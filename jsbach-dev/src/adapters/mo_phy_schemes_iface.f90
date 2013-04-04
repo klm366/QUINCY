@@ -19,14 +19,14 @@ MODULE mo_phy_schemes_iface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: specific_humidity, qsat
+  PUBLIC :: specific_humidity !, qsat
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_phy_schemes_iface'
 
-CONTAINS
-
-  REAL(wp) ELEMENTAL FUNCTION qsat()
-
-  END FUNCTION qsat
+!!$CONTAINS
+!!$
+!!$  REAL(wp) ELEMENTAL FUNCTION qsat()
+!!$
+!!$  END FUNCTION qsat
 
 END MODULE mo_phy_schemes_iface
