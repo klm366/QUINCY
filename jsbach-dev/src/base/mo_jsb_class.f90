@@ -5,7 +5,8 @@ MODULE mo_jsb_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: jsbach!, get_model
+  ! t_jsb needs to be public for the NEC compiler
+  PUBLIC :: t_jsb, jsbach!, get_model
 
   TYPE t_jsb
      INTEGER :: no_of_models
