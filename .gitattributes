@@ -7,7 +7,6 @@ jsbach-dev/src/adapters/mo_jsb_parallel_iface.f90 -text
 jsbach-dev/src/adapters/mo_jsb_time_iface.f90 -text
 jsbach-dev/src/adapters/mo_jsb_varlist_iface.f90 -text
 jsbach-dev/src/adapters/mo_phy_schemes_iface.f90 -text
-jsbach-dev/src/adapters/shared_icon/.externals -text
 jsbach-dev/src/atmland/mo_atmland_interface.f90 -text
 jsbach-dev/src/atmland/mo_atmland_memory.f90 -text
 jsbach-dev/src/atmland/mo_atmland_memory_class.f90 -text
