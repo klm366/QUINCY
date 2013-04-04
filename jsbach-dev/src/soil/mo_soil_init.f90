@@ -12,7 +12,7 @@ MODULE mo_soil_init
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile
   USE mo_soil_memory_class, ONLY: t_soil_memory, t_soil_phys_state, t_soil_energy_state, t_soil_energy_flux, &
-                                  t_soil_water_state &, t_soil_water_flux
+                                  t_soil_water_state !, t_soil_water_flux
   USE mo_jsb_base,          ONLY: get_model
   USE mo_netcdf_read,       ONLY: netcdf_read_oncells_2d_time, netcdf_read_oncells_2d
   USE mo_kind,              ONLY: wp
