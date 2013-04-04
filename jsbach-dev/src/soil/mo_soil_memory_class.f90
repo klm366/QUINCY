@@ -16,7 +16,7 @@ MODULE mo_soil_memory_class
 
   PUBLIC :: t_soil_memory, t_soil_phys_state, &
             t_soil_energy_state, t_soil_water_state, &
-            t_soil_energy_flux,  t_soil_water_flux, &
+            t_soil_energy_flux & !,  t_soil_water_flux, &
             copy_soil_mem, add_soil_mem
 
   TYPE t_soil_phys_state
