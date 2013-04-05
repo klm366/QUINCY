@@ -5,7 +5,7 @@
 !!  Reiner Schnur, MPI-M Hamburg
 !!
 !! @par Revision History
-!! First version by Reiner Schnur (2012-10-09)
+!! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_parallel_iface
 
