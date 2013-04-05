@@ -22,6 +22,7 @@ MODULE mo_srf_config_class
      LOGICAL :: active
      CHARACTER(len=filename_max) :: ic_filename
      CHARACTER(len=filename_max) :: bc_filename
+     CHARACTER(len=filename_max) :: bc_sso_filename
      CHARACTER(len=10)           :: scheme_albedo !< Scheme to use for computation of albedo (echam5 only for now)
      REAL(wp)                    :: wsn_critical  !< Critical snow depth for correction of new surface temperature [m water equivalent]
   END type t_srf_config
@@ -40,13 +41,14 @@ CONTAINS
     TYPE(t_srf_config), POINTER :: new
 
     LOGICAL  :: active
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     CHARACTER(len=10)           :: scheme_albedo
     REAL(wp)                    :: wsn_critical
 
     NAMELIST /jsb_srf_nml/         &
       active,                      &
       ic_filename, bc_filename,    &
+      bc_sso_filename,             &
       scheme_albedo,               &
       wsn_critical
 
@@ -59,11 +61,12 @@ CONTAINS
     ALLOCATE(new)
 
     ! Set defaults
-    active         = .TRUE.
-    ic_filename    = 'ic_srf.nc'
-    bc_filename    = 'bc_srf.nc'
-    scheme_albedo  = 'echam5'
-    wsn_critical   = 5.85036E-3_wp
+    active          = .TRUE.
+    ic_filename     = 'ic_land_srf.nc'
+    bc_filename     = 'bc_land_srf.nc'
+    bc_sso_filename = 'bc_land_sso.nc'
+    scheme_albedo   = 'echam5'
+    wsn_critical    = 5.85036E-3_wp
 
     CALL position_nml('jsb_srf_nml', STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_srf_nml)
@@ -71,6 +74,7 @@ CONTAINS
     new%active                    = active
     new%ic_filename               = ic_filename
     new%bc_filename               = bc_filename
+    new%bc_sso_filename           = bc_sso_filename
     new%scheme_albedo             = scheme_albedo
     new%wsn_critical              = wsn_critical
 

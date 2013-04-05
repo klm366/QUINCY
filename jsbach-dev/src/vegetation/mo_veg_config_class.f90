@@ -61,8 +61,8 @@ CONTAINS
 
     ! Set defaults
     active           = .FALSE.
-    ic_filename      = 'ic_veg.nc'
-    bc_filename      = 'bc_veg.nc'
+    ic_filename      = 'ic_land_veg.nc'
+    bc_filename      = 'bc_land_veg.nc'
     scheme_stom_cond = 'echam5'
     wsr_capacity     = 2.E-4_wp
     wsn_capacity     = 2.E-4_wp

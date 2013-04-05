@@ -77,6 +77,11 @@ CONTAINS
     phys => srf%phys_state
 
     ! Orography
+    return_pointer => netcdf_read_oncells_2d(         &
+      & filename=model%config%srf%bc_sso_filename,    &
+      & variable_name='orostd',                       &
+      & fill_array = phys%oro_stddev,                 &
+      & patch=model%grid%patch)
     phys%oro_stddev(:,:) = 140.606_wp   ! Temporary
 
     ! Albedo

@@ -69,8 +69,8 @@ CONTAINS
 
     ! Set defaults
     active         = .FALSE.
-    ic_filename    = 'ic_soil.nc'
-    bc_filename    = 'bc_soil.nc'
+    ic_filename    = 'ic_land_soil.nc'
+    bc_filename    = 'bc_land_soil.nc'
     nsoil_energy   = 5
     nsoil_water    = 5
     dz_energy(1:5) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/) ; dz_energy(6:max_soil_layers) = 0._wp
