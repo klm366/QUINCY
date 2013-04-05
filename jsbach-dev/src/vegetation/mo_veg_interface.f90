@@ -13,6 +13,7 @@ MODULE mo_veg_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile
   USE mo_jsb_base,           ONLY: get_model
   USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
+  USE mo_jsb_control,        ONLY: debug_on
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
   USE mo_util_string,        ONLY: one_of, int2string
@@ -69,7 +70,7 @@ CONTAINS
 
 !!$    p_pe = get_my_global_mpi_id()
 !!$    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update on PE '//int2string(p_pe), all_print=.TRUE.)
-    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update of vegetation_1 ')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of vegetation_1 ')
 
     model => get_model(tile%owner_model_id)
 
@@ -169,7 +170,7 @@ CONTAINS
     IF (one_of('veg', tile%components) < 1) RETURN
 
     p_pe = get_my_global_mpi_id()
-    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
     model => get_model(tile%owner_model_id)
 

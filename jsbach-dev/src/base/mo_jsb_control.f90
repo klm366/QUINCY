@@ -17,6 +17,7 @@ MODULE mo_jsb_control
 
   PUBLIC :: init_jsb_master_control
   PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted
+  PUBLIC :: debug_on
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
@@ -24,6 +25,7 @@ MODULE mo_jsb_control
   LOGICAL :: is_standalone
   LOGICAL :: restart_jsbach
   CHARACTER(len=99) :: model_base_dir
+  INTEGER :: debug
 
   TYPE t_jsb_model_nml
     CHARACTER(len=30)  :: model_name
@@ -85,7 +87,8 @@ CONTAINS
     NAMELIST /jsb_control_nml/ &
       is_standalone,           &
       restart_jsbach,          &
-      model_base_dir
+      model_base_dir,          &
+      debug
 
     NAMELIST /jsb_model_nml/   &
       model_name,              &
@@ -97,6 +100,7 @@ CONTAINS
     is_standalone  = .TRUE.
     restart_jsbach = .FALSE.
     model_base_dir = '.'
+    debug          = 0
 
     nml_unit = open_nml(TRIM(namelist_filename))
 
@@ -148,5 +152,11 @@ CONTAINS
     get_no_of_models = no_of_models
 
   END FUNCTION get_no_of_models
+
+  LOGICAL FUNCTION debug_on()
+
+    debug_on = debug > 0
+
+  END FUNCTION debug_on
 
 END MODULE mo_jsb_control

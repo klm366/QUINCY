@@ -14,6 +14,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile
   USE mo_atmland_interface,  ONLY: update_atm2land, update_land2atm
   USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
+  USE mo_jsb_control,        ONLY: debug_on
   USE mo_timer,              ONLY: timer_start, timer_stop, timer_jsbach
   USE mo_exception,          ONLY: message_text, message, finish
   USE mo_util_string,        ONLY: int2string
@@ -105,7 +106,7 @@ CONTAINS
     p_pe = get_my_global_mpi_id()
 !!$    CALL message( TRIM(routine), 'Updating '//TRIM(model%name)//' on PE '//int2string(p_pe)// &
 !!$                               & ', nblk='//int2string(iblk), all_print=.TRUE.)
-    IF (iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
+    IF (debug_on() .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
     ! Put atmospheric forcing into the atm2land memory.
     ! Only has to be done for the root tile since, for all other sub-tiles, the atm2land structure points to this.
@@ -166,7 +167,7 @@ CONTAINS
 
 !!$    IF (iblk == 1) CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' on PE '//int2string(p_pe)//' completed.', &
 !!$                                all_print=.TRUE.)
-    IF (iblk == 1) CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
     CALL timer_stop(timer_jsbach)
 

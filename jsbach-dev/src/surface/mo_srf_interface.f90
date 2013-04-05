@@ -12,6 +12,7 @@ MODULE mo_srf_interface
   USE mo_jsb_model_class, ONLY: t_jsb_model
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile
   USE mo_jsb_base,        ONLY: get_model
+  USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
   USE mo_util_string,     ONLY: one_of
@@ -49,7 +50,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_radiation'
 
-    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update of surface radiation')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface radiation')
 
     model => get_model(tile%owner_model_id)
 
@@ -122,7 +123,7 @@ CONTAINS
 
     IF (one_of('soil', tile%components) < 1) RETURN
 
-    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update of snow and skin reservoir fraction')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of snow and skin reservoir fraction')
 
     model => get_model(tile%owner_model_id)
 
@@ -238,7 +239,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
 
-    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update of surface temperature')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface temperature')
 
     model => get_model(tile%owner_model_id)
 

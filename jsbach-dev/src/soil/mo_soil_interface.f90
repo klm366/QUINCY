@@ -12,6 +12,7 @@ MODULE mo_soil_interface
   USE mo_jsb_model_class, ONLY: t_jsb_model
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile
   USE mo_jsb_base,        ONLY: get_model
+  USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
   USE mo_util_string,     ONLY: one_of
@@ -46,7 +47,7 @@ CONTAINS
 
     IF (one_of('soil', tile%components) < 1) RETURN
 
-    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
     model => get_model(tile%owner_model_id)
 
@@ -82,7 +83,7 @@ CONTAINS
 
     IF (one_of('soil', tile%components) < 1) RETURN
 
-    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
     model => get_model(tile%owner_model_id)
 
