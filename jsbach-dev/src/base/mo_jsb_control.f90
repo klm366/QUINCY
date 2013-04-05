@@ -19,7 +19,7 @@ MODULE mo_jsb_control
   PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
-  PUBLIC :: jsb_models_nml, get_no_of_models
+  PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
 
   LOGICAL :: is_standalone
   LOGICAL :: restart_jsbach
