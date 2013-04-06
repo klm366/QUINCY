@@ -44,7 +44,8 @@ CONTAINS
                            & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
 
     USE mo_veg_interface,     ONLY: update_vegetation_1, update_vegetation_2
-    USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy
+    USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, &
+                                    update_surface_energy, update_surface_fluxes
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
     USE mo_soil_memory_class, ONLY: copy_soil_mem
 
@@ -128,8 +129,11 @@ CONTAINS
     ! Update wet skin and snow fractions
     CALL  update_snow_and_skin_fraction(model%land, iblk, ics, ice, nc, dtime, steplen)
 
-    ! Compute new surface temperatures
+    ! Compute new surface temperatures and saturation surface specific humidity
     CALL update_surface_energy(model%land, iblk, ics, ice, nc, dtime, steplen)
+
+    ! Compute surface fluxes of heat and moisture based on the new surface temperature and qsat
+    CALL update_surface_fluxes(model%land, iblk, ics, ice, nc, steplen)
 
     ! First part of vegetation that is applied before the soil is updated,
     ! in particular:

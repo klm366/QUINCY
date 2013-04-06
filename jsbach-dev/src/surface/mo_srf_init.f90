@@ -114,7 +114,7 @@ CONTAINS
     ! used below to fill %energy_state%t_srf for all other files:
     !    tile%mem%srf%energy_state%t_srf(:,:) = t_srf(:,:)
 
-!!$    energy%t_srf_old      (:,:) = t_srf (:,:)
+    energy%t_srf_old      (:,:) = t_srf (:,:)
     energy%t_srf_unfilt   (:,:) = t_srf (:,:)
     energy%t_rad_srf      (:,:) = t_srf (:,:)
 !!$    energy%t_eff_srf      (:,:) = t_srf (:,:)
@@ -142,12 +142,15 @@ CONTAINS
     eflux%lwrad_srf_net (:,:) = 0._wp
     eflux%rad_srf_net   (:,:) = 0._wp
     eflux%latent_hflx   (:,:) = 0._wp
+    eflux%sensible_hflx (:,:) = 0._wp
 
     ! Initialize water fluxes
     !
     wflux => srf%water_flux
 
-    wflux%evap_srf      (:,:) = 0._wp
+    wflux%evapopot      (:,:) = 0._wp
+    wflux%evapotrans    (:,:) = 0._wp
+    wflux%trans         (:,:) = 0._wp
 
     ! Propagate initial conditions down the tile structure, starting with the tile with which this subroutine was called initially
     ! TBD: sub-tiles should not read the netcdf files again

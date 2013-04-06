@@ -21,6 +21,7 @@ MODULE mo_srf_interface
   PRIVATE
 
   PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy !, update_srf
+  PUBLIC :: update_surface_fluxes
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_interface'
 
@@ -186,7 +187,7 @@ CONTAINS
 
   SUBROUTINE update_surface_energy( tile, iblk, ics, ice, nc, dtime, steplen)
 
-    USE mo_phy_schemes,        ONLY: qsat, surface_dry_static_energy, heat_transfer_coef
+    USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_srf_process,        ONLY: surface_temp_and_qsat_implicit
     USE mo_srf_constants,      ONLY: eps
     USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
@@ -203,8 +204,8 @@ CONTAINS
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
-      & fract          (:),    &
       & t_srf          (:),    &
+      & t_srf_old      (:),    &
       & t_srf_unfilt   (:),    &
       & t_rad_srf      (:),    &
       & qsat_srf       (:),    &
@@ -229,7 +230,6 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp) ::             &
-      t_srf_old(nc),        &
       t_srf_unfilt_old(nc), &
       qsat_srf_old(nc),     &
       s_srf_old(nc),        &
@@ -246,6 +246,7 @@ CONTAINS
     ! Get reference to variables for current block
     !
     t_srf                => tile%mem%srf  %energy_state %t_srf            (ics:ice, iblk)
+    t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
     t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
     t_rad_srf            => tile%mem%srf  %energy_state %t_rad_srf        (ics:ice, iblk)
     qsat_srf             => tile%mem%srf  %energy_state %qsat_srf         (ics:ice, iblk)
@@ -281,7 +282,8 @@ CONTAINS
     dQdT(:) = ( qsat(t_srf(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
 
     ! 2. Old dry static energy
-    s_srf_old(:) = surface_dry_static_energy(t_srf_old(:), qsat_srf_old(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
+    s_srf_old(:) = surface_dry_static_energy( t_srf_old(:), &
+                                            & q_effective(qsat_srf_old(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
 
     t2s_conv(:) = s_srf_old(:) / t_srf_old(:)  !
 
@@ -316,6 +318,7 @@ CONTAINS
     t_rad_srf(:) = s_srf(:) / t2s_conv(:)
 
     ! Time filter for surface temperature
+    ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
     IF (.NOT. lstart) THEN
       t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
     ELSE
@@ -323,6 +326,104 @@ CONTAINS
     END IF
 
   END SUBROUTINE update_surface_energy
+
+  SUBROUTINE update_surface_fluxes( tile, iblk, ics, ice, nc, steplen)
+
+    USE mo_phy_schemes,        ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
+
+    TYPE(t_jsb_tile),  POINTER    :: tile
+    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+    REAL(wp),          INTENT(in) :: steplen
+
+    ! Local variables
+    !
+    TYPE(t_jsb_model), POINTER    :: model
+    LOGICAL                       :: lstart
+
+    ! Pointers to variables in memory
+    REAL(wp), POINTER ::       &
+      & t_srf          (:),    &
+      & t_srf_old      (:),    &
+      & qsat_srf       (:),    &
+      & s_srf          (:),    &
+      & t_acoef        (:),    &
+      & t_bcoef        (:),    &
+      & q_acoef        (:),    &
+      & q_bcoef        (:),    &
+      & fact_qsat_srf  (:),    &
+      & fact_q_air     (:),    &
+      & drag_srf       (:),    &
+      & latent_hflx    (:),    &
+      & sensible_hflx  (:),    &
+      & evapopot       (:),    &
+      & evapotrans     (:)
+
+    ! Locally allocated vectors
+    !
+    REAL(wp) ::                &
+      & s_air          (nc),   &  !< Dry static energy at lowest atmospheric level
+      & q_air          (nc),   &  !< Humidity at lowest atmospheric level
+      & q_air_eff      (nc),   &  !< Effective humidity at lowest atmospheric level
+      & qsat_srf_eff   (nc),   &  !< Effective surface saturation specific humidity
+      heat_tcoef       (nc)       !< Heat transfer coefficient (rho*C_h*|v|)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes'
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface fluxes')
+
+    model => get_model(tile%owner_model_id)
+
+    ! Get reference to variables for current block
+    !
+    t_srf                => tile%mem%srf  %energy_state %t_srf            (ics:ice, iblk)
+    t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
+    qsat_srf             => tile%mem%srf  %energy_state %qsat_srf         (ics:ice, iblk)
+    s_srf                => tile%mem%srf  %energy_state %s_srf            (ics:ice, iblk)
+    t_acoef              => tile%mem      %atm2land     %t_acoef          (ics:ice, iblk)
+    t_bcoef              => tile%mem      %atm2land     %t_bcoef          (ics:ice, iblk)
+    q_acoef              => tile%mem      %atm2land     %q_acoef          (ics:ice, iblk)
+    q_bcoef              => tile%mem      %atm2land     %q_bcoef          (ics:ice, iblk)
+    fact_q_air           => tile%mem%srf  %energy_state %fact_q_air       (ics:ice, iblk)
+    fact_qsat_srf        => tile%mem%srf  %energy_state %fact_qsat_srf    (ics:ice, iblk)
+    drag_srf             => tile%mem      %atm2land     %drag_srf         (ics:ice, iblk)
+    sensible_hflx        => tile%mem%srf  %energy_flux  %sensible_hflx    (ics:ice, iblk)
+    latent_hflx          => tile%mem%srf  %energy_flux  %latent_hflx      (ics:ice, iblk)
+    evapotrans           => tile%mem%srf  %water_flux   %evapotrans       (ics:ice, iblk)
+    evapopot             => tile%mem%srf  %water_flux   %evapopot         (ics:ice, iblk)
+
+    ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
+    !
+    s_air(:) = t_acoef(:) * s_srf   (:) + t_bcoef(:)
+    q_air(:) = q_acoef(:) * qsat_srf(:) + q_bcoef(:)
+
+    ! Transfer coefficient
+    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+
+    ! Compute effective air moisture and surface saturation humidity
+    q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
+                              & SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
+    qsat_srf_eff(:) = q_effective(qsat_srf(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
+
+    ! Compute moisture fluxes
+    !
+    evapotrans(:) = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:))        ! Evapotranspiratin
+    evapopot  (:) = heat_tcoef(:) * (q_air    (:) - qsat_srf    (:))        ! Potential evaporation
+
+    ! Compute sensible heat flux
+    !
+    ! TBD RS: I think it's wrong to use t_srf_old below, it also contradicts how it was done in echam5.
+    sensible_hflx(:) = heat_tcoef(:) &
+      & * ( (s_air(:) - s_srf(:))                                        & ! Flux of dry static energy
+      &   - ( surface_dry_static_energy(t_srf_old(:), q_air_eff(:))      & ! Subtract contribution from ...
+      &     - surface_dry_static_energy(t_srf_old(:), qsat_srf_eff(:))   & ! ... moisture
+      &     ) &
+      &   )
+
+    ! Compute latent heat flux
+    !
+    ! TBD
+
+  END SUBROUTINE update_surface_fluxes
 
 !!$  SUBROUTINE update_srf( tile, iblk, ics, ice)
 !!$

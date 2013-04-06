@@ -134,11 +134,11 @@ CONTAINS
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
         & ldims=shape2d, initval_r=0.0_wp )
 
-!!$      CALL add_var( this_list, prefix//'t_srf_old'//suffix, estate%t_srf_old,                           &
-!!$        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
-!!$        & t_cf_var('surface_temperature_old', 'K', '', DATATYPE_FLT32),                                 &
-!!$        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
-!!$        & ldims=shape2d, initval_r=0.0_wp )
+      CALL add_var( this_list, prefix//'t_srf_old'//suffix, estate%t_srf_old,                           &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('surface_temperature_old', 'K', '', DATATYPE_FLT32),                                 &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
 
       CALL add_var( this_list, prefix//'t_srf_unfilt'//suffix, estate%t_srf_unfilt,                     &
         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
@@ -226,6 +226,12 @@ CONTAINS
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
         & ldims=shape2d, initval_r=0.0_wp )
 
+      CALL add_var( this_list, prefix//'sensible_hflx'//suffix, eflux%sensible_hflx,                    &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('sensible_hflx', '', 'Sensible heat flux', DATATYPE_FLT32),                          &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
+
     END FUNCTION new_energy_flux
 
     FUNCTION new_water_state() RESULT(wstate)
@@ -266,11 +272,23 @@ CONTAINS
 
       ALLOCATE(wflux)
 
-      CALL add_var( this_list, prefix//'evap_srf'//suffix, wflux%evap_srf,                              &
-                  & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                 &
-                  & t_cf_var('surface_evaporation', '', 'Evaporation from surface', DATATYPE_FLT32),    &
-                  & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),             &
-                  & ldims=shape2d, initval_r=0.0_wp )
+      CALL add_var( this_list, prefix//'evapopot'//suffix, wflux%evapopot,                                     &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                                  &
+        & t_cf_var('surface_evaporation_potential', '', 'Potential evaporation from surface', DATATYPE_FLT32), &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                              &
+        & ldims=shape2d, initval_r=0.0_wp )
+
+      CALL add_var( this_list, prefix//'evapotrans'//suffix, wflux%evapotrans,                                 &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                                  &
+        & t_cf_var('surface_evapotranspiration', '', 'Evapotranspiration from surface', DATATYPE_FLT32),       &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                              &
+        & ldims=shape2d, initval_r=0.0_wp )
+
+      CALL add_var( this_list, prefix//'trans'//suffix, wflux%trans,                                           &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                                  &
+        & t_cf_var('surface_transpiration', '', 'Transpiration from surface', DATATYPE_FLT32),                 &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                              &
+        & ldims=shape2d, initval_r=0.0_wp )
 
     END FUNCTION new_water_flux
 

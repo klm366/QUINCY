@@ -30,7 +30,7 @@ MODULE mo_srf_memory_class
   TYPE t_srf_energy_state
     REAL(wp), POINTER :: &
       t_srf         (:,:), &
-!!$      t_srf_old     (:,:), &
+      t_srf_old     (:,:), &
       t_srf_unfilt  (:,:), &
       t_rad_srf     (:,:), &
 !!$      t_eff_srf     (:,:), &
@@ -53,6 +53,7 @@ MODULE mo_srf_memory_class
   TYPE t_srf_energy_flux
     REAL(wp), POINTER :: &
       latent_hflx      (:,:),   & !< latent heat flux
+      sensible_hflx    (:,:),   & !< sensible heat flux
       swrad_srf_net    (:,:),   & !< net shortwave radiation at surface
       lwrad_srf_net    (:,:),   & !< net longwave radiation at surface
       rad_srf_net      (:,:)      !< net radiation at surface
@@ -60,7 +61,9 @@ MODULE mo_srf_memory_class
 
   TYPE t_srf_water_flux
     REAL(wp), POINTER :: &
-      evap_srf        (:,:)
+      evapopot         (:,:),   & !< Potential evaporation
+      evapotrans       (:,:),   & !< Evapotranspiration
+      trans            (:,:)      !< Transpiration
   END TYPE t_srf_water_flux
 
   TYPE t_srf_memory
@@ -92,7 +95,7 @@ CONTAINS
     INTEGER,                   INTENT(in)  :: iblk, ics, ice
 
     out%t_srf         (ics:ice,    iblk) = in%t_srf         (ics:ice,    iblk)
-!!$    out%t_srf_old     (ics:ice,    iblk) = in%t_srf_old     (ics:ice,    iblk)
+    out%t_srf_old     (ics:ice,    iblk) = in%t_srf_old     (ics:ice,    iblk)
     out%t_srf_unfilt  (ics:ice,    iblk) = in%t_srf_unfilt  (ics:ice,    iblk)
     out%t_rad_srf     (ics:ice,    iblk) = in%t_rad_srf     (ics:ice,    iblk)
 !!$    out%t_eff_srf     (ics:ice,    iblk) = in%t_eff_srf     (ics:ice,    iblk)
@@ -112,7 +115,7 @@ CONTAINS
     INTEGER,                   INTENT(in)  :: iblk, ics, ice
 
     out%t_srf         (ics:ice,    iblk) = in1%t_srf         (ics:ice,    iblk) + in2%t_srf         (ics:ice,    iblk)
-!!$    out%t_srf_old     (ics:ice,    iblk) = in1%t_srf_old     (ics:ice,    iblk) + in2%t_srf_old     (ics:ice,    iblk)
+    out%t_srf_old     (ics:ice,    iblk) = in1%t_srf_old     (ics:ice,    iblk) + in2%t_srf_old     (ics:ice,    iblk)
     out%t_srf_unfilt  (ics:ice,    iblk) = in1%t_srf_unfilt  (ics:ice,    iblk) + in2%t_srf_unfilt  (ics:ice,    iblk)
     out%t_rad_srf     (ics:ice,    iblk) = in1%t_rad_srf     (ics:ice,    iblk) + in2%t_rad_srf     (ics:ice,    iblk)
 !!$    out%t_eff_srf     (ics:ice,    iblk) = in1%t_eff_srf     (ics:ice,    iblk) + in2%t_eff_srf     (ics:ice,    iblk)
