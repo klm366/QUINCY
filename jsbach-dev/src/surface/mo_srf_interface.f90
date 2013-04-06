@@ -415,7 +415,7 @@ CONTAINS
     sensible_hflx(:) = heat_tcoef(:) &
       & * ( (s_air(:) - s_srf(:))                                        & ! Flux of dry static energy
       &   - ( surface_dry_static_energy(t_srf_old(:), q_air_eff(:))      & ! Subtract contribution from ...
-      &     - surface_dry_static_energy(t_srf_old(:), qsat_srf_eff(:))   & ! ... moisture
+      &     - surface_dry_static_energy(t_srf_old(:), qsat_srf_eff(:))   & ! ... moisture (Cpd*T cancels out in difference)
       &     ) &
       &   )
 
