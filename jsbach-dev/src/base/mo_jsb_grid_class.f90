@@ -97,7 +97,8 @@ CONTAINS
 
   FUNCTION new_grid_from_patch(patch) RESULT(grid)
 
-    TYPE(t_patch),    TARGET, INTENT(in) :: patch
+!!$    TYPE(t_patch),    TARGET, INTENT(in) :: patch
+    TYPE(t_patch),             INTENT(in) :: patch
     TYPE(t_jsb_grid), POINTER             :: grid
 
     TYPE(t_jsb_grid), POINTER       :: new
@@ -129,7 +130,17 @@ CONTAINS
     new%lsm(:,:) = .TRUE.
     new%lsf(:,:) = 1.0_wp
     new%ntotal_g = patch%n_patch_cells_g
-    new%patch => patch
+
+    ALLOCATE(new%patch)
+    new%patch%id = patch%id
+    new%patch%n_patch_cells = patch%n_patch_cells
+    new%patch%n_patch_cells_g = patch%n_patch_cells_g
+    new%patch%nblks_c = patch%nblks_c
+    new%patch%npromz_c = patch%npromz_c
+    new%patch%grid_filename = patch%grid_filename
+    new%patch%comm_pat_gather_c = patch%comm_pat_gather_c
+    new%patch%cells%glb_index = patch%cells%glb_index
+!!$    new%patch => patch
 
     new%configured = .TRUE.
 
