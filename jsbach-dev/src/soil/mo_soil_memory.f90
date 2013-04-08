@@ -11,7 +11,7 @@ MODULE mo_soil_memory
 
   USE mo_soil_memory_class, ONLY: t_soil_memory, t_soil_phys_state, &
                                   t_soil_energy_state, t_soil_energy_flux,          &
-                                  t_soil_water_state !,  t_soil_water_flux
+                                  t_soil_water_state, t_soil_water_flux
   USE mo_jsb_grid_class,    ONLY: get_nproma, get_nblks
   USE mo_cdi_constants,     ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16,  &
                                   ZA_SURFACE, ZA_DEPTH_BELOW_LAND,                  &
@@ -89,7 +89,7 @@ CONTAINS
     new%energy_state => new_energy_state()
     new%energy_flux  => new_energy_flux()
     new%water_state  => new_water_state()
-!!$    new%water_flux   => new_water_flux()
+    new%water_flux   => new_water_flux()
 
     mem => new
 
@@ -277,13 +277,25 @@ CONTAINS
 
     END FUNCTION new_water_state
 
-!!$    FUNCTION new_water_flux() RESULT(wflux)
-!!$
-!!$      TYPE(t_soil_water_flux), POINTER :: wflux
-!!$
-!!$      ALLOCATE(wflux)
-!!$
-!!$    END FUNCTION new_water_flux
+    FUNCTION new_water_flux() RESULT(wflux)
+
+      TYPE(t_soil_water_flux), POINTER :: wflux
+
+      ALLOCATE(wflux)
+
+      CALL add_var( this_list, prefix//'runoff'//suffix, wflux%runoff,                                  &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('surface_runoff', '', '', DATATYPE_FLT32),                                           &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
+
+      CALL add_var( this_list, prefix//'drainage'//suffix, wflux%drainage,                              &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('drainage', '', '', DATATYPE_FLT32),                                                 &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
+
+    END FUNCTION new_water_flux
 
   END FUNCTION new_soil_memory
 

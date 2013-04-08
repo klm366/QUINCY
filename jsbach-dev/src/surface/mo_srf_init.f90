@@ -55,7 +55,7 @@ CONTAINS
     TYPE(t_srf_water_state),  POINTER :: water
     TYPE(t_srf_water_flux),   POINTER :: wflux
 
-    REAL(wp), POINTER :: t_srf(:,:), t_srf_mon(:,:,:)
+    REAL(wp), POINTER :: t_srf(:,:)
     REAL(wp), POINTER :: &
       & return_pointer (:,  :)       !< temporary pointer
 
@@ -99,30 +99,27 @@ CONTAINS
     !
     energy => srf%energy_state
 
-    ! Set initial surface temperature to SST
-    ! Temporary for comparing with Thomas' jsbach implementation
-    t_srf_mon => netcdf_read_oncells_2d_time(         &
+    ! Initial surface temperature
+    return_pointer => netcdf_read_oncells_2d(         &
       & filename=model%config%srf%ic_filename,        &
-      & variable_name='SST',                          &
-      !& fill_array=energy%t_srf,                      &
-      & patch=model%grid%patch,                       &
-      & start_timestep=1, end_timestep=12)
-    energy%t_srf(:,:) = t_srf_mon(:,:,1)
+      & variable_name='surface_temperature',          &
+      fill_array=energy%t_srf,                        &
+      & patch=model%grid%patch)
     t_srf => energy%t_srf
-    DEALLOCATE(t_srf_mon)
     ! Note: t_srf now points to energy%t_srf and can be
     ! used below to fill %energy_state%t_srf for all other files:
     !    tile%mem%srf%energy_state%t_srf(:,:) = t_srf(:,:)
 
-    energy%t_srf_old      (:,:) = t_srf (:,:)
-    energy%t_srf_unfilt   (:,:) = t_srf (:,:)
-    energy%t_rad_srf      (:,:) = t_srf (:,:)
-!!$    energy%t_eff_srf      (:,:) = t_srf (:,:)
-    energy%s_srf          (:,:) = 0._wp
-    energy%qsat_srf       (:,:) = -1._wp  ! Negative values will be used to test for start of experiment
-!!$    energy%qsat_srf_old   (:,:) = 0._wp
-    energy%fact_q_air     (:,:) = 0.5_wp
-    energy%fact_qsat_srf  (:,:) = 0.5_wp
+    energy%t_srf_old        (:,:) = t_srf (:,:)
+    energy%t_srf_unfilt     (:,:) = t_srf (:,:)
+    energy%t_srf_unfilt_old (:,:) = t_srf (:,:)
+    energy%t_rad_srf        (:,:) = t_srf (:,:)
+!!$    energy%t_eff_srf        (:,:) = t_srf (:,:)
+    energy%s_srf            (:,:) = 0._wp
+    energy%qsat_srf         (:,:) = -1._wp  ! Negative values will be used to test for start of experiment
+!!$    energy%qsat_srf_old     (:,:) = 0._wp
+    energy%fact_q_air       (:,:) = 0.5_wp
+    energy%fact_qsat_srf    (:,:) = 0.5_wp
 
     ! Initialize water state
 
@@ -132,7 +129,7 @@ CONTAINS
     water%wsr_srf    (:,:) = 0._wp
 
     water%sfract_srf (:,:) = 0._wp
-    water%wsn_srf    (:,:) = 0._wp
+    water%wsn_srf    (:,:) = -1._wp    ! -1 used to determine start of experiment
 
     ! Initialize energy fluxes
     !

@@ -16,7 +16,7 @@ MODULE mo_soil_memory_class
 
   PUBLIC :: t_soil_memory, t_soil_phys_state, &
             t_soil_energy_state, t_soil_water_state, &
-            t_soil_energy_flux, & !  t_soil_water_flux, &
+            t_soil_energy_flux, t_soil_water_flux, &
             copy_soil_mem, add_soil_mem
 
   TYPE t_soil_phys_state
@@ -60,16 +60,18 @@ MODULE mo_soil_memory_class
       grnd_hflx        (:,:)      !< ground heat flux
   END type t_soil_energy_flux
 
-!!$  TYPE t_soil_water_flux
-!!$!     REAL(wp), POINTER :: &
-!!$  END type t_soil_water_flux
+  TYPE t_soil_water_flux
+    REAL(wp), POINTER :: &
+      & runoff         (:,:), & !< Accumulated surface runoff
+      & drainage       (:,:)     !< Accumulated drainage
+  END type t_soil_water_flux
 
   TYPE t_soil_memory
      TYPE(t_soil_phys_state),   POINTER :: phys_state   => NULL()
      TYPE(t_soil_energy_state), POINTER :: energy_state => NULL()
      TYPE(t_soil_water_state),  POINTER :: water_state  => NULL()
      TYPE(t_soil_energy_flux),  POINTER :: energy_flux  => NULL()
-!!$     TYPE(t_soil_water_flux),   POINTER :: water_flux   => NULL()
+     TYPE(t_soil_water_flux),   POINTER :: water_flux   => NULL()
   END type t_soil_memory
 
   ! Note: Would be nicer to be able to overload the "=" operator, but that would be more

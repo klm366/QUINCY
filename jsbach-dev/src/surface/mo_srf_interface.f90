@@ -20,8 +20,8 @@ MODULE mo_srf_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy !, update_srf
-  PUBLIC :: update_surface_fluxes
+  PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy
+  PUBLIC :: update_surface_fluxes, update_t_srf
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_interface'
 
@@ -189,7 +189,7 @@ CONTAINS
 
     USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_srf_process,        ONLY: surface_temp_and_qsat_implicit
-    USE mo_srf_constants,      ONLY: eps
+!!$    USE mo_srf_constants,      ONLY: eps
     USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
     USE mo_physical_constants, ONLY: tmelt
 
@@ -207,6 +207,7 @@ CONTAINS
       & t_srf          (:),    &
       & t_srf_old      (:),    &
       & t_srf_unfilt   (:),    &
+      & t_srf_unfilt_old(:),    &
       & t_rad_srf      (:),    &
       & qsat_srf       (:),    &
 !!$      & qsat_srf_old   (:),    &
@@ -230,7 +231,6 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp) ::             &
-      t_srf_unfilt_old(nc), &
       qsat_srf_old(nc),     &
       s_srf_old(nc),        &
       dQdT(nc),             & !< Sensitivity of saturated surface specific humidity to temperature
@@ -248,6 +248,7 @@ CONTAINS
     t_srf                => tile%mem%srf  %energy_state %t_srf            (ics:ice, iblk)
     t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
     t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
+    t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
     t_rad_srf            => tile%mem%srf  %energy_state %t_rad_srf        (ics:ice, iblk)
     qsat_srf             => tile%mem%srf  %energy_state %qsat_srf         (ics:ice, iblk)
 !!$    qsat_srf_old         => tile%mem%srf  %energy_state %qsat_srf_old     (ics:ice, iblk)
@@ -317,15 +318,47 @@ CONTAINS
     ! 'Radiative temperature' used in the radiation scheme of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
     t_rad_srf(:) = s_srf(:) / t2s_conv(:)
 
-    ! Time filter for surface temperature
-    ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
-    IF (.NOT. lstart) THEN
-      t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
-    ELSE
-      t_srf(:) = t_srf_unfilt_old(:)
-    END IF
+!!$    ! Time filter for surface temperature
+!!$    ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
+!!$    ! Also: this is not done in ICON at all (at the moment, at least), so it should be switched off.
+!!$    IF (.NOT. lstart) THEN
+!!$      t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
+!!$    ELSE
+!!$      t_srf(:) = t_srf_unfilt_old(:)
+!!$    END IF
 
   END SUBROUTINE update_surface_energy
+
+  SUBROUTINE update_t_srf( tile, iblk, ics, ice, nc)
+
+    USE mo_srf_constants,      ONLY: eps
+
+    TYPE(t_jsb_tile),  POINTER    :: tile
+    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+
+    ! Local variables
+    !
+    TYPE(t_jsb_model), POINTER    :: model
+    LOGICAL                       :: lstart
+
+    ! Pointers to variables in memory
+    REAL(wp), POINTER ::       &
+      & t_srf          (:),    &
+      & t_srf_old      (:),    &
+      & t_srf_unfilt   (:),    &
+      & t_srf_unfilt_old(:)
+
+    t_srf                => tile%mem%srf  %energy_state %t_srf            (ics:ice, iblk)
+    t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
+    t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
+    t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
+
+    ! Time filter for surface temperature
+    ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
+    ! Also: this is not done in ICON at all (at the moment, at least), so it should be switched off.
+    t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
+
+  END SUBROUTINE update_t_srf
 
   SUBROUTINE update_surface_fluxes( tile, iblk, ics, ice, nc, steplen)
 
@@ -338,7 +371,6 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
-    LOGICAL                       :: lstart
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &

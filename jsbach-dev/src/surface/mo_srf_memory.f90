@@ -146,6 +146,12 @@ CONTAINS
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
         & ldims=shape2d, initval_r=0.0_wp )
 
+      CALL add_var( this_list, prefix//'t_srf_unfilt_old'//suffix, estate%t_srf_unfilt_old,             &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('surface_temperature_unfiltered_old', 'K', '', DATATYPE_FLT32),                      &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
+
       CALL add_var( this_list, prefix//'t_rad_srf'//suffix, estate%t_rad_srf,                           &
         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
         & t_cf_var('surface_temperature_rad', 'K', '', DATATYPE_FLT32),                                 &

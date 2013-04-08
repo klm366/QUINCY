@@ -45,7 +45,7 @@ CONTAINS
 
     USE mo_veg_interface,     ONLY: update_vegetation_1, update_vegetation_2
     USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, &
-                                    update_surface_energy, update_surface_fluxes
+                                    update_surface_energy, update_surface_fluxes, update_t_srf
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
     USE mo_soil_memory_class, ONLY: copy_soil_mem
 
@@ -148,7 +148,7 @@ CONTAINS
     ! First part of soil that is applied before the soil is updated,
     ! in particular:
     ! 1. Compute skin reservoir and snow fractions on ground (for the moment also on canopy)
-    CALL update_soil_1(tile, iblk, ics, ice, nc)
+    CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
 
 !!$    ! Update soil
 !!$    CALL update_soil(tile, iblk, ics, ice, nc)
@@ -162,6 +162,9 @@ CONTAINS
     ! in particular:
     ! 1. Compute ground albedo
     CALL update_soil_2(tile, iblk, ics, ice, nc)
+
+    ! Apply time filter for surface temperature
+    CALL update_t_srf(tile, iblk, ics, ice, nc)
 
     ! Finally, give the required variables back to the atmosphere
     CALL update_land2atm(tile, iblk, ics, ice,                                                                                  &

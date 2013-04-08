@@ -29,17 +29,18 @@ MODULE mo_srf_memory_class
 
   TYPE t_srf_energy_state
     REAL(wp), POINTER :: &
-      t_srf         (:,:), &
-      t_srf_old     (:,:), &
-      t_srf_unfilt  (:,:), &
-      t_rad_srf     (:,:), &
-!!$      t_eff_srf     (:,:), &
-      s_srf         (:,:), &  !< Dry static energy at surface (new timestep)
-!!$      s_srf_old     (:,:), &  !< Dry static energy at surface (old timestep)
-      qsat_srf      (:,:), &
-!!$      qsat_srf_old  (:,:), &
-      fact_q_air    (:,:), &  !< cair in echam
-      fact_qsat_srf (:,:)     !< csat in echam
+      t_srf            (:,:), &
+      t_srf_old        (:,:), &
+      t_srf_unfilt     (:,:), &
+      t_srf_unfilt_old (:,:), &
+      t_rad_srf        (:,:), &
+!!$      t_eff_srf        (:,:), &
+      s_srf            (:,:), &  !< Dry static energy at surface (new timestep)
+!!$      s_srf_old        (:,:), &  !< Dry static energy at surface (old timestep)
+      qsat_srf         (:,:), &
+!!$      qsat_srf_old     (:,:), &
+      fact_q_air       (:,:), &  !< cair in echam
+      fact_qsat_srf    (:,:)     !< csat in echam
   END TYPE t_srf_energy_state
 
   TYPE t_srf_water_state

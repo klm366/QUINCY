@@ -12,7 +12,7 @@ MODULE mo_soil_init
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile
   USE mo_soil_memory_class, ONLY: t_soil_memory, t_soil_phys_state, t_soil_energy_state, t_soil_energy_flux, &
-                                  t_soil_water_state !, t_soil_water_flux
+                                  t_soil_water_state, t_soil_water_flux
   USE mo_jsb_base,          ONLY: get_model
   USE mo_netcdf_read,       ONLY: netcdf_read_oncells_2d_time, netcdf_read_oncells_2d
   USE mo_kind,              ONLY: wp
@@ -58,7 +58,7 @@ CONTAINS
     TYPE(t_soil_energy_state), POINTER :: energy
     TYPE(t_soil_energy_flux),  POINTER :: eflux
     TYPE(t_soil_water_state),  POINTER :: water
-!!$    TYPE(t_soil_water_flux),   POINTER :: wflux
+    TYPE(t_soil_water_flux),   POINTER :: wflux
 
     INTEGER :: isoil
     REAL(wp), POINTER :: t_srf(:,:), t_srf_mon(:,:,:)
@@ -66,8 +66,6 @@ CONTAINS
       & vpwp           (:,  :),    & !< Volumetric soil permanent wilting point [m/m]
       & vpor           (:,  :),    & !< Volumetric soil porosity following Cosby et al. [m/m]
       & vfc            (:,  :),    & !< Volumetric soil field capacity [m/m]
-      & shc            (:,  :),    & !< Saturated hydraulic conductivity [m/s]
-      & mpot           (:,  :),    & !< Matrix potential [m]
       & fao            (:,  :),    & !< FAO soil types
       & return_pointer (:,  :)       !< temporary pointer
 
@@ -135,14 +133,6 @@ CONTAINS
 !!$      & patch=model%grid%patch)
     phys%bclapp(:,:) = 8.58824_wp  ! Temporary
 
-    ! Matrix potential
-!!$    return_pointer => netcdf_read_oncells_2d(         &
-!!$      & filename=model%config%soil%bc_filename,       &
-!!$      & variable_name='moisture_pot',                 &
-!!$      & fill_array = phys%mpot,       &
-!!$      & patch=model%grid%patch)
-    phys%mpot(:,:) = 0.275715_wp  ! Temporary
-
     ! Pore size distribution index
 !!$    return_pointer => netcdf_read_oncells_2d(         &
 !!$      & filename=model%config%soil%bc_filename,       &
@@ -192,7 +182,7 @@ CONTAINS
       energy%t_soil_bcoef (:,isoil,:) = 1._wp
     END DO
 
-    energy%hcap_grnd (:,:) = 0._wp
+    energy%hcap_grnd (:,:) = 1._wp
 
     ! Initialize water state
 
@@ -215,30 +205,31 @@ CONTAINS
     ! Water content at field capacity
     !
     ! Read volumetric field capacity from boundary condition file
-!!$    ws_vfc => netcdf_read_oncells_2d(             &
+!!$    vfc => netcdf_read_oncells_2d(             &
 !!$      & filename=model%config%soil%bc_filename,   &
 !!$      & variable_name='soil_field_cap',           &
 !!$      & patch=model%grid%patch)
+
     ! Get field capacity by multiplying with soil layer thicknesses
     DO i=1,model%config%soil%nsoil_water
-!!$      water&ws_fc_l(:,i,:) = ws_vfc(:,:) * phys%soil_depth_l(:,i,:)
-      water%ws_fc_l(:,i,:) = 0.318517_wp * phys%soil_depth_l(:,i,:)     ! Temporary
+!!$      water%ws_fc_l(:,i,:) = vfc(:,:) * phys%soil_depth_l(:,i,:)
+      water%ws_fc_l(:,i,:) = 0.318517_wp * phys%soil_depth_l(:,i,:) ! Temporary
     END DO
-!!$    DEALLOCATE(ws_vfc)
+!!$    DEALLOCATE(vfc)
 
     ! Water content at permanent wilting point
     !
     ! Read volumetric wilting point from boundary condition file
-!!$    ws_vpwp => netcdf_read_oncells_2d(            &
+!!$    vpwp => netcdf_read_oncells_2d(            &
 !!$      & filename=model%config%soil%bc_filename,   &
 !!$      & variable_name='wilting_point',            &
 !!$      & patch=model%grid%patch)
     ! Get permanent wilting point by multiplying with soil layer thicknesses
     DO i=1,model%config%soil%nsoil_water
-!!$      water&ws_pwp_l(:,i,:) = ws_vpwp(:,:) * phys%soil_depth_l(:,i,:)
+!!$      water&ws_pwp_l(:,i,:) = vpwp(:,:) * phys%soil_depth_l(:,i,:)
       water%ws_pwp_l(:,i,:) = 0.185245_wp * phys%soil_depth_l(:,i,:)     ! Temporary
     END DO
-!!$    DEALLOCATE(ws_vpwp)
+!!$    DEALLOCATE(vpwp)
 
     ! Water content at saturation (water holding capacity)
     !
@@ -255,7 +246,10 @@ CONTAINS
 
     ! Initialize water fluxes
     !
-!!$    wflux => soil%water_flux
+    wflux => soil%water_flux
+
+    wflux%runoff        (:,:) = 0._wp
+    wflux%drainage      (:,:) = 0._wp
 
     ! Propagate initial conditions down the tile structure, starting with the tile with which this subroutine was called initially
     ! TBD: sub-tiles should not read the netcdf files again
