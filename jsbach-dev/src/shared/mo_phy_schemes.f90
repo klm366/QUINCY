@@ -82,7 +82,7 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: t_srf
 
-    thermal_radiation = stbo * zemiss_def * t_srf
+    thermal_radiation = stbo * zemiss_def * t_srf**4
 
   END FUNCTION thermal_radiation
 

@@ -107,6 +107,7 @@ CONTAINS
       & variable_name='forest_fract',                &
       & fill_array = phys%fract_forest,              &
       & patch=model%grid%patch)
+    phys%fract_forest(:,:) = MERGE(phys%fract_forest(:,:), 0._wp, phys%fract_forest(:,:) >= 0._wp)
 
     phys%canopy_cond(:,:) = 0._wp
 

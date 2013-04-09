@@ -191,13 +191,13 @@ CONTAINS
         & GRID_UNSTRUCTURED_CELL, ZA_DEPTH_BELOW_LAND,                                                  &
         & t_cf_var('soil_temperature_bcoef', '', '', DATATYPE_FLT32),                                   &
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
-                  & ldims=shape3d_e, initval_r=0.0_wp )
+        & ldims=shape3d_e, initval_r=0.0_wp )
 
       CALL add_var( this_list, prefix//'heat_cap_grnd'//suffix, estate%hcap_grnd,                       &
         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
         & t_cf_var('heat_capacity_ground', 'J m-2 K-1', '', DATATYPE_FLT32),                            &
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
-        & ldims=shape2d, initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & ldims=shape2d, initval_r=0.0_wp )
 
     END FUNCTION new_energy_state
 

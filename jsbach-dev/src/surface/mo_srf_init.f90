@@ -82,6 +82,7 @@ CONTAINS
       & variable_name='orostd',                       &
       & fill_array = phys%oro_stddev,                 &
       & patch=model%grid%patch)
+    phys%oro_stddev(:,:) = MERGE(phys%oro_stddev(:,:), 0._wp, phys%oro_stddev(:,:) >= 0._wp)
     phys%oro_stddev(:,:) = 140.606_wp   ! Temporary
 
     ! Albedo

@@ -46,7 +46,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      , prain, psnow                            &
      , lmask, lpglac       &
      , palac &
-     , psnacl, psnmel, progl &
+!!$     , psnacl, psnmel, progl &
      , pmlres, tte_corr &
 !++mgs : add instantaneous snow melt for drydep calculation
      , psmelt   &
@@ -171,9 +171,9 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   REAL(wp), INTENT(inout) :: psn(kbdim)
   REAL(wp), INTENT(inout) :: psnc(kbdim)
   REAL(wp), INTENT(inout) :: pgld(kbdim)
-  REAL(wp), INTENT(inout) :: psnacl(kbdim)
-  REAL(wp), INTENT(inout) :: psnmel(kbdim)
-  REAL(wp), INTENT(inout) :: progl(kbdim)
+!!$  REAL(wp), INTENT(inout) :: psnacl(kbdim)
+!!$  REAL(wp), INTENT(inout) :: psnmel(kbdim)
+!!$  REAL(wp), INTENT(inout) :: progl(kbdim)
 
   REAL(wp), INTENT(out)   :: pevwsd(kbdim)
   REAL(wp), INTENT(out)   :: palac(kbdim)
@@ -333,13 +333,14 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      ! Accumulate water fluxes
      ! Note: conversion from m water equivalent to kg/m^2s - multiply by rhoh2o / zdtime
      !       accumulation - multiply by zdtime
-      DO 601 jl=1,kbdim
-         IF (lmask(jl)) THEN
-            IF (.NOT. lpglac(jl)) psnacl(jl) = psnacl(jl)  +zsn(jl) * rhoh2o
-            psnmel(jl) = psnmel(jl)  +zsnmel(jl) * rhoh2o
-            IF (lpglac(jl)) progl(jl)  = progl(jl)   +zrogl(jl)  *rhoh2o
-         END IF
- 601  END DO
+!!$      DO 601 jl=1,kbdim
+!!$         IF (lmask(jl)) THEN
+!!$            IF (.NOT. lpglac(jl)) psnacl(jl) = psnacl(jl)  +zsn(jl) * rhoh2o
+!!$            psnmel(jl) = psnmel(jl)  +zsnmel(jl) * rhoh2o
+!!$            IF (lpglac(jl)) progl(jl)  = progl(jl)   +zrogl(jl)  *rhoh2o
+!!$         END IF
+!!$ 601  END DO
+
 !++mgs
 !--- Included for dry deposition ---------------------------------------
       psmelt(1:kbdim) = zsnmel(1:kbdim) * rhoh2o
@@ -1807,11 +1808,11 @@ END SUBROUTINE soildef
 
 SUBROUTINE soilchange (kidia, kfdia, klon, kdeep,  isch ,  &
     dt, zdiags, loland, &
-!         *** - Soil moisture layers,  
+!         *** - Soil moisture layers,
     wsi   , wsim1m, dzr, dzrsi  , dzsi, zwsat, zwsfc, &
 !         ***   Vertical water fluxes  -- evap. fluxes over land
     finfil, drain, aetrans, aebsoil,                  &
-!         ***   Reduction of evaporation if necessary 
+!         ***   Reduction of evaporation if necessary
     redevap)
 
 !     Intermediate routine for changing 5 soil moisture layers due to
@@ -1923,7 +1924,7 @@ REAL(wp) :: zrebsoil(klon), zretrans(klon)
 REAL(wp) :: zdum, zdum2, zrel
 REAL(wp) :: zover(klon)
 
-! *** Constants 
+! *** Constants
   zwdmin = 0.05_wp
   zwilt  = 0.35_wp ! Read WAVA later on
 
@@ -1955,7 +1956,7 @@ REAL(wp) :: zover(klon)
         END IF
       END IF
     END DO
-    
+
 !       *** Reduction of AEBSOIL necessary? --> diagnostic
     DO jl=kidia, kfdia
       IF (loland(jl)) THEN
@@ -1972,20 +1973,20 @@ REAL(wp) :: zover(klon)
       DO  jl=kidia, kfdia
         IF (loland(jl)) THEN
           IF (aetrans(jl) < -zeps) THEN
-            
+
 !           *** Distribute transpiration over rooting depth
-!           *** for this, calculate rooted water depth 
+!           *** for this, calculate rooted water depth
             IF (dzr(jl) <= zeps) THEN
-              
+
 !             *** Special case: sealed grid cell
               IF (jk == 1) zretrans(jl) = zretrans(jl) + aetrans(jl)
-              
+
             ELSE IF (dzrsi(jl,jk) > 0) THEN
 !             *** Note that transpiration should only access water until the
 !             *** rooting depth --> pay regard where the relative term of the
 !             *** rooted depth within the layer has to be applied
               zrel = MIN(dzrsi(jl,jk)/dzsi(jl,jk), 1._wp)
-              
+
               zdum2 = zwsfc(jl,jk)*zwilt * zrel
               IF (wsi(jl,jk)*zrel >= zdum2) THEN
                 zdum = wsi(jl,jk) * zrel + aetrans(jl) * dzrsi(jl,jk)/dzr(jl)
@@ -2015,7 +2016,7 @@ REAL(wp) :: zover(klon)
         redevap(jl) = redevap(jl) + zrebsoil(jl) + zretrans(jl)
       END IF
     END DO
-    
+
 !   *** If redevap not zero, soil moisture must be changed
 !   *** to close the land surface water balance.
 !   *** Reduction will be relatively distributed to the wetness
@@ -2038,11 +2039,11 @@ REAL(wp) :: zover(klon)
 ! ******* Change by infiltration
   IF (isch == 2 .OR. isch == 3) THEN
     zover(kidia:kfdia) = finfil(kidia:kfdia)*dt
-    
+
     DO  jk = 1, kdeep
       DO  jl=kidia, kfdia
         IF (loland(jl)) THEN
-          
+
 !         *** infiltration-loop for 5 layer routine
           wsi(jl,jk) = wsi(jl,jk) + zover(jl)
           IF (wsi(jl,jk) > zwsfc(jl,jk)) THEN
@@ -2054,7 +2055,7 @@ REAL(wp) :: zover(klon)
         END IF
       END DO
     END DO
-  
+
 !   *** If infiltration cannot fully enter the soil
     DO jl=kidia, kfdia
       IF (loland(jl)) THEN

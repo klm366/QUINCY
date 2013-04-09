@@ -14,7 +14,7 @@ MODULE mo_soil_interface
   USE mo_jsb_base,        ONLY: get_model
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: message, finish
   USE mo_util_string,     ONLY: one_of
 
   IMPLICIT NONE
@@ -45,11 +45,14 @@ CONTAINS
       & fract          (:),    &
       & t_srf_unfilt   (:),    &
       & t_air          (:),    &
+      & q_air          (:),    &
       & wind_10m       (:),    &
       & rain           (:),    &
       & snow           (:),    &
+      & wsr_soil       (:),    &
       & wsr_srf        (:),    &
       & wfract_srf     (:),    &
+      & wsn_soil       (:),    &
       & wsn_srf        (:),    &
       & sfract_srf     (:),    &
       & wsn_can        (:),    &
@@ -82,7 +85,6 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp) :: &
-      q_air(nc), &
       wsr_max(nc), &
       evapotrans_no_snow_skin(nc), &
       tte_corr(nc), &
@@ -121,11 +123,14 @@ CONTAINS
 
     t_srf_unfilt   => tile%mem%srf  %energy_state   %t_srf_unfilt        (ics:ice,    iblk)
     t_air          => tile%mem      %atm2land       %t_air               (ics:ice,    iblk)
+    q_air          => tile%mem      %atm2land       %q_air               (ics:ice,    iblk)
     wind_10m       => tile%mem      %atm2land       %wind_10m            (ics:ice,    iblk)
     rain           => tile%mem      %atm2land       %rain                (ics:ice,    iblk)
     snow           => tile%mem      %atm2land       %snow                (ics:ice,    iblk)
+    wsr_soil       => tile%mem%soil %water_state    %wsr_soil            (ics:ice,    iblk)
     wsr_srf        => tile%mem%srf  %water_state    %wsr_srf             (ics:ice,    iblk)
     wfract_srf     => tile%mem%srf  %water_state    %wfract_srf          (ics:ice,    iblk)
+    wsn_soil       => tile%mem%soil %water_state    %wsn_soil            (ics:ice,    iblk)
     wsn_srf        => tile%mem%srf  %water_state    %wsn_srf             (ics:ice,    iblk)
     sfract_srf     => tile%mem%srf  %water_state    %sfract_srf          (ics:ice,    iblk)
     wsn_can        => tile%mem%veg  %water_state    %wsn_can             (ics:ice,    iblk)
@@ -179,11 +184,12 @@ CONTAINS
     END IF
 
     CALL update_surf_down(nc, dtime, lstart, &
-      & q_air(:), t_srf_unfilt(:), wind_10m(:), t_air(:), wsr_srf(:), wfract_srf(:), &
-      & wsr_max(:), wsn_srf(:), sfract_srf(:), wsn_can(:), glacier_depth(:), &
+      & q_air(:), t_srf_unfilt(:), wind_10m(:), t_air(:), wsr_soil(:), wfract_srf(:), &
+      & wsr_max(:), wsn_soil(:), sfract_srf(:), wsn_can(:), glacier_depth(:), &
       & hcap_grnd(:), evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), rain(:),  snow(:), &
       & is_present(:), is_glacier(:), glacier_precip_minus_evap(:), &
-      & snow_acc(:), snow_melt_acc(:), glacier_runoff_acc(:), melt_water_excess(:), &
+!!$      & snow_acc(:), snow_melt_acc(:), glacier_runoff_acc(:), &
+      melt_water_excess(:), &
       & tte_corr(:), snow_melt(:) &
       & )
 
@@ -193,7 +199,7 @@ CONTAINS
       & hcap_grnd(:), grnd_hflx(:))
 
     CALL update_surf_up(nc, dtime, model%config%soil%nsoil_water, &
-      & wsr_srf(:), wfract_srf(:), wsr_max(:), ws_l(:,1), &
+      & wsr_soil(:), wfract_srf(:), wsr_max(:), ws_l(:,1), &
       & SPREAD(0.5_wp, NCOPIES=nc, DIM=1), & ! Temporary
       & t_soil(:,1), sfract_srf(:), oro_stddev(:), &
       & evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), &
@@ -209,6 +215,9 @@ CONTAINS
       & psdi(:), &
       & jllog &
       & )
+
+    wsn_srf(:) = wsn_soil(:) + wsn_can(:)
+    wsr_srf(:) = wsr_soil(:) ! + wsr_can(:)
 
   END SUBROUTINE update_soil_1
 

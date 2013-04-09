@@ -158,7 +158,7 @@ CONTAINS
     wfract_can(:) = MERGE(MIN(1._wp, wsr_can(:) / wsr_max(:)), 0._wp, wsr_max(:) > EPSILON(1._wp))
 
     ! Snow fraction on soil
-    sfract_soil(:) = snow_fract(wsr_soil(:), oro_stddev(:))
+    sfract_soil(:) = snow_fract(wsn_soil(:), oro_stddev(:))
     sfract_soil(:) = MERGE(sfract_can(:), sfract_soil(:), sfract_soil(:) < EPSILON(1._wp) .AND. sfract_can(:) > EPSILON(1._wp))
 
     ! Snow fraction on canopy
@@ -173,11 +173,13 @@ CONTAINS
     qsat_srf_old(:) = qsat(t_srf_old(:), press_srf(:))
     evap_pot(:) =  heat_transfer_coef(drag_srf(:), steplen) * (qsat_srf_old(:) - q_air(:))
     !
-    WHERE (sfract_soil(:) > 0._wp)
-      sfract_soil(:) = sfract_soil(:) / MAX(1._wp, sfract_soil(:) * evap_pot(:) * dtime / (rhoh2o * (wsn_soil(:) + wsn_can(:))))
+    WHERE (sfract_soil(:) > 0._wp .AND. wsn_soil(:)+wsn_can(:) > EPSILON(1._wp))
+      sfract_soil(:) = sfract_soil(:) / MAX(1._wp, sfract_soil(:) * evap_pot(:) * dtime / (rhoh2o * &
+        & MAX(EPSILON(1._wp),(wsn_soil(:) + wsn_can(:)))))
     END WHERE
-    WHERE (wfract_soil(:) > 0._wp)
-      wfract_soil(:) = wfract_soil(:) / MAX(1._wp, wfract_soil(:) * evap_pot(:) * dtime / (rhoh2o * (wsr_soil(:) + wsr_can(:))))
+    WHERE (wfract_soil(:) > 0._wp .AND. wsr_soil(:)+wsr_can(:) > EPSILON(1._wp))
+      wfract_soil(:) = wfract_soil(:) / MAX(1._wp, wfract_soil(:) * evap_pot(:) * dtime / (rhoh2o * &
+        & MAX(EPSILON(1._wp), (wsr_soil(:) + wsr_can(:)))))
     END WHERE
 
     wfract_srf(:) = wfract_soil(:) + wfract_can(:)
@@ -352,6 +354,8 @@ CONTAINS
     t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
     t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
     t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
+
+    WHERE(t_srf_unfilt(:) < 200._wp) t_srf_unfilt(:) = 200._wp
 
     ! Time filter for surface temperature
     ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
