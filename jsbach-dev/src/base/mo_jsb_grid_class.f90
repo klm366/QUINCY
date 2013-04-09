@@ -12,7 +12,7 @@ MODULE mo_jsb_grid_class
   USE mo_kind,               ONLY: wp
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message_text, message, print_value, finish
-  USE mo_jsb_domain_iface,   ONLY: t_patch
+  USE mo_jsb_domain_iface,   ONLY: t_patch, p_patch
 
   IMPLICIT NONE
   PRIVATE
@@ -131,16 +131,16 @@ CONTAINS
     new%lsf(:,:) = 1.0_wp
     new%ntotal_g = patch%n_patch_cells_g
 
-    ALLOCATE(new%patch)
-    new%patch%id = patch%id
-    new%patch%n_patch_cells = patch%n_patch_cells
-    new%patch%n_patch_cells_g = patch%n_patch_cells_g
-    new%patch%nblks_c = patch%nblks_c
-    new%patch%npromz_c = patch%npromz_c
-    new%patch%grid_filename = patch%grid_filename
-    new%patch%comm_pat_gather_c = patch%comm_pat_gather_c
-    new%patch%cells%glb_index = patch%cells%glb_index
-!!$    new%patch => patch
+!!$    ALLOCATE(new%patch)
+!!$    new%patch%id = patch%id
+!!$    new%patch%n_patch_cells = patch%n_patch_cells
+!!$    new%patch%n_patch_cells_g = patch%n_patch_cells_g
+!!$    new%patch%nblks_c = patch%nblks_c
+!!$    new%patch%npromz_c = patch%npromz_c
+!!$    new%patch%grid_filename = patch%grid_filename
+!!$    new%patch%comm_pat_gather_c = patch%comm_pat_gather_c
+!!$    new%patch%cells%glb_index = patch%cells%glb_index
+    new%patch => p_patch(patch%id)
 
     new%configured = .TRUE.
 

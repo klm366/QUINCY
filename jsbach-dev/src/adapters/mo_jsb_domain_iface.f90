@@ -21,7 +21,7 @@ MODULE mo_jsb_domain_iface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_patch
+  PUBLIC :: t_patch, p_patch
   PUBLIC :: get_blk_start, get_blk_end, get_col_start, get_col_end
 
 #ifndef __ICON__
