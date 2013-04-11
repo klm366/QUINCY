@@ -200,6 +200,12 @@ CONTAINS
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
         & ldims=shape2d, initval_r=0.0_wp )
 
+      CALL add_var( this_list, prefix//'fact_qsat_trans_srf'//suffix, estate%fact_qsat_trans_srf,       &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('factor_qsat_trans_srf', '', '', DATATYPE_FLT32),                                    &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
+
     END FUNCTION new_energy_state
 
     FUNCTION new_energy_flux() RESULT(eflux)

@@ -39,8 +39,9 @@ MODULE mo_srf_memory_class
 !!$      s_srf_old        (:,:), &  !< Dry static energy at surface (old timestep)
       qsat_srf         (:,:), &
 !!$      qsat_srf_old     (:,:), &
-      fact_q_air       (:,:), &  !< cair in echam
-      fact_qsat_srf    (:,:)     !< csat in echam
+      fact_q_air       (:,:), &  !< cair in echam6
+      fact_qsat_srf    (:,:), &  !< csat in echam6
+      fact_qsat_trans_srf (:,:)   !< csat_transpiration in echam6/jsbach
   END TYPE t_srf_energy_state
 
   TYPE t_srf_water_state

@@ -154,6 +154,12 @@ CONTAINS
          & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),         &
          & ldims=shape2d, initval_r=0.0_wp )
 
+    CALL add_var( this_list, prefix//'pch'//suffix, atm2land%pch,                          &
+         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                             &
+         & t_cf_var('pch', '', '', DATATYPE_FLT32),                                        &
+         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),         &
+         & ldims=shape2d, initval_r=0.0_wp )
+
     CALL add_var( this_list, prefix//'cos_zenith_angle'//suffix, atm2land%cos_zenith_angle,&
          & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                             &
          & t_cf_var('cosine_zenith_angle', '', '', DATATYPE_FLT32),                        &

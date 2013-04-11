@@ -121,6 +121,7 @@ CONTAINS
 !!$    energy%qsat_srf_old     (:,:) = 0._wp
     energy%fact_q_air       (:,:) = 0.5_wp
     energy%fact_qsat_srf    (:,:) = 0.5_wp
+    energy%fact_qsat_trans_srf (:,:) = 0.5_wp
 
     ! Initialize water state
 

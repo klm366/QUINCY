@@ -71,6 +71,7 @@ CONTAINS
       & oro_stddev     (:),    &
       & runoff_acc     (:),    &
       & drainage_acc   (:),    &
+      & ws             (:),    &
       & ws_l           (:,:),  &
       & ws_fc_l        (:,:),  &
       & root_depth     (:),    &
@@ -149,6 +150,7 @@ CONTAINS
     oro_stddev     => tile%mem%srf  %phys_state     %oro_stddev          (ics:ice,    iblk)
     runoff_acc     => tile%mem%soil %water_flux     %runoff              (ics:ice,    iblk)
     drainage_acc   => tile%mem%soil %water_flux     %drainage            (ics:ice,    iblk)
+    ws             => tile%mem%soil %water_state    %ws                  (ics:ice,    iblk)
     ws_l           => tile%mem%soil %water_state    %ws_l                (ics:ice, :, iblk)
     ws_fc_l        => tile%mem%soil %water_state    %ws_fc_l             (ics:ice, :, iblk)
     root_depth     => tile%mem%veg  %phys_state     %root_depth          (ics:ice,    iblk)
@@ -199,7 +201,7 @@ CONTAINS
       & hcap_grnd(:), grnd_hflx(:))
 
     CALL update_surf_up(nc, dtime, model%config%soil%nsoil_water, &
-      & wsr_soil(:), wfract_srf(:), wsr_max(:), ws_l(:,1), &
+      & wsr_soil(:), wfract_srf(:), wsr_max(:), ws(:), &
       & SPREAD(0.5_wp, NCOPIES=nc, DIM=1), & ! Temporary
       & t_soil(:,1), sfract_srf(:), oro_stddev(:), &
       & evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), &

@@ -32,6 +32,7 @@ MODULE mo_atmland_memory_class
       t_bcoef          (:,:), &
       q_acoef          (:,:), &
       q_bcoef          (:,:), &
+      pch              (:,:), &
       cos_zenith_angle (:,:)
   END type t_atm2land_memory
 

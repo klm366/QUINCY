@@ -111,10 +111,10 @@ CONTAINS
     ! Get water stress
 
     ! Temporary fix for compatibility with Thomas ICON setup ... later replace tmp_* variables!
-    ALLOCATE(tmp_soil_depth_l(nc,nsoil), tmp_root_depth_l(nc,nsoil), tmp_ws_l(nc,nsoil), tmp_ws_fc_l(nc,nsoil))
+    ALLOCATE(tmp_soil_depth_l(nc,1), tmp_root_depth_l(nc,1), tmp_ws_l(nc,1), tmp_ws_fc_l(nc,1))
     tmp_soil_depth_l(:,:) = 1._wp
     tmp_root_depth_l(:,:) = 1._wp
-    tmp_ws_l        (:,:) = SPREAD(ws(:), NCOPIES=nsoil, DIM=2)
+    tmp_ws_l        (:,:) = SPREAD(ws(:), NCOPIES=1, DIM=2)
     tmp_ws_fc_l     (:,:) = 0.5_wp
     ! 1. Calculate water content and field capacity in the root zone
     ws_root   (:)  = water_in_root_zone(tmp_ws_l   (:,:),  tmp_soil_depth_l(:,:), tmp_root_depth_l(:,:))

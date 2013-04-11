@@ -21,7 +21,7 @@ MODULE mo_srf_interface
   PRIVATE
 
   PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy
-  PUBLIC :: update_surface_fluxes, update_t_srf
+  PUBLIC :: update_surface_fluxes, update_t_srf, update_humidity_scaling
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_interface'
 
@@ -367,6 +367,7 @@ CONTAINS
   SUBROUTINE update_surface_fluxes( tile, iblk, ics, ice, nc, steplen)
 
     USE mo_phy_schemes,        ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_physical_constants, ONLY: alv, als
 
     TYPE(t_jsb_tile),  POINTER    :: tile
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
@@ -387,12 +388,15 @@ CONTAINS
       & q_acoef        (:),    &
       & q_bcoef        (:),    &
       & fact_qsat_srf  (:),    &
+      & fact_qsat_trans_srf  (:),    &
       & fact_q_air     (:),    &
       & drag_srf       (:),    &
       & latent_hflx    (:),    &
       & sensible_hflx  (:),    &
       & evapopot       (:),    &
-      & evapotrans     (:)
+      & evapotrans     (:),    &
+      & trans          (:),    &
+      & sfract_srf     (:)
 
     ! Locally allocated vectors
     !
@@ -421,11 +425,14 @@ CONTAINS
     q_bcoef              => tile%mem      %atm2land     %q_bcoef          (ics:ice, iblk)
     fact_q_air           => tile%mem%srf  %energy_state %fact_q_air       (ics:ice, iblk)
     fact_qsat_srf        => tile%mem%srf  %energy_state %fact_qsat_srf    (ics:ice, iblk)
+    fact_qsat_trans_srf  => tile%mem%srf  %energy_state %fact_qsat_trans_srf (ics:ice, iblk)
     drag_srf             => tile%mem      %atm2land     %drag_srf         (ics:ice, iblk)
     sensible_hflx        => tile%mem%srf  %energy_flux  %sensible_hflx    (ics:ice, iblk)
     latent_hflx          => tile%mem%srf  %energy_flux  %latent_hflx      (ics:ice, iblk)
     evapotrans           => tile%mem%srf  %water_flux   %evapotrans       (ics:ice, iblk)
+    trans                => tile%mem%srf  %water_flux   %trans            (ics:ice, iblk)
     evapopot             => tile%mem%srf  %water_flux   %evapopot         (ics:ice, iblk)
+    sfract_srf           => tile%mem%srf  %water_state  %sfract_srf       (ics:ice, iblk)
 
     ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
     !
@@ -444,6 +451,7 @@ CONTAINS
     !
     evapotrans(:) = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:))        ! Evapotranspiratin
     evapopot  (:) = heat_tcoef(:) * (q_air    (:) - qsat_srf    (:))        ! Potential evaporation
+    trans     (:) = fact_qsat_trans_srf(:) * evapopot(:)
 
     ! Compute sensible heat flux
     !
@@ -457,9 +465,91 @@ CONTAINS
 
     ! Compute latent heat flux
     !
-    ! TBD
+    latent_hflx(:) = alv * evapotrans(:) + (als - alv) * sfract_srf(:) * evapopot(:)
 
   END SUBROUTINE update_surface_fluxes
+
+  SUBROUTINE update_humidity_scaling( tile, iblk, ics, ice, nc)
+
+    USE mo_srf_constants,  ONLY: rhoh2o
+    USE mo_soil_constants, ONLY: ws_wilt_fract
+
+    TYPE(t_jsb_tile),  POINTER    :: tile
+    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+
+    ! Local variables
+    !
+    TYPE(t_jsb_model), POINTER    :: model
+
+    ! Pointers to variables in memory
+    REAL(wp), POINTER :: &
+      fract_fpc_max (:), &
+      lai           (:), &
+      ws_l          (:,:), &
+!!$      sfract_can    (:), &
+!!$      sfract_soil   (:), &
+!!$      wfract_can    (:), &
+!!$      wfract_soil   (:), &
+      sfract_srf    (:), &
+      wfract_srf    (:), &
+      fact_q_air    (:), &
+      fact_qsat_srf (:), &
+      fact_qsat_trans_srf (:), &
+      canopy_cond   (:), &
+      pch           (:), &
+      wind_air      (:)
+
+    ! Locally allocated vectors
+    REAL(wp) :: &
+      wsr_max(nc)      !< Water holding capacity of skin reservoir (soil and canopy)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
+
+    IF (one_of('soil', tile%components) < 1) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of humidity weights')
+
+    model => get_model(tile%owner_model_id)
+
+    ! Get reference to variables for current block
+    !
+    fract_fpc_max    => tile%mem%veg  %phys_state   %fract_fpc_max       (ics:ice,    iblk)
+    lai              => tile%mem%veg  %phys_state   %lai                 (ics:ice,    iblk)
+    canopy_cond      => tile%mem%veg  %phys_state   %canopy_cond         (ics:ice,    iblk)
+    ws_l             => tile%mem%soil %water_state  %ws_l                (ics:ice, :, iblk)
+!!$    sfract_can       => tile%mem%veg  %water_state  %sfract_can          (ics:ice,    iblk)
+!!$    sfract_soil      => tile%mem%soil %water_state  %sfract_soil         (ics:ice,    iblk)
+!!$    wfract_can       => tile%mem%veg  %water_state  %wfract_can          (ics:ice,    iblk)
+!!$    wfract_soil      => tile%mem%soil %water_state  %wfract_soil         (ics:ice,    iblk)
+    sfract_srf       => tile%mem%srf  %water_state  %sfract_srf          (ics:ice,    iblk)
+    wfract_srf       => tile%mem%srf  %water_state  %wfract_srf          (ics:ice,    iblk)
+    fact_q_air       => tile%mem%srf  %energy_state %fact_q_air          (ics:ice,    iblk)
+    fact_qsat_srf    => tile%mem%srf  %energy_state %fact_qsat_srf       (ics:ice,    iblk)
+    fact_qsat_trans_srf  => tile%mem%srf  %energy_state %fact_qsat_trans_srf (ics:ice,    iblk)
+    pch              => tile%mem      %atm2land     %pch                 (ics:ice,    iblk)
+    wind_air         => tile%mem      %atm2land     %wind_air            (ics:ice,    iblk)
+
+    ! Maximum capacity of skin reservoir (soil + canopy)
+    wsr_max(:) = model%config%soil%wsr_capacity * (1._wp + lai(:) * fract_fpc_max(:))
+
+!!$    PRINT*,'canopy cond ', MINVAL(canopy_cond(:)), MAXVAL(canopy_cond(:))
+!!$    PRINT*,'ws_l        ', MINVAL(ws_l(:,1)), MAXVAL(ws_l(:,1))
+!!$    PRINT*,'wsr_max     ', MINVAL(wsr_max(:)), MAXVAL(wsr_max(:))
+!!$    PRINT*,'sfract_srf', MINVAL(sfract_srf(:)), MAXVAL(sfract_srf(:))
+!!$    PRINT*,'wfract_srf', MINVAL(wfract_srf(:)), MAXVAL(wfract_srf(:))
+!!$    PRINT*,'pch', MINVAL(pch(:)), MAXVAL(pch(:))
+!!$    PRINT*,'wind_air', MINVAL(wind_air(:)), MAXVAL(wind_air(:))
+    WHERE (ws_l(:,1) > ws_wilt_fract * wsr_max(:))
+      fact_qsat_srf(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * &
+        & (wfract_srf(:) + ( 1._wp - wfract_srf(:)) /                &
+        & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:))))
+    ELSEWHERE
+      fact_qsat_srf(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * wfract_srf(:)
+    END WHERE
+    fact_q_air(:)          = fact_qsat_srf(:)
+    fact_qsat_trans_srf(:) = fact_qsat_srf(:)
+
+  END SUBROUTINE update_humidity_scaling
 
 !!$  SUBROUTINE update_srf( tile, iblk, ics, ice)
 !!$

@@ -24,13 +24,13 @@ CONTAINS
 
   SUBROUTINE update_atm2land(tile, iblk, ics, ice, &
     & t_air, q_air, rain, snow, wind_air, wind_10m, lwrad_srf_down, swrad_srf_down, &
-    & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, cos_zenith_angle)
+    & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
 
     TYPE(t_jsb_tile),   INTENT(in) :: tile
     INTEGER,            INTENT(in) :: iblk, ics, ice
     REAL(wp), OPTIONAL, INTENT(in) :: &
       & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:), lwrad_srf_down(:), swrad_srf_down(:), &
-      & press_srf(:), drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), cos_zenith_angle(:)
+      & press_srf(:), drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), cos_zenith_angle(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_atm2land'
 
@@ -50,12 +50,15 @@ CONTAINS
     IF (PRESENT(t_bcoef))          tile%mem%atm2land%t_bcoef          (ics:ice, iblk) = t_bcoef          (:)
     IF (PRESENT(q_acoef))          tile%mem%atm2land%q_acoef          (ics:ice, iblk) = q_acoef          (:)
     IF (PRESENT(q_bcoef))          tile%mem%atm2land%q_bcoef          (ics:ice, iblk) = q_bcoef          (:)
+    IF (PRESENT(pch))              tile%mem%atm2land%pch              (ics:ice, iblk) = pch              (:)
     IF (PRESENT(cos_zenith_angle)) tile%mem%atm2land%cos_zenith_angle (ics:ice, iblk) = cos_zenith_angle (:)
 
   END SUBROUTINE update_atm2land
 
   SUBROUTINE update_land2atm(tile, iblk, ics, ice,           &
     & t_srf, t_rad_srf, qsat_srf, fact_q_air, fact_qsat_srf, &
+    & evapotrans, latent_hflx, sensible_hflx,                &
+    & swrad_net,                                             &
     & zh_srf, zm_srf,                                        &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
 
@@ -63,6 +66,8 @@ CONTAINS
     INTEGER,            INTENT(in) :: iblk, ics, ice
     REAL(wp), OPTIONAL, INTENT(out) ::                                        &
       & t_srf(:), t_rad_srf(:), qsat_srf(:), fact_q_air(:), fact_qsat_srf(:), &
+      & evapotrans(:), latent_hflx(:), sensible_hflx(:),                      &
+      & swrad_net(:),                                                         &
       & zh_srf(:), zm_srf(:),                                                 &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:)
 
@@ -75,6 +80,10 @@ CONTAINS
     IF (PRESENT(qsat_srf))        qsat_srf(:)         = tile%mem%srf  %energy_state %qsat_srf       (ics:ice, iblk)
     IF (PRESENT(fact_q_air))      fact_q_air(:)       = tile%mem%srf  %energy_state %fact_q_air     (ics:ice, iblk)
     IF (PRESENT(fact_qsat_srf))   fact_qsat_srf(:)    = tile%mem%srf  %energy_state %fact_qsat_srf  (ics:ice, iblk)
+    IF (PRESENT(evapotrans))      evapotrans(:)       = tile%mem%srf  %water_flux   %evapotrans     (ics:ice, iblk)
+    IF (PRESENT(latent_hflx))     latent_hflx(:)      = tile%mem%srf  %energy_flux  %latent_hflx    (ics:ice, iblk)
+    IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = tile%mem%srf  %energy_flux  %sensible_hflx  (ics:ice, iblk)
+    IF (PRESENT(swrad_net))       swrad_net(:)        = tile%mem%srf  %energy_flux  %swrad_srf_net  (ics:ice, iblk)
 !!$    IF (PRESENT(zh_srf))          zh_srf(:)           = tile%mem%srf  %phys_state   %zh_srf         (ics:ice, iblk)
 !!$    IF (PRESENT(zm_srf))          zm_srf(:)           = tile%mem%srf  %phys_state   %zm_srf         (ics:ice, iblk)
     IF (PRESENT(alb_vis_dir))     alb_vis_dir(:)      = tile%mem%srf  %phys_state   %alb_vis_srf    (ics:ice, iblk)  ! Temporary
