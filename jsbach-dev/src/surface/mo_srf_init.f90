@@ -55,7 +55,7 @@ CONTAINS
     TYPE(t_srf_water_state),  POINTER :: water
     TYPE(t_srf_water_flux),   POINTER :: wflux
 
-    REAL(wp), POINTER :: t_srf(:,:)
+    REAL(wp), POINTER :: t_srf(:,:), t_srf_mon(:,:,:)
     REAL(wp), POINTER :: &
       & return_pointer (:,  :)       !< temporary pointer
 
@@ -101,11 +101,18 @@ CONTAINS
     energy => srf%energy_state
 
     ! Initial surface temperature
-    return_pointer => netcdf_read_oncells_2d(         &
+!!$    return_pointer => netcdf_read_oncells_2d(         &
+!!$      & filename=model%config%srf%ic_filename,        &
+!!$      & variable_name='surface_temperature',          &
+!!$      fill_array=energy%t_srf,                        &
+!!$      & patch=model%grid%patch)
+!!$    t_srf => energy%t_srf
+    t_srf_mon => netcdf_read_oncells_2d_time(         &   ! Temporary
       & filename=model%config%srf%ic_filename,        &
-      & variable_name='surface_temperature',          &
-      fill_array=energy%t_srf,                        &
+      & variable_name='surf_temp',                    &
       & patch=model%grid%patch)
+    energy%t_srf(:,:) = MERGE(t_srf_mon(:,:,1), 273.15_wp, t_srf_mon(:,:,1) > 0._wp)
+    DEALLOCATE(t_srf_mon)
     t_srf => energy%t_srf
     ! Note: t_srf now points to energy%t_srf and can be
     ! used below to fill %energy_state%t_srf for all other files:
