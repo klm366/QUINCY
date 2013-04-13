@@ -152,10 +152,11 @@ CONTAINS
     wsr_max(:) = model%config%soil%wsr_capacity * (1._wp + lai(:) * fract_fpc_max(:))
 
     ! Wet skin fraction on soil
-    wfract_soil(:) = MERGE(MIN(1._wp, wsr_soil(:) / wsr_max(:)), 0._wp, wsr_max(:) > EPSILON(1._wp))
+    wfract_soil(:) = MERGE(MIN(1._wp, (wsr_soil(:) + wsr_can(:)) / wsr_max(:)), 0._wp, wsr_max(:) > EPSILON(1._wp))
 
     ! Wet skin fraction on canopy
-    wfract_can(:) = MERGE(MIN(1._wp, wsr_can(:) / wsr_max(:)), 0._wp, wsr_max(:) > EPSILON(1._wp))
+!!$    wfract_can(:) = MERGE(MIN(1._wp, wsr_can(:) / wsr_max(:)), 0._wp, wsr_max(:) > EPSILON(1._wp))
+    wfract_can(:) = 0._wp
 
     ! Snow fraction on soil
     sfract_soil(:) = snow_fract(wsn_soil(:), oro_stddev(:))
@@ -171,14 +172,14 @@ CONTAINS
     !
     t_srf_old(:) = t_srf(:)
     qsat_srf_old(:) = qsat(t_srf_old(:), press_srf(:))
-    evap_pot(:) =  heat_transfer_coef(drag_srf(:), steplen) * (qsat_srf_old(:) - q_air(:))
+    evap_pot(:) =  heat_transfer_coef(drag_srf(:), steplen) * (qsat_srf_old(:) - q_air(:)) ! Positive upwards
     !
     WHERE (sfract_soil(:) > 0._wp .AND. wsn_soil(:)+wsn_can(:) > EPSILON(1._wp))
       sfract_soil(:) = sfract_soil(:) / MAX(1._wp, sfract_soil(:) * evap_pot(:) * dtime / (rhoh2o * &
         & MAX(EPSILON(1._wp),(wsn_soil(:) + wsn_can(:)))))
     END WHERE
     WHERE (wfract_soil(:) > 0._wp .AND. wsr_soil(:)+wsr_can(:) > EPSILON(1._wp))
-      wfract_soil(:) = wfract_soil(:) / MAX(1._wp, wfract_soil(:) * evap_pot(:) * dtime / (rhoh2o * &
+      wfract_soil(:) = wfract_soil(:) / MAX(1._wp, (1._wp - sfract_soil(:)) * evap_pot(:) * dtime / (rhoh2o * &
         & MAX(EPSILON(1._wp), (wsr_soil(:) + wsr_can(:)))))
     END WHERE
 
@@ -539,7 +540,9 @@ CONTAINS
 !!$    PRINT*,'wfract_srf', MINVAL(wfract_srf(:)), MAXVAL(wfract_srf(:))
 !!$    PRINT*,'pch', MINVAL(pch(:)), MAXVAL(pch(:))
 !!$    PRINT*,'wind_air', MINVAL(wind_air(:)), MAXVAL(wind_air(:))
-    WHERE (ws_l(:,1) > ws_wilt_fract * wsr_max(:))
+
+!!$    WHERE (ws_l(:,1) > ws_wilt_fract * wsr_max(:))
+    WHERE (ws_l(:,1) > ws_wilt_fract * 0.5_wp) ! Temporary
       fact_qsat_srf(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * &
         & (wfract_srf(:) + ( 1._wp - wfract_srf(:)) /                &
         & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:))))
