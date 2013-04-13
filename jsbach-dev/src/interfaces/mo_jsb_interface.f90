@@ -132,6 +132,11 @@ CONTAINS
     !
     tile => model%land
 
+    ! Temporary fix for zero t_air at model start (analytical initialization of atmosphere)
+    IF (ANY(t_air(:) < 100._wp)) THEN
+      tile%mem%atm2land%t_air(ics:ice,iblk) = MERGE(t_air(:), tile%mem%srf%energy_state%t_srf(ics:ice,iblk), t_air(:) < 100._wp)
+    END IF
+
     ! Compute net surface radiation
     CALL update_surface_radiation(model%land, iblk, ics, ice, nc)
 
