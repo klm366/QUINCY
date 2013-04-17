@@ -51,7 +51,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
 
     INTEGER :: nproma, nblks, nsoil_water
-    INTEGER :: shape2d(2), shape3d_w(3)
+    INTEGER :: shape2d(2), shape3d_w(3), shape3d_mon(3)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_veg_memory'
 
@@ -72,8 +72,9 @@ CONTAINS
     nblks        = model%grid%nblks
     nsoil_water  = model%config%soil%nsoil_water
 
-    shape2d   = (/ nproma, nblks /)
-    shape3d_w = (/ nproma, nsoil_water, nblks /)
+    shape2d       = (/ nproma, nblks /)
+    shape3d_w     = (/ nproma, nsoil_water, nblks /)
+    shape3d_mon   = (/ nproma, nblks, 14 /)
 
     new%phys_state  => new_phys_state()
     new%water_state => new_water_state()
@@ -93,6 +94,12 @@ CONTAINS
         & t_cf_var('leaf_area_index', '', '', DATATYPE_FLT32),                                &
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),             &
         & ldims=shape2d, initval_r=0.0_wp )
+
+      CALL add_var( this_list, prefix//'lai_mon'//suffix, pstate%lai_mon,                     &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                 &
+        & t_cf_var('monthly_leaf_area_index', '', '', DATATYPE_FLT32),                        &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),             &
+        & ldims=shape3d_mon, initval_r=0.0_wp, loutput=.FALSE., lrestart=.FALSE. )
 
       CALL add_var( this_list, prefix//'fract_fpc'//suffix, pstate%fract_fpc,                 &
         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                 &

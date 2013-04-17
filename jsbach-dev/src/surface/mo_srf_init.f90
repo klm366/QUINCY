@@ -45,6 +45,8 @@ CONTAINS
 
   RECURSIVE SUBROUTINE srf_init_ic(tile)
 
+    USE mo_amip_bc,     ONLY: wgt1, wgt2, nmw1,nmw2
+
     TYPE(t_jsb_tile), INTENT(in) :: tile
 
     TYPE(t_jsb_model),        POINTER :: model
@@ -59,7 +61,7 @@ CONTAINS
     REAL(wp), POINTER :: &
       & return_pointer (:,  :)       !< temporary pointer
 
-    INTEGER :: i
+    INTEGER :: i, n1, n2
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':srf_init_ic'
 
@@ -83,7 +85,14 @@ CONTAINS
       & fill_array = phys%oro_stddev,                 &
       & patch=model%grid%patch)
     phys%oro_stddev(:,:) = MERGE(phys%oro_stddev(:,:), 0._wp, phys%oro_stddev(:,:) >= 0._wp)
-    phys%oro_stddev(:,:) = 140.606_wp   ! Temporary
+
+    ! Surface roughness length
+    return_pointer => netcdf_read_oncells_2d(         &
+      & filename=model%config%srf%bc_filename,        &
+      & variable_name='roughness_length',             &
+      & fill_array = phys%rough_m_srf,                &
+      & patch=model%grid%patch)
+    phys%rough_m_srf(:,:) = MERGE(phys%rough_m_srf(:,:), 1._wp, phys%rough_m_srf(:,:) >= 0._wp)
 
     ! Albedo
     return_pointer => netcdf_read_oncells_2d(         &
@@ -111,7 +120,23 @@ CONTAINS
       & filename=model%config%srf%ic_filename,        &
       & variable_name='surf_temp',                    &
       & patch=model%grid%patch)
-    energy%t_srf(:,:) = MERGE(t_srf_mon(:,:,1), 273.15_wp, t_srf_mon(:,:,1) > 0._wp)
+    t_srf_mon(:,:,:) = MERGE(t_srf_mon(:,:,:), 280._wp, t_srf_mon(:,:,:) > 0._wp)
+    IF (nmw1 == 0) THEN
+      n1 = 12
+    ELSE IF (nmw1 == 13) THEN
+      n1 = 1
+    ELSE
+      n1 = nmw1
+    END IF
+    IF (nmw2 == 0) THEN
+      n2 = 12
+    ELSE IF (nmw2 == 13) THEN
+      n2 = 1
+    ELSE
+      n2 = nmw2
+    END IF
+    energy%t_srf(:,:) = wgt1 * t_srf_mon(:,:,n1) + wgt2 * t_srf_mon(:,:,n2)
+
     DEALLOCATE(t_srf_mon)
     t_srf => energy%t_srf
     ! Note: t_srf now points to energy%t_srf and can be
@@ -126,6 +151,7 @@ CONTAINS
     energy%s_srf            (:,:) = 0._wp
     energy%qsat_srf         (:,:) = -1._wp  ! Negative values will be used to test for start of experiment
 !!$    energy%qsat_srf_old     (:,:) = 0._wp
+    energy%tte_corr         (:,:) = 0._wp
     energy%fact_q_air       (:,:) = 0.5_wp
     energy%fact_qsat_srf    (:,:) = 0.5_wp
     energy%fact_qsat_trans_srf (:,:) = 0.5_wp
@@ -134,11 +160,13 @@ CONTAINS
 
     water => srf%water_state
 
-    water%wfract_srf (:,:) = 0._wp
-    water%wsr_srf    (:,:) = 0._wp
+    water%wfract_srf  (:,:) = 0._wp
+    water%wsr_srf     (:,:) = 0._wp
 
-    water%sfract_srf (:,:) = 0._wp
-    water%wsn_srf    (:,:) = -1._wp    ! -1 used to determine start of experiment
+    water%sfract_srf  (:,:) = 0._wp
+    water%wsn_srf     (:,:) = -1._wp    ! -1 used to determine start of experiment
+
+    water%rel_hum_srf (:,:) = 0._wp
 
     ! Initialize energy fluxes
     !

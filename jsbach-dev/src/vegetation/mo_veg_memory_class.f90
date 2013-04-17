@@ -20,6 +20,7 @@ MODULE mo_veg_memory_class
   TYPE t_veg_phys_state
     REAL(wp), POINTER ::    &
       & lai            (:,  :), &  !< Leaf area index
+      & lai_mon        (:,  :, :), & !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>
       & fract_fpc      (:,  :), &  !< Foliage projected cover (fraction of ground area occupied by the vertical projection of foliage)
       & fract_fpc_max  (:,  :), &  !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
       & fract_forest   (:,  :), &  !< Forest fraction

@@ -52,7 +52,7 @@ MODULE mo_soil_memory_class
       ws_sat_l      (:,:,:),   & !< Water content of soil layers at saturation (derived from soil porosity) [m]
       ws_fc_l       (:,:,:),   & !< Water content of soil layers at field capacity (derived from volumetric field capacity)[m]
       ws_pwp_l      (:,:,:),   & !< Water content of soil layers at permanent wilting point (derived from vol. perm wilt point) [m]
-      ws            (:  ,:)      !< Water content in the whole soil colums [m]
+      ws            (:  ,:)      !< Water content in the whole soil column [m]
   END type t_soil_water_state
 
   TYPE t_soil_energy_flux

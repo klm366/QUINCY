@@ -12,6 +12,7 @@ MODULE mo_veg_init
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile
   USE mo_veg_memory_class,  ONLY: t_veg_memory, t_veg_phys_state, t_veg_water_state
+  USE mo_soil_memory_class, ONLY: t_soil_phys_state, t_soil_water_state
   USE mo_jsb_base,          ONLY: get_model
   USE mo_netcdf_read,       ONLY: netcdf_read_oncells_2d_time, netcdf_read_oncells_2d
   USE mo_kind,              ONLY: wp
@@ -52,15 +53,18 @@ CONTAINS
   RECURSIVE SUBROUTINE veg_init_ic(tile)
 
     USE mo_veg_process, ONLY: foliage_projected_cover
-    USE mo_soil_util, ONLY: soil_depth_to_layers_2d
+    USE mo_veg_util,    ONLY: water_in_root_zone
+    USE mo_soil_util,   ONLY: soil_depth_to_layers_2d
+    USE mo_amip_bc,     ONLY: wgt1, wgt2, nmw1,nmw2
 
     TYPE(t_jsb_tile),  INTENT(in) :: tile
 
-    TYPE(t_jsb_model),       POINTER :: model
-    TYPE(t_veg_memory),      POINTER :: veg
-    TYPE(t_veg_phys_state),  POINTER :: phys
-    TYPE(t_veg_water_state), POINTER :: water
-
+    TYPE(t_jsb_model),        POINTER :: model
+    TYPE(t_veg_memory),       POINTER :: veg
+    TYPE(t_veg_phys_state),   POINTER :: phys
+    TYPE(t_veg_water_state),  POINTER :: water
+    TYPE(t_soil_water_state), POINTER :: soil_water
+    TYPE(t_soil_phys_state),  POINTER :: soil_phys
     INTEGER :: i
 
     REAL(wp), POINTER ::        &
@@ -85,21 +89,32 @@ CONTAINS
     !
     phys => veg%phys_state
 
-    ! TBD - For now set LAI to constant
-    phys%lai(:,:) = 5._wp  ! Temporary
+    ! Leaf area index
+    ! Get monthly LAI climatology
+    lai_mon => netcdf_read_oncells_2d_time(    &
+      & filename=model%config%veg%bc_filename,        &
+      & variable_name='lai_clim',                     &
+      & patch=model%grid%patch)
+    lai_mon(:,:,:) = MERGE(lai_mon(:,:,:), 0._wp, lai_mon(:,:,:) > 0._wp)
+    phys%lai_mon(:,:,2:13) = lai_mon(:,:,1:12)
+    phys%lai_mon(:,:,1   ) = lai_mon(:,:,12  )
+    phys%lai_mon(:,:,14  ) = lai_mon(:,:,1   )
+    DEALLOCATE(lai_mon)
+
+    phys%lai(:,:) = wgt1 * phys%lai_mon(:,:,nmw1+1) + wgt2 * phys%lai_mon(:,:,nmw2+1)
 
     ! Maximum foliage projected cover
-!!$    return_pointer => netcdf_read_oncells_2d(        &
+    return_pointer => netcdf_read_oncells_2d(        &
 !!$      & filename=model%config%veg%bc_filename,       &
-!!$      & variable_name='veg_ratio_max',               &
-!!$      & fill_array = phys%fract_fpc_max,             &
-!!$      & patch=model%grid%patch)
-!!$    phys%fract_fpc_max(:,:) = MERGE(phys%fract_fpc_max(:,:), 0._wp, phys%fract_fpc_max(:,:) >= 0._wp)
-    phys%fract_fpc_max(:,:) = 1._wp  ! Temporary
+      & filename='bc_land_frac.nc',                  &  ! Temporary
+      & variable_name='veg_ratio_max',               &
+      & fill_array = phys%fract_fpc_max,             &
+      & patch=model%grid%patch)
+    phys%fract_fpc_max(:,:) = MERGE(phys%fract_fpc_max(:,:), 0._wp, phys%fract_fpc_max(:,:) >= 0._wp)
 
 !!$    phys%fract_fpc(:,:) = foliage_projected_cover(phys%fract_fpc_max(:,:), phys%lai(:,:), phys%clump(:,:))
-    phys%fract_fpc(:,:)     = 1._wp  ! Temporary
-    phys%fract_fpc_max(:,:) = MERGE(phys%fract_fpc_max(:,:), 0._wp, phys%fract_fpc_max(:,:) >= 0._wp)
+    phys%fract_fpc(:,:) = foliage_projected_cover(phys%fract_fpc_max(:,:), phys%lai(:,:), &
+                          SPREAD(SPREAD(2._wp, DIM=1, NCOPIES=SIZE(phys%lai,1)), DIM=2, NCOPIES=SIZE(phys%lai,2))) ! Temporary
 
     ! Forest fraction
     return_pointer => netcdf_read_oncells_2d(        &
@@ -113,7 +128,14 @@ CONTAINS
 
     phys%skin_can_depth(:,:) = model%config%veg%wsr_capacity * phys%lai(:,:)
 
-    phys%root_depth(:,:) = 2.65355_wp  ! Temporary
+    return_pointer => netcdf_read_oncells_2d(         &
+      & filename=model%config%soil%bc_filename,       &
+      & variable_name='root_depth',                   &
+      & fill_array = phys%root_depth,                 &
+      & patch=model%grid%patch)
+    phys%root_depth(:,:) = MERGE(phys%root_depth(:,:), 0._wp, phys%root_depth(:,:) >= 0._wp)
+    phys%root_depth(:,:) = MIN(phys%root_depth(:,:), tile%mem%soil%phys_state%soil_depth(:,:))  ! Temporary fix (root depth sometimes larger then soil depth)
+!!$    phys%root_depth(:,:) = tile%mem%soil%phys_state%soil_depth(:,:) * 0.75_wp  ! Temporary
 
     phys%root_depth_l(:,:,:) = soil_depth_to_layers_2d(               &
       & phys%root_depth(:,:),                                         & ! Total rooting depth
@@ -141,9 +163,21 @@ CONTAINS
     water%wsr_can     (:,:) = 0._wp
     water%sfract_can  (:,:) = 0._wp
     water%wsn_can     (:,:) = 0._wp
-    water%ws_root     (:,:) = 0._wp
-    water%ws_fc_root  (:,:) = 0._wp
-    water%ws_pwp_root (:,:) = 0._wp
+
+    ! Calculate water content and field capacity in the root zone
+    soil_water => tile%mem%soil%water_state
+    soil_phys => tile%mem%soil%phys_state
+    DO i=1,SIZE(water%ws_root,2)
+      water%ws_root     (:,i) = water_in_root_zone( soil_water%ws_l     (:,:,i), &
+                                                  & soil_phys%soil_depth_l(:,:,i), phys%root_depth_l(:,:,i))
+      water%ws_fc_root  (:,i) = water_in_root_zone( soil_water%ws_fc_l  (:,:,i), &
+                                                  & soil_phys%soil_depth_l(:,:,i), phys%root_depth_l(:,:,i))
+      water%ws_pwp_root (:,i) = water_in_root_zone( soil_water%ws_pwp_l (:,:,i), &
+                                                  & soil_phys%soil_depth_l(:,:,i), phys%root_depth_l(:,:,i))
+    END DO
+!!$    water%ws_root    (:,:) = 0._wp
+!!$    water%ws_fc_root (:,:) = 0._wp
+!!$    water%ws_pwp_root(:,:) = 0._wp
 
     water%water_stress(:,:) = 0._wp
 

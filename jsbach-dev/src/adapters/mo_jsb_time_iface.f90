@@ -13,7 +13,7 @@ MODULE mo_jsb_time_iface
   USE mo_exception, ONLY: finish, message, message_text
 
 #ifdef __ICON__
-  USE mo_datetime,    ONLY: t_datetime, print_datetime, add_time, check_newday
+  USE mo_datetime,    ONLY: t_datetime, date_to_time, print_datetime, add_time, check_newday, rdaylen, idaylen
   USE mo_time_config, ONLY: time_config !configure_time
   USE mo_time_nml,    ONLY: read_time_namelist
 #else
@@ -25,7 +25,8 @@ MODULE mo_jsb_time_iface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_datetime
+  PUBLIC :: t_datetime, date_to_time
+  PUBLIC :: rdaylen, idaylen
   PUBLIC :: get_time_dt, get_time_nsteps, &
             get_time_start, get_time_stop, &
             get_time_current, get_time_previous

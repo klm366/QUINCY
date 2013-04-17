@@ -37,8 +37,8 @@ CONTAINS
     INTEGER :: it
     REAL(wp) :: tluc
 
-!!$    it = NINT(temperature*1000._wp)
-    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
+    it = NINT(temperature*1000._wp)
+!!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
     tluc = tlucua(it)
 
     IF (it >= jptlucu1 .AND. it <= jptlucu2) THEN

@@ -44,6 +44,7 @@ CONTAINS
     REAL(wp), POINTER ::       &
       & fract          (:),    &
       & t_srf_unfilt   (:),    &
+      & tte_corr       (:),    &
       & t_air          (:),    &
       & q_air          (:),    &
       & wind_10m       (:),    &
@@ -74,8 +75,11 @@ CONTAINS
       & ws             (:),    &
       & ws_l           (:,:),  &
       & ws_fc_l        (:,:),  &
-      & root_depth     (:),    &
+      & ws_pwp_l       (:,:),  &
       & soil_depth     (:),    &
+      & ws_root        (:),    &
+      & ws_fc_root     (:),    &
+      & root_depth     (:),    &
       & shc            (:),    &
       & mpot           (:),    &
       & bclapp         (:),    &
@@ -88,7 +92,6 @@ CONTAINS
     REAL(wp) :: &
       wsr_max(nc), &
       evapotrans_no_snow_skin(nc), &
-      tte_corr(nc), &
       glacier_precip_minus_evap(nc), &
       snow_acc(nc), &
       snow_melt_acc(nc), &
@@ -123,6 +126,7 @@ CONTAINS
     IF (ALL(fract(:) < EPSILON(1._wp))) RETURN
 
     t_srf_unfilt   => tile%mem%srf  %energy_state   %t_srf_unfilt        (ics:ice,    iblk)
+    tte_corr       => tile%mem%srf  %energy_state   %tte_corr            (ics:ice,    iblk)
     t_air          => tile%mem      %atm2land       %t_air               (ics:ice,    iblk)
     q_air          => tile%mem      %atm2land       %q_air               (ics:ice,    iblk)
     wind_10m       => tile%mem      %atm2land       %wind_10m            (ics:ice,    iblk)
@@ -153,8 +157,11 @@ CONTAINS
     ws             => tile%mem%soil %water_state    %ws                  (ics:ice,    iblk)
     ws_l           => tile%mem%soil %water_state    %ws_l                (ics:ice, :, iblk)
     ws_fc_l        => tile%mem%soil %water_state    %ws_fc_l             (ics:ice, :, iblk)
-    root_depth     => tile%mem%veg  %phys_state     %root_depth          (ics:ice,    iblk)
+    ws_pwp_l       => tile%mem%soil %water_state    %ws_pwp_l            (ics:ice, :, iblk)
     soil_depth     => tile%mem%soil %phys_state     %soil_depth          (ics:ice,    iblk)
+    ws_root        => tile%mem%veg  %water_state    %ws_root             (ics:ice,    iblk)
+    ws_fc_root     => tile%mem%veg  %water_state    %ws_fc_root          (ics:ice,    iblk)
+    root_depth     => tile%mem%veg  %phys_state     %root_depth          (ics:ice,    iblk)
     shc            => tile%mem%soil %phys_state     %shc                 (ics:ice,    iblk)
     mpot           => tile%mem%soil %phys_state     %mpot                (ics:ice,    iblk)
     bclapp         => tile%mem%soil %phys_state     %bclapp              (ics:ice,    iblk)
@@ -196,24 +203,24 @@ CONTAINS
       & )
 
     CALL update_soiltemp(nc, model%config%soil%nsoil_water, dtime, lstart, &
-      & t_srf_unfilt(:), hdiff(:), vhcap(:), &
+      & t_srf_unfilt(:), wsn_soil(:), hdiff(:), vhcap(:), &
       & t_soil_acoef(:,:), t_soil_bcoef(:,:), t_soil(:,:), &
       & hcap_grnd(:), grnd_hflx(:))
 
     CALL update_surf_up(nc, dtime, model%config%soil%nsoil_water, &
-      & wsr_soil(:), wfract_srf(:), wsr_max(:), ws(:), &
-      & SPREAD(0.5_wp, NCOPIES=nc, DIM=1), & ! Temporary
+      & wsr_soil(:), wfract_srf(:), wsr_max(:), &
+      & ws_root(:), ws_fc_root(:), &
       & t_soil(:,1), sfract_srf(:), oro_stddev(:), &
       & evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), &
       & rain(:), is_present(:), is_glacier(:), &
       & runoff_acc(:), drainage_acc(:), runoff_hd(:), drainage_hd(:), &
       & melt_water_excess(:), skin_res_evap(:), &
       & model%config%soil%dz_water(1:model%config%soil%nsoil_water), &
-      & ws_l(:,:), ws_fc_l(:,:), root_depth(:), soil_depth(:), &
+      & ws_l(:,:), ws_fc_l(:,:), ws_pwp_l(:,:), root_depth(:), soil_depth(:), &
       & shc(:), mpot(:), bclapp(:), vpor(:), &
       & trans(:), reduced_evap(:), &
-      & SPREAD(0.318517_wp, NCOPIES=nc, DIM=1), & !Temporary
-      & SPREAD(0.185245_wp, NCOPIES=nc, DIM=1), & !Temporary
+!!$      & SPREAD(0.318517_wp, NCOPIES=nc, DIM=1), & !Temporary
+!!$      & SPREAD(0.185245_wp, NCOPIES=nc, DIM=1), & !Temporary
       & psdi(:), &
       & jllog &
       & )

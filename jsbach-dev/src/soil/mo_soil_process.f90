@@ -9,13 +9,15 @@
 !!
 MODULE mo_soil_process
 
+  USE mo_physical_constants, ONLY: rhoh2o
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: snow_fract, update_surf_down, update_soiltemp, update_surf_up
+  PUBLIC :: snow_fract, relative_humidity, update_surf_down, update_soiltemp, update_surf_up
+  PUBLIC :: init_soil_temperature
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_process'
 
@@ -36,6 +38,127 @@ CONTAINS
 
   END FUNCTION snow_fract
 
+  REAL(wp) ELEMENTAL FUNCTION relative_humidity(ws, fc)
+
+    USE mo_math_constants, ONLY: pi
+
+    REAL(wp), INTENT(in) :: &
+      ws, & !< moisture content
+      fc    !< field capacity (maximum moisture content)
+
+    REAL(wp) :: moisture
+
+    moisture = MIN(ws, fc)
+    IF (moisture > 0._wp) THEN
+      relative_humidity = 0.5_wp * (1._wp - COS(moisture * pi / fc))
+    ELSE
+      relative_humidity = 0._wp
+    END IF
+
+  END FUNCTION relative_humidity
+
+  !>
+  !
+  ! Initialize soil and surface temperature 
+  !
+  ! Method:
+  !
+  ! Starting from the tslclim field temperatures are set in relation
+  ! to the depth of the soil layer and position of the initial
+  ! day in the annual cycle.
+  !
+  ! tsl is at 0.07 m
+  ! thickness of layers 0.065, 0.254, 0.913, 2.902, 5.700 m (s. soiltemp)
+  !
+  ! Authors:
+  !
+  ! U. Schlese, DKRZ, April 2000, original source
+  ! L. Dumenil, MPI, June 1989, original source of *initemp*
+  !             which is now part of this routine
+  ! I. Kirchner, MPI, November 2000, date/time control
+  ! U. Schulzweida, MPI, May 2002, blocking (nproma)
+  ! E. Roeckner, MPI, Sep 2002, initialization of mixed layer ocean
+  ! T. Raddatz, MPI, Mai 2005, adaption to JSBACH
+  ! 
+  ! TBD: remove fixed soil depths
+  !
+  SUBROUTINE init_soil_temperature(tclim, tsoil, tsurf)
+
+    USE mo_jsb_time_iface, ONLY: t_datetime, get_time_start, rdaylen, date_to_time
+    USE mo_math_constants, ONLY: pi
+    USE mo_exception,      ONLY: finish
+
+    REAL(wp), INTENT(in)  :: tclim(:,:)
+    REAL(wp), INTENT(out) :: tsoil(:,:), tsurf(:)
+
+    INTEGER :: nsoil, ndim
+    REAL(wp) :: zkap, zsqrt
+    REAL(wp), POINTER :: zrange(:), zdmax(:), zd(:)
+    INTEGER, POINTER :: jmax(:)
+    TYPE(t_datetime) :: inidate
+    INTEGER :: im, i, jl
+    REAL(wp) :: year_len, day_in_year
+    REAL(wp) :: month_len(12), month_mid(12)
+
+    ndim  = SIZE(tsoil,1)
+    nsoil = SIZE(tsoil,2)
+    IF (nsoil /= 5) CALL finish('init_soil_temperature', 'Currently only works with 5-layer soil')
+
+    ALLOCATE(zrange(ndim), jmax(ndim), zdmax(ndim))
+    ALLOCATE(zd(nsoil))
+
+    zkap = 7.5e-7_wp
+
+    inidate = get_time_start()
+
+    year_len    = REAL(inidate%yealen, wp)
+    day_in_year = REAL(inidate%yeaday, wp)
+
+    DO im=1,12
+      inidate%month = im
+      CALL date_to_time(inidate)
+      month_len(im) = REAL(inidate%monlen, wp)
+      month_mid(im) = month_len(im) * 0.5_wp
+    END DO
+
+    zsqrt = SQRT(zkap * year_len * rdaylen / pi)
+
+    ! Calendar month of maximum surface temperature
+    jmax(:) = MAXLOC(tclim(:,:), DIM=2)
+
+    ! Difference between months of maximum and minimum surface temperature
+    zrange(:) = MAXVAL(tclim(:,:), DIM=2) - MINVAL(tclim(:,:), DIM=2)
+
+    ! Calendar day of maximum surface temperature
+    zdmax(:) = 0._wp
+    DO jl=1,ndim
+      DO im=1,jmax(jl)
+        zdmax(jl) = zdmax(jl) + month_len(im)
+      END DO
+      zdmax(jl) = zdmax(jl) - month_mid(jmax(jl))
+    END DO
+
+    ! layer depths
+    zd(1) =            0.5_wp * 0.065_wp - 0.07_wp
+    zd(2) = 0.065_wp + 0.5_wp * 0.254_wp - 0.07_wp
+    zd(3) = 0.065_wp + 0.254_wp + 0.5_wp * 0.913_wp - 0.07_wp
+    zd(4) = 0.065_wp + 0.254_wp + 0.913_wp + 0.5_wp * 2.902_wp - 0.07_wp
+    zd(5) = 0.065_wp + 0.254_wp + 0.913_wp + 2.902_wp + 0.5_wp * 5.7_wp - 0.07_wp
+
+    ! Initialize soil temperatures
+    DO i=1,nsoil
+      tsoil(:,i) = SUM(tclim(:,:), DIM=2) / 12._wp &
+                 & + 0.5_wp * zrange(:) * EXP(-zd(i) / zsqrt) &
+                 &   * COS(2._wp * pi * (day_in_year - zdmax(:)) / year_len - zd(i) / zsqrt)
+    END DO
+
+    ! Set surface temperature to uppermost soil temperature
+    tsurf(:) = tsoil(:,1)
+
+    DEALLOCATE(zrange, jmax, zdmax, zd)
+
+  END SUBROUTINE init_soil_temperature
+
 SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      , pqm1, ptsl, pspeed10, ptm1  &
      , pwl, pcvw, pwlmx &
@@ -54,7 +177,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
 
      )
 
-  USE mo_physical_constants, ONLY: alf, cpd, vtmpc2, rhoh2o, tmelt, g=>grav
+  USE mo_physical_constants, ONLY: alf, cpd, vtmpc2, tmelt, g=>grav
 
   !
   !     ------------------------------------------------------------------
@@ -98,7 +221,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   ! pmlres        Residual melt water available for infiltration into the
   !               non-frozen soil after being intercepted by the
   !               skin reservoir
-  ! tte_corr      ???
+  ! tte_corr      Correction term for temperature tendencies accounting for snow melt
   ! psmelt        instantaneous snow melt rate (for dry deposition)
   !
   !       Rest folgt spaeter ....
@@ -268,6 +391,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
            !
         ELSE
            psnc(jl)=0._wp
+           tte_corr(jl) = 0._wp
         END IF
 210  END DO
      !
@@ -356,12 +480,12 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
                          , delta_time                        &
                          , lstart                            &
                          , pts                               &
-!!$ TR                         , psn                               &
+                         , psn                               &
                          , psodif, prgcgn                    &
                          , pgrndc, pgrndd                    &
                          , ptsoil                            &
                          , pgrndcapc, pgrndhflx              &
-!!$ TR                         , lmask, ldglac)
+!!$                         , lmask, ldglac)
                          )
 !
 !   AUTHOR:  FREDERIC HOURDIN     30/01/92
@@ -417,7 +541,7 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
   REAL(wp), Intent(in)     ::  delta_time       !! time step
   LOGICAL, INTENT(in)  :: lstart
   REAL(wp), Intent(in)     ::  pts(nidx)            !! surface temperature at top of soil [K]
-!!$ TR  REAL(wp), Intent(in)     ::  psn(nidx)            !! equivalent snow depth [m water]
+  REAL(wp), Intent(in)     ::  psn(nidx)            !! equivalent snow depth [m water]
   REAL(wp), Intent(in)     ::  psodif(nidx)         !! soil temperature diffusivity [m^2/s]
   REAL(wp), Intent(in)     ::  prgcgn(nidx)         !! soil heat capacity [J/m^3K]
   REAL(wp), Intent(inout)  ::  pgrndc(nidx,nsoil)   !!
@@ -425,8 +549,8 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
   REAL(wp), Intent(inout)  ::  ptsoil(nidx,nsoil)   !! soil temperature [K]
   REAL(wp), Intent(out)    ::  pgrndcapc(nidx)      !!
   REAL(wp), Intent(out)    ::  pgrndhflx(nidx)      !! ground heat flux
-!!$ TR  LOGICAL, Intent(in)  ::  lmask(nidx)
-!!$ TR  LOGICAL, Intent(in)  ::  ldglac(nidx)         !! glacier mask
+!!$  LOGICAL, Intent(in)  ::  lmask(nidx)
+!!$  LOGICAL, Intent(in)  ::  ldglac(nidx)         !! glacier mask
 !
 !     ------------------------------------------------------------------
 !
@@ -465,12 +589,15 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !*    1.3 COMPUTE OF THE SOIL THERMAL CONDUCTIVITY [J/S/M/K] FROM
 !*        THE SOIL TEMPERATURE DIFFUSIVITY [M**2/S].
 !
-!!$ TR  WHERE (lmask(:) .AND. ldglac(:))
-!!$ TR    zso_capa(:) = zrici
-!!$ TR    zso_cond(:) = zso_capa(:) * zdifiz
-!!$ TR  ELSEWHERE (lmask(:))
-  zso_capa(:) = prgcgn(:)
-  zso_cond(:) = zso_capa(:) * psodif(:)
+!!$  WHERE (lmask(:) .AND. ldglac(:))
+  WHERE (prgcgn(:) == 0._wp)  ! Temporary way to find glacier mask
+    zso_capa(:) = zrici
+    zso_cond(:) = zso_capa(:) * zdifiz
+!!$  ELSEWHERE (lmask(:))
+  ELSEWHERE
+    zso_capa(:) = prgcgn(:)
+    zso_cond(:) = zso_capa(:) * psodif(:)
+  END WHERE
 !
 !*    1.4 PRE-SET THERMAL CONDUCTIVITY AT ALL LEVELS.
 !
@@ -512,8 +639,7 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !   ---------------------------------------------------------------
 !
 !!$ TR  WHERE (lmask)
-!!$ TR    zsnow_h(:) = psn(:) * RhoH2O / zsn_dens
-     zsnow_h(:) = 0._wp
+    zsnow_h(:) = psn(:) * RhoH2O / zsn_dens
 
 !
 !*       Special treatment for first layer
@@ -601,10 +727,11 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
      , pmlres &
      , zevwld &
 !     Soil moisture layers, evap. fluxes over land
-     , zdel, wsi, zwsfc           &
+     , zdel, wsi, zwsfc, zwpwp           &
      , dzr, dzs, fksat , fmpot , bclapp, vpor     &
      , etrans, redevap                    &
-     , vfc, vpwp, spsi                           &
+!!$     , vfc, vpwp &
+     , spsi                           &
      , jllog                                     &
      )
 !
@@ -729,7 +856,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !!$ TR  USE mo_jsbach_comm_to_echam5mods, ONLY: nlat
 !!$ TR#endif
 
-  USE mo_physical_constants, ONLY: rhoh2o, tmelt, g=>grav
+  USE mo_physical_constants, ONLY: tmelt, g=>grav
 
   INTEGER,  INTENT(in)    :: kbdim
   REAL(wp), INTENT(in)    :: delta_time
@@ -760,7 +887,8 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 ! Soil moisture layers, evap. fluxes over land.
   REAL(wp), INTENT(in)   , optional :: zdel(nsoil)
   REAL(wp), INTENT(inout), optional :: wsi(kbdim,nsoil)
-  REAL(wp), INTENT(inout), optional :: zwsfc(kbdim,nsoil)
+  REAL(wp), INTENT(in), optional :: zwsfc(kbdim,nsoil)
+  REAL(wp), INTENT(in), optional :: zwpwp(kbdim,nsoil)
   REAL(wp), INTENT(in)   , optional :: dzr(kbdim)
   REAL(wp), INTENT(in)   , optional :: dzs(kbdim)
   REAL(wp), INTENT(in)   , optional :: fksat(kbdim)
@@ -769,8 +897,8 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
   REAL(wp), INTENT(in)   , optional :: vpor(kbdim)
   REAL(wp), INTENT(in)   , optional :: etrans(kbdim)
   REAL(wp), INTENT(out)  , optional :: redevap(kbdim) ! reduction of evapotranspiration from SOILCHANGE
-  REAL(wp), INTENT(in)   , optional :: vfc(kbdim)
-  REAL(wp), INTENT(in)   , optional :: vpwp(kbdim)
+!!$  REAL(wp), INTENT(in)   , optional :: vfc(kbdim)
+!!$  REAL(wp), INTENT(in)   , optional :: vpwp(kbdim)
   REAL(wp), INTENT(in)   , optional :: spsi(kbdim)
   INTEGER,  INTENT(inout), optional :: jllog      ! gridbox number for logoutput in SOILHYD
 !
@@ -799,7 +927,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
   REAL(wp) ::                                                         &
        dzrsi(kbdim, nsoil), dzsi(kbdim, nsoil),                       &
        zwsat(kbdim,nsoil),                        &
-       zwpwp(kbdim,nsoil),                                            &
+!!$       zwpwp(kbdim,nsoil),                                            &
        wsim1m(kbdim, nsoil), aebsoil(kbdim), aetrans(kbdim)
 
   REAL(wp) :: zinfil(kbdim)    ! Infiltration for transfer to SOILCHANGE - was previously a local scalar
@@ -842,8 +970,12 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 ! Initialization of working arrays for 5 soil layer scheme
   IF (nsoil == 5) THEN
     CALL SoilDef(kb1, kbdim, kbdim, nsoil,               &
-                 dzr, dzs, vpor, vfc, vpwp, lmask, zdel, &
-                 dzrsi, dzsi, zwsat, zwsfc, zwpwp)
+                 dzr, dzs, vpor &
+!!$                 , vfc, vpwp &
+                 , lmask, zdel, &
+                 dzrsi, dzsi, zwsat &
+!!$                , zwsfc, zwpwp &
+                 )
 
 !   *** Unit conversion for Transpiration [kg/m**2/s] --> [m]
     aetrans(1:kbdim) = etrans(1:kbdim)  * zdtime / rhoh2o
@@ -904,24 +1036,12 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !*    4.2.1  Surface runoff, infiltration and evaporation from soil
 
         ! Positive Enoskin_nosnow is added to throughfall if the old bucket is used
-        IF (nsoil == 1) THEN
-
-          IF (pevwsd(jl) >= 0.0_wp) THEN
-            zprfl = pmlres(jl)+zraind(jl)+pevwsd(jl)
-          ELSE
-            pws(jl) = pws(jl)    + pevwsd(jl)
-            zprfl   = pmlres(jl) + zraind(jl)
-          END IF
-
-        ELSE
 
 !         ******* Positive EBSoil and Etrans are added to throughfall separately
 !         ******* Negative fluxes change soil moisture in SOILCHANGE.
           zprfl = pmlres(jl)+zraind(jl)
           IF (aebsoil(jl) >= 0.0_wp) zprfl = zprfl + aebsoil(jl)
           IF (aetrans(jl) >= 0.0_wp) zprfl = zprfl + aetrans(jl)
-
-        ENDIF
 
         IF (ptsoil(jl) < tmelt) THEN
           zros(jl) = zprfl
@@ -942,8 +1062,6 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
             zros(jl)   = 0._wp
             zinfil(jl) = zprfl
           END IF
-          ! In 5 layer scheme, infiltration changes soil moisture in SOILCHANGE.
-          IF (nsoil == 1) pws(jl) = pws(jl)+zinfil(jl)
         END IF
 !
 !*    4.2.2  Drainage and total runoff
@@ -951,43 +1069,6 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
       ENDIF
     ENDDO
 !
-!   ****** Drainage if the old bucket is used
-    IF (nsoil == 1) THEN
-
-      DO jl=1,kbdim
-
-        IF (lmask(jl) .AND. .NOT.lpglac(jl)) THEN
-
-!         *** Term shifting moved from the beginning of the original soil hydrology loop
-          zwdtr  = 0.90_wp*pwsmx(jl)
-          zwslim = 0.05_wp*pwsmx(jl)
-          zconw2 = pwsmx(jl)-zwdtr
-          zconw3 = zdrmax-zdrmin
-
-          IF (pws(jl) <= zwslim) THEN
-            zdrain(jl) = 0._wp
-          ELSE
-            IF (ptsoil(jl) > tmelt) THEN
-              zdrain(jl) = zdrmin*MAX(pws(jl)/pwsmx(jl),0.7_wp)
-              IF (pws(jl) > zwdtr) THEN
-                 zdrain(jl) = zdrain(jl)+zconw3*((pws(jl)-zwdtr)/zconw2)**zdrexp
-              END IF
-              zdrain(jl) = zdrain(jl)*zdtime
-              zdrain(jl) = MIN(zdrain(jl),pws(jl)-zwslim)
-              pws(jl)    = pws(jl)-zdrain(jl)
-            ELSE
-              zdrain(jl) = 0._wp
-            END IF
-          END IF
-          zwsup    = MAX(pws(jl)-pwsmx(jl),0._wp)
-          pws(jl)  = pws(jl)-zwsup
-          zros(jl) = zros(jl)+zdrain(jl)+zwsup
-        ELSE
-           pws(jl) = 0._wp
-        END IF
-      ENDDO
-
-    ELSE ! nsoil == 1
       !  Change of soil moisture in 5 layers
       !  change belongs to one time step = zdtime
 
@@ -1010,7 +1091,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
       ! Unit of zinfil is [m] but soilchange expects m/s
       ! For numerical reasons, half of the water is infiltrated
       ! before SOILHYD, half if it after
-      zinfil(1:kbdim) = zinfil(1:kbdim) / zdtime / 2.
+      zinfil(1:kbdim) = zinfil(1:kbdim) / zdtime / 2._wp
 
       isch = 2     ! Changes by infiltration
 
@@ -1070,7 +1151,6 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
         ENDIF
       ENDDO
 
-    ENDIF ! end of nsoil if clause.
 !
 !*  4.2.3  Runoff and drainage for the HD-Model [m]
 !
@@ -1682,7 +1762,11 @@ INTEGER  :: i, jl
 END SUBROUTINE soilhyd
 
 SUBROUTINE soildef (kidia, kfdia, klon, kdeep,  &
-    dzr, dzs, vpor, vfc, vpwp, loland, zdel, dzrsi, dzsi, zwsat, zwsfc, zwpwp)
+    dzr, dzs, vpor &
+!!$    , vfc, vpwp &
+    , loland, zdel, dzrsi, dzsi, zwsat &
+!!$   , zwsfc, zwpwp &
+    )
 !     ***********************************************************************
 
 !     *** Routine defining various fields for the 5-layer soil scheme.
@@ -1730,16 +1814,16 @@ INTEGER,  INTENT(IN)                     :: kdeep
 REAL(wp), INTENT(IN)                     :: dzr(klon)
 REAL(wp), INTENT(IN)                     :: dzs(klon)
 REAL(wp), INTENT(IN)                     :: vpor(klon)
-REAL(wp), INTENT(IN)                     :: vfc(klon)
-REAL(wp), INTENT(IN)                     :: vpwp(klon)
+!!$REAL(wp), INTENT(IN)                     :: vfc(klon)
+!!$REAL(wp), INTENT(IN)                     :: vpwp(klon)
 LOGICAL,  INTENT(IN)                     :: loland(klon)
 REAL(wp), INTENT(IN)                     :: zdel(kdeep)
 
 REAL(wp), INTENT(OUT)                    :: dzrsi(klon, kdeep)
 REAL(wp), INTENT(OUT)                    :: dzsi(klon, kdeep)
 REAL(wp), INTENT(OUT)                    :: zwsat(klon,kdeep)
-REAL(wp), INTENT(OUT)                    :: zwsfc(klon,kdeep)
-REAL(wp), INTENT(OUT)                    :: zwpwp(klon,kdeep)
+!!$REAL(wp), INTENT(OUT)                    :: zwsfc(klon,kdeep)
+!!$REAL(wp), INTENT(OUT)                    :: zwpwp(klon,kdeep)
 
 
 REAL(wp), PARAMETER :: zeps = 1.e-15_wp
@@ -1799,8 +1883,8 @@ REAL(wp) :: zdels(kdeep), zdelsm1(kdeep)
   DO  i=1,kdeep
     DO  jl=1,klon
       zwsat(jl,i) = vpor(jl) * dzsi(jl,i)
-      zwsfc(jl,i) = vfc(jl)  * dzsi(jl,i)
-      zwpwp(jl,i) = vpwp(jl) * dzsi(jl,i)
+!!$      zwsfc(jl,i) = vfc(jl)  * dzsi(jl,i)
+!!$      zwpwp(jl,i) = vpwp(jl) * dzsi(jl,i)
     END DO
   END DO
 

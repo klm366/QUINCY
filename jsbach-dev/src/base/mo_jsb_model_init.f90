@@ -143,6 +143,7 @@ CONTAINS
       CALL soil_init_ic(model%land)
     END IF
 
+    ! Vegetation must be initialized after soil!
     IF (model%config%veg%active) THEN
       CALL veg_init_bc(model%land)
       CALL veg_init_ic(model%land)

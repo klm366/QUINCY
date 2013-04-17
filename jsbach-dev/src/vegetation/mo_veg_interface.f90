@@ -57,9 +57,6 @@ CONTAINS
       & q_air                  (:),      &
       & press_srf              (:)
 
-    ! Temporary arrays
-    REAL(wp), POINTER :: &
-      tmp_soil_depth_l(:,:), tmp_root_depth_l(:,:), tmp_ws_l(:,:), tmp_ws_fc_l(:,:)
     INTEGER :: nsoil
 
     INTEGER :: p_pe
@@ -110,20 +107,14 @@ CONTAINS
 
     ! Get water stress
 
-    ! Temporary fix for compatibility with Thomas ICON setup ... later replace tmp_* variables!
-    ALLOCATE(tmp_soil_depth_l(nc,1), tmp_root_depth_l(nc,1), tmp_ws_l(nc,1), tmp_ws_fc_l(nc,1))
-    tmp_soil_depth_l(:,:) = 1._wp
-    tmp_root_depth_l(:,:) = 1._wp
-    tmp_ws_l        (:,:) = SPREAD(ws(:), NCOPIES=1, DIM=2)
-    tmp_ws_fc_l     (:,:) = 0.5_wp
-    ! 1. Calculate water content and field capacity in the root zone
-    ws_root   (:)  = water_in_root_zone(tmp_ws_l   (:,:),  tmp_soil_depth_l(:,:), tmp_root_depth_l(:,:))
-    ws_fc_root(:)  = water_in_root_zone(tmp_ws_fc_l(:,:),  tmp_soil_depth_l(:,:), tmp_root_depth_l(:,:))
-    !ws_pwp_root(:) = water_in_root_zone(ws_pwp_l(:,:), soil_depth_l(:,:), root_depth_l(:,:)) ! Temporary: activate later
+    ! Calculate water content and field capacity in the root zone
+    ws_root   (:)  = water_in_root_zone(ws_l     (:,:), soil_depth_l(:,:), root_depth_l(:,:))
+    ws_fc_root(:)  = water_in_root_zone(ws_fc_l  (:,:), soil_depth_l(:,:), root_depth_l(:,:))
+    ws_pwp_root(:) = water_in_root_zone(ws_pwp_l (:,:), soil_depth_l(:,:), root_depth_l(:,:))
 
     ! Calculate water stress factor
     ! Temporary: later use the distributed permanent wilting point from above and change water_stress_factor function
-    water_stress(:) = water_stress_factor(ws_root(:), ws_fc_root(:))
+    water_stress(:) = water_stress_factor(ws_root(:), ws_fc_root(:), ws_pwp_root(:))
 
     ! Compute (actual) canopy (stomatal) conductance under water stress.
     canopy_cond(:) = &
@@ -138,7 +129,8 @@ CONTAINS
 
   SUBROUTINE update_vegetation_2( tile, iblk, ics, ice, nc)
 
-    USE mo_veg_process, ONLY: canopy_albedo
+    USE mo_veg_process, ONLY: canopy_albedo, foliage_projected_cover
+    USE mo_amip_bc,     ONLY:  wgt1, wgt2, nmw1,nmw2  ! TBD: this should be made more general
 
     REAL(wp), PARAMETER :: &
       albedo_snow_min = 0.4_wp,  & !< Minimum possible snow albedo   ! Temporary, will depend on vegetation type
@@ -150,18 +142,21 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
 
     REAL(wp), POINTER ::   &
-      & t_srf        (:),  &
-      & lai          (:),  &
-      & fract_forest (:),  &
-!!$      & alb_vis_can  (:),  &
-!!$      & alb_nir_can  (:),  &
-!!$      & alb_vis_soil (:),  &
-!!$      & alb_nir_soil (:),  &
-      & alb_vis_srf  (:),  &
-      & alb_nir_srf  (:),  &
-      & albedo_srf   (:),  &
-      & sfract_can   (:),  &
-      & sfract_soil  (:)
+      & t_srf         (:),   &
+      & lai           (:),   &
+      & lai_mon       (:,:), &
+      & fract_fpc     (:),   &
+      & fract_fpc_max (:),   &
+      & fract_forest  (:),   &
+!!$      & alb_vis_can  (:),    &
+!!$      & alb_nir_can  (:),    &
+!!$      & alb_vis_soil (:),    &
+!!$      & alb_nir_soil (:),    &
+      & alb_vis_srf   (:),   &
+      & alb_nir_srf   (:),   &
+      & albedo_srf    (:),   &
+      & sfract_can    (:),   &
+      & sfract_soil   (:)
 
     INTEGER :: p_pe
 
@@ -178,6 +173,9 @@ CONTAINS
     !
     t_srf        => tile%mem%srf  %energy_state %t_srf           (ics:ice,    iblk)
     lai          => tile%mem%veg  %phys_state   %lai             (ics:ice,    iblk)
+    lai_mon      => tile%mem%veg  %phys_state   %lai_mon         (ics:ice,    iblk, :)
+    fract_fpc    => tile%mem%veg  %phys_state   %fract_fpc       (ics:ice,    iblk)
+    fract_fpc_max=> tile%mem%veg  %phys_state   %fract_fpc_max   (ics:ice,    iblk)
     fract_forest => tile%mem%veg  %phys_state   %fract_forest    (ics:ice,    iblk)
 !!$    alb_vis_can  => tile%mem%veg  %phys_state   %alb_vis_can     (ics:ice,    iblk)
 !!$    alb_nir_can  => tile%mem%veg  %phys_state   %alb_nir_can     (ics:ice,    iblk)
@@ -189,6 +187,18 @@ CONTAINS
     sfract_can   => tile%mem%veg  %water_state  %sfract_can      (ics:ice,    iblk)
     sfract_soil  => tile%mem%soil %water_state  %sfract_soil     (ics:ice,    iblk)
 
+    ! Update leaf area index
+    !
+    ! At the moment by interpolating monthly climatological LAI
+    lai(:) = REAL(wgt1,wp) * lai_mon(:,nmw1+1) + REAL(wgt2,wp) * lai_mon(:,nmw2+1)
+
+    ! Update foliage projected cover
+    !
+    ! TBD: Use clumpiness factor instead of 1._wp
+    fract_fpc(:) = foliage_projected_cover(fract_fpc_max(:), lai(:), SPREAD(1._wp, DIM=1, NCOPIES=SIZE(lai,1)))
+
+    ! Update albedo
+    ! TBD: use newer albedo scheme
     alb_vis_srf(:) = canopy_albedo(t_srf(:), fract_forest(:), sfract_soil(:), sfract_can(:), lai(:), &
                    & SPREAD(albedo_snow_min, NCOPIES=nc, DIM=1), SPREAD(albedo_snow_max, NCOPIES=nc, DIM=1), albedo_srf(:))
     alb_nir_srf(:) = alb_vis_srf(:)

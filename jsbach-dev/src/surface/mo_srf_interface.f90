@@ -21,7 +21,7 @@ MODULE mo_srf_interface
   PRIVATE
 
   PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy
-  PUBLIC :: update_surface_fluxes, update_t_srf, update_humidity_scaling
+  PUBLIC :: update_surface_fluxes, update_t_srf, update_humidity_scaling, update_roughness
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_interface'
 
@@ -184,7 +184,7 @@ CONTAINS
     END WHERE
 
     wfract_srf(:) = wfract_soil(:) + wfract_can(:)
-    sfract_srf(:) = sfract_soil(:) + sfract_can(:)
+    sfract_srf(:) = sfract_soil(:) !+ sfract_can(:)
 
   END SUBROUTINE update_snow_and_skin_fraction
 
@@ -356,12 +356,14 @@ CONTAINS
     t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
     t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
 
-    WHERE(t_srf_unfilt(:) < 200._wp) t_srf_unfilt(:) = 200._wp
+!!$    WHERE(t_srf_unfilt(:) < 200._wp) t_srf_unfilt(:) = 200._wp
 
     ! Time filter for surface temperature
     ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
-    ! Also: this is not done in ICON at all (at the moment, at least), so it should be switched off.
-    t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
+    ! Also: this is not done in ICON at all (at the moment, at least), therefore it is switched off for now.
+    !
+!!$    t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
+    t_srf(:) = t_srf_unfilt(:)
 
   END SUBROUTINE update_t_srf
 
@@ -474,6 +476,7 @@ CONTAINS
 
     USE mo_srf_constants,  ONLY: rhoh2o
     USE mo_soil_constants, ONLY: ws_wilt_fract
+    USE mo_soil_process,   ONLY: relative_humidity
 
     TYPE(t_jsb_tile),  POINTER    :: tile
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
@@ -484,9 +487,10 @@ CONTAINS
 
     ! Pointers to variables in memory
     REAL(wp), POINTER :: &
-      fract_fpc_max (:), &
-      lai           (:), &
+      fract_fpc     (:), &
       ws_l          (:,:), &
+      ws_fc_l       (:,:), &
+      ws_pwp_l      (:,:), &
 !!$      sfract_can    (:), &
 !!$      sfract_soil   (:), &
 !!$      wfract_can    (:), &
@@ -496,13 +500,21 @@ CONTAINS
       fact_q_air    (:), &
       fact_qsat_srf (:), &
       fact_qsat_trans_srf (:), &
+      rel_hum_srf   (:), &
+      qsat_srf      (:), &
       canopy_cond   (:), &
       pch           (:), &
-      wind_air      (:)
+      wind_air      (:), &
+      q_air         (:)
 
     ! Locally allocated vectors
     REAL(wp) :: &
-      wsr_max(nc)      !< Water holding capacity of skin reservoir (soil and canopy)
+      fact_qsat_veg(nc),   &
+      fact_qsat_trans(nc), &
+      fact_qsat_soil(nc),  &
+      fact_qair_veg(nc),   &
+      fact_qair_soil(nc),  &
+      rel_hum(nc)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
 
@@ -514,45 +526,90 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    fract_fpc_max    => tile%mem%veg  %phys_state   %fract_fpc_max       (ics:ice,    iblk)
-    lai              => tile%mem%veg  %phys_state   %lai                 (ics:ice,    iblk)
+    fract_fpc        => tile%mem%veg  %phys_state   %fract_fpc           (ics:ice,    iblk)
     canopy_cond      => tile%mem%veg  %phys_state   %canopy_cond         (ics:ice,    iblk)
     ws_l             => tile%mem%soil %water_state  %ws_l                (ics:ice, :, iblk)
+    ws_fc_l          => tile%mem%soil %water_state  %ws_fc_l             (ics:ice, :, iblk)
+    ws_pwp_l         => tile%mem%soil %water_state  %ws_pwp_l            (ics:ice, :, iblk)
 !!$    sfract_can       => tile%mem%veg  %water_state  %sfract_can          (ics:ice,    iblk)
 !!$    sfract_soil      => tile%mem%soil %water_state  %sfract_soil         (ics:ice,    iblk)
 !!$    wfract_can       => tile%mem%veg  %water_state  %wfract_can          (ics:ice,    iblk)
 !!$    wfract_soil      => tile%mem%soil %water_state  %wfract_soil         (ics:ice,    iblk)
+    qsat_srf         => tile%mem%srf  %energy_state %qsat_srf            (ics:ice,    iblk)
     sfract_srf       => tile%mem%srf  %water_state  %sfract_srf          (ics:ice,    iblk)
     wfract_srf       => tile%mem%srf  %water_state  %wfract_srf          (ics:ice,    iblk)
     fact_q_air       => tile%mem%srf  %energy_state %fact_q_air          (ics:ice,    iblk)
     fact_qsat_srf    => tile%mem%srf  %energy_state %fact_qsat_srf       (ics:ice,    iblk)
     fact_qsat_trans_srf  => tile%mem%srf  %energy_state %fact_qsat_trans_srf (ics:ice,    iblk)
+    rel_hum_srf      => tile%mem%srf  %water_state  %rel_hum_srf         (ics:ice,    iblk)
     pch              => tile%mem      %atm2land     %pch                 (ics:ice,    iblk)
     wind_air         => tile%mem      %atm2land     %wind_air            (ics:ice,    iblk)
+    q_air            => tile%mem      %atm2land     %q_air               (ics:ice,    iblk)
 
-    ! Maximum capacity of skin reservoir (soil + canopy)
-    wsr_max(:) = model%config%soil%wsr_capacity * (1._wp + lai(:) * fract_fpc_max(:))
-
-!!$    PRINT*,'canopy cond ', MINVAL(canopy_cond(:)), MAXVAL(canopy_cond(:))
-!!$    PRINT*,'ws_l        ', MINVAL(ws_l(:,1)), MAXVAL(ws_l(:,1))
-!!$    PRINT*,'wsr_max     ', MINVAL(wsr_max(:)), MAXVAL(wsr_max(:))
-!!$    PRINT*,'sfract_srf', MINVAL(sfract_srf(:)), MAXVAL(sfract_srf(:))
-!!$    PRINT*,'wfract_srf', MINVAL(wfract_srf(:)), MAXVAL(wfract_srf(:))
-!!$    PRINT*,'pch', MINVAL(pch(:)), MAXVAL(pch(:))
-!!$    PRINT*,'wind_air', MINVAL(wind_air(:)), MAXVAL(wind_air(:))
-
-!!$    WHERE (ws_l(:,1) > ws_wilt_fract * wsr_max(:))
-    WHERE (ws_l(:,1) > ws_wilt_fract * 0.5_wp) ! Temporary
-      fact_qsat_srf(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * &
+    WHERE (ws_l(:,1) > ws_pwp_l(:,1))
+      fact_qsat_veg(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) *   &
         & (wfract_srf(:) + ( 1._wp - wfract_srf(:)) /                &
         & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:))))
+      fact_qsat_trans(:) = (1._wp - sfract_srf(:)) * &
+        & (1._wp - wfract_srf(:)) /                  &
+        & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:)))
     ELSEWHERE
-      fact_qsat_srf(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * wfract_srf(:)
+      fact_qsat_veg(:)   = sfract_srf(:) + (1._wp - sfract_srf(:)) * wfract_srf(:)
+      fact_qsat_trans(:) = 0._wp
     END WHERE
-    fact_q_air(:)          = fact_qsat_srf(:)
-    fact_qsat_trans_srf(:) = fact_qsat_srf(:)
+    fact_qair_veg(:) = fact_qsat_veg(:)
+
+    rel_hum(:) = relative_humidity(ws_l(:,1), ws_fc_l(:,1))
+
+    WHERE (qsat_srf(:) * rel_hum(:) > q_air(:) .AND. rel_hum(:) > 1.e-10_wp)
+      fact_qsat_soil(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * &
+        & (wfract_srf(:) + (1._wp - wfract_srf(:)) * rel_hum(:))
+      fact_qair_soil(:) = 1._wp
+    ELSEWHERE
+      fact_qsat_soil(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * wfract_srf(:)
+      fact_qair_soil(:) = fact_qsat_soil(:)
+    END WHERE
+    WHERE (q_air(:) > qsat_srf(:))
+      fact_qsat_soil(:) = 1._wp
+      fact_qair_soil(:) = 1._wp
+    END WHERE
+
+    fact_qsat_srf(:) = fract_fpc(:) * fact_qsat_veg(:) + (1._wp - fract_fpc(:)) * fact_qsat_soil(:)
+    fact_q_air(:)    = fract_fpc(:) * fact_qair_veg(:) + (1._wp - fract_fpc(:)) * fact_qair_soil(:)
+    fact_qsat_trans_srf(:) = fract_fpc(:) * fact_qsat_trans(:)
+
+    WHERE (q_air(:) < qsat_srf(:))
+      rel_hum_srf(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * (wfract_srf(:) + (1._wp - wfract_srf(:)) *  rel_hum(:))
+    ELSEWHERE
+      rel_hum_srf(:) = 1._wp
+    END WHERE
 
   END SUBROUTINE update_humidity_scaling
+
+  SUBROUTINE update_roughness( tile, iblk, ics, ice, nc)
+
+    USE mo_srf_constants, ONLY: blending_height, roughness_snow
+
+    TYPE(t_jsb_tile),  POINTER    :: tile
+    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+
+    ! Pointers to variables in memory
+    REAL(wp), POINTER ::       &
+      & rough_m_srf    (:),    &
+      & rough_h_srf    (:),    &
+      & sfract_soil    (:)
+
+    rough_m_srf          => tile%mem%srf  %phys_state   %rough_m_srf      (ics:ice, iblk)
+    rough_h_srf          => tile%mem%srf  %phys_state   %rough_h_srf      (ics:ice, iblk)
+    sfract_soil          => tile%mem%soil %water_state  %sfract_soil      (ics:ice, iblk)
+
+    rough_h_srf(:) =            sfract_soil(:)  / (LOG(blending_height /             roughness_snow) ** 2)  &
+                   & + (1._wp - sfract_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m_srf(:))) ** 2)
+
+    ! Limit roughness length for heat by 1m (see below Eq.5.6 in ECHAM5 manual)
+    rough_h_srf(:) = MIN(1._wp, blending_height * EXP(-1._wp / SQRT(rough_h_srf(:))))
+
+  END SUBROUTINE update_roughness
 
 !!$  SUBROUTINE update_srf( tile, iblk, ics, ice)
 !!$
