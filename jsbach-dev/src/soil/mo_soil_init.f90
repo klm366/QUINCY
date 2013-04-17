@@ -55,7 +55,7 @@ CONTAINS
     USE mo_soil_process, ONLY: init_soil_temperature
     USE mo_soil_util,    ONLY: soil_depth_to_layers_2d
 
-    TYPE(t_jsb_tile), INTENT(in) :: tile
+    TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),         POINTER :: model
     TYPE(t_soil_memory),       POINTER :: soil
