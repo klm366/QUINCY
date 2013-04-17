@@ -102,6 +102,18 @@ CONTAINS
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
         & ldims=shape2d, initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
+      CALL add_var( this_list, prefix//'rough_m_srf'//suffix, pstate%rough_m_srf,                       &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('roughness_length_momentum', 'm', '', DATATYPE_FLT32),                               &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
+
+      CALL add_var( this_list, prefix//'rough_h_srf'//suffix, pstate%rough_h_srf,                       &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('roughness_length_heat', 'm', '', DATATYPE_FLT32),                                   &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
+
       CALL add_var( this_list, prefix//'albedo_srf'//suffix, pstate%albedo_srf,                         &
         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
         & t_cf_var('surface_albedo_background', '', '', DATATYPE_FLT32),                                &
@@ -188,6 +200,12 @@ CONTAINS
 !!$        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
 !!$        & ldims=shape2d, initval_r=0.0_wp )
 
+      CALL add_var( this_list, prefix//'tte_corr'//suffix, estate%tte_corr,                             &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('tte_correction_snowmelt', '', '', DATATYPE_FLT32),                                  &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
+
       CALL add_var( this_list, prefix//'fact_q_air'//suffix, estate%fact_q_air,                         &
         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
         & t_cf_var('factor_air_moisture', '', '', DATATYPE_FLT32),                                      &
@@ -273,6 +291,12 @@ CONTAINS
       CALL add_var( this_list, prefix//'wsn_srf'//suffix, wstate%wsn_srf,                               &
         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
         & t_cf_var('surface_snow_water_equivalent', 'm', '', DATATYPE_FLT32),                           &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
+
+      CALL add_var( this_list, prefix//'rel_hum_srf'//suffix, wstate%rel_hum_srf,                       &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('relative_humidity_surface', '', '', DATATYPE_FLT32),                                &
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
         & ldims=shape2d, initval_r=0.0_wp )
 

@@ -22,6 +22,8 @@ MODULE mo_srf_memory_class
   TYPE t_srf_phys_state
     REAL(wp), POINTER ::           &
       oro_stddev   (:,:),    & !< Standard deviation of orography
+      rough_m_srf  (:,:),    & !< Surface roughness length for momentum
+      rough_h_srf  (:,:),    & !< Surface roughness length for heat
       albedo_srf   (:,:),    & !< (Background) albedo of tile
       alb_vis_srf  (:,:),    & !< Albedo in the visible range
       alb_nir_srf  (:,:)       !< Albedo in the NIR range
@@ -39,9 +41,10 @@ MODULE mo_srf_memory_class
 !!$      s_srf_old        (:,:), &  !< Dry static energy at surface (old timestep)
       qsat_srf         (:,:), &
 !!$      qsat_srf_old     (:,:), &
+      tte_corr         (:,:), &  !< Correction term of tte for snow melt
       fact_q_air       (:,:), &  !< cair in echam6
       fact_qsat_srf    (:,:), &  !< csat in echam6
-      fact_qsat_trans_srf (:,:)   !< csat_transpiration in echam6/jsbach
+      fact_qsat_trans_srf (:,:)  !< csat_transpiration in echam6/jsbach
   END TYPE t_srf_energy_state
 
   TYPE t_srf_water_state
@@ -49,7 +52,8 @@ MODULE mo_srf_memory_class
       wfract_srf    (:,:),   & !< Wet (skin reservoir) fraction of tile []
       wsr_srf       (:,:),   & !< Water content in skin reservoir [m]
       sfract_srf    (:,:),   & !< Snow fraction of tile []
-      wsn_srf       (:,:)      !< Water content of snow reservoir [m water equivalent]
+      wsn_srf       (:,:),   & !< Water content of snow reservoir [m water equivalent]
+      rel_hum_srf   (:,:)      !< Relative humidity of surface (zhsoil in echam6)
   END TYPE t_srf_water_state
 
   TYPE t_srf_energy_flux
@@ -105,8 +109,10 @@ CONTAINS
 !!$    out%s_srf_old     (ics:ice,    iblk) = in%s_srf_old     (ics:ice,    iblk)
     out%qsat_srf      (ics:ice,    iblk) = in%qsat_srf      (ics:ice,    iblk)
 !!$    out%qsat_srf_old  (ics:ice,    iblk) = in%qsat_srf_old  (ics:ice,    iblk)
+    out%tte_corr      (ics:ice,    iblk) = in%tte_corr      (ics:ice,    iblk)
     out%fact_q_air    (ics:ice,    iblk) = in%fact_q_air    (ics:ice,    iblk)
     out%fact_qsat_srf (ics:ice,    iblk) = in%fact_qsat_srf (ics:ice,    iblk)
+    out%fact_qsat_trans_srf (ics:ice,    iblk) = in%fact_qsat_trans_srf (ics:ice,    iblk)
 
   END SUBROUTINE copy_t_srf_energy_state
 
@@ -125,8 +131,10 @@ CONTAINS
 !!$    out%s_srf_old     (ics:ice,    iblk) = in1%s_srf_old     (ics:ice,    iblk) + in2%s_srf_old     (ics:ice,    iblk)
     out%qsat_srf      (ics:ice,    iblk) = in1%qsat_srf      (ics:ice,    iblk) + in2%qsat_srf      (ics:ice,    iblk)
 !!$    out%qsat_srf_old  (ics:ice,    iblk) = in1%qsat_srf_old  (ics:ice,    iblk) + in2%qsat_srf_old  (ics:ice,    iblk)
+    out%tte_corr      (ics:ice,    iblk) = in1%tte_corr      (ics:ice,    iblk) + in2%tte_corr      (ics:ice,    iblk)
     out%fact_q_air    (ics:ice,    iblk) = in1%fact_q_air    (ics:ice,    iblk) + in2%fact_q_air    (ics:ice,    iblk)
     out%fact_qsat_srf (ics:ice,    iblk) = in1%fact_qsat_srf (ics:ice,    iblk) + in2%fact_qsat_srf (ics:ice,    iblk)
+    out%fact_qsat_trans_srf (ics:ice,  iblk) = in1%fact_qsat_trans_srf (ics:ice,  iblk) + in2%fact_qsat_trans_srf (ics:ice,  iblk)
 
   END SUBROUTINE add_t_srf_energy_state
 

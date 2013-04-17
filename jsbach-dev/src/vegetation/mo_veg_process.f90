@@ -81,23 +81,26 @@ CONTAINS
 
   END FUNCTION canopy_conductance_stressed
 
-  REAL(wp) ELEMENTAL FUNCTION water_stress_factor (ws, ws_fc)
+  REAL(wp) ELEMENTAL FUNCTION water_stress_factor (ws, ws_fc, ws_pwp)
 
-    ! TBD: change later so that it uses the geographically dependend wilting point (and maybe critical values)
+    ! TBD: Maybe change later so that it uses geographically dependend critical values (like wilting point)
 
-    USE mo_soil_constants, ONLY: ws_crit_fract, &
-      ws_wilt_fract
+    USE mo_soil_constants, ONLY: ws_crit_fract
 
     REAL(wp), INTENT(in) :: ws      !< Soil water content
     REAL(wp), INTENT(in) :: ws_fc   !< Soil water content at field capacity
+    REAL(wp), INTENT(in) :: ws_pwp  !< Soil water content at permanent wilting point
 
-    REAL(wp) :: ws_crit, ws_wilt    !< Soil water content at critical, resp. wilting point
+    REAL(wp) :: ws_crit             !< Soil water content at critical value
 
     ws_crit = ws_fc * ws_crit_fract
-    ws_wilt = ws_fc * ws_wilt_fract
 
-    water_stress_factor = MAX (0._wp, &
-      MIN (1._wp, (ws - ws_wilt) / (ws_crit - ws_wilt) ))
+    IF (ws_crit - ws_pwp < EPSILON(1._wp)) THEN  ! This should only happen if there's no water in soil (ws=ws_fc=ws_pwp=0)
+      water_stress_factor = 0._wp
+    ELSE
+      water_stress_factor = MAX (0._wp, &
+        MIN (1._wp, (ws - ws_pwp) / (ws_crit - ws_pwp) ))
+    END IF
 
   END FUNCTION water_stress_factor
 

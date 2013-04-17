@@ -39,16 +39,17 @@ CONTAINS
                            & lwrad_srf_down, swrad_srf_down, press_srf, drag_srf,         &
                            & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
                            & pch, cos_zenith_angle,                                       &
-                           & t_srf, t_rad_srf, qsat_srf, fact_q_air, fact_qsat_srf,       &
+                           & t_srf, t_rad_srf, qsat_srf, s_srf,                           &
+                           & fact_q_air, fact_qsat_srf, rel_hum_srf,                      &
                            & evapotrans, latent_hflx, sensible_hflx,                      &
-                           & swrad_net,                                                   &
-!!$                           & zh_srf, zm_srf,                                              &
+                           & rough_h_srf, rough_m_srf,                                    &
+                           & tte_corr,                                                    &
                            & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
 
     USE mo_veg_interface,     ONLY: update_vegetation_1, update_vegetation_2
     USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, &
                                     update_surface_energy, update_surface_fluxes, update_t_srf, &
-                                    update_humidity_scaling
+                                    update_humidity_scaling, update_roughness
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
     USE mo_soil_memory_class, ONLY: copy_soil_mem
 
@@ -84,14 +85,16 @@ CONTAINS
       & t_srf            (:), &
       & t_rad_srf        (:), &
       & qsat_srf         (:), &
+      & s_srf            (:), &
       & fact_q_air       (:), &
       & fact_qsat_srf    (:), &
+      & rel_hum_srf      (:), &
       & evapotrans       (:), &
       & latent_hflx      (:), &
       & sensible_hflx    (:), &
-      & swrad_net        (:), &
-!!$      & zh_srf           (:), &
-!!$      & zm_srf           (:), &
+      & rough_h_srf      (:), &
+      & rough_m_srf      (:), &
+      & tte_corr         (:), &
       & alb_vis_dir      (:), &
       & alb_nir_dir      (:), &
       & alb_vis_dif      (:), &
@@ -162,16 +165,6 @@ CONTAINS
     ! Soil hydrology
     CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
 
-    ! Second part of vegetation that is applied after the soil has been updated,
-    ! in particular:
-    ! 1. Compute canopy albedo
-    CALL update_vegetation_2(tile, iblk, ics, ice, nc)
-
-    ! Second part of soil that is applied after the soil energy and water balance has been updated,
-    ! in particular:
-    ! 1. Compute ground albedo
-    CALL update_soil_2(tile, iblk, ics, ice, nc)
-
     ! Apply time filter for surface temperature
     CALL update_t_srf(tile, iblk, ics, ice, nc)
 
@@ -181,12 +174,28 @@ CONTAINS
     ! Update effective evaporation weights for qsat and q_air
     CALL update_humidity_scaling(tile, iblk, ics, ice, nc)
 
+    ! Second part of vegetation that is applied after the soil has been updated,
+    ! in particular:
+    ! 1. Update LAI and foliage projected cover
+    ! 2. Compute canopy albedo
+    CALL update_vegetation_2(tile, iblk, ics, ice, nc)
+
+    ! Second part of soil that is applied after the soil energy and water balance has been updated,
+    ! in particular:
+    ! 1. Compute ground albedo (at the moment this is done together with canopy in update_vegetation_2)
+    CALL update_soil_2(tile, iblk, ics, ice, nc)
+
+    ! Update roughness length
+    ! At the moment, roughness length for momentum is read in from ini file, only for heat is changed here
+    CALL update_roughness(tile, iblk, ics, ice, nc)
+
     ! Finally, give the required variables back to the atmosphere
     CALL update_land2atm(tile, iblk, ics, ice,                                                                                  &
-      & t_srf=t_srf(:), t_rad_srf=t_rad_srf(:), qsat_srf=qsat_srf(:), fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:), &
+      & t_srf=t_srf(:), t_rad_srf=t_rad_srf(:), qsat_srf=qsat_srf(:), s_srf=s_srf(:),                                           &
+      & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:), rel_hum_srf=rel_hum_srf(:),                                   &
       & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:),                                   &
-      & swrad_net=swrad_net(:),                                                                                                 &
-!!$      & zh_srf=zh_srf(:), zm_srf=zm_srf(:),                                                                                     &
+      & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &
+      & tte_corr=tte_corr(:),                                                                                                   &
       & alb_vis_dir=alb_vis_dir(:), alb_nir_dir=alb_nir_dir(:), alb_vis_dif=alb_vis_dif(:), alb_nir_dif=alb_nir_dif(:))
 
 !!$    IF (iblk == 1) CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' on PE '//int2string(p_pe)//' completed.', &
