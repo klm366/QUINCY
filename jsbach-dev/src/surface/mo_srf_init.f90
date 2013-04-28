@@ -78,6 +78,15 @@ CONTAINS
     !
     phys => srf%phys_state
 
+    ! Glacier mask
+    return_pointer => netcdf_read_oncells_2d(         &
+!!$      & filename=model%config%srf%bc_filename,        &
+      & filename='bc_land_frac.nc',                   & ! Temporary
+      & variable_name='glac',                         &
+      & fill_array = phys%glacier,                    &
+      & patch=model%grid%patch)
+    phys%glacier(:,:) = MERGE(phys%glacier(:,:), 0._wp, phys%glacier(:,:) >= 0._wp)
+
     ! Orography
     return_pointer => netcdf_read_oncells_2d(         &
       & filename=model%config%srf%bc_sso_filename,    &
@@ -165,6 +174,7 @@ CONTAINS
 
     water%sfract_srf  (:,:) = 0._wp
     water%wsn_srf     (:,:) = -1._wp    ! -1 used to determine start of experiment
+    water%wsn_glacier (:,:) = 20._wp    ! Temporary initialization of glacier thickness
 
     water%rel_hum_srf (:,:) = 0._wp
 
