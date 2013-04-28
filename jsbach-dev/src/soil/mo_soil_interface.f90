@@ -84,7 +84,9 @@ CONTAINS
       & mpot           (:),    &
       & bclapp         (:),    &
       & vpor           (:),    &
-      & psdi           (:)
+      & psdi           (:),    &
+      & glacier        (:),    &
+      & wsn_glacier    (:)
 
 
     ! Locally allocated vectors
@@ -98,7 +100,6 @@ CONTAINS
       glacier_runoff_acc(nc), &
       melt_water_excess(nc), &
       snow_melt(nc), &
-      glacier_depth(nc), &
       runoff_hd(nc), &
       drainage_hd(nc), &
       skin_res_evap(nc), &
@@ -167,13 +168,15 @@ CONTAINS
     bclapp         => tile%mem%soil %phys_state     %bclapp              (ics:ice,    iblk)
     vpor           => tile%mem%soil %phys_state     %vpor                (ics:ice,    iblk)
     psdi           => tile%mem%soil %phys_state     %psdi                (ics:ice,    iblk)
+    glacier        => tile%mem%srf  %phys_state     %glacier             (ics:ice, iblk)
+    wsn_glacier    => tile%mem%srf  %water_state    %wsn_glacier         (ics:ice, iblk)
 
     is_present(:)    = .TRUE.
-    is_glacier(:)    = .FALSE.
-    glacier_depth(:) = 0._wp
+    is_glacier(:)    = ( glacier(:) > 0.5_wp )
 
     IF (ALL(wsn_srf(:) < 0._wp)) THEN          ! Start of experiment
       lstart = .TRUE.
+      wsn_srf(:) = 0._wp
     ELSE
       lstart = .FALSE.
     END IF
@@ -194,7 +197,7 @@ CONTAINS
 
     CALL update_surf_down(nc, dtime, lstart, &
       & q_air(:), t_srf_unfilt(:), wind_10m(:), t_air(:), wsr_soil(:), wfract_srf(:), &
-      & wsr_max(:), wsn_soil(:), sfract_srf(:), wsn_can(:), glacier_depth(:), &
+      & wsr_max(:), wsn_soil(:), sfract_srf(:), wsn_can(:), wsn_glacier(:), &
       & hcap_grnd(:), evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), rain(:),  snow(:), &
       & is_present(:), is_glacier(:), glacier_precip_minus_evap(:), &
 !!$      & snow_acc(:), snow_melt_acc(:), glacier_runoff_acc(:), &
@@ -205,7 +208,8 @@ CONTAINS
     CALL update_soiltemp(nc, model%config%soil%nsoil_water, dtime, lstart, &
       & t_srf_unfilt(:), wsn_soil(:), hdiff(:), vhcap(:), &
       & t_soil_acoef(:,:), t_soil_bcoef(:,:), t_soil(:,:), &
-      & hcap_grnd(:), grnd_hflx(:))
+      & hcap_grnd(:), grnd_hflx(:), &
+      & is_present(:), is_glacier(:))
 
     CALL update_surf_up(nc, dtime, model%config%soil%nsoil_water, &
       & wsr_soil(:), wfract_srf(:), wsr_max(:), &

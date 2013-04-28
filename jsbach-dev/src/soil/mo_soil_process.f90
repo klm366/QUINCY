@@ -485,7 +485,7 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
                          , pgrndc, pgrndd                    &
                          , ptsoil                            &
                          , pgrndcapc, pgrndhflx              &
-!!$                         , lmask, ldglac)
+                         , lmask, ldglac                     &
                          )
 !
 !   AUTHOR:  FREDERIC HOURDIN     30/01/92
@@ -549,8 +549,8 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
   REAL(wp), Intent(inout)  ::  ptsoil(nidx,nsoil)   !! soil temperature [K]
   REAL(wp), Intent(out)    ::  pgrndcapc(nidx)      !!
   REAL(wp), Intent(out)    ::  pgrndhflx(nidx)      !! ground heat flux
-!!$  LOGICAL, Intent(in)  ::  lmask(nidx)
-!!$  LOGICAL, Intent(in)  ::  ldglac(nidx)         !! glacier mask
+  LOGICAL, Intent(in)  ::  lmask(nidx)
+  LOGICAL, Intent(in)  ::  ldglac(nidx)         !! glacier mask
 !
 !     ------------------------------------------------------------------
 !
@@ -589,28 +589,21 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !*    1.3 COMPUTE OF THE SOIL THERMAL CONDUCTIVITY [J/S/M/K] FROM
 !*        THE SOIL TEMPERATURE DIFFUSIVITY [M**2/S].
 !
-!!$  WHERE (lmask(:) .AND. ldglac(:))
-  WHERE (prgcgn(:) == 0._wp)  ! Temporary way to find glacier mask
+  WHERE (lmask(:) .AND. ldglac(:))
     zso_capa(:) = zrici
     zso_cond(:) = zso_capa(:) * zdifiz
-!!$  ELSEWHERE (lmask(:))
-  ELSEWHERE
+  ELSEWHERE (lmask(:))
     zso_capa(:) = prgcgn(:)
     zso_cond(:) = zso_capa(:) * psodif(:)
   END WHERE
 !
 !*    1.4 PRE-SET THERMAL CONDUCTIVITY AT ALL LEVELS.
 !
-!!$ TR  DO jk = 1,nsoil
-!!$ TR     WHERE (lmask)
-!!$ TR        zkappa(:,jk) = zso_cond(:)
-!!$ TR        zcapa(:,jk)  = zso_capa(:)
-!!$ TR     END WHERE
-!!$ TR  END DO
-
   DO jk = 1,nsoil
-     zkappa(:,jk) = zso_cond(:)
-     zcapa(:,jk)  = zso_capa(:)
+    WHERE (lmask)
+      zkappa(:,jk) = zso_cond(:)
+      zcapa(:,jk)  = zso_capa(:)
+    END WHERE
   END DO
 
 !
@@ -628,8 +621,7 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !   Deeper layers
 !
     DO jk = 1,nsoil-1
-!!$ TR      WHERE(lmask) ptsoil(:,jk+1) = pgrndc(:,jk) + pgrndd(:,jk) * ptsoil(:,jk)
-      ptsoil(:,jk+1) = pgrndc(:,jk) + pgrndd(:,jk) * ptsoil(:,jk)
+      WHERE(lmask) ptsoil(:,jk+1) = pgrndc(:,jk) + pgrndd(:,jk) * ptsoil(:,jk)
     END DO
 
   END IF
@@ -638,28 +630,28 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !   COMPUTATION OF THE CGRD AND DGRD COEFFICIENTS FOR THE NEXT STEP
 !   ---------------------------------------------------------------
 !
-!!$ TR  WHERE (lmask)
-    zsnow_h(:) = psn(:) * RhoH2O / zsn_dens
+  WHERE (lmask)
 
+    zsnow_h(:) = psn(:) * RhoH2O / zsn_dens
 !
 !*       Special treatment for first layer
 !
-     WHERE ( zsnow_h(:) > cmid(2) )
-        zcapa(:,1) = zsn_capa
-        zkappa(:,1) = zsn_cond
-     ELSEWHERE( zsnow_h(:) > 0.0_wp .AND. zsnow_h(:) <= cmid(2) )
-        zx1 = zsnow_h(:) / cmid(2)
-        zx2 = ( cmid(2) - zsnow_h(:)) / cmid(2)
-        zcapa(:,1) = zx1 * zsn_capa + zx2 * zso_capa(:)
-        zkappa(:,1) = 1._wp / ( zx1 / zsn_cond + zx2 / zso_cond(:) )
-     ELSEWHERE
-        zcapa(:,1) = zso_capa(:)
-        zkappa(:,1) = zso_cond(:)
-     ENDWHERE
-!!$ TR  END WHERE
+    WHERE ( zsnow_h(:) > cmid(2) )
+      zcapa(:,1) = zsn_capa
+      zkappa(:,1) = zsn_cond
+    ELSEWHERE( zsnow_h(:) > 0.0_wp .AND. zsnow_h(:) <= cmid(2) )
+      zx1 = zsnow_h(:) / cmid(2)
+      zx2 = ( cmid(2) - zsnow_h(:)) / cmid(2)
+      zcapa(:,1) = zx1 * zsn_capa + zx2 * zso_capa(:)
+      zkappa(:,1) = 1._wp / ( zx1 / zsn_cond + zx2 / zso_cond(:) )
+    ELSEWHERE
+      zcapa(:,1) = zso_capa(:)
+      zkappa(:,1) = zso_cond(:)
+    ENDWHERE
+  END WHERE
 !
   DO jk = 2, nsoil - 2
-!!$ TR    WHERE (lmask)
+    WHERE (lmask)
        WHERE ( zsnow_h(:) > cmid(jk+1) )
           zcapa(:,jk) = zsn_capa
           zkappa(:,jk) = zsn_cond
@@ -672,31 +664,29 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
           zcapa(:,jk) = zso_capa(:)
           zkappa(:,jk) = zso_cond(:)
        ENDWHERE
-!!$ TR    END WHERE
+     END WHERE
   END DO
 !
   DO jk=1,nsoil
-!!$ TR    WHERE (lmask) zdz2(:,jk) = zcapa(:,jk) * cdel(jk) / delta_time
-     zdz2(:,jk) = zcapa(:,jk) * cdel(jk) / delta_time
+    WHERE (lmask) zdz2(:,jk) = zcapa(:,jk) * cdel(jk) / delta_time
   END DO
 !
   DO jk=1,nsoil-1
-!!$ TR    WHERE (lmask) zdz1(:,jk) = zd1(jk) * zkappa(:,jk)
-     zdz1(:,jk) = zd1(jk) * zkappa(:,jk)
+    WHERE (lmask) zdz1(:,jk) = zd1(jk) * zkappa(:,jk)
   END DO
 !
-!!$ TR  WHERE (lmask)
-     z1(:) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
-     pgrndc(:,nsoil-1) = zdz2(:,nsoil) * ptsoil(:,nsoil) / z1(:)
-     pgrndd(:,nsoil-1) = zdz1(:,nsoil-1) / z1(:)
-!!$ TR  END WHERE
+  WHERE (lmask)
+    z1(:) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
+    pgrndc(:,nsoil-1) = zdz2(:,nsoil) * ptsoil(:,nsoil) / z1(:)
+    pgrndd(:,nsoil-1) = zdz1(:,nsoil-1) / z1(:)
+  END WHERE
 !
   DO jk=nsoil-1,2,-1
-!!$ TR     WHERE (lmask)
-        z1(:) = 1._wp / (zdz2(:,jk) + zdz1(:,jk-1) + zdz1(:,jk) * (1._wp - pgrndd(:,jk)))
-        pgrndc(:,jk-1) = (ptsoil(:,jk) * zdz2(:,jk) + zdz1(:,jk) * pgrndc(:,jk)) * z1(:)
-        pgrndd(:,jk-1) = zdz1(:,jk-1) * z1(:)
-!!$ TR     END WHERE
+    WHERE (lmask)
+      z1(:) = 1._wp / (zdz2(:,jk) + zdz1(:,jk-1) + zdz1(:,jk) * (1._wp - pgrndd(:,jk)))
+      pgrndc(:,jk-1) = (ptsoil(:,jk) * zdz2(:,jk) + zdz1(:,jk) * pgrndc(:,jk)) * z1(:)
+      pgrndd(:,jk-1) = zdz1(:,jk-1) * z1(:)
+    END WHERE
   END DO
 !
 !   ---------------------------------------------------------
@@ -704,15 +694,15 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !   CALORIFIC CAPACITY OF THE GROUND:
 !   ---------------------------------------------------------
 !
-!!$ TR  WHERE (lmask)
-     pgrndhflx(:) = zdz1(:,1) * (pgrndc(:,1) + (pgrndd(:,1) - 1._wp) * ptsoil(:,1))
-     pgrndcapc(:) = (zdz2(:,1) * delta_time + delta_time * (1._wp - pgrndd(:,1)) * zdz1(:,1))
-!!$ TR  ELSEWHERE
-!!$ TR     pgrndhflx = 0._wp
-!!$ TR     pgrndcapc = 0._wp
-!!$ TR  END WHERE
+  WHERE (lmask)
+    pgrndhflx(:) = zdz1(:,1) * (pgrndc(:,1) + (pgrndd(:,1) - 1._wp) * ptsoil(:,1))
+    pgrndcapc(:) = (zdz2(:,1) * delta_time + delta_time * (1._wp - pgrndd(:,1)) * zdz1(:,1))
+  ELSEWHERE
+    pgrndhflx = 0._wp
+    pgrndcapc = 0._wp
+  END WHERE
 
-   END SUBROUTINE update_soiltemp
+END SUBROUTINE update_soiltemp
 
 SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
      , pwl, pcvw, pwlmx &

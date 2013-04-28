@@ -96,6 +96,12 @@ CONTAINS
 
       ALLOCATE(pstate)
 
+      CALL add_var( this_list, prefix//'glacier'//suffix, pstate%glacier,                               &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('glacier_mask', '', '', DATATYPE_FLT32),                                             &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
       CALL add_var( this_list, prefix//'oro_stddev'//suffix, pstate%oro_stddev,                         &
         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
         & t_cf_var('orography_standard_deviation', '', '', DATATYPE_FLT32),                             &
@@ -291,6 +297,12 @@ CONTAINS
       CALL add_var( this_list, prefix//'wsn_srf'//suffix, wstate%wsn_srf,                               &
         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
         & t_cf_var('surface_snow_water_equivalent', 'm', '', DATATYPE_FLT32),                           &
+        & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
+        & ldims=shape2d, initval_r=0.0_wp )
+
+      CALL add_var( this_list, prefix//'wsn_glacier'//suffix, wstate%wsn_glacier,                       &
+        & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
+        & t_cf_var('glacier_snow_water_equivalent', 'm', '', DATATYPE_FLT32),                           &
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
         & ldims=shape2d, initval_r=0.0_wp )
 

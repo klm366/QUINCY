@@ -95,6 +95,7 @@ CONTAINS
     ! Pointers to variables in memory
     REAL(wp), POINTER :: &
                                 !wsn           (:), &
+      glacier       (:), &
       lai           (:), &
       fract_fpc_max (:), &
       sfract_can    (:), &
@@ -130,6 +131,7 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
+    glacier       => tile%mem%srf  %phys_state   %glacier          (ics:ice, iblk)
     lai           => tile%mem%veg  %phys_state   %lai              (ics:ice, iblk)
     fract_fpc_max => tile%mem%veg  %phys_state   %fract_fpc_max    (ics:ice, iblk)
     sfract_can    => tile%mem%veg  %water_state  %sfract_can       (ics:ice, iblk)
@@ -186,6 +188,15 @@ CONTAINS
     wfract_srf(:) = wfract_soil(:) + wfract_can(:)
     sfract_srf(:) = sfract_soil(:) !+ sfract_can(:)
 
+    WHERE (glacier(:) > 0.5_wp)
+      wfract_srf(:)  = 0._wp
+      sfract_srf(:)  = 1._wp
+      wfract_soil(:) = 0._wp
+      sfract_soil(:) = 1._wp
+      wfract_can(:)  = 0._wp
+      sfract_can(:)  = 0._wp
+    END WHERE
+
   END SUBROUTINE update_snow_and_skin_fraction
 
   SUBROUTINE update_surface_energy( tile, iblk, ics, ice, nc, dtime, steplen)
@@ -229,7 +240,8 @@ CONTAINS
       & t_acoef        (:),    &
       & t_bcoef        (:),    &
       & q_acoef        (:),    &
-      & q_bcoef        (:)
+      & q_bcoef        (:),    &
+      & glacier        (:)
 
     ! Locally allocated vectors
     !
@@ -271,6 +283,7 @@ CONTAINS
     t_bcoef              => tile%mem      %atm2land     %t_bcoef          (ics:ice, iblk)
     q_acoef              => tile%mem      %atm2land     %q_acoef          (ics:ice, iblk)
     q_bcoef              => tile%mem      %atm2land     %q_bcoef          (ics:ice, iblk)
+    glacier              => tile%mem%srf  %phys_state   %glacier          (ics:ice, iblk)
 
     ! Save old surface temperature and saturation spec. humidity
     t_srf_unfilt_old(:) = t_srf_unfilt(:)
@@ -314,7 +327,7 @@ CONTAINS
     t_srf_unfilt(:) = ( tpfac2 * s_srf(:) + tpfac3 * s_srf_old(:) ) / t2s_conv(:)
 
     ! Correct new dry static energy for snowmelt
-    WHERE (wsn_srf(:) > model%config%srf%wsn_critical)
+    WHERE (wsn_srf(:) > model%config%srf%wsn_critical .OR. glacier(:) > 0.5_wp)
       s_srf(:) = ( MIN(t_srf_unfilt(:), tmelt) * t2s_conv(:) - tpfac3 * s_srf_old(:) ) / tpfac2
     END WHERE
 
