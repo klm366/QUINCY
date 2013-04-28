@@ -225,6 +225,8 @@ CONTAINS
       & jllog &
       & )
 
+    ws(:) = SUM(ws_l(:,:), DIM=2)
+
     wsn_srf(:) = wsn_soil(:) + wsn_can(:)
     wsr_srf(:) = wsr_soil(:) ! + wsr_can(:)
 
