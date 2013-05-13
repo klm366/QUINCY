@@ -26,9 +26,9 @@ CONTAINS
     & t_air, q_air, rain, snow, wind_air, wind_10m, lwrad_srf_down, swrad_srf_down, &
     & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
 
-    TYPE(t_jsb_tile),   INTENT(in) :: tile
-    INTEGER,            INTENT(in) :: iblk, ics, ice
-    REAL(wp), OPTIONAL, INTENT(in) :: &
+    TYPE(t_jsb_tile),   INTENT(inout) :: tile
+    INTEGER,            INTENT(in)    :: iblk, ics, ice
+    REAL(wp), OPTIONAL, INTENT(in)    :: &
       & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:), lwrad_srf_down(:), swrad_srf_down(:), &
       & press_srf(:), drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), cos_zenith_angle(:)
 

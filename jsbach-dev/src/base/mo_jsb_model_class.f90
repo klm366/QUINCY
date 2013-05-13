@@ -144,10 +144,11 @@ CONTAINS
 
 #ifdef HAVE_F2003
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: self
+    TYPE(t_jsb_grid),  POINTER, INTENT(in)    :: grid
 #else
     TYPE(t_jsb_model), POINTER                :: self
+    TYPE(t_jsb_grid),  POINTER                :: grid
 #endif
-    TYPE(t_jsb_grid),  POINTER, INTENT(in) :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:register_grid'
 

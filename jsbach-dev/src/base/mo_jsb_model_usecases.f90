@@ -24,7 +24,11 @@ CONTAINS
 
   SUBROUTINE init_usecase(model)
 
-    TYPE(t_jsb_model), POINTER, INTENT(inout)  :: model
+#ifdef HAVE_F2003
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+#else
+    TYPE(t_jsb_model), POINTER                :: model
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase'
 
@@ -52,7 +56,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite'
 
-    TYPE(t_jsb_model), POINTER, INTENT(inout)  :: model
+#ifdef HAVE_F2003
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+#else
+    TYPE(t_jsb_model), POINTER                :: model
+#endif
 
     TYPE(t_jsb_tile), POINTER :: tile
     INTEGER :: nblks, nproma
