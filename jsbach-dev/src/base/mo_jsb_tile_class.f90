@@ -49,7 +49,11 @@ CONTAINS
 
   FUNCTION new_sub_tile(parent, name, description, components) RESULT(tile)
 
+#ifdef HAVE_F2003
     TYPE(t_jsb_tile), POINTER, INTENT(inout) :: parent
+#else
+    TYPE(t_jsb_tile), POINTER                :: parent
+#endif
     CHARACTER(len=*),          INTENT(in)    :: name
     CHARACTER(len=*),          INTENT(in)    :: description
     CHARACTER(len=*),          INTENT(in)    :: components(:)

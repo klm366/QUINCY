@@ -115,7 +115,11 @@ CONTAINS
     USE mo_veg_init,           ONLY: veg_init_ic, veg_init_bc
     USE mo_jsb_base,           ONLY: get_tile
 
-    TYPE(t_jsb_model), POINTER, INTENT(inout)  :: model
+#ifdef HAVE_F2003
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+#else
+    TYPE(t_jsb_model), POINTER                :: model
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_common'
 
