@@ -55,14 +55,14 @@ CONTAINS
 
 #ifdef __ICON__
     USE mo_mpi, ONLY: set_mpi_work_communicators
-    USE mo_parallel_config, ONLY: p_test_run, l_test_openmp, num_io_procs
+    USE mo_parallel_config, ONLY: p_test_run, l_test_openmp, num_io_procs, num_restart_procs
 #else
     USE mo_mpi, ONLY: p_init_communicators
     USE mo_control, ONLY: nproca, nprocb, nprocio
 #endif
 
 #ifdef __ICON__
-    CALL set_mpi_work_communicators(p_test_run, l_test_openmp, num_io_procs)
+    CALL set_mpi_work_communicators(p_test_run, l_test_openmp, num_io_procs, num_restart_procs)
 #else
     CALL p_init_communicators(nproca, nprocb, nprocio)
 #endif
