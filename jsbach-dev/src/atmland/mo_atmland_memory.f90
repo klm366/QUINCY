@@ -142,7 +142,7 @@ CONTAINS
          & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),         &
          & ldims=shape2d, initval_r=0.0_wp )
 
-    CALL add_var( this_list, prefix//'q_aceof'//suffix, atm2land%q_acoef,                  &
+    CALL add_var( this_list, prefix//'q_acoef'//suffix, atm2land%q_acoef,                  &
          & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                             &
          & t_cf_var('specific_humidity_acoef', '', '', DATATYPE_FLT32),                    &
          & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),         &
