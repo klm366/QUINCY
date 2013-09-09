@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_model_usecases
+#ifdef __JSBACH__
 
   USE mo_jsb_model_class, ONLY: t_jsb_model
   USE mo_exception,       ONLY: message, finish
@@ -101,4 +102,5 @@ CONTAINS
 
   END SUBROUTINE init_usecase_lite
 
+#endif
 END MODULE mo_jsb_model_usecases

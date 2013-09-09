@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_phy_schemes_iface
+#ifdef __JSBACH__
 
   USE mo_kind, ONLY: wp
 
@@ -29,4 +30,5 @@ MODULE mo_phy_schemes_iface
 !!$
 !!$  END FUNCTION qsat
 
+#endif
 END MODULE mo_phy_schemes_iface

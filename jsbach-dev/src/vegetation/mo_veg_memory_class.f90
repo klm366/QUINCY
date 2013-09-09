@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_veg_memory_class
+#ifdef __JSBACH__
 
   USE mo_kind, ONLY: wp
 
@@ -51,4 +52,5 @@ MODULE mo_veg_memory_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_memory_class'
 
+#endif
 END MODULE mo_veg_memory_class

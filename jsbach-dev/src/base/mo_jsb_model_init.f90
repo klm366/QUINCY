@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_model_init
+#ifdef __JSBACH__
 
   USE mo_jsb_base,         ONLY: jsbach
   USE mo_jsb_model_class,  ONLY: t_jsb_model
@@ -164,4 +165,5 @@ CONTAINS
 
   END SUBROUTINE init_model_common
 
+#endif
 END MODULE mo_jsb_model_init

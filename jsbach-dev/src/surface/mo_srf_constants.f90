@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_srf_constants
+#ifdef __JSBACH__
 
   USE mo_physical_constants, ONLY: &
     rd,              &  !< Gas constant [J/K/kg]
@@ -30,4 +31,5 @@ MODULE mo_srf_constants
     & roughness_snow  = 0.001_wp, & !< Roughness length of snow-covered surfaces [m]
     & roughness_bare  = 0.005_wp    !< Roughness length of bare land surfaces [m]
 
+#endif
 END MODULE mo_srf_constants

@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_parallel_iface
+#ifdef __JSBACH__
 
 #ifdef __ICON__
   USE mo_gather_scatter,  ONLY: gather_field => gather_cells, scatter_field => scatter_cells
@@ -99,4 +100,5 @@ CONTAINS
   END FUNCTION get_my_global_mpi_id
 #endif
 
+#endif
 END MODULE mo_jsb_parallel_iface

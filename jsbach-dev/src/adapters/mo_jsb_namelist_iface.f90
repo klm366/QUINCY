@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-02-06)
 !!
 MODULE mo_jsb_namelist_iface
+#ifdef __JSBACH__
 
   USE mo_exception, ONLY: finish
 
@@ -64,4 +65,5 @@ CONTAINS
   END SUBROUTINE close_nml
 #endif
 
+#endif
 END MODULE mo_jsb_namelist_iface

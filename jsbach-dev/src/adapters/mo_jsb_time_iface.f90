@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-02-06)
 !!
 MODULE mo_jsb_time_iface
+#ifdef __JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish, message, message_text
@@ -253,4 +254,5 @@ CONTAINS
   END SUBROUTINE get_date_components
 #endif
 
+#endif
 END MODULE mo_jsb_time_iface

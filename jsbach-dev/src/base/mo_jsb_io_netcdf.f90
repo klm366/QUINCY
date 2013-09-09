@@ -1,4 +1,5 @@
 MODULE mo_jsb_io_netcdf
+#ifdef __JSBACH__
 
   USE mo_exception, ONLY: finish, message, em_warn
   USE mo_io_units,         ONLY: filename_max
@@ -70,4 +71,5 @@ CONTAINS
     
   END SUBROUTINE nf
 
+#endif
 END MODULE mo_jsb_io_netcdf

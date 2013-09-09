@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_soil_util
+#ifdef __JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish
@@ -53,4 +54,5 @@ CONTAINS
 
   END FUNCTION soil_depth_to_layers_2d
 
+#endif
 END MODULE mo_soil_util

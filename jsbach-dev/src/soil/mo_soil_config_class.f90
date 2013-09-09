@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_soil_config_class
+#ifdef __JSBACH__
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
@@ -103,4 +104,5 @@ CONTAINS
 
   END FUNCTION new_soil_config
 
+#endif
 END MODULE mo_soil_config_class

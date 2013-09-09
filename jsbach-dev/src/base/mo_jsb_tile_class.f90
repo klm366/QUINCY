@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_tile_class
+#ifdef __JSBACH__
 
   !USE mo_jsb_varlist_class, ONLY: t_jsb_varlist
   USE mo_jsb_memory_class,   ONLY: t_jsb_memory
@@ -135,4 +136,5 @@ CONTAINS
 
   END SUBROUTINE register_varlist
 
+#endif
 END MODULE mo_jsb_tile_class

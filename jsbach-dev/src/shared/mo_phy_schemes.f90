@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_phy_schemes
+#ifdef __JSBACH__
 
   USE mo_kind, ONLY: wp
 
@@ -99,4 +100,5 @@ CONTAINS
 
   END FUNCTION heat_transfer_coef
 
+#endif
 END MODULE mo_phy_schemes

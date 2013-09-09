@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_srf_memory_class
+#ifdef __JSBACH__
 
   USE mo_kind, ONLY: wp
 
@@ -140,4 +141,5 @@ CONTAINS
 
   END SUBROUTINE add_t_srf_energy_state
 
+#endif
 END MODULE mo_srf_memory_class
