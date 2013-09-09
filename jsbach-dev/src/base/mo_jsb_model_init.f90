@@ -30,7 +30,7 @@ CONTAINS
 
   SUBROUTINE init_model_standalone(model_id, model_name)
 
-    USE mo_jsb_grid_class,  ONLY: new_grid
+    USE mo_jsb_grid_class,  ONLY: t_jsb_grid, new_grid
     USE mo_jsb_model_class, ONLY: register_grid, print_model
 
     INTEGER,                    INTENT(in) :: model_id
@@ -42,6 +42,7 @@ CONTAINS
 !!$#endif
 
     TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_standalone'
 
@@ -52,7 +53,8 @@ CONTAINS
     END IF
 
     ! TBD: loop through already existing grids and use it if already exists with same name
-    CALL register_grid(model, new_grid(model%config%grid_filename, model%config%grid_name))
+    grid => new_grid(model%config%grid_filename, model%config%grid_name)
+    CALL register_grid(model, grid)
 
     CALL print_model(model)
 
@@ -64,7 +66,7 @@ CONTAINS
                              & nsoil_w, dzsoil_w, nsoil_e, dzsoil_e)
 
     USE mo_jsb_domain_iface, ONLY: t_patch
-    USE mo_jsb_grid_class,   ONLY: new_grid
+    USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_model_class,  ONLY: register_grid
 
     INTEGER,                    INTENT(in) :: model_id
@@ -79,6 +81,7 @@ CONTAINS
       & dzsoil_e(:)                               !< Soil layer depths (energy)
 
     TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_patch'
 
@@ -87,7 +90,8 @@ CONTAINS
 
     model => jsbach%models(model_id)%m
 
-    CALL register_grid(model, new_grid(patch))
+    grid => new_grid(patch)
+    CALL register_grid(model, grid)
 
     CALL init_model_common(model)
 
