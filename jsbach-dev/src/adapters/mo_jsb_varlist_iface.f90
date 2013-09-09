@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_varlist_iface
+#ifdef __JSBACH__
 
 #ifdef __ICON__
   USE mo_var_list,    ONLY: new_var_list, &
@@ -25,4 +26,5 @@ MODULE mo_jsb_varlist_iface
   
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_varlist_iface'
 
+#endif
 END MODULE mo_jsb_varlist_iface

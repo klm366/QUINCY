@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_srf_process
+#ifdef __JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message
@@ -81,4 +82,5 @@ CONTAINS
 
   END SUBROUTINE surface_temp_and_qsat_implicit
 
+#endif
 END MODULE mo_srf_process

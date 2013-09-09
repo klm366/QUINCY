@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_atmland_interface
+#ifdef __JSBACH__
 
   USE mo_jsb_tile_class, ONLY: t_jsb_tile
   USE mo_exception,      ONLY: finish
@@ -95,4 +96,5 @@ CONTAINS
 
   END SUBROUTINE update_land2atm
 
+#endif
 END MODULE mo_atmland_interface

@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_veg_constants
+#ifdef __JSBACH__
 
   USE mo_kind, ONLY: wp
 
@@ -26,4 +27,5 @@ MODULE mo_veg_constants
     albedo_snow_can = 0.2_wp,     & !> Albedo of snow on canopy
     sky_view_factor = 1._wp         !> Sky view factor
 
+#endif
 END MODULE mo_veg_constants

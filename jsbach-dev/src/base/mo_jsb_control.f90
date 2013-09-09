@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-02-22)
 !!
 MODULE mo_jsb_control
+#ifdef __JSBACH__
 
   USE mo_io_units,  ONLY: filename_max
   USE mo_exception, ONLY: finish
@@ -159,4 +160,5 @@ CONTAINS
 
   END FUNCTION debug_on
 
+#endif
 END MODULE mo_jsb_control

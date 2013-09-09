@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-02-18)
 !!
 MODULE mo_jsb_time
+#ifdef __JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish, print_value
@@ -199,4 +200,5 @@ CONTAINS
 
   END FUNCTION get_secs_of_day_at_current_timestep
 
+#endif
 END MODULE mo_jsb_time

@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_atmland_memory
+#ifdef __JSBACH__
 
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory, t_land2atm_memory
   USE mo_cdi_constants,     ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, &
@@ -280,4 +281,5 @@ CONTAINS
 
   END FUNCTION new_land2atm_memory
 
+#endif
 END MODULE mo_atmland_memory

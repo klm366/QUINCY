@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_soil_memory
+#ifdef __JSBACH__
 
   USE mo_soil_memory_class, ONLY: t_soil_memory, t_soil_phys_state, &
                                   t_soil_energy_state, t_soil_energy_flux,          &
@@ -299,4 +300,5 @@ CONTAINS
 
   END FUNCTION new_soil_memory
 
+#endif
 END MODULE mo_soil_memory

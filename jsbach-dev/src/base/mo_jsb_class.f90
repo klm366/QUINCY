@@ -1,4 +1,5 @@
 MODULE mo_jsb_class
+#ifdef __JSBACH__
 
   USE mo_jsb_model_class, ONLY: t_jsb_model_m
 
@@ -44,4 +45,5 @@ MODULE mo_jsb_class
 !!$
 !!$  END FUNCTION get_model_by_id
 
+#endif
 END MODULE mo_jsb_class

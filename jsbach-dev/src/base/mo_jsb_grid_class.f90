@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_grid_class
+#ifdef __JSBACH__
 
   USE mo_kind,               ONLY: wp
   USE mo_io_units,           ONLY: filename_max
@@ -292,4 +293,5 @@ CONTAINS
 
   END FUNCTION get_col_end
 
+#endif
 END MODULE mo_jsb_grid_class

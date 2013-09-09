@@ -1,4 +1,5 @@
 MODULE mo_jsb_memory
+#ifdef __JSBACH__
 
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_cdi_constants,     ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, &
@@ -111,4 +112,5 @@ CONTAINS
 
   END FUNCTION new_jsbach_memory
 
+#endif
 END MODULE mo_jsb_memory

@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_soil_init
+#ifdef __JSBACH__
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile
@@ -315,4 +316,5 @@ CONTAINS
 
   END SUBROUTINE soil_init_ic
 
+#endif
 END MODULE mo_soil_init

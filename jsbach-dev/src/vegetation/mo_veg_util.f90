@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_veg_util
+#ifdef __JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish
@@ -64,4 +65,5 @@ CONTAINS
 
   END FUNCTION water_in_root_zone
 
+#endif
 END MODULE mo_veg_util

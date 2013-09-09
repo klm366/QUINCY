@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_base
+#ifdef __JSBACH__
 
 !!$  USE mo_jsb_model_class, ONLY: t_jsb_model_m
 !!$  USE mo_jsb_class, ONLY: t_jsb, jsbach
@@ -147,4 +148,5 @@ CONTAINS
 
   END FUNCTION get_tile_by_name
 
+#endif
 END MODULE mo_jsb_base

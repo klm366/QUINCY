@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_soil_constants
+#ifdef __JSBACH__
 
   USE mo_kind, ONLY: wp
 
@@ -26,4 +27,5 @@ MODULE mo_soil_constants
     & wsn2frac_sigfac = 0.15_wp,    &
     & wsn2frac_const  = 0.95_wp        !< Inverse of snow height when snow is considered to completely cover the ground
 
+#endif
 END MODULE mo_soil_constants

@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_soil_process
+#ifdef __JSBACH__
 
   USE mo_physical_constants, ONLY: rhoh2o
   USE mo_kind,      ONLY: wp
@@ -2166,4 +2167,5 @@ REAL(wp) :: zover(klon)
 
 END SUBROUTINE soilchange
 
+#endif
 END MODULE mo_soil_process

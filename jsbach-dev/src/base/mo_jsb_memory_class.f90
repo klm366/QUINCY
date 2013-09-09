@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_memory_class
+#ifdef __JSBACH__
 
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory, t_land2atm_memory
   USE mo_srf_memory_class,     ONLY: t_srf_memory
@@ -41,4 +42,5 @@ MODULE mo_jsb_memory_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_memory_class'
 
+#endif
 END MODULE mo_jsb_memory_class

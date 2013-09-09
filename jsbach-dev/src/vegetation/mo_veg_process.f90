@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_veg_process
+#ifdef __JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message
@@ -165,4 +166,5 @@ CONTAINS
 
   END FUNCTION canopy_albedo_echam5
 
+#endif
 END MODULE mo_veg_process

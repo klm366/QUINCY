@@ -8,6 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_io_iface
+#ifdef __JSBACH__
 
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
@@ -21,4 +22,5 @@ MODULE mo_jsb_io_iface
   
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_iface'
 
+#endif
 END MODULE mo_jsb_io_iface
