@@ -45,11 +45,15 @@ MODULE mo_jsb_control
 
 CONTAINS
 
-  SUBROUTINE init_jsb_master_control()
+  SUBROUTINE init_jsb_master_control(namelist_filename)
 
     USE mo_jsb_time, ONLY: init_time
 
+    CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_jsb_master_control'
+
+    IF (PRESENT(namelist_filename)) master_namelist_filename = TRIM(namelist_filename)
 
     CALL read_jsb_control_namelist(TRIM(master_namelist_filename))
 
