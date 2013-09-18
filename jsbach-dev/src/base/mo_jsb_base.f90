@@ -41,13 +41,15 @@ MODULE mo_jsb_base
 
 CONTAINS
 
-  SUBROUTINE init_base()
+  SUBROUTINE init_base(master_namelist_filename)
 
     USE mo_jsb_control,        ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, jsbach_runs_standalone
     USE mo_jsb_parallel_iface, ONLY: init_parallel_iface, init_mpi_communicators
     USE mo_jsb_model_class,    ONLY: t_jsb_model, new_model
     USE mo_jsb_config_class,   ONLY: new_model_config
     !USE mo_jsb_domain,         ONLY: init_domains
+
+    CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
     TYPE(t_jsb_model), POINTER :: current => NULL()
 
@@ -57,7 +59,7 @@ CONTAINS
 
     CALL message(TRIM(routine), 'starting basic initialization')
 
-    CALL init_jsb_master_control()
+    CALL init_jsb_master_control(master_namelist_filename)
 
     CALL init_parallel_iface
 
