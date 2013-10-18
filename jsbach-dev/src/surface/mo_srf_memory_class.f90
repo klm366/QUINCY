@@ -63,7 +63,7 @@ MODULE mo_srf_memory_class
     REAL(wp), POINTER :: &
       latent_hflx      (:,:),   & !< latent heat flux
       sensible_hflx    (:,:),   & !< sensible heat flux
-      swrad_srf_net    (:,:),   & !< net shortwave radiation at surface
+      swrad_srf_down   (:,:),   & !< net shortwave radiation at surface
       lwrad_srf_net    (:,:),   & !< net longwave radiation at surface
       rad_srf_net      (:,:)      !< net radiation at surface
   END TYPE t_srf_energy_flux

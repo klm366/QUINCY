@@ -26,7 +26,7 @@ MODULE mo_atmland_memory_class
       wind_air         (:,:), &
       wind_10m         (:,:), &
       lwrad_srf_down   (:,:), &
-      swrad_srf_down   (:,:), &
+      swrad_srf_net    (:,:), &
       press_srf        (:,:), &
       drag_srf         (:,:), &
       t_acoef          (:,:), &

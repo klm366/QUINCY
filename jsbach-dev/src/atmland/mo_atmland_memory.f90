@@ -113,9 +113,9 @@ CONTAINS
          & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),         &
          & ldims=shape2d, initval_r=0.0_wp )
 
-    CALL add_var( this_list, prefix//'swrad_srf_down'//suffix, atm2land%swrad_srf_down,    &
+    CALL add_var( this_list, prefix//'swrad_srf_net'//suffix, atm2land%swrad_srf_net,      &
          & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                             &
-         & t_cf_var('downward_shortwave_radiation', 'K', '', DATATYPE_FLT32),              &
+         & t_cf_var('net', 'K', '', DATATYPE_FLT32),                                       &
          & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),         &
          & ldims=shape2d, initval_r=0.0_wp )
 

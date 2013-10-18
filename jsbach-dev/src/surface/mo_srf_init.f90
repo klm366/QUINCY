@@ -183,11 +183,11 @@ CONTAINS
     !
     eflux => srf%energy_flux
 
-    eflux%swrad_srf_net (:,:) = 0._wp
-    eflux%lwrad_srf_net (:,:) = 0._wp
-    eflux%rad_srf_net   (:,:) = 0._wp
-    eflux%latent_hflx   (:,:) = 0._wp
-    eflux%sensible_hflx (:,:) = 0._wp
+    eflux%swrad_srf_down (:,:) = 0._wp
+    eflux%lwrad_srf_net  (:,:) = 0._wp
+    eflux%rad_srf_net    (:,:) = 0._wp
+    eflux%latent_hflx    (:,:) = 0._wp
+    eflux%sensible_hflx  (:,:) = 0._wp
 
     ! Initialize water fluxes
     !

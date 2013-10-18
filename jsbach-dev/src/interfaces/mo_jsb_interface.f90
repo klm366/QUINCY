@@ -37,7 +37,7 @@ CONTAINS
 
   SUBROUTINE interface_full( model_id, iblk, ics, ice, dtime, steplen,                    &
                            & t_air, q_air, rain, snow, wind_air, wind_10m,                &
-                           & lwrad_srf_down, swrad_srf_down, press_srf, drag_srf,         &
+                           & lwrad_srf_down, swrad_srf_net, press_srf, drag_srf,          &
                            & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
                            & pch, cos_zenith_angle,                                       &
                            & t_srf, t_rad_srf, qsat_srf, s_srf,                           &
@@ -73,7 +73,7 @@ CONTAINS
       & wind_air         (:), &
       & wind_10m         (:), &
       & lwrad_srf_down   (:), &
-      & swrad_srf_down   (:), &
+      & swrad_srf_net    (:), &
       & press_srf        (:), &
       & drag_srf         (:), &
       & t_acoef          (:), &
@@ -126,7 +126,7 @@ CONTAINS
     CALL update_atm2land( model%land, iblk, ics, ice,                                                                         &
 !!$      & t_air=t_air(:), q_air=q_air(:), rain=rain(:), snow=snow(:), wind_air=wind_air(:), wind_10m=wind_10m(:),               &
       & t_air=t_air(:), q_air=q_air(:), rain=rain(:), snow=snow(:), wind_air=wind_air(:), wind_10m=wind_air(:)*0.8_wp,        & ! Temporary
-      & lwrad_srf_down=lwrad_srf_down(:), swrad_srf_down=swrad_srf_down(:), press_srf=press_srf(:), drag_srf=drag_srf(:),     &
+      & lwrad_srf_down=lwrad_srf_down(:), swrad_srf_net=swrad_srf_net(:), press_srf=press_srf(:), drag_srf=drag_srf(:),       &
       & t_acoef=t_acoef(:), t_bcoef=t_bcoef(:), q_acoef=q_acoef(:), q_bcoef=q_bcoef(:),                                       &
       & pch=pch(:), cos_zenith_angle=cos_zenith_angle(:))
 

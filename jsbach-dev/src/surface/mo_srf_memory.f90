@@ -239,9 +239,9 @@ CONTAINS
 
       ALLOCATE(eflux)
 
-      CALL add_var( this_list, prefix//'swrad_srf_net'//suffix, eflux%swrad_srf_net,                    &
+      CALL add_var( this_list, prefix//'swrad_srf_down'//suffix, eflux%swrad_srf_down,                  &
         & GRID_UNSTRUCTURED_CELL, ZA_SURFACE,                                                           &
-        & t_cf_var('swrad_srf_net', '', 'Net surface shortwave radiation', DATATYPE_FLT32),             &
+        & t_cf_var('swrad_srf_down', '', 'Downward surface shortwave radiation', DATATYPE_FLT32),       &
         & t_grib2_var(255, 255, 255, DATATYPE_PACK16, GRID_REFERENCE, GRID_CELL),                       &
         & ldims=shape2d, initval_r=0.0_wp )
 
