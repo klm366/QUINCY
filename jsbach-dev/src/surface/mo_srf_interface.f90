@@ -44,8 +44,8 @@ CONTAINS
       & swrad_srf_net    (:), &
       & lwrad_srf_net    (:), &
       & rad_srf_net      (:), &
-      & swrad_srf_down   (:), &
       & lwrad_srf_down   (:), &
+      & swrad_srf_down   (:), &
       & alb_vis_srf      (:), &
       & alb_nir_srf      (:), &
       & t_srf            (:)
@@ -58,8 +58,8 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    swrad_srf_net  => tile%mem%srf %energy_flux  %swrad_srf_net  (ics:ice, iblk)
-    swrad_srf_down => tile%mem     %atm2land     %swrad_srf_down (ics:ice, iblk)
+    swrad_srf_net  => tile%mem     %atm2land     %swrad_srf_net  (ics:ice, iblk)
+    swrad_srf_down => tile%mem%srf %energy_flux  %swrad_srf_down (ics:ice, iblk)
     lwrad_srf_net  => tile%mem%srf %energy_flux  %lwrad_srf_net  (ics:ice, iblk)
     lwrad_srf_down => tile%mem     %atm2land     %lwrad_srf_down (ics:ice, iblk)
     rad_srf_net    => tile%mem%srf %energy_flux  %rad_srf_net    (ics:ice, iblk)
@@ -68,8 +68,8 @@ CONTAINS
     lwrad_srf_net  => tile%mem%srf %energy_flux  %lwrad_srf_net  (ics:ice, iblk)
     t_srf          => tile%mem%srf %energy_state %t_srf          (ics:ice, iblk)
 
-    ! Compute SW net radiation from incoming and albedo
-    swrad_srf_net(:) = swrad_srf_down(:) * (1._wp - (alb_vis_srf(:) + alb_nir_srf(:)) / 2._wp)
+    ! Compute downward SW radiation from net SW and albedo
+    swrad_srf_down(:) = swrad_srf_net(:) / (1._wp - (alb_vis_srf(:) + alb_nir_srf(:)) / 2._wp)
 
     ! Compute LW net radiation from incoming and the thermal radiation from the surface
     lwrad_srf_net(:) = lwrad_srf_down(:) - thermal_radiation(t_srf(:))

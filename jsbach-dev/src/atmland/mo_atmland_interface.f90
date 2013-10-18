@@ -24,13 +24,13 @@ MODULE mo_atmland_interface
 CONTAINS
 
   SUBROUTINE update_atm2land(tile, iblk, ics, ice, &
-    & t_air, q_air, rain, snow, wind_air, wind_10m, lwrad_srf_down, swrad_srf_down, &
+    & t_air, q_air, rain, snow, wind_air, wind_10m, lwrad_srf_down, swrad_srf_net, &
     & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
 
     TYPE(t_jsb_tile),   INTENT(inout) :: tile
     INTEGER,            INTENT(in)    :: iblk, ics, ice
     REAL(wp), OPTIONAL, INTENT(in)    :: &
-      & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:), lwrad_srf_down(:), swrad_srf_down(:), &
+      & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:), lwrad_srf_down(:), swrad_srf_net(:), &
       & press_srf(:), drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), cos_zenith_angle(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_atm2land'
@@ -44,7 +44,7 @@ CONTAINS
     IF (PRESENT(wind_air))         tile%mem%atm2land%wind_air         (ics:ice, iblk) = wind_air         (:)
     IF (PRESENT(wind_10m))         tile%mem%atm2land%wind_10m         (ics:ice, iblk) = wind_10m         (:)
     IF (PRESENT(lwrad_srf_down))   tile%mem%atm2land%lwrad_srf_down   (ics:ice, iblk) = lwrad_srf_down   (:)
-    IF (PRESENT(swrad_srf_down))   tile%mem%atm2land%swrad_srf_down   (ics:ice, iblk) = swrad_srf_down   (:)
+    IF (PRESENT(swrad_srf_net))    tile%mem%atm2land%swrad_srf_net    (ics:ice, iblk) = swrad_srf_net    (:)
     IF (PRESENT(press_srf))        tile%mem%atm2land%press_srf        (ics:ice, iblk) = press_srf        (:)
     IF (PRESENT(drag_srf))         tile%mem%atm2land%drag_srf         (ics:ice, iblk) = drag_srf         (:)
     IF (PRESENT(t_acoef))          tile%mem%atm2land%t_acoef          (ics:ice, iblk) = t_acoef          (:)

@@ -77,7 +77,7 @@ CONTAINS
     ! Get reference to variables for current block
     !
     lai                => tile%mem%veg  %phys_state   %lai            (ics:ice,    iblk)
-    swrad_srf_down     => tile%mem      %atm2land     %swrad_srf_down (ics:ice,    iblk)
+    swrad_srf_down     => tile%mem%srf  %energy_flux  %swrad_srf_down (ics:ice,    iblk)
     canopy_cond        => tile%mem%veg  %phys_state   %canopy_cond    (ics:ice,    iblk)
     soil_depth_l       => tile%mem%soil %phys_state   %soil_depth_l   (ics:ice, :, iblk)
     root_depth_l       => tile%mem%veg  %phys_state   %root_depth_l   (ics:ice, :, iblk)
