@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-02-06)
 !!
 MODULE mo_jsb_nml_iface
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
 #ifdef __ICON__
 #else

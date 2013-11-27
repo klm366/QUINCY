@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_veg_config_class
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message, finish
   USE mo_io_units,          ONLY: filename_max

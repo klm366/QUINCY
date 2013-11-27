@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-02-18)
 !!
 MODULE mo_jsb_time
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish, print_value

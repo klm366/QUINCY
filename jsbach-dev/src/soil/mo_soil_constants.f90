@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_soil_constants
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
 

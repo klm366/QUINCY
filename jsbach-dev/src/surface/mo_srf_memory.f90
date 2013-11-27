@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_srf_memory
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_srf_memory_class, ONLY: t_srf_memory, t_srf_phys_state, &
                                   t_srf_energy_state, t_srf_energy_flux,          &

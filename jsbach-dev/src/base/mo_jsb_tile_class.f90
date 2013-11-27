@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_tile_class
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
   !USE mo_jsb_varlist_class, ONLY: t_jsb_varlist
   USE mo_jsb_memory_class,   ONLY: t_jsb_memory

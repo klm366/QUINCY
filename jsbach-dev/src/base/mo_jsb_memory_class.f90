@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_memory_class
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory, t_land2atm_memory
   USE mo_srf_memory_class,     ONLY: t_srf_memory
