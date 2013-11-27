@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_model_class
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_jsb_config_class, ONLY: t_jsb_model_config
   USE mo_jsb_grid_class,   ONLY: t_jsb_grid

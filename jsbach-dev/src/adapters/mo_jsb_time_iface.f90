@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-02-06)
 !!
 MODULE mo_jsb_time_iface
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish, message, message_text

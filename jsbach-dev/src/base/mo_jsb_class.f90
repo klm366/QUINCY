@@ -1,5 +1,5 @@
 MODULE mo_jsb_class
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
   USE mo_jsb_model_class, ONLY: t_jsb_model_m
 

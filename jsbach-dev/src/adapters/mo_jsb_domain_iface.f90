@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_domain_iface
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
 #ifdef __ICON__
   USE mo_model_domain,       ONLY: t_patch, p_patch

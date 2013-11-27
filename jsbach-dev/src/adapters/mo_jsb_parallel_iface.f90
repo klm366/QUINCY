@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !!
 MODULE mo_jsb_parallel_iface
-#ifdef __JSBACH__
+#ifndef __NO_JSBACH__
 
 #ifdef __ICON__
   USE mo_mpi,             ONLY: p_comm_work_test, p_comm_work, my_process_is_stdio, my_process_is_mpi_parallel, &
