@@ -1,5 +1,5 @@
 !>
-!! @brief Contains interface to parallel scatter/gather routines
+!! @brief Contains interface to parallel infrastructure
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
@@ -11,15 +11,12 @@ MODULE mo_jsb_parallel_iface
 #ifdef __JSBACH__
 
 #ifdef __ICON__
-  USE mo_gather_scatter,  ONLY: gather_field => gather_cells, scatter_field => scatter_cells
   USE mo_mpi,             ONLY: p_comm_work_test, p_comm_work, my_process_is_stdio, my_process_is_mpi_parallel, &
                                 get_my_global_mpi_id
   USE mo_parallel_config, ONLY: p_test_run
   USE mo_model_domain,    ONLY: t_patch, p_patch
 #else
   USE mo_decomposition,   ONLY: local_decomposition, global_decomposition
-  USE mo_tr_scatter,      ONLY: scatter_field
-  USE mo_tr_gather,       ONLY: gather_field
   USE mo_mpi,             ONLY: p_all_comm
 #endif
   USE mo_mpi, ONLY: p_io,    & !< Processor performing I/O
@@ -29,7 +26,6 @@ MODULE mo_jsb_parallel_iface
   PRIVATE
 
   PUBLIC :: init_parallel_iface, init_mpi_communicators, my_process_is_stdio, get_my_global_mpi_id
-  PUBLIC :: gather_field, scatter_field
   PUBLIC :: p_io, mpi_comm, p_bcast
 
   INTEGER :: mpi_comm
