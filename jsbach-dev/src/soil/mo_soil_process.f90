@@ -85,7 +85,8 @@ CONTAINS
   !
   SUBROUTINE init_soil_temperature(tclim, tsoil, tsurf)
 
-    USE mo_jsb_time_iface, ONLY: t_datetime, get_time_start, rdaylen, date_to_time
+    USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, &
+                                 get_year_length, get_month_length, get_day_length, get_year_day
     USE mo_math_constants, ONLY: pi
     USE mo_exception,      ONLY: finish
 
@@ -97,6 +98,7 @@ CONTAINS
     REAL(wp), POINTER :: zrange(:), zdmax(:), zd(:)
     INTEGER, POINTER :: jmax(:)
     TYPE(t_datetime) :: inidate
+    INTEGER :: iniyear
     INTEGER :: im, i, jl
     REAL(wp) :: year_len, day_in_year
     REAL(wp) :: month_len(12), month_mid(12)
@@ -111,18 +113,17 @@ CONTAINS
     zkap = 7.5e-7_wp
 
     inidate = get_time_start()
+    iniyear = get_year(inidate)
 
-    year_len    = REAL(inidate%yealen, wp)
-    day_in_year = REAL(inidate%yeaday, wp)
+    year_len    = REAL(get_year_length(iniyear), wp)
+    day_in_year = INT(get_year_day(inidate))
 
     DO im=1,12
-      inidate%month = im
-      CALL date_to_time(inidate)
-      month_len(im) = REAL(inidate%monlen, wp)
+      month_len(im) = REAL(get_month_length(iniyear, im), wp)
       month_mid(im) = month_len(im) * 0.5_wp
     END DO
 
-    zsqrt = SQRT(zkap * year_len * rdaylen / pi)
+    zsqrt = SQRT(zkap * year_len * get_day_length() / pi)
 
     ! Calendar month of maximum surface temperature
     jmax(:) = MAXLOC(tclim(:,:), DIM=2)
@@ -140,6 +141,7 @@ CONTAINS
     END DO
 
     ! layer depths
+    ! TBD: should not be hardcoded here!
     zd(1) =            0.5_wp * 0.065_wp - 0.07_wp
     zd(2) = 0.065_wp + 0.5_wp * 0.254_wp - 0.07_wp
     zd(3) = 0.065_wp + 0.254_wp + 0.5_wp * 0.913_wp - 0.07_wp

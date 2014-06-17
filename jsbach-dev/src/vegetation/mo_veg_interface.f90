@@ -17,7 +17,7 @@ MODULE mo_veg_interface
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
-  USE mo_util_string,        ONLY: one_of, int2string
+  USE mo_util,               ONLY: one_of, int2string
 
   IMPLICIT NONE
   PRIVATE
@@ -131,7 +131,7 @@ CONTAINS
   SUBROUTINE update_vegetation_2( tile, iblk, ics, ice, nc)
 
     USE mo_veg_process, ONLY: canopy_albedo, foliage_projected_cover
-    USE mo_amip_bc,     ONLY:  wgt1, wgt2, nmw1,nmw2  ! TBD: this should be made more general
+    USE mo_jsb_time,    ONLY: wgt1, wgt2, nmw1,nmw2  ! TBD: this should be made more general
 
     REAL(wp), PARAMETER :: &
       albedo_snow_min = 0.4_wp,  & !< Minimum possible snow albedo   ! Temporary, will depend on vegetation type

@@ -15,14 +15,14 @@ MODULE mo_soil_init
   USE mo_soil_memory_class, ONLY: t_soil_memory, t_soil_phys_state, t_soil_energy_state, t_soil_energy_flux, &
                                   t_soil_water_state, t_soil_water_flux
   USE mo_jsb_base,          ONLY: get_model
-  USE mo_netcdf_read,       ONLY: netcdf_read_oncells_2d_time, netcdf_read_oncells_2d, netcdf_read_oncells_2d_extdim
+  USE mo_jsb_io_netcdf,     ONLY: jsb_netcdf_read_2d, jsb_netcdf_read_2d_time, jsb_netcdf_read_2d_extdim
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: soil_init_ic, soil_init_bc
+  PUBLIC :: soil_init
 
   REAL(wp), PARAMETER :: &
     fao_thermal_diff(0:6) = (/7.4e-7_wp ,8.7e-7_wp ,8.0e-7_wp ,7.4e-7_wp ,7.1e-7_wp ,6.7e-7_wp ,-1._wp/)
@@ -30,6 +30,20 @@ MODULE mo_soil_init
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_init'
 
 CONTAINS
+
+  !
+  !> Intialize soil component (after memory has been set up)
+  !
+  SUBROUTINE soil_init(model)
+
+    TYPE(t_jsb_model), INTENT(in) :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init'
+
+    CALL soil_init_bc(model%land)
+    CALL soil_init_ic(model%land)
+
+  END SUBROUTINE soil_init
 
   SUBROUTINE soil_init_bc(tile)
 
@@ -95,11 +109,11 @@ CONTAINS
 
     ! Total soil depth until bedrock
 
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%soil%bc_filename,       &
-      & variable_name='soildepth',                    &
+      & variable_name='soil_depth',                   &
       & fill_array = phys%soil_depth, &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%soil_depth(:,:) = MAX(0.1_wp, MERGE(phys%soil_depth(:,:), 0._wp, phys%soil_depth(:,:) >= 0._wp))
 
     ! Compute actual soil layer depths based on the fixed layer thicknesses from namelist and
@@ -109,50 +123,50 @@ CONTAINS
       & model%config%soil%dz_water(1:model%config%soil%nsoil_water))    ! Soil layer thicknesses from namelist
 
     ! Volumetric soil porosity
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%soil%bc_filename,       &
       & fill_array = phys%vpor,                       &
-      & variable_name='porosity',                     &
-      & patch=model%grid%patch)
+      & variable_name='soil_porosity',                &
+      & model_id=model%id)
     phys%vpor(:,:) = MERGE(phys%vpor(:,:), 0.2_wp, phys%vpor(:,:) >= 0._wp)
 
     ! Saturated hydraulic conductivity
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%soil%bc_filename,       &
-      & variable_name='hydcond',                      &
+      & variable_name='hyd_cond_sat',                 &
       & fill_array = phys%shc,                        &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%shc(:,:) = MERGE(phys%shc(:,:), 4.e-6_wp, phys%shc(:,:) >= 0._wp)
 
     ! Matrix potential
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%soil%bc_filename,       &
       & variable_name='moisture_pot',                 &
       & fill_array = phys%mpot,       &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%mpot(:,:) = MERGE(phys%mpot(:,:), 0.2_wp, phys%mpot(:,:) >= 0._wp)
 
     ! Exponent B in Clapp and Hornberger
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%soil%bc_filename,       &
       & variable_name='bclapp',                       &
       & fill_array = phys%bclapp,                     &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%bclapp(:,:) = MERGE(phys%bclapp(:,:), 6._wp, phys%bclapp(:,:) >= 0._wp)
 
     ! Pore size distribution index
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%soil%bc_filename,       &
-      & variable_name='poresize',                     &
+      & variable_name='pore_size_index',              &
       & fill_array = phys%psdi,                       &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%psdi(:,:) = MERGE(phys%psdi(:,:), 0.25_wp, phys%psdi(:,:) >= 0._wp)
 
     ! Thermal diffusivity of soil
-    fao => netcdf_read_oncells_2d(                    &
+    fao => jsb_netcdf_read_2d(                    &
       & filename=model%config%soil%bc_filename,       &
       & variable_name='fao',                          &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     fao(:,:) = MERGE(fao(:,:), 0._wp, fao(:,:) >= 0._wp)
     fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), MIN(REAL(UBOUND(fao_thermal_diff,1),wp), fao(:,:)))
 
@@ -162,28 +176,28 @@ CONTAINS
 !!$    phys%hdiff(:,:) = RESHAPE(fao_thermal_diff(PACK(NINT(fao(:,:)), fao(:,:) > -1._wp)), /( SIZE(fao(:,:),1),SIZE(fao(:,:),2) )/ )
 
     ! Volumetric heat capacity of dry soil
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%soil%bc_filename,       &
-      & variable_name='heatcapacity',                 &
+      & variable_name='heat_capacity',                &
       & fill_array = phys%vhcap,                      &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%vhcap(:,:) = MERGE(phys%vhcap(:,:), 2.e6_wp, phys%vhcap(:,:) >= 0._wp)
 
     ! Albedo
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
 !!$      & filename=model%config%soil%bc_filename,       &
       & filename='bc_land_phys.nc',                   &  ! Temporary
       & variable_name='albedo_soil_vis',              &
       & fill_array = phys%alb_vis_soil,               &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%alb_vis_soil(:,:) = MERGE(phys%alb_vis_soil(:,:), 0._wp, phys%alb_vis_soil(:,:) >= 0._wp)
 
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
 !!$      & filename=model%config%soil%bc_filename,       &
       & filename='bc_land_phys.nc',                   &  ! Temporary
       & variable_name='albedo_soil_nir',              &
       & fill_array = phys%alb_nir_soil,               &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%alb_nir_soil(:,:) = MERGE(phys%alb_nir_soil(:,:), 0._wp, phys%alb_nir_soil(:,:) >= 0._wp)
 
     ! Initialize energy state
@@ -193,10 +207,10 @@ CONTAINS
     ! Soil temperatures
     !
     ! Read climatological surface temperature
-    t_srf_mon => netcdf_read_oncells_2d_time(         &   ! Temporary
+    t_srf_mon => jsb_netcdf_read_2d_time(         &   ! Temporary
       & filename=model%config%srf%ic_filename,        &
       & variable_name='surf_temp',                    &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     t_srf_mon(:,:,:) = MERGE(t_srf_mon(:,:,:), 280._wp, t_srf_mon(:,:,:) > 0._wp)
 
     DO i=1,SIZE(phys%soil_depth(:,:), DIM=2)
@@ -219,28 +233,28 @@ CONTAINS
     water%sfract_soil (:,:) = 0._wp
 
     ! Initial snow depth
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%soil%ic_filename,       &
       & variable_name='snow',                         &
       & fill_array = water%wsn_soil,                  &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     water%wsn_soil(:,:) = MERGE(water%wsn_soil(:,:), 0._wp, water%wsn_soil(:,:) >= 0._wp)
 
     ! Initial soil moisture
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%soil%ic_filename,       &
-      & variable_name='init_moist_layered',           &
+      & variable_name='init_moist',                   &
       & fill_array = water%ws,                        &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     water%ws(:,:) = MERGE(water%ws(:,:), 0._wp, water%ws(:,:) >= 0._wp)
 
     DO isoil=1,model%config%soil%nsoil_water
-      return_pointer3d => netcdf_read_oncells_2d_extdim(  &
+      return_pointer3d => jsb_netcdf_read_2d_extdim(  &
         & filename=model%config%soil%ic_filename,       &
         & variable_name='layer_moist',                  &
 !!$        & fill_array = water%ws_l,                      &
-        & patch=model%grid%patch,                       &
-        & start_extdim=isoil, end_extdim=isoil, extdim_name='lev')
+        & model_id=model%id,                       &
+        & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
       water%ws_l(:,isoil,:) = MERGE(return_pointer3d(:,:,1), 0._wp, return_pointer3d(:,:,1) >= 0._wp)
     END DO
 !!$      water%ws_l(:,:,:) = MERGE(water%ws_l(:,:,:), 0._wp, water%ws_l(:,:,:) >= 0._wp)
@@ -257,10 +271,10 @@ CONTAINS
     ! Water content at field capacity
     !
     ! Read volumetric field capacity from boundary condition file
-    vfc => netcdf_read_oncells_2d(                         &
+    vfc => jsb_netcdf_read_2d(                         &
       & filename=model%config%soil%bc_filename,            &
-      & variable_name='fieldcap',                          &
-      & patch=model%grid%patch)
+      & variable_name='soil_field_cap',                    &
+      & model_id=model%id)
     vfc(:,:) = MERGE(vfc(:,:), 0._wp, vfc(:,:) >= 0._wp)
 
     ! Get field capacity by multiplying with soil layer thicknesses
@@ -273,10 +287,10 @@ CONTAINS
     ! Water content at permanent wilting point
     !
     ! Read volumetric wilting point from boundary condition file
-    vpwp => netcdf_read_oncells_2d(                         &
+    vpwp => jsb_netcdf_read_2d(                         &
       & filename=model%config%soil%bc_filename,             &
-      & variable_name='wiltpoint',                          &
-      & patch=model%grid%patch)
+      & variable_name='wilting_point',                      &
+      & model_id=model%id)
     vpwp(:,:) = MERGE(vpwp(:,:), 0._wp, vpwp(:,:) >= 0._wp)
 
     ! Get permanent wilting point by multiplying with soil layer thicknesses

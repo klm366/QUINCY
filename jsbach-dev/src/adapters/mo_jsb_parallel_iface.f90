@@ -14,9 +14,7 @@ MODULE mo_jsb_parallel_iface
   USE mo_mpi,             ONLY: p_comm_work_test, p_comm_work, my_process_is_stdio, my_process_is_mpi_parallel, &
                                 get_my_global_mpi_id
   USE mo_parallel_config, ONLY: p_test_run
-  USE mo_model_domain,    ONLY: t_patch, p_patch
 #else
-  USE mo_decomposition,   ONLY: local_decomposition, global_decomposition
   USE mo_mpi,             ONLY: p_all_comm
 #endif
   USE mo_mpi, ONLY: p_io,    & !< Processor performing I/O
@@ -25,7 +23,7 @@ MODULE mo_jsb_parallel_iface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: init_parallel_iface, init_mpi_communicators, my_process_is_stdio, get_my_global_mpi_id
+  PUBLIC :: init_parallel_iface, init_mpi_communicators, my_process_is_mpi_parallel, my_process_is_stdio, get_my_global_mpi_id
   PUBLIC :: p_io, mpi_comm, p_bcast
 
   INTEGER :: mpi_comm

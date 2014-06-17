@@ -32,11 +32,11 @@ MODULE mo_srf_config_class
 
 CONTAINS
 
-  FUNCTION new_srf_config(nml_unit) RESULT(config)
+  FUNCTION new_srf_config(nml_handler) RESULT(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
-    INTEGER,          INTENT(in) :: nml_unit
+    INTEGER,          INTENT(in) :: nml_handler
     TYPE(t_srf_config), POINTER :: config
 
     TYPE(t_srf_config), POINTER :: new
@@ -53,7 +53,7 @@ CONTAINS
       scheme_albedo,               &
       wsn_critical
 
-    INTEGER :: istat
+    INTEGER :: nml_unit, istat
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_srf_config'
 
@@ -69,7 +69,7 @@ CONTAINS
     scheme_albedo   = 'echam5'
     wsn_critical    = 5.85036E-3_wp
 
-    CALL position_nml('jsb_srf_nml', STATUS=istat)
+    nml_unit = position_nml('jsb_srf_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_srf_nml)
 
     new%active                    = active

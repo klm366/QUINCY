@@ -16,7 +16,7 @@ MODULE mo_srf_interface
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
-  USE mo_util_string,     ONLY: one_of
+  USE mo_util,            ONLY: one_of
 
   IMPLICIT NONE
   PRIVATE
@@ -205,7 +205,13 @@ CONTAINS
     USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_srf_process,        ONLY: surface_temp_and_qsat_implicit
 !!$    USE mo_srf_constants,      ONLY: eps
-    USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
+    ! TBD: Use tpfac2 and tpfac3 from mo_echam_vdiff_params once the unified vdiff for ICON/ECHAM is ready
+    ! USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
+#ifdef __ICON__
+    USE mo_echam_vdiff_params, ONLY: cvdifts
+#else
+    USE mo_physc2, ONLY: cvdifts
+#endif
     USE mo_physical_constants, ONLY: tmelt
 
     TYPE(t_jsb_tile),  POINTER    :: tile
@@ -216,6 +222,9 @@ CONTAINS
     !
     TYPE(t_jsb_model), POINTER    :: model
     LOGICAL                       :: lstart
+
+    ! Temporary (see above) TBD
+    REAL(wp) :: tpfac2, tpfac3
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
@@ -258,6 +267,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface temperature')
 
     model => get_model(tile%owner_model_id)
+
+    ! Temporary (see above) TBD
+    tpfac2 = 1._wp / cvdifts
+    tpfac3 = 1._wp - tpfac2
 
     ! Get reference to variables for current block
     !
