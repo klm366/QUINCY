@@ -90,7 +90,12 @@ CONTAINS
   REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
 
     USE mo_physical_constants, ONLY: grav
+! The following ifdef should not be neccessary with the new unified vdiff for ICON/ECHAM. TBD!
+#ifdef __ICON__
     USE mo_echam_vdiff_params, ONLY: cvdifts  ! TBD: change to 1. for standalone JSBACH
+#else
+    USE mo_physc2, ONLY: cvdifts
+#endif
 
     REAL(wp), INTENT(in) :: &
       & drag,      &

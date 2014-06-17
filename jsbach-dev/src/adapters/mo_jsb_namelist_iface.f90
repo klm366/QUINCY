@@ -13,12 +13,13 @@ MODULE mo_jsb_namelist_iface
   USE mo_exception, ONLY: finish
 
 #ifdef __ICON__
-  USE mo_namelist, ONLY: open_nml_icon => open_nml, close_nml_icon => close_nml
+  USE mo_namelist, ONLY: open_nml_icon => open_nml, close_nml_icon => close_nml, &
+                         position_nml_icon => position_nml 
   USE mo_io_units, ONLY: nnml
 #else
-  USE mo_namelist, ONLY: open_nml, close_nml
+  USE mo_namelist, ONLY: open_nml, close_nml, position_nml_echam => position_nml
 #endif
-  USE mo_namelist, ONLY: POSITIONED, position_nml
+  USE mo_namelist, ONLY: POSITIONED
 
   IMPLICIT NONE
   PRIVATE
@@ -45,25 +46,47 @@ CONTAINS
     IF (unit_is_occupied) CALL finish(TRIM(routine), 'namelist unit is already open')
 
     CALL open_nml_icon(TRIM(namelist_filename))
-    open_nml = nnml
+    open_nml = 1
 
   END FUNCTION open_nml
 
   !>
   !! Wrapper function to make ICON subroutine close_nml a function take unit as argument,
   !! as in ECHAM. Should be replaced when close_nml in ICON gets updated.
-  SUBROUTINE close_nml(nml_unit)
+  SUBROUTINE close_nml(nml_handler)
 
-    INTEGER, INTENT(in) :: nml_unit
+    INTEGER, INTENT(in) :: nml_handler
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':close_nml'
 
-    IF (nml_unit /= nnml) CALL finish(TRIM(routine), 'Cannot close namelist unit')
+    IF (nml_handler /= 1) CALL finish(TRIM(routine), 'Cannot close namelist unit')
 
     CALL close_nml_icon()
 
   END SUBROUTINE close_nml
 #endif
+
+  !>
+  !! Wrapper function to make ICON subroutine position_nml a function, as in ECHAM.
+  !! Should be replaced when open_nml in ICON gets updated.
+  INTEGER FUNCTION position_nml(name, nml_handler, lrewind, status)
+
+    CHARACTER(len=*), INTENT(in)            :: name         ! namelist group name
+    INTEGER,          INTENT(in)            :: nml_handler  ! file handler
+    LOGICAL,          INTENT(in)  ,OPTIONAL :: lrewind      ! default: true
+    INTEGER,          INTENT(out) ,OPTIONAL :: status       ! error return value
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':position_nml'
+
+#ifdef __ICON__
+    CALL position_nml_icon(name, lrewind=lrewind, status=status)
+
+    position_nml = nnml
+#else
+    position_nml = position_nml_echam(name, nml_handler, rewind=lrewind, status=status)
+#endif
+
+  END FUNCTION position_nml
 
 #endif
 END MODULE mo_jsb_namelist_iface

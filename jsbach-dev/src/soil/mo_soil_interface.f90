@@ -16,7 +16,7 @@ MODULE mo_soil_interface
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
-  USE mo_util_string,     ONLY: one_of
+  USE mo_util,            ONLY: one_of
 
   IMPLICIT NONE
   PRIVATE

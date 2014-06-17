@@ -15,7 +15,7 @@ MODULE mo_srf_init
   USE mo_srf_memory_class, ONLY: t_srf_memory, t_srf_phys_state, t_srf_energy_state, t_srf_energy_flux, &
                                   t_srf_water_state, t_srf_water_flux
   USE mo_jsb_base,          ONLY: get_model
-  USE mo_netcdf_read,       ONLY: netcdf_read_oncells_2d_time, netcdf_read_oncells_2d
+  USE mo_jsb_io_netcdf,     ONLY: jsb_netcdf_read_2d, jsb_netcdf_read_2d_time
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
 
@@ -46,7 +46,7 @@ CONTAINS
 
   RECURSIVE SUBROUTINE srf_init_ic(tile)
 
-    USE mo_amip_bc,     ONLY: wgt1, wgt2, nmw1,nmw2
+    USE mo_jsb_time, ONLY: wgt1, wgt2, nmw1,nmw2
 
     TYPE(t_jsb_tile), INTENT(in) :: tile
 
@@ -80,36 +80,36 @@ CONTAINS
     phys => srf%phys_state
 
     ! Glacier mask
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
 !!$      & filename=model%config%srf%bc_filename,        &
       & filename='bc_land_frac.nc',                   & ! Temporary
       & variable_name='glac',                         &
       & fill_array = phys%glacier,                    &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%glacier(:,:) = MERGE(phys%glacier(:,:), 0._wp, phys%glacier(:,:) >= 0._wp)
 
     ! Orography
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%srf%bc_sso_filename,    &
       & variable_name='orostd',                       &
       & fill_array = phys%oro_stddev,                 &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%oro_stddev(:,:) = MERGE(phys%oro_stddev(:,:), 0._wp, phys%oro_stddev(:,:) >= 0._wp)
 
     ! Surface roughness length
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%srf%bc_filename,        &
       & variable_name='roughness_length',             &
       & fill_array = phys%rough_m_srf,                &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%rough_m_srf(:,:) = MERGE(phys%rough_m_srf(:,:), 1._wp, phys%rough_m_srf(:,:) >= 0._wp)
 
     ! Albedo
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%srf%bc_filename,        &
       & variable_name='albedo',                       &
       & fill_array = phys%albedo_srf,                 &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%albedo_srf(:,:) = MERGE(phys%albedo_srf(:,:), 0._wp, phys%albedo_srf(:,:) >= 0._wp)
 
     phys%alb_vis_srf(:,:) = phys%albedo_srf(:,:)
@@ -120,16 +120,16 @@ CONTAINS
     energy => srf%energy_state
 
     ! Initial surface temperature
-!!$    return_pointer => netcdf_read_oncells_2d(         &
+!!$    return_pointer => jsb_netcdf_read_2d(         &
 !!$      & filename=model%config%srf%ic_filename,        &
 !!$      & variable_name='surface_temperature',          &
 !!$      fill_array=energy%t_srf,                        &
-!!$      & patch=model%grid%patch)
+!!$      & model_id=model%id)
 !!$    t_srf => energy%t_srf
-    t_srf_mon => netcdf_read_oncells_2d_time(         &   ! Temporary
+    t_srf_mon => jsb_netcdf_read_2d_time(         &   ! Temporary
       & filename=model%config%srf%ic_filename,        &
       & variable_name='surf_temp',                    &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     t_srf_mon(:,:,:) = MERGE(t_srf_mon(:,:,:), 280._wp, t_srf_mon(:,:,:) > 0._wp)
     IF (nmw1 == 0) THEN
       n1 = 12

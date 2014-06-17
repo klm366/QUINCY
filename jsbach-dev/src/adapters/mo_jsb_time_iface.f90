@@ -14,27 +14,32 @@ MODULE mo_jsb_time_iface
   USE mo_exception, ONLY: finish, message, message_text
 
 #ifdef __ICON__
-  USE mo_datetime,    ONLY: t_datetime, date_to_time, print_datetime, add_time, check_newday, rdaylen, idaylen
+  USE mo_datetime,    ONLY: t_datetime, print_datetime, add_time, rdaylen
   USE mo_time_config, ONLY: time_config !configure_time
   USE mo_time_nml,    ONLY: read_time_namelist
+  USE mo_amip_bc,     ONLY: wgt1, wgt2, nmw1,nmw2  ! TBD: this should be made more general
 #else
-  USE mo_time_conversion, ONLY: t_datetime => time_days
-  USE mo_time_control,    ONLY: start_date, stop_date, current_date, previous_date, &
+  USE mo_time_conversion, ONLY: t_datetime => time_days, &
+                                get_day_length => day_len
+  USE mo_time_control,    ONLY: get_year_length => get_year_len, get_month_length => get_month_len, get_year_day, &
                                 get_date_components
+  USE mo_time_control,    ONLY: start_date, stop_date, current_date, previous_date
+  USE mo_interpo,         ONLY: wgt1, wgt2, nmw1, nmw2
 #endif
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_datetime, date_to_time
-  PUBLIC :: rdaylen, idaylen
+  PUBLIC :: t_datetime
+  PUBLIC :: get_year_length, get_month_length, get_day_length, get_year_day
   PUBLIC :: get_time_dt, get_time_nsteps, &
             get_time_start, get_time_stop, &
             get_time_current, get_time_previous
-  PUBLIC :: read_time_namelist, check_newday !, configure_time
+  PUBLIC :: read_time_namelist !, configure_time
   PUBLIC :: start_timestep, finish_timestep
   PUBLIC :: configure_time_and_events
   PUBLIC :: get_date_components
+  PUBLIC :: wgt1, wgt2, nmw1, nmw2
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_time_iface'
 
@@ -56,17 +61,20 @@ CONTAINS
 
   SUBROUTINE configure_time_and_events
 
-    USE mo_time_control, ONLY: lfirst_cycle, get_dates, ec_manager_init, &
-                               init_manager, init_times, init_events
+    USE mo_time_control, ONLY: lfirst_cycle, ec_manager_init, &
+                               init_manager, init_times, init_events, time_set
 
     INTEGER :: IO_timestep, istep
 
-    CALL get_dates(IO_timestep, istep)           ! get timestep
-    CALL ec_manager_init(IO_timestep, istep)     ! time manager initialization
-    IF (lfirst_cycle) CALL init_manager
-    CALL init_times                              ! initialize all dates
+    ! Only called for standalone jsbach ... commented out for the time being ! TBD
+!!$    CALL get_dates(IO_timestep, istep)           ! get timestep
+!!$    CALL ec_manager_init(IO_timestep, istep)     ! time manager initialization
+!!$    IF (lfirst_cycle) CALL init_manager
+!!$    CALL init_times                              ! initialize all dates
+!!$
+!!$    CALL init_events
 
-    CALL init_events
+    CALL time_set
 
   END SUBROUTINE configure_time_and_events
 #endif
@@ -252,6 +260,99 @@ CONTAINS
     IF (PRESENT(second)) second = INT(datetime_tmp%second)
 
   END SUBROUTINE get_date_components
+#endif
+
+  !>
+  !! Get length of year
+  !!
+  !! Function returns the length of a year in days
+  !!
+#ifdef __ICON__
+  INTEGER FUNCTION get_year_length(yr)
+
+    USE mo_datetime, ONLY: aux_datetime
+
+    INTEGER, INTENT(in) :: yr
+
+    TYPE(t_datetime) :: date
+
+    date%year   = yr
+    date%month  = 1
+    date%day    = 1
+    date%hour   = 0
+    date%minute = 0
+    date%second = 0
+
+    CALL aux_datetime(date)
+
+    get_year_length = date%yealen
+
+  END FUNCTION get_year_length
+#endif
+
+  !>
+  !! Get length of month
+  !!
+  !! Function returns the length of a month in days
+  !!
+#ifdef __ICON__
+  INTEGER FUNCTION get_month_length(yr, mo)
+
+    USE mo_datetime, ONLY: aux_datetime
+
+    INTEGER, INTENT(in) :: yr, mo
+
+    TYPE(t_datetime) :: date
+
+    date%year   = yr
+    date%month  = mo
+    date%day    = 1
+    date%hour   = 0
+    date%minute = 0
+    date%second = 0
+
+    CALL aux_datetime(date)
+
+    get_month_length = date%monlen
+
+  END FUNCTION get_month_length
+#endif
+
+  !>
+  !! Get length of day
+  !!
+  !! Function returns the length of a day in seconds
+  !!
+#ifdef __ICON__
+  REAL(wp) FUNCTION get_day_length()
+
+    get_day_length = rdaylen
+
+  END FUNCTION get_day_length
+#endif
+
+  !>
+  !! Get day in year
+  !!
+  !! Function returns the day of the year for a given date.
+  !! The seconds in the day are given as fraction of the day. 
+  !!
+#ifdef __ICON__
+  REAL(wp) FUNCTION get_year_day(date)
+
+    USE mo_datetime, ONLY: aux_datetime
+
+    TYPE(t_datetime),  INTENT(in)  :: date
+
+    TYPE(t_datetime) :: datetime_tmp
+
+    datetime_tmp = date
+
+    CALL aux_datetime(datetime_tmp)
+
+    get_year_day = REAL(datetime_tmp%yeaday, wp) + datetime_tmp%daytim
+
+  END FUNCTION get_year_day
 #endif
 
 #endif

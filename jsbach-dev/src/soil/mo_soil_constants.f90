@@ -16,11 +16,11 @@ MODULE mo_soil_constants
   PUBLIC
 
   REAL(wp), PARAMETER :: &
-                                !
-    & ws_crit_fract  = 0.75_wp, &   !< Fraction of field capacity at which soil starts to dry,
-                                !  i.e. at which water stress starts to be above zero
-    & ws_wilt_fract  = 0.35_wp, &   !< Fraction of field capacity at which soil is at wilting point,
-                                !  i.e. when no transpiration occurs anymore
+                                       !
+    & ws_crit_fract  = 0.75_wp, &      !< Fraction of field capacity at which soil starts to dry,
+                                       !  i.e. at which water stress starts to be above zero
+    & ws_wilt_fract  = 0.35_wp, &      !< Fraction of field capacity at which soil is at wilting point,
+                                       !  i.e. when no transpiration occurs anymore
 
     ! Parameters used for snow cover fraction
     & wsn2frac_eps    = 1.E-12_wp,  &

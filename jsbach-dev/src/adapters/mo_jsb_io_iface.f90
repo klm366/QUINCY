@@ -13,13 +13,54 @@ MODULE mo_jsb_io_iface
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
   USE mo_grib2,         ONLY: t_grib2_var
+  USE mo_cdi_constants, ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24, &
+                              ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                            &
+                              FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,          &
+                              GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL,                &
+                              TSTEP_CONSTANT,                                                   &
+                              zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize
+#else
+  USE mo_linked_list,   ONLY: NETCDF2, NETCDF4, GRIB
 #endif
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_cf_var, t_grib2_var
-  
+  PUBLIC :: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
+            ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                   &
+            FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
+            GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, &
+            TSTEP_CONSTANT, &
+            zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize
+
+#ifndef __ICON__
+  TYPE t_cf_var
+    CHARACTER(len=128) :: standard_name = ''
+    CHARACTER(len=128) :: units         = ''
+    CHARACTER(len=128) :: long_name     = ''
+    INTEGER            :: datatype      = -1
+  END TYPE t_cf_var
+
+  TYPE t_grib2_var
+    INTEGER :: discipline
+    INTEGER :: category
+    INTEGER :: number
+    INTEGER :: bits
+    INTEGER :: gridtype
+    INTEGER :: subgridtype
+  END TYPE t_grib2_var
+
+  INCLUDE 'cdi.inc'
+
+  ! From ICON mo_cdi_constants.f90
+  INTEGER, PARAMETER :: ZA_SURFACE             =  1
+  INTEGER, PARAMETER :: ZA_DEPTH_BELOW_LAND    = 11
+  INTEGER, PARAMETER :: GRID_CELL              =  1
+  INTEGER, PARAMETER :: GRID_UNSTRUCTURED_CELL =  1
+  INTEGER, PARAMETER :: GRID_REFERENCE         =  9
+#endif
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_iface'
 
 #endif

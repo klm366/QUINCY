@@ -15,7 +15,7 @@ MODULE mo_veg_init
   USE mo_veg_memory_class,  ONLY: t_veg_memory, t_veg_phys_state, t_veg_water_state
   USE mo_soil_memory_class, ONLY: t_soil_phys_state, t_soil_water_state
   USE mo_jsb_base,          ONLY: get_model
-  USE mo_netcdf_read,       ONLY: netcdf_read_oncells_2d_time, netcdf_read_oncells_2d
+  USE mo_jsb_io_netcdf,     ONLY: jsb_netcdf_read_2d_time, jsb_netcdf_read_2d
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
 
@@ -56,7 +56,7 @@ CONTAINS
     USE mo_veg_process, ONLY: foliage_projected_cover
     USE mo_veg_util,    ONLY: water_in_root_zone
     USE mo_soil_util,   ONLY: soil_depth_to_layers_2d
-    USE mo_amip_bc,     ONLY: wgt1, wgt2, nmw1,nmw2
+    USE mo_jsb_time,    ONLY: wgt1, wgt2, nmw1,nmw2
 
     TYPE(t_jsb_tile),  INTENT(in) :: tile
 
@@ -92,10 +92,10 @@ CONTAINS
 
     ! Leaf area index
     ! Get monthly LAI climatology
-    lai_mon => netcdf_read_oncells_2d_time(    &
+    lai_mon => jsb_netcdf_read_2d_time(    &
       & filename=model%config%veg%bc_filename,        &
       & variable_name='lai_clim',                     &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     lai_mon(:,:,:) = MERGE(lai_mon(:,:,:), 0._wp, lai_mon(:,:,:) > 0._wp)
     phys%lai_mon(:,:,2:13) = lai_mon(:,:,1:12)
     phys%lai_mon(:,:,1   ) = lai_mon(:,:,12  )
@@ -105,12 +105,12 @@ CONTAINS
     phys%lai(:,:) = wgt1 * phys%lai_mon(:,:,nmw1+1) + wgt2 * phys%lai_mon(:,:,nmw2+1)
 
     ! Maximum foliage projected cover
-    return_pointer => netcdf_read_oncells_2d(        &
+    return_pointer => jsb_netcdf_read_2d(        &
 !!$      & filename=model%config%veg%bc_filename,       &
       & filename='bc_land_frac.nc',                  &  ! Temporary
       & variable_name='veg_ratio_max',               &
       & fill_array = phys%fract_fpc_max,             &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%fract_fpc_max(:,:) = MERGE(phys%fract_fpc_max(:,:), 0._wp, phys%fract_fpc_max(:,:) >= 0._wp)
 
 !!$    phys%fract_fpc(:,:) = foliage_projected_cover(phys%fract_fpc_max(:,:), phys%lai(:,:), phys%clump(:,:))
@@ -118,22 +118,22 @@ CONTAINS
                           SPREAD(SPREAD(2._wp, DIM=1, NCOPIES=SIZE(phys%lai,1)), DIM=2, NCOPIES=SIZE(phys%lai,2))) ! Temporary
 
     ! Forest fraction
-    return_pointer => netcdf_read_oncells_2d(        &
+    return_pointer => jsb_netcdf_read_2d(        &
       & filename=model%config%veg%bc_filename,       &
       & variable_name='forest_fract',                &
       & fill_array = phys%fract_forest,              &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%fract_forest(:,:) = MERGE(phys%fract_forest(:,:), 0._wp, phys%fract_forest(:,:) >= 0._wp)
 
     phys%canopy_cond(:,:) = 0._wp
 
     phys%skin_can_depth(:,:) = model%config%veg%wsr_capacity * phys%lai(:,:)
 
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%soil%bc_filename,       &
       & variable_name='root_depth',                   &
       & fill_array = phys%root_depth,                 &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%root_depth(:,:) = MERGE(phys%root_depth(:,:), 0._wp, phys%root_depth(:,:) >= 0._wp)
     phys%root_depth(:,:) = MIN(phys%root_depth(:,:), tile%mem%soil%phys_state%soil_depth(:,:))  ! Temporary fix (root depth sometimes larger then soil depth)
 !!$    phys%root_depth(:,:) = tile%mem%soil%phys_state%soil_depth(:,:) * 0.75_wp  ! Temporary
@@ -142,18 +142,18 @@ CONTAINS
       & phys%root_depth(:,:),                                         & ! Total rooting depth
       & model%config%soil%dz_water(1:model%config%soil%nsoil_water))    ! Soil layer thicknesses from namelist
 
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%veg%bc_filename,       &
       & variable_name='albedo_veg_vis',               &
       & fill_array = phys%alb_vis_can,                &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%alb_vis_can(:,:) = MERGE(phys%alb_vis_can(:,:), 0._wp, phys%alb_vis_can(:,:) >= 0._wp)
 
-    return_pointer => netcdf_read_oncells_2d(         &
+    return_pointer => jsb_netcdf_read_2d(         &
       & filename=model%config%veg%bc_filename,       &
       & variable_name='albedo_veg_nir',               &
       & fill_array = phys%alb_nir_can,                &
-      & patch=model%grid%patch)
+      & model_id=model%id)
     phys%alb_nir_can(:,:) = MERGE(phys%alb_nir_can(:,:), 0._wp, phys%alb_nir_can(:,:) >= 0._wp)
 
     ! Initialize water state

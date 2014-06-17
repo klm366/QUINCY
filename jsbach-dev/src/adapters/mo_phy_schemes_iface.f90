@@ -13,14 +13,14 @@ MODULE mo_phy_schemes_iface
   USE mo_kind, ONLY: wp
 
 #ifdef __ICON__
-  USE mo_satad, ONLY: specific_humidity => spec_humi, &
-                      sat_pres_water
+!!$  USE mo_satad, ONLY: specific_humidity => spec_humi, &
+!!$                      sat_pres_water
 #endif
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: specific_humidity !, qsat
+!!$  PUBLIC :: specific_humidity !, qsat
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_phy_schemes_iface'
 
