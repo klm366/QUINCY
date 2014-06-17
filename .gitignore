@@ -1,16 +1,3 @@
-jsbach-dev/*#
-jsbach-dev/*status
-jsbach-dev/*tmp
-jsbach-dev/*~
-jsbach-dev/.history
-jsbach-dev/.status.file
-jsbach-dev/Makefile
-jsbach-dev/autom4te.cache
-jsbach-dev/build
-jsbach-dev/build_command
-jsbach-dev/config.log
-jsbach-dev/config.status
-jsbach-dev/experiments
 src/.history
 src/adapters/.history
 src/atmland/.history
