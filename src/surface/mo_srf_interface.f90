@@ -203,7 +203,7 @@ CONTAINS
   SUBROUTINE update_surface_energy( tile, iblk, ics, ice, nc, dtime, steplen)
 
     USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_srf_process,        ONLY: surface_temp_and_qsat_implicit
+    USE mo_srf_process,        ONLY: surface_temp_implicit
 !!$    USE mo_srf_constants,      ONLY: eps
     ! TBD: Use tpfac2 and tpfac3 from mo_echam_vdiff_params once the unified vdiff for ICON/ECHAM is ready
     ! USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
@@ -324,17 +324,16 @@ CONTAINS
     IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
       lstart = .TRUE.
       s_srf(:) = s_srf_old(:)
-      qsat_srf(:) = qsat_srf_old(:)
     ELSE
       lstart = .FALSE.
-      CALL surface_temp_and_qsat_implicit( nc, steplen, &
+      CALL surface_temp_implicit( nc, steplen, &
         t2s_conv(:), &
         t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
         s_srf_old(:), qsat_srf_old(:), dQdT(:), &
         rad_srf_net(:), grnd_hflx(:), heat_tcoef(:), &
         fact_q_air(:), fact_qsat_srf(:), &
         sfract_srf(:), hcap_grnd(:), &
-        & s_srf(:), qsat_srf(:))
+        & s_srf(:))
     END IF
 
     ! Back out unfiltered surface temperature (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
@@ -342,8 +341,16 @@ CONTAINS
 
     ! Correct new dry static energy for snowmelt
     WHERE (wsn_srf(:) > model%config%srf%wsn_critical .OR. glacier(:) > 0.5_wp)
-      s_srf(:) = ( MIN(t_srf_unfilt(:), tmelt) * t2s_conv(:) - tpfac3 * s_srf_old(:) ) / tpfac2
+      s_srf(:) = MIN(s_srf(:) / t2s_conv(:), tmelt) * t2s_conv(:)
     END WHERE
+
+    ! Compute new surface qsat (after correction of dry static energy for snow melt!)
+    qsat_srf(:) = 0._wp
+    IF (lstart) THEN
+      qsat_srf(:) = qsat_srf_old(:)
+    ELSE
+      qsat_srf(:) = qsat_srf_old(:) + dQdT(:) * (s_srf(:) - s_srf_old(:)) / t2s_conv(:)
+    END IF
 
     ! 'Radiative temperature' used in the radiation scheme of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
     t_rad_srf(:) = s_srf(:) / t2s_conv(:)
@@ -389,8 +396,11 @@ CONTAINS
     ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
     ! Also: this is not done in ICON at all (at the moment, at least), therefore it is switched off for now.
     !
-!!$    t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
+#ifdef __ICON__
     t_srf(:) = t_srf_unfilt(:)
+#else
+    t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
+#endif
 
   END SUBROUTINE update_t_srf
 
@@ -409,8 +419,6 @@ CONTAINS
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
-      & t_srf          (:),    &
-      & t_srf_old      (:),    &
       & qsat_srf       (:),    &
       & s_srf          (:),    &
       & t_acoef        (:),    &
@@ -445,8 +453,6 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    t_srf                => tile%mem%srf  %energy_state %t_srf            (ics:ice, iblk)
-    t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
     qsat_srf             => tile%mem%srf  %energy_state %qsat_srf         (ics:ice, iblk)
     s_srf                => tile%mem%srf  %energy_state %s_srf            (ics:ice, iblk)
     t_acoef              => tile%mem      %atm2land     %t_acoef          (ics:ice, iblk)
@@ -481,17 +487,11 @@ CONTAINS
     !
     evapotrans(:) = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:))        ! Evapotranspiratin
     evapopot  (:) = heat_tcoef(:) * (q_air    (:) - qsat_srf    (:))        ! Potential evaporation
-    trans     (:) = fact_qsat_trans_srf(:) * evapopot(:)
+    trans     (:) = fact_qsat_trans_srf(:) * evapopot(:)                    ! Transpiration
 
     ! Compute sensible heat flux
     !
-    ! TBD RS: I think it's wrong to use t_srf_old below, it also contradicts how it was done in echam5.
-    sensible_hflx(:) = heat_tcoef(:) &
-      & * ( (s_air(:) - s_srf(:))                                        & ! Flux of dry static energy
-      &   - ( surface_dry_static_energy(t_srf_old(:), q_air_eff(:))      & ! Subtract contribution from ...
-      &     - surface_dry_static_energy(t_srf_old(:), qsat_srf_eff(:))   & ! ... moisture (Cpd*T cancels out in difference)
-      &     ) &
-      &   )
+    sensible_hflx(:) = heat_tcoef(:) * (s_air(:) - s_srf(:))
 
     ! Compute latent heat flux
     !
