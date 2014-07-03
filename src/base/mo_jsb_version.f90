@@ -135,8 +135,8 @@ CONTAINS
   !!
   SUBROUTINE jsbach_label_run(standalone)
 
-    USE mo_mpi,               ONLY: p_parallel_io, p_io, p_bcast
-    USE mo_util_string,       ONLY: separator
+    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast
+    USE mo_util_string,        ONLY: separator
  
     LOGICAL, INTENT(in), OPTIONAL :: standalone !< true: offline JSBACH, false: ECHAM/JSBACH
 
@@ -150,7 +150,7 @@ CONTAINS
 
     IF (l_standalone) THEN
       ! Get model name from environment
-       IF (p_parallel_io) THEN
+       IF (my_process_is_stdio()) THEN
          CALL get_command_argument(0, executable)
       END IF
 
