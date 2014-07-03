@@ -31,7 +31,7 @@ MODULE mo_jsb_varlist_iface
 #endif
 
   USE mo_jsb_io_iface, ONLY: t_cf_var, t_grib2_var
-  USE mo_jsb_io_iface, ONLY: GRID_UNSTRUCTURED_CELL, GRID_REFERENCE, GRID_CELL, ZAXIS_SURFACE
+  USE mo_jsb_io_iface, ONLY: GRID_UNSTRUCTURED_CELL, GRID_REFERENCE, GRID_CELL, ZA_SURFACE, ZA_DEPTH_BELOW_LAND
 
   IMPLICIT NONE
   PRIVATE
@@ -133,7 +133,7 @@ CONTAINS
     END IF
 
 #ifdef __ICON__
-    CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, vgrid, cf, grib2, &
+    CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, ZA_SURFACE, cf, grib2, &
       ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r,       &
       tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, new_element=new_element)
@@ -200,7 +200,7 @@ CONTAINS
     END IF
 
 #ifdef __ICON__
-    CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, vgrid, cf, grib2, &
+    CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, ZA_DEPTH_BELOW_LAND, cf, grib2, &
       ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r,       &
       tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, new_element=new_element)

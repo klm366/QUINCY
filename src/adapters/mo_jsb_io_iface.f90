@@ -17,7 +17,7 @@ MODULE mo_jsb_io_iface
                               ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                            &
                               FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,          &
                               GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL,                &
-                              TSTEP_CONSTANT,                                                   &
+                              ZA_SURFACE, ZA_DEPTH_BELOW_LAND, TSTEP_CONSTANT,                  &
                               zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize
 #else
   USE mo_linked_list,   ONLY: NETCDF2, NETCDF4, GRIB
@@ -31,7 +31,7 @@ MODULE mo_jsb_io_iface
             ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                   &
             FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
             GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, &
-            TSTEP_CONSTANT, &
+            ZA_SURFACE, ZA_DEPTH_BELOW_LAND, TSTEP_CONSTANT, &
             zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize
 
 #ifndef __ICON__
