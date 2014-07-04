@@ -82,10 +82,6 @@ ${srcdir}/jsbach_init_file.ksh
 # remove the executable and modules
 rm jsbach_init_file mo_kinds.mod mo_vegparams.mod
 
-# ICON input
-mkdir -p ${srcdir}/input/icon
-cd ${srcdir}/input/icon
-
 ${srcdir}/gauss_to_icon.ksh
 
 exit
