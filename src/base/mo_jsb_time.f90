@@ -30,11 +30,11 @@ MODULE mo_jsb_time
             get_day, get_secs_of_day
   PUBLIC :: wgt1, wgt2, nmw1, nmw2
 
-  INTEGER          :: number_timesteps
-  REAL(wp)         :: timestep_length
-  TYPE(t_datetime) :: start_date
-  TYPE(t_datetime) :: current_date
-  TYPE(t_datetime) :: final_date
+  INTEGER                :: number_timesteps
+  REAL(wp)               :: timestep_length
+  TYPE(t_datetime), SAVE :: start_date
+  TYPE(t_datetime), SAVE :: current_date
+  TYPE(t_datetime), SAVE :: final_date
 
 !!$  !>
 !!$  !! Initialize JSBACH time control
