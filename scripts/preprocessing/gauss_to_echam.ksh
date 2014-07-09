@@ -9,7 +9,7 @@ year=${year_cf}
 [[ ${echam_fractional} = true ]] && fractional=fractional_ || fractional=""
 
 # input files
-jsbachfile=${srcdir}/input/jsbach/jsbach_${res_atm}${res_oce}_${fractional}${ntiles}tiles_5layers_${year}.nc
+jsbachfile=${srcdir}/input/jsbach/${res_atm}/jsbach_${res_atm}${res_oce}_${fractional}${ntiles}tiles_5layers_${year}.nc
 ifile_topo=${srcdir}/input/echam6/${res_atm}${res_oce}_jan_surf.nc
 filename=${grid}_jsbach_${ntiles}tiles_${year}
 
@@ -210,22 +210,23 @@ cdo chname,OROMEA,oromea -selname,OROMEA jan_surf.nc ${filename}_oromea.tmp
 rm -f ${grid}_jsbach_clim.nc ${grid}_jsbach_${ntiles}tiles_${year}.nc ${grid}_jsbach.nc
 
 # define surfaces
-cdo merge ${filename}_slm.tmp ${filename}_glac.tmp ${filename}_sea.tmp ${filename}_notsea.tmp ${filename}_lake.tmp ${filename}_land.tmp ${filename}_cover_fract.tmp ${filename}_cover_type.tmp ${filename}_natural_veg.tmp ${filename}_veg_ratio_max.tmp bc_land_frac_${grid}.nc
+cdo merge ${filename}_slm.tmp ${filename}_glac.tmp ${filename}_sea.tmp ${filename}_notsea.tmp ${filename}_lake.tmp ${filename}_land.tmp ${filename}_cover_fract.tmp ${filename}_cover_type.tmp ${filename}_natural_veg.tmp ${filename}_veg_ratio_max.tmp bc_land_frac_${grid}_${year}.nc
 rm ${filename}_slm.tmp ${filename}_glac.tmp ${filename}_sea.tmp ${filename}_notsea.tmp ${filename}_lake.tmp ${filename}_land.tmp ${filename}_cover_fract.tmp ${filename}_cover_type.tmp ${filename}_natural_veg.tmp ${filename}_veg_ratio_max.tmp 
 # physical properties
-cdo merge ${filename}_lai_clim.tmp ${filename}_veg_fract.tmp ${filename}_roughness_length.tmp ${filename}_roughness_length_oro.tmp ${filename}_z0.tmp ${filename}_albedo.tmp ${filename}_albedo_veg_vis.tmp ${filename}_albedo_veg_nir.tmp ${filename}_albedo_soil_vis.tmp ${filename}_albedo_soil_nir.tmp ${filename}_forest_fract.tmp bc_land_phys_${grid}.nc
+cdo merge ${filename}_lai_clim.tmp ${filename}_veg_fract.tmp ${filename}_roughness_length.tmp ${filename}_roughness_length_oro.tmp ${filename}_z0.tmp ${filename}_albedo.tmp ${filename}_albedo_veg_vis.tmp ${filename}_albedo_veg_nir.tmp ${filename}_albedo_soil_vis.tmp ${filename}_albedo_soil_nir.tmp ${filename}_forest_fract.tmp bc_land_phys_${grid}_${year}.nc
 rm ${filename}_lai_clim.tmp ${filename}_veg_fract.tmp ${filename}_roughness_length.tmp ${filename}_roughness_length_oro.tmp ${filename}_z0.tmp ${filename}_albedo.tmp ${filename}_albedo_veg_vis.tmp ${filename}_albedo_veg_nir.tmp ${filename}_albedo_soil_vis.tmp ${filename}_albedo_soil_nir.tmp ${filename}_forest_fract.tmp
 # soil properties
-cdo merge ${filename}_fao.tmp ${filename}_maxmoist.tmp ${filename}_bclapp.tmp ${filename}_soil_field_cap.tmp ${filename}_heat_capacity.tmp ${filename}_heat_conductivity.tmp ${filename}_hyd_cond_sat.tmp ${filename}_moisture_pot.tmp ${filename}_pore_size_index.tmp ${filename}_soil_porosity.tmp ${filename}_soil_depth.tmp ${filename}_wilting_point.tmp ${filename}_root_depth.tmp bc_land_soil_${grid}.nc
+cdo merge ${filename}_fao.tmp ${filename}_maxmoist.tmp ${filename}_bclapp.tmp ${filename}_soil_field_cap.tmp ${filename}_heat_capacity.tmp ${filename}_heat_conductivity.tmp ${filename}_hyd_cond_sat.tmp ${filename}_moisture_pot.tmp ${filename}_pore_size_index.tmp ${filename}_soil_porosity.tmp ${filename}_soil_depth.tmp ${filename}_wilting_point.tmp ${filename}_root_depth.tmp bc_land_soil_${grid}_${year}.nc
 rm ${filename}_fao.tmp ${filename}_maxmoist.tmp ${filename}_bclapp.tmp ${filename}_soil_field_cap.tmp ${filename}_heat_capacity.tmp ${filename}_heat_conductivity.tmp ${filename}_hyd_cond_sat.tmp ${filename}_moisture_pot.tmp ${filename}_pore_size_index.tmp ${filename}_soil_porosity.tmp ${filename}_soil_depth.tmp ${filename}_wilting_point.tmp ${filename}_root_depth.tmp
 # topography
-cdo merge ${filename}_elevation.tmp ${filename}_orostd.tmp ${filename}_orosig.tmp ${filename}_orogam.tmp ${filename}_orothe.tmp ${filename}_oropic.tmp ${filename}_oroval.tmp ${filename}_oromea.tmp bc_land_sso_${grid}.nc
+cdo merge ${filename}_elevation.tmp ${filename}_orostd.tmp ${filename}_orosig.tmp ${filename}_orogam.tmp ${filename}_orothe.tmp ${filename}_oropic.tmp ${filename}_oroval.tmp ${filename}_oromea.tmp bc_land_sso_${grid}_${year}.nc
 rm ${filename}_elevation.tmp ${filename}_orostd.tmp ${filename}_orosig.tmp ${filename}_orogam.tmp ${filename}_orothe.tmp ${filename}_oropic.tmp ${filename}_oroval.tmp ${filename}_oromea.tmp
 # initial soil conditions
-cdo merge ${filename}_surf_temp.tmp ${filename}_init_moist.tmp ${filename}_layer_moist.tmp ${filename}_snow.tmp ic_land_soil_${grid}.nc
+cdo merge ${filename}_surf_temp.tmp ${filename}_init_moist.tmp ${filename}_layer_moist.tmp ${filename}_snow.tmp ic_land_soil_${grid}_${year}.nc
 rm ${filename}_surf_temp.tmp ${filename}_init_moist.tmp ${filename}_layer_moist.tmp ${filename}_snow.tmp
 
 # clean up
+rm ${jsbachfile}
 rm gauss_*.tmp
 rm slm_${grid}.nc  slm_${res_atm}.nc
 rm glac_${res_atm}.nc glac_${grid}.nc glac_inv_${grid}.nc
