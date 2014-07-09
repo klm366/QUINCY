@@ -72,8 +72,8 @@ cp -p ${pool}/${res_atm}_TSLCLIM2.nc             .
 cd ../..
 
 # land (JSBACH) input
-mkdir -p ${srcdir}/input/jsbach
-cd ${srcdir}/input/jsbach
+mkdir -p ${srcdir}/input/jsbach/${res_atm}
+cd ${srcdir}/input/jsbach/${res_atm}
 
 ${srcdir}/jsbach_init_file.ksh
 
