@@ -355,17 +355,9 @@ CONTAINS
     ! 'Radiative temperature' used in the radiation scheme of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
     t_rad_srf(:) = s_srf(:) / t2s_conv(:)
 
-!!$    ! Time filter for surface temperature
-!!$    ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
-!!$    ! Also: this is not done in ICON at all (at the moment, at least), so it should be switched off.
-!!$    IF (.NOT. lstart) THEN
-!!$      t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
-!!$    ELSE
-!!$      t_srf(:) = t_srf_unfilt_old(:)
-!!$    END IF
-
   END SUBROUTINE update_surface_energy
 
+  ! Asselin time filter for surface temperature
   SUBROUTINE update_t_srf( tile, iblk, ics, ice, nc)
 
     USE mo_srf_constants,      ONLY: eps
@@ -392,9 +384,8 @@ CONTAINS
 
 !!$    WHERE(t_srf_unfilt(:) < 200._wp) t_srf_unfilt(:) = 200._wp
 
-    ! Time filter for surface temperature
-    ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
-    ! Also: this is not done in ICON at all (at the moment, at least), therefore it is switched off for now.
+    ! TBD: In the case of __ICON__, the filter should be switched on for the hydrostatic core (see
+    !      namelist parameter "asselin_coef" in icon.
     !
 #ifdef __ICON__
     t_srf(:) = t_srf_unfilt(:)
