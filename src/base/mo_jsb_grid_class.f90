@@ -451,16 +451,18 @@ CONTAINS
     ! If none found create a new CDI zaxis, else use existing one
     IF (idx == 0) THEN
       new%cdiZaxisID = zaxisCreate(cdi_axis_type, length)
+      CALL zaxisDefName    (new%cdiZaxisID, TRIM(new%name))
+      CALL zaxisDefLevels  (new%cdiZaxisID, new%levels(1:length))
+      CALL zaxisDefLbounds (new%cdiZaxisID, new%lbounds(1:length))
+      CALL zaxisDefUbounds (new%cdiZaxisID, new%ubounds(1:length))
+      CALL zaxisDefUnits   (new%cdiZaxisID, TRIM(new%units))
+      CALL zaxisDefLongname(new%cdiZaxisID, TRIM(new%longname))
+      WRITE(message_text, '(A,A,2I3)') 'Created new vgrid: name, ID, length= ',TRIM(new%name), new%cdiZaxisID, length
+      CALL message(TRIM(routine), message_text)
     ELSE
       new%cdiZaxisID = cdi_zaxis_ids(idx)
     END IF
     cdi_zaxis_ids(new%id) = new%cdiZaxisID
-    CALL zaxisDefName    (new%cdiZaxisID, TRIM(new%name))
-    CALL zaxisDefLevels  (new%cdiZaxisID, new%levels(1:length))
-    CALL zaxisDefLbounds (new%cdiZaxisID, new%lbounds(1:length))
-    CALL zaxisDefUbounds (new%cdiZaxisID, new%ubounds(1:length))
-    CALL zaxisDefUnits   (new%cdiZaxisID, TRIM(new%units))
-    CALL zaxisDefLongname(new%cdiZaxisID, TRIM(new%longname))
 
   END FUNCTION new_vgrid
 
