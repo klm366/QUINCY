@@ -36,7 +36,7 @@ CONTAINS
   !
   SUBROUTINE soil_init(model)
 
-    TYPE(t_jsb_model), INTENT(in) :: model
+    TYPE(t_jsb_model), INTENT(inout) :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init'
 
@@ -47,7 +47,7 @@ CONTAINS
 
   SUBROUTINE soil_init_bc(tile)
 
-    TYPE(t_jsb_tile), INTENT(in) :: tile
+    TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),       POINTER :: model
     TYPE(t_soil_memory), POINTER :: soil

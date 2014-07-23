@@ -30,7 +30,7 @@ CONTAINS
 
   SUBROUTINE veg_init_bc(tile)
 
-    TYPE(t_jsb_tile), INTENT(in) :: tile
+    TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),       POINTER :: model
     TYPE(t_veg_memory), POINTER :: veg
@@ -58,7 +58,7 @@ CONTAINS
     USE mo_soil_util,   ONLY: soil_depth_to_layers_2d
     USE mo_jsb_time,    ONLY: wgt1, wgt2, nmw1,nmw2
 
-    TYPE(t_jsb_tile),  INTENT(in) :: tile
+    TYPE(t_jsb_tile),  INTENT(inout) :: tile
 
     TYPE(t_jsb_model),        POINTER :: model
     TYPE(t_veg_memory),       POINTER :: veg
