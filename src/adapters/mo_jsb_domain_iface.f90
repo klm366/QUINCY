@@ -34,7 +34,7 @@ MODULE mo_jsb_domain_iface
     INTEGER :: nlon = -1
   END TYPE pe_decomposed
 
-  TYPE(pe_decomposed) :: global_decomposition(1)
+  TYPE(pe_decomposed), SAVE :: global_decomposition(1)
 #else
   ! Dummy type for ICON patch
   TYPE t_patch
