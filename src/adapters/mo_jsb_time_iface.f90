@@ -17,7 +17,7 @@ MODULE mo_jsb_time_iface
   USE mo_datetime,    ONLY: t_datetime, print_datetime, add_time, rdaylen
   USE mo_time_config, ONLY: time_config !configure_time
   USE mo_time_nml,    ONLY: read_time_namelist
-  USE mo_amip_bc,     ONLY: wgt1, wgt2, nmw1,nmw2  ! TBD: this should be made more general
+  USE mo_bc_sst_sic,  ONLY: wgt1, wgt2, nmw1,nmw2  ! TBD: this should be made more general
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
                                 get_day_length => day_len
