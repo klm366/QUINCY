@@ -270,20 +270,23 @@ CONTAINS
 #ifdef __ICON__
   INTEGER FUNCTION get_year_length(yr)
 
-    USE mo_datetime, ONLY: aux_datetime
+    USE mo_datetime, ONLY: date_to_time
 
     INTEGER, INTENT(in) :: yr
 
-    TYPE(t_datetime) :: date
+    TYPE(t_datetime) :: date, inidate
 
-    date%year   = yr
-    date%month  = 1
-    date%day    = 1
-    date%hour   = 0
-    date%minute = 0
-    date%second = 0
+    inidate = get_time_start()
 
-    CALL aux_datetime(date)
+    date%calendar = inidate%calendar
+    date%year     = yr
+    date%month    = 1
+    date%day      = 1
+    date%hour     = 0
+    date%minute   = 0
+    date%second   = 0._wp
+
+    CALL date_to_time(date)
 
     get_year_length = date%yealen
 
@@ -298,20 +301,23 @@ CONTAINS
 #ifdef __ICON__
   INTEGER FUNCTION get_month_length(yr, mo)
 
-    USE mo_datetime, ONLY: aux_datetime
+    USE mo_datetime, ONLY: date_to_time
 
     INTEGER, INTENT(in) :: yr, mo
 
-    TYPE(t_datetime) :: date
+    TYPE(t_datetime) :: date, inidate
 
-    date%year   = yr
-    date%month  = mo
-    date%day    = 1
-    date%hour   = 0
-    date%minute = 0
-    date%second = 0
+    inidate = get_time_start()
 
-    CALL aux_datetime(date)
+    date%calendar = inidate%calendar
+    date%year     = yr
+    date%month    = mo
+    date%day      = 1
+    date%hour     = 0
+    date%minute   = 0
+    date%second   = 0
+
+    CALL date_to_time(date)
 
     get_month_length = date%monlen
 
