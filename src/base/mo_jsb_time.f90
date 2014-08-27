@@ -63,7 +63,7 @@ CONTAINS
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_time_standalone'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_time'
 
     CALL message(TRIM(routine), 'Initializing JSBACH time')
 

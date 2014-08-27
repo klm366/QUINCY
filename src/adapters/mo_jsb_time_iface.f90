@@ -61,8 +61,9 @@ CONTAINS
 
   SUBROUTINE configure_time_and_events
 
-    USE mo_time_control, ONLY: lfirst_cycle, ec_manager_init, &
-                               init_manager, init_times, init_events, time_set
+!!$    USE mo_time_control, ONLY: lfirst_cycle, ec_manager_init, &
+!!$                               init_manager, init_times, init_events, time_set
+    USE mo_time_control, ONLY: time_weights
 
     INTEGER :: IO_timestep, istep
 
@@ -73,8 +74,9 @@ CONTAINS
 !!$    CALL init_times                              ! initialize all dates
 !!$
 !!$    CALL init_events
+!!$    CALL time_set
 
-    CALL time_set
+    CALL time_weights(l_compute_rad=.FALSE.) ! radiation_time is not initialized yet at the time of JSBACH initialization
 
   END SUBROUTINE configure_time_and_events
 #endif
