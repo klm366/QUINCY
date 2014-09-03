@@ -12,12 +12,12 @@ MODULE mo_jsb_io_netcdf_iface
 
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: finish, message
+  USE mo_io_units,           ONLY: filename_max
   USE mo_jsb_domain_iface,   ONLY: t_patch, pe_decomposed
   USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel, my_process_is_stdio, p_bcast, p_io
 #ifdef __ICON__
-  USE mo_netcdf_read, ONLY: netcdf_read_oncells_2d,       &
-                            netcdf_read_oncells_2d_time,  &
-                            netcdf_read_oncells_2d_extdim
+  USE mo_read_interface, ONLY: read_2D, read_2D_time, read_2D_extdim, openInputFile, closeFile, onCells, &
+                               t_stream_id, read_netcdf_broadcast_method
 #else
   USE mo_tr_scatter, ONLY: scatter_field
 #endif
@@ -25,6 +25,21 @@ MODULE mo_jsb_io_netcdf_iface
   IMPLICIT NONE
 
   PUBLIC
+
+  TYPE t_input_file
+    INTEGER           :: TYPE                ! 0: ICON infrastructure, 1: ECHAM infrastructure
+    CHARACTER(len=filename_max) :: filename  ! Name of input file
+#ifdef __ICON__
+    TYPE(t_stream_id) :: stream_id  ! ICON stream_id structure
+#else
+    INTEGER :: file_id          ! netcdf file id
+    INTEGER :: return_status    ! the latest operation return status
+    INTEGER :: nlon    = -1
+    INTEGER :: nlat    = -1
+    INTEGER :: nproma  = -1
+    INTEGER :: ngpblks = -1
+#endif
+  END TYPE t_input_file
 
   INTERFACE netcdf_read_2d
     MODULE PROCEDURE netcdf_read_real_2d
@@ -46,26 +61,22 @@ MODULE mo_jsb_io_netcdf_iface
 
 CONTAINS
 
-  FUNCTION netcdf_read_real_2d(filename, variable_name, fill_array, patch, decomp)
+  TYPE(t_input_file) FUNCTION netcdf_open_input(filename, patch, decomp)
 
-    CHARACTER(LEN=*), INTENT(in) :: filename
-    CHARACTER(LEN=*), INTENT(in) :: variable_name
-    REAL(wp), TARGET, OPTIONAL   :: fill_array(:,:)
+    CHARACTER(LEN=*),    INTENT(in) :: filename
     TYPE(t_patch),       INTENT(in) :: patch
     TYPE(pe_decomposed), INTENT(in) :: decomp
-    REAL(wp), POINTER            :: netcdf_read_real_2d(:,:)
 
-    REAL(wp), POINTER :: tmp_array(:,:)
-    INTEGER :: file_id, var_id
+    INTEGER :: file_id, return_status
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_2d'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_open_input'
 
-    NULLIFY(netcdf_read_real_2d)
+    netcdf_open_input%filename = TRIM(filename)
 
     IF (patch%id > 0) THEN
 #ifdef __ICON__
-      netcdf_read_real_2d => &
-        netcdf_read_oncells_2d(TRIM(filename), TRIM(variable_name), fill_array, patch)
+      netcdf_open_input%type      = 1
+      netcdf_open_input%stream_id = openInputFile(TRIM(filename), patch, read_netcdf_broadcast_method)
 #else
       CALL finish(TRIM(routine), 'Incompatible combination patch/no-ICON')
 #endif
@@ -73,28 +84,21 @@ CONTAINS
 #ifdef __ICON__
       CALL finish(TRIM(routine), 'Incompatible combination decomp/ICON')
 #else
-      ALLOCATE(tmp_array(decomp%nlon, decomp%nlat))
+      netcdf_open_input%type = 2
 
       IF (my_process_is_stdio()) THEN
-        CALL nf(nf_open(TRIM(filename), NF_NOWRITE, file_id), TRIM(routine)//':'//TRIM(filename))
-
-        CALL nf(nf_inq_varid(file_id, TRIM(variable_name), var_id), TRIM(routine))
-
-        CALL nf(nf_get_var_double(file_id, var_id, tmp_array), TRIM(routine))
-      END IF
-
-      IF (PRESENT(fill_array)) THEN
-        netcdf_read_real_2d => fill_array
+        return_status = nf_open(TRIM(filename), NF_NOWRITE, file_id)
+        CALL nf(return_status, TRIM(routine)//':'//TRIM(filename))
       ELSE
-        ALLOCATE(netcdf_read_real_2d(decomp%nproma, decomp%ngpblks))
-        netcdf_read_real_2d(:,:) = 0._wp
+        return_status = 1
+        file_id = -1
       END IF
-
-      CALL scatter_field(tmp_array, netcdf_read_real_2d)
-
-      DEALLOCATE(tmp_array)
-
-      IF (my_process_is_stdio()) CALL nf(nf_close(file_id), TRIM(routine))
+      netcdf_open_input%file_id       = file_id
+      netcdf_open_input%nlon          = decomp%nlon
+      netcdf_open_input%nlat          = decomp%nlat
+      netcdf_open_input%nproma        = decomp%nproma
+      netcdf_open_input%ngpblks       = decomp%ngpblks
+      netcdf_open_input%return_status = return_status
 #endif
     ELSE
 #ifdef __ICON__
@@ -104,38 +108,100 @@ CONTAINS
 #endif
     END IF
 
+  END FUNCTION netcdf_open_input
+
+  SUBROUTINE netcdf_close_file(input_file)
+
+    TYPE(t_input_file), INTENT(inout) :: input_file
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_close_file'
+
+#ifdef __ICON__
+    CALL closeFile(input_file%stream_id)
+#else
+    IF (my_process_is_stdio()) &
+      CALL nf(nf_close(input_file%file_id), TRIM(routine)//':'//TRIM(input_file%filename))
+#endif
+
+  END SUBROUTINE netcdf_close_file
+
+  FUNCTION netcdf_read_real_2d(input_file, variable_name, fill_array)
+
+    TYPE(t_input_file), INTENT(inout) :: input_file
+    CHARACTER(LEN=*),   INTENT(in)    :: variable_name
+    REAL(wp), TARGET, OPTIONAL        :: fill_array(:,:)
+    REAL(wp), POINTER                 :: netcdf_read_real_2d(:,:)
+
+    REAL(wp), POINTER :: tmp_array(:,:)
+    INTEGER :: file_id, var_id
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_2d'
+
+    NULLIFY(netcdf_read_real_2d)
+
+    IF (input_file%type == 1) THEN
+#ifdef __ICON__
+      CALL read_2D(input_file%stream_id, onCells, TRIM(variable_name), fill_array, netcdf_read_real_2d)
+#else
+      CALL finish(TRIM(routine), 'Incompatible input file type')
+#endif
+    ELSE IF (input_file%type == 2) THEN
+#ifdef __ICON__
+      CALL finish(TRIM(routine), 'Incompatible input file type')
+#else
+      ALLOCATE(tmp_array(input_file%nlon, input_file%nlat))
+
+      file_id = input_file%file_id
+
+      IF (my_process_is_stdio()) THEN
+        CALL nf(nf_inq_varid(file_id, TRIM(variable_name), var_id), TRIM(routine))
+
+        CALL nf(nf_get_var_double(file_id, var_id, tmp_array), TRIM(routine))
+      END IF
+
+      IF (PRESENT(fill_array)) THEN
+        netcdf_read_real_2d => fill_array
+      ELSE
+        ALLOCATE(netcdf_read_real_2d(input_file%nproma, input_file%ngpblks))
+        netcdf_read_real_2d(:,:) = 0._wp
+      END IF
+
+      CALL scatter_field(tmp_array, netcdf_read_real_2d)
+
+      DEALLOCATE(tmp_array)
+#endif
+    ELSE
+      CALL finish(TRIM(routine), 'Input file type not recognized.')
+    END IF
+
   END FUNCTION netcdf_read_real_2d
 
-  FUNCTION netcdf_read_real_2d_time(filename, variable_name, fill_array, patch, decomp, &
+  FUNCTION netcdf_read_real_2d_time(input_file, variable_name, fill_array, &
     start_time_step, end_time_step)
 
-    CHARACTER(LEN=*), INTENT(in) :: filename
-    CHARACTER(LEN=*), INTENT(in) :: variable_name
-    REAL(wp), TARGET, OPTIONAL   :: fill_array(:,:,:)
-    TYPE(t_patch),       INTENT(in) :: patch
-    TYPE(pe_decomposed), INTENT(in) :: decomp
-    INTEGER, OPTIONAL, INTENT(in) :: start_time_step, end_time_step
-    REAL(wp), POINTER            :: netcdf_read_real_2d_time(:,:,:)
+    TYPE(t_input_file), INTENT(inout) :: input_file
+    CHARACTER(LEN=*),   INTENT(in)    :: variable_name
+    REAL(wp), TARGET, OPTIONAL        :: fill_array(:,:,:)
+    INTEGER, OPTIONAL,  INTENT(in)    :: start_time_step, end_time_step
+    REAL(wp), POINTER                 :: netcdf_read_real_2d_time(:,:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_read_real_2d_time'
 
     netcdf_read_real_2d_time => netcdf_read_real_2d_extdim( &
-      filename, variable_name, fill_array, patch, decomp,   &
+      input_file, variable_name, fill_array,    &
       start_extdim=start_time_step, end_extdim=end_time_step, extdim_name="time")
                                  
   END FUNCTION netcdf_read_real_2d_time
 
-  FUNCTION netcdf_read_real_2d_extdim(filename, variable_name, fill_array, patch, decomp, &
+  FUNCTION netcdf_read_real_2d_extdim(input_file, variable_name, fill_array, &
     start_extdim, end_extdim, extdim_name)
 
-    CHARACTER(LEN=*), INTENT(in) :: filename
-    CHARACTER(LEN=*), INTENT(in) :: variable_name
-    REAL(wp), TARGET, OPTIONAL   :: fill_array(:,:,:)
-    TYPE(t_patch),       INTENT(in) :: patch
-    TYPE(pe_decomposed), INTENT(in) :: decomp
-    INTEGER, OPTIONAL, INTENT(in) :: start_extdim, end_extdim
-    CHARACTER(LEN=*), OPTIONAL, INTENT(in) :: extdim_name
-    REAL(wp), POINTER            :: netcdf_read_real_2d_extdim(:,:,:)
+    TYPE(t_input_file),         INTENT(inout) :: input_file
+    CHARACTER(LEN=*),           INTENT(in)    :: variable_name
+    REAL(wp), TARGET, OPTIONAL                :: fill_array(:,:,:)
+    INTEGER, OPTIONAL,          INTENT(in)    :: start_extdim, end_extdim
+    CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: extdim_name
+    REAL(wp), POINTER                         :: netcdf_read_real_2d_extdim(:,:,:)
 
     INTEGER :: i, start_allocated_step, end_allocated_step, steps, start_step, end_step
     REAL(wp), POINTER :: tmp_array(:,:,:), ptr(:,:)
@@ -146,21 +212,20 @@ CONTAINS
 
     NULLIFY(netcdf_read_real_2d_extdim)
 
-    IF (patch%id > 0) THEN
+    IF (input_file%type == 1) THEN
 #ifdef __ICON__
-      netcdf_read_real_2d_extdim => &
-        netcdf_read_oncells_2d_extdim(TRIM(filename), TRIM(variable_name), fill_array, patch, &
-                                      start_extdim=start_extdim, end_extdim=end_extdim, extdim_name=extdim_name)
+      CALL read_2D_extdim(input_file%stream_id, onCells, TRIM(variable_name), fill_array, netcdf_read_real_2d_extdim, &
+                          start_extdim=start_extdim, end_extdim=end_extdim, extdim_name=extdim_name)
 #else
-      CALL finish(TRIM(routine), 'Incompatible combination patch/no-ICON')
+      CALL finish(TRIM(routine), 'Incompatible input file type')
 #endif
-    ELSE IF (decomp%nlon > 0) THEN
+    ELSE IF (input_file%type == 2) THEN
 #ifdef __ICON__
-      CALL finish(TRIM(routine), 'Incompatible combination decomp/ICON')
+      CALL finish(TRIM(routine), 'Incompatible input file type')
 #else
-      IF (my_process_is_stdio()) THEN
-        CALL nf(nf_open(TRIM(filename), NF_NOWRITE, file_id), TRIM(routine)//':'//TRIM(filename))
+      file_id = input_file%file_id
 
+      IF (my_process_is_stdio()) THEN
         CALL nf(nf_inq_varid(file_id, TRIM(variable_name), var_id), TRIM(routine))
 
         CALL nf(nf_inq_varndims(file_id, var_id, var_ndims), TRIM(routine)//':'//TRIM(variable_name))
@@ -193,18 +258,18 @@ CONTAINS
       IF (PRESENT(fill_array)) THEN
         netcdf_read_real_2d_extdim => fill_array
       ELSE
-        ALLOCATE(netcdf_read_real_2d_extdim(decomp%nproma, decomp%ngpblks, steps))
+        ALLOCATE(netcdf_read_real_2d_extdim(input_file%nproma, input_file%ngpblks, steps))
         netcdf_read_real_2d_extdim(:,:,:) = 0._wp
       END IF
 
       start_allocated_step = LBOUND(netcdf_read_real_2d_extdim, 3)
       end_allocated_step = UBOUND(netcdf_read_real_2d_extdim, 3)
-      ALLOCATE(tmp_array(decomp%nlon, decomp%nlat, start_allocated_step:end_allocated_step))
+      ALLOCATE(tmp_array(input_file%nlon, input_file%nlat, start_allocated_step:end_allocated_step))
       IF (SIZE(netcdf_read_real_2d_extdim,3) < steps) CALL finish(TRIM(routine), 'allocated size < steps')
 
       IF (my_process_is_stdio()) THEN
         start_read_index = (/ 1, 1, start_step /)
-        count_read_index = (/ decomp%nlon, decomp%nlat, steps /)
+        count_read_index = (/ input_file%nlon, input_file%nlat, steps /)
         CALL nf(nf_get_vara_double(file_id, var_id, start_read_index, count_read_index, tmp_array), &
           TRIM(routine)//':'//TRIM(variable_name))
       END IF
@@ -215,15 +280,9 @@ CONTAINS
       END DO
 
       DEALLOCATE(tmp_array)
-
-      IF (my_process_is_stdio()) CALL nf(nf_close(file_id), TRIM(routine))
 #endif
     ELSE
-#ifdef __ICON__
-      CALL finish(TRIM(routine), 'No patch')
-#else
-      CALL finish(TRIM(routine), 'No decomposition')
-#endif
+      CALL finish(TRIM(routine), 'Input file type not recognized.')
     END IF
 
   END FUNCTION netcdf_read_real_2d_extdim
