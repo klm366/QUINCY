@@ -9,7 +9,7 @@ year=${year_cf}
 [[ ${echam_fractional} = true ]] && fractional=fractional_ || fractional=""
 
 # input files
-jsbachfile=${srcdir}/input/jsbach/${res_atm}/jsbach_${res_atm}${res_oce}_${fractional}${ntiles}tiles_5layers_${year}.nc
+jsbachfile=${srcdir}/input/jsbach/${grid}/jsbach_${res_atm}${res_oce}_${fractional}${ntiles}tiles_5layers_${year}.nc
 ifile_topo=${srcdir}/input/echam6/${res_atm}${res_oce}_jan_surf.nc
 filename=${grid}_jsbach_${ntiles}tiles_${year}
 

@@ -38,16 +38,18 @@ export interactive_ctrl=1
 export res_atm=T63         # atmosphere horizontal resolution
 export res_oce=GR15        # ocean horizontal resolution
 
-# ECHAM grid
 export grid=${res_atm}${res_oce}
 
 # echam6 input data
 export pool=/pool/data/ECHAM6/input/r0003/${res_atm}  # pool with atm input data
 export pool_land=/pool/data/JSBACH/prepare/${res_atm} # pool with srf input data
 
+# Script name
+script=gauss_to_echam.ksh
+
 # script directory
 startdir=$(pwd)
-[[ -f gauss_to_echam.ksh ]] || cp `dirname ${0}`/gauss_to_echam.ksh .
+[[ -f ${script} ]] || cp `dirname ${0}`/${script} .
 
 # parameters for jsbach_init_file.f90
 export dynveg=false
@@ -72,15 +74,14 @@ cp -p ${pool}/${res_atm}_TSLCLIM2.nc             .
 cd ../..
 
 # land (JSBACH) input
-mkdir -p ${srcdir}/input/jsbach/${res_atm}
-cd ${srcdir}/input/jsbach/${res_atm}
+mkdir -p ${srcdir}/input/jsbach/${grid}
+cd ${srcdir}/input/jsbach/${grid}
 
 ${srcdir}/jsbach_init_file.ksh
 
 # remove the executable and modules
 rm jsbach_init_file mo_kinds.mod mo_vegparams.mod
 
-#${srcdir}/gauss_to_echam.ksh
-${srcdir}/gauss_to_echam.ksh
+${srcdir}/${script}
 
 exit
