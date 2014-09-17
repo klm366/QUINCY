@@ -38,18 +38,26 @@ export interactive_ctrl=1
 export res_atm=T63         # atmosphere horizontal resolution
 export res_oce=GR15        # ocean horizontal resolution
 
+export grid=r2b4_amip
+
 # ICON grid file
 pool_grid=/pool/data/ICON/grids/private/r2b4_amip # pool with ICON grid data
-export grid=r2b4_amip
 export gridfile=${pool_grid}/${grid}.nc
+
+# Soil parameter file
+export pool_soil=/pool/data/JSBACH/prepare/r2b4
+export soilparamfile=soil_parameters_${grid}.nc
 
 # echam6 input data
 export pool=/pool/data/ECHAM6/input/r0003/${res_atm}  # pool with atm input data
 export pool_land=/pool/data/JSBACH/prepare/${res_atm} # pool with srf input data
 
+# Script name
+script=gauss_to_icon.ksh
+
 # script directory
 startdir=$(pwd)
-[[ -f gauss_to_icon.ksh ]] || cp `dirname ${0}`/gauss_to_icon.ksh .
+[[ -f ${script} ]] || cp `dirname ${0}`/${script} .
 
 # parameters for jsbach_init_file.f90
 export dynveg=false
@@ -82,6 +90,6 @@ ${srcdir}/jsbach_init_file.ksh
 # remove the executable and modules
 rm jsbach_init_file mo_kinds.mod mo_vegparams.mod
 
-${srcdir}/gauss_to_icon.ksh
+${srcdir}/${script}
 
 exit

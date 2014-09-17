@@ -13,8 +13,7 @@ jsbachfile=${srcdir}/input/jsbach/${grid}/jsbach_${res_atm}${res_oce}_${fraction
 ifile_topo=${srcdir}/input/echam6/${res_atm}${res_oce}_jan_surf.nc
 filename=${grid}_jsbach_${ntiles}tiles_${year}
 
-soilparamfile=soil_parameters_${grid}.nc
-cdo -f nc2 copy ${pool_land}/../${grid%_*}/${soilparamfile} ${soilparamfile}
+cdo -f nc2 copy ${pool_soil}/${soilparamfile} ${soilparamfile}
 
 # preparations
 #--------------
