@@ -55,8 +55,7 @@ MODULE mo_srf_memory_class
       wsr_srf       (:,:),   & !< Water content in skin reservoir [m]
       sfract_srf    (:,:),   & !< Snow fraction of tile []
       wsn_srf       (:,:),   & !< Water content of snow reservoir [m water equivalent]
-      wsn_glacier   (:,:),   & !< Water content of snow on glacier [m water equivalent]
-      rel_hum_srf   (:,:)      !< Relative humidity of surface (zhsoil in echam6)
+      wsn_glacier   (:,:)      !< Water content of snow on glacier [m water equivalent]
   END TYPE t_srf_water_state
 
   TYPE t_srf_energy_flux

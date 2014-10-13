@@ -518,7 +518,6 @@ CONTAINS
       fact_q_air    (:), &
       fact_qsat_srf (:), &
       fact_qsat_trans_srf (:), &
-      rel_hum_srf   (:), &
       qsat_srf      (:), &
       canopy_cond   (:), &
       pch           (:), &
@@ -559,7 +558,6 @@ CONTAINS
     fact_q_air       => tile%mem%srf  %energy_state %fact_q_air          (ics:ice,    iblk)
     fact_qsat_srf    => tile%mem%srf  %energy_state %fact_qsat_srf       (ics:ice,    iblk)
     fact_qsat_trans_srf  => tile%mem%srf  %energy_state %fact_qsat_trans_srf (ics:ice,    iblk)
-    rel_hum_srf      => tile%mem%srf  %water_state  %rel_hum_srf         (ics:ice,    iblk)
     pch              => tile%mem      %atm2land     %pch                 (ics:ice,    iblk)
     wind_air         => tile%mem      %atm2land     %wind_air            (ics:ice,    iblk)
     q_air            => tile%mem      %atm2land     %q_air               (ics:ice,    iblk)
@@ -595,12 +593,6 @@ CONTAINS
     fact_qsat_srf(:) = fract_fpc(:) * fact_qsat_veg(:) + (1._wp - fract_fpc(:)) * fact_qsat_soil(:)
     fact_q_air(:)    = fract_fpc(:) * fact_qair_veg(:) + (1._wp - fract_fpc(:)) * fact_qair_soil(:)
     fact_qsat_trans_srf(:) = fract_fpc(:) * fact_qsat_trans(:)
-
-    WHERE (q_air(:) < qsat_srf(:))
-      rel_hum_srf(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * (wfract_srf(:) + (1._wp - wfract_srf(:)) *  rel_hum(:))
-    ELSEWHERE
-      rel_hum_srf(:) = 1._wp
-    END WHERE
 
   END SUBROUTINE update_humidity_scaling
 
