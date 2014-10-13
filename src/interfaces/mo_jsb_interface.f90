@@ -41,7 +41,7 @@ CONTAINS
                            & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
                            & pch, cos_zenith_angle,                                       &
                            & t_srf, t_rad_srf, qsat_srf, s_srf,                           &
-                           & fact_q_air, fact_qsat_srf, rel_hum_srf,                      &
+                           & fact_q_air, fact_qsat_srf,                                   &
                            & evapotrans, latent_hflx, sensible_hflx,                      &
                            & rough_h_srf, rough_m_srf,                                    &
                            & tte_corr,                                                    &
@@ -89,7 +89,6 @@ CONTAINS
       & s_srf            (:), &
       & fact_q_air       (:), &
       & fact_qsat_srf    (:), &
-      & rel_hum_srf      (:), &
       & evapotrans       (:), &
       & latent_hflx      (:), &
       & sensible_hflx    (:), &
@@ -193,7 +192,7 @@ CONTAINS
     ! Finally, give the required variables back to the atmosphere
     CALL update_land2atm(tile, iblk, ics, ice,                                                                                  &
       & t_srf=t_srf(:), t_rad_srf=t_rad_srf(:), qsat_srf=qsat_srf(:), s_srf=s_srf(:),                                           &
-      & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:), rel_hum_srf=rel_hum_srf(:),                                   &
+      & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:),                                                               &
       & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:),                                   &
       & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &
       & tte_corr=tte_corr(:),                                                                                                   &

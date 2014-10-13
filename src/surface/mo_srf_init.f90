@@ -191,8 +191,6 @@ CONTAINS
     water%wsn_srf     (:,:) = -1._wp    ! -1 used to determine start of experiment
     water%wsn_glacier (:,:) = 20._wp    ! Temporary initialization of glacier thickness
 
-    water%rel_hum_srf (:,:) = 0._wp
-
     ! Initialize energy fluxes
     !
     eflux => srf%energy_flux

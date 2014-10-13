@@ -312,12 +312,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( this_list, prefix//'rel_hum_srf'//suffix, wstate%rel_hum_srf,                       &
-        & hgrid, surface,                                                           &
-        & t_cf('relative_humidity_surface', '', '', nc_bits),                                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-        & initval_r=0.0_wp )
-
     END FUNCTION new_water_state
 
     FUNCTION new_water_flux() RESULT(wflux)

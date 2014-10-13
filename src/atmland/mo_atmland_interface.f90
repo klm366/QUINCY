@@ -58,7 +58,7 @@ CONTAINS
 
   SUBROUTINE update_land2atm(tile, iblk, ics, ice,           &
     & t_srf, t_rad_srf, qsat_srf, s_srf,                     &
-    & fact_q_air, fact_qsat_srf, rel_hum_srf,                &
+    & fact_q_air, fact_qsat_srf,                             &
     & evapotrans, latent_hflx, sensible_hflx,                &
     & rough_h_srf, rough_m_srf, tte_corr,                    &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
@@ -67,7 +67,7 @@ CONTAINS
     INTEGER,            INTENT(in) :: iblk, ics, ice
     REAL(wp), OPTIONAL, INTENT(out) ::                                        &
       & t_srf(:), t_rad_srf(:), qsat_srf(:), s_srf(:),                        &
-      & fact_q_air(:), fact_qsat_srf(:), rel_hum_srf(:),                      &
+      & fact_q_air(:), fact_qsat_srf(:),                                      &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:),                      &
       & rough_h_srf(:), rough_m_srf(:), tte_corr(:),                          &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:)
@@ -82,7 +82,6 @@ CONTAINS
     IF (PRESENT(s_srf))           s_srf(:)            = tile%mem%srf  %energy_state %s_srf          (ics:ice, iblk)
     IF (PRESENT(fact_q_air))      fact_q_air(:)       = tile%mem%srf  %energy_state %fact_q_air     (ics:ice, iblk)
     IF (PRESENT(fact_qsat_srf))   fact_qsat_srf(:)    = tile%mem%srf  %energy_state %fact_qsat_srf  (ics:ice, iblk)
-    IF (PRESENT(rel_hum_srf))     rel_hum_srf(:)      = tile%mem%srf  %water_state  %rel_hum_srf    (ics:ice, iblk)
     IF (PRESENT(evapotrans))      evapotrans(:)       = tile%mem%srf  %water_flux   %evapotrans     (ics:ice, iblk)
     IF (PRESENT(latent_hflx))     latent_hflx(:)      = tile%mem%srf  %energy_flux  %latent_hflx    (ics:ice, iblk)
     IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = tile%mem%srf  %energy_flux  %sensible_hflx  (ics:ice, iblk)
