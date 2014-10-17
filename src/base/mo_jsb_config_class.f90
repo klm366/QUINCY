@@ -24,7 +24,7 @@ MODULE mo_jsb_config_class
   TYPE t_jsb_model_config
     CHARACTER(len=filename_max)  :: grid_filename
     CHARACTER(len=30)            :: grid_name
-    CHARACTER(len=20)            :: usecase
+    CHARACTER(len=30)            :: usecase
     TYPE(t_srf_config),  POINTER :: srf
     TYPE(t_soil_config), POINTER :: soil
     TYPE(t_veg_config),  POINTER :: veg
