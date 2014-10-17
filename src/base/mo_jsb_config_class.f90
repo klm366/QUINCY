@@ -53,7 +53,7 @@ CONTAINS
       grid_filename,          &
       grid_name
 
-    CHARACTER(len=20)           :: usecase
+    CHARACTER(len=30)           :: usecase
 
     NAMELIST /jsb_model_nml/  &
       usecase
