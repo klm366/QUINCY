@@ -34,6 +34,9 @@ mv ./initial_tarfiles/jsbach_init_file.f90 .
 # switch off interactive mode in the script jsbach_init_file.ksh
 export interactive_ctrl=1
 
+# Switch for terraplanet
+export terraplanet=true
+
 # component model resolutions
 export res_atm=T63         # atmosphere horizontal resolution
 export res_oce=GR15        # ocean horizontal resolution
@@ -52,8 +55,10 @@ export soilparamfile=soil_parameters_${grid}.nc
 export pool=/pool/data/ECHAM6/input/r0003/${res_atm}  # pool with atm input data
 export pool_land=/pool/data/JSBACH/prepare/${res_atm} # pool with srf input data
 
+[[ ${terraplanet} = true ]] && grid=${grid}_tpe
+
 # Script name
-script=gauss_to_icon.ksh
+[[ ${terraplanet} = 'false' ]] && script=gauss_to_icon.ksh || script=gauss_to_icon_tpe.ksh
 
 # script directory
 startdir=$(pwd)

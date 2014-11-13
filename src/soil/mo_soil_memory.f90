@@ -259,6 +259,12 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & initval_r=0.0_wp )
 
+      CALL jsb_add_var( this_list, prefix//'overflow'//suffix, wstate%overflow,                             &
+        & hgrid, surface,                                                                    &
+        & t_cf('overflown_soil_moisture', 'm', '', nc_bits),                              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & initval_r=0.0_wp )
+
       CALL jsb_add_var( this_list, prefix//'ws_l'//suffix, wstate%ws_l,                                     &
         & hgrid, soil_w,                                                                     &
         & t_cf('soil_moisture', 'm', '', nc_bits),                                           &

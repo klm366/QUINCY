@@ -247,6 +247,9 @@ CONTAINS
       & fill_array = water%ws)
     water%ws(:,:) = MERGE(water%ws(:,:), 0._wp, water%ws(:,:) >= 0._wp)
 
+    ! Initial overflown water
+    water%overflow(:,:) = 0._wp
+
     DO isoil=1,model%config%soil%nsoil_water
       return_pointer3d => jsb_netcdf_read_2d_extdim(  &
         & input_file,                                 &
