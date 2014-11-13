@@ -49,6 +49,7 @@ MODULE mo_soil_memory_class
       wsr_soil      (:,  :),   & !< Water content in skin reservoir on soil [m]
       sfract_soil   (:,  :),   & !< Snow fraction of soil []
       wsn_soil      (:,  :),   & !< Water content of snow reservoir of soil [m water equivalent]
+      overflow      (:,  :),   & !< Water content of reservoir for overflown soil water (terraplanet) [m] 
       ws_l          (:,:,:),   & !< Water content in soil layers [m]
       ws_sat_l      (:,:,:),   & !< Water content of soil layers at saturation (derived from soil porosity) [m]
       ws_fc_l       (:,:,:),   & !< Water content of soil layers at field capacity (derived from volumetric field capacity)[m]

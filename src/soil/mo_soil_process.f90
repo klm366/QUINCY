@@ -725,7 +725,10 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
      , etrans, redevap                    &
 !!$     , vfc, vpwp &
      , spsi                           &
+     , overflow                       &
      , jllog                                     &
+     , l_tpe_open                      &
+     , l_tpe_closed                    &
      )
 !
 !     ------------------------------------------------------------------
@@ -749,6 +752,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 ! pdrain        Drainage at non-glacier points [kg/m**2] (accumul.)
 ! pros_hd       Runoff for HD-Model (does NOT include drainage) [m]
 ! pdrain_hd     Drainage for HD-Model [m]
+! 
 ! lpglac        Logical glacier mask
 !
 ! The following local variables represent the respective fluxes
@@ -893,7 +897,11 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !!$  REAL(wp), INTENT(in)   , optional :: vfc(kbdim)
 !!$  REAL(wp), INTENT(in)   , optional :: vpwp(kbdim)
   REAL(wp), INTENT(in)   , optional :: spsi(kbdim)
+  REAL(wp), INTENT(inout), optional :: overflow(kbdim) ! excess of water in the terraplanet setup (l_tpe_closed = true)
+
   INTEGER,  INTENT(inout), optional :: jllog      ! gridbox number for logoutput in SOILHYD
+  LOGICAL,  INTENT(in),    OPTIONAL :: l_tpe_open   ! Switch for terraplanet setup, open water cycle
+  LOGICAL,  INTENT(in),    OPTIONAL :: l_tpe_closed ! Switch for terraplanet setup, closed water cycle
 !
 !  local variables
 !
@@ -908,6 +916,9 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
        zroeff, zbws, zb1, zbm, zconw1, zlyeps, zvol, zprfl,           &
        zlysic, zwsup, zsncp, zexpt, zexpw, zsncmax, zsncwind
   REAL(wp) :: zdtime, zrcp, zsncfac
+  ! variables for terraplanet
+  REAL(wp) :: remoist
+  LOGICAL  :: ltpe_open, ltpe_closed
 
   ! Variables necessary for evaporation fluxes and 5 soil layers
   REAL(wp), PARAMETER :: cvinter = 0.25  !!$ TR for JSBACH testing
@@ -942,6 +953,17 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
   zdrmax  = 0.1_wp/(3600._wp*1000._wp)
   zdrexp  = 1.5_wp
   zsncfac = rhoh2o*g/zdtime
+
+  IF (PRESENT(l_tpe_open)) THEN
+    ltpe_open = l_tpe_open
+  ELSE
+    ltpe_open = .false.
+  ENDIF
+  IF (PRESENT(l_tpe_closed)) THEN
+    ltpe_closed = l_tpe_closed
+  ELSE
+    ltpe_closed = .false.
+  ENDIF
 
 !     ------------------------------------------------------------------
 !
@@ -1035,25 +1057,30 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
           zprfl = pmlres(jl)+zraind(jl)
           IF (aebsoil(jl) >= 0.0_wp) zprfl = zprfl + aebsoil(jl)
           IF (aetrans(jl) >= 0.0_wp) zprfl = zprfl + aetrans(jl)
-
-        IF (ptsoil(jl) < tmelt) THEN
-          zros(jl) = zprfl
+        
+        IF (ltpe_closed) THEN
+          zros(jl)   = 0._wp
+          zinfil(jl) = zprfl
         ELSE
-          IF (zprfl > 0._wp .AND. pws(jl) > zwslim) THEN
-            IF (pws(jl) > pwsmx(jl)) THEN
-              zlyeps = pws(jl)-pwsmx(jl)
-            ELSE
-              zlyeps = 0._wp
-            END IF
-            zlysic     = MIN(1._wp,(pws(jl)-zlyeps)/pwsmx(jl))
-            zvol       = (1._wp-zlysic)**zbm-zprfl/zconw1
-            zros(jl)   = zprfl-(pwsmx(jl)-pws(jl))
-            IF (zvol > 0._wp) zros(jl) = zros(jl)+pwsmx(jl)*zvol**zb1
-            zros(jl)   = MAX(zros(jl),0._wp)
-            zinfil(jl) = zprfl-zros(jl)
+          IF (ptsoil(jl) < tmelt) THEN
+            zros(jl) = zprfl
           ELSE
-            zros(jl)   = 0._wp
-            zinfil(jl) = zprfl
+            IF (zprfl > 0._wp .AND. pws(jl) > zwslim) THEN
+              IF (pws(jl) > pwsmx(jl)) THEN
+                zlyeps = pws(jl)-pwsmx(jl)
+              ELSE
+                zlyeps = 0._wp
+              END IF
+              zlysic     = MIN(1._wp,(pws(jl)-zlyeps)/pwsmx(jl))
+              zvol       = (1._wp-zlysic)**zbm-zprfl/zconw1
+              zros(jl)   = zprfl-(pwsmx(jl)-pws(jl))
+              IF (zvol > 0._wp) zros(jl) = zros(jl)+pwsmx(jl)*zvol**zb1
+              zros(jl)   = MAX(zros(jl),0._wp)
+              zinfil(jl) = zprfl-zros(jl)
+            ELSE
+              zros(jl)   = 0._wp
+              zinfil(jl) = zprfl
+            END IF
           END IF
         END IF
 !
@@ -1093,15 +1120,15 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
             wsi , wsim1m,                           &
             dzr, dzrsi,    dzsi, zwsat, zwsfc,      &
             zinfil, zdrain, aetrans, aebsoil,       &
-            redevap)
+            redevap, overflow, ltpe_closed)
 
       ! Drainage calculation [m] with 5 layer soil scheme
       CALL SoilHyd(kb1, kbdim, kbdim, nsoil,      &
            zdtime, lmask, ilog, jllog,            &
            wsi, dzsi, zwsat, zwsfc,               &
            fksat, vpor, bclapp, fmpot,            &
-           zdrain, spsi, zwpwp, zdel              &
-           )
+           zdrain, spsi, zwpwp, zdel,             &
+           overflow, ltpe_closed)
 
       ! Second half of the water is infiltrated after SOILHYD
       isch = 2     ! Changes by infiltration
@@ -1110,16 +1137,37 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
             wsi , wsim1m,                           &
             dzr, dzrsi,    dzsi, zwsat, zwsfc,      &
             zinfil, zdrain, aetrans, aebsoil,       &
-            redevap)
+            redevap, overflow, ltpe_closed)
 
       ! Does overflow occurs due to infiltration in the layers? --> added to drainage
       DO jk=1, nsoil
         DO jl=kb1, kbdim
           IF (dzsi(jl,1) > 0) THEN
             IF (wsi(jl,jk) > zwsfc(jl,jk)) THEN
-              zdrain(jl) = zdrain(jl) + wsi(jl,jk) - zwsfc(jl,jk)
+              IF (ltpe_closed) THEN
+                ! modification for TPE
+                ! put drainage in overflow pool
+                overflow(jl) = overflow(jl) + wsi(jl,jk) - zwsfc(jl,jk)
+              ELSE
+                zdrain(jl) = zdrain(jl) + wsi(jl,jk) - zwsfc(jl,jk)
+              ENDIF
               wsi(jl,jk) = zwsfc(jl,jk)
+            ELSE ! wsi <= zwsfc
+              IF (ltpe_closed) THEN
+                ! modification for TPE
+                ! refill soil moisture from overflow pool
+                remoist = MIN(overflow(jl), zwsfc(jl,jk) - wsi(jl,jk))
+                wsi(jl,jk) = wsi(jl,jk) + remoist
+                overflow(jl) = overflow(jl) - remoist
+              ENDIF
             ENDIF
+            IF (ltpe_open) THEN
+              ! modification for TPE
+              ! keep the two lowest soil layers always very wet 
+              IF (jk == nsoil - 1 .OR. jk == nsoil) THEN
+                wsi(jl,jk) = MAX(wsi(jl,jk),zwsfc(jl,jk) * 0.9_wp)
+              END IF
+            END IF
           ENDIF
         ENDDO
       ENDDO
@@ -1176,7 +1224,7 @@ END SUBROUTINE update_surf_up
 
 SUBROUTINE soilhyd(kidia, kfdia, klon, kdeep, zdiagt, loland, ilog, jllog,  &
     wsi, dzsi, zwsat, zwsfc, fksat, vpor, bclapp, fmpot,  &
-    zdrain, spsi, zwpwp, zdel )
+    zdrain, spsi, zwpwp, zdel, overflow, ltpe_closed )
 !     **************************************************************************
 
 !     ******* SOIL HYDROLOGY - Routine to be build into REMO
@@ -1311,6 +1359,8 @@ REAL(wp), INTENT(INOUT)                  :: zdrain(klon)
 REAL(wp), INTENT(IN)                     :: spsi(klon)
 REAL(wp), INTENT(IN)                     :: zwpwp(klon,kdeep)
 REAL(wp), INTENT(IN)                     :: zdel(kdeep)
+REAL(wp), INTENT(INOUT), OPTIONAL        :: overflow(klon)
+LOGICAL,  INTENT(IN),    OPTIONAL        :: ltpe_closed
 
 REAL(wp), PARAMETER :: zeps   = 1.e-15_wp
 INTEGER,  PARAMETER :: iperc  = 3
@@ -1334,6 +1384,14 @@ REAL(wp) :: zkredu(kdeep)      ! KSAT reduction factor with depth
 
 !     *** Dummy variables, running indices, etc.
 INTEGER  :: i, jl
+
+LOGICAL  :: l_tpe_closed
+
+  IF (PRESENT(ltpe_closed)) THEN
+    l_tpe_closed = ltpe_closed
+  ELSE
+    l_tpe_closed = .false.
+  END IF
 
   zwdmin = 0.05_wp
   zwdcri = 0.9_wp
@@ -1477,8 +1535,10 @@ INTEGER  :: i, jl
 !               *** soil moisture layer wsi before diffusion occurs
 !               *** here, drainage is used as accumulated value over ZDIAGT
                 zdum4 = MIN(zdum3 * zdiagt, (zp2-zdum))
-                wsi(jl,i) = wsi(jl,i) - zdum4
-                zdrain(jl) = zdrain(jl) + zdum4
+                IF (.NOT. l_tpe_closed) THEN ! no drainage for TPE case
+                  wsi(jl,i) = wsi(jl,i) - zdum4
+                  zdrain(jl) = zdrain(jl) + zdum4
+                END IF
               END IF
             END IF                                 ! Lowest layer / IDRECH=2
           END IF
@@ -1656,7 +1716,13 @@ INTEGER  :: i, jl
     DO jl=kidia, kfdia
       IF (dzsi(jl,i) > 0) THEN
         IF (wsi(jl,i) > zwsfc(jl,i)) THEN
-          zdrain(jl) = zdrain(jl) + wsi(jl,i) - zwsfc(jl,i)
+          IF (l_tpe_closed) THEN
+            ! modification for TPE
+            ! redirect overflow from drainage to overflow pool
+            overflow(jl) = overflow(jl) + wsi(jl,i) - zwsfc(jl,i)
+          ELSE
+            zdrain(jl) = zdrain(jl) + wsi(jl,i) - zwsfc(jl,i)
+          END IF
           wsi(jl,i) = zwsfc(jl,i)
         END IF
       END IF
@@ -1699,7 +1765,13 @@ INTEGER  :: i, jl
         IF (dzsi(jl,i+1) > 0) THEN
           wsi(jl,i+1) = wsi(jl,i+1) + zperc(jl,i)
         ELSE
-          zdrain(jl) = zdrain(jl) + zperc(jl,i)
+          IF (l_tpe_closed) THEN
+            ! modification for TPE
+            ! redirect percolation from drainage to overflow pool
+            overflow(jl) = overflow(jl) + zperc(jl,i)
+          ELSE
+            zdrain(jl) = zdrain(jl) + zperc(jl,i)
+          END IF
           zperc(jl,i) = 0._wp
         END IF
       END IF
@@ -1708,7 +1780,13 @@ INTEGER  :: i, jl
 
   DO jl=kidia, kfdia
     IF (dzsi(jl,1) > 0) THEN
-      zdrain(jl) = zdrain(jl) + zperc(jl,kdeep)
+      IF (l_tpe_closed) THEN
+        ! modification for TPE
+        ! redirect percolation from drainage to overflow pool
+        overflow(jl) = overflow(jl) + zperc(jl,kdeep)
+      ELSE
+        zdrain(jl) = zdrain(jl) + zperc(jl,kdeep)
+      END IF
     END IF
   END DO
 
@@ -1731,7 +1809,13 @@ INTEGER  :: i, jl
   DO jl=kidia, kfdia
     IF (dzsi(jl,1) > 0) THEN
       IF (wsi(jl,1) > zwsfc(jl,1)) THEN
-        zdrain(jl) = zdrain(jl) + wsi(jl,1) - zwsfc(jl,1)
+        IF (l_tpe_closed) THEN
+          ! modification for TPE
+          ! redirect overflow from drainage to overflow pool
+          overflow(jl) = overflow(jl) + wsi(jl,1) - zwsfc(jl,1)
+        ELSE
+          zdrain(jl) = zdrain(jl) + wsi(jl,1) - zwsfc(jl,1)
+        END IF
         wsi(jl,1) = zwsfc(jl,1)
       END IF
     END IF
@@ -1890,7 +1974,7 @@ SUBROUTINE soilchange (kidia, kfdia, klon, kdeep,  isch ,  &
 !         ***   Vertical water fluxes  -- evap. fluxes over land
     finfil, drain, aetrans, aebsoil,                  &
 !         ***   Reduction of evaporation if necessary
-    redevap)
+    redevap, overflow, ltpe_closed)
 
 !     Intermediate routine for changing 5 soil moisture layers due to
 !     evaporation fluxes, infiltration and drainage that are calculated
@@ -1990,6 +2074,8 @@ REAL(wp), INTENT(INOUT)                  :: drain(klon)
 REAL(wp), INTENT(IN)                     :: aetrans(klon)
 REAL(wp), INTENT(IN)                     :: aebsoil(klon)
 REAL(wp), INTENT(INOUT)                  :: redevap(klon)
+REAL(wp), INTENT(INOUT), OPTIONAL        :: overflow(klon)
+LOGICAL,  INTENT(IN),    OPTIONAL        :: ltpe_closed
 
 REAL(wp), PARAMETER :: zeps = 1.e-15_wp
 
@@ -2000,6 +2086,14 @@ REAL(wp) :: zrebsoil(klon), zretrans(klon)
 
 REAL(wp) :: zdum, zdum2, zrel
 REAL(wp) :: zover(klon)
+
+LOGICAL  :: l_tpe_closed
+
+  IF (PRESENT(ltpe_closed)) THEN
+    l_tpe_closed = ltpe_closed
+  ELSE
+    l_tpe_closed = .false.
+  END IF
 
 ! *** Constants
   zwdmin = 0.05_wp
@@ -2123,11 +2217,19 @@ REAL(wp) :: zover(klon)
 
 !         *** infiltration-loop for 5 layer routine
           wsi(jl,jk) = wsi(jl,jk) + zover(jl)
-          IF (wsi(jl,jk) > zwsfc(jl,jk)) THEN
-            zover(jl)  = wsi(jl,jk) - zwsfc(jl,jk)
-            wsi(jl,jk) = zwsfc(jl,jk)
-          ELSE
+          IF (l_tpe_closed) THEN
+            IF (wsi(jl,jk) > zwsfc(jl,jk)) THEN
+              overflow(jl) = overflow(jl) + wsi(jl,jk) - zwsfc(jl,jk)
+              wsi(jl,jk) = zwsfc(jl,jk)
+            END IF
             zover(jl) = 0._wp
+          ELSE
+            IF (wsi(jl,jk) > zwsfc(jl,jk)) THEN
+              zover(jl)  = wsi(jl,jk) - zwsfc(jl,jk)
+              wsi(jl,jk) = zwsfc(jl,jk)
+            ELSE
+              zover(jl) = 0._wp
+            END IF
           END IF
         END IF
       END DO

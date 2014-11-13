@@ -86,6 +86,7 @@ CONTAINS
       & bclapp         (:),    &
       & vpor           (:),    &
       & psdi           (:),    &
+      & overflow       (:),    &
       & glacier        (:),    &
       & wsn_glacier    (:)
 
@@ -113,6 +114,8 @@ CONTAINS
     INTEGER :: jllog
 
     LOGICAL :: lstart
+    LOGICAL :: l_tpe_open = .FALSE.
+    LOGICAL :: l_tpe_closed = .FALSE.
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_1'
 
@@ -121,6 +124,9 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
     model => get_model(tile%owner_model_id)
+
+    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
+    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
 
     ! Get reference to variables for current block
     !
@@ -169,6 +175,7 @@ CONTAINS
     bclapp         => tile%mem%soil %phys_state     %bclapp              (ics:ice,    iblk)
     vpor           => tile%mem%soil %phys_state     %vpor                (ics:ice,    iblk)
     psdi           => tile%mem%soil %phys_state     %psdi                (ics:ice,    iblk)
+    overflow       => tile%mem%soil %water_state    %overflow            (ics:ice,    iblk)
     glacier        => tile%mem%srf  %phys_state     %glacier             (ics:ice, iblk)
     wsn_glacier    => tile%mem%srf  %water_state    %wsn_glacier         (ics:ice, iblk)
 
@@ -227,7 +234,10 @@ CONTAINS
 !!$      & SPREAD(0.318517_wp, NCOPIES=nc, DIM=1), & !Temporary
 !!$      & SPREAD(0.185245_wp, NCOPIES=nc, DIM=1), & !Temporary
       & psdi(:), &
-      & jllog &
+      & overflow(:), &
+      & jllog, &
+      & l_tpe_open, &
+      & l_tpe_closed &
       & )
 
     ws(:) = SUM(ws_l(:,:), DIM=2)
