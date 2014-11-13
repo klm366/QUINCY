@@ -155,13 +155,17 @@ fi
 #--------------------------------
 
 if [[ ${icon} = true ]]; then
-for grid in r2b4_amip r2b6; do
+for grid in r2b4_amip r2b6 r2b7 r2b8; do
 
   case ${grid} in
     r2b4_amip)
       gridfile=/pool/data/ICON/grids/private/${grid}/${grid}.nc ;;
     r2b6)
       gridfile=/pool/data/ICON/grids/private/leonidas/gcc_globalGrids/Earth_Icos_0039km_etopo05_landlakes.nc ;;
+    r2b7)
+      gridfile=/pool/data/ICON/grids/private/leonidas/gcc_globalGrids/Earth_Icos_0020km_etopo05_landlakes.nc ;;
+    r2b8)
+      gridfile=/pool/data/ICON/grids/private/leonidas/gcc_globalGrids/Earth_Icos_0010km_etopo05_landlakes.nc ;;
   esac
 
   mergelist=""
