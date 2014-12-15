@@ -302,7 +302,6 @@ CONTAINS
     ! Save old surface temperature and saturation spec. humidity
     t_srf_unfilt_old(:) = t_srf_unfilt(:)
     t_srf_old   (:) = t_srf(:)
-    !qsat_srf_old(:) = qsat_srf(:)   ! Is this the same as next line?
     qsat_srf_old(:) = qsat(t_srf_old(:), press_srf(:))
 
     ! Calculate surface saturation specific humidity
@@ -336,7 +335,7 @@ CONTAINS
         & s_srf(:))
     END IF
 
-    ! Back out unfiltered surface temperature (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
+    ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     t_srf_unfilt(:) = ( tpfac2 * s_srf(:) + tpfac3 * s_srf_old(:) ) / t2s_conv(:)
 
     ! Correct new dry static energy for snowmelt
