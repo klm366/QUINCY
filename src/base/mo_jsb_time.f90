@@ -14,7 +14,7 @@ MODULE mo_jsb_time
   USE mo_exception,      ONLY: message, finish
   USE mo_jsb_time_iface, ONLY: t_datetime, get_date_components, get_time_current, get_time_start, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
-                               wgt1, wgt2, nmw1, nmw2
+                               get_time_interpolation_weights
 
   IMPLICIT NONE
   PRIVATE
@@ -28,7 +28,7 @@ MODULE mo_jsb_time
   PUBLIC :: is_newday, get_year_at_model_start, &
             get_year, get_month, &
             get_day, get_secs_of_day
-  PUBLIC :: wgt1, wgt2, nmw1, nmw2
+  PUBLIC :: get_time_interpolation_weights
 
   INTEGER                :: number_timesteps
   REAL(wp)               :: timestep_length

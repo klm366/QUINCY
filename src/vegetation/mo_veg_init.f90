@@ -57,7 +57,7 @@ CONTAINS
     USE mo_veg_process, ONLY: foliage_projected_cover
     USE mo_veg_util,    ONLY: water_in_root_zone
     USE mo_soil_util,   ONLY: soil_depth_to_layers_2d
-    USE mo_jsb_time,    ONLY: wgt1, wgt2, nmw1,nmw2
+    USE mo_jsb_time,    ONLY: get_time_interpolation_weights
 
     TYPE(t_jsb_tile),  INTENT(inout) :: tile
 
@@ -74,6 +74,9 @@ CONTAINS
       & return_pointer (:,:)       !< temporary pointer
 
     TYPE(t_input_file) :: input_file
+
+    REAL(wp) :: wgt1, wgt2
+    INTEGER  :: nmw1,nmw2
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init_ic'
 
@@ -106,6 +109,7 @@ CONTAINS
     phys%lai_mon(:,:,14  ) = lai_mon(:,:,1   )
     DEALLOCATE(lai_mon)
 
+    CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
     phys%lai(:,:) = wgt1 * phys%lai_mon(:,:,nmw1+1) + wgt2 * phys%lai_mon(:,:,nmw2+1)
 
     ! Forest fraction
