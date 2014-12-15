@@ -131,7 +131,7 @@ CONTAINS
   SUBROUTINE update_vegetation_2( tile, iblk, ics, ice, nc)
 
     USE mo_veg_process, ONLY: canopy_albedo, foliage_projected_cover
-    USE mo_jsb_time,    ONLY: wgt1, wgt2, nmw1,nmw2  ! TBD: this should be made more general
+    USE mo_jsb_time,    ONLY: get_time_interpolation_weights
 
     REAL(wp), PARAMETER :: &
       albedo_snow_min = 0.4_wp,  & !< Minimum possible snow albedo   ! Temporary, will depend on vegetation type
@@ -160,6 +160,9 @@ CONTAINS
       & sfract_soil   (:)
 
     INTEGER :: p_pe
+
+    REAL(wp) :: wgt1, wgt2
+    INTEGER  :: nmw1,nmw2
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_2'
 
@@ -191,6 +194,7 @@ CONTAINS
     ! Update leaf area index
     !
     ! At the moment by interpolating monthly climatological LAI
+    CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
     lai(:) = REAL(wgt1,wp) * lai_mon(:,nmw1+1) + REAL(wgt2,wp) * lai_mon(:,nmw2+1)
 
     ! Update foliage projected cover

@@ -17,7 +17,7 @@ MODULE mo_jsb_time_iface
   USE mo_datetime,    ONLY: t_datetime, print_datetime, add_time, rdaylen
   USE mo_time_config, ONLY: time_config !configure_time
   USE mo_time_nml,    ONLY: read_time_namelist
-  USE mo_bc_sst_sic,  ONLY: wgt1, wgt2, nmw1,nmw2  ! TBD: this should be made more general
+  USE mo_time_interpolation_weights, ONLY: wi_limm
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
                                 get_day_length => day_len
@@ -39,7 +39,7 @@ MODULE mo_jsb_time_iface
   PUBLIC :: start_timestep, finish_timestep
   PUBLIC :: configure_time_and_events
   PUBLIC :: get_date_components
-  PUBLIC :: wgt1, wgt2, nmw1, nmw2
+  PUBLIC :: get_time_interpolation_weights
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_time_iface'
 
@@ -362,6 +362,25 @@ CONTAINS
 
   END FUNCTION get_year_day
 #endif
+
+  SUBROUTINE  get_time_interpolation_weights(w1, w2, n1, n2)
+
+    REAL(wp), INTENT(out) :: w1, w2
+    INTEGER, INTENT(out)  :: n1, n2
+
+#ifdef __ICON__
+    w1 = wi_limm%wgt1
+    w2 = wi_limm%wgt2
+    n1 = wi_limm%inm1
+    n2 = wi_limm%inm2
+#else
+    w1 = wgt1
+    w2 = wgt2
+    n1 = nmw1
+    n2 = nmw2
+#endif
+
+  END SUBROUTINE get_time_interpolation_weights
 
 #endif
 END MODULE mo_jsb_time_iface

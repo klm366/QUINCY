@@ -47,7 +47,7 @@ CONTAINS
 
   RECURSIVE SUBROUTINE srf_init_ic(tile)
 
-    USE mo_jsb_time, ONLY: wgt1, wgt2, nmw1,nmw2
+    USE mo_jsb_time, ONLY: get_time_interpolation_weights
 
     TYPE(t_jsb_tile), INTENT(inout) :: tile
 
@@ -64,7 +64,10 @@ CONTAINS
       & return_pointer (:,  :)       !< temporary pointer
 
     TYPE(t_input_file) :: input_file
-    INTEGER :: i, n1, n2
+
+    INTEGER  :: i
+    REAL(wp) :: wgt1, wgt2
+    INTEGER  :: nmw1,nmw2, n1, n2
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':srf_init_ic'
 
@@ -142,6 +145,7 @@ CONTAINS
       & input_file,                               &
       & variable_name='surf_temp')
     t_srf_mon(:,:,:) = MERGE(t_srf_mon(:,:,:), 280._wp, t_srf_mon(:,:,:) > 0._wp)
+    CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
     IF (nmw1 == 0) THEN
       n1 = 12
     ELSE IF (nmw1 == 13) THEN
