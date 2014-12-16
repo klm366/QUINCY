@@ -205,13 +205,7 @@ CONTAINS
     USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_srf_process,        ONLY: surface_temp_implicit
 !!$    USE mo_srf_constants,      ONLY: eps
-    ! TBD: Use tpfac2 and tpfac3 from mo_echam_vdiff_params once the unified vdiff for ICON/ECHAM is ready
-    ! USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
-#ifdef __ICON__
-    USE mo_echam_vdiff_params, ONLY: cvdifts
-#else
-    USE mo_physc2, ONLY: cvdifts
-#endif
+    USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
     USE mo_physical_constants, ONLY: tmelt
 
     TYPE(t_jsb_tile),  POINTER    :: tile
@@ -267,10 +261,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface temperature')
 
     model => get_model(tile%owner_model_id)
-
-    ! Temporary (see above) TBD
-    tpfac2 = 1._wp / cvdifts
-    tpfac3 = 1._wp - tpfac2
 
     ! Get reference to variables for current block
     !

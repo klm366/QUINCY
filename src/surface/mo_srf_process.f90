@@ -30,12 +30,7 @@ CONTAINS
     &            pcfh, pcair, pcsat, pfracsu, pgrdcap,        &
     &            psnew)
 
-    ! TBD: Use cvdifts from mo_echam_vdiff_params once the unified vdiff for ICON/ECHAM is ready
-#ifdef __ICON__
     USE mo_echam_vdiff_params, ONLY: cvdifts   ! TBD: change to 1. for standalone JSBACH
-#else
-    USE mo_physc2, ONLY: cvdifts
-#endif
     USE mo_physical_constants, ONLY: &
       & cpd, &
       & vtmpc2, &
