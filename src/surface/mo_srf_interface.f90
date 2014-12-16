@@ -217,9 +217,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
     LOGICAL                       :: lstart
 
-    ! Temporary (see above) TBD
-    REAL(wp) :: tpfac2, tpfac3
-
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
       & t_srf          (:),    &
