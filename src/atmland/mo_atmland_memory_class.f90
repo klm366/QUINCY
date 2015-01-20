@@ -40,7 +40,7 @@ MODULE mo_atmland_memory_class
   TYPE t_land2atm_memory
     REAL(wp), POINTER ::   &
       t_srf       (:,:),   &
-      t_rad_srf   (:,:),   &
+      t_eff_srf   (:,:),   &
       qsat_srf    (:,:),   &
       fact_q_air  (:,:),   &
       fact_qsat_srf (:,:), &

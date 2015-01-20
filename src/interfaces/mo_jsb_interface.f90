@@ -40,7 +40,7 @@ CONTAINS
                            & lwrad_srf_down, swrad_srf_net, press_srf, drag_srf,          &
                            & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
                            & pch, cos_zenith_angle,                                       &
-                           & t_srf, t_rad_srf, qsat_srf, s_srf,                           &
+                           & t_srf, t_eff_srf, qsat_srf, s_srf,                           &
                            & fact_q_air, fact_qsat_srf,                                   &
                            & evapotrans, latent_hflx, sensible_hflx,                      &
                            & rough_h_srf, rough_m_srf,                                    &
@@ -49,7 +49,7 @@ CONTAINS
 
     USE mo_veg_interface,     ONLY: update_vegetation_1, update_vegetation_2
     USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, &
-                                    update_surface_energy, update_surface_fluxes, update_t_srf, &
+                                    update_surface_energy, update_surface_fluxes, update_t_srf_asselin, &
                                     update_humidity_scaling, update_roughness
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
     USE mo_soil_memory_class, ONLY: copy_soil_mem
@@ -84,7 +84,7 @@ CONTAINS
       & cos_zenith_angle (:)
     REAL(wp), INTENT(out) ::  &
       & t_srf            (:), &
-      & t_rad_srf        (:), &
+      & t_eff_srf        (:), &
       & qsat_srf         (:), &
       & s_srf            (:), &
       & fact_q_air       (:), &
@@ -165,9 +165,6 @@ CONTAINS
     ! Soil hydrology
     CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
 
-    ! Apply time filter for surface temperature
-    CALL update_t_srf(tile, iblk, ics, ice, nc)
-
     ! Re-calculate wet skin and snow fractions with updated moisture parameters
     CALL  update_snow_and_skin_fraction(model%land, iblk, ics, ice, nc, dtime, steplen)
 
@@ -189,9 +186,12 @@ CONTAINS
     ! At the moment, roughness length for momentum is read in from ini file, only for heat is changed here
     CALL update_roughness(tile, iblk, ics, ice, nc)
 
+    ! Apply Asselin time filter for surface temperature (t_srf)
+    CALL update_t_srf_asselin(tile, iblk, ics, ice, nc)
+
     ! Finally, give the required variables back to the atmosphere
     CALL update_land2atm(tile, iblk, ics, ice,                                                                                  &
-      & t_srf=t_srf(:), t_rad_srf=t_rad_srf(:), qsat_srf=qsat_srf(:), s_srf=s_srf(:),                                           &
+      & t_srf=t_srf(:), t_eff_srf=t_eff_srf(:), qsat_srf=qsat_srf(:), s_srf=s_srf(:),                                           &
       & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:),                                                               &
       & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:),                                   &
       & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &
@@ -207,7 +207,7 @@ CONTAINS
   END SUBROUTINE interface_full
 
   SUBROUTINE interface_inquire( model_id, iblk, ics, ice, &
-                              & t_srf, t_rad_srf, qsat_srf, zh_srf, zm_srf, alb_vis, alb_nir)
+                              & t_srf, t_eff_srf, qsat_srf, zh_srf, zm_srf, alb_vis, alb_nir)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':interface_inquire'
 
@@ -219,7 +219,7 @@ CONTAINS
 
     REAL(wp), INTENT(inout) :: &
       & t_srf    (:), &
-      & t_rad_srf(:), &
+      & t_eff_srf(:), &
       & qsat_srf (:), &
       & zh_srf   (:), &
       & zm_srf   (:), &

@@ -231,9 +231,9 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( this_list, prefix//'t_rad_srf'//suffix, land2atm%t_rad_srf,              &
+    CALL jsb_add_var( this_list, prefix//'t_eff_srf'//suffix, land2atm%t_eff_srf,              &
       & hgrid, surface,                                                      &
-      & t_cf('radiative_surface_temperature', 'K', '', nc_bits),                &
+      & t_cf('effective_surface_temperature', 'K', '', nc_bits),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & initval_r=0.0_wp )
 

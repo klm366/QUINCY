@@ -37,8 +37,7 @@ MODULE mo_srf_memory_class
       t_srf_old        (:,:), &
       t_srf_unfilt     (:,:), &
       t_srf_unfilt_old (:,:), &
-      t_rad_srf        (:,:), &
-!!$      t_eff_srf        (:,:), &
+      t_eff_srf        (:,:), &
       s_srf            (:,:), &  !< Dry static energy at surface (new timestep)
 !!$      s_srf_old        (:,:), &  !< Dry static energy at surface (old timestep)
       qsat_srf         (:,:), &
@@ -105,8 +104,7 @@ CONTAINS
     out%t_srf         (ics:ice,    iblk) = in%t_srf         (ics:ice,    iblk)
     out%t_srf_old     (ics:ice,    iblk) = in%t_srf_old     (ics:ice,    iblk)
     out%t_srf_unfilt  (ics:ice,    iblk) = in%t_srf_unfilt  (ics:ice,    iblk)
-    out%t_rad_srf     (ics:ice,    iblk) = in%t_rad_srf     (ics:ice,    iblk)
-!!$    out%t_eff_srf     (ics:ice,    iblk) = in%t_eff_srf     (ics:ice,    iblk)
+    out%t_eff_srf     (ics:ice,    iblk) = in%t_eff_srf     (ics:ice,    iblk)
     out%s_srf         (ics:ice,    iblk) = in%s_srf         (ics:ice,    iblk)
 !!$    out%s_srf_old     (ics:ice,    iblk) = in%s_srf_old     (ics:ice,    iblk)
     out%qsat_srf      (ics:ice,    iblk) = in%qsat_srf      (ics:ice,    iblk)
@@ -127,8 +125,7 @@ CONTAINS
     out%t_srf         (ics:ice,    iblk) = in1%t_srf         (ics:ice,    iblk) + in2%t_srf         (ics:ice,    iblk)
     out%t_srf_old     (ics:ice,    iblk) = in1%t_srf_old     (ics:ice,    iblk) + in2%t_srf_old     (ics:ice,    iblk)
     out%t_srf_unfilt  (ics:ice,    iblk) = in1%t_srf_unfilt  (ics:ice,    iblk) + in2%t_srf_unfilt  (ics:ice,    iblk)
-    out%t_rad_srf     (ics:ice,    iblk) = in1%t_rad_srf     (ics:ice,    iblk) + in2%t_rad_srf     (ics:ice,    iblk)
-!!$    out%t_eff_srf     (ics:ice,    iblk) = in1%t_eff_srf     (ics:ice,    iblk) + in2%t_eff_srf     (ics:ice,    iblk)
+    out%t_eff_srf     (ics:ice,    iblk) = in1%t_eff_srf     (ics:ice,    iblk) + in2%t_eff_srf     (ics:ice,    iblk)
     out%s_srf         (ics:ice,    iblk) = in1%s_srf         (ics:ice,    iblk) + in2%s_srf         (ics:ice,    iblk)
 !!$    out%s_srf_old     (ics:ice,    iblk) = in1%s_srf_old     (ics:ice,    iblk) + in2%s_srf_old     (ics:ice,    iblk)
     out%qsat_srf      (ics:ice,    iblk) = in1%qsat_srf      (ics:ice,    iblk) + in2%qsat_srf      (ics:ice,    iblk)
