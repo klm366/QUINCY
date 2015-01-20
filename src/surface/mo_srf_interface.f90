@@ -346,7 +346,7 @@ CONTAINS
   ! Asselin time filter for surface temperature
   SUBROUTINE update_t_srf_asselin( tile, iblk, ics, ice, nc)
 
-    USE mo_srf_constants,      ONLY: eps
+    USE mo_jsb_time, ONLY: get_asselin_coef
 
     TYPE(t_jsb_tile),  POINTER    :: tile
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
@@ -355,6 +355,7 @@ CONTAINS
     !
     TYPE(t_jsb_model), POINTER    :: model
     LOGICAL                       :: lstart
+    REAL(wp)                      :: eps
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
@@ -368,14 +369,12 @@ CONTAINS
     t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
     t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
 
-    ! TBD: In the case of __ICON__, the filter should be switched on for the hydrostatic core (see
-    !      namelist parameter "asselin_coef" in icon.
-    !
-#ifdef __ICON__
-    t_srf(:) = t_srf_unfilt(:)
-#else
-    t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
-#endif
+    eps = get_asselin_coef()
+    IF (eps > 0._wp) THEN
+      t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
+    ELSE
+      t_srf(:) = t_srf_unfilt(:)
+    END IF
 
   END SUBROUTINE update_t_srf_asselin
 
