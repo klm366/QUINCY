@@ -22,7 +22,7 @@ MODULE mo_srf_interface
   PRIVATE
 
   PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy
-  PUBLIC :: update_surface_fluxes, update_t_srf, update_humidity_scaling, update_roughness
+  PUBLIC :: update_surface_fluxes, update_t_srf_asselin, update_humidity_scaling, update_roughness
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_interface'
 
@@ -223,7 +223,7 @@ CONTAINS
       & t_srf_old      (:),    &
       & t_srf_unfilt   (:),    &
       & t_srf_unfilt_old(:),    &
-      & t_rad_srf      (:),    &
+      & t_eff_srf      (:),    &
       & qsat_srf       (:),    &
 !!$      & qsat_srf_old   (:),    &
       & s_srf          (:),    &
@@ -265,7 +265,7 @@ CONTAINS
     t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
     t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
     t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
-    t_rad_srf            => tile%mem%srf  %energy_state %t_rad_srf        (ics:ice, iblk)
+    t_eff_srf            => tile%mem%srf  %energy_state %t_eff_srf        (ics:ice, iblk)
     qsat_srf             => tile%mem%srf  %energy_state %qsat_srf         (ics:ice, iblk)
 !!$    qsat_srf_old         => tile%mem%srf  %energy_state %qsat_srf_old     (ics:ice, iblk)
     s_srf                => tile%mem%srf  %energy_state %s_srf            (ics:ice, iblk)
@@ -338,13 +338,13 @@ CONTAINS
       qsat_srf(:) = qsat_srf_old(:) + dQdT(:) * (s_srf(:) - s_srf_old(:)) / t2s_conv(:)
     END IF
 
-    ! 'Radiative temperature' used in the radiation scheme of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
-    t_rad_srf(:) = s_srf(:) / t2s_conv(:)
+    ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
+    t_eff_srf(:) = (t_srf_old(:)**3 * (4._wp * s_srf(:)/t2s_conv(:) - 3._wp * t_srf_old(:))) ** 0.25_wp
 
   END SUBROUTINE update_surface_energy
 
   ! Asselin time filter for surface temperature
-  SUBROUTINE update_t_srf( tile, iblk, ics, ice, nc)
+  SUBROUTINE update_t_srf_asselin( tile, iblk, ics, ice, nc)
 
     USE mo_srf_constants,      ONLY: eps
 
@@ -368,8 +368,6 @@ CONTAINS
     t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
     t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
 
-!!$    WHERE(t_srf_unfilt(:) < 200._wp) t_srf_unfilt(:) = 200._wp
-
     ! TBD: In the case of __ICON__, the filter should be switched on for the hydrostatic core (see
     !      namelist parameter "asselin_coef" in icon.
     !
@@ -379,7 +377,7 @@ CONTAINS
     t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
 #endif
 
-  END SUBROUTINE update_t_srf
+  END SUBROUTINE update_t_srf_asselin
 
   SUBROUTINE update_surface_fluxes( tile, iblk, ics, ice, nc, steplen)
 

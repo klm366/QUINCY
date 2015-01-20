@@ -57,7 +57,7 @@ CONTAINS
   END SUBROUTINE update_atm2land
 
   SUBROUTINE update_land2atm(tile, iblk, ics, ice,           &
-    & t_srf, t_rad_srf, qsat_srf, s_srf,                     &
+    & t_srf, t_eff_srf, qsat_srf, s_srf,                     &
     & fact_q_air, fact_qsat_srf,                             &
     & evapotrans, latent_hflx, sensible_hflx,                &
     & rough_h_srf, rough_m_srf, tte_corr,                    &
@@ -66,7 +66,7 @@ CONTAINS
     TYPE(t_jsb_tile),   INTENT(in) :: tile
     INTEGER,            INTENT(in) :: iblk, ics, ice
     REAL(wp), OPTIONAL, INTENT(out) ::                                        &
-      & t_srf(:), t_rad_srf(:), qsat_srf(:), s_srf(:),                        &
+      & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                        &
       & fact_q_air(:), fact_qsat_srf(:),                                      &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:),                      &
       & rough_h_srf(:), rough_m_srf(:), tte_corr(:),                          &
@@ -77,7 +77,7 @@ CONTAINS
     IF (ice-ics+1 /= SIZE(t_srf,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     IF (PRESENT(t_srf))           t_srf(:)            = tile%mem%srf  %energy_state %t_srf          (ics:ice, iblk)
-    IF (PRESENT(t_rad_srf))       t_rad_srf(:)        = tile%mem%srf  %energy_state %t_rad_srf      (ics:ice, iblk)
+    IF (PRESENT(t_eff_srf))       t_eff_srf(:)        = tile%mem%srf  %energy_state %t_eff_srf      (ics:ice, iblk)
     IF (PRESENT(qsat_srf))        qsat_srf(:)         = tile%mem%srf  %energy_state %qsat_srf       (ics:ice, iblk)
     IF (PRESENT(s_srf))           s_srf(:)            = tile%mem%srf  %energy_state %s_srf          (ics:ice, iblk)
     IF (PRESENT(fact_q_air))      fact_q_air(:)       = tile%mem%srf  %energy_state %fact_q_air     (ics:ice, iblk)

@@ -176,9 +176,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( this_list, prefix//'t_rad_srf'//suffix, estate%t_rad_srf,                           &
+      CALL jsb_add_var( this_list, prefix//'t_eff_srf'//suffix, estate%t_eff_srf,                           &
         & hgrid, surface,                                                           &
-        & t_cf('surface_temperature_rad', 'K', '', nc_bits),                                 &
+        & t_cf('surface_temperature_eff', 'K', '', nc_bits),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 

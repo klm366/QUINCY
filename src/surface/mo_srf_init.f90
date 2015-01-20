@@ -174,7 +174,7 @@ CONTAINS
     energy%t_srf_old        (:,:) = t_srf (:,:)
     energy%t_srf_unfilt     (:,:) = t_srf (:,:)
     energy%t_srf_unfilt_old (:,:) = t_srf (:,:)
-    energy%t_rad_srf        (:,:) = t_srf (:,:)
+    energy%t_eff_srf        (:,:) = t_srf (:,:)
 !!$    energy%t_eff_srf        (:,:) = t_srf (:,:)
     energy%s_srf            (:,:) = 0._wp
     energy%qsat_srf         (:,:) = -1._wp  ! Negative values will be used to test for start of experiment
