@@ -10,14 +10,17 @@
 MODULE mo_jsb_time_iface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish, message, message_text
+  USE mo_kind,            ONLY: wp
+  USE mo_exception,       ONLY: finish, message, message_text
 
 #ifdef __ICON__
-  USE mo_datetime,    ONLY: t_datetime, print_datetime, add_time, rdaylen
-  USE mo_time_config, ONLY: time_config !configure_time
-  USE mo_time_nml,    ONLY: read_time_namelist
+  USE mo_datetime,        ONLY: t_datetime, print_datetime, add_time, rdaylen
+  USE mo_time_config,     ONLY: time_config !configure_time
+  USE mo_time_nml,        ONLY: read_time_namelist
   USE mo_time_interpolation_weights, ONLY: wi_limm
+  USE mo_dynamics_config, ONLY: iequations
+  USE mo_impl_constants,  ONLY: ihs_atm_temp, ihs_atm_theta, ishallow_water, leapfrog_expl, leapfrog_si
+  USE mo_ha_dyn_config,   ONLY: ha_dyn_config
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
                                 get_day_length => day_len
@@ -25,6 +28,7 @@ MODULE mo_jsb_time_iface
                                 get_date_components
   USE mo_time_control,    ONLY: start_date, stop_date, current_date, previous_date
   USE mo_interpo,         ONLY: wgt1, wgt2, nmw1, nmw2
+  USE mo_semi_impl,       ONLY: eps
 #endif
 
   IMPLICIT NONE
@@ -40,6 +44,7 @@ MODULE mo_jsb_time_iface
   PUBLIC :: configure_time_and_events
   PUBLIC :: get_date_components
   PUBLIC :: get_time_interpolation_weights
+  PUBLIC :: get_asselin_coef
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_time_iface'
 
@@ -381,6 +386,23 @@ CONTAINS
 #endif
 
   END SUBROUTINE get_time_interpolation_weights
+
+  REAL(wp) FUNCTION get_asselin_coef
+
+#ifdef __ICON__
+    SELECT CASE(iequations)
+    CASE(ishallow_water,ihs_atm_temp,ihs_atm_theta)
+      IF (ha_dyn_config%itime_scheme == leapfrog_expl .OR. ha_dyn_config%itime_scheme == leapfrog_si) THEN
+        get_asselin_coef = ha_dyn_config%asselin_coeff
+      END IF
+    CASE DEFAULT
+      get_asselin_coef = 0._wp
+    END SELECT
+#else
+    get_asselin_coef = eps
+#endif
+
+  END FUNCTION get_asselin_coef
 
 #endif
 END MODULE mo_jsb_time_iface
