@@ -287,8 +287,11 @@ CONTAINS
     glacier              => tile%mem%srf  %phys_state   %glacier          (ics:ice, iblk)
 
     ! Save old surface temperature and saturation spec. humidity
-    t_srf_unfilt_old(:) = t_srf_unfilt(:)
-    t_srf_old   (:) = t_srf(:)
+!!$    t_srf_unfilt_old(:) = t_srf_unfilt(:)
+!!$    t_srf_old   (:) = t_srf(:)
+    ! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in convect_tables
+    t_srf_unfilt_old(:) = MAX(MIN(t_srf_unfilt(:), 380._wp), 100._wp)
+    t_srf_old(:)        = MAX(MIN(t_srf(:),        380._wp), 100._wp)
     qsat_srf_old(:) = qsat(t_srf_old(:), press_srf(:))
 
     ! Calculate surface saturation specific humidity
