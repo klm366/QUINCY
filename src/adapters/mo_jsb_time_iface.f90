@@ -387,7 +387,7 @@ CONTAINS
 
   END SUBROUTINE get_time_interpolation_weights
 
-  REAL(wp) FUNCTION get_asselin_coef
+  REAL(wp) FUNCTION get_asselin_coef()
 
 #ifdef __ICON__
     SELECT CASE(iequations)
