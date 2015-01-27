@@ -11,7 +11,7 @@ MODULE mo_jsb_time
 #ifndef __NO_JSBACH__
 
   USE mo_kind,           ONLY: wp
-  USE mo_exception,      ONLY: message, finish
+  USE mo_exception,      ONLY: message, message_text, finish
   USE mo_jsb_time_iface, ONLY: t_datetime, get_date_components, get_time_current, get_time_start, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
                                get_time_interpolation_weights, get_asselin_coef
@@ -64,6 +64,8 @@ CONTAINS
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
 
+    REAL(wp) :: eps
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_time'
 
     CALL message(TRIM(routine), 'Initializing JSBACH time')
@@ -78,6 +80,15 @@ CONTAINS
     final_date        = get_time_stop()
 
     current_date     = start_date
+
+    ! Check if Asselin time filter is used and print message
+    eps = get_asselin_coef()
+    IF (eps > 0._wp) THEN
+      WRITE(message_text,*) 'Using Asselin time filter for surface temperature: eps =', eps
+    ELSE
+      WRITE(message_text,*) 'Not using Asselin time filter for surface temperature'
+    END IF
+    CALL message(TRIM(routine), TRIM(message_text))
 
     time_initialized = .TRUE.
 
