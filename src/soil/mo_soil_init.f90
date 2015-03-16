@@ -316,6 +316,7 @@ CONTAINS
     eflux => soil%energy_flux
 
     eflux%grnd_hflx     (:,:) = 0._wp
+    eflux%grnd_hflx_old (:,:) = 0._wp
 
     ! Initialize water fluxes
     !

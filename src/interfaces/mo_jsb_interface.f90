@@ -37,12 +37,13 @@ CONTAINS
 
   SUBROUTINE interface_full( model_id, iblk, ics, ice, dtime, steplen,                    &
                            & t_air, q_air, rain, snow, wind_air, wind_10m,                &
-                           & lwrad_srf_down, swrad_srf_net, press_srf, drag_srf,          &
+                           & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
+                           & press_srf, drag_srf,                                         &
                            & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
                            & pch, cos_zenith_angle,                                       &
                            & t_srf, t_eff_srf, qsat_srf, s_srf,                           &
                            & fact_q_air, fact_qsat_srf,                                   &
-                           & evapotrans, latent_hflx, sensible_hflx,                      &
+                           & evapotrans, latent_hflx, sensible_hflx, grnd_hflx,           &
                            & rough_h_srf, rough_m_srf,                                    &
                            & tte_corr,                                                    &
                            & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
@@ -72,8 +73,10 @@ CONTAINS
       & snow             (:), &
       & wind_air         (:), &
       & wind_10m         (:), &
-      & lwrad_srf_down   (:), &
-      & swrad_srf_net    (:), &
+      & lw_srf_down      (:), &
+      & swvis_srf_down   (:), &
+      & swnir_srf_down   (:), &
+      & swpar_srf_down   (:), &
       & press_srf        (:), &
       & drag_srf         (:), &
       & t_acoef          (:), &
@@ -92,6 +95,7 @@ CONTAINS
       & evapotrans       (:), &
       & latent_hflx      (:), &
       & sensible_hflx    (:), &
+      & grnd_hflx        (:), &
       & rough_h_srf      (:), &
       & rough_m_srf      (:), &
       & tte_corr         (:), &
@@ -125,7 +129,9 @@ CONTAINS
     CALL update_atm2land( model%land, iblk, ics, ice,                                                                         &
 !!$      & t_air=t_air(:), q_air=q_air(:), rain=rain(:), snow=snow(:), wind_air=wind_air(:), wind_10m=wind_10m(:),               &
       & t_air=t_air(:), q_air=q_air(:), rain=rain(:), snow=snow(:), wind_air=wind_air(:), wind_10m=wind_air(:)*0.8_wp,        & ! Temporary
-      & lwrad_srf_down=lwrad_srf_down(:), swrad_srf_net=swrad_srf_net(:), press_srf=press_srf(:), drag_srf=drag_srf(:),       &
+      & lw_srf_down=lw_srf_down(:), swvis_srf_down=swvis_srf_down(:),                                                         &
+      & swnir_srf_down=swnir_srf_down(:), swpar_srf_down=swpar_srf_down(:),                                                   &
+      & press_srf=press_srf(:), drag_srf=drag_srf(:),                                                                         &
       & t_acoef=t_acoef(:), t_bcoef=t_bcoef(:), q_acoef=q_acoef(:), q_bcoef=q_bcoef(:),                                       &
       & pch=pch(:), cos_zenith_angle=cos_zenith_angle(:))
 
@@ -193,7 +199,7 @@ CONTAINS
     CALL update_land2atm(tile, iblk, ics, ice,                                                                                  &
       & t_srf=t_srf(:), t_eff_srf=t_eff_srf(:), qsat_srf=qsat_srf(:), s_srf=s_srf(:),                                           &
       & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:),                                                               &
-      & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:),                                   &
+      & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:), grnd_hflx=grnd_hflx(:),           &
       & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &
       & tte_corr=tte_corr(:),                                                                                                   &
       & alb_vis_dir=alb_vis_dir(:), alb_nir_dir=alb_nir_dir(:), alb_vis_dif=alb_vis_dif(:), alb_nir_dif=alb_nir_dif(:))

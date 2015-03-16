@@ -199,8 +199,10 @@ CONTAINS
     !
     eflux => srf%energy_flux
 
-    eflux%swrad_srf_down (:,:) = 0._wp
-    eflux%lwrad_srf_net  (:,:) = 0._wp
+    eflux%sw_srf_net     (:,:) = 0._wp
+    eflux%swvis_srf_net  (:,:) = 0._wp
+    eflux%swnir_srf_net  (:,:) = 0._wp
+    eflux%lw_srf_net     (:,:) = 0._wp
     eflux%rad_srf_net    (:,:) = 0._wp
     eflux%latent_hflx    (:,:) = 0._wp
     eflux%sensible_hflx  (:,:) = 0._wp

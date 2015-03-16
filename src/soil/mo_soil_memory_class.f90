@@ -59,7 +59,8 @@ MODULE mo_soil_memory_class
 
   TYPE t_soil_energy_flux
     REAL(wp), POINTER :: &
-      grnd_hflx        (:,:)      !< ground heat flux
+      grnd_hflx        (:,:),  &  !< ground heat flux
+      grnd_hflx_old    (:,:)      !< ground heat flux (old)
   END type t_soil_energy_flux
 
   TYPE t_soil_water_flux

@@ -111,15 +111,27 @@ CONTAINS
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
          & initval_r=0.0_wp )
 
-    CALL jsb_add_var( this_list, prefix//'lwrad_srf_down'//suffix, atm2land%lwrad_srf_down,    &
+    CALL jsb_add_var( this_list, prefix//'lw_srf_down'//suffix, atm2land%lw_srf_down,          &
          & hgrid, surface,                                                      &
-         & t_cf('downward_longwave_radiation', '', '', nc_bits),                &
+         & t_cf('downward_longwave_radiation', 'W/m2', '', nc_bits),            &
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
          & initval_r=0.0_wp )
 
-    CALL jsb_add_var( this_list, prefix//'swrad_srf_net'//suffix, atm2land%swrad_srf_net,      &
+    CALL jsb_add_var( this_list, prefix//'swvis_srf_down'//suffix, atm2land%swvis_srf_down,    &
          & hgrid, surface,                                                      &
-         & t_cf('net', 'K', '', nc_bits),                                       &
+         & t_cf('downward_visible_shortwave_radiation', 'W/m2', '', nc_bits),   &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+
+    CALL jsb_add_var( this_list, prefix//'swnir_srf_down'//suffix, atm2land%swnir_srf_down,    &
+         & hgrid, surface,                                                      &
+         & t_cf('downward_nir_shortwave_radiation', 'W/m2', '', nc_bits),       &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+
+    CALL jsb_add_var( this_list, prefix//'swpar_srf_down'//suffix, atm2land%swpar_srf_down,    &
+         & hgrid, surface,                                                      &
+         & t_cf('downward_par_shortwave_radiation', 'W/m2', '', nc_bits),       &
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
          & initval_r=0.0_wp )
 
