@@ -244,34 +244,46 @@ CONTAINS
 
       ALLOCATE(eflux)
 
-      CALL jsb_add_var( this_list, prefix//'swrad_srf_down'//suffix, eflux%swrad_srf_down,                  &
-        & hgrid, surface,                                                           &
-        & t_cf('swrad_srf_down', '', 'Downward surface shortwave radiation', nc_bits),       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      CALL jsb_add_var( this_list, prefix//'sw_srf_net'//suffix, eflux%sw_srf_net,                        &
+        & hgrid, surface,                                                                                 &
+        & t_cf('sw_srf_net', '', 'Net surface shortwave radiation', nc_bits),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( this_list, prefix//'lwrad_srf_net'//suffix, eflux%lwrad_srf_net,                    &
-        & hgrid, surface,                                                           &
-        & t_cf('lwrad_srf_net', '', 'Net surface longwave radiation', nc_bits),              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      CALL jsb_add_var( this_list, prefix//'swvis_srf_net'//suffix, eflux%swvis_srf_net,                  &
+        & hgrid, surface,                                                                                 &
+        & t_cf('swvis_srf_net', '', 'Net surface shortwave radiation in VIS', nc_bits),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( this_list, prefix//'rad_srf_net'//suffix, eflux%rad_srf_net,                        &
-        & hgrid, surface,                                                           &
-        & t_cf('rad_srf_net', '', 'Net surface radiation', nc_bits),                         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      CALL jsb_add_var( this_list, prefix//'swnir_srf_net'//suffix, eflux%swnir_srf_net,                  &
+        & hgrid, surface,                                                                                 &
+        & t_cf('swnir_srf_net', '', 'Net surface shortwave radiation in NIR', nc_bits),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( this_list, prefix//'latent_hflx'//suffix, eflux%latent_hflx,                        &
-        & hgrid, surface,                                                           &
-        & t_cf('latent_hflx', '', 'Latent heat flux', nc_bits),                              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      CALL jsb_add_var( this_list, prefix//'lw_srf_net'//suffix, eflux%lw_srf_net,                        &
+        & hgrid, surface,                                                                                 &
+        & t_cf('lw_srf_net', '', 'Net surface longwave radiation', nc_bits),                              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( this_list, prefix//'sensible_hflx'//suffix, eflux%sensible_hflx,                    &
-        & hgrid, surface,                                                           &
-        & t_cf('sensible_hflx', '', 'Sensible heat flux', nc_bits),                          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      CALL jsb_add_var( this_list, prefix//'rad_srf_net'//suffix, eflux%rad_srf_net,                      &
+        & hgrid, surface,                                                                                 &
+        & t_cf('rad_srf_net', '', 'Net surface radiation', nc_bits),                                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( this_list, prefix//'latent_hflx'//suffix, eflux%latent_hflx,                      &
+        & hgrid, surface,                                                                                 &
+        & t_cf('latent_hflx', '', 'Latent heat flux', nc_bits),                                           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( this_list, prefix//'sensible_hflx'//suffix, eflux%sensible_hflx,                  &
+        & hgrid, surface,                                                                                 &
+        & t_cf('sensible_hflx', '', 'Sensible heat flux', nc_bits),                                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
     END FUNCTION new_energy_flux

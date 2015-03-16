@@ -30,7 +30,7 @@ CONTAINS
 
   SUBROUTINE update_surface_radiation(tile, iblk, ics, ice, nc)
 
-    USE mo_phy_schemes, ONLY: thermal_radiation
+    USE mo_phy_schemes, ONLY: lwnet_from_lwdown
 
     TYPE(t_jsb_tile),  POINTER    :: tile
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
@@ -41,11 +41,14 @@ CONTAINS
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::      &
-      & swrad_srf_net    (:), &
-      & lwrad_srf_net    (:), &
+      & swvis_srf_net    (:), &
+      & swnir_srf_net    (:), &
+      & sw_srf_net       (:), &
+      & lw_srf_net       (:), &
       & rad_srf_net      (:), &
-      & lwrad_srf_down   (:), &
-      & swrad_srf_down   (:), &
+      & lw_srf_down      (:), &
+      & swvis_srf_down   (:), &
+      & swnir_srf_down   (:), &
       & alb_vis_srf      (:), &
       & alb_nir_srf      (:), &
       & t_srf            (:)
@@ -58,24 +61,28 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    swrad_srf_net  => tile%mem     %atm2land     %swrad_srf_net  (ics:ice, iblk)
-    swrad_srf_down => tile%mem%srf %energy_flux  %swrad_srf_down (ics:ice, iblk)
-    lwrad_srf_net  => tile%mem%srf %energy_flux  %lwrad_srf_net  (ics:ice, iblk)
-    lwrad_srf_down => tile%mem     %atm2land     %lwrad_srf_down (ics:ice, iblk)
+    swvis_srf_down => tile%mem     %atm2land     %swvis_srf_down (ics:ice, iblk)
+    swnir_srf_down => tile%mem     %atm2land     %swnir_srf_down (ics:ice, iblk)
+    lw_srf_down    => tile%mem     %atm2land     %lw_srf_down    (ics:ice, iblk)
+    swvis_srf_net  => tile%mem%srf %energy_flux  %swvis_srf_net  (ics:ice, iblk)
+    swnir_srf_net  => tile%mem%srf %energy_flux  %swnir_srf_net  (ics:ice, iblk)
+    sw_srf_net     => tile%mem%srf %energy_flux  %sw_srf_net     (ics:ice, iblk)
+    lw_srf_net     => tile%mem%srf %energy_flux  %lw_srf_net     (ics:ice, iblk)
     rad_srf_net    => tile%mem%srf %energy_flux  %rad_srf_net    (ics:ice, iblk)
     alb_vis_srf    => tile%mem%srf %phys_state   %alb_vis_srf    (ics:ice, iblk)
     alb_nir_srf    => tile%mem%srf %phys_state   %alb_nir_srf    (ics:ice, iblk)
-    lwrad_srf_net  => tile%mem%srf %energy_flux  %lwrad_srf_net  (ics:ice, iblk)
     t_srf          => tile%mem%srf %energy_state %t_srf          (ics:ice, iblk)
 
-    ! Compute downward SW radiation from net SW and albedo
-    swrad_srf_down(:) = swrad_srf_net(:) / (1._wp - (alb_vis_srf(:) + alb_nir_srf(:)) / 2._wp)
+    ! Compute net SW radiation from downward SW and albedo
+    swvis_srf_net(:) = swvis_srf_down(:) * (1._wp - alb_vis_srf(:))
+    swnir_srf_net(:) = swnir_srf_down(:) * (1._wp - alb_nir_srf(:))
+    sw_srf_net   (:) = swvis_srf_net(:) + swnir_srf_net(:)
 
     ! Compute LW net radiation from incoming and the thermal radiation from the surface
-    lwrad_srf_net(:) = lwrad_srf_down(:) - thermal_radiation(t_srf(:))
+    lw_srf_net(:) = lwnet_from_lwdown(lw_srf_down(:), t_srf(:))
 
     ! Compute net radiation
-    rad_srf_net(:) = swrad_srf_net(:) + lwrad_srf_net(:)
+    rad_srf_net(:) = sw_srf_net(:) + lw_srf_net(:)
 
   END SUBROUTINE update_surface_radiation
 

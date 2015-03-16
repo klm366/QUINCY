@@ -70,6 +70,7 @@ CONTAINS
       & t_soil_bcoef   (:,:),  &
       & t_soil         (:,:),  &
       & grnd_hflx      (:),    &
+      & grnd_hflx_old  (:),    &
       & oro_stddev     (:),    &
       & runoff_acc     (:),    &
       & drainage_acc   (:),    &
@@ -159,6 +160,7 @@ CONTAINS
     t_soil_bcoef   => tile%mem%soil %energy_state   %t_soil_bcoef        (ics:ice, :, iblk)
     t_soil         => tile%mem%soil %energy_state   %t_soil              (ics:ice, :, iblk)
     grnd_hflx      => tile%mem%soil %energy_flux    %grnd_hflx           (ics:ice,    iblk)
+    grnd_hflx_old  => tile%mem%soil %energy_flux    %grnd_hflx_old       (ics:ice,    iblk)
     oro_stddev     => tile%mem%srf  %phys_state     %oro_stddev          (ics:ice,    iblk)
     runoff_acc     => tile%mem%soil %water_flux     %runoff              (ics:ice,    iblk)
     drainage_acc   => tile%mem%soil %water_flux     %drainage            (ics:ice,    iblk)
@@ -212,6 +214,11 @@ CONTAINS
       melt_water_excess(:), &
       & tte_corr(:), snow_melt(:) &
       & )
+
+    ! Save old ground heat flux before updating
+    ! The old flux (which has been used in the implicit calculation of the new surface temperature) is
+    ! given back to the atmosphere so that the surface energy balance can be computed there
+    grnd_hflx_old(:) = grnd_hflx(:)
 
     CALL update_soiltemp(nc, model%config%soil%nsoil_water, dtime, lstart, &
       & t_srf_unfilt(:), wsn_soil(:), hdiff(:), vhcap(:), &

@@ -227,6 +227,12 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & initval_r=0.0_wp )
 
+      CALL jsb_add_var( this_list, prefix//'grnd_hflx_old'//suffix, eflux%grnd_hflx_old,                    &
+        & hgrid, surface,                                                                    &
+        & t_cf('grnd_hflx_old', '', 'Ground heat flux (old)', nc_bits),                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & initval_r=0.0_wp )
+
     END FUNCTION new_energy_flux
 
     FUNCTION new_water_state() RESULT(wstate)

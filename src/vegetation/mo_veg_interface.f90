@@ -42,7 +42,7 @@ CONTAINS
 
     REAL(wp), POINTER ::                 &
       & lai                    (:),      &
-      & swrad_srf_down         (:),      &
+      & swpar_srf_down         (:),      &
       & canopy_cond            (:),      &
       & soil_depth_l           (:,:),    &
       & root_depth_l           (:,:),    &
@@ -77,7 +77,7 @@ CONTAINS
     ! Get reference to variables for current block
     !
     lai                => tile%mem%veg  %phys_state   %lai            (ics:ice,    iblk)
-    swrad_srf_down     => tile%mem%srf  %energy_flux  %swrad_srf_down (ics:ice,    iblk)
+    swpar_srf_down     => tile%mem      %atm2land     %swpar_srf_down (ics:ice,    iblk)
     canopy_cond        => tile%mem%veg  %phys_state   %canopy_cond    (ics:ice,    iblk)
     soil_depth_l       => tile%mem%soil %phys_state   %soil_depth_l   (ics:ice, :, iblk)
     root_depth_l       => tile%mem%veg  %phys_state   %root_depth_l   (ics:ice, :, iblk)
@@ -96,7 +96,7 @@ CONTAINS
     ! Compute (max) canopy (stomatal) conductance with no water stress
     SELECT CASE(TRIM(model%config%veg%scheme_stom_cond))
       CASE('echam5')
-        canopy_cond(:) = canopy_conductance( lai(:), swrad_srf_down(:) / 2._wp )
+        canopy_cond(:) = canopy_conductance( lai(:), swpar_srf_down(:) )
 
 !!$      CASE('bethy')
 !!$        ! TBD: Call bethy to compute unstressed canopy conductance
