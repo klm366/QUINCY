@@ -219,7 +219,8 @@ CONTAINS
     energy%t_soil_acoef (:,:,:) = 0._wp
     energy%t_soil_bcoef (:,:,:) = 1._wp
 
-    energy%hcap_grnd (:,:) = 0._wp
+    energy%hcap_grnd     (:,:) = 0._wp
+    energy%hcap_grnd_old (:,:) = 0._wp
 
     ! Initialize water state
 

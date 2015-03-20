@@ -40,7 +40,8 @@ MODULE mo_soil_memory_class
       t_soil        (:,:,:), &
       t_soil_acoef  (:,:,:), &
       t_soil_bcoef  (:,:,:), &
-      hcap_grnd     (:,  :)     !< Heat capacity of the ground [J m-2 K-1]
+      hcap_grnd     (:,  :), &  !< Heat capacity of the ground [J m-2 K-1]
+      hcap_grnd_old (:,  :)     !< Heat capacity of the ground [J m-2 K-1] (old)
   END type t_soil_energy_state
 
   TYPE t_soil_water_state

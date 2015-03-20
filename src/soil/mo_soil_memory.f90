@@ -209,7 +209,13 @@ CONTAINS
 
       CALL jsb_add_var( this_list, prefix//'heat_cap_grnd'//suffix, estate%hcap_grnd,                       &
         & hgrid, surface,                                                                    &
-        & t_cf('heat_capacity_ground', 'J m-2 K-1', '', nc_bits),                            &
+        & t_cf('heat_capacity_ground', 'J m-2 K-1', 'Ground heat capacity', nc_bits),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( this_list, prefix//'heat_cap_grnd_old'//suffix, estate%hcap_grnd_old,&
+        & hgrid, surface,                                                                    &
+        & t_cf('heat_capacity_ground_old', 'J m-2 K-1', 'Ground heat capacity (old)', nc_bits), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & initval_r=0.0_wp )
 
