@@ -61,6 +61,7 @@ CONTAINS
       & lai            (:),    &
       & fract_fpc_max  (:),    &
       & hcap_grnd      (:),    &
+      & hcap_grnd_old  (:),    &
       & evapotrans     (:),    &
       & trans          (:),    &
       & evapopot       (:),    &
@@ -151,6 +152,7 @@ CONTAINS
     lai            => tile%mem%veg  %phys_state     %lai                 (ics:ice,    iblk)
     fract_fpc_max  => tile%mem%veg  %phys_state     %fract_fpc_max       (ics:ice,    iblk)
     hcap_grnd      => tile%mem%soil %energy_state   %hcap_grnd           (ics:ice,    iblk)
+    hcap_grnd_old  => tile%mem%soil %energy_state   %hcap_grnd_old       (ics:ice,    iblk)
     evapotrans     => tile%mem%srf  %water_flux     %evapotrans          (ics:ice,    iblk)
     trans          => tile%mem%srf  %water_flux     %trans               (ics:ice,    iblk)
     evapopot       => tile%mem%srf  %water_flux     %evapopot            (ics:ice,    iblk)
@@ -215,10 +217,11 @@ CONTAINS
       & tte_corr(:), snow_melt(:) &
       & )
 
-    ! Save old ground heat flux before updating
-    ! The old flux (which has been used in the implicit calculation of the new surface temperature) is
+    ! Save old ground heat flux and heat capacity before updating
+    ! The old flux and capacity (which have been used in the implicit calculation of the new surface temperature) are
     ! given back to the atmosphere so that the surface energy balance can be computed there
     grnd_hflx_old(:) = grnd_hflx(:)
+    hcap_grnd_old(:) = hcap_grnd(:)
 
     CALL update_soiltemp(nc, model%config%soil%nsoil_water, dtime, lstart, &
       & t_srf_unfilt(:), wsn_soil(:), hdiff(:), vhcap(:), &
