@@ -10,11 +10,12 @@
 MODULE mo_jsb_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_srf_config_class,  ONLY: t_srf_config
-  USE mo_soil_config_class, ONLY: t_soil_config
-  USE mo_veg_config_class,  ONLY: t_veg_config
-  USE mo_io_units,          ONLY: filename_max
-  USE mo_exception,         ONLY: message
+  USE mo_srf_config_class,    ONLY: t_srf_config
+  USE mo_soil_config_class,   ONLY: t_soil_config
+  USE mo_veg_config_class,    ONLY: t_veg_config
+  USE mo_carbon_config_class, ONLY: t_carbon_config  
+  USE mo_io_units,            ONLY: filename_max
+  USE mo_exception,           ONLY: message
 
   IMPLICIT NONE
   PRIVATE
@@ -25,9 +26,10 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max)  :: grid_filename
     CHARACTER(len=30)            :: grid_name
     CHARACTER(len=30)            :: usecase
-    TYPE(t_srf_config),  POINTER :: srf
-    TYPE(t_soil_config), POINTER :: soil
-    TYPE(t_veg_config),  POINTER :: veg
+    TYPE(t_srf_config),    POINTER :: srf
+    TYPE(t_soil_config),   POINTER :: soil
+    TYPE(t_veg_config),    POINTER :: veg
+    TYPE(t_carbon_config), POINTER :: carbon    
   END TYPE t_jsb_model_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_config_class'
@@ -36,14 +38,14 @@ CONTAINS
 
   FUNCTION new_model_config(namelist_filename) RESULT(config)
 
-    USE mo_srf_config_class,   ONLY: new_srf_config
-    USE mo_soil_config_class,  ONLY: new_soil_config
-    USE mo_veg_config_class,   ONLY: new_veg_config
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_srf_config_class,    ONLY: new_srf_config
+    USE mo_soil_config_class,   ONLY: new_soil_config
+    USE mo_veg_config_class,    ONLY: new_veg_config
+    USE mo_carbon_config_class, ONLY: new_carbon_config
+    USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
 
     CHARACTER(len=*), INTENT(in) :: namelist_filename
     TYPE(t_jsb_model_config), POINTER :: config
-
     TYPE(t_jsb_model_config), POINTER :: new
 
     CHARACTER(len=filename_max) :: grid_filename
@@ -85,11 +87,13 @@ CONTAINS
 
     new%usecase       = usecase
 
-    new%srf  => new_srf_config(nml_handler)
+    new%srf    => new_srf_config(nml_handler)
 
-    new%soil => new_soil_config(nml_handler)
+    new%soil   => new_soil_config(nml_handler)
 
-    new%veg  => new_veg_config(nml_handler)
+    new%veg    => new_veg_config(nml_handler)
+    
+    new%carbon => new_carbon_config(nml_handler)
 
     CALL close_nml(nml_handler)
 

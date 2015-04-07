@@ -2,3 +2,7 @@
 *~
 !externals/.history
 !externals/*~
+!src/carbon/assimilation/.history
+!src/carbon/assimilation/*~
+!src/carbon/.history
+!src/carbon/*~
