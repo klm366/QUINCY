@@ -28,8 +28,7 @@ CONTAINS
     USE mo_srf_memory,        ONLY: new_srf_memory
     USE mo_soil_memory,       ONLY: new_soil_memory
     USE mo_veg_memory,        ONLY: new_veg_memory
-    USE mo_carbon_memory,     ONLY: new_carbon_memory
-    
+
     CHARACTER(len=*),             INTENT(in) :: varlist_name
     CHARACTER(len=*),             INTENT(in) :: prefix        ! Prefix for variable names
     CHARACTER(len=*),             INTENT(in) :: suffix        
@@ -119,12 +118,6 @@ CONTAINS
 !!$      new%veg => new_veg_memory(varlist_name, 'veg_'//TRIM(prefix), suffix, tile)
       new%veg => new_veg_memory(varlist_name, TRIM(prefix), suffix, tile)
 
-!! R: hier spiegelt sich Flächenkonzept wieder, nicht Prozesse. Dennoch soll der Memory nach Prozessen ausgerichtet werden...
-    IF (model%config%carbon%active .AND. one_of('carbon', tile%components) > 0) &
-!!$      new%carbon => new_carbon_memory(varlist_name, 'carbon_'//TRIM(prefix), suffix, tile)
-      new%carbon => new_carbon_memory(varlist_name, TRIM(prefix), suffix, tile)
-      
-      
     mem => new
 
   END FUNCTION new_jsbach_memory

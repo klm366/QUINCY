@@ -195,15 +195,6 @@ CONTAINS
     ! because e.g. the fraction of the vegetated tile depends on LAI.
     ! TBD: later read veg_ratio_max into 'veg' tile, and set 'bare' tile to 1-veg_ratio_max
 
-    
-    
-    
-    !IF (model%config%soil%active) THEN
-      CALL canopy_conductance_init(model)
-    !END IF
-    
-    
-    
   END SUBROUTINE init_model_common
 
 #endif
