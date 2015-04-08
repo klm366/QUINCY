@@ -34,10 +34,9 @@ MODULE mo_jsb_memory_class
     REAL(wp),                POINTER :: fract_max (:,:)  !< Maximum potential cover fraction for this tile (rel. to parent)
     TYPE(t_atm2land_memory), POINTER :: atm2land => NULL()
     TYPE(t_land2atm_memory), POINTER :: land2atm => NULL()
-    TYPE(t_srf_memory),      POINTER :: srf      => NULL()
+    TYPE(t_srf_memory),      POINTER :: srf     => NULL()
     TYPE(t_soil_memory),     POINTER :: soil     => NULL()
     TYPE(t_veg_memory),      POINTER :: veg      => NULL()
-    TYPE(t_carbon_memory),   POINTER :: carbon   => NULL()
     !TYPE(t_glacier),         POINTER :: glacier
   END type t_jsb_memory
 

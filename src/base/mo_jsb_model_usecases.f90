@@ -59,7 +59,7 @@ CONTAINS
     USE mo_jsb_grid_class,     ONLY: get_nblks, get_nproma
     USE mo_jsb_memory,         ONLY: new_jsbach_memory
 
-    CHARACTER(len=20) :: components(4)
+    CHARACTER(len=20) :: components(3)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite'
 
@@ -79,7 +79,7 @@ CONTAINS
     model%config%soil%active = .TRUE.
 
     ! Create root of the tile structure representing the whole grid box
-    components(1) = 'srf' ; components(2) = 'soil' ; components(3) = 'veg' ; components(4) = 'carbon' ! R: hier werden components als subtiles betrachtet, ich schätze da sollen eigentlich Prozesse draus werden, daher carbon hinzugefügt.
+    components(1) = 'srf' ; components(2) = 'soil' ; components(3) = 'veg'
     model%land => new_tile(model%id, 'land', 'land', components)
 
     model%land%mem => new_jsbach_memory(TRIM(model%name), '', '', model%land)
