@@ -1186,21 +1186,21 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
         ENDDO
       ENDDO
 
-      DO jl=1,kbdim
-        IF (lmask(jl) .AND. .NOT.lpglac(jl)) THEN
-          zros(jl) = zros(jl)+zdrain(jl)
-        ENDIF
-      ENDDO
-
-!
-!*  4.2.3  Runoff and drainage for the HD-Model [m]
-!
-    DO jl=1,kbdim
-      IF (lmask(jl)) THEN
-        pros_hd(jl)   = zros(jl)-zdrain(jl)
-        pdrain_hd(jl) = zdrain(jl)
-      END IF
-    END DO
+!vg       DO jl=1,kbdim
+!vg         IF (lmask(jl) .AND. .NOT.lpglac(jl)) THEN
+!vg           zros(jl) = zros(jl)+zdrain(jl)
+!vg         ENDIF
+!vg       ENDDO
+!vg 
+!vg !
+!vg !*  4.2.3  Runoff and drainage for the HD-Model [m]
+!vg !
+!vg     DO jl=1,kbdim
+!vg       IF (lmask(jl)) THEN
+!vg         pros_hd(jl)   = zros(jl)-zdrain(jl)
+!vg         pdrain_hd(jl) = zdrain(jl)
+!vg       END IF
+!vg     END DO
 !
 !     ------------------------------------------------------------------
 !
