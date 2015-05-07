@@ -102,6 +102,18 @@ CONTAINS
 
       ALLOCATE(pstate)
 
+      CALL jsb_add_var( this_list, prefix//'land'//suffix, pstate%land,                               &
+        & hgrid, surface,                                                           &
+        & t_cf('land_mask', '', '', nc_bits),                                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL jsb_add_var( this_list, prefix//'lake'//suffix, pstate%lake,                               &
+        & hgrid, surface,                                                           &
+        & t_cf('lake_mask', '', '', nc_bits),                                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
       CALL jsb_add_var( this_list, prefix//'glacier'//suffix, pstate%glacier,                               &
         & hgrid, surface,                                                           &
         & t_cf('glacier_mask', '', '', nc_bits),                                             &

@@ -229,6 +229,8 @@ CONTAINS
       & hcap_grnd(:), grnd_hflx(:), &
       & is_present(:), is_glacier(:))
 
+print*, 'vg-in: runoff_acc: ', MINVAL(runoff_acc), MAXVAL(runoff_acc), SUM(runoff_acc)
+!vg:  runoff_hd and drainage_hd no longer needed
     CALL update_surf_up(nc, dtime, model%config%soil%nsoil_water, &
       & wsr_soil(:), wfract_srf(:), wsr_max(:), &
       & ws_root(:), ws_fc_root(:), &
@@ -249,6 +251,7 @@ CONTAINS
       & l_tpe_open, &
       & l_tpe_closed &
       & )
+print*, 'vg-out: runoff_acc: ', MINVAL(runoff_acc), MAXVAL(runoff_acc), SUM(runoff_acc)
 
     ws(:) = SUM(ws_l(:,:), DIM=2)
 
