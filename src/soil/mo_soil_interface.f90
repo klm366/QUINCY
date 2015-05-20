@@ -104,8 +104,8 @@ CONTAINS
       glacier_runoff_acc(nc), &
       melt_water_excess(nc), &
       snow_melt(nc), &
-      runoff_hd(nc), &
-      drainage_hd(nc), &
+!vg       runoff_hd(nc), &
+!vg       drainage_hd(nc), &
       skin_res_evap(nc), &
       reduced_evap(nc)
 
@@ -229,7 +229,6 @@ CONTAINS
       & hcap_grnd(:), grnd_hflx(:), &
       & is_present(:), is_glacier(:))
 
-print*, 'vg-in: runoff_acc: ', MINVAL(runoff_acc), MAXVAL(runoff_acc), SUM(runoff_acc)
 !vg:  runoff_hd and drainage_hd no longer needed
     CALL update_surf_up(nc, dtime, model%config%soil%nsoil_water, &
       & wsr_soil(:), wfract_srf(:), wsr_max(:), &
@@ -237,7 +236,7 @@ print*, 'vg-in: runoff_acc: ', MINVAL(runoff_acc), MAXVAL(runoff_acc), SUM(runof
       & t_soil(:,1), sfract_srf(:), oro_stddev(:), &
       & evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), &
       & rain(:), is_present(:), is_glacier(:), &
-      & runoff_acc(:), drainage_acc(:), runoff_hd(:), drainage_hd(:), &
+      & runoff_acc(:), drainage_acc(:), & !vg runoff_hd(:), drainage_hd(:), &
       & melt_water_excess(:), skin_res_evap(:), &
       & model%config%soil%dz_water(1:model%config%soil%nsoil_water), &
       & ws_l(:,:), ws_fc_l(:,:), ws_pwp_l(:,:), root_depth(:), soil_depth(:), &
@@ -251,7 +250,6 @@ print*, 'vg-in: runoff_acc: ', MINVAL(runoff_acc), MAXVAL(runoff_acc), SUM(runof
       & l_tpe_open, &
       & l_tpe_closed &
       & )
-print*, 'vg-out: runoff_acc: ', MINVAL(runoff_acc), MAXVAL(runoff_acc), SUM(runoff_acc)
 
     ws(:) = SUM(ws_l(:,:), DIM=2)
 

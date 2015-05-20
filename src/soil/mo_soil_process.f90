@@ -716,7 +716,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
      , prain                           &
      , lmask, lpglac &
      , prunoff, pdrain &
-     , pros_hd,    pdrain_hd                   &
+!vg      , pros_hd,    pdrain_hd                   &
      , pmlres &
      , zevwld &
 !     Soil moisture layers, evap. fluxes over land
@@ -750,8 +750,8 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 ! prain         Totalrainfall [kg/m**2/s]
 ! prunoff       Total runoff [kg/m**2] at non-glacier points (accumul.)
 ! pdrain        Drainage at non-glacier points [kg/m**2] (accumul.)
-! pros_hd       Runoff for HD-Model (does NOT include drainage) [m]
-! pdrain_hd     Drainage for HD-Model [m]
+!vg ! pros_hd       Runoff for HD-Model (does NOT include drainage) [m]
+!vg ! pdrain_hd     Drainage for HD-Model [m]
 ! 
 ! lpglac        Logical glacier mask
 !
@@ -877,8 +877,8 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
   REAL(wp), INTENT(inout) :: prunoff(kbdim)
   REAL(wp), INTENT(inout) :: pdrain(kbdim)
 
-  REAL(wp), INTENT(inout) :: pros_hd(kbdim)
-  REAL(wp), INTENT(inout) :: pdrain_hd(kbdim)
+!vg   REAL(wp), INTENT(inout) :: pros_hd(kbdim)
+!vg   REAL(wp), INTENT(inout) :: pdrain_hd(kbdim)
   REAL(wp), INTENT(out)   :: zevwld(kbdim) ! From optional part
 !
 ! Soil moisture layers, evap. fluxes over land.
