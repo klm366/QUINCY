@@ -21,7 +21,8 @@ MODULE mo_jsb_grid_class
                                    get_nproma_domain        => get_nproma,        &
                                    get_nblks_domain         => get_nblks,         &
                                    get_lon_domain           => get_lon,           &
-                                   get_lat_domain           => get_lat
+                                   get_lat_domain           => get_lat,           &
+                                   get_area_domain          => get_area
 
   IMPLICIT NONE
   PRIVATE
@@ -38,6 +39,7 @@ MODULE mo_jsb_grid_class
     INTEGER                      :: nland = 0
     REAL(wp), POINTER            :: lon(:,:) => NULL()
     REAL(wp), POINTER            :: lat(:,:) => NULL()
+    REAL(wp), POINTER            :: area(:,:) => NULL()
     LOGICAL,  POINTER            :: lsm(:,:) => NULL()
     REAL(wp), POINTER            :: lsf(:,:) => NULL()
     INTEGER                      :: nblks = 1
@@ -83,8 +85,8 @@ CONTAINS
 
   FUNCTION new_grid_from_host(patch, decomp) RESULT(grid)
 
-    TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch
-    TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
+    TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch          !< used with icon
+    TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp         !< used with echam
     TYPE(t_jsb_grid), POINTER                 :: grid
 
     TYPE(t_jsb_grid), POINTER       :: new
@@ -125,6 +127,7 @@ CONTAINS
     new%npromz   = new%ntotal - new%nproma * (new%nblks - 1)
     new%lon     => get_lon_domain          (patch, decomp)
     new%lat     => get_lat_domain          (patch, decomp)
+    new%area    => get_area_domain         (patch, decomp)
     ALLOCATE(new%lsm(new%nproma,new%nblks), new%lsf(new%nproma,new%nblks))
     new%lsm(:,:) = .TRUE.
     new%lsf(:,:) = 1.0_wp

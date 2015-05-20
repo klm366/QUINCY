@@ -54,6 +54,7 @@ CONTAINS
                                     update_humidity_scaling, update_roughness
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
     USE mo_soil_memory_class, ONLY: copy_soil_mem
+    USE mo_hd_interface,      ONLY: update_hd
 
     INTEGER :: p_pe
 
@@ -171,6 +172,8 @@ CONTAINS
 
     ! Soil hydrology
     CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
+
+    CALL update_hd(tile, iblk, ics, ice, nc)
 
     ! Re-calculate wet skin and snow fractions with updated moisture parameters
     CALL  update_snow_and_skin_fraction(model%land, iblk, ics, ice, nc, dtime, steplen)

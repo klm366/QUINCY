@@ -315,16 +315,16 @@ CONTAINS
 
       ALLOCATE(wflux)
 
-      CALL jsb_add_var( this_list, prefix//'runoff'//suffix, wflux%runoff,                                  &
+      CALL jsb_add_var( this_list, prefix//'runoff'//suffix, wflux%runoff,                   &
         & hgrid, surface,                                                                    &
         & t_cf('surface_runoff', '', '', nc_bits),                                           &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( this_list, prefix//'drainage'//suffix, wflux%drainage,                              &
+      CALL jsb_add_var( this_list, prefix//'drainage'//suffix, wflux%drainage,               &
         & hgrid, surface,                                                                    &
         & t_cf('drainage', '', '', nc_bits),                                                 &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & initval_r=0.0_wp )
 
     END FUNCTION new_water_flux
