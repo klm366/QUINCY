@@ -69,7 +69,7 @@ CONTAINS
     glacier        => tile%mem%srf  %phys_state     %glacier             (ics:ice, iblk)
     runoff         => tile%mem%soil %water_flux     %runoff              (ics:ice, iblk)
     drainage       => tile%mem%soil %water_flux     %drainage            (ics:ice, iblk)
-    evapotrans     => tile%mem%srf  %water_flux     %evapotrans          (ics:ice, iblk)
+    pme_glacier    => tile%mem%soil %water_flux     %pme_glacier         (ics:ice, iblk)
 
     area           => model%grid%area                                    (ics:ice, iblk)
 
@@ -90,14 +90,16 @@ CONTAINS
     discharge = 0._wp
     !<<<
 
-print*, 'vg: runoff  : ',  MINVAL(runoff),   MAXVAL(runoff),   SUM(runoff)
-print*, 'vg: drainage: ',  MINVAL(drainage), MAXVAL(drainage), SUM(drainage)
+print*, 'vg: runoff     : ',  MINVAL(runoff),      MAXVAL(runoff),      SUM(runoff)
+print*, 'vg: drainage   : ',  MINVAL(drainage),    MAXVAL(drainage),    SUM(drainage)
+print*, 'vg: pme_glacier: ',  MINVAL(pme_glacier), MAXVAL(pme_glacier), SUM(pme_glacier)
 
     ! calculate global land water budget
     !
     water_budget = &
            SUM(runoff*area*land)            & !< runoff
          + SUM(drainage*area*land)          & !< drainage
+         + SUM(pme_glacier*area*land)       & !< P-E over glaciers
          + SUM(flfmem)                      & !< water in the overland flow reservoirs
          + SUM(fgmem)                       & !< water in the baseflow reservoir
          + SUM(frfmem)                      & !< water in the riverflow reservoirs
@@ -106,7 +108,7 @@ print*, 'vg: drainage: ',  MINVAL(drainage), MAXVAL(drainage), SUM(drainage)
 
     ! dummy version of HD model
     !
-    discharge(:) = land(:) * (runoff(:) + drainage(:))
+    discharge(:) = land(:) * (runoff(:) + drainage(:) + pme_glacier(:))
 
 
     ! re-calculate global land water budget
