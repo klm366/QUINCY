@@ -203,7 +203,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   ! prain         Totalrainfall [kg/m**2/s]
   ! psnow         Total snowfall [kg/m**2/s]
   ! lpglac        Logical glacier mask
-  ! palac         Precipitation minus sublimation at glacier points [m water equivalent]
+  ! palac         Precipitation minus sublimation at glacier points [kg/m**2/s]
   ! psnacl        Snow budget at non-glacier points [kg/m**2] (accumul.)
   ! psnmel        Snow melt [kg/m**2] (accumulated for diagnostics)
   ! progl         Glacier runoff (rain+snow/ice melt) [kg/m**2] (accumul.)
@@ -392,9 +392,9 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
            !
            !   pwl(jl)=pwl(jl)+zsncmelt(jl) see section 2.5
            !
-        ELSE
-           psnc(jl)=0._wp
-           tte_corr(jl) = 0._wp
+        ELSE                         !vg  on glacier:
+           psnc(jl)=0._wp            !vg    no snow on canopy
+           tte_corr(jl) = 0._wp      !vg    no snow melt correction
         END IF
 210  END DO
      !
@@ -407,8 +407,8 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
               pevwsd(jl)=pevwsd(jl)+psn(jl)
               psn(jl)=0._wp
            END IF
-        ELSE
-           psn(jl)=0._wp
+        ELSE                         !vg  glacier:
+           psn(jl)=0._wp             !vg     no snow on glaciers
         END IF
 220  END DO
      !
@@ -416,9 +416,9 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      !
      DO 230 jl=1,kbdim
         IF (lpglac(jl)) THEN
-           pgld(jl)=pgld(jl)+zsnowd(jl)+zevsnd(jl)
-           palac(jl)=zraind(jl)+zsnowd(jl)+zevttd(jl)
-           zrogl(jl)=zraind(jl)
+           pgld(jl)=pgld(jl)+zsnowd(jl)+zevsnd(jl)      !vg  glacier depth [m] = glacier depth + snowfall + sublimation of snow
+           palac(jl)=zraind(jl)+zsnowd(jl)+zevttd(jl)   !vg  P-E on glaciers [m] = rainfall + snowfall + evaporation (incl. sublim.) 
+           zrogl(jl)=zraind(jl)                         !vg  glacier runoff = rainfall [m]
         END IF
 230  END DO
      !
@@ -427,17 +427,17 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      IF (.NOT. lstart) THEN
         DO 240 jl=1,kbdim
            IF (lmask(jl)) THEN
-              IF (ptsl(jl).GT.tmelt) THEN
-                 IF (lpglac(jl)) THEN
-                    zsnmel(jl)=pgrndcapc(jl)*(ptsl(jl)-tmelt)/(alf*rhoh2o)
-                    pgld(jl)=pgld(jl)-zsnmel(jl)
-                    zrogl(jl)=zrogl(jl)+zsnmel(jl)
-                    ptsl(jl)=tmelt
-                 ELSE IF (psn(jl).GT.0._wp) THEN
-                    zsmelt=pgrndcapc(jl)*(ptsl(jl)-tmelt)/(alf*rhoh2o)
-                    zsnmel(jl)=MIN(psn(jl),zsmelt)
-                    ptsl(jl)=ptsl(jl)-zsnmel(jl)*alf*rhoh2o/pgrndcapc(jl)
-                    psn(jl)=MAX(psn(jl)-zsnmel(jl),0._wp)
+              IF (ptsl(jl).GT.tmelt) THEN               !vg  temperature > 0 degC
+                 IF (lpglac(jl)) THEN                                    !vg  glacier:
+                    zsnmel(jl)=pgrndcapc(jl)*(ptsl(jl)-tmelt)/(alf*rhoh2o)  !vg  snow and ice melt [m]
+                    pgld(jl)=pgld(jl)-zsnmel(jl)                            !vg  adapt glacier depth to snow and ice melt
+                    zrogl(jl)=zrogl(jl)+zsnmel(jl)                          !vg  add melt water to glacier runoff
+                    ptsl(jl)=tmelt                                          !vg  surface temp. limited to 0 degC
+                 ELSE IF (psn(jl).GT.0._wp) THEN                         !vg  snow cover at non glacier land:
+                    zsmelt=pgrndcapc(jl)*(ptsl(jl)-tmelt)/(alf*rhoh2o)      !vg  potential snow and ice melt [m]
+                    zsnmel(jl)=MIN(psn(jl),zsmelt)                          !vg  actual snow and ice melt [m]
+                    ptsl(jl)=ptsl(jl)-zsnmel(jl)*alf*rhoh2o/pgrndcapc(jl)   !vg  re-calculation of surface temp.
+                    psn(jl)=MAX(psn(jl)-zsnmel(jl),0._wp)                   !vg  re-calculation of snow depth
                  END IF
               END IF
            END IF
@@ -460,13 +460,16 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      ! Accumulate water fluxes
      ! Note: conversion from m water equivalent to kg/m^2s - multiply by rhoh2o / zdtime
      !       accumulation - multiply by zdtime
-!!$      DO 601 jl=1,kbdim
-!!$         IF (lmask(jl)) THEN
+     DO 601 jl=1,kbdim
+        IF (lmask(jl)) THEN
 !!$            IF (.NOT. lpglac(jl)) psnacl(jl) = psnacl(jl)  +zsn(jl) * rhoh2o
 !!$            psnmel(jl) = psnmel(jl)  +zsnmel(jl) * rhoh2o
 !!$            IF (lpglac(jl)) progl(jl)  = progl(jl)   +zrogl(jl)  *rhoh2o
-!!$         END IF
-!!$ 601  END DO
+!vg>>
+          palac(jl) = palac(jl) * rhoh2o/zdtime  ! [m] -> [kg m-2 s-1]
+!vg<<
+        END IF
+601  END DO
 
 !++mgs
 !--- Included for dry deposition ---------------------------------------
@@ -748,8 +751,8 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 ! pevwsd        Evapotranspiration without sublimation and evaporation from interception reservoir [kg/m**2]
 !               BUT in this routine it is [m], such as zevwld.
 ! prain         Totalrainfall [kg/m**2/s]
-! prunoff       Total runoff [kg/m**2] at non-glacier points (accumul.)
-! pdrain        Drainage at non-glacier points [kg/m**2] (accumul.)
+! prunoff       Runoff [kg/m**2/s] at non-glacier points (not including drainage)
+! pdrain        Drainage at non-glacier points [kg/m**2/s]
 !vg ! pros_hd       Runoff for HD-Model (does NOT include drainage) [m]
 !vg ! pdrain_hd     Drainage for HD-Model [m]
 ! 
@@ -761,8 +764,8 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !
 ! zraind        Total rain [m]
 ! zevwld        Evaporation from the skin reservoir [m]
-! zros          Total runoff (including drainage) at non-glacier points
-! zdrain        Drainage at non-glacier points
+! zros          Runoff (not including drainage) at non-glacier points [m]
+! zdrain        Drainage at non-glacier points [m]
 ! zsn           Snow budget at non-glacier points (snowfall-subl-melt)
 ! pmlres        Residual melt water available for infiltration into the
 !               non-frozen soil after being intercepted by the
@@ -858,7 +861,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
   INTEGER,  INTENT(in)    :: kbdim
   REAL(wp), INTENT(in)    :: delta_time
   INTEGER,  INTENT(in)    :: nsoil ! also used as switch for 5 layer calculation
-  LOGICAL,  INTENT(in)    :: lmask(kbdim)
+  LOGICAL,  INTENT(in)    :: lmask(kbdim)      !vg: true everywhere
   LOGICAL,  INTENT(in)    :: lpglac(kbdim)
   REAL(wp), INTENT(in)    :: pcvw(kbdim)
   REAL(wp), INTENT(in)    :: pwlmx(kbdim)
@@ -971,13 +974,15 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 
   zros   = 0._wp
   zdrain = 0._wp
-  zraind = prain * zdtime / rhoh2o
+  zraind = prain * zdtime / rhoh2o   !vg: prain [kg/m2/s] -> zraind [m]
   zevwld = 0._wp
   DO jl=1,kbdim
     IF (lmask(jl)) THEN
 !!$      zros(jl) = 0._wp
 !!$      zdrain(jl) = 0._wp
 !!$      zraind(jl) = prain(jl) * zdtime/rhoh2o
+      !vg: potential evaporation from skin reservoir
+      !vg:  = (1-snow_fract) * skinres_fract * evap_pot  [kg/m2/s] -> [m]
       zevwld(jl) = (1._wp-pcvs(jl))*pcvw(jl)*pevapot(jl)*zdtime/rhoh2o
     END IF
   ENDDO
@@ -1010,26 +1015,26 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !
 !*      4.1.1  Interception of rain
 !
-        zmprcp     = MIN(zraind(jl)*cvinter,pwlmx(jl)-pwl(jl))
-        zwlp       = pwl(jl)    + zmprcp
-        zraind(jl) = zraind(jl) - zmprcp
+        zmprcp     = MIN(zraind(jl)*cvinter,pwlmx(jl)-pwl(jl))  !vg  amount of water going into interception reservoir
+        zwlp       = pwl(jl)    + zmprcp                        !vg  update interception reservoir
+        zraind(jl) = zraind(jl) - zmprcp                        !vg  remaining water reaching the soil 
 !
 !*      4.1.2  Evaporation or dew collection
 !
-        pwl(jl)    = MIN(MAX(0._wp,zwlp+zevwld(jl)),pwlmx(jl))
-        pevwsd(jl) = pevwsd(jl)-(pwl(jl)-zwlp)
+        pwl(jl)    = MIN(MAX(0._wp,zwlp+zevwld(jl)),pwlmx(jl))  !vg  update interception reservoir with respect to pot. evaporation
+        pevwsd(jl) = pevwsd(jl)-(pwl(jl)-zwlp)                  !vg  reduce amount of evaporation accordingly -> evapor. from soil
 !HAG
 !       Get sure that ESKIN comprises only amounts that really change the skin reservoir
-        zevwld(jl) = pwl(jl)-zwlp ! This is supposedly the correct way
+        zevwld(jl) = pwl(jl)-zwlp ! This is supposedly the correct way     !vg  calculate actual evaporation from pot. evaporation
 !        if (nsoil==5) zevwld(jl) = pwl(jl)-zwlp ! Use this for compatibility with older jsbach revisions
       ELSE
-        pwl(jl) = 0._wp
+        pwl(jl) = 0._wp   !vg: no water in skin reservoir on glaciers anyway? or does something get lost?
       END IF
     ENDDO
 
 !   Calculation of Bare Soil Evaporation
 !   Unit of pevwsd is [m]
-    IF (nsoil == 5) aebsoil(1:kbdim) = pevwsd(1:kbdim) - aetrans(1:kbdim)
+    IF (nsoil == 5) aebsoil(1:kbdim) = pevwsd(1:kbdim) - aetrans(1:kbdim)  !vg  evap_baresoil = evapotrans_soil - transpiration
 !
 !*  4.2    Soil reservoir
 !
@@ -1054,31 +1059,32 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 
 !         ******* Positive EBSoil and Etrans are added to throughfall separately
 !         ******* Negative fluxes change soil moisture in SOILCHANGE.
-          zprfl = pmlres(jl)+zraind(jl)
-          IF (aebsoil(jl) >= 0.0_wp) zprfl = zprfl + aebsoil(jl)
-          IF (aetrans(jl) >= 0.0_wp) zprfl = zprfl + aetrans(jl)
+          zprfl = pmlres(jl)+zraind(jl)                           !vg  water reaching the soil = meltwater + rain reaching the soil
+          IF (aebsoil(jl) >= 0.0_wp) zprfl = zprfl + aebsoil(jl)  !vg  add bare soil evaporation
+          IF (aetrans(jl) >= 0.0_wp) zprfl = zprfl + aetrans(jl)  !vg  add transpiration
         
-        IF (ltpe_closed) THEN
+        IF (ltpe_closed) THEN   !vg  only used with terra planet: runoff swiched off
           zros(jl)   = 0._wp
           zinfil(jl) = zprfl
         ELSE
           IF (ptsoil(jl) < tmelt) THEN
-            zros(jl) = zprfl
+            zros(jl) = zprfl            !vg  no water infiltrated if uppermost soil layer is frozen -> runoff
           ELSE
-            IF (zprfl > 0._wp .AND. pws(jl) > zwslim) THEN
-              IF (pws(jl) > pwsmx(jl)) THEN
-                zlyeps = pws(jl)-pwsmx(jl)
+            IF (zprfl > 0._wp .AND. pws(jl) > zwslim) THEN   !vg  water reaches soil and soil water content above 5%-limit
+              IF (pws(jl) > pwsmx(jl)) THEN                  !vg  soil water content above water holding capacity
+                zlyeps = pws(jl)-pwsmx(jl)                   !vg     excess water
               ELSE
-                zlyeps = 0._wp
+                zlyeps = 0._wp                               !vg     no excess water
               END IF
-              zlysic     = MIN(1._wp,(pws(jl)-zlyeps)/pwsmx(jl))
-              zvol       = (1._wp-zlysic)**zbm-zprfl/zconw1
-              zros(jl)   = zprfl-(pwsmx(jl)-pws(jl))
-              IF (zvol > 0._wp) zros(jl) = zros(jl)+pwsmx(jl)*zvol**zb1
-              zros(jl)   = MAX(zros(jl),0._wp)
-              zinfil(jl) = zprfl-zros(jl)
+              zlysic     = MIN(1._wp,(pws(jl)-zlyeps)/pwsmx(jl))        !vg  relative soil moisture (MIN() needed?)
+              zvol       = (1._wp-zlysic)**zbm-zprfl/zconw1             !vg  ??
+              zros(jl)   = zprfl-(pwsmx(jl)-pws(jl))                    !vg  remaining water, when water holding capacity reached
+              IF (zvol > 0._wp) zros(jl) = zros(jl)+pwsmx(jl)*zvol**zb1 !vg  ??
+              zros(jl)   = MAX(zros(jl),0._wp)                          !vg  no negative runoff (code would be clearer, if excess 
+                                                                        !vg       water was considered two lines above)
+              zinfil(jl) = zprfl-zros(jl)                               !vg  water not going into runoff is infiltrated
             ELSE
-              zros(jl)   = 0._wp
+              zros(jl)   = 0._wp   !vg  no runoff as no water reaches the soil or soil is too dry (below 5%-limit)
               zinfil(jl) = zprfl
             END IF
           END IF
@@ -1139,19 +1145,19 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
             zinfil, zdrain, aetrans, aebsoil,       &
             redevap, overflow, ltpe_closed)
 
-      ! Does overflow occurs due to infiltration in the layers? --> added to drainage
+      ! Does overflow occur due to infiltration in the layers? --> added to drainage
       DO jk=1, nsoil
         DO jl=kb1, kbdim
-          IF (dzsi(jl,1) > 0) THEN
-            IF (wsi(jl,jk) > zwsfc(jl,jk)) THEN
+          IF (dzsi(jl,1) > 0) THEN                                     !vg  there is soil (above bedrock)
+            IF (wsi(jl,jk) > zwsfc(jl,jk)) THEN                        !vg  soil moisture above field capacity
               IF (ltpe_closed) THEN
                 ! modification for TPE
                 ! put drainage in overflow pool
                 overflow(jl) = overflow(jl) + wsi(jl,jk) - zwsfc(jl,jk)
               ELSE
-                zdrain(jl) = zdrain(jl) + wsi(jl,jk) - zwsfc(jl,jk)
+                zdrain(jl) = zdrain(jl) + wsi(jl,jk) - zwsfc(jl,jk)    !vg  excess moisture goes to drainage
               ENDIF
-              wsi(jl,jk) = zwsfc(jl,jk)
+              wsi(jl,jk) = zwsfc(jl,jk)                                !vg  soil moisture reduced accordingly
             ELSE ! wsi <= zwsfc
               IF (ltpe_closed) THEN
                 ! modification for TPE
@@ -1212,8 +1218,13 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
     !       accumulation - multiply by zdtime
     DO jl=1,kbdim
       IF (lmask(jl)) THEN
-        prunoff(jl) = prunoff(jl) +zros(jl)   *rhoh2o
-        pdrain(jl)  = pdrain(jl)  +zdrain(jl) *rhoh2o
+!vg         prunoff(jl) = prunoff(jl) +zros(jl)   *rhoh2o
+!vg         pdrain(jl)  = pdrain(jl)  +zdrain(jl) *rhoh2o
+!vg>>
+        !vg  [m] -> [kg/m2/s]
+        prunoff(jl) = zros(jl)   *rhoh2o/zdtime
+        pdrain(jl)  = zdrain(jl) *rhoh2o/zdtime
+!vg<<
       END IF
     END DO
 !

@@ -73,8 +73,9 @@ CONTAINS
       & grnd_hflx      (:),    &
       & grnd_hflx_old  (:),    &
       & oro_stddev     (:),    &
-      & runoff_acc     (:),    &
-      & drainage_acc   (:),    &
+      & runoff         (:),    &
+      & drainage       (:),    &
+      & pme_glacier    (:),    &
       & ws             (:),    &
       & ws_l           (:,:),  &
       & ws_fc_l        (:,:),  &
@@ -98,7 +99,6 @@ CONTAINS
     REAL(wp) :: &
       wsr_max(nc), &
       evapotrans_no_snow_skin(nc), &
-      glacier_precip_minus_evap(nc), &
       snow_acc(nc), &
       snow_melt_acc(nc), &
       glacier_runoff_acc(nc), &
@@ -164,8 +164,9 @@ CONTAINS
     grnd_hflx      => tile%mem%soil %energy_flux    %grnd_hflx           (ics:ice,    iblk)
     grnd_hflx_old  => tile%mem%soil %energy_flux    %grnd_hflx_old       (ics:ice,    iblk)
     oro_stddev     => tile%mem%srf  %phys_state     %oro_stddev          (ics:ice,    iblk)
-    runoff_acc     => tile%mem%soil %water_flux     %runoff              (ics:ice,    iblk)
-    drainage_acc   => tile%mem%soil %water_flux     %drainage            (ics:ice,    iblk)
+    runoff         => tile%mem%soil %water_flux     %runoff              (ics:ice,    iblk)
+    drainage       => tile%mem%soil %water_flux     %drainage            (ics:ice,    iblk)
+    pme_glacier    => tile%mem%soil %water_flux     %pme_glacier         (ics:ice,    iblk)
     ws             => tile%mem%soil %water_state    %ws                  (ics:ice,    iblk)
     ws_l           => tile%mem%soil %water_state    %ws_l                (ics:ice, :, iblk)
     ws_fc_l        => tile%mem%soil %water_state    %ws_fc_l             (ics:ice, :, iblk)
@@ -198,7 +199,6 @@ CONTAINS
 
     IF (lstart) THEN
       evapotrans_no_snow_skin(:) = 0._wp
-      glacier_precip_minus_evap(:) = 0._wp
       snow_acc(:) = 0._wp
       snow_melt_acc(:) = 0._wp
       glacier_runoff_acc(:) = 0._wp
@@ -207,15 +207,19 @@ CONTAINS
       snow_melt(:) = 0._wp
     END IF
 
+print*, 'vg1: pme_glacier: ', MINVAL(pme_glacier), MAXVAL(pme_glacier), SUM(pme_glacier)
+
     CALL update_surf_down(nc, dtime, lstart, &
       & q_air(:), t_srf_unfilt(:), wind_10m(:), t_air(:), wsr_soil(:), wfract_srf(:), &
       & wsr_max(:), wsn_soil(:), sfract_srf(:), wsn_can(:), wsn_glacier(:), &
       & hcap_grnd(:), evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), rain(:),  snow(:), &
-      & is_present(:), is_glacier(:), glacier_precip_minus_evap(:), &
+      & is_present(:), is_glacier(:), pme_glacier(:), &
 !!$      & snow_acc(:), snow_melt_acc(:), glacier_runoff_acc(:), &
       melt_water_excess(:), &
       & tte_corr(:), snow_melt(:) &
       & )
+
+print*, 'vg2: pme_glacier: ', MINVAL(pme_glacier), MAXVAL(pme_glacier), SUM(pme_glacier)
 
     ! Save old ground heat flux and heat capacity before updating
     ! The old flux and capacity (which have been used in the implicit calculation of the new surface temperature) are
@@ -229,14 +233,18 @@ CONTAINS
       & hcap_grnd(:), grnd_hflx(:), &
       & is_present(:), is_glacier(:))
 
+print*, 'vg1: runoff  : ',  MINVAL(runoff),   MAXVAL(runoff),   SUM(runoff)
+print*, 'vg1: drainage: ',  MINVAL(drainage), MAXVAL(drainage), SUM(drainage)
+
 !vg:  runoff_hd and drainage_hd no longer needed
+!vg:  accumulation does not make sense (no reset)
     CALL update_surf_up(nc, dtime, model%config%soil%nsoil_water, &
       & wsr_soil(:), wfract_srf(:), wsr_max(:), &
       & ws_root(:), ws_fc_root(:), &
       & t_soil(:,1), sfract_srf(:), oro_stddev(:), &
       & evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), &
       & rain(:), is_present(:), is_glacier(:), &
-      & runoff_acc(:), drainage_acc(:), & !vg runoff_hd(:), drainage_hd(:), &
+      & runoff(:), drainage(:), & !vg runoff_hd(:), drainage_hd(:), &
       & melt_water_excess(:), skin_res_evap(:), &
       & model%config%soil%dz_water(1:model%config%soil%nsoil_water), &
       & ws_l(:,:), ws_fc_l(:,:), ws_pwp_l(:,:), root_depth(:), soil_depth(:), &
@@ -250,6 +258,8 @@ CONTAINS
       & l_tpe_open, &
       & l_tpe_closed &
       & )
+print*, 'vg2: runoff  : ',  MINVAL(runoff),   MAXVAL(runoff),   SUM(runoff)
+print*, 'vg2: drainage: ',  MINVAL(drainage), MAXVAL(drainage), SUM(drainage)
 
     ws(:) = SUM(ws_l(:,:), DIM=2)
 
