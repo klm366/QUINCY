@@ -200,7 +200,11 @@ CONTAINS
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
     ELSE IF(PRESENT(patch)) THEN
 #ifdef __ICON__
-      get_nproma = INT( (patch%n_patch_cells - patch%npromz_c)/(patch%nblks_c-1))
+      IF (patch%nblks_c > 1) THEN
+        get_nproma = INT( (patch%n_patch_cells - patch%npromz_c)/(patch%nblks_c-1))
+      ELSE
+        get_nproma = patch%n_patch_cells
+      END IF
 #else
       CALL finish(TRIM(routine), 'patch not allowed')
 #endif
