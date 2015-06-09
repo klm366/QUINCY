@@ -63,5 +63,29 @@ MODULE mo_jsb_io_iface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_iface'
 
+#ifndef __ICON__
+CONTAINS
+
+  ! constructor for GRIB2 derived data type
+  FUNCTION grib2_var(discipline, category, number, bits, gridtype, subgridtype)
+    INTEGER, INTENT(IN) :: discipline
+    INTEGER, INTENT(IN) :: category
+    INTEGER, INTENT(IN) :: number
+    INTEGER, INTENT(IN) :: bits
+    INTEGER, INTENT(IN) :: gridtype
+    INTEGER, INTENT(IN) :: subgridtype
+    TYPE(t_grib2_var) :: grib2_var
+
+    grib2_var%discipline  = discipline
+    grib2_var%category    = category
+    grib2_var%number      = number
+    grib2_var%bits        = bits
+    grib2_var%gridtype    = gridtype
+    grib2_var%subgridtype = subgridtype
+
+!!$    grib2_var%additional_keys%nint_keys = 0
+  END FUNCTION grib2_var
+#endif
+  
 #endif
 END MODULE mo_jsb_io_iface
