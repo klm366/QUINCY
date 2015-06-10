@@ -17,7 +17,7 @@ MODULE mo_veg_interface
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
-  USE mo_util_string,        ONLY: one_of, int2string
+  USE mo_util,               ONLY: one_of, int2string
 
   IMPLICIT NONE
   PRIVATE
@@ -42,7 +42,7 @@ CONTAINS
 
     REAL(wp), POINTER ::                 &
       & lai                    (:),      &
-      & swrad_srf_down         (:),      &
+      & swpar_srf_down         (:),      &
       & canopy_cond            (:),      &
       & soil_depth_l           (:,:),    &
       & root_depth_l           (:,:),    &
@@ -77,7 +77,7 @@ CONTAINS
     ! Get reference to variables for current block
     !
     lai                => tile%mem%veg  %phys_state   %lai            (ics:ice,    iblk)
-    swrad_srf_down     => tile%mem%srf  %energy_flux  %swrad_srf_down (ics:ice,    iblk)
+    swpar_srf_down     => tile%mem      %atm2land     %swpar_srf_down (ics:ice,    iblk)
     canopy_cond        => tile%mem%veg  %phys_state   %canopy_cond    (ics:ice,    iblk)
     soil_depth_l       => tile%mem%soil %phys_state   %soil_depth_l   (ics:ice, :, iblk)
     root_depth_l       => tile%mem%veg  %phys_state   %root_depth_l   (ics:ice, :, iblk)
@@ -96,7 +96,7 @@ CONTAINS
     ! Compute (max) canopy (stomatal) conductance with no water stress
     SELECT CASE(TRIM(model%config%veg%scheme_stom_cond))
       CASE('echam5')
-        canopy_cond(:) = canopy_conductance( lai(:), swrad_srf_down(:) / 2._wp )
+        canopy_cond(:) = canopy_conductance( lai(:), swpar_srf_down(:) )
 
 !!$      CASE('bethy')
 !!$        ! TBD: Call bethy to compute unstressed canopy conductance
@@ -131,7 +131,7 @@ CONTAINS
   SUBROUTINE update_vegetation_2( tile, iblk, ics, ice, nc)
 
     USE mo_veg_process, ONLY: canopy_albedo, foliage_projected_cover
-    USE mo_amip_bc,     ONLY:  wgt1, wgt2, nmw1,nmw2  ! TBD: this should be made more general
+    USE mo_jsb_time,    ONLY: get_time_interpolation_weights
 
     REAL(wp), PARAMETER :: &
       albedo_snow_min = 0.4_wp,  & !< Minimum possible snow albedo   ! Temporary, will depend on vegetation type
@@ -160,6 +160,9 @@ CONTAINS
       & sfract_soil   (:)
 
     INTEGER :: p_pe
+
+    REAL(wp) :: wgt1, wgt2
+    INTEGER  :: nmw1,nmw2
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_2'
 
@@ -191,6 +194,7 @@ CONTAINS
     ! Update leaf area index
     !
     ! At the moment by interpolating monthly climatological LAI
+    CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
     lai(:) = REAL(wgt1,wp) * lai_mon(:,nmw1+1) + REAL(wgt2,wp) * lai_mon(:,nmw2+1)
 
     ! Update foliage projected cover

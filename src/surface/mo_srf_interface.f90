@@ -16,13 +16,13 @@ MODULE mo_srf_interface
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
-  USE mo_util_string,     ONLY: one_of
+  USE mo_util,            ONLY: one_of
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy
-  PUBLIC :: update_surface_fluxes, update_t_srf, update_humidity_scaling, update_roughness
+  PUBLIC :: update_surface_fluxes, update_t_srf_asselin, update_humidity_scaling, update_roughness
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_interface'
 
@@ -30,7 +30,7 @@ CONTAINS
 
   SUBROUTINE update_surface_radiation(tile, iblk, ics, ice, nc)
 
-    USE mo_phy_schemes, ONLY: thermal_radiation
+    USE mo_phy_schemes, ONLY: lwnet_from_lwdown
 
     TYPE(t_jsb_tile),  POINTER    :: tile
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
@@ -41,11 +41,14 @@ CONTAINS
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::      &
-      & swrad_srf_net    (:), &
-      & lwrad_srf_net    (:), &
+      & swvis_srf_net    (:), &
+      & swnir_srf_net    (:), &
+      & sw_srf_net       (:), &
+      & lw_srf_net       (:), &
       & rad_srf_net      (:), &
-      & lwrad_srf_down   (:), &
-      & swrad_srf_down   (:), &
+      & lw_srf_down      (:), &
+      & swvis_srf_down   (:), &
+      & swnir_srf_down   (:), &
       & alb_vis_srf      (:), &
       & alb_nir_srf      (:), &
       & t_srf            (:)
@@ -58,24 +61,28 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    swrad_srf_net  => tile%mem     %atm2land     %swrad_srf_net  (ics:ice, iblk)
-    swrad_srf_down => tile%mem%srf %energy_flux  %swrad_srf_down (ics:ice, iblk)
-    lwrad_srf_net  => tile%mem%srf %energy_flux  %lwrad_srf_net  (ics:ice, iblk)
-    lwrad_srf_down => tile%mem     %atm2land     %lwrad_srf_down (ics:ice, iblk)
+    swvis_srf_down => tile%mem     %atm2land     %swvis_srf_down (ics:ice, iblk)
+    swnir_srf_down => tile%mem     %atm2land     %swnir_srf_down (ics:ice, iblk)
+    lw_srf_down    => tile%mem     %atm2land     %lw_srf_down    (ics:ice, iblk)
+    swvis_srf_net  => tile%mem%srf %energy_flux  %swvis_srf_net  (ics:ice, iblk)
+    swnir_srf_net  => tile%mem%srf %energy_flux  %swnir_srf_net  (ics:ice, iblk)
+    sw_srf_net     => tile%mem%srf %energy_flux  %sw_srf_net     (ics:ice, iblk)
+    lw_srf_net     => tile%mem%srf %energy_flux  %lw_srf_net     (ics:ice, iblk)
     rad_srf_net    => tile%mem%srf %energy_flux  %rad_srf_net    (ics:ice, iblk)
     alb_vis_srf    => tile%mem%srf %phys_state   %alb_vis_srf    (ics:ice, iblk)
     alb_nir_srf    => tile%mem%srf %phys_state   %alb_nir_srf    (ics:ice, iblk)
-    lwrad_srf_net  => tile%mem%srf %energy_flux  %lwrad_srf_net  (ics:ice, iblk)
     t_srf          => tile%mem%srf %energy_state %t_srf          (ics:ice, iblk)
 
-    ! Compute downward SW radiation from net SW and albedo
-    swrad_srf_down(:) = swrad_srf_net(:) / (1._wp - (alb_vis_srf(:) + alb_nir_srf(:)) / 2._wp)
+    ! Compute net SW radiation from downward SW and albedo
+    swvis_srf_net(:) = swvis_srf_down(:) * (1._wp - alb_vis_srf(:))
+    swnir_srf_net(:) = swnir_srf_down(:) * (1._wp - alb_nir_srf(:))
+    sw_srf_net   (:) = swvis_srf_net(:) + swnir_srf_net(:)
 
     ! Compute LW net radiation from incoming and the thermal radiation from the surface
-    lwrad_srf_net(:) = lwrad_srf_down(:) - thermal_radiation(t_srf(:))
+    lw_srf_net(:) = lwnet_from_lwdown(lw_srf_down(:), t_srf(:))
 
     ! Compute net radiation
-    rad_srf_net(:) = swrad_srf_net(:) + lwrad_srf_net(:)
+    rad_srf_net(:) = sw_srf_net(:) + lw_srf_net(:)
 
   END SUBROUTINE update_surface_radiation
 
@@ -203,7 +210,7 @@ CONTAINS
   SUBROUTINE update_surface_energy( tile, iblk, ics, ice, nc, dtime, steplen)
 
     USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_srf_process,        ONLY: surface_temp_and_qsat_implicit
+    USE mo_srf_process,        ONLY: surface_temp_implicit
 !!$    USE mo_srf_constants,      ONLY: eps
     USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
     USE mo_physical_constants, ONLY: tmelt
@@ -223,7 +230,7 @@ CONTAINS
       & t_srf_old      (:),    &
       & t_srf_unfilt   (:),    &
       & t_srf_unfilt_old(:),    &
-      & t_rad_srf      (:),    &
+      & t_eff_srf      (:),    &
       & qsat_srf       (:),    &
 !!$      & qsat_srf_old   (:),    &
       & s_srf          (:),    &
@@ -265,7 +272,7 @@ CONTAINS
     t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
     t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
     t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
-    t_rad_srf            => tile%mem%srf  %energy_state %t_rad_srf        (ics:ice, iblk)
+    t_eff_srf            => tile%mem%srf  %energy_state %t_eff_srf        (ics:ice, iblk)
     qsat_srf             => tile%mem%srf  %energy_state %qsat_srf         (ics:ice, iblk)
 !!$    qsat_srf_old         => tile%mem%srf  %energy_state %qsat_srf_old     (ics:ice, iblk)
     s_srf                => tile%mem%srf  %energy_state %s_srf            (ics:ice, iblk)
@@ -287,9 +294,11 @@ CONTAINS
     glacier              => tile%mem%srf  %phys_state   %glacier          (ics:ice, iblk)
 
     ! Save old surface temperature and saturation spec. humidity
-    t_srf_unfilt_old(:) = t_srf_unfilt(:)
-    t_srf_old   (:) = t_srf(:)
-    !qsat_srf_old(:) = qsat_srf(:)   ! Is this the same as next line?
+!!$    t_srf_unfilt_old(:) = t_srf_unfilt(:)
+!!$    t_srf_old   (:) = t_srf(:)
+    ! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in convect_tables
+    t_srf_unfilt_old(:) = MAX(MIN(t_srf_unfilt(:), 380._wp), 100._wp)
+    t_srf_old(:)        = MAX(MIN(t_srf(:),        380._wp), 100._wp)
     qsat_srf_old(:) = qsat(t_srf_old(:), press_srf(:))
 
     ! Calculate surface saturation specific humidity
@@ -311,44 +320,43 @@ CONTAINS
     IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
       lstart = .TRUE.
       s_srf(:) = s_srf_old(:)
-      qsat_srf(:) = qsat_srf_old(:)
     ELSE
       lstart = .FALSE.
-      CALL surface_temp_and_qsat_implicit( nc, steplen, &
+      CALL surface_temp_implicit( nc, steplen, &
         t2s_conv(:), &
         t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
         s_srf_old(:), qsat_srf_old(:), dQdT(:), &
         rad_srf_net(:), grnd_hflx(:), heat_tcoef(:), &
         fact_q_air(:), fact_qsat_srf(:), &
         sfract_srf(:), hcap_grnd(:), &
-        & s_srf(:), qsat_srf(:))
+        & s_srf(:))
     END IF
 
-    ! Back out unfiltered surface temperature (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
+    ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     t_srf_unfilt(:) = ( tpfac2 * s_srf(:) + tpfac3 * s_srf_old(:) ) / t2s_conv(:)
 
     ! Correct new dry static energy for snowmelt
     WHERE (wsn_srf(:) > model%config%srf%wsn_critical .OR. glacier(:) > 0.5_wp)
-      s_srf(:) = ( MIN(t_srf_unfilt(:), tmelt) * t2s_conv(:) - tpfac3 * s_srf_old(:) ) / tpfac2
+      s_srf(:) = MIN(s_srf(:) / t2s_conv(:), tmelt) * t2s_conv(:)
     END WHERE
 
-    ! 'Radiative temperature' used in the radiation scheme of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
-    t_rad_srf(:) = s_srf(:) / t2s_conv(:)
+    ! Compute new surface qsat (after correction of dry static energy for snow melt!)
+    qsat_srf(:) = 0._wp
+    IF (lstart) THEN
+      qsat_srf(:) = qsat_srf_old(:)
+    ELSE
+      qsat_srf(:) = qsat_srf_old(:) + dQdT(:) * (s_srf(:) - s_srf_old(:)) / t2s_conv(:)
+    END IF
 
-!!$    ! Time filter for surface temperature
-!!$    ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
-!!$    ! Also: this is not done in ICON at all (at the moment, at least), so it should be switched off.
-!!$    IF (.NOT. lstart) THEN
-!!$      t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
-!!$    ELSE
-!!$      t_srf(:) = t_srf_unfilt_old(:)
-!!$    END IF
+    ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
+    t_eff_srf(:) = (t_srf_old(:)**3 * (4._wp * s_srf(:)/t2s_conv(:) - 3._wp * t_srf_old(:))) ** 0.25_wp
 
   END SUBROUTINE update_surface_energy
 
-  SUBROUTINE update_t_srf( tile, iblk, ics, ice, nc)
+  ! Asselin time filter for surface temperature
+  SUBROUTINE update_t_srf_asselin( tile, iblk, ics, ice, nc)
 
-    USE mo_srf_constants,      ONLY: eps
+    USE mo_jsb_time, ONLY: get_asselin_coef
 
     TYPE(t_jsb_tile),  POINTER    :: tile
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
@@ -357,6 +365,7 @@ CONTAINS
     !
     TYPE(t_jsb_model), POINTER    :: model
     LOGICAL                       :: lstart
+    REAL(wp)                      :: eps
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
@@ -370,16 +379,14 @@ CONTAINS
     t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
     t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
 
-!!$    WHERE(t_srf_unfilt(:) < 200._wp) t_srf_unfilt(:) = 200._wp
+    eps = get_asselin_coef()
+    IF (eps > 0._wp) THEN
+      t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
+    ELSE
+      t_srf(:) = t_srf_unfilt(:)
+    END IF
 
-    ! Time filter for surface temperature
-    ! TBD: Is this correct? In ECHAM5, only the variable ptkem is filtered in this way (turbulent kinetic energy)?
-    ! Also: this is not done in ICON at all (at the moment, at least), therefore it is switched off for now.
-    !
-!!$    t_srf(:) = t_srf_unfilt_old(:) + eps * (t_srf_old(:) - 2._wp * t_srf_unfilt_old(:) + t_srf_unfilt(:))
-    t_srf(:) = t_srf_unfilt(:)
-
-  END SUBROUTINE update_t_srf
+  END SUBROUTINE update_t_srf_asselin
 
   SUBROUTINE update_surface_fluxes( tile, iblk, ics, ice, nc, steplen)
 
@@ -396,8 +403,6 @@ CONTAINS
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
-      & t_srf          (:),    &
-      & t_srf_old      (:),    &
       & qsat_srf       (:),    &
       & s_srf          (:),    &
       & t_acoef        (:),    &
@@ -432,8 +437,6 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    t_srf                => tile%mem%srf  %energy_state %t_srf            (ics:ice, iblk)
-    t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
     qsat_srf             => tile%mem%srf  %energy_state %qsat_srf         (ics:ice, iblk)
     s_srf                => tile%mem%srf  %energy_state %s_srf            (ics:ice, iblk)
     t_acoef              => tile%mem      %atm2land     %t_acoef          (ics:ice, iblk)
@@ -468,17 +471,11 @@ CONTAINS
     !
     evapotrans(:) = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:))        ! Evapotranspiratin
     evapopot  (:) = heat_tcoef(:) * (q_air    (:) - qsat_srf    (:))        ! Potential evaporation
-    trans     (:) = fact_qsat_trans_srf(:) * evapopot(:)
+    trans     (:) = fact_qsat_trans_srf(:) * evapopot(:)                    ! Transpiration
 
     ! Compute sensible heat flux
     !
-    ! TBD RS: I think it's wrong to use t_srf_old below, it also contradicts how it was done in echam5.
-    sensible_hflx(:) = heat_tcoef(:) &
-      & * ( (s_air(:) - s_srf(:))                                        & ! Flux of dry static energy
-      &   - ( surface_dry_static_energy(t_srf_old(:), q_air_eff(:))      & ! Subtract contribution from ...
-      &     - surface_dry_static_energy(t_srf_old(:), qsat_srf_eff(:))   & ! ... moisture (Cpd*T cancels out in difference)
-      &     ) &
-      &   )
+    sensible_hflx(:) = heat_tcoef(:) * (s_air(:) - s_srf(:))
 
     ! Compute latent heat flux
     !
@@ -514,7 +511,6 @@ CONTAINS
       fact_q_air    (:), &
       fact_qsat_srf (:), &
       fact_qsat_trans_srf (:), &
-      rel_hum_srf   (:), &
       qsat_srf      (:), &
       canopy_cond   (:), &
       pch           (:), &
@@ -555,7 +551,6 @@ CONTAINS
     fact_q_air       => tile%mem%srf  %energy_state %fact_q_air          (ics:ice,    iblk)
     fact_qsat_srf    => tile%mem%srf  %energy_state %fact_qsat_srf       (ics:ice,    iblk)
     fact_qsat_trans_srf  => tile%mem%srf  %energy_state %fact_qsat_trans_srf (ics:ice,    iblk)
-    rel_hum_srf      => tile%mem%srf  %water_state  %rel_hum_srf         (ics:ice,    iblk)
     pch              => tile%mem      %atm2land     %pch                 (ics:ice,    iblk)
     wind_air         => tile%mem      %atm2land     %wind_air            (ics:ice,    iblk)
     q_air            => tile%mem      %atm2land     %q_air               (ics:ice,    iblk)
@@ -591,12 +586,6 @@ CONTAINS
     fact_qsat_srf(:) = fract_fpc(:) * fact_qsat_veg(:) + (1._wp - fract_fpc(:)) * fact_qsat_soil(:)
     fact_q_air(:)    = fract_fpc(:) * fact_qair_veg(:) + (1._wp - fract_fpc(:)) * fact_qair_soil(:)
     fact_qsat_trans_srf(:) = fract_fpc(:) * fact_qsat_trans(:)
-
-    WHERE (q_air(:) < qsat_srf(:))
-      rel_hum_srf(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * (wfract_srf(:) + (1._wp - wfract_srf(:)) *  rel_hum(:))
-    ELSEWHERE
-      rel_hum_srf(:) = 1._wp
-    END WHERE
 
   END SUBROUTINE update_humidity_scaling
 

@@ -24,7 +24,7 @@ MODULE mo_jsb_config_class
   TYPE t_jsb_model_config
     CHARACTER(len=filename_max)  :: grid_filename
     CHARACTER(len=30)            :: grid_name
-    CHARACTER(len=20)            :: usecase
+    CHARACTER(len=30)            :: usecase
     TYPE(t_srf_config),  POINTER :: srf
     TYPE(t_soil_config), POINTER :: soil
     TYPE(t_veg_config),  POINTER :: veg
@@ -53,12 +53,12 @@ CONTAINS
       grid_filename,          &
       grid_name
 
-    CHARACTER(len=20)           :: usecase
+    CHARACTER(len=30)           :: usecase
 
     NAMELIST /jsb_model_nml/  &
       usecase
 
-    INTEGER :: nml_unit, istat
+    INTEGER :: nml_handler, nml_unit, istat
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_model_config'
 
@@ -72,26 +72,26 @@ CONTAINS
     usecase       = ''
 
     ! Read namelist
-    nml_unit = open_nml(TRIM(namelist_filename))
+    nml_handler = open_nml(TRIM(namelist_filename))
 
-    CALL position_nml('jsb_grid_nml', STATUS=istat)
+    nml_unit = position_nml('jsb_grid_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_grid_nml)
 
     new%grid_filename = grid_filename
     new%grid_name     = grid_name
 
-    CALL position_nml('jsb_model_nml', STATUS=istat)
+    nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
 
     new%usecase       = usecase
 
-    new%srf  => new_srf_config(nml_unit)
+    new%srf  => new_srf_config(nml_handler)
 
-    new%soil => new_soil_config(nml_unit)
+    new%soil => new_soil_config(nml_handler)
 
-    new%veg  => new_veg_config(nml_unit)
+    new%veg  => new_veg_config(nml_handler)
 
-    CALL close_nml(nml_unit)
+    CALL close_nml(nml_handler)
 
     config => new
 

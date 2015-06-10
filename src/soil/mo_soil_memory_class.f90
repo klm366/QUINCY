@@ -40,7 +40,8 @@ MODULE mo_soil_memory_class
       t_soil        (:,:,:), &
       t_soil_acoef  (:,:,:), &
       t_soil_bcoef  (:,:,:), &
-      hcap_grnd     (:,  :)     !< Heat capacity of the ground [J m-2 K-1]
+      hcap_grnd     (:,  :), &  !< Heat capacity of the ground [J m-2 K-1]
+      hcap_grnd_old (:,  :)     !< Heat capacity of the ground [J m-2 K-1] (old)
   END type t_soil_energy_state
 
   TYPE t_soil_water_state
@@ -49,6 +50,7 @@ MODULE mo_soil_memory_class
       wsr_soil      (:,  :),   & !< Water content in skin reservoir on soil [m]
       sfract_soil   (:,  :),   & !< Snow fraction of soil []
       wsn_soil      (:,  :),   & !< Water content of snow reservoir of soil [m water equivalent]
+      overflow      (:,  :),   & !< Water content of reservoir for overflown soil water (terraplanet) [m] 
       ws_l          (:,:,:),   & !< Water content in soil layers [m]
       ws_sat_l      (:,:,:),   & !< Water content of soil layers at saturation (derived from soil porosity) [m]
       ws_fc_l       (:,:,:),   & !< Water content of soil layers at field capacity (derived from volumetric field capacity)[m]
@@ -58,7 +60,8 @@ MODULE mo_soil_memory_class
 
   TYPE t_soil_energy_flux
     REAL(wp), POINTER :: &
-      grnd_hflx        (:,:)      !< ground heat flux
+      grnd_hflx        (:,:),  &  !< ground heat flux
+      grnd_hflx_old    (:,:)      !< ground heat flux (old)
   END type t_soil_energy_flux
 
   TYPE t_soil_water_flux

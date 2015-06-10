@@ -25,8 +25,10 @@ MODULE mo_atmland_memory_class
       snow             (:,:), &
       wind_air         (:,:), &
       wind_10m         (:,:), &
-      lwrad_srf_down   (:,:), &
-      swrad_srf_net    (:,:), &
+      lw_srf_down      (:,:), &
+      swvis_srf_down   (:,:), &
+      swnir_srf_down   (:,:), &
+      swpar_srf_down   (:,:), &
       press_srf        (:,:), &
       drag_srf         (:,:), &
       t_acoef          (:,:), &
@@ -40,7 +42,7 @@ MODULE mo_atmland_memory_class
   TYPE t_land2atm_memory
     REAL(wp), POINTER ::   &
       t_srf       (:,:),   &
-      t_rad_srf   (:,:),   &
+      t_eff_srf   (:,:),   &
       qsat_srf    (:,:),   &
       fact_q_air  (:,:),   &
       fact_qsat_srf (:,:), &

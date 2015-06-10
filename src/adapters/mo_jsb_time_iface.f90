@@ -10,31 +10,41 @@
 MODULE mo_jsb_time_iface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish, message, message_text
+  USE mo_kind,            ONLY: wp
+  USE mo_exception,       ONLY: finish, message, message_text
 
 #ifdef __ICON__
-  USE mo_datetime,    ONLY: t_datetime, date_to_time, print_datetime, add_time, check_newday, rdaylen, idaylen
-  USE mo_time_config, ONLY: time_config !configure_time
-  USE mo_time_nml,    ONLY: read_time_namelist
+  USE mo_datetime,        ONLY: t_datetime, print_datetime, add_time, rdaylen
+  USE mo_time_config,     ONLY: time_config !configure_time
+  USE mo_time_nml,        ONLY: read_time_namelist
+  USE mo_time_interpolation_weights, ONLY: wi_limm
+  USE mo_dynamics_config, ONLY: iequations
+  USE mo_impl_constants,  ONLY: ihs_atm_temp, ihs_atm_theta, ishallow_water, leapfrog_expl, leapfrog_si
+  USE mo_ha_dyn_config,   ONLY: ha_dyn_config
 #else
-  USE mo_time_conversion, ONLY: t_datetime => time_days
-  USE mo_time_control,    ONLY: start_date, stop_date, current_date, previous_date, &
+  USE mo_time_conversion, ONLY: t_datetime => time_days, &
+                                get_day_length => day_len
+  USE mo_time_control,    ONLY: get_year_length => get_year_len, get_month_length => get_month_len, get_year_day, &
                                 get_date_components
+  USE mo_time_control,    ONLY: start_date, stop_date, current_date, previous_date
+  USE mo_interpo,         ONLY: wgt1, wgt2, nmw1, nmw2
+  USE mo_semi_impl,       ONLY: eps
 #endif
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_datetime, date_to_time
-  PUBLIC :: rdaylen, idaylen
+  PUBLIC :: t_datetime
+  PUBLIC :: get_year_length, get_month_length, get_day_length, get_year_day
   PUBLIC :: get_time_dt, get_time_nsteps, &
             get_time_start, get_time_stop, &
             get_time_current, get_time_previous
-  PUBLIC :: read_time_namelist, check_newday !, configure_time
+  PUBLIC :: read_time_namelist !, configure_time
   PUBLIC :: start_timestep, finish_timestep
   PUBLIC :: configure_time_and_events
   PUBLIC :: get_date_components
+  PUBLIC :: get_time_interpolation_weights
+  PUBLIC :: get_asselin_coef
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_time_iface'
 
@@ -56,17 +66,22 @@ CONTAINS
 
   SUBROUTINE configure_time_and_events
 
-    USE mo_time_control, ONLY: lfirst_cycle, get_dates, ec_manager_init, &
-                               init_manager, init_times, init_events
+!!$    USE mo_time_control, ONLY: lfirst_cycle, ec_manager_init, &
+!!$                               init_manager, init_times, init_events, time_set
+    USE mo_time_control, ONLY: time_weights
 
     INTEGER :: IO_timestep, istep
 
-    CALL get_dates(IO_timestep, istep)           ! get timestep
-    CALL ec_manager_init(IO_timestep, istep)     ! time manager initialization
-    IF (lfirst_cycle) CALL init_manager
-    CALL init_times                              ! initialize all dates
+    ! Only called for standalone jsbach ... commented out for the time being ! TBD
+!!$    CALL get_dates(IO_timestep, istep)           ! get timestep
+!!$    CALL ec_manager_init(IO_timestep, istep)     ! time manager initialization
+!!$    IF (lfirst_cycle) CALL init_manager
+!!$    CALL init_times                              ! initialize all dates
+!!$
+!!$    CALL init_events
+!!$    CALL time_set
 
-    CALL init_events
+    CALL time_weights(l_compute_rad=.FALSE.) ! radiation_time is not initialized yet at the time of JSBACH initialization
 
   END SUBROUTINE configure_time_and_events
 #endif
@@ -253,6 +268,141 @@ CONTAINS
 
   END SUBROUTINE get_date_components
 #endif
+
+  !>
+  !! Get length of year
+  !!
+  !! Function returns the length of a year in days
+  !!
+#ifdef __ICON__
+  INTEGER FUNCTION get_year_length(yr)
+
+    USE mo_datetime, ONLY: date_to_time
+
+    INTEGER, INTENT(in) :: yr
+
+    TYPE(t_datetime) :: date, inidate
+
+    inidate = get_time_start()
+
+    date%calendar = inidate%calendar
+    date%year     = yr
+    date%month    = 1
+    date%day      = 1
+    date%hour     = 0
+    date%minute   = 0
+    date%second   = 0._wp
+
+    CALL date_to_time(date)
+
+    get_year_length = date%yealen
+
+  END FUNCTION get_year_length
+#endif
+
+  !>
+  !! Get length of month
+  !!
+  !! Function returns the length of a month in days
+  !!
+#ifdef __ICON__
+  INTEGER FUNCTION get_month_length(yr, mo)
+
+    USE mo_datetime, ONLY: date_to_time
+
+    INTEGER, INTENT(in) :: yr, mo
+
+    TYPE(t_datetime) :: date, inidate
+
+    inidate = get_time_start()
+
+    date%calendar = inidate%calendar
+    date%year     = yr
+    date%month    = mo
+    date%day      = 1
+    date%hour     = 0
+    date%minute   = 0
+    date%second   = 0
+
+    CALL date_to_time(date)
+
+    get_month_length = date%monlen
+
+  END FUNCTION get_month_length
+#endif
+
+  !>
+  !! Get length of day
+  !!
+  !! Function returns the length of a day in seconds
+  !!
+#ifdef __ICON__
+  REAL(wp) FUNCTION get_day_length()
+
+    get_day_length = rdaylen
+
+  END FUNCTION get_day_length
+#endif
+
+  !>
+  !! Get day in year
+  !!
+  !! Function returns the day of the year for a given date.
+  !! The seconds in the day are given as fraction of the day. 
+  !!
+#ifdef __ICON__
+  REAL(wp) FUNCTION get_year_day(date)
+
+    USE mo_datetime, ONLY: aux_datetime
+
+    TYPE(t_datetime),  INTENT(in)  :: date
+
+    TYPE(t_datetime) :: datetime_tmp
+
+    datetime_tmp = date
+
+    CALL aux_datetime(datetime_tmp)
+
+    get_year_day = REAL(datetime_tmp%yeaday, wp) + datetime_tmp%daytim
+
+  END FUNCTION get_year_day
+#endif
+
+  SUBROUTINE  get_time_interpolation_weights(w1, w2, n1, n2)
+
+    REAL(wp), INTENT(out) :: w1, w2
+    INTEGER, INTENT(out)  :: n1, n2
+
+#ifdef __ICON__
+    w1 = wi_limm%wgt1
+    w2 = wi_limm%wgt2
+    n1 = wi_limm%inm1
+    n2 = wi_limm%inm2
+#else
+    w1 = wgt1
+    w2 = wgt2
+    n1 = nmw1
+    n2 = nmw2
+#endif
+
+  END SUBROUTINE get_time_interpolation_weights
+
+  REAL(wp) FUNCTION get_asselin_coef()
+
+#ifdef __ICON__
+    SELECT CASE(iequations)
+    CASE(ishallow_water,ihs_atm_temp,ihs_atm_theta)
+      IF (ha_dyn_config%itime_scheme == leapfrog_expl .OR. ha_dyn_config%itime_scheme == leapfrog_si) THEN
+        get_asselin_coef = ha_dyn_config%asselin_coeff
+      END IF
+    CASE DEFAULT
+      get_asselin_coef = 0._wp
+    END SELECT
+#else
+    get_asselin_coef = eps
+#endif
+
+  END FUNCTION get_asselin_coef
 
 #endif
 END MODULE mo_jsb_time_iface

@@ -10,10 +10,11 @@
 MODULE mo_jsb_time
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message, finish, print_value
-  USE mo_jsb_time_iface, ONLY: t_datetime, &
-                               get_time_current
+  USE mo_kind,           ONLY: wp
+  USE mo_exception,      ONLY: message, message_text, finish
+  USE mo_jsb_time_iface, ONLY: t_datetime, get_date_components, get_time_current, get_time_start, &
+                               get_year_length, get_month_length, get_day_length, get_year_day,   &
+                               get_time_interpolation_weights, get_asselin_coef
 
   IMPLICIT NONE
   PRIVATE
@@ -21,15 +22,20 @@ MODULE mo_jsb_time
 !!$  PUBLIC :: init_jsb_time
   PUBLIC :: init_time
   PUBLIC :: update_time_at_beginloop, update_time_at_endloop
+  PUBLIC :: t_datetime
+  PUBLIC :: get_date_components, get_time_current, get_time_start, &
+            get_year_length, get_month_length, get_day_length, get_year_day
   PUBLIC :: is_newday, get_year_at_model_start, &
-            get_year_at_current_timestep, get_month_at_current_timestep, &
-            get_day_at_current_timestep, get_secs_of_day_at_current_timestep
+            get_year, get_month, &
+            get_day, get_secs_of_day
+  PUBLIC :: get_time_interpolation_weights
+  PUBLIC :: get_asselin_coef
 
-  INTEGER          :: number_timesteps
-  REAL(wp)         :: timestep_length
-  TYPE(t_datetime) :: start_date
-  TYPE(t_datetime) :: current_date
-  TYPE(t_datetime) :: final_date
+  INTEGER                :: number_timesteps
+  REAL(wp)               :: timestep_length
+  TYPE(t_datetime), SAVE :: start_date
+  TYPE(t_datetime), SAVE :: current_date
+  TYPE(t_datetime), SAVE :: final_date
 
 !!$  !>
 !!$  !! Initialize JSBACH time control
@@ -38,6 +44,8 @@ MODULE mo_jsb_time
 !!$    MODULE PROCEDURE init_time_standalone
 !!$    MODULE PROCEDURE init_time
 !!$  END INTERFACE init_jsb_time
+
+  LOGICAL, SAVE :: time_initialized = .FALSE.
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_time'
 
@@ -56,7 +64,9 @@ CONTAINS
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_time_standalone'
+    REAL(wp) :: eps
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_time'
 
     CALL message(TRIM(routine), 'Initializing JSBACH time')
 
@@ -71,7 +81,19 @@ CONTAINS
 
     current_date     = start_date
 
+    ! Check if Asselin time filter is used and print message
+    eps = get_asselin_coef()
+    IF (eps > 0._wp) THEN
+      WRITE(message_text,*) 'Using Asselin time filter for surface temperature: eps =', eps
+    ELSE
+      WRITE(message_text,*) 'Not using Asselin time filter for surface temperature'
+    END IF
+    CALL message(TRIM(routine), TRIM(message_text))
+
+    time_initialized = .TRUE.
+
   END SUBROUTINE init_time
+
 !!$  END SUBROUTINE init_time_standalone
 
 !!$  !>
@@ -119,8 +141,7 @@ CONTAINS
 
   LOGICAL FUNCTION is_newday()
 
-    USE mo_jsb_time_iface, ONLY: get_time_current, get_time_previous, &
-                                 get_date_components
+    USE mo_jsb_time_iface, ONLY: get_time_previous
 
     TYPE(t_datetime) :: current, previous
 
@@ -136,69 +157,91 @@ CONTAINS
 
   END FUNCTION is_newday
 
-  INTEGER FUNCTION get_year_at_model_start()
+  INTEGER FUNCTION get_year(datetime)
 
-    USE mo_jsb_time_iface, ONLY: get_date_components
+    TYPE(t_datetime), OPTIONAL, INTENT(in) :: datetime
 
+    TYPE(t_datetime) :: datetime_tmp
     INTEGER :: year
 
-    CALL get_date_components(start_date, year=year)
+    IF (PRESENT(datetime)) THEN
+      datetime_tmp = datetime
+    ELSE
+      datetime_tmp  = get_time_current()
+    END IF
+    CALL get_date_components(datetime_tmp, year=year)
 
-    get_year_at_model_start = year
+    get_year = year
 
-  END FUNCTION get_year_at_model_start
+  END FUNCTION get_year
 
-  INTEGER FUNCTION get_year_at_current_timestep()
+  INTEGER FUNCTION get_month(datetime)
 
-    USE mo_jsb_time_iface, ONLY: get_date_components
+    TYPE(t_datetime), OPTIONAL, INTENT(in) :: datetime
 
-    TYPE(t_datetime) :: current
-    INTEGER :: year
-
-    CALL get_date_components(current, year=year)
-
-    get_year_at_current_timestep = year
-
-  END FUNCTION get_year_at_current_timestep
-
-  INTEGER FUNCTION get_month_at_current_timestep()
-
-    USE mo_jsb_time_iface, ONLY: get_date_components
-
-    TYPE(t_datetime) :: current
+    TYPE(t_datetime) :: datetime_tmp
     INTEGER :: month
 
-    CALL get_date_components(current, month=month)
+    IF (PRESENT(datetime)) THEN
+      datetime_tmp = datetime
+    ELSE
+      datetime_tmp  = get_time_current()
+    END IF
 
-    get_month_at_current_timestep = month
+    CALL get_date_components(datetime_tmp, month=month)
 
-  END FUNCTION get_month_at_current_timestep
+    get_month = month
 
-  INTEGER FUNCTION get_day_at_current_timestep()
+  END FUNCTION get_month
 
-    USE mo_jsb_time_iface, ONLY: get_date_components
+  INTEGER FUNCTION get_day(datetime)
 
-    TYPE(t_datetime) :: current
+    TYPE(t_datetime), OPTIONAL, INTENT(in) :: datetime
+
+    TYPE(t_datetime) :: datetime_tmp
     INTEGER :: day
 
-    CALL get_date_components(current, day=day)
+    IF (PRESENT(datetime)) THEN
+      datetime_tmp = datetime
+    ELSE
+      datetime_tmp  = get_time_current()
+    END IF
 
-    get_day_at_current_timestep = day
+    CALL get_date_components(datetime_tmp, day=day)
 
-  END FUNCTION get_day_at_current_timestep
+    get_day = day
 
-  INTEGER FUNCTION get_secs_of_day_at_current_timestep()
+  END FUNCTION get_day
 
-    USE mo_jsb_time_iface, ONLY: get_date_components
+  INTEGER FUNCTION get_secs_of_day(datetime)
 
-    TYPE(t_datetime) :: current
+    TYPE(t_datetime), OPTIONAL, INTENT(in) :: datetime
+
+    TYPE(t_datetime) :: datetime_tmp
     INTEGER :: hour, minute, second
 
-    CALL get_date_components(current, hour=hour, minute=minute, second=second)
+    IF (PRESENT(datetime)) THEN
+      datetime_tmp = datetime
+    ELSE
+      datetime_tmp  = get_time_current()
+    END IF
 
-    get_secs_of_day_at_current_timestep = NINT(3600._wp * REAL(hour,wp) + 60._wp * REAL(minute,wp) + REAL(second,wp))
+    CALL get_date_components(datetime_tmp, hour=hour, minute=minute, second=second)
 
-  END FUNCTION get_secs_of_day_at_current_timestep
+    get_secs_of_day = NINT(3600._wp * REAL(hour,wp) + 60._wp * REAL(minute,wp) + REAL(second,wp))
+
+  END FUNCTION get_secs_of_day
+
+  INTEGER FUNCTION get_year_at_model_start()
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_year_at_model_start'
+
+    IF (.NOT. time_initialized) &
+      CALL finish(TRIM(routine), 'Time not initialized yet.')
+
+    get_year_at_model_start = get_year(start_date)
+
+  END FUNCTION get_year_at_model_start
 
 #endif
 END MODULE mo_jsb_time

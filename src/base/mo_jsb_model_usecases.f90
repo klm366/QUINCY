@@ -40,6 +40,12 @@ CONTAINS
     CASE ('jsbach_lite')
       CALL init_usecase_lite(model)
 
+    CASE ('jsbach_lite_tpe_open')
+      CALL init_usecase_lite_tpe_open(model)
+
+    CASE ('jsbach_lite_tpe_closed')
+      CALL init_usecase_lite_tpe_closed(model)
+
     CASE DEFAULT
       CALL finish(TRIM(routine), 'JSBACH usecase not defined.')
 
@@ -101,6 +107,34 @@ CONTAINS
 !!$    tile%mem%fract_max = 1._wp  ! Temporary (must later be initialized from input file)
 
   END SUBROUTINE init_usecase_lite
+
+  SUBROUTINE init_usecase_lite_tpe_open(model)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_tpe_open'
+
+#ifdef HAVE_F2003
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+#else
+    TYPE(t_jsb_model), POINTER                :: model
+#endif
+
+    CALL init_usecase_lite(model)
+
+  END SUBROUTINE init_usecase_lite_tpe_open
+
+  SUBROUTINE init_usecase_lite_tpe_closed(model)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_tpe_closed'
+
+#ifdef HAVE_F2003
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+#else
+    TYPE(t_jsb_model), POINTER                :: model
+#endif
+
+    CALL init_usecase_lite(model)
+
+  END SUBROUTINE init_usecase_lite_tpe_closed
 
 #endif
 END MODULE mo_jsb_model_usecases

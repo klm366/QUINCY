@@ -15,7 +15,8 @@ MODULE mo_phy_schemes
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: qsat, q_effective, surface_dry_static_energy, thermal_radiation, heat_transfer_coef
+  PUBLIC :: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, &
+    thermal_radiation, lwnet_from_lwdown
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_phy_schemes'
 
@@ -86,6 +87,19 @@ CONTAINS
     thermal_radiation = stbo * zemiss_def * t_srf**4
 
   END FUNCTION thermal_radiation
+
+  REAL(wp) ELEMENTAL FUNCTION lwnet_from_lwdown(lwdown, t_srf)
+
+    USE mo_physical_constants, ONLY: &
+      stbo,       &  !< Stefan-Boltzmann constant
+      zemiss_def     !< Surface emissivity
+
+    REAL(wp), INTENT(in) :: lwdown   ! downward longwave radiation
+    REAL(wp), INTENT(in) :: t_srf    ! surface temperature
+
+    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4)
+
+  END FUNCTION lwnet_from_lwdown
 
   REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
 

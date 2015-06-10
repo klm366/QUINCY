@@ -16,21 +16,21 @@ MODULE mo_srf_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: surface_temp_and_qsat_implicit
+  PUBLIC :: surface_temp_implicit
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_process'
 
 CONTAINS
 
-  SUBROUTINE surface_temp_and_qsat_implicit(klon, steplen,              &
+  SUBROUTINE surface_temp_implicit(klon, steplen,             &
     &            pcp,                                         &
-    &            pescoe, pfscoe, peqcoe, pfqcoe,                       &
-    &            psold, pqsold, pdqsold,                               &
-    &            pnetrad, pgrdfl,                                      &
-    &            pcfh, pcair, pcsat, pfracsu, pgrdcap,                 &
-    &            psnew, pqsnew)
+    &            pescoe, pfscoe, peqcoe, pfqcoe,              &
+    &            psold, pqsold, pdqsold,                      &
+    &            pnetrad, pgrdfl,                             &
+    &            pcfh, pcair, pcsat, pfracsu, pgrdcap,        &
+    &            psnew)
 
-    USE mo_echam_vdiff_params, ONLY: cvdifts  ! TBD: change to 1. for standalone JSBACH
+    USE mo_echam_vdiff_params, ONLY: cvdifts   ! TBD: change to 1. for standalone JSBACH
     USE mo_physical_constants, ONLY: &
       & cpd, &
       & vtmpc2, &
@@ -47,7 +47,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: pnetrad(klon), pgrdfl(klon)
     REAL(wp), INTENT(in)    :: pcfh(klon), pcair(klon), pcsat(klon), pfracsu(klon)
     REAL(wp), INTENT(in)    :: pgrdcap(klon)
-    REAL(wp), INTENT(out)   :: psnew(klon), pqsnew(klon)
+    REAL(wp), INTENT(out)   :: psnew(klon)
     !
     REAL(wp) :: zcolin(klon), zcohfl(klon), zcoind(klon), zicp(klon), zca(klon), zcs(klon)
     REAL(wp) :: pdt
@@ -62,25 +62,19 @@ CONTAINS
     zca(:)    = als * pfracsu(:) +  alv * (pcair(:) - pfracsu(:))
     zcs(:)    = als * pfracsu(:) +  alv * (pcsat(:) - pfracsu(:))
     !
-    zcolin(:) = pgrdcap(:)*zicp(:) +                                                           &
-              &      pdt * (zicp(:) * 4._wp * zemiss_def * stbo * ((zicp(:) * psold(:))**3)  - &
-              &      pcfh(:) * (zca(:) * peqcoe(:) - zcs(:) -                                  &
-              &      zicp(:) * pc16 * psold(:) *                                               &
-              &      (pcair(:) * peqcoe(:) - pcsat(:)))*                                       &
+    zcolin(:) = pgrdcap(:)*zicp(:) +                                                              &
+              &      pdt * (zicp(:) * 4._wp * zemiss_def * stbo * ((zicp(:) * psold(:))**3)  -    &
+              &      pcfh(:) * (zca(:) * peqcoe(:) - zcs(:)) *                                    &
               &      zicp(:) * pdqsold(:))
     !
     zcohfl(:) = -pdt * pcfh(:) * (pescoe(:) - 1._wp)
     !
-    zcoind(:) = pdt * (pnetrad(:) + pcfh(:) * pfscoe(:) +  pcfh(:)*                            &
-              &      ((zca(:) * peqcoe(:) - zcs(:)) * pqsold(:) + zca(:) * pfqcoe(:)  -        &
-              &      zicp(:) * pc16 * psold(:) *                                               &
-              &      ((pcair(:) * peqcoe(:) - pcsat(:)) * pqsold(:) +                          &
-              &      pcair(:) * pfqcoe(:))) + pgrdfl(:))
+    zcoind(:) = pdt * (pnetrad(:) + pcfh(:) * pfscoe(:) +  pcfh(:) *                              &
+              &      ((zca(:) * peqcoe(:) - zcs(:)) * pqsold(:) + zca(:) * pfqcoe(:)) + pgrdfl(:))
     !
     psnew(:)  = (zcolin(:) * psold(:) + zcoind(:)) / (zcolin(:) + zcohfl(:))
-    pqsnew(:) = pqsold(:) + zicp(:) * pdqsold(:) * (psnew(:) - psold(:))
 
-  END SUBROUTINE surface_temp_and_qsat_implicit
+  END SUBROUTINE surface_temp_implicit
 
 #endif
 END MODULE mo_srf_process

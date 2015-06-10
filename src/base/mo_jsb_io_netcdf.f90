@@ -1,30 +1,105 @@
 MODULE mo_jsb_io_netcdf
 #ifndef __NO_JSBACH__
 
-  USE mo_exception, ONLY: finish, message, em_warn
-  USE mo_io_units,         ONLY: filename_max
+  USE mo_kind,      ONLY: wp
+  USE mo_exception, ONLY: finish, message
 
-#if !defined(NOMPI) && defined(__ICON__)
-  USE mo_read_netcdf_parallel, ONLY:               &
-    nf_nowrite, nf_global, nf_noerr, nf_strerror,  &
-    nf_open            => p_nf_open,               &
-    nf_close           => p_nf_close,              &
-    nf_inq_dimid       => p_nf_inq_dimid,          &
-    nf_get_att_int     => p_nf_get_att_int ,       &
-    nf_get_att_double  => p_nf_get_att_double
-#endif
+  USE mo_jsb_io_netcdf_iface, ONLY: nf_open, nf_inq_dimid, nf_close, &
+    NF_NOWRITE, NF_NOERR, nf, t_input_file, netcdf_open_input, netcdf_close_file, &
+    netcdf_read_2d, netcdf_read_2d_time, netcdf_read_2d_extdim
+  USE mo_jsb_model_class,   ONLY: t_jsb_model
+  USE mo_jsb_base,          ONLY: get_model
 
   IMPLICIT NONE
 
-  PUBLIC
+  PRIVATE
+
+  PUBLIC :: t_input_file, jsb_netcdf_open_input, jsb_netcdf_close_file, &
+            jsb_netcdf_read_2d_time, jsb_netcdf_read_2d, jsb_netcdf_read_2d_extdim, &
+            ncfile_has_dim
+
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_netcdf'
 
-#if defined(NOMPI) || !defined(__ICON__)
-  INCLUDE 'netcdf.inc'
-#endif
-
 CONTAINS
+
+  TYPE(t_input_file) FUNCTION jsb_netcdf_open_input(filename, model_id)
+
+    CHARACTER(LEN=*), INTENT(in) :: filename
+    INTEGER,          INTENT(in) :: model_id
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_netcdf_open_input'
+
+    model => get_model(model_id)
+
+    jsb_netcdf_open_input = netcdf_open_input(filename, patch=model%grid%patch, decomp=model%grid%decomposition)
+
+  END FUNCTION jsb_netcdf_open_input
+
+  SUBROUTINE jsb_netcdf_close_file(input_file)
+
+    TYPE(t_input_file), INTENT(inout) :: input_file
+
+    CALL netcdf_close_file(input_file)
+
+  END SUBROUTINE jsb_netcdf_close_file
+
+  FUNCTION jsb_netcdf_read_2d(input_file, variable_name, fill_array)
+
+    TYPE(t_input_file), INTENT(inout) :: input_file
+    CHARACTER(LEN=*),   INTENT(in) :: variable_name
+    REAL(wp), TARGET, OPTIONAL     :: fill_array(:,:)
+    REAL(wp), POINTER              :: jsb_netcdf_read_2d(:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_netcdf_read_2d'
+
+    jsb_netcdf_read_2d => netcdf_read_2d( &
+      input_file, variable_name,          &
+      fill_array=fill_array)
+
+  END FUNCTION jsb_netcdf_read_2d
+
+  FUNCTION jsb_netcdf_read_2d_time(input_file, variable_name, fill_array, &
+    start_time_step, end_time_step)
+
+    TYPE(t_input_file), INTENT(inout) :: input_file
+    CHARACTER(LEN=*),   INTENT(in) :: variable_name
+    REAL(wp), TARGET, OPTIONAL     :: fill_array(:,:,:)
+    INTEGER, OPTIONAL,  INTENT(in) :: start_time_step, end_time_step
+    REAL(wp), POINTER              :: jsb_netcdf_read_2d_time(:,:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_netcdf_read_2d_time'
+
+    jsb_netcdf_read_2d_time => netcdf_read_2d_time( &
+      input_file, variable_name,                    &
+      fill_array=fill_array,                        &
+      start_time_step=start_time_step,              &
+      end_time_step=end_time_step)
+
+  END FUNCTION jsb_netcdf_read_2d_time
+
+  FUNCTION jsb_netcdf_read_2d_extdim(input_file, variable_name, fill_array, &
+    start_extdim, end_extdim, extdim_name)
+
+    TYPE(t_input_file),         INTENT(inout) :: input_file
+    CHARACTER(LEN=*),           INTENT(in) :: variable_name
+    REAL(wp), TARGET, OPTIONAL             :: fill_array(:,:,:)
+    INTEGER, OPTIONAL,          INTENT(in) :: start_extdim, end_extdim
+    CHARACTER(LEN=*), OPTIONAL, INTENT(in) :: extdim_name
+    REAL(wp), POINTER                      :: jsb_netcdf_read_2d_extdim(:,:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_netcdf_read_2d_extdim'
+
+    jsb_netcdf_read_2d_extdim => netcdf_read_2d_extdim( &
+      input_file, variable_name,                        &
+      fill_array=fill_array,                            &
+      start_extdim=start_extdim,                        &
+      end_extdim=end_extdim,                            &
+      extdim_name=extdim_name)
+
+  END FUNCTION jsb_netcdf_read_2d_extdim
 
   LOGICAL FUNCTION ncfile_has_dim(filename, dimname)
 
@@ -38,38 +113,11 @@ CONTAINS
     CALL nf(nf_open(TRIM(filename), NF_NOWRITE, ncid), routine)
 
     status = nf_inq_dimid(ncid, TRIM(dimname), dimid)
-    ncfile_has_dim = (status == nf_noerr)
+    ncfile_has_dim = (status == NF_NOERR)
 
     CALL nf(nf_close(ncid), routine)
 
   END FUNCTION ncfile_has_dim
-
-  SUBROUTINE nf(status, routine, warnonly, silent)
-    
-    INTEGER, INTENT(in)           :: status
-    CHARACTER(len=*), INTENT(in)  :: routine
-    LOGICAL, INTENT(in), OPTIONAL :: warnonly
-    LOGICAL, INTENT(in), OPTIONAL :: silent
-    
-    LOGICAL :: lwarnonly, lsilent
-    
-    lwarnonly = .FALSE.
-    lsilent   = .FALSE.
-    IF(PRESENT(warnonly)) lwarnonly = .TRUE.
-    IF(PRESENT(silent))   lsilent   = silent
-    
-    IF (lsilent) RETURN
-
-    IF (status /= nf_noerr) THEN
-      IF (lwarnonly) THEN
-        CALL message( TRIM(routine)//' netCDF error', nf_strerror(status), &
-          & level=em_warn)
-      ELSE
-        CALL finish( TRIM(routine)//' netCDF error', nf_strerror(status))
-      ENDIF
-    ENDIF
-    
-  END SUBROUTINE nf
 
 #endif
 END MODULE mo_jsb_io_netcdf
