@@ -12,8 +12,8 @@ MODULE mo_jsb_base
 
 !!$  USE mo_jsb_model_class, ONLY: t_jsb_model_m
 !!$  USE mo_jsb_class, ONLY: t_jsb, jsbach
-  USE mo_jsb_class, ONLY: jsbach
-  USE mo_exception,        ONLY: message_text, message, finish
+  USE mo_jsb_class,   ONLY: jsbach
+  USE mo_exception,   ONLY: message_text, message, finish
 
   IMPLICIT NONE
   PRIVATE
