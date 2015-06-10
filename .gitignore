@@ -16,3 +16,17 @@ config/set-up.info
 .status.file
 experiments
 grids
+!externals/*#
+!externals/*~
+!externals/.history
+!externals/build
+!externals/Makefile
+!externals/autom4te.cache
+!externals/build_command
+!externals/config.log
+!externals/config.status
+!externals/*tmp
+!externals/*status
+!externals/.status.file
+!externals/experiments
+!externals/grids
