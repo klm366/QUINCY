@@ -16,7 +16,7 @@ MODULE mo_soil_interface
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
-  USE mo_util_string,     ONLY: one_of
+  USE mo_util,            ONLY: one_of
 
   IMPLICIT NONE
   PRIVATE
@@ -61,6 +61,7 @@ CONTAINS
       & lai            (:),    &
       & fract_fpc_max  (:),    &
       & hcap_grnd      (:),    &
+      & hcap_grnd_old  (:),    &
       & evapotrans     (:),    &
       & trans          (:),    &
       & evapopot       (:),    &
@@ -70,6 +71,7 @@ CONTAINS
       & t_soil_bcoef   (:,:),  &
       & t_soil         (:,:),  &
       & grnd_hflx      (:),    &
+      & grnd_hflx_old  (:),    &
       & oro_stddev     (:),    &
       & runoff_acc     (:),    &
       & drainage_acc   (:),    &
@@ -86,6 +88,7 @@ CONTAINS
       & bclapp         (:),    &
       & vpor           (:),    &
       & psdi           (:),    &
+      & overflow       (:),    &
       & glacier        (:),    &
       & wsn_glacier    (:)
 
@@ -113,6 +116,8 @@ CONTAINS
     INTEGER :: jllog
 
     LOGICAL :: lstart
+    LOGICAL :: l_tpe_open = .FALSE.
+    LOGICAL :: l_tpe_closed = .FALSE.
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_1'
 
@@ -121,6 +126,9 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
     model => get_model(tile%owner_model_id)
+
+    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
+    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
 
     ! Get reference to variables for current block
     !
@@ -144,6 +152,7 @@ CONTAINS
     lai            => tile%mem%veg  %phys_state     %lai                 (ics:ice,    iblk)
     fract_fpc_max  => tile%mem%veg  %phys_state     %fract_fpc_max       (ics:ice,    iblk)
     hcap_grnd      => tile%mem%soil %energy_state   %hcap_grnd           (ics:ice,    iblk)
+    hcap_grnd_old  => tile%mem%soil %energy_state   %hcap_grnd_old       (ics:ice,    iblk)
     evapotrans     => tile%mem%srf  %water_flux     %evapotrans          (ics:ice,    iblk)
     trans          => tile%mem%srf  %water_flux     %trans               (ics:ice,    iblk)
     evapopot       => tile%mem%srf  %water_flux     %evapopot            (ics:ice,    iblk)
@@ -153,6 +162,7 @@ CONTAINS
     t_soil_bcoef   => tile%mem%soil %energy_state   %t_soil_bcoef        (ics:ice, :, iblk)
     t_soil         => tile%mem%soil %energy_state   %t_soil              (ics:ice, :, iblk)
     grnd_hflx      => tile%mem%soil %energy_flux    %grnd_hflx           (ics:ice,    iblk)
+    grnd_hflx_old  => tile%mem%soil %energy_flux    %grnd_hflx_old       (ics:ice,    iblk)
     oro_stddev     => tile%mem%srf  %phys_state     %oro_stddev          (ics:ice,    iblk)
     runoff_acc     => tile%mem%soil %water_flux     %runoff              (ics:ice,    iblk)
     drainage_acc   => tile%mem%soil %water_flux     %drainage            (ics:ice,    iblk)
@@ -169,6 +179,7 @@ CONTAINS
     bclapp         => tile%mem%soil %phys_state     %bclapp              (ics:ice,    iblk)
     vpor           => tile%mem%soil %phys_state     %vpor                (ics:ice,    iblk)
     psdi           => tile%mem%soil %phys_state     %psdi                (ics:ice,    iblk)
+    overflow       => tile%mem%soil %water_state    %overflow            (ics:ice,    iblk)
     glacier        => tile%mem%srf  %phys_state     %glacier             (ics:ice, iblk)
     wsn_glacier    => tile%mem%srf  %water_state    %wsn_glacier         (ics:ice, iblk)
 
@@ -206,6 +217,12 @@ CONTAINS
       & tte_corr(:), snow_melt(:) &
       & )
 
+    ! Save old ground heat flux and heat capacity before updating
+    ! The old flux and capacity (which have been used in the implicit calculation of the new surface temperature) are
+    ! given back to the atmosphere so that the surface energy balance can be computed there
+    grnd_hflx_old(:) = grnd_hflx(:)
+    hcap_grnd_old(:) = hcap_grnd(:)
+
     CALL update_soiltemp(nc, model%config%soil%nsoil_water, dtime, lstart, &
       & t_srf_unfilt(:), wsn_soil(:), hdiff(:), vhcap(:), &
       & t_soil_acoef(:,:), t_soil_bcoef(:,:), t_soil(:,:), &
@@ -227,7 +244,10 @@ CONTAINS
 !!$      & SPREAD(0.318517_wp, NCOPIES=nc, DIM=1), & !Temporary
 !!$      & SPREAD(0.185245_wp, NCOPIES=nc, DIM=1), & !Temporary
       & psdi(:), &
-      & jllog &
+      & overflow(:), &
+      & jllog, &
+      & l_tpe_open, &
+      & l_tpe_closed &
       & )
 
     ws(:) = SUM(ws_l(:,:), DIM=2)

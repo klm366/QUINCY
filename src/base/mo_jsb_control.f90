@@ -47,7 +47,8 @@ CONTAINS
 
   SUBROUTINE init_jsb_master_control(namelist_filename)
 
-    USE mo_jsb_time, ONLY: init_time
+    USE mo_jsb_time,    ONLY: init_time
+    USE mo_jsb_version, ONLY: jsbach_init_version
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
 
@@ -56,6 +57,8 @@ CONTAINS
     IF (PRESENT(namelist_filename)) master_namelist_filename = TRIM(namelist_filename)
 
     CALL read_jsb_control_namelist(TRIM(master_namelist_filename))
+
+    CALL jsbach_init_version(jsbach_runs_standalone())
 
     IF (is_standalone) THEN
        CALL init_time(TRIM(master_namelist_filename))
@@ -84,7 +87,7 @@ CONTAINS
     CHARACTER(len=132) :: model_description
     CHARACTER(len=filename_max) :: model_namelist_filename
 
-    INTEGER :: nml_unit, istat
+    INTEGER :: nml_handler, nml_unit, istat
     LOGICAL :: rwnd
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_jsb_control_namelist'
@@ -107,15 +110,15 @@ CONTAINS
     model_base_dir = '.'
     debug          = 0
 
-    nml_unit = open_nml(TRIM(namelist_filename))
+    nml_handler = open_nml(TRIM(namelist_filename))
 
-    CALL position_nml('jsb_control_nml', STATUS=istat)
+    nml_unit = position_nml('jsb_control_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_control_nml)
 
     rwnd = .TRUE.
     no_of_models = 0
     DO
-      CALL position_nml('jsb_model_nml', lrewind=rwnd, STATUS=istat)
+      nml_unit = position_nml('jsb_model_nml', nml_handler, lrewind=rwnd, STATUS=istat)
       IF (istat /= POSITIONED) EXIT
       IF (no_of_models >= max_no_of_models) THEN
         CALL finish(routine, 'no_of_models >= max_no_of_models')
@@ -135,7 +138,7 @@ CONTAINS
       jsb_models_nml(no_of_models)%model_namelist_filename = model_namelist_filename
     END DO
 
-    CALL close_nml(nml_unit)
+    CALL close_nml(nml_handler)
 
   END SUBROUTINE read_jsb_control_namelist
 

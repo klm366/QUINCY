@@ -32,10 +32,10 @@ MODULE mo_jsb_tile_class
      !INTEGER                     :: no_of_varlists = 0
      !TYPE(t_jsb_varlist), TARGET :: varlists(1:max_no_of_varlists)
      TYPE(t_jsb_memory), POINTER :: mem => NULL()
-     TYPE(t_jsb_tile), POINTER   :: parent_tile => NULL()
+     TYPE(t_jsb_tile),   POINTER :: parent_tile => NULL()
      INTEGER                     :: no_of_sub_tiles = 0
      INTEGER                     :: idx_of_sub_tile = 0
-     TYPE(t_jsb_tile), POINTER   :: sub_tiles(:) => NULL()
+     TYPE(t_jsb_tile),   POINTER :: sub_tiles(:) => NULL()
      INTEGER                     :: owner_model_id = 0
   END type t_jsb_tile
 

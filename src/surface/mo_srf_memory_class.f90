@@ -37,8 +37,7 @@ MODULE mo_srf_memory_class
       t_srf_old        (:,:), &
       t_srf_unfilt     (:,:), &
       t_srf_unfilt_old (:,:), &
-      t_rad_srf        (:,:), &
-!!$      t_eff_srf        (:,:), &
+      t_eff_srf        (:,:), &
       s_srf            (:,:), &  !< Dry static energy at surface (new timestep)
 !!$      s_srf_old        (:,:), &  !< Dry static energy at surface (old timestep)
       qsat_srf         (:,:), &
@@ -55,16 +54,17 @@ MODULE mo_srf_memory_class
       wsr_srf       (:,:),   & !< Water content in skin reservoir [m]
       sfract_srf    (:,:),   & !< Snow fraction of tile []
       wsn_srf       (:,:),   & !< Water content of snow reservoir [m water equivalent]
-      wsn_glacier   (:,:),   & !< Water content of snow on glacier [m water equivalent]
-      rel_hum_srf   (:,:)      !< Relative humidity of surface (zhsoil in echam6)
+      wsn_glacier   (:,:)      !< Water content of snow on glacier [m water equivalent]
   END TYPE t_srf_water_state
 
   TYPE t_srf_energy_flux
     REAL(wp), POINTER :: &
       latent_hflx      (:,:),   & !< latent heat flux
       sensible_hflx    (:,:),   & !< sensible heat flux
-      swrad_srf_down   (:,:),   & !< net shortwave radiation at surface
-      lwrad_srf_net    (:,:),   & !< net longwave radiation at surface
+      sw_srf_net       (:,:),   & !< net shortwave radiation at surface
+      swvis_srf_net    (:,:),   & !< net shortwave radiation at surface in visible range
+      swnir_srf_net    (:,:),   & !< net shortwave radiation at surface in NIR range
+      lw_srf_net       (:,:),   & !< net longwave radiation at surface
       rad_srf_net      (:,:)      !< net radiation at surface
   END TYPE t_srf_energy_flux
 
@@ -106,8 +106,7 @@ CONTAINS
     out%t_srf         (ics:ice,    iblk) = in%t_srf         (ics:ice,    iblk)
     out%t_srf_old     (ics:ice,    iblk) = in%t_srf_old     (ics:ice,    iblk)
     out%t_srf_unfilt  (ics:ice,    iblk) = in%t_srf_unfilt  (ics:ice,    iblk)
-    out%t_rad_srf     (ics:ice,    iblk) = in%t_rad_srf     (ics:ice,    iblk)
-!!$    out%t_eff_srf     (ics:ice,    iblk) = in%t_eff_srf     (ics:ice,    iblk)
+    out%t_eff_srf     (ics:ice,    iblk) = in%t_eff_srf     (ics:ice,    iblk)
     out%s_srf         (ics:ice,    iblk) = in%s_srf         (ics:ice,    iblk)
 !!$    out%s_srf_old     (ics:ice,    iblk) = in%s_srf_old     (ics:ice,    iblk)
     out%qsat_srf      (ics:ice,    iblk) = in%qsat_srf      (ics:ice,    iblk)
@@ -128,8 +127,7 @@ CONTAINS
     out%t_srf         (ics:ice,    iblk) = in1%t_srf         (ics:ice,    iblk) + in2%t_srf         (ics:ice,    iblk)
     out%t_srf_old     (ics:ice,    iblk) = in1%t_srf_old     (ics:ice,    iblk) + in2%t_srf_old     (ics:ice,    iblk)
     out%t_srf_unfilt  (ics:ice,    iblk) = in1%t_srf_unfilt  (ics:ice,    iblk) + in2%t_srf_unfilt  (ics:ice,    iblk)
-    out%t_rad_srf     (ics:ice,    iblk) = in1%t_rad_srf     (ics:ice,    iblk) + in2%t_rad_srf     (ics:ice,    iblk)
-!!$    out%t_eff_srf     (ics:ice,    iblk) = in1%t_eff_srf     (ics:ice,    iblk) + in2%t_eff_srf     (ics:ice,    iblk)
+    out%t_eff_srf     (ics:ice,    iblk) = in1%t_eff_srf     (ics:ice,    iblk) + in2%t_eff_srf     (ics:ice,    iblk)
     out%s_srf         (ics:ice,    iblk) = in1%s_srf         (ics:ice,    iblk) + in2%s_srf         (ics:ice,    iblk)
 !!$    out%s_srf_old     (ics:ice,    iblk) = in1%s_srf_old     (ics:ice,    iblk) + in2%s_srf_old     (ics:ice,    iblk)
     out%qsat_srf      (ics:ice,    iblk) = in1%qsat_srf      (ics:ice,    iblk) + in2%qsat_srf      (ics:ice,    iblk)

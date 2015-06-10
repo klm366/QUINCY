@@ -15,7 +15,8 @@ MODULE mo_srf_init
   USE mo_srf_memory_class, ONLY: t_srf_memory, t_srf_phys_state, t_srf_energy_state, t_srf_energy_flux, &
                                   t_srf_water_state, t_srf_water_flux
   USE mo_jsb_base,          ONLY: get_model
-  USE mo_netcdf_read,       ONLY: netcdf_read_oncells_2d_time, netcdf_read_oncells_2d
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
+                                  jsb_netcdf_read_2d, jsb_netcdf_read_2d_time
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
 
@@ -30,7 +31,7 @@ CONTAINS
 
   SUBROUTINE srf_init_bc(tile)
 
-    TYPE(t_jsb_tile), INTENT(in) :: tile
+    TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),       POINTER :: model
     TYPE(t_srf_memory), POINTER :: srf
@@ -46,9 +47,9 @@ CONTAINS
 
   RECURSIVE SUBROUTINE srf_init_ic(tile)
 
-    USE mo_amip_bc,     ONLY: wgt1, wgt2, nmw1,nmw2
+    USE mo_jsb_time, ONLY: get_time_interpolation_weights
 
-    TYPE(t_jsb_tile), INTENT(in) :: tile
+    TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),        POINTER :: model
     TYPE(t_srf_memory),       POINTER :: srf
@@ -62,7 +63,11 @@ CONTAINS
     REAL(wp), POINTER :: &
       & return_pointer (:,  :)       !< temporary pointer
 
-    INTEGER :: i, n1, n2
+    TYPE(t_input_file) :: input_file
+
+    INTEGER  :: i
+    REAL(wp) :: wgt1, wgt2
+    INTEGER  :: nmw1,nmw2, n1, n2
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':srf_init_ic'
 
@@ -79,58 +84,68 @@ CONTAINS
     !
     phys => srf%phys_state
 
-    ! Glacier mask
-    return_pointer => netcdf_read_oncells_2d(         &
-!!$      & filename=model%config%srf%bc_filename,        &
-      & filename='bc_land_frac.nc',                   & ! Temporary
-      & variable_name='glac',                         &
-      & fill_array = phys%glacier,                    &
-      & patch=model%grid%patch)
-    phys%glacier(:,:) = MERGE(phys%glacier(:,:), 0._wp, phys%glacier(:,:) >= 0._wp)
+    input_file = jsb_netcdf_open_input(TRIM(model%config%srf%bc_sso_filename), model%id)
 
     ! Orography
-    return_pointer => netcdf_read_oncells_2d(         &
-      & filename=model%config%srf%bc_sso_filename,    &
-      & variable_name='orostd',                       &
-      & fill_array = phys%oro_stddev,                 &
-      & patch=model%grid%patch)
+    return_pointer => jsb_netcdf_read_2d(         &
+      & input_file,                               &
+      & variable_name='orostd',                   &
+      & fill_array = phys%oro_stddev)
     phys%oro_stddev(:,:) = MERGE(phys%oro_stddev(:,:), 0._wp, phys%oro_stddev(:,:) >= 0._wp)
 
+    CALL jsb_netcdf_close_file(input_file)
+
+    input_file = jsb_netcdf_open_input('bc_land_frac.nc', model%id)     ! Temporary
+!!$    input_file = jsb_netcdf_open_input(TRIM(model%config%srf%bc_filename), model%id)
+
+    ! Glacier mask
+    return_pointer => jsb_netcdf_read_2d(         &
+      & input_file,                               &
+      & variable_name='glac',                     &
+      & fill_array = phys%glacier)
+    phys%glacier(:,:) = MERGE(phys%glacier(:,:), 0._wp, phys%glacier(:,:) >= 0._wp)
+
+    CALL jsb_netcdf_close_file(input_file)
+
+    input_file = jsb_netcdf_open_input(TRIM(model%config%srf%bc_filename), model%id)
+
     ! Surface roughness length
-    return_pointer => netcdf_read_oncells_2d(         &
-      & filename=model%config%srf%bc_filename,        &
-      & variable_name='roughness_length',             &
-      & fill_array = phys%rough_m_srf,                &
-      & patch=model%grid%patch)
+    return_pointer => jsb_netcdf_read_2d(         &
+      & input_file,                               &
+      & variable_name='roughness_length',         &
+      & fill_array = phys%rough_m_srf)
     phys%rough_m_srf(:,:) = MERGE(phys%rough_m_srf(:,:), 1._wp, phys%rough_m_srf(:,:) >= 0._wp)
 
     ! Albedo
-    return_pointer => netcdf_read_oncells_2d(         &
-      & filename=model%config%srf%bc_filename,        &
-      & variable_name='albedo',                       &
-      & fill_array = phys%albedo_srf,                 &
-      & patch=model%grid%patch)
+    return_pointer => jsb_netcdf_read_2d(         &
+      & input_file,                               &
+      & variable_name='albedo',                   &
+      & fill_array = phys%albedo_srf)
     phys%albedo_srf(:,:) = MERGE(phys%albedo_srf(:,:), 0._wp, phys%albedo_srf(:,:) >= 0._wp)
 
     phys%alb_vis_srf(:,:) = phys%albedo_srf(:,:)
     phys%alb_nir_srf(:,:) = phys%albedo_srf(:,:)
 
+    CALL jsb_netcdf_close_file(input_file)
+
     ! Initialize energy state
     !
     energy => srf%energy_state
 
+    input_file = jsb_netcdf_open_input(TRIM(model%config%srf%ic_filename), model%id)
+
     ! Initial surface temperature
-!!$    return_pointer => netcdf_read_oncells_2d(         &
+!!$    return_pointer => jsb_netcdf_read_2d(         &
 !!$      & filename=model%config%srf%ic_filename,        &
 !!$      & variable_name='surface_temperature',          &
 !!$      fill_array=energy%t_srf,                        &
-!!$      & patch=model%grid%patch)
+!!$      & model_id=model%id)
 !!$    t_srf => energy%t_srf
-    t_srf_mon => netcdf_read_oncells_2d_time(         &   ! Temporary
-      & filename=model%config%srf%ic_filename,        &
-      & variable_name='surf_temp',                    &
-      & patch=model%grid%patch)
+    t_srf_mon => jsb_netcdf_read_2d_time(         &   ! Temporary
+      & input_file,                               &
+      & variable_name='surf_temp')
     t_srf_mon(:,:,:) = MERGE(t_srf_mon(:,:,:), 280._wp, t_srf_mon(:,:,:) > 0._wp)
+    CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
     IF (nmw1 == 0) THEN
       n1 = 12
     ELSE IF (nmw1 == 13) THEN
@@ -148,6 +163,9 @@ CONTAINS
     energy%t_srf(:,:) = wgt1 * t_srf_mon(:,:,n1) + wgt2 * t_srf_mon(:,:,n2)
 
     DEALLOCATE(t_srf_mon)
+
+    CALL jsb_netcdf_close_file(input_file)
+
     t_srf => energy%t_srf
     ! Note: t_srf now points to energy%t_srf and can be
     ! used below to fill %energy_state%t_srf for all other files:
@@ -156,7 +174,7 @@ CONTAINS
     energy%t_srf_old        (:,:) = t_srf (:,:)
     energy%t_srf_unfilt     (:,:) = t_srf (:,:)
     energy%t_srf_unfilt_old (:,:) = t_srf (:,:)
-    energy%t_rad_srf        (:,:) = t_srf (:,:)
+    energy%t_eff_srf        (:,:) = t_srf (:,:)
 !!$    energy%t_eff_srf        (:,:) = t_srf (:,:)
     energy%s_srf            (:,:) = 0._wp
     energy%qsat_srf         (:,:) = -1._wp  ! Negative values will be used to test for start of experiment
@@ -177,14 +195,14 @@ CONTAINS
     water%wsn_srf     (:,:) = -1._wp    ! -1 used to determine start of experiment
     water%wsn_glacier (:,:) = 20._wp    ! Temporary initialization of glacier thickness
 
-    water%rel_hum_srf (:,:) = 0._wp
-
     ! Initialize energy fluxes
     !
     eflux => srf%energy_flux
 
-    eflux%swrad_srf_down (:,:) = 0._wp
-    eflux%lwrad_srf_net  (:,:) = 0._wp
+    eflux%sw_srf_net     (:,:) = 0._wp
+    eflux%swvis_srf_net  (:,:) = 0._wp
+    eflux%swnir_srf_net  (:,:) = 0._wp
+    eflux%lw_srf_net     (:,:) = 0._wp
     eflux%rad_srf_net    (:,:) = 0._wp
     eflux%latent_hflx    (:,:) = 0._wp
     eflux%sensible_hflx  (:,:) = 0._wp

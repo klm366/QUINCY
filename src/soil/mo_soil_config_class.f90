@@ -25,6 +25,8 @@ MODULE mo_soil_config_class
      CHARACTER(len=filename_max) :: bc_filename
      INTEGER :: nsoil_energy
      INTEGER :: nsoil_water
+     REAL(wp), ALLOCATABLE :: soil_depth_energy(:)
+     REAL(wp), ALLOCATABLE :: soil_depth_water(:)
      REAL(wp), ALLOCATABLE :: dz_energy(:)
      REAL(wp), ALLOCATABLE :: dz_water(:)
      REAL(wp) :: wsr_capacity               !< Water holding capacity of ground skin reservoir [m water equivalent]
@@ -37,11 +39,11 @@ MODULE mo_soil_config_class
 
 CONTAINS
 
-  FUNCTION new_soil_config(nml_unit) RESULT(config)
+  FUNCTION new_soil_config(nml_handler) RESULT(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
-    INTEGER,          INTENT(in) :: nml_unit
+    INTEGER,          INTENT(in) :: nml_handler
     TYPE(t_soil_config), POINTER :: config
 
     TYPE(t_soil_config), POINTER :: new
@@ -60,7 +62,7 @@ CONTAINS
       dz_energy, dz_water,                      &
       wsr_capacity, wsn_capacity
 
-    INTEGER :: istat
+    INTEGER :: nml_unit, istat, i
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_soil_config'
 
@@ -79,7 +81,7 @@ CONTAINS
     wsr_capacity   = 2.E-4_wp
     wsn_capacity   = 2.E-4_wp
 
-    CALL position_nml('jsb_soil_nml', STATUS=istat)
+    nml_unit = position_nml('jsb_soil_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_soil_nml)
 
     IF (nsoil_energy > max_soil_layers .OR. nsoil_water > max_soil_layers) THEN
@@ -87,6 +89,8 @@ CONTAINS
       CALL finish(TRIM(routine), message_text)
     END IF
 
+    ALLOCATE(new%soil_depth_energy(nsoil_energy))
+    ALLOCATE(new%soil_depth_water (nsoil_water ))
     ALLOCATE(new%dz_energy(nsoil_energy))
     ALLOCATE(new%dz_water (nsoil_water ))
 
@@ -95,6 +99,14 @@ CONTAINS
     new%bc_filename               = bc_filename
     new%nsoil_energy              = nsoil_energy
     new%nsoil_water               = nsoil_water
+    new%soil_depth_energy(1)      = dz_energy(1)
+    DO i=2,nsoil_energy
+      new%soil_depth_energy(i) = new%soil_depth_energy(i-1) + dz_energy(i)
+    END DO
+    new%soil_depth_water(1)       = dz_water(1)
+    DO i=2,nsoil_water
+      new%soil_depth_water(i) = new%soil_depth_water(i-1) + dz_water(i)
+    END DO
     new%dz_energy(1:nsoil_energy) = dz_energy(1:nsoil_energy)
     new%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)
     new%wsr_capacity              = wsr_capacity

@@ -32,11 +32,11 @@ MODULE mo_veg_config_class
 
 CONTAINS
 
-  FUNCTION new_veg_config(nml_unit) RESULT(config)
+  FUNCTION new_veg_config(nml_handler) RESULT(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
-    INTEGER,          INTENT(in) :: nml_unit
+    INTEGER,          INTENT(in) :: nml_handler
     TYPE(t_veg_config), POINTER :: config
 
     TYPE(t_veg_config), POINTER :: new
@@ -52,7 +52,7 @@ CONTAINS
          scheme_stom_cond,                    &
          wsr_capacity, wsn_capacity
 
-    INTEGER :: istat
+    INTEGER :: nml_unit, istat
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_veg_config'
 
@@ -68,7 +68,7 @@ CONTAINS
     wsr_capacity     = 2.E-4_wp
     wsn_capacity     = 2.E-4_wp
 
-    CALL position_nml('jsb_veg_nml', STATUS=istat)
+    nml_unit = position_nml('jsb_veg_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_veg_nml)
 
     new%active             = active
