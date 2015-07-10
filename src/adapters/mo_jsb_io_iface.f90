@@ -12,7 +12,7 @@ MODULE mo_jsb_io_iface
 
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
-  USE mo_grib2,         ONLY: t_grib2_var
+  USE mo_grib2,         ONLY: t_grib2_var, grib2_var
   USE mo_cdi_constants, ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24, &
                               ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                            &
                               FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,          &
@@ -26,7 +26,7 @@ MODULE mo_jsb_io_iface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_cf_var, t_grib2_var
+  PUBLIC :: t_cf_var, t_grib2_var, grib2_var
   PUBLIC :: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
             ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                   &
             FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &

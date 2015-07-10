@@ -102,22 +102,34 @@ CONTAINS
 
       ALLOCATE(pstate)
 
-      CALL jsb_add_var( this_list, prefix//'land'//suffix, pstate%land,                               &
-        & hgrid, surface,                                                           &
-        & t_cf('land_mask', '', '', nc_bits),                                             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      CALL jsb_add_var( this_list, prefix//'land'//suffix, pstate%land,                 &
+        & hgrid, surface,                                                               &
+        & t_cf('land_mask', '', 'land fraction', nc_bits),                              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL jsb_add_var( this_list, prefix//'lake'//suffix, pstate%lake,                               &
-        & hgrid, surface,                                                           &
-        & t_cf('lake_mask', '', '', nc_bits),                                             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      CALL jsb_add_var( this_list, prefix//'lake'//suffix, pstate%lake,                 &
+        & hgrid, surface,                                                               &
+        & t_cf('lake_mask', '', 'lake fraction', nc_bits),                              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL jsb_add_var( this_list, prefix//'glacier'//suffix, pstate%glacier,                               &
-        & hgrid, surface,                                                           &
-        & t_cf('glacier_mask', '', '', nc_bits),                                             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      CALL jsb_add_var( this_list, prefix//'coast_land'//suffix, pstate%coast_land,     &
+        & hgrid, surface,                                                               &
+        & t_cf('coast_land', '', 'coastal grid cells of the land', nc_bits),            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL jsb_add_var( this_list, prefix//'coast_ocean'//suffix, pstate%coast_ocean,   &
+        & hgrid, surface,                                                               &
+        & t_cf('coast_ocean', '', 'coastal grid cells of the ocean ', nc_bits),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL jsb_add_var( this_list, prefix//'glacier'//suffix, pstate%glacier,           &
+        & hgrid, surface,                                                               &
+        & t_cf('glacier_mask', '', 'glacier fraction', nc_bits),                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( this_list, prefix//'oro_stddev'//suffix, pstate%oro_stddev,                         &

@@ -59,7 +59,7 @@ CONTAINS
     TYPE(t_srf_water_state),  POINTER :: water
     TYPE(t_srf_water_flux),   POINTER :: wflux
 
-    REAL(wp), POINTER :: t_srf(:,:), t_srf_mon(:,:,:)
+    REAL(wp), POINTER :: t_srf(:,:), t_srf_mon(:,:,:), cell_sea_land_mask(:,:)
     REAL(wp), POINTER :: &
       & return_pointer (:,  :)       !< temporary pointer
 
@@ -102,7 +102,7 @@ CONTAINS
     ! Land mask (including glacies and lakes)
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
-      & variable_name='notsea',                   &        !< ocean 0, land 1
+      & variable_name='notsea',                   &        !< ocean 0., land 1.
       & fill_array = phys%land)
 
     ! Glacier mask
@@ -120,6 +120,18 @@ CONTAINS
       & input_file,                               &
       & variable_name='lake',                     &
       & fill_array = phys%lake)
+
+    CALL jsb_netcdf_close_file(input_file)
+
+    input_file = jsb_netcdf_open_input('r2b4_amip.nc', model%id)    !vg Name !!!
+
+    ! coastal cells of the land and ocean
+    cell_sea_land_mask => jsb_netcdf_read_2d( &
+      & input_file,                                &
+      & variable_name='cell_sea_land_mask')
+    phys%coast_land(:,:)  = MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == 1)
+    phys%coast_ocean(:,:) = MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == -1)
+    DEALLOCATE(cell_sea_land_mask)
 
     CALL jsb_netcdf_close_file(input_file)
 
