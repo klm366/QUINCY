@@ -135,7 +135,7 @@ CONTAINS
 #ifdef __ICON__
     CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, ZA_SURFACE, cf, grib2, &
       ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
-      initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r,       &
+      initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
       tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, new_element=new_element)
 
       element => find_list_element(this_list, TRIM(name))
@@ -202,7 +202,7 @@ CONTAINS
 #ifdef __ICON__
     CALL add_var_icon(this_list, TRIM(name), ptr, hgrid, ZA_DEPTH_BELOW_LAND, cf, grib2, &
       ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont,     &
-      initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, lmiss=lmiss, missval_r=missval_r,       &
+      initval=initval_r, isteptype=isteptype, resetval=resetval_r, lmiss=lmiss, missval=missval_r,             &
       tlev_source=tlev_source, info=info, p5=p5, verbose=verbose, new_element=new_element)
 
       element => find_list_element(this_list, TRIM(name))

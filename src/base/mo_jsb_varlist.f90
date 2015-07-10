@@ -19,7 +19,7 @@ MODULE mo_jsb_varlist
                                   t_var_metadata, t_list_element,   &
                                   add_var_list_element_r2d, add_var_list_element_r3d
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED_CELL, GRID_REFERENCE, GRID_CELL
-  USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var
+  USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
 
   IMPLICIT NONE
   PRIVATE
@@ -73,7 +73,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r2d'
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
-    grib2_loc = t_grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
+    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
 
     ldims(1) = hgrid%nproma
     ldims(2) = hgrid%nblks
@@ -128,7 +128,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r3d'
 
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
-    grib2_loc = t_grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
+    grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_REFERENCE, GRID_CELL)
 
     ldims(1) = hgrid%nproma
     gdims(1) = hgrid%dims_g(1)

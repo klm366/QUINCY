@@ -207,8 +207,6 @@ CONTAINS
       snow_melt(:) = 0._wp
     END IF
 
-print*, 'vg1: pme_glacier: ', MINVAL(pme_glacier), MAXVAL(pme_glacier), SUM(pme_glacier)
-
     CALL update_surf_down(nc, dtime, lstart, &
       & q_air(:), t_srf_unfilt(:), wind_10m(:), t_air(:), wsr_soil(:), wfract_srf(:), &
       & wsr_max(:), wsn_soil(:), sfract_srf(:), wsn_can(:), wsn_glacier(:), &
@@ -218,8 +216,6 @@ print*, 'vg1: pme_glacier: ', MINVAL(pme_glacier), MAXVAL(pme_glacier), SUM(pme_
       melt_water_excess(:), &
       & tte_corr(:), snow_melt(:) &
       & )
-
-print*, 'vg2: pme_glacier: ', MINVAL(pme_glacier), MAXVAL(pme_glacier), SUM(pme_glacier)
 
     ! Save old ground heat flux and heat capacity before updating
     ! The old flux and capacity (which have been used in the implicit calculation of the new surface temperature) are
@@ -232,9 +228,6 @@ print*, 'vg2: pme_glacier: ', MINVAL(pme_glacier), MAXVAL(pme_glacier), SUM(pme_
       & t_soil_acoef(:,:), t_soil_bcoef(:,:), t_soil(:,:), &
       & hcap_grnd(:), grnd_hflx(:), &
       & is_present(:), is_glacier(:))
-
-print*, 'vg1: runoff  : ',  MINVAL(runoff),   MAXVAL(runoff),   SUM(runoff)
-print*, 'vg1: drainage: ',  MINVAL(drainage), MAXVAL(drainage), SUM(drainage)
 
 !vg:  runoff_hd and drainage_hd no longer needed
 !vg:  accumulation does not make sense (no reset)
@@ -258,8 +251,6 @@ print*, 'vg1: drainage: ',  MINVAL(drainage), MAXVAL(drainage), SUM(drainage)
       & l_tpe_open, &
       & l_tpe_closed &
       & )
-print*, 'vg2: runoff  : ',  MINVAL(runoff),   MAXVAL(runoff),   SUM(runoff)
-print*, 'vg2: drainage: ',  MINVAL(drainage), MAXVAL(drainage), SUM(drainage)
 
     ws(:) = SUM(ws_l(:,:), DIM=2)
 

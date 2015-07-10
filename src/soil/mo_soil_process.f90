@@ -349,15 +349,15 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      zsn(jl)=0._wp
      zsnmel(jl)=0._wp
      zsncmelt(jl)=0._wp
-     zraind(jl)=prain(jl)             *zdtime/rhoh2o
-     zsnowd(jl)=psnow(jl)             *zdtime/rhoh2o
+     zraind(jl)=prain(jl)             *zdtime/rhoh2o                   !rain     [kg m-2 s-1] -> [m]
+     zsnowd(jl)=psnow(jl)             *zdtime/rhoh2o                   !snowfall [kg m-2 s-1] -> [m]
      IF(lmask(jl)) THEN
         zrcp=1._wp/(cpd*(1._wp+vtmpc2*MAX(0.0_wp,pqm1(jl))))
         zlfdcp(jl)=alf*zrcp
-        zevttd(jl)=pevapl(jl)                        *zdtime/rhoh2o
-        zevsnd(jl)=pcvs(jl)*pevapot(jl)              *zdtime/rhoh2o
-        zevwld(jl)=(1._wp-pcvs(jl))*pcvw(jl)*pevapot(jl)*zdtime/rhoh2o
-        pevwsd(jl)=zevttd(jl)-zevsnd(jl)
+        zevttd(jl)=pevapl(jl)                        *zdtime/rhoh2o    !evapotransp. [kg m-2 s-1] -> [m]
+        zevsnd(jl)=pcvs(jl)*pevapot(jl)              *zdtime/rhoh2o    !pot. sublimation from snow [m]
+        zevwld(jl)=(1._wp-pcvs(jl))*pcvw(jl)*pevapot(jl)*zdtime/rhoh2o !pot. evaporation from skinreservoir [m]
+        pevwsd(jl)=zevttd(jl)-zevsnd(jl)                               ! [m]
      ELSE
         pevwsd(jl) = 0._wp ! Sain initialization for diagnostics
      END IF
@@ -374,7 +374,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      !
      DO 210 jl=1,kbdim
         IF (lmask(jl) .AND. .NOT.lpglac(jl)) THEN
-           zsn(jl)=zsnowd(jl)+zevsnd(jl)
+           zsn(jl)=zsnowd(jl)+zevsnd(jl)                       ! [m]
            zsncmax=MAX(0.0_wp,pwlmx(jl)-cwlmax)
            zmprcp=MIN(zsnowd(jl)*cvinter,zsncmax-psnc(jl))
            zsncp=psnc(jl)+zmprcp
@@ -1076,9 +1076,9 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
               ELSE
                 zlyeps = 0._wp                               !vg     no excess water
               END IF
-              zlysic     = MIN(1._wp,(pws(jl)-zlyeps)/pwsmx(jl))        !vg  relative soil moisture (MIN() needed?)
+              zlysic     = MIN(1._wp,(pws(jl)-zlyeps)/pwsmx(jl))        !vg  relative soil moisture (MIN() needed??)
               zvol       = (1._wp-zlysic)**zbm-zprfl/zconw1             !vg  ??
-              zros(jl)   = zprfl-(pwsmx(jl)-pws(jl))                    !vg  remaining water, when water holding capacity reached
+              zros(jl)   = zprfl-(pwsmx(jl)-pws(jl))                    !vg  runoff = remaining water, when pwsmx reached
               IF (zvol > 0._wp) zros(jl) = zros(jl)+pwsmx(jl)*zvol**zb1 !vg  ??
               zros(jl)   = MAX(zros(jl),0._wp)                          !vg  no negative runoff (code would be clearer, if excess 
                                                                         !vg       water was considered two lines above)
@@ -2120,16 +2120,16 @@ LOGICAL  :: l_tpe_closed
   IF (isch == 1) THEN
     zrebsoil(kidia:kfdia) = 0._wp
     zretrans(kidia:kfdia) = 0._wp
-    zover(kidia:kfdia) = aebsoil(kidia:kfdia)
+    zover(kidia:kfdia) = aebsoil(kidia:kfdia)   !vg bare soil evaporation [m]
 
 !   *** Bare soil evaporation loop
     DO  jl=kidia, kfdia
       IF (loland(jl)) THEN
-!        *** TAU is packed in SURF in precipitation
+!        *** TAU is packed in SURF in precipitation     !vg  dew added to rain in update_surf_up
 !        ***     --> Is contained in the infiltration!
-        IF (zover(jl) < -zeps) THEN
-          wsi(jl,1) = wsi(jl,1) + zover(jl)
-          IF (wsi(jl,1) < 0._wp) THEN
+        IF (zover(jl) < -zeps) THEN             !vg  considerable evaporation (why not < 0. ?)
+          wsi(jl,1) = wsi(jl,1) + zover(jl)     !vg  take from soil water of uppermost layer 
+          IF (wsi(jl,1) < 0._wp) THEN           !vg  if water of uppermost layer gets negative
             zover(jl) = wsi(jl,1)
             wsi(jl,1) = 0._wp
           ELSE
@@ -2142,8 +2142,8 @@ LOGICAL  :: l_tpe_closed
 !       *** Reduction of AEBSOIL necessary? --> diagnostic
     DO jl=kidia, kfdia
       IF (loland(jl)) THEN
-        IF (zover(jl) < -zeps) THEN
-          zrebsoil(jl) = zover(jl)
+        IF (zover(jl) < -zeps) THEN             !vg  considerable amount of water could not be taken from first level
+          zrebsoil(jl) = zover(jl)              !vg  reduce evaporation accordingly
 !!!            AEBSOIL(JL) = MIN(AEBSOIL(JL) - ZOVER(JL), 0.)
         END IF
       END IF
@@ -2154,35 +2154,40 @@ LOGICAL  :: l_tpe_closed
     DO  jk=1, kdeep
       DO  jl=kidia, kfdia
         IF (loland(jl)) THEN
-          IF (aetrans(jl) < -zeps) THEN
+          IF (aetrans(jl) < -zeps) THEN         !vg  considerable transpiration (why not < 0. ?)
 
 !           *** Distribute transpiration over rooting depth
 !           *** for this, calculate rooted water depth
-            IF (dzr(jl) <= zeps) THEN
+            IF (dzr(jl) <= zeps) THEN                                  !vg  rooting depth almost zero
 
 !             *** Special case: sealed grid cell
-              IF (jk == 1) zretrans(jl) = zretrans(jl) + aetrans(jl)
+              IF (jk == 1) zretrans(jl) = zretrans(jl) + aetrans(jl)   !vg    no transpiration possible, add to reduction term
 
-            ELSE IF (dzrsi(jl,jk) > 0) THEN
+            ELSE IF (dzrsi(jl,jk) > 0) THEN                            !vg  roots reach into the soil layer
 !             *** Note that transpiration should only access water until the
 !             *** rooting depth --> pay regard where the relative term of the
 !             *** rooted depth within the layer has to be applied
-              zrel = MIN(dzrsi(jl,jk)/dzsi(jl,jk), 1._wp)
-
-              zdum2 = zwsfc(jl,jk)*zwilt * zrel
-              IF (wsi(jl,jk)*zrel >= zdum2) THEN
-                zdum = wsi(jl,jk) * zrel + aetrans(jl) * dzrsi(jl,jk)/dzr(jl)
-                IF (zdum < zdum2) THEN
-                  zover(jl) = zdum - zdum2
-                  wsi(jl,jk) = zdum2 + wsi(jl,jk) * MAX(1._wp-zrel, 0._wp)
-                ELSE
-                  wsi(jl,jk) = zdum + wsi(jl,jk) * MAX(1._wp-zrel, 0._wp)
-                  zover(jl)=0._wp
+              zrel = MIN(dzrsi(jl,jk)/dzsi(jl,jk), 1._wp)                     !vg  rooting depth relative to soil layer depth    
+                                                                              !vg     (why should that become greater than 1 ?)
+              zdum2 = zwsfc(jl,jk)*zwilt * zrel                               !vg  amount of water in root zone, not available for 
+                                                                              !vg     transpiration
+              IF (wsi(jl,jk)*zrel >= zdum2) THEN                              !vg  there is water in root zone available
+                zdum = wsi(jl,jk) * zrel + aetrans(jl) * dzrsi(jl,jk)/dzr(jl) !vg    amount of soil water after pot. transpiration
+                                                                              !vg     (root depth in layer rel. to total root depth
+                                                                              !vg      for portion of transpiration from the layer)
+                IF (zdum < zdum2) THEN                                        !vg    more water transpired than available
+                  zover(jl) = zdum - zdum2                                    !vg      water deficit
+                  wsi(jl,jk) = zdum2 + wsi(jl,jk) * MAX(1._wp-zrel, 0._wp)    !vg      soil water = amount in root zone not avail.
+                                                                              !vg        for transpiration + water below root zone
+                ELSE                                                          !vg    enough water available
+                  wsi(jl,jk) = zdum + wsi(jl,jk) * MAX(1._wp-zrel, 0._wp)     !vg      soil water = amount in root zone after tran-
+                                                                              !vg        spiration + water below root zone
+                  zover(jl)=0._wp                                             !vg      no deficit
                 END IF
-              ELSE
-                zover(jl) = aetrans(jl) * dzrsi(jl,jk)/dzr(jl)
+              ELSE                                                            !vg  no water in root zone available for transpiration
+                zover(jl) = aetrans(jl) * dzrsi(jl,jk)/dzr(jl)                !vg    add pot. transpiration of layer to deficit 
               END IF
-              zretrans(jl) = zretrans(jl) + zover(jl)
+              zretrans(jl) = zretrans(jl) + zover(jl)                         !vg  add deficit to reduction term
             END IF
           END IF
         END IF
@@ -2199,7 +2204,7 @@ LOGICAL  :: l_tpe_closed
       END IF
     END DO
 
-!   *** If redevap not zero, soil moisture must be changed
+!   *** If redevap not zero, soil moisture must be changed            !vg  why again???
 !   *** to close the land surface water balance.
 !   *** Reduction will be relatively distributed to the wetness
 !   *** of each layer.

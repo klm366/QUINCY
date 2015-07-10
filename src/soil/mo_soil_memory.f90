@@ -333,6 +333,17 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & initval_r=0.0_wp )
 
+      CALL jsb_add_var( this_list, prefix//'discharge'//suffix, wflux%discharge,             &
+        & hgrid, surface,                                                                    &
+        & t_cf('discharge', 'kg m-2 s-1', 'local discharge', nc_bits),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( this_list, prefix//'discharge_ocean'//suffix, wflux%discharge_ocean, &
+        & hgrid, surface,                                                                    &
+        & t_cf('discharge_ocean', 'kg m-2 s-1', 'discharge to the ocean', nc_bits),          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & initval_r=0.0_wp )
     END FUNCTION new_water_flux
 
   END FUNCTION new_soil_memory

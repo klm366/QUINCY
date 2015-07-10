@@ -23,6 +23,8 @@ MODULE mo_srf_memory_class
   TYPE t_srf_phys_state
     REAL(wp), POINTER ::           &
       land         (:,:),    & !< Land fraction: 1: land/lake/glacier, 0: sea
+      coast_land   (:,:),    & !< mask for coastal cells of the land
+      coast_ocean  (:,:),    & !< mask for coastal cells of the ocean
       glacier      (:,:),    & !< Glacier fraction
       lake         (:,:),    & !< Lake fraction
       oro_stddev   (:,:),    & !< Standard deviation of orography
