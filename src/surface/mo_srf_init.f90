@@ -132,7 +132,8 @@ CONTAINS
       & variable_name='cell_sea_land_mask')
     phys%coast_land(:,:)  = MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == LAND_BOUNDARY)
     phys%coast_ocean(:,:) = MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
-    phys%ocean(:,:)       = MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA)
+    phys%ocean(:,:)       = MERGE(1._wp, 0._wp, &
+          cell_sea_land_mask(:,:) == SEA .OR. cell_sea_land_mask(:,:) == SEA_BOUNDARY)
     DEALLOCATE(cell_sea_land_mask)
 
     CALL jsb_netcdf_close_file(input_file)
