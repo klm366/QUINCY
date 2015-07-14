@@ -108,6 +108,12 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
+      CALL jsb_add_var( this_list, prefix//'ocean'//suffix, pstate%ocean,               &
+        & hgrid, surface,                                                               &
+        & t_cf('ocean_mask', '', 'ocean fraction', nc_bits),                            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
       CALL jsb_add_var( this_list, prefix//'lake'//suffix, pstate%lake,                 &
         & hgrid, surface,                                                               &
         & t_cf('lake_mask', '', 'lake fraction', nc_bits),                              &

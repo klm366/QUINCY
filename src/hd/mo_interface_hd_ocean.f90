@@ -13,30 +13,20 @@
 
 MODULE mo_interface_hd_ocean
 
-  USE mo_jsb_model_class, ONLY: t_jsb_model
-  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
-  USE mo_jsb_base,        ONLY: get_model
-  USE mo_run_config,      ONLY: nlev, ltimer
-  USE mo_kind                ,ONLY: wp
-  USE mo_model_domain        ,ONLY: t_patch
-  USE mo_echam_phy_memory    ,ONLY: prm_field
-                                
-  USE mo_parallel_config     ,ONLY: nproma
-  USE mo_echam_sfc_indices   ,ONLY: iwtr, iice
-
-  USE mo_sync                ,ONLY: SYNC_C, sync_patch_array
+  USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_tile_class,      ONLY: t_jsb_tile
+  USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+  USE mo_jsb_base,            ONLY: get_model
+  USE mo_kind,                ONLY: wp
   USE mo_coupling_config,     ONLY: is_coupled_run
-  USE mo_exception           ,ONLY: finish
+  USE mo_exception,           ONLY: finish
 #ifdef YAC_coupling
-  USE mo_yac_finterface      ,ONLY: yac_fput, yac_fget, yac_fget_nbr_fields, yac_fget_field_ids
-#else
-  USE mo_icon_cpl_exchg      ,ONLY: ICON_cpl_put, ICON_cpl_get
-  USE mo_icon_cpl_def_field  ,ONLY: ICON_cpl_get_nbr_fields, ICON_cpl_get_field_ids
-  USE mo_icon_cpl_restart    ,ONLY: icon_cpl_write_restart
+  USE mo_yac_finterface,      ONLY: yac_fput, yac_fget_field_id_from_name
 #endif
 
   IMPLICIT NONE
   PRIVATE
+
   PUBLIC :: interface_hd_ocean
   CHARACTER(len=*), PARAMETER :: modname = 'mo_interface_hd_ocean'
 
@@ -45,10 +35,12 @@ CONTAINS
   SUBROUTINE interface_hd_ocean(model_id)
 
     INTEGER, INTENT(in) :: model_id
+
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
+    TYPE(t_jsb_grid),  POINTER    :: grid
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':interface_hd_ocean'
 
     ! Pointers to variables in memory
@@ -58,9 +50,10 @@ CONTAINS
     ! Local variables
 
     LOGICAL               :: write_coupler_restart
-    INTEGER               :: nbr_hor_points ! = inner and halo points
-    INTEGER               :: field_shape(3)
+    INTEGER               :: field_id
+    INTEGER               :: nbr_hor_cells
     REAL(wp), ALLOCATABLE :: buffer(:,:)
+    INTEGER               :: collection_size, nbr_pointsets, nbr_subdomains
     INTEGER               :: info, ierror !< return values form cpl_put/get calls
 
 
@@ -68,6 +61,7 @@ CONTAINS
 
     model => get_model(model_id)
     tile => model%land
+    grid => model%grid
 
     ! Get reference to variables in memory
     discharge_ocean      => tile%mem%soil %water_flux %discharge_ocean   (:,:)
@@ -77,33 +71,31 @@ CONTAINS
 
     write_coupler_restart = .FALSE.
 
-!vg     DO i_blk = 1, p_patch%nblk_c
-!vg       nn = (i_blk - 1) * nproma
+    ALLOCATE(buffer(grid%nproma*grid%nblks,1))
+    buffer(:,:) = 0.0_wp
+!vg     DO iblk = 1, grid%nblks
+!vg       nn = (iblk - 1) * grid%nproma
 !vg       DO n = 1, nproma
-!vg         buffer(nn+n,1) = discharge_ocean(n,i_blk)
+!vg         buffer(nn+n,1) = discharge_ocean(n,iblk)
 !vg       END DO
 !vg     END DO
+    nbr_hor_cells = model%grid%ntotal
+    buffer(:,:) = RESHAPE(discharge_ocean(:,:), (/ nbr_hor_cells, 1 /))
 
 #ifdef YAC_coupling
-
-    !vg: field_id, nbr_hor_points, collection_size, nbr_pointsets, nbr_subdomains, send_field, info, ierror)
-    CALL yac_fput ('DISCHARGE', nbr_hor_points, 1, 1, 1, buffer, info, ierror )
-    IF ( info > 1 .AND. info < 7 ) THEN
-       write_coupler_restart = .TRUE.
-       WRITE ( 6 , * ) 'DISCHARGE', minval(buffer(1:nbr_hor_points,1)), maxval(buffer(1:nbr_hor_points,1))
-    ELSE IF ( info == 7 ) THEN
-       CALL warning "..."
-    ENDIF
-#else
-    CALL finish(TRIM(routine), 'ERROR: the old ICON coupler is no longer supported. Use YAC.')
+    CALL yac_fget_field_id_from_name('river_runoff', field_id)
 #endif
+    collection_size = 1
+    nbr_pointsets   = 1
+    nbr_subdomains  = 1
+#ifdef YAC_coupling
+    CALL yac_fput(field_id, nbr_hor_cells, collection_size, nbr_pointsets, nbr_subdomains, buffer, info, ierror)
+#endif
+    IF ( info > 1 ) write_coupler_restart = .TRUE.
 
     IF ( write_coupler_restart ) THEN
-#ifdef YAC_coupling
        CALL finish(TRIM(routine), 'ERROR: restart not supported yet for YAC')
-#endif
     ENDIF
-
     DEALLOCATE(buffer)
 
   END SUBROUTINE interface_hd_ocean

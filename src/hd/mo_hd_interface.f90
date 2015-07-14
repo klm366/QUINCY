@@ -18,12 +18,15 @@ MODULE mo_hd_interface
   USE mo_exception,       ONLY: finish, message, message_text
   USE mo_hd_constants,    ONLY: nl, nb
   USE mo_sync,            ONLY: SYNC_C, sync_patch_array, global_sum_array
+  USE mo_impl_constants,  ONLY: vname_len
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: update_hd, hd_riverflow, hd_init_water_budget, hd_check_water_budget
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_interface'
+
+  REAL(wp), SAVE  :: water_budget
 
 CONTAINS
 
@@ -47,7 +50,6 @@ CONTAINS
       & area        (:), &
       & land        (:), &
       & lake        (:), &
-      & coast_ocean (:), &
       & glacier     (:), &
       & runoff      (:), &
       & drainage    (:), &
@@ -70,7 +72,6 @@ CONTAINS
     land           => tile%mem%srf  %phys_state     %land                (ics:ice, iblk)
     lake           => tile%mem%srf  %phys_state     %lake                (ics:ice, iblk)
     glacier        => tile%mem%srf  %phys_state     %glacier             (ics:ice, iblk)
-    coast_ocean    => tile%mem%srf  %phys_state     %coast_ocean         (ics:ice, iblk)
     runoff         => tile%mem%soil %water_flux     %runoff              (ics:ice, iblk)
     drainage       => tile%mem%soil %water_flux     %drainage            (ics:ice, iblk)
     pme_glacier    => tile%mem%soil %water_flux     %pme_glacier         (ics:ice, iblk)
@@ -120,12 +121,23 @@ CONTAINS
       & area            (:,:), &
       & land            (:,:), &
       & coast_ocean     (:,:), &
+      & ocean           (:,:), &
       & discharge       (:,:), &
       & discharge_ocean (:,:)
 
     REAL(wp) ::            &
       & global_discharge,  &  ! global sum of discharge to the ocean
-      & area_coast_ocean      ! total area of coastal ocean grid cells
+      & area_coast_ocean,  &  ! total area of all coastal ocean grid cells
+      & area_ocean            ! total area of all ocean grid cells
+
+    LOGICAL, POINTER  ::   &
+      & is_in_domain    (:,:) ! T: cell in domain (not halo)
+
+    CHARACTER(len=vname_len) :: &
+      & routing_scheme        ! river routing scheme
+
+    REAL(wp), ALLOCATABLE  ::   &
+      & in_domain       (:,:) ! 1: cell in domain, 0: halo cell 
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
@@ -137,29 +149,69 @@ CONTAINS
     area            => model%grid                    %area            (:,:)
     land            => tile%mem%srf  %phys_state     %land            (:,:)
     coast_ocean     => tile%mem%srf  %phys_state     %coast_ocean     (:,:)
+    ocean           => tile%mem%srf  %phys_state     %ocean           (:,:)
     discharge       => tile%mem%soil %water_flux     %discharge       (:,:)
     discharge_ocean => tile%mem%soil %water_flux     %discharge_ocean (:,:)
 
-!vg     ! Synchronize halos
-!vg     CALL sync_patch_array(SYNC_C, patch, discharge(:,:))
+    is_in_domain    => model%grid%patch%cells%decomp_info%owner_mask  (:,:)
 
-    ! Dummy discharge: the discharge is equally distributed to the coastal ocean cells
-    !
-    global_discharge = global_sum_array(discharge(:,:)*land(:,:)*area(:,:))
-    area_coast_ocean = global_sum_array(coast_ocean(:,:)*area(:,:))
-    WHERE (coast_ocean(:,:) == 1._wp)
-      discharge_ocean(:,:) = area(:,:) * global_discharge/area_coast_ocean
+    ! Configuration parameters from the namelist
+    routing_scheme = model%config%hd%routing_scheme
+
+
+    ! Dummy discharge: the discharge is equally distributed to either
+    !     - all coastal ocean cells (routing_scheme = 'equally_to_coast')  or
+    !     - all ocean cells (routing_scheme = 'equally_to_ocean')
+    ! (routing_scheme = 'full' for real river routing not yet implemented)
+
+    ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
+    ALLOCATE (in_domain(SIZE(is_in_domain(:,1)),SIZE(is_in_domain(1,:))))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
     ELSEWHERE
-      discharge_ocean(:,:) = 0._wp
+      in_domain = 0._wp
     END WHERE
+    global_discharge = global_sum_array(discharge(:,:)*land(:,:)*area(:,:)*in_domain(:,:))
+    area_coast_ocean = global_sum_array(coast_ocean(:,:)*area(:,:)*in_domain(:,:))
+    area_ocean = global_sum_array(ocean(:,:)*area(:,:)*in_domain(:,:))
+
+    SELECT CASE (TRIM(routing_scheme))
+    CASE ('full')
+      CALL finish(TRIM(routine), 'full HD model not yet implemented')
+
+    CASE ('equally_to_coast')
+      WHERE (coast_ocean(:,:) == 1._wp)
+        discharge_ocean(:,:) = global_discharge/area_coast_ocean
+      ELSEWHERE
+        discharge_ocean(:,:) = 0._wp
+      END WHERE
+
+    CASE ('equally_to_ocean')
+      WHERE (ocean(:,:) == 1._wp)
+        discharge_ocean(:,:) = global_discharge/area_ocean
+      ELSEWHERE
+        discharge_ocean(:,:) = 0._wp
+      END WHERE
+
+    CASE DEFAULT
+      WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    END SELECT
+
+    DEALLOCATE (in_domain)
+
+!vg     ! Synchronize halos
+!vg     IF (PRESENT(subset_range)) THEN
+!vg       IF (.NOT. subset_range%is_in_domain) CALL sync_patch_array(sync_c, patch, discharge_ocean)
+!vg     END IF
 
   END SUBROUTINE hd_riverflow
 
   !------------------------------------------------------------------------------------------------
   SUBROUTINE hd_init_water_budget(model_id)
   !------------------------------------------------------------------------------------------------
-  ! calculation of the global water budget at the beginning of the timestep 
-  !    For the moment we only check the water treated by the HD model
+  ! calculation of the water budget before riverflow calculations
   !------------------------------------------------------------------------------------------------
 
     INTEGER, INTENT(in) :: model_id
@@ -171,20 +223,22 @@ CONTAINS
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_init_water_budget'
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER :: &
-      & area        (:,:), &
-      & land        (:,:), &
-      & coast_ocean (:,:), &
-      & glacier     (:,:), &
-      & runoff      (:,:), &
-      & drainage    (:,:), &
-      & pme_glacier (:,:), &
-      & discharge   (:,:)
+    REAL(wp), POINTER ::    &
+      & area         (:,:), &
+      & land         (:,:), &
+      & glacier      (:,:), &
+      & runoff       (:,:), &
+      & drainage     (:,:), &
+      & pme_glacier  (:,:), &
+      & discharge    (:,:)
 
-    REAL(wp) ::            &
-      & water_budget          ! global sum of water playing a role in the HD mode
+    LOGICAL, POINTER  ::   &
+      & is_in_domain    (:,:) ! T: cell in domain (not halo) 
 
-    LOGICAL :: debug_hd, diag_water_budget
+    REAL(wp), ALLOCATABLE  ::   &
+      & in_domain       (:,:) ! 1: cell in domain, 0: halo cell
+
+    LOGICAL :: debug_hd
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
@@ -192,30 +246,38 @@ CONTAINS
     tile => model%land        ! HD works on the root tile
 
     ! Get reference to variables in memory
-    area           => model%grid                    %area        (:,:)
-    land           => tile%mem%srf  %phys_state     %land        (:,:)
-    coast_ocean    => tile%mem%srf  %phys_state     %coast_ocean (:,:)
-    glacier        => tile%mem%srf  %phys_state     %glacier     (:,:)
-    runoff         => tile%mem%soil %water_flux     %runoff      (:,:)
-    drainage       => tile%mem%soil %water_flux     %drainage    (:,:)
-    pme_glacier    => tile%mem%soil %water_flux     %pme_glacier (:,:)
-    discharge      => tile%mem%soil %water_flux     %discharge   (:,:)
+    area           => model%grid                       %area        (:,:)
+    land           => tile%mem%srf   %phys_state       %land        (:,:)
+    glacier        => tile%mem%srf   %phys_state       %glacier     (:,:)
+    runoff         => tile%mem%soil  %water_flux       %runoff      (:,:)
+    drainage       => tile%mem%soil  %water_flux       %drainage    (:,:)
+    pme_glacier    => tile%mem%soil  %water_flux       %pme_glacier (:,:)
+    discharge      => tile%mem%soil  %water_flux       %discharge   (:,:)
+    is_in_domain   => model%grid%patch%cells%decomp_info%owner_mask (:,:)
 
     ! Configuration parameters from the namelist
     debug_hd          = model%config%hd%debug_hd
-    diag_water_budget = model%config%hd%diag_water_budget
 
+    ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
+    ALLOCATE (in_domain(SIZE(is_in_domain(:,1)),SIZE(is_in_domain(1,:))))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
+    ELSEWHERE
+      in_domain = 0._wp
+    END WHERE
     !
     ! calculate global land water budget
     !
     water_budget = &
-          global_sum_array(runoff*area*land)                    & !< runoff
-        + global_sum_array(drainage*area*land)                  & !< drainage
-        + global_sum_array(pme_glacier*glacier*area*land)   !vg & !< P-E over glaciers
+          global_sum_array(runoff*area*land*in_domain)                    & !< runoff
+        + global_sum_array(drainage*area*land*in_domain)                  & !< drainage
+        + global_sum_array(pme_glacier*glacier*area*land*in_domain)   !vg & !< P-E over glaciers
 !vg         + global_sum_array(flfmem)                      & !< water in the overland flow reservoirs
 !vg         + global_sum_array(fgmem)                       & !< water in the baseflow reservoir
 !vg         + global_sum_array(frfmem)                      & !< water in the riverflow reservoirs
 !vg         + global_sum_array(finfl)                         !< inflow data from the hd restart file
+
+    DEALLOCATE (in_domain)
 
   END SUBROUTINE hd_init_water_budget
 
@@ -235,17 +297,17 @@ CONTAINS
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_check_water_budget'
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER :: &
-      & area        (:,:), &
-      & land        (:,:), &
-      & coast_ocean (:,:), &
-      & glacier     (:,:), &
-      & runoff      (:,:), &
-      & drainage    (:,:), &
-      & pme_glacier (:,:), &
+    REAL(wp), POINTER ::       &
+      & area            (:,:), &
+      & land            (:,:), &
       & discharge_ocean (:,:)
 
-    REAL(wp), SAVE  ::  water_budget       ! global sum of water playing a role in the HD mode
+    LOGICAL,  POINTER ::    &
+      & is_in_domain (:,:)      ! T: cell in domain (not halo)
+
+    REAL(wp), ALLOCATABLE  ::   &
+      & in_domain       (:,:) ! 1: cell in domain, 0: halo cell
+
     REAL(wp) ::             &
       & water_budget_old,   &   ! water budget at the beginning of the time step
       & water_budget_change     ! water budget change within the time step
@@ -260,23 +322,27 @@ CONTAINS
     ! Get reference to variables in memory
     area            => model%grid                    %area            (:,:)
     land            => tile%mem%srf  %phys_state     %land            (:,:)
-    coast_ocean     => tile%mem%srf  %phys_state     %coast_ocean     (:,:)
-    glacier         => tile%mem%srf  %phys_state     %glacier         (:,:)
-    runoff          => tile%mem%soil %water_flux     %runoff          (:,:)
-    drainage        => tile%mem%soil %water_flux     %drainage        (:,:)
-    pme_glacier     => tile%mem%soil %water_flux     %pme_glacier     (:,:)
     discharge_ocean => tile%mem%soil %water_flux     %discharge_ocean (:,:)
+    is_in_domain    => model%grid%patch%cells%decomp_info%owner_mask  (:,:)
 
     ! Configuration parameters from the namelist
     debug_hd          = model%config%hd%debug_hd
     diag_water_budget = model%config%hd%diag_water_budget
+
+    ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
+    ALLOCATE (in_domain(SIZE(is_in_domain(:,1)),SIZE(is_in_domain(1,:))))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
+    ELSEWHERE
+      in_domain = 0._wp
+    END WHERE
 
     water_budget_old = water_budget
 
     ! re-calculate global land water budget
     !
     water_budget = &
-           global_sum_array(discharge_ocean*area) !vg  & !< river discharge
+           global_sum_array(discharge_ocean*area*in_domain)  !vg  & !< river discharge
 !vg          + global_sum_array(flfmem)                    & !< water in the overland flow reservoirs
 !vg          + global_sum_array(fgmem)                     & !< water in the baseflow reservoir
 !vg          + global_sum_array(frfmem)                    & !< water in the riverflow reservoirs
@@ -286,20 +352,22 @@ CONTAINS
     !
     water_budget_change = water_budget_old - water_budget
     IF (diag_water_budget) THEN
-      WRITE (message_text,*) 'Water budget change: ', water_budget_change,' m3/s'
+      WRITE (message_text,*) 'Water budget change: ', water_budget_change,' kg/s'
     END IF
     CALL message (TRIM(routine),message_text)
     IF (water_budget /= 0._wp) THEN
       IF (ABS(water_budget_change/water_budget) > 1.E-7_wp) THEN
         WRITE (message_text,*) 'Water conservation problem: budget change: ', &
-             water_budget_change,' m3/s'
-!vg       CALL finish (TRIM(routine),message_text)
+             water_budget_change,' kg/s'
+        CALL finish (TRIM(routine),message_text)
       END IF
     END IF
     IF (diag_water_budget) THEN
-      WRITE (message_text,*) '  global discharge to the ocean: ', SUM(discharge_ocean*area), ' m3/s'
+      WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(discharge_ocean*area*in_domain), ' kg/s'
       CALL message (TRIM(routine),message_text)
-    END IF   
+    END IF 
+  
+    DEALLOCATE (in_domain)
 
   END SUBROUTINE hd_check_water_budget
 
