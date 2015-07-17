@@ -173,7 +173,7 @@ CONTAINS
     ! Soil hydrology
     CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
 
-    CALL update_hd(tile, iblk, ics, ice, nc)
+    CALL update_hd(tile, iblk, ics, ice, nc, steplen)
 
     ! Re-calculate wet skin and snow fractions with updated moisture parameters
     CALL  update_snow_and_skin_fraction(model%land, iblk, ics, ice, nc, dtime, steplen)

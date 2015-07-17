@@ -15,7 +15,7 @@ MODULE mo_hd_init
   USE mo_hd_memory_class,   ONLY: t_hd_memory, t_hd_param, t_hd_state
   USE mo_jsb_base,          ONLY: get_model
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
-                                  jsb_netcdf_read_2d, jsb_netcdf_read_2d_time
+                                  jsb_netcdf_read_2d, jsb_netcdf_read_2d_extdim
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
 
@@ -59,61 +59,52 @@ CONTAINS
     input_file = jsb_netcdf_open_input('bc_hdpara.nc', model%id)     ! Temporary
 !!$    input_file = jsb_netcdf_open_input(TRIM(model%config%hd%bc_filename), model%id)
 
-    ! FLAG: HD model land sea mask
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='FLAG',                     &
-      & fill_array = param%hd_lsm)
 
-    ! FDIR: river and base flow direction
+    ! Index of flow destination grid cell
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='FDIR',                     &
       & fill_array = param%fdir)
 
-    ! FILNEW: longitude of next grid cell downstream
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='FILNEW',                   &
-      & fill_array = param%filnew)
-
-    ! FIBNEW: latitude of next grid cell downstream
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='FIBNEW',                   &
-      & fill_array = param%fibnew)
-
-    ! ALF_K: retention constant of overland flow [day]
+    ! Retention constant of overland flow [day]
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='ALF_K',                    &
-      & fill_array = param%alf_k)
+      & fill_array = param%ret_overlflow)
 
-    ! ALF_N: number of overland flow reservoirs
+    ! Number of overland flow reservoirs
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='ALF_N',                    &
-      & fill_array = param%alf_n)
+      & fill_array = param%nres_overlflow)
 
-    ! ARF_K: retention constant of river flow [day]
+    ! Retention constant of river flow [day]
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='ARF_K',                   &
-      & fill_array = param%arf_k)
+      & fill_array = param%ret_riverflow)
 
-    ! ARF_N: number of river flow reservoirs
+    ! Number of river flow reservoirs
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='ARF_N',                    &
-      & fill_array = param%arf_n)
+      & fill_array = param%nres_riverflow)
 
-    ! AGF_K: retention constant for base flow [day]
+    ! Retention constant for base flow [day]
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='AGF_K',                    &
-      & fill_array = param%agf_k)
+      & fill_array = param%ret_baseflow)
 
     CALL jsb_netcdf_close_file(input_file)
+
+    ! Number of base flow reservoirs
+    param%nres_baseflow(:,:) = 1._wp
+
+    ! Maximum number of reservoirs
+    param%nres_o_max = MAXVAL(NINT(param%nres_overlflow))
+    param%nres_b_max = MAXVAL(NINT(param%nres_baseflow))
+    param%nres_r_max = MAXVAL(NINT(param%nres_riverflow))
 
   END SUBROUTINE hd_init_bc
 
@@ -128,13 +119,9 @@ CONTAINS
     TYPE(t_hd_state),        POINTER :: state
 
     REAL(wp), POINTER :: &
-      & return_pointer (:,  :)       !< temporary pointer
+      & return_pointer (:,:)       !< temporary pointer
 
     TYPE(t_input_file) :: input_file
-
-    INTEGER  :: i
-    REAL(wp) :: wgt1, wgt2
-    INTEGER  :: nmw1,nmw2, n1, n2
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':hd_init_ic'
 
@@ -153,13 +140,29 @@ CONTAINS
     !
     state => hd%hd_state
 
-    ! FLFMEM
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='FLFMEM',                   &
-      & fill_array = state%flfmem)
-
-    
+!vg     ! Overlandflow reservoir
+!vg     return_pointer => jsb_netcdf_read_2d_extdim(  &
+!vg       & input_file,                               &
+!vg       & variable_name='FLFMEM',                   &
+!vg       & start_extdim=1,                           &
+!vg       & end_extdim=hd%hd_param%nres_o_max,        &
+!vg       & fill_array = state%overlflow_res)
+!vg 
+!vg     ! Baseflow reservoir
+!vg     return_pointer => jsb_netcdf_read_2d_extdim(  &
+!vg       & input_file,                               &
+!vg       & variable_name='FGMEM',                    &
+!vg       & start_extdim=1,                           &
+!vg       & end_extdim=hd%hd_param%nres_b_max,        &
+!vg       & fill_array = state%baseflow_res)
+!vg 
+!vg     ! Riverflow reservoir
+!vg     return_pointer => jsb_netcdf_read_2d_extdim(  &
+!vg       & input_file,                               &
+!vg       & variable_name='FRFMEM',                   &
+!vg       & start_extdim=1,                           &
+!vg       & end_extdim=hd%hd_param%nres_r_max,        &
+!vg       & fill_array = state%riverflow_res)
 
   END SUBROUTINE hd_init_ic
 

@@ -16,9 +16,9 @@ MODULE mo_hd_interface
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: finish, message, message_text
-  USE mo_hd_constants,    ONLY: nl, nb
   USE mo_sync,            ONLY: SYNC_C, sync_patch_array, global_sum_array
   USE mo_impl_constants,  ONLY: vname_len
+  USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade
 
   IMPLICIT NONE
   PRIVATE
@@ -31,7 +31,7 @@ MODULE mo_hd_interface
 CONTAINS
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE update_hd(tile, iblk, ics, ice, nc)
+  SUBROUTINE update_hd(tile, iblk, ics, ice, nc, steplen)
   !------------------------------------------------------------------------------------------------
   ! the routine is called within the block-loop from jsbach_interface. There is no information on 
   ! neighbouring grid cells (on other paches) availabe.
@@ -40,6 +40,7 @@ CONTAINS
 
     TYPE(t_jsb_tile),  POINTER    :: tile
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+    REAL(wp),          INTENT(in) :: steplen
 
     ! Local variables
     !
@@ -56,11 +57,27 @@ CONTAINS
       & pme_glacier (:), &
       & discharge   (:)
 
-    REAL(wp), ALLOCATABLE :: flfmem(:,:), fgmem(:,:), frfmem(:,:), finfl(:,:)
+    REAL(wp), POINTER ::    &
+      & ret_overlflow  (:), &
+      & nres_overlflow (:), &
+      & ret_baseflow   (:), &
+      & nres_baseflow  (:), &
+      & ret_riverflow  (:), &
+      & nres_riverflow (:)
+
+    REAL(wp), POINTER ::     &
+      & overlflow_res (:,:), &
+      & baseflow_res  (:,:), &
+      & riverflow_res (:,:)
+
+    REAL(wp), ALLOCATABLE :: inflow(:)
+    REAL(wp), ALLOCATABLE :: outflow_runoff(:)
+    REAL(wp), ALLOCATABLE :: outflow_drainage(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_hd'
 
-    LOGICAL :: debug_hd
+    LOGICAL                  :: debug_hd
+    CHARACTER(len=vname_len) :: routing_scheme
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
@@ -77,27 +94,53 @@ CONTAINS
     pme_glacier    => tile%mem%soil %water_flux     %pme_glacier         (ics:ice, iblk)
     discharge      => tile%mem%soil %water_flux     %discharge           (ics:ice, iblk)
 
+    overlflow_res  => tile%mem%hd   %hd_state       %overlflow_res       (ics:ice, :, iblk)
+    baseflow_res   => tile%mem%hd   %hd_state       %baseflow_res        (ics:ice, :, iblk)
+    riverflow_res  => tile%mem%hd   %hd_state       %riverflow_res       (ics:ice, :, iblk)
+
+    ret_overlflow  => tile%mem%hd   %hd_param       %ret_overlflow       (ics:ice, iblk)
+    nres_overlflow => tile%mem%hd   %hd_param       %nres_overlflow      (ics:ice, iblk)
+    ret_baseflow   => tile%mem%hd   %hd_param       %ret_baseflow        (ics:ice, iblk)
+    nres_baseflow  => tile%mem%hd   %hd_param       %nres_baseflow       (ics:ice, iblk)
+    ret_riverflow  => tile%mem%hd   %hd_param       %ret_riverflow       (ics:ice, iblk)
+    nres_riverflow => tile%mem%hd   %hd_param       %nres_riverflow      (ics:ice, iblk)
+ 
+
     ! Configuration parameters from the namelist
     debug_hd          = model%config%hd%debug_hd
+    routing_scheme    = model%config%hd%routing_scheme
 
-    !>>>
-    ALLOCATE (flfmem(nl,nb))
-    flfmem = 0._wp
-    ALLOCATE (fgmem(nl,nb))
-    fgmem = 0._wp
-    ALLOCATE (frfmem(nl,nb))
-    frfmem = 0._wp
-    ALLOCATE (finfl(nl,nb))
-    finfl = 0._wp
-    !<<<
 
-    ! dummy version of HD model
-    !
-    discharge(:) = land(:) * (runoff(:) + drainage(:) + pme_glacier(:))
+    SELECT CASE (TRIM(routing_scheme))
+    CASE ('full')
+      CALL finish(TRIM(routine), 'full HD model not yet implemented')
 
-    !>>>
-    DEALLOCATE (flfmem, fgmem, frfmem, finfl)
-    !<<<
+      ALLOCATE(inflow(nc))
+      ALLOCATE(outflow_runoff(nc))
+      ALLOCATE(outflow_drainage(nc))
+
+      inflow(:) = runoff(:) + pme_glacier(:)  !vg eigentlich [m3/s]
+      CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
+
+      inflow(:) = drainage(:)  !vg eigentlich [m3/s]
+      CALL reservoir_cascade (inflow(:), nc, steplen, ret_baseflow(:), nres_baseflow(:), baseflow_res(:,:), outflow_drainage(:))
+
+      inflow(:) = outflow_runoff(:) + outflow_drainage(:)
+      CALL reservoir_cascade (inflow(:), nc, steplen, ret_riverflow(:), nres_riverflow(:), riverflow_res(:,:), discharge(:))
+
+      DEALLOCATE (inflow, outflow_runoff, outflow_drainage)
+
+    CASE ('equally_to_coast', 'equally_to_ocean')
+      !
+      ! dummy version of HD model
+      !
+      discharge(:) = land(:) * (runoff(:) + drainage(:) + pme_glacier(:))
+
+    CASE DEFAULT
+      WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    END SELECT
 
   END SUBROUTINE update_hd
 
@@ -178,6 +221,8 @@ CONTAINS
     SELECT CASE (TRIM(routing_scheme))
     CASE ('full')
       CALL finish(TRIM(routine), 'full HD model not yet implemented')
+
+!vg   CALL river_routing(discharge) -> discharge_ocean
 
     CASE ('equally_to_coast')
       WHERE (coast_ocean(:,:) == 1._wp)
