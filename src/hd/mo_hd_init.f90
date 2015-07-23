@@ -133,6 +133,8 @@ CONTAINS
     hd => tile%mem%hd
     IF (.NOT. ASSOCIATED(hd)) RETURN
 
+    IF (TRIM(model%config%hd%routing_scheme) /= 'full') RETURN
+
     ! read initial conditions
 
     input_file = jsb_netcdf_open_input('ic_hdstart.nc', model%id)     ! Temporary
