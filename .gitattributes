@@ -27,7 +27,9 @@ src/hd/mo_hd_config_class.f90 -text
 src/hd/mo_hd_constants.f90 -text
 src/hd/mo_hd_init.f90 -text
 src/hd/mo_hd_interface.f90 -text
+src/hd/mo_hd_memory.f90 -text
 src/hd/mo_hd_memory_class.f90 -text
+src/hd/mo_hd_reservoir_cascade.f90 -text
 src/hd/mo_interface_hd_ocean.f90 -text
 src/interfaces/mo_jsb_interface.f90 -text
 src/shared/mo_phy_schemes.f90 -text

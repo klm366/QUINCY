@@ -79,6 +79,8 @@ CONTAINS
     LOGICAL                  :: debug_hd
     CHARACTER(len=vname_len) :: routing_scheme
 
+    IF (.NOT. ASSOCIATED(tile%mem%hd)) RETURN
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
     model => get_model(tile%owner_model_id)

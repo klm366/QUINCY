@@ -71,7 +71,7 @@ CONTAINS
 
     write_coupler_restart = .FALSE.
 
-    ALLOCATE(buffer(grid%nproma*grid%nblks,1))
+    ALLOCATE(buffer(grid%nproma * grid%nblks, 1))
     buffer(:,:) = 0.0_wp
 !vg     DO iblk = 1, grid%nblks
 !vg       nn = (iblk - 1) * grid%nproma

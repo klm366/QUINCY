@@ -50,6 +50,8 @@ CONTAINS
     hd => tile%mem%hd
     IF (.NOT. ASSOCIATED(hd)) RETURN
 
+    IF (TRIM(model%config%hd%routing_scheme) /= 'full') RETURN
+
     CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//' from '//TRIM(model%config%hd%bc_filename))
 
     ! Initialize boundary conditions
