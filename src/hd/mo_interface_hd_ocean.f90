@@ -19,7 +19,7 @@ MODULE mo_interface_hd_ocean
   USE mo_jsb_base,            ONLY: get_model
   USE mo_kind,                ONLY: wp
   USE mo_coupling_config,     ONLY: is_coupled_run
-  USE mo_exception,           ONLY: finish
+  USE mo_exception,           ONLY: warning
 #ifdef YAC_coupling
   USE mo_yac_finterface,      ONLY: yac_fput, yac_fget_field_id_from_name
 #endif
@@ -91,11 +91,12 @@ CONTAINS
 #ifdef YAC_coupling
     CALL yac_fput(field_id, nbr_hor_cells, collection_size, nbr_pointsets, nbr_subdomains, buffer, info, ierror)
 #endif
-    IF ( info > 1 ) write_coupler_restart = .TRUE.
+    IF ( info > 1 .AND. info < 7 ) write_coupler_restart = .TRUE.
 
     IF ( write_coupler_restart ) THEN
-       CALL finish(TRIM(routine), 'ERROR: restart not supported yet for YAC')
+       CALL warning(TRIM(routine), 'YAC says it is put for restart')
     ENDIF
+
     DEALLOCATE(buffer)
 
   END SUBROUTINE interface_hd_ocean
