@@ -132,7 +132,7 @@ CONTAINS
 
       DEALLOCATE (inflow, outflow_runoff, outflow_drainage)
 
-    CASE ('equally_to_coast', 'equally_to_ocean')
+    CASE ('weighted_to_coast', 'weighted_to_ocean', 'equally_to_coast', 'equally_to_ocean')
       !
       ! dummy version of HD model
       !
@@ -173,7 +173,10 @@ CONTAINS
     REAL(wp) ::            &
       & global_discharge,  &  ! global sum of discharge to the ocean
       & area_coast_ocean,  &  ! total area of all coastal ocean grid cells
-      & area_ocean            ! total area of all ocean grid cells
+      & area_ocean,        &  ! total area of all ocean grid cells
+      & sum_weights
+
+    REAL(wp), ALLOCATABLE :: cos_lat(:,:) ! Cosines of latitudes of cell centers
 
     LOGICAL, POINTER  ::   &
       & is_in_domain    (:,:) ! T: cell in domain (not halo)
@@ -210,7 +213,7 @@ CONTAINS
     ! (routing_scheme = 'full' for real river routing not yet implemented)
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
-    ALLOCATE (in_domain(SIZE(is_in_domain(:,1)),SIZE(is_in_domain(1,:))))
+    ALLOCATE (in_domain(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
     WHERE (is_in_domain(:,:))
       in_domain = 1._wp
     ELSEWHERE
@@ -226,6 +229,24 @@ CONTAINS
 
 !vg   CALL river_routing(discharge) -> discharge_ocean
 
+    CASE ('weighted_to_coast')
+      ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
+      cos_lat(:,:) = MERGE(COS(model%grid%lat(:,:)), 0._wp, coast_ocean(:,:) == 1._wp)
+      sum_weights = global_sum_array(coast_ocean(:,:)*cos_lat(:,:)*area(:,:)*in_domain(:,:))
+      WHERE (coast_ocean(:,:) == 1._wp)
+        discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
+      ELSEWHERE
+        discharge_ocean(:,:) = 0._wp
+      END WHERE
+    CASE ('weighted_to_ocean')
+      ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
+      cos_lat(:,:) = MERGE(COS(model%grid%lat(:,:)), 0._wp, ocean(:,:) == 1._wp)
+      sum_weights = global_sum_array(ocean(:,:)*cos_lat(:,:)*area(:,:)*in_domain(:,:))
+      WHERE (ocean(:,:) == 1._wp)
+        discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
+      ELSEWHERE
+        discharge_ocean(:,:) = 0._wp
+      END WHERE
     CASE ('equally_to_coast')
       WHERE (coast_ocean(:,:) == 1._wp)
         discharge_ocean(:,:) = global_discharge/area_coast_ocean
