@@ -21,16 +21,34 @@ MODULE mo_interface_hd_ocean
   USE mo_coupling_config,     ONLY: is_coupled_run
   USE mo_exception,           ONLY: warning
 #ifdef YAC_coupling
-  USE mo_yac_finterface,      ONLY: yac_fput, yac_fget_field_id_from_name
+  USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name
 #endif
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: interface_hd_ocean
+  PUBLIC :: jsb_fdef_hd_fields, interface_hd_ocean
   CHARACTER(len=*), PARAMETER :: modname = 'mo_interface_hd_ocean'
 
 CONTAINS
+
+  SUBROUTINE jsb_fdef_hd_fields(comp_id, domain_id, cell_point_ids, cell_mask_ids)
+
+    INTEGER, INTENT(in) :: comp_id, domain_id
+    INTEGER, INTENT(in) :: cell_point_ids(:), cell_mask_ids(:)
+
+    INTEGER :: field_id
+
+    CALL yac_fdef_field (      &
+      & 'river_runoff',        &
+      & comp_id,               &
+      & domain_id,             &
+      & cell_point_ids,        &
+      & cell_mask_ids,         &
+      & 1,                     &
+      & field_id )
+
+  END SUBROUTINE jsb_fdef_hd_fields
 
   SUBROUTINE interface_hd_ocean(model_id)
 
