@@ -371,7 +371,9 @@ CONTAINS
 
   FUNCTION new_vgrid(name, cdi_axis_type, length, longname, units, levels, lbounds, ubounds) RESULT(new)
 
-    USE mo_jsb_io, ONLY: cdi_zaxis_ids, zaxisCreate, zaxisInqName, zaxisInqSize
+    USE mo_jsb_io,       ONLY: cdi_zaxis_ids, zaxisCreate, zaxisInqName, zaxisInqSize
+    USE mo_jsb_io_iface, ONLY: zaxisDefName, zaxisDefLevels, zaxisDefLbounds,          &
+                               zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname
 
     CHARACTER(len=*),           INTENT(in) :: name
     INTEGER,                    INTENT(in) :: cdi_axis_type
