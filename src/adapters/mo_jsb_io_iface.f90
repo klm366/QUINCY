@@ -15,7 +15,9 @@ MODULE mo_jsb_io_iface
   USE mo_grib2,         ONLY: t_grib2_var, grib2_var
   USE mo_cdi,           ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24, ZAXIS_SURFACE, &
                             & ZAXIS_DEPTH_BELOW_LAND, FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, TSTEP_CONSTANT, &
-                            & zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize
+                            & zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
+                            & zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
+                            & zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname 
   USE mo_cdi_constants, ONLY: GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, ZA_SURFACE, ZA_DEPTH_BELOW_LAND
 #else
   USE mo_linked_list,   ONLY: NETCDF2, NETCDF4, GRIB
@@ -30,7 +32,10 @@ MODULE mo_jsb_io_iface
             FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
             GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, &
             ZA_SURFACE, ZA_DEPTH_BELOW_LAND, TSTEP_CONSTANT, &
-            zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize
+            zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
+            zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
+            zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname 
+
 
 #ifndef __ICON__
   TYPE t_cf_var
