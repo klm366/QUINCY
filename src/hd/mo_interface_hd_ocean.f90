@@ -27,11 +27,16 @@ MODULE mo_interface_hd_ocean
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: jsb_fdef_hd_fields, interface_hd_ocean
+#ifdef YAC_coupling
+  PUBLIC :: jsb_fdef_hd_fields
+#endif
+  PUBLIC :: interface_hd_ocean
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_interface_hd_ocean'
 
 CONTAINS
 
+#ifdef YAC_coupling
   SUBROUTINE jsb_fdef_hd_fields(comp_id, domain_id, cell_point_ids, cell_mask_ids)
 
     INTEGER, INTENT(in) :: comp_id, domain_id
@@ -49,6 +54,7 @@ CONTAINS
       & field_id )
 
   END SUBROUTINE jsb_fdef_hd_fields
+#endif
 
   SUBROUTINE interface_hd_ocean(model_id)
 
