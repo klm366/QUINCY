@@ -72,6 +72,12 @@ CONTAINS
 
     hgrid        => model%grid
 
+    surface => get_vgrid(model, 'surface')
+    IF (.NOT. ASSOCIATED(surface)) THEN
+      surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
+      CALL register_vgrid(model, surface)
+    END IF
+
     !vg   wie kann ich die level dynamisch definieren??
     hd_o => get_vgrid(model, 'hd_nres_overlflow')
     IF (.NOT. ASSOCIATED(hd_o)) THEN
