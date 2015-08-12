@@ -79,6 +79,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: buffer(:,:)
     INTEGER               :: collection_size, nbr_pointsets, nbr_subdomains
     INTEGER               :: info, ierror !< return values form cpl_put/get calls
+    INTEGER               :: iblk, n, nn
 
 
     IF ( .NOT. is_coupled_run() ) RETURN
@@ -97,18 +98,17 @@ CONTAINS
 
     ALLOCATE(buffer(grid%nproma * grid%nblks, 1))
     buffer(:,:) = 0.0_wp
-!vg     DO iblk = 1, grid%nblks
-!vg       nn = (iblk - 1) * grid%nproma
-!vg       DO n = 1, nproma
-!vg         buffer(nn+n,1) = discharge_ocean(n,iblk)
-!vg       END DO
-!vg     END DO
-    nbr_hor_cells = model%grid%ntotal
-    buffer(:,:) = RESHAPE(discharge_ocean(:,:), (/ nbr_hor_cells, 1 /))
+    DO iblk = 1, model%grid%nblks
+      nn = (iblk - 1) * model%grid%nproma
+      DO n = 1, model%grid%npromz
+        buffer(nn+n,1) = discharge_ocean(n,iblk)
+      END DO
+    END DO
 
 #ifdef YAC_coupling
     CALL yac_fget_field_id_from_name('river_runoff', field_id)
 #endif
+    nbr_hor_cells = model%grid%ntotal
     collection_size = 1
     nbr_pointsets   = 1
     nbr_subdomains  = 1
