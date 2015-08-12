@@ -44,11 +44,7 @@ MODULE mo_hd_memory_class
     TYPE(t_hd_state),   POINTER :: hd_state => NULL()
   END TYPE t_hd_memory
 
-
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_memory_class'
-
-CONTAINS
-
 
 #endif
 END MODULE mo_hd_memory_class
