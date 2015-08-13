@@ -100,7 +100,7 @@ CONTAINS
     buffer(:,:) = 0.0_wp
     DO iblk = 1, model%grid%nblks
       nn = (iblk - 1) * model%grid%nproma
-      DO n = 1, model%grid%npromz
+      DO n = 1, model%grid%nproma
         buffer(nn+n,1) = discharge_ocean(n,iblk)
       END DO
     END DO
