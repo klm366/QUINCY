@@ -96,14 +96,11 @@ CONTAINS
     END IF
 
     IF (ASSOCIATED(tile%parent_tile)) THEN
-       new%hd_state => tile%parent_tile%mem%hd%hd_state
        new%hd_param => tile%parent_tile%mem%hd%hd_param
     ELSE
-       new%hd_state => new_state()
        new%hd_param => new_param()
     END IF
 
-    new%hd_param => new_param()
     new%hd_state => new_state()
 
     mem => new
@@ -164,19 +161,19 @@ CONTAINS
         & hgrid, hd_o,                                                                     &
         & t_cf('overlflow_res', '', 'content of the overland flow reservoir', nc_bits),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp )
 
       CALL jsb_add_var( this_list, prefix//'baseflow_res'//suffix, state%baseflow_res,     &
         & hgrid, hd_b,                                                                     &
         & t_cf('baseflow_res', '', 'content of the baseflow reservoir', nc_bits),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp )
 
       CALL jsb_add_var( this_list, prefix//'riverflow_res'//suffix, state%riverflow_res,   &
         & hgrid, hd_r,                                                                     &
         & t_cf('riverflow_res', '', 'content of the riverflow reservoir', nc_bits),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp )
 
     END FUNCTION new_state
 
