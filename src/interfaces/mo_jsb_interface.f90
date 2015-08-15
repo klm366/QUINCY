@@ -173,7 +173,9 @@ CONTAINS
     ! Soil hydrology
     CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
 
-    CALL update_hd(tile, iblk, ics, ice, nc, steplen)
+    IF (model%config%hd%active) THEN
+      CALL update_hd(tile, iblk, ics, ice, nc, steplen)
+    END IF
 
     ! Re-calculate wet skin and snow fractions with updated moisture parameters
     CALL  update_snow_and_skin_fraction(model%land, iblk, ics, ice, nc, dtime, steplen)
@@ -272,11 +274,13 @@ CONTAINS
 
     model => get_model(model_id)
 
-    CALL hd_init_water_budget(model_id)
-    CALL hd_riverflow(model_id)
-    CALL hd_check_water_budget(model_id)
+    IF (model%config%hd%active) THEN
+      CALL hd_init_water_budget(model_id)
+      CALL hd_riverflow(model_id)
+      CALL hd_check_water_budget(model_id)
 
-    CALL interface_hd_ocean(model_id)
+      CALL interface_hd_ocean(model_id)
+    END IF
 
   END SUBROUTINE jsbach_finish_timestep
 
