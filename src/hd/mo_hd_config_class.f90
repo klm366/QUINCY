@@ -65,7 +65,7 @@ CONTAINS
     ALLOCATE(new)
 
     ! Set defaults
-    active          = .TRUE.
+    active          = .FALSE.
     ic_filename     = 'hdstart.nc'
     bc_filename     = 'hdpara.nc'
     debug_hd        = .FALSE.
