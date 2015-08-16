@@ -8,12 +8,12 @@
 !! First version by Veroniks Gayler (2013-04-20)
 !!
 MODULE mo_hd_config_class
-#ifndef __NO_JSBACH__
+!#ifndef __NO_JSBACH__
+#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
-  USE mo_impl_constants,    ONLY: vname_len
 
   IMPLICIT NONE
   PRIVATE
@@ -42,12 +42,12 @@ CONTAINS
 
     TYPE(t_hd_config), POINTER :: new
 
-    LOGICAL                     :: active                !< hd module is active
-    CHARACTER(len=filename_max) :: ic_filename           !< file with initial conditions
-    CHARACTER(len=filename_max) :: bc_filename           !< file with boundary conditions       
-    LOGICAL                     :: debug_hd              !< additional printing for debugging
-    LOGICAL                     :: diag_water_budget     !< prints to diagnose global water budget
-    CHARACTER(len=vname_len)    :: routing_scheme        !< river_routing_scheme: full / equally_to_coast / equally_to_ocean
+    LOGICAL                       :: active                !< hd module is active
+    CHARACTER(len=filename_max)   :: ic_filename           !< file with initial conditions
+    CHARACTER(len=filename_max)   :: bc_filename           !< file with boundary conditions       
+    LOGICAL                       :: debug_hd              !< additional printing for debugging
+    LOGICAL                       :: diag_water_budget     !< prints to diagnose global water budget
+    CHARACTER(len=:), ALLOCATABLE :: routing_scheme        !< river_routing_scheme: full / equally_to_coast / equally_to_ocean
 
     NAMELIST /jsb_hd_nml/          &
       active,                      &

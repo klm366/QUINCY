@@ -28,7 +28,9 @@ CONTAINS
     USE mo_srf_memory,        ONLY: new_srf_memory
     USE mo_soil_memory,       ONLY: new_soil_memory
     USE mo_veg_memory,        ONLY: new_veg_memory
+#ifndef __NO_JSBACH_HD__
     USE mo_hd_memory,         ONLY: new_hd_memory
+#endif
 
     CHARACTER(len=*),             INTENT(in) :: varlist_name
     CHARACTER(len=*),             INTENT(in) :: prefix        ! Prefix for variable names
@@ -119,8 +121,10 @@ CONTAINS
 !!$      new%veg => new_veg_memory(varlist_name, 'veg_'//TRIM(prefix), suffix, tile)
       new%veg => new_veg_memory(varlist_name, TRIM(prefix), suffix, tile)
 
+#ifndef __NO_JSBACH_HD__
     IF (model%config%hd%active) &
       new%hd => new_hd_memory(varlist_name, TRIM(prefix), suffix, tile)
+#endif
 
     mem => new
 

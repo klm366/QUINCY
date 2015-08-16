@@ -19,7 +19,9 @@ MODULE mo_srf_init
                                   jsb_netcdf_read_2d, jsb_netcdf_read_2d_time
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
+#ifndef __NO_JSBACH_HD__
   USE mo_impl_constants,    ONLY: LAND_BOUNDARY, SEA_BOUNDARY, SEA
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -124,6 +126,8 @@ CONTAINS
 
     CALL jsb_netcdf_close_file(input_file)
 
+#ifndef __NO_JSBACH_HD__
+
     input_file = jsb_netcdf_open_input('r2b4_amip.nc', model%id)    !vg Name !!!
 
     ! coastal cells of the land and ocean
@@ -137,6 +141,8 @@ CONTAINS
     DEALLOCATE(cell_sea_land_mask)
 
     CALL jsb_netcdf_close_file(input_file)
+
+#endif
 
     input_file = jsb_netcdf_open_input(TRIM(model%config%srf%bc_filename), model%id)
 
