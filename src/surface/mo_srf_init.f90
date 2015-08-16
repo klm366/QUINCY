@@ -19,6 +19,7 @@ MODULE mo_srf_init
                                   jsb_netcdf_read_2d, jsb_netcdf_read_2d_time
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
+  USE mo_impl_constants,    ONLY: LAND_BOUNDARY, SEA_BOUNDARY, SEA
 
   IMPLICIT NONE
   PRIVATE
@@ -59,7 +60,7 @@ CONTAINS
     TYPE(t_srf_water_state),  POINTER :: water
     TYPE(t_srf_water_flux),   POINTER :: wflux
 
-    REAL(wp), POINTER :: t_srf(:,:), t_srf_mon(:,:,:)
+    REAL(wp), POINTER :: t_srf(:,:), t_srf_mon(:,:,:), cell_sea_land_mask(:,:)
     REAL(wp), POINTER :: &
       & return_pointer (:,  :)       !< temporary pointer
 
@@ -78,12 +79,12 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(srf)) RETURN
 
-    CALL message(TRIM(routine), 'Initializing srf memory for tile '//TRIM(tile%name)//' from '//TRIM(model%config%srf%ic_filename))
-
     ! Initialize physical state
     !
     phys => srf%phys_state
 
+    CALL message(TRIM(routine), &
+         'Initializing srf memory for tile '//TRIM(tile%name)//' from '//TRIM(model%config%srf%bc_sso_filename))
     input_file = jsb_netcdf_open_input(TRIM(model%config%srf%bc_sso_filename), model%id)
 
     ! Orography
@@ -95,15 +96,45 @@ CONTAINS
 
     CALL jsb_netcdf_close_file(input_file)
 
+    CALL message(TRIM(routine), 'Initializing srf memory for tile '//TRIM(tile%name)//' from bc_land_frac.nc')
     input_file = jsb_netcdf_open_input('bc_land_frac.nc', model%id)     ! Temporary
 !!$    input_file = jsb_netcdf_open_input(TRIM(model%config%srf%bc_filename), model%id)
+
+    ! Land mask (including glacies and lakes)
+    return_pointer => jsb_netcdf_read_2d(         &
+      & input_file,                               &
+      & variable_name='notsea',                   &        !< ocean 0., land 1.
+      & fill_array = phys%land)
 
     ! Glacier mask
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='glac',                     &
       & fill_array = phys%glacier)
-    phys%glacier(:,:) = MERGE(phys%glacier(:,:), 0._wp, phys%glacier(:,:) >= 0._wp)
+    ! set glacier mask to zero on ocean grid cells (instead of missing value)
+    WHERE (phys%land(:,:) == 0._wp)
+      phys%glacier(:,:) = 0._wp
+    END WHERE
+
+    ! Lake mask
+    return_pointer => jsb_netcdf_read_2d(         &
+      & input_file,                               &
+      & variable_name='lake',                     &
+      & fill_array = phys%lake)
+
+    CALL jsb_netcdf_close_file(input_file)
+
+    input_file = jsb_netcdf_open_input('r2b4_amip.nc', model%id)    !vg Name !!!
+
+    ! coastal cells of the land and ocean
+    cell_sea_land_mask => jsb_netcdf_read_2d( &
+      & input_file,                                &
+      & variable_name='cell_sea_land_mask')
+    phys%coast_land(:,:)  = MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == LAND_BOUNDARY)
+    phys%coast_ocean(:,:) = MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+    phys%ocean(:,:)       = MERGE(1._wp, 0._wp, &
+          cell_sea_land_mask(:,:) == SEA .OR. cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+    DEALLOCATE(cell_sea_land_mask)
 
     CALL jsb_netcdf_close_file(input_file)
 

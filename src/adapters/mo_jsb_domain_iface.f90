@@ -25,7 +25,7 @@ MODULE mo_jsb_domain_iface
   PRIVATE
 
   PUBLIC :: t_patch, p_patch, pe_decomposed
-  PUBLIC :: get_grid_filename, get_ntotal, get_ntotal_g, get_dims_g, get_nproma, get_nblks, get_lon, get_lat
+  PUBLIC :: get_grid_filename, get_ntotal, get_ntotal_g, get_dims_g, get_nproma, get_nblks, get_lon, get_lat, get_area
   PUBLIC :: get_blk_start, get_blk_end, get_col_start, get_col_end
 
 #ifdef __ICON__
@@ -200,7 +200,11 @@ CONTAINS
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
     ELSE IF(PRESENT(patch)) THEN
 #ifdef __ICON__
-      get_nproma = INT( (patch%n_patch_cells - patch%npromz_c)/(patch%nblks_c-1))
+      IF (patch%nblks_c > 1) THEN
+        get_nproma = INT( (patch%n_patch_cells - patch%npromz_c)/(patch%nblks_c-1))
+      ELSE
+        get_nproma = patch%n_patch_cells
+      END IF
 #else
       CALL finish(TRIM(routine), 'patch not allowed')
 #endif
@@ -427,6 +431,46 @@ CONTAINS
     END IF
 
   END FUNCTION get_lat
+
+  FUNCTION get_area(patch, decomp) RESULT(area)
+
+#ifndef __ICON__
+    USE mo_geoloc, ONLY: gboxarea_2d
+#endif
+
+    TYPE(t_patch),       OPTIONAL, INTENT(in)  :: patch
+    TYPE(pe_decomposed), OPTIONAL, INTENT(in)  :: decomp
+    REAL(wp), POINTER                          :: area(:,:)
+
+    INTEGER :: nproma, nblks
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_area'
+
+    nproma = get_nproma(patch, decomp)
+    nblks  = get_nblks (patch, decomp)
+    ALLOCATE(area(nproma,nblks))
+
+    IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
+      CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
+    ELSE IF(PRESENT(patch)) THEN
+#ifdef __ICON__
+      area(:,:) = patch%cells%area(:,:)
+#else
+      CALL finish(TRIM(routine), 'patch not allowed')
+#endif
+    ELSE IF(PRESENT(decomp)) THEN
+#ifdef __ICON__
+      CALL finish(TRIM(routine), 'decomposition not allowed')
+#else
+      IF (.NOT. ASSOCIATED(gboxarea_2d)) &
+        CALL finish(TRIM(routine), 'grid box surface area of decomposition not computed yet')
+      area(:,:) = gboxarea_2d(:,:)
+#endif
+    ELSE
+      CALL finish(TRIM(routine), 'Need to specify either patch or decomposition')
+    END IF
+
+  END FUNCTION get_area
 
 #endif
 END MODULE mo_jsb_domain_iface
