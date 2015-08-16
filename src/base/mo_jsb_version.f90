@@ -33,6 +33,7 @@ MODULE mo_jsb_version
 
   CHARACTER(len=256) :: executable                         !< Name of executable
   CHARACTER(len= 80) :: label(4)                           !< Space for storing model information
+  LOGICAL            :: version_printed = .FALSE.
 
 CONTAINS
 
@@ -48,6 +49,7 @@ CONTAINS
   SUBROUTINE jsbach_init_version(standalone)
 
 !!$    USE mo_netcdf, ONLY: global_att, put_att
+    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast
 
     LOGICAL, INTENT(in), OPTIONAL :: standalone !< true: offline JSBACH, false: ECHAM/JSBACH
 
@@ -69,24 +71,37 @@ CONTAINS
     l_standalone = .FALSE.
     IF (PRESENT(standalone)) l_standalone = standalone
 
-    IF (l_standalone) THEN
+    ! Get model name from environment
+    IF (my_process_is_stdio()) THEN
+      CALL get_command_argument(0, executable)
+    END IF
+
+    CALL p_bcast (executable, p_io)
+
+!!$    IF (l_standalone) THEN
+    IF (.NOT. version_printed) THEN
       ! Print version
       CALL message ('','')
       CALL message ('','')
       message_text = '==========================================================='
-      CALL message ('',TRIM(message_text))        
+      CALL message ('',TRIM(message_text))
       CALL message ('','')
-  
+
       message_text = '  JSBACH - Version '//jsbach_version
-      CALL message ('',TRIM(message_text))        
-      message_text = '  Copyright by Max-Planck-Institute for Meteorology, 2014'
-      CALL message ('',TRIM(message_text))        
-  
+      CALL message ('',TRIM(message_text))
+      message_text = '  Copyright by Max-Planck-Institute for Meteorology, 2015'
+      CALL message ('',TRIM(message_text))
+      IF (INDEX(executable, 'icon') /= 0) THEN
+        message_text = '  License subject to the DWD and MPI-M-Software-License-Agreement'
+        CALL message ('',TRIM(message_text))
+      END IF
+
       CALL message ('','')
       message_text = '==========================================================='
-      CALL message ('',TRIM(message_text))        
+      CALL message ('',TRIM(message_text))
       CALL message ('','')
       CALL message ('','')
+      version_printed = .TRUE.
     END IF
 
 
@@ -135,7 +150,6 @@ CONTAINS
   !!
   SUBROUTINE jsbach_label_run(standalone)
 
-    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast
     USE mo_util_string,        ONLY: separator
  
     LOGICAL, INTENT(in), OPTIONAL :: standalone !< true: offline JSBACH, false: ECHAM/JSBACH
@@ -149,13 +163,6 @@ CONTAINS
     IF (PRESENT(standalone)) l_standalone = standalone
 
     IF (l_standalone) THEN
-      ! Get model name from environment
-       IF (my_process_is_stdio()) THEN
-         CALL get_command_argument(0, executable)
-      END IF
-
-      CALL p_bcast (executable, p_io)
-
       CALL message ('','')
       CALL message('',separator)
       CALL message ('',' Model: '//TRIM(executable))
