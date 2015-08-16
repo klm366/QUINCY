@@ -13,6 +13,7 @@ MODULE mo_jsb_config_class
   USE mo_srf_config_class,  ONLY: t_srf_config
   USE mo_soil_config_class, ONLY: t_soil_config
   USE mo_veg_config_class,  ONLY: t_veg_config
+  USE mo_hd_config_class,   ONLY: t_hd_config
   USE mo_io_units,          ONLY: filename_max
   USE mo_exception,         ONLY: message
 
@@ -28,6 +29,7 @@ MODULE mo_jsb_config_class
     TYPE(t_srf_config),  POINTER :: srf
     TYPE(t_soil_config), POINTER :: soil
     TYPE(t_veg_config),  POINTER :: veg
+    TYPE(t_hd_config),   POINTER :: hd
   END TYPE t_jsb_model_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_config_class'
@@ -39,6 +41,7 @@ CONTAINS
     USE mo_srf_config_class,   ONLY: new_srf_config
     USE mo_soil_config_class,  ONLY: new_soil_config
     USE mo_veg_config_class,   ONLY: new_veg_config
+    USE mo_hd_config_class,    ONLY: new_hd_config
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
     CHARACTER(len=*), INTENT(in) :: namelist_filename
@@ -90,6 +93,8 @@ CONTAINS
     new%soil => new_soil_config(nml_handler)
 
     new%veg  => new_veg_config(nml_handler)
+
+    new%hd  => new_hd_config(nml_handler)
 
     CALL close_nml(nml_handler)
 

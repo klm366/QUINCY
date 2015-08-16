@@ -148,6 +148,7 @@ CONTAINS
     USE mo_srf_init,           ONLY: srf_init_ic, srf_init_bc
     USE mo_soil_init,          ONLY: soil_init
     USE mo_veg_init,           ONLY: veg_init_ic, veg_init_bc
+    USE mo_hd_init,            ONLY: hd_init_ic, hd_init_bc
     USE mo_jsb_base,           ONLY: get_tile
 
 #ifdef HAVE_F2003
@@ -188,6 +189,11 @@ CONTAINS
     IF (model%config%veg%active) THEN
       CALL veg_init_bc(model%land)
       CALL veg_init_ic(model%land)
+    END IF
+
+    IF (model%config%hd%active) THEN
+      CALL hd_init_bc(model%land)
+      CALL hd_init_ic(model%land)
     END IF
 
     ! Initialize tile fractions for all tiles

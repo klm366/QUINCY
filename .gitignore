@@ -1,2 +1,4 @@
 .history
 *~
+!src/hd/.history
+!src/hd/*~
