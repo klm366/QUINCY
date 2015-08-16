@@ -8,7 +8,8 @@
 !! First version by Veronika Gayler (2015-05-06)
 !!
 MODULE mo_hd_memory_class
-#ifndef __NO_JSBACH__
+!#ifndef __NO_JSBACH__
+#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind, ONLY: wp
 

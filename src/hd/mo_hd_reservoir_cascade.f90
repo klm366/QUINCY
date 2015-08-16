@@ -8,7 +8,8 @@
 !! First version by Veronika Gayler (2013-04-20)
 !!
 MODULE mo_hd_reservoir_cascade
-#ifndef __NO_JSBACH__
+!#ifndef __NO_JSBACH__
+#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp

@@ -8,7 +8,8 @@
 !! First version by Veronika Gayler (2013-04-20)
 !!
 MODULE mo_hd_constants
-#ifndef __NO_JSBACH__
+!#ifndef __NO_JSBACH__
+#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_physical_constants, ONLY: &
     rhoh2o              !< Density of liquid water [kg/m3]

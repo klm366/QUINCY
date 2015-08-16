@@ -8,7 +8,8 @@
 !! First version by Veronika Gayler (2013-04-20)
 !!
 MODULE mo_hd_interface
-#ifndef __NO_JSBACH__
+!#ifndef __NO_JSBACH__
+#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_jsb_model_class, ONLY: t_jsb_model
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile
@@ -17,7 +18,6 @@ MODULE mo_hd_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: finish, message, message_text
   USE mo_sync,            ONLY: SYNC_C, sync_patch_array, global_sum_array
-  USE mo_impl_constants,  ONLY: vname_len
   USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade
 
   IMPLICIT NONE
@@ -76,8 +76,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_hd'
 
-    LOGICAL                  :: debug_hd
-    CHARACTER(len=vname_len) :: routing_scheme
+    LOGICAL                       :: debug_hd
+    CHARACTER(len=:), ALLOCATABLE :: routing_scheme
 
     IF (.NOT. ASSOCIATED(tile%mem%hd)) RETURN
 
@@ -181,7 +181,7 @@ CONTAINS
     LOGICAL, POINTER  ::   &
       & is_in_domain    (:,:) ! T: cell in domain (not halo)
 
-    CHARACTER(len=vname_len) :: &
+    CHARACTER(len=:), ALLOCATABLE :: &
       & routing_scheme        ! river routing scheme
 
     REAL(wp), ALLOCATABLE  ::   &

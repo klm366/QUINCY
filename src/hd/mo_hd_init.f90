@@ -8,7 +8,8 @@
 !! First version by Veronika Gayler (2013-04-20)
 !!
 MODULE mo_hd_init
-#ifndef __NO_JSBACH__
+!#ifndef __NO_JSBACH__
+#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile

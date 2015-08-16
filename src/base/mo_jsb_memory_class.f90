@@ -14,7 +14,9 @@ MODULE mo_jsb_memory_class
   USE mo_srf_memory_class,     ONLY: t_srf_memory
   USE mo_soil_memory_class,    ONLY: t_soil_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
+#ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
+#endif
   !USE mo_glacier_memory_class, ONLY: t_glacier
 !!$  USE mo_cdi_constants,     ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, &
 !!$                                  ZA_SURFACE, &
@@ -38,7 +40,9 @@ MODULE mo_jsb_memory_class
     TYPE(t_srf_memory),      POINTER :: srf      => NULL()
     TYPE(t_soil_memory),     POINTER :: soil     => NULL()
     TYPE(t_veg_memory),      POINTER :: veg      => NULL()
+#ifndef __NO_JSBACH_HD__
     TYPE(t_hd_memory),       POINTER :: hd       => NULL()
+#endif
     !TYPE(t_glacier),         POINTER :: glacier
   END type t_jsb_memory
 
