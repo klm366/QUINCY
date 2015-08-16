@@ -76,8 +76,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_hd'
 
-    LOGICAL                       :: debug_hd
-    CHARACTER(len=:), ALLOCATABLE :: routing_scheme
+    LOGICAL           :: debug_hd
+    CHARACTER(len=32) :: routing_scheme
 
     IF (.NOT. ASSOCIATED(tile%mem%hd)) RETURN
 
@@ -181,7 +181,7 @@ CONTAINS
     LOGICAL, POINTER  ::   &
       & is_in_domain    (:,:) ! T: cell in domain (not halo)
 
-    CHARACTER(len=:), ALLOCATABLE :: &
+    CHARACTER(len=32) :: &
       & routing_scheme        ! river routing scheme
 
     REAL(wp), ALLOCATABLE  ::   &

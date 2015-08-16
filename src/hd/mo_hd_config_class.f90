@@ -26,7 +26,8 @@ MODULE mo_hd_config_class
      CHARACTER(len=filename_max) :: bc_filename           !< file with boundary conditions       
      LOGICAL                     :: debug_hd              !< additional printing for debugging
      LOGICAL                     :: diag_water_budget     !< prints to diagnose global water budget
-     CHARACTER(len=20)           :: routing_scheme        !< river_routing_scheme: full / equally_to_coast / equally_to_ocean
+     CHARACTER(len=32)           :: routing_scheme        !< river_routing_scheme: full / equally_to_coast / equally_to_ocean /
+                                                          !<                              weighted_to_coast / weighted_to_ocean
   END type t_hd_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_config_class'
@@ -47,7 +48,8 @@ CONTAINS
     CHARACTER(len=filename_max)   :: bc_filename           !< file with boundary conditions       
     LOGICAL                       :: debug_hd              !< additional printing for debugging
     LOGICAL                       :: diag_water_budget     !< prints to diagnose global water budget
-    CHARACTER(len=:), ALLOCATABLE :: routing_scheme        !< river_routing_scheme: full / equally_to_coast / equally_to_ocean
+    CHARACTER(len=32)             :: routing_scheme        !< river_routing_scheme: full / equally_to_coast / equally_to_ocean /
+                                                           !<                              weighted_to_coast / weighted_to_ocean
 
     NAMELIST /jsb_hd_nml/          &
       active,                      &
