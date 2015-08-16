@@ -47,7 +47,8 @@ CONTAINS
 
   SUBROUTINE init_jsb_master_control(namelist_filename)
 
-    USE mo_jsb_time, ONLY: init_time
+    USE mo_jsb_time,    ONLY: init_time
+    USE mo_jsb_version, ONLY: jsbach_init_version
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
 
@@ -56,6 +57,8 @@ CONTAINS
     IF (PRESENT(namelist_filename)) master_namelist_filename = TRIM(namelist_filename)
 
     CALL read_jsb_control_namelist(TRIM(master_namelist_filename))
+
+    CALL jsbach_init_version(jsbach_runs_standalone())
 
     IF (is_standalone) THEN
        CALL init_time(TRIM(master_namelist_filename))

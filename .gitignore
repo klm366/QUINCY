@@ -1,6 +1,4 @@
 .history
 *~
-!externals/.history
-!externals/*~
 !src/hd/.history
 !src/hd/*~
