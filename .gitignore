@@ -12,3 +12,17 @@ config.status
 .status.file
 experiments
 grids
+!src/hd/*#
+!src/hd/*~
+!src/hd/.history
+!src/hd/build
+!src/hd/Makefile
+!src/hd/autom4te.cache
+!src/hd/build_command
+!src/hd/config.log
+!src/hd/config.status
+!src/hd/*tmp
+!src/hd/*status
+!src/hd/.status.file
+!src/hd/experiments
+!src/hd/grids

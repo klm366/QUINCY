@@ -66,8 +66,11 @@ MODULE mo_soil_memory_class
 
   TYPE t_soil_water_flux
     REAL(wp), POINTER :: &
-      & runoff         (:,:), & !< Accumulated surface runoff
-      & drainage       (:,:)     !< Accumulated drainage
+      & runoff         (:,:), & !< surface runoff
+      & drainage       (:,:), & !< drainage
+      & pme_glacier    (:,:), & !< P-E on glaciers
+      & discharge      (:,:), & !< discharge (local)
+      & discharge_ocean(:,:)    !< discharge to the ocean
   END type t_soil_water_flux
 
   TYPE t_soil_memory
