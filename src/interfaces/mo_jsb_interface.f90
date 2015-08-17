@@ -24,7 +24,7 @@ MODULE mo_jsb_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: jsbach_interface, interface_full
+  PUBLIC :: jsbach_interface, interface_full, jsbach_start_timestep, jsbach_finish_timestep
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
@@ -54,6 +54,9 @@ CONTAINS
                                     update_humidity_scaling, update_roughness
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
     USE mo_soil_memory_class, ONLY: copy_soil_mem
+#ifndef __NO_JSBACH_HD__
+    USE mo_hd_interface,      ONLY: update_hd
+#endif
 
     INTEGER :: p_pe
 
@@ -172,6 +175,12 @@ CONTAINS
     ! Soil hydrology
     CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
 
+#ifndef __NO_JSBACH_HD__
+    IF (model%config%hd%active) THEN
+      CALL update_hd(tile, iblk, ics, ice, nc, steplen)
+    END IF
+#endif
+
     ! Re-calculate wet skin and snow fractions with updated moisture parameters
     CALL  update_snow_and_skin_fraction(model%land, iblk, ics, ice, nc, dtime, steplen)
 
@@ -235,6 +244,53 @@ CONTAINS
       & alb_nir  (:)
 
   END SUBROUTINE interface_inquire
+
+  SUBROUTINE jsbach_start_timestep(model_id)
+ 
+    INTEGER :: p_pe
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_start_timestep'
+
+    INTEGER,  INTENT(in) ::  model_id
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    model => get_model(model_id)
+
+  END SUBROUTINE jsbach_start_timestep
+
+  SUBROUTINE jsbach_finish_timestep(model_id)
+
+#ifndef __NO_JSBACH_HD__
+    USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
+    USE mo_hd_interface,       ONLY: hd_init_water_budget, hd_check_water_budget, hd_riverflow
+#endif
+
+    INTEGER :: p_pe
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
+
+    INTEGER,  INTENT(in) ::  model_id
+ 
+    TYPE(t_jsb_model), POINTER :: model
+
+    IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    model => get_model(model_id)
+
+#ifndef __NO_JSBACH_HD__
+    IF (model%config%hd%active) THEN
+      CALL hd_init_water_budget(model_id)
+      CALL hd_riverflow(model_id)
+      CALL hd_check_water_budget(model_id)
+
+      CALL interface_hd_ocean(model_id)
+    END IF
+#endif
+
+  END SUBROUTINE jsbach_finish_timestep
 
 #endif
 END MODULE mo_jsb_interface
