@@ -9,22 +9,29 @@
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
+#include "dsl_jsbach.inc"
+
 !----------------------------
 #include "omp_definitions.inc"
 !----------------------------
 
 MODULE mo_interface_hd_ocean
 
-  USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_tile_class,      ONLY: t_jsb_tile
-  USE mo_jsb_grid_class,      ONLY: t_jsb_grid
-  USE mo_jsb_base,            ONLY: get_model
   USE mo_kind,                ONLY: wp
-  USE mo_coupling_config,     ONLY: is_coupled_run
   USE mo_exception,           ONLY: warning
+
+  USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_class,           ONLY: get_model
+  USE mo_jsb_tile_class,      ONLY: t_jsb_tile
+  USE mo_jsb_grid,            ONLY: Get_grid
+  USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+  USE mo_coupling_config,     ONLY: is_coupled_run
 #ifdef YAC_coupling
   USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name
 #endif
+
+  Use_processes SOIL
+  Use_memory(soil)
 
   IMPLICIT NONE
   PRIVATE
@@ -67,6 +74,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
     TYPE(t_jsb_grid),  POINTER    :: grid
+
+    Def_memory(soil_mem, soil)
+
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':interface_hd_ocean'
 
     ! Pointers to variables in memory
@@ -87,11 +97,13 @@ CONTAINS
     IF ( .NOT. is_coupled_run() ) RETURN
 
     model => get_model(model_id)
-    tile => model%land
-    grid => model%grid
+    tile => model%Get_top_tile()
+    grid => Get_grid(model%grid_id)
 
     ! Get reference to variables in memory
-    discharge_ocean      => tile%mem%soil %water_flux %discharge_ocean   (:,:)
+    Get_memory(soil_mem, SOIL)
+
+    discharge_ocean => soil_mem %discharge_ocean%ptr   (:,:)
 
     ! Send river discharge
     ! --------------------
@@ -100,14 +112,14 @@ CONTAINS
 
     ALLOCATE(buffer(grid%nproma * grid%nblks, 1))
     buffer(:,:) = 0.0_wp
-    DO iblk = 1, model%grid%nblks
+    DO iblk = 1, grid%nblks
       nn = (iblk - 1) * grid%nproma
       IF (iblk /= grid%nblks) THEN
         nlen = grid%nproma
       ELSE
         nlen = grid%npromz
       END IF
-      DO n = 1, model%grid%nproma
+      DO n = 1, grid%nproma
         buffer(nn+n,1) = discharge_ocean(n,iblk)
       END DO
     END DO

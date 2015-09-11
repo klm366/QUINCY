@@ -14,13 +14,14 @@ MODULE mo_hd_config_class
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
+  USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_hd_config, new_hd_config
 
-  TYPE t_hd_config
+  TYPE, EXTENDS(t_jsb_config) :: t_hd_config
      LOGICAL                     :: active                !< hd module is active
      CHARACTER(len=filename_max) :: ic_filename           !< file with initial conditions
      CHARACTER(len=filename_max) :: bc_filename           !< file with boundary conditions       
@@ -37,11 +38,12 @@ CONTAINS
   FUNCTION new_hd_config(nml_handler) RESULT(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
 
     INTEGER,          INTENT(in) :: nml_handler
     TYPE(t_hd_config), POINTER :: config
-
-    TYPE(t_hd_config), POINTER :: new
 
     LOGICAL                       :: active                !< hd module is active
     CHARACTER(len=filename_max)   :: ic_filename           !< file with initial conditions
@@ -60,11 +62,13 @@ CONTAINS
 
     INTEGER :: nml_unit, istat
 
+    TYPE(t_jsb_vgrid), POINTER :: hd_o, hd_b, hd_r  ! Vertical grids
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_hd_config'
 
     CALL message(TRIM(routine), 'Starting hd configuration')
 
-    ALLOCATE(new)
+    ALLOCATE(config)
 
     ! Set defaults
     active          = .FALSE.
@@ -77,14 +81,21 @@ CONTAINS
     nml_unit = position_nml('jsb_hd_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_hd_nml)
 
-    new%active                    = active
-    new%ic_filename               = ic_filename
-    new%bc_filename               = bc_filename
-    new%debug_hd                  = debug_hd
-    new%diag_water_budget         = diag_water_budget
-    new%routing_scheme            = routing_scheme
+    config%active                    = active
+    config%ic_filename               = ic_filename
+    config%bc_filename               = bc_filename
+    config%debug_hd                  = debug_hd
+    config%diag_water_budget         = diag_water_budget
+    config%routing_scheme            = routing_scheme
 
-    config => new
+    hd_o  => new_vgrid('hd_nres_overlflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
+    CALL Register_vgrid(hd_o)
+
+    hd_b  => new_vgrid('hd_nres_baseflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
+    CALL Register_vgrid(hd_b)
+
+    hd_r  => new_vgrid('hd_nres_riverflow', ZAXIS_DEPTH_BELOW_LAND, 5, levels=(/1._wp,2._wp,3._wp,4._wp,5._wp/), units='')
+    CALL Register_vgrid(hd_r)
 
   END FUNCTION new_hd_config
 

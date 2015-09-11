@@ -10,13 +10,25 @@
 MODULE mo_srf_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_model_class, ONLY: t_jsb_model
-  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
-  USE mo_jsb_base,        ONLY: get_model
+#include "dsl_jsbach.inc"
+  
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
-  USE mo_util,            ONLY: one_of
+
+  USE mo_jsb_model_class, ONLY: t_jsb_model
+  USE mo_jsb_class,       ONLY: get_model
+  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
+
+  Use_processes SRF, SOIL, VEG, ATM2LAND
+  Use_config(srf)
+  Use_config(soil)
+
+  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
+!!$  Use_memory(atm2land)
+  Use_memory(soil)
+  Use_memory(srf)
+  Use_memory(veg)
 
   IMPLICIT NONE
   PRIVATE
@@ -38,6 +50,8 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
+    Def_memory(atm2land_mem, atm2land)
+    Def_memory(srf_mem, srf)
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::      &
@@ -61,17 +75,20 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    swvis_srf_down => tile%mem     %atm2land     %swvis_srf_down (ics:ice, iblk)
-    swnir_srf_down => tile%mem     %atm2land     %swnir_srf_down (ics:ice, iblk)
-    lw_srf_down    => tile%mem     %atm2land     %lw_srf_down    (ics:ice, iblk)
-    swvis_srf_net  => tile%mem%srf %energy_flux  %swvis_srf_net  (ics:ice, iblk)
-    swnir_srf_net  => tile%mem%srf %energy_flux  %swnir_srf_net  (ics:ice, iblk)
-    sw_srf_net     => tile%mem%srf %energy_flux  %sw_srf_net     (ics:ice, iblk)
-    lw_srf_net     => tile%mem%srf %energy_flux  %lw_srf_net     (ics:ice, iblk)
-    rad_srf_net    => tile%mem%srf %energy_flux  %rad_srf_net    (ics:ice, iblk)
-    alb_vis_srf    => tile%mem%srf %phys_state   %alb_vis_srf    (ics:ice, iblk)
-    alb_nir_srf    => tile%mem%srf %phys_state   %alb_nir_srf    (ics:ice, iblk)
-    t_srf          => tile%mem%srf %energy_state %t_srf          (ics:ice, iblk)
+    Get_memory(srf_mem, SRF)
+    Get_memory(atm2land_mem, ATM2LAND)
+
+    swvis_srf_down => atm2land_mem     %swvis_srf_down%ptr (ics:ice, iblk)
+    swnir_srf_down => atm2land_mem     %swnir_srf_down%ptr (ics:ice, iblk)
+    lw_srf_down    => atm2land_mem     %lw_srf_down%ptr    (ics:ice, iblk)
+    swvis_srf_net  => srf_mem %swvis_srf_net%ptr  (ics:ice, iblk)
+    swnir_srf_net  => srf_mem %swnir_srf_net%ptr  (ics:ice, iblk)
+    sw_srf_net     => srf_mem %sw_srf_net%ptr     (ics:ice, iblk)
+    lw_srf_net     => srf_mem %lw_srf_net%ptr     (ics:ice, iblk)
+    rad_srf_net    => srf_mem %rad_srf_net%ptr    (ics:ice, iblk)
+    alb_vis_srf    => srf_mem %alb_vis_srf%ptr    (ics:ice, iblk)
+    alb_nir_srf    => srf_mem %alb_nir_srf%ptr    (ics:ice, iblk)
+    t_srf          => srf_mem %t_srf%ptr          (ics:ice, iblk)
 
     ! Compute net SW radiation from downward SW and albedo
     swvis_srf_net(:) = swvis_srf_down(:) * (1._wp - alb_vis_srf(:))
@@ -99,6 +116,12 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
+
+    Def_config(soil_conf, soil)
+    Def_memory(srf_mem, srf)
+    Def_memory(soil_mem, soil)
+    Def_memory(veg_mem, veg)
+    Def_memory(atm2land_mem, atm2land)
 
     ! Pointers to variables in memory
     REAL(wp), POINTER :: &
@@ -131,35 +154,42 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_skin_fraction'
 
-    IF (one_of('soil', tile%components) < 1) RETURN
+    IF (.NOT. tile%Is_process_active(SOIL)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of snow and skin reservoir fraction')
 
     model => get_model(tile%owner_model_id)
 
+    Get_config(soil_conf, SOIL)
+
     ! Get reference to variables for current block
     !
-    glacier       => tile%mem%srf  %phys_state   %glacier          (ics:ice, iblk)
-    lai           => tile%mem%veg  %phys_state   %lai              (ics:ice, iblk)
-    fract_fpc_max => tile%mem%veg  %phys_state   %fract_fpc_max    (ics:ice, iblk)
-    sfract_can    => tile%mem%veg  %water_state  %sfract_can       (ics:ice, iblk)
-    wsn_can       => tile%mem%veg  %water_state  %wsn_can          (ics:ice, iblk)
-    sfract_soil   => tile%mem%soil %water_state  %sfract_soil      (ics:ice, iblk)
-    wsn_soil      => tile%mem%soil %water_state  %wsn_soil         (ics:ice, iblk)
-    wfract_can    => tile%mem%veg  %water_state  %wfract_can       (ics:ice, iblk)
-    wsr_can       => tile%mem%veg  %water_state  %wsr_can          (ics:ice, iblk)
-    wfract_soil   => tile%mem%soil %water_state  %wfract_soil      (ics:ice, iblk)
-    wsr_soil      => tile%mem%soil %water_state  %wsr_soil         (ics:ice, iblk)
-    sfract_srf    => tile%mem%srf  %water_state  %sfract_srf       (ics:ice, iblk)
-    wfract_srf    => tile%mem%srf  %water_state  %wfract_srf       (ics:ice, iblk)
-    oro_stddev    => tile%mem%srf  %phys_state   %oro_stddev       (ics:ice, iblk)
-    drag_srf      => tile%mem      %atm2land     %drag_srf         (ics:ice, iblk)
-    q_air         => tile%mem      %atm2land     %q_air            (ics:ice, iblk)
-    press_srf     => tile%mem      %atm2land     %press_srf        (ics:ice, iblk)
-    t_srf         => tile%mem%srf  %energy_state %t_srf            (ics:ice, iblk)
+    Get_memory(srf_mem, SRF)
+    Get_memory(soil_mem, SOIL)
+    Get_memory(veg_mem, VEG)
+    Get_memory(atm2land_mem, ATM2LAND)
+
+    glacier       => srf_mem  %glacier%ptr          (ics:ice, iblk)
+    lai           => veg_mem  %lai%ptr              (ics:ice, iblk)
+    fract_fpc_max => veg_mem  %fract_fpc_max%ptr    (ics:ice, iblk)
+    sfract_can    => veg_mem  %sfract_can%ptr       (ics:ice, iblk)
+    wsn_can       => veg_mem  %wsn_can%ptr          (ics:ice, iblk)
+    sfract_soil   => soil_mem %sfract_soil%ptr      (ics:ice, iblk)
+    wsn_soil      => soil_mem %wsn_soil%ptr         (ics:ice, iblk)
+    wfract_can    => veg_mem  %wfract_can%ptr       (ics:ice, iblk)
+    wsr_can       => veg_mem  %wsr_can%ptr          (ics:ice, iblk)
+    wfract_soil   => soil_mem %wfract_soil%ptr      (ics:ice, iblk)
+    wsr_soil      => soil_mem %wsr_soil%ptr         (ics:ice, iblk)
+    sfract_srf    => srf_mem  %sfract_srf%ptr       (ics:ice, iblk)
+    wfract_srf    => srf_mem  %wfract_srf%ptr       (ics:ice, iblk)
+    oro_stddev    => srf_mem  %oro_stddev%ptr       (ics:ice, iblk)
+    drag_srf      => atm2land_mem     %drag_srf%ptr         (ics:ice, iblk)
+    q_air         => atm2land_mem     %q_air%ptr            (ics:ice, iblk)
+    press_srf     => atm2land_mem     %press_srf%ptr        (ics:ice, iblk)
+    t_srf         => srf_mem  %t_srf%ptr            (ics:ice, iblk)
 
     ! Maximum capacity of skin reservoir (soil + canopy)
-    wsr_max(:) = model%config%soil%wsr_capacity * (1._wp + lai(:) * fract_fpc_max(:))
+    wsr_max(:) = soil_conf%wsr_capacity * (1._wp + lai(:) * fract_fpc_max(:))
 
     ! Wet skin fraction on soil
     wfract_soil(:) = MERGE(MIN(1._wp, (wsr_soil(:) + wsr_can(:)) / wsr_max(:)), 0._wp, wsr_max(:) > EPSILON(1._wp))
@@ -222,6 +252,11 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
+    Def_config(srf_conf, srf)
+    Def_memory(srf_mem, srf)
+    Def_memory(soil_mem, soil)
+    Def_memory(atm2land_mem, atm2land)
+
     LOGICAL                       :: lstart
 
     ! Pointers to variables in memory
@@ -266,32 +301,38 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
+    Get_config(srf_conf, SRF)
+
     ! Get reference to variables for current block
     !
-    t_srf                => tile%mem%srf  %energy_state %t_srf            (ics:ice, iblk)
-    t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
-    t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
-    t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
-    t_eff_srf            => tile%mem%srf  %energy_state %t_eff_srf        (ics:ice, iblk)
-    qsat_srf             => tile%mem%srf  %energy_state %qsat_srf         (ics:ice, iblk)
-!!$    qsat_srf_old         => tile%mem%srf  %energy_state %qsat_srf_old     (ics:ice, iblk)
-    s_srf                => tile%mem%srf  %energy_state %s_srf            (ics:ice, iblk)
-!!$    s_srf_old            => tile%mem%srf  %energy_state %s_srf_old        (ics:ice, iblk)
-    press_srf            => tile%mem      %atm2land     %press_srf        (ics:ice, iblk)
-    q_air                => tile%mem      %atm2land     %q_air            (ics:ice, iblk)
-    fact_q_air           => tile%mem%srf  %energy_state %fact_q_air       (ics:ice, iblk)
-    fact_qsat_srf        => tile%mem%srf  %energy_state %fact_qsat_srf    (ics:ice, iblk)
-    drag_srf             => tile%mem      %atm2land     %drag_srf         (ics:ice, iblk)
-    rad_srf_net          => tile%mem%srf  %energy_flux  %rad_srf_net      (ics:ice, iblk)
-    grnd_hflx            => tile%mem%soil %energy_flux  %grnd_hflx        (ics:ice, iblk)
-    hcap_grnd            => tile%mem%soil %energy_state %hcap_grnd        (ics:ice, iblk)
-    wsn_srf              => tile%mem%srf  %water_state  %wsn_srf          (ics:ice, iblk)
-    sfract_srf           => tile%mem%srf  %water_state  %sfract_srf       (ics:ice, iblk)
-    t_acoef              => tile%mem      %atm2land     %t_acoef          (ics:ice, iblk)
-    t_bcoef              => tile%mem      %atm2land     %t_bcoef          (ics:ice, iblk)
-    q_acoef              => tile%mem      %atm2land     %q_acoef          (ics:ice, iblk)
-    q_bcoef              => tile%mem      %atm2land     %q_bcoef          (ics:ice, iblk)
-    glacier              => tile%mem%srf  %phys_state   %glacier          (ics:ice, iblk)
+    Get_memory(srf_mem, SRF)
+    Get_memory(soil_mem, SOIL)
+    Get_memory(atm2land_mem, ATM2LAND)
+
+    t_srf                => srf_mem  %t_srf%ptr            (ics:ice, iblk)
+    t_srf_old            => srf_mem  %t_srf_old%ptr        (ics:ice, iblk)
+    t_srf_unfilt         => srf_mem  %t_srf_unfilt%ptr     (ics:ice, iblk)
+    t_srf_unfilt_old     => srf_mem  %t_srf_unfilt_old%ptr (ics:ice, iblk)
+    t_eff_srf            => srf_mem  %t_eff_srf%ptr        (ics:ice, iblk)
+    qsat_srf             => srf_mem  %qsat_srf%ptr         (ics:ice, iblk)
+!!$    qsat_srf_old         => srf_mem  %qsat_srf_old%ptr     (ics:ice, iblk)
+    s_srf                => srf_mem  %s_srf%ptr            (ics:ice, iblk)
+!!$    s_srf_old            => srf_mem  %s_srf_old%ptr        (ics:ice, iblk)
+    press_srf            => atm2land_mem     %press_srf%ptr        (ics:ice, iblk)
+    q_air                => atm2land_mem     %q_air%ptr            (ics:ice, iblk)
+    fact_q_air           => srf_mem  %fact_q_air%ptr       (ics:ice, iblk)
+    fact_qsat_srf        => srf_mem  %fact_qsat_srf%ptr    (ics:ice, iblk)
+    drag_srf             => atm2land_mem     %drag_srf%ptr         (ics:ice, iblk)
+    rad_srf_net          => srf_mem  %rad_srf_net%ptr      (ics:ice, iblk)
+    grnd_hflx            => soil_mem %grnd_hflx%ptr        (ics:ice, iblk)
+    hcap_grnd            => soil_mem %hcap_grnd%ptr        (ics:ice, iblk)
+    wsn_srf              => srf_mem  %wsn_srf%ptr          (ics:ice, iblk)
+    sfract_srf           => srf_mem  %sfract_srf%ptr       (ics:ice, iblk)
+    t_acoef              => atm2land_mem     %t_acoef%ptr          (ics:ice, iblk)
+    t_bcoef              => atm2land_mem     %t_bcoef%ptr          (ics:ice, iblk)
+    q_acoef              => atm2land_mem     %q_acoef%ptr          (ics:ice, iblk)
+    q_bcoef              => atm2land_mem     %q_bcoef%ptr          (ics:ice, iblk)
+    glacier              => srf_mem  %glacier%ptr          (ics:ice, iblk)
 
     ! Save old surface temperature and saturation spec. humidity
 !!$    t_srf_unfilt_old(:) = t_srf_unfilt(:)
@@ -336,7 +377,7 @@ CONTAINS
     t_srf_unfilt(:) = ( tpfac2 * s_srf(:) + tpfac3 * s_srf_old(:) ) / t2s_conv(:)
 
     ! Correct new dry static energy for snowmelt
-    WHERE (wsn_srf(:) > model%config%srf%wsn_critical .OR. glacier(:) > 0.5_wp)
+    WHERE (wsn_srf(:) > srf_conf%wsn_critical .OR. glacier(:) > 0.5_wp)
       s_srf(:) = MIN(s_srf(:) / t2s_conv(:), tmelt) * t2s_conv(:)
     END WHERE
 
@@ -364,6 +405,7 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
+    Def_memory(srf_mem, srf)
     LOGICAL                       :: lstart
     REAL(wp)                      :: eps
 
@@ -374,10 +416,12 @@ CONTAINS
       & t_srf_unfilt   (:),    &
       & t_srf_unfilt_old(:)
 
-    t_srf                => tile%mem%srf  %energy_state %t_srf            (ics:ice, iblk)
-    t_srf_old            => tile%mem%srf  %energy_state %t_srf_old        (ics:ice, iblk)
-    t_srf_unfilt         => tile%mem%srf  %energy_state %t_srf_unfilt     (ics:ice, iblk)
-    t_srf_unfilt_old     => tile%mem%srf  %energy_state %t_srf_unfilt_old (ics:ice, iblk)
+    Get_memory(srf_mem, SRF)
+
+    t_srf                => srf_mem  %t_srf%ptr            (ics:ice, iblk)
+    t_srf_old            => srf_mem  %t_srf_old%ptr        (ics:ice, iblk)
+    t_srf_unfilt         => srf_mem  %t_srf_unfilt%ptr     (ics:ice, iblk)
+    t_srf_unfilt_old     => srf_mem  %t_srf_unfilt_old%ptr (ics:ice, iblk)
 
     eps = get_asselin_coef()
     IF (eps > 0._wp) THEN
@@ -400,6 +444,8 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
+    Def_memory(srf_mem, srf)
+    Def_memory(atm2land_mem, ATM2LAND)
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
@@ -437,22 +483,25 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    qsat_srf             => tile%mem%srf  %energy_state %qsat_srf         (ics:ice, iblk)
-    s_srf                => tile%mem%srf  %energy_state %s_srf            (ics:ice, iblk)
-    t_acoef              => tile%mem      %atm2land     %t_acoef          (ics:ice, iblk)
-    t_bcoef              => tile%mem      %atm2land     %t_bcoef          (ics:ice, iblk)
-    q_acoef              => tile%mem      %atm2land     %q_acoef          (ics:ice, iblk)
-    q_bcoef              => tile%mem      %atm2land     %q_bcoef          (ics:ice, iblk)
-    fact_q_air           => tile%mem%srf  %energy_state %fact_q_air       (ics:ice, iblk)
-    fact_qsat_srf        => tile%mem%srf  %energy_state %fact_qsat_srf    (ics:ice, iblk)
-    fact_qsat_trans_srf  => tile%mem%srf  %energy_state %fact_qsat_trans_srf (ics:ice, iblk)
-    drag_srf             => tile%mem      %atm2land     %drag_srf         (ics:ice, iblk)
-    sensible_hflx        => tile%mem%srf  %energy_flux  %sensible_hflx    (ics:ice, iblk)
-    latent_hflx          => tile%mem%srf  %energy_flux  %latent_hflx      (ics:ice, iblk)
-    evapotrans           => tile%mem%srf  %water_flux   %evapotrans       (ics:ice, iblk)
-    trans                => tile%mem%srf  %water_flux   %trans            (ics:ice, iblk)
-    evapopot             => tile%mem%srf  %water_flux   %evapopot         (ics:ice, iblk)
-    sfract_srf           => tile%mem%srf  %water_state  %sfract_srf       (ics:ice, iblk)
+    Get_memory(srf_mem, SRF)
+    Get_memory(atm2land_mem, ATM2LAND)
+
+    qsat_srf             => srf_mem  %qsat_srf%ptr         (ics:ice, iblk)
+    s_srf                => srf_mem  %s_srf%ptr            (ics:ice, iblk)
+    t_acoef              => atm2land_mem     %t_acoef%ptr          (ics:ice, iblk)
+    t_bcoef              => atm2land_mem     %t_bcoef%ptr          (ics:ice, iblk)
+    q_acoef              => atm2land_mem     %q_acoef%ptr          (ics:ice, iblk)
+    q_bcoef              => atm2land_mem     %q_bcoef%ptr          (ics:ice, iblk)
+    fact_q_air           => srf_mem  %fact_q_air%ptr       (ics:ice, iblk)
+    fact_qsat_srf        => srf_mem  %fact_qsat_srf%ptr    (ics:ice, iblk)
+    fact_qsat_trans_srf  => srf_mem  %fact_qsat_trans_srf%ptr (ics:ice, iblk)
+    drag_srf             => atm2land_mem     %drag_srf%ptr         (ics:ice, iblk)
+    sensible_hflx        => srf_mem  %sensible_hflx%ptr    (ics:ice, iblk)
+    latent_hflx          => srf_mem  %latent_hflx%ptr      (ics:ice, iblk)
+    evapotrans           => srf_mem  %evapotrans%ptr       (ics:ice, iblk)
+    trans                => srf_mem  %trans%ptr            (ics:ice, iblk)
+    evapopot             => srf_mem  %evapopot%ptr         (ics:ice, iblk)
+    sfract_srf           => srf_mem  %sfract_srf%ptr       (ics:ice, iblk)
 
     ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
     !
@@ -495,6 +544,10 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
+    Def_memory(srf_mem, srf)
+    Def_memory(soil_mem, soil)
+    Def_memory(veg_mem, veg)
+    Def_memory(atm2land_mem, atm2land)
 
     ! Pointers to variables in memory
     REAL(wp), POINTER :: &
@@ -528,7 +581,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
 
-    IF (one_of('soil', tile%components) < 1) RETURN
+    IF (.NOT. tile%Is_process_active(SOIL)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of humidity weights')
 
@@ -536,24 +589,29 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    fract_fpc        => tile%mem%veg  %phys_state   %fract_fpc           (ics:ice,    iblk)
-    canopy_cond      => tile%mem%veg  %phys_state   %canopy_cond         (ics:ice,    iblk)
-    ws_l             => tile%mem%soil %water_state  %ws_l                (ics:ice, :, iblk)
-    ws_fc_l          => tile%mem%soil %water_state  %ws_fc_l             (ics:ice, :, iblk)
-    ws_pwp_l         => tile%mem%soil %water_state  %ws_pwp_l            (ics:ice, :, iblk)
-!!$    sfract_can       => tile%mem%veg  %water_state  %sfract_can          (ics:ice,    iblk)
-!!$    sfract_soil      => tile%mem%soil %water_state  %sfract_soil         (ics:ice,    iblk)
-!!$    wfract_can       => tile%mem%veg  %water_state  %wfract_can          (ics:ice,    iblk)
-!!$    wfract_soil      => tile%mem%soil %water_state  %wfract_soil         (ics:ice,    iblk)
-    qsat_srf         => tile%mem%srf  %energy_state %qsat_srf            (ics:ice,    iblk)
-    sfract_srf       => tile%mem%srf  %water_state  %sfract_srf          (ics:ice,    iblk)
-    wfract_srf       => tile%mem%srf  %water_state  %wfract_srf          (ics:ice,    iblk)
-    fact_q_air       => tile%mem%srf  %energy_state %fact_q_air          (ics:ice,    iblk)
-    fact_qsat_srf    => tile%mem%srf  %energy_state %fact_qsat_srf       (ics:ice,    iblk)
-    fact_qsat_trans_srf  => tile%mem%srf  %energy_state %fact_qsat_trans_srf (ics:ice,    iblk)
-    pch              => tile%mem      %atm2land     %pch                 (ics:ice,    iblk)
-    wind_air         => tile%mem      %atm2land     %wind_air            (ics:ice,    iblk)
-    q_air            => tile%mem      %atm2land     %q_air               (ics:ice,    iblk)
+    Get_memory(srf_mem, SRF)
+    Get_memory(soil_mem, SOIL)
+    Get_memory(veg_mem, VEG)
+    Get_memory(atm2land_mem, ATM2LAND)
+
+    fract_fpc        => veg_mem  %fract_fpc%ptr           (ics:ice,    iblk)
+    canopy_cond      => veg_mem  %canopy_cond%ptr         (ics:ice,    iblk)
+    ws_l             => soil_mem %ws_l%ptr                (ics:ice, :, iblk)
+    ws_fc_l          => soil_mem %ws_fc_l%ptr             (ics:ice, :, iblk)
+    ws_pwp_l         => soil_mem %ws_pwp_l%ptr            (ics:ice, :, iblk)
+!!$    sfract_can       => tile%mem%veg  %sfract_can%ptr          (ics:ice,    iblk)
+!!$    sfract_soil      => tile%mem%soil %sfract_soil%ptr         (ics:ice,    iblk)
+!!$    wfract_can       => tile%mem%veg  %wfract_can%ptr          (ics:ice,    iblk)
+!!$    wfract_soil      => tile%mem%soil %wfract_soil%ptr         (ics:ice,    iblk)
+    qsat_srf         => srf_mem  %qsat_srf%ptr            (ics:ice,    iblk)
+    sfract_srf       => srf_mem  %sfract_srf%ptr          (ics:ice,    iblk)
+    wfract_srf       => srf_mem  %wfract_srf%ptr          (ics:ice,    iblk)
+    fact_q_air       => srf_mem  %fact_q_air%ptr          (ics:ice,    iblk)
+    fact_qsat_srf    => srf_mem  %fact_qsat_srf%ptr       (ics:ice,    iblk)
+    fact_qsat_trans_srf  => srf_mem  %fact_qsat_trans_srf%ptr (ics:ice,    iblk)
+    pch              => atm2land_mem     %pch%ptr                 (ics:ice,    iblk)
+    wind_air         => atm2land_mem     %wind_air%ptr            (ics:ice,    iblk)
+    q_air            => atm2land_mem     %q_air%ptr               (ics:ice,    iblk)
 
     WHERE (ws_l(:,1) > ws_pwp_l(:,1))
       fact_qsat_veg(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) *   &
@@ -596,15 +654,21 @@ CONTAINS
     TYPE(t_jsb_tile),  POINTER    :: tile
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
 
+    Def_memory(srf_mem, srf)
+    Def_memory(soil_mem, soil)
+
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
       & rough_m_srf    (:),    &
       & rough_h_srf    (:),    &
       & sfract_soil    (:)
 
-    rough_m_srf          => tile%mem%srf  %phys_state   %rough_m_srf      (ics:ice, iblk)
-    rough_h_srf          => tile%mem%srf  %phys_state   %rough_h_srf      (ics:ice, iblk)
-    sfract_soil          => tile%mem%soil %water_state  %sfract_soil      (ics:ice, iblk)
+    Get_memory(srf_mem, SRF)
+    Get_memory(soil_mem, SOIL)
+
+    rough_m_srf          => srf_mem  %rough_m_srf%ptr      (ics:ice, iblk)
+    rough_h_srf          => srf_mem  %rough_h_srf%ptr      (ics:ice, iblk)
+    sfract_soil          => soil_mem %sfract_soil%ptr      (ics:ice, iblk)
 
     rough_h_srf(:) =            sfract_soil(:)  / (LOG(blending_height /             roughness_snow) ** 2)  &
                    & + (1._wp - sfract_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m_srf(:))) ** 2)

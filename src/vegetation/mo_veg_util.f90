@@ -1,5 +1,5 @@
 !>
-!! @brief Contains utilities for the veg component
+!! @brief Contains utilities for the veg process
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
