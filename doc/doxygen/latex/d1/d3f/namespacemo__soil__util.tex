@@ -1,0 +1,113 @@
+\hypertarget{namespacemo__soil__util}{}\section{mo\+\_\+soil\+\_\+util Module Reference}
+\label{namespacemo__soil__util}\index{mo\+\_\+soil\+\_\+util@{mo\+\_\+soil\+\_\+util}}
+
+
+Contains the utilities for the soil process.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+real(wp) function, dimension(size(soil\+\_\+depth, 1), size(dz), size(soil\+\_\+depth, 2)), public \hyperlink{namespacemo__soil__util_ad78dd96d8e36c528df761c9769302d5f}{soil\+\_\+depth\+\_\+to\+\_\+layers\+\_\+2d} (soil\+\_\+depth, dz)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__soil__util_aab312ec886be3b630752b30c016b5206}{modname} = \textquotesingle{}mo\+\_\+soil\+\_\+util\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains the utilities for the soil process. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__soil__util_ad78dd96d8e36c528df761c9769302d5f}{}\index{mo\+\_\+soil\+\_\+util@{mo\+\_\+soil\+\_\+util}!soil\+\_\+depth\+\_\+to\+\_\+layers\+\_\+2d@{soil\+\_\+depth\+\_\+to\+\_\+layers\+\_\+2d}}
+\index{soil\+\_\+depth\+\_\+to\+\_\+layers\+\_\+2d@{soil\+\_\+depth\+\_\+to\+\_\+layers\+\_\+2d}!mo\+\_\+soil\+\_\+util@{mo\+\_\+soil\+\_\+util}}
+\subsubsection[{soil\+\_\+depth\+\_\+to\+\_\+layers\+\_\+2d}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, dimension(size(soil\+\_\+depth,1), size(dz), size(soil\+\_\+depth,2)), public mo\+\_\+soil\+\_\+util\+::soil\+\_\+depth\+\_\+to\+\_\+layers\+\_\+2d (
+\begin{DoxyParamCaption}
+\item[{real(wp), dimension(\+:,\+:), intent(in)}]{soil\+\_\+depth, }
+\item[{real(wp), dimension(\+:), intent(in)}]{dz}
+\end{DoxyParamCaption}
+)}\label{namespacemo__soil__util_ad78dd96d8e36c528df761c9769302d5f}
+
+
+Definition at line 26 of file mo\+\_\+soil\+\_\+util.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+soil\+\_\+init\+::soil\+\_\+init(), and mo\+\_\+veg\+\_\+init\+::veg\+\_\+init\+\_\+ic().
+
+
+\begin{DoxyCode}
+26 
+27     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: soil\_depth(:,:)
+28     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: dz(:)
+29     \textcolor{keywordtype}{REAL(wp)}             :: soil\_depth\_l(size(soil\_depth,1), size(dz), size(soil\_depth,2))
+30 
+31     \textcolor{keywordtype}{REAL(wp)} :: dz\_cumsum(size(dz)), dz\_cumsum\_m1(size(dz))
+32     \textcolor{keywordtype}{INTEGER}  :: nsoil, i
+33 
+34     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':soil\_depth\_to\_layer\_2d'}
+35 
+36     nsoil = \textcolor{keyword}{SIZE}(dz)
+37 
+38     \textcolor{keywordflow}{DO} i=2,nsoil
+39       dz\_cumsum(i)    = sum(dz(1:i))
+40       dz\_cumsum\_m1(i) = sum(dz(1:i-1))
+41 \textcolor{keywordflow}{    END DO}
+42     dz\_cumsum(1)    = dz(1)
+43     dz\_cumsum\_m1(1) = 0.\_wp
+44 
+45     soil\_depth\_l(:,:,:) = 0.\_wp
+46 
+47     \textcolor{keywordflow}{DO} i=1,nsoil
+48       \textcolor{keywordflow}{WHERE} (soil\_depth(:,:) > dz\_cumsum(i))
+49         soil\_depth\_l(:,i,:) = dz(i)
+50       \textcolor{keywordflow}{ELSEWHERE} (soil\_depth(:,:) > dz\_cumsum\_m1(i))
+51         soil\_depth\_l(:,i,:) = soil\_depth(:,:) - dz\_cumsum\_m1(i)
+52 \textcolor{keywordflow}{      END WHERE}
+53 \textcolor{keywordflow}{    END DO}
+54 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d3f/namespacemo__soil__util_ad78dd96d8e36c528df761c9769302d5f_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__soil__util_aab312ec886be3b630752b30c016b5206}{}\index{mo\+\_\+soil\+\_\+util@{mo\+\_\+soil\+\_\+util}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+soil\+\_\+util@{mo\+\_\+soil\+\_\+util}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+soil\+\_\+util\+::modname = \textquotesingle{}mo\+\_\+soil\+\_\+util\textquotesingle{}}\label{namespacemo__soil__util_aab312ec886be3b630752b30c016b5206}
+
+
+Definition at line 21 of file mo\+\_\+soil\+\_\+util.\+f90.
+
+
+
+Referenced by soil\+\_\+depth\+\_\+to\+\_\+layers\+\_\+2d().
+
+
+\begin{DoxyCode}
+21   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_soil\_util'}
+\end{DoxyCode}

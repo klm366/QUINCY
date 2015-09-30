@@ -1,0 +1,121 @@
+\hypertarget{namespacemo__jsb__model__usecases}{}\section{mo\+\_\+jsb\+\_\+model\+\_\+usecases Module Reference}
+\label{namespacemo__jsb__model__usecases}\index{mo\+\_\+jsb\+\_\+model\+\_\+usecases@{mo\+\_\+jsb\+\_\+model\+\_\+usecases}}
+
+
+Contains methods for initialization of J\+S\+B\+A\+C\+H usecases.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__model__usecases_aee8b30e4af60fbe54276c99ea4ee1fd1}{init\+\_\+usecase} (model)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__model__usecases_a6402d6a009193765fce1700ae3c98365}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+model\+\_\+usecases\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains methods for initialization of J\+S\+B\+A\+C\+H usecases. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__model__usecases_aee8b30e4af60fbe54276c99ea4ee1fd1}{}\index{mo\+\_\+jsb\+\_\+model\+\_\+usecases@{mo\+\_\+jsb\+\_\+model\+\_\+usecases}!init\+\_\+usecase@{init\+\_\+usecase}}
+\index{init\+\_\+usecase@{init\+\_\+usecase}!mo\+\_\+jsb\+\_\+model\+\_\+usecases@{mo\+\_\+jsb\+\_\+model\+\_\+usecases}}
+\subsubsection[{init\+\_\+usecase}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+model\+\_\+usecases\+::init\+\_\+usecase (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+model), intent(inout), pointer}]{model}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__model__usecases_aee8b30e4af60fbe54276c99ea4ee1fd1}
+
+
+Definition at line 33 of file mo\+\_\+jsb\+\_\+model\+\_\+usecases.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+grid\+::get\+\_\+grid(), and modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+model\+\_\+init\+::init\+\_\+model\+\_\+common().
+
+
+\begin{DoxyCode}
+33 
+34     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}, \textcolor{keywordtype}{INTENT(inout)} :: model
+35 
+36     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':init\_usecase'}
+37 
+38     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Initializing JSBACH usecase "'}//trim(model%config%usecase)//\textcolor{stringliteral}{'"'})
+39 
+40     \textcolor{keywordflow}{SELECT CASE} (trim(model%config%usecase))
+41 
+42     \textcolor{keywordflow}{CASE} (\textcolor{stringliteral}{'jsbach\_lite'})
+43       \textcolor{keyword}{CALL }init\_usecase\_lite(model)
+44 
+45     \textcolor{keywordflow}{CASE} (\textcolor{stringliteral}{'jsbach\_lite\_tpe\_open'})
+46       \textcolor{keyword}{CALL }init\_usecase\_lite\_tpe\_open(model)
+47 
+48     \textcolor{keywordflow}{CASE} (\textcolor{stringliteral}{'jsbach\_lite\_tpe\_closed'})
+49       \textcolor{keyword}{CALL }init\_usecase\_lite\_tpe\_closed(model)
+50 
+51     \textcolor{keywordflow}{CASE} (\textcolor{stringliteral}{'jsbach\_tiles'})
+52       \textcolor{keyword}{CALL }init\_usecase\_tiles(model)
+53 
+54 \textcolor{keywordflow}{    CASE DEFAULT}
+55       \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'JSBACH usecase not defined.'})
+56 
+57 \textcolor{keywordflow}{    END SELECT}
+58 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{dc/de3/namespacemo__jsb__model__usecases_aee8b30e4af60fbe54276c99ea4ee1fd1_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{dc/de3/namespacemo__jsb__model__usecases_aee8b30e4af60fbe54276c99ea4ee1fd1_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__model__usecases_a6402d6a009193765fce1700ae3c98365}{}\index{mo\+\_\+jsb\+\_\+model\+\_\+usecases@{mo\+\_\+jsb\+\_\+model\+\_\+usecases}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+model\+\_\+usecases@{mo\+\_\+jsb\+\_\+model\+\_\+usecases}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+model\+\_\+usecases\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+model\+\_\+usecases\textquotesingle{}}\label{namespacemo__jsb__model__usecases_a6402d6a009193765fce1700ae3c98365}
+
+
+Definition at line 28 of file mo\+\_\+jsb\+\_\+model\+\_\+usecases.\+f90.
+
+
+
+Referenced by init\+\_\+usecase().
+
+
+\begin{DoxyCode}
+28   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_model\_usecases'}
+\end{DoxyCode}

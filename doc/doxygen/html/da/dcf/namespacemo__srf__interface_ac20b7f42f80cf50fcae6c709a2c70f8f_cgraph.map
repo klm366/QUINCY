@@ -1,0 +1,6 @@
+<map id="mo_srf_interface::update_snow_and_skin_fraction" name="mo_srf_interface::update_snow_and_skin_fraction">
+<area shape="rect" id="node2" href="$d9/da0/namespacemo__jsb__control.html#a5712e1cd2e5736d1d7e6a59707af0200" title="mo_jsb_control::debug_on" alt="" coords="223,5,397,32"/>
+<area shape="rect" id="node3" href="$d7/d78/namespacemo__phy__schemes.html#a9d1fe0b8e7cc0e86d2cf43ea5ebaac58" title="mo_phy_schemes::heat\l_transfer_coef" alt="" coords="229,57,391,98"/>
+<area shape="rect" id="node4" href="$d7/d78/namespacemo__phy__schemes.html#aa793f9cf2db7aa0f821bde8fbf8f38a8" title="mo_phy_schemes::qsat" alt="" coords="229,123,391,149"/>
+<area shape="rect" id="node5" href="$d1/d3e/namespacemo__soil__process.html#a20c4b80ccc8a10cb3028ff15293d3cc0" title="mo_soil_process::snow\l_fract" alt="" coords="231,174,389,215"/>
+</map>

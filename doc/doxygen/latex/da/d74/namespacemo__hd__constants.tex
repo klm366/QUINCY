@@ -1,0 +1,154 @@
+\hypertarget{namespacemo__hd__constants}{}\section{mo\+\_\+hd\+\_\+constants Module Reference}
+\label{namespacemo__hd__constants}\index{mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}}
+
+
+Contains constants for the hd processes.  
+
+
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+integer, parameter \hyperlink{namespacemo__hd__constants_a9be972e3a7c772eb94e17e1d538f418c}{nl} = 720
+\begin{DoxyCompactList}\small\item\em number of longitudes \end{DoxyCompactList}\item 
+integer, parameter \hyperlink{namespacemo__hd__constants_a9973287d6e85ff29b6c46662b54e256d}{nb} = 360
+\begin{DoxyCompactList}\small\item\em number of latitudes \end{DoxyCompactList}\item 
+real(wp), parameter \hyperlink{namespacemo__hd__constants_ad86ad4525b3aaf33c6b5a61de4a3dd77}{fullcirc} = 360.\+0\+\_\+wp
+\begin{DoxyCompactList}\small\item\em full circle\+: 360 degree \end{DoxyCompactList}\item 
+real(wp), parameter \hyperlink{namespacemo__hd__constants_a11321e92ff31b590a466fb310e67da2c}{hd\+\_\+scal\+\_\+lon} = \hyperlink{namespacemo__hd__constants_ad86ad4525b3aaf33c6b5a61de4a3dd77}{fullcirc}/\hyperlink{namespacemo__hd__constants_a9be972e3a7c772eb94e17e1d538f418c}{nl}
+\item 
+real(wp), parameter \hyperlink{namespacemo__hd__constants_a6424c9dc04985720e8aa1960333184c7}{hd\+\_\+scal\+\_\+lat} = 0.\+5\+\_\+wp$\ast$fullcirc/nb
+\item 
+real(wp), parameter \hyperlink{namespacemo__hd__constants_a92e3ff05e4400fd3ce8a5b2b051040a3}{florg} = -\/180.\+0\+\_\+wp
+\begin{DoxyCompactList}\small\item\em north-\/west corner longitude of gridbox(1,1) \end{DoxyCompactList}\item 
+real(wp), parameter \hyperlink{namespacemo__hd__constants_a7270adbffa37eee2f760d2084fb208ee}{fborg} = 90.\+0\+\_\+wp
+\begin{DoxyCompactList}\small\item\em north-\/west corner latitude of gridbox(1,1) \end{DoxyCompactList}\item 
+real(wp), parameter \hyperlink{namespacemo__hd__constants_ad75b06fdc814a4a8eefcb76b47760ded}{fscal} = 0.\+5\+\_\+wp
+\begin{DoxyCompactList}\small\item\em grid resolution \mbox{[}degree\mbox{]} \end{DoxyCompactList}\item 
+integer, parameter \hyperlink{namespacemo__hd__constants_a3f303b1ab15b9bc83ce3cca3beb1bfd0}{nmemrf} = 5
+\begin{DoxyCompactList}\small\item\em number of riverflow reservoir cascades \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains constants for the hd processes. 
+
+\begin{DoxyAuthor}{Author}
+Veronika Gayler, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Veronika Gayler (2013-\/04-\/20) 
+\end{DoxyParagraph}
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__hd__constants_a7270adbffa37eee2f760d2084fb208ee}{}\index{mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}!fborg@{fborg}}
+\index{fborg@{fborg}!mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}}
+\subsubsection[{fborg}]{\setlength{\rightskip}{0pt plus 5cm}real(wp), parameter mo\+\_\+hd\+\_\+constants\+::fborg = 90.\+0\+\_\+wp}\label{namespacemo__hd__constants_a7270adbffa37eee2f760d2084fb208ee}
+
+
+north-\/west corner latitude of gridbox(1,1) 
+
+
+
+Definition at line 31 of file mo\+\_\+hd\+\_\+constants.\+f90.
+
+\hypertarget{namespacemo__hd__constants_a92e3ff05e4400fd3ce8a5b2b051040a3}{}\index{mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}!florg@{florg}}
+\index{florg@{florg}!mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}}
+\subsubsection[{florg}]{\setlength{\rightskip}{0pt plus 5cm}real(wp), parameter mo\+\_\+hd\+\_\+constants\+::florg = -\/180.\+0\+\_\+wp}\label{namespacemo__hd__constants_a92e3ff05e4400fd3ce8a5b2b051040a3}
+
+
+north-\/west corner longitude of gridbox(1,1) 
+
+
+
+Definition at line 31 of file mo\+\_\+hd\+\_\+constants.\+f90.
+
+\hypertarget{namespacemo__hd__constants_ad75b06fdc814a4a8eefcb76b47760ded}{}\index{mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}!fscal@{fscal}}
+\index{fscal@{fscal}!mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}}
+\subsubsection[{fscal}]{\setlength{\rightskip}{0pt plus 5cm}real(wp), parameter mo\+\_\+hd\+\_\+constants\+::fscal = 0.\+5\+\_\+wp}\label{namespacemo__hd__constants_ad75b06fdc814a4a8eefcb76b47760ded}
+
+
+grid resolution \mbox{[}degree\mbox{]} 
+
+
+
+Definition at line 31 of file mo\+\_\+hd\+\_\+constants.\+f90.
+
+\hypertarget{namespacemo__hd__constants_ad86ad4525b3aaf33c6b5a61de4a3dd77}{}\index{mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}!fullcirc@{fullcirc}}
+\index{fullcirc@{fullcirc}!mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}}
+\subsubsection[{fullcirc}]{\setlength{\rightskip}{0pt plus 5cm}real(wp), parameter mo\+\_\+hd\+\_\+constants\+::fullcirc = 360.\+0\+\_\+wp}\label{namespacemo__hd__constants_ad86ad4525b3aaf33c6b5a61de4a3dd77}
+
+
+full circle\+: 360 degree 
+
+
+
+Definition at line 31 of file mo\+\_\+hd\+\_\+constants.\+f90.
+
+
+\begin{DoxyCode}
+31   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{PARAMETER} :: &
+32     fullcirc    = 360.0\_wp,            & 
+33     hd\_scal\_lon = fullcirc/nl,         & 
+34     hd\_scal\_lat = 0.5\_wp*fullcirc/nb,  & 
+35     florg       = -180.0\_wp,           & 
+36     fborg       =   90.0\_wp,           & 
+37     fscal       =    0.5\_wp              
+\end{DoxyCode}
+\hypertarget{namespacemo__hd__constants_a6424c9dc04985720e8aa1960333184c7}{}\index{mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}!hd\+\_\+scal\+\_\+lat@{hd\+\_\+scal\+\_\+lat}}
+\index{hd\+\_\+scal\+\_\+lat@{hd\+\_\+scal\+\_\+lat}!mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}}
+\subsubsection[{hd\+\_\+scal\+\_\+lat}]{\setlength{\rightskip}{0pt plus 5cm}real(wp), parameter mo\+\_\+hd\+\_\+constants\+::hd\+\_\+scal\+\_\+lat = 0.\+5\+\_\+wp$\ast$fullcirc/nb}\label{namespacemo__hd__constants_a6424c9dc04985720e8aa1960333184c7}
+
+
+Definition at line 31 of file mo\+\_\+hd\+\_\+constants.\+f90.
+
+\hypertarget{namespacemo__hd__constants_a11321e92ff31b590a466fb310e67da2c}{}\index{mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}!hd\+\_\+scal\+\_\+lon@{hd\+\_\+scal\+\_\+lon}}
+\index{hd\+\_\+scal\+\_\+lon@{hd\+\_\+scal\+\_\+lon}!mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}}
+\subsubsection[{hd\+\_\+scal\+\_\+lon}]{\setlength{\rightskip}{0pt plus 5cm}real(wp), parameter mo\+\_\+hd\+\_\+constants\+::hd\+\_\+scal\+\_\+lon = {\bf fullcirc}/{\bf nl}}\label{namespacemo__hd__constants_a11321e92ff31b590a466fb310e67da2c}
+
+
+Definition at line 31 of file mo\+\_\+hd\+\_\+constants.\+f90.
+
+\hypertarget{namespacemo__hd__constants_a9973287d6e85ff29b6c46662b54e256d}{}\index{mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}!nb@{nb}}
+\index{nb@{nb}!mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}}
+\subsubsection[{nb}]{\setlength{\rightskip}{0pt plus 5cm}integer, parameter mo\+\_\+hd\+\_\+constants\+::nb = 360}\label{namespacemo__hd__constants_a9973287d6e85ff29b6c46662b54e256d}
+
+
+number of latitudes 
+
+
+
+Definition at line 27 of file mo\+\_\+hd\+\_\+constants.\+f90.
+
+\hypertarget{namespacemo__hd__constants_a9be972e3a7c772eb94e17e1d538f418c}{}\index{mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}!nl@{nl}}
+\index{nl@{nl}!mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}}
+\subsubsection[{nl}]{\setlength{\rightskip}{0pt plus 5cm}integer, parameter mo\+\_\+hd\+\_\+constants\+::nl = 720}\label{namespacemo__hd__constants_a9be972e3a7c772eb94e17e1d538f418c}
+
+
+number of longitudes 
+
+
+
+Definition at line 27 of file mo\+\_\+hd\+\_\+constants.\+f90.
+
+
+\begin{DoxyCode}
+27   \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{PARAMETER} :: &
+28     nl = 720,                          & !< number of longitudes
+29     nb = 360                             
+\end{DoxyCode}
+\hypertarget{namespacemo__hd__constants_a3f303b1ab15b9bc83ce3cca3beb1bfd0}{}\index{mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}!nmemrf@{nmemrf}}
+\index{nmemrf@{nmemrf}!mo\+\_\+hd\+\_\+constants@{mo\+\_\+hd\+\_\+constants}}
+\subsubsection[{nmemrf}]{\setlength{\rightskip}{0pt plus 5cm}integer, parameter mo\+\_\+hd\+\_\+constants\+::nmemrf = 5}\label{namespacemo__hd__constants_a3f303b1ab15b9bc83ce3cca3beb1bfd0}
+
+
+number of riverflow reservoir cascades 
+
+
+
+Definition at line 42 of file mo\+\_\+hd\+\_\+constants.\+f90.
+
+
+\begin{DoxyCode}
+42   \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{PARAMETER}  :: &
+43     nmemrf = 5
+\end{DoxyCode}

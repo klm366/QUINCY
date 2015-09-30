@@ -1,0 +1,613 @@
+\hypertarget{namespacemo__jsb__time}{}\section{mo\+\_\+jsb\+\_\+time Module Reference}
+\label{namespacemo__jsb__time}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+
+
+Contains time control for J\+S\+B\+A\+C\+H.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__time_af406b57a3b7ee99184a5ca90996d63de}{init\+\_\+time} (namelist\+\_\+filename)
+\begin{DoxyCompactList}\small\item\em Initialize time control for J\+S\+B\+A\+C\+H standalone. \end{DoxyCompactList}\item 
+subroutine, public \hyperlink{namespacemo__jsb__time_a730df761753fbbdb7d42e0a8df801907}{update\+\_\+time\+\_\+at\+\_\+beginloop} (istep, is\+\_\+standalone)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__time_ac894ecb723bd71f8506bff6f279e323e}{update\+\_\+time\+\_\+at\+\_\+endloop} (istep, is\+\_\+standalone)
+\item 
+logical function, public \hyperlink{namespacemo__jsb__time_aaf4eeda4cb187ded221b00e4fd1c3448}{is\+\_\+newday} ()
+\item 
+integer function, public \hyperlink{namespacemo__jsb__time_adf7b7e4156df6e151e9274d0d94dc601}{get\+\_\+year} (datetime)
+\item 
+integer function, public \hyperlink{namespacemo__jsb__time_a58e1d9b59545569a0eced95aca165c58}{get\+\_\+month} (datetime)
+\item 
+integer function, public \hyperlink{namespacemo__jsb__time_a6b454a27050a101777b380f81321b779}{get\+\_\+day} (datetime)
+\item 
+integer function, public \hyperlink{namespacemo__jsb__time_aa3a34d4460604cad784963d39ca47fbe}{get\+\_\+secs\+\_\+of\+\_\+day} (datetime)
+\item 
+integer function, public \hyperlink{namespacemo__jsb__time_a9dd8cce6102dffffa97513d7b4d2e45b}{get\+\_\+year\+\_\+at\+\_\+model\+\_\+start} ()
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+integer \hyperlink{namespacemo__jsb__time_ab33d9e53cde817560aa3730633ea1413}{number\+\_\+timesteps}
+\item 
+real(wp) \hyperlink{namespacemo__jsb__time_ad760ff14bc3e4b8e9d624706973ee1a4}{timestep\+\_\+length}
+\item 
+type(t\+\_\+datetime), save \hyperlink{namespacemo__jsb__time_afa7b526c3dff7e0c063d6545e6eae499}{start\+\_\+date}
+\item 
+type(t\+\_\+datetime), save \hyperlink{namespacemo__jsb__time_a1a0e4eb7d850630c29d3e80a77cac78b}{current\+\_\+date}
+\item 
+type(t\+\_\+datetime), save \hyperlink{namespacemo__jsb__time_a6ee919b8447b1554b208420eb0760e95}{final\+\_\+date}
+\item 
+logical, save \hyperlink{namespacemo__jsb__time_ac404f6055d48b37e7de92b0e288f5a8c}{time\+\_\+initialized} = .F\+A\+L\+S\+E.
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__time_a44d3acf17e06ee576cf456b9fa721952}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+time\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains time control for J\+S\+B\+A\+C\+H. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/02-\/18) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__time_a6b454a27050a101777b380f81321b779}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!get\+\_\+day@{get\+\_\+day}}
+\index{get\+\_\+day@{get\+\_\+day}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{get\+\_\+day}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+time\+::get\+\_\+day (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+datetime), intent(in), optional}]{datetime}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time_a6b454a27050a101777b380f81321b779}
+
+
+Definition at line 198 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+date\+\_\+components(), and mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+current().
+
+
+\begin{DoxyCode}
+198 
+199     \textcolor{keywordtype}{TYPE}(t\_datetime), \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(in)} :: datetime
+200 
+201     \textcolor{keywordtype}{TYPE}(t\_datetime) :: datetime\_tmp
+202     \textcolor{keywordtype}{INTEGER} :: day
+203 
+204     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(datetime)) \textcolor{keywordflow}{THEN}
+205       datetime\_tmp = datetime
+206     \textcolor{keywordflow}{ELSE}
+207       datetime\_tmp  = get\_time\_current()
+208 \textcolor{keywordflow}{    END IF}
+209 
+210     \textcolor{keyword}{CALL }get\_date\_components(datetime\_tmp, day=day)
+211 
+212     get\_day = day
+213 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=342pt]{da/d0d/namespacemo__jsb__time_a6b454a27050a101777b380f81321b779_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time_a58e1d9b59545569a0eced95aca165c58}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!get\+\_\+month@{get\+\_\+month}}
+\index{get\+\_\+month@{get\+\_\+month}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{get\+\_\+month}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+time\+::get\+\_\+month (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+datetime), intent(in), optional}]{datetime}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time_a58e1d9b59545569a0eced95aca165c58}
+
+
+Definition at line 179 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+date\+\_\+components(), and mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+current().
+
+
+\begin{DoxyCode}
+179 
+180     \textcolor{keywordtype}{TYPE}(t\_datetime), \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(in)} :: datetime
+181 
+182     \textcolor{keywordtype}{TYPE}(t\_datetime) :: datetime\_tmp
+183     \textcolor{keywordtype}{INTEGER} :: month
+184 
+185     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(datetime)) \textcolor{keywordflow}{THEN}
+186       datetime\_tmp = datetime
+187     \textcolor{keywordflow}{ELSE}
+188       datetime\_tmp  = get\_time\_current()
+189 \textcolor{keywordflow}{    END IF}
+190 
+191     \textcolor{keyword}{CALL }get\_date\_components(datetime\_tmp, month=month)
+192 
+193     get\_month = month
+194 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/d0d/namespacemo__jsb__time_a58e1d9b59545569a0eced95aca165c58_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time_aa3a34d4460604cad784963d39ca47fbe}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!get\+\_\+secs\+\_\+of\+\_\+day@{get\+\_\+secs\+\_\+of\+\_\+day}}
+\index{get\+\_\+secs\+\_\+of\+\_\+day@{get\+\_\+secs\+\_\+of\+\_\+day}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{get\+\_\+secs\+\_\+of\+\_\+day}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+time\+::get\+\_\+secs\+\_\+of\+\_\+day (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+datetime), intent(in), optional}]{datetime}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time_aa3a34d4460604cad784963d39ca47fbe}
+
+
+Definition at line 217 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+date\+\_\+components(), and mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+current().
+
+
+\begin{DoxyCode}
+217 
+218     \textcolor{keywordtype}{TYPE}(t\_datetime), \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(in)} :: datetime
+219 
+220     \textcolor{keywordtype}{TYPE}(t\_datetime) :: datetime\_tmp
+221     \textcolor{keywordtype}{INTEGER} :: hour, minute, second
+222 
+223     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(datetime)) \textcolor{keywordflow}{THEN}
+224       datetime\_tmp = datetime
+225     \textcolor{keywordflow}{ELSE}
+226       datetime\_tmp  = get\_time\_current()
+227 \textcolor{keywordflow}{    END IF}
+228 
+229     \textcolor{keyword}{CALL }get\_date\_components(datetime\_tmp, hour=hour, minute=minute, second=second)
+230 
+231     get\_secs\_of\_day = nint(3600.\_wp * \textcolor{keywordtype}{REAL(hour,wp)} + 60.\_wp * \textcolor{keywordtype}{REAL(minute,wp)} + \textcolor{keywordtype}{REAL}(second,wp))
+232 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=347pt]{da/d0d/namespacemo__jsb__time_aa3a34d4460604cad784963d39ca47fbe_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time_adf7b7e4156df6e151e9274d0d94dc601}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!get\+\_\+year@{get\+\_\+year}}
+\index{get\+\_\+year@{get\+\_\+year}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{get\+\_\+year}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+time\+::get\+\_\+year (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+datetime), intent(in), optional}]{datetime}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time_adf7b7e4156df6e151e9274d0d94dc601}
+
+
+Definition at line 161 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+date\+\_\+components(), and mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+current().
+
+
+
+Referenced by get\+\_\+year\+\_\+at\+\_\+model\+\_\+start(), and mo\+\_\+soil\+\_\+process\+::init\+\_\+soil\+\_\+temperature().
+
+
+\begin{DoxyCode}
+161 
+162     \textcolor{keywordtype}{TYPE}(t\_datetime), \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(in)} :: datetime
+163 
+164     \textcolor{keywordtype}{TYPE}(t\_datetime) :: datetime\_tmp
+165     \textcolor{keywordtype}{INTEGER} :: year
+166 
+167     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(datetime)) \textcolor{keywordflow}{THEN}
+168       datetime\_tmp = datetime
+169     \textcolor{keywordflow}{ELSE}
+170       datetime\_tmp  = get\_time\_current()
+171 \textcolor{keywordflow}{    END IF}
+172     \textcolor{keyword}{CALL }get\_date\_components(datetime\_tmp, year=year)
+173 
+174     get\_year = year
+175 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=345pt]{da/d0d/namespacemo__jsb__time_adf7b7e4156df6e151e9274d0d94dc601_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/d0d/namespacemo__jsb__time_adf7b7e4156df6e151e9274d0d94dc601_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time_a9dd8cce6102dffffa97513d7b4d2e45b}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!get\+\_\+year\+\_\+at\+\_\+model\+\_\+start@{get\+\_\+year\+\_\+at\+\_\+model\+\_\+start}}
+\index{get\+\_\+year\+\_\+at\+\_\+model\+\_\+start@{get\+\_\+year\+\_\+at\+\_\+model\+\_\+start}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{get\+\_\+year\+\_\+at\+\_\+model\+\_\+start}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+time\+::get\+\_\+year\+\_\+at\+\_\+model\+\_\+start (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time_a9dd8cce6102dffffa97513d7b4d2e45b}
+
+
+Definition at line 236 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+References get\+\_\+year(), modname, start\+\_\+date, and time\+\_\+initialized.
+
+
+\begin{DoxyCode}
+236 
+237     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':get\_year\_at\_model\_start'}
+238 
+239     \textcolor{keywordflow}{IF} (.NOT. time\_initialized) &
+240       \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Time not initialized yet.'})
+241 
+242     get\_year\_at\_model\_start = get\_year(start\_date)
+243 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/d0d/namespacemo__jsb__time_a9dd8cce6102dffffa97513d7b4d2e45b_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time_af406b57a3b7ee99184a5ca90996d63de}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!init\+\_\+time@{init\+\_\+time}}
+\index{init\+\_\+time@{init\+\_\+time}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{init\+\_\+time}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+time\+::init\+\_\+time (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in), optional}]{namelist\+\_\+filename}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time_af406b57a3b7ee99184a5ca90996d63de}
+
+
+Initialize time control for J\+S\+B\+A\+C\+H standalone. 
+
+\$ S\+U\+B\+R\+O\+U\+T\+I\+N\+E init\+\_\+time\+\_\+standalone(namelist\+\_\+filename) 
+
+Definition at line 59 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+References current\+\_\+date, final\+\_\+date, modname, number\+\_\+timesteps, mo\+\_\+jsb\+\_\+time\+\_\+iface\+::read\+\_\+time\+\_\+namelist(), start\+\_\+date, time\+\_\+initialized, and timestep\+\_\+length.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+control\+::init\+\_\+jsb\+\_\+master\+\_\+control().
+
+
+\begin{DoxyCode}
+59 
+60     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__time__iface}{mo\_jsb\_time\_iface}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__jsb__time__iface_aa849b3904eff063cc37a76aeb2cc9e2d}{read\_time\_namelist}, & \textcolor{comment}{!, configure\_time}
+61                                  configure\_time\_and\_events, &
+62                                  get\_time\_nsteps, get\_time\_dt, &
+63                                  get\_time\_start, get\_time\_stop
+64 
+65     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(in)} :: namelist\_filename
+66 
+67     \textcolor{keywordtype}{REAL(wp)} :: eps
+68 
+69     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':init\_time'}
+70 
+71     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Initializing JSBACH time'})
+72 
+73     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(namelist\_filename)) \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__time__iface_aa849b3904eff063cc37a76aeb2cc9e2d}{read\_time\_namelist}(trim(namelist\_filename))
+74 
+75     \textcolor{keyword}{CALL }configure\_time\_and\_events()
+76 
+77     number\_timesteps  = get\_time\_nsteps()
+78     timestep\_length   = get\_time\_dt()
+79     start\_date        = get\_time\_start()
+80     final\_date        = get\_time\_stop()
+81 
+82     current\_date     = start\_date
+83 
+84     \textcolor{comment}{! Check if Asselin time filter is used and print message}
+85     eps = get\_asselin\_coef()
+86     \textcolor{keywordflow}{IF} (eps > 0.\_wp) \textcolor{keywordflow}{THEN}
+87       \textcolor{keyword}{WRITE}(message\_text,*) \textcolor{stringliteral}{'Using Asselin time filter for surface temperature: eps ='}, eps
+88     \textcolor{keywordflow}{ELSE}
+89       \textcolor{keyword}{WRITE}(message\_text,*) \textcolor{stringliteral}{'Not using Asselin time filter for surface temperature'}
+90 \textcolor{keywordflow}{    END IF}
+91     \textcolor{keyword}{CALL }message(trim(routine), trim(message\_text))
+92 
+93     time\_initialized = .true.
+94 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=335pt]{da/d0d/namespacemo__jsb__time_af406b57a3b7ee99184a5ca90996d63de_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/d0d/namespacemo__jsb__time_af406b57a3b7ee99184a5ca90996d63de_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time_aaf4eeda4cb187ded221b00e4fd1c3448}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!is\+\_\+newday@{is\+\_\+newday}}
+\index{is\+\_\+newday@{is\+\_\+newday}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{is\+\_\+newday}]{\setlength{\rightskip}{0pt plus 5cm}logical function, public mo\+\_\+jsb\+\_\+time\+::is\+\_\+newday (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time_aaf4eeda4cb187ded221b00e4fd1c3448}
+
+
+Definition at line 143 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+previous().
+
+
+\begin{DoxyCode}
+143 
+144     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__time__iface}{mo\_jsb\_time\_iface}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__jsb__time__iface_aa475436175297ff2a5f9969a176d17da}{get\_time\_previous}
+145 
+146     \textcolor{keywordtype}{TYPE}(t\_datetime) :: current, previous
+147 
+148     \textcolor{keywordtype}{INTEGER} :: current\_day, previous\_day
+149 
+150     current  = get\_time\_current()
+151     previous = \hyperlink{namespacemo__jsb__time__iface_aa475436175297ff2a5f9969a176d17da}{get\_time\_previous}()
+152 
+153     \textcolor{keyword}{CALL }get\_date\_components(current, day=current\_day)
+154     \textcolor{keyword}{CALL }get\_date\_components(previous, day=previous\_day)
+155 
+156     is\_newday = current\_day /= previous\_day
+157 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=345pt]{da/d0d/namespacemo__jsb__time_aaf4eeda4cb187ded221b00e4fd1c3448_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time_a730df761753fbbdb7d42e0a8df801907}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!update\+\_\+time\+\_\+at\+\_\+beginloop@{update\+\_\+time\+\_\+at\+\_\+beginloop}}
+\index{update\+\_\+time\+\_\+at\+\_\+beginloop@{update\+\_\+time\+\_\+at\+\_\+beginloop}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{update\+\_\+time\+\_\+at\+\_\+beginloop}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+time\+::update\+\_\+time\+\_\+at\+\_\+beginloop (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{istep, }
+\item[{logical, intent(in)}]{is\+\_\+standalone}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time_a730df761753fbbdb7d42e0a8df801907}
+
+
+Definition at line 121 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+time\+\_\+iface\+::start\+\_\+timestep().
+
+
+\begin{DoxyCode}
+121 
+122     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__time__iface}{mo\_jsb\_time\_iface}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__jsb__time__iface_a01e05b9838b013ea37b6bd5f9e446ce6}{start\_timestep}
+123 
+124     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(in)} :: istep
+125     \textcolor{keywordtype}{LOGICAL}, \textcolor{keywordtype}{INTENT(in)} :: is\_standalone
+126 
+127     \textcolor{keywordflow}{IF} (is\_standalone) \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__time__iface_a01e05b9838b013ea37b6bd5f9e446ce6}{start\_timestep}(istep)
+128 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=327pt]{da/d0d/namespacemo__jsb__time_a730df761753fbbdb7d42e0a8df801907_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time_ac894ecb723bd71f8506bff6f279e323e}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!update\+\_\+time\+\_\+at\+\_\+endloop@{update\+\_\+time\+\_\+at\+\_\+endloop}}
+\index{update\+\_\+time\+\_\+at\+\_\+endloop@{update\+\_\+time\+\_\+at\+\_\+endloop}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{update\+\_\+time\+\_\+at\+\_\+endloop}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+time\+::update\+\_\+time\+\_\+at\+\_\+endloop (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{istep, }
+\item[{logical, intent(in)}]{is\+\_\+standalone}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time_ac894ecb723bd71f8506bff6f279e323e}
+
+
+Definition at line 132 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+time\+\_\+iface\+::finish\+\_\+timestep().
+
+
+\begin{DoxyCode}
+132 
+133     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__time__iface}{mo\_jsb\_time\_iface}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__jsb__time__iface_a6f035dd414c8b19cde3a73e39f6afa3a}{finish\_timestep}
+134 
+135     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(in)} :: istep
+136     \textcolor{keywordtype}{LOGICAL}, \textcolor{keywordtype}{INTENT(in)} :: is\_standalone
+137 
+138     \textcolor{keywordflow}{IF} (is\_standalone) \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__time__iface_a6f035dd414c8b19cde3a73e39f6afa3a}{finish\_timestep}(istep)
+139 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=327pt]{da/d0d/namespacemo__jsb__time_ac894ecb723bd71f8506bff6f279e323e_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__time_a1a0e4eb7d850630c29d3e80a77cac78b}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!current\+\_\+date@{current\+\_\+date}}
+\index{current\+\_\+date@{current\+\_\+date}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{current\+\_\+date}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+datetime), save mo\+\_\+jsb\+\_\+time\+::current\+\_\+date}\label{namespacemo__jsb__time_a1a0e4eb7d850630c29d3e80a77cac78b}
+
+
+Definition at line 37 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+Referenced by init\+\_\+time().
+
+
+\begin{DoxyCode}
+37   \textcolor{keywordtype}{TYPE}(t\_datetime), \textcolor{keywordtype}{SAVE} :: current\_date
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time_a6ee919b8447b1554b208420eb0760e95}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!final\+\_\+date@{final\+\_\+date}}
+\index{final\+\_\+date@{final\+\_\+date}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{final\+\_\+date}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+datetime), save mo\+\_\+jsb\+\_\+time\+::final\+\_\+date}\label{namespacemo__jsb__time_a6ee919b8447b1554b208420eb0760e95}
+
+
+Definition at line 38 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+Referenced by init\+\_\+time().
+
+
+\begin{DoxyCode}
+38   \textcolor{keywordtype}{TYPE}(t\_datetime), \textcolor{keywordtype}{SAVE} :: final\_date
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time_a44d3acf17e06ee576cf456b9fa721952}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+time\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+time\textquotesingle{}}\label{namespacemo__jsb__time_a44d3acf17e06ee576cf456b9fa721952}
+
+
+Definition at line 50 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+Referenced by get\+\_\+year\+\_\+at\+\_\+model\+\_\+start(), and init\+\_\+time().
+
+
+\begin{DoxyCode}
+50   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_time'}
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time_ab33d9e53cde817560aa3730633ea1413}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!number\+\_\+timesteps@{number\+\_\+timesteps}}
+\index{number\+\_\+timesteps@{number\+\_\+timesteps}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{number\+\_\+timesteps}]{\setlength{\rightskip}{0pt plus 5cm}integer mo\+\_\+jsb\+\_\+time\+::number\+\_\+timesteps}\label{namespacemo__jsb__time_ab33d9e53cde817560aa3730633ea1413}
+
+
+Definition at line 34 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+Referenced by init\+\_\+time().
+
+
+\begin{DoxyCode}
+34   \textcolor{keywordtype}{INTEGER}                :: number\_timesteps
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time_afa7b526c3dff7e0c063d6545e6eae499}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!start\+\_\+date@{start\+\_\+date}}
+\index{start\+\_\+date@{start\+\_\+date}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{start\+\_\+date}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+datetime), save mo\+\_\+jsb\+\_\+time\+::start\+\_\+date}\label{namespacemo__jsb__time_afa7b526c3dff7e0c063d6545e6eae499}
+
+
+Definition at line 36 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+Referenced by get\+\_\+year\+\_\+at\+\_\+model\+\_\+start(), and init\+\_\+time().
+
+
+\begin{DoxyCode}
+36   \textcolor{keywordtype}{TYPE}(t\_datetime), \textcolor{keywordtype}{SAVE} :: start\_date
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time_ac404f6055d48b37e7de92b0e288f5a8c}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!time\+\_\+initialized@{time\+\_\+initialized}}
+\index{time\+\_\+initialized@{time\+\_\+initialized}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{time\+\_\+initialized}]{\setlength{\rightskip}{0pt plus 5cm}logical, save mo\+\_\+jsb\+\_\+time\+::time\+\_\+initialized = .F\+A\+L\+S\+E.}\label{namespacemo__jsb__time_ac404f6055d48b37e7de92b0e288f5a8c}
+
+
+Definition at line 48 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+Referenced by get\+\_\+year\+\_\+at\+\_\+model\+\_\+start(), and init\+\_\+time().
+
+
+\begin{DoxyCode}
+48   \textcolor{keywordtype}{LOGICAL}, \textcolor{keywordtype}{SAVE} :: time\_initialized = .false.
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time_ad760ff14bc3e4b8e9d624706973ee1a4}{}\index{mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}!timestep\+\_\+length@{timestep\+\_\+length}}
+\index{timestep\+\_\+length@{timestep\+\_\+length}!mo\+\_\+jsb\+\_\+time@{mo\+\_\+jsb\+\_\+time}}
+\subsubsection[{timestep\+\_\+length}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) mo\+\_\+jsb\+\_\+time\+::timestep\+\_\+length}\label{namespacemo__jsb__time_ad760ff14bc3e4b8e9d624706973ee1a4}
+
+
+Definition at line 35 of file mo\+\_\+jsb\+\_\+time.\+f90.
+
+
+
+Referenced by init\+\_\+time().
+
+
+\begin{DoxyCode}
+35   \textcolor{keywordtype}{REAL(wp)}               :: timestep\_length
+\end{DoxyCode}

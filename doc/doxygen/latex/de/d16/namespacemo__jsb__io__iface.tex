@@ -1,0 +1,169 @@
+\hypertarget{namespacemo__jsb__io__iface}{}\section{mo\+\_\+jsb\+\_\+io\+\_\+iface Module Reference}
+\label{namespacemo__jsb__io__iface}\index{mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}}
+
+
+Contains the interface to io.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(t\+\_\+grib2\+\_\+var) function, public \hyperlink{namespacemo__jsb__io__iface_a7dcb7e7f110b47d470552f4961b9f07d}{grib2\+\_\+var} (discipline, category, number, bits, gridtype, subgridtype)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+integer, parameter, public \hyperlink{namespacemo__jsb__io__iface_ab7d5e02770372d76b4e849aad1df02c6}{za\+\_\+surface} = 1
+\item 
+integer, parameter, public \hyperlink{namespacemo__jsb__io__iface_a79c0041a5e9568c7cb97d79f478ce461}{za\+\_\+depth\+\_\+below\+\_\+land} = 11
+\item 
+integer, parameter, public \hyperlink{namespacemo__jsb__io__iface_a30ebf996cc621d7f8ecfa372b0e452c2}{grid\+\_\+cell} = 1
+\item 
+integer, parameter, public \hyperlink{namespacemo__jsb__io__iface_a4923bf314c5fffee744c897b5d7b82ae}{grid\+\_\+unstructured\+\_\+cell} = 1
+\item 
+integer, parameter, public \hyperlink{namespacemo__jsb__io__iface_aadac9f6eb4b6f2ac600ea3c0eabe6a93}{grid\+\_\+reference} = 9
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__io__iface_aba3d7fda335dca67008e7972403aebf6}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+io\+\_\+iface\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains the interface to io. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__io__iface_a7dcb7e7f110b47d470552f4961b9f07d}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}!grib2\+\_\+var@{grib2\+\_\+var}}
+\index{grib2\+\_\+var@{grib2\+\_\+var}!mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}}
+\subsubsection[{grib2\+\_\+var}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+grib2\+\_\+var) function, public mo\+\_\+jsb\+\_\+io\+\_\+iface\+::grib2\+\_\+var (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{discipline, }
+\item[{integer, intent(in)}]{category, }
+\item[{integer, intent(in)}]{number, }
+\item[{integer, intent(in)}]{bits, }
+\item[{integer, intent(in)}]{gridtype, }
+\item[{integer, intent(in)}]{subgridtype}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__iface_a7dcb7e7f110b47d470552f4961b9f07d}
+
+
+Definition at line 74 of file mo\+\_\+jsb\+\_\+io\+\_\+iface.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+varlist\+::get\+\_\+varlist().
+
+
+\begin{DoxyCode}
+74     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(IN)} :: discipline
+75     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(IN)} :: category
+76     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(IN)} :: number
+77     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(IN)} :: bits
+78     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(IN)} :: gridtype
+79     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(IN)} :: subgridtype
+80     \textcolor{keywordtype}{TYPE}(t\_grib2\_var) :: grib2\_var
+81 
+82     grib2\_var%discipline  = discipline
+83     grib2\_var%category    = category
+84     grib2\_var%number      = number
+85     grib2\_var%bits        = bits
+86     grib2\_var%gridtype    = gridtype
+87     grib2\_var%subgridtype = subgridtype
+88 
+89 \textcolor{comment}{!!$    grib2\_var%additional\_keys%nint\_keys = 0}
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{de/d16/namespacemo__jsb__io__iface_a7dcb7e7f110b47d470552f4961b9f07d_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__io__iface_a30ebf996cc621d7f8ecfa372b0e452c2}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}!grid\+\_\+cell@{grid\+\_\+cell}}
+\index{grid\+\_\+cell@{grid\+\_\+cell}!mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}}
+\subsubsection[{grid\+\_\+cell}]{\setlength{\rightskip}{0pt plus 5cm}integer, parameter, public mo\+\_\+jsb\+\_\+io\+\_\+iface\+::grid\+\_\+cell = 1}\label{namespacemo__jsb__io__iface_a30ebf996cc621d7f8ecfa372b0e452c2}
+
+
+Definition at line 62 of file mo\+\_\+jsb\+\_\+io\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+62   \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{PARAMETER} :: grid\_cell              =  1
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__io__iface_aadac9f6eb4b6f2ac600ea3c0eabe6a93}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}!grid\+\_\+reference@{grid\+\_\+reference}}
+\index{grid\+\_\+reference@{grid\+\_\+reference}!mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}}
+\subsubsection[{grid\+\_\+reference}]{\setlength{\rightskip}{0pt plus 5cm}integer, parameter, public mo\+\_\+jsb\+\_\+io\+\_\+iface\+::grid\+\_\+reference = 9}\label{namespacemo__jsb__io__iface_aadac9f6eb4b6f2ac600ea3c0eabe6a93}
+
+
+Definition at line 64 of file mo\+\_\+jsb\+\_\+io\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+64   \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{PARAMETER} :: grid\_reference         =  9
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__io__iface_a4923bf314c5fffee744c897b5d7b82ae}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}!grid\+\_\+unstructured\+\_\+cell@{grid\+\_\+unstructured\+\_\+cell}}
+\index{grid\+\_\+unstructured\+\_\+cell@{grid\+\_\+unstructured\+\_\+cell}!mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}}
+\subsubsection[{grid\+\_\+unstructured\+\_\+cell}]{\setlength{\rightskip}{0pt plus 5cm}integer, parameter, public mo\+\_\+jsb\+\_\+io\+\_\+iface\+::grid\+\_\+unstructured\+\_\+cell = 1}\label{namespacemo__jsb__io__iface_a4923bf314c5fffee744c897b5d7b82ae}
+
+
+Definition at line 63 of file mo\+\_\+jsb\+\_\+io\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+63   \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{PARAMETER} :: grid\_unstructured\_cell =  1
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__io__iface_aba3d7fda335dca67008e7972403aebf6}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+io\+\_\+iface\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+io\+\_\+iface\textquotesingle{}}\label{namespacemo__jsb__io__iface_aba3d7fda335dca67008e7972403aebf6}
+
+
+Definition at line 67 of file mo\+\_\+jsb\+\_\+io\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+67   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_io\_iface'}
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__io__iface_a79c0041a5e9568c7cb97d79f478ce461}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}!za\+\_\+depth\+\_\+below\+\_\+land@{za\+\_\+depth\+\_\+below\+\_\+land}}
+\index{za\+\_\+depth\+\_\+below\+\_\+land@{za\+\_\+depth\+\_\+below\+\_\+land}!mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}}
+\subsubsection[{za\+\_\+depth\+\_\+below\+\_\+land}]{\setlength{\rightskip}{0pt plus 5cm}integer, parameter, public mo\+\_\+jsb\+\_\+io\+\_\+iface\+::za\+\_\+depth\+\_\+below\+\_\+land = 11}\label{namespacemo__jsb__io__iface_a79c0041a5e9568c7cb97d79f478ce461}
+
+
+Definition at line 61 of file mo\+\_\+jsb\+\_\+io\+\_\+iface.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+varlist\+\_\+iface\+::add\+\_\+var\+\_\+list\+\_\+element\+\_\+r3d().
+
+
+\begin{DoxyCode}
+61   \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{PARAMETER} :: za\_depth\_below\_land    = 11
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__io__iface_ab7d5e02770372d76b4e849aad1df02c6}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}!za\+\_\+surface@{za\+\_\+surface}}
+\index{za\+\_\+surface@{za\+\_\+surface}!mo\+\_\+jsb\+\_\+io\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+iface}}
+\subsubsection[{za\+\_\+surface}]{\setlength{\rightskip}{0pt plus 5cm}integer, parameter, public mo\+\_\+jsb\+\_\+io\+\_\+iface\+::za\+\_\+surface = 1}\label{namespacemo__jsb__io__iface_ab7d5e02770372d76b4e849aad1df02c6}
+
+
+Definition at line 60 of file mo\+\_\+jsb\+\_\+io\+\_\+iface.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+varlist\+\_\+iface\+::add\+\_\+var\+\_\+list\+\_\+element\+\_\+r2d().
+
+
+\begin{DoxyCode}
+60   \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{PARAMETER} :: za\_surface             =  1
+\end{DoxyCode}

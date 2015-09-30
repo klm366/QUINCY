@@ -1,0 +1,156 @@
+\hypertarget{namespacemo__hd__reservoir__cascade}{}\section{mo\+\_\+hd\+\_\+reservoir\+\_\+cascade Module Reference}
+\label{namespacemo__hd__reservoir__cascade}\index{mo\+\_\+hd\+\_\+reservoir\+\_\+cascade@{mo\+\_\+hd\+\_\+reservoir\+\_\+cascade}}
+
+
+Flow simulation of reservoir cascade.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__hd__reservoir__cascade_a2fa442fd7d7849b36ae0cc5b9f39cbcd}{reservoir\+\_\+cascade} (inflow, nc, steplen, retention, nres, res\+\_\+content, outflow)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__hd__reservoir__cascade_a8b0cd1df229795ce555d9973dbd65c30}{modname} = \textquotesingle{}mo\+\_\+hd\+\_\+reservoir\+\_\+cascade\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Flow simulation of reservoir cascade. 
+
+\begin{DoxyAuthor}{Author}
+Veronika Gayler, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Veronika Gayler (2013-\/04-\/20) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__hd__reservoir__cascade_a2fa442fd7d7849b36ae0cc5b9f39cbcd}{}\index{mo\+\_\+hd\+\_\+reservoir\+\_\+cascade@{mo\+\_\+hd\+\_\+reservoir\+\_\+cascade}!reservoir\+\_\+cascade@{reservoir\+\_\+cascade}}
+\index{reservoir\+\_\+cascade@{reservoir\+\_\+cascade}!mo\+\_\+hd\+\_\+reservoir\+\_\+cascade@{mo\+\_\+hd\+\_\+reservoir\+\_\+cascade}}
+\subsubsection[{reservoir\+\_\+cascade}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+hd\+\_\+reservoir\+\_\+cascade\+::reservoir\+\_\+cascade (
+\begin{DoxyParamCaption}
+\item[{real(wp), dimension(\+:), intent(in)}]{inflow, }
+\item[{integer, intent(in)}]{nc, }
+\item[{real(wp), intent(in)}]{steplen, }
+\item[{real(wp), dimension(\+:), intent(in)}]{retention, }
+\item[{real(wp), dimension(\+:), intent(in)}]{nres, }
+\item[{real(wp), dimension(\+:,\+:), intent(inout)}]{res\+\_\+content, }
+\item[{real(wp), dimension(\+:), intent(out)}]{outflow}
+\end{DoxyParamCaption}
+)}\label{namespacemo__hd__reservoir__cascade_a2fa442fd7d7849b36ae0cc5b9f39cbcd}
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em inflow} & inflow to the cascade\\
+\hline
+\mbox{\tt in}  & {\em steplen} & time steps per day\\
+\hline
+\mbox{\tt in}  & {\em nc} & current block size\\
+\hline
+\mbox{\tt in}  & {\em retention} & retention parameter (residence time of water in the reservoir)\\
+\hline
+\mbox{\tt in}  & {\em nres} & number of reservoirs\\
+\hline
+\mbox{\tt in,out}  & {\em res\+\_\+content} & intermediate content of reservoir cascade\\
+\hline
+\mbox{\tt out}  & {\em outflow} & outflow at the end of the cascade \\
+\hline
+\end{DoxyParams}
+
+
+Definition at line 28 of file mo\+\_\+hd\+\_\+reservoir\+\_\+cascade.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+hd\+\_\+interface\+::update\+\_\+hd().
+
+
+\begin{DoxyCode}
+28   \textcolor{comment}{!------------------------------------------------------------------------------------------------}
+29   \textcolor{comment}{! routine based on jsbach3 routine kasglob by Stefan Hagemann}
+30   \textcolor{comment}{!   cascade of n equal linear reservoirs. }
+31   \textcolor{comment}{!   linear reservoir approach: The outflow from a reservoir is proportional to its content.}
+32   \textcolor{comment}{!------------------------------------------------------------------------------------------------}
+33 
+34     \textcolor{keywordtype}{REAL(wp)},  \textcolor{keywordtype}{INTENT(in)}    :: inflow(:)
+35     \textcolor{keywordtype}{REAL(wp)},  \textcolor{keywordtype}{INTENT(in)}    :: steplen
+36     \textcolor{keywordtype}{INTEGER},   \textcolor{keywordtype}{INTENT(in)}    :: nc
+37     \textcolor{keywordtype}{REAL(wp)},  \textcolor{keywordtype}{INTENT(in)}    :: retention(:)
+38     \textcolor{keywordtype}{REAL(wp)},  \textcolor{keywordtype}{INTENT(in)}    :: nres(:)
+39     \textcolor{keywordtype}{REAL(wp)},  \textcolor{keywordtype}{INTENT(inout)} :: res\_content(:,:)
+40     \textcolor{keywordtype}{REAL(wp)},  \textcolor{keywordtype}{INTENT(out)}   :: outflow(:)
+41 
+42     \textcolor{comment}{! local variables}
+43     \textcolor{comment}{! ---------------}
+44 
+45     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{ALLOCATABLE}    :: amod(:)       \textcolor{comment}{!vg wuerde ich gern beides abschaffen}
+46     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{ALLOCATABLE}    :: akdiv(:)
+47     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{ALLOCATABLE}    :: inflow\_cascade(:)
+48 
+49     \textcolor{keywordtype}{INTEGER} ::  res, nres\_max
+50 
+51 
+52     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':reservoir\_cascade'}
+53 
+54     \textcolor{keyword}{ALLOCATE}(amod(nc)) 
+55     \textcolor{keyword}{ALLOCATE}(akdiv(nc))
+56     \textcolor{keyword}{ALLOCATE}(inflow\_cascade(nc))
+57 
+58     amod(:) = retention(:) * nres(:) / aint(nres(:))    \textcolor{comment}{!! vg: lieber im inifile anpassen!!}
+59     akdiv = 1.\_wp / (amod(:) + steplen) * steplen       \textcolor{comment}{!! vg: soll das so??}
+60 
+61     inflow\_cascade(:) = inflow(:)
+62 
+63     nres\_max = \textcolor{keyword}{SIZE}(res\_content(1,:))    \textcolor{comment}{! maximum number of reservoirs = 'vertical' dimension of reservoir
+       cascade}
+64     \textcolor{keywordflow}{DO} res = 1, nres\_max
+65       \textcolor{keywordflow}{WHERE} (res <= nint(nres(:)))
+66         res\_content(:,res) = res\_content(:,res) + inflow\_cascade(:)
+67         outflow(:) = res\_content(:,res) * akdiv
+68         res\_content(:,res) = res\_content(:,res) - outflow(:)
+69       \textcolor{keywordflow}{ELSEWHERE}
+70         outflow(:) = inflow\_cascade(:)
+71 \textcolor{keywordflow}{      ENDWHERE}
+72       inflow\_cascade(:) = outflow(:)
+73 \textcolor{keywordflow}{    END DO}
+74 
+75     \textcolor{keyword}{DEALLOCATE}(amod, akdiv)
+76 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d8/db5/namespacemo__hd__reservoir__cascade_a2fa442fd7d7849b36ae0cc5b9f39cbcd_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__hd__reservoir__cascade_a8b0cd1df229795ce555d9973dbd65c30}{}\index{mo\+\_\+hd\+\_\+reservoir\+\_\+cascade@{mo\+\_\+hd\+\_\+reservoir\+\_\+cascade}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+hd\+\_\+reservoir\+\_\+cascade@{mo\+\_\+hd\+\_\+reservoir\+\_\+cascade}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+hd\+\_\+reservoir\+\_\+cascade\+::modname = \textquotesingle{}mo\+\_\+hd\+\_\+reservoir\+\_\+cascade\textquotesingle{}}\label{namespacemo__hd__reservoir__cascade_a8b0cd1df229795ce555d9973dbd65c30}
+
+
+Definition at line 22 of file mo\+\_\+hd\+\_\+reservoir\+\_\+cascade.\+f90.
+
+
+
+Referenced by reservoir\+\_\+cascade().
+
+
+\begin{DoxyCode}
+22   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_hd\_reservoir\_cascade'}
+\end{DoxyCode}

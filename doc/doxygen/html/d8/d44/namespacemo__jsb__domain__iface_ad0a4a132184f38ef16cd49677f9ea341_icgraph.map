@@ -1,0 +1,6 @@
+<map id="mo_jsb_domain_iface::get_nblks" name="mo_jsb_domain_iface::get_nblks">
+<area shape="rect" id="node2" href="$d8/d44/namespacemo__jsb__domain__iface.html#af469456668d8bdb4619e492296338af7" title="mo_jsb_domain_iface\l::get_area" alt="" coords="201,5,349,47"/>
+<area shape="rect" id="node3" href="$d8/d44/namespacemo__jsb__domain__iface.html#a3d9e98bf333fe59aa4108a37ed0947d3" title="mo_jsb_domain_iface\l::get_lat" alt="" coords="201,71,349,112"/>
+<area shape="rect" id="node4" href="$d8/d44/namespacemo__jsb__domain__iface.html#a026b4e63e8ae775bc1621cc37da5da2b" title="mo_jsb_domain_iface\l::get_lon" alt="" coords="201,136,349,177"/>
+<area shape="rect" id="node5" href="$d2/dcf/namespacemo__jsb__grid__class.html#a1f7b1d1bbf7523458be54c335a83f423" title="mo_jsb_grid_class::\lget_nblks" alt="" coords="206,201,345,243"/>
+</map>

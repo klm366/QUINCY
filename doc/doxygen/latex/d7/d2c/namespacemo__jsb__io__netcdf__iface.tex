@@ -1,0 +1,538 @@
+\hypertarget{namespacemo__jsb__io__netcdf__iface}{}\section{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface Module Reference}
+\label{namespacemo__jsb__io__netcdf__iface}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}}
+
+
+Contains the interface to io.  
+
+
+\subsection*{Data Types}
+\begin{DoxyCompactItemize}
+\item 
+interface \hyperlink{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d}{netcdf\+\_\+read\+\_\+2d}
+\item 
+interface \hyperlink{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d__extdim}{netcdf\+\_\+read\+\_\+2d\+\_\+extdim}
+\item 
+interface \hyperlink{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d__time}{netcdf\+\_\+read\+\_\+2d\+\_\+time}
+\item 
+type \hyperlink{structmo__jsb__io__netcdf__iface_1_1t__input__file}{t\+\_\+input\+\_\+file}
+\end{DoxyCompactItemize}
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(\hyperlink{structmo__jsb__io__netcdf__iface_1_1t__input__file}{t\+\_\+input\+\_\+file}) function \hyperlink{namespacemo__jsb__io__netcdf__iface_a62f76a91ba113d51746677418c103187}{netcdf\+\_\+open\+\_\+input} (filename, patch, decomp)
+\item 
+subroutine \hyperlink{namespacemo__jsb__io__netcdf__iface_a1e42c90ce288ce4489b6e472daa40d2e}{netcdf\+\_\+close\+\_\+file} (input\+\_\+file)
+\item 
+real(wp) function, dimension(\+:,\+:), pointer \hyperlink{namespacemo__jsb__io__netcdf__iface_a228681d1ececa8f44b717c01629fee9d}{netcdf\+\_\+read\+\_\+real\+\_\+2d} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array)
+\item 
+real(wp) function, dimension(\+:,\+:,\+:), pointer \hyperlink{namespacemo__jsb__io__netcdf__iface_a4e62dfd3cc23b3747e5039db1110a5a0}{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array, start\+\_\+time\+\_\+step, end\+\_\+time\+\_\+step)
+\item 
+real(wp) function, dimension(\+:,\+:,\+:), pointer \hyperlink{namespacemo__jsb__io__netcdf__iface_acc08a587eb91f00869119c81c06aea05}{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array, start\+\_\+extdim, end\+\_\+extdim, extdim\+\_\+name)
+\item 
+subroutine \hyperlink{namespacemo__jsb__io__netcdf__iface_a14c4e6dbfc96b953416a81add4b76022}{nf} (status, routine, warnonly, silent)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__io__netcdf__iface_aa929904f54cf60b8c7c6bc8be31257d0}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains the interface to io. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__io__netcdf__iface_a1e42c90ce288ce4489b6e472daa40d2e}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}!netcdf\+\_\+close\+\_\+file@{netcdf\+\_\+close\+\_\+file}}
+\index{netcdf\+\_\+close\+\_\+file@{netcdf\+\_\+close\+\_\+file}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}}
+\subsubsection[{netcdf\+\_\+close\+\_\+file}]{\setlength{\rightskip}{0pt plus 5cm}subroutine mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+close\+\_\+file (
+\begin{DoxyParamCaption}
+\item[{type({\bf t\+\_\+input\+\_\+file}), intent(inout)}]{input\+\_\+file}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf__iface_a1e42c90ce288ce4489b6e472daa40d2e}
+
+
+Definition at line 114 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90.
+
+
+
+References modname, and nf().
+
+
+\begin{DoxyCode}
+114 
+115     \textcolor{keywordtype}{TYPE}(t\_input\_file), \textcolor{keywordtype}{INTENT(inout)} :: input\_file
+116 
+117     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':netcdf\_close\_file'}
+118 
+119 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+120 \textcolor{preprocessor}{}    \textcolor{keyword}{CALL }closefile(input\_file%stream\_id)
+121 \textcolor{preprocessor}{#else}
+122 \textcolor{preprocessor}{}    \textcolor{keywordflow}{IF} (my\_process\_is\_stdio()) &
+123       \textcolor{keyword}{CALL }nf(nf\_close(input\_file%file\_id), trim(routine)//\textcolor{stringliteral}{':'}//trim(input\_file%filename))
+124 \textcolor{preprocessor}{#endif}
+125 \textcolor{preprocessor}{}
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d7/d2c/namespacemo__jsb__io__netcdf__iface_a1e42c90ce288ce4489b6e472daa40d2e_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__io__netcdf__iface_a62f76a91ba113d51746677418c103187}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}!netcdf\+\_\+open\+\_\+input@{netcdf\+\_\+open\+\_\+input}}
+\index{netcdf\+\_\+open\+\_\+input@{netcdf\+\_\+open\+\_\+input}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}}
+\subsubsection[{netcdf\+\_\+open\+\_\+input}]{\setlength{\rightskip}{0pt plus 5cm}type({\bf t\+\_\+input\+\_\+file}) function mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+open\+\_\+input (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{filename, }
+\item[{type(t\+\_\+patch), intent(in)}]{patch, }
+\item[{type(pe\+\_\+decomposed), intent(in)}]{decomp}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf__iface_a62f76a91ba113d51746677418c103187}
+
+
+Definition at line 65 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90.
+
+
+
+References modname, mo\+\_\+jsb\+\_\+parallel\+\_\+iface\+::my\+\_\+process\+\_\+is\+\_\+stdio(), and nf().
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+open\+\_\+input().
+
+
+\begin{DoxyCode}
+65 
+66     \textcolor{keywordtype}{CHARACTER(LEN=*)},    \textcolor{keywordtype}{INTENT(in)} :: filename
+67     \textcolor{keywordtype}{TYPE}(t\_patch),       \textcolor{keywordtype}{INTENT(in)} :: patch
+68     \textcolor{keywordtype}{TYPE}(pe\_decomposed), \textcolor{keywordtype}{INTENT(in)} :: decomp
+69 
+70     \textcolor{keywordtype}{INTEGER} :: file\_id, return\_status
+71 
+72     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':netcdf\_open\_input'}
+73 
+74     netcdf\_open\_input%filename = trim(filename)
+75 
+76     \textcolor{keywordflow}{IF} (patch%id > 0) \textcolor{keywordflow}{THEN}
+77 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+78 \textcolor{preprocessor}{}      netcdf\_open\_input%type      = 1
+79       netcdf\_open\_input%stream\_id = openinputfile(trim(filename), patch, read\_netcdf\_broadcast\_method)
+80 \textcolor{preprocessor}{#else}
+81 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Incompatible combination patch/no-ICON'})
+82 \textcolor{preprocessor}{#endif}
+83 \textcolor{preprocessor}{}    \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (decomp%nlon > 0) \textcolor{keywordflow}{THEN}
+84 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+85 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Incompatible combination decomp/ICON'})
+86 \textcolor{preprocessor}{#else}
+87 \textcolor{preprocessor}{}      netcdf\_open\_input%type = 2
+88 
+89       \textcolor{keywordflow}{IF} (my\_process\_is\_stdio()) \textcolor{keywordflow}{THEN}
+90         return\_status = nf\_open(trim(filename), nf\_nowrite, file\_id)
+91         \textcolor{keyword}{CALL }nf(return\_status, trim(routine)//\textcolor{stringliteral}{':'}//trim(filename))
+92       \textcolor{keywordflow}{ELSE}
+93         return\_status = 1
+94         file\_id = -1
+95 \textcolor{keywordflow}{      END IF}
+96       netcdf\_open\_input%file\_id       = file\_id
+97       netcdf\_open\_input%nlon          = decomp%nlon
+98       netcdf\_open\_input%nlat          = decomp%nlat
+99       netcdf\_open\_input%nproma        = decomp%nproma
+100       netcdf\_open\_input%ngpblks       = decomp%ngpblks
+101       netcdf\_open\_input%return\_status = return\_status
+102 \textcolor{preprocessor}{#endif}
+103 \textcolor{preprocessor}{}    \textcolor{keywordflow}{ELSE}
+104 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+105 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'No patch'})
+106 \textcolor{preprocessor}{#else}
+107 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'No decomposition'})
+108 \textcolor{preprocessor}{#endif}
+109 \textcolor{preprocessor}{}\textcolor{keywordflow}{    END IF}
+110 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d7/d2c/namespacemo__jsb__io__netcdf__iface_a62f76a91ba113d51746677418c103187_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d7/d2c/namespacemo__jsb__io__netcdf__iface_a62f76a91ba113d51746677418c103187_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__io__netcdf__iface_a228681d1ececa8f44b717c01629fee9d}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}!netcdf\+\_\+read\+\_\+real\+\_\+2d@{netcdf\+\_\+read\+\_\+real\+\_\+2d}}
+\index{netcdf\+\_\+read\+\_\+real\+\_\+2d@{netcdf\+\_\+read\+\_\+real\+\_\+2d}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}}
+\subsubsection[{netcdf\+\_\+read\+\_\+real\+\_\+2d}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, dimension(\+:,\+:), pointer mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+real\+\_\+2d (
+\begin{DoxyParamCaption}
+\item[{type({\bf t\+\_\+input\+\_\+file}), intent(inout)}]{input\+\_\+file, }
+\item[{character(len=$\ast$), intent(in)}]{variable\+\_\+name, }
+\item[{real(wp), dimension(\+:,\+:), optional, target}]{fill\+\_\+array}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf__iface_a228681d1ececa8f44b717c01629fee9d}
+
+
+Definition at line 129 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90.
+
+
+
+References modname, and nf().
+
+
+\begin{DoxyCode}
+129 
+130     \textcolor{keywordtype}{TYPE}(t\_input\_file), \textcolor{keywordtype}{INTENT(inout)} :: input\_file
+131     \textcolor{keywordtype}{CHARACTER(LEN=*)},   \textcolor{keywordtype}{INTENT(in)}    :: variable\_name
+132     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{TARGET}, \textcolor{keywordtype}{OPTIONAL}        :: fill\_array(:,:)
+133     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER}                 :: netcdf\_read\_real\_2d(:,:)
+134 
+135     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} :: tmp\_array(:,:)
+136     \textcolor{keywordtype}{INTEGER} :: file\_id, var\_id
+137 
+138     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':netcdf\_read\_real\_2d'}
+139 
+140     \textcolor{keyword}{NULLIFY}(netcdf\_read\_real\_2d)
+141 
+142     \textcolor{keywordflow}{IF} (input\_file%type == 1) \textcolor{keywordflow}{THEN}
+143 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+144 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }read\_2d(input\_file%stream\_id, oncells, trim(variable\_name), fill\_array, netcdf\_read\_real\_2d)
+145 \textcolor{preprocessor}{#else}
+146 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Incompatible input file type'})
+147 \textcolor{preprocessor}{#endif}
+148 \textcolor{preprocessor}{}    \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (input\_file%type == 2) \textcolor{keywordflow}{THEN}
+149 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+150 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Incompatible input file type'})
+151 \textcolor{preprocessor}{#else}
+152 \textcolor{preprocessor}{}      \textcolor{keyword}{ALLOCATE}(tmp\_array(input\_file%nlon, input\_file%nlat))
+153 
+154       file\_id = input\_file%file\_id
+155 
+156       \textcolor{keywordflow}{IF} (my\_process\_is\_stdio()) \textcolor{keywordflow}{THEN}
+157         \textcolor{keyword}{CALL }nf(nf\_inq\_varid(file\_id, trim(variable\_name), var\_id), trim(routine))
+158 
+159         \textcolor{keyword}{CALL }nf(nf\_get\_var\_double(file\_id, var\_id, tmp\_array), trim(routine))
+160 \textcolor{keywordflow}{      END IF}
+161 
+162       \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(fill\_array)) \textcolor{keywordflow}{THEN}
+163         netcdf\_read\_real\_2d => fill\_array
+164       \textcolor{keywordflow}{ELSE}
+165         \textcolor{keyword}{ALLOCATE}(netcdf\_read\_real\_2d(input\_file%nproma, input\_file%ngpblks))
+166         netcdf\_read\_real\_2d(:,:) = 0.\_wp
+167 \textcolor{keywordflow}{      END IF}
+168 
+169       \textcolor{keyword}{CALL }scatter\_field(tmp\_array, netcdf\_read\_real\_2d)
+170 
+171       \textcolor{keyword}{DEALLOCATE}(tmp\_array)
+172 \textcolor{preprocessor}{#endif}
+173 \textcolor{preprocessor}{}    \textcolor{keywordflow}{ELSE}
+174       \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Input file type not recognized.'})
+175 \textcolor{keywordflow}{    END IF}
+176 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d7/d2c/namespacemo__jsb__io__netcdf__iface_a228681d1ececa8f44b717c01629fee9d_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__io__netcdf__iface_acc08a587eb91f00869119c81c06aea05}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}!netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim@{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim}}
+\index{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim@{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}}
+\subsubsection[{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, dimension(\+:,\+:,\+:), pointer mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim (
+\begin{DoxyParamCaption}
+\item[{type({\bf t\+\_\+input\+\_\+file}), intent(inout)}]{input\+\_\+file, }
+\item[{character(len=$\ast$), intent(in)}]{variable\+\_\+name, }
+\item[{real(wp), dimension(\+:,\+:,\+:), optional, target}]{fill\+\_\+array, }
+\item[{integer, intent(in), optional}]{start\+\_\+extdim, }
+\item[{integer, intent(in), optional}]{end\+\_\+extdim, }
+\item[{character(len=$\ast$), intent(in), optional}]{extdim\+\_\+name}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf__iface_acc08a587eb91f00869119c81c06aea05}
+
+
+Definition at line 198 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90.
+
+
+
+References modname, and nf().
+
+
+
+Referenced by netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time().
+
+
+\begin{DoxyCode}
+198 
+199     \textcolor{keywordtype}{TYPE}(t\_input\_file),         \textcolor{keywordtype}{INTENT(inout)} :: input\_file
+200     \textcolor{keywordtype}{CHARACTER(LEN=*)},           \textcolor{keywordtype}{INTENT(in)}    :: variable\_name
+201     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{TARGET}, \textcolor{keywordtype}{OPTIONAL}                :: fill\_array(:,:,:)
+202     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{OPTIONAL},          \textcolor{keywordtype}{INTENT(in)}    :: start\_extdim, end\_extdim
+203     \textcolor{keywordtype}{CHARACTER(LEN=*)}, \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(in)}    :: extdim\_name
+204     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER}                         :: netcdf\_read\_real\_2d\_extdim(:,:,:)
+205 
+206     \textcolor{keywordtype}{INTEGER} :: i, start\_allocated\_step, end\_allocated\_step, steps, start\_step, end\_step
+207     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} :: tmp\_array(:,:,:), ptr(:,:)
+208     \textcolor{keywordtype}{INTEGER} :: file\_id, var\_id, var\_ndims, var\_dim\_ids(1:3), var\_extdim\_size, start\_read\_index(1:3), 
+      count\_read\_index(1:3)
+209     \textcolor{keywordtype}{CHARACTER(LEN=NF\_MAX\_NAME)} :: var\_extdim\_name
+210 
+211     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':netcdf\_read\_real\_2d\_extdim'}
+212 
+213     \textcolor{keyword}{NULLIFY}(netcdf\_read\_real\_2d\_extdim)
+214 
+215     \textcolor{keywordflow}{IF} (input\_file%type == 1) \textcolor{keywordflow}{THEN}
+216 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+217 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }read\_2d\_extdim(input\_file%stream\_id, oncells, trim(variable\_name), fill\_array, 
+      netcdf\_read\_real\_2d\_extdim, &
+218                           start\_extdim=start\_extdim, end\_extdim=end\_extdim, extdim\_name=extdim\_name)
+219 \textcolor{preprocessor}{#else}
+220 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Incompatible input file type'})
+221 \textcolor{preprocessor}{#endif}
+222 \textcolor{preprocessor}{}    \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (input\_file%type == 2) \textcolor{keywordflow}{THEN}
+223 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+224 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Incompatible input file type'})
+225 \textcolor{preprocessor}{#else}
+226 \textcolor{preprocessor}{}      file\_id = input\_file%file\_id
+227 
+228       \textcolor{keywordflow}{IF} (my\_process\_is\_stdio()) \textcolor{keywordflow}{THEN}
+229         \textcolor{keyword}{CALL }nf(nf\_inq\_varid(file\_id, trim(variable\_name), var\_id), trim(routine))
+230 
+231         \textcolor{keyword}{CALL }nf(nf\_inq\_varndims(file\_id, var\_id, var\_ndims), trim(routine)//\textcolor{stringliteral}{':'}//trim(variable\_name))
+232         \textcolor{keywordflow}{IF} (var\_ndims /= 3) \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Dimension mismatch'})
+233 
+234         \textcolor{keyword}{CALL }nf(nf\_inq\_vardimid(file\_id, var\_id, var\_dim\_ids(:)), trim(routine)//\textcolor{stringliteral}{':'}//trim(variable\_name))
+235         \textcolor{keyword}{CALL }nf(nf\_inq\_dimlen(file\_id, var\_dim\_ids(3), var\_extdim\_size), trim(routine)//\textcolor{stringliteral}{':'}//trim(
+      variable\_name))
+236 
+237         \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(extdim\_name)) \textcolor{keywordflow}{THEN}
+238           \textcolor{keyword}{CALL }nf(nf\_inq\_dimname(file\_id, var\_dim\_ids(3), var\_extdim\_name), trim(routine)//\textcolor{stringliteral}{':'}//trim(
+      variable\_name))
+239           \textcolor{keywordflow}{IF} (trim(extdim\_name) /= trim(var\_extdim\_name)) \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'extdim\_name mismatch'}
+      )
+240 \textcolor{keywordflow}{        END IF}
+241 \textcolor{keywordflow}{      END IF}
+242 
+243       \textcolor{keyword}{CALL }p\_bcast(var\_extdim\_size, p\_io)
+244 
+245       \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(start\_extdim)) \textcolor{keywordflow}{THEN}
+246         start\_step = start\_extdim
+247       \textcolor{keywordflow}{ELSE}
+248         start\_step = 1
+249 \textcolor{keywordflow}{      END IF}
+250       \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(end\_extdim)) \textcolor{keywordflow}{THEN}
+251 \textcolor{keyword}{        end}\_step = end\_extdim
+252       \textcolor{keywordflow}{ELSE}
+253 \textcolor{keyword}{        end}\_step = var\_extdim\_size
+254 \textcolor{keywordflow}{      END IF}
+255       steps = end\_step - start\_step + 1
+256       \textcolor{keywordflow}{IF} (steps < 1) \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'extdim\_size < 1'})
+257 
+258       \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(fill\_array)) \textcolor{keywordflow}{THEN}
+259         netcdf\_read\_real\_2d\_extdim => fill\_array
+260       \textcolor{keywordflow}{ELSE}
+261         \textcolor{keyword}{ALLOCATE}(netcdf\_read\_real\_2d\_extdim(input\_file%nproma, input\_file%ngpblks, steps))
+262         netcdf\_read\_real\_2d\_extdim(:,:,:) = 0.\_wp
+263 \textcolor{keywordflow}{      END IF}
+264 
+265       start\_allocated\_step = lbound(netcdf\_read\_real\_2d\_extdim, 3)
+266 \textcolor{keyword}{      end}\_allocated\_step = UBOUND(netcdf\_read\_real\_2d\_extdim, 3)
+267       \textcolor{keyword}{ALLOCATE}(tmp\_array(input\_file%nlon, input\_file%nlat, start\_allocated\_step:end\_allocated\_step))
+268       \textcolor{keywordflow}{IF} (\textcolor{keyword}{SIZE}(netcdf\_read\_real\_2d\_extdim,3) < steps) \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'allocated size < steps'})
+269 
+270       \textcolor{keywordflow}{IF} (my\_process\_is\_stdio()) \textcolor{keywordflow}{THEN}
+271         start\_read\_index = (/ 1, 1, start\_step /)
+272         count\_read\_index = (/ input\_file%nlon, input\_file%nlat, steps /)
+273         \textcolor{keyword}{CALL }nf(nf\_get\_vara\_double(file\_id, var\_id, start\_read\_index, count\_read\_index, tmp\_array), &
+274           trim(routine)//\textcolor{stringliteral}{':'}//trim(variable\_name))
+275 \textcolor{keywordflow}{      END IF}
+276 
+277       \textcolor{keywordflow}{DO} i=start\_allocated\_step,end\_allocated\_step
+278         \textcolor{keywordflow}{IF} (my\_process\_is\_stdio()) ptr => tmp\_array(:,:,i)
+279         \textcolor{keyword}{CALL }scatter\_field(ptr, netcdf\_read\_real\_2d\_extdim(:,:,i))
+280 \textcolor{keywordflow}{      END DO}
+281 
+282       \textcolor{keyword}{DEALLOCATE}(tmp\_array)
+283 \textcolor{preprocessor}{#endif}
+284 \textcolor{preprocessor}{}    \textcolor{keywordflow}{ELSE}
+285       \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Input file type not recognized.'})
+286 \textcolor{keywordflow}{    END IF}
+287 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d7/d2c/namespacemo__jsb__io__netcdf__iface_acc08a587eb91f00869119c81c06aea05_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d7/d2c/namespacemo__jsb__io__netcdf__iface_acc08a587eb91f00869119c81c06aea05_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__io__netcdf__iface_a4e62dfd3cc23b3747e5039db1110a5a0}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}!netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time@{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time}}
+\index{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time@{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}}
+\subsubsection[{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, dimension(\+:,\+:,\+:), pointer mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time (
+\begin{DoxyParamCaption}
+\item[{type({\bf t\+\_\+input\+\_\+file}), intent(inout)}]{input\+\_\+file, }
+\item[{character(len=$\ast$), intent(in)}]{variable\+\_\+name, }
+\item[{real(wp), dimension(\+:,\+:,\+:), optional, target}]{fill\+\_\+array, }
+\item[{integer, intent(in), optional}]{start\+\_\+time\+\_\+step, }
+\item[{integer, intent(in), optional}]{end\+\_\+time\+\_\+step}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf__iface_a4e62dfd3cc23b3747e5039db1110a5a0}
+
+
+Definition at line 181 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90.
+
+
+
+References modname, and netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim().
+
+
+\begin{DoxyCode}
+181 
+182     \textcolor{keywordtype}{TYPE}(t\_input\_file), \textcolor{keywordtype}{INTENT(inout)} :: input\_file
+183     \textcolor{keywordtype}{CHARACTER(LEN=*)},   \textcolor{keywordtype}{INTENT(in)}    :: variable\_name
+184     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{TARGET}, \textcolor{keywordtype}{OPTIONAL}        :: fill\_array(:,:,:)
+185     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{OPTIONAL},  \textcolor{keywordtype}{INTENT(in)}    :: start\_time\_step, end\_time\_step
+186     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER}                 :: netcdf\_read\_real\_2d\_time(:,:,:)
+187 
+188     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':netcdf\_read\_real\_2d\_time'}
+189 
+190     netcdf\_read\_real\_2d\_time => netcdf\_read\_real\_2d\_extdim( &
+191       input\_file, variable\_name, fill\_array,    &
+192       start\_extdim=start\_time\_step, end\_extdim=end\_time\_step, extdim\_name=\textcolor{stringliteral}{"time"})
+193                                  
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d7/d2c/namespacemo__jsb__io__netcdf__iface_a4e62dfd3cc23b3747e5039db1110a5a0_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__io__netcdf__iface_a14c4e6dbfc96b953416a81add4b76022}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}!nf@{nf}}
+\index{nf@{nf}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}}
+\subsubsection[{nf}]{\setlength{\rightskip}{0pt plus 5cm}subroutine mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::nf (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{status, }
+\item[{character(len=$\ast$), intent(in)}]{routine, }
+\item[{logical, intent(in), optional}]{warnonly, }
+\item[{logical, intent(in), optional}]{silent}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf__iface_a14c4e6dbfc96b953416a81add4b76022}
+
+
+Definition at line 291 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90.
+
+
+
+Referenced by netcdf\+\_\+close\+\_\+file(), netcdf\+\_\+open\+\_\+input(), netcdf\+\_\+read\+\_\+real\+\_\+2d(), and netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim().
+
+
+\begin{DoxyCode}
+291     
+292     \textcolor{keywordtype}{USE }mo\_exception\textcolor{keywordtype}{, ONLY}: em\_warn
+293 
+294     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(in)}           :: status
+295     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(in)}  :: routine
+296     \textcolor{keywordtype}{LOGICAL}, \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: warnonly
+297     \textcolor{keywordtype}{LOGICAL}, \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: silent
+298     
+299     \textcolor{keywordtype}{LOGICAL} :: lwarnonly, lsilent
+300     
+301     lwarnonly = .false.
+302     lsilent   = .false.
+303     \textcolor{keywordflow}{IF}(\textcolor{keyword}{PRESENT}(warnonly)) lwarnonly = .true.
+304     \textcolor{keywordflow}{IF}(\textcolor{keyword}{PRESENT}(silent))   lsilent   = silent
+305     
+306     \textcolor{keywordflow}{IF} (lsilent) \textcolor{keywordflow}{RETURN}
+307 
+308     \textcolor{keywordflow}{IF} (status /= nf\_noerr) \textcolor{keywordflow}{THEN}
+309       \textcolor{keywordflow}{IF} (lwarnonly) \textcolor{keywordflow}{THEN}
+310         \textcolor{keyword}{CALL }message( trim(routine)//\textcolor{stringliteral}{' netCDF error'}, nf\_strerror(status), &
+311           & level=em\_warn)
+312       \textcolor{keywordflow}{ELSE}
+313         \textcolor{keyword}{CALL }finish( trim(routine)//\textcolor{stringliteral}{' netCDF error'}, nf\_strerror(status))
+314 \textcolor{keywordflow}{      ENDIF}
+315 \textcolor{keywordflow}{    ENDIF}
+316     
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d7/d2c/namespacemo__jsb__io__netcdf__iface_a14c4e6dbfc96b953416a81add4b76022_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__io__netcdf__iface_aa929904f54cf60b8c7c6bc8be31257d0}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\textquotesingle{}}\label{namespacemo__jsb__io__netcdf__iface_aa929904f54cf60b8c7c6bc8be31257d0}
+
+
+Definition at line 60 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90.
+
+
+
+Referenced by netcdf\+\_\+close\+\_\+file(), netcdf\+\_\+open\+\_\+input(), netcdf\+\_\+read\+\_\+real\+\_\+2d(), netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim(), and netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time().
+
+
+\begin{DoxyCode}
+60   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_io\_netcdf\_iface'}
+\end{DoxyCode}

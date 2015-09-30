@@ -1,0 +1,199 @@
+\hypertarget{namespacemo__jsb__model__class}{}\section{mo\+\_\+jsb\+\_\+model\+\_\+class Module Reference}
+\label{namespacemo__jsb__model__class}\index{mo\+\_\+jsb\+\_\+model\+\_\+class@{mo\+\_\+jsb\+\_\+model\+\_\+class}}
+
+
+Contains main J\+S\+B\+A\+C\+H model class.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(t\+\_\+jsb\+\_\+model) function, pointer, public \hyperlink{namespacemo__jsb__model__class_adf5b91c2a2a066c645b083ed656d2a79}{new\+\_\+model} (name, shortname, description, namelist\+\_\+filename)
+\begin{DoxyCompactList}\small\item\em Constructor method for model instance. \end{DoxyCompactList}\item 
+subroutine, public \hyperlink{namespacemo__jsb__model__class_a82752ae5f33d1ce51253ab6bb3dbe776}{delete\+\_\+model} (self)
+\begin{DoxyCompactList}\small\item\em Destructor method for model instance. \end{DoxyCompactList}\item 
+subroutine, public \hyperlink{namespacemo__jsb__model__class_aeff5c6eb74d03881233ad31085269d5e}{print\+\_\+model} (self)
+\begin{DoxyCompactList}\small\item\em Print method for model instance. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains main J\+S\+B\+A\+C\+H model class. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__model__class_a82752ae5f33d1ce51253ab6bb3dbe776}{}\index{mo\+\_\+jsb\+\_\+model\+\_\+class@{mo\+\_\+jsb\+\_\+model\+\_\+class}!delete\+\_\+model@{delete\+\_\+model}}
+\index{delete\+\_\+model@{delete\+\_\+model}!mo\+\_\+jsb\+\_\+model\+\_\+class@{mo\+\_\+jsb\+\_\+model\+\_\+class}}
+\subsubsection[{delete\+\_\+model}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+model\+\_\+class\+::delete\+\_\+model (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+model), intent(inout), pointer}]{self}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__model__class_a82752ae5f33d1ce51253ab6bb3dbe776}
+
+
+Destructor method for model instance. 
+
+Subroutine to delete model instance from memory. 
+
+Definition at line 148 of file mo\+\_\+jsb\+\_\+model\+\_\+class.\+f90.
+
+
+\begin{DoxyCode}
+148 
+149     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}, \textcolor{keywordtype}{INTENT(inout)} :: self
+150 
+151     \textcolor{keywordtype}{INTEGER} :: i
+152 
+153     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = \textcolor{stringliteral}{'mo\_jsb\_model\_class:delete\_model'}
+154 
+155     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'starting destruction of JSBACH model instance'})
+156 
+157     \textcolor{keyword}{DEALLOCATE}(self)
+158 
+159     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'destruction of JSBACH model instance completed.'})
+160 
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__model__class_adf5b91c2a2a066c645b083ed656d2a79}{}\index{mo\+\_\+jsb\+\_\+model\+\_\+class@{mo\+\_\+jsb\+\_\+model\+\_\+class}!new\+\_\+model@{new\+\_\+model}}
+\index{new\+\_\+model@{new\+\_\+model}!mo\+\_\+jsb\+\_\+model\+\_\+class@{mo\+\_\+jsb\+\_\+model\+\_\+class}}
+\subsubsection[{new\+\_\+model}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+jsb\+\_\+model) function, pointer, public mo\+\_\+jsb\+\_\+model\+\_\+class\+::new\+\_\+model (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{name, }
+\item[{character(len=$\ast$), intent(in)}]{shortname, }
+\item[{character(len=$\ast$), intent(in)}]{description, }
+\item[{character(len=$\ast$), intent(in)}]{namelist\+\_\+filename}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__model__class_adf5b91c2a2a066c645b083ed656d2a79}
+
+
+Constructor method for model instance. 
+
+Subroutine to construct new instance of basic model structure.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em namelist\+\_\+filename} & Model namelist file \\
+\hline
+\end{DoxyParams}
+
+
+Definition at line 65 of file mo\+\_\+jsb\+\_\+model\+\_\+class.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+base\+::init\+\_\+base().
+
+
+\begin{DoxyCode}
+65 
+66     \textcolor{keywordtype}{CHARACTER(len=*)},           \textcolor{keywordtype}{INTENT(in)} :: name
+67     \textcolor{keywordtype}{CHARACTER(len=*)},           \textcolor{keywordtype}{INTENT(in)} :: shortname
+68     \textcolor{keywordtype}{CHARACTER(len=*)},           \textcolor{keywordtype}{INTENT(in)} :: description
+69     \textcolor{keywordtype}{CHARACTER(len=*)},           \textcolor{keywordtype}{INTENT(in)} :: namelist\_filename
+70     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}             :: return\_ptr
+71 
+72     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = \textcolor{stringliteral}{'mo\_jsb\_model\_class:new\_model'}
+73 
+74     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'starting construction of new JSBACH model instance.'})
+75 
+76     \textcolor{keyword}{ALLOCATE}(return\_ptr)
+77 
+78     return\_ptr%name              = trim(name)
+79     return\_ptr%shortname         = trim(shortname)
+80     return\_ptr%description       = trim(description)
+81     return\_ptr%namelist\_filename = trim(namelist\_filename)
+82     return\_ptr%config => null()
+83 
+84     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'construction of JSBACH model completed.'})
+85 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=343pt]{d8/d9d/namespacemo__jsb__model__class_adf5b91c2a2a066c645b083ed656d2a79_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__model__class_aeff5c6eb74d03881233ad31085269d5e}{}\index{mo\+\_\+jsb\+\_\+model\+\_\+class@{mo\+\_\+jsb\+\_\+model\+\_\+class}!print\+\_\+model@{print\+\_\+model}}
+\index{print\+\_\+model@{print\+\_\+model}!mo\+\_\+jsb\+\_\+model\+\_\+class@{mo\+\_\+jsb\+\_\+model\+\_\+class}}
+\subsubsection[{print\+\_\+model}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+model\+\_\+class\+::print\+\_\+model (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+model), intent(in)}]{self}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__model__class_aeff5c6eb74d03881233ad31085269d5e}
+
+
+Print method for model instance. 
+
+Subroutine to print description of model instance. 
+
+Definition at line 169 of file mo\+\_\+jsb\+\_\+model\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+grid\+::get\+\_\+grid(), and mo\+\_\+jsb\+\_\+control\+::model\+\_\+base\+\_\+dir.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+model\+\_\+init\+::init\+\_\+model\+\_\+common().
+
+
+\begin{DoxyCode}
+169 
+170     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__control}{mo\_jsb\_control}\textcolor{keywordtype}{,    ONLY}: \hyperlink{namespacemo__jsb__control_a7011bd39debd8f5806d4da9947ac38a6}{model\_base\_dir}
+171     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid__class}{mo\_jsb\_grid\_class}\textcolor{keywordtype}{, ONLY}: t\_jsb\_grid
+172     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid}{mo\_jsb\_grid}\textcolor{keywordtype}{,       ONLY}: \hyperlink{namespacemo__jsb__grid_ad009e7ddbafe2ef26506e2a5abdeb4db}{get\_grid}
+173 
+174     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{INTENT(in)} :: self
+175 
+176     \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{POINTER} :: grid
+177     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = \textcolor{stringliteral}{'mo\_jsb\_model\_class:print\_model'}
+178 
+179     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'print JSBACH model description'})
+180 
+181     \textcolor{keyword}{WRITE}(message\_text,\textcolor{stringliteral}{'(A,I2,A,A,A,A,A)'}) \textcolor{stringliteral}{'Model id: '}, self%id, \textcolor{stringliteral}{', model name: '}, trim(self%name), &
+182                                      \textcolor{stringliteral}{' ('}, trim(self%shortname), \textcolor{stringliteral}{')'}
+183     \textcolor{keyword}{CALL }message(\textcolor{stringliteral}{''}, message\_text)
+184     \textcolor{keyword}{CALL }message(\textcolor{stringliteral}{''}, \textcolor{stringliteral}{'... '}//trim(self%description))
+185 
+186     \textcolor{keyword}{CALL }message(\textcolor{stringliteral}{''}, \textcolor{stringliteral}{'Namelist file: '}//trim(\hyperlink{namespacemo__jsb__control_a7011bd39debd8f5806d4da9947ac38a6}{model\_base\_dir})//\textcolor{stringliteral}{'/'}//trim(self
+      %namelist\_filename))
+187 
+188     grid => \hyperlink{namespacemo__jsb__grid_ad009e7ddbafe2ef26506e2a5abdeb4db}{get\_grid}(self%grid\_id)
+189     \textcolor{keywordflow}{IF} (\textcolor{keyword}{ASSOCIATED}(grid)) \textcolor{keyword}{CALL }grid%Print
+190 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=334pt]{d8/d9d/namespacemo__jsb__model__class_aeff5c6eb74d03881233ad31085269d5e_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d8/d9d/namespacemo__jsb__model__class_aeff5c6eb74d03881233ad31085269d5e_icgraph}
+\end{center}
+\end{figure}
+
+

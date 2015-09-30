@@ -1,0 +1,359 @@
+\hypertarget{namespacemo__veg__interface}{}\section{mo\+\_\+veg\+\_\+interface Module Reference}
+\label{namespacemo__veg__interface}\index{mo\+\_\+veg\+\_\+interface@{mo\+\_\+veg\+\_\+interface}}
+
+
+Contains the interfaces to the vegetation processes.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__veg__interface_a3663bc9118551ffb7d52763535228d89}{update\+\_\+vegetation\+\_\+1} (tile, iblk, ics, ice, nc)
+\item 
+subroutine, public \hyperlink{namespacemo__veg__interface_a58ea81b4305df127f8b495a40b520eae}{update\+\_\+vegetation\+\_\+2} (tile, iblk, ics, ice, nc)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__veg__interface_a8187c713accfd2ec663731108d9ad611}{modname} = \textquotesingle{}mo\+\_\+veg\+\_\+interface\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains the interfaces to the vegetation processes. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__veg__interface_a3663bc9118551ffb7d52763535228d89}{}\index{mo\+\_\+veg\+\_\+interface@{mo\+\_\+veg\+\_\+interface}!update\+\_\+vegetation\+\_\+1@{update\+\_\+vegetation\+\_\+1}}
+\index{update\+\_\+vegetation\+\_\+1@{update\+\_\+vegetation\+\_\+1}!mo\+\_\+veg\+\_\+interface@{mo\+\_\+veg\+\_\+interface}}
+\subsubsection[{update\+\_\+vegetation\+\_\+1}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+veg\+\_\+interface\+::update\+\_\+vegetation\+\_\+1 (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc}
+\end{DoxyParamCaption}
+)}\label{namespacemo__veg__interface_a3663bc9118551ffb7d52763535228d89}
+
+
+Definition at line 45 of file mo\+\_\+veg\+\_\+interface.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+control\+::debug\+\_\+on(), modname, mo\+\_\+phy\+\_\+schemes\+::qsat(), mo\+\_\+veg\+\_\+util\+::water\+\_\+in\+\_\+root\+\_\+zone(), and mo\+\_\+veg\+\_\+process\+::water\+\_\+stress\+\_\+factor().
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+45 
+46     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__veg__process}{mo\_veg\_process}\textcolor{keywordtype}{, ONLY}: canopy\_conductance, 
+      \hyperlink{namespacemo__veg__process_a08781664d42770f4962218de89b6387d}{water\_stress\_factor}
+47     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__veg__util}{mo\_veg\_util}\textcolor{keywordtype}{,    ONLY}: \hyperlink{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}{water\_in\_root\_zone}
+48     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__phy__schemes}{mo\_phy\_schemes}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__phy__schemes_aa793f9cf2db7aa0f821bde8fbf8f38a8}{qsat}
+49 
+50 
+51     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+52     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+53 
+54     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}    :: model
+55 
+56     def\_config(veg\_conf, veg)
+57     def\_config(soil\_conf, soil)
+58     def\_memory(soil\_mem, soil)
+59     def\_memory(srf\_mem, srf)
+60     def\_memory(veg\_mem, veg)
+61     def\_memory(atm2land\_mem, atm2land)
+62 
+63     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} ::                 &
+64       & lai                    (:),      &
+65       & swpar\_srf\_down         (:),      &
+66       & canopy\_cond            (:),      &
+67       & soil\_depth\_l           (:,:),    &
+68       & root\_depth\_l           (:,:),    &
+69       & ws                     (:),      & !< Water content in soil column
+70       & ws\_l                   (:,:),    & !< Water content in soil layers
+71       & ws\_fc\_l                (:,:),    & !< Water content of soil layers at field capacity
+72       & ws\_pwp\_l               (:,:),    & !< Water content of soil layers at permanent wilting point
+73       & ws\_root                (:),      & !< Water content in root zone
+74       & ws\_fc\_root             (:),      & !< Water content in root zone at field capacity
+75       & ws\_pwp\_root            (:),      & !< Water content in root zone at permanent wilting point
+76       & water\_stress           (:),      &
+77       & t\_srf                  (:),      &
+78       & q\_air                  (:),      &
+79       & press\_srf              (:)
+80 
+81     \textcolor{keywordtype}{INTEGER} :: nsoil
+82 
+83     \textcolor{keywordtype}{INTEGER} :: p\_pe
+84 
+85     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':update\_vegetation\_1'}
+86 
+87     \textcolor{keywordflow}{IF} (.NOT. tile%Is\_process\_active(veg)) \textcolor{keywordflow}{RETURN}
+88 
+89 \textcolor{comment}{!!$    p\_pe = get\_my\_global\_mpi\_id()}
+90 \textcolor{comment}{!!$    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update on PE '//int2string(p\_pe),
+       all\_print=.TRUE.)}
+91     \textcolor{keywordflow}{IF} (debug\_on() .AND. iblk == 1) \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting update of vegetation\_1 '})
+92 
+93     model => get\_model(tile%owner\_model\_id)
+94 
+95     get\_config(veg\_conf, veg)
+96     get\_config(soil\_conf, soil)
+97 
+98     nsoil = soil\_conf%nsoil\_water
+99 
+100     \textcolor{comment}{! Get reference to variables for current block}
+101     \textcolor{comment}{!}
+102     get\_memory(veg\_mem, veg)
+103     get\_memory(srf\_mem, srf)
+104     get\_memory(soil\_mem, soil)
+105     get\_memory(atm2land\_mem, atm2land)
+106 
+107     lai                => veg\_mem  %lai%ptr            (ics:ice,    iblk)
+108     swpar\_srf\_down     => atm2land\_mem     %swpar\_srf\_down%ptr (ics:ice,    iblk)
+109     canopy\_cond        => veg\_mem  %canopy\_cond%ptr    (ics:ice,    iblk)
+110     soil\_depth\_l       => soil\_mem %soil\_depth\_l%ptr   (ics:ice, :, iblk)
+111     root\_depth\_l       => veg\_mem  %root\_depth\_l%ptr   (ics:ice, :, iblk)
+112     ws                 => soil\_mem %ws%ptr             (ics:ice,    iblk)
+113     ws\_l               => soil\_mem %ws\_l%ptr           (ics:ice, :, iblk)
+114     ws\_fc\_l            => soil\_mem %ws\_fc\_l%ptr        (ics:ice, :, iblk)
+115     ws\_pwp\_l           => soil\_mem %ws\_pwp\_l%ptr       (ics:ice, :, iblk)
+116     ws\_root            => veg\_mem  %ws\_root%ptr        (ics:ice,    iblk)
+117     ws\_fc\_root         => veg\_mem  %ws\_fc\_root%ptr     (ics:ice,    iblk)
+118     ws\_pwp\_root        => veg\_mem  %ws\_pwp\_root%ptr    (ics:ice,    iblk)
+119     water\_stress       => veg\_mem  %water\_stress%ptr   (ics:ice,    iblk)
+120     t\_srf              => srf\_mem  %t\_srf%ptr          (ics:ice,    iblk)
+121     q\_air              => atm2land\_mem     %q\_air%ptr          (ics:ice,    iblk)
+122     press\_srf          => atm2land\_mem     %press\_srf%ptr      (ics:ice,    iblk)
+123 
+124     \textcolor{comment}{! Compute (max) canopy (stomatal) conductance with no water stress}
+125     \textcolor{keywordflow}{SELECT CASE}(trim(veg\_conf%scheme\_stom\_cond))
+126       \textcolor{keywordflow}{CASE}(\textcolor{stringliteral}{'echam5'})
+127         canopy\_cond(:) = canopy\_conductance( lai(:), swpar\_srf\_down(:) )
+128 
+129 \textcolor{comment}{!!$      CASE('bethy')}
+130 \textcolor{comment}{!!$        ! TBD: Call bethy to compute unstressed canopy conductance}
+131 
+132 \textcolor{keywordflow}{      CASE default}
+133         \textcolor{keyword}{CALL }finish( trim(routine), \textcolor{stringliteral}{'Canopy conductance scheme '}//trim(veg\_conf%scheme\_stom\_cond)//&
+134                    & \textcolor{stringliteral}{'not supported.'})
+135 \textcolor{keywordflow}{    END SELECT}
+136 
+137     \textcolor{comment}{! Get water stress}
+138 
+139     \textcolor{comment}{! Calculate water content and field capacity in the root zone}
+140     ws\_root(:)  = \hyperlink{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}{water\_in\_root\_zone}(ws\_l(:,:), soil\_depth\_l(:,:), root\_depth\_l(:,:))
+141     ws\_fc\_root(:)  = \hyperlink{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}{water\_in\_root\_zone}(ws\_fc\_l(:,:), soil\_depth\_l(:,:), root\_depth\_l(:,:
+      ))
+142     ws\_pwp\_root(:) = \hyperlink{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}{water\_in\_root\_zone}(ws\_pwp\_l(:,:), soil\_depth\_l(:,:), root\_depth\_l(:,
+      :))
+143 
+144     \textcolor{comment}{! Calculate water stress factor}
+145     \textcolor{comment}{! Temporary: later use the distributed permanent wilting point from above and change
+       water\_stress\_factor function}
+146     water\_stress(:) = \hyperlink{namespacemo__veg__process_a08781664d42770f4962218de89b6387d}{water\_stress\_factor}(ws\_root(:), ws\_fc\_root(:), ws\_pwp\_root(:))
+147 
+148     \textcolor{comment}{! Compute (actual) canopy (stomatal) conductance under water stress.}
+149     canopy\_cond(:) = &
+150       canopy\_conductance( canopy\_cond(:),                                & \textcolor{comment}{! in, unstressed canopy
+       conductance}
+151                         & water\_stress(:),                               & \textcolor{comment}{! in, water stress factor}
+152                         & q\_air(:) > \hyperlink{namespacemo__phy__schemes_aa793f9cf2db7aa0f821bde8fbf8f38a8}{qsat}(t\_srf(:), press\_srf(:))     & \textcolor{comment}{! in, atmosphere saturated?}
+153                         )
+154 
+155     \textcolor{comment}{! Compute skin reservoir fraction on canopy}
+156 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d90/namespacemo__veg__interface_a3663bc9118551ffb7d52763535228d89_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d90/namespacemo__veg__interface_a3663bc9118551ffb7d52763535228d89_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__veg__interface_a58ea81b4305df127f8b495a40b520eae}{}\index{mo\+\_\+veg\+\_\+interface@{mo\+\_\+veg\+\_\+interface}!update\+\_\+vegetation\+\_\+2@{update\+\_\+vegetation\+\_\+2}}
+\index{update\+\_\+vegetation\+\_\+2@{update\+\_\+vegetation\+\_\+2}!mo\+\_\+veg\+\_\+interface@{mo\+\_\+veg\+\_\+interface}}
+\subsubsection[{update\+\_\+vegetation\+\_\+2}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+veg\+\_\+interface\+::update\+\_\+vegetation\+\_\+2 (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc}
+\end{DoxyParamCaption}
+)}\label{namespacemo__veg__interface_a58ea81b4305df127f8b495a40b520eae}
+
+
+Definition at line 160 of file mo\+\_\+veg\+\_\+interface.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+control\+::debug\+\_\+on(), mo\+\_\+veg\+\_\+process\+::foliage\+\_\+projected\+\_\+cover(), mo\+\_\+jsb\+\_\+parallel\+\_\+iface\+::get\+\_\+my\+\_\+global\+\_\+mpi\+\_\+id(), and modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+160 
+161     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__veg__process}{mo\_veg\_process}\textcolor{keywordtype}{, ONLY}: canopy\_albedo, 
+      \hyperlink{namespacemo__veg__process_a274a1f4ec71f0e64f08d19c388367d89}{foliage\_projected\_cover}
+162     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__time}{mo\_jsb\_time}\textcolor{keywordtype}{,    ONLY}: get\_time\_interpolation\_weights
+163 
+164     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{PARAMETER} :: &
+165       albedo\_snow\_min = 0.4\_wp,  & 
+166       albedo\_snow\_max = 0.8\_wp     
+167 
+168     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+169     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+170 
+171     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}    :: model
+172 
+173     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} ::   &
+174       & t\_srf         (:),   &
+175       & lai           (:),   &
+176       & lai\_mon       (:,:), &
+177       & fract\_fpc     (:),   &
+178       & fract\_fpc\_max (:),   &
+179       & fract\_forest  (:),   &
+180 \textcolor{comment}{!!$      & alb\_vis\_can  (:),    &}
+181 \textcolor{comment}{!!$      & alb\_nir\_can  (:),    &}
+182 \textcolor{comment}{!!$      & alb\_vis\_soil (:),    &}
+183 \textcolor{comment}{!!$      & alb\_nir\_soil (:),    &}
+184       & alb\_vis\_srf(:),   &
+185       & alb\_nir\_srf(:),   &
+186       & albedo\_srf(:),   &
+187       & sfract\_can(:),   &
+188       & sfract\_soil(:)
+189 
+190     \textcolor{keywordtype}{INTEGER} :: p\_pe
+191 
+192     \textcolor{keywordtype}{REAL(wp)} :: wgt1, wgt2
+193     \textcolor{keywordtype}{INTEGER}  :: nmw1,nmw2
+194 
+195     def\_memory(veg\_mem, veg)
+196     def\_memory(srf\_mem, srf)
+197     def\_memory(soil\_mem, soil)
+198 
+199     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':update\_vegetation\_2'}
+200 
+201     \textcolor{keywordflow}{IF} (.NOT. tile%Is\_process\_active(veg)) \textcolor{keywordflow}{RETURN}
+202 
+203     p\_pe = get\_my\_global\_mpi\_id()
+204     \textcolor{keywordflow}{IF} (debug\_on() .AND. iblk == 1) \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting update'})
+205 
+206     model => get\_model(tile%owner\_model\_id)
+207 
+208     \textcolor{comment}{! Get reference to variables for current block}
+209     \textcolor{comment}{!}
+210     get\_memory(veg\_mem, veg)
+211     get\_memory(srf\_mem, srf)
+212     get\_memory(soil\_mem, soil)
+213 
+214     t\_srf        => srf\_mem  %t\_srf%ptr           (ics:ice,    iblk)
+215     lai          => veg\_mem  %lai%ptr             (ics:ice,    iblk)
+216     lai\_mon      => veg\_mem  %lai\_mon%ptr         (ics:ice,    iblk, :)
+217     fract\_fpc    => veg\_mem  %fract\_fpc%ptr       (ics:ice,    iblk)
+218     fract\_fpc\_max=> veg\_mem  %fract\_fpc\_max%ptr   (ics:ice,    iblk)
+219     fract\_forest => veg\_mem  %fract\_forest%ptr    (ics:ice,    iblk)
+220 \textcolor{comment}{!!$    alb\_vis\_can  => tile%mem%veg  %alb\_vis\_can%ptr     (ics:ice,    iblk)}
+221 \textcolor{comment}{!!$    alb\_nir\_can  => tile%mem%veg  %alb\_nir\_can%ptr     (ics:ice,    iblk)}
+222 \textcolor{comment}{!!$    alb\_vis\_soil => tile%mem%soil %alb\_vis\_soil%ptr    (ics:ice,    iblk)}
+223 \textcolor{comment}{!!$    alb\_nir\_soil => tile%mem%soil %alb\_nir\_soil%ptr    (ics:ice,    iblk)}
+224     alb\_vis\_srf  => srf\_mem  %alb\_vis\_srf%ptr     (ics:ice,    iblk)
+225     alb\_nir\_srf  => srf\_mem  %alb\_nir\_srf%ptr     (ics:ice,    iblk)
+226     albedo\_srf   => srf\_mem  %albedo\_srf%ptr      (ics:ice,    iblk)
+227     sfract\_can   => veg\_mem  %sfract\_can%ptr      (ics:ice,    iblk)
+228     sfract\_soil  => soil\_mem %sfract\_soil%ptr     (ics:ice,    iblk)
+229 
+230     \textcolor{comment}{! Update leaf area index}
+231     \textcolor{comment}{!}
+232     \textcolor{comment}{! At the moment by interpolating monthly climatological LAI}
+233     \textcolor{keyword}{CALL }get\_time\_interpolation\_weights(wgt1, wgt2, nmw1, nmw2)
+234     lai(:) = \textcolor{keywordtype}{REAL(wgt1,wp)} * lai\_mon(:,nmw1+1) + \textcolor{keywordtype}{REAL(wgt2,wp)} * lai\_mon(:,nmw2+1)
+235 
+236     \textcolor{comment}{! Update foliage projected cover}
+237     \textcolor{comment}{!}
+238     \textcolor{comment}{! TBD: Use clumpiness factor instead of 1.\_wp}
+239     fract\_fpc(:) = \hyperlink{namespacemo__veg__process_a274a1f4ec71f0e64f08d19c388367d89}{foliage\_projected\_cover}(fract\_fpc\_max(:), lai(:), spread(1.\_wp, 
+      dim=1, ncopies=\textcolor{keyword}{SIZE}(lai,1)))
+240 
+241     \textcolor{comment}{! Update albedo}
+242     \textcolor{comment}{! TBD: use newer albedo scheme}
+243     alb\_vis\_srf(:) = canopy\_albedo(t\_srf(:), fract\_forest(:), sfract\_soil(:), sfract\_can(:), lai(:), &
+244                    & spread(albedo\_snow\_min, ncopies=nc, dim=1), spread(albedo\_snow\_max, ncopies=nc, dim=1)
+      , albedo\_srf(:))
+245     alb\_nir\_srf(:) = alb\_vis\_srf(:)
+246 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d90/namespacemo__veg__interface_a58ea81b4305df127f8b495a40b520eae_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d90/namespacemo__veg__interface_a58ea81b4305df127f8b495a40b520eae_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__veg__interface_a8187c713accfd2ec663731108d9ad611}{}\index{mo\+\_\+veg\+\_\+interface@{mo\+\_\+veg\+\_\+interface}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+veg\+\_\+interface@{mo\+\_\+veg\+\_\+interface}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+veg\+\_\+interface\+::modname = \textquotesingle{}mo\+\_\+veg\+\_\+interface\textquotesingle{}}\label{namespacemo__veg__interface_a8187c713accfd2ec663731108d9ad611}
+
+
+Definition at line 40 of file mo\+\_\+veg\+\_\+interface.\+f90.
+
+
+
+Referenced by update\+\_\+vegetation\+\_\+1(), and update\+\_\+vegetation\+\_\+2().
+
+
+\begin{DoxyCode}
+40   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_veg\_interface'}
+\end{DoxyCode}

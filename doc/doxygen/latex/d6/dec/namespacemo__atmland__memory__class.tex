@@ -1,0 +1,199 @@
+\hypertarget{namespacemo__atmland__memory__class}{}\section{mo\+\_\+atmland\+\_\+memory\+\_\+class Module Reference}
+\label{namespacemo__atmland__memory__class}\index{mo\+\_\+atmland\+\_\+memory\+\_\+class@{mo\+\_\+atmland\+\_\+memory\+\_\+class}}
+
+
+Contains types for the atmosphere-\/land interface memory.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine \hyperlink{namespacemo__atmland__memory__class_a374d0d01cacf18ff46609c87546c67b9}{init\+\_\+land2atm\+\_\+memory} (mem, prefix, suffix)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+integer, parameter, public \hyperlink{namespacemo__atmland__memory__class_afae3263e73e4c64ed0955c7ac81cd609}{max\+\_\+no\+\_\+of\+\_\+vars} = 20
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__atmland__memory__class_a61803b8c6f643016537157a3763a73c6}{modname} = \textquotesingle{}mo\+\_\+atmland\+\_\+memory\+\_\+class\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains types for the atmosphere-\/land interface memory. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__atmland__memory__class_a374d0d01cacf18ff46609c87546c67b9}{}\index{mo\+\_\+atmland\+\_\+memory\+\_\+class@{mo\+\_\+atmland\+\_\+memory\+\_\+class}!init\+\_\+land2atm\+\_\+memory@{init\+\_\+land2atm\+\_\+memory}}
+\index{init\+\_\+land2atm\+\_\+memory@{init\+\_\+land2atm\+\_\+memory}!mo\+\_\+atmland\+\_\+memory\+\_\+class@{mo\+\_\+atmland\+\_\+memory\+\_\+class}}
+\subsubsection[{init\+\_\+land2atm\+\_\+memory}]{\setlength{\rightskip}{0pt plus 5cm}subroutine mo\+\_\+atmland\+\_\+memory\+\_\+class\+::init\+\_\+land2atm\+\_\+memory (
+\begin{DoxyParamCaption}
+\item[{class(t\+\_\+land2atm\+\_\+memory), intent(inout)}]{mem, }
+\item[{character(len=$\ast$), intent(in)}]{prefix, }
+\item[{character(len=$\ast$), intent(in)}]{suffix}
+\end{DoxyParamCaption}
+)}\label{namespacemo__atmland__memory__class_a374d0d01cacf18ff46609c87546c67b9}
+
+
+Definition at line 205 of file mo\+\_\+atmland\+\_\+memory\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+grid\+::get\+\_\+grid(), mo\+\_\+jsb\+\_\+grid\+::get\+\_\+vgrid(), mo\+\_\+jsb\+\_\+io\+::grib\+\_\+bits, modname, mo\+\_\+jsb\+\_\+io\+::nc\+\_\+bits, and mo\+\_\+jsb\+\_\+io\+::tables.
+
+
+\begin{DoxyCode}
+205 
+206     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__varlist}{mo\_jsb\_varlist}\textcolor{keywordtype}{,       ONLY}: jsb\_add\_var
+207     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__io}{mo\_jsb\_io}\textcolor{keywordtype}{,            ONLY}: \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}, 
+      \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}, \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}, \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}, &
+208                                     zaxis\_surface, \hyperlink{namespacemo__jsb__io_aefd9f08b763f8c7b6f4cdbc576e3dd14}{tables}
+209     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid__class}{mo\_jsb\_grid\_class}\textcolor{keywordtype}{,    ONLY}: t\_jsb\_grid, t\_jsb\_vgrid
+210     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid}{mo\_jsb\_grid}\textcolor{keywordtype}{,          ONLY}: \hyperlink{namespacemo__jsb__grid_ad009e7ddbafe2ef26506e2a5abdeb4db}{get\_grid}, \hyperlink{namespacemo__jsb__grid_a2111791e291579cc1551a4213a670e35}{get\_vgrid}
+211 
+212     \textcolor{keywordtype}{CLASS}(t\_land2atm\_memory),   \textcolor{keywordtype}{INTENT(inout)} :: mem
+213     \textcolor{keywordtype}{CHARACTER(len=*)},           \textcolor{keywordtype}{INTENT(in)} :: prefix
+214     \textcolor{keywordtype}{CHARACTER(len=*)},           \textcolor{keywordtype}{INTENT(in)} :: suffix
+215 
+216     \textcolor{keywordtype}{TYPE}(t\_jsb\_grid),        \textcolor{keywordtype}{POINTER} :: hgrid
+217     \textcolor{keywordtype}{TYPE}(t\_jsb\_vgrid),       \textcolor{keywordtype}{POINTER} :: surface
+218 
+219     \textcolor{keywordtype}{INTEGER} :: table
+220 
+221     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':new\_land2atm\_memory'}
+222 
+223     table = \hyperlink{namespacemo__jsb__io_aefd9f08b763f8c7b6f4cdbc576e3dd14}{tables}(1)
+224 
+225     hgrid => \hyperlink{namespacemo__jsb__grid_ad009e7ddbafe2ef26506e2a5abdeb4db}{get\_grid}(mem%grid\_id)
+226     surface => \hyperlink{namespacemo__jsb__grid_a2111791e291579cc1551a4213a670e35}{get\_vgrid}(\textcolor{stringliteral}{'surface'})
+227 
+228     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'t\_srf'}//suffix, mem%t\_srf,                      &
+229       & hgrid, surface,                                                      &
+230       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'surface\_temperature'}, \textcolor{stringliteral}{'K'}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),                          &
+231       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+232       & initval\_r=0.0\_wp )
+233 
+234     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'t\_eff\_srf'}//suffix, mem%t\_eff\_srf,              &
+235       & hgrid, surface,                                                      &
+236       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'effective\_surface\_temperature'}, \textcolor{stringliteral}{'K'}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),                &
+237       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+238       & initval\_r=0.0\_wp )
+239 
+240     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'qsat\_srf'}//suffix, mem%qsat\_srf,                &
+241       & hgrid, surface,                                                      &
+242       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'saturated\_surface\_specific\_humidity'}, \textcolor{stringliteral}{''}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),           &
+243       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+244       & initval\_r=0.0\_wp )
+245 
+246     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'fact\_q\_air'}//suffix, mem%fact\_q\_air,            &
+247       & hgrid, surface,                                                      &
+248       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'factor\_air\_moisture'}, \textcolor{stringliteral}{''}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),                           &
+249       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+250       & initval\_r=0.0\_wp )
+251 
+252     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'fact\_qsat\_srf'}//suffix, mem%fact\_qsat\_srf,      &
+253       & hgrid, surface,                                                      &
+254       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'factor\_qsat\_srf'}, \textcolor{stringliteral}{''}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),                               &
+255       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+256       & initval\_r=0.0\_wp )
+257 
+258     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'zh\_srf'}//suffix, mem%zh\_srf,                    &
+259       & hgrid, surface,                                                      &
+260       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'surface\_roughness\_humidity'}, \textcolor{stringliteral}{''}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),                    &
+261       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+262       & initval\_r=0.0\_wp )
+263 
+264     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'zm\_srf'}//suffix, mem%zm\_srf,                    &
+265       & hgrid, surface,                                                      &
+266       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'surface\_roughness\_momentum'}, \textcolor{stringliteral}{''}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),                    &
+267       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+268       & initval\_r=0.0\_wp )
+269 
+270     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'alb\_vis\_dif'}//suffix, mem%alb\_vis\_dif,          &
+271       & hgrid, surface,                                                      &
+272       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'albedo\_visible\_diffuse'}, \textcolor{stringliteral}{''}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),                        &
+273       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+274       & initval\_r=0.0\_wp )
+275 
+276     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'alb\_nir\_dif'}//suffix, mem%alb\_nir\_dif,          &
+277       & hgrid, surface,                                                      &
+278       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'albedo\_near\_infrared\_diffuse'}, \textcolor{stringliteral}{''}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),                  &
+279       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+280       & initval\_r=0.0\_wp )
+281 
+282     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'alb\_vis\_dir'}//suffix, mem%alb\_vis\_dir,          &
+283       & hgrid, surface,                                                      &
+284       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'albedo\_visible\_direct'}, \textcolor{stringliteral}{''}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),                         &
+285       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+286       & initval\_r=0.0\_wp )
+287 
+288     \textcolor{keyword}{CALL }jsb\_add\_var( mem, prefix//\textcolor{stringliteral}{'alb\_nir\_dir'}//suffix, mem%alb\_nir\_dir,          &
+289       & hgrid, surface,                                                      &
+290       & \hyperlink{structmo__jsb__io_1_1t__cf}{t\_cf}(\textcolor{stringliteral}{'albedo\_near\_infrared\_dir'}, \textcolor{stringliteral}{''}, \textcolor{stringliteral}{''}, \hyperlink{namespacemo__jsb__io_a4bf2b656fa0a7acf938f0bfcad5870e3}{nc\_bits}),                      &
+291       & \hyperlink{structmo__jsb__io_1_1t__grib1}{t\_grib1}(table, 255, \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}), \hyperlink{structmo__jsb__io_1_1t__grib2}{t\_grib2}(255, 255, 255, 
+      \hyperlink{namespacemo__jsb__io_aade09fd070010f905e77497f041ce6c3}{grib\_bits}),   &
+292       & initval\_r=0.0\_wp )
+293 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d6/dec/namespacemo__atmland__memory__class_a374d0d01cacf18ff46609c87546c67b9_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__atmland__memory__class_afae3263e73e4c64ed0955c7ac81cd609}{}\index{mo\+\_\+atmland\+\_\+memory\+\_\+class@{mo\+\_\+atmland\+\_\+memory\+\_\+class}!max\+\_\+no\+\_\+of\+\_\+vars@{max\+\_\+no\+\_\+of\+\_\+vars}}
+\index{max\+\_\+no\+\_\+of\+\_\+vars@{max\+\_\+no\+\_\+of\+\_\+vars}!mo\+\_\+atmland\+\_\+memory\+\_\+class@{mo\+\_\+atmland\+\_\+memory\+\_\+class}}
+\subsubsection[{max\+\_\+no\+\_\+of\+\_\+vars}]{\setlength{\rightskip}{0pt plus 5cm}integer, parameter, public mo\+\_\+atmland\+\_\+memory\+\_\+class\+::max\+\_\+no\+\_\+of\+\_\+vars = 20}\label{namespacemo__atmland__memory__class_afae3263e73e4c64ed0955c7ac81cd609}
+
+
+Definition at line 23 of file mo\+\_\+atmland\+\_\+memory\+\_\+class.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+process\+\_\+factory\+::create\+\_\+process\+\_\+memory().
+
+
+\begin{DoxyCode}
+23   \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{PARAMETER} :: max\_no\_of\_vars = 20
+\end{DoxyCode}
+\hypertarget{namespacemo__atmland__memory__class_a61803b8c6f643016537157a3763a73c6}{}\index{mo\+\_\+atmland\+\_\+memory\+\_\+class@{mo\+\_\+atmland\+\_\+memory\+\_\+class}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+atmland\+\_\+memory\+\_\+class@{mo\+\_\+atmland\+\_\+memory\+\_\+class}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+atmland\+\_\+memory\+\_\+class\+::modname = \textquotesingle{}mo\+\_\+atmland\+\_\+memory\+\_\+class\textquotesingle{}}\label{namespacemo__atmland__memory__class_a61803b8c6f643016537157a3763a73c6}
+
+
+Definition at line 66 of file mo\+\_\+atmland\+\_\+memory\+\_\+class.\+f90.
+
+
+
+Referenced by init\+\_\+land2atm\+\_\+memory().
+
+
+\begin{DoxyCode}
+66   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_atmland\_memory\_class'}
+\end{DoxyCode}
