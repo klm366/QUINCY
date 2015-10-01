@@ -11,13 +11,25 @@ MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_jsb_model_class, ONLY: t_jsb_model
-  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
-  USE mo_jsb_base,        ONLY: get_model
-  USE mo_jsb_control,     ONLY: debug_on
+#include "dsl_jsbach.inc"
+
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: finish, message, message_text
   USE mo_sync,            ONLY: SYNC_C, sync_patch_array, global_sum_array
+
+  USE mo_jsb_model_class, ONLY: t_jsb_model
+  USE mo_jsb_class,       ONLY: get_model
+  USE mo_jsb_grid_class,  ONLY: t_jsb_grid
+  USE mo_jsb_grid,        ONLY: Get_grid
+  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
+  USE mo_jsb_control,     ONLY: debug_on
+
+  Use_processes HD, SRF, SOIL
+  Use_config(hd)
+  Use_memory(hd)
+  Use_memory(srf)
+  Use_memory(soil)
+
   USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade
 
   IMPLICIT NONE
@@ -44,7 +56,13 @@ CONTAINS
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_model), POINTER :: model
+
+    Def_config(hd_conf, hd)
+    Def_memory(hd_mem, hd)
+    Def_memory(srf_mem, srf)
+    Def_memory(soil_mem, soil)
 
     ! Pointers to variables in memory
     REAL(wp), POINTER :: &
@@ -79,38 +97,45 @@ CONTAINS
     LOGICAL           :: debug_hd
     CHARACTER(len=32) :: routing_scheme
 
-    IF (.NOT. ASSOCIATED(tile%mem%hd)) RETURN
+    IF (.NOT. tile%Is_process_active(HD)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
     model => get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    Get_config(hd_conf, HD)
 
     ! Get reference to variables for current block
     !
-    area           => model%grid                    %area                (ics:ice, iblk)
-    land           => tile%mem%srf  %phys_state     %land                (ics:ice, iblk)
-    lake           => tile%mem%srf  %phys_state     %lake                (ics:ice, iblk)
-    glacier        => tile%mem%srf  %phys_state     %glacier             (ics:ice, iblk)
-    runoff         => tile%mem%soil %water_flux     %runoff              (ics:ice, iblk)
-    drainage       => tile%mem%soil %water_flux     %drainage            (ics:ice, iblk)
-    pme_glacier    => tile%mem%soil %water_flux     %pme_glacier         (ics:ice, iblk)
-    discharge      => tile%mem%soil %water_flux     %discharge           (ics:ice, iblk)
+    Get_memory(hd_mem, HD)
+    Get_memory(srf_mem, SRF)
+    Get_memory(soil_mem, SOIL)
 
-    overlflow_res  => tile%mem%hd   %hd_state       %overlflow_res       (ics:ice, :, iblk)
-    baseflow_res   => tile%mem%hd   %hd_state       %baseflow_res        (ics:ice, :, iblk)
-    riverflow_res  => tile%mem%hd   %hd_state       %riverflow_res       (ics:ice, :, iblk)
+    area           => grid                     %area                (ics:ice, iblk)
+    land           => srf_mem  %land%ptr                (ics:ice, iblk)
+    lake           => srf_mem  %lake%ptr                (ics:ice, iblk)
+    glacier        => srf_mem  %glacier%ptr             (ics:ice, iblk)
+    runoff         => soil_mem %runoff%ptr              (ics:ice, iblk)
+    drainage       => soil_mem %drainage%ptr            (ics:ice, iblk)
+    pme_glacier    => soil_mem %pme_glacier%ptr         (ics:ice, iblk)
+    discharge      => soil_mem %discharge%ptr           (ics:ice, iblk)
 
-    ret_overlflow  => tile%mem%hd   %hd_param       %ret_overlflow       (ics:ice, iblk)
-    nres_overlflow => tile%mem%hd   %hd_param       %nres_overlflow      (ics:ice, iblk)
-    ret_baseflow   => tile%mem%hd   %hd_param       %ret_baseflow        (ics:ice, iblk)
-    nres_baseflow  => tile%mem%hd   %hd_param       %nres_baseflow       (ics:ice, iblk)
-    ret_riverflow  => tile%mem%hd   %hd_param       %ret_riverflow       (ics:ice, iblk)
-    nres_riverflow => tile%mem%hd   %hd_param       %nres_riverflow      (ics:ice, iblk)
- 
+    overlflow_res  => hd_mem   %overlflow_res%ptr       (ics:ice, :, iblk)
+    baseflow_res   => hd_mem   %baseflow_res%ptr        (ics:ice, :, iblk)
+    riverflow_res  => hd_mem   %riverflow_res%ptr       (ics:ice, :, iblk)
+
+    ret_overlflow  => hd_mem   %ret_overlflow%ptr       (ics:ice, iblk)
+    nres_overlflow => hd_mem   %nres_overlflow%ptr      (ics:ice, iblk)
+    ret_baseflow   => hd_mem   %ret_baseflow%ptr        (ics:ice, iblk)
+    nres_baseflow  => hd_mem   %nres_baseflow%ptr       (ics:ice, iblk)
+    ret_riverflow  => hd_mem   %ret_riverflow%ptr       (ics:ice, iblk)
+    nres_riverflow => hd_mem   %nres_riverflow%ptr      (ics:ice, iblk)
+
 
     ! Configuration parameters from the namelist
-    debug_hd          = model%config%hd%debug_hd
-    routing_scheme    = model%config%hd%routing_scheme
+    debug_hd          = hd_conf%debug_hd
+    routing_scheme    = hd_conf%routing_scheme
 
 
     SELECT CASE (TRIM(routing_scheme))
@@ -157,8 +182,14 @@ CONTAINS
 
     ! Local variables
     !
+    TYPE(t_jsb_grid),  POINTER    :: grid
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
+
+    Def_config(hd_conf, hd)
+    Def_memory(srf_mem, srf)
+    Def_memory(soil_mem, soil)
+
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_riverflow'
 
     ! Pointers to variables in memory
@@ -190,21 +221,27 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
     model => get_model(model_id)
-    tile => model%land        ! HD works on the root tile
+    tile => model%Get_top_tile()        ! HD works on the root tile
+    grid => Get_grid(model%grid_id)
+
+    Get_config(hd_conf, HD)
 
     ! Get reference to variables for current block
     !
-    area            => model%grid                    %area            (:,:)
-    land            => tile%mem%srf  %phys_state     %land            (:,:)
-    coast_ocean     => tile%mem%srf  %phys_state     %coast_ocean     (:,:)
-    ocean           => tile%mem%srf  %phys_state     %ocean           (:,:)
-    discharge       => tile%mem%soil %water_flux     %discharge       (:,:)
-    discharge_ocean => tile%mem%soil %water_flux     %discharge_ocean (:,:)
+    Get_memory(srf_mem, SRF)
+    Get_memory(soil_mem, SOIL)
 
-    is_in_domain    => model%grid%patch%cells%decomp_info%owner_mask  (:,:)
+    area            => grid     %area                (:,:)
+    land            => srf_mem  %land%ptr            (:,:)
+    coast_ocean     => srf_mem  %coast_ocean%ptr     (:,:)
+    ocean           => srf_mem  %ocean%ptr           (:,:)
+    discharge       => soil_mem %discharge%ptr       (:,:)
+    discharge_ocean => soil_mem %discharge_ocean%ptr (:,:)
+
+    is_in_domain    => grid%patch%cells%decomp_info%owner_mask  (:,:)
 
     ! Configuration parameters from the namelist
-    routing_scheme = model%config%hd%routing_scheme
+    routing_scheme = hd_conf%routing_scheme
 
 
     ! Dummy discharge: the discharge is equally distributed to either
@@ -231,7 +268,7 @@ CONTAINS
 
     CASE ('weighted_to_coast')
       ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
-      cos_lat(:,:) = MERGE(COS(model%grid%lat(:,:)), 0._wp, coast_ocean(:,:) == 1._wp)
+      cos_lat(:,:) = MERGE(COS(grid%lat(:,:)), 0._wp, coast_ocean(:,:) == 1._wp)
       sum_weights = global_sum_array(coast_ocean(:,:)*cos_lat(:,:)*area(:,:)*in_domain(:,:))
       WHERE (coast_ocean(:,:) == 1._wp)
         discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
@@ -240,7 +277,7 @@ CONTAINS
       END WHERE
     CASE ('weighted_to_ocean')
       ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
-      cos_lat(:,:) = MERGE(COS(model%grid%lat(:,:)), 0._wp, ocean(:,:) == 1._wp)
+      cos_lat(:,:) = MERGE(COS(grid%lat(:,:)), 0._wp, ocean(:,:) == 1._wp)
       sum_weights = global_sum_array(ocean(:,:)*cos_lat(:,:)*area(:,:)*in_domain(:,:))
       WHERE (ocean(:,:) == 1._wp)
         discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
@@ -286,8 +323,14 @@ CONTAINS
 
     ! Local variables
     !
+    TYPE(t_jsb_grid),  POINTER    :: grid
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
+
+    Def_config(hd_conf, hd)
+    Def_memory(srf_mem, srf)
+    Def_memory(soil_mem, soil)
+
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_init_water_budget'
 
     ! Pointers to variables in memory
@@ -311,20 +354,26 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
     model => get_model(model_id)
-    tile => model%land        ! HD works on the root tile
+    tile => model%Get_top_tile()        ! HD works on the root tile
+    grid => Get_grid(model%grid_id)
+
+    Get_config(hd_conf, HD)
 
     ! Get reference to variables in memory
-    area           => model%grid                       %area        (:,:)
-    land           => tile%mem%srf   %phys_state       %land        (:,:)
-    glacier        => tile%mem%srf   %phys_state       %glacier     (:,:)
-    runoff         => tile%mem%soil  %water_flux       %runoff      (:,:)
-    drainage       => tile%mem%soil  %water_flux       %drainage    (:,:)
-    pme_glacier    => tile%mem%soil  %water_flux       %pme_glacier (:,:)
-    discharge      => tile%mem%soil  %water_flux       %discharge   (:,:)
-    is_in_domain   => model%grid%patch%cells%decomp_info%owner_mask (:,:)
+    Get_memory(srf_mem, SRF)
+    Get_memory(soil_mem, SOIL)
+
+    area           => grid                        %area        (:,:)
+    land           => srf_mem   %land%ptr        (:,:)
+    glacier        => srf_mem   %glacier%ptr     (:,:)
+    runoff         => soil_mem  %runoff%ptr      (:,:)
+    drainage       => soil_mem  %drainage%ptr    (:,:)
+    pme_glacier    => soil_mem  %pme_glacier%ptr (:,:)
+    discharge      => soil_mem  %discharge%ptr   (:,:)
+    is_in_domain   => grid%patch%cells%decomp_info%owner_mask  (:,:)
 
     ! Configuration parameters from the namelist
-    debug_hd          = model%config%hd%debug_hd
+    debug_hd          = hd_conf%debug_hd
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(SIZE(is_in_domain(:,1)),SIZE(is_in_domain(1,:))))
@@ -360,8 +409,14 @@ CONTAINS
 
     ! Local variables
     !
+    TYPE(t_jsb_grid),  POINTER    :: grid
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
+
+    Def_config(hd_conf, hd)
+    Def_memory(srf_mem, srf)
+    Def_memory(soil_mem, soil)
+
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_check_water_budget'
 
     ! Pointers to variables in memory
@@ -385,17 +440,23 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
     model => get_model(model_id)
-    tile => model%land        ! HD works on the root tile
+    tile => model%Get_top_tile()        ! HD works on the root tile
+    grid => Get_grid(model%grid_id)
+
+    Get_config(hd_conf, HD)
 
     ! Get reference to variables in memory
-    area            => model%grid                    %area            (:,:)
-    land            => tile%mem%srf  %phys_state     %land            (:,:)
-    discharge_ocean => tile%mem%soil %water_flux     %discharge_ocean (:,:)
-    is_in_domain    => model%grid%patch%cells%decomp_info%owner_mask  (:,:)
+    Get_memory(srf_mem, SRF)
+    Get_memory(soil_mem, SOIL)
+
+    area            => grid         %area            (:,:)
+    land            => srf_mem  %land%ptr            (:,:)
+    discharge_ocean => soil_mem %discharge_ocean%ptr (:,:)
+    is_in_domain    => grid%patch%cells%decomp_info%owner_mask (:,:)
 
     ! Configuration parameters from the namelist
-    debug_hd          = model%config%hd%debug_hd
-    diag_water_budget = model%config%hd%diag_water_budget
+    debug_hd          = hd_conf%debug_hd
+    diag_water_budget = hd_conf%diag_water_budget
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(SIZE(is_in_domain(:,1)),SIZE(is_in_domain(1,:))))

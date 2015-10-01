@@ -10,41 +10,54 @@
 MODULE mo_jsb_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_atmland_memory_class, ONLY: t_atm2land_memory, t_land2atm_memory
-  USE mo_srf_memory_class,     ONLY: t_srf_memory
-  USE mo_soil_memory_class,    ONLY: t_soil_memory
-  USE mo_veg_memory_class,     ONLY: t_veg_memory
-#ifndef __NO_JSBACH_HD__
-  USE mo_hd_memory_class,      ONLY: t_hd_memory
-#endif
-  !USE mo_glacier_memory_class, ONLY: t_glacier
 !!$  USE mo_cdi_constants,     ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, &
 !!$                                  ZA_SURFACE, &
 !!$                                  FILETYPE_NC2, &
 !!$                                  GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL
   USE mo_kind,              ONLY: wp
 !!$  USE mo_exception,         ONLY: message
+  USE mo_jsb_var_class, ONLY: t_jsb_var_p
+
+!  USE mo_jsb_process_factory, ONLY: Create_process_memory
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_memory!, new_jsbach_memory
+  PUBLIC :: t_jsb_memory_p, t_jsb_memory, t_jsb_param
+
+  TYPE, ABSTRACT :: t_jsb_param
+  END TYPE t_jsb_param
 
   ! This type contains the memory state for each tile
   ! It includes all memory types from all sub-modules
-  TYPE t_jsb_memory
-    REAL(wp),                POINTER :: fract     (:,:)  !< Cover fraction of this tile (relative to parent tile)
-    REAL(wp),                POINTER :: fract_max (:,:)  !< Maximum potential cover fraction for this tile (rel. to parent)
-    TYPE(t_atm2land_memory), POINTER :: atm2land => NULL()
-    TYPE(t_land2atm_memory), POINTER :: land2atm => NULL()
-    TYPE(t_srf_memory),      POINTER :: srf      => NULL()
-    TYPE(t_soil_memory),     POINTER :: soil     => NULL()
-    TYPE(t_veg_memory),      POINTER :: veg      => NULL()
-#ifndef __NO_JSBACH_HD__
-    TYPE(t_hd_memory),       POINTER :: hd       => NULL()
-#endif
-    !TYPE(t_glacier),         POINTER :: glacier
+  TYPE, ABSTRACT :: t_jsb_memory
+    INTEGER :: id = 0
+    INTEGER :: grid_id = 0
+    INTEGER :: owner_model_id = 0
+    INTEGER :: max_no_of_vars = 0
+    INTEGER :: no_of_vars = 0
+    CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
+    TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
+    CLASS(t_jsb_param), POINTER :: param => NULL()
+  CONTAINS
+    PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
   END type t_jsb_memory
+
+  TYPE t_jsb_memory_p
+    CLASS(t_jsb_memory), POINTER :: p
+  END TYPE t_jsb_memory_p
+
+  ABSTRACT INTERFACE
+    SUBROUTINE Init_memory(mem, prefix, suffix)
+      IMPORT :: t_jsb_memory
+      CLASS(t_jsb_memory), INTENT(inout) :: mem
+      CHARACTER(LEN=*), INTENT(in) :: prefix, suffix
+    END SUBROUTINE Init_memory
+  END INTERFACE
+
+!  INTERFACE t_jsb_memory
+!    PROCEDURE Create_process_memory
+!  END INTERFACE t_jsb_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_memory_class'
 

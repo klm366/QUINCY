@@ -10,16 +10,27 @@
 MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_base,           ONLY: get_model
+#include "dsl_jsbach.inc"
+
+  USE mo_kind,               ONLY: wp
+  USE mo_exception,          ONLY: message_text, message, finish
+  USE mo_util_string,        ONLY: int2string
+  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_timer,              ONLY: timer_start, timer_stop, timer_jsbach
+  USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile
   USE mo_atmland_interface,  ONLY: update_atm2land, update_land2atm
   USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
-  USE mo_jsb_control,        ONLY: debug_on
-  USE mo_timer,              ONLY: timer_start, timer_stop, timer_jsbach
-  USE mo_exception,          ONLY: message_text, message, finish
-  USE mo_util_string,        ONLY: int2string
-  USE mo_kind,               ONLY: wp
+
+  Use_processes ATM2LAND, SRF, HD
+  Use_config(hd)
+  Use_memory(srf)
+  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
+!!$    Use_memory(atm2land_mem)
+#ifndef __NO_JSBACH_HD__
+  Use_memory(hd)
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -53,7 +64,6 @@ CONTAINS
                                     update_surface_energy, update_surface_fluxes, update_t_srf_asselin, &
                                     update_humidity_scaling, update_roughness
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
-    USE mo_soil_memory_class, ONLY: copy_soil_mem
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_interface,      ONLY: update_hd
 #endif
@@ -108,11 +118,14 @@ CONTAINS
       & alb_vis_dif      (:), &
       & alb_nir_dif      (:)
 
-    TYPE(t_jsb_model), POINTER :: model
-
     ! Local variables
     !
+    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_tile), POINTER :: tile
+    Def_config(hd_conf, hd)
+    Def_memory(atm2land_mem, atm2land)
+    Def_memory(srf_mem, srf)
+
     INTEGER :: nc, i
 
     CALL timer_start(timer_jsbach)
@@ -120,6 +133,12 @@ CONTAINS
     nc = ice - ics + 1
 
     model => get_model(model_id)
+    tile => model%Get_top_tile()
+
+    Get_memory(atm2land_mem, ATM2LAND)
+    Get_memory(srf_mem, SRF)
+
+    Get_config(hd_conf, HD)
 
 !!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)//' for: block=', iblk, ', ics=', ics, ', ice=', ice
 !!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
@@ -130,7 +149,7 @@ CONTAINS
 
     ! Put atmospheric forcing into the atm2land memory.
     ! Only has to be done for the root tile since, for all other sub-tiles, the atm2land structure points to this.
-    CALL update_atm2land( model%land, iblk, ics, ice,                                                                         &
+    CALL update_atm2land(tile, iblk, ics, ice,                                                                         &
 !!$      & t_air=t_air(:), q_air=q_air(:), rain=rain(:), snow=snow(:), wind_air=wind_air(:), wind_10m=wind_10m(:),               &
       & t_air=t_air(:), q_air=q_air(:), rain=rain(:), snow=snow(:), wind_air=wind_air(:), wind_10m=wind_air(:)*0.8_wp,        & ! Temporary
       & lw_srf_down=lw_srf_down(:), swvis_srf_down=swvis_srf_down(:),                                                         &
@@ -139,28 +158,22 @@ CONTAINS
       & t_acoef=t_acoef(:), t_bcoef=t_bcoef(:), q_acoef=q_acoef(:), q_bcoef=q_bcoef(:),                                       &
       & pch=pch(:), cos_zenith_angle=cos_zenith_angle(:))
 
-    ! Now we have to loop through the tiles for which the calculations have to be performed.
-
-    ! For the moment, we only have one root tile
-    !
-    tile => model%land
-
     ! Temporary fix for zero t_air at model start (analytical initialization of atmosphere)
     IF (ANY(t_air(:) < 100._wp)) THEN
-      tile%mem%atm2land%t_air(ics:ice,iblk) = MERGE(t_air(:), tile%mem%srf%energy_state%t_srf(ics:ice,iblk), t_air(:) < 100._wp)
+      atm2land_mem%t_air%ptr(ics:ice,iblk) = MERGE(t_air(:), srf_mem%t_srf%ptr(ics:ice,iblk), t_air(:) < 100._wp)
     END IF
 
     ! Compute net surface radiation
-    CALL update_surface_radiation(model%land, iblk, ics, ice, nc)
+    CALL update_surface_radiation(tile, iblk, ics, ice, nc)
 
     ! Update wet skin and snow fractions
-    CALL  update_snow_and_skin_fraction(model%land, iblk, ics, ice, nc, dtime, steplen)
+    CALL  update_snow_and_skin_fraction(tile, iblk, ics, ice, nc, dtime, steplen)
 
     ! Compute new surface temperatures and saturation surface specific humidity
-    CALL update_surface_energy(model%land, iblk, ics, ice, nc, dtime, steplen)
+    CALL update_surface_energy(tile, iblk, ics, ice, nc, dtime, steplen)
 
     ! Compute surface fluxes of heat and moisture based on the new surface temperature and qsat
-    CALL update_surface_fluxes(model%land, iblk, ics, ice, nc, steplen)
+    CALL update_surface_fluxes(tile, iblk, ics, ice, nc, steplen)
 
     ! First part of vegetation that is applied before the soil is updated,
     ! in particular:
@@ -176,13 +189,13 @@ CONTAINS
     CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
 
 #ifndef __NO_JSBACH_HD__
-    IF (model%config%hd%active) THEN
+    IF (hd_conf%active) THEN
       CALL update_hd(tile, iblk, ics, ice, nc, steplen)
     END IF
 #endif
 
     ! Re-calculate wet skin and snow fractions with updated moisture parameters
-    CALL  update_snow_and_skin_fraction(model%land, iblk, ics, ice, nc, dtime, steplen)
+    CALL  update_snow_and_skin_fraction(tile, iblk, ics, ice, nc, dtime, steplen)
 
     ! Update effective evaporation weights for qsat and q_air
     CALL update_humidity_scaling(tile, iblk, ics, ice, nc)
@@ -276,12 +289,16 @@ CONTAINS
  
     TYPE(t_jsb_model), POINTER :: model
 
+    Def_config(hd_conf, hd)
+
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
     model => get_model(model_id)
 
+    Get_config(hd_conf, HD)
+
 #ifndef __NO_JSBACH_HD__
-    IF (model%config%hd%active) THEN
+    IF (hd_conf%active) THEN
       CALL hd_init_water_budget(model_id)
       CALL hd_riverflow(model_id)
       CALL hd_check_water_budget(model_id)

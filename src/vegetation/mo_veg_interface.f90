@@ -10,14 +10,27 @@
 MODULE mo_veg_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile
-  USE mo_jsb_base,           ONLY: get_model
-  USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
+#include "dsl_jsbach.inc"
+
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
-  USE mo_util,               ONLY: one_of, int2string
+  USE mo_util,               ONLY: int2string
+
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile
+  USE mo_jsb_class,          ONLY: get_model
+  USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
+
+  Use_processes VEG, SOIL, SRF, ATM2LAND
+  Use_config(veg)
+  Use_config(soil)
+
+  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
+!!$  Use_memory(atm2land)
+  Use_memory(soil)
+  Use_memory(srf)
+  Use_memory(veg)
 
   IMPLICIT NONE
   PRIVATE
@@ -39,6 +52,13 @@ CONTAINS
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
 
     TYPE(t_jsb_model), POINTER    :: model
+
+    Def_config(veg_conf, veg)
+    Def_config(soil_conf, soil)
+    Def_memory(soil_mem, soil)
+    Def_memory(srf_mem, srf)
+    Def_memory(veg_mem, veg)
+    Def_memory(atm2land_mem, atm2land)
 
     REAL(wp), POINTER ::                 &
       & lai                    (:),      &
@@ -64,7 +84,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_1'
 
-    IF (one_of('veg', tile%components) < 1) RETURN
+    IF (.NOT. tile%Is_process_active(VEG)) RETURN
 
 !!$    p_pe = get_my_global_mpi_id()
 !!$    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update on PE '//int2string(p_pe), all_print=.TRUE.)
@@ -72,29 +92,37 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    nsoil = model%config%soil%nsoil_water
+    Get_config(veg_conf, VEG)
+    Get_config(soil_conf, SOIL)
+
+    nsoil = soil_conf%nsoil_water
 
     ! Get reference to variables for current block
     !
-    lai                => tile%mem%veg  %phys_state   %lai            (ics:ice,    iblk)
-    swpar_srf_down     => tile%mem      %atm2land     %swpar_srf_down (ics:ice,    iblk)
-    canopy_cond        => tile%mem%veg  %phys_state   %canopy_cond    (ics:ice,    iblk)
-    soil_depth_l       => tile%mem%soil %phys_state   %soil_depth_l   (ics:ice, :, iblk)
-    root_depth_l       => tile%mem%veg  %phys_state   %root_depth_l   (ics:ice, :, iblk)
-    ws                 => tile%mem%soil %water_state  %ws             (ics:ice,    iblk)
-    ws_l               => tile%mem%soil %water_state  %ws_l           (ics:ice, :, iblk)
-    ws_fc_l            => tile%mem%soil %water_state  %ws_fc_l        (ics:ice, :, iblk)
-    ws_pwp_l           => tile%mem%soil %water_state  %ws_pwp_l       (ics:ice, :, iblk)
-    ws_root            => tile%mem%veg  %water_state  %ws_root        (ics:ice,    iblk)
-    ws_fc_root         => tile%mem%veg  %water_state  %ws_fc_root     (ics:ice,    iblk)
-    ws_pwp_root        => tile%mem%veg  %water_state  %ws_pwp_root    (ics:ice,    iblk)
-    water_stress       => tile%mem%veg  %water_state  %water_stress   (ics:ice,    iblk)
-    t_srf              => tile%mem%srf  %energy_state %t_srf          (ics:ice,    iblk)
-    q_air              => tile%mem      %atm2land     %q_air          (ics:ice,    iblk)
-    press_srf          => tile%mem      %atm2land     %press_srf      (ics:ice,    iblk)
+    Get_memory(veg_mem, VEG)
+    Get_memory(srf_mem, SRF)
+    Get_memory(soil_mem, SOIL)
+    Get_memory(atm2land_mem, ATM2LAND)
+
+    lai                => veg_mem  %lai%ptr            (ics:ice,    iblk)
+    swpar_srf_down     => atm2land_mem     %swpar_srf_down%ptr (ics:ice,    iblk)
+    canopy_cond        => veg_mem  %canopy_cond%ptr    (ics:ice,    iblk)
+    soil_depth_l       => soil_mem %soil_depth_l%ptr   (ics:ice, :, iblk)
+    root_depth_l       => veg_mem  %root_depth_l%ptr   (ics:ice, :, iblk)
+    ws                 => soil_mem %ws%ptr             (ics:ice,    iblk)
+    ws_l               => soil_mem %ws_l%ptr           (ics:ice, :, iblk)
+    ws_fc_l            => soil_mem %ws_fc_l%ptr        (ics:ice, :, iblk)
+    ws_pwp_l           => soil_mem %ws_pwp_l%ptr       (ics:ice, :, iblk)
+    ws_root            => veg_mem  %ws_root%ptr        (ics:ice,    iblk)
+    ws_fc_root         => veg_mem  %ws_fc_root%ptr     (ics:ice,    iblk)
+    ws_pwp_root        => veg_mem  %ws_pwp_root%ptr    (ics:ice,    iblk)
+    water_stress       => veg_mem  %water_stress%ptr   (ics:ice,    iblk)
+    t_srf              => srf_mem  %t_srf%ptr          (ics:ice,    iblk)
+    q_air              => atm2land_mem     %q_air%ptr          (ics:ice,    iblk)
+    press_srf          => atm2land_mem     %press_srf%ptr      (ics:ice,    iblk)
 
     ! Compute (max) canopy (stomatal) conductance with no water stress
-    SELECT CASE(TRIM(model%config%veg%scheme_stom_cond))
+    SELECT CASE(TRIM(veg_conf%scheme_stom_cond))
       CASE('echam5')
         canopy_cond(:) = canopy_conductance( lai(:), swpar_srf_down(:) )
 
@@ -102,7 +130,7 @@ CONTAINS
 !!$        ! TBD: Call bethy to compute unstressed canopy conductance
 
       CASE default
-        CALL finish( TRIM(routine), 'Canopy conductance scheme '//TRIM(model%config%veg%scheme_stom_cond)//&
+        CALL finish( TRIM(routine), 'Canopy conductance scheme '//TRIM(veg_conf%scheme_stom_cond)//&
                    & 'not supported.')
     END SELECT
 
@@ -164,9 +192,13 @@ CONTAINS
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
 
+    Def_memory(veg_mem, veg)
+    Def_memory(srf_mem, srf)
+    Def_memory(soil_mem, soil)
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_2'
 
-    IF (one_of('veg', tile%components) < 1) RETURN
+    IF (.NOT. tile%Is_process_active(VEG)) RETURN
 
     p_pe = get_my_global_mpi_id()
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
@@ -175,21 +207,25 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    t_srf        => tile%mem%srf  %energy_state %t_srf           (ics:ice,    iblk)
-    lai          => tile%mem%veg  %phys_state   %lai             (ics:ice,    iblk)
-    lai_mon      => tile%mem%veg  %phys_state   %lai_mon         (ics:ice,    iblk, :)
-    fract_fpc    => tile%mem%veg  %phys_state   %fract_fpc       (ics:ice,    iblk)
-    fract_fpc_max=> tile%mem%veg  %phys_state   %fract_fpc_max   (ics:ice,    iblk)
-    fract_forest => tile%mem%veg  %phys_state   %fract_forest    (ics:ice,    iblk)
-!!$    alb_vis_can  => tile%mem%veg  %phys_state   %alb_vis_can     (ics:ice,    iblk)
-!!$    alb_nir_can  => tile%mem%veg  %phys_state   %alb_nir_can     (ics:ice,    iblk)
-!!$    alb_vis_soil => tile%mem%soil %phys_state   %alb_vis_soil    (ics:ice,    iblk)
-!!$    alb_nir_soil => tile%mem%soil %phys_state   %alb_nir_soil    (ics:ice,    iblk)
-    alb_vis_srf  => tile%mem%srf  %phys_state   %alb_vis_srf     (ics:ice,    iblk)
-    alb_nir_srf  => tile%mem%srf  %phys_state   %alb_nir_srf     (ics:ice,    iblk)
-    albedo_srf   => tile%mem%srf  %phys_state   %albedo_srf      (ics:ice,    iblk)
-    sfract_can   => tile%mem%veg  %water_state  %sfract_can      (ics:ice,    iblk)
-    sfract_soil  => tile%mem%soil %water_state  %sfract_soil     (ics:ice,    iblk)
+    Get_memory(veg_mem, VEG)
+    Get_memory(srf_mem, SRF)
+    Get_memory(soil_mem, SOIL)
+
+    t_srf        => srf_mem  %t_srf%ptr           (ics:ice,    iblk)
+    lai          => veg_mem  %lai%ptr             (ics:ice,    iblk)
+    lai_mon      => veg_mem  %lai_mon%ptr         (ics:ice,    iblk, :)
+    fract_fpc    => veg_mem  %fract_fpc%ptr       (ics:ice,    iblk)
+    fract_fpc_max=> veg_mem  %fract_fpc_max%ptr   (ics:ice,    iblk)
+    fract_forest => veg_mem  %fract_forest%ptr    (ics:ice,    iblk)
+!!$    alb_vis_can  => tile%mem%veg  %alb_vis_can%ptr     (ics:ice,    iblk)
+!!$    alb_nir_can  => tile%mem%veg  %alb_nir_can%ptr     (ics:ice,    iblk)
+!!$    alb_vis_soil => tile%mem%soil %alb_vis_soil%ptr    (ics:ice,    iblk)
+!!$    alb_nir_soil => tile%mem%soil %alb_nir_soil%ptr    (ics:ice,    iblk)
+    alb_vis_srf  => srf_mem  %alb_vis_srf%ptr     (ics:ice,    iblk)
+    alb_nir_srf  => srf_mem  %alb_nir_srf%ptr     (ics:ice,    iblk)
+    albedo_srf   => srf_mem  %albedo_srf%ptr      (ics:ice,    iblk)
+    sfract_can   => veg_mem  %sfract_can%ptr      (ics:ice,    iblk)
+    sfract_soil  => soil_mem %sfract_soil%ptr     (ics:ice,    iblk)
 
     ! Update leaf area index
     !

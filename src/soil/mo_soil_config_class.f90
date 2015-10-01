@@ -13,13 +13,14 @@ MODULE mo_soil_config_class
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
+  USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_soil_config, new_soil_config
 
-  TYPE t_soil_config
+  TYPE, EXTENDS(t_jsb_config) :: t_soil_config
      LOGICAL :: active
      CHARACTER(len=filename_max) :: ic_filename
      CHARACTER(len=filename_max) :: bc_filename
@@ -41,12 +42,13 @@ CONTAINS
 
   FUNCTION new_soil_config(nml_handler) RESULT(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: POSITIONED, position_nml
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
 
     INTEGER,          INTENT(in) :: nml_handler
     TYPE(t_soil_config), POINTER :: config
-
-    TYPE(t_soil_config), POINTER :: new
 
     LOGICAL  :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
@@ -64,11 +66,13 @@ CONTAINS
 
     INTEGER :: nml_unit, istat, i
 
+    TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_soil_config'
 
     CALL message(TRIM(routine), 'Starting soil configuration')
 
-    ALLOCATE(new)
+    ALLOCATE(config)
 
     ! Set defaults
     active         = .FALSE.
@@ -89,30 +93,38 @@ CONTAINS
       CALL finish(TRIM(routine), message_text)
     END IF
 
-    ALLOCATE(new%soil_depth_energy(nsoil_energy))
-    ALLOCATE(new%soil_depth_water (nsoil_water ))
-    ALLOCATE(new%dz_energy(nsoil_energy))
-    ALLOCATE(new%dz_water (nsoil_water ))
+    ALLOCATE(config%soil_depth_energy(nsoil_energy))
+    ALLOCATE(config%soil_depth_water (nsoil_water ))
+    ALLOCATE(config%dz_energy(nsoil_energy))
+    ALLOCATE(config%dz_water (nsoil_water ))
 
-    new%active                    = active
-    new%ic_filename               = ic_filename
-    new%bc_filename               = bc_filename
-    new%nsoil_energy              = nsoil_energy
-    new%nsoil_water               = nsoil_water
-    new%soil_depth_energy(1)      = dz_energy(1)
+    config%active                    = active
+    config%ic_filename               = ic_filename
+    config%bc_filename               = bc_filename
+    config%nsoil_energy              = nsoil_energy
+    config%nsoil_water               = nsoil_water
+    config%soil_depth_energy(1)      = dz_energy(1)
     DO i=2,nsoil_energy
-      new%soil_depth_energy(i) = new%soil_depth_energy(i-1) + dz_energy(i)
+      config%soil_depth_energy(i) = config%soil_depth_energy(i-1) + dz_energy(i)
     END DO
-    new%soil_depth_water(1)       = dz_water(1)
+    config%soil_depth_water(1)       = dz_water(1)
     DO i=2,nsoil_water
-      new%soil_depth_water(i) = new%soil_depth_water(i-1) + dz_water(i)
+      config%soil_depth_water(i) = config%soil_depth_water(i-1) + dz_water(i)
     END DO
-    new%dz_energy(1:nsoil_energy) = dz_energy(1:nsoil_energy)
-    new%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)
-    new%wsr_capacity              = wsr_capacity
-    new%wsn_capacity              = wsn_capacity
+    config%dz_energy(1:nsoil_energy) = dz_energy(1:nsoil_energy)
+    config%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)
+    config%wsr_capacity              = wsr_capacity
+    config%wsn_capacity              = wsn_capacity
 
-    config => new
+    ! Create vertical axes
+
+    soil_e  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, config%nsoil_energy, &
+      levels=config%soil_depth_energy(1:config%nsoil_energy), units='m')
+    CALL register_vgrid(soil_e)
+
+    soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, config%nsoil_water, &
+      levels=config%soil_depth_water(1:config%nsoil_water), units='m')
+    CALL register_vgrid(soil_w)
 
   END FUNCTION new_soil_config
 

@@ -116,7 +116,7 @@ CONTAINS
 
   END FUNCTION foliage_projected_cover
 
-  ! TBD: At the moment, this computes the albedo for canopy and ground. Should be split between the veg and soil components
+  ! TBD: At the moment, this computes the albedo for canopy and ground. Should be split between the veg and soil processes
   REAL(wp) ELEMENTAL FUNCTION canopy_albedo_echam5( surface_temp, forest_fract, grnd_snow_fract, canopy_snow_fract, lai, &
                                                   &  albedo_snow_min, albedo_snow_max, albedo_background)
 

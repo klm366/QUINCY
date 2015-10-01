@@ -10,9 +10,9 @@
 MODULE mo_jsb_model_class
 #ifndef __NO_JSBACH__
 
+  USE mo_hsm_class,        ONLY: t_hsm, t_state
   USE mo_jsb_config_class, ONLY: t_jsb_model_config
-  USE mo_jsb_grid_class,   ONLY: t_jsb_grid, t_jsb_vgrid, t_jsb_vgrid_ptr
-  USE mo_jsb_tile_class,   ONLY: t_jsb_tile
+  USE mo_jsb_process_class, ONLY: t_jsb_process
 
   USE mo_exception,        ONLY: message_text, message, finish
   USE mo_io_units,         ONLY: filename_max
@@ -20,12 +20,9 @@ MODULE mo_jsb_model_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_model_m, t_jsb_model, max_no_of_var_lists
+  PUBLIC :: t_jsb_model_m, t_jsb_model
   PUBLIC :: new_model, print_model, delete_model
-  PUBLIC :: register_grid, register_vgrid, get_vgrid
 
-  INTEGER, PARAMETER :: max_no_of_var_lists = 20
-  INTEGER, PARAMETER :: max_no_of_vgrids = 10
   !>
   !! Type for model structure
   !!
@@ -38,10 +35,13 @@ MODULE mo_jsb_model_class
     CHARACTER(len=132)                :: description       !< Model description
     CHARACTER(len=filename_max)       :: namelist_filename !< Model namelist file
     TYPE(t_jsb_model_config), POINTER :: config            !< Configuration
-    TYPE(t_jsb_grid),         POINTER :: grid              !< Horizontal grid
-    TYPE(t_jsb_vgrid_ptr),    POINTER :: vgrids(:)         !< Vertical grids
-    TYPE(t_jsb_tile),         POINTER :: land              !< Land structure and model state
-    CHARACTER(len=16),        POINTER :: var_list_names(:) !< Names of var_lists defined for this model
+    INTEGER                           :: grid_id
+    TYPE(t_jsb_process), ALLOCATABLE  :: processes(:)
+    TYPE(t_hsm),              POINTER :: hsm
+  CONTAINS
+    PROCEDURE :: Configure_processes => Configure_model_processes
+    PROCEDURE :: Get_shortname       => Get_model_shortname
+    PROCEDURE :: Get_top_tile        => Get_model_top_tile
   END TYPE t_jsb_model
 
   !>
@@ -61,40 +61,83 @@ CONTAINS
   !!
   !! Subroutine to construct new instance of basic model structure.
   !!
-  FUNCTION new_model(name, shortname, description, namelist_filename) RESULT(model)
+  FUNCTION new_model(name, shortname, description, namelist_filename) RESULT(return_ptr)
 
     CHARACTER(len=*),           INTENT(in) :: name
     CHARACTER(len=*),           INTENT(in) :: shortname
     CHARACTER(len=*),           INTENT(in) :: description
     CHARACTER(len=*),           INTENT(in) :: namelist_filename !< Model namelist file
-    TYPE(t_jsb_model), POINTER             :: model
-
-    TYPE(t_jsb_model), POINTER :: new
-
-    INTEGER :: i
+    TYPE(t_jsb_model), POINTER             :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:new_model'
 
     CALL message(TRIM(routine), 'starting construction of new JSBACH model instance.')
 
-    ALLOCATE(new)
+    ALLOCATE(return_ptr)
 
-    new%name              = TRIM(name)
-    new%shortname         = TRIM(shortname)
-    new%description       = TRIM(description)
-    new%namelist_filename = TRIM(namelist_filename)
-    new%config => NULL()
-    new%grid => NULL()
-    ALLOCATE(new%vgrids(max_no_of_vgrids))
-    DO i=1,max_no_of_vgrids
-      new%vgrids(i)%p => NULL()
-    END DO
+    return_ptr%name              = TRIM(name)
+    return_ptr%shortname         = TRIM(shortname)
+    return_ptr%description       = TRIM(description)
+    return_ptr%namelist_filename = TRIM(namelist_filename)
+    return_ptr%config => NULL()
 
     CALL message(TRIM(routine), 'construction of JSBACH model completed.')
 
-    model => new
-
   END FUNCTION new_model
+
+  SUBROUTINE Configure_model_processes(this, processes)
+
+    CLASS(t_jsb_model), INTENT(inout) :: this
+    INTEGER,            INTENT(in)    :: processes(:)
+
+    INTEGER :: i, iproc
+
+    DO i=1,SIZE(processes)
+      iproc = processes(i)
+      CALL this%processes(iproc)%Configure(iproc, this%namelist_filename)
+    END DO
+
+  END SUBROUTINE Configure_model_processes
+
+  FUNCTION Get_model_name(this) RESULT(return_value)
+
+    CLASS(t_jsb_model), INTENT(in) :: this
+    CHARACTER(LEN=:), ALLOCATABLE :: return_value
+
+    return_value = this%name
+
+  END FUNCTION Get_model_name
+
+  FUNCTION Get_model_shortname(this) RESULT(return_value)
+
+    CLASS(t_jsb_model), INTENT(in) :: this
+    CHARACTER(LEN=:), ALLOCATABLE :: return_value
+
+    return_value = this%shortname
+
+  END FUNCTION Get_model_shortname
+
+  FUNCTION Get_model_top_tile(this) RESULT(return_ptr)
+
+    USE mo_jsb_tile_class,   ONLY: t_jsb_tile
+
+    CLASS(t_jsb_model), INTENT(in) :: this
+    TYPE(t_jsb_tile), POINTER :: return_ptr
+
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Get_model_top_tile'
+
+    return_ptr => NULL()
+
+    SELECT TYPE (top => this%Hsm%top)
+    TYPE IS (t_jsb_tile)
+      return_ptr => top
+    CLASS IS (t_State)
+      CALL finish(TRIM(routine), 'tile is of type t_State, should be t_jsb_tile')
+    CLASS DEFAULT
+      CALL finish(TRIM(routine), 'Unkown type for tile')
+    END SELECT
+
+  END FUNCTION Get_model_top_tile
 
   !>
   !! Destructor method for model instance.
@@ -103,26 +146,13 @@ CONTAINS
   !!
   SUBROUTINE delete_model(self)
 
-    USE mo_jsb_grid_class, ONLY: delete_grid, delete_vgrid
-
-#ifdef HAVE_F2003
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: self
-#else
-    TYPE(t_jsb_model), POINTER                :: self
-#endif
 
     INTEGER :: i
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:delete_model'
 
     CALL message(TRIM(routine), 'starting destruction of JSBACH model instance')
-
-    IF (ASSOCIATED(self%grid)) CALL delete_grid(self%grid)
-
-    DO i=1,SIZE(self%vgrids)
-      CALL delete_vgrid(self%vgrids(i)%p)
-    END DO
-    DEALLOCATE(self%vgrids)
 
     DEALLOCATE(self)
 
@@ -137,11 +167,13 @@ CONTAINS
   !!
   SUBROUTINE print_model(self)
 
-    USE mo_jsb_grid_class, ONLY: print_grid
     USE mo_jsb_control,    ONLY: model_base_dir
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid
+    USE mo_jsb_grid,       ONLY: Get_grid
 
     TYPE(t_jsb_model), INTENT(in) :: self
 
+    TYPE(t_jsb_grid), POINTER :: grid
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:print_model'
 
     CALL message(TRIM(routine), 'print JSBACH model description')
@@ -153,109 +185,10 @@ CONTAINS
 
     CALL message('', 'Namelist file: '//TRIM(model_base_dir)//'/'//TRIM(self%namelist_filename))
 
-    IF (ASSOCIATED(self%grid)) CALL print_grid(self%grid)
+    grid => Get_grid(self%grid_id)
+    IF (ASSOCIATED(grid)) CALL grid%Print
 
   END SUBROUTINE print_model
-
-  SUBROUTINE register_grid(self, grid)
-
-    USE mo_jsb_grid_class, ONLY: t_jsb_grid
-
-#ifdef HAVE_F2003
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: self
-    TYPE(t_jsb_grid),  POINTER, INTENT(in)    :: grid
-#else
-    TYPE(t_jsb_model), POINTER                :: self
-    TYPE(t_jsb_grid),  POINTER                :: grid
-#endif
-
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:register_grid'
-
-    CALL message(TRIM(routine), 'going to register new JSBACH grid instance')
-
-    NULLIFY(self%grid)
-    self%grid => grid
-
-    CALL message(TRIM(routine), 'registered new JSBACH grid instance '//TRIM(grid%name)//&
-                                ' for model '//TRIM(self%name))
-
-  END SUBROUTINE register_grid
-
-  SUBROUTINE register_vgrid(self, vgrid)
-
-    USE mo_jsb_grid_class, ONLY: t_jsb_vgrid
-
-#ifdef HAVE_F2003
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: self
-    TYPE(t_jsb_vgrid), POINTER, INTENT(in)    :: vgrid
-#else
-    TYPE(t_jsb_model), POINTER                :: self
-    TYPE(t_jsb_vgrid), POINTER                :: vgrid
-#endif
-
-    INTEGER :: i, idx
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:register_vgrid'
-
-    idx = 0
-    DO i=1,max_no_of_vgrids
-      IF (ASSOCIATED(self%vgrids(i)%p)) THEN
-        IF (self%vgrids(i)%p%cdiZaxisID == vgrid%cdiZaxisID) EXIT
-      END IF
-    END DO
-    IF (idx /= 0) RETURN        ! axis already exists and is already registered for model
-
-    idx = 0
-    DO i=1,max_no_of_vgrids
-      IF (.NOT. ASSOCIATED(self%vgrids(i)%p)) THEN
-        idx = i
-        EXIT
-      END IF
-    END DO
-    IF(idx == 0) CALL finish(TRIM(routine), 'Max no of vgrids reached')
-
-    self%vgrids(idx)%p => vgrid
-
-!!$    self%vgrids(idx)%id         = vgrid%id
-!!$    self%vgrids(idx)%name       = TRIM(vgrid%name)
-!!$    self%vgrids(idx)%longname   = TRIM(vgrid%longname)
-!!$    self%vgrids(idx)%units      = TRIM(vgrid%units)
-!!$    self%vgrids(idx)%n_levels   = vgrid%n_levels
-!!$    self%vgrids(idx)%cdiZaxisID = vgrid%cdiZaxisID
-!!$    ALLOCATE(self%vgrids(idx)%levels (vgrid%n_levels))
-!!$    ALLOCATE(self%vgrids(idx)%lbounds(vgrid%n_levels))
-!!$    ALLOCATE(self%vgrids(idx)%ubounds(vgrid%n_levels))
-!!$    self%vgrids(idx)%levels(:)  = vgrid%levels(:)
-!!$    self%vgrids(idx)%lbounds(:) = vgrid%lbounds(:)
-!!$    self%vgrids(idx)%ubounds(:) = vgrid%ubounds(:)
-
-  END SUBROUTINE register_vgrid
-
-  FUNCTION get_vgrid(self, name) RESULT(vgrid)
-
-    USE mo_jsb_grid_class, ONLY: t_jsb_vgrid
-
-#ifdef HAVE_F2003
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: self
-#else
-    TYPE(t_jsb_model), POINTER                :: self
-#endif
-    CHARACTER(len=*),           INTENT(in)    :: name
-
-    TYPE(t_jsb_vgrid), POINTER                :: vgrid
-
-    INTEGER :: i, idx
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:get_vgrid'
-
-    vgrid => NULL()
-    DO i=1,SIZE(self%vgrids)
-      IF (ASSOCIATED(self%vgrids(i)%p)) THEN
-        IF (self%vgrids(i)%p%id > 0 .AND. TRIM(self%vgrids(i)%p%name) == TRIM(name)) THEN
-          vgrid => self%vgrids(i)%p
-        END IF
-      END IF
-    END DO
-
-  END FUNCTION get_vgrid
 
 #endif
 END MODULE mo_jsb_model_class

@@ -1,6 +1,7 @@
 MODULE mo_jsb_io
 #ifndef __NO_JSBACH__
 
+  USE mo_kind, ONLY: wp
   USE mo_jsb_io_iface, ONLY:                                           &
     DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
     ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                             &
@@ -45,6 +46,8 @@ MODULE mo_jsb_io
   INTEGER :: tables(max_tables) = (/186, 187, 188, 189, 190/)
 
   INTEGER, SAVE :: cdi_zaxis_ids(max_cdi_zaxis_ids) = 0  ! Collects CDI zaxis IDs of all JSBACH vgrids
+
+  REAL(wp), SAVE :: missval = -9.E33
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io'
 

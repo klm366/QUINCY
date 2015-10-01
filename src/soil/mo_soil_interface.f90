@@ -10,13 +10,23 @@
 MODULE mo_soil_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_model_class, ONLY: t_jsb_model
-  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
-  USE mo_jsb_base,        ONLY: get_model
-  USE mo_jsb_control,     ONLY: debug_on
+#include "dsl_jsbach.inc"
+
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
-  USE mo_util,            ONLY: one_of
+
+  USE mo_jsb_model_class, ONLY: t_jsb_model
+  USE mo_jsb_class,       ONLY: Get_model
+  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
+  USE mo_jsb_control,     ONLY: debug_on
+
+  Use_processes SOIL, SRF, VEG, ATM2LAND
+  Use_config(soil)
+  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
+!!$  Use_memory(atm2land)
+  Use_memory(soil)
+  Use_memory(srf)
+  Use_memory(veg)
 
   IMPLICIT NONE
   PRIVATE
@@ -27,7 +37,7 @@ MODULE mo_soil_interface
 
 CONTAINS
 
-  ! TBD: At the moment, the hydrology for soil and canopy is handled together in the soil component (as in echam6).
+  ! TBD: At the moment, the hydrology for soil and canopy is handled together in the soil process (as in echam6).
   ! This will be changed later.
   SUBROUTINE update_soil_1( tile, iblk, ics, ice, nc, dtime, steplen)
 
@@ -40,58 +50,62 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
+    Def_config(soil_conf, soil)
+    Def_memory(soil_mem, soil)
+    Def_memory(srf_mem, srf)
+    Def_memory(veg_mem, veg)
+    Def_memory(atm2land_mem, atm2land)
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER ::       &
-      & fract          (:),    &
-      & t_srf_unfilt   (:),    &
-      & tte_corr       (:),    &
-      & t_air          (:),    &
-      & q_air          (:),    &
-      & wind_10m       (:),    &
-      & rain           (:),    &
-      & snow           (:),    &
-      & wsr_soil       (:),    &
-      & wsr_srf        (:),    &
-      & wfract_srf     (:),    &
-      & wsn_soil       (:),    &
-      & wsn_srf        (:),    &
-      & sfract_srf     (:),    &
-      & wsn_can        (:),    &
-      & lai            (:),    &
-      & fract_fpc_max  (:),    &
-      & hcap_grnd      (:),    &
-      & hcap_grnd_old  (:),    &
-      & evapotrans     (:),    &
-      & trans          (:),    &
-      & evapopot       (:),    &
-      & vhcap          (:),    &
-      & hdiff          (:),    &
-      & t_soil_acoef   (:,:),  &
-      & t_soil_bcoef   (:,:),  &
-      & t_soil         (:,:),  &
-      & grnd_hflx      (:),    &
-      & grnd_hflx_old  (:),    &
-      & oro_stddev     (:),    &
-      & runoff         (:),    &
-      & drainage       (:),    &
-      & pme_glacier    (:),    &
-      & ws             (:),    &
-      & ws_l           (:,:),  &
-      & ws_fc_l        (:,:),  &
-      & ws_pwp_l       (:,:),  &
-      & soil_depth     (:),    &
-      & ws_root        (:),    &
-      & ws_fc_root     (:),    &
-      & root_depth     (:),    &
-      & shc            (:),    &
-      & mpot           (:),    &
-      & bclapp         (:),    &
-      & vpor           (:),    &
-      & psdi           (:),    &
-      & overflow       (:),    &
-      & glacier        (:),    &
-      & wsn_glacier    (:)
+    Def_real2d_onChunk(fract)
+    Def_real2d_onChunk(t_srf_unfilt)
+    Def_real2d_onChunk(tte_corr)
+    Def_real2d_onChunk(t_air)
+    Def_real2d_onChunk(q_air)
+    Def_real2d_onChunk(wind_10m)
+    Def_real2d_onChunk(rain)
+    Def_real2d_onChunk(snow)
+    Def_real2d_onChunk(wsr_soil)
+    Def_real2d_onChunk(wsr_srf)
+    Def_real2d_onChunk(wfract_srf)
+    Def_real2d_onChunk(wsn_soil)
+    Def_real2d_onChunk(wsn_srf)
+    Def_real2d_onChunk(sfract_srf)
+    Def_real2d_onChunk(wsn_can)
+    Def_real2d_onChunk(lai)
+    Def_real2d_onChunk(fract_fpc_max)
+    Def_real2d_onChunk(hcap_grnd)
+    Def_real2d_onChunk(hcap_grnd_old)
+    Def_real2d_onChunk(evapotrans)
+    Def_real2d_onChunk(trans)
+    Def_real2d_onChunk(evapopot)
+    Def_real2d_onChunk(vhcap)
+    Def_real2d_onChunk(hdiff)
+    Def_real3d_onChunk(t_soil_acoef)
+    Def_real3d_onChunk(t_soil_bcoef)
+    Def_real3d_onChunk(t_soil)
+    Def_real2d_onChunk(grnd_hflx)
+    Def_real2d_onChunk(grnd_hflx_old)
+    Def_real2d_onChunk(oro_stddev)
+    Def_real2d_onChunk(runoff)
+    Def_real2d_onChunk(drainage)
+    Def_real2d_onChunk(pme_glacier)
+    Def_real2d_onChunk(ws)
+    Def_real3d_onChunk(ws_l)
+    Def_real3d_onChunk(ws_fc_l)
+    Def_real3d_onChunk(ws_pwp_l)
+    Def_real2d_onChunk(soil_depth)
+    Def_real2d_onChunk(ws_root)
+    Def_real2d_onChunk(ws_fc_root)
+    Def_real2d_onChunk(root_depth)
+    Def_real2d_onChunk(shc)
+    Def_real2d_onChunk(mpot)
+    Def_real2d_onChunk(bclapp)
+    Def_real2d_onChunk(vpor)
+    Def_real2d_onChunk(psdi)
+    Def_real2d_onChunk(overflow)
+    Def_real2d_onChunk(glacier)
+    Def_real2d_onChunk(wsn_glacier)
 
 
     ! Locally allocated vectors
@@ -121,68 +135,76 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_1'
 
-    IF (one_of('soil', tile%components) < 1) RETURN
+    IF (.NOT. tile%Is_process_active(SOIL)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
-    model => get_model(tile%owner_model_id)
+    model => Get_model(tile%owner_model_id)
+
+!!$    soil_conf => Get_soil_config(model)
+    Get_config(soil_conf, SOIL)
 
     IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
     IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
 
     ! Get reference to variables for current block
     !
-    fract                => tile%mem%fract                               (ics:ice,    iblk)
+    fract                => tile%fract                               (ics:ice,    iblk)
     IF (ALL(fract(:) < EPSILON(1._wp))) RETURN
 
-    t_srf_unfilt   => tile%mem%srf  %energy_state   %t_srf_unfilt        (ics:ice,    iblk)
-    tte_corr       => tile%mem%srf  %energy_state   %tte_corr            (ics:ice,    iblk)
-    t_air          => tile%mem      %atm2land       %t_air               (ics:ice,    iblk)
-    q_air          => tile%mem      %atm2land       %q_air               (ics:ice,    iblk)
-    wind_10m       => tile%mem      %atm2land       %wind_10m            (ics:ice,    iblk)
-    rain           => tile%mem      %atm2land       %rain                (ics:ice,    iblk)
-    snow           => tile%mem      %atm2land       %snow                (ics:ice,    iblk)
-    wsr_soil       => tile%mem%soil %water_state    %wsr_soil            (ics:ice,    iblk)
-    wsr_srf        => tile%mem%srf  %water_state    %wsr_srf             (ics:ice,    iblk)
-    wfract_srf     => tile%mem%srf  %water_state    %wfract_srf          (ics:ice,    iblk)
-    wsn_soil       => tile%mem%soil %water_state    %wsn_soil            (ics:ice,    iblk)
-    wsn_srf        => tile%mem%srf  %water_state    %wsn_srf             (ics:ice,    iblk)
-    sfract_srf     => tile%mem%srf  %water_state    %sfract_srf          (ics:ice,    iblk)
-    wsn_can        => tile%mem%veg  %water_state    %wsn_can             (ics:ice,    iblk)
-    lai            => tile%mem%veg  %phys_state     %lai                 (ics:ice,    iblk)
-    fract_fpc_max  => tile%mem%veg  %phys_state     %fract_fpc_max       (ics:ice,    iblk)
-    hcap_grnd      => tile%mem%soil %energy_state   %hcap_grnd           (ics:ice,    iblk)
-    hcap_grnd_old  => tile%mem%soil %energy_state   %hcap_grnd_old       (ics:ice,    iblk)
-    evapotrans     => tile%mem%srf  %water_flux     %evapotrans          (ics:ice,    iblk)
-    trans          => tile%mem%srf  %water_flux     %trans               (ics:ice,    iblk)
-    evapopot       => tile%mem%srf  %water_flux     %evapopot            (ics:ice,    iblk)
-    vhcap          => tile%mem%soil %phys_state     %vhcap               (ics:ice,    iblk)
-    hdiff          => tile%mem%soil %phys_state     %hdiff               (ics:ice,    iblk)
-    t_soil_acoef   => tile%mem%soil %energy_state   %t_soil_acoef        (ics:ice, :, iblk)
-    t_soil_bcoef   => tile%mem%soil %energy_state   %t_soil_bcoef        (ics:ice, :, iblk)
-    t_soil         => tile%mem%soil %energy_state   %t_soil              (ics:ice, :, iblk)
-    grnd_hflx      => tile%mem%soil %energy_flux    %grnd_hflx           (ics:ice,    iblk)
-    grnd_hflx_old  => tile%mem%soil %energy_flux    %grnd_hflx_old       (ics:ice,    iblk)
-    oro_stddev     => tile%mem%srf  %phys_state     %oro_stddev          (ics:ice,    iblk)
-    runoff         => tile%mem%soil %water_flux     %runoff              (ics:ice,    iblk)
-    drainage       => tile%mem%soil %water_flux     %drainage            (ics:ice,    iblk)
-    pme_glacier    => tile%mem%soil %water_flux     %pme_glacier         (ics:ice,    iblk)
-    ws             => tile%mem%soil %water_state    %ws                  (ics:ice,    iblk)
-    ws_l           => tile%mem%soil %water_state    %ws_l                (ics:ice, :, iblk)
-    ws_fc_l        => tile%mem%soil %water_state    %ws_fc_l             (ics:ice, :, iblk)
-    ws_pwp_l       => tile%mem%soil %water_state    %ws_pwp_l            (ics:ice, :, iblk)
-    soil_depth     => tile%mem%soil %phys_state     %soil_depth          (ics:ice,    iblk)
-    ws_root        => tile%mem%veg  %water_state    %ws_root             (ics:ice,    iblk)
-    ws_fc_root     => tile%mem%veg  %water_state    %ws_fc_root          (ics:ice,    iblk)
-    root_depth     => tile%mem%veg  %phys_state     %root_depth          (ics:ice,    iblk)
-    shc            => tile%mem%soil %phys_state     %shc                 (ics:ice,    iblk)
-    mpot           => tile%mem%soil %phys_state     %mpot                (ics:ice,    iblk)
-    bclapp         => tile%mem%soil %phys_state     %bclapp              (ics:ice,    iblk)
-    vpor           => tile%mem%soil %phys_state     %vpor                (ics:ice,    iblk)
-    psdi           => tile%mem%soil %phys_state     %psdi                (ics:ice,    iblk)
-    overflow       => tile%mem%soil %water_state    %overflow            (ics:ice,    iblk)
-    glacier        => tile%mem%srf  %phys_state     %glacier             (ics:ice, iblk)
-    wsn_glacier    => tile%mem%srf  %water_state    %wsn_glacier         (ics:ice, iblk)
+    Get_memory(soil_mem, SOIL)
+    Get_memory(srf_mem, SRF)
+    Get_memory(veg_mem, VEG)
+    Get_memory(atm2land_mem, ATM2LAND)
+
+    t_srf_unfilt   => srf_mem  %t_srf_unfilt%ptr        (ics:ice,    iblk)
+    tte_corr       => srf_mem  %tte_corr%ptr            (ics:ice,    iblk)
+    t_air          => atm2land_mem       %t_air%ptr               (ics:ice,    iblk)
+    q_air          => atm2land_mem       %q_air%ptr               (ics:ice,    iblk)
+    wind_10m       => atm2land_mem       %wind_10m%ptr            (ics:ice,    iblk)
+    rain           => atm2land_mem       %rain%ptr                (ics:ice,    iblk)
+    snow           => atm2land_mem       %snow%ptr                (ics:ice,    iblk)
+    wsr_soil       => soil_mem %wsr_soil%ptr            (ics:ice,    iblk)
+    wsr_srf        => srf_mem  %wsr_srf%ptr             (ics:ice,    iblk)
+    wfract_srf     => srf_mem  %wfract_srf%ptr          (ics:ice,    iblk)
+    wsn_soil       => soil_mem %wsn_soil%ptr            (ics:ice,    iblk)
+    wsn_srf        => srf_mem  %wsn_srf%ptr             (ics:ice,    iblk)
+    sfract_srf     => srf_mem  %sfract_srf%ptr          (ics:ice,    iblk)
+    wsn_can        => veg_mem  %wsn_can%ptr             (ics:ice,    iblk)
+    lai            => veg_mem  %lai%ptr                 (ics:ice,    iblk)
+    fract_fpc_max  => veg_mem  %fract_fpc_max%ptr       (ics:ice,    iblk)
+    hcap_grnd      => soil_mem %hcap_grnd%ptr           (ics:ice,    iblk)
+    hcap_grnd_old  => soil_mem %hcap_grnd_old%ptr       (ics:ice,    iblk)
+    evapotrans     => srf_mem  %evapotrans%ptr          (ics:ice,    iblk)
+    trans          => srf_mem  %trans%ptr               (ics:ice,    iblk)
+    evapopot       => srf_mem  %evapopot%ptr            (ics:ice,    iblk)
+    vhcap          => soil_mem %vhcap%ptr               (ics:ice,    iblk)
+    hdiff          => soil_mem %hdiff%ptr               (ics:ice,    iblk)
+    t_soil_acoef   => soil_mem %t_soil_acoef%ptr        (ics:ice, :, iblk)
+    t_soil_bcoef   => soil_mem %t_soil_bcoef%ptr        (ics:ice, :, iblk)
+    t_soil         => soil_mem %t_soil%ptr              (ics:ice, :, iblk)
+    grnd_hflx      => soil_mem %grnd_hflx%ptr           (ics:ice,    iblk)
+    grnd_hflx_old  => soil_mem %grnd_hflx_old%ptr       (ics:ice,    iblk)
+    oro_stddev     => srf_mem  %oro_stddev%ptr          (ics:ice,    iblk)
+    runoff         => soil_mem %runoff%ptr              (ics:ice,    iblk)
+    drainage       => soil_mem %drainage%ptr            (ics:ice,    iblk)
+    pme_glacier    => soil_mem %pme_glacier%ptr         (ics:ice,    iblk)
+    ws             => soil_mem %ws%ptr                  (ics:ice,    iblk)
+    ws_l           => soil_mem %ws_l%ptr                (ics:ice, :, iblk)
+    ws_fc_l        => soil_mem %ws_fc_l%ptr             (ics:ice, :, iblk)
+    ws_pwp_l       => soil_mem %ws_pwp_l%ptr            (ics:ice, :, iblk)
+    soil_depth     => soil_mem %soil_depth%ptr          (ics:ice,    iblk)
+    ws_root        => veg_mem  %ws_root%ptr             (ics:ice,    iblk)
+    ws_fc_root     => veg_mem  %ws_fc_root%ptr          (ics:ice,    iblk)
+    root_depth     => veg_mem  %root_depth%ptr          (ics:ice,    iblk)
+    shc            => soil_mem %shc%ptr                 (ics:ice,    iblk)
+    mpot           => soil_mem %mpot%ptr                (ics:ice,    iblk)
+    bclapp         => soil_mem %bclapp%ptr              (ics:ice,    iblk)
+    vpor           => soil_mem %vpor%ptr                (ics:ice,    iblk)
+    psdi           => soil_mem %psdi%ptr                (ics:ice,    iblk)
+    overflow       => soil_mem %overflow%ptr            (ics:ice,    iblk)
+    glacier        => srf_mem  %glacier%ptr             (ics:ice, iblk)
+    wsn_glacier    => srf_mem  %wsn_glacier%ptr         (ics:ice, iblk)
 
     is_present(:)    = .TRUE.
     is_glacier(:)    = ( glacier(:) > 0.5_wp )
@@ -195,7 +217,7 @@ CONTAINS
     END IF
 
     ! Maximum capacity of skin reservoir (soil + canopy)
-    wsr_max(:) = model%config%soil%wsr_capacity * (1._wp + lai(:) * fract_fpc_max(:))
+    wsr_max(:) = soil_conf%wsr_capacity * (1._wp + lai(:) * fract_fpc_max(:))
 
     IF (lstart) THEN
       evapotrans_no_snow_skin(:) = 0._wp
@@ -223,7 +245,7 @@ CONTAINS
     grnd_hflx_old(:) = grnd_hflx(:)
     hcap_grnd_old(:) = hcap_grnd(:)
 
-    CALL update_soiltemp(nc, model%config%soil%nsoil_water, dtime, lstart, &
+    CALL update_soiltemp(nc, soil_conf%nsoil_water, dtime, lstart, &
       & t_srf_unfilt(:), wsn_soil(:), hdiff(:), vhcap(:), &
       & t_soil_acoef(:,:), t_soil_bcoef(:,:), t_soil(:,:), &
       & hcap_grnd(:), grnd_hflx(:), &
@@ -231,7 +253,7 @@ CONTAINS
 
 !vg:  runoff_hd and drainage_hd no longer needed
 !vg:  accumulation does not make sense (no reset)
-    CALL update_surf_up(nc, dtime, model%config%soil%nsoil_water, &
+    CALL update_surf_up(nc, dtime, soil_conf%nsoil_water, &
       & wsr_soil(:), wfract_srf(:), wsr_max(:), &
       & ws_root(:), ws_fc_root(:), &
       & t_soil(:,1), sfract_srf(:), oro_stddev(:), &
@@ -239,7 +261,7 @@ CONTAINS
       & rain(:), is_present(:), is_glacier(:), &
       & runoff(:), drainage(:), & !vg runoff_hd(:), drainage_hd(:), &
       & melt_water_excess(:), skin_res_evap(:), &
-      & model%config%soil%dz_water(1:model%config%soil%nsoil_water), &
+      & soil_conf%dz_water(1:soil_conf%nsoil_water), &
       & ws_l(:,:), ws_fc_l(:,:), ws_pwp_l(:,:), root_depth(:), soil_depth(:), &
       & shc(:), mpot(:), bclapp(:), vpor(:), &
       & trans(:), reduced_evap(:), &
@@ -279,15 +301,15 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_2'
 
-    IF (one_of('soil', tile%components) < 1) RETURN
+    IF (.NOT. tile%Is_process_active(SOIL)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
-    model => get_model(tile%owner_model_id)
+    model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
-    fract                => tile%mem%fract                               (ics:ice,    iblk)
+    fract                => tile%fract                               (ics:ice,    iblk)
     IF (ALL(fract(:) < EPSILON(1._wp))) RETURN
 
 

@@ -27,9 +27,9 @@ MODULE mo_jsb_grid_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_grid, t_jsb_vgrid, t_jsb_vgrid_ptr
-  PUBLIC :: new_grid, delete_grid, print_grid, new_vgrid, delete_vgrid
-  PUBLIC :: get_nblks, get_nproma
+  PUBLIC :: t_jsb_grid, t_jsb_grid_ptr, t_jsb_vgrid, t_jsb_vgrid_ptr
+  PUBLIC :: new_grid, delete_grid, new_vgrid, delete_vgrid
+  PUBLIC :: get_nblks, get_nproma, t_jsb_subset
 
   TYPE t_jsb_grid
     INTEGER                      :: id = 0
@@ -50,7 +50,19 @@ MODULE mo_jsb_grid_class
     LOGICAL                      :: configured = .FALSE.
     TYPE(t_patch), POINTER       :: patch
     TYPE(pe_decomposed), POINTER :: decomposition
+  CONTAINS
+    PROCEDURE :: Print => Print_grid
   END TYPE t_jsb_grid
+
+  TYPE t_jsb_grid_ptr
+    TYPE(t_jsb_grid), POINTER :: p => NULL()
+  END TYPE t_jsb_grid_ptr
+
+  TYPE t_jsb_subset
+    INTEGER :: block
+    INTEGER :: start_index
+    INTEGER :: end_index
+  END TYPE t_jsb_subset
 
   TYPE t_jsb_vgrid
     INTEGER ::           id           = 0
@@ -65,7 +77,7 @@ MODULE mo_jsb_grid_class
   END TYPE t_jsb_vgrid
 
   TYPE t_jsb_vgrid_ptr
-    TYPE(t_jsb_vgrid), POINTER :: p
+    TYPE(t_jsb_vgrid), POINTER :: p => NULL()
   END TYPE t_jsb_vgrid_ptr
 
   INTERFACE new_grid
@@ -238,37 +250,33 @@ CONTAINS
   !!
   !! Subroutine to print description of grid instance.
   !!
-  SUBROUTINE print_grid(self)
+  SUBROUTINE Print_grid(this)
 
-#ifdef HAVE_F2003
-    TYPE(t_jsb_grid), POINTER, INTENT(in) :: self
-#else
-    TYPE(t_jsb_grid), POINTER             :: self
-#endif
+    CLASS(t_jsb_grid), INTENT(in) :: this
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':print_grid'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Print_grid'
 
     CALL message(TRIM(routine), 'print JSBACH grid description')
 
-    WRITE(message_text,'(A,I2,A,A)') 'Grid id: ', self%id, ', grid name: ', TRIM(self%name)
+    WRITE(message_text,'(A,I2,A,A)') 'Grid id: ', this%id, ', grid name: ', TRIM(this%name)
     CALL message('  ', message_text)
 
-    IF (.NOT. self%configured) THEN
+    IF (.NOT. this%configured) THEN
       CALL message(TRIM(routine), 'Grid not configured yet!')
       RETURN
     END IF
 
-    IF (self%filename /= '') THEN
-      WRITE(message_text,'(A)') 'Grid filename: '//TRIM(self%filename)
+    IF (this%filename /= '') THEN
+      WRITE(message_text,'(A)') 'Grid filename: '//TRIM(this%filename)
       CALL message('  ', message_text)
     END IF
 
-    IF (self%patch%id >= 0) THEN
-      WRITE(message_text,'(A,I2)') 'Patch ID: ', self%patch%id
+    IF (this%patch%id >= 0) THEN
+      WRITE(message_text,'(A,I2)') 'Patch ID: ', this%patch%id
       CALL message('  ', message_text)
     END IF
 
-  END SUBROUTINE print_grid
+  END SUBROUTINE Print_grid
 
   INTEGER FUNCTION get_nblks(self)
 

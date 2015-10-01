@@ -13,13 +13,14 @@ MODULE mo_srf_config_class
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
+  USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_srf_config, new_srf_config
 
-  TYPE t_srf_config
+  TYPE, EXTENDS(t_jsb_config) :: t_srf_config
      LOGICAL :: active
      CHARACTER(len=filename_max) :: ic_filename
      CHARACTER(len=filename_max) :: bc_filename
