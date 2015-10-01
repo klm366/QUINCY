@@ -1,0 +1,109 @@
+\hypertarget{namespacemo__jsb__varlist}{}\section{mo\+\_\+jsb\+\_\+varlist Module Reference}
+\label{namespacemo__jsb__varlist}\index{mo\+\_\+jsb\+\_\+varlist@{mo\+\_\+jsb\+\_\+varlist}}
+
+
+Contains routines for var\+\_\+lists/streams.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(t\+\_\+jsb\+\_\+varlist) function, pointer, public \hyperlink{namespacemo__jsb__varlist_adb20739c60013ec241ba5044f198ce74}{get\+\_\+varlist} (name, patch\+\_\+id)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__varlist_a5689561f18201663129fe99f0badd5cf}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+varlist\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains routines for var\+\_\+lists/streams. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/12-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__varlist_adb20739c60013ec241ba5044f198ce74}{}\index{mo\+\_\+jsb\+\_\+varlist@{mo\+\_\+jsb\+\_\+varlist}!get\+\_\+varlist@{get\+\_\+varlist}}
+\index{get\+\_\+varlist@{get\+\_\+varlist}!mo\+\_\+jsb\+\_\+varlist@{mo\+\_\+jsb\+\_\+varlist}}
+\subsubsection[{get\+\_\+varlist}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+jsb\+\_\+varlist) function, pointer, public mo\+\_\+jsb\+\_\+varlist\+::get\+\_\+varlist (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{name, }
+\item[{integer, intent(in)}]{patch\+\_\+id}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__varlist_adb20739c60013ec241ba5044f198ce74}
+
+
+Definition at line 45 of file mo\+\_\+jsb\+\_\+varlist.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+varlist\+\_\+iface\+::add\+\_\+var\+\_\+list\+\_\+element\+\_\+r2d(), mo\+\_\+jsb\+\_\+varlist\+\_\+iface\+::add\+\_\+var\+\_\+list\+\_\+element\+\_\+r3d(), mo\+\_\+jsb\+\_\+io\+\_\+iface\+::grib2\+\_\+var(), mo\+\_\+jsb\+\_\+io\+::missval, modname, and mo\+\_\+jsb\+\_\+io\+::tables.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+tile\+\_\+class\+::init\+\_\+tile().
+
+
+\begin{DoxyCode}
+45 
+46     \textcolor{keywordtype}{CHARACTER(LEN=*)}, \textcolor{keywordtype}{INTENT(in)} :: name
+47     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(in)} :: patch\_id
+48     \textcolor{keywordtype}{TYPE}(t\_jsb\_varlist), \textcolor{keywordtype}{POINTER} :: return\_ptr
+49 
+50     \textcolor{keyword}{CALL }jsb\_get\_var\_list(return\_ptr, trim(name))
+51 
+52     \textcolor{keywordflow}{IF} (.NOT. \textcolor{keyword}{ASSOCIATED}(return\_ptr)) \textcolor{keywordflow}{THEN}
+53       \textcolor{keyword}{ALLOCATE}(return\_ptr)
+54       \textcolor{keyword}{CALL }jsb\_new\_var\_list(return\_ptr, trim(name), &
+55         & patch\_id, lrestart=.true., restart\_type=filetype\_nc2, table=\hyperlink{namespacemo__jsb__io_aefd9f08b763f8c7b6f4cdbc576e3dd14}{tables}(1))
+56 \textcolor{keywordflow}{    END IF}
+57 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=349pt]{d5/d62/namespacemo__jsb__varlist_adb20739c60013ec241ba5044f198ce74_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=316pt]{d5/d62/namespacemo__jsb__varlist_adb20739c60013ec241ba5044f198ce74_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__varlist_a5689561f18201663129fe99f0badd5cf}{}\index{mo\+\_\+jsb\+\_\+varlist@{mo\+\_\+jsb\+\_\+varlist}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+varlist@{mo\+\_\+jsb\+\_\+varlist}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+varlist\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+varlist\textquotesingle{}}\label{namespacemo__jsb__varlist_a5689561f18201663129fe99f0badd5cf}
+
+
+Definition at line 40 of file mo\+\_\+jsb\+\_\+varlist.\+f90.
+
+
+
+Referenced by get\+\_\+varlist().
+
+
+\begin{DoxyCode}
+40   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_varlist'}
+\end{DoxyCode}

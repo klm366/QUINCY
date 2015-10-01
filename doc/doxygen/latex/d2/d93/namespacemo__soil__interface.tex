@@ -1,0 +1,427 @@
+\hypertarget{namespacemo__soil__interface}{}\section{mo\+\_\+soil\+\_\+interface Module Reference}
+\label{namespacemo__soil__interface}\index{mo\+\_\+soil\+\_\+interface@{mo\+\_\+soil\+\_\+interface}}
+
+
+Contains the interfaces to the soil processes.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__soil__interface_ae4d0b6e8f65eeda1006776c05f071a85}{update\+\_\+soil\+\_\+1} (tile, iblk, ics, ice, nc, dtime, steplen)
+\item 
+subroutine, public \hyperlink{namespacemo__soil__interface_ac0a837dc7aabd46cf851cef036afaeda}{update\+\_\+soil\+\_\+2} (tile, iblk, ics, ice, nc)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__soil__interface_a77346ad1827157005a696fc3bcb7c014}{modname} = \textquotesingle{}mo\+\_\+soil\+\_\+interface\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains the interfaces to the soil processes. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__soil__interface_ae4d0b6e8f65eeda1006776c05f071a85}{}\index{mo\+\_\+soil\+\_\+interface@{mo\+\_\+soil\+\_\+interface}!update\+\_\+soil\+\_\+1@{update\+\_\+soil\+\_\+1}}
+\index{update\+\_\+soil\+\_\+1@{update\+\_\+soil\+\_\+1}!mo\+\_\+soil\+\_\+interface@{mo\+\_\+soil\+\_\+interface}}
+\subsubsection[{update\+\_\+soil\+\_\+1}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+soil\+\_\+interface\+::update\+\_\+soil\+\_\+1 (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc, }
+\item[{real(wp), intent(in)}]{dtime, }
+\item[{real(wp), intent(in)}]{steplen}
+\end{DoxyParamCaption}
+)}\label{namespacemo__soil__interface_ae4d0b6e8f65eeda1006776c05f071a85}
+
+
+Definition at line 43 of file mo\+\_\+soil\+\_\+interface.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+control\+::debug\+\_\+on(), modname, mo\+\_\+soil\+\_\+process\+::update\+\_\+soiltemp(), mo\+\_\+soil\+\_\+process\+::update\+\_\+surf\+\_\+down(), and mo\+\_\+soil\+\_\+process\+::update\+\_\+surf\+\_\+up().
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+43 
+44     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__soil__process}{mo\_soil\_process}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__soil__process_a7dd6c425ac02aef924fb1fa3de6b373d}{update\_surf\_down}, 
+      \hyperlink{namespacemo__soil__process_a9f2a04bdb962c1615ee419e1c62d6870}{update\_soiltemp}, \hyperlink{namespacemo__soil__process_a6baae437b29f7d04d8bb10cb1d52249f}{update\_surf\_up}
+45 
+46     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+47     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+48     \textcolor{keywordtype}{REAL(wp)},          \textcolor{keywordtype}{INTENT(in)} :: dtime, steplen
+49 
+50     \textcolor{comment}{! Local variables}
+51     \textcolor{comment}{!}
+52     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}    :: model
+53     def\_config(soil\_conf, soil)
+54     def\_memory(soil\_mem, soil)
+55     def\_memory(srf\_mem, srf)
+56     def\_memory(veg\_mem, veg)
+57     def\_memory(atm2land\_mem, atm2land)
+58 
+59     \textcolor{comment}{! Pointers to variables in memory}
+60     def\_real2d\_onchunk(fract)
+61     def\_real2d\_onchunk(t\_srf\_unfilt)
+62     def\_real2d\_onchunk(tte\_corr)
+63     def\_real2d\_onchunk(t\_air)
+64     def\_real2d\_onchunk(q\_air)
+65     def\_real2d\_onchunk(wind\_10m)
+66     def\_real2d\_onchunk(rain)
+67     def\_real2d\_onchunk(snow)
+68     def\_real2d\_onchunk(wsr\_soil)
+69     def\_real2d\_onchunk(wsr\_srf)
+70     def\_real2d\_onchunk(wfract\_srf)
+71     def\_real2d\_onchunk(wsn\_soil)
+72     def\_real2d\_onchunk(wsn\_srf)
+73     def\_real2d\_onchunk(sfract\_srf)
+74     def\_real2d\_onchunk(wsn\_can)
+75     def\_real2d\_onchunk(lai)
+76     def\_real2d\_onchunk(fract\_fpc\_max)
+77     def\_real2d\_onchunk(hcap\_grnd)
+78     def\_real2d\_onchunk(hcap\_grnd\_old)
+79     def\_real2d\_onchunk(evapotrans)
+80     def\_real2d\_onchunk(trans)
+81     def\_real2d\_onchunk(evapopot)
+82     def\_real2d\_onchunk(vhcap)
+83     def\_real2d\_onchunk(hdiff)
+84     def\_real3d\_onchunk(t\_soil\_acoef)
+85     def\_real3d\_onchunk(t\_soil\_bcoef)
+86     def\_real3d\_onchunk(t\_soil)
+87     def\_real2d\_onchunk(grnd\_hflx)
+88     def\_real2d\_onchunk(grnd\_hflx\_old)
+89     def\_real2d\_onchunk(oro\_stddev)
+90     def\_real2d\_onchunk(runoff)
+91     def\_real2d\_onchunk(drainage)
+92     def\_real2d\_onchunk(pme\_glacier)
+93     def\_real2d\_onchunk(ws)
+94     def\_real3d\_onchunk(ws\_l)
+95     def\_real3d\_onchunk(ws\_fc\_l)
+96     def\_real3d\_onchunk(ws\_pwp\_l)
+97     def\_real2d\_onchunk(soil\_depth)
+98     def\_real2d\_onchunk(ws\_root)
+99     def\_real2d\_onchunk(ws\_fc\_root)
+100     def\_real2d\_onchunk(root\_depth)
+101     def\_real2d\_onchunk(shc)
+102     def\_real2d\_onchunk(mpot)
+103     def\_real2d\_onchunk(bclapp)
+104     def\_real2d\_onchunk(vpor)
+105     def\_real2d\_onchunk(psdi)
+106     def\_real2d\_onchunk(overflow)
+107     def\_real2d\_onchunk(glacier)
+108     def\_real2d\_onchunk(wsn\_glacier)
+109 
+110 
+111     \textcolor{comment}{! Locally allocated vectors}
+112     \textcolor{comment}{!}
+113     \textcolor{keywordtype}{REAL(wp)} :: &
+114       wsr\_max(nc), &
+115       evapotrans\_no\_snow\_skin(nc), &
+116       snow\_acc(nc), &
+117       snow\_melt\_acc(nc), &
+118       glacier\_runoff\_acc(nc), &
+119       melt\_water\_excess(nc), &
+120       snow\_melt(nc), &
+121 \textcolor{comment}{!vg       runoff\_hd(nc), &}
+122 \textcolor{comment}{!vg       drainage\_hd(nc), &}
+123       skin\_res\_evap(nc), &
+124       reduced\_evap(nc)
+125 
+126     \textcolor{keywordtype}{LOGICAL} :: &
+127       is\_present(nc), &
+128       is\_glacier(nc)
+129 
+130     \textcolor{keywordtype}{INTEGER} :: jllog
+131 
+132     \textcolor{keywordtype}{LOGICAL} :: lstart
+133     \textcolor{keywordtype}{LOGICAL} :: l\_tpe\_open = .false.
+134     \textcolor{keywordtype}{LOGICAL} :: l\_tpe\_closed = .false.
+135 
+136     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':update\_soil\_1'}
+137 
+138     \textcolor{keywordflow}{IF} (.NOT. tile%Is\_process\_active(soil)) \textcolor{keywordflow}{RETURN}
+139 
+140     \textcolor{keywordflow}{IF} (debug\_on() .AND. iblk == 1) \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting update'})
+141 
+142     model => get\_model(tile%owner\_model\_id)
+143 
+144 \textcolor{comment}{!!$    soil\_conf => Get\_soil\_config(model)}
+145     get\_config(soil\_conf, soil)
+146 
+147     \textcolor{keywordflow}{IF} (model%config%usecase == \textcolor{stringliteral}{'jsbach\_lite\_tpe\_open'})   l\_tpe\_open = .true.
+148     \textcolor{keywordflow}{IF} (model%config%usecase == \textcolor{stringliteral}{'jsbach\_lite\_tpe\_closed'}) l\_tpe\_closed = .true.
+149 
+150     \textcolor{comment}{! Get reference to variables for current block}
+151     \textcolor{comment}{!}
+152     fract                => tile%fract                               (ics:ice,    iblk)
+153     \textcolor{keywordflow}{IF} (all(fract(:) < epsilon(1.\_wp))) \textcolor{keywordflow}{RETURN}
+154 
+155     get\_memory(soil\_mem, soil)
+156     get\_memory(srf\_mem, srf)
+157     get\_memory(veg\_mem, veg)
+158     get\_memory(atm2land\_mem, atm2land)
+159 
+160     t\_srf\_unfilt   => srf\_mem  %t\_srf\_unfilt%ptr        (ics:ice,    iblk)
+161     tte\_corr       => srf\_mem  %tte\_corr%ptr            (ics:ice,    iblk)
+162     t\_air          => atm2land\_mem       %t\_air%ptr               (ics:ice,    iblk)
+163     q\_air          => atm2land\_mem       %q\_air%ptr               (ics:ice,    iblk)
+164     wind\_10m       => atm2land\_mem       %wind\_10m%ptr            (ics:ice,    iblk)
+165     rain           => atm2land\_mem       %rain%ptr                (ics:ice,    iblk)
+166     snow           => atm2land\_mem       %snow%ptr                (ics:ice,    iblk)
+167     wsr\_soil       => soil\_mem %wsr\_soil%ptr            (ics:ice,    iblk)
+168     wsr\_srf        => srf\_mem  %wsr\_srf%ptr             (ics:ice,    iblk)
+169     wfract\_srf     => srf\_mem  %wfract\_srf%ptr          (ics:ice,    iblk)
+170     wsn\_soil       => soil\_mem %wsn\_soil%ptr            (ics:ice,    iblk)
+171     wsn\_srf        => srf\_mem  %wsn\_srf%ptr             (ics:ice,    iblk)
+172     sfract\_srf     => srf\_mem  %sfract\_srf%ptr          (ics:ice,    iblk)
+173     wsn\_can        => veg\_mem  %wsn\_can%ptr             (ics:ice,    iblk)
+174     lai            => veg\_mem  %lai%ptr                 (ics:ice,    iblk)
+175     fract\_fpc\_max  => veg\_mem  %fract\_fpc\_max%ptr       (ics:ice,    iblk)
+176     hcap\_grnd      => soil\_mem %hcap\_grnd%ptr           (ics:ice,    iblk)
+177     hcap\_grnd\_old  => soil\_mem %hcap\_grnd\_old%ptr       (ics:ice,    iblk)
+178     evapotrans     => srf\_mem  %evapotrans%ptr          (ics:ice,    iblk)
+179     trans          => srf\_mem  %trans%ptr               (ics:ice,    iblk)
+180     evapopot       => srf\_mem  %evapopot%ptr            (ics:ice,    iblk)
+181     vhcap          => soil\_mem %vhcap%ptr               (ics:ice,    iblk)
+182     hdiff          => soil\_mem %hdiff%ptr               (ics:ice,    iblk)
+183     t\_soil\_acoef   => soil\_mem %t\_soil\_acoef%ptr        (ics:ice, :, iblk)
+184     t\_soil\_bcoef   => soil\_mem %t\_soil\_bcoef%ptr        (ics:ice, :, iblk)
+185     t\_soil         => soil\_mem %t\_soil%ptr              (ics:ice, :, iblk)
+186     grnd\_hflx      => soil\_mem %grnd\_hflx%ptr           (ics:ice,    iblk)
+187     grnd\_hflx\_old  => soil\_mem %grnd\_hflx\_old%ptr       (ics:ice,    iblk)
+188     oro\_stddev     => srf\_mem  %oro\_stddev%ptr          (ics:ice,    iblk)
+189     runoff         => soil\_mem %runoff%ptr              (ics:ice,    iblk)
+190     drainage       => soil\_mem %drainage%ptr            (ics:ice,    iblk)
+191     pme\_glacier    => soil\_mem %pme\_glacier%ptr         (ics:ice,    iblk)
+192     ws             => soil\_mem %ws%ptr                  (ics:ice,    iblk)
+193     ws\_l           => soil\_mem %ws\_l%ptr                (ics:ice, :, iblk)
+194     ws\_fc\_l        => soil\_mem %ws\_fc\_l%ptr             (ics:ice, :, iblk)
+195     ws\_pwp\_l       => soil\_mem %ws\_pwp\_l%ptr            (ics:ice, :, iblk)
+196     soil\_depth     => soil\_mem %soil\_depth%ptr          (ics:ice,    iblk)
+197     ws\_root        => veg\_mem  %ws\_root%ptr             (ics:ice,    iblk)
+198     ws\_fc\_root     => veg\_mem  %ws\_fc\_root%ptr          (ics:ice,    iblk)
+199     root\_depth     => veg\_mem  %root\_depth%ptr          (ics:ice,    iblk)
+200     shc            => soil\_mem %shc%ptr                 (ics:ice,    iblk)
+201     mpot           => soil\_mem %mpot%ptr                (ics:ice,    iblk)
+202     bclapp         => soil\_mem %bclapp%ptr              (ics:ice,    iblk)
+203     vpor           => soil\_mem %vpor%ptr                (ics:ice,    iblk)
+204     psdi           => soil\_mem %psdi%ptr                (ics:ice,    iblk)
+205     overflow       => soil\_mem %overflow%ptr            (ics:ice,    iblk)
+206     glacier        => srf\_mem  %glacier%ptr             (ics:ice, iblk)
+207     wsn\_glacier    => srf\_mem  %wsn\_glacier%ptr         (ics:ice, iblk)
+208 
+209     is\_present(:)    = .true.
+210     is\_glacier(:)    = ( glacier(:) > 0.5\_wp )
+211 
+212     \textcolor{keywordflow}{IF} (all(wsn\_srf(:) < 0.\_wp)) \textcolor{keywordflow}{THEN}          \textcolor{comment}{! Start of experiment}
+213       lstart = .true.
+214       wsn\_srf(:) = 0.\_wp
+215     \textcolor{keywordflow}{ELSE}
+216       lstart = .false.
+217 \textcolor{keywordflow}{    END IF}
+218 
+219     \textcolor{comment}{! Maximum capacity of skin reservoir (soil + canopy)}
+220     wsr\_max(:) = soil\_conf%wsr\_capacity * (1.\_wp + lai(:) * fract\_fpc\_max(:))
+221 
+222     \textcolor{keywordflow}{IF} (lstart) \textcolor{keywordflow}{THEN}
+223       evapotrans\_no\_snow\_skin(:) = 0.\_wp
+224       snow\_acc(:) = 0.\_wp
+225       snow\_melt\_acc(:) = 0.\_wp
+226       glacier\_runoff\_acc(:) = 0.\_wp
+227       melt\_water\_excess(:) = 0.\_wp
+228       tte\_corr(:) = 0.\_wp
+229       snow\_melt(:) = 0.\_wp
+230 \textcolor{keywordflow}{    END IF}
+231 
+232     \textcolor{keyword}{CALL }\hyperlink{namespacemo__soil__process_a7dd6c425ac02aef924fb1fa3de6b373d}{update\_surf\_down}(nc, dtime, lstart, &
+233       & q\_air(:), t\_srf\_unfilt(:), wind\_10m(:), t\_air(:), wsr\_soil(:), wfract\_srf(:), &
+234       & wsr\_max(:), wsn\_soil(:), sfract\_srf(:), wsn\_can(:), wsn\_glacier(:), &
+235       & hcap\_grnd(:), evapotrans(:), evapopot(:), evapotrans\_no\_snow\_skin(:), rain(:),  snow(:), &
+236       & is\_present(:), is\_glacier(:), pme\_glacier(:), &
+237 \textcolor{comment}{!!$      & snow\_acc(:), snow\_melt\_acc(:), glacier\_runoff\_acc(:), &}
+238       melt\_water\_excess(:), &
+239       & tte\_corr(:), snow\_melt(:) &
+240       & )
+241 
+242     \textcolor{comment}{! Save old ground heat flux and heat capacity before updating}
+243     \textcolor{comment}{! The old flux and capacity (which have been used in the implicit calculation of the new surface
+       temperature) are}
+244     \textcolor{comment}{! given back to the atmosphere so that the surface energy balance can be computed there}
+245     grnd\_hflx\_old(:) = grnd\_hflx(:)
+246     hcap\_grnd\_old(:) = hcap\_grnd(:)
+247 
+248     \textcolor{keyword}{CALL }\hyperlink{namespacemo__soil__process_a9f2a04bdb962c1615ee419e1c62d6870}{update\_soiltemp}(nc, soil\_conf%nsoil\_water, dtime, lstart, &
+249       & t\_srf\_unfilt(:), wsn\_soil(:), hdiff(:), vhcap(:), &
+250       & t\_soil\_acoef(:,:), t\_soil\_bcoef(:,:), t\_soil(:,:), &
+251       & hcap\_grnd(:), grnd\_hflx(:), &
+252       & is\_present(:), is\_glacier(:))
+253 
+254 \textcolor{comment}{!vg:  runoff\_hd and drainage\_hd no longer needed}
+255 \textcolor{comment}{!vg:  accumulation does not make sense (no reset)}
+256     \textcolor{keyword}{CALL }\hyperlink{namespacemo__soil__process_a6baae437b29f7d04d8bb10cb1d52249f}{update\_surf\_up}(nc, dtime, soil\_conf%nsoil\_water, &
+257       & wsr\_soil(:), wfract\_srf(:), wsr\_max(:), &
+258       & ws\_root(:), ws\_fc\_root(:), &
+259       & t\_soil(:,1), sfract\_srf(:), oro\_stddev(:), &
+260       & evapotrans(:), evapopot(:), evapotrans\_no\_snow\_skin(:), &
+261       & rain(:), is\_present(:), is\_glacier(:), &
+262       & runoff(:), drainage(:), & \textcolor{comment}{!vg runoff\_hd(:), drainage\_hd(:), &}
+263       & melt\_water\_excess(:), skin\_res\_evap(:), &
+264       & soil\_conf%dz\_water(1:soil\_conf%nsoil\_water), &
+265       & ws\_l(:,:), ws\_fc\_l(:,:), ws\_pwp\_l(:,:), root\_depth(:), soil\_depth(:), &
+266       & shc(:), mpot(:), bclapp(:), vpor(:), &
+267       & trans(:), reduced\_evap(:), &
+268 \textcolor{comment}{!!$      & SPREAD(0.318517\_wp, NCOPIES=nc, DIM=1), & !Temporary}
+269 \textcolor{comment}{!!$      & SPREAD(0.185245\_wp, NCOPIES=nc, DIM=1), & !Temporary}
+270       & psdi(:), &
+271       & overflow(:), &
+272       & jllog, &
+273       & l\_tpe\_open, &
+274       & l\_tpe\_closed &
+275       & )
+276 
+277     ws(:) = sum(ws\_l(:,:), dim=2)
+278 
+279     wsn\_srf(:) = wsn\_soil(:) + wsn\_can(:)
+280     wsr\_srf(:) = wsr\_soil(:) \textcolor{comment}{! + wsr\_can(:)}
+281 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/d93/namespacemo__soil__interface_ae4d0b6e8f65eeda1006776c05f071a85_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/d93/namespacemo__soil__interface_ae4d0b6e8f65eeda1006776c05f071a85_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__soil__interface_ac0a837dc7aabd46cf851cef036afaeda}{}\index{mo\+\_\+soil\+\_\+interface@{mo\+\_\+soil\+\_\+interface}!update\+\_\+soil\+\_\+2@{update\+\_\+soil\+\_\+2}}
+\index{update\+\_\+soil\+\_\+2@{update\+\_\+soil\+\_\+2}!mo\+\_\+soil\+\_\+interface@{mo\+\_\+soil\+\_\+interface}}
+\subsubsection[{update\+\_\+soil\+\_\+2}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+soil\+\_\+interface\+::update\+\_\+soil\+\_\+2 (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc}
+\end{DoxyParamCaption}
+)}\label{namespacemo__soil__interface_ac0a837dc7aabd46cf851cef036afaeda}
+
+
+Definition at line 285 of file mo\+\_\+soil\+\_\+interface.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+control\+::debug\+\_\+on(), and modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+285 
+286 
+287     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+288     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+289 
+290     \textcolor{comment}{! Local variables}
+291     \textcolor{comment}{!}
+292     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}    :: model
+293 
+294     \textcolor{comment}{! Pointers to variables in memory}
+295     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} ::       &
+296       & fract          (:)
+297 
+298     \textcolor{comment}{! Locally allocated vectors}
+299     \textcolor{comment}{!}
+300 \textcolor{comment}{!!$    REAL(wp) :: &}
+301 
+302     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':update\_soil\_2'}
+303 
+304     \textcolor{keywordflow}{IF} (.NOT. tile%Is\_process\_active(soil)) \textcolor{keywordflow}{RETURN}
+305 
+306     \textcolor{keywordflow}{IF} (debug\_on() .AND. iblk == 1) \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting update'})
+307 
+308     model => get\_model(tile%owner\_model\_id)
+309 
+310     \textcolor{comment}{! Get reference to variables for current block}
+311     \textcolor{comment}{!}
+312     fract                => tile%fract                               (ics:ice,    iblk)
+313     \textcolor{keywordflow}{IF} (all(fract(:) < epsilon(1.\_wp))) \textcolor{keywordflow}{RETURN}
+314 
+315 
+316 
+317 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=346pt]{d2/d93/namespacemo__soil__interface_ac0a837dc7aabd46cf851cef036afaeda_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/d93/namespacemo__soil__interface_ac0a837dc7aabd46cf851cef036afaeda_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__soil__interface_a77346ad1827157005a696fc3bcb7c014}{}\index{mo\+\_\+soil\+\_\+interface@{mo\+\_\+soil\+\_\+interface}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+soil\+\_\+interface@{mo\+\_\+soil\+\_\+interface}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+soil\+\_\+interface\+::modname = \textquotesingle{}mo\+\_\+soil\+\_\+interface\textquotesingle{}}\label{namespacemo__soil__interface_a77346ad1827157005a696fc3bcb7c014}
+
+
+Definition at line 36 of file mo\+\_\+soil\+\_\+interface.\+f90.
+
+
+
+Referenced by update\+\_\+soil\+\_\+1(), and update\+\_\+soil\+\_\+2().
+
+
+\begin{DoxyCode}
+36   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_soil\_interface'}
+\end{DoxyCode}

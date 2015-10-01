@@ -1,0 +1,53 @@
+\hypertarget{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d__time}{}\section{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+:\+:netcdf\+\_\+read\+\_\+2d\+\_\+time Interface Reference}
+\label{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d__time}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+2d\+\_\+time@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+2d\+\_\+time}}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+real(wp) function, dimension(\+:,\+:,\+:), pointer \hyperlink{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d__time_aa7e041f066b09f5950869c5369a1f074}{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array, start\+\_\+time\+\_\+step, end\+\_\+time\+\_\+step)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+
+
+Definition at line 48 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90.
+
+
+
+\subsection{Member Function/\+Subroutine Documentation}
+\hypertarget{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d__time_aa7e041f066b09f5950869c5369a1f074}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+2d\+\_\+time@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+2d\+\_\+time}!netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time@{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time}}
+\index{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time@{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+2d\+\_\+time@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+2d\+\_\+time}}
+\subsubsection[{netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, dimension(\+:,\+:,\+:), pointer mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+2d\+\_\+time\+::netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time (
+\begin{DoxyParamCaption}
+\item[{type({\bf t\+\_\+input\+\_\+file}), intent(inout)}]{input\+\_\+file, }
+\item[{character(len=$\ast$), intent(in)}]{variable\+\_\+name, }
+\item[{real(wp), dimension(\+:,\+:,\+:), optional, target}]{fill\+\_\+array, }
+\item[{integer, intent(in), optional}]{start\+\_\+time\+\_\+step, }
+\item[{integer, intent(in), optional}]{end\+\_\+time\+\_\+step}
+\end{DoxyParamCaption}
+)}\label{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d__time_aa7e041f066b09f5950869c5369a1f074}
+
+
+Definition at line 181 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+181 
+182     \textcolor{keywordtype}{TYPE}(t\_input\_file), \textcolor{keywordtype}{INTENT(inout)} :: input\_file
+183     \textcolor{keywordtype}{CHARACTER(LEN=*)},   \textcolor{keywordtype}{INTENT(in)}    :: variable\_name
+184     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{TARGET}, \textcolor{keywordtype}{OPTIONAL}        :: fill\_array(:,:,:)
+185     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{OPTIONAL},  \textcolor{keywordtype}{INTENT(in)}    :: start\_time\_step, end\_time\_step
+186     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER}                 :: netcdf\_read\_real\_2d\_time(:,:,:)
+187 
+188     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':netcdf\_read\_real\_2d\_time'}
+189 
+190     netcdf\_read\_real\_2d\_time => netcdf\_read\_real\_2d\_extdim( &
+191       input\_file, variable\_name, fill\_array,    &
+192       start\_extdim=start\_time\_step, end\_extdim=end\_time\_step, extdim\_name=\textcolor{stringliteral}{"time"})
+193                                  
+\end{DoxyCode}
+
+
+The documentation for this interface was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+/home/reiner/git/jsbach.\+ulme/src/adapters/\hyperlink{mo__jsb__io__netcdf__iface_8f90}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90}\end{DoxyCompactItemize}

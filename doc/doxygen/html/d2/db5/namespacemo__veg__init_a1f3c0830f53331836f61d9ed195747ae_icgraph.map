@@ -1,0 +1,5 @@
+<map id="mo_veg_init::veg_init_ic" name="mo_veg_init::veg_init_ic">
+<area shape="rect" id="node2" href="$d8/d8e/namespacemo__jsb__model__init.html#adfe552aef42349bce64eb6bbd05e01e7" title="mo_jsb_model_init::\linit_model_common" alt="" coords="216,39,355,80"/>
+<area shape="rect" id="node3" href="$d8/d8e/namespacemo__jsb__model__init.html#adca97e8b4accd7231a2461e78399ee71" title="mo_jsb_model_init::\linit_model_decomposition" alt="" coords="403,5,575,47"/>
+<area shape="rect" id="node4" href="$d8/d8e/namespacemo__jsb__model__init.html#abde13ff24f002945132bb153233d61ea" title="mo_jsb_model_init::\linit_model_patch" alt="" coords="419,71,558,112"/>
+</map>
