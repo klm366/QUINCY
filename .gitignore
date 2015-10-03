@@ -2,3 +2,5 @@
 *~
 !src/hd/.history
 !src/hd/*~
+!src/include/.history
+!src/include/*~
