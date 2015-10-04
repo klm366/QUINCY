@@ -24,11 +24,11 @@ MODULE mo_hd_interface
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile
   USE mo_jsb_control,     ONLY: debug_on
 
-  Use_processes HD, SRF, SOIL
-  Use_config(hd)
-  Use_memory(hd)
-  Use_memory(srf)
-  Use_memory(soil)
+  dsl$jsb Use_processes HD, SRF, SOIL
+  dsl$jsb Use_config(hd)
+  dsl$jsb Use_memory(hd)
+  dsl$jsb Use_memory(srf)
+  dsl$jsb Use_memory(soil)
 
   USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade
 
@@ -59,34 +59,31 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_model), POINTER :: model
 
-    Def_config(hd_conf, hd)
-    Def_memory(hd_mem, hd)
-    Def_memory(srf_mem, srf)
-    Def_memory(soil_mem, soil)
+    dsl$jsb Def_config(hd_conf, hd)
+    dsl$jsb Def_memory(hd_mem, hd)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(soil_mem, soil)
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER :: &
-      & area        (:), &
-      & land        (:), &
-      & lake        (:), &
-      & glacier     (:), &
-      & runoff      (:), &
-      & drainage    (:), &
-      & pme_glacier (:), &
-      & discharge   (:)
+    dsl$jsb onChunk_Real2D :: area
+    dsl$jsb onChunk_Real2D :: land
+    dsl$jsb onChunk_Real2D :: lake
+    dsl$jsb onChunk_Real2D :: glacier
+    dsl$jsb onChunk_Real2D :: runoff
+    dsl$jsb onChunk_Real2D :: drainage
+    dsl$jsb onChunk_Real2D :: pme_glacier
+    dsl$jsb onChunk_Real2D :: discharge
 
-    REAL(wp), POINTER ::    &
-      & ret_overlflow  (:), &
-      & nres_overlflow (:), &
-      & ret_baseflow   (:), &
-      & nres_baseflow  (:), &
-      & ret_riverflow  (:), &
-      & nres_riverflow (:)
+    dsl$jsb onChunk_Real2D :: ret_overlflow
+    dsl$jsb onChunk_Real2D :: nres_overlflow
+    dsl$jsb onChunk_Real2D :: ret_baseflow
+    dsl$jsb onChunk_Real2D :: nres_baseflow
+    dsl$jsb onChunk_Real2D :: ret_riverflow
+    dsl$jsb onChunk_Real2D :: nres_riverflow
 
-    REAL(wp), POINTER ::     &
-      & overlflow_res (:,:), &
-      & baseflow_res  (:,:), &
-      & riverflow_res (:,:)
+    dsl$jsb onChunk_Real3D :: overlflow_res
+    dsl$jsb onChunk_Real3D :: baseflow_res
+    dsl$jsb onChunk_Real3D :: riverflow_res
 
     REAL(wp), ALLOCATABLE :: inflow(:)
     REAL(wp), ALLOCATABLE :: outflow_runoff(:)
@@ -104,33 +101,33 @@ CONTAINS
     model => get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
 
-    Get_config(hd_conf, HD)
+    dsl$jsb Get_config(hd_conf, HD)
 
     ! Get reference to variables for current block
     !
-    Get_memory(hd_mem, HD)
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(hd_mem, HD)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
 
-    area           => grid                     %area                (ics:ice, iblk)
-    land           => srf_mem  %land%ptr                (ics:ice, iblk)
-    lake           => srf_mem  %lake%ptr                (ics:ice, iblk)
-    glacier        => srf_mem  %glacier%ptr             (ics:ice, iblk)
-    runoff         => soil_mem %runoff%ptr              (ics:ice, iblk)
-    drainage       => soil_mem %drainage%ptr            (ics:ice, iblk)
-    pme_glacier    => soil_mem %pme_glacier%ptr         (ics:ice, iblk)
-    discharge      => soil_mem %discharge%ptr           (ics:ice, iblk)
+    area           => grid               %area                (ics:ice, iblk)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  land,           OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  lake,           OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  glacier,        OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem, runoff,         OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem, drainage,       OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem, pme_glacier,    OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem, discharge,      OUT)
 
-    overlflow_res  => hd_mem   %overlflow_res%ptr       (ics:ice, :, iblk)
-    baseflow_res   => hd_mem   %baseflow_res%ptr        (ics:ice, :, iblk)
-    riverflow_res  => hd_mem   %riverflow_res%ptr       (ics:ice, :, iblk)
+    dsl$jsb Get_var3D_onChunk( hd_mem,   overlflow_res,  OUT)
+    dsl$jsb Get_var3D_onChunk( hd_mem,   baseflow_res,   OUT)
+    dsl$jsb Get_var3D_onChunk( hd_mem,   riverflow_res,  OUT)
 
-    ret_overlflow  => hd_mem   %ret_overlflow%ptr       (ics:ice, iblk)
-    nres_overlflow => hd_mem   %nres_overlflow%ptr      (ics:ice, iblk)
-    ret_baseflow   => hd_mem   %ret_baseflow%ptr        (ics:ice, iblk)
-    nres_baseflow  => hd_mem   %nres_baseflow%ptr       (ics:ice, iblk)
-    ret_riverflow  => hd_mem   %ret_riverflow%ptr       (ics:ice, iblk)
-    nres_riverflow => hd_mem   %nres_riverflow%ptr      (ics:ice, iblk)
+    dsl$jsb Get_var2D_onChunk( hd_mem,   ret_overlflow,  OUT)
+    dsl$jsb Get_var2D_onChunk( hd_mem,   nres_overlflow, OUT)
+    dsl$jsb Get_var2D_onChunk( hd_mem,   ret_baseflow,   OUT)
+    dsl$jsb Get_var2D_onChunk( hd_mem,   nres_baseflow,  OUT)
+    dsl$jsb Get_var2D_onChunk( hd_mem,   ret_riverflow,  OUT)
+    dsl$jsb Get_var2D_onChunk( hd_mem,   nres_riverflow, OUT)
 
 
     ! Configuration parameters from the namelist
@@ -186,9 +183,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
 
-    Def_config(hd_conf, hd)
-    Def_memory(srf_mem, srf)
-    Def_memory(soil_mem, soil)
+    dsl$jsb Def_config(hd_conf, hd)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(soil_mem, soil)
 
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_riverflow'
 
@@ -224,12 +221,12 @@ CONTAINS
     tile => model%Get_top_tile()        ! HD works on the root tile
     grid => Get_grid(model%grid_id)
 
-    Get_config(hd_conf, HD)
+    dsl$jsb Get_config(hd_conf, HD)
 
     ! Get reference to variables for current block
     !
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
 
     area            => grid     %area                (:,:)
     land            => srf_mem  %land%ptr            (:,:)
@@ -327,9 +324,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
 
-    Def_config(hd_conf, hd)
-    Def_memory(srf_mem, srf)
-    Def_memory(soil_mem, soil)
+    dsl$jsb Def_config(hd_conf, hd)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(soil_mem, soil)
 
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_init_water_budget'
 
@@ -357,11 +354,11 @@ CONTAINS
     tile => model%Get_top_tile()        ! HD works on the root tile
     grid => Get_grid(model%grid_id)
 
-    Get_config(hd_conf, HD)
+    dsl$jsb Get_config(hd_conf, HD)
 
     ! Get reference to variables in memory
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
 
     area           => grid                        %area        (:,:)
     land           => srf_mem   %land%ptr        (:,:)
@@ -443,11 +440,11 @@ CONTAINS
     tile => model%Get_top_tile()        ! HD works on the root tile
     grid => Get_grid(model%grid_id)
 
-    Get_config(hd_conf, HD)
+    dsl$jsb Get_config(hd_conf, HD)
 
     ! Get reference to variables in memory
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
 
     area            => grid         %area            (:,:)
     land            => srf_mem  %land%ptr            (:,:)
@@ -494,8 +491,8 @@ CONTAINS
     IF (diag_water_budget) THEN
       WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(discharge_ocean*area*in_domain), ' kg/s'
       CALL message (TRIM(routine),message_text)
-    END IF 
-  
+    END IF
+
     DEALLOCATE (in_domain)
 
   END SUBROUTINE hd_check_water_budget

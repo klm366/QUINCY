@@ -21,11 +21,11 @@ MODULE mo_soil_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
                                   jsb_netcdf_read_2d, jsb_netcdf_read_2d_time, jsb_netcdf_read_2d_extdim
 
-  Use_processes SOIL, SRF
-  Use_config(soil)
-  Use_config(srf)
-  Use_memory(soil)
-  Use_memory(srf)
+  dsl$jsb Use_processes SOIL, SRF
+  dsl$jsb Use_config(soil)
+  dsl$jsb Use_config(srf)
+  dsl$jsb Use_memory(soil)
+  dsl$jsb Use_memory(srf)
 
   IMPLICIT NONE
   PRIVATE
@@ -58,14 +58,14 @@ CONTAINS
     TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),       POINTER :: model
-    Def_memory(soil_mem, soil)
+    dsl$jsb Def_memory(soil_mem, soil)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init_bc'
 
     model => get_model(tile%owner_model_id)
 
     ! Get soil memory of the tile
-    Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(soil_mem, SOIL)
 
     IF (.NOT. ASSOCIATED(soil_mem)) RETURN
 
@@ -81,10 +81,10 @@ CONTAINS
     TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),         POINTER :: model
-    Def_config(soil_conf, soil)
-    Def_memory(soil_mem, soil)
-    Def_config(srf_conf, srf)
-    Def_memory(srf_mem, srf)
+    dsl$jsb Def_config(soil_conf, soil)
+    dsl$jsb Def_memory(soil_mem, soil)
+    dsl$jsb Def_config(srf_conf, srf)
+    dsl$jsb Def_memory(srf_mem, srf)
 
     INTEGER :: isoil
     REAL(wp), POINTER :: &
@@ -104,12 +104,12 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get soil memory of the tile
-    Get_memory(soil_mem, SOIL)
-    Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(srf_mem, SRF)
 
     ! Get soil config
-    Get_config(soil_conf, SOIL)
-    Get_config(srf_conf, SRF)
+    dsl$jsb Get_config(soil_conf, SOIL)
+    dsl$jsb Get_config(srf_conf, SRF)
 
     IF (.NOT. soil_conf%active) RETURN
 
@@ -180,7 +180,7 @@ CONTAINS
       soil_mem%hdiff%ptr(:,i) = fao_thermal_diff(NINT(fao(:,i)))
     END DO
 !!$    soil_mem%hdiff%ptr(:,:) = RESHAPE(fao_thermal_diff(PACK(NINT(fao(:,:)), fao(:,:) > -1._wp)), /( SIZE(fao(:,:),1),SIZE(fao(:,:),2) )/ )
-    
+
     ! Volumetric heat capacity of dry soil
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
@@ -266,7 +266,7 @@ CONTAINS
       soil_mem%ws_l%ptr(:,isoil,:) = MERGE(return_pointer3d(:,:,1), 0._wp, return_pointer3d(:,:,1) >= 0._wp)
     END DO
 !!$      soil_mem%ws_l%ptr(:,:,:) = MERGE(soil_mem%ws_l%ptr(:,:,:), 0._wp, soil_mem%ws_l%ptr(:,:,:) >= 0._wp)
-    
+
 !!$    ! Temporary: Distribute water content of whole column to layers. Should be read in from ini file.
 !!$    DO isoil=1,soil_conf%nsoil_water
 !!$      WHERE (soil_mem%soil_depth%ptr(:,:) > 0._wp)

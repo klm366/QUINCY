@@ -20,13 +20,13 @@ MODULE mo_soil_interface
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile
   USE mo_jsb_control,     ONLY: debug_on
 
-  Use_processes SOIL, SRF, VEG, ATM2LAND
-  Use_config(soil)
+  dsl$jsb Use_processes SOIL, SRF, VEG, ATM2LAND
+  dsl$jsb Use_config(soil)
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$  Use_memory(atm2land)
-  Use_memory(soil)
-  Use_memory(srf)
-  Use_memory(veg)
+!!$  dsl$jsb Use_memory(atm2land)
+  dsl$jsb Use_memory(soil)
+  dsl$jsb Use_memory(srf)
+  dsl$jsb Use_memory(veg)
 
   IMPLICIT NONE
   PRIVATE
@@ -50,62 +50,62 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
-    Def_config(soil_conf, soil)
-    Def_memory(soil_mem, soil)
-    Def_memory(srf_mem, srf)
-    Def_memory(veg_mem, veg)
-    Def_memory(atm2land_mem, atm2land)
+    dsl$jsb Def_config(soil_conf, soil)
+    dsl$jsb Def_memory(soil_mem, soil)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(veg_mem, veg)
+    dsl$jsb Def_memory(atm2land_mem, atm2land)
 
     ! Pointers to variables in memory
-    Def_real2d_onChunk(fract)
-    Def_real2d_onChunk(t_srf_unfilt)
-    Def_real2d_onChunk(tte_corr)
-    Def_real2d_onChunk(t_air)
-    Def_real2d_onChunk(q_air)
-    Def_real2d_onChunk(wind_10m)
-    Def_real2d_onChunk(rain)
-    Def_real2d_onChunk(snow)
-    Def_real2d_onChunk(wsr_soil)
-    Def_real2d_onChunk(wsr_srf)
-    Def_real2d_onChunk(wfract_srf)
-    Def_real2d_onChunk(wsn_soil)
-    Def_real2d_onChunk(wsn_srf)
-    Def_real2d_onChunk(sfract_srf)
-    Def_real2d_onChunk(wsn_can)
-    Def_real2d_onChunk(lai)
-    Def_real2d_onChunk(fract_fpc_max)
-    Def_real2d_onChunk(hcap_grnd)
-    Def_real2d_onChunk(hcap_grnd_old)
-    Def_real2d_onChunk(evapotrans)
-    Def_real2d_onChunk(trans)
-    Def_real2d_onChunk(evapopot)
-    Def_real2d_onChunk(vhcap)
-    Def_real2d_onChunk(hdiff)
-    Def_real3d_onChunk(t_soil_acoef)
-    Def_real3d_onChunk(t_soil_bcoef)
-    Def_real3d_onChunk(t_soil)
-    Def_real2d_onChunk(grnd_hflx)
-    Def_real2d_onChunk(grnd_hflx_old)
-    Def_real2d_onChunk(oro_stddev)
-    Def_real2d_onChunk(runoff)
-    Def_real2d_onChunk(drainage)
-    Def_real2d_onChunk(pme_glacier)
-    Def_real2d_onChunk(ws)
-    Def_real3d_onChunk(ws_l)
-    Def_real3d_onChunk(ws_fc_l)
-    Def_real3d_onChunk(ws_pwp_l)
-    Def_real2d_onChunk(soil_depth)
-    Def_real2d_onChunk(ws_root)
-    Def_real2d_onChunk(ws_fc_root)
-    Def_real2d_onChunk(root_depth)
-    Def_real2d_onChunk(shc)
-    Def_real2d_onChunk(mpot)
-    Def_real2d_onChunk(bclapp)
-    Def_real2d_onChunk(vpor)
-    Def_real2d_onChunk(psdi)
-    Def_real2d_onChunk(overflow)
-    Def_real2d_onChunk(glacier)
-    Def_real2d_onChunk(wsn_glacier)
+    dsl$jsb onChunk_Real2D :: fract
+    dsl$jsb onChunk_Real2D :: t_srf_unfilt
+    dsl$jsb onChunk_Real2D :: tte_corr
+    dsl$jsb onChunk_Real2D :: t_air
+    dsl$jsb onChunk_Real2D :: q_air
+    dsl$jsb onChunk_Real2D :: wind_10m
+    dsl$jsb onChunk_Real2D :: rain
+    dsl$jsb onChunk_Real2D :: snow
+    dsl$jsb onChunk_Real2D :: wsr_soil
+    dsl$jsb onChunk_Real2D :: wsr_srf
+    dsl$jsb onChunk_Real2D :: wfract_srf
+    dsl$jsb onChunk_Real2D :: wsn_soil
+    dsl$jsb onChunk_Real2D :: wsn_srf
+    dsl$jsb onChunk_Real2D :: sfract_srf
+    dsl$jsb onChunk_Real2D :: wsn_can
+    dsl$jsb onChunk_Real2D :: lai
+    dsl$jsb onChunk_Real2D :: fract_fpc_max
+    dsl$jsb onChunk_Real2D :: hcap_grnd
+    dsl$jsb onChunk_Real2D :: hcap_grnd_old
+    dsl$jsb onChunk_Real2D :: evapotrans
+    dsl$jsb onChunk_Real2D :: trans
+    dsl$jsb onChunk_Real2D :: evapopot
+    dsl$jsb onChunk_Real2D :: vhcap
+    dsl$jsb onChunk_Real2D :: hdiff
+    dsl$jsb onChunk_Real3D :: t_soil_acoef
+    dsl$jsb onChunk_Real3D :: t_soil_bcoef
+    dsl$jsb onChunk_Real3D :: t_soil
+    dsl$jsb onChunk_Real2D :: grnd_hflx
+    dsl$jsb onChunk_Real2D :: grnd_hflx_old
+    dsl$jsb onChunk_Real2D :: oro_stddev
+    dsl$jsb onChunk_Real2D :: runoff
+    dsl$jsb onChunk_Real2D :: drainage
+    dsl$jsb onChunk_Real2D :: pme_glacier
+    dsl$jsb onChunk_Real2D :: ws
+    dsl$jsb onChunk_Real3D :: ws_l
+    dsl$jsb onChunk_Real3D :: ws_fc_l
+    dsl$jsb onChunk_Real3D :: ws_pwp_l
+    dsl$jsb onChunk_Real2D :: soil_depth
+    dsl$jsb onChunk_Real2D :: ws_root
+    dsl$jsb onChunk_Real2D :: ws_fc_root
+    dsl$jsb onChunk_Real2D :: root_depth
+    dsl$jsb onChunk_Real2D :: shc
+    dsl$jsb onChunk_Real2D :: mpot
+    dsl$jsb onChunk_Real2D :: bclapp
+    dsl$jsb onChunk_Real2D :: vpor
+    dsl$jsb onChunk_Real2D :: psdi
+    dsl$jsb onChunk_Real2D :: overflow
+    dsl$jsb onChunk_Real2D :: glacier
+    dsl$jsb onChunk_Real2D :: wsn_glacier
 
 
     ! Locally allocated vectors
@@ -142,7 +142,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
 !!$    soil_conf => Get_soil_config(model)
-    Get_config(soil_conf, SOIL)
+    dsl$jsb Get_config(soil_conf, SOIL)
 
     IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
     IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
@@ -152,59 +152,62 @@ CONTAINS
     fract                => tile%fract                               (ics:ice,    iblk)
     IF (ALL(fract(:) < EPSILON(1._wp))) RETURN
 
-    Get_memory(soil_mem, SOIL)
-    Get_memory(srf_mem, SRF)
-    Get_memory(veg_mem, VEG)
-    Get_memory(atm2land_mem, ATM2LAND)
+    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(veg_mem, VEG)
+    dsl$jsb Get_memory(atm2land_mem, ATM2LAND)
 
-    t_srf_unfilt   => srf_mem  %t_srf_unfilt%ptr        (ics:ice,    iblk)
-    tte_corr       => srf_mem  %tte_corr%ptr            (ics:ice,    iblk)
-    t_air          => atm2land_mem       %t_air%ptr               (ics:ice,    iblk)
-    q_air          => atm2land_mem       %q_air%ptr               (ics:ice,    iblk)
-    wind_10m       => atm2land_mem       %wind_10m%ptr            (ics:ice,    iblk)
-    rain           => atm2land_mem       %rain%ptr                (ics:ice,    iblk)
-    snow           => atm2land_mem       %snow%ptr                (ics:ice,    iblk)
-    wsr_soil       => soil_mem %wsr_soil%ptr            (ics:ice,    iblk)
-    wsr_srf        => srf_mem  %wsr_srf%ptr             (ics:ice,    iblk)
-    wfract_srf     => srf_mem  %wfract_srf%ptr          (ics:ice,    iblk)
-    wsn_soil       => soil_mem %wsn_soil%ptr            (ics:ice,    iblk)
-    wsn_srf        => srf_mem  %wsn_srf%ptr             (ics:ice,    iblk)
-    sfract_srf     => srf_mem  %sfract_srf%ptr          (ics:ice,    iblk)
-    wsn_can        => veg_mem  %wsn_can%ptr             (ics:ice,    iblk)
-    lai            => veg_mem  %lai%ptr                 (ics:ice,    iblk)
-    fract_fpc_max  => veg_mem  %fract_fpc_max%ptr       (ics:ice,    iblk)
-    hcap_grnd      => soil_mem %hcap_grnd%ptr           (ics:ice,    iblk)
-    hcap_grnd_old  => soil_mem %hcap_grnd_old%ptr       (ics:ice,    iblk)
-    evapotrans     => srf_mem  %evapotrans%ptr          (ics:ice,    iblk)
-    trans          => srf_mem  %trans%ptr               (ics:ice,    iblk)
-    evapopot       => srf_mem  %evapopot%ptr            (ics:ice,    iblk)
-    vhcap          => soil_mem %vhcap%ptr               (ics:ice,    iblk)
-    hdiff          => soil_mem %hdiff%ptr               (ics:ice,    iblk)
-    t_soil_acoef   => soil_mem %t_soil_acoef%ptr        (ics:ice, :, iblk)
-    t_soil_bcoef   => soil_mem %t_soil_bcoef%ptr        (ics:ice, :, iblk)
-    t_soil         => soil_mem %t_soil%ptr              (ics:ice, :, iblk)
-    grnd_hflx      => soil_mem %grnd_hflx%ptr           (ics:ice,    iblk)
-    grnd_hflx_old  => soil_mem %grnd_hflx_old%ptr       (ics:ice,    iblk)
-    oro_stddev     => srf_mem  %oro_stddev%ptr          (ics:ice,    iblk)
-    runoff         => soil_mem %runoff%ptr              (ics:ice,    iblk)
-    drainage       => soil_mem %drainage%ptr            (ics:ice,    iblk)
-    pme_glacier    => soil_mem %pme_glacier%ptr         (ics:ice,    iblk)
-    ws             => soil_mem %ws%ptr                  (ics:ice,    iblk)
-    ws_l           => soil_mem %ws_l%ptr                (ics:ice, :, iblk)
-    ws_fc_l        => soil_mem %ws_fc_l%ptr             (ics:ice, :, iblk)
-    ws_pwp_l       => soil_mem %ws_pwp_l%ptr            (ics:ice, :, iblk)
-    soil_depth     => soil_mem %soil_depth%ptr          (ics:ice,    iblk)
-    ws_root        => veg_mem  %ws_root%ptr             (ics:ice,    iblk)
-    ws_fc_root     => veg_mem  %ws_fc_root%ptr          (ics:ice,    iblk)
-    root_depth     => veg_mem  %root_depth%ptr          (ics:ice,    iblk)
-    shc            => soil_mem %shc%ptr                 (ics:ice,    iblk)
-    mpot           => soil_mem %mpot%ptr                (ics:ice,    iblk)
-    bclapp         => soil_mem %bclapp%ptr              (ics:ice,    iblk)
-    vpor           => soil_mem %vpor%ptr                (ics:ice,    iblk)
-    psdi           => soil_mem %psdi%ptr                (ics:ice,    iblk)
-    overflow       => soil_mem %overflow%ptr            (ics:ice,    iblk)
-    glacier        => srf_mem  %glacier%ptr             (ics:ice, iblk)
-    wsn_glacier    => srf_mem  %wsn_glacier%ptr         (ics:ice, iblk)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, t_air,         IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, q_air,         IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, wind_10m,      IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, rain,          IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, snow,          IN)
+
+    dsl$jsb Get_var2D_onChunk( soil_mem,     wsr_soil,      OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     wsn_soil,      OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     hcap_grnd,     OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     hcap_grnd_old, OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     vhcap,         OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     hdiff,         OUT)
+    dsl$jsb Get_var3D_onChunk( soil_mem,     t_soil_acoef,  OUT)
+    dsl$jsb Get_var3D_onChunk( soil_mem,     t_soil_bcoef,  OUT)
+    dsl$jsb Get_var3D_onChunk( soil_mem,     t_soil,        OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     grnd_hflx,     OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     grnd_hflx_old, OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     runoff,        OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     drainage,      OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     pme_glacier,   OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     ws,            OUT)
+    dsl$jsb Get_var3D_onChunk( soil_mem,     ws_l,          OUT)
+    dsl$jsb Get_var3D_onChunk( soil_mem,     ws_fc_l,       OUT)
+    dsl$jsb Get_var3D_onChunk( soil_mem,     ws_pwp_l,      OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     soil_depth,    OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     shc,           IN)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     mpot,          IN)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     bclapp,        IN)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     vpor,          IN)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     psdi,          IN)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     overflow,      OUT)
+
+    dsl$jsb Get_var2D_onChunk( srf_mem,      t_srf_unfilt,  OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      tte_corr,      OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      wsr_srf,       OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      wfract_srf,    OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      wsn_srf,       OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      sfract_srf,    OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      evapotrans,    OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      trans,         OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      evapopot,      OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      oro_stddev,    IN)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      glacier,       OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      wsn_glacier,   OUT)
+
+    dsl$jsb Get_var2D_onChunk( veg_mem,      wsn_can,       OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      lai,           OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      fract_fpc_max, OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      ws_root,       OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      ws_fc_root,    OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      root_depth,    OUT)
 
     is_present(:)    = .TRUE.
     is_glacier(:)    = ( glacier(:) > 0.5_wp )

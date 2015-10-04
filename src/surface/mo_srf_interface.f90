@@ -11,7 +11,7 @@ MODULE mo_srf_interface
 #ifndef __NO_JSBACH__
 
 #include "dsl_jsbach.inc"
-  
+
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
@@ -20,15 +20,15 @@ MODULE mo_srf_interface
   USE mo_jsb_class,       ONLY: get_model
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile
 
-  Use_processes SRF, SOIL, VEG, ATM2LAND
-  Use_config(srf)
-  Use_config(soil)
+  dsl$jsb Use_processes SRF, SOIL, VEG, ATM2LAND
+  dsl$jsb Use_config(srf)
+  dsl$jsb Use_config(soil)
 
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$  Use_memory(atm2land)
-  Use_memory(soil)
-  Use_memory(srf)
-  Use_memory(veg)
+!!$  dsl$jsb Use_memory(atm2land)
+  dsl$jsb Use_memory(soil)
+  dsl$jsb Use_memory(srf)
+  dsl$jsb Use_memory(veg)
 
   IMPLICIT NONE
   PRIVATE
@@ -50,22 +50,21 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
-    Def_memory(atm2land_mem, atm2land)
-    Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(atm2land_mem, atm2land)
+    dsl$jsb Def_memory(srf_mem, srf)
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER ::      &
-      & swvis_srf_net    (:), &
-      & swnir_srf_net    (:), &
-      & sw_srf_net       (:), &
-      & lw_srf_net       (:), &
-      & rad_srf_net      (:), &
-      & lw_srf_down      (:), &
-      & swvis_srf_down   (:), &
-      & swnir_srf_down   (:), &
-      & alb_vis_srf      (:), &
-      & alb_nir_srf      (:), &
-      & t_srf            (:)
+    dsl$jsb onChunk_Real2D :: swvis_srf_net
+    dsl$jsb onChunk_Real2D :: swnir_srf_net
+    dsl$jsb onChunk_Real2D :: sw_srf_net
+    dsl$jsb onChunk_Real2D :: lw_srf_net
+    dsl$jsb onChunk_Real2D :: rad_srf_net
+    dsl$jsb onChunk_Real2D :: lw_srf_down
+    dsl$jsb onChunk_Real2D :: swvis_srf_down
+    dsl$jsb onChunk_Real2D :: swnir_srf_down
+    dsl$jsb onChunk_Real2D :: alb_vis_srf
+    dsl$jsb onChunk_Real2D :: alb_nir_srf
+    dsl$jsb onChunk_Real2D :: t_srf
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_radiation'
 
@@ -75,20 +74,20 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    Get_memory(srf_mem, SRF)
-    Get_memory(atm2land_mem, ATM2LAND)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(atm2land_mem, ATM2LAND)
 
-    swvis_srf_down => atm2land_mem     %swvis_srf_down%ptr (ics:ice, iblk)
-    swnir_srf_down => atm2land_mem     %swnir_srf_down%ptr (ics:ice, iblk)
-    lw_srf_down    => atm2land_mem     %lw_srf_down%ptr    (ics:ice, iblk)
-    swvis_srf_net  => srf_mem %swvis_srf_net%ptr  (ics:ice, iblk)
-    swnir_srf_net  => srf_mem %swnir_srf_net%ptr  (ics:ice, iblk)
-    sw_srf_net     => srf_mem %sw_srf_net%ptr     (ics:ice, iblk)
-    lw_srf_net     => srf_mem %lw_srf_net%ptr     (ics:ice, iblk)
-    rad_srf_net    => srf_mem %rad_srf_net%ptr    (ics:ice, iblk)
-    alb_vis_srf    => srf_mem %alb_vis_srf%ptr    (ics:ice, iblk)
-    alb_nir_srf    => srf_mem %alb_nir_srf%ptr    (ics:ice, iblk)
-    t_srf          => srf_mem %t_srf%ptr          (ics:ice, iblk)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, swvis_srf_down, IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, swnir_srf_down, IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, lw_srf_down,    OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      swvis_srf_net,  OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      swnir_srf_net,  OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      sw_srf_net,     OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      lw_srf_net,     OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      rad_srf_net,    OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      alb_vis_srf,    OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      alb_nir_srf,    OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      t_srf,          OUT)
 
     ! Compute net SW radiation from downward SW and albedo
     swvis_srf_net(:) = swvis_srf_down(:) * (1._wp - alb_vis_srf(:))
@@ -117,33 +116,31 @@ CONTAINS
     !
     TYPE(t_jsb_model), POINTER    :: model
 
-    Def_config(soil_conf, soil)
-    Def_memory(srf_mem, srf)
-    Def_memory(soil_mem, soil)
-    Def_memory(veg_mem, veg)
-    Def_memory(atm2land_mem, atm2land)
+    dsl$jsb Def_config(soil_conf, soil)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(soil_mem, soil)
+    dsl$jsb Def_memory(veg_mem, veg)
+    dsl$jsb Def_memory(atm2land_mem, atm2land)
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER :: &
-                                !wsn           (:), &
-      glacier       (:), &
-      lai           (:), &
-      fract_fpc_max (:), &
-      sfract_can    (:), &
-      wsn_can       (:), &
-      sfract_soil   (:), &
-      wsn_soil      (:), &
-      wfract_can    (:), &
-      wsr_can       (:), &
-      wfract_soil   (:), &
-      wsr_soil      (:), &
-      sfract_srf    (:), &
-      wfract_srf    (:), &
-      oro_stddev    (:), &
-      drag_srf      (:), &
-      t_srf         (:), &
-      press_srf     (:), &
-      q_air         (:)
+    dsl$jsb onChunk_Real2D :: glacier
+    dsl$jsb onChunk_Real2D :: lai
+    dsl$jsb onChunk_Real2D :: fract_fpc_max
+    dsl$jsb onChunk_Real2D :: sfract_can
+    dsl$jsb onChunk_Real2D :: wsn_can
+    dsl$jsb onChunk_Real2D :: sfract_soil
+    dsl$jsb onChunk_Real2D :: wsn_soil
+    dsl$jsb onChunk_Real2D :: wfract_can
+    dsl$jsb onChunk_Real2D :: wsr_can
+    dsl$jsb onChunk_Real2D :: wfract_soil
+    dsl$jsb onChunk_Real2D :: wsr_soil
+    dsl$jsb onChunk_Real2D :: sfract_srf
+    dsl$jsb onChunk_Real2D :: wfract_srf
+    dsl$jsb onChunk_Real2D :: oro_stddev
+    dsl$jsb onChunk_Real2D :: drag_srf
+    dsl$jsb onChunk_Real2D :: t_srf
+    dsl$jsb onChunk_Real2D :: press_srf
+    dsl$jsb onChunk_Real2D :: q_air
 
     ! Locally allocated vectors
     REAL(wp) :: &
@@ -160,33 +157,33 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    Get_config(soil_conf, SOIL)
+    dsl$jsb Get_config(soil_conf, SOIL)
 
     ! Get reference to variables for current block
     !
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
-    Get_memory(veg_mem, VEG)
-    Get_memory(atm2land_mem, ATM2LAND)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(veg_mem, VEG)
+    dsl$jsb Get_memory(atm2land_mem, ATM2LAND)
 
-    glacier       => srf_mem  %glacier%ptr          (ics:ice, iblk)
-    lai           => veg_mem  %lai%ptr              (ics:ice, iblk)
-    fract_fpc_max => veg_mem  %fract_fpc_max%ptr    (ics:ice, iblk)
-    sfract_can    => veg_mem  %sfract_can%ptr       (ics:ice, iblk)
-    wsn_can       => veg_mem  %wsn_can%ptr          (ics:ice, iblk)
-    sfract_soil   => soil_mem %sfract_soil%ptr      (ics:ice, iblk)
-    wsn_soil      => soil_mem %wsn_soil%ptr         (ics:ice, iblk)
-    wfract_can    => veg_mem  %wfract_can%ptr       (ics:ice, iblk)
-    wsr_can       => veg_mem  %wsr_can%ptr          (ics:ice, iblk)
-    wfract_soil   => soil_mem %wfract_soil%ptr      (ics:ice, iblk)
-    wsr_soil      => soil_mem %wsr_soil%ptr         (ics:ice, iblk)
-    sfract_srf    => srf_mem  %sfract_srf%ptr       (ics:ice, iblk)
-    wfract_srf    => srf_mem  %wfract_srf%ptr       (ics:ice, iblk)
-    oro_stddev    => srf_mem  %oro_stddev%ptr       (ics:ice, iblk)
-    drag_srf      => atm2land_mem     %drag_srf%ptr         (ics:ice, iblk)
-    q_air         => atm2land_mem     %q_air%ptr            (ics:ice, iblk)
-    press_srf     => atm2land_mem     %press_srf%ptr        (ics:ice, iblk)
-    t_srf         => srf_mem  %t_srf%ptr            (ics:ice, iblk)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, drag_srf,      IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, q_air,         IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, press_srf,     IN)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     sfract_soil,   OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     wsn_soil,      OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     wfract_soil,   OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     wsr_soil,      OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      glacier,       OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      sfract_srf,    OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      wfract_srf,    OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      oro_stddev,    IN)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      t_srf,         OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      lai,           OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      fract_fpc_max, OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      sfract_can,    OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      wsn_can,       OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      wfract_can,    OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      wsr_can,       OUT)
 
     ! Maximum capacity of skin reservoir (soil + canopy)
     wsr_max(:) = soil_conf%wsr_capacity * (1._wp + lai(:) * fract_fpc_max(:))
@@ -252,39 +249,38 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
-    Def_config(srf_conf, srf)
-    Def_memory(srf_mem, srf)
-    Def_memory(soil_mem, soil)
-    Def_memory(atm2land_mem, atm2land)
+    dsl$jsb Def_config(srf_conf, srf)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(soil_mem, soil)
+    dsl$jsb Def_memory(atm2land_mem, atm2land)
 
     LOGICAL                       :: lstart
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER ::       &
-      & t_srf          (:),    &
-      & t_srf_old      (:),    &
-      & t_srf_unfilt   (:),    &
-      & t_srf_unfilt_old(:),    &
-      & t_eff_srf      (:),    &
-      & qsat_srf       (:),    &
-!!$      & qsat_srf_old   (:),    &
-      & s_srf          (:),    &
-!!$      & s_srf_old      (:),    &
-      & press_srf      (:),    &
-      & q_air          (:),    &
-      & fact_qsat_srf  (:),    &
-      & fact_q_air     (:),    &
-      & drag_srf       (:),    &
-      & rad_srf_net    (:),    &
-      & grnd_hflx      (:),    &
-      & hcap_grnd      (:),    &
-      & wsn_srf        (:),    &
-      & sfract_srf     (:),    &
-      & t_acoef        (:),    &
-      & t_bcoef        (:),    &
-      & q_acoef        (:),    &
-      & q_bcoef        (:),    &
-      & glacier        (:)
+    dsl$jsb onChunk_Real2D :: t_srf
+    dsl$jsb onChunk_Real2D :: t_srf_old
+    dsl$jsb onChunk_Real2D :: t_srf_unfilt
+    dsl$jsb onChunk_Real2D :: t_srf_unfilt_old
+    dsl$jsb onChunk_Real2D :: t_eff_srf
+    dsl$jsb onChunk_Real2D :: qsat_srf
+!!$   dsl$jsb onChunk_Real2D :: qsat_srf_old
+    dsl$jsb onChunk_Real2D :: s_srf
+!!$   dsl$jsb onChunk_Real2D :: s_srf_old
+    dsl$jsb onChunk_Real2D :: press_srf
+    dsl$jsb onChunk_Real2D :: q_air
+    dsl$jsb onChunk_Real2D :: fact_qsat_srf
+    dsl$jsb onChunk_Real2D :: fact_q_air
+    dsl$jsb onChunk_Real2D :: drag_srf
+    dsl$jsb onChunk_Real2D :: rad_srf_net
+    dsl$jsb onChunk_Real2D :: grnd_hflx
+    dsl$jsb onChunk_Real2D :: hcap_grnd
+    dsl$jsb onChunk_Real2D :: wsn_srf
+    dsl$jsb onChunk_Real2D :: sfract_srf
+    dsl$jsb onChunk_Real2D :: t_acoef
+    dsl$jsb onChunk_Real2D :: t_bcoef
+    dsl$jsb onChunk_Real2D :: q_acoef
+    dsl$jsb onChunk_Real2D :: q_bcoef
+    dsl$jsb onChunk_Real2D :: glacier
 
     ! Locally allocated vectors
     !
@@ -301,38 +297,38 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    Get_config(srf_conf, SRF)
+    dsl$jsb Get_config(srf_conf, SRF)
 
     ! Get reference to variables for current block
     !
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
-    Get_memory(atm2land_mem, ATM2LAND)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(atm2land_mem, ATM2LAND)
 
-    t_srf                => srf_mem  %t_srf%ptr            (ics:ice, iblk)
-    t_srf_old            => srf_mem  %t_srf_old%ptr        (ics:ice, iblk)
-    t_srf_unfilt         => srf_mem  %t_srf_unfilt%ptr     (ics:ice, iblk)
-    t_srf_unfilt_old     => srf_mem  %t_srf_unfilt_old%ptr (ics:ice, iblk)
-    t_eff_srf            => srf_mem  %t_eff_srf%ptr        (ics:ice, iblk)
-    qsat_srf             => srf_mem  %qsat_srf%ptr         (ics:ice, iblk)
-!!$    qsat_srf_old         => srf_mem  %qsat_srf_old%ptr     (ics:ice, iblk)
-    s_srf                => srf_mem  %s_srf%ptr            (ics:ice, iblk)
-!!$    s_srf_old            => srf_mem  %s_srf_old%ptr        (ics:ice, iblk)
-    press_srf            => atm2land_mem     %press_srf%ptr        (ics:ice, iblk)
-    q_air                => atm2land_mem     %q_air%ptr            (ics:ice, iblk)
-    fact_q_air           => srf_mem  %fact_q_air%ptr       (ics:ice, iblk)
-    fact_qsat_srf        => srf_mem  %fact_qsat_srf%ptr    (ics:ice, iblk)
-    drag_srf             => atm2land_mem     %drag_srf%ptr         (ics:ice, iblk)
-    rad_srf_net          => srf_mem  %rad_srf_net%ptr      (ics:ice, iblk)
-    grnd_hflx            => soil_mem %grnd_hflx%ptr        (ics:ice, iblk)
-    hcap_grnd            => soil_mem %hcap_grnd%ptr        (ics:ice, iblk)
-    wsn_srf              => srf_mem  %wsn_srf%ptr          (ics:ice, iblk)
-    sfract_srf           => srf_mem  %sfract_srf%ptr       (ics:ice, iblk)
-    t_acoef              => atm2land_mem     %t_acoef%ptr          (ics:ice, iblk)
-    t_bcoef              => atm2land_mem     %t_bcoef%ptr          (ics:ice, iblk)
-    q_acoef              => atm2land_mem     %q_acoef%ptr          (ics:ice, iblk)
-    q_bcoef              => atm2land_mem     %q_bcoef%ptr          (ics:ice, iblk)
-    glacier              => srf_mem  %glacier%ptr          (ics:ice, iblk)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, t_acoef,          IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, t_bcoef,          IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, q_acoef,          IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, q_bcoef,          IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, press_srf,        IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, q_air,            IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, drag_srf,         IN)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      t_srf,            OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      t_srf_old,        OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      t_srf_unfilt,     OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      t_srf_unfilt_old, OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      t_eff_srf,        OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      qsat_srf,         OUT)
+!!$    dsl$jsb Get_var2D_onChunk( srf_mem,      qsat_srf_old,     OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      s_srf,            OUT)
+!!$    dsl$jsb Get_var2D_onChunk( srf_mem,      s_srf_old,        OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      fact_q_air,       OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      fact_qsat_srf,    OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      rad_srf_net,      OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      wsn_srf,          OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      sfract_srf,       OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      glacier,          OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     grnd_hflx,        OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem,     hcap_grnd,        OUT)
 
     ! Save old surface temperature and saturation spec. humidity
 !!$    t_srf_unfilt_old(:) = t_srf_unfilt(:)
@@ -405,23 +401,23 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
-    Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(srf_mem, srf)
+
     LOGICAL                       :: lstart
     REAL(wp)                      :: eps
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER ::       &
-      & t_srf          (:),    &
-      & t_srf_old      (:),    &
-      & t_srf_unfilt   (:),    &
-      & t_srf_unfilt_old(:)
+    dsl$jsb onChunk_Real2D :: t_srf
+    dsl$jsb onChunk_Real2D :: t_srf_old
+    dsl$jsb onChunk_Real2D :: t_srf_unfilt
+    dsl$jsb onChunk_Real2D :: t_srf_unfilt_old
 
-    Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(srf_mem, SRF)
 
-    t_srf                => srf_mem  %t_srf%ptr            (ics:ice, iblk)
-    t_srf_old            => srf_mem  %t_srf_old%ptr        (ics:ice, iblk)
-    t_srf_unfilt         => srf_mem  %t_srf_unfilt%ptr     (ics:ice, iblk)
-    t_srf_unfilt_old     => srf_mem  %t_srf_unfilt_old%ptr (ics:ice, iblk)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  t_srf,            OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  t_srf_old,        OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  t_srf_unfilt,     OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  t_srf_unfilt_old, OUT)
 
     eps = get_asselin_coef()
     IF (eps > 0._wp) THEN
@@ -444,27 +440,26 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
-    Def_memory(srf_mem, srf)
-    Def_memory(atm2land_mem, ATM2LAND)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(atm2land_mem, ATM2LAND)
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER ::       &
-      & qsat_srf       (:),    &
-      & s_srf          (:),    &
-      & t_acoef        (:),    &
-      & t_bcoef        (:),    &
-      & q_acoef        (:),    &
-      & q_bcoef        (:),    &
-      & fact_qsat_srf  (:),    &
-      & fact_qsat_trans_srf  (:),    &
-      & fact_q_air     (:),    &
-      & drag_srf       (:),    &
-      & latent_hflx    (:),    &
-      & sensible_hflx  (:),    &
-      & evapopot       (:),    &
-      & evapotrans     (:),    &
-      & trans          (:),    &
-      & sfract_srf     (:)
+    dsl$jsb onChunk_Real2D :: qsat_srf
+    dsl$jsb onChunk_Real2D :: s_srf
+    dsl$jsb onChunk_Real2D :: t_acoef
+    dsl$jsb onChunk_Real2D :: t_bcoef
+    dsl$jsb onChunk_Real2D :: q_acoef
+    dsl$jsb onChunk_Real2D :: q_bcoef
+    dsl$jsb onChunk_Real2D :: fact_qsat_srf
+    dsl$jsb onChunk_Real2D :: fact_qsat_trans_srf
+    dsl$jsb onChunk_Real2D :: fact_q_air
+    dsl$jsb onChunk_Real2D :: drag_srf
+    dsl$jsb onChunk_Real2D :: latent_hflx
+    dsl$jsb onChunk_Real2D :: sensible_hflx
+    dsl$jsb onChunk_Real2D :: evapopot
+    dsl$jsb onChunk_Real2D :: evapotrans
+    dsl$jsb onChunk_Real2D :: trans
+    dsl$jsb onChunk_Real2D :: sfract_srf
 
     ! Locally allocated vectors
     !
@@ -483,25 +478,25 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    Get_memory(srf_mem, SRF)
-    Get_memory(atm2land_mem, ATM2LAND)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(atm2land_mem, ATM2LAND)
 
-    qsat_srf             => srf_mem  %qsat_srf%ptr         (ics:ice, iblk)
-    s_srf                => srf_mem  %s_srf%ptr            (ics:ice, iblk)
-    t_acoef              => atm2land_mem     %t_acoef%ptr          (ics:ice, iblk)
-    t_bcoef              => atm2land_mem     %t_bcoef%ptr          (ics:ice, iblk)
-    q_acoef              => atm2land_mem     %q_acoef%ptr          (ics:ice, iblk)
-    q_bcoef              => atm2land_mem     %q_bcoef%ptr          (ics:ice, iblk)
-    fact_q_air           => srf_mem  %fact_q_air%ptr       (ics:ice, iblk)
-    fact_qsat_srf        => srf_mem  %fact_qsat_srf%ptr    (ics:ice, iblk)
-    fact_qsat_trans_srf  => srf_mem  %fact_qsat_trans_srf%ptr (ics:ice, iblk)
-    drag_srf             => atm2land_mem     %drag_srf%ptr         (ics:ice, iblk)
-    sensible_hflx        => srf_mem  %sensible_hflx%ptr    (ics:ice, iblk)
-    latent_hflx          => srf_mem  %latent_hflx%ptr      (ics:ice, iblk)
-    evapotrans           => srf_mem  %evapotrans%ptr       (ics:ice, iblk)
-    trans                => srf_mem  %trans%ptr            (ics:ice, iblk)
-    evapopot             => srf_mem  %evapopot%ptr         (ics:ice, iblk)
-    sfract_srf           => srf_mem  %sfract_srf%ptr       (ics:ice, iblk)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, t_acoef,             IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, t_bcoef,             IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, q_acoef,             IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, q_bcoef,             IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, drag_srf,            IN)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      qsat_srf,            OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      s_srf,               OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      fact_q_air,          OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      fact_qsat_srf,       OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      fact_qsat_trans_srf, OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      sensible_hflx,       OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      latent_hflx,         OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      evapotrans,          OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      trans,               OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      evapopot,            OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      sfract_srf,          OUT)
 
     ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
     !
@@ -544,31 +539,30 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER    :: model
-    Def_memory(srf_mem, srf)
-    Def_memory(soil_mem, soil)
-    Def_memory(veg_mem, veg)
-    Def_memory(atm2land_mem, atm2land)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(soil_mem, soil)
+    dsl$jsb Def_memory(veg_mem, veg)
+    dsl$jsb Def_memory(atm2land_mem, atm2land)
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER :: &
-      fract_fpc     (:), &
-      ws_l          (:,:), &
-      ws_fc_l       (:,:), &
-      ws_pwp_l      (:,:), &
-!!$      sfract_can    (:), &
-!!$      sfract_soil   (:), &
-!!$      wfract_can    (:), &
-!!$      wfract_soil   (:), &
-      sfract_srf    (:), &
-      wfract_srf    (:), &
-      fact_q_air    (:), &
-      fact_qsat_srf (:), &
-      fact_qsat_trans_srf (:), &
-      qsat_srf      (:), &
-      canopy_cond   (:), &
-      pch           (:), &
-      wind_air      (:), &
-      q_air         (:)
+    dsl$jsb onChunk_Real2D :: fract_fpc
+    dsl$jsb onChunk_Real3D :: ws_l
+    dsl$jsb onChunk_Real3D :: ws_fc_l
+    dsl$jsb onChunk_Real3D :: ws_pwp_l
+!!$   dsl$jsb onChunk_Real2D :: sfract_can
+!!$   dsl$jsb onChunk_Real2D :: sfract_soil
+!!$   dsl$jsb onChunk_Real2D :: wfract_can
+!!$   dsl$jsb onChunk_Real2D :: wfract_soil
+    dsl$jsb onChunk_Real2D :: sfract_srf
+    dsl$jsb onChunk_Real2D :: wfract_srf
+    dsl$jsb onChunk_Real2D :: fact_q_air
+    dsl$jsb onChunk_Real2D :: fact_qsat_srf
+    dsl$jsb onChunk_Real2D :: fact_qsat_trans_srf
+    dsl$jsb onChunk_Real2D :: qsat_srf
+    dsl$jsb onChunk_Real2D :: canopy_cond
+    dsl$jsb onChunk_Real2D :: pch
+    dsl$jsb onChunk_Real2D :: wind_air
+    dsl$jsb onChunk_Real2D :: q_air
 
     ! Locally allocated vectors
     REAL(wp) :: &
@@ -589,29 +583,29 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
-    Get_memory(veg_mem, VEG)
-    Get_memory(atm2land_mem, ATM2LAND)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(veg_mem, VEG)
+    dsl$jsb Get_memory(atm2land_mem, ATM2LAND)
 
-    fract_fpc        => veg_mem  %fract_fpc%ptr           (ics:ice,    iblk)
-    canopy_cond      => veg_mem  %canopy_cond%ptr         (ics:ice,    iblk)
-    ws_l             => soil_mem %ws_l%ptr                (ics:ice, :, iblk)
-    ws_fc_l          => soil_mem %ws_fc_l%ptr             (ics:ice, :, iblk)
-    ws_pwp_l         => soil_mem %ws_pwp_l%ptr            (ics:ice, :, iblk)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, pch,                 IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, wind_air,            IN)
+    dsl$jsb Get_var2D_onChunk( atm2land_mem, q_air,               IN)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      qsat_srf,            OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      sfract_srf,          OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      wfract_srf,          OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      fact_q_air,          OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      fact_qsat_srf,       OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,      fact_qsat_trans_srf, OUT)
+    dsl$jsb Get_var3D_onChunk( soil_mem,     ws_l,                OUT)
+    dsl$jsb Get_var3D_onChunk( soil_mem,     ws_fc_l,             OUT)
+    dsl$jsb Get_var3D_onChunk( soil_mem,     ws_pwp_l,            OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      fract_fpc,           OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,      canopy_cond,         OUT)
 !!$    sfract_can       => tile%mem%veg  %sfract_can%ptr          (ics:ice,    iblk)
 !!$    sfract_soil      => tile%mem%soil %sfract_soil%ptr         (ics:ice,    iblk)
 !!$    wfract_can       => tile%mem%veg  %wfract_can%ptr          (ics:ice,    iblk)
 !!$    wfract_soil      => tile%mem%soil %wfract_soil%ptr         (ics:ice,    iblk)
-    qsat_srf         => srf_mem  %qsat_srf%ptr            (ics:ice,    iblk)
-    sfract_srf       => srf_mem  %sfract_srf%ptr          (ics:ice,    iblk)
-    wfract_srf       => srf_mem  %wfract_srf%ptr          (ics:ice,    iblk)
-    fact_q_air       => srf_mem  %fact_q_air%ptr          (ics:ice,    iblk)
-    fact_qsat_srf    => srf_mem  %fact_qsat_srf%ptr       (ics:ice,    iblk)
-    fact_qsat_trans_srf  => srf_mem  %fact_qsat_trans_srf%ptr (ics:ice,    iblk)
-    pch              => atm2land_mem     %pch%ptr                 (ics:ice,    iblk)
-    wind_air         => atm2land_mem     %wind_air%ptr            (ics:ice,    iblk)
-    q_air            => atm2land_mem     %q_air%ptr               (ics:ice,    iblk)
 
     WHERE (ws_l(:,1) > ws_pwp_l(:,1))
       fact_qsat_veg(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) *   &
@@ -654,21 +648,20 @@ CONTAINS
     TYPE(t_jsb_tile),  POINTER    :: tile
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
 
-    Def_memory(srf_mem, srf)
-    Def_memory(soil_mem, soil)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(soil_mem, soil)
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER ::       &
-      & rough_m_srf    (:),    &
-      & rough_h_srf    (:),    &
-      & sfract_soil    (:)
+    dsl$jsb onChunk_Real2D :: rough_m_srf
+    dsl$jsb onChunk_Real2D :: rough_h_srf
+    dsl$jsb onChunk_Real2D :: sfract_soil
 
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
 
-    rough_m_srf          => srf_mem  %rough_m_srf%ptr      (ics:ice, iblk)
-    rough_h_srf          => srf_mem  %rough_h_srf%ptr      (ics:ice, iblk)
-    sfract_soil          => soil_mem %sfract_soil%ptr      (ics:ice, iblk)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  rough_m_srf, OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  rough_h_srf, OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem, sfract_soil, OUT)
 
     rough_h_srf(:) =            sfract_soil(:)  / (LOG(blending_height /             roughness_snow) ** 2)  &
                    & + (1._wp - sfract_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m_srf(:))) ** 2)

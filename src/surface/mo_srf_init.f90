@@ -24,9 +24,9 @@ MODULE mo_srf_init
   USE mo_impl_constants,    ONLY: LAND_BOUNDARY, SEA_BOUNDARY, SEA
 #endif
 
-  Use_processes SRF
-  Use_config(srf)
-  Use_memory(srf)
+  dsl$jsb Use_processes SRF
+  dsl$jsb Use_config(srf)
+  dsl$jsb Use_memory(srf)
 
   IMPLICIT NONE
   PRIVATE
@@ -56,8 +56,8 @@ CONTAINS
     TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),        POINTER :: model
-    Def_config(srf_conf, srf)
-    Def_memory(srf_mem, srf)
+    dsl$jsb Def_config(srf_conf, srf)
+    dsl$jsb Def_memory(srf_mem, srf)
 
     REAL(wp), POINTER :: t_srf(:,:), t_srf_mon(:,:,:), cell_sea_land_mask(:,:)
     REAL(wp), POINTER :: &
@@ -74,10 +74,10 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get srf memory of the tile
-    Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(srf_mem, SRF)
 
     ! Get srf config
-    Get_config(srf_conf, SRF)
+    dsl$jsb Get_config(srf_conf, SRF)
 
     IF (.NOT. srf_conf%active) RETURN
 

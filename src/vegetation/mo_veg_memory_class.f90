@@ -35,9 +35,9 @@ MODULE mo_veg_memory_class
       & alb_vis_can    , &  !< Albedo of the canopy in the visible range
       & alb_nir_can         !< Albedo of the canopy in the NIR range
     TYPE(t_jsb_var_real3d) :: &
-      & lai_mon        , & !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>
       & root_depth_l     !< Rooted depth per soil layer (until rooting depth) [m]
-    !
+    REAL(wp), POINTER :: lai_mon(:,:,:) !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
+
     ! Water state
     TYPE(t_jsb_var_real2d) :: &
       & wfract_can  , &  !< Wet (skin reservoir) fraction of canopy
@@ -93,7 +93,7 @@ CONTAINS
 !!$        & t_cf('monthly_leaf_area_index', '', '', nc_bits),                        &
 !!$        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
 !!$        & extra_dim_n=14, initval_r=0.0_wp, loutput=.FALSE., lrestart=.FALSE. )
-      ALLOCATE(mem%lai_mon%ptr(hgrid%nproma, hgrid%nblks, 14))
+      ALLOCATE(mem%lai_mon(hgrid%nproma, hgrid%nblks, 14))
 
       CALL jsb_add_var( mem, prefix//'fract_fpc'//suffix, mem%fract_fpc,                 &
         & hgrid, surface,                                                 &

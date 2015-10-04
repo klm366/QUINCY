@@ -21,9 +21,9 @@ MODULE mo_hd_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
                                   jsb_netcdf_read_2d, jsb_netcdf_read_2d_extdim
 
-  Use_processes HD
-  Use_config(hd)
-  Use_memory(hd)
+  dsl$jsb Use_processes HD
+  dsl$jsb Use_config(hd)
+  dsl$jsb Use_memory(hd)
 
   IMPLICIT NONE
   PRIVATE
@@ -39,8 +39,8 @@ CONTAINS
     TYPE(t_jsb_tile),  INTENT(inout) :: tile
 
     TYPE(t_jsb_model), POINTER       :: model
-    Def_config(hd_conf, hd)
-    Def_memory(hd_mem, hd)
+    dsl$jsb Def_config(hd_conf, hd)
+    dsl$jsb Def_memory(hd_mem, hd)
 
     REAL(wp), POINTER :: &
       & return_pointer (:,  :)       !< temporary pointer
@@ -52,10 +52,10 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get hd memory of the tile (only the root tile is used)
-    Get_memory(hd_mem, HD)
+    dsl$jsb Get_memory(hd_mem, HD)
 
     ! Get hd config
-    Get_config(hd_conf, HD)
+    dsl$jsb Get_config(hd_conf, HD)
 
     IF (.NOT. hd_conf%active) RETURN
 
@@ -124,8 +124,8 @@ CONTAINS
     TYPE(t_jsb_tile),  INTENT(inout) :: tile
 
     TYPE(t_jsb_model),       POINTER :: model
-    Def_config(hd_conf, hd)
-    Def_memory(hd_mem, hd)
+    dsl$jsb Def_config(hd_conf, hd)
+    dsl$jsb Def_memory(hd_mem, hd)
 
     REAL(wp), POINTER :: &
       & return_pointer (:,:)       !< temporary pointer
@@ -137,10 +137,10 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get hd memory of the tile (only the root tile is used)
-    Get_memory(hd_mem, HD)
+    dsl$jsb Get_memory(hd_mem, HD)
 
     ! Get hd config
-    Get_config(hd_conf, HD)
+    dsl$jsb Get_config(hd_conf, HD)
 
     IF (.NOT. hd_conf%active) RETURN
 
