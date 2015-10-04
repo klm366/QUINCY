@@ -1,5 +1,6 @@
 /*~
 /.history
+/.projectile
 doc/*~
 doc/.history
 doc/doxygen/*~
@@ -628,6 +629,10 @@ src/atmland/*~
 src/atmland/.history
 src/base/*~
 src/base/.history
+src/hd/*~
+src/hd/.history
+src/include/*~
+src/include/.history
 src/interfaces/*~
 src/interfaces/.history
 src/shared/*~
