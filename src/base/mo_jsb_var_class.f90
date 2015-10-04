@@ -14,6 +14,10 @@ MODULE mo_jsb_var_class
 
   TYPE, ABSTRACT :: t_jsb_var
 !!$    INTEGER           :: type = REAL2D
+    CHARACTER(len=5) :: inout = 'IN'
+  CONTAINS
+    PROCEDURE :: Set_to_OUT => Set_var_to_OUT
+    PROCEDURE :: Set_to_IN  => Set_var_to_IN
   END TYPE t_jsb_var
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
@@ -31,9 +35,9 @@ MODULE mo_jsb_var_class
 !!$  INTERFACE t_jsb_var
 !!$    PROCEDURE :: Create_jsb_var
 !!$  END INTERFACE t_jsb_var
-!!$
-!!$CONTAINS
-!!$
+
+CONTAINS
+
 !!$  FUNCTION Create_jsb_var(i_shape, i_type) RESULT(return_ptr)
 !!$
 !!$    INTEGER, INTENT(in) :: i_shape(2)
@@ -57,6 +61,22 @@ MODULE mo_jsb_var_class
 !!$    END SELECT
 !!$
 !!$  END FUNCTION Create_jsb_var
+
+  SUBROUTINE Set_var_to_OUT(this)
+
+    CLASS(t_jsb_var), INTENT(inout) :: this
+
+    this%inout = "OUT"
+
+  END SUBROUTINE Set_var_to_OUT
+
+  SUBROUTINE Set_var_to_IN(this)
+
+    CLASS(t_jsb_var), INTENT(inout) :: this
+
+    this%inout = "IN"
+
+  END SUBROUTINE Set_var_to_IN
 
 #endif
 END MODULE mo_jsb_var_class

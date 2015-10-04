@@ -16,11 +16,11 @@ MODULE mo_atmland_interface
   USE mo_kind,           ONLY: wp
   USE mo_jsb_tile_class, ONLY: t_jsb_tile
 
-  Use_processes ATM2LAND, SRF, SOIL
+  dsl$jsb Use_processes ATM2LAND, SRF, SOIL
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$  Use_memory(atm2land)
-  Use_memory(srf)
-  Use_memory(soil)
+!!$  dsl$jsb Use_memory(atm2land)
+  dsl$jsb Use_memory(srf)
+  dsl$jsb Use_memory(soil)
 
   IMPLICIT NONE
   PRIVATE
@@ -41,13 +41,13 @@ CONTAINS
       & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:), lw_srf_down(:), swvis_srf_down(:), swnir_srf_down(:), &
       & swpar_srf_down(:), press_srf(:), drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), cos_zenith_angle(:)
 
-    Def_memory(atm2land_mem, atm2land)
+    dsl$jsb Def_memory(atm2land_mem, atm2land)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_atm2land'
 
     IF (ice-ics+1 /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
-    Get_memory(atm2land_mem, ATM2LAND)
+    dsl$jsb Get_memory(atm2land_mem, ATM2LAND)
 
     IF (PRESENT(t_air))            atm2land_mem%t_air%ptr            (ics:ice, iblk) = t_air            (:)
     IF (PRESENT(q_air))            atm2land_mem%q_air%ptr            (ics:ice, iblk) = q_air            (:)
@@ -86,15 +86,15 @@ CONTAINS
       & rough_h_srf(:), rough_m_srf(:), tte_corr(:),                                 &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:)
 
-    Def_memory(srf_mem, srf)
-    Def_memory(soil_mem, soil)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(soil_mem, soil)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_land2atm'
 
     IF (ice-ics+1 /= SIZE(t_srf,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
 
     IF (PRESENT(t_srf))           t_srf(:)            = srf_mem  %t_srf%ptr          (ics:ice, iblk)
     IF (PRESENT(t_eff_srf))       t_eff_srf(:)        = srf_mem  %t_eff_srf%ptr      (ics:ice, iblk)

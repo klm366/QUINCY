@@ -21,11 +21,11 @@ MODULE mo_veg_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
                                   jsb_netcdf_read_2d_time, jsb_netcdf_read_2d
 
-  Use_processes VEG, SOIL
-  Use_config(veg)
-  Use_config(soil)
-  Use_memory(veg)
-  Use_memory(soil)
+  dsl$jsb Use_processes VEG, SOIL
+  dsl$jsb Use_config(veg)
+  dsl$jsb Use_config(soil)
+  dsl$jsb Use_memory(veg)
+  dsl$jsb Use_memory(soil)
 
   IMPLICIT NONE
   PRIVATE
@@ -41,7 +41,7 @@ CONTAINS
     TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),       POINTER :: model
-    Def_memory(veg_mem, veg)
+    dsl$jsb Def_memory(veg_mem, veg)
 
     REAL(wp), POINTER :: lai_mon(:,:,:)
 
@@ -50,7 +50,7 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get veg memory of the tile
-    Get_memory(veg_mem, VEG)
+    dsl$jsb Get_memory(veg_mem, VEG)
 
     ! ...
 
@@ -69,10 +69,10 @@ CONTAINS
     TYPE(t_jsb_tile),  INTENT(inout) :: tile
 
     TYPE(t_jsb_model),        POINTER :: model
-    Def_config(veg_conf, veg)
-    Def_memory(veg_mem, veg)
-    Def_config(soil_conf, soil)
-    Def_memory(soil_mem, soil)
+    dsl$jsb Def_config(veg_conf, veg)
+    dsl$jsb Def_memory(veg_mem, veg)
+    dsl$jsb Def_config(soil_conf, soil)
+    dsl$jsb Def_memory(soil_mem, soil)
 
     INTEGER :: i
 
@@ -90,12 +90,12 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get veg memory of the tile
-    Get_memory(veg_mem, VEG)
-    Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(veg_mem, VEG)
+    dsl$jsb Get_memory(soil_mem, SOIL)
 
     ! Get veg config
-    Get_config(veg_conf, VEG)
-    Get_config(soil_conf, SOIL)
+    dsl$jsb Get_config(veg_conf, VEG)
+    dsl$jsb Get_config(soil_conf, SOIL)
 
     IF (.NOT. veg_conf%active) RETURN
 
@@ -115,13 +115,13 @@ CONTAINS
       & input_file,                        &
       & variable_name='lai_clim')
     lai_mon(:,:,:) = MERGE(lai_mon(:,:,:), 0._wp, lai_mon(:,:,:) > 0._wp)
-    veg_mem%lai_mon%ptr(:,:,2:13) = lai_mon(:,:,1:12)
-    veg_mem%lai_mon%ptr(:,:,1   ) = lai_mon(:,:,12  )
-    veg_mem%lai_mon%ptr(:,:,14  ) = lai_mon(:,:,1   )
+    veg_mem%lai_mon(:,:,2:13) = lai_mon(:,:,1:12)
+    veg_mem%lai_mon(:,:,1   ) = lai_mon(:,:,12  )
+    veg_mem%lai_mon(:,:,14  ) = lai_mon(:,:,1   )
     DEALLOCATE(lai_mon)
 
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    veg_mem%lai%ptr(:,:) = wgt1 * veg_mem%lai_mon%ptr(:,:,nmw1+1) + wgt2 * veg_mem%lai_mon%ptr(:,:,nmw2+1)
+    veg_mem%lai%ptr(:,:) = wgt1 * veg_mem%lai_mon(:,:,nmw1+1) + wgt2 * veg_mem%lai_mon(:,:,nmw2+1)
 
     ! Forest fraction
     return_pointer => jsb_netcdf_read_2d(        &
@@ -156,7 +156,7 @@ CONTAINS
     veg_mem%root_depth%ptr(:,:) = MERGE(veg_mem%root_depth%ptr(:,:), 0._wp, veg_mem%root_depth%ptr(:,:) >= 0._wp)
     veg_mem%root_depth%ptr(:,:) = MIN(veg_mem%root_depth%ptr(:,:), soil_mem%soil_depth%ptr(:,:))  ! Temporary fix (root depth sometimes larger then soil depth)
 !!$    veg_mem%root_depth%ptr(:,:) = soil_mem%soil_depth%ptr(:,:) * 0.75_wp  ! Temporary
-    
+
     veg_mem%root_depth_l%ptr(:,:,:) = soil_depth_to_layers_2d(               &
       & veg_mem%root_depth%ptr(:,:),                                         & ! Total rooting depth
       & soil_conf%dz_water(1:soil_conf%nsoil_water))    ! Soil layer thicknesses from namelist

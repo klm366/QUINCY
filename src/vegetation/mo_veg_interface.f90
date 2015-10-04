@@ -22,15 +22,15 @@ MODULE mo_veg_interface
   USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
 
-  Use_processes VEG, SOIL, SRF, ATM2LAND
-  Use_config(veg)
-  Use_config(soil)
+  dsl$jsb Use_processes VEG, SOIL, SRF, ATM2LAND
+  dsl$jsb Use_config(veg)
+  dsl$jsb Use_config(soil)
 
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$  Use_memory(atm2land)
-  Use_memory(soil)
-  Use_memory(srf)
-  Use_memory(veg)
+!!$  dsl$jsb Use_memory(atm2land)
+  dsl$jsb Use_memory(soil)
+  dsl$jsb Use_memory(srf)
+  dsl$jsb Use_memory(veg)
 
   IMPLICIT NONE
   PRIVATE
@@ -53,30 +53,29 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER    :: model
 
-    Def_config(veg_conf, veg)
-    Def_config(soil_conf, soil)
-    Def_memory(soil_mem, soil)
-    Def_memory(srf_mem, srf)
-    Def_memory(veg_mem, veg)
-    Def_memory(atm2land_mem, atm2land)
+    dsl$jsb Def_config(veg_conf, veg)
+    dsl$jsb Def_config(soil_conf, soil)
+    dsl$jsb Def_memory(soil_mem, soil)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(veg_mem, veg)
+    dsl$jsb Def_memory(atm2land_mem, atm2land)
 
-    REAL(wp), POINTER ::                 &
-      & lai                    (:),      &
-      & swpar_srf_down         (:),      &
-      & canopy_cond            (:),      &
-      & soil_depth_l           (:,:),    &
-      & root_depth_l           (:,:),    &
-      & ws                     (:),      & !< Water content in soil column
-      & ws_l                   (:,:),    & !< Water content in soil layers
-      & ws_fc_l                (:,:),    & !< Water content of soil layers at field capacity
-      & ws_pwp_l               (:,:),    & !< Water content of soil layers at permanent wilting point
-      & ws_root                (:),      & !< Water content in root zone
-      & ws_fc_root             (:),      & !< Water content in root zone at field capacity
-      & ws_pwp_root            (:),      & !< Water content in root zone at permanent wilting point
-      & water_stress           (:),      &
-      & t_srf                  (:),      &
-      & q_air                  (:),      &
-      & press_srf              (:)
+    dsl$jsb onChunk_Real2D :: lai
+    dsl$jsb onChunk_Real2D :: swpar_srf_down
+    dsl$jsb onChunk_Real2D :: canopy_cond
+    dsl$jsb onChunk_Real3D :: soil_depth_l
+    dsl$jsb onChunk_Real3D :: root_depth_l
+    dsl$jsb onChunk_Real2D :: ws              !< Water content in soil column
+    dsl$jsb onChunk_Real3D :: ws_l            !< Water content in soil layers
+    dsl$jsb onChunk_Real3D :: ws_fc_l         !< Water content of soil layers at field capacity
+    dsl$jsb onChunk_Real3D :: ws_pwp_l        !< Water content of soil layers at permanent wilting point
+    dsl$jsb onChunk_Real2D :: ws_root         !< Water content in root zone
+    dsl$jsb onChunk_Real2D :: ws_fc_root      !< Water content in root zone at field capacity
+    dsl$jsb onChunk_Real2D :: ws_pwp_root     !< Water content in root zone at permanent wilting point
+    dsl$jsb onChunk_Real2D :: water_stress
+    dsl$jsb onChunk_Real2D :: t_srf
+    dsl$jsb onChunk_Real2D :: q_air
+    dsl$jsb onChunk_Real2D :: press_srf
 
     INTEGER :: nsoil
 
@@ -92,17 +91,17 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    Get_config(veg_conf, VEG)
-    Get_config(soil_conf, SOIL)
+    dsl$jsb Get_config(veg_conf, VEG)
+    dsl$jsb Get_config(soil_conf, SOIL)
 
     nsoil = soil_conf%nsoil_water
 
     ! Get reference to variables for current block
     !
-    Get_memory(veg_mem, VEG)
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
-    Get_memory(atm2land_mem, ATM2LAND)
+    dsl$jsb Get_memory(veg_mem, VEG)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(atm2land_mem, ATM2LAND)
 
     lai                => veg_mem  %lai%ptr            (ics:ice,    iblk)
     swpar_srf_down     => atm2land_mem     %swpar_srf_down%ptr (ics:ice,    iblk)
@@ -170,31 +169,30 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER    :: model
 
-    REAL(wp), POINTER ::   &
-      & t_srf         (:),   &
-      & lai           (:),   &
-      & lai_mon       (:,:), &
-      & fract_fpc     (:),   &
-      & fract_fpc_max (:),   &
-      & fract_forest  (:),   &
-!!$      & alb_vis_can  (:),    &
-!!$      & alb_nir_can  (:),    &
-!!$      & alb_vis_soil (:),    &
-!!$      & alb_nir_soil (:),    &
-      & alb_vis_srf   (:),   &
-      & alb_nir_srf   (:),   &
-      & albedo_srf    (:),   &
-      & sfract_can    (:),   &
-      & sfract_soil   (:)
+    dsl$jsb onChunk_Real2D :: t_srf
+    dsl$jsb onChunk_Real2D :: lai
+    dsl$jsb onChunk_Real2D :: fract_fpc
+    dsl$jsb onChunk_Real2D :: fract_fpc_max
+    dsl$jsb onChunk_Real2D :: fract_forest
+!!$   dsl$jsb onChunk_Real2D :: alb_vis_can
+!!$   dsl$jsb onChunk_Real2D :: alb_nir_can
+!!$   dsl$jsb onChunk_Real2D :: alb_vis_soil
+!!$   dsl$jsb onChunk_Real2D :: alb_nir_soil
+    dsl$jsb onChunk_Real2D :: alb_vis_srf
+    dsl$jsb onChunk_Real2D :: alb_nir_srf
+    dsl$jsb onChunk_Real2D :: albedo_srf
+    dsl$jsb onChunk_Real2D :: sfract_can
+    dsl$jsb onChunk_Real2D :: sfract_soil
+    REAL(wp), POINTER :: lai_mon       (:,:)
 
     INTEGER :: p_pe
 
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
 
-    Def_memory(veg_mem, veg)
-    Def_memory(srf_mem, srf)
-    Def_memory(soil_mem, soil)
+    dsl$jsb Def_memory(veg_mem, veg)
+    dsl$jsb Def_memory(srf_mem, srf)
+    dsl$jsb Def_memory(soil_mem, soil)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_2'
 
@@ -207,25 +205,25 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    Get_memory(veg_mem, VEG)
-    Get_memory(srf_mem, SRF)
-    Get_memory(soil_mem, SOIL)
+    dsl$jsb Get_memory(veg_mem, VEG)
+    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl$jsb Get_memory(soil_mem, SOIL)
 
-    t_srf        => srf_mem  %t_srf%ptr           (ics:ice,    iblk)
-    lai          => veg_mem  %lai%ptr             (ics:ice,    iblk)
-    lai_mon      => veg_mem  %lai_mon%ptr         (ics:ice,    iblk, :)
-    fract_fpc    => veg_mem  %fract_fpc%ptr       (ics:ice,    iblk)
-    fract_fpc_max=> veg_mem  %fract_fpc_max%ptr   (ics:ice,    iblk)
-    fract_forest => veg_mem  %fract_forest%ptr    (ics:ice,    iblk)
+    dsl$jsb Get_var2D_onChunk( veg_mem,  lai,           OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,  fract_fpc,     OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,  fract_fpc_max, OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,  fract_forest,  OUT)
+    dsl$jsb Get_var2D_onChunk( veg_mem,  sfract_can,    OUT)
 !!$    alb_vis_can  => tile%mem%veg  %alb_vis_can%ptr     (ics:ice,    iblk)
 !!$    alb_nir_can  => tile%mem%veg  %alb_nir_can%ptr     (ics:ice,    iblk)
 !!$    alb_vis_soil => tile%mem%soil %alb_vis_soil%ptr    (ics:ice,    iblk)
 !!$    alb_nir_soil => tile%mem%soil %alb_nir_soil%ptr    (ics:ice,    iblk)
-    alb_vis_srf  => srf_mem  %alb_vis_srf%ptr     (ics:ice,    iblk)
-    alb_nir_srf  => srf_mem  %alb_nir_srf%ptr     (ics:ice,    iblk)
-    albedo_srf   => srf_mem  %albedo_srf%ptr      (ics:ice,    iblk)
-    sfract_can   => veg_mem  %sfract_can%ptr      (ics:ice,    iblk)
-    sfract_soil  => soil_mem %sfract_soil%ptr     (ics:ice,    iblk)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  t_srf,         OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  alb_vis_srf,   OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  alb_nir_srf,   OUT)
+    dsl$jsb Get_var2D_onChunk( srf_mem,  albedo_srf,    OUT)
+    dsl$jsb Get_var2D_onChunk( soil_mem, sfract_soil,   OUT)
+    lai_mon      => veg_mem  %lai_mon (ics:ice,    iblk, :)
 
     ! Update leaf area index
     !

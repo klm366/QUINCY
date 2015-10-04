@@ -23,13 +23,13 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,  ONLY: update_atm2land, update_land2atm
   USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
 
-  Use_processes ATM2LAND, SRF, HD
-  Use_config(hd)
-  Use_memory(srf)
+  dsl$jsb Use_processes ATM2LAND, SRF, HD
+  dsl$jsb Use_config(hd)
+  dsl$jsb Use_memory(srf)
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$    Use_memory(atm2land_mem)
+!!$    dsl$jsb Use_memory(atm2land_mem)
 #ifndef __NO_JSBACH_HD__
-  Use_memory(hd)
+  dsl$jsb Use_memory(hd)
 #endif
 
   IMPLICIT NONE
@@ -289,13 +289,13 @@ CONTAINS
  
     TYPE(t_jsb_model), POINTER :: model
 
-    Def_config(hd_conf, hd)
+    dsl$jsb Def_config(hd_conf, hd)
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
     model => get_model(model_id)
 
-    Get_config(hd_conf, HD)
+    dsl$jsb Get_config(hd_conf, HD)
 
 #ifndef __NO_JSBACH_HD__
     IF (hd_conf%active) THEN
