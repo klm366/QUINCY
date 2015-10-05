@@ -16,7 +16,7 @@ MODULE mo_jsb_io_netcdf_iface
   USE mo_jsb_domain_iface,   ONLY: t_patch, pe_decomposed
   USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel, my_process_is_stdio, p_bcast, p_io
 #ifdef __ICON__
-  USE mo_read_interface, ONLY: read_2D, read_2D_time, read_2D_extdim, openInputFile, closeFile, onCells, &
+  USE mo_read_interface, ONLY: read_2D, read_2D_time, read_2D_extdim, openInputFile, closeFile, on_cells, &
                                t_stream_id, read_netcdf_broadcast_method
 #else
   USE mo_tr_scatter, ONLY: scatter_field
@@ -141,7 +141,7 @@ CONTAINS
 
     IF (input_file%type == 1) THEN
 #ifdef __ICON__
-      CALL read_2D(input_file%stream_id, onCells, TRIM(variable_name), fill_array, netcdf_read_real_2d)
+      CALL read_2D(input_file%stream_id, on_cells, TRIM(variable_name), fill_array, netcdf_read_real_2d)
 #else
       CALL finish(TRIM(routine), 'Incompatible input file type')
 #endif
@@ -190,7 +190,7 @@ CONTAINS
     netcdf_read_real_2d_time => netcdf_read_real_2d_extdim( &
       input_file, variable_name, fill_array,    &
       start_extdim=start_time_step, end_extdim=end_time_step, extdim_name="time")
-                                 
+
   END FUNCTION netcdf_read_real_2d_time
 
   FUNCTION netcdf_read_real_2d_extdim(input_file, variable_name, fill_array, &
@@ -214,7 +214,7 @@ CONTAINS
 
     IF (input_file%type == 1) THEN
 #ifdef __ICON__
-      CALL read_2D_extdim(input_file%stream_id, onCells, TRIM(variable_name), fill_array, netcdf_read_real_2d_extdim, &
+      CALL read_2D_extdim(input_file%stream_id, on_cells, TRIM(variable_name), fill_array, netcdf_read_real_2d_extdim, &
                           start_extdim=start_extdim, end_extdim=end_extdim, extdim_name=extdim_name)
 #else
       CALL finish(TRIM(routine), 'Incompatible input file type')
@@ -288,21 +288,21 @@ CONTAINS
   END FUNCTION netcdf_read_real_2d_extdim
 
   SUBROUTINE nf(status, routine, warnonly, silent)
-    
+
     USE mo_exception, ONLY: em_warn
 
     INTEGER, INTENT(in)           :: status
     CHARACTER(len=*), INTENT(in)  :: routine
     LOGICAL, INTENT(in), OPTIONAL :: warnonly
     LOGICAL, INTENT(in), OPTIONAL :: silent
-    
+
     LOGICAL :: lwarnonly, lsilent
-    
+
     lwarnonly = .FALSE.
     lsilent   = .FALSE.
     IF(PRESENT(warnonly)) lwarnonly = .TRUE.
     IF(PRESENT(silent))   lsilent   = silent
-    
+
     IF (lsilent) RETURN
 
     IF (status /= nf_noerr) THEN
@@ -313,7 +313,7 @@ CONTAINS
         CALL finish( TRIM(routine)//' netCDF error', NF_STRERROR(status))
       ENDIF
     ENDIF
-    
+
   END SUBROUTINE nf
 
 #endif
