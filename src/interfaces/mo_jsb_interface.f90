@@ -23,13 +23,13 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,  ONLY: update_atm2land, update_land2atm
   USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
 
-  dsl$jsb Use_processes ATM2LAND, SRF, HD
-  dsl$jsb Use_config(hd)
-  dsl$jsb Use_memory(srf)
+  dsl4jsb_Use_processes ATM2LAND, SRF, HD
+  dsl4jsb_Use_config(HD)
+  dsl4jsb_Use_memory(SRF)
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$    dsl$jsb Use_memory(atm2land_mem)
+!!$    dsl4jsb_Use_memory(ATM2LAND)
 #ifndef __NO_JSBACH_HD__
-  dsl$jsb Use_memory(hd)
+  dsl4jsb_Use_memory(HD)
 #endif
 
   IMPLICIT NONE
@@ -122,9 +122,9 @@ CONTAINS
     !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_tile), POINTER :: tile
-    Def_config(hd_conf, hd)
-    Def_memory(atm2land_mem, atm2land)
-    Def_memory(srf_mem, srf)
+    dsl4jsb_Def_config(HD)
+    dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_memory(SRF)
 
     INTEGER :: nc, i
 
@@ -135,10 +135,10 @@ CONTAINS
     model => get_model(model_id)
     tile => model%Get_top_tile()
 
-    Get_memory(atm2land_mem, ATM2LAND)
-    Get_memory(srf_mem, SRF)
+    dsl4jsb_Get_memory(ATM2LAND)
+    dsl4jsb_Get_memory(SRF)
 
-    Get_config(hd_conf, HD)
+    dsl4jsb_Get_config(HD)
 
 !!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)//' for: block=', iblk, ', ics=', ics, ', ice=', ice
 !!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
@@ -160,7 +160,7 @@ CONTAINS
 
     ! Temporary fix for zero t_air at model start (analytical initialization of atmosphere)
     IF (ANY(t_air(:) < 100._wp)) THEN
-      atm2land_mem%t_air%ptr(ics:ice,iblk) = MERGE(t_air(:), srf_mem%t_srf%ptr(ics:ice,iblk), t_air(:) < 100._wp)
+      dsl4jsb_var2D_onChunk(ATM2LAND, t_air) = MERGE(t_air(:), dsl4jsb_var2D_onChunk(SRF, t_srf), t_air(:) < 100._wp)
     END IF
 
     ! Compute net surface radiation
@@ -189,7 +189,7 @@ CONTAINS
     CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
 
 #ifndef __NO_JSBACH_HD__
-    IF (hd_conf%active) THEN
+    IF (dsl4jsb_Config(HD)%active) THEN
       CALL update_hd(tile, iblk, ics, ice, nc, steplen)
     END IF
 #endif
@@ -289,16 +289,16 @@ CONTAINS
  
     TYPE(t_jsb_model), POINTER :: model
 
-    dsl$jsb Def_config(hd_conf, hd)
+    dsl4jsb_Def_config(HD)
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
     model => get_model(model_id)
 
-    dsl$jsb Get_config(hd_conf, HD)
+    dsl4jsb_Get_config(HD)
 
 #ifndef __NO_JSBACH_HD__
-    IF (hd_conf%active) THEN
+    IF (dsl4jsb_Config(HD)%active) THEN
       CALL hd_init_water_budget(model_id)
       CALL hd_riverflow(model_id)
       CALL hd_check_water_budget(model_id)

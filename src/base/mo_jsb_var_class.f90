@@ -1,7 +1,8 @@
 MODULE mo_jsb_var_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind,      ONLY: wp
+  USE mo_exception, ONLY: finish
 
   IMPLICIT NONE
   PRIVATE
@@ -16,8 +17,7 @@ MODULE mo_jsb_var_class
 !!$    INTEGER           :: type = REAL2D
     CHARACTER(len=5) :: inout = 'IN'
   CONTAINS
-    PROCEDURE :: Set_to_OUT => Set_var_to_OUT
-    PROCEDURE :: Set_to_IN  => Set_var_to_IN
+    PROCEDURE :: Set_inout => Set_var_inout
   END TYPE t_jsb_var
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
@@ -35,6 +35,8 @@ MODULE mo_jsb_var_class
 !!$  INTERFACE t_jsb_var
 !!$    PROCEDURE :: Create_jsb_var
 !!$  END INTERFACE t_jsb_var
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_var_class'
 
 CONTAINS
 
@@ -62,21 +64,32 @@ CONTAINS
 !!$
 !!$  END FUNCTION Create_jsb_var
 
-  SUBROUTINE Set_var_to_OUT(this)
+  SUBROUTINE Set_var_inout(this, attr)
+
+    USE mo_util, ONLY: toupper
 
     CLASS(t_jsb_var), INTENT(inout) :: this
+    CHARACTER(len=*), INTENT(in), OPTIONAL  :: attr
 
-    this%inout = "OUT"
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_var_inout'
 
-  END SUBROUTINE Set_var_to_OUT
+    IF (.NOT. PRESENT(attr)) THEN
+      this%inout = "OUT"
+      RETURN
+    END IF
 
-  SUBROUTINE Set_var_to_IN(this)
+    SELECT CASE (toupper(TRIM(ADJUSTL(attr))))
+    CASE("OUT")
+      this%inout = "OUT"
+    CASE("IN")
+      this%inout = "IN"
+    CASE("INOUT")
+      this%inout = "INOUT"
+    CASE DEFAULT
+      CALL finish(TRIM(routine), "Invalid intent specified for jsb_var")
+    END SELECT
 
-    CLASS(t_jsb_var), INTENT(inout) :: this
-
-    this%inout = "IN"
-
-  END SUBROUTINE Set_var_to_IN
+  END SUBROUTINE Set_var_inout
 
 #endif
 END MODULE mo_jsb_var_class

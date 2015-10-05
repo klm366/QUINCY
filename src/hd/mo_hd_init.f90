@@ -21,9 +21,9 @@ MODULE mo_hd_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
                                   jsb_netcdf_read_2d, jsb_netcdf_read_2d_extdim
 
-  dsl$jsb Use_processes HD
-  dsl$jsb Use_config(hd)
-  dsl$jsb Use_memory(hd)
+  dsl4jsb_Use_processes HD
+  dsl4jsb_Use_config(HD)
+  dsl4jsb_Use_memory(HD)
 
   IMPLICIT NONE
   PRIVATE
@@ -39,8 +39,8 @@ CONTAINS
     TYPE(t_jsb_tile),  INTENT(inout) :: tile
 
     TYPE(t_jsb_model), POINTER       :: model
-    dsl$jsb Def_config(hd_conf, hd)
-    dsl$jsb Def_memory(hd_mem, hd)
+    dsl4jsb_Def_config(HD)
+    dsl4jsb_Def_memory(HD)
 
     REAL(wp), POINTER :: &
       & return_pointer (:,  :)       !< temporary pointer
@@ -52,16 +52,17 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get hd memory of the tile (only the root tile is used)
-    dsl$jsb Get_memory(hd_mem, HD)
+    dsl4jsb_Get_memory(HD)
 
     ! Get hd config
-    dsl$jsb Get_config(hd_conf, HD)
+    dsl4jsb_Get_config(HD)
 
-    IF (.NOT. hd_conf%active) RETURN
+    IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
 
-    IF (TRIM(hd_conf%routing_scheme) /= 'full') RETURN
+    IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) /= 'full') RETURN
 
-    CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//' from '//TRIM(hd_conf%bc_filename))
+    CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//&
+                                ' from '//TRIM(dsl4jsb_Config(HD)%bc_filename))
 
     ! Initialize boundary conditions
     !
@@ -74,47 +75,47 @@ CONTAINS
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='FDIR',                     &
-      & fill_array = hd_mem%fdir%ptr)
+      & fill_array = dsl4jsb_var2D_ptr(HD,fdir))
 
     ! Retention constant of overland flow [day]
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='ALF_K',                    &
-      & fill_array = hd_mem%ret_overlflow%ptr)
+      & fill_array = dsl4jsb_var2D_ptr(HD,ret_overlflow))
 
     ! Number of overland flow reservoirs
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='ALF_N',                    &
-      & fill_array = hd_mem%nres_overlflow%ptr)
+      & fill_array = dsl4jsb_var2D_ptr(HD,nres_overlflow))
 
     ! Retention constant of river flow [day]
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='ARF_K',                   &
-      & fill_array = hd_mem%ret_riverflow%ptr)
+      & fill_array = dsl4jsb_var2D_ptr(HD,ret_riverflow))
 
     ! Number of river flow reservoirs
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='ARF_N',                    &
-      & fill_array = hd_mem%nres_riverflow%ptr)
+      & fill_array = dsl4jsb_var2D_ptr(HD,nres_riverflow))
 
     ! Retention constant for base flow [day]
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='AGF_K',                    &
-      & fill_array = hd_mem%ret_baseflow%ptr)
+      & fill_array = dsl4jsb_var2D_ptr(HD,ret_baseflow))
 
     CALL jsb_netcdf_close_file(input_file)
 
     ! Number of base flow reservoirs
-    hd_mem%nres_baseflow%ptr(:,:) = 1._wp
+    dsl4jsb_var2D_onDomain(HD,nres_baseflow) = 1._wp
 
     ! Maximum number of reservoirs
-    hd_mem%nres_o_max = MAXVAL(NINT(hd_mem%nres_overlflow%ptr))
-    hd_mem%nres_b_max = MAXVAL(NINT(hd_mem%nres_baseflow%ptr))
-    hd_mem%nres_r_max = MAXVAL(NINT(hd_mem%nres_riverflow%ptr))
+    hd__mem%nres_o_max = MAXVAL(NINT(dsl4jsb_var2D_onDomain(HD,nres_overlflow)))
+    hd__mem%nres_b_max = MAXVAL(NINT(dsl4jsb_var2D_onDomain(HD,nres_baseflow)))
+    hd__mem%nres_r_max = MAXVAL(NINT(dsl4jsb_var2D_onDomain(HD,nres_riverflow)))
 
   END SUBROUTINE hd_init_bc
 
@@ -124,8 +125,8 @@ CONTAINS
     TYPE(t_jsb_tile),  INTENT(inout) :: tile
 
     TYPE(t_jsb_model),       POINTER :: model
-    dsl$jsb Def_config(hd_conf, hd)
-    dsl$jsb Def_memory(hd_mem, hd)
+    dsl4jsb_Def_config(HD)
+    dsl4jsb_Def_memory(HD)
 
     REAL(wp), POINTER :: &
       & return_pointer (:,:)       !< temporary pointer
@@ -137,19 +138,20 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get hd memory of the tile (only the root tile is used)
-    dsl$jsb Get_memory(hd_mem, HD)
+    dsl4jsb_Get_memory(HD)
 
     ! Get hd config
-    dsl$jsb Get_config(hd_conf, HD)
+    dsl4jsb_Get_config(HD)
 
-    IF (.NOT. hd_conf%active) RETURN
+    IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
 
-    IF (TRIM(hd_conf%routing_scheme) /= 'full') RETURN
+    IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) /= 'full') RETURN
 
     ! read initial conditions
 
     input_file = jsb_netcdf_open_input('ic_hdstart.nc', model%id)     ! Temporary
-    CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//' from '//TRIM(hd_conf%ic_filename))
+    CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//&
+                                ' from '//TRIM(dsl4jsb_Config(HD)%ic_filename))
 
     ! Initialize boundary conditions
     !

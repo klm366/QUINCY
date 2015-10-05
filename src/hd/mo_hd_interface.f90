@@ -7,11 +7,11 @@
 !! @par Revision History
 !! First version by Veronika Gayler (2013-04-20)
 !!
+#include "dsl_jsbach.inc"
+
 MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
-
-#include "dsl_jsbach.inc"
 
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: finish, message, message_text
@@ -24,11 +24,11 @@ MODULE mo_hd_interface
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile
   USE mo_jsb_control,     ONLY: debug_on
 
-  dsl$jsb Use_processes HD, SRF, SOIL
-  dsl$jsb Use_config(hd)
-  dsl$jsb Use_memory(hd)
-  dsl$jsb Use_memory(srf)
-  dsl$jsb Use_memory(soil)
+  dsl4jsb_Use_processes HD, SRF, SOIL
+  dsl4jsb_Use_config(HD)
+  dsl4jsb_Use_memory(HD)
+  dsl4jsb_Use_memory(SRF)
+  dsl4jsb_Use_memory(SOIL)
 
   USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade
 
@@ -36,6 +36,7 @@ MODULE mo_hd_interface
   PRIVATE
 
   PUBLIC :: update_hd, hd_riverflow, hd_init_water_budget, hd_check_water_budget
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_interface'
 
   REAL(wp), SAVE  :: water_budget
@@ -59,31 +60,31 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_model), POINTER :: model
 
-    dsl$jsb Def_config(hd_conf, hd)
-    dsl$jsb Def_memory(hd_mem, hd)
-    dsl$jsb Def_memory(srf_mem, srf)
-    dsl$jsb Def_memory(soil_mem, soil)
+    dsl4jsb_Def_config(HD)
+    dsl4jsb_Def_memory(HD)
+    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(SOIL)
 
     ! Pointers to variables in memory
-    dsl$jsb onChunk_Real2D :: area
-    dsl$jsb onChunk_Real2D :: land
-    dsl$jsb onChunk_Real2D :: lake
-    dsl$jsb onChunk_Real2D :: glacier
-    dsl$jsb onChunk_Real2D :: runoff
-    dsl$jsb onChunk_Real2D :: drainage
-    dsl$jsb onChunk_Real2D :: pme_glacier
-    dsl$jsb onChunk_Real2D :: discharge
+    dsl4jsb_Real2D_onChunk :: area
+    dsl4jsb_Real2D_onChunk :: land
+    dsl4jsb_Real2D_onChunk :: lake
+    dsl4jsb_Real2D_onChunk :: glacier
+    dsl4jsb_Real2D_onChunk :: runoff
+    dsl4jsb_Real2D_onChunk :: drainage
+    dsl4jsb_Real2D_onChunk :: pme_glacier
+    dsl4jsb_Real2D_onChunk :: discharge
 
-    dsl$jsb onChunk_Real2D :: ret_overlflow
-    dsl$jsb onChunk_Real2D :: nres_overlflow
-    dsl$jsb onChunk_Real2D :: ret_baseflow
-    dsl$jsb onChunk_Real2D :: nres_baseflow
-    dsl$jsb onChunk_Real2D :: ret_riverflow
-    dsl$jsb onChunk_Real2D :: nres_riverflow
+    dsl4jsb_Real2D_onChunk :: ret_overlflow
+    dsl4jsb_Real2D_onChunk :: nres_overlflow
+    dsl4jsb_Real2D_onChunk :: ret_baseflow
+    dsl4jsb_Real2D_onChunk :: nres_baseflow
+    dsl4jsb_Real2D_onChunk :: ret_riverflow
+    dsl4jsb_Real2D_onChunk :: nres_riverflow
 
-    dsl$jsb onChunk_Real3D :: overlflow_res
-    dsl$jsb onChunk_Real3D :: baseflow_res
-    dsl$jsb onChunk_Real3D :: riverflow_res
+    dsl4jsb_Real3D_onChunk :: overlflow_res
+    dsl4jsb_Real3D_onChunk :: baseflow_res
+    dsl4jsb_Real3D_onChunk :: riverflow_res
 
     REAL(wp), ALLOCATABLE :: inflow(:)
     REAL(wp), ALLOCATABLE :: outflow_runoff(:)
@@ -101,38 +102,38 @@ CONTAINS
     model => get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
 
-    dsl$jsb Get_config(hd_conf, HD)
+    dsl4jsb_Get_config(HD)
 
     ! Get reference to variables for current block
     !
-    dsl$jsb Get_memory(hd_mem, HD)
-    dsl$jsb Get_memory(srf_mem, SRF)
-    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl4jsb_Get_memory(HD)
+    dsl4jsb_Get_memory(SRF)
+    dsl4jsb_Get_memory(SOIL)
 
     area           => grid               %area                (ics:ice, iblk)
-    dsl$jsb Get_var2D_onChunk( srf_mem,  land,           OUT)
-    dsl$jsb Get_var2D_onChunk( srf_mem,  lake,           OUT)
-    dsl$jsb Get_var2D_onChunk( srf_mem,  glacier,        OUT)
-    dsl$jsb Get_var2D_onChunk( soil_mem, runoff,         OUT)
-    dsl$jsb Get_var2D_onChunk( soil_mem, drainage,       OUT)
-    dsl$jsb Get_var2D_onChunk( soil_mem, pme_glacier,    OUT)
-    dsl$jsb Get_var2D_onChunk( soil_mem, discharge,      OUT)
 
-    dsl$jsb Get_var3D_onChunk( hd_mem,   overlflow_res,  OUT)
-    dsl$jsb Get_var3D_onChunk( hd_mem,   baseflow_res,   OUT)
-    dsl$jsb Get_var3D_onChunk( hd_mem,   riverflow_res,  OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF,  land,        OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF,  lake,        OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF,  glacier,     OUT)
+    dsl4jsb_Get_var2D_onChunk(SOIL, runoff,      OUT)
+    dsl4jsb_Get_var2D_onChunk(SOIL, drainage,    OUT)
+    dsl4jsb_Get_var2D_onChunk(SOIL, pme_glacier, OUT)
+    dsl4jsb_Get_var2D_onChunk(SOIL, discharge,   OUT)
 
-    dsl$jsb Get_var2D_onChunk( hd_mem,   ret_overlflow,  OUT)
-    dsl$jsb Get_var2D_onChunk( hd_mem,   nres_overlflow, OUT)
-    dsl$jsb Get_var2D_onChunk( hd_mem,   ret_baseflow,   OUT)
-    dsl$jsb Get_var2D_onChunk( hd_mem,   nres_baseflow,  OUT)
-    dsl$jsb Get_var2D_onChunk( hd_mem,   ret_riverflow,  OUT)
-    dsl$jsb Get_var2D_onChunk( hd_mem,   nres_riverflow, OUT)
+    dsl4jsb_Get_var3D_onChunk(HD, overlflow_res,  OUT)
+    dsl4jsb_Get_var3D_onChunk(HD, baseflow_res,   OUT)
+    dsl4jsb_Get_var3D_onChunk(HD, riverflow_res,  OUT)
+    dsl4jsb_Get_var2D_onChunk(HD, ret_overlflow,  OUT)
+    dsl4jsb_Get_var2D_onChunk(HD, nres_overlflow, OUT)
+    dsl4jsb_Get_var2D_onChunk(HD, ret_baseflow,   OUT)
+    dsl4jsb_Get_var2D_onChunk(HD, nres_baseflow,  OUT)
+    dsl4jsb_Get_var2D_onChunk(HD, ret_riverflow,  OUT)
+    dsl4jsb_Get_var2D_onChunk(HD, nres_riverflow, OUT)
 
 
     ! Configuration parameters from the namelist
-    debug_hd          = hd_conf%debug_hd
-    routing_scheme    = hd_conf%routing_scheme
+    debug_hd          = dsl4jsb_Config(HD)%debug_hd
+    routing_scheme    = dsl4jsb_Config(HD)%routing_scheme
 
 
     SELECT CASE (TRIM(routing_scheme))
@@ -183,20 +184,21 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
 
-    dsl$jsb Def_config(hd_conf, hd)
-    dsl$jsb Def_memory(srf_mem, srf)
-    dsl$jsb Def_memory(soil_mem, soil)
+    dsl4jsb_Def_config(HD)
+    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(SOIL)
 
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_riverflow'
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER ::   &
-      & area            (:,:), &
-      & land            (:,:), &
-      & coast_ocean     (:,:), &
-      & ocean           (:,:), &
-      & discharge       (:,:), &
-      & discharge_ocean (:,:)
+    REAL(wp), POINTER :: area(:,:)
+
+    dsl4jsb_Real2D_onDomain :: &
+      & land,                  &
+      & coast_ocean,           &
+      & ocean,                 &
+      & discharge,             &
+      & discharge_ocean
 
     REAL(wp) ::            &
       & global_discharge,  &  ! global sum of discharge to the ocean
@@ -221,24 +223,26 @@ CONTAINS
     tile => model%Get_top_tile()        ! HD works on the root tile
     grid => Get_grid(model%grid_id)
 
-    dsl$jsb Get_config(hd_conf, HD)
+    dsl4jsb_Get_config(HD)
 
     ! Get reference to variables for current block
     !
-    dsl$jsb Get_memory(srf_mem, SRF)
-    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl4jsb_Get_memory(SRF)
+    dsl4jsb_Get_memory(SOIL)
 
-    area            => grid     %area                (:,:)
-    land            => srf_mem  %land%ptr            (:,:)
-    coast_ocean     => srf_mem  %coast_ocean%ptr     (:,:)
-    ocean           => srf_mem  %ocean%ptr           (:,:)
-    discharge       => soil_mem %discharge%ptr       (:,:)
-    discharge_ocean => soil_mem %discharge_ocean%ptr (:,:)
+    area => grid%area(:,:)
 
-    is_in_domain    => grid%patch%cells%decomp_info%owner_mask  (:,:)
+    dsl4jsb_Get_var2D_onDomain(SRF, land,        IN)
+    dsl4jsb_Get_var2D_onDomain(SRF, coast_ocean, IN)
+    dsl4jsb_Get_var2D_onDomain(SRF, ocean,       IN)
+
+    dsl4jsb_Get_var2D_onDomain(SOIL, discharge,       OUT)
+    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean, OUT)
+
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
 
     ! Configuration parameters from the namelist
-    routing_scheme = hd_conf%routing_scheme
+    routing_scheme = dsl4jsb_Config(HD)%routing_scheme
 
 
     ! Dummy discharge: the discharge is equally distributed to either
@@ -324,21 +328,23 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
 
-    dsl$jsb Def_config(hd_conf, hd)
-    dsl$jsb Def_memory(srf_mem, srf)
-    dsl$jsb Def_memory(soil_mem, soil)
+    dsl4jsb_Def_config(HD)
+    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(SOIL)
 
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_init_water_budget'
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::    &
-      & area         (:,:), &
-      & land         (:,:), &
-      & glacier      (:,:), &
-      & runoff       (:,:), &
-      & drainage     (:,:), &
-      & pme_glacier  (:,:), &
-      & discharge    (:,:)
+      & area         (:,:)
+
+    dsl4jsb_Real2D_onDomain :: &
+      & land,                  &
+      & glacier,               &
+      & runoff,                &
+      & drainage,              &
+      & pme_glacier,           &
+      & discharge
 
     LOGICAL, POINTER  ::   &
       & is_in_domain    (:,:) ! T: cell in domain (not halo) 
@@ -354,23 +360,25 @@ CONTAINS
     tile => model%Get_top_tile()        ! HD works on the root tile
     grid => Get_grid(model%grid_id)
 
-    dsl$jsb Get_config(hd_conf, HD)
+    dsl4jsb_Get_config(HD)
 
     ! Get reference to variables in memory
-    dsl$jsb Get_memory(srf_mem, SRF)
-    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl4jsb_Get_memory(SRF)
+    dsl4jsb_Get_memory(SOIL)
 
     area           => grid                        %area        (:,:)
-    land           => srf_mem   %land%ptr        (:,:)
-    glacier        => srf_mem   %glacier%ptr     (:,:)
-    runoff         => soil_mem  %runoff%ptr      (:,:)
-    drainage       => soil_mem  %drainage%ptr    (:,:)
-    pme_glacier    => soil_mem  %pme_glacier%ptr (:,:)
-    discharge      => soil_mem  %discharge%ptr   (:,:)
     is_in_domain   => grid%patch%cells%decomp_info%owner_mask  (:,:)
 
+    dsl4jsb_Get_var2D_onDomain(SRF,land,    IN)
+    dsl4jsb_Get_var2D_onDomain(SRF,glacier, IN)
+
+    dsl4jsb_Get_var2D_onDomain(SOIL,runoff,      IN)
+    dsl4jsb_Get_var2D_onDomain(SOIL,drainage,    IN)
+    dsl4jsb_Get_var2D_onDomain(SOIL,pme_glacier, IN)
+    dsl4jsb_Get_var2D_onDomain(SOIL,discharge,   IN)
+
     ! Configuration parameters from the namelist
-    debug_hd          = hd_conf%debug_hd
+    debug_hd = dsl4jsb_Config(HD)%debug_hd
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(SIZE(is_in_domain(:,1)),SIZE(is_in_domain(1,:))))
@@ -410,15 +418,17 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
 
-    Def_config(hd_conf, hd)
-    Def_memory(srf_mem, srf)
-    Def_memory(soil_mem, soil)
+    dsl4jsb_Def_config(HD)
+    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(SOIL)
 
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_check_water_budget'
 
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
-      & area            (:,:), &
+      & area            (:,:)
+
+    dsl4jsb_Real2D_onDomain :: &
       & land            (:,:), &
       & discharge_ocean (:,:)
 
@@ -440,20 +450,22 @@ CONTAINS
     tile => model%Get_top_tile()        ! HD works on the root tile
     grid => Get_grid(model%grid_id)
 
-    dsl$jsb Get_config(hd_conf, HD)
+    dsl4jsb_Get_config(HD)
 
     ! Get reference to variables in memory
-    dsl$jsb Get_memory(srf_mem, SRF)
-    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl4jsb_Get_memory(SRF)
+    dsl4jsb_Get_memory(SOIL)
 
     area            => grid         %area            (:,:)
-    land            => srf_mem  %land%ptr            (:,:)
-    discharge_ocean => soil_mem %discharge_ocean%ptr (:,:)
     is_in_domain    => grid%patch%cells%decomp_info%owner_mask (:,:)
 
+    dsl4jsb_Get_var2D_onDomain(SRF,land, IN)
+
+    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean, IN)
+
     ! Configuration parameters from the namelist
-    debug_hd          = hd_conf%debug_hd
-    diag_water_budget = hd_conf%diag_water_budget
+    debug_hd          = dsl4jsb_Config(HD)%debug_hd
+    diag_water_budget = dsl4jsb_Config(HD)%diag_water_budget
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(SIZE(is_in_domain(:,1)),SIZE(is_in_domain(1,:))))

@@ -21,11 +21,11 @@ MODULE mo_veg_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
                                   jsb_netcdf_read_2d_time, jsb_netcdf_read_2d
 
-  dsl$jsb Use_processes VEG, SOIL
-  dsl$jsb Use_config(veg)
-  dsl$jsb Use_config(soil)
-  dsl$jsb Use_memory(veg)
-  dsl$jsb Use_memory(soil)
+  dsl4jsb_Use_processes VEG, SOIL
+  dsl4jsb_Use_config(veg)
+  dsl4jsb_Use_config(soil)
+  dsl4jsb_Use_memory(veg)
+  dsl4jsb_Use_memory(soil)
 
   IMPLICIT NONE
   PRIVATE
@@ -41,7 +41,7 @@ CONTAINS
     TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),       POINTER :: model
-    dsl$jsb Def_memory(veg_mem, veg)
+    dsl4jsb_Def_memory(VEG)
 
     REAL(wp), POINTER :: lai_mon(:,:,:)
 
@@ -50,7 +50,7 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get veg memory of the tile
-    dsl$jsb Get_memory(veg_mem, VEG)
+    dsl4jsb_Get_memory(VEG)
 
     ! ...
 
@@ -69,10 +69,10 @@ CONTAINS
     TYPE(t_jsb_tile),  INTENT(inout) :: tile
 
     TYPE(t_jsb_model),        POINTER :: model
-    dsl$jsb Def_config(veg_conf, veg)
-    dsl$jsb Def_memory(veg_mem, veg)
-    dsl$jsb Def_config(soil_conf, soil)
-    dsl$jsb Def_memory(soil_mem, soil)
+    dsl4jsb_Def_config(VEG)
+    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_config(SOIL)
+    dsl4jsb_Def_memory(SOIL)
 
     INTEGER :: i
 
@@ -90,14 +90,14 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get veg memory of the tile
-    dsl$jsb Get_memory(veg_mem, VEG)
-    dsl$jsb Get_memory(soil_mem, SOIL)
+    dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(SOIL)
 
     ! Get veg config
-    dsl$jsb Get_config(veg_conf, VEG)
-    dsl$jsb Get_config(soil_conf, SOIL)
+    dsl4jsb_Get_config(VEG)
+    dsl4jsb_Get_config(SOIL)
 
-    IF (.NOT. veg_conf%active) RETURN
+    IF (.NOT. dsl4jsb_Config(VEG)%active) RETURN
 
     ! Initialize tile fractions
     ! TBD
@@ -107,7 +107,7 @@ CONTAINS
     ! Initialize physical state
     !
 
-    input_file = jsb_netcdf_open_input(TRIM(veg_conf%bc_filename), model%id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(VEG)%bc_filename), model%id)
 
     ! Leaf area index
     ! Get monthly LAI climatology
@@ -115,51 +115,57 @@ CONTAINS
       & input_file,                        &
       & variable_name='lai_clim')
     lai_mon(:,:,:) = MERGE(lai_mon(:,:,:), 0._wp, lai_mon(:,:,:) > 0._wp)
-    veg_mem%lai_mon(:,:,2:13) = lai_mon(:,:,1:12)
-    veg_mem%lai_mon(:,:,1   ) = lai_mon(:,:,12  )
-    veg_mem%lai_mon(:,:,14  ) = lai_mon(:,:,1   )
+    veg__mem%lai_mon(:,:,2:13) = lai_mon(:,:,1:12)
+    veg__mem%lai_mon(:,:,1   ) = lai_mon(:,:,12  )
+    veg__mem%lai_mon(:,:,14  ) = lai_mon(:,:,1   )
     DEALLOCATE(lai_mon)
 
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    veg_mem%lai%ptr(:,:) = wgt1 * veg_mem%lai_mon(:,:,nmw1+1) + wgt2 * veg_mem%lai_mon(:,:,nmw2+1)
+    dsl4jsb_var2D_onDomain(VEG, lai) = &
+      wgt1 * veg__mem%lai_mon(:,:,nmw1+1) + wgt2 * veg__mem%lai_mon(:,:,nmw2+1)
 
     ! Forest fraction
     return_pointer => jsb_netcdf_read_2d(        &
       & input_file,                              &
       & variable_name='forest_fract',            &
-      & fill_array = veg_mem%fract_forest%ptr)
-    veg_mem%fract_forest%ptr(:,:) = MERGE(veg_mem%fract_forest%ptr(:,:), 0._wp, veg_mem%fract_forest%ptr(:,:) >= 0._wp)
+      & fill_array = dsl4jsb_var2D_ptr(VEG, fract_forest))
+    dsl4jsb_var2D_onDomain(VEG, fract_forest) = &
+      MERGE(dsl4jsb_var2D_onDomain(VEG, fract_forest), 0._wp, dsl4jsb_var2D_onDomain(VEG, fract_forest) >= 0._wp)
 
-    veg_mem%canopy_cond%ptr(:,:) = 0._wp
+    dsl4jsb_var2D_onDomain(VEG, canopy_cond) = 0._wp
 
-    veg_mem%skin_can_depth%ptr(:,:) = veg_conf%wsr_capacity * veg_mem%lai%ptr(:,:)
+    dsl4jsb_var2D_onDomain(VEG, skin_can_depth) = dsl4jsb_Config(VEG)%wsr_capacity * dsl4jsb_var2D_onDomain(VEG, lai)
 
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='albedo_veg_vis',           &
-      & fill_array = veg_mem%alb_vis_can%ptr)
-    veg_mem%alb_vis_can%ptr(:,:) = MERGE(veg_mem%alb_vis_can%ptr(:,:), 0._wp, veg_mem%alb_vis_can%ptr(:,:) >= 0._wp)
+      & fill_array = dsl4jsb_var2D_ptr(VEG, alb_vis_can))
+    dsl4jsb_var2D_onDomain(VEG, alb_vis_can) = &
+      MERGE(dsl4jsb_var2D_onDomain(VEG, alb_vis_can), 0._wp, dsl4jsb_var2D_onDomain(VEG, alb_vis_can) >= 0._wp)
 
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='albedo_veg_nir',           &
-      & fill_array = veg_mem%alb_nir_can%ptr)
-    veg_mem%alb_nir_can%ptr(:,:) = MERGE(veg_mem%alb_nir_can%ptr(:,:), 0._wp, veg_mem%alb_nir_can%ptr(:,:) >= 0._wp)
+      & fill_array = dsl4jsb_var2D_ptr(VEG, alb_nir_can))
+    dsl4jsb_var2D_onDomain(VEG, alb_nir_can) = &
+      MERGE(dsl4jsb_var2D_onDomain(VEG, alb_nir_can), 0._wp, dsl4jsb_var2D_onDomain(VEG, alb_nir_can) >= 0._wp)
 
     CALL jsb_netcdf_close_file(input_file)
-    input_file = jsb_netcdf_open_input(TRIM(soil_conf%bc_filename), model%id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SOIL)%bc_filename), model%id)
 
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='root_depth',               &
-      & fill_array = veg_mem%root_depth%ptr)
-    veg_mem%root_depth%ptr(:,:) = MERGE(veg_mem%root_depth%ptr(:,:), 0._wp, veg_mem%root_depth%ptr(:,:) >= 0._wp)
-    veg_mem%root_depth%ptr(:,:) = MIN(veg_mem%root_depth%ptr(:,:), soil_mem%soil_depth%ptr(:,:))  ! Temporary fix (root depth sometimes larger then soil depth)
-!!$    veg_mem%root_depth%ptr(:,:) = soil_mem%soil_depth%ptr(:,:) * 0.75_wp  ! Temporary
+      & fill_array = dsl4jsb_var2D_ptr(VEG, root_depth))
+    dsl4jsb_var2D_onDomain(VEG, root_depth) = &
+      MERGE(dsl4jsb_var2D_onDomain(VEG, root_depth), 0._wp, dsl4jsb_var2D_onDomain(VEG, root_depth) >= 0._wp)
+    dsl4jsb_var2D_onDomain(VEG, root_depth) = &           ! Temporary fix (root depth sometimes larger then soil depth)
+      MIN(dsl4jsb_var2D_onDomain(VEG, root_depth), dsl4jsb_var2D_onDomain(SOIL, soil_depth))
+!!$    dsl4jsb_var2D_onDomain(VEG, root_depth) = soil_mem%soil_depth%ptr(:,:) * 0.75_wp  ! Temporary
 
-    veg_mem%root_depth_l%ptr(:,:,:) = soil_depth_to_layers_2d(               &
-      & veg_mem%root_depth%ptr(:,:),                                         & ! Total rooting depth
-      & soil_conf%dz_water(1:soil_conf%nsoil_water))    ! Soil layer thicknesses from namelist
+    dsl4jsb_var3D_onDomain(VEG, root_depth_l) = soil_depth_to_layers_2d(               &
+      & dsl4jsb_var2D_onDomain(VEG, root_depth),                                         & ! Total rooting depth
+      & dsl4jsb_Config(SOIL)%dz_water(1:dsl4jsb_Config(SOIL)%nsoil_water))    ! Soil layer thicknesses from namelist
 
     CALL jsb_netcdf_close_file(input_file)                              ! Temporary
     input_file = jsb_netcdf_open_input('bc_land_frac.nc', model%id)     ! Temporary
@@ -168,36 +174,38 @@ CONTAINS
     return_pointer => jsb_netcdf_read_2d(        &
       & input_file,                              &
       & variable_name='veg_ratio_max',           &
-      & fill_array = veg_mem%fract_fpc_max%ptr)
-    veg_mem%fract_fpc_max%ptr(:,:) = MERGE(veg_mem%fract_fpc_max%ptr(:,:), 0._wp, veg_mem%fract_fpc_max%ptr(:,:) >= 0._wp)
+      & fill_array = dsl4jsb_var2D_ptr(VEG, fract_fpc_max))
+    dsl4jsb_var2D_onDomain(VEG, fract_fpc_max) = &
+      MERGE(dsl4jsb_var2D_onDomain(VEG, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(VEG, fract_fpc_max) >= 0._wp)
 
 !!$    veg_mem%fract_fpc(:,:) = foliage_projected_cover(veg_mem%fract_fpc_max%ptr(:,:), veg_mem%lai%ptr(:,:), veg_mem%clump%ptr(:,:))
-    veg_mem%fract_fpc%ptr(:,:) = foliage_projected_cover(veg_mem%fract_fpc_max%ptr(:,:), veg_mem%lai%ptr(:,:), &
-      SPREAD(SPREAD(2._wp, DIM=1, NCOPIES=SIZE(veg_mem%lai%ptr,1)), DIM=2, NCOPIES=SIZE(veg_mem%lai%ptr,2))) ! Temporary
+    dsl4jsb_var2D_onDomain(VEG, fract_fpc) = &
+      foliage_projected_cover(dsl4jsb_var2D_onDomain(VEG, fract_fpc_max), dsl4jsb_var2D_onDomain(VEG, lai), &
+      SPREAD(SPREAD(2._wp, DIM=1, NCOPIES=SIZE(dsl4jsb_var2D_ptr(VEG, lai),1)), DIM=2, NCOPIES=SIZE(dsl4jsb_var2D_ptr(VEG, lai),2))) ! Temporary
 
     CALL jsb_netcdf_close_file(input_file)
 
     ! Initialize water state
     !
-    veg_mem%wfract_can%ptr  (:,:) = 0._wp
-    veg_mem%wsr_can%ptr     (:,:) = 0._wp
-    veg_mem%sfract_can%ptr  (:,:) = 0._wp
-    veg_mem%wsn_can%ptr     (:,:) = 0._wp
+    dsl4jsb_var2D_onDomain(VEG, wfract_can) = 0._wp
+    dsl4jsb_var2D_onDomain(VEG, wsr_can)    = 0._wp
+    dsl4jsb_var2D_onDomain(VEG, sfract_can) = 0._wp
+    dsl4jsb_var2D_onDomain(VEG, wsn_can)    = 0._wp
 
     ! Calculate water content and field capacity in the root zone
-    DO i=1,SIZE(veg_mem%ws_root%ptr,2)
-      veg_mem%ws_root%ptr     (:,i) = water_in_root_zone( soil_mem%ws_l%ptr     (:,:,i), &
-        & soil_mem%soil_depth_l%ptr(:,:,i), veg_mem%root_depth_l%ptr(:,:,i))
-      veg_mem%ws_fc_root%ptr  (:,i) = water_in_root_zone( soil_mem%ws_fc_l%ptr  (:,:,i), &
-        & soil_mem%soil_depth_l%ptr(:,:,i), veg_mem%root_depth_l%ptr(:,:,i))
-      veg_mem%ws_pwp_root%ptr (:,i) = water_in_root_zone( soil_mem%ws_pwp_l%ptr (:,:,i), &
-        & soil_mem%soil_depth_l%ptr(:,:,i), veg_mem%root_depth_l%ptr(:,:,i))
+    DO i=1,SIZE(dsl4jsb_var2D_ptr(VEG, ws_root), 2)
+      dsl4jsb_var2D_ptr(VEG, ws_root)     (:,i) = water_in_root_zone( dsl4jsb_var3D_ptr(SOIL, ws_l)     (:,:,i), &
+        & dsl4jsb_var3D_ptr(SOIL, soil_depth_l)(:,:,i), dsl4jsb_var3D_ptr(VEG, root_depth_l)(:,:,i))
+      dsl4jsb_var2D_ptr(VEG, ws_fc_root)  (:,i) = water_in_root_zone( dsl4jsb_var3D_ptr(SOIL, ws_fc_l)  (:,:,i), &
+        & dsl4jsb_var3D_ptr(SOIL, soil_depth_l)(:,:,i), dsl4jsb_var3D_ptr(VEG, root_depth_l)(:,:,i))
+      dsl4jsb_var2D_ptr(VEG, ws_pwp_root) (:,i) = water_in_root_zone( dsl4jsb_var3D_ptr(SOIL, ws_pwp_l) (:,:,i), &
+        & dsl4jsb_var3D_ptr(SOIL, soil_depth_l)(:,:,i), dsl4jsb_var3D_ptr(VEG, root_depth_l)(:,:,i))
     END DO
 !!$    veg_mem%ws_root%ptr    (:,:) = 0._wp
 !!$    veg_mem%ws_fc_root%ptr (:,:) = 0._wp
 !!$    veg_mem%ws_pwp_root%ptr(:,:) = 0._wp
 
-    veg_mem%water_stress%ptr(:,:) = 0._wp
+    dsl4jsb_var2d_onDomain(VEG, water_stress) = 0._wp
 
     ! Propagate initial conditions down the tile structure, starting with the tile with which this subroutine was called initially
     ! TBD: sub-tiles should not read the netcdf files again

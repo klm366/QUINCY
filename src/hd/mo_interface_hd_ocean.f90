@@ -30,8 +30,8 @@ MODULE mo_interface_hd_ocean
   USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name
 #endif
 
-  Use_processes SOIL
-  Use_memory(soil)
+  dsl4jsb_Use_processes SOIL
+  dsl4jsb_Use_memory(SOIL)
 
   IMPLICIT NONE
   PRIVATE
@@ -75,13 +75,12 @@ CONTAINS
     TYPE(t_jsb_tile),  POINTER    :: tile
     TYPE(t_jsb_grid),  POINTER    :: grid
 
-    Def_memory(soil_mem, soil)
+    dsl4jsb_Def_memory(SOIL)
 
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':interface_hd_ocean'
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER :: &
-      & discharge_ocean   (:,:)
+    dsl4jsb_Real2D_onDomain ::discharge_ocean
 
     ! Local variables
 
@@ -101,9 +100,9 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     ! Get reference to variables in memory
-    Get_memory(soil_mem, SOIL)
+    dsl4jsb_Get_memory(SOIL)
 
-    discharge_ocean => soil_mem %discharge_ocean%ptr   (:,:)
+    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean, IN)
 
     ! Send river discharge
     ! --------------------
