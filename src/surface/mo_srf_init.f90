@@ -24,9 +24,9 @@ MODULE mo_srf_init
   USE mo_impl_constants,    ONLY: LAND_BOUNDARY, SEA_BOUNDARY, SEA
 #endif
 
-  dsl$jsb Use_processes SRF
-  dsl$jsb Use_config(srf)
-  dsl$jsb Use_memory(srf)
+  dsl4jsb_Use_processes SRF
+  dsl4jsb_Use_config(SRF)
+  dsl4jsb_Use_memory(SRF)
 
   IMPLICIT NONE
   PRIVATE
@@ -56,8 +56,8 @@ CONTAINS
     TYPE(t_jsb_tile), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),        POINTER :: model
-    dsl$jsb Def_config(srf_conf, srf)
-    dsl$jsb Def_memory(srf_mem, srf)
+    dsl4jsb_Def_config(SRF)
+    dsl4jsb_Def_memory(SRF)
 
     REAL(wp), POINTER :: t_srf(:,:), t_srf_mon(:,:,:), cell_sea_land_mask(:,:)
     REAL(wp), POINTER :: &
@@ -74,53 +74,54 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get srf memory of the tile
-    dsl$jsb Get_memory(srf_mem, SRF)
+    dsl4jsb_Get_memory(SRF)
 
     ! Get srf config
-    dsl$jsb Get_config(srf_conf, SRF)
+    dsl4jsb_Get_config(SRF)
 
-    IF (.NOT. srf_conf%active) RETURN
+    IF (.NOT. dsl4jsb_Config(SRF)%active) RETURN
 
     ! Initialize parameters
     !
     CALL message(TRIM(routine), &
-         'Initializing srf memory for tile '//TRIM(tile%name)//' from '//TRIM(srf_conf%bc_sso_filename))
-    input_file = jsb_netcdf_open_input(TRIM(srf_conf%bc_sso_filename), model%id)
+         'Initializing srf memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(SRF)%bc_sso_filename))
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SRF)%bc_sso_filename), model%id)
 
     ! Orography
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='orostd',                   &
-      & fill_array = srf_mem%oro_stddev%ptr)
-    srf_mem%oro_stddev%ptr(:,:) = MERGE(srf_mem%oro_stddev%ptr(:,:), 0._wp, srf_mem%oro_stddev%ptr(:,:) >= 0._wp)
+      & fill_array = dsl4jsb_var2D_ptr(SRF,oro_stddev))
+    dsl4jsb_var2D_onDomain(SRF,oro_stddev) = &
+      MERGE(dsl4jsb_var2D_onDomain(SRF,oro_stddev), 0._wp, dsl4jsb_var2D_onDomain(SRF,oro_stddev) >= 0._wp)
 
     CALL jsb_netcdf_close_file(input_file)
 
     CALL message(TRIM(routine), 'Initializing srf memory for tile '//TRIM(tile%name)//' from bc_land_frac.nc')
     input_file = jsb_netcdf_open_input('bc_land_frac.nc', model%id)     ! Temporary
-!!$    input_file = jsb_netcdf_open_input(TRIM(srf_conf%bc_filename), model%id)
+!!$    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SRF)%bc_filename), model%id)
 
     ! Land mask (including glacies and lakes)
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='notsea',                   &        !< ocean 0., land 1.
-      & fill_array = srf_mem%land%ptr)
+      & fill_array = dsl4jsb_var2D_ptr(SRF,land))
 
     ! Glacier mask
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='glac',                     &
-      & fill_array = srf_mem%glacier%ptr)
+      & fill_array = dsl4jsb_var2D_ptr(SRF,glacier))
     ! set glacier mask to zero on ocean grid cells (instead of missing value)
-    WHERE (srf_mem%land%ptr(:,:) == 0._wp)
-      srf_mem%glacier%ptr(:,:) = 0._wp
+    WHERE (dsl4jsb_var2D_onDomain(SRF,land) == 0._wp)
+      dsl4jsb_var2D_onDomain(SRF,glacier) = 0._wp
     END WHERE
 
     ! Lake mask
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='lake',                     &
-      & fill_array = srf_mem%lake%ptr)
+      & fill_array = dsl4jsb_var2D_ptr(SRF,lake))
 
     CALL jsb_netcdf_close_file(input_file)
 
@@ -132,9 +133,11 @@ CONTAINS
     cell_sea_land_mask => jsb_netcdf_read_2d( &
       & input_file,                                &
       & variable_name='cell_sea_land_mask')
-    srf_mem%coast_land%ptr(:,:)  = MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == LAND_BOUNDARY)
-    srf_mem%coast_ocean%ptr(:,:) = MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
-    srf_mem%ocean%ptr(:,:)       = MERGE(1._wp, 0._wp, &
+    dsl4jsb_var2D_onDomain(SRF,coast_land)  = &
+      MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == LAND_BOUNDARY)
+    dsl4jsb_var2D_onDomain(SRF,coast_ocean) = &
+      MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+    dsl4jsb_var2D_onDomain(SRF,ocean)       = MERGE(1._wp, 0._wp, &
       cell_sea_land_mask(:,:) == SEA .OR. cell_sea_land_mask(:,:) == SEA_BOUNDARY)
     DEALLOCATE(cell_sea_land_mask)
 
@@ -142,31 +145,33 @@ CONTAINS
 
 #endif
 
-    input_file = jsb_netcdf_open_input(TRIM(srf_conf%bc_filename), model%id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SRF)%bc_filename), model%id)
 
     ! Surface roughness length
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='roughness_length',         &
-      & fill_array = srf_mem%rough_m_srf%ptr)
-    srf_mem%rough_m_srf%ptr(:,:) = MERGE(srf_mem%rough_m_srf%ptr(:,:), 1._wp, srf_mem%rough_m_srf%ptr(:,:) >= 0._wp)
+      & fill_array = dsl4jsb_var2D_ptr(SRF,rough_m_srf))
+    dsl4jsb_var2D_onDomain(SRF,rough_m_srf) = &
+      MERGE(dsl4jsb_var2D_onDomain(SRF,rough_m_srf), 1._wp, dsl4jsb_var2D_onDomain(SRF,rough_m_srf) >= 0._wp)
 
     ! Albedo
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='albedo',                   &
-      & fill_array = srf_mem%albedo_srf%ptr)
-    srf_mem%albedo_srf%ptr(:,:) = MERGE(srf_mem%albedo_srf%ptr(:,:), 0._wp, srf_mem%albedo_srf%ptr(:,:) >= 0._wp)
+      & fill_array = dsl4jsb_var2D_ptr(SRF,albedo_srf))
+    dsl4jsb_var2D_onDomain(SRF,albedo_srf) = &
+      MERGE(dsl4jsb_var2D_onDomain(SRF,albedo_srf), 0._wp, dsl4jsb_var2D_onDomain(SRF,albedo_srf) >= 0._wp)
 
-    srf_mem%alb_vis_srf%ptr(:,:) = srf_mem%albedo_srf%ptr(:,:)
-    srf_mem%alb_nir_srf%ptr(:,:) = srf_mem%albedo_srf%ptr(:,:)
+    dsl4jsb_var2D_onDomain(SRF,alb_vis_srf) = dsl4jsb_var2D_onDomain(SRF,albedo_srf)
+    dsl4jsb_var2D_onDomain(SRF,alb_nir_srf) = dsl4jsb_var2D_onDomain(SRF,albedo_srf)
 
     CALL jsb_netcdf_close_file(input_file)
 
     ! Initialize energy state
     !
 
-    input_file = jsb_netcdf_open_input(TRIM(srf_conf%ic_filename), model%id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SRF)%ic_filename), model%id)
 
     ! Initial surface temperature
 !!$    return_pointer => jsb_netcdf_read_2d(         &
@@ -194,56 +199,55 @@ CONTAINS
     ELSE
       n2 = nmw2
     END IF
-    srf_mem%t_srf%ptr(:,:) = wgt1 * t_srf_mon(:,:,n1) + wgt2 * t_srf_mon(:,:,n2)
+    dsl4jsb_var2D_onDomain(SRF,t_srf) = wgt1 * t_srf_mon(:,:,n1) + wgt2 * t_srf_mon(:,:,n2)
 
     DEALLOCATE(t_srf_mon)
 
     CALL jsb_netcdf_close_file(input_file)
 
-    t_srf => srf_mem%t_srf%ptr
+    t_srf => dsl4jsb_var2D_ptr(SRF,t_srf)
     ! Note: t_srf now points to srf_mem%t_srf%ptr and can be
     ! used below to fill %t_srf for all other files:
     !    tile%mem%srf%energy_state%t_srf%ptr(:,:) = t_srf(:,:)
 
-    srf_mem%t_srf_old%ptr        (:,:) = t_srf (:,:)
-    srf_mem%t_srf_unfilt%ptr     (:,:) = t_srf (:,:)
-    srf_mem%t_srf_unfilt_old%ptr (:,:) = t_srf (:,:)
-    srf_mem%t_eff_srf%ptr        (:,:) = t_srf (:,:)
+    dsl4jsb_var2D_onDomain(SRF,t_srf_old)            = t_srf (:,:)
+    dsl4jsb_var2D_onDomain(SRF,t_srf_unfilt)         = t_srf (:,:)
+    dsl4jsb_var2D_onDomain(SRF,t_srf_unfilt_old)     = t_srf (:,:)
+    dsl4jsb_var2D_onDomain(SRF,t_eff_srf)            = t_srf (:,:)
 !!$    srf_mem%t_eff_srf%ptr        (:,:) = t_srf (:,:)
-    srf_mem%s_srf%ptr            (:,:) = 0._wp
-    srf_mem%qsat_srf%ptr         (:,:) = -1._wp  ! Negative values will be used to test for start of experiment
+    dsl4jsb_var2D_onDomain(SRF,s_srf)                = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,qsat_srf)             = -1._wp  ! Negative values will be used to test for start of experiment
 !!$    srf_mem%qsat_srf_old%ptr     (:,:) = 0._wp
-    srf_mem%tte_corr%ptr         (:,:) = 0._wp
-    srf_mem%fact_q_air%ptr       (:,:) = 0.5_wp
-    srf_mem%fact_qsat_srf%ptr    (:,:) = 0.5_wp
-    srf_mem%fact_qsat_trans_srf%ptr (:,:) = 0.5_wp
+    dsl4jsb_var2D_onDomain(SRF,tte_corr)             = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,fact_q_air)           = 0.5_wp
+    dsl4jsb_var2D_onDomain(SRF,fact_qsat_srf)        = 0.5_wp
+    dsl4jsb_var2D_onDomain(SRF,fact_qsat_trans_srf)  = 0.5_wp
 
     ! Initialize water state
 
-    srf_mem%wfract_srf%ptr  (:,:) = 0._wp
-    srf_mem%wsr_srf%ptr     (:,:) = 0._wp
-
-    srf_mem%sfract_srf%ptr  (:,:) = 0._wp
-    srf_mem%wsn_srf%ptr     (:,:) = -1._wp    ! -1 used to determine start of experiment
-    srf_mem%wsn_glacier%ptr (:,:) = 20._wp    ! Temporary initialization of glacier thickness
+    dsl4jsb_var2D_onDomain(SRF,wfract_srf)   = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,wsr_srf)      = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,sfract_srf)   = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,wsn_srf)      = -1._wp    ! -1 used to determine start of experiment
+    dsl4jsb_var2D_onDomain(SRF,wsn_glacier)  = 20._wp    ! Temporary initialization of glacier thickness
 
     ! Initialize energy fluxes
     !
 
-    srf_mem%sw_srf_net%ptr     (:,:) = 0._wp
-    srf_mem%swvis_srf_net%ptr  (:,:) = 0._wp
-    srf_mem%swnir_srf_net%ptr  (:,:) = 0._wp
-    srf_mem%lw_srf_net%ptr     (:,:) = 0._wp
-    srf_mem%rad_srf_net%ptr    (:,:) = 0._wp
-    srf_mem%latent_hflx%ptr    (:,:) = 0._wp
-    srf_mem%sensible_hflx%ptr  (:,:) = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,sw_srf_net)      = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,swvis_srf_net)   = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,swnir_srf_net)   = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,lw_srf_net)      = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,rad_srf_net)     = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,latent_hflx)     = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,sensible_hflx)   = 0._wp
 
     ! Initialize water fluxes
     !
 
-    srf_mem%evapopot%ptr      (:,:) = 0._wp
-    srf_mem%evapotrans%ptr    (:,:) = 0._wp
-    srf_mem%trans%ptr         (:,:) = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,evapopot)       = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,evapotrans)     = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,trans)          = 0._wp
 
     ! Propagate initial conditions down the tile structure, starting with the tile with which this subroutine was called initially
     ! TBD: sub-tiles should not read the netcdf files again

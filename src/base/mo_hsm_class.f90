@@ -11,6 +11,11 @@ MODULE mo_hsm_class
 
   USE mo_exception, ONLY: message
 
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: t_State, t_Hsm
+
   INTEGER, PARAMETER :: MAX_STATE_NESTING = 10
   !>
   !! Type for States of the State Machine
@@ -235,6 +240,7 @@ CONTAINS
     CLASS(t_State), INTENT(in) :: this
 
     CHARACTER(LEN=2*MAX_STATE_NESTING) :: c_path
+    INTEGER :: i
 
     DO i=1,MAX_STATE_NESTING
       IF (this%path(i) /= -1) THEN
@@ -268,7 +274,7 @@ CONTAINS
 
     CHARACTER(len=*), INTENT(in)         :: name
     CLASS(t_State),   INTENT(in), POINTER, OPTIONAL :: top
-    CLASS(t_Hsm), POINTER                :: return_ptr
+    TYPE(t_Hsm), POINTER                 :: return_ptr
 
     ALLOCATE(return_ptr)
 

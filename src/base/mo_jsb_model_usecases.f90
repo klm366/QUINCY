@@ -15,7 +15,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_process_factory, ONLY: ATM2LAND, LAND2ATM, SRF, SOIL, VEG, GLACIER, LAKE, HD
-  USE mo_hsm_class,          ONLY: t_Hsm
+  USE mo_hsm_class,          ONLY: t_Hsm, t_State
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,           ONLY: Get_Grid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile
@@ -62,7 +62,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile
+    CLASS(t_State),   POINTER :: box_tile
     TYPE(t_jsb_grid), POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite'
@@ -75,7 +75,7 @@ CONTAINS
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG,HD/), &
       varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
-    model%hsm => t_Hsm('hsm', box_tile)
+    model%hsm => t_Hsm('hsm', top=box_tile)
 
     NULLIFY(box_tile)
 
@@ -109,7 +109,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile, glacier_tile, lake_tile
+    CLASS(t_State),   POINTER :: box_tile, glacier_tile, lake_tile
     TYPE(t_jsb_grid), POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_tiles'
