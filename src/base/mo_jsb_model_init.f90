@@ -149,7 +149,6 @@ CONTAINS
 
     USE mo_jsb_model_class,    ONLY: print_model
     USE mo_jsb_tile_class,     ONLY: t_jsb_tile
-    USE mo_jsb_process_factory,      ONLY: max_no_of_processes
     USE mo_jsb_model_usecases, ONLY: init_usecase
     USE mo_srf_init,           ONLY: srf_init_ic, srf_init_bc
     USE mo_soil_init,          ONLY: soil_init
@@ -168,10 +167,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_common'
 
+    CALL model%Configure_processes()
+
     surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
     CALL register_vgrid(surface)
-
-    ALLOCATE(model%processes(max_no_of_processes))
 
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase

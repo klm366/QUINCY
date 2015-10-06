@@ -10,6 +10,8 @@
 MODULE mo_jsb_process_factory
 #ifndef __NO_JSBACH__
 
+  USE mo_exception,            ONLY: finish
+
   USE mo_jsb_memory_class,     ONLY: t_jsb_memory, t_jsb_memory_p
   USE mo_jsb_config_class,     ONLY: t_jsb_config
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory, t_land2atm_memory
@@ -52,6 +54,8 @@ MODULE mo_jsb_process_factory
     MODULE PROCEDURE Get_veg_config
     MODULE PROCEDURE Get_hd_config
   END INTERFACE Get_process_config
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory'
 
 CONTAINS
 
@@ -268,12 +272,17 @@ CONTAINS
     CLASS(t_jsb_config), TARGET, INTENT(in) :: config
     TYPE(t_srf_config),  POINTER    :: return_ptr
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_srf_config'
+
     return_ptr => NULL()
 
     SELECT TYPE (config)
     TYPE IS (t_srf_config)
       return_ptr => config
     END SELECT
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      CALL finish(TRIM(routine), 'Process has no configuration')
 
   END SUBROUTINE Get_srf_config
 
@@ -282,12 +291,17 @@ CONTAINS
     CLASS(t_jsb_config), TARGET, INTENT(in) :: config
     TYPE(t_soil_config), POINTER    :: return_ptr
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_soil_config'
+
     return_ptr => NULL()
 
     SELECT TYPE (config)
     TYPE IS (t_soil_config)
       return_ptr => config
     END SELECT
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      CALL finish(TRIM(routine), 'Process has no configuration')
 
   END SUBROUTINE Get_soil_config
 
@@ -296,12 +310,17 @@ CONTAINS
     CLASS(t_jsb_config), TARGET, INTENT(in) :: config
     TYPE(t_veg_config), POINTER    :: return_ptr
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_veg_config'
+
     return_ptr => NULL()
 
     SELECT TYPE (config)
     TYPE IS (t_veg_config)
       return_ptr => config
     END SELECT
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      CALL finish(TRIM(routine), 'Process has no configuration')
 
   END SUBROUTINE Get_veg_config
 
@@ -310,12 +329,17 @@ CONTAINS
     CLASS(t_jsb_config), TARGET, INTENT(in) :: config
     TYPE(t_hd_config), POINTER    :: return_ptr
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_hd_config'
+
     return_ptr => NULL()
 
     SELECT TYPE (config)
     TYPE IS (t_hd_config)
       return_ptr => config
     END SELECT
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      CALL finish(TRIM(routine), 'Process has no configuration')
 
   END SUBROUTINE Get_hd_config
 

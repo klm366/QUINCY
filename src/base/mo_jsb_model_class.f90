@@ -63,6 +63,8 @@ CONTAINS
   !!
   FUNCTION new_model(name, shortname, description, namelist_filename) RESULT(return_ptr)
 
+    USE mo_jsb_process_factory, ONLY: max_no_of_processes
+
     CHARACTER(len=*),           INTENT(in) :: name
     CHARACTER(len=*),           INTENT(in) :: shortname
     CHARACTER(len=*),           INTENT(in) :: description
@@ -81,19 +83,19 @@ CONTAINS
     return_ptr%namelist_filename = TRIM(namelist_filename)
     return_ptr%config => NULL()
 
+    ALLOCATE(return_ptr%processes(max_no_of_processes))
+
     CALL message(TRIM(routine), 'construction of JSBACH model completed.')
 
   END FUNCTION new_model
 
-  SUBROUTINE Configure_model_processes(this, processes)
+  SUBROUTINE Configure_model_processes(this)
 
     CLASS(t_jsb_model), INTENT(inout) :: this
-    INTEGER,            INTENT(in)    :: processes(:)
 
-    INTEGER :: i, iproc
+    INTEGER :: iproc
 
-    DO i=1,SIZE(processes)
-      iproc = processes(i)
+    DO iproc=1,SIZE(this%processes)
       CALL this%processes(iproc)%Configure(iproc, this%namelist_filename)
     END DO
 
