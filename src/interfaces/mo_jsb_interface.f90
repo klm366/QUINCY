@@ -24,11 +24,11 @@ MODULE mo_jsb_interface
   USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
 
   dsl4jsb_Use_processes ATM2LAND, SRF, HD
-  dsl4jsb_Use_config(HD)
   dsl4jsb_Use_memory(SRF)
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
 !!$    dsl4jsb_Use_memory(ATM2LAND)
 #ifndef __NO_JSBACH_HD__
+  dsl4jsb_Use_config(HD)
   dsl4jsb_Use_memory(HD)
 #endif
 
@@ -122,7 +122,9 @@ CONTAINS
     !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_tile), POINTER :: tile
+#ifndef __NO_JSBACH_HD__
     dsl4jsb_Def_config(HD)
+#endif
     dsl4jsb_Def_memory(ATM2LAND)
     dsl4jsb_Def_memory(SRF)
 
@@ -138,7 +140,9 @@ CONTAINS
     dsl4jsb_Get_memory(ATM2LAND)
     dsl4jsb_Get_memory(SRF)
 
+#ifndef __NO_JSBACH_HD__
     dsl4jsb_Get_config(HD)
+#endif
 
 !!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)//' for: block=', iblk, ', ics=', ics, ', ice=', ice
 !!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
@@ -286,16 +290,20 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
 
     INTEGER,  INTENT(in) ::  model_id
- 
+
     TYPE(t_jsb_model), POINTER :: model
 
+#ifndef __NO_JSBACH_HD__
     dsl4jsb_Def_config(HD)
+#endif
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
     model => get_model(model_id)
 
+#ifndef __NO_JSBACH_HD__
     dsl4jsb_Get_config(HD)
+#endif
 
 #ifndef __NO_JSBACH_HD__
     IF (dsl4jsb_Config(HD)%active) THEN
