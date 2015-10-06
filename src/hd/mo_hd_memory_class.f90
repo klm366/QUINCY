@@ -40,7 +40,7 @@ MODULE mo_hd_memory_class
     !
     ! HD state variables
     TYPE(t_jsb_var_real3d) :: &
-    overlflow_res,  &  !< content of overland flow reservoir cascade
+      overlflow_res,  &  !< content of overland flow reservoir cascade
       baseflow_res, &  !< content of baseflow reservoir cascade
       riverflow_res    !< content of groundflow reservoir cascade
   CONTAINS
