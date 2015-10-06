@@ -69,9 +69,6 @@ CONTAINS
 
     grid => Get_grid(model%grid_id)
 
-    ! Configure processes
-    CALL model%Configure_processes(processes=(/ATM2LAND,SRF,SOIL,VEG,HD/))
-
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG,HD/), &
       varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
@@ -115,9 +112,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_tiles'
 
     grid => Get_grid(model%grid_id)
-
-    ! Configure processes
-    CALL model%Configure_processes(processes=(/ATM2LAND,SRF,SOIL,VEG,HD/))
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG,HD/), &
