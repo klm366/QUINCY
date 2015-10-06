@@ -35,7 +35,7 @@ CONTAINS
     CHARACTER(LEN=*),     INTENT(in)    :: namelist_filename
 
     this%id       = iproc
-    this%config  => Create_process_config(iproc, namelist_filename)
+    this%config  => Create_process_config(iproc, TRIM(namelist_filename))
 
   END SUBROUTINE Configure_process
 

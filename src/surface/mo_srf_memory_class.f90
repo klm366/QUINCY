@@ -124,19 +124,19 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-      CALL jsb_add_var( mem, prefix//'land'//suffix, mem%land,                 &
+      CALL jsb_add_var( mem, prefix//'land_frac'//suffix, mem%land,                     &
         & hgrid, surface,                                                               &
         & t_cf('land_mask', '', 'land fraction', nc_bits),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL jsb_add_var( mem, prefix//'ocean'//suffix, mem%ocean,               &
+      CALL jsb_add_var( mem, prefix//'ocean_frac'//suffix, mem%ocean,                   &
         & hgrid, surface,                                                               &
         & t_cf('ocean_mask', '', 'ocean fraction', nc_bits),                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL jsb_add_var( mem, prefix//'lake'//suffix, mem%lake,                 &
+      CALL jsb_add_var( mem, prefix//'lake_frac'//suffix, mem%lake,                     &
         & hgrid, surface,                                                               &
         & t_cf('lake_mask', '', 'lake fraction', nc_bits),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &

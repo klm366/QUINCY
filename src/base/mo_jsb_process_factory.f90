@@ -85,6 +85,8 @@ CONTAINS
     CASE (HD)
       return_ptr => new_hd_config(nml_handler)
 #endif
+    CASE DEFAULT
+      return_ptr => NULL()
     END SELECT
 
     CALL close_nml(nml_handler)
