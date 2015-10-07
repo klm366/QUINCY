@@ -28,8 +28,7 @@ MODULE mo_jsb_varlist
   PRIVATE
 
   PUBLIC :: t_jsb_varlist
-  PUBLIC :: jsb_new_var_list, jsb_get_var_list, jsb_add_var
-  PUBLIC :: Get_varlist
+  PUBLIC :: jsb_add_var, Get_varlist
 
   INTERFACE jsb_add_var
     MODULE PROCEDURE jsb_add_var_list_element_r2d

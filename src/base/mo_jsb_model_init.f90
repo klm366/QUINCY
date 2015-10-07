@@ -147,6 +147,7 @@ CONTAINS
 
   SUBROUTINE init_model_common(model)
 
+    USE mo_jsb_process_factory, ONLY: HD
     USE mo_jsb_model_class,    ONLY: print_model
     USE mo_jsb_tile_class,     ONLY: t_jsb_tile
     USE mo_jsb_model_usecases, ONLY: init_usecase
@@ -198,8 +199,10 @@ CONTAINS
     CALL veg_init_ic(tile)
 
 #ifndef __NO_JSBACH_HD__
-    CALL hd_init_bc(tile)
-    CALL hd_init_ic(tile)
+    IF (tile%Is_process_active(HD)) THEN
+      CALL hd_init_bc(tile)
+      CALL hd_init_ic(tile)
+    END IF
 #endif
     ! Initialize tile fractions for all tiles
     ! This is done after the initialization of the initial and boundary conditions of the model components

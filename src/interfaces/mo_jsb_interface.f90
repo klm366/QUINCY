@@ -193,7 +193,7 @@ CONTAINS
     CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
 
 #ifndef __NO_JSBACH_HD__
-    IF (dsl4jsb_Config(HD)%active) THEN
+    IF (tile%Is_process_active(HD)) THEN
       CALL update_hd(tile, iblk, ics, ice, nc, steplen)
     END IF
 #endif

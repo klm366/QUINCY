@@ -42,6 +42,9 @@ CONTAINS
     CASE ('jsbach_lite')
       CALL init_usecase_lite(model)
 
+    CASE ('jsbach_lite_with_hd')
+      CALL init_usecase_lite_with_hd(model)
+
     CASE ('jsbach_lite_tpe_open')
       CALL init_usecase_lite_tpe_open(model)
 
@@ -70,13 +73,33 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
-    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG,HD/), &
+    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG/), &
       varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
     model%hsm => t_Hsm('hsm', top=box_tile)
 
     NULLIFY(box_tile)
 
   END SUBROUTINE init_usecase_lite
+
+  SUBROUTINE init_usecase_lite_with_hd(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_State),   POINTER :: box_tile
+    TYPE(t_jsb_grid), POINTER :: grid
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_with_hd'
+
+    grid => Get_grid(model%grid_id)
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG,HD/), &
+      varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
+    model%hsm => t_Hsm('hsm', top=box_tile)
+
+    NULLIFY(box_tile)
+
+  END SUBROUTINE init_usecase_lite_with_hd
 
   SUBROUTINE init_usecase_lite_tpe_open(model)
 

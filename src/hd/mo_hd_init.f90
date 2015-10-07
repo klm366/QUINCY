@@ -51,13 +51,13 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    ! Get hd memory of the tile (only the root tile is used)
-    dsl4jsb_Get_memory(HD)
-
     ! Get hd config
     dsl4jsb_Get_config(HD)
 
     IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
+
+    ! Get hd memory of the tile (only the root tile is used)
+    dsl4jsb_Get_memory(HD)
 
     IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) /= 'full') RETURN
 
@@ -137,13 +137,13 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    ! Get hd memory of the tile (only the root tile is used)
-    dsl4jsb_Get_memory(HD)
-
     ! Get hd config
     dsl4jsb_Get_config(HD)
 
     IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
+
+    ! Get hd memory of the tile (only the root tile is used)
+    dsl4jsb_Get_memory(HD)
 
     IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) /= 'full') RETURN
 
