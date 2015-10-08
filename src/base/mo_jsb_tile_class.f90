@@ -99,6 +99,9 @@ CONTAINS
     END IF
 
     ALLOCATE(return_ptr%mem(max_no_of_processes))
+    DO i=1,max_no_of_processes
+      return_ptr%mem(i)%p => NULL()
+    END DO
     DO i=1,SIZE(processes)
       iproc = processes(i)
       !return_ptr%param(iproc)%p => t_jsb_param(iproc)
@@ -113,7 +116,6 @@ CONTAINS
         IF (ASSOCIATED(return_ptr%parent_tile)) THEN
           CALL return_ptr%mem(iproc)%p%Init(TRIM(Get_process_name(iproc)), TRIM(name))
         ELSE
-!!$          CALL return_ptr%mem(iproc)%p%Init(TRIM(Get_process_name(iproc)), '')
           CALL return_ptr%mem(iproc)%p%Init('', '')
         END IF
       END SELECT
@@ -200,7 +202,10 @@ CONTAINS
     INTEGER,           INTENT(in) :: iproc
     LOGICAL                       :: return_value
 
-    return_value = ASSOCIATED(this%mem(iproc)%p)
+    SELECT TYPE (this)
+    TYPE IS (t_jsb_tile)
+      return_value = ASSOCIATED(this%mem(iproc)%p)
+    END SELECT
 
   END FUNCTION Is_process_active
 

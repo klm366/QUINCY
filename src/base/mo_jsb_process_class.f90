@@ -34,8 +34,11 @@ CONTAINS
     INTEGER,              INTENT(in)    :: iproc
     CHARACTER(LEN=*),     INTENT(in)    :: namelist_filename
 
-    this%id       = iproc
-    this%config  => Create_process_config(iproc, TRIM(namelist_filename))
+    SELECT TYPE (this)
+    CLASS IS (t_jsb_process)
+      this%id       = iproc
+      this%config  => Create_process_config(iproc, TRIM(namelist_filename))
+    END SELECT
 
   END SUBROUTINE Configure_process
 
