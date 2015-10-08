@@ -24,7 +24,7 @@ MODULE mo_hd_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_hd_config
      LOGICAL                     :: active                !< hd module is active
      CHARACTER(len=filename_max) :: ic_filename           !< file with initial conditions
-     CHARACTER(len=filename_max) :: bc_filename           !< file with boundary conditions       
+     CHARACTER(len=filename_max) :: bc_filename           !< file with boundary conditions
      LOGICAL                     :: debug_hd              !< additional printing for debugging
      LOGICAL                     :: diag_water_budget     !< prints to diagnose global water budget
      CHARACTER(len=32)           :: routing_scheme        !< river_routing_scheme: full / equally_to_coast / equally_to_ocean /
@@ -47,7 +47,7 @@ CONTAINS
 
     LOGICAL                       :: active                !< hd module is active
     CHARACTER(len=filename_max)   :: ic_filename           !< file with initial conditions
-    CHARACTER(len=filename_max)   :: bc_filename           !< file with boundary conditions       
+    CHARACTER(len=filename_max)   :: bc_filename           !< file with boundary conditions
     LOGICAL                       :: debug_hd              !< additional printing for debugging
     LOGICAL                       :: diag_water_budget     !< prints to diagnose global water budget
     CHARACTER(len=32)             :: routing_scheme        !< river_routing_scheme: full / equally_to_coast / equally_to_ocean /
@@ -87,6 +87,8 @@ CONTAINS
     config%debug_hd                  = debug_hd
     config%diag_water_budget         = diag_water_budget
     config%routing_scheme            = routing_scheme
+
+    IF (.NOT. active) RETURN
 
     hd_o  => new_vgrid('hd_nres_overlflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
     CALL Register_vgrid(hd_o)
