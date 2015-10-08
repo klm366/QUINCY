@@ -161,6 +161,8 @@ CONTAINS
       return_value = 'glac'
     CASE (LAKE)
       return_value = 'lake'
+    CASE DEFAULT
+      return_value = ''
     END SELECT
 
   END FUNCTION Get_process_name

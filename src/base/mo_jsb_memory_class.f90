@@ -36,7 +36,7 @@ MODULE mo_jsb_memory_class
     INTEGER :: owner_model_id = 0
     INTEGER :: max_no_of_vars = 0
     INTEGER :: no_of_vars = 0
-    CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
+    CHARACTER(LEN=50) :: varlist_name
     TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
     CLASS(t_jsb_param), POINTER :: param => NULL()
   CONTAINS
