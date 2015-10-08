@@ -125,7 +125,7 @@ CONTAINS
 
   SUBROUTINE Init_tile(tile, varlist_name, prefix, suffix, grid_id)
 
-    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist, jsb_new_var_list, jsb_add_var
+    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist, jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, nc_bits, t_cf, t_grib1, t_grib2, &
                                     FILETYPE_NC2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
