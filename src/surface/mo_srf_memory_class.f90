@@ -105,7 +105,7 @@ CONTAINS
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, nc_bits, t_cf, t_grib1, t_grib2, &
-                                    TSTEP_CONSTANT, ZAXIS_SURFACE, tables
+                                    TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 

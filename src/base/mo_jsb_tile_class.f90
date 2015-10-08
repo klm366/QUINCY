@@ -72,6 +72,7 @@ CONTAINS
     TYPE(t_jsb_tile), POINTER              :: return_ptr
 
     CLASS(t_jsb_memory), POINTER :: tmp_ptr
+    CHARACTER(LEN=15) :: process_name
     INTEGER :: i, iproc
 
     ! Allocate and initialize base structure (=state) for tile
@@ -104,17 +105,18 @@ CONTAINS
     END DO
     DO i=1,SIZE(processes)
       iproc = processes(i)
+      process_name = Get_process_name(iproc)
       !return_ptr%param(iproc)%p => t_jsb_param(iproc)
       tmp_ptr => Create_process_memory(iproc)
       SELECT TYPE (tmp_ptr)
       CLASS IS (t_jsb_memory)
         return_ptr%mem(iproc)%p => tmp_ptr
         return_ptr%mem(iproc)%p%id = iproc
-        return_ptr%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(Get_process_name(iproc))
+        return_ptr%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
         return_ptr%mem(iproc)%p%grid_id = return_ptr%grid_id
         return_ptr%mem(iproc)%p%owner_model_id = return_ptr%owner_model_id
         IF (ASSOCIATED(return_ptr%parent_tile)) THEN
-          CALL return_ptr%mem(iproc)%p%Init(TRIM(Get_process_name(iproc)), TRIM(name))
+          CALL return_ptr%mem(iproc)%p%Init(TRIM(process_name), TRIM(name))
         ELSE
           CALL return_ptr%mem(iproc)%p%Init('', '')
         END IF
@@ -128,8 +130,7 @@ CONTAINS
   SUBROUTINE Init_tile(tile, varlist_name, prefix, suffix, grid_id)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits, nc_bits, t_cf, t_grib1, t_grib2, &
-                                    FILETYPE_NC2, tables
+    USE mo_jsb_io,            ONLY: grib_bits, nc_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -138,8 +139,6 @@ CONTAINS
     CHARACTER(len=*),             INTENT(in)    :: prefix        ! Prefix for variable names
     CHARACTER(len=*),             INTENT(in)    :: suffix
     INTEGER,                      INTENT(in)    :: grid_id
-
-    TYPE(t_jsb_varlist), POINTER :: this_list
 
     CHARACTER(len=10) :: parent_tile_name
 
@@ -201,6 +200,8 @@ CONTAINS
     CLASS(t_jsb_tile), INTENT(in) :: this
     INTEGER,           INTENT(in) :: iproc
     LOGICAL                       :: return_value
+
+    return_value = .FALSE.
 
     SELECT TYPE (this)
     TYPE IS (t_jsb_tile)

@@ -70,8 +70,7 @@ CONTAINS
   SUBROUTINE Init_atm2land_memory(mem, prefix, suffix)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits, nc_bits, t_cf, t_grib1, t_grib2, &
-                                    ZAXIS_SURFACE, tables
+    USE mo_jsb_io,            ONLY: grib_bits, nc_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -204,8 +203,7 @@ CONTAINS
   SUBROUTINE Init_land2atm_memory(mem, prefix, suffix)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits, nc_bits, t_cf, t_grib1, t_grib2, &
-                                    ZAXIS_SURFACE, tables
+    USE mo_jsb_io,            ONLY: grib_bits, nc_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
