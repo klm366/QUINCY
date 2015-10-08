@@ -44,7 +44,7 @@ MODULE mo_jsb_memory_class
   END type t_jsb_memory
 
   TYPE t_jsb_memory_p
-    CLASS(t_jsb_memory), POINTER :: p
+    CLASS(t_jsb_memory), POINTER :: p => NULL()
   END TYPE t_jsb_memory_p
 
   ABSTRACT INTERFACE
