@@ -278,18 +278,19 @@ CONTAINS
 
   END SUBROUTINE jsbach_start_timestep
 
-  SUBROUTINE jsbach_finish_timestep(model_id)
+  SUBROUTINE jsbach_finish_timestep(model_id, steplen)
 
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
-    USE mo_hd_interface,       ONLY: hd_init_water_budget, hd_check_water_budget, hd_riverflow
+    USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
 
     INTEGER :: p_pe
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
 
-    INTEGER,  INTENT(in) ::  model_id
+    INTEGER, INTENT(in)  :: model_id
+    REAL(wp), INTENT(in) :: steplen
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -307,9 +308,8 @@ CONTAINS
 
 #ifndef __NO_JSBACH_HD__
     IF (dsl4jsb_Config(HD)%active) THEN
-      CALL hd_init_water_budget(model_id)
-      CALL hd_riverflow(model_id)
-      CALL hd_check_water_budget(model_id)
+      CALL hd_lateral_flow(model_id)
+      CALL hd_check_water_budget(model_id, steplen)
 
       CALL interface_hd_ocean(model_id)
     END IF
