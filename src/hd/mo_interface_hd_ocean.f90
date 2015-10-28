@@ -6,16 +6,10 @@
 !! @par Revision History
 !! First version by Veronika Gayler (2013-06-29)
 
-!#ifndef __NO_JSBACH__
-#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
-
 #include "dsl_jsbach.inc"
 
-!----------------------------
-#include "omp_definitions.inc"
-!----------------------------
-
 MODULE mo_interface_hd_ocean
+#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: warning
@@ -143,5 +137,5 @@ CONTAINS
 
   END SUBROUTINE interface_hd_ocean
 
-END MODULE mo_interface_hd_ocean
 #endif
+END MODULE mo_interface_hd_ocean
