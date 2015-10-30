@@ -18,11 +18,15 @@ MODULE mo_jsb_process_factory
   USE mo_srf_memory_class,     ONLY: t_srf_memory
   USE mo_soil_memory_class,    ONLY: t_soil_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
+#ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
+#endif
   USE mo_srf_config_class,     ONLY: t_srf_config
   USE mo_soil_config_class,    ONLY: t_soil_config
   USE mo_veg_config_class,     ONLY: t_veg_config
+#ifndef __NO_JSBACH_HD__
   USE mo_hd_config_class,      ONLY: t_hd_config
+#endif
 
 !!$  USE mo_jsb_process_class,    ONLY: t_jsb_process
 
@@ -45,14 +49,18 @@ MODULE mo_jsb_process_factory
     MODULE PROCEDURE Get_srf_memory
     MODULE PROCEDURE Get_soil_memory
     MODULE PROCEDURE Get_veg_memory
+#ifndef __NO_JSBACH_HD__
     MODULE PROCEDURE Get_hd_memory
+#endif
   END INTERFACE Get_process_memory
 
   INTERFACE Get_process_config
     MODULE PROCEDURE Get_srf_config
     MODULE PROCEDURE Get_soil_config
     MODULE PROCEDURE Get_veg_config
+#ifndef __NO_JSBACH_HD__
     MODULE PROCEDURE Get_hd_config
+#endif
   END INTERFACE Get_process_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory'
@@ -252,6 +260,7 @@ CONTAINS
 
   END SUBROUTINE Get_veg_memory
 
+#ifndef __NO_JSBACH_HD__
   SUBROUTINE Get_hd_memory(mem, iproc, return_ptr)
 
     TYPE(t_jsb_memory_p), INTENT(in) :: mem(:)
@@ -268,6 +277,7 @@ CONTAINS
     NULLIFY(ptr)
 
   END SUBROUTINE Get_hd_memory
+#endif
 
   SUBROUTINE Get_srf_config(config, return_ptr)
 
@@ -326,6 +336,7 @@ CONTAINS
 
   END SUBROUTINE Get_veg_config
 
+#ifndef __NO_JSBACH_HD__
   SUBROUTINE Get_hd_config(config, return_ptr)
 
     CLASS(t_jsb_config), TARGET, INTENT(in) :: config
@@ -344,6 +355,7 @@ CONTAINS
       CALL finish(TRIM(routine), 'Process has no configuration')
 
   END SUBROUTINE Get_hd_config
+#endif
 
 #endif
 END MODULE mo_jsb_process_factory
