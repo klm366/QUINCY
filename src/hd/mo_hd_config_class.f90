@@ -73,7 +73,7 @@ CONTAINS
     ! Set defaults
     active          = .FALSE.
     ic_filename     = 'hdstart.nc'
-    bc_filename     = 'hdpara.nc'
+    bc_filename     = 'bc_land_hd.nc'
     debug_hd        = .FALSE.
     diag_water_budget = .TRUE.
     routing_scheme  = 'full'
