@@ -11,9 +11,12 @@ MODULE mo_hd_reservoir_cascade
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: finish, message, message_text
+
+  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_time_base,       ONLY: rdaylen
+  USE mo_srf_constants,   ONLY: rhoh2o
 
   IMPLICIT NONE
   PRIVATE
@@ -27,22 +30,22 @@ CONTAINS
   SUBROUTINE reservoir_cascade(inflow, nc, steplen, retention, nres, res_content, outflow)
   !------------------------------------------------------------------------------------------------
   ! routine based on jsbach3 routine kasglob by Stefan Hagemann
-  !   cascade of n equal linear reservoirs. 
+  !   cascade of n equal linear reservoirs.
   !   linear reservoir approach: The outflow from a reservoir is proportional to its content.
   !------------------------------------------------------------------------------------------------
 
-    REAL(wp),  INTENT(in)    :: inflow(:)        !< inflow to the cascade
-    REAL(wp),  INTENT(in)    :: steplen          !< time steps per day
+    REAL(wp),  INTENT(in)    :: inflow(:)        !< inflow to the cascade [m3/s]
+    REAL(wp),  INTENT(in)    :: steplen          !< time step [s]
     INTEGER,   INTENT(in)    :: nc               !< current block size
-    REAL(wp),  INTENT(in)    :: retention(:)     !< retention parameter (residence time of water in the reservoir)
+    REAL(wp),  INTENT(in)    :: retention(:)     !< retention parameter (residence time of water in the reservoir) [day]
     REAL(wp),  INTENT(in)    :: nres(:)          !< number of reservoirs
-    REAL(wp),  INTENT(inout) :: res_content(:,:) !< intermediate content of reservoir cascade
-    REAL(wp),  INTENT(out)   :: outflow(:)       !< outflow at the end of the cascade
+    REAL(wp),  INTENT(inout) :: res_content(:,:) !< intermediate content of reservoir cascade [m3]
+    REAL(wp),  INTENT(out)   :: outflow(:)       !< outflow at the end of the cascade [m3/s]
 
     ! local variables
     ! ---------------
 
-    REAL(wp), ALLOCATABLE    :: amod(:)       !vg wuerde ich gern beides abschaffen
+    REAL(wp), ALLOCATABLE    :: amod(:)
     REAL(wp), ALLOCATABLE    :: akdiv(:)
     REAL(wp), ALLOCATABLE    :: inflow_cascade(:) !< inflow into each level of the cascade
 
@@ -51,26 +54,35 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reservoir_cascade'
 
-    ALLOCATE(amod(nc)) 
+    ALLOCATE(amod(nc))
     ALLOCATE(akdiv(nc))
     ALLOCATE(inflow_cascade(nc))
 
-    amod(:) = retention(:) * nres(:) / AINT(nres(:))    !! vg: lieber im inifile anpassen!!
-    akdiv = 1._wp / (amod(:) + steplen) * steplen       !! vg: soll das so??
+    WHERE (nres > 0)       !< land - without internal drainage cells
+      ! unit conversions: [day] -> [seconds]
+      amod(:) = retention(:) * rdaylen
+      akdiv(:) = 1._wp / (amod(:) + steplen) * steplen
+    ELSEWHERE              !< ocean and lakes
+      akdiv(:) = 0._wp
+    END WHERE
 
-    inflow_cascade(:) = inflow(:)
+    ! conversions: [m3/s] -> [m3]
+    inflow_cascade(:) = inflow(:) * steplen
 
     nres_max = SIZE(res_content(1,:))    ! maximum number of reservoirs = 'vertical' dimension of reservoir cascade
     DO res = 1, nres_max
       WHERE (res <= NINT(nres(:)))
         res_content(:,res) = res_content(:,res) + inflow_cascade(:)
-        outflow(:) = res_content(:,res) * akdiv
+        outflow(:) = res_content(:,res) * akdiv(:)
         res_content(:,res) = res_content(:,res) - outflow(:)
       ELSEWHERE
         outflow(:) = inflow_cascade(:)
       ENDWHERE
       inflow_cascade(:) = outflow(:)
     END DO
+
+    ! conversions: [m3] -> [m3/s]
+    outflow(:) = outflow(:) / steplen
 
     DEALLOCATE(amod, akdiv)
 

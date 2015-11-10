@@ -41,7 +41,7 @@
 #define dsl4jsb_Real3D_onDomain REAL(wp), POINTER, DIMENSION(:,:,:)
 
 #define dsl4jsb_Get_var2D_onDomain(PROC,var,intent) var => CONCATENATE2(PROC,__mem)%var%ptr(:,:); CALL CONCATENATE2(PROC,__mem)%var%Set_inout(TOSTRING(intent))
-#define dsl4jsb_Get_var3D_onDomain(PROC,var,intent) var => CONCATENATE2(PROC,__mem)%var%ptr(:,:,); CALL CONCATENATE2(PROC,__mem)%var%Set_inout(TOSTRING(intent))
+#define dsl4jsb_Get_var3D_onDomain(PROC,var,intent) var => CONCATENATE2(PROC,__mem)%var%ptr(:,:,:); CALL CONCATENATE2(PROC,__mem)%var%Set_inout(TOSTRING(intent))
 #define dsl4jsb_var2D_onDomain(PROC,var) CONCATENATE2(PROC,__mem)%var%ptr(:,:)
 #define dsl4jsb_var3D_onDomain(PROC,var) CONCATENATE2(PROC,__mem)%var%ptr(:,:,:)
 
