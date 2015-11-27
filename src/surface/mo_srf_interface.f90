@@ -243,7 +243,12 @@ CONTAINS
     USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_srf_process,        ONLY: surface_temp_implicit
 !!$    USE mo_srf_constants,      ONLY: eps
-    USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
+
+!  USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
+! JN: get cvdifts and calculate tpfac2, tpfac3 as done before in mo_echam_vdiff_params
+! JN-TODO: check ICON case!!!
+    USE mo_physc2, ONLY: cvdifts
+
     USE mo_physical_constants, ONLY: tmelt
 
     TYPE(t_jsb_tile),  POINTER    :: tile
@@ -294,6 +299,11 @@ CONTAINS
       dQdT(nc),             & !< Sensitivity of saturated surface specific humidity to temperature
       t2s_conv(nc),         & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
       heat_tcoef(nc)          !< Heat transfer coefficient (rho*C_h*|v|)
+
+    ! JN: required constants which where previously defined in mo_echam_vdiff_params
+    ! JN-TODO: check ICON case!!!
+    REAL(wp) :: tpfac2, tpfac3
+
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
 
@@ -374,6 +384,11 @@ CONTAINS
         sfract_srf(:), hcap_grnd(:), &
         & s_srf(:))
     END IF
+
+    ! JN: required constants which where previously defined in mo_echam_vdiff_params
+    ! JN-TODO: check ICON case!!!
+    tpfac2  = 1._wp / cvdifts
+    tpfac3  = 1._wp - tpfac2
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     t_srf_unfilt(:) = ( tpfac2 * s_srf(:) + tpfac3 * s_srf_old(:) ) / t2s_conv(:)

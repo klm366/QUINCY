@@ -30,7 +30,10 @@ CONTAINS
     &            pcfh, pcair, pcsat, pfracsu, pgrdcap,        &
     &            psnew)
 
-    USE mo_echam_vdiff_params, ONLY: cvdifts   ! TBD: change to 1. for standalone JSBACH
+! USE mo_echam_vdiff_params, ONLY: cvdifts
+! JN-TODO: check ICON case
+    USE mo_physc2, ONLY: cvdifts   ! TBD: change to 1. for standalone JSBACH
+
     USE mo_physical_constants, ONLY: &
       & cpd, &
       & vtmpc2, &

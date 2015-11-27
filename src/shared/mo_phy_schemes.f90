@@ -29,7 +29,9 @@ CONTAINS
   !
   REAL(wp) ELEMENTAL FUNCTION qsat(temperature, pressure)
 
-    USE mo_convect_tables, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
+! USE mo_convect_tables, ONLY: tlucua, &
+! JN-TODO: check ICON case
+    USE mo_echam_convect_tables, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
                                  jptlucu1, jptlucu2, lookuperror
     USE mo_physical_constants, ONLY: vtmpc1                      ! = R_v/R_d - 1
 
@@ -104,7 +106,10 @@ CONTAINS
   REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
 
     USE mo_physical_constants, ONLY: grav
-    USE mo_echam_vdiff_params, ONLY: cvdifts  ! TBD: change to 1. for standalone JSBACH
+
+! USE mo_echam_vdiff_params, ONLY: cvdifts
+! JN-TODO: check ICON case
+    USE mo_physc2, ONLY: cvdifts  ! TBD: change to 1. for standalone JSBACH
 
     REAL(wp), INTENT(in) :: &
       & drag,      &
