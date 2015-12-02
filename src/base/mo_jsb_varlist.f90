@@ -51,6 +51,7 @@ CONTAINS
     IF (.NOT. ASSOCIATED(return_ptr)) THEN
       ALLOCATE(return_ptr)
       CALL jsb_new_var_list(return_ptr, TRIM(name), &
+        & loutput=.TRUE., output_type=FILETYPE_NC2, &
         & patch_id, lrestart=.TRUE., restart_type=FILETYPE_NC2, table=tables(1))
     END IF
 
