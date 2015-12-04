@@ -51,13 +51,18 @@ CONTAINS
                            & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
                            & press_srf, drag_srf,                                         &
                            & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
+!!!!! de Vrese (01.12.2015) Passing Richtmyer-Morton coeffcients for the flux aggregation to JSBACH - start
+                           & t_acoef_flux, t_bcoef_flux, q_acoef_flux, q_bcoef_flux,      &
+!!!!! de Vrese (01.12.2015) Passing Richtmyer-Morton coeffcients for the flux aggregation to JSBACH - end
                            & pch, cos_zenith_angle,                                       &
                            & t_srf, t_eff_srf, qsat_srf, s_srf,                           &
                            & fact_q_air, fact_qsat_srf,                                   &
                            & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,&
                            & rough_h_srf, rough_m_srf,                                    &
                            & tte_corr,                                                    &
-                           & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
+                           & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,          &
+                           & test_flux                                                    &
+                           &)
 
     USE mo_veg_interface,     ONLY: update_vegetation_1, update_vegetation_2
     USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, &
@@ -96,6 +101,12 @@ CONTAINS
       & t_bcoef          (:), &
       & q_acoef          (:), &
       & q_bcoef          (:), &
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
+      & t_acoef_flux     (:), &
+      & t_bcoef_flux     (:), &
+      & q_acoef_flux     (:), &
+      & q_bcoef_flux     (:), &
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
       & pch              (:), &
       & cos_zenith_angle (:)
     REAL(wp), INTENT(out) ::  &
@@ -117,6 +128,9 @@ CONTAINS
       & alb_nir_dir      (:), &
       & alb_vis_dif      (:), &
       & alb_nir_dif      (:)
+!!!!! de Vrese (01.12.2015) Variable for testing - start
+    REAL(wp) ::  test_flux(:)
+!!!!! de Vrese (01.12.2015) Variable for testing - end
 
     ! Local variables
     !
@@ -160,6 +174,10 @@ CONTAINS
       & swnir_srf_down=swnir_srf_down(:), swpar_srf_down=swpar_srf_down(:),                                                   &
       & press_srf=press_srf(:), drag_srf=drag_srf(:),                                                                         &
       & t_acoef=t_acoef(:), t_bcoef=t_bcoef(:), q_acoef=q_acoef(:), q_bcoef=q_bcoef(:),                                       &
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
+      & t_acoef_flux=t_acoef_flux(:), t_bcoef_flux=t_bcoef_flux(:),                                                           &
+      & q_acoef_flux=q_acoef_flux(:), q_bcoef_flux=q_bcoef_flux(:),                                                           &
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
       & pch=pch(:), cos_zenith_angle=cos_zenith_angle(:))
 
     ! Temporary fix for zero t_air at model start (analytical initialization of atmosphere)
@@ -171,7 +189,7 @@ CONTAINS
     CALL update_surface_radiation(tile, iblk, ics, ice, nc)
 
     ! Update wet skin and snow fractions
-    CALL  update_snow_and_skin_fraction(tile, iblk, ics, ice, nc, dtime, steplen)
+    CALL update_snow_and_skin_fraction(tile, iblk, ics, ice, nc, dtime, steplen)
 
     ! Compute new surface temperatures and saturation surface specific humidity
     CALL update_surface_energy(tile, iblk, ics, ice, nc, dtime, steplen)
@@ -230,7 +248,11 @@ CONTAINS
       & grnd_hflx=grnd_hflx(:), grnd_hcap=grnd_hcap,                                                                            &
       & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &
       & tte_corr=tte_corr(:),                                                                                                   &
-      & alb_vis_dir=alb_vis_dir(:), alb_nir_dir=alb_nir_dir(:), alb_vis_dif=alb_vis_dif(:), alb_nir_dif=alb_nir_dif(:))
+      & alb_vis_dir=alb_vis_dir(:), alb_nir_dir=alb_nir_dir(:), alb_vis_dif=alb_vis_dif(:), alb_nir_dif=alb_nir_dif(:),         &
+!!!!! de Vrese (01.12.2015) Variable for testing - start
+      & test_flux = test_flux(:)&
+!!!!! de Vrese (01.12.2015) Variable for testing - start
+      &)
 
 !!$    IF (iblk == 1) CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' on PE '//int2string(p_pe)//' completed.', &
 !!$                                all_print=.TRUE.)

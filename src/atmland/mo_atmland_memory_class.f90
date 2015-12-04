@@ -19,9 +19,10 @@ MODULE mo_atmland_memory_class
   PRIVATE
 
   PUBLIC :: t_atm2land_memory, t_land2atm_memory, max_no_of_vars
-
-  INTEGER, PARAMETER :: max_no_of_vars = 20
-
+!!!!! de Vrese (01.12.2015) allowing to add more vaiables to memory  - start
+  !INTEGER, PARAMETER :: max_no_of_vars = 20
+  INTEGER, PARAMETER :: max_no_of_vars = 25
+!!!!! de Vrese (01.12.2015) allowing to add more vaiables to memory  - end
   TYPE, EXTENDS(t_jsb_memory) :: t_atm2land_memory
     TYPE(t_jsb_var_real2d) :: &
       t_air            , &
@@ -40,6 +41,12 @@ MODULE mo_atmland_memory_class
       t_bcoef          , &
       q_acoef          , &
       q_bcoef          , &
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
+      t_acoef_flux          , &
+      t_bcoef_flux           , &
+      q_acoef_flux           , &
+      q_bcoef_flux           , &
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
       pch              , &
       cos_zenith_angle
   CONTAINS
@@ -185,6 +192,32 @@ CONTAINS
          & t_cf('specific_humidity_bcoef', '', '', nc_bits),                    &
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
          & initval_r=0.0_wp )
+
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
+    CALL jsb_add_var( mem, prefix//'t_acoef_flux'//suffix, mem%t_acoef_flux,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('temperature_acoef_flux', '', '', nc_bits),                          &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, prefix//'t_bcoef_flux'//suffix, mem%t_bcoef_flux,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('temperature_acoef_flux', '', '', nc_bits),                          &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, prefix//'q_acoef_flux'//suffix, mem%q_acoef_flux,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('specific_humidity_acoef_flux', '', '', nc_bits),                    &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, prefix//'q_bcoef_flux'//suffix, mem%q_bcoef_flux,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('specific_humidity_bcoef_flux', '', '', nc_bits),                    &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
 
     CALL jsb_add_var( mem, prefix//'pch'//suffix, mem%pch,                          &
          & hgrid, surface,                                                      &

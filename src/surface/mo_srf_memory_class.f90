@@ -52,6 +52,9 @@ MODULE mo_srf_memory_class
       t_srf_unfilt_old , &
       t_eff_srf        , &
       s_srf            , &  !< Dry static energy at surface (new timestep)
+!!!!! de Vrese (01.12.2015) Variable for testing - start
+      test_flux            , &  !< Dry static energy at surface (new timestep) test variable
+!!!!! de Vrese (01.12.2015) Variable for testing - end
 !!$      s_srf_old        , &  !< Dry static energy at surface (old timestep)
       qsat_srf         , &
 !!$      qsat_srf_old     , &
@@ -237,6 +240,16 @@ CONTAINS
         & t_cf('dry_static_energy', '', '', nc_bits),                                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
+
+!!!!! de Vrese (01.12.2015) Variable for testing - start
+
+      CALL jsb_add_var( mem, prefix//'test_flux'//suffix, mem%test_flux,                                   &
+        & hgrid, surface,                                                           &
+        & t_cf('dry_static_energy_flux', '', '', nc_bits),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & initval_r=0.0_wp )
+        
+!!!!! de Vrese (01.12.2015) Variable for testing - end
 
 !!$      CALL jsb_add_var( mem, prefix//'s_srf_old'//suffix, mem%s_srf_old,                           &
 !!$        & hgrid, surface,                                                           &

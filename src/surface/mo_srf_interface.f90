@@ -242,6 +242,10 @@ CONTAINS
 
     USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_srf_process,        ONLY: surface_temp_implicit
+!!!!! de Vrese (01.12.2015) Calculating new state based on flux aggregation see (M. J. Best, A. Beljaars, J. Polcher, and P. Viterbo, 2004) - start
+    USE mo_srf_process,        ONLY: surface_temp_implicit_flux_agg
+!!!!! de Vrese (01.12.2015) Calculating new state based on flux aggregation see (M. J. Best, A. Beljaars, J. Polcher, and P. Viterbo, 2004) - end
+
 !!$    USE mo_srf_constants,      ONLY: eps
     USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
     USE mo_physical_constants, ONLY: tmelt
@@ -269,6 +273,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: qsat_srf
 !!$   dsl4jsb_Real2D_onChunk :: qsat_srf_old
     dsl4jsb_Real2D_onChunk :: s_srf
+!!!!! de Vrese (01.12.2015) Variable for testing - start
+    dsl4jsb_Real2D_onChunk :: test_flux
+!!!!! de Vrese (01.12.2015) Variable for testing - end
 !!$   dsl4jsb_Real2D_onChunk :: s_srf_old
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: q_air
@@ -284,6 +291,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: q_acoef
     dsl4jsb_Real2D_onChunk :: q_bcoef
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
+    dsl4jsb_Real2D_onChunk :: t_acoef_flux
+    dsl4jsb_Real2D_onChunk :: t_bcoef_flux
+    dsl4jsb_Real2D_onChunk :: q_acoef_flux
+    dsl4jsb_Real2D_onChunk :: q_bcoef_flux
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
     dsl4jsb_Real2D_onChunk :: glacier
 
     ! Locally allocated vectors
@@ -294,6 +307,10 @@ CONTAINS
       dQdT(nc),             & !< Sensitivity of saturated surface specific humidity to temperature
       t2s_conv(nc),         & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
       heat_tcoef(nc)          !< Heat transfer coefficient (rho*C_h*|v|)
+      
+!!!!! de Vrese (01.12.2015) Output from   surface_temp_implicit_flux_agg - start
+    REAL(wp) :: s_srf_flux(nc) ! for comparison of coupling schemes !
+!!!!! de Vrese (01.12.2015) Output from   surface_temp_implicit_flux_agg - end
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
 
@@ -313,6 +330,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef,   IN)
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef,   IN)
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef,   IN)
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef_flux,   IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef_flux,   IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef_flux,   IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef_flux,   IN)
+!!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf, IN)
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air,     IN)
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf,  IN)
@@ -325,6 +348,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SRF, qsat_srf,         OUT)
 !!$    dsl4jsb_Get_var2D_onChunk( SRF,      qsat_srf_old,     OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, s_srf,            OUT)
+!!!!! de Vrese (01.12.2015) Variable for testing - start
+    dsl4jsb_Get_var2D_onChunk(SRF, test_flux,            OUT)
+!!!!! de Vrese (01.12.2015) Variable for testing - end
 !!$    dsl4jsb_Get_var2D_onChunk( SRF,      s_srf_old,        OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, fact_q_air,       OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, fact_qsat_srf,    OUT)
@@ -374,6 +400,59 @@ CONTAINS
         sfract_srf(:), hcap_grnd(:), &
         & s_srf(:))
     END IF
+
+!!!!! de Vrese (01.12.2015) Calculating new state based on flux aggregation see (M. J. Best, A. Beljaars, J. Polcher, and P. Viterbo, 2004) - start
+
+    ! Compute new surface temperature and saturation humidity
+!     IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
+!       lstart = .TRUE.
+!       s_srf(:) = s_srf_old(:)
+!     ELSE
+!       lstart = .FALSE.
+!       CALL surface_temp_implicit_flux_agg( nc, steplen, &
+!         ntiles,                                         &
+!         t2s_conv(:), &
+!         t_acoef_flux(:), t_bcoef_flux(:), q_acoef_flux(:), q_bcoef_flux(:), &
+!         s_srf_old(:), qsat_srf_old(:), dQdT(:), &
+!         rad_srf_net(:), grnd_hflx(:), heat_tcoef(:), &
+!         fact_q_air(:), fact_qsat_srf(:), &
+!         sfract_srf(:), hcap_grnd(:), &
+!         & s_srf(:))
+!     END IF
+
+
+    IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
+      lstart = .TRUE.
+      s_srf_flux(:) = s_srf_old(:)
+    ELSE
+      lstart = .FALSE.
+    Call surface_temp_implicit_flux_agg(nc,              &
+                1,                                            &
+  !              ntiles,              &
+                steplen,                                      &
+                t2s_conv(:),                                     &
+                t_acoef_flux(:), t_bcoef_flux(:),                   &
+                q_acoef_flux(:), q_bcoef_flux(:),                   &
+                s_srf_old(:), qsat_srf_old(:), dQdT(:),                 &
+                rad_srf_net(:), grnd_hflx(:),                       &
+                heat_tcoef(:), fact_q_air(:), fact_qsat_srf(:),        &
+ !              cfract_srf,                     &
+                sfract_srf(:), hcap_grnd(:),                        &
+                s_srf_flux(:))!, qsat_srf_new, s_atm_new, q_atm_new)
+    END IF
+    
+!!!!! de Vrese (01.12.2015) testing output - start    
+    IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
+      lstart = .TRUE.
+      test_flux(:) = 0.0_wp
+    ELSE
+      lstart = .FALSE.    
+      !test_flux(:) = s_srf(:) - s_srf_flux(:)
+      test_flux(:) = test_flux(:) + s_srf(:) - s_srf_flux(:)
+    END IF
+!!!!! de Vrese (01.12.2015) testing output - end    
+!!!!! de Vrese (01.12.2015) Calculating new state based on flux aggregation see (M. J. Best, A. Beljaars, J. Polcher, and P. Viterbo, 2004) - end
+
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     t_srf_unfilt(:) = ( tpfac2 * s_srf(:) + tpfac3 * s_srf_old(:) ) / t2s_conv(:)
