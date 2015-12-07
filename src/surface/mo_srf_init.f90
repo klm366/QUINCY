@@ -75,14 +75,14 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    ! Get srf memory of the tile
-    dsl4jsb_Get_memory(SRF)
-
     ! Get srf config
     dsl4jsb_Get_config(SRF)
     dsl4jsb_Get_config(HD)
 
     IF (.NOT. dsl4jsb_Config(SRF)%active) RETURN
+
+    ! Get srf memory of the tile
+    dsl4jsb_Get_memory(SRF)
 
     ! Initialize parameters
     !
@@ -158,7 +158,7 @@ CONTAINS
       & variable_name='roughness_length',         &
       & fill_array = dsl4jsb_var2D_ptr(SRF,rough_m_srf))
     dsl4jsb_var2D_onDomain(SRF,rough_m_srf) = &
-      MERGE(dsl4jsb_var2D_onDomain(SRF,rough_m_srf), 1._wp, dsl4jsb_var2D_onDomain(SRF,rough_m_srf) >= 0._wp)
+      MERGE(dsl4jsb_var2D_onDomain(SRF,rough_m_srf), 1._wp, dsl4jsb_var2D_onDomain(SRF,rough_m_srf) > 0._wp)
 
     ! Albedo
     return_pointer => jsb_netcdf_read_2d(         &
@@ -215,18 +215,18 @@ CONTAINS
     ! used below to fill %t_srf for all other files:
     !    tile%mem%srf%energy_state%t_srf%ptr(:,:) = t_srf(:,:)
 
-    dsl4jsb_var2D_onDomain(SRF,t_srf_old)            = t_srf (:,:)
-    dsl4jsb_var2D_onDomain(SRF,t_srf_unfilt)         = t_srf (:,:)
-    dsl4jsb_var2D_onDomain(SRF,t_srf_unfilt_old)     = t_srf (:,:)
-    dsl4jsb_var2D_onDomain(SRF,t_eff_srf)            = t_srf (:,:)
+!    dsl4jsb_var2D_onDomain(SRF,t_srf_old)            = t_srf (:,:)
+!    dsl4jsb_var2D_onDomain(SRF,t_srf_unfilt)         = t_srf (:,:)
+!    dsl4jsb_var2D_onDomain(SRF,t_srf_unfilt_old)     = t_srf (:,:)
+!    dsl4jsb_var2D_onDomain(SRF,t_eff_srf)            = t_srf (:,:)
 !!$    srf_mem%t_eff_srf%ptr        (:,:) = t_srf (:,:)
-    dsl4jsb_var2D_onDomain(SRF,s_srf)                = 0._wp
-    dsl4jsb_var2D_onDomain(SRF,qsat_srf)             = -1._wp  ! Negative values will be used to test for start of experiment
+!    dsl4jsb_var2D_onDomain(SRF,s_srf)                = 0._wp
+!    dsl4jsb_var2D_onDomain(SRF,qsat_srf)             = -1._wp  ! Negative values will be used to test for start of experiment
 !!$    srf_mem%qsat_srf_old%ptr     (:,:) = 0._wp
-    dsl4jsb_var2D_onDomain(SRF,tte_corr)             = 0._wp
-    dsl4jsb_var2D_onDomain(SRF,fact_q_air)           = 0.5_wp
-    dsl4jsb_var2D_onDomain(SRF,fact_qsat_srf)        = 0.5_wp
-    dsl4jsb_var2D_onDomain(SRF,fact_qsat_trans_srf)  = 0.5_wp
+!    dsl4jsb_var2D_onDomain(SRF,tte_corr)             = 0._wp
+!    dsl4jsb_var2D_onDomain(SRF,fact_q_air)           = 0.5_wp
+!    dsl4jsb_var2D_onDomain(SRF,fact_qsat_srf)        = 0.5_wp
+!    dsl4jsb_var2D_onDomain(SRF,fact_qsat_trans_srf)  = 0.5_wp
 
     ! Initialize water state
 

@@ -24,12 +24,13 @@ MODULE mo_jsb_memory_class
   TYPE, ABSTRACT :: t_jsb_param
   END TYPE t_jsb_param
 
-  ! This type contains the memory state for each tile
-  ! It includes all memory types from all sub-modules
+  ! This type contains the memory state for each tile for one process
   TYPE, ABSTRACT :: t_jsb_memory
     INTEGER :: id = 0
     INTEGER :: grid_id = 0
     INTEGER :: owner_model_id = 0
+    INTEGER :: owner_proc_id = 0
+    INTEGER, ALLOCATABLE :: owner_tile_path(:)
     INTEGER :: max_no_of_vars = 0
     INTEGER :: no_of_vars = 0
     CHARACTER(LEN=50) :: varlist_name

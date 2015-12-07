@@ -79,16 +79,16 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, swvis_srf_down, IN)
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, swnir_srf_down, IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, lw_srf_down,    OUT)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, lw_srf_down,    IN)
 
     dsl4jsb_Get_var2D_onChunk(SRF, swvis_srf_net, OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, swnir_srf_net, OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, sw_srf_net,    OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, lw_srf_net,    OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, rad_srf_net,   OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, alb_vis_srf,   OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, alb_nir_srf,   OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,         OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, alb_vis_srf,   IN)
+    dsl4jsb_Get_var2D_onChunk(SRF, alb_nir_srf,   IN)
+    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,         IN)
 
     ! Compute net SW radiation from downward SW and albedo
     swvis_srf_net(:) = swvis_srf_down(:) * (1._wp - alb_vis_srf(:))
@@ -176,14 +176,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL, wfract_soil,   OUT)
     dsl4jsb_Get_var2D_onChunk(SOIL, wsr_soil,      OUT)
 
-    dsl4jsb_Get_var2D_onChunk(SRF, glacier,       OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, glacier,       IN)
     dsl4jsb_Get_var2D_onChunk(SRF, sfract_srf,    OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, wfract_srf,    OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, oro_stddev,    IN)
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,         OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,         IN)
 
-    dsl4jsb_Get_var2D_onChunk(VEG, lai,           OUT)
-    dsl4jsb_Get_var2D_onChunk(VEG, fract_fpc_max, OUT)
+    dsl4jsb_Get_var2D_onChunk(VEG, lai,           IN)
+    dsl4jsb_Get_var2D_onChunk(VEG, fract_fpc_max, IN)
     dsl4jsb_Get_var2D_onChunk(VEG, sfract_can,    OUT)
     dsl4jsb_Get_var2D_onChunk(VEG, wsn_can,       OUT)
     dsl4jsb_Get_var2D_onChunk(VEG, wfract_can,    OUT)
@@ -606,12 +606,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SRF, fact_qsat_srf,       OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, fact_qsat_trans_srf, OUT)
 
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_l,     OUT)
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_fc_l,  OUT)
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_pwp_l, OUT)
+    dsl4jsb_Get_var3D_onChunk(SOIL, ws_l,     IN)
+    dsl4jsb_Get_var3D_onChunk(SOIL, ws_fc_l,  IN)
+    dsl4jsb_Get_var3D_onChunk(SOIL, ws_pwp_l, IN)
 
-    dsl4jsb_Get_var2D_onChunk(VEG, fract_fpc,   OUT)
-    dsl4jsb_Get_var2D_onChunk(VEG, canopy_cond, OUT)
+    dsl4jsb_Get_var2D_onChunk(VEG, fract_fpc,   IN)
+    dsl4jsb_Get_var2D_onChunk(VEG, canopy_cond, IN)
 !!$    sfract_can       => tile%mem%veg  %sfract_can%ptr          (ics:ice,    iblk)
 !!$    sfract_soil      => tile%mem%soil %sfract_soil%ptr         (ics:ice,    iblk)
 !!$    wfract_can       => tile%mem%veg  %wfract_can%ptr          (ics:ice,    iblk)

@@ -102,6 +102,8 @@ CONTAINS
 
     dsl4jsb_Get_config(HD)
 
+    IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
+
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HD)
@@ -242,6 +244,8 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     dsl4jsb_Get_config(HD)
+
+    IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
 
     ! Get reference to variables for current block
     !
@@ -459,6 +463,8 @@ CONTAINS
 
 
     dsl4jsb_Get_config(HD)
+
+    IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
 
     dsl4jsb_Get_memory(HD)
     dsl4jsb_Get_memory(SRF)

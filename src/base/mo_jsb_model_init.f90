@@ -147,19 +147,22 @@ CONTAINS
 
   SUBROUTINE init_model_common(model)
 
-    USE mo_jsb_process_factory, ONLY: HD
-    USE mo_jsb_model_class,    ONLY: print_model
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile
-    USE mo_jsb_model_usecases, ONLY: init_usecase
-    USE mo_srf_init,           ONLY: srf_init_ic, srf_init_bc
-    USE mo_soil_init,          ONLY: soil_init
-    USE mo_veg_init,           ONLY: veg_init_ic, veg_init_bc
+    USE mo_jsb_process_factory, ONLY: SRF, SOIL, VEG, RAD, GLACIER, LAKE, HD
+    USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
+    USE mo_jsb_model_class,     ONLY: print_model
+    USE mo_jsb_tile_class,      ONLY: t_jsb_tile
+    USE mo_jsb_model_usecases,  ONLY: init_usecase
+    USE mo_srf_init,            ONLY: srf_init_ic, srf_init_bc
+    USE mo_soil_init,           ONLY: soil_init
+    USE mo_veg_init,            ONLY: veg_init_ic, veg_init_bc
+    USE mo_radiation_init,      ONLY: radiation_init
 #ifndef __NO_JSBACH_HD__
-    USE mo_hd_init,            ONLY: hd_init_ic, hd_init_bc
+    USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
-    USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,          ONLY: Register_vgrid
-    USE mo_jsb_io,            ONLY: ZAXIS_SURFACE
+    USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,            ONLY: Register_vgrid
+    USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
+    USE mo_util,                ONLY: one_of
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
@@ -182,28 +185,53 @@ CONTAINS
     END IF
 
     CALL print_model(model)
+    CALL model%Print_actions()
 
     ! At this point, the model configuration, tile and memory structure is set up.
 
     ! We continue with initializing the different model processes.
 
+    ! Iterate over tiles and call initialization if necessary
+    CALL model%Set_top_tile
     tile => model%Get_top_tile()
+    DO WHILE (ASSOCIATED(tile))
 
-    CALL srf_init_bc(tile)
-    CALL srf_init_ic(tile)
+      IF (tile%visited) THEN  ! Have been here before
+        tile => model%Goto_next_tile()
+        CYCLE
+      END IF
 
-    CALL soil_init(tile)
+      ! TBD: Loop over processes instead of explicit
+!!$      IF (one_of(tile%process_action(RAD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+!!$        CALL radiation_init(tile)
+!!$      END IF
 
-    ! Vegetation must be initialized after soil!
-    CALL veg_init_bc(tile)
-    CALL veg_init_ic(tile)
+      IF (one_of(tile%process_action(SRF), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+        CALL srf_init_bc(tile)
+        CALL srf_init_ic(tile)
+      END IF
+
+      IF (one_of(tile%process_action(SOIL), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+        CALL soil_init(tile)
+      END IF
+
+      ! Vegetation must be initialized after soil!
+      IF (one_of(tile%process_action(VEG), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+        CALL veg_init_bc(tile)
+        CALL veg_init_ic(tile)
+      END IF
 
 #ifndef __NO_JSBACH_HD__
-    IF (tile%Is_process_active(HD)) THEN
-      CALL hd_init_bc(tile)
-      CALL hd_init_ic(tile)
-    END IF
+      IF (one_of(tile%process_action(HD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+        CALL hd_init_bc(tile)
+        CALL hd_init_ic(tile)
+      END IF
 #endif
+
+      tile => model%Goto_next_tile()
+
+    END DO
+
     ! Initialize tile fractions for all tiles
     ! This is done after the initialization of the initial and boundary conditions of the model components
     ! because e.g. the fraction of the vegetated tile depends on LAI.

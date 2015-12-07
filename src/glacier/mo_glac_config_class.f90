@@ -1,0 +1,81 @@
+!>
+!! @brief Contains structures and methods for glacier config
+!!
+!! @author
+!!  Reiner Schnur, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version by Reiner Schnur (2013-04-04)
+!!
+MODULE mo_glacier_config_class
+#ifndef __NO_JSBACH__
+
+  USE mo_exception,         ONLY: message_text, message, finish
+  USE mo_io_units,          ONLY: filename_max
+  USE mo_kind,              ONLY: wp
+  USE mo_jsb_config_class,  ONLY: t_jsb_config
+
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: t_glacier_config
+
+  TYPE, EXTENDS(t_jsb_config) :: t_glacier_config
+     CHARACTER(len=10)           :: scheme_albedo !< Scheme to use for computation of albedo (echam5 only for now)
+     REAL(wp)                    :: wsn_critical  !< Critical snow depth for correction of new surface temperature [m water equivalent]
+   CONTAINS
+     PROCEDURE :: Init => Init_glacier_config
+  END type t_glacier_config
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_glacier_config_class'
+
+CONTAINS
+
+  SUBROUTINE Init_glacier_config(config)
+
+    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+
+    CLASS(t_glacier_config), INTENT(inout) :: config
+
+    LOGICAL  :: active
+    CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    CHARACTER(len=10)           :: scheme_albedo
+    REAL(wp)                    :: wsn_critical
+
+    NAMELIST /jsb_glac_nml/         &
+      active,                      &
+      ic_filename, bc_filename,    &
+      scheme_albedo,               &
+      wsn_critical
+
+    INTEGER :: nml_handler, nml_unit, istat
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_glacier_config'
+
+    CALL message(TRIM(routine), 'Starting glacier configuration')
+
+
+    ! Set defaults
+    active          = .TRUE.
+    ic_filename     = 'ic_land_srf.nc'
+    bc_filename     = 'bc_land_srf.nc'
+    scheme_albedo   = 'echam5'
+    wsn_critical    = 5.85036E-3_wp
+
+    nml_handler = open_nml(TRIM(config%namelist_filename))
+
+    nml_unit = position_nml('jsb_glac_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, jsb_glac_nml)
+
+    config%active                    = active
+    config%ic_filename               = ic_filename
+    config%bc_filename               = bc_filename
+    config%scheme_albedo             = scheme_albedo
+    config%wsn_critical              = wsn_critical
+
+    CALL close_nml(nml_handler)
+
+  END SUBROUTINE Init_glacier_config
+
+#endif
+END MODULE mo_glacier_config_class

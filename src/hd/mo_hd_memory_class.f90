@@ -85,89 +85,103 @@ CONTAINS
     hd_b => get_vgrid('hd_nres_baseflow')
     hd_r => get_vgrid('hd_nres_riverflow')
 
-    CALL jsb_add_var( mem, prefix//'hd_mask'//suffix, mem%hd_mask,     &
+    CALL jsb_add_var( mem, 'hd_mask', mem%hd_mask,     &
       & hgrid, surface,                                                                    &
       & t_cf('hd_mask', '', 'HD mask: -1 ocean, 0 ocean inflow, 1 land, 2 internal drainage'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, prefix//'ret_overlflow'//suffix, mem%ret_overlflow,     &
+    CALL jsb_add_var( mem, 'ret_overlflow', mem%ret_overlflow,     &
       & hgrid, surface,                                                                    &
       & t_cf('ret_overlflow', 'day', 'overland flow retention constant'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, prefix//'ret_baseflow'//suffix, mem%ret_baseflow,       &
+    CALL jsb_add_var( mem, 'ret_baseflow', mem%ret_baseflow,       &
       & hgrid, surface,                                                                    &
       & t_cf('ret_baseflow', 'day', 'baseflow retention constant'),                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, prefix//'ret_riverflow'//suffix, mem%ret_riverflow,     &
+    CALL jsb_add_var( mem, 'ret_riverflow', mem%ret_riverflow,     &
       & hgrid, surface,                                                                    &
       & t_cf('ret_riverflow', 'day', 'riverflow retention constant'),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, prefix//'nres_overlflow'//suffix, mem%nres_overlflow,   &
+    CALL jsb_add_var( mem, 'nres_overlflow', mem%nres_overlflow,   &
       & hgrid, surface,                                                                    &
       & t_cf('nres_overlflow', '', 'number of overland flow reservoirs'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, prefix//'nres_baseflow'//suffix, mem%nres_baseflow,     &
+    CALL jsb_add_var( mem, 'nres_baseflow', mem%nres_baseflow,     &
       & hgrid, surface,                                                                    &
       & t_cf('nres_baseflow', '', 'number of baseflow reservoirs'),                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, prefix//'nres_riverflow'//suffix, mem%nres_riverflow,           &
+    CALL jsb_add_var( mem, 'nres_riverflow', mem%nres_riverflow,           &
       & hgrid, surface,                                                                    &
       & t_cf('nres_riverflow', '', 'number of riverflow reservoirs'),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, prefix//'outflow_runoff'//suffix, mem%outflow_runoff,           &
+    CALL jsb_add_var( mem, 'outflow_runoff', mem%outflow_runoff,           &
       & hgrid, surface,                                                                    &
       & t_cf('outflow_runoff', 'm3/s', 'grid cell outflow due to runoff'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, prefix//'outflow_drainage'//suffix, mem%outflow_drainage,       &
+    CALL jsb_add_var( mem, 'outflow_drainage', mem%outflow_drainage,       &
       & hgrid, surface,                                                                    &
       & t_cf('outflow_drainage', 'm3/s', 'grid cell outflow due to drainage'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, prefix//'outflow_rivers'//suffix, mem%outflow_rivers,              &
+    CALL jsb_add_var( mem, 'outflow_rivers', mem%outflow_rivers,              &
       & hgrid, surface,                                                                       &
       & t_cf('outflow_rivers', 'm3/s', 'grid cell outflow due to rivers'),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, prefix//'overlflow_res'//suffix, mem%overlflow_res,   &
+    CALL jsb_add_var( mem, 'overlflow_res', mem%overlflow_res,   &
       & hgrid, hd_o,                                                                     &
       & t_cf('overlflow_res', '', 'content of the overland flow reservoir'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, prefix//'baseflow_res'//suffix, mem%baseflow_res,     &
+    CALL jsb_add_var( mem, 'baseflow_res', mem%baseflow_res,     &
       & hgrid, hd_b,                                                                     &
       & t_cf('baseflow_res', '', 'content of the baseflow reservoir'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, prefix//'riverflow_res'//suffix, mem%riverflow_res,   &
+    CALL jsb_add_var( mem, 'riverflow_res', mem%riverflow_res,   &
       & hgrid, hd_r,                                                                     &
       & t_cf('riverflow_res', '', 'content of the riverflow reservoir'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
     ! It would be sufficient to store just one grid point
-    CALL jsb_add_var( mem, prefix//'water_budget'//suffix, mem%water_budget,             &
+    CALL jsb_add_var( mem, 'water_budget', mem%water_budget,             &
       & hgrid, surface,                                                                  &
       & t_cf('water_budget', 'm3', 'global water budget'),                               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
   END SUBROUTINE Init_hd_memory

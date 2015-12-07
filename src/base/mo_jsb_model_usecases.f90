@@ -14,7 +14,8 @@ MODULE mo_jsb_model_usecases
   USE mo_kind,            ONLY: wp
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_process_factory, ONLY: ATM2LAND, LAND2ATM, SRF, SOIL, VEG, GLACIER, LAKE, HD
+  USE mo_jsb_process_factory, ONLY: ATM2LAND, LAND2ATM, SRF, SOIL, VEG, RAD, GLACIER, LAKE, HD
+  USE mo_jsb_process_class,  ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
   USE mo_hsm_class,          ONLY: t_Hsm, t_State
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,           ONLY: Get_Grid
@@ -75,7 +76,8 @@ CONTAINS
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG/), &
       varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
-    model%hsm => t_Hsm('hsm', top=box_tile)
+    model%top => box_tile
+!!$    model%hsm => t_Hsm('hsm', top=box_tile)
 
     NULLIFY(box_tile)
 
@@ -95,7 +97,8 @@ CONTAINS
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG,HD/), &
       varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
-    model%hsm => t_Hsm('hsm', top=box_tile)
+    model%top => box_tile
+!!$    model%hsm => t_Hsm('hsm', top=box_tile)
 
     NULLIFY(box_tile)
 
@@ -129,7 +132,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_State),   POINTER :: box_tile, glacier_tile, lake_tile
+    CLASS(t_jsb_tile),   POINTER :: box_tile, lake_tile, srf_tile, glacier_tile, land_tile
     TYPE(t_jsb_grid), POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_tiles'
@@ -137,15 +140,30 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
-    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG,HD/), &
-                           varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
-    model%hsm => t_Hsm('hsm', box_tile)
+    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,LAND2ATM,RAD/), &
+      varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
+    model%top => box_tile
+!!$    model%hsm => t_Hsm('hsm', box_tile)
 
-!!$    glacier_tile => t_jsb_tile('glacier', 'Glacier tile', processes=(/SRF,GLACIER/), &
-!!$                               varlist_name=model%shortname, parent=box_tile)
-!!$
-!!$    lake_tile => t_jsb_tile('lake', 'Lake tile', processes=(/SRF,GLACIER/), &
-!!$                            varlist_name=model%shortname, parent=box_tile)
+      srf_tile => t_jsb_tile('srf', 'Srf tile', &
+        & processes=(/SRF/), process_actions=(/ON_TILE_/), &
+!!$                          & processes=(/SRF/), process_actions=(/ON_SUBTREE_/), &
+        & varlist_name=model%shortname, parent=box_tile)
+
+        glacier_tile => t_jsb_tile('glacier', 'Glacier tile', processes=(/GLACIER/), &
+          & varlist_name=model%shortname, parent=srf_tile)
+
+        land_tile => t_jsb_tile('land', 'Land tile', processes=(/SOIL,VEG/), &
+          & varlist_name=model%shortname, parent=srf_tile)
+
+      lake_tile => t_jsb_tile('lake', 'Lake tile', processes=(/LAKE/), &
+        & varlist_name=model%shortname, parent=box_tile)
+
+    CALL box_tile%Print()
+    CALL srf_tile%Print()
+    CALL glacier_tile%Print()
+    CALL land_tile%Print()
+    CALL lake_tile%Print()
 
     NULLIFY(box_tile)
 

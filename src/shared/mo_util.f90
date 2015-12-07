@@ -15,6 +15,11 @@ MODULE mo_util
 
   PUBLIC :: one_of, toupper, int2string
 
+  INTERFACE one_of
+    MODULE PROCEDURE one_of_str
+    MODULE PROCEDURE one_of_int
+  END INTERFACE one_of
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_util'
 
 CONTAINS
@@ -48,18 +53,31 @@ CONTAINS
   !
   !  Copied from ICON module shared/mo_util_string
   !  
-  FUNCTION one_of(in_str, arg)
-    INTEGER :: one_of
+  FUNCTION one_of_str(in_str, arg)
+    INTEGER :: one_of_str
     CHARACTER(len=*), INTENT(IN)           :: in_str    ! input string
     CHARACTER(len=*), INTENT(IN)           :: arg(:)
     ! local variables:
     INTEGER :: i
     
-    one_of = -1
+    one_of_str = -1
     DO i=1,SIZE(arg)
-      IF (toupper(TRIM(in_str)) == toupper(TRIM(arg(i))))  one_of=i
+      IF (toupper(TRIM(in_str)) == toupper(TRIM(arg(i))))  one_of_str=i
     END DO
-  END FUNCTION one_of
+  END FUNCTION one_of_str
+
+  FUNCTION one_of_int(in_int, arg)
+    INTEGER :: one_of_int
+    INTEGER, INTENT(IN)           :: in_int    ! input integer
+    INTEGER, INTENT(IN)           :: arg(:)
+    ! local variables:
+    INTEGER :: i
+
+    one_of_int = -1
+    DO i=1,SIZE(arg)
+      IF (in_int == arg(i))  one_of_int=i
+    END DO
+  END FUNCTION one_of_int
 
   !
   ! returns integer n as a string (often needed in printing messages)
