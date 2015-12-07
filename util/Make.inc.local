@@ -1,0 +1,19 @@
+# site specific compiler settings
+COMP = x86_64-intel 
+C_N = ifort 
+M_K = gmake --no-print-directory
+F_C = $(C_N) -c -cpp
+F_O = -O -I$(MODDIR) -module ${MODDIR}
+F_L = $(C_N)
+A_C = ar -r
+A_G = ar -x
+##
+## generic infrastructure for all make files
+##
+CDIR = $(addprefix ../../,$(COMP))
+LIBDIR = $(addsuffix /build/mod,$(CDIR))
+BDIR = $(addsuffix /bin,$(CDIR))
+BINDIR = $(strip $(BDIR))
+MODDIR = $(LIBDIR)
+$(shell [ ! -d $(MODDIR) ] && mkdir -p $(MODDIR))
+$(shell [ ! -d $(BINDIR) ] && mkdir -p $(BINDIR))
