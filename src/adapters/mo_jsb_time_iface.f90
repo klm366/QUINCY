@@ -14,13 +14,17 @@ MODULE mo_jsb_time_iface
   USE mo_exception,       ONLY: finish, message, message_text
 
 #ifdef __ICON__
-  USE mo_datetime,        ONLY: t_datetime, print_datetime, add_time, rdaylen
+  USE mo_datetime,        ONLY: t_datetime, print_datetime, add_time, string_to_datetime
   USE mo_time_config,     ONLY: time_config !configure_time
   USE mo_time_nml,        ONLY: read_time_namelist
   USE mo_time_interpolation_weights, ONLY: wi_limm
   USE mo_dynamics_config, ONLY: iequations
-  USE mo_impl_constants,  ONLY: ihs_atm_temp, ihs_atm_theta, ishallow_water, leapfrog_expl, leapfrog_si
+  USE mo_impl_constants,  ONLY: ihs_atm_temp, ihs_atm_theta, ishallow_water, &
+    &                           leapfrog_expl, leapfrog_si
+  USE mo_physical_constants, ONLY: rdaylen
   USE mo_ha_dyn_config,   ONLY: ha_dyn_config
+  USE mtime,              ONLY: datetime, MAX_DATETIME_STR_LEN, &
+    &                           datetimeToString, OPERATOR(+)
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
                                 get_day_length => day_len
@@ -137,6 +141,8 @@ CONTAINS
     INTEGER :: isteps
 
 #ifdef __ICON__
+    CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: datetime_string
+
     isteps = nsteps
 #else
     CALL TC_get(start_date, start_day, start_second)
@@ -159,7 +165,15 @@ CONTAINS
   TYPE(t_datetime) FUNCTION get_time_start()
 
 #ifdef __ICON__
-    get_time_start = time_config%ini_datetime
+    CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: datetime_string
+    !---------------------------------------------------------------
+    ! conversion to old "t_datetime" data structure
+    !
+    ! TODO: remove this after transition to mtime library!!!
+    
+    CALL datetimeToString(time_config%tc_startdate, datetime_string )
+    CALL string_to_datetime( datetime_string,  get_time_start )
+    !---------------------------------------------------------------  
 #else
     get_time_start = start_date
 #endif
@@ -169,7 +183,15 @@ CONTAINS
   TYPE(t_datetime) FUNCTION get_time_stop()
 
 #ifdef __ICON__
-    get_time_stop = time_config%end_datetime
+    CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: datetime_string
+    !---------------------------------------------------------------
+    ! conversion to old "t_datetime" data structure
+    !
+    ! TODO: remove this after transition to mtime library!!!
+    
+    CALL datetimeToString(time_config%tc_stopdate, datetime_string )
+    CALL string_to_datetime( datetime_string,  get_time_stop )
+    !---------------------------------------------------------------  
 #else
     get_time_stop = stop_date
 #endif
@@ -182,7 +204,16 @@ CONTAINS
   TYPE(t_datetime) FUNCTION get_time_current()
 
 #ifdef __ICON__
-    get_time_current = time_config%cur_datetime
+    CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: datetime_string
+
+    !---------------------------------------------------------------
+    ! conversion to old "t_datetime" data structure
+    !
+    ! TODO: remove this after transition to mtime library!!!
+    
+    CALL datetimeToString(time_config%tc_current_date, datetime_string )
+    CALL string_to_datetime( datetime_string,  get_time_current )
+    !---------------------------------------------------------------  
 #else
     get_time_current = current_date
 #endif
@@ -198,8 +229,17 @@ CONTAINS
     USE mo_run_config, ONLY: dtime
 
     TYPE(t_datetime) :: datetime
+    CHARACTER(LEN=MAX_DATETIME_STR_LEN) :: datetime_string
 
-    datetime = time_config%cur_datetime
+    !---------------------------------------------------------------
+    ! conversion to old "t_datetime" data structure
+    !
+    ! TODO: remove this after transition to mtime library!!!
+    
+    CALL datetimeToString(time_config%tc_current_date, datetime_string )
+    CALL string_to_datetime( datetime_string,  datetime )
+    !---------------------------------------------------------------  
+
     CALL add_time(-dtime, 0, 0, 0, datetime)
     get_time_previous = datetime
 #else
@@ -221,7 +261,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':start_timestep'
 
 #ifdef __ICON__
-    CALL add_time(dtime, 0, 0, 0, time_config%cur_datetime)
+    time_config%tc_current_date = time_config%tc_current_date + time_config%tc_dt_model
 
     WRITE(message_text,'(a,i10)') 'TIME STEP n: ', istep
     CALL message(TRIM(routine),message_text)
