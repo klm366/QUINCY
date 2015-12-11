@@ -170,13 +170,15 @@ CONTAINS
                 ! PAR penetrating sunlit foliage at lc (umol/m2/s)
                 ! sum of diffuse and direct radiation
                 par_sunlit(icanop) = par_shaded(icanop) + radf3
-          ENDIF 
+            ENDIF 
 
-          lc = lc + canopy_layer_depth(icanop)/2.0_wp + canopy_layer_depth(icanop+1)/2.0_wp
+            IF(icanop < ncanop) & 
+              lc = lc + canopy_layer_depth(icanop)/2.0_wp + canopy_layer_depth(icanop+1)/2.0_wp
 
           ENDIF
 
        ENDDO
+
     ENDIF
 
   END SUBROUTINE calc_fapar 
