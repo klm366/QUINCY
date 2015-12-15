@@ -287,9 +287,11 @@ CONTAINS
   SUBROUTINE Get_srf_config(config, return_ptr)
 
     CLASS(t_jsb_config), POINTER, INTENT(in) :: config
-    TYPE(t_srf_config),  POINTER    :: return_ptr => NULL()
+    TYPE(t_srf_config),  POINTER    :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_srf_config'
+
+    return_ptr => NULL()
 
     SELECT TYPE (config)
     TYPE IS (t_srf_config)
@@ -306,9 +308,11 @@ CONTAINS
   SUBROUTINE Get_soil_config(config, return_ptr)
 
     CLASS(t_jsb_config), POINTER, INTENT(in) :: config
-    TYPE(t_soil_config), POINTER    :: return_ptr => NULL()
+    TYPE(t_soil_config), POINTER    :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_soil_config'
+
+    return_ptr => NULL()
 
     SELECT TYPE (config)
     TYPE IS (t_soil_config)
@@ -325,9 +329,11 @@ CONTAINS
   SUBROUTINE Get_veg_config(config, return_ptr)
 
     CLASS(t_jsb_config), POINTER, INTENT(in) :: config
-    TYPE(t_veg_config), POINTER    :: return_ptr => NULL()
+    TYPE(t_veg_config), POINTER    :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_veg_config'
+
+    return_ptr => NULL()
 
     SELECT TYPE (config)
     TYPE IS (t_veg_config)
@@ -345,9 +351,11 @@ CONTAINS
   SUBROUTINE Get_hd_config(config, return_ptr)
 
     CLASS(t_jsb_config), POINTER, INTENT(in) :: config
-    TYPE(t_hd_config), POINTER    :: return_ptr => NULL()
+    TYPE(t_hd_config), POINTER    :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_hd_config'
+
+    return_ptr => NULL()
 
     SELECT TYPE (config)
     TYPE IS (t_hd_config)
