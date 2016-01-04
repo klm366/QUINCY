@@ -10,10 +10,6 @@
 MODULE mo_jsb_memory_class
 #ifndef __NO_JSBACH__
 
-!!$  USE mo_cdi_constants,     ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, &
-!!$                                  ZA_SURFACE, &
-!!$                                  FILETYPE_NC2, &
-!!$                                  GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL
   USE mo_kind,              ONLY: wp
 !!$  USE mo_exception,         ONLY: message
   USE mo_jsb_var_class, ONLY: t_jsb_var_p
