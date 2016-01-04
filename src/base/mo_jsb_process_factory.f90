@@ -279,14 +279,9 @@ CONTAINS
   END SUBROUTINE Get_hd_memory
 #endif
 
-  !
-  ! In the following Get_*_config routines, the config structures are, for the moment, copied
-  ! to the return_ptr, instead of using a pointer assignment. This is due to a compiler bug that
-  ! leads to crashes in hybrid MPI/OpenMP mode on mistral with intel.
-  !
   SUBROUTINE Get_srf_config(config, return_ptr)
 
-    CLASS(t_jsb_config), POINTER, INTENT(in) :: config
+    CLASS(t_jsb_config), TARGET, INTENT(in) :: config
     TYPE(t_srf_config),  POINTER    :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_srf_config'
@@ -295,9 +290,7 @@ CONTAINS
 
     SELECT TYPE (config)
     TYPE IS (t_srf_config)
-      !return_ptr => config
-      ALLOCATE(t_srf_config::return_ptr)
-      return_ptr = config
+      return_ptr => config
     END SELECT
 
     IF (.NOT. ASSOCIATED(return_ptr)) &
@@ -307,7 +300,7 @@ CONTAINS
 
   SUBROUTINE Get_soil_config(config, return_ptr)
 
-    CLASS(t_jsb_config), POINTER, INTENT(in) :: config
+    CLASS(t_jsb_config), TARGET, INTENT(in) :: config
     TYPE(t_soil_config), POINTER    :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_soil_config'
@@ -316,9 +309,7 @@ CONTAINS
 
     SELECT TYPE (config)
     TYPE IS (t_soil_config)
-      !return_ptr => config
-      ALLOCATE(t_soil_config::return_ptr)
-      return_ptr = config
+      return_ptr => config
     END SELECT
 
     IF (.NOT. ASSOCIATED(return_ptr)) &
@@ -328,7 +319,7 @@ CONTAINS
 
   SUBROUTINE Get_veg_config(config, return_ptr)
 
-    CLASS(t_jsb_config), POINTER, INTENT(in) :: config
+    CLASS(t_jsb_config), TARGET, INTENT(in) :: config
     TYPE(t_veg_config), POINTER    :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_veg_config'
@@ -337,9 +328,7 @@ CONTAINS
 
     SELECT TYPE (config)
     TYPE IS (t_veg_config)
-      !return_ptr => config
-      ALLOCATE(t_veg_config::return_ptr)
-      return_ptr = config
+      return_ptr => config
     END SELECT
 
     IF (.NOT. ASSOCIATED(return_ptr)) &
@@ -350,7 +339,7 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
   SUBROUTINE Get_hd_config(config, return_ptr)
 
-    CLASS(t_jsb_config), POINTER, INTENT(in) :: config
+    CLASS(t_jsb_config), TARGET, INTENT(in) :: config
     TYPE(t_hd_config), POINTER    :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_hd_config'
@@ -359,9 +348,7 @@ CONTAINS
 
     SELECT TYPE (config)
     TYPE IS (t_hd_config)
-      !return_ptr => config
-      ALLOCATE(t_hd_config::return_ptr)
-      return_ptr = config
+      return_ptr => config
     END SELECT
 
     IF (.NOT. ASSOCIATED(return_ptr)) &
