@@ -13,6 +13,7 @@ MODULE mo_jsb_io_iface
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
   USE mo_grib2,         ONLY: t_grib2_var, grib2_var
+  USE mo_io_config,     ONLY: lnetcdf_flt64_output
   USE mo_cdi,           ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24, ZAXIS_SURFACE, &
                             & ZAXIS_DEPTH_BELOW_LAND, FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, TSTEP_CONSTANT, &
                             & zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
@@ -27,6 +28,7 @@ MODULE mo_jsb_io_iface
   PRIVATE
 
   PUBLIC :: t_cf_var, t_grib2_var, grib2_var
+  PUBLIC :: Get_netcdf_precision
   PUBLIC :: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
             ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                   &
             FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
@@ -66,9 +68,26 @@ MODULE mo_jsb_io_iface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_iface'
 
-#ifndef __ICON__
 CONTAINS
 
+  FUNCTION Get_netcdf_precision() RESULT(return_value)
+
+    INTEGER :: return_value
+
+#ifdef __ICON__
+    IF (lnetcdf_flt64_output) THEN
+      return_value = DATATYPE_FLT64
+    ELSE
+      return_value = DATATYPE_FLT32
+    END IF
+#else
+    ! This might be overwritten by ECHAM in mo_output.f90 based on the value of grib precision.
+    return_value = DATATYPE_FLT32
+#endif
+
+  END FUNCTION Get_netcdf_precision
+
+#ifndef __ICON__
   ! constructor for GRIB2 derived data type
   FUNCTION grib2_var(discipline, category, number, bits, gridtype, subgridtype)
     INTEGER, INTENT(IN) :: discipline

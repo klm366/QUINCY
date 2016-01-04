@@ -104,7 +104,7 @@ CONTAINS
   SUBROUTINE Init_srf_memory(mem, prefix, suffix)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits, nc_bits, t_cf, t_grib1, t_grib2, &
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -126,247 +126,247 @@ CONTAINS
 
       CALL jsb_add_var( mem, prefix//'land_frac'//suffix, mem%land,                     &
         & hgrid, surface,                                                               &
-        & t_cf('land_mask', '', 'land fraction', nc_bits),                              &
+        & t_cf('land_mask', '', 'land fraction'),                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, prefix//'ocean_frac'//suffix, mem%ocean,                   &
         & hgrid, surface,                                                               &
-        & t_cf('ocean_mask', '', 'ocean fraction', nc_bits),                            &
+        & t_cf('ocean_mask', '', 'ocean fraction'),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, prefix//'lake_frac'//suffix, mem%lake,                     &
         & hgrid, surface,                                                               &
-        & t_cf('lake_mask', '', 'lake fraction', nc_bits),                              &
+        & t_cf('lake_mask', '', 'lake fraction'),                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, prefix//'coast_land'//suffix, mem%coast_land,     &
         & hgrid, surface,                                                               &
-        & t_cf('coast_land', '', 'coastal grid cells of the land', nc_bits),            &
+        & t_cf('coast_land', '', 'coastal grid cells of the land'),                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, prefix//'coast_ocean'//suffix, mem%coast_ocean,   &
         & hgrid, surface,                                                               &
-        & t_cf('coast_ocean', '', 'coastal grid cells of the ocean ', nc_bits),         &
+        & t_cf('coast_ocean', '', 'coastal grid cells of the ocean '),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, prefix//'glacier'//suffix, mem%glacier,           &
         & hgrid, surface,                                                               &
-        & t_cf('glacier_mask', '', 'glacier fraction', nc_bits),                        &
+        & t_cf('glacier_mask', '', 'glacier fraction'),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, prefix//'oro_stddev'//suffix, mem%oro_stddev,                         &
         & hgrid, surface,                                                           &
-        & t_cf('orography_standard_deviation', '', '', nc_bits),                             &
+        & t_cf('orography_standard_deviation', '', ''),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, prefix//'rough_m_srf'//suffix, mem%rough_m_srf,                       &
         & hgrid, surface,                                                           &
-        & t_cf('roughness_length_momentum', 'm', '', nc_bits),                               &
+        & t_cf('roughness_length_momentum', 'm', ''),                                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'rough_h_srf'//suffix, mem%rough_h_srf,                       &
         & hgrid, surface,                                                           &
-        & t_cf('roughness_length_heat', 'm', '', nc_bits),                                   &
+        & t_cf('roughness_length_heat', 'm', ''),                                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'albedo_srf'//suffix, mem%albedo_srf,                         &
         & hgrid, surface,                                                           &
-        & t_cf('surface_albedo_background', '', '', nc_bits),                                &
+        & t_cf('surface_albedo_background', '', ''),                                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, prefix//'alb_vis_srf'//suffix, mem%alb_vis_srf,                       &
         & hgrid, surface,                                                           &
-        & t_cf('surface_albedo_visible', '', '', nc_bits),                                   &
+        & t_cf('surface_albedo_visible', '', ''),                                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'alb_nir_srf'//suffix, mem%alb_nir_srf,                       &
         & hgrid, surface,                                                           &
-        & t_cf('surface_albedo_nir', '', '', nc_bits),                                       &
+        & t_cf('surface_albedo_nir', '', ''),                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'t_srf'//suffix, mem%t_srf,                                   &
         & hgrid, surface,                                                           &
-        & t_cf('surface_temperature', 'K', '', nc_bits),                                     &
+        & t_cf('surface_temperature', 'K', ''),                                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'t_srf_old'//suffix, mem%t_srf_old,                           &
         & hgrid, surface,                                                           &
-        & t_cf('surface_temperature_old', 'K', '', nc_bits),                                 &
+        & t_cf('surface_temperature_old', 'K', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'t_srf_unfilt'//suffix, mem%t_srf_unfilt,                     &
         & hgrid, surface,                                                           &
-        & t_cf('surface_temperature_unfiltered', 'K', '', nc_bits),                          &
+        & t_cf('surface_temperature_unfiltered', 'K', ''),                                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'t_srf_unfilt_old'//suffix, mem%t_srf_unfilt_old,             &
         & hgrid, surface,                                                           &
-        & t_cf('surface_temperature_unfiltered_old', 'K', '', nc_bits),                      &
+        & t_cf('surface_temperature_unfiltered_old', 'K', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'t_eff_srf'//suffix, mem%t_eff_srf,                           &
         & hgrid, surface,                                                           &
-        & t_cf('surface_temperature_eff', 'K', '', nc_bits),                                 &
+        & t_cf('surface_temperature_eff', 'K', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
 !!$      CALL jsb_add_var( mem, prefix//'t_eff_srf'//suffix, mem%t_eff_srf,                           &
 !!$        & hgrid, surface,                                                           &
-!!$        & t_cf('surface_temperature_eff', 'K', '', nc_bits),                                 &
+!!$        & t_cf('surface_temperature_eff', 'K', ''),                                          &
 !!$        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
 !!$        & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'s_srf'//suffix, mem%s_srf,                                   &
         & hgrid, surface,                                                           &
-        & t_cf('dry_static_energy', '', '', nc_bits),                                        &
+        & t_cf('dry_static_energy', '', ''),                                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
 !!$      CALL jsb_add_var( mem, prefix//'s_srf_old'//suffix, mem%s_srf_old,                           &
 !!$        & hgrid, surface,                                                           &
-!!$        & t_cf('dry_static_energy_old', '', '', nc_bits),                                    &
+!!$        & t_cf('dry_static_energy_old', '', ''),                                             &
 !!$        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
 !!$        & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'qsat_srf'//suffix, mem%qsat_srf,                             &
         & hgrid, surface,                                                           &
-        & t_cf('sat_specific_humidity', '', '', nc_bits),                                    &
+        & t_cf('sat_specific_humidity', '', ''),                                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
 !!$      CALL jsb_add_var( mem, prefix//'qsat_srf_old'//suffix, mem%qsat_srf_old,                     &
 !!$        & hgrid, surface,                                                           &
-!!$        & t_cf('sat_specific_humidity_old', '', '', nc_bits),                                &
+!!$        & t_cf('sat_specific_humidity_old', '', ''),                                         &
 !!$        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
 !!$        & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'tte_corr'//suffix, mem%tte_corr,                             &
         & hgrid, surface,                                                           &
-        & t_cf('tte_correction_snowmelt', '', '', nc_bits),                                  &
+        & t_cf('tte_correction_snowmelt', '', ''),                                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'fact_q_air'//suffix, mem%fact_q_air,                         &
         & hgrid, surface,                                                           &
-        & t_cf('factor_air_moisture', '', '', nc_bits),                                      &
+        & t_cf('factor_air_moisture', '', ''),                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'fact_qsat_srf'//suffix, mem%fact_qsat_srf,                   &
         & hgrid, surface,                                                           &
-        & t_cf('factor_qsat_srf', '', '', nc_bits),                                          &
+        & t_cf('factor_qsat_srf', '', ''),                                                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'fact_qsat_trans_srf'//suffix, mem%fact_qsat_trans_srf,       &
         & hgrid, surface,                                                           &
-        & t_cf('factor_qsat_trans_srf', '', '', nc_bits),                                    &
+        & t_cf('factor_qsat_trans_srf', '', ''),                                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'sw_srf_net'//suffix, mem%sw_srf_net,                        &
         & hgrid, surface,                                                                                 &
-        & t_cf('sw_srf_net', '', 'Net surface shortwave radiation', nc_bits),                             &
+        & t_cf('sw_srf_net', '', 'Net surface shortwave radiation'),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'swvis_srf_net'//suffix, mem%swvis_srf_net,                  &
         & hgrid, surface,                                                                                 &
-        & t_cf('swvis_srf_net', '', 'Net surface shortwave radiation in VIS', nc_bits),                   &
+        & t_cf('swvis_srf_net', '', 'Net surface shortwave radiation in VIS'),                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'swnir_srf_net'//suffix, mem%swnir_srf_net,                  &
         & hgrid, surface,                                                                                 &
-        & t_cf('swnir_srf_net', '', 'Net surface shortwave radiation in NIR', nc_bits),                   &
+        & t_cf('swnir_srf_net', '', 'Net surface shortwave radiation in NIR'),                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'lw_srf_net'//suffix, mem%lw_srf_net,                        &
         & hgrid, surface,                                                                                 &
-        & t_cf('lw_srf_net', '', 'Net surface longwave radiation', nc_bits),                              &
+        & t_cf('lw_srf_net', '', 'Net surface longwave radiation'),                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'rad_srf_net'//suffix, mem%rad_srf_net,                      &
         & hgrid, surface,                                                                                 &
-        & t_cf('rad_srf_net', '', 'Net surface radiation', nc_bits),                                      &
+        & t_cf('rad_srf_net', '', 'Net surface radiation'),                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'latent_hflx'//suffix, mem%latent_hflx,                      &
         & hgrid, surface,                                                                                 &
-        & t_cf('latent_hflx', '', 'Latent heat flux', nc_bits),                                           &
+        & t_cf('latent_hflx', '', 'Latent heat flux'),                                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'sensible_hflx'//suffix, mem%sensible_hflx,                  &
         & hgrid, surface,                                                                                 &
-        & t_cf('sensible_hflx', '', 'Sensible heat flux', nc_bits),                                       &
+        & t_cf('sensible_hflx', '', 'Sensible heat flux'),                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'wfract_srf'//suffix, mem%wfract_srf,                         &
         & hgrid, surface,                                                           &
-        & t_cf('surface_wet_fraction', '', '', nc_bits),                                     &
+        & t_cf('surface_wet_fraction', '', ''),                                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'wsr_srf'//suffix, mem%wsr_srf,                               &
         & hgrid, surface,                                                           &
-        & t_cf('surface_skin_reservoir', 'm', '', nc_bits),                                  &
+        & t_cf('surface_skin_reservoir', 'm', ''),                                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'sfract_srf'//suffix, mem%sfract_srf,                         &
         & hgrid, surface,                                                           &
-        & t_cf('surface_snow_fraction', '', '', nc_bits),                                    &
+        & t_cf('surface_snow_fraction', '', ''),                                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'wsn_srf'//suffix, mem%wsn_srf,                               &
         & hgrid, surface,                                                           &
-        & t_cf('surface_snow_water_equivalent', 'm', '', nc_bits),                           &
+        & t_cf('surface_snow_water_equivalent', 'm', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'wsn_glacier'//suffix, mem%wsn_glacier,                       &
         & hgrid, surface,                                                           &
-        & t_cf('glacier_snow_water_equivalent', 'm', '', nc_bits),                           &
+        & t_cf('glacier_snow_water_equivalent', 'm', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'evapopot'//suffix, mem%evapopot,                                     &
         & hgrid, surface,                                                                  &
-        & t_cf('surface_evaporation_potential', '', 'Potential evaporation from surface', nc_bits), &
+        & t_cf('surface_evaporation_potential', '', 'Potential evaporation from surface'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'evapotrans'//suffix, mem%evapotrans,                                 &
         & hgrid, surface,                                                                  &
-        & t_cf('surface_evapotranspiration', '', 'Evapotranspiration from surface', nc_bits),       &
+        & t_cf('surface_evapotranspiration', '', 'Evapotranspiration from surface'),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'trans'//suffix, mem%trans,                                           &
         & hgrid, surface,                                                                  &
-        & t_cf('surface_transpiration', '', 'Transpiration from surface', nc_bits),                 &
+        & t_cf('surface_transpiration', '', 'Transpiration from surface'),                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & initval_r=0.0_wp )
 
