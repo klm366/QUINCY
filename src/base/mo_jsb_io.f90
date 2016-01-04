@@ -17,7 +17,9 @@ MODULE mo_jsb_io
   PUBLIC
 
   INTEGER, PARAMETER :: grib_bits     = DATATYPE_PACK16, &
-                        grib_extbits  = DATATYPE_PACK24
+                        grib_extbits  = DATATYPE_PACK24, &
+                        nc_bits       = DATATYPE_FLT32,  &
+                        nc_extbits    = DATATYPE_FLT64
 
   TYPE t_cf
     CHARACTER(len=128) :: standard_name = ''
