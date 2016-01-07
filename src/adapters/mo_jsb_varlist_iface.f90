@@ -87,11 +87,11 @@ CONTAINS
 
   END SUBROUTINE new_var_list
 
-  SUBROUTINE add_var_list_element_r2d(this_list, name, ptr,                  &
-    hgrid, vgrid, cf, grib2, code, table, ldims, gdims, loutput, lcontainer, &
-    lrestart, lrestart_cont, initval_r, isteptype,                           &
-    resetval_r, lmiss, missval_r, tlev_source, info, p5,                     &
-    verbose, new_element                                                     &
+  SUBROUTINE add_var_list_element_r2d(this_list, name, ptr,                             &
+    hgrid, vgrid, cf, grib2, code, table, ldims, gdims, levelindx, loutput, lcontainer, &
+    lrestart, lrestart_cont, initval_r, isteptype,                                      &
+    resetval_r, lmiss, missval_r, tlev_source, info, p5,                                &
+    verbose, new_element                                                                &
     )
 
     TYPE(t_var_list),     INTENT(inout)        :: this_list           ! list
@@ -105,6 +105,7 @@ CONTAINS
     INTEGER,              INTENT(in)           :: table               ! GRIB1 table number
     INTEGER,              INTENT(in), OPTIONAL :: ldims(2)            ! local dimensions
     INTEGER,              INTENT(in), OPTIONAL :: gdims(2)            ! global dimensions
+    INTEGER,              INTENT(in), OPTIONAL :: levelindx           ! info%levelindx for ECHAM
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
@@ -142,7 +143,7 @@ CONTAINS
       element%field%info%cdiZaxisID = vgrid
 #else
       CALL add_stream_element(this_list, TRIM(name), ptr, &
-        ldims=ldims, gdims=gdims, &
+        ldims=ldims, gdims=gdims, leveltype=levelindx, &
         longname=cf%long_name, units=cf%units, &
         code=code, table=table, &
         lmiss=lmiss, missval=missval_r, verbose=.TRUE. &
@@ -154,11 +155,11 @@ CONTAINS
 
   END SUBROUTINE add_var_list_element_r2d
 
-  SUBROUTINE add_var_list_element_r3d(this_list, name, ptr,                  &
-    hgrid, vgrid, cf, grib2, code, table, ldims, gdims, loutput, lcontainer, &
-    lrestart, lrestart_cont, initval_r, isteptype,                           &
-    resetval_r, lmiss, missval_r, tlev_source, info, p5,                     &
-    verbose, new_element                                                     &
+  SUBROUTINE add_var_list_element_r3d(this_list, name, ptr,                             &
+    hgrid, vgrid, cf, grib2, code, table, ldims, gdims, levelindx, loutput, lcontainer, &
+    lrestart, lrestart_cont, initval_r, isteptype,                                      &
+    resetval_r, lmiss, missval_r, tlev_source, info, p5,                                &
+    verbose, new_element                                                                &
     )
 
     TYPE(t_var_list),     INTENT(inout)        :: this_list           ! list
@@ -172,6 +173,7 @@ CONTAINS
     INTEGER,              INTENT(in)           :: table               ! GRIB1 table number
     INTEGER,              INTENT(in), OPTIONAL :: ldims(3)            ! local dimensions
     INTEGER,              INTENT(in), OPTIONAL :: gdims(3)            ! global dimensions
+    INTEGER,              INTENT(in), OPTIONAL :: levelindx           ! info%levelindx for ECHAM
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
@@ -210,7 +212,7 @@ CONTAINS
 #else
     IF (PRESENT(p5)) THEN
       CALL add_stream_element(this_list, TRIM(name), ptr, &
-        ldims=ldims, gdims=gdims, &
+        ldims=ldims, gdims=gdims, leveltype=levelindx, &
         longname=cf%long_name, units=cf%units, &
         code=code, table=table, &
         lpost=loutput, lmiss=lmiss, missval=missval_r, lrerun=lrestart, contnorest=lrestart_cont, &
@@ -219,7 +221,7 @@ CONTAINS
         )
     ELSE
       CALL add_stream_element(this_list, TRIM(name), ptr, &
-        ldims=ldims, gdims=gdims, &
+        ldims=ldims, gdims=gdims, leveltype=levelindx, &
         longname=cf%long_name, units=cf%units, &
         code=code, table=table, &
         lpost=loutput, lmiss=lmiss, missval=missval_r, lrerun=lrestart, contnorest=lrestart_cont &
