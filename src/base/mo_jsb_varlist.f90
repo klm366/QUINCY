@@ -116,7 +116,7 @@ CONTAINS
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
-      ldims=ldims, gdims=gdims, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc)
@@ -206,7 +206,7 @@ CONTAINS
     CALL add_var_list_element_r3d( &
       this_list, TRIM(name), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
-      ldims=ldims, gdims=gdims, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5)
@@ -278,7 +278,7 @@ CONTAINS
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name), ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
-      ldims=ldims, gdims=gdims, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc)
