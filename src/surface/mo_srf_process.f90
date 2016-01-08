@@ -30,9 +30,13 @@ CONTAINS
     &            pcfh, pcair, pcsat, pfracsu, pgrdcap,        &
     &            psnew)
 
-! USE mo_echam_vdiff_params, ONLY: cvdifts
-! JN-TODO: check ICON case
+#ifndef STANDALONE
+! TODO-check-with-RMS: ICON case ?
+! i.e. #ifdef __ICON__
+    ! USE mo_echam_vdiff_params, ONLY: cvdifts
+! #else ??
     USE mo_physc2, ONLY: cvdifts   ! TBD: change to 1. for standalone JSBACH
+#endif
 
     USE mo_physical_constants, ONLY: &
       & cpd, &
@@ -55,6 +59,12 @@ CONTAINS
     REAL(wp) :: zcolin(klon), zcohfl(klon), zcoind(klon), zicp(klon), zca(klon), zcs(klon)
     REAL(wp) :: pdt
     REAL(wp) :: pc16
+
+#ifdef STANDALONE
+    REAL(wp) :: cvdifts
+    !TODO-check-with-RMS: according to current echam version this is 1.5 -> why above 1.?
+    cvdifts = 1.5_wp
+#endif
 
     pdt     = cvdifts * steplen
     pc16    = cpd * vtmpc2

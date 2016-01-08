@@ -50,8 +50,9 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(return_ptr)) THEN
       ALLOCATE(return_ptr)
-      CALL jsb_new_var_list(return_ptr, TRIM(name), &
-        & patch_id, lrestart=.TRUE., restart_type=FILETYPE_NC2, table=tables(1))
+       CALL jsb_new_var_list(return_ptr, TRIM(name), patch_id, &
+         & loutput=.TRUE., output_type=FILETYPE_NC2, &
+         & lrestart=.TRUE., restart_type=FILETYPE_NC2, table=tables(1))
     END IF
 
   END FUNCTION Get_varlist
@@ -115,7 +116,7 @@ CONTAINS
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
-      ldims=ldims, gdims=gdims, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc)
@@ -205,7 +206,7 @@ CONTAINS
     CALL add_var_list_element_r3d( &
       this_list, TRIM(name), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
-      ldims=ldims, gdims=gdims, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5)
@@ -277,7 +278,7 @@ CONTAINS
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name), ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
-      ldims=ldims, gdims=gdims, &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc)

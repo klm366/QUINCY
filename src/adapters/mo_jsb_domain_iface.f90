@@ -27,6 +27,7 @@ MODULE mo_jsb_domain_iface
   PUBLIC :: t_patch, p_patch, pe_decomposed
   PUBLIC :: get_grid_filename, get_ntotal, get_ntotal_g, get_dims_g, get_nproma, get_nblks, get_lon, get_lat, get_area
   PUBLIC :: get_blk_start, get_blk_end, get_col_start, get_col_end
+  PUBLIC :: get_nlon_nlat_from_file, jsbalone_init_decomp
 
 #ifdef __ICON__
   ! Dummy type for ECHAM decomposition
@@ -360,7 +361,16 @@ CONTAINS
   FUNCTION get_lon(patch, decomp) RESULT(lon)
 
 #ifndef __ICON__
-    USE mo_geoloc, ONLY: philon_2d
+
+#ifdef STANDALONE
+    USE mo_control,   ONLY: nlon
+    USE mo_gaussgrid,  ONLY: philon
+    USE mo_transpose,     ONLY: reorder
+    USE mo_decomposition, ONLY: ldc => local_decomposition
+#else
+    USE mo_geoloc,     ONLY: philon_2d
+#endif
+
 #endif
 
     TYPE(t_patch),       OPTIONAL, INTENT(in)  :: patch
@@ -370,6 +380,12 @@ CONTAINS
     INTEGER :: nproma, nblks
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_lon'
+
+#if !defined(__ICON__) && defined(STANDALONE)
+    INTEGER :: jlat, jlon
+    REAL(wp) :: tmp (ldc%nglon, ldc%nglat)
+#endif
+
 
     nproma = get_nproma(patch, decomp)
     nblks  = get_nblks (patch, decomp)
@@ -387,9 +403,24 @@ CONTAINS
 #ifdef __ICON__
       CALL finish(TRIM(routine), 'decomposition not allowed')
 #else
+
+#ifdef STANDALONE
+      ! in jsb standalone init_geoloc is never called, therefore philon_2d is never calculated.
+      ! -> alternatively lons could be read from a file (grid_filename) 
+      !     - this solution would probably be more suitable for a driver for ECHAM and ICON?
+      DO jlat = 1, ldc%nglat     ! local  latitude index N -> S
+        DO jlon = 1, ldc%nglon   ! local  longitude index
+          tmp(jlon,jlat) = philon (jlon + ldc%glon(jlat))
+        END DO
+      END DO
+
+      CALL reorder (lon, tmp)
+#else
       IF (.NOT. ASSOCIATED(philon_2d)) &
         CALL finish(TRIM(routine), 'Longitudes of decomposition not computed yet')
       lon(:,:) = philon_2d(:,:)
+#endif
+
 #endif
     ELSE
       CALL finish(TRIM(routine), 'Need to specify either patch or decomposition')
@@ -400,7 +431,15 @@ CONTAINS
   FUNCTION get_lat(patch, decomp) RESULT(lat)
 
 #ifndef __ICON__
+
+#ifdef STANDALONE
+    USE mo_gaussgrid,  ONLY: philat
+    USE mo_transpose,     ONLY: reorder
+    USE mo_decomposition, ONLY: ldc => local_decomposition
+#else
     USE mo_geoloc, ONLY: philat_2d
+#endif
+
 #endif
 
     TYPE(t_patch),       OPTIONAL, INTENT(in)  :: patch
@@ -427,9 +466,18 @@ CONTAINS
 #ifdef __ICON__
       CALL finish(TRIM(routine), 'decomposition not allowed')
 #else
+
+#ifdef STANDALONE
+      ! in jsb standalone init_geoloc is never called, therefore philat_2d is never calculated.
+      ! -> alternatively lats could be read from a file (grid_filename) 
+      !     - this solution would probably be more suitable for a driver for ECHAM and ICON?
+      CALL reorder (lat, SPREAD(philat(ldc%glat(:)),1 ,ldc%nglon))
+#else
       IF (.NOT. ASSOCIATED(philat_2d)) &
         CALL finish(TRIM(routine), 'Latitudes of decomposition not computed yet')
       lat(:,:) = philat_2d(:,:)
+#endif
+
 #endif
     ELSE
       CALL finish(TRIM(routine), 'Need to specify either patch or decomposition')
@@ -440,7 +488,15 @@ CONTAINS
   FUNCTION get_area(patch, decomp) RESULT(area)
 
 #ifndef __ICON__
+
+#ifdef STANDALONE
+    USE mo_transpose,     ONLY: reorder
+    USE mo_decomposition, ONLY: ldc => local_decomposition
+    USE mo_gaussgrid,     ONLY: gridarea
+#else
     USE mo_geoloc, ONLY: gboxarea_2d
+#endif
+
 #endif
 
     TYPE(t_patch),       OPTIONAL, INTENT(in)  :: patch
@@ -467,15 +523,165 @@ CONTAINS
 #ifdef __ICON__
       CALL finish(TRIM(routine), 'decomposition not allowed')
 #else
+
+#ifdef STANDALONE
+      ! in jsb standalone init_geoloc is never called, therefore gboxarea_2d has not been calculated.
+      CALL reorder (area ,SPREAD(gridarea(ldc%glat(:)), 1, ldc%nglon))
+#else
       IF (.NOT. ASSOCIATED(gboxarea_2d)) &
         CALL finish(TRIM(routine), 'grid box surface area of decomposition not computed yet')
       area(:,:) = gboxarea_2d(:,:)
+#endif
+
 #endif
     ELSE
       CALL finish(TRIM(routine), 'Need to specify either patch or decomposition')
     END IF
 
   END FUNCTION get_area
+
+  !>
+  !! @brief Read number of lons and lats from a given netcdf file
+  !!
+  !! Currently only working for ECHAM
+  !!
+  !! @par History
+  !! Initial parts copied from jsbach3 mo_jsbach_grid.f90:init_grid 
+  !!
+  SUBROUTINE get_nlon_nlat_from_file(grid_filename, read_nlon, read_nlat) !filename
+  
+#ifndef __ICON__  
+    USE mo_control,   ONLY: nlon, ngl, nhgl, nvclev, vct
+    USE mo_io,     ONLY: IO_READ, IO_open, IO_close
+    USE mo_netCDF, ONLY: file_info, io_inq_dimid, io_inq_dimlen
+#endif
+
+    CHARACTER(len=*), INTENT(in) :: grid_filename
+    INTEGER, INTENT(out) :: read_nlon, read_nlat
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nlon_nlat_from_file'
+
+#ifndef __ICON__  
+    TYPE(file_info) :: grid_file
+    INTEGER :: IO_dim_id
+#endif
+
+
+#ifdef __ICON__  
+    CALL finish(TRIM(routine), 'not implemented for use with ICON')
+#else
+    grid_file%opened = .FALSE.
+
+    CALL io_open(grid_filename, grid_file, IO_READ)
+    CALL io_inq_dimid  (grid_file%file_id, 'lon', IO_dim_id)
+    CALL io_inq_dimlen (grid_file%file_id, IO_dim_id, read_nlon)
+    CALL io_inq_dimid  (grid_file%file_id, 'lat', IO_dim_id)
+    CALL io_inq_dimlen (grid_file%file_id, IO_dim_id, read_nlat)
+
+    CALL IO_close(grid_file)
+
+    !Required for standalone model for mo_gaussgrid::inigau()
+    nlon = read_nlon
+    ngl = read_nlat
+    nhgl = ngl / 2
+    nvclev = 0
+
+    !-> TODO-JN implement parallel case - only read if io proc and the p_cast
+    !CALL p_bcast (nlon, p_io)       
+#endif
+  END SUBROUTINE
+
+
+  !>
+  !! @brief Get a decomposition for jsbach standalone
+  !!
+  !! Currently only working for ECHAM
+  !!
+  !! @par History
+  !! Initial version copied from jsbach3 jsbalone_init_decomp.f90 
+  !!
+  SUBROUTINE jsbalone_init_decomp (nlon, nlat, nproca, nprocb, npedim, decomposition)
+
+#ifndef __ICON__  
+    USE mo_decomposition, ONLY : decompose, local_decomposition, global_decomposition
+    USE mo_mpi,           ONLY : p_nprocs, p_parallel_io, p_pe
+    USE mo_transpose,     ONLY : indx
+    USE mo_io_units,      ONLY : nout
+    USE mo_gaussgrid,     ONLY : inigau
+
+    USE mo_echam_convect_tables, ONLY : init_convect_tables
+#endif
+
+    INTEGER, INTENT(in) :: nlon, nlat, nproca, nprocb, npedim
+    TYPE(pe_decomposed), INTENT(OUT) :: decomposition
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbalone_init_decomp'
+
+
+#ifndef __ICON__  
+    INTEGER :: debug_parallel, i, p
+    LOGICAL :: lrot
+#endif
+
+
+#ifdef __ICON__  
+    CALL finish(TRIM(routine), 'not implemented for use with ICON')
+#else
+    lrot          = .TRUE.  ! true: no rotation of longitudes           
+
+    ! nprocb has to be 1, otherwise the consistency checks in
+    ! mo_decomposition will fail (nprocb - must be < nlev).
+    IF (nprocb > 1) THEN
+      CALL finish(TRIM(routine), 'nprocb has to be 1')
+    ENDIF
+
+    IF (p_nprocs == nproca*nprocb) THEN
+      debug_parallel = -1
+    ELSE IF (p_nprocs == nproca*nprocb+1) THEN
+      debug_parallel = 0
+    ELSE
+      CALL finish(TRIM(routine), 'Number of runtime PEs doesn''t fit nproca*nprocb(+1)')
+    ENDIF
+
+    ! Derive decomposition
+    ALLOCATE(global_decomposition(1:p_nprocs))
+
+    ! The truncation is set to nproca, otherwise the consistency checks in
+    ! mo_decomposition will fail 
+    CALL decompose(global_decomposition, npedim, nproca, nprocb, nlat, nlon, norot=lrot, nlev=1, &
+                   nm=nproca, nn=nproca, nk=nproca, nadvec=0, debug=debug_parallel)
+
+    ! Keep index values, not id values
+    DO p=1,p_nprocs
+      global_decomposition(p)%mapmesh(:,:) = &
+            indx(global_decomposition(p)%mapmesh(:,:),global_decomposition)
+    ENDDO
+
+    ! Copy global decomposition table entry to local decomposition
+    DO i=1,p_nprocs
+       IF (global_decomposition(i)% pe == p_pe) THEN
+          local_decomposition = global_decomposition(i)
+       END IF
+    END DO
+
+    IF (p_parallel_io) THEN
+       WRITE(nout,*) '---------------------------------------------'
+       WRITE(nout,*) ' Blocking information:'
+       WRITE(nout,*) '   lreg  nproma ngpblks  npromz'
+       WRITE(nout,'(L5,3I8)') local_decomposition% lreg, &
+            local_decomposition%nproma, &
+            local_decomposition%ngpblks, &
+            local_decomposition%npromz
+       WRITE(nout,*) '---------------------------------------------'
+    ENDIF
+
+    ! Copy content of local_decomposition to output 
+    decomposition = local_decomposition
+
+    !TODO-check-with-RMS: where to init further echam specific things? 
+    CALL inigau              ! required for get_lon, get_lat and get_area
+    CALL init_convect_tables 
+#endif
+  END SUBROUTINE
 
 #endif
 END MODULE mo_jsb_domain_iface

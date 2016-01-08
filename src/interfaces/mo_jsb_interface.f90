@@ -64,6 +64,11 @@ CONTAINS
                                     update_surface_energy, update_surface_fluxes, update_t_srf_asselin, &
                                     update_humidity_scaling, update_roughness
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
+
+#ifndef STANDALONE
+    USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
+#endif
+
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_interface,      ONLY: update_hd
 #endif
@@ -129,6 +134,14 @@ CONTAINS
     dsl4jsb_Def_memory(SRF)
 
     INTEGER :: nc, i
+
+#ifndef STANDALONE
+    IF (write_interface_vars) THEN
+       CALL write_interface_variables(ics, ice, iblk, t_air, q_air, rain, snow, wind_air, wind_10m, &
+             & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf,    &
+             & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
+    END IF
+#endif
 
     CALL timer_start(timer_jsbach)
 
