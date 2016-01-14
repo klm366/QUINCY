@@ -257,17 +257,17 @@ CONTAINS
   END SUBROUTINE finish_timestep
 
 #ifdef __ICON__
-  SUBROUTINE get_date_components(datetime, year, month, day, hour, minute, second)
+  SUBROUTINE get_date_components(this_datetime, year, month, day, hour, minute, second)
 
-    TYPE(t_datetime),  INTENT(in)  :: datetime
+    TYPE(t_datetime),  INTENT(in)  :: this_datetime
     INTEGER, OPTIONAL, INTENT(out) :: year, month, day, hour, minute, second
 
-    IF (PRESENT(year))   year   = datetime%date%year
-    IF (PRESENT(month))  month  = datetime%date%month
-    IF (PRESENT(day))    day    = datetime%date%day
-    IF (PRESENT(hour))   hour   = datetime%time%hour
-    IF (PRESENT(minute)) minute = datetime%time%minute
-    IF (PRESENT(second)) second = datetime%time%second
+    IF (PRESENT(year))   year   = this_datetime%date%year
+    IF (PRESENT(month))  month  = this_datetime%date%month
+    IF (PRESENT(day))    day    = this_datetime%date%day
+    IF (PRESENT(hour))   hour   = this_datetime%time%hour
+    IF (PRESENT(minute)) minute = this_datetime%time%minute
+    IF (PRESENT(second)) second = this_datetime%time%second
 
   END SUBROUTINE get_date_components
 #endif
