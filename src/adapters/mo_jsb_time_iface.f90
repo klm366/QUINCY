@@ -227,8 +227,15 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':start_timestep'
 
 #ifdef __ICON__
-    time_config%tc_current_date = time_config%tc_current_date + time_config%tc_dt_model
-
+    !
+    ! Luis:
+    !
+    ! The following commented region is not allowed as time_config is
+    ! a protected varaible. Reiner told me that this is meant for
+    ! later use in JSBACH standalone.
+    ! time_config%tc_current_date = time_config%tc_current_date &
+    !      &                       +time_config%tc_dt_model
+    !
     WRITE(message_text,'(a,i10)') 'JSBACH: Start TIME STEP n: ', istep
     CALL message(TRIM(routine),message_text)
 #else
