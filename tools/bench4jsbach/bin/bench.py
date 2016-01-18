@@ -11,7 +11,8 @@ from report import Report
 REF_EXP_IDX       = 0
 SWITCHED_ON_IDX   = TYPE_IDX = 0
 TEMP_SCALE_IDX    = PATH_IDX = 1
-bench4jsbach_base =  "/scratch/mpi/mpiles/m300050/bench4jsbach"
+bench4jsbach_base =  os.environ [ 'BENCH4JSBACH_BASE' ]
+if not bench4jsbach_base: raise Exception ( "Environment variable not set." )
 config_template   = os.path.join ( bench4jsbach_base, "configuration", "template.cfg" )
 work_base         = os.path.join ( bench4jsbach_base, "work" )
 bench_dirnames    = [ "config", "data", "graphic", "report", "logging" ]

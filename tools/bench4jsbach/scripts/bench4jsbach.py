@@ -2,11 +2,21 @@
 """ BENCH4JSBACH benchmarking script """
 
 import os,sys,shutil
-sys.path.append ( "/scratch/mpi/mpiles/m300050/bench4jsbach/bin" )
+
+script_dir = os.path.dirname ( os.path.realpath ( __file__ ))
+bench4jsbach_base = os.path.dirname ( os.path.realpath ( script_dir ))
+bin_dir = os.path.join ( bench4jsbach_base, "bin" )
+if os.path.isdir ( bin_dir ):
+    sys.path.append ( bin_dir )
+else:
+    raise Exception ( "Directory %s with source files not found." % bin_dir )
 import sys
+os.environ [ 'BENCH4JSBACH_BASE' ] = bench4jsbach_base
+
 from util import logger as dkl_logger
 import bench
 
+dkl_logger.debug ( "hello" )
 nargs = len ( sys.argv )
 if nargs == 1:
     print "******************************************"
