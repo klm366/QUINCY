@@ -1,8 +1,10 @@
 #! /usr/bin/env python
 
 import os,subprocess
-from util import log_message_newline
 import shutil
+import json
+
+from util import log_message_newline
 
 template = """\documentclass[]{article}
 \\usepackage[english]{babel}
@@ -31,6 +33,14 @@ template = """\documentclass[]{article}
 section_template = """\section{%(section)s}
 %(body)s"""
 
+subsection_template = """\subsection{%(subsection)s}"""
+
+includegraphics_template = """
+\\begin{center}
+\includegraphics[width=\\textwidth]{%(graphicpath)s}
+\\end{center}
+"""
+
 report_dirname = "report"
 source_dirname = "sources"
 
@@ -45,26 +55,37 @@ class Report ( object ):
     def albedo_section ( self ):
         self.logger.debug ( "Starting." )
         varname = "albedo"
-        print self.analyses
+        albedo_body = "" 
+        self.logger.debug ( "self.analyses buffer: " + log_message_newline +\
+                            json.dumps ( self.analyses ))
+
+        from bench import REF_EXP_IDX
+        
+        for e in self.experiments:
+            e_idx = self.experiments.index ( e )
+            ref = True if e_idx == REF_EXP_IDX else False
+            name =  e.name.replace ( '_','\_' )
+            title = "Reference experiment %s" % name if ref else \
+                    "Experiment %s" % name
+            albedo_body += subsection_template % { 'subsection': title }
+            plot =  self.analyses [ varname ][ 'plots' ][ e_idx ]
+            if plot:
+                albedo_body += includegraphics_template % { 'graphicpath': plot }
+            diff_plot =  self.analyses [ varname ][ 'diff_plots' ][ e_idx ]
+            if diff_plot:
+                albedo_body += """
+            Difference plot to reference experiment:\n
+            %s """ % includegraphics_template %  { 'graphicpath': diff_plot }
+            #print "e_idx", e_idx,"albedo_body", albedo_body
 
         section = section_template % { 'section' : varname,
-                                       'body'    : """
-This text is about analyzing '%s'.
-%s
-""" % ( varname,
-        ' \n\n '.join ( """
-        \\begin{{center}}
-        \includegraphics[width=\\textwidth]{{{!s}}}
-        \\end{{center}}""".format ( p ) for p in \
-                    self.analyses [ varname ][ 'plots' ]))}
-
-        self.logger.debug ( section )
+                                       'body' : albedo_body }
+        #print "section", section
         self.body += section
-        self.logger.debug ( "Exiting." )
+        
         
     def write_report ( self ):
         self.logger.debug ( "Starting." )
-
         source_path  = os.path.join ( self.report_path, "sources" )
         tmp_path     = os.path.join ( self.report_path, "tmp" )
         if not os.path.exists ( source_path ):
@@ -81,7 +102,8 @@ This text is about analyzing '%s'.
                             'abstract'   : "This is an abstract.",
                             'body'       : self.body,
                             'epilog'     : "This is an epilog."}
-        print page
+        self.logger.debug ( "Latex source code: " + log_message_newline +\
+                            page )
         filename = self.bench_name + ".tex"
         with open ( filename, "w" ) as text_file:
             text_file.write ( page )

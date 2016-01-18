@@ -182,6 +182,7 @@ class Analysis ( object ):
 
 
             ### TODO: external loop
+        self.analyses [ varname ][ "diff_plots" ] = [ None ] * n_exp
         for e in self.experiments:
             exp_idx = self.experiments.index ( e )
             if exp_idx == REF_EXP_IDX:
@@ -197,7 +198,7 @@ class Analysis ( object ):
                                            'startdate'      : str ( period [ 0 ]),
                                            'finaldate'      : str ( period [ -1 ]),
                                            'suffix'         : 'png' }
-            self.analyses [ varname ][ "diff_plots" ].append ( figurefilepath )
+            self.analyses [ varname ][ "diff_plots" ][ exp_idx ] = figurefilepath
             for season in seasons:
                 season_idx = seasons.index ( season )
                 buffer_in_idx =  path_tokens.index ( season )
