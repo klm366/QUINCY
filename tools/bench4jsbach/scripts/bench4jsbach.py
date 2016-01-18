@@ -31,7 +31,6 @@ elif not os.path.isfile ( sys.argv [ 1 ]):
     print "******************************************"
 
     b4j_obj = bench.Bench_Object ( sys.argv [ 1 ])
-    b4j_obj.logger.debug ( b4j_obj )
         
     print "\n******************************************"
     print "* BENCH4JSBACH: "
