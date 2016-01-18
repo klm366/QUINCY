@@ -257,3 +257,12 @@ src/vegetation/mo_veg_interface.f90 -text
 src/vegetation/mo_veg_memory_class.f90 -text
 src/vegetation/mo_veg_process.f90 -text
 src/vegetation/mo_veg_util.f90 -text
+tools/bench4jsbach/bin/__init__.py -text
+tools/bench4jsbach/bin/analysis.py -text
+tools/bench4jsbach/bin/bench.py -text
+tools/bench4jsbach/bin/experiment.py -text
+tools/bench4jsbach/bin/redmine_read.py -text
+tools/bench4jsbach/bin/report.py -text
+tools/bench4jsbach/bin/util.py -text
+tools/bench4jsbach/configuration/template.cfg -text
+tools/bench4jsbach/scripts/bench4jsbach.py -text
