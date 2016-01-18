@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import os,subprocess
-from util import logger as dkl_logger, log_message_newline
+from util import log_message_newline
 import shutil
 
 template = """\documentclass[]{article}
@@ -43,7 +43,7 @@ class Report ( object ):
         self.template = template
 
     def albedo_section ( self ):
-        dkl_logger.debug ( "Starting." )
+        self.logger.debug ( "Starting." )
         varname = "albedo"
         print self.analyses
 
@@ -58,12 +58,12 @@ This text is about analyzing '%s'.
         \\end{{center}}""".format ( p ) for p in \
                     self.analyses [ varname ][ 'plots' ]))}
 
-        dkl_logger.debug ( section )
+        self.logger.debug ( section )
         self.body += section
-        dkl_logger.debug ( "Exiting." )
+        self.logger.debug ( "Exiting." )
         
     def write_report ( self ):
-        dkl_logger.debug ( "Starting." )
+        self.logger.debug ( "Starting." )
 
         source_path  = os.path.join ( self.report_path, "sources" )
         tmp_path     = os.path.join ( self.report_path, "tmp" )
@@ -90,8 +90,8 @@ This text is about analyzing '%s'.
                 '%s'%tmp_path,
                 '%s'%filename]
         
-        dkl_logger.debug (  "subprocess pdflatex, args =" + log_message_newline +\
-                            "[ %s ]" %','.join ("{!s}".format ( l ) for l in args ))
+        self.logger.debug (  "subprocess pdflatex, args =" + log_message_newline +\
+                             "[ %s ]" %','.join ("{!s}".format ( l ) for l in args ))
 
         try:
             subprocess.check_call ( args )
@@ -105,4 +105,4 @@ This text is about analyzing '%s'.
         except:
             raise Exception ( "Moving of report-pdf failed." )
 
-        dkl_logger.debug ( "Exiting." )
+        self.logger.debug ( "Exiting." )

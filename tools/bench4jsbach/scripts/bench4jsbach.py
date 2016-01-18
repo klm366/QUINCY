@@ -13,10 +13,10 @@ else:
 import sys
 os.environ [ 'BENCH4JSBACH_BASE' ] = bench4jsbach_base
 
-from util import logger as dkl_logger
+#from util import logger as dkl_logger
 import bench
 
-dkl_logger.debug ( "hello" )
+#dkl_logger.debug ( "hello" )
 nargs = len ( sys.argv )
 if nargs == 1:
     print "******************************************"
@@ -31,7 +31,7 @@ elif not os.path.isfile ( sys.argv [ 1 ]):
     print "******************************************"
 
     b4j_obj = bench.Bench_Object ( sys.argv [ 1 ])
-    dkl_logger.debug ( b4j_obj )
+    b4j_obj.logger.debug ( b4j_obj )
         
     print "\n******************************************"
     print "* BENCH4JSBACH: "
@@ -47,10 +47,6 @@ else:
 
     b4j_obj = bench.Bench_Object ( sys.argv [ 1 ])
 
-    _old_stdout = sys.stdout
-    log_file = open ( b4j_obj.logfile_path, "w")
-    sys.stdout = log_file
-
     # analysis
     for var,var_bench in b4j_obj.config [ 'variables' ].iteritems():
 
@@ -60,21 +56,19 @@ else:
             fun_name = var + fun_suffix
             try:
                 fun = getattr ( b4j_obj, fun_name )
-                dkl_logger.debug ( "Loaded function '%s'." % fun_name )
+                b4j_obj.logger.debug ( "Loaded function '%s'." % fun_name )
             except Exception, e:
                 raise AttributeError ( "%s. \n Bench object has no attribute '%s'" % 
                                        ( str ( e ), fun_name ))
 
             ret = fun ()
         
-        dkl_logger.debug ( "Finished analysis of '%s' successfully." % var ) if not ret else \
-                dkl_logger.debug ( "Analysis of '%s' failed." % var )
+        b4j_obj.logger.debug ( "Finished analysis of '%s' successfully." % var ) if not ret else \
+                b4j_obj.logger.debug ( "Analysis of '%s' failed." % var )
     
     b4j_obj.write_report ()
     
-    dkl_logger.debug ( "Exiting." )
-    sys.stdout = _old_stdout
-    log_file.close ()
+    b4j_obj.logger.debug ( "Exiting." )
 
     print "\n******************************************"
     print "* BENCH4JSBACH: "

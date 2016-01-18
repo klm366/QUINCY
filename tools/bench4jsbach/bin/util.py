@@ -22,7 +22,7 @@ class WrappedFixedIndentingLog ( logging.Formatter ):
 def setup_logger ( *args, **kwargs ):
 
     name     = kwargs.get ( 'name', default_logger_name )
-    filename = kwargs.get ( 'filename', None ) 
+    filename = kwargs.get ( 'filename', None )
 
     logger   = logging.getLogger ( name )
     logger.propagate = False

@@ -2,7 +2,8 @@
 
 import os, subprocess, shutil,getpass,datetime
 from experiment import Experiment
-from util import logger as dkl_logger, print_none, log_message_newline
+#from util import logger as setup_logger, print_none, log_message_newline
+from util import logger as dkl_logger, setup_logger, print_none, log_message_newline
 import configobj
 from sets import Set
 from analysis import Analysis
@@ -30,6 +31,7 @@ class Bench_Object ( Analysis, Report ):
     bench_config_path = None
     config            = None
     experiments       = []
+    logger            = None
     
     
     def __init__ ( self, config_arg, **kwargs ):
@@ -82,15 +84,13 @@ class Bench_Object ( Analysis, Report ):
                                            self.bench_name + '_' +\
                                            str ( datetime.datetime.now ().strftime ( '%Y%m%d%H%M' )) +\
                                            '.out' )
+        self.logger = setup_logger ( name = "B4JSBACH_LOGGER", filename = self.logfile_path )
 
-        dkl_logger.debug ( "Before redirecting stdout and logging to file " + \
+        self.logger.debug ( "Before redirecting stdout and logging to file " + \
                            log_message_newline +\
                            "'%s'." % self.logfile_path +\
                            log_message_newline +\
                            "The processing might take a while ..." )
-        if dkl_logger:
-            import logging
-            dkl_logger.handlers[0] = logging.FileHandler ( self.logfile_path )
             
         es = self.config [ "experiments" ]
         for en in es:
@@ -100,7 +100,7 @@ class Bench_Object ( Analysis, Report ):
                              bench = self )
             self.experiments.append ( e )
 
-        dkl_logger.debug ( "Exiting." )
+        self.logger.debug ( "Exiting." )
 
 
     def _writeconfig__init__ ( self, config_arg ):

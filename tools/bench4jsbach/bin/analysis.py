@@ -4,7 +4,6 @@ import os
 import fnmatch
 from cdo import Cdo
 from sets import Set
-from util import logger as dkl_logger
 
 from pycmbs.data import Data
 import matplotlib.pyplot as plt
@@ -77,7 +76,7 @@ class Analysis ( object ):
         - storage demand for report: paths for plots, report section texts
         - TODO: rename method to 'albedo seasonal means'
         """
-        dkl_logger.debug ( "Starting." )
+        self.logger.debug ( "Starting." )
 
         from bench import REF_EXP_IDX
         from bench import Bench_Object
@@ -101,7 +100,7 @@ class Analysis ( object ):
         
         n_exp = len ( self.experiments )
         assert n_exp > 1    # TOCHECK: this should be checked while reading bench configfile 
-        dkl_logger.warning ( "Experiments' former filename list will be deleted." )
+        self.logger.warning ( "Experiments' former filename list will be deleted." )
         
         # TODO: look for albedo file first ...
         # ... no albedo found. Calculate albedo:
@@ -118,7 +117,7 @@ class Analysis ( object ):
                                           ( pattern, e.path,
                                             ",".join ( "{!s}".format ( f ) for f in files )))
                     e.buffer [ idx ] =  os.path.join ( root, files [ 0 ])
-            dkl_logger.debug ( e )
+            self.logger.debug ( e )
 
         period = get_period_intersection ([ p for e in self.experiments \
                                             for p in e.buffer if p ])
@@ -155,7 +154,7 @@ class Analysis ( object ):
                 season_idx = seasons.index ( season )
                 buffer_idx = path_tokens.index ( season )
                 tmp_data     = [ None ] * n_seasons
-                dkl_logger.debug ( "season_idx=%d, buffer_idx=%d" % (season_idx, buffer_idx ))
+                self.logger.debug ( "season_idx=%d, buffer_idx=%d" % (season_idx, buffer_idx ))
                 e.buffer [ buffer_idx ] = template % { 'path'           : self.data_path,
                                                        'varname'        : varname,
                                                        'classification' : 'y%smean' % season,
@@ -188,7 +187,7 @@ class Analysis ( object ):
             if exp_idx == REF_EXP_IDX:
                 continue
             
-            dkl_logger.debug ( "Test experiment, make diff plots." )
+            self.logger.debug ( "Test experiment '%s', make diff plots." % e.name )
             f            = plt.figure ( figsize = ( 15, 10 ))
             tmp_subplots = [ f.add_subplot ( 2, 2, idx + 1 ) for idx in range ( n_seasons )]
             figurefilepath =  template % { 'path'           : self.graphic_path,
@@ -212,15 +211,12 @@ class Analysis ( object ):
                                                            'finaldate'      : str ( period [ -1 ]),
                                                            'suffix'         : 'nc' }
 
-                print e.buffer [ buffer_out_idx ]
-
-
                 cdo.sub ( input   = e.buffer [ buffer_in_idx ] + " " +\
                           self.experiments [ REF_EXP_IDX ].buffer [ buffer_in_idx ],
                           output  = e.buffer [ buffer_out_idx ],
                           options = '-f nc' )
 
-                dkl_logger.debug ( "input sub: " + e.buffer [ season_idx ] + \
+                self.logger.debug ( "input sub: " + e.buffer [ season_idx ] + \
                                    " " + self.experiments [ REF_EXP_IDX ].buffer [ season_idx ] )
 
                 tmp_data [ season_idx ] = Data (  e.buffer [ buffer_out_idx ],
@@ -241,6 +237,6 @@ class Analysis ( object ):
             plt.close ()
 
         
-        dkl_logger.debug ( "Exiting." )
+        self.logger.debug ( "Exiting." )
 
     

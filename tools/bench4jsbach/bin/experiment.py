@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from util import log_message_newline,logger as dkl_logger, print_none
+from util import print_none
 
 class Experiment ( object ):
     id    = None
@@ -9,12 +9,10 @@ class Experiment ( object ):
     path  = None
     
     def __init__ ( self, **kwargs ):
-        dkl_logger.debug ( "Starting" )
         self.name     = kwargs.get ( "name" )
         self.etype    = kwargs.get ( "etype", None )
         self.path     = kwargs.get ( "path", None )
         self.buffer   = []
-        dkl_logger.debug ( "Exiting" )
         
 
     def __repr__ ( self ):
