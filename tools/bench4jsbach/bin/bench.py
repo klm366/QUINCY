@@ -11,6 +11,7 @@ from report import Report
 REF_EXP_IDX       = 0
 SWITCHED_ON_IDX   = TYPE_IDX = 0
 TEMP_SCALE_IDX    = PATH_IDX = 1
+VARNAME_4_CMIP5_METADATA = 'rsds'
 bench4jsbach_base =  os.environ [ 'BENCH4JSBACH_BASE' ]
 if not bench4jsbach_base: raise Exception ( "Environment variable not set." )
 config_template   = os.path.join ( bench4jsbach_base, "configuration", "template.cfg" )
@@ -94,19 +95,25 @@ class Bench_Object ( Analysis, Report ):
         self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
             
         es = self.config [ "experiments" ]
+        from analysis import find_files
         for en in es:
+            name = en
+            path = es [ en ][ PATH_IDX ]
+            kwargs = { 'B4J_name'  : name,
+                       'B4J_etype' : es [ en ][ TYPE_IDX ],
+                       'B4J_path'  : path,
+                       'B4J_bench' : self }
             if es [ en ][ TYPE_IDX ] == "CMIP5":
-                e = CMIP5_Experiment (  name = en,
-                                        etype = es [ en ][ TYPE_IDX ],
-                                        path = es [ en ][ PATH_IDX ],
-                                        bench = self,
-                                        var_filename = "/scratch/mpi/mpiles/m300050/benchmarking/example_data/CMIP5/amip/rsds_Amon_MPI-ESM-LR_amip_r3i1p1_197901-200812.nc" )
-                print e
+                varfiles = find_files ( "*%s*%s*%s" % \
+                                        ( VARNAME_4_CMIP5_METADATA, name, '.nc' ),
+                                        path )
+                if not varfiles:
+                    raise Exception ( " No nc file for exp '%s' and var '%s' found." % \
+                                      ( name, VARNAME_4_CMIP5_METADATA ))
+                kwargs [ 'var_filename' ] = varfiles [ 0 ]
+                e = CMIP5_Experiment ( **kwargs )
             else:
-                e = Experiment ( name = en,
-                                 etype = es [ en ][ TYPE_IDX ],
-                                 path = es [ en ][ PATH_IDX ],
-                                 bench = self )
+                e = Experiment ( **kwargs )
             self.experiments.append ( e )
 
         self.logger.debug ( "Exiting." )

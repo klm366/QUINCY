@@ -96,7 +96,7 @@ class Report ( object ):
         for e in self.experiments:
             e_idx = self.experiments.index ( e )
             ref = True if e_idx == REF_EXP_IDX else False
-            name =  e.name.replace ( '_','\_' )
+            name =  e.B4J_name.replace ( '_','\_' )
             title = "Reference experiment {\\tt %s}" % name if ref else \
                     "Experiment {\\tt %s}" % name
             albedo_body += subsection_template % { 'subsection': title }
@@ -107,7 +107,7 @@ class Report ( object ):
             if diff_plot:
                 albedo_body += """
             %s difference plot to reference experiment {\\tt %s} :\n
-            %s """ % ( varname.title (), e.name.replace ( '_','\_' ),
+            %s """ % ( varname.title (), e.B4J_name.replace ( '_','\_' ),
             includegraphics_template %  { 'graphicpath': diff_plot })
             #print "e_idx", e_idx,"albedo_body", albedo_body
 

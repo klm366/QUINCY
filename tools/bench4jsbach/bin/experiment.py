@@ -7,36 +7,36 @@ from util import print_none
 
 
 class Experiment ( object ):
-    id    = None
-    name  = None
-    etype = None
-    path  = None
+    B4J_id    = None
+    B4J_name  = None
+    B4J_etype = None
+    B4J_path  = None
     
     
     def __init__ ( self, **kwargs ):
-        self.name     = kwargs.get ( "name" )
-        self.etype    = kwargs.get ( "etype", None )
-        self.path     = kwargs.get ( "path", None )
-        self.buffer   = []
+        self.B4J_name     = kwargs.get ( "B4J_name" )
+        self.B4J_etype    = kwargs.get ( "B4J_etype", None )
+        self.B4J_path     = kwargs.get ( "B4J_path", None )
+        self.B4J_buffer   = []
         
 
     def __repr__ ( self ):
-        return "{} ( id = {}, name = {}, etype = {}, path = {}, buffer = {})". \
-               format ( self.__class__.__name__,
-                        print_none ( self.id ),
-                        print_none ( self.name ),
-                        print_none ( self.etype ),
-                        print_none ( self.path ),
-                        print_none ( self.buffer ))
+        return "{} ( B4J_id = {}, B4J_name = {}, B4J_etype = {}, B4J_path = {}, B4J_buffer = {})". \
+               format ( self.__class__.__B4J_name__,
+                        print_none ( self.B4J_id ),
+                        print_none ( self.B4J_name ),
+                        print_none ( self.B4J_etype ),
+                        print_none ( self.B4J_path ),
+                        print_none ( self.B4J_buffer ))
 
 
 class CMIP5_Experiment ( Experiment ):
     
     def __init__ ( self, **kwargs ):
-        var_filename = kwargs.get ( "var_filename", None )
+        var_filename = kwargs.pop ( "var_filename", None )
         assert var_filename and os.path.isfile ( var_filename )
 
-        Experiment.__init__ ( self )
+        Experiment.__init__ ( self, **kwargs )
         
         nc_fid  = Dataset ( var_filename, 'r' )
         nc_attrs = nc_fid.ncattrs ()
@@ -46,7 +46,7 @@ class CMIP5_Experiment ( Experiment ):
 
 
     def __repr__ ( self ):
-        return "%s object %s ( %s )" % ( self.__class__.__name__, self.name,
+        return "%s object %s ( %s )" % ( self.__class__.__name__, self.B4J_name,
                                ",\n".join ( '{!s} : {!r}'.format ( k, print_none ( v.encode ( 'ascii', 'ignore' )) \
                                                                    if isinstance ( v, unicode ) else \
                                                                    print_none ( v )) \

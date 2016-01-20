@@ -11,6 +11,17 @@ from pycmbs.mapping import map_plot
 
 
 # methods #
+def find_files ( pattern, path ):
+    assert os.path.isdir ( path ) and isinstance ( pattern, str )
+    
+    ret = []
+    for root, dirnames, filenames in os.walk ( path ):
+        files   = fnmatch.filter ( filenames, pattern )
+        for f in files:
+            ret.append ( os.path.join ( root, f ))
+
+    return ret
+                    
     # albedo
 def get_period_intersection ( filelist ):
     """Get largest common period for list of datafiles <filelist> given as argument."""
@@ -105,38 +116,38 @@ class Analysis ( object ):
         # TODO: look for albedo file first ...
         # ... no albedo found. Calculate albedo:
         for e in self.experiments:
-            e.buffer = [ None ] * n_paths
-            for root, dirnames, filenames in os.walk ( e.path ):
+            e.B4J_buffer = [ None ] * n_paths
+            for root, dirnames, filenames in os.walk ( e.B4J_path ):
                 for idx in [ path_tokens.index ( "rsus" ),
                              path_tokens.index ( "rsds" )]:
-                    pattern = '*%s*%s*.nc' % ( path_tokens [ idx ], e.name )
+                    pattern = '*%s*%s*.nc' % ( path_tokens [ idx ], e.B4J_name )
                     files   = fnmatch.filter ( filenames, pattern )
                     if len ( files ) != 1:
                         raise Exception ( """Multiple or no files found matching pattern '%s' in '%s':
                                         files = [ %s ]""" %\
-                                          ( pattern, e.path,
+                                          ( pattern, e.B4J_path,
                                             ",".join ( "{!s}".format ( f ) for f in files )))
-                    e.buffer [ idx ] =  os.path.join ( root, files [ 0 ])
+                    e.B4J_buffer [ idx ] =  os.path.join ( root, files [ 0 ])
             self.logger.debug ( e )
 
         period = get_period_intersection ([ p for e in self.experiments \
-                                            for p in e.buffer if p ])
+                                            for p in e.B4J_buffer if p ])
 
         seasons      = [ 'DJF', 'MAM', 'JJA', 'SON' ]
         n_seasons    = len ( seasons )
         for e in self.experiments:
-            e.buffer [ path_tokens.index ( varname )] = template % {
+            e.B4J_buffer [ path_tokens.index ( varname )] = template % {
                 'path'           : self.data_path,
                 'varname'        : varname,
                 'classification' : 'yseasmean',
-                'expname'        : e.name,
+                'expname'        : e.B4J_name,
                 'startdate'      : str ( period [ 0 ]),
                 'finaldate'      : str ( period [ -1 ]),
                 'suffix'         : 'nc' }
              
-            albedo_yseasmean ( e.buffer [ path_tokens.index ( "rsus" )],
-                               e.buffer [ path_tokens.index ( "rsds" )],
-                               e.buffer [ path_tokens.index ( "albedo" )],
+            albedo_yseasmean ( e.B4J_buffer [ path_tokens.index ( "rsus" )],
+                               e.B4J_buffer [ path_tokens.index ( "rsds" )],
+                               e.B4J_buffer [ path_tokens.index ( "albedo" )],
                                period )
 
 
@@ -145,7 +156,7 @@ class Analysis ( object ):
             figurefilepath =  template % { 'path'           : self.graphic_path,
                                            'varname'        : varname,
                                            'classification' : 'yseasmean',
-                                           'expname'        : e.name,
+                                           'expname'        : e.B4J_name,
                                            'startdate'      : str ( period [ 0 ]),
                                            'finaldate'      : str ( period [ -1 ]),
                                            'suffix'         : 'png' }
@@ -155,17 +166,17 @@ class Analysis ( object ):
                 buffer_idx = path_tokens.index ( season )
                 tmp_data     = [ None ] * n_seasons
                 self.logger.debug ( "season_idx=%d, buffer_idx=%d" % (season_idx, buffer_idx ))
-                e.buffer [ buffer_idx ] = template % { 'path'           : self.data_path,
+                e.B4J_buffer [ buffer_idx ] = template % { 'path'           : self.data_path,
                                                        'varname'        : varname,
                                                        'classification' : 'y%smean' % season,
-                                                       'expname'        : e.name,
+                                                       'expname'        : e.B4J_name,
                                                        'startdate'      : str ( period [ 0 ]),
                                                        'finaldate'      : str ( period [ -1 ]),
                                                        'suffix'         : 'nc' }
                 cdo.selseas ( season,
-                              input  = e.buffer [ path_tokens.index ( "albedo" )],
-                              output = e.buffer [ buffer_idx ])
-                tmp_data [ season_idx ] = Data (  e.buffer [ buffer_idx ],
+                              input  = e.B4J_buffer [ path_tokens.index ( "albedo" )],
+                              output = e.B4J_buffer [ buffer_idx ])
+                tmp_data [ season_idx ] = Data (  e.B4J_buffer [ buffer_idx ],
                                                   'albedo',
                                                   lat_name = 'lat',
                                                   lon_name = 'lon',
@@ -188,13 +199,13 @@ class Analysis ( object ):
             if exp_idx == REF_EXP_IDX:
                 continue
             
-            self.logger.debug ( "Test experiment '%s', make diff plots." % e.name )
+            self.logger.debug ( "Test experiment '%s', make diff plots." % e.B4J_name )
             f            = plt.figure ( figsize = ( 15, 10 ))
             tmp_subplots = [ f.add_subplot ( 2, 2, idx + 1 ) for idx in range ( n_seasons )]
             figurefilepath =  template % { 'path'           : self.graphic_path,
                                            'varname'        : varname,
                                            'classification' : 'yseasmean_diff',
-                                           'expname'        : e.name,
+                                           'expname'        : e.B4J_name,
                                            'startdate'      : str ( period [ 0 ]),
                                            'finaldate'      : str ( period [ -1 ]),
                                            'suffix'         : 'png' }
@@ -204,23 +215,23 @@ class Analysis ( object ):
                 buffer_in_idx =  path_tokens.index ( season )
                 buffer_out_idx = path_tokens.index ( season + "_diff" )
                 tmp_data     = [ None ] * n_seasons
-                e.buffer [ buffer_out_idx ] = template % { 'path'           : self.data_path,
+                e.B4J_buffer [ buffer_out_idx ] = template % { 'path'           : self.data_path,
                                                            'varname'        : varname,
                                                            'classification' : 'y%smean_diff' % season,
-                                                           'expname'        : e.name,
+                                                           'expname'        : e.B4J_name,
                                                            'startdate'      : str ( period [ 0 ]),
                                                            'finaldate'      : str ( period [ -1 ]),
                                                            'suffix'         : 'nc' }
 
-                cdo.sub ( input   = e.buffer [ buffer_in_idx ] + " " +\
-                          self.experiments [ REF_EXP_IDX ].buffer [ buffer_in_idx ],
-                          output  = e.buffer [ buffer_out_idx ],
+                cdo.sub ( input   = e.B4J_buffer [ buffer_in_idx ] + " " +\
+                          self.experiments [ REF_EXP_IDX ].B4J_buffer [ buffer_in_idx ],
+                          output  = e.B4J_buffer [ buffer_out_idx ],
                           options = '-f nc' )
 
-                self.logger.debug ( "input sub: " + e.buffer [ season_idx ] + \
-                                   " " + self.experiments [ REF_EXP_IDX ].buffer [ season_idx ] )
+                self.logger.debug ( "input sub: " + e.B4J_buffer [ season_idx ] + \
+                                   " " + self.experiments [ REF_EXP_IDX ].B4J_buffer [ season_idx ] )
 
-                tmp_data [ season_idx ] = Data (  e.buffer [ buffer_out_idx ],
+                tmp_data [ season_idx ] = Data (  e.B4J_buffer [ buffer_out_idx ],
                                                   'albedo',
                                                   lat_name = 'lat',
                                                   lon_name = 'lon',
