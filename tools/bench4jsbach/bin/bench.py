@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import os, subprocess, shutil,getpass,datetime
-from experiment import Experiment
+from experiment import Experiment, CMIP5_Experiment
 from util import logger as dkl_logger, setup_logger, print_none, log_message_newline
 import configobj
 from sets import Set
