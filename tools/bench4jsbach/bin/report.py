@@ -68,20 +68,19 @@ class Report ( object ):
 
         description = ""
 
-        description += subsection_template % { 'subsection': 'Experiments' }
+        description += subsection_template % { 'subsection': 'Experiments to benchmark' }
         
         from bench import REF_EXP_IDX
         for e in self.experiments:
             if self.experiments.index ( e ) == REF_EXP_IDX:
                 continue
-            e_descr = e.__repr__ ()
-            description += latexify ( e_descr )
+            description += latexify ( e.table_repr ())
 
         description += subsection_template % { 'subsection': 'Reference experiment' }
 
         print description
-            
-        return description
+
+        return description 
     
 
     def albedo_section ( self ):

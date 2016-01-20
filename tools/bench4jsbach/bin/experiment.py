@@ -47,12 +47,35 @@ class CMIP5_Experiment ( Experiment ):
 
     def __repr__ ( self ):
         return "%s object %s ( %s )" % ( self.__class__.__name__, self.B4J_name,
-                               ",\n".join ( '{!s} : {!r}'.format ( k, print_none ( v.encode ( 'ascii', 'ignore' )) \
-                                                                   if isinstance ( v, unicode ) else \
-                                                                   print_none ( v )) \
-                                            for (k,v) in self.__dict__.iteritems ()))
-                                           
-                                   
+                    ",\n".join ( '{!s} : {!r}'.format ( k, str ( print_none ( v ))) \
+                    for (k,v) in sorted ( self.__dict__.iteritems ())))
+    
+
+    def table_repr ( self ):
+
+        def truncate ( s, pl, sl ):
+            import re
+            assert isinstance ( s, str )
+            ret = s
+            if len ( s ) > pl + sl:
+                ret = re.sub(r'^(.{%d}).*(.{%d})$' % (pl,sl), '\g<1>...\g<2>', s )
+            return ret
+        
+        return """
+\\begin{tabular}{ |l|l| }
+\\hline
+\multicolumn{2}{|l|}{%s object %s}
+\\\\ \\hline
+%s
+\\\\ \\hline
+
+\\end{tabular}
+""" % ( self.__class__.__name__, self.B4J_name,
+            """\\\\
+""".join ( '{!s} & {!r}'.format ( k,  truncate ( str ( print_none ( v )), 40, 12 )) \
+                                  for (k,v) in sorted ( self.__dict__.iteritems ())))
+
+                                                                             
                                    
 if __name__ == "__main__":
 
