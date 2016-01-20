@@ -70,38 +70,27 @@ CONTAINS
   FUNCTION Create_process_config(icomp, namelist_filename) RESULT(return_ptr)
 
     USE mo_jsb_config_class,   ONLY: t_jsb_config
-    USE mo_srf_config_class,   ONLY: new_srf_config
-    USE mo_soil_config_class,  ONLY: new_soil_config
-    USE mo_veg_config_class,   ONLY: new_veg_config
-#ifndef __NO_JSBACH_HD__
-    USE mo_hd_config_class,    ONLY: new_hd_config
-#endif
-    USE mo_jsb_namelist_iface, ONLY: open_nml, close_nml
 
     INTEGER, INTENT(in) :: icomp
     CHARACTER(LEN=*), INTENT(in) :: namelist_filename
     CLASS(t_jsb_config), POINTER :: return_ptr
 
-    INTEGER :: nml_handler
-
-    nml_handler = open_nml(TRIM(namelist_filename))
-
     SELECT CASE(icomp)
     CASE (SRF)
-      return_ptr  => new_srf_config(nml_handler)
+      ALLOCATE(t_srf_config::return_ptr)
     CASE (SOIL)
-      return_ptr => new_soil_config(nml_handler)
+      ALLOCATE(t_soil_config::return_ptr)
     CASE (VEG)
-      return_ptr  => new_veg_config(nml_handler)
+      ALLOCATE(t_veg_config::return_ptr)
 #ifndef __NO_JSBACH_HD__
     CASE (HD)
-      return_ptr => new_hd_config(nml_handler)
+      ALLOCATE(t_hd_config::return_ptr)
 #endif
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
 
-    CALL close_nml(nml_handler)
+    IF (ASSOCIATED(return_ptr)) return_ptr%namelist_filename = namelist_filename
 
   END FUNCTION Create_process_config
 
@@ -281,12 +270,14 @@ CONTAINS
 
   SUBROUTINE Get_srf_config(config, return_ptr)
 
-    CLASS(t_jsb_config), TARGET, INTENT(in) :: config
-    TYPE(t_srf_config),  POINTER    :: return_ptr
+    CLASS(t_jsb_config), POINTER :: config
+    TYPE(t_srf_config),  POINTER :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_srf_config'
 
     return_ptr => NULL()
+
+    IF (.NOT. ASSOCIATED(config)) RETURN
 
     SELECT TYPE (config)
     TYPE IS (t_srf_config)
@@ -300,12 +291,14 @@ CONTAINS
 
   SUBROUTINE Get_soil_config(config, return_ptr)
 
-    CLASS(t_jsb_config), TARGET, INTENT(in) :: config
-    TYPE(t_soil_config), POINTER    :: return_ptr
+    CLASS(t_jsb_config), POINTER :: config
+    TYPE(t_soil_config), POINTER :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_soil_config'
 
     return_ptr => NULL()
+
+    IF (.NOT. ASSOCIATED(config)) RETURN
 
     SELECT TYPE (config)
     TYPE IS (t_soil_config)
@@ -319,12 +312,14 @@ CONTAINS
 
   SUBROUTINE Get_veg_config(config, return_ptr)
 
-    CLASS(t_jsb_config), TARGET, INTENT(in) :: config
-    TYPE(t_veg_config), POINTER    :: return_ptr
+    CLASS(t_jsb_config), POINTER :: config
+    TYPE(t_veg_config),  POINTER :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_veg_config'
 
     return_ptr => NULL()
+
+    IF (.NOT. ASSOCIATED(config)) RETURN
 
     SELECT TYPE (config)
     TYPE IS (t_veg_config)
@@ -339,12 +334,14 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
   SUBROUTINE Get_hd_config(config, return_ptr)
 
-    CLASS(t_jsb_config), TARGET, INTENT(in) :: config
-    TYPE(t_hd_config), POINTER    :: return_ptr
+    CLASS(t_jsb_config), POINTER :: config
+    TYPE(t_hd_config),   POINTER :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_hd_config'
 
     return_ptr => NULL()
+
+    IF (.NOT. ASSOCIATED(config)) RETURN
 
     SELECT TYPE (config)
     TYPE IS (t_hd_config)

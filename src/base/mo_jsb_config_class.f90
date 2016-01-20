@@ -25,7 +25,20 @@ MODULE mo_jsb_config_class
   END TYPE t_jsb_model_config
 
   TYPE, ABSTRACT :: t_jsb_config
+    LOGICAL :: active
+    CHARACTER(len=filename_max) :: ic_filename
+    CHARACTER(len=filename_max) :: bc_filename
+    CHARACTER(LEN=filename_max) :: namelist_filename
+  CONTAINS
+    PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init
   END TYPE t_jsb_config
+
+  ABSTRACT INTERFACE
+    SUBROUTINE Init_config(config)
+      IMPORT :: t_jsb_config
+      CLASS(t_jsb_config), INTENT(inout) :: config
+    END SUBROUTINE Init_config
+  END INTERFACE
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_config_class'
 

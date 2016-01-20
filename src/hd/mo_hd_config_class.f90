@@ -19,31 +19,29 @@ MODULE mo_hd_config_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_hd_config, new_hd_config
+  PUBLIC :: t_hd_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_hd_config
-     LOGICAL                     :: active                !< hd module is active
-     CHARACTER(len=filename_max) :: ic_filename           !< file with initial conditions
-     CHARACTER(len=filename_max) :: bc_filename           !< file with boundary conditions
      LOGICAL                     :: debug_hd              !< additional printing for debugging
      LOGICAL                     :: diag_water_budget     !< prints to diagnose global water budget
      CHARACTER(len=32)           :: routing_scheme        !< river_routing_scheme: full / equally_to_coast / equally_to_ocean /
                                                           !<                              weighted_to_coast / weighted_to_ocean
+   CONTAINS
+     PROCEDURE :: Init => Init_hd_config
   END type t_hd_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_config_class'
 
 CONTAINS
 
-  FUNCTION new_hd_config(nml_handler) RESULT(config)
+  SUBROUTINE Init_hd_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
 
-    INTEGER,          INTENT(in) :: nml_handler
-    TYPE(t_hd_config), POINTER :: config
+    CLASS(t_hd_config),INTENT(inout) :: config
 
     LOGICAL                       :: active                !< hd module is active
     CHARACTER(len=filename_max)   :: ic_filename           !< file with initial conditions
@@ -60,15 +58,13 @@ CONTAINS
       diag_water_budget,           &
       routing_scheme
 
-    INTEGER :: nml_unit, istat
+    INTEGER :: nml_handler, nml_unit, istat
 
     TYPE(t_jsb_vgrid), POINTER :: hd_o, hd_b, hd_r  ! Vertical grids
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_hd_config'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_hd_config'
 
     CALL message(TRIM(routine), 'Starting hd configuration')
-
-    ALLOCATE(config)
 
     ! Set defaults
     active          = .FALSE.
@@ -78,8 +74,12 @@ CONTAINS
     diag_water_budget = .TRUE.
     routing_scheme  = 'full'
 
+    nml_handler = open_nml(TRIM(config%namelist_filename))
+
     nml_unit = position_nml('jsb_hd_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_hd_nml)
+
+    CALL close_nml(nml_handler)
 
     config%active                    = active
     config%ic_filename               = ic_filename
@@ -99,7 +99,7 @@ CONTAINS
     hd_r  => new_vgrid('hd_nres_riverflow', ZAXIS_DEPTH_BELOW_LAND, 5, levels=(/1._wp,2._wp,3._wp,4._wp,5._wp/), units='')
     CALL Register_vgrid(hd_r)
 
-  END FUNCTION new_hd_config
+  END SUBROUTINE Init_hd_config
 
 #endif
 END MODULE mo_hd_config_class
