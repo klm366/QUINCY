@@ -31,6 +31,7 @@ class Bench_Object ( Analysis, Report ):
     config            = None
     experiments       = []
     logger            = None
+    logger_name       = 'B4J_LOGGER'
     
     
     def __init__ ( self, config_arg, **kwargs ):
@@ -83,20 +84,29 @@ class Bench_Object ( Analysis, Report ):
                                            self.bench_name + '_' +\
                                            str ( datetime.datetime.now ().strftime ( '%Y%m%d%H%M' )) +\
                                            '.out' )
-        self.logger = setup_logger ( name = "B4JSBACH_LOGGER", filename = self.logfile_path )
 
-        self.logger.debug ( "Before redirecting stdout and logging to file " + \
+        dkl_logger.debug ( "Logger switched to %s. It will write to file " % self.logger_name + \
                            log_message_newline +\
-                           "'%s'." % self.logfile_path +\
+                           "'%s' of now." % self.logfile_path +\
                            log_message_newline +\
-                           "The processing might take a while ..." )
+                           "Processing might take a while ..." )
+
+        self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
             
         es = self.config [ "experiments" ]
         for en in es:
-            e = Experiment ( name = en,
-                             etype = es [ en ][ TYPE_IDX ],
-                             path = es [ en ][ PATH_IDX ],
-                             bench = self )
+            if es [ en ][ TYPE_IDX ] == "CMIP5":
+                e = CMIP5_Experiment (  name = en,
+                                        etype = es [ en ][ TYPE_IDX ],
+                                        path = es [ en ][ PATH_IDX ],
+                                        bench = self,
+                                        var_filename = "/scratch/mpi/mpiles/m300050/benchmarking/example_data/CMIP5/amip/rsds_Amon_MPI-ESM-LR_amip_r3i1p1_197901-200812.nc" )
+                print e
+            else:
+                e = Experiment ( name = en,
+                                 etype = es [ en ][ TYPE_IDX ],
+                                 path = es [ en ][ PATH_IDX ],
+                                 bench = self )
             self.experiments.append ( e )
 
         self.logger.debug ( "Exiting." )
