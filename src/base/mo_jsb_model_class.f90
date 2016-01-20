@@ -12,7 +12,7 @@ MODULE mo_jsb_model_class
 
   USE mo_hsm_class,        ONLY: t_hsm, t_state
   USE mo_jsb_config_class, ONLY: t_jsb_model_config
-  USE mo_jsb_process_class, ONLY: t_jsb_process
+  USE mo_jsb_process_class, ONLY: t_jsb_process_p
 
   USE mo_exception,        ONLY: message_text, message, finish
   USE mo_io_units,         ONLY: filename_max
@@ -36,7 +36,7 @@ MODULE mo_jsb_model_class
     CHARACTER(len=filename_max)       :: namelist_filename !< Model namelist file
     TYPE(t_jsb_model_config), POINTER :: config            !< Configuration
     INTEGER                           :: grid_id
-    TYPE(t_jsb_process), ALLOCATABLE  :: processes(:)
+    TYPE(t_jsb_process_p), POINTER    :: processes(:)
     TYPE(t_hsm),              POINTER :: hsm
   CONTAINS
     PROCEDURE :: Configure_processes => Configure_model_processes
@@ -96,7 +96,8 @@ CONTAINS
     INTEGER :: iproc
 
     DO iproc=1,SIZE(this%processes)
-      CALL this%processes(iproc)%Configure(iproc, this%namelist_filename)
+      ALLOCATE(this%processes(iproc)%p)
+      CALL this%processes(iproc)%p%Configure(iproc, this%namelist_filename)
     END DO
 
   END SUBROUTINE Configure_model_processes
