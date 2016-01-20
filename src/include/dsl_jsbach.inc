@@ -55,17 +55,3 @@
 #define dsl4jsb_var2d_ptr dsl4jsb_var2D_ptr
 #define dsl4jsb_var3d_ptr dsl4jsb_var3D_ptr
 
-/*
-#define VA_NUM_ARGS(...) VA_NUM_ARGS_IMPL(__VA_ARGS__, 5,4,3,2,1)
-#define VA_NUM_ARGS_IMPL(_1,_2,_3,_4,_5,N,...) N
-
-#define macro_dispatcher(func, ...) macro_dispatcher_(func, VA_NUM_ARGS(__VA_ARGS__))
-#define macro_dispatcher_(func, nargs) macro_dispatcher__(func, nargs)
-#define macro_dispatcher__(func, nargs) func ## nargs
-
-#define Get_var2D_onChunk(...) macro_dispatcher(Get_var2D_onChunk, __VA_ARGS__)(__VA_ARGS__)
-
-#define Get_var2D_onChunk2(mem,var) var => mem%var%ptr(ics:ice,iblk)
-#define Get_var2D_onChunk3(mem,var,intent) var => mem%var%ptr(ics:ice,iblk); mem%var%inout=#intent
-*/
-
