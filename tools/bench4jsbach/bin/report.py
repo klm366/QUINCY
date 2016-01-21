@@ -5,15 +5,23 @@ import json
 
 from util import log_message_newline
 
-template = """\documentclass[]{article}
+template = """
+\\documentclass[]{article}
 \\usepackage[english]{babel}
 \\usepackage{graphicx}
 \\usepackage{color}
+
+\\usepackage{booktabs,tabularx,ragged2e}
+\\newcolumntype{Y}{>{\\raggedright\\arraybackslash}X}
+\\newcolumntype{L}{>{\\arraybackslash}X}
+\
 \\usepackage{titling}
 \\usepackage{lipsum}
 \\renewcommand{\\familydefault}{\\sfdefault}
 \\newcommand{\graphicpath}[1]{%(graphicpath)s/#1}
+
 \\begin{document}
+
 \\title{%(title)s}
 \\author{%(author)s, %(institute)s, %(department)s}
 \maketitle
@@ -26,6 +34,7 @@ template = """\documentclass[]{article}
 
 \section{Outlook}
 %(epilog)s \lipsum[1]
+
 \end{document}
 """
 section_template = """\section{%(section)s}
@@ -43,7 +52,7 @@ report_dirname = "report"
 source_dirname = "sources"
 
 
-def latexify ( string ):
+def lateXify ( string ):
     assert isinstance ( string, str )
     
     ret = string
@@ -74,9 +83,10 @@ class Report ( object ):
         for e in self.experiments:
             if self.experiments.index ( e ) == REF_EXP_IDX:
                 continue
-            description += latexify ( e.table_repr ())
+            description += lateXify ( e.table_repr ())
 
-        description += subsection_template % { 'subsection': 'Reference experiment' }
+        description += subsection_template % { 'subsection': 'Reference experiments' }
+        description += lateXify ( self.experiments [ REF_EXP_IDX ] .table_repr ())
 
         print description
 
@@ -171,6 +181,6 @@ if __name__ == '__main__':
 
     print s
 
-    s2 = latexify ( s )
+    s2 = lateXify ( s )
 
     print s2

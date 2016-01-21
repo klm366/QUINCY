@@ -62,21 +62,20 @@ class CMIP5_Experiment ( Experiment ):
             return ret
         
         return """
-\\begin{tabular}{ |l|l| }
-\\hline
-\multicolumn{2}{|l|}{%s object %s}
-\\\\ \\hline
+\\begin{tabularx}{\\linewidth}{lL}
+\\toprule
+\\multicolumn{2}{l}{\\textbf{{%s object {\\tt %s}}}}  \\\\
+\\addlinespace
+\\cmidrule(r){1-2}
 %s
-\\\\ \\hline
-
-\\end{tabular}
+\\\\ \\bottomrule
+\\end{tabularx}
 """ % ( self.__class__.__name__, self.B4J_name,
             """\\\\
-""".join ( '{!s} & {!r}'.format ( k,  truncate ( str ( print_none ( v )), 40, 12 )) \
+""".join ( '{!s} & {!r}'.format ( k, truncate ( str ( print_none ( v )), 30, 12 )) \
                                   for (k,v) in sorted ( self.__dict__.iteritems ())))
 
-                                                                             
-                                   
+                                                                                                                
 if __name__ == "__main__":
 
     var_filename = "/scratch/mpi/mpiles/m300050/benchmarking/example_data/CMIP5/amip/rsds_Amon_MPI-ESM-LR_amip_r3i1p1_197901-200812.nc"
