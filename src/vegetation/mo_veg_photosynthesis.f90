@@ -76,7 +76,7 @@ SUBROUTINE update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,v
                                      tile(t)%plant%pool%foliarN%fnl_rub)
      ! calculate photosynthesis per layer
      DO icanop = 1,ncanop
-        IF(tile(t)%plant%par_sunlit(icanop).GT.eps8)THEN
+        IF(tile(t)%plant%lai.GT.0.0_wp)THEN
            
           CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
                                     tile(t)%plant%par_sunlit(icanop),tile(t)%plant%par_shaded(icanop),& 
@@ -346,10 +346,10 @@ SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par
            it = ps_it_max + 1
            cil = pcp 
         ENDIF
-        IF( gsl <= g0 * rtck / press_srf .OR. cil <= pcp ) THEN 
-           last_call = .TRUE.
-           cil = pcp 
-        ENDIF 
+!        IF( gsl <= g0 * rtck / press_srf .OR. cil <= pcp ) THEN 
+!           last_call = .TRUE.
+!           cil = pcp 
+!        ENDIF 
         it =  it + 1
      END DO
 
