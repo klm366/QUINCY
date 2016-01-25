@@ -7,6 +7,8 @@ LAND_LIB = $(LIBDIR)/lib_land.a
 SXLAND_LIB = $(LAND_LIB)
 VEG_LIB = $(LIBDIR)/lib_vegetation.a
 SXVEG_LIB = $(VEG_LIB)
+ATM_LIB = $(LIBDIR)/lib_atmland.a
+SXATM_LIB = $(ATM_LIB)
 MODEL_LIB = $(LIBDIR)/lib_drivers.a
 SXMODEL_LIB = $(MODEL_LIB)
 
@@ -25,11 +27,11 @@ all:
 	@echo main is OK
 
 m_all: $(BINDIR)/land.x
-$(BINDIR)/land.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXBASE_LIB) \
+$(BINDIR)/land.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) \
   $(MODEL_LIB)(mo_land_model_interface.o) $(MODEL_LIB)(land_model_driver.o)
 	$(A_G) $(MODEL_LIB) land_model_driver.o
 	$(F_L) -o $(BINDIR)/land.x land_model_driver.o \
-            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXBASE_LIB)
+            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB)
 	$(RM) land_model_driver.o
 
 canopy: 
@@ -38,12 +40,25 @@ canopy:
 	@echo canopy is OK
 
 m_canopy: $(BINDIR)/canopy.x
-$(BINDIR)/canopy.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXBASE_LIB) \
+$(BINDIR)/canopy.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) \
   $(MODEL_LIB)(canopy_model_driver.o)
 	$(A_G) $(MODEL_LIB) canopy_model_driver.o
 	$(F_L) -o $(BINDIR)/canopy.x canopy_model_driver.o \
-            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXBASE_LIB) 
-	$(RM) canopy_model_driver.o
+            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) 
+	$(RM) canopy_model_driver.o 
+
+transient_canopy: 
+	@$(M_K) all_libs 
+	@$(M_K) m_transient_canopy
+	@echo transient canopy is OK
+
+m_transient_canopy: $(BINDIR)/transient_canopy.x
+$(BINDIR)/transient_canopy.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) \
+  $(MODEL_LIB)(transient_canopy_model_driver.o)
+	$(A_G) $(MODEL_LIB) transient_canopy_model_driver.o
+	$(F_L) -o $(BINDIR)/transient_canopy.x transient_canopy_model_driver.o \
+            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) 
+	$(RM) transient_canopy_model_driver.o 
 
 plant: 
 	@$(M_K) all_libs 
@@ -51,17 +66,21 @@ plant:
 	@echo plant is OK
 
 m_plant: $(BINDIR)/plant.x
-$(BINDIR)/plant.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXBASE_LIB) \
+$(BINDIR)/plant.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) \
   $(MODEL_LIB)(plant_model_driver.o)
 	$(A_G) $(MODEL_LIB) plant_model_driver.o
 	$(F_L) -o $(BINDIR)/plant.x $(SXDRIVER_LIB) \
-            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXBASE_LIB) 
+            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) 
 	$(RM) plant_model_driver.o
 
 all_libs:
 	@$(M_K) libbase
+	@$(M_K) libatmland
 	@$(M_K) libland
 	@$(M_K) libvegetation
+
+libatmland:
+	(cd ../atmland; $(M_K) -f Makefile atmland)
 
 libland:
 	(cd ../land; $(M_K) -f Makefile land)

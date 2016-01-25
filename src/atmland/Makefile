@@ -12,7 +12,9 @@ STRIP   = strip
 SIZE    = size
 
 #-
-MODS1 = mo_atmland_memory.f90
+MODS1 = mo_atmland_memory.f90 \
+        mo_atmland_constants.f90 \
+        mo_atmland_util.f90
 
 OBJSMODS1 = $(MODS1:.f90=.o)
 #-
@@ -20,10 +22,18 @@ OBJSMODS1 = $(MODS1:.f90=.o)
 
 #-
 all:
-	$(M_K) m_all
+	@$(M_K) libbase
+	@$(M_K) m_all
+	@echo atmland is OK
+
+atmland:
+	@$(M_K) m_all
 	@echo atmland is OK
 
 m_all: $(MODEL_LIB)($(OBJSMODS1))
+
+libbase:
+	(cd ../base; $(M_K) -f Makefile)
 
 $(MODEL_LIB)(%.o): %.f90
 	$(F_C) $(F_O) $*.f90
@@ -35,3 +45,10 @@ clean:
 
 $(MODEL_LIB)(mo_atmland_memory.o): \
   $(BASE_LIB)(mo_kind.o)
+
+$(MODEL_LIB)(mo_atmland_constants.o): \
+  $(BASE_LIB)(mo_kind.o)
+
+$(MODEL_LIB)(mo_atmland_util.o): \
+  $(BASE_LIB)(mo_kind.o) \
+  $(MODEL_LIB)(mo_atmland_constants.o)

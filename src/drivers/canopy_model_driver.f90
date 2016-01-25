@@ -64,9 +64,9 @@ PROGRAM canopy_model_driver
   !
   ! 1.0 Initialisation of vegetation parameters and constants
   ! 
+  CALL init_base_constants
   CALL init_pft_param_table(veg_param)
   CALL init_veg_parameters
-  CALL init_canopy_layer_depth
   !
   ! 1.1 Initalisation of met-forcing which is assumed constant 
   ! 

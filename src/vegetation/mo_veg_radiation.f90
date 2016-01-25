@@ -57,11 +57,7 @@ CONTAINS
                      tile(t)%plant%par_shaded,tile(t)%plant%fleaf_sunlit)
   
   ENDDO
-!write(*,*) swpar_srf_down,swpar_fdiffuse,cos_zenith_angle,tile%plant%lai
-!write(*,*) sum(tile(1)%plant%par_sunlit*tile(1)%plant%fleaf_sunlit),&
-!           sum(tile(1)%plant%par_shaded*(1._wp-tile(1)%plant%fleaf_sunlit)),&
-!           sum(tile(2)%plant%par_sunlit*tile(2)%plant%fleaf_sunlit),&
-!           sum(tile(2)%plant%par_shaded*(1._wp-tile(2)%plant%fleaf_sunlit))
+  
   END SUBROUTINE update_radiation
 
 
@@ -75,13 +71,13 @@ CONTAINS
     !  
     !  Equations numbers refer to the Spitters paper 
     !
-    ! Input: sbeta: solar angle (radians)
+    ! Input: cos_zenith_angle: solar angle (radians)
     !        swpar_srf_down: short-wave downward radiation (W m-2)
     !        fdiffuse: fraction of diffuse radiation (--)
     !        lai: leaf area index (--)
     ! Output: isla: PAR on sunlit leaves (µmol m-2 s-1)
     !         isha: PAR on shaded leaved (µmol m-2 s-1)
-    !          fsl:  fraction of foliage that is sunlit
+    !         fsl:  fraction of foliage that is sunlit
 
     USE mo_base_constants, ONLY: ncanop,canopy_layer_depth
     USE mo_land_constants, ONLY: eps8,sw2par
@@ -107,10 +103,7 @@ CONTAINS
     REAL(wp) :: idrdra               ! direct PAR remaining direct at lc (umol/m2/s) 
     REAL(wp) :: temp1,temp2,radf1,radf2,radf3,radf3b,radf4   ! dummy variables
     REAL(wp), DIMENSION(ncanop) :: canopy_layer_depth_act  ! actual depth of canopy layers (account for incomplete lower bound) 
-    REAL(wp) :: sbeta 
     INTEGER :: icanop
-
-    sbeta = cos_zenith_angle !! some conversion needed here!
 
     par_sunlit(:) = 0.0_wp 
     par_shaded(:) = 0.0_wp
@@ -119,7 +112,7 @@ CONTAINS
     canopy_layer_depth_act = calc_canopy_layer_depth(lai)
 
     ! only do calculations during daylight
-    IF((swpar_srf_down > eps8) .AND. (sbeta > eps8) .AND. lai .GT. eps8) THEN 
+    IF((swpar_srf_down > eps8) .AND. (cos_zenith_angle > eps8) .AND. lai .GT. eps8) THEN 
 
        ! Downwelling direct PAR umol/m2/s
        ipar_dr = (1.0_wp - swpar_fdiffuse) * sw2par * swpar_srf_down
@@ -132,11 +125,11 @@ CONTAINS
        temp2 = 2.0_wp * (1.0_wp - temp1)/(1.0_wp + temp1)
 
        ! Fraction of PAR reflected by green closed canopy (fraction); eq. 1
-       rho = temp2/(1.0_wp + rho2sbeta * sbeta)
+       rho = temp2/(1.0_wp + rho2sbeta * cos_zenith_angle)
 
        ! Extinction coefficient for PAR over black leaves in canopy
        kdf = kdf0 * SQRT(1.0_wp - sigma)
-       kbl = kbl0 * kdf/(0.8_wp * temp1 * sbeta)
+       kbl = kbl0 * kdf/(0.8_wp * temp1 * cos_zenith_angle)
 
        ! Some factors for radiation calculations that change with time
        radf1 = (1.0_wp - rho) * ipar_df * kdf            ! eq 10

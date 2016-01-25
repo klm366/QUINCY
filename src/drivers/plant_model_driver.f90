@@ -11,6 +11,7 @@ PROGRAM plant_model_driver
   USE mo_kind, ONLY: wp
   USE mo_base_memory
   USE mo_base_constants
+  USE mo_atmland_constants
   USE mo_land_constants
   USE mo_veg_parameters
   USE mo_veg_interface, ONLY: update_vegetation

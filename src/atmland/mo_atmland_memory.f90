@@ -52,7 +52,7 @@ MODULE mo_atmland_memory
       alb_nir_dir 
 
   END TYPE t_land2atm_memory
- 
-  CONTAINS
+
+CONTAINS
 
 END MODULE mo_atmland_memory

@@ -10,6 +10,7 @@
 PROGRAM land_model_driver
   USE mo_kind
   USE mo_base_constants
+  USE mo_atmland_constants
   USE mo_land_constants
   USE mo_land_model_interface, ONLY: land_model_interface 
   USE mo_veg_parameters
@@ -59,9 +60,10 @@ PROGRAM land_model_driver
   !
   ! 1.0 Initialisation of vegetation parameters and constants
   !
+  CALL init_base_constants
+  CALL init_atmland_constants
   CALL init_pft_param_table(veg_param)
   CALL init_veg_parameters
-  CALL init_canopy_layer_depth
   !
   ! 1.1 Initalisation of met-forcing which is assumed constant
   !
