@@ -1,0 +1,65 @@
+!!
+!! @brief memory structure for atm->land and land->atm processes (not used yet) 
+!!
+!! @author
+!!  Sönke Zaehle, MPI-BGC Jena 
+!!
+!! @par Revision History
+!! First version by Sönke Zaehle (2015-12-04)
+!!
+MODULE mo_atmland_constants
+
+  USE mo_kind, ONLY: wp
+
+  ! orbital parameters (not calculated - do I need to include this dynamically later?)
+  REAL(wp),SAVE :: eccentricity                ! eccentricity of the Earth's orbit
+  REAL(wp),SAVE :: perihel                     ! perihel of the Earth's orbit
+  REAL(wp),SAVE :: obliquity                   ! obliquity of the Earth's orbit
+  REAL(wp),SAVE :: declination                 ! solar declination (degrees, angle sun at equator)
+  LOGICAL,SAVE  :: angle_at_GMT                ! logical to simulate solar angle according to local time or GMT 
+  REAL(wp),SAVE :: reference_longitude_GMT     ! reference longitude for GMT correction 
+  REAL(wp),SAVE :: solar_constant              ! solar shortwave radiation (W m-2) 
+  REAL(wp),SAVE :: k1_fdiff                    ! constants for calculation of diffuse radiation
+  REAL(wp),SAVE :: k2_fdiff                    ! calculation from transmission as in 
+  REAL(wp),SAVE :: k3_fdiff                    ! calc_diffuse_radiation_fraction
+  REAL(wp),SAVE :: k4_fdiff                    ! 
+  REAL(wp),SAVE :: min_sw_fdiffuse             ! minimum diffuse fraction in shortwave downward flux
+ REAL(wp), SAVE :: max_transmission_fdiff      ! atmospheric transmission rate above which the 
+                                               ! diffuse fraction becomes minimal
+
+  PUBLIC :: init_atmland_constants
+ 
+CONTAINS
+
+  SUBROUTINE init_atmland_constants
+  ! 
+  ! subroutine to initialise atmland constants
+  !
+  IMPLICIT NONE
+  ! 
+  ! initialise Earth's orbit
+  !  
+  obliquity = 23.446_wp
+  perihel = 102.04_wp
+  eccentricity = 0.016724_wp
+  !
+  ! initialise solar angle calculation
+  !
+  angle_at_GMT = .FALSE.
+  reference_longitude_GMT = 0.0_wp
+  ! 
+  ! initialise solar constant
+  ! 
+  solar_constant = 1370.0_wp
+  ! 
+  ! initalise diffuse fraction calculation
+  k1_fdiff = 1.0045_wp
+  k2_fdiff = 0.0435_wp
+  k3_fdiff = -3.5227_wp
+  k4_fdiff = 2.6313_wp
+  min_sw_fdiffuse = 0.1667_wp 
+  max_transmission_fdiff = 0.75_wp
+
+  END SUBROUTINE init_atmland_constants
+
+END MODULE mo_atmland_constants

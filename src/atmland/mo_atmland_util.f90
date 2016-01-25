@@ -15,7 +15,7 @@ MODULE mo_atmland_util
 
   PRIVATE
 
-  PUBLIC :: calc_solar_angle,calc_declination
+  PUBLIC :: calc_solar_angle,update_orbital_parameters,calc_sw_fdiffuse
 
 CONTAINS
 
@@ -58,25 +58,62 @@ CONTAINS
 
   END FUNCTION calc_solar_angle
 
-  FUNCTION calc_declination(time) RESULT(declination)
-    ! function to calculate declination for a given day as a function of orbital parameters
+  FUNCTION calc_sw_fdiffuse(sw_srf_down,sw_toa_down,cos_zenith_angle) RESULT(sw_fdiffuse)
+    ! function to calculate the fraction of diffuse light in the shortwave downward flux
+    ! at the surface
+    USE mo_atmland_constants, ONLY : k1_fdiff,k2_fdiff,k3_fdiff,k4_fdiff,max_transmission_fdiff, & 
+                                     min_sw_fdiffuse
+    IMPLICIT NONE
+    ! 0.1 Input
+    REAL(wp) :: sw_srf_down           ! surface downward shortwave radiation flux
+    REAL(wp) :: sw_toa_down           ! top-of-atmoshere downward shortwave radiation flux
+    REAL(wp) :: cos_zenith_angle      ! cosine of solar zenith angle
+    ! 0.3 Output
+    REAL(wp) :: sw_fdiffuse           ! fraction of surface downward radiation flux that is diffuse
+    ! 0.4 Local
+    REAL(wp) :: transmission          ! fraction of radiation reaching surface
+
+    IF(cos_zenith_angle >= eps8)THEN
+
+      transmission = sw_srf_down / ( sw_toa_down * cos_zenith_angle )     
+
+      IF(transmission >= max_transmission_fdiff) THEN
+         sw_fdiffuse = min_sw_fdiffuse
+      ELSE
+         sw_fdiffuse = MIN(1.0_wp, k1_fdiff + transmission * & 
+            (k2_fdiff + transmission * ( k3_fdiff + k4_fdiff * transmission )))
+      ENDIF
+
+    ELSE
+  
+      sw_fdiffuse = 1.0_wp
+  
+    ENDIF
+
+  END FUNCTION calc_sw_fdiffuse
+
+  SUBROUTINE update_orbital_parameters(time,declination,sw_toa_down) 
+    ! subroutine to calculate declination for a given day as a function of orbital parameters
+    ! given this, the potential shortwave radiation at the top of the atmosphere is also calculated
     ! the implementation here is taken from ORCHIDEE, as described in 
     ! the PhD thesis of Marie-France Loutre, ASTR-UCL, Belgium, 1993
 
     USE mo_base_constants, ONLY : deg2rad 
-    USE mo_atmland_constants, ONLY : obliquity,perihel,eccentricity
+    USE mo_atmland_constants, ONLY : obliquity,perihel,eccentricity,solar_constant
 
     IMPLICIT NONE
     ! 0.1 Input
-    REAL(wp) :: time                         ! days since January 1st
+    REAL(wp),INTENT(in) :: time              ! days since January 1st
     ! 0.3 Output
-    REAL(wp) :: declination                  ! solar declination 
+    REAL(wp),INTENT(out) :: declination      ! solar declination 
+    REAL(wp),INTENT(out) :: sw_toa_down      ! shortwave downward flux at the top of the atmosphere (W m-2) 
     ! 0.4 Local
     REAL(wp) :: so                           ! sine of obliquity
     REAL(wp) :: sd,cd                        ! sine and cosine of declination
     REAL(wp) :: xl,xllp                      ! perihel in radians
     REAL(wp) :: xee,xse                      ! helper variables for eccentricity calculation
     REAL(wp) :: ranm,rlam,xlam,dlamm,ranv    ! helper variables for anomaly calculation of eath orbit
+    REAL(wp) :: dist                         ! distance sun-Earth for potential radiation calculation 
     ! 
     ! 1.0 calculate orbital parameters
     ! 
@@ -114,7 +151,15 @@ CONTAINS
     cd = SQRT(1.0_wp-sd*sd)
     ! delta : Solar Declination (radians; angle sun at equator)
     declination = ATAN(sd/cd)
+    !
+    ! 3.0 calculate potential radiation normal to the atmsphere
+    ! 
+    ! eccentricity effect: normalised Sun-Earth distance
+    dist = 1.0_wp / (( 1.0_wp - eccentricity * eccentricity ) / & 
+           ( 1.0_wp + eccentricity * cos(ranv)))
+    ! potential insolation normal to the atmosphere (W m-2)
+    sw_toa_down = dist * dist * solar_constant
 
-  END FUNCTION calc_declination
+  END SUBROUTINE update_orbital_parameters
 
 END MODULE mo_atmland_util

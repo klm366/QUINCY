@@ -52,6 +52,7 @@ PROGRAM canopy_model_driver
       ga, &
       vpd
   INTEGER :: i,lun
+  REAL(wp) :: sw_toa_down                  ! potential radiation at the top of the atmosphere
   REAL(wp) :: time
  
   REAL(wp) :: ref_t_air = 25.0_wp          ! temperature in deg C 
@@ -108,12 +109,13 @@ PROGRAM canopy_model_driver
   dt = 1.0_wp/(2.0_wp*hourday)
   DO i = 1,365*48
      time = time + dt
-     declination = calc_declination(time)
+     CALL update_orbital_parameters(time,declination,sw_toa_down)
      cos_zenith_angle = calc_solar_angle(50.0_wp,0.0_wp,time)
 
      swvis_srf_down = MAX(0.0,ref_swdown * cos_zenith_angle) 
      swnir_srf_down = swvis_srf_down * 0.1_wp
      swpar_srf_down = swvis_srf_down
+     swpar_fdiffuse = calc_sw_fdiffuse(swvis_srf_down,sw_toa_down,cos_zenith_angle) 
 
      CALL update_radiation(tile,swvis_srf_down,swnir_srf_down,swpar_srf_down, &
                               swpar_fdiffuse,cos_zenith_angle,alb_vis_dif,alb_vis_dir, &
