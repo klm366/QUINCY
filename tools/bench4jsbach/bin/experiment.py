@@ -18,31 +18,6 @@ class Experiment ( object ):
         self.B4J_etype    = kwargs.get ( "B4J_etype", None )
         self.B4J_path     = kwargs.get ( "B4J_path", None )
         self.B4J_buffer   = []
-        
-
-    def __repr__ ( self ):
-        return "{} ( B4J_id = {}, B4J_name = {}, B4J_etype = {}, B4J_path = {}, B4J_buffer = {})". \
-               format ( self.__class__.__B4J_name__,
-                        print_none ( self.B4J_id ),
-                        print_none ( self.B4J_name ),
-                        print_none ( self.B4J_etype ),
-                        print_none ( self.B4J_path ),
-                        print_none ( self.B4J_buffer ))
-
-
-class CMIP5_Experiment ( Experiment ):
-    
-    def __init__ ( self, **kwargs ):
-        var_filename = kwargs.pop ( "var_filename", None )
-        assert var_filename and os.path.isfile ( var_filename )
-
-        Experiment.__init__ ( self, **kwargs )
-        
-        nc_fid  = Dataset ( var_filename, 'r' )
-        nc_attrs = nc_fid.ncattrs ()
-        for nc_attr in nc_attrs:
-            self.__dict__[ nc_attr ] = nc_fid.getncattr ( nc_attr )
-        nc_fid.close ()
 
 
     def __repr__ ( self ):
@@ -51,7 +26,7 @@ class CMIP5_Experiment ( Experiment ):
                     for (k,v) in sorted ( self.__dict__.iteritems ())))
     
 
-    def table_repr ( self ):
+    def teX_repr ( self ):
 
         def truncate ( s, pl, sl ):
             import re
@@ -74,6 +49,21 @@ class CMIP5_Experiment ( Experiment ):
             """\\\\
 """.join ( '{!s} & {!r}'.format ( k, truncate ( str ( print_none ( v )), 30, 12 )) \
                                   for (k,v) in sorted ( self.__dict__.iteritems ())))
+
+
+class CMIP5_Experiment ( Experiment ):
+    
+    def __init__ ( self, **kwargs ):
+        var_filename = kwargs.pop ( "var_filename", None )
+        assert var_filename and os.path.isfile ( var_filename )
+
+        Experiment.__init__ ( self, **kwargs )
+        
+        nc_fid  = Dataset ( var_filename, 'r' )
+        nc_attrs = nc_fid.ncattrs ()
+        for nc_attr in nc_attrs:
+            self.__dict__[ nc_attr ] = nc_fid.getncattr ( nc_attr )
+        nc_fid.close ()
 
                                                                                                                 
 if __name__ == "__main__":

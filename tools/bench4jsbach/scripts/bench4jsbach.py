@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """ BENCH4JSBACH benchmarking script """
 
-import os,sys,shutil
+import os,sys,shutil,timeit
 
 script_dir = os.path.dirname ( os.path.realpath ( __file__ ))
 bench4jsbach_base = os.path.dirname ( os.path.realpath ( script_dir ))
@@ -13,10 +13,10 @@ else:
 import sys
 os.environ [ 'BENCH4JSBACH_BASE' ] = bench4jsbach_base
 
-#from util import logger as dkl_logger
+start = timeit.default_timer ()
+
 import bench
 
-#dkl_logger.debug ( "hello" )
 nargs = len ( sys.argv )
 if nargs == 1:
     print "******************************************"
@@ -51,7 +51,10 @@ else:
 
         if not var_bench [ bench.SWITCHED_ON_IDX ]: continue
 
-        for fun_suffix in [ "_analyse", "_section" ]:
+        fun_suffixes =  [ "_analyse" ]
+        fun_suffixes.append ( "_section" ) if b4j_obj.reporting else None
+        
+        for fun_suffix in fun_suffixes:
             fun_name = var + fun_suffix
             try:
                 fun = getattr ( b4j_obj, fun_name )
@@ -65,11 +68,15 @@ else:
         b4j_obj.logger.debug ( "Finished analysis of '%s' successfully." % var ) if not ret else \
                 b4j_obj.logger.debug ( "Analysis of '%s' failed." % var )
     
-    b4j_obj.write_report ()
+    b4j_obj.write_report () if b4j_obj.reporting else None
     
     b4j_obj.logger.debug ( "Exiting." )
 
+    stop = timeit.default_timer ()
+
     print "\n******************************************"
     print "* BENCH4JSBACH: "
-    print "* Finished successfully."
+    print "* Finished successfully. Elapsed time %.4f seconds." % ( stop - start )
+    if b4j_obj.reporting: print "* Find the report %s in %s." % ( b4j_obj.bench_name + '.pdf',
+                                                                  b4j_obj.report_path )
     print "******************************************"

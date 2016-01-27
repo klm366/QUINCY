@@ -62,16 +62,6 @@ def albedo_yseasmean ( rsus_infile, rsds_infile, albedo_outfile, years ):
                   output=albedo_outfile,
                   options='-f nc -m 0.00011' )
 
-    # TO CHECK:
-    # cdo setvrange,min,max sets x in (min,max) to missval # ??? the opposite to 
-    # what you would expect
-    # cdo setrtomiss,min,max sets x not in (min,max) to missval or (???) but also changes
-    # values in that range
-    
-    #  "-setvrange,0.0001,0.99 " +\
-    #  "-setrtomiss,0.0001,0.91 " +\
-    #  "-setctomiss,1 " +\
-
 
 class Analysis ( object ):
     def __init__ ( self, **kwargs ):
@@ -98,8 +88,14 @@ class Analysis ( object ):
 
         varname = "albedo"
 
-        path_tokens = [ "rsus","rsds","albedo","DJF","MAM","JJA","SON",
-                        "DJF_diff","MAM_diff","JJA_diff","SON_diff" ]
+        path_tokens = [ "rsus","rsds","albedo",
+                        "DJF","MAM","JJA","SON",
+                        "DJF_diff","MAM_diff","JJA_diff","SON_diff",
+                        "rsds_seasmean", "delta_rsus_seasmean",
+                        "delta_rsus_seasmean_global",
+                        "delta_rsus_timemean_global",
+                        "delta_rsus_seasmean_global_abs",
+                        "delta_rsus_timemean_global" ]
         n_paths = len ( path_tokens )
         
         cdo = Cdo ()
@@ -247,6 +243,26 @@ class Analysis ( object ):
             plt.show ()
             plt.savefig ( figurefilepath )
             plt.close ()
+
+
+        # benchmark
+        for e in self.experiments:
+            exp_idx = self.experiments.index ( e )
+            buffer_out_idx = path_tokens.index ( "rsds_seasmean" )
+            
+            e.B4J_buffer [ buffer_out_idx ] = template % { 'path'           : self.data_path,
+                                                           'varname'        : "rsds",
+                                                           'classification' : 'yseasmean_',
+                                                           'expname'        : e.B4J_name,
+                                                           'startdate'      : str ( period [ 0 ]),
+                                                           'finaldate'      : str ( period [ -1 ]),
+                                                           'suffix'         : 'nc' }
+            
+            cdo.yseasmean ( input = " -selyear," + ','.join ( repr ( y ) for y in period ) + \
+                            " " +  e.B4J_buffer [ path_tokens.index ( "rsds" )],
+                            output=e.B4J_buffer [ buffer_out_idx ],
+                            options='-f nc' )
+
 
         
         self.logger.debug ( "Exiting." )

@@ -2,11 +2,12 @@
 
 import os, subprocess, shutil,getpass,datetime
 from experiment import Experiment, CMIP5_Experiment
-from util import logger as dkl_logger, setup_logger, print_none, log_message_newline
+from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool
 import configobj
 from sets import Set
 from analysis import Analysis
 from report import Report
+
 
 REF_EXP_IDX       = 0
 SWITCHED_ON_IDX   = TYPE_IDX = 0
@@ -31,8 +32,10 @@ class Bench_Object ( Analysis, Report ):
     bench_config_path = None
     config            = None
     experiments       = []
+    references        = []
     logger            = None
     logger_name       = 'B4J_LOGGER'
+    reporting         = True
     
     
     def __init__ ( self, config_arg, **kwargs ):
@@ -42,11 +45,8 @@ class Bench_Object ( Analysis, Report ):
             self._writeconfig__init__ ( config_arg )
             dkl_logger.debug ( "Exiting." )
             return
-        
-        Analysis.__init__ ( self )
-        Report.__init__ ( self )
         bench_config_path = config_arg
-            
+        
         # read config object
         try:
             config = configobj.ConfigObj ( bench_config_path )
@@ -60,6 +60,11 @@ class Bench_Object ( Analysis, Report ):
         except:
             raise Exception (  "ERROR reading token 'bench_name' from configuration file %s." % \
                                bench_config_path )
+        
+        Analysis.__init__ ( self )
+        self.reporting = str2bool ( config [ "reporting" ])
+        Report.__init__ ( self ) if self.reporting else None
+            
         
         # check environment
         bench_config_path = os.path.abspath ( bench_config_path )

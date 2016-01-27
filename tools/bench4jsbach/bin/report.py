@@ -83,10 +83,10 @@ class Report ( object ):
         for e in self.experiments:
             if self.experiments.index ( e ) == REF_EXP_IDX:
                 continue
-            description += lateXify ( e.table_repr ())
+            description += lateXify ( e.teX_repr ())
 
         description += subsection_template % { 'subsection': 'Reference experiments' }
-        description += lateXify ( self.experiments [ REF_EXP_IDX ] .table_repr ())
+        description += lateXify ( self.experiments [ REF_EXP_IDX ] .teX_repr ())
 
         print description
 

@@ -47,6 +47,10 @@ def setup_logger ( *args, **kwargs ):
 
 logger = setup_logger ()
 
+
+def str2bool ( s ) :
+  return s.lower() in ( "true", "t", "1", "yes", "y" )
+
 def print_none ( item ):
     return item if item is not None else "None"
 
