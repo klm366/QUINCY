@@ -18,8 +18,9 @@ MODULE mo_base_constants
   ! convenience 
   REAL(wp), PARAMETER :: zero = 0.0_wp 
   ! time control
-  REAL(wp), SAVE :: dt
-  REAL(wp), SAVE :: one_year
+  REAL(wp), SAVE :: dt                          ! length of one time step in seconds
+  REAL(wp), SAVE :: one_year                    ! length of one year in days 
+  REAL(wp), SAVE :: one_day                     ! length of one day in seconds
   ! conversion of degree to radians
   REAL(wp), SAVE :: pi                          ! the number PI
   REAL(wp), SAVE :: deg2rad                     ! conversion of degree to radians
@@ -40,6 +41,9 @@ CONTAINS
     deg2rad = pi / 180.0_wp
 
     canopy_layer_depth(:) = 0.5_wp
+
+    one_day = 86400._wp
+    one_year = 365._wp
 
   END SUBROUTINE init_base_constants
 
