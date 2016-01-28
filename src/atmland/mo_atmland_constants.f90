@@ -10,10 +10,12 @@
 MODULE mo_atmland_constants
 
   USE mo_kind, ONLY: wp
+  USE mo_base_constants, ONLY: hourday
 
   ! orbital parameters (not calculated - do I need to include this dynamically later?)
   REAL(wp),SAVE :: eccentricity                ! eccentricity of the Earth's orbit
   REAL(wp),SAVE :: perihel                     ! perihel of the Earth's orbit
+  REAL(wp),SAVE :: solstice                    ! day of the year at which solstice occurs 
   REAL(wp),SAVE :: obliquity                   ! obliquity of the Earth's orbit
   REAL(wp),SAVE :: declination                 ! solar declination (degrees, angle sun at equator)
   LOGICAL,SAVE  :: angle_at_GMT                ! logical to simulate solar angle according to local time or GMT 
@@ -24,8 +26,11 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: k3_fdiff                    ! calc_diffuse_radiation_fraction
   REAL(wp),SAVE :: k4_fdiff                    ! 
   REAL(wp),SAVE :: min_sw_fdiffuse             ! minimum diffuse fraction in shortwave downward flux
- REAL(wp), SAVE :: max_transmission_fdiff      ! atmospheric transmission rate above which the 
+  REAL(wp),SAVE :: max_transmission_fdiff      ! atmospheric transmission rate above which the 
                                                ! diffuse fraction becomes minimal
+  REAL(wp),SAVE :: min_daylength
+  REAL(wp),SAVE :: dusk_time 
+  REAL(wp),SAVE :: tmp_peak_time 
 
   PUBLIC :: init_atmland_constants
  
@@ -42,6 +47,7 @@ CONTAINS
   obliquity = 23.446_wp
   perihel = 102.04_wp
   eccentricity = 0.016724_wp
+  solstice = 174.0_wp   ! 23rd June
   !
   ! initialise solar angle calculation
   !
@@ -59,6 +65,11 @@ CONTAINS
   k4_fdiff = 2.6313_wp
   min_sw_fdiffuse = 0.1667_wp 
   max_transmission_fdiff = 0.75_wp
+  ! 
+  ! initialise diurnal temperature calculation
+  min_daylength = 4._wp / hourday
+  tmp_peak_time = 14.0_wp / hourday
+  dusk_time = 1.0_wp / hourday
 
   END SUBROUTINE init_atmland_constants
 

@@ -14,6 +14,7 @@ SIZE    = size
 #-
 MODS1 = mo_atmland_memory.f90 \
         mo_atmland_constants.f90 \
+        mo_atmland_forcing.f90 \
         mo_atmland_util.f90
 
 OBJSMODS1 = $(MODS1:.f90=.o)
@@ -47,7 +48,12 @@ $(MODEL_LIB)(mo_atmland_memory.o): \
   $(BASE_LIB)(mo_kind.o)
 
 $(MODEL_LIB)(mo_atmland_constants.o): \
-  $(BASE_LIB)(mo_kind.o)
+  $(BASE_LIB)(mo_kind.o) \
+  $(BASE_LIB)(mo_base_constants.o)
+
+$(MODEL_LIB)(mo_atmland_forcing.o): \
+  $(BASE_LIB)(mo_kind.o) \
+  $(MODEL_LIB)(mo_atmland_constants.o)
 
 $(MODEL_LIB)(mo_atmland_util.o): \
   $(BASE_LIB)(mo_kind.o) \
