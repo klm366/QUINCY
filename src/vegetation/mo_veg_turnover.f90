@@ -141,18 +141,18 @@ CONTAINS
     ! set to constant for now
     ! should be based on PFT, phenology and senesence
     !
-    USE mo_base_constants, ONLY: dt, one_year
+    USE mo_base_constants, ONLY: dt, one_day, one_year
 
     IMPLICIT NONE
 
     TYPE(PlantClass), INTENT(inout) :: plant
 
-    fturn_leaf = 0.3_wp * dt/one_year
-    fturn_fine_root = 0.7_wp * dt/one_year
-    fturn_coarse_root = 0.1_wp * dt/one_year
-    fturn_sap_wood = 0.01_wp * dt/one_year
-    fturn_heart_wood = 0.01_wp * dt/one_year
-    fturn_seed_bed = 1.0_wp * dt/one_year
+    fturn_leaf = 0.3_wp * dt/one_day/one_year
+    fturn_fine_root = 0.7_wp * dt/one_day/one_year
+    fturn_coarse_root = 0.1_wp * dt/one_day/one_year
+    fturn_sap_wood = 0.01_wp * dt/one_day/one_year
+    fturn_heart_wood = 0.01_wp * dt/one_day/one_year
+    fturn_seed_bed = 1.0_wp * dt/one_day/one_year
 
   END SUBROUTINE update_turnover_fraction
 
@@ -164,33 +164,33 @@ CONTAINS
     !   this is the only process forming these pools, added to the growth term of the respective 
     !   sink pools
     ! 
-    USE mo_base_constants, ONLY: dt, one_year
+    USE mo_base_constants, ONLY: dt, one_day, one_year
     IMPLICIT NONE
     REAL(wp), INTENT(in) :: tau_pool
     REAL(wp), INTENT(in) :: resorption
 
     TYPE(Element),INTENT(inout) :: source_flux,sink_flux,storage_flux,source_pool
 
-    source_flux%carbon = source_flux%carbon - tau_pool * dt/one_year * source_pool%carbon
-    sink_flux%carbon = tau_pool * dt/one_year * source_pool%carbon
+    source_flux%carbon = source_flux%carbon - tau_pool * dt/one_day/one_year * source_pool%carbon
+    sink_flux%carbon = tau_pool * dt/one_day/one_year * source_pool%carbon
 
-    source_flux%nitrogen = source_flux%nitrogen - tau_pool * dt/one_year * source_pool%nitrogen
-    sink_flux%nitrogen = ( 1.0_wp - resorption ) * tau_pool * dt/one_year * source_pool%nitrogen
-    storage_flux%nitrogen = storage_flux%nitrogen + resorption * tau_pool * dt/one_year * source_pool%nitrogen
+    source_flux%nitrogen = source_flux%nitrogen - tau_pool * dt/one_day/one_year * source_pool%nitrogen
+    sink_flux%nitrogen = ( 1.0_wp - resorption ) * tau_pool * dt/one_day/one_year * source_pool%nitrogen
+    storage_flux%nitrogen = storage_flux%nitrogen + resorption * tau_pool * dt/one_day/one_year * source_pool%nitrogen
 
-    source_flux%phosphorus = source_flux%phosphorus - tau_pool * dt/one_year * source_pool%phosphorus
-    sink_flux%phosphorus = ( 1.0_wp - resorption )  * tau_pool * dt/one_year * source_pool%phosphorus
-    storage_flux%phosphorus = storage_flux%phosphorus + resorption * tau_pool * dt/one_year * source_pool%phosphorus
+    source_flux%phosphorus = source_flux%phosphorus - tau_pool * dt/one_day/one_year * source_pool%phosphorus
+    sink_flux%phosphorus = ( 1.0_wp - resorption )  * tau_pool * dt/one_day/one_year * source_pool%phosphorus
+    storage_flux%phosphorus = storage_flux%phosphorus + resorption * tau_pool * dt/one_day/one_year * source_pool%phosphorus
 
-    source_flux%carbon13 = source_flux%carbon13 - tau_pool * dt/one_year * source_pool%carbon13
-    sink_flux%carbon13 = tau_pool * dt/one_year * source_pool%carbon13
+    source_flux%carbon13 = source_flux%carbon13 - tau_pool * dt/one_day/one_year * source_pool%carbon13
+    sink_flux%carbon13 = tau_pool * dt/one_day/one_year * source_pool%carbon13
 
-    source_flux%carbon14 = source_flux%carbon14 - tau_pool * dt/one_year * source_pool%carbon14
-    sink_flux%carbon14 = tau_pool * dt/one_year * source_pool%carbon14
+    source_flux%carbon14 = source_flux%carbon14 - tau_pool * dt/one_day/one_year * source_pool%carbon14
+    sink_flux%carbon14 = tau_pool * dt/one_day/one_year * source_pool%carbon14
 
-    source_flux%nitrogen15 = source_flux%nitrogen15 - tau_pool * dt/one_year * source_pool%nitrogen15
-    sink_flux%nitrogen15 = ( 1.0_wp - resorption ) * tau_pool * dt/one_year * source_pool%nitrogen15
-    storage_flux%nitrogen15 = storage_flux%nitrogen15 + resorption * tau_pool * dt/one_year * source_pool%nitrogen15
+    source_flux%nitrogen15 = source_flux%nitrogen15 - tau_pool * dt/one_day/one_year * source_pool%nitrogen15
+    sink_flux%nitrogen15 = ( 1.0_wp - resorption ) * tau_pool * dt/one_day/one_year * source_pool%nitrogen15
+    storage_flux%nitrogen15 = storage_flux%nitrogen15 + resorption * tau_pool * dt/one_day/one_year * source_pool%nitrogen15
 
   END SUBROUTINE calc_pool_turnover
 

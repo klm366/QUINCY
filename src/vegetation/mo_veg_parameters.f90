@@ -73,6 +73,7 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: weibull_k_soil_gs
      REAL(wp),DIMENSION(npft) :: tau_sapwood
      REAL(wp),DIMENSION(npft) :: tau_fruit_pool 
+     REAL(wp),DIMENSION(npft) :: sla
   END TYPE VegetationParameterClass
 
   PUBLIC :: init_veg_parameters,init_pft_param_table
@@ -183,6 +184,8 @@ MODULE mo_veg_parameters
       veg_param%tau_sapwood(:) = 0.05_wp
       ! turnover time of the fruit pool (1/years)
       veg_param%tau_fruit_pool(:) = 1.0_wp
+      ! specific leaf area of a plant (m2 / mol C) 
+      veg_param%sla(:) = 10.0_wp / 1000.0_wp * 12.0_wp ! 10 m-2 / kg C
 
     END SUBROUTINE init_pft_param_table 
 

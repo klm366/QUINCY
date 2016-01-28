@@ -10,7 +10,7 @@
 MODULE mo_veg_photosynthesis
 
  USE mo_kind, ONLY: wp
- USE mo_base_constants, ONLY: ncanop,ntile
+ USE mo_base_constants, ONLY: ncanop,ntile,dt
  USE mo_base_memory
  USE mo_veg_parameters
  USE mo_veg_radiation, ONLY: calc_canopy_layer_depth
@@ -77,7 +77,7 @@ SUBROUTINE update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,v
      ! calculate photosynthesis per layer
      DO icanop = 1,ncanop
         IF(tile(t)%plant%lai.GT.0.0_wp)THEN
-           
+
           CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
                                     tile(t)%plant%par_sunlit(icanop),tile(t)%plant%par_shaded(icanop),& 
                                     tile(t)%plant%fleaf_sunlit(icanop), &
@@ -96,7 +96,8 @@ SUBROUTINE update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,v
      tile(t)%plant%flux%gc = 0.0_wp
      tile(t)%plant%flux%ci = 0.0_wp
      DO icanop = 1,ncanop
-        tile(t)%plant%flux%gpp = tile(t)%plant%flux%gpp + anl(icanop) * canopy_layer_depth_act(icanop)
+        tile(t)%plant%flux%gpp = tile(t)%plant%flux%gpp + anl(icanop) * canopy_layer_depth_act(icanop) &  
+                * dt / 1000000._wp
         tile(t)%plant%flux%gc = tile(t)%plant%flux%gc + gsl(icanop) * canopy_layer_depth_act(icanop)
         tile(t)%plant%flux%ci = tile(t)%plant%flux%ci + cil(icanop) * canopy_layer_depth_act(icanop)
      ENDDO
@@ -134,7 +135,11 @@ SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,nl_to
 
   ! calculate top of the canopy N 
   ! standard OCN approach, including the conversion to mmol N / m2(lai)
-  n0 = totalN * 1000._wp * kn / (1._wp - exp(-kn * lai))
+  IF(lai >= canopy_layer_depth_act(1)) THEN
+     n0 = totalN * 1000._wp * kn / (1._wp - exp(-kn * lai))
+  ELSE 
+     n0 = totalN * 1000._wp
+  ENDIF
   ! dummy QUINCY appraoch: N for photosynthesis minus structural N (to be a function of leaf-type and sla)
   ! n0 = MAX( totalN - structural_n * lai, 0.0_wp ) * kn / (1._wp - exp(-kn * lai))
   ! OBS, redefining vcmax2n and jmax2n here temporarily for QUINCY approach

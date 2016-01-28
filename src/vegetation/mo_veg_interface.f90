@@ -96,6 +96,10 @@ CONTAINS
     ! 
     plant%pool = VegPoolSub(plant%pool,plant%flux%litterfall)
     plant%pool = VegPoolAdd(plant%pool,plant%flux%growth)
+    ! 
+    ! 6.0 Update plant diagnostics
+    !
+    plant%lai = plant%pool%leaf%carbon * veg_param%sla(plant%pftid)
 
   END SUBROUTINE vegetation_interface
 

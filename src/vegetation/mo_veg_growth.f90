@@ -90,7 +90,7 @@ CONTAINS
     !
     !  1.0 Initial guess of growth rate, should be influenced by moisture and temperature
     !
-    tau_labile = tau_labile_default * dt
+    tau_labile = tau_labile_default * dt/one_day
 
     ! 2.0 Elemental limitation of growth (this should be replaced at a later stage - here to conserve mass)
     !
