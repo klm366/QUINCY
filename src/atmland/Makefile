@@ -53,7 +53,8 @@ $(MODEL_LIB)(mo_atmland_constants.o): \
 
 $(MODEL_LIB)(mo_atmland_forcing.o): \
   $(BASE_LIB)(mo_kind.o) \
-  $(MODEL_LIB)(mo_atmland_constants.o)
+  $(MODEL_LIB)(mo_atmland_constants.o) \
+  $(MODEL_LIB)(mo_atmland_util.o)
 
 $(MODEL_LIB)(mo_atmland_util.o): \
   $(BASE_LIB)(mo_kind.o) \
