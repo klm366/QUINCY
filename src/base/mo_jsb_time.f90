@@ -25,7 +25,7 @@ MODULE mo_jsb_time
   PUBLIC :: t_datetime
   PUBLIC :: get_date_components, get_time_current, get_time_start, &
             get_year_length, get_month_length, get_day_length, get_year_day
-  PUBLIC :: is_newday, get_year_at_model_start, &
+  PUBLIC :: is_newday, is_newyear, get_year_at_model_start, &
             get_year, get_month, &
             get_day, get_secs_of_day
   PUBLIC :: get_time_interpolation_weights
@@ -156,6 +156,25 @@ CONTAINS
     is_newday = current_day /= previous_day
 
   END FUNCTION is_newday
+
+  LOGICAL FUNCTION is_newyear()
+
+    USE mo_jsb_time_iface, ONLY: get_time_previous
+
+    TYPE(t_datetime) :: current, previous
+
+    INTEGER :: current_year, previous_year
+
+    current  = get_time_current()
+    previous = get_time_previous()
+
+    CALL get_date_components(current, year=current_year)
+    CALL get_date_components(previous, year=previous_year)
+
+    is_newyear = current_year /= previous_year
+
+  END FUNCTION is_newyear
+
 
   INTEGER FUNCTION get_year(datetime)
 

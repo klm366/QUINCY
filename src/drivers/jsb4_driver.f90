@@ -6,7 +6,7 @@
 !!  Julia Nabel, MPI-M Hamburg
 !!
 !! @par Revision History
-!! First version by Julia Nabel (2015-11-02)
+!! First version by Julia Nabel (2015-11-02), copied several parts from jsbach3 jsbalone_driver.f90
 !!
 PROGRAM jsb4_driver
 
@@ -14,18 +14,25 @@ PROGRAM jsb4_driver
   USE mo_jsb_base,           ONLY: init_base
   USE mo_jsb_model_init,     ONLY: init_model
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
-  USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone
+  USE mo_jsb_time,           ONLY: is_newday
+
+  USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
+
+  ! Currently from adapter
+  USE mo_jsb_domain_iface,   ONLY: get_lat, get_lon
+  USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
 ! Seems to be available in both ICON and ECHAM
   USE mo_exception,        ONLY: message, message_text
   USE mo_kind,             ONLY: wp
+  USE mo_math_constants,   ONLY: pi
 
-! TODO-check-with-RMS: echam!
+!>>> TODO: echam:
   ! parallelisation
-  USE mo_mpi,              ONLY: p_start, p_stop, p_init_communicators, p_global_comm
+  USE mo_mpi,              ONLY: p_start, p_stop, p_init_communicators
   USE mo_machine,          ONLY: machine_setup
 
   ! io
@@ -34,21 +41,26 @@ PROGRAM jsb4_driver
   USE mo_output,           ONLY: open_output_streams, close_output_streams, out_streams, init_output
   USE mo_decomposition,    ONLY: local_decomposition
 
-  ! time control
+  ! time control, orbit
   USE mo_timer,            ONLY: init_timer
   USE mo_time_control,     ONLY: lresume, time_set, time_reset, lstop, l_trigfiles, delta_time, &
-                                    & time_step_len
+                                    & time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date
+  USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
+  USE mo_orbit,                ONLY: orbit_kepler, orbit_vsop87
+!<<<
 
 
-  implicit none
+  IMPLICIT NONE
+
+  CHARACTER(len=*), PARAMETER :: progname = 'jsb4_driver'
 
   INTEGER,  EXTERNAL:: util_cputime
   REAL(wp), EXTERNAL:: util_walltime
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
-  INTEGER:: nml_handler, read_status, f_unit, status, jrow, nproma, ncid
+  INTEGER:: nml_handler, read_status, f_unit, status, jrow, nproma, nblks, ncid
 
-  !! Variables of namelist jsbalone_parctl                       ! TODO-check-with-RMS: echam!
+  !! Variables of namelist jsbalone_parctl                       ! TODO: echam!?!
   INTEGER:: nproca  ! number of processors for jsbach
   INTEGER:: nprocb  ! has to be one
   INTEGER:: nprocio ! number of processors for I/O server
@@ -56,26 +68,36 @@ PROGRAM jsb4_driver
                      ! Default (-1): each domain is processed in one call
   INTEGER:: buffer(4) ! buffer to broadcast the 4 above variables
 
+  LOGICAL :: l_rad_call = .FALSE.  ! TODO: echam -- orbit calculation
+  REAL(wp) :: time_of_day, orbit_date, rasc_sun, decl_sun, dist_sun, flx_ratio
+  REAL(wp), ALLOCATABLE :: lon(:,:), lat(:,:), coslon(:,:), coslat(:,:), sinlon(:,:), sinlat(:,:)
+  REAL(wp), ALLOCATABLE :: daylght_frc(:,:)
+
+!TODO-JN: maybe only use the 2D ones?
+  REAL(wp), ALLOCATABLE :: t_srf_proc(:,:), fact_q_air_proc(:,:), fact_qsat_srf_proc(:,:), rough_h_srf_proc(:,:)
 
   !! JSB4 interface variables - input
-  REAL(wp), ALLOCATABLE :: t_air(:)
-  REAL(wp), ALLOCATABLE :: q_air(:)
-  REAL(wp), ALLOCATABLE :: rain(:)
-  REAL(wp), ALLOCATABLE :: snow(:)
-  REAL(wp), ALLOCATABLE :: wind_air(:)
-  REAL(wp), ALLOCATABLE :: wind_10m(:)
-  REAL(wp), ALLOCATABLE :: lw_srf_down(:)
-  REAL(wp), ALLOCATABLE :: swvis_srf_down(:)
-  REAL(wp), ALLOCATABLE :: swnir_srf_down(:)
-  REAL(wp), ALLOCATABLE :: swpar_srf_down(:)
-  REAL(wp), ALLOCATABLE :: press_srf(:)
-  REAL(wp), ALLOCATABLE :: drag_srf(:)
-  REAL(wp), ALLOCATABLE :: t_acoef(:)
-  REAL(wp), ALLOCATABLE :: t_bcoef(:)
-  REAL(wp), ALLOCATABLE :: q_acoef(:)
-  REAL(wp), ALLOCATABLE :: q_bcoef(:)
-  REAL(wp), ALLOCATABLE :: pch(:)
-  REAL(wp), ALLOCATABLE :: cos_zenith_angle(:)
+  REAL(wp), ALLOCATABLE :: t_air_K(:,:)
+  REAL(wp), ALLOCATABLE :: q_air(:,:)
+  REAL(wp), ALLOCATABLE :: rain(:,:)
+  REAL(wp), ALLOCATABLE :: snow(:,:)
+  REAL(wp), ALLOCATABLE :: wind_air(:,:)
+  REAL(wp), ALLOCATABLE :: wind_10m(:,:)
+  REAL(wp), ALLOCATABLE :: lw_srf_down(:,:)
+  REAL(wp), ALLOCATABLE :: swvis_srf_down(:,:)
+  REAL(wp), ALLOCATABLE :: swnir_srf_down(:,:)
+  REAL(wp), ALLOCATABLE :: swpar_srf_down(:,:)
+  REAL(wp), ALLOCATABLE :: press_srf(:,:)
+  REAL(wp), ALLOCATABLE :: drag_srf(:,:)
+  REAL(wp), ALLOCATABLE :: t_acoef(:,:)
+  REAL(wp), ALLOCATABLE :: t_bcoef(:,:)
+  REAL(wp), ALLOCATABLE :: q_acoef(:,:)
+  REAL(wp), ALLOCATABLE :: q_bcoef(:,:)
+  REAL(wp), ALLOCATABLE :: pch(:,:)
+  REAL(wp), ALLOCATABLE :: cos_zenith_angle(:,:)
+
+  !! TODO not used so far
+  REAL(wp), ALLOCATABLE :: CO2_concentration(:,:)
 
   !! JSB4 interface variables - output
   REAL(wp), ALLOCATABLE :: t_srf(:)
@@ -85,6 +107,7 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: fact_q_air(:)
   REAL(wp), ALLOCATABLE :: fact_qsat_srf(:)
   REAL(wp), ALLOCATABLE :: evapotrans(:)
+  REAL(wp), ALLOCATABLE :: evapopot(:)
   REAL(wp), ALLOCATABLE :: latent_hflx(:)
   REAL(wp), ALLOCATABLE :: sensible_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hflx(:)
@@ -97,19 +120,19 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: alb_vis_dif(:)
   REAL(wp), ALLOCATABLE :: alb_nir_dif(:)
 
+    NAMELIST /jsbalone_parctl/     &
+      nproca, npedim,             &
+      nprocb, nprocio
 
-  INCLUDE 'jsbalone_parctl.inc'  ! TODO-check-with-RMS: echam!
+  !-------------------------------------------------------------------------------------------------
 
   default_output = .TRUE.
 
-  !=================================================================================================
   ! Start MPI
   CALL p_start
 
-  !=================================================================================================
   CALL jsbach_init_version
 
-  !=================================================================================================
   ! Initialize wallclock timer
 !$OMP PARALLEL
 !$OMP MASTER
@@ -117,32 +140,27 @@ PROGRAM jsb4_driver
 !$OMP END MASTER
 !$OMP END PARALLEL
 
-  !=================================================================================================
   ! read processor decomposition
   IF (my_process_is_stdio()) THEN
+    ! define default values
+    nproca = 1
+    nprocb = 1
+    nprocio = 0
+    npedim = -1
 
-      ! define default values
-      nproca = 1
-      nprocb = 1
-      nprocio = 0
-      npedim = -1
-
-      ! read the namelist
-      nml_handler = open_nml ('namelist.jsbach')
-      f_unit = position_nml ('JSBALONE_PARCTL', nml_handler, status=read_status)
-      SELECT CASE (read_status)
-      CASE (POSITIONED)
-          READ (f_unit, jsbalone_parctl)
-      END SELECT
+    ! read the namelist
+    nml_handler = open_nml ('namelist.jsbach')
+    f_unit = position_nml ('JSBALONE_PARCTL', nml_handler, status=read_status)
+    IF (read_status == POSITIONED) READ(f_unit, jsbalone_parctl)
   ENDIF
 
   IF (my_process_is_mpi_parallel()) THEN
-      buffer(:) = (/ nproca, nprocb, nprocio, npedim /)
-      CALL p_bcast (buffer, p_io, comm=p_global_comm)
-      nproca  = buffer(1)
-      nprocb  = buffer(2)
-      nprocio = buffer(3)
-      npedim  = buffer(4)
+    buffer(:) = (/ nproca, nprocb, nprocio, npedim /)
+    CALL p_bcast (buffer, p_io)
+    nproca  = buffer(1)
+    nprocb  = buffer(2)
+    nprocio = buffer(3)
+    npedim  = buffer(4)
   END IF
 
   CALL p_init_communicators(nproca, nprocb, nprocio)
@@ -156,131 +174,167 @@ PROGRAM jsb4_driver
 
   CALL jsbach_label_run(jsbach_runs_standalone())
 
-  !TODO-check-with-RMS: include in init_model?
+  !TODO: include in init_model?
   CALL init_output 
   CALL open_output_streams
 
-  IF (read_interface_vars) THEN
-      ncid = 0
-      nproma = local_decomposition%nproma
+  ! Allocate arrays -> current assumption is for standalone nlon=nproma=npromz,
+  !     therefore set (and allocated fields) here -- else need to strongly adapt
+  !       -> i.e. set and allocate in the jrow loop for just one and change way of reading?!
+  nproma = local_decomposition%nproma
+  nblks = local_decomposition%ngpblks
 
-      ! Allocate fields -> JN: TODO -- nicht interface test fall
-      ALLOCATE(t_air(nproma))
-      ALLOCATE(q_air(nproma))
-      ALLOCATE(rain(nproma))
-      ALLOCATE(snow(nproma))
-      ALLOCATE(wind_air(nproma))
-      ALLOCATE(wind_10m(nproma))
-      ALLOCATE(lw_srf_down(nproma))
-      ALLOCATE(swvis_srf_down(nproma))
-      ALLOCATE(swnir_srf_down(nproma))
-      ALLOCATE(swpar_srf_down(nproma))
-      ALLOCATE(press_srf(nproma))
-      ALLOCATE(drag_srf(nproma))
-      ALLOCATE(t_acoef(nproma))
-      ALLOCATE(t_bcoef(nproma))
-      ALLOCATE(q_acoef(nproma))
-      ALLOCATE(q_bcoef(nproma))
-      ALLOCATE(pch(nproma))
-      ALLOCATE(cos_zenith_angle(nproma))
+  ALLOCATE(t_air_K(nproma, nblks))
+  ALLOCATE(q_air(nproma, nblks))
+  ALLOCATE(rain(nproma, nblks))
+  ALLOCATE(snow(nproma, nblks))
+  ALLOCATE(wind_air(nproma, nblks))
+  ALLOCATE(wind_10m(nproma, nblks))
+  ALLOCATE(lw_srf_down(nproma, nblks))
+  ALLOCATE(swvis_srf_down(nproma, nblks))
+  ALLOCATE(swnir_srf_down(nproma, nblks))
+  ALLOCATE(swpar_srf_down(nproma, nblks))
+  ALLOCATE(press_srf(nproma, nblks))
+  ALLOCATE(drag_srf(nproma, nblks))
+  ALLOCATE(t_acoef(nproma, nblks))
+  ALLOCATE(t_bcoef(nproma, nblks))
+  ALLOCATE(q_acoef(nproma, nblks))
+  ALLOCATE(q_bcoef(nproma, nblks))
+  ALLOCATE(pch(nproma, nblks))
+  ALLOCATE(cos_zenith_angle(nproma, nblks))
 
-      ALLOCATE(t_srf(nproma))
-      ALLOCATE(t_eff_srf(nproma))
-      ALLOCATE(qsat_srf(nproma))
-      ALLOCATE(s_srf(nproma))
-      ALLOCATE(fact_q_air(nproma))
-      ALLOCATE(fact_qsat_srf(nproma))
-      ALLOCATE(evapotrans(nproma))
-      ALLOCATE(latent_hflx(nproma))
-      ALLOCATE(sensible_hflx(nproma))
-      ALLOCATE(grnd_hflx(nproma))
-      ALLOCATE(grnd_hcap(nproma))
-      ALLOCATE(rough_h_srf(nproma))
-      ALLOCATE(rough_m_srf(nproma))
-      ALLOCATE(tte_corr(nproma))
-      ALLOCATE(alb_vis_dir(nproma))
-      ALLOCATE(alb_nir_dir(nproma))
-      ALLOCATE(alb_vis_dif(nproma))
-      ALLOCATE(alb_nir_dif(nproma))
+  ALLOCATE(CO2_concentration(nproma, nblks))
 
-  ELSE
-      ! JN-TODO
-      print *, '...to be implemented...'
-      stop
+  ALLOCATE(t_srf(nproma))
+  ALLOCATE(t_eff_srf(nproma))
+  ALLOCATE(qsat_srf(nproma))
+  ALLOCATE(s_srf(nproma))
+  ALLOCATE(fact_q_air(nproma))
+  ALLOCATE(fact_qsat_srf(nproma))
+  ALLOCATE(evapopot(nproma))
+  ALLOCATE(evapotrans(nproma))
+  ALLOCATE(latent_hflx(nproma))
+  ALLOCATE(sensible_hflx(nproma))
+  ALLOCATE(grnd_hflx(nproma))
+  ALLOCATE(grnd_hcap(nproma))
+  ALLOCATE(rough_h_srf(nproma))
+  ALLOCATE(rough_m_srf(nproma))
+  ALLOCATE(tte_corr(nproma))
+  ALLOCATE(alb_vis_dir(nproma))
+  ALLOCATE(alb_nir_dir(nproma))
+  ALLOCATE(alb_vis_dif(nproma))
+  ALLOCATE(alb_nir_dif(nproma))
+
+  IF (.NOT. read_interface_vars) THEN
+    CALL init_forcing()
+
+    ALLOCATE(lon(nproma,nblks))
+    ALLOCATE(lat(nproma,nblks))
+
+    lon = get_lon(decomp = local_decomposition)
+    lat = get_lat(decomp = local_decomposition)
+
+    ALLOCATE(coslon(nproma,nblks))
+    ALLOCATE(coslat(nproma,nblks))
+    ALLOCATE(sinlon(nproma,nblks))
+    ALLOCATE(sinlat(nproma,nblks))
+    ALLOCATE(daylght_frc(nproma, nblks))
+
+    ALLOCATE(t_srf_proc(nproma, nblks))
+    ALLOCATE(fact_q_air_proc(nproma, nblks))
+    ALLOCATE(fact_qsat_srf_proc(nproma, nblks))
+    ALLOCATE(rough_h_srf_proc(nproma, nblks))
+
+    !init for first timestep/day (according to jsb3: mo_jsbalone: init_driving)
+    t_srf_proc = 273._wp
+    fact_q_air_proc = 0.5_wp
+    fact_qsat_srf_proc = 0.5_wp
+    rough_h_srf_proc = 1._wp
+
   ENDIF
 
-
-! - Main loop
+  ! - Main loop
   main_loop:DO 
-      CALL time_set   !(echam!)
 
-      IF (l_trigfiles) THEN
-          CALL close_output_streams
-          CALL open_output_streams
-      ENDIF
+    CALL time_set   !(echam!)
+    CALL write_date(current_date,'Calculate for: ')
 
-  !     CALL stepon_jsbach      -->     sowas gibts in jsbach4 gar nicht!
-  !        --> wurde in jsb3 am anfang jedes zeitschritts gerufen 
-  !            und macht sowas wie      
-  !                 - wenn ganz zu anfang, cover fracts, glacier masks, potential nat veg, veg_ratio_max, ... initialisieren 
-  !                 - jedes neue Jahr: jährliche karten einlesen (e.g. landcover/transitions/nitrogen)
+    IF (l_trigfiles) THEN
+      CALL close_output_streams
+      CALL open_output_streams
+    ENDIF
 
-!    IF (.NOT. read_interface_vars) THEN
-    ! CALL compute_orbit_and_solar(domain)        -> in jsbach3 "mo_zenith.f90" ?? kopieren ?? wie ersetzen ??
+    IF (.NOT. read_interface_vars) THEN
 
-    ! TODO: read forcing date from file
-    ! CALL read_forcing und CALL update_forcing   -->     mo_jsbalone_frocing! (TODO... erstmal kopieren?)
-    ! CALL update_driving                         -->     mo_jsbalone          (TODO... erstmal kopieren?)
-!    ENDIF
+      ! copied from jsbach3: mo_zenith.f90
+      CALL get_orbit_times(l_rad_call, lyr_perp, nmonth, yr_perp, time_of_day, orbit_date)
+      IF (l_orbvsop87) THEN
+         CALL orbit_vsop87 (orbit_date, rasc_sun, decl_sun, dist_sun)
+      ELSE
+         CALL orbit_kepler (orbit_date, rasc_sun, decl_sun, dist_sun)
+      END IF
 
-      DO jrow = 1, local_decomposition%ngpblks 
+      coslon = COS(pi * lon / 180._wp)
+      sinlon = SIN(pi * lon / 180._wp)
+      coslat = COS(pi * lat / 180._wp)
+      sinlat = SIN(pi * lat / 180._wp)
 
-! JN-TODO: hm, in standalone case always nproma=npromz???
-!          IF ( jrow == local_decomposition%ngpblks ) THEN
+      CALL solar_parameters(decl_sun, dist_sun, time_of_day, sinlon, sinlat, coslon, coslat, &
+        & flx_ratio, cos_zenith_angle, daylght_frc)
+
+      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, &
+        & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, cos_zenith_angle, CO2_concentration, &
+        & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
+        & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
+    ENDIF
+
+    DO jrow = 1, nblks
+
+! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
+!   Else would need large refactoring and:
+!          IF ( jrow == nblks ) THEN
 !            nproma = local_decomposition%npromz
 !          ELSE
 !            nproma = local_decomposition%nproma
 !          END IF
 
-          IF (read_interface_vars) THEN
-            CALL read_interface_variables( 1, nproma, jrow, ncid, t_air, q_air, rain, snow, wind_air, wind_10m, &
-                        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf, &
-                        & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle )
-          ENDIF
+      IF (read_interface_vars) THEN
+        CALL read_interface_variables( 1, nproma, jrow, ncid, t_air_K(:,jrow), q_air(:,jrow), rain(:,jrow), &
+          & snow(:,jrow), wind_air(:,jrow), wind_10m(:,jrow), lw_srf_down(:,jrow), swvis_srf_down(:,jrow), &
+          & swnir_srf_down(:,jrow), swpar_srf_down(:,jrow), press_srf(:,jrow), drag_srf(:,jrow), &
+          & t_acoef(:,jrow), t_bcoef(:,jrow), q_acoef(:,jrow), q_bcoef(:,jrow), pch(:,jrow), cos_zenith_angle(:,jrow))
+      ENDIF
 
-          CALL jsbach_interface ( 1, jrow, 1, nproma, delta_time, time_step_len,               &
-                        & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down,           &
-                        & swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf, &
-                        & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,           &
-                        & t_srf, t_eff_srf, qsat_srf, s_srf, fact_q_air, fact_qsat_srf,        &
-                        & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,        & 
-                        & rough_h_srf, rough_m_srf, tte_corr, alb_vis_dir, alb_nir_dir,        & 
-                        & alb_vis_dif, alb_nir_dif)
+      CALL jsbach_interface ( 1, jrow, 1, nproma, delta_time, time_step_len, t_air_K(:,jrow), &
+        & q_air(:,jrow), rain(:,jrow), snow(:,jrow), wind_air(:,jrow), wind_10m(:,jrow), lw_srf_down(:,jrow), &
+        & swvis_srf_down(:,jrow), swnir_srf_down(:,jrow), swpar_srf_down(:,jrow), press_srf(:,jrow), drag_srf(:,jrow), &
+        & t_acoef(:,jrow), t_bcoef(:,jrow), q_acoef(:,jrow), q_bcoef(:,jrow), pch(:,jrow), cos_zenith_angle(:,jrow), &
+        & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air(:), fact_qsat_srf(:), &
+        & evapopot(:), evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
+        & rough_h_srf(:), rough_m_srf(:), tte_corr(:), alb_vis_dir(:), alb_nir_dir(:), &
+        & alb_vis_dif(:), alb_nir_dif(:))
 
-      ENDDO
+      IF (.NOT. read_interface_vars) THEN
+        t_srf_proc(:,jrow) = t_srf(:)
+        fact_q_air_proc(:,jrow) = fact_q_air(:)
+        fact_qsat_srf_proc(:,jrow) = fact_qsat_srf(:)
+        rough_h_srf_proc(:,jrow) = rough_h_srf(:)
+      ENDIF
+    ENDDO
 
-      CALL out_streams
+    CALL out_streams
 
-    ! CALL stepoff_jsbach in jsb3 (macht hd! und clean) 
-    ! --> sowas gibts hier nicht --> hm, aber wann und wie dann hd (geht im moment ja aber eh nicht mit echam) (TODO-later)
+  !TODO: lresume
+  !IF (l_putrerun) THEN  CALL write_streams  -> echam?
 
-    !IF (l_putrerun) THEN  CALL write_streams  -> echam
-
-      CALL time_reset
-      IF (lstop) EXIT main_loop
+    CALL time_reset
+    IF (lstop) EXIT main_loop
 
   ENDDO main_loop
 
-!!!!!!!!!!!!!!!
-print *, '...jsb4_driver in development...'
-
-!TODO-JN: after main loop there is a lot of further stuff in the jsb3 driver!
-
   IF (read_interface_vars) THEN
-      CALL nf_check(nf_close(ncid))
+    CALL nf_check(nf_close(ncid))
   ENDIF
-
-!!!!!!!!!!!!!!!
 
 !$OMP PARALLEL
 !$OMP MASTER
@@ -288,28 +342,41 @@ print *, '...jsb4_driver in development...'
 !$OMP END MASTER
 !$OMP END PARALLEL
   IF (status == -1) THEN
-      CALL message('jsb4_driver','Cannot determine used CPU time')
+    CALL message(TRIM(progname),'Cannot determine used CPU time')
   ELSE
 !$OMP PARALLEL
 !$OMP MASTER
-      zwtime = util_walltime(0)
+    zwtime = util_walltime(0)
 !$OMP END MASTER
 !$OMP END PARALLEL
-      zrtime = (zutime+zstime)/zwtime
-      CALL message ('', '')
-      WRITE (message_text,'(a,f10.2,a)') ' Wallclock        : ', zwtime, ' s'
-      CALL message('',message_text)
-      WRITE (message_text,'(a,f10.2,a)') ' CPU-time (user)  : ', zutime, ' s'
-      CALL message('',message_text)
-      WRITE (message_text,'(a,f10.2,a)') ' CPU-time (system): ', zstime, ' s'
-      CALL message('',message_text)
-      WRITE (message_text,'(a,f10.2,a)') ' Ratio            : ', 100*zrtime, ' %'
-      CALL message('',message_text)
-      CALL message ('', '')
+    zrtime = (zutime+zstime)/zwtime
+    CALL message ('', '')
+    WRITE (message_text,'(a,f10.2,a)') ' Wallclock        : ', zwtime, ' s'
+    CALL message('',message_text)
+    WRITE (message_text,'(a,f10.2,a)') ' CPU-time (user)  : ', zutime, ' s'
+    CALL message('',message_text)
+    WRITE (message_text,'(a,f10.2,a)') ' CPU-time (system): ', zstime, ' s'
+    CALL message('',message_text)
+    WRITE (message_text,'(a,f10.2,a)') ' Ratio            : ', 100*zrtime, ' %'
+    CALL message('',message_text)
+    CALL message ('', '')
   END IF
+
+  ! deallocate in- and output arrays
+  DEALLOCATE(t_air_K, q_air, rain, snow, wind_air, wind_10m)
+  DEALLOCATE(lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down)
+  DEALLOCATE(press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle, CO2_concentration)
+
+  DEALLOCATE(t_srf, t_eff_srf, qsat_srf, s_srf, fact_q_air, fact_qsat_srf)
+  DEALLOCATE(evapopot, evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap)
+  DEALLOCATE(rough_h_srf, rough_m_srf, tte_corr, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
+
+  IF (.NOT. read_interface_vars) THEN
+    DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)
+    DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc)
+  ENDIF
 
   ! Stop MPI
   CALL p_stop
-
 
 END PROGRAM jsb4_driver

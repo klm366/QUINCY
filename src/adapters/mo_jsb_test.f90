@@ -2,26 +2,37 @@
 !! @brief Module with test functions and parameters
 !!
 !! @author
-!!  Reiner Schnur, MPI-M Hamburg
+!!  Julia Nabel, MPI-M Hamburg
 !!
 !! @par Revision History
-!! Initial parts copied from jsbach3 mo_test.f90
+!! Most parts copied from jsbach3 mo_test.f90
 !!
 MODULE mo_jsb_test
 #ifndef __NO_JSBACH__
 
   USE mo_kind,               ONLY: wp
 
+#ifdef __ICON__
+  USE mo_write_netcdf,       ONLY: fillvalue_double
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: write_interface_variables, write_interface_vars, read_interface_vars, read_interface_variables
+  PUBLIC :: write_interface_variables, write_interface_vars, read_interface_vars, read_interface_variables, fillValue
 
   ! For test with direct echam output
-  LOGICAL, PARAMETER :: read_interface_vars = .FALSE.
-  LOGICAL, PARAMETER :: write_interface_vars = .FALSE.
+  LOGICAL :: read_interface_vars, write_interface_vars
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_test'
+
+#ifndef __ICON__
+  REAL(wp), PARAMETER :: fillValue = -9.e+33_wp
+#else
+  REAL(wp), PARAMETER :: fillValue = fillvalue_double
+#endif
+
+  CHARACTER(len=*), PARAMETER :: fillValueAttrName = '_FillValue'
 
 CONTAINS
 
@@ -33,9 +44,9 @@ CONTAINS
   !! @par History
   !! Initial version copied from jsbach3 mo_test.f90: write_interface_variables
   !!
-  SUBROUTINE write_interface_variables( ics, ice, iblk, t_air, q_air, rain, snow, wind_air, wind_10m, &
-             & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf, &
-             & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle )
+  SUBROUTINE write_interface_variables( ics, ice, iblk, t_air, q_air, rain, snow, wind_air, &
+    & wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf, &
+    & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle )
 
     USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel
 
@@ -46,8 +57,7 @@ CONTAINS
 
     USE mo_decomposition, ONLY: local_decomposition
     USE mo_gaussgrid,     ONLY: philon,philat
-    USE mo_exception,     ONLY: finish
-    USE mo_control,       ONLY: nproma
+    USE mo_exception,     ONLY: finish, message_text
 
 #endif
 
@@ -84,7 +94,7 @@ CONTAINS
     INTEGER :: tstart(1), tcount(1), fstart(3), fcount(3)
 
     INTEGER  :: year, month, day, hour, minute, second
-    INTEGER  :: nlon, nlat, lonCount
+    INTEGER  :: nlon, nlat, lonCount, nproma
     REAL(wp) :: date
 
     CHARACTER(len=nf_max_name), SAVE :: filename
@@ -112,13 +122,15 @@ CONTAINS
 
     nlon = local_decomposition%nlon
     nlat = local_decomposition%nlat
+    nproma = ice
 
-    !-- routine currently does not work in parallel  -- !TODO-JN: do it with dsl_jsbach.inc 
+    !-- as in jsbach3 standalone, this routine is not implemented to work in parallel
     IF (my_process_is_mpi_parallel()) THEN
       CALL finish(TRIM(routine), 'writing interface variables not possible in a parallel run')
     END IF
     IF (.NOT. nproma == nlon) THEN
-      CALL finish(TRIM(routine), 'writing interface variables only possible if nproma == nlon')
+      WRITE (message_text,*) 'Writing interface variables only possible if nproma == nlon; here: ', nproma
+      CALL finish(TRIM(routine), message_text)
     END IF
 
     !-- Create netcdf file
@@ -158,6 +170,25 @@ CONTAINS
       CALL nf_check(nf_def_var(ncid, 'q_bcoef',          NF_DOUBLE, 3, dim3, q_bcoef_id))
       CALL nf_check(nf_def_var(ncid, 'pch',              NF_DOUBLE, 3, dim3, pch_id))
       CALL nf_check(nf_def_var(ncid, 'cos_zenith_angle', NF_DOUBLE, 3, dim3, cos_zenith_angle_id))
+
+      CALL nf_check(nf_put_att_double(ncid, t_air_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, q_air_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, rain_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, snow_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, wind_air_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, wind_10m_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, lw_srf_down_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, swvis_srf_down_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, swnir_srf_down_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, swpar_srf_down_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, press_srf_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, drag_srf_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, t_acoef_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, t_bcoef_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, q_acoef_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, q_bcoef_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, pch_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
+      CALL nf_check(nf_put_att_double(ncid, cos_zenith_angle_id, fillValueAttrName, NF_DOUBLE, 1, fillValue))
 
       ! assign global attributes
       CALL nf_check(nf_put_att_text(ncid, NF_GLOBAL, 'conventions', 6, 'CF-1.0'))
@@ -216,7 +247,7 @@ CONTAINS
     CALL nf_check(nf_close(ncid))
 
 #else
-    CALL finish(TRIM(routine), 'Not implemented for ICON')
+    CALL finish(TRIM(routine), 'Not implemented for use with ICON')
 #endif
 
   END SUBROUTINE write_interface_variables
@@ -302,7 +333,7 @@ CONTAINS
     nlat = local_decomposition%nlat
     nproma = local_decomposition%nproma
 
-    !-- routine currently does not work in parallel  -- !TODO-JN: do it with dsl_jsbach.inc 
+    !-- as in jsbach3 standalone, this routine is not implemented to work in parallel
     IF (my_process_is_mpi_parallel()) THEN
       CALL finish(TRIM(routine), 'reading interface variables not implemented for parallel runs')
     END IF
@@ -390,7 +421,7 @@ CONTAINS
     CALL nf_check(nf_get_vara_double(ncid, pch_id,              fstart, fcount, pch)) 
     CALL nf_check(nf_get_vara_double(ncid, cos_zenith_angle_id, fstart, fcount, cos_zenith_angle))
 #else
-    CALL finish(TRIM(routine), 'Not implemented for ICON')
+    CALL finish(TRIM(routine), 'Not implemented for use with ICON')
 #endif
 
   END SUBROUTINE read_interface_variables

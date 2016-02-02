@@ -53,7 +53,7 @@ CONTAINS
                            & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
                            & pch, cos_zenith_angle,                                       &
                            & t_srf, t_eff_srf, qsat_srf, s_srf,                           &
-                           & fact_q_air, fact_qsat_srf,                                   &
+                           & fact_q_air, fact_qsat_srf, evapopot,                         &
                            & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,&
                            & rough_h_srf, rough_m_srf,                                    &
                            & tte_corr,                                                    &
@@ -65,9 +65,7 @@ CONTAINS
                                     update_humidity_scaling, update_roughness
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
 
-#ifndef STANDALONE
     USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
-#endif
 
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_interface,      ONLY: update_hd
@@ -110,6 +108,7 @@ CONTAINS
       & s_srf            (:), &
       & fact_q_air       (:), &
       & fact_qsat_srf    (:), &
+      & evapopot         (:), &
       & evapotrans       (:), &
       & latent_hflx      (:), &
       & sensible_hflx    (:), &
@@ -135,13 +134,11 @@ CONTAINS
 
     INTEGER :: nc, i
 
-#ifndef STANDALONE
     IF (write_interface_vars) THEN
        CALL write_interface_variables(ics, ice, iblk, t_air, q_air, rain, snow, wind_air, wind_10m, &
              & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf,    &
              & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
     END IF
-#endif
 
     CALL timer_start(timer_jsbach)
 
@@ -238,7 +235,7 @@ CONTAINS
     ! Finally, give the required variables back to the atmosphere
     CALL update_land2atm(tile, iblk, ics, ice,                                                                                  &
       & t_srf=t_srf(:), t_eff_srf=t_eff_srf(:), qsat_srf=qsat_srf(:), s_srf=s_srf(:),                                           &
-      & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:),                                                               &
+      & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:), evapopot=evapopot(:),                                         &
       & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:),                                   &
       & grnd_hflx=grnd_hflx(:), grnd_hcap=grnd_hcap,                                                                            &
       & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &

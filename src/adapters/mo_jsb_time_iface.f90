@@ -37,6 +37,7 @@ MODULE mo_jsb_time_iface
   USE mo_mpi,             ONLY : p_parallel, p_io, p_bcast
 
   USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, close_nml, position_nml
+  USE mo_jsb_test,           ONLY: read_interface_vars, write_interface_vars
 #endif
 
 #endif
@@ -78,22 +79,28 @@ CONTAINS
     INTEGER :: nml_handler, nml_unit, istat
 
     NAMELIST /jsbalone_ctl/ &
-      out_expname,          &   !TODO-check-with-RMS: does not really belong into time namelist!
+      out_expname,          & !TODO-check-with-RMS: does not really belong into 'time' namelist
       lresume,              &
       no_cycles,            &
       dt_start,             &
-!      dt_resume,            &  !TODO-check-with-RMS: how to lresume for jsb4 standalone
+!      dt_resume,            &  !TODO-check-with-RMS: lresume for jsb4 standalone
       dt_stop,              &
       no_days,              &
       no_steps,             &
       delta_time,           &
       putdata,              &
       putrerun,             &
-      trigfiles
+      trigfiles,            &
+      read_interface_vars,  & !TODO-check-with-RMS: does not really belong into 'time' namelist
+      write_interface_vars    !TODO-check-with-RMS: does not really belong into 'time' namelist
+
+    !-----------------------------------------------------------------------------------------------
 
     ! default values
     out_expname = 'undefined_expname'
     lresume = .FALSE.
+    read_interface_vars = .FALSE.
+    write_interface_vars = .FALSE.
     no_cycles = 1
     dt_start(:) = 0
     dt_resume(:) = 0
@@ -148,7 +155,6 @@ CONTAINS
     IF (lfirst_cycle) CALL init_manager
     CALL init_times                              ! initialize all dates
     CALL init_events
-    CALL time_set
 #endif
     CALL time_weights(l_compute_rad=.FALSE.) ! radiation_time is not initialized yet at the time of JSBACH initialization
 
@@ -510,7 +516,7 @@ CONTAINS
     IF (p_parallel_io) THEN
        IF (lresume) THEN
           CALL finish('mo_jsb_time_iface', 'behaviour for lresume = true not yet implemented')
-!TODO-JN -- lrsume
+!TODO lrsume
          ! copy from jsb3 get_dates: 
          ! Get time information from restart file
 !          IO_file%opened = .FALSE.
@@ -541,7 +547,7 @@ CONTAINS
     ENDIF
        
     IF (lresume) THEN
-!TODO-JN -- lresume
+!TODO lresume
 !       CALL inp_convert_date(forecast_date, forecast_time, start_date)
 !       CALL inp_convert_date(verification_date, verification_time, resume_date)
           CALL finish('mo_jsb_time_iface', 'behaviour for lresume = true not yet implemented')

@@ -32,6 +32,7 @@ MODULE mo_srf_memory_class
       ocean        ,    & !< mask for ocean cells, 1: ocean
       glacier      ,    & !< Glacier fraction
       lake         ,    & !< Lake fraction
+      elevation    ,    & !< Elevation
       oro_stddev   ,    & !< Standard deviation of orography
       rough_m_srf  ,    & !< Surface roughness length for momentum
       rough_h_srf  ,    & !< Surface roughness length for heat
@@ -158,6 +159,12 @@ CONTAINS
         & hgrid, surface,                                                               &
         & t_cf('glacier_mask', '', 'glacier fraction', nc_bits),                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL jsb_add_var( mem, prefix//'elevation'//suffix, mem%elevation,                         &
+        & hgrid, surface,                                                           &
+        & t_cf('elevation', '', '', nc_bits),                                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, prefix//'oro_stddev'//suffix, mem%oro_stddev,                         &

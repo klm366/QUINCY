@@ -87,6 +87,14 @@ CONTAINS
          'Initializing srf memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(SRF)%bc_sso_filename))
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SRF)%bc_sso_filename), model%id)
 
+    ! Elevation ...
+    return_pointer => jsb_netcdf_read_2d(         &
+      & input_file,                               &
+      & variable_name='elevation',                &
+      & fill_array = dsl4jsb_var2D_ptr(SRF,elevation))
+    dsl4jsb_var2D_onDomain(SRF,elevation) = &
+      MERGE(dsl4jsb_var2D_onDomain(SRF,elevation), 0._wp, dsl4jsb_var2D_onDomain(SRF,elevation) >= 0._wp)
+
     ! Orography
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &

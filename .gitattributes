@@ -218,6 +218,7 @@ src/adapters/mo_jsb_varlist_iface.f90 -text
 src/adapters/mo_phy_schemes_iface.f90 -text
 src/atmland/mo_atmland_interface.f90 -text
 src/atmland/mo_atmland_memory_class.f90 -text
+src/base/mo_jsb4_forcing.f90 -text
 src/base/mo_jsb_base.f90 -text
 src/base/mo_jsb_class.f90 -text
 src/base/mo_jsb_config_class.f90 -text
