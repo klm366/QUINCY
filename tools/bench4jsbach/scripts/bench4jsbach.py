@@ -3,6 +3,7 @@
 
 import os,sys,shutil,timeit
 
+### Set environment
 script_dir = os.path.dirname ( os.path.realpath ( __file__ ))
 bench4jsbach_base = os.path.dirname ( os.path.realpath ( script_dir ))
 bin_dir = os.path.join ( bench4jsbach_base, "bin" )
@@ -10,13 +11,14 @@ if os.path.isdir ( bin_dir ):
     sys.path.append ( bin_dir )
 else:
     raise Exception ( "Directory %s with source files not found." % bin_dir )
-import sys
 os.environ [ 'BENCH4JSBACH_BASE' ] = bench4jsbach_base
+import bench
+
 
 start = timeit.default_timer ()
 
-import bench
-
+### Start action:
+### Three cases ( say hello / create configuration file and environment / run benchmarking from configuration file ) 
 nargs = len ( sys.argv )
 if nargs == 1:
     print "******************************************"

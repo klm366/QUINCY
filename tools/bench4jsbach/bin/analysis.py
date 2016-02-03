@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+# -*- encoding:  utf-8 -*-
+
 
 import os
 import fnmatch
@@ -8,22 +10,46 @@ from sets import Set
 from pycmbs.data import Data
 import matplotlib.pyplot as plt
 from pycmbs.mapping import map_plot
+from util import logger as dkl_logger
+import warnings
+
 
 
 # methods #
-def find_files ( pattern, path ):
+def find_files ( pattern, path, single = True, raise_e = False ):
     assert os.path.isdir ( path ) and isinstance ( pattern, str )
     
-    ret = []
+    paths = []
     for root, dirnames, filenames in os.walk ( path ):
         files   = fnmatch.filter ( filenames, pattern )
         for f in files:
-            ret.append ( os.path.join ( root, f ))
+            paths.append ( os.path.join ( root, f ))
+
+    n_files = len ( paths )
+    if single:
+        if not n_files:
+            if raise_e:
+                raise Exception ( "no file" )
+            else:
+                ret = None
+        elif n_files > 1:
+            if raise_e:
+                raise Exception ( "multiple files" )
+            else:
+                warnings.warn ( "multiple files, take first" )
+                ret = paths [ 0 ]
+        else:
+            ret = paths [ 0 ]
+    else:
+        if not n_files and raise_e:
+            raise Exception ( "no files" )
+        ret = paths
 
     return ret
+
                     
     # albedo
-def get_period_intersection ( filelist ):
+def get_largest_common_yearlist ( filelist ):
     """Get largest common period for list of datafiles <filelist> given as argument."""
     assert filelist, "No filelist given."
     assert all ( map ( lambda c: os.path.isfile ( c ), filelist )),\
@@ -39,229 +65,162 @@ def get_period_intersection ( filelist ):
     return range ( startyear, endyear + 1 ) if startyear <= endyear else []
 
 
-def albedo_yseasmean ( rsus_infile, rsds_infile, albedo_outfile, years ):
-    assert os.path.isfile ( rsus_infile ), "Input file %s not found." % rsus_infile
-    assert os.path.isfile ( rsds_infile ), "Input file %s not found." % rsds_infile
-
-    cdo = Cdo ()
-    
-    assert Set ( years ).issubset ( Set ( map ( int, ''.join ( cdo.showyear(
-        input=rsus_infile )). encode (). split ()))), "Selected years not in " +\
-        "range of simulation period."
-
-    cdo.setname ( "albedo",
-                  input="-setunit,1 " +\
-                  "-setvrange,0.0001,0.99 " +\
-                  "-div " +\
-                  ( "-yseasmean " + \
-                    ( " -selyear," + ','.join ( repr ( y ) for y in years ) + \
-                      " " +  rsus_infile )) +\
-                  ( " -yseasmean " + \
-                    ( " -selyear," + ','.join ( repr ( y ) for y in years ) + \
-                      " " +  rsds_infile )),
-                  output=albedo_outfile,
-                  options='-f nc -m 0.00011' )
-
-
 class Analysis ( object ):
+
+    template = """%(path)s/%(varname)s_%(classification)s_%(expname)s_%(startdate)s-%(finaldate)s.%(suffix)s"""
+
+
     def __init__ ( self, **kwargs ):
-        pass
+        try:
+            if self.logger: pass
+        except:
+            self.logger = dkl_logger
 
 
     def albedo_analyse ( self ):
         """
-        - look for albedo output, if it is not found look for rsus, rsds output and calculate albedo
-        - calculate seasonal means for largest common period and store plot with subplots
-        - calculate difference to reference experiment and store plot with subplots
-        - storage demand over exp loop, temp: subplot, data
-        - storage demand for report: paths for plots, report section texts
-        - TODO: rename method to 'albedo seasonal means'
-        """
+NAME 
+        albedo_analyse
+
+DESCRIPTION
+        This method guides the analyses and the benchmarking for the variable albedo. It plots the results and generates texts for 
+        the report. 
+
+DETAILS
+        for all experiments in benchmark:
+    1.  find variable data files:
+        - try to find output files for variable albedo                          :  A
+        - if not found, calculate albedo from variables rsus and rsds           :  A = U/D
+        - if none of the needed output files found                              :  EXIT ON ERROR
+
+    2.  preprocessing, calculate seasonal means for largest common period: 
+        - albedo seasonal means                                                 :  A_sm = sm ( A )
+        - only for references:  rsds seasonal means                             :  D_sm = sm ( D )
+
+    3.  matrix processing, for all Experiments e and all References r:
+        - difference of albedo seasonal means weighted by rsds seasonal means   :  Δ_er  = ( A_sm_e - A_sm_r ) * D_sm_r 
+        - global mean                                                           :  gm_er = ∑_wx_x ( Δ_er * land-sea-mask )
+        - time mean                                                             :  tm_er = ∑_wt_x ( gm_er )
+        - global mean deviation                                                 :  gd_er = ∑_wx_x ( abs ( Δ_er * land-sea-mask )
+        - time mean deviation                                                   :  td_er = ∑_wt_x ( gd_er )
+
+    4.  prepare output:
+        - store plots for results of calculations in 3.
+        - if report is switched on, prepare text blocks
+"""
+
+        try:
+            from bench import Bench_Object
+            if not isinstance ( self, Bench_Object ):
+                raise
+        except:
+            self.logger.warning ( "This method has to be used by a Bench_Object." )
+
         self.logger.debug ( "Starting." )
 
-        from bench import REF_EXP_IDX
-        from bench import Bench_Object
-        assert isinstance ( self, Bench_Object ), \
-               "This method has to be used by a Bench_Object."
-
-        template = """%(path)s/%(varname)s_%(classification)s_%(expname)s_%(startdate)s-%(finaldate)s.%(suffix)s"""
-
-        varname = "albedo"
-
-        path_tokens = [ "rsus","rsds","albedo",
-                        "DJF","MAM","JJA","SON",
-                        "DJF_diff","MAM_diff","JJA_diff","SON_diff",
-                        "rsds_seasmean", "delta_rsus_seasmean",
-                        "delta_rsus_seasmean_global",
-                        "delta_rsus_timemean_global",
-                        "delta_rsus_seasmean_global_abs",
-                        "delta_rsus_timemean_global" ]
-        n_paths = len ( path_tokens )
+        A_varname = "albedo"
+        D_varname = "rsds"
+        U_varname = "rsus"
+        suffix    = "nc"
         
+        for exp in self.experiments:
+            exp.B4J_varpaths.clear ()
+        in_files = []
+        
+
+        # 1.  find variable data files
+       
+        # 1.a) find variable data files
+        for exp in self.experiments:
+            pattern = '*%s*%s*.%s' % ( A_varname, exp.B4J_name, suffix )
+            exp.B4J_varpaths [ "A" ] = A = find_files ( pattern, exp.B4J_path, single = True, raise_e = False )
+            if A: in_files.append ( A )
+            if exp.B4J_isref or not A:
+                pattern = '*%s*%s*.%s' % ( D_varname, exp.B4J_name, suffix )
+                exp.B4J_varpaths [ "D" ] = D = find_files ( pattern, exp.B4J_path, single = True, raise_e = True )
+                if D: in_files.append ( D )
+            if not A:
+                pattern = '*%s*%s*.%s' % ( U_varname, exp.B4J_name, suffix )
+                exp.B4J_varpaths [ "U" ]  = U = find_files ( pattern, exp.B4J_path, single = True, raise_e = True )
+                if U: in_files.append ( U )
+            self.logger.debug ( exp )
+
+
+        yearlist = get_largest_common_yearlist ( in_files )
         cdo = Cdo ()
 
-        self.analyses [ varname ] = { "type" : "yseasmean_diff",
-                                      "plots" : [],
-                                      "diff_plots" : [],
-                                      "text" : "" }
-        
-        n_exp = len ( self.experiments )
-        assert n_exp > 1    # TOCHECK: this should be checked while reading bench configfile 
-        self.logger.warning ( "Experiments' former filename list will be deleted." )
-        
-        # TODO: look for albedo file first ...
-        # ... no albedo found. Calculate albedo:
-        for e in self.experiments:
-            e.B4J_buffer = [ None ] * n_paths
-            for root, dirnames, filenames in os.walk ( e.B4J_path ):
-                for idx in [ path_tokens.index ( "rsus" ),
-                             path_tokens.index ( "rsds" )]:
-                    pattern = '*%s*%s*.nc' % ( path_tokens [ idx ], e.B4J_name )
-                    files   = fnmatch.filter ( filenames, pattern )
-                    if len ( files ) != 1:
-                        raise Exception ( """Multiple or no files found matching pattern '%s' in '%s':
-                                        files = [ %s ]""" %\
-                                          ( pattern, e.B4J_path,
-                                            ",".join ( "{!s}".format ( f ) for f in files )))
-                    e.B4J_buffer [ idx ] =  os.path.join ( root, files [ 0 ])
-            self.logger.debug ( e )
 
-        period = get_period_intersection ([ p for e in self.experiments \
-                                            for p in e.B4J_buffer if p ])
+        # 1.b) calculate albedo if not found
+        for exp in self.experiments:
+            if not exp.B4J_varpaths [ "A" ]:
+                exp.B4J_varpaths [ "A" ] = self.template % { 
+                    'path'           : self.data_path,
+                    'varname'        : A_varname,
+                    'classification' : 'divUD',
+                    'expname'        : exp.B4J_name,
+                    'startdate'      : str ( yearlist [ 0 ]),
+                    'finaldate'      : str ( yearlist [ -1 ]),
+                    'suffix'         : suffix }
+                cdo.setname ( A_varname,
+                              input="-setunit,1 " +\
+                              "-setvrange,0.0001,0.99 " +\
+                              "-div " +\
+                              ( " -selyear," + ','.join ( repr ( y ) for y in yearlist ) + \
+                                " " +  exp.B4J_varpaths [ "U" ] ) +\
+                              ( " -selyear," + ','.join ( repr ( y ) for y in yearlist ) + \
+                                " " +  exp.B4J_varpaths [ "D" ] ),
+                              output=exp.B4J_varpaths [ "A" ],
+                              options='-f nc -m 0.00011' )
+                
 
-        seasons      = [ 'DJF', 'MAM', 'JJA', 'SON' ]
-        n_seasons    = len ( seasons )
-        for e in self.experiments:
-            e.B4J_buffer [ path_tokens.index ( varname )] = template % {
+        # 2.  preprocessing, calculate seasonal means for largest common period
+        for exp in self.experiments:
+            exp.B4J_varpaths [ "A_sm" ] = self.template % { 
                 'path'           : self.data_path,
-                'varname'        : varname,
+                'varname'        : A_varname,
                 'classification' : 'yseasmean',
-                'expname'        : e.B4J_name,
-                'startdate'      : str ( period [ 0 ]),
-                'finaldate'      : str ( period [ -1 ]),
-                'suffix'         : 'nc' }
-             
-            albedo_yseasmean ( e.B4J_buffer [ path_tokens.index ( "rsus" )],
-                               e.B4J_buffer [ path_tokens.index ( "rsds" )],
-                               e.B4J_buffer [ path_tokens.index ( "albedo" )],
-                               period )
+                'expname'        : exp.B4J_name,
+                'startdate'      : str ( yearlist [ 0 ]),
+                'finaldate'      : str ( yearlist [ -1 ]),
+                'suffix'         : suffix }
+            cdo.yseasmean ( input="-selyear," + ','.join ( repr ( y ) for y in yearlist ) + \
+                            " " + exp.B4J_varpaths [ "A" ],
+                            output=exp.B4J_varpaths [ "A_sm" ])
+            if exp.B4J_isref:
+                exp.B4J_varpaths [ "D_sm" ] = self.template % { 
+                    'path'           : self.data_path,
+                    'varname'        : D_varname,
+                    'classification' : 'yseasmean',
+                    'expname'        : exp.B4J_name,
+                    'startdate'      : str ( yearlist [ 0 ]),
+                    'finaldate'      : str ( yearlist [ -1 ]),
+                    'suffix'         : suffix }
+                cdo.yseasmean ( input="-selyear," + ','.join ( repr ( y ) for y in yearlist ) + \
+                                " " + exp.B4J_varpaths [ "D" ],
+                                output=exp.B4J_varpaths [ "D_sm" ],
+                                options='-f %s' % suffix )
 
 
-            f            = plt.figure ( figsize = ( 15, 10 ))
-            tmp_subplots = [ f.add_subplot ( 2, 2, idx + 1 ) for idx in range ( n_seasons )]
-            figurefilepath =  template % { 'path'           : self.graphic_path,
-                                           'varname'        : varname,
-                                           'classification' : 'yseasmean',
-                                           'expname'        : e.B4J_name,
-                                           'startdate'      : str ( period [ 0 ]),
-                                           'finaldate'      : str ( period [ -1 ]),
-                                           'suffix'         : 'png' }
-            self.analyses [ varname ][ "plots" ].append ( figurefilepath )
-            for season in seasons:
-                season_idx = seasons.index ( season )
-                buffer_idx = path_tokens.index ( season )
-                tmp_data     = [ None ] * n_seasons
-                self.logger.debug ( "season_idx=%d, buffer_idx=%d" % (season_idx, buffer_idx ))
-                e.B4J_buffer [ buffer_idx ] = template % { 'path'           : self.data_path,
-                                                       'varname'        : varname,
-                                                       'classification' : 'y%smean' % season,
-                                                       'expname'        : e.B4J_name,
-                                                       'startdate'      : str ( period [ 0 ]),
-                                                       'finaldate'      : str ( period [ -1 ]),
-                                                       'suffix'         : 'nc' }
-                cdo.selseas ( season,
-                              input  = e.B4J_buffer [ path_tokens.index ( "albedo" )],
-                              output = e.B4J_buffer [ buffer_idx ])
-                tmp_data [ season_idx ] = Data (  e.B4J_buffer [ buffer_idx ],
-                                                  'albedo',
-                                                  lat_name = 'lat',
-                                                  lon_name = 'lon',
-                                                  read     = True,
-                                                  label    = season )
-                
-                x = map_plot ( tmp_data [ season_idx ],
-                               ax = tmp_subplots [ season_idx ],
-                               use_basemap = True )
-
-            plt.show ()
-            plt.savefig ( figurefilepath )
-            plt.close ()
-
-
-            ### TODO: external loop
-        self.analyses [ varname ][ "diff_plots" ] = [ None ] * n_exp
-        for e in self.experiments:
-            exp_idx = self.experiments.index ( e )
-            if exp_idx == REF_EXP_IDX:
-                continue
-            
-            self.logger.debug ( "Test experiment '%s', make diff plots." % e.B4J_name )
-            f            = plt.figure ( figsize = ( 15, 10 ))
-            tmp_subplots = [ f.add_subplot ( 2, 2, idx + 1 ) for idx in range ( n_seasons )]
-            figurefilepath =  template % { 'path'           : self.graphic_path,
-                                           'varname'        : varname,
-                                           'classification' : 'yseasmean_diff',
-                                           'expname'        : e.B4J_name,
-                                           'startdate'      : str ( period [ 0 ]),
-                                           'finaldate'      : str ( period [ -1 ]),
-                                           'suffix'         : 'png' }
-            self.analyses [ varname ][ "diff_plots" ][ exp_idx ] = figurefilepath
-            for season in seasons:
-                season_idx = seasons.index ( season )
-                buffer_in_idx =  path_tokens.index ( season )
-                buffer_out_idx = path_tokens.index ( season + "_diff" )
-                tmp_data     = [ None ] * n_seasons
-                e.B4J_buffer [ buffer_out_idx ] = template % { 'path'           : self.data_path,
-                                                           'varname'        : varname,
-                                                           'classification' : 'y%smean_diff' % season,
-                                                           'expname'        : e.B4J_name,
-                                                           'startdate'      : str ( period [ 0 ]),
-                                                           'finaldate'      : str ( period [ -1 ]),
-                                                           'suffix'         : 'nc' }
-
-                cdo.sub ( input   = e.B4J_buffer [ buffer_in_idx ] + " " +\
-                          self.experiments [ REF_EXP_IDX ].B4J_buffer [ buffer_in_idx ],
-                          output  = e.B4J_buffer [ buffer_out_idx ],
-                          options = '-f nc' )
-
-                self.logger.debug ( "input sub: " + e.B4J_buffer [ season_idx ] + \
-                                   " " + self.experiments [ REF_EXP_IDX ].B4J_buffer [ season_idx ] )
-
-                tmp_data [ season_idx ] = Data (  e.B4J_buffer [ buffer_out_idx ],
-                                                  'albedo',
-                                                  lat_name = 'lat',
-                                                  lon_name = 'lon',
-                                                  read     = True,
-                                                  label    = season + " diff")
-                
-
-
-                x = map_plot ( tmp_data [ season_idx ],
-                               ax = tmp_subplots [ season_idx ],
-                               use_basemap = True )
-
-            plt.show ()
-            plt.savefig ( figurefilepath )
-            plt.close ()
-
-
-        # benchmark
-        for e in self.experiments:
-            exp_idx = self.experiments.index ( e )
-            buffer_out_idx = path_tokens.index ( "rsds_seasmean" )
-            
-            e.B4J_buffer [ buffer_out_idx ] = template % { 'path'           : self.data_path,
-                                                           'varname'        : "rsds",
-                                                           'classification' : 'yseasmean_',
-                                                           'expname'        : e.B4J_name,
-                                                           'startdate'      : str ( period [ 0 ]),
-                                                           'finaldate'      : str ( period [ -1 ]),
-                                                           'suffix'         : 'nc' }
-            
-            cdo.yseasmean ( input = " -selyear," + ','.join ( repr ( y ) for y in period ) + \
-                            " " +  e.B4J_buffer [ path_tokens.index ( "rsds" )],
-                            output=e.B4J_buffer [ buffer_out_idx ],
-                            options='-f nc' )
+        # 3.  matrix processing, for all Experiments e and all References r
+        for can in self.experiments:
+            if not can.B4J_iscan: continue
+            for ref in self.experiments:
+                if not ref.B4J_isref: continue
+                delta_str = "delta-ref%d" % ref.B4J_refno
+                can.B4J_varpaths [ delta_str ] = self.template % { 
+                    'path'           : self.data_path,
+                    'varname'        : A_varname,
+                    'classification' : delta_str,
+                    'expname'        : exp.B4J_name,
+                    'startdate'      : str ( yearlist [ 0 ]),
+                    'finaldate'      : str ( yearlist [ -1 ]),
+                    'suffix'         : suffix }
+                cdo.mul ( input=" -sub " +\
+                          can.B4J_varpaths [ "A_sm" ] + " " +\
+                          ref.B4J_varpaths [ "A_sm" ] + " " +\
+                          ref.B4J_varpaths [ "D_sm" ],
+                          output=can.B4J_varpaths [ delta_str ],
+                          options='-f %s' % suffix )
 
 
         

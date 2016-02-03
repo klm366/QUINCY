@@ -7,17 +7,23 @@ from util import print_none
 
 
 class Experiment ( object ):
-    B4J_id    = None
-    B4J_name  = None
-    B4J_etype = None
-    B4J_path  = None
-    
+    B4J_id       = None
+    B4J_name     = None
+    B4J_etype    = None
+    B4J_path     = None
+    B4J_isref    = False
+    B4J_iscan    = True
+    B4J_varpaths = None
+    B4J_refno    = None
     
     def __init__ ( self, **kwargs ):
         self.B4J_name     = kwargs.get ( "B4J_name" )
         self.B4J_etype    = kwargs.get ( "B4J_etype", None )
         self.B4J_path     = kwargs.get ( "B4J_path", None )
-        self.B4J_buffer   = []
+        self.B4J_isref    = kwargs.get ( "B4J_isref", False )
+        self.B4J_iscan    = kwargs.get ( "B4J_iscan", True )
+        self.B4J_refno    = kwargs.get ( "B4J_refno", None )
+        self.B4J_varpaths = {}
 
 
     def __repr__ ( self ):

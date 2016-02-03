@@ -12,6 +12,8 @@ from report import Report
 REF_EXP_IDX       = 0
 SWITCHED_ON_IDX   = TYPE_IDX = 0
 TEMP_SCALE_IDX    = PATH_IDX = 1
+ISREF_IDX         = 2
+ISCAN_IDX         = 3
 VARNAME_4_CMIP5_METADATA = 'rsds'
 bench4jsbach_base =  os.environ [ 'BENCH4JSBACH_BASE' ]
 if not bench4jsbach_base: raise Exception ( "Environment variable not set." )
@@ -32,7 +34,6 @@ class Bench_Object ( Analysis, Report ):
     bench_config_path = None
     config            = None
     experiments       = []
-    references        = []
     logger            = None
     logger_name       = 'B4J_LOGGER'
     reporting         = True
@@ -60,11 +61,6 @@ class Bench_Object ( Analysis, Report ):
         except:
             raise Exception (  "ERROR reading token 'bench_name' from configuration file %s." % \
                                bench_config_path )
-        
-        Analysis.__init__ ( self )
-        self.reporting = str2bool ( config [ "reporting" ])
-        Report.__init__ ( self ) if self.reporting else None
-            
         
         # check environment
         bench_config_path = os.path.abspath ( bench_config_path )
@@ -98,28 +94,41 @@ class Bench_Object ( Analysis, Report ):
                            "Processing might take a while ..." )
 
         self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
+
+        
+        Analysis.__init__ ( self )
+        self.reporting = str2bool ( config [ "reporting" ])
+        Report.__init__ ( self ) if self.reporting else None
+            
             
         es = self.config [ "experiments" ]
         from analysis import find_files
+        n_refs = n_cans = 0
         for en in es:
             name = en
             path = es [ en ][ PATH_IDX ]
+            iscan = str2bool ( es [ en ][ ISCAN_IDX ])
+            isref = str2bool ( es [ en ][ ISREF_IDX ])
+            n_cans += 1 if iscan else 0
+            n_refs += 1 if isref else 0
+            refno = n_refs - 1 if isref else None
             kwargs = { 'B4J_name'  : name,
                        'B4J_etype' : es [ en ][ TYPE_IDX ],
                        'B4J_path'  : path,
+                       'B4J_iscan' : iscan,
+                       'B4J_isref' : isref,
+                       'B4J_refno' : refno,
                        'B4J_bench' : self }
             if es [ en ][ TYPE_IDX ] == "CMIP5":
-                varfiles = find_files ( "*%s*%s*%s" % \
+                varfile = find_files ( "*%s*%s*%s" % \
                                         ( VARNAME_4_CMIP5_METADATA, name, '.nc' ),
-                                        path )
-                if not varfiles:
-                    raise Exception ( " No nc file for exp '%s' and var '%s' found." % \
-                                      ( name, VARNAME_4_CMIP5_METADATA ))
-                kwargs [ 'var_filename' ] = varfiles [ 0 ]
+                                        path, raise_e = True )
+                kwargs [ 'var_filename' ] = varfile
                 e = CMIP5_Experiment ( **kwargs )
             else:
                 e = Experiment ( **kwargs )
             self.experiments.append ( e )
+        if n_refs < 1 or n_cans < 1: raise Exception ( "No candidate or no reference experiment defined."  )
 
         self.logger.debug ( "Exiting." )
 
