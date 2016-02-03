@@ -37,6 +37,7 @@ class Bench_Object ( Analysis, Report ):
     logger            = None
     logger_name       = 'B4J_LOGGER'
     reporting         = True
+    land_sea_mask     = None
     
     
     def __init__ ( self, config_arg, **kwargs ):
@@ -99,7 +100,12 @@ class Bench_Object ( Analysis, Report ):
         Analysis.__init__ ( self )
         self.reporting = str2bool ( config [ "reporting" ])
         Report.__init__ ( self ) if self.reporting else None
-            
+
+        try:
+            self.land_sea_mask = config [ "land_sea_mask" ]
+            if not os.path.isfile ( self.land_sea_mask ): raise
+        except:
+            raise Exception ( "Error with land sea mask." )
             
         es = self.config [ "experiments" ]
         from analysis import find_files
@@ -129,7 +135,7 @@ class Bench_Object ( Analysis, Report ):
                 e = Experiment ( **kwargs )
             self.experiments.append ( e )
         if n_refs < 1 or n_cans < 1: raise Exception ( "No candidate or no reference experiment defined."  )
-
+        
         self.logger.debug ( "Exiting." )
 
 

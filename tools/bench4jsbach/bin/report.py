@@ -5,7 +5,7 @@ import json
 
 from util import log_message_newline
 
-template = """
+doc_template = """
 \\documentclass[]{article}
 \\usepackage[english]{babel}
 \\usepackage{graphicx}
@@ -70,7 +70,7 @@ class Report ( object ):
     analyses = {}
 
     def __init__ ( self ):
-        self.template = template
+        self.doc_template = doc_template
         
 
     def write_description ( self ):
@@ -100,30 +100,30 @@ class Report ( object ):
         self.logger.debug ( "self.analyses buffer: " + log_message_newline +\
                             json.dumps ( self.analyses ))
 
-        from bench import REF_EXP_IDX
+        # from bench import REF_EXP_IDX
         
-        for e in self.experiments:
-            e_idx = self.experiments.index ( e )
-            ref = True if e_idx == REF_EXP_IDX else False
-            name =  e.B4J_name.replace ( '_','\_' )
-            title = "Reference experiment {\\tt %s}" % name if ref else \
-                    "Experiment {\\tt %s}" % name
-            albedo_body += subsection_template % { 'subsection': title }
-            plot =  self.analyses [ varname ][ 'plots' ][ e_idx ]
-            if plot:
-                albedo_body += includegraphics_template % { 'graphicpath': plot }
-            diff_plot =  self.analyses [ varname ][ 'diff_plots' ][ e_idx ]
-            if diff_plot:
-                albedo_body += """
-            %s difference plot to reference experiment {\\tt %s} :\n
-            %s """ % ( varname.title (), e.B4J_name.replace ( '_','\_' ),
-            includegraphics_template %  { 'graphicpath': diff_plot })
-            #print "e_idx", e_idx,"albedo_body", albedo_body
+        # for e in self.experiments:
+        #     e_idx = self.experiments.index ( e )
+        #     ref = True if e_idx == REF_EXP_IDX else False
+        #     name =  e.B4J_name.replace ( '_','\_' )
+        #     title = "Reference experiment {\\tt %s}" % name if ref else \
+        #             "Experiment {\\tt %s}" % name
+        #     albedo_body += subsection_template % { 'subsection': title }
+        #     plot =  self.analyses [ varname ][ 'plots' ][ e_idx ]
+        #     if plot:
+        #         albedo_body += includegraphics_template % { 'graphicpath': plot }
+        #     diff_plot =  self.analyses [ varname ][ 'diff_plots' ][ e_idx ]
+        #     if diff_plot:
+        #         albedo_body += """
+        #     %s difference plot to reference experiment {\\tt %s} :\n
+        #     %s """ % ( varname.title (), e.B4J_name.replace ( '_','\_' ),
+        #     includegraphics_template %  { 'graphicpath': diff_plot })
+        #     #print "e_idx", e_idx,"albedo_body", albedo_body
 
-        section = section_template % { 'section' : varname.title (),
-                                       'body' : albedo_body }
-        #print "section", section
-        self.body += section
+        # section = section_template % { 'section' : varname.title (),
+        #                                'body' : albedo_body }
+        # #print "section", section
+        # self.body += section
     
 
         
@@ -137,14 +137,14 @@ class Report ( object ):
             os.makedirs ( tmp_path )
         os.chdir ( source_path )
 
-        page = template % { 'title'      : 'Bench4JSBACH Report', 
-                            'author'     : "%s" % self.config [ 'author' ],
-                            'institute'  : "Max-Planck-Institute for Meteorology",
-                            'department' : "Land Department",
-                            'graphicpath': "/scratch/mpi/mpiles/m300050/bench4jsbach/work/yab/graphic",
-                            'abstract'   : self.write_description (),
-                            'body'       : self.body,
-                            'epilog'     : "This is an epilog."}
+        page = doc_template % { 'title'      : 'Bench4JSBACH Report', 
+                                'author'     : "%s" % self.config [ 'author' ],
+                                'institute'  : "Max-Planck-Institute for Meteorology",
+                                'department' : "Land Department",
+                                'graphicpath': self.graphic_path,
+                                'abstract'   : self.write_description (),
+                                'body'       : self.body,
+                                'epilog'     : "This is an epilog."}
         self.logger.debug ( "Latex source code: " + log_message_newline +\
                             page )
         filename = self.bench_name + ".tex"

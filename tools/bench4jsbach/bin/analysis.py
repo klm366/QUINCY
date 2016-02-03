@@ -1,17 +1,19 @@
 #! /usr/bin/env python
-# -*- encoding:  utf-8 -*-
+# -*- coding:  utf-8 -*-
 
 
 import os
 import fnmatch
+import warnings
+from datetime import datetime
 from cdo import Cdo
 from sets import Set
 
 from pycmbs.data import Data
 import matplotlib.pyplot as plt
 from pycmbs.mapping import map_plot
+
 from util import logger as dkl_logger
-import warnings
 
 
 
@@ -67,7 +69,7 @@ def get_largest_common_yearlist ( filelist ):
 
 class Analysis ( object ):
 
-    template = """%(path)s/%(varname)s_%(classification)s_%(expname)s_%(startdate)s-%(finaldate)s.%(suffix)s"""
+    path_template = """%(path)s/%(varname)s_%(classification)s_%(expname)s_%(startdate)s-%(finaldate)s.%(suffix)s"""
 
 
     def __init__ ( self, **kwargs ):
@@ -153,7 +155,8 @@ DETAILS
         # 1.b) calculate albedo if not found
         for exp in self.experiments:
             if not exp.B4J_varpaths [ "A" ]:
-                exp.B4J_varpaths [ "A" ] = self.template % { 
+                print "hello"
+                exp.B4J_varpaths [ "A" ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : A_varname,
                     'classification' : 'divUD',
@@ -161,6 +164,7 @@ DETAILS
                     'startdate'      : str ( yearlist [ 0 ]),
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : suffix }
+                print "hello"
                 cdo.setname ( A_varname,
                               input="-setunit,1 " +\
                               "-setvrange,0.0001,0.99 " +\
@@ -175,7 +179,7 @@ DETAILS
 
         # 2.  preprocessing, calculate seasonal means for largest common period
         for exp in self.experiments:
-            exp.B4J_varpaths [ "A_sm" ] = self.template % { 
+            exp.B4J_varpaths [ "A_sm" ] = self.path_template % { 
                 'path'           : self.data_path,
                 'varname'        : A_varname,
                 'classification' : 'yseasmean',
@@ -187,7 +191,7 @@ DETAILS
                             " " + exp.B4J_varpaths [ "A" ],
                             output=exp.B4J_varpaths [ "A_sm" ])
             if exp.B4J_isref:
-                exp.B4J_varpaths [ "D_sm" ] = self.template % { 
+                exp.B4J_varpaths [ "D_sm" ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : D_varname,
                     'classification' : 'yseasmean',
@@ -202,16 +206,20 @@ DETAILS
 
 
         # 3.  matrix processing, for all Experiments e and all References r
+        # 4.  prepare output
+        
         for can in self.experiments:
             if not can.B4J_iscan: continue
             for ref in self.experiments:
                 if not ref.B4J_isref: continue
+                
+                # 3.a) difference of albedo seasonal means weighted by rsds seasonal means
                 delta_str = "delta-ref%d" % ref.B4J_refno
-                can.B4J_varpaths [ delta_str ] = self.template % { 
+                can.B4J_varpaths [ delta_str ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : A_varname,
                     'classification' : delta_str,
-                    'expname'        : exp.B4J_name,
+                    'expname'        : can.B4J_name,
                     'startdate'      : str ( yearlist [ 0 ]),
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : suffix }
@@ -222,8 +230,102 @@ DETAILS
                           output=can.B4J_varpaths [ delta_str ],
                           options='-f %s' % suffix )
 
+                # 3.b) global mean
+                gm_str = "gm-ref%d" % ref.B4J_refno
+                can.B4J_varpaths [ gm_str ] = self.path_template % { 
+                    'path'           : self.data_path,
+                    'varname'        : A_varname,
+                    'classification' : gm_str,
+                    'expname'        : can.B4J_name,
+                    'startdate'      : str ( yearlist [ 0 ]),
+                    'finaldate'      : str ( yearlist [ -1 ]),
+                    'suffix'         : suffix }
+                cdo.fldmean ( input=" -mul " +\
+                              can.B4J_varpaths [ delta_str ] + " " +\
+                              self.land_sea_mask,
+                              output=can.B4J_varpaths [ gm_str ],
+                              options='-f %s' % suffix )
 
-        
+                # 3.c) time mean
+                tm_str = "tm-ref%d" % ref.B4J_refno
+                can.B4J_varpaths [ tm_str ] = self.path_template % { 
+                    'path'           : self.data_path,
+                    'varname'        : A_varname,
+                    'classification' : tm_str,
+                    'expname'        : can.B4J_name,
+                    'startdate'      : str ( yearlist [ 0 ]),
+                    'finaldate'      : str ( yearlist [ -1 ]),
+                    'suffix'         : suffix }
+                cdo.timmean ( input=can.B4J_varpaths [ gm_str ],
+                              output=can.B4J_varpaths [ tm_str ],
+                              options='-f %s' % suffix )
+
+                # 3.d) global mean deviation
+                gd_str = "gd-ref%d" % ref.B4J_refno
+                can.B4J_varpaths [ gd_str ] = self.path_template % { 
+                    'path'           : self.data_path,
+                    'varname'        : A_varname,
+                    'classification' : gd_str,
+                    'expname'        : can.B4J_name,
+                    'startdate'      : str ( yearlist [ 0 ]),
+                    'finaldate'      : str ( yearlist [ -1 ]),
+                    'suffix'         : suffix }
+                cdo.fldmean ( input="-abs -mul " +\
+                              can.B4J_varpaths [ delta_str ] + " " +\
+                              self.land_sea_mask,
+                              output=can.B4J_varpaths [ gd_str ],
+                              options='-f %s' % suffix )
+
+                # 3.e) time mean deviation
+                td_str = "td-ref%d" % ref.B4J_refno
+                can.B4J_varpaths [ td_str ] = self.path_template % { 
+                    'path'           : self.data_path,
+                    'varname'        : A_varname,
+                    'classification' : td_str,
+                    'expname'        : can.B4J_name,
+                    'startdate'      : str ( yearlist [ 0 ]),
+                    'finaldate'      : str ( yearlist [ -1 ]),
+                    'suffix'         : suffix }
+                cdo.timmean ( input=can.B4J_varpaths [ gd_str ],
+                              output=can.B4J_varpaths [ td_str ],
+                              options='-f %s' % suffix )
+                
+                # 4.a) store plots for results of calculations in 3.
+
+                # 4.a.3.a)
+                dates = cdo.showtimestamp ( input = can.B4J_varpaths [ delta_str ] )[ 0 ].split ( " ")
+                dates = [ datetime.strptime ( str ( x ), '%Y-%m-%dT%H:%M:%S') for x in dates if x ]
+                plot_delta_str = delta_str + "plot"
+                can.B4J_varpaths [ plot_delta_str ] =  self.path_template % {
+                    'path' : self.graphic_path,
+                    'varname'        : A_varname,
+                    'classification' : delta_str,
+                    'expname'        : can.B4J_name,
+                    'startdate'      : str ( yearlist [ 0 ]),
+                    'finaldate'      : str ( yearlist [ -1 ]), 
+                    'suffix'         : 'png' }
+
+
+                f = plt.figure ( figsize = ( 15, 10 ))
+                ax = [ f.add_subplot ( 2, 2, i + 1 ) for i in range ( 4 )]
+                d = [ None ] * 4
+                for i in range ( 4 ):
+                    i1 = i + 1
+                    ax [ i ] = f.add_subplot ( 2, 2, i1 )
+                    d [ i ] = Data ( can.B4J_varpaths [ delta_str ],
+                                     'albedo',
+                                     read = True,
+                                     start_time = dates [ i ],
+                                     label = str ( dates [ i ]))    
+                    x = map_plot ( d [ i ], ax = ax [ i ], use_basemap = True )
+                    
+                plt.show ()
+                plt.savefig ( can.B4J_varpaths [ plot_delta_str ] )
+                plt.close ()
+                
+                
+                # 4.b) if report is switched on, prepare text blocks   
+            
         self.logger.debug ( "Exiting." )
 
     
