@@ -41,6 +41,7 @@ section_template = """\section{%(section)s}
 %(body)s"""
 
 subsection_template = """\subsection{%(subsection)s}"""
+subsubsection_template = """\subsubsection{%(subsubsection)s}"""
 
 includegraphics_template = """
 \\begin{center}
@@ -74,6 +75,7 @@ class Report ( object ):
                                'outfiles' : [],
                                'plots'    : [],
                                'teXts'    : [],
+                               'matrix'   : False,
                                'title'    : None }
 
     def __init__ ( self ):
@@ -108,6 +110,27 @@ class Report ( object ):
         for analyse in self.analyses [ varname ]:
             albedo_body += subsection_template % { 'subsection': lateXify ( analyse [ 'title' ])}
             albedo_body += lateXify ( analyse [ 'teXts' ][ 0 ])
+            if analyse [ 'matrix' ]:
+                for can in self.experiments:
+                    if not can.B4J_iscan: continue
+                    can_name =  can.B4J_name.replace ( '_','\_' )
+                    title = "Experiment {\\tt %s}" % can_name 
+                    albedo_body += subsubsection_template % { 'subsubsection': title }
+                    if len ( analyse [ 'plots' ]):
+                        no = 0
+                        for ref in self.experiments:
+                            if not ref.B4J_isref: continue
+                            ref_name =  ref.B4J_name.replace ( '_','\_' )
+                            plot = analyse [ 'plots' ][ no ]
+                            albedo_body += includegraphics_template % { 'graphicpath': plot }
+                            no += 1
+            else:
+                if len ( analyse [ 'plots' ]):
+                    plot = analyse [ 'plots' ][ 0 ]
+                    albedo_body += includegraphics_template % { 'graphicpath': plot }
+                
+                        
+            
         
         # for can in self.experiments:
         #     if not can.B4J_iscan: continue

@@ -8,6 +8,8 @@ import warnings
 from datetime import datetime
 from cdo import Cdo
 from sets import Set
+import copy
+from netCDF4 import Dataset
 
 from pycmbs.data import Data
 import matplotlib.pyplot as plt
@@ -125,12 +127,24 @@ DETAILS
         U_varname = "rsus"
         suffix    = "nc"
         
-        self.analyses [ A_varname ] = self.analyses_var_item
-        delta = self.analyses_var_test_item
-        delta [ 'name' ] = 'delta'
-        delta [ 'teXts' ]. append ( 'difference of albedo seasonal means weighted by rsds seasonal means' )
-        delta [ 'title' ] = 'Seasonal means difference plots'
+        self.analyses [ A_varname ] = copy.deepcopy ( self.analyses_var_item )
+        
+        delta = copy.deepcopy ( self.analyses_var_test_item )
+        delta [ 'name' ]   = 'delta'
+        delta [ 'teXts' ]. append ( 'Difference of albedo seasonal means weighted by rsds seasonal means' )
+        delta [ 'title' ]  = 'Seasonal means difference plots'
+        delta [ 'matrix' ] = True
         self.analyses [ A_varname ].append ( delta )
+        
+        globalNtime_mean = copy.deepcopy ( self.analyses_var_test_item )
+        globalNtime_mean [ 'name' ]   = 'globalNtime_mean'
+        globalNtime_mean [ 'teXts' ]. append (
+            'Global and time means of ' +\
+            'difference of albedo seasonal means weighted by rsds seasonal means' )
+        globalNtime_mean [ 'title' ]  = 'Global and time means'
+        globalNtime_mean [ 'matrix' ] = False
+        self.analyses [ A_varname ].append ( globalNtime_mean )
+        
         
         for exp in self.experiments:
             exp.B4J_varpaths.clear ()
@@ -337,11 +351,56 @@ DETAILS
                 delta = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "delta" ), None )
                 assert delta
                 delta [ 'infiles' ].append ( can.B4J_varpaths [ delta_str ])
-                delta [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ]) 
-   
-                # 4.a.3.b)             
+                delta [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ])
                 
-                # 4.b) if report is switched on, prepare text blocks   
+   
+        # 4.a.3.b,c)
+        
+        plot_globalNtime_mean_str =  self.path_template % {
+            'path'           : self.graphic_path,
+            'varname'        : A_varname,
+            'classification' : "gNtmeans",
+            'expname'        : self.bench_name,
+            'startdate'      : str ( yearlist [ 0 ]),
+            'finaldate'      : str ( yearlist [ -1 ]), 
+            'suffix'         : 'png' }
+        globalNtime_mean = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "globalNtime_mean" ), None )
+        assert globalNtime_mean
+        globalNtime_mean [ 'plots' ].append ( plot_globalNtime_mean_str )
+
+        fig = plt.figure()
+        
+        for can in self.experiments:
+            if not can.B4J_iscan: continue   
+            for ref in self.experiments:
+                if not ref.B4J_isref: continue
+                
+                gm_str = "gm-ref%d" % ref.B4J_refno
+                globalNtime_mean [ 'infiles' ].append ( can.B4J_varpaths [ gm_str ])
+                nc_fid = Dataset ( can.B4J_varpaths [ gm_str ], 'r')  
+                time = nc_fid.variables [ 'time' ][ : ]
+                albedo_gm = nc_fid.variables['albedo'][:] 
+                nc_fid.close ()
+                
+                globalNtime_mean [ 'infiles' ].append ( can.B4J_varpaths [ tm_str ])
+                nc_fid = Dataset ( can.B4J_varpaths [ tm_str ], 'r')
+                albedo_tm = nc_fid.variables [ 'albedo' ][ : ] 
+                nc_fid.close ()
+                
+                plt.plot ( time, albedo_gm [ :, 0, 0 ], 'ro')
+                plt.axhline ( albedo_tm [ 0, 0, 0 ], color = "r")
+
+                
+        plt.title ( "my title ", y = 1.08 )
+        plt.ylabel ( r'$\sum_{i=0}^\infty x_i$', rotation = 0 )
+        plt.xlabel ( "season")
+        plt.xticks ( time, ['DJF','MAM','JJA','SON'] )
+        plt.savefig ( plot_globalNtime_mean_str, 
+             dpi = 100 )
+        plt.close ()
+        
+    
+        # 4.b) if report is switched on, prepare text blocks   
             
         self.logger.debug ( "Exiting." )
 
