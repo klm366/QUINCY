@@ -125,6 +125,13 @@ DETAILS
         U_varname = "rsus"
         suffix    = "nc"
         
+        self.analyses [ A_varname ] = self.analyses_var_item
+        delta = self.analyses_var_test_item
+        delta [ 'name' ] = 'delta'
+        delta [ 'teXts' ]. append ( 'difference of albedo seasonal means weighted by rsds seasonal means' )
+        delta [ 'title' ] = 'Seasonal means difference plots'
+        self.analyses [ A_varname ].append ( delta )
+        
         for exp in self.experiments:
             exp.B4J_varpaths.clear ()
         in_files = []
@@ -150,12 +157,17 @@ DETAILS
 
         yearlist = get_largest_common_yearlist ( in_files )
         cdo = Cdo ()
+        
+        # land sea mask, todo: tests
+        slf_varname = "slf"
+        land_sea_mask = self.data_path + os.sep + \
+                        slf_varname + "_" + os.path.basename ( self.land_sea_mask )
+        cdo.selname ( slf_varname, input = self.land_sea_mask, output = land_sea_mask )
 
 
         # 1.b) calculate albedo if not found
         for exp in self.experiments:
             if not exp.B4J_varpaths [ "A" ]:
-                print "hello"
                 exp.B4J_varpaths [ "A" ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : A_varname,
@@ -164,7 +176,6 @@ DETAILS
                     'startdate'      : str ( yearlist [ 0 ]),
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : suffix }
-                print "hello"
                 cdo.setname ( A_varname,
                               input="-setunit,1 " +\
                               "-setvrange,0.0001,0.99 " +\
@@ -231,6 +242,7 @@ DETAILS
                           options='-f %s' % suffix )
 
                 # 3.b) global mean
+                
                 gm_str = "gm-ref%d" % ref.B4J_refno
                 can.B4J_varpaths [ gm_str ] = self.path_template % { 
                     'path'           : self.data_path,
@@ -242,7 +254,7 @@ DETAILS
                     'suffix'         : suffix }
                 cdo.fldmean ( input=" -mul " +\
                               can.B4J_varpaths [ delta_str ] + " " +\
-                              self.land_sea_mask,
+                              land_sea_mask,
                               output=can.B4J_varpaths [ gm_str ],
                               options='-f %s' % suffix )
 
@@ -272,7 +284,7 @@ DETAILS
                     'suffix'         : suffix }
                 cdo.fldmean ( input="-abs -mul " +\
                               can.B4J_varpaths [ delta_str ] + " " +\
-                              self.land_sea_mask,
+                              land_sea_mask,
                               output=can.B4J_varpaths [ gd_str ],
                               options='-f %s' % suffix )
 
@@ -297,7 +309,7 @@ DETAILS
                 dates = [ datetime.strptime ( str ( x ), '%Y-%m-%dT%H:%M:%S') for x in dates if x ]
                 plot_delta_str = delta_str + "plot"
                 can.B4J_varpaths [ plot_delta_str ] =  self.path_template % {
-                    'path' : self.graphic_path,
+                    'path'           : self.graphic_path,
                     'varname'        : A_varname,
                     'classification' : delta_str,
                     'expname'        : can.B4J_name,
@@ -319,10 +331,15 @@ DETAILS
                                      label = str ( dates [ i ]))    
                     x = map_plot ( d [ i ], ax = ax [ i ], use_basemap = True )
                     
-                plt.show ()
                 plt.savefig ( can.B4J_varpaths [ plot_delta_str ] )
                 plt.close ()
-                
+
+                delta = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "delta" ), None )
+                assert delta
+                delta [ 'infiles' ].append ( can.B4J_varpaths [ delta_str ])
+                delta [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ]) 
+   
+                # 4.a.3.b)             
                 
                 # 4.b) if report is switched on, prepare text blocks   
             

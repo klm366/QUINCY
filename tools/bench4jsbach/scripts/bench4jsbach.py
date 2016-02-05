@@ -58,7 +58,6 @@ else:
         
         for fun_suffix in fun_suffixes:
             fun_name = var + fun_suffix
-            print fun_name
             try:
                 fun = getattr ( b4j_obj, fun_name )
                 b4j_obj.logger.debug ( "Loaded function '%s'." % fun_name )

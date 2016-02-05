@@ -135,7 +135,7 @@ class Bench_Object ( Analysis, Report ):
                 e = Experiment ( **kwargs )
             self.experiments.append ( e )
         if n_refs < 1 or n_cans < 1: raise Exception ( "No candidate or no reference experiment defined."  )
-        
+
         self.logger.debug ( "Exiting." )
 
 

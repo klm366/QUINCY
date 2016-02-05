@@ -68,6 +68,13 @@ class Report ( object ):
     body = ""
     graphic = None
     analyses = {}
+    analyses_var_item = []
+    analyses_var_test_item = { 'name'     : None,
+                               'infiles'  : [],
+                               'outfiles' : [],
+                               'plots'    : [],
+                               'teXts'    : [],
+                               'title'    : None }
 
     def __init__ ( self ):
         self.doc_template = doc_template
@@ -88,8 +95,6 @@ class Report ( object ):
         description += subsection_template % { 'subsection': 'Reference experiments' }
         description += lateXify ( self.experiments [ REF_EXP_IDX ] .teX_repr ())
 
-        print description
-
         return description 
     
 
@@ -100,18 +105,19 @@ class Report ( object ):
         self.logger.debug ( "self.analyses buffer: " + log_message_newline +\
                             json.dumps ( self.analyses ))
 
-        # from bench import REF_EXP_IDX
+        for analyse in self.analyses [ varname ]:
+            albedo_body += subsection_template % { 'subsection': lateXify ( analyse [ 'title' ])}
+            albedo_body += lateXify ( analyse [ 'teXts' ][ 0 ])
         
-        # for e in self.experiments:
-        #     e_idx = self.experiments.index ( e )
-        #     ref = True if e_idx == REF_EXP_IDX else False
-        #     name =  e.B4J_name.replace ( '_','\_' )
-        #     title = "Reference experiment {\\tt %s}" % name if ref else \
-        #             "Experiment {\\tt %s}" % name
+        # for can in self.experiments:
+        #     if not can.B4J_iscan: continue
+        #     name =  can.B4J_name.replace ( '_','\_' )
+        #     title = "Experiment {\\tt %s}" % name 
         #     albedo_body += subsection_template % { 'subsection': title }
-        #     plot =  self.analyses [ varname ][ 'plots' ][ e_idx ]
-        #     if plot:
-        #         albedo_body += includegraphics_template % { 'graphicpath': plot }
+        #     print self.analyses
+            # plot =  self.analyses [ varname ][ 'plots' ][ 0 ]
+            # if plot:
+            #     albedo_body += includegraphics_template % { 'graphicpath': plot }
         #     diff_plot =  self.analyses [ varname ][ 'diff_plots' ][ e_idx ]
         #     if diff_plot:
         #         albedo_body += """
@@ -120,10 +126,10 @@ class Report ( object ):
         #     includegraphics_template %  { 'graphicpath': diff_plot })
         #     #print "e_idx", e_idx,"albedo_body", albedo_body
 
-        # section = section_template % { 'section' : varname.title (),
-        #                                'body' : albedo_body }
-        # #print "section", section
-        # self.body += section
+        section = section_template % { 'section' : varname.title (),
+                                       'body' : albedo_body }
+        print "section", section
+        self.body += section
     
 
         
