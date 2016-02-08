@@ -109,7 +109,7 @@ class Report ( object ):
 
         for analyse in self.analyses [ varname ]:
             albedo_body += subsection_template % { 'subsection': lateXify ( analyse [ 'title' ])}
-            albedo_body += lateXify ( analyse [ 'teXts' ][ 0 ])
+            albedo_body +=  analyse [ 'teXts' ][ 0 ]
             if analyse [ 'matrix' ]:
                 for can in self.experiments:
                     if not can.B4J_iscan: continue

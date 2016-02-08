@@ -131,7 +131,23 @@ DETAILS
         
         delta = copy.deepcopy ( self.analyses_var_test_item )
         delta [ 'name' ]   = 'delta'
-        delta [ 'teXts' ]. append ( 'Difference of albedo seasonal means weighted by rsds seasonal means' )
+        teXt =  """
+The difference between candidate and reference experiments albedo seasonal means 
+is weighted with the reference  experiments downwelling radiation seasonal means:
+\\begin{eqnarray*}
+\\Delta_{CR} & = & ( A_{sm\_C} - A_{sm\_R}) * D_{sm\_R}, \\\\
+        && A_{sm} = \\texttt{yseasmean}( A ), \\\\
+        && D_{sm} = \\texttt{yseasmean} ( D ),
+\\end{eqnarray*}
+with \\texttt{yseasmean}($X$) defined as
+\\begin{eqnarray*}
+  y_{S,x} & = & n_{S}^{-1}\\sum_{i=0}^{n_{S}} x_{i}, \\\\
+        && t\\mapsto i, t \in S,  \\\\
+   && S \in \{\\textnormal{DJF, MAM, JJA, SON} \}.
+\\end{eqnarray*}
+"""
+  
+        delta [ 'teXts' ]. append ( teXt )
         delta [ 'title' ]  = 'Seasonal means difference plots'
         delta [ 'matrix' ] = True
         self.analyses [ A_varname ].append ( delta )
@@ -237,6 +253,7 @@ DETAILS
             if not can.B4J_iscan: continue
             for ref in self.experiments:
                 if not ref.B4J_isref: continue
+                if ref.B4J_name == can.B4J_name: continue
                 
                 # 3.a) difference of albedo seasonal means weighted by rsds seasonal means
                 delta_str = "delta-ref%d" % ref.B4J_refno
@@ -318,6 +335,8 @@ DETAILS
                 
                 # 4.a) store plots for results of calculations in 3.
 
+                seasons =  ['DJF','MAM','JJA','SON']
+
                 # 4.a.3.a)
                 dates = cdo.showtimestamp ( input = can.B4J_varpaths [ delta_str ] )[ 0 ].split ( " ")
                 dates = [ datetime.strptime ( str ( x ), '%Y-%m-%dT%H:%M:%S') for x in dates if x ]
@@ -342,16 +361,20 @@ DETAILS
                                      'albedo',
                                      read = True,
                                      start_time = dates [ i ],
-                                     label = str ( dates [ i ]))    
-                    x = map_plot ( d [ i ], ax = ax [ i ], use_basemap = True )
-                    
+                                     label = seasons [ i ] )    
+                    x = map_plot ( d [ i ], ax = ax [ i ], use_basemap = True,
+                                   show_colorbar = False, return_plot_handler=True )
+                cax = f.add_axes([0.9, 0.1, 0.03, 0.8])
+                f.colorbar(x.im, cax=cax)
+                plt.suptitle ( r'$\Delta_{CR}$' + ', C: %s, R: %s' % (
+                    can.B4J_name, ref.B4J_name ),  fontsize = 18 )
                 plt.savefig ( can.B4J_varpaths [ plot_delta_str ] )
                 plt.close ()
 
                 delta = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "delta" ), None )
-                assert delta
-                delta [ 'infiles' ].append ( can.B4J_varpaths [ delta_str ])
-                delta [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ])
+                if delta:
+                    delta [ 'infiles' ].append ( can.B4J_varpaths [ delta_str ])
+                    delta [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ])
                 
    
         # 4.a.3.b,c)
@@ -394,13 +417,13 @@ DETAILS
         plt.title ( "my title ", y = 1.08 )
         plt.ylabel ( r'$\sum_{i=0}^\infty x_i$', rotation = 0 )
         plt.xlabel ( "season")
-        plt.xticks ( time, ['DJF','MAM','JJA','SON'] )
+        plt.xticks ( time, seasons )
         plt.savefig ( plot_globalNtime_mean_str, 
              dpi = 100 )
         plt.close ()
         
     
-        # 4.b) if report is switched on, prepare text blocks   
+        # 4.b) if report is switched on, prepare text blocks
             
         self.logger.debug ( "Exiting." )
 
