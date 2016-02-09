@@ -11,7 +11,7 @@ doc_template = """
 \\usepackage{graphicx}
 \\usepackage{color}
 
-\\usepackage{booktabs,tabularx,ragged2e}
+\\usepackage{booktabs,tabularx,ragged2e,makecell}
 \\newcolumntype{Y}{>{\\raggedright\\arraybackslash}X}
 \\newcolumntype{L}{>{\\arraybackslash}X}
 \
@@ -84,18 +84,37 @@ class Report ( object ):
 
     def write_description ( self ):
 
-        description = ""
+        description = """
+In this benchmark report, the candidate experiments
+\\begin{itemize}
+%s
+\\end{itemize}
+are compared with the reference experiments
+\\begin{itemize}
+%s
+\\end{itemize}
 
-        description += subsection_template % { 'subsection': 'Experiments to benchmark' }
+The tests and analyses run are: \\\\
+%s.\\\\
+
+""" %(
+    ''.join ( '\\item {!s}'.format ( lateXify ( can.B4J_name )) if can.B4J_iscan else '' \
+                for can in self.experiments ),
+    ''.join ( '\\item {!s}'.format ( lateXify ( ref.B4J_name )) if ref.B4J_isref else '' \
+                for ref in self.experiments ),
+    ''.join ( "something" ))
+
+        description += subsection_template % { 'subsection': 'Candidate experiments to benchmark' }
         
         from bench import REF_EXP_IDX
-        for e in self.experiments:
-            if self.experiments.index ( e ) == REF_EXP_IDX:
-                continue
-            description += lateXify ( e.teX_repr ())
+        for can in self.experiments:
+            if not can.B4J_iscan: continue
+            description +=  can.teX_repr ()
 
         description += subsection_template % { 'subsection': 'Reference experiments' }
-        description += lateXify ( self.experiments [ REF_EXP_IDX ] .teX_repr ())
+        for ref in self.experiments:
+            if not ref.B4J_isref: continue
+            description +=  ref.teX_repr ()
 
         return description 
     
@@ -114,7 +133,7 @@ class Report ( object ):
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
                     can_name =  can.B4J_name.replace ( '_','\_' )
-                    title = "Experiment {\\tt %s}" % can_name 
+                    title = "Candidate experiment {\\tt %s}" % can_name 
                     albedo_body += subsubsection_template % { 'subsubsection': title }
                     if len ( analyse [ 'plots' ]):
                         no = 0
@@ -149,7 +168,8 @@ class Report ( object ):
         #     includegraphics_template %  { 'graphicpath': diff_plot })
         #     #print "e_idx", e_idx,"albedo_body", albedo_body
 
-        section = section_template % { 'section' : varname.title (),
+        section = section_template % { 'section' : "Analyses and benchmarks for variable " + \
+                                       varname.title (),
                                        'body' : albedo_body }
         print "section", section
         self.body += section
@@ -176,6 +196,8 @@ class Report ( object ):
                                 'epilog'     : "This is an epilog."}
         self.logger.debug ( "Latex source code: " + log_message_newline +\
                             page )
+
+        print page 
         filename = self.bench_name + ".tex"
         with open ( filename, "w" ) as text_file:
             text_file.write ( page )

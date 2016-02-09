@@ -117,12 +117,14 @@ class Bench_Object ( Analysis, Report ):
             isref = str2bool ( es [ en ][ ISREF_IDX ])
             n_cans += 1 if iscan else 0
             n_refs += 1 if isref else 0
+            canno = n_cans - 1 if iscan else None
             refno = n_refs - 1 if isref else None
             kwargs = { 'B4J_name'  : name,
                        'B4J_etype' : es [ en ][ TYPE_IDX ],
                        'B4J_path'  : path,
                        'B4J_iscan' : iscan,
                        'B4J_isref' : isref,
+                       'B4J_canno' : canno,
                        'B4J_refno' : refno,
                        'B4J_bench' : self }
             if es [ en ][ TYPE_IDX ] == "CMIP5":
