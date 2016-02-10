@@ -367,11 +367,11 @@ with \\texttt{yseasmean}($X$) defined as
                     'suffix'         : 'png' }
 
 
-                f = plt.figure ( figsize = ( 15,10 ))
+                f = plt.figure ( figsize = ( 15,12 ))
                 ax = [ f.add_subplot ( 2, 2, i + 1 ) for i in range ( 4 )]
                 d = [ None ] * 4                
                 gs1 = gridspec.GridSpec ( 2, 2 )
-                gs1.update ( wspace = 0.001, hspace = 0.001 )                
+                gs1.update ( wspace = -0.2, hspace = -0.2  ) #0.001, hspace = 0.001 )                
                 for i in range ( 4 ):
                     ax [i] = plt.subplot ( gs1 [ i ])
                     d [i] = Data ( can.B4J_varpaths [ delta_str ],
@@ -395,7 +395,6 @@ with \\texttt{yseasmean}($X$) defined as
                                r',   $C_{%d}$: %s, $R_{%d}$: %s' % (
                                    can.B4J_canno, can.B4J_name,
                                    ref.B4J_refno, ref.B4J_name ),  fontsize = 24 )
-                plt.subplots_adjust ( hspace = 0, wspace = 0 )
                 plt.savefig ( can.B4J_varpaths [ plot_delta_str ] )
                 plt.close ()
 
@@ -456,7 +455,7 @@ with \\texttt{yseasmean}($X$) defined as
         plt.title ( "Global and time mean", y = 1.08 )
         plt.ylabel ( r'$\frac{W}{m^{2}}$',
                      rotation = 0,
-                     position = ( -0.2, .96 ),
+                     position = ( -0.3, .96 ),
                      fontsize = 20 )
         plt.xlabel ( "season")
         plt.xticks ( time, seasons )

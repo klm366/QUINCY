@@ -192,7 +192,7 @@ variable & name of analyis or plot \\\\
                 if len ( analyse [ 'plots' ]):
                     plot = analyse [ 'plots' ][ 0 ]
                     albedo_body += includegraphics_template ( plot,
-                                                              width    = '.8',
+                                                              width    = '.9',
                                                               hspace   = '0' )
 
 
