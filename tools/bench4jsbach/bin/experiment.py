@@ -69,9 +69,9 @@ class Experiment ( object ):
 %s
 \\\\ \\bottomrule
 \\end{tabularx}
-""" % ( '$\mathbf{C_{%d}}$:' % self.B4J_canno if self.B4J_iscan else '$\mathbf{R_{%d}}$:' % self.B4J_refno,
-        lateXify ( self.__class__.__name__ ),
-        lateXify ( self.B4J_name ), 
+""" % ( lateXify ( self.__class__.__name__ ),
+        lateXify ( self.B4J_name ),
+        '($\mathbf{C_{%d}}$)' % self.B4J_canno if self.B4J_iscan else '($\mathbf{R_{%d}}$)' % self.B4J_refno,
         """\\\\
 """.join ( '{!s} & {!s}'.format ( lateXify ( str ( k )), force_breaks ( lateXify ( str ( v )), 50 )) \
            if not isinstance ( v, dict ) else '&'

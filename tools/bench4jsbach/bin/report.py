@@ -20,6 +20,8 @@ doc_template = """
 \\renewcommand{\\familydefault}{\\sfdefault}
 \\newcommand{\graphicpath}[1]{%(graphicpath)s/#1}
 
+\\setlength{\parindent}{0pt}
+
 \\begin{document}
 
 \\title{%(title)s}
@@ -84,6 +86,8 @@ class Report ( object ):
 
     def write_description ( self ):
 
+        analysis_table = [ ]
+
         description = """
 In this benchmark report, the candidate experiments
 \\begin{itemize}
@@ -92,21 +96,38 @@ In this benchmark report, the candidate experiments
 are compared with the reference experiments
 \\begin{itemize}
 %s
-\\end{itemize}
+\\end{itemize} 
+\\ \\\\ \\\\
 
-The tests and analyses run are: \\\\
-%s.\\\\
+The variables tested and analysed run are
+\\ \\\\
+
+\\begin{tabularx}{\\linewidth}{lL}
+\\toprule
+variable & name of analyis or plot \\\\
+\\addlinespace
+\\cmidrule(r){1-2}
+%s
+\\\\ \\bottomrule
+\\end{tabularx}
 
 """ %(
-    ''.join ( '\\item {!s}'.format ( lateXify ( can.B4J_name )) if can.B4J_iscan else '' \
+    ''.join ( '\\item {!s} ($C_{{{!s}}}$)'.format ( lateXify ( can.B4J_name ),
+                                                    str ( can.B4J_canno )) \
+              if can.B4J_iscan else '' \
                 for can in self.experiments ),
-    ''.join ( '\\item {!s}'.format ( lateXify ( ref.B4J_name )) if ref.B4J_isref else '' \
+    ''.join ( '\\item {!s} ($R_{{{!s}}}$)'.format ( lateXify ( ref.B4J_name ),
+                                                   str ( ref.B4J_refno )) \
+              if ref.B4J_isref else '' \
                 for ref in self.experiments ),
-    ''.join ( "something" ))
+    '\\\\\n'.join ( '%s & %s' % (( lateXify ( k ), lateXify ( str ( a [ 'name' ]))) \
+                                 if self.analyses [ k ].index ( a ) == 0 \
+                                 else ( '', lateXify ( str ( a [ 'name' ])))) \
+                                 for k in self.analyses \
+                                 for a in self.analyses [ k ] ))
 
         description += subsection_template % { 'subsection': 'Candidate experiments to benchmark' }
-        
-        from bench import REF_EXP_IDX
+    
         for can in self.experiments:
             if not can.B4J_iscan: continue
             description +=  can.teX_repr ()
@@ -126,20 +147,23 @@ The tests and analyses run are: \\\\
         self.logger.debug ( "self.analyses buffer: " + log_message_newline +\
                             json.dumps ( self.analyses ))
 
+        print self.analyses
+
         for analyse in self.analyses [ varname ]:
             albedo_body += subsection_template % { 'subsection': lateXify ( analyse [ 'title' ])}
             albedo_body +=  analyse [ 'teXts' ][ 0 ]
             if analyse [ 'matrix' ]:
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
-                    can_name =  can.B4J_name.replace ( '_','\_' )
-                    title = "Candidate experiment {\\tt %s}" % can_name 
+                    #can_name =  can.B4J_name.replace ( '_','\_' )
+                    can_name = lateXify ( can.B4J_name )
+                    title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
+                            ( can_name, can.B4J_canno ) 
                     albedo_body += subsubsection_template % { 'subsubsection': title }
                     if len ( analyse [ 'plots' ]):
                         no = 0
                         for ref in self.experiments:
                             if not ref.B4J_isref: continue
-                            ref_name =  ref.B4J_name.replace ( '_','\_' )
                             plot = analyse [ 'plots' ][ no ]
                             albedo_body += includegraphics_template % { 'graphicpath': plot }
                             no += 1
@@ -147,30 +171,13 @@ The tests and analyses run are: \\\\
                 if len ( analyse [ 'plots' ]):
                     plot = analyse [ 'plots' ][ 0 ]
                     albedo_body += includegraphics_template % { 'graphicpath': plot }
-                
-                        
-            
-        
-        # for can in self.experiments:
-        #     if not can.B4J_iscan: continue
-        #     name =  can.B4J_name.replace ( '_','\_' )
-        #     title = "Experiment {\\tt %s}" % name 
-        #     albedo_body += subsection_template % { 'subsection': title }
-        #     print self.analyses
-            # plot =  self.analyses [ varname ][ 'plots' ][ 0 ]
-            # if plot:
-            #     albedo_body += includegraphics_template % { 'graphicpath': plot }
-        #     diff_plot =  self.analyses [ varname ][ 'diff_plots' ][ e_idx ]
-        #     if diff_plot:
-        #         albedo_body += """
-        #     %s difference plot to reference experiment {\\tt %s} :\n
-        #     %s """ % ( varname.title (), e.B4J_name.replace ( '_','\_' ),
-        #     includegraphics_template %  { 'graphicpath': diff_plot })
-        #     #print "e_idx", e_idx,"albedo_body", albedo_body
 
-        section = section_template % { 'section' : "Analyses and benchmarks for variable " + \
+
+        section_intro = "The result data and the plots can be found in\\\\ \\ \\\\"
+
+        section = section_template % { 'section' : "%s: analyses and benchmarks for variable" % \
                                        varname.title (),
-                                       'body' : albedo_body }
+                                       'body' : section_intro + albedo_body }
         print "section", section
         self.body += section
     

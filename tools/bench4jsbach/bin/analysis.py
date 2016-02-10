@@ -13,6 +13,7 @@ from netCDF4 import Dataset
 
 from pycmbs.data import Data
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from pycmbs.mapping import map_plot
 
 from util import logger as dkl_logger
@@ -126,6 +127,12 @@ DETAILS
         D_varname = "rsds"
         U_varname = "rsus"
         suffix    = "nc"
+                
+        cmap_bwr = mcolors.LinearSegmentedColormap.from_list ( name = 'red_white_blue', 
+                                                               colors = [(0, 0, 1), 
+                                                                         (1, 1., 1), 
+                                                                         (1, 0, 0)],
+                                                               N = 11, )
         
         self.analyses [ A_varname ] = copy.deepcopy ( self.analyses_var_item )
         
@@ -353,21 +360,28 @@ with \\texttt{yseasmean}($X$) defined as
 
                 f = plt.figure ( figsize = ( 15, 10 ))
                 ax = [ f.add_subplot ( 2, 2, i + 1 ) for i in range ( 4 )]
-                d = [ None ] * 4
+                d = [ None ] * 4                
                 for i in range ( 4 ):
                     i1 = i + 1
                     ax [ i ] = f.add_subplot ( 2, 2, i1 )
                     d [ i ] = Data ( can.B4J_varpaths [ delta_str ],
                                      'albedo',
-                                     read = True,
+                                     read       = True,
                                      start_time = dates [ i ],
-                                     label = seasons [ i ] )    
-                    x = map_plot ( d [ i ], ax = ax [ i ], use_basemap = True,
-                                   show_colorbar = False, return_plot_handler=True )
-                cax = f.add_axes([0.9, 0.1, 0.03, 0.8])
-                f.colorbar(x.im, cax=cax)
-                plt.suptitle ( r'$\Delta_{CR}$' + ', C: %s, R: %s' % (
-                    can.B4J_name, ref.B4J_name ),  fontsize = 18 )
+                                     label      = seasons [ i ] )    
+                    x = map_plot ( d [ i ], ax         = ax [ i ],
+                                   use_basemap         = True,
+                                   show_colorbar       = True,
+                                   return_plot_handler = True,
+                                   cmap_data           = cmap_bwr )
+                cax = f.add_axes ([ 0.9, 0.1, 0.03, 0.8 ])
+                cb = f.colorbar ( x.im, cax = cax )
+                cb.ax.text ( 1.5, 1, r'$\frac{W}{m^{2}}$', size = 32 )
+                plt.suptitle ( r'$\Delta_{C_{%d}R_{%d}}$' % (
+                    can.B4J_canno, ref.B4J_refno ) + \
+                               r',   $C_{%d}$: %s, $R_{%d}$: %s' % (
+                                   can.B4J_canno, can.B4J_name,
+                                   ref.B4J_refno, ref.B4J_name ),  fontsize = 24 )
                 plt.savefig ( can.B4J_varpaths [ plot_delta_str ] )
                 plt.close ()
 
