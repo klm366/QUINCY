@@ -14,6 +14,8 @@ from netCDF4 import Dataset
 from pycmbs.data import Data
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import matplotlib.gridspec as gridspec
+import numpy as np
 from pycmbs.mapping import map_plot
 
 from util import logger as dkl_logger
@@ -127,12 +129,6 @@ DETAILS
         D_varname = "rsds"
         U_varname = "rsus"
         suffix    = "nc"
-                
-        cmap_bwr = mcolors.LinearSegmentedColormap.from_list ( name = 'red_white_blue', 
-                                                               colors = [(0, 0, 1), 
-                                                                         (1, 1., 1), 
-                                                                         (1, 0, 0)],
-                                                               N = 11, )
         
         self.analyses [ A_varname ] = copy.deepcopy ( self.analyses_var_item )
         
@@ -255,6 +251,19 @@ with \\texttt{yseasmean}($X$) defined as
 
         # 3.  matrix processing, for all Experiments e and all References r
         # 4.  prepare output
+
+        # 4.a.3.a) special color adjustment for delta plot        
+        vmin           = -7.5
+        vmax           = 4.5        
+        num_levels     = 13
+        midpoint       = 0
+        levels         = np.linspace ( vmin, vmax, num_levels )
+        midp           = np.mean ( np.c_ [ levels [ :-1 ], levels [ 1: ]], axis = 1 )
+        vals           = np.interp ( midp, [ vmin, midpoint, vmax ], [ 0, 0.5, 1 ])
+        colors         = plt.cm.bwr ( vals )
+        cmap_bwr, norm = mcolors.from_levels_and_colors ( levels, colors )
+        # end 4.a.3.a)
+    
         
         for can in self.experiments:
             if not can.B4J_iscan: continue
@@ -358,30 +367,35 @@ with \\texttt{yseasmean}($X$) defined as
                     'suffix'         : 'png' }
 
 
-                f = plt.figure ( figsize = ( 15, 10 ))
+                f = plt.figure ( figsize = ( 15,10 ))
                 ax = [ f.add_subplot ( 2, 2, i + 1 ) for i in range ( 4 )]
                 d = [ None ] * 4                
+                gs1 = gridspec.GridSpec ( 2, 2 )
+                gs1.update ( wspace = 0.001, hspace = 0.001 )                
                 for i in range ( 4 ):
-                    i1 = i + 1
-                    ax [ i ] = f.add_subplot ( 2, 2, i1 )
-                    d [ i ] = Data ( can.B4J_varpaths [ delta_str ],
-                                     'albedo',
-                                     read       = True,
-                                     start_time = dates [ i ],
-                                     label      = seasons [ i ] )    
-                    x = map_plot ( d [ i ], ax         = ax [ i ],
+                    ax [i] = plt.subplot ( gs1 [ i ])
+                    d [i] = Data ( can.B4J_varpaths [ delta_str ],
+                                   'albedo',
+                                   read       = True,
+                                   start_time = dates [ i ],
+                                   label      = seasons [ i ] )    
+                    x = map_plot ( d[i], ax         = ax[i],
+                                   vmin                = vmin,
+                                   vmax                = vmax,
                                    use_basemap         = True,
-                                   show_colorbar       = True,
+                                   show_colorbar       = False,
                                    return_plot_handler = True,
                                    cmap_data           = cmap_bwr )
+                    
                 cax = f.add_axes ([ 0.9, 0.1, 0.03, 0.8 ])
                 cb = f.colorbar ( x.im, cax = cax )
-                cb.ax.text ( 1.5, 1, r'$\frac{W}{m^{2}}$', size = 32 )
+                cb.ax.text ( 1.8, 1, r'$\frac{W}{m^{2}}$', size = 32 )
                 plt.suptitle ( r'$\Delta_{C_{%d}R_{%d}}$' % (
                     can.B4J_canno, ref.B4J_refno ) + \
                                r',   $C_{%d}$: %s, $R_{%d}$: %s' % (
                                    can.B4J_canno, can.B4J_name,
                                    ref.B4J_refno, ref.B4J_name ),  fontsize = 24 )
+                plt.subplots_adjust ( hspace = 0, wspace = 0 )
                 plt.savefig ( can.B4J_varpaths [ plot_delta_str ] )
                 plt.close ()
 
@@ -405,7 +419,12 @@ with \\texttt{yseasmean}($X$) defined as
         assert globalNtime_mean
         globalNtime_mean [ 'plots' ].append ( plot_globalNtime_mean_str )
 
+        colors = ['b', 'c', 'y', 'm', 'r']
+        colored_dots = ['bo', 'co', 'yo', 'mo', 'ro']
+
         fig = plt.figure()
+
+        refs = []
         
         for can in self.experiments:
             if not can.B4J_iscan: continue   
@@ -413,8 +432,9 @@ with \\texttt{yseasmean}($X$) defined as
                 if not ref.B4J_isref: continue
                 
                 gm_str = "gm-ref%d" % ref.B4J_refno
+                tm_str = "tm-ref%d" % ref.B4J_refno
                 globalNtime_mean [ 'infiles' ].append ( can.B4J_varpaths [ gm_str ])
-                nc_fid = Dataset ( can.B4J_varpaths [ gm_str ], 'r')  
+                nc_fid = Dataset ( can.B4J_varpaths [ gm_str ])  
                 time = nc_fid.variables [ 'time' ][ : ]
                 albedo_gm = nc_fid.variables['albedo'][:] 
                 nc_fid.close ()
@@ -424,16 +444,30 @@ with \\texttt{yseasmean}($X$) defined as
                 albedo_tm = nc_fid.variables [ 'albedo' ][ : ] 
                 nc_fid.close ()
                 
-                plt.plot ( time, albedo_gm [ :, 0, 0 ], 'ro')
-                plt.axhline ( albedo_tm [ 0, 0, 0 ], color = "r")
+                plt.plot ( time, albedo_gm [ :, 0, 0 ],
+                           colored_dots [ ref.B4J_refno ],
+                           label = ref.B4J_name + r' ($R_{%s}$)' % ref.B4J_refno )
+                                   #marker = 'o', 
+                                   #color = colors [ ref.B4J_refno ])
+                plt.axhline ( albedo_tm [ 0, 0, 0 ],
+                              color =  colors [ ref.B4J_refno ])
 
                 
-        plt.title ( "my title ", y = 1.08 )
-        plt.ylabel ( r'$\sum_{i=0}^\infty x_i$', rotation = 0 )
+        plt.title ( "Global and time mean", y = 1.08 )
+        plt.ylabel ( r'$\frac{W}{m^{2}}$',
+                     rotation = 0,
+                     position = ( -0.2, .96 ),
+                     fontsize = 20 )
         plt.xlabel ( "season")
         plt.xticks ( time, seasons )
+        plt.grid ( 'on' )
+        lgd = plt.legend ( numpoints = 1,  
+                           loc = 2,                  
+                           bbox_to_anchor=(1.05,1))
         plt.savefig ( plot_globalNtime_mean_str, 
-             dpi = 100 )
+             dpi = 100, 
+             bbox_extra_artists= ( lgd, ), 
+             bbox_inches='tight' )
         plt.close ()
         
     

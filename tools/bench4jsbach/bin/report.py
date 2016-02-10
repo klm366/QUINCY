@@ -45,15 +45,33 @@ section_template = """\section{%(section)s}
 subsection_template = """\subsection{%(subsection)s}"""
 subsubsection_template = """\subsubsection{%(subsubsection)s}"""
 
-includegraphics_template = """
-\\begin{center}
-\includegraphics[width=\\textwidth]{%(graphicpath)s}
-\\end{center}
-"""
-
 report_dirname = "report"
 source_dirname = "sources"
 
+
+def includegraphics_template ( path, width = '1', hspace = '0' ):
+    
+    ret = "\\includegraphics[width=%s\\textwidth]{%s}" % ( width, path )
+    if hspace:
+        ret = """
+
+\\hspace*{%scm}%s
+
+""" % ( hspace, ret )
+    else:
+        ret = """ 
+
+\\begin{centering}
+%s
+\\end{centering}
+
+    """ % ret
+
+    return ret
+
+        
+
+    
 
 def lateXify ( string ):
     assert isinstance ( string, str )
@@ -165,12 +183,17 @@ variable & name of analyis or plot \\\\
                         for ref in self.experiments:
                             if not ref.B4J_isref: continue
                             plot = analyse [ 'plots' ][ no ]
-                            albedo_body += includegraphics_template % { 'graphicpath': plot }
+                            albedo_body += includegraphics_template (  plot,
+                                                                       width      = '1.5',
+                                                                       hspace     = '-4' )
+                    
                             no += 1
             else:
                 if len ( analyse [ 'plots' ]):
                     plot = analyse [ 'plots' ][ 0 ]
-                    albedo_body += includegraphics_template % { 'graphicpath': plot }
+                    albedo_body += includegraphics_template ( plot,
+                                                              width    = '.8',
+                                                              hspace   = '0' )
 
 
         section_intro = "The result data and the plots can be found in\\\\ \\ \\\\"
