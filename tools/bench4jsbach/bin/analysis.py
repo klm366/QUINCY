@@ -131,7 +131,9 @@ DETAILS
         suffix    = "nc"
         
         self.analyses [ A_varname ] = copy.deepcopy ( self.analyses_var_item )
-        
+
+        # preparation of runtime storage and texts for analyses 
+        # 3.a)
         delta = copy.deepcopy ( self.analyses_var_test_item )
         delta [ 'name' ]   = 'delta'
         teXt =  """
@@ -142,24 +144,43 @@ is weighted with the reference  experiments downwelling radiation seasonal means
         && A_{sm} = \\texttt{yseasmean}( A ), \\\\
         && D_{sm} = \\texttt{yseasmean} ( D ),
 \\end{eqnarray*}
+with
+\\begin{eqnarray*}
+\\Delta & := & \\textnormal{ weighted difference of albedo in } \\frac{W}{m^{2}} \\\\
+A & := & \\textnormal{albedo, quotient of upwelling, downwelling radiation in } \% \\\\
+D & := & \\textnormal{downwelling solar radiation in } \\frac{W}{m^{2}}
+\\end{eqnarray*}
+
 with \\texttt{yseasmean}($X$) defined as
 \\begin{eqnarray*}
   y_{S,x} & = & n_{S}^{-1}\\sum_{i=0}^{n_{S}} x_{i}, \\\\
         && t\\mapsto i, t \in S,  \\\\
    && S \in \{\\textnormal{DJF, MAM, JJA, SON} \}.
 \\end{eqnarray*}
-"""
-  
+"""  
         delta [ 'teXts' ]. append ( teXt )
         delta [ 'title' ]  = 'Seasonal means difference plots'
         delta [ 'matrix' ] = True
         self.analyses [ A_varname ].append ( delta )
-        
+
+
+        # 3.b,c)
         globalNtime_mean = copy.deepcopy ( self.analyses_var_test_item )
         globalNtime_mean [ 'name' ]   = 'globalNtime_mean'
-        globalNtime_mean [ 'teXts' ]. append (
-            'Global and time means of ' +\
-            'difference of albedo seasonal means weighted by rsds seasonal means' )
+        teXt = """
+We calculate the global and time means of the difference of albedo seasonal means 
+weighted by downwelling radiation seasonal means from the last section. The global 
+means is 
+\\begin{eqnarray*}
+gm_{CR} & = & \\texttt{fldmean} ( \\Delta_{CR} * \\texttt{land-sea-mask} )
+\\end{eqnarray*}
+with \\texttt{fldmean}($X$) defined as
+\\begin{eqnarray*}
+  y_{S,x} & = & n_{S}^{-1}\\sum_{i=0}^{n_{S}} x_{i}, \\\\
+\\end{eqnarray*}
+
+"""
+        globalNtime_mean [ 'teXts' ]. append ( teXt )
         globalNtime_mean [ 'title' ]  = 'Global and time means'
         globalNtime_mean [ 'matrix' ] = False
         self.analyses [ A_varname ].append ( globalNtime_mean )
@@ -367,11 +388,11 @@ with \\texttt{yseasmean}($X$) defined as
                     'suffix'         : 'png' }
 
 
-                f = plt.figure ( figsize = ( 15,12 ))
+                f = plt.figure ( figsize = ( 15, 10 ))
                 ax = [ f.add_subplot ( 2, 2, i + 1 ) for i in range ( 4 )]
                 d = [ None ] * 4                
                 gs1 = gridspec.GridSpec ( 2, 2 )
-                gs1.update ( wspace = -0.2, hspace = -0.2  ) #0.001, hspace = 0.001 )                
+                gs1.update ( wspace = -0.08, hspace = -0.04  ) #0.001, hspace = 0.001 )                
                 for i in range ( 4 ):
                     ax [i] = plt.subplot ( gs1 [ i ])
                     d [i] = Data ( can.B4J_varpaths [ delta_str ],
@@ -379,7 +400,8 @@ with \\texttt{yseasmean}($X$) defined as
                                    read       = True,
                                    start_time = dates [ i ],
                                    label      = seasons [ i ] )    
-                    x = map_plot ( d[i], ax         = ax[i],
+                    x = map_plot ( d[i],
+                                   ax                  = ax[i],
                                    vmin                = vmin,
                                    vmax                = vmax,
                                    use_basemap         = True,
@@ -455,7 +477,7 @@ with \\texttt{yseasmean}($X$) defined as
         plt.title ( "Global and time mean", y = 1.08 )
         plt.ylabel ( r'$\frac{W}{m^{2}}$',
                      rotation = 0,
-                     position = ( -0.3, .96 ),
+                     position = ( -0.4, .96 ),
                      fontsize = 20 )
         plt.xlabel ( "season")
         plt.xticks ( time, seasons )

@@ -22,6 +22,7 @@ doc_template = """
 
 \\setlength{\parindent}{0pt}
 
+
 \\begin{document}
 
 \\title{%(title)s}
@@ -68,9 +69,6 @@ def includegraphics_template ( path, width = '1', hspace = '0' ):
     """ % ret
 
     return ret
-
-        
-
     
 
 def lateXify ( string ):
@@ -117,14 +115,15 @@ are compared with the reference experiments
 \\end{itemize} 
 \\ \\\\ \\\\
 
-The variables tested and analysed run are
+The variables tested and the analyses and plots made are listed in the 
+table below.
 \\ \\\\
 
-\\begin{tabularx}{\\linewidth}{lL}
+\\begin{tabularx}{\\linewidth}{lLL}
 \\toprule
-variable & name of analyis or plot \\\\
+\\textbf{variable} & \\textbf{name of analyis or plot} & \\textbf{description} \\\\
 \\addlinespace
-\\cmidrule(r){1-2}
+\\cmidrule(r){1-3}
 %s
 \\\\ \\bottomrule
 \\end{tabularx}
@@ -138,7 +137,7 @@ variable & name of analyis or plot \\\\
                                                    str ( ref.B4J_refno )) \
               if ref.B4J_isref else '' \
                 for ref in self.experiments ),
-    '\\\\\n'.join ( '%s & %s' % (( lateXify ( k ), lateXify ( str ( a [ 'name' ]))) \
+    '\\\\\n'.join ( '%s & %s &' % (( lateXify ( k ), lateXify ( str ( a [ 'name' ]))) \
                                  if self.analyses [ k ].index ( a ) == 0 \
                                  else ( '', lateXify ( str ( a [ 'name' ])))) \
                                  for k in self.analyses \
@@ -192,7 +191,7 @@ variable & name of analyis or plot \\\\
                 if len ( analyse [ 'plots' ]):
                     plot = analyse [ 'plots' ][ 0 ]
                     albedo_body += includegraphics_template ( plot,
-                                                              width    = '.9',
+                                                              width    = '1',
                                                               hspace   = '0' )
 
 
@@ -216,7 +215,16 @@ variable & name of analyis or plot \\\\
             os.makedirs ( tmp_path )
         os.chdir ( source_path )
 
-        page = doc_template % { 'title'      : 'Bench4JSBACH Report', 
+        title_second = "%s" % ''.join ( '\\\\{!s} ({!s})'. format ( lateXify ( can.B4J_name ),  lateXify ( can.B4J_etype )) \
+                if can.B4J_iscan else '' \
+                for can in self.experiments )
+
+        print '############'
+
+        page = doc_template % { 'title'      : """
+        {\\normalsize \\textbf{Bench4JSBach}} {\\Large Report for Experiments} 
+        {\\LARGE %s}
+        """ % title_second, 
                                 'author'     : "%s" % self.config [ 'author' ],
                                 'institute'  : "Max-Planck-Institute for Meteorology",
                                 'department' : "Land Department",
@@ -224,6 +232,9 @@ variable & name of analyis or plot \\\\
                                 'abstract'   : self.write_description (),
                                 'body'       : self.body,
                                 'epilog'     : "This is an epilog."}
+
+        print '###########'
+        #\\\\ \\medskip
         self.logger.debug ( "Latex source code: " + log_message_newline +\
                             page )
 
