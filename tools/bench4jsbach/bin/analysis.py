@@ -134,8 +134,6 @@ DETAILS
 
         # preparation of runtime storage and texts for analyses 
         # 3.a)
-        delta = copy.deepcopy ( self.analyses_var_test_item )
-        delta [ 'name' ]   = 'delta'
         teXt =  """
 The difference between candidate and reference experiments albedo seasonal means 
 is weighted with the reference  experiments downwelling radiation seasonal means:
@@ -151,22 +149,24 @@ A & := & \\textnormal{albedo, quotient of upwelling, downwelling radiation in } 
 D & := & \\textnormal{downwelling solar radiation in } \\frac{W}{m^{2}}
 \\end{eqnarray*}
 
-with \\texttt{yseasmean}($X$) defined as
+and \\texttt{yseasmean}($X$) defined as
 \\begin{eqnarray*}
-  y_{S,x} & = & n_{S}^{-1}\\sum_{i=0}^{n_{S}} x_{i}, \\\\
+  y_{SX} & = & n_{S}^{-1}\\sum_{i=0}^{n_{S}} x_{iX}, \\\\
         && t\\mapsto i, t \in S,  \\\\
    && S \in \{\\textnormal{DJF, MAM, JJA, SON} \}.
 \\end{eqnarray*}
+
 """  
+        delta = copy.deepcopy ( self.analyses_var_test_item )
+        delta [ 'name' ]   = 'delta'
         delta [ 'teXts' ]. append ( teXt )
         delta [ 'title' ]  = 'Seasonal means difference plots'
         delta [ 'matrix' ] = True
+        delta [ 'vector' ] = False
         self.analyses [ A_varname ].append ( delta )
 
-
+        
         # 3.b,c)
-        globalNtime_mean = copy.deepcopy ( self.analyses_var_test_item )
-        globalNtime_mean [ 'name' ]   = 'globalNtime_mean'
         teXt = """
 We calculate the global and time means of the difference of albedo seasonal means 
 weighted by downwelling radiation seasonal means from the last section. The global 
@@ -174,15 +174,33 @@ means is
 \\begin{eqnarray*}
 gm_{CR} & = & \\texttt{fldmean} ( \\Delta_{CR} * \\texttt{land-sea-mask} )
 \\end{eqnarray*}
-with \\texttt{fldmean}($X$) defined as
+with
 \\begin{eqnarray*}
-  y_{S,x} & = & n_{S}^{-1}\\sum_{i=0}^{n_{S}} x_{i}, \\\\
+gm & := & \\textnormal{ global mean of weighted difference of albedo  in } \\frac{W}{m^{2}}
+\\end{eqnarray*}
+and \\texttt{fldmean}($X$) defined as
+\\begin{eqnarray*}
+  y_{t} & = & \\sum_{i=0}^{n_{X}} w_{Xi} x_{ti} \\\\
+\\end{eqnarray*}
+The time mean is then calculated with
+\\begin{eqnarray*}
+tm_{CR} & = & \\texttt{timemean} ( gm_{CR} )
+\\end{eqnarray*}
+\\begin{eqnarray*}
+tm & := & \\textnormal{ time mean of global mean of weighted difference of seasonal mean of albedo  in } \\frac{W}{m^{2}}
+\\end{eqnarray*}
+and \\texttt{timemean}($X$) defined as
+\\begin{eqnarray*}
+  y & = &  n^{-1} \\sum_{i=0}^{n_{T}} x_{i} \\\\
 \\end{eqnarray*}
 
 """
+        globalNtime_mean = copy.deepcopy ( self.analyses_var_test_item )
+        globalNtime_mean [ 'name' ]   = 'globalNtime_mean'
         globalNtime_mean [ 'teXts' ]. append ( teXt )
         globalNtime_mean [ 'title' ]  = 'Global and time means'
         globalNtime_mean [ 'matrix' ] = False
+        globalNtime_mean [ 'vector' ] = True
         self.analyses [ A_varname ].append ( globalNtime_mean )
         
         
@@ -375,6 +393,10 @@ with \\texttt{fldmean}($X$) defined as
                 seasons =  ['DJF','MAM','JJA','SON']
 
                 # 4.a.3.a)
+                
+                delta = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "delta" ), None )
+                assert delta
+                
                 dates = cdo.showtimestamp ( input = can.B4J_varpaths [ delta_str ] )[ 0 ].split ( " ")
                 dates = [ datetime.strptime ( str ( x ), '%Y-%m-%dT%H:%M:%S') for x in dates if x ]
                 plot_delta_str = delta_str + "plot"
@@ -420,35 +442,35 @@ with \\texttt{fldmean}($X$) defined as
                 plt.savefig ( can.B4J_varpaths [ plot_delta_str ] )
                 plt.close ()
 
-                delta = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "delta" ), None )
-                if delta:
-                    delta [ 'infiles' ].append ( can.B4J_varpaths [ delta_str ])
-                    delta [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ])
+                delta [ 'infiles' ].append ( can.B4J_varpaths [ delta_str ])
+                delta [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ])
                 
    
         # 4.a.3.b,c)
-        
-        plot_globalNtime_mean_str =  self.path_template % {
-            'path'           : self.graphic_path,
-            'varname'        : A_varname,
-            'classification' : "gNtmeans",
-            'expname'        : self.bench_name,
-            'startdate'      : str ( yearlist [ 0 ]),
-            'finaldate'      : str ( yearlist [ -1 ]), 
-            'suffix'         : 'png' }
+
         globalNtime_mean = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "globalNtime_mean" ), None )
         assert globalNtime_mean
-        globalNtime_mean [ 'plots' ].append ( plot_globalNtime_mean_str )
 
         colors = ['b', 'c', 'y', 'm', 'r']
         colored_dots = ['bo', 'co', 'yo', 'mo', 'ro']
 
-        fig = plt.figure()
-
-        refs = []
         
         for can in self.experiments:
-            if not can.B4J_iscan: continue   
+            if not can.B4J_iscan: continue
+            
+            plot_globalNtime_mean_str =  self.path_template % {
+                'path'           : self.graphic_path,
+                'varname'        : A_varname,
+                'classification' : "gNtmeans",
+                'expname'        : can.B4J_name,
+                'startdate'      : str ( yearlist [ 0 ]),
+                'finaldate'      : str ( yearlist [ -1 ]),  
+                'suffix'         : 'png' }
+            globalNtime_mean [ 'plots' ].append ( plot_globalNtime_mean_str )
+            
+            fig = plt.figure()
+            
+            refs = []
             for ref in self.experiments:
                 if not ref.B4J_isref: continue
                 
@@ -474,22 +496,25 @@ with \\texttt{fldmean}($X$) defined as
                               color =  colors [ ref.B4J_refno ])
 
                 
-        plt.title ( "Global and time mean", y = 1.08 )
-        plt.ylabel ( r'$\frac{W}{m^{2}}$',
-                     rotation = 0,
-                     position = ( -0.4, .96 ),
-                     fontsize = 20 )
-        plt.xlabel ( "season")
-        plt.xticks ( time, seasons )
-        plt.grid ( 'on' )
-        lgd = plt.legend ( numpoints = 1,  
-                           loc = 2,                  
-                           bbox_to_anchor=(1.05,1))
-        plt.savefig ( plot_globalNtime_mean_str, 
-             dpi = 100, 
-             bbox_extra_artists= ( lgd, ), 
-             bbox_inches='tight' )
-        plt.close ()
+            plt.title ( r'$gm_{C_{%d}R}$' % can.B4J_canno + \
+                        " and " +\
+                        r'$tm_{C_{%d}R}$' % can.B4J_canno,
+                        y = 1.08 )
+            plt.ylabel ( r'$\frac{W}{m^{2}}$',
+                         rotation = 0,
+                         position = ( -0.4, .96 ),
+                         fontsize = 20 )
+            plt.xlabel ( "season")
+            plt.xticks ( time, seasons )
+            plt.grid ( 'on' )
+            lgd = plt.legend ( numpoints = 1,  
+                               loc = 2,                  
+                               bbox_to_anchor=(1.05,1))
+            plt.savefig ( plot_globalNtime_mean_str, 
+                          dpi = 100, 
+                          bbox_extra_artists= ( lgd, ), 
+                          bbox_inches='tight' )
+            plt.close ()
         
     
         # 4.b) if report is switched on, prepare text blocks

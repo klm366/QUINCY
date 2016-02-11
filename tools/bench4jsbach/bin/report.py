@@ -94,11 +94,12 @@ class Report ( object ):
                                'plots'    : [],
                                'teXts'    : [],
                                'matrix'   : False,
+                               'vector'   : False,
+                               'cans'     : [],
                                'title'    : None }
 
     def __init__ ( self ):
         self.doc_template = doc_template
-        
 
     def write_description ( self ):
 
@@ -167,12 +168,15 @@ table below.
         print self.analyses
 
         for analyse in self.analyses [ varname ]:
+            print '################ analyse ##################'
+            print analyse
+            print '##########################################'
+            
             albedo_body += subsection_template % { 'subsection': lateXify ( analyse [ 'title' ])}
             albedo_body +=  analyse [ 'teXts' ][ 0 ]
             if analyse [ 'matrix' ]:
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
-                    #can_name =  can.B4J_name.replace ( '_','\_' )
                     can_name = lateXify ( can.B4J_name )
                     title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
                             ( can_name, can.B4J_canno ) 
@@ -185,14 +189,20 @@ table below.
                             albedo_body += includegraphics_template (  plot,
                                                                        width      = '1.5',
                                                                        hspace     = '-4' )
-                    
                             no += 1
-            else:
-                if len ( analyse [ 'plots' ]):
-                    plot = analyse [ 'plots' ][ 0 ]
-                    albedo_body += includegraphics_template ( plot,
-                                                              width    = '1',
-                                                              hspace   = '0' )
+                            
+            elif analyse [ 'vector' ]:
+                for can in self.experiments:
+                    if not can.B4J_iscan: continue
+                    can_name = lateXify ( can.B4J_name )
+                    title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
+                            ( can_name, can.B4J_canno ) 
+                    albedo_body += subsubsection_template % { 'subsubsection': title }
+                    if len ( analyse [ 'plots' ]):
+                        plot = analyse [ 'plots' ][ 0 ]
+                        albedo_body += includegraphics_template ( plot,
+                                                                  width    = '1',
+                                                                  hspace   = '0' )
 
 
         section_intro = "The result data and the plots can be found in\\\\ \\ \\\\"
