@@ -2,6 +2,7 @@
 
 import os, subprocess, shutil, re
 import json
+import copy
 
 from util import log_message_newline
 
@@ -50,6 +51,30 @@ report_dirname = "report"
 source_dirname = "sources"
 
 
+analyses_var_item = []
+
+analyses_var_test_item = { 'name'     : None,
+                           'infiles'  : [],
+                           'outfiles' : [],
+                           'plots'    : [],
+                           'teXts'    : [],
+                           'matrix'   : False,
+                           'vector'   : False,
+                           'cans'     : [],
+                           'title'    : None }
+
+analyses_var_test_can_item = { 'name'     : None,
+                               'infiles'  : [],
+                               'outfiles' : [],
+                               'plots'    : []}
+
+def init_analyses_var_test_can_item ( name = None ):
+    ret =  copy.deepcopy ( analyses_var_test_can_item )
+    ret [ 'name' ] = name 
+    return ret
+                   
+
+
 def includegraphics_template ( path, width = '1', hspace = '0' ):
     
     ret = "\\includegraphics[width=%s\\textwidth]{%s}" % ( width, path )
@@ -87,16 +112,6 @@ class Report ( object ):
     body = ""
     graphic = None
     analyses = {}
-    analyses_var_item = []
-    analyses_var_test_item = { 'name'     : None,
-                               'infiles'  : [],
-                               'outfiles' : [],
-                               'plots'    : [],
-                               'teXts'    : [],
-                               'matrix'   : False,
-                               'vector'   : False,
-                               'cans'     : [],
-                               'title'    : None }
 
     def __init__ ( self ):
         self.doc_template = doc_template
@@ -153,6 +168,7 @@ table below.
         description += subsection_template % { 'subsection': 'Reference experiments' }
         for ref in self.experiments:
             if not ref.B4J_isref: continue
+            if ref.B4J_name == can.B4J_name: continue
             description +=  ref.teX_repr ()
 
         return description 
@@ -168,9 +184,6 @@ table below.
         print self.analyses
 
         for analyse in self.analyses [ varname ]:
-            print '################ analyse ##################'
-            print analyse
-            print '##########################################'
             
             albedo_body += subsection_template % { 'subsection': lateXify ( analyse [ 'title' ])}
             albedo_body +=  analyse [ 'teXts' ][ 0 ]
@@ -181,11 +194,14 @@ table below.
                     title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
                             ( can_name, can.B4J_canno ) 
                     albedo_body += subsubsection_template % { 'subsubsection': title }
-                    if len ( analyse [ 'plots' ]):
+                    analyse_can = next (( item for item in analyse [ 'cans' ] \
+                                          if item [ 'name' ] == can.B4J_name ), None )
+                    if len ( analyse_can [ 'plots' ]):
                         no = 0
                         for ref in self.experiments:
                             if not ref.B4J_isref: continue
-                            plot = analyse [ 'plots' ][ no ]
+                            if ref.B4J_name == can.B4J_name: continue
+                            plot = analyse_can [ 'plots' ][ no ]
                             albedo_body += includegraphics_template (  plot,
                                                                        width      = '1.5',
                                                                        hspace     = '-4' )
@@ -198,8 +214,10 @@ table below.
                     title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
                             ( can_name, can.B4J_canno ) 
                     albedo_body += subsubsection_template % { 'subsubsection': title }
-                    if len ( analyse [ 'plots' ]):
-                        plot = analyse [ 'plots' ][ 0 ]
+                    analyse_can = next (( item for item in analyse [ 'cans' ] \
+                                          if item [ 'name' ] == can.B4J_name ), None )
+                    if len ( analyse_can [ 'plots' ]):
+                        plot = analyse_can [ 'plots' ][ 0 ]
                         albedo_body += includegraphics_template ( plot,
                                                                   width    = '1',
                                                                   hspace   = '0' )
@@ -210,7 +228,6 @@ table below.
         section = section_template % { 'section' : "%s: analyses and benchmarks for variable" % \
                                        varname.title (),
                                        'body' : section_intro + albedo_body }
-        print "section", section
         self.body += section
     
 
@@ -229,8 +246,6 @@ table below.
                 if can.B4J_iscan else '' \
                 for can in self.experiments )
 
-        print '############'
-
         page = doc_template % { 'title'      : """
         {\\normalsize \\textbf{Bench4JSBach}} {\\Large Report for Experiments} 
         {\\LARGE %s}
@@ -243,8 +258,6 @@ table below.
                                 'body'       : self.body,
                                 'epilog'     : "This is an epilog."}
 
-        print '###########'
-        #\\\\ \\medskip
         self.logger.debug ( "Latex source code: " + log_message_newline +\
                             page )
 

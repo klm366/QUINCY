@@ -20,7 +20,10 @@ from pycmbs.mapping import map_plot
 
 from util import logger as dkl_logger
 
-
+from report import ( analyses_var_item,
+                     analyses_var_test_item,
+                     analyses_var_test_can_item,
+                     init_analyses_var_test_can_item )
 
 # methods #
 def find_files ( pattern, path, single = True, raise_e = False ):
@@ -130,7 +133,7 @@ DETAILS
         U_varname = "rsus"
         suffix    = "nc"
         
-        self.analyses [ A_varname ] = copy.deepcopy ( self.analyses_var_item )
+        self.analyses [ A_varname ] = copy.deepcopy ( analyses_var_item )
 
         # preparation of runtime storage and texts for analyses 
         # 3.a)
@@ -157,12 +160,14 @@ and \\texttt{yseasmean}($X$) defined as
 \\end{eqnarray*}
 
 """  
-        delta = copy.deepcopy ( self.analyses_var_test_item )
+        delta = copy.deepcopy ( analyses_var_test_item )
         delta [ 'name' ]   = 'delta'
         delta [ 'teXts' ]. append ( teXt )
         delta [ 'title' ]  = 'Seasonal means difference plots'
         delta [ 'matrix' ] = True
         delta [ 'vector' ] = False
+        delta [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
+                               for can in self.experiments if can.B4J_iscan ]
         self.analyses [ A_varname ].append ( delta )
 
         
@@ -195,12 +200,14 @@ and \\texttt{timemean}($X$) defined as
 \\end{eqnarray*}
 
 """
-        globalNtime_mean = copy.deepcopy ( self.analyses_var_test_item )
+        globalNtime_mean = copy.deepcopy ( analyses_var_test_item )
         globalNtime_mean [ 'name' ]   = 'globalNtime_mean'
         globalNtime_mean [ 'teXts' ]. append ( teXt )
         globalNtime_mean [ 'title' ]  = 'Global and time means'
         globalNtime_mean [ 'matrix' ] = False
         globalNtime_mean [ 'vector' ] = True
+        globalNtime_mean [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
+                                          for can in self.experiments if can.B4J_iscan ]
         self.analyses [ A_varname ].append ( globalNtime_mean )
         
         
@@ -442,8 +449,10 @@ and \\texttt{timemean}($X$) defined as
                 plt.savefig ( can.B4J_varpaths [ plot_delta_str ] )
                 plt.close ()
 
-                delta [ 'infiles' ].append ( can.B4J_varpaths [ delta_str ])
-                delta [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ])
+                delta_can = next (( item for item in delta [ 'cans' ] if item [ 'name' ] == can.B4J_name ), None )
+                assert delta_can
+                delta_can [ 'infiles' ].append ( can.B4J_varpaths [ delta_str ])
+                delta_can [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ])
                 
    
         # 4.a.3.b,c)
@@ -451,8 +460,8 @@ and \\texttt{timemean}($X$) defined as
         globalNtime_mean = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "globalNtime_mean" ), None )
         assert globalNtime_mean
 
-        colors = ['b', 'c', 'y', 'm', 'r']
-        colored_dots = ['bo', 'co', 'yo', 'mo', 'ro']
+        colors = [ 'r', 'g', 'b', 'c', 'y', 'm' ]
+        colored_dots = [ 'ro', 'go', 'bo', 'co', 'yo', 'mo' ]
 
         
         for can in self.experiments:
@@ -466,34 +475,37 @@ and \\texttt{timemean}($X$) defined as
                 'startdate'      : str ( yearlist [ 0 ]),
                 'finaldate'      : str ( yearlist [ -1 ]),  
                 'suffix'         : 'png' }
-            globalNtime_mean [ 'plots' ].append ( plot_globalNtime_mean_str )
+            globalNtime_mean_can = next (( item for item in globalNtime_mean [ 'cans' ] \
+                                           if item [ 'name' ] == can.B4J_name ), None )
+            assert globalNtime_mean_can
+            globalNtime_mean_can [ 'plots' ].append ( plot_globalNtime_mean_str )
             
             fig = plt.figure()
             
             refs = []
             for ref in self.experiments:
                 if not ref.B4J_isref: continue
+                if ref.B4J_name == can.B4J_name: continue
                 
                 gm_str = "gm-ref%d" % ref.B4J_refno
                 tm_str = "tm-ref%d" % ref.B4J_refno
-                globalNtime_mean [ 'infiles' ].append ( can.B4J_varpaths [ gm_str ])
+                globalNtime_mean_can [ 'infiles' ].append ( can.B4J_varpaths [ gm_str ])
                 nc_fid = Dataset ( can.B4J_varpaths [ gm_str ])  
                 time = nc_fid.variables [ 'time' ][ : ]
                 albedo_gm = nc_fid.variables['albedo'][:] 
                 nc_fid.close ()
-                
-                globalNtime_mean [ 'infiles' ].append ( can.B4J_varpaths [ tm_str ])
+
+                globalNtime_mean_can [ 'infiles' ].append ( can.B4J_varpaths [ tm_str ])
                 nc_fid = Dataset ( can.B4J_varpaths [ tm_str ], 'r')
                 albedo_tm = nc_fid.variables [ 'albedo' ][ : ] 
                 nc_fid.close ()
                 
                 plt.plot ( time, albedo_gm [ :, 0, 0 ],
                            colored_dots [ ref.B4J_refno ],
-                           label = ref.B4J_name + r' ($R_{%s}$)' % ref.B4J_refno )
-                                   #marker = 'o', 
-                                   #color = colors [ ref.B4J_refno ])
+                           label = r'$gm_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ) +  r', $R_{%s}$: ' % ref.B4J_refno + ref.B4J_name )
                 plt.axhline ( albedo_tm [ 0, 0, 0 ],
-                              color =  colors [ ref.B4J_refno ])
+                              color =  colors [ ref.B4J_refno ],
+                              label = r'$tm_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ))
 
                 
             plt.title ( r'$gm_{C_{%d}R}$' % can.B4J_canno + \
@@ -515,6 +527,7 @@ and \\texttt{timemean}($X$) defined as
                           bbox_extra_artists= ( lgd, ), 
                           bbox_inches='tight' )
             plt.close ()
+
         
     
         # 4.b) if report is switched on, prepare text blocks
