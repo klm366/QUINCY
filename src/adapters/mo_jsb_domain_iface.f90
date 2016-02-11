@@ -586,10 +586,10 @@ CONTAINS
     nhgl = ngl / 2
     nvclev = 0
 
-    !-> TODO-JN implement parallel case - only read if io proc and the p_cast
+    !-> TODO implement parallel case - only read if io proc and the p_cast?
     !CALL p_bcast (nlon, p_io)       
 #endif
-  END SUBROUTINE
+  END SUBROUTINE get_nlon_nlat_from_file
 
 
   !>
@@ -607,9 +607,6 @@ CONTAINS
     USE mo_mpi,           ONLY : p_nprocs, p_parallel_io, p_pe
     USE mo_transpose,     ONLY : indx
     USE mo_io_units,      ONLY : nout
-    USE mo_gaussgrid,     ONLY : inigau
-
-    USE mo_echam_convect_tables, ONLY : init_convect_tables
 #endif
 
     INTEGER, INTENT(in) :: nlon, nlat, nproca, nprocb, npedim
@@ -676,12 +673,8 @@ CONTAINS
 
     ! Copy content of local_decomposition to output 
     decomposition = local_decomposition
-
-    !TODO-check-with-RMS: where to init further echam specific things? 
-    CALL inigau              ! required for get_lon, get_lat and get_area
-    CALL init_convect_tables 
 #endif
-  END SUBROUTINE
+  END SUBROUTINE jsbalone_init_decomp
 
 #endif
 END MODULE mo_jsb_domain_iface

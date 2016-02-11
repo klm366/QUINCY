@@ -59,7 +59,7 @@ CONTAINS
 
     CALL init_parallel_iface
 
-    !IF (jsbach_runs_standalone()) CALL init_mpi_communicators !TODO-check-with-RMS: remove? now done in the driver!
+    !IF (jsbach_runs_standalone()) CALL init_mpi_communicators !TODO-check-with-RMS: remove: done in the driver!
 
     no_of_models = get_no_of_models()
     ALLOCATE(jsbach%models(no_of_models))
@@ -83,7 +83,7 @@ CONTAINS
        current%config => new_model_config(current%namelist_filename)
     END DO
 
-    !IF (jsbach_runs_standalone) CALL init_domains(jsbach%models(:)%grid%filename) !TODO-check-with-RMS: ??
+    !IF (jsbach_runs_standalone) CALL init_domains(jsbach%models(:)%grid%filename) !TODO-check-with-RMS: not required?!
 
     CALL message(TRIM(routine), 'done basic initialization')
 

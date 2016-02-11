@@ -83,7 +83,7 @@ CONTAINS
       lresume,              &
       no_cycles,            &
       dt_start,             &
-!      dt_resume,            &  !TODO-check-with-RMS: lresume for jsb4 standalone
+!      dt_resume,            &  !TODO: lresume for jsb4 standalone
       dt_stop,              &
       no_days,              &
       no_steps,             &

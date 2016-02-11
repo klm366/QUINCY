@@ -31,11 +31,11 @@ CONTAINS
     &            psnew)
 
 #ifndef STANDALONE
-! TODO-check-with-RMS: ICON case ?
-! i.e. #ifdef __ICON__
-    ! USE mo_echam_vdiff_params, ONLY: cvdifts
-! #else ??
-    USE mo_physc2, ONLY: cvdifts   ! TBD: change to 1. for standalone JSBACH
+#ifdef __ICON__
+    USE mo_echam_vdiff_params, ONLY: cvdifts
+#else
+    USE mo_physc2, ONLY: cvdifts
+#endif
 #endif
 
     USE mo_physical_constants, ONLY: &
@@ -62,7 +62,6 @@ CONTAINS
 
 #ifdef STANDALONE
     REAL(wp) :: cvdifts
-    !TODO-check-with-RMS: according to current echam version this is 1.5 -> why above 1.?
     cvdifts = 1.5_wp
 #endif
 

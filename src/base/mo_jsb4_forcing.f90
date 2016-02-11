@@ -7,7 +7,7 @@
 !! @par Revision History
 !! Initial version: jsbach3 - mo_jsbalone_forcing.f90 -- current implementation only for daily, timestep or constant data
 
-!TODO-check-with-RMS: Delete not required shortwave functions/ namelist flags and refactor whats left
+!TODO-JN: Delete not required shortwave functions/ namelist flags and refactor whats left
 ! (The jsb3 functions heavily duplicate code!)  -- (check jsbach init header files in cosmos-landveg?)
 
 MODULE mo_jsb4_forcing
@@ -16,7 +16,7 @@ MODULE mo_jsb4_forcing
 #include "dsl_jsbach.inc"
 
   !>>> TODO: echam!
-  USE mo_time_control,    ONLY: get_date_components, next_date, current_date, lstart, lresume, delta_time, time_step_len
+  USE mo_time_control,    ONLY: next_date, current_date, lstart, lresume, delta_time, time_step_len
   USE mo_netcdf,          ONLY: nf_check, nf_get_vara_double, nf_inq_dimid, nf_inq_dimlen, &
                                 nf_inq_varid, NF_MAX_NAME, nf_get_att_text, NF_NOERR
   USE mo_time_conversion, ONLY: IMerge_HMS2Sec, day_in_year
@@ -36,6 +36,7 @@ MODULE mo_jsb4_forcing
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, p_bcast
   USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input, jsb_netcdf_close_file, jsb_netcdf_read_2d_time
+  USE mo_jsb_time,           ONLY: get_date_components
 
   dsl4jsb_Use_processes SRF
   dsl4jsb_Use_memory(SRF)
@@ -48,7 +49,7 @@ MODULE mo_jsb4_forcing
   ! --- CONSTANTS
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsbalone_forcing'
 
-!>>>>> TODO-check-with-RMS: module for general constants / soubroutine initialising general constants?
+!>>>>> TODO: module for general constants / subroutine initialising general constants?
   REAL(wp), PARAMETER :: gamma = 6.0E-3_wp  ! copied from jsbach3 - mo_jsbalone_forcing
                                             ! fixed temperature gradient of atmosphere [K/m] (see Knorr, p. 31). Note that
                                             ! for the standard ICAO-atmosphere this value is different, namely 6.5E-3 !!!
@@ -279,7 +280,7 @@ CONTAINS
 
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:), temporary_data2(:,:)
 
-    !TODO: refactor ... only required to handle unused frac_PAR_diffuse, rad_sw_down, rad_sw_down_pot_out
+    !TODO-JN: refactor ... only required to handle unused frac_PAR_diffuse, rad_sw_down, rad_sw_down_pot_out
     REAL(wp), ALLOCATABLE :: help1(:,:), help2(:,:), help3(:,:)
 
     !---------------------------------------------------------------------------------
@@ -857,7 +858,7 @@ CONTAINS
     WRITE(year_label,'(i8.4)') year
     ydate = ISIGN(1,year)*(IABS(year)*10000+month*100+day)
     ith_timestep = IMerge_HMS2Sec(hour, minute, second)/int(delta_time)+1 !+1 because 00:00/X => 0; and 1 based vector
-      !--> JN-TODO test in case of lresume
+    ! TODO: test in case of lresume
 
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
     IF (new_year_forcing .OR. lstart .OR. lresume) THEN
@@ -865,7 +866,7 @@ CONTAINS
         input_file = jsb_netcdf_open_input( &
           & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc') , model_id)
 
-        ! TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf?
+        !>>> TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions?
         ! get length and content of the time dimenson/var
         CALL nf_check(nf_inq_dimid(input_file%file_id,"time",nc_dim_id))
         CALL nf_check(nf_inq_dimlen(input_file%file_id, nc_dim_id, forcing_input_variable%length_time_series))
@@ -874,7 +875,6 @@ CONTAINS
         CALL nf_check(nf_inq_varid(input_file%file_id, 'time', nc_var_id))
         CALL nf_check(nf_get_vara_double(input_file%file_id, nc_var_id, (/ 1 /), &
           & (/ forcing_input_variable%length_time_series /), forcing_input_variable%timevalues))
-
         ! Assert: test that the netcdf file unit for this variable is the expected unit
         IF (TRIM(forcing_input_variable%expectedUnit) .NE. TRIM(unspecified_exp_unit)) THEN
           CALL nf_check(nf_inq_varid(input_file%file_id, TRIM(forcing_input_variable%variable_name), nc_var_id))
@@ -888,6 +888,7 @@ CONTAINS
               & //'" but: "'//TRIM(readUnit)//'" for the variable '//TRIM(forcing_input_variable%variable_name))
           ENDIF
         ENDIF
+        !<<<
 
         ! TODO: further assertions? e.g. that lon lat are correct?
 
@@ -1425,7 +1426,7 @@ integer :: i
   !         may be somewhat shifted.
   SUBROUTINE instantly_from_daily_temp_2(nblks, ice, lon, sinlat, coslat, dtmp_min, dtmp_max, date, tmp)
 
-    !>>> JN-TODO: echam!
+    !>>> TODO: echam!
     USE mo_time_conversion, ONLY: time_days
     USE mo_time_control,    ONLY: get_year_day
     USE mo_orbit,           ONLY: inquire_declination

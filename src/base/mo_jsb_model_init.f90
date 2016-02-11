@@ -32,6 +32,11 @@ CONTAINS
 
   SUBROUTINE init_model_standalone(nproca, nprocb, npedim, model_id, model_name)
 
+    !>>> TODO: echam
+    USE mo_gaussgrid,     ONLY : inigau
+    USE mo_echam_convect_tables, ONLY : init_convect_tables
+    !<<<
+
     USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, jsbalone_init_decomp, pe_decomposed
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
@@ -40,12 +45,6 @@ CONTAINS
 
     INTEGER,                    INTENT(in) :: model_id, nproca, nprocb, npedim
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: model_name
-
-!!$#ifdef HAVE_F2003
-!!$    TYPE(t_jsb_model), POINTER, INTENT(inout) :: self
-!!$#else
-!!$    TYPE(t_jsb_model), POINTER                :: self
-!!$#endif
 
     TYPE(t_jsb_model),  POINTER  :: model
     TYPE(t_jsb_grid),   POINTER  :: grid
@@ -64,9 +63,8 @@ CONTAINS
     CALL get_nlon_nlat_from_file(jsbach%models(model_id)%m%config%grid_filename, nlon, nlat)
     CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
 
-!TODO-check-with-RMS: delete?
-    ! TBD: loop through already existing grids and use it if already exists with same name
-!    grid => new_grid(model%config%grid_filename, model%config%grid_name)
+    CALL inigau              ! required for get_lon, get_lat and get_area, i.e. required before new_grid
+    CALL init_convect_tables
 
     grid => new_grid(decomp=decomposition)
 

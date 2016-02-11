@@ -29,10 +29,6 @@ CONTAINS
   !
   REAL(wp) ELEMENTAL FUNCTION qsat(temperature, pressure)
 
-! TODO-check-with-RMS: ICON case ?
-! i.e. #ifdef __ICON__
-    ! USE mo_convect_tables, ONLY: tlucua, &
-! #else ??
     USE mo_echam_convect_tables, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
                                  jptlucu1, jptlucu2, lookuperror
     USE mo_physical_constants, ONLY: vtmpc1                      ! = R_v/R_d - 1
@@ -45,7 +41,7 @@ CONTAINS
 
     it = NINT(temperature*1000._wp)
 !!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
-    tluc = tlucua(it)
+    tluc = tlucua(it) !<- TODO catch seg fault for unplausible temperatures? (e.g. see mo_jsb4_forcing)
 
     IF (it >= jptlucu1 .AND. it <= jptlucu2) THEN
       qsat = tluc / (pressure - vtmpc1*tluc)
@@ -110,11 +106,11 @@ CONTAINS
     USE mo_physical_constants, ONLY: grav
 
 #ifndef STANDALONE
-! TODO-check-with-RMS: ICON case ?
-! i.e. #ifdef __ICON__
-    ! USE mo_echam_vdiff_params, ONLY: cvdifts
-! #else ??
-    USE mo_physc2, ONLY: cvdifts  ! TBD: change to 1. for standalone JSBACH
+#ifdef __ICON__
+    USE mo_echam_vdiff_params, ONLY: cvdifts
+#else
+    USE mo_physc2, ONLY: cvdifts
+#endif
 #endif
 
     REAL(wp), INTENT(in) :: &
@@ -123,7 +119,6 @@ CONTAINS
 
 #ifdef STANDALONE
     REAL(wp) :: cvdifts
-    !TODO-check-with-RMS: according to current echam version this is 1.5 -> why above 1.?
     cvdifts = 1.5_wp 
 #endif
 

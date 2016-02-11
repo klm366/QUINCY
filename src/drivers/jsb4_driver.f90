@@ -60,7 +60,7 @@ PROGRAM jsb4_driver
 
   INTEGER:: nml_handler, read_status, f_unit, status, jrow, nproma, nblks, ncid
 
-  !! Variables of namelist jsbalone_parctl                       ! TODO: echam!?!
+  !! Variables of namelist jsbalone_parctl
   INTEGER:: nproca  ! number of processors for jsbach
   INTEGER:: nprocb  ! has to be one
   INTEGER:: nprocio ! number of processors for I/O server
@@ -96,7 +96,7 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: pch(:,:)
   REAL(wp), ALLOCATABLE :: cos_zenith_angle(:,:)
 
-  !! TODO not used so far
+  !! TODO: so far not used in jsb4 but already read from forcing file
   REAL(wp), ALLOCATABLE :: CO2_concentration(:,:)
 
   !! JSB4 interface variables - output
@@ -174,15 +174,15 @@ PROGRAM jsb4_driver
 
   CALL jsbach_label_run(jsbach_runs_standalone())
 
-  !TODO: include in init_model?
+  !TODO: include in init_model (init_model_standalone)?
   CALL init_output 
   CALL open_output_streams
 
   ! Allocate arrays -> current assumption is for standalone nlon=nproma=npromz,
   !     therefore set (and allocated fields) here -- else need to strongly adapt
   !       -> i.e. set and allocate in the jrow loop for just one and change way of reading?!
-  nproma = local_decomposition%nproma
-  nblks = local_decomposition%ngpblks
+  nproma = local_decomposition%nproma !TODO: get with already existing function? 'get_nproma' ?
+  nblks = local_decomposition%ngpblks !TODO: get with already existing function?
 
   ALLOCATE(t_air_K(nproma, nblks))
   ALLOCATE(q_air(nproma, nblks))
@@ -231,7 +231,7 @@ PROGRAM jsb4_driver
     ALLOCATE(lon(nproma,nblks))
     ALLOCATE(lat(nproma,nblks))
 
-    lon = get_lon(decomp = local_decomposition)
+    lon = get_lon(decomp = local_decomposition) !TODO: get from grid?!
     lat = get_lat(decomp = local_decomposition)
 
     ALLOCATE(coslon(nproma,nblks))
@@ -257,7 +257,7 @@ PROGRAM jsb4_driver
   main_loop:DO 
 
     CALL time_set   !(echam!)
-    CALL write_date(current_date,'Calculate for: ')
+!    CALL write_date(current_date,'Calculate for: ')
 
     IF (l_trigfiles) THEN
       CALL close_output_streams
