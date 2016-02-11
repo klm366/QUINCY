@@ -1,25 +1,27 @@
 !>
 !! @brief Module to read and convert external driving/forcing data (expects annual files with year in filename)
+!! -- current implementation only for daily, timestep or constant data
+!!    (for using monthly data see e.g. jsbach3 (https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg r8133))
 !!
 !! @author
 !!  Julia Nabel, MPI-M Hamburg
 !!
 !! @par Revision History
-!! Initial version: jsbach3 - mo_jsbalone_forcing.f90 -- current implementation only for daily, timestep or constant data
-
-!TODO-JN: Delete not required shortwave functions/ namelist flags and refactor whats left
-! (The jsb3 functions heavily duplicate code!)  -- (check jsbach init header files in cosmos-landveg?)
-
+!! Initial version: jsbach3 (https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg r8133) - mo_jsbalone_forcing.f90
+!! -- adopted most of the options which were provided in the jsbach3 namelist (e.g. different sw-schemes incl. using clouds)
+!! -- After revision 304 (https://svn.zmaw.de/svn/jsbach/branches/jsbach-jn r304): removed currently not required functions:
+!!  several sw schemes (shortwave_from_cloudcover, shortwave_from_fpar_orig, shortwave_from_fpar_ccdas, shortwave_from_fsw,
+!!  shortwave_from_fsw_orig), lw cloud scheme (longwave_rad_down) and calculation of vapour_pressure
 MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
 
 #include "dsl_jsbach.inc"
 
   !>>> TODO: echam!
-  USE mo_time_control,    ONLY: next_date, current_date, lstart, lresume, delta_time, time_step_len
+  USE mo_time_control,    ONLY: next_date, current_date, lstart, lresume, delta_time, time_step_len, get_year_day
   USE mo_netcdf,          ONLY: nf_check, nf_get_vara_double, nf_inq_dimid, nf_inq_dimlen, &
                                 nf_inq_varid, NF_MAX_NAME, nf_get_att_text, NF_NOERR
-  USE mo_time_conversion, ONLY: IMerge_HMS2Sec, day_in_year
+  USE mo_time_conversion, ONLY: IMerge_HMS2Sec, day_in_year, time_days
   !<<<
 
   ! Apparently in echam and icon
@@ -27,8 +29,9 @@ MODULE mo_jsb4_forcing
   USE mo_kind,                 ONLY: wp
   USE mo_exception,            ONLY: message, message_text, finish
   USE mo_util_string,          ONLY: tolower, int2string
-  USE mo_physical_constants,   ONLY: tmelt, p0sl_bg, grav, rd, amco2, amd, stbo, rdv, cpd, vtmpc1
+  USE mo_physical_constants,   ONLY: tmelt, p0sl_bg, grav, rd, amco2, amd, cpd, vtmpc1
   USE mo_echam_convect_tables, ONLY: tlucua, jptlucu1, jptlucu2
+  USE mo_orbit,                ONLY: inquire_declination
 
   ! jsb4
   USE mo_jsb_base,           ONLY: jsbach
@@ -54,7 +57,6 @@ MODULE mo_jsb4_forcing
                                             ! fixed temperature gradient of atmosphere [K/m] (see Knorr, p. 31). Note that
                                             ! for the standard ICAO-atmosphere this value is different, namely 6.5E-3 !!!
   REAL(wp), PARAMETER :: solar_const =  1361.371_wp               ! default solar constant (AMIP) [W/m2]
-  REAL(wp), PARAMETER :: solar_const_vis = solar_const * 0.44_wp  ! solar constant corrected for visible rad. [W/m^2]
   REAL(wp), PARAMETER :: conv_prec_day = 1._wp/86400._wp ! copied from jsbach3 - mo_jsbalone_forcing
                                                          ! Conversion factor for precipitation in [mm/day] to [kg/m^2/s]:
                                                          ! 1 mm/day is equivalent to 1 kg /86400 s / m^2
@@ -84,9 +86,7 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: precipitation_varname = 'precip'
   CHARACTER(len=*), PARAMETER :: rel_humidity_varname = 'rel_humidity'
   CHARACTER(len=*), PARAMETER :: qair_varname = 'qair'
-  CHARACTER(len=*), PARAMETER :: cloud_varname = 'cloud'
   CHARACTER(len=*), PARAMETER :: shortwave_varname = 'shortwave'
-  CHARACTER(len=*), PARAMETER :: potential_shortwave_varname = 'mpot'
   CHARACTER(len=*), PARAMETER :: longwave_varname = 'longwave'
   CHARACTER(len=*), PARAMETER :: CO2_varname = 'CO2'
   CHARACTER(len=*), PARAMETER :: wspeed_varname = 'wspeed'
@@ -109,17 +109,6 @@ MODULE mo_jsb4_forcing
   INTEGER,PARAMETER :: RH_   = 1         ! relative humidity as forcing data
   INTEGER,PARAMETER :: QAIR_ = 2         ! specific humidity as forcing data
 
-  ! options controlling radiation input data (used for longwave and shortwave)
-  INTEGER,PARAMETER :: CLOUD_    = 1     ! cloudcover as forcing data
-  INTEGER,PARAMETER :: MEAN_RAD_ = 2     ! mean daily incoming radiation as input data
-
-  ! options controlling the shortwave-radiation algorithms used
-  INTEGER,PARAMETER :: SW_SCHEME_ORIGINAL_    = 1 ! Use shortwave_from_fpar_orig()  (scheme from Wolfgangs Diss.)
-  INTEGER,PARAMETER :: SW_SCHEME_CCDAS_       = 2 ! Use shortwave_from_fpar_ccdas() (scheme from CCDAS)
-  INTEGER,PARAMETER :: SW_SCHEME_NEW_         = 3 ! Use shortwave_from_fsw()  (Wolfgangs new scheme)
-  INTEGER,PARAMETER :: SW_SCHEME_NEW_ORIG_CF_ = 4 ! Use shortwave_from_fsw()  (Wolfgangs new scheme with original conversion factor)
-  INTEGER,PARAMETER :: SW_SCHEME_DIRECT_      = 5 ! Use shortwave_from_direct_shortwave() (scheme from shortwave record)
-
   ! --- Namelist parameters
   CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data [degC]
   CHARACTER(len=128)     :: forcing_temp_frequ               !! Frequency of temperature forcing data (DAILY/CONST/TIMESTEP)
@@ -136,21 +125,11 @@ MODULE mo_jsb4_forcing
 
   CHARACTER(NF_MAX_NAME) :: forcing_sw_file_prefix           !! Prefix for files with shortwave radiation data
   CHARACTER(len=128)     :: forcing_sw_frequ                 !! Frequency of shortwave forcing data (DAILY/CONST/TIMESTEP)
-  CHARACTER(len=128)     :: forcing_sw_type                  !! Type of input data used for forcing by shortwave radiation
-  CHARACTER(len=128)     :: forcing_sw_scheme                !! Scheme to generate the  the components (PAR, NIR) of sw forcing
-  REAL(wp)               :: forcing_sw_const_cloud           !! Constant value for cloudcover [percent]
   REAL(wp)               :: forcing_sw_const_shortwave       !! Constant value for downward shortwave radiation [W/m^2]
   REAL(wp)               :: forcing_sw_ocean                 !! Constant value for ocean cells
 
-  CHARACTER(NF_MAX_NAME) :: forcing_table_sw_pot_file_prefix !! Prefix for files with potential short wave radiation data [W/m^2]
-  CHARACTER(len=128)     :: forcing_table_sw_pot_frequ       !! Frequency of potential sw radiation (DAILY/CONST/TIMESTEP)
-  REAL(wp)               :: forcing_table_sw_pot_const       !! Constant value for potential shortwave radiation [W/m^2]
-  REAL(wp)               :: forcing_table_sw_pot_ocean       !! Constant value for ocean cells
-
   CHARACTER(NF_MAX_NAME) :: forcing_lw_file_prefix           !! Prefix for files with longwave radiation data [W/m^2]
   CHARACTER(len=128)     :: forcing_lw_frequ                 !! Frequency of longwave forcing data (DAILY/CONST/TIMESTEP)
-  CHARACTER(len=128)     :: forcing_lw_type                  !! Type of forcing data for longwave forcing
-  REAL(wp)               :: forcing_lw_const_cloud           !! Constant value for cloud cover [percent]
   REAL(wp)               :: forcing_lw_const_longwave        !! Constant value for downward longwave radiation [W/m^2]
   REAL(wp)               :: forcing_lw_ocean                 !! Constant value for ocean cells
 
@@ -179,9 +158,6 @@ MODULE mo_jsb4_forcing
   TYPE forcing_options_type
     LOGICAL  :: air_temperature_as_timestep !! Specifies if the air temperatures are given per timestep
     INTEGER  :: type_of_qair_forcing        !! Possible values: see 'options controlling atmospheric humidity input data'
-    INTEGER  :: type_of_shortwave_forcing   !! Possible values: see 'options controlling radiation input data'
-    INTEGER  :: type_of_shortwave_scheme    !! Possible values: see 'options controlling the shortwave-radiation algorithms'
-    INTEGER  :: type_of_longwave_forcing    !! Possible values: see 'options controlling radiation input data'
     LOGICAL  :: precip_in_mm_per_day        !! Specifies units of precipitation input data: true: mm/day; false: kg/(m^2*s)
     REAL(wp) :: conv_CO2_2_MassRatio        !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
   END TYPE forcing_options_type
@@ -202,16 +178,14 @@ MODULE mo_jsb4_forcing
     REAL(wp), POINTER        :: timevalues(:) => NULL()     !! The values of the time variable (only if my_process_is_stdio())
   END TYPE input_variable_type
 
-  ! All theoretically possible input data, i.e. some are usually not used. (Input data is controlled by FORCING_CTL)
+  ! All theoretically possible input data, i.e. some are usually not used. (Input data is controlled by jsb_forcing_ctl)
   TYPE forcing_input_type
      TYPE(input_variable_type) :: air_temp_min  !! daily minimum of air temperature at surface [Celsius]
      TYPE(input_variable_type) :: air_temp_max  !! daily maximum of air temperature at surface [Celsius]
      TYPE(input_variable_type) :: air_temp      !! air temperature [Celsius]
      TYPE(input_variable_type) :: precipitation !! daily precipitation (including snow); units may be
                                                 !! [mm/day] or [kg/m^2/s] (see option  "precip_in_mm_per_day")
-     TYPE(input_variable_type) :: cloud_cover   !! fraction of sky covered by clouds (from [0,1])
      TYPE(input_variable_type) :: shortwave     !! incident shortwave radiation [W/m^2]
-     TYPE(input_variable_type) :: shortwave_pot !! potential (i.e. clear sky) shortwave radiation incident to surface [W/m^2]
      TYPE(input_variable_type) :: longwave      !! incident longwave radiation [W/m^2]
      TYPE(input_variable_type) :: CO2_concentr  !! CO2-concentration [mol(CO2)/mol(air)], [kg(CO2)/kg(dry Air)] or [ppmv]
      TYPE(input_variable_type) :: wind_speed    !! wind speed [m/s]
@@ -231,7 +205,7 @@ CONTAINS
   SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, sinlat, coslat, lon, &
     & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, cos_zenith_angle, CO2_concentration, &
     & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, &
-    & swnir_srf_down, swpar_srf_down, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
+    & swnir_srf_down, swpar_srf_down, frac_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
 
     INTEGER,  INTENT(IN)  :: model_id, ics, ice, nblks
     REAL(wp), INTENT(IN)  :: sinlat(:,:)
@@ -244,6 +218,8 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
 
     REAL(wp), INTENT(OUT) :: CO2_concentration(:,:)
+    REAL(wp), INTENT(OUT) :: frac_par_diffuse(:,:)
+
     REAL(wp), INTENT(OUT) :: t_air_K(:,:)
     REAL(wp), INTENT(OUT) :: q_air(:,:)
     REAL(wp), INTENT(OUT) :: rain(:,:)
@@ -262,7 +238,6 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: q_bcoef(:,:)
     REAL(wp), INTENT(OUT) :: pch(:,:)
 
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_interface_variables_from_external_forcing'
 
     TYPE(t_jsb_model),  POINTER  :: model
@@ -275,21 +250,17 @@ CONTAINS
     INTEGER  :: iblk
     INTEGER  :: day_of_year
 
-    REAL(wp), ALLOCATABLE :: cloud_cover_data(:,:), rad_uv_down(:,:), vapor_pressure_data(:,:)
-    REAL(wp), ALLOCATABLE :: precipitation_data(:,:), t_air(:,:), tmax_data(:,:), tmin_data(:,:), sat_spec_humidity(:,:)
+    REAL(wp), ALLOCATABLE :: t_air(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), sat_spec_humidity(:,:)
+    REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
 
-    REAL(wp), ALLOCATABLE :: temporary_data1(:,:), temporary_data2(:,:)
-
-    !TODO-JN: refactor ... only required to handle unused frac_PAR_diffuse, rad_sw_down, rad_sw_down_pot_out
-    REAL(wp), ALLOCATABLE :: help1(:,:), help2(:,:), help3(:,:)
+    ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are not required - remove?
+    REAL(wp), ALLOCATABLE :: help1(:,:), help2(:,:)
 
     !---------------------------------------------------------------------------------
     ALLOCATE(help1(ice, nblks))
     ALLOCATE(help2(ice, nblks))
-    ALLOCATE(help3(ice, nblks))
 
     ALLOCATE(temporary_data1(ice, nblks))
-    ALLOCATE(temporary_data2(ice, nblks))
 
     ! --- temperature
     ! for temperature the variables used depend on the forcing frequency: tmin&tmax for daily data t_air for timestep
@@ -309,25 +280,23 @@ CONTAINS
     t_air_K = t_air + tmelt
 
     ! --- precipitation
-    ALLOCATE(precipitation_data(ice, nblks))
-    CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%precipitation, precipitation_data)
+    CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%precipitation, temporary_data1)
     ! convert if required
-    IF(forcing_options%precip_in_mm_per_day) precipitation_data = precipitation_data * conv_prec_day
+    IF(forcing_options%precip_in_mm_per_day) temporary_data1 = temporary_data1 * conv_prec_day
     ! compute rain and snow
     IF(forcing_options%air_temperature_as_timestep) THEN
       IF(forcing_input%precipitation%frequency .EQ. DAILY_) THEN
         ! In case of daily precipitation the minimum and maximum read for air_temp are used
-        CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), precipitation_data(:,:), &
+        CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), temporary_data1(:,:), &
           & 0.5_wp*(MAXVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3) + MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3)))
       ELSE
         ! else currentvalue
-        CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), precipitation_data(:,:), t_air(:,:))
+        CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), temporary_data1(:,:), t_air(:,:))
       ENDIF
     ELSE
-      CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), precipitation_data(:,:), &
+      CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), temporary_data1(:,:), &
         & 0.5_wp*(tmax_data(:,:) + tmin_data(:,:)))
     ENDIF
-    DEALLOCATE(precipitation_data)
 
     ! --- compute bottom pressure
     DO iblk = 1, nblks
@@ -342,7 +311,6 @@ CONTAINS
 
     ! --- compute specific humidity
     ALLOCATE(sat_spec_humidity(ice, nblks))
-    ALLOCATE(vapor_pressure_data(ice, nblks))
     SELECT CASE(forcing_options%type_of_qair_forcing)
     CASE(RH_)
       CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%rel_humidity, temporary_data1)
@@ -379,8 +347,6 @@ CONTAINS
       ELSE
         q_air(:,:) = MIN(q_air, sat_spec_humidity)
       ENDIF
-      ! compute current vapour pressure
-      vapor_pressure_data(:,:) = fun_vapour_pressure(q_air(:,:),press_srf(:,:))
     CASE(QAIR_)
       CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%qair, q_air(:,:))
       ! constrain daily specific humidity to be lower than or equal to the saturation spec. humidity
@@ -388,81 +354,36 @@ CONTAINS
         CALL sat_specific_humidity(ice, t_air_K(:,iblk), press_srf(:,iblk), sat_spec_humidity(:,iblk))
       ENDDO
       q_air(:,:) = MIN(q_air(:,:),sat_spec_humidity(:,:))
-      ! compute current vapour pressure
-      vapor_pressure_data(:,:) = fun_vapour_pressure(q_air(:,:),press_srf(:,:))
     END SELECT
     DEALLOCATE(sat_spec_humidity)
-
-    ! --- get cloud cover if required for short or longwave radiation
-    IF ((forcing_options%type_of_shortwave_forcing .EQ. CLOUD_) &
-        & .OR. (forcing_options%type_of_longwave_forcing .EQ. CLOUD_)) THEN
-
-      ALLOCATE(cloud_cover_data(ice, nblks))
-
-      IF(forcing_input%cloud_cover%frequency .EQ. TIMESTEP_) CALL finish(TRIM(routine), &
-        & "Cloud cover not implemented as time-step forcing")
-      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%cloud_cover, cloud_cover_data)
-      ! check data
-      hlp_r = MAXVAL(MAXVAL(cloud_cover_data,DIM=2))
-      IF(hlp_r < 1._wp) THEN
-        WRITE (message_text,*) 'Maximum value of cloud cover is ', hlp_r
-        CALL message(TRIM(routine), message_text)
-        CALL message(TRIM(routine),'WARNING: cloud cover data probably represent fractions instead of percentages.')
-      ENDIF
-      ! Convert percentage data to fractional data:
-      cloud_cover_data = cloud_cover_data/100._wp
-    ENDIF
 
     ! --- compute shortwave radiation
     day_of_year=day_in_year(next_date)
     ALLOCATE(rad_uv_down(ice, nblks))
-    SELECT CASE(forcing_options%type_of_shortwave_forcing)
-    CASE(CLOUD_)   ! short wave radiation is computed from cloudcover
-      ! Calculate shortwave
-      CALL shortwave_from_cloudcover(day_of_year, cos_zenith_angle, press_srf, cloud_cover_data, &
-        & rad_uv_down, swpar_srf_down, swnir_srf_down, help1, help2, help3)
-
-    CASE(MEAN_RAD_)
-      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%shortwave, temporary_data1)
-      IF(forcing_options%type_of_shortwave_scheme .NE. SW_SCHEME_DIRECT_) THEN
-        CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%shortwave_pot, temporary_data2)
-      ELSE
-        temporary_data2 = 0._wp
-      ENDIF
-      CALL shortwave_from_shortwaveMean(day_of_year, cos_zenith_angle, coslat, sinlat, press_srf, &
-        temporary_data1, temporary_data2, rad_uv_down, swpar_srf_down, swnir_srf_down, help1, help2, help3)
-
-    CASE default
-      CALL finish(TRIM(routine),'Please specifiy either cloud or mean_read for "FORCING_SW_TYPE" in forcing_ctl')
-    END SELECT
+    CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%shortwave, temporary_data1)
+    CALL shortwave_from_direct_shortwave(day_of_year, cos_zenith_angle, coslat, sinlat, press_srf, &
+      & temporary_data1, rad_uv_down, swpar_srf_down, swnir_srf_down, frac_par_diffuse, help1, help2)
     ! jsb3 standalone: swvis_srf_down = rad_uv_down + rad_par_down (& rad_par_down = swpar_srf_down)
     swvis_srf_down(:,:) = rad_uv_down(:,:) + swpar_srf_down(:,:)
     DEALLOCATE(rad_uv_down)
 
     ! --- compute longwave radiation
-    SELECT CASE(forcing_options%type_of_longwave_forcing)
-    CASE(CLOUD_)     ! longwave radiation is computed from cloudcover and vapour pressure
-      lw_srf_down = longwave_rad_down(cloud_cover_data(:,:), vapor_pressure_data(:,:), t_air(:,:))
-    CASE(MEAN_RAD_)
-      IF (forcing_input%longwave%frequency .EQ. TIMESTEP_) THEN
-        CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%longwave, lw_srf_down)
-      ELSE
-        ! jsbach3 driver: diurnal longwave downward radiation is generated such that the average radiation matches the
-        ! observations but the diurnal cycle follows temperature to help calculation of a correct
-        ! net radiation flux. Note that reduces biases resulting from assuming a constant flux, but
-        ! this introduces uncertainty due to biases in the assumed dial course of temperature
-        CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%longwave, temporary_data1)
+    IF (forcing_input%longwave%frequency .EQ. TIMESTEP_) THEN
+      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%longwave, lw_srf_down)
+    ELSE
+      ! jsbach3 driver: diurnal longwave downward radiation is generated such that the average radiation matches the
+      ! observations but the diurnal cycle follows temperature to help calculation of a correct
+      ! net radiation flux. Note that reduces biases resulting from assuming a constant flux, but
+      ! this introduces uncertainty due to biases in the assumed dial course of temperature
+      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%longwave, temporary_data1)
 
-        IF (forcing_options%air_temperature_as_timestep) THEN
-          lw_srf_down = longwave_from_daily_longwave(temporary_data1(:,:), MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3), &
-            & MAXVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3), t_air(:,:))
-        ELSE
-          lw_srf_down = longwave_from_daily_longwave(temporary_data1(:,:), tmin_data(:,:), tmax_data(:,:), t_air(:,:))
-        ENDIF
+      IF (forcing_options%air_temperature_as_timestep) THEN
+        lw_srf_down = longwave_from_daily_longwave(temporary_data1(:,:), MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3), &
+          & MAXVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3), t_air(:,:))
+      ELSE
+        lw_srf_down = longwave_from_daily_longwave(temporary_data1(:,:), tmin_data(:,:), tmax_data(:,:), t_air(:,:))
       ENDIF
-    CASE default
-       CALL finish(TRIM(routine),'Please specifiy either cloud or mean_read for "FORCING_LW_TYPE" in forcing_ctl')
-    END SELECT
+    ENDIF
 
     ! --- wind
     CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%wind_speed, wind_air)
@@ -483,14 +404,8 @@ CONTAINS
       DEALLOCATE(tmax_data)
     ENDIF
 
-    IF ((forcing_options%type_of_shortwave_forcing .EQ. CLOUD_) &
-        & .OR. (forcing_options%type_of_longwave_forcing .EQ. CLOUD_)) THEN
-      DEALLOCATE(cloud_cover_data)
-    ENDIF
-    DEALLOCATE(vapor_pressure_data)
-
-    DEALLOCATE(help1, help2, help3)
-    DEALLOCATE(temporary_data1, temporary_data2)
+    DEALLOCATE(help1, help2)
+    DEALLOCATE(temporary_data1)
 
   END SUBROUTINE get_interface_variables_from_external_forcing
 
@@ -507,15 +422,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_forcing'
 
-    NAMELIST /forcing_ctl/          &
+    NAMELIST /jsb_forcing_ctl/          &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
       & forcing_precip_file_prefix, forcing_precip_frequ, forcing_precip_const_precip,                                        &
         & forcing_precip_in_mm_per_day, forcing_precip_ocean,                                                                 &
-      & forcing_sw_file_prefix, forcing_sw_frequ, forcing_sw_type, forcing_sw_scheme,                                         &
-        & forcing_sw_const_cloud, forcing_sw_const_shortwave, forcing_sw_ocean,                                               &
-      & forcing_table_sw_pot_file_prefix, forcing_table_sw_pot_frequ, forcing_table_sw_pot_const, forcing_table_sw_pot_ocean, &
-      & forcing_lw_file_prefix, forcing_lw_frequ, forcing_lw_type,                                                            &
-        & forcing_lw_const_cloud, forcing_lw_const_longwave, forcing_lw_ocean,                                                &
+      & forcing_sw_file_prefix, forcing_sw_frequ, forcing_sw_ocean,                                                           &
+      & forcing_lw_file_prefix, forcing_lw_frequ, forcing_lw_ocean,                                                           &
       & forcing_co2_file_prefix, forcing_co2_frequ, forcing_co2_const_co2, forcing_co2_unit, forcing_co2_ocean,               &
       & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean,                          &
       & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean
@@ -525,7 +437,7 @@ CONTAINS
     !------------------------------------------------------------------------------------
 
     IF (my_process_is_stdio()) THEN
-      ! ----- define default values for forcing_ctl namelist parameters
+      ! ----- define default values for jsb_forcing_ctl namelist parameters
       forcing_temp_file_prefix = 'climate_'
       forcing_temp_frequ = 'DAILY'
       forcing_temp_const_tmin = 0.0_wp !jsb3: HUGE(0.0_wp)
@@ -540,21 +452,10 @@ CONTAINS
 
       forcing_sw_file_prefix = 'climate_'
       forcing_sw_frequ = 'DAILY'
-      forcing_sw_type = 'MEAN_RAD'
-      forcing_sw_scheme = 'DIRECT'
-      forcing_sw_const_cloud = 0.0_wp !jsb3: HUGE(0.0_wp)
-      forcing_sw_const_shortwave = 0.0_wp !jsb3: HUGE(0.0_wp)
       forcing_sw_ocean = 0._wp
-      forcing_table_sw_pot_file_prefix = 'climate_'
-      forcing_table_sw_pot_frequ = 'DAILY'
-      forcing_table_sw_pot_const = 0.0_wp !jsb3: HUGE(0.0_wp)
-      forcing_table_sw_pot_ocean = 0._wp
 
       forcing_lw_file_prefix = 'climate_'
       forcing_lw_frequ = 'DAILY'
-      forcing_lw_type = 'MEAN_RAD'
-      forcing_lw_const_cloud = 0.0_wp !jsb3: HUGE(0.0_wp)
-      forcing_lw_const_longwave = 0.0_wp !jsb3: HUGE(0.0_wp)
       forcing_lw_ocean = 100._wp
 
       forcing_co2_file_prefix = 'climate_'
@@ -576,83 +477,31 @@ CONTAINS
 
       ! ----- read the namelist
       nml_handler = open_nml ('namelist.jsbach')
-      f_unit = position_nml ('forcing_ctl', nml_handler, status=read_status)
-      IF (read_status .EQ. POSITIONED) READ(f_unit, forcing_ctl)
+      f_unit = position_nml ('jsb_forcing_ctl', nml_handler, status=read_status)
+      IF (read_status .EQ. POSITIONED) READ(f_unit, jsb_forcing_ctl)
 
-!TODO-JN: simplify and merge were possible
       ! ----- derive options
+      ! --- Temperature timestep (if daily two variables - max and min - need to be read)
       forcing_options%air_temperature_as_timestep &
         & = (frequency_key_to_constant_val('temperature', forcing_temp_frequ) .EQ. TIMESTEP_)
-
-      ! --- Precipitation
+      ! --- Precipitation unit
       forcing_options%precip_in_mm_per_day = forcing_precip_in_mm_per_day
       IF(forcing_options%precip_in_mm_per_day) THEN
         CALL message(TRIM(routine),'Precipitation forcing in mm/day')
       ELSE
         CALL message(TRIM(routine),'Precipitation forcing in kg/m^2/s')
       ENDIF
-      ! --- QAIR
+      ! --- QAIR type
       SELECT CASE(TRIM(tolower(forcing_qair_type)))
       CASE("rh")
         forcing_options%type_of_qair_forcing = RH_
       CASE("qair")
         forcing_options%type_of_qair_forcing = QAIR_
       CASE default
-        CALL finish(TRIM(routine),'Please specifiy either rh or qair for "FORCING_QAIR_TYPE" in forcing_ctl')
+        CALL finish(TRIM(routine),'Please specifiy either rh or qair for "FORCING_QAIR_TYPE" in jsb_forcing_ctl')
       END SELECT
       CALL message(TRIM(routine),"Type of air humidity forcing: "//TRIM(forcing_qair_type))
-      ! --- SW
-      SELECT CASE(TRIM(tolower(forcing_sw_type)))
-      CASE("cloud")
-        forcing_options%type_of_shortwave_forcing = CLOUD_
-      CASE("mean_rad")
-        forcing_options%type_of_shortwave_forcing = MEAN_RAD_
-      CASE default
-        CALL finish(TRIM(routine),'Please specifiy either cloud or mean_read for "FORCING_SW_TYPE" in forcing_ctl')
-      END SELECT
-      CALL message(TRIM(routine),"Type of shortwave radiation forcing: "//TRIM(forcing_sw_type))
-      ! sw scheme
-      SELECT CASE(TRIM(tolower(forcing_sw_scheme)))
-      CASE("orig")
-        forcing_options%type_of_shortwave_scheme= SW_SCHEME_ORIGINAL_
-      CASE("ccdas")
-        forcing_options%type_of_shortwave_scheme = SW_SCHEME_CCDAS_
-      CASE("new")
-        forcing_options%type_of_shortwave_scheme = SW_SCHEME_NEW_
-      CASE("new_orig_cf")
-        forcing_options%type_of_shortwave_scheme = SW_SCHEME_NEW_ORIG_CF_
-      CASE("direct")
-        forcing_options%type_of_shortwave_scheme = SW_SCHEME_DIRECT_
-      CASE default
-        CALL finish(TRIM(routine),'Please specifiy a value for "FORCING_SW_SCHEME" in forcing_ctl')
-      END SELECT
-      CALL message(TRIM(routine),"Radiation forcing scheme: "//TRIM(forcing_sw_scheme))
-      !Assertion: sw type clouds only possible with the shortwave schemes original or ccdas
-      IF(forcing_options%type_of_shortwave_forcing .EQ. CLOUD_) THEN
-        IF(( forcing_options%type_of_shortwave_scheme .NE. SW_SCHEME_ORIGINAL_) &
-            & .AND. ( forcing_options%type_of_shortwave_scheme .NE. SW_SCHEME_CCDAS_)) THEN
-          CALL finish(TRIM(routine), &
-            & "Calculating sw from cloud cover only implemented for sw scheme original or ccdas, please check selected sw scheme.")
-        ENDIF
-      ENDIF
-      ! assert same frequency if not direct scheme
-      IF (( forcing_options%type_of_shortwave_scheme .NE. SW_SCHEME_DIRECT_) &
-          & .AND. (forcing_options%type_of_shortwave_forcing .NE. MEAN_RAD_ ) &
-          & .AND. (forcing_sw_frequ .NE. forcing_table_sw_pot_frequ )) THEN
-        CALL finish(TRIM(routine),"Invalid combination of shortwave ("//TRIM(forcing_sw_frequ)//") and mpot forcing frequency (" &
-          & //TRIM(forcing_table_sw_pot_frequ)//"). [Need to be equal if not reading direct mean_rad forcing.]")
-      ENDIF
-      ! --- LW
-      SELECT CASE(TRIM(tolower(forcing_lw_type)))
-      CASE("cloud")
-        forcing_options%type_of_longwave_forcing = CLOUD_
-      CASE("mean_rad")
-        forcing_options%type_of_longwave_forcing = MEAN_RAD_
-      CASE default
-        CALL finish(TRIM(routine),'Please specifiy either cloud or mean_read for "FORCING_LW_TYPE" in forcing_ctl')
-      END SELECT
-      CALL message(TRIM(routine),"Type of longwave radiation forcing: "//TRIM(forcing_lw_type))
-      ! - CO2
+      ! --- CO2 unit
       SELECT CASE(TRIM(tolower(forcing_co2_unit)))
       CASE("ppmv")
         CALL message(TRIM(routine),'CO2 forcing in ppmv')
@@ -664,7 +513,7 @@ CONTAINS
         CALL message(TRIM(routine),'CO2 forcing in kg(CO2)/kg(Dry Air)')
         forcing_options%conv_CO2_2_MassRatio = 1.0_wp
       CASE default
-        CALL message(TRIM(routine),'WARNING: "FORCING_CO2_UNIT" missing in namelist forcing_ctl.')
+        CALL message(TRIM(routine),'WARNING: "FORCING_CO2_UNIT" missing in namelist jsb_forcing_ctl.')
         CALL message(TRIM(routine),'Assumption: unit is mol(CO2)/mol(DryAir). Verify your settings!')
         forcing_options%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg
       END SELECT
@@ -676,9 +525,6 @@ CONTAINS
       ! forcing options
       CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io)
       CALL p_bcast(forcing_options%type_of_qair_forcing, p_io)
-      CALL p_bcast(forcing_options%type_of_shortwave_forcing, p_io)
-      CALL p_bcast(forcing_options%type_of_shortwave_scheme, p_io)
-      CALL p_bcast(forcing_options%type_of_longwave_forcing, p_io)
       CALL p_bcast(forcing_options%conv_CO2_2_MassRatio, p_io)
 
       ! other namelist parameters
@@ -695,18 +541,10 @@ CONTAINS
 
       CALL p_bcast(forcing_sw_file_prefix, p_io)
       CALL p_bcast(forcing_sw_frequ, p_io)
-      CALL p_bcast(forcing_sw_const_cloud, p_io)
-      CALL p_bcast(forcing_sw_const_shortwave, p_io)
       CALL p_bcast(forcing_sw_ocean, p_io)
-      CALL p_bcast(forcing_table_sw_pot_file_prefix, p_io)
-      CALL p_bcast(forcing_table_sw_pot_frequ, p_io)
-      CALL p_bcast(forcing_table_sw_pot_const, p_io)
-      CALL p_bcast(forcing_table_sw_pot_ocean, p_io)
 
       CALL p_bcast(forcing_lw_file_prefix, p_io)
       CALL p_bcast(forcing_lw_frequ, p_io)
-      CALL p_bcast(forcing_lw_const_cloud, p_io)
-      CALL p_bcast(forcing_lw_const_longwave, p_io)
       CALL p_bcast(forcing_lw_ocean, p_io)
 
       CALL p_bcast(forcing_co2_file_prefix, p_io)
@@ -754,49 +592,14 @@ CONTAINS
       CALL init_forcing_input_variable(qair_varname, forcing_qair_frequ, forcing_qair_ocean, &
         forcing_qair_file_prefix, exp_unit_qair ,forcing_qair_const_rh, forcing_input%qair)
     CASE default
-      CALL finish(TRIM(routine),'Please specifiy either qair or rh for "forcing_qair_type" in forcing_ctl')
+      CALL finish(TRIM(routine),'Please specifiy either qair or rh for "forcing_qair_type" in jsb_forcing_ctl')
     END SELECT
     ! --- shortwave radiation
-    SELECT CASE(forcing_options%type_of_shortwave_forcing)
-    CASE(CLOUD_)
-      CALL init_forcing_input_variable(cloud_varname, forcing_sw_frequ, forcing_sw_ocean, &
-        & forcing_sw_file_prefix, unspecified_exp_unit, forcing_sw_const_cloud, forcing_input%cloud_cover)
-    CASE(MEAN_RAD_)
-      CALL init_forcing_input_variable(shortwave_varname, forcing_sw_frequ, forcing_sw_ocean, &
-        & forcing_sw_file_prefix, exp_unit_radiation, forcing_sw_const_shortwave, forcing_input%shortwave)
-      ! jsbach3 text: "As a provisional solution we need here also a table of potential shortwave radiation"
-      IF(forcing_options%type_of_shortwave_scheme .NE. SW_SCHEME_DIRECT_ ) THEN
-        CALL init_forcing_input_variable(potential_shortwave_varname, forcing_table_sw_pot_frequ, forcing_table_sw_pot_ocean, &
-          & forcing_table_sw_pot_file_prefix, exp_unit_radiation, forcing_table_sw_pot_const, forcing_input%shortwave_pot)
-      ENDIF
-    CASE default
-      CALL finish(TRIM(routine),'Please specifiy either cloud or mean_read for "FORCING_SW_TYPE" in forcing_ctl')
-    END SELECT
+    CALL init_forcing_input_variable(shortwave_varname, forcing_sw_frequ, forcing_sw_ocean, &
+      & forcing_sw_file_prefix, exp_unit_radiation, forcing_sw_const_shortwave, forcing_input%shortwave)
     ! --- longwave radiation
-    SELECT CASE(forcing_options%type_of_longwave_forcing)
-    CASE(CLOUD_)
-      ! jsbach3 driver: Initialisation only if not already initialised for shortwave radiation
-      IF (forcing_options%type_of_shortwave_forcing .NE. CLOUD_) THEN
-        CALL init_forcing_input_variable(cloud_varname, forcing_lw_frequ, forcing_lw_ocean, &
-          & forcing_lw_file_prefix, unspecified_exp_unit, forcing_lw_const_cloud, forcing_input%cloud_cover)
-      ELSE !! Cloud cover is used for both shortwave and longwave
-        ! In the jsbach3 driver the assumption in this case was accordingly that clouds were already read
-        ! from the forcing sw file and that the constant is also the same!
-        ! --> check compatibility
-        IF (my_process_is_stdio()) THEN
-          IF ((forcing_lw_frequ .NE. forcing_sw_frequ) .OR. (forcing_lw_const_cloud .NE. forcing_sw_const_cloud) &
-              & .OR. (forcing_lw_file_prefix .NE. forcing_sw_file_prefix)) THEN
-            CALL finish(TRIM(routine), &
-              & "Inconsistent specifications for cloud data (FORCING_LW... and FORCING_SW..., please check)")
-          ENDIF
-        ENDIF
-      ENDIF
-    CASE(MEAN_RAD_)
-      CALL init_forcing_input_variable(longwave_varname, forcing_lw_frequ, forcing_lw_ocean, &
-        & forcing_lw_file_prefix, exp_unit_radiation, forcing_lw_const_longwave, forcing_input%longwave)
-    CASE default
-      CALL finish(TRIM(routine),'Please specifiy either cloud or mean_read for "FORCING_LW_TYPE" in forcing_ctl')
-    END SELECT
+    CALL init_forcing_input_variable(longwave_varname, forcing_lw_frequ, forcing_lw_ocean, &
+      & forcing_lw_file_prefix, exp_unit_radiation, forcing_lw_const_longwave, forcing_input%longwave)
     ! --- CO2
     CALL init_forcing_input_variable(CO2_varname, forcing_co2_frequ, forcing_co2_ocean, &
       & forcing_co2_file_prefix, unspecified_exp_unit, forcing_co2_const_co2, forcing_input%CO2_concentr)
@@ -1146,9 +949,6 @@ CONTAINS
     ! SUBROUTINE instantly_from_daily_temp_2
     ! Otherwise the results will be faulty!
 
-    !mo_orbit with the required routine seems to be available in ICON and ECHAM
-    USE mo_orbit,      ONLY: inquire_declination
-
     IMPLICIT NONE
 
     INTEGER, INTENT(IN)  :: ice
@@ -1426,12 +1226,6 @@ integer :: i
   !         may be somewhat shifted.
   SUBROUTINE instantly_from_daily_temp_2(nblks, ice, lon, sinlat, coslat, dtmp_min, dtmp_max, date, tmp)
 
-    !>>> TODO: echam!
-    USE mo_time_conversion, ONLY: time_days
-    USE mo_time_control,    ONLY: get_year_day
-    USE mo_orbit,           ONLY: inquire_declination
-    !<<<
-
     IMPLICIT NONE
 
     REAL(wp), PARAMETER :: pio180 = pi/180._wp ! conversion factor from degrees to radians ("pi over 180")
@@ -1632,69 +1426,23 @@ integer :: i
   END SUBROUTINE snow_and_rain_from_precip
 
   !>
-  !! @brief computes PAR and NIR, together with the diffuse part of PAR, from cloudcover
-  !!
-  !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing, removed not required output
-  !
-  ! === shortwave_from_cloudcover() ================================================================================================
-  !
-  ! Following the strategy described in [1], this routine computes PAR and NIR, together with the diffuse part of PAR, from
-  ! cloudcover, by converting cloudcover "n" to "fpar" (fpar is the fraction of actual to potential radiation flux in the PAR
-  ! band incident at the earth's surface):
-  ! (1)           fpar = 0.5 + 0.4 * n.
-  ! Then the main computations are done in the subroutine "shortwave_from_fpar()" (see there for a description of the method).
-  !
-  ! Literature:
-  ! [1] W. Knorr, "Satellite remote sensing and modelling of the global CO2 exchange of land vegetation", Examensarbeit 49,
-  ! (Max Planck Institut fuer Meteorologie, Hamburg, 1998).
-  !
-  ELEMENTAL SUBROUTINE shortwave_from_cloudcover(day_of_year, cos_zenith, air_pressure, cloud_cover, & !! input
-    & rad_UV_down, rad_PAR_down, rad_NIR_down, frac_PAR_diffuse, rad_sw_down, rad_sw_down_pot) !! output
-
-    INTEGER,INTENT(in)   :: day_of_year      !! day in year (from [1,365])
-    REAL(wp),INTENT(in)  :: cos_zenith       !! cosine of zenith angle
-    REAL(wp),INTENT(in)  :: air_pressure     !! air pressure at bottom (depending on local elevation) [N/m^2]
-    REAL(wp),INTENT(in)  :: cloud_cover      !! fraction of sky covered by clouds (from [0,1])
-    REAL(wp),INTENT(out) :: rad_UV_down      !! solar radiation flux (direct+diffuse) from the UV band 280-400 nm ...
-                                             !! .. arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: rad_PAR_down     !! solar radiation flux (direct+diffuse) from the visible band 400-700 nm ...
-                                             !! .. arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: rad_NIR_down     !! solar radiation flux (direct+diffuse) from the near infrared band 700-3000 nm ...
-                                             !! .. arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: frac_PAR_diffuse !! Fraction from  rad_PAR_down() that comes down as diffuse radiation ..
-                                             !! .. (values in [0,1])
-    REAL(wp),INTENT(out) :: rad_sw_down      !! total solar shortwave radiation : direct+diffuse, 280-3000 nm, (i.e. PAR+NIR), ..
-                                             !! ... that actually arrives at the bottom [W/m^2]
-    REAL(wp),INTENT(out) :: rad_sw_down_pot  !! total solar shortwave radiation : direct+diffuse, 280-3000 nm, (i.e. PAR+NIR), ..
-                                             !! ... that actually arrives at the bottom [W/m^2]
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':shortwave_from_cloudcover'
-
-    REAL(wp) :: fpar
-
-    fpar = 0.5_wp + 0.4_wp * (1.0_wp - cloud_cover)
-    SELECT CASE(forcing_options%type_of_shortwave_scheme)
-    CASE(SW_SCHEME_ORIGINAL_)
-      CALL shortwave_from_fpar_orig(day_of_year, cos_zenith, air_pressure, fpar,                            & !! inputs
-        & rad_UV_down, rad_PAR_down, rad_NIR_down, frac_PAR_diffuse, rad_sw_down)   !! outputs
-    CASE(SW_SCHEME_CCDAS_)
-      CALL shortwave_from_fpar_ccdas(day_of_year, cos_zenith, air_pressure, fpar,                           & !! inputs
-        & rad_UV_down, rad_PAR_down, rad_NIR_down, frac_PAR_diffuse, rad_sw_down)   !! outputs
-    END SELECT
-    rad_sw_down_pot = rad_sw_down / fpar
-
-  END SUBROUTINE shortwave_from_cloudcover
-
-  !>
-  !! @brief computes PAR and NIR, together with the diffuse part of PAR, from fpar
+  !! @brief computes shortwave parts (PAR,NIR,fraction of diffuse PAR)
+  !! ATTENTION: TR: there maybe considerable deviations in the daily sum of insolation if daily data is used and
+  !! if the orbit is different then todays orbit (i.e. ATTENTION: this may be incorrect for paleo situations)
   !!
   !! @par History
   !! JN: copied from jsbach3 mo_jsbalone_forcing
   !
-  ! === shortwave_from_fpar_orig() ===============================================================================================
+  ELEMENTAL SUBROUTINE shortwave_from_direct_shortwave(day_of_year,cos_zenith,cos_lat,sin_lat,air_pressure, &
+    & rad_sw_in, rad_UV,rad_PAR,rad_NIR,frac_PAR_diffuse,rad_sw,rad_sw_pot )
+  ! For timestep data the observed radiation is used directly;
+  ! in daily version, the instantaneous flux at noon required to calculate irradiation at any
+  ! time of the day is approximated by solving the integral over the positive sun angle, following Prentice et al. Ecol. Mod. 1993
   !
-  ! This routine follows exactly [1]. It computes PAR and NIR, together with the diffuse part of PAR, from "fpar", which is the
+  ! ATTENTION: TR: there maybe considerable deviations in the daily sum of insolation  if daily data is used and
+  ! if the orbit is different then todays orbit (i.e. ATTENTION: this may be incorrect for paleo situations)
+  !
+  ! Rest of the routine follows [1]. It computes PAR and NIR, together with the diffuse part of PAR, from "fpar", which is the
   ! quotient of the actual PAR flux "Rpar_act" (i.e. at cloudy sky) to the potential PAR flux "Rpar_pot" (i.e. at clear sky), both
   ! measured at the ground:
   !                       Rpar_act
@@ -1731,28 +1479,28 @@ integer :: i
   ! (11)          fdirPar =   ------------
   !                             Rpar_act
   ! is estimated from the direct part in potential PAR
-  ! (11)          Rpar_pot_dir = S0 * exp(-0.185*(p/p0)/cos(theta))
+  ! (12)          Rpar_pot_dir = S0 * exp(-0.185*(p/p0)/cos(theta))
   ! total potential PAR "Rpar_pot" and "fpar" by (see Knorr Eq. (30))
   !                            /  0 for fpar < 0.2
   !                           /                   2/3
   !                          /      / 0.9 - fpar \      Rpar_pot_dir
-  ! (12)          fdirPar = (  (1- (--------------)   ) ------------       for 0.2 <= fpar <= 0.9
+  ! (13)          fdirPar = (  (1- (--------------)   ) ------------       for 0.2 <= fpar <= 0.9
   !                          \      \    0.7     /         Rpar_pot
   !                           \
   !                            \  1 for fpar > 0.9
   ! where the quotient showing up in (12) is
   !
   !               Rpar_pot_dir         exp(-0.185*(p/p0)/cos(theta))
-  ! (13)          ------------ =   ---------------------------------------
+  ! (14)          ------------ =   ---------------------------------------
   !                 Rpar_pot       0.4 + 0.6*exp(-0.185*(p/p0)/cos(theta))
   !
   ! It follows that the fraction of diffuse radiation "fdiffPar" in PAR is
   !
-  ! (14)         fdiffPar = 1 - fdirPar.
+  ! (15)         fdiffPar = 1 - fdirPar.
   !
-  ! REMARK: Eq. (12) is taken from [2] but contains an additional approximation: In [2] fdirPar does not depend on fpar, but on
+  ! REMARK: Eq. (13) is taken from [2] but contains an additional approximation: In [2] fdirPar does not depend on fpar, but on
   ! the transmission ratio for TOTAL SHORTWAVE flux, whereas fpar is defined as the transmission ratio for PAR only (see Eq. (1)).
-  ! Hence, (12) includes the additional approximation of the shortwave transmission ratio by the PAR transmission ratio (fpar).
+  ! Hence, (13) includes the additional approximation of the shortwave transmission ratio by the PAR transmission ratio (fpar).
   !
   ! Literature:
   ! [1] W. Knorr, "Satellite remote sensing and modelling of the global CO2 exchange of land vegetation", Examensarbeit 49,
@@ -1762,88 +1510,14 @@ integer :: i
   ! [3] R.T. Pinker & I. Laszlo, "Global distribution of photosynthetically active radiation as observed from satellites",
   ! J. Climate 5 (1992) 56-65.
   ! [4] G.W. Paltridge and C.M.R. Platt, "Radiative Processes in Meteorology and Climatology" (Elsevier, Amsterdam, 1976).
-  ELEMENTAL SUBROUTINE shortwave_from_fpar_orig(day_of_year,cos_zenith,air_pressure,fpar, & !! inputs
-    & rad_UV,rad_PAR,rad_NIR,frac_PAR_diffuse,rad_sw)  !! outputs
-
-    INTEGER,INTENT(in)   :: day_of_year      !! day in year (from [1,365])
-    REAL(wp),INTENT(in)  :: cos_zenith       !! cosine of zenith angle
-    REAL(wp),INTENT(in)  :: air_pressure     !! air pressure at bottom (depending on local elevation) [N/m^2]
-    REAL(wp),INTENT(in)  :: fpar             !! daily mean fraction of actual to potential PAR at bottom (from [0,1])
-    REAL(wp),INTENT(out) :: rad_UV           !! "RUV": solar radiation flux (direct+diffuse) from the UV band 280-700 nm .
-                                             !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: rad_PAR          !! "Rpar_act": solar radiation flux (direct+diffuse) from the visible band 400-700 nm .
-                                             !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-
-    REAL(wp),INTENT(out) :: rad_NIR          !! "Rnir": flux (direct+diffuse) from the near infrared band 700-3000 nm ..
-                                             !! .. actually arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: frac_PAR_diffuse !! "fdiffPar": Fraction from  rad_PAR() that comes down as diffuse radiation ..
-                                             !! .. (values in [0,1])
-    REAL(wp),INTENT(out) :: rad_sw           !! "Rtot": total solar shortwave radiation : direct+diffuse, 280-3000 nm, ,..
-                                             !! ... (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
-
-    REAL(wp) :: day_angle     !! day of year expressed as angle in radians
-    REAL(wp) :: r_sun_earth_2 !! inverse squared earth-sun-distance normalized to mean distance
-    REAL(wp) :: Rpar_top      !! PAR flux incident to the outer atmosphere at particular zenith angle [W/m^2]
-    REAL(wp) :: F_invers      !! factor 1/F to obtain total shortwave from visible radiation (see Eq. (9))
-    REAL(wp) :: hlp_r,hlp2_r,hlp3_r,hlp4_r
-
-    REAL(wp), PARAMETER  ::  frac_UV = 0._wp ! UV fraction of (UV + PAR)
-                                             ! to be checked, if the ratio rad_PAR/rad_sw is within observed range (0.42-0.51) with this value of frac_UV
-
-    day_angle = 2._wp*pi*(day_of_year-1._wp)/365._wp !! ATTENTION: this may be incorrect for paleo situations
-    hlp_r=2._wp*day_angle
-    r_sun_earth_2 = &         ! Eq. (3) from above
-      & 1.000110_wp+3.4221E-2_wp*COS(day_angle)+1.280E-3_wp*SIN(day_angle)+7.19E-4_wp*COS(hlp_r)+7.7E-5_wp*SIN(hlp_r)
-
-    IF(cos_zenith > 0.017452406_wp) THEN! zenith angle smaller than 89 degrees  (cos(89) = 0.017452406)
-      Rpar_top   = solar_const_vis*cos_zenith*r_sun_earth_2       ! Eq. (2) from above
-      hlp3_r = EXP(-0.185_wp*(air_pressure/p0sl_bg)/cos_zenith) ! in jsb3: p0sl_bg = p_sealevel
-      hlp4_r = 0.4_wp+0.6_wp*hlp3_r
-      rad_UV = fpar * Rpar_top * hlp4_r * frac_UV
-      rad_PAR = fpar * Rpar_top * hlp4_r * (1._wp - frac_UV)   ! This is Rpar_act; Eq. (7) from above
-      hlp_r=1._wp-fpar
-      hlp2_r=hlp_r*hlp_r
-      F_invers=1._wp + (1.185_wp-0.437_wp*hlp_r-0.494_wp*hlp2_r)* &
-        & EXP(MIN(2.534_wp,(0.0305_wp-0.208_wp*hlp_r+0.495_wp*hlp2_r)/cos_zenith)) ! Eq. (9) from above
-      rad_sw = (rad_PAR + rad_UV) *F_invers   ! This is "Rtot"; Eq. (8) from above
-      rad_NIR = rad_sw - rad_PAR - rad_UV ! This is "Rnir"; Eq. (10) from above
-      IF(fpar <= 0.2_wp) THEN
-        frac_PAR_diffuse = 1.                                                     ! Eq. (12)-(15) from above
-      ELSEIF(fpar >= 0.9_wp) THEN
-        frac_PAR_diffuse = 0._wp                                                  ! Eq. (12)-(15) from above
-      ELSE
-        frac_PAR_diffuse = 1._wp - &
-          & (1._wp- ((0.9_wp -fpar)/0.7_wp)**(2._wp/3._wp))*hlp3_r/hlp4_r ! Eq. (12)-(15) from above
-      ENDIF
-    ELSE ! zenith angle larger than 89 degrees
-      rad_UV = 0._wp
-      rad_PAR = 0._wp
-      rad_NIR = 0._wp
-      frac_PAR_diffuse = 1._wp ! (could also be another value in this case)
-      rad_sw  = 0._wp
-    ENDIF
-  END SUBROUTINE shortwave_from_fpar_orig
-
-
-  !>
-  !! @brief computes shortwave parts (PAR,NIR,fraction of diffuse PAR)
-  !!
-  !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
-  !
-  ELEMENTAL SUBROUTINE shortwave_from_direct_shortwave(day_of_year,cos_zenith,cos_lat,sin_lat,air_pressure, &
-    & rad_sw_in, rad_UV,rad_PAR,rad_NIR,frac_PAR_diffuse,rad_sw,rad_sw_pot )
-    ! similar concept as above, however, the observed radiation is used to derive the remaining
-    ! parameters. In daily version, the instantaneous flux at noon required to calculate irradiation at any
-    ! time of the day is approximated by solving the integral over the positive sun angle, following Prentice et al. Ecol. Mod. 1993
 
     INTEGER,INTENT(in)   :: day_of_year      !! day in year (from [1,365])
     REAL(wp),INTENT(in)  :: cos_zenith       !! cosine of zenith angle
     REAL(wp),INTENT(in)  :: cos_lat          !! cosine of latitude
     REAL(wp),INTENT(in)  :: sin_lat          !! sine of latitude
     REAL(wp),INTENT(in)  :: air_pressure     !! air pressure at bottom (depending on local elevation) [N/m^2]
-    REAL(wp),INTENT(in)  :: rad_sw_in        !! "Rtot": daily average total solar shortwave radiation : direct+diffuse, 280-3000 nm,
-                                             !! ... (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
+    REAL(wp),INTENT(in)  :: rad_sw_in        !! "Rtot": either timestep or daily average total solar shortwave radiation :
+                                             !! ... direct+diffuse, 280-3000 nm, (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
     REAL(wp),INTENT(out) :: rad_UV           !! "RUV": solar radiation flux (direct+diffuse) from the UV band 280-400 nm
                                              !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
     REAL(wp),INTENT(out) :: rad_PAR          !! "Rpar_act": solar radiation flux (direct+diffuse) from the visible band 400-700 nm .
@@ -1932,354 +1606,6 @@ integer :: i
 
   END SUBROUTINE shortwave_from_direct_shortwave
 
-
-  !>
-  !! @brief computes PAR and NIR, together with the diffuse part of PAR, from fpar (according to ccdas)
-  !!
-  !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
-  !
-  ! === shortwave_from_fpar_ccdas() ================================================================================================
-  !
-  ! This routine implements the shortwave radiation scheme of ccdas. As far as I understand it is almost identical to
-  ! to shortwave_from_fpar_orig(), with the  only exceptions that Equation (9) is replaced by the more simple relationsship  !
-  !
-  ! (9')        F= 0.43 +0.25*(1.-fpar)*cos(theta)
-  ! (whereever this comes from).
-  !
-  ELEMENTAL SUBROUTINE shortwave_from_fpar_ccdas(day_of_year,cos_zenith,air_pressure,fpar, & !! inputs
-    & rad_UV,rad_PAR,rad_NIR,frac_PAR_diffuse,rad_sw)  !! outputs
-
-    INTEGER,INTENT(in)   :: day_of_year      !! day in year (from [1,365])
-    REAL(wp),INTENT(in)  :: cos_zenith       !! cosine of zenith angle
-    REAL(wp),INTENT(in)  :: air_pressure     !! air pressure at bottom (depending on local elevation) [N/m^2]
-    REAL(wp),INTENT(in)  :: fpar             !! daily mean fraction of actual to potential PAR at bottom (from [0,1])
-    REAL(wp),INTENT(out) :: rad_UV           !! "RUV_act": solar radiation flux (direct+diffuse) from the UV band 280-400 nm .
-                                             !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: rad_PAR          !! "Rpar_act": solar radiation flux (direct+diffuse) from the visible band 400-700 nm .
-                                             !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-
-    REAL(wp),INTENT(out) :: rad_NIR          !! "Rnir": flux (direct+diffuse) from the near infrared band 700-3000 nm ..
-                                             !! .. actually arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: frac_PAR_diffuse !! "fdiffPar": Fraction from  rad_PAR() that comes down as diffuse radiation ..
-                                             !! .. (values in [0,1])
-    REAL(wp),INTENT(out) :: rad_sw           !! "Rtot": total solar shortwave radiation : direct+diffuse, 280-3000 nm, ,..
-                                             !! ... (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
-
-    REAL(wp) :: day_angle     !! day of year expressed as angle in radians
-    REAL(wp) :: r_sun_earth_2 !! inverse squared earth-sun-distance normalized to mean distance
-    REAL(wp) :: Rpar_top      !! PAR flux incident to the outer atmosphere at particular zenith angle [W/m^2]
-    REAL(wp) :: F             !! factor F to obtain total shortwave from visible radiation (see Eq. (9'))
-    REAL(wp) :: hlp_r, hlp3_r,hlp4_r
-
-    REAL(wp), PARAMETER  ::  frac_UV = 0._wp ! UV fraction of (UV + PAR)
-                                             ! to be checked, if the ratio rad_PAR/rad_sw is within observed range (0.42-0.51) with this value of frac_UV
-
-    day_angle = 2._wp*pi*(day_of_year-1._wp)/365._wp !! ATTENTION: this may be incorrect for paleo situations
-    hlp_r=2._wp*day_angle
-    r_sun_earth_2 = &         ! Eq. (3) from above
-      & 1.000110_wp+3.4221E-2_wp*COS(day_angle)+1.280E-3_wp*SIN(day_angle)+7.19E-4_wp*COS(hlp_r)+7.7E-5_wp*SIN(hlp_r)
-    IF(cos_zenith > 0.017452406_wp) THEN! zenith angle smaller than 89 degrees  (cos(89) = 0.017452406)
-      Rpar_top   = solar_const_vis*cos_zenith*r_sun_earth_2       ! Eq. (2) from above
-      hlp3_r = EXP(-0.185_wp*(air_pressure/p0sl_bg)/cos_zenith) ! in jsb3: p0sl_bg = p_sealevel
-      hlp4_r = 0.4_wp+0.6_wp*hlp3_r
-      rad_UV = fpar * Rpar_top * hlp4_r * frac_UV
-      rad_PAR = fpar * Rpar_top * hlp4_r * (1._wp - frac_UV)    ! This is Rpar_act; Eq. (7) from above
-      hlp_r=1.-fpar
-      F = 0.43_wp +0.25_wp*(1.-fpar)*cos_zenith ! Eq. (9') from above
-      rad_sw = (rad_PAR + rad_UV)/ F   ! This is "Rtot"; Eq. (8) from above
-      rad_NIR = rad_sw - rad_PAR - rad_UV ! This is "Rnir"; Eq. (10) from above
-      IF(fpar <= 0.2_wp) THEN
-         frac_PAR_diffuse = 1._wp                                                     ! Eq. (12)-(14) from above
-      ELSEIF(fpar >= 0.9_wp) THEN
-         frac_PAR_diffuse = 0._wp                                                     ! Eq. (11)-(14) from above
-      ELSE
-         frac_PAR_diffuse = 1._wp - &
-           & (1._wp- ((0.9_wp -fpar)/0.7_wp)**(2._wp/3._wp))*hlp3_r/hlp4_r ! Eq. (11)-(14) from above
-      ENDIF
-    ELSE ! zenith angle larger than 89 degrees
-      rad_UV = 0._wp
-      rad_PAR = 0._wp
-      rad_NIR = 0._wp
-      frac_PAR_diffuse = 1._wp ! (could also be another value in this case)
-      rad_sw  = 0._wp
-    ENDIF
-  END SUBROUTINE shortwave_from_fpar_ccdas
-
-  !>
-  !! @brief computes PAR and NIR, together with the diffuse part of PAR, from fpar (according to ccdas but with Wolfgangs modification)
-  !!
-  !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
-  !
-  ! === shortwave_from_fsw() =====================================================================================================
-  !
-  ! This routine is identical to the shortwave routine from CCDAS shortwave_from_fpar_ccdas(), but with a modification proposed by
-  ! Wolfgang to use not fpar as input, but the transmission ratio fsw for TOTAL SHORTWAVE radiation instead.
-  !
-  ! Here
-  !                     Rtot
-  ! (A)        fsw := ----------
-  !                     R_pot
-  !
-  ! the ratio between actual "Rtot" to potential "R_pot" shortwave radiation (daily means). "R_pot" is obtailed from the
-  ! potential PAR radiation by
-  !                      Rpar_pot
-  ! (B)        R_pot = ---------
-  !                       F_pot
-  ! where the conversion factor "F_pot" is taken as
-  ! (C)        F_pot = 0.43.
-  ! With (1) then total incident shortwave radiation follows from
-  !                                       Rpar_pot
-  ! (D)        Rtot = fsw * R_pot = fsw * ---------
-  !                                         F_pot
-  ! The PAR part of total actual radiation is then obtained by
-  ! (E)        Rpar_act = Rtot * F,
-  ! where the conversion factor "F" is
-  ! (F)        F= 0.43 +0.25*(1.-fpar)*cos(theta)
-  ! Now by equations (10) to (14) from shortwave_from_fpar_orig() all output fields can be computed.
-  !
-  ELEMENTAL SUBROUTINE shortwave_from_fsw(day_of_year,cos_zenith,air_pressure,fsw, & !! inputs
-    & rad_UV,rad_PAR,rad_NIR,frac_PAR_diffuse,rad_sw) !! outputs
-
-    INTEGER,INTENT(in)   :: day_of_year      !! day in year (from [1,365])
-    REAL(wp),INTENT(in)  :: cos_zenith       !! cosine of zenith angle
-    REAL(wp),INTENT(in)  :: air_pressure     !! air pressure at bottom (depending on local elevation) [N/m^2]
-    REAL(wp),INTENT(in)  :: fsw              !! daily mean fraction of actual to potential TOTAL SHORTWAVE flux at bottom ..
-                                             !! .. (from [0,1])
-    REAL(wp),INTENT(out) :: rad_UV           !! "RUV_act": solar radiation flux (direct+diffuse) from the UV band 280-400 nm
-                                             !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: rad_PAR          !! "Rpar_act": solar radiation flux (direct+diffuse) from the visible band 400-700 nm .
-                                             !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-
-    REAL(wp),INTENT(out) :: rad_NIR          !! "Rnir": flux (direct+diffuse) from the near infrared band 700-3000 nm ..
-                                             !! .. actually arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: frac_PAR_diffuse !! "fdiffPar": Fraction from  rad_PAR() that comes down as diffuse radiation ..
-                                             !! .. (values in [0,1])
-    REAL(wp),INTENT(out) :: rad_sw           !! "Rtot": total solar shortwave radiation : direct+diffuse, 400-3000 nm, ,..
-                                             !! ... (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
-
-    REAL(wp) :: day_angle     !! day of year expressed as angle in radians
-    REAL(wp) :: r_sun_earth_2 !! inverse squared earth-sun-distance normalized to mean distance
-    REAL(wp) :: Rpar_top      !! PAR flux incident to the outer atmosphere at particular zenith angle [W/m^2]
-    REAL(wp) :: F             !! factor F to obtain total shortwave from visible radiation (see Eq. (9'))
-    REAL(wp) :: hlp_r,hlp3_r,hlp4_r
-
-    REAL(wp),PARAMETER :: F_pot = 0.43_wp !! See Eq. (C) from above
-    REAL(wp),PARAMETER :: frac_UV = 0._wp !! UV fraction of (UV + PAR)
-                                          !! to be checked, if the ratio rad_PAR/rad_sw is within observed range (0.42-0.51) with this value of frac_UV
-
-    day_angle = 2._wp*pi*(day_of_year-1._wp)/365._wp !! ATTENTION: this may be incorrect for paleo situations
-    hlp_r=2._wp*day_angle
-    r_sun_earth_2 = &         ! Eq. (3) from above
-      & 1.000110_wp+3.4221E-2_wp*COS(day_angle)+1.280E-3_wp*SIN(day_angle)+7.19E-4_wp*COS(hlp_r)+7.7E-5_wp*SIN(hlp_r)
-    IF(cos_zenith > 0.017452406_wp) THEN! zenith angle smaller than 89 degrees  (cos(89) = 0.017452406)
-       Rpar_top   = solar_const_vis*cos_zenith*r_sun_earth_2       ! Eq. (2) from above
-       hlp3_r = EXP(-0.185_wp*(air_pressure/p0sl_bg)/cos_zenith) ! in jsb3: p0sl_bg = p_sealevel
-       hlp4_r = 0.4_wp+0.6_wp*hlp3_r
-       rad_sw = fsw*Rpar_top*hlp4_r/F_pot   ! This is "Rtot"; Eq. (D) from above
-       hlp_r=1.-fsw
-       F = 0.43_wp + 0.25_wp*(1.-fsw)*cos_zenith ! Eq. (9') from shortwave_from_fpar_ccdas(), but with the correct ratio
-                                                 ! fsw instead fpar
-       rad_UV = rad_sw * F * frac_UV
-       rad_PAR = rad_sw * F * (1._wp - frac_UV)  ! This is Rpar_act; Eq. (E) from above
-       rad_NIR = rad_sw - rad_PAR - rad_UV ! This is "Rnir"; Eq. (10) from above
-       IF(fsw <= 0.2_wp) THEN
-          frac_PAR_diffuse = 1._wp                                                     ! Eq. (12)-(14) from above
-       ELSEIF(fsw >= 0.9_wp) THEN
-          frac_PAR_diffuse = 0._wp                                                  ! Eq. (11)-(14) from above
-       ELSE
-          frac_PAR_diffuse = 1._wp - &
-               (1._wp - ((0.9_wp - fsw)/0.7_wp)**(2._wp/3._wp))*hlp3_r/hlp4_r ! Eq. (11)-(14) from above
-       ENDIF
-    ELSE ! zenith angle larger than 89 degrees
-       rad_UV = 0._wp
-       rad_PAR = 0._wp
-       rad_NIR = 0._wp
-       frac_PAR_diffuse = 1._wp ! (could also be another value in this case)
-       rad_sw  = 0._wp
-    ENDIF
-  END SUBROUTINE shortwave_from_fsw
-
-
-  !>
-  !! @brief computes PAR and NIR, together with the diffuse part of PAR, from fpar (according to ccdas but with some modifications)
-  !!
-  !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
-  !
-  ! === shortwave_from_fsw_orig() ==================================================================================================
-  !
-  ! This routine is identical to the new shortwave routine from Wolfgang shortwave_from_fsw, except that the original conversion
-  !
-  ! factor
-  ! (9)           1/F = 1 + (1.185-0.437*mfpar-0.494*mfpar^2)* exp[(0.0305-0.208*mfpar+0.495*mfpar^2)/cos(theta)]
-  ! with mfpar=1-fpar is used (compare Eq. (9) in subroutine shortwave_from_fpar_orig()).
-  ELEMENTAL SUBROUTINE shortwave_from_fsw_orig(day_of_year,cos_zenith,air_pressure,fsw, & !! inputs
-      & rad_UV,rad_PAR,rad_NIR,frac_PAR_diffuse,rad_sw)  !! outputs
-
-    INTEGER,INTENT(in)   :: day_of_year      !! day in year (from [1,365])
-    REAL(wp),INTENT(in)  :: cos_zenith       !! cosine of zenith angle
-    REAL(wp),INTENT(in)  :: air_pressure     !! air pressure at bottom (depending on local elevation) [N/m^2]
-    REAL(wp),INTENT(in)  :: fsw              !! daily mean fraction of actual to potential TOTAL SHORTWAVE flux at bottom ..
-                                             !! .. (from [0,1])
-    REAL(wp),INTENT(out) :: rad_UV           !! "RUV_act": solar radiation flux (direct+diffuse) from the UV band 280-400 nm
-                                             !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-
-    REAL(wp),INTENT(out) :: rad_PAR          !! "Rpar_act": solar radiation flux (direct+diffuse) from the visible band 400-700 nm .
-                                             !! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
-
-    REAL(wp),INTENT(out) :: rad_NIR          !! "Rnir": flux (direct+diffuse) from the near infrared band 700-3000 nm ..
-                                             !! .. actually arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: frac_PAR_diffuse !! "fdiffPar": Fraction from  rad_PAR() that comes down as diffuse radiation ..
-                                             !! .. (values in [0,1])
-    REAL(wp),INTENT(out) :: rad_sw           !! "Rtot": total solar shortwave radiation : direct+diffuse, 280-3000 nm, ,..
-                                             !! ... (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
-
-    REAL(wp) :: day_angle     !! day of year expressed as angle in radians
-    REAL(wp) :: r_sun_earth_2 !! inverse squared earth-sun-distance normalized to mean distance
-    REAL(wp) :: Rpar_top      !! PAR flux incident to the outer atmosphere at particular zenith angle [W/m^2]
-    REAL(wp) :: F             !! factor F to obtain total shortwave from visible radiation (see Eq. (9'))
-    REAL(wp) :: hlp_r,hlp2_r,hlp3_r,hlp4_r
-
-    REAL(wp),PARAMETER :: F_pot = 0.43_wp !! See Eq. (C) from above
-    REAL(wp),PARAMETER :: frac_UV = 0._wp !! UV fraction of (UV + PAR)
-                                          !! to be checked, if the ratio rad_PAR/rad_sw is within observed range (0.42-0.51) with this value of frac_UV
-
-    day_angle = 2._wp*pi*(day_of_year-1._wp)/365._wp !! ATTENTION: this may be incorrect for paleo situations
-    hlp_r=2._wp*day_angle
-    r_sun_earth_2 = &         ! Eq. (3) from above
-      & 1.000110_wp+3.4221E-2_wp*COS(day_angle)+1.280E-3_wp*SIN(day_angle)+7.19E-4_wp*COS(hlp_r)+7.7E-5_wp*SIN(hlp_r)
-    IF(cos_zenith > 0.017452406_wp) THEN! zenith angle smaller than 89 degrees  (cos(89) = 0.017452406)
-       Rpar_top   = solar_const_vis*cos_zenith*r_sun_earth_2       ! Eq. (2) from above
-       hlp3_r = EXP(-0.185_wp*(air_pressure/p0sl_bg)/cos_zenith) ! in jsb3: p0sl_bg = p_sealevel
-       hlp4_r = 0.4_wp+0.6_wp*hlp3_r
-       rad_sw = fsw*Rpar_top*hlp4_r/F_pot   ! This is "Rtot"; Eq. (D) from above
-       hlp_r=1._wp-fsw
-       hlp2_r=hlp_r*hlp_r
-       F = 1._wp/(1._wp + (1.185_wp-0.437_wp*hlp_r-0.494_wp*hlp2_r) * &
-         & EXP(MIN(2.534_wp,(0.0305_wp-0.208_wp*hlp_r+0.495_wp*hlp2_r)/cos_zenith))) ! Eq. (9) from above
-       rad_UV = rad_sw * F * frac_UV
-       rad_PAR = rad_sw * F * (1._wp - frac_UV)    ! This is Rpar_act; Eq. (E) from above
-       rad_NIR = rad_sw - rad_PAR - rad_UV ! This is "Rnir"; Eq. (10) from above
-       IF(fsw <= 0.2_wp) THEN
-          frac_PAR_diffuse = 1._wp                                                     ! Eq. (12)-(14) from above
-       ELSEIF(fsw >= 0.9_wp) THEN
-          frac_PAR_diffuse = 0._wp                                                     ! Eq. (11)-(14) from above
-       ELSE
-          frac_PAR_diffuse = 1._wp - &
-            & (1._wp - ((0.9_wp -fsw)/0.7_wp)**(2._wp/3._wp))*hlp3_r/hlp4_r ! Eq. (11)-(14) from above
-       ENDIF
-    ELSE ! zenith angle larger than 89 degrees
-       rad_UV = 0._wp
-       rad_PAR = 0._wp
-       rad_NIR = 0._wp
-       frac_PAR_diffuse = 1._wp ! (could also be another value in this case)
-       rad_sw  = 0._wp
-    ENDIF
-  END SUBROUTINE shortwave_from_fsw_orig
-
-
-  !>
-  !! @brief computes shortwave parts (PAR,NIR,fraction of diffuse PAR) from the mean daily shortwave flux that arrives at the bottom
-  !!
-  !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
-  !
-  ! === shortwave_from_shortwaveMean() =============================================================================================
-  !
-  ! This routine computes the various shortwave parts (PAR,NIR,fraction of diffuse PAR) from the mean daily shortwave flux that
-  ! arrives at the bottom. The method is the same as that used in the subroutine "shortwave_from_cloudcover()", except that
-  ! "fpar" (see description of  "shortwave_from_cloudcover()"), which is the fraction of actual to potential PAR at the earth's
-  ! surface, is not computed from cloudcover, but estimated from the ratio of actual to potential mean daily shortwave flux
-  !                       R0_act
-  ! (1')           fpar = ------ ,
-  !                       R0_pot
-  ! where the actual mean daily shortwave flux "R0_act" is input to the routine and the potential mean daily shortwave flux
-  ! is computed from the average shortwave flux reaching the bottom at a clear day:
-  !
-  !                                    1                                                             -0.185*p
-  ! (A)           R0_pot = S * E *  ----- INTEGRAL[t_up:t_down] dt cos(theta(t)){ 0.4 + 0.6*exp(------------------) },
-  !                                   24h                                                         p0*cos(theta(t))
-  !
-  ! where the term "0.4 + ..." accounts for Rayleigh scattering (which is insufficient!), "E" reflects the varying distance
-  ! from the sun, "S=1360 W/m^2" is the solar constant and "t_up" and "t_down" are the times of sunrise and sunset
-  ! (for other symbol names see subroutine "shortwave_from_fpar()").
-  ! To compute the integral one needs the explicit representation of the cosine of the zenith-angle theta(t):
-  ! (B)          cos(theta(t)) = sin(lat)*sin(dec) + cos(lat)*cos(dec)*cos(omega(t))
-  ! where "lat" is the latitude, "dec" the declination and "omega(t)" is the hour-angle
-  ! (C)          omega(t) = t*2*pi/24h ;
-  ! here the time "t" is measured since/to the culmination of the sun at the particular day, i.e. in the morning "t" is positive
-  ! and negative in the afternoon.
-  ! The hour angles of sunrise and sunset are obtained from setting "theta(t) = pi/2" so that
-  ! (D)          omega_sunrise = -omega_sunset = |arccos(tan(lat)*tan(dec))|.
-  ! Since the cos(theta(t)) is symmetric the integral from (A) can be rewritten as
-  !                                  1                                                       -0.185*p
-  ! (A')          R0_pot = S * E *  -- INTEGRAL[0:omega_sunrise] dx cos(x){ 0.4 + 0.6*exp(--------------) },
-  !                                 pi                                                       p0*cos(x)
-  ! This value has to be provided when calling the subroutine (input variable "rad_sw_down_pot")
-  !
-  ELEMENTAL SUBROUTINE shortwave_from_shortwaveMean(day_of_year, cos_zenith, cos_lat, sin_lat, air_pressure,  &
-    & rad_sw_down_act,rad_sw_down_pot, rad_UV_down, rad_PAR_down, rad_NIR_down, frac_PAR_diffuse, rad_sw_down, rad_sw_down_pot_out)
-
-    INTEGER,INTENT(in)   :: day_of_year      !! day in year (from [1,365])
-    REAL(wp),INTENT(in)  :: cos_zenith       !! cosine of zenith angle
-    REAL(wp),INTENT(in)  :: cos_lat          !! cosine of latitude
-    REAL(wp),INTENT(in)  :: sin_lat          !! sine of latitude
-    REAL(wp),INTENT(in)  :: air_pressure     !! air pressure at bottom (depending on local elevation) [N/m^2]
-    REAL(wp),INTENT(in)  :: rad_sw_down_act  !! daily mean of total solar shortwave radiation : direct+diffuse, 280-3000 nm, ..
-                                             !! .. (i.e. PAR+NIR), that actually arrives at the bottom  [W/m^2]
-    REAL(wp),INTENT(in)  :: rad_sw_down_pot  !! daily mean of total solar shortwave radiation : direct+diffuse, 280-3000 nm, ..
-                                             !! ..(i.e. PAR+NIR), that potentially arrives at the bottom (i.e. at clear sky) [W/m^2]
-    REAL(wp),INTENT(out) :: rad_UV_down      !! solar radiation flux (direct+diffuse) from the UV band 280-400 nm ...
-                                             !! .. arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: rad_PAR_down     !! solar radiation flux (direct+diffuse) from the visible band 400-700 nm ...
-                                             !! .. arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: rad_NIR_down     !! solar radiation flux (direct+diffuse) from the near infrared band 700-3000 nm ...
-                                             !! .. arriving at the bottom (includes cloud shading and scattering) [W/m^2]
-    REAL(wp),INTENT(out) :: frac_PAR_diffuse !! Fraction from  rad_PAR_down() that comes down as diffuse radiation ..
-                                             !! .. (values in [0,1])
-    REAL(wp),INTENT(out) :: rad_sw_down      !! total solar shortwave radiation flux: direct+diffuse, 280-3000 nm, (i.e. PAR+NIR),..
-                                             !! ... that actually arrives at the bottom for the particular zenith angle [W/m^2]
-    REAL(wp),INTENT(out) :: rad_sw_down_pot_out !! total solar shortwave radiation flux: direct+diffuse, 280-3000 nm, (i.e. PAR+NIR)
-                                             !! ... that potentially arrives at the bottom for the particular zenith angle [W/m^2]
-
-    REAL(wp),PARAMETER :: negligible_rad = 1e-8_wp !! Below this value (in [W/m^2]) radiation is assumed to be negligible
-    REAL(wp) :: fsw         !! Fraction of actual out of potential radiation flux in the full shortwave band at surface
-
-    IF(rad_sw_down_pot < negligible_rad ) THEN
-       fsw = 0.5_wp
-    ELSE
-       fsw = MIN(rad_sw_down_act/rad_sw_down_pot,1._wp)
-    ENDIF
-
-    SELECT CASE(forcing_options%type_of_shortwave_scheme)
-       CASE(SW_SCHEME_ORIGINAL_)
-          CALL shortwave_from_fpar_orig(day_of_year,cos_zenith,air_pressure,fsw, &   !! inputs
-            & rad_UV_down,rad_PAR_down,rad_NIR_down,frac_PAR_diffuse,rad_sw_down)   !! outputs
-          rad_sw_down_pot_out = rad_sw_down_pot
-
-       CASE(SW_SCHEME_CCDAS_)
-          CALL shortwave_from_fpar_ccdas(day_of_year,cos_zenith,air_pressure,fsw, &   !! inputs
-            & rad_UV_down,rad_PAR_down,rad_NIR_down,frac_PAR_diffuse,rad_sw_down)   !! outputs
-          rad_sw_down_pot_out = rad_sw_down_pot
-
-       CASE(SW_SCHEME_NEW_)
-          CALL shortwave_from_fsw(day_of_year,cos_zenith,air_pressure,fsw, &   !! inputs
-            & rad_UV_down,rad_PAR_down,rad_NIR_down,frac_PAR_diffuse,rad_sw_down)   !! outputs
-          rad_sw_down_pot_out = rad_sw_down_pot
-
-       CASE(SW_SCHEME_NEW_ORIG_CF_)
-          CALL shortwave_from_fsw_orig(day_of_year,cos_zenith,air_pressure,fsw, &   !! inputs
-            & rad_UV_down,rad_PAR_down,rad_NIR_down,frac_PAR_diffuse,rad_sw_down)   !! outputs
-          rad_sw_down_pot_out = rad_sw_down_pot
-
-       CASE(SW_SCHEME_DIRECT_)
-          CALL shortwave_from_direct_shortwave(day_of_year,cos_zenith,cos_lat,sin_lat,air_pressure, &
-            & rad_sw_down_act, rad_UV_down,rad_PAR_down,rad_NIR_down,frac_PAR_diffuse, rad_sw_down,rad_sw_down_pot_out)
-   END SELECT
-  END SUBROUTINE shortwave_from_shortwaveMean
-
   !>
   !! @brief computes longwave from observed longwave and diural course associated with air temperature
   !!
@@ -2311,102 +1637,6 @@ integer :: i
     longwave_from_daily_longwave = longwave_down_daily * (hlp_r**4) / (dtmp**4)      ! lw-radiation flux Eq. (1)
 
   END FUNCTION longwave_from_daily_longwave
-
-  !>
-  !! @brief computes longwave from cloud cover, vapor pressure and air temperature
-  !!
-  !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
-  !
-  ! === longwave_rad_down() =======================================================================================================
-  !
-  ! Downward long wave radiation flux "R_d" [W/m^2] is according to [1],[2] computed by
-  ! (1) R_d = r_cloud * epsA * sigma * T^4,
-  ! where "T" is the air temperature [K] (in the bottom layer?), sigma = 5.6703e-8 W/(m^2 K^4) is the Stefan-Boltzmann constant,
-  ! "epsA" is the emissivity of the cloudless atmosphere given by
-  ! (2) epsA = epsA0 * (e_A/T)^(1/7).
-  ! Here "e_vap" is the vapor pressure in [Pa] from above, and epsA0 = 0.64 (units: [(K/Pa)^(1/7)]) a constant (see [2]).
-  ! The factor "r_cloud" in (1) corrects for clouds and is given by
-  ! (3) r_cloud = 1+0.22*n^2,
-  ! where "n" is the cloudcover.
-  ! [1] W. Knorr, "Satellite remote sensing and modelling of the global CO2 exchange of land vegetation", Examensarbeit 49,
-  ! (Max Planck Institut fuer Meteorologie, Hamburg, 1998).
-  ! [2] W. Brutsaert, "Evaporation into the Atmosphere", (Reidel, Dordrecht, 1982), pp. 299.
-  !
-  ELEMENTAL FUNCTION longwave_rad_down(cloud_cover, vapor_pressure, air_temp)
-    REAL(wp)            :: longwave_rad_down !! longwave downward radiation [W/m^2]
-    REAL(wp),INTENT(in) :: cloud_cover       !! fraction of sky covered by clouds (from [0,1])
-    REAL(wp),INTENT(in) :: vapor_pressure    !! vapor pressure [N/m^2]
-    REAL(wp),INTENT(in) :: air_temp          !! air temperature at bottom [Celsius]
-
-    REAL(wp) :: r_cloud ! factor correcting longwave radiation for clouds
-    REAL(wp) :: epsA    ! emissivity of the cloudless atmosphere
-    REAL(wp) :: hlp_r   ! helper
-
-    r_cloud = 1._wp + 0.22_wp * cloud_cover * cloud_cover           ! cloud correction Eq. (3)
-    hlp_r = air_temp + tmelt                                        ! Celsius --> Kelvin
-    epsA = 0.64_wp * (vapor_pressure/hlp_r)**0.14285714_wp          ! emissivity Eq. (2)
-    !jsbach3: stbo = StefanBoltzmann
-    longwave_rad_down = r_cloud * epsA * stbo * hlp_r**4 ! lw-radiation flux Eq. (1)
-  END FUNCTION longwave_rad_down
-
-
-  !>
-  !! @brief computes specific humidity
-  !!
-  !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
-  !
-  ! === specific_humidity() =======================================================================================================
-  !
-  ! Specific humidity is computed here by assuming that each component of a mixture of dry air and vapor can be considered as an
-  ! ideal gas. So, let m_d and m_v the masses of the two components in a fixed volume V. Then the specific humidity "q" is
-  ! defined as
-  ! (1) q = m_v/(m_v+m_d)
-  ! Closely related is the moisture mixing ratio "r"
-  ! (2) r = m_v/m_d
-  ! Hence,
-  ! (3) q = r/(1+r)
-  ! Next it is assumed that both, dray air and vapor behave like ideal gases:
-  ! (4) p_d*V = m_d*R_d*T and p_v*V = m_v*R_v*T,
-  ! where p_d is the partial pressure of the dry air and p_v the vapor pressure, R_d and R_v the gas constants and T the
-  ! temperature. Noting that air pressure "p" is the sum of the two partial pressures (p=p_d+p_v) the division of the two gas
-  ! equation by each other gives by using (2):
-  ! (5) r = eps*p_v/(p-p_v),
-  ! where eps=R_d/R_v is the ratio of gas constants. Entering ths into (3) one finally obtains for the specific humidity:
-  !                 p_v
-  ! (6) q = eps -------------
-  !             p-(1-eps)*p_v
-  !
-  ELEMENTAL FUNCTION specific_humidity(vapour_pressure, air_pressure)
-    REAL(wp)            :: specific_humidity !! (from [0,1])
-    REAL(wp),INTENT(IN) :: vapour_pressure   !! [N/m^2]
-    REAL(wp),INTENT(IN) :: air_pressure      !! air pressure at bottom [N/m^2]
-
-    !jsb3: rdv = eps
-    specific_humidity = rdv * vapour_pressure/(air_pressure - (1._wp-rdv)*vapour_pressure)
-
-  END FUNCTION specific_humidity
-
-  !>
-  !! @brief Inverse of specific_humidity
-  !!
-  !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
-  !
-  ! === fun_vapour_pressure() =========================================================================================================
-  !
-  ! Inverse of specific_humidity()
-  !
-  ELEMENTAL FUNCTION fun_vapour_pressure(specific_humidity, air_pressure)
-    REAL(wp) :: fun_vapour_pressure   !! [N/m^2]
-    REAL(wp),INTENT(IN) :: specific_humidity !! (from [0,1])
-    REAL(wp),INTENT(IN) :: air_pressure      !! air pressure at bottom [N/m^2]
-
-    !jsb3: rdv = eps
-    fun_vapour_pressure = air_pressure * specific_humidity / ( rdv + specific_humidity * ( 1._wp - rdv ) )
-
-  END FUNCTION fun_vapour_pressure
 
 #endif
 END MODULE mo_jsb4_forcing

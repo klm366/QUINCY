@@ -15,7 +15,6 @@ PROGRAM jsb4_driver
   USE mo_jsb_model_init,     ONLY: init_model
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone
-  USE mo_jsb_time,           ONLY: is_newday
 
   USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
 
@@ -25,10 +24,11 @@ PROGRAM jsb4_driver
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
-! Seems to be available in both ICON and ECHAM
+  ! Seems to be available in both ICON and ECHAM
   USE mo_exception,        ONLY: message, message_text
   USE mo_kind,             ONLY: wp
   USE mo_math_constants,   ONLY: pi
+  USE mo_orbit,            ONLY: orbit_kepler, orbit_vsop87
 
 !>>> TODO: echam:
   ! parallelisation
@@ -41,14 +41,15 @@ PROGRAM jsb4_driver
   USE mo_output,           ONLY: open_output_streams, close_output_streams, out_streams, init_output
   USE mo_decomposition,    ONLY: local_decomposition
 
-  ! time control, orbit
+  ! time control and orbit calc
   USE mo_timer,            ONLY: init_timer
   USE mo_time_control,     ONLY: lresume, time_set, time_reset, lstop, l_trigfiles, delta_time, &
                                     & time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date
-  USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
-  USE mo_orbit,                ONLY: orbit_kepler, orbit_vsop87
-!<<<
 
+  USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
+  ! ICON would be:
+  ! USE mo_psrad_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
+!<<<
 
   IMPLICIT NONE
 
@@ -73,8 +74,6 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: lon(:,:), lat(:,:), coslon(:,:), coslat(:,:), sinlon(:,:), sinlat(:,:)
   REAL(wp), ALLOCATABLE :: daylght_frc(:,:)
 
-!TODO-JN: maybe only use the 2D ones?
-  REAL(wp), ALLOCATABLE :: t_srf_proc(:,:), fact_q_air_proc(:,:), fact_qsat_srf_proc(:,:), rough_h_srf_proc(:,:)
 
   !! JSB4 interface variables - input
   REAL(wp), ALLOCATABLE :: t_air_K(:,:)
@@ -96,23 +95,26 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: pch(:,:)
   REAL(wp), ALLOCATABLE :: cos_zenith_angle(:,:)
 
-  !! TODO: so far not used in jsb4 but already read from forcing file
+  !! TODO: so far not used in jsb4 but already read from forcing file/ calculated in mo_jsb4_forcing
   REAL(wp), ALLOCATABLE :: CO2_concentration(:,:)
+  REAL(wp), ALLOCATABLE :: frac_par_diffuse(:,:)
+
+  !! JSB4 interface variables - output, required for next timesteps forcing (if not reading interface vars)
+  REAL(wp), ALLOCATABLE :: t_srf_proc(:,:)
+  REAL(wp), ALLOCATABLE :: fact_q_air_proc(:,:)
+  REAL(wp), ALLOCATABLE :: fact_qsat_srf_proc(:,:)
+  REAL(wp), ALLOCATABLE :: rough_h_srf_proc(:,:)
 
   !! JSB4 interface variables - output
-  REAL(wp), ALLOCATABLE :: t_srf(:)
   REAL(wp), ALLOCATABLE :: t_eff_srf(:)
   REAL(wp), ALLOCATABLE :: qsat_srf(:)
   REAL(wp), ALLOCATABLE :: s_srf(:)
-  REAL(wp), ALLOCATABLE :: fact_q_air(:)
-  REAL(wp), ALLOCATABLE :: fact_qsat_srf(:)
   REAL(wp), ALLOCATABLE :: evapotrans(:)
   REAL(wp), ALLOCATABLE :: evapopot(:)
   REAL(wp), ALLOCATABLE :: latent_hflx(:)
   REAL(wp), ALLOCATABLE :: sensible_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hcap(:)
-  REAL(wp), ALLOCATABLE :: rough_h_srf(:)
   REAL(wp), ALLOCATABLE :: rough_m_srf(:)
   REAL(wp), ALLOCATABLE :: tte_corr(:)
   REAL(wp), ALLOCATABLE :: alb_vis_dir(:)
@@ -184,6 +186,7 @@ PROGRAM jsb4_driver
   nproma = local_decomposition%nproma !TODO: get with already existing function? 'get_nproma' ?
   nblks = local_decomposition%ngpblks !TODO: get with already existing function?
 
+  ! forcing
   ALLOCATE(t_air_K(nproma, nblks))
   ALLOCATE(q_air(nproma, nblks))
   ALLOCATE(rain(nproma, nblks))
@@ -204,20 +207,24 @@ PROGRAM jsb4_driver
   ALLOCATE(cos_zenith_angle(nproma, nblks))
 
   ALLOCATE(CO2_concentration(nproma, nblks))
+  ALLOCATE(frac_par_diffuse(nproma, nblks))
 
-  ALLOCATE(t_srf(nproma))
+  ! output required for next timesteps forcing (if not reading interface vars)
+  ALLOCATE(t_srf_proc(nproma, nblks))
+  ALLOCATE(fact_q_air_proc(nproma, nblks))
+  ALLOCATE(fact_qsat_srf_proc(nproma, nblks))
+  ALLOCATE(rough_h_srf_proc(nproma, nblks))
+
+  ! output
   ALLOCATE(t_eff_srf(nproma))
   ALLOCATE(qsat_srf(nproma))
   ALLOCATE(s_srf(nproma))
-  ALLOCATE(fact_q_air(nproma))
-  ALLOCATE(fact_qsat_srf(nproma))
   ALLOCATE(evapopot(nproma))
   ALLOCATE(evapotrans(nproma))
   ALLOCATE(latent_hflx(nproma))
   ALLOCATE(sensible_hflx(nproma))
   ALLOCATE(grnd_hflx(nproma))
   ALLOCATE(grnd_hcap(nproma))
-  ALLOCATE(rough_h_srf(nproma))
   ALLOCATE(rough_m_srf(nproma))
   ALLOCATE(tte_corr(nproma))
   ALLOCATE(alb_vis_dir(nproma))
@@ -240,17 +247,11 @@ PROGRAM jsb4_driver
     ALLOCATE(sinlat(nproma,nblks))
     ALLOCATE(daylght_frc(nproma, nblks))
 
-    ALLOCATE(t_srf_proc(nproma, nblks))
-    ALLOCATE(fact_q_air_proc(nproma, nblks))
-    ALLOCATE(fact_qsat_srf_proc(nproma, nblks))
-    ALLOCATE(rough_h_srf_proc(nproma, nblks))
-
     !init for first timestep/day (according to jsb3: mo_jsbalone: init_driving)
     t_srf_proc = 273._wp
     fact_q_air_proc = 0.5_wp
     fact_qsat_srf_proc = 0.5_wp
     rough_h_srf_proc = 1._wp
-
   ENDIF
 
   ! - Main loop
@@ -285,7 +286,7 @@ PROGRAM jsb4_driver
       CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, cos_zenith_angle, CO2_concentration, &
         & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
-        & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
+        & frac_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
     ENDIF
 
     DO jrow = 1, nblks
@@ -309,17 +310,10 @@ PROGRAM jsb4_driver
         & q_air(:,jrow), rain(:,jrow), snow(:,jrow), wind_air(:,jrow), wind_10m(:,jrow), lw_srf_down(:,jrow), &
         & swvis_srf_down(:,jrow), swnir_srf_down(:,jrow), swpar_srf_down(:,jrow), press_srf(:,jrow), drag_srf(:,jrow), &
         & t_acoef(:,jrow), t_bcoef(:,jrow), q_acoef(:,jrow), q_bcoef(:,jrow), pch(:,jrow), cos_zenith_angle(:,jrow), &
-        & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air(:), fact_qsat_srf(:), &
+        & t_srf_proc(:,jrow), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,jrow), fact_qsat_srf_proc(:,jrow), &
         & evapopot(:), evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
-        & rough_h_srf(:), rough_m_srf(:), tte_corr(:), alb_vis_dir(:), alb_nir_dir(:), &
+        & rough_h_srf_proc(:,jrow), rough_m_srf(:), tte_corr(:), alb_vis_dir(:), alb_nir_dir(:), &
         & alb_vis_dif(:), alb_nir_dif(:))
-
-      IF (.NOT. read_interface_vars) THEN
-        t_srf_proc(:,jrow) = t_srf(:)
-        fact_q_air_proc(:,jrow) = fact_q_air(:)
-        fact_qsat_srf_proc(:,jrow) = fact_qsat_srf(:)
-        rough_h_srf_proc(:,jrow) = rough_h_srf(:)
-      ENDIF
     ENDDO
 
     CALL out_streams
@@ -364,12 +358,12 @@ PROGRAM jsb4_driver
 
   ! deallocate in- and output arrays
   DEALLOCATE(t_air_K, q_air, rain, snow, wind_air, wind_10m)
-  DEALLOCATE(lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down)
+  DEALLOCATE(lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, frac_par_diffuse)
   DEALLOCATE(press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle, CO2_concentration)
 
-  DEALLOCATE(t_srf, t_eff_srf, qsat_srf, s_srf, fact_q_air, fact_qsat_srf)
+  DEALLOCATE(t_eff_srf, qsat_srf, s_srf)
   DEALLOCATE(evapopot, evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap)
-  DEALLOCATE(rough_h_srf, rough_m_srf, tte_corr, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
+  DEALLOCATE(rough_m_srf, tte_corr, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
 
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)
