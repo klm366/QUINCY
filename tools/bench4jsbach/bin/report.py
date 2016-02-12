@@ -137,7 +137,7 @@ table below.
 
 \\begin{tabularx}{\\linewidth}{lLL}
 \\toprule
-\\textbf{variable} & \\textbf{analyis method} & \\textbf{shortname} \\\\
+\\textbf{variable} & \\textbf{analyis method} & \\textbf{classification string} \\\\
 \\addlinespace
 \\cmidrule(r){1-3}
 %s

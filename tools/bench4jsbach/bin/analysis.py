@@ -212,6 +212,46 @@ and \\texttt{timemean}($X$) defined as
         self.analyses [ A_varname ].append ( globalNtime_mean )
         
         
+        # 3.d,e)
+        teXt = """
+We calculate the global and time mean deviation of the difference of albedo seasonal mean 
+weighted by downwelling radiation seasonal mean from the last section. The global 
+mean deviation is 
+\\begin{eqnarray*}
+gd_{CR} & = & \\texttt{fldmean} ( \\sqrt{(\\Delta_{CR} * \\texttt{land-sea-mask})^{2}} )
+\\end{eqnarray*}
+with
+\\begin{eqnarray*}
+gd & := & \\textnormal{ global mean deviation of weighted difference of albedo  in } \\frac{W}{m^{2}}
+\\end{eqnarray*}
+and \\texttt{fldmean}($X$) defined as
+\\begin{eqnarray*}
+  y_{t} & = & \\sum_{i=0}^{n_{X}} w_{Xi} x_{ti} \\\\
+\\end{eqnarray*}
+The time mean is then calculated with
+\\begin{eqnarray*}
+td_{CR} & = & \\texttt{timemean} ( gd_{CR} )
+\\end{eqnarray*}
+\\begin{eqnarray*}
+td & := & \\textnormal{time and global mean deviation of weighted difference} \\\\
+ & & \\textnormal{seasonal mean of albedo  in } \\frac{W}{m^{2}}
+\\end{eqnarray*}
+and \\texttt{timemean}($X$) defined as
+\\begin{eqnarray*}
+  y & = &  n^{-1} \\sum_{i=0}^{n_{T}} x_{i} \\\\
+\\end{eqnarray*}
+
+"""
+        globalNtime_dev = copy.deepcopy ( analyses_var_test_item )
+        globalNtime_dev [ 'name' ]   = 'globalNtime_dev'
+        globalNtime_dev [ 'teXts' ]. append ( teXt )
+        globalNtime_dev [ 'title' ]  = 'Global and time mean deviation'
+        globalNtime_dev [ 'matrix' ] = False
+        globalNtime_dev [ 'vector' ] = True
+        globalNtime_dev [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
+                                          for can in self.experiments if can.B4J_iscan ]
+        self.analyses [ A_varname ].append ( globalNtime_dev )
+        
         for exp in self.experiments:
             exp.B4J_varpaths.clear ()
         in_files = []
@@ -268,7 +308,7 @@ and \\texttt{timemean}($X$) defined as
                               options='-f nc -m 0.00011' )
                 
 
-        # 2.  preprocessing, calculate seasonal means for largest common period
+        # 2.  preprocessing, calculate seasonal mean for largest common period
         for exp in self.experiments:
             exp.B4J_varpaths [ "A_sm" ] = self.path_template % { 
                 'path'           : self.data_path,
@@ -455,15 +495,16 @@ and \\texttt{timemean}($X$) defined as
                 delta_can [ 'infiles' ].append ( can.B4J_varpaths [ delta_str ])
                 delta_can [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ])
                 
-   
+
+        # 4.a.3.b,c,d,e
+        
+        colors = [ 'r', 'g', 'b', 'c', 'y', 'm' ]
+        colored_dots = [ 'ro', 'go', 'bo', 'co', 'yo', 'mo' ]
+        
         # 4.a.3.b,c)
 
         globalNtime_mean = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "globalNtime_mean" ), None )
         assert globalNtime_mean
-
-        colors = [ 'r', 'g', 'b', 'c', 'y', 'm' ]
-        colored_dots = [ 'ro', 'go', 'bo', 'co', 'yo', 'mo' ]
-
         
         for can in self.experiments:
             if not can.B4J_iscan: continue
@@ -522,8 +563,78 @@ and \\texttt{timemean}($X$) defined as
             plt.grid ( 'on' )
             lgd = plt.legend ( numpoints = 1,  
                                loc = 2,                  
-                               bbox_to_anchor=(1.05,1))
+                               bbox_to_anchor = ( 1.05, 1 ))
             plt.savefig ( plot_globalNtime_mean_str, 
+                          dpi = 100, 
+                          bbox_extra_artists = ( lgd, ), 
+                          bbox_inches = 'tight' )
+            plt.close ()
+            
+        
+        # 4.a.3.d,e)
+
+        globalNtime_dev = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "globalNtime_dev" ), None )
+        assert globalNtime_dev
+        
+        for can in self.experiments:
+            if not can.B4J_iscan: continue
+            
+            plot_globalNtime_dev_str =  self.path_template % {
+                'path'           : self.graphic_path,
+                'varname'        : A_varname,
+                'classification' : "gNtdev",
+                'expname'        : can.B4J_name,
+                'startdate'      : str ( yearlist [ 0 ]),
+                'finaldate'      : str ( yearlist [ -1 ]),  
+                'suffix'         : 'png' }
+            globalNtime_dev_can = next (( item for item in globalNtime_dev [ 'cans' ] \
+                                           if item [ 'name' ] == can.B4J_name ), None )
+            assert globalNtime_dev_can
+            globalNtime_dev_can [ 'plots' ].append ( plot_globalNtime_dev_str )
+            
+            fig = plt.figure()
+            
+            refs = []
+            for ref in self.experiments:
+                if not ref.B4J_isref: continue
+                if ref.B4J_name == can.B4J_name: continue
+                
+                gd_str = "gd-ref%d" % ref.B4J_refno
+                td_str = "td-ref%d" % ref.B4J_refno
+                globalNtime_dev_can [ 'infiles' ].append ( can.B4J_varpaths [ gd_str ])
+                nc_fid = Dataset ( can.B4J_varpaths [ gd_str ])  
+                time = nc_fid.variables [ 'time' ][ : ]
+                albedo_gm = nc_fid.variables['albedo'][:] 
+                nc_fid.close ()
+
+                globalNtime_dev_can [ 'infiles' ].append ( can.B4J_varpaths [ td_str ])
+                nc_fid = Dataset ( can.B4J_varpaths [ td_str ], 'r')
+                albedo_tm = nc_fid.variables [ 'albedo' ][ : ] 
+                nc_fid.close ()
+                
+                plt.plot ( time, albedo_gm [ :, 0, 0 ],
+                           colored_dots [ ref.B4J_refno ],
+                           label = r'$gd_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ) +  r', $R_{%s}$: ' % ref.B4J_refno + ref.B4J_name )
+                plt.axhline ( albedo_tm [ 0, 0, 0 ],
+                              color =  colors [ ref.B4J_refno ],
+                              label = r'$td_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ))
+
+                
+            plt.title ( r'$gd_{C_{%d}R}$' % can.B4J_canno + \
+                        " and " +\
+                        r'$td_{C_{%d}R}$' % can.B4J_canno,
+                        y = 1.08 )
+            plt.ylabel ( r'$\frac{W}{m^{2}}$',
+                         rotation = 0,
+                         position = ( -0.4, .96 ),
+                         fontsize = 20 )
+            plt.xlabel ( "season")
+            plt.xticks ( time, seasons )
+            plt.grid ( 'on' )
+            lgd = plt.legend ( numpoints = 1,  
+                               loc = 2,                  
+                               bbox_to_anchor=(1.05,1))
+            plt.savefig ( plot_globalNtime_dev_str, 
                           dpi = 100, 
                           bbox_extra_artists= ( lgd, ), 
                           bbox_inches='tight' )
