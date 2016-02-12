@@ -110,7 +110,6 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: qsat_srf(:)
   REAL(wp), ALLOCATABLE :: s_srf(:)
   REAL(wp), ALLOCATABLE :: evapotrans(:)
-  REAL(wp), ALLOCATABLE :: evapopot(:)
   REAL(wp), ALLOCATABLE :: latent_hflx(:)
   REAL(wp), ALLOCATABLE :: sensible_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hflx(:)
@@ -221,7 +220,6 @@ PROGRAM jsb4_driver
   ALLOCATE(t_eff_srf(nproma))
   ALLOCATE(qsat_srf(nproma))
   ALLOCATE(s_srf(nproma))
-  ALLOCATE(evapopot(nproma))
   ALLOCATE(evapotrans(nproma))
   ALLOCATE(latent_hflx(nproma))
   ALLOCATE(sensible_hflx(nproma))
@@ -315,7 +313,7 @@ PROGRAM jsb4_driver
         & swvis_srf_down(:,jrow), swnir_srf_down(:,jrow), swpar_srf_down(:,jrow), press_srf(:,jrow), drag_srf(:,jrow), &
         & t_acoef(:,jrow), t_bcoef(:,jrow), q_acoef(:,jrow), q_bcoef(:,jrow), pch(:,jrow), cos_zenith_angle(:,jrow), &
         & t_srf_proc(:,jrow), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,jrow), fact_qsat_srf_proc(:,jrow), &
-        & evapopot(:), evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
+        & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
         & rough_h_srf_proc(:,jrow), rough_m_srf(:), tte_corr(:), alb_vis_dir(:), alb_nir_dir(:), &
         & alb_vis_dif(:), alb_nir_dif(:))
     ENDDO
@@ -366,7 +364,7 @@ PROGRAM jsb4_driver
   DEALLOCATE(press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle, CO2_concentration)
 
   DEALLOCATE(t_eff_srf, qsat_srf, s_srf)
-  DEALLOCATE(evapopot, evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap)
+  DEALLOCATE(evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap)
   DEALLOCATE(rough_m_srf, tte_corr, alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
 
   IF (.NOT. read_interface_vars) THEN
