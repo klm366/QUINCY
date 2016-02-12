@@ -15,6 +15,7 @@ from pycmbs.data import Data
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
+import matplotlib.colorbar as colorbar
 import numpy as np
 from pycmbs.mapping import map_plot
 
@@ -163,7 +164,7 @@ and \\texttt{yseasmean}($X$) defined as
         delta = copy.deepcopy ( analyses_var_test_item )
         delta [ 'name' ]   = 'delta'
         delta [ 'teXts' ]. append ( teXt )
-        delta [ 'title' ]  = 'Seasonal means difference plots'
+        delta [ 'title' ]  = 'Seasonal mean difference'
         delta [ 'matrix' ] = True
         delta [ 'vector' ] = False
         delta [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
@@ -192,7 +193,7 @@ The time mean is then calculated with
 tm_{CR} & = & \\texttt{timemean} ( gm_{CR} )
 \\end{eqnarray*}
 \\begin{eqnarray*}
-tm & := & \\textnormal{ time mean of global mean of weighted difference of seasonal mean of albedo  in } \\frac{W}{m^{2}}
+tm & := & \\textnormal{ time and global mean of weighted difference of seasonal mean of albedo  in } \\frac{W}{m^{2}}
 \\end{eqnarray*}
 and \\texttt{timemean}($X$) defined as
 \\begin{eqnarray*}
@@ -203,7 +204,7 @@ and \\texttt{timemean}($X$) defined as
         globalNtime_mean = copy.deepcopy ( analyses_var_test_item )
         globalNtime_mean [ 'name' ]   = 'globalNtime_mean'
         globalNtime_mean [ 'teXts' ]. append ( teXt )
-        globalNtime_mean [ 'title' ]  = 'Global and time means'
+        globalNtime_mean [ 'title' ]  = 'Global and time mean'
         globalNtime_mean [ 'matrix' ] = False
         globalNtime_mean [ 'vector' ] = True
         globalNtime_mean [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
@@ -297,6 +298,8 @@ and \\texttt{timemean}($X$) defined as
 
         # 3.  matrix processing, for all Experiments e and all References r
         # 4.  prepare output
+
+        seasons =  ['DJF','MAM','JJA','SON']
 
         # 4.a.3.a) special color adjustment for delta plot        
         vmin           = -7.5
@@ -397,8 +400,6 @@ and \\texttt{timemean}($X$) defined as
                 
                 # 4.a) store plots for results of calculations in 3.
 
-                seasons =  ['DJF','MAM','JJA','SON']
-
                 # 4.a.3.a)
                 
                 delta = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "delta" ), None )
@@ -417,11 +418,11 @@ and \\texttt{timemean}($X$) defined as
                     'suffix'         : 'png' }
 
 
-                f = plt.figure ( figsize = ( 15, 10 ))
+                f = plt.figure ( figsize = ( 16, 10 ))
                 ax = [ f.add_subplot ( 2, 2, i + 1 ) for i in range ( 4 )]
                 d = [ None ] * 4                
                 gs1 = gridspec.GridSpec ( 2, 2 )
-                gs1.update ( wspace = -0.08, hspace = -0.04  ) #0.001, hspace = 0.001 )                
+                gs1.update ( wspace = -0.08, hspace = -0.04  )               
                 for i in range ( 4 ):
                     ax [i] = plt.subplot ( gs1 [ i ])
                     d [i] = Data ( can.B4J_varpaths [ delta_str ],
@@ -438,9 +439,9 @@ and \\texttt{timemean}($X$) defined as
                                    return_plot_handler = True,
                                    cmap_data           = cmap_bwr )
                     
-                cax = f.add_axes ([ 0.9, 0.1, 0.03, 0.8 ])
-                cb = f.colorbar ( x.im, cax = cax )
-                cb.ax.text ( 1.8, 1, r'$\frac{W}{m^{2}}$', size = 32 )
+                cax = f.add_axes ([ 0.17, 0.07, 0.7, 0.03])
+                cb = f.colorbar ( x.im, cax = cax, orientation = "horizontal" )
+                cb.ax.text ( 0.97, 2.5, r'$\frac{W}{m^{2}}$', size = 32 )
                 plt.suptitle ( r'$\Delta_{C_{%d}R_{%d}}$' % (
                     can.B4J_canno, ref.B4J_refno ) + \
                                r',   $C_{%d}$: %s, $R_{%d}$: %s' % (

@@ -36,7 +36,7 @@ doc_template = """
 
 %(body)s
 
-\section{Outlook}
+\section{Summary}
 %(epilog)s \lipsum[1]
 
 \end{document}
@@ -96,7 +96,7 @@ def includegraphics_template ( path, width = '1', hspace = '0' ):
     return ret
     
 
-def lateXify ( string ):
+def teXify ( string ):
     assert isinstance ( string, str )
     
     ret = string
@@ -137,7 +137,7 @@ table below.
 
 \\begin{tabularx}{\\linewidth}{lLL}
 \\toprule
-\\textbf{variable} & \\textbf{name of analyis or plot} & \\textbf{description} \\\\
+\\textbf{variable} & \\textbf{analyis method} & \\textbf{shortname} \\\\
 \\addlinespace
 \\cmidrule(r){1-3}
 %s
@@ -145,19 +145,24 @@ table below.
 \\end{tabularx}
 
 """ %(
-    ''.join ( '\\item {!s} ($C_{{{!s}}}$)'.format ( lateXify ( can.B4J_name ),
+    ''.join ( '\\item {!s} ($C_{{{!s}}}$)'.format ( teXify ( can.B4J_name ),
                                                     str ( can.B4J_canno )) \
               if can.B4J_iscan else '' \
                 for can in self.experiments ),
-    ''.join ( '\\item {!s} ($R_{{{!s}}}$)'.format ( lateXify ( ref.B4J_name ),
+    ''.join ( '\\item {!s} ($R_{{{!s}}}$)'.format ( teXify ( ref.B4J_name ),
                                                    str ( ref.B4J_refno )) \
               if ref.B4J_isref else '' \
                 for ref in self.experiments ),
-    '\\\\\n'.join ( '%s & %s &' % (( lateXify ( k ), lateXify ( str ( a [ 'name' ]))) \
-                                 if self.analyses [ k ].index ( a ) == 0 \
-                                 else ( '', lateXify ( str ( a [ 'name' ])))) \
-                                 for k in self.analyses \
-                                 for a in self.analyses [ k ] ))
+    '\\\\\n'.join ( '%s & %s & %s' %\
+                    (( teXify ( varname ),
+                      teXify ( str ( analysesitemdict [ 'title' ])),
+                      teXify ( str ( analysesitemdict [ 'name' ]))) \
+                    if self.analyses [ varname ].index ( analysesitemdict ) == 0 \
+                    else ( '',
+                           teXify ( str ( analysesitemdict [ 'title' ])),
+                           teXify ( str ( analysesitemdict [ 'name' ])))) \
+                    for varname in self.analyses \
+                    for analysesitemdict in self.analyses [ varname ] ))
 
         description += subsection_template % { 'subsection': 'Candidate experiments to benchmark' }
     
@@ -185,12 +190,12 @@ table below.
 
         for analyse in self.analyses [ varname ]:
             
-            albedo_body += subsection_template % { 'subsection': lateXify ( analyse [ 'title' ])}
+            albedo_body += subsection_template % { 'subsection': teXify ( analyse [ 'title' ])}
             albedo_body +=  analyse [ 'teXts' ][ 0 ]
             if analyse [ 'matrix' ]:
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
-                    can_name = lateXify ( can.B4J_name )
+                    can_name = teXify ( can.B4J_name )
                     title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
                             ( can_name, can.B4J_canno ) 
                     albedo_body += subsubsection_template % { 'subsubsection': title }
@@ -204,13 +209,13 @@ table below.
                             plot = analyse_can [ 'plots' ][ no ]
                             albedo_body += includegraphics_template (  plot,
                                                                        width      = '1.5',
-                                                                       hspace     = '-4' )
+                                                                       hspace     = '-3.3' )
                             no += 1
                             
             elif analyse [ 'vector' ]:
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
-                    can_name = lateXify ( can.B4J_name )
+                    can_name = teXify ( can.B4J_name )
                     title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
                             ( can_name, can.B4J_canno ) 
                     albedo_body += subsubsection_template % { 'subsubsection': title }
@@ -223,7 +228,15 @@ table below.
                                                                   hspace   = '0' )
 
 
-        section_intro = "The result data and the plots can be found in\\\\ \\ \\\\"
+        section_intro = """The the output data of the analyses can be found in \\\\ 
+\\bigskip
+
+  \\-\ \\hspace{.5cm} \\texttt{%s},\\\\
+\\medskip
+the plots\\\\
+\\medskip
+   \\-\ \\hspace{.5cm}  \\texttt{%s}.
+\\medskip""" % ( teXify ( self.data_path ), teXify ( self.graphic_path ))
 
         section = section_template % { 'section' : "%s: analyses and benchmarks for variable" % \
                                        varname.title (),
@@ -242,7 +255,7 @@ table below.
             os.makedirs ( tmp_path )
         os.chdir ( source_path )
 
-        title_second = "%s" % ''.join ( '\\\\{!s} ({!s})'. format ( lateXify ( can.B4J_name ),  lateXify ( can.B4J_etype )) \
+        title_second = "%s" % ''.join ( '\\\\{!s} ({!s})'. format ( teXify ( can.B4J_name ),  teXify ( can.B4J_etype )) \
                 if can.B4J_iscan else '' \
                 for can in self.experiments )
 
@@ -256,7 +269,8 @@ table below.
                                 'graphicpath': self.graphic_path,
                                 'abstract'   : self.write_description (),
                                 'body'       : self.body,
-                                'epilog'     : "This is an epilog."}
+                                'epilog'     : """This chapter provides a brief overview of the analyses and 
+                                benchmarks being done."""}
 
         self.logger.debug ( "Latex source code: " + log_message_newline +\
                             page )
@@ -296,6 +310,6 @@ if __name__ == '__main__':
 
     print s
 
-    s2 = lateXify ( s )
+    s2 = teXify ( s )
 
     print s2
