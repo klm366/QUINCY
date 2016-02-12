@@ -6,10 +6,13 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
+!! JN (2016-02-20) io namelist subroutine for jsb4 standalone
 !!
 MODULE mo_jsb_io_iface
 #ifndef __NO_JSBACH__
-  USE mo_kind,          ONLY: wp
+  USE mo_kind,               ONLY: wp
+  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+  USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, close_nml, position_nml
 
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
@@ -37,7 +40,7 @@ MODULE mo_jsb_io_iface
             zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
             zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
             zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &
-            Create_zaxis
+            Create_zaxis, read_io_namelist
 
 
 #ifndef __ICON__
@@ -125,5 +128,58 @@ CONTAINS
 
   END SUBROUTINE Create_zaxis
   
+  SUBROUTINE read_io_namelist(filename)
+
+    USE mo_jsb_test, ONLY: read_interface_vars, write_interface_vars
+
+#ifdef __ICON__
+    ! TODO: mo_jsb_test for now not inplemented with ICON
+    read_interface_vars = .FALSE.
+    write_interface_vars = .FALSE.
+#else
+#ifdef STANDALONE
+    USE mo_filename, ONLY: out_expname
+#endif
+#endif
+
+    CHARACTER(LEN=*), INTENT(in) :: filename
+
+    INTEGER :: nml_handler, nml_unit, istat
+
+    NAMELIST /jsb_io_ctl/ &
+#ifdef STANDALONE
+      out_expname,          &
+      read_interface_vars,  &
+#endif
+      write_interface_vars
+
+    IF(my_process_is_stdio()) THEN
+      ! default values
+#ifdef STANDALONE
+      out_expname = 'undefined_expname'
+#endif
+      read_interface_vars = .FALSE.
+      write_interface_vars = .FALSE.
+
+      nml_handler = open_nml(TRIM(filename))
+
+      nml_unit =  position_nml('jsb_io_ctl', nml_handler, STATUS=istat)
+      IF (istat == POSITIONED) READ(nml_unit, jsb_io_ctl)
+
+      CALL close_nml(nml_handler)
+
+    ENDIF
+
+    IF (my_process_is_mpi_parallel()) THEN
+#ifdef STANDALONE
+      CALL p_bcast(out_expname, p_io)
+#endif
+      CALL p_bcast(read_interface_vars, p_io)
+      CALL p_bcast(write_interface_vars, p_io)
+    ENDIF
+
+  END SUBROUTINE read_io_namelist
+
+
 #endif
 END MODULE mo_jsb_io_iface

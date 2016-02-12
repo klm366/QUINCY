@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
+!! JN (2016-02-20) new subroutines and some adaptations for jsb4 standalone
 !!
 MODULE mo_jsb_domain_iface
 #ifndef __NO_JSBACH__
@@ -546,10 +547,12 @@ CONTAINS
   !! Currently only working for ECHAM
   !!
   !! @par History
-  !! Initial parts copied from jsbach3 mo_jsbach_grid.f90:init_grid 
+  !! JN: Initial parts copied from jsbach3 mo_jsbach_grid.f90:init_grid
   !!
   SUBROUTINE get_nlon_nlat_from_file(grid_filename, read_nlon, read_nlat) !filename
   
+    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+
 #ifndef __ICON__  
     USE mo_control,   ONLY: nlon, ngl, nhgl, nvclev, vct
     USE mo_io,     ONLY: IO_READ, IO_open, IO_close
@@ -570,15 +573,23 @@ CONTAINS
 #ifdef __ICON__  
     CALL finish(TRIM(routine), 'not implemented for use with ICON')
 #else
-    grid_file%opened = .FALSE.
 
-    CALL io_open(grid_filename, grid_file, IO_READ)
-    CALL io_inq_dimid  (grid_file%file_id, 'lon', IO_dim_id)
-    CALL io_inq_dimlen (grid_file%file_id, IO_dim_id, read_nlon)
-    CALL io_inq_dimid  (grid_file%file_id, 'lat', IO_dim_id)
-    CALL io_inq_dimlen (grid_file%file_id, IO_dim_id, read_nlat)
+    IF (my_process_is_stdio()) THEN
+      grid_file%opened = .FALSE.
 
-    CALL IO_close(grid_file)
+      CALL io_open(grid_filename, grid_file, IO_READ)
+      CALL io_inq_dimid  (grid_file%file_id, 'lon', IO_dim_id)
+      CALL io_inq_dimlen (grid_file%file_id, IO_dim_id, read_nlon)
+      CALL io_inq_dimid  (grid_file%file_id, 'lat', IO_dim_id)
+      CALL io_inq_dimlen (grid_file%file_id, IO_dim_id, read_nlat)
+
+      CALL IO_close(grid_file)
+    ENDIF
+
+    IF (my_process_is_mpi_parallel()) THEN
+      CALL p_bcast (read_nlon, p_io)
+      CALL p_bcast (read_nlat, p_io)
+    ENDIF
 
     !Required for standalone model for mo_gaussgrid::inigau()
     nlon = read_nlon
@@ -586,8 +597,6 @@ CONTAINS
     nhgl = ngl / 2
     nvclev = 0
 
-    !-> TODO implement parallel case - only read if io proc and the p_cast?
-    !CALL p_bcast (nlon, p_io)       
 #endif
   END SUBROUTINE get_nlon_nlat_from_file
 
@@ -598,7 +607,7 @@ CONTAINS
   !! Currently only working for ECHAM
   !!
   !! @par History
-  !! Initial version copied from jsbach3 jsbalone_init_decomp.f90 
+  !! JN: Initial version copied from jsbach3 jsbalone_init_decomp.f90
   !!
   SUBROUTINE jsbalone_init_decomp (nlon, nlat, nproca, nprocb, npedim, decomposition)
 

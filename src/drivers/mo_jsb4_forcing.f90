@@ -1,5 +1,5 @@
 !>
-!! @brief Module to read and convert external driving/forcing data (expects annual files with year in filename)
+!! @brief Module to read and convert external forcing data (expects annual files with year in filename)
 !! -- current implementation only for daily, timestep or constant data
 !!    (for using monthly data see e.g. jsbach3 (https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg r8133))
 !!
@@ -135,7 +135,7 @@ MODULE mo_jsb4_forcing
 
   CHARACTER(NF_MAX_NAME) :: forcing_co2_file_prefix          !! Prefix for files with CO2 data (unit: mol(CO2)/mol(air)
                                                              !! or kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit'
-  CHARACTER(len=128)     :: forcing_co2_frequ                !! Frequency of CO2 forcing data (DAILY/CONST)
+  CHARACTER(len=128)     :: forcing_co2_frequ                !! Frequency of CO2 forcing data (DAILY/CONST/TIMESTEP)
   REAL(wp)               :: forcing_co2_const_co2            !! Constant value for CO2-concentration (unit: mol(CO2)/mol(air) or
                                                              !! kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit')
   REAL(wp)               :: forcing_co2_ocean                !! Constant value for ocean cells
@@ -178,12 +178,12 @@ MODULE mo_jsb4_forcing
     REAL(wp), POINTER        :: timevalues(:) => NULL()     !! The values of the time variable (only if my_process_is_stdio())
   END TYPE input_variable_type
 
-  ! All theoretically possible input data, i.e. some are usually not used. (Input data is controlled by jsb_forcing_ctl)
+  ! All theoretically possible input data, i.e. some are not used. (Input data is controlled by jsb_forcing_ctl)
   TYPE forcing_input_type
      TYPE(input_variable_type) :: air_temp_min  !! daily minimum of air temperature at surface [Celsius]
      TYPE(input_variable_type) :: air_temp_max  !! daily maximum of air temperature at surface [Celsius]
      TYPE(input_variable_type) :: air_temp      !! air temperature [Celsius]
-     TYPE(input_variable_type) :: precipitation !! daily precipitation (including snow); units may be
+     TYPE(input_variable_type) :: precipitation !! precipitation (including snow); units may be
                                                 !! [mm/day] or [kg/m^2/s] (see option  "precip_in_mm_per_day")
      TYPE(input_variable_type) :: shortwave     !! incident shortwave radiation [W/m^2]
      TYPE(input_variable_type) :: longwave      !! incident longwave radiation [W/m^2]
@@ -250,7 +250,7 @@ CONTAINS
     INTEGER  :: iblk
     INTEGER  :: day_of_year
 
-    REAL(wp), ALLOCATABLE :: t_air(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), sat_spec_humidity(:,:)
+    REAL(wp), ALLOCATABLE :: t_air(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), sat_spec_humidity(:,:), rel_humidity(:,:)
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
 
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are not required - remove?
@@ -263,7 +263,7 @@ CONTAINS
     ALLOCATE(temporary_data1(ice, nblks))
 
     ! --- temperature
-    ! for temperature the variables used depend on the forcing frequency: tmin&tmax for daily data t_air for timestep
+    ! for temperature the variables used depend on the forcing frequency: tmin&tmax for daily data; t_air for timestep
     ALLOCATE(t_air(ice, nblks))
     IF(forcing_options%air_temperature_as_timestep) THEN
       CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%air_temp, t_air)
@@ -313,43 +313,44 @@ CONTAINS
     ALLOCATE(sat_spec_humidity(ice, nblks))
     SELECT CASE(forcing_options%type_of_qair_forcing)
     CASE(RH_)
-      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%rel_humidity, temporary_data1)
+      ALLOCATE(rel_humidity(ice, nblks))
+      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%rel_humidity, rel_humidity)
       ! check data
-      hlp_r = MAXVAL(MAXVAL(temporary_data1,DIM=2))
+      hlp_r = MAXVAL(MAXVAL(rel_humidity,DIM=2))
       IF(hlp_r < 1._wp) THEN
         WRITE (message_text,*) 'Maximum value of relative humidity is ', hlp_r
         CALL message(TRIM(routine), message_text)
         CALL message(TRIM(routine),'relative humidity data probably represent fractions instead of percentages.')
       ENDIF
       ! Convert percentage data to fractional data:
-      temporary_data1 = temporary_data1/100._wp
+      rel_humidity = rel_humidity/100._wp
+      ! Get saturation spec. humidity from air temperature
+      DO iblk = 1, nblks
+        CALL sat_specific_humidity(ice, t_air_K(:,iblk), press_srf(:,iblk), sat_spec_humidity(:,iblk))
+      ENDDO
       ! Get specific humidity
-      IF (forcing_input%rel_humidity%frequency .NE. TIMESTEP_) THEN
+      IF (forcing_input%rel_humidity%frequency .EQ. TIMESTEP_) THEN
+        q_air(:,:) = rel_humidity(:,:) * sat_spec_humidity(:,:) !TODO: Why *?
+      ELSE
         IF (forcing_options%air_temperature_as_timestep) THEN
           DO iblk = 1, nblks
             CALL spec_humidity_from_rel_humidity(ice, sinlat(:,iblk), coslat(:,iblk), &
-              & temporary_data1(:,iblk), MINVAL(forcing_input%air_temp%data_read(:,iblk,:),DIM=2), &
+              & rel_humidity(:,iblk), MINVAL(forcing_input%air_temp%data_read(:,iblk,:),DIM=2), &
               & MAXVAL(forcing_input%air_temp%data_read(:,iblk,:),DIM=2), elevation(:), delta_time, q_air(:,iblk))
           ENDDO
         ELSE
           DO iblk = 1, nblks
             CALL spec_humidity_from_rel_humidity(ice, sinlat(:,iblk), coslat(:,iblk), &
-              & temporary_data1(:,iblk), tmin_data(:,iblk), tmax_data(:,iblk), elevation(:), delta_time, q_air(:,iblk))
+              & rel_humidity(:,iblk), tmin_data(:,iblk), tmax_data(:,iblk), elevation(:), delta_time, q_air(:,iblk))
           ENDDO
         ENDIF
-      ENDIF
-      ! constrain daily specific humidity to be lower than or equal to the saturation spec. humidity
-      DO iblk = 1, nblks
-        CALL sat_specific_humidity(ice, t_air_K(:,iblk), press_srf(:,iblk), sat_spec_humidity(:,iblk))
-      ENDDO
-      IF (forcing_input%rel_humidity%frequency .EQ. TIMESTEP_) THEN
-        q_air(:,:) = temporary_data1(:,:) * sat_spec_humidity(:,:)
-      ELSE
+        ! constrain daily specific humidity to be lower than or equal to the saturation spec. humidity
         q_air(:,:) = MIN(q_air, sat_spec_humidity)
       ENDIF
+      DEALLOCATE(rel_humidity)
     CASE(QAIR_)
       CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%qair, q_air(:,:))
-      ! constrain daily specific humidity to be lower than or equal to the saturation spec. humidity
+      ! constrain specific humidity to be lower than or equal to the saturation spec. humidity
       DO iblk = 1, nblks
         CALL sat_specific_humidity(ice, t_air_K(:,iblk), press_srf(:,iblk), sat_spec_humidity(:,iblk))
       ENDDO
@@ -404,8 +405,8 @@ CONTAINS
       DEALLOCATE(tmax_data)
     ENDIF
 
-    DEALLOCATE(help1, help2)
     DEALLOCATE(temporary_data1)
+    DEALLOCATE(help1, help2)
 
   END SUBROUTINE get_interface_variables_from_external_forcing
 
@@ -415,7 +416,8 @@ CONTAINS
   !!
   !! @par History
   !! JN: copied first version from jsbach3 mo_jsbalone_forcing
-  !
+  !! -- after r304: removed all currently not required options
+  !!
   SUBROUTINE init_forcing()
 
     USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
@@ -523,6 +525,7 @@ CONTAINS
     ! ----- broadcast information
     IF (my_process_is_mpi_parallel()) THEN
       ! forcing options
+      CALL p_bcast(forcing_options%air_temperature_as_timestep, p_io)
       CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io)
       CALL p_bcast(forcing_options%type_of_qair_forcing, p_io)
       CALL p_bcast(forcing_options%conv_CO2_2_MassRatio, p_io)
@@ -566,14 +569,14 @@ CONTAINS
 
     ! ----- init forcing_input
     ! --- temperature
-    IF(tolower(forcing_temp_frequ) .NE. "timestep") THEN
+    IF(forcing_options%air_temperature_as_timestep) THEN
+      CALL init_forcing_input_variable(air_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
+        & forcing_temp_file_prefix, exp_unit_temperature, forcing_temp_const_tmax, forcing_input%air_temp)
+    ELSE
       CALL init_forcing_input_variable(min_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
         & forcing_temp_file_prefix, exp_unit_temperature, forcing_temp_const_tmin, forcing_input%air_temp_min)
       CALL init_forcing_input_variable(max_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
         & forcing_temp_file_prefix, exp_unit_temperature, forcing_temp_const_tmax, forcing_input%air_temp_max)
-    ELSE
-      CALL init_forcing_input_variable(air_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
-        & forcing_temp_file_prefix, exp_unit_temperature, forcing_temp_const_tmax, forcing_input%air_temp)
     ENDIF
     ! --- precipitation
     IF(forcing_options%precip_in_mm_per_day) THEN
@@ -664,7 +667,7 @@ CONTAINS
     ! TODO: test in case of lresume
 
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
-    IF (new_year_forcing .OR. lstart .OR. lresume) THEN
+    IF (new_year_forcing .OR. lstart .OR. lresume) THEN !TODO lresume -> better: jsbach_is_restarted (mo_jsb_control)
       IF(my_process_is_stdio()) THEN
         input_file = jsb_netcdf_open_input( &
           & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc') , model_id)
@@ -726,7 +729,7 @@ CONTAINS
     thisDayEnd = forcing_input_variable%currentDayEnd
 
     ! --- if its a new day or new run - read the data
-    IF (new_day_forcing .OR. lstart .OR. lresume) THEN
+    IF (new_day_forcing .OR. lstart .OR. lresume) THEN !TODO lresume -> better: jsbach_is_restarted (mo_jsb_control)
       ! check timeseries
       IF(my_process_is_stdio()) THEN
         !Assertion: currentTimeStep needs to be contained in the file
@@ -751,18 +754,16 @@ CONTAINS
         & start_time_step=thisDayStart, end_time_step=thisDayEnd, fill_array=forcing_input_variable%data_read)
       CALL jsb_netcdf_close_file(input_file)
 
-      ! Set the ocean cells of the read data to the constant ocean value
+      ! Set the ocean cells of the read data to the constant ocean value and increase the start and end for the next day to be read
       IF(forcing_input_variable%frequency .EQ. TIMESTEP_) THEN
         DO index_time = 1,time_steps_per_day
           CALL set_ocean_cells(nblks, ics, ice, model_id, &
             & forcing_input_variable%ocean_value, forcing_input_variable%data_read(:,:,index_time))
         ENDDO
-        ! Increase the start and end for the next day to be read
         forcing_input_variable%currentDayStart=forcing_input_variable%currentDayEnd+1
         forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+time_steps_per_day
       ELSEIF(forcing_input_variable%frequency .EQ. DAILY_) THEN
         CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, forcing_input_variable%data_read(:,:,1))
-        ! Increase the start and end for the next day to be read
         forcing_input_variable%currentDayStart=forcing_input_variable%currentDayStart+1
         forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+1
       ENDIF
@@ -777,7 +778,7 @@ CONTAINS
   END SUBROUTINE get_data_and_update_field
 
   !>
-  !! @brief sets given values for input_variable_type field in forcing_input
+  !! @brief sets given values for input_variable_type fields in forcing_input
   !!
   !! @par History
   !! JN: based on jsbach3 mo_jsbalone_forcing init_variable_access
@@ -794,7 +795,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_forcing_input_variable'
 
-    forcing_input_variable%frequency=frequency_key_to_constant_val(variable_name, forcing_frequ_keyword)
+    forcing_input_variable%frequency = frequency_key_to_constant_val(variable_name, forcing_frequ_keyword)
     forcing_input_variable%variable_name = variable_name
     forcing_input_variable%file_name_prefix = forcing_file_prefix
     forcing_input_variable%ocean_value = forcing_ocean_value
@@ -805,7 +806,7 @@ CONTAINS
   END SUBROUTINE init_forcing_input_variable
 
   !>
-  !! @brief assignes forcing frequency keyword to integer constant
+  !! @brief assigns forcing frequency keyword to integer constant
   !!
   !! @par History
   !! JN (2016-01-14): based on jsbach3 mo_jsbalone_forcing init_variable_access
@@ -833,10 +834,10 @@ CONTAINS
 
 
   !>
-  !! @brief calculates the remaining drivers required for jsbach4, particularly drag coefficient
+  !! @brief calculates the remaining input required for jsbach4
   !!
   !! @par History
-  !! JN: copied required parts from jsbach3 mo_jsbalone and adapted for jsb4
+  !! JN: copied required parts from jsbach3: mo_jsbalone: update_driving and adapted for jsb4
   SUBROUTINE get_remaining_input_for_jsb4_interface(nblks, ice, temp_air, pressure, qair, wind, &
       & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, &
       & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
@@ -942,7 +943,7 @@ CONTAINS
   !! @brief converts daily relative humidity to specific humidity considering the daily course of temperature
   !!
   !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing and adapted for jsb4 input
+  !! JN: copied from jsbach3: mo_jsbalone_forcing: spec_humidity_from_rel_humidity and adapted for jsb4 input
   SUBROUTINE spec_humidity_from_rel_humidity(ice, sinlat, coslat, rel_humidity, Tmin, Tmax, elevation, delta_time, qair)
     ! This subroutine converts daily relative humidity to specific humidity considering the daily course of temperature
     ! ops! Using this routine only makes sense together with the generated diurnal cycle of temperature as in
@@ -1122,7 +1123,7 @@ CONTAINS
   !! @brief Returns saturation specific humidity for given temperature and pressure
   !!
   !! @par History
-  !! JN: copied from jsbach3 mo_atmosphere
+  !! JN: copied from jsbach3: mo_atmosphere: sat_specific_humidity
   SUBROUTINE sat_specific_humidity(temp_dim, temp, pressure, qsat)
     ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
     ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
@@ -1133,7 +1134,7 @@ CONTAINS
     REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
     REAL(wp), INTENT(OUT):: qsat(:)
 
-integer :: i
+    INTEGER :: i
     REAL(wp) :: vtmpc1
     INTEGER  :: it(1:temp_dim)
     REAL(wp) :: tluc(1:temp_dim)
@@ -1198,7 +1199,7 @@ integer :: i
   !! @brief estimate timestep temperature from daily min- and max temperature
   !!
   !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing and adapted for 2D arrays
+  !! JN: copied from jsbach3: mo_jsbalone_forcing: instantly_from_daily_temp_2 and adapted for 2D arrays
   !
   ! --- instantly_from_daily_temp_2() --------------------------------------------------------------------------------------
   !
@@ -1349,7 +1350,7 @@ integer :: i
   !! @brief calculate bottom pressure from air temperature and elevation
   !!
   !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing and only slightly adapted for jsb4 context
+  !! JN: copied from jsbach3: mo_jsbalone_forcing: bottom pressure and only slightly adapted for jsb4 context
   !
   ! === bottom pressure() =======================================================================================================
   !
@@ -1395,7 +1396,7 @@ integer :: i
   !! @brief split precipitation in snow and rain depending on mean air temperature
   !!
   !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
+  !! JN: copied from jsbach3: mo_jsbalone_forcing: snow_and_rain_from_precip
   !
   ! === snow_and_rain_from_precip() ==============================================================================================
   !
@@ -1431,10 +1432,8 @@ integer :: i
   !! if the orbit is different then todays orbit (i.e. ATTENTION: this may be incorrect for paleo situations)
   !!
   !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
+  !! JN: copied from jsbach3: mo_jsbalone_forcing: shortwave_from_direct_shortwave (+ comment parts from shortwave_from_fpar_orig)
   !
-  ELEMENTAL SUBROUTINE shortwave_from_direct_shortwave(day_of_year,cos_zenith,cos_lat,sin_lat,air_pressure, &
-    & rad_sw_in, rad_UV,rad_PAR,rad_NIR,frac_PAR_diffuse,rad_sw,rad_sw_pot )
   ! For timestep data the observed radiation is used directly;
   ! in daily version, the instantaneous flux at noon required to calculate irradiation at any
   ! time of the day is approximated by solving the integral over the positive sun angle, following Prentice et al. Ecol. Mod. 1993
@@ -1510,6 +1509,8 @@ integer :: i
   ! [3] R.T. Pinker & I. Laszlo, "Global distribution of photosynthetically active radiation as observed from satellites",
   ! J. Climate 5 (1992) 56-65.
   ! [4] G.W. Paltridge and C.M.R. Platt, "Radiative Processes in Meteorology and Climatology" (Elsevier, Amsterdam, 1976).
+  ELEMENTAL SUBROUTINE shortwave_from_direct_shortwave(day_of_year,cos_zenith,cos_lat,sin_lat,air_pressure, &
+    & rad_sw_in, rad_UV,rad_PAR,rad_NIR,frac_PAR_diffuse,rad_sw,rad_sw_pot )
 
     INTEGER,INTENT(in)   :: day_of_year      !! day in year (from [1,365])
     REAL(wp),INTENT(in)  :: cos_zenith       !! cosine of zenith angle
@@ -1610,7 +1611,7 @@ integer :: i
   !! @brief computes longwave from observed longwave and diural course associated with air temperature
   !!
   !! @par History
-  !! JN: copied from jsbach3 mo_jsbalone_forcing
+  !! JN: copied from jsbach3: mo_jsbalone_forcing: longwave_from_daily_longwave
   !
   ! === longwave_from_daily_longwave() ====================================================================================
   !

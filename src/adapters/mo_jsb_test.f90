@@ -1,6 +1,9 @@
 !>
 !! @brief Module with test functions and parameters
 !!
+!! --> ATTENTION: currently only implemented for ECHAM: therefore it is located in adapters.
+!!     TODO: implement for use with ICON and then move to e.g. atmland folder?!
+!!
 !! @author
 !!  Julia Nabel, MPI-M Hamburg
 !!
@@ -134,7 +137,7 @@ CONTAINS
     END IF
 
     !-- Create netcdf file
-    IF ((lstart .OR. lresume) .AND. iblk == 1) THEN
+    IF ((lstart .OR. lresume) .AND. iblk == 1) THEN     !TODO lresume -> jsbach_is_restarted (mo_jsb_control)
       CALL compose_filenames
       filename = TRIM(standard_output_file)//'_interface.nc'
 
@@ -342,7 +345,7 @@ CONTAINS
       CALL finish (TRIM(routine), message_text)
     END IF
 
-    IF ((lstart .OR. lresume) .AND. iblk == 1) THEN
+    IF ((lstart .OR. lresume) .AND. iblk == 1) THEN     !TODO lresume -> jsbach_is_restarted (mo_jsb_control)
       CALL nf_check(nf_open(TRIM(filename), NF_NOWRITE, ncid))
 
       CALL nf_check(nf_inq_dimid(ncid, 'lon', lon_id))

@@ -8,7 +8,7 @@ MODULE mo_jsb_io
     FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,           &
     GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL,                 &
     TSTEP_CONSTANT,                                                    &
-    zaxisCreate, zaxisInqName, zaxisInqSize, zaxisDestroy
+    zaxisCreate, zaxisInqName, zaxisInqSize, zaxisDestroy, read_io_namelist
   USE mo_exception, ONLY: finish
 
   IMPLICIT NONE
@@ -51,7 +51,15 @@ MODULE mo_jsb_io
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io'
 
-!CONTAINS
+CONTAINS
+
+  !>
+  !! @brief Initialize io control for JSBACH
+  !!
+  SUBROUTINE init_io(namelist_filename)
+    CHARACTER(len=*), INTENT(in) :: namelist_filename
+    CALL read_io_namelist(TRIM(namelist_filename))
+  END SUBROUTINE init_io
 
 #endif
 END MODULE mo_jsb_io

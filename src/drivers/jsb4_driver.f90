@@ -43,7 +43,7 @@ PROGRAM jsb4_driver
 
   ! time control and orbit calc
   USE mo_timer,            ONLY: init_timer
-  USE mo_time_control,     ONLY: lresume, time_set, time_reset, lstop, l_trigfiles, delta_time, &
+  USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, delta_time, &
                                     & time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date
 
   USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
@@ -61,7 +61,7 @@ PROGRAM jsb4_driver
 
   INTEGER:: nml_handler, read_status, f_unit, status, jrow, nproma, nblks, ncid
 
-  !! Variables of namelist jsbalone_parctl
+  !! Variables of namelist jsb_parallel_ctl
   INTEGER:: nproca  ! number of processors for jsbach
   INTEGER:: nprocb  ! has to be one
   INTEGER:: nprocio ! number of processors for I/O server
@@ -122,7 +122,7 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: alb_vis_dif(:)
   REAL(wp), ALLOCATABLE :: alb_nir_dif(:)
 
-    NAMELIST /jsbalone_parctl/     &
+    NAMELIST /jsb_parallel_ctl/     &
       nproca, npedim,             &
       nprocb, nprocio
 
@@ -152,8 +152,8 @@ PROGRAM jsb4_driver
 
     ! read the namelist
     nml_handler = open_nml ('namelist.jsbach')
-    f_unit = position_nml ('JSBALONE_PARCTL', nml_handler, status=read_status)
-    IF (read_status == POSITIONED) READ(f_unit, jsbalone_parctl)
+    f_unit = position_nml ('jsb_parallel_ctl', nml_handler, status=read_status)
+    IF (read_status == POSITIONED) READ(f_unit, jsb_parallel_ctl)
   ENDIF
 
   IF (my_process_is_mpi_parallel()) THEN
@@ -183,8 +183,10 @@ PROGRAM jsb4_driver
   ! Allocate arrays -> current assumption is for standalone nlon=nproma=npromz,
   !     therefore set (and allocated fields) here -- else need to strongly adapt
   !       -> i.e. set and allocate in the jrow loop for just one and change way of reading?!
-  nproma = local_decomposition%nproma !TODO: get with already existing function? 'get_nproma' ?
-  nblks = local_decomposition%ngpblks !TODO: get with already existing function?
+  nproma = local_decomposition%nproma
+  nblks = local_decomposition%ngpblks
+  !TODO: get nproma/nblks with already existing function? 'get_nproma'
+  !  -> hm, for that need to first get the model and than the grid?
 
   ! forcing
   ALLOCATE(t_air_K(nproma, nblks))
@@ -238,7 +240,9 @@ PROGRAM jsb4_driver
     ALLOCATE(lon(nproma,nblks))
     ALLOCATE(lat(nproma,nblks))
 
-    lon = get_lon(decomp = local_decomposition) !TODO: get from grid?!
+    !TODO: get from grid? but how to name such a function get_lon_from_grid?
+    !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
+    lon = get_lon(decomp = local_decomposition)
     lat = get_lat(decomp = local_decomposition)
 
     ALLOCATE(coslon(nproma,nblks))
@@ -318,7 +322,7 @@ PROGRAM jsb4_driver
 
     CALL out_streams
 
-  !TODO: lresume
+  !TODO: lresume -> or better jsbach_is_restarted (mo_jsb_control)
   !IF (l_putrerun) THEN  CALL write_streams  -> echam?
 
     CALL time_reset

@@ -6,12 +6,13 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-02-06)
-!!
+!! JN (2016-02-20) new subroutines and some adaptations for jsb4 standalone
 MODULE mo_jsb_time_iface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: finish, message, message_text
+  USE mo_kind,               ONLY: wp
+  USE mo_exception,          ONLY: finish, message, message_text
+  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
 
 #ifdef __ICON__
   USE mo_datetime,        ONLY: t_datetime, print_datetime, add_time, rdaylen
@@ -34,10 +35,8 @@ MODULE mo_jsb_time_iface
   USE mo_time_event,      ONLY: io_time_event, TIME_INC_DAYS, TIME_INC_MONTHS, TRIG_FIRST, TRIG_LAST
   USE mo_time_control,    ONLY: lresume, dt_start, dt_resume, dt_stop, delta_time, no_cycles, &
                                 no_days, no_steps, putdata, putrerun, trigfiles, p_bcast_event
-  USE mo_mpi,             ONLY : p_parallel, p_io, p_bcast
 
   USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, close_nml, position_nml
-  USE mo_jsb_test,           ONLY: read_interface_vars, write_interface_vars
 #endif
 
 #endif
@@ -71,16 +70,13 @@ CONTAINS
 #else
   SUBROUTINE read_time_namelist(filename)
 
-    USE mo_filename, ONLY: out_expname
-
     CHARACTER(LEN=*), INTENT(in) :: filename
 
 #ifdef STANDALONE
     INTEGER :: nml_handler, nml_unit, istat
 
-    NAMELIST /jsbalone_ctl/ &
-      out_expname,          & !TODO-check-with-RMS: does not really belong into 'time' namelist
-      lresume,              &
+    NAMELIST /jsb_time_ctl/ &
+!      lresume,              & !TODO: lresume for jsb4 standalone -> see also jsbach_is_restarted (mo_jsb_control)
       no_cycles,            &
       dt_start,             &
 !      dt_resume,            &  !TODO: lresume for jsb4 standalone
@@ -90,39 +86,35 @@ CONTAINS
       delta_time,           &
       putdata,              &
       putrerun,             &
-      trigfiles,            &
-      read_interface_vars,  & !TODO-check-with-RMS: does not really belong into 'time' namelist
-      write_interface_vars    !TODO-check-with-RMS: does not really belong into 'time' namelist
+      trigfiles
 
     !-----------------------------------------------------------------------------------------------
 
-    ! default values
-    out_expname = 'undefined_expname'
-    lresume = .FALSE.
-    read_interface_vars = .FALSE.
-    write_interface_vars = .FALSE.
-    no_cycles = 1
-    dt_start(:) = 0
-    dt_resume(:) = 0
-    dt_stop(:) = 0
-    no_days = -1
-    no_steps = -1
-    delta_time = 0
-    putdata  = io_time_event(1, TIME_INC_DAYS, TRIG_FIRST, 0)
-    putrerun = io_time_event(1, TIME_INC_MONTHS, TRIG_LAST, 0)
-    trigfiles = io_time_event(1, TIME_INC_MONTHS, TRIG_FIRST, 0)
+    IF(my_process_is_stdio()) THEN
+      ! default values
+      lresume = .FALSE.
+      no_cycles = 1
+      dt_start(:) = 0
+      dt_resume(:) = 0
+      dt_stop(:) = 0
+      no_days = -1
+      no_steps = -1
+      delta_time = 0
+      putdata  = io_time_event(1, TIME_INC_DAYS, TRIG_FIRST, 0)
+      putrerun = io_time_event(1, TIME_INC_MONTHS, TRIG_LAST, 0)
+      trigfiles = io_time_event(1, TIME_INC_MONTHS, TRIG_FIRST, 0)
 
-    nml_handler = open_nml(TRIM(filename))
+      nml_handler = open_nml(TRIM(filename))
 
-    nml_unit =  position_nml('jsbalone_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsbalone_ctl)
+      nml_unit =  position_nml('jsb_time_ctl', nml_handler, STATUS=istat)
+      IF (istat == POSITIONED) READ(nml_unit, jsb_time_ctl)
 
-    CALL close_nml(nml_handler)
+      CALL close_nml(nml_handler)
+    ENDIF
 
-    IF (p_parallel) THEN
+    IF (my_process_is_mpi_parallel()) THEN
     ! jsb3 text: The following are used from ECHAM5 modules and ... need
     ! to be broadcast if running in standalone mode so that the modules can use them
-      CALL p_bcast(out_expname, p_io)
       CALL p_bcast(lresume, p_io)
       CALL p_bcast(no_cycles, p_io)
       CALL p_bcast(dt_start, p_io)
@@ -488,7 +480,7 @@ CONTAINS
   !! Currently only working for ECHAM
   !!
   !! @par History
-  !! Initial version copied from jsbach3 mo_jsbach_interface.f90
+  !! JN: Initial version copied from jsbach3 mo_jsbach_interface.f90
   !!
   SUBROUTINE get_dates(IO_timestep, istep)
 
@@ -516,7 +508,7 @@ CONTAINS
     IF (p_parallel_io) THEN
        IF (lresume) THEN
           CALL finish('mo_jsb_time_iface', 'behaviour for lresume = true not yet implemented')
-!TODO lrsume
+!TODO lresume (jsbach_is_restarted (mo_jsb_control))
          ! copy from jsb3 get_dates: 
          ! Get time information from restart file
 !          IO_file%opened = .FALSE.
@@ -538,16 +530,17 @@ CONTAINS
     IF (p_parallel) THEN
        CALL p_bcast(istep, p_io)
        CALL p_bcast(IO_timestep, p_io)
-       IF (lresume) THEN
-          CALL p_bcast(forecast_date, p_io)
-          CALL p_bcast(forecast_time, p_io)
-          CALL p_bcast(verification_date, p_io)
-          CALL p_bcast(verification_time, p_io)
-       ENDIF
+!TODO lresume (jsbach_is_restarted (mo_jsb_control))
+!       IF (lresume) THEN
+!          CALL p_bcast(forecast_date, p_io)
+!          CALL p_bcast(forecast_time, p_io)
+!          CALL p_bcast(verification_date, p_io)
+!          CALL p_bcast(verification_time, p_io)
+!       ENDIF
     ENDIF
        
     IF (lresume) THEN
-!TODO lresume
+!TODO lresume (jsbach_is_restarted (mo_jsb_control))
 !       CALL inp_convert_date(forecast_date, forecast_time, start_date)
 !       CALL inp_convert_date(verification_date, verification_time, resume_date)
           CALL finish('mo_jsb_time_iface', 'behaviour for lresume = true not yet implemented')

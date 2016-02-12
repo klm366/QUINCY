@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
+!! JN (2016-02-20) some adaptations for jsb4 standalone
 !!
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
