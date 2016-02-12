@@ -72,8 +72,9 @@ MODULE mo_jsb_io_iface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_iface'
 
-#ifndef __ICON__
 CONTAINS
+
+#ifndef __ICON__
 
   ! constructor for GRIB2 derived data type
   FUNCTION grib2_var(discipline, category, number, bits, gridtype, subgridtype)
@@ -132,11 +133,7 @@ CONTAINS
 
     USE mo_jsb_test, ONLY: read_interface_vars, write_interface_vars
 
-#ifdef __ICON__
-    ! TODO: mo_jsb_test for now not inplemented with ICON
-    read_interface_vars = .FALSE.
-    write_interface_vars = .FALSE.
-#else
+#ifndef __ICON__
 #ifdef STANDALONE
     USE mo_filename, ONLY: out_expname
 #endif
@@ -152,6 +149,13 @@ CONTAINS
       read_interface_vars,  &
 #endif
       write_interface_vars
+
+#ifdef __ICON__
+    ! TODO: mo_jsb_test for now not inplemented with ICON
+    read_interface_vars = .FALSE.
+    write_interface_vars = .FALSE.
+#else
+
 
     IF(my_process_is_stdio()) THEN
       ! default values
@@ -177,7 +181,7 @@ CONTAINS
       CALL p_bcast(read_interface_vars, p_io)
       CALL p_bcast(write_interface_vars, p_io)
     ENDIF
-
+#endif
   END SUBROUTINE read_io_namelist
 
 

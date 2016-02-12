@@ -9,7 +9,7 @@
 !! First version by Julia Nabel (2015-11-02), copied several parts from jsbach3 jsbalone_driver.f90
 !!
 PROGRAM jsb4_driver
-
+#ifndef __ICON__
   USE mo_jsb_interface,      ONLY: jsbach_interface
   USE mo_jsb_base,           ONLY: init_base
   USE mo_jsb_model_init,     ONLY: init_model
@@ -186,7 +186,7 @@ PROGRAM jsb4_driver
   nproma = local_decomposition%nproma
   nblks = local_decomposition%ngpblks
   !TODO: get nproma/nblks with already existing function? 'get_nproma'
-  !  -> hm, for that need to first get the model and than the grid?
+  !  -> hm, for that need to first get the model and than the grid
 
   ! forcing
   ALLOCATE(t_air_K(nproma, nblks))
@@ -376,5 +376,5 @@ PROGRAM jsb4_driver
 
   ! Stop MPI
   CALL p_stop
-
+#endif
 END PROGRAM jsb4_driver

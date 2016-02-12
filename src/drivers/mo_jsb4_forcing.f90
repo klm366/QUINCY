@@ -14,6 +14,7 @@
 !!  shortwave_from_fsw_orig), lw cloud scheme (longwave_rad_down) and calculation of vapour_pressure
 MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
+#ifndef __ICON__
 
 #include "dsl_jsbach.inc"
 
@@ -1639,5 +1640,6 @@ CONTAINS
 
   END FUNCTION longwave_from_daily_longwave
 
+#endif
 #endif
 END MODULE mo_jsb4_forcing

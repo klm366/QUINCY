@@ -32,12 +32,12 @@ MODULE mo_jsb_model_init
 CONTAINS
 
   SUBROUTINE init_model_standalone(nproca, nprocb, npedim, model_id, model_name)
-
+#ifndef __ICON__
     !>>> TODO: echam
     USE mo_gaussgrid,     ONLY : inigau
     USE mo_echam_convect_tables, ONLY : init_convect_tables
     !<<<
-
+#endif
     USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, jsbalone_init_decomp, pe_decomposed
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
@@ -64,8 +64,10 @@ CONTAINS
     CALL get_nlon_nlat_from_file(jsbach%models(model_id)%m%config%grid_filename, nlon, nlat)
     CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
 
+#ifndef __ICON__
     CALL inigau              ! required for get_lon, get_lat and get_area, i.e. required before new_grid
     CALL init_convect_tables
+#endif
 
     grid => new_grid(decomp=decomposition)
 
@@ -77,6 +79,7 @@ CONTAINS
     NULLIFY(model)
 
   END SUBROUTINE init_model_standalone
+
 
 !!$  SUBROUTINE init_model_patch( model_id, patch, &
 !!$                             & nsoil_w, dzsoil_w, nsoil_e, dzsoil_e)

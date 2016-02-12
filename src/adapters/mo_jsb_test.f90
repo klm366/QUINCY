@@ -15,9 +15,10 @@ MODULE mo_jsb_test
 
   USE mo_kind,               ONLY: wp
 
-#ifdef __ICON__
-  USE mo_write_netcdf,       ONLY: fillvalue_double
-#endif
+!#ifdef __ICON__
+!! TODO: fillvalue_double is private in icon
+!  USE mo_write_netcdf,       ONLY: fillvalue_double
+!#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -29,11 +30,11 @@ MODULE mo_jsb_test
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_test'
 
-#ifndef __ICON__
+!#ifndef __ICON__
   REAL(wp), PARAMETER :: fillValue = -9.e+33_wp
-#else
-  REAL(wp), PARAMETER :: fillValue = fillvalue_double
-#endif
+!#else
+!  REAL(wp), PARAMETER :: fillValue = fillvalue_double
+!#endif
 
   CHARACTER(len=*), PARAMETER :: fillValueAttrName = '_FillValue'
 
@@ -51,6 +52,8 @@ CONTAINS
     & wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf, &
     & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle )
 
+    USE mo_exception,     ONLY: finish, message_text
+
     USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel
 
 #ifndef __ICON__
@@ -60,8 +63,6 @@ CONTAINS
 
     USE mo_decomposition, ONLY: local_decomposition
     USE mo_gaussgrid,     ONLY: philon,philat
-    USE mo_exception,     ONLY: finish, message_text
-
 #endif
 
     INTEGER,  INTENT(in) :: ics, ice, iblk
@@ -267,6 +268,8 @@ CONTAINS
              & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf, &
              & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle )
 
+    USE mo_exception,     ONLY: finish, message_text
+
     USE mo_jsb_parallel_iface, ONLY: my_process_is_mpi_parallel
 
 #ifndef __ICON__
@@ -274,7 +277,6 @@ CONTAINS
     USE mo_netcdf,       ONLY: nf_check
 
     USE mo_decomposition, ONLY: local_decomposition
-    USE mo_exception,     ONLY: finish, message_text
 #endif
 
     INTEGER,  INTENT(in)  :: ics, ice, iblk
