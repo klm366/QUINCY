@@ -1,0 +1,35 @@
+\hypertarget{mo__jsb__grid__class_8f90}{}\section{/home/reiner/git/jsbach.ulme/src/base/mo\+\_\+jsb\+\_\+grid\+\_\+class.f90 File Reference}
+\label{mo__jsb__grid__class_8f90}\index{/home/reiner/git/jsbach.\+ulme/src/base/mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90@{/home/reiner/git/jsbach.\+ulme/src/base/mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90}}
+\subsection*{Modules}
+\begin{DoxyCompactItemize}
+\item 
+module \hyperlink{namespacemo__jsb__grid__class}{mo\+\_\+jsb\+\_\+grid\+\_\+class}
+\begin{DoxyCompactList}\small\item\em Contains J\+S\+B\+A\+C\+H grid structure and methods. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(t\+\_\+jsb\+\_\+grid) function, pointer \hyperlink{namespacemo__jsb__grid__class_a2ed0d23521e0ed882dd496dc097e941f}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::new\+\_\+grid\+\_\+from\+\_\+lonlat} (lon, lat)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__grid__class_a8eff8482b9f6dc02b8c703f80f962b8c}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::delete\+\_\+grid} (self)
+\item 
+integer function, public \hyperlink{namespacemo__jsb__grid__class_a1f7b1d1bbf7523458be54c335a83f423}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::get\+\_\+nblks} (self)
+\item 
+integer function, public \hyperlink{namespacemo__jsb__grid__class_a42ff42d4dc8ff6d34bc68cde0d2c9006}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::get\+\_\+nproma} (self)
+\item 
+integer function \hyperlink{namespacemo__jsb__grid__class_afc8f2ee4e73381a9ff8eb402d89c4eee}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::get\+\_\+blk\+\_\+end} (grid)
+\item 
+integer function \hyperlink{namespacemo__jsb__grid__class_a1a350aded77ade355944cec2a0d972f1}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::get\+\_\+col\+\_\+start} (iblk, grid)
+\item 
+integer function \hyperlink{namespacemo__jsb__grid__class_affffc8eaeee7b83491f39d21150f2c78}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::get\+\_\+col\+\_\+end} (iblk, grid)
+\item 
+type(t\+\_\+jsb\+\_\+vgrid) function, pointer, public \hyperlink{namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::new\+\_\+vgrid} (name, cdi\+\_\+axis\+\_\+type, length, longname, units, levels, lbounds, ubounds)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__grid__class_a14a5dddab870a130135f43b849588a3f}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::delete\+\_\+vgrid} (self)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+integer, save \hyperlink{namespacemo__jsb__grid__class_ad64217c2b3f2f8da3c4b7297bc650ae4}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::ngrid\+\_\+count} = 0
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__grid__class_a2d6c1334c4fbe274a9f0b7acd6fd6361}{mo\+\_\+jsb\+\_\+grid\+\_\+class\+::modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+grid\+\_\+class\textquotesingle{}
+\end{DoxyCompactItemize}

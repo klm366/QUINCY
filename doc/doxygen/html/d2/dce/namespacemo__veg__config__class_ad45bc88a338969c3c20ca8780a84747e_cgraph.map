@@ -1,0 +1,5 @@
+<map id="mo_veg_config_class::new_veg_config" name="mo_veg_config_class::new_veg_config">
+<area shape="rect" id="node2" href="$d4/d5f/namespacemo__jsb__namelist__iface.html#a240047c255ab5bb3871ecdcdcd6d6a92" title="Wrapper function to make ICON subroutine close_nml a function take unit as argument, as in ECHAM. Should be replaced when close_nml in ICON gets updated. " alt="" coords="201,5,356,47"/>
+<area shape="rect" id="node3" href="$d4/d5f/namespacemo__jsb__namelist__iface.html#abb2821ffd4c30375faa307d522af3bcb" title="Wrapper function to make ICON subroutine open_nml a function, as in ECHAM. Should be replaced when op..." alt="" coords="201,71,356,112"/>
+<area shape="rect" id="node4" href="$d4/d5f/namespacemo__jsb__namelist__iface.html#a4d29dc192b429a0c5f11ecd7d7f637e9" title="Wrapper function to make ICON subroutine position_nml a function, as in ECHAM. Should be replaced whe..." alt="" coords="201,136,356,177"/>
+</map>

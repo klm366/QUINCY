@@ -191,6 +191,10 @@ CONTAINS
 
   INTEGER FUNCTION get_nproma(patch, decomp)
 
+#ifdef __ICON__
+    USE mo_parallel_config,    ONLY: nproma
+#endif
+
     TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch
     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
 
@@ -200,11 +204,12 @@ CONTAINS
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
     ELSE IF(PRESENT(patch)) THEN
 #ifdef __ICON__
-      IF (patch%nblks_c > 1) THEN
-        get_nproma = INT( (patch%n_patch_cells - patch%npromz_c)/(patch%nblks_c-1))
-      ELSE
-        get_nproma = patch%n_patch_cells
-      END IF
+      get_nproma = nproma
+!!$      IF (patch%nblks_c > 1) THEN
+!!$        get_nproma = INT( (patch%n_patch_cells - patch%npromz_c)/(patch%nblks_c-1))
+!!$      ELSE
+!!$        get_nproma = patch%n_patch_cells
+!!$      END IF
 #else
       CALL finish(TRIM(routine), 'patch not allowed')
 #endif

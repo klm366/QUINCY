@@ -10,9 +10,15 @@
 MODULE mo_jsb_model_usecases
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_model_class, ONLY: t_jsb_model
   USE mo_exception,       ONLY: message, finish
   USE mo_kind,            ONLY: wp
+
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_process_factory, ONLY: ATM2LAND, LAND2ATM, SRF, SOIL, VEG, GLACIER, LAKE, HD
+  USE mo_hsm_class,          ONLY: t_Hsm, t_State
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid !, get_nblks, get_nproma
+  USE mo_jsb_grid,           ONLY: Get_Grid
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile
 
   IMPLICIT NONE
   PRIVATE
@@ -25,11 +31,7 @@ CONTAINS
 
   SUBROUTINE init_usecase(model)
 
-#ifdef HAVE_F2003
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-#else
-    TYPE(t_jsb_model), POINTER                :: model
-#endif
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase'
 
@@ -40,11 +42,17 @@ CONTAINS
     CASE ('jsbach_lite')
       CALL init_usecase_lite(model)
 
+    CASE ('jsbach_lite_with_hd')
+      CALL init_usecase_lite_with_hd(model)
+
     CASE ('jsbach_lite_tpe_open')
       CALL init_usecase_lite_tpe_open(model)
 
     CASE ('jsbach_lite_tpe_closed')
       CALL init_usecase_lite_tpe_closed(model)
+
+    CASE ('jsbach_tiles')
+      CALL init_usecase_tiles(model)
 
     CASE DEFAULT
       CALL finish(TRIM(routine), 'JSBACH usecase not defined.')
@@ -55,58 +63,43 @@ CONTAINS
 
   SUBROUTINE init_usecase_lite(model)
 
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile, new_tile
-    USE mo_jsb_grid_class,     ONLY: get_nblks, get_nproma
-    USE mo_jsb_memory,         ONLY: new_jsbach_memory
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CHARACTER(len=20) :: components(3)
+    CLASS(t_State),   POINTER :: box_tile
+    TYPE(t_jsb_grid), POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite'
 
-#ifdef HAVE_F2003
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-#else
-    TYPE(t_jsb_model), POINTER                :: model
-#endif
-
-    TYPE(t_jsb_tile), POINTER :: tile
-    INTEGER :: nblks, nproma
-
-    nblks = get_nblks(model%grid)
-    nproma = get_nproma(model%grid)
-
-    ! Activate soil component
-    model%config%soil%active = .TRUE.
+    grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
-    components(1) = 'srf' ; components(2) = 'soil' ; components(3) = 'veg'
-    model%land => new_tile(model%id, 'land', 'land', components)
+    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG/), &
+      varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
+    model%hsm => t_Hsm('hsm', top=box_tile)
 
-    model%land%mem => new_jsbach_memory(TRIM(model%name), '', '', model%land)
-    model%land%mem%fract    (:,:) = 1._wp
-    model%land%mem%fract_max(:,:) = 1._wp
-
-!!$    ! Create glacier tile
-!!$    tile => new_tile(model%land, 'glacier', 'Glacier tile')
-!!$
-!!$    ! Create bare soil tile
-!!$    components(1) = 'srf' ; components(2) = 'soil' ; components(3) = ''
-!!$    tile => new_tile(model%land, 'bare', 'Bare soil tile', components)
-!!$    tile%mem => new_jsbach_memory(TRIM(model%name), '', '_bare', tile)
-!!$    tile%mem%fract     = 0._wp  ! Temporary (must later be initialized from input file)
-!!$    tile%mem%fract_max = 0._wp
-!!$
-!!$    ! Create vegetated tile
-!!$    components(1) = 'srf' ; components(2) = 'soil' ; components(3) = 'veg'
-!!$    tile => new_tile(model%land, 'veg', 'Vegetated tile', components)
-!!$    tile%mem => new_jsbach_memory(TRIM(model%name), '', '_veg', tile)
-!!$    ! Note: %fract will be the foliar projective cover, i.e. the fraction of the parent tile that is actually covered by a
-!!$    !       canopy (veg_ratio), depending on the leaf area index.
-!!$    !       %fract_max is the fraction of the parent tile that can potentially be covered by a canopy (veg_ratio_max)
-!!$    tile%mem%fract     = 1._wp
-!!$    tile%mem%fract_max = 1._wp  ! Temporary (must later be initialized from input file)
+    NULLIFY(box_tile)
 
   END SUBROUTINE init_usecase_lite
+
+  SUBROUTINE init_usecase_lite_with_hd(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_State),   POINTER :: box_tile
+    TYPE(t_jsb_grid), POINTER :: grid
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_with_hd'
+
+    grid => Get_grid(model%grid_id)
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG,HD/), &
+      varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
+    model%hsm => t_Hsm('hsm', top=box_tile)
+
+    NULLIFY(box_tile)
+
+  END SUBROUTINE init_usecase_lite_with_hd
 
   SUBROUTINE init_usecase_lite_tpe_open(model)
 
@@ -126,15 +119,37 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_tpe_closed'
 
-#ifdef HAVE_F2003
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-#else
-    TYPE(t_jsb_model), POINTER                :: model
-#endif
 
     CALL init_usecase_lite(model)
 
   END SUBROUTINE init_usecase_lite_tpe_closed
+
+  SUBROUTINE init_usecase_tiles(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_State),   POINTER :: box_tile, glacier_tile, lake_tile
+    TYPE(t_jsb_grid), POINTER :: grid
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_tiles'
+
+    grid => Get_grid(model%grid_id)
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG,HD/), &
+                           varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
+    model%hsm => t_Hsm('hsm', box_tile)
+
+!!$    glacier_tile => t_jsb_tile('glacier', 'Glacier tile', processes=(/SRF,GLACIER/), &
+!!$                               varlist_name=model%shortname, parent=box_tile)
+!!$
+!!$    lake_tile => t_jsb_tile('lake', 'Lake tile', processes=(/SRF,GLACIER/), &
+!!$                            varlist_name=model%shortname, parent=box_tile)
+
+    NULLIFY(box_tile)
+
+  END SUBROUTINE init_usecase_tiles
 
 #endif
 END MODULE mo_jsb_model_usecases

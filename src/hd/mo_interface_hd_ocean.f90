@@ -6,25 +6,26 @@
 !! @par Revision History
 !! First version by Veronika Gayler (2013-06-29)
 
-!#ifndef __NO_JSBACH__
-#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
-
-!----------------------------
-#include "omp_definitions.inc"
-!----------------------------
+#include "dsl_jsbach.inc"
 
 MODULE mo_interface_hd_ocean
+#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
+
+  USE mo_kind,                ONLY: wp
+  USE mo_exception,           ONLY: warning
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile
+  USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
-  USE mo_jsb_base,            ONLY: get_model
-  USE mo_kind,                ONLY: wp
   USE mo_coupling_config,     ONLY: is_coupled_run
-  USE mo_exception,           ONLY: warning
 #ifdef YAC_coupling
   USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name
 #endif
+
+  dsl4jsb_Use_processes SOIL
+  dsl4jsb_Use_memory(SOIL)
 
   IMPLICIT NONE
   PRIVATE
@@ -67,11 +68,13 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_tile),  POINTER    :: tile
     TYPE(t_jsb_grid),  POINTER    :: grid
+
+    dsl4jsb_Def_memory(SOIL)
+
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':interface_hd_ocean'
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER :: &
-      & discharge_ocean   (:,:)
+    dsl4jsb_Real2D_onDomain ::discharge_ocean
 
     ! Local variables
 
@@ -81,17 +84,19 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: buffer(:,:)
     INTEGER               :: collection_size, nbr_pointsets, nbr_subdomains
     INTEGER               :: info, ierror !< return values form cpl_put/get calls
-    INTEGER               :: iblk, n, nn
+    INTEGER               :: iblk, n, nn, nlen
 
 
     IF ( .NOT. is_coupled_run() ) RETURN
 
     model => get_model(model_id)
-    tile => model%land
-    grid => model%grid
+    tile => model%Get_top_tile()
+    grid => Get_grid(model%grid_id)
 
     ! Get reference to variables in memory
-    discharge_ocean      => tile%mem%soil %water_flux %discharge_ocean   (:,:)
+    dsl4jsb_Get_memory(SOIL)
+
+    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean, IN)
 
     ! Send river discharge
     ! --------------------
@@ -100,9 +105,14 @@ CONTAINS
 
     ALLOCATE(buffer(grid%nproma * grid%nblks, 1))
     buffer(:,:) = 0.0_wp
-    DO iblk = 1, model%grid%nblks
-      nn = (iblk - 1) * model%grid%nproma
-      DO n = 1, model%grid%nproma
+    DO iblk = 1, grid%nblks
+      nn = (iblk - 1) * grid%nproma
+      IF (iblk /= grid%nblks) THEN
+        nlen = grid%nproma
+      ELSE
+        nlen = grid%npromz
+      END IF
+      DO n = 1, grid%nproma
         buffer(nn+n,1) = discharge_ocean(n,iblk)
       END DO
     END DO
@@ -110,7 +120,7 @@ CONTAINS
 #ifdef YAC_coupling
     CALL yac_fget_field_id_from_name('river_runoff', field_id)
 #endif
-    nbr_hor_cells = model%grid%ntotal
+    nbr_hor_cells = grid%ntotal
     collection_size = 1
     nbr_pointsets   = 1
     nbr_subdomains  = 1
@@ -127,5 +137,5 @@ CONTAINS
 
   END SUBROUTINE interface_hd_ocean
 
-END MODULE mo_interface_hd_ocean
 #endif
+END MODULE mo_interface_hd_ocean

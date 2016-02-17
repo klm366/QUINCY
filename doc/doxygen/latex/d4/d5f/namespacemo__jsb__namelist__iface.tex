@@ -1,0 +1,208 @@
+\hypertarget{namespacemo__jsb__namelist__iface}{}\section{mo\+\_\+jsb\+\_\+namelist\+\_\+iface Module Reference}
+\label{namespacemo__jsb__namelist__iface}\index{mo\+\_\+jsb\+\_\+namelist\+\_\+iface@{mo\+\_\+jsb\+\_\+namelist\+\_\+iface}}
+
+
+Contains interface to namelist handling.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+integer function, public \hyperlink{namespacemo__jsb__namelist__iface_abb2821ffd4c30375faa307d522af3bcb}{open\+\_\+nml} (namelist\+\_\+filename)
+\begin{DoxyCompactList}\small\item\em Wrapper function to make I\+C\+O\+N subroutine open\+\_\+nml a function, as in E\+C\+H\+A\+M. Should be replaced when open\+\_\+nml in I\+C\+O\+N gets updated. \end{DoxyCompactList}\item 
+subroutine, public \hyperlink{namespacemo__jsb__namelist__iface_a240047c255ab5bb3871ecdcdcd6d6a92}{close\+\_\+nml} (nml\+\_\+handler)
+\begin{DoxyCompactList}\small\item\em Wrapper function to make I\+C\+O\+N subroutine close\+\_\+nml a function take unit as argument, as in E\+C\+H\+A\+M. Should be replaced when close\+\_\+nml in I\+C\+O\+N gets updated. \end{DoxyCompactList}\item 
+integer function, public \hyperlink{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}{position\+\_\+nml} (name, nml\+\_\+handler, lrewind, status)
+\begin{DoxyCompactList}\small\item\em Wrapper function to make I\+C\+O\+N subroutine position\+\_\+nml a function, as in E\+C\+H\+A\+M. Should be replaced when open\+\_\+nml in I\+C\+O\+N gets updated. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__namelist__iface_ac285553fa6612b5913578b420275d81b}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+namelist\+\_\+iface\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains interface to namelist handling. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/02-\/06) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__namelist__iface_a240047c255ab5bb3871ecdcdcd6d6a92}{}\index{mo\+\_\+jsb\+\_\+namelist\+\_\+iface@{mo\+\_\+jsb\+\_\+namelist\+\_\+iface}!close\+\_\+nml@{close\+\_\+nml}}
+\index{close\+\_\+nml@{close\+\_\+nml}!mo\+\_\+jsb\+\_\+namelist\+\_\+iface@{mo\+\_\+jsb\+\_\+namelist\+\_\+iface}}
+\subsubsection[{close\+\_\+nml}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::close\+\_\+nml (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{nml\+\_\+handler}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__namelist__iface_a240047c255ab5bb3871ecdcdcd6d6a92}
+
+
+Wrapper function to make I\+C\+O\+N subroutine close\+\_\+nml a function take unit as argument, as in E\+C\+H\+A\+M. Should be replaced when close\+\_\+nml in I\+C\+O\+N gets updated. 
+
+
+
+Definition at line 57 of file mo\+\_\+jsb\+\_\+namelist\+\_\+iface.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+process\+\_\+factory\+::create\+\_\+process\+\_\+config(), mo\+\_\+hd\+\_\+config\+\_\+class\+::new\+\_\+hd\+\_\+config(), mo\+\_\+jsb\+\_\+config\+\_\+class\+::new\+\_\+model\+\_\+config(), mo\+\_\+srf\+\_\+config\+\_\+class\+::new\+\_\+srf\+\_\+config(), mo\+\_\+veg\+\_\+config\+\_\+class\+::new\+\_\+veg\+\_\+config(), and mo\+\_\+jsb\+\_\+control\+::read\+\_\+jsb\+\_\+control\+\_\+namelist().
+
+
+\begin{DoxyCode}
+57 
+58     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(in)} :: nml\_handler
+59 
+60     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':close\_nml'}
+61 
+62     \textcolor{keywordflow}{IF} (nml\_handler /= 1) \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Cannot close namelist unit'})
+63 
+64     \textcolor{keyword}{CALL }close\_nml\_icon()
+65 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d4/d5f/namespacemo__jsb__namelist__iface_a240047c255ab5bb3871ecdcdcd6d6a92_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__namelist__iface_abb2821ffd4c30375faa307d522af3bcb}{}\index{mo\+\_\+jsb\+\_\+namelist\+\_\+iface@{mo\+\_\+jsb\+\_\+namelist\+\_\+iface}!open\+\_\+nml@{open\+\_\+nml}}
+\index{open\+\_\+nml@{open\+\_\+nml}!mo\+\_\+jsb\+\_\+namelist\+\_\+iface@{mo\+\_\+jsb\+\_\+namelist\+\_\+iface}}
+\subsubsection[{open\+\_\+nml}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::open\+\_\+nml (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{namelist\+\_\+filename}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__namelist__iface_abb2821ffd4c30375faa307d522af3bcb}
+
+
+Wrapper function to make I\+C\+O\+N subroutine open\+\_\+nml a function, as in E\+C\+H\+A\+M. Should be replaced when open\+\_\+nml in I\+C\+O\+N gets updated. 
+
+
+
+Definition at line 38 of file mo\+\_\+jsb\+\_\+namelist\+\_\+iface.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+process\+\_\+factory\+::create\+\_\+process\+\_\+config(), mo\+\_\+hd\+\_\+config\+\_\+class\+::new\+\_\+hd\+\_\+config(), mo\+\_\+jsb\+\_\+config\+\_\+class\+::new\+\_\+model\+\_\+config(), mo\+\_\+srf\+\_\+config\+\_\+class\+::new\+\_\+srf\+\_\+config(), mo\+\_\+veg\+\_\+config\+\_\+class\+::new\+\_\+veg\+\_\+config(), and mo\+\_\+jsb\+\_\+control\+::read\+\_\+jsb\+\_\+control\+\_\+namelist().
+
+
+\begin{DoxyCode}
+38 
+39     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(in)} :: namelist\_filename
+40 
+41     \textcolor{keywordtype}{LOGICAL} :: unit\_is\_occupied
+42 
+43     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':open\_nml'}
+44 
+45     \textcolor{keyword}{INQUIRE}(unit=nnml, opened=unit\_is\_occupied)
+46     \textcolor{keywordflow}{IF} (unit\_is\_occupied) \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'namelist unit is already open'})
+47 
+48     \textcolor{keyword}{CALL }open\_nml\_icon(trim(namelist\_filename))
+49     \hyperlink{namespacemo__jsb__namelist__iface_abb2821ffd4c30375faa307d522af3bcb}{open\_nml} = 1
+50 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d4/d5f/namespacemo__jsb__namelist__iface_abb2821ffd4c30375faa307d522af3bcb_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}{}\index{mo\+\_\+jsb\+\_\+namelist\+\_\+iface@{mo\+\_\+jsb\+\_\+namelist\+\_\+iface}!position\+\_\+nml@{position\+\_\+nml}}
+\index{position\+\_\+nml@{position\+\_\+nml}!mo\+\_\+jsb\+\_\+namelist\+\_\+iface@{mo\+\_\+jsb\+\_\+namelist\+\_\+iface}}
+\subsubsection[{position\+\_\+nml}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::position\+\_\+nml (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{name, }
+\item[{integer, intent(in)}]{nml\+\_\+handler, }
+\item[{logical, intent(in), optional}]{lrewind, }
+\item[{integer, intent(out), optional}]{status}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}
+
+
+Wrapper function to make I\+C\+O\+N subroutine position\+\_\+nml a function, as in E\+C\+H\+A\+M. Should be replaced when open\+\_\+nml in I\+C\+O\+N gets updated. 
+
+
+
+Definition at line 73 of file mo\+\_\+jsb\+\_\+namelist\+\_\+iface.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+hd\+\_\+config\+\_\+class\+::new\+\_\+hd\+\_\+config(), mo\+\_\+jsb\+\_\+config\+\_\+class\+::new\+\_\+model\+\_\+config(), mo\+\_\+soil\+\_\+config\+\_\+class\+::new\+\_\+soil\+\_\+config(), mo\+\_\+srf\+\_\+config\+\_\+class\+::new\+\_\+srf\+\_\+config(), mo\+\_\+veg\+\_\+config\+\_\+class\+::new\+\_\+veg\+\_\+config(), and mo\+\_\+jsb\+\_\+control\+::read\+\_\+jsb\+\_\+control\+\_\+namelist().
+
+
+\begin{DoxyCode}
+73 
+74     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(in)}            :: name         \textcolor{comment}{! namelist group name}
+75     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(in)}            :: nml\_handler  \textcolor{comment}{! file handler}
+76     \textcolor{keywordtype}{LOGICAL},          \textcolor{keywordtype}{INTENT(in)}  ,\textcolor{keywordtype}{OPTIONAL} :: lrewind      \textcolor{comment}{! default: true}
+77     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(out)} ,\textcolor{keywordtype}{OPTIONAL} :: status       \textcolor{comment}{! error return value}
+78 
+79     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':position\_nml'}
+80 
+81 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+82 \textcolor{preprocessor}{}    \textcolor{keyword}{CALL }position\_nml\_icon(name, lrewind=lrewind, status=status)
+83 
+84     \hyperlink{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}{position\_nml} = nnml
+85 \textcolor{preprocessor}{#else}
+86 \textcolor{preprocessor}{}    \hyperlink{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}{position\_nml} = position\_nml\_echam(name, nml\_handler, rewind=lrewind, status=status)
+87 \textcolor{preprocessor}{#endif}
+88 \textcolor{preprocessor}{}
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d4/d5f/namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__namelist__iface_ac285553fa6612b5913578b420275d81b}{}\index{mo\+\_\+jsb\+\_\+namelist\+\_\+iface@{mo\+\_\+jsb\+\_\+namelist\+\_\+iface}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+namelist\+\_\+iface@{mo\+\_\+jsb\+\_\+namelist\+\_\+iface}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+namelist\+\_\+iface\textquotesingle{}}\label{namespacemo__jsb__namelist__iface_ac285553fa6612b5913578b420275d81b}
+
+
+Definition at line 29 of file mo\+\_\+jsb\+\_\+namelist\+\_\+iface.\+f90.
+
+
+
+Referenced by close\+\_\+nml(), open\+\_\+nml(), and position\+\_\+nml().
+
+
+\begin{DoxyCode}
+29   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_namelist\_iface'}
+\end{DoxyCode}

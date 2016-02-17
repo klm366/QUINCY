@@ -20,7 +20,7 @@ MODULE mo_jsb_base
 
   PUBLIC :: jsbach
   PUBLIC :: init_base !, register_model
-  PUBLIC :: get_model, get_tile
+!!$  PUBLIC :: get_model
 
 !!$  TYPE t_jsb
 !!$    INTEGER :: no_of_models
@@ -30,14 +30,10 @@ MODULE mo_jsb_base
 
 !!$  TYPE(t_jsb) :: jsbach
 
-  INTERFACE get_model
-     MODULE PROCEDURE get_model_by_id
-     !MODULE PROCEDURE get_model_by_name
-  END INTERFACE get_model
-
-  INTERFACE get_tile
-    MODULE PROCEDURE get_tile_by_name
-  END INTERFACE get_tile
+!!$  INTERFACE get_model
+!!$     MODULE PROCEDURE get_model_by_id
+!!$     !MODULE PROCEDURE get_model_by_name
+!!$  END INTERFACE get_model
 
 CONTAINS
 
@@ -115,40 +111,16 @@ CONTAINS
 !!$
 !!$  END SUBROUTINE register_model
 
-  FUNCTION get_model_by_id(id) RESULT(model)
-
-    USE mo_jsb_model_class, ONLY: t_jsb_model
-
-    INTEGER, INTENT(in)        :: id
-    TYPE(t_jsb_model), POINTER :: model
-
-    model => jsbach%models(id)%m
-
-  END FUNCTION get_model_by_id
-
-  RECURSIVE FUNCTION get_tile_by_name(tile, name) RESULT(found)
-
-    USE mo_jsb_tile_class, ONLY: t_jsb_tile
-
-    TYPE(t_jsb_tile), POINTER    :: tile
-    CHARACTER(len=*), INTENT(in) :: name
-    TYPE(t_jsb_tile), POINTER    :: found, current
-
-    INTEGER :: i
-
-    found => NULL()
-
-    IF (TRIM(tile%name) == TRIM(name)) THEN
-      found => tile
-    ELSE IF (tile%no_of_sub_tiles > 0) THEN
-      DO i=1,tile%no_of_sub_tiles
-        current => tile%sub_tiles(i)
-        found => get_tile_by_name(current, name)
-        IF (ASSOCIATED(found)) EXIT
-      END DO
-    END IF
-
-  END FUNCTION get_tile_by_name
+!!$  FUNCTION get_model_by_id(id) RESULT(model)
+!!$
+!!$    USE mo_jsb_model_class, ONLY: t_jsb_model
+!!$
+!!$    INTEGER, INTENT(in)        :: id
+!!$    TYPE(t_jsb_model), POINTER :: model
+!!$
+!!$    model => jsbach%models(id)%m
+!!$
+!!$  END FUNCTION get_model_by_id
 
 #endif
 END MODULE mo_jsb_base

@@ -13,16 +13,14 @@ MODULE mo_soil_config_class
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
+  USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_soil_config, new_soil_config
+  PUBLIC :: t_soil_config
 
-  TYPE t_soil_config
-     LOGICAL :: active
-     CHARACTER(len=filename_max) :: ic_filename
-     CHARACTER(len=filename_max) :: bc_filename
+  TYPE, EXTENDS(t_jsb_config) :: t_soil_config
      INTEGER :: nsoil_energy
      INTEGER :: nsoil_water
      REAL(wp), ALLOCATABLE :: soil_depth_energy(:)
@@ -31,6 +29,8 @@ MODULE mo_soil_config_class
      REAL(wp), ALLOCATABLE :: dz_water(:)
      REAL(wp) :: wsr_capacity               !< Water holding capacity of ground skin reservoir [m water equivalent]
      REAL(wp) :: wsn_capacity               !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
+   CONTAINS
+     PROCEDURE :: Init => Init_soil_config
   END type t_soil_config
 
   INTEGER, PARAMETER :: max_soil_layers = 20
@@ -39,14 +39,14 @@ MODULE mo_soil_config_class
 
 CONTAINS
 
-  FUNCTION new_soil_config(nml_handler) RESULT(config)
+  SUBROUTINE Init_soil_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
 
-    INTEGER,          INTENT(in) :: nml_handler
-    TYPE(t_soil_config), POINTER :: config
-
-    TYPE(t_soil_config), POINTER :: new
+    CLASS(t_soil_config), INTENT(inout) :: config
 
     LOGICAL  :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
@@ -62,13 +62,14 @@ CONTAINS
       dz_energy, dz_water,                      &
       wsr_capacity, wsn_capacity
 
-    INTEGER :: nml_unit, istat, i
+    INTEGER :: nml_handler, nml_unit, istat, i
+    CHARACTER(len=filename_max) :: namelist_filename
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_soil_config'
+    TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
 
     CALL message(TRIM(routine), 'Starting soil configuration')
-
-    ALLOCATE(new)
 
     ! Set defaults
     active         = .FALSE.
@@ -81,40 +82,54 @@ CONTAINS
     wsr_capacity   = 2.E-4_wp
     wsn_capacity   = 2.E-4_wp
 
+    nml_handler = open_nml(TRIM(config%namelist_filename))
+
     nml_unit = position_nml('jsb_soil_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_soil_nml)
+
+    CALL close_nml(nml_handler)
 
     IF (nsoil_energy > max_soil_layers .OR. nsoil_water > max_soil_layers) THEN
       WRITE(message_text, '(A,I2)') 'Maximum number of soil layers is ', max_soil_layers
       CALL finish(TRIM(routine), message_text)
     END IF
 
-    ALLOCATE(new%soil_depth_energy(nsoil_energy))
-    ALLOCATE(new%soil_depth_water (nsoil_water ))
-    ALLOCATE(new%dz_energy(nsoil_energy))
-    ALLOCATE(new%dz_water (nsoil_water ))
+    ALLOCATE(config%soil_depth_energy(nsoil_energy))
+    ALLOCATE(config%soil_depth_water (nsoil_water ))
+    ALLOCATE(config%dz_energy(nsoil_energy))
+    ALLOCATE(config%dz_water (nsoil_water ))
 
-    new%active                    = active
-    new%ic_filename               = ic_filename
-    new%bc_filename               = bc_filename
-    new%nsoil_energy              = nsoil_energy
-    new%nsoil_water               = nsoil_water
-    new%soil_depth_energy(1)      = dz_energy(1)
+    config%active                    = active
+    config%ic_filename               = ic_filename
+    config%bc_filename               = bc_filename
+    config%nsoil_energy              = nsoil_energy
+    config%nsoil_water               = nsoil_water
+    config%soil_depth_energy(1)      = dz_energy(1)
     DO i=2,nsoil_energy
-      new%soil_depth_energy(i) = new%soil_depth_energy(i-1) + dz_energy(i)
+      config%soil_depth_energy(i) = config%soil_depth_energy(i-1) + dz_energy(i)
     END DO
-    new%soil_depth_water(1)       = dz_water(1)
+    config%soil_depth_water(1)       = dz_water(1)
     DO i=2,nsoil_water
-      new%soil_depth_water(i) = new%soil_depth_water(i-1) + dz_water(i)
+      config%soil_depth_water(i) = config%soil_depth_water(i-1) + dz_water(i)
     END DO
-    new%dz_energy(1:nsoil_energy) = dz_energy(1:nsoil_energy)
-    new%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)
-    new%wsr_capacity              = wsr_capacity
-    new%wsn_capacity              = wsn_capacity
+    config%dz_energy(1:nsoil_energy) = dz_energy(1:nsoil_energy)
+    config%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)
+    config%wsr_capacity              = wsr_capacity
+    config%wsn_capacity              = wsn_capacity
 
-    config => new
+    IF (.NOT. active) RETURN
 
-  END FUNCTION new_soil_config
+    ! Create vertical axes
+
+    soil_e  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, config%nsoil_energy, &
+      levels=config%soil_depth_energy(1:config%nsoil_energy), units='m')
+    CALL register_vgrid(soil_e)
+
+    soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, config%nsoil_water, &
+      levels=config%soil_depth_water(1:config%nsoil_water), units='m')
+    CALL register_vgrid(soil_w)
+
+  END SUBROUTINE Init_soil_config
 
 #endif
 END MODULE mo_soil_config_class

@@ -8,7 +8,9 @@ MODULE mo_jsb_io_netcdf
     NF_NOWRITE, NF_NOERR, nf, t_input_file, netcdf_open_input, netcdf_close_file, &
     netcdf_read_2d, netcdf_read_2d_time, netcdf_read_2d_extdim
   USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_base,          ONLY: get_model
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
+  USE mo_jsb_grid,           ONLY: Get_grid
+  USE mo_jsb_class,          ONLY: get_model
 
   IMPLICIT NONE
 
@@ -29,12 +31,14 @@ CONTAINS
     INTEGER,          INTENT(in) :: model_id
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_netcdf_open_input'
 
     model => get_model(model_id)
+    grid => Get_grid(model%grid_id)
 
-    jsb_netcdf_open_input = netcdf_open_input(filename, patch=model%grid%patch, decomp=model%grid%decomposition)
+    jsb_netcdf_open_input = netcdf_open_input(filename, patch=grid%patch, decomp=grid%decomposition)
 
   END FUNCTION jsb_netcdf_open_input
 

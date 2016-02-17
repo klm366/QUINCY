@@ -1,0 +1,147 @@
+\hypertarget{namespacemo__jsb__config__class}{}\section{mo\+\_\+jsb\+\_\+config\+\_\+class Module Reference}
+\label{namespacemo__jsb__config__class}\index{mo\+\_\+jsb\+\_\+config\+\_\+class@{mo\+\_\+jsb\+\_\+config\+\_\+class}}
+
+
+Contains structures and methods for J\+S\+B\+A\+C\+H model config.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(t\+\_\+jsb\+\_\+model\+\_\+config) function, pointer, public \hyperlink{namespacemo__jsb__config__class_a1954d6f33b1cea7b395655837a1377db}{new\+\_\+model\+\_\+config} (namelist\+\_\+filename)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__config__class_afe047bc8cf7a4d227f9421eaa14e2d80}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+config\+\_\+class\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains structures and methods for J\+S\+B\+A\+C\+H model config. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__config__class_a1954d6f33b1cea7b395655837a1377db}{}\index{mo\+\_\+jsb\+\_\+config\+\_\+class@{mo\+\_\+jsb\+\_\+config\+\_\+class}!new\+\_\+model\+\_\+config@{new\+\_\+model\+\_\+config}}
+\index{new\+\_\+model\+\_\+config@{new\+\_\+model\+\_\+config}!mo\+\_\+jsb\+\_\+config\+\_\+class@{mo\+\_\+jsb\+\_\+config\+\_\+class}}
+\subsubsection[{new\+\_\+model\+\_\+config}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+jsb\+\_\+model\+\_\+config) function, pointer, public mo\+\_\+jsb\+\_\+config\+\_\+class\+::new\+\_\+model\+\_\+config (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{namelist\+\_\+filename}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__config__class_a1954d6f33b1cea7b395655837a1377db}
+
+
+Definition at line 35 of file mo\+\_\+jsb\+\_\+config\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::close\+\_\+nml(), modname, mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::open\+\_\+nml(), and mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::position\+\_\+nml().
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+base\+::init\+\_\+base().
+
+
+\begin{DoxyCode}
+35 
+36     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__namelist__iface}{mo\_jsb\_namelist\_iface}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__jsb__namelist__iface_abb2821ffd4c30375faa307d522af3bcb}{open\_nml}, positioned, 
+      \hyperlink{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}{position\_nml}, \hyperlink{namespacemo__jsb__namelist__iface_a240047c255ab5bb3871ecdcdcd6d6a92}{close\_nml}
+37 
+38     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(in)} :: namelist\_filename
+39     \textcolor{keywordtype}{TYPE}(t\_jsb\_model\_config), \textcolor{keywordtype}{POINTER} :: config
+40 
+41     \textcolor{keywordtype}{TYPE}(t\_jsb\_model\_config), \textcolor{keywordtype}{POINTER} :: new
+42 
+43     \textcolor{keywordtype}{CHARACTER(len=filename\_max)} :: grid\_filename
+44     \textcolor{keywordtype}{CHARACTER(len=30)}           :: grid\_name
+45 
+46     namelist /jsb\_grid\_nml/   &
+47       grid\_filename,          &
+48       grid\_name
+49 
+50     \textcolor{keywordtype}{CHARACTER(len=30)}           :: usecase
+51 
+52     namelist /jsb\_model\_nml/  &
+53       usecase
+54 
+55     \textcolor{keywordtype}{INTEGER} :: nml\_handler, nml\_unit, istat
+56 
+57     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':new\_model\_config'}
+58 
+59     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting model configuration from '}//trim(namelist\_filename))
+60 
+61     \textcolor{keyword}{ALLOCATE}(new)
+62 
+63     \textcolor{comment}{! Set defaults}
+64     grid\_filename = \textcolor{stringliteral}{''}
+65     grid\_name     = \textcolor{stringliteral}{''}
+66     usecase       = \textcolor{stringliteral}{''}
+67 
+68     \textcolor{comment}{! Read namelist}
+69     nml\_handler = \hyperlink{namespacemo__jsb__namelist__iface_abb2821ffd4c30375faa307d522af3bcb}{open\_nml}(trim(namelist\_filename))
+70 
+71     nml\_unit = \hyperlink{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}{position\_nml}(\textcolor{stringliteral}{'jsb\_grid\_nml'}, nml\_handler, status=istat)
+72     \textcolor{keywordflow}{IF} (istat == positioned) \textcolor{keyword}{READ}(nml\_unit, jsb\_grid\_nml)
+73 
+74     new%grid\_filename = grid\_filename
+75     new%grid\_name     = grid\_name
+76 
+77     nml\_unit =  \hyperlink{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}{position\_nml}(\textcolor{stringliteral}{'jsb\_model\_nml'}, nml\_handler, status=istat)
+78     \textcolor{keywordflow}{IF} (istat == positioned) \textcolor{keyword}{READ}(nml\_unit, jsb\_model\_nml)
+79 
+80     new%usecase       = usecase
+81 
+82     \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__namelist__iface_a240047c255ab5bb3871ecdcdcd6d6a92}{close\_nml}(nml\_handler)
+83 
+84     config => new
+85 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=340pt]{db/dd4/namespacemo__jsb__config__class_a1954d6f33b1cea7b395655837a1377db_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=343pt]{db/dd4/namespacemo__jsb__config__class_a1954d6f33b1cea7b395655837a1377db_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__config__class_afe047bc8cf7a4d227f9421eaa14e2d80}{}\index{mo\+\_\+jsb\+\_\+config\+\_\+class@{mo\+\_\+jsb\+\_\+config\+\_\+class}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+config\+\_\+class@{mo\+\_\+jsb\+\_\+config\+\_\+class}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+config\+\_\+class\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+config\+\_\+class\textquotesingle{}}\label{namespacemo__jsb__config__class_afe047bc8cf7a4d227f9421eaa14e2d80}
+
+
+Definition at line 30 of file mo\+\_\+jsb\+\_\+config\+\_\+class.\+f90.
+
+
+
+Referenced by new\+\_\+model\+\_\+config().
+
+
+\begin{DoxyCode}
+30   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_config\_class'}
+\end{DoxyCode}

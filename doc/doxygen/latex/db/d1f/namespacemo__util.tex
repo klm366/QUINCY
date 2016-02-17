@@ -1,0 +1,171 @@
+\hypertarget{namespacemo__util}{}\section{mo\+\_\+util Module Reference}
+\label{namespacemo__util}\index{mo\+\_\+util@{mo\+\_\+util}}
+
+
+Contains utility functions.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+character(len=len\+\_\+trim(lowercase)) function, public \hyperlink{namespacemo__util_a4a244c25226ff9221cdd725d0964c118}{toupper} (lowercase)
+\begin{DoxyCompactList}\small\item\em Conversion\+: Lowercase -\/$>$ Uppercase. \end{DoxyCompactList}\item 
+integer function, public \hyperlink{namespacemo__util_a7a24a8dc4b724911d99757348cc8ecbe}{one\+\_\+of} (in\+\_\+str, arg)
+\begin{DoxyCompactList}\small\item\em Function for convenience. \end{DoxyCompactList}\item 
+character(len=10) function, public \hyperlink{namespacemo__util_a2adc90dbfdafeab9097559d6fd71c06e}{int2string} (n, opt\+\_\+fmt)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__util_a4026980f9290fc6203c551efed0cd9e0}{modname} = \textquotesingle{}mo\+\_\+util\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains utility functions. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2014-\/03-\/17) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__util_a2adc90dbfdafeab9097559d6fd71c06e}{}\index{mo\+\_\+util@{mo\+\_\+util}!int2string@{int2string}}
+\index{int2string@{int2string}!mo\+\_\+util@{mo\+\_\+util}}
+\subsubsection[{int2string}]{\setlength{\rightskip}{0pt plus 5cm}character(len=10) function, public mo\+\_\+util\+::int2string (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{n, }
+\item[{character(len=$\ast$), intent(in), optional}]{opt\+\_\+fmt}
+\end{DoxyParamCaption}
+)}\label{namespacemo__util_a2adc90dbfdafeab9097559d6fd71c06e}
+
+
+Definition at line 70 of file mo\+\_\+util.\+f90.
+
+
+\begin{DoxyCode}
+70     \textcolor{keywordtype}{CHARACTER(len=10)} :: int2string \textcolor{comment}{! result}
+71     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(in)} :: n
+72     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: opt\_fmt
+73     \textcolor{comment}{!}
+74     \textcolor{keywordtype}{CHARACTER(len=10)} :: fmt
+75 
+76     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(opt\_fmt)) \textcolor{keywordflow}{THEN}
+77       fmt = opt\_fmt
+78     \textcolor{keywordflow}{ELSE}
+79       fmt = \textcolor{stringliteral}{'(I10)'}
+80 \textcolor{keywordflow}{    END IF}
+81     \textcolor{keyword}{WRITE}(int2string,fmt) n
+82     int2string = adjustl(int2string)
+83     \textcolor{comment}{!}
+\end{DoxyCode}
+\hypertarget{namespacemo__util_a7a24a8dc4b724911d99757348cc8ecbe}{}\index{mo\+\_\+util@{mo\+\_\+util}!one\+\_\+of@{one\+\_\+of}}
+\index{one\+\_\+of@{one\+\_\+of}!mo\+\_\+util@{mo\+\_\+util}}
+\subsubsection[{one\+\_\+of}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+util\+::one\+\_\+of (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{in\+\_\+str, }
+\item[{character(len=$\ast$), dimension(\+:), intent(in)}]{arg}
+\end{DoxyParamCaption}
+)}\label{namespacemo__util_a7a24a8dc4b724911d99757348cc8ecbe}
+
+
+Function for convenience. 
+
+
+
+Definition at line 52 of file mo\+\_\+util.\+f90.
+
+
+
+References toupper().
+
+
+\begin{DoxyCode}
+52     \textcolor{keywordtype}{INTEGER} :: one\_of
+53     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(IN)}           :: in\_str    \textcolor{comment}{! input string}
+54     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(IN)}           :: arg(:)
+55     \textcolor{comment}{! local variables:}
+56     \textcolor{keywordtype}{INTEGER} :: i
+57     
+58     one\_of = -1
+59     \textcolor{keywordflow}{DO} i=1,\textcolor{keyword}{SIZE}(arg)
+60       \textcolor{keywordflow}{IF} (toupper(trim(in\_str)) == toupper(trim(arg(i))))  one\_of=i
+61 \textcolor{keywordflow}{    END DO}
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=285pt]{db/d1f/namespacemo__util_a7a24a8dc4b724911d99757348cc8ecbe_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__util_a4a244c25226ff9221cdd725d0964c118}{}\index{mo\+\_\+util@{mo\+\_\+util}!toupper@{toupper}}
+\index{toupper@{toupper}!mo\+\_\+util@{mo\+\_\+util}}
+\subsubsection[{toupper}]{\setlength{\rightskip}{0pt plus 5cm}character(len=len\+\_\+trim(lowercase)) function, public mo\+\_\+util\+::toupper (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{lowercase}
+\end{DoxyParamCaption}
+)}\label{namespacemo__util_a4a244c25226ff9221cdd725d0964c118}
+
+
+Conversion\+: Lowercase -\/$>$ Uppercase. 
+
+
+
+Definition at line 28 of file mo\+\_\+util.\+f90.
+
+
+
+Referenced by one\+\_\+of().
+
+
+\begin{DoxyCode}
+28     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(in)} :: lowercase
+29     \textcolor{keywordtype}{CHARACTER(len=LEN\_TRIM(lowercase))} :: toupper
+30     \textcolor{comment}{!}
+31     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{PARAMETER} :: idel = ichar(\textcolor{stringliteral}{'A'})-ichar(\textcolor{stringliteral}{'a'})
+32     \textcolor{keywordtype}{INTEGER} :: i
+33     \textcolor{comment}{!}
+34     \textcolor{keywordflow}{DO} i = 1, len\_trim(lowercase)
+35       \textcolor{keywordflow}{IF} (ichar(lowercase(i:i)) >= ichar(\textcolor{stringliteral}{'a'}) .AND. ichar(lowercase(i:i)) <= ichar(\textcolor{stringliteral}{'z'})) \textcolor{keywordflow}{THEN}
+36         toupper(i:i) = char( ichar(lowercase(i:i)) + idel )
+37       \textcolor{keywordflow}{ELSE}
+38         toupper(i:i) = lowercase(i:i)
+39 \textcolor{keywordflow}{      ENDIF}
+40 \textcolor{keywordflow}{    ENDDO}
+41     \textcolor{comment}{!}
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=285pt]{db/d1f/namespacemo__util_a4a244c25226ff9221cdd725d0964c118_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__util_a4026980f9290fc6203c551efed0cd9e0}{}\index{mo\+\_\+util@{mo\+\_\+util}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+util@{mo\+\_\+util}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+util\+::modname = \textquotesingle{}mo\+\_\+util\textquotesingle{}}\label{namespacemo__util_a4026980f9290fc6203c551efed0cd9e0}
+
+
+Definition at line 18 of file mo\+\_\+util.\+f90.
+
+
+\begin{DoxyCode}
+18   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_util'}
+\end{DoxyCode}

@@ -1,0 +1,569 @@
+\hypertarget{namespacemo__jsb__grid__class}{}\section{mo\+\_\+jsb\+\_\+grid\+\_\+class Module Reference}
+\label{namespacemo__jsb__grid__class}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+
+
+Contains J\+S\+B\+A\+C\+H grid structure and methods.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(t\+\_\+jsb\+\_\+grid) function, pointer \hyperlink{namespacemo__jsb__grid__class_a2ed0d23521e0ed882dd496dc097e941f}{new\+\_\+grid\+\_\+from\+\_\+lonlat} (lon, lat)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__grid__class_a8eff8482b9f6dc02b8c703f80f962b8c}{delete\+\_\+grid} (self)
+\item 
+integer function, public \hyperlink{namespacemo__jsb__grid__class_a1f7b1d1bbf7523458be54c335a83f423}{get\+\_\+nblks} (self)
+\item 
+integer function, public \hyperlink{namespacemo__jsb__grid__class_a42ff42d4dc8ff6d34bc68cde0d2c9006}{get\+\_\+nproma} (self)
+\item 
+integer function \hyperlink{namespacemo__jsb__grid__class_afc8f2ee4e73381a9ff8eb402d89c4eee}{get\+\_\+blk\+\_\+end} (grid)
+\item 
+integer function \hyperlink{namespacemo__jsb__grid__class_a1a350aded77ade355944cec2a0d972f1}{get\+\_\+col\+\_\+start} (iblk, grid)
+\item 
+integer function \hyperlink{namespacemo__jsb__grid__class_affffc8eaeee7b83491f39d21150f2c78}{get\+\_\+col\+\_\+end} (iblk, grid)
+\item 
+type(t\+\_\+jsb\+\_\+vgrid) function, pointer, public \hyperlink{namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8}{new\+\_\+vgrid} (name, cdi\+\_\+axis\+\_\+type, length, longname, units, levels, lbounds, ubounds)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__grid__class_a14a5dddab870a130135f43b849588a3f}{delete\+\_\+vgrid} (self)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+integer, save \hyperlink{namespacemo__jsb__grid__class_ad64217c2b3f2f8da3c4b7297bc650ae4}{ngrid\+\_\+count} = 0
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__grid__class_a2d6c1334c4fbe274a9f0b7acd6fd6361}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+grid\+\_\+class\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains J\+S\+B\+A\+C\+H grid structure and methods. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__grid__class_a8eff8482b9f6dc02b8c703f80f962b8c}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!delete\+\_\+grid@{delete\+\_\+grid}}
+\index{delete\+\_\+grid@{delete\+\_\+grid}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{delete\+\_\+grid}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+grid\+\_\+class\+::delete\+\_\+grid (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+grid), intent(inout), pointer}]{self}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__grid__class_a8eff8482b9f6dc02b8c703f80f962b8c}
+
+
+Definition at line 226 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+
+References modname.
+
+
+\begin{DoxyCode}
+226 
+227 \textcolor{preprocessor}{#ifdef HAVE\_F2003}
+228 \textcolor{preprocessor}{}    \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{POINTER}, \textcolor{keywordtype}{INTENT(inout)} :: self
+229 \textcolor{preprocessor}{#else}
+230 \textcolor{preprocessor}{}    \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{POINTER} :: self
+231 \textcolor{preprocessor}{#endif}
+232 \textcolor{preprocessor}{}
+233     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':delete\_grid'}
+234 
+235     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'starting destruction of JSBACH grid instance.'})
+236 
+237     \textcolor{keywordflow}{IF} (\textcolor{keyword}{ASSOCIATED}(self%lsm)) \textcolor{keyword}{DEALLOCATE}(self%lsm)
+238     \textcolor{keywordflow}{IF} (\textcolor{keyword}{ASSOCIATED}(self%lsf)) \textcolor{keyword}{DEALLOCATE}(self%lsf)
+239     \textcolor{keywordflow}{IF} (\textcolor{keyword}{ASSOCIATED}(self%lon)) \textcolor{keyword}{DEALLOCATE}(self%lon)
+240     \textcolor{keywordflow}{IF} (\textcolor{keyword}{ASSOCIATED}(self%lat)) \textcolor{keyword}{DEALLOCATE}(self%lat)
+241 
+242     \textcolor{keyword}{DEALLOCATE}(self)
+243 
+244     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'destruction of JSBACH grid completed.'})
+245 
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__grid__class_a14a5dddab870a130135f43b849588a3f}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!delete\+\_\+vgrid@{delete\+\_\+vgrid}}
+\index{delete\+\_\+vgrid@{delete\+\_\+vgrid}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{delete\+\_\+vgrid}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+grid\+\_\+class\+::delete\+\_\+vgrid (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+vgrid), intent(inout), pointer}]{self}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__grid__class_a14a5dddab870a130135f43b849588a3f}
+
+
+Definition at line 483 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+io\+::cdi\+\_\+zaxis\+\_\+ids, and modname.
+
+
+\begin{DoxyCode}
+483 
+484     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__io}{mo\_jsb\_io}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids}, zaxisdestroy
+485 
+486 \textcolor{preprocessor}{#ifdef HAVE\_F2003}
+487 \textcolor{preprocessor}{}    \textcolor{keywordtype}{TYPE}(t\_jsb\_vgrid), \textcolor{keywordtype}{POINTER}, \textcolor{keywordtype}{INTENT(inout)} :: self
+488 \textcolor{preprocessor}{#else}
+489 \textcolor{preprocessor}{}    \textcolor{keywordtype}{TYPE}(t\_jsb\_vgrid), \textcolor{keywordtype}{POINTER} :: self
+490 \textcolor{preprocessor}{#endif}
+491 \textcolor{preprocessor}{}
+492     \textcolor{keywordtype}{INTEGER} :: i, idx
+493 
+494     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':delete\_vgrid'}
+495 
+496     \textcolor{keywordflow}{IF} (self%id == 0) \textcolor{keywordflow}{RETURN}
+497 
+498     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'starting destruction of JSBACH vgrid instance.'})
+499 
+500     \textcolor{keywordflow}{IF} (\textcolor{keyword}{ASSOCIATED}(self%levels)) \textcolor{keyword}{DEALLOCATE}(self%levels)
+501     \textcolor{keywordflow}{IF} (\textcolor{keyword}{ASSOCIATED}(self%lbounds)) \textcolor{keyword}{DEALLOCATE}(self%lbounds)
+502     \textcolor{keywordflow}{IF} (\textcolor{keyword}{ASSOCIATED}(self%ubounds)) \textcolor{keyword}{DEALLOCATE}(self%ubounds)
+503 
+504     \hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids}(self%id) = 0
+505     \textcolor{comment}{! If this was the last instance of a JSBACH vgrid that uses a particular cdiZaxisID, also destroy CDI
+       zaxis}
+506     idx = 0
+507     \textcolor{keywordflow}{DO} i=1,\textcolor{keyword}{SIZE}(\hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids})
+508       \textcolor{keywordflow}{IF} (\hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids}(i) == self%cdiZaxisID) \textcolor{keywordflow}{THEN}
+509         idx = i
+510         \textcolor{keywordflow}{EXIT}
+511 \textcolor{keywordflow}{      END IF}
+512 \textcolor{keywordflow}{    END DO}
+513     \textcolor{keywordflow}{IF} (idx == 0) \textcolor{keyword}{CALL }zaxisdestroy(self%cdiZaxisID)
+514 
+515     \textcolor{keyword}{DEALLOCATE}(self)
+516 \textcolor{comment}{!!$    self%cdiZaxisID = 0}
+517 \textcolor{comment}{!!$    self%id = 0}
+518 \textcolor{comment}{!!$    self%n\_levels = 0}
+519 \textcolor{comment}{!!$    self%name = ''}
+520 
+521     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'destruction of JSBACH vgrid completed.'})
+522 
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__grid__class_afc8f2ee4e73381a9ff8eb402d89c4eee}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!get\+\_\+blk\+\_\+end@{get\+\_\+blk\+\_\+end}}
+\index{get\+\_\+blk\+\_\+end@{get\+\_\+blk\+\_\+end}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{get\+\_\+blk\+\_\+end}]{\setlength{\rightskip}{0pt plus 5cm}integer function mo\+\_\+jsb\+\_\+grid\+\_\+class\+::get\+\_\+blk\+\_\+end (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+grid), intent(in)}]{grid}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__grid__class_afc8f2ee4e73381a9ff8eb402d89c4eee}
+
+
+Definition at line 328 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+domain\+\_\+iface\+::get\+\_\+blk\+\_\+end(), and modname.
+
+
+\begin{DoxyCode}
+328 
+329     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__domain__iface}{mo\_jsb\_domain\_iface}\textcolor{keywordtype}{, ONLY}: get\_blk\_end\_domain => 
+      \hyperlink{namespacemo__jsb__domain__iface_afdc692d241094026338672555daf11a8}{get\_blk\_end}
+330 
+331     \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{INTENT(in)} :: grid
+332 
+333     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':get\_blk\_end'}
+334 
+335     \textcolor{keywordflow}{IF} (grid%patch%id >= 0) \textcolor{keywordflow}{THEN}
+336       \hyperlink{namespacemo__jsb__domain__iface_afdc692d241094026338672555daf11a8}{get\_blk\_end} = get\_blk\_end\_domain(patch=grid%patch)
+337     \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (grid%decomposition%nlon >= 0) \textcolor{keywordflow}{THEN}
+338       \hyperlink{namespacemo__jsb__domain__iface_afdc692d241094026338672555daf11a8}{get\_blk\_end} = get\_blk\_end\_domain(decomp=grid%decomposition)
+339     \textcolor{keywordflow}{ELSE}
+340       \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Something went wrong.'})
+341 \textcolor{keywordflow}{    END IF}
+342 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=331pt]{d2/dcf/namespacemo__jsb__grid__class_afc8f2ee4e73381a9ff8eb402d89c4eee_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__grid__class_affffc8eaeee7b83491f39d21150f2c78}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!get\+\_\+col\+\_\+end@{get\+\_\+col\+\_\+end}}
+\index{get\+\_\+col\+\_\+end@{get\+\_\+col\+\_\+end}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{get\+\_\+col\+\_\+end}]{\setlength{\rightskip}{0pt plus 5cm}integer function mo\+\_\+jsb\+\_\+grid\+\_\+class\+::get\+\_\+col\+\_\+end (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{iblk, }
+\item[{type(t\+\_\+jsb\+\_\+grid), intent(in)}]{grid}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__grid__class_affffc8eaeee7b83491f39d21150f2c78}
+
+
+Definition at line 365 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+domain\+\_\+iface\+::get\+\_\+col\+\_\+end(), and modname.
+
+
+\begin{DoxyCode}
+365 
+366     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__domain__iface}{mo\_jsb\_domain\_iface}\textcolor{keywordtype}{, ONLY}: get\_col\_end\_domain => 
+      \hyperlink{namespacemo__jsb__domain__iface_abf860a70b92fa185920b6598b2e897cb}{get\_col\_end}
+367 
+368     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(in)} :: iblk
+369     \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{INTENT(in)} :: grid
+370 
+371     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':get\_col\_end'}
+372 
+373     \textcolor{keywordflow}{IF} (grid%patch%id >= 0) \textcolor{keywordflow}{THEN}
+374       \hyperlink{namespacemo__jsb__domain__iface_abf860a70b92fa185920b6598b2e897cb}{get\_col\_end} = get\_col\_end\_domain(iblk, patch=grid%patch)
+375     \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (grid%decomposition%nlon >= 0) \textcolor{keywordflow}{THEN}
+376       \hyperlink{namespacemo__jsb__domain__iface_abf860a70b92fa185920b6598b2e897cb}{get\_col\_end} = get\_col\_end\_domain(iblk, decomp=grid%decomposition)
+377     \textcolor{keywordflow}{ELSE}
+378       \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Something went wrong.'})
+379 \textcolor{keywordflow}{    END IF}
+380 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/dcf/namespacemo__jsb__grid__class_affffc8eaeee7b83491f39d21150f2c78_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__grid__class_a1a350aded77ade355944cec2a0d972f1}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!get\+\_\+col\+\_\+start@{get\+\_\+col\+\_\+start}}
+\index{get\+\_\+col\+\_\+start@{get\+\_\+col\+\_\+start}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{get\+\_\+col\+\_\+start}]{\setlength{\rightskip}{0pt plus 5cm}integer function mo\+\_\+jsb\+\_\+grid\+\_\+class\+::get\+\_\+col\+\_\+start (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{iblk, }
+\item[{type(t\+\_\+jsb\+\_\+grid), intent(in)}]{grid}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__grid__class_a1a350aded77ade355944cec2a0d972f1}
+
+
+Definition at line 346 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+domain\+\_\+iface\+::get\+\_\+col\+\_\+start(), and modname.
+
+
+\begin{DoxyCode}
+346 
+347     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__domain__iface}{mo\_jsb\_domain\_iface}\textcolor{keywordtype}{, ONLY}: get\_col\_start\_domain => 
+      \hyperlink{namespacemo__jsb__domain__iface_a286a7d88ee91a2541b4285f22ad7c442}{get\_col\_start}
+348 
+349     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(in)} :: iblk
+350     \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{INTENT(in)} :: grid
+351 
+352     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':get\_col\_start'}
+353 
+354     \textcolor{keywordflow}{IF} (grid%patch%id >= 0) \textcolor{keywordflow}{THEN}
+355       \hyperlink{namespacemo__jsb__domain__iface_a286a7d88ee91a2541b4285f22ad7c442}{get\_col\_start} = get\_col\_start\_domain(iblk, patch=grid%patch)
+356     \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (grid%decomposition%nlon >= 0) \textcolor{keywordflow}{THEN}
+357       \hyperlink{namespacemo__jsb__domain__iface_a286a7d88ee91a2541b4285f22ad7c442}{get\_col\_start} = get\_col\_start\_domain(iblk, decomp=grid%decomposition)
+358     \textcolor{keywordflow}{ELSE}
+359       \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Something went wrong.'})
+360 \textcolor{keywordflow}{    END IF}
+361 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/dcf/namespacemo__jsb__grid__class_a1a350aded77ade355944cec2a0d972f1_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__grid__class_a1f7b1d1bbf7523458be54c335a83f423}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!get\+\_\+nblks@{get\+\_\+nblks}}
+\index{get\+\_\+nblks@{get\+\_\+nblks}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{get\+\_\+nblks}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+grid\+\_\+class\+::get\+\_\+nblks (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+grid), intent(in), pointer}]{self}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__grid__class_a1f7b1d1bbf7523458be54c335a83f423}
+
+
+Definition at line 282 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+domain\+\_\+iface\+::get\+\_\+nblks(), and modname.
+
+
+\begin{DoxyCode}
+282 
+283 \textcolor{preprocessor}{#ifdef HAVE\_F2003}
+284 \textcolor{preprocessor}{}    \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{POINTER}, \textcolor{keywordtype}{INTENT(in)} :: self
+285 \textcolor{preprocessor}{#else}
+286 \textcolor{preprocessor}{}    \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{POINTER}             :: self
+287 \textcolor{preprocessor}{#endif}
+288 \textcolor{preprocessor}{}
+289     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':get\_nblks'}
+290 
+291     get\_nblks = self%nblks
+292 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=331pt]{d2/dcf/namespacemo__jsb__grid__class_a1f7b1d1bbf7523458be54c335a83f423_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__grid__class_a42ff42d4dc8ff6d34bc68cde0d2c9006}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!get\+\_\+nproma@{get\+\_\+nproma}}
+\index{get\+\_\+nproma@{get\+\_\+nproma}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{get\+\_\+nproma}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+grid\+\_\+class\+::get\+\_\+nproma (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+grid), intent(in), pointer}]{self}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__grid__class_a42ff42d4dc8ff6d34bc68cde0d2c9006}
+
+
+Definition at line 296 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+domain\+\_\+iface\+::get\+\_\+blk\+\_\+start(), mo\+\_\+jsb\+\_\+domain\+\_\+iface\+::get\+\_\+nproma(), and modname.
+
+
+\begin{DoxyCode}
+296 
+297 \textcolor{preprocessor}{#ifdef HAVE\_F2003}
+298 \textcolor{preprocessor}{}    \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{POINTER}, \textcolor{keywordtype}{INTENT(in)} :: self
+299 \textcolor{preprocessor}{#else}
+300 \textcolor{preprocessor}{}    \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{POINTER}             :: self
+301 \textcolor{preprocessor}{#endif}
+302 \textcolor{preprocessor}{}
+303     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':get\_nproma'}
+304 
+305     get\_nproma = self%nproma
+306 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=331pt]{d2/dcf/namespacemo__jsb__grid__class_a42ff42d4dc8ff6d34bc68cde0d2c9006_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__grid__class_a2ed0d23521e0ed882dd496dc097e941f}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!new\+\_\+grid\+\_\+from\+\_\+lonlat@{new\+\_\+grid\+\_\+from\+\_\+lonlat}}
+\index{new\+\_\+grid\+\_\+from\+\_\+lonlat@{new\+\_\+grid\+\_\+from\+\_\+lonlat}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{new\+\_\+grid\+\_\+from\+\_\+lonlat}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+jsb\+\_\+grid) function, pointer mo\+\_\+jsb\+\_\+grid\+\_\+class\+::new\+\_\+grid\+\_\+from\+\_\+lonlat (
+\begin{DoxyParamCaption}
+\item[{real(wp)}]{lon, }
+\item[{real(wp)}]{lat}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__grid__class_a2ed0d23521e0ed882dd496dc097e941f}
+
+
+Definition at line 210 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+
+References modname.
+
+
+\begin{DoxyCode}
+210 
+211     \textcolor{keywordtype}{REAL(wp)}                        :: lon
+212     \textcolor{keywordtype}{REAL(wp)}                        :: lat
+213     \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{POINTER}       :: grid
+214 
+215     \textcolor{keywordtype}{TYPE}(t\_jsb\_grid), \textcolor{keywordtype}{POINTER}       :: new
+216 
+217     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':new\_grid\_from\_lonlat'}
+218 
+219     \textcolor{keyword}{ALLOCATE}(new)
+220 
+221     grid => new
+222 
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!new\+\_\+vgrid@{new\+\_\+vgrid}}
+\index{new\+\_\+vgrid@{new\+\_\+vgrid}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{new\+\_\+vgrid}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+jsb\+\_\+vgrid) function, pointer, public mo\+\_\+jsb\+\_\+grid\+\_\+class\+::new\+\_\+vgrid (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{name, }
+\item[{integer, intent(in)}]{cdi\+\_\+axis\+\_\+type, }
+\item[{integer, intent(in)}]{length, }
+\item[{character(len=$\ast$), intent(in), optional}]{longname, }
+\item[{character(len=$\ast$), intent(in), optional}]{units, }
+\item[{real(wp), dimension(\+:), intent(in), optional}]{levels, }
+\item[{real(wp), dimension(\+:), intent(in), optional}]{lbounds, }
+\item[{real(wp), dimension(\+:), intent(in), optional}]{ubounds}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8}
+
+
+Definition at line 384 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+io\+::cdi\+\_\+zaxis\+\_\+ids, and modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+model\+\_\+init\+::init\+\_\+model\+\_\+common(), mo\+\_\+hd\+\_\+config\+\_\+class\+::new\+\_\+hd\+\_\+config(), and mo\+\_\+soil\+\_\+config\+\_\+class\+::new\+\_\+soil\+\_\+config().
+
+
+\begin{DoxyCode}
+384 
+385     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__io}{mo\_jsb\_io}\textcolor{keywordtype}{,       ONLY}: \hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids}, zaxiscreate, zaxisinqname, zaxisinqsize
+386     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__io__iface}{mo\_jsb\_io\_iface}\textcolor{keywordtype}{, ONLY}: zaxisdefname, zaxisdeflevels, zaxisdeflbounds,          &
+387                                zaxisdefubounds, zaxisdefunits, zaxisdeflongname
+388 
+389     \textcolor{keywordtype}{CHARACTER(len=*)},           \textcolor{keywordtype}{INTENT(in)} :: name
+390     \textcolor{keywordtype}{INTEGER},                    \textcolor{keywordtype}{INTENT(in)} :: cdi\_axis\_type
+391     \textcolor{keywordtype}{INTEGER},                    \textcolor{keywordtype}{INTENT(in)} :: length
+392     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(in)} :: longname
+393     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(in)} :: units
+394     \textcolor{keywordtype}{REAL(wp)},         \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(in)} :: levels(:), lbounds(:), ubounds(:)
+395 
+396     \textcolor{keywordtype}{TYPE}(t\_jsb\_vgrid), \textcolor{keywordtype}{POINTER} :: new
+397 
+398     \textcolor{keywordtype}{INTEGER} :: cdi\_size
+399     \textcolor{keywordtype}{CHARACTER(len=100)} :: cdi\_name
+400     \textcolor{keywordtype}{INTEGER} :: i, idx
+401 
+402     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':new\_vgrid'}
+403 
+404     \textcolor{keywordflow}{IF}(length < 1) \textcolor{keyword}{CALL }finish(trim(routine), trim(name)//\textcolor{stringliteral}{' - length < 1'})
+405 
+406     \textcolor{keyword}{ALLOCATE}(new)
+407 
+408     new%name = trim(name)
+409     new%n\_levels = length
+410     \textcolor{keyword}{ALLOCATE}(new%levels(length), new%lbounds(length), new%ubounds(length))
+411     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(levels)) \textcolor{keywordflow}{THEN}
+412       new%levels(:) = levels(1:length)
+413     \textcolor{keywordflow}{ELSE}
+414       \textcolor{keywordflow}{DO} i=1,length
+415         new%levels(:) = \textcolor{keywordtype}{REAL}(i,wp)
+416 \textcolor{keywordflow}{      END DO}
+417 \textcolor{keywordflow}{    END IF}
+418     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(lbounds)) \textcolor{keywordflow}{THEN}
+419       new%lbounds(:) = lbounds(1:length)
+420     \textcolor{keywordflow}{ELSE}
+421       new%lbounds(1) = 0.\_wp
+422       \textcolor{keywordflow}{DO} i=2,length
+423         new%lbounds(i) = new%levels(i-1) + (new%levels(i-1) - new%lbounds(i-1))
+424 \textcolor{keywordflow}{      END DO}
+425 \textcolor{keywordflow}{    END IF}
+426     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(ubounds)) \textcolor{keywordflow}{THEN}
+427       new%ubounds(:) = ubounds(1:length)
+428     \textcolor{keywordflow}{ELSE}
+429       \textcolor{keywordflow}{DO} i=1,length
+430         new%ubounds(i) = new%levels(i) + (new%levels(i) - new%lbounds(i))
+431 \textcolor{keywordflow}{      END DO}
+432 \textcolor{keywordflow}{    END IF}
+433     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(longname)) new%longname = trim(longname)
+434     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(units)) new%units  = trim(units)
+435 
+436     \textcolor{comment}{! Find free slot in cdi\_zaxis\_ids}
+437     idx = 0
+438     \textcolor{keywordflow}{DO} i=1,\textcolor{keyword}{SIZE}(\hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids})
+439       \textcolor{keywordflow}{IF} (\hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids}(i) == 0) \textcolor{keywordflow}{THEN}
+440         idx = i
+441         \textcolor{keywordflow}{EXIT}
+442 \textcolor{keywordflow}{      END IF}
+443 \textcolor{keywordflow}{    END DO}
+444     \textcolor{keywordflow}{IF} (idx == 0) \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Increase size of cdi\_zaxis\_ids'})
+445     new%id = idx
+446 
+447     \textcolor{comment}{! Find CDI zaxis with same name and same size}
+448     idx = 0
+449     \textcolor{keywordflow}{DO} i=1,\textcolor{keyword}{SIZE}(\hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids})
+450       \textcolor{keywordflow}{IF} (\hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids}(i) == 0) cycle
+451       \textcolor{keyword}{CALL }zaxisinqname(\hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids}(i), cdi\_name)
+452       \textcolor{keywordflow}{IF} (trim(cdi\_name) /= name) \textcolor{keywordflow}{THEN}
+453         cycle
+454       \textcolor{keywordflow}{ELSE}
+455         cdi\_size = zaxisinqsize(\hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids}(i))
+456         \textcolor{keywordflow}{IF} (cdi\_size /= length) \textcolor{keywordflow}{THEN}
+457           cycle
+458         \textcolor{keywordflow}{ELSE}
+459           idx = i
+460           \textcolor{keywordflow}{EXIT}
+461 \textcolor{keywordflow}{        END IF}
+462 \textcolor{keywordflow}{      END IF}
+463 \textcolor{keywordflow}{    END DO}
+464     \textcolor{comment}{! If none found create a new CDI zaxis, else use existing one}
+465     \textcolor{keywordflow}{IF} (idx == 0) \textcolor{keywordflow}{THEN}
+466       new%cdiZaxisID = zaxiscreate(cdi\_axis\_type, length)
+467       \textcolor{keyword}{CALL }zaxisdefname    (new%cdiZaxisID, trim(new%name))
+468       \textcolor{keyword}{CALL }zaxisdeflevels  (new%cdiZaxisID, new%levels(1:length))
+469       \textcolor{keyword}{CALL }zaxisdeflbounds (new%cdiZaxisID, new%lbounds(1:length))
+470       \textcolor{keyword}{CALL }zaxisdefubounds (new%cdiZaxisID, new%ubounds(1:length))
+471       \textcolor{keyword}{CALL }zaxisdefunits   (new%cdiZaxisID, trim(new%units))
+472       \textcolor{keyword}{CALL }zaxisdeflongname(new%cdiZaxisID, trim(new%longname))
+473       \textcolor{keyword}{WRITE}(message\_text, \textcolor{stringliteral}{'(A,A,2I3)'}) \textcolor{stringliteral}{'Created new vgrid: name, ID, length= '},trim(new%name), new
+      %cdiZaxisID, length
+474       \textcolor{keyword}{CALL }message(trim(routine), message\_text)
+475     \textcolor{keywordflow}{ELSE}
+476       new%cdiZaxisID = \hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids}(idx)
+477 \textcolor{keywordflow}{    END IF}
+478     \hyperlink{namespacemo__jsb__io_a40fcb52ae787aaf48e1497bf80759dfb}{cdi\_zaxis\_ids}(new%id) = new%cdiZaxisID
+479 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/dcf/namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__grid__class_a2d6c1334c4fbe274a9f0b7acd6fd6361}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+grid\+\_\+class\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+grid\+\_\+class\textquotesingle{}}\label{namespacemo__jsb__grid__class_a2d6c1334c4fbe274a9f0b7acd6fd6361}
+
+
+Definition at line 91 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+
+Referenced by delete\+\_\+grid(), delete\+\_\+vgrid(), get\+\_\+blk\+\_\+end(), get\+\_\+col\+\_\+end(), get\+\_\+col\+\_\+start(), get\+\_\+nblks(), get\+\_\+nproma(), new\+\_\+grid\+\_\+from\+\_\+lonlat(), and new\+\_\+vgrid().
+
+
+\begin{DoxyCode}
+91   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_grid\_class'}
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__grid__class_ad64217c2b3f2f8da3c4b7297bc650ae4}{}\index{mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}!ngrid\+\_\+count@{ngrid\+\_\+count}}
+\index{ngrid\+\_\+count@{ngrid\+\_\+count}!mo\+\_\+jsb\+\_\+grid\+\_\+class@{mo\+\_\+jsb\+\_\+grid\+\_\+class}}
+\subsubsection[{ngrid\+\_\+count}]{\setlength{\rightskip}{0pt plus 5cm}integer, save mo\+\_\+jsb\+\_\+grid\+\_\+class\+::ngrid\+\_\+count = 0}\label{namespacemo__jsb__grid__class_ad64217c2b3f2f8da3c4b7297bc650ae4}
+
+
+Definition at line 89 of file mo\+\_\+jsb\+\_\+grid\+\_\+class.\+f90.
+
+
+\begin{DoxyCode}
+89   \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{SAVE} :: ngrid\_count = 0
+\end{DoxyCode}

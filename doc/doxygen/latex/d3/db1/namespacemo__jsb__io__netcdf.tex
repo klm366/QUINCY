@@ -1,0 +1,330 @@
+\hypertarget{namespacemo__jsb__io__netcdf}{}\section{mo\+\_\+jsb\+\_\+io\+\_\+netcdf Module Reference}
+\label{namespacemo__jsb__io__netcdf}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}}
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(\hyperlink{structmo__jsb__io__netcdf__iface_1_1t__input__file}{t\+\_\+input\+\_\+file}) function, public \hyperlink{namespacemo__jsb__io__netcdf_a65a68943467734db9da1c09c39e50b4d}{jsb\+\_\+netcdf\+\_\+open\+\_\+input} (filename, model\+\_\+id)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__io__netcdf_a930c28c3c36a4cad53a44d7fd0849fd2}{jsb\+\_\+netcdf\+\_\+close\+\_\+file} (input\+\_\+file)
+\item 
+real(wp) function, dimension(\+:,\+:), pointer, public \hyperlink{namespacemo__jsb__io__netcdf_a6779dd8b9cd04d70eb5aba842875f0da}{jsb\+\_\+netcdf\+\_\+read\+\_\+2d} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array)
+\item 
+real(wp) function, dimension(\+:,\+:,\+:), pointer, public \hyperlink{namespacemo__jsb__io__netcdf_a5cdd38386756d348b9d7efeaccc170bb}{jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array, start\+\_\+time\+\_\+step, end\+\_\+time\+\_\+step)
+\item 
+real(wp) function, dimension(\+:,\+:,\+:), pointer, public \hyperlink{namespacemo__jsb__io__netcdf_a91c6a275275258e361e32ffed8362b08}{jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+extdim} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array, start\+\_\+extdim, end\+\_\+extdim, extdim\+\_\+name)
+\item 
+logical function, public \hyperlink{namespacemo__jsb__io__netcdf_a00a86f02344a16ec5309e26c61c3c8f1}{ncfile\+\_\+has\+\_\+dim} (filename, dimname)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__io__netcdf_a9e42139581fe6002bdbc58266020b84a}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+io\+\_\+netcdf\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__io__netcdf_a930c28c3c36a4cad53a44d7fd0849fd2}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}!jsb\+\_\+netcdf\+\_\+close\+\_\+file@{jsb\+\_\+netcdf\+\_\+close\+\_\+file}}
+\index{jsb\+\_\+netcdf\+\_\+close\+\_\+file@{jsb\+\_\+netcdf\+\_\+close\+\_\+file}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}}
+\subsubsection[{jsb\+\_\+netcdf\+\_\+close\+\_\+file}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+close\+\_\+file (
+\begin{DoxyParamCaption}
+\item[{type({\bf t\+\_\+input\+\_\+file}), intent(inout)}]{input\+\_\+file}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf_a930c28c3c36a4cad53a44d7fd0849fd2}
+
+
+Definition at line 46 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf.\+f90.
+
+
+
+Referenced by mo\+\_\+hd\+\_\+init\+::hd\+\_\+init\+\_\+bc(), mo\+\_\+soil\+\_\+init\+::soil\+\_\+init(), mo\+\_\+srf\+\_\+init\+::srf\+\_\+init\+\_\+ic(), and mo\+\_\+veg\+\_\+init\+::veg\+\_\+init\+\_\+ic().
+
+
+\begin{DoxyCode}
+46 
+47     \textcolor{keywordtype}{TYPE}(t\_input\_file), \textcolor{keywordtype}{INTENT(inout)} :: input\_file
+48 
+49     \textcolor{keyword}{CALL }netcdf\_close\_file(input\_file)
+50 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d3/db1/namespacemo__jsb__io__netcdf_a930c28c3c36a4cad53a44d7fd0849fd2_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__io__netcdf_a65a68943467734db9da1c09c39e50b4d}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}!jsb\+\_\+netcdf\+\_\+open\+\_\+input@{jsb\+\_\+netcdf\+\_\+open\+\_\+input}}
+\index{jsb\+\_\+netcdf\+\_\+open\+\_\+input@{jsb\+\_\+netcdf\+\_\+open\+\_\+input}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}}
+\subsubsection[{jsb\+\_\+netcdf\+\_\+open\+\_\+input}]{\setlength{\rightskip}{0pt plus 5cm}type({\bf t\+\_\+input\+\_\+file}) function, public mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+open\+\_\+input (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{filename, }
+\item[{integer, intent(in)}]{model\+\_\+id}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf_a65a68943467734db9da1c09c39e50b4d}
+
+
+Definition at line 29 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+grid\+::get\+\_\+grid(), modname, and mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+open\+\_\+input().
+
+
+
+Referenced by mo\+\_\+hd\+\_\+init\+::hd\+\_\+init\+\_\+bc(), mo\+\_\+hd\+\_\+init\+::hd\+\_\+init\+\_\+ic(), mo\+\_\+soil\+\_\+init\+::soil\+\_\+init(), mo\+\_\+srf\+\_\+init\+::srf\+\_\+init\+\_\+ic(), and mo\+\_\+veg\+\_\+init\+::veg\+\_\+init\+\_\+ic().
+
+
+\begin{DoxyCode}
+29 
+30     \textcolor{keywordtype}{CHARACTER(LEN=*)}, \textcolor{keywordtype}{INTENT(in)} :: filename
+31     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(in)} :: model\_id
+32 
+33     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER} :: model
+34     \textcolor{keywordtype}{TYPE}(t\_jsb\_grid),  \textcolor{keywordtype}{POINTER} :: grid
+35 
+36     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':jsb\_netcdf\_open\_input'}
+37 
+38     model => get\_model(model\_id)
+39     grid => get\_grid(model%grid\_id)
+40 
+41     jsb\_netcdf\_open\_input = netcdf\_open\_input(filename, patch=grid%patch, decomp=grid%decomposition)
+42 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d3/db1/namespacemo__jsb__io__netcdf_a65a68943467734db9da1c09c39e50b4d_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d3/db1/namespacemo__jsb__io__netcdf_a65a68943467734db9da1c09c39e50b4d_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__io__netcdf_a6779dd8b9cd04d70eb5aba842875f0da}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}!jsb\+\_\+netcdf\+\_\+read\+\_\+2d@{jsb\+\_\+netcdf\+\_\+read\+\_\+2d}}
+\index{jsb\+\_\+netcdf\+\_\+read\+\_\+2d@{jsb\+\_\+netcdf\+\_\+read\+\_\+2d}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}}
+\subsubsection[{jsb\+\_\+netcdf\+\_\+read\+\_\+2d}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, dimension(\+:,\+:), pointer, public mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+read\+\_\+2d (
+\begin{DoxyParamCaption}
+\item[{type({\bf t\+\_\+input\+\_\+file}), intent(inout)}]{input\+\_\+file, }
+\item[{character(len=$\ast$), intent(in)}]{variable\+\_\+name, }
+\item[{real(wp), dimension(\+:,\+:), optional, target}]{fill\+\_\+array}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf_a6779dd8b9cd04d70eb5aba842875f0da}
+
+
+Definition at line 54 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+hd\+\_\+init\+::hd\+\_\+init\+\_\+bc(), mo\+\_\+soil\+\_\+init\+::soil\+\_\+init(), mo\+\_\+srf\+\_\+init\+::srf\+\_\+init\+\_\+ic(), and mo\+\_\+veg\+\_\+init\+::veg\+\_\+init\+\_\+ic().
+
+
+\begin{DoxyCode}
+54 
+55     \textcolor{keywordtype}{TYPE}(t\_input\_file), \textcolor{keywordtype}{INTENT(inout)} :: input\_file
+56     \textcolor{keywordtype}{CHARACTER(LEN=*)},   \textcolor{keywordtype}{INTENT(in)} :: variable\_name
+57     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{TARGET}, \textcolor{keywordtype}{OPTIONAL}     :: fill\_array(:,:)
+58     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER}              :: jsb\_netcdf\_read\_2d(:,:)
+59 
+60     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':jsb\_netcdf\_read\_2d'}
+61 
+62     jsb\_netcdf\_read\_2d => netcdf\_read\_2d( &
+63       input\_file, variable\_name,          &
+64       fill\_array=fill\_array)
+65 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d3/db1/namespacemo__jsb__io__netcdf_a6779dd8b9cd04d70eb5aba842875f0da_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__io__netcdf_a91c6a275275258e361e32ffed8362b08}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}!jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+extdim@{jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+extdim}}
+\index{jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+extdim@{jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+extdim}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}}
+\subsubsection[{jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+extdim}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, dimension(\+:,\+:,\+:), pointer, public mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+extdim (
+\begin{DoxyParamCaption}
+\item[{type({\bf t\+\_\+input\+\_\+file}), intent(inout)}]{input\+\_\+file, }
+\item[{character(len=$\ast$), intent(in)}]{variable\+\_\+name, }
+\item[{real(wp), dimension(\+:,\+:,\+:), optional, target}]{fill\+\_\+array, }
+\item[{integer, intent(in), optional}]{start\+\_\+extdim, }
+\item[{integer, intent(in), optional}]{end\+\_\+extdim, }
+\item[{character(len=$\ast$), intent(in), optional}]{extdim\+\_\+name}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf_a91c6a275275258e361e32ffed8362b08}
+
+
+Definition at line 89 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+soil\+\_\+init\+::soil\+\_\+init().
+
+
+\begin{DoxyCode}
+89 
+90     \textcolor{keywordtype}{TYPE}(t\_input\_file),         \textcolor{keywordtype}{INTENT(inout)} :: input\_file
+91     \textcolor{keywordtype}{CHARACTER(LEN=*)},           \textcolor{keywordtype}{INTENT(in)} :: variable\_name
+92     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{TARGET}, \textcolor{keywordtype}{OPTIONAL}             :: fill\_array(:,:,:)
+93     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{OPTIONAL},          \textcolor{keywordtype}{INTENT(in)} :: start\_extdim, end\_extdim
+94     \textcolor{keywordtype}{CHARACTER(LEN=*)}, \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(in)} :: extdim\_name
+95     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER}                      :: jsb\_netcdf\_read\_2d\_extdim(:,:,:)
+96 
+97     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':jsb\_netcdf\_read\_2d\_extdim'}
+98 
+99     jsb\_netcdf\_read\_2d\_extdim => netcdf\_read\_2d\_extdim( &
+100       input\_file, variable\_name,                        &
+101       fill\_array=fill\_array,                            &
+102       start\_extdim=start\_extdim,                        &
+103 \textcolor{keyword}{      end}\_extdim=end\_extdim,                            &
+104       extdim\_name=extdim\_name)
+105 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d3/db1/namespacemo__jsb__io__netcdf_a91c6a275275258e361e32ffed8362b08_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__io__netcdf_a5cdd38386756d348b9d7efeaccc170bb}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}!jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time@{jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time}}
+\index{jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time@{jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}}
+\subsubsection[{jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, dimension(\+:,\+:,\+:), pointer, public mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time (
+\begin{DoxyParamCaption}
+\item[{type({\bf t\+\_\+input\+\_\+file}), intent(inout)}]{input\+\_\+file, }
+\item[{character(len=$\ast$), intent(in)}]{variable\+\_\+name, }
+\item[{real(wp), dimension(\+:,\+:,\+:), optional, target}]{fill\+\_\+array, }
+\item[{integer, intent(in), optional}]{start\+\_\+time\+\_\+step, }
+\item[{integer, intent(in), optional}]{end\+\_\+time\+\_\+step}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf_a5cdd38386756d348b9d7efeaccc170bb}
+
+
+Definition at line 70 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+soil\+\_\+init\+::soil\+\_\+init(), mo\+\_\+srf\+\_\+init\+::srf\+\_\+init\+\_\+ic(), and mo\+\_\+veg\+\_\+init\+::veg\+\_\+init\+\_\+ic().
+
+
+\begin{DoxyCode}
+70 
+71     \textcolor{keywordtype}{TYPE}(t\_input\_file), \textcolor{keywordtype}{INTENT(inout)} :: input\_file
+72     \textcolor{keywordtype}{CHARACTER(LEN=*)},   \textcolor{keywordtype}{INTENT(in)} :: variable\_name
+73     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{TARGET}, \textcolor{keywordtype}{OPTIONAL}     :: fill\_array(:,:,:)
+74     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{OPTIONAL},  \textcolor{keywordtype}{INTENT(in)} :: start\_time\_step, end\_time\_step
+75     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER}              :: jsb\_netcdf\_read\_2d\_time(:,:,:)
+76 
+77     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':jsb\_netcdf\_read\_2d\_time'}
+78 
+79     jsb\_netcdf\_read\_2d\_time => netcdf\_read\_2d\_time( &
+80       input\_file, variable\_name,                    &
+81       fill\_array=fill\_array,                        &
+82       start\_time\_step=start\_time\_step,              &
+83 \textcolor{keyword}{      end}\_time\_step=end\_time\_step)
+84 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d3/db1/namespacemo__jsb__io__netcdf_a5cdd38386756d348b9d7efeaccc170bb_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__io__netcdf_a00a86f02344a16ec5309e26c61c3c8f1}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}!ncfile\+\_\+has\+\_\+dim@{ncfile\+\_\+has\+\_\+dim}}
+\index{ncfile\+\_\+has\+\_\+dim@{ncfile\+\_\+has\+\_\+dim}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}}
+\subsubsection[{ncfile\+\_\+has\+\_\+dim}]{\setlength{\rightskip}{0pt plus 5cm}logical function, public mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::ncfile\+\_\+has\+\_\+dim (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{filename, }
+\item[{character(len=$\ast$), intent(in)}]{dimname}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__io__netcdf_a00a86f02344a16ec5309e26c61c3c8f1}
+
+
+Definition at line 109 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf.\+f90.
+
+
+
+References modname.
+
+
+\begin{DoxyCode}
+109 
+110     \textcolor{keywordtype}{CHARACTER(LEN=*)}, \textcolor{keywordtype}{INTENT(in)} :: filename
+111     \textcolor{keywordtype}{CHARACTER(LEN=*)}, \textcolor{keywordtype}{INTENT(in)} :: dimname
+112 
+113     \textcolor{keywordtype}{INTEGER} :: ncid, dimid, status
+114 
+115     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':ncfile\_has\_dim'}
+116 
+117     \textcolor{keyword}{CALL }nf(nf\_open(trim(filename), nf\_nowrite, ncid), routine)
+118 
+119     status = nf\_inq\_dimid(ncid, trim(dimname), dimid)
+120     ncfile\_has\_dim = (status == nf\_noerr)
+121 
+122     \textcolor{keyword}{CALL }nf(nf\_close(ncid), routine)
+123 
+\end{DoxyCode}
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__io__netcdf_a9e42139581fe6002bdbc58266020b84a}{}\index{mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+io\+\_\+netcdf@{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+io\+\_\+netcdf\textquotesingle{}}\label{namespacemo__jsb__io__netcdf_a9e42139581fe6002bdbc58266020b84a}
+
+
+Definition at line 24 of file mo\+\_\+jsb\+\_\+io\+\_\+netcdf.\+f90.
+
+
+
+Referenced by jsb\+\_\+netcdf\+\_\+open\+\_\+input(), jsb\+\_\+netcdf\+\_\+read\+\_\+2d(), jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+extdim(), jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time(), and ncfile\+\_\+has\+\_\+dim().
+
+
+\begin{DoxyCode}
+24   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_io\_netcdf'}
+\end{DoxyCode}

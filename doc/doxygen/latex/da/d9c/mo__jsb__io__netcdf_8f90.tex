@@ -1,0 +1,27 @@
+\hypertarget{mo__jsb__io__netcdf_8f90}{}\section{/home/reiner/git/jsbach.ulme/src/base/mo\+\_\+jsb\+\_\+io\+\_\+netcdf.f90 File Reference}
+\label{mo__jsb__io__netcdf_8f90}\index{/home/reiner/git/jsbach.\+ulme/src/base/mo\+\_\+jsb\+\_\+io\+\_\+netcdf.\+f90@{/home/reiner/git/jsbach.\+ulme/src/base/mo\+\_\+jsb\+\_\+io\+\_\+netcdf.\+f90}}
+\subsection*{Modules}
+\begin{DoxyCompactItemize}
+\item 
+module \hyperlink{namespacemo__jsb__io__netcdf}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf}
+\end{DoxyCompactItemize}
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(t\+\_\+input\+\_\+file) function, public \hyperlink{namespacemo__jsb__io__netcdf_a65a68943467734db9da1c09c39e50b4d}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+open\+\_\+input} (filename, model\+\_\+id)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__io__netcdf_a930c28c3c36a4cad53a44d7fd0849fd2}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+close\+\_\+file} (input\+\_\+file)
+\item 
+real(wp) function, dimension(\+:,\+:), pointer, public \hyperlink{namespacemo__jsb__io__netcdf_a6779dd8b9cd04d70eb5aba842875f0da}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+read\+\_\+2d} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array)
+\item 
+real(wp) function, dimension(\+:,\+:,\+:), pointer, public \hyperlink{namespacemo__jsb__io__netcdf_a5cdd38386756d348b9d7efeaccc170bb}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array, start\+\_\+time\+\_\+step, end\+\_\+time\+\_\+step)
+\item 
+real(wp) function, dimension(\+:,\+:,\+:), pointer, public \hyperlink{namespacemo__jsb__io__netcdf_a91c6a275275258e361e32ffed8362b08}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+extdim} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array, start\+\_\+extdim, end\+\_\+extdim, extdim\+\_\+name)
+\item 
+logical function, public \hyperlink{namespacemo__jsb__io__netcdf_a00a86f02344a16ec5309e26c61c3c8f1}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::ncfile\+\_\+has\+\_\+dim} (filename, dimname)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__io__netcdf_a9e42139581fe6002bdbc58266020b84a}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+io\+\_\+netcdf\textquotesingle{}
+\end{DoxyCompactItemize}

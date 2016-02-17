@@ -1,0 +1,1013 @@
+\hypertarget{namespacemo__srf__interface}{}\section{mo\+\_\+srf\+\_\+interface Module Reference}
+\label{namespacemo__srf__interface}\index{mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}}
+
+
+Contains the interfaces to the srf processes.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__srf__interface_a137b2fda7589cf50e04e3eaafc16ca43}{update\+\_\+surface\+\_\+radiation} (tile, iblk, ics, ice, nc)
+\item 
+subroutine, public \hyperlink{namespacemo__srf__interface_ac20b7f42f80cf50fcae6c709a2c70f8f}{update\+\_\+snow\+\_\+and\+\_\+skin\+\_\+fraction} (tile, iblk, ics, ice, nc, dtime, steplen)
+\item 
+subroutine, public \hyperlink{namespacemo__srf__interface_a35bdafa30fe0752a3903d61fc30173cf}{update\+\_\+surface\+\_\+energy} (tile, iblk, ics, ice, nc, dtime, steplen)
+\item 
+subroutine, public \hyperlink{namespacemo__srf__interface_a5633e536e2d4fb8351760c1a5c8bf972}{update\+\_\+t\+\_\+srf\+\_\+asselin} (tile, iblk, ics, ice, nc)
+\item 
+subroutine, public \hyperlink{namespacemo__srf__interface_acdac2acc6bb50d7ecc7dea28ea5b3e87}{update\+\_\+surface\+\_\+fluxes} (tile, iblk, ics, ice, nc, steplen)
+\item 
+subroutine, public \hyperlink{namespacemo__srf__interface_a5b41ccc70c29c3591021f628805678fa}{update\+\_\+humidity\+\_\+scaling} (tile, iblk, ics, ice, nc)
+\item 
+subroutine, public \hyperlink{namespacemo__srf__interface_ae587e1259627bd94efdfc4698cebe49a}{update\+\_\+roughness} (tile, iblk, ics, ice, nc)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__srf__interface_ad2ac37413e10df5be378325501189b54}{modname} = \textquotesingle{}mo\+\_\+srf\+\_\+interface\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains the interfaces to the srf processes. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__srf__interface_a5b41ccc70c29c3591021f628805678fa}{}\index{mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}!update\+\_\+humidity\+\_\+scaling@{update\+\_\+humidity\+\_\+scaling}}
+\index{update\+\_\+humidity\+\_\+scaling@{update\+\_\+humidity\+\_\+scaling}!mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}}
+\subsubsection[{update\+\_\+humidity\+\_\+scaling}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+srf\+\_\+interface\+::update\+\_\+humidity\+\_\+scaling (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc}
+\end{DoxyParamCaption}
+)}\label{namespacemo__srf__interface_a5b41ccc70c29c3591021f628805678fa}
+
+
+Definition at line 536 of file mo\+\_\+srf\+\_\+interface.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+control\+::debug\+\_\+on(), modname, and mo\+\_\+soil\+\_\+process\+::relative\+\_\+humidity().
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+536 
+537     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__srf__constants}{mo\_srf\_constants}\textcolor{keywordtype}{,  ONLY}: rhoh2o
+538     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__soil__constants}{mo\_soil\_constants}\textcolor{keywordtype}{, ONLY}: ws\_wilt\_fract
+539     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__soil__process}{mo\_soil\_process}\textcolor{keywordtype}{,   ONLY}: \hyperlink{namespacemo__soil__process_ae91447aa4654c4a406dedd04c5c4daf0}{relative\_humidity}
+540 
+541     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+542     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+543 
+544     \textcolor{comment}{! Local variables}
+545     \textcolor{comment}{!}
+546     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}    :: model
+547     def\_memory(srf\_mem, srf)
+548     def\_memory(soil\_mem, soil)
+549     def\_memory(veg\_mem, veg)
+550     def\_memory(atm2land\_mem, atm2land)
+551 
+552     \textcolor{comment}{! Pointers to variables in memory}
+553     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} :: &
+554       fract\_fpc     (:), &
+555       ws\_l          (:,:), &
+556       ws\_fc\_l       (:,:), &
+557       ws\_pwp\_l      (:,:), &
+558 \textcolor{comment}{!!$      sfract\_can    (:), &}
+559 \textcolor{comment}{!!$      sfract\_soil   (:), &}
+560 \textcolor{comment}{!!$      wfract\_can    (:), &}
+561 \textcolor{comment}{!!$      wfract\_soil   (:), &}
+562       sfract\_srf(:), &
+563       wfract\_srf(:), &
+564       fact\_q\_air(:), &
+565       fact\_qsat\_srf(:), &
+566       fact\_qsat\_trans\_srf(:), &
+567       qsat\_srf(:), &
+568       canopy\_cond(:), &
+569       pch(:), &
+570       wind\_air(:), &
+571       q\_air(:)
+572 
+573     \textcolor{comment}{! Locally allocated vectors}
+574     \textcolor{keywordtype}{REAL(wp)} :: &
+575       fact\_qsat\_veg(nc),   &
+576       fact\_qsat\_trans(nc), &
+577       fact\_qsat\_soil(nc),  &
+578       fact\_qair\_veg(nc),   &
+579       fact\_qair\_soil(nc),  &
+580       rel\_hum(nc)
+581 
+582     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':update\_humidity\_scaling'}
+583 
+584     \textcolor{keywordflow}{IF} (.NOT. tile%Is\_process\_active(soil)) \textcolor{keywordflow}{RETURN}
+585 
+586     \textcolor{keywordflow}{IF} (debug\_on() .AND. iblk == 1) \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting update of humidity weights'})
+587 
+588     model => get\_model(tile%owner\_model\_id)
+589 
+590     \textcolor{comment}{! Get reference to variables for current block}
+591     \textcolor{comment}{!}
+592     get\_memory(srf\_mem, srf)
+593     get\_memory(soil\_mem, soil)
+594     get\_memory(veg\_mem, veg)
+595     get\_memory(atm2land\_mem, atm2land)
+596 
+597     fract\_fpc        => veg\_mem  %fract\_fpc%ptr           (ics:ice,    iblk)
+598     canopy\_cond      => veg\_mem  %canopy\_cond%ptr         (ics:ice,    iblk)
+599     ws\_l             => soil\_mem %ws\_l%ptr                (ics:ice, :, iblk)
+600     ws\_fc\_l          => soil\_mem %ws\_fc\_l%ptr             (ics:ice, :, iblk)
+601     ws\_pwp\_l         => soil\_mem %ws\_pwp\_l%ptr            (ics:ice, :, iblk)
+602 \textcolor{comment}{!!$    sfract\_can       => tile%mem%veg  %sfract\_can%ptr          (ics:ice,    iblk)}
+603 \textcolor{comment}{!!$    sfract\_soil      => tile%mem%soil %sfract\_soil%ptr         (ics:ice,    iblk)}
+604 \textcolor{comment}{!!$    wfract\_can       => tile%mem%veg  %wfract\_can%ptr          (ics:ice,    iblk)}
+605 \textcolor{comment}{!!$    wfract\_soil      => tile%mem%soil %wfract\_soil%ptr         (ics:ice,    iblk)}
+606     qsat\_srf         => srf\_mem  %qsat\_srf%ptr            (ics:ice,    iblk)
+607     sfract\_srf       => srf\_mem  %sfract\_srf%ptr          (ics:ice,    iblk)
+608     wfract\_srf       => srf\_mem  %wfract\_srf%ptr          (ics:ice,    iblk)
+609     fact\_q\_air       => srf\_mem  %fact\_q\_air%ptr          (ics:ice,    iblk)
+610     fact\_qsat\_srf    => srf\_mem  %fact\_qsat\_srf%ptr       (ics:ice,    iblk)
+611     fact\_qsat\_trans\_srf  => srf\_mem  %fact\_qsat\_trans\_srf%ptr (ics:ice,    iblk)
+612     pch              => atm2land\_mem     %pch%ptr                 (ics:ice,    iblk)
+613     wind\_air         => atm2land\_mem     %wind\_air%ptr            (ics:ice,    iblk)
+614     q\_air            => atm2land\_mem     %q\_air%ptr               (ics:ice,    iblk)
+615 
+616     \textcolor{keywordflow}{WHERE} (ws\_l(:,1) > ws\_pwp\_l(:,1))
+617       fact\_qsat\_veg(:) = sfract\_srf(:) + (1.\_wp - sfract\_srf(:)) *   &
+618         & (wfract\_srf(:) + ( 1.\_wp - wfract\_srf(:)) /                &
+619         & (1.\_wp + pch(:) * max(1.\_wp, wind\_air(:)) / max(1.e-20\_wp, canopy\_cond(:))))
+620       fact\_qsat\_trans(:) = (1.\_wp - sfract\_srf(:)) * &
+621         & (1.\_wp - wfract\_srf(:)) /                  &
+622         & (1.\_wp + pch(:) * max(1.\_wp, wind\_air(:)) / max(1.e-20\_wp, canopy\_cond(:)))
+623     \textcolor{keywordflow}{ELSEWHERE}
+624       fact\_qsat\_veg(:)   = sfract\_srf(:) + (1.\_wp - sfract\_srf(:)) * wfract\_srf(:)
+625       fact\_qsat\_trans(:) = 0.\_wp
+626 \textcolor{keywordflow}{    END WHERE}
+627     fact\_qair\_veg(:) = fact\_qsat\_veg(:)
+628 
+629     rel\_hum(:) = \hyperlink{namespacemo__soil__process_ae91447aa4654c4a406dedd04c5c4daf0}{relative\_humidity}(ws\_l(:,1), ws\_fc\_l(:,1))
+630 
+631     \textcolor{keywordflow}{WHERE} (qsat\_srf(:) * rel\_hum(:) > q\_air(:) .AND. rel\_hum(:) > 1.e-10\_wp)
+632       fact\_qsat\_soil(:) = sfract\_srf(:) + (1.\_wp - sfract\_srf(:)) * &
+633         & (wfract\_srf(:) + (1.\_wp - wfract\_srf(:)) * rel\_hum(:))
+634       fact\_qair\_soil(:) = 1.\_wp
+635     \textcolor{keywordflow}{ELSEWHERE}
+636       fact\_qsat\_soil(:) = sfract\_srf(:) + (1.\_wp - sfract\_srf(:)) * wfract\_srf(:)
+637       fact\_qair\_soil(:) = fact\_qsat\_soil(:)
+638 \textcolor{keywordflow}{    END WHERE}
+639     \textcolor{keywordflow}{WHERE} (q\_air(:) > qsat\_srf(:))
+640       fact\_qsat\_soil(:) = 1.\_wp
+641       fact\_qair\_soil(:) = 1.\_wp
+642 \textcolor{keywordflow}{    END WHERE}
+643 
+644     fact\_qsat\_srf(:) = fract\_fpc(:) * fact\_qsat\_veg(:) + (1.\_wp - fract\_fpc(:)) * fact\_qsat\_soil(:)
+645     fact\_q\_air(:)    = fract\_fpc(:) * fact\_qair\_veg(:) + (1.\_wp - fract\_fpc(:)) * fact\_qair\_soil(:)
+646     fact\_qsat\_trans\_srf(:) = fract\_fpc(:) * fact\_qsat\_trans(:)
+647 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_a5b41ccc70c29c3591021f628805678fa_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_a5b41ccc70c29c3591021f628805678fa_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__srf__interface_ae587e1259627bd94efdfc4698cebe49a}{}\index{mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}!update\+\_\+roughness@{update\+\_\+roughness}}
+\index{update\+\_\+roughness@{update\+\_\+roughness}!mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}}
+\subsubsection[{update\+\_\+roughness}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+srf\+\_\+interface\+::update\+\_\+roughness (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc}
+\end{DoxyParamCaption}
+)}\label{namespacemo__srf__interface_ae587e1259627bd94efdfc4698cebe49a}
+
+
+Definition at line 651 of file mo\+\_\+srf\+\_\+interface.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+651 
+652     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__srf__constants}{mo\_srf\_constants}\textcolor{keywordtype}{, ONLY}: blending\_height, roughness\_snow
+653 
+654     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+655     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+656 
+657     def\_memory(srf\_mem, srf)
+658     def\_memory(soil\_mem, soil)
+659 
+660     \textcolor{comment}{! Pointers to variables in memory}
+661     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} ::       &
+662       & rough\_m\_srf    (:),    &
+663       & rough\_h\_srf    (:),    &
+664       & sfract\_soil    (:)
+665 
+666     get\_memory(srf\_mem, srf)
+667     get\_memory(soil\_mem, soil)
+668 
+669     rough\_m\_srf          => srf\_mem  %rough\_m\_srf%ptr      (ics:ice, iblk)
+670     rough\_h\_srf          => srf\_mem  %rough\_h\_srf%ptr      (ics:ice, iblk)
+671     sfract\_soil          => soil\_mem %sfract\_soil%ptr      (ics:ice, iblk)
+672 
+673     rough\_h\_srf(:) =            sfract\_soil(:)  / (log(blending\_height /             roughness\_snow) ** 2) 
+       &
+674                    & + (1.\_wp - sfract\_soil(:)) / (log(blending\_height / min(1.\_wp, rough\_m\_srf(:))) ** 2)
+675 
+676     \textcolor{comment}{! Limit roughness length for heat by 1m (see below Eq.5.6 in ECHAM5 manual)}
+677     rough\_h\_srf(:) = min(1.\_wp, blending\_height * exp(-1.\_wp / sqrt(rough\_h\_srf(:))))
+678 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_ae587e1259627bd94efdfc4698cebe49a_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__srf__interface_ac20b7f42f80cf50fcae6c709a2c70f8f}{}\index{mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}!update\+\_\+snow\+\_\+and\+\_\+skin\+\_\+fraction@{update\+\_\+snow\+\_\+and\+\_\+skin\+\_\+fraction}}
+\index{update\+\_\+snow\+\_\+and\+\_\+skin\+\_\+fraction@{update\+\_\+snow\+\_\+and\+\_\+skin\+\_\+fraction}!mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}}
+\subsubsection[{update\+\_\+snow\+\_\+and\+\_\+skin\+\_\+fraction}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+srf\+\_\+interface\+::update\+\_\+snow\+\_\+and\+\_\+skin\+\_\+fraction (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc, }
+\item[{real(wp), intent(in)}]{dtime, }
+\item[{real(wp), intent(in)}]{steplen}
+\end{DoxyParamCaption}
+)}\label{namespacemo__srf__interface_ac20b7f42f80cf50fcae6c709a2c70f8f}
+
+
+Definition at line 107 of file mo\+\_\+srf\+\_\+interface.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+control\+::debug\+\_\+on(), mo\+\_\+phy\+\_\+schemes\+::heat\+\_\+transfer\+\_\+coef(), modname, mo\+\_\+phy\+\_\+schemes\+::qsat(), and mo\+\_\+soil\+\_\+process\+::snow\+\_\+fract().
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+107 
+108     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__phy__schemes}{mo\_phy\_schemes}\textcolor{keywordtype}{,    ONLY}: \hyperlink{namespacemo__phy__schemes_a9d1fe0b8e7cc0e86d2cf43ea5ebaac58}{heat\_transfer\_coef}, 
+      \hyperlink{namespacemo__phy__schemes_aa793f9cf2db7aa0f821bde8fbf8f38a8}{qsat}
+109     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__soil__process}{mo\_soil\_process}\textcolor{keywordtype}{,   ONLY}: \hyperlink{namespacemo__soil__process_a20c4b80ccc8a10cb3028ff15293d3cc0}{snow\_fract}
+110     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__srf__constants}{mo\_srf\_constants}\textcolor{keywordtype}{,  ONLY}: rhoh2o
+111 
+112     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+113     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+114     \textcolor{keywordtype}{REAL(wp)},          \textcolor{keywordtype}{INTENT(in)} :: dtime, steplen
+115 
+116     \textcolor{comment}{! Local variables}
+117     \textcolor{comment}{!}
+118     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}    :: model
+119 
+120     def\_config(soil\_conf, soil)
+121     def\_memory(srf\_mem, srf)
+122     def\_memory(soil\_mem, soil)
+123     def\_memory(veg\_mem, veg)
+124     def\_memory(atm2land\_mem, atm2land)
+125 
+126     \textcolor{comment}{! Pointers to variables in memory}
+127     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} :: &
+128                                 \textcolor{comment}{!wsn           (:), &}
+129       glacier(:), &
+130       lai(:), &
+131       fract\_fpc\_max(:), &
+132       sfract\_can(:), &
+133       wsn\_can(:), &
+134       sfract\_soil(:), &
+135       wsn\_soil(:), &
+136       wfract\_can(:), &
+137       wsr\_can(:), &
+138       wfract\_soil(:), &
+139       wsr\_soil(:), &
+140       sfract\_srf(:), &
+141       wfract\_srf(:), &
+142       oro\_stddev(:), &
+143       drag\_srf(:), &
+144       t\_srf(:), &
+145       press\_srf(:), &
+146       q\_air(:)
+147 
+148     \textcolor{comment}{! Locally allocated vectors}
+149     \textcolor{keywordtype}{REAL(wp)} :: &
+150       wsr\_max(nc), &    !< Water holding capacity of skin reservoir (soil and canopy)
+151       evap\_pot(nc), &
+152       qsat\_srf\_old(nc), &
+153       t\_srf\_old(nc)
+154 
+155     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':update\_snow\_and\_skin\_fraction'}
+156 
+157     \textcolor{keywordflow}{IF} (.NOT. tile%Is\_process\_active(soil)) \textcolor{keywordflow}{RETURN}
+158 
+159     \textcolor{keywordflow}{IF} (debug\_on() .AND. iblk == 1) \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting update of snow and skin reservoir
+       fraction'})
+160 
+161     model => get\_model(tile%owner\_model\_id)
+162 
+163     get\_config(soil\_conf, soil)
+164 
+165     \textcolor{comment}{! Get reference to variables for current block}
+166     \textcolor{comment}{!}
+167     get\_memory(srf\_mem, srf)
+168     get\_memory(soil\_mem, soil)
+169     get\_memory(veg\_mem, veg)
+170     get\_memory(atm2land\_mem, atm2land)
+171 
+172     glacier       => srf\_mem  %glacier%ptr          (ics:ice, iblk)
+173     lai           => veg\_mem  %lai%ptr              (ics:ice, iblk)
+174     fract\_fpc\_max => veg\_mem  %fract\_fpc\_max%ptr    (ics:ice, iblk)
+175     sfract\_can    => veg\_mem  %sfract\_can%ptr       (ics:ice, iblk)
+176     wsn\_can       => veg\_mem  %wsn\_can%ptr          (ics:ice, iblk)
+177     sfract\_soil   => soil\_mem %sfract\_soil%ptr      (ics:ice, iblk)
+178     wsn\_soil      => soil\_mem %wsn\_soil%ptr         (ics:ice, iblk)
+179     wfract\_can    => veg\_mem  %wfract\_can%ptr       (ics:ice, iblk)
+180     wsr\_can       => veg\_mem  %wsr\_can%ptr          (ics:ice, iblk)
+181     wfract\_soil   => soil\_mem %wfract\_soil%ptr      (ics:ice, iblk)
+182     wsr\_soil      => soil\_mem %wsr\_soil%ptr         (ics:ice, iblk)
+183     sfract\_srf    => srf\_mem  %sfract\_srf%ptr       (ics:ice, iblk)
+184     wfract\_srf    => srf\_mem  %wfract\_srf%ptr       (ics:ice, iblk)
+185     oro\_stddev    => srf\_mem  %oro\_stddev%ptr       (ics:ice, iblk)
+186     drag\_srf      => atm2land\_mem     %drag\_srf%ptr         (ics:ice, iblk)
+187     q\_air         => atm2land\_mem     %q\_air%ptr            (ics:ice, iblk)
+188     press\_srf     => atm2land\_mem     %press\_srf%ptr        (ics:ice, iblk)
+189     t\_srf         => srf\_mem  %t\_srf%ptr            (ics:ice, iblk)
+190 
+191     \textcolor{comment}{! Maximum capacity of skin reservoir (soil + canopy)}
+192     wsr\_max(:) = soil\_conf%wsr\_capacity * (1.\_wp + lai(:) * fract\_fpc\_max(:))
+193 
+194     \textcolor{comment}{! Wet skin fraction on soil}
+195     wfract\_soil(:) = merge(min(1.\_wp, (wsr\_soil(:) + wsr\_can(:)) / wsr\_max(:)), 0.\_wp, wsr\_max(:) > epsilon
+      (1.\_wp))
+196 
+197     \textcolor{comment}{! Wet skin fraction on canopy}
+198 \textcolor{comment}{!!$    wfract\_can(:) = MERGE(MIN(1.\_wp, wsr\_can(:) / wsr\_max(:)), 0.\_wp, wsr\_max(:) > EPSILON(1.\_wp))}
+199     wfract\_can(:) = 0.\_wp
+200 
+201     \textcolor{comment}{! Snow fraction on soil}
+202     sfract\_soil(:) = \hyperlink{namespacemo__soil__process_a20c4b80ccc8a10cb3028ff15293d3cc0}{snow\_fract}(wsn\_soil(:), oro\_stddev(:))
+203     sfract\_soil(:) = merge(sfract\_can(:), sfract\_soil(:), sfract\_soil(:) < epsilon(1.\_wp) .AND. sfract\_can(
+      :) > epsilon(1.\_wp))
+204 
+205     \textcolor{comment}{! Snow fraction on canopy}
+206     sfract\_can(:) = merge(min(1.\_wp, wsn\_can(:) / wsr\_max(:)), 0.\_wp, wsr\_max(:) > epsilon(1.\_wp))
+207 
+208     \textcolor{comment}{! Modify snow cover if snow loss during the time step due to potential evaporation is larger than}
+209     \textcolor{comment}{! equivalent snow water content from soil and canopy; same for skin reservoir}
+210     \textcolor{comment}{!}
+211     \textcolor{comment}{! Potential evaporation using old values of air and surface humidity}
+212     \textcolor{comment}{!}
+213     t\_srf\_old(:) = t\_srf(:)
+214     qsat\_srf\_old(:) = \hyperlink{namespacemo__phy__schemes_aa793f9cf2db7aa0f821bde8fbf8f38a8}{qsat}(t\_srf\_old(:), press\_srf(:))
+215     evap\_pot(:) =  \hyperlink{namespacemo__phy__schemes_a9d1fe0b8e7cc0e86d2cf43ea5ebaac58}{heat\_transfer\_coef}(drag\_srf(:), steplen) * (qsat\_srf\_old(:) - q\_air(:)
+      ) \textcolor{comment}{! Positive upwards}
+216     \textcolor{comment}{!}
+217     \textcolor{keywordflow}{WHERE} (sfract\_soil(:) > 0.\_wp .AND. wsn\_soil(:)+wsn\_can(:) > epsilon(1.\_wp))
+218       sfract\_soil(:) = sfract\_soil(:) / max(1.\_wp, sfract\_soil(:) * evap\_pot(:) * dtime / (rhoh2o * &
+219         & max(epsilon(1.\_wp),(wsn\_soil(:) + wsn\_can(:)))))
+220 \textcolor{keywordflow}{    END WHERE}
+221     \textcolor{keywordflow}{WHERE} (wfract\_soil(:) > 0.\_wp .AND. wsr\_soil(:)+wsr\_can(:) > epsilon(1.\_wp))
+222       wfract\_soil(:) = wfract\_soil(:) / max(1.\_wp, (1.\_wp - sfract\_soil(:)) * evap\_pot(:) * dtime / (rhoh2o
+       * &
+223         & max(epsilon(1.\_wp), (wsr\_soil(:) + wsr\_can(:)))))
+224 \textcolor{keywordflow}{    END WHERE}
+225 
+226     wfract\_srf(:) = wfract\_soil(:) + wfract\_can(:)
+227     sfract\_srf(:) = sfract\_soil(:) \textcolor{comment}{!+ sfract\_can(:)}
+228 
+229     \textcolor{keywordflow}{WHERE} (glacier(:) > 0.5\_wp)
+230       wfract\_srf(:)  = 0.\_wp
+231       sfract\_srf(:)  = 1.\_wp
+232       wfract\_soil(:) = 0.\_wp
+233       sfract\_soil(:) = 1.\_wp
+234       wfract\_can(:)  = 0.\_wp
+235       sfract\_can(:)  = 0.\_wp
+236 \textcolor{keywordflow}{    END WHERE}
+237 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_ac20b7f42f80cf50fcae6c709a2c70f8f_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_ac20b7f42f80cf50fcae6c709a2c70f8f_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__srf__interface_a35bdafa30fe0752a3903d61fc30173cf}{}\index{mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}!update\+\_\+surface\+\_\+energy@{update\+\_\+surface\+\_\+energy}}
+\index{update\+\_\+surface\+\_\+energy@{update\+\_\+surface\+\_\+energy}!mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}}
+\subsubsection[{update\+\_\+surface\+\_\+energy}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+srf\+\_\+interface\+::update\+\_\+surface\+\_\+energy (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc, }
+\item[{real(wp), intent(in)}]{dtime, }
+\item[{real(wp), intent(in)}]{steplen}
+\end{DoxyParamCaption}
+)}\label{namespacemo__srf__interface_a35bdafa30fe0752a3903d61fc30173cf}
+
+
+Definition at line 241 of file mo\+\_\+srf\+\_\+interface.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+control\+::debug\+\_\+on(), mo\+\_\+phy\+\_\+schemes\+::heat\+\_\+transfer\+\_\+coef(), modname, mo\+\_\+phy\+\_\+schemes\+::q\+\_\+effective(), mo\+\_\+phy\+\_\+schemes\+::qsat(), mo\+\_\+phy\+\_\+schemes\+::surface\+\_\+dry\+\_\+static\+\_\+energy(), and mo\+\_\+srf\+\_\+process\+::surface\+\_\+temp\+\_\+implicit().
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+241 
+242     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__phy__schemes}{mo\_phy\_schemes}\textcolor{keywordtype}{,        ONLY}: \hyperlink{namespacemo__phy__schemes_aa793f9cf2db7aa0f821bde8fbf8f38a8}{qsat}, \hyperlink{namespacemo__phy__schemes_a52234cb76d1efb2d2298d8fc66b61545}{q\_effective}, 
+      \hyperlink{namespacemo__phy__schemes_afffc006f6b4ec423054e4e5f4943e19d}{surface\_dry\_static\_energy}, \hyperlink{namespacemo__phy__schemes_a9d1fe0b8e7cc0e86d2cf43ea5ebaac58}{heat\_transfer\_coef}
+243     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__srf__process}{mo\_srf\_process}\textcolor{keywordtype}{,        ONLY}: \hyperlink{namespacemo__srf__process_aa120db81e24075287f867d3958eca237}{surface\_temp\_implicit}
+244 \textcolor{comment}{!!$    USE mo\_srf\_constants,      ONLY: eps}
+245     \textcolor{keywordtype}{USE }mo\_echam\_vdiff\_params\textcolor{keywordtype}{, ONLY}: tpfac2, tpfac3
+246     \textcolor{keywordtype}{USE }mo\_physical\_constants\textcolor{keywordtype}{, ONLY}: tmelt
+247 
+248     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+249     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+250     \textcolor{keywordtype}{REAL(wp)},          \textcolor{keywordtype}{INTENT(in)} :: dtime, steplen
+251 
+252     \textcolor{comment}{! Local variables}
+253     \textcolor{comment}{!}
+254     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}    :: model
+255     def\_config(srf\_conf, srf)
+256     def\_memory(srf\_mem, srf)
+257     def\_memory(soil\_mem, soil)
+258     def\_memory(atm2land\_mem, atm2land)
+259 
+260     \textcolor{keywordtype}{LOGICAL}                       :: lstart
+261 
+262     \textcolor{comment}{! Pointers to variables in memory}
+263     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} ::       &
+264       & t\_srf          (:),    &
+265       & t\_srf\_old      (:),    &
+266       & t\_srf\_unfilt   (:),    &
+267       & t\_srf\_unfilt\_old(:),    &
+268       & t\_eff\_srf      (:),    &
+269       & qsat\_srf       (:),    &
+270 \textcolor{comment}{!!$      & qsat\_srf\_old   (:),    &}
+271       & s\_srf(:),    &
+272 \textcolor{comment}{!!$      & s\_srf\_old      (:),    &}
+273       & press\_srf(:),    &
+274       & q\_air(:),    &
+275       & fact\_qsat\_srf(:),    &
+276       & fact\_q\_air(:),    &
+277       & drag\_srf(:),    &
+278       & rad\_srf\_net(:),    &
+279       & grnd\_hflx(:),    &
+280       & hcap\_grnd(:),    &
+281       & wsn\_srf(:),    &
+282       & sfract\_srf(:),    &
+283       & t\_acoef(:),    &
+284       & t\_bcoef(:),    &
+285       & q\_acoef(:),    &
+286       & q\_bcoef(:),    &
+287       & glacier(:)
+288 
+289     \textcolor{comment}{! Locally allocated vectors}
+290     \textcolor{comment}{!}
+291     \textcolor{keywordtype}{REAL(wp)} ::             &
+292       qsat\_srf\_old(nc),     &
+293       s\_srf\_old(nc),        &
+294       dqdt(nc),             & !< Sensitivity of saturated surface specific humidity to temperature
+295       t2s\_conv(nc),         & !< Conversion factor from temperature to dry static energy (C\_pd * (1+(delta-
+      1)*q\_v))
+296       heat\_tcoef(nc)
+297 
+298     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':update\_surface\_energy'}
+299 
+300     \textcolor{keywordflow}{IF} (debug\_on() .AND. iblk == 1) \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting update of surface temperature'})
+301 
+302     model => get\_model(tile%owner\_model\_id)
+303 
+304     get\_config(srf\_conf, srf)
+305 
+306     \textcolor{comment}{! Get reference to variables for current block}
+307     \textcolor{comment}{!}
+308     get\_memory(srf\_mem, srf)
+309     get\_memory(soil\_mem, soil)
+310     get\_memory(atm2land\_mem, atm2land)
+311 
+312     t\_srf                => srf\_mem  %t\_srf%ptr            (ics:ice, iblk)
+313     t\_srf\_old            => srf\_mem  %t\_srf\_old%ptr        (ics:ice, iblk)
+314     t\_srf\_unfilt         => srf\_mem  %t\_srf\_unfilt%ptr     (ics:ice, iblk)
+315     t\_srf\_unfilt\_old     => srf\_mem  %t\_srf\_unfilt\_old%ptr (ics:ice, iblk)
+316     t\_eff\_srf            => srf\_mem  %t\_eff\_srf%ptr        (ics:ice, iblk)
+317     qsat\_srf             => srf\_mem  %qsat\_srf%ptr         (ics:ice, iblk)
+318 \textcolor{comment}{!!$    qsat\_srf\_old         => srf\_mem  %qsat\_srf\_old%ptr     (ics:ice, iblk)}
+319     s\_srf                => srf\_mem  %s\_srf%ptr            (ics:ice, iblk)
+320 \textcolor{comment}{!!$    s\_srf\_old            => srf\_mem  %s\_srf\_old%ptr        (ics:ice, iblk)}
+321     press\_srf            => atm2land\_mem     %press\_srf%ptr        (ics:ice, iblk)
+322     q\_air                => atm2land\_mem     %q\_air%ptr            (ics:ice, iblk)
+323     fact\_q\_air           => srf\_mem  %fact\_q\_air%ptr       (ics:ice, iblk)
+324     fact\_qsat\_srf        => srf\_mem  %fact\_qsat\_srf%ptr    (ics:ice, iblk)
+325     drag\_srf             => atm2land\_mem     %drag\_srf%ptr         (ics:ice, iblk)
+326     rad\_srf\_net          => srf\_mem  %rad\_srf\_net%ptr      (ics:ice, iblk)
+327     grnd\_hflx            => soil\_mem %grnd\_hflx%ptr        (ics:ice, iblk)
+328     hcap\_grnd            => soil\_mem %hcap\_grnd%ptr        (ics:ice, iblk)
+329     wsn\_srf              => srf\_mem  %wsn\_srf%ptr          (ics:ice, iblk)
+330     sfract\_srf           => srf\_mem  %sfract\_srf%ptr       (ics:ice, iblk)
+331     t\_acoef              => atm2land\_mem     %t\_acoef%ptr          (ics:ice, iblk)
+332     t\_bcoef              => atm2land\_mem     %t\_bcoef%ptr          (ics:ice, iblk)
+333     q\_acoef              => atm2land\_mem     %q\_acoef%ptr          (ics:ice, iblk)
+334     q\_bcoef              => atm2land\_mem     %q\_bcoef%ptr          (ics:ice, iblk)
+335     glacier              => srf\_mem  %glacier%ptr          (ics:ice, iblk)
+336 
+337     \textcolor{comment}{! Save old surface temperature and saturation spec. humidity}
+338 \textcolor{comment}{!!$    t\_srf\_unfilt\_old(:) = t\_srf\_unfilt(:)}
+339 \textcolor{comment}{!!$    t\_srf\_old   (:) = t\_srf(:)}
+340     \textcolor{comment}{! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in
+       convect\_tables}
+341     t\_srf\_unfilt\_old(:) = max(min(t\_srf\_unfilt(:), 380.\_wp), 100.\_wp)
+342     t\_srf\_old(:)        = max(min(t\_srf(:),        380.\_wp), 100.\_wp)
+343     qsat\_srf\_old(:) = \hyperlink{namespacemo__phy__schemes_aa793f9cf2db7aa0f821bde8fbf8f38a8}{qsat}(t\_srf\_old(:), press\_srf(:))
+344 
+345     \textcolor{comment}{! Calculate surface saturation specific humidity}
+346 
+347     \textcolor{comment}{! Update surface temperature}
+348     \textcolor{comment}{!}
+349     \textcolor{comment}{! 1. Compute sensitivity of surface saturation specific humidity to temperature}
+350     dqdt(:) = ( \hyperlink{namespacemo__phy__schemes_aa793f9cf2db7aa0f821bde8fbf8f38a8}{qsat}(t\_srf(:) + 0.001\_wp, press\_srf(:)) - qsat\_srf\_old(:) ) * 1000.\_wp
+351 
+352     \textcolor{comment}{! 2. Old dry static energy}
+353     s\_srf\_old(:) = \hyperlink{namespacemo__phy__schemes_afffc006f6b4ec423054e4e5f4943e19d}{surface\_dry\_static\_energy}( t\_srf\_old(:), &
+354                                             & \hyperlink{namespacemo__phy__schemes_a52234cb76d1efb2d2298d8fc66b61545}{q\_effective}(qsat\_srf\_old(:), q\_air(:), 
+      fact\_qsat\_srf(:), fact\_q\_air(:)))
+355 
+356     t2s\_conv(:) = s\_srf\_old(:) / t\_srf\_old(:)  \textcolor{comment}{!}
+357 
+358     heat\_tcoef(:) = \hyperlink{namespacemo__phy__schemes_a9d1fe0b8e7cc0e86d2cf43ea5ebaac58}{heat\_transfer\_coef}(drag\_srf(:), steplen)
+359 
+360     \textcolor{comment}{! Compute new surface temperature and saturation humidity}
+361     \textcolor{keywordflow}{IF} (all(qsat\_srf(:) < 0.\_wp)) \textcolor{keywordflow}{THEN}          \textcolor{comment}{! Start of experiment}
+362       lstart = .true.
+363       s\_srf(:) = s\_srf\_old(:)
+364     \textcolor{keywordflow}{ELSE}
+365       lstart = .false.
+366       \textcolor{keyword}{CALL }\hyperlink{namespacemo__srf__process_aa120db81e24075287f867d3958eca237}{surface\_temp\_implicit}( nc, steplen, &
+367         t2s\_conv(:), &
+368         t\_acoef(:), t\_bcoef(:), q\_acoef(:), q\_bcoef(:), &
+369         s\_srf\_old(:), qsat\_srf\_old(:), dqdt(:), &
+370         rad\_srf\_net(:), grnd\_hflx(:), heat\_tcoef(:), &
+371         fact\_q\_air(:), fact\_qsat\_srf(:), &
+372         sfract\_srf(:), hcap\_grnd(:), &
+373         & s\_srf(:))
+374 \textcolor{keywordflow}{    END IF}
+375 
+376     \textcolor{comment}{! New unfiltered surface temperature (\(\backslash\)tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha =
+       1/tpfac2)}
+377     t\_srf\_unfilt(:) = ( tpfac2 * s\_srf(:) + tpfac3 * s\_srf\_old(:) ) / t2s\_conv(:)
+378 
+379     \textcolor{comment}{! Correct new dry static energy for snowmelt}
+380     \textcolor{keywordflow}{WHERE} (wsn\_srf(:) > srf\_conf%wsn\_critical .OR. glacier(:) > 0.5\_wp)
+381       s\_srf(:) = min(s\_srf(:) / t2s\_conv(:), tmelt) * t2s\_conv(:)
+382 \textcolor{keywordflow}{    END WHERE}
+383 
+384     \textcolor{comment}{! Compute new surface qsat (after correction of dry static energy for snow melt!)}
+385     qsat\_srf(:) = 0.\_wp
+386     \textcolor{keywordflow}{IF} (lstart) \textcolor{keywordflow}{THEN}
+387       qsat\_srf(:) = qsat\_srf\_old(:)
+388     \textcolor{keywordflow}{ELSE}
+389       qsat\_srf(:) = qsat\_srf\_old(:) + dqdt(:) * (s\_srf(:) - s\_srf\_old(:)) / t2s\_conv(:)
+390 \textcolor{keywordflow}{    END IF}
+391 
+392     \textcolor{comment}{! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)}
+393     t\_eff\_srf(:) = (t\_srf\_old(:)**3 * (4.\_wp * s\_srf(:)/t2s\_conv(:) - 3.\_wp * t\_srf\_old(:))) ** 0.25\_wp
+394 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_a35bdafa30fe0752a3903d61fc30173cf_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_a35bdafa30fe0752a3903d61fc30173cf_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__srf__interface_acdac2acc6bb50d7ecc7dea28ea5b3e87}{}\index{mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}!update\+\_\+surface\+\_\+fluxes@{update\+\_\+surface\+\_\+fluxes}}
+\index{update\+\_\+surface\+\_\+fluxes@{update\+\_\+surface\+\_\+fluxes}!mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}}
+\subsubsection[{update\+\_\+surface\+\_\+fluxes}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+srf\+\_\+interface\+::update\+\_\+surface\+\_\+fluxes (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc, }
+\item[{real(wp), intent(in)}]{steplen}
+\end{DoxyParamCaption}
+)}\label{namespacemo__srf__interface_acdac2acc6bb50d7ecc7dea28ea5b3e87}
+
+
+Definition at line 436 of file mo\+\_\+srf\+\_\+interface.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+control\+::debug\+\_\+on(), mo\+\_\+phy\+\_\+schemes\+::heat\+\_\+transfer\+\_\+coef(), modname, mo\+\_\+phy\+\_\+schemes\+::q\+\_\+effective(), and mo\+\_\+phy\+\_\+schemes\+::surface\+\_\+dry\+\_\+static\+\_\+energy().
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+436 
+437     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__phy__schemes}{mo\_phy\_schemes}\textcolor{keywordtype}{,        ONLY}: \hyperlink{namespacemo__phy__schemes_a52234cb76d1efb2d2298d8fc66b61545}{q\_effective}, 
+      \hyperlink{namespacemo__phy__schemes_afffc006f6b4ec423054e4e5f4943e19d}{surface\_dry\_static\_energy}, \hyperlink{namespacemo__phy__schemes_a9d1fe0b8e7cc0e86d2cf43ea5ebaac58}{heat\_transfer\_coef}
+438     \textcolor{keywordtype}{USE }mo\_physical\_constants\textcolor{keywordtype}{, ONLY}: alv, als
+439 
+440     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+441     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+442     \textcolor{keywordtype}{REAL(wp)},          \textcolor{keywordtype}{INTENT(in)} :: steplen
+443 
+444     \textcolor{comment}{! Local variables}
+445     \textcolor{comment}{!}
+446     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}    :: model
+447     def\_memory(srf\_mem, srf)
+448     def\_memory(atm2land\_mem, atm2land)
+449 
+450     \textcolor{comment}{! Pointers to variables in memory}
+451     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} ::       &
+452       & qsat\_srf       (:),    &
+453       & s\_srf          (:),    &
+454       & t\_acoef        (:),    &
+455       & t\_bcoef        (:),    &
+456       & q\_acoef        (:),    &
+457       & q\_bcoef        (:),    &
+458       & fact\_qsat\_srf  (:),    &
+459       & fact\_qsat\_trans\_srf  (:),    &
+460       & fact\_q\_air     (:),    &
+461       & drag\_srf       (:),    &
+462       & latent\_hflx    (:),    &
+463       & sensible\_hflx  (:),    &
+464       & evapopot       (:),    &
+465       & evapotrans     (:),    &
+466       & trans          (:),    &
+467       & sfract\_srf     (:)
+468 
+469     \textcolor{comment}{! Locally allocated vectors}
+470     \textcolor{comment}{!}
+471     \textcolor{keywordtype}{REAL(wp)} ::                &
+472       & s\_air          (nc),   &  !< Dry static energy at lowest atmospheric level
+473       & q\_air          (nc),   &  !< Humidity at lowest atmospheric level
+474       & q\_air\_eff      (nc),   &  !< Effective humidity at lowest atmospheric level
+475       & qsat\_srf\_eff   (nc),   &  !< Effective surface saturation specific humidity
+476       heat\_tcoef       (nc)
+477 
+478     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':update\_surface\_fluxes'}
+479 
+480     \textcolor{keywordflow}{IF} (debug\_on() .AND. iblk == 1) \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting update of surface fluxes'})
+481 
+482     model => get\_model(tile%owner\_model\_id)
+483 
+484     \textcolor{comment}{! Get reference to variables for current block}
+485     \textcolor{comment}{!}
+486     get\_memory(srf\_mem, srf)
+487     get\_memory(atm2land\_mem, atm2land)
+488 
+489     qsat\_srf             => srf\_mem  %qsat\_srf%ptr         (ics:ice, iblk)
+490     s\_srf                => srf\_mem  %s\_srf%ptr            (ics:ice, iblk)
+491     t\_acoef              => atm2land\_mem     %t\_acoef%ptr          (ics:ice, iblk)
+492     t\_bcoef              => atm2land\_mem     %t\_bcoef%ptr          (ics:ice, iblk)
+493     q\_acoef              => atm2land\_mem     %q\_acoef%ptr          (ics:ice, iblk)
+494     q\_bcoef              => atm2land\_mem     %q\_bcoef%ptr          (ics:ice, iblk)
+495     fact\_q\_air           => srf\_mem  %fact\_q\_air%ptr       (ics:ice, iblk)
+496     fact\_qsat\_srf        => srf\_mem  %fact\_qsat\_srf%ptr    (ics:ice, iblk)
+497     fact\_qsat\_trans\_srf  => srf\_mem  %fact\_qsat\_trans\_srf%ptr (ics:ice, iblk)
+498     drag\_srf             => atm2land\_mem     %drag\_srf%ptr         (ics:ice, iblk)
+499     sensible\_hflx        => srf\_mem  %sensible\_hflx%ptr    (ics:ice, iblk)
+500     latent\_hflx          => srf\_mem  %latent\_hflx%ptr      (ics:ice, iblk)
+501     evapotrans           => srf\_mem  %evapotrans%ptr       (ics:ice, iblk)
+502     trans                => srf\_mem  %trans%ptr            (ics:ice, iblk)
+503     evapopot             => srf\_mem  %evapopot%ptr         (ics:ice, iblk)
+504     sfract\_srf           => srf\_mem  %sfract\_srf%ptr       (ics:ice, iblk)
+505 
+506     \textcolor{comment}{! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution}
+507     \textcolor{comment}{!}
+508     s\_air(:) = t\_acoef(:) * s\_srf(:) + t\_bcoef(:)
+509     q\_air(:) = q\_acoef(:) * qsat\_srf(:) + q\_bcoef(:)
+510 
+511     \textcolor{comment}{! Transfer coefficient}
+512     heat\_tcoef(:) = \hyperlink{namespacemo__phy__schemes_a9d1fe0b8e7cc0e86d2cf43ea5ebaac58}{heat\_transfer\_coef}(drag\_srf(:), steplen)
+513 
+514     \textcolor{comment}{! Compute effective air moisture and surface saturation humidity}
+515     q\_air\_eff(:) = \hyperlink{namespacemo__phy__schemes_a52234cb76d1efb2d2298d8fc66b61545}{q\_effective}( spread(0.\_wp, ncopies=nc, dim=1), q\_air(:), &
+516                               & spread(1.\_wp, ncopies=nc, dim=1), spread(0.\_wp, ncopies=nc, dim=1))
+517     qsat\_srf\_eff(:) = \hyperlink{namespacemo__phy__schemes_a52234cb76d1efb2d2298d8fc66b61545}{q\_effective}(qsat\_srf(:), q\_air(:), fact\_qsat\_srf(:), fact\_q\_air(:))
+518 
+519     \textcolor{comment}{! Compute moisture fluxes}
+520     \textcolor{comment}{!}
+521     evapotrans(:) = heat\_tcoef(:) * (q\_air\_eff(:) - qsat\_srf\_eff(:))        \textcolor{comment}{! Evapotranspiratin}
+522     evapopot(:) = heat\_tcoef(:) * (q\_air(:) - qsat\_srf(:))        \textcolor{comment}{! Potential evaporation}
+523     trans(:) = fact\_qsat\_trans\_srf(:) * evapopot(:)                    \textcolor{comment}{! Transpiration}
+524 
+525     \textcolor{comment}{! Compute sensible heat flux}
+526     \textcolor{comment}{!}
+527     sensible\_hflx(:) = heat\_tcoef(:) * (s\_air(:) - s\_srf(:))
+528 
+529     \textcolor{comment}{! Compute latent heat flux}
+530     \textcolor{comment}{!}
+531     latent\_hflx(:) = alv * evapotrans(:) + (als - alv) * sfract\_srf(:) * evapopot(:)
+532 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_acdac2acc6bb50d7ecc7dea28ea5b3e87_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_acdac2acc6bb50d7ecc7dea28ea5b3e87_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__srf__interface_a137b2fda7589cf50e04e3eaafc16ca43}{}\index{mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}!update\+\_\+surface\+\_\+radiation@{update\+\_\+surface\+\_\+radiation}}
+\index{update\+\_\+surface\+\_\+radiation@{update\+\_\+surface\+\_\+radiation}!mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}}
+\subsubsection[{update\+\_\+surface\+\_\+radiation}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+srf\+\_\+interface\+::update\+\_\+surface\+\_\+radiation (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc}
+\end{DoxyParamCaption}
+)}\label{namespacemo__srf__interface_a137b2fda7589cf50e04e3eaafc16ca43}
+
+
+Definition at line 44 of file mo\+\_\+srf\+\_\+interface.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+control\+::debug\+\_\+on(), mo\+\_\+phy\+\_\+schemes\+::lwnet\+\_\+from\+\_\+lwdown(), and modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+44 
+45     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__phy__schemes}{mo\_phy\_schemes}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__phy__schemes_ace9a64c869caa711065208594ef8114e}{lwnet\_from\_lwdown}
+46 
+47     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+48     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+49 
+50     \textcolor{comment}{! Local variables}
+51     \textcolor{comment}{!}
+52     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}    :: model
+53     def\_memory(atm2land\_mem, atm2land)
+54     def\_memory(srf\_mem, srf)
+55 
+56     \textcolor{comment}{! Pointers to variables in memory}
+57     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} ::      &
+58       & swvis\_srf\_net    (:), &
+59       & swnir\_srf\_net    (:), &
+60       & sw\_srf\_net       (:), &
+61       & lw\_srf\_net       (:), &
+62       & rad\_srf\_net      (:), &
+63       & lw\_srf\_down      (:), &
+64       & swvis\_srf\_down   (:), &
+65       & swnir\_srf\_down   (:), &
+66       & alb\_vis\_srf      (:), &
+67       & alb\_nir\_srf      (:), &
+68       & t\_srf            (:)
+69 
+70     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':update\_surface\_radiation'}
+71 
+72     \textcolor{keywordflow}{IF} (debug\_on() .AND. iblk == 1) \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting update of surface radiation'})
+73 
+74     model => get\_model(tile%owner\_model\_id)
+75 
+76     \textcolor{comment}{! Get reference to variables for current block}
+77     \textcolor{comment}{!}
+78     get\_memory(srf\_mem, srf)
+79     get\_memory(atm2land\_mem, atm2land)
+80 
+81     swvis\_srf\_down => atm2land\_mem     %swvis\_srf\_down%ptr (ics:ice, iblk)
+82     swnir\_srf\_down => atm2land\_mem     %swnir\_srf\_down%ptr (ics:ice, iblk)
+83     lw\_srf\_down    => atm2land\_mem     %lw\_srf\_down%ptr    (ics:ice, iblk)
+84     swvis\_srf\_net  => srf\_mem %swvis\_srf\_net%ptr  (ics:ice, iblk)
+85     swnir\_srf\_net  => srf\_mem %swnir\_srf\_net%ptr  (ics:ice, iblk)
+86     sw\_srf\_net     => srf\_mem %sw\_srf\_net%ptr     (ics:ice, iblk)
+87     lw\_srf\_net     => srf\_mem %lw\_srf\_net%ptr     (ics:ice, iblk)
+88     rad\_srf\_net    => srf\_mem %rad\_srf\_net%ptr    (ics:ice, iblk)
+89     alb\_vis\_srf    => srf\_mem %alb\_vis\_srf%ptr    (ics:ice, iblk)
+90     alb\_nir\_srf    => srf\_mem %alb\_nir\_srf%ptr    (ics:ice, iblk)
+91     t\_srf          => srf\_mem %t\_srf%ptr          (ics:ice, iblk)
+92 
+93     \textcolor{comment}{! Compute net SW radiation from downward SW and albedo}
+94     swvis\_srf\_net(:) = swvis\_srf\_down(:) * (1.\_wp - alb\_vis\_srf(:))
+95     swnir\_srf\_net(:) = swnir\_srf\_down(:) * (1.\_wp - alb\_nir\_srf(:))
+96     sw\_srf\_net(:) = swvis\_srf\_net(:) + swnir\_srf\_net(:)
+97 
+98     \textcolor{comment}{! Compute LW net radiation from incoming and the thermal radiation from the surface}
+99     lw\_srf\_net(:) = \hyperlink{namespacemo__phy__schemes_ace9a64c869caa711065208594ef8114e}{lwnet\_from\_lwdown}(lw\_srf\_down(:), t\_srf(:))
+100 
+101     \textcolor{comment}{! Compute net radiation}
+102     rad\_srf\_net(:) = sw\_srf\_net(:) + lw\_srf\_net(:)
+103 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_a137b2fda7589cf50e04e3eaafc16ca43_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_a137b2fda7589cf50e04e3eaafc16ca43_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__srf__interface_a5633e536e2d4fb8351760c1a5c8bf972}{}\index{mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}!update\+\_\+t\+\_\+srf\+\_\+asselin@{update\+\_\+t\+\_\+srf\+\_\+asselin}}
+\index{update\+\_\+t\+\_\+srf\+\_\+asselin@{update\+\_\+t\+\_\+srf\+\_\+asselin}!mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}}
+\subsubsection[{update\+\_\+t\+\_\+srf\+\_\+asselin}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+srf\+\_\+interface\+::update\+\_\+t\+\_\+srf\+\_\+asselin (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), pointer}]{tile, }
+\item[{integer, intent(in)}]{iblk, }
+\item[{integer, intent(in)}]{ics, }
+\item[{integer, intent(in)}]{ice, }
+\item[{integer, intent(in)}]{nc}
+\end{DoxyParamCaption}
+)}\label{namespacemo__srf__interface_a5633e536e2d4fb8351760c1a5c8bf972}
+
+
+Definition at line 399 of file mo\+\_\+srf\+\_\+interface.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+interface\+::interface\+\_\+full().
+
+
+\begin{DoxyCode}
+399 
+400     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__time}{mo\_jsb\_time}\textcolor{keywordtype}{, ONLY}: get\_asselin\_coef
+401 
+402     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER}    :: tile
+403     \textcolor{keywordtype}{INTEGER},           \textcolor{keywordtype}{INTENT(in)} :: iblk, ics, ice, nc
+404 
+405     \textcolor{comment}{! Local variables}
+406     \textcolor{comment}{!}
+407     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}    :: model
+408     def\_memory(srf\_mem, srf)
+409     \textcolor{keywordtype}{LOGICAL}                       :: lstart
+410     \textcolor{keywordtype}{REAL(wp)}                      :: eps
+411 
+412     \textcolor{comment}{! Pointers to variables in memory}
+413     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} ::       &
+414       & t\_srf          (:),    &
+415       & t\_srf\_old      (:),    &
+416       & t\_srf\_unfilt   (:),    &
+417       & t\_srf\_unfilt\_old(:)
+418 
+419     get\_memory(srf\_mem, srf)
+420 
+421     t\_srf                => srf\_mem  %t\_srf%ptr            (ics:ice, iblk)
+422     t\_srf\_old            => srf\_mem  %t\_srf\_old%ptr        (ics:ice, iblk)
+423     t\_srf\_unfilt         => srf\_mem  %t\_srf\_unfilt%ptr     (ics:ice, iblk)
+424     t\_srf\_unfilt\_old     => srf\_mem  %t\_srf\_unfilt\_old%ptr (ics:ice, iblk)
+425 
+426     eps = get\_asselin\_coef()
+427     \textcolor{keywordflow}{IF} (eps > 0.\_wp) \textcolor{keywordflow}{THEN}
+428       t\_srf(:) = t\_srf\_unfilt\_old(:) + eps * (t\_srf\_old(:) - 2.\_wp * t\_srf\_unfilt\_old(:) + t\_srf\_unfilt(:))
+429     \textcolor{keywordflow}{ELSE}
+430       t\_srf(:) = t\_srf\_unfilt(:)
+431 \textcolor{keywordflow}{    END IF}
+432 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dcf/namespacemo__srf__interface_a5633e536e2d4fb8351760c1a5c8bf972_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__srf__interface_ad2ac37413e10df5be378325501189b54}{}\index{mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+srf\+\_\+interface@{mo\+\_\+srf\+\_\+interface}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+srf\+\_\+interface\+::modname = \textquotesingle{}mo\+\_\+srf\+\_\+interface\textquotesingle{}}\label{namespacemo__srf__interface_ad2ac37413e10df5be378325501189b54}
+
+
+Definition at line 39 of file mo\+\_\+srf\+\_\+interface.\+f90.
+
+
+
+Referenced by update\+\_\+humidity\+\_\+scaling(), update\+\_\+snow\+\_\+and\+\_\+skin\+\_\+fraction(), update\+\_\+surface\+\_\+energy(), update\+\_\+surface\+\_\+fluxes(), and update\+\_\+surface\+\_\+radiation().
+
+
+\begin{DoxyCode}
+39   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_srf\_interface'}
+\end{DoxyCode}

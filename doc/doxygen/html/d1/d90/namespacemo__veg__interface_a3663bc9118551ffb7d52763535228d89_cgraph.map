@@ -1,0 +1,6 @@
+<map id="mo_veg_interface::update_vegetation_1" name="mo_veg_interface::update_vegetation_1">
+<area shape="rect" id="node2" href="$d9/da0/namespacemo__jsb__control.html#a5712e1cd2e5736d1d7e6a59707af0200" title="mo_jsb_control::debug_on" alt="" coords="225,5,400,32"/>
+<area shape="rect" id="node3" href="$d7/d78/namespacemo__phy__schemes.html#aa793f9cf2db7aa0f821bde8fbf8f38a8" title="mo_phy_schemes::qsat" alt="" coords="232,56,393,83"/>
+<area shape="rect" id="node4" href="$d7/dda/namespacemo__veg__util.html#af6216ea4cafe0107cd77fd3774c1b948" title="mo_veg_util::water\l_in_root_zone" alt="" coords="247,107,379,149"/>
+<area shape="rect" id="node5" href="$d5/dad/namespacemo__veg__process.html#a08781664d42770f4962218de89b6387d" title="mo_veg_process::water\l_stress_factor" alt="" coords="232,173,393,214"/>
+</map>

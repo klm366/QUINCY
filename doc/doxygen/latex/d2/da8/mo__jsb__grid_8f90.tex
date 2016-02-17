@@ -1,0 +1,29 @@
+\hypertarget{mo__jsb__grid_8f90}{}\section{/home/reiner/git/jsbach.ulme/src/base/mo\+\_\+jsb\+\_\+grid.f90 File Reference}
+\label{mo__jsb__grid_8f90}\index{/home/reiner/git/jsbach.\+ulme/src/base/mo\+\_\+jsb\+\_\+grid.\+f90@{/home/reiner/git/jsbach.\+ulme/src/base/mo\+\_\+jsb\+\_\+grid.\+f90}}
+\subsection*{Modules}
+\begin{DoxyCompactItemize}
+\item 
+module \hyperlink{namespacemo__jsb__grid}{mo\+\_\+jsb\+\_\+grid}
+\end{DoxyCompactItemize}
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__grid_a7dc7b6b26aa0f0cce8b32e1f7f3307d6}{mo\+\_\+jsb\+\_\+grid\+::register\+\_\+grid} (grid)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__grid_a043909fe2d80d058e59831341f25fdab}{mo\+\_\+jsb\+\_\+grid\+::register\+\_\+vgrid} (vgrid)
+\item 
+type(t\+\_\+jsb\+\_\+grid) function, pointer, public \hyperlink{namespacemo__jsb__grid_ad009e7ddbafe2ef26506e2a5abdeb4db}{mo\+\_\+jsb\+\_\+grid\+::get\+\_\+grid} (id)
+\item 
+type(t\+\_\+jsb\+\_\+vgrid) function, pointer, public \hyperlink{namespacemo__jsb__grid_a2111791e291579cc1551a4213a670e35}{mo\+\_\+jsb\+\_\+grid\+::get\+\_\+vgrid} (name)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+integer, parameter \hyperlink{namespacemo__jsb__grid_a1d86a8db41131c146df75f25afca96ed}{mo\+\_\+jsb\+\_\+grid\+::max\+\_\+no\+\_\+of\+\_\+grids} = 1
+\item 
+integer, parameter \hyperlink{namespacemo__jsb__grid_a9155254cdfdc8f5d4faab808185807d6}{mo\+\_\+jsb\+\_\+grid\+::max\+\_\+no\+\_\+of\+\_\+vgrids} = 10
+\item 
+type(t\+\_\+jsb\+\_\+grid\+\_\+ptr), dimension(max\+\_\+no\+\_\+of\+\_\+grids), save \hyperlink{namespacemo__jsb__grid_a575fc745dca08fbc468cfa38e731e25e}{mo\+\_\+jsb\+\_\+grid\+::jsbach\+\_\+grids}
+\item 
+type(t\+\_\+jsb\+\_\+vgrid\+\_\+ptr), dimension(max\+\_\+no\+\_\+of\+\_\+vgrids), save \hyperlink{namespacemo__jsb__grid_a861c396d0d03f42c064fa5ff78f7cc58}{mo\+\_\+jsb\+\_\+grid\+::jsbach\+\_\+vgrids}
+\end{DoxyCompactItemize}
