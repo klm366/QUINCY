@@ -1,0 +1,349 @@
+\hypertarget{namespacemo__srf__init}{}\section{mo\+\_\+srf\+\_\+init Module Reference}
+\label{namespacemo__srf__init}\index{mo\+\_\+srf\+\_\+init@{mo\+\_\+srf\+\_\+init}}
+
+
+Initialization of the the srf memory.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__srf__init_a7c44e1a5211e8f4702bfd3724031f8d7}{srf\+\_\+init\+\_\+bc} (tile)
+\item 
+recursive subroutine, public \hyperlink{namespacemo__srf__init_a7991eb826bda9d166a7e59489d44ea9b}{srf\+\_\+init\+\_\+ic} (tile)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__srf__init_aa48301154b912ae072ff1916d431321b}{modname} = \textquotesingle{}mo\+\_\+srf\+\_\+init\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Initialization of the the srf memory. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__srf__init_a7c44e1a5211e8f4702bfd3724031f8d7}{}\index{mo\+\_\+srf\+\_\+init@{mo\+\_\+srf\+\_\+init}!srf\+\_\+init\+\_\+bc@{srf\+\_\+init\+\_\+bc}}
+\index{srf\+\_\+init\+\_\+bc@{srf\+\_\+init\+\_\+bc}!mo\+\_\+srf\+\_\+init@{mo\+\_\+srf\+\_\+init}}
+\subsubsection[{srf\+\_\+init\+\_\+bc}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+srf\+\_\+init\+::srf\+\_\+init\+\_\+bc (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), intent(inout)}]{tile}
+\end{DoxyParamCaption}
+)}\label{namespacemo__srf__init_a7c44e1a5211e8f4702bfd3724031f8d7}
+
+
+Definition at line 41 of file mo\+\_\+srf\+\_\+init.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+model\+\_\+init\+::init\+\_\+model\+\_\+common().
+
+
+\begin{DoxyCode}
+41 
+42     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile), \textcolor{keywordtype}{INTENT(inout)} :: tile
+43 
+44     \textcolor{keywordtype}{TYPE}(t\_jsb\_model),       \textcolor{keywordtype}{POINTER} :: model
+45 
+46     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':srf\_init\_bc'}
+47 
+48     model => get\_model(tile%owner\_model\_id)
+49 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dd2/namespacemo__srf__init_a7c44e1a5211e8f4702bfd3724031f8d7_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__srf__init_a7991eb826bda9d166a7e59489d44ea9b}{}\index{mo\+\_\+srf\+\_\+init@{mo\+\_\+srf\+\_\+init}!srf\+\_\+init\+\_\+ic@{srf\+\_\+init\+\_\+ic}}
+\index{srf\+\_\+init\+\_\+ic@{srf\+\_\+init\+\_\+ic}!mo\+\_\+srf\+\_\+init@{mo\+\_\+srf\+\_\+init}}
+\subsubsection[{srf\+\_\+init\+\_\+ic}]{\setlength{\rightskip}{0pt plus 5cm}recursive subroutine, public mo\+\_\+srf\+\_\+init\+::srf\+\_\+init\+\_\+ic (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), intent(inout)}]{tile}
+\end{DoxyParamCaption}
+)}\label{namespacemo__srf__init_a7991eb826bda9d166a7e59489d44ea9b}
+
+
+Definition at line 53 of file mo\+\_\+srf\+\_\+init.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+close\+\_\+file(), mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+open\+\_\+input(), mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+read\+\_\+2d(), mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time(), and modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+model\+\_\+init\+::init\+\_\+model\+\_\+common().
+
+
+\begin{DoxyCode}
+53 
+54     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__time}{mo\_jsb\_time}\textcolor{keywordtype}{, ONLY}: get\_time\_interpolation\_weights
+55 
+56     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile), \textcolor{keywordtype}{INTENT(inout)} :: tile
+57 
+58     \textcolor{keywordtype}{TYPE}(t\_jsb\_model),        \textcolor{keywordtype}{POINTER} :: model
+59     def\_config(srf\_conf, srf)
+60     def\_memory(srf\_mem, srf)
+61 
+62     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} :: t\_srf(:,:), t\_srf\_mon(:,:,:), cell\_sea\_land\_mask(:,:)
+63     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} :: &
+64       & return\_pointer (:,  :)       !< temporary pointer
+65 
+66     \textcolor{keywordtype}{TYPE}(t\_input\_file) :: input\_file
+67 
+68     \textcolor{keywordtype}{INTEGER}  :: i
+69     \textcolor{keywordtype}{REAL(wp)} :: wgt1, wgt2
+70     \textcolor{keywordtype}{INTEGER}  :: nmw1,nmw2, n1, n2
+71 
+72     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':srf\_init\_ic'}
+73 
+74     model => get\_model(tile%owner\_model\_id)
+75 
+76     \textcolor{comment}{! Get srf memory of the tile}
+77     get\_memory(srf\_mem, srf)
+78 
+79     \textcolor{comment}{! Get srf config}
+80     get\_config(srf\_conf, srf)
+81 
+82     \textcolor{keywordflow}{IF} (.NOT. srf\_conf%active) \textcolor{keywordflow}{RETURN}
+83 
+84     \textcolor{comment}{! Initialize parameters}
+85     \textcolor{comment}{!}
+86     \textcolor{keyword}{CALL }message(trim(routine), &
+87          \textcolor{stringliteral}{'Initializing srf memory for tile '}//trim(tile%name)//\textcolor{stringliteral}{' from '}//trim(srf\_conf%bc\_sso\_filename))
+88     input\_file = jsb\_netcdf\_open\_input(trim(srf\_conf%bc\_sso\_filename), model%id)
+89 
+90     \textcolor{comment}{! Orography}
+91     return\_pointer => jsb\_netcdf\_read\_2d(         &
+92       & input\_file,                               &
+93       & variable\_name=\textcolor{stringliteral}{'orostd'},                   &
+94       & fill\_array = srf\_mem%oro\_stddev%ptr)
+95     srf\_mem%oro\_stddev%ptr(:,:) = merge(srf\_mem%oro\_stddev%ptr(:,:), 0.\_wp, srf\_mem%oro\_stddev%ptr(:,:) >= 
+      0.\_wp)
+96 
+97     \textcolor{keyword}{CALL }jsb\_netcdf\_close\_file(input\_file)
+98 
+99     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Initializing srf memory for tile '}//trim(tile%name)//\textcolor{stringliteral}{' from
+       bc\_land\_frac.nc'})
+100     input\_file = jsb\_netcdf\_open\_input(\textcolor{stringliteral}{'bc\_land\_frac.nc'}, model%id)     \textcolor{comment}{! Temporary}
+101 \textcolor{comment}{!!$    input\_file = jsb\_netcdf\_open\_input(TRIM(srf\_conf%bc\_filename), model%id)}
+102 
+103     \textcolor{comment}{! Land mask (including glacies and lakes)}
+104     return\_pointer => jsb\_netcdf\_read\_2d(         &
+105       & input\_file,                               &
+106       & variable\_name=\textcolor{stringliteral}{'notsea'},                   &        
+107       & fill\_array = srf\_mem%land%ptr)
+108 
+109     \textcolor{comment}{! Glacier mask}
+110     return\_pointer => jsb\_netcdf\_read\_2d(         &
+111       & input\_file,                               &
+112       & variable\_name=\textcolor{stringliteral}{'glac'},                     &
+113       & fill\_array = srf\_mem%glacier%ptr)
+114     \textcolor{comment}{! set glacier mask to zero on ocean grid cells (instead of missing value)}
+115     \textcolor{keywordflow}{WHERE} (srf\_mem%land%ptr(:,:) == 0.\_wp)
+116       srf\_mem%glacier%ptr(:,:) = 0.\_wp
+117 \textcolor{keywordflow}{    END WHERE}
+118 
+119     \textcolor{comment}{! Lake mask}
+120     return\_pointer => jsb\_netcdf\_read\_2d(         &
+121       & input\_file,                               &
+122       & variable\_name=\textcolor{stringliteral}{'lake'},                     &
+123       & fill\_array = srf\_mem%lake%ptr)
+124 
+125     \textcolor{keyword}{CALL }jsb\_netcdf\_close\_file(input\_file)
+126 
+127 \textcolor{preprocessor}{#ifndef \_\_NO\_JSBACH\_HD\_\_}
+128 \textcolor{preprocessor}{}
+129     input\_file = jsb\_netcdf\_open\_input(\textcolor{stringliteral}{'r2b4\_amip.nc'}, model%id)    \textcolor{comment}{!vg Name !!!}
+130 
+131     \textcolor{comment}{! coastal cells of the land and ocean}
+132     cell\_sea\_land\_mask => jsb\_netcdf\_read\_2d( &
+133       & input\_file,                                &
+134       & variable\_name=\textcolor{stringliteral}{'cell\_sea\_land\_mask'})
+135     srf\_mem%coast\_land%ptr(:,:)  = merge(1.\_wp, 0.\_wp, cell\_sea\_land\_mask(:,:) == land\_boundary)
+136     srf\_mem%coast\_ocean%ptr(:,:) = merge(1.\_wp, 0.\_wp, cell\_sea\_land\_mask(:,:) == sea\_boundary)
+137     srf\_mem%ocean%ptr(:,:)       = merge(1.\_wp, 0.\_wp, &
+138       cell\_sea\_land\_mask(:,:) == sea .OR. cell\_sea\_land\_mask(:,:) == sea\_boundary)
+139     \textcolor{keyword}{DEALLOCATE}(cell\_sea\_land\_mask)
+140 
+141     \textcolor{keyword}{CALL }jsb\_netcdf\_close\_file(input\_file)
+142 
+143 \textcolor{preprocessor}{#endif}
+144 \textcolor{preprocessor}{}
+145     input\_file = jsb\_netcdf\_open\_input(trim(srf\_conf%bc\_filename), model%id)
+146 
+147     \textcolor{comment}{! Surface roughness length}
+148     return\_pointer => jsb\_netcdf\_read\_2d(         &
+149       & input\_file,                               &
+150       & variable\_name=\textcolor{stringliteral}{'roughness\_length'},         &
+151       & fill\_array = srf\_mem%rough\_m\_srf%ptr)
+152     srf\_mem%rough\_m\_srf%ptr(:,:) = merge(srf\_mem%rough\_m\_srf%ptr(:,:), 1.\_wp, srf\_mem%rough\_m\_srf%ptr(:,:) 
+      >= 0.\_wp)
+153 
+154     \textcolor{comment}{! Albedo}
+155     return\_pointer => jsb\_netcdf\_read\_2d(         &
+156       & input\_file,                               &
+157       & variable\_name=\textcolor{stringliteral}{'albedo'},                   &
+158       & fill\_array = srf\_mem%albedo\_srf%ptr)
+159     srf\_mem%albedo\_srf%ptr(:,:) = merge(srf\_mem%albedo\_srf%ptr(:,:), 0.\_wp, srf\_mem%albedo\_srf%ptr(:,:) >= 
+      0.\_wp)
+160 
+161     srf\_mem%alb\_vis\_srf%ptr(:,:) = srf\_mem%albedo\_srf%ptr(:,:)
+162     srf\_mem%alb\_nir\_srf%ptr(:,:) = srf\_mem%albedo\_srf%ptr(:,:)
+163 
+164     \textcolor{keyword}{CALL }jsb\_netcdf\_close\_file(input\_file)
+165 
+166     \textcolor{comment}{! Initialize energy state}
+167     \textcolor{comment}{!}
+168 
+169     input\_file = jsb\_netcdf\_open\_input(trim(srf\_conf%ic\_filename), model%id)
+170 
+171     \textcolor{comment}{! Initial surface temperature}
+172 \textcolor{comment}{!!$    return\_pointer => jsb\_netcdf\_read\_2d(         &}
+173 \textcolor{comment}{!!$      & filename=srf\_conf%ic\_filename,        &}
+174 \textcolor{comment}{!!$      & variable\_name='surface\_temperature',          &}
+175 \textcolor{comment}{!!$      fill\_array=srf\_mem%t\_srf%ptr,                        &}
+176 \textcolor{comment}{!!$      & model\_id=model%id)}
+177 \textcolor{comment}{!!$    t\_srf => srf\_mem%t\_srf}
+178     t\_srf\_mon => jsb\_netcdf\_read\_2d\_time(         &   \textcolor{comment}{! Temporary}
+179       & input\_file,                               &
+180       & variable\_name=\textcolor{stringliteral}{'surf\_temp'})
+181     t\_srf\_mon(:,:,:) = merge(t\_srf\_mon(:,:,:), 280.\_wp, t\_srf\_mon(:,:,:) > 0.\_wp)
+182     \textcolor{keyword}{CALL }get\_time\_interpolation\_weights(wgt1, wgt2, nmw1, nmw2)
+183     \textcolor{keywordflow}{IF} (nmw1 == 0) \textcolor{keywordflow}{THEN}
+184       n1 = 12
+185     \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (nmw1 == 13) \textcolor{keywordflow}{THEN}
+186       n1 = 1
+187     \textcolor{keywordflow}{ELSE}
+188       n1 = nmw1
+189 \textcolor{keywordflow}{    END IF}
+190     \textcolor{keywordflow}{IF} (nmw2 == 0) \textcolor{keywordflow}{THEN}
+191       n2 = 12
+192     \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (nmw2 == 13) \textcolor{keywordflow}{THEN}
+193       n2 = 1
+194     \textcolor{keywordflow}{ELSE}
+195       n2 = nmw2
+196 \textcolor{keywordflow}{    END IF}
+197     srf\_mem%t\_srf%ptr(:,:) = wgt1 * t\_srf\_mon(:,:,n1) + wgt2 * t\_srf\_mon(:,:,n2)
+198 
+199     \textcolor{keyword}{DEALLOCATE}(t\_srf\_mon)
+200 
+201     \textcolor{keyword}{CALL }jsb\_netcdf\_close\_file(input\_file)
+202 
+203     t\_srf => srf\_mem%t\_srf%ptr
+204     \textcolor{comment}{! Note: t\_srf now points to srf\_mem%t\_srf%ptr and can be}
+205     \textcolor{comment}{! used below to fill %t\_srf for all other files:}
+206     \textcolor{comment}{!    tile%mem%srf%energy\_state%t\_srf%ptr(:,:) = t\_srf(:,:)}
+207 
+208     srf\_mem%t\_srf\_old%ptr        (:,:) = t\_srf(:,:)
+209     srf\_mem%t\_srf\_unfilt%ptr     (:,:) = t\_srf(:,:)
+210     srf\_mem%t\_srf\_unfilt\_old%ptr (:,:) = t\_srf(:,:)
+211     srf\_mem%t\_eff\_srf%ptr        (:,:) = t\_srf(:,:)
+212 \textcolor{comment}{!!$    srf\_mem%t\_eff\_srf%ptr        (:,:) = t\_srf (:,:)}
+213     srf\_mem%s\_srf%ptr            (:,:) = 0.\_wp
+214     srf\_mem%qsat\_srf%ptr         (:,:) = -1.\_wp  \textcolor{comment}{! Negative values will be used to test for start of
+       experiment}
+215 \textcolor{comment}{!!$    srf\_mem%qsat\_srf\_old%ptr     (:,:) = 0.\_wp}
+216     srf\_mem%tte\_corr%ptr         (:,:) = 0.\_wp
+217     srf\_mem%fact\_q\_air%ptr       (:,:) = 0.5\_wp
+218     srf\_mem%fact\_qsat\_srf%ptr    (:,:) = 0.5\_wp
+219     srf\_mem%fact\_qsat\_trans\_srf%ptr (:,:) = 0.5\_wp
+220 
+221     \textcolor{comment}{! Initialize water state}
+222 
+223     srf\_mem%wfract\_srf%ptr  (:,:) = 0.\_wp
+224     srf\_mem%wsr\_srf%ptr     (:,:) = 0.\_wp
+225 
+226     srf\_mem%sfract\_srf%ptr  (:,:) = 0.\_wp
+227     srf\_mem%wsn\_srf%ptr     (:,:) = -1.\_wp    \textcolor{comment}{! -1 used to determine start of experiment}
+228     srf\_mem%wsn\_glacier%ptr (:,:) = 20.\_wp    \textcolor{comment}{! Temporary initialization of glacier thickness}
+229 
+230     \textcolor{comment}{! Initialize energy fluxes}
+231     \textcolor{comment}{!}
+232 
+233     srf\_mem%sw\_srf\_net%ptr     (:,:) = 0.\_wp
+234     srf\_mem%swvis\_srf\_net%ptr  (:,:) = 0.\_wp
+235     srf\_mem%swnir\_srf\_net%ptr  (:,:) = 0.\_wp
+236     srf\_mem%lw\_srf\_net%ptr     (:,:) = 0.\_wp
+237     srf\_mem%rad\_srf\_net%ptr    (:,:) = 0.\_wp
+238     srf\_mem%latent\_hflx%ptr    (:,:) = 0.\_wp
+239     srf\_mem%sensible\_hflx%ptr  (:,:) = 0.\_wp
+240 
+241     \textcolor{comment}{! Initialize water fluxes}
+242     \textcolor{comment}{!}
+243 
+244     srf\_mem%evapopot%ptr      (:,:) = 0.\_wp
+245     srf\_mem%evapotrans%ptr    (:,:) = 0.\_wp
+246     srf\_mem%trans%ptr         (:,:) = 0.\_wp
+247 
+248     \textcolor{comment}{! Propagate initial conditions down the tile structure, starting with the tile with which this
+       subroutine was called initially}
+249     \textcolor{comment}{! TBD: sub-tiles should not read the netcdf files again}
+250 \textcolor{comment}{!!$    IF (tile%no\_of\_sub\_tiles > 0) THEN}
+251 \textcolor{comment}{!!$      DO i=1,tile%no\_of\_sub\_tiles}
+252 \textcolor{comment}{!!$        CALL srf\_init\_ic(tile%sub\_tiles(i))}
+253 \textcolor{comment}{!!$      END DO}
+254 \textcolor{comment}{!!$    END IF}
+255 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dd2/namespacemo__srf__init_a7991eb826bda9d166a7e59489d44ea9b_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{da/dd2/namespacemo__srf__init_a7991eb826bda9d166a7e59489d44ea9b_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__srf__init_aa48301154b912ae072ff1916d431321b}{}\index{mo\+\_\+srf\+\_\+init@{mo\+\_\+srf\+\_\+init}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+srf\+\_\+init@{mo\+\_\+srf\+\_\+init}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+srf\+\_\+init\+::modname = \textquotesingle{}mo\+\_\+srf\+\_\+init\textquotesingle{}}\label{namespacemo__srf__init_aa48301154b912ae072ff1916d431321b}
+
+
+Definition at line 36 of file mo\+\_\+srf\+\_\+init.\+f90.
+
+
+
+Referenced by srf\+\_\+init\+\_\+bc(), and srf\+\_\+init\+\_\+ic().
+
+
+\begin{DoxyCode}
+36   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_srf\_init'}
+\end{DoxyCode}

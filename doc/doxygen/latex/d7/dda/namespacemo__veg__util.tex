@@ -1,0 +1,142 @@
+\hypertarget{namespacemo__veg__util}{}\section{mo\+\_\+veg\+\_\+util Module Reference}
+\label{namespacemo__veg__util}\index{mo\+\_\+veg\+\_\+util@{mo\+\_\+veg\+\_\+util}}
+
+
+Contains utilities for the veg process.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+real(wp) function, dimension(size(w, 1)), public \hyperlink{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}{water\+\_\+in\+\_\+root\+\_\+zone} (w, z, zr)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__veg__util_a7c115cfdb9def27cc2cb0f8a8332485f}{modname} = \textquotesingle{}mo\+\_\+veg\+\_\+util\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains utilities for the veg process. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}{}\index{mo\+\_\+veg\+\_\+util@{mo\+\_\+veg\+\_\+util}!water\+\_\+in\+\_\+root\+\_\+zone@{water\+\_\+in\+\_\+root\+\_\+zone}}
+\index{water\+\_\+in\+\_\+root\+\_\+zone@{water\+\_\+in\+\_\+root\+\_\+zone}!mo\+\_\+veg\+\_\+util@{mo\+\_\+veg\+\_\+util}}
+\subsubsection[{water\+\_\+in\+\_\+root\+\_\+zone}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, dimension(size(w,1)), public mo\+\_\+veg\+\_\+util\+::water\+\_\+in\+\_\+root\+\_\+zone (
+\begin{DoxyParamCaption}
+\item[{real(wp), dimension (\+:,\+:), intent(in)}]{w, }
+\item[{real(wp), dimension (\+:,\+:), intent(in)}]{z, }
+\item[{real(wp), dimension(\+:,\+:), intent(in)}]{zr}
+\end{DoxyParamCaption}
+)}\label{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em zr} & Depths of root layers\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Water content in root zone 
+\end{DoxyReturn}
+
+\begin{DoxyParams}{Parameters}
+{\em w} & Water content of soil layers \\
+\hline
+{\em z} & Depths of soil layers \\
+\hline
+\end{DoxyParams}
+
+
+Definition at line 26 of file mo\+\_\+veg\+\_\+util.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+veg\+\_\+interface\+::update\+\_\+vegetation\+\_\+1(), and mo\+\_\+veg\+\_\+init\+::veg\+\_\+init\+\_\+ic().
+
+
+\begin{DoxyCode}
+26 
+27     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: &
+28       & w (:,:), &         !< Water content of soil layers
+29       & z (:,:), &         !< Depths of soil layers
+30       & zr(:,:)            !< Depths of root layers
+31     \textcolor{keywordtype}{REAL(wp)} :: wr(size(w,1))
+32 
+33     \textcolor{keywordtype}{REAL(wp)} :: &
+34       & z\_sum    (SIZE(w,1)), &  !< Cumulative depth of soil down to a layer
+35       & z\_sum\_m1 (SIZE(w,1)), &  !< Cumulative depth of soil down to previous layer
+36       & zr\_total (SIZE(w,1))     !< Total depth of root\_zone
+37 
+38     \textcolor{keywordtype}{INTEGER} :: &
+39       & n  ,   &
+40       & nr
+41     \textcolor{keywordtype}{INTEGER} :: i
+42 
+43     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':water\_in\_root\_zone'}
+44 
+45     n  = \textcolor{keyword}{SIZE}(z,2)    \textcolor{comment}{! Number of soil layers}
+46     nr = \textcolor{keyword}{SIZE}(zr,2)  \textcolor{comment}{! Number of root layers}
+47 
+48     z\_sum(:) = sum(z(:,:), dim=2)
+49     zr\_total(:) = sum(zr(:,:), dim=2)
+50     \textcolor{keywordflow}{IF} (any(zr\_total > z\_sum)) &
+51       & \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Root zone larger than soil depth.'})
+52 
+53     z\_sum(:)    = 0.\_wp
+54     z\_sum\_m1(:) = 0.\_wp
+55     wr(:)    = 0.\_wp
+56     \textcolor{keywordflow}{DO} i=1,n
+57       z\_sum(:)    = z\_sum(:) + z(:,i)
+58       \textcolor{keywordflow}{WHERE}(zr\_total(:) > z\_sum(:))                                    \textcolor{comment}{! Root zone below current layer}
+59         wr(:) = wr(:) + w(:,i)
+60       \textcolor{keywordflow}{ELSEWHERE} (zr\_total(:) > z\_sum\_m1(:))                            \textcolor{comment}{! Root zone above current layer but
+       below previous layer, i.e.}
+61         wr(:) = wr(:) + w(:,i) * (zr\_total(:) - z\_sum\_m1(:)) / z(:,i)  \textcolor{comment}{!   root zone partially extends into
+       current layer}
+62 \textcolor{keywordflow}{      END WHERE}
+63       z\_sum\_m1(:) = z\_sum\_m1(:) + z(:,i)
+64 \textcolor{keywordflow}{    END DO}
+65 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d7/dda/namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__veg__util_a7c115cfdb9def27cc2cb0f8a8332485f}{}\index{mo\+\_\+veg\+\_\+util@{mo\+\_\+veg\+\_\+util}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+veg\+\_\+util@{mo\+\_\+veg\+\_\+util}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+veg\+\_\+util\+::modname = \textquotesingle{}mo\+\_\+veg\+\_\+util\textquotesingle{}}\label{namespacemo__veg__util_a7c115cfdb9def27cc2cb0f8a8332485f}
+
+
+Definition at line 21 of file mo\+\_\+veg\+\_\+util.\+f90.
+
+
+
+Referenced by water\+\_\+in\+\_\+root\+\_\+zone().
+
+
+\begin{DoxyCode}
+21   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_veg\_util'}
+\end{DoxyCode}

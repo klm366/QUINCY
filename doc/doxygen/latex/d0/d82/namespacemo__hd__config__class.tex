@@ -1,0 +1,157 @@
+\hypertarget{namespacemo__hd__config__class}{}\section{mo\+\_\+hd\+\_\+config\+\_\+class Module Reference}
+\label{namespacemo__hd__config__class}\index{mo\+\_\+hd\+\_\+config\+\_\+class@{mo\+\_\+hd\+\_\+config\+\_\+class}}
+
+
+Contains structures and methods for hd config.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(t\+\_\+hd\+\_\+config) function, pointer, public \hyperlink{namespacemo__hd__config__class_acc4bf17e3db786bdbe4c6634717b53f7}{new\+\_\+hd\+\_\+config} (nml\+\_\+handler)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__hd__config__class_a0541298ddcbe68dca19b1f7b1352d9e7}{modname} = \textquotesingle{}mo\+\_\+hd\+\_\+config\+\_\+class\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains structures and methods for hd config. 
+
+\begin{DoxyAuthor}{Author}
+Veronika Gayler, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Veroniks Gayler (2013-\/04-\/20) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__hd__config__class_acc4bf17e3db786bdbe4c6634717b53f7}{}\index{mo\+\_\+hd\+\_\+config\+\_\+class@{mo\+\_\+hd\+\_\+config\+\_\+class}!new\+\_\+hd\+\_\+config@{new\+\_\+hd\+\_\+config}}
+\index{new\+\_\+hd\+\_\+config@{new\+\_\+hd\+\_\+config}!mo\+\_\+hd\+\_\+config\+\_\+class@{mo\+\_\+hd\+\_\+config\+\_\+class}}
+\subsubsection[{new\+\_\+hd\+\_\+config}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+hd\+\_\+config) function, pointer, public mo\+\_\+hd\+\_\+config\+\_\+class\+::new\+\_\+hd\+\_\+config (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{nml\+\_\+handler}
+\end{DoxyParamCaption}
+)}\label{namespacemo__hd__config__class_acc4bf17e3db786bdbe4c6634717b53f7}
+
+
+Definition at line 39 of file mo\+\_\+hd\+\_\+config\+\_\+class.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::close\+\_\+nml(), modname, mo\+\_\+jsb\+\_\+grid\+\_\+class\+::new\+\_\+vgrid(), mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::open\+\_\+nml(), mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::position\+\_\+nml(), and mo\+\_\+jsb\+\_\+grid\+::register\+\_\+vgrid().
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+process\+\_\+factory\+::create\+\_\+process\+\_\+config().
+
+
+\begin{DoxyCode}
+39 
+40     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__namelist__iface}{mo\_jsb\_namelist\_iface}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__jsb__namelist__iface_abb2821ffd4c30375faa307d522af3bcb}{open\_nml}, positioned, 
+      \hyperlink{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}{position\_nml}, \hyperlink{namespacemo__jsb__namelist__iface_a240047c255ab5bb3871ecdcdcd6d6a92}{close\_nml}
+41     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid__class}{mo\_jsb\_grid\_class}\textcolor{keywordtype}{,     ONLY}: t\_jsb\_vgrid, \hyperlink{namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8}{new\_vgrid}
+42     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid}{mo\_jsb\_grid}\textcolor{keywordtype}{,           ONLY}: \hyperlink{namespacemo__jsb__grid_a043909fe2d80d058e59831341f25fdab}{register\_vgrid}
+43     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__io}{mo\_jsb\_io}\textcolor{keywordtype}{,             ONLY}: zaxis\_depth\_below\_land
+44 
+45     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(in)} :: nml\_handler
+46     \textcolor{keywordtype}{TYPE}(t\_hd\_config), \textcolor{keywordtype}{POINTER} :: config
+47 
+48     \textcolor{keywordtype}{LOGICAL}                       :: active
+49     \textcolor{keywordtype}{CHARACTER(len=filename\_max)}   :: ic\_filename
+50     \textcolor{keywordtype}{CHARACTER(len=filename\_max)}   :: bc\_filename
+51     \textcolor{keywordtype}{LOGICAL}                       :: debug\_hd
+52     \textcolor{keywordtype}{LOGICAL}                       :: diag\_water\_budget
+53     \textcolor{keywordtype}{CHARACTER(len=32)}             :: routing\_scheme
+55 
+56     namelist /jsb\_hd\_nml/          &
+57       active,                      &
+58       ic\_filename, bc\_filename,    &
+59       debug\_hd,                    &
+60       diag\_water\_budget,           &
+61       routing\_scheme
+62 
+63     \textcolor{keywordtype}{INTEGER} :: nml\_unit, istat
+64 
+65     \textcolor{keywordtype}{TYPE}(t\_jsb\_vgrid), \textcolor{keywordtype}{POINTER} :: hd\_o, hd\_b, hd\_r  \textcolor{comment}{! Vertical grids}
+66 
+67     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':new\_hd\_config'}
+68 
+69     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Starting hd configuration'})
+70 
+71     \textcolor{keyword}{ALLOCATE}(config)
+72 
+73     \textcolor{comment}{! Set defaults}
+74     active          = .false.
+75     ic\_filename     = \textcolor{stringliteral}{'hdstart.nc'}
+76     bc\_filename     = \textcolor{stringliteral}{'hdpara.nc'}
+77     debug\_hd        = .false.
+78     diag\_water\_budget = .true.
+79     routing\_scheme  = \textcolor{stringliteral}{'full'}
+80 
+81     nml\_unit = \hyperlink{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}{position\_nml}(\textcolor{stringliteral}{'jsb\_hd\_nml'}, nml\_handler, status=istat)
+82     \textcolor{keywordflow}{IF} (istat == positioned) \textcolor{keyword}{READ}(nml\_unit, jsb\_hd\_nml)
+83 
+84     config%active                    = active
+85     config%ic\_filename               = ic\_filename
+86     config%bc\_filename               = bc\_filename
+87     config%debug\_hd                  = debug\_hd
+88     config%diag\_water\_budget         = diag\_water\_budget
+89     config%routing\_scheme            = routing\_scheme
+90 
+91     hd\_o  => \hyperlink{namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8}{new\_vgrid}(\textcolor{stringliteral}{'hd\_nres\_overlflow'}, zaxis\_depth\_below\_land, 1, levels=(/1.\_wp/), units=\textcolor{stringliteral}{''})
+92     \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__grid_a043909fe2d80d058e59831341f25fdab}{register\_vgrid}(hd\_o)
+93 
+94     hd\_b  => \hyperlink{namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8}{new\_vgrid}(\textcolor{stringliteral}{'hd\_nres\_baseflow'}, zaxis\_depth\_below\_land, 1, levels=(/1.\_wp/), units=\textcolor{stringliteral}{''})
+95     \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__grid_a043909fe2d80d058e59831341f25fdab}{register\_vgrid}(hd\_b)
+96 
+97     hd\_r  => \hyperlink{namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8}{new\_vgrid}(\textcolor{stringliteral}{'hd\_nres\_riverflow'}, zaxis\_depth\_below\_land, 5, levels=(/1.\_wp,2.\_wp,3.\_wp,
+      4.\_wp,5.\_wp/), units=\textcolor{stringliteral}{''})
+98     \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__grid_a043909fe2d80d058e59831341f25fdab}{register\_vgrid}(hd\_r)
+99 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=338pt]{d0/d82/namespacemo__hd__config__class_acc4bf17e3db786bdbe4c6634717b53f7_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=345pt]{d0/d82/namespacemo__hd__config__class_acc4bf17e3db786bdbe4c6634717b53f7_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__hd__config__class_a0541298ddcbe68dca19b1f7b1352d9e7}{}\index{mo\+\_\+hd\+\_\+config\+\_\+class@{mo\+\_\+hd\+\_\+config\+\_\+class}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+hd\+\_\+config\+\_\+class@{mo\+\_\+hd\+\_\+config\+\_\+class}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+hd\+\_\+config\+\_\+class\+::modname = \textquotesingle{}mo\+\_\+hd\+\_\+config\+\_\+class\textquotesingle{}}\label{namespacemo__hd__config__class_a0541298ddcbe68dca19b1f7b1352d9e7}
+
+
+Definition at line 34 of file mo\+\_\+hd\+\_\+config\+\_\+class.\+f90.
+
+
+
+Referenced by new\+\_\+hd\+\_\+config().
+
+
+\begin{DoxyCode}
+34   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_hd\_config\_class'}
+\end{DoxyCode}

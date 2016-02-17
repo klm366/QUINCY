@@ -1,0 +1,297 @@
+\hypertarget{namespacemo__jsb__model__init}{}\section{mo\+\_\+jsb\+\_\+model\+\_\+init Module Reference}
+\label{namespacemo__jsb__model__init}\index{mo\+\_\+jsb\+\_\+model\+\_\+init@{mo\+\_\+jsb\+\_\+model\+\_\+init}}
+
+
+Contains methods for J\+S\+B\+A\+C\+H initializations.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine \hyperlink{namespacemo__jsb__model__init_abde13ff24f002945132bb153233d61ea}{init\+\_\+model\+\_\+patch} (model\+\_\+id, patch)
+\item 
+subroutine \hyperlink{namespacemo__jsb__model__init_adca97e8b4accd7231a2461e78399ee71}{init\+\_\+model\+\_\+decomposition} (model\+\_\+id, decomposition)
+\item 
+subroutine \hyperlink{namespacemo__jsb__model__init_adfe552aef42349bce64eb6bbd05e01e7}{init\+\_\+model\+\_\+common} (model)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__model__init_a1b4f5a568975c096385432c5e8a209f0}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+model\+\_\+init\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains methods for J\+S\+B\+A\+C\+H initializations. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__model__init_adfe552aef42349bce64eb6bbd05e01e7}{}\index{mo\+\_\+jsb\+\_\+model\+\_\+init@{mo\+\_\+jsb\+\_\+model\+\_\+init}!init\+\_\+model\+\_\+common@{init\+\_\+model\+\_\+common}}
+\index{init\+\_\+model\+\_\+common@{init\+\_\+model\+\_\+common}!mo\+\_\+jsb\+\_\+model\+\_\+init@{mo\+\_\+jsb\+\_\+model\+\_\+init}}
+\subsubsection[{init\+\_\+model\+\_\+common}]{\setlength{\rightskip}{0pt plus 5cm}subroutine mo\+\_\+jsb\+\_\+model\+\_\+init\+::init\+\_\+model\+\_\+common (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+model), intent(inout), pointer}]{model}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__model__init_adfe552aef42349bce64eb6bbd05e01e7}
+
+
+Definition at line 149 of file mo\+\_\+jsb\+\_\+model\+\_\+init.\+f90.
+
+
+
+References mo\+\_\+hd\+\_\+init\+::hd\+\_\+init\+\_\+bc(), mo\+\_\+hd\+\_\+init\+::hd\+\_\+init\+\_\+ic(), mo\+\_\+jsb\+\_\+model\+\_\+usecases\+::init\+\_\+usecase(), mo\+\_\+jsb\+\_\+process\+\_\+factory\+::max\+\_\+no\+\_\+of\+\_\+processes, modname, mo\+\_\+jsb\+\_\+grid\+\_\+class\+::new\+\_\+vgrid(), mo\+\_\+jsb\+\_\+model\+\_\+class\+::print\+\_\+model(), mo\+\_\+jsb\+\_\+grid\+::register\+\_\+vgrid(), mo\+\_\+soil\+\_\+init\+::soil\+\_\+init(), mo\+\_\+srf\+\_\+init\+::srf\+\_\+init\+\_\+bc(), mo\+\_\+srf\+\_\+init\+::srf\+\_\+init\+\_\+ic(), mo\+\_\+veg\+\_\+init\+::veg\+\_\+init\+\_\+bc(), and mo\+\_\+veg\+\_\+init\+::veg\+\_\+init\+\_\+ic().
+
+
+
+Referenced by init\+\_\+model\+\_\+decomposition(), and init\+\_\+model\+\_\+patch().
+
+
+\begin{DoxyCode}
+149 
+150     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__model__class}{mo\_jsb\_model\_class}\textcolor{keywordtype}{,    ONLY}: \hyperlink{namespacemo__jsb__model__class_aeff5c6eb74d03881233ad31085269d5e}{print\_model}
+151     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__tile__class}{mo\_jsb\_tile\_class}\textcolor{keywordtype}{,     ONLY}: t\_jsb\_tile
+152     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__process__factory}{mo\_jsb\_process\_factory}\textcolor{keywordtype}{,      ONLY}: 
+      \hyperlink{namespacemo__jsb__process__factory_a337f3a29d18cd060186cd10e4b2a878e}{max\_no\_of\_processes}
+153     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__model__usecases}{mo\_jsb\_model\_usecases}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__jsb__model__usecases_aee8b30e4af60fbe54276c99ea4ee1fd1}{init\_usecase}
+154     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__srf__init}{mo\_srf\_init}\textcolor{keywordtype}{,           ONLY}: \hyperlink{namespacemo__srf__init_a7991eb826bda9d166a7e59489d44ea9b}{srf\_init\_ic}, 
+      \hyperlink{namespacemo__srf__init_a7c44e1a5211e8f4702bfd3724031f8d7}{srf\_init\_bc}
+155     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__soil__init}{mo\_soil\_init}\textcolor{keywordtype}{,          ONLY}: \hyperlink{namespacemo__soil__init_acd283c148fd4faca32050c04a10218a3}{soil\_init}
+156     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__veg__init}{mo\_veg\_init}\textcolor{keywordtype}{,           ONLY}: \hyperlink{namespacemo__veg__init_a1f3c0830f53331836f61d9ed195747ae}{veg\_init\_ic}, 
+      \hyperlink{namespacemo__veg__init_a51acdbb676d276054d328e045605f688}{veg\_init\_bc}
+157 \textcolor{preprocessor}{#ifndef \_\_NO\_JSBACH\_HD\_\_}
+158 \textcolor{preprocessor}{}    \textcolor{keywordtype}{USE }\hyperlink{namespacemo__hd__init}{mo\_hd\_init}\textcolor{keywordtype}{,            ONLY}: \hyperlink{namespacemo__hd__init_a526043119739677fd2421c98d327096c}{hd\_init\_ic}, \hyperlink{namespacemo__hd__init_adf1d82e3e44ab86867243ede5e9d8a4c}{hd\_init\_bc}
+159 \textcolor{preprocessor}{#endif}
+160 \textcolor{preprocessor}{}    \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid__class}{mo\_jsb\_grid\_class}\textcolor{keywordtype}{,    ONLY}: t\_jsb\_vgrid, \hyperlink{namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8}{new\_vgrid}
+161     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid}{mo\_jsb\_grid}\textcolor{keywordtype}{,          ONLY}: \hyperlink{namespacemo__jsb__grid_a043909fe2d80d058e59831341f25fdab}{register\_vgrid}
+162     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__io}{mo\_jsb\_io}\textcolor{keywordtype}{,            ONLY}: zaxis\_surface
+163 
+164     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}, \textcolor{keywordtype}{INTENT(inout)} :: model
+165 
+166     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{POINTER} :: tile
+167     \textcolor{keywordtype}{TYPE}(t\_jsb\_vgrid), \textcolor{keywordtype}{POINTER} :: surface                      \textcolor{comment}{! Vertical grid}
+168 
+169     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':init\_model\_common'}
+170 
+171     surface => \hyperlink{namespacemo__jsb__grid__class_a9b97575796bec8269c7381e0ffedd2d8}{new\_vgrid}(\textcolor{stringliteral}{'surface'}, zaxis\_surface, 1)
+172     \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__grid_a043909fe2d80d058e59831341f25fdab}{register\_vgrid}(surface)
+173 
+174     \textcolor{keyword}{ALLOCATE}(model%processes(\hyperlink{namespacemo__jsb__process__factory_a337f3a29d18cd060186cd10e4b2a878e}{max\_no\_of\_processes}))
+175 
+176     \textcolor{keywordflow}{IF} (model%config%usecase /= \textcolor{stringliteral}{''}) \textcolor{keywordflow}{THEN}
+177       \textcolor{comment}{! Shortcut model configuration through usecase}
+178       \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__model__usecases_aee8b30e4af60fbe54276c99ea4ee1fd1}{init\_usecase}(model)
+179     \textcolor{keywordflow}{ELSE}
+180       \textcolor{comment}{! Explicit model configuration through namelist}
+181       \textcolor{comment}{! TBD}
+182 \textcolor{keywordflow}{    END IF}
+183 
+184     \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__model__class_aeff5c6eb74d03881233ad31085269d5e}{print\_model}(model)
+185 
+186     \textcolor{comment}{! At this point, the model configuration, tile and memory structure is set up.}
+187 
+188     \textcolor{comment}{! We continue with initializing the different model processes.}
+189 
+190     tile => model%Get\_top\_tile()
+191 
+192     \textcolor{keyword}{CALL }\hyperlink{namespacemo__srf__init_a7c44e1a5211e8f4702bfd3724031f8d7}{srf\_init\_bc}(tile)
+193     \textcolor{keyword}{CALL }\hyperlink{namespacemo__srf__init_a7991eb826bda9d166a7e59489d44ea9b}{srf\_init\_ic}(tile)
+194 
+195     \textcolor{keyword}{CALL }\hyperlink{namespacemo__soil__init_acd283c148fd4faca32050c04a10218a3}{soil\_init}(tile)
+196 
+197     \textcolor{comment}{! Vegetation must be initialized after soil!}
+198     \textcolor{keyword}{CALL }\hyperlink{namespacemo__veg__init_a51acdbb676d276054d328e045605f688}{veg\_init\_bc}(tile)
+199     \textcolor{keyword}{CALL }\hyperlink{namespacemo__veg__init_a1f3c0830f53331836f61d9ed195747ae}{veg\_init\_ic}(tile)
+200 
+201 \textcolor{preprocessor}{#ifndef \_\_NO\_JSBACH\_HD\_\_}
+202 \textcolor{preprocessor}{}    \textcolor{keyword}{CALL }\hyperlink{namespacemo__hd__init_adf1d82e3e44ab86867243ede5e9d8a4c}{hd\_init\_bc}(tile)
+203     \textcolor{keyword}{CALL }\hyperlink{namespacemo__hd__init_a526043119739677fd2421c98d327096c}{hd\_init\_ic}(tile)
+204 \textcolor{preprocessor}{#endif}
+205 \textcolor{preprocessor}{}    \textcolor{comment}{! Initialize tile fractions for all tiles}
+206     \textcolor{comment}{! This is done after the initialization of the initial and boundary conditions of the model components}
+207     \textcolor{comment}{! because e.g. the fraction of the vegetated tile depends on LAI.}
+208     \textcolor{comment}{! TBD: later read veg\_ratio\_max into 'veg' tile, and set 'bare' tile to 1-veg\_ratio\_max}
+209 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d8/d8e/namespacemo__jsb__model__init_adfe552aef42349bce64eb6bbd05e01e7_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=349pt]{d8/d8e/namespacemo__jsb__model__init_adfe552aef42349bce64eb6bbd05e01e7_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__model__init_adca97e8b4accd7231a2461e78399ee71}{}\index{mo\+\_\+jsb\+\_\+model\+\_\+init@{mo\+\_\+jsb\+\_\+model\+\_\+init}!init\+\_\+model\+\_\+decomposition@{init\+\_\+model\+\_\+decomposition}}
+\index{init\+\_\+model\+\_\+decomposition@{init\+\_\+model\+\_\+decomposition}!mo\+\_\+jsb\+\_\+model\+\_\+init@{mo\+\_\+jsb\+\_\+model\+\_\+init}}
+\subsubsection[{init\+\_\+model\+\_\+decomposition}]{\setlength{\rightskip}{0pt plus 5cm}subroutine mo\+\_\+jsb\+\_\+model\+\_\+init\+::init\+\_\+model\+\_\+decomposition (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{model\+\_\+id, }
+\item[{type(pe\+\_\+decomposed), intent(in)}]{decomposition}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__model__init_adca97e8b4accd7231a2461e78399ee71}
+
+
+Definition at line 120 of file mo\+\_\+jsb\+\_\+model\+\_\+init.\+f90.
+
+
+
+References init\+\_\+model\+\_\+common(), modname, and mo\+\_\+jsb\+\_\+grid\+::register\+\_\+grid().
+
+
+\begin{DoxyCode}
+120 
+121     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__domain__iface}{mo\_jsb\_domain\_iface}\textcolor{keywordtype}{, ONLY}: pe\_decomposed
+122     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid__class}{mo\_jsb\_grid\_class}\textcolor{keywordtype}{,   ONLY}: t\_jsb\_grid, new\_grid
+123     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid}{mo\_jsb\_grid}\textcolor{keywordtype}{,         ONLY}: \hyperlink{namespacemo__jsb__grid_a7dc7b6b26aa0f0cce8b32e1f7f3307d6}{register\_grid}
+124 
+125     \textcolor{keywordtype}{INTEGER},               \textcolor{keywordtype}{INTENT(in)} :: model\_id
+126     \textcolor{keywordtype}{TYPE}(pe\_decomposed),   \textcolor{keywordtype}{INTENT(in)} :: decomposition
+127 
+128     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}  :: model
+129     \textcolor{keywordtype}{TYPE}(t\_jsb\_grid),  \textcolor{keywordtype}{POINTER}  :: grid
+130 
+131     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':init\_model\_decomposition'}
+132 
+133     \textcolor{keywordflow}{IF} (decomposition%nlon < 0) &
+134       \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Improper call with invalid decomposition'})
+135 
+136     model => jsbach%models(model\_id)%m
+137 
+138     grid => new\_grid(decomp=decomposition)
+139     \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__grid_a7dc7b6b26aa0f0cce8b32e1f7f3307d6}{register\_grid}(grid)
+140     model%grid\_id = grid%id
+141 
+142     \textcolor{keyword}{CALL }init\_model\_common(model)
+143 
+144     \textcolor{keyword}{NULLIFY}(model)
+145 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d8/d8e/namespacemo__jsb__model__init_adca97e8b4accd7231a2461e78399ee71_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__model__init_abde13ff24f002945132bb153233d61ea}{}\index{mo\+\_\+jsb\+\_\+model\+\_\+init@{mo\+\_\+jsb\+\_\+model\+\_\+init}!init\+\_\+model\+\_\+patch@{init\+\_\+model\+\_\+patch}}
+\index{init\+\_\+model\+\_\+patch@{init\+\_\+model\+\_\+patch}!mo\+\_\+jsb\+\_\+model\+\_\+init@{mo\+\_\+jsb\+\_\+model\+\_\+init}}
+\subsubsection[{init\+\_\+model\+\_\+patch}]{\setlength{\rightskip}{0pt plus 5cm}subroutine mo\+\_\+jsb\+\_\+model\+\_\+init\+::init\+\_\+model\+\_\+patch (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{model\+\_\+id, }
+\item[{type(t\+\_\+patch), intent(in)}]{patch}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__model__init_abde13ff24f002945132bb153233d61ea}
+
+
+Definition at line 72 of file mo\+\_\+jsb\+\_\+model\+\_\+init.\+f90.
+
+
+
+References init\+\_\+model\+\_\+common(), modname, and mo\+\_\+jsb\+\_\+grid\+::register\+\_\+grid().
+
+
+\begin{DoxyCode}
+72 
+73     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__domain__iface}{mo\_jsb\_domain\_iface}\textcolor{keywordtype}{, ONLY}: t\_patch
+74     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid__class}{mo\_jsb\_grid\_class}\textcolor{keywordtype}{,   ONLY}: t\_jsb\_grid, new\_grid
+75     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__grid}{mo\_jsb\_grid}\textcolor{keywordtype}{,         ONLY}: \hyperlink{namespacemo__jsb__grid_a7dc7b6b26aa0f0cce8b32e1f7f3307d6}{register\_grid}
+76 
+77     \textcolor{keywordtype}{INTEGER},                    \textcolor{keywordtype}{INTENT(in)} :: model\_id
+78     \textcolor{keywordtype}{TYPE}(t\_patch),              \textcolor{keywordtype}{INTENT(in)} :: patch
+79 
+80 \textcolor{comment}{!!$    ! The soil layer structure has be sent back to ICON because this information is needed to setup the
+       CDI output}
+81 \textcolor{comment}{!!$    INTEGER,           OPTIONAL, INTENT(out) :: &}
+82 \textcolor{comment}{!!$      & nsoil\_w,                                & !< Number of soil layers (water)}
+83 \textcolor{comment}{!!$      & nsoil\_e                                   !< Number of soil layers (energy)}
+84 \textcolor{comment}{!!$    REAL(wp), POINTER, OPTIONAL              :: &}
+85 \textcolor{comment}{!!$      & dzsoil\_w(:),                            & !< Soil layer depths (water)}
+86 \textcolor{comment}{!!$      & dzsoil\_e(:)                               !< Soil layer depths (energy)}
+87 
+88     \textcolor{keywordtype}{TYPE}(t\_jsb\_model), \textcolor{keywordtype}{POINTER}  :: model
+89     \textcolor{keywordtype}{TYPE}(t\_jsb\_grid),  \textcolor{keywordtype}{POINTER}  :: grid
+90 
+91     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':init\_model\_patch'}
+92 
+93     \textcolor{keywordflow}{IF} (patch%id < 0) &
+94       \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'Improper call with invalid patch'})
+95 
+96     model => jsbach%models(model\_id)%m
+97 
+98     grid => new\_grid(patch=patch)
+99     \textcolor{keyword}{CALL }\hyperlink{namespacemo__jsb__grid_a7dc7b6b26aa0f0cce8b32e1f7f3307d6}{register\_grid}(grid)
+100     model%grid\_id = grid%id
+101 
+102     \textcolor{keyword}{CALL }init\_model\_common(model)
+103 
+104 \textcolor{comment}{!!$    IF (PRESENT(nsoil\_w)) nsoil\_w = model%config%soil%nsoil\_water}
+105 \textcolor{comment}{!!$    IF (PRESENT(nsoil\_e)) nsoil\_e = model%config%soil%nsoil\_energy}
+106 \textcolor{comment}{!!$    IF (PRESENT(dzsoil\_w)) THEN}
+107 \textcolor{comment}{!!$      ALLOCATE(dzsoil\_w(nsoil\_w))}
+108 \textcolor{comment}{!!$      dzsoil\_w(1:nsoil\_w) = model%config%soil%dz\_water(1:nsoil\_w)}
+109 \textcolor{comment}{!!$    END IF}
+110 \textcolor{comment}{!!$    IF (PRESENT(dzsoil\_e)) THEN}
+111 \textcolor{comment}{!!$      ALLOCATE(dzsoil\_e(nsoil\_e))}
+112 \textcolor{comment}{!!$      dzsoil\_w(1:nsoil\_e) = model%config%soil%dz\_energy(1:nsoil\_e)}
+113 \textcolor{comment}{!!$    END IF}
+114 
+115     \textcolor{keyword}{NULLIFY}(model)
+116 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d8/d8e/namespacemo__jsb__model__init_abde13ff24f002945132bb153233d61ea_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__model__init_a1b4f5a568975c096385432c5e8a209f0}{}\index{mo\+\_\+jsb\+\_\+model\+\_\+init@{mo\+\_\+jsb\+\_\+model\+\_\+init}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+model\+\_\+init@{mo\+\_\+jsb\+\_\+model\+\_\+init}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+model\+\_\+init\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+model\+\_\+init\textquotesingle{}}\label{namespacemo__jsb__model__init_a1b4f5a568975c096385432c5e8a209f0}
+
+
+Definition at line 29 of file mo\+\_\+jsb\+\_\+model\+\_\+init.\+f90.
+
+
+
+Referenced by init\+\_\+model\+\_\+common(), init\+\_\+model\+\_\+decomposition(), and init\+\_\+model\+\_\+patch().
+
+
+\begin{DoxyCode}
+29   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_model\_init'}
+\end{DoxyCode}

@@ -1,0 +1,137 @@
+\hypertarget{namespacemo__srf__process}{}\section{mo\+\_\+srf\+\_\+process Module Reference}
+\label{namespacemo__srf__process}\index{mo\+\_\+srf\+\_\+process@{mo\+\_\+srf\+\_\+process}}
+
+
+Contains the routines for the srf processes.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__srf__process_aa120db81e24075287f867d3958eca237}{surface\+\_\+temp\+\_\+implicit} (klon, steplen, pcp, pescoe, pfscoe, peqcoe, pfqcoe, psold, pqsold, pdqsold, pnetrad, pgrdfl, pcfh, pcair, pcsat, pfracsu, pgrdcap, psnew)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__srf__process_a74a1ddcea9503b7ef5d8ac1d52d3b3b4}{modname} = \textquotesingle{}mo\+\_\+srf\+\_\+process\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains the routines for the srf processes. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__srf__process_aa120db81e24075287f867d3958eca237}{}\index{mo\+\_\+srf\+\_\+process@{mo\+\_\+srf\+\_\+process}!surface\+\_\+temp\+\_\+implicit@{surface\+\_\+temp\+\_\+implicit}}
+\index{surface\+\_\+temp\+\_\+implicit@{surface\+\_\+temp\+\_\+implicit}!mo\+\_\+srf\+\_\+process@{mo\+\_\+srf\+\_\+process}}
+\subsubsection[{surface\+\_\+temp\+\_\+implicit}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+srf\+\_\+process\+::surface\+\_\+temp\+\_\+implicit (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{klon, }
+\item[{real(wp), intent(in)}]{steplen, }
+\item[{real(wp), dimension(klon), intent(in)}]{pcp, }
+\item[{real(wp), dimension(klon), intent(in)}]{pescoe, }
+\item[{real(wp), dimension(klon), intent(in)}]{pfscoe, }
+\item[{real(wp), dimension(klon), intent(in)}]{peqcoe, }
+\item[{real(wp), dimension(klon), intent(in)}]{pfqcoe, }
+\item[{real(wp), dimension(klon), intent(in)}]{psold, }
+\item[{real(wp), dimension(klon), intent(in)}]{pqsold, }
+\item[{real(wp), dimension(klon), intent(in)}]{pdqsold, }
+\item[{real(wp), dimension(klon), intent(in)}]{pnetrad, }
+\item[{real(wp), dimension(klon), intent(in)}]{pgrdfl, }
+\item[{real(wp), dimension(klon), intent(in)}]{pcfh, }
+\item[{real(wp), dimension(klon), intent(in)}]{pcair, }
+\item[{real(wp), dimension(klon), intent(in)}]{pcsat, }
+\item[{real(wp), dimension(klon), intent(in)}]{pfracsu, }
+\item[{real(wp), dimension(klon), intent(in)}]{pgrdcap, }
+\item[{real(wp), dimension(klon), intent(out)}]{psnew}
+\end{DoxyParamCaption}
+)}\label{namespacemo__srf__process_aa120db81e24075287f867d3958eca237}
+
+
+Definition at line 32 of file mo\+\_\+srf\+\_\+process.\+f90.
+
+
+
+Referenced by mo\+\_\+srf\+\_\+interface\+::update\+\_\+surface\+\_\+energy().
+
+
+\begin{DoxyCode}
+32 
+33     \textcolor{keywordtype}{USE }mo\_echam\_vdiff\_params\textcolor{keywordtype}{, ONLY}: cvdifts   \textcolor{comment}{! TBD: change to 1. for standalone JSBACH}
+34     \textcolor{keywordtype}{USE }mo\_physical\_constants\textcolor{keywordtype}{, ONLY}: &
+35       & cpd, &
+36       & vtmpc2, &
+37       & zemiss\_def, &
+38       & stbo, &
+39       & alv,  &
+40       & als
+41 
+42 
+43     \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(in)}    :: klon
+44     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: steplen
+45     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pcp(klon), pfscoe(klon), pescoe(klon), pfqcoe(klon), peqcoe(klon)
+46     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: psold(klon), pqsold(klon), pdqsold(klon)
+47     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pnetrad(klon), pgrdfl(klon)
+48     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pcfh(klon), pcair(klon), pcsat(klon), pfracsu(klon)
+49     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pgrdcap(klon)
+50     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(out)}   :: psnew(klon)
+51     \textcolor{comment}{!}
+52     \textcolor{keywordtype}{REAL(wp)} :: zcolin(klon), zcohfl(klon), zcoind(klon), zicp(klon), zca(klon), zcs(klon)
+53     \textcolor{keywordtype}{REAL(wp)} :: pdt
+54     \textcolor{keywordtype}{REAL(wp)} :: pc16
+55 
+56     pdt     = cvdifts * steplen
+57     pc16    = cpd * vtmpc2
+58 
+59     \textcolor{comment}{!}
+60     zicp(:) = 1.\_wp / pcp(:)
+61     \textcolor{comment}{!}
+62     zca(:)    = als * pfracsu(:) +  alv * (pcair(:) - pfracsu(:))
+63     zcs(:)    = als * pfracsu(:) +  alv * (pcsat(:) - pfracsu(:))
+64     \textcolor{comment}{!}
+65     zcolin(:) = pgrdcap(:)*zicp(:) +                                                              &
+66               &      pdt * (zicp(:) * 4.\_wp * zemiss\_def * stbo * ((zicp(:) * psold(:))**3)  -    &
+67               &      pcfh(:) * (zca(:) * peqcoe(:) - zcs(:)) *                                    &
+68               &      zicp(:) * pdqsold(:))
+69     \textcolor{comment}{!}
+70     zcohfl(:) = -pdt * pcfh(:) * (pescoe(:) - 1.\_wp)
+71     \textcolor{comment}{!}
+72     zcoind(:) = pdt * (pnetrad(:) + pcfh(:) * pfscoe(:) +  pcfh(:) *                              &
+73               &      ((zca(:) * peqcoe(:) - zcs(:)) * pqsold(:) + zca(:) * pfqcoe(:)) + pgrdfl(:))
+74     \textcolor{comment}{!}
+75     psnew(:)  = (zcolin(:) * psold(:) + zcoind(:)) / (zcolin(:) + zcohfl(:))
+76 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d7/d35/namespacemo__srf__process_aa120db81e24075287f867d3958eca237_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__srf__process_a74a1ddcea9503b7ef5d8ac1d52d3b3b4}{}\index{mo\+\_\+srf\+\_\+process@{mo\+\_\+srf\+\_\+process}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+srf\+\_\+process@{mo\+\_\+srf\+\_\+process}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+srf\+\_\+process\+::modname = \textquotesingle{}mo\+\_\+srf\+\_\+process\textquotesingle{}}\label{namespacemo__srf__process_a74a1ddcea9503b7ef5d8ac1d52d3b3b4}
+
+
+Definition at line 21 of file mo\+\_\+srf\+\_\+process.\+f90.
+
+
+\begin{DoxyCode}
+21   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_srf\_process'}
+\end{DoxyCode}

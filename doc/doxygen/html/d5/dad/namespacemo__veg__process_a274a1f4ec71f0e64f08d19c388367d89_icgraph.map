@@ -1,0 +1,8 @@
+<map id="mo_veg_process::foliage_projected_cover" name="mo_veg_process::foliage_projected_cover">
+<area shape="rect" id="node2" href="$d1/d90/namespacemo__veg__interface.html#a58ea81b4305df127f8b495a40b520eae" title="mo_veg_interface::update\l_vegetation_2" alt="" coords="220,5,392,47"/>
+<area shape="rect" id="node4" href="$d2/db5/namespacemo__veg__init.html#a1f3c0830f53331836f61d9ed195747ae" title="mo_veg_init::veg_init_ic" alt="" coords="225,71,387,98"/>
+<area shape="rect" id="node3" href="$db/d22/namespacemo__jsb__interface.html#a669b978bf786a78426b4aa57d8c8f7b1" title="mo_jsb_interface::interface_full" alt="" coords="440,13,643,39"/>
+<area shape="rect" id="node5" href="$d8/d8e/namespacemo__jsb__model__init.html#adfe552aef42349bce64eb6bbd05e01e7" title="mo_jsb_model_init::\linit_model_common" alt="" coords="472,64,611,105"/>
+<area shape="rect" id="node6" href="$d8/d8e/namespacemo__jsb__model__init.html#adca97e8b4accd7231a2461e78399ee71" title="mo_jsb_model_init::\linit_model_decomposition" alt="" coords="691,31,863,72"/>
+<area shape="rect" id="node7" href="$d8/d8e/namespacemo__jsb__model__init.html#abde13ff24f002945132bb153233d61ea" title="mo_jsb_model_init::\linit_model_patch" alt="" coords="707,96,846,137"/>
+</map>

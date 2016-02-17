@@ -1,0 +1,38 @@
+\hypertarget{mo__jsb__io__netcdf__iface_8f90}{}\section{/home/reiner/git/jsbach.ulme/src/adapters/mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.f90 File Reference}
+\label{mo__jsb__io__netcdf__iface_8f90}\index{/home/reiner/git/jsbach.\+ulme/src/adapters/mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90@{/home/reiner/git/jsbach.\+ulme/src/adapters/mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface.\+f90}}
+\subsection*{Data Types}
+\begin{DoxyCompactItemize}
+\item 
+type \hyperlink{structmo__jsb__io__netcdf__iface_1_1t__input__file}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::t\+\_\+input\+\_\+file}
+\item 
+interface \hyperlink{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+2d}
+\item 
+interface \hyperlink{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d__time}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+2d\+\_\+time}
+\item 
+interface \hyperlink{interfacemo__jsb__io__netcdf__iface_1_1netcdf__read__2d__extdim}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+2d\+\_\+extdim}
+\end{DoxyCompactItemize}
+\subsection*{Modules}
+\begin{DoxyCompactItemize}
+\item 
+module \hyperlink{namespacemo__jsb__io__netcdf__iface}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface}
+\begin{DoxyCompactList}\small\item\em Contains the interface to io. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+type(t\+\_\+input\+\_\+file) function \hyperlink{namespacemo__jsb__io__netcdf__iface_a62f76a91ba113d51746677418c103187}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+open\+\_\+input} (filename, patch, decomp)
+\item 
+subroutine \hyperlink{namespacemo__jsb__io__netcdf__iface_a1e42c90ce288ce4489b6e472daa40d2e}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+close\+\_\+file} (input\+\_\+file)
+\item 
+real(wp) function, dimension(\+:,\+:), pointer \hyperlink{namespacemo__jsb__io__netcdf__iface_a228681d1ececa8f44b717c01629fee9d}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+real\+\_\+2d} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array)
+\item 
+real(wp) function, dimension(\+:,\+:,\+:), pointer \hyperlink{namespacemo__jsb__io__netcdf__iface_a4e62dfd3cc23b3747e5039db1110a5a0}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+time} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array, start\+\_\+time\+\_\+step, end\+\_\+time\+\_\+step)
+\item 
+real(wp) function, dimension(\+:,\+:,\+:), pointer \hyperlink{namespacemo__jsb__io__netcdf__iface_acc08a587eb91f00869119c81c06aea05}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::netcdf\+\_\+read\+\_\+real\+\_\+2d\+\_\+extdim} (input\+\_\+file, variable\+\_\+name, fill\+\_\+array, start\+\_\+extdim, end\+\_\+extdim, extdim\+\_\+name)
+\item 
+subroutine \hyperlink{namespacemo__jsb__io__netcdf__iface_a14c4e6dbfc96b953416a81add4b76022}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::nf} (status, routine, warnonly, silent)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__io__netcdf__iface_aa929904f54cf60b8c7c6bc8be31257d0}{mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\+::modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+\_\+iface\textquotesingle{}
+\end{DoxyCompactItemize}

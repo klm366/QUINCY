@@ -1,0 +1,21 @@
+\hypertarget{mo__jsb__namelist__iface_8f90}{}\section{/home/reiner/git/jsbach.ulme/src/adapters/mo\+\_\+jsb\+\_\+namelist\+\_\+iface.f90 File Reference}
+\label{mo__jsb__namelist__iface_8f90}\index{/home/reiner/git/jsbach.\+ulme/src/adapters/mo\+\_\+jsb\+\_\+namelist\+\_\+iface.\+f90@{/home/reiner/git/jsbach.\+ulme/src/adapters/mo\+\_\+jsb\+\_\+namelist\+\_\+iface.\+f90}}
+\subsection*{Modules}
+\begin{DoxyCompactItemize}
+\item 
+module \hyperlink{namespacemo__jsb__namelist__iface}{mo\+\_\+jsb\+\_\+namelist\+\_\+iface}
+\begin{DoxyCompactList}\small\item\em Contains interface to namelist handling. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+integer function, public \hyperlink{namespacemo__jsb__namelist__iface_abb2821ffd4c30375faa307d522af3bcb}{mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::open\+\_\+nml} (namelist\+\_\+filename)
+\begin{DoxyCompactList}\small\item\em Wrapper function to make I\+C\+O\+N subroutine open\+\_\+nml a function, as in E\+C\+H\+A\+M. Should be replaced when open\+\_\+nml in I\+C\+O\+N gets updated. \end{DoxyCompactList}\item 
+subroutine, public \hyperlink{namespacemo__jsb__namelist__iface_a240047c255ab5bb3871ecdcdcd6d6a92}{mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::close\+\_\+nml} (nml\+\_\+handler)
+\begin{DoxyCompactList}\small\item\em Wrapper function to make I\+C\+O\+N subroutine close\+\_\+nml a function take unit as argument, as in E\+C\+H\+A\+M. Should be replaced when close\+\_\+nml in I\+C\+O\+N gets updated. \end{DoxyCompactList}\item 
+integer function, public \hyperlink{namespacemo__jsb__namelist__iface_a4d29dc192b429a0c5f11ecd7d7f637e9}{mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::position\+\_\+nml} (name, nml\+\_\+handler, lrewind, status)
+\begin{DoxyCompactList}\small\item\em Wrapper function to make I\+C\+O\+N subroutine position\+\_\+nml a function, as in E\+C\+H\+A\+M. Should be replaced when open\+\_\+nml in I\+C\+O\+N gets updated. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__namelist__iface_ac285553fa6612b5913578b420275d81b}{mo\+\_\+jsb\+\_\+namelist\+\_\+iface\+::modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+namelist\+\_\+iface\textquotesingle{}
+\end{DoxyCompactItemize}

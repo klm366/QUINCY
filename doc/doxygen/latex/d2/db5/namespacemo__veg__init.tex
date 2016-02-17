@@ -1,0 +1,311 @@
+\hypertarget{namespacemo__veg__init}{}\section{mo\+\_\+veg\+\_\+init Module Reference}
+\label{namespacemo__veg__init}\index{mo\+\_\+veg\+\_\+init@{mo\+\_\+veg\+\_\+init}}
+
+
+Initialization of the the vegetation memory.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__veg__init_a51acdbb676d276054d328e045605f688}{veg\+\_\+init\+\_\+bc} (tile)
+\item 
+recursive subroutine, public \hyperlink{namespacemo__veg__init_a1f3c0830f53331836f61d9ed195747ae}{veg\+\_\+init\+\_\+ic} (tile)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__veg__init_a29fc1d9443f5600fe324d7f02b8c3dbf}{modname} = \textquotesingle{}mo\+\_\+veg\+\_\+init\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Initialization of the the vegetation memory. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__veg__init_a51acdbb676d276054d328e045605f688}{}\index{mo\+\_\+veg\+\_\+init@{mo\+\_\+veg\+\_\+init}!veg\+\_\+init\+\_\+bc@{veg\+\_\+init\+\_\+bc}}
+\index{veg\+\_\+init\+\_\+bc@{veg\+\_\+init\+\_\+bc}!mo\+\_\+veg\+\_\+init@{mo\+\_\+veg\+\_\+init}}
+\subsubsection[{veg\+\_\+init\+\_\+bc}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+veg\+\_\+init\+::veg\+\_\+init\+\_\+bc (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), intent(inout)}]{tile}
+\end{DoxyParamCaption}
+)}\label{namespacemo__veg__init_a51acdbb676d276054d328e045605f688}
+
+
+Definition at line 40 of file mo\+\_\+veg\+\_\+init.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+model\+\_\+init\+::init\+\_\+model\+\_\+common().
+
+
+\begin{DoxyCode}
+40 
+41     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile), \textcolor{keywordtype}{INTENT(inout)} :: tile
+42 
+43     \textcolor{keywordtype}{TYPE}(t\_jsb\_model),       \textcolor{keywordtype}{POINTER} :: model
+44     def\_memory(veg\_mem, veg)
+45 
+46     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} :: lai\_mon(:,:,:)
+47 
+48     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':veg\_init\_bc'}
+49 
+50     model => get\_model(tile%owner\_model\_id)
+51 
+52     \textcolor{comment}{! Get veg memory of the tile}
+53     get\_memory(veg\_mem, veg)
+54 
+55     \textcolor{comment}{! ...}
+56 
+57     \textcolor{comment}{! Propagate boundary conditions down the tile structure}
+58     \textcolor{comment}{! TBD}
+59 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/db5/namespacemo__veg__init_a51acdbb676d276054d328e045605f688_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__veg__init_a1f3c0830f53331836f61d9ed195747ae}{}\index{mo\+\_\+veg\+\_\+init@{mo\+\_\+veg\+\_\+init}!veg\+\_\+init\+\_\+ic@{veg\+\_\+init\+\_\+ic}}
+\index{veg\+\_\+init\+\_\+ic@{veg\+\_\+init\+\_\+ic}!mo\+\_\+veg\+\_\+init@{mo\+\_\+veg\+\_\+init}}
+\subsubsection[{veg\+\_\+init\+\_\+ic}]{\setlength{\rightskip}{0pt plus 5cm}recursive subroutine, public mo\+\_\+veg\+\_\+init\+::veg\+\_\+init\+\_\+ic (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+jsb\+\_\+tile), intent(inout)}]{tile}
+\end{DoxyParamCaption}
+)}\label{namespacemo__veg__init_a1f3c0830f53331836f61d9ed195747ae}
+
+
+Definition at line 63 of file mo\+\_\+veg\+\_\+init.\+f90.
+
+
+
+References mo\+\_\+veg\+\_\+process\+::foliage\+\_\+projected\+\_\+cover(), mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+close\+\_\+file(), mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+open\+\_\+input(), mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+read\+\_\+2d(), mo\+\_\+jsb\+\_\+io\+\_\+netcdf\+::jsb\+\_\+netcdf\+\_\+read\+\_\+2d\+\_\+time(), modname, mo\+\_\+soil\+\_\+util\+::soil\+\_\+depth\+\_\+to\+\_\+layers\+\_\+2d(), and mo\+\_\+veg\+\_\+util\+::water\+\_\+in\+\_\+root\+\_\+zone().
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+model\+\_\+init\+::init\+\_\+model\+\_\+common().
+
+
+\begin{DoxyCode}
+63 
+64     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__veg__process}{mo\_veg\_process}\textcolor{keywordtype}{, ONLY}: \hyperlink{namespacemo__veg__process_a274a1f4ec71f0e64f08d19c388367d89}{foliage\_projected\_cover}
+65     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__veg__util}{mo\_veg\_util}\textcolor{keywordtype}{,    ONLY}: \hyperlink{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}{water\_in\_root\_zone}
+66     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__soil__util}{mo\_soil\_util}\textcolor{keywordtype}{,   ONLY}: \hyperlink{namespacemo__soil__util_ad78dd96d8e36c528df761c9769302d5f}{soil\_depth\_to\_layers\_2d}
+67     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__time}{mo\_jsb\_time}\textcolor{keywordtype}{,    ONLY}: get\_time\_interpolation\_weights
+68 
+69     \textcolor{keywordtype}{TYPE}(t\_jsb\_tile),  \textcolor{keywordtype}{INTENT(inout)} :: tile
+70 
+71     \textcolor{keywordtype}{TYPE}(t\_jsb\_model),        \textcolor{keywordtype}{POINTER} :: model
+72     def\_config(veg\_conf, veg)
+73     def\_memory(veg\_mem, veg)
+74     def\_config(soil\_conf, soil)
+75     def\_memory(soil\_mem, soil)
+76 
+77     \textcolor{keywordtype}{INTEGER} :: i
+78 
+79     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} ::        &
+80       & lai\_mon(:,:,:),         &
+81       & return\_pointer (:,:)       !< temporary pointer
+82 
+83     \textcolor{keywordtype}{TYPE}(t\_input\_file) :: input\_file
+84 
+85     \textcolor{keywordtype}{REAL(wp)} :: wgt1, wgt2
+86     \textcolor{keywordtype}{INTEGER}  :: nmw1,nmw2
+87 
+88     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':veg\_init\_ic'}
+89 
+90     model => get\_model(tile%owner\_model\_id)
+91 
+92     \textcolor{comment}{! Get veg memory of the tile}
+93     get\_memory(veg\_mem, veg)
+94     get\_memory(soil\_mem, soil)
+95 
+96     \textcolor{comment}{! Get veg config}
+97     get\_config(veg\_conf, veg)
+98     get\_config(soil\_conf, soil)
+99 
+100     \textcolor{keywordflow}{IF} (.NOT. veg\_conf%active) \textcolor{keywordflow}{RETURN}
+101 
+102     \textcolor{comment}{! Initialize tile fractions}
+103     \textcolor{comment}{! TBD}
+104 
+105     \textcolor{keyword}{CALL }message(trim(routine), \textcolor{stringliteral}{'Initializing veg memory for tile '}//trim(tile%name))
+106 
+107     \textcolor{comment}{! Initialize physical state}
+108     \textcolor{comment}{!}
+109 
+110     input\_file = jsb\_netcdf\_open\_input(trim(veg\_conf%bc\_filename), model%id)
+111 
+112     \textcolor{comment}{! Leaf area index}
+113     \textcolor{comment}{! Get monthly LAI climatology}
+114     lai\_mon => jsb\_netcdf\_read\_2d\_time(    &
+115       & input\_file,                        &
+116       & variable\_name=\textcolor{stringliteral}{'lai\_clim'})
+117     lai\_mon(:,:,:) = merge(lai\_mon(:,:,:), 0.\_wp, lai\_mon(:,:,:) > 0.\_wp)
+118     veg\_mem%lai\_mon%ptr(:,:,2:13) = lai\_mon(:,:,1:12)
+119     veg\_mem%lai\_mon%ptr(:,:,1   ) = lai\_mon(:,:,12  )
+120     veg\_mem%lai\_mon%ptr(:,:,14  ) = lai\_mon(:,:,1   )
+121     \textcolor{keyword}{DEALLOCATE}(lai\_mon)
+122 
+123     \textcolor{keyword}{CALL }get\_time\_interpolation\_weights(wgt1, wgt2, nmw1, nmw2)
+124     veg\_mem%lai%ptr(:,:) = wgt1 * veg\_mem%lai\_mon%ptr(:,:,nmw1+1) + wgt2 * veg\_mem%lai\_mon%ptr(:,:,nmw2+1)
+125 
+126     \textcolor{comment}{! Forest fraction}
+127     return\_pointer => jsb\_netcdf\_read\_2d(        &
+128       & input\_file,                              &
+129       & variable\_name=\textcolor{stringliteral}{'forest\_fract'},            &
+130       & fill\_array = veg\_mem%fract\_forest%ptr)
+131     veg\_mem%fract\_forest%ptr(:,:) = merge(veg\_mem%fract\_forest%ptr(:,:), 0.\_wp, veg\_mem%fract\_forest%ptr(:,
+      :) >= 0.\_wp)
+132 
+133     veg\_mem%canopy\_cond%ptr(:,:) = 0.\_wp
+134 
+135     veg\_mem%skin\_can\_depth%ptr(:,:) = veg\_conf%wsr\_capacity * veg\_mem%lai%ptr(:,:)
+136 
+137     return\_pointer => jsb\_netcdf\_read\_2d(         &
+138       & input\_file,                               &
+139       & variable\_name=\textcolor{stringliteral}{'albedo\_veg\_vis'},           &
+140       & fill\_array = veg\_mem%alb\_vis\_can%ptr)
+141     veg\_mem%alb\_vis\_can%ptr(:,:) = merge(veg\_mem%alb\_vis\_can%ptr(:,:), 0.\_wp, veg\_mem%alb\_vis\_can%ptr(:,:) 
+      >= 0.\_wp)
+142 
+143     return\_pointer => jsb\_netcdf\_read\_2d(         &
+144       & input\_file,                               &
+145       & variable\_name=\textcolor{stringliteral}{'albedo\_veg\_nir'},           &
+146       & fill\_array = veg\_mem%alb\_nir\_can%ptr)
+147     veg\_mem%alb\_nir\_can%ptr(:,:) = merge(veg\_mem%alb\_nir\_can%ptr(:,:), 0.\_wp, veg\_mem%alb\_nir\_can%ptr(:,:) 
+      >= 0.\_wp)
+148 
+149     \textcolor{keyword}{CALL }jsb\_netcdf\_close\_file(input\_file)
+150     input\_file = jsb\_netcdf\_open\_input(trim(soil\_conf%bc\_filename), model%id)
+151 
+152     return\_pointer => jsb\_netcdf\_read\_2d(         &
+153       & input\_file,                               &
+154       & variable\_name=\textcolor{stringliteral}{'root\_depth'},               &
+155       & fill\_array = veg\_mem%root\_depth%ptr)
+156     veg\_mem%root\_depth%ptr(:,:) = merge(veg\_mem%root\_depth%ptr(:,:), 0.\_wp, veg\_mem%root\_depth%ptr(:,:) >= 
+      0.\_wp)
+157     veg\_mem%root\_depth%ptr(:,:) = min(veg\_mem%root\_depth%ptr(:,:), soil\_mem%soil\_depth%ptr(:,:))  \textcolor{comment}{!
+       Temporary fix (root depth sometimes larger then soil depth)}
+158 \textcolor{comment}{!!$    veg\_mem%root\_depth%ptr(:,:) = soil\_mem%soil\_depth%ptr(:,:) * 0.75\_wp  ! Temporary}
+159     
+160     veg\_mem%root\_depth\_l%ptr(:,:,:) = \hyperlink{namespacemo__soil__util_ad78dd96d8e36c528df761c9769302d5f}{soil\_depth\_to\_layers\_2d}(               &
+161       & veg\_mem%root\_depth%ptr(:,:),                                         & \textcolor{comment}{! Total rooting depth}
+162       & soil\_conf%dz\_water(1:soil\_conf%nsoil\_water))    \textcolor{comment}{! Soil layer thicknesses from namelist}
+163 
+164     \textcolor{keyword}{CALL }jsb\_netcdf\_close\_file(input\_file)                              \textcolor{comment}{! Temporary}
+165     input\_file = jsb\_netcdf\_open\_input(\textcolor{stringliteral}{'bc\_land\_frac.nc'}, model%id)     \textcolor{comment}{! Temporary}
+166 
+167     \textcolor{comment}{! Maximum foliage projected cover}
+168     return\_pointer => jsb\_netcdf\_read\_2d(        &
+169       & input\_file,                              &
+170       & variable\_name=\textcolor{stringliteral}{'veg\_ratio\_max'},           &
+171       & fill\_array = veg\_mem%fract\_fpc\_max%ptr)
+172     veg\_mem%fract\_fpc\_max%ptr(:,:) = merge(veg\_mem%fract\_fpc\_max%ptr(:,:), 0.\_wp, veg\_mem%fract\_fpc\_max%ptr
+      (:,:) >= 0.\_wp)
+173 
+174 \textcolor{comment}{!!$    veg\_mem%fract\_fpc(:,:) = foliage\_projected\_cover(veg\_mem%fract\_fpc\_max%ptr(:,:),
+       veg\_mem%lai%ptr(:,:), veg\_mem%clump%ptr(:,:))}
+175     veg\_mem%fract\_fpc%ptr(:,:) = \hyperlink{namespacemo__veg__process_a274a1f4ec71f0e64f08d19c388367d89}{foliage\_projected\_cover}(veg\_mem%fract\_fpc\_max%ptr(:
+      ,:), veg\_mem%lai%ptr(:,:), &
+176       spread(spread(2.\_wp, dim=1, ncopies=\textcolor{keyword}{SIZE}(veg\_mem%lai%ptr,1)), dim=2, ncopies=\textcolor{keyword}{SIZE}(veg\_mem%lai%ptr,2))
+      ) \textcolor{comment}{! Temporary}
+177 
+178     \textcolor{keyword}{CALL }jsb\_netcdf\_close\_file(input\_file)
+179 
+180     \textcolor{comment}{! Initialize water state}
+181     \textcolor{comment}{!}
+182     veg\_mem%wfract\_can%ptr  (:,:) = 0.\_wp
+183     veg\_mem%wsr\_can%ptr     (:,:) = 0.\_wp
+184     veg\_mem%sfract\_can%ptr  (:,:) = 0.\_wp
+185     veg\_mem%wsn\_can%ptr     (:,:) = 0.\_wp
+186 
+187     \textcolor{comment}{! Calculate water content and field capacity in the root zone}
+188     \textcolor{keywordflow}{DO} i=1,\textcolor{keyword}{SIZE}(veg\_mem%ws\_root%ptr,2)
+189       veg\_mem%ws\_root%ptr     (:,i) = \hyperlink{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}{water\_in\_root\_zone}( soil\_mem%ws\_l%ptr     (:,:,i), 
+      &
+190         & soil\_mem%soil\_depth\_l%ptr(:,:,i), veg\_mem%root\_depth\_l%ptr(:,:,i))
+191       veg\_mem%ws\_fc\_root%ptr  (:,i) = \hyperlink{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}{water\_in\_root\_zone}( soil\_mem%ws\_fc\_l%ptr  (:,:,i), 
+      &
+192         & soil\_mem%soil\_depth\_l%ptr(:,:,i), veg\_mem%root\_depth\_l%ptr(:,:,i))
+193       veg\_mem%ws\_pwp\_root%ptr (:,i) = \hyperlink{namespacemo__veg__util_af6216ea4cafe0107cd77fd3774c1b948}{water\_in\_root\_zone}( soil\_mem%ws\_pwp\_l%ptr (:,:,i), 
+      &
+194         & soil\_mem%soil\_depth\_l%ptr(:,:,i), veg\_mem%root\_depth\_l%ptr(:,:,i))
+195 \textcolor{keywordflow}{    END DO}
+196 \textcolor{comment}{!!$    veg\_mem%ws\_root%ptr    (:,:) = 0.\_wp}
+197 \textcolor{comment}{!!$    veg\_mem%ws\_fc\_root%ptr (:,:) = 0.\_wp}
+198 \textcolor{comment}{!!$    veg\_mem%ws\_pwp\_root%ptr(:,:) = 0.\_wp}
+199 
+200     veg\_mem%water\_stress%ptr(:,:) = 0.\_wp
+201 
+202     \textcolor{comment}{! Propagate initial conditions down the tile structure, starting with the tile with which this
+       subroutine was called initially}
+203     \textcolor{comment}{! TBD: sub-tiles should not read the netcdf files again}
+204 \textcolor{comment}{!!$    IF (tile%no\_of\_sub\_tiles > 0) THEN}
+205 \textcolor{comment}{!!$      DO i=1,tile%no\_of\_sub\_tiles}
+206 \textcolor{comment}{!!$        CALL veg\_init\_ic(tile%sub\_tiles(i))}
+207 \textcolor{comment}{!!$      END DO}
+208 \textcolor{comment}{!!$    END IF}
+209 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/db5/namespacemo__veg__init_a1f3c0830f53331836f61d9ed195747ae_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/db5/namespacemo__veg__init_a1f3c0830f53331836f61d9ed195747ae_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__veg__init_a29fc1d9443f5600fe324d7f02b8c3dbf}{}\index{mo\+\_\+veg\+\_\+init@{mo\+\_\+veg\+\_\+init}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+veg\+\_\+init@{mo\+\_\+veg\+\_\+init}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+veg\+\_\+init\+::modname = \textquotesingle{}mo\+\_\+veg\+\_\+init\textquotesingle{}}\label{namespacemo__veg__init_a29fc1d9443f5600fe324d7f02b8c3dbf}
+
+
+Definition at line 35 of file mo\+\_\+veg\+\_\+init.\+f90.
+
+
+
+Referenced by veg\+\_\+init\+\_\+bc(), and veg\+\_\+init\+\_\+ic().
+
+
+\begin{DoxyCode}
+35   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_veg\_init'}
+\end{DoxyCode}

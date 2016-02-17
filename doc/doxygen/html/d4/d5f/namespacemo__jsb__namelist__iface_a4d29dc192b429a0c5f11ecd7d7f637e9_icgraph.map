@@ -1,0 +1,11 @@
+<map id="mo_jsb_namelist_iface::position_nml" name="mo_jsb_namelist_iface::position_nml">
+<area shape="rect" id="node2" href="$d0/d82/namespacemo__hd__config__class.html#acc4bf17e3db786bdbe4c6634717b53f7" title="mo_hd_config_class\l::new_hd_config" alt="" coords="211,5,353,47"/>
+<area shape="rect" id="node4" href="$db/dd4/namespacemo__jsb__config__class.html#a1954d6f33b1cea7b395655837a1377db" title="mo_jsb_config_class\l::new_model_config" alt="" coords="414,257,558,299"/>
+<area shape="rect" id="node6" href="$de/d22/namespacemo__soil__config__class.html#a5093e53abf20433b31866a3ccf4a9632" title="mo_soil_config_class\l::new_soil_config" alt="" coords="209,71,355,112"/>
+<area shape="rect" id="node7" href="$de/d09/namespacemo__srf__config__class.html#ab74df301c0b4a0a8c1b10dfd0fdee25c" title="mo_srf_config_class\l::new_srf_config" alt="" coords="211,136,353,177"/>
+<area shape="rect" id="node8" href="$d2/dce/namespacemo__veg__config__class.html#ad45bc88a338969c3c20ca8780a84747e" title="mo_veg_config_class\l::new_veg_config" alt="" coords="208,201,356,243"/>
+<area shape="rect" id="node9" href="$d9/da0/namespacemo__jsb__control.html#a7096485a9080a52ed242f5e352a810db" title="Reads JSBACH control parameters. " alt="" coords="208,320,356,361"/>
+<area shape="rect" id="node3" href="$d5/d9a/namespacemo__jsb__process__factory.html#a6f93cf11896531cdf403cd86d13ab571" title="mo_jsb_process_factory\l::create_process_config" alt="" coords="404,104,568,145"/>
+<area shape="rect" id="node5" href="$db/d23/namespacemo__jsb__base.html#ad811b441fdefcb99ec47d6c2a0d92659" title="mo_jsb_base::init_base" alt="" coords="616,298,775,325"/>
+<area shape="rect" id="node10" href="$d9/da0/namespacemo__jsb__control.html#a6090e428421fd94a977d2962605f4b85" title="mo_jsb_control::init\l_jsb_master_control" alt="" coords="417,323,555,364"/>
+</map>

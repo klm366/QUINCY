@@ -1,0 +1,2166 @@
+\hypertarget{namespacemo__soil__process}{}\section{mo\+\_\+soil\+\_\+process Module Reference}
+\label{namespacemo__soil__process}\index{mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}}
+
+
+Contains the routines for the soil processes.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+real(wp) elemental function, public \hyperlink{namespacemo__soil__process_a20c4b80ccc8a10cb3028ff15293d3cc0}{snow\+\_\+fract} (snow, orodev)
+\item 
+real(wp) elemental function, public \hyperlink{namespacemo__soil__process_ae91447aa4654c4a406dedd04c5c4daf0}{relative\+\_\+humidity} (ws, fc)
+\item 
+subroutine, public \hyperlink{namespacemo__soil__process_aefac72c5fad9c92d8fa6c646fcd13f3b}{init\+\_\+soil\+\_\+temperature} (tclim, tsoil, tsurf)
+\item 
+subroutine, public \hyperlink{namespacemo__soil__process_a7dd6c425ac02aef924fb1fa3de6b373d}{update\+\_\+surf\+\_\+down} (kbdim, delta\+\_\+time, lstart, pqm1, ptsl, pspeed10, ptm1, pwl, pcvw, pwlmx, psn, pcvs, psnc,pgld, pgrndcapc
+\item 
+subroutine, public \hyperlink{namespacemo__soil__process_a9f2a04bdb962c1615ee419e1c62d6870}{update\+\_\+soiltemp} (nidx, nsoil, delta\+\_\+time, lstart, pts, psn, psodif, prgcgn, pgrndc, pgrndd, ptsoil, pgrndcapc, pgrndhflx, lmask, ldglac)
+\item 
+subroutine, public \hyperlink{namespacemo__soil__process_a6baae437b29f7d04d8bb10cb1d52249f}{update\+\_\+surf\+\_\+up} (kbdim, delta\+\_\+time, nsoil, pwl, pcvw, pwlmx, pws, pwsmx, ptsoil, pcvs, porostd, pevapl,pevapot, pevwsd, prain, lmask, lpglac, prunoff, pdrain
+\item 
+subroutine \hyperlink{namespacemo__soil__process_a4063fcd30b65b8bb38b532cfe884feb7}{soilhyd} (kidia, kfdia, klon, kdeep, zdiagt, loland, ilog, jllog, wsi, dzsi, zwsat, zwsfc, fksat, vpor, bclapp, fmpot, zdrain, spsi, zwpwp, zdel, overflow, ltpe\+\_\+closed)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__soil__process_ad7dacf511801f2d14d39a64fe6bfe6d2}{modname} = \textquotesingle{}mo\+\_\+soil\+\_\+process\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains the routines for the soil processes. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__soil__process_aefac72c5fad9c92d8fa6c646fcd13f3b}{}\index{mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}!init\+\_\+soil\+\_\+temperature@{init\+\_\+soil\+\_\+temperature}}
+\index{init\+\_\+soil\+\_\+temperature@{init\+\_\+soil\+\_\+temperature}!mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}}
+\subsubsection[{init\+\_\+soil\+\_\+temperature}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+soil\+\_\+process\+::init\+\_\+soil\+\_\+temperature (
+\begin{DoxyParamCaption}
+\item[{real(wp), dimension(\+:,\+:), intent(in)}]{tclim, }
+\item[{real(wp), dimension(\+:,\+:), intent(out)}]{tsoil, }
+\item[{real(wp), dimension(\+:), intent(out)}]{tsurf}
+\end{DoxyParamCaption}
+)}\label{namespacemo__soil__process_aefac72c5fad9c92d8fa6c646fcd13f3b}
+
+
+Definition at line 87 of file mo\+\_\+soil\+\_\+process.\+f90.
+
+
+
+References mo\+\_\+jsb\+\_\+time\+::get\+\_\+year().
+
+
+
+Referenced by mo\+\_\+soil\+\_\+init\+::soil\+\_\+init().
+
+
+\begin{DoxyCode}
+87 
+88     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__jsb__time}{mo\_jsb\_time}\textcolor{keywordtype}{,       ONLY}: t\_datetime, get\_time\_start, \hyperlink{namespacemo__jsb__time_adf7b7e4156df6e151e9274d0d94dc601}{get\_year}, &
+89                                  get\_year\_length, get\_month\_length, get\_day\_length, get\_year\_day
+90     \textcolor{keywordtype}{USE }mo\_math\_constants\textcolor{keywordtype}{, ONLY}: pi
+91     \textcolor{keywordtype}{USE }mo\_exception\textcolor{keywordtype}{,      ONLY}: finish
+92 
+93     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}  :: tclim(:,:)
+94     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(out)} :: tsoil(:,:), tsurf(:)
+95 
+96     \textcolor{keywordtype}{INTEGER} :: nsoil, ndim
+97     \textcolor{keywordtype}{REAL(wp)} :: zkap, zsqrt
+98     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} :: zrange(:), zdmax(:), zd(:)
+99     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{POINTER} :: jmax(:)
+100     \textcolor{keywordtype}{TYPE}(t\_datetime) :: inidate
+101     \textcolor{keywordtype}{INTEGER} :: iniyear
+102     \textcolor{keywordtype}{INTEGER} :: im, i, jl
+103     \textcolor{keywordtype}{REAL(wp)} :: year\_len, day\_in\_year
+104     \textcolor{keywordtype}{REAL(wp)} :: month\_len(12), month\_mid(12)
+105 
+106     ndim  = \textcolor{keyword}{SIZE}(tsoil,1)
+107     nsoil = \textcolor{keyword}{SIZE}(tsoil,2)
+108     \textcolor{keywordflow}{IF} (nsoil /= 5) \textcolor{keyword}{CALL }finish(\textcolor{stringliteral}{'init\_soil\_temperature'}, \textcolor{stringliteral}{'Currently only works with 5-layer soil'})
+109 
+110     \textcolor{keyword}{ALLOCATE}(zrange(ndim), jmax(ndim), zdmax(ndim))
+111     \textcolor{keyword}{ALLOCATE}(zd(nsoil))
+112 
+113     zkap = 7.5e-7\_wp
+114 
+115     inidate = get\_time\_start()
+116     iniyear = \hyperlink{namespacemo__jsb__time_adf7b7e4156df6e151e9274d0d94dc601}{get\_year}(inidate)
+117 
+118     year\_len    = \textcolor{keywordtype}{REAL(get\_year\_length(iniyear)}, wp)
+119     day\_in\_year = int(get\_year\_day(inidate))
+120 
+121     \textcolor{keywordflow}{DO} im=1,12
+122       month\_len(im) = \textcolor{keywordtype}{REAL(get\_month\_length(iniyear, im)}, wp)
+123       month\_mid(im) = month\_len(im) * 0.5\_wp
+124 \textcolor{keywordflow}{    END DO}
+125 
+126     zsqrt = sqrt(zkap * year\_len * get\_day\_length() / pi)
+127 
+128     \textcolor{comment}{! Calendar month of maximum surface temperature}
+129     jmax(:) = maxloc(tclim(:,:), dim=2)
+130 
+131     \textcolor{comment}{! Difference between months of maximum and minimum surface temperature}
+132     zrange(:) = maxval(tclim(:,:), dim=2) - minval(tclim(:,:), dim=2)
+133 
+134     \textcolor{comment}{! Calendar day of maximum surface temperature}
+135     zdmax(:) = 0.\_wp
+136     \textcolor{keywordflow}{DO} jl=1,ndim
+137       \textcolor{keywordflow}{DO} im=1,jmax(jl)
+138         zdmax(jl) = zdmax(jl) + month\_len(im)
+139 \textcolor{keywordflow}{      END DO}
+140       zdmax(jl) = zdmax(jl) - month\_mid(jmax(jl))
+141 \textcolor{keywordflow}{    END DO}
+142 
+143     \textcolor{comment}{! layer depths}
+144     \textcolor{comment}{! TBD: should not be hardcoded here!}
+145     zd(1) =            0.5\_wp * 0.065\_wp - 0.07\_wp
+146     zd(2) = 0.065\_wp + 0.5\_wp * 0.254\_wp - 0.07\_wp
+147     zd(3) = 0.065\_wp + 0.254\_wp + 0.5\_wp * 0.913\_wp - 0.07\_wp
+148     zd(4) = 0.065\_wp + 0.254\_wp + 0.913\_wp + 0.5\_wp * 2.902\_wp - 0.07\_wp
+149     zd(5) = 0.065\_wp + 0.254\_wp + 0.913\_wp + 2.902\_wp + 0.5\_wp * 5.7\_wp - 0.07\_wp
+150 
+151     \textcolor{comment}{! Initialize soil temperatures}
+152     \textcolor{keywordflow}{DO} i=1,nsoil
+153       tsoil(:,i) = sum(tclim(:,:), dim=2) / 12.\_wp &
+154                  & + 0.5\_wp * zrange(:) * exp(-zd(i) / zsqrt) &
+155                  &   * cos(2.\_wp * pi * (day\_in\_year - zdmax(:)) / year\_len - zd(i) / zsqrt)
+156 \textcolor{keywordflow}{    END DO}
+157 
+158     \textcolor{comment}{! Set surface temperature to uppermost soil temperature}
+159     tsurf(:) = tsoil(:,1)
+160 
+161     \textcolor{keyword}{DEALLOCATE}(zrange, jmax, zdmax, zd)
+162 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d3e/namespacemo__soil__process_aefac72c5fad9c92d8fa6c646fcd13f3b_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d3e/namespacemo__soil__process_aefac72c5fad9c92d8fa6c646fcd13f3b_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__soil__process_ae91447aa4654c4a406dedd04c5c4daf0}{}\index{mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}!relative\+\_\+humidity@{relative\+\_\+humidity}}
+\index{relative\+\_\+humidity@{relative\+\_\+humidity}!mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}}
+\subsubsection[{relative\+\_\+humidity}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) elemental function, public mo\+\_\+soil\+\_\+process\+::relative\+\_\+humidity (
+\begin{DoxyParamCaption}
+\item[{real(wp), intent(in)}]{ws, }
+\item[{real(wp), intent(in)}]{fc}
+\end{DoxyParamCaption}
+)}\label{namespacemo__soil__process_ae91447aa4654c4a406dedd04c5c4daf0}
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em fc} & field capacity (maximum moisture content) \\
+\hline
+\end{DoxyParams}
+
+\begin{DoxyParams}{Parameters}
+{\em ws} & moisture content \\
+\hline
+\end{DoxyParams}
+
+
+Definition at line 43 of file mo\+\_\+soil\+\_\+process.\+f90.
+
+
+
+Referenced by mo\+\_\+srf\+\_\+interface\+::update\+\_\+humidity\+\_\+scaling().
+
+
+\begin{DoxyCode}
+43 
+44     \textcolor{keywordtype}{USE }mo\_math\_constants\textcolor{keywordtype}{, ONLY}: pi
+45 
+46     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: &
+47       ws, & !< moisture content
+48       fc
+49 
+50     \textcolor{keywordtype}{REAL(wp)} :: moisture
+51 
+52     moisture = min(ws, fc)
+53     \textcolor{keywordflow}{IF} (moisture > 0.\_wp) \textcolor{keywordflow}{THEN}
+54       relative\_humidity = 0.5\_wp * (1.\_wp - cos(moisture * pi / fc))
+55     \textcolor{keywordflow}{ELSE}
+56       relative\_humidity = 0.\_wp
+57 \textcolor{keywordflow}{    END IF}
+58 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d3e/namespacemo__soil__process_ae91447aa4654c4a406dedd04c5c4daf0_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__soil__process_a20c4b80ccc8a10cb3028ff15293d3cc0}{}\index{mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}!snow\+\_\+fract@{snow\+\_\+fract}}
+\index{snow\+\_\+fract@{snow\+\_\+fract}!mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}}
+\subsubsection[{snow\+\_\+fract}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) elemental function, public mo\+\_\+soil\+\_\+process\+::snow\+\_\+fract (
+\begin{DoxyParamCaption}
+\item[{real(wp), intent(in)}]{snow, }
+\item[{real(wp), intent(in)}]{orodev}
+\end{DoxyParamCaption}
+)}\label{namespacemo__soil__process_a20c4b80ccc8a10cb3028ff15293d3cc0}
+
+
+Definition at line 30 of file mo\+\_\+soil\+\_\+process.\+f90.
+
+
+
+Referenced by mo\+\_\+srf\+\_\+interface\+::update\+\_\+snow\+\_\+and\+\_\+skin\+\_\+fraction().
+
+
+\begin{DoxyCode}
+30 
+31     \textcolor{keywordtype}{USE }\hyperlink{namespacemo__soil__constants}{mo\_soil\_constants}\textcolor{keywordtype}{, ONLY}: wsn2frac\_const, wsn2frac\_eps, wsn2frac\_sigfac
+32 
+33     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: &
+34       & snow,   &
+35       & orodev
+36 
+37     snow\_fract = wsn2frac\_const * tanh(snow * 100.\_wp) &
+38                                & * sqrt(snow * 1000.\_wp / (snow * 1000.\_wp + wsn2frac\_eps + wsn2frac\_sigfac
+       * orodev))
+39 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d3e/namespacemo__soil__process_a20c4b80ccc8a10cb3028ff15293d3cc0_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__soil__process_a4063fcd30b65b8bb38b532cfe884feb7}{}\index{mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}!soilhyd@{soilhyd}}
+\index{soilhyd@{soilhyd}!mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}}
+\subsubsection[{soilhyd}]{\setlength{\rightskip}{0pt plus 5cm}subroutine mo\+\_\+soil\+\_\+process\+::soilhyd (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{kidia, }
+\item[{integer, intent(in)}]{kfdia, }
+\item[{integer, intent(in)}]{klon, }
+\item[{integer, intent(in)}]{kdeep, }
+\item[{real(wp), intent(in)}]{zdiagt, }
+\item[{logical, dimension(klon), intent(in)}]{loland, }
+\item[{integer, intent(in)}]{ilog, }
+\item[{integer, intent(inout)}]{jllog, }
+\item[{real(wp), dimension(klon, kdeep), intent(inout)}]{wsi, }
+\item[{real(wp), dimension(klon, kdeep), intent(in)}]{dzsi, }
+\item[{real(wp), dimension(klon,kdeep), intent(in)}]{zwsat, }
+\item[{real(wp), dimension(klon,kdeep), intent(in)}]{zwsfc, }
+\item[{real(wp), dimension(klon), intent(in)}]{fksat, }
+\item[{real(wp), dimension(klon), intent(in)}]{vpor, }
+\item[{real(wp), dimension(klon), intent(in)}]{bclapp, }
+\item[{real(wp), dimension(klon), intent(in)}]{fmpot, }
+\item[{real(wp), dimension(klon), intent(inout)}]{zdrain, }
+\item[{real(wp), dimension(klon), intent(in)}]{spsi, }
+\item[{real(wp), dimension(klon,kdeep), intent(in)}]{zwpwp, }
+\item[{real(wp), dimension(kdeep), intent(in)}]{zdel, }
+\item[{real(wp), dimension(klon), intent(inout), optional}]{overflow, }
+\item[{logical, intent(in), optional}]{ltpe\+\_\+closed}
+\end{DoxyParamCaption}
+)}\label{namespacemo__soil__process_a4063fcd30b65b8bb38b532cfe884feb7}
+
+
+Definition at line 1239 of file mo\+\_\+soil\+\_\+process.\+f90.
+
+
+
+Referenced by update\+\_\+surf\+\_\+up().
+
+
+\begin{DoxyCode}
+1239 \textcolor{comment}{!     **************************************************************************}
+1240 
+1241 \textcolor{comment}{!     ******* SOIL HYDROLOGY - Routine to be build into REMO}
+1242 \textcolor{comment}{!     *******   to calculate soil hydrology for 5 soil layers}
+1243 \textcolor{comment}{!     ******* SOIL HYDROLOGY = percolation and vertical diffusion of water}
+1244 \textcolor{comment}{!     ******* Type of diffusiont:  Richtmeyr/Morton}
+1245 
+1246 \textcolor{comment}{!     *** PROGRAMMING AND DEVELOPMENT: STEFAN HAGEMANN}
+1247 \textcolor{comment}{!     ****}
+1248 \textcolor{comment}{!     *** VS. 1.0 - Test version for soil processes without run-off and others}
+1249 \textcolor{comment}{!              percolation dependent of IPERC type}
+1250 \textcolor{comment}{!              REMO calculations in [m], but output is in [mm]/output interval.}
+1251 \textcolor{comment}{!     ***}
+1252 \textcolor{comment}{!     *** VS. 1.1 - Version for REMO}
+1253 \textcolor{comment}{!     ***           Units must be made consistent.}
+1254 
+1255 \textcolor{comment}{!     *** VS. 1.2 - Limitation to IPERC=2, IDIFF=2}
+1256 \textcolor{comment}{!     ***           --> alternatives removed}
+1257 
+1258 \textcolor{comment}{!     *** VS. 1.3 - Last loop splitted and loop order changed to get longest loop inside}
+1259 
+1260 \textcolor{comment}{!     *** VS. 1.4 - September 2007 - HAG}
+1261 \textcolor{comment}{!     ***           Loop from Numerical Recipes changed to get longest loop inside.}
+1262 \textcolor{comment}{!     ***               Therefore were ZTRI(KDEEP) and ZDC changed into fields}
+1263 \textcolor{comment}{!     ***               ZTRI(KLON,KDEEP) and ZDC(KLON,KDEEP).}
+1264 \textcolor{comment}{!     ***           Inconsistency for percolation overflow of layers eliminated}
+1265 \textcolor{comment}{!     ***               now overflow exists if WSI > ZWSFC (instead of ZWSAT as used before)}
+1266 \textcolor{comment}{!     ***           Test for 1E-10. was changed due to the calculation accuracy of the NEC}
+1267 \textcolor{comment}{!     ***               at WSMX-1.E-10 < ZEPS (1E-15)}
+1268 \textcolor{comment}{!     ***}
+1269 \textcolor{comment}{!     ***}
+1270 \textcolor{comment}{!     *** Fluxes are always calculated to be valid two time steps ahead.}
+1271 \textcolor{comment}{!     *** Therefore the fluxes must be divided by 2 for accumulation.}
+1272 \textcolor{comment}{!     *** The calculations themselves uses volumes, not fluxes.}
+1273 \textcolor{comment}{!     *** The flux is calculated so that later the unit of the flux is the accumulated volume}
+1274 \textcolor{comment}{!     *** per time step.}
+1275 \textcolor{comment}{!     ***}
+1276 \textcolor{comment}{!     *** VS. 1.5 - December 2007 - HAG}
+1277 \textcolor{comment}{!     ***           Use of ZWSFC instead of ZWSAT for percolation}
+1278 
+1279 \textcolor{comment}{!     ***           Juli 2008 - S. HAGEMANN (R. PODZUN)}
+1280 \textcolor{comment}{!     ***           Removal of all occurances of ZVFC in soilhyd.f and surf.f}
+1281 \textcolor{comment}{!     ***           UNSAFE! Use may cause problems. on nec no obvious errors were caused.}
+1282 
+1283 \textcolor{comment}{!     *** VS. 1.6 - March 2009 - HAG}
+1284 \textcolor{comment}{!     ***           Introduction of maximum percolation rate and solving the percolation}
+1285 \textcolor{comment}{!     ***           equation with midpoint method instead of euler method.}
+1286 
+1287 \textcolor{comment}{!     *** VS. 1.7 - March-May 2009 - HAG}
+1288 \textcolor{comment}{!     ***           Implementation of van genuchetn equation for percolation.}
+1289 \textcolor{comment}{!     ***           preliminary using iperc to allow switching to previuos}
+1290 \textcolor{comment}{!     ***               Clapp & Hornberger method.}
+1291 \textcolor{comment}{!     ***           Allow ECHAM drainage for lowest layer above bedrock (IDRECH).}
+1292 \textcolor{comment}{!     ***           Allow reduction of hydraulic conductivity with depth for percolation.}
+1293 
+1294 \textcolor{comment}{!     *** VS. 1.8 - October 2009 - HAG}
+1295 \textcolor{comment}{!     ***           Percolation overflow is not allowed anymore from layers below the surface}
+1296 \textcolor{comment}{!     ***               layer. This has led to a too strong drying}
+1297 \textcolor{comment}{!     ***               of soil layers in wet areas, especially from the second lowest layer}
+1298 \textcolor{comment}{!     ***               above the bedrock. Now it assumed that water piles upwards from}
+1299 \textcolor{comment}{!     ***               SATURATEDsoil5layer.f90 layers, very similar to a rising water table.}
+1300 \textcolor{comment}{!     ***               Whether this may actually be used to describe a water table, has to be
+       investigated.}
+1301 \textcolor{comment}{!     ***               But this can be also done offline.}
+1302 
+1303 \textcolor{comment}{!     *** VS. 1.9 - June 2010 - HAG}
+1304 \textcolor{comment}{!     ***            Initialization of zdrain with zero must happen in calling routine before}
+1305 \textcolor{comment}{!     ***                soilchange is called.}
+1306 \textcolor{comment}{!}
+1307 \textcolor{comment}{!     *** vs. 1.10 - Jay 2011 - HAG}
+1308 \textcolor{comment}{!     ***            Code converted using TO\_F90 by Alan Miller}
+1309 \textcolor{comment}{!     ***            plus REAL --> REAL(wp) and fine tuning afterwards}
+1310 \textcolor{comment}{!}
+1311 \textcolor{comment}{!     SOILHYD}
+1312 \textcolor{comment}{!     ***  FKSAT = Saturated hydraulic conductivity: unit [m/s] -> Must be checked in ECMGBDT.F}
+1313 \textcolor{comment}{!     ***  FMPOT = Matrix potential [m]}
+1314 \textcolor{comment}{!     *** BCLAPP = Exponent B in Clapp and Hornberger}
+1315 \textcolor{comment}{!     ***   VPOR = Volumetric soil porosity [m/m]}
+1316 \textcolor{comment}{!     ***   SPSI = Soil pore size distribution index used in Van Genuchten}
+1317 
+1318 \textcolor{comment}{!     *** ZDIAGT = Time step: unit [s]   ##### org. was [day]}
+1319 
+1320 \textcolor{comment}{!     *** ZDRAIN = Drainage: Volumen during time step: unit [m]}
+1321 \textcolor{comment}{!     ***  ZWSAT = Maximum storage in soil layer I (porosity) [m]}
+1322 \textcolor{comment}{!     ***          Important for the take up of the infiltration in the soil layers}
+1323 \textcolor{comment}{!     ***          Defined down to the depth of the soil - that is where the bedrock begins.}
+1324 \textcolor{comment}{!     ***  ZWSFC = Field capacity for soil layer I (analog to ZWSAT) [m]}
+1325 \textcolor{comment}{!     ***  ZWPWP = Texture depending wilting point of the soil layer I (analog to ZWSAT) [m]}
+1326 \textcolor{comment}{!     ***}
+1327 \textcolor{comment}{!     ***  ZPERC = Downward flux from soil layer I: First in m/day, then in [m].}
+1328 \textcolor{comment}{!     ***          First because of gravitational drainage.}
+1329 \textcolor{comment}{!     ***  ZDIFF = Diffusion of water between soil layer i and layer i+1 [m^2/day]}
+1330 \textcolor{comment}{!     ***   ZMVG = Exponent M in Van Genuchten scheme = SPSI / (SPSI+1)}
+1331 \textcolor{comment}{!     ***   ZDEL = Thickness of the 5 soil layers [m]}
+1332 \textcolor{comment}{!     *** ZKREDU = Reduction factor of hydraulic conductivity with depth for percolation}
+1333 \textcolor{comment}{!     ***  IREDU = Reduction of conductivity with depth yes/no (1/0)}
+1334 \textcolor{comment}{!     ***}
+1335 \textcolor{comment}{!     ***  NSOIL - Number of soil layers}
+1336 \textcolor{comment}{!     *** WSI(I) = Soil moisture content in I. soil layer [m]}
+1337 \textcolor{comment}{!     ***          Updated through the fluxes calculated in SOILHYD}
+1338 \textcolor{comment}{!     ***  ILOG =  1 --> Log output to StdOut with keword SOILFLUX for grid cell JLLOG}
+1339 \textcolor{comment}{!     ***                5 * DIFF. FLUXES, 5 PERC. FLUXES, ZDRAIN}
+1340 \textcolor{comment}{!     ***          2 --> Log output to StdOut with keyword SOILHYD1 for grid cell JLLOG}
+1341 
+1342 \textcolor{comment}{!     ***  IPERC = Type of percolation}
+1343 \textcolor{comment}{!     ***          1  ECHAM4 drainage (removed, not available)}
+1344 \textcolor{comment}{!     ***          2  Clapp & Hornberger}
+1345 \textcolor{comment}{!     ***          3  Van Genuchten methode 2, after these}
+1346 \textcolor{comment}{!     ***}
+1347 \textcolor{comment}{!     ***  IDRECH = ECHAM drainage}
+1348 \textcolor{comment}{!     ***          0   No, drainage is percolation from lowest layer above bedrock.}
+1349 \textcolor{comment}{!     ***          1   Yes, for lowest layer above bedrock (replaces percolation)}
+1350 \textcolor{comment}{!     ***          2   For all layers above bedrock (in addition to percolation, except}
+1351 \textcolor{comment}{!     ***              for lowest layer above bedrock where it replaces percolation.}
+1352 
+1353 \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(IN)}                     :: kidia
+1354 \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(IN)}                     :: kfdia
+1355 \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(IN)}                     :: klon
+1356 \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(IN)}                     :: kdeep
+1357 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: zdiagt
+1358 \textcolor{keywordtype}{LOGICAL},  \textcolor{keywordtype}{INTENT(IN)}                     :: loland(klon)
+1359 \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(IN)}                     :: ilog
+1360 \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(INOUT)}                  :: jllog
+1361 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(INOUT)}                  :: wsi(klon, kdeep)
+1362 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: dzsi(klon, kdeep)
+1363 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: zwsat(klon,kdeep)
+1364 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: zwsfc(klon,kdeep)
+1365 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: fksat(klon)
+1366 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: vpor(klon)
+1367 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: bclapp(klon)
+1368 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: fmpot(klon)
+1369 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(INOUT)}                  :: zdrain(klon)
+1370 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: spsi(klon)
+1371 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: zwpwp(klon,kdeep)
+1372 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(IN)}                     :: zdel(kdeep)
+1373 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(INOUT)}, \textcolor{keywordtype}{OPTIONAL}        :: overflow(klon)
+1374 \textcolor{keywordtype}{LOGICAL},  \textcolor{keywordtype}{INTENT(IN)},    \textcolor{keywordtype}{OPTIONAL}        :: ltpe\_closed
+1375 
+1376 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{PARAMETER} :: zeps   = 1.e-15\_wp
+1377 \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{PARAMETER} :: iperc  = 3
+1378 \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{PARAMETER} :: idrech = 2
+1379 \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{PARAMETER} :: iredu  = 0
+1380 \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{PARAMETER} :: credu  = 1.0\_wp
+1381 
+1382 \textcolor{keywordtype}{REAL(wp)} :: zdum, zdum2, zdum3
+1383 \textcolor{keywordtype}{REAL(wp)} :: zperc(klon,kdeep), zdum4, zctsat
+1384 \textcolor{keywordtype}{REAL(wp)} :: zmvg(klon), zwrel
+1385 \textcolor{keywordtype}{REAL(wp)} :: zdiflog(10), wslog(kdeep)
+1386 \textcolor{comment}{!     *** ECHAM-Drainage-Parameter}
+1387 \textcolor{keywordtype}{REAL(wp)} :: zdrmin, zdrmax, zdrexp, zwdmin, zwdcri
+1388 
+1389 \textcolor{comment}{!     *** Diffusion}
+1390 \textcolor{keywordtype}{REAL(wp)} :: zda(klon,kdeep), zdb(klon,kdeep), zdiff(klon,kdeep-1)
+1391 \textcolor{keywordtype}{REAL(wp)} :: ztri(klon,kdeep), zdc(klon,kdeep)
+1392 
+1393 \textcolor{keywordtype}{REAL(wp)} :: zpmax, zp2         \textcolor{comment}{! Maximum percolation rate}
+1394 \textcolor{keywordtype}{REAL(wp)} :: zkredu(kdeep)      \textcolor{comment}{! KSAT reduction factor with depth}
+1395 
+1396 \textcolor{comment}{!     *** Dummy variables, running indices, etc.}
+1397 \textcolor{keywordtype}{INTEGER}  :: i, jl
+1398 
+1399 \textcolor{keywordtype}{LOGICAL}  :: l\_tpe\_closed
+1400 
+1401   \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(ltpe\_closed)) \textcolor{keywordflow}{THEN}
+1402     l\_tpe\_closed = ltpe\_closed
+1403   \textcolor{keywordflow}{ELSE}
+1404     l\_tpe\_closed = .false.
+1405 \textcolor{keywordflow}{  END IF}
+1406 
+1407   zwdmin = 0.05\_wp
+1408   zwdcri = 0.9\_wp
+1409   zdrmin = 0.001\_wp / (3600.\_wp*1000.\_wp)
+1410   zdrmax = 0.1\_wp / (3600.\_wp*1000.\_wp)
+1411   zdrexp = 1.5\_wp
+1412   \textcolor{keywordflow}{IF} (iredu == 1) \textcolor{keywordflow}{THEN}
+1413     zkredu(1) = (1.\_wp + exp(-credu*zdel(1)) )/2.\_wp
+1414     \textcolor{keywordflow}{DO} i=2, kdeep
+1415       zkredu(i) = (exp(-credu*sum(zdel(1:i-1))) +  &
+1416           exp(-credu*sum(zdel(1:i))) )/2.\_wp
+1417 \textcolor{keywordflow}{    END DO}
+1418   \textcolor{keywordflow}{ELSE}
+1419     zkredu(1:kdeep) = 1.\_wp
+1420 \textcolor{keywordflow}{  END IF}
+1421 
+1422 \textcolor{comment}{!     ***** Initialization of local fields}
+1423   zperc(kidia:kfdia,1:kdeep) = 0.\_wp
+1424   zmvg(kidia:kfdia) = spsi(kidia:kfdia) / (spsi(kidia:kfdia)+1.\_wp)
+1425 
+1426 \textcolor{comment}{!     *** Percolation = Gravitational drainage - calculated from bottom upward.}
+1427 \textcolor{comment}{!     *** Maximum percoplation due to numeric instability at large time steps}
+1428 \textcolor{comment}{!     *** and small spatial distances.}
+1429   \textcolor{keywordflow}{IF} (iperc == 2) \textcolor{keywordflow}{THEN}          \textcolor{comment}{! Clapp & Hornberger-formulation}
+1430     \textcolor{keywordflow}{DO} i=1, kdeep
+1431       \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1432 \textcolor{comment}{!cc        IF (DZSI(JL,I).GT.0) THEN}
+1433         \textcolor{keywordflow}{IF} (zwsfc(jl,i)-1.e-10\_wp > zeps) \textcolor{keywordflow}{THEN}
+1434 
+1435 \textcolor{comment}{!         *** MAXIMUM PERCOLATION RATE ZPMAX}
+1436           zdum = ( zwsfc(jl,i) -  &
+1437               fksat(jl)*zkredu(i) * zdiagt - zwpwp(jl,i) ) /  &
+1438               ( zwsfc(jl,i) - zwpwp(jl,i))
+1439           \textcolor{keywordflow}{IF} (zdum > zeps) \textcolor{keywordflow}{THEN}
+1440             zp2 = fksat(jl)*zkredu(i) * zdum ** (2.\_wp*bclapp(jl)+3.\_wp)
+1441           \textcolor{keywordflow}{ELSE}
+1442             zp2=0.\_wp
+1443 \textcolor{keywordflow}{          END IF}
+1444           zpmax  = max( (fksat(jl)*zkredu(i) + zp2)/2.\_wp , 0.\_wp)
+1445           zctsat = min( max((wsi(jl,i)-zwsfc(jl,i))/zdiagt ,0.\_wp)  &
+1446               / (fksat(jl)*zkredu(i)) /zdiagt , 1.\_wp)
+1447           zpmax  = zctsat * fksat(jl)*zkredu(i) + (1.\_wp-zctsat) * zpmax
+1448 
+1449           zwrel  = max(wsi(jl,i)-zwpwp(jl,i), 0.\_wp) / (zwsfc(jl,i)-zwpwp(jl,i))
+1450           zwrel  = min(zwrel, 1.\_wp)
+1451 
+1452           \textcolor{keywordflow}{IF} (zwrel-1.e-10\_wp > zeps) \textcolor{keywordflow}{THEN}
+1453             zp2   = fksat(jl)*zkredu(i) * zdiagt / 2.\_wp * zwrel ** (2.\_wp*bclapp(jl)+3.\_wp)
+1454             zdum2 = max( max(wsi(jl,i)-zp2,0.\_wp)  -zwpwp(jl,i), 0.\_wp)/  &
+1455                 (zwsfc(jl,i)-zwpwp(jl,i))
+1456             zdum2 = min(zdum2, 1.\_wp)
+1457             zperc(jl,i) = fksat(jl)*zkredu(i) * zdum2 ** (2.\_wp*bclapp(jl)+3.\_wp)
+1458             zperc(jl,i) = min(zperc(jl,i) , zpmax )
+1459           \textcolor{keywordflow}{ELSE}
+1460             zperc(jl,i) = 0.\_wp
+1461 \textcolor{keywordflow}{          END IF}
+1462 \textcolor{keywordflow}{        END IF}
+1463 \textcolor{keywordflow}{      END DO}
+1464 \textcolor{keywordflow}{    END DO}
+1465   \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (iperc == 3) \textcolor{keywordflow}{THEN}          \textcolor{comment}{! Van Genuchten-formulation}
+1466     \textcolor{keywordflow}{DO} i = 1, kdeep
+1467       \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1468         \textcolor{keywordflow}{IF} (zwsfc(jl,i)-1.e-10\_wp > zeps) \textcolor{keywordflow}{THEN}
+1469 
+1470 \textcolor{comment}{!         *** MAXIMUM PERCOLATION RATE ZPMAX}
+1471           zdum = max(zwsfc(jl,i)-zwpwp(jl,i) -  &
+1472               fksat(jl)*zkredu(i)*zdiagt, 0.\_wp) / (zwsfc(jl,i)-zwpwp(jl,i))
+1473           \textcolor{keywordflow}{IF} (zdum > zeps) \textcolor{keywordflow}{THEN}
+1474             zp2 = fksat(jl)*zkredu(i) * sqrt(zdum) * ( 1.\_wp - ( 1.\_wp -  &
+1475                 zdum**(1.\_wp/zmvg(jl)) )**zmvg(jl) )**2.\_wp
+1476           \textcolor{keywordflow}{ELSE}
+1477             zp2=0.\_wp
+1478 \textcolor{keywordflow}{          END IF}
+1479           zpmax = max( (fksat(jl)*zkredu(i) + zp2)/2.\_wp , 0.\_wp)
+1480           zctsat = min( max((wsi(jl,i)-zwsfc(jl,i))/zdiagt ,0.\_wp)  &
+1481               / (fksat(jl)*zkredu(i)) /zdiagt , 1.\_wp)
+1482           zpmax = zctsat * fksat(jl)*zkredu(i) + (1.\_wp-zctsat) * zpmax
+1483 
+1484 \textcolor{comment}{!         *** Midpoint-Method}
+1485 
+1486           zwrel = max(wsi(jl,i)-zwpwp(jl,i), 0.\_wp) / (zwsfc(jl,i)-zwpwp(jl,i))
+1487           zwrel = min(zwrel, 1.\_wp)
+1488 
+1489           zdum2 = fksat(jl)*zkredu(i) * sqrt(zwrel) * ( 1.\_wp - ( 1.\_wp -  &
+1490               zwrel**(1.\_wp/zmvg(jl)) )**zmvg(jl) )**2.\_wp
+1491           zdum3 = wsi(jl,i) - min(zdum2,zpmax) * zdiagt / 2.\_wp
+1492 
+1493           zdum4 = max(zdum3-zwpwp(jl,i), 0.\_wp) / (zwsfc(jl,i)-zwpwp(jl,i))
+1494           zdum4 = min(zdum4, 1.\_wp)
+1495 
+1496           zperc(jl,i) = fksat(jl)*zkredu(i) * sqrt(zdum4) * ( 1.\_wp -  &
+1497               ( 1.\_wp - zdum4**(1.\_wp/zmvg(jl)) )**zmvg(jl) )**2.\_wp
+1498 
+1499           zperc(jl,i) = min(zperc(jl,i) , zpmax)
+1500         \textcolor{keywordflow}{ELSE}
+1501           zperc(jl,i) = 0.\_wp
+1502 \textcolor{keywordflow}{        END IF}
+1503 \textcolor{keywordflow}{      END DO}
+1504 \textcolor{keywordflow}{    END DO}
+1505 \textcolor{keywordflow}{  END IF}
+1506 
+1507 \textcolor{comment}{! *** Using ECHAM4 drainage calculation? for the lowest layer above bedrock}
+1508 \textcolor{comment}{! *** this replaces the percolation value.}
+1509 
+1510   \textcolor{keywordflow}{IF} (idrech == 1 .OR. idrech == 2) \textcolor{keywordflow}{THEN}
+1511     \textcolor{keywordflow}{DO} i = 1, kdeep-1
+1512       \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1513         \textcolor{keywordflow}{IF} (dzsi(jl,1) > 0) \textcolor{keywordflow}{THEN}
+1514           \textcolor{keywordflow}{IF} (dzsi(jl,i) > 0) \textcolor{keywordflow}{THEN}
+1515             \textcolor{keywordflow}{IF} (dzsi(jl,i+1) <= 0) \textcolor{keywordflow}{THEN}           \textcolor{comment}{! *** Lowest layer above bedrock}
+1516 
+1517 \textcolor{comment}{!cc              ZDUM = ZWSFC(JL,I) * ZWDMIN}
+1518               zdum = zwpwp(jl,i)
+1519               zdum2 = zwsfc(jl,i) * zwdcri
+1520               \textcolor{keywordflow}{IF} (wsi(jl,i) <= zdum) \textcolor{keywordflow}{THEN}
+1521                 zperc(jl,i) = 0.\_wp
+1522               \textcolor{keywordflow}{ELSE}
+1523                 zdum3 = zdrmin * (wsi(jl,i)-zdum) / (zwsfc(jl,i)-zdum)
+1524                 \textcolor{keywordflow}{IF} (wsi(jl,i) > zdum2) \textcolor{keywordflow}{THEN}
+1525                   zdum4 = (zdrmax-zdrmin)*( (wsi(jl,i)-zdum2)  &
+1526                       / (zwsat(jl,i) - zdum2) )**zdrexp
+1527                   zdum3 = zdum3 + min(zdum4, (wsi(jl,i)-zdum2)/zdiagt)
+1528 \textcolor{keywordflow}{                END IF}
+1529                 zperc(jl,i) = min(zdum3, (wsi(jl,i)-zdum)/zdiagt)
+1530 \textcolor{keywordflow}{              END IF}
+1531             \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (idrech == 2) \textcolor{keywordflow}{THEN}            \textcolor{comment}{! *** Other layers for IDRECH=2}
+1532 
+1533 \textcolor{comment}{!             *** Drainage is calculated with percolation removed from WSI}
+1534               zp2 = wsi(jl,i) - zperc(jl,i) * zdiagt
+1535               zdum = zwpwp(jl,i)
+1536               zdum2 = zwsfc(jl,i) * zwdcri
+1537               \textcolor{keywordflow}{IF} (zp2 > zdum) \textcolor{keywordflow}{THEN}         \textcolor{comment}{! Drainage occurs only above wilting point}
+1538                 zdum3 = zdrmin * (zp2-zdum) / (zwsfc(jl,i)-zdum)
+1539                 \textcolor{keywordflow}{IF} (zp2 > zdum2) \textcolor{keywordflow}{THEN}
+1540                   zdum4 = (zdrmax-zdrmin)*( (zp2-zdum2)  &
+1541                       / (zwsat(jl,i) - zdum2) )**zdrexp
+1542                   zdum3 = zdum3 + min(zdum4, (zp2-zdum2)/zdiagt)
+1543 \textcolor{keywordflow}{                END IF}
+1544 
+1545 \textcolor{comment}{!               *** Except for the lowest layer above bedrock, drainage is removed from}
+1546 \textcolor{comment}{!               *** soil moisture layer wsi before diffusion occurs}
+1547 \textcolor{comment}{!               *** here, drainage is used as accumulated value over ZDIAGT}
+1548                 zdum4 = min(zdum3 * zdiagt, (zp2-zdum))
+1549                 \textcolor{keywordflow}{IF} (.NOT. l\_tpe\_closed) \textcolor{keywordflow}{THEN} \textcolor{comment}{! no drainage for TPE case}
+1550                   wsi(jl,i) = wsi(jl,i) - zdum4
+1551                   zdrain(jl) = zdrain(jl) + zdum4
+1552 \textcolor{keywordflow}{                END IF}
+1553 \textcolor{keywordflow}{              END IF}
+1554 \textcolor{keywordflow}{            END IF}                                 \textcolor{comment}{! Lowest layer / IDRECH=2}
+1555 \textcolor{keywordflow}{          END IF}
+1556 \textcolor{keywordflow}{        END IF}
+1557 \textcolor{keywordflow}{      END DO}
+1558 \textcolor{keywordflow}{    END DO}
+1559 
+1560 \textcolor{comment}{!   *** Lowest layer (=5)}
+1561     \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1562       \textcolor{keywordflow}{IF} (dzsi(jl,kdeep) > 0) \textcolor{keywordflow}{THEN}
+1563 \textcolor{comment}{!cc          ZDUM = ZWSFC(JL,KDEEP) * ZWDMIN}
+1564         zdum = zwpwp(jl,kdeep)
+1565         zdum2 = zwsfc(jl,kdeep) * zwdcri
+1566         \textcolor{keywordflow}{IF} (wsi(jl,kdeep) <= zdum) \textcolor{keywordflow}{THEN}
+1567           zperc(jl,kdeep) = 0.\_wp
+1568         \textcolor{keywordflow}{ELSE}
+1569           zdum3 = zdrmin * (wsi(jl,kdeep)-zdum) / (zwsfc(jl,kdeep)-zdum)
+1570           \textcolor{keywordflow}{IF} (wsi(jl,kdeep) > zdum2) \textcolor{keywordflow}{THEN}
+1571             zdum4 = (zdrmax-zdrmin)*( (wsi(jl,kdeep)-zdum2)  &
+1572                 / (zwsat(jl,kdeep) - zdum2) )**zdrexp
+1573             zdum3= zdum3 + min(zdum4, (wsi(jl,kdeep)-zdum2)/zdiagt)
+1574 \textcolor{keywordflow}{          END IF}
+1575           zperc(jl,kdeep) = min(zdum3, (wsi(jl,kdeep)-zdum)/zdiagt)
+1576 \textcolor{keywordflow}{        END IF}
+1577 \textcolor{keywordflow}{      END IF}
+1578 \textcolor{keywordflow}{    END DO}
+1579 \textcolor{keywordflow}{  END IF}
+1580 
+1581 \textcolor{comment}{! *** Original unit of percolation fluxes (=unit of FKSAT) was [m/day]}
+1582 \textcolor{comment}{! *** Now it's accumulatied [m] over ZDIAGE (unit of ZDIAGT=[s]}
+1583 \textcolor{comment}{! *** --> Take time step into account : * ZDIAGT}
+1584   zperc(kidia:kfdia,1:kdeep) = zperc(kidia:kfdia,1:kdeep) * zdiagt
+1585 
+1586 \textcolor{comment}{! *** Diffusion of water *******************************************}
+1587 
+1588 \textcolor{comment}{! *** Numerical recipes/Richtmyer & -Morton diffusion  *************}
+1589 
+1590   \textcolor{keywordflow}{DO} i = 1, kdeep-1
+1591     \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1592       \textcolor{keywordflow}{IF} (dzsi(jl,i) > 0) \textcolor{keywordflow}{THEN}
+1593 
+1594 \textcolor{comment}{!       ***  Soil moisture diffusivity [m^2/day]}
+1595 \textcolor{comment}{!       ***  method c: diffusivity of both levels is averaged}
+1596 \textcolor{comment}{!       ***            to calculate diffusivity between layers}
+1597         \textcolor{keywordflow}{IF} (wsi(jl,i+1) > 0) \textcolor{keywordflow}{THEN}
+1598           zdum = wsi(jl,i+1)/dzsi(jl,i+1)
+1599 
+1600 \textcolor{comment}{!         *** Calculating the diffusivity of layer i+1}
+1601           zdum4 = zdum / vpor(jl)
+1602           \textcolor{keywordflow}{IF} (zdum4-1.e-10\_wp > zeps) \textcolor{keywordflow}{THEN}
+1603             zdum2 = bclapp(jl) * fksat(jl) * fmpot(jl) /  &
+1604                 zdum * zdum4 ** (bclapp(jl)+3.)
+1605           \textcolor{keywordflow}{ELSE}
+1606             zdum2 = 0.\_wp
+1607 \textcolor{keywordflow}{          END IF}
+1608         \textcolor{keywordflow}{ELSE}
+1609           zdum2=0.\_wp
+1610 \textcolor{keywordflow}{        END IF}
+1611         \textcolor{keywordflow}{IF} (wsi(jl,i) > 0.\_wp) \textcolor{keywordflow}{THEN}
+1612           zdum = wsi(jl,i)/dzsi(jl,i)
+1613 
+1614 \textcolor{comment}{!         *** Calculating the diffusivity of layer i}
+1615           zdum4 = zdum / vpor(jl)
+1616           \textcolor{keywordflow}{IF} (zdum4-1.e-10\_wp > zeps) \textcolor{keywordflow}{THEN}
+1617             zdum3 = bclapp(jl) * fksat(jl) * fmpot(jl) /  &
+1618                 zdum *  zdum4 ** (bclapp(jl)+3.\_wp)
+1619           \textcolor{keywordflow}{ELSE}
+1620             zdum3 = 0.\_wp
+1621 \textcolor{keywordflow}{          END IF}
+1622         \textcolor{keywordflow}{ELSE}
+1623           zdum3=0.\_wp
+1624 \textcolor{keywordflow}{        END IF}
+1625 
+1626 \textcolor{comment}{!       *** Calculating the diffusivity at the bottom of layer i}
+1627         zdiff(jl,i) = (zdum2+zdum3)*0.5\_wp
+1628 \textcolor{keywordflow}{      END IF}
+1629 \textcolor{keywordflow}{    END DO}
+1630 \textcolor{keywordflow}{  END DO}
+1631 
+1632 \textcolor{comment}{! *** Calculation of diffusion coefficients}
+1633 \textcolor{comment}{! *** Deepest layer KDEEP = 5}
+1634   \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1635     zda(jl, kdeep) = 0.\_wp
+1636     \textcolor{keywordflow}{IF} (dzsi(jl,kdeep) > 0.\_wp) \textcolor{keywordflow}{THEN}
+1637 
+1638 \textcolor{comment}{!     *** [ZDIAGT] = s}
+1639       zdb(jl, kdeep) = zdiff(jl,kdeep-1) *zdiagt /dzsi(jl,kdeep)  &
+1640           / (dzsi(jl,kdeep)+dzsi(jl,kdeep-1)) * 2.\_wp
+1641     \textcolor{keywordflow}{ELSE}
+1642       zdb(jl, kdeep) = 0.\_wp
+1643 \textcolor{keywordflow}{    END IF}
+1644 \textcolor{keywordflow}{  END DO}
+1645 
+1646 \textcolor{comment}{! *** Layers i = 4,3,2}
+1647   \textcolor{keywordflow}{DO} i=kdeep-1, 2,-1
+1648     \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1649       \textcolor{keywordflow}{IF} (dzsi(jl,i) > 0) \textcolor{keywordflow}{THEN}
+1650         \textcolor{keywordflow}{IF} (dzsi(jl,i+1) > 0.\_wp) \textcolor{keywordflow}{THEN}
+1651           zda(jl,i) = zdiff(jl,i) * zdiagt / dzsi(jl,i) /  &
+1652               (dzsi(jl,i)+dzsi(jl,i+1)) * 2.\_wp
+1653         \textcolor{keywordflow}{ELSE}
+1654           zda(jl,i) = 0.\_wp
+1655 \textcolor{keywordflow}{        END IF}
+1656         zdb(jl,i) = zdiff(jl,i-1) * zdiagt / dzsi(jl,i) /  &
+1657             (dzsi(jl,i)+dzsi(jl,i-1)) * 2.\_wp
+1658       \textcolor{keywordflow}{ELSE}
+1659         zda(jl, i) = 0.\_wp
+1660         zdb(jl, i) = 0.\_wp
+1661 \textcolor{keywordflow}{      END IF}
+1662 \textcolor{keywordflow}{    END DO}
+1663 \textcolor{keywordflow}{  END DO}
+1664 
+1665 \textcolor{comment}{! *** Layer 1}
+1666   \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1667     zdb(jl, 1) = 0.\_wp
+1668     \textcolor{keywordflow}{IF} (dzsi(jl,1) > 0) \textcolor{keywordflow}{THEN}
+1669       \textcolor{keywordflow}{IF} (dzsi(jl,2) > 0) \textcolor{keywordflow}{THEN}
+1670         zda(jl,1) = zdiff(jl,1) * zdiagt / dzsi(jl,1) /  &
+1671             (dzsi(jl,1)+dzsi(jl,2)) * 2.\_wp
+1672       \textcolor{keywordflow}{ELSE}
+1673         zda(jl,1) = 0.\_wp
+1674 \textcolor{keywordflow}{      END IF}
+1675     \textcolor{keywordflow}{ELSE}
+1676       zda(jl, 1) = 0.\_wp
+1677 \textcolor{keywordflow}{    END IF}
+1678 \textcolor{keywordflow}{  END DO}
+1679 
+1680 \textcolor{comment}{! *** Temporary storage for log output}
+1681   \textcolor{keywordflow}{IF} (ilog == 1 .OR. ilog == 3) wslog(1:kdeep) = wsi(jllog, 1:kdeep)
+1682 
+1683 \textcolor{comment}{! *** Routine TRIDIAG from Numerical Recipes, p. 43}
+1684 \textcolor{comment}{! *** -ZDA = CI, -ZDB=AI, ZDA+ZDB+1=BI, WSI(T)=RI, WSI(T+1)=UI}
+1685   \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1686     \textcolor{keywordflow}{IF} (dzsi(jl,1) > 0) \textcolor{keywordflow}{THEN}
+1687       zdc(jl,1) = zda(jl,1)+zdb(jl,1)+1.\_wp
+1688       wsi(jl,1) = wsi(jl,1) / zdc(jl,1)
+1689 \textcolor{keywordflow}{    END IF}
+1690 \textcolor{keywordflow}{  END DO}
+1691 \textcolor{comment}{! *** Decomposition and forward substitution}
+1692   \textcolor{keywordflow}{DO} i=2, kdeep
+1693     \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1694       \textcolor{keywordflow}{IF} (dzsi(jl,1) > 0) \textcolor{keywordflow}{THEN}
+1695 
+1696         \textcolor{keywordflow}{IF} (dzsi(jl,i) > 0) \textcolor{keywordflow}{THEN}
+1697           ztri(jl,i) = -zda(jl,i-1) / zdc(jl,i-1)
+1698           zdc(jl,i) = zda(jl,i)+zdb(jl,i)+1.\_wp + zdb(jl,i)*ztri(jl,i)
+1699           wsi(jl,i) = (wsi(jl,i)/dzsi(jl,i) + zdb(jl,i)  &
+1700               * wsi(jl,i-1)/dzsi(jl,i-1) ) / zdc(jl,i) * dzsi(jl,i)
+1701 \textcolor{keywordflow}{        END IF}
+1702 \textcolor{keywordflow}{      END IF}
+1703 \textcolor{keywordflow}{    END DO}
+1704 \textcolor{keywordflow}{  END DO}
+1705 
+1706   \textcolor{keywordflow}{DO} i=kdeep-1,1,-1       \textcolor{comment}{! Backsubstitution}
+1707     \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1708       \textcolor{keywordflow}{IF} (dzsi(jl,1) > 0) \textcolor{keywordflow}{THEN}
+1709 
+1710         \textcolor{keywordflow}{IF} (dzsi(jl,i+1) > 0) \textcolor{keywordflow}{THEN}
+1711           wsi(jl,i) = wsi(jl,i) - ztri(jl,i+1)*wsi(jl,i+1)*  &
+1712               (dzsi(jl,i)/dzsi(jl,i+1))
+1713 \textcolor{keywordflow}{        END IF}
+1714 \textcolor{keywordflow}{      END IF}
+1715 \textcolor{keywordflow}{    END DO}
+1716 \textcolor{keywordflow}{  END DO}
+1717 
+1718 \textcolor{comment}{! *** Log output of fluxes ?}
+1719   \textcolor{keywordflow}{IF} (ilog == 1 .OR. ilog == 3) \textcolor{keywordflow}{THEN}
+1720     \textcolor{keywordflow}{DO} i=1, kdeep
+1721       zdiflog(i) = wslog(i) - wsi(jllog, i)
+1722 \textcolor{keywordflow}{    END DO}
+1723 \textcolor{keywordflow}{  END IF}
+1724 
+1725 \textcolor{comment}{! *** If layer overflow occurs after diffusion, it is added to drainage.}
+1726   \textcolor{keywordflow}{DO} i = 1, kdeep
+1727     \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1728       \textcolor{keywordflow}{IF} (dzsi(jl,i) > 0) \textcolor{keywordflow}{THEN}
+1729         \textcolor{keywordflow}{IF} (wsi(jl,i) > zwsfc(jl,i)) \textcolor{keywordflow}{THEN}
+1730           \textcolor{keywordflow}{IF} (l\_tpe\_closed) \textcolor{keywordflow}{THEN}
+1731             \textcolor{comment}{! modification for TPE}
+1732             \textcolor{comment}{! redirect overflow from drainage to overflow pool}
+1733             overflow(jl) = overflow(jl) + wsi(jl,i) - zwsfc(jl,i)
+1734           \textcolor{keywordflow}{ELSE}
+1735             zdrain(jl) = zdrain(jl) + wsi(jl,i) - zwsfc(jl,i)
+1736 \textcolor{keywordflow}{          END IF}
+1737           wsi(jl,i) = zwsfc(jl,i)
+1738 \textcolor{keywordflow}{        END IF}
+1739 \textcolor{keywordflow}{      END IF}
+1740 \textcolor{keywordflow}{    END DO}
+1741 \textcolor{keywordflow}{  END DO}
+1742 
+1743   \textcolor{keywordflow}{IF} (ilog == 2 .OR. ilog == 3) \textcolor{keywordflow}{THEN}
+1744     \textcolor{keyword}{WRITE}(*,\textcolor{stringliteral}{'(A10,1X, 11(E16.9E2, 1X) )'})  &
+1745         \textcolor{stringliteral}{"SOILHYD1: "}, fksat(jllog)*1000.\_wp, wsi(jllog,1:kdeep)*1000.\_wp,  &
+1746         zwsfc(jllog,1:kdeep)*1000.\_wp
+1747 \textcolor{keywordflow}{  END IF}
+1748 
+1749 \textcolor{comment}{! ******* NEW SOIL LAYER SOIL MOISTURE CONTENTS *********************}
+1750 
+1751 \textcolor{comment}{! *** Percolation per time step must be smaller than the usable soil}
+1752 \textcolor{comment}{! *** layer contents.}
+1753   \textcolor{keywordflow}{DO} i = 1, kdeep
+1754     \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1755       \textcolor{keywordflow}{IF} (dzsi(jl,i) > 0 .AND. zperc(jl,i) > 0) \textcolor{keywordflow}{THEN}
+1756         zdum = zwdmin*zwsfc(jl,i)
+1757         \textcolor{keywordflow}{IF} (wsi(jl,i)-zperc(jl,i) < zdum) \textcolor{keywordflow}{THEN}
+1758           \textcolor{keywordflow}{IF} (wsi(jl,i) > zdum) \textcolor{keywordflow}{THEN}
+1759             zperc(jl,i) = wsi(jl,i) - zdum
+1760             wsi(jl,i) = zdum
+1761           \textcolor{keywordflow}{ELSE}
+1762             zperc(jl,i) = 0.\_wp
+1763 \textcolor{keywordflow}{          END IF}
+1764         \textcolor{keywordflow}{ELSE}
+1765           wsi(jl,i) = wsi(jl,i) - zperc(jl,i)
+1766 \textcolor{keywordflow}{        END IF}
+1767 \textcolor{keywordflow}{      END IF}
+1768 \textcolor{keywordflow}{    END DO}
+1769 \textcolor{keywordflow}{  END DO}
+1770 
+1771 \textcolor{comment}{! *** Percolation added to downward layer or drainage}
+1772 \textcolor{comment}{! *** if lowest layer or bedrock is reached.}
+1773   \textcolor{keywordflow}{DO} i = 1, kdeep-1
+1774     \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1775       \textcolor{keywordflow}{IF} (dzsi(jl,1) > 0) \textcolor{keywordflow}{THEN}
+1776         \textcolor{keywordflow}{IF} (dzsi(jl,i+1) > 0) \textcolor{keywordflow}{THEN}
+1777           wsi(jl,i+1) = wsi(jl,i+1) + zperc(jl,i)
+1778         \textcolor{keywordflow}{ELSE}
+1779           \textcolor{keywordflow}{IF} (l\_tpe\_closed) \textcolor{keywordflow}{THEN}
+1780             \textcolor{comment}{! modification for TPE}
+1781             \textcolor{comment}{! redirect percolation from drainage to overflow pool}
+1782             overflow(jl) = overflow(jl) + zperc(jl,i)
+1783           \textcolor{keywordflow}{ELSE}
+1784             zdrain(jl) = zdrain(jl) + zperc(jl,i)
+1785 \textcolor{keywordflow}{          END IF}
+1786           zperc(jl,i) = 0.\_wp
+1787 \textcolor{keywordflow}{        END IF}
+1788 \textcolor{keywordflow}{      END IF}
+1789 \textcolor{keywordflow}{    END DO}
+1790 \textcolor{keywordflow}{  END DO}
+1791 
+1792   \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1793     \textcolor{keywordflow}{IF} (dzsi(jl,1) > 0) \textcolor{keywordflow}{THEN}
+1794       \textcolor{keywordflow}{IF} (l\_tpe\_closed) \textcolor{keywordflow}{THEN}
+1795         \textcolor{comment}{! modification for TPE}
+1796         \textcolor{comment}{! redirect percolation from drainage to overflow pool}
+1797         overflow(jl) = overflow(jl) + zperc(jl,kdeep)
+1798       \textcolor{keywordflow}{ELSE}
+1799         zdrain(jl) = zdrain(jl) + zperc(jl,kdeep)
+1800 \textcolor{keywordflow}{      END IF}
+1801 \textcolor{keywordflow}{    END IF}
+1802 \textcolor{keywordflow}{  END DO}
+1803 
+1804 \textcolor{comment}{! *** Percolation overflow is not allowed from layers below the surface layer.}
+1805 \textcolor{comment}{! *** Instead it is assumed that water piles upwards from saturated layers.}
+1806   \textcolor{keywordflow}{DO} i = kdeep,2, -1
+1807     \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1808       \textcolor{keywordflow}{IF} (dzsi(jl,i) > 0) \textcolor{keywordflow}{THEN}
+1809         \textcolor{keywordflow}{IF} (wsi(jl,i) > zwsfc(jl,i)) \textcolor{keywordflow}{THEN}
+1810           zperc(jl,i-1) = max( zperc(jl,i-1) - wsi(jl,i) + zwsfc(jl,i), 0.\_wp)
+1811           wsi(jl,i-1) = wsi(jl,i-1) + wsi(jl,i) - zwsfc(jl,i)
+1812           wsi(jl,i) = zwsfc(jl,i)
+1813 \textcolor{keywordflow}{        END IF}
+1814 \textcolor{keywordflow}{      END IF}
+1815 \textcolor{keywordflow}{    END DO}
+1816 \textcolor{keywordflow}{  END DO}
+1817 
+1818 \textcolor{comment}{! *** Overflow from the surface layer enters drainage. this should not happen,}
+1819 \textcolor{comment}{! *** so this is just for security.}
+1820   \textcolor{keywordflow}{DO} jl=kidia, kfdia
+1821     \textcolor{keywordflow}{IF} (dzsi(jl,1) > 0) \textcolor{keywordflow}{THEN}
+1822       \textcolor{keywordflow}{IF} (wsi(jl,1) > zwsfc(jl,1)) \textcolor{keywordflow}{THEN}
+1823         \textcolor{keywordflow}{IF} (l\_tpe\_closed) \textcolor{keywordflow}{THEN}
+1824           \textcolor{comment}{! modification for TPE}
+1825           \textcolor{comment}{! redirect overflow from drainage to overflow pool}
+1826           overflow(jl) = overflow(jl) + wsi(jl,1) - zwsfc(jl,1)
+1827         \textcolor{keywordflow}{ELSE}
+1828           zdrain(jl) = zdrain(jl) + wsi(jl,1) - zwsfc(jl,1)
+1829 \textcolor{keywordflow}{        END IF}
+1830         wsi(jl,1) = zwsfc(jl,1)
+1831 \textcolor{keywordflow}{      END IF}
+1832 \textcolor{keywordflow}{    END IF}
+1833 \textcolor{keywordflow}{  END DO}
+1834 
+1835 \textcolor{comment}{! *** Log output of the fluxes ?}
+1836   \textcolor{keywordflow}{IF} (ilog == 1 .OR. ilog == 3) \textcolor{keywordflow}{THEN}
+1837     \textcolor{keywordflow}{DO} i=1, kdeep
+1838       zdiflog(kdeep+i) = zperc(jllog,i)
+1839 \textcolor{keywordflow}{    END DO}
+1840     \textcolor{keyword}{WRITE}(*, \textcolor{stringliteral}{'(A10,1X,11(E15.6E3,1X) )'}) &
+1841        \textcolor{stringliteral}{"SOILFLUX"},zdiflog(1:10)*1000.\_wp, zdrain(jllog)*1000.\_wp
+1842 \textcolor{keywordflow}{  END IF}
+1843 
+1844 \textcolor{comment}{! *** Log output of WSI!}
+1845   \textcolor{keywordflow}{IF} (ilog == 2 .OR. ilog == 3) \textcolor{keywordflow}{THEN}
+1846     \textcolor{keyword}{WRITE}(*,\textcolor{stringliteral}{'(A10,1X,10(E16.9E2,1X) )'} ) &
+1847        \textcolor{stringliteral}{"SOILHYD2: "}, wsi(jllog,1:kdeep)*1000.\_wp, dzsi(jllog,1:kdeep)*1000.\_wp
+1848 \textcolor{keywordflow}{  END IF}
+1849 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d3e/namespacemo__soil__process_a4063fcd30b65b8bb38b532cfe884feb7_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__soil__process_a9f2a04bdb962c1615ee419e1c62d6870}{}\index{mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}!update\+\_\+soiltemp@{update\+\_\+soiltemp}}
+\index{update\+\_\+soiltemp@{update\+\_\+soiltemp}!mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}}
+\subsubsection[{update\+\_\+soiltemp}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+soil\+\_\+process\+::update\+\_\+soiltemp (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{nidx, }
+\item[{integer, intent(in)}]{nsoil, }
+\item[{real(wp), intent(in)}]{delta\+\_\+time, }
+\item[{logical, intent(in)}]{lstart, }
+\item[{real(wp), dimension(nidx), intent(in)}]{pts, }
+\item[{real(wp), dimension(nidx), intent(in)}]{psn, }
+\item[{real(wp), dimension(nidx), intent(in)}]{psodif, }
+\item[{real(wp), dimension(nidx), intent(in)}]{prgcgn, }
+\item[{real(wp), dimension(nidx,nsoil), intent(inout)}]{pgrndc, }
+\item[{real(wp), dimension(nidx,nsoil), intent(inout)}]{pgrndd, }
+\item[{real(wp), dimension(nidx,nsoil), intent(inout)}]{ptsoil, }
+\item[{real(wp), dimension(nidx), intent(out)}]{pgrndcapc, }
+\item[{real(wp), dimension(nidx), intent(out)}]{pgrndhflx, }
+\item[{logical, dimension(nidx), intent(in)}]{lmask, }
+\item[{logical, dimension(nidx), intent(in)}]{ldglac}
+\end{DoxyParamCaption}
+)}\label{namespacemo__soil__process_a9f2a04bdb962c1615ee419e1c62d6870}
+
+
+Definition at line 496 of file mo\+\_\+soil\+\_\+process.\+f90.
+
+
+
+Referenced by mo\+\_\+soil\+\_\+interface\+::update\+\_\+soil\+\_\+1().
+
+
+\begin{DoxyCode}
+496 \textcolor{comment}{!}
+497 \textcolor{comment}{!   AUTHOR:  FREDERIC HOURDIN     30/01/92}
+498 \textcolor{comment}{!}
+499 \textcolor{comment}{!            ADAPTED TO THE LMD-GCM BY JAN POLCHER  26/02/92}
+500 \textcolor{comment}{!            ADAPTED TO THE ECHAM-GCM BY JAN-PETER SCHULZ, MPI  03/02/96}
+501 \textcolor{comment}{!}
+502 \textcolor{comment}{!            J.-P. SCHULZ   MPI - OCTOBER 1997 :}
+503 \textcolor{comment}{!               ROUTINE USED FOR IMPLEMENTATION OF AN IMPLICIT}
+504 \textcolor{comment}{!               COUPLING BETWEEN LAND SURFACE AND ATMOSPHERE IN THE}
+505 \textcolor{comment}{!               ECHAM4 GCM.}
+506 \textcolor{comment}{!            U.SCHLESE DKRZ - NOVEMBER 1999  MODIFIED FOR ECHAM5}
+507 \textcolor{comment}{!            U.Schlese DKRZ - February 2000  new soil temperatures}
+508 \textcolor{comment}{!            L Kornblueh, MPI, January 2003, removed MERGE}
+509 \textcolor{comment}{!}
+510 \textcolor{comment}{!            Adapted to JSBACH by Thomas Raddatz, Mai 2004}
+511 \textcolor{comment}{!            Adapted to ICON  by Thomas Raddatz, Sep 2011}
+512 \textcolor{comment}{!   OBJECTIVE:  COMPUTATION OF:}
+513 \textcolor{comment}{!               THE GROUND TEMPERATURE EVOLUTION}
+514 \textcolor{comment}{!               THE GROUND SPECIFIC HEAT "CAPCAL"}
+515 \textcolor{comment}{!               THE SURFACE DIFFUSIVE FLUX FROM GROUND "F0"}
+516 \textcolor{comment}{!}
+517 \textcolor{comment}{!}
+518 \textcolor{comment}{!   METHOD:  IMPLICIT TIME INTEGRATION}
+519 \textcolor{comment}{!}
+520 \textcolor{comment}{!   CONSECUTIVES GROUND TEMPERATURES ARE RELATED BY:}
+521 \textcolor{comment}{!           T(K+1) = C(K) + D(K)*T(K)  (1)}
+522 \textcolor{comment}{!   THE COEFFICIENTS C (=pgrndc) AND D (=pgrndd) ARE COMPUTED AT THE}
+523 \textcolor{comment}{!   T-DT TIME-STEP.}
+524 \textcolor{comment}{!   ROUTINE STRUCTURE:}
+525 \textcolor{comment}{!   1)NEW TEMPERATURES ARE COMPUTED  USING (1)}
+526 \textcolor{comment}{!   2)C AND D COEFFICIENTS ARE COMPUTED FROM THE NEW TEMPERATURE}
+527 \textcolor{comment}{!     PROFILE FOR THE T+DT TIME-STEP}
+528 \textcolor{comment}{!   3)THE COEFFICIENTS A AND B ARE COMPUTED WHERE THE DIFFUSIVE}
+529 \textcolor{comment}{!     FLUXES AT THE T+DT TIME-STEP IS GIVEN BY}
+530 \textcolor{comment}{!            FDIFF = A + B TS(T+DT)}
+531 \textcolor{comment}{!     OR     FDIFF = F0 + CAPCAL (TS(T+DT)-TS(T))/DT}
+532 \textcolor{comment}{!            WITH F0 = A + B (TS(T))}
+533 \textcolor{comment}{!                 CAPCAL = B*DT}
+534 \textcolor{comment}{!}
+535 \textcolor{comment}{!     ------------------------------------------------------------------}
+536 \textcolor{comment}{!}
+537 \textcolor{comment}{!   DECLARATIONS:}
+538 \textcolor{comment}{!}
+539 \textcolor{comment}{!!$ TR USE mo\_jsbach\_constants   , ONLY: RhoH2O}
+540 \textcolor{comment}{!!$ TR USE mo\_time\_control       , ONLY: lstart}
+541 \textcolor{comment}{!}
+542 \textcolor{comment}{!-----------------------------------------------------------------------}
+543 \textcolor{comment}{!  ARGUMENTS}
+544 \textcolor{comment}{!}
+545   \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{Intent(in)}  ::  nidx                 \textcolor{comment}{!! length of the vector}
+546   \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{Intent(in)}  ::  nsoil                \textcolor{comment}{!! number of soil layers (fixed to 5)}
+547   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{Intent(in)}     ::  delta\_time       \textcolor{comment}{!! time step}
+548   \textcolor{keywordtype}{LOGICAL}, \textcolor{keywordtype}{INTENT(in)}  :: lstart
+549   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{Intent(in)}     ::  pts(nidx)            \textcolor{comment}{!! surface temperature at top of soil [K]}
+550   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{Intent(in)}     ::  psn(nidx)            \textcolor{comment}{!! equivalent snow depth [m water]}
+551   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{Intent(in)}     ::  psodif(nidx)         \textcolor{comment}{!! soil temperature diffusivity [m^2/s]}
+552   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{Intent(in)}     ::  prgcgn(nidx)         \textcolor{comment}{!! soil heat capacity [J/m^3K]}
+553   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{Intent(inout)}  ::  pgrndc(nidx,nsoil)   \textcolor{comment}{!!}
+554   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{Intent(inout)}  ::  pgrndd(nidx,nsoil)   \textcolor{comment}{!!}
+555   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{Intent(inout)}  ::  ptsoil(nidx,nsoil)   \textcolor{comment}{!! soil temperature [K]}
+556   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{Intent(out)}    ::  pgrndcapc(nidx)      \textcolor{comment}{!!}
+557   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{Intent(out)}    ::  pgrndhflx(nidx)      \textcolor{comment}{!! ground heat flux}
+558   \textcolor{keywordtype}{LOGICAL}, \textcolor{keywordtype}{Intent(in)}  ::  lmask(nidx)
+559   \textcolor{keywordtype}{LOGICAL}, \textcolor{keywordtype}{Intent(in)}  ::  ldglac(nidx)         \textcolor{comment}{!! glacier mask}
+560 \textcolor{comment}{!}
+561 \textcolor{comment}{!     ------------------------------------------------------------------}
+562 \textcolor{comment}{!}
+563 \textcolor{comment}{!  local Variables}
+564 \textcolor{comment}{!}
+565   \textcolor{keywordtype}{INTEGER} :: jk
+566   \textcolor{keywordtype}{REAL(wp)} :: zso\_cond(nidx), zso\_capa(nidx)
+567   \textcolor{keywordtype}{REAL(wp)} :: z1(nidx)
+568   \textcolor{keywordtype}{REAL(wp)} :: zd1(nsoil)
+569   \textcolor{keywordtype}{REAL(wp)} :: zdz1(nidx,nsoil),   zdz2(nidx,nsoil)
+570   \textcolor{keywordtype}{REAL(wp)} :: zkappa(nidx,nsoil), zcapa(nidx,nsoil)
+571   \textcolor{keywordtype}{REAL(wp)} :: zsnow\_h(nidx), zx1(nidx), zx2(nidx)
+572   \textcolor{keywordtype}{REAL(wp)} :: cdel(nsoil),cmid(nsoil)
+573   \textcolor{keywordtype}{REAL(wp)} :: zrici, zdifiz, zsn\_cond, zsn\_dens, zsn\_capa
+574 \textcolor{comment}{!}
+575 \textcolor{comment}{!     ------------------------------------------------------------------}
+576 \textcolor{comment}{!}
+577 \textcolor{comment}{!*    1.  SPECIFYING THE DEPTHS OF THE TEMPERATURE LEVELS.}
+578 \textcolor{comment}{!}
+579 \textcolor{comment}{!*    1.1 SOME CONSTANTS.}
+580 \textcolor{comment}{!}
+581   zrici = 2.09e+06\_wp                                 \textcolor{comment}{!! volumetric heat capacity of ice [j/m**3/k]}
+582   zdifiz = 12.e-07\_wp                                 \textcolor{comment}{!! temperature diffusivity of ice  [m**2/s]}
+583   zsn\_cond = 0.31\_wp                                  \textcolor{comment}{!! snow thermal conductivity [j/s/m/k]}
+584   zsn\_dens = 330.0\_wp                                 \textcolor{comment}{!! snow density              [kg/m**3]}
+585   zsn\_capa = 634500.0\_wp                              \textcolor{comment}{!! snow  heat capacity   [j/m**3/k]}
+586   cdel = (/0.065\_wp,0.254\_wp,0.913\_wp,2.902\_wp,5.700\_wp/)         \textcolor{comment}{!! thicknesses of soil layers [m]}
+587   cmid = (/0.0325\_wp,0.192\_wp,0.7755\_wp,2.683\_wp,6.984\_wp/)       \textcolor{comment}{!! depth of mids of soil layers [m]}
+588 \textcolor{comment}{!}
+589 \textcolor{comment}{!*    1.2 COMPUTING SOME USEFUL CONSTANTS.}
+590 \textcolor{comment}{!}
+591   \textcolor{keywordflow}{DO} jk = 1,nsoil-1
+592      zd1(jk) = 1.\_wp / (cmid(jk+1) - cmid(jk))
+593 \textcolor{keywordflow}{  END DO}
+594 \textcolor{comment}{!}
+595 \textcolor{comment}{!*    1.3 COMPUTE OF THE SOIL THERMAL CONDUCTIVITY [J/S/M/K] FROM}
+596 \textcolor{comment}{!*        THE SOIL TEMPERATURE DIFFUSIVITY [M**2/S].}
+597 \textcolor{comment}{!}
+598   \textcolor{keywordflow}{WHERE} (lmask(:) .AND. ldglac(:))
+599     zso\_capa(:) = zrici
+600     zso\_cond(:) = zso\_capa(:) * zdifiz
+601   \textcolor{keywordflow}{ELSEWHERE} (lmask(:))
+602     zso\_capa(:) = prgcgn(:)
+603     zso\_cond(:) = zso\_capa(:) * psodif(:)
+604 \textcolor{keywordflow}{  END WHERE}
+605 \textcolor{comment}{!}
+606 \textcolor{comment}{!*    1.4 PRE-SET THERMAL CONDUCTIVITY AT ALL LEVELS.}
+607 \textcolor{comment}{!}
+608   \textcolor{keywordflow}{DO} jk = 1,nsoil
+609     \textcolor{keywordflow}{WHERE} (lmask)
+610       zkappa(:,jk) = zso\_cond(:)
+611       zcapa(:,jk)  = zso\_capa(:)
+612 \textcolor{keywordflow}{    END WHERE}
+613 \textcolor{keywordflow}{  END DO}
+614 
+615 \textcolor{comment}{!}
+616 \textcolor{comment}{!   --------------------------------------------------------------}
+617 \textcolor{comment}{!   COMPUTATION OF THE GROUND TEMPERATURES USING THE CGRD AND DGRD}
+618 \textcolor{comment}{!   COEFFICIENTS COMPUTED AT THE PREVIOUS TIME-STEP}
+619 \textcolor{comment}{!   --------------------------------------------------------------}
+620 \textcolor{comment}{!}
+621 \textcolor{comment}{!   Upper layer}
+622 \textcolor{comment}{!}
+623   \textcolor{keywordflow}{IF} (.NOT. lstart) \textcolor{keywordflow}{THEN}
+624 
+625     ptsoil(:,1) = pts(:)
+626 \textcolor{comment}{!}
+627 \textcolor{comment}{!   Deeper layers}
+628 \textcolor{comment}{!}
+629     \textcolor{keywordflow}{DO} jk = 1,nsoil-1
+630       \textcolor{keywordflow}{WHERE}(lmask) ptsoil(:,jk+1) = pgrndc(:,jk) + pgrndd(:,jk) * ptsoil(:,jk)
+631 \textcolor{keywordflow}{    END DO}
+632 
+633 \textcolor{keywordflow}{  END IF}
+634 \textcolor{comment}{!}
+635 \textcolor{comment}{!   ---------------------------------------------------------------}
+636 \textcolor{comment}{!   COMPUTATION OF THE CGRD AND DGRD COEFFICIENTS FOR THE NEXT STEP}
+637 \textcolor{comment}{!   ---------------------------------------------------------------}
+638 \textcolor{comment}{!}
+639   \textcolor{keywordflow}{WHERE} (lmask)
+640 
+641     zsnow\_h(:) = psn(:) * rhoh2o / zsn\_dens
+642 \textcolor{comment}{!}
+643 \textcolor{comment}{!*       Special treatment for first layer}
+644 \textcolor{comment}{!}
+645     \textcolor{keywordflow}{WHERE} ( zsnow\_h(:) > cmid(2) )
+646       zcapa(:,1) = zsn\_capa
+647       zkappa(:,1) = zsn\_cond
+648     \textcolor{keywordflow}{ELSEWHERE}( zsnow\_h(:) > 0.0\_wp .AND. zsnow\_h(:) <= cmid(2) )
+649       zx1 = zsnow\_h(:) / cmid(2)
+650       zx2 = ( cmid(2) - zsnow\_h(:)) / cmid(2)
+651       zcapa(:,1) = zx1 * zsn\_capa + zx2 * zso\_capa(:)
+652       zkappa(:,1) = 1.\_wp / ( zx1 / zsn\_cond + zx2 / zso\_cond(:) )
+653     \textcolor{keywordflow}{ELSEWHERE}
+654       zcapa(:,1) = zso\_capa(:)
+655       zkappa(:,1) = zso\_cond(:)
+656 \textcolor{keywordflow}{    ENDWHERE}
+657 \textcolor{keywordflow}{  END WHERE}
+658 \textcolor{comment}{!}
+659   \textcolor{keywordflow}{DO} jk = 2, nsoil - 2
+660     \textcolor{keywordflow}{WHERE} (lmask)
+661        \textcolor{keywordflow}{WHERE} ( zsnow\_h(:) > cmid(jk+1) )
+662           zcapa(:,jk) = zsn\_capa
+663           zkappa(:,jk) = zsn\_cond
+664        \textcolor{keywordflow}{ELSEWHERE} ( zsnow\_h(:) > cmid(jk) .AND. zsnow\_h(:) <= cmid(jk+1) )
+665           zx1 = (zsnow\_h(:) - cmid(jk)) * zd1(jk)
+666           zx2 = ( cmid(jk+1) - zsnow\_h(:)) * zd1(jk)
+667           zcapa(:,jk) = zx1 * zsn\_capa + zx2 * zso\_capa(:)
+668           zkappa(:,jk) = 1.\_wp / ( zx1 / zsn\_cond + zx2 / zso\_cond(:) )
+669        \textcolor{keywordflow}{ELSEWHERE}
+670           zcapa(:,jk) = zso\_capa(:)
+671           zkappa(:,jk) = zso\_cond(:)
+672 \textcolor{keywordflow}{       ENDWHERE}
+673 \textcolor{keywordflow}{     END WHERE}
+674 \textcolor{keywordflow}{  END DO}
+675 \textcolor{comment}{!}
+676   \textcolor{keywordflow}{DO} jk=1,nsoil
+677     \textcolor{keywordflow}{WHERE} (lmask) zdz2(:,jk) = zcapa(:,jk) * cdel(jk) / delta\_time
+678 \textcolor{keywordflow}{  END DO}
+679 \textcolor{comment}{!}
+680   \textcolor{keywordflow}{DO} jk=1,nsoil-1
+681     \textcolor{keywordflow}{WHERE} (lmask) zdz1(:,jk) = zd1(jk) * zkappa(:,jk)
+682 \textcolor{keywordflow}{  END DO}
+683 \textcolor{comment}{!}
+684   \textcolor{keywordflow}{WHERE} (lmask)
+685     z1(:) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
+686     pgrndc(:,nsoil-1) = zdz2(:,nsoil) * ptsoil(:,nsoil) / z1(:)
+687     pgrndd(:,nsoil-1) = zdz1(:,nsoil-1) / z1(:)
+688 \textcolor{keywordflow}{  END WHERE}
+689 \textcolor{comment}{!}
+690   \textcolor{keywordflow}{DO} jk=nsoil-1,2,-1
+691     \textcolor{keywordflow}{WHERE} (lmask)
+692       z1(:) = 1.\_wp / (zdz2(:,jk) + zdz1(:,jk-1) + zdz1(:,jk) * (1.\_wp - pgrndd(:,jk)))
+693       pgrndc(:,jk-1) = (ptsoil(:,jk) * zdz2(:,jk) + zdz1(:,jk) * pgrndc(:,jk)) * z1(:)
+694       pgrndd(:,jk-1) = zdz1(:,jk-1) * z1(:)
+695 \textcolor{keywordflow}{    END WHERE}
+696 \textcolor{keywordflow}{  END DO}
+697 \textcolor{comment}{!}
+698 \textcolor{comment}{!   ---------------------------------------------------------}
+699 \textcolor{comment}{!   COMPUTATION OF THE SURFACE DIFFUSIVE FLUX FROM GROUND AND}
+700 \textcolor{comment}{!   CALORIFIC CAPACITY OF THE GROUND:}
+701 \textcolor{comment}{!   ---------------------------------------------------------}
+702 \textcolor{comment}{!}
+703   \textcolor{keywordflow}{WHERE} (lmask)
+704     pgrndhflx(:) = zdz1(:,1) * (pgrndc(:,1) + (pgrndd(:,1) - 1.\_wp) * ptsoil(:,1))
+705     pgrndcapc(:) = (zdz2(:,1) * delta\_time + delta\_time * (1.\_wp - pgrndd(:,1)) * zdz1(:,1))
+706   \textcolor{keywordflow}{ELSEWHERE}
+707     pgrndhflx = 0.\_wp
+708     pgrndcapc = 0.\_wp
+709 \textcolor{keywordflow}{  END WHERE}
+710 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d3e/namespacemo__soil__process_a9f2a04bdb962c1615ee419e1c62d6870_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__soil__process_a7dd6c425ac02aef924fb1fa3de6b373d}{}\index{mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}!update\+\_\+surf\+\_\+down@{update\+\_\+surf\+\_\+down}}
+\index{update\+\_\+surf\+\_\+down@{update\+\_\+surf\+\_\+down}!mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}}
+\subsubsection[{update\+\_\+surf\+\_\+down}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+soil\+\_\+process\+::update\+\_\+surf\+\_\+down (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{kbdim, }
+\item[{real(wp), intent(in)}]{delta\+\_\+time, }
+\item[{logical, intent(in)}]{lstart, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pqm1, }
+\item[{real(wp), dimension(kbdim), intent(inout)}]{ptsl, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pspeed10, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{ptm1, }
+\item[{real(wp), dimension(kbdim), intent(inout)}]{pwl, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pcvw, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pwlmx, }
+\item[{real(wp), dimension(kbdim), intent(inout)}]{psn, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pcvs, }
+\item[{real(wp), dimension(kbdim), intent(inout)}]{psnc, }
+\item[{real(wp), dimension(kbdim), intent(inout)}]{pgld, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pgrndcapc}
+\end{DoxyParamCaption}
+)}\label{namespacemo__soil__process_a7dd6c425ac02aef924fb1fa3de6b373d}
+
+
+Definition at line 171 of file mo\+\_\+soil\+\_\+process.\+f90.
+
+
+
+Referenced by mo\+\_\+soil\+\_\+interface\+::update\+\_\+soil\+\_\+1().
+
+
+\begin{DoxyCode}
+171      , pevapl,     pevapot, pevwsd                    &
+172      , prain, psnow                            &
+173      , lmask, lpglac       &
+174      , palac &
+175 \textcolor{comment}{!!$     , psnacl, psnmel, progl &}
+176      , pmlres, tte\_corr &
+177 \textcolor{comment}{!++mgs : add instantaneous snow melt for drydep calculation}
+178      , psmelt   &
+179 \textcolor{comment}{!--mgs}
+180 
+181      )
+182 
+183   \textcolor{keywordtype}{USE }mo\_physical\_constants\textcolor{keywordtype}{, ONLY}: alf, cpd, vtmpc2, tmelt, g=>grav
+184 
+185   \textcolor{comment}{!}
+186   \textcolor{comment}{!     ------------------------------------------------------------------}
+187   \textcolor{comment}{! ptsl          Sfc temp [K] at timestep t+dt (unfiltered)}
+188   \textcolor{comment}{! pspeed10      Wind speed at 10m height [m/s] ... from 'vdiff'}
+189   \textcolor{comment}{! ptm1          Air temp [K] at timestep t-dt (filtered)}
+190   \textcolor{comment}{! pwl           Water content [m] in skin reservoir}
+191   \textcolor{comment}{!               (vegetation and bare soil)}
+192   \textcolor{comment}{! pcvw          Skin reservoir fraction (= pwl/pwlmx, see *vdiff*)}
+193   \textcolor{comment}{! pwlmx         Skin reservoir [m] (calculated in *vdiff* as a function}
+194   \textcolor{comment}{!               of vegetation index and leaf area index)}
+195   \textcolor{comment}{! psn           Snow depth [m water equivalent] at the ground}
+196   \textcolor{comment}{! pcvs          Fractional snow cover (function of psn in *physc*)}
+197   \textcolor{comment}{! psnc          Snow depth [m water equivalent] at the canopy}
+198   \textcolor{comment}{! pgld          Glacier depth (including snow) [m water equivalent]}
+199   \textcolor{comment}{! pgrndcapc     Heat capacity of the uppermost soil layer [j/m**2/K]}
+200   \textcolor{comment}{! pevapl        Total evapotranspiration, including sublimation [kg/m**2/s]}
+201   \textcolor{comment}{! pevapot       Potential evaporation/sublimation [kg/m**2/s]}
+202   \textcolor{comment}{! pevwsd        Evapotranspiration without sublimation and evaporation from interception reservoir
+       [kg/m**2]}
+203   \textcolor{comment}{! prain         Totalrainfall [kg/m**2/s]}
+204   \textcolor{comment}{! psnow         Total snowfall [kg/m**2/s]}
+205   \textcolor{comment}{! lpglac        Logical glacier mask}
+206   \textcolor{comment}{! palac         Precipitation minus sublimation at glacier points [kg/m**2/s]}
+207   \textcolor{comment}{! psnacl        Snow budget at non-glacier points [kg/m**2] (accumul.)}
+208   \textcolor{comment}{! psnmel        Snow melt [kg/m**2] (accumulated for diagnostics)}
+209   \textcolor{comment}{! progl         Glacier runoff (rain+snow/ice melt) [kg/m**2] (accumul.)}
+210   \textcolor{comment}{!}
+211   \textcolor{comment}{! The following local variables represent the respective fluxes}
+212   \textcolor{comment}{! integrated over one timestep (delta\_time) and divided by the density of}
+213   \textcolor{comment}{! water (rhoh2o). Units are m water equivalent.}
+214   \textcolor{comment}{!}
+215   \textcolor{comment}{! zraind        Total rain}
+216   \textcolor{comment}{! zsnowd        Total snowfall}
+217   \textcolor{comment}{! zevttd        Total evaporation}
+218   \textcolor{comment}{! zevsnd        Sublimation from snow}
+219   \textcolor{comment}{! zevwld        Evaporation from the skin reservoir}
+220   \textcolor{comment}{! zrogl         Runoff at glacier points (rain and melt, but no calving)}
+221   \textcolor{comment}{! zsnmel        Snow/ice melt at land and glacier points}
+222   \textcolor{comment}{! zsncmelt      Snow melt in the canopy}
+223   \textcolor{comment}{! zsn           Snow budget at non-glacier points (snowfall-subl-melt)}
+224   \textcolor{comment}{! pmlres        Residual melt water available for infiltration into the}
+225   \textcolor{comment}{!               non-frozen soil after being intercepted by the}
+226   \textcolor{comment}{!               skin reservoir}
+227   \textcolor{comment}{! tte\_corr      Correction term for temperature tendencies accounting for snow melt}
+228   \textcolor{comment}{! psmelt        instantaneous snow melt rate (for dry deposition)}
+229   \textcolor{comment}{!}
+230   \textcolor{comment}{!       Rest folgt spaeter ....}
+231   \textcolor{comment}{!}
+232   \textcolor{comment}{!     *SURF* - UPDATES LAND VALUES OF TEMPERATURE, MOISTURE AND SNOW.}
+233   \textcolor{comment}{!              CALCULATE FLUXES OF TOTAL RAIN, TOTAL SNOW AND EVAPO-}
+234   \textcolor{comment}{!              RATION FROM THE THREE RESERVOIRS (SN, WS, WL)}
+235   \textcolor{comment}{!              CONVERT FLUXES (KG/M**2*S) TO CHANGES OF WATER LEVELS (M)}
+236   \textcolor{comment}{!              DURING TIMESTEP DELTA\_TIME.}
+237   \textcolor{comment}{!}
+238   \textcolor{comment}{!     J.F.GELEYN     E.C.M.W.F.     08/06/82.}
+239   \textcolor{comment}{!     MODIFIED BY}
+240   \textcolor{comment}{!     C.A.BLONDIN    E.C.M.W.F.    18/12/86.}
+241   \textcolor{comment}{!     MODIFIED BY L.DUMENIL      MET.INST.HH     20/05/88}
+242   \textcolor{comment}{!     J.-P. SCHULZ   MPI - 1997 : IMPLEMENTATION OF IMPLICIT}
+243   \textcolor{comment}{!                                 COUPLING BETWEEN LAND SURFACE}
+244   \textcolor{comment}{!                                 AND ATMOSPHERE.}
+245   \textcolor{comment}{!     MODIFIED BY E. ROECKNER    MPI - SEPT 1998}
+246   \textcolor{comment}{!     MODIFIED BY M. ESCH        MPI - APR  1999}
+247   \textcolor{comment}{!     MODIFIED BY E. ROECKNER    MPI - JAN  2001}
+248   \textcolor{comment}{!     MODIFIED BY I. Kirchner    MPI - MARCH 2001 date/time control}
+249   \textcolor{comment}{!     MODIFIED BY E. ROECKNER    MPI - SEP  2002 interception reservoir}
+250   \textcolor{comment}{!                                                for snow changed}
+251   \textcolor{comment}{!     MODIFIED BY L. KORNBLUEH   MPI - JAN  2003 removed MERGE}
+252   \textcolor{comment}{!}
+253   \textcolor{comment}{!     MODIFICATION}
+254   \textcolor{comment}{!}
+255   \textcolor{comment}{!     PURPOSE}
+256   \textcolor{comment}{!}
+257   \textcolor{comment}{!     INTERFACE.}
+258   \textcolor{comment}{!}
+259   \textcolor{comment}{!          *SURF* IS CALLED FROM *PHYSC*.}
+260   \textcolor{comment}{!}
+261   \textcolor{comment}{!     METHOD.}
+262   \textcolor{comment}{!}
+263   \textcolor{comment}{!     EXTERNALS.}
+264   \textcolor{comment}{!}
+265   \textcolor{comment}{!          NONE.}
+266   \textcolor{comment}{!}
+267   \textcolor{comment}{!     REFERENCE.}
+268   \textcolor{comment}{!}
+269   \textcolor{comment}{!          SEE SOIL PROCESSES' PART OF THE MODEL'S DOCUMENTATION FOR}
+270   \textcolor{comment}{!     DETAILS ABOUT THE MATHEMATICS OF THIS ROUTINE.}
+271   \textcolor{comment}{!}
+272 \textcolor{comment}{!!$ TR  USE mo\_param\_switches ! only lsurf is used}
+273 \textcolor{comment}{!!$ TR  USE mo\_physc2}
+274 \textcolor{comment}{!!$ TR  USE mo\_constants}
+275 \textcolor{comment}{!!$ TR  USE mo\_vegetation ! only cvinter is used}
+276 \textcolor{comment}{!!$ TR  USE mo\_radiation}
+277 
+278   \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(in)} :: kbdim
+279   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: delta\_time
+280   \textcolor{keywordtype}{LOGICAL},  \textcolor{keywordtype}{INTENT(in)} :: lstart
+281   \textcolor{keywordtype}{LOGICAL},  \textcolor{keywordtype}{INTENT(in)} :: lmask(kbdim)
+282   \textcolor{keywordtype}{LOGICAL},  \textcolor{keywordtype}{INTENT(in)} :: lpglac(kbdim)
+283   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: pqm1(kbdim)
+284   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: pspeed10(kbdim)
+285   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: ptm1(kbdim)
+286   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: pcvw(kbdim)
+287   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: pwlmx(kbdim)
+288   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: pcvs(kbdim)
+289   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: pgrndcapc(kbdim)
+290   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: pevapl(kbdim)
+291   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: pevapot(kbdim)
+292   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: prain(kbdim)
+293   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)} :: psnow(kbdim)
+294 
+295   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)} :: ptsl(kbdim)
+296   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)} :: pwl(kbdim)
+297   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)} :: psn(kbdim)
+298   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)} :: psnc(kbdim)
+299   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)} :: pgld(kbdim)
+300 \textcolor{comment}{!!$  REAL(wp), INTENT(inout) :: psnacl(kbdim)}
+301 \textcolor{comment}{!!$  REAL(wp), INTENT(inout) :: psnmel(kbdim)}
+302 \textcolor{comment}{!!$  REAL(wp), INTENT(inout) :: progl(kbdim)}
+303 
+304   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(out)}   :: pevwsd(kbdim)
+305   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(out)}   :: palac(kbdim)
+306   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(out)}   :: tte\_corr(kbdim)
+307   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(out)}   :: pmlres(kbdim)
+308   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(out)}   :: psmelt(kbdim)   \textcolor{comment}{!++mgs}
+309   \textcolor{comment}{!}
+310   \textcolor{comment}{!  local arrays}
+311   \textcolor{comment}{!}
+312   \textcolor{keywordtype}{INTEGER} :: jl
+313   \textcolor{keywordtype}{REAL(wp)} ::                                                             &
+314        zraind (kbdim),       zsnowd(kbdim),         zevttd(kbdim)        &
+315        , zevsnd(kbdim),        zevwld(kbdim)        &
+316        , zrogl(kbdim)         &
+317        , zsnmel(kbdim),        zsn(kbdim)                                 &
+318        ,        zsncmelt(kbdim)
+319 \textcolor{comment}{!!$       , zdp(kbdim),}
+320   \textcolor{keywordtype}{REAL(wp)} :: zlfdcp(kbdim)
+321   \textcolor{comment}{!}
+322   \textcolor{comment}{!  local scalars}
+323   \textcolor{comment}{!}
+324   \textcolor{keywordtype}{REAL(wp)} ::                                                             &
+325        zsmelt, zsnmlt,      &
+326        zmprcp,    &
+327        zc2, zc3, zsncp, zexpt, zexpw, zsncmax, zsncwind
+328   \textcolor{keywordtype}{REAL(wp)} :: zdtime, zrcp, zsncfac
+329   \textcolor{comment}{!}
+330   \textcolor{comment}{!      Parameters}
+331   \textcolor{comment}{!}
+332 
+333   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{PARAMETER} :: cvinter = 0.25\_wp  \textcolor{comment}{!!$ TR for JSBACH testing}
+334   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{PARAMETER} :: cwlmax = 2.e-4\_wp  \textcolor{comment}{!!$ TR for JSBACH testing}
+335 
+336   zdtime = delta\_time
+337   zc2=1.87e5\_wp
+338   zc3=1.56e5\_wp
+339   zsncfac=rhoh2o*g/zdtime
+340   \textcolor{comment}{!}
+341   \textcolor{comment}{!     ------------------------------------------------------------------}
+342   \textcolor{comment}{!}
+343   \textcolor{comment}{!*    1.     Convert water fluxes to [m water equivalent * timestep]}
+344   \textcolor{comment}{!}
+345   \textcolor{keywordflow}{DO} 110 jl=1,kbdim
+346      palac(jl)=0.\_wp
+347      zrogl(jl)=0.\_wp
+348      pmlres(jl)=0.\_wp
+349      zsn(jl)=0.\_wp
+350      zsnmel(jl)=0.\_wp
+351      zsncmelt(jl)=0.\_wp
+352      zraind(jl)=prain(jl)             *zdtime/rhoh2o                   \textcolor{comment}{!rain     [kg m-2 s-1] -> [m]}
+353      zsnowd(jl)=psnow(jl)             *zdtime/rhoh2o                   \textcolor{comment}{!snowfall [kg m-2 s-1] -> [m]}
+354      \textcolor{keywordflow}{IF}(lmask(jl)) \textcolor{keywordflow}{THEN}
+355         zrcp=1.\_wp/(cpd*(1.\_wp+vtmpc2*max(0.0\_wp,pqm1(jl))))
+356         zlfdcp(jl)=alf*zrcp
+357         zevttd(jl)=pevapl(jl)                        *zdtime/rhoh2o    \textcolor{comment}{!evapotransp. [kg m-2 s-1] -> [m]}
+358         zevsnd(jl)=pcvs(jl)*pevapot(jl)              *zdtime/rhoh2o    \textcolor{comment}{!pot. sublimation from snow [m]}
+359         zevwld(jl)=(1.\_wp-pcvs(jl))*pcvw(jl)*pevapot(jl)*zdtime/rhoh2o \textcolor{comment}{!pot. evaporation from skinreservoir
+       [m]}
+360         pevwsd(jl)=zevttd(jl)-zevsnd(jl)                               \textcolor{comment}{! [m]}
+361      \textcolor{keywordflow}{ELSE}
+362         pevwsd(jl) = 0.\_wp \textcolor{comment}{! Sain initialization for diagnostics}
+363 \textcolor{keywordflow}{     END IF}
+364 110\textcolor{keywordflow}{ END DO}
+365   \textcolor{comment}{!}
+366 \textcolor{comment}{!!$ TR  IF(lsurf) THEN}
+367      \textcolor{comment}{!}
+368      \textcolor{comment}{!     ------------------------------------------------------------------}
+369      \textcolor{comment}{!}
+370      \textcolor{comment}{!*    2.     Budgets of snow (canopy and ground) and glaciers}
+371      \textcolor{comment}{!}
+372      \textcolor{comment}{!*    2.1    Snow changes in the canopy (interception of snowfall,}
+373      \textcolor{comment}{!            sublimation, melting, unloading due to wind)}
+374      \textcolor{comment}{!}
+375      \textcolor{keywordflow}{DO} 210 jl=1,kbdim
+376         \textcolor{keywordflow}{IF} (lmask(jl) .AND. .NOT.lpglac(jl)) \textcolor{keywordflow}{THEN}
+377            zsn(jl)=zsnowd(jl)+zevsnd(jl)                       \textcolor{comment}{! [m]}
+378            zsncmax=max(0.0\_wp,pwlmx(jl)-cwlmax)
+379            zmprcp=min(zsnowd(jl)*cvinter,zsncmax-psnc(jl))
+380            zsncp=psnc(jl)+zmprcp
+381            zsnowd(jl)=zsnowd(jl)-zmprcp
+382            psnc(jl)=min(max(0.\_wp,zsncp+zevsnd(jl)),zsncmax)
+383            zevsnd(jl)=zevsnd(jl)-(psnc(jl)-zsncp)
+384            zexpt=max(0.\_wp,ptm1(jl)+3.\_wp-tmelt)*zdtime/zc2
+385            zexpw=pspeed10(jl)*zdtime/zc3
+386            zsncmelt(jl)=psnc(jl)*(1.\_wp-exp(-zexpt))
+387            psnc(jl)=psnc(jl)-zsncmelt(jl)
+388            zsncwind=psnc(jl)*(1.\_wp-exp(-zexpw))
+389            psnc(jl)=psnc(jl)-zsncwind
+390            zsnowd(jl)=zsnowd(jl)+zsncwind
+391            tte\_corr(jl)=zsncmelt(jl)*zsncfac*zlfdcp(jl)
+392            \textcolor{comment}{!}
+393            \textcolor{comment}{!   pwl(jl)=pwl(jl)+zsncmelt(jl) see section 2.5}
+394            \textcolor{comment}{!}
+395         \textcolor{keywordflow}{ELSE}                         \textcolor{comment}{!vg  on glacier:}
+396            psnc(jl)=0.\_wp            \textcolor{comment}{!vg    no snow on canopy}
+397            tte\_corr(jl) = 0.\_wp      \textcolor{comment}{!vg    no snow melt correction}
+398 \textcolor{keywordflow}{        END IF}
+399 210\textcolor{keywordflow}{  END DO}
+400      \textcolor{comment}{!}
+401      \textcolor{comment}{!*    2.2    Snowfall and sublimation on land (excluding glaciers)}
+402      \textcolor{comment}{!}
+403      \textcolor{keywordflow}{DO} 220 jl=1,kbdim
+404         \textcolor{keywordflow}{IF} (lmask(jl) .AND. .NOT.lpglac(jl)) \textcolor{keywordflow}{THEN}
+405            psn(jl)=psn(jl)+zsnowd(jl)+zevsnd(jl)
+406            \textcolor{keywordflow}{IF} (psn(jl).LT.0.\_wp) \textcolor{keywordflow}{THEN}
+407               pevwsd(jl)=pevwsd(jl)+psn(jl)
+408               psn(jl)=0.\_wp
+409 \textcolor{keywordflow}{           END IF}
+410         \textcolor{keywordflow}{ELSE}                         \textcolor{comment}{!vg  glacier:}
+411            psn(jl)=0.\_wp             \textcolor{comment}{!vg     no snow on glaciers}
+412 \textcolor{keywordflow}{        END IF}
+413 220\textcolor{keywordflow}{  END DO}
+414      \textcolor{comment}{!}
+415      \textcolor{comment}{!*    2.3    Snowfall and sublimation on glaciers and diagnostics}
+416      \textcolor{comment}{!}
+417      \textcolor{keywordflow}{DO} 230 jl=1,kbdim
+418         \textcolor{keywordflow}{IF} (lpglac(jl)) \textcolor{keywordflow}{THEN}
+419            pgld(jl)=pgld(jl)+zsnowd(jl)+zevsnd(jl)      \textcolor{comment}{!vg  glacier depth [m] = glacier depth + snowfall +
+       sublimation of snow}
+420            palac(jl)=zraind(jl)+zsnowd(jl)+zevttd(jl)   \textcolor{comment}{!vg  P-E on glaciers [m] = rainfall + snowfall +
+       evaporation (incl. sublim.) }
+421            zrogl(jl)=zraind(jl)                         \textcolor{comment}{!vg  glacier runoff = rainfall [m]}
+422 \textcolor{keywordflow}{        END IF}
+423 230\textcolor{keywordflow}{  END DO}
+424      \textcolor{comment}{!}
+425      \textcolor{comment}{!*    2.4    Snow and glacier melt}
+426      \textcolor{comment}{!}
+427      \textcolor{keywordflow}{IF} (.NOT. lstart) \textcolor{keywordflow}{THEN}
+428         \textcolor{keywordflow}{DO} 240 jl=1,kbdim
+429            \textcolor{keywordflow}{IF} (lmask(jl)) \textcolor{keywordflow}{THEN}
+430               \textcolor{keywordflow}{IF} (ptsl(jl).GT.tmelt) \textcolor{keywordflow}{THEN}               \textcolor{comment}{!vg  temperature > 0 degC}
+431                  \textcolor{keywordflow}{IF} (lpglac(jl)) \textcolor{keywordflow}{THEN}                                    \textcolor{comment}{!vg  glacier:}
+432                     zsnmel(jl)=pgrndcapc(jl)*(ptsl(jl)-tmelt)/(alf*rhoh2o)  \textcolor{comment}{!vg  snow and ice melt [m]}
+433                     pgld(jl)=pgld(jl)-zsnmel(jl)                            \textcolor{comment}{!vg  adapt glacier depth to
+       snow and ice melt}
+434                     zrogl(jl)=zrogl(jl)+zsnmel(jl)                          \textcolor{comment}{!vg  add melt water to glacier
+       runoff}
+435                     ptsl(jl)=tmelt                                          \textcolor{comment}{!vg  surface temp. limited to 0
+       degC}
+436                  \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (psn(jl).GT.0.\_wp) \textcolor{keywordflow}{THEN}                         \textcolor{comment}{!vg  snow cover at non glacier
+       land:}
+437                     zsmelt=pgrndcapc(jl)*(ptsl(jl)-tmelt)/(alf*rhoh2o)      \textcolor{comment}{!vg  potential snow and ice
+       melt [m]}
+438                     zsnmel(jl)=min(psn(jl),zsmelt)                          \textcolor{comment}{!vg  actual snow and ice melt
+       [m]}
+439                     ptsl(jl)=ptsl(jl)-zsnmel(jl)*alf*rhoh2o/pgrndcapc(jl)   \textcolor{comment}{!vg  re-calculation of surface
+       temp.}
+440                     psn(jl)=max(psn(jl)-zsnmel(jl),0.\_wp)                   \textcolor{comment}{!vg  re-calculation of snow
+       depth}
+441 \textcolor{keywordflow}{                 END IF}
+442 \textcolor{keywordflow}{              END IF}
+443 \textcolor{keywordflow}{           END IF}
+444 240\textcolor{keywordflow}{     END DO}
+445 \textcolor{keywordflow}{     END IF}
+446      \textcolor{comment}{!}
+447      \textcolor{comment}{!*    2.5    Snow budget and meltwater (glacier-free land only)}
+448      \textcolor{comment}{!}
+449      \textcolor{keywordflow}{DO} 250 jl=1,kbdim
+450         \textcolor{keywordflow}{IF} (lmask(jl) .AND. .NOT.lpglac(jl)) \textcolor{keywordflow}{THEN}
+451            pwl(jl)=pwl(jl)+zsncmelt(jl)                  \textcolor{comment}{! Add melt water on canopy to skin reservoir}
+452            zsnmlt=zsnmel(jl)+max(0.\_wp,pwl(jl)-pwlmx(jl))   \textcolor{comment}{! Excess water on canopy drips to ground and}
+453            pwl(jl)=min(pwlmx(jl),pwl(jl))                \textcolor{comment}{! skin reservoir on canopy is set to maximum}
+454            pmlres(jl)=zsnmlt
+455            zsnmel(jl)=zsnmel(jl)+zsncmelt(jl)
+456            zsn(jl)=zsn(jl)-zsnmel(jl)
+457 \textcolor{keywordflow}{        END IF}
+458 250\textcolor{keywordflow}{  END DO}
+459      \textcolor{comment}{!}
+460      \textcolor{comment}{! Accumulate water fluxes}
+461      \textcolor{comment}{! Note: conversion from m water equivalent to kg/m^2s - multiply by rhoh2o / zdtime}
+462      \textcolor{comment}{!       accumulation - multiply by zdtime}
+463      \textcolor{keywordflow}{DO} 601 jl=1,kbdim
+464         \textcolor{keywordflow}{IF} (lmask(jl)) \textcolor{keywordflow}{THEN}
+465 \textcolor{comment}{!!$            IF (.NOT. lpglac(jl)) psnacl(jl) = psnacl(jl)  +zsn(jl) * rhoh2o}
+466 \textcolor{comment}{!!$            psnmel(jl) = psnmel(jl)  +zsnmel(jl) * rhoh2o}
+467 \textcolor{comment}{!!$            IF (lpglac(jl)) progl(jl)  = progl(jl)   +zrogl(jl)  *rhoh2o}
+468 \textcolor{comment}{!vg>>}
+469           palac(jl) = palac(jl) * rhoh2o/zdtime  \textcolor{comment}{! [m] -> [kg m-2 s-1]}
+470 \textcolor{comment}{!vg<<}
+471 \textcolor{keywordflow}{        END IF}
+472 601\textcolor{keywordflow}{  END DO}
+473 
+474 \textcolor{comment}{!++mgs}
+475 \textcolor{comment}{!--- Included for dry deposition ---------------------------------------}
+476       psmelt(1:kbdim) = zsnmel(1:kbdim) * rhoh2o
+477 \textcolor{comment}{!--mgs}
+478 
+479 \textcolor{comment}{!!$ TR  END IF}
+480   \textcolor{comment}{!}
+481   \textcolor{keywordflow}{RETURN}
+482 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d3e/namespacemo__soil__process_a7dd6c425ac02aef924fb1fa3de6b373d_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__soil__process_a6baae437b29f7d04d8bb10cb1d52249f}{}\index{mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}!update\+\_\+surf\+\_\+up@{update\+\_\+surf\+\_\+up}}
+\index{update\+\_\+surf\+\_\+up@{update\+\_\+surf\+\_\+up}!mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}}
+\subsubsection[{update\+\_\+surf\+\_\+up}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+soil\+\_\+process\+::update\+\_\+surf\+\_\+up (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{kbdim, }
+\item[{real(wp), intent(in)}]{delta\+\_\+time, }
+\item[{integer, intent(in)}]{nsoil, }
+\item[{real(wp), dimension(kbdim), intent(inout)}]{pwl, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pcvw, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pwlmx, }
+\item[{real(wp), dimension(kbdim), intent(inout)}]{pws, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pwsmx, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{ptsoil, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pcvs, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{porostd, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pevapl, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{pevapot, }
+\item[{real(wp), dimension(kbdim), intent(inout)}]{pevwsd, }
+\item[{real(wp), dimension(kbdim), intent(in)}]{prain, }
+\item[{logical, dimension(kbdim), intent(in)}]{lmask, }
+\item[{logical, dimension(kbdim), intent(in)}]{lpglac, }
+\item[{real(wp), dimension(kbdim), intent(inout)}]{prunoff, }
+\item[{real(wp), dimension(kbdim), intent(inout)}]{pdrain}
+\end{DoxyParamCaption}
+)}\label{namespacemo__soil__process_a6baae437b29f7d04d8bb10cb1d52249f}
+
+
+Definition at line 723 of file mo\+\_\+soil\+\_\+process.\+f90.
+
+
+
+References soilhyd().
+
+
+
+Referenced by mo\+\_\+soil\+\_\+interface\+::update\+\_\+soil\+\_\+1().
+
+
+\begin{DoxyCode}
+723      , pmlres &
+724      , zevwld &
+725 \textcolor{comment}{!     Soil moisture layers, evap. fluxes over land}
+726      , zdel, wsi, zwsfc, zwpwp           &
+727      , dzr, dzs, fksat , fmpot , bclapp, vpor     &
+728      , etrans, redevap                    &
+729 \textcolor{comment}{!!$     , vfc, vpwp &}
+730      , spsi                           &
+731      , overflow                       &
+732      , jllog                                     &
+733      , l\_tpe\_open                      &
+734      , l\_tpe\_closed                    &
+735      )
+736 \textcolor{comment}{!}
+737 \textcolor{comment}{!     ------------------------------------------------------------------}
+738 \textcolor{comment}{! pwl           Water content [m] in skin reservoir}
+739 \textcolor{comment}{!               (vegetation and bare soil)}
+740 \textcolor{comment}{! pwlmx         Skin reservoir [m] (calculated in *vdiff* as a function}
+741 \textcolor{comment}{!               of vegetation index and leaf area index)}
+742 \textcolor{comment}{! pcvw          Skin reservoir fraction (= pwl/pwlmx, see *vdiff*)}
+743 \textcolor{comment}{! pws           Soil water content [m]}
+744 \textcolor{comment}{! pwsmx         Water holding capacity [m] of the soil}
+745 \textcolor{comment}{! ptsoil        Temperature [K] in upper soil layer}
+746 \textcolor{comment}{! pcvs          Fractional snow cover (function of psn in *physc*)}
+747 \textcolor{comment}{! porostd       Subgrid standard diviation [m] used in runoff scheme}
+748 \textcolor{comment}{! pevapl        Total evapotranspiration, including sublimation [kg/m**2/s]}
+749 \textcolor{comment}{! etrans        Transpiration [kg/m**2/s]}
+750 \textcolor{comment}{! pevapot       Potential evaporation/sublimation [kg/m**2/s]}
+751 \textcolor{comment}{! pevwsd        Evapotranspiration without sublimation and evaporation from interception reservoir
+       [kg/m**2]}
+752 \textcolor{comment}{!               BUT in this routine it is [m], such as zevwld.}
+753 \textcolor{comment}{! prain         Totalrainfall [kg/m**2/s]}
+754 \textcolor{comment}{! prunoff       Runoff [kg/m**2/s] at non-glacier points (not including drainage)}
+755 \textcolor{comment}{! pdrain        Drainage at non-glacier points [kg/m**2/s]}
+756 \textcolor{comment}{!vg ! pros\_hd       Runoff for HD-Model (does NOT include drainage) [m]}
+757 \textcolor{comment}{!vg ! pdrain\_hd     Drainage for HD-Model [m]}
+758 \textcolor{comment}{! }
+759 \textcolor{comment}{! lpglac        Logical glacier mask}
+760 \textcolor{comment}{!}
+761 \textcolor{comment}{! The following local variables represent the respective fluxes}
+762 \textcolor{comment}{! integrated over one timestep (delta\_time) and divided by the density of}
+763 \textcolor{comment}{! water (rhoh2o). Units are m water equivalent.}
+764 \textcolor{comment}{!}
+765 \textcolor{comment}{! zraind        Total rain [m]}
+766 \textcolor{comment}{! zevwld        Evaporation from the skin reservoir [m]}
+767 \textcolor{comment}{! zros          Runoff (not including drainage) at non-glacier points [m]}
+768 \textcolor{comment}{! zdrain        Drainage at non-glacier points [m]}
+769 \textcolor{comment}{! zsn           Snow budget at non-glacier points (snowfall-subl-melt)}
+770 \textcolor{comment}{! pmlres        Residual melt water available for infiltration into the}
+771 \textcolor{comment}{!               non-frozen soil after being intercepted by the}
+772 \textcolor{comment}{!               skin reservoir}
+773 \textcolor{comment}{!}
+774 \textcolor{comment}{!  ******** 5 layer scheme}
+775 \textcolor{comment}{!     ***  kdeep = Number of soil layers = 5}
+776 \textcolor{comment}{!     ***   zdel = Thickness of the 5 soil layers [m]}
+777 \textcolor{comment}{!     ***  dzrsi = Rooted depth per soil layer (until rooting depth DZR) [m]}
+778 \textcolor{comment}{!     ***   dzsi = Depth that can be saturated with water per soil layer}
+779 \textcolor{comment}{!     ***          (until bedrock DZS) [m]}
+780 \textcolor{comment}{!     ***    dzr = Rooting depth in [m]}
+781 \textcolor{comment}{!     ***    dzs = Soil depth derived from textures in [m]}
+782 \textcolor{comment}{!     ***  fksat = Saturated hydraulic conductivity: unit [m/s]}
+783 \textcolor{comment}{!     ***  fmpot = Matrix potential [m]}
+784 \textcolor{comment}{!     *** bclapp = Exponent B in Clapp and Hornberger}
+785 \textcolor{comment}{!     ***   vpor = Volumetric soil porosity [m/m]   following Cosby et al.}
+786 \textcolor{comment}{!     ***    vfc = Volumetric soil field capacity [m/m]}
+787 \textcolor{comment}{!     ***   vpwp = Volumetric soil wilting point [m/m]}
+788 \textcolor{comment}{!     ***   spsi = Soil Pore size distribution index}
+789 \textcolor{comment}{!     ***  zwsat = MAXIMALE SPEICHERGEHALT DER SOIL LAYER I (POROSITAET) [M]}
+790 \textcolor{comment}{!     ***          WICHTIG FUER AUFNAHME DER INFILTRATION IN DEN BODENSCHICHTEN.}
+791 \textcolor{comment}{!     ***          IST DEFINIERT BIS ZUR TIEFE DES BODENS dzs, WO DER BEDROCK BEGINNT.}
+792 \textcolor{comment}{!     ***  zwsfc = Field capacity of soil layer I (analog zu ZWSAT) [m]}
+793 \textcolor{comment}{!     ***  zwpwp = Soil wilting point of soil layer I (analog to ZWSAT) [m]}
+794 \textcolor{comment}{!     ** aebsoil = Bare soil evaporation in [m], accumulated over TWODT/2}
+795 \textcolor{comment}{!     ** aetrans = Transpiration in [m] accumulated over one time step}
+796 \textcolor{comment}{!     ***          (calculated from etrans which is in [kg/m**2/s])}
+797 \textcolor{comment}{!     *** redevap  = Diagnostic desired reduction of evapotranspiration}
+798 \textcolor{comment}{!     ***            due to limited storage in soil layers [kg/m**2/s]}
+799 \textcolor{comment}{!     *** wsi(I) = Soil moisture content in I. soil layer [m]}
+800 \textcolor{comment}{!     ***          Is updated with the fluxes calculated in SOILHYD}
+801 \textcolor{comment}{!     *** wsim1m(i) = Soil Moisture of previous time step in i. Soil layer [m]}
+802 \textcolor{comment}{!     *** ZDRAIN = Drainage: Volumen in time step: unit [m]}
+803 \textcolor{comment}{!}
+804 \textcolor{comment}{!     *** jllog          relative Index of grid box for log output between 1 and kbdim}
+805 \textcolor{comment}{!}
+806 \textcolor{comment}{!       The rest is to be added later on ....}
+807 \textcolor{comment}{!}
+808 \textcolor{comment}{!     *SURF* - Updates land values of temperature, moisture and snow.}
+809 \textcolor{comment}{!              Calculate fluxes of total rain, total snow and evapo-}
+810 \textcolor{comment}{!              ration from the three reservoirs (SN, WS, WL)}
+811 \textcolor{comment}{!              convert fluxes (kg/m**2*s) to changes of water levels (m)}
+812 \textcolor{comment}{!              during timestep delta\_time.}
+813 \textcolor{comment}{!}
+814 \textcolor{comment}{!     J.F.GELEYN     E.C.M.W.F.     08/06/82.}
+815 \textcolor{comment}{!     MODIFIED BY}
+816 \textcolor{comment}{!     C.A.BLONDIN    E.C.M.W.F.    18/12/86.}
+817 \textcolor{comment}{!     MODIFIED BY L.DUMENIL      MET.INST.HH     20/05/88}
+818 \textcolor{comment}{!                 J.-P. SCHULZ   MPI - 1997 : Implementation of implicit coupling between}
+819 \textcolor{comment}{!                                             land surface and atmosphere.}
+820 \textcolor{comment}{!     MODIFIED BY E. ROECKNER    MPI - SEPT 1998}
+821 \textcolor{comment}{!     MODIFIED BY M. ESCH        MPI - APR  1999}
+822 \textcolor{comment}{!     MODIFIED BY E. ROECKNER    MPI - JAN  2001}
+823 \textcolor{comment}{!     MODIFIED BY I. Kirchner    MPI - MARCH 2001 date/time control}
+824 \textcolor{comment}{!     MODIFIED BY E. ROECKNER    MPI - SEP  2002 interception reservoir}
+825 \textcolor{comment}{!                                                for snow changed}
+826 \textcolor{comment}{!     MODIFIED BY L. KORNBLUEH   MPI - JAN  2003 removed MERGE}
+827 \textcolor{comment}{!     MODIFIED BY ??? R. SCHNUR?        JSBACH Version}
+828 \textcolor{comment}{!}
+829 \textcolor{comment}{!     MODIFIED BY S. HAGEMANN    MPI - February  2009}
+830 \textcolor{comment}{!     *** Implementation of 5 layer soil hydrology scheme}
+831 \textcolor{comment}{!}
+832 \textcolor{comment}{!     MODIFICATION}
+833 \textcolor{comment}{!}
+834 \textcolor{comment}{!     PURPOSE}
+835 \textcolor{comment}{!}
+836 \textcolor{comment}{!     INTERFACE.}
+837 \textcolor{comment}{!}
+838 \textcolor{comment}{!          *SURF* is called from *PHYSC*.}
+839 \textcolor{comment}{!}
+840 \textcolor{comment}{!     METHOD.}
+841 \textcolor{comment}{!}
+842 \textcolor{comment}{!     EXTERNALS.}
+843 \textcolor{comment}{!}
+844 \textcolor{comment}{!          NONE.}
+845 \textcolor{comment}{!}
+846 \textcolor{comment}{!     REFERENCE.}
+847 \textcolor{comment}{!}
+848 \textcolor{comment}{!          See soil processes' part of the model's documentation for}
+849 \textcolor{comment}{!     details about the mathematics of this routine.}
+850 \textcolor{comment}{!}
+851 \textcolor{comment}{!!$ TR  USE mo\_control,        ONLY: ngl}
+852 \textcolor{comment}{!!$ TR  USE mo\_param\_switches, ONLY: lsurf}
+853 \textcolor{comment}{!!$ TR  USE mo\_vegetation ! only cvinter is used}
+854 \textcolor{comment}{!!$ TR  USE mo\_radiation}
+855 \textcolor{comment}{!!$ TR#ifdef STANDALONE}
+856 \textcolor{comment}{!!$ TR  USE mo\_jsbach\_comm\_to\_echam5mods, ONLY: nlat}
+857 \textcolor{comment}{!!$ TR#endif}
+858 
+859   \textcolor{keywordtype}{USE }mo\_physical\_constants\textcolor{keywordtype}{, ONLY}: tmelt, g=>grav
+860 
+861   \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(in)}    :: kbdim
+862   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: delta\_time
+863   \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(in)}    :: nsoil \textcolor{comment}{! also used as switch for 5 layer calculation}
+864   \textcolor{keywordtype}{LOGICAL},  \textcolor{keywordtype}{INTENT(in)}    :: lmask(kbdim)      \textcolor{comment}{!vg: true everywhere}
+865   \textcolor{keywordtype}{LOGICAL},  \textcolor{keywordtype}{INTENT(in)}    :: lpglac(kbdim)
+866   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pcvw(kbdim)
+867   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pwlmx(kbdim)
+868   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pwsmx(kbdim)
+869   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: ptsoil(kbdim)
+870   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pcvs(kbdim)
+871   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: porostd(kbdim)
+872   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pevapl(kbdim)      \textcolor{comment}{!! not used}
+873   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pevapot(kbdim)
+874   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: prain(kbdim)
+875   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}    :: pmlres(kbdim)
+876 
+877   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)} :: pwl(kbdim)
+878   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)} :: pws(kbdim)
+879   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)} :: pevwsd(kbdim)
+880   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)} :: prunoff(kbdim)
+881   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)} :: pdrain(kbdim)
+882 
+883 \textcolor{comment}{!vg   REAL(wp), INTENT(inout) :: pros\_hd(kbdim)}
+884 \textcolor{comment}{!vg   REAL(wp), INTENT(inout) :: pdrain\_hd(kbdim)}
+885   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(out)}   :: zevwld(kbdim) \textcolor{comment}{! From optional part}
+886 \textcolor{comment}{!}
+887 \textcolor{comment}{! Soil moisture layers, evap. fluxes over land.}
+888   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}   , \textcolor{keywordtype}{optional} :: zdel(nsoil)
+889   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)}, \textcolor{keywordtype}{optional} :: wsi(kbdim,nsoil)
+890   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{optional} :: zwsfc(kbdim,nsoil)
+891   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{optional} :: zwpwp(kbdim,nsoil)
+892   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}   , \textcolor{keywordtype}{optional} :: dzr(kbdim)
+893   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}   , \textcolor{keywordtype}{optional} :: dzs(kbdim)
+894   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}   , \textcolor{keywordtype}{optional} :: fksat(kbdim)
+895   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}   , \textcolor{keywordtype}{optional} :: fmpot(kbdim)
+896   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}   , \textcolor{keywordtype}{optional} :: bclapp(kbdim)
+897   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}   , \textcolor{keywordtype}{optional} :: vpor(kbdim)
+898   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}   , \textcolor{keywordtype}{optional} :: etrans(kbdim)
+899   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(out)}  , \textcolor{keywordtype}{optional} :: redevap(kbdim) \textcolor{comment}{! reduction of evapotranspiration from SOILCHANGE}
+900 \textcolor{comment}{!!$  REAL(wp), INTENT(in)   , optional :: vfc(kbdim)}
+901 \textcolor{comment}{!!$  REAL(wp), INTENT(in)   , optional :: vpwp(kbdim)}
+902   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(in)}   , \textcolor{keywordtype}{optional} :: spsi(kbdim)
+903   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(inout)}, \textcolor{keywordtype}{optional} :: overflow(kbdim) \textcolor{comment}{! excess of water in the terraplanet setup
+       (l\_tpe\_closed = true)}
+904 
+905   \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{INTENT(inout)}, \textcolor{keywordtype}{optional} :: jllog      \textcolor{comment}{! gridbox number for logoutput in SOILHYD}
+906   \textcolor{keywordtype}{LOGICAL},  \textcolor{keywordtype}{INTENT(in)},    \textcolor{keywordtype}{OPTIONAL} :: l\_tpe\_open   \textcolor{comment}{! Switch for terraplanet setup, open water cycle}
+907   \textcolor{keywordtype}{LOGICAL},  \textcolor{keywordtype}{INTENT(in)},    \textcolor{keywordtype}{OPTIONAL} :: l\_tpe\_closed \textcolor{comment}{! Switch for terraplanet setup, closed water cycle}
+908 \textcolor{comment}{!}
+909 \textcolor{comment}{!  local variables}
+910 \textcolor{comment}{!}
+911   \textcolor{keywordtype}{INTEGER} :: jl,jk
+912   \textcolor{keywordtype}{REAL(wp)} ::                                                             &
+913        zraind (kbdim)      &
+914      , zros(kbdim),          zdrain(kbdim)
+915 
+916   \textcolor{keywordtype}{REAL(wp)} ::                                                             &
+917        zorvari, zorvars, zdrmin, zdrmax, zdrexp, zsmelt,              &
+918        zmprcp, zwlp, zwptr, zwdtr, zwslim, zconw2, zconw3, zconw4,    &
+919        zroeff, zbws, zb1, zbm, zconw1, zlyeps, zvol, zprfl,           &
+920        zlysic, zwsup, zsncp, zexpt, zexpw, zsncmax, zsncwind
+921   \textcolor{keywordtype}{REAL(wp)} :: zdtime, zrcp, zsncfac
+922   \textcolor{comment}{! variables for terraplanet}
+923   \textcolor{keywordtype}{REAL(wp)} :: remoist
+924   \textcolor{keywordtype}{LOGICAL}  :: ltpe\_open, ltpe\_closed
+925 
+926   \textcolor{comment}{! Variables necessary for evaporation fluxes and 5 soil layers}
+927   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{PARAMETER} :: cvinter = 0.25  \textcolor{comment}{!!$ TR for JSBACH testing}
+928   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{PARAMETER} :: zeps  = 1.e-10\_wp
+929   \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{PARAMETER} :: zfak1 = 1.\_wp           \textcolor{comment}{! =1., Dummy for SOILCHANGE (not used)}
+930   \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{PARAMETER} :: kb1   = 1               \textcolor{comment}{! = 1, Digit for 1st field value for transfer to
+       subroutine}
+931   \textcolor{keywordtype}{INTEGER},  \textcolor{keywordtype}{PARAMETER} :: ilog  = 0               \textcolor{comment}{! Switch for logoutput in SOILHYD}
+932 \textcolor{comment}{!!!!  PARAMETER (jllog=918, ilog=3)        ! No logoutput for ilog=0}
+933 
+934   \textcolor{keywordtype}{REAL(wp)} ::                                                         &
+935        dzrsi(kbdim, nsoil), dzsi(kbdim, nsoil),                       &
+936        zwsat(kbdim,nsoil),                        &
+937 \textcolor{comment}{!!$       zwpwp(kbdim,nsoil),                                            &}
+938        wsim1m(kbdim, nsoil), aebsoil(kbdim), aetrans(kbdim)
+939 
+940   \textcolor{keywordtype}{REAL(wp)} :: zinfil(kbdim)    \textcolor{comment}{! Infiltration for transfer to SOILCHANGE - was previously a local scalar}
+941   \textcolor{keywordtype}{INTEGER}  :: isch             \textcolor{comment}{! Switch to control SOILCHANGE}
+942 
+943 \textcolor{comment}{!}
+944 \textcolor{comment}{!      Parameters}
+945 \textcolor{comment}{!}
+946   zdtime  = delta\_time
+947   zorvari = 100.\_wp
+948 \textcolor{comment}{!!$ TR#ifndef STANDALONE}
+949 \textcolor{comment}{!!$ TR for JSBACH testing (ngl is number of latitutdes)}
+950 \textcolor{comment}{!!$ TR  zorvars = 1000.\_wp*64.\_wp/ngl}
+951   zorvars = 1000.\_wp*64.\_wp/180.\_wp
+952 \textcolor{comment}{!!$ TR#else}
+953 \textcolor{comment}{!!$  zorvars = 1000.\_wp*64.\_wp/nlat}
+954 \textcolor{comment}{!!$ TR#endif}
+955   zdrmin  = 0.001\_wp/(3600.\_wp*1000.\_wp)
+956   zdrmax  = 0.1\_wp/(3600.\_wp*1000.\_wp)
+957   zdrexp  = 1.5\_wp
+958   zsncfac = rhoh2o*g/zdtime
+959 
+960   \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(l\_tpe\_open)) \textcolor{keywordflow}{THEN}
+961     ltpe\_open = l\_tpe\_open
+962   \textcolor{keywordflow}{ELSE}
+963     ltpe\_open = .false.
+964 \textcolor{keywordflow}{  ENDIF}
+965   \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(l\_tpe\_closed)) \textcolor{keywordflow}{THEN}
+966     ltpe\_closed = l\_tpe\_closed
+967   \textcolor{keywordflow}{ELSE}
+968     ltpe\_closed = .false.
+969 \textcolor{keywordflow}{  ENDIF}
+970 
+971 \textcolor{comment}{!     ------------------------------------------------------------------}
+972 \textcolor{comment}{!}
+973 \textcolor{comment}{!*    1.     Convert water fluxes to [m water equivalent * timestep]}
+974 
+975   zros   = 0.\_wp
+976   zdrain = 0.\_wp
+977   zraind = prain * zdtime / rhoh2o   \textcolor{comment}{!vg: prain [kg/m2/s] -> zraind [m]}
+978   zevwld = 0.\_wp
+979   \textcolor{keywordflow}{DO} jl=1,kbdim
+980     \textcolor{keywordflow}{IF} (lmask(jl)) \textcolor{keywordflow}{THEN}
+981 \textcolor{comment}{!!$      zros(jl) = 0.\_wp}
+982 \textcolor{comment}{!!$      zdrain(jl) = 0.\_wp}
+983 \textcolor{comment}{!!$      zraind(jl) = prain(jl) * zdtime/rhoh2o}
+984       \textcolor{comment}{!vg: potential evaporation from skin reservoir}
+985       \textcolor{comment}{!vg:  = (1-snow\_fract) * skinres\_fract * evap\_pot  [kg/m2/s] -> [m]}
+986       zevwld(jl) = (1.\_wp-pcvs(jl))*pcvw(jl)*pevapot(jl)*zdtime/rhoh2o
+987 \textcolor{keywordflow}{    END IF}
+988 \textcolor{keywordflow}{  ENDDO}
+989 
+990 \textcolor{comment}{! Initialization of working arrays for 5 soil layer scheme}
+991   \textcolor{keywordflow}{IF} (nsoil == 5) \textcolor{keywordflow}{THEN}
+992     \textcolor{keyword}{CALL }soildef(kb1, kbdim, kbdim, nsoil,               &
+993                  dzr, dzs, vpor &
+994 \textcolor{comment}{!!$                 , vfc, vpwp &}
+995                  , lmask, zdel, &
+996                  dzrsi, dzsi, zwsat &
+997 \textcolor{comment}{!!$                , zwsfc, zwpwp &}
+998                  )
+999 
+1000 \textcolor{comment}{!   *** Unit conversion for Transpiration [kg/m**2/s] --> [m]}
+1001     aetrans(1:kbdim) = etrans(1:kbdim)  * zdtime / rhoh2o
+1002     redevap(1:kbdim) = 0.\_wp
+1003 
+1004 \textcolor{keywordflow}{  ENDIF}
+1005 
+1006 \textcolor{comment}{!!$ TR  IF (lsurf) THEN}
+1007 
+1008 \textcolor{comment}{!     ------------------------------------------------------------------}
+1009 \textcolor{comment}{!*  4.     Water budget}
+1010 \textcolor{comment}{!}
+1011 \textcolor{comment}{!*  4.1    Skin reservoir (vegetation and bare soil)}
+1012 \textcolor{comment}{!}
+1013     \textcolor{keywordflow}{DO} jl=1,kbdim
+1014       \textcolor{keywordflow}{IF} (lmask(jl) .AND. .NOT. lpglac(jl)) \textcolor{keywordflow}{THEN}
+1015 \textcolor{comment}{!}
+1016 \textcolor{comment}{!*      4.1.1  Interception of rain}
+1017 \textcolor{comment}{!}
+1018         zmprcp     = min(zraind(jl)*cvinter,pwlmx(jl)-pwl(jl))  \textcolor{comment}{!vg  amount of water going into
+       interception reservoir}
+1019         zwlp       = pwl(jl)    + zmprcp                        \textcolor{comment}{!vg  update interception reservoir}
+1020         zraind(jl) = zraind(jl) - zmprcp                        \textcolor{comment}{!vg  remaining water reaching the soil }
+1021 \textcolor{comment}{!}
+1022 \textcolor{comment}{!*      4.1.2  Evaporation or dew collection}
+1023 \textcolor{comment}{!}
+1024         pwl(jl)    = min(max(0.\_wp,zwlp+zevwld(jl)),pwlmx(jl))  \textcolor{comment}{!vg  update interception reservoir with
+       respect to pot. evaporation}
+1025         pevwsd(jl) = pevwsd(jl)-(pwl(jl)-zwlp)                  \textcolor{comment}{!vg  reduce amount of evaporation
+       accordingly -> evapor. from soil}
+1026 \textcolor{comment}{!HAG}
+1027 \textcolor{comment}{!       Get sure that ESKIN comprises only amounts that really change the skin reservoir}
+1028         zevwld(jl) = pwl(jl)-zwlp \textcolor{comment}{! This is supposedly the correct way     !vg  calculate actual
+       evaporation from pot. evaporation}
+1029 \textcolor{comment}{!        if (nsoil==5) zevwld(jl) = pwl(jl)-zwlp ! Use this for compatibility with older jsbach revisions}
+1030       \textcolor{keywordflow}{ELSE}
+1031         pwl(jl) = 0.\_wp   \textcolor{comment}{!vg: no water in skin reservoir on glaciers anyway? or does something get lost?}
+1032 \textcolor{keywordflow}{      END IF}
+1033 \textcolor{keywordflow}{    ENDDO}
+1034 
+1035 \textcolor{comment}{!   Calculation of Bare Soil Evaporation}
+1036 \textcolor{comment}{!   Unit of pevwsd is [m]}
+1037     \textcolor{keywordflow}{IF} (nsoil == 5) aebsoil(1:kbdim) = pevwsd(1:kbdim) - aetrans(1:kbdim)  \textcolor{comment}{!vg  evap\_baresoil =
+       evapotrans\_soil - transpiration}
+1038 \textcolor{comment}{!}
+1039 \textcolor{comment}{!*  4.2    Soil reservoir}
+1040 \textcolor{comment}{!}
+1041     \textcolor{keywordflow}{DO} jl=1,kbdim
+1042 
+1043       zinfil(jl) = 0.\_wp
+1044       \textcolor{keywordflow}{IF} (lmask(jl) .AND. .NOT.lpglac(jl)) \textcolor{keywordflow}{THEN}
+1045         zwslim = 0.05\_wp*pwsmx(jl)
+1046 
+1047         zroeff = max(0.\_wp, porostd(jl)-zorvari)   &
+1048                      /(porostd(jl)+zorvars)
+1049         zbws   = max(min(zroeff,0.5\_wp),0.01\_wp)
+1050         zb1    = 1.\_wp+zbws
+1051         zbm    = 1.\_wp/zb1
+1052         zconw1 = pwsmx(jl)*zb1
+1053         zlyeps = 0.\_wp
+1054         zvol   = 0.\_wp
+1055 
+1056 \textcolor{comment}{!*    4.2.1  Surface runoff, infiltration and evaporation from soil}
+1057 
+1058         \textcolor{comment}{! Positive Enoskin\_nosnow is added to throughfall if the old bucket is used}
+1059 
+1060 \textcolor{comment}{!         ******* Positive EBSoil and Etrans are added to throughfall separately}
+1061 \textcolor{comment}{!         ******* Negative fluxes change soil moisture in SOILCHANGE.}
+1062           zprfl = pmlres(jl)+zraind(jl)                           \textcolor{comment}{!vg  water reaching the soil = meltwater
+       + rain reaching the soil}
+1063           \textcolor{keywordflow}{IF} (aebsoil(jl) >= 0.0\_wp) zprfl = zprfl + aebsoil(jl)  \textcolor{comment}{!vg  add bare soil evaporation}
+1064           \textcolor{keywordflow}{IF} (aetrans(jl) >= 0.0\_wp) zprfl = zprfl + aetrans(jl)  \textcolor{comment}{!vg  add transpiration}
+1065         
+1066         \textcolor{keywordflow}{IF} (ltpe\_closed) \textcolor{keywordflow}{THEN}   \textcolor{comment}{!vg  only used with terra planet: runoff swiched off}
+1067           zros(jl)   = 0.\_wp
+1068           zinfil(jl) = zprfl
+1069         \textcolor{keywordflow}{ELSE}
+1070           \textcolor{keywordflow}{IF} (ptsoil(jl) < tmelt) \textcolor{keywordflow}{THEN}
+1071             zros(jl) = zprfl            \textcolor{comment}{!vg  no water infiltrated if uppermost soil layer is frozen ->
+       runoff}
+1072           \textcolor{keywordflow}{ELSE}
+1073             \textcolor{keywordflow}{IF} (zprfl > 0.\_wp .AND. pws(jl) > zwslim) \textcolor{keywordflow}{THEN}   \textcolor{comment}{!vg  water reaches soil and soil water content
+       above 5%-limit}
+1074               \textcolor{keywordflow}{IF} (pws(jl) > pwsmx(jl)) \textcolor{keywordflow}{THEN}                  \textcolor{comment}{!vg  soil water content above water holding
+       capacity}
+1075                 zlyeps = pws(jl)-pwsmx(jl)                   \textcolor{comment}{!vg     excess water}
+1076               \textcolor{keywordflow}{ELSE}
+1077                 zlyeps = 0.\_wp                               \textcolor{comment}{!vg     no excess water}
+1078 \textcolor{keywordflow}{              END IF}
+1079               zlysic     = min(1.\_wp,(pws(jl)-zlyeps)/pwsmx(jl))        \textcolor{comment}{!vg  relative soil moisture (MIN()
+       needed??)}
+1080               zvol       = (1.\_wp-zlysic)**zbm-zprfl/zconw1             \textcolor{comment}{!vg  ??}
+1081               zros(jl)   = zprfl-(pwsmx(jl)-pws(jl))                    \textcolor{comment}{!vg  runoff = remaining water, when
+       pwsmx reached}
+1082               \textcolor{keywordflow}{IF} (zvol > 0.\_wp) zros(jl) = zros(jl)+pwsmx(jl)*zvol**zb1 \textcolor{comment}{!vg  ??}
+1083               zros(jl)   = max(zros(jl),0.\_wp)                          \textcolor{comment}{!vg  no negative runoff (code would
+       be clearer, if excess }
+1084                                                                         \textcolor{comment}{!vg       water was considered two
+       lines above)}
+1085               zinfil(jl) = zprfl-zros(jl)                               \textcolor{comment}{!vg  water not going into runoff is
+       infiltrated}
+1086             \textcolor{keywordflow}{ELSE}
+1087               zros(jl)   = 0.\_wp   \textcolor{comment}{!vg  no runoff as no water reaches the soil or soil is too dry (below
+       5%-limit)}
+1088               zinfil(jl) = zprfl
+1089 \textcolor{keywordflow}{            END IF}
+1090 \textcolor{keywordflow}{          END IF}
+1091 \textcolor{keywordflow}{        END IF}
+1092 \textcolor{comment}{!}
+1093 \textcolor{comment}{!*    4.2.2  Drainage and total runoff}
+1094 \textcolor{comment}{!}
+1095 \textcolor{keywordflow}{      ENDIF}
+1096 \textcolor{keywordflow}{    ENDDO}
+1097 \textcolor{comment}{!}
+1098       \textcolor{comment}{!  Change of soil moisture in 5 layers}
+1099       \textcolor{comment}{!  change belongs to one time step = zdtime}
+1100 
+1101       \textcolor{comment}{! Soil moisture of previous time step: wsim1m}
+1102       wsim1m(:,:) = wsi(:,:)
+1103 
+1104       \textcolor{comment}{! Zero initialization for drainage field before SOILCHANGE}
+1105       zdrain(1:kbdim) = 0.\_wp
+1106 
+1107       \textcolor{comment}{! Soilchange expects aetrans and aebsoil in [m]}
+1108       isch = 1     \textcolor{comment}{! Changes by evaporation fluxes}
+1109                    \textcolor{comment}{! Soilchange only uses negative evaporation fluxes as positive fluxes,}
+1110                    \textcolor{comment}{! e.g. by dew formation, are part of the throughfall zprfl.}
+1111       \textcolor{keyword}{CALL }soilchange(kb1, kbdim, kbdim, nsoil,     &
+1112             isch, zdtime, zfak1, lmask,             &
+1113             wsi , wsim1m,                           &
+1114             dzr, dzrsi,    dzsi, zwsat, zwsfc,      &
+1115             zinfil, zdrain, aetrans, aebsoil,       &
+1116             redevap)
+1117       \textcolor{comment}{! Unit of zinfil is [m] but soilchange expects m/s}
+1118       \textcolor{comment}{! For numerical reasons, half of the water is infiltrated}
+1119       \textcolor{comment}{! before SOILHYD, half if it after}
+1120       zinfil(1:kbdim) = zinfil(1:kbdim) / zdtime / 2.\_wp
+1121 
+1122       isch = 2     \textcolor{comment}{! Changes by infiltration}
+1123 
+1124       \textcolor{keyword}{CALL }soilchange(kb1, kbdim, kbdim, nsoil,     &
+1125             isch, zdtime, zfak1, lmask,             &
+1126             wsi , wsim1m,                           &
+1127             dzr, dzrsi,    dzsi, zwsat, zwsfc,      &
+1128             zinfil, zdrain, aetrans, aebsoil,       &
+1129             redevap, overflow, ltpe\_closed)
+1130 
+1131       \textcolor{comment}{! Drainage calculation [m] with 5 layer soil scheme}
+1132       \textcolor{keyword}{CALL }soilhyd(kb1, kbdim, kbdim, nsoil,      &
+1133            zdtime, lmask, ilog, jllog,            &
+1134            wsi, dzsi, zwsat, zwsfc,               &
+1135            fksat, vpor, bclapp, fmpot,            &
+1136            zdrain, spsi, zwpwp, zdel,             &
+1137            overflow, ltpe\_closed)
+1138 
+1139       \textcolor{comment}{! Second half of the water is infiltrated after SOILHYD}
+1140       isch = 2     \textcolor{comment}{! Changes by infiltration}
+1141       \textcolor{keyword}{CALL }soilchange(kb1, kbdim, kbdim, nsoil,     &
+1142             isch, zdtime, zfak1, lmask,             &
+1143             wsi , wsim1m,                           &
+1144             dzr, dzrsi,    dzsi, zwsat, zwsfc,      &
+1145             zinfil, zdrain, aetrans, aebsoil,       &
+1146             redevap, overflow, ltpe\_closed)
+1147 
+1148       \textcolor{comment}{! Does overflow occur due to infiltration in the layers? --> added to drainage}
+1149       \textcolor{keywordflow}{DO} jk=1, nsoil
+1150         \textcolor{keywordflow}{DO} jl=kb1, kbdim
+1151           \textcolor{keywordflow}{IF} (dzsi(jl,1) > 0) \textcolor{keywordflow}{THEN}                                     \textcolor{comment}{!vg  there is soil (above bedrock)}
+1152             \textcolor{keywordflow}{IF} (wsi(jl,jk) > zwsfc(jl,jk)) \textcolor{keywordflow}{THEN}                        \textcolor{comment}{!vg  soil moisture above field
+       capacity}
+1153               \textcolor{keywordflow}{IF} (ltpe\_closed) \textcolor{keywordflow}{THEN}
+1154                 \textcolor{comment}{! modification for TPE}
+1155                 \textcolor{comment}{! put drainage in overflow pool}
+1156                 overflow(jl) = overflow(jl) + wsi(jl,jk) - zwsfc(jl,jk)
+1157               \textcolor{keywordflow}{ELSE}
+1158                 zdrain(jl) = zdrain(jl) + wsi(jl,jk) - zwsfc(jl,jk)    \textcolor{comment}{!vg  excess moisture goes to
+       drainage}
+1159 \textcolor{keywordflow}{              ENDIF}
+1160               wsi(jl,jk) = zwsfc(jl,jk)                                \textcolor{comment}{!vg  soil moisture reduced
+       accordingly}
+1161             \textcolor{keywordflow}{ELSE} \textcolor{comment}{! wsi <= zwsfc}
+1162               \textcolor{keywordflow}{IF} (ltpe\_closed) \textcolor{keywordflow}{THEN}
+1163                 \textcolor{comment}{! modification for TPE}
+1164                 \textcolor{comment}{! refill soil moisture from overflow pool}
+1165                 remoist = min(overflow(jl), zwsfc(jl,jk) - wsi(jl,jk))
+1166                 wsi(jl,jk) = wsi(jl,jk) + remoist
+1167                 overflow(jl) = overflow(jl) - remoist
+1168 \textcolor{keywordflow}{              ENDIF}
+1169 \textcolor{keywordflow}{            ENDIF}
+1170             \textcolor{keywordflow}{IF} (ltpe\_open) \textcolor{keywordflow}{THEN}
+1171               \textcolor{comment}{! modification for TPE}
+1172               \textcolor{comment}{! keep the two lowest soil layers always very wet }
+1173               \textcolor{keywordflow}{IF} (jk == nsoil - 1 .OR. jk == nsoil) \textcolor{keywordflow}{THEN}
+1174                 wsi(jl,jk) = max(wsi(jl,jk),zwsfc(jl,jk) * 0.9\_wp)
+1175 \textcolor{keywordflow}{              END IF}
+1176 \textcolor{keywordflow}{            END IF}
+1177 \textcolor{keywordflow}{          ENDIF}
+1178 \textcolor{keywordflow}{        ENDDO}
+1179 \textcolor{keywordflow}{      ENDDO}
+1180 
+1181       \textcolor{comment}{! WS must be re-derived from wsi after SOILHYD}
+1182       pws(1:kbdim) = 0.0\_wp
+1183       \textcolor{keywordflow}{DO} jk=1, nsoil
+1184         \textcolor{keywordflow}{DO} jl=kb1, kbdim
+1185           \textcolor{keywordflow}{IF} (lmask(jl)) \textcolor{keywordflow}{THEN}
+1186             \textcolor{keywordflow}{IF} (dzrsi(jl,jk) >= zdel(jk)) \textcolor{keywordflow}{THEN}
+1187               pws(jl) = pws(jl) + wsi(jl,jk)
+1188             \textcolor{keywordflow}{ELSE} \textcolor{keywordflow}{IF} (dzrsi(jl,jk) > 0.\_wp) \textcolor{keywordflow}{THEN}
+1189               pws(jl) = pws(jl) + wsi(jl,jk) * dzrsi(jl,jk)/dzsi(jl,jk)
+1190 \textcolor{keywordflow}{            ENDIF}
+1191 \textcolor{keywordflow}{          ENDIF}
+1192 \textcolor{keywordflow}{        ENDDO}
+1193 \textcolor{keywordflow}{      ENDDO}
+1194 
+1195 \textcolor{comment}{!vg       DO jl=1,kbdim}
+1196 \textcolor{comment}{!vg         IF (lmask(jl) .AND. .NOT.lpglac(jl)) THEN}
+1197 \textcolor{comment}{!vg           zros(jl) = zros(jl)+zdrain(jl)}
+1198 \textcolor{comment}{!vg         ENDIF}
+1199 \textcolor{comment}{!vg       ENDDO}
+1200 \textcolor{comment}{!vg }
+1201 \textcolor{comment}{!vg !}
+1202 \textcolor{comment}{!vg !*  4.2.3  Runoff and drainage for the HD-Model [m]}
+1203 \textcolor{comment}{!vg !}
+1204 \textcolor{comment}{!vg     DO jl=1,kbdim}
+1205 \textcolor{comment}{!vg       IF (lmask(jl)) THEN}
+1206 \textcolor{comment}{!vg         pros\_hd(jl)   = zros(jl)-zdrain(jl)}
+1207 \textcolor{comment}{!vg         pdrain\_hd(jl) = zdrain(jl)}
+1208 \textcolor{comment}{!vg       END IF}
+1209 \textcolor{comment}{!vg     END DO}
+1210 \textcolor{comment}{!}
+1211 \textcolor{comment}{!     ------------------------------------------------------------------}
+1212 \textcolor{comment}{!}
+1213 \textcolor{comment}{!*    6.     Accumulate fluxes for diagnostics}
+1214 \textcolor{comment}{!}
+1215 \textcolor{comment}{!     6.1    Water fluxes}
+1216 \textcolor{comment}{!}
+1217     \textcolor{comment}{! Note: conversion from m water equivalent to kg/m^2s - multiply by rhoh2o / zdtime}
+1218     \textcolor{comment}{!       accumulation - multiply by zdtime}
+1219     \textcolor{keywordflow}{DO} jl=1,kbdim
+1220       \textcolor{keywordflow}{IF} (lmask(jl)) \textcolor{keywordflow}{THEN}
+1221 \textcolor{comment}{!vg         prunoff(jl) = prunoff(jl) +zros(jl)   *rhoh2o}
+1222 \textcolor{comment}{!vg         pdrain(jl)  = pdrain(jl)  +zdrain(jl) *rhoh2o}
+1223 \textcolor{comment}{!vg>>}
+1224         \textcolor{comment}{!vg  [m] -> [kg/m2/s]}
+1225         prunoff(jl) = zros(jl)   *rhoh2o/zdtime
+1226         pdrain(jl)  = zdrain(jl) *rhoh2o/zdtime
+1227 \textcolor{comment}{!vg<<}
+1228 \textcolor{keywordflow}{      END IF}
+1229 \textcolor{keywordflow}{    END DO}
+1230 \textcolor{comment}{!}
+1231 \textcolor{comment}{!     ------------------------------------------------------------------}
+1232 \textcolor{comment}{!!$ TR  END IF}
+1233 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d3e/namespacemo__soil__process_a6baae437b29f7d04d8bb10cb1d52249f_cgraph}
+\end{center}
+\end{figure}
+
+
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d1/d3e/namespacemo__soil__process_a6baae437b29f7d04d8bb10cb1d52249f_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__soil__process_ad7dacf511801f2d14d39a64fe6bfe6d2}{}\index{mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+soil\+\_\+process@{mo\+\_\+soil\+\_\+process}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+soil\+\_\+process\+::modname = \textquotesingle{}mo\+\_\+soil\+\_\+process\textquotesingle{}}\label{namespacemo__soil__process_ad7dacf511801f2d14d39a64fe6bfe6d2}
+
+
+Definition at line 23 of file mo\+\_\+soil\+\_\+process.\+f90.
+
+
+\begin{DoxyCode}
+23   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_soil\_process'}
+\end{DoxyCode}

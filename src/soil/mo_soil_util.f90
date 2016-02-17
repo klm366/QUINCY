@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the utilities for the soil component
+!! @brief Contains the utilities for the soil process
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg

@@ -1,0 +1,5 @@
+<map id="mo_jsb_time_iface::read_time_namelist" name="mo_jsb_time_iface::read_time_namelist">
+<area shape="rect" id="node2" href="$da/d0d/namespacemo__jsb__time.html#af406b57a3b7ee99184a5ca90996d63de" title="Initialize time control for JSBACH standalone. " alt="" coords="192,13,345,39"/>
+<area shape="rect" id="node3" href="$d9/da0/namespacemo__jsb__control.html#a6090e428421fd94a977d2962605f4b85" title="mo_jsb_control::init\l_jsb_master_control" alt="" coords="393,5,532,47"/>
+<area shape="rect" id="node4" href="$db/d23/namespacemo__jsb__base.html#ad811b441fdefcb99ec47d6c2a0d92659" title="mo_jsb_base::init_base" alt="" coords="580,13,739,39"/>
+</map>

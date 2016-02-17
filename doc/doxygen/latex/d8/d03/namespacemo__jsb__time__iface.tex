@@ -1,0 +1,778 @@
+\hypertarget{namespacemo__jsb__time__iface}{}\section{mo\+\_\+jsb\+\_\+time\+\_\+iface Module Reference}
+\label{namespacemo__jsb__time__iface}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+
+
+Contains interface to time control.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__time__iface_a72043de558313d19de7e74737fb0d405}{configure\+\_\+time\+\_\+and\+\_\+events} ()
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__time__iface_aa849b3904eff063cc37a76aeb2cc9e2d}{read\+\_\+time\+\_\+namelist} (filename)
+\item 
+real(wp) function, public \hyperlink{namespacemo__jsb__time__iface_ab168c46be9abca5f386500550a020775}{get\+\_\+time\+\_\+dt} ()
+\begin{DoxyCompactList}\small\item\em Get time step length. \end{DoxyCompactList}\item 
+integer function, public \hyperlink{namespacemo__jsb__time__iface_a3f7d59d4cfa4bebbe8460d5649b660df}{get\+\_\+time\+\_\+nsteps} ()
+\begin{DoxyCompactList}\small\item\em Get number of time steps. \end{DoxyCompactList}\item 
+type(t\+\_\+datetime) function, public \hyperlink{namespacemo__jsb__time__iface_ae2944548df61fb74efc201b6f7638abc}{get\+\_\+time\+\_\+start} ()
+\item 
+type(t\+\_\+datetime) function, public \hyperlink{namespacemo__jsb__time__iface_ac6e0e1e6c162a0d29f99e6ec9988a664}{get\+\_\+time\+\_\+stop} ()
+\item 
+type(t\+\_\+datetime) function, public \hyperlink{namespacemo__jsb__time__iface_adbc8c1cd58176897cabb83ffbb84ad31}{get\+\_\+time\+\_\+current} ()
+\begin{DoxyCompactList}\small\item\em Get current time. \end{DoxyCompactList}\item 
+type(t\+\_\+datetime) function, public \hyperlink{namespacemo__jsb__time__iface_aa475436175297ff2a5f9969a176d17da}{get\+\_\+time\+\_\+previous} ()
+\begin{DoxyCompactList}\small\item\em Get time at previous time step. \end{DoxyCompactList}\item 
+subroutine, public \hyperlink{namespacemo__jsb__time__iface_a01e05b9838b013ea37b6bd5f9e446ce6}{start\+\_\+timestep} (istep)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__time__iface_a6f035dd414c8b19cde3a73e39f6afa3a}{finish\+\_\+timestep} (istep)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__time__iface_aefc6d88ce2a25c59f0931865095f217b}{get\+\_\+date\+\_\+components} (datetime, year, month, day, hour, minute, second)
+\item 
+integer function, public \hyperlink{namespacemo__jsb__time__iface_a4e7bdc2a98bd137115b6b270439065b0}{get\+\_\+year\+\_\+length} (yr)
+\begin{DoxyCompactList}\small\item\em Get length of year. \end{DoxyCompactList}\item 
+integer function, public \hyperlink{namespacemo__jsb__time__iface_a443c83592d475f0832e0147783a960ba}{get\+\_\+month\+\_\+length} (yr, mo)
+\begin{DoxyCompactList}\small\item\em Get length of month. \end{DoxyCompactList}\item 
+real(wp) function, public \hyperlink{namespacemo__jsb__time__iface_a53e5fa510aa754954b65b557be123be4}{get\+\_\+day\+\_\+length} ()
+\begin{DoxyCompactList}\small\item\em Get length of day. \end{DoxyCompactList}\item 
+real(wp) function, public \hyperlink{namespacemo__jsb__time__iface_a9b807c3d9aa14da6ed98308332014a52}{get\+\_\+year\+\_\+day} (date)
+\begin{DoxyCompactList}\small\item\em Get day in year. \end{DoxyCompactList}\item 
+subroutine, public \hyperlink{namespacemo__jsb__time__iface_a4de628dda235839b578e82755b9b98ab}{get\+\_\+time\+\_\+interpolation\+\_\+weights} (w1, w2, n1, n2)
+\item 
+real(wp) function, public \hyperlink{namespacemo__jsb__time__iface_ac63a5305338faddee24202e1798bcf93}{get\+\_\+asselin\+\_\+coef} ()
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__time__iface_a71db855b89fbd2a192705b32716cc869}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+time\+\_\+iface\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains interface to time control. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/02-\/06) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__time__iface_a72043de558313d19de7e74737fb0d405}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!configure\+\_\+time\+\_\+and\+\_\+events@{configure\+\_\+time\+\_\+and\+\_\+events}}
+\index{configure\+\_\+time\+\_\+and\+\_\+events@{configure\+\_\+time\+\_\+and\+\_\+events}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{configure\+\_\+time\+\_\+and\+\_\+events}]{\setlength{\rightskip}{0pt plus 5cm}subroutine public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::configure\+\_\+time\+\_\+and\+\_\+events (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_a72043de558313d19de7e74737fb0d405}
+
+
+Definition at line 55 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+55 
+56     \textcolor{comment}{! CALL configure\_time}
+57     \textcolor{keywordflow}{RETURN}
+58 
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time__iface_a6f035dd414c8b19cde3a73e39f6afa3a}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!finish\+\_\+timestep@{finish\+\_\+timestep}}
+\index{finish\+\_\+timestep@{finish\+\_\+timestep}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{finish\+\_\+timestep}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::finish\+\_\+timestep (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{istep}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_a6f035dd414c8b19cde3a73e39f6afa3a}
+
+
+Definition at line 235 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+time\+::update\+\_\+time\+\_\+at\+\_\+endloop().
+
+
+\begin{DoxyCode}
+235 
+236 \textcolor{preprocessor}{#ifndef \_\_ICON\_\_}
+237 \textcolor{preprocessor}{}    \textcolor{keywordtype}{USE }mo\_time\_control\textcolor{keywordtype}{, ONLY}: time\_reset
+238 \textcolor{preprocessor}{#endif}
+239 \textcolor{preprocessor}{}
+240     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(in)} :: istep
+241 
+242 \textcolor{preprocessor}{#ifndef \_\_ICON\_\_}
+243 \textcolor{preprocessor}{}    \textcolor{keyword}{CALL }time\_reset
+244 \textcolor{preprocessor}{#endif}
+245 \textcolor{preprocessor}{}
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=327pt]{d8/d03/namespacemo__jsb__time__iface_a6f035dd414c8b19cde3a73e39f6afa3a_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time__iface_ac63a5305338faddee24202e1798bcf93}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+asselin\+\_\+coef@{get\+\_\+asselin\+\_\+coef}}
+\index{get\+\_\+asselin\+\_\+coef@{get\+\_\+asselin\+\_\+coef}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+asselin\+\_\+coef}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+asselin\+\_\+coef (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_ac63a5305338faddee24202e1798bcf93}
+
+
+Definition at line 391 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+391 
+392 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+393 \textcolor{preprocessor}{}    \textcolor{keywordflow}{SELECT CASE}(iequations)
+394     \textcolor{keywordflow}{CASE}(ishallow\_water,ihs\_atm\_temp,ihs\_atm\_theta)
+395       \textcolor{keywordflow}{IF} (ha\_dyn\_config%itime\_scheme == leapfrog\_expl .OR. ha\_dyn\_config%itime\_scheme == leapfrog\_si) \textcolor{keywordflow}{THEN}
+396         get\_asselin\_coef = ha\_dyn\_config%asselin\_coeff
+397 \textcolor{keywordflow}{      END IF}
+398 \textcolor{keywordflow}{    CASE DEFAULT}
+399       get\_asselin\_coef = 0.\_wp
+400 \textcolor{keywordflow}{    END SELECT}
+401 \textcolor{preprocessor}{#else}
+402 \textcolor{preprocessor}{}    get\_asselin\_coef = eps
+403 \textcolor{preprocessor}{#endif}
+404 \textcolor{preprocessor}{}
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time__iface_aefc6d88ce2a25c59f0931865095f217b}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+date\+\_\+components@{get\+\_\+date\+\_\+components}}
+\index{get\+\_\+date\+\_\+components@{get\+\_\+date\+\_\+components}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+date\+\_\+components}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+date\+\_\+components (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+datetime), intent(in)}]{datetime, }
+\item[{integer, intent(out), optional}]{year, }
+\item[{integer, intent(out), optional}]{month, }
+\item[{integer, intent(out), optional}]{day, }
+\item[{integer, intent(out), optional}]{hour, }
+\item[{integer, intent(out), optional}]{minute, }
+\item[{integer, intent(out), optional}]{second}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_aefc6d88ce2a25c59f0931865095f217b}
+
+
+Definition at line 250 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+time\+::get\+\_\+day(), mo\+\_\+jsb\+\_\+time\+::get\+\_\+month(), mo\+\_\+jsb\+\_\+time\+::get\+\_\+secs\+\_\+of\+\_\+day(), and mo\+\_\+jsb\+\_\+time\+::get\+\_\+year().
+
+
+\begin{DoxyCode}
+250 
+251     \textcolor{keywordtype}{USE }mo\_datetime\textcolor{keywordtype}{, ONLY}: time\_to\_date, check\_date
+252 
+253     \textcolor{keywordtype}{TYPE}(t\_datetime),  \textcolor{keywordtype}{INTENT(in)}  :: datetime
+254     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{OPTIONAL}, \textcolor{keywordtype}{INTENT(out)} :: year, month, day, hour, minute, second
+255 
+256     \textcolor{keywordtype}{TYPE}(t\_datetime) :: datetime\_tmp
+257 
+258     datetime\_tmp = datetime
+259     \textcolor{keyword}{CALL }time\_to\_date(datetime\_tmp)
+260     \textcolor{keyword}{CALL }check\_date(datetime\_tmp)
+261 
+262     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(year))   year   = datetime\_tmp%year
+263     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(month))  month  = datetime\_tmp%month
+264     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(day))    day    = datetime\_tmp%day
+265     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(hour))   hour   = datetime\_tmp%hour
+266     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(minute)) minute = datetime\_tmp%minute
+267     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(second)) second = int(datetime\_tmp%second)
+268 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d8/d03/namespacemo__jsb__time__iface_aefc6d88ce2a25c59f0931865095f217b_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time__iface_a53e5fa510aa754954b65b557be123be4}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+day\+\_\+length@{get\+\_\+day\+\_\+length}}
+\index{get\+\_\+day\+\_\+length@{get\+\_\+day\+\_\+length}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+day\+\_\+length}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+day\+\_\+length (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_a53e5fa510aa754954b65b557be123be4}
+
+
+Get length of day. 
+
+Function returns the length of a day in seconds 
+
+Definition at line 341 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+341 
+342     get\_day\_length = rdaylen
+343 
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time__iface_a443c83592d475f0832e0147783a960ba}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+month\+\_\+length@{get\+\_\+month\+\_\+length}}
+\index{get\+\_\+month\+\_\+length@{get\+\_\+month\+\_\+length}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+month\+\_\+length}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+month\+\_\+length (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{yr, }
+\item[{integer, intent(in)}]{mo}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_a443c83592d475f0832e0147783a960ba}
+
+
+Get length of month. 
+
+Function returns the length of a month in days 
+
+Definition at line 310 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+References get\+\_\+time\+\_\+start().
+
+
+\begin{DoxyCode}
+310 
+311     \textcolor{keywordtype}{USE }mo\_datetime\textcolor{keywordtype}{, ONLY}: date\_to\_time
+312 
+313     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(in)} :: yr, mo
+314 
+315     \textcolor{keywordtype}{TYPE}(t\_datetime) :: date, inidate
+316 
+317     inidate = get\_time\_start()
+318 
+319     date%calendar = inidate%calendar
+320     date%year     = yr
+321     date%month    = mo
+322     date%day      = 1
+323     date%hour     = 0
+324     date%minute   = 0
+325     date%second   = 0
+326 
+327     \textcolor{keyword}{CALL }date\_to\_time(date)
+328 
+329     get\_month\_length = date%monlen
+330 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=324pt]{d8/d03/namespacemo__jsb__time__iface_a443c83592d475f0832e0147783a960ba_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time__iface_adbc8c1cd58176897cabb83ffbb84ad31}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+time\+\_\+current@{get\+\_\+time\+\_\+current}}
+\index{get\+\_\+time\+\_\+current@{get\+\_\+time\+\_\+current}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+time\+\_\+current}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+datetime) function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+current (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_adbc8c1cd58176897cabb83ffbb84ad31}
+
+
+Get current time. 
+
+
+
+Definition at line 183 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+time\+::get\+\_\+day(), mo\+\_\+jsb\+\_\+time\+::get\+\_\+month(), mo\+\_\+jsb\+\_\+time\+::get\+\_\+secs\+\_\+of\+\_\+day(), and mo\+\_\+jsb\+\_\+time\+::get\+\_\+year().
+
+
+\begin{DoxyCode}
+183 
+184 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+185 \textcolor{preprocessor}{}    get\_time\_current = time\_config%cur\_datetime
+186 \textcolor{preprocessor}{#else}
+187 \textcolor{preprocessor}{}    get\_time\_current = current\_date
+188 \textcolor{preprocessor}{#endif}
+189 \textcolor{preprocessor}{}
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d8/d03/namespacemo__jsb__time__iface_adbc8c1cd58176897cabb83ffbb84ad31_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time__iface_ab168c46be9abca5f386500550a020775}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+time\+\_\+dt@{get\+\_\+time\+\_\+dt}}
+\index{get\+\_\+time\+\_\+dt@{get\+\_\+time\+\_\+dt}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+time\+\_\+dt}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+dt (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_ab168c46be9abca5f386500550a020775}
+
+
+Get time step length. 
+
+Function returns the length of the integration time step 
+
+Definition at line 95 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by get\+\_\+time\+\_\+nsteps().
+
+
+\begin{DoxyCode}
+95 
+96 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+97 \textcolor{preprocessor}{}    \textcolor{keywordtype}{USE }mo\_run\_config\textcolor{keywordtype}{, ONLY}: dtime
+98 \textcolor{preprocessor}{#else}
+99 \textcolor{preprocessor}{}    \textcolor{keywordtype}{USE }mo\_time\_control\textcolor{keywordtype}{, ONLY}: delta\_time
+100 \textcolor{preprocessor}{#endif}
+101 \textcolor{preprocessor}{}
+102     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':get\_time\_dt'}
+103 
+104     \textcolor{keywordtype}{REAL(wp)} :: ztime
+105 
+106 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+107 \textcolor{preprocessor}{}    ztime = dtime
+108 \textcolor{preprocessor}{#else}
+109 \textcolor{preprocessor}{}    ztime = delta\_time
+110 \textcolor{preprocessor}{#endif}
+111 \textcolor{preprocessor}{}
+112     \textcolor{keywordflow}{IF} (ztime <= 0.0\_wp) &
+113       \textcolor{keyword}{CALL }finish(routine, \textcolor{stringliteral}{'time step not configured yet.'})
+114 
+115     get\_time\_dt = ztime
+116 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=324pt]{d8/d03/namespacemo__jsb__time__iface_ab168c46be9abca5f386500550a020775_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time__iface_a4de628dda235839b578e82755b9b98ab}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+time\+\_\+interpolation\+\_\+weights@{get\+\_\+time\+\_\+interpolation\+\_\+weights}}
+\index{get\+\_\+time\+\_\+interpolation\+\_\+weights@{get\+\_\+time\+\_\+interpolation\+\_\+weights}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+time\+\_\+interpolation\+\_\+weights}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+interpolation\+\_\+weights (
+\begin{DoxyParamCaption}
+\item[{real(wp), intent(out)}]{w1, }
+\item[{real(wp), intent(out)}]{w2, }
+\item[{integer, intent(out)}]{n1, }
+\item[{integer, intent(out)}]{n2}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_a4de628dda235839b578e82755b9b98ab}
+
+
+Definition at line 372 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+372 
+373     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{INTENT(out)} :: w1, w2
+374     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(out)}  :: n1, n2
+375 
+376 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+377 \textcolor{preprocessor}{}    w1 = wi\_limm%wgt1
+378     w2 = wi\_limm%wgt2
+379     n1 = wi\_limm%inm1
+380     n2 = wi\_limm%inm2
+381 \textcolor{preprocessor}{#else}
+382 \textcolor{preprocessor}{}    w1 = wgt1
+383     w2 = wgt2
+384     n1 = nmw1
+385     n2 = nmw2
+386 \textcolor{preprocessor}{#endif}
+387 \textcolor{preprocessor}{}
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time__iface_a3f7d59d4cfa4bebbe8460d5649b660df}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+time\+\_\+nsteps@{get\+\_\+time\+\_\+nsteps}}
+\index{get\+\_\+time\+\_\+nsteps@{get\+\_\+time\+\_\+nsteps}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+time\+\_\+nsteps}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+nsteps (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_a3f7d59d4cfa4bebbe8460d5649b660df}
+
+
+Get number of time steps. 
+
+Function returns the number of time steps for current model integration 
+
+Definition at line 125 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+References get\+\_\+time\+\_\+dt(), and modname.
+
+
+\begin{DoxyCode}
+125 
+126 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+127 \textcolor{preprocessor}{}    \textcolor{keywordtype}{USE }mo\_run\_config\textcolor{keywordtype}{,   ONLY}: nsteps
+128 \textcolor{preprocessor}{#else}
+129 \textcolor{preprocessor}{}    \textcolor{keywordtype}{USE }mo\_time\_control\textcolor{keywordtype}{, ONLY}: start\_date, stop\_date
+130     \textcolor{keywordtype}{USE }mo\_time\_base\textcolor{keywordtype}{,    ONLY}: idaylen
+131     \textcolor{keywordtype}{USE }mo\_time\_conversion\textcolor{keywordtype}{, ONLY}: tc\_get
+132 \textcolor{preprocessor}{#endif}
+133 \textcolor{preprocessor}{}
+134     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':get\_time\_nsteps'}
+135 
+136     \textcolor{keywordtype}{INTEGER} :: start\_day, start\_second, stop\_day, stop\_second
+137     \textcolor{keywordtype}{INTEGER} :: isteps
+138 
+139 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+140 \textcolor{preprocessor}{}    isteps = nsteps
+141 \textcolor{preprocessor}{#else}
+142 \textcolor{preprocessor}{}    \textcolor{keyword}{CALL }tc\_get(start\_date, start\_day, start\_second)
+143     \textcolor{keyword}{CALL }tc\_get(stop\_date, stop\_day, stop\_second)
+144 
+145     isteps =                                   &
+146       & ( idaylen * (stop\_day - start\_day - 1) & \textcolor{comment}{! Number of seconds in full days}
+147       &   + stop\_second                        & \textcolor{comment}{! Number of seconds in last day}
+148       &   + (idaylen - start\_second - 1)       & \textcolor{comment}{! Number of seconds in first day}
+149       & ) / int(get\_time\_dt())
+150 \textcolor{preprocessor}{#endif}
+151 \textcolor{preprocessor}{}
+152     \textcolor{keywordflow}{IF} (isteps <= 0) &
+153       \textcolor{keyword}{CALL }finish(routine, \textcolor{stringliteral}{'number of time steps not configured yet.'})
+154 
+155     get\_time\_nsteps = isteps
+156 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=324pt]{d8/d03/namespacemo__jsb__time__iface_a3f7d59d4cfa4bebbe8460d5649b660df_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time__iface_aa475436175297ff2a5f9969a176d17da}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+time\+\_\+previous@{get\+\_\+time\+\_\+previous}}
+\index{get\+\_\+time\+\_\+previous@{get\+\_\+time\+\_\+previous}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+time\+\_\+previous}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+datetime) function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+previous (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_aa475436175297ff2a5f9969a176d17da}
+
+
+Get time at previous time step. 
+
+
+
+Definition at line 196 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+time\+::is\+\_\+newday().
+
+
+\begin{DoxyCode}
+196 
+197 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+198 \textcolor{preprocessor}{}    \textcolor{keywordtype}{USE }mo\_run\_config\textcolor{keywordtype}{, ONLY}: dtime
+199 
+200     \textcolor{keywordtype}{TYPE}(t\_datetime) :: datetime
+201 
+202     datetime = time\_config%cur\_datetime
+203     \textcolor{keyword}{CALL }add\_time(-dtime, 0, 0, 0, datetime)
+204     get\_time\_previous = datetime
+205 \textcolor{preprocessor}{#else}
+206 \textcolor{preprocessor}{}    get\_time\_previous = previous\_date
+207 \textcolor{preprocessor}{#endif}
+208 \textcolor{preprocessor}{}
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=345pt]{d8/d03/namespacemo__jsb__time__iface_aa475436175297ff2a5f9969a176d17da_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time__iface_ae2944548df61fb74efc201b6f7638abc}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+time\+\_\+start@{get\+\_\+time\+\_\+start}}
+\index{get\+\_\+time\+\_\+start@{get\+\_\+time\+\_\+start}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+time\+\_\+start}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+datetime) function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+start (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_ae2944548df61fb74efc201b6f7638abc}
+
+
+Definition at line 160 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+Referenced by get\+\_\+month\+\_\+length(), and get\+\_\+year\+\_\+length().
+
+
+\begin{DoxyCode}
+160 
+161 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+162 \textcolor{preprocessor}{}    get\_time\_start = time\_config%ini\_datetime
+163 \textcolor{preprocessor}{#else}
+164 \textcolor{preprocessor}{}    get\_time\_start = start\_date
+165 \textcolor{preprocessor}{#endif}
+166 \textcolor{preprocessor}{}
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=324pt]{d8/d03/namespacemo__jsb__time__iface_ae2944548df61fb74efc201b6f7638abc_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time__iface_ac6e0e1e6c162a0d29f99e6ec9988a664}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+time\+\_\+stop@{get\+\_\+time\+\_\+stop}}
+\index{get\+\_\+time\+\_\+stop@{get\+\_\+time\+\_\+stop}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+time\+\_\+stop}]{\setlength{\rightskip}{0pt plus 5cm}type(t\+\_\+datetime) function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+time\+\_\+stop (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_ac6e0e1e6c162a0d29f99e6ec9988a664}
+
+
+Definition at line 170 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+170 
+171 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+172 \textcolor{preprocessor}{}    get\_time\_stop = time\_config%end\_datetime
+173 \textcolor{preprocessor}{#else}
+174 \textcolor{preprocessor}{}    get\_time\_stop = stop\_date
+175 \textcolor{preprocessor}{#endif}
+176 \textcolor{preprocessor}{}
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time__iface_a9b807c3d9aa14da6ed98308332014a52}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+year\+\_\+day@{get\+\_\+year\+\_\+day}}
+\index{get\+\_\+year\+\_\+day@{get\+\_\+year\+\_\+day}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+year\+\_\+day}]{\setlength{\rightskip}{0pt plus 5cm}real(wp) function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+year\+\_\+day (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+datetime), intent(in)}]{date}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_a9b807c3d9aa14da6ed98308332014a52}
+
+
+Get day in year. 
+
+Function returns the day of the year for a given date. The seconds in the day are given as fraction of the day. 
+
+Definition at line 355 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+355 
+356     \textcolor{keywordtype}{USE }mo\_datetime\textcolor{keywordtype}{, ONLY}: aux\_datetime
+357 
+358     \textcolor{keywordtype}{TYPE}(t\_datetime),  \textcolor{keywordtype}{INTENT(in)}  :: date
+359 
+360     \textcolor{keywordtype}{TYPE}(t\_datetime) :: datetime\_tmp
+361 
+362     datetime\_tmp = date
+363 
+364     \textcolor{keyword}{CALL }aux\_datetime(datetime\_tmp)
+365 
+366     get\_year\_day = \textcolor{keywordtype}{REAL(datetime\_tmp%yeaday, wp)} + datetime\_tmp%daytim
+367 
+\end{DoxyCode}
+\hypertarget{namespacemo__jsb__time__iface_a4e7bdc2a98bd137115b6b270439065b0}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!get\+\_\+year\+\_\+length@{get\+\_\+year\+\_\+length}}
+\index{get\+\_\+year\+\_\+length@{get\+\_\+year\+\_\+length}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{get\+\_\+year\+\_\+length}]{\setlength{\rightskip}{0pt plus 5cm}integer function, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::get\+\_\+year\+\_\+length (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{yr}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_a4e7bdc2a98bd137115b6b270439065b0}
+
+
+Get length of year. 
+
+Function returns the length of a year in days 
+
+Definition at line 279 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+References get\+\_\+time\+\_\+start().
+
+
+\begin{DoxyCode}
+279 
+280     \textcolor{keywordtype}{USE }mo\_datetime\textcolor{keywordtype}{, ONLY}: date\_to\_time
+281 
+282     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(in)} :: yr
+283 
+284     \textcolor{keywordtype}{TYPE}(t\_datetime) :: date, inidate
+285 
+286     inidate = get\_time\_start()
+287 
+288     date%calendar = inidate%calendar
+289     date%year     = yr
+290     date%month    = 1
+291     date%day      = 1
+292     date%hour     = 0
+293     date%minute   = 0
+294     date%second   = 0.\_wp
+295 
+296     \textcolor{keyword}{CALL }date\_to\_time(date)
+297 
+298     get\_year\_length = date%yealen
+299 
+\end{DoxyCode}
+
+
+Here is the call graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=324pt]{d8/d03/namespacemo__jsb__time__iface_a4e7bdc2a98bd137115b6b270439065b0_cgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time__iface_aa849b3904eff063cc37a76aeb2cc9e2d}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!read\+\_\+time\+\_\+namelist@{read\+\_\+time\+\_\+namelist}}
+\index{read\+\_\+time\+\_\+namelist@{read\+\_\+time\+\_\+namelist}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{read\+\_\+time\+\_\+namelist}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::read\+\_\+time\+\_\+namelist (
+\begin{DoxyParamCaption}
+\item[{character(len=$\ast$), intent(in)}]{filename}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_aa849b3904eff063cc37a76aeb2cc9e2d}
+
+
+Definition at line 62 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+time\+::init\+\_\+time().
+
+
+\begin{DoxyCode}
+62 
+63     \textcolor{keywordtype}{CHARACTER(LEN=*)}, \textcolor{keywordtype}{INTENT(in)} :: filename
+64 
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d8/d03/namespacemo__jsb__time__iface_aa849b3904eff063cc37a76aeb2cc9e2d_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__time__iface_a01e05b9838b013ea37b6bd5f9e446ce6}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!start\+\_\+timestep@{start\+\_\+timestep}}
+\index{start\+\_\+timestep@{start\+\_\+timestep}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{start\+\_\+timestep}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+time\+\_\+iface\+::start\+\_\+timestep (
+\begin{DoxyParamCaption}
+\item[{integer, intent(in)}]{istep}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__time__iface_a01e05b9838b013ea37b6bd5f9e446ce6}
+
+
+Definition at line 212 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+References modname.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+time\+::update\+\_\+time\+\_\+at\+\_\+beginloop().
+
+
+\begin{DoxyCode}
+212 
+213 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+214 \textcolor{preprocessor}{}    \textcolor{keywordtype}{USE }mo\_run\_config\textcolor{keywordtype}{, ONLY}: dtime
+215 \textcolor{preprocessor}{#else}
+216 \textcolor{preprocessor}{}    \textcolor{keywordtype}{USE }mo\_time\_control\textcolor{keywordtype}{, ONLY}: time\_set
+217 \textcolor{preprocessor}{#endif}
+218 \textcolor{preprocessor}{}
+219     \textcolor{keywordtype}{INTEGER}, \textcolor{keywordtype}{INTENT(in)} :: istep
+220 
+221     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':start\_timestep'}
+222 
+223 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+224 \textcolor{preprocessor}{}    \textcolor{keyword}{CALL }add\_time(dtime, 0, 0, 0, time\_config%cur\_datetime)
+225 
+226     \textcolor{keyword}{WRITE}(message\_text,\textcolor{stringliteral}{'(a,i10)'}) \textcolor{stringliteral}{'TIME STEP n: '}, istep
+227     \textcolor{keyword}{CALL }message(trim(routine),message\_text)
+228 \textcolor{preprocessor}{#else}
+229 \textcolor{preprocessor}{}    \textcolor{keyword}{CALL }time\_set
+230 \textcolor{preprocessor}{#endif}
+231 \textcolor{preprocessor}{}
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=327pt]{d8/d03/namespacemo__jsb__time__iface_a01e05b9838b013ea37b6bd5f9e446ce6_icgraph}
+\end{center}
+\end{figure}
+
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__time__iface_a71db855b89fbd2a192705b32716cc869}{}\index{mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+time\+\_\+iface@{mo\+\_\+jsb\+\_\+time\+\_\+iface}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+time\+\_\+iface\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+time\+\_\+iface\textquotesingle{}}\label{namespacemo__jsb__time__iface_a71db855b89fbd2a192705b32716cc869}
+
+
+Definition at line 49 of file mo\+\_\+jsb\+\_\+time\+\_\+iface.\+f90.
+
+
+
+Referenced by get\+\_\+time\+\_\+dt(), get\+\_\+time\+\_\+nsteps(), and start\+\_\+timestep().
+
+
+\begin{DoxyCode}
+49   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_time\_iface'}
+\end{DoxyCode}

@@ -1,0 +1,369 @@
+\hypertarget{namespacemo__jsb__varlist__iface}{}\section{mo\+\_\+jsb\+\_\+varlist\+\_\+iface Module Reference}
+\label{namespacemo__jsb__varlist__iface}\index{mo\+\_\+jsb\+\_\+varlist\+\_\+iface@{mo\+\_\+jsb\+\_\+varlist\+\_\+iface}}
+
+
+Contains the interface to varlists/streams.  
+
+
+\subsection*{Functions/\+Subroutines}
+\begin{DoxyCompactItemize}
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__varlist__iface_a169b8d752d071050ff305239fe73dbfc}{new\+\_\+var\+\_\+list} (this\+\_\+list, name, patch\+\_\+id, output\+\_\+type, restart\+\_\+type, post\+\_\+suf, rest\+\_\+suf, init\+\_\+suf, loutput, lrestart, linitial, table)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__varlist__iface_a1a7673f9db168055de30bc6f735a7ecb}{add\+\_\+var\+\_\+list\+\_\+element\+\_\+r2d} (this\+\_\+list, name, ptr, hgrid, vgrid, cf, grib2, code, table, ldims, gdims, loutput, lcontainer, lrestart, lrestart\+\_\+cont, initval\+\_\+r, isteptype, resetval\+\_\+r, lmiss, missval\+\_\+r, tlev\+\_\+source, info, p5, verbose, new\+\_\+element)
+\item 
+subroutine, public \hyperlink{namespacemo__jsb__varlist__iface_a0bb929b116f163f5cbe5e680073ca3b2}{add\+\_\+var\+\_\+list\+\_\+element\+\_\+r3d} (this\+\_\+list, name, ptr, hgrid, vgrid, cf, grib2, code, table, ldims, gdims, loutput, lcontainer, lrestart, lrestart\+\_\+cont, initval\+\_\+r, isteptype, resetval\+\_\+r, lmiss, missval\+\_\+r, tlev\+\_\+source, info, p5, verbose, new\+\_\+element)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+character(len=$\ast$), parameter \hyperlink{namespacemo__jsb__varlist__iface_a5a17e1c8f252488a0b648044116fcac7}{modname} = \textquotesingle{}mo\+\_\+jsb\+\_\+varlist\+\_\+iface\textquotesingle{}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains the interface to varlists/streams. 
+
+\begin{DoxyAuthor}{Author}
+Reiner Schnur, M\+P\+I-\/\+M Hamburg
+\end{DoxyAuthor}
+\begin{DoxyParagraph}{Revision History}
+First version by Reiner Schnur (2013-\/04-\/04) 
+\end{DoxyParagraph}
+
+
+\subsection{Function/\+Subroutine Documentation}
+\hypertarget{namespacemo__jsb__varlist__iface_a1a7673f9db168055de30bc6f735a7ecb}{}\index{mo\+\_\+jsb\+\_\+varlist\+\_\+iface@{mo\+\_\+jsb\+\_\+varlist\+\_\+iface}!add\+\_\+var\+\_\+list\+\_\+element\+\_\+r2d@{add\+\_\+var\+\_\+list\+\_\+element\+\_\+r2d}}
+\index{add\+\_\+var\+\_\+list\+\_\+element\+\_\+r2d@{add\+\_\+var\+\_\+list\+\_\+element\+\_\+r2d}!mo\+\_\+jsb\+\_\+varlist\+\_\+iface@{mo\+\_\+jsb\+\_\+varlist\+\_\+iface}}
+\subsubsection[{add\+\_\+var\+\_\+list\+\_\+element\+\_\+r2d}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+varlist\+\_\+iface\+::add\+\_\+var\+\_\+list\+\_\+element\+\_\+r2d (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+var\+\_\+list), intent(inout)}]{this\+\_\+list, }
+\item[{character(len=$\ast$), intent(in)}]{name, }
+\item[{real(wp), dimension(\+:,\+:), pointer}]{ptr, }
+\item[{integer, intent(in)}]{hgrid, }
+\item[{integer, intent(in)}]{vgrid, }
+\item[{type(t\+\_\+cf\+\_\+var), intent(in)}]{cf, }
+\item[{type(t\+\_\+grib2\+\_\+var), intent(in)}]{grib2, }
+\item[{integer, intent(in)}]{code, }
+\item[{integer, intent(in)}]{table, }
+\item[{integer, dimension(2), intent(in), optional}]{ldims, }
+\item[{integer, dimension(2), intent(in), optional}]{gdims, }
+\item[{logical, intent(in), optional}]{loutput, }
+\item[{logical, intent(in), optional}]{lcontainer, }
+\item[{logical, intent(in), optional}]{lrestart, }
+\item[{logical, intent(in), optional}]{lrestart\+\_\+cont, }
+\item[{real(wp), intent(in), optional}]{initval\+\_\+r, }
+\item[{integer, intent(in), optional}]{isteptype, }
+\item[{real(wp), intent(in), optional}]{resetval\+\_\+r, }
+\item[{logical, intent(in), optional}]{lmiss, }
+\item[{real(wp), intent(in), optional}]{missval\+\_\+r, }
+\item[{integer, intent(in), optional}]{tlev\+\_\+source, }
+\item[{type(t\+\_\+var\+\_\+metadata), optional, pointer}]{info, }
+\item[{real(wp), dimension(\+:,\+:,\+:,\+:,\+:), optional, pointer}]{p5, }
+\item[{logical, intent(in), optional}]{verbose, }
+\item[{type(t\+\_\+list\+\_\+element), optional, pointer}]{new\+\_\+element}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__varlist__iface_a1a7673f9db168055de30bc6f735a7ecb}
+
+
+Definition at line 96 of file mo\+\_\+jsb\+\_\+varlist\+\_\+iface.\+f90.
+
+
+
+References modname, and mo\+\_\+jsb\+\_\+io\+\_\+iface\+::za\+\_\+surface.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+varlist\+::get\+\_\+varlist().
+
+
+\begin{DoxyCode}
+96 
+97     \textcolor{keywordtype}{TYPE}(t\_var\_list),     \textcolor{keywordtype}{INTENT(inout)}        :: this\_list           \textcolor{comment}{! list}
+98     \textcolor{keywordtype}{CHARACTER(len=*)},     \textcolor{keywordtype}{INTENT(in)}           :: name                \textcolor{comment}{! name of variable}
+99     \textcolor{keywordtype}{REAL(wp)},             \textcolor{keywordtype}{POINTER}              :: ptr(:,:)            \textcolor{comment}{! reference to field}
+100     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}           :: hgrid               \textcolor{comment}{! horizontal grid type}
+101     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}           :: vgrid               \textcolor{comment}{! vertical grid type (cdiZaxisID)}
+102     \textcolor{keywordtype}{TYPE}(t\_cf\_var),       \textcolor{keywordtype}{INTENT(in)}           :: cf                  \textcolor{comment}{! CF related metadata}
+103     \textcolor{keywordtype}{TYPE}(t\_grib2\_var),    \textcolor{keywordtype}{INTENT(in)}           :: grib2               \textcolor{comment}{! GRIB2 related metadata}
+104     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}           :: code                \textcolor{comment}{! GRIB1 code number}
+105     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}           :: table               \textcolor{comment}{! GRIB1 table number}
+106     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: ldims(2)            \textcolor{comment}{! local dimensions}
+107     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: gdims(2)            \textcolor{comment}{! global dimensions}
+108     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: loutput             \textcolor{comment}{! output flag}
+109     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: lcontainer          \textcolor{comment}{! container flag}
+110     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: lrestart            \textcolor{comment}{! restart flag}
+111     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: lrestart\_cont       \textcolor{comment}{! continue restart if var not
+       available}
+112     \textcolor{keywordtype}{REAL(wp)},             \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: initval\_r           \textcolor{comment}{! value if var not available}
+113     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: isteptype           \textcolor{comment}{! type of statistical processing}
+114     \textcolor{keywordtype}{REAL(wp)},             \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: resetval\_r          \textcolor{comment}{! reset value (after accumulation)}
+115     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: lmiss               \textcolor{comment}{! missing value flag}
+116     \textcolor{keywordtype}{REAL(wp)},             \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: missval\_r           \textcolor{comment}{! missing value}
+117     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: tlev\_source         \textcolor{comment}{! actual TL for TL dependent vars}
+118     \textcolor{keywordtype}{TYPE}(t\_var\_metadata), \textcolor{keywordtype}{POINTER},    \textcolor{keywordtype}{OPTIONAL} :: info                \textcolor{comment}{! returns reference to metadata}
+119     \textcolor{keywordtype}{REAL(wp)},             \textcolor{keywordtype}{POINTER},    \textcolor{keywordtype}{OPTIONAL} :: p5(:,:,:,:,:)       \textcolor{comment}{! provided pointer}
+120     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: verbose             \textcolor{comment}{! print information}
+121     \textcolor{keywordtype}{TYPE}(t\_list\_element), \textcolor{keywordtype}{POINTER}, \textcolor{keywordtype}{OPTIONAL}  :: new\_element           \textcolor{comment}{! pointer to new var list element}
+122 
+123     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} :: p4(:,:,:,:)
+124 
+125     type(t\_list\_element), \textcolor{keywordtype}{POINTER} :: element
+126 
+127     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':add\_var\_list\_element\_r2d'}
+128 
+129     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(p5)) \textcolor{keywordflow}{THEN}
+130       \textcolor{keywordflow}{IF} (\textcolor{keyword}{SIZE}(p5, dim=5) > 1) &
+131         \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'p5: only four dimensions allowed currently because of ECHAM
+       compatibility'})
+132       p4 => p5(:,:,:,:,1)
+133 \textcolor{keywordflow}{    END IF}
+134 
+135 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+136 \textcolor{preprocessor}{}    \textcolor{keyword}{CALL }add\_var\_icon(this\_list, trim(name), ptr, hgrid, za\_surface, cf, grib2, &
+137       ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart\_cont=lrestart\_cont, 
+          &
+138       initval=initval\_r, isteptype=isteptype, resetval=resetval\_r, lmiss=lmiss, missval=missval\_r,         
+          &
+139       tlev\_source=tlev\_source, info=info, p5=p5, verbose=verbose, new\_element=new\_element)
+140 
+141       element => find\_list\_element(this\_list, trim(name))
+142       element%field%info%cdiZaxisID = vgrid
+143 \textcolor{preprocessor}{#else}
+144 \textcolor{preprocessor}{}      \textcolor{keyword}{CALL }add\_stream\_element(this\_list, trim(name), ptr, &
+145         ldims=ldims, gdims=gdims, &
+146         longname=cf%long\_name, units=cf%units, &
+147         code=code, table=table, &
+148         lmiss=lmiss, missval=missval\_r, verbose=.true. &
+149         )
+150 
+151       element => find\_list\_element(this\_list, trim(name))
+152       element%field%info%zaxisID = vgrid
+153 \textcolor{preprocessor}{#endif}
+154 \textcolor{preprocessor}{}
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/d6d/namespacemo__jsb__varlist__iface_a1a7673f9db168055de30bc6f735a7ecb_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__varlist__iface_a0bb929b116f163f5cbe5e680073ca3b2}{}\index{mo\+\_\+jsb\+\_\+varlist\+\_\+iface@{mo\+\_\+jsb\+\_\+varlist\+\_\+iface}!add\+\_\+var\+\_\+list\+\_\+element\+\_\+r3d@{add\+\_\+var\+\_\+list\+\_\+element\+\_\+r3d}}
+\index{add\+\_\+var\+\_\+list\+\_\+element\+\_\+r3d@{add\+\_\+var\+\_\+list\+\_\+element\+\_\+r3d}!mo\+\_\+jsb\+\_\+varlist\+\_\+iface@{mo\+\_\+jsb\+\_\+varlist\+\_\+iface}}
+\subsubsection[{add\+\_\+var\+\_\+list\+\_\+element\+\_\+r3d}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+varlist\+\_\+iface\+::add\+\_\+var\+\_\+list\+\_\+element\+\_\+r3d (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+var\+\_\+list), intent(inout)}]{this\+\_\+list, }
+\item[{character(len=$\ast$), intent(in)}]{name, }
+\item[{real(wp), dimension(\+:,\+:,\+:), pointer}]{ptr, }
+\item[{integer, intent(in)}]{hgrid, }
+\item[{integer, intent(in)}]{vgrid, }
+\item[{type(t\+\_\+cf\+\_\+var), intent(in)}]{cf, }
+\item[{type(t\+\_\+grib2\+\_\+var), intent(in)}]{grib2, }
+\item[{integer, intent(in)}]{code, }
+\item[{integer, intent(in)}]{table, }
+\item[{integer, dimension(3), intent(in), optional}]{ldims, }
+\item[{integer, dimension(3), intent(in), optional}]{gdims, }
+\item[{logical, intent(in), optional}]{loutput, }
+\item[{logical, intent(in), optional}]{lcontainer, }
+\item[{logical, intent(in), optional}]{lrestart, }
+\item[{logical, intent(in), optional}]{lrestart\+\_\+cont, }
+\item[{real(wp), intent(in), optional}]{initval\+\_\+r, }
+\item[{integer, intent(in), optional}]{isteptype, }
+\item[{real(wp), intent(in), optional}]{resetval\+\_\+r, }
+\item[{logical, intent(in), optional}]{lmiss, }
+\item[{real(wp), intent(in), optional}]{missval\+\_\+r, }
+\item[{integer, intent(in), optional}]{tlev\+\_\+source, }
+\item[{type(t\+\_\+var\+\_\+metadata), optional, pointer}]{info, }
+\item[{real(wp), dimension(\+:,\+:,\+:,\+:,\+:), optional, pointer}]{p5, }
+\item[{logical, intent(in), optional}]{verbose, }
+\item[{type(t\+\_\+list\+\_\+element), optional, pointer}]{new\+\_\+element}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__varlist__iface_a0bb929b116f163f5cbe5e680073ca3b2}
+
+
+Definition at line 163 of file mo\+\_\+jsb\+\_\+varlist\+\_\+iface.\+f90.
+
+
+
+References modname, and mo\+\_\+jsb\+\_\+io\+\_\+iface\+::za\+\_\+depth\+\_\+below\+\_\+land.
+
+
+
+Referenced by mo\+\_\+jsb\+\_\+varlist\+::get\+\_\+varlist().
+
+
+\begin{DoxyCode}
+163 
+164     \textcolor{keywordtype}{TYPE}(t\_var\_list),     \textcolor{keywordtype}{INTENT(inout)}        :: this\_list           \textcolor{comment}{! list}
+165     \textcolor{keywordtype}{CHARACTER(len=*)},     \textcolor{keywordtype}{INTENT(in)}           :: name                \textcolor{comment}{! name of variable}
+166     \textcolor{keywordtype}{REAL(wp)},             \textcolor{keywordtype}{POINTER}              :: ptr(:,:,:)          \textcolor{comment}{! reference to field}
+167     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}           :: hgrid               \textcolor{comment}{! horizontal grid type}
+168     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}           :: vgrid               \textcolor{comment}{! vertical grid type (cdiZaxisID)}
+169     \textcolor{keywordtype}{TYPE}(t\_cf\_var),       \textcolor{keywordtype}{INTENT(in)}           :: cf                  \textcolor{comment}{! CF related metadata}
+170     \textcolor{keywordtype}{TYPE}(t\_grib2\_var),    \textcolor{keywordtype}{INTENT(in)}           :: grib2               \textcolor{comment}{! GRIB2 related metadata}
+171     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}           :: code                \textcolor{comment}{! GRIB1 code number}
+172     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}           :: table               \textcolor{comment}{! GRIB1 table number}
+173     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: ldims(3)            \textcolor{comment}{! local dimensions}
+174     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: gdims(3)            \textcolor{comment}{! global dimensions}
+175     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: loutput             \textcolor{comment}{! output flag}
+176     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: lcontainer          \textcolor{comment}{! container flag}
+177     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: lrestart            \textcolor{comment}{! restart flag}
+178     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: lrestart\_cont       \textcolor{comment}{! continue restart if var not
+       available}
+179     \textcolor{keywordtype}{REAL(wp)},             \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: initval\_r           \textcolor{comment}{! value if var not available}
+180     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: isteptype           \textcolor{comment}{! type of statistical processing}
+181     \textcolor{keywordtype}{REAL(wp)},             \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: resetval\_r          \textcolor{comment}{! reset value (after accumulation)}
+182     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: lmiss               \textcolor{comment}{! missing value flag}
+183     \textcolor{keywordtype}{REAL(wp)},             \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: missval\_r           \textcolor{comment}{! missing value}
+184     \textcolor{keywordtype}{INTEGER},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: tlev\_source         \textcolor{comment}{! actual TL for TL dependent vars}
+185     \textcolor{keywordtype}{TYPE}(t\_var\_metadata), \textcolor{keywordtype}{POINTER},    \textcolor{keywordtype}{OPTIONAL} :: info                \textcolor{comment}{! returns reference to metadata}
+186     \textcolor{keywordtype}{REAL(wp)},             \textcolor{keywordtype}{POINTER},    \textcolor{keywordtype}{OPTIONAL} :: p5(:,:,:,:,:)       \textcolor{comment}{! provided pointer}
+187     \textcolor{keywordtype}{LOGICAL},              \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL} :: verbose             \textcolor{comment}{! print information}
+188     \textcolor{keywordtype}{TYPE}(t\_list\_element), \textcolor{keywordtype}{POINTER}, \textcolor{keywordtype}{OPTIONAL}  :: new\_element           \textcolor{comment}{! pointer to new var list element}
+189 
+190     \textcolor{keywordtype}{REAL(wp)}, \textcolor{keywordtype}{POINTER} :: p4(:,:,:,:)
+191 
+192     type(t\_list\_element), \textcolor{keywordtype}{POINTER} :: element
+193 
+194     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: routine = trim(modname)//\textcolor{stringliteral}{':add\_var\_list\_element\_r3d'}
+195 
+196     \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(p5)) \textcolor{keywordflow}{THEN}
+197       \textcolor{keywordflow}{IF} (\textcolor{keyword}{SIZE}(p5, dim=5) > 1) &
+198         \textcolor{keyword}{CALL }finish(trim(routine), \textcolor{stringliteral}{'p5: only four dimensions allowed currently because of ECHAM
+       compatibility'})
+199       p4 => p5(:,:,:,:,1)
+200 \textcolor{keywordflow}{    END IF}
+201 
+202 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+203 \textcolor{preprocessor}{}    \textcolor{keyword}{CALL }add\_var\_icon(this\_list, trim(name), ptr, hgrid, za\_depth\_below\_land, cf, grib2, &
+204       ldims=ldims, loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart\_cont=lrestart\_cont, 
+          &
+205       initval=initval\_r, isteptype=isteptype, resetval=resetval\_r, lmiss=lmiss, missval=missval\_r,         
+          &
+206       tlev\_source=tlev\_source, info=info, p5=p5, verbose=verbose, new\_element=new\_element)
+207 
+208       element => find\_list\_element(this\_list, trim(name))
+209       element%field%info%cdiZaxisID = vgrid
+210 \textcolor{preprocessor}{#else}
+211 \textcolor{preprocessor}{}    \textcolor{keywordflow}{IF} (\textcolor{keyword}{PRESENT}(p5)) \textcolor{keywordflow}{THEN}
+212       \textcolor{keyword}{CALL }add\_stream\_element(this\_list, trim(name), ptr, &
+213         ldims=ldims, gdims=gdims, &
+214         longname=cf%long\_name, units=cf%units, &
+215         code=code, table=table, &
+216         lpost=loutput, lmiss=lmiss, missval=missval\_r, lrerun=lrestart, contnorest=lrestart\_cont, &
+217         p4=p4 &
+218       \textcolor{comment}{!mem\_info=info &}
+219         )
+220     \textcolor{keywordflow}{ELSE}
+221       \textcolor{keyword}{CALL }add\_stream\_element(this\_list, trim(name), ptr, &
+222         ldims=ldims, gdims=gdims, &
+223         longname=cf%long\_name, units=cf%units, &
+224         code=code, table=table, &
+225         lpost=loutput, lmiss=lmiss, missval=missval\_r, lrerun=lrestart, contnorest=lrestart\_cont &
+226         )
+227 \textcolor{keywordflow}{    END IF}
+228 
+229     element => find\_list\_element(this\_list, trim(name))
+230     element%field%info%zaxisID = vgrid
+231 \textcolor{preprocessor}{#endif}
+232 \textcolor{preprocessor}{}
+\end{DoxyCode}
+
+
+Here is the caller graph for this function\+:
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{d2/d6d/namespacemo__jsb__varlist__iface_a0bb929b116f163f5cbe5e680073ca3b2_icgraph}
+\end{center}
+\end{figure}
+
+
+\hypertarget{namespacemo__jsb__varlist__iface_a169b8d752d071050ff305239fe73dbfc}{}\index{mo\+\_\+jsb\+\_\+varlist\+\_\+iface@{mo\+\_\+jsb\+\_\+varlist\+\_\+iface}!new\+\_\+var\+\_\+list@{new\+\_\+var\+\_\+list}}
+\index{new\+\_\+var\+\_\+list@{new\+\_\+var\+\_\+list}!mo\+\_\+jsb\+\_\+varlist\+\_\+iface@{mo\+\_\+jsb\+\_\+varlist\+\_\+iface}}
+\subsubsection[{new\+\_\+var\+\_\+list}]{\setlength{\rightskip}{0pt plus 5cm}subroutine, public mo\+\_\+jsb\+\_\+varlist\+\_\+iface\+::new\+\_\+var\+\_\+list (
+\begin{DoxyParamCaption}
+\item[{type(t\+\_\+var\+\_\+list), intent(inout), pointer}]{this\+\_\+list, }
+\item[{character(len=$\ast$), intent(in)}]{name, }
+\item[{integer, intent(in)}]{patch\+\_\+id, }
+\item[{integer, intent(in), optional}]{output\+\_\+type, }
+\item[{integer, intent(in), optional}]{restart\+\_\+type, }
+\item[{character(len=$\ast$), intent(in), optional}]{post\+\_\+suf, }
+\item[{character(len=$\ast$), intent(in), optional}]{rest\+\_\+suf, }
+\item[{character(len=$\ast$), intent(in), optional}]{init\+\_\+suf, }
+\item[{logical, intent(in), optional}]{loutput, }
+\item[{logical, intent(in), optional}]{lrestart, }
+\item[{logical, intent(in), optional}]{linitial, }
+\item[{integer, intent(in), optional}]{table}
+\end{DoxyParamCaption}
+)}\label{namespacemo__jsb__varlist__iface_a169b8d752d071050ff305239fe73dbfc}
+
+
+Definition at line 50 of file mo\+\_\+jsb\+\_\+varlist\+\_\+iface.\+f90.
+
+
+\begin{DoxyCode}
+50     \textcolor{comment}{!}
+51     \textcolor{keywordtype}{TYPE}(t\_var\_list), \textcolor{keywordtype}{POINTER}, \textcolor{keywordtype}{INTENT(inout)} :: this\_list    \textcolor{comment}{! anchor}
+52     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(in)}             :: name         \textcolor{comment}{! name of output var\_list}
+53     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(in)}             :: patch\_id     \textcolor{comment}{! patch ID}
+54     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL}   :: output\_type  \textcolor{comment}{! 'GRIB1', 'GRIB2' or 'NetCDF[12]'}
+55     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL}   :: restart\_type \textcolor{comment}{! 'NetCDF[12]'}
+56     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL}   :: post\_suf     \textcolor{comment}{! suffix of output file}
+57     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL}   :: rest\_suf     \textcolor{comment}{! suffix of restart file}
+58     \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL}   :: init\_suf     \textcolor{comment}{! suffix of initial file}
+59     \textcolor{keywordtype}{LOGICAL},          \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL}   :: loutput      \textcolor{comment}{! write to  output file}
+60     \textcolor{keywordtype}{LOGICAL},          \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL}   :: lrestart     \textcolor{comment}{! write to restart file}
+61     \textcolor{keywordtype}{LOGICAL},          \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL}   :: linitial     \textcolor{comment}{! read from initial file}
+62     \textcolor{keywordtype}{INTEGER},          \textcolor{keywordtype}{INTENT(in)}, \textcolor{keywordtype}{OPTIONAL}   :: table
+63 
+64 \textcolor{preprocessor}{#ifdef \_\_ICON\_\_}
+65 \textcolor{preprocessor}{}    \textcolor{keyword}{CALL }new\_var\_list\_icon(this\_list, name,                                    &
+66                       output\_type=output\_type,                                 &
+67                       post\_suf=post\_suf, rest\_suf=rest\_suf, init\_suf=init\_suf, &
+68                       loutput=loutput, lrestart=lrestart, linitial=linitial,   &
+69                       patch\_id=patch\_id                                        &
+70                      )
+71 \textcolor{preprocessor}{#else}
+72 \textcolor{preprocessor}{}    \textcolor{keywordtype}{INTEGER} :: table\_loc
+73 
+74     \textcolor{keywordflow}{IF}(\textcolor{keyword}{PRESENT}(table)) \textcolor{keywordflow}{THEN}
+75       table\_loc = table
+76     \textcolor{keywordflow}{ELSE}
+77       table\_loc = 180
+78 \textcolor{keywordflow}{    END IF}
+79     \textcolor{keyword}{CALL }new\_stream(this\_list, name,                                         &
+80                     filetype=output\_type,                                    &
+81                     post\_suf=post\_suf, rest\_suf=rest\_suf, init\_suf=init\_suf, &
+82                     lpost=loutput, lpout=loutput, lrerun=lrestart            &
+83                    )
+84 
+85     \textcolor{keyword}{CALL }default\_stream\_setting(this\_list, table=table\_loc, lpost=loutput, lrerun=lrestart)
+86 \textcolor{preprocessor}{#endif}
+87 \textcolor{preprocessor}{}
+\end{DoxyCode}
+
+
+\subsection{Variable Documentation}
+\hypertarget{namespacemo__jsb__varlist__iface_a5a17e1c8f252488a0b648044116fcac7}{}\index{mo\+\_\+jsb\+\_\+varlist\+\_\+iface@{mo\+\_\+jsb\+\_\+varlist\+\_\+iface}!modname@{modname}}
+\index{modname@{modname}!mo\+\_\+jsb\+\_\+varlist\+\_\+iface@{mo\+\_\+jsb\+\_\+varlist\+\_\+iface}}
+\subsubsection[{modname}]{\setlength{\rightskip}{0pt plus 5cm}character(len=$\ast$), parameter mo\+\_\+jsb\+\_\+varlist\+\_\+iface\+::modname = \textquotesingle{}mo\+\_\+jsb\+\_\+varlist\+\_\+iface\textquotesingle{}}\label{namespacemo__jsb__varlist__iface_a5a17e1c8f252488a0b648044116fcac7}
+
+
+Definition at line 43 of file mo\+\_\+jsb\+\_\+varlist\+\_\+iface.\+f90.
+
+
+
+Referenced by add\+\_\+var\+\_\+list\+\_\+element\+\_\+r2d(), and add\+\_\+var\+\_\+list\+\_\+element\+\_\+r3d().
+
+
+\begin{DoxyCode}
+43   \textcolor{keywordtype}{CHARACTER(len=*)}, \textcolor{keywordtype}{PARAMETER} :: modname = \textcolor{stringliteral}{'mo\_jsb\_varlist\_iface'}
+\end{DoxyCode}

@@ -33,7 +33,8 @@ CONTAINS
   SUBROUTINE init_model_standalone(model_id, model_name)
 
     USE mo_jsb_grid_class,  ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_model_class, ONLY: register_grid, print_model
+    USE mo_jsb_grid,        ONLY: Register_grid
+    USE mo_jsb_model_class, ONLY: print_model
 
     INTEGER,                    INTENT(in) :: model_id
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: model_name
@@ -56,7 +57,8 @@ CONTAINS
 
     ! TBD: loop through already existing grids and use it if already exists with same name
     grid => new_grid(model%config%grid_filename, model%config%grid_name)
-    CALL register_grid(model, grid)
+    CALL register_grid(grid)
+    model%grid_id = grid%id
 
     CALL print_model(model)
 
@@ -70,7 +72,7 @@ CONTAINS
 
     USE mo_jsb_domain_iface, ONLY: t_patch
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_model_class,  ONLY: register_grid
+    USE mo_jsb_grid,         ONLY: Register_grid
 
     INTEGER,                    INTENT(in) :: model_id
     TYPE(t_patch),              INTENT(in) :: patch
@@ -94,7 +96,8 @@ CONTAINS
     model => jsbach%models(model_id)%m
 
     grid => new_grid(patch=patch)
-    CALL register_grid(model, grid)
+    CALL Register_grid(grid)
+    model%grid_id = grid%id
 
     CALL init_model_common(model)
 
@@ -117,7 +120,7 @@ CONTAINS
 
     USE mo_jsb_domain_iface, ONLY: pe_decomposed
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_model_class,  ONLY: register_grid
+    USE mo_jsb_grid,         ONLY: Register_grid
 
     INTEGER,               INTENT(in) :: model_id
     TYPE(pe_decomposed),   INTENT(in) :: decomposition
@@ -133,7 +136,8 @@ CONTAINS
     model => jsbach%models(model_id)%m
 
     grid => new_grid(decomp=decomposition)
-    CALL register_grid(model, grid)
+    CALL Register_grid(grid)
+    model%grid_id = grid%id
 
     CALL init_model_common(model)
 
@@ -143,7 +147,9 @@ CONTAINS
 
   SUBROUTINE init_model_common(model)
 
-    USE mo_jsb_model_class,    ONLY: max_no_of_var_lists, print_model
+    USE mo_jsb_process_factory, ONLY: HD
+    USE mo_jsb_model_class,    ONLY: print_model
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile
     USE mo_jsb_model_usecases, ONLY: init_usecase
     USE mo_srf_init,           ONLY: srf_init_ic, srf_init_bc
     USE mo_soil_init,          ONLY: soil_init
@@ -151,18 +157,21 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,            ONLY: hd_init_ic, hd_init_bc
 #endif
-    USE mo_jsb_base,           ONLY: get_tile
+    USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,          ONLY: Register_vgrid
+    USE mo_jsb_io,            ONLY: ZAXIS_SURFACE
 
-#ifdef HAVE_F2003
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-#else
-    TYPE(t_jsb_model), POINTER                :: model
-#endif
+
+    TYPE(t_jsb_tile),  POINTER :: tile
+    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_common'
 
-    ALLOCATE(model%var_list_names(max_no_of_var_lists))
-    model%var_list_names(:) = ''
+    CALL model%Configure_processes()
+
+    surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
+    CALL register_vgrid(surface)
 
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
@@ -176,30 +185,25 @@ CONTAINS
 
     ! At this point, the model configuration, tile and memory structure is set up.
 
-    ! We continue with initializing the different model components.
+    ! We continue with initializing the different model processes.
 
-    IF (model%config%srf%active) THEN
-      CALL srf_init_bc(model%land)
-      CALL srf_init_ic(model%land)
-    END IF
+    tile => model%Get_top_tile()
 
-    IF (model%config%soil%active) THEN
-      CALL soil_init(model)
-    END IF
+    CALL srf_init_bc(tile)
+    CALL srf_init_ic(tile)
+
+    CALL soil_init(tile)
 
     ! Vegetation must be initialized after soil!
-    IF (model%config%veg%active) THEN
-      CALL veg_init_bc(model%land)
-      CALL veg_init_ic(model%land)
-    END IF
+    CALL veg_init_bc(tile)
+    CALL veg_init_ic(tile)
 
 #ifndef __NO_JSBACH_HD__
-    IF (model%config%hd%active) THEN
-      CALL hd_init_bc(model%land)
-      CALL hd_init_ic(model%land)
+    IF (tile%Is_process_active(HD)) THEN
+      CALL hd_init_bc(tile)
+      CALL hd_init_ic(tile)
     END IF
 #endif
-
     ! Initialize tile fractions for all tiles
     ! This is done after the initialization of the initial and boundary conditions of the model components
     ! because e.g. the fraction of the vegetated tile depends on LAI.

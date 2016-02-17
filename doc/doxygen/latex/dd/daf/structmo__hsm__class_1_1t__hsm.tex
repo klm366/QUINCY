@@ -1,0 +1,140 @@
+\hypertarget{structmo__hsm__class_1_1t__hsm}{}\section{mo\+\_\+hsm\+\_\+class\+:\+:t\+\_\+hsm Interface Reference}
+\label{structmo__hsm__class_1_1t__hsm}\index{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}}
+
+
+Type for Hierarchical State Machine.  
+
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+P\+R\+O\+C\+E\+D\+U\+R\+E \hyperlink{structmo__hsm__class_1_1t__hsm_ab2d1ff5acb909badd755032905b7f76b}{get\+\_\+current} =$>$ Get\+\_\+current\+\_\+hsm
+\item 
+P\+R\+O\+C\+E\+D\+U\+R\+E \hyperlink{structmo__hsm__class_1_1t__hsm_a80b6dcd63695591ff5a1c77ca3749fcc}{get\+\_\+levels\+\_\+to\+\_\+lca} =$>$ Get\+\_\+levels\+\_\+to\+\_\+\+L\+C\+A\+\_\+hsm
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+character(len=10) \hyperlink{structmo__hsm__class_1_1t__hsm_a41c6532ae5a0ad64e3859551d680e304}{name}
+\item 
+class(\hyperlink{structmo__hsm__class_1_1t__state}{t\+\_\+state}), pointer \hyperlink{structmo__hsm__class_1_1t__hsm_ac82b92ceb5581d9541a803ce0f618513}{top} =$>$ N\+U\+L\+L()
+\begin{DoxyCompactList}\small\item\em Topmost state. \end{DoxyCompactList}\item 
+class(\hyperlink{structmo__hsm__class_1_1t__state}{t\+\_\+state}), pointer \hyperlink{structmo__hsm__class_1_1t__hsm_aa44c8241f08804bcb0735ad94de011aa}{current} =$>$ N\+U\+L\+L()
+\begin{DoxyCompactList}\small\item\em Current state. \end{DoxyCompactList}\item 
+class(\hyperlink{structmo__hsm__class_1_1t__state}{t\+\_\+state}), pointer \hyperlink{structmo__hsm__class_1_1t__hsm_a2c0b1b670fbc0073efab59f8257f4486}{next} =$>$ N\+U\+L\+L()
+\begin{DoxyCompactList}\small\item\em Next state (non\+\_\+null if transition taken) \end{DoxyCompactList}\item 
+class(\hyperlink{structmo__hsm__class_1_1t__state}{t\+\_\+state}), pointer \hyperlink{structmo__hsm__class_1_1t__hsm_ac172a34a2cef6a45250c897f8c165e67}{source} =$>$ N\+U\+L\+L()
+\begin{DoxyCompactList}\small\item\em Source state during last transition. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Type for Hierarchical State Machine. 
+
+This derived type defines the structure of a basic Hierarchical State Machine 
+
+Definition at line 54 of file mo\+\_\+hsm\+\_\+class.\+f90.
+
+
+
+\subsection{Member Function/\+Subroutine Documentation}
+\hypertarget{structmo__hsm__class_1_1t__hsm_ab2d1ff5acb909badd755032905b7f76b}{}\index{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}!get\+\_\+current@{get\+\_\+current}}
+\index{get\+\_\+current@{get\+\_\+current}!mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}}
+\subsubsection[{get\+\_\+current}]{\setlength{\rightskip}{0pt plus 5cm}P\+R\+O\+C\+E\+D\+U\+R\+E mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm\+::get\+\_\+current (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{structmo__hsm__class_1_1t__hsm_ab2d1ff5acb909badd755032905b7f76b}
+
+
+Definition at line 62 of file mo\+\_\+hsm\+\_\+class.\+f90.
+
+\hypertarget{structmo__hsm__class_1_1t__hsm_a80b6dcd63695591ff5a1c77ca3749fcc}{}\index{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}!get\+\_\+levels\+\_\+to\+\_\+lca@{get\+\_\+levels\+\_\+to\+\_\+lca}}
+\index{get\+\_\+levels\+\_\+to\+\_\+lca@{get\+\_\+levels\+\_\+to\+\_\+lca}!mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}}
+\subsubsection[{get\+\_\+levels\+\_\+to\+\_\+lca}]{\setlength{\rightskip}{0pt plus 5cm}P\+R\+O\+C\+E\+D\+U\+R\+E mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm\+::get\+\_\+levels\+\_\+to\+\_\+lca (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}\label{structmo__hsm__class_1_1t__hsm_a80b6dcd63695591ff5a1c77ca3749fcc}
+
+
+Definition at line 63 of file mo\+\_\+hsm\+\_\+class.\+f90.
+
+
+
+\subsection{Member Data Documentation}
+\hypertarget{structmo__hsm__class_1_1t__hsm_aa44c8241f08804bcb0735ad94de011aa}{}\index{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}!current@{current}}
+\index{current@{current}!mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}}
+\subsubsection[{current}]{\setlength{\rightskip}{0pt plus 5cm}class({\bf t\+\_\+state}), pointer mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm\+::current =$>$ N\+U\+L\+L()}\label{structmo__hsm__class_1_1t__hsm_aa44c8241f08804bcb0735ad94de011aa}
+
+
+Current state. 
+
+
+
+Definition at line 58 of file mo\+\_\+hsm\+\_\+class.\+f90.
+
+
+\begin{DoxyCode}
+58     \textcolor{keywordtype}{CLASS}(t\_state), \textcolor{keywordtype}{POINTER}     :: current => null()  
+\end{DoxyCode}
+\hypertarget{structmo__hsm__class_1_1t__hsm_a41c6532ae5a0ad64e3859551d680e304}{}\index{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}!name@{name}}
+\index{name@{name}!mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}}
+\subsubsection[{name}]{\setlength{\rightskip}{0pt plus 5cm}character(len=10) mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm\+::name}\label{structmo__hsm__class_1_1t__hsm_a41c6532ae5a0ad64e3859551d680e304}
+
+
+Definition at line 55 of file mo\+\_\+hsm\+\_\+class.\+f90.
+
+
+\begin{DoxyCode}
+55     \textcolor{keywordtype}{CHARACTER(len=10)}           :: name
+\end{DoxyCode}
+\hypertarget{structmo__hsm__class_1_1t__hsm_a2c0b1b670fbc0073efab59f8257f4486}{}\index{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}!next@{next}}
+\index{next@{next}!mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}}
+\subsubsection[{next}]{\setlength{\rightskip}{0pt plus 5cm}class({\bf t\+\_\+state}), pointer mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm\+::next =$>$ N\+U\+L\+L()}\label{structmo__hsm__class_1_1t__hsm_a2c0b1b670fbc0073efab59f8257f4486}
+
+
+Next state (non\+\_\+null if transition taken) 
+
+
+
+Definition at line 59 of file mo\+\_\+hsm\+\_\+class.\+f90.
+
+
+\begin{DoxyCode}
+59     \textcolor{keywordtype}{CLASS}(t\_state), \textcolor{keywordtype}{POINTER}     :: next    => null()  
+\end{DoxyCode}
+\hypertarget{structmo__hsm__class_1_1t__hsm_ac172a34a2cef6a45250c897f8c165e67}{}\index{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}!source@{source}}
+\index{source@{source}!mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}}
+\subsubsection[{source}]{\setlength{\rightskip}{0pt plus 5cm}class({\bf t\+\_\+state}), pointer mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm\+::source =$>$ N\+U\+L\+L()}\label{structmo__hsm__class_1_1t__hsm_ac172a34a2cef6a45250c897f8c165e67}
+
+
+Source state during last transition. 
+
+
+
+Definition at line 60 of file mo\+\_\+hsm\+\_\+class.\+f90.
+
+
+\begin{DoxyCode}
+60     \textcolor{keywordtype}{CLASS}(t\_state), \textcolor{keywordtype}{POINTER}     :: source  => null()  
+\end{DoxyCode}
+\hypertarget{structmo__hsm__class_1_1t__hsm_ac82b92ceb5581d9541a803ce0f618513}{}\index{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}!top@{top}}
+\index{top@{top}!mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm@{mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm}}
+\subsubsection[{top}]{\setlength{\rightskip}{0pt plus 5cm}class({\bf t\+\_\+state}), pointer mo\+\_\+hsm\+\_\+class\+::t\+\_\+hsm\+::top =$>$ N\+U\+L\+L()}\label{structmo__hsm__class_1_1t__hsm_ac82b92ceb5581d9541a803ce0f618513}
+
+
+Topmost state. 
+
+
+
+Definition at line 56 of file mo\+\_\+hsm\+\_\+class.\+f90.
+
+
+\begin{DoxyCode}
+56     \textcolor{keywordtype}{CLASS}(t\_state), \textcolor{keywordtype}{POINTER}     :: top     => null()  
+\end{DoxyCode}
+
+
+The documentation for this interface was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+/home/reiner/git/jsbach.\+ulme/src/base/\hyperlink{mo__hsm__class_8f90}{mo\+\_\+hsm\+\_\+class.\+f90}\end{DoxyCompactItemize}

@@ -10,9 +10,11 @@
 MODULE mo_jsb_io_iface
 #ifndef __NO_JSBACH__
 
+  USE mo_kind,          ONLY: wp
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
   USE mo_grib2,         ONLY: t_grib2_var, grib2_var
+  USE mo_io_config,     ONLY: lnetcdf_flt64_output
   USE mo_cdi,           ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24, ZAXIS_SURFACE, &
                             & ZAXIS_DEPTH_BELOW_LAND, FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, TSTEP_CONSTANT, &
                             & zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
@@ -21,12 +23,14 @@ MODULE mo_jsb_io_iface
   USE mo_cdi_constants, ONLY: GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, ZA_SURFACE, ZA_DEPTH_BELOW_LAND
 #else
   USE mo_linked_list,   ONLY: NETCDF2, NETCDF4, GRIB
+  USE mo_netcdf,        ONLY: add_dim
 #endif
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_cf_var, t_grib2_var, grib2_var
+  PUBLIC :: Get_netcdf_precision
   PUBLIC :: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
             ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                   &
             FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
@@ -34,8 +38,8 @@ MODULE mo_jsb_io_iface
             ZA_SURFACE, ZA_DEPTH_BELOW_LAND, TSTEP_CONSTANT, &
             zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
             zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
-            zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname 
-
+            zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &
+            Create_zaxis
 
 #ifndef __ICON__
   TYPE t_cf_var
@@ -66,9 +70,26 @@ MODULE mo_jsb_io_iface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_iface'
 
-#ifndef __ICON__
 CONTAINS
 
+  FUNCTION Get_netcdf_precision() RESULT(return_value)
+
+    INTEGER :: return_value
+
+#ifdef __ICON__
+    IF (lnetcdf_flt64_output) THEN
+      return_value = DATATYPE_FLT64
+    ELSE
+      return_value = DATATYPE_FLT32
+    END IF
+#else
+    ! This might be overwritten by ECHAM in mo_output.f90 based on the value of grib precision.
+    return_value = DATATYPE_FLT32
+#endif
+
+  END FUNCTION Get_netcdf_precision
+
+#ifndef __ICON__
   ! constructor for GRIB2 derived data type
   FUNCTION grib2_var(discipline, category, number, bits, gridtype, subgridtype)
     INTEGER, INTENT(IN) :: discipline
@@ -89,6 +110,38 @@ CONTAINS
 !!$    grib2_var%additional_keys%nint_keys = 0
   END FUNCTION grib2_var
 #endif
-  
+
+  SUBROUTINE Create_zaxis(cdiZaxisID, echamZaxisID, cdi_axis_type, length, name, &
+    & levels, units, longname, lbounds, ubounds)
+
+    INTEGER,           INTENT(inout) :: cdiZaxisID
+    INTEGER,           INTENT(inout) :: echamZaxisID
+    INTEGER,           INTENT(in)    :: cdi_axis_type
+    INTEGER,           INTENT(in)    :: length
+    CHARACTER(len=*),  INTENT(in)    :: name
+    REAL(wp),          INTENT(in)    :: levels(:)
+    CHARACTER(len=*),  INTENT(in)    :: units
+    CHARACTER(len=*),  INTENT(in)    :: longname
+    REAL(wp),          INTENT(in)    :: lbounds(:)
+    REAL(wp),          INTENT(in)    :: ubounds(:)
+
+    cdiZaxisID = zaxisCreate(cdi_axis_type, length)
+    CALL zaxisDefName    (cdiZaxisID, TRIM(name))
+    CALL zaxisDefLevels  (cdiZaxisID, levels(1:length))
+    CALL zaxisDefLbounds (cdiZaxisID, lbounds(1:length))
+    CALL zaxisDefUbounds (cdiZaxisID, ubounds(1:length))
+    CALL zaxisDefUnits   (cdiZaxisID, TRIM(units))
+    CALL zaxisDefLongname(cdiZaxisID, TRIM(longname))
+
+#ifdef __ICON__
+    echamZaxisID = -1
+#else
+    CALL add_dim(TRIM(name), length, &
+      & longname=TRIM(longname), units=TRIM(units), VALUE=levels(1:length), &
+      & indx=echamZaxisID)
+#endif
+
+  END SUBROUTINE Create_zaxis
+
 #endif
 END MODULE mo_jsb_io_iface
