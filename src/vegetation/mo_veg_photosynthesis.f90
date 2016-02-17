@@ -93,11 +93,13 @@ SUBROUTINE update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,v
 
      ! integrate to canopy level values
      tile(t)%plant%flux%gpp = 0.0_wp
+     tile(t)%plant%flux%maint_respiration_leaf = 0.0_wp
      tile(t)%plant%flux%gc = 0.0_wp
      tile(t)%plant%flux%ci = 0.0_wp
      DO icanop = 1,ncanop
-        tile(t)%plant%flux%gpp = tile(t)%plant%flux%gpp + anl(icanop) * canopy_layer_depth_act(icanop) &  
-                * dt / 1000000._wp
+        tile(t)%plant%flux%gpp = tile(t)%plant%flux%gpp + agl(icanop) * canopy_layer_depth_act(icanop) 
+        tile(t)%plant%flux%maint_respiration_leaf = tile(t)%plant%flux%maint_respiration_leaf + & 
+               rl(icanop) * canopy_layer_depth_act(icanop) 
         tile(t)%plant%flux%gc = tile(t)%plant%flux%gc + gsl(icanop) * canopy_layer_depth_act(icanop)
         tile(t)%plant%flux%ci = tile(t)%plant%flux%ci + cil(icanop) * canopy_layer_depth_act(icanop)
      ENDDO
@@ -175,6 +177,7 @@ SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par
     
   USE mo_land_constants
   USE mo_veg_parameters
+  USE mo_veg_respiration, ONLY: temperature_response_respiration
 
   IMPLICIT NONE
 
@@ -228,7 +231,7 @@ SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par
   ppm2Pa = press_srf * 1.e-06
   
   !  Net canopy layer respiration (umol[CO2]/m2/s)
-  rl = rl2mmolN * beta_soil_ps * exp(E0kt - E1kt/rtck) * nfmol
+  rl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp) * nfmol
 
   ! initialise output for no-light condition
   IF(par_sunlit + par_shaded <= eps8) THEN

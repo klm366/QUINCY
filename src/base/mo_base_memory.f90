@@ -44,15 +44,19 @@ MODULE mo_base_memory
   TYPE VegFlux
      TYPE(VegPool) :: growth
      TYPE(VegPool) :: litterfall
-     REAL(wp) :: gpp                      ! net photosynthesis (Ag-R in µmol CO2 m-2 s-1)
-     REAL(wp) :: gpp_c13                  ! net photosynthesis (Ag-R in µmol 13CO2 m-2 s-1)
-     REAL(wp) :: gpp_c14                  ! net photosynthesis (Ag-R in µmol 14CO2 m-2 s-1)
+     REAL(wp) :: gpp                      ! gross photosynthesis (µmol CO2 m-2 s-1)
+     REAL(wp) :: gpp_c13                  ! gross photosynthesis (µmol 13CO2 m-2 s-1)
+     REAL(wp) :: gpp_c14                  ! gross photosynthesis (µmol 14CO2 m-2 s-1)
+     REAL(wp) :: maint_respiration_leaf   ! foliar maintenance respiration (µmol CO2 m-2 s-1)
+     REAL(wp) :: maint_respiration        ! maintenance respiration (µmol CO2 m-2 s-1)
+     REAL(wp) :: maint_respiration_c13    ! maintenance respiration (µmol 13CO2 m-2 s-1)
+     REAL(wp) :: maint_respiration_c14    ! maintenance respiration (µmol 14CO2 m-2 s-1)
      REAL(wp) :: growth_respiration       ! growth respiration (µmol CO2 m-2 s-1)
      REAL(wp) :: growth_respiration_c13   ! growth respiration (µmol 13CO2 m-2 s-1)
      REAL(wp) :: growth_respiration_c14   ! growth respiration (µmol 14CO2 m-2 s-1)
-     REAL(wp) :: npp
-     REAL(wp) :: npp_c13
-     REAL(wp) :: npp_c14
+     REAL(wp) :: npp                      ! net primary production (µmol CO2 m-2 s-1)
+     REAL(wp) :: npp_c13                  ! net primary production (µmol 13CO2 m-2 s-1)
+     REAL(wp) :: npp_c14                  ! net primary production (µmol 14CO2 m-2 s-1)
      REAL(wp) :: uptake_n
      REAL(wp) :: uptake_n15
      REAL(wp) :: uptake_p

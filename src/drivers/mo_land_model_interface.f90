@@ -88,7 +88,7 @@ tile(1)%plant%pftid=1
 
      CALL update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,veg_param)
 
-     CALL update_vegetation(tile,veg_param)
+     CALL update_vegetation(tile,t_air,veg_param)
 
   END SUBROUTINE land_model_interface
 

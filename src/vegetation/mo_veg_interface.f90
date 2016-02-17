@@ -20,7 +20,7 @@ MODULE mo_veg_interface
 
 CONTAINS
 
-  SUBROUTINE update_vegetation(tile,veg_param)
+  SUBROUTINE update_vegetation(tile,t_air,veg_param)
     !
     ! calls the vegetation interface
     ! TBD: Merge with interface? Somewhat a strategic decision for all header routines
@@ -34,6 +34,7 @@ CONTAINS
 
     ! 0.1 Input
     TYPE(VegetationParameterClass),INTENT(in) :: veg_param 
+    REAL(wp),INTENT(in) :: t_air 
     ! 0.2 In- and Output
     TYPE(TileClass), DIMENSION(ntile), INTENT(inout) :: tile
     ! 0.4 Local
@@ -41,13 +42,13 @@ CONTAINS
 
     DO t = 1,ntile
  
-       CALL vegetation_interface(tile(t)%plant,veg_param)
+       CALL vegetation_interface(tile(t)%plant,t_air,veg_param)
 
     END DO
  
   END SUBROUTINE update_vegetation
 
-  SUBROUTINE vegetation_interface(plant,veg_param)
+  SUBROUTINE vegetation_interface(plant,t_air,veg_param)
     ! 
     ! update vegetation pools given pre-calculated rates of 
     ! net C, N and P uptake 
@@ -57,9 +58,11 @@ CONTAINS
     USE mo_veg_parameters, ONLY: VegetationParameterClass
     USE mo_veg_turnover
     USE mo_veg_growth
+    USE mo_veg_respiration, ONLY: calc_maintenance_respiration
     IMPLICIT NONE
     ! 0.1 Input
     TYPE(VegetationParameterClass),INTENT(in) :: veg_param 
+    REAL(wp),INTENT(in) :: t_air 
     ! 0.2 In- and Output
     TYPE(PlantClass),INTENT(inout) :: plant
     ! 
@@ -68,18 +71,27 @@ CONTAINS
     CALL  calc_growth(plant,plant%flux%growth, & 
             plant%flux%growth_respiration,plant%flux%growth_respiration_c13,plant%flux%growth_respiration_c14)
     ! 
+    ! 1.5 Calculate maintenance respiration
+    ! 
+    CALL  calc_maintenance_respiration(t_air,t_air,plant%pool%sap_wood%nitrogen,plant%pool%fine_root%nitrogen, &
+            plant%pool%coarse_root%nitrogen,plant%pool%labile%carbon,plant%pool%labile%carbon13, & 
+            plant%pool%labile%carbon14,plant%flux%maint_respiration_leaf,&
+            plant%flux%maint_respiration,plant%flux%maint_respiration_c13,plant%flux%maint_respiration_c14)
+    ! 
     ! 2.0 Calculate turnover from tissue aging and senescence
     !
     CALL calc_turnover(plant,veg_param)
     !
     ! 3.0 Add carbon from photosynthesis to the labile pool
     !
-    plant%flux%growth%labile%carbon = plant%flux%growth%labile%carbon + & 
-       plant%flux%gpp - plant%flux%growth_respiration
+    plant%flux%npp = plant%flux%gpp - plant%flux%growth_respiration - plant%flux%maint_respiration 
+    plant%flux%npp_c13 = plant%flux%gpp_c13 - plant%flux%growth_respiration_c13 - plant%flux%maint_respiration_c13 
+    plant%flux%npp_c14 = plant%flux%gpp_c14 - plant%flux%growth_respiration_c14 - plant%flux%maint_respiration_c14 
+    plant%flux%growth%labile%carbon = plant%flux%growth%labile%carbon + plant%flux%npp * dt / 1.e6
     plant%flux%growth%labile%carbon13 = plant%flux%growth%labile%carbon13 + & 
-       plant%flux%gpp_c13 - plant%flux%growth_respiration_c13
+       plant%flux%npp_c13 * dt / 1.e6
     plant%flux%growth%labile%carbon14 = plant%flux%growth%labile%carbon14 + & 
-       plant%flux%gpp_c14 - plant%flux%growth_respiration_c14
+       plant%flux%npp_c14 * dt / 1.e6
     !
     ! 4.0 Add nutrients from uptake calculations
     !

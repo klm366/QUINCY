@@ -49,9 +49,9 @@ CONTAINS
                               target_np_sap_wood,target_np_fruit,falloc,nreq_growth,preq_growth)
     CALL meristem_activity(nreq_growth,preq_growth,plant%pool%labile,growth%labile)
 
-    growth_respiration = fresp_growth * growth%labile%carbon
-    growth_respiration_c13 = fresp_growth * growth%labile%carbon13
-    growth_respiration_c14 = fresp_growth * growth%labile%carbon14
+    growth_respiration = fresp_growth * growth%labile%carbon * 1.e6 / dt
+    growth_respiration_c13 = fresp_growth * growth%labile%carbon13 * 1.e6 / dt
+    growth_respiration_c14 = fresp_growth * growth%labile%carbon14 * 1.e6 / dt
 
     growth%leaf = ElementMul ( falloc%leaf, growth%labile )
     growth%fine_root = ElementMul ( falloc%fine_root, growth%labile ) 

@@ -14,9 +14,10 @@ MODULE mo_veg_parameters
 
   ! Respiration parameters
   REAL(wp),SAVE :: fresp_growth                 ! growth respiration per unit new biomass 
-  REAL(wp),SAVE :: rl2mmolN                     ! N-specific foliar maintenance respiration rate (µmol CO2 / mmol N / s) 
-  REAL(wp),SAVE :: E0kt                         ! Baseline value of foliar respiration
-  REAL(wp),SAVE :: E1kt                         ! Temperature sensitivity of value of foliar respiration 
+  REAL(wp),SAVE :: fmaint_rate_base             ! N-specific maintenance respiration rate (µmol CO2 / mmol N / s) 
+  REAL(wp),SAVE :: t_maint_k1                   ! Coefficient in the equation for temperature sensitivity of foliar respiration 
+  REAL(wp),SAVE :: t_maint_k2                   ! Coefficient in the equation for temperature sensitivity of foliar respiration
+  REAL(wp),SAVE :: t_maint_k3                   ! Coefficient in the equation for temperature sensitivity of foliar respiration 
 
   ! Standard pool turnover times
   REAL(wp),SAVE :: tau_labile_default           ! default turnover time of the labile carbo-hydrates (in days)
@@ -87,8 +88,16 @@ MODULE mo_veg_parameters
       !   
       ! growth respiration per unit new biomass
       fresp_growth = 0.25_wp
-      ! N-specific foliar maintenance respiration rate (µmol CO2 / mmol N / s)
-      rl2mmolN = 0.0028_wp ! corresponds to 0.2 µmol CO2 / g N / s)
+      ! N-specific foliar maintenance respiration rate (µmol CO2 / mol N / s)
+      ! Taken from Sprugel et al. Respiration from the organ level to the stand. 
+      ! In: Smith WK, Hinckley, T.M., editor. Physiological Ecology of Coniferous Forests.
+      ! San Diego, CA, USA: Academic Press; 1996.
+      ! Note converted from 7.4 e-7 to 1.48 e-6 to account for the different values of the Lloyd&Taylor equation
+      fmaint_rate_base = 1.48_wp 
+      ! parameters in the Lloyd and Taylor temperature response function (Lloyd & Taylor, 1996, Funct. Ecol.) 
+      t_maint_k1 = 308.56_wp  
+      t_maint_k2 = 56.02_wp
+      t_maint_k3 = 227.13_wp
 
       ! default turnover time of the labile carbo-hydrates (in days)
       tau_labile_default = 0.1_wp 

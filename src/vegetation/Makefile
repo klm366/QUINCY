@@ -17,6 +17,7 @@ SIZE    = size
 MODS1 = mo_veg_memory.f90 \
         mo_veg_parameters.f90 \
         mo_veg_interface.f90 \
+        mo_veg_respiration.f90 \
         mo_veg_photosynthesis.f90 \
         mo_veg_turnover.f90 \
         mo_veg_growth.f90 \
@@ -61,12 +62,17 @@ $(MODEL_LIB)(mo_veg_interface.o): \
   $(BASE_LIB)(mo_kind.o) \
   $(MODEL_LIB)(mo_veg_memory.o) \
   $(MODEL_LIB)(mo_veg_growth.o) \
+  $(MODEL_LIB)(mo_veg_respiration.o) \
   $(MODEL_LIB)(mo_veg_turnover.o)
 
 $(MODEL_LIB)(mo_veg_growth.o): \
   $(BASE_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) \
   $(MODEL_LIB)(mo_veg_memory.o)
+
+$(MODEL_LIB)(mo_veg_respiration.o): \
+  $(BASE_LIB)(mo_kind.o) \
+  $(MODEL_LIB)(mo_veg_parameters.o) 
 
 $(MODEL_LIB)(mo_veg_turnover.o): \
   $(BASE_LIB)(mo_kind.o) \
@@ -86,4 +92,5 @@ $(MODEL_LIB)(mo_veg_photosynthesis.o): \
   $(BASE_LIB)(mo_kind.o) \
   $(LAND_LIB)(mo_land_constants.o) \
   $(MODEL_LIB)(mo_veg_parameters.o) \
+  $(MODEL_LIB)(mo_veg_respiration.o) \
   $(MODEL_LIB)(mo_veg_radiation.o)

@@ -127,7 +127,7 @@ PROGRAM plant_model_driver
   tile(:)%plant%pool%leaf%nitrogen = tile(:)%plant%pool%leaf%carbon / & 
         ( 25.0_wp * molar_mass_N14 / molar_mass_C12 )
   tile(:)%plant%pool%leaf%phosphorus = tile(:)%plant%pool%leaf%nitrogen / &
-        ( 14.0_wp * molar_massP31 / molar_mass_N14 )
+        ( 14.0_wp * molar_mass_P31 / molar_mass_N14 )
   tile(:)%plant%pool%labile%carbon = 100.0_wp
   tile(:)%plant%pool%labile%nitrogen = 10.0_wp
   tile(:)%plant%pool%labile%phosphorus = 1.0_wp
@@ -142,7 +142,7 @@ PROGRAM plant_model_driver
   WRITE(lun,'(2a)'), 'Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
                      'Fruit_P Labile_P Reserve_P SeedBank_P'
   lun=lun+1
-  WRITE(lun,'(a)'), 'GPP GrowthResp NPP NUP PUP'
+  WRITE(lun,'(a)'), 'GPP GrowthResp NPP NUP PUP LAI'
 
   DO i = 1,ntimestep
      !
@@ -172,7 +172,7 @@ PROGRAM plant_model_driver
      !
      ! 4.0 calculate vegetation growth and turnover
      !
-     CALL update_vegetation(tile,veg_param)
+     CALL update_vegetation(tile,t_air,veg_param)
      !
      ! 5.0 Output
      ! 
@@ -196,7 +196,13 @@ PROGRAM plant_model_driver
          tile(1)%plant%pool%reserve%phosphorus,tile(1)%plant%pool%seed_bed%carbon
      lun=lun+1
      write(lun,'(9F12.6)') tile(1)%plant%flux%gpp,tile(1)%plant%flux%growth_respiration,& 
-         tile(1)%plant%flux%npp,tile(1)%plant%flux%uptake_n,tile(1)%plant%flux%uptake_p
+         tile(1)%plant%flux%npp,tile(1)%plant%flux%uptake_n,tile(1)%plant%flux%uptake_p,&
+         tile(1)%plant%lai
+     lun=lun+1
+     write(lun,'(9F12.6)') tile(1)%plant%pool%leaf%carbon/tile(1)%plant%pool%leaf%nitrogen,&
+         tile(1)%plant%pool%fine_root%carbon/tile(1)%plant%pool%fine_root%nitrogen, &
+         tile(1)%plant%pool%sap_wood%carbon/tile(1)%plant%pool%sap_wood%nitrogen, &
+         tile(1)%plant%pool%labile%carbon/tile(1)%plant%pool%labile%nitrogen
      !
      ! 6.0 check timer
      !
