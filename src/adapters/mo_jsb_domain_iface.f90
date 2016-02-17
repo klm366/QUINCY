@@ -28,7 +28,7 @@ MODULE mo_jsb_domain_iface
   PUBLIC :: t_patch, p_patch, pe_decomposed
   PUBLIC :: get_grid_filename, get_ntotal, get_ntotal_g, get_dims_g, get_nproma, get_nblks, get_lon, get_lat, get_area
   PUBLIC :: get_blk_start, get_blk_end, get_col_start, get_col_end
-  PUBLIC :: get_nlon_nlat_from_file, jsbalone_init_decomp
+  PUBLIC :: get_nlon_nlat_from_file, get_lons_and_lats_from_file, jsbalone_init_decomp
 
 #ifdef __ICON__
   ! Dummy type for ECHAM decomposition
@@ -368,9 +368,10 @@ CONTAINS
     USE mo_gaussgrid,  ONLY: philon
     USE mo_transpose,     ONLY: reorder
     USE mo_decomposition, ONLY: ldc => local_decomposition
-#else
-    USE mo_geoloc,     ONLY: philon_2d
 #endif
+!#else
+    USE mo_geoloc,     ONLY: philon_2d
+!#endif
 
 #endif
 
@@ -404,24 +405,9 @@ CONTAINS
 #ifdef __ICON__
       CALL finish(TRIM(routine), 'decomposition not allowed')
 #else
-
-#ifdef STANDALONE
-      ! in jsb standalone init_geoloc is never called, therefore philon_2d is never calculated.
-      ! -> alternatively lons could be read from a file (grid_filename) 
-      !     - this solution would probably be more suitable for a driver for ECHAM and ICON?
-      DO jlat = 1, ldc%nglat     ! local  latitude index N -> S
-        DO jlon = 1, ldc%nglon   ! local  longitude index
-          tmp(jlon,jlat) = philon (jlon + ldc%glon(jlat))
-        END DO
-      END DO
-
-      CALL reorder (lon, tmp)
-#else
       IF (.NOT. ASSOCIATED(philon_2d)) &
         CALL finish(TRIM(routine), 'Longitudes of decomposition not computed yet')
       lon(:,:) = philon_2d(:,:)
-#endif
-
 #endif
     ELSE
       CALL finish(TRIM(routine), 'Need to specify either patch or decomposition')
@@ -432,15 +418,7 @@ CONTAINS
   FUNCTION get_lat(patch, decomp) RESULT(lat)
 
 #ifndef __ICON__
-
-#ifdef STANDALONE
-    USE mo_gaussgrid,  ONLY: philat
-    USE mo_transpose,     ONLY: reorder
-    USE mo_decomposition, ONLY: ldc => local_decomposition
-#else
     USE mo_geoloc, ONLY: philat_2d
-#endif
-
 #endif
 
     TYPE(t_patch),       OPTIONAL, INTENT(in)  :: patch
@@ -463,22 +441,14 @@ CONTAINS
 #else
       CALL finish(TRIM(routine), 'patch not allowed')
 #endif
+
     ELSE IF(PRESENT(decomp)) THEN
 #ifdef __ICON__
       CALL finish(TRIM(routine), 'decomposition not allowed')
 #else
-
-#ifdef STANDALONE
-      ! in jsb standalone init_geoloc is never called, therefore philat_2d is never calculated.
-      ! -> alternatively lats could be read from a file (grid_filename) 
-      !     - this solution would probably be more suitable for a driver for ECHAM and ICON?
-      CALL reorder (lat, SPREAD(philat(ldc%glat(:)),1 ,ldc%nglon))
-#else
       IF (.NOT. ASSOCIATED(philat_2d)) &
         CALL finish(TRIM(routine), 'Latitudes of decomposition not computed yet')
       lat(:,:) = philat_2d(:,:)
-#endif
-
 #endif
     ELSE
       CALL finish(TRIM(routine), 'Need to specify either patch or decomposition')
@@ -491,9 +461,9 @@ CONTAINS
 #ifndef __ICON__
 
 #ifdef STANDALONE
-    USE mo_transpose,     ONLY: reorder
-    USE mo_decomposition, ONLY: ldc => local_decomposition
-    USE mo_gaussgrid,     ONLY: gridarea
+    USE mo_transpose,          ONLY: reorder
+    USE mo_decomposition,      ONLY: ldc => local_decomposition
+    USE mo_gaussgrid,          ONLY: gridarea
 #else
     USE mo_geoloc, ONLY: gboxarea_2d
 #endif
@@ -555,8 +525,8 @@ CONTAINS
 
 #ifndef __ICON__  
     USE mo_control,   ONLY: nlon, ngl, nhgl, nvclev, vct
-    USE mo_io,     ONLY: IO_READ, IO_open, IO_close
-    USE mo_netCDF, ONLY: file_info, io_inq_dimid, io_inq_dimlen
+    USE mo_io,        ONLY: IO_READ, IO_open, IO_close
+    USE mo_netCDF,    ONLY: file_info, io_inq_dimid, io_inq_dimlen
 #endif
 
     CHARACTER(len=*), INTENT(in) :: grid_filename
@@ -591,6 +561,9 @@ CONTAINS
       CALL p_bcast (read_nlat, p_io)
     ENDIF
 
+    !Assertion: number of lats needs to be even
+    IF (.NOT. MOD(read_nlat,2) .EQ. 0) CALL finish(TRIM(routine), 'number of lats needs to be even.')
+
     !Required for standalone model for mo_gaussgrid::inigau()
     nlon = read_nlon
     ngl = read_nlat
@@ -600,6 +573,77 @@ CONTAINS
 #endif
   END SUBROUTINE get_nlon_nlat_from_file
 
+
+  !>
+  !! @brief Read actual lons and lats from the given netcdf file
+  !!
+  !! Currently only working for ECHAM
+  !!    -> read lons and lats and write to philon_2d and philat_2d
+  !!       (in the standalone case init_geoloc is not called, but
+  !!        philon_2d and philat_2d are required for get_lon and get_lat
+  !!        and to get the output right in the site-level/part grid case)
+  !!
+  !! @par History
+  !! First version: JN (2016-02-15)
+  !!
+  SUBROUTINE get_lons_and_lats_from_file(grid_filename, nproma, nblks) !filename
+
+    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
+
+#ifndef __ICON__
+    USE mo_io,         ONLY: IO_READ, IO_open, IO_close
+    USE mo_netCDF,     ONLY: file_info, nf_get_vara_double, nf_inq_varid, nf_check
+    USE mo_tr_scatter, ONLY: scatter_field
+    USE mo_control,    ONLY: nlon, ngl
+
+    USE mo_geoloc,     ONLY: philon_2d, philat_2d
+#endif
+
+    CHARACTER(len=*), INTENT(IN) :: grid_filename
+    INTEGER,          INTENT(IN) :: nproma, nblks
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_lons_and_lats_from_file'
+
+#ifndef __ICON__
+    REAL(wp), ALLOCATABLE :: read_lons(:), read_lats(:)
+    REAL(wp), POINTER :: lons_2D(:,:), lats_2D(:,:)
+    TYPE(file_info) :: grid_file
+    INTEGER :: IO_var_id, jlat, jlon
+#endif
+
+#ifdef __ICON__
+    CALL finish(TRIM(routine), 'not implemented for use with ICON')
+#else
+    ALLOCATE(read_lons(nlon))
+    ALLOCATE(lons_2D(nlon,ngl))
+    ALLOCATE(philon_2d(nproma, nblks))
+
+    ALLOCATE(read_lats(ngl))
+    ALLOCATE(lats_2D(nlon,ngl))
+    ALLOCATE(philat_2d(nproma, nblks))
+
+    IF (my_process_is_stdio()) THEN
+      grid_file%opened = .FALSE.
+
+      CALL io_open(grid_filename, grid_file, IO_READ)
+      CALL nf_check(nf_inq_varid(grid_file%file_id, 'lon', IO_var_id))
+      CALL nf_check(nf_get_vara_double(grid_file%file_id, IO_var_id, (/ 1 /), &
+        & (/ nlon /), read_lons))
+      CALL nf_check(nf_inq_varid(grid_file%file_id, 'lat', IO_var_id))
+      CALL nf_check(nf_get_vara_double(grid_file%file_id, IO_var_id, (/ 1 /), &
+        & (/ ngl /), read_lats))
+      CALL IO_close(grid_file)
+
+      lons_2D = SPREAD(read_lons, DIM=2, NCOPIES=ngl)
+      lats_2D = SPREAD(read_lats, DIM=1, NCOPIES=nlon)
+    ENDIF
+
+    CALL scatter_field(lons_2D, philon_2d)
+    CALL scatter_field(lats_2D, philat_2d)
+    DEALLOCATE(read_lons, read_lats, lons_2D, lats_2D)
+
+#endif
+
+  END SUBROUTINE get_lons_and_lats_from_file
 
   !>
   !! @brief Get a decomposition for jsbach standalone

@@ -38,7 +38,7 @@ CONTAINS
     USE mo_echam_convect_tables, ONLY : init_convect_tables
     !<<<
 #endif
-    USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, jsbalone_init_decomp, pe_decomposed
+    USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, get_lons_and_lats_from_file, jsbalone_init_decomp, pe_decomposed
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
     USE mo_jsb_model_class,  ONLY: print_model
@@ -65,9 +65,12 @@ CONTAINS
     CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
 
 #ifndef __ICON__
-    CALL inigau              ! required for get_lon, get_lat and get_area, i.e. required before new_grid
+    CALL inigau               ! beside others required for get_area, i.e. required before new_grid
     CALL init_convect_tables
 #endif
+
+    !needs to be done after the decomposition is initialised; required for get_lon and get_lat, especially for site-level sims
+    CALL get_lons_and_lats_from_file(jsbach%models(model_id)%m%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
 
     grid => new_grid(decomp=decomposition)
 

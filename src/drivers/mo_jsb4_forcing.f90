@@ -887,7 +887,7 @@ CONTAINS
       ztvd(:) = ( temp_air(:,iblk) * ( 100000._wp/pressure(:,iblk))**zkappa ) * ( 1._wp + vtmpc1 * qair(:, iblk))
 
       ! virtual potential surface temperature
-      CALL sat_specific_humidity(ice, t_srf_proc(:,iblk),pressure(:,iblk), qsat_surf(:))
+      CALL sat_specific_humidity(ice, t_srf_proc(:,iblk), pressure(:,iblk), qsat_surf(:))
       ztvs(:) = t_srf_proc(:,iblk) * ( 100000._wp/pressure(:,iblk))**zkappa * &
         & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(:,iblk) * qsat_surf(:) + ( 1._wp - fact_q_air_proc(:,iblk) ) * qair(:,iblk)))
 
