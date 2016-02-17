@@ -10,6 +10,7 @@
 MODULE mo_jsb_io_iface
 #ifndef __NO_JSBACH__
 
+  USE mo_kind,          ONLY: wp
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
   USE mo_grib2,         ONLY: t_grib2_var, grib2_var
@@ -22,6 +23,7 @@ MODULE mo_jsb_io_iface
   USE mo_cdi_constants, ONLY: GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL, ZA_SURFACE, ZA_DEPTH_BELOW_LAND
 #else
   USE mo_linked_list,   ONLY: NETCDF2, NETCDF4, GRIB
+  USE mo_netcdf,        ONLY: add_dim
 #endif
 
   IMPLICIT NONE
@@ -36,8 +38,8 @@ MODULE mo_jsb_io_iface
             ZA_SURFACE, ZA_DEPTH_BELOW_LAND, TSTEP_CONSTANT, &
             zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
             zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
-            zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname 
-
+            zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &
+            Create_zaxis
 
 #ifndef __ICON__
   TYPE t_cf_var
@@ -108,6 +110,38 @@ CONTAINS
 !!$    grib2_var%additional_keys%nint_keys = 0
   END FUNCTION grib2_var
 #endif
-  
+
+  SUBROUTINE Create_zaxis(cdiZaxisID, echamZaxisID, cdi_axis_type, length, name, &
+    & levels, units, longname, lbounds, ubounds)
+
+    INTEGER,           INTENT(inout) :: cdiZaxisID
+    INTEGER,           INTENT(inout) :: echamZaxisID
+    INTEGER,           INTENT(in)    :: cdi_axis_type
+    INTEGER,           INTENT(in)    :: length
+    CHARACTER(len=*),  INTENT(in)    :: name
+    REAL(wp),          INTENT(in)    :: levels(:)
+    CHARACTER(len=*),  INTENT(in)    :: units
+    CHARACTER(len=*),  INTENT(in)    :: longname
+    REAL(wp),          INTENT(in)    :: lbounds(:)
+    REAL(wp),          INTENT(in)    :: ubounds(:)
+
+    cdiZaxisID = zaxisCreate(cdi_axis_type, length)
+    CALL zaxisDefName    (cdiZaxisID, TRIM(name))
+    CALL zaxisDefLevels  (cdiZaxisID, levels(1:length))
+    CALL zaxisDefLbounds (cdiZaxisID, lbounds(1:length))
+    CALL zaxisDefUbounds (cdiZaxisID, ubounds(1:length))
+    CALL zaxisDefUnits   (cdiZaxisID, TRIM(units))
+    CALL zaxisDefLongname(cdiZaxisID, TRIM(longname))
+
+#ifdef __ICON__
+    echamZaxisID = -1
+#else
+    CALL add_dim(TRIM(name), length, &
+      & longname=TRIM(longname), units=TRIM(units), VALUE=levels(1:length), &
+      & indx=echamZaxisID)
+#endif
+
+  END SUBROUTINE Create_zaxis
+
 #endif
 END MODULE mo_jsb_io_iface
