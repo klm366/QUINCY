@@ -16,12 +16,12 @@
 #define dsl4jsb_Use_processes USE mo_jsb_process_factory, ONLY: Get_process_memory, Get_process_config,
 
 #define dsl4jsb_Use_memory(PROC) USE CONCATENATE3(mo_,PROC,_memory_class), ONLY: CONCATENATE3(t_,PROC,_memory)
-#define dsl4jsb_Def_memory(PROC) TYPE(CONCATENATE3(t_,PROC,_memory)), POINTER :: CONCATENATE2(PROC,__mem) => NULL()
+#define dsl4jsb_Def_memory(PROC) TYPE(CONCATENATE3(t_,PROC,_memory)), POINTER :: CONCATENATE2(PROC,__mem)
 #define dsl4jsb_Get_memory(PROC) CALL Get_process_memory(tile%mem, PROC, CONCATENATE2(PROC,__mem))
 
 #define dsl4jsb_Use_config(PROC) USE CONCATENATE3(mo_,PROC,_config_class), ONLY: CONCATENATE3(t_,PROC,_config)
-#define dsl4jsb_Def_config(PROC) TYPE(CONCATENATE3(t_,PROC,_config)), POINTER :: CONCATENATE2(PROC,__conf) => NULL()
-#define dsl4jsb_Get_config(PROC) CALL Get_process_config(model%processes(PROC)%config, CONCATENATE2(PROC,__conf))
+#define dsl4jsb_Def_config(PROC) TYPE(CONCATENATE3(t_,PROC,_config)), POINTER :: CONCATENATE2(PROC,__conf)
+#define dsl4jsb_Get_config(PROC) CALL Get_process_config(model%processes(PROC)%p%config, CONCATENATE2(PROC,__conf))
 #define dsl4jsb_Config(PROC) CONCATENATE2(PROC,__conf)
 
 #define dsl4jsb_Real2D_onChunk REAL(wp), POINTER, DIMENSION(:)

@@ -18,29 +18,25 @@ MODULE mo_srf_config_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_srf_config, new_srf_config
+  PUBLIC :: t_srf_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_srf_config
-     LOGICAL :: active
-     CHARACTER(len=filename_max) :: ic_filename
-     CHARACTER(len=filename_max) :: bc_filename
      CHARACTER(len=filename_max) :: bc_sso_filename
      CHARACTER(len=10)           :: scheme_albedo !< Scheme to use for computation of albedo (echam5 only for now)
      REAL(wp)                    :: wsn_critical  !< Critical snow depth for correction of new surface temperature [m water equivalent]
+   CONTAINS
+     PROCEDURE :: Init => Init_srf_config
   END type t_srf_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_config_class'
 
 CONTAINS
 
-  FUNCTION new_srf_config(nml_handler) RESULT(config)
+  SUBROUTINE Init_srf_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
-    INTEGER,          INTENT(in) :: nml_handler
-    TYPE(t_srf_config), POINTER :: config
-
-    TYPE(t_srf_config), POINTER :: new
+    CLASS(t_srf_config), INTENT(inout) :: config
 
     LOGICAL  :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
@@ -54,13 +50,11 @@ CONTAINS
       scheme_albedo,               &
       wsn_critical
 
-    INTEGER :: nml_unit, istat
+    INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_srf_config'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_srf_config'
 
     CALL message(TRIM(routine), 'Starting srf configuration')
-
-    ALLOCATE(new)
 
     ! Set defaults
     active          = .TRUE.
@@ -70,19 +64,21 @@ CONTAINS
     scheme_albedo   = 'echam5'
     wsn_critical    = 5.85036E-3_wp
 
+    nml_handler = open_nml(TRIM(config%namelist_filename))
+
     nml_unit = position_nml('jsb_srf_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_srf_nml)
 
-    new%active                    = active
-    new%ic_filename               = ic_filename
-    new%bc_filename               = bc_filename
-    new%bc_sso_filename           = bc_sso_filename
-    new%scheme_albedo             = scheme_albedo
-    new%wsn_critical              = wsn_critical
+    config%active                    = active
+    config%ic_filename               = ic_filename
+    config%bc_filename               = bc_filename
+    config%bc_sso_filename           = bc_sso_filename
+    config%scheme_albedo             = scheme_albedo
+    config%wsn_critical              = wsn_critical
 
-    config => new
+    CALL close_nml(nml_handler)
 
-  END FUNCTION new_srf_config
+  END SUBROUTINE Init_srf_config
 
 #endif
 END MODULE mo_srf_config_class

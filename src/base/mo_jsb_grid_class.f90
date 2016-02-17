@@ -75,6 +75,7 @@ MODULE mo_jsb_grid_class
     REAL(wp), POINTER :: lbounds(:)   => NULL()
     REAL(wp), POINTER :: ubounds(:)   => NULL()
     INTEGER :: cdiZaxisID             = 0
+    INTEGER :: echamZaxisID           = 0
   END TYPE t_jsb_vgrid
 
   TYPE t_jsb_vgrid_ptr
@@ -383,9 +384,8 @@ CONTAINS
 
   FUNCTION new_vgrid(name, cdi_axis_type, length, longname, units, levels, lbounds, ubounds) RESULT(new)
 
-    USE mo_jsb_io,       ONLY: cdi_zaxis_ids, zaxisCreate, zaxisInqName, zaxisInqSize
-    USE mo_jsb_io_iface, ONLY: zaxisDefName, zaxisDefLevels, zaxisDefLbounds,          &
-                               zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname
+    USE mo_jsb_io,       ONLY: cdi_zaxis_ids, zaxisInqName, zaxisInqSize
+    USE mo_jsb_io_iface, ONLY: Create_zaxis
 
     CHARACTER(len=*),           INTENT(in) :: name
     INTEGER,                    INTENT(in) :: cdi_axis_type
@@ -464,13 +464,9 @@ CONTAINS
     END DO
     ! If none found create a new CDI zaxis, else use existing one
     IF (idx == 0) THEN
-      new%cdiZaxisID = zaxisCreate(cdi_axis_type, length)
-      CALL zaxisDefName    (new%cdiZaxisID, TRIM(new%name))
-      CALL zaxisDefLevels  (new%cdiZaxisID, new%levels(1:length))
-      CALL zaxisDefLbounds (new%cdiZaxisID, new%lbounds(1:length))
-      CALL zaxisDefUbounds (new%cdiZaxisID, new%ubounds(1:length))
-      CALL zaxisDefUnits   (new%cdiZaxisID, TRIM(new%units))
-      CALL zaxisDefLongname(new%cdiZaxisID, TRIM(new%longname))
+      CALL Create_zaxis(new%cdiZaxisID, new%echamZaxisID, &
+        & cdi_axis_type, length, new%name, new%levels(1:length), new%units, new%longname, &
+        & new%lbounds(1:length), new%ubounds(1:length))
       WRITE(message_text, '(A,A,2I3)') 'Created new vgrid: name, ID, length= ',TRIM(new%name), new%cdiZaxisID, length
       CALL message(TRIM(routine), message_text)
     ELSE
