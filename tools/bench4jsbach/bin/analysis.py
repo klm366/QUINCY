@@ -2,7 +2,7 @@
 # -*- coding:  utf-8 -*-
 
 
-import os
+import os, sys
 import fnmatch
 import warnings
 from datetime import datetime
@@ -341,23 +341,18 @@ and \\texttt{timemean}($X$) defined as
 
         seasons =  ['DJF','MAM','JJA','SON']
 
-        # 4.a.3.a) special color adjustment for delta plot        
-        vmin           = -7.5
-        vmax           = 4.5        
-        num_levels     = 13
-        midpoint       = 0
-        levels         = np.linspace ( vmin, vmax, num_levels )
-        midp           = np.mean ( np.c_ [ levels [ :-1 ], levels [ 1: ]], axis = 1 )
-        vals           = np.interp ( midp, [ vmin, midpoint, vmax ], [ 0, 0.5, 1 ])
-        colors         = plt.cm.bwr ( vals )
-        cmap_bwr, norm = mcolors.from_levels_and_colors ( levels, colors )
-        # end 4.a.3.a)
+        # 4.a) collecting information for common adjustment of colorbar
+        delta_min = sys.float_info.max
+        delta_max = sys.float_info.min
+        can.B4J_varpaths [ "delta_maxs" ] = []
+        can.B4J_varpaths [ "delta_mins" ] = []
     
         
         for can in self.experiments:
             if not can.B4J_iscan: continue
+                                   
             for ref in self.experiments:
-                if not ref.B4J_isref: continue
+                if not ref.B4J_isref:            continue
                 if ref.B4J_name == can.B4J_name: continue
                 
                 # 3.a) difference of albedo seasonal means weighted by rsds seasonal means
@@ -377,6 +372,21 @@ and \\texttt{timemean}($X$) defined as
                           output=can.B4J_varpaths [ delta_str ],
                           options='-f %s' % suffix )
 
+                nc_fid = Dataset ( can.B4J_varpaths [ delta_str ], 'r')
+                albedo_delta = nc_fid.variables [ A_varname ][ : ] 
+                nc_fid.close ()
+                vmax = albedo_delta.max ()
+                vmin = albedo_delta.min ()
+                can.B4J_varpaths [ "delta_maxs" ].append ( vmax ) 
+                can.B4J_varpaths [ "delta_mins" ].append ( vmin )
+                if vmax > delta_max:
+                    delta_max = vmax
+                if vmin < delta_min:
+                    delta_min = vmin
+                print "delta_min = ", delta_min, " <= vmin = ", vmin, \
+                    " <= vmax = ", vmax, " <= delta_max = ", delta_max
+
+                    
                 # 3.b) global mean
                 
                 gm_str = "gm-ref%d" % ref.B4J_refno
@@ -437,6 +447,52 @@ and \\texttt{timemean}($X$) defined as
                 cdo.timmean ( input=can.B4J_varpaths [ gd_str ],
                               output=can.B4J_varpaths [ td_str ],
                               options='-f %s' % suffix )
+
+                
+                
+
+        # 4.a.3.a) colormap adjustment for delta (as serie of mapplots )
+
+        # arguments
+        nlevs                = 25
+        midval               =  0
+        vmin                 = delta_min
+        vmax                 = delta_max
+
+        # calculate colormap, colorbar, ticks
+        assert nlevs        >=  5       
+        unit                 = ( vmax - vmin )  / ( nlevs - 1 )
+        baselevel_left_val   = midval - unit/2
+        baselevel_right_val  = midval + unit/2
+        assert vmin < baselevel_left_val and \
+                baselevel_left_val < midval and \
+                midval < baselevel_right_val and  \
+                baselevel_right_val < vmax
+        nlevs_left           = int (( baselevel_left_val - vmin ) // unit ) + \
+                                 ( 1 if int (( baselevel_left_val - vmin ) % unit ) == 0 else 0 )
+        
+        nlevs_right          = int (( vmax - baselevel_right_val ) // unit ) + \
+                                 ( 1 if int (( vmax - baselevel_right_val ) % unit ) == 0 else 0 )
+        nlevs_revised        = nlevs_left + nlevs_right + 1
+        leftlevel_left_val   = baselevel_left_val -  nlevs_left * unit
+        rightlevel_right_val = baselevel_right_val + nlevs_right * unit
+        levels               = np.arange ( leftlevel_left_val, rightlevel_right_val + unit/2, unit )
+        ticks_left           = np.arange ( midval, leftlevel_left_val, - unit ) [::-1]
+        ticks_right          = np.delete ( np.arange ( midval, rightlevel_right_val, unit ), 0 )
+        ticks                = np.concatenate (( ticks_left, ticks_right ), axis = 0 )
+        ticks_interleave     = np.take ( ticks, np.arange ( nlevs_left % 2, len ( ticks ) - 1, 2 ))
+        vals                 = np.interp ( ticks, [ leftlevel_left_val, midval, rightlevel_right_val ],
+                                           [ 0, 0.5, 1 ])
+        colors               = plt.cm.bwr ( vals )
+        cmap, norm           = mcolors.from_levels_and_colors ( levels, colors )
+
+
+        for can in self.experiments:
+            if not can.B4J_iscan: continue
+            for ref in self.experiments:
+                if not ref.B4J_isref: continue
+                if ref.B4J_name == can.B4J_name: continue
+        
                 
                 # 4.a) store plots for results of calculations in 3.
 
@@ -472,15 +528,15 @@ and \\texttt{timemean}($X$) defined as
                                    label      = seasons [ i ] )    
                     x = map_plot ( d[i],
                                    ax                  = ax[i],
-                                   vmin                = vmin,
-                                   vmax                = vmax,
+                                   vmin                = leftlevel_left_val,
+                                   vmax                = rightlevel_right_val,
                                    use_basemap         = True,
                                    show_colorbar       = False,
                                    return_plot_handler = True,
-                                   cmap_data           = cmap_bwr )
+                                   cmap_data           = cmap )
                     
                 cax = f.add_axes ([ 0.17, 0.07, 0.7, 0.03])
-                cb = f.colorbar ( x.im, cax = cax, orientation = "horizontal" )
+                cb = f.colorbar ( x.im, cax=cax, orientation="horizontal", ticks=ticks_interleave, format='%.3f' )
                 cb.ax.text ( 0.97, 2.5, r'$\frac{W}{m^{2}}$', size = 32 )
                 plt.suptitle ( r'$\Delta_{C_{%d}R_{%d}}$' % (
                     can.B4J_canno, ref.B4J_refno ) + \
