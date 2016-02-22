@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 # -*- coding:  utf-8 -*-
+from __future__ import division
 
 
 import os, sys
@@ -87,6 +88,24 @@ class Analysis ( object ):
         except:
             self.logger = dkl_logger
 
+
+    def  get_seasonal_period_2d_coords ( self, xvals, yvals, xmargin_unitfactor, ymargin_factor ):
+        
+        xunit         = xvals [ 1 ] - xvals [ 0 ]
+        xmargin       = xunit * xmargin_unitfactor
+        left_x_coord  = xvals [ 0 ] - xmargin
+        right_x_coord = xvals [ 3 ] + xmargin
+        
+        y_dist        = yvals [ 0 ] - yvals [ 3 ]
+        left_y_addon  = y_dist * ( 1 - xmargin_unitfactor ) 
+        right_y_addon = y_dist * xmargin_unitfactor
+        left_y_coord  = yvals [ 3 ] + left_y_addon
+        right_y_coord = yvals [ 3 ] + right_y_addon
+        
+        x_coords = np.insert ( np.insert ( xvals, 0, left_x_coord ), 5, right_x_coord )
+        y_coords = np.insert ( np.insert ( yvals, 0, left_y_coord ), 5, right_y_coord )
+        
+        return x_coords, y_coords
 
     def albedo_analyse ( self ):
         """
@@ -448,7 +467,8 @@ and \\texttt{timemean}($X$) defined as
 
                 
                 
-
+        # 4.) plotting section
+        
         # 4.a.3.a) colormap adjustment for delta (as serie of mapplots )
 
         # arguments
@@ -555,7 +575,12 @@ and \\texttt{timemean}($X$) defined as
         # 4.a.3.b,c,d,e
         
         colors = [ 'r', 'g', 'b', 'c', 'y', 'm' ]
-        colored_dots = [ '-ro', '-go', '-bo', '-co', '-yo', '-mo' ]
+        colored_dots = [ 'ro', 'go', 'bo', 'co', 'yo', 'mo' ]
+        colored_lines = [ 'r-', 'g-', 'b-', 'c-', 'y-', 'm-' ]
+
+        hmargin_unitfactor = 1/2
+        vmargin_factor = 1/15
+        
         
         # 4.a.3.b,c)
 
@@ -581,6 +606,10 @@ and \\texttt{timemean}($X$) defined as
             fig = plt.figure()
             
             refs = []
+            xcoords = []
+            ymin = sys.float_info.max
+            ymax = sys.float_info.min
+            
             for ref in self.experiments:
                 if not ref.B4J_isref: continue
                 if ref.B4J_name == can.B4J_name: continue
@@ -597,15 +626,22 @@ and \\texttt{timemean}($X$) defined as
                 nc_fid = Dataset ( can.B4J_index [ tm_str ], 'r')
                 albedo_tm = nc_fid.variables [ 'albedo' ][ : ] 
                 nc_fid.close ()
-                
+
+                xcoords, ycoords = self.get_seasonal_period_2d_coords ( time, albedo_gm [ :, 0, 0 ],
+                                                        hmargin_unitfactor, vmargin_factor )
+                ymin = np.amin ( albedo_gm [ :, 0, 0 ]) if np.amin ( albedo_gm [ :, 0, 0 ]) < ymin  else  ymin 
+                ymax = np.amax ( albedo_gm [ :, 0, 0 ]) if np.amax ( albedo_gm [ :, 0, 0 ]) > ymax  else  ymax 
+                plt.plot ( xcoords, ycoords, colored_lines [ ref.B4J_refno ])
                 plt.plot ( time, albedo_gm [ :, 0, 0 ],
                            colored_dots [ ref.B4J_refno ],
                            label = r'$gm_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ) +  r', $R_{%s}$: ' % ref.B4J_refno + ref.B4J_name )
                 plt.axhline ( albedo_tm [ 0, 0, 0 ],
                               color =  colors [ ref.B4J_refno ],
                               label = r'$tm_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ))
+             
 
-                
+            ymargin = ( ymax - ymin ) * vmargin_factor
+            plt.axis ([ xcoords [ 0 ], xcoords [ 5 ], ymin - ymargin, ymax + ymargin ])     
             plt.title ( r'$gm_{C_{%d}R}$' % can.B4J_canno + \
                         " and " +\
                         r'$tm_{C_{%d}R}$' % can.B4J_canno,
@@ -651,6 +687,10 @@ and \\texttt{timemean}($X$) defined as
             fig = plt.figure()
             
             refs = []
+            xcoords = []
+            ymin = sys.float_info.max
+            ymax = sys.float_info.min
+            
             for ref in self.experiments:
                 if not ref.B4J_isref: continue
                 if ref.B4J_name == can.B4J_name: continue
@@ -660,22 +700,30 @@ and \\texttt{timemean}($X$) defined as
                 globalNtime_dev_can [ 'infiles' ].append ( can.B4J_index [ gd_str ])
                 nc_fid = Dataset ( can.B4J_index [ gd_str ])  
                 time = nc_fid.variables [ 'time' ][ : ]
-                albedo_gm = nc_fid.variables['albedo'][:] 
+                albedo_gd = nc_fid.variables['albedo'][:] 
                 nc_fid.close ()
 
                 globalNtime_dev_can [ 'infiles' ].append ( can.B4J_index [ td_str ])
                 nc_fid = Dataset ( can.B4J_index [ td_str ], 'r')
-                albedo_tm = nc_fid.variables [ 'albedo' ][ : ] 
+                albedo_td = nc_fid.variables [ 'albedo' ][ : ] 
                 nc_fid.close ()
+
+                xcoords, ycoords = self.get_seasonal_period_2d_coords ( time, albedo_gd [ :, 0, 0 ],
+                                                        hmargin_unitfactor, vmargin_factor )
+                ymin = np.amin ( albedo_gd [ :, 0, 0 ]) if np.amin ( albedo_gd [ :, 0, 0 ]) < ymin  else  ymin 
+                ymax = np.amax ( albedo_gd [ :, 0, 0 ]) if np.amax ( albedo_gd [ :, 0, 0 ]) > ymax  else  ymax 
+                plt.plot ( xcoords, ycoords, colored_lines [ ref.B4J_refno ])
                 
-                plt.plot ( time, albedo_gm [ :, 0, 0 ],
+                plt.plot ( time, albedo_gd [ :, 0, 0 ],
                            colored_dots [ ref.B4J_refno ],
                            label = r'$gd_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ) +  r', $R_{%s}$: ' % ref.B4J_refno + ref.B4J_name )
-                plt.axhline ( albedo_tm [ 0, 0, 0 ],
+                plt.axhline ( albedo_td [ 0, 0, 0 ],
                               color =  colors [ ref.B4J_refno ],
                               label = r'$td_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ))
 
-                
+    
+            ymargin = ( ymax - ymin ) * vmargin_factor
+            plt.axis ([ xcoords [ 0 ], xcoords [ 5 ], ymin - ymargin, ymax + ymargin ])               
             plt.title ( r'$gd_{C_{%d}R}$' % can.B4J_canno + \
                         " and " +\
                         r'$td_{C_{%d}R}$' % can.B4J_canno,

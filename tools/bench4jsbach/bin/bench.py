@@ -95,7 +95,6 @@ class Bench_Object ( Analysis, Report ):
                            "Processing might take a while ..." )
 
         self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
-
         
         Analysis.__init__ ( self )
         self.reporting = str2bool ( config [ "reporting" ])
