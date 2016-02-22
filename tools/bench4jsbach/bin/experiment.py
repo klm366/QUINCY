@@ -13,7 +13,7 @@ class Experiment ( object ):
     B4J_path     = None
     B4J_isref    = False
     B4J_iscan    = True
-    B4J_varpaths = None
+    B4J_index    = None
     B4J_canno    = None
     B4J_refno    = None
     
@@ -25,7 +25,7 @@ class Experiment ( object ):
         self.B4J_iscan    = kwargs.get ( "B4J_iscan", True )
         self.B4J_canno    = kwargs.get ( "B4J_canno", None )
         self.B4J_refno    = kwargs.get ( "B4J_refno", None )
-        self.B4J_varpaths = {}
+        self.B4J_index    = {}
         
 
     def __repr__ ( self ):

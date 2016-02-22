@@ -253,7 +253,7 @@ and \\texttt{timemean}($X$) defined as
         self.analyses [ A_varname ].append ( globalNtime_dev )
         
         for exp in self.experiments:
-            exp.B4J_varpaths.clear ()
+            exp.B4J_index.clear ()
         in_files = []
         
 
@@ -262,15 +262,15 @@ and \\texttt{timemean}($X$) defined as
         # 1.a) find variable data files
         for exp in self.experiments:
             pattern = '*%s*%s*.%s' % ( A_varname, exp.B4J_name, suffix )
-            exp.B4J_varpaths [ "A" ] = A = find_files ( pattern, exp.B4J_path, single = True, raise_e = False )
+            exp.B4J_index [ "A" ] = A = find_files ( pattern, exp.B4J_path, single = True, raise_e = False )
             if A: in_files.append ( A )
             if exp.B4J_isref or not A:
                 pattern = '*%s*%s*.%s' % ( D_varname, exp.B4J_name, suffix )
-                exp.B4J_varpaths [ "D" ] = D = find_files ( pattern, exp.B4J_path, single = True, raise_e = True )
+                exp.B4J_index [ "D" ] = D = find_files ( pattern, exp.B4J_path, single = True, raise_e = True )
                 if D: in_files.append ( D )
             if not A:
                 pattern = '*%s*%s*.%s' % ( U_varname, exp.B4J_name, suffix )
-                exp.B4J_varpaths [ "U" ]  = U = find_files ( pattern, exp.B4J_path, single = True, raise_e = True )
+                exp.B4J_index [ "U" ]  = U = find_files ( pattern, exp.B4J_path, single = True, raise_e = True )
                 if U: in_files.append ( U )
             self.logger.debug ( exp )
 
@@ -287,8 +287,8 @@ and \\texttt{timemean}($X$) defined as
 
         # 1.b) calculate albedo if not found
         for exp in self.experiments:
-            if not exp.B4J_varpaths [ "A" ]:
-                exp.B4J_varpaths [ "A" ] = self.path_template % { 
+            if not exp.B4J_index [ "A" ]:
+                exp.B4J_index [ "A" ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : A_varname,
                     'classification' : 'divUD',
@@ -301,16 +301,16 @@ and \\texttt{timemean}($X$) defined as
                               "-setvrange,0.0001,0.99 " +\
                               "-div " +\
                               ( " -selyear," + ','.join ( repr ( y ) for y in yearlist ) + \
-                                " " +  exp.B4J_varpaths [ "U" ] ) +\
+                                " " +  exp.B4J_index [ "U" ] ) +\
                               ( " -selyear," + ','.join ( repr ( y ) for y in yearlist ) + \
-                                " " +  exp.B4J_varpaths [ "D" ] ),
-                              output=exp.B4J_varpaths [ "A" ],
+                                " " +  exp.B4J_index [ "D" ] ),
+                              output=exp.B4J_index [ "A" ],
                               options='-f nc -m 0.00011' )
                 
 
         # 2.  preprocessing, calculate seasonal mean for largest common period
         for exp in self.experiments:
-            exp.B4J_varpaths [ "A_sm" ] = self.path_template % { 
+            exp.B4J_index [ "A_sm" ] = self.path_template % { 
                 'path'           : self.data_path,
                 'varname'        : A_varname,
                 'classification' : 'yseasmean',
@@ -319,10 +319,10 @@ and \\texttt{timemean}($X$) defined as
                 'finaldate'      : str ( yearlist [ -1 ]),
                 'suffix'         : suffix }
             cdo.yseasmean ( input="-selyear," + ','.join ( repr ( y ) for y in yearlist ) + \
-                            " " + exp.B4J_varpaths [ "A" ],
-                            output=exp.B4J_varpaths [ "A_sm" ])
+                            " " + exp.B4J_index [ "A" ],
+                            output=exp.B4J_index [ "A_sm" ])
             if exp.B4J_isref:
-                exp.B4J_varpaths [ "D_sm" ] = self.path_template % { 
+                exp.B4J_index [ "D_sm" ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : D_varname,
                     'classification' : 'yseasmean',
@@ -331,8 +331,8 @@ and \\texttt{timemean}($X$) defined as
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : suffix }
                 cdo.yseasmean ( input="-selyear," + ','.join ( repr ( y ) for y in yearlist ) + \
-                                " " + exp.B4J_varpaths [ "D" ],
-                                output=exp.B4J_varpaths [ "D_sm" ],
+                                " " + exp.B4J_index [ "D" ],
+                                output=exp.B4J_index [ "D_sm" ],
                                 options='-f %s' % suffix )
 
 
@@ -344,8 +344,8 @@ and \\texttt{timemean}($X$) defined as
         # 4.a) collecting information for common adjustment of colorbar
         delta_min = sys.float_info.max
         delta_max = sys.float_info.min
-        can.B4J_varpaths [ "delta_maxs" ] = []
-        can.B4J_varpaths [ "delta_mins" ] = []
+        can.B4J_index [ "delta_maxs" ] = []
+        can.B4J_index [ "delta_mins" ] = []
     
         
         for can in self.experiments:
@@ -357,7 +357,7 @@ and \\texttt{timemean}($X$) defined as
                 
                 # 3.a) difference of albedo seasonal means weighted by rsds seasonal means
                 delta_str = "delta-ref%d" % ref.B4J_refno
-                can.B4J_varpaths [ delta_str ] = self.path_template % { 
+                can.B4J_index [ delta_str ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : A_varname,
                     'classification' : delta_str,
@@ -366,31 +366,29 @@ and \\texttt{timemean}($X$) defined as
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : suffix }
                 cdo.mul ( input=" -sub " +\
-                          can.B4J_varpaths [ "A_sm" ] + " " +\
-                          ref.B4J_varpaths [ "A_sm" ] + " " +\
-                          ref.B4J_varpaths [ "D_sm" ],
-                          output=can.B4J_varpaths [ delta_str ],
+                          can.B4J_index [ "A_sm" ] + " " +\
+                          ref.B4J_index [ "A_sm" ] + " " +\
+                          ref.B4J_index [ "D_sm" ],
+                          output=can.B4J_index [ delta_str ],
                           options='-f %s' % suffix )
 
-                nc_fid = Dataset ( can.B4J_varpaths [ delta_str ], 'r')
+                nc_fid = Dataset ( can.B4J_index [ delta_str ], 'r')
                 albedo_delta = nc_fid.variables [ A_varname ][ : ] 
                 nc_fid.close ()
                 vmax = albedo_delta.max ()
                 vmin = albedo_delta.min ()
-                can.B4J_varpaths [ "delta_maxs" ].append ( vmax ) 
-                can.B4J_varpaths [ "delta_mins" ].append ( vmin )
+                can.B4J_index [ "delta_maxs" ].append ( vmax ) 
+                can.B4J_index [ "delta_mins" ].append ( vmin )
                 if vmax > delta_max:
                     delta_max = vmax
                 if vmin < delta_min:
                     delta_min = vmin
-                print "delta_min = ", delta_min, " <= vmin = ", vmin, \
-                    " <= vmax = ", vmax, " <= delta_max = ", delta_max
 
                     
                 # 3.b) global mean
                 
                 gm_str = "gm-ref%d" % ref.B4J_refno
-                can.B4J_varpaths [ gm_str ] = self.path_template % { 
+                can.B4J_index [ gm_str ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : A_varname,
                     'classification' : gm_str,
@@ -399,14 +397,14 @@ and \\texttt{timemean}($X$) defined as
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : suffix }
                 cdo.fldmean ( input=" -mul " +\
-                              can.B4J_varpaths [ delta_str ] + " " +\
+                              can.B4J_index [ delta_str ] + " " +\
                               land_sea_mask,
-                              output=can.B4J_varpaths [ gm_str ],
+                              output=can.B4J_index [ gm_str ],
                               options='-f %s' % suffix )
 
                 # 3.c) time mean
                 tm_str = "tm-ref%d" % ref.B4J_refno
-                can.B4J_varpaths [ tm_str ] = self.path_template % { 
+                can.B4J_index [ tm_str ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : A_varname,
                     'classification' : tm_str,
@@ -414,13 +412,13 @@ and \\texttt{timemean}($X$) defined as
                     'startdate'      : str ( yearlist [ 0 ]),
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : suffix }
-                cdo.timmean ( input=can.B4J_varpaths [ gm_str ],
-                              output=can.B4J_varpaths [ tm_str ],
+                cdo.timmean ( input=can.B4J_index [ gm_str ],
+                              output=can.B4J_index [ tm_str ],
                               options='-f %s' % suffix )
 
                 # 3.d) global mean deviation
                 gd_str = "gd-ref%d" % ref.B4J_refno
-                can.B4J_varpaths [ gd_str ] = self.path_template % { 
+                can.B4J_index [ gd_str ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : A_varname,
                     'classification' : gd_str,
@@ -429,14 +427,14 @@ and \\texttt{timemean}($X$) defined as
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : suffix }
                 cdo.fldmean ( input="-abs -mul " +\
-                              can.B4J_varpaths [ delta_str ] + " " +\
+                              can.B4J_index [ delta_str ] + " " +\
                               land_sea_mask,
-                              output=can.B4J_varpaths [ gd_str ],
+                              output=can.B4J_index [ gd_str ],
                               options='-f %s' % suffix )
 
                 # 3.e) time mean deviation
                 td_str = "td-ref%d" % ref.B4J_refno
-                can.B4J_varpaths [ td_str ] = self.path_template % { 
+                can.B4J_index [ td_str ] = self.path_template % { 
                     'path'           : self.data_path,
                     'varname'        : A_varname,
                     'classification' : td_str,
@@ -444,8 +442,8 @@ and \\texttt{timemean}($X$) defined as
                     'startdate'      : str ( yearlist [ 0 ]),
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : suffix }
-                cdo.timmean ( input=can.B4J_varpaths [ gd_str ],
-                              output=can.B4J_varpaths [ td_str ],
+                cdo.timmean ( input=can.B4J_index [ gd_str ],
+                              output=can.B4J_index [ td_str ],
                               options='-f %s' % suffix )
 
                 
@@ -454,7 +452,8 @@ and \\texttt{timemean}($X$) defined as
         # 4.a.3.a) colormap adjustment for delta (as serie of mapplots )
 
         # arguments
-        nlevs                = 25
+        nlevs                = 400
+        tick_interleave_no   = int ( nlevs // 16 )
         midval               =  0
         vmin                 = delta_min
         vmax                 = delta_max
@@ -480,7 +479,8 @@ and \\texttt{timemean}($X$) defined as
         ticks_left           = np.arange ( midval, leftlevel_left_val, - unit ) [::-1]
         ticks_right          = np.delete ( np.arange ( midval, rightlevel_right_val, unit ), 0 )
         ticks                = np.concatenate (( ticks_left, ticks_right ), axis = 0 )
-        ticks_interleave     = np.take ( ticks, np.arange ( nlevs_left % 2, len ( ticks ) - 1, 2 ))
+        ticks_interleave     = np.take ( ticks, np.arange ( nlevs_left % tick_interleave_no,
+                                                            len ( ticks ) - 1, tick_interleave_no ))
         vals                 = np.interp ( ticks, [ leftlevel_left_val, midval, rightlevel_right_val ],
                                            [ 0, 0.5, 1 ])
         colors               = plt.cm.bwr ( vals )
@@ -501,10 +501,10 @@ and \\texttt{timemean}($X$) defined as
                 delta = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "delta" ), None )
                 assert delta
                 
-                dates = cdo.showtimestamp ( input = can.B4J_varpaths [ delta_str ] )[ 0 ].split ( " ")
+                dates = cdo.showtimestamp ( input = can.B4J_index [ delta_str ] )[ 0 ].split ( " ")
                 dates = [ datetime.strptime ( str ( x ), '%Y-%m-%dT%H:%M:%S') for x in dates if x ]
                 plot_delta_str = delta_str + "plot"
-                can.B4J_varpaths [ plot_delta_str ] =  self.path_template % {
+                can.B4J_index [ plot_delta_str ] =  self.path_template % {
                     'path'           : self.graphic_path,
                     'varname'        : A_varname,
                     'classification' : delta_str,
@@ -521,7 +521,7 @@ and \\texttt{timemean}($X$) defined as
                 gs1.update ( wspace = -0.08, hspace = -0.04  )               
                 for i in range ( 4 ):
                     ax [i] = plt.subplot ( gs1 [ i ])
-                    d [i] = Data ( can.B4J_varpaths [ delta_str ],
+                    d [i] = Data ( can.B4J_index [ delta_str ],
                                    'albedo',
                                    read       = True,
                                    start_time = dates [ i ],
@@ -543,19 +543,19 @@ and \\texttt{timemean}($X$) defined as
                                r',   $C_{%d}$: %s, $R_{%d}$: %s' % (
                                    can.B4J_canno, can.B4J_name,
                                    ref.B4J_refno, ref.B4J_name ),  fontsize = 24 )
-                plt.savefig ( can.B4J_varpaths [ plot_delta_str ] )
+                plt.savefig ( can.B4J_index [ plot_delta_str ] )
                 plt.close ()
 
                 delta_can = next (( item for item in delta [ 'cans' ] if item [ 'name' ] == can.B4J_name ), None )
                 assert delta_can
-                delta_can [ 'infiles' ].append ( can.B4J_varpaths [ delta_str ])
-                delta_can [ 'plots' ].append ( can.B4J_varpaths [ plot_delta_str ])
+                delta_can [ 'infiles' ].append ( can.B4J_index [ delta_str ])
+                delta_can [ 'plots' ].append ( can.B4J_index [ plot_delta_str ])
                 
 
         # 4.a.3.b,c,d,e
         
         colors = [ 'r', 'g', 'b', 'c', 'y', 'm' ]
-        colored_dots = [ 'ro', 'go', 'bo', 'co', 'yo', 'mo' ]
+        colored_dots = [ '-ro', '-go', '-bo', '-co', '-yo', '-mo' ]
         
         # 4.a.3.b,c)
 
@@ -587,14 +587,14 @@ and \\texttt{timemean}($X$) defined as
                 
                 gm_str = "gm-ref%d" % ref.B4J_refno
                 tm_str = "tm-ref%d" % ref.B4J_refno
-                globalNtime_mean_can [ 'infiles' ].append ( can.B4J_varpaths [ gm_str ])
-                nc_fid = Dataset ( can.B4J_varpaths [ gm_str ])  
+                globalNtime_mean_can [ 'infiles' ].append ( can.B4J_index [ gm_str ])
+                nc_fid = Dataset ( can.B4J_index [ gm_str ])  
                 time = nc_fid.variables [ 'time' ][ : ]
                 albedo_gm = nc_fid.variables['albedo'][:] 
                 nc_fid.close ()
 
-                globalNtime_mean_can [ 'infiles' ].append ( can.B4J_varpaths [ tm_str ])
-                nc_fid = Dataset ( can.B4J_varpaths [ tm_str ], 'r')
+                globalNtime_mean_can [ 'infiles' ].append ( can.B4J_index [ tm_str ])
+                nc_fid = Dataset ( can.B4J_index [ tm_str ], 'r')
                 albedo_tm = nc_fid.variables [ 'albedo' ][ : ] 
                 nc_fid.close ()
                 
@@ -657,14 +657,14 @@ and \\texttt{timemean}($X$) defined as
                 
                 gd_str = "gd-ref%d" % ref.B4J_refno
                 td_str = "td-ref%d" % ref.B4J_refno
-                globalNtime_dev_can [ 'infiles' ].append ( can.B4J_varpaths [ gd_str ])
-                nc_fid = Dataset ( can.B4J_varpaths [ gd_str ])  
+                globalNtime_dev_can [ 'infiles' ].append ( can.B4J_index [ gd_str ])
+                nc_fid = Dataset ( can.B4J_index [ gd_str ])  
                 time = nc_fid.variables [ 'time' ][ : ]
                 albedo_gm = nc_fid.variables['albedo'][:] 
                 nc_fid.close ()
 
-                globalNtime_dev_can [ 'infiles' ].append ( can.B4J_varpaths [ td_str ])
-                nc_fid = Dataset ( can.B4J_varpaths [ td_str ], 'r')
+                globalNtime_dev_can [ 'infiles' ].append ( can.B4J_index [ td_str ])
+                nc_fid = Dataset ( can.B4J_index [ td_str ], 'r')
                 albedo_tm = nc_fid.variables [ 'albedo' ][ : ] 
                 nc_fid.close ()
                 
