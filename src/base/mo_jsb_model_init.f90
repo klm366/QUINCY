@@ -36,6 +36,7 @@ CONTAINS
     !>>> TODO: echam
     USE mo_gaussgrid,     ONLY : inigau
     USE mo_echam_convect_tables, ONLY : init_convect_tables
+    USE mo_netCDF,      ONLY: add_dim
     !<<<
 #endif
     USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, get_lons_and_lats_from_file, jsbalone_init_decomp, pe_decomposed
@@ -67,6 +68,10 @@ CONTAINS
 #ifndef __ICON__
     CALL inigau               ! beside others required for get_area, i.e. required before new_grid
     CALL init_convect_tables
+
+    CALL add_dim("lon", nlon, "longitude", "degrees_east" ) !required to write restart files
+    CALL add_dim("lat", nlat, "latitude", "degrees_north")
+
 #endif
 
     !needs to be done after the decomposition is initialised; required for get_lon and get_lat, especially for site-level sims

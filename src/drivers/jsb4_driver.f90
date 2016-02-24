@@ -10,11 +10,20 @@
 !!
 PROGRAM jsb4_driver
 #ifndef __ICON__
+
+#include "dsl_jsbach.inc"
+
   USE mo_jsb_interface,      ONLY: jsbach_interface
   USE mo_jsb_base,           ONLY: init_base
   USE mo_jsb_model_init,     ONLY: init_model
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
-  USE mo_jsb_control,        ONLY: jsbach_runs_standalone
+  USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
+  USE mo_jsb_class,          ONLY: get_model
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+
+  dsl4jsb_Use_processes SRF
+  dsl4jsb_Use_memory(SRF)
 
   USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
 
@@ -30,20 +39,22 @@ PROGRAM jsb4_driver
   USE mo_math_constants,   ONLY: pi
   USE mo_orbit,            ONLY: orbit_kepler, orbit_vsop87
 
-!>>> TODO: echam:
+!>>> TODO? echam:
   ! parallelisation
   USE mo_mpi,              ONLY: p_start, p_stop, p_init_communicators
   USE mo_machine,          ONLY: machine_setup
 
   ! io
+  USE mo_io,               ONLY: write_streams, IO_read_streams
+  USE mo_filename,         ONLY: out_filetype
   USE mo_netcdf,           ONLY: nf_check, nf_close
-  USE mo_memory_base,      ONLY: default_output
+  USE mo_memory_base,      ONLY: default_output, NETCDF
   USE mo_output,           ONLY: open_output_streams, close_output_streams, out_streams, init_output
   USE mo_decomposition,    ONLY: local_decomposition
 
   ! time control and orbit calc
   USE mo_timer,            ONLY: init_timer
-  USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, delta_time, &
+  USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, l_putrerun, delta_time, &
                                     & time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date
 
   USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
@@ -59,9 +70,9 @@ PROGRAM jsb4_driver
   REAL(wp), EXTERNAL:: util_walltime
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
-  INTEGER:: nml_handler, read_status, f_unit, status, jrow, nproma, nblks, ncid
+  INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics
 
-  !! Variables of namelist jsb_parallel_ctl
+  !! Variables of namelist jsb_parallel_nml
   INTEGER:: nproca  ! number of processors for jsbach
   INTEGER:: nprocb  ! has to be one
   INTEGER:: nprocio ! number of processors for I/O server
@@ -69,11 +80,15 @@ PROGRAM jsb4_driver
                      ! Default (-1): each domain is processed in one call
   INTEGER:: buffer(4) ! buffer to broadcast the 4 above variables
 
-  LOGICAL :: l_rad_call = .FALSE.  ! TODO: echam -- orbit calculation
+  LOGICAL :: l_rad_call = .FALSE.  ! TODO? echam -- orbit calculation
   REAL(wp) :: time_of_day, orbit_date, rasc_sun, decl_sun, dist_sun, flx_ratio
   REAL(wp), ALLOCATABLE :: lon(:,:), lat(:,:), coslon(:,:), coslat(:,:), sinlon(:,:), sinlat(:,:)
   REAL(wp), ALLOCATABLE :: daylght_frc(:,:)
 
+  TYPE(t_jsb_model), POINTER :: model
+  TYPE(t_jsb_tile),  POINTER :: tile
+
+  dsl4jsb_Def_memory(SRF)
 
   !! JSB4 interface variables - input
   REAL(wp), ALLOCATABLE :: t_air_K(:,:)
@@ -121,13 +136,15 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: alb_vis_dif(:)
   REAL(wp), ALLOCATABLE :: alb_nir_dif(:)
 
-    NAMELIST /jsb_parallel_ctl/     &
+    NAMELIST /jsb_parallel_nml/     &
       nproca, npedim,             &
       nprocb, nprocio
 
   !-------------------------------------------------------------------------------------------------
 
+  model_id = 1
   default_output = .TRUE.
+  out_filetype = NETCDF
 
   ! Start MPI
   CALL p_start
@@ -151,8 +168,8 @@ PROGRAM jsb4_driver
 
     ! read the namelist
     nml_handler = open_nml ('namelist.jsbach')
-    f_unit = position_nml ('jsb_parallel_ctl', nml_handler, status=read_status)
-    IF (read_status == POSITIONED) READ(f_unit, jsb_parallel_ctl)
+    f_unit = position_nml ('jsb_parallel_nml', nml_handler, status=read_status)
+    IF (read_status == POSITIONED) READ(f_unit, jsb_parallel_nml)
   ENDIF
 
   IF (my_process_is_mpi_parallel()) THEN
@@ -171,21 +188,17 @@ PROGRAM jsb4_driver
 
   ! - jsbach_init
   CALL init_base('namelist.jsbach')
-  CALL init_model(nproca, nprocb, npedim, 1)
+  CALL init_model(nproca, nprocb, npedim, model_id)
 
   CALL jsbach_label_run(jsbach_runs_standalone())
 
-  !TODO: include in init_model (init_model_standalone)?
-  CALL init_output 
-  CALL open_output_streams
-
   ! Allocate arrays -> current assumption is for standalone nlon=nproma=npromz,
   !     therefore set (and allocated fields) here -- else need to strongly adapt
-  !       -> i.e. set and allocate in the jrow loop for just one and change way of reading?!
+  !       -> i.e. set and allocate in the iblk loop for just one and change way of reading?!
   nproma = local_decomposition%nproma
   nblks = local_decomposition%ngpblks
   !TODO: get nproma/nblks with already existing function? 'get_nproma'
-  !  -> hm, for that need to first get the model and than the grid
+  !  -> hm, for that need to first get the model and then the grid
 
   ! forcing
   ALLOCATE(t_air_K(nproma, nblks))
@@ -233,7 +246,7 @@ PROGRAM jsb4_driver
   ALLOCATE(alb_nir_dif(nproma))
 
   IF (.NOT. read_interface_vars) THEN
-    CALL init_forcing()
+    CALL init_forcing(model_id)
 
     ALLOCATE(lon(nproma,nblks))
     ALLOCATE(lat(nproma,nblks))
@@ -255,6 +268,28 @@ PROGRAM jsb4_driver
     fact_qsat_srf_proc = 0.5_wp
     rough_h_srf_proc = 1._wp
   ENDIF
+
+  IF(jsbach_is_restarted()) THEN
+
+    model => get_model(model_id)
+    tile => model%Get_top_tile()
+    ics = 1
+    ice = nproma
+
+    CALL IO_read_streams
+
+    DO iblk = 1, nblks
+      dsl4jsb_Get_memory(SRF)
+
+      t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, t_srf)
+      fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, fact_q_air)
+      fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, fact_qsat_srf)
+      rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, rough_h_srf)
+    ENDDO
+  ENDIF
+
+  CALL init_output
+  CALL open_output_streams
 
   ! - Main loop
   main_loop:DO 
@@ -291,37 +326,36 @@ PROGRAM jsb4_driver
         & frac_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
     ENDIF
 
-    DO jrow = 1, nblks
+    DO iblk = 1, nblks
 
 ! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
 !   Else would need large refactoring and:
-!          IF ( jrow == nblks ) THEN
+!          IF ( iblk == nblks ) THEN
 !            nproma = local_decomposition%npromz
 !          ELSE
 !            nproma = local_decomposition%nproma
 !          END IF
 
       IF (read_interface_vars) THEN
-        CALL read_interface_variables( 1, nproma, jrow, ncid, t_air_K(:,jrow), q_air(:,jrow), rain(:,jrow), &
-          & snow(:,jrow), wind_air(:,jrow), wind_10m(:,jrow), lw_srf_down(:,jrow), swvis_srf_down(:,jrow), &
-          & swnir_srf_down(:,jrow), swpar_srf_down(:,jrow), press_srf(:,jrow), drag_srf(:,jrow), &
-          & t_acoef(:,jrow), t_bcoef(:,jrow), q_acoef(:,jrow), q_bcoef(:,jrow), pch(:,jrow), cos_zenith_angle(:,jrow))
+        CALL read_interface_variables( 1, nproma, iblk, ncid, t_air_K(:,iblk), q_air(:,iblk), rain(:,iblk), &
+          & snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), swvis_srf_down(:,iblk), &
+          & swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), press_srf(:,iblk), drag_srf(:,iblk), &
+          & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk))
       ENDIF
 
-      CALL jsbach_interface ( 1, jrow, 1, nproma, delta_time, time_step_len, t_air_K(:,jrow), &
-        & q_air(:,jrow), rain(:,jrow), snow(:,jrow), wind_air(:,jrow), wind_10m(:,jrow), lw_srf_down(:,jrow), &
-        & swvis_srf_down(:,jrow), swnir_srf_down(:,jrow), swpar_srf_down(:,jrow), press_srf(:,jrow), drag_srf(:,jrow), &
-        & t_acoef(:,jrow), t_bcoef(:,jrow), q_acoef(:,jrow), q_bcoef(:,jrow), pch(:,jrow), cos_zenith_angle(:,jrow), &
-        & t_srf_proc(:,jrow), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,jrow), fact_qsat_srf_proc(:,jrow), &
+      CALL jsbach_interface ( 1, iblk, 1, nproma, delta_time, time_step_len, t_air_K(:,iblk), &
+        & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
+        & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), press_srf(:,iblk), drag_srf(:,iblk), &
+        & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk), &
+        & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
-        & rough_h_srf_proc(:,jrow), rough_m_srf(:), tte_corr(:), alb_vis_dir(:), alb_nir_dir(:), &
+        & rough_h_srf_proc(:,iblk), rough_m_srf(:), tte_corr(:), alb_vis_dir(:), alb_nir_dir(:), &
         & alb_vis_dif(:), alb_nir_dif(:))
     ENDDO
 
     CALL out_streams
 
-  !TODO: lresume -> or better jsbach_is_restarted (mo_jsb_control)
-  !IF (l_putrerun) THEN  CALL write_streams  -> echam?
+    IF (l_putrerun) CALL write_streams
 
     CALL time_reset
     IF (lstop) EXIT main_loop

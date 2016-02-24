@@ -143,7 +143,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    NAMELIST /jsb_io_ctl/ &
+    NAMELIST /jsb_io_nml/ &
 #ifdef STANDALONE
       out_expname,          &
       read_interface_vars,  &
@@ -167,8 +167,8 @@ CONTAINS
 
       nml_handler = open_nml(TRIM(filename))
 
-      nml_unit =  position_nml('jsb_io_ctl', nml_handler, STATUS=istat)
-      IF (istat == POSITIONED) READ(nml_unit, jsb_io_ctl)
+      nml_unit =  position_nml('jsb_io_nml', nml_handler, STATUS=istat)
+      IF (istat == POSITIONED) READ(nml_unit, jsb_io_nml)
 
       CALL close_nml(nml_handler)
 

@@ -55,42 +55,59 @@ CONTAINS
   !! @brief Initialize time control for JSBACH standalone
   !!
 !!$  SUBROUTINE init_time_standalone(namelist_filename)
-  SUBROUTINE init_time(namelist_filename)
+  SUBROUTINE init_time(namelist_filename, model_shortname, restart_jsbach)
 
     USE mo_jsb_time_iface, ONLY: read_time_namelist, & !, configure_time
                                  configure_time_and_events, &
                                  get_time_nsteps, get_time_dt, &
                                  get_time_start, get_time_stop
 
-    CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: namelist_filename
+    CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname
+    LOGICAL, OPTIONAL, INTENT(IN) :: restart_jsbach
 
     REAL(wp) :: eps
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_time'
 
-    CALL message(TRIM(routine), 'Initializing JSBACH time')
+    !TODO? currently the time is initalised from the namelist of the first processed model
+    !      but then used globally for all models!
+    !      If different models should have different time information this would need to change
+    !      -> Attention: it is not possible to specify this global information before knowing the names
+    !         of the models: knowing the models is a precondition for restart with echam, because echam restart files
+    !        contain the short name of a model. The time-information of a restart file in turn needs
+    !        to be processed before times and events can be initialised.
+    IF (.NOT. time_initialized) THEN
+      CALL message(TRIM(routine), 'Initializing JSBACH time')
 
-    IF (PRESENT(namelist_filename)) CALL read_time_namelist(TRIM(namelist_filename))
+      IF (PRESENT(namelist_filename) .AND. PRESENT(restart_jsbach)) THEN
+        CALL read_time_namelist(TRIM(namelist_filename), restart_jsbach)
+      ENDIF
 
-    CALL configure_time_and_events()
+      IF (PRESENT(model_shortname)) THEN
+        CALL configure_time_and_events(model_shortname)
+      ELSE
+        CALL configure_time_and_events()
+      ENDIF
 
-    number_timesteps  = get_time_nsteps()
-    timestep_length   = get_time_dt()
-    start_date        = get_time_start()
-    final_date        = get_time_stop()
+      number_timesteps  = get_time_nsteps()
+      timestep_length   = get_time_dt()
+      start_date        = get_time_start()
+      final_date        = get_time_stop()
 
-    current_date     = start_date
+      current_date     = start_date
 
-    ! Check if Asselin time filter is used and print message
-    eps = get_asselin_coef()
-    IF (eps > 0._wp) THEN
-      WRITE(message_text,*) 'Using Asselin time filter for surface temperature: eps =', eps
-    ELSE
-      WRITE(message_text,*) 'Not using Asselin time filter for surface temperature'
-    END IF
-    CALL message(TRIM(routine), TRIM(message_text))
+      ! Check if Asselin time filter is used and print message
+      eps = get_asselin_coef()
+      IF (eps > 0._wp) THEN
+        WRITE(message_text,*) 'Using Asselin time filter for surface temperature: eps =', eps
+      ELSE
+        WRITE(message_text,*) 'Not using Asselin time filter for surface temperature'
+      END IF
+      CALL message(TRIM(routine), TRIM(message_text))
 
-    time_initialized = .TRUE.
+      time_initialized = .TRUE.
+    ENDIF
 
   END SUBROUTINE init_time
 

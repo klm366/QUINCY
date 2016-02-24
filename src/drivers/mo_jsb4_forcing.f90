@@ -41,6 +41,7 @@ MODULE mo_jsb4_forcing
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, p_bcast
   USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input, jsb_netcdf_close_file, jsb_netcdf_read_2d_time
   USE mo_jsb_time,           ONLY: get_date_components
+  USE mo_jsb_class,          ONLY: get_model
 
   dsl4jsb_Use_processes SRF
   dsl4jsb_Use_memory(SRF)
@@ -98,7 +99,6 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: exp_unit_qair = 'g/g'
   CHARACTER(len=*), PARAMETER :: exp_unit_wspeed = 'm/s'
   CHARACTER(len=*), PARAMETER :: unit_precip_mm_day = 'mm/day'
-  CHARACTER(len=*), PARAMETER :: unit_precip_kg_m2_s = 'kg/m2/s'
   CHARACTER(len=*), PARAMETER :: unspecified_exp_unit = ''
 
   ! options controlling types of forcing data
@@ -111,28 +111,32 @@ MODULE mo_jsb4_forcing
   INTEGER,PARAMETER :: QAIR_ = 2         ! specific humidity as forcing data
 
   ! --- Namelist parameters
-  CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data [degC]
+  CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data
   CHARACTER(len=128)     :: forcing_temp_frequ               !! Frequency of temperature forcing data (DAILY/CONST/TIMESTEP)
-  REAL(wp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature [degC]
-  REAL(wp)               :: forcing_temp_const_tmax          !! Constant value for maximum daily temperature [degC]
-  REAL(wp)               :: forcing_temp_ocean               !! Constant value for ocean cells [degC]
+  REAL(wp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature
+  REAL(wp)               :: forcing_temp_const_tmax          !! Constant value for maximum daily temperature
+  REAL(wp)               :: forcing_temp_ocean               !! Constant value for ocean cells
+  CHARACTER(len=128)     :: forcing_temp_unit                !! Expected unit of temp input
 
   CHARACTER(NF_MAX_NAME) :: forcing_precip_file_prefix       !! Prefix for files with precipitation forcing data (unit: mm/day
                                                              !! or kg/m^2/s, depending on 'forcing_precip_in_mm_per_day')
   CHARACTER(len=128)     :: forcing_precip_frequ             !! Frequency of precipitation forcing (DAILY/CONST/TIMESTEP)
   REAL(wp)               :: forcing_precip_const_precip      !! Constant value for precipitation
   REAL(wp)               :: forcing_precip_ocean             !! Constant value for ocean cells
-  LOGICAL                :: forcing_precip_in_mm_per_day     !! Precipitation input in mm/day (true) or kg/m^2/s (false)
+  LOGICAL                :: forcing_precip_in_mm_per_day     !! Precipitation input in mm/day (true) or kg/m2/s (false)
+  CHARACTER(len=128)     :: forcing_precip_unit              !! Expected unit of precip input
 
   CHARACTER(NF_MAX_NAME) :: forcing_sw_file_prefix           !! Prefix for files with shortwave radiation data
   CHARACTER(len=128)     :: forcing_sw_frequ                 !! Frequency of shortwave forcing data (DAILY/CONST/TIMESTEP)
-  REAL(wp)               :: forcing_sw_const_shortwave       !! Constant value for downward shortwave radiation [W/m^2]
+  REAL(wp)               :: forcing_sw_const_shortwave       !! Constant value for downward shortwave radiation
   REAL(wp)               :: forcing_sw_ocean                 !! Constant value for ocean cells
+  CHARACTER(len=128)     :: forcing_sw_unit                  !! Expected unit of shortwave input (default: [W/m^2])
 
-  CHARACTER(NF_MAX_NAME) :: forcing_lw_file_prefix           !! Prefix for files with longwave radiation data [W/m^2]
+  CHARACTER(NF_MAX_NAME) :: forcing_lw_file_prefix           !! Prefix for files with longwave radiation data
   CHARACTER(len=128)     :: forcing_lw_frequ                 !! Frequency of longwave forcing data (DAILY/CONST/TIMESTEP)
-  REAL(wp)               :: forcing_lw_const_longwave        !! Constant value for downward longwave radiation [W/m^2]
+  REAL(wp)               :: forcing_lw_const_longwave        !! Constant value for downward longwave radiation
   REAL(wp)               :: forcing_lw_ocean                 !! Constant value for ocean cells
+  CHARACTER(len=128)     :: forcing_lw_unit                  !! Expected unit of longwave input (default: [W/m^2])
 
   CHARACTER(NF_MAX_NAME) :: forcing_co2_file_prefix          !! Prefix for files with CO2 data (unit: mol(CO2)/mol(air)
                                                              !! or kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit'
@@ -140,18 +144,20 @@ MODULE mo_jsb4_forcing
   REAL(wp)               :: forcing_co2_const_co2            !! Constant value for CO2-concentration (unit: mol(CO2)/mol(air) or
                                                              !! kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit')
   REAL(wp)               :: forcing_co2_ocean                !! Constant value for ocean cells
-  CHARACTER(len=128)     :: forcing_co2_unit                 !! Unit of CO2 input (PPMV/MOL_PER_MOL/KG_PER_KG)
+  CHARACTER(len=128)     :: forcing_co2_unit                 !! Unit of CO2 input (PPMV/MOL_PER_MOL/KG_PER_KG/'')
 
-  CHARACTER(NF_MAX_NAME) :: forcing_wind_file_prefix         !! Prefix for files with windspeed data [m/s]
+  CHARACTER(NF_MAX_NAME) :: forcing_wind_file_prefix         !! Prefix for files with windspeed data
   CHARACTER(len=128)     :: forcing_wind_frequ               !! Frequency of windspeed forcing data (DAILY/CONST/TIMESTEP)
   REAL(wp)               :: forcing_wind_const_wspeed        !! Constant value for windspeed [m/s]
   REAL(wp)               :: forcing_wind_ocean               !! Constant value for ocean cells
+  CHARACTER(len=128)     :: forcing_wind_unit                !! Expected unit of wind input (default: [m/s])
 
   CHARACTER(NF_MAX_NAME) :: forcing_qair_file_prefix         !! Prefix for files with qair data
   CHARACTER(len=128)     :: forcing_qair_frequ               !! Frequency of qair forcing data (DAILY/CONST)
   CHARACTER(len=128)     :: forcing_qair_type                !! Type of input data used for forcing by atm. humidity
-  REAL(wp)               :: forcing_qair_const_rh            !! Constant value for relative humidity [%]
+  REAL(wp)               :: forcing_qair_const_rh            !! Constant value for relative humidity
   REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
+  CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
 
   ! --- Structures for handling input data
@@ -179,7 +185,7 @@ MODULE mo_jsb4_forcing
     REAL(wp), POINTER        :: timevalues(:) => NULL()     !! The values of the time variable (only if my_process_is_stdio())
   END TYPE input_variable_type
 
-  ! All theoretically possible input data, i.e. some are not used. (Input data is controlled by jsb_forcing_ctl)
+  ! All theoretically possible input data, i.e. some are not used. (Input data is controlled by jsb_forcing_nml)
   TYPE forcing_input_type
      TYPE(input_variable_type) :: air_temp_min  !! daily minimum of air temperature at surface [Celsius]
      TYPE(input_variable_type) :: air_temp_max  !! daily maximum of air temperature at surface [Celsius]
@@ -300,10 +306,10 @@ CONTAINS
     ENDIF
 
     ! --- compute bottom pressure
+    model => get_model(model_id)
+    tile => model%Get_top_tile()
     DO iblk = 1, nblks
       ! get elevation
-      model => jsbach%models(model_id)%m
-      tile => model%Get_top_tile()
       dsl4jsb_Get_memory(SRF)
       dsl4jsb_Get_var2D_onChunk(SRF, elevation, IN)
 
@@ -419,69 +425,82 @@ CONTAINS
   !! JN: copied first version from jsbach3 mo_jsbalone_forcing
   !! -- after r304: removed all currently not required options
   !!
-  SUBROUTINE init_forcing()
+  SUBROUTINE init_forcing(model_id)
 
     USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
 
+    INTEGER, INTENT(IN) :: model_id
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_forcing'
 
-    NAMELIST /jsb_forcing_ctl/          &
+    NAMELIST /jsb_forcing_nml/          &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
+        & forcing_temp_unit,                                                                                                  &
       & forcing_precip_file_prefix, forcing_precip_frequ, forcing_precip_const_precip,                                        &
-        & forcing_precip_in_mm_per_day, forcing_precip_ocean,                                                                 &
-      & forcing_sw_file_prefix, forcing_sw_frequ, forcing_sw_ocean,                                                           &
-      & forcing_lw_file_prefix, forcing_lw_frequ, forcing_lw_ocean,                                                           &
-      & forcing_co2_file_prefix, forcing_co2_frequ, forcing_co2_const_co2, forcing_co2_unit, forcing_co2_ocean,               &
-      & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean,                          &
-      & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean
+        & forcing_precip_in_mm_per_day, forcing_precip_ocean, forcing_precip_unit,                                            &
+      & forcing_sw_file_prefix, forcing_sw_frequ, forcing_sw_ocean, forcing_sw_unit,                                          &
+      & forcing_lw_file_prefix, forcing_lw_frequ, forcing_lw_ocean, forcing_lw_unit,                                          &
+      & forcing_co2_file_prefix, forcing_co2_frequ, forcing_co2_const_co2, forcing_co2_ocean, forcing_co2_unit,               &
+      & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean, forcing_wind_unit,       &
+      & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean,           &
+        & forcing_qair_unit
 
+    TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
 
     !------------------------------------------------------------------------------------
 
     IF (my_process_is_stdio()) THEN
-      ! ----- define default values for jsb_forcing_ctl namelist parameters
+      ! ----- define default values for jsb_forcing_nml namelist parameters
       forcing_temp_file_prefix = 'climate_'
       forcing_temp_frequ = 'DAILY'
       forcing_temp_const_tmin = 0.0_wp !jsb3: HUGE(0.0_wp)
       forcing_temp_const_tmax = 0.0_wp !jsb3: HUGE(0.0_wp)
       forcing_temp_ocean = 0._wp
+      forcing_temp_unit = exp_unit_temperature
 
       forcing_precip_file_prefix = 'climate_'
       forcing_precip_frequ = 'DAILY'
       forcing_precip_const_precip = 0.0_wp !jsb3: HUGE(0.0_wp)
       forcing_precip_in_mm_per_day = .TRUE.
       forcing_precip_ocean = 0._wp
+      forcing_precip_unit = unit_precip_mm_day
 
       forcing_sw_file_prefix = 'climate_'
       forcing_sw_frequ = 'DAILY'
       forcing_sw_ocean = 0._wp
+      forcing_sw_unit = exp_unit_radiation
 
       forcing_lw_file_prefix = 'climate_'
       forcing_lw_frequ = 'DAILY'
       forcing_lw_ocean = 100._wp
+      forcing_lw_unit = exp_unit_radiation
 
       forcing_co2_file_prefix = 'climate_'
       forcing_co2_frequ = 'DAILY'
       forcing_co2_const_co2 = 3.65e-4_wp
-      forcing_co2_unit = ''
+      forcing_co2_unit = unspecified_exp_unit
       forcing_co2_ocean = 0.00033114_wp
 
       forcing_wind_file_prefix = 'climate_'
       forcing_wind_frequ = 'DAILY'
       forcing_wind_const_wspeed = 0.0_wp !jsb3: HUGE(0.0_wp)
       forcing_wind_ocean = 0._wp
+      forcing_wind_unit = exp_unit_wspeed
 
       forcing_qair_file_prefix = 'climate_'
       forcing_qair_frequ = 'DAILY'
       forcing_qair_type = 'QAIR'
       forcing_qair_const_rh = 100._wp
       forcing_qair_ocean = 1.0e-05
+      forcing_qair_unit = exp_unit_qair
 
       ! ----- read the namelist
-      nml_handler = open_nml ('namelist.jsbach')
-      f_unit = position_nml ('jsb_forcing_ctl', nml_handler, status=read_status)
-      IF (read_status .EQ. POSITIONED) READ(f_unit, jsb_forcing_ctl)
+      model => get_model(model_id)
+
+      nml_handler = open_nml (TRIM(model%namelist_filename))
+      f_unit = position_nml ('jsb_forcing_nml', nml_handler, status=read_status)
+      IF (read_status .EQ. POSITIONED) READ(f_unit, jsb_forcing_nml)
 
       ! ----- derive options
       ! --- Temperature timestep (if daily two variables - max and min - need to be read)
@@ -492,7 +511,7 @@ CONTAINS
       IF(forcing_options%precip_in_mm_per_day) THEN
         CALL message(TRIM(routine),'Precipitation forcing in mm/day')
       ELSE
-        CALL message(TRIM(routine),'Precipitation forcing in kg/m^2/s')
+        CALL message(TRIM(routine),'Precipitation forcing in kg/m2/s')
       ENDIF
       ! --- QAIR type
       SELECT CASE(TRIM(tolower(forcing_qair_type)))
@@ -501,7 +520,7 @@ CONTAINS
       CASE("qair")
         forcing_options%type_of_qair_forcing = QAIR_
       CASE default
-        CALL finish(TRIM(routine),'Please specifiy either rh or qair for "FORCING_QAIR_TYPE" in jsb_forcing_ctl')
+        CALL finish(TRIM(routine),'Please specifiy either rh or qair for "FORCING_QAIR_TYPE" in jsb_forcing_nml')
       END SELECT
       CALL message(TRIM(routine),"Type of air humidity forcing: "//TRIM(forcing_qair_type))
       ! --- CO2 unit
@@ -509,14 +528,14 @@ CONTAINS
       CASE("ppmv")
         CALL message(TRIM(routine),'CO2 forcing in ppmv')
         forcing_options%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg * 0.000001_wp
-      CASE("mol_per_mol")
+      CASE("mol_per_mol", "mol/mol")
         CALL message(TRIM(routine),'CO2 forcing in mol(CO2)/mol(Dry Air)')
         forcing_options%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg
-      CASE("kg_per_kg")
+      CASE("kg_per_kg", "kg/kg")
         CALL message(TRIM(routine),'CO2 forcing in kg(CO2)/kg(Dry Air)')
         forcing_options%conv_CO2_2_MassRatio = 1.0_wp
       CASE default
-        CALL message(TRIM(routine),'WARNING: "FORCING_CO2_UNIT" missing in namelist jsb_forcing_ctl.')
+        CALL message(TRIM(routine),'WARNING: "FORCING_CO2_UNIT" missing in namelist jsb_forcing_nml.')
         CALL message(TRIM(routine),'Assumption: unit is mol(CO2)/mol(DryAir). Verify your settings!')
         forcing_options%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg
       END SELECT
@@ -537,79 +556,80 @@ CONTAINS
       CALL p_bcast(forcing_temp_const_tmin, p_io)
       CALL p_bcast(forcing_temp_const_tmax, p_io)
       CALL p_bcast(forcing_temp_ocean, p_io)
+      CALL p_bcast(forcing_temp_unit, p_io)
 
       CALL p_bcast(forcing_precip_file_prefix, p_io)
       CALL p_bcast(forcing_precip_frequ, p_io)
       CALL p_bcast(forcing_precip_const_precip, p_io)
       CALL p_bcast(forcing_precip_ocean, p_io)
+      CALL p_bcast(forcing_precip_unit, p_io)
 
       CALL p_bcast(forcing_sw_file_prefix, p_io)
       CALL p_bcast(forcing_sw_frequ, p_io)
       CALL p_bcast(forcing_sw_ocean, p_io)
+      CALL p_bcast(forcing_sw_unit, p_io)
 
       CALL p_bcast(forcing_lw_file_prefix, p_io)
       CALL p_bcast(forcing_lw_frequ, p_io)
       CALL p_bcast(forcing_lw_ocean, p_io)
+      CALL p_bcast(forcing_lw_unit, p_io)
 
       CALL p_bcast(forcing_co2_file_prefix, p_io)
       CALL p_bcast(forcing_co2_frequ, p_io)
       CALL p_bcast(forcing_co2_const_co2, p_io)
-      CALL p_bcast(forcing_co2_unit, p_io)
       CALL p_bcast(forcing_co2_ocean, p_io)
+      CALL p_bcast(forcing_co2_unit, p_io)
 
       CALL p_bcast(forcing_wind_file_prefix, p_io)
       CALL p_bcast(forcing_wind_frequ, p_io)
       CALL p_bcast(forcing_wind_const_wspeed, p_io)
       CALL p_bcast(forcing_wind_ocean, p_io)
+      CALL p_bcast(forcing_wind_unit, p_io)
 
       CALL p_bcast(forcing_qair_file_prefix, p_io)
       CALL p_bcast(forcing_qair_frequ, p_io)
       CALL p_bcast(forcing_qair_const_rh, p_io)
       CALL p_bcast(forcing_qair_ocean, p_io)
+      CALL p_bcast(forcing_qair_unit, p_io)
     ENDIF
 
     ! ----- init forcing_input
     ! --- temperature
     IF(forcing_options%air_temperature_as_timestep) THEN
       CALL init_forcing_input_variable(air_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
-        & forcing_temp_file_prefix, exp_unit_temperature, forcing_temp_const_tmax, forcing_input%air_temp)
+        & forcing_temp_file_prefix, forcing_temp_unit, forcing_temp_const_tmax, forcing_input%air_temp)
     ELSE
       CALL init_forcing_input_variable(min_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
-        & forcing_temp_file_prefix, exp_unit_temperature, forcing_temp_const_tmin, forcing_input%air_temp_min)
+        & forcing_temp_file_prefix, forcing_temp_unit, forcing_temp_const_tmin, forcing_input%air_temp_min)
       CALL init_forcing_input_variable(max_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
-        & forcing_temp_file_prefix, exp_unit_temperature, forcing_temp_const_tmax, forcing_input%air_temp_max)
+        & forcing_temp_file_prefix, forcing_temp_unit, forcing_temp_const_tmax, forcing_input%air_temp_max)
     ENDIF
     ! --- precipitation
-    IF(forcing_options%precip_in_mm_per_day) THEN
-      CALL init_forcing_input_variable(precipitation_varname, forcing_precip_frequ, forcing_precip_ocean, &
-        & forcing_precip_file_prefix, unit_precip_mm_day, forcing_precip_const_precip, forcing_input%precipitation)
-    ELSE
-      CALL init_forcing_input_variable(precipitation_varname, forcing_precip_frequ, forcing_precip_ocean, &
-        & forcing_precip_file_prefix, unit_precip_kg_m2_s, forcing_precip_const_precip, forcing_input%precipitation)
-    ENDIF
+    CALL init_forcing_input_variable(precipitation_varname, forcing_precip_frequ, forcing_precip_ocean, &
+      & forcing_precip_file_prefix, forcing_precip_unit, forcing_precip_const_precip, forcing_input%precipitation)
     ! --- atmospheric humidity
     SELECT CASE(forcing_options%type_of_qair_forcing)
     CASE(RH_)
       CALL init_forcing_input_variable(rel_humidity_varname, forcing_qair_frequ, forcing_qair_ocean, &
-        forcing_qair_file_prefix, unspecified_exp_unit ,forcing_qair_const_rh, forcing_input%rel_humidity)
+        forcing_qair_file_prefix, forcing_qair_unit ,forcing_qair_const_rh, forcing_input%rel_humidity)
     CASE(QAIR_)
       CALL init_forcing_input_variable(qair_varname, forcing_qair_frequ, forcing_qair_ocean, &
-        forcing_qair_file_prefix, exp_unit_qair ,forcing_qair_const_rh, forcing_input%qair)
+        forcing_qair_file_prefix, forcing_qair_unit ,forcing_qair_const_rh, forcing_input%qair)
     CASE default
-      CALL finish(TRIM(routine),'Please specifiy either qair or rh for "forcing_qair_type" in jsb_forcing_ctl')
+      CALL finish(TRIM(routine),'Please specifiy either qair or rh for "forcing_qair_type" in jsb_forcing_nml')
     END SELECT
     ! --- shortwave radiation
     CALL init_forcing_input_variable(shortwave_varname, forcing_sw_frequ, forcing_sw_ocean, &
-      & forcing_sw_file_prefix, exp_unit_radiation, forcing_sw_const_shortwave, forcing_input%shortwave)
+      & forcing_sw_file_prefix, forcing_sw_unit, forcing_sw_const_shortwave, forcing_input%shortwave)
     ! --- longwave radiation
     CALL init_forcing_input_variable(longwave_varname, forcing_lw_frequ, forcing_lw_ocean, &
-      & forcing_lw_file_prefix, exp_unit_radiation, forcing_lw_const_longwave, forcing_input%longwave)
+      & forcing_lw_file_prefix, forcing_lw_unit, forcing_lw_const_longwave, forcing_input%longwave)
     ! --- CO2
     CALL init_forcing_input_variable(CO2_varname, forcing_co2_frequ, forcing_co2_ocean, &
-      & forcing_co2_file_prefix, unspecified_exp_unit, forcing_co2_const_co2, forcing_input%CO2_concentr)
+      & forcing_co2_file_prefix, forcing_co2_unit, forcing_co2_const_co2, forcing_input%CO2_concentr)
     ! --- Wind
     CALL init_forcing_input_variable(wspeed_varname, forcing_wind_frequ, forcing_wind_ocean, &
-      & forcing_wind_file_prefix, exp_unit_wspeed, forcing_wind_const_wspeed, forcing_input%wind_speed)
+      & forcing_wind_file_prefix, forcing_wind_unit, forcing_wind_const_wspeed, forcing_input%wind_speed)
 
   END SUBROUTINE init_forcing
 
@@ -668,7 +688,7 @@ CONTAINS
     ! TODO: test in case of lresume
 
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
-    IF (new_year_forcing .OR. lstart .OR. lresume) THEN !TODO lresume -> better: jsbach_is_restarted (mo_jsb_control)
+    IF (new_year_forcing .OR. lstart .OR. lresume) THEN
       IF(my_process_is_stdio()) THEN
         input_file = jsb_netcdf_open_input( &
           & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc') , model_id)
@@ -682,7 +702,7 @@ CONTAINS
         CALL nf_check(nf_inq_varid(input_file%file_id, 'time', nc_var_id))
         CALL nf_check(nf_get_vara_double(input_file%file_id, nc_var_id, (/ 1 /), &
           & (/ forcing_input_variable%length_time_series /), forcing_input_variable%timevalues))
-        ! Assert: test that the netcdf file unit for this variable is the expected unit
+        ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
         IF (TRIM(forcing_input_variable%expectedUnit) .NE. TRIM(unspecified_exp_unit)) THEN
           CALL nf_check(nf_inq_varid(input_file%file_id, TRIM(forcing_input_variable%variable_name), nc_var_id))
           status = nf_get_att_text(input_file%file_id, nc_var_id, name_of_unit_attribute, readUnit)
@@ -690,9 +710,17 @@ CONTAINS
             CALL message(TRIM(routine), &
                  & 'WARNING: netcdf error when accessing units attribute of variable '//TRIM(forcing_input_variable%variable_name))
           ELSE
-            IF(TRIM(forcing_input_variable%expectedUnit) .NE. TRIM(readUnit)) CALL finish(TRIM(routine), &
-              & 'Forcing file does not contain the expected unit "' //TRIM(forcing_input_variable%expectedUnit) &
-              & //'" but: "'//TRIM(readUnit)//'" for the variable '//TRIM(forcing_input_variable%variable_name))
+            IF(TRIM(readUnit) .NE. TRIM(forcing_input_variable%expectedUnit)) THEN
+              IF(TRIM(readUnit) .EQ. TRIM(unspecified_exp_unit)) THEN
+                CALL message(TRIM(routine), &
+                  & 'WARNING: Forcing file does not contain the expected unit "' //TRIM(forcing_input_variable%expectedUnit) &
+                  & //'" but: "'//TRIM(unspecified_exp_unit)//'" for the variable '//TRIM(forcing_input_variable%variable_name))
+              ELSE
+                CALL finish(TRIM(routine), &
+                  & 'Forcing file does not contain the expected unit "' //TRIM(forcing_input_variable%expectedUnit) &
+                  & //'" but: "'//TRIM(readUnit)//'" for the variable '//TRIM(forcing_input_variable%variable_name))
+              ENDIF
+            ENDIF
           ENDIF
         ENDIF
         !<<<
@@ -730,7 +758,7 @@ CONTAINS
     thisDayEnd = forcing_input_variable%currentDayEnd
 
     ! --- if its a new day or new run - read the data
-    IF (new_day_forcing .OR. lstart .OR. lresume) THEN !TODO lresume -> better: jsbach_is_restarted (mo_jsb_control)
+    IF (new_day_forcing .OR. lstart .OR. lresume) THEN
       ! check timeseries
       IF(my_process_is_stdio()) THEN
         !Assertion: currentTimeStep needs to be contained in the file
@@ -832,7 +860,6 @@ CONTAINS
     END SELECT
     CALL message(TRIM(routine), 'Frequency for forcing variable "'//TRIM(variable_name)//'" is: '//TRIM(forcing_frequ_keyword))
   END FUNCTION frequency_key_to_constant_val
-
 
   !>
   !! @brief calculates the remaining input required for jsbach4
@@ -1173,24 +1200,21 @@ CONTAINS
     USE mo_jsb_model_class,    ONLY: t_jsb_model
 
     dsl4jsb_Def_memory(SRF)
-    dsl4jsb_Real2D_onChunk :: land
 
     INTEGER, INTENT(IN) :: nblks, ics, ice, model_id
     REAL(wp), INTENT(IN) :: constant
     REAL(wp), INTENT(INOUT) :: array(:,:)
     INTEGER :: iblk
 
-    TYPE(t_jsb_model),  POINTER  :: model
-    TYPE(t_jsb_tile), POINTER :: tile
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_tile),  POINTER :: tile
+
+    model => jsbach%models(model_id)%m
+    tile => model%Get_top_tile()
 
     DO iblk = 1, nblks
-      model => jsbach%models(model_id)%m
-      tile => model%Get_top_tile()
-
       dsl4jsb_Get_memory(SRF)
-      dsl4jsb_Get_var2D_onChunk(SRF, land,    IN)
-
-      WHERE (land .EQ. 0._wp)
+      WHERE (dsl4jsb_var2D_onChunk(SRF, land) .EQ. 0._wp)
         array(:,iblk) = constant
       END WHERE
     ENDDO
