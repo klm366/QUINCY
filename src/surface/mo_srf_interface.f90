@@ -33,7 +33,7 @@ MODULE mo_srf_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy
+  PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, precalc_surface_tiles, update_surface_energy
   PUBLIC :: update_surface_fluxes, update_t_srf_asselin, update_humidity_scaling, update_roughness
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_interface'
@@ -237,15 +237,169 @@ CONTAINS
     END WHERE
 
   END SUBROUTINE update_snow_and_skin_fraction
+!!!!! de Vrese (01.12.2015) Calculating new state based on flux aggregation see (M. J. Best, A. Beljaars, J. Polcher, and P. Viterbo, 2004) - start  
+  SUBROUTINE precalc_surface_tiles( tile, iblk, ics, ice, nc, dtime, steplen)
+
+    USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_flux_aggregation,   ONLY: tiled_srf_exchange_coeff, tiled_srf_exchange_coeff_jsbalone
+    USE mo_io_units,           ONLY: nerr,nout
+
+    TYPE(t_jsb_tile),  POINTER    :: tile
+    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+    REAL(wp),          INTENT(in) :: dtime, steplen
+
+    ! Local variables
+    !
+    TYPE(t_jsb_model), POINTER    :: model
+    dsl4jsb_Def_config(SRF)
+    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(SOIL)
+    dsl4jsb_Def_memory(ATM2LAND)
+
+    LOGICAL                       :: lstart
+
+!!!!! de Vrese (01.12.2015) Variable for testing - end
+!!$   dsl4jsb_Real2D_onChunk :: s_srf_old
+    dsl4jsb_Real2D_onChunk :: geom_b     ! pgeom1 = geopotential above ground
+    dsl4jsb_Real2D_onChunk :: qxm1_b     ! xlm1 + xim1 = total concentration of hydrometeors
+    dsl4jsb_Real2D_onChunk :: aclc_b     ! cloud fraction
+    dsl4jsb_Real2D_onChunk :: theta_b    ! potential temp.
+    dsl4jsb_Real2D_onChunk :: thetav_b   ! virtual potential temp.
+    dsl4jsb_Real2D_onChunk :: thetal_b   ! liquid water (?) pot. temp.
+    dsl4jsb_Real2D_onChunk :: qsat_b     ! saturation specific humidity   
+    dsl4jsb_Real2D_onChunk :: lh_b       ! latent heat  
+    dsl4jsb_Real2D_onChunk :: fac_sfc    ! factor: drag_srf = pfac_sfc * pcfh_tile
+    dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: wind_air
+    dsl4jsb_Real2D_onChunk :: press_srf
+
+    
+    dsl4jsb_Real2D_onChunk :: t_srf
+    dsl4jsb_Real2D_onChunk :: qsat_srf
+    dsl4jsb_Real2D_onChunk :: rough_m_srf
+    dsl4jsb_Real2D_onChunk :: rough_h_srf
+    dsl4jsb_Real2D_onChunk :: fact_qsat_srf
+    dsl4jsb_Real2D_onChunk :: fact_q_air
+
+
+    dsl4jsb_Real2D_onChunk :: drag_tile
+   
+    REAL(wp) :: cfm_tile(nc), cfh_tile(nc), heat_tcoef_tile(nc)
+    REAL(wp) ::t_srf_old(nc), qsat_srf_old(nc), s_srf_old(nc)
+    INTEGER :: i
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':precalc_surface_tiles'
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Calculating drag coefficients for individual tiles')
+
+    model => get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SRF)
+    dsl4jsb_Get_memory(SRF)
+    dsl4jsb_Get_memory(ATM2LAND)
+
+    ! Get reference to variables for current block
+
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, geom_b,    IN)   ! pgeom1 = geopotential above ground
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, qxm1_b,    IN)   ! xlm1 + xim1 = total concentration of hydrometeors
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, aclc_b,    IN)   ! cloud fraction
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, theta_b,   IN)   ! potential temp.
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, thetav_b,  IN)   ! virtual potential temp.
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, thetal_b,  IN)   ! liquid water (?) pot. temp.
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, qsat_b,    IN)   ! saturation specific humidity   
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, lh_b,      IN)   ! latent heat  
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, fac_sfc,   IN)   ! factor: drag_srf = pfac_sfc * pcfh_tile
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_air,     IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air,     IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, wind_air,  IN)    
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf, IN)
+
+
+    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,        OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, qsat_srf,     OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, rough_m_srf,  OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, rough_h_srf,  OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, fact_q_air,   OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, fact_qsat_srf,OUT)
+
+    dsl4jsb_Get_var2D_onChunk(SRF, drag_tile,    OUT)
+    ! Save old surface temperature and saturation spec. humidity
+!!$    t_srf_unfilt_old(:) = t_srf_unfilt(:)
+!!$    t_srf_old   (:) = t_srf(:)
+    ! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in convect_tables
+    t_srf_old(:)    = MAX(MIN(t_srf(:),        380._wp), 100._wp)
+    qsat_srf_old(:) = qsat(t_srf_old(:), press_srf(:))
+
+    s_srf_old(:) = surface_dry_static_energy( t_srf_old(:), &
+                                            & q_effective(qsat_srf_old(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
+
+    IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
+      lstart = .TRUE.
+    ELSE
+      lstart = .FALSE.
+    CALL tiled_srf_exchange_coeff(nc,         &! in
+         rough_m_srf(:)   , rough_h_srf(:),   &! in
+         fact_qsat_srf(:) , fact_q_air(:),    &! in 
+         t_srf_old(:)     , s_srf_old(:),     &! in
+         qsat_srf_old(:)  ,                   &! in    
+         press_srf(:)     ,                   &! in                         
+         wind_air(:)      ,                   &! in 
+         t_air(:)         , geom_b(:),        &! in    
+         q_air(:)         , qxm1_b(:),        &! in    
+         qsat_b(:)        , lh_b(:),          &! in    
+         theta_b(:)       , thetav_b(:),      &! in    
+         thetal_b(:)      , aclc_b(:),        &! in    
+         cfm_tile(:)      , cfh_tile(:)       &! out
+         )
+    !------------------------------------------------------------------------------
+    ! The prefactor (= air density * Rd) that will be multiplied to the exchange
+    ! coefficients when building the linear algebraic equations. The density here is
+    ! computed using air temperature of the lowest model level at time step n-1.
+    !------------------------------------------------------------------------------
+    !comming from mo_turbulence_diag.f90 & mo_vdiff_downward_sweep.f90 (fac_sfc = zfactor)
+    !pprfac_sfc(1:kproma) =  ppsfc(1:kproma)                                     &
+    !                     & /( ptm1_b(1:kproma)                                  &
+    !                    &   *(1._wp+vtmpc1*pqm1_b(1:kproma)-pqxm1_b(1:kproma)) )
+    !zconst = tpfac1*pstep_len*grav/rd
+    !zfactor(1:kproma,  klev)   = pprfac_sfc(1:kproma,  klev)  *zconst
+        drag_tile(:) = cfh_tile(:)*fac_sfc(:)
+        heat_tcoef_tile(:) = heat_transfer_coef(drag_tile(:), steplen)
+    END IF
+!!!!! de Vrese (18.01.2016) Calculating tile specific drag coefficients - end
+!!!!! de Vrese (15.02.2016) Calculating surface drag coefficients according to the formulations used in jsbalone - start
+!     IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
+!       lstart = .TRUE.
+!     ELSE
+!       lstart = .FALSE.
+!       call tiled_srf_exchange_coeff_jsbalone(nc,  &! in
+!          rough_m_srf(:)   , rough_h_srf(:),   &! in
+!          fact_qsat_srf(:) , fact_q_air(:) ,   &! in 
+!          t_srf_old(:)     ,                   &! in
+!          qsat_srf_old(:)  ,                   &! in      
+!          press_srf(:)     ,                   &! in                         
+!          wind_air(:)      ,                   &! in 
+!          t_air(:)         ,                   &! in    
+!          q_air(:)         ,                   &! in    
+!          cfm_tile(:)       ,                   &! out
+!          cfh_tile(:)                           &! out
+!          )
+!         drag_tile(:) = cfh_tile(:)*fac_sfc(:)
+!         heat_tcoef_jba(:) = heat_transfer_coef(drag_jba(:), steplen)
+!     END IF
+  END SUBROUTINE precalc_surface_tiles
+
+
 
   SUBROUTINE update_surface_energy( tile, iblk, ics, ice, nc, dtime, steplen)
 
     USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_srf_process,        ONLY: surface_temp_implicit
 !!!!! de Vrese (01.12.2015) Calculating new state based on flux aggregation see (M. J. Best, A. Beljaars, J. Polcher, and P. Viterbo, 2004) - start
-    USE mo_srf_process,        ONLY: surface_temp_implicit_flux_agg
+    USE mo_flux_aggregation,   ONLY: tiled_srf_exchange_coeff, tiled_srf_exchange_coeff_jsbalone, &
+                                     surface_temp_implicit_flux_agg, update_atm
+    USE mo_io_units,           ONLY: nerr,nout
 !!!!! de Vrese (01.12.2015) Calculating new state based on flux aggregation see (M. J. Best, A. Beljaars, J. Polcher, and P. Viterbo, 2004) - end
-
 !!$    USE mo_srf_constants,      ONLY: eps
     USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
     USE mo_physical_constants, ONLY: tmelt
@@ -274,7 +428,11 @@ CONTAINS
 !!$   dsl4jsb_Real2D_onChunk :: qsat_srf_old
     dsl4jsb_Real2D_onChunk :: s_srf
 !!!!! de Vrese (01.12.2015) Variable for testing - start
-    dsl4jsb_Real2D_onChunk :: test_flux
+    dsl4jsb_Real2D_onChunk :: test_flux_1
+    dsl4jsb_Real2D_onChunk :: test_flux_2
+    dsl4jsb_Real2D_onChunk :: test_flux_3
+    dsl4jsb_Real2D_onChunk :: test_flux_4
+    dsl4jsb_Real2D_onChunk :: test_flux_5
 !!!!! de Vrese (01.12.2015) Variable for testing - end
 !!$   dsl4jsb_Real2D_onChunk :: s_srf_old
     dsl4jsb_Real2D_onChunk :: press_srf
@@ -285,6 +443,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rad_srf_net
     dsl4jsb_Real2D_onChunk :: grnd_hflx
     dsl4jsb_Real2D_onChunk :: hcap_grnd
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+    dsl4jsb_Real2D_onChunk :: heat_snow_melt
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end 
     dsl4jsb_Real2D_onChunk :: wsn_srf
     dsl4jsb_Real2D_onChunk :: sfract_srf
     dsl4jsb_Real2D_onChunk :: t_acoef
@@ -292,6 +453,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_acoef
     dsl4jsb_Real2D_onChunk :: q_bcoef
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
+    dsl4jsb_Real2D_onChunk :: drag_tile
     dsl4jsb_Real2D_onChunk :: t_acoef_flux
     dsl4jsb_Real2D_onChunk :: t_bcoef_flux
     dsl4jsb_Real2D_onChunk :: q_acoef_flux
@@ -311,6 +473,20 @@ CONTAINS
 !!!!! de Vrese (01.12.2015) Output from   surface_temp_implicit_flux_agg - start
     REAL(wp) :: s_srf_flux(nc) ! for comparison of coupling schemes !
 !!!!! de Vrese (01.12.2015) Output from   surface_temp_implicit_flux_agg - end
+
+!!!!! de Vrese (18.01.2016) Fields required for the Calculation of tile specific drag coefficients - start
+!!!!! de Vrese (08.02.2016) Calculating new atmospheric state after correction for snowmelt and RM-coefficient-equivalent to be passed back - start     
+    REAL(wp) :: heat_tcoef_tile(nc), qsat_tile(nc), t_acoef_equiv(nc), q_acoef_equiv(nc)
+!!!!! de Vrese (08.02.2016) Calculating new atmospheric state after correction for snowmelt and RM-coefficient-equivalent to be passed back - end 
+!!!!! de Vrese (18.01.2016) Fields required for the Calculation of tile specific drag coefficients - end
+    INTEGER :: i
+!!!!! de Vrese (01.12.2015) Variables required to test call of surf_temp_implicit with multiple tiles - start
+    REAL(wp) :: s_srf_old_mtile(nc,5), qsat_srf_old_mtile(nc,5), dQdT_mtile(nc,5), t2s_conv_mtile(nc,5),&
+                rad_srf_net_mtile(nc,5), grnd_hflx_mtile(nc,5), heat_tcoef_mtile(nc,5), &
+                fact_q_air_mtile(nc,5), fact_qsat_srf_mtile(nc,5), heat_snow_melt_mtile(nc,5), &
+                sfract_srf_mtile(nc,5), hcap_grnd_mtile(nc,5), s_srf_flux_mtile(nc,5),  &
+                t_acoef_equiv_tile(nc,5), q_acoef_equiv_tile(nc,5), cfract_srf_mtile(nc,5)
+!!!!! de Vrese (01.12.2015) Variables required to test call of surf_temp_implicit with arrays - end
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
 
@@ -340,6 +516,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air,     IN)
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf,  IN)
 
+    dsl4jsb_Get_var2D_onChunk(SRF, drag_tile,        OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, t_srf,            OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, t_srf_old,        OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, t_srf_unfilt,     OUT)
@@ -349,7 +526,11 @@ CONTAINS
 !!$    dsl4jsb_Get_var2D_onChunk( SRF,      qsat_srf_old,     OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, s_srf,            OUT)
 !!!!! de Vrese (01.12.2015) Variable for testing - start
-    dsl4jsb_Get_var2D_onChunk(SRF, test_flux,            OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, test_flux_1,        OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, test_flux_2,        OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, test_flux_3,        OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, test_flux_4,        OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, test_flux_5,        OUT)
 !!!!! de Vrese (01.12.2015) Variable for testing - end
 !!$    dsl4jsb_Get_var2D_onChunk( SRF,      s_srf_old,        OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, fact_q_air,       OUT)
@@ -358,9 +539,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SRF, wsn_srf,          OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, sfract_srf,       OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, glacier,          OUT)
-
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+    dsl4jsb_Get_var2D_onChunk(SRF, heat_snow_melt,OUT)
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end   
     dsl4jsb_Get_var2D_onChunk( SOIL, grnd_hflx, OUT)
     dsl4jsb_Get_var2D_onChunk( SOIL, hcap_grnd, OUT)
+
+
 
     ! Save old surface temperature and saturation spec. humidity
 !!$    t_srf_unfilt_old(:) = t_srf_unfilt(:)
@@ -383,8 +568,10 @@ CONTAINS
 
     t2s_conv(:) = s_srf_old(:) / t_srf_old(:)  !
 
-    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
-
+!!!!! de Vrese (01.12.2015) Calculating heat transfer coefficient for each tile - start
+    heat_tcoef_tile(:) = heat_transfer_coef(drag_tile(:), steplen)
+!!!!! de Vrese (01.12.2015) Calculating heat transfer coefficient for each tile - end
+    heat_tcoef(:)      = heat_transfer_coef(drag_srf(:) , steplen)
     ! Compute new surface temperature and saturation humidity
     IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
       lstart = .TRUE.
@@ -402,55 +589,57 @@ CONTAINS
     END IF
 
 !!!!! de Vrese (01.12.2015) Calculating new state based on flux aggregation see (M. J. Best, A. Beljaars, J. Polcher, and P. Viterbo, 2004) - start
-
-    ! Compute new surface temperature and saturation humidity
-!     IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
-!       lstart = .TRUE.
-!       s_srf(:) = s_srf_old(:)
-!     ELSE
-!       lstart = .FALSE.
-!       CALL surface_temp_implicit_flux_agg( nc, steplen, &
-!         ntiles,                                         &
-!         t2s_conv(:), &
-!         t_acoef_flux(:), t_bcoef_flux(:), q_acoef_flux(:), q_bcoef_flux(:), &
-!         s_srf_old(:), qsat_srf_old(:), dQdT(:), &
-!         rad_srf_net(:), grnd_hflx(:), heat_tcoef(:), &
-!         fact_q_air(:), fact_qsat_srf(:), &
-!         sfract_srf(:), hcap_grnd(:), &
-!         & s_srf(:))
-!     END IF
-
+!!!!! de Vrese (01.12.2015) Variables required to test call of surf_temp_implicit with multiple tiles
+!Distributing values on 5 tiles ..... 
+    DO i = 1, nc
+    s_srf_old_mtile(i,:)    = s_srf_old(i)
+    qsat_srf_old_mtile(i,:) = qsat_srf_old(i)
+    dQdT_mtile(i,:)         = dQdT(i)
+    t2s_conv_mtile(i,:)     = t2s_conv(i)
+    rad_srf_net_mtile(i,:)  = rad_srf_net(i)
+    grnd_hflx_mtile(i,:)    = grnd_hflx(i)
+    heat_tcoef_mtile(i,:)   = heat_tcoef_tile(i)
+    fact_q_air_mtile(i,:)   = fact_q_air(i)
+    fact_qsat_srf_mtile(i,:)= fact_qsat_srf(i)
+    heat_snow_melt_mtile(i,:)= heat_snow_melt(i)
+    sfract_srf_mtile(i,:)   = sfract_srf(i)
+    hcap_grnd_mtile(i,:)    = hcap_grnd(i)
+    s_srf_flux_mtile(i,:)   = 0._wp
+    t_acoef_equiv_tile(i,:) = 0._wp
+    q_acoef_equiv_tile(i,:) = 0._wp
+    cfract_srf_mtile(i,:)   = 0.2_wp
+    END DO
 
     IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
       lstart = .TRUE.
       s_srf_flux(:) = s_srf_old(:)
     ELSE
       lstart = .FALSE.
-    Call surface_temp_implicit_flux_agg(nc,              &
-                1,                                            &
-  !              ntiles,              &
-                steplen,                                      &
-                t2s_conv(:),                                     &
-                t_acoef_flux(:), t_bcoef_flux(:),                   &
-                q_acoef_flux(:), q_bcoef_flux(:),                   &
-                s_srf_old(:), qsat_srf_old(:), dQdT(:),                 &
-                rad_srf_net(:), grnd_hflx(:),                       &
-                heat_tcoef(:), fact_q_air(:), fact_qsat_srf(:),        &
- !              cfract_srf,                     &
-                sfract_srf(:), hcap_grnd(:),                        &
-                s_srf_flux(:))!, qsat_srf_new, s_atm_new, q_atm_new)
+    Call surface_temp_implicit_flux_agg(nc,                &
+      steplen,                                             &
+      5,                                                   &
+  !    ntiles(:),              &
+      cfract_srf_mtile(:,:),                     &
+      t2s_conv_mtile(:,:),                                         &
+      t_acoef_flux(:), t_bcoef_flux(:),                    &
+      q_acoef_flux(:), q_bcoef_flux(:),                    &
+      t_bcoef(:), q_bcoef(:),                              &
+      s_srf_old_mtile(:,:), qsat_srf_old_mtile(:,:), dQdT_mtile(:,:), &
+      rad_srf_net_mtile(:,:), grnd_hflx_mtile(:,:),                        &
+      heat_tcoef_mtile(:,:), fact_q_air_mtile(:,:), fact_qsat_srf_mtile(:,:), &
+ !!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+      heat_snow_melt_mtile(:,:),                                   &
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end 
+      sfract_srf_mtile(:,:), hcap_grnd_mtile(:,:),                         &
+      s_srf_flux_mtile(:,:),                                       &
+      t_acoef_equiv_tile(:,:), q_acoef_equiv_tile(:,:),        &
+      t_acoef_equiv(:), q_acoef_equiv(:)                   &
+      )
     END IF
     
-!!!!! de Vrese (01.12.2015) testing output - start    
-    IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
-      lstart = .TRUE.
-      test_flux(:) = 0.0_wp
-    ELSE
-      lstart = .FALSE.    
-      !test_flux(:) = s_srf(:) - s_srf_flux(:)
-      test_flux(:) = test_flux(:) + s_srf(:) - s_srf_flux(:)
-    END IF
-!!!!! de Vrese (01.12.2015) testing output - end    
+    DO i = 1, nc
+    s_srf_flux(i)= s_srf_flux_mtile(i,1)   
+    END DO
 !!!!! de Vrese (01.12.2015) Calculating new state based on flux aggregation see (M. J. Best, A. Beljaars, J. Polcher, and P. Viterbo, 2004) - end
 
 
@@ -461,7 +650,6 @@ CONTAINS
     WHERE (wsn_srf(:) > dsl4jsb_Config(SRF)%wsn_critical .OR. glacier(:) > 0.5_wp)
       s_srf(:) = MIN(s_srf(:) / t2s_conv(:), tmelt) * t2s_conv(:)
     END WHERE
-
     ! Compute new surface qsat (after correction of dry static energy for snow melt!)
     qsat_srf(:) = 0._wp
     IF (lstart) THEN
@@ -472,6 +660,66 @@ CONTAINS
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
     t_eff_srf(:) = (t_srf_old(:)**3 * (4._wp * s_srf(:)/t2s_conv(:) - 3._wp * t_srf_old(:))) ** 0.25_wp
+    
+    
+    
+!!!!! de Vrese (08.02.2016) Calculating new atmospheric state after correction for snowmelt and RM-coefficient-equivalent to be passed back - start    
+    qsat_tile(:) = 0.0_wp 
+    IF (lstart) THEN          ! Start of experiment
+      qsat_tile(:) = qsat_srf_old(:)
+    ELSE
+!!!!! de Vrese (02.23.2016) Heat consumption by melting snow and land ice [W/m**2] is accounted for in update_surface_temp - start 
+!    WHERE (wsn_srf(:) > dsl4jsb_Config(SRF)%wsn_critical .OR. glacier(:) > 0.5_wp)
+!      s_srf_flux(:) = MIN(s_srf_flux(:) / t2s_conv(:), tmelt) * t2s_conv(:)
+!    END WHERE
+    qsat_tile(:)= qsat_srf_old(:) + dQdT(:) * (s_srf_flux(:) - s_srf_old(:)) / t2s_conv(:)
+    END IF
+!!!!! de Vrese (02.23.2016) Heat consumption by melting snow and land ice [W/m**2] is accounted for in update_surface_temp - end  
+
+!!!!! de Vrese (01.12.2015) testing output - start    
+    IF (lstart) THEN          ! Start of experiment
+      test_flux_1(:) = 0.0_wp
+      test_flux_2(:) = 0.0_wp
+      test_flux_3(:) = 0.0_wp
+      test_flux_4(:) = 0.0_wp
+      test_flux_5(:) = 0.0_wp
+    ELSE
+!       WHERE (s_srf_flux(:) > 0.0_wp .AND. t_acoef(:) > 0.0_wp)
+!       test_flux_1(:) = test_flux_1(:) + (t_acoef(:)-t_acoef_equiv(:))/t_acoef(:)*100._wp
+!       END WHERE
+!       WHERE (qsat_tile(:) > 0.0_wp .AND. q_acoef(:) > 0.0_wp)
+!       test_flux_2(:) = test_flux_2(:) + (q_acoef(:)-q_acoef_equiv(:))/q_acoef(:)*100._wp
+!       test_flux_3(:) = test_flux_3(:) + q_acoef(:)- q_acoef_equiv(:)
+!       END WHERE
+!       test_flux_4(:) = test_flux_4(:) + (s_srf_flux(:) - s_srf(:))/s_srf(:)*100._wp
+!       WHERE (heat_tcoef(:) > 0.0_wp)
+!       test_flux_5(:) = test_flux_5(:) + (heat_tcoef_tile(:) - heat_tcoef(:))/heat_tcoef(:)*100._wp
+!       END WHERE
+!       WHERE (s_srf_flux(:) > 0.0_wp .AND. t_acoef(:) > 0.0_wp)
+!       test_flux_1(:) = (t_acoef(:)-t_acoef_equiv(:))/t_acoef(:)*100._wp
+!       END WHERE
+!       WHERE (qsat_tile(:) > 0.0_wp .AND. q_acoef(:) > 0.0_wp)
+!       test_flux_2(:) = (q_acoef(:)-q_acoef_equiv(:))/q_acoef(:)*100._wp
+!       test_flux_3(:) =  q_acoef(:)- q_acoef_equiv(:)
+!       END WHERE
+!       test_flux_4(:) =(s_srf_flux(:) - s_srf(:))/s_srf(:)*100._wp
+!       WHERE (heat_tcoef(:) > 0.0_wp)
+!       test_flux_5(:) = (heat_tcoef_tile(:) - heat_tcoef(:))/heat_tcoef(:)*100._wp
+!       END WHERE
+!     END IF
+      WHERE (s_srf_flux(:) > 0.0_wp .AND. t_acoef(:) > 0.0_wp)
+      test_flux_1(:) = test_flux_1(:) + heat_snow_melt(:)
+      END WHERE
+      WHERE (qsat_tile(:) > 0.0_wp .AND. q_acoef(:) > 0.0_wp)
+      test_flux_2(:) = test_flux_2(:) + grnd_hflx(:)
+      test_flux_3(:) = heat_snow_melt(:)
+      END WHERE
+      test_flux_4(:) =(s_srf_flux(:) - s_srf(:))/s_srf(:)*100._wp
+      WHERE (heat_tcoef(:) > 0.0_wp)
+      test_flux_5(:) = (heat_tcoef_tile(:) - heat_tcoef(:))/heat_tcoef(:)*100._wp
+      END WHERE
+    END IF
+!!!!! de Vrese (01.12.2015) testing output - end    
 
   END SUBROUTINE update_surface_energy
 
@@ -591,6 +839,15 @@ CONTAINS
 
     ! Transfer coefficient
     heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+
+!!!!! de Vrese (01.12.2015) Calculating Surface fluxes based on flux aggregation start
+!     Here state on the lowest lvl needs to be calculated either subroutine using update_atm
+!     or t_acoef_equiv_tile() and q_acoef_equiv_tile()
+! ----------------------------------------------------------
+!     s_air(:) = t_acoef_equiv_tile(:) * s_srf   (:) + t_bcoef(:)
+!     q_air(:) = q_acoef_equiv_tile(:) * qsat_srf(:) + q_bcoef(:)
+!!!!! de Vrese (01.12.2015) Calculating Surface fluxes based on flux aggregation end
+
 
     ! Compute effective air moisture and surface saturation humidity
     q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &

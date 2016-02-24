@@ -20,7 +20,7 @@ MODULE mo_srf_memory_class
   PUBLIC :: t_srf_memory, max_no_of_vars
 !!$            copy_srf_mem, add_srf_mem
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40
+  INTEGER, PARAMETER :: max_no_of_vars = 50
 
   TYPE, EXTENDS(t_jsb_memory) :: t_srf_memory
     !
@@ -52,8 +52,15 @@ MODULE mo_srf_memory_class
       t_srf_unfilt_old , &
       t_eff_srf        , &
       s_srf            , &  !< Dry static energy at surface (new timestep)
+!!!!! de Vrese (18.01.2016) Fields required for the Calculation of tile specific drag coefficients - start
+      drag_tile        , &
+!!!!! de Vrese (18.01.2016) Fields required for the Calculation of tile specific drag coefficients - end
 !!!!! de Vrese (01.12.2015) Variable for testing - start
-      test_flux            , &  !< Dry static energy at surface (new timestep) test variable
+      test_flux_1            , &  !< test variable
+      test_flux_2            , &  !< test variable
+      test_flux_3            , &  !< test variable
+      test_flux_4            , &  !< test variable
+      test_flux_5            , &  !< test variable
 !!!!! de Vrese (01.12.2015) Variable for testing - end
 !!$      s_srf_old        , &  !< Dry static energy at surface (old timestep)
       qsat_srf         , &
@@ -69,7 +76,10 @@ MODULE mo_srf_memory_class
       wsr_srf       ,   & !< Water content in skin reservoir [m]
       sfract_srf    ,   & !< Snow fraction of tile []
       wsn_srf       ,   & !< Water content of snow reservoir [m water equivalent]
-      wsn_glacier         !< Water content of snow on glacier [m water equivalent]
+      wsn_glacier   ,   &   !< Water content of snow on glacier [m water equivalent]
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+      heat_snow_melt      !< Heat consumption by melting snow and land ice [W/m**2]
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end 
     !
     ! Energy fluxes
     TYPE(t_jsb_var_real2d) :: &
@@ -241,14 +251,44 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
-!!!!! de Vrese (01.12.2015) Variable for testing - start
 
-      CALL jsb_add_var( mem, prefix//'test_flux'//suffix, mem%test_flux,                                   &
+!!!!! de Vrese (18.01.2016) Fields required for the Calculation of tile specific drag coefficients - start
+      CALL jsb_add_var( mem, prefix//'drag_tile'//suffix, mem%drag_tile,                                   &
         & hgrid, surface,                                                           &
-        & t_cf('dry_static_energy_flux', '', '', nc_bits),                                        &
+        & t_cf('tile specific drag coefficient', '', '', nc_bits),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & initval_r=0.0_wp )
+!!!!! de Vrese (18.01.2016) Fields required for the Calculation of tile specific drag coefficients - end
+!!!!! de Vrese (01.12.2015) Variable for testing - start
+      CALL jsb_add_var( mem, prefix//'test_flux_1'//suffix, mem%test_flux_1,                                   &
+        & hgrid, surface,                                                           &
+        & t_cf('output for testing', '', '', nc_bits),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, prefix//'test_flux_2'//suffix, mem%test_flux_2,                                   &
+        & hgrid, surface,                                                           &
+        & t_cf('output for testing', '', '', nc_bits),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, prefix//'test_flux_3'//suffix, mem%test_flux_3,                                   &
+        & hgrid, surface,                                                           &
+        & t_cf('output for testing', '', '', nc_bits),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, prefix//'test_flux_4'//suffix, mem%test_flux_4,                                   &
+        & hgrid, surface,                                                           &
+        & t_cf('output for testing', '', '', nc_bits),                                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
         
+      CALL jsb_add_var( mem, prefix//'test_flux_5'//suffix, mem%test_flux_5,                                   &
+        & hgrid, surface,                                                           &
+        & t_cf('output for testing', '', '', nc_bits),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & initval_r=0.0_wp )        
 !!!!! de Vrese (01.12.2015) Variable for testing - end
 
 !!$      CALL jsb_add_var( mem, prefix//'s_srf_old'//suffix, mem%s_srf_old,                           &
@@ -364,6 +404,15 @@ CONTAINS
         & t_cf('glacier_snow_water_equivalent', 'm', '', nc_bits),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
+
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start        
+      CALL jsb_add_var( mem, prefix//'heat_snow_melt'//suffix, mem%heat_snow_melt,  &
+        & hgrid, surface,                                                           &
+        & t_cf('Heat consumption by melting snow', '[W/m**2]', '', nc_bits),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & initval_r=0.0_wp )
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end 
+
 
       CALL jsb_add_var( mem, prefix//'evapopot'//suffix, mem%evapopot,                                     &
         & hgrid, surface,                                                                  &

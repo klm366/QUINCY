@@ -244,6 +244,7 @@ src/soil/mo_soil_interface.f90 -text
 src/soil/mo_soil_memory_class.f90 -text
 src/soil/mo_soil_process.f90 -text
 src/soil/mo_soil_util.f90 -text
+src/surface/mo_flux_aggregation.f90 -text
 src/surface/mo_srf_config_class.f90 -text
 src/surface/mo_srf_constants.f90 -text
 src/surface/mo_srf_init.f90 -text

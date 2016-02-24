@@ -21,7 +21,7 @@ MODULE mo_atmland_memory_class
   PUBLIC :: t_atm2land_memory, t_land2atm_memory, max_no_of_vars
 !!!!! de Vrese (01.12.2015) allowing to add more vaiables to memory  - start
   !INTEGER, PARAMETER :: max_no_of_vars = 20
-  INTEGER, PARAMETER :: max_no_of_vars = 25
+  INTEGER, PARAMETER :: max_no_of_vars = 35
 !!!!! de Vrese (01.12.2015) allowing to add more vaiables to memory  - end
   TYPE, EXTENDS(t_jsb_memory) :: t_atm2land_memory
     TYPE(t_jsb_var_real2d) :: &
@@ -42,11 +42,22 @@ MODULE mo_atmland_memory_class
       q_acoef          , &
       q_bcoef          , &
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
-      t_acoef_flux          , &
+      t_acoef_flux           , &
       t_bcoef_flux           , &
       q_acoef_flux           , &
       q_bcoef_flux           , &
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - start
+      geom_b                 , &! in, pgeom1 = geopotential above ground
+      qxm1_b                 , &! in, xlm1 + xim1 = total concentration of hydrometeors
+      aclc_b                 , &! in, cloud fraction
+      theta_b                , &! in, potential temp.
+      thetav_b               , &! in, virtual potential temp.
+      thetal_b               , &! in, liquid water (?) pot. temp.
+      qsat_b                 , &! in, saturation specific humidity   
+      lh_b                   , &! in, latent heat  
+      fac_sfc                , &! in factor: drag_srf = pfac_sfc * pcfh_tile
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - end
       pch              , &
       cos_zenith_angle
   CONTAINS
@@ -218,6 +229,61 @@ CONTAINS
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
          & initval_r=0.0_wp )
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - start
+    CALL jsb_add_var( mem, prefix//'geom_b'//suffix, mem%geom_b,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('geopotential lowest lvl', '', '', nc_bits),                          &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, prefix//'qxm1_b'//suffix, mem%qxm1_b,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('total concentration of hydrometeors lowest lvl', '', '', nc_bits),                          &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, prefix//'aclc_b'//suffix, mem%aclc_b,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('cloud fraction lowest lvl', '', '', nc_bits),                          &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, prefix//'theta_b'//suffix, mem%theta_b,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('potential temp.', '', '', nc_bits),                    &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, prefix//'thetav_b'//suffix, mem%thetav_b,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('virtual potential temp.', '', '', nc_bits),                    &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+         
+    CALL jsb_add_var( mem, prefix//'thetal_b'//suffix, mem%thetal_b,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('liquid water (?) pot. temp.', '', '', nc_bits),                    &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, prefix//'qsat_b'//suffix, mem%qsat_b,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('saturation specific humidity', '', '', nc_bits),                    &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+         
+    CALL jsb_add_var( mem, prefix//'lh_b'//suffix, mem%lh_b,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('latent heat', '', '', nc_bits),                    &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+         
+    CALL jsb_add_var( mem, prefix//'fac_sfc'//suffix, mem%fac_sfc,                  &
+         & hgrid, surface,                                                      &
+         & t_cf('factor for surface drag coeficient', '', '', nc_bits),                    &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+         & initval_r=0.0_wp )
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - end
 
     CALL jsb_add_var( mem, prefix//'pch'//suffix, mem%pch,                          &
          & hgrid, surface,                                                      &

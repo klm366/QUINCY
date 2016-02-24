@@ -177,7 +177,9 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
 !++mgs : add instantaneous snow melt for drydep calculation
      , psmelt   &
 !--mgs
-
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+     , pmeltflux  &
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end
      )
 
   USE mo_physical_constants, ONLY: alf, cpd, vtmpc2, tmelt, g=>grav
@@ -220,6 +222,9 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   ! zrogl         Runoff at glacier points (rain and melt, but no calving)
   ! zsnmel        Snow/ice melt at land and glacier points
   ! zsncmelt      Snow melt in the canopy
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+! pmeltflux       Heat consumption by melting snow and land ice [W/m**2]
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end
   ! zsn           Snow budget at non-glacier points (snowfall-subl-melt)
   ! pmlres        Residual melt water available for infiltration into the
   !               non-frozen soil after being intercepted by the
@@ -306,6 +311,9 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   REAL(wp), INTENT(out)   :: tte_corr(kbdim)
   REAL(wp), INTENT(out)   :: pmlres(kbdim)
   REAL(wp), INTENT(out)   :: psmelt(kbdim)   !++mgs
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+  REAL(wp), INTENT(out)   :: pmeltflux(kbdim)
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end
   !
   !  local arrays
   !
@@ -348,6 +356,9 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      pmlres(jl)=0._wp
      zsn(jl)=0._wp
      zsnmel(jl)=0._wp
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+     pmeltflux(jl)=0._wp 
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end
      zsncmelt(jl)=0._wp
      zraind(jl)=prain(jl)             *zdtime/rhoh2o                   !rain     [kg m-2 s-1] -> [m]
      zsnowd(jl)=psnow(jl)             *zdtime/rhoh2o                   !snowfall [kg m-2 s-1] -> [m]
@@ -433,10 +444,18 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
                     pgld(jl)=pgld(jl)-zsnmel(jl)                            !vg  adapt glacier depth to snow and ice melt
                     zrogl(jl)=zrogl(jl)+zsnmel(jl)                          !vg  add melt water to glacier runoff
                     ptsl(jl)=tmelt                                          !vg  surface temp. limited to 0 degC
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+                    pmeltflux(jl) = zsnmel(jl)*rhoh2o*alf/zdtime                ! an dieser Stelle, falls Gletscherschmelze auf
+                                                                            ! separates Feld gespeichert werden sollte
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end
                  ELSE IF (psn(jl).GT.0._wp) THEN                         !vg  snow cover at non glacier land:
                     zsmelt=pgrndcapc(jl)*(ptsl(jl)-tmelt)/(alf*rhoh2o)      !vg  potential snow and ice melt [m]
                     zsnmel(jl)=MIN(psn(jl),zsmelt)                          !vg  actual snow and ice melt [m]
                     ptsl(jl)=ptsl(jl)-zsnmel(jl)*alf*rhoh2o/pgrndcapc(jl)   !vg  re-calculation of surface temp.
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+                    pmeltflux(jl) = zsnmel(jl)*rhoh2o*alf/zdtime                ! an dieser Stelle, falls Gletscherschmelze auf
+                                                                            ! separates Feld gespeichert werden sollte
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end
                     psn(jl)=MAX(psn(jl)-zsnmel(jl),0._wp)                   !vg  re-calculation of snow depth
                  END IF
               END IF

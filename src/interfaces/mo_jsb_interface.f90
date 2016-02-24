@@ -22,7 +22,8 @@ MODULE mo_jsb_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile
   USE mo_atmland_interface,  ONLY: update_atm2land, update_land2atm
   USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
-
+  USE mo_io_units,          ONLY: nerr,nout
+  
   dsl4jsb_Use_processes ATM2LAND, SRF, HD
   dsl4jsb_Use_memory(SRF)
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
@@ -54,6 +55,17 @@ CONTAINS
 !!!!! de Vrese (01.12.2015) Passing Richtmyer-Morton coeffcients for the flux aggregation to JSBACH - start
                            & t_acoef_flux, t_bcoef_flux, q_acoef_flux, q_bcoef_flux,      &
 !!!!! de Vrese (01.12.2015) Passing Richtmyer-Morton coeffcients for the flux aggregation to JSBACH - end
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - star
+                           & geom_b,                           &! in, pgeom1 = geopotential above ground
+                           & qxm1_b,                           &! in, xlm1 + xim1 = total concentration of hydrometeors
+                           & aclc_b,                           &! in, cloud fraction
+                           & theta_b,                          &! in, potential temp.
+                           & thetav_b,                         &! in, virtual potential temp.
+                           & thetal_b,                         &! in, liquid water (?) pot. temp.
+                           & qsat_b,                           &! in, saturation specific humidity   
+                           & lh_b,                             &! in, latent heat  
+                           & fac_sfc,                          &! in factor: drag_srf = pfac_sfc * pcfh_tile
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - end
                            & pch, cos_zenith_angle,                                       &
                            & t_srf, t_eff_srf, qsat_srf, s_srf,                           &
                            & fact_q_air, fact_qsat_srf,                                   &
@@ -61,13 +73,19 @@ CONTAINS
                            & rough_h_srf, rough_m_srf,                                    &
                            & tte_corr,                                                    &
                            & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,          &
-                           & test_flux                                                    &
+!!!!! de Vrese (01.12.2015) Variable for testing - start
+                           & test_flux_1,                                                 &
+                           & test_flux_2,                                                 &
+                           & test_flux_3,                                                 &
+                           & test_flux_4,                                                 &
+                           & test_flux_5                                                  &
+!!!!! de Vrese (01.12.2015) Variable for testing - end
                            &)
 
     USE mo_veg_interface,     ONLY: update_vegetation_1, update_vegetation_2
     USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, &
-                                    update_surface_energy, update_surface_fluxes, update_t_srf_asselin, &
-                                    update_humidity_scaling, update_roughness
+                                    precalc_surface_tiles, update_surface_energy, update_surface_fluxes,&
+                                    update_t_srf_asselin, update_humidity_scaling, update_roughness
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_interface,      ONLY: update_hd
@@ -107,6 +125,17 @@ CONTAINS
       & q_acoef_flux     (:), &
       & q_bcoef_flux     (:), &
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - star
+      & geom_b           (:), &
+      & qxm1_b           (:), &
+      & aclc_b           (:), &
+      & theta_b          (:), &
+      & thetav_b         (:), &
+      & thetal_b         (:), &
+      & qsat_b           (:), &
+      & lh_b             (:), &
+      & fac_sfc          (:), &
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - end
       & pch              (:), &
       & cos_zenith_angle (:)
     REAL(wp), INTENT(out) ::  &
@@ -129,7 +158,11 @@ CONTAINS
       & alb_vis_dif      (:), &
       & alb_nir_dif      (:)
 !!!!! de Vrese (01.12.2015) Variable for testing - start
-    REAL(wp) ::  test_flux(:)
+    REAL(wp) ::  test_flux_1(:)
+    REAL(wp) ::  test_flux_2(:)
+    REAL(wp) ::  test_flux_3(:)
+    REAL(wp) ::  test_flux_4(:)
+    REAL(wp) ::  test_flux_5(:)
 !!!!! de Vrese (01.12.2015) Variable for testing - end
 
     ! Local variables
@@ -178,6 +211,17 @@ CONTAINS
       & t_acoef_flux=t_acoef_flux(:), t_bcoef_flux=t_bcoef_flux(:),                                                           &
       & q_acoef_flux=q_acoef_flux(:), q_bcoef_flux=q_bcoef_flux(:),                                                           &
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - star
+      & geom_b=geom_b        (:), &
+      & qxm1_b=qxm1_b        (:), &
+      & aclc_b=aclc_b        (:), &    
+      & theta_b=theta_b      (:), &
+      & thetav_b=thetav_b    (:), &
+      & thetal_b=thetal_b    (:), &
+      & qsat_b=qsat_b        (:), & 
+      & lh_b=lh_b            (:), &
+      & fac_sfc=fac_sfc      (:), &
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - end
       & pch=pch(:), cos_zenith_angle=cos_zenith_angle(:))
 
     ! Temporary fix for zero t_air at model start (analytical initialization of atmosphere)
@@ -190,6 +234,9 @@ CONTAINS
 
     ! Update wet skin and snow fractions
     CALL update_snow_and_skin_fraction(tile, iblk, ics, ice, nc, dtime, steplen)
+
+    ! Calculating tile-specific drag coefficients
+    CALL precalc_surface_tiles( tile, iblk, ics, ice, nc, dtime, steplen)
 
     ! Compute new surface temperatures and saturation surface specific humidity
     CALL update_surface_energy(tile, iblk, ics, ice, nc, dtime, steplen)
@@ -250,7 +297,11 @@ CONTAINS
       & tte_corr=tte_corr(:),                                                                                                   &
       & alb_vis_dir=alb_vis_dir(:), alb_nir_dir=alb_nir_dir(:), alb_vis_dif=alb_vis_dif(:), alb_nir_dif=alb_nir_dif(:),         &
 !!!!! de Vrese (01.12.2015) Variable for testing - start
-      & test_flux = test_flux(:)&
+      & test_flux_1 = test_flux_1(:),&
+      & test_flux_2 = test_flux_2(:),&
+      & test_flux_3 = test_flux_3(:),&
+      & test_flux_4 = test_flux_4(:),&
+      & test_flux_5 = test_flux_5(:) &
 !!!!! de Vrese (01.12.2015) Variable for testing - start
       &)
 

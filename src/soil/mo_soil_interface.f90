@@ -106,7 +106,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: overflow
     dsl4jsb_Real2D_onChunk :: glacier
     dsl4jsb_Real2D_onChunk :: wsn_glacier
-
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+    dsl4jsb_Real2D_onChunk :: heat_snow_melt
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end 
 
     ! Locally allocated vectors
     !
@@ -201,6 +203,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SRF, oro_stddev,   IN)
     dsl4jsb_Get_var2D_onChunk(SRF, glacier,      OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, wsn_glacier,  OUT)
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+    dsl4jsb_Get_var2D_onChunk(SRF, heat_snow_melt,OUT)
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end 
 
     dsl4jsb_Get_var2D_onChunk(VEG, wsn_can,       OUT)
     dsl4jsb_Get_var2D_onChunk(VEG, lai,           IN)
@@ -230,6 +235,9 @@ CONTAINS
       melt_water_excess(:) = 0._wp
       tte_corr(:) = 0._wp
       snow_melt(:) = 0._wp
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+      heat_snow_melt(:) = 0._wp
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end
     END IF
 
     CALL update_surf_down(nc, dtime, lstart, &
@@ -240,6 +248,9 @@ CONTAINS
 !!$      & snow_acc(:), snow_melt_acc(:), glacier_runoff_acc(:), &
       melt_water_excess(:), &
       & tte_corr(:), snow_melt(:) &
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - start  
+      &, heat_snow_melt(:)        &
+!!!!! de Vrese (02.23.2016) Calculating Heat consumption by melting snow and land ice [W/m**2] - end  
       & )
 
     ! Save old ground heat flux and heat capacity before updating

@@ -37,6 +37,17 @@ CONTAINS
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
     &t_acoef_flux, t_bcoef_flux, q_acoef_flux, q_bcoef_flux,  &
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - star
+    & geom_b,                           &! in, pgeom1 = geopotential above ground
+    & qxm1_b,                           &! in, xlm1 + xim1 = total concentration of hydrometeors
+    & aclc_b,                           &! in, cloud fraction
+    & theta_b,                          &! in, potential temp.
+    & thetav_b,                         &! in, virtual potential temp.
+    & thetal_b,                         &! in, liquid water (?) pot. temp.
+    & qsat_b,                           &! in, saturation specific humidity   
+    & lh_b,                             &! in, latent heat  
+    & fac_sfc,                          &! in factor: drag_srf = pfac_sfc * pcfh_tile
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - end
     &pch, cos_zenith_angle)
 
 
@@ -46,8 +57,19 @@ CONTAINS
       & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:), lw_srf_down(:), swvis_srf_down(:), swnir_srf_down(:), &
       & swpar_srf_down(:), press_srf(:), drag_srf(:), t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), pch(:), cos_zenith_angle(:) &
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
-      &, t_acoef_flux(:), t_bcoef_flux(:), q_acoef_flux(:), q_bcoef_flux(:)
+      &, t_acoef_flux(:), t_bcoef_flux(:), q_acoef_flux(:), q_bcoef_flux(:),&
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - star
+      & geom_b(:),                           &! in, pgeom1 = geopotential above ground
+      & qxm1_b(:),                           &! in, xlm1 + xim1 = total concentration of hydrometeors
+      & aclc_b(:),                           &! in, cloud fraction
+      & theta_b(:),                          &! in, potential temp.
+      & thetav_b(:),                         &! in, virtual potential temp.
+      & thetal_b(:),                         &! in, liquid water (?) pot. temp.
+      & qsat_b(:),                           &! in, saturation specific humidity   
+      & lh_b(:),                             &! in, latent heat  
+      & fac_sfc(:)                            ! in factor: drag_srf = pfac_sfc * pcfh_tile
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - end
 
     dsl4jsb_Def_memory(ATM2LAND)
 
@@ -74,13 +96,25 @@ CONTAINS
     IF (PRESENT(q_acoef))          dsl4jsb_var2D_onChunk(ATM2LAND,q_acoef)          = q_acoef          (:)
     IF (PRESENT(q_bcoef))          dsl4jsb_var2D_onChunk(ATM2LAND,q_bcoef)          = q_bcoef          (:)
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - start
-    IF (PRESENT(t_acoef_flux))          dsl4jsb_var2D_onChunk(ATM2LAND,t_acoef_flux)          = t_acoef_flux         (:)
-    IF (PRESENT(t_bcoef_flux))          dsl4jsb_var2D_onChunk(ATM2LAND,t_bcoef_flux)          = t_bcoef_flux         (:)
-    IF (PRESENT(q_acoef_flux))          dsl4jsb_var2D_onChunk(ATM2LAND,q_acoef_flux)          = q_acoef_flux         (:)
-    IF (PRESENT(q_bcoef_flux))          dsl4jsb_var2D_onChunk(ATM2LAND,q_bcoef_flux)          = q_bcoef_flux         (:)
+    IF (PRESENT(t_acoef_flux))     dsl4jsb_var2D_onChunk(ATM2LAND,t_acoef_flux)     = t_acoef_flux     (:)
+    IF (PRESENT(t_bcoef_flux))     dsl4jsb_var2D_onChunk(ATM2LAND,t_bcoef_flux)     = t_bcoef_flux     (:)
+    IF (PRESENT(q_acoef_flux))     dsl4jsb_var2D_onChunk(ATM2LAND,q_acoef_flux)     = q_acoef_flux     (:)
+    IF (PRESENT(q_bcoef_flux))     dsl4jsb_var2D_onChunk(ATM2LAND,q_bcoef_flux)     = q_bcoef_flux     (:)
 !!!!! de Vrese (01.12.2015) Richtmyer-Morton coeffcients for the flux aggregation - end
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - star
+    IF (PRESENT(geom_b))           dsl4jsb_var2D_onChunk(ATM2LAND,geom_b)           = geom_b           (:)
+    IF (PRESENT(qxm1_b))           dsl4jsb_var2D_onChunk(ATM2LAND,qxm1_b)           = qxm1_b           (:)
+    IF (PRESENT(aclc_b))           dsl4jsb_var2D_onChunk(ATM2LAND,aclc_b)           = aclc_b           (:)   
+    IF (PRESENT(theta_b))          dsl4jsb_var2D_onChunk(ATM2LAND,theta_b)          = theta_b          (:)
+    IF (PRESENT(thetav_b))         dsl4jsb_var2D_onChunk(ATM2LAND,thetav_b)         = thetav_b         (:)
+    IF (PRESENT(thetal_b))         dsl4jsb_var2D_onChunk(ATM2LAND,thetal_b)         = thetal_b         (:)
+    IF (PRESENT(qsat_b))           dsl4jsb_var2D_onChunk(ATM2LAND,qsat_b)           = qsat_b           (:)
+    IF (PRESENT(lh_b))             dsl4jsb_var2D_onChunk(ATM2LAND,lh_b)             = lh_b             (:)
+    IF (PRESENT(fac_sfc))          dsl4jsb_var2D_onChunk(ATM2LAND,fac_sfc)          = fac_sfc          (:)
+!!!!! de Vrese (18.01.2016) Fields of variables on the lowest atmosperic model levels required for the Calculation of tile specific drag coefficients - end
     IF (PRESENT(pch))              dsl4jsb_var2D_onChunk(ATM2LAND,pch)              = pch              (:)
     IF (PRESENT(cos_zenith_angle)) dsl4jsb_var2D_onChunk(ATM2LAND,cos_zenith_angle) = cos_zenith_angle (:)
+
 
   END SUBROUTINE update_atm2land
 
@@ -91,7 +125,11 @@ CONTAINS
     & rough_h_srf, rough_m_srf, tte_corr,                               &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,               &
 !!!!! de Vrese (01.12.2015) Variable for testing - start
-    & test_flux &
+    & test_flux_1, &
+    & test_flux_2, &
+    & test_flux_3, &
+    & test_flux_4, &
+    & test_flux_5  &
 !!!!! de Vrese (01.12.2015) Variable for testing - end
     &)
 
@@ -104,7 +142,11 @@ CONTAINS
       & rough_h_srf(:), rough_m_srf(:), tte_corr(:),                                 &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
 !!!!! de Vrese (01.12.2015) Variable for testing - start
-      & test_flux(:)    
+      & test_flux_1(:),                                                              &
+      & test_flux_2(:),                                                              &
+      & test_flux_3(:),                                                              &
+      & test_flux_4(:),                                                              &
+      & test_flux_5(:)
 !!!!! de Vrese (01.12.2015) Variable for testing - end
 
 
@@ -137,7 +179,11 @@ CONTAINS
     IF (PRESENT(alb_nir_dir))     alb_nir_dir(:)      = dsl4jsb_var2D_onChunk(SRF,alb_nir_srf)  ! Temporary
     IF (PRESENT(alb_nir_dif))     alb_nir_dif(:)      = dsl4jsb_var2D_onChunk(SRF,alb_nir_srf)  ! Temporary
 !!!!! de Vrese (01.12.2015) Variable for testing - start
-    IF (PRESENT(test_flux))       test_flux(:)        = dsl4jsb_var2D_onChunk(SRF,test_flux)
+    IF (PRESENT(test_flux_1))     test_flux_1(:)      = dsl4jsb_var2D_onChunk(SRF,test_flux_1)
+    IF (PRESENT(test_flux_2))     test_flux_2(:)      = dsl4jsb_var2D_onChunk(SRF,test_flux_2)
+    IF (PRESENT(test_flux_3))     test_flux_3(:)      = dsl4jsb_var2D_onChunk(SRF,test_flux_3)
+    IF (PRESENT(test_flux_4))     test_flux_4(:)      = dsl4jsb_var2D_onChunk(SRF,test_flux_4)
+    IF (PRESENT(test_flux_5))     test_flux_5(:)      = dsl4jsb_var2D_onChunk(SRF,test_flux_5)
 !!!!! de Vrese (01.12.2015) Variable for testing - end
 
   END SUBROUTINE update_land2atm
