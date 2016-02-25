@@ -70,7 +70,7 @@ else:
         b4j_obj.logger.debug ( "Finished analysis of '%s' successfully." % var ) if not ret else \
                 b4j_obj.logger.debug ( "Analysis of '%s' failed." % var )
     
-    b4j_obj.write_report () if b4j_obj.reporting else None
+#    b4j_obj.write_report () if b4j_obj.reporting else None
     
     b4j_obj.logger.debug ( "Exiting." )
 

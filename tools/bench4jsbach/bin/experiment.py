@@ -92,6 +92,12 @@ class CMIP5_Experiment ( Experiment ):
             self.__dict__[ nc_attr ] = nc_fid.getncattr ( nc_attr )
         nc_fid.close ()
 
+
+class MPIESM1_Experiment ( Experiment ):
+
+    def __init__ ( self, **kwargs ):
+        Experiment.__init__ ( self, **kwargs )
+
                                                                                                                 
 if __name__ == "__main__":
 
