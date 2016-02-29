@@ -30,7 +30,7 @@ MODULE mo_jsb4_forcing
   USE mo_kind,                 ONLY: wp
   USE mo_exception,            ONLY: message, message_text, finish
   USE mo_util_string,          ONLY: tolower, int2string
-  USE mo_physical_constants,   ONLY: tmelt, p0sl_bg, grav, rd, amco2, amd, cpd, vtmpc1
+  USE mo_physical_constants,   ONLY: tmelt, p0sl_bg, grav, rd, amco2, amd, cpd, vtmpc1, rdv
   USE mo_echam_convect_tables, ONLY: tlucua, jptlucu1, jptlucu2
   USE mo_orbit,                ONLY: inquire_declination
 
@@ -105,12 +105,18 @@ MODULE mo_jsb4_forcing
   INTEGER,PARAMETER  :: DAILY_    = 1
   INTEGER,PARAMETER  :: CONST_    = 2
   INTEGER,PARAMETER  :: TIMESTEP_ = 3
+  ! additional option for CO2
+  INTEGER,PARAMETER  :: GHG_SCENARIO_  = 5
 
   ! options controlling atmospheric humidity input data
+  INTEGER,PARAMETER :: NONE_ = 0         ! calculate specific humidity from temperature
   INTEGER,PARAMETER :: RH_   = 1         ! relative humidity as forcing data
   INTEGER,PARAMETER :: QAIR_ = 2         ! specific humidity as forcing data
 
   ! --- Namelist parameters
+  LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
+                                                             !! false: forcing is expected for all variables and cells (e.g. echam)
+
   CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data
   CHARACTER(len=128)     :: forcing_temp_frequ               !! Frequency of temperature forcing data (DAILY/CONST/TIMESTEP)
   REAL(wp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature
@@ -140,7 +146,7 @@ MODULE mo_jsb4_forcing
 
   CHARACTER(NF_MAX_NAME) :: forcing_co2_file_prefix          !! Prefix for files with CO2 data (unit: mol(CO2)/mol(air)
                                                              !! or kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit'
-  CHARACTER(len=128)     :: forcing_co2_frequ                !! Frequency of CO2 forcing data (DAILY/CONST/TIMESTEP)
+  CHARACTER(len=128)     :: forcing_co2_frequ                !! Frequency of CO2 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
   REAL(wp)               :: forcing_co2_const_co2            !! Constant value for CO2-concentration (unit: mol(CO2)/mol(air) or
                                                              !! kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit')
   REAL(wp)               :: forcing_co2_ocean                !! Constant value for ocean cells
@@ -159,14 +165,14 @@ MODULE mo_jsb4_forcing
   REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
   CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
-
   ! --- Structures for handling input data
   ! options relating forcing read from namelist
   TYPE forcing_options_type
-    LOGICAL  :: air_temperature_as_timestep !! Specifies if the air temperatures are given per timestep
-    INTEGER  :: type_of_qair_forcing        !! Possible values: see 'options controlling atmospheric humidity input data'
-    LOGICAL  :: precip_in_mm_per_day        !! Specifies units of precipitation input data: true: mm/day; false: kg/(m^2*s)
-    REAL(wp) :: conv_CO2_2_MassRatio        !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
+    LOGICAL  :: forcing_set_ocean_to_constants !! Specifies if external forcing is only defined for land cells (true)
+    LOGICAL  :: air_temperature_as_timestep    !! Specifies if the air temperatures are given per timestep
+    INTEGER  :: type_of_qair_forcing           !! Possible values: see 'options controlling atmospheric humidity input data'
+    LOGICAL  :: precip_in_mm_per_day           !! Specifies units of precipitation input data: true: mm/day; false: kg/(m^2*s)
+    REAL(wp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
   END TYPE forcing_options_type
   TYPE(forcing_options_type), SAVE :: forcing_options
 
@@ -209,7 +215,7 @@ CONTAINS
   !! @par History
   !! JN: used parts of jsbach3 mo_jsbalone_forcing: read_forcing / update_forcing and mo_jsbalone: update_driving
   !!
-  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, sinlat, coslat, lon, &
+  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
     & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, cos_zenith_angle, CO2_concentration, &
     & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, &
     & swnir_srf_down, swpar_srf_down, frac_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
@@ -218,6 +224,7 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: sinlat(:,:)
     REAL(wp), INTENT(IN)  :: coslat(:,:)
     REAL(wp), INTENT(IN)  :: lon(:,:)
+    REAL(wp), INTENT(IN)  :: evap_act2pot_proc(:,:)
     REAL(wp), INTENT(IN)  :: t_srf_proc(:,:)
     REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)
     REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)
@@ -260,7 +267,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: t_air(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), sat_spec_humidity(:,:), rel_humidity(:,:)
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
 
-    ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are not required - remove?
+    ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
     REAL(wp), ALLOCATABLE :: help1(:,:), help2(:,:)
 
     !---------------------------------------------------------------------------------
@@ -319,6 +326,16 @@ CONTAINS
     ! --- compute specific humidity
     ALLOCATE(sat_spec_humidity(ice, nblks))
     SELECT CASE(forcing_options%type_of_qair_forcing)
+    CASE(NONE_)
+      ! ratio of actual to potential evapotranspiration from the previous day
+      IF (forcing_options%air_temperature_as_timestep) THEN
+        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, evap_act2pot_proc(:,:), &
+          & MINVAL(forcing_input%air_temp%data_read(:,:,:), DIM=3), t_air(:,:))
+      ELSE
+        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, evap_act2pot_proc(:,:), tmin_data(:,:), t_air(:,:))
+      ENDIF
+      q_air(:,:) = fun_specific_humidity(temporary_data1(:,:), press_srf(:,:))
+
     CASE(RH_)
       ALLOCATE(rel_humidity(ice, nblks))
       CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%rel_humidity, rel_humidity)
@@ -326,7 +343,7 @@ CONTAINS
       hlp_r = MAXVAL(MAXVAL(rel_humidity,DIM=2))
       IF(hlp_r < 1._wp) THEN
         WRITE (message_text,*) 'Maximum value of relative humidity is ', hlp_r
-        CALL message(TRIM(routine), message_text)
+        CALL message(TRIM(routine), TRIM(message_text))
         CALL message(TRIM(routine),'relative humidity data probably represent fractions instead of percentages.')
       ENDIF
       ! Convert percentage data to fractional data:
@@ -399,6 +416,8 @@ CONTAINS
 
     ! --- CO2 concentration
     CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%CO2_concentr, CO2_concentration)
+    ! and convert to correct unit
+    CO2_concentration = CO2_concentration * forcing_options%conv_CO2_2_MassRatio
 
     ! --- compute remaining required input for jsb4 interface
     CALL get_remaining_input_for_jsb4_interface(nblks, ice, t_air_K, press_srf, q_air, wind_air, &
@@ -433,7 +452,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_forcing'
 
-    NAMELIST /jsb_forcing_nml/          &
+    NAMELIST /jsb_forcing_nml/    forcing_set_ocean_to_constants,                                                             &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
         & forcing_temp_unit,                                                                                                  &
       & forcing_precip_file_prefix, forcing_precip_frequ, forcing_precip_const_precip,                                        &
@@ -452,6 +471,8 @@ CONTAINS
 
     IF (my_process_is_stdio()) THEN
       ! ----- define default values for jsb_forcing_nml namelist parameters
+      forcing_set_ocean_to_constants = .TRUE.
+
       forcing_temp_file_prefix = 'climate_'
       forcing_temp_frequ = 'DAILY'
       forcing_temp_const_tmin = 0.0_wp !jsb3: HUGE(0.0_wp)
@@ -478,9 +499,9 @@ CONTAINS
 
       forcing_co2_file_prefix = 'climate_'
       forcing_co2_frequ = 'DAILY'
-      forcing_co2_const_co2 = 3.65e-4_wp
+      forcing_co2_const_co2 = 3.67e-4_wp
       forcing_co2_unit = unspecified_exp_unit
-      forcing_co2_ocean = 0.00033114_wp
+      forcing_co2_ocean = 3.67e-4_wp
 
       forcing_wind_file_prefix = 'climate_'
       forcing_wind_frequ = 'DAILY'
@@ -506,6 +527,15 @@ CONTAINS
       ! --- Temperature timestep (if daily two variables - max and min - need to be read)
       forcing_options%air_temperature_as_timestep &
         & = (frequency_key_to_constant_val('temperature', forcing_temp_frequ) .EQ. TIMESTEP_)
+      ! --- Boolean indicating if forcing is only specified for land cells
+      forcing_options%forcing_set_ocean_to_constants = forcing_set_ocean_to_constants
+      IF(forcing_options%forcing_set_ocean_to_constants) THEN
+        CALL message(TRIM(routine),'forcing_set_ocean_to_constants = true: ocean cells will be set to the specified constants. '&
+          & //'On ERROR: make sure that your jsbach4 land sea mask matches the land sea mask of your forcing!')
+      ELSE
+        CALL message(TRIM(routine),'forcing_set_ocean_to_constants = false: input is expected for all cells for all variables. '&
+          & //'On ERROR: make sure that your forcing is actually defined for all cells for all variables!')
+      ENDIF
       ! --- Precipitation unit
       forcing_options%precip_in_mm_per_day = forcing_precip_in_mm_per_day
       IF(forcing_options%precip_in_mm_per_day) THEN
@@ -519,8 +549,11 @@ CONTAINS
         forcing_options%type_of_qair_forcing = RH_
       CASE("qair")
         forcing_options%type_of_qair_forcing = QAIR_
+      CASE("none")
+        forcing_options%type_of_qair_forcing = NONE_
+        CALL message(TRIM(routine),'WARNING: QAIR will be diagnosed from Air temperature (type_of_qair_forcing = none)')
       CASE default
-        CALL finish(TRIM(routine),'Please specifiy either rh or qair for "FORCING_QAIR_TYPE" in jsb_forcing_nml')
+        CALL finish(TRIM(routine),'Please specifiy either rh, qair or none for "FORCING_QAIR_TYPE" in jsb_forcing_nml')
       END SELECT
       CALL message(TRIM(routine),"Type of air humidity forcing: "//TRIM(forcing_qair_type))
       ! --- CO2 unit
@@ -539,12 +572,12 @@ CONTAINS
         CALL message(TRIM(routine),'Assumption: unit is mol(CO2)/mol(DryAir). Verify your settings!')
         forcing_options%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg
       END SELECT
-      forcing_co2_const_co2 = forcing_co2_const_co2 * forcing_options%conv_CO2_2_MassRatio
     ENDIF
 
     ! ----- broadcast information
     IF (my_process_is_mpi_parallel()) THEN
       ! forcing options
+      CALL p_bcast(forcing_options%forcing_set_ocean_to_constants, p_io)
       CALL p_bcast(forcing_options%air_temperature_as_timestep, p_io)
       CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io)
       CALL p_bcast(forcing_options%type_of_qair_forcing, p_io)
@@ -615,8 +648,10 @@ CONTAINS
     CASE(QAIR_)
       CALL init_forcing_input_variable(qair_varname, forcing_qair_frequ, forcing_qair_ocean, &
         forcing_qair_file_prefix, forcing_qair_unit ,forcing_qair_const_rh, forcing_input%qair)
+    CASE(NONE_)
+      ! no extra forcing needs to be initialised
     CASE default
-      CALL finish(TRIM(routine),'Please specifiy either qair or rh for "forcing_qair_type" in jsb_forcing_nml')
+      CALL finish(TRIM(routine),'Please specifiy either qair, rh or none for "forcing_qair_type" in jsb_forcing_nml')
     END SELECT
     ! --- shortwave radiation
     CALL init_forcing_input_variable(shortwave_varname, forcing_sw_frequ, forcing_sw_ocean, &
@@ -650,39 +685,92 @@ CONTAINS
     LOGICAL ::  new_day_forcing      ! the dates in the forcing file shall correspond to the dates of stepwise output.
 
     INTEGER           :: year, month, day, hour, minute, second, ydate, time_steps_per_day, current_year, current_day
-    INTEGER           :: frequency, currentTimeStep, thisDayStart, thisDayEnd, ith_timestep
+    INTEGER           :: frequency, currentTimeStep, thisDayStart, thisDayEnd, ith_timestep, index_time, nc_var_id
     CHARACTER(len=8)  :: year_label
     CHARACTER(len=NF_MAX_NAME)  :: readUnit
 
     REAL(wp), POINTER :: return_pointer(:,:,:) !temporary pointer
+    REAL(wp) :: hlp_r(1)
 
-    INTEGER :: nc_dim_id, nc_var_id, status, index_time
     TYPE(t_input_file) :: input_file
 
     !---------------------------
     frequency = forcing_input_variable%frequency
 
+    ! ----- in case of constant forcing, only set correct constants and retun
     IF(frequency .EQ. CONST_) THEN
-      ! For constant forcing, only set correct constants and retun
-      current_forcing_array = forcing_input_variable%constantValue
+      current_forcing_array(:,:) = forcing_input_variable%constantValue
       CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, current_forcing_array)
       RETURN
     ENDIF
 
-    !Assertion: Rest of the routine only implemented for daily or timestep frequency
-    IF ( (frequency .NE. TIMESTEP_) .AND. (frequency .NE. DAILY_) ) CALL finish(TRIM(routine), &
-      & 'Violation of assertion: routine only implemented for constant, daily or timestep frequency, please check program flow')
-    !Assertion: delta_time needs to be smaller or equal 86400
-    IF ((delta_time .GT. 86400._wp)) CALL finish(TRIM(routine), &
-      & 'Violation of assertion: Reading forcing data not implemented for delta_time > day.')
-
-    time_steps_per_day = 86400/INT(delta_time)
+    ! ----- Check times
     CALL get_date_components(next_date, year, month, day, hour, minute, second)
     CALL get_date_components (current_date,  year=current_year, day=current_day)
     new_year_forcing = (year /= current_year)
     new_day_forcing = (day /= current_day)
-
     WRITE(year_label,'(i8.4)') year
+    !Assertion: delta_time needs to be smaller or equal 86400
+    IF ((delta_time .GT. 86400._wp)) CALL finish(TRIM(routine), &
+      & 'Violation of assertion: Reading forcing data not implemented for delta_time > day.')
+    time_steps_per_day = 86400/INT(delta_time)
+
+    ! ----- CO2 ghg_scenario exception: in case of ghg_scenario a single file is used, which contains one CO2 value per year
+    IF ((TRIM(forcing_input_variable%variable_name) .EQ. CO2_varname) .AND. (frequency .EQ. GHG_SCENARIO_)) THEN
+      IF(lstart .OR. lresume) THEN
+        IF(my_process_is_stdio()) THEN
+          ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
+          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model_id)
+          CALL get_time_dimension(input_file%file_id, forcing_input_variable)
+          ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
+          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
+            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
+          CALL jsb_netcdf_close_file(input_file)
+        ENDIF
+
+        IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
+        ALLOCATE(forcing_input_variable%data_read(ice, nblks, time_steps_per_day))
+      ENDIF
+
+      IF(new_year_forcing .OR. lstart .OR. lresume) THEN
+        IF(my_process_is_stdio()) THEN
+          ! find current year in the timevalues
+          currentTimeStep = 1
+          DO WHILE (currentTimeStep .LE. forcing_input_variable%length_time_series)
+            IF ( year .EQ. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
+              EXIT
+            ENDIF
+            currentTimeStep = currentTimeStep + 1
+          ENDDO
+          ! Assert that year has been found
+          IF ( year .NE. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
+            CALL finish(TRIM(routine), 'The ghg_scenario file "'//TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) &
+              &//'" does not contain the required input year '//TRIM(ADJUSTL(year_label)))
+          ENDIF
+
+          ! get the data -- TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
+          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model_id)
+          CALL nf_check(nf_inq_varid(input_file%file_id, CO2_varname, nc_var_id))
+          CALL nf_check(nf_get_vara_double(input_file%file_id, nc_var_id, (/ currentTimeStep /), (/ 1 /), hlp_r ))
+          CALL jsb_netcdf_close_file(input_file)
+        ENDIF
+
+        IF(my_process_is_mpi_parallel()) THEN
+          CALL p_bcast(hlp_r, p_io)
+        ENDIF
+
+        forcing_input_variable%data_read(:,:,1) = hlp_r(1)
+      ENDIF
+
+      current_forcing_array(:,:) = forcing_input_variable%data_read(:,:,1)
+      RETURN
+    ENDIF
+
+    ! ----- For all other variables and frequencies:
+    !Assertion: Rest of the routine only implemented for daily or timestep frequency
+    IF ( (frequency .NE. TIMESTEP_) .AND. (frequency .NE. DAILY_) ) CALL finish(TRIM(routine), &
+      & 'Violation of assertion: routine only implemented for constant, daily or timestep frequency, please check program flow')
+
     ydate = ISIGN(1,year)*(IABS(year)*10000+month*100+day)
     ith_timestep = IMerge_HMS2Sec(hour, minute, second)/int(delta_time)+1 !+1 because 00:00/X => 0; and 1 based vector
     ! TODO: test in case of lresume
@@ -691,40 +779,12 @@ CONTAINS
     IF (new_year_forcing .OR. lstart .OR. lresume) THEN
       IF(my_process_is_stdio()) THEN
         input_file = jsb_netcdf_open_input( &
-          & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc') , model_id)
+          & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model_id)
 
-        !>>> TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions?
-        ! get length and content of the time dimenson/var
-        CALL nf_check(nf_inq_dimid(input_file%file_id,"time",nc_dim_id))
-        CALL nf_check(nf_inq_dimlen(input_file%file_id, nc_dim_id, forcing_input_variable%length_time_series))
-        IF(ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
-        ALLOCATE(forcing_input_variable%timevalues(forcing_input_variable%length_time_series))
-        CALL nf_check(nf_inq_varid(input_file%file_id, 'time', nc_var_id))
-        CALL nf_check(nf_get_vara_double(input_file%file_id, nc_var_id, (/ 1 /), &
-          & (/ forcing_input_variable%length_time_series /), forcing_input_variable%timevalues))
+        CALL get_time_dimension(input_file%file_id, forcing_input_variable)
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
-        IF (TRIM(forcing_input_variable%expectedUnit) .NE. TRIM(unspecified_exp_unit)) THEN
-          CALL nf_check(nf_inq_varid(input_file%file_id, TRIM(forcing_input_variable%variable_name), nc_var_id))
-          status = nf_get_att_text(input_file%file_id, nc_var_id, name_of_unit_attribute, readUnit)
-          IF (status /= NF_NOERR) THEN
-            CALL message(TRIM(routine), &
-                 & 'WARNING: netcdf error when accessing units attribute of variable '//TRIM(forcing_input_variable%variable_name))
-          ELSE
-            IF(TRIM(readUnit) .NE. TRIM(forcing_input_variable%expectedUnit)) THEN
-              IF(TRIM(readUnit) .EQ. TRIM(unspecified_exp_unit)) THEN
-                CALL message(TRIM(routine), &
-                  & 'WARNING: Forcing file does not contain the expected unit "' //TRIM(forcing_input_variable%expectedUnit) &
-                  & //'" but: "'//TRIM(unspecified_exp_unit)//'" for the variable '//TRIM(forcing_input_variable%variable_name))
-              ELSE
-                CALL finish(TRIM(routine), &
-                  & 'Forcing file does not contain the expected unit "' //TRIM(forcing_input_variable%expectedUnit) &
-                  & //'" but: "'//TRIM(readUnit)//'" for the variable '//TRIM(forcing_input_variable%variable_name))
-              ENDIF
-            ENDIF
-          ENDIF
-        ENDIF
-        !<<<
-
+        CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
+          & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
         ! TODO: further assertions? e.g. that lon lat are correct?
 
         currentTimeStep = 1
@@ -740,14 +800,26 @@ CONTAINS
           ENDIF
           currentTimeStep = currentTimeStep + 1
         ENDDO
+        ! Assert that current date has been found
+        IF (( currentTimeStep .GT. forcing_input_variable%length_time_series) &
+          & .OR. (( currentTimeStep .EQ. 1) .AND. ( ydate .NE. INT(forcing_input_variable%timevalues(1)))))  THEN
+          WRITE (message_text,*) 'The forcing file "'&
+            &//trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc') &
+            &//'" does not contain the required input date ',ydate,' for the variable "'&
+            &//TRIM(forcing_input_variable%variable_name)//'".'
+          CALL finish(TRIM(routine), message_text)
+        ENDIF
 
         CALL jsb_netcdf_close_file(input_file)
         forcing_input_variable%currentDayStart = thisDayStart
         forcing_input_variable%currentDayEnd = thisDayEnd
 
       ENDIF
+
+      IF(my_process_is_mpi_parallel()) THEN
         CALL p_bcast(forcing_input_variable%currentDayStart, p_io)
         CALL p_bcast(forcing_input_variable%currentDayEnd, p_io)
+      ENDIF
 
       IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
       ALLOCATE(forcing_input_variable%data_read(ice, nblks, time_steps_per_day))
@@ -778,7 +850,7 @@ CONTAINS
       ENDIF
       ! get data
       input_file = jsb_netcdf_open_input( &
-        & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc') , model_id)
+        & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model_id)
       return_pointer => jsb_netcdf_read_2d_time(input_file, forcing_input_variable%variable_name, &
         & start_time_step=thisDayStart, end_time_step=thisDayEnd, fill_array=forcing_input_variable%data_read)
       CALL jsb_netcdf_close_file(input_file)
@@ -856,10 +928,83 @@ CONTAINS
     CASE("timestep")
       frequency_key_to_constant_val = TIMESTEP_
     CASE default
-      CALL finish(TRIM(routine), 'Please specify a valid reading frequency in your namelist for the variable '//TRIM(variable_name))
+      ! Test for ghg scenario exception for CO2
+      IF ((variable_name .EQ. CO2_varname) .AND. (TRIM(tolower(forcing_frequ_keyword)) .EQ. "ghg_scenario")) THEN
+        frequency_key_to_constant_val = GHG_SCENARIO_
+      ELSE
+        CALL finish(TRIM(routine), 'Please specify a valid reading frequency for the variable '//TRIM(variable_name))
+      ENDIF
     END SELECT
     CALL message(TRIM(routine), 'Frequency for forcing variable "'//TRIM(variable_name)//'" is: '//TRIM(forcing_frequ_keyword))
   END FUNCTION frequency_key_to_constant_val
+
+  !>
+  !! @brief gets the length and the content of the time dimension
+  !!
+  !! @par History
+  !! JN (2016-02-25) first version
+  !TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
+  SUBROUTINE get_time_dimension(file_id, forcing_input_variable)
+
+    INTEGER, INTENT(IN)  :: file_id
+    TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
+
+    INTEGER :: nc_dim_id, nc_var_id
+
+    CALL nf_check(nf_inq_dimid(file_id, 'time', nc_dim_id))
+    CALL nf_check(nf_inq_dimlen(file_id, nc_dim_id, forcing_input_variable%length_time_series))
+    IF(ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
+    ALLOCATE(forcing_input_variable%timevalues(forcing_input_variable%length_time_series))
+    CALL nf_check(nf_inq_varid(file_id, 'time', nc_var_id))
+    CALL nf_check(nf_get_vara_double(file_id, nc_var_id, (/ 1 /), &
+      & (/ forcing_input_variable%length_time_series /), forcing_input_variable%timevalues))
+
+  END SUBROUTINE
+
+  !>
+  !! @brief tests if the read unit equals the expected unit (with some exception tests)
+  !!
+  !! @par History
+  !! JN (2016-02-25) first version
+  !TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
+  SUBROUTINE test_unit(file_id, variable_name, expectedUnit, readUnit)
+
+    INTEGER, INTENT(IN) :: file_id
+    CHARACTER(len=*),INTENT(IN) :: variable_name
+    CHARACTER(len=*),INTENT(IN) :: expectedUnit
+    CHARACTER(len=*),INTENT(IN) :: readUnit
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_unit'
+
+    INTEGER :: nc_var_id, status
+
+    IF (TRIM(expectedUnit) .NE. TRIM(unspecified_exp_unit)) THEN
+      CALL nf_check(nf_inq_varid(file_id, TRIM(variable_name), nc_var_id))
+      status = nf_get_att_text(file_id, nc_var_id, name_of_unit_attribute, readUnit)
+      IF (status /= NF_NOERR) THEN
+        CALL message(TRIM(routine), &
+             & 'WARNING: netcdf error when accessing units attribute of variable '//TRIM(variable_name))
+      ELSE
+        IF(TRIM(readUnit) .NE. TRIM(expectedUnit)) THEN
+          IF(TRIM(readUnit) .EQ. TRIM(unspecified_exp_unit)) THEN
+            CALL message(TRIM(routine), &
+              & 'WARNING: Forcing file does not contain the expected unit "' //TRIM(expectedUnit) &
+              & //'" but: "'//TRIM(unspecified_exp_unit)//'" for the variable '//TRIM(variable_name))
+          ELSEIF (SCAN(readUnit, ACHAR(0)) > 0) THEN
+            CALL message(TRIM(routine), 'WARNING: Forcing file contains unit with NULL character for variable '&
+              & //TRIM(variable_name)//' the expected unit "' //TRIM(expectedUnit) &
+              & //'" has therefore not been tested against the unit read from the file  "'//TRIM(readUnit)//'".')
+          ELSE
+            CALL finish(TRIM(routine), &
+              & 'Forcing file does not contain the expected unit "' //TRIM(expectedUnit) &
+              & //'" but: "'//TRIM(readUnit)//'" for the variable '//TRIM(variable_name))
+          ENDIF
+        ENDIF
+      ENDIF
+    ENDIF
+
+  END SUBROUTINE test_unit
+
 
   !>
   !! @brief calculates the remaining input required for jsbach4
@@ -1162,23 +1307,25 @@ CONTAINS
     REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
     REAL(wp), INTENT(OUT):: qsat(:)
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sat_specific_humidity'
+
     INTEGER :: i
     REAL(wp) :: vtmpc1
     INTEGER  :: it(1:temp_dim)
     REAL(wp) :: tluc(1:temp_dim)
 
-    vtmpc1 = 0.6077686814143877_wp
-    it = NINT(temp*1000._wp)
-
-    !Assertion: check tlucua bounds
+    !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
     DO i = 1,temp_dim
-      IF ((it(i) .LT. LBOUND(tlucua,dim=1)) .OR. (it(i) .GT. UBOUND(tlucua,dim=1))) THEN
+      IF ((temp(i) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)) .OR. (temp(i) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp))) THEN
         WRITE (message_text,*) &
-          & 'Index out of tlucua bounds (would give a seg. fault!) - index was: ', it(i), ' i.e. temp was: ', temp(i)
-        CALL finish('sat_specific_humidity', message_text)
+          & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
+          & '- temperature was: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
+        CALL finish(TRIM(routine), TRIM(message_text))
       ENDIF
     ENDDO
 
+    vtmpc1 = 0.6077686814143877_wp
+    it = NINT(temp*1000._wp)
     tluc = tlucua(it)
 
     WHERE (it >= jptlucu1 .AND. it <= jptlucu2)
@@ -1190,10 +1337,135 @@ CONTAINS
   END SUBROUTINE sat_specific_humidity
 
   !>
+  !! @brief Returns saturation specific humidity for given air and vapour pressure
+  !!
+  !! @par History
+  !! JN: copied from jsbach3: mo_jsbalone_forcing: specific_humidity
+  !
+  ! === specific_humidity() =======================================================================================================
+  !
+  ! Specific humidity is computed here by assuming that each component of a mixture of dry air and vapor can be considered as an
+  ! ideal gas. So, let m_d and m_v the masses of the two components in a fixed volume V. Then the specific humidity "q" is
+  ! defined as
+  ! (1) q = m_v/(m_v+m_d)
+  ! Closely related is the moisture mixing ratio "r"
+  ! (2) r = m_v/m_d
+  ! Hence,
+  ! (3) q = r/(1+r)
+  ! Next it is assumed that both, dray air and vapor behave like ideal gases:
+  ! (4) p_d*V = m_d*R_d*T and p_v*V = m_v*R_v*T,
+  ! where p_d is the partial pressure of the dry air and p_v the vapor pressure, R_d and R_v the gas constants and T the
+  ! temperature. Noting that air pressure "p" is the sum of the two partial pressures (p=p_d+p_v) the division of the two gas
+  ! equation by each other gives by using (2):
+  ! (5) r = eps*p_v/(p-p_v),
+  ! where eps=R_d/R_v is the ratio of gas constants. Entering ths into (3) one finally obtains for the specific humidity:
+  !                 p_v
+  ! (6) q = eps -------------
+  !             p-(1-eps)*p_v
+  !
+  PURE elemental FUNCTION fun_specific_humidity(vapour_pressure, air_pressure)
+    REAL(wp)            :: fun_specific_humidity !! (from [0,1])
+    REAL(wp),INTENT(in) :: vapour_pressure   !! [N/m^2]
+    REAL(wp),INTENT(in) :: air_pressure      !! air pressure at bottom [N/m^2]
+
+    !in jsbach3 rdv=eps
+    fun_specific_humidity = rdv*vapour_pressure/(air_pressure - (1._wp-rdv)*vapour_pressure)
+  END FUNCTION fun_specific_humidity
+
+  !>
+  !! @brief computes vapor pressure from actual and potential evapotranspiration
+  !!
+  !! @par History
+  !! JN: copied from jsbach3: mo_jsbalone_forcing: vapour_pressure_from_evapor
+  !
+  ! === vapour_pressure_from_evapor() =============================================================================================
+  !
+  ! Vapor pressure is computed according to a method described in [1] from actual and potential evapotranspiration.
+  ! Typically the mean vapor pressure at a day is approximately equal to the saturation vapor pressure at sunrise
+  ! "e_sat(T_min)", where temperature is at its minimum. Only in arid regions this approximation gets bad; in these regions
+  ! the saturation vapor pressure is not reached at sunrise. The following model accounts for this observation by using the
+  ! ratio of actual to potential evapotranspiration as a measure of aridity. Let "E_act(d)" and "E_pot(d)" denote the total
+  ! actual and total potential evapotranspiration at day "d" and "fe(d)" the ratio of these values (Eq. (22) in [1]):
+  ! (1) fe(d) = E_act(d)/E_pot(d).
+  ! For draught situations  E_pot(d)=infty so that fe(d)=0. In the other extreme, fe(d)=1, E_act(d)=E_pot(d), i.e. actual transpi-
+  ! ration is only limited by potential evapotranspiration and this means the climate is extremely wet (sufficient soil moisture
+  ! and finite capacity of the atmosphere to absorb water vapor). Let the vapor pressure at sunrise be (Eq. (21) in [1])
+  ! (2) e0_vap(d) = (h0 + (1-h0)*fe(d-1))*e_sat(T_min),
+  ! where "e_sat(T_min)" is the saturation vapor pressure at sunrise temperature "T_min", "fe(d-1)" the yesterdays
+  ! evapotranspiration ratio and "h0" a tuning parameter that has the meaning of the humidity at sunrise for total draught
+  ! (fe=0). Here the yesterdays value of the evapotranspiration ratio "fe" is taken. The vapor pressure "e_vap(t)" in the actual
+  ! timestep "t" is then estimated from the current temperature "T" by (Eq. (20) in [1])
+  ! (3) e_vap(t) = e0_vap(d) + h1*fe(d-1)*(e_sat(T)-e0_vap(d)),
+  ! where "h1" is another tuning constant that has the meaning of a daily amplitude of vapor pressure under extreme moist
+  ! conditions (fe=1). According to [1] one finds h0=0.96 and h1=0.49 (see pp. 65/66).
+  ! [1] W. Knorr, "Satellite remote sensing and modelling of the global CO2 exchange of land vegetation", Examensarbeit 49,
+  ! (Max Planck Institut fuer Meteorologie, Hamburg, 1998).
+  !
+  !vg>>
+  ! Above values for h0 and h1 lead to extremely moist conditions, especially in desert areas.
+  ! A comparison of qair from echam/jsbach output with qair calculated in this routine using different h0 values shows best
+  ! agreement for h0=0.6. The same h0 is found when comparing CRUNCEP qair with qair calculated from CRUNCEP temperatures in
+  ! this module. For desert studies it might be good to reduce h0 even further. As the specific humidity does not have a
+  ! significant diurnal cycle, h1 is set to 0.
+  !vg<<
+  FUNCTION vapour_pressure_from_evapor(nblks, ice, evapo_ratio_mean, Tmin, Tair)
+    INTEGER,  INTENT(IN) :: nblks, ice
+    REAL(wp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
+    REAL(wp), INTENT(IN) :: Tmin(:,:)              !! minimum temperature (= temperature at sunrise)
+    REAL(wp), INTENT(IN) :: Tair(:,:)              !! temperature at current time step
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':vapour_pressure_from_evapor'
+
+    REAL(wp), PARAMETER :: h0 = 0.6_wp  !! (0.96_wp) tuning constant for computing vapor pressure
+    REAL(wp), PARAMETER :: h1 = 0.0_wp  !! (0.49_wp) tuning constant for computing vapor pressure
+
+    REAL(wp) :: vapour_pressure_from_evapor(ice, nblks) !! the vapour pressure
+    REAL(wp) :: evapo_sat        ! saturation pressure at actual temperature
+    REAL(wp) :: evapo_sat_min    ! saturation pressure at minimum temperature of day (= at sunrise)
+    REAL(wp) :: e0_vap           ! vapor pressure at sunrise
+
+    INTEGER :: i,j
+
+    DO j = 1,nblks
+      DO i = 1,ice
+        !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
+        IF ((Tmin(i,j) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)-tmelt) &
+            & .OR. (Tmin(i,j) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp)-tmelt)) THEN
+          WRITE (message_text,*) &
+            & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
+            & '- tmin temperature was: ', Tmin(i,j), ' degC. One thing to check: consistency of land-sea mask and forcing.'
+          CALL finish(TRIM(routine), TRIM(message_text))
+        ENDIF
+        IF ((Tair(i,j) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)-tmelt) &
+            & .OR. (Tair(i,j) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp)-tmelt)) THEN
+          WRITE (message_text,*) &
+            & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
+            & '- air temperature was: ', Tmin(i,j), ' degC. One thing to check: consistency of land-sea mask and forcing.'
+          CALL finish(TRIM(routine), TRIM(message_text))
+        ENDIF
+
+        !jsb3: rdv = eps
+        evapo_sat_min = tlucua(INT(1000._wp * (Tmin(i,j) + tmelt)))/rdv ! saturation pressure at minimum temperature
+        evapo_sat     = tlucua(INT(1000._wp * (Tair(i,j) + tmelt)))/rdv ! saturation pressure at actual temperature
+        e0_vap = evapo_sat_min * (h0 + (1._wp - h0) * evapo_ratio_mean(i,j))                               ! Eq. (2) from above
+        vapour_pressure_from_evapor(i,j) = e0_vap + h1 * evapo_ratio_mean(i,j) * (evapo_sat - evapo_sat_min) ! Eq. (3) from above
+
+      ENDDO
+    ENDDO
+  END FUNCTION vapour_pressure_from_evapor
+
+
+  !>
   !! @brief sets all not land (i.e. not notsea ;)) cells to the given constant
   !!
   !! @par History
   !! First version: JN (20.01.16)
+  !
+  !   Some external forcing is only defined for land cells.
+  !   If the external forcing is only defined for land cells is specified by the namelist option
+  !   "forcing_options%forcing_set_ocean_to_constants". If true: ocean cells need to be replaced
+  !   by constants (reasonable values for the different variables) to ensure numeric stability.
+  !   If false: forcing is expected for all variables for all cells (e.g. forcing from echam)
   SUBROUTINE set_ocean_cells(nblks, ics, ice, model_id, constant, array)
 
     USE mo_jsb_tile_class,     ONLY: t_jsb_tile
@@ -1208,6 +1480,8 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_tile),  POINTER :: tile
+
+    IF (.NOT. forcing_options%forcing_set_ocean_to_constants) RETURN
 
     model => jsbach%models(model_id)%m
     tile => model%Get_top_tile()

@@ -57,7 +57,7 @@ CONTAINS
                            & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,&
                            & rough_h_srf, rough_m_srf,                                    &
                            & tte_corr,                                                    &
-                           & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
+                           & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif, evapopot)
 
     USE mo_veg_interface,     ONLY: update_vegetation_1, update_vegetation_2
     USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, &
@@ -120,6 +120,7 @@ CONTAINS
       & alb_nir_dir      (:), &
       & alb_vis_dif      (:), &
       & alb_nir_dif      (:)
+    REAL(wp), INTENT(out), OPTIONAL :: evapopot(:)
 
     ! Local variables
     !
@@ -232,15 +233,25 @@ CONTAINS
     CALL update_t_srf_asselin(tile, iblk, ics, ice, nc)
 
     ! Finally, give the required variables back to the atmosphere
-    CALL update_land2atm(tile, iblk, ics, ice,                                                                                  &
-      & t_srf=t_srf(:), t_eff_srf=t_eff_srf(:), qsat_srf=qsat_srf(:), s_srf=s_srf(:),                                           &
-      & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:),                                                               &
-      & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:),                                   &
-      & grnd_hflx=grnd_hflx(:), grnd_hcap=grnd_hcap,                                                                            &
-      & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &
-      & tte_corr=tte_corr(:),                                                                                                   &
-      & alb_vis_dir=alb_vis_dir(:), alb_nir_dir=alb_nir_dir(:), alb_vis_dif=alb_vis_dif(:), alb_nir_dif=alb_nir_dif(:))
-
+    IF (PRESENT(evapopot)) THEN
+      CALL update_land2atm(tile, iblk, ics, ice,                                                                                  &
+        & t_srf=t_srf(:), t_eff_srf=t_eff_srf(:), qsat_srf=qsat_srf(:), s_srf=s_srf(:),                                           &
+        & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:), evapopot=evapopot(:),                                         &
+        & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:),                                   &
+        & grnd_hflx=grnd_hflx(:), grnd_hcap=grnd_hcap,                                                                            &
+        & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &
+        & tte_corr=tte_corr(:),                                                                                                   &
+        & alb_vis_dir=alb_vis_dir(:), alb_nir_dir=alb_nir_dir(:), alb_vis_dif=alb_vis_dif(:), alb_nir_dif=alb_nir_dif(:))
+    ELSE
+      CALL update_land2atm(tile, iblk, ics, ice,                                                                                  &
+        & t_srf=t_srf(:), t_eff_srf=t_eff_srf(:), qsat_srf=qsat_srf(:), s_srf=s_srf(:),                                           &
+        & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:),                                                               &
+        & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:),                                   &
+        & grnd_hflx=grnd_hflx(:), grnd_hcap=grnd_hcap,                                                                            &
+        & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &
+        & tte_corr=tte_corr(:),                                                                                                   &
+        & alb_vis_dir=alb_vis_dir(:), alb_nir_dir=alb_nir_dir(:), alb_vis_dif=alb_vis_dif(:), alb_nir_dif=alb_nir_dif(:))
+    ENDIF
 !!$    IF (iblk == 1) CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' on PE '//int2string(p_pe)//' completed.', &
 !!$                                all_print=.TRUE.)
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')

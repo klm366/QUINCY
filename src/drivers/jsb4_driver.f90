@@ -18,6 +18,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_model_init,     ONLY: init_model
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
+  USE mo_jsb_time,           ONLY: is_newday
   USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -119,12 +120,17 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: fact_q_air_proc(:,:)
   REAL(wp), ALLOCATABLE :: fact_qsat_srf_proc(:,:)
   REAL(wp), ALLOCATABLE :: rough_h_srf_proc(:,:)
+  REAL(wp), ALLOCATABLE :: evap_act2pot_proc(:,:)
+!  REAL(wp), ALLOCATABLE :: evap_act_sum_proc(:,:)
+!  REAL(wp), ALLOCATABLE :: evap_pot_sum_proc(:,:)
+
 
   !! JSB4 interface variables - output
   REAL(wp), ALLOCATABLE :: t_eff_srf(:)
   REAL(wp), ALLOCATABLE :: qsat_srf(:)
   REAL(wp), ALLOCATABLE :: s_srf(:)
   REAL(wp), ALLOCATABLE :: evapotrans(:)
+  REAL(wp), ALLOCATABLE :: evapopot(:)
   REAL(wp), ALLOCATABLE :: latent_hflx(:)
   REAL(wp), ALLOCATABLE :: sensible_hflx(:)
   REAL(wp), ALLOCATABLE :: grnd_hflx(:)
@@ -228,12 +234,16 @@ PROGRAM jsb4_driver
   ALLOCATE(fact_q_air_proc(nproma, nblks))
   ALLOCATE(fact_qsat_srf_proc(nproma, nblks))
   ALLOCATE(rough_h_srf_proc(nproma, nblks))
+  ALLOCATE(evap_act2pot_proc(nproma, nblks))
+!  ALLOCATE(evap_act_sum_proc(nproma, nblks))
+!  ALLOCATE(evap_pot_sum_proc(nproma, nblks))
 
   ! output
   ALLOCATE(t_eff_srf(nproma))
   ALLOCATE(qsat_srf(nproma))
   ALLOCATE(s_srf(nproma))
   ALLOCATE(evapotrans(nproma))
+  ALLOCATE(evapopot(nproma))
   ALLOCATE(latent_hflx(nproma))
   ALLOCATE(sensible_hflx(nproma))
   ALLOCATE(grnd_hflx(nproma))
@@ -267,6 +277,10 @@ PROGRAM jsb4_driver
     fact_q_air_proc = 0.5_wp
     fact_qsat_srf_proc = 0.5_wp
     rough_h_srf_proc = 1._wp
+    evap_act2pot_proc = 1._wp
+
+!    evap_act_sum_proc = 0._wp
+!    evap_pot_sum_proc = 0._wp
   ENDIF
 
   IF(jsbach_is_restarted()) THEN
@@ -285,7 +299,11 @@ PROGRAM jsb4_driver
       fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, fact_q_air)
       fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, fact_qsat_srf)
       rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, rough_h_srf)
+
+      ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
+      evap_act2pot_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, evapotrans) / dsl4jsb_var2D_onChunk(SRF, evapopot)
     ENDDO
+
   ENDIF
 
   CALL init_output
@@ -320,14 +338,13 @@ PROGRAM jsb4_driver
       CALL solar_parameters(decl_sun, dist_sun, time_of_day, sinlon, sinlat, coslon, coslat, &
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
-      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, &
+      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, cos_zenith_angle, CO2_concentration, &
         & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
         & frac_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
     ENDIF
 
     DO iblk = 1, nblks
-
 ! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
 !   Else would need large refactoring and:
 !          IF ( iblk == nblks ) THEN
@@ -350,8 +367,23 @@ PROGRAM jsb4_driver
         & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
         & rough_h_srf_proc(:,iblk), rough_m_srf(:), tte_corr(:), alb_vis_dir(:), alb_nir_dir(:), &
-        & alb_vis_dif(:), alb_nir_dif(:))
+        & alb_vis_dif(:), alb_nir_dif(:), evapopot(:))
+
+      IF (.NOT. read_interface_vars) THEN
+        ! TODO: if really required (only ERA-interim forcing data):
+        ! To ensure restart identity, the daily evap_act_sum and evap_pot_sum would need to be calculated in jsbach!
+        ! => for now the instantaneous values are used instead of the daily sums, to ensure restart identity
+        evap_act2pot_proc(:,iblk) = MIN(evapotrans(:),-EPSILON(1._wp)) / MIN(evapopot(:),  -EPSILON(1._wp))
+!        evap_act_sum_proc(:,iblk) = evap_act_sum(:,iblk) + MIN(evapotrans(:),-EPSILON(1._wp))
+!        evap_pot_sum_proc(:,iblk) = evap_pot_sum(:,iblk) + MIN(evapopot(:),  -EPSILON(1._wp))
+      ENDIF
     ENDDO
+
+!    IF ((.NOT. read_interface_vars) .AND. is_newday()) THEN
+!      evap_act2pot_proc = evap_act_sum_proc / evap_pot_sum_proc
+!      evap_act_sum_proc = 0._wp
+!      evap_pot_sum_proc = 0._wp
+!    ENDIF
 
     CALL out_streams
 
@@ -403,7 +435,8 @@ PROGRAM jsb4_driver
 
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)
-    DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc)
+    DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, evap_act2pot_proc)
+    !DEALLOCATE(evap_act_sum_proc, evap_pot_sum_proc)
   ENDIF
 
   ! Stop MPI
