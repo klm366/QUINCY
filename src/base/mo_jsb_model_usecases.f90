@@ -19,7 +19,7 @@ MODULE mo_jsb_model_usecases
   USE mo_hsm_class,          ONLY: t_Hsm, t_State
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,           ONLY: Get_Grid
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile
+  USE mo_jsb_tile,           ONLY: t_jsb_tile
 
   IMPLICIT NONE
   PRIVATE
@@ -140,13 +140,13 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
-    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,LAND2ATM,RAD/), &
+    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,LAND2ATM/), &
       varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
     model%top => box_tile
 !!$    model%hsm => t_Hsm('hsm', box_tile)
 
       srf_tile => t_jsb_tile('srf', 'Srf tile', &
-        & processes=(/SRF/), process_actions=(/ON_TILE_/), &
+        & processes=(/SRF,RAD/), process_actions=(/ON_TILE_,ON_LEAFS_/), &
 !!$                          & processes=(/SRF/), process_actions=(/ON_SUBTREE_/), &
         & varlist_name=model%shortname, parent=box_tile)
 
@@ -166,6 +166,9 @@ CONTAINS
     CALL lake_tile%Print()
 
     NULLIFY(box_tile)
+
+    ! Temporary for testing
+    CALL model%Queue_task(RAD, "radiation_surface")
 
   END SUBROUTINE init_usecase_tiles
 

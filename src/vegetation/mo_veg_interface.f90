@@ -17,14 +17,17 @@ MODULE mo_veg_interface
   USE mo_exception,          ONLY: message, finish
   USE mo_util,               ONLY: int2string
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile
-  USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
 
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
+  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_process_class,  ONLY: t_jsb_process
+  USE mo_jsb_task_class,     ONLY: t_jsb_process_task
+
   dsl4jsb_Use_processes VEG, SOIL, SRF, ATM2LAND
-  dsl4jsb_Use_config(veg)
-  dsl4jsb_Use_config(soil)
+  dsl4jsb_Use_config(VEG)
+  dsl4jsb_Use_config(SOIL)
 
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
 !!$  dsl4jsb_Use_memory(atm2land)
@@ -36,22 +39,36 @@ MODULE mo_veg_interface
   PRIVATE
 
   PUBLIC :: update_vegetation_1, update_vegetation_2
+  PUBLIC :: t_veg_process
+
+  TYPE, EXTENDS(t_jsb_process) :: t_veg_process
+  CONTAINS
+    PROCEDURE :: Register_tasks => Register_veg_tasks
+  END TYPE t_veg_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_interface'
 
 CONTAINS
 
-  SUBROUTINE update_vegetation_1( tile, iblk, ics, ice, nc)
+  SUBROUTINE Register_veg_tasks(this, model_id)
+
+    CLASS(t_veg_process), INTENT(inout) :: this
+    INTEGER, INTENT(in) :: model_id
+
+    !CALL this%Register_task(tsk_radiation_surface(name="radiation_surface", process_id=VEG))
+
+  END SUBROUTINE Register_veg_tasks
+
+  SUBROUTINE update_vegetation_1(tile, config, iblk, ics, ice, nc)
 
     USE mo_veg_process, ONLY: canopy_conductance, water_stress_factor
     USE mo_veg_util,    ONLY: water_in_root_zone
     USE mo_phy_schemes, ONLY: qsat
 
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
-
-    TYPE(t_jsb_model), POINTER    :: model
 
     dsl4jsb_Def_config(VEG)
     dsl4jsb_Def_config(SOIL)
@@ -88,8 +105,6 @@ CONTAINS
 !!$    p_pe = get_my_global_mpi_id()
 !!$    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update on PE '//int2string(p_pe), all_print=.TRUE.)
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of vegetation_1 ')
-
-    model => get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(VEG)
     dsl4jsb_Get_config(SOIL)
@@ -157,7 +172,7 @@ CONTAINS
 
   END SUBROUTINE update_vegetation_1
 
-  SUBROUTINE update_vegetation_2( tile, iblk, ics, ice, nc)
+  SUBROUTINE update_vegetation_2(tile, config, iblk, ics, ice, nc)
 
     USE mo_veg_process, ONLY: canopy_albedo, foliage_projected_cover
     USE mo_jsb_time,    ONLY: get_time_interpolation_weights
@@ -166,10 +181,9 @@ CONTAINS
       albedo_snow_min = 0.4_wp,  & !< Minimum possible snow albedo   ! Temporary, will depend on vegetation type
       albedo_snow_max = 0.8_wp     !< Maximum possible snow albedo   ! Temporary
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
-
-    TYPE(t_jsb_model), POINTER    :: model
 
     dsl4jsb_Real2D_onChunk :: t_srf
     dsl4jsb_Real2D_onChunk :: lai
@@ -202,8 +216,6 @@ CONTAINS
 
     p_pe = get_my_global_mpi_id()
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
-
-    model => get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !

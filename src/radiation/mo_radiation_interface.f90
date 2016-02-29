@@ -17,14 +17,10 @@ MODULE mo_radiation_interface
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_hsm_class,          ONLY: t_hsm
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile
-!!$  USE mo_jsb_memory_class,   ONLY: t_jsb_memory_p, t_jsb_memory
-  USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_process_class,  ONLY: t_jsb_process_task
-!  USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
-!  USE mo_util,               ONLY: one_of, int2string
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_process_class,  ONLY: t_jsb_process
+  USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   dsl4jsb_Use_processes SRF, SOIL, VEG, ATM2LAND, RAD
   dsl4jsb_Use_config(SRF)
@@ -41,24 +37,60 @@ MODULE mo_radiation_interface
   IMPLICIT NONE
   dsl4jsb_Def_config(RAD)
   dsl4jsb_Def_memory(RAD)
+  !CLASS(t_rad_memory), POINTER :: rad__mem
   dsl4jsb_Def_memory(VEG)
   dsl4jsb_Def_memory(ATM2LAND)
 
   PRIVATE
 
-  PUBLIC :: radiation_surface
+  PUBLIC :: t_Radiation_process
 
-  TYPE, EXTENDS(t_jsb_process_task) :: radiation_surface
+  TYPE, EXTENDS(t_jsb_process) :: t_Radiation_process
+  CONTAINS
+    PROCEDURE :: Register_tasks => Register_radiation_tasks
+  END TYPE t_Radiation_process
+
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_Radiation_surface
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_radiation_surface
     PROCEDURE, NOPASS :: Aggregate => aggregate_radiation_surface
-  END TYPE radiation_surface
+  END TYPE tsk_Radiation_surface
+
+  INTERFACE tsk_Radiation_surface
+    PROCEDURE Create_task_radiation_surface
+  END INTERFACE tsk_Radiation_surface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_radiation_interface'
 
 CONTAINS
 
-  SUBROUTINE update_radiation_surface(hsm, iblk, ics, ice, nc)
+  FUNCTION Create_task_radiation_surface(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_radiation_surface::return_ptr)
+
+    return_ptr%name = 'radiation_surface'
+    return_ptr%process_id = RAD
+    return_ptr%owner_model_id = model_id
+! !!$    return_ptr%Integrate => update_radiation_surface
+! !!$    return_ptr%Aggregate => aggregate_radiation_surface
+
+  END FUNCTION Create_task_radiation_surface
+
+  SUBROUTINE Register_radiation_tasks(this, model_id)
+
+    CLASS(t_Radiation_process), INTENT(inout) :: this
+    INTEGER, INTENT(in) :: model_id
+
+!!$    CALL this%Register_task(tsk_Radiation_surface(name="radiation_surface", process_id=RAD))
+    CALL this%Register_task(tsk_Radiation_surface(model_id))
+
+  END SUBROUTINE Register_radiation_tasks
+
+!!$  SUBROUTINE update_radiation_surface(model_id, tile_id, iblk, ics, ice, nc)
+  SUBROUTINE update_radiation_surface(tile, config, options)
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
@@ -66,14 +98,12 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
-    CLASS(t_hsm),              INTENT(inout) :: hsm
-    INTEGER,           INTENT(in) :: iblk, ics, ice
-    INTEGER, OPTIONAL, INTENT(in) :: nc
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options), INTENT(in) :: options
 
     !-----------------------------------------------------------------------
     ! POINTERS TO VARIABLES IN MEMORY
-    TYPE(t_jsb_model), POINTER    :: model
-    CLASS(t_jsb_tile), POINTER :: tile
 
     dsl4jsb_Def_memory(ATM2LAND)
     dsl4jsb_Def_memory(SRF)
@@ -92,23 +122,19 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: alb_nir_srf
     dsl4jsb_Real2D_onChunk :: t_srf
 
+    INTEGER :: iblk, ics, ice, nc
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation_surface'
 
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+    !
     !-----------------------------------------------------------------------
     !
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface radiation')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface radiation on tile '//TRIM(tile%name))
 
-    SELECT TYPE(t=>hsm%current)
-    CLASS IS(t_jsb_tile)
-      tile => t
-      model => Get_model(tile%owner_model_id)
-    END SELECT
-
-    ! Get reference to variables for current block
-    !
-!!$    CALL Get_process_memory(mem_p, ATM2LAND, atm2land__mem)
-!!$    CALL Get_process_memory(mem_p, RAD, rad__mem)
-!!$    CALL Get_process_memory(mem_p, SRF, srf__mem)
     dsl4jsb_Get_memory(ATM2LAND)
     dsl4jsb_Get_memory(RAD)
     dsl4jsb_Get_memory(SRF)
@@ -138,25 +164,27 @@ CONTAINS
                                     lw_srf_net(:),        & ! output
                                     rad_srf_net(:) )        ! output
 
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished update of surface radiation')
 
   END SUBROUTINE update_radiation_surface
 
-  SUBROUTINE aggregate_radiation_surface(hsm, iblk, ics, ice, nc)
+  SUBROUTINE aggregate_radiation_surface(tile, config, options)
 
-    CLASS(t_hsm),              INTENT(inout) :: hsm
-    INTEGER,             INTENT(in)    :: iblk, ics, ice
-    INTEGER, OPTIONAL,   INTENT(in)    :: nc
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER    :: model
-    CLASS(t_jsb_tile), POINTER :: tile
+!!$    TYPE(t_jsb_model), POINTER :: model
+!!$    CLASS(t_jsb_tile), POINTER :: tile
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_radiation_surface'
 
-    SELECT TYPE(t=>hsm%current)
-      CLASS IS(t_jsb_tile)
-      tile => t
-      model => Get_model(tile%owner_model_id)
-    END SELECT
+    INTEGER :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
 
   END SUBROUTINE aggregate_radiation_surface
 

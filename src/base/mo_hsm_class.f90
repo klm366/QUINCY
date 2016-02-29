@@ -10,11 +10,12 @@
 MODULE mo_hsm_class
 
   USE mo_exception, ONLY: message, message_text, finish
+  USE mo_util,      ONLY: int2string
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_Message, t_Action, t_Queue, t_State, t_Hsm, Handler_interface
+  PUBLIC :: t_Message, t_Action, t_State, t_Hsm
 
   INTEGER, PARAMETER :: MAX_STATE_NESTING = 10
   INTEGER, PARAMETER :: MAX_ACTIONS = 5
@@ -24,21 +25,19 @@ MODULE mo_hsm_class
   CONTAINS
     PROCEDURE :: Is_equal        => Is_equal_action
     GENERIC   :: OPERATOR(==)    => Is_equal
+    PROCEDURE :: Is_not_equal    => Is_not_equal_action
+    GENERIC   :: OPERATOR(/=)    => Is_not_equal
   END TYPE t_Action
 
   INTERFACE t_Action
     PROCEDURE Construct_action
   END INTERFACE t_Action
 
-  TYPE, ABSTRACT :: t_Message
+  TYPE t_Message
     CHARACTER(len=50)       :: name = ''
     TYPE(t_Action), POINTER :: action => NULL()
   END TYPE t_Message
 
-  TYPE t_Queue
-    CLASS(t_Message), POINTER :: message
-    TYPE(t_Queue),    POINTER :: next => NULL()
-  END TYPE t_Queue
   !>
   !! Type for States of the State Machine
   !!
@@ -49,8 +48,6 @@ MODULE mo_hsm_class
     CHARACTER(len=50)           :: description
 !!$    INTEGER                     :: id
     INTEGER                     :: path(MAX_STATE_NESTING) = -1
-    !
-    CLASS(t_Queue), POINTER     :: queue => NULL()
     !
     LOGICAL                     :: visited = .FALSE.
     CLASS(t_State), POINTER     :: parent       => NULL()
@@ -71,7 +68,9 @@ MODULE mo_hsm_class
     PROCEDURE :: Print_state
     PROCEDURE :: Is_equal        => Is_equal_state
     GENERIC   :: OPERATOR(==)    => Is_equal
-    PROCEDURE(Handler_interface), DEFERRED :: Handler
+    PROCEDURE :: Is_not_equal    => Is_not_equal_state
+    GENERIC   :: OPERATOR(/=)    => Is_not_equal
+    PROCEDURE(Handler_interface), DEFERRED :: Handler             ! State's handler function
     PROCEDURE :: Process_message => Process_message_state
   END TYPE t_State
 
@@ -80,6 +79,9 @@ MODULE mo_hsm_class
 !!$    PROCEDURE Construct_state
 !!$  END INTERFACE t_State
 
+  TYPE t_State_p
+    CLASS(t_State), POINTER :: p
+  END TYPE t_State_p
   !>
   !! Type for Hierarchical State Machine
   !!
@@ -92,17 +94,25 @@ MODULE mo_hsm_class
     CLASS(t_State), POINTER     :: current => NULL()    !< Current state
     CLASS(t_State), POINTER     :: next    => NULL()    !< Next state (non_null if transition taken)
     CLASS(t_State), POINTER     :: source  => NULL()    !< Source state during last transition
-    TYPE(t_Action)              :: actions(MAX_ACTIONS) !< List of possible actions (events)
+    TYPE(t_Action), POINTER     :: actions(:) => NULL() !< List of possible actions (events)
+    INTEGER                     :: levels_to_lca = -1   !< Temporary storage
   CONTAINS
     PROCEDURE :: Init_hsm
     PROCEDURE :: Get_current       => Get_current_hsm
-    PROCEDURE :: Get_levels_to_LCA => Get_levels_to_LCA_hsm
+    PROCEDURE :: Goto              => Goto_state_hsm
     PROCEDURE :: Goto_next         => Goto_next_state_hsm
+    PROCEDURE :: Get_next          => Get_next_state_hsm
     PROCEDURE :: Get_state         => Get_state_hsm
-    PROCEDURE :: Reset_state       => Reset_state_hsm
+    PROCEDURE :: Start_state       => Start_state_hsm
+    PROCEDURE :: Reset             => Reset_hsm
     PROCEDURE :: Register_action   => Register_action_hsm
+    PROCEDURE :: Get_action        => Get_action_hsm
     PROCEDURE :: Print_actions     => Print_actions_hsm
     PROCEDURE :: Process_message   => Process_message_hsm        ! State machine engine
+    PROCEDURE :: Process_entry_to_next
+    PROCEDURE :: Get_levels_to_LCA => Get_levels_to_LCA_hsm
+    PROCEDURE :: Process_exit_to_LCA
+    PROCEDURE :: Start             => Start_hsm                  ! Start state machine
   END TYPE t_Hsm
 
   ! Derived-type constructor
@@ -110,12 +120,21 @@ MODULE mo_hsm_class
 !!$    PROCEDURE Construct_hsm
 !!$  END INTERFACE t_Hsm
 
+!!$  ABSTRACT INTERFACE
+!!$    FUNCTION Handler_interface(this, hsm, msg_in) RESULT(msg_out)
+!!$      IMPORT :: t_State, t_Hsm, t_Message
+!!$      CLASS(t_State),   INTENT(inout) :: this
+!!$      CLASS(t_Hsm),     POINTER       :: hsm
+!!$      CLASS(t_Message), POINTER       :: msg_in
+!!$      CLASS(t_Message), POINTER       :: msg_out
+!!$    END FUNCTION Handler_interface
+!!$  END INTERFACE
   ABSTRACT INTERFACE
     FUNCTION Handler_interface(this, hsm, msg_in) RESULT(msg_out)
       IMPORT :: t_State, t_Hsm, t_Message
       CLASS(t_State),   INTENT(inout) :: this
-      CLASS(t_Hsm),     POINTER       :: hsm
-      CLASS(t_Message), POINTER       :: msg_in
+      CLASS(t_Hsm),     INTENT(in)    :: hsm
+      CLASS(t_Message), INTENT(in)    :: msg_in
       CLASS(t_Message), POINTER       :: msg_out
     END FUNCTION Handler_interface
   END INTERFACE
@@ -190,7 +209,7 @@ CONTAINS
     IF (.NOT. PRESENT(parent)) THEN
       this%path(:) = -1
       this%path(1) = 1
-      CALL this%Print_state()
+      !CALL this%Print_state()
       RETURN
     END IF
 
@@ -328,17 +347,43 @@ CONTAINS
 
   END FUNCTION Is_equal_state
 
+  FUNCTION Is_not_equal_state(this, that) RESULT(return_value)
+
+    CLASS(t_State), INTENT(in) :: this, that
+    LOGICAL                    :: return_value
+
+    return_value = ANY(this%path /= that%path)
+
+  END FUNCTION Is_not_equal_state
+
+!!$  FUNCTION Process_message_state(this, hsm, msg) RESULT(return_ptr)
+!!$
+!!$    CLASS(t_State),   INTENT(inout) :: this
+!!$    CLASS(t_Hsm),     POINTER       :: hsm
+!!$    CLASS(t_Message), POINTER       :: msg
+!!$    CLASS(t_Message), POINTER       :: return_ptr
+!!$
+!!$    CALL this%Print_state()
+!!$    return_ptr => this%Handler(hsm, msg)
+!!$
+!!$  END FUNCTION Process_message_state
   FUNCTION Process_message_state(this, hsm, msg) RESULT(return_ptr)
 
     CLASS(t_State),   INTENT(inout) :: this
-    CLASS(t_Hsm),     POINTER       :: hsm
-    CLASS(t_Message), POINTER       :: msg
+    CLASS(t_Hsm),     INTENT(in)    :: hsm
+    CLASS(t_Message), INTENT(in)    :: msg
+!!$    CLASS(t_Message), POINTER       :: msg
     CLASS(t_Message), POINTER       :: return_ptr
 
-    CALL this%Print_state()
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_message_state'
+
+!!$    this%msg => msg
+!!$    this%hsm => hsm
+    !CALL this%Print_state()
     return_ptr => this%Handler(hsm, msg)
 
   END FUNCTION Process_message_state
+
   ! ===============================================================================
   ! Methods for hsm class
   ! ===============================================================================
@@ -349,11 +394,13 @@ CONTAINS
 
     INTEGER :: i
 
+    ALLOCATE(self%actions(MAX_ACTIONS))
     DO i=1,MAX_ACTIONS
       self%actions(i) = t_Action("")
     END DO
     CALL self%Register_action(t_Action("ENTER"))
     CALL self%Register_action(t_Action("EXIT"))
+    CALL self%Register_action(t_Action("START"))
 
     self%name = TRIM(name)
 
@@ -368,17 +415,17 @@ CONTAINS
 
   END FUNCTION Get_current_hsm
 
-  SUBROUTINE Reset_state_hsm(this)
+  SUBROUTINE Reset_hsm(this)
 
     CLASS(t_hsm), INTENT(inout) :: this
 
     this%current => this%top
     this%top%visited = .FALSE.
 
-  END SUBROUTINE Reset_state_hsm
+  END SUBROUTINE Reset_hsm
 
-  ! Set Hsm to next state in pre-order traversal
-  FUNCTION Goto_next_state_hsm(this) RESULT(return_ptr)
+  ! Get next state in pre-order traversal
+  FUNCTION Get_next_state_hsm(this) RESULT(return_ptr)
 
     CLASS(t_hsm), INTENT(inout) :: this
     CLASS(t_State), POINTER     :: return_ptr
@@ -390,21 +437,32 @@ CONTAINS
         RETURN
       ELSE
         IF (ASSOCIATED(this%current%next_sibling)) THEN
-          this%current => this%current%next_sibling
+          return_ptr => this%current%next_sibling
         ELSE
-          this%current => this%current%parent
+          return_ptr => this%current%parent
         END IF
       END IF
     ELSE                             ! First visit of this state during traversal
       IF (this%current%Has_children()) THEN
         this%current%visited = .TRUE.
-        this%current => this%current%first_child
+        return_ptr => this%current%first_child
       ELSE IF (ASSOCIATED(this%current%next_sibling)) THEN
-        this%current => this%current%next_sibling
+        return_ptr => this%current%next_sibling
       ELSE
-        this%current => this%current%parent
+        return_ptr => this%current%parent
       END IF
     END IF
+
+  END FUNCTION Get_next_state_hsm
+
+  ! Set Hsm to next state in pre-order traversal
+  FUNCTION Goto_next_state_hsm(this) RESULT(return_ptr)
+
+    CLASS(t_hsm), INTENT(inout) :: this
+    CLASS(t_State), POINTER     :: return_ptr
+
+    !this%current%visited = .NOT. this%current%visited
+    this%current => this%Get_next()
     return_ptr => this%current
 
   END FUNCTION Goto_next_state_hsm
@@ -419,9 +477,16 @@ CONTAINS
 
     INTEGER :: depth, i, j
 
+    IF (SIZE(path) > MAX_STATE_NESTING) &
+      & CALL finish(TRIM(routine), 'Path too long')
+
     return_ptr => this%top
 
-    depth = MINLOC(path, DIM=1) - 1
+    IF (ALL(path > 0)) THEN
+      depth = SIZE(path)
+    ELSE
+      depth = MINLOC(path, DIM=1) - 1
+    END IF
     DO i=2,depth
       return_ptr => return_ptr%first_child
       DO j=2,path(i)
@@ -433,43 +498,224 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Path to invalid state')
 
   END FUNCTION Get_state_hsm
+
+  ! State transition
+  SUBROUTINE Goto_state_hsm(this, that)
+
+    CLASS(t_hsm), INTENT(inout) :: this
+    CLASS(t_State), INTENT(in), TARGET :: that
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Goto_state_hsm'
+
+    IF (ASSOCIATED(this%next)) &
+      & CALL finish(TRIM(routine), 'Transition already in progress')
+
+    !CALL this%Process_exit_to_LCA(that)
+    this%levels_to_lca = this%Get_levels_to_LCA(that)
+    this%next => that
+
+  END SUBROUTINE Goto_state_hsm
   !>
-  !! Get number of levels from state machines current state to the least common
-  !! ancestor with some other state.
+  !! Get number of levels from state machines source state to the least common
+  !! ancestor with some other target state.
   !!
   FUNCTION Get_levels_to_LCA_hsm(this, that) RESULT(return_value)
 
-    CLASS(t_hsm),   INTENT(in) :: this
-    CLASS(t_State), INTENT(in) :: that
-    INTEGER                    :: return_value
+    CLASS(t_hsm),   INTENT(in)         :: this
+    CLASS(t_State), INTENT(in), TARGET :: that
+    INTEGER                            :: return_value
+
+    CLASS(t_State), POINTER :: sstate, tstate
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_levels_to_LCA_hsm'
 
     return_value = 0
 
+    sstate => this%source
+    IF (sstate == that) THEN
+      return_value = 1
+      RETURN
+    END IF
+
+    DO WHILE (ASSOCIATED(sstate))
+      tstate => that
+      DO WHILE (ASSOCIATED(tstate))
+        IF (sstate == tstate) EXIT
+        tstate => tstate%parent
+      END DO
+      return_value = return_value + 1
+      sstate => sstate%parent
+    END DO
+
+    CALL message(TRIM(routine), 'Levels to LCA from '//TRIM(this%source%name)//' to '//&
+      &                                                TRIM(that%name)//': '//int2string(return_value))
+
   END FUNCTION Get_levels_to_LCA_hsm
 
+  ! Take start transition (no states need to be exited)
+  SUBROUTINE Start_state_hsm(this, that)
+
+    CLASS(t_Hsm),   INTENT(inout)      :: this
+    CLASS(t_State), INTENT(in), TARGET :: that
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Start_state_hsm'
+
+    IF (ASSOCIATED(this%next)) &
+      & CALL finish(TRIM(routine), 'Transition already in progress')
+
+    this%next => that
+
+  END SUBROUTINE Start_state_hsm
+
+  SUBROUTINE Start_hsm(this)
+
+    CLASS(t_Hsm), INTENT(inout) :: this
+
+    TYPE(t_Message)           :: start_msg, entry_msg
+    CLASS(t_Message), POINTER :: tmp_msg
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Start_hsm'
+
+    start_msg%action => this%Get_action('START')
+    entry_msg%action => this%Get_action('ENTER')
+
+    this%current => this%top
+    this%next    => NULL()
+    tmp_msg => this%current%Process_message(this, entry_msg)
+
+    tmp_msg => this%current%Process_message(this, start_msg)
+    DO WHILE (ASSOCIATED(this%next))
+      CALL this%Process_entry_to_next()
+      this%current => this%next
+      NULLIFY(this%next)
+      tmp_msg => this%current%Process_message(this, start_msg)
+    END DO
+
+  END SUBROUTINE Start_hsm
   !
   ! State machine engine
   !
   SUBROUTINE Process_message_hsm(this, msg)
 
     CLASS(t_Hsm),     TARGET, INTENT(inout) :: this
-    CLASS(t_Message), POINTER       :: msg
+!!$    CLASS(t_Message), POINTER       :: msg
+    CLASS(t_Message), INTENT(in) :: msg
 
     CLASS(t_State),   POINTER :: state
-    CLASS(t_Message), POINTER :: new_msg
-    CLASS(t_Hsm),     POINTER :: hsm
+    CLASS(t_Message), POINTER :: new_msg, tmp_msg
+    TYPE(t_Message) :: start_msg
+    !CLASS(t_Hsm),     POINTER :: hsm
 
-    hsm => this
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_message_hsm'
 
+    !hsm => this
+    start_msg%action => this%Get_action('START')
+
+!!$    CALL this%Process_exit_to_LCA()
+
+    ALLOCATE(new_msg, source=msg)
     state => this%current
-    this%source => state
-
-!!$    new_msg => state%Process_message(hsm, msg)
-    new_msg => state%Handler(hsm, msg)
+    DO WHILE (ASSOCIATED(state))
+      this%source => state
+      new_msg => state%Process_message(this, new_msg)
+      CALL this%Process_exit_to_LCA()
+      IF (ASSOCIATED(this%next)) THEN      ! State transition taken (i.e. already exited to LCA)
+        ! Execute entry and start messages to target
+        CALL this%Process_entry_to_next()
+        this%current => this%next
+        NULLIFY(this%next)
+        tmp_msg => this%current%Process_message(this, start_msg)
+        DO WHILE (ASSOCIATED(this%next))
+          tmp_msg => this%current%Process_message(this, start_msg)
+          CALL this%Process_entry_to_next()
+          this%current => this%next
+          NULLIFY(this%next)
+        END DO
+        IF (.NOT. ASSOCIATED(new_msg)) THEN ! Message processed
+          EXIT
+        ELSE
+          state => this%current
+        END IF
+      ELSE                                ! No state transition taken
+        IF (ASSOCIATED(new_msg)) THEN
+          state => state%parent
+        ELSE
+          EXIT
+        END IF
+      END IF
+    END DO
 
   END SUBROUTINE Process_message_hsm
 
-  SUBROUTINE Register_action_hsm(this, action)
+  ! Process entry messages from LCA to target
+  SUBROUTINE Process_entry_to_next(this)
+
+    CLASS(t_Hsm), INTENT(inout) :: this
+
+    TYPE(t_Message) :: entry_msg
+    CLASS(t_Message), POINTER :: tmp_msg
+    CLASS(t_State), POINTER :: state
+    TYPE(t_State_p) :: entrypath(MAX_STATE_NESTING)
+    INTEGER         :: i, j
+
+    entry_msg%action => this%Get_action('ENTER')
+
+    i = 0
+    state => this%next
+    DO WHILE (state /= this%current)
+      i = i + 1
+      entrypath(i)%p => state
+      state => state%parent
+      IF (.NOT. ASSOCIATED(state)) EXIT
+    END DO
+
+    DO j=i,1,-1
+      state => entrypath(j)%p
+      tmp_msg => state%Process_message(this, entry_msg)
+    END DO
+
+  END SUBROUTINE Process_entry_to_next
+
+  ! Process exit messages from current state up to LCA with target state
+  ! (set during a previous state transition)
+!  SUBROUTINE Process_exit_to_lca(this, that)
+  SUBROUTINE Process_exit_to_lca(this)
+
+    CLASS(t_Hsm),   INTENT(inout) :: this
+!    CLASS(t_State), INTENT(in)    :: that
+
+    TYPE(t_Message)           :: exit_msg
+    CLASS(t_Message), POINTER :: tmp_msg
+    CLASS(t_State),   POINTER :: state
+    INTEGER                   :: i
+
+    IF (this%levels_to_lca == -1) RETURN
+
+    exit_msg%action => this%Get_action('EXIT')
+
+    state => this%current
+
+!!$    IF (ASSOCIATED(this%source)) THEN
+!!$      DO WHILE (state /= this%source)
+!!$        tmp_msg => state%Process_message(this, exit_msg)
+!!$        state => state%parent
+!!$        IF (.NOT. ASSOCIATED(state)) EXIT
+!!$      END DO
+!!$    END IF
+
+!    DO i=this%Get_levels_to_LCA(that),1,-1
+    DO i=this%levels_to_lca,1,-1
+      tmp_msg => state%Process_message(this, exit_msg)
+      state => state%parent
+      IF (.NOT. ASSOCIATED(state)) EXIT
+    END DO
+
+    this%current => state
+    this%levels_to_lca = -1
+
+  END SUBROUTINE Process_exit_to_lca
+
+    SUBROUTINE Register_action_hsm(this, action)
 
     CLASS(t_Hsm),   INTENT(inout) :: this
     CLASS(t_Action), INTENT(in)    :: action
@@ -489,6 +735,30 @@ CONTAINS
     END IF
 
   END SUBROUTINE Register_action_hsm
+
+  FUNCTION Get_action_hsm(this, name) RESULT(return_ptr)
+
+    CLASS(t_Hsm),     TARGET, INTENT(in) :: this
+    CHARACTER(len=*),         INTENT(in) :: name
+    CLASS(t_Action),  POINTER            :: return_ptr
+
+    INTEGER :: i
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_action_hsm'
+
+    return_ptr => NULL()
+
+    DO i=1,MAX_ACTIONS
+      IF (TRIM(this%actions(i)%name) == TRIM(name)) THEN
+        return_ptr => this%actions(i)
+        EXIT
+      END IF
+    END DO
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      & CALL finish(TRIM(routine), 'Action '//TRIM(name)//' not found')
+
+  END FUNCTION Get_action_hsm
 
   SUBROUTINE Print_actions_hsm(this)
 
@@ -528,5 +798,14 @@ CONTAINS
     return_value = TRIM(this%name) == TRIM(that%name)
 
   END FUNCTION Is_equal_action
+
+  FUNCTION Is_not_equal_action(this, that) RESULT(return_value)
+
+    CLASS(t_Action), INTENT(in) :: this, that
+    LOGICAL                    :: return_value
+
+    return_value = TRIM(this%name) /= TRIM(that%name)
+
+  END FUNCTION Is_not_equal_action
 
 END MODULE mo_hsm_class

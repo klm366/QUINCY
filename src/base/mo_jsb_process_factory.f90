@@ -12,8 +12,11 @@ MODULE mo_jsb_process_factory
 
   USE mo_exception,            ONLY: finish
 
+  !USE mo_radiation_interface,  ONLY: tsk_Radiation_surface
+  !
   USE mo_jsb_memory_class,     ONLY: t_jsb_memory, t_jsb_memory_p
   USE mo_jsb_config_class,     ONLY: t_jsb_config
+  !
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory, t_land2atm_memory
   USE mo_srf_memory_class,     ONLY: t_srf_memory
   USE mo_soil_memory_class,    ONLY: t_soil_memory
@@ -37,7 +40,7 @@ MODULE mo_jsb_process_factory
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: max_no_of_processes, Create_process_config, &
+  PUBLIC :: max_no_of_processes, & !Create_process, & !Register_process_tasks, &
             Create_process_memory, Get_process_name, Get_process_memory, Get_process_config
   PUBLIC :: SRF, ATM2LAND, LAND2ATM, SKIN, SOIL, VEG, SNOW, GLACIER, LAKE, HD, RAD
 
@@ -77,38 +80,77 @@ MODULE mo_jsb_process_factory
 
 CONTAINS
 
-  FUNCTION Create_process_config(icomp, namelist_filename) RESULT(return_ptr)
+!!$  FUNCTION Create_process(iproc, model_id) RESULT(return_ptr)
+!!$
+!!$    USE mo_jsb_process_class, ONLY: t_jsb_process
+!!$
+!!$    INTEGER, INTENT(in) :: iproc
+!!$    INTEGER, INTENT(in) :: model_id
+!!$    CLASS(t_jsb_process), POINTER :: return_ptr
+!!$
+!!$    SELECT CASE (iproc)
+!!$    CASE (RAD)
+!!$      ALLOCATE(t_jsb_process::return_ptr)
+!!$      ALLOCATE(t_rad_config::return_ptr%config)
+!!$      !CALL return_ptr%Register_task(tsk_Radiation_surface(model_id))
+!!$
+!!$    CASE DEFAULT
+!!$      return_ptr => NULL()
+!!$    END SELECT
+!!$
+!!$    IF (ASSOCIATED(return_ptr)) THEN
+!!$      return_ptr%id             = iproc
+!!$      return_ptr%owner_model_id = model_id
+!!$
+!!$      !CALL return_ptr%Register_tasks(model_id)
+!!$    END IF
+!!$
+!!$  END FUNCTION Create_process
 
-    USE mo_jsb_config_class,   ONLY: t_jsb_config
+!!$  FUNCTION Create_process_config(icomp, namelist_filename) RESULT(return_ptr)
+!!$
+!!$    USE mo_jsb_config_class,   ONLY: t_jsb_config
+!!$
+!!$    INTEGER, INTENT(in) :: icomp
+!!$    CHARACTER(LEN=*), INTENT(in) :: namelist_filename
+!!$    CLASS(t_jsb_config), POINTER :: return_ptr
+!!$
+!!$    SELECT CASE(icomp)
+ !!$    CASE (SRF)
+!!$      ALLOCATE(t_srf_config::return_ptr)
+!!$    CASE (SOIL)
+!!$      ALLOCATE(t_soil_config::return_ptr)
+!!$    CASE (VEG)
+!!$      ALLOCATE(t_veg_config::return_ptr)
+!!$    CASE (RAD)
+!!$      ALLOCATE(t_rad_config::return_ptr)
+!!$#ifndef __NO_JSBACH_HD__
+!!$    CASE (HD)
+!!$      ALLOCATE(t_hd_config::return_ptr)
+!!$#endif
+!!$    CASE (GLACIER)
+!!$      ALLOCATE(t_glacier_config::return_ptr)
+!!$    CASE (LAKE)
+!!$      ALLOCATE(t_lake_config::return_ptr)
+!!$    CASE DEFAULT
+!!$      return_ptr => NULL()
+!!$    END SELECT
+!!$
+!!$    IF (ASSOCIATED(return_ptr)) return_ptr%namelist_filename = namelist_filename
+!!$
+!!$  END FUNCTION Create_process_config
 
-    INTEGER, INTENT(in) :: icomp
-    CHARACTER(LEN=*), INTENT(in) :: namelist_filename
-    CLASS(t_jsb_config), POINTER :: return_ptr
-
-    SELECT CASE(icomp)
-    CASE (SRF)
-      ALLOCATE(t_srf_config::return_ptr)
-    CASE (SOIL)
-      ALLOCATE(t_soil_config::return_ptr)
-    CASE (VEG)
-      ALLOCATE(t_veg_config::return_ptr)
-    CASE (RAD)
-      ALLOCATE(t_rad_config::return_ptr)
-#ifndef __NO_JSBACH_HD__
-    CASE (HD)
-      ALLOCATE(t_hd_config::return_ptr)
-#endif
-    CASE (GLACIER)
-      ALLOCATE(t_glacier_config::return_ptr)
-    CASE (LAKE)
-      ALLOCATE(t_lake_config::return_ptr)
-    CASE DEFAULT
-      return_ptr => NULL()
-    END SELECT
-
-    IF (ASSOCIATED(return_ptr)) return_ptr%namelist_filename = namelist_filename
-
-  END FUNCTION Create_process_config
+!!$  SUBROUTINE Register_process_tasks(icomp, model_id)
+!!$
+!!$    INTEGER, INTENT(in) :: icomp
+!!$    INTEGER, INTENT(in) :: model_id
+!!$
+!!$    SELECT CASE (icomp)
+!!$    CASE (RAD)
+!!$      CALL Register_radiation_tasks(model_id)
+!!$    END SELECT
+!!$
+!!$  END SUBROUTINE Register_process_tasks
 
   FUNCTION Create_process_memory(icomp) RESULT(return_ptr)
 

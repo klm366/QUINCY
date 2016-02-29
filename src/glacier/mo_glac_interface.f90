@@ -16,9 +16,10 @@ MODULE mo_glacier_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
 
-  USE mo_jsb_model_class, ONLY: t_jsb_model
-  USE mo_jsb_class,       ONLY: get_model
-  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_process_class,  ONLY: t_jsb_process
+  USE mo_jsb_task_class,     ONLY: t_jsb_process_task
 
   dsl4jsb_Use_processes SRF, SOIL, ATM2LAND
   dsl4jsb_Use_config(SRF)
@@ -32,9 +33,25 @@ MODULE mo_glacier_interface
   IMPLICIT NONE
   PRIVATE
 
+  PUBLIC :: t_glacier_process
+
+  TYPE, EXTENDS(t_jsb_process) :: t_glacier_process
+  CONTAINS
+    PROCEDURE :: Register_tasks => Register_glacier_tasks
+  END TYPE t_glacier_process
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_glacier_interface'
 
-!CONTAINS
+CONTAINS
+
+  SUBROUTINE Register_glacier_tasks(this, model_id)
+
+    CLASS(t_glacier_process), INTENT(inout) :: this
+    INTEGER, INTENT(in) :: model_id
+
+    !CALL this%Register_task(tsk_radiation_surface(name="radiation_surface", process_id=GLACIER))
+
+  END SUBROUTINE Register_glacier_tasks
 
 #endif
 END MODULE mo_glacier_interface

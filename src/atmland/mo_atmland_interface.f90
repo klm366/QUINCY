@@ -14,9 +14,10 @@ MODULE mo_atmland_interface
 
   USE mo_exception,       ONLY: finish
   USE mo_kind,            ONLY: wp
-  USE mo_jsb_class,       ONLY: Get_model
-  USE mo_jsb_model_class, ONLY: t_jsb_model
-  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
+
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
+  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
 
   dsl4jsb_Use_processes ATM2LAND, SRF, SOIL
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
@@ -33,14 +34,15 @@ MODULE mo_atmland_interface
 
 CONTAINS
 
-  SUBROUTINE update_atm2land(model_id, iblk, ics, ice,             &
+  SUBROUTINE update_atm2land(tile, config, iblk, ics, ice,                 &
     & t_air, q_air, rain, snow, wind_air, wind_10m,                &
     & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
     & press_srf, drag_srf,                                         &
     & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
     & pch, cos_zenith_angle)
 
-    INTEGER,            INTENT(in) :: model_id
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,            INTENT(in) :: iblk, ics, ice
     REAL(wp), OPTIONAL, INTENT(in) ::                                            &
       & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:),          &
@@ -49,17 +51,11 @@ CONTAINS
       & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),                          &
       & pch(:), cos_zenith_angle(:)
 
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_tile),  POINTER :: tile
-
     dsl4jsb_Def_memory(ATM2LAND)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_atm2land'
 
     IF (ice-ics+1 /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
-
-    model => Get_model(model_id)
-    tile => model%Get_top_tile()
 
     dsl4jsb_Get_memory(ATM2LAND)
 
@@ -82,12 +78,9 @@ CONTAINS
     IF (PRESENT(pch))              dsl4jsb_var2D_onChunk(ATM2LAND,pch)              = pch              (:)
     IF (PRESENT(cos_zenith_angle)) dsl4jsb_var2D_onChunk(ATM2LAND,cos_zenith_angle) = cos_zenith_angle (:)
 
-    NULLIFY(tile)
-    NULLIFY(model)
-
   END SUBROUTINE update_atm2land
 
-  SUBROUTINE update_land2atm(model_id, iblk, ics, ice,                  &
+  SUBROUTINE update_land2atm(tile, config, iblk, ics, ice,                      &
     & t_srf, t_eff_srf, qsat_srf, s_srf,                                &
     & fact_q_air, fact_qsat_srf,                                        &
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,     &
@@ -95,7 +88,8 @@ CONTAINS
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,               &
     & t_wtr, t_ice, ice_fract_lake)
 
-    INTEGER,            INTENT(in)  :: model_id
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,            INTENT(in)  :: iblk, ics, ice
     REAL(wp), OPTIONAL, INTENT(out) ::                                               &
       & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                               &
@@ -108,15 +102,9 @@ CONTAINS
     dsl4jsb_Def_memory(SRF)
     dsl4jsb_Def_memory(SOIL)
 
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_tile),  POINTER :: tile
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_land2atm'
 
     IF (ice-ics+1 /= SIZE(t_srf,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
-
-    model => Get_model(model_id)
-    tile => model%Get_top_tile()
 
     dsl4jsb_Get_memory(SRF)
     dsl4jsb_Get_memory(SOIL)
@@ -142,9 +130,6 @@ CONTAINS
     IF (PRESENT(t_wtr))           t_wtr(:)            = dsl4jsb_var2D_onChunk(SRF,t_srf)        ! Temporary
     IF (PRESENT(t_ice))           t_ice(:)            = 273.15_wp                               ! Temporary
     IF (PRESENT(ice_fract_lake))  ice_fract_lake(:)   = 0._wp                                   ! Temporary
-
-    NULLIFY(tile)
-    NULLIFY(model)
 
   END SUBROUTINE update_land2atm
 

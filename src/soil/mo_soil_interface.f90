@@ -15,10 +15,13 @@ MODULE mo_soil_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
-  USE mo_jsb_model_class, ONLY: t_jsb_model
-  USE mo_jsb_class,       ONLY: Get_model
-  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
   USE mo_jsb_control,     ONLY: debug_on
+
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
+  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_process_class,  ONLY: t_jsb_process
+  USE mo_jsb_task_class,     ONLY: t_jsb_process_task
 
   dsl4jsb_Use_processes SOIL, SRF, VEG, ATM2LAND
   dsl4jsb_Use_config(SOIL)
@@ -32,24 +35,39 @@ MODULE mo_soil_interface
   PRIVATE
 
   PUBLIC :: update_soil_1, update_soil_2
+  PUBLIC :: t_soil_process
+
+  TYPE, EXTENDS(t_jsb_process) :: t_soil_process
+CONTAINS
+  PROCEDURE :: Register_tasks => Register_soil_tasks
+END TYPE t_soil_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_interface'
 
 CONTAINS
 
+  SUBROUTINE Register_soil_tasks(this, model_id)
+
+    CLASS(t_soil_process), INTENT(inout) :: this
+    INTEGER, INTENT(in) :: model_id
+
+    !CALL this%Register_task(tsk_radiation_surface(name="radiation_surface", process_id=SOIL))
+
+  END SUBROUTINE Register_soil_tasks
+
   ! TBD: At the moment, the hydrology for soil and canopy is handled together in the soil process (as in echam6).
   ! This will be changed later.
-  SUBROUTINE update_soil_1( tile, iblk, ics, ice, nc, dtime, steplen)
+  SUBROUTINE update_soil_1(tile, config, iblk, ics, ice, nc, dtime, steplen)
 
     USE mo_soil_process, ONLY: update_surf_down, update_soiltemp, update_surf_up
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
     REAL(wp),          INTENT(in) :: dtime, steplen
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
     dsl4jsb_Def_config(SOIL)
     dsl4jsb_Def_memory(SOIL)
     dsl4jsb_Def_memory(SRF)
@@ -139,13 +157,11 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
-    model => Get_model(tile%owner_model_id)
-
 !!$    soil_conf => Get_soil_config(model)
     dsl4jsb_Get_config(SOIL)
 
-    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
-    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
+!!$    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
+!!$    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
 
     ! Get reference to variables for current block
     !
@@ -284,16 +300,14 @@ CONTAINS
 
   END SUBROUTINE update_soil_1
 
-  SUBROUTINE update_soil_2( tile, iblk, ics, ice, nc)
+  SUBROUTINE update_soil_2(tile, config, iblk, ics, ice, nc)
 
-
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
-
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
       & fract          (:)
@@ -308,15 +322,10 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
-    model => Get_model(tile%owner_model_id)
-
     ! Get reference to variables for current block
     !
     fract                => tile%fract                               (ics:ice,    iblk)
     IF (ALL(fract(:) < EPSILON(1._wp))) RETURN
-
-
-
 
   END SUBROUTINE update_soil_2
 

@@ -16,8 +16,9 @@ MODULE mo_radiation_init
   USE mo_exception,         ONLY: message
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_tile_class,    ONLY: t_jsb_tile
+  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
+  USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
                                   jsb_netcdf_read_2d, jsb_netcdf_read_2d_time, jsb_netcdf_read_2d_extdim
 
@@ -37,53 +38,54 @@ CONTAINS
   !
   !> Intialize radiation process (after memory has been set up)
   !
-  SUBROUTINE radiation_init(tile)
+  SUBROUTINE radiation_init(tile, config)
 
-    TYPE(t_jsb_tile), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':radiation_init'
 
-    CALL radiation_init_bc(tile)
-    CALL radiation_init_ic(tile)
+    CALL radiation_init_bc(tile, config)
+!!$    CALL radiation_init_ic(tile, config)
 
   END SUBROUTINE radiation_init
 
-  
-  SUBROUTINE radiation_init_bc(tile)
+  SUBROUTINE radiation_init_bc(tile, config)
     !-----------------------------------------------------------------------
-    !  ARGUMENTS 
-    TYPE(t_jsb_tile), INTENT(inout) :: tile
-    
+    !  ARGUMENTS
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
+
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES
     TYPE(t_jsb_model),       POINTER :: model
     dsl4jsb_Def_memory(RAD)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':radiation_init_bc'
-    
+
     !-----------------------------------------------------------------------
     ! CONTENT
-    
+
     model => get_model(tile%owner_model_id)
 
     ! Get radiation memory of the tile
     dsl4jsb_Get_memory(RAD)
 
-    IF (.NOT. ASSOCIATED(rad__mem)) RETURN
+!!$    IF (.NOT. ASSOCIATED(rad__mem)) RETURN
 
     CALL message(TRIM(routine), 'Setting  radiation boundary conditions for tile '//TRIM(tile%name))
 
     ! R: nothing to do in the moment ...
-    
+
   END SUBROUTINE radiation_init_bc
 
-  
-  RECURSIVE SUBROUTINE radiation_init_ic(tile)
+  RECURSIVE SUBROUTINE radiation_init_ic(tile, config)
 
 !    USE mo_radiation_process, ONLY: init_radiation_temperature
 !    USE mo_radiation_util,    ONLY: radiation_depth_to_layers_2d
 
-    TYPE(t_jsb_tile), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
     TYPE(t_jsb_model),         POINTER :: model
     dsl4jsb_Def_config(RAD)
@@ -126,8 +128,7 @@ CONTAINS
 
     dsl4jsb_var2D_onDomain(RAD,alb_vis_srf) = dsl4jsb_var2D_onDomain(RAD,alb_background)
     dsl4jsb_var2D_onDomain(RAD,alb_nir_srf) = dsl4jsb_var2D_onDomain(RAD,alb_background)
-    
-    
+
     ! soil albedo
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
@@ -142,7 +143,7 @@ CONTAINS
       & fill_array = dsl4jsb_var2D_ptr(RAD, alb_nir_soil))
     dsl4jsb_var2D_onDomain(RAD,alb_nir_soil) = &
       MERGE(dsl4jsb_var2D_onDomain(RAD,alb_nir_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD,alb_nir_soil) >= 0._wp)
-    
+
     ! vegetation albedo
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
@@ -158,10 +159,8 @@ CONTAINS
     dsl4jsb_var2D_onDomain(RAD, alb_nir_can) = &
       MERGE(dsl4jsb_var2D_onDomain(RAD, alb_nir_can), 0._wp, dsl4jsb_var2D_onDomain(RAD, alb_nir_can) >= 0._wp)
 
-    CALL jsb_netcdf_close_file(input_file)    
-   
-    
-    
+    CALL jsb_netcdf_close_file(input_file)
+
     ! Initialize variables
     !
 

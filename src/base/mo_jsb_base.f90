@@ -68,10 +68,11 @@ CONTAINS
     ! Create models according to master namelist
     DO model_idx=1,no_of_models
       NULLIFY(current)
-      current => new_model(jsb_models_nml(model_idx)%model_name,              &
-                           jsb_models_nml(model_idx)%model_shortname,         &
-                           jsb_models_nml(model_idx)%model_description,       &
-                           jsb_models_nml(model_idx)%model_namelist_filename)
+      current => new_model(model_idx, &
+        &                  jsb_models_nml(model_idx)%model_name,              &
+        &                  jsb_models_nml(model_idx)%model_shortname,         &
+        &                  jsb_models_nml(model_idx)%model_description,       &
+        &                  jsb_models_nml(model_idx)%model_namelist_filename)
       current%id = model_idx
       jsbach%models(model_idx)%m => current
     END DO

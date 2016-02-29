@@ -16,7 +16,7 @@ MODULE mo_jsb_config_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_config, t_jsb_model_config, new_model_config
+  PUBLIC :: t_jsb_config, t_jsb_config_p, t_jsb_model_config, new_model_config
 
   TYPE t_jsb_model_config
     CHARACTER(len=filename_max)  :: grid_filename
@@ -32,6 +32,10 @@ MODULE mo_jsb_config_class
   CONTAINS
     PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init
   END TYPE t_jsb_config
+
+  TYPE t_jsb_config_p
+    CLASS(t_jsb_config), POINTER :: p
+  END TYPE t_jsb_config_p
 
   ABSTRACT INTERFACE
     SUBROUTINE Init_config(config)

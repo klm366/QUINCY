@@ -16,9 +16,11 @@ MODULE mo_srf_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
 
-  USE mo_jsb_model_class, ONLY: t_jsb_model
-  USE mo_jsb_class,       ONLY: get_model
-  USE mo_jsb_tile_class,  ONLY: t_jsb_tile
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
+  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_process_class,  ONLY: t_jsb_process
+  USE mo_jsb_task_class,     ONLY: t_jsb_process_task
 
   dsl4jsb_Use_processes SRF, SOIL, VEG, ATM2LAND
   dsl4jsb_Use_config(SRF)
@@ -35,21 +37,36 @@ MODULE mo_srf_interface
 
   PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy
   PUBLIC :: update_surface_fluxes, update_t_srf_asselin, update_humidity_scaling, update_roughness
+  PUBLIC :: t_srf_process
+
+  TYPE, EXTENDS(t_jsb_process) :: t_srf_process
+  CONTAINS
+    PROCEDURE :: Register_tasks => Register_srf_tasks
+  END TYPE t_srf_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_interface'
 
 CONTAINS
 
-  SUBROUTINE update_surface_radiation(tile, iblk, ics, ice, nc)
+  SUBROUTINE Register_srf_tasks(this, model_id)
+
+    CLASS(t_srf_process), INTENT(inout) :: this
+    INTEGER, INTENT(in) :: model_id
+
+    !CALL this%Register_task(tsk_radiation_surface(name="radiation_surface", process_id=SRF))
+
+  END SUBROUTINE Register_srf_tasks
+
+  SUBROUTINE update_surface_radiation(tile, config, iblk, ics, ice, nc)
 
     USE mo_phy_schemes, ONLY: lwnet_from_lwdown
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
     dsl4jsb_Def_memory(ATM2LAND)
     dsl4jsb_Def_memory(SRF)
 
@@ -68,9 +85,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_radiation'
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface radiation')
+    IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
-    model => get_model(tile%owner_model_id)
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface radiation')
 
     ! Get reference to variables for current block
     !
@@ -103,20 +120,19 @@ CONTAINS
 
   END SUBROUTINE update_surface_radiation
 
-  SUBROUTINE update_snow_and_skin_fraction( tile, iblk, ics, ice, nc, dtime, steplen)
+  SUBROUTINE update_snow_and_skin_fraction(tile, config, iblk, ics, ice, nc, dtime, steplen)
 
     USE mo_phy_schemes,    ONLY: heat_transfer_coef, qsat
     USE mo_soil_process,   ONLY: snow_fract
     USE mo_srf_constants,  ONLY: rhoh2o
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
     REAL(wp),          INTENT(in) :: dtime, steplen
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
-
     dsl4jsb_Def_config(SOIL)
     dsl4jsb_Def_memory(SRF)
     dsl4jsb_Def_memory(SOIL)
@@ -152,11 +168,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_skin_fraction'
 
-    IF (.NOT. tile%Is_process_active(SOIL)) RETURN
+    IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of snow and skin reservoir fraction')
-
-    model => get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(SOIL)
 
@@ -238,7 +252,7 @@ CONTAINS
 
   END SUBROUTINE update_snow_and_skin_fraction
 
-  SUBROUTINE update_surface_energy( tile, iblk, ics, ice, nc, dtime, steplen)
+  SUBROUTINE update_surface_energy(tile, config, iblk, ics, ice, nc, dtime, steplen)
 
     USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_srf_process,        ONLY: surface_temp_implicit
@@ -246,13 +260,13 @@ CONTAINS
     USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
     USE mo_physical_constants, ONLY: tmelt
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
     REAL(wp),          INTENT(in) :: dtime, steplen
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
     dsl4jsb_Def_config(SRF)
     dsl4jsb_Def_memory(SRF)
     dsl4jsb_Def_memory(SOIL)
@@ -297,9 +311,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface temperature')
+    IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
-    model => get_model(tile%owner_model_id)
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface temperature')
 
     dsl4jsb_Get_config(SRF)
 
@@ -397,16 +411,16 @@ CONTAINS
   END SUBROUTINE update_surface_energy
 
   ! Asselin time filter for surface temperature
-  SUBROUTINE update_t_srf_asselin( tile, iblk, ics, ice, nc)
+  SUBROUTINE update_t_srf_asselin(tile, config, iblk, ics, ice, nc)
 
     USE mo_jsb_time, ONLY: get_asselin_coef
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
     dsl4jsb_Def_memory(SRF)
 
     LOGICAL                       :: lstart
@@ -417,6 +431,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_srf_old
     dsl4jsb_Real2D_onChunk :: t_srf_unfilt
     dsl4jsb_Real2D_onChunk :: t_srf_unfilt_old
+
+    IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
     dsl4jsb_Get_memory(SRF)
 
@@ -434,18 +450,18 @@ CONTAINS
 
   END SUBROUTINE update_t_srf_asselin
 
-  SUBROUTINE update_surface_fluxes( tile, iblk, ics, ice, nc, steplen)
+  SUBROUTINE update_surface_fluxes(tile, config, iblk, ics, ice, nc, steplen)
 
     USE mo_phy_schemes,        ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_physical_constants, ONLY: alv, als
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
     REAL(wp),          INTENT(in) :: steplen
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
     dsl4jsb_Def_memory(SRF)
     dsl4jsb_Def_memory(ATM2LAND)
 
@@ -478,9 +494,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes'
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface fluxes')
+    IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
-    model => get_model(tile%owner_model_id)
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface fluxes')
 
     ! Get reference to variables for current block
     !
@@ -534,18 +550,18 @@ CONTAINS
 
   END SUBROUTINE update_surface_fluxes
 
-  SUBROUTINE update_humidity_scaling( tile, iblk, ics, ice, nc)
+  SUBROUTINE update_humidity_scaling(tile, config, iblk, ics, ice, nc)
 
     USE mo_srf_constants,  ONLY: rhoh2o
     USE mo_soil_constants, ONLY: ws_wilt_fract
     USE mo_soil_process,   ONLY: relative_humidity
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
     dsl4jsb_Def_memory(SRF)
     dsl4jsb_Def_memory(SOIL)
     dsl4jsb_Def_memory(VEG)
@@ -582,11 +598,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
 
-    IF (.NOT. tile%Is_process_active(SOIL)) RETURN
+    IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of humidity weights')
-
-    model => get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
@@ -651,11 +665,12 @@ CONTAINS
 
   END SUBROUTINE update_humidity_scaling
 
-  SUBROUTINE update_roughness( tile, iblk, ics, ice, nc)
+  SUBROUTINE update_roughness(tile, config, iblk, ics, ice, nc)
 
     USE mo_srf_constants, ONLY: blending_height, roughness_snow
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
 
     dsl4jsb_Def_memory(SRF)
@@ -665,6 +680,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rough_m_srf
     dsl4jsb_Real2D_onChunk :: rough_h_srf
     dsl4jsb_Real2D_onChunk :: sfract_soil
+
+    IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
     dsl4jsb_Get_memory(SRF)
     dsl4jsb_Get_memory(SOIL)

@@ -17,10 +17,10 @@ MODULE mo_jsb_interface
   USE mo_util_string,         ONLY: int2string
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_timer,               ONLY: timer_start, timer_stop, timer_jsbach
-  USE mo_jsb_class,           ONLY: get_model
+  USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_tile_class,      ONLY: t_jsb_tile
-  USE mo_jsb_process_class,   ONLY: t_jsb_process_task
+  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+  USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_Task_queue
   USE mo_hsm_class,           ONLY: t_Hsm, t_Message, t_State
   USE mo_jsb_process_factory, ONLY: RAD
 !  USE mo_jsb_controller,      ONLY: Run_process_task
@@ -63,7 +63,6 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_interface,      ONLY: update_hd
 #endif
-    USE mo_radiation_interface, ONLY: radiation_surface
 
     INTEGER :: p_pe
 
@@ -120,17 +119,16 @@ CONTAINS
 
     ! Local variables
     !
-    CLASS(t_Hsm), POINTER :: model
-    CLASS(t_jsb_tile),  POINTER :: tile
-!!$    CLASS(t_jsb_process_task), POINTER :: msg1
-    CLASS(t_jsb_process_task), POINTER :: msg1, msg2
+    CLASS(t_jsb_model),          POINTER :: model
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile
+
     INTEGER :: nc, i
 
     CALL timer_start(timer_jsbach)
 
     nc = ice - ics + 1
 
-    model => get_model(model_id)
+    model => Get_model(model_id)
 
 !!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)// &
 !!$      &                 ' for: block=', iblk, ', ics=', ics, ', ice=', ice
@@ -141,8 +139,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
     ! Put atmospheric forcing into the atm2land memory.
+    tile => model%Get_top_tile()
     CALL update_atm2land(                      &
-      & model_id,                              &
+      & tile,                                  &
+      & model%Get_process_configs(),           &
       & iblk,                                  &
       & ics,                                   &
       & ice,                                   &
@@ -166,34 +166,14 @@ CONTAINS
       & pch              = pch(:),             &
       & cos_zenith_angle = cos_zenith_angle(:) &
       & )
+    NULLIFY(tile)
 
-    ALLOCATE(radiation_surface::msg1)
+    ! Update options
+    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, dtime=dtime, steplen=steplen)
 
-!!$    SELECT TYPE(msg1)
-!!$    CLASS IS (t_jsb_process_task)
-!!$      ALLOCATE(msg1%message)
-!!$    END SELECT
-    CALL model%Reset_state()
-    CALL model%Process_message(msg1)
+    ! Run tasks in queue
+    CALL model%Run_tasks()
 
-    SELECT TYPE (model)
-    CLASS IS (t_jsb_model)
-      tile => model%Get_top_tile()
-    END SELECT
-    msg2 => tile%Handler(model, msg1)
-
-!!$    tile => tile%first_child
-!!$    msg2 => tile%Handler(model, msg1)
-!!$    DEALLOCATE(msg2)
-
-!!$    SELECT TYPE(msg1)
-!!$    CLASS IS (t_jsb_process_task)
-!!$      DEALLOCATE(msg1%message)
-!!$    END SELECT
-    DEALLOCATE(msg1)
-
-    ! Compute net surface radiation
-   ! CALL Run_process_task(model_id, RAD, update_surface_radiation, iblk, ics, ice, nc)
 
 !!$    ! Update wet skin and snow fractions
 !!$    CALL  update_snow_and_skin_fraction(tile, iblk, ics, ice, nc, dtime, steplen)
@@ -250,8 +230,10 @@ CONTAINS
 !!$    CALL update_t_srf_asselin(tile, iblk, ics, ice, nc)
 !!$
     ! Finally, give the required variables back to the atmosphere
+    tile => model%Get_top_tile()
     CALL update_land2atm(                   &
-      & model_id,                           &
+      & tile,                               &
+      & model%Get_process_configs(),        &
       & iblk,                               &
       & ics,                                &
       & ice,                                &
@@ -277,6 +259,7 @@ CONTAINS
       & t_ice          = t_ice(:),          &
       & ice_fract_lake = ice_fract_lake(:)  &
       & )
+    NULLIFY(tile)
 
 !!$    IF (iblk == 1)                                                              &
 !!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
@@ -323,7 +306,9 @@ CONTAINS
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
-    model => get_model(model_id)
+    model => Get_model(model_id)
+
+    IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE jsbach_start_timestep
 
@@ -341,17 +326,19 @@ CONTAINS
     INTEGER, INTENT(in)  :: model_id
     REAL(wp), INTENT(in) :: steplen
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model),          POINTER :: model
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
-    model => get_model(model_id)
+    model => Get_model(model_id)
+    tile => model%Get_top_tile()
 
 #ifndef __NO_JSBACH_HD__
-      CALL hd_lateral_flow(model_id)
-      CALL hd_check_water_budget(model_id, steplen)
+      CALL hd_lateral_flow(tile, model%Get_process_configs(), model%options)
+      CALL hd_check_water_budget(tile, model%Get_process_configs(), model%options)
 
-      CALL interface_hd_ocean(model_id)
+      CALL interface_hd_ocean(tile, model%Get_process_configs(), model%options)
 #endif
 
   END SUBROUTINE jsbach_finish_timestep

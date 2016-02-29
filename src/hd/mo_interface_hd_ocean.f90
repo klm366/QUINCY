@@ -12,17 +12,19 @@ MODULE mo_interface_hd_ocean
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: warning
+  USE mo_exception,           ONLY: finish, warning
 
-  USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_class,           ONLY: get_model
-  USE mo_jsb_tile_class,      ONLY: t_jsb_tile
+  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
   USE mo_coupling_config,     ONLY: is_coupled_run
 #ifdef YAC_coupling
   USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name
 #endif
+
+  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_process_class,  ONLY: t_jsb_process
+  USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   dsl4jsb_Use_processes SOIL
   dsl4jsb_Use_memory(SOIL)
@@ -59,14 +61,14 @@ CONTAINS
   END SUBROUTINE jsb_fdef_hd_fields
 #endif
 
-  SUBROUTINE interface_hd_ocean(model_id)
+  SUBROUTINE interface_hd_ocean(tile, config, options)
 
-    INTEGER, INTENT(in) :: model_id
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in) :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in) :: options
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
-    TYPE(t_jsb_tile),  POINTER    :: tile
     TYPE(t_jsb_grid),  POINTER    :: grid
 
     dsl4jsb_Def_memory(SOIL)
@@ -89,9 +91,10 @@ CONTAINS
 
     IF ( .NOT. is_coupled_run() ) RETURN
 
-    model => get_model(model_id)
-    tile => model%Get_top_tile()
-    grid => Get_grid(model%grid_id)
+    IF (ASSOCIATED(tile%parent)) &
+      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
+
+    grid => Get_grid(options%grid_id)
 
     ! Get reference to variables in memory
     dsl4jsb_Get_memory(SOIL)

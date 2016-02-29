@@ -17,13 +17,15 @@ MODULE mo_hd_interface
   USE mo_exception,        ONLY: finish, message, message_text
   USE mo_sync,             ONLY: SYNC_C, sync_patch_array, global_sum_array
 
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
-  USE mo_jsb_class,        ONLY: get_model
   USE mo_jsb_grid_class,   ONLY: t_jsb_grid
   USE mo_jsb_grid,         ONLY: Get_grid
   USE mo_jsb_domain_iface, ONLY: get_blk_start, get_blk_end, get_col_start, get_col_end
-  USE mo_jsb_tile_class,   ONLY: t_jsb_tile
+  USE mo_jsb_tile_class,   ONLY: t_jsb_tile_abstract
   USE mo_jsb_control,      ONLY: debug_on
+
+  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_process_class,  ONLY: t_jsb_process
+  USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   dsl4jsb_Use_processes HD, SRF, SOIL
   dsl4jsb_Use_config(HD)
@@ -38,25 +40,66 @@ MODULE mo_hd_interface
   PRIVATE
 
   PUBLIC :: update_hd, hd_lateral_flow, hd_check_water_budget
+
+  PUBLIC :: t_Hd_process
+
+  TYPE, EXTENDS(t_jsb_process) :: t_Hd_process
+  CONTAINS
+    PROCEDURE :: Register_tasks => Register_hd_tasks
+  END TYPE t_Hd_process
+
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_Hd_local_outflow
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_hd
+    PROCEDURE, NOPASS :: Aggregate => aggregate_hd
+  END TYPE tsk_Hd_local_outflow
+
+  INTERFACE tsk_Hd_local_outflow
+    PROCEDURE Create_task_Hd_local_outflow
+  END INTERFACE tsk_Hd_local_outflow
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_interface'
 
 CONTAINS
 
+  SUBROUTINE Register_hd_tasks(this, model_id)
+
+    CLASS(t_hd_process), INTENT(inout) :: this
+    INTEGER,             INTENT(in)    :: model_id
+
+    CALL this%Register_task(tsk_hd_local_outflow(model_id))
+
+  END SUBROUTINE Register_hd_tasks
+
+  FUNCTION Create_task_hd_local_outflow(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_hd_local_outflow::return_ptr)
+
+    return_ptr%name = 'hd_local_outflow'
+    return_ptr%process_id = HD
+    return_ptr%owner_model_id = model_id
+    ! !!$    return_ptr%Integrate => update_radiation_surface
+    ! !!$    return_ptr%Aggregate => aggregate_radiation_surface
+
+  END FUNCTION Create_task_hd_local_outflow
+
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE update_hd(tile, iblk, ics, ice, nc, steplen)
+  SUBROUTINE update_hd(tile, config, options)
   !------------------------------------------------------------------------------------------------
   ! the routine is called within the block-loop from jsbach_interface. There is no information on
   ! neighbouring grid cells (on other patches) availabe.
   ! We calculate here the local outflow of each grid cell.
   !------------------------------------------------------------------------------------------------
 
-    TYPE(t_jsb_tile),  POINTER    :: tile
-    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
-    REAL(wp),          INTENT(in) :: steplen
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
     dsl4jsb_Def_config(HD)
@@ -93,12 +136,21 @@ CONTAINS
 
     CHARACTER(len=32) :: routing_scheme
 
+    INTEGER  :: iblk, ics, ice, nc, grid_id
+    REAL(wp) :: steplen
+
+    grid_id = options%grid_id
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    steplen = options%steplen
+
     IF (.NOT. tile%Is_process_active(HD)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
-    model => get_model(tile%owner_model_id)
-    grid => Get_grid(model%grid_id)
+    grid => Get_grid(grid_id)
 
     dsl4jsb_Get_config(HD)
 
@@ -169,20 +221,29 @@ CONTAINS
 
   END SUBROUTINE update_hd
 
+  SUBROUTINE aggregate_hd(tile, config, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Nothing to do because the HD model only runs on the top tile
+
+  END SUBROUTINE aggregate_hd
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE hd_lateral_flow(model_id)
+  SUBROUTINE hd_lateral_flow(tile, config, options)
   !------------------------------------------------------------------------------------------------
   ! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
   ! It is thus possible to synchronize the halos. And to use data from surounding grid cells.
   !------------------------------------------------------------------------------------------------
 
-    INTEGER, INTENT(in) :: model_id
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in) :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in) :: options
 
     ! Local variables
     !
     TYPE(t_jsb_grid),  POINTER    :: grid
-    TYPE(t_jsb_model), POINTER    :: model
-    TYPE(t_jsb_tile),  POINTER    :: tile
 
     dsl4jsb_Def_config(HD)
     dsl4jsb_Def_memory(HD)
@@ -239,9 +300,10 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
-    model => get_model(model_id)
-    tile => model%Get_top_tile()        ! HD works on the root tile
-    grid => Get_grid(model%grid_id)
+    IF (ASSOCIATED(tile%parent)) &
+      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
+
+    grid => Get_grid(options%grid_id)
 
     dsl4jsb_Get_config(HD)
 
@@ -398,20 +460,19 @@ CONTAINS
   END SUBROUTINE hd_lateral_flow
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE hd_check_water_budget(model_id, steplen)
+  SUBROUTINE hd_check_water_budget(tile, config, options)
   !------------------------------------------------------------------------------------------------
   ! calculation of the global water budget at the end of a time step, and compare it to the
   ! budget from the previous time step.
   !------------------------------------------------------------------------------------------------
 
-    INTEGER,  INTENT(in) :: model_id
-    REAL(wp), INTENT(in) :: steplen
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in) :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in) :: options
 
     ! Local variables
     !
     TYPE(t_jsb_grid),  POINTER    :: grid
-    TYPE(t_jsb_model), POINTER    :: model
-    TYPE(t_jsb_tile),  POINTER    :: tile
 
     dsl4jsb_Def_config(HD)
     dsl4jsb_Def_memory(HD)
@@ -448,6 +509,7 @@ CONTAINS
       & in_domain       (:,:) ! 1: cell in domain, 0: halo cell
 
     REAL(wp) ::              &
+      & steplen,             &
       & water_budget,        &  ! water budget of current step
       & water_budget_old,    &  ! water budget of previous step
       & water_budget_change, &  ! water budget change within the time step
@@ -457,10 +519,12 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
-    model => get_model(model_id)
-    tile => model%Get_top_tile()        ! HD works on the root tile
-    grid => Get_grid(model%grid_id)
+    IF (ASSOCIATED(tile%parent)) &
+      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
 
+    steplen = options%steplen
+
+    grid => Get_grid(options%grid_id)
 
     dsl4jsb_Get_config(HD)
 

@@ -16,8 +16,9 @@ MODULE mo_veg_init
   USE mo_exception,         ONLY: message
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_tile_class,    ONLY: t_jsb_tile
+  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
+  USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
                                   jsb_netcdf_read_2d_time, jsb_netcdf_read_2d
 
@@ -36,9 +37,10 @@ MODULE mo_veg_init
 
 CONTAINS
 
-  SUBROUTINE veg_init_bc(tile)
+  SUBROUTINE veg_init_bc(tile, config)
 
-    TYPE(t_jsb_tile), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
     TYPE(t_jsb_model),       POINTER :: model
     dsl4jsb_Def_memory(VEG)
@@ -59,14 +61,15 @@ CONTAINS
 
   END SUBROUTINE veg_init_bc
 
-  RECURSIVE SUBROUTINE veg_init_ic(tile)
+  RECURSIVE SUBROUTINE veg_init_ic(tile, config)
 
     USE mo_veg_process, ONLY: foliage_projected_cover
     USE mo_veg_util,    ONLY: water_in_root_zone
     USE mo_soil_util,   ONLY: soil_depth_to_layers_2d
     USE mo_jsb_time,    ONLY: get_time_interpolation_weights
 
-    TYPE(t_jsb_tile),  INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract),  INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
     TYPE(t_jsb_model),        POINTER :: model
     dsl4jsb_Def_config(VEG)
