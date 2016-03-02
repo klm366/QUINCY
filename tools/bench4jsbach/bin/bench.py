@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import os, subprocess, shutil,getpass,datetime
-from experiment import Experiment, CMIP5_Experiment
+from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
 from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool
 import configobj
 from sets import Set
@@ -41,6 +41,8 @@ class Bench_Object ( Analysis, Report ):
     
     
     def __init__ ( self, config_arg, **kwargs ):
+        super ( Bench_Object, self ).__init__ ()
+        
         dkl_logger.debug ( "Starting." )
         
         if not os.path.exists ( config_arg ):
@@ -95,10 +97,6 @@ class Bench_Object ( Analysis, Report ):
                            "Processing might take a while ..." )
 
         self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
-        
-        Analysis.__init__ ( self )
-        self.reporting = str2bool ( config [ "reporting" ])
-        Report.__init__ ( self ) if self.reporting else None
 
         try:
             self.land_sea_mask = config [ "land_sea_mask" ]
@@ -132,11 +130,13 @@ class Bench_Object ( Analysis, Report ):
                                         path, raise_e = True )
                 kwargs [ 'var_filename' ] = varfile
                 e = CMIP5_Experiment ( **kwargs )
+            elif es [ en ] [ TYPE_IDX ] == "MPIESM1":
+                e = MPIESM1_Experiment ( **kwargs )
             else:
                 e = Experiment ( **kwargs )
             self.experiments.append ( e )
         if n_refs < 1 or n_cans < 1: raise Exception ( "No candidate or no reference experiment defined."  )
-
+        
         self.logger.debug ( "Exiting." )
 
 
@@ -166,18 +166,30 @@ class Bench_Object ( Analysis, Report ):
 
         
     def __repr__ ( self ):
-        return  """{} ( bench_name = {}, bench_path = {}, config_path = {},
-        data_path = {}, graphic_path = {}, report_path = {}, bench_config_path = {}, config = {}, 
-        experiments = {}""".format (
-            self.__class__.__name__,
-            print_none (  self.bench_name        ),
-            print_none (  self.bench_path        ),
-            print_none (  self.config_path       ),
-            print_none (  self.data_path         ),
-            print_none (  self.graphic_path      ),
-            print_none (  self.report_path       ),
-            print_none (  self.bench_config_path ),
-            print_none (  self.config            ),
-            print_none ( self.experiments )).replace ( "\n", "" )
+        repr =  """\n\n{} ( bench_name = {}, 
+\tbench_path        = {},
+\tconfig_path       = {},
+\tdata_path         = {}, 
+\tgraphic_path      = {}, 
+\treport_path       = {}, 
+\tbench_config_path = {}, 
+\tconfig            = {}, 
+\texperiments       = {}\n\n""".format ( self.__class__.__name__,
+                print_none ( self.bench_name        ),
+                print_none ( self.bench_path        ),
+                print_none ( self.config_path       ),
+                print_none ( self.data_path         ),
+                print_none ( self.graphic_path      ),
+                print_none ( self.report_path       ),
+                print_none ( self.bench_config_path ),
+                print_none ( self.config            ),
+                print_none ( self.experiments ))#.replace ( "\n", "" )
+
+        print repr
+    
+        super ( Bench_Object, self ).__repr__ ()
+
+        return ""
+        
     
 

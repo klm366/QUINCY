@@ -29,8 +29,8 @@ class Experiment ( object ):
         
 
     def __repr__ ( self ):
-        return "%s object %s ( %s )" % ( self.__class__.__name__, self.B4J_name,
-                    ",\n".join ( '{!s} : {!r}'.format ( k, str ( print_none ( v ))) \
+        return "\n%s object %s ( \n\t%s )" % ( self.__class__.__name__, self.B4J_name,
+                    ",\n\t".join ( '{!s}\t: {!r}'.format ( k, str ( print_none ( v ))) \
                     for (k,v) in sorted ( self.__dict__.iteritems ())))
     
 

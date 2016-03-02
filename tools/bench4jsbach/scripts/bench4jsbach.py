@@ -26,6 +26,7 @@ if nargs == 1:
     print "* Usage:" + __doc__
     print "******************************************"
 elif not os.path.isfile ( sys.argv [ 1 ]):
+    # todo: if bench-environment exists exit on error, overwrite only with extra force configuration
     print "******************************************"
     print "* BENCH4JSBACH: "
     print "* Creating environment and configfile for new bench4jsbach object '%s'." % \
@@ -69,8 +70,10 @@ else:
         
         b4j_obj.logger.debug ( "Finished analysis of '%s' successfully." % var ) if not ret else \
                 b4j_obj.logger.debug ( "Analysis of '%s' failed." % var )
+
+    print b4j_obj
     
-#    b4j_obj.write_report () if b4j_obj.reporting else None
+    b4j_obj.write_report () if b4j_obj.reporting else None
     
     b4j_obj.logger.debug ( "Exiting." )
 

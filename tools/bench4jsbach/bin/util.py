@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import sys,logging,textwrap
+import os,sys,logging,textwrap
 
 default_logger_name = 'DKL_LOGGER'
 log_message_newline = "\n  #\t"
@@ -54,6 +54,31 @@ def str2bool ( s ) :
 def print_none ( item ):
     return item if item is not None else "None"
 
+def print_item_or_list_rec ( something, indent ):
+    import collections
+
+    nextindent = indent + 3
+    
+    baseind = " " *   indent
+    nextind = " " *   nextindent
+    joinind = " " * ( nextindent + 20 )
+    sepind  = " " * ( nextindent + 20 )
+    if not something:
+        return "None"
+    elif isinstance ( something, basestring ):
+        return something
+    elif not isinstance ( something, collections.Iterable ):
+        return something
+    elif isinstance ( something, list ):
+        return "[\n%s]" % ( ",\n".join ( '{!s}{!s}'.format ( nextind, print_item_or_list_rec ( i, nextindent + 3 ))\
+                                       for i in something ))
+    elif isinstance ( something, dict ):
+        return "{\n%s}" % ( ",\n".join ( '{!s}{!s}\t: {!s}'.format ( nextind, k, print_item_or_list_rec ( v, nextindent + 3 )) \
+                                       for k,v in something.iteritems ()))
+    else:
+        print "It's somthing different."
+        
+
 
 def pprint_class_member_methods ( modulename, classname ):
     """python -c "import sys;sys.path.append ( '/scratch/mpi/mpiles/m300050/bench4jsbach/bin' );import util; util.pprint_class_member_methods ( 'bench', 'Bench_Object' )"
@@ -72,6 +97,13 @@ def pprint_class_member_methods ( modulename, classname ):
                                                                         modulename ))
     mem = inspect.getmembers ( class_, predicate=inspect.ismethod)
     pprint.pprint ([ i for i,j in mem])
+
+
+def touch ( filename ):
+    if os.path.exists ( filename ):
+        os.utime ( filename, None )
+    else:
+        open ( filename, 'a' ).close ()
 
 
 if __name__ == '__main__':

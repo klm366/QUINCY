@@ -4,7 +4,7 @@ import os, subprocess, shutil, re
 import json
 import copy
 
-from util import log_message_newline
+from util import log_message_newline, print_none, print_item_or_list_rec
 
 doc_template = """
 \\documentclass[]{article}
@@ -114,6 +114,7 @@ class Report ( object ):
     analyses = {}
 
     def __init__ ( self ):
+        super ( Report, self ).__init__ ()
         self.doc_template = doc_template
 
     def write_description ( self ):
@@ -185,8 +186,6 @@ table below.
         albedo_body = "" 
         self.logger.debug ( "self.analyses buffer: " + log_message_newline +\
                             json.dumps ( self.analyses ))
-
-        print self.analyses
 
         for analyse in self.analyses [ varname ]:
             
@@ -301,7 +300,13 @@ the plots\\\\
             raise Exception ( "Moving of report-pdf failed." )
 
         self.logger.debug ( "Exiting." )
-
+        
+    def __repr__ ( self ):
+        super ( Report, self ).__repr__ ()
+        print "Report.__repr__:"
+        print "Superclass Report object: analyses = ", print_item_or_list_rec ( self.analyses, 0 )
+                
+        return ""
 
 if __name__ == '__main__':
 
