@@ -26,7 +26,7 @@ CONTAINS
   FUNCTION moving_avrg(cav,nv,w,l) RESULT(nav)
     IMPLICIT NONE
     REAL(wp), INTENT(in)    :: cav,nv,w  ! input
-    LOGICAL(wp), INTENT(in) :: l         ! input
+    LOGICAL, INTENT(in) 		:: l         ! input
     REAL(wp)                :: nav       ! output
 
     IF(l) THEN
