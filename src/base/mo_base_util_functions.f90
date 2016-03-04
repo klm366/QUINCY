@@ -16,6 +16,7 @@ MODULE mo_base_util_functions
 
 CONTAINS
 
+  FUNCTION moving_avrg(cav,nv,w,l) RESULT(nav)
   ! calculates the average across a certain period preceding to the current value
   ! actually, the average gets rather estimated than exactly calculated using the weighted arithmetic mean 
   ! cav: current average value
@@ -23,7 +24,6 @@ CONTAINS
   ! w:   weight of the new value
   ! l:   bool, whether the new average is calculated from the nv, or av is used as nav
   ! nav: output of the function, the new average
-  FUNCTION moving_avrg(cav,nv,w,l) RESULT(nav)
     IMPLICIT NONE
     REAL(wp), INTENT(in)    :: cav,nv,w  ! input
     LOGICAL, INTENT(in) 		:: l         ! input
