@@ -361,7 +361,7 @@ and \\texttt{timemean}($X$) defined as
             os.environ [ "SKIP_SAME_TIME" ] = "1"
             cdo.selcode ( "21,22", 
                           options = '-f %s -t %s' % ( write_suffix, rsds_vardes [ 'path' ]),
-                          input   = exp_streams [ 0 ],
+                          input   = "-settunits,hours " + exp_streams [ 0 ],
                           output  = temp3 )
             print "wrote initial file %s" % temp2
             touch ( temp1 )
@@ -371,7 +371,7 @@ and \\texttt{timemean}($X$) defined as
                 os.remove ( temp1 )
                 shutil.move ( temp3, temp2 )
                 cdo.selcode ( "21,22",
-                              input   = f,
+                              input   = "-settunits,hours " + f,
                               output  = temp1,
                               options = '-f %s -t %s' % ( write_suffix, rsds_vardes [ 'path' ]))
                 cdo.mergetime (
