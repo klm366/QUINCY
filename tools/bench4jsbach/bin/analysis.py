@@ -571,7 +571,7 @@ and \\texttt{timemean}($X$) defined as
                     'startdate'      : str ( yearlist [ 0 ]),
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : write_suffix }
-                cdo.fldmean ( input=" -mul " +\
+                cdo.fldmean ( input="-setmisstoc,0 -mul " +\
                               can.B4J_index [ delta_str ] + " " +\
                               land_sea_mask,
                               output=can.B4J_index [ gm_str ],
@@ -601,7 +601,7 @@ and \\texttt{timemean}($X$) defined as
                     'startdate'      : str ( yearlist [ 0 ]),
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : write_suffix }
-                cdo.fldmean ( input="-abs -mul " +\
+                cdo.fldmean ( input="-abs -setmisstoc,0 -mul " +\
                               can.B4J_index [ delta_str ] + " " +\
                               land_sea_mask,
                               output=can.B4J_index [ gd_str ],
@@ -629,7 +629,7 @@ and \\texttt{timemean}($X$) defined as
 
         # arguments
         nlevs                = 20
-        tick_interleave_no   = int ( nlevs // 12 )
+        tick_interleave_no   = int ( nlevs // 10 )
         midval               =  0
         vmin                 = delta_min
         vmax                 = delta_max
@@ -714,7 +714,7 @@ and \\texttt{timemean}($X$) defined as
                 cax = f.add_axes ([ 0.17, 0.07, 0.7, 0.03])
                 cb = f.colorbar ( x.im, cax = cax, orientation = "horizontal",
                                   ticks = ticks_interleave,
-                                  format = ticker.FuncFormatter ( '%.2e' ))#'%.3f' )
+                                  format = '%.2e' )#ticker.FuncFormatter ( '%.2e' ))#'%.3f' )
                 cb.ax.text ( 0.97, 2.5, r'$\frac{W}{m^{2}}$', size = 32 )
                 plt.suptitle ( r'$\Delta_{C_{%d}R_{%d}}$' % (
                     can.B4J_canno, ref.B4J_refno ) + \
@@ -800,6 +800,8 @@ and \\texttt{timemean}($X$) defined as
              
 
             ymargin = ( ymax - ymin ) * vmargin_factor
+            print "ymin incl margin =", ymin - ymargin
+            print "ymax incl margin =", ymax + ymargin
             plt.axis ([ xcoords [ 0 ], xcoords [ 5 ], ymin - ymargin, ymax + ymargin ])     
             plt.title ( r'$gm_{C_{%d}R}$' % can.B4J_canno + \
                         " and " +\
@@ -807,7 +809,7 @@ and \\texttt{timemean}($X$) defined as
                         y = 1.08 )
             plt.ylabel ( r'$\frac{W}{m^{2}}$',
                          rotation = 0,
-                         position = ( -0.4, .96 ),
+                         position = ( -0.5, .96 ),
                          fontsize = 20 )
             plt.xlabel ( "season")
             plt.xticks ( time, seasons )
