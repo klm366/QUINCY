@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
 import matplotlib.colorbar as colorbar
+import matplotlib.ticker as ticker
 import numpy as np
 from pycmbs.mapping import map_plot
 
@@ -139,6 +140,14 @@ class Analysis ( object ):
         y_coords = np.insert ( np.insert ( yvals, 0, left_y_coord ), 5, right_y_coord )
         
         return x_coords, y_coords
+
+
+    def fmt(x, pos):
+        a, b = '{:.2e}'.format(x).split('e')
+        b = int(b)
+        return r'${} \times 10^{{{}}}$'.format(a, b)
+
+    
 
     def albedo_analyse ( self ):
         """
@@ -619,8 +628,8 @@ and \\texttt{timemean}($X$) defined as
         # 4.a.3.a) colormap adjustment for delta (as serie of mapplots )
 
         # arguments
-        nlevs                = 400
-        tick_interleave_no   = int ( nlevs // 16 )
+        nlevs                = 20
+        tick_interleave_no   = int ( nlevs // 12 )
         midval               =  0
         vmin                 = delta_min
         vmax                 = delta_max
@@ -703,7 +712,9 @@ and \\texttt{timemean}($X$) defined as
                                    cmap_data           = cmap )
                     
                 cax = f.add_axes ([ 0.17, 0.07, 0.7, 0.03])
-                cb = f.colorbar ( x.im, cax=cax, orientation="horizontal", ticks=ticks_interleave, format='%.3f' )
+                cb = f.colorbar ( x.im, cax = cax, orientation = "horizontal",
+                                  ticks = ticks_interleave,
+                                  format = ticker.FuncFormatter ( '%.2e' ))#'%.3f' )
                 cb.ax.text ( 0.97, 2.5, r'$\frac{W}{m^{2}}$', size = 32 )
                 plt.suptitle ( r'$\Delta_{C_{%d}R_{%d}}$' % (
                     can.B4J_canno, ref.B4J_refno ) + \
@@ -781,10 +792,11 @@ and \\texttt{timemean}($X$) defined as
                 plt.plot ( xcoords, ycoords, colored_lines [ ref.B4J_refno ])
                 plt.plot ( time, albedo_gm [ :, 0, 0 ],
                            colored_dots [ ref.B4J_refno ],
-                           label = r'$gm_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ) +  r', $R_{%s}$: ' % ref.B4J_refno + ref.B4J_name )
+                           label = r'$gm_{C_{%s}R_{%s}}$'% ( can.B4J_canno, ref.B4J_refno ) +\
+                           r', $R_{%s}$: ' % ref.B4J_refno + ref.B4J_name )
                 plt.axhline ( albedo_tm [ 0, 0, 0 ],
                               color =  colors [ ref.B4J_refno ],
-                              label = r'$tm_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ))
+                              label = r'$tm_{C_{%s}R_{%s}}$'% ( can.B4J_canno, ref.B4J_refno ))
              
 
             ymargin = ( ymax - ymin ) * vmargin_factor
@@ -863,10 +875,11 @@ and \\texttt{timemean}($X$) defined as
                 
                 plt.plot ( time, albedo_gd [ :, 0, 0 ],
                            colored_dots [ ref.B4J_refno ],
-                           label = r'$gd_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ) +  r', $R_{%s}$: ' % ref.B4J_refno + ref.B4J_name )
+                           label = r'$gd_{C_{%s}R_{%s}}$'% ( can.B4J_canno, ref.B4J_refno ) +\
+                           r', $R_{%s}$: ' % ref.B4J_refno + ref.B4J_name )
                 plt.axhline ( albedo_td [ 0, 0, 0 ],
                               color =  colors [ ref.B4J_refno ],
-                              label = r'$td_{C_{%s}R_{%s}}$'% ( can.B4J_refno, ref.B4J_refno ))
+                              label = r'$td_{C_{%s}R_{%s}}$'% ( can.B4J_canno, ref.B4J_refno ))
 
     
             ymargin = ( ymax - ymin ) * vmargin_factor
