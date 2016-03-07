@@ -68,7 +68,7 @@ CONTAINS
     ! 
     ! 1.0 Calculate growth
     ! 
-    CALL  calc_growth(plant,plant%flux%growth, & 
+    CALL  calc_growth(plant,veg_param,plant%flux%growth, & 
             plant%flux%growth_respiration,plant%flux%growth_respiration_c13,plant%flux%growth_respiration_c14)
     ! 
     ! 1.5 Calculate maintenance respiration

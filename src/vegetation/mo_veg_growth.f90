@@ -18,7 +18,7 @@ MODULE mo_veg_growth
 
 CONTAINS
 
-  SUBROUTINE calc_growth(plant,growth,growth_respiration,growth_respiration_c13,growth_respiration_c14)
+  SUBROUTINE calc_growth(plant,veg_param,growth,growth_respiration,growth_respiration_c13,growth_respiration_c14)
     !
     ! Routine to calculate plant growth 
     ! 
@@ -28,6 +28,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(PlantClass), INTENT(in) :: plant
+    TYPE(VegetationParameterClass),INTENT(in) :: veg_param 
     TYPE(VegPool),INTENT(out) :: growth
     REAL(wp),INTENT(out) :: growth_respiration,growth_respiration_c13,growth_respiration_c14 
     TYPE(VegPool) :: falloc
@@ -44,7 +45,12 @@ CONTAINS
     CALL update_stoichiometry(target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, & 
                               target_cn_fruit,target_np_leaf,target_np_fine_root,target_np_coarse_root, & 
                               target_np_sap_wood,target_np_fruit)
-    CALL calc_allocation_fraction(target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, &
+    CALL calc_allocation_fraction(plant%pool%leaf%carbon,plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon, & 
+                              plant%pool%fine_root%carbon,veg_param%sla(plant%pftid),veg_param%k_latosa(plant%pftid), &
+                              veg_param%k_rtos(plant%pftid),veg_param%wood_density(plant%pftid), & 
+                              veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
+                              veg_param%growthform(plant%pftid), & 
+                              target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, &
                               target_cn_fruit,target_np_leaf,target_np_fine_root,target_np_coarse_root, &
                               target_np_sap_wood,target_np_fruit,falloc,nreq_growth,preq_growth)
     CALL meristem_activity(nreq_growth,preq_growth,plant%pool%labile,growth%labile)
@@ -126,7 +132,9 @@ CONTAINS
 
   END SUBROUTINE meristem_activity
 
-  SUBROUTINE calc_allocation_fraction(target_cn_leaf,target_cn_fine_root,target_cn_coarse_root, & 
+  SUBROUTINE calc_allocation_fraction(leaf_carbon,sap_wood_carbon,heart_wood_carbon,root_carbon,sla, &
+                              k_latosa,k_rtos,wood_density,allom_k1,allom_k2,growthform, &
+                              target_cn_leaf,target_cn_fine_root,target_cn_coarse_root, & 
                               target_cn_sap_wood,target_cn_fruit,target_np_leaf,target_np_fine_root, & 
                               target_np_coarse_root,target_np_sap_wood,target_np_fruit,falloc,nreq_growth,& 
                               preq_growth)
@@ -138,9 +146,22 @@ CONTAINS
     ! 
     USE mo_land_constants
     USE mo_base_memory
+    USE mo_base_constants, ONLY: pi
     USE mo_veg_parameters
+
     IMPLICIT NONE
     ! 0.1 Input
+    REAL(wp), INTENT(in) :: leaf_carbon           ! carbon in leaves (mol/individual)
+    REAL(wp), INTENT(in) :: sap_wood_carbon       ! carbon in sap wood (mol/individual)
+    REAL(wp), INTENT(in) :: heart_wood_carbon     ! carbon in heart wood (mol/individual)
+    REAL(wp), INTENT(in) :: root_carbon           ! carbon in roots (mol/individual) 
+    REAL(wp), INTENT(in) :: sla                   ! specific leaf area
+    REAL(wp), INTENT(in) :: k_latosa              ! leaf area to sapwood area ratio
+    REAL(wp), INTENT(in) :: k_rtos                ! root tradeoff parameter
+    REAL(wp), INTENT(in) :: wood_density          ! specific wood density 
+    REAL(wp), INTENT(in) :: allom_k1              ! parameter 1 in height diameter relationship
+    REAL(wp), INTENT(in) :: allom_k2              ! parameter 2 in height diameter relationship
+    INTEGER, INTENT(in) :: growthform             ! plant growth form 
     REAL(wp), INTENT(in) :: target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, &
                               target_cn_fruit,target_np_leaf,target_np_fine_root,target_np_coarse_root, &
                               target_np_sap_wood,target_np_fruit        ! target C:N and N:P rations for tissue types
@@ -148,16 +169,77 @@ CONTAINS
     TYPE(VegPool), INTENT(inout) :: falloc                              ! allocation coefficients 
     ! 0.3 Output
     REAL(wp), INTENT(out) :: nreq_growth, preq_growth                   ! mol N/P needed per mol growth of C
+    ! 0.4 Local
+    REAL(wp) height,dheight,diameter,ddiameter                          ! height, diameter and their derivative
+    REAL(wp) b_inc,leaf_carbon_inc,root_carbon_inc,sap_wood_carbon_inc  ! total and compartment-wise carbon increment (mol/dt)
+    REAL(wp) ltos,ltor                                                  ! leaf to sapwood and leaf to root mass ratio
 
     !
     ! 1.0 Allocation factors for C (this should be calculated based on various principles of plant growth and allometry)
     ! 
-    falloc%leaf%carbon = 0.3_wp
-    falloc%fine_root%carbon = 0.3_wp
-    falloc%coarse_root%carbon = 0.1_wp
-    falloc%sap_wood%carbon = 0.2_wp
-    falloc%fruit%carbon = 0.1_wp 
+    ! SZ: uncomment this to revert to fixed constant allocation
+    ! falloc%leaf%carbon = 0.3_wp
+    ! falloc%fine_root%carbon = 0.3_wp
+    ! falloc%coarse_root%carbon = 0.1_wp
+    ! falloc%sap_wood%carbon = 0.2_wp
+    ! falloc%fruit%carbon = 0.1_wp 
 
+    IF(growthform==itree)THEN
+       ! 
+       ! seed for allocation coefficients is the average growth rate per time step.
+       ! for now assume a standard growth rate of 2.4 g / m2 / day
+       b_inc = 0.2_wp / one_day * dt 
+       !
+       ! Diagnose current height and diameter from wood mass assuming a zylindric shape and 
+       ! height = k1 * D ^k2
+       !  
+       diameter = ((sap_wood_carbon + heart_wood_carbon) / & 
+                  (wood_density * pi/4._wp * allom_k1)) ** (1._wp/(2._wp + allom_k2))
+       height = MAX(3.0_wp,allom_k1 * (diameter ** allom_k2))
+       ! derivative of height against biomass increase for approximation of height growth effect on partitioning
+       ddiameter = ((sap_wood_carbon + heart_wood_carbon + b_inc) / &
+                  (wood_density * pi/4._wp * allom_k1)) ** (1._wp/(2._wp + allom_k2))
+       dheight = allom_k1 * ddiameter ** allom_k2 - height
+       ! scaling factor for leaf to wood mass, derived from pipe-model (Shinozaki et al. 1964, J J Ecol)
+       ! leaf area = k_latosa * sap_wood area
+       ! => Cl * sla = k * Cs / wood_density / height
+       ! => Cl = k_latosa / sla / wood_density / height * Cs = ltos * Cs / height
+       ltos = k_latosa / sla / wood_density
+       ! scaling factor for root to leaf mass
+       ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
+       ! Note: currently still lacks a moisture response!
+       ! sapwood mass / height =  k_rtos * fine_root_mass
+       ! Cr = Cs / k_rtos / height
+       ! let Cs = Cl / ltos * height
+       ! => Cl = Cr * ltos * k_rtos = Cl = Cr * ltor 
+       ! ad 2: nitrogen/phosphorus sensitivity still needed
+       ltor = k_rtos * ltos
+
+       ! solving the above three equations simulatenously
+       leaf_carbon_inc = MAX(( b_inc + leaf_carbon * dheight / ltos * & 
+                         ( leaf_carbon / ltor - b_inc - root_carbon ) + sap_wood_carbon + root_carbon - & 
+                         leaf_carbon * (height / ltos + 1.0_wp / ltor )) / & 
+                         (1.0_wp + ( b_inc - (1.0_wp + 2.0_wp/ltor) * leaf_carbon + root_carbon ) & 
+                         * dheight / ltos + height / ltos + 1._wp / ltor ), 0.0_wp) 
+
+       sap_wood_carbon_inc = MAX((( leaf_carbon + leaf_carbon_inc ) / ltos * height - sap_wood_carbon) / & 
+                             (1._wp - ( leaf_carbon + leaf_carbon_inc ) / ltos * dheight ), 0.0_wp)          
+       IF(sap_wood_carbon_inc > 0.0_wp) THEN
+          root_carbon_inc = MAX(( leaf_carbon + leaf_carbon_inc ) / ltor - root_carbon, 0.0_wp)
+       ELSE ! special case of no wood growth (phenology etc.): redistribute available carbon 
+          leaf_carbon_inc = MAX(( b_inc - leaf_carbon / ltor + root_carbon ) / (1.0_wp + 1._wp/ ltor),0.0_wp)
+          root_carbon_inc = MAX(MIN(b_inc - leaf_carbon_inc,( leaf_carbon_inc + leaf_carbon ) / ltor - root_carbon),&
+                            0.0_wp)
+       ENDIF
+
+       ! convert to allocation fractions 
+       falloc%leaf%carbon = leaf_carbon_inc/(leaf_carbon_inc+sap_wood_carbon_inc+root_carbon_inc)
+       falloc%fine_root%carbon = root_carbon_inc/(leaf_carbon_inc+sap_wood_carbon_inc+root_carbon_inc)
+       falloc%coarse_root%carbon = 0.0_wp
+       falloc%sap_wood%carbon = sap_wood_carbon_inc/(leaf_carbon_inc+sap_wood_carbon_inc+root_carbon_inc)
+       falloc%fruit%carbon = 0.0_wp 
+
+    ENDIF
     !
     ! 2.0 Allocation factors for N, derived from the target C:N ratios and the C partitioning coefficients
     !  

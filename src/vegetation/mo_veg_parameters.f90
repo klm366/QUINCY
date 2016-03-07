@@ -62,19 +62,31 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: kdf0                         ! extinction coefficient for diffuse PAR (Spitters eq. 7) 
   REAL(wp),SAVE :: rho2sbeta                    ! scaling factor of solar angle in reflection calculation (mo_veg_fapar) 
 
+  ! some useful numbers for easy identification of photosynthetic pathways and growth forms
+  INTEGER,SAVE :: itree = 1 
+  INTEGER,SAVE :: igrass = 2 
+  INTEGER,SAVE :: ic3phot = 1
+  INTEGER,SAVE :: ic4phot = 2 
+
   TYPE VegetationParameterClass
+     INTEGER,DIMENSION(npft) :: growthform 
+     REAL(wp),DIMENSION(npft) :: sla
+     REAL(wp),DIMENSION(npft) :: nf 
      REAL(wp),DIMENSION(npft) :: tjmax_opt
      REAL(wp),DIMENSION(npft) :: tjmax_omega
      REAL(wp),DIMENSION(npft) :: g0
      REAL(wp),DIMENSION(npft) :: g1
-     REAL(wp),DIMENSION(npft) :: nf 
      REAL(wp),DIMENSION(npft) :: lambda_soil_ps
      REAL(wp),DIMENSION(npft) :: weibull_k_soil_ps
      REAL(wp),DIMENSION(npft) :: lambda_soil_gs
      REAL(wp),DIMENSION(npft) :: weibull_k_soil_gs
      REAL(wp),DIMENSION(npft) :: tau_sapwood
+     REAL(wp),DIMENSION(npft) :: wood_density 
+     REAL(wp),DIMENSION(npft) :: k_latosa 
+     REAL(wp),DIMENSION(npft) :: k_rtos 
+     REAL(wp),DIMENSION(npft) :: allom_k1
+     REAL(wp),DIMENSION(npft) :: allom_k2
      REAL(wp),DIMENSION(npft) :: tau_fruit_pool 
-     REAL(wp),DIMENSION(npft) :: sla
   END TYPE VegetationParameterClass
 
   PUBLIC :: init_veg_parameters,init_pft_param_table
@@ -170,9 +182,14 @@ MODULE mo_veg_parameters
       ! This subroutine initalise plant type specific parameters
       ! This should obviously not be hard coded, but read from a file
       !
+      USE mo_land_constants, ONLY: molar_mass_C12
       IMPLICIT NONE
       TYPE(VegetationParameterClass),INTENT(inout) :: veg_param
  
+      ! vegetation growth form
+      veg_param%growthform(:) = itree
+      ! specific leaf area of a plant (m2 / mol C) 
+      veg_param%sla(:) = 10.0_wp / 1000.0_wp * molar_mass_C12 
       ! nitrogen scaling parameter for photosynthesis calculation 
       veg_param%nf(:) = 1.83_wp
       ! initial value of the temperature optimum of electron transport and its shape parameter (deg C)
@@ -191,10 +208,18 @@ MODULE mo_veg_parameters
       veg_param%weibull_k_soil_gs(:) = veg_param%weibull_k_soil_ps(:)
       ! turnover time of the sapwood pool (1/years)
       veg_param%tau_sapwood(:) = 0.05_wp
+      ! wood density (mol C / m3)
+      veg_param%wood_density(:) = 30000.0_wp / molar_mass_C12
+      ! leaf area to sapwood area ratio 
+      veg_param%k_latosa(:) = 4000.0_wp 
+      ! trade-off parametr for hydraulic investment into sapwood or fine roots 
+      veg_param%k_rtos(:) = 1.0_wp / (veg_param%k_latosa(:) / veg_param%sla(:) / veg_param%wood_density(:))
+      ! paramter in height diameter relationship 
+      veg_param%allom_k1(:) = 55.0_wp 
+      ! paramter in height diameter relationship
+      veg_param%allom_k2(:) = 0.65 
       ! turnover time of the fruit pool (1/years)
       veg_param%tau_fruit_pool(:) = 1.0_wp
-      ! specific leaf area of a plant (m2 / mol C) 
-      veg_param%sla(:) = 10.0_wp / 1000.0_wp * 12.0_wp ! 10 m-2 / kg C
 
     END SUBROUTINE init_pft_param_table 
 
