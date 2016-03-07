@@ -72,6 +72,7 @@ $(MODEL_LIB)(mo_veg_growth.o): \
 
 $(MODEL_LIB)(mo_veg_respiration.o): \
   $(BASE_LIB)(mo_kind.o) \
+  $(LAND_LIB)(mo_land_constants.o) \
   $(MODEL_LIB)(mo_veg_parameters.o) 
 
 $(MODEL_LIB)(mo_veg_turnover.o): \
