@@ -1,0 +1,47 @@
+!!
+!! @brief flags (switches) to en-/disable certain model functionalities
+!!
+!! @author
+!!  Jan Engel, MPI-BGC Jena
+!!
+!! @par Revision History
+!! First version by Jan Engel (2016-03-08)
+!!
+MODULE mo_base_configuration
+
+  USE mo_kind, ONLY : wp
+
+  IMPLICIT NONE
+
+  TYPE VegetationConfigClass
+    ! Output related:
+    ! Set output timestep of pools and fluxes
+    REAL(wp) :: output_timestep_pool  = 1.0
+    REAL(wp) :: output_timestep_flux  = 1.0
+    ! Set time of output start/end (e.g. only output last 3 years)
+    REAL(wp) :: output_start_date     = 1.0
+    REAL(wp) :: output_end_date       = 100.0
+    ! Driver related:
+    ! Set whether driving variables (temperature, light etc.) vary seasonally: 0 == NO, 1 == YES
+    CHARACTER(8) :: option_forcing    = 'constant'  ! options: generate readfile constant -> case  (mit TRIM damit die leeren Stellen abgeschnitten werden)
+    ! Optimality related:
+    ! Set whether model runs optimising schemes:
+    LOGICAL :: flag_optimal_Nfraction = .FALSE.
+    LOGICAL :: flag_optimal_Nleaf     = .FALSE.
+  END TYPE VegetationConfigClass
+
+
+  TYPE ModelConfigClass
+  ! collects all sub-model specific Config TYPEs and makes them globally accessible
+    TYPE( VegetationConfigClass ) :: vegetation			! values set in plant_model_driver.f90 (later: read from file)
+
+  END TYPE ModelConfigClass
+
+  TYPE( ModelConfigClass ) :: model_config
+
+
+  PRIVATE							! all other definitions of TYPEs are local, but accessible via lodel_config%... 
+
+  PUBLIC :: model_config			! only this main config TYPE is global
+
+END MODULE mo_base_configuration
