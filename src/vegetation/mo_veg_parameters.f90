@@ -89,6 +89,14 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: tau_fruit_pool 
   END TYPE VegetationParameterClass
 
+  TYPE AccumulationPeriodClass   ! new
+    ! length of period over which the values are accumulated
+    REAL(wp) :: light = 1.
+    REAL(wp) :: npp = 1.
+    REAL(wp) :: gpp = 1.
+  END TYPE AccumulationPeriodClass
+
+
   PUBLIC :: init_veg_parameters,init_pft_param_table
 
   CONTAINS 

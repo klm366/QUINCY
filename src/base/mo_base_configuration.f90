@@ -14,13 +14,14 @@ MODULE mo_base_configuration
   IMPLICIT NONE
 
   TYPE VegetationConfigClass
+    ! currently: values are set in plant_model_driver section 0.1
     ! Output related:
     ! Set output timestep of pools and fluxes
-    REAL(wp) :: output_timestep_pool  = 1.0
-    REAL(wp) :: output_timestep_flux  = 1.0
+    INTEGER :: output_timestep_pool  = 1
+    INTEGER :: output_timestep_flux  = 1
     ! Set time of output start/end (e.g. only output last 3 years)
-    REAL(wp) :: output_start_date     = 1.0
-    REAL(wp) :: output_end_date       = 100.0
+    INTEGER :: output_start_date     = 1
+    INTEGER :: output_end_date       = 100
     ! Driver related:
     ! Set whether driving variables (temperature, light etc.) vary seasonally: 0 == NO, 1 == YES
     CHARACTER(8) :: option_forcing    = 'constant'  ! options: generate readfile constant -> case  (mit TRIM damit die leeren Stellen abgeschnitten werden)

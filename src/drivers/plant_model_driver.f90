@@ -78,10 +78,10 @@ PROGRAM plant_model_driver
   ! 
   ! 0.1 set config switches & values (see mo_base_configuration)
   ! 
-  model_config%vegetation%output_timestep_pool      = 0.
-  model_config%vegetation%output_timestep_flux      = 0.
-  model_config%vegetation%output_start_date         = 0.
-  model_config%vegetation%output_end_date           = 0.
+  model_config%vegetation%output_timestep_pool      = 1
+  model_config%vegetation%output_timestep_flux      = 1
+  model_config%vegetation%output_start_date         = 1
+  model_config%vegetation%output_end_date           = 100
   model_config%vegetation%option_forcing            = 'constant'
   model_config%vegetation%flag_optimal_Nfraction    = .FALSE.
   model_config%vegetation%flag_optimal_Nleaf        = .FALSE.
@@ -92,7 +92,8 @@ PROGRAM plant_model_driver
   CALL init_atmland_constants
   CALL init_pft_param_table(veg_param)
   CALL init_veg_parameters
-  !
+  !CALL init_veg_accumulation_paramaters   ! defined in mo_veg_memory
+  ! 
   ! 1.1 Initialise time step
   ! 
   time = 0.0
@@ -103,9 +104,9 @@ PROGRAM plant_model_driver
   annual_t_air_min = -5.0_wp + Tzero       ! annual minumum average day temperature
   annual_t_air_max = 25.0_wp + Tzero       ! annual maximum average day temperature
   diurnal_temp_range = 15.0_wp             ! diurnal temperature range
-  !
+  ! 
   ! 1.2 Initalisation of met-forcing to standard values
-  !
+  ! 
   t_air = ref_t_air + Tzero
   press_srf = standard_press_srf
   q_air = calc_spec_humidity_sat(t_air,press_srf) - ref_vpd / press_srf * eps_vpd
