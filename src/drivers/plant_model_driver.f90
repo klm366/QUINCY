@@ -11,6 +11,7 @@ PROGRAM plant_model_driver
   USE mo_kind, ONLY: wp
   USE mo_base_memory
   USE mo_base_constants
+  USE mo_base_configuration, ONLY: model_config
   USE mo_atmland_constants
   USE mo_land_constants
   USE mo_atmland_util
@@ -25,7 +26,7 @@ PROGRAM plant_model_driver
   TYPE(VegetationParameterClass),SAVE :: veg_param     ! data structure for vegetation parameters
   TYPE(TileClass),DIMENSION(ntile), SAVE :: tile       ! data structure for dynamic vegetation and soil variables
 
- REAL(wp) :: &                                        ! model forcing
+  REAL(wp) :: &                                        ! model forcing
       t_air            , &
       q_air            , &
       rain             , &
@@ -73,7 +74,18 @@ PROGRAM plant_model_driver
   REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
 
   INTEGER :: i,lun
-  !
+
+  ! 
+  ! 0.1 set config switches & values (see mo_base_configuration)
+  ! 
+  model_config%vegetation%output_timestep_pool      = 0.
+  model_config%vegetation%output_timestep_flux      = 0.
+  model_config%vegetation%output_start_date         = 0.
+  model_config%vegetation%output_end_date           = 0.
+  model_config%vegetation%option_forcing            = 'constant'
+  model_config%vegetation%flag_optimal_Nfraction    = .FALSE.
+  model_config%vegetation%flag_optimal_Nleaf        = .FALSE.
+  ! 
   ! 1.0 Initialisation of vegetation parameters and constants
   ! 
   CALL init_base_constants
