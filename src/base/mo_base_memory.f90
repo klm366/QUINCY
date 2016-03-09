@@ -78,18 +78,18 @@ MODULE mo_base_memory
      REAL(wp) :: theta
   END TYPE SoilClass
 
-  TYPE AccumulationClass  ! new
-    ! averages of parameters across a certain period (model time steps)
-    ! see AccumulationPeriodClass in mo_veg_parameters
-    REAL(wp) :: light = 1.
-    REAL(wp) :: npp = 1.
-    REAL(wp) :: gpp = 1.
-  END TYPE AccumulationClass
+!  TYPE AccumulationClass  ! new
+!    ! averages of parameters across a certain period (model time steps)
+!    ! see AccumulationPeriodClass in mo_veg_parameters
+!    REAL(wp) :: light = 1.
+!    REAL(wp) :: npp = 1.
+!    REAL(wp) :: gpp = 1.
+!  END TYPE AccumulationClass
 
   TYPE TileClass
      TYPE(PlantClass) :: plant
      TYPE(SoilClass) :: soil
-     TYPE(AccumulationClass) :: accumulation    ! new
+!     TYPE(AccumulationClass) :: accumulation_parameters    ! new
   END TYPE TileClass  
  
 ! PUBLIC :: ElementAdd,ElementSub,ElementMul,ElementDiv
