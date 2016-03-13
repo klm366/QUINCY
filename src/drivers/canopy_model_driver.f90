@@ -96,7 +96,7 @@ PROGRAM canopy_model_driver
   !
   tile(:)%soil%theta = ref_theta
   tile(1)%plant%lai = ref_lai 
-  tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N14*tile(1)%plant%lai
+  tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
   ! 
   ! 2.0 Sensitivity plots
   ! 
@@ -218,7 +218,7 @@ PROGRAM canopy_model_driver
   DO i = 1,22
 
      tile(1)%plant%lai = tile(1)%plant%lai + 0.5_wp 
-     tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N14*tile(1)%plant%lai
+     tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
 
      CALL update_radiation(tile,swvis_srf_down,swnir_srf_down,swpar_srf_down, &
                               swpar_fdiffuse,cos_zenith_angle,alb_vis_dif,alb_vis_dir, &
@@ -237,7 +237,7 @@ PROGRAM canopy_model_driver
   WRITE(lun,*) 'Nleaf A GC CI'
   DO i = 1,24
 
-     tile(1)%plant%pool%leaf%nitrogen=0.125_wp*(i)/molar_mass_N14*tile(1)%plant%lai
+     tile(1)%plant%pool%leaf%nitrogen=0.125_wp*(i)/molar_mass_N*tile(1)%plant%lai
 
      CALL update_radiation(tile,swvis_srf_down,swnir_srf_down,swpar_srf_down, &
                               swpar_fdiffuse,cos_zenith_angle,alb_vis_dif,alb_vis_dir, &
@@ -245,10 +245,10 @@ PROGRAM canopy_model_driver
 
      CALL update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,veg_param)
 
-     WRITE(lun,'(4F16.7)') tile(1)%plant%pool%leaf%nitrogen/tile(1)%plant%lai*molar_mass_N14, & 
+     WRITE(lun,'(4F16.7)') tile(1)%plant%pool%leaf%nitrogen/tile(1)%plant%lai*molar_mass_N, & 
            tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci
 
   ENDDO
-  tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N14*tile(1)%plant%lai
+  tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
 
 END PROGRAM canopy_model_driver

@@ -13,12 +13,14 @@ MODULE mo_land_constants
   ! physical constants
   REAL(wp), PARAMETER :: r_gas = 8.3144_wp ! universal gas constant (J / mol / K) 
   ! molar masses
+  REAL(wp), SAVE :: molar_mass_C = 12.0112_wp   ! g C / mol C
   REAL(wp), SAVE :: molar_mass_C12 = 12.0_wp   ! g C / mol C
   REAL(wp), SAVE :: molar_mass_C13 = 13.0_wp   ! g C / mol C
   REAL(wp), SAVE :: molar_mass_C14 = 14.0_wp   ! g C / mol C
+  REAL(wp), SAVE :: molar_mass_N = 14.0072_wp   ! g N / mol N
   REAL(wp), SAVE :: molar_mass_N14 = 14.0_wp   ! g N / mol N
   REAL(wp), SAVE :: molar_mass_N15 = 15.0_wp   ! g N / mol N
-  REAL(wp), SAVE :: molar_mass_P31 = 30.997_wp ! g P / mol P
+  REAL(wp), SAVE :: molar_mass_P = 30.997_wp ! g P / mol P
   ! conversion factors
   REAL(wp), SAVE :: sw2par = 2.3_wp            ! W / µmol / s
   REAL(wp), SAVE :: Tzero = 273.15_wp          ! melting point in K

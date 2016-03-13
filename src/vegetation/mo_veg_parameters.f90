@@ -190,14 +190,14 @@ MODULE mo_veg_parameters
       ! This subroutine initalise plant type specific parameters
       ! This should obviously not be hard coded, but read from a file
       !
-      USE mo_land_constants, ONLY: molar_mass_C12
+      USE mo_land_constants, ONLY: molar_mass_C
       IMPLICIT NONE
       TYPE(VegetationParameterClass),INTENT(inout) :: veg_param
  
       ! vegetation growth form
       veg_param%growthform(:) = itree
       ! specific leaf area of a plant (m2 / mol C) 
-      veg_param%sla(:) = 10.0_wp / 1000.0_wp * molar_mass_C12 
+      veg_param%sla(:) = 10.0_wp / 1000.0_wp * molar_mass_C 
       ! nitrogen scaling parameter for photosynthesis calculation 
       veg_param%nf(:) = 1.83_wp
       ! initial value of the temperature optimum of electron transport and its shape parameter (deg C)
@@ -217,7 +217,7 @@ MODULE mo_veg_parameters
       ! turnover time of the sapwood pool (1/years)
       veg_param%tau_sapwood(:) = 0.05_wp
       ! wood density (mol C / m3)
-      veg_param%wood_density(:) = 30000.0_wp / molar_mass_C12
+      veg_param%wood_density(:) = 30000.0_wp / molar_mass_C
       ! leaf area to sapwood area ratio 
       veg_param%k_latosa(:) = 4000.0_wp 
       ! trade-off parametr for hydraulic investment into sapwood or fine roots 

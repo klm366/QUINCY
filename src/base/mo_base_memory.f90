@@ -13,8 +13,8 @@ MODULE mo_base_memory
   USE mo_base_constants
 
   TYPE Element
-     REAL(wp) :: carbon = 0.0_wp     ! carbon concentration of pool in mol / m2
-     REAL(wp) :: nitrogen = 0.0_wp   ! nitrogen concentration of pool in mol / m2
+     REAL(wp) :: carbon = 0.0_wp     ! total carbon concentration of pool in mol / m2
+     REAL(wp) :: nitrogen = 0.0_wp   ! totol nitrogen concentration of pool in mol / m2
      REAL(wp) :: phosphorus = 0.0_wp ! phosphorus concentration of pool in mol / m2
      REAL(wp) :: carbon13 = 0.0_wp   ! 13carbon concentration of pool in mol / m2
      REAL(wp) :: carbon14 = 0.0_wp   ! 14carbon concentration of pool in mol / m2

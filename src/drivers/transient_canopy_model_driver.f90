@@ -119,7 +119,7 @@ PROGRAM canopy_model_driver
   veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(t_air - Tzero)
   tile(:)%soil%theta = ref_theta
   tile(1)%plant%lai = ref_lai 
-  tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N14*tile(1)%plant%lai
+  tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
   ! 
   ! 2.0 Time loop 
   ! 

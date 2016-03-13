@@ -98,12 +98,12 @@ PROGRAM plant_model_driver
   ! 
   time = 0.0
   dt = 1800.0_wp
-  ntimestep = NINT(15.0_wp * one_year * one_day / dt)  ! number of time steps
+  ntimestep = NINT(10.0 * one_year * one_day / dt)  ! number of time steps
   latitude = 50.0_wp                       ! latitude in degrees
   longitude = 0.0_wp                       ! longitude in degrees
   annual_t_air_min = -5.0_wp + Tzero       ! annual minumum average day temperature
   annual_t_air_max = 25.0_wp + Tzero       ! annual maximum average day temperature
-  diurnal_temp_range = 15.0_wp             ! diurnal temperature range
+  diurnal_temp_range = .1_wp             ! diurnal temperature range
   ! 
   ! 1.2 Initalisation of met-forcing to standard values
   ! 
@@ -138,9 +138,9 @@ PROGRAM plant_model_driver
      tile(i)%plant%pool%leaf%carbon = tile(i)%plant%lai / veg_param%sla(tile(i)%plant%pftid)
   ENDDO 
   tile(:)%plant%pool%leaf%nitrogen = tile(:)%plant%pool%leaf%carbon / & 
-        ( 25.0_wp * molar_mass_N14 / molar_mass_C12 )
+        ( 25.0_wp * molar_mass_N / molar_mass_C )
   tile(:)%plant%pool%leaf%phosphorus = tile(:)%plant%pool%leaf%nitrogen / &
-        ( 14.0_wp * molar_mass_P31 / molar_mass_N14 )
+        ( 14.0_wp * molar_mass_P / molar_mass_N )
   tile(:)%plant%pool%labile%carbon = 100.0_wp
   tile(:)%plant%pool%labile%nitrogen = 10.0_wp
   tile(:)%plant%pool%labile%phosphorus = 1.0_wp

@@ -317,14 +317,14 @@ CONTAINS
                               ! target C:N and N:P rations (Ops! this is in mol:mol)
 
     ! for now prescribed and based on OCN
-    target_cn_leaf = 25.0_wp * molar_mass_N14 / molar_mass_C12  ! CN adjusted for g/g to mol/mol
+    target_cn_leaf = 25.0_wp * molar_mass_N / molar_mass_C  ! CN adjusted for g/g to mol/mol
     target_cn_fine_root = target_cn_leaf / 0.85_wp 
     target_cn_coarse_root = target_cn_leaf / 0.125_wp 
     target_cn_sap_wood = target_cn_leaf / 0.125_wp
     target_cn_fruit = target_cn_leaf / 0.85_wp 
 
     ! Mock allocation fractions for P, assuming a univeral aim of N:P = 14 ("optimal") 
-    target_np_leaf = 14.0_wp * molar_mass_P31 / molar_mass_N14  ! NP adjusted for g/g to mol/mol
+    target_np_leaf = 14.0_wp * molar_mass_P / molar_mass_N  ! NP adjusted for g/g to mol/mol
     target_np_fine_root = target_np_leaf / 0.85_wp
     target_np_coarse_root = target_np_leaf / 0.125_wp
     target_np_sap_wood = target_np_leaf / 0.125_wp
