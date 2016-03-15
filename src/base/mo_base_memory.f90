@@ -64,9 +64,25 @@ MODULE mo_base_memory
      REAL(wp) :: ci
   END TYPE VegFlux
 
+  ! 
+  ! Plant
+  ! 
+  TYPE AccumulationPlantClass
+    ! definition of averages of variable across a certain period (model time steps)
+    ! Light in the canopy
+    REAL(wp) :: par_sunlit = 1._wp
+    REAL(wp) :: par_shaded = 1._wp
+    REAL(wp) :: fleaf_sunlit = 1._wp
+    ! Soil moisture (currently in mo_veg_photosynthesis)
+    REAL(wp) :: beta_air = 1._wp
+    REAL(wp) :: beta_soil_ps = 1._wp
+    REAL(wp) :: beta_soil_gs = 1._wp
+  END TYPE AccumulationPlantClass
+
   TYPE PlantClass
      TYPE(VegPool) :: pool
      TYPE(VegFlux) :: flux
+     TYPE(AccumulationPlantClass) :: accumulated
      INTEGER :: pftid = 1
      REAL(wp) :: lai
      REAL(wp) :: par_sunlit(ncanop)
@@ -74,22 +90,35 @@ MODULE mo_base_memory
      REAL(wp) :: fleaf_sunlit(ncanop)
   END TYPE PlantClass
 
+  ! 
+  ! Soil
+  ! 
+! activate when soil model needs it ! no init subroutine implemented yet
+!  TYPE AccumulationSoilClass
+!    ! definition of averages of variable across a certain period (model time steps)
+!    REAL(wp) :: x_something = 1.
+!  END TYPE AccumulationSoilClass
+
   TYPE SoilClass
-     REAL(wp) :: theta
+    !TYPE(AccumulationSoilClass) :: accumulated    ! activate when soil model needs it
+    REAL(wp) :: theta
   END TYPE SoilClass
 
-!  TYPE AccumulationClass  ! new
-!    ! averages of parameters across a certain period (model time steps)
-!    ! see AccumulationPeriodClass in mo_veg_parameters
-!    REAL(wp) :: light = 1.
-!    REAL(wp) :: npp = 1.
-!    REAL(wp) :: gpp = 1.
-!  END TYPE AccumulationClass
+  ! 
+  ! Tile (integrates plant & soil)
+  ! 
+  TYPE AccumulationTileClass
+    ! definition of averages of variable across a certain period (model time steps)
+    ! Environmental forcing
+    REAL(wp) :: t_air = 1._wp
+    REAL(wp) :: q_air = 1._wp
+    REAL(wp) :: press_surf = 1._wp
+  END TYPE AccumulationTileClass
 
   TYPE TileClass
      TYPE(PlantClass) :: plant
      TYPE(SoilClass) :: soil
-!     TYPE(AccumulationClass) :: accumulation_parameters    ! new
+     TYPE(AccumulationTileClass) :: accumulated
   END TYPE TileClass  
  
 ! PUBLIC :: ElementAdd,ElementSub,ElementMul,ElementDiv

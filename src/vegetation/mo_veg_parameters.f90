@@ -10,7 +10,7 @@
 MODULE mo_veg_parameters
 
   USE mo_kind
-  USE mo_base_constants, ONLY : npft
+  USE mo_base_constants, ONLY: npft
 
   ! Respiration parameters
   REAL(wp),SAVE :: fresp_growth                 ! growth respiration per unit new biomass 
@@ -89,12 +89,16 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: tau_fruit_pool 
   END TYPE VegetationParameterClass
 
-  TYPE AccumulationPeriodClass   ! new
-    ! length of period over which the values are accumulated
-    REAL(wp) :: light = 1.
-    REAL(wp) :: npp = 1.
-    REAL(wp) :: gpp = 1.
-  END TYPE AccumulationPeriodClass
+  TYPE AccumulationIntervalPlantClass 
+    ! length of period over which the values are accumulated/ averaged
+    ! see mo_base_memory for defintion of TYPEs that keep the starting/default value
+    REAL(wp) :: par_sunlit = 1.
+    REAL(wp) :: par_shaded = 1.
+    REAL(wp) :: fleaf_sunlit = 1.
+    REAL(wp) :: beta_air = 1.
+    REAL(wp) :: beta_soil_ps = 1.
+    REAL(wp) :: beta_soil_gs = 1.
+  END TYPE AccumulationIntervalPlantClass
 
 
   PUBLIC :: init_veg_parameters,init_pft_param_table

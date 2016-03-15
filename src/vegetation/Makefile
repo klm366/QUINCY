@@ -21,7 +21,8 @@ MODS1 = mo_veg_memory.f90 \
         mo_veg_photosynthesis.f90 \
         mo_veg_turnover.f90 \
         mo_veg_growth.f90 \
-        mo_veg_radiation.f90
+        mo_veg_radiation.f90 \
+        mo_veg_output.f90
 
 OBJSMODS1 = $(MODS1:.f90=.o)
 #-
@@ -95,3 +96,9 @@ $(MODEL_LIB)(mo_veg_photosynthesis.o): \
   $(MODEL_LIB)(mo_veg_parameters.o) \
   $(MODEL_LIB)(mo_veg_respiration.o) \
   $(MODEL_LIB)(mo_veg_radiation.o)
+
+$(MODEL_LIB)(mo_veg_output.o): \
+  $(BASE_LIB)(mo_kind.o) \
+  $(BASE_LIB)(mo_base_memory.o) \
+  $(BASE_LIB)(mo_base_constants.o)
+

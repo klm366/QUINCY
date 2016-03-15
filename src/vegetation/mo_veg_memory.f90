@@ -79,12 +79,28 @@ CONTAINS
      p3%seed_bed = ElementDiv(p1%seed_bed,p2%seed_bed)
  END FUNCTION VegPoolDiv  
 
-!  SUBROUTINE init_veg_accumulation_paramaters    ! new  -> insert USE to plant_model_driver
-!    ! set intial values for parameters that accumulate values (averag) across a certain period
-!    ! called in plant_model_driver section 1.0
-!    tile%accumulation_parameters%light  = 1.
-!    tile%accumulation_parameters%npp    = 1.
-!    tile%accumulation_parameters%gpp    = 1.
-!  END SUBROUTINE init_veg_accumulation_paramaters
+  SUBROUTINE init_plant_variable_accumulation(tile)
+    ! set intial values for parameters that accumulate values (average) across a certain period
+    ! called in plant_model_driver section 1.0
+    ! the interval is defined in mo_veg_parameters
+    USE mo_base_memory
+    IMPLICIT NONE
+    ! 0.1 Input
+    ! 
+    ! 0.2 Output
+    TYPE(TileClass), DIMENSION(ntile), INTENT(out) :: tile 
+    ! 0.3 Local
+    ! 
+
+    ! 
+    ! 1.0 initialize default values
+    ! 
+    tile(:)%plant%accumulated%par_sunlit        = 1._wp
+    tile(:)%plant%accumulated%par_shaded        = 1._wp
+    tile(:)%plant%accumulated%fleaf_sunlit      = 1._wp
+    tile(:)%plant%accumulated%beta_air          = 1._wp
+    tile(:)%plant%accumulated%beta_soil_ps      = 1._wp
+    tile(:)%plant%accumulated%beta_soil_gs      = 1._wp
+  END SUBROUTINE init_plant_variable_accumulation
 
 END MODULE mo_veg_memory

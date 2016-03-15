@@ -36,14 +36,15 @@ clean:
 	$(RM) $(MODEL_LIB)
 
 $(MODEL_LIB)(mo_base_constants.o): \
-  $(MODEL_LIB)(mo_kind.o) 
+  $(MODEL_LIB)(mo_kind.o)
 
 $(MODEL_LIB)(mo_base_memory.o): \
   $(MODEL_LIB)(mo_kind.o) \
-  $(MODEL_LIB)(mo_base_constants.o) 
+  $(MODEL_LIB)(mo_base_constants.o)
 
 $(MODEL_LIB)(mo_base_util_functions.o): \
-  $(MODEL_LIB)(mo_kind.o) 
+  $(MODEL_LIB)(mo_kind.o)
 
 $(MODEL_LIB)(mo_base_configuration.o): \
-  $(MODEL_LIB)(mo_kind.o) 
+  $(MODEL_LIB)(mo_kind.o)
+

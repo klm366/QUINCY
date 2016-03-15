@@ -14,17 +14,17 @@ MODULE mo_base_configuration
   IMPLICIT NONE
 
   TYPE VegetationConfigClass
-    ! currently: values are set in plant_model_driver section 0.1
+    ! currently: values are set in plant_model_driver section 0.1 -> later: read from file
     ! Output related:
     ! Set output timestep of pools and fluxes
-    INTEGER :: output_timestep_pool  = 1
-    INTEGER :: output_timestep_flux  = 1
+    CHARACTER(8) :: output_interval_pool  = 'timestep'   ! options: timestep daily weekly monthly yearly (monthly == 30 days)
+    CHARACTER(8) :: output_interval_flux  = 'timestep'   ! ( TRIM is used to cut empty character fields)
     ! Set time of output start/end (e.g. only output last 3 years)
     INTEGER :: output_start_date     = 1
     INTEGER :: output_end_date       = 100
     ! Driver related:
     ! Set whether driving variables (temperature, light etc.) vary seasonally: 0 == NO, 1 == YES
-    CHARACTER(8) :: option_forcing    = 'constant'  ! options: generate readfile constant -> case  (mit TRIM damit die leeren Stellen abgeschnitten werden)
+    CHARACTER(8) :: option_forcing    = 'constant'  ! options: constant readfile generate 
     ! Optimality related:
     ! Set whether model runs optimising schemes:
     LOGICAL :: flag_optimal_Nfraction = .FALSE.

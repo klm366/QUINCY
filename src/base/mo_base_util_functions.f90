@@ -30,7 +30,7 @@ CONTAINS
     REAL(wp)                :: nav       ! output
 
     IF(l) THEN
-      nav = cav * (1-w) + nv * w         ! weighted mean
+      nav = cav * (1._wp - w) + nv * w         ! weighted mean
     ELSE
       nav = cav
     END IF

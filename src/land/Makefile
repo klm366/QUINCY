@@ -11,7 +11,9 @@ STRIP   = strip
 SIZE    = size
 
 #-
-MODS1 = mo_land_constants.f90 
+MODS1 = mo_land_constants.f90 \
+		mo_land_memory.f90 \
+		mo_land_parameters.f90
 
 OBJSMODS1 = $(MODS1:.f90=.o)
 #-
@@ -41,4 +43,10 @@ clean:
 	$(RM) $(MODEL_LIB)
 
 $(MODEL_LIB)(mo_land_constants.o): \
+  $(BASE_LIB)(mo_kind.o)
+
+$(MODEL_LIB)(mo_land_parameters.o): \
+  $(BASE_LIB)(mo_kind.o)
+
+$(MODEL_LIB)(mo_land_memory.o): \
   $(BASE_LIB)(mo_kind.o)

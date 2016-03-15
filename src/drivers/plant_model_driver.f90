@@ -8,18 +8,21 @@
 !! First version by Sönke Zaehle (2015-12-04)
 !!
 PROGRAM plant_model_driver
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: wp, eps4
   USE mo_base_memory
   USE mo_base_constants
   USE mo_base_configuration, ONLY: model_config
   USE mo_atmland_constants
   USE mo_land_constants
+  USE mo_land_memory, ONLY: init_tile_variable_accumulation
   USE mo_atmland_util
   USE mo_atmland_forcing
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
   USE mo_veg_interface, ONLY: update_vegetation
+  USE mo_veg_memory, ONLY: init_plant_variable_accumulation
+  USE mo_veg_output
 
   IMPLICIT NONE
 
@@ -54,7 +57,7 @@ PROGRAM plant_model_driver
       alb_nir_dir ,   &
       ga, &
       vpd
-  REAL(wp) :: time
+  REAL(wp) :: time                         ! displays the 'real time' in days; time == 1.0 after one day has passed
   INTEGER :: ntimestep
   REAL(wp) :: sw_toa_down                  ! potential radiation at the top of the atmosphere
   REAL(wp) :: longitude, latitude          ! coordinates of point to be simulated
@@ -73,16 +76,19 @@ PROGRAM plant_model_driver
   REAL(wp) :: ref_lai = 3._wp              ! LAI
   REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
 
-  INTEGER :: i,lun
+  INTEGER :: i
+
+  REAL(wp) :: output_interval_pool ! compared with 'time' if interval is NOT set to timestep, but daily, weekly ...
+  REAL(wp) :: output_interval_flux ! compared with 'time' if interval is NOT set to timestep, but daily, weekly ...
 
   ! 
-  ! 0.1 set config switches & values (see mo_base_configuration)
+  ! 0.1 set config switches & values (see mo_base_configuration) -> future: read via input file
   ! 
-  model_config%vegetation%output_timestep_pool      = 1
-  model_config%vegetation%output_timestep_flux      = 1
+  model_config%vegetation%output_interval_pool      = 'daily' ! options: timestep daily weekly monthly yearly
+  model_config%vegetation%output_interval_flux      = 'daily' ! options: timestep daily weekly monthly yearly
   model_config%vegetation%output_start_date         = 1
   model_config%vegetation%output_end_date           = 100
-  model_config%vegetation%option_forcing            = 'constant'
+  model_config%vegetation%option_forcing            = 'generate'
   model_config%vegetation%flag_optimal_Nfraction    = .FALSE.
   model_config%vegetation%flag_optimal_Nleaf        = .FALSE.
   ! 
@@ -92,13 +98,14 @@ PROGRAM plant_model_driver
   CALL init_atmland_constants
   CALL init_pft_param_table(veg_param)
   CALL init_veg_parameters
-  !CALL init_veg_accumulation_paramaters   ! defined in mo_veg_memory
+  CALL init_plant_variable_accumulation(tile)   ! defined in mo_veg_memory
+  CALL init_tile_variable_accumulation(tile)    ! defined in mo_land_memory
   ! 
   ! 1.1 Initialise time step
   ! 
-  time = 0.0
-  dt = 1800.0_wp
-  ntimestep = NINT(10.0 * one_year * one_day / dt)  ! number of time steps
+  time = 0.0_wp
+  dt = 1800.0_wp     ! time step length in seconds
+  ntimestep = NINT(10.0_wp * one_year * one_day / dt)  ! number of time steps
   latitude = 50.0_wp                       ! latitude in degrees
   longitude = 0.0_wp                       ! longitude in degrees
   annual_t_air_min = -5.0_wp + Tzero       ! annual minumum average day temperature
@@ -128,9 +135,9 @@ PROGRAM plant_model_driver
   pch = 0.0_wp
   cos_zenith_angle = ref_cos_angle
   ga = .1_wp / ( drag_srf * wind_10m )
-  !
+  ! 
   ! 1.3 Initialise tile
-  !
+  ! 
   veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(t_air - Tzero) 
   tile(:)%soil%theta = ref_theta
   tile(:)%plant%lai = 1.0_wp
@@ -144,39 +151,43 @@ PROGRAM plant_model_driver
   tile(:)%plant%pool%labile%carbon = 100.0_wp
   tile(:)%plant%pool%labile%nitrogen = 10.0_wp
   tile(:)%plant%pool%labile%phosphorus = 1.0_wp
-
-  lun=10
-  WRITE(lun,'(2a)'), 'Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
-                     'Fruit_C Labile_C Reserve_C SeedBank_C'
-  lun=lun+1
-  WRITE(lun,'(2a)'), 'Leaf_N FineRoot_N SapWood_N HeartWood_N CoarseRoot_N ', & 
-                     'Fruit_N Labile_N Reserve_N SeedBank_N'
-  lun=lun+1
-  WRITE(lun,'(2a)'), 'Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
-                     'Fruit_P Labile_P Reserve_P SeedBank_P'
-  lun=lun+1
-  WRITE(lun,'(a)'), 'GPP GrowthResp NPP NUP PUP LAI'
-
+  ! 
+  ! 1.4 Initialise output and accumulation (i.e. averaging variables across a certain period); see mo_veg_output
+  ! 
+  output_interval_pool = calc_output_time_interval(model_config%vegetation%output_interval_pool, dt, one_day)
+  output_interval_flux = calc_output_time_interval(model_config%vegetation%output_interval_flux, dt, one_day)
+  CALL init_output_writing_pool
+  CALL init_output_writing_flux
+  ! 
+  ! 2.0 time loop
+  ! 
   DO i = 1,ntimestep
-     !
+     ! 
      ! 2.1 advance timer and set orbital parameters
-     !
-     time = time + dt/one_day
+     ! 
+     time = time + dt/one_day 
      CALL update_orbital_parameters(time,declination,sw_toa_down)
-     !
+     ! 
      ! 2.2 update time-variant forcing
-     !
-     t_air = generate_inst_temperature(latitude,time,declination,annual_t_air_min, &
-               annual_t_air_max,diurnal_temp_range)
-     cos_zenith_angle = calc_solar_angle(latitude,longitude,time)
-     swvis_srf_down = MAX(0.0,ref_swdown * cos_zenith_angle)
-     swnir_srf_down = swvis_srf_down * 0.1_wp
-     swpar_srf_down = swvis_srf_down
-     swpar_fdiffuse = calc_sw_fdiffuse(swvis_srf_down,sw_toa_down,cos_zenith_angle)
-     q_air = ref_rh * calc_spec_humidity_sat(t_air,press_srf)
-     !
+     ! 
+     SELECT CASE(model_config%vegetation%option_forcing)  ! see mo_base_configuration VegetationConfigClass
+       CASE('constant')
+         ! default input values are not changed ?
+       CASE('readfile')
+         ! implement later
+       CASE('generate')
+         t_air = generate_inst_temperature(latitude,time,declination,annual_t_air_min, &
+         annual_t_air_max,diurnal_temp_range)
+         cos_zenith_angle = calc_solar_angle(latitude,longitude,time)
+         swvis_srf_down = MAX(0.0,ref_swdown * cos_zenith_angle)
+         swnir_srf_down = swvis_srf_down * 0.1_wp
+         swpar_srf_down = swvis_srf_down
+         swpar_fdiffuse = calc_sw_fdiffuse(swvis_srf_down,sw_toa_down,cos_zenith_angle)
+         q_air = ref_rh * calc_spec_humidity_sat(t_air,press_srf)
+     END SELECT
+     ! 
      ! 3.0 canopy calculation fluxes
-     !
+     ! 
      CALL update_radiation(tile,swvis_srf_down,swnir_srf_down,swpar_srf_down, &
                               swpar_fdiffuse,cos_zenith_angle,alb_vis_dif,alb_vis_dir, &
                               alb_nir_dif,alb_nir_dir)
@@ -184,42 +195,27 @@ PROGRAM plant_model_driver
      CALL update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,veg_param)
      !
      ! 4.0 calculate vegetation growth and turnover
-     !
-     CALL update_vegetation(tile,t_air,veg_param)
-     !
-     ! 5.0 Output
      ! 
-     lun=10
-     write(lun,'(9F12.6)') tile(1)%plant%pool%leaf%carbon,&
-         tile(1)%plant%pool%fine_root%carbon,tile(1)%plant%pool%sap_wood%carbon,&
-         tile(1)%plant%pool%heart_wood%carbon,tile(1)%plant%pool%coarse_root%carbon,&
-         tile(1)%plant%pool%fruit%carbon,tile(1)%plant%pool%labile%carbon,&
-         tile(1)%plant%pool%reserve%carbon,tile(1)%plant%pool%seed_bed%carbon
-     lun=lun+1
-     write(lun,'(9F12.6)') tile(1)%plant%pool%leaf%nitrogen,&
-         tile(1)%plant%pool%fine_root%nitrogen,tile(1)%plant%pool%sap_wood%nitrogen,&
-         tile(1)%plant%pool%heart_wood%nitrogen,tile(1)%plant%pool%coarse_root%nitrogen,&
-         tile(1)%plant%pool%fruit%nitrogen,tile(1)%plant%pool%labile%nitrogen,&
-         tile(1)%plant%pool%reserve%nitrogen,tile(1)%plant%pool%seed_bed%nitrogen
-     lun=lun+1
-     write(lun,'(9F12.6)') tile(1)%plant%pool%leaf%phosphorus,&
-         tile(1)%plant%pool%fine_root%phosphorus,tile(1)%plant%pool%sap_wood%phosphorus,&
-         tile(1)%plant%pool%heart_wood%phosphorus,tile(1)%plant%pool%coarse_root%phosphorus,&
-         tile(1)%plant%pool%fruit%phosphorus,tile(1)%plant%pool%labile%phosphorus,&
-         tile(1)%plant%pool%reserve%phosphorus,tile(1)%plant%pool%seed_bed%carbon
-     lun=lun+1
-     write(lun,'(9F12.6)') tile(1)%plant%flux%gpp,tile(1)%plant%flux%growth_respiration,& 
-         tile(1)%plant%flux%npp,tile(1)%plant%flux%uptake_n,tile(1)%plant%flux%uptake_p,&
-         tile(1)%plant%lai
-     lun=lun+1
-     write(lun,'(9F12.6)') tile(1)%plant%pool%leaf%carbon/tile(1)%plant%pool%leaf%nitrogen,&
-         tile(1)%plant%pool%fine_root%carbon/tile(1)%plant%pool%fine_root%nitrogen, &
-         tile(1)%plant%pool%sap_wood%carbon/tile(1)%plant%pool%sap_wood%nitrogen, &
-         tile(1)%plant%pool%labile%carbon/tile(1)%plant%pool%labile%nitrogen
-     !
-     ! 6.0 check timer
-     !
-     IF(time > one_year) time = time - one_year
+     CALL update_vegetation(tile,t_air,veg_param)
+     ! 
+     ! 
+     ! 5.0 Accumulation
+     ! 
+
+     ! ... 2 do
+
+     ! 6.0 Output
+     ! 
+     ! 6.1 pool: write output in certain intervals, see mo_veg_output
+     ! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
+     ! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
+     CALL write_output_pool(time, output_interval_pool, tile)
+     ! 6.2 flux: write output in certain intervals, see mo_veg_output
+     CALL write_output_flux(time, output_interval_flux, tile)
+     ! 
+     ! 7.0 check timer
+     ! 
+     IF(time > one_year) time = time - one_year   ! largest value of time ~ 365; see mo_base_constants
 
   ENDDO
 
