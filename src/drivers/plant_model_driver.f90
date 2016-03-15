@@ -84,13 +84,13 @@ PROGRAM plant_model_driver
   ! 
   ! 0.1 set config switches & values (see mo_base_configuration) -> future: read via input file
   ! 
-  model_config%vegetation%output_interval_pool      = 'daily' ! options: timestep daily weekly monthly yearly
-  model_config%vegetation%output_interval_flux      = 'daily' ! options: timestep daily weekly monthly yearly
+  model_config%vegetation%output_interval_pool      = 'weekly' ! options: timestep daily weekly monthly yearly
+  model_config%vegetation%output_interval_flux      = 'weekly' ! options: timestep daily weekly monthly yearly
   model_config%vegetation%output_start_date         = 1
   model_config%vegetation%output_end_date           = 100
   model_config%vegetation%option_forcing            = 'generate'
-  model_config%vegetation%flag_optimal_Nfraction    = .FALSE.
-  model_config%vegetation%flag_optimal_Nleaf        = .FALSE.
+  model_config%vegetation%flag_optimal_Nfraction    = .FALSE.  ! .TRUE. .FALSE.
+  model_config%vegetation%flag_optimal_Nleaf        = .TRUE.  ! .TRUE. .FALSE.
   ! 
   ! 1.0 Initialisation of vegetation parameters and constants
   ! 
@@ -156,6 +156,8 @@ PROGRAM plant_model_driver
   ! 
   output_interval_pool = calc_output_time_interval(model_config%vegetation%output_interval_pool, dt, one_day)
   output_interval_flux = calc_output_time_interval(model_config%vegetation%output_interval_flux, dt, one_day)
+  CALL open_pool_output_files(model_config%vegetation%output_interval_pool, model_config%vegetation%flag_optimal_Nfraction, model_config%vegetation%flag_optimal_Nleaf)
+  CALL open_flux_output_files(model_config%vegetation%output_interval_flux, model_config%vegetation%flag_optimal_Nfraction, model_config%vegetation%flag_optimal_Nleaf)
   CALL init_output_writing_pool
   CALL init_output_writing_flux
   ! 
@@ -218,5 +220,7 @@ PROGRAM plant_model_driver
      IF(time > one_year) time = time - one_year   ! largest value of time ~ 365; see mo_base_constants
 
   ENDDO
+
+  CALL close_output_files
 
 END PROGRAM plant_model_driver

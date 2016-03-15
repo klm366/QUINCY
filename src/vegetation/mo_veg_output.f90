@@ -44,6 +44,80 @@ CONTAINS
     END SELECT
   END FUNCTION calc_output_time_interval
 
+  SUBROUTINE open_pool_output_files(interval, optNfrac, optNleaf)
+    ! open output files and define file names for pools
+    IMPLICIT NONE
+    ! 0.1 Input
+    CHARACTER(8), INTENT(in) :: interval   ! options: timestep daily weekly monthly yearly
+    LOGICAL, INTENT(in)      :: optNfrac
+    LOGICAL, INTENT(in)      :: optNleaf
+    ! 0.3 Local
+    INTEGER :: lun = 10
+    CHARACTER(100) :: fname = "filename"
+    CHARACTER(20)  :: options = ""
+    ! 
+    ! 1.0 insert options in filename variable
+    ! 
+    IF(optNfrac .AND. optNleaf) THEN
+      options = "_optNfrac_optNleaf"
+      ELSE IF(optNfrac) THEN
+        options = "_optNfrac"
+      ELSE IF(optNleaf) THEN
+        options = "_optNleaf"
+    END IF
+    ! 
+    ! 1.1 define open() statements for file output
+    ! 
+    lun=10
+    fname = 'Cpool_'//TRIM(interval)//TRIM(options)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
+    fname = 'Npool_'//TRIM(interval)//TRIM(options)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
+    fname = 'Ppool_'//TRIM(interval)//TRIM(options)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+  END SUBROUTINE open_pool_output_files
+
+  SUBROUTINE open_flux_output_files(interval, optNfrac, optNleaf)
+    ! open output files and define file names for fluxes
+    IMPLICIT NONE
+    ! 0.1 Input
+    CHARACTER(8), INTENT(in) :: interval   ! options: timestep daily weekly monthly yearly
+    LOGICAL, INTENT(in)      :: optNfrac
+    LOGICAL, INTENT(in)      :: optNleaf
+    ! 0.3 Local
+    INTEGER :: lun = 10
+    CHARACTER(100) :: fname = "filename"
+    CHARACTER(20)  :: options = ""
+    ! 
+    ! 1.0 insert options in filename variable
+    ! 
+    IF(optNfrac .AND. optNleaf) THEN
+      options = "_optNfrac_optNleaf"
+      ELSE IF(optNfrac) THEN
+        options = "_optNfrac"
+      ELSE IF(optNleaf) THEN
+        options = "_optNleaf"
+    END IF
+    ! 
+    ! 1.1 define open() statements for file output
+    ! 
+    lun=30
+    fname = 'Flux_'//TRIM(interval)//TRIM(options)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+  END SUBROUTINE open_flux_output_files
+
+  SUBROUTINE close_output_files
+    ! close output files after all data have been written
+    IMPLICIT NONE
+
+    CLOSE(10)  ! please consider the unit names used in open_output_files
+    CLOSE(11)
+    CLOSE(12)
+    CLOSE(30)
+  END SUBROUTINE close_output_files
+
   SUBROUTINE init_output_writing_pool
     ! write column headers of output files for pools
     IMPLICIT NONE
