@@ -100,5 +100,6 @@ $(MODEL_LIB)(mo_veg_photosynthesis.o): \
 $(MODEL_LIB)(mo_veg_output.o): \
   $(BASE_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) \
-  $(BASE_LIB)(mo_base_constants.o)
+  $(BASE_LIB)(mo_base_constants.o) \
+  $(BASE_LIB)(mo_base_configuration.o)
 

@@ -38,7 +38,7 @@ MODULE mo_base_configuration
 
   END TYPE ModelConfigClass
 
-  TYPE( ModelConfigClass ) :: model_config
+  TYPE( ModelConfigClass ), SAVE :: model_config
 
 
   PRIVATE							! all other definitions of TYPEs are local, but accessible via lodel_config%... 

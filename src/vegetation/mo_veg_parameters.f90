@@ -106,7 +106,9 @@ MODULE mo_veg_parameters
   CONTAINS 
 
     SUBROUTINE init_veg_parameters
-      !
+
+      !IMPLICIT NONE
+      ! 
       ! this subroutine sets global constants to describe the vegetation processes
       ! defined in the module header
       !   

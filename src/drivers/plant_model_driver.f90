@@ -11,7 +11,6 @@ PROGRAM plant_model_driver
   USE mo_kind, ONLY: wp, eps4
   USE mo_base_memory
   USE mo_base_constants
-  USE mo_base_configuration, ONLY: model_config
   USE mo_atmland_constants
   USE mo_land_constants
   USE mo_land_memory, ONLY: init_tile_variable_accumulation
@@ -78,19 +77,15 @@ PROGRAM plant_model_driver
 
   INTEGER :: i
 
-  REAL(wp) :: output_interval_pool ! compared with 'time' if interval is NOT set to timestep, but daily, weekly ...
-  REAL(wp) :: output_interval_flux ! compared with 'time' if interval is NOT set to timestep, but daily, weekly ...
-
-  ! 
-  ! 0.1 set config switches & values (see mo_base_configuration) -> future: read via input file
-  ! 
+  ! set model options (switches & parameter)
   model_config%vegetation%output_interval_pool      = 'weekly' ! options: timestep daily weekly monthly yearly
   model_config%vegetation%output_interval_flux      = 'weekly' ! options: timestep daily weekly monthly yearly
   model_config%vegetation%output_start_date         = 1
   model_config%vegetation%output_end_date           = 100
   model_config%vegetation%option_forcing            = 'generate'
-  model_config%vegetation%flag_optimal_Nfraction    = .FALSE.  ! .TRUE. .FALSE.
+  model_config%vegetation%flag_optimal_Nfraction    = .TRUE.  ! .TRUE. .FALSE.
   model_config%vegetation%flag_optimal_Nleaf        = .TRUE.  ! .TRUE. .FALSE.
+
   ! 
   ! 1.0 Initialisation of vegetation parameters and constants
   ! 
@@ -152,14 +147,10 @@ PROGRAM plant_model_driver
   tile(:)%plant%pool%labile%nitrogen = 10.0_wp
   tile(:)%plant%pool%labile%phosphorus = 1.0_wp
   ! 
-  ! 1.4 Initialise output and accumulation (i.e. averaging variables across a certain period); see mo_veg_output
+  ! 1.4 Initialise output and accumulation, and open output files; see mo_veg_output
   ! 
-  output_interval_pool = calc_output_time_interval(model_config%vegetation%output_interval_pool, dt, one_day)
-  output_interval_flux = calc_output_time_interval(model_config%vegetation%output_interval_flux, dt, one_day)
-  CALL open_pool_output_files(model_config%vegetation%output_interval_pool, model_config%vegetation%flag_optimal_Nfraction, model_config%vegetation%flag_optimal_Nleaf)
-  CALL open_flux_output_files(model_config%vegetation%output_interval_flux, model_config%vegetation%flag_optimal_Nfraction, model_config%vegetation%flag_optimal_Nleaf)
-  CALL init_output_writing_pool
-  CALL init_output_writing_flux
+  CALL open_pool_output_files
+  CALL open_flux_output_files
   ! 
   ! 2.0 time loop
   ! 
@@ -211,9 +202,9 @@ PROGRAM plant_model_driver
      ! 6.1 pool: write output in certain intervals, see mo_veg_output
      ! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
      ! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-     CALL write_output_pool(time, output_interval_pool, tile)
+     CALL write_output_pool(time, tile)
      ! 6.2 flux: write output in certain intervals, see mo_veg_output
-     CALL write_output_flux(time, output_interval_flux, tile)
+     CALL write_output_flux(time, tile)
      ! 
      ! 7.0 check timer
      ! 
