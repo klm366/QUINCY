@@ -1,9 +1,10 @@
-#program to plot plant model output 
+# program to plot plant model output 
+#  changed pattern to "*.txt" in line 7 [Jan Engel 20160315]
 make=read.delim('../../util/Make.inc.local',header=F,sep="=",stringsAsFactors=F)
 comp=gsub(" $","",gsub("^ ","",make[gsub(" $","",make[,1])=="COMP",2]))
 system(paste("../../",comp,"/bin/plant.x",sep=''))
 
-flist = list.files(path= ".",patter="fort*")
+flist = list.files(path= ".",patter="*.txt")
 nplot=length(flist)
 
 pdf('plant_plots.pdf')
