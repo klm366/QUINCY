@@ -17,7 +17,7 @@ MODULE mo_jsb_model_class
   USE mo_hsm_class,         ONLY: t_Hsm, t_State, t_Message, t_Action
   USE mo_jsb_config_class,  ONLY: t_jsb_model_config, t_jsb_config_p
   USE mo_jsb_process_class, ONLY: t_jsb_process, t_jsb_process_p
-  USE mo_jsb_task_class,    ONLY: t_jsb_process_task, t_Task_queue, t_jsb_task_options
+  USE mo_jsb_task_class,    ONLY: t_jsb_process_task, t_Task_queue, t_jsb_task_msg, t_jsb_task_options
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
 
   IMPLICIT NONE
@@ -40,15 +40,16 @@ MODULE mo_jsb_model_class
     ! CLASS(t_State), POINTER     :: source  => NULL()    !< Source state during last transition
     ! TYPE(t_Action)              :: actions(MAX_ACTIONS) !< List of possible actions (events)
     ! Extensions:
-    INTEGER                           :: id                !< Model id
-    CHARACTER(len=10)                 :: shortname         !< Model short name
-    CHARACTER(len=132)                :: description       !< Model description
-    CHARACTER(len=filename_max)       :: namelist_filename !< Model namelist file
-    TYPE(t_jsb_model_config), POINTER :: config            !< Configuration
-    TYPE(t_jsb_task_options)          :: options           !< Options needed by tasks
-    INTEGER                           :: grid_id
-    TYPE(t_jsb_process_p), POINTER    :: processes(:)
-    TYPE(t_Task_queue),    POINTER    :: queue => NULL()
+    INTEGER                            :: id                !< Model id
+    CHARACTER(len=10)                  :: shortname         !< Model short name
+    CHARACTER(len=132)                 :: description       !< Model description
+    CHARACTER(len=filename_max)        :: namelist_filename !< Model namelist file
+    TYPE(t_jsb_model_config),  POINTER :: config            !< Configuration
+    TYPE(t_jsb_task_options)           :: options           !< Options needed by tasks
+    INTEGER                            :: grid_id
+    TYPE(t_jsb_process_p),     POINTER :: processes(:)
+    TYPE(t_Task_queue),        POINTER :: queue        => NULL()
+    CLASS(t_jsb_process_task), POINTER :: current_task => NULL()
 !!$    TYPE(t_hsm),              POINTER :: hsm
   CONTAINS
     ! From base type:
@@ -71,7 +72,7 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Get_process
     PROCEDURE :: Queue_task
     PROCEDURE :: Get_process_configs
-    PROCEDURE :: Process_task
+!!$    PROCEDURE :: Process_task
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
   END TYPE t_jsb_model
@@ -190,35 +191,39 @@ CONTAINS
   !
   ! State machine engine
   !
-  ! Just a stub to the real engine hsm%Process_message
-  SUBROUTINE Process_task(this, task)
-
-    CLASS(t_jsb_model), INTENT(inout) :: this
-    CLASS(t_jsb_process_task), INTENT(in)       :: task
-
-    CALL this%Process_message(task)
-
-  END SUBROUTINE Process_task
-
+!!$  ! Just a stub to the real engine hsm%Process_message
+!!$  SUBROUTINE Process_task(this, task)
+!!$
+!!$    CLASS(t_jsb_model),    INTENT(inout) :: this
+!!$    CLASS(t_jsb_task_msg), INTENT(in)    :: msg
+!!$
+!!$    CALL this%Process_message(msg)
+!!$
+!!$  END SUBROUTINE Process_task
+!!$
   SUBROUTINE Run_tasks(this)
 
     CLASS(t_jsb_model), INTENT(inout) :: this
 
     CLASS(t_Task_queue), POINTER :: current_queue_element
+    TYPE(t_jsb_task_msg) :: msg
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Run_tasks'
+
+    this%current_task => this%queue%task
+    CALL this%Start() ! Start state machine
 
     current_queue_element => this%queue
     DO WHILE (ASSOCIATED(current_queue_element))
 
       ASSOCIATE(task => current_queue_element%task)
-        task%action => this%Get_action('INTEGRATE')  ! TBD Temporary for testing
-        IF (.NOT. ASSOCIATED(task%action)) &
-          & CALL finish(TRIM(routine), 'Action not set for task')
-        CALL this%Reset_tiles()
+        this%current_task => task
+        msg%action => this%Get_action('INTEGRATE')
+!!$        IF (.NOT. ASSOCIATED(task%action)) &
+!!$          & CALL finish(TRIM(routine), 'Action not set for task')
         ! Let state machine handle the task (message)
-        CALL this%Process_task(task)
-        NULLIFY(task%action)                         ! TBD
+!!$        CALL this%Process_task(task)
+        CALL this%Process_message(msg)
       END ASSOCIATE
 
       current_queue_element => current_queue_element%next

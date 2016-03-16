@@ -10,16 +10,17 @@
 MODULE mo_jsb_model_usecases
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,       ONLY: message, finish
-  USE mo_kind,            ONLY: wp
+  USE mo_exception,           ONLY: message, finish
+  USE mo_kind,                ONLY: wp
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_process_factory, ONLY: ATM2LAND, LAND2ATM, SRF, SOIL, VEG, RAD, GLACIER, LAKE, HD
-  USE mo_jsb_process_class,  ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
-  USE mo_hsm_class,          ONLY: t_Hsm, t_State
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid !, get_nblks, get_nproma
-  USE mo_jsb_grid,           ONLY: Get_Grid
-  USE mo_jsb_tile,           ONLY: t_jsb_tile
+  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
+  USE mo_hsm_class,           ONLY: t_Hsm, t_State
+  USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
+  USE mo_jsb_grid,            ONLY: Get_Grid
+  USE mo_jsb_tile,            ONLY: t_jsb_tile
+  USE mo_jsb_lct_class,       ONLY: BOX_TYPE, LAND_TYPE, GLACIER_TYPE, PFT_TYPE, LAKE_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -66,18 +67,20 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_State),   POINTER :: box_tile
-    TYPE(t_jsb_grid), POINTER :: grid
+    CLASS(t_jsb_tile), POINTER :: box_tile
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite'
 
     grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
-    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG/), &
-      varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
+    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,LAND2ATM,RAD,SRF,SOIL,VEG/), &
+      varlist_name=model%shortname, lct_type=LAND_TYPE, model_id=model%id, grid_id=model%grid_id)
     model%top => box_tile
 !!$    model%hsm => t_Hsm('hsm', top=box_tile)
+
+    CALL box_tile%Print()
 
     NULLIFY(box_tile)
 
@@ -87,18 +90,20 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_State),   POINTER :: box_tile
-    TYPE(t_jsb_grid), POINTER :: grid
+    CLASS(t_jsb_tile), POINTER :: box_tile
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_with_hd'
 
     grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
-    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,SRF,SOIL,VEG,HD/), &
-      varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
+    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,LAND2ATM,RAD,SRF,SOIL,VEG,HD/), &
+      varlist_name=model%shortname, lct_type=LAND_TYPE, model_id=model%id, grid_id=model%grid_id)
     model%top => box_tile
 !!$    model%hsm => t_Hsm('hsm', top=box_tile)
+
+    CALL box_tile%Print()
 
     NULLIFY(box_tile)
 
@@ -140,24 +145,26 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
-    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,LAND2ATM/), &
-      varlist_name=model%shortname, model_id=model%id, grid_id=model%grid_id)
+    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,LAND2ATM,RAD/), &
+      varlist_name=model%shortname, lct_type=BOX_TYPE, model_id=model%id, grid_id=model%grid_id)
     model%top => box_tile
 !!$    model%hsm => t_Hsm('hsm', box_tile)
 
       srf_tile => t_jsb_tile('srf', 'Srf tile', &
-        & processes=(/SRF,RAD/), process_actions=(/ON_TILE_,ON_LEAFS_/), &
-!!$                          & processes=(/SRF/), process_actions=(/ON_SUBTREE_/), &
-        & varlist_name=model%shortname, parent=box_tile)
+        & processes=(/SRF/), process_actions=(/ON_TILE_/), &
+!!$        & processes=(/SRF,RAD/), process_actions=(/ON_TILE_,ON_LEAFS_/), &
+!!$                            & processes=(/SRF/), process_actions=(/ON_SUBTREE_/), &
+        & varlist_name=model%shortname, lct_type=LAND_TYPE, parent=box_tile)
 
         glacier_tile => t_jsb_tile('glacier', 'Glacier tile', processes=(/GLACIER/), &
-          & varlist_name=model%shortname, parent=srf_tile)
+          & varlist_name=model%shortname, lct_type=GLACIER_TYPE, parent=srf_tile)
 
         land_tile => t_jsb_tile('land', 'Land tile', processes=(/SOIL,VEG/), &
-          & varlist_name=model%shortname, parent=srf_tile)
+          & varlist_name=model%shortname, lct_type=PFT_TYPE, parent=srf_tile)
 
-      lake_tile => t_jsb_tile('lake', 'Lake tile', processes=(/LAKE/), &
-        & varlist_name=model%shortname, parent=box_tile)
+      lake_tile => t_jsb_tile('lake', 'Lake tile', &
+        & processes=(/SRF,LAKE/), process_actions=(/ON_LEAFS_,ON_LEAFS_/), &
+        & varlist_name=model%shortname, lct_type=LAKE_TYPE, parent=box_tile)
 
     CALL box_tile%Print()
     CALL srf_tile%Print()
@@ -166,9 +173,6 @@ CONTAINS
     CALL lake_tile%Print()
 
     NULLIFY(box_tile)
-
-    ! Temporary for testing
-    CALL model%Queue_task(RAD, "radiation_surface")
 
   END SUBROUTINE init_usecase_tiles
 

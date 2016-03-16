@@ -13,14 +13,14 @@ MODULE mo_jsb_task_class
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
 
-  USE mo_hsm_class,       ONLY: t_Message
+  USE mo_hsm_class,       ONLY: t_jsb_task_msg => t_Message
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile_abstract
   USE mo_jsb_config_class, ONLY: t_jsb_config_p
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_process_task, t_jsb_process_task_p, t_Task_queue, t_jsb_task_options
+  PUBLIC :: t_jsb_process_task, t_jsb_process_task_p, t_Task_queue, t_jsb_task_msg, t_jsb_task_options
 
   TYPE t_jsb_task_options
     REAL(wp) :: dtime   = -1._wp
@@ -32,13 +32,17 @@ MODULE mo_jsb_task_class
     INTEGER  :: nc      = -1  ! Length of chunk
   END TYPE t_jsb_task_options
 
-  TYPE, ABSTRACT, EXTENDS(t_Message) :: t_jsb_process_task
-    ! From base type:
-    ! CHARACTER(len=50) :: name
-    ! TYPE(t_Action)    :: action
-    ! Extensions:
-    INTEGER :: process_id     = 0
-    INTEGER :: owner_model_id = 0
+!!$  TYPE, EXTENDS(t_Message) :: t_jsb_task_msg
+!!$    ! From base type:
+!!$    ! CHARACTER(len=50) :: name
+!!$    ! TYPE(t_Action)    :: action
+!!$  END TYPE t_jsb_task_msg
+
+  TYPE, ABSTRACT :: t_jsb_process_task
+    CHARACTER(len=50)              :: name
+    INTEGER                        :: process_id     = 0
+    INTEGER                        :: owner_model_id = 0
+    CLASS(t_jsb_task_msg), POINTER :: msg
 !!$    PROCEDURE(Integrate_task), POINTER, NOPASS :: Integrate
 !!$    PROCEDURE(Aggregate_task), POINTER, NOPASS :: Aggregate
   CONTAINS
@@ -70,8 +74,8 @@ MODULE mo_jsb_task_class
   END TYPE t_jsb_process_task_p
 
   TYPE t_Task_queue
-    CLASS(t_jsb_process_task), POINTER :: task => NULL()
-    TYPE(t_Task_queue),    POINTER :: next => NULL()
+    CLASS(t_jsb_process_task), POINTER :: task    => NULL()
+    TYPE(t_Task_queue),        POINTER :: next    => NULL()
   CONTAINS
     PROCEDURE :: Append => Append_task
   END TYPE t_Task_queue
@@ -96,7 +100,7 @@ CONTAINS
     SELECT TYPE (this)
     CLASS IS (t_jsb_process_task)
 
-      IF (.NOT. ASSOCIATED(this%action)) &
+      IF (.NOT. ASSOCIATED(this%msg%action)) &
         & CALL finish(TRIM(routine), 'Action not set for task '//TRIM(this%name))
 
 !!$      IF (.NOT. ASSOCIATED(task%Integrate)) &
@@ -105,7 +109,7 @@ CONTAINS
 !!$      IF (.NOT. ASSOCIATED(task%Aggregate)) &
 !!$        & CALL finish(TRIM(routine), 'Procedure pointer for Aggregate not set')
 !!$
-      SELECT CASE(TRIM(this%action%name))
+      SELECT CASE(TRIM(this%msg%action%name))
       CASE ('INTEGRATE')
         CALL this%Integrate(tile, config, options)
       CASE ('AGGREGATE')

@@ -18,11 +18,12 @@ MODULE mo_radiation_interface
   USE mo_exception,          ONLY: message, finish
 
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE, BARE_TYPE, PFT_TYPE
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SRF, SOIL, VEG, ATM2LAND, RAD
+  dsl4jsb_Use_processes SRF, SOIL, VEG, ATM2LAND, RAD, LAKE
   dsl4jsb_Use_config(SRF)
   dsl4jsb_Use_config(SOIL)
   dsl4jsb_Use_config(RAD)
@@ -33,13 +34,9 @@ MODULE mo_radiation_interface
   dsl4jsb_Use_memory(SRF)
   dsl4jsb_Use_memory(VEG)
   dsl4jsb_Use_memory(RAD)
+  dsl4jsb_Use_memory(LAKE)
 
   IMPLICIT NONE
-  dsl4jsb_Def_config(RAD)
-  dsl4jsb_Def_memory(RAD)
-  !CLASS(t_rad_memory), POINTER :: rad__mem
-  dsl4jsb_Def_memory(VEG)
-  dsl4jsb_Def_memory(ATM2LAND)
 
   PRIVATE
 
@@ -105,9 +102,12 @@ CONTAINS
     !-----------------------------------------------------------------------
     ! POINTERS TO VARIABLES IN MEMORY
 
+    dsl4jsb_Def_config(RAD)
     dsl4jsb_Def_memory(ATM2LAND)
     dsl4jsb_Def_memory(SRF)
-    !dsl4jsb_Def_memory(RAD) ! siehe oben im Modul
+    dsl4jsb_Def_memory(RAD)
+    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(LAKE)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: swvis_srf_net
@@ -133,7 +133,7 @@ CONTAINS
     !
     !-----------------------------------------------------------------------
     !
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface radiation on tile '//TRIM(tile%name))
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_memory(ATM2LAND)
     dsl4jsb_Get_memory(RAD)
@@ -150,7 +150,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD, rad_srf_net,   OUT)
     dsl4jsb_Get_var2D_onChunk(RAD, alb_vis_srf,   IN)
     dsl4jsb_Get_var2D_onChunk(RAD, alb_nir_srf,   IN)
-    dsl4jsb_Get_var2D_onChunk(SRF,       t_srf,         IN)
+    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,         IN)
 
     CALL calc_radiation_surface_net(swvis_srf_down(:),    & ! input
                                     swnir_srf_down(:),    & ! input
@@ -164,7 +164,7 @@ CONTAINS
                                     lw_srf_net(:),        & ! output
                                     rad_srf_net(:) )        ! output
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished update of surface radiation')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_radiation_surface
 
@@ -174,9 +174,6 @@ CONTAINS
     CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-!!$    TYPE(t_jsb_model), POINTER :: model
-!!$    CLASS(t_jsb_tile), POINTER :: tile
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_radiation_surface'
 
     INTEGER :: iblk, ics, ice, nc
@@ -185,6 +182,10 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_radiation_surface
 

@@ -188,6 +188,9 @@ CONTAINS
       ! TBD
     END IF
 
+    ! Temporary for testing ... should be in separate subroutine
+    CALL model%Queue_task(RAD, "radiation_surface")
+
     CALL print_model(model)
     CALL model%Print_actions()
 

@@ -154,13 +154,15 @@ CONTAINS
 
   FUNCTION Create_process_memory(icomp) RESULT(return_ptr)
 
-    USE mo_atmland_memory_class, ONLY: t_atm2land_memory, t_land2atm_memory, max_no_of_atmland_vars => max_no_of_vars
-    USE mo_srf_memory_class,     ONLY: t_srf_memory, max_no_of_srf_vars => max_no_of_vars
-    USE mo_soil_memory_class,    ONLY: t_soil_memory, max_no_of_soil_vars => max_no_of_vars
-    USE mo_veg_memory_class,     ONLY: t_veg_memory, max_no_of_veg_vars => max_no_of_vars
-    USE mo_rad_memory_class,     ONLY: t_rad_memory, max_no_of_rad_vars => max_no_of_vars
+    USE mo_atmland_memory_class, ONLY: max_no_of_atmland_vars => max_no_of_vars
+    USE mo_srf_memory_class,     ONLY: max_no_of_srf_vars => max_no_of_vars
+    USE mo_soil_memory_class,    ONLY: max_no_of_soil_vars => max_no_of_vars
+    USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
+    USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
+    USE mo_glacier_memory_class, ONLY: max_no_of_glacier_vars => max_no_of_vars
+    USE mo_lake_memory_class,    ONLY: max_no_of_lake_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
-    USE mo_hd_memory_class,      ONLY: t_hd_memory, max_no_of_hd_vars => max_no_of_vars
+    USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
 
     INTEGER, INTENT(in) :: icomp
@@ -192,10 +194,10 @@ CONTAINS
 #endif
     CASE (GLACIER)
       ALLOCATE(t_glacier_memory::return_ptr)
-      return_ptr%max_no_of_vars = max_no_of_srf_vars
+      return_ptr%max_no_of_vars = max_no_of_glacier_vars
     CASE (LAKE)
       ALLOCATE(t_lake_memory::return_ptr)
-      return_ptr%max_no_of_vars = max_no_of_srf_vars
+      return_ptr%max_no_of_vars = max_no_of_lake_vars
     END SELECT
 
     ALLOCATE(return_ptr%vars(return_ptr%max_no_of_vars))

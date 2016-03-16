@@ -112,18 +112,24 @@ CONTAINS
 
   END FUNCTION Is_process_active
 
-  RECURSIVE SUBROUTINE Set_process_action_parents(this, iproc, action)
+  SUBROUTINE Set_process_action_parents(this, iproc, action)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    INTEGER,                    INTENT(in)    :: iproc
-    INTEGER,                    INTENT(in)    :: action
+    CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: this
+    INTEGER,                    INTENT(in)            :: iproc
+    INTEGER,                    INTENT(in)            :: action
+
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_process_action_parents'
 
-    IF (ASSOCIATED(this%parent_tile)) THEN
-      this%parent_tile%process_action(iproc) = action
-      CALL this%parent_tile%Set_process_action_parents(iproc, action)
-    END IF
+    tile => this
+    DO WHILE (ASSOCIATED(tile%parent))
+      SELECT TYPE (parent=>tile%parent)
+      CLASS IS (t_jsb_tile_abstract)
+        parent%process_action(iproc) = action
+        tile => parent
+      END SELECT
+    END DO
 
   END SUBROUTINE Set_process_action_parents
 

@@ -9,7 +9,7 @@
 !!
 MODULE mo_hsm_class
 
-  USE mo_exception, ONLY: message, message_text, finish
+  USE mo_exception, ONLY: message, message_text, warning, finish
   USE mo_util,      ONLY: int2string
 
   IMPLICIT NONE
@@ -334,6 +334,11 @@ CONTAINS
     CALL message('State', this%name)
     CALL message('  Description', this%description)
     CALL message('  Tree path', TRIM(c_path))
+    IF (this%visited) THEN
+      CALL message('  Visited', '.TRUE.')
+    ELSE
+      CALL message('  Visited', '.FALSE.')
+    END IF
 
   END SUBROUTINE Print_state
 
@@ -381,6 +386,13 @@ CONTAINS
 !!$    this%hsm => hsm
     !CALL this%Print_state()
     return_ptr => this%Handler(hsm, msg)
+
+    SELECT CASE (TRIM(msg%action%name))
+    CASE ('START')
+      this%visited = .TRUE.
+    CASE ('EXIT')
+      this%visited = .FALSE.
+    END SELECT
 
   END FUNCTION Process_message_state
 
@@ -540,15 +552,16 @@ CONTAINS
     DO WHILE (ASSOCIATED(sstate))
       tstate => that
       DO WHILE (ASSOCIATED(tstate))
-        IF (sstate == tstate) EXIT
+        IF (sstate == tstate) THEN
+!!$          CALL message(TRIM(routine), 'Levels to LCA from '//TRIM(this%source%name)//' to '//&
+!!$            &                                                TRIM(that%name)//': '//int2string(return_value))
+          RETURN
+        END IF
         tstate => tstate%parent
       END DO
       return_value = return_value + 1
       sstate => sstate%parent
     END DO
-
-    CALL message(TRIM(routine), 'Levels to LCA from '//TRIM(this%source%name)//' to '//&
-      &                                                TRIM(that%name)//': '//int2string(return_value))
 
   END FUNCTION Get_levels_to_LCA_hsm
 
@@ -560,8 +573,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Start_state_hsm'
 
+!!$    CALL message(TRIM(routine), 'Taking start transition from '//TRIM(this%current%name)//&
+!!$      &                                                  ' to '//TRIM(that%name))
+
     IF (ASSOCIATED(this%next)) &
-      & CALL finish(TRIM(routine), 'Transition already in progress')
+      & CALL warning(TRIM(routine), 'Transition to '//TRIM(this%next%name)//' already in progress')
 
     this%next => that
 
@@ -576,11 +592,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Start_hsm'
 
+!!$    CALL message(TRIM(routine), 'Starting hsm ...')
+
     start_msg%action => this%Get_action('START')
     entry_msg%action => this%Get_action('ENTER')
 
     this%current => this%top
-    this%next    => NULL()
+    !this%next    => NULL()
     tmp_msg => this%current%Process_message(this, entry_msg)
 
     tmp_msg => this%current%Process_message(this, start_msg)
@@ -590,6 +608,8 @@ CONTAINS
       NULLIFY(this%next)
       tmp_msg => this%current%Process_message(this, start_msg)
     END DO
+
+!!$    CALL message(TRIM(routine), 'Hsm started.')
 
   END SUBROUTINE Start_hsm
   !
@@ -603,10 +623,12 @@ CONTAINS
 
     CLASS(t_State),   POINTER :: state
     CLASS(t_Message), POINTER :: new_msg, tmp_msg
-    TYPE(t_Message) :: start_msg
+    TYPE(t_Message)           :: start_msg
     !CLASS(t_Hsm),     POINTER :: hsm
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_message_hsm'
+
+!!$    CALL message(TRIM(routine), 'Processing message '//TRIM(msg%name)//' on hsm ...')
 
     !hsm => this
     start_msg%action => this%Get_action('START')
@@ -626,10 +648,10 @@ CONTAINS
         NULLIFY(this%next)
         tmp_msg => this%current%Process_message(this, start_msg)
         DO WHILE (ASSOCIATED(this%next))
-          tmp_msg => this%current%Process_message(this, start_msg)
           CALL this%Process_entry_to_next()
           this%current => this%next
           NULLIFY(this%next)
+          tmp_msg => this%current%Process_message(this, start_msg)
         END DO
         IF (.NOT. ASSOCIATED(new_msg)) THEN ! Message processed
           EXIT
@@ -645,6 +667,8 @@ CONTAINS
       END IF
     END DO
 
+!!$    CALL message(TRIM(routine), 'Processing finished.')
+
   END SUBROUTINE Process_message_hsm
 
   ! Process entry messages from LCA to target
@@ -657,6 +681,10 @@ CONTAINS
     CLASS(t_State), POINTER :: state
     TYPE(t_State_p) :: entrypath(MAX_STATE_NESTING)
     INTEGER         :: i, j
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_entry_to_next'
+
+!!$    CALL message(TRIM(routine), 'Processing entry messages to next ...')
 
     entry_msg%action => this%Get_action('ENTER')
 
@@ -674,6 +702,8 @@ CONTAINS
       tmp_msg => state%Process_message(this, entry_msg)
     END DO
 
+!!$    CALL message(TRIM(routine), 'Processing of entry messages finished.')
+
   END SUBROUTINE Process_entry_to_next
 
   ! Process exit messages from current state up to LCA with target state
@@ -689,19 +719,23 @@ CONTAINS
     CLASS(t_State),   POINTER :: state
     INTEGER                   :: i
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_exit_to_lca'
+
     IF (this%levels_to_lca == -1) RETURN
+
+!!$    CALL message(TRIM(routine), 'Processing exit messages to lca ...'//int2string(this%levels_to_lca))
 
     exit_msg%action => this%Get_action('EXIT')
 
     state => this%current
 
-!!$    IF (ASSOCIATED(this%source)) THEN
-!!$      DO WHILE (state /= this%source)
-!!$        tmp_msg => state%Process_message(this, exit_msg)
-!!$        state => state%parent
-!!$        IF (.NOT. ASSOCIATED(state)) EXIT
-!!$      END DO
-!!$    END IF
+    IF (ASSOCIATED(this%source)) THEN
+      DO WHILE (state /= this%source)
+        tmp_msg => state%Process_message(this, exit_msg)
+        state => state%parent
+        IF (.NOT. ASSOCIATED(state)) EXIT
+      END DO
+    END IF
 
 !    DO i=this%Get_levels_to_LCA(that),1,-1
     DO i=this%levels_to_lca,1,-1
@@ -712,6 +746,8 @@ CONTAINS
 
     this%current => state
     this%levels_to_lca = -1
+
+!!$    CALL message(TRIM(routine), 'Processing of exit messages finished.')
 
   END SUBROUTINE Process_exit_to_lca
 
@@ -750,7 +786,7 @@ CONTAINS
 
     DO i=1,MAX_ACTIONS
       IF (TRIM(this%actions(i)%name) == TRIM(name)) THEN
-        return_ptr => this%actions(i)
+        ALLOCATE(return_ptr, source=this%actions(i))
         EXIT
       END IF
     END DO

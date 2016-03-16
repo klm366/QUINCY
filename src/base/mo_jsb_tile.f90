@@ -14,6 +14,7 @@ MODULE mo_jsb_tile
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
+  USE mo_jsb_control,         ONLY: debug_on
 
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -21,7 +22,7 @@ MODULE mo_jsb_tile
   USE mo_jsb_process_class,   ONLY: t_jsb_process_p, &
     &                               SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
-  USE mo_jsb_task_class,      ONLY: t_jsb_process_task
+  USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_msg
   USE mo_jsb_config_class,    ONLY: t_jsb_config_p
 
   IMPLICIT NONE
@@ -48,8 +49,8 @@ MODULE mo_jsb_tile
 
 CONTAINS
 
-    FUNCTION Construct_tile(name, description, processes, varlist_name, process_actions, &
-    & parent, model_id, grid_id) RESULT(return_ptr)
+  FUNCTION Construct_tile(name, description, processes, varlist_name, lct_type, &
+    & process_actions, parent, model_id, grid_id) RESULT(return_ptr)
 
     USE mo_jsb_process_factory,   ONLY: Create_process_memory, Get_process_name, SRF, ATM2LAND, LAND2ATM
     USE mo_jsb_memory_class, ONLY: t_jsb_memory
@@ -59,6 +60,7 @@ CONTAINS
     CHARACTER(len=*),  INTENT(in)           :: description
     INTEGER,           INTENT(in)           :: processes(:)
     CHARACTER(len=*),  INTENT(in)           :: varlist_name
+    INTEGER,           INTENT(in)           :: lct_type
     INTEGER,           INTENT(in), OPTIONAL :: process_actions(:)
     CLASS(t_jsb_tile), POINTER,    OPTIONAL :: parent
     INTEGER,           INTENT(in), OPTIONAL :: model_id   ! Only needed if parent is not present
@@ -74,6 +76,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Construct_tile'
 
+    CALL message(TRIM(routine), 'Starting construction of tile '//TRIM(name))
+
     ! Allocate and initialize base structure (=state) for tile
     ALLOCATE(t_jsb_tile::return_ptr)
     IF (PRESENT(parent)) THEN
@@ -84,6 +88,8 @@ CONTAINS
     END IF
 
     ! Initialize further components of t_jsb_tile_abstract extended type
+
+    return_ptr%lct_type = lct_type
 
     IF (PRESENT(process_actions)) THEN
       IF (SIZE(processes) /= SIZE(process_actions)) &
@@ -192,6 +198,7 @@ CONTAINS
           ELSE
             CALL return_ptr%mem(iproc)%p%Init(TRIM(process_name), '')
           END IF
+          CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(return_ptr%name))
         END SELECT
         NULLIFY(tmp_ptr)
       END IF
@@ -199,11 +206,14 @@ CONTAINS
       IF (must_create_memory_parents) THEN
         tmp_tile => return_ptr%parent_tile
         DO WHILE (ASSOCIATED(tmp_tile))
-          IF (ASSOCIATED(tmp_tile%mem(iproc)%p)) CYCLE
+          IF (ASSOCIATED(tmp_tile%mem(iproc)%p)) THEN
+            tmp_tile => tmp_tile%parent_tile
+            CYCLE
+          END IF
           !return_ptr%param(iproc)%p => t_jsb_param(iproc)
           tmp_ptr => Create_process_memory(iproc)
           SELECT TYPE (tmp_ptr)
-            CLASS IS (t_jsb_memory)
+          CLASS IS (t_jsb_memory)
             tmp_tile%mem(iproc)%p => tmp_ptr
             tmp_tile%mem(iproc)%p%id = iproc
             tmp_tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
@@ -214,6 +224,7 @@ CONTAINS
             ELSE
               CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), '')
             END IF
+            CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(tmp_tile%name))
           END SELECT
           NULLIFY(tmp_ptr)
           tmp_tile => tmp_tile%parent_tile
@@ -221,6 +232,8 @@ CONTAINS
         NULLIFY(tmp_tile)
       END IF
     END DO
+
+    CALL message(TRIM(routine), 'Finished construction of tile '//TRIM(name))
 
   END FUNCTION Construct_tile
 
@@ -281,67 +294,99 @@ CONTAINS
     CLASS(t_Message),   INTENT(in)    :: msg_in
     CLASS(t_Message),   POINTER       :: return_ptr
 
-    CLASS(t_Message), POINTER :: msg
+    CLASS(t_jsb_task_msg), POINTER :: msg
     INTEGER :: iproc
+
+    CLASS(t_jsb_process_task), POINTER :: task
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_task_on_tile'
 
-    SELECT TYPE(model=>hsm)
-    CLASS IS (t_jsb_model)
-      IF (model%options%iblk == 1) THEN
-        CALL message(TRIM(routine),'Started')
-        CALL message('    ', 'Processing task '//TRIM(msg_in%name)//'/action '//&
-          &                   TRIM(msg_in%action%name)//' on tile '//TRIM(this%name))
-        CALL this%PRINT()
-      END IF
-    END SELECT
-
     ALLOCATE(msg, source=msg_in)
-    return_ptr => NULL()
+    !return_ptr => NULL()
 
     SELECT TYPE(model=>hsm)
     CLASS IS (t_jsb_model)
-      SELECT TYPE(task=>msg)
-      CLASS IS (t_jsb_process_task)
-        SELECT CASE (TRIM(task%action%name))
-        CASE ('START')
-          IF (this%Has_children()) THEN
 
-          END IF
-        CASE ('INTEGRATE')
-          IF (this%process_action(task%process_id) == ON_LEAFS_) THEN
-            IF (.NOT. this%Has_children()) THEN
-              CALL task%Do_it(this, model%Get_process_configs(), model%options)
-            END IF
-            CALL model%Goto(model%Get_next_tile())
-            !model%next => model%Get_next_tile()
-            IF (.NOT. ASSOCIATED(model%next)) THEN
-              return_ptr => NULL()
-            ELSE
-              return_ptr => task
-            END IF
-          ELSE IF (this%process_action(task%process_id) == AGGREGATE_) THEN
+      task => model%current_task
+
+      IF (debug_on() .AND. model%options%iblk == 1) THEN
+        CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
+          &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name))
+        !CALL this%Print()
+      END IF
+
+      SELECT CASE (TRIM(msg%action%name))
+      CASE ('START')
+        IF (.NOT. this%visited) THEN
+          IF (this%process_action(task%process_id) >= AGGREGATE_) THEN
             IF (this%Has_children()) THEN
-              CALL model%Goto(model%Get_next_tile())
-              !model%next => model%Get_next_tile()
-              IF (.NOT. ASSOCIATED(model%next)) THEN
-                return_ptr => NULL()
+              CALL model%Start_state(this%first_child)
+            END IF
+          ELSE IF (ASSOCIATED(this%next_sibling)) THEN
+            CALL model%Start_state(this%next_sibling)
+          END IF
+        END IF
+      CASE ('INTEGRATE')
+        IF (this%process_action(task%process_id) >= AGGREGATE_) THEN
+          IF (this%Has_children()) THEN
+            CALL model%Goto(this%first_child)
+          ELSE
+            task%msg => msg
+            CALL task%Do_it(this, model%Get_process_configs(), model%options)
+            IF (ASSOCIATED(this%next_sibling)) THEN
+              IF (this%next_sibling%Has_children()) THEN
+                CALL model%Goto(this%next_sibling%first_child)
               ELSE
-                return_ptr => task
+                CALL model%Goto(this%next_sibling)
               END IF
+            ELSE IF (ASSOCIATED(this%parent)) THEN
+              msg%action => model%Get_action('AGGREGATE')
+              CALL model%Goto(this%parent)
+            ELSE
+              this%visited = .FALSE.
+              msg => NULL()
             END IF
           END IF
-        END SELECT
+        ELSE
+          IF (ASSOCIATED(this%next_sibling)) THEN
+            IF (this%next_sibling%Has_children()) THEN
+              CALL model%Goto(this%next_sibling%first_child)
+            ELSE
+              CALL model%Goto(this%next_sibling)
+            END IF
+          ELSE IF (ASSOCIATED(this%parent)) THEN
+            msg%action => model%Get_action('AGGREGATE')
+            CALL model%Goto(this%parent)
+          ELSE
+            this%visited = .FALSE.
+            msg => NULL()
+          END IF
+        END IF
+      CASE ('AGGREGATE')
+        IF (this%process_action(task%process_id) >= AGGREGATE_ .AND. this%visited) THEN
+          task%msg => msg
+          CALL task%Do_it(this, model%Get_process_configs(), model%options)
+        END IF
+        IF (ASSOCIATED(this%next_sibling)) THEN
+          msg%action => model%Get_action('INTEGRATE')
+          CALL model%Goto(this%next_sibling)
+        ELSE IF (this == model%top) THEN
+          this%visited = .FALSE.
+          msg => NULL()
+        ELSE
+          msg%action => model%Get_action('AGGREGATE')
+          CALL model%Goto(this%parent)
+        END IF
       END SELECT
     CLASS DEFAULT
       CALL finish(TRIM(routine), 'Error running task')
     END SELECT
 
+    return_ptr => msg
+
     SELECT TYPE(model=>hsm)
     CLASS IS (t_jsb_model)
-      IF (model%options%iblk == 1) THEN
-        CALL message(TRIM(routine),'Finished')
-      END IF
+      IF (debug_on() .AND. model%options%iblk == 1) CALL message(TRIM(routine),'Finished')
     END SELECT
 
   END FUNCTION Process_task_on_tile

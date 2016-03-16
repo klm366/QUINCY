@@ -15,13 +15,13 @@ MODULE mo_jsb_lct_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: PFT_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
+  PUBLIC :: BOX_TYPE, LAND_TYPE, PFT_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
   PUBLIC :: max_no_of_lct, Get_lct_name
 
   INTEGER, PARAMETER :: max_no_of_lct = 5
 
   ENUM, BIND(C)
-    ENUMERATOR :: PFT_TYPE=1, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
+    ENUMERATOR :: BOX_TYPE=1, LAND_TYPE=2, PFT_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
   END ENUM
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_lct_class'
@@ -36,6 +36,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_name'
 
     SELECT CASE(ilct)
+    CASE (BOX_TYPE)
+      return_value = 'box'
+    CASE (LAND_TYPE)
+      return_value = 'land'
     CASE (PFT_TYPE)
       return_value = 'pft'
     CASE (BARE_TYPE)
