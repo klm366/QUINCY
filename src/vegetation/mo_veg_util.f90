@@ -35,13 +35,13 @@ CONTAINS
 
     ! moving_avrg( current average, new value, weight of new value, use function TRUE FALSE [OPTIONAL argument] )
     tile(1)%plant%accumulated%par_sunlit    = moving_avrg( &
-                                              tile(1)%plant%accumulated%par_sunlit, tile(1)%plant%par_sunlit(1), &
+                                              tile(1)%plant%accumulated%par_sunlit, tile(1)%plant%canopy_layer(1)%par_sunlit, &
                                               1.0_wp / (plant_acc_interval%par_sunlit * one_day/ dt), .TRUE.) 
     tile(1)%plant%accumulated%par_shaded    = moving_avrg( &
-                                              tile(1)%plant%accumulated%par_shaded, tile(1)%plant%par_shaded(1), &
+                                              tile(1)%plant%accumulated%par_shaded, tile(1)%plant%canopy_layer(1)%par_shaded, &
                                               1.0_wp / (plant_acc_interval%par_shaded * one_day/ dt), .TRUE.) 
     tile(1)%plant%accumulated%fleaf_sunlit  = moving_avrg( &
-                                              tile(1)%plant%accumulated%fleaf_sunlit, tile(1)%plant%fleaf_sunlit(1), &
+                                              tile(1)%plant%accumulated%fleaf_sunlit, tile(1)%plant%canopy_layer(1)%fleaf_sunlit, &
                                               1.0_wp / (plant_acc_interval%fleaf_sunlit * one_day/ dt) )!, .TRUE.) 
 
   END SUBROUTINE accumulate_moving_averages_plant

@@ -53,8 +53,8 @@ CONTAINS
   DO t=1,ntile
 
      CALL calc_fapar(swpar_srf_down,swpar_fdiffuse,cos_zenith_angle, & 
-                     tile(t)%plant%lai,tile(t)%plant%par_sunlit, & 
-                     tile(t)%plant%par_shaded,tile(t)%plant%fleaf_sunlit)
+                     tile(t)%plant%lai,tile(t)%plant%canopy_layer(:)%par_sunlit, & 
+                     tile(t)%plant%canopy_layer(:)%par_shaded,tile(t)%plant%canopy_layer(:)%fleaf_sunlit)
   
   ENDDO
   

@@ -21,13 +21,6 @@ MODULE mo_base_memory
      REAL(wp) :: nitrogen15 = 0.0_wp ! 15nitrogen concentration of pool in mol / m2
   END TYPE Element
 
-  TYPE CanopyPartitioningClass       ! partitioning of canopy N into photosynthetic fractions
-     REAL(wp) :: nl_tot(ncanop) = 0.0_wp     ! N in canopy layer (mmol / m2 (LAI))
-     REAL(wp) :: fnl_chl(ncanop) = 0.0_wp    ! fraction of layer N in chlorophyll (pigments only!)
-     REAL(wp) :: fnl_et(ncanop) = 0.0_wp     ! fraction of layer N in electron transport 
-     REAL(wp) :: fnl_rub(ncanop) = 0.0_wp    ! fraction of layer N in Rubisco 
-  END TYPE CanopyPartitioningClass
-
   TYPE VegPool                       ! vegetation pools 
      TYPE(Element) :: leaf           ! foliage
      TYPE(Element) :: fine_root      ! fine roots (< 2mm)
@@ -38,7 +31,6 @@ MODULE mo_base_memory
      TYPE(Element) :: reserve        ! storage
      TYPE(Element) :: fruit          ! live propagation pool
      TYPE(Element) :: seed_bed       ! fruit mass on ground
-     TYPE(CanopyPartitioningClass) :: foliarN ! probably undesirable feature to have this here
   END TYPE VegPool
 
   TYPE VegFlux
@@ -67,6 +59,16 @@ MODULE mo_base_memory
      REAL(wp) :: ci
   END TYPE VegFlux
 
+  TYPE VegCanopy                       ! vegetation canopy structure (for each layer)
+     REAL(wp) :: nl_tot = 0.0_wp       ! N in canopy layer (mmol / m2 (LAI))
+     REAL(wp) :: fnl_chl = 0.0_wp      ! fraction of N in chlorophyll (pigments only!)
+     REAL(wp) :: fnl_et = 0.0_wp       ! fraction of N in electron transport 
+     REAL(wp) :: fnl_rub = 0.0_wp      ! fraction of N in Rubisco 
+     REAL(wp) :: par_sunlit = 0.0_wp   ! PAR on sunlit leaves (µmol m-2 s-1)
+     REAL(wp) :: par_shaded = 0.0_wp   ! PAR on shaded leaves (µmol m-2 s-1)
+     REAL(wp) :: fleaf_sunlit = 0.0_wp ! fraction of layer which is sunlit
+  END TYPE VegCanopy
+
   ! 
   ! Plant
   ! 
@@ -86,12 +88,10 @@ MODULE mo_base_memory
   TYPE PlantClass
      TYPE(VegPool) :: pool
      TYPE(VegFlux) :: flux
+     TYPE(VegCanopy),DIMENSION(ncanop) :: canopy_layer
      TYPE(AccumulationPlantClass) :: accumulated
      INTEGER :: pftid = 1
      REAL(wp) :: lai
-     REAL(wp) :: par_sunlit(ncanop)
-     REAL(wp) :: par_shaded(ncanop)
-     REAL(wp) :: fleaf_sunlit(ncanop)
   END TYPE PlantClass
 
   ! 

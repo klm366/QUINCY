@@ -70,20 +70,23 @@ SUBROUTINE update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,v
      CALL calc_canopy_n_distribution(tile(t)%plant%pool%leaf%nitrogen,tile(t)%plant%lai, & 
                                      canopy_layer_depth_act, &
                                      veg_param%nf(pftid), & 
-                                     tile(t)%plant%pool%foliarN%nl_tot, & 
-                                     tile(t)%plant%pool%foliarN%fnl_chl, & 
-                                     tile(t)%plant%pool%foliarN%fnl_et, & 
-                                     tile(t)%plant%pool%foliarN%fnl_rub)
+                                     tile(t)%plant%canopy_layer(:)%nl_tot, & 
+                                     tile(t)%plant%canopy_layer(:)%fnl_chl, & 
+                                     tile(t)%plant%canopy_layer(:)%fnl_et, & 
+                                     tile(t)%plant%canopy_layer(:)%fnl_rub)
      ! calculate photosynthesis per layer
      DO icanop = 1,ncanop
         IF(canopy_layer_depth_act(icanop).GT.0.0_wp)THEN
 
           CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
-                                    tile(t)%plant%par_sunlit(icanop),tile(t)%plant%par_shaded(icanop),& 
-                                    tile(t)%plant%fleaf_sunlit(icanop), &
+                                    tile(t)%plant%canopy_layer(icanop)%par_sunlit, &
+                                    tile(t)%plant%canopy_layer(icanop)%par_shaded, & 
+                                    tile(t)%plant%canopy_layer(icanop)%fleaf_sunlit, &
                                     beta_air,beta_soil_ps,beta_soil_gs, &
-                                    tile(t)%plant%pool%foliarN%fnl_chl(icanop),tile(t)%plant%pool%foliarN%fnl_et(icanop),& 
-                                    tile(t)%plant%pool%foliarN%fnl_rub(icanop),tile(t)%plant%pool%foliarN%nl_tot(icanop),& 
+                                    tile(t)%plant%canopy_layer(icanop)%fnl_chl, & 
+                                    tile(t)%plant%canopy_layer(icanop)%fnl_et, & 
+                                    tile(t)%plant%canopy_layer(icanop)%fnl_rub, & 
+                                    tile(t)%plant%canopy_layer(icanop)%nl_tot, & 
                                     veg_param%tjmax_opt(pftid), &
                                     veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
                                     agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop))
