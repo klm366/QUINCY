@@ -85,22 +85,17 @@ CONTAINS
     ! the interval is defined in mo_veg_parameters
     USE mo_base_memory
     IMPLICIT NONE
-    ! 0.1 Input
-    ! 
     ! 0.2 Output
     TYPE(TileClass), DIMENSION(ntile), INTENT(out) :: tile 
-    ! 0.3 Local
-    ! 
-
     ! 
     ! 1.0 initialize default values
     ! 
-    tile(:)%plant%accumulated%par_sunlit        = 1._wp
-    tile(:)%plant%accumulated%par_shaded        = 1._wp
-    tile(:)%plant%accumulated%fleaf_sunlit      = 1._wp
-    tile(:)%plant%accumulated%beta_air          = 1._wp
-    tile(:)%plant%accumulated%beta_soil_ps      = 1._wp
-    tile(:)%plant%accumulated%beta_soil_gs      = 1._wp
+    tile(:)%plant%accumulated%par_sunlit        = 10._wp
+    tile(:)%plant%accumulated%par_shaded        = 10._wp
+    tile(:)%plant%accumulated%fleaf_sunlit      = 10._wp
+    tile(:)%plant%accumulated%beta_air          = 10._wp
+    tile(:)%plant%accumulated%beta_soil_ps      = 10._wp
+    tile(:)%plant%accumulated%beta_soil_gs      = 10._wp
   END SUBROUTINE init_plant_variable_accumulation
 
 END MODULE mo_veg_memory

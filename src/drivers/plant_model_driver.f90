@@ -8,7 +8,7 @@
 !! First version by Sönke Zaehle (2015-12-04)
 !!
 PROGRAM plant_model_driver
-  USE mo_kind, ONLY: wp, eps4
+  USE mo_kind, ONLY: wp
   USE mo_base_memory
   USE mo_base_constants
   USE mo_atmland_constants
@@ -20,13 +20,14 @@ PROGRAM plant_model_driver
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
   USE mo_veg_interface, ONLY: update_vegetation
-  USE mo_veg_memory, ONLY: init_plant_variable_accumulation
   USE mo_veg_output
+  USE mo_veg_memory, ONLY: init_plant_variable_accumulation
+  USE mo_veg_util
 
   IMPLICIT NONE
 
-  TYPE(VegetationParameterClass),SAVE :: veg_param     ! data structure for vegetation parameters
-  TYPE(TileClass),DIMENSION(ntile), SAVE :: tile       ! data structure for dynamic vegetation and soil variables
+  TYPE(VegetationParameterClass),SAVE :: veg_param           ! data structure for vegetation parameters
+  TYPE(TileClass),DIMENSION(ntile), SAVE :: tile             ! data structure for dynamic vegetation and soil variables
 
   REAL(wp) :: &                                        ! model forcing
       t_air            , &
@@ -93,8 +94,9 @@ PROGRAM plant_model_driver
   CALL init_atmland_constants
   CALL init_pft_param_table(veg_param)
   CALL init_veg_parameters
-  CALL init_plant_variable_accumulation(tile)   ! defined in mo_veg_memory
-  CALL init_tile_variable_accumulation(tile)    ! defined in mo_land_memory
+  CALL init_plant_variable_accumulation(tile)   ! set initial average values, defined in mo_veg_memory
+  CALL init_tile_variable_accumulation(tile)    ! set initial average values, defined in mo_land_memory
+  !CALL init_soil_variable_accumulation(tile) follows later
   ! 
   ! 1.1 Initialise time step
   ! 
@@ -186,17 +188,15 @@ PROGRAM plant_model_driver
                               alb_nir_dif,alb_nir_dir)
 
      CALL update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,veg_param)
-     !
+     ! 
      ! 4.0 calculate vegetation growth and turnover
      ! 
      CALL update_vegetation(tile,t_air,veg_param)
      ! 
-     ! 
      ! 5.0 Accumulation
      ! 
-
-     ! ... 2 do
-
+     CALL accumulate_moving_averages_plant(tile, ntile, dt)
+     ! 
      ! 6.0 Output
      ! 
      ! 6.1 pool: write output in certain intervals, see mo_veg_output
@@ -213,5 +213,6 @@ PROGRAM plant_model_driver
   ENDDO
 
   CALL close_output_files
+
 
 END PROGRAM plant_model_driver

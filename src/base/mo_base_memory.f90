@@ -72,6 +72,7 @@ MODULE mo_base_memory
   ! 
   TYPE AccumulationPlantClass
     ! definition of averages of variable across a certain period (model time steps)
+    ! init subroutine in mo_veg_memory
     ! Light in the canopy
     REAL(wp) :: par_sunlit = 1._wp
     REAL(wp) :: par_shaded = 1._wp

@@ -22,7 +22,9 @@ MODS1 = mo_veg_memory.f90 \
         mo_veg_turnover.f90 \
         mo_veg_growth.f90 \
         mo_veg_radiation.f90 \
-        mo_veg_output.f90
+        mo_veg_output.f90 \
+        mo_veg_util.f90
+
 
 OBJSMODS1 = $(MODS1:.f90=.o)
 #-
@@ -104,4 +106,12 @@ $(MODEL_LIB)(mo_veg_output.o): \
   $(BASE_LIB)(mo_base_memory.o) \
   $(BASE_LIB)(mo_base_constants.o) \
   $(BASE_LIB)(mo_base_configuration.o)
+
+$(MODEL_LIB)(mo_veg_util.o): \
+  $(BASE_LIB)(mo_kind.o) \
+  $(BASE_LIB)(mo_base_memory.o) \
+  $(BASE_LIB)(mo_base_util_functions.o) \
+  $(BASE_LIB)(mo_base_constants.o) \
+  $(LAND_LIB)(mo_land_parameters.o) \
+  $(MODEL_LIB)(mo_veg_parameters.o)
 

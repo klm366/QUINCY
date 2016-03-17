@@ -90,14 +90,15 @@ MODULE mo_veg_parameters
   END TYPE VegetationParameterClass
 
   TYPE AccumulationIntervalPlantClass 
-    ! length of period over which the values are accumulated/ averaged
+    ! interval over which the values are accumulated/ averaged
+    ! interval in days !!
     ! see mo_base_memory for defintion of TYPEs that keep the starting/default value
-    REAL(wp) :: par_sunlit = 1.
-    REAL(wp) :: par_shaded = 1.
-    REAL(wp) :: fleaf_sunlit = 1.
-    REAL(wp) :: beta_air = 1.
-    REAL(wp) :: beta_soil_ps = 1.
-    REAL(wp) :: beta_soil_gs = 1.
+    REAL(wp) :: par_sunlit = 2._wp
+    REAL(wp) :: par_shaded = 2._wp
+    REAL(wp) :: fleaf_sunlit = 2._wp
+    REAL(wp) :: beta_air = 2._wp
+    REAL(wp) :: beta_soil_ps = 2._wp
+    REAL(wp) :: beta_soil_gs = 2._wp
   END TYPE AccumulationIntervalPlantClass
 
 

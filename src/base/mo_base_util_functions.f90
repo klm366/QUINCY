@@ -22,17 +22,19 @@ CONTAINS
   ! cav: current average value
   ! nv:  new value
   ! w:   weight of the new value
-  ! l:   bool, whether the new average is calculated from the nv, or av is used as nav
+  ! l:   bool, whether the new average is calculated from the nv, or av is used as nav !! this is an OPTIONAL argument
   ! nav: output of the function, the new average
     IMPLICIT NONE
-    REAL(wp), INTENT(in)    :: cav,nv,w  ! input
-    LOGICAL, INTENT(in) 		:: l         ! input
-    REAL(wp)                :: nav       ! output
+    REAL(wp), INTENT(in)            :: cav,nv,w  ! input
+    LOGICAL, OPTIONAL, INTENT(in)   :: l         ! input
+    REAL(wp)                        :: nav       ! output
 
-    IF(l) THEN
-      nav = cav * (1._wp - w) + nv * w         ! weighted mean
-    ELSE
-      nav = cav
+    IF( .NOT. present(l) ) THEN
+      nav = cav * (1.0_wp - w) + nv * w    ! weighted mean
+      ELSE IF(l) THEN
+        nav = cav * (1.0_wp - w) + nv * w  ! weighted mean
+      ELSE
+        nav = cav
     END IF
   END FUNCTION moving_avrg
 
