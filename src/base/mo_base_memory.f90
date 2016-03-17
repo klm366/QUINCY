@@ -60,6 +60,9 @@ MODULE mo_base_memory
      REAL(wp) :: uptake_n
      REAL(wp) :: uptake_n15
      REAL(wp) :: uptake_p
+     REAL(wp) :: leaf_resorption_n        ! resorption of N upon leaf senescence (mol m-2 timestep-1)
+     REAL(wp) :: leaf_resorption_n15      ! resorption of 15N upon leaf senescence (mol m-2 timestep-1)
+     REAL(wp) :: leaf_resorption_p        ! resorption of P upon leaf senescence (mol m-2 timestep-1)
      REAL(wp) :: gc
      REAL(wp) :: ci
   END TYPE VegFlux

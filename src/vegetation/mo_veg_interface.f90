@@ -109,6 +109,15 @@ CONTAINS
     plant%pool = VegPoolSub(plant%pool,plant%flux%litterfall)
     plant%pool = VegPoolAdd(plant%pool,plant%flux%growth)
     ! 
+    ! 5.1 update fluxes from retranslocation of leaves
+    !
+    plant%pool%leaf%nitrogen = plant%pool%leaf%nitrogen - plant%flux%leaf_resorption_n
+    plant%pool%labile%nitrogen = plant%pool%labile%nitrogen + plant%flux%leaf_resorption_n
+    plant%pool%leaf%phosphorus = plant%pool%leaf%phosphorus - plant%flux%leaf_resorption_p
+    plant%pool%labile%phosphorus = plant%pool%labile%phosphorus + plant%flux%leaf_resorption_p
+    plant%pool%leaf%nitrogen15 = plant%pool%leaf%nitrogen15 - plant%flux%leaf_resorption_n15
+    plant%pool%labile%nitrogen15 = plant%pool%labile%nitrogen15 + plant%flux%leaf_resorption_n15
+    ! 
     ! 6.0 Update plant diagnostics
     !
     plant%lai = plant%pool%leaf%carbon * veg_param%sla(plant%pftid)

@@ -62,10 +62,7 @@ CONTAINS
     ! calculated as a separate function and costly in terms of C
     !
     plant%flux%litterfall%leaf%nitrogen = fturn_leaf * (1.0_wp -nitrogen_resorption) * plant%pool%leaf%nitrogen 
-    plant%flux%growth%labile%nitrogen = plant%flux%growth%labile%nitrogen + & 
-                                        fturn_leaf * nitrogen_resorption * plant%pool%leaf%nitrogen 
-    plant%flux%growth%leaf%nitrogen = plant%flux%growth%leaf%nitrogen - & 
-                                        fturn_leaf * nitrogen_resorption * plant%pool%leaf%nitrogen 
+    plant%flux%leaf_resorption_n = fturn_leaf * nitrogen_resorption * plant%pool%leaf%nitrogen
     plant%flux%litterfall%fine_root%nitrogen = fturn_fine_root * plant%pool%fine_root%nitrogen 
     plant%flux%litterfall%coarse_root%nitrogen = fturn_coarse_root * plant%pool%coarse_root%nitrogen 
     plant%flux%litterfall%sap_wood%nitrogen = fturn_sap_wood * plant%pool%sap_wood%nitrogen 
@@ -78,10 +75,7 @@ CONTAINS
     ! calculated as a separate function and costly in terms of C
     !
     plant%flux%litterfall%leaf%phosphorus = fturn_leaf * (1.0_wp-phosphorus_resorption) * plant%pool%leaf%phosphorus 
-    plant%flux%growth%labile%phosphorus = plant%flux%growth%labile%phosphorus + & 
-                                        fturn_leaf * phosphorus_resorption * plant%pool%leaf%phosphorus 
-    plant%flux%growth%leaf%phosphorus = plant%flux%growth%leaf%phosphorus - & 
-                                        fturn_leaf * phosphorus_resorption * plant%pool%leaf%phosphorus 
+    plant%flux%leaf_resorption_p = fturn_leaf * phosphorus_resorption * plant%pool%leaf%phosphorus 
     plant%flux%litterfall%fine_root%phosphorus = fturn_fine_root * plant%pool%fine_root%phosphorus 
     plant%flux%litterfall%coarse_root%phosphorus = fturn_coarse_root * plant%pool%coarse_root%phosphorus 
     plant%flux%litterfall%sap_wood%phosphorus = fturn_sap_wood * plant%pool%sap_wood%phosphorus 
@@ -112,10 +106,7 @@ CONTAINS
     ! 2.6 N15 Litter fall
     !
     plant%flux%litterfall%leaf%nitrogen15 = fturn_leaf * (1.0_wp-nitrogen_resorption) * plant%pool%leaf%nitrogen15 
-    plant%flux%growth%labile%nitrogen15 = plant%flux%growth%labile%nitrogen15 + & 
-                                        fturn_leaf * nitrogen_resorption * plant%pool%leaf%nitrogen15 
-    plant%flux%growth%leaf%nitrogen15 = plant%flux%growth%leaf%nitrogen15 - & 
-                                        fturn_leaf * nitrogen_resorption * plant%pool%leaf%nitrogen15
+    plant%flux%leaf_resorption_n15 = fturn_leaf * nitrogen_resorption * plant%pool%leaf%nitrogen15
     plant%flux%litterfall%fine_root%nitrogen15 = fturn_fine_root * plant%pool%fine_root%nitrogen15 
     plant%flux%litterfall%coarse_root%nitrogen15 = fturn_coarse_root * plant%pool%coarse_root%nitrogen15 
     plant%flux%litterfall%sap_wood%nitrogen15 = fturn_sap_wood * plant%pool%sap_wood%nitrogen15 

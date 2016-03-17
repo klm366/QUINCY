@@ -61,6 +61,7 @@ $(MODEL_LIB)(mo_veg_memory.o): \
 
 $(MODEL_LIB)(mo_veg_interface.o): \
   $(BASE_LIB)(mo_kind.o) \
+  $(BASE_LIB)(mo_base_memory.o) \
   $(MODEL_LIB)(mo_veg_memory.o) \
   $(MODEL_LIB)(mo_veg_growth.o) \
   $(MODEL_LIB)(mo_veg_respiration.o) \
@@ -78,6 +79,7 @@ $(MODEL_LIB)(mo_veg_respiration.o): \
 
 $(MODEL_LIB)(mo_veg_turnover.o): \
   $(BASE_LIB)(mo_kind.o) \
+  $(BASE_LIB)(mo_base_memory.o) \
   $(LAND_LIB)(mo_land_constants.o) \
   $(MODEL_LIB)(mo_veg_memory.o)
 
