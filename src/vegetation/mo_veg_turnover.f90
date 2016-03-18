@@ -44,8 +44,9 @@ CONTAINS
     !
     nitrogen_resorption = update_nitrogen_resorption(plant)
     phosphorus_resorption = update_phosphorus_resorption(plant)
-    CALL update_turnover_fraction(plant)
-
+    CALL update_turnover_fraction(veg_param%tau_leaf(plant%pftid),veg_param%tau_fine_root(plant%pftid),&
+                                  veg_param%tau_coarse_root(plant%pftid),veg_param%tau_sap_wood(plant%pftid),&
+                                  veg_param%tau_seed(plant%pftid), plant)
     !
     ! 2.1 C Litter fall
     !
@@ -116,34 +117,40 @@ CONTAINS
     !
     ! calculate transformation from sapwood into heart wood 
     ! 
-    CALL calc_pool_turnover(plant%pool%sap_wood,veg_param%tau_sapwood(plant%pftid),resorption_wood, & 
+    CALL calc_pool_turnover(plant%pool%sap_wood,veg_param%tau_sap_wood(plant%pftid),resorption_wood, & 
                             plant%flux%growth%sap_wood,plant%flux%growth%heart_wood,plant%flux%growth%labile)
     !
     ! calculate transformation from fruit into seed_bed 
     ! 
-    CALL calc_pool_turnover(plant%pool%fruit,veg_param%tau_fruit_pool(plant%pftid),zero, & 
+    CALL calc_pool_turnover(plant%pool%fruit,veg_param%tau_fruit(plant%pftid),zero, & 
                             plant%flux%growth%fruit,plant%flux%growth%seed_bed,plant%flux%growth%labile)
 
   END SUBROUTINE calc_turnover
 
-  SUBROUTINE update_turnover_fraction(plant)
+  SUBROUTINE update_turnover_fraction(tau_leaf,tau_fine_root,tau_coarse_root,tau_sap_wood,tau_seed,plant)
     !
     ! routine to calculate fractional loss of biomass from a plant compartment
     ! set to constant for now
-    ! should be based on PFT, phenology and senesence
+    ! should be varying with phenology and senesence
     !
     USE mo_base_constants, ONLY: dt, one_day, one_year
 
     IMPLICIT NONE
-
+    ! 0.1 Input
+    REAL(wp), INTENT(in) :: tau_leaf             ! default turnover time of leaves (1/years)
+    REAL(wp), INTENT(in) :: tau_fine_root        ! default turnover time of fine roots (1/years)
+    REAL(wp), INTENT(in) :: tau_coarse_root      ! default turnover time of coarse roots (1/years)
+    REAL(wp), INTENT(in) :: tau_sap_wood         ! default turnover time of wood  (1/years)
+    REAL(wp), INTENT(in) :: tau_seed             ! default turnover time of seeds (1/years)
+    ! 0.2 In-/Output
     TYPE(PlantClass), INTENT(inout) :: plant
 
-    fturn_leaf = 0.3_wp * dt/one_day/one_year
-    fturn_fine_root = 0.7_wp * dt/one_day/one_year
-    fturn_coarse_root = 0.1_wp * dt/one_day/one_year
-    fturn_sap_wood = 0.01_wp * dt/one_day/one_year
-    fturn_heart_wood = 0.01_wp * dt/one_day/one_year
-    fturn_seed_bed = 1.0_wp * dt/one_day/one_year
+    fturn_leaf = tau_leaf * dt/one_day/one_year
+    fturn_fine_root = tau_fine_root * dt/one_day/one_year
+    fturn_coarse_root = tau_coarse_root * dt/one_day/one_year
+    fturn_sap_wood = tau_sap_wood * dt/one_day/one_year
+    fturn_heart_wood = tau_sap_wood * dt/one_day/one_year
+    fturn_seed_bed = tau_seed * dt/one_day/one_year
 
   END SUBROUTINE update_turnover_fraction
 

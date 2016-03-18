@@ -19,8 +19,18 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: t_maint_k2                   ! Coefficient in the equation for temperature sensitivity of foliar respiration
   REAL(wp),SAVE :: t_maint_k3                   ! Coefficient in the equation for temperature sensitivity of foliar respiration 
 
-  ! Standard pool turnover times
+  ! Labile pool parameters 
   REAL(wp),SAVE :: tau_labile_default           ! default turnover time of the labile carbo-hydrates (in days)
+  REAL(wp),SAVE :: lambda_tau_labile_temp       ! lambda in temperature response function of labile pool 
+  REAL(wp),SAVE :: weibull_k_tau_labile_temp    ! k in temperature response function of labile pool 
+  REAL(wp),SAVE :: lambda_tau_labile_theta      ! lambda in moisture response function of labile pool 
+  REAL(wp),SAVE :: weibull_k_tau_labile_theta   ! k in moisture response function of labile pool 
+  REAL(wp),SAVE :: lambda_phiphen               ! lambda in storage response function to phenology 
+  REAL(wp),SAVE :: weibull_k_phiphen            ! k in in storage response function to phenology 
+  REAL(wp),SAVE :: lambda_phimaint              ! lambda in storage response function to maintenance needs 
+  REAL(wp),SAVE :: weibull_k_phimaint           ! k in in storage response function to maintenance needs
+  REAL(wp),SAVE :: lambda_phistore              ! lambda in storage response function to storage size
+  REAL(wp),SAVE :: weibull_k_phistore           ! k in in storage response function to storage size 
 
   ! Resporption parameters
   REAL(wp),SAVE :: resorption_default           ! default fraction of nutrient resporption before leaf shedding
@@ -70,6 +80,7 @@ MODULE mo_veg_parameters
 
   TYPE VegetationParameterClass
      INTEGER,DIMENSION(npft) :: growthform 
+     REAL(wp),DIMENSION(npft) :: tau_leaf
      REAL(wp),DIMENSION(npft) :: sla
      REAL(wp),DIMENSION(npft) :: nf 
      REAL(wp),DIMENSION(npft) :: tjmax_opt
@@ -80,13 +91,16 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: weibull_k_soil_ps
      REAL(wp),DIMENSION(npft) :: lambda_soil_gs
      REAL(wp),DIMENSION(npft) :: weibull_k_soil_gs
-     REAL(wp),DIMENSION(npft) :: tau_sapwood
+     REAL(wp),DIMENSION(npft) :: tau_sap_wood
      REAL(wp),DIMENSION(npft) :: wood_density 
      REAL(wp),DIMENSION(npft) :: k_latosa 
      REAL(wp),DIMENSION(npft) :: k_rtos 
+     REAL(wp),DIMENSION(npft) :: tau_fine_root
+     REAL(wp),DIMENSION(npft) :: tau_coarse_root
      REAL(wp),DIMENSION(npft) :: allom_k1
      REAL(wp),DIMENSION(npft) :: allom_k2
-     REAL(wp),DIMENSION(npft) :: tau_fruit_pool 
+     REAL(wp),DIMENSION(npft) :: tau_fruit
+     REAL(wp),DIMENSION(npft) :: tau_seed
   END TYPE VegetationParameterClass
 
   TYPE AccumulationIntervalPlantClass 
@@ -99,6 +113,7 @@ MODULE mo_veg_parameters
     REAL(wp) :: beta_air = 2._wp
     REAL(wp) :: beta_soil_ps = 2._wp
     REAL(wp) :: beta_soil_gs = 2._wp
+    REAL(wp) :: weekly = 7._wp
   END TYPE AccumulationIntervalPlantClass
 
 
@@ -128,6 +143,23 @@ MODULE mo_veg_parameters
 
       ! default turnover time of the labile carbo-hydrates (in days)
       tau_labile_default = 0.1_wp 
+      ! temperature scalar on turnover time of labile pool (1-exp(-(lambda * T)^k))
+      ! tuned to reduce growth between 5°C to zero at 0°C
+      lambda_tau_labile_temp = 0.5_wp
+      weibull_k_tau_labile_temp = 2.0_wp
+      ! moisture scalar on turnover time of labile pool (1-exp(-(lambda * theta)^k))
+      ! tuned to reduce growth from 20% saturation to zero at 0% saturation
+      lambda_tau_labile_theta = 0.1_wp
+      weibull_k_tau_labile_theta = 2.0_wp
+      ! pull from reserve to labile pool due to phenology (1-exp(-(lambda * lai/target_lai)^k))
+      lambda_phiphen = 2._wp
+      weibull_k_phiphen = 4.0_wp
+      ! pull from reserve to labile pool due to maintenance of labile pool (1-exp(-(lambda * labile/target_labile)^k))
+      lambda_phimaint = 1.2_wp
+      weibull_k_phimaint = 1.2_wp
+      ! pull from reserve to labile pool due to maintenance of labile pool (1-exp(-(lambda * labile/target_labile)^k))
+      lambda_phistore = 4._wp
+      weibull_k_phistore = 3._wp
 
       ! default fraction of nutrient resporption before leaf shedding
       resorption_default = 0.5_wp 
@@ -203,6 +235,8 @@ MODULE mo_veg_parameters
  
       ! vegetation growth form
       veg_param%growthform(:) = itree
+      ! average turnover (1/lifetime) of a leaf (1/years) 
+      veg_param%tau_leaf(:) = 0.3_wp 
       ! specific leaf area of a plant (m2 / mol C) 
       veg_param%sla(:) = 10.0_wp / 1000.0_wp * molar_mass_C 
       ! nitrogen scaling parameter for photosynthesis calculation 
@@ -222,19 +256,25 @@ MODULE mo_veg_parameters
       veg_param%lambda_soil_gs(:) = veg_param%lambda_soil_ps(:)
       veg_param%weibull_k_soil_gs(:) = veg_param%weibull_k_soil_ps(:)
       ! turnover time of the sapwood pool (1/years)
-      veg_param%tau_sapwood(:) = 0.05_wp
+      veg_param%tau_sap_wood(:) = 0.05_wp
       ! wood density (mol C / m3)
       veg_param%wood_density(:) = 30000.0_wp / molar_mass_C
       ! leaf area to sapwood area ratio 
       veg_param%k_latosa(:) = 4000.0_wp 
       ! trade-off parametr for hydraulic investment into sapwood or fine roots 
       veg_param%k_rtos(:) = 1.0_wp / (veg_param%k_latosa(:) / veg_param%sla(:) / veg_param%wood_density(:))
+      ! average turnover (1/lifetime) of a fine root (1/years) 
+      veg_param%tau_fine_root(:) = 0.7_wp 
+      ! average turnover (1/lifetime) of a coarse root (1/years) 
+      veg_param%tau_coarse_root(:) = 0.1_wp 
       ! paramter in height diameter relationship 
       veg_param%allom_k1(:) = 55.0_wp 
       ! paramter in height diameter relationship
       veg_param%allom_k2(:) = 0.65 
       ! turnover time of the fruit pool (1/years)
-      veg_param%tau_fruit_pool(:) = 1.0_wp
+      veg_param%tau_fruit(:) = 1.0_wp
+      ! turnover time of the fruit pool (1/years)
+      veg_param%tau_seed(:) = 1.0_wp
 
     END SUBROUTINE init_pft_param_table 
 

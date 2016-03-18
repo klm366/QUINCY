@@ -33,8 +33,8 @@ CONTAINS
     IMPLICIT NONE
 
     ! 0.1 Input
-    TYPE(VegetationParameterClass),INTENT(in) :: veg_param 
-    REAL(wp),INTENT(in) :: t_air 
+    TYPE(VegetationParameterClass),INTENT(in) :: veg_param   ! vegetation type parameters
+    REAL(wp),INTENT(in) :: t_air                             ! ambient air temperature (K)
     ! 0.2 In- and Output
     TYPE(TileClass), DIMENSION(ntile), INTENT(inout) :: tile
     ! 0.4 Local
@@ -42,18 +42,20 @@ CONTAINS
 
     DO t = 1,ntile
  
-       CALL vegetation_interface(tile(t)%plant,t_air,veg_param)
+       CALL vegetation_interface(tile(t)%plant,t_air,tile(t)%soil%theta,veg_param)
 
     END DO
  
   END SUBROUTINE update_vegetation
 
-  SUBROUTINE vegetation_interface(plant,t_air,veg_param)
+  SUBROUTINE vegetation_interface(plant,t_air,theta,veg_param)
     ! 
     ! update vegetation pools given pre-calculated rates of 
     ! net C, N and P uptake 
     ! !! OBS: incomplete!!
     ! 
+    USE mo_base_memory, ONLY: ElementAdd,ElementSub
+    USE mo_base_util_functions, ONLY: moving_avrg ! temporarily only!
     USE mo_veg_memory, ONLY: VegPoolAdd,VegPoolSub
     USE mo_veg_parameters, ONLY: VegetationParameterClass
     USE mo_veg_turnover
@@ -61,15 +63,17 @@ CONTAINS
     USE mo_veg_respiration, ONLY: calc_maintenance_respiration
     IMPLICIT NONE
     ! 0.1 Input
-    TYPE(VegetationParameterClass),INTENT(in) :: veg_param 
-    REAL(wp),INTENT(in) :: t_air 
+    TYPE(VegetationParameterClass),INTENT(in) :: veg_param      ! vegetation type parameters
+    REAL(wp),INTENT(in) :: t_air                                ! ambient air temperature (K)
+    REAL(wp),INTENT(in) :: theta                                ! soil moisture (%)
     ! 0.2 In- and Output
     TYPE(PlantClass),INTENT(inout) :: plant
     ! 
     ! 1.0 Calculate growth
     ! 
-    CALL  calc_growth(plant,veg_param,plant%flux%growth, & 
-            plant%flux%growth_respiration,plant%flux%growth_respiration_c13,plant%flux%growth_respiration_c14)
+    CALL  calc_growth(t_air,theta,plant,veg_param,plant%flux%growth, & 
+            plant%flux%growth_respiration,plant%flux%growth_respiration_c13,plant%flux%growth_respiration_c14,& 
+            plant%flux%reserve_use)
     ! 
     ! 1.5 Calculate maintenance respiration
     ! 
@@ -104,10 +108,10 @@ CONTAINS
     plant%flux%growth%labile%nitrogen15 = plant%flux%growth%labile%nitrogen15 + plant%flux%uptake_n15
     plant%flux%growth%labile%phosphorus = plant%flux%growth%labile%phosphorus + plant%flux%uptake_p
     !
-    ! 5.0 Update plant biogeochemical pools with growth and litterfall
+    ! 5.0 update labile pool and reserve 
     ! 
-    plant%pool = VegPoolSub(plant%pool,plant%flux%litterfall)
-    plant%pool = VegPoolAdd(plant%pool,plant%flux%growth)
+    plant%pool%labile = ElementAdd(plant%pool%labile,plant%flux%reserve_use)
+    plant%pool%reserve = ElementSub(plant%pool%reserve,plant%flux%reserve_use)
     ! 
     ! 5.1 update fluxes from retranslocation of leaves
     !
@@ -117,8 +121,13 @@ CONTAINS
     plant%pool%labile%phosphorus = plant%pool%labile%phosphorus + plant%flux%leaf_resorption_p
     plant%pool%leaf%nitrogen15 = plant%pool%leaf%nitrogen15 - plant%flux%leaf_resorption_n15
     plant%pool%labile%nitrogen15 = plant%pool%labile%nitrogen15 + plant%flux%leaf_resorption_n15
+    !
+    ! 6.0 Update plant biogeochemical pools with growth and litterfall
     ! 
-    ! 6.0 Update plant diagnostics
+    plant%pool = VegPoolSub(plant%pool,plant%flux%litterfall)
+    plant%pool = VegPoolAdd(plant%pool,plant%flux%growth)
+    ! 
+    ! 7.0 Update plant diagnostics
     !
     plant%lai = plant%pool%leaf%carbon * veg_param%sla(plant%pftid)
 

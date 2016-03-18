@@ -43,6 +43,12 @@ CONTAINS
     tile(1)%plant%accumulated%fleaf_sunlit  = moving_avrg( &
                                               tile(1)%plant%accumulated%fleaf_sunlit, tile(1)%plant%canopy_layer(1)%fleaf_sunlit, &
                                               1.0_wp / (plant_acc_interval%fleaf_sunlit * one_day/ dt) )!, .TRUE.) 
+    tile(1)%plant%accumulated%gpp_week      = moving_avrg( & 
+                                              tile(1)%plant%accumulated%gpp_week, tile(1)%plant%flux%gpp, & 
+                                              1.0_wp / (plant_acc_interval%weekly * one_day/dt))
+    tile(1)%plant%accumulated%maint_respiration_week = moving_avrg(tile(1)%plant%accumulated%maint_respiration_week,& 
+                                                       tile(1)%plant%flux%maint_respiration, & 
+                                                       1._wp/(plant_acc_interval%weekly*one_day/dt))
 
   END SUBROUTINE accumulate_moving_averages_plant
 

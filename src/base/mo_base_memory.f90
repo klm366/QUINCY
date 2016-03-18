@@ -34,8 +34,8 @@ MODULE mo_base_memory
   END TYPE VegPool
 
   TYPE VegFlux
-     TYPE(VegPool) :: growth
-     TYPE(VegPool) :: litterfall
+     TYPE(VegPool) :: growth              ! growth of tissues (mol m-2 timestep-1)
+     TYPE(VegPool) :: litterfall          ! litter fall (mol m-2 timestep-1)
      REAL(wp) :: gpp                      ! gross photosynthesis (µmol CO2 m-2 s-1)
      REAL(wp) :: gpp_c13                  ! gross photosynthesis (µmol 13CO2 m-2 s-1)
      REAL(wp) :: gpp_c14                  ! gross photosynthesis (µmol 14CO2 m-2 s-1)
@@ -57,6 +57,8 @@ MODULE mo_base_memory
      REAL(wp) :: leaf_resorption_p        ! resorption of P upon leaf senescence (mol m-2 timestep-1)
      REAL(wp) :: gc
      REAL(wp) :: ci
+     TYPE(Element) :: reserve_use         ! net flux between reserve and labile pool (mol m-2 timestep-1)
+                                          !  (+ve: flux to labile; -ve flux from labile) 
   END TYPE VegFlux
 
   TYPE VegCanopy                       ! vegetation canopy structure (for each layer)
@@ -83,6 +85,9 @@ MODULE mo_base_memory
     REAL(wp) :: beta_air = 1._wp
     REAL(wp) :: beta_soil_ps = 1._wp
     REAL(wp) :: beta_soil_gs = 1._wp
+    ! memory of fluxes
+    REAL(wp) :: gpp_week = 0._wp                   ! gpp of the last week (µmol m-2 s-1)
+    REAL(wp) :: maint_respiration_week = 0._wp     ! maintenance respiration of the last week (µmol m-2 s-1)
   END TYPE AccumulationPlantClass
 
   TYPE PlantClass
