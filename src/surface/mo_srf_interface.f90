@@ -17,12 +17,12 @@ MODULE mo_srf_interface
   USE mo_exception,       ONLY: message
 
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
+  USE mo_jsb_lct_class,      ONLY: LAKE_TYPE
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
-  USE mo_jsb_task_class,     ONLY: t_jsb_process_task
+  USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SRF, SOIL, VEG, ATM2LAND
+  dsl4jsb_Use_processes SRF, SOIL, VEG, ATM2LAND, LAKE
   dsl4jsb_Use_config(SRF)
   dsl4jsb_Use_config(SOIL)
 
@@ -31,100 +31,66 @@ MODULE mo_srf_interface
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(SRF)
   dsl4jsb_Use_memory(VEG)
+  dsl4jsb_Use_memory(LAKE)
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: update_surface_radiation, update_snow_and_skin_fraction, update_surface_energy
+  PUBLIC :: update_snow_and_skin_fraction, update_surface_energy
   PUBLIC :: update_surface_fluxes, update_t_srf_asselin, update_humidity_scaling, update_roughness
   PUBLIC :: t_srf_process
 
+  !
+  ! ================================================================================================================================
+  !
   TYPE, EXTENDS(t_jsb_process) :: t_srf_process
   CONTAINS
     PROCEDURE :: Register_tasks => Register_srf_tasks
   END TYPE t_srf_process
 
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_surface_energy
+    PROCEDURE, NOPASS :: Aggregate => aggregate_surface_energy
+  END TYPE tsk_surface_energy
+
+  INTERFACE tsk_surface_energy
+    PROCEDURE Create_task_surface_energy
+  END INTERFACE tsk_surface_energy
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_interface'
 
 CONTAINS
+
+  FUNCTION Create_task_surface_energy(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_surface_energy::return_ptr)
+
+    return_ptr%name = 'surface_energy'
+    return_ptr%process_id = SRF
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_surface_energy
 
   SUBROUTINE Register_srf_tasks(this, model_id)
 
     CLASS(t_srf_process), INTENT(inout) :: this
     INTEGER, INTENT(in) :: model_id
 
-    !CALL this%Register_task(tsk_radiation_surface(name="radiation_surface", process_id=SRF))
+    CALL this%Register_task(tsk_surface_energy(model_id))
 
   END SUBROUTINE Register_srf_tasks
-
-  SUBROUTINE update_surface_radiation(tile, config, iblk, ics, ice, nc)
-
-    USE mo_phy_schemes, ONLY: lwnet_from_lwdown
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
-
-    ! Local variables
-    !
-    dsl4jsb_Def_memory(ATM2LAND)
-    dsl4jsb_Def_memory(SRF)
-
-    ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: swvis_srf_net
-    dsl4jsb_Real2D_onChunk :: swnir_srf_net
-    dsl4jsb_Real2D_onChunk :: sw_srf_net
-    dsl4jsb_Real2D_onChunk :: lw_srf_net
-    dsl4jsb_Real2D_onChunk :: rad_srf_net
-    dsl4jsb_Real2D_onChunk :: lw_srf_down
-    dsl4jsb_Real2D_onChunk :: swvis_srf_down
-    dsl4jsb_Real2D_onChunk :: swnir_srf_down
-    dsl4jsb_Real2D_onChunk :: alb_vis_srf
-    dsl4jsb_Real2D_onChunk :: alb_nir_srf
-    dsl4jsb_Real2D_onChunk :: t_srf
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_radiation'
-
-    IF (.NOT. tile%Is_process_active(SRF)) RETURN
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface radiation')
-
-    ! Get reference to variables for current block
-    !
-    dsl4jsb_Get_memory(SRF)
-    dsl4jsb_Get_memory(ATM2LAND)
-
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swvis_srf_down, IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swnir_srf_down, IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, lw_srf_down,    IN)
-
-    dsl4jsb_Get_var2D_onChunk(SRF, swvis_srf_net, OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, swnir_srf_net, OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, sw_srf_net,    OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, lw_srf_net,    OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, rad_srf_net,   OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, alb_vis_srf,   IN)
-    dsl4jsb_Get_var2D_onChunk(SRF, alb_nir_srf,   IN)
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,         IN)
-
-    ! Compute net SW radiation from downward SW and albedo
-    swvis_srf_net(:) = swvis_srf_down(:) * (1._wp - alb_vis_srf(:))
-    swnir_srf_net(:) = swnir_srf_down(:) * (1._wp - alb_nir_srf(:))
-    sw_srf_net   (:) = swvis_srf_net(:) + swnir_srf_net(:)
-
-    ! Compute LW net radiation from incoming and the thermal radiation from the surface
-    lw_srf_net(:) = lwnet_from_lwdown(lw_srf_down(:), t_srf(:))
-
-    ! Compute net radiation
-    rad_srf_net(:) = sw_srf_net(:) + lw_srf_net(:)
-
-  END SUBROUTINE update_surface_radiation
-
+  !
+  ! ================================================================================================================================
+  !
   SUBROUTINE update_snow_and_skin_fraction(tile, config, iblk, ics, ice, nc, dtime, steplen)
 
-    USE mo_phy_schemes,    ONLY: heat_transfer_coef, qsat
-    USE mo_soil_process,   ONLY: snow_fract
-    USE mo_srf_constants,  ONLY: rhoh2o
+    USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
+    USE mo_soil_process,           ONLY: snow_fract
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
@@ -251,19 +217,34 @@ CONTAINS
     END WHERE
 
   END SUBROUTINE update_snow_and_skin_fraction
-
-  SUBROUTINE update_surface_energy(tile, config, iblk, ics, ice, nc, dtime, steplen)
-
-    USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_srf_process,        ONLY: surface_temp_implicit
-!!$    USE mo_srf_constants,      ONLY: eps
-    USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
-    USE mo_physical_constants, ONLY: tmelt
+  !
+  ! ================================================================================================================================
+  !
+  SUBROUTINE update_surface_energy(tile, config, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
-    REAL(wp),          INTENT(in) :: dtime, steplen
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    SELECT CASE (tile%lct_type)
+    CASE (LAKE_TYPE)
+      CALL update_surface_energy_lake(tile, config, options)
+    CASE DEFAULT
+      CALL update_surface_energy_land(tile, config, options)
+    END SELECT
+
+  END SUBROUTINE update_surface_energy
+
+  SUBROUTINE update_surface_energy_land(tile, config, options)
+
+    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_srf_process,            ONLY: surface_temp_implicit
+    USE mo_echam_vdiff_params,     ONLY: tpfac2, tpfac3
+    USE mo_jsb_physical_constants, ONLY: tmelt
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
     !
@@ -303,17 +284,26 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp) ::             &
-      qsat_srf_old(nc),     &
-      s_srf_old(nc),        &
-      dQdT(nc),             & !< Sensitivity of saturated surface specific humidity to temperature
-      t2s_conv(nc),         & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
-      heat_tcoef(nc)          !< Heat transfer coefficient (rho*C_h*|v|)
+      qsat_srf_old(options%nc),     &
+      s_srf_old(options%nc),        &
+      dQdT(options%nc),             & !< Sensitivity of saturated surface specific humidity to temperature
+      t2s_conv(options%nc),         & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
+      heat_tcoef(options%nc)          !< Heat transfer coefficient (rho*C_h*|v|)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
+    INTEGER :: iblk, ics, ice, nc
+    REAL(wp) :: steplen
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy_land'
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+    steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface temperature')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_config(SRF)
 
@@ -408,8 +398,78 @@ CONTAINS
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
     t_eff_srf(:) = (t_srf_old(:)**3 * (4._wp * s_srf(:)/t2s_conv(:) - 3._wp * t_srf_old(:))) ** 0.25_wp
 
-  END SUBROUTINE update_surface_energy
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
+  END SUBROUTINE update_surface_energy_land
+
+  SUBROUTINE update_surface_energy_lake(tile, config, options)
+
+    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_srf_process,            ONLY: surface_temp_implicit
+    USE mo_echam_vdiff_params,     ONLY: tpfac2, tpfac3
+    USE mo_jsb_physical_constants, ONLY: tmelt
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(LAKE)
+
+    ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: t_srf
+
+    ! Local variables
+    INTEGER :: iblk, ics, ice, nc
+    LOGICAL                       :: lstart
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy_lake'
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (.NOT. tile%Is_process_active(SRF)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(SRF)
+    dsl4jsb_Get_memory(LAKE)
+
+    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,   IN)
+
+    t_srf(:) = dsl4jsb_var2D_onChunk(LAKE,t_srf)
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_surface_energy_lake
+
+  SUBROUTINE aggregate_surface_energy(tile, config, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_energy'
+
+    INTEGER :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_surface_energy
+  !
+  ! ================================================================================================================================
+  !
   ! Asselin time filter for surface temperature
   SUBROUTINE update_t_srf_asselin(tile, config, iblk, ics, ice, nc)
 
@@ -452,8 +512,8 @@ CONTAINS
 
   SUBROUTINE update_surface_fluxes(tile, config, iblk, ics, ice, nc, steplen)
 
-    USE mo_phy_schemes,        ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_physical_constants, ONLY: alv, als
+    USE mo_phy_schemes,            ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_jsb_physical_constants, ONLY: alv, als
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
@@ -552,9 +612,9 @@ CONTAINS
 
   SUBROUTINE update_humidity_scaling(tile, config, iblk, ics, ice, nc)
 
-    USE mo_srf_constants,  ONLY: rhoh2o
-    USE mo_soil_constants, ONLY: ws_wilt_fract
-    USE mo_soil_process,   ONLY: relative_humidity
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_soil_constants,         ONLY: ws_wilt_fract
+    USE mo_soil_process,           ONLY: relative_humidity
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     CLASS(t_jsb_config_p), INTENT(in)    :: config(:)

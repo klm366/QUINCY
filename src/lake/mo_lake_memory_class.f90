@@ -26,13 +26,18 @@ MODULE mo_lake_memory_class
     !
     ! Parameters
     TYPE(t_jsb_var_real2d) :: &
-      land         ,    & !< Land fraction: 1: land/lake/glacier, 0: sea
-      lake                !< Lake fraction
+      & land_fract,       & !< Land fraction: 1: land/lake/glacier, 0: sea
+      & lake_fract          !< Lake fraction
     !
     ! Fractions
     TYPE(t_jsb_var_real2d) :: &
-      fract,    &  !< Cover fraction of tile (relative to parent tile)
-      fract_max    !< Maximum potential cover fraction for tile (rel. to parent)
+      & fract,    &  !< Cover fraction of tile (relative to parent tile)
+      & fract_max    !< Maximum potential cover fraction for tile (rel. to parent)
+    !
+    TYPE(t_jsb_var_real2d) :: &
+      & t_srf,          & !< Temperature of lake surface
+      & hflx_res,       & !! Residual heat flux
+      & ice_fract         !! Fraction of ice cover on lake
   CONTAINS
     PROCEDURE :: Init => Init_lake_memory
   END TYPE t_lake_memory
@@ -74,63 +79,35 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    CALL jsb_add_var( mem, 'land_frac', mem%land,                     &
+    CALL jsb_add_var( mem, 'land_frac', mem%land_fract,                     &
       & hgrid, surface,                                                               &
       & t_cf('land_mask', '', 'land fraction'),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, 'lake', mem%lake,                          &
+    CALL jsb_add_var( mem, 'lake', mem%lake_fract,                          &
       & hgrid, surface,                                                               &
       & t_cf('lake_mask', '', 'lake fraction'),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-  END SUBROUTINE Init_lake_memory
+    CALL jsb_add_var( mem, 't_srf', mem%t_srf,                                   &
+      & hgrid, surface,                                                           &
+      & t_cf('surface_temperature', 'K', ''),                                              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      & prefix, suffix,                                                      &
+      & initval_r=280.0_wp )
 
-!!$  SUBROUTINE copy_t_srf_energy_state(in, out, iblk, ics, ice)
-!!$
-!!$    TYPE(t_srf_energy_state), INTENT(in)    :: in
-!!$    TYPE(t_srf_energy_state), INTENT(inout) :: out
-!!$    INTEGER,                  INTENT(in)    :: iblk, ics, ice
-!!$
-!!$    out%t_srf         (ics:ice,    iblk) = in%t_srf         (ics:ice,    iblk)
-!!$    out%t_srf_old     (ics:ice,    iblk) = in%t_srf_old     (ics:ice,    iblk)
-!!$    out%t_srf_unfilt  (ics:ice,    iblk) = in%t_srf_unfilt  (ics:ice,    iblk)
-!!$    out%t_eff_srf     (ics:ice,    iblk) = in%t_eff_srf     (ics:ice,    iblk)
-!!$    out%s_srf         (ics:ice,    iblk) = in%s_srf         (ics:ice,    iblk)
-!!$    !out%s_srf_old     (ics:ice,    iblk) = in%s_srf_old     (ics:ice,    iblk)
-!!$    out%qsat_srf      (ics:ice,    iblk) = in%qsat_srf      (ics:ice,    iblk)
-!!$    !out%qsat_srf_old  (ics:ice,    iblk) = in%qsat_srf_old  (ics:ice,    iblk)
-!!$    out%tte_corr      (ics:ice,    iblk) = in%tte_corr      (ics:ice,    iblk)
-!!$    out%fact_q_air    (ics:ice,    iblk) = in%fact_q_air    (ics:ice,    iblk)
-!!$    out%fact_qsat_srf (ics:ice,    iblk) = in%fact_qsat_srf (ics:ice,    iblk)
-!!$    out%fact_qsat_trans_srf (ics:ice,    iblk) = in%fact_qsat_trans_srf (ics:ice,    iblk)
-!!$
-!!$  END SUBROUTINE copy_t_srf_energy_state
-!!$
-!!$  SUBROUTINE add_t_srf_energy_state(in1, in2, out, iblk, ics, ice)
-!!$
-!!$    TYPE(t_srf_energy_state), INTENT(in)    :: in1, in2
-!!$    TYPE(t_srf_energy_state), INTENT(inout) :: out
-!!$    INTEGER,                  INTENT(in)    :: iblk, ics, ice
-!!$
-!!$    out%t_srf         (ics:ice,    iblk) = in1%t_srf         (ics:ice,    iblk) + in2%t_srf         (ics:ice,    iblk)
-!!$    out%t_srf_old     (ics:ice,    iblk) = in1%t_srf_old     (ics:ice,    iblk) + in2%t_srf_old     (ics:ice,    iblk)
-!!$    out%t_srf_unfilt  (ics:ice,    iblk) = in1%t_srf_unfilt  (ics:ice,    iblk) + in2%t_srf_unfilt  (ics:ice,    iblk)
-!!$    out%t_eff_srf     (ics:ice,    iblk) = in1%t_eff_srf     (ics:ice,    iblk) + in2%t_eff_srf     (ics:ice,    iblk)
-!!$    out%s_srf         (ics:ice,    iblk) = in1%s_srf         (ics:ice,    iblk) + in2%s_srf         (ics:ice,    iblk)
-!!$    !out%s_srf_old     (ics:ice,    iblk) = in1%s_srf_old     (ics:ice,    iblk) + in2%s_srf_old     (ics:ice,    iblk)
-!!$    out%qsat_srf      (ics:ice,    iblk) = in1%qsat_srf      (ics:ice,    iblk) + in2%qsat_srf      (ics:ice,    iblk)
-!!$    !out%qsat_srf_old  (ics:ice,    iblk) = in1%qsat_srf_old  (ics:ice,    iblk) + in2%qsat_srf_old  (ics:ice,    iblk)
-!!$    out%tte_corr      (ics:ice,    iblk) = in1%tte_corr      (ics:ice,    iblk) + in2%tte_corr      (ics:ice,    iblk)
-!!$    out%fact_q_air    (ics:ice,    iblk) = in1%fact_q_air    (ics:ice,    iblk) + in2%fact_q_air    (ics:ice,    iblk)
-!!$    out%fact_qsat_srf (ics:ice,    iblk) = in1%fact_qsat_srf (ics:ice,    iblk) + in2%fact_qsat_srf (ics:ice,    iblk)
-!!$    out%fact_qsat_trans_srf (ics:ice,  iblk) = in1%fact_qsat_trans_srf (ics:ice,  iblk) + in2%fact_qsat_trans_srf (ics:ice,  iblk)
-!!$
-!!$  END SUBROUTINE add_t_srf_energy_state
+    CALL jsb_add_var( mem, 'ice_frac', mem%ice_fract,                                   &
+      & hgrid, surface,                                                           &
+      & t_cf('ice fraction on lake', 'K', ''),                                              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+  END SUBROUTINE Init_lake_memory
 
 #endif
 END MODULE mo_lake_memory_class

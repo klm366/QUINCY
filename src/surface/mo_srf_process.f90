@@ -30,10 +30,10 @@ CONTAINS
     &            pcfh, pcair, pcsat, pfracsu, pgrdcap,        &
     &            psnew)
 
-    USE mo_echam_vdiff_params, ONLY: cvdifts   ! TBD: change to 1. for standalone JSBACH
-    USE mo_physical_constants, ONLY: &
+    USE mo_echam_vdiff_params,     ONLY: cvdifts   ! TBD: change to 1. for standalone JSBACH
+    USE mo_jsb_physical_constants, ONLY: &
       & cpd, &
-      & vtmpc2, &
+      & cpvd1, &
       & zemiss_def, &
       & stbo, &
       & alv,  &
@@ -54,7 +54,7 @@ CONTAINS
     REAL(wp) :: pc16
 
     pdt     = cvdifts * steplen
-    pc16    = cpd * vtmpc2
+    pc16    = cpd * cpvd1
 
     !
     zicp(:) = 1._wp / pcp(:)

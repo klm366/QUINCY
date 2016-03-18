@@ -11,12 +11,12 @@ MODULE mo_hd_reservoir_cascade
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: finish, message, message_text
+  USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: finish, message, message_text
 
-  USE mo_jsb_control,     ONLY: debug_on
-  USE mo_time_base,       ONLY: rdaylen
-  USE mo_srf_constants,   ONLY: rhoh2o
+  USE mo_jsb_control,            ONLY: debug_on
+  USE mo_time_base,              ONLY: rdaylen
+  USE mo_jsb_physical_constants, ONLY: rhoh2o
 
   IMPLICIT NONE
   PRIVATE

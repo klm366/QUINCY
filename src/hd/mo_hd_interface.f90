@@ -33,8 +33,8 @@ MODULE mo_hd_interface
   dsl4jsb_Use_memory(SRF)
   dsl4jsb_Use_memory(SOIL)
 
-  USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade
-  USE mo_srf_constants,   ONLY: rhoh2o
+  USE mo_hd_reservoir_cascade,   ONLY: reservoir_cascade
+  USE mo_jsb_physical_constants, ONLY: rhoh2o
 
   IMPLICIT NONE
   PRIVATE

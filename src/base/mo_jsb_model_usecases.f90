@@ -156,8 +156,8 @@ CONTAINS
 !!$                            & processes=(/SRF/), process_actions=(/ON_SUBTREE_/), &
         & varlist_name=model%shortname, lct_type=LAND_TYPE, parent=box_tile)
 
-        glacier_tile => t_jsb_tile('glacier', 'Glacier tile', processes=(/GLACIER/), &
-          & varlist_name=model%shortname, lct_type=GLACIER_TYPE, parent=srf_tile)
+!!$        glacier_tile => t_jsb_tile('glacier', 'Glacier tile', processes=(/GLACIER/), &
+!!$          & varlist_name=model%shortname, lct_type=GLACIER_TYPE, parent=srf_tile)
 
         land_tile => t_jsb_tile('land', 'Land tile', processes=(/SOIL,VEG/), &
           & varlist_name=model%shortname, lct_type=PFT_TYPE, parent=srf_tile)
@@ -168,7 +168,7 @@ CONTAINS
 
     CALL box_tile%Print()
     CALL srf_tile%Print()
-    CALL glacier_tile%Print()
+!!$    CALL glacier_tile%Print()
     CALL land_tile%Print()
     CALL lake_tile%Print()
 

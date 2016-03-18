@@ -157,6 +157,7 @@ CONTAINS
     USE mo_soil_init,           ONLY: soil_init
     USE mo_veg_init,            ONLY: veg_init_ic, veg_init_bc
     USE mo_radiation_init,      ONLY: radiation_init
+    USE mo_lake_init,           ONLY: lake_init
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
@@ -189,7 +190,9 @@ CONTAINS
     END IF
 
     ! Temporary for testing ... should be in separate subroutine
-    CALL model%Queue_task(RAD, "radiation_surface")
+    CALL model%Queue_task(RAD,  "radiation_surface")
+    CALL model%Queue_task(LAKE, "lake_surface")
+    CALL model%Queue_task(SRF,  "surface_energy")
 
     CALL print_model(model)
     CALL model%Print_actions()
@@ -215,6 +218,10 @@ CONTAINS
       ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL radiation_init(tile, configs)
+      END IF
+
+      IF (one_of(tile%process_action(LAKE), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+        CALL lake_init(tile, configs)
       END IF
 
       IF (one_of(tile%process_action(SRF), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN

@@ -10,7 +10,7 @@
 MODULE mo_soil_process
 #ifndef __NO_JSBACH__
 
-  USE mo_physical_constants, ONLY: rhoh2o
+  USE mo_jsb_physical_constants, ONLY: rhoh2o
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message
 
@@ -180,7 +180,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
 
      )
 
-  USE mo_physical_constants, ONLY: alf, cpd, vtmpc2, tmelt, g=>grav
+  USE mo_jsb_physical_constants, ONLY: alf, cpd, cpvd1, tmelt, g=>grav
 
   !
   !     ------------------------------------------------------------------
@@ -352,7 +352,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      zraind(jl)=prain(jl)             *zdtime/rhoh2o                   !rain     [kg m-2 s-1] -> [m]
      zsnowd(jl)=psnow(jl)             *zdtime/rhoh2o                   !snowfall [kg m-2 s-1] -> [m]
      IF(lmask(jl)) THEN
-        zrcp=1._wp/(cpd*(1._wp+vtmpc2*MAX(0.0_wp,pqm1(jl))))
+        zrcp=1._wp/(cpd*(1._wp+cpvd1*MAX(0.0_wp,pqm1(jl))))
         zlfdcp(jl)=alf*zrcp
         zevttd(jl)=pevapl(jl)                        *zdtime/rhoh2o    !evapotransp. [kg m-2 s-1] -> [m]
         zevsnd(jl)=pcvs(jl)*pevapot(jl)              *zdtime/rhoh2o    !pot. sublimation from snow [m]
@@ -856,7 +856,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !!$ TR  USE mo_jsbach_comm_to_echam5mods, ONLY: nlat
 !!$ TR#endif
 
-  USE mo_physical_constants, ONLY: tmelt, g=>grav
+  USE mo_jsb_physical_constants, ONLY: tmelt, g=>grav
 
   INTEGER,  INTENT(in)    :: kbdim
   REAL(wp), INTENT(in)    :: delta_time

@@ -21,8 +21,7 @@ MODULE mo_lake_config_class
   PUBLIC :: t_lake_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_lake_config
-     CHARACTER(len=10)           :: scheme_albedo !< Scheme to use for computation of albedo (echam5 only for now)
-     REAL(wp)                    :: wsn_critical  !< Critical snow depth for correction of new surface temperature [m water equivalent]
+     REAL(wp)   :: mixed_layer_depth  !< Mixed-layer depth of lakes
    CONTAINS
      PROCEDURE :: Init => Init_lake_config
   END type t_lake_config
@@ -39,14 +38,12 @@ CONTAINS
 
     LOGICAL  :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    CHARACTER(len=10)           :: scheme_albedo
-    REAL(wp)                    :: wsn_critical
+    REAL(wp)                    :: mixed_layer_depth
 
-    NAMELIST /jsb_glac_nml/         &
+    NAMELIST /jsb_lake_nml/        &
       active,                      &
       ic_filename, bc_filename,    &
-      scheme_albedo,               &
-      wsn_critical
+      mixed_layer_depth
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -55,24 +52,22 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting lake configuration')
 
     ! Set defaults
-    active          = .TRUE.
-    ic_filename     = 'ic_land_srf.nc'
-    bc_filename     = 'bc_land_srf.nc'
-    scheme_albedo   = 'echam5'
-    wsn_critical    = 5.85036E-3_wp
+    active            = .TRUE.
+    ic_filename       = 'ic_land_srf.nc'
+    bc_filename       = 'bc_land_srf.nc'
+    mixed_layer_depth = 10._wp
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
-    nml_unit = position_nml('jsb_glac_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_glac_nml)
+    nml_unit = position_nml('jsb_lake_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, jsb_lake_nml)
 
     CALL close_nml(nml_handler)
 
     config%active                    = active
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
-    config%scheme_albedo             = scheme_albedo
-    config%wsn_critical              = wsn_critical
+    config%mixed_layer_depth         = mixed_layer_depth
 
   END SUBROUTINE Init_lake_config
 

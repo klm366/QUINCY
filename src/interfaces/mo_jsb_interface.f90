@@ -55,15 +55,6 @@ CONTAINS
                            & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,          &
                            & t_wtr, t_ice, ice_fract_lake)
 
-    USE mo_veg_interface,     ONLY: update_vegetation_1, update_vegetation_2
-    USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, &
-                                    update_surface_energy, update_surface_fluxes, update_t_srf_asselin, &
-                                    update_humidity_scaling, update_roughness
-    USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
-#ifndef __NO_JSBACH_HD__
-    USE mo_hd_interface,      ONLY: update_hd
-#endif
-
     INTEGER :: p_pe
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':interface_full'

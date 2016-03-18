@@ -12,15 +12,15 @@ MODULE mo_lake_init
 
 #include "dsl_jsbach.inc"
 
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_tile,          ONLY: t_jsb_tile
+  USE mo_kind,              ONLY: wp
+  USE mo_exception,         ONLY: message
 
+  USE mo_jsb_model_class,   ONLY: t_jsb_model
+  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
-    jsb_netcdf_read_2d, jsb_netcdf_read_2d_time
-  USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
+    jsb_netcdf_read_2d, jsb_netcdf_read_2d_time, jsb_netcdf_read_2d_extdim
 #ifndef __NO_JSBACH_HD__
   USE mo_impl_constants,    ONLY: LAND_BOUNDARY, SEA_BOUNDARY, SEA
 #endif
@@ -32,18 +32,32 @@ MODULE mo_lake_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: lake_init_ic, lake_init_bc
+  PUBLIC :: lake_init
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_lake_init'
 
 CONTAINS
+  !
+  !> Intialize lake process (after memory has been set up)
+  !
+  SUBROUTINE lake_init(tile, config)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':lake_init'
+
+    CALL lake_init_bc(tile, config)
+    CALL lake_init_ic(tile, config)
+
+  END SUBROUTINE lake_init
 
   SUBROUTINE lake_init_bc(tile, config)
 
-    TYPE(t_jsb_tile), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
 
-    TYPE(t_jsb_model),       POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':lake_init_bc'
 
@@ -53,10 +67,11 @@ CONTAINS
 
   RECURSIVE SUBROUTINE lake_init_ic(tile, config)
 
-    TYPE(t_jsb_tile), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
 
-    TYPE(t_jsb_model),        POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
+
     dsl4jsb_Def_config(LAKE)
     dsl4jsb_Def_memory(LAKE)
 
@@ -86,27 +101,19 @@ CONTAINS
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='notsea',                   &        !< ocean 0., land 1.
-      & fill_array = dsl4jsb_var2D_ptr(LAKE,land))
+      & fill_array = dsl4jsb_var2D_ptr(LAKE,land_fract))
 
     ! Lake mask
     return_pointer => jsb_netcdf_read_2d(         &
       & input_file,                               &
       & variable_name='lake',                     &
-      & fill_array = dsl4jsb_var2D_ptr(LAKE,lake))
+      & fill_array = tile%fract)
     ! set lake mask to zero on ocean grid cells (instead of missing value)
-    WHERE (dsl4jsb_var2D_onDomain(LAKE,land) == 0._wp)
-      dsl4jsb_var2D_onDomain(LAKE,lake) = 0._wp
+    WHERE (dsl4jsb_var2D_onDomain(LAKE,land_fract) == 0._wp)
+      tile%fract = 0._wp
     END WHERE
 
     CALL jsb_netcdf_close_file(input_file)
-
-    ! Propagate initial conditions down the tile structure, starting with the tile with which this subroutine was called initially
-    ! TBD: sub-tiles should not read the netcdf files again
-!!$    IF (tile%no_of_sub_tiles > 0) THEN
-!!$      DO i=1,tile%no_of_sub_tiles
-!!$        CALL lake_init_ic(tile%sub_tiles(i))
-!!$      END DO
-!!$    END IF
 
   END SUBROUTINE lake_init_ic
 
