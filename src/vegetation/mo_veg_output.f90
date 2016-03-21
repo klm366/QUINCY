@@ -13,7 +13,7 @@ MODULE mo_veg_output
   USE mo_kind, ONLY: wp, eps8
   USE mo_base_memory, ONLY: TileClass
   USE mo_base_constants, ONLY: ntile, one_day, dt
-  USE mo_base_configuration, ONLY: model_config
+  USE mo_base_configuration, ONLY: options
 
   IMPLICIT NONE
 
@@ -94,37 +94,37 @@ CONTAINS
     ! 0.3 Local
     INTEGER :: lun = 10
     CHARACTER(100) :: fname = "filename"
-    CHARACTER(20)  :: options = ""
+    CHARACTER(20)  :: opt = ""
     ! 
     ! 1.1 transform interval string to interval number (e.g. week -> 7)
-    !   it is not necessary to pass 'model_config%vegetation%output_interval_pool' as argument to open_pool_output_files
-    !   as 'model_config' is global & defined with SAVE in mo_base_configuration and initialized before this function is called
+    !   it is not necessary to pass 'options%model%output_interval_pool' as argument to open_pool_output_files
+    !   as 'options' is global & defined with SAVE in mo_base_configuration and initialized before this function is called
     ! 
-    output_interval_pool = calc_output_time_interval(model_config%vegetation%output_interval_pool)
+    output_interval_pool = calc_output_time_interval(options%model%output_interval_pool)
     ! 
-    ! 2.1 get options for filenames
+    ! 2.1 get opt for filenames
     ! 
-    IF(model_config%vegetation%flag_optimal_Nfraction .AND. model_config%vegetation%flag_optimal_Nleaf) THEN
-      options = "_optNfrac_optNleaf"
-      ELSE IF(model_config%vegetation%flag_optimal_Nfraction) THEN
-        options = "_optNfrac"
-      ELSE IF(model_config%vegetation%flag_optimal_Nleaf) THEN
-        options = "_optNleaf"
+    IF(options%model%flag_optimal_Nfraction .AND. options%model%flag_optimal_Nleaf) THEN
+      opt = "_optNfrac_optNleaf"
+      ELSE IF(options%model%flag_optimal_Nfraction) THEN
+        opt = "_optNfrac"
+      ELSE IF(options%model%flag_optimal_Nleaf) THEN
+        opt = "_optNleaf"
     END IF
     ! 
     ! 2.2 define open() statements for file output
     ! 
     lun=10
-    fname = 'poolC_'//TRIM(model_config%vegetation%output_interval_pool)//TRIM(options)//'.txt'
+    fname = 'poolC_'//TRIM(options%model%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'poolN_'//TRIM(model_config%vegetation%output_interval_pool)//TRIM(options)//'.txt'
+    fname = 'poolN_'//TRIM(options%model%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'poolP_'//TRIM(model_config%vegetation%output_interval_pool)//TRIM(options)//'.txt'
+    fname = 'poolP_'//TRIM(options%model%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     !lun=lun+1
-    !fname = 'LAI_'//TRIM(model_config%vegetation%output_interval_pool)//TRIM(options)//'.txt'
+    !fname = 'LAI_'//TRIM(options%model%output_interval_pool)//TRIM(opt)//'.txt'
     !OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     ! 
     ! 3.0 write column headers into output files
@@ -138,32 +138,32 @@ CONTAINS
     ! 0.3 Local
     INTEGER :: lun = 10
     CHARACTER(100) :: fname = "filename"
-    CHARACTER(20)  :: options = ""
+    CHARACTER(20)  :: opt = ""
     ! 
     ! 1.1 transform interval string to interval number (e.g. week -> 7)
     ! 
-    output_interval_flux = calc_output_time_interval(model_config%vegetation%output_interval_flux)
+    output_interval_flux = calc_output_time_interval(options%model%output_interval_flux)
     ! 
     ! 2.1 get options for filenames
     ! 
-    IF(model_config%vegetation%flag_optimal_Nfraction .AND. model_config%vegetation%flag_optimal_Nleaf) THEN
-      options = "_optNfrac_optNleaf"
-      ELSE IF(model_config%vegetation%flag_optimal_Nfraction) THEN
-        options = "_optNfrac"
-      ELSE IF(model_config%vegetation%flag_optimal_Nleaf) THEN
-        options = "_optNleaf"
+    IF(options%model%flag_optimal_Nfraction .AND. options%model%flag_optimal_Nleaf) THEN
+      opt = "_optNfrac_optNleaf"
+      ELSE IF(options%model%flag_optimal_Nfraction) THEN
+        opt = "_optNfrac"
+      ELSE IF(options%model%flag_optimal_Nleaf) THEN
+        opt = "_optNleaf"
     END IF
     ! 
     ! 2.2 define open() statements for file output
     ! 
     lun=30
-    fname = 'fluxC_'//TRIM(model_config%vegetation%output_interval_flux)//TRIM(options)//'.txt'
+    fname = 'fluxC_'//TRIM(options%model%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'fluxN_'//TRIM(model_config%vegetation%output_interval_flux)//TRIM(options)//'.txt'
+    fname = 'fluxN_'//TRIM(options%model%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'fluxP_'//TRIM(model_config%vegetation%output_interval_flux)//TRIM(options)//'.txt'
+    fname = 'fluxP_'//TRIM(options%model%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     ! 
     ! 3.0 write column headers into output files

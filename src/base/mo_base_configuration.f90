@@ -13,8 +13,7 @@ MODULE mo_base_configuration
 
   IMPLICIT NONE
 
-  TYPE VegetationConfigClass
-    ! currently: values are set in plant_model_driver section 0.1 -> later: read from file
+  TYPE ModelOptionsClass
     ! Output related:
     ! Set output timestep of pools and fluxes
     CHARACTER(8) :: output_interval_pool  = 'daily'   ! options: timestep daily weekly monthly yearly (monthly == 30 days)
@@ -22,27 +21,36 @@ MODULE mo_base_configuration
     ! Set time of output start/end (e.g. only output last 3 years)
     INTEGER :: output_start_date     = 1
     INTEGER :: output_end_date       = 100
-    ! Driver related:
-    ! Set whether driving variables (temperature, light etc.) vary seasonally: 0 == NO, 1 == YES
-    CHARACTER(8) :: option_forcing    = 'generate'  ! options: constant readfile generate 
     ! Optimality related:
     ! Set whether model runs optimising schemes:
     LOGICAL :: flag_optimal_Nfraction = .FALSE.
     LOGICAL :: flag_optimal_Nleaf     = .FALSE.
-  END TYPE VegetationConfigClass
+  END TYPE ModelOptionsClass
+
+  TYPE ForcingOptionsClass
+    ! Driver related:
+    ! Set forcing to one of three options
+    CHARACTER(8) :: option_forcing    = 'generate'  ! options: constant readfile generate 
+  END TYPE ForcingOptionsClass
+
+  TYPE VegetationOptionsClass
+    ! docu
+    
+  END TYPE VegetationOptionsClass
 
 
-  TYPE ModelConfigClass
-  ! collects all sub-model specific Config TYPEs and makes them globally accessible
-    TYPE( VegetationConfigClass ) :: vegetation			! values set in plant_model_driver.f90 (later: read from file)
+  TYPE OptionsClass
+    ! collects all sub-model specific Config TYPEs and makes them globally accessible
+    TYPE( ModelOptionsClass )       :: model
+    TYPE( ForcingOptionsClass )     :: forcing
+    TYPE( VegetationOptionsClass )  :: vegetation
+  END TYPE OptionsClass
 
-  END TYPE ModelConfigClass
-
-  TYPE( ModelConfigClass ), SAVE :: model_config
+  TYPE( OptionsClass ), SAVE :: options
 
 
-  PRIVATE							! all other definitions of TYPEs are local, but accessible via lodel_config%... 
+  PRIVATE							! all other definitions of TYPEs are local, but accessible via options%... 
 
-  PUBLIC :: model_config			! only this main config TYPE is global
+  PUBLIC :: options			        ! only this main options TYPE is global
 
 END MODULE mo_base_configuration

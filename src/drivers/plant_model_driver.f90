@@ -84,7 +84,7 @@ PROGRAM plant_model_driver
   INTEGER           :: f_unit      = 0
   INTEGER           :: read_status = 0
   INTEGER, SAVE     :: nml_unit    = 0     ! copied from JSBACH3 mo_jsbach.f90 | Unit of the jsbach namelist
-  ! define variables, and set their default values, used for read model-options from file, and passed to model_config% ... then
+  ! define variables, and set their default values, used for read model-options from file, and passed to options% ... then
   CHARACTER(8) :: read_output_interval_pool  = 'monthly'   ! used for read from file
   CHARACTER(8) :: read_output_interval_flux  = 'monthly'   ! 
   INTEGER      :: output_start_date          = 1
@@ -171,12 +171,12 @@ PROGRAM plant_model_driver
         READ (f_unit, plant_model_options)
     END SELECT
   ! pass values as read from file
-  model_config%vegetation%output_interval_pool   = read_output_interval_pool
-  model_config%vegetation%output_interval_flux   = read_output_interval_flux
-  model_config%vegetation%output_start_date      = output_start_date
-  model_config%vegetation%output_end_date        = output_end_date
-  model_config%vegetation%flag_optimal_Nfraction = flag_optimal_Nfraction
-  model_config%vegetation%flag_optimal_Nleaf     = flag_optimal_Nleaf
+  options%model%output_interval_pool   = read_output_interval_pool
+  options%model%output_interval_flux   = read_output_interval_flux
+  options%model%output_start_date      = output_start_date
+  options%model%output_end_date        = output_end_date
+  options%model%flag_optimal_Nfraction = flag_optimal_Nfraction
+  options%model%flag_optimal_Nleaf     = flag_optimal_Nleaf
   ! 
   ! 1.5 Initialise output and accumulation, and open output files; see mo_veg_output
   ! 
@@ -194,7 +194,7 @@ PROGRAM plant_model_driver
      ! 
      ! 2.2 update time-variant forcing
      ! 
-     SELECT CASE(model_config%vegetation%option_forcing)  ! see mo_base_configuration VegetationConfigClass
+     SELECT CASE(options%forcing%option_forcing)  ! see mo_base_configuration
        CASE('constant')
          ! default input values are not changed ?
        CASE('readfile')
