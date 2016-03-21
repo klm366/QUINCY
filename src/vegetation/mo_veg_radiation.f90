@@ -11,6 +11,7 @@ MODULE mo_veg_radiation
 
   USE mo_kind
   USE mo_base_memory
+  USE mo_atmland_memory
   USE mo_land_constants
 
   PRIVATE
@@ -19,42 +20,34 @@ MODULE mo_veg_radiation
 
 CONTAINS
 
-  SUBROUTINE update_radiation(tile,swvis_srf_down,swnir_srf_down,swpar_srf_down, & 
-                              swpar_fdiffuse,cos_zenith_angle,alb_vis_dif,alb_vis_dir, & 
-                              alb_nir_dif,alb_nir_dir)
-  ! 
-  ! Subroutine to calculate surface radiation reflection and absorption in PAR band
-  ! currently no albedo calculation...
+  SUBROUTINE update_radiation(tile, atm2land, land2atm)
+  ! calculate surface radiation reflection and absorption in PAR band
+  !! currently no albedo calculation...
   ! 
   IMPLICIT NONE
   ! 0.1 Input
-  REAL(wp),INTENT(in) :: swvis_srf_down 
-  REAL(wp),INTENT(in) :: swnir_srf_down 
-  REAL(wp),INTENT(in) :: swpar_srf_down 
-  REAL(wp),INTENT(in) :: swpar_fdiffuse
-  REAL(wp),INTENT(in) :: cos_zenith_angle 
+  TYPE(t_atm2land_memory), INTENT(in)        :: atm2land
   ! 0.2 modified Input
   TYPE(TileClass),DIMENSION(ntile),INTENT(inout) :: tile
   ! 0.3 Output
-  REAL(wp), INTENT(out) :: alb_vis_dif 
-  REAL(wp), INTENT(out) :: alb_vis_dir
-  REAL(wp), INTENT(out) :: alb_nir_dif 
-  REAL(wp), INTENT(out) :: alb_nir_dir 
+  TYPE(t_land2atm_memory), INTENT(out)        :: land2atm
   ! 0.4 Local
   INTEGER :: t
   !
   ! 1.0 initalise output
   ! 
-  alb_nir_dif = 0.0_wp
-  alb_nir_dir = 0.0_wp
-  alb_vis_dif = 0.0_wp
-  alb_vis_dir = 0.0_wp
+  land2atm%alb_nir_dif = 0.0_wp
+  land2atm%alb_nir_dir = 0.0_wp
+  land2atm%alb_vis_dif = 0.0_wp
+  land2atm%alb_vis_dir = 0.0_wp
  
   DO t=1,ntile
 
-     CALL calc_fapar(swpar_srf_down,swpar_fdiffuse,cos_zenith_angle, & 
-                     tile(t)%plant%lai,tile(t)%plant%canopy_layer(:)%par_sunlit, & 
-                     tile(t)%plant%canopy_layer(:)%par_shaded,tile(t)%plant%canopy_layer(:)%fleaf_sunlit)
+     CALL calc_fapar(atm2land%swpar_srf_down, atm2land%swpar_fdiffuse, atm2land%cos_zenith_angle, & 
+                     tile(t)%plant%lai, &
+                     tile(t)%plant%canopy_layer(:)%par_sunlit, & 
+                     tile(t)%plant%canopy_layer(:)%par_shaded, &
+                     tile(t)%plant%canopy_layer(:)%fleaf_sunlit)
   
   ENDDO
   

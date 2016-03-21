@@ -3,6 +3,8 @@ include ../../util/Make.inc.local
 #---------------------------------------------------------------------
 BASE_LIB = $(LIBDIR)/lib_base.a
 SXBASE_LIB = $(BASE_LIB)
+ATM_LIB = $(LIBDIR)/lib_atmland.a
+SXATM_LIB = $(ATM_LIB)
 LAND_LIB = $(LIBDIR)/lib_land.a
 SXLAND_LIB = $(LAND_LIB)
 MODEL_LIB = $(LIBDIR)/lib_vegetation.a
@@ -33,6 +35,7 @@ OBJSMODS1 = $(MODS1:.f90=.o)
 #-
 all:
 	@$(M_K) libland
+	@$(M_K) libatm
 	@$(M_K) libbase
 	@$(M_K) m_all
 	@echo  vegetation is OK
@@ -45,6 +48,9 @@ m_all: $(MODEL_LIB)($(OBJSMODS1))
 
 libland:
 	(cd ../land; $(M_K) -f Makefile land)
+
+libatm:
+	(cd ../atmland; $(M_K) -f Makefile atmland)
 
 libbase:
 	(cd ../base; $(M_K) -f Makefile)
@@ -91,11 +97,13 @@ $(MODEL_LIB)(mo_veg_parameters.o): \
 
 $(MODEL_LIB)(mo_veg_radiation.o): \
   $(BASE_LIB)(mo_kind.o) \
+  $(ATM_LIB)(mo_atmland_memory.o) \
   $(LAND_LIB)(mo_land_constants.o) \
   $(MODEL_LIB)(mo_veg_parameters.o)
 
 $(MODEL_LIB)(mo_veg_photosynthesis.o): \
   $(BASE_LIB)(mo_kind.o) \
+  $(ATM_LIB)(mo_atmland_memory.o) \
   $(LAND_LIB)(mo_land_constants.o) \
   $(MODEL_LIB)(mo_veg_parameters.o) \
   $(MODEL_LIB)(mo_veg_respiration.o) \

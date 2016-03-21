@@ -32,7 +32,9 @@ MODULE mo_atmland_memory
       q_acoef          , &
       q_bcoef          , &
       pch              , &
-      cos_zenith_angle
+      cos_zenith_angle , &
+      co2_mixing_ratio , &
+      ga
 
   END TYPE t_atm2land_memory
 
@@ -49,7 +51,8 @@ MODULE mo_atmland_memory
       alb_vis_dif ,   &
       alb_nir_dif ,   &
       alb_vis_dir ,   &
-      alb_nir_dir 
+      alb_nir_dir ,   &
+      vpd
 
   END TYPE t_land2atm_memory
 

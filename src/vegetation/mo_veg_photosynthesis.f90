@@ -12,6 +12,7 @@ MODULE mo_veg_photosynthesis
  USE mo_kind, ONLY: wp
  USE mo_base_constants, ONLY: ncanop,ntile,dt
  USE mo_base_memory
+ USE mo_atmland_memory
  USE mo_veg_parameters
  USE mo_veg_radiation, ONLY: calc_canopy_layer_depth
 
@@ -23,16 +24,12 @@ MODULE mo_veg_photosynthesis
 
 CONTAINS
 
-SUBROUTINE update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,veg_param)
+SUBROUTINE update_canopy_fluxes(tile, atm2land, veg_param)
 
    IMPLICIT NONE
    ! 0.1 Input
-   TYPE(VegetationParameterClass),INTENT(in) :: veg_param  ! list of vegetation parameters
-   REAL(wp),INTENT(in) :: t_air
-   REAL(wp),INTENT(in) :: q_air
-   REAL(wp),INTENT(in) :: press_srf
-   REAL(wp),INTENT(in) :: co2_mixing_ratio
-   REAL(wp),INTENT(in) :: ga
+   TYPE(VegetationParameterClass), INTENT(in) :: veg_param  ! list of vegetation parameters
+   TYPE(t_atm2land_memory), INTENT(in)        :: atm2land
    ! 0.2 In-Output
    TYPE(TileClass),DIMENSION(ntile) :: tile  ! root tile
    ! 0.3 Output
@@ -57,7 +54,7 @@ SUBROUTINE update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,v
      pftid = tile(t)%plant%pftid
 
      ! calculate the moisture scaling factor for photosynthesis
-     beta_air = calc_atm_moisture_stress(t_air,q_air,press_srf) 
+     beta_air = calc_atm_moisture_stress(atm2land%t_air,atm2land%q_air,atm2land%press_srf) 
      beta_soil_ps = calc_soil_moisture_stress(tile(t)%soil%theta, & 
                          veg_param%lambda_soil_ps(pftid),veg_param%weibull_k_soil_ps(pftid))
      beta_soil_gs = calc_soil_moisture_stress(tile(t)%soil%theta, &
@@ -78,7 +75,7 @@ SUBROUTINE update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,v
      DO icanop = 1,ncanop
         IF(canopy_layer_depth_act(icanop).GT.0.0_wp)THEN
 
-          CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
+          CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
                                     tile(t)%plant%canopy_layer(icanop)%par_sunlit, &
                                     tile(t)%plant%canopy_layer(icanop)%par_shaded, & 
                                     tile(t)%plant%canopy_layer(icanop)%fleaf_sunlit, &
