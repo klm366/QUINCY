@@ -224,7 +224,7 @@ PROGRAM plant_model_driver
      ! 
      ! 5.0 Accumulation
      ! 
-     CALL accumulate_moving_averages_plant(tile, ntile, dt)
+     CALL update_vegetation_moving_averages(tile)
      ! 
      ! 6.0 Output
      ! 
