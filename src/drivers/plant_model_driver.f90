@@ -8,21 +8,23 @@
 !! First version by Sönke Zaehle (2015-12-04)
 !!
 PROGRAM plant_model_driver
-  USE mo_kind, ONLY: wp
+  USE mo_kind,               ONLY: wp
   USE mo_base_memory
   USE mo_base_constants
   USE mo_atmland_constants
   USE mo_land_constants
-  USE mo_land_memory, ONLY: init_tile_variable_accumulation
+  USE mo_land_memory,        ONLY: init_tile_variable_accumulation
   USE mo_atmland_util
   USE mo_atmland_forcing
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
-  USE mo_veg_interface, ONLY: update_vegetation
+  USE mo_veg_interface,      ONLY: update_vegetation
   USE mo_veg_output
-  USE mo_veg_memory, ONLY: init_plant_variable_accumulation
+  USE mo_veg_memory,         ONLY: init_plant_variable_accumulation
   USE mo_veg_util
+  USE mo_namelist,           ONLY: POSITIONED, open_nml, position_nml  ! read model options from file
+
 
   IMPLICIT NONE
 
@@ -78,14 +80,17 @@ PROGRAM plant_model_driver
 
   INTEGER :: i
 
-  ! set model options (switches & parameter)
-  model_config%vegetation%output_interval_pool      = 'weekly' ! options: timestep daily weekly monthly yearly
-  model_config%vegetation%output_interval_flux      = 'weekly' ! options: timestep daily weekly monthly yearly
-  model_config%vegetation%output_start_date         = 1
-  model_config%vegetation%output_end_date           = 100
-  model_config%vegetation%option_forcing            = 'generate'
-  model_config%vegetation%flag_optimal_Nfraction    = .TRUE.  ! .TRUE. .FALSE.
-  model_config%vegetation%flag_optimal_Nleaf        = .TRUE.  ! .TRUE. .FALSE.
+  ! variables for reading model-options from file (namelist.plant)
+  INTEGER           :: f_unit      = 0
+  INTEGER           :: read_status = 0
+  INTEGER, SAVE     :: nml_unit    = 0     ! copied from JSBACH3 mo_jsbach.f90 | Unit of the jsbach namelist
+  ! define variables, and set their default values, used for read model-options from file, and passed to model_config% ... then
+  CHARACTER(8) :: read_output_interval_pool  = 'monthly'   ! used for read from file
+  CHARACTER(8) :: read_output_interval_flux  = 'monthly'   ! 
+  INTEGER      :: output_start_date          = 1
+  INTEGER      :: output_end_date            = 100
+  LOGICAL      :: flag_optimal_Nfraction     = .FALSE.  ! .TRUE. .FALSE.
+  LOGICAL      :: flag_optimal_Nleaf         = .FALSE.  ! .TRUE. .FALSE.
 
   ! 
   ! 1.0 Initialisation of vegetation parameters and constants
@@ -149,7 +154,31 @@ PROGRAM plant_model_driver
   tile(:)%plant%pool%labile%nitrogen = 10.0_wp
   tile(:)%plant%pool%labile%phosphorus = 1.0_wp
   ! 
-  ! 1.4 Initialise output and accumulation, and open output files; see mo_veg_output
+  ! 1.4 Read Model options from file (see src/shared & test_bed/plant/namelist.plant)
+  ! 
+  NAMELIST /plant_model_options/  &    ! see file namelist & READ() function below
+    read_output_interval_pool, &
+    read_output_interval_flux, &
+    output_start_date, &
+    output_end_date, &
+    flag_optimal_Nfraction, &
+    flag_optimal_Nleaf
+  ! read the namelist
+  nml_unit = open_nml  ('namelist.plant')
+  f_unit = position_nml ('PLANT_MODEL_OPTIONS', nml_unit, status=read_status)
+    SELECT CASE (read_status)
+      CASE (POSITIONED)
+        READ (f_unit, plant_model_options)
+    END SELECT
+  ! pass values as read from file
+  model_config%vegetation%output_interval_pool   = read_output_interval_pool
+  model_config%vegetation%output_interval_flux   = read_output_interval_flux
+  model_config%vegetation%output_start_date      = output_start_date
+  model_config%vegetation%output_end_date        = output_end_date
+  model_config%vegetation%flag_optimal_Nfraction = flag_optimal_Nfraction
+  model_config%vegetation%flag_optimal_Nleaf     = flag_optimal_Nleaf
+  ! 
+  ! 1.5 Initialise output and accumulation, and open output files; see mo_veg_output
   ! 
   CALL open_pool_output_files
   CALL open_flux_output_files

@@ -9,6 +9,8 @@ VEG_LIB = $(LIBDIR)/lib_vegetation.a
 SXVEG_LIB = $(VEG_LIB)
 ATM_LIB = $(LIBDIR)/lib_atmland.a
 SXATM_LIB = $(ATM_LIB)
+SHARE_LIB = $(LIBDIR)/lib_shared.a
+SXSHARE_LIB = $(SHARE_LIB)
 MODEL_LIB = $(LIBDIR)/lib_drivers.a
 SXMODEL_LIB = $(MODEL_LIB)
 
@@ -27,11 +29,11 @@ all:
 	@echo main is OK
 
 m_all: $(BINDIR)/land.x
-$(BINDIR)/land.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) \
+$(BINDIR)/land.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXSHARE_LIB) $(SXBASE_LIB) \
   $(MODEL_LIB)(mo_land_model_interface.o) $(MODEL_LIB)(land_model_driver.o)
 	$(A_G) $(MODEL_LIB) land_model_driver.o
 	$(F_L) -o $(BINDIR)/land.x land_model_driver.o \
-            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB)
+            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXSHARE_LIB) $(SXBASE_LIB)
 	$(RM) land_model_driver.o
 
 canopy: 
@@ -66,15 +68,16 @@ plant:
 	@echo plant is OK
 
 m_plant: $(BINDIR)/plant.x
-$(BINDIR)/plant.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) \
+$(BINDIR)/plant.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXSHARE_LIB) $(SXBASE_LIB) \
   $(MODEL_LIB)(plant_model_driver.o)
 	$(A_G) $(MODEL_LIB) plant_model_driver.o
 	$(F_L) -o $(BINDIR)/plant.x $(SXDRIVER_LIB) \
-            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) 
+            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXSHARE_LIB) $(SXBASE_LIB) 
 	$(RM) plant_model_driver.o
 
 all_libs:
 	@$(M_K) libbase
+	@$(M_K) libshared
 	@$(M_K) libatmland
 	@$(M_K) libland
 	@$(M_K) libvegetation
@@ -88,11 +91,16 @@ libland:
 libvegetation:
 	(cd ../vegetation; $(M_K) -f Makefile vegetation)
 
+libshared:
+	(cd ../shared; $(M_K) -f Makefile shared)
+
 libbase:
 	(cd ../base; $(M_K) -f Makefile)
 
 clean:
 	(cd ../base; $(M_K) -f Makefile clean)
+	(cd ../shared; $(M_K) -f Makefile clean)
+	(cd ../atmland; $(M_K) -f Makefile clean)
 	(cd ../land; $(M_K) -f Makefile clean)
 	(cd ../vegetation; $(M_K) -f Makefile clean)
 	$(RM) $(MODEL_LIB)
