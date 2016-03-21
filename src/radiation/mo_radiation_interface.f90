@@ -139,18 +139,18 @@ CONTAINS
     dsl4jsb_Get_memory(RAD)
     dsl4jsb_Get_memory(SRF)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swvis_srf_down, IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swnir_srf_down, IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, lw_srf_down,    IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swvis_srf_down) ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swnir_srf_down) ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, lw_srf_down)    ! IN
 
-    dsl4jsb_Get_var2D_onChunk(RAD, swvis_srf_net, OUT)
-    dsl4jsb_Get_var2D_onChunk(RAD, swnir_srf_net, OUT)
-    dsl4jsb_Get_var2D_onChunk(RAD, sw_srf_net,    OUT)
-    dsl4jsb_Get_var2D_onChunk(RAD, lw_srf_net,    OUT)
-    dsl4jsb_Get_var2D_onChunk(RAD, rad_srf_net,   OUT)
-    dsl4jsb_Get_var2D_onChunk(RAD, alb_vis_srf,   IN)
-    dsl4jsb_Get_var2D_onChunk(RAD, alb_nir_srf,   IN)
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,         IN)
+    dsl4jsb_Get_var2D_onChunk(RAD,      swvis_srf_net)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(RAD,      swnir_srf_net)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(RAD,      sw_srf_net)     ! OUT
+    dsl4jsb_Get_var2D_onChunk(RAD,      lw_srf_net)     ! OUT
+    dsl4jsb_Get_var2D_onChunk(RAD,      rad_srf_net)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(RAD,      alb_vis_srf)    ! IN
+    dsl4jsb_Get_var2D_onChunk(RAD,      alb_nir_srf)    ! IN
+    dsl4jsb_Get_var2D_onChunk(SRF,      t_srf)          ! IN
 
     CALL calc_radiation_surface_net(swvis_srf_down(:),    & ! input
                                     swnir_srf_down(:),    & ! input

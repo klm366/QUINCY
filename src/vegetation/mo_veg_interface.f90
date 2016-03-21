@@ -23,7 +23,7 @@ MODULE mo_veg_interface
   USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
-  USE mo_jsb_task_class,     ONLY: t_jsb_process_task
+  USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   dsl4jsb_Use_processes VEG, SOIL, SRF, ATM2LAND
   dsl4jsb_Use_config(VEG)
@@ -59,7 +59,7 @@ CONTAINS
 
   END SUBROUTINE Register_veg_tasks
 
-  SUBROUTINE update_vegetation_1(tile, config, iblk, ics, ice, nc)
+  SUBROUTINE update_vegetation_1(tile, config, options)
 
     USE mo_veg_process, ONLY: canopy_conductance, water_stress_factor
     USE mo_veg_util,    ONLY: water_in_root_zone
@@ -67,8 +67,8 @@ CONTAINS
 
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_config(VEG)
     dsl4jsb_Def_config(SOIL)
@@ -97,9 +97,15 @@ CONTAINS
     INTEGER :: nsoil
 
     INTEGER :: p_pe
-
+    INTEGER :: iblk, ics, ice, nc
+    
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_1'
 
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+    
     IF (.NOT. tile%Is_process_active(VEG)) RETURN
 
 !!$    p_pe = get_my_global_mpi_id()
@@ -118,24 +124,24 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL)
     dsl4jsb_Get_memory(ATM2LAND)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swpar_srf_down, IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air,          IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf,      IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swpar_srf_down) ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air) ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf) ! IN
 
-    dsl4jsb_Get_var2D_onChunk(VEG, lai,          OUT)
-    dsl4jsb_Get_var2D_onChunk(VEG, canopy_cond,  OUT)
-    dsl4jsb_Get_var3D_onChunk(VEG, root_depth_l, OUT)
-    dsl4jsb_Get_var2D_onChunk(VEG, ws_root,      OUT)
-    dsl4jsb_Get_var2D_onChunk(VEG, ws_fc_root,   OUT)
-    dsl4jsb_Get_var2D_onChunk(VEG, ws_pwp_root,  OUT)
-    dsl4jsb_Get_var2D_onChunk(VEG, water_stress, OUT)
+    dsl4jsb_Get_var2D_onChunk(VEG, lai) ! OUT
+    dsl4jsb_Get_var2D_onChunk(VEG, canopy_cond) ! OUT
+    dsl4jsb_Get_var3D_onChunk(VEG, root_depth_l) ! OUT
+    dsl4jsb_Get_var2D_onChunk(VEG, ws_root) ! OUT
+    dsl4jsb_Get_var2D_onChunk(VEG, ws_fc_root) ! OUT
+    dsl4jsb_Get_var2D_onChunk(VEG, ws_pwp_root) ! OUT
+    dsl4jsb_Get_var2D_onChunk(VEG, water_stress) ! OUT
 
-    dsl4jsb_Get_var3D_onChunk(SOIL, soil_depth_l, OUT)
-    dsl4jsb_Get_var2D_onChunk(SOIL, ws,           OUT)
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_l,         OUT)
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_fc_l,      OUT)
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_pwp_l,     OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF,  t_srf,        OUT)
+    dsl4jsb_Get_var3D_onChunk(SOIL, soil_depth_l) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL, ws) ! OUT
+    dsl4jsb_Get_var3D_onChunk(SOIL, ws_l) ! OUT
+    dsl4jsb_Get_var3D_onChunk(SOIL, ws_fc_l) ! OUT
+    dsl4jsb_Get_var3D_onChunk(SOIL, ws_pwp_l) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,  t_srf) ! OUT
 
     ! Compute (max) canopy (stomatal) conductance with no water stress
     SELECT CASE(TRIM(dsl4jsb_Config(VEG)%scheme_stom_cond))
@@ -172,19 +178,21 @@ CONTAINS
 
   END SUBROUTINE update_vegetation_1
 
-  SUBROUTINE update_vegetation_2(tile, config, iblk, ics, ice, nc)
+  SUBROUTINE update_vegetation_2(tile, config, options)
 
     USE mo_veg_process, ONLY: canopy_albedo, foliage_projected_cover
     USE mo_jsb_time,    ONLY: get_time_interpolation_weights
 
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    
     REAL(wp), PARAMETER :: &
       albedo_snow_min = 0.4_wp,  & !< Minimum possible snow albedo   ! Temporary, will depend on vegetation type
       albedo_snow_max = 0.8_wp     !< Maximum possible snow albedo   ! Temporary
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
-
+      
+      
     dsl4jsb_Real2D_onChunk :: t_srf
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc
@@ -209,9 +217,16 @@ CONTAINS
     dsl4jsb_Def_memory(VEG)
     dsl4jsb_Def_memory(SRF)
     dsl4jsb_Def_memory(SOIL)
-
+    
+    INTEGER  :: iblk, ics, ice, nc
+    
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_2'
-
+    
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+    
     IF (.NOT. tile%Is_process_active(VEG)) RETURN
 
     p_pe = get_my_global_mpi_id()
@@ -223,22 +238,22 @@ CONTAINS
     dsl4jsb_Get_memory(SRF)
     dsl4jsb_Get_memory(SOIL)
 
-    dsl4jsb_Get_var2D_onChunk( VEG,  lai,           OUT)
-    dsl4jsb_Get_var2D_onChunk( VEG,  fract_fpc,     OUT)
-    dsl4jsb_Get_var2D_onChunk( VEG,  fract_fpc_max, OUT)
-    dsl4jsb_Get_var2D_onChunk( VEG,  fract_forest,  OUT)
-    dsl4jsb_Get_var2D_onChunk( VEG,  sfract_can,    OUT)
+    dsl4jsb_Get_var2D_onChunk( VEG,  lai) ! OUT
+    dsl4jsb_Get_var2D_onChunk( VEG,  fract_fpc) ! OUT
+    dsl4jsb_Get_var2D_onChunk( VEG,  fract_fpc_max) ! OUT
+    dsl4jsb_Get_var2D_onChunk( VEG,  fract_forest) ! OUT
+    dsl4jsb_Get_var2D_onChunk( VEG,  sfract_can) ! OUT
 !!$    alb_vis_can  => tile%mem%veg  %alb_vis_can%ptr     (ics:ice,    iblk)
 !!$    alb_nir_can  => tile%mem%veg  %alb_nir_can%ptr     (ics:ice,    iblk)
 
 !!$    alb_vis_soil => tile%mem%soil %alb_vis_soil%ptr    (ics:ice,    iblk)
 !!$    alb_nir_soil => tile%mem%soil %alb_nir_soil%ptr    (ics:ice,    iblk)
-    dsl4jsb_Get_var2D_onChunk( SRF, t_srf,       OUT)
-    dsl4jsb_Get_var2D_onChunk( SRF, alb_vis_srf, OUT)
-    dsl4jsb_Get_var2D_onChunk( SRF, alb_nir_srf, OUT)
-    dsl4jsb_Get_var2D_onChunk( SRF, albedo_srf,  OUT)
+    dsl4jsb_Get_var2D_onChunk( SRF, t_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk( SRF, alb_vis_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk( SRF, alb_nir_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk( SRF, albedo_srf) ! OUT
 
-    dsl4jsb_Get_var2D_onChunk( SOIL, sfract_soil, OUT)
+    dsl4jsb_Get_var2D_onChunk( SOIL, sfract_soil) ! OUT
 
     lai_mon      => veg__mem%lai_mon (ics:ice,    iblk, :)
 
@@ -261,5 +276,26 @@ CONTAINS
 
   END SUBROUTINE update_vegetation_2
 
+
+    SUBROUTINE aggregate_veg(tile, config, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+!!$    TYPE(t_jsb_model), POINTER :: model
+!!$    CLASS(t_jsb_tile), POINTER :: tile
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_veg'
+
+    INTEGER :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+  END SUBROUTINE aggregate_veg
+  
 #endif
 END MODULE mo_veg_interface

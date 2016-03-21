@@ -53,7 +53,7 @@ CONTAINS
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
     CHARACTER(len=*), INTENT(in) :: namelist_filename
-    TYPE(t_jsb_model_config), POINTER :: config
+    TYPE(t_jsb_model_config), POINTER :: config !R faende es besser wenn die config Pointer schon im Namen unterschieden wuerden, macht es einfacher zu grepen...hier und in "Subroutine init_base" m_config
 
     TYPE(t_jsb_model_config), POINTER :: new
 

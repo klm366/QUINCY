@@ -207,7 +207,7 @@ CONTAINS
     dsl4jsb_Get_memory(SRF)
 
     ! Land sea mask
-    dsl4jsb_Get_var2D_onDomain(SRF, land, IN)
+    dsl4jsb_Get_var2D_onDomain(SRF, land) ! IN
 
 
     IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) /= 'full') RETURN

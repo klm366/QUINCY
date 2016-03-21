@@ -86,15 +86,16 @@ CONTAINS
   !
   ! ================================================================================================================================
   !
-  SUBROUTINE update_snow_and_skin_fraction(tile, config, iblk, ics, ice, nc, dtime, steplen)
+  SUBROUTINE update_snow_and_skin_fraction(tile, config, options, dtime, steplen)
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_soil_process,           ONLY: snow_fract
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    
     REAL(wp),          INTENT(in) :: dtime, steplen
 
     ! Local variables
@@ -127,15 +128,23 @@ CONTAINS
 
     ! Locally allocated vectors
     REAL(wp) :: &
-      wsr_max(nc), &    !< Water holding capacity of skin reservoir (soil and canopy)
-      evap_pot(nc), &
-      qsat_srf_old(nc), &
-      t_srf_old(nc)
-
+      wsr_max(options%nc), &    !< Water holding capacity of skin reservoir (soil and canopy)
+      evap_pot(options%nc), &
+      qsat_srf_old(options%nc), &
+      t_srf_old(options%nc)
+    
+    INTEGER :: iblk, ics, ice, nc
+    
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_skin_fraction'
 
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+    
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
+        
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of snow and skin reservoir fraction')
 
     dsl4jsb_Get_config(SOIL)
@@ -147,27 +156,27 @@ CONTAINS
     dsl4jsb_Get_memory(VEG)
     dsl4jsb_Get_memory(ATM2LAND)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf,      IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air,         IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf,     IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)      ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)         ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)     ! IN
 
-    dsl4jsb_Get_var2D_onChunk(SOIL, sfract_soil,   OUT)
-    dsl4jsb_Get_var2D_onChunk(SOIL, wsn_soil,      OUT)
-    dsl4jsb_Get_var2D_onChunk(SOIL, wfract_soil,   OUT)
-    dsl4jsb_Get_var2D_onChunk(SOIL, wsr_soil,      OUT)
+    dsl4jsb_Get_var2D_onChunk(SOIL,     sfract_soil)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     wsn_soil)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     wfract_soil)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     wsr_soil)      ! OUT
 
-    dsl4jsb_Get_var2D_onChunk(SRF, glacier,       IN)
-    dsl4jsb_Get_var2D_onChunk(SRF, sfract_srf,    OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, wfract_srf,    OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, oro_stddev,    IN)
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,         IN)
+    dsl4jsb_Get_var2D_onChunk(SRF,      glacier)       ! IN
+    dsl4jsb_Get_var2D_onChunk(SRF,      sfract_srf)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      wfract_srf)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      oro_stddev)    ! IN
+    dsl4jsb_Get_var2D_onChunk(SRF,      t_srf)         ! IN
 
-    dsl4jsb_Get_var2D_onChunk(VEG, lai,           IN)
-    dsl4jsb_Get_var2D_onChunk(VEG, fract_fpc_max, IN)
-    dsl4jsb_Get_var2D_onChunk(VEG, sfract_can,    OUT)
-    dsl4jsb_Get_var2D_onChunk(VEG, wsn_can,       OUT)
-    dsl4jsb_Get_var2D_onChunk(VEG, wfract_can,    OUT)
-    dsl4jsb_Get_var2D_onChunk(VEG, wsr_can,       OUT)
+    dsl4jsb_Get_var2D_onChunk(VEG,      lai)           ! IN
+    dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc_max) ! IN
+    dsl4jsb_Get_var2D_onChunk(VEG,      sfract_can)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(VEG,      wsn_can)       ! OUT
+    dsl4jsb_Get_var2D_onChunk(VEG,      wfract_can)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(VEG,      wsr_can)       ! OUT
 
     ! Maximum capacity of skin reservoir (soil + canopy)
     wsr_max(:) = dsl4jsb_Config(SOIL)%wsr_capacity * (1._wp + lai(:) * fract_fpc_max(:))
@@ -300,7 +309,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     steplen = options%steplen
-
+    
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -313,32 +322,32 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL)
     dsl4jsb_Get_memory(ATM2LAND)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef,   IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef,   IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef,   IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef,   IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf, IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air,     IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf,  IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)     ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)         ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)      ! IN
 
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,            OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf_old,        OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf_unfilt,     OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf_unfilt_old, OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, t_eff_srf,        OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, qsat_srf,         OUT)
-!!$    dsl4jsb_Get_var2D_onChunk( SRF,      qsat_srf_old,     OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, s_srf,            OUT)
-!!$    dsl4jsb_Get_var2D_onChunk( SRF,      s_srf_old,        OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, fact_q_air,       OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, fact_qsat_srf,    OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, rad_srf_net,      OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, wsn_srf,          OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, sfract_srf,       OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, glacier,          OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF,      t_srf)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      t_srf_old)     ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      t_srf_unfilt)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      t_srf_unfilt_old) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      t_eff_srf)     ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      qsat_srf)      ! OUT
+!!$    dsl4jsb_Get_var2D_onChunk( SRF,      qsat_srf_old) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      s_srf)         ! OUT
+!!$    dsl4jsb_Get_var2D_onChunk( SRF,      s_srf_old)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_q_air)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_qsat_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      rad_srf_net)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      wsn_srf)       ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      sfract_srf)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      glacier)       ! OUT
 
-    dsl4jsb_Get_var2D_onChunk( SOIL, grnd_hflx, OUT)
-    dsl4jsb_Get_var2D_onChunk( SOIL, hcap_grnd, OUT)
+    dsl4jsb_Get_var2D_onChunk( SOIL,    grnd_hflx)     ! OUT
+    dsl4jsb_Get_var2D_onChunk( SOIL,    hcap_grnd)     ! OUT
 
     ! Save old surface temperature and saturation spec. humidity
 !!$    t_srf_unfilt_old(:) = t_srf_unfilt(:)
@@ -439,7 +448,7 @@ CONTAINS
     dsl4jsb_Get_memory(SRF)
     dsl4jsb_Get_memory(LAKE)
 
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf,   IN)
+    dsl4jsb_Get_var2D_onChunk(SRF, t_srf) ! IN
 
     t_srf(:) = dsl4jsb_var2D_onChunk(LAKE,t_srf)
 
@@ -471,13 +480,13 @@ CONTAINS
   ! ================================================================================================================================
   !
   ! Asselin time filter for surface temperature
-  SUBROUTINE update_t_srf_asselin(tile, config, iblk, ics, ice, nc)
+  SUBROUTINE update_t_srf_asselin(tile, config, options)
 
     USE mo_jsb_time, ONLY: get_asselin_coef
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
     !
@@ -485,7 +494,9 @@ CONTAINS
 
     LOGICAL                       :: lstart
     REAL(wp)                      :: eps
-
+ 
+    INTEGER                       :: iblk, ics, ice, nc
+    
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_srf
     dsl4jsb_Real2D_onChunk :: t_srf_old
@@ -493,13 +504,18 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_srf_unfilt_old
 
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
-
+   
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+    
     dsl4jsb_Get_memory(SRF)
 
-    dsl4jsb_Get_var2D_onChunk( SRF, t_srf,            OUT)
-    dsl4jsb_Get_var2D_onChunk( SRF, t_srf_old,        OUT)
-    dsl4jsb_Get_var2D_onChunk( SRF, t_srf_unfilt,     OUT)
-    dsl4jsb_Get_var2D_onChunk( SRF, t_srf_unfilt_old, OUT)
+    dsl4jsb_Get_var2D_onChunk( SRF, t_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk( SRF, t_srf_old) ! OUT
+    dsl4jsb_Get_var2D_onChunk( SRF, t_srf_unfilt) ! OUT
+    dsl4jsb_Get_var2D_onChunk( SRF, t_srf_unfilt_old) ! OUT
 
     eps = get_asselin_coef()
     IF (eps > 0._wp) THEN
@@ -510,15 +526,15 @@ CONTAINS
 
   END SUBROUTINE update_t_srf_asselin
 
-  SUBROUTINE update_surface_fluxes(tile, config, iblk, ics, ice, nc, steplen)
+  SUBROUTINE update_surface_fluxes(tile, config, options)
 
     USE mo_phy_schemes,            ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: alv, als
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
-    REAL(wp),          INTENT(in) :: steplen
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    
 
     ! Local variables
     !
@@ -546,13 +562,22 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp) ::                &
-      & s_air          (nc),   &  !< Dry static energy at lowest atmospheric level
-      & q_air          (nc),   &  !< Humidity at lowest atmospheric level
-      & q_air_eff      (nc),   &  !< Effective humidity at lowest atmospheric level
-      & qsat_srf_eff   (nc),   &  !< Effective surface saturation specific humidity
-      heat_tcoef       (nc)       !< Heat transfer coefficient (rho*C_h*|v|)
+      & s_air          (options%nc),   &  !< Dry static energy at lowest atmospheric level
+      & q_air          (options%nc),   &  !< Humidity at lowest atmospheric level
+      & q_air_eff      (options%nc),   &  !< Effective humidity at lowest atmospheric level
+      & qsat_srf_eff   (options%nc),   &  !< Effective surface saturation specific humidity
+      heat_tcoef       (options%nc)       !< Heat transfer coefficient (rho*C_h*|v|)
+
+    INTEGER  :: iblk, ics, ice, nc
+    REAL(wp) :: steplen
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes'
+
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
@@ -563,23 +588,23 @@ CONTAINS
     dsl4jsb_Get_memory(SRF)
     dsl4jsb_Get_memory(ATM2LAND)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef,  IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef,  IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef,  IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef,  IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf, IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)      ! IN
 
-    dsl4jsb_Get_var2D_onChunk(SRF, qsat_srf,            OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, s_srf,               OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, fact_q_air,          OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, fact_qsat_srf,       OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, fact_qsat_trans_srf, OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, sensible_hflx,       OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, latent_hflx,         OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, evapotrans,          OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, trans,               OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, evapopot,            OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, sfract_srf,          OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF,      qsat_srf)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      s_srf)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_q_air)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_qsat_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_qsat_trans_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      sensible_hflx) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      latent_hflx)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      evapotrans)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      trans)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      evapopot)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      sfract_srf)    ! OUT
 
     ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
     !
@@ -610,15 +635,16 @@ CONTAINS
 
   END SUBROUTINE update_surface_fluxes
 
-  SUBROUTINE update_humidity_scaling(tile, config, iblk, ics, ice, nc)
+  SUBROUTINE update_humidity_scaling(tile, config, options)
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_soil_constants,         ONLY: ws_wilt_fract
     USE mo_soil_process,           ONLY: relative_humidity
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    
 
     ! Local variables
     !
@@ -649,15 +675,22 @@ CONTAINS
 
     ! Locally allocated vectors
     REAL(wp) :: &
-      fact_qsat_veg(nc),   &
-      fact_qsat_trans(nc), &
-      fact_qsat_soil(nc),  &
-      fact_qair_veg(nc),   &
-      fact_qair_soil(nc),  &
-      rel_hum(nc)
+      fact_qsat_veg(options%nc),   &
+      fact_qsat_trans(options%nc), &
+      fact_qsat_soil(options%nc),  &
+      fact_qair_veg(options%nc),   &
+      fact_qair_soil(options%nc),  &
+      rel_hum(options%nc)
 
+    INTEGER :: iblk, ics, ice, nc
+          
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
 
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+    
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of humidity weights')
@@ -669,23 +702,23 @@ CONTAINS
     dsl4jsb_Get_memory(VEG)
     dsl4jsb_Get_memory(ATM2LAND)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, pch,      IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, wind_air, IN)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air,    IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, pch)                 ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, wind_air)            ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)               ! IN
 
-    dsl4jsb_Get_var2D_onChunk(SRF, qsat_srf,            OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, sfract_srf,          OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, wfract_srf,          OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, fact_q_air,          OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, fact_qsat_srf,       OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, fact_qsat_trans_srf, OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF,      qsat_srf)            ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      sfract_srf)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      wfract_srf)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_q_air)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_qsat_srf)       ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_qsat_trans_srf) ! OUT
 
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_l,     IN)
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_fc_l,  IN)
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_pwp_l, IN)
+    dsl4jsb_Get_var3D_onChunk(SOIL,     ws_l)                ! IN
+    dsl4jsb_Get_var3D_onChunk(SOIL,     ws_fc_l)             ! IN
+    dsl4jsb_Get_var3D_onChunk(SOIL,     ws_pwp_l)            ! IN
 
-    dsl4jsb_Get_var2D_onChunk(VEG, fract_fpc,   IN)
-    dsl4jsb_Get_var2D_onChunk(VEG, canopy_cond, IN)
+    dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc)           ! IN
+    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)         ! IN
 !!$    sfract_can       => tile%mem%veg  %sfract_can%ptr          (ics:ice,    iblk)
 !!$    sfract_soil      => tile%mem%soil %sfract_soil%ptr         (ics:ice,    iblk)
 !!$    wfract_can       => tile%mem%veg  %wfract_can%ptr          (ics:ice,    iblk)
@@ -725,14 +758,16 @@ CONTAINS
 
   END SUBROUTINE update_humidity_scaling
 
-  SUBROUTINE update_roughness(tile, config, iblk, ics, ice, nc)
+  SUBROUTINE update_roughness(tile, config, options)
 
     USE mo_srf_constants, ONLY: blending_height, roughness_snow
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    INTEGER :: iblk, ics, ice, nc
+    
     dsl4jsb_Def_memory(SRF)
     dsl4jsb_Def_memory(SOIL)
 
@@ -746,9 +781,15 @@ CONTAINS
     dsl4jsb_Get_memory(SRF)
     dsl4jsb_Get_memory(SOIL)
 
-    dsl4jsb_Get_var2D_onChunk( SRF,  rough_m_srf, OUT)
-    dsl4jsb_Get_var2D_onChunk( SRF,  rough_h_srf, OUT)
-    dsl4jsb_Get_var2D_onChunk( SOIL, sfract_soil, OUT)
+    dsl4jsb_Get_var2D_onChunk( SRF,  rough_m_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk( SRF,  rough_h_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk( SOIL, sfract_soil) ! OUT
+    
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+    
 
     rough_h_srf(:) =            sfract_soil(:)  / (LOG(blending_height /             roughness_snow) ** 2)  &
                    & + (1._wp - sfract_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m_srf(:))) ** 2)
@@ -783,5 +824,26 @@ CONTAINS
 !!$
 !!$  END SUBROUTINE update_srf
 
+  SUBROUTINE aggregate_srf(tile, config, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+!!$    TYPE(t_jsb_model), POINTER :: model
+!!$    CLASS(t_jsb_tile), POINTER :: tile
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_srf'
+
+    INTEGER :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+  END SUBROUTINE aggregate_srf
+
+  
 #endif
 END MODULE mo_srf_interface

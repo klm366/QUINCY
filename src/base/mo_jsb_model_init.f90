@@ -169,7 +169,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
-    CLASS(t_jsb_config_p), POINTER :: configs(:)
+    CLASS(t_jsb_config_p), POINTER :: configs(:) !R faende es besser wenn die config Pointer schon im Namen unterschieden wuerden, macht es einfacher zu grepen...hier in "SUBROUTINE init_model_common" p_configs
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_common'

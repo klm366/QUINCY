@@ -99,7 +99,7 @@ CONTAINS
     ! Get reference to variables in memory
     dsl4jsb_Get_memory(SOIL)
 
-    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean, IN)
+    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean) ! IN
 
     ! Send river discharge
     ! --------------------

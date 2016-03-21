@@ -164,26 +164,26 @@ CONTAINS
 
     area => grid %area (ics:ice, iblk)
 
-    dsl4jsb_Get_var2D_onChunk(SRF,  land,        IN)
-    dsl4jsb_Get_var2D_onChunk(SRF,  lake,        IN)
-    dsl4jsb_Get_var2D_onChunk(SRF,  glacier,     IN)
-    dsl4jsb_Get_var2D_onChunk(SOIL, runoff,      IN)
-    dsl4jsb_Get_var2D_onChunk(SOIL, drainage,    IN)
-    dsl4jsb_Get_var2D_onChunk(SOIL, pme_glacier, IN)
-    dsl4jsb_Get_var2D_onChunk(SOIL, discharge,   INOUT)
+    dsl4jsb_Get_var2D_onChunk(SRF,  land)        ! IN
+    dsl4jsb_Get_var2D_onChunk(SRF,  lake)        ! IN
+    dsl4jsb_Get_var2D_onChunk(SRF,  glacier)     ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL, runoff)      ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL, drainage)    ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL, pme_glacier) ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL, discharge)   ! INOUT
 
-    dsl4jsb_Get_var2D_onChunk(HD, ret_overlflow,    IN)
-    dsl4jsb_Get_var2D_onChunk(HD, nres_overlflow,   IN)
-    dsl4jsb_Get_var2D_onChunk(HD, ret_baseflow,     IN)
-    dsl4jsb_Get_var2D_onChunk(HD, nres_baseflow,    IN)
-    dsl4jsb_Get_var2D_onChunk(HD, ret_riverflow,    IN)
-    dsl4jsb_Get_var2D_onChunk(HD, nres_riverflow,   IN)
-    dsl4jsb_Get_var3D_onChunk(HD, overlflow_res,    INOUT)
-    dsl4jsb_Get_var3D_onChunk(HD, baseflow_res,     INOUT)
-    dsl4jsb_Get_var3D_onChunk(HD, riverflow_res,    INOUT)
-    dsl4jsb_Get_var2D_onChunk(HD, outflow_runoff,   OUT)
-    dsl4jsb_Get_var2D_onChunk(HD, outflow_drainage, OUT)
-    dsl4jsb_Get_var2D_onChunk(HD, outflow_rivers,   OUT)
+    dsl4jsb_Get_var2D_onChunk(HD, ret_overlflow)  ! IN
+    dsl4jsb_Get_var2D_onChunk(HD, nres_overlflow) ! IN
+    dsl4jsb_Get_var2D_onChunk(HD, ret_baseflow)   ! IN
+    dsl4jsb_Get_var2D_onChunk(HD, nres_baseflow)  ! IN
+    dsl4jsb_Get_var2D_onChunk(HD, ret_riverflow)  ! IN
+    dsl4jsb_Get_var2D_onChunk(HD, nres_riverflow) ! IN
+    dsl4jsb_Get_var3D_onChunk(HD, overlflow_res)  ! INOUT
+    dsl4jsb_Get_var3D_onChunk(HD, baseflow_res)   ! INOUT
+    dsl4jsb_Get_var3D_onChunk(HD, riverflow_res)  ! INOUT
+    dsl4jsb_Get_var2D_onChunk(HD, outflow_runoff) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HD, outflow_drainage) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HD, outflow_rivers) ! OUT
 
 
     ! Configuration parameters from the namelist
@@ -319,19 +319,19 @@ CONTAINS
     nproma =  grid%nproma
     nblks  =  grid%nblks
 
-    dsl4jsb_Get_var2D_onDomain(HD, hd_mask,          IN)
-    dsl4jsb_Get_var2D_onDomain(HD, outflow_runoff,   IN)
-    dsl4jsb_Get_var2D_onDomain(HD, outflow_drainage, IN)
-    dsl4jsb_Get_var2D_onDomain(HD, outflow_rivers,   IN)
-    dsl4jsb_Get_var3D_onDomain(HD, nidx_upstream,    IN)
-    dsl4jsb_Get_var3D_onDomain(HD, bidx_upstream,    IN)
+    dsl4jsb_Get_var2D_onDomain(HD, hd_mask) ! IN
+    dsl4jsb_Get_var2D_onDomain(HD, outflow_runoff) ! IN
+    dsl4jsb_Get_var2D_onDomain(HD, outflow_drainage) ! IN
+    dsl4jsb_Get_var2D_onDomain(HD, outflow_rivers) ! IN
+    dsl4jsb_Get_var3D_onDomain(HD, nidx_upstream) ! IN
+    dsl4jsb_Get_var3D_onDomain(HD, bidx_upstream) ! IN
 
-    dsl4jsb_Get_var2D_onDomain(SRF, land,        IN)
-    dsl4jsb_Get_var2D_onDomain(SRF, coast_ocean, IN)
+    dsl4jsb_Get_var2D_onDomain(SRF, land) ! IN
+    dsl4jsb_Get_var2D_onDomain(SRF, coast_ocean) ! IN
 
-    dsl4jsb_Get_var2D_onDomain(SOIL, discharge,       OUT)
-    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean, OUT)
-    dsl4jsb_Get_var2D_onDomain(SOIL, internal_drain,  OUT)
+    dsl4jsb_Get_var2D_onDomain(SOIL, discharge) ! OUT
+    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean) ! OUT
+    dsl4jsb_Get_var2D_onDomain(SOIL, internal_drain) ! OUT
 
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
 
@@ -546,18 +546,18 @@ CONTAINS
     area            => grid%area                                (:,:)
     is_in_domain    => grid%patch%cells%decomp_info%owner_mask  (:,:)
 
-    dsl4jsb_Get_var2D_onDomain(SRF, land,    IN)
-    dsl4jsb_Get_var2D_onDomain(SRF, glacier, IN)
+    dsl4jsb_Get_var2D_onDomain(SRF, land) ! IN
+    dsl4jsb_Get_var2D_onDomain(SRF, glacier) ! IN
 
-    dsl4jsb_Get_var3D_onDomain(HD, overlflow_res, IN)
-    dsl4jsb_Get_var3D_onDomain(HD, baseflow_res,  IN)
-    dsl4jsb_Get_var3D_onDomain(HD, riverflow_res, IN)
+    dsl4jsb_Get_var3D_onDomain(HD, overlflow_res) ! IN
+    dsl4jsb_Get_var3D_onDomain(HD, baseflow_res) ! IN
+    dsl4jsb_Get_var3D_onDomain(HD, riverflow_res) ! IN
 
-    dsl4jsb_Get_var2D_onDomain(SOIL, runoff,          IN)
-    dsl4jsb_Get_var2D_onDomain(SOIL, drainage,        IN)
-    dsl4jsb_Get_var2D_onDomain(SOIL, pme_glacier,     IN)
-    dsl4jsb_Get_var2D_onDomain(SOIL, discharge,       IN)
-    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean, IN)
+    dsl4jsb_Get_var2D_onDomain(SOIL, runoff) ! IN
+    dsl4jsb_Get_var2D_onDomain(SOIL, drainage) ! IN
+    dsl4jsb_Get_var2D_onDomain(SOIL, pme_glacier)         ! IN
+    dsl4jsb_Get_var2D_onDomain(SOIL, discharge) ! IN
+    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean) ! IN
 
     water_budget   =  dsl4jsb_var2D_ptr(HD,water_budget)  (1,1)
 

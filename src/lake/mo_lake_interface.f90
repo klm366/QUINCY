@@ -149,8 +149,8 @@ CONTAINS
     dsl4jsb_Get_memory(LAKE)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(LAKE, t_srf,       IN)
-    dsl4jsb_Get_var2D_onChunk(LAKE, ice_fract,   IN)
+    dsl4jsb_Get_var2D_onChunk(LAKE, t_srf)     ! IN
+    dsl4jsb_Get_var2D_onChunk(LAKE, ice_fract) ! IN
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
