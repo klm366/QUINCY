@@ -35,9 +35,14 @@ MODULE mo_lake_memory_class
       & fract_max    !< Maximum potential cover fraction for tile (rel. to parent)
     !
     TYPE(t_jsb_var_real2d) :: &
-      & t_srf,          & !< Temperature of lake surface
-      & hflx_res,       & !! Residual heat flux
-      & ice_fract         !! Fraction of ice cover on lake
+      & t_srf,          & !< Temperature of lake surface (aggregated open water and ice)
+                          !! Currently, lake is either ice-free or completely ice-covered.
+      & t_wtr,          & !< Surface temperature of water (ice-free) lake surface
+      & t_ice,          & !< Surface temperature of ice layer on lake
+      & latent_hflx,    & !< latent heat flux
+      & sensible_hflx,  & !< sensible heat flux
+      & hflx_res,       & !< Residual heat flux
+      & ice_fract         !< Fraction of ice cover on lake
   CONTAINS
     PROCEDURE :: Init => Init_lake_memory
   END TYPE t_lake_memory
@@ -95,7 +100,42 @@ CONTAINS
 
     CALL jsb_add_var( mem, 't_srf', mem%t_srf,                                   &
       & hgrid, surface,                                                           &
-      & t_cf('surface_temperature', 'K', ''),                                              &
+      & t_cf('lake surface_temperature', 'K', ''),                                              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      & prefix, suffix,                                                      &
+      & initval_r=280.0_wp )
+
+    CALL jsb_add_var( mem, 't_wtr', mem%t_wtr,                                   &
+      & hgrid, surface,                                                           &
+      & t_cf('lake water_temperature', 'K', ''),                                              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      & prefix, suffix,                                                      &
+      & initval_r=280.0_wp )
+
+    CALL jsb_add_var( mem, 't_ice', mem%t_ice,                                   &
+      & hgrid, surface,                                                           &
+      & t_cf('lake ice_temperature', 'K', ''),                                              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+      & prefix, suffix,                                                      &
+      & initval_r=280.0_wp )
+
+    CALL jsb_add_var( mem, 'latent_hflx', mem%latent_hflx,                      &
+      & hgrid, surface,                                                                                 &
+      & t_cf('latent_hflx', '', 'Latent heat flux'),                                                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'sensible_hflx', mem%sensible_hflx,                  &
+      & hgrid, surface,                                                                                 &
+      & t_cf('sensible_hflx', '', 'Sensible heat flux'),                                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'hflx_res', mem%hflx_res,                                   &
+      & hgrid, surface,                                                           &
+      & t_cf('lake residual heat flux', 'K', ''),                                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
       & prefix, suffix,                                                      &
       & initval_r=280.0_wp )

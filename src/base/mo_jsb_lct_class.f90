@@ -18,7 +18,7 @@ MODULE mo_jsb_lct_class
   PUBLIC :: BOX_TYPE, LAND_TYPE, PFT_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
   PUBLIC :: max_no_of_lct, Get_lct_name
 
-  INTEGER, PARAMETER :: max_no_of_lct = 5
+  INTEGER, PARAMETER :: max_no_of_lct = 10
 
   ENUM, BIND(C)
     ENUMERATOR :: BOX_TYPE=1, LAND_TYPE=2, PFT_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE

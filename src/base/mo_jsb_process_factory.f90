@@ -107,15 +107,15 @@ CONTAINS
 !!$
 !!$  END FUNCTION Create_process
 
-!!$  FUNCTION Create_process_config(icomp, namelist_filename) RESULT(return_ptr)
+!!$  FUNCTION Create_process_config(iproc, namelist_filename) RESULT(return_ptr)
 !!$
 !!$    USE mo_jsb_config_class,   ONLY: t_jsb_config
 !!$
-!!$    INTEGER, INTENT(in) :: icomp
+!!$    INTEGER, INTENT(in) :: iproc
 !!$    CHARACTER(LEN=*), INTENT(in) :: namelist_filename
 !!$    CLASS(t_jsb_config), POINTER :: return_ptr
 !!$
-!!$    SELECT CASE(icomp)
+!!$    SELECT CASE(iproc)
  !!$    CASE (SRF)
 !!$      ALLOCATE(t_srf_config::return_ptr)
 !!$    CASE (SOIL)
@@ -140,19 +140,19 @@ CONTAINS
 !!$
 !!$  END FUNCTION Create_process_config
 
-!!$  SUBROUTINE Register_process_tasks(icomp, model_id)
+!!$  SUBROUTINE Register_process_tasks(iproc, model_id)
 !!$
-!!$    INTEGER, INTENT(in) :: icomp
+!!$    INTEGER, INTENT(in) :: iproc
 !!$    INTEGER, INTENT(in) :: model_id
 !!$
-!!$    SELECT CASE (icomp)
+!!$    SELECT CASE (iproc)
 !!$    CASE (RAD)
 !!$      CALL Register_radiation_tasks(model_id)
 !!$    END SELECT
 !!$
 !!$  END SUBROUTINE Register_process_tasks
 
-  FUNCTION Create_process_memory(icomp) RESULT(return_ptr)
+  FUNCTION Create_process_memory(iproc) RESULT(return_ptr)
 
     USE mo_atmland_memory_class, ONLY: max_no_of_atmland_vars => max_no_of_vars
     USE mo_srf_memory_class,     ONLY: max_no_of_srf_vars => max_no_of_vars
@@ -165,10 +165,10 @@ CONTAINS
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
 
-    INTEGER, INTENT(in) :: icomp
+    INTEGER, INTENT(in) :: iproc
     CLASS(t_jsb_memory), POINTER   :: return_ptr
 
-    SELECT CASE(icomp)
+    SELECT CASE(iproc)
     CASE (ATM2LAND)
       ALLOCATE(t_atm2land_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_atmland_vars
@@ -204,12 +204,12 @@ CONTAINS
 
   END FUNCTION Create_process_memory
 
-  FUNCTION Get_process_name(icomp) RESULT(return_value)
+  FUNCTION Get_process_name(iproc) RESULT(return_value)
 
-    INTEGER, INTENT(in) :: icomp
+    INTEGER, INTENT(in) :: iproc
     CHARACTER(len=:), ALLOCATABLE :: return_value
 
-    SELECT CASE(icomp)
+    SELECT CASE(iproc)
     CASE (ATM2LAND)
       return_value = 'atm2land'
     CASE (LAND2ATM)

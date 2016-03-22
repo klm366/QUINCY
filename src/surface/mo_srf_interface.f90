@@ -95,7 +95,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    
+
     REAL(wp),          INTENT(in) :: dtime, steplen
 
     ! Local variables
@@ -132,19 +132,18 @@ CONTAINS
       evap_pot(options%nc), &
       qsat_srf_old(options%nc), &
       t_srf_old(options%nc)
-    
+
     INTEGER :: iblk, ics, ice, nc
-    
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_skin_fraction'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
-    
+
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
-        
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of snow and skin reservoir fraction')
 
     dsl4jsb_Get_config(SOIL)
@@ -309,7 +308,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     steplen = options%steplen
-    
+
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -494,9 +493,9 @@ CONTAINS
 
     LOGICAL                       :: lstart
     REAL(wp)                      :: eps
- 
+
     INTEGER                       :: iblk, ics, ice, nc
-    
+
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_srf
     dsl4jsb_Real2D_onChunk :: t_srf_old
@@ -504,12 +503,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_srf_unfilt_old
 
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
-   
+
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
-    
+
     dsl4jsb_Get_memory(SRF)
 
     dsl4jsb_Get_var2D_onChunk( SRF, t_srf) ! OUT
@@ -534,7 +533,6 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    
 
     ! Local variables
     !
@@ -644,7 +642,6 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    
 
     ! Local variables
     !
@@ -683,14 +680,14 @@ CONTAINS
       rel_hum(options%nc)
 
     INTEGER :: iblk, ics, ice, nc
-          
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
-    
+
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of humidity weights')
@@ -767,7 +764,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     INTEGER :: iblk, ics, ice, nc
-    
+
     dsl4jsb_Def_memory(SRF)
     dsl4jsb_Def_memory(SOIL)
 
@@ -784,12 +781,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk( SRF,  rough_m_srf) ! OUT
     dsl4jsb_Get_var2D_onChunk( SRF,  rough_h_srf) ! OUT
     dsl4jsb_Get_var2D_onChunk( SOIL, sfract_soil) ! OUT
-    
+
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
-    
+
 
     rough_h_srf(:) =            sfract_soil(:)  / (LOG(blending_height /             roughness_snow) ** 2)  &
                    & + (1._wp - sfract_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m_srf(:))) ** 2)
@@ -844,6 +841,6 @@ CONTAINS
 
   END SUBROUTINE aggregate_srf
 
-  
+
 #endif
 END MODULE mo_srf_interface

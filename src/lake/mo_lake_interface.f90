@@ -125,6 +125,9 @@ CONTAINS
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_srf
+    dsl4jsb_Real2D_onChunk :: t_wtr
+    dsl4jsb_Real2D_onChunk :: t_ice
+    dsl4jsb_Real2D_onChunk :: hflx_res
     dsl4jsb_Real2D_onChunk :: ice_fract
 
     ! Local variables
@@ -149,8 +152,15 @@ CONTAINS
     dsl4jsb_Get_memory(LAKE)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(LAKE, t_srf)     ! IN
-    dsl4jsb_Get_var2D_onChunk(LAKE, ice_fract) ! IN
+    dsl4jsb_Get_var2D_onChunk(LAKE, t_srf)       ! IN
+    dsl4jsb_Get_var2D_onChunk(LAKE, t_wtr)       ! IN
+    dsl4jsb_Get_var2D_onChunk(LAKE, t_ice)       ! IN
+    dsl4jsb_Get_var2D_onChunk(LAKE, hflx_res)    ! IN
+    dsl4jsb_Get_var2D_onChunk(LAKE, ice_fract)   ! IN
+
+    ! Aggregate temperatures for open water and ice.
+    ! Note: Currently, lake is either ice-free or completely ice-covered.
+    t_srf(:) = (1._wp - ice_fract(:)) * t_wtr(:) + ice_fract(:) * t_ice(:)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
