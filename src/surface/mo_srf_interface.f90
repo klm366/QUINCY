@@ -86,7 +86,7 @@ CONTAINS
   !
   ! ================================================================================================================================
   !
-  SUBROUTINE update_snow_and_skin_fraction(tile, config, options, dtime, steplen)
+  SUBROUTINE update_snow_and_skin_fraction(tile, config, options)
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_soil_process,           ONLY: snow_fract
@@ -95,8 +95,6 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    REAL(wp),          INTENT(in) :: dtime, steplen
 
     ! Local variables
     !
@@ -133,14 +131,17 @@ CONTAINS
       qsat_srf_old(options%nc), &
       t_srf_old(options%nc)
 
-    INTEGER :: iblk, ics, ice, nc
-
+    INTEGER  :: iblk, ics, ice, nc
+    REAL(wp) :: dtime, steplen
+        
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_skin_fraction'
 
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
+    steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(SRF)) RETURN
 

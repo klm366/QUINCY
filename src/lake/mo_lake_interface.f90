@@ -11,7 +11,10 @@ MODULE mo_lake_interface
 #ifndef __NO_JSBACH__
 
 #include "dsl_jsbach.inc"
-
+  ! -------------------------------------------------------------------------------------------------------
+  ! Used variables of module
+  
+  ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
@@ -21,63 +24,54 @@ MODULE mo_lake_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  ! Which processes are used in this module?
+  ! Use of processes in this module
   dsl4jsb_Use_processes LAKE
 
   ! Use process configurations
   dsl4jsb_Use_config(LAKE)
 
-  ! USe process memories
+  ! Use process memories
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
 !!$  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(LAKE)
 
+  ! -------------------------------------------------------------------------------------------------------
+  ! Module variables 
+  
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: t_lake_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_lake_interface'
-  !
-  ! ================================================================================================================================
-  !
-  ! Definition of lake process and its tasks
-  !
+  
   !> Type definition for lake process
-  !!
   TYPE, EXTENDS(t_jsb_process) :: t_lake_process
   CONTAINS
     PROCEDURE :: Register_tasks => Register_lake_tasks        !< Registers tasks for lake process
   END TYPE t_lake_process
-  !
-  ! Task "lake_surface" computes the surface temperature, ice cover and ice depth on lakes.
-  !
+  
   !> Type definition for lake_surface task
-  !!
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_lake_surface
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_lake_surface     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_lake_surface  !< Aggregates computed task variables
   END TYPE tsk_lake_surface
-  !
+  
   !> Constructor interface for lake_surface task
-  !!
   INTERFACE tsk_lake_surface
     PROCEDURE Create_task_lake_surface                        !< Constructor function for task
   END INTERFACE tsk_lake_surface
-  !
-  ! ================================================================================================================================
-  !
+
 CONTAINS
-  !
+
   ! ================================================================================================================================
-  !
   !! Constructors for tasks
-  !
+  
+  ! -------------------------------------------------------------------------------------------------------
   !> Constructor for lake_surface task
   !!
-  !! @param[in]     model_id Model id
-  !! @return                 Instance of process task "lake_surface"
+  !! @param[in]     model_id   Model id
+  !! @return        return_ptr Instance of process task "lake_surface"
   !!
   FUNCTION Create_task_lake_surface(model_id) RESULT(return_ptr)
 
@@ -91,11 +85,12 @@ CONTAINS
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_lake_surface
-  !
+  
+  ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for lake process
   !!
-  !! @param[in,out] this     Instance of lake process class
-  !! @param[in]     model_id Model id
+  !! @param[in]      model_id Model id  
+  !! @param[in,out]  this     Instance of lake process class
   !!
   SUBROUTINE Register_lake_tasks(this, model_id)
 
@@ -105,14 +100,15 @@ CONTAINS
     CALL this%Register_task(tsk_lake_surface(model_id))
 
   END SUBROUTINE Register_lake_tasks
-  !
+
   ! ================================================================================================================================
   !>
   !! @brief Implementation of "update" for task "lake_surface"
+  !! Task "lake_surface" computes the surface temperature, ice cover and ice depth on lakes.
   !!
-  !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     config  Vector of process configurations.
-  !! @param[in]     options Additional run-time parameters.
+  !! @param[in]     options Additional run-time parameters.  
+  !! @param[in,out] tile    Tile for which routine is executed.
   !!
   SUBROUTINE update_lake_surface(tile, config, options)
 
@@ -165,12 +161,14 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_lake_surface
+  
+  ! -------------------------------------------------------------------------------------------------------
   !>
   !! Implementation of "aggregate" for task "lake_surface"
   !!  
-  !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     config  Vector of process configurations.
-  !! @param[in]     options Additional run-time parameters.
+  !! @param[in]     options Additional run-time parameters.  
+  !! @param[in,out] tile    Tile for which routine is executed.
   !!
   SUBROUTINE aggregate_lake_surface(tile, config, options)
 
@@ -194,8 +192,6 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_lake_surface
-  !
-  ! ================================================================================================================================
-  !
+
 #endif
 END MODULE mo_lake_interface

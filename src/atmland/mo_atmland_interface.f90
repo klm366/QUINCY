@@ -34,7 +34,7 @@ MODULE mo_atmland_interface
 
 CONTAINS
 
-  SUBROUTINE update_atm2land(tile, config, iblk, ics, ice,                 &
+  SUBROUTINE update_atm2land(tile, config, options,                &
     & t_air, q_air, rain, snow, wind_air, wind_10m,                &
     & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
     & press_srf, drag_srf,                                         &
@@ -42,8 +42,8 @@ CONTAINS
     & pch, cos_zenith_angle)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,            INTENT(in) :: iblk, ics, ice
+    CLASS(t_jsb_config_p), INTENT(in)         :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
     REAL(wp), OPTIONAL, INTENT(in) ::                                            &
       & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:),          &
       & lw_srf_down(:), swvis_srf_down(:), swnir_srf_down(:), swpar_srf_down(:), &
@@ -52,9 +52,15 @@ CONTAINS
       & pch(:), cos_zenith_angle(:)
 
     dsl4jsb_Def_memory(ATM2LAND)
-
+    
+    INTEGER ::  iblk, ics, ice
+    
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_atm2land'
-
+    
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    
     IF (ice-ics+1 /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(ATM2LAND)
@@ -80,7 +86,7 @@ CONTAINS
 
   END SUBROUTINE update_atm2land
 
-  SUBROUTINE update_land2atm(tile, config, iblk, ics, ice,                      &
+  SUBROUTINE update_land2atm(tile, config, options,                     &
     & t_srf, t_eff_srf, qsat_srf, s_srf,                                &
     & fact_q_air, fact_qsat_srf,                                        &
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,     &
@@ -102,8 +108,14 @@ CONTAINS
     dsl4jsb_Def_memory(SRF)
     dsl4jsb_Def_memory(SOIL)
 
+    INTEGER ::  iblk, ics, ice
+    
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_land2atm'
-
+    
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    
     IF (ice-ics+1 /= SIZE(t_srf,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(SRF)
