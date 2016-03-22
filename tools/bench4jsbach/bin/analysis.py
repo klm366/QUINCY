@@ -71,6 +71,7 @@ def find_files ( pattern, path, single = True, raise_e = False ):
             paths.append ( os.path.join ( root, f ))
     
     n_files = len ( paths )
+
     if single:
         if not n_files:
             if raise_e:
@@ -372,9 +373,9 @@ and \\texttt{timemean}($X$) defined as
                           options = '-f %s -t %s' % ( write_suffix, rsds_vardes [ 'path' ]),
                           input   = "-settunits,hours " + exp_streams [ 0 ],
                           output  = temp3 )
-            print "wrote initial file %s" % temp2
+            self.logger.debug ( "wrote initial file %s" % temp2 )
             touch ( temp1 )
-            print "initialized files %s " % ( temp1 )
+            self.logger.debug ( "initialized files %s " % ( temp1 ))
 
             for f in exp_streams [ 1 : ]:
                 os.remove ( temp1 )
@@ -387,14 +388,18 @@ and \\texttt{timemean}($X$) defined as
                     input   = temp1 + " " + temp2,
                     output  = temp3 )
                 print "merged selcode 21,22 from %s to %s" % ( f, temp3 )
+
+            yearlist = map ( int, cdo.showyear ( input = temp3 )[ 0 ].split ())
+            startyear = min ( yearlist )
+            finalyear = max ( yearlist )
                 
             exp.B4J_index [ "D" ] = D = self.path_template % { 
                 'path'           : self.data_path,
                 'varname'        : "rsds",
-                'classification' : "selcode",
+                'classification' : "selcode-21",
                 'expname'        : exp.B4J_name,
-                'startdate'      : "XXXX",
-                'finaldate'      : "YYYY",
+                'startdate'      : startyear,
+                'finaldate'      : finalyear,
                 'suffix'         : write_suffix }
             
             print  exp.B4J_index [ "D" ]
@@ -406,10 +411,10 @@ and \\texttt{timemean}($X$) defined as
             exp.B4J_index [ "U" ] = U = self.path_template % { 
                 'path'           : self.data_path,
                 'varname'        : "rsus",
-                'classification' : "selcode",
+                'classification' : "selcode-22",
                 'expname'        : exp.B4J_name,
-                'startdate'      : "XXXX",
-                'finaldate'      : "YYYY",
+                'startdate'      : startyear,
+                'finaldate'      : finalyear,
                 'suffix'         : write_suffix }
             
             print  exp.B4J_index [ "U" ]
@@ -766,7 +771,7 @@ and \\texttt{timemean}($X$) defined as
             refs = []
             xcoords = []
             ymin = sys.float_info.max
-            ymax = sys.float_info.min
+            ymax = - sys.float_info.max
             
             for ref in self.experiments:
                 if not ref.B4J_isref: continue
@@ -788,7 +793,7 @@ and \\texttt{timemean}($X$) defined as
                 xcoords, ycoords = self.get_seasonal_period_2d_coords ( time, albedo_gm [ :, 0, 0 ],
                                                         hmargin_unitfactor, vmargin_factor )
                 ymin = np.amin ( albedo_gm [ :, 0, 0 ]) if np.amin ( albedo_gm [ :, 0, 0 ]) < ymin  else  ymin 
-                ymax = np.amax ( albedo_gm [ :, 0, 0 ]) if np.amax ( albedo_gm [ :, 0, 0 ]) > ymax  else  ymax 
+                ymax = np.amax ( albedo_gm [ :, 0, 0 ]) if np.amax ( albedo_gm [ :, 0, 0 ]) > ymax  else  ymax
                 plt.plot ( xcoords, ycoords, colored_lines [ ref.B4J_refno ])
                 plt.plot ( time, albedo_gm [ :, 0, 0 ],
                            colored_dots [ ref.B4J_refno ],
@@ -800,8 +805,6 @@ and \\texttt{timemean}($X$) defined as
              
 
             ymargin = ( ymax - ymin ) * vmargin_factor
-            print "ymin incl margin =", ymin - ymargin
-            print "ymax incl margin =", ymax + ymargin
             plt.axis ([ xcoords [ 0 ], xcoords [ 5 ], ymin - ymargin, ymax + ymargin ])     
             plt.title ( r'$gm_{C_{%d}R}$' % can.B4J_canno + \
                         " and " +\
