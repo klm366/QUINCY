@@ -36,7 +36,7 @@ PROGRAM canopy_model_driver
   REAL(wp) :: ref_wind = 1.0_wp            ! wind in m/s
   REAL(wp) :: ref_theta = 100._wp          ! soil water availability in %
   REAL(wp) :: ref_lai = 3._wp              ! LAI
-  REAL(wp) :: ref_nleaf = 1.2_wp           ! N leaf per unit leaf area in gN/m2
+  REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
   !
   ! 1.0 Initialisation of vegetation parameters and constants
   ! 

@@ -67,7 +67,7 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
      CALL calc_canopy_n_distribution(tile(t)%plant%pool%leaf%nitrogen,tile(t)%plant%lai, & 
                                      canopy_layer_depth_act, &
                                      veg_param%nf(pftid), & 
-                                     veg_param%fn_struc_leaf(pftid), & 
+                                     veg_param%k0_fnl_struc(pftid), & 
                                      tile(t)%plant%canopy_layer(:)%nl_tot, & 
                                      tile(t)%plant%canopy_layer(:)%fnl_chl, & 
                                      tile(t)%plant%canopy_layer(:)%fnl_et, & 
@@ -111,14 +111,14 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
 
   END SUBROUTINE update_canopy_fluxes
 
-SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,fn_struc_leaf,& 
+SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,k0_fnl_struc,& 
                                       nl_tot,fnl_chl,fnl_et,fnl_rub)
   !
   ! Dummy routine to produce the within canopy distribution of N of OCN
   ! NB: Should be replaced by Silvia's allocation scheme and feed back information on foliar C:N to 
   !     growth routine
-  ! 
-  USE mo_veg_parameters, ONLY: kn,k0_fnl_chl,k1_fnl_chl,kfnl_chl
+  !
+  USE mo_veg_parameters, ONLY: kn,k0_fnl_chl,k1_fnl_chl,kfnl_chl,jmax2n,vcmax2n,k1_fnl_struc
  
   IMPLICIT NONE
   ! 0.1 Input
@@ -126,7 +126,7 @@ SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,fn_st
   REAL(wp), INTENT(in)    :: lai              ! total foliar area (m2 / m2)
   REAL(wp), DIMENSION(ncanop), INTENT(in) :: canopy_layer_depth_act ! depth of canopy layers (in units LAI)
   REAL(wp), INTENT(in)    :: nf               ! Andrew's tuning constant 
-  REAL(wp), INTENT(in)    :: fn_struc_leaf    ! fraction of N not used for photosynthesis
+  REAL(wp), INTENT(in)    :: k0_fnl_struc     ! maximum fraction of N not used for photosynthesis 
   ! 0.2 In- and Output
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: nl_tot           ! total N content of the layer
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_chl          ! fraction of N in chlorophyll content per layer
@@ -134,35 +134,30 @@ SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,fn_st
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_rub          ! fraction of N used for Rubisco per layer
   ! 0.4 Local
   REAL(wp) :: n0                              ! foliar N content of top-most layer
+  REAL(wp) :: fnl_oth                         ! fraction of N not associated with PS
   REAL(wp) :: lc
   INTEGER :: icanop
 
   ! calculate top of the canopy N 
-  ! standard OCN approach, including the conversion to mmol N / m2(lai)
   IF(lai >= canopy_layer_depth_act(1)) THEN
      n0 = totalN * 1000._wp * kn / (1._wp - exp(-kn * lai))
   ELSE 
      n0 = totalN * 1000._wp
   ENDIF
-  ! dummy QUINCY appraoch: N for photosynthesis minus structural N (to be a function of leaf-type and sla)
-  ! n0 = MAX( totalN - structural_n * lai, 0.0_wp ) * kn / (1._wp - exp(-kn * lai))
-  ! OBS, redefining vcmax2n and jmax2n here temporarily for QUINCY approach
-  ! jmax2n=6.0_wp  ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
-  ! vcmax2n=1.2_wp ! Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
 
   lc = canopy_layer_depth_act(1) / 2._wp
   DO icanop = 1,ncanop
      IF(canopy_layer_depth_act(icanop).GT.eps8) THEN
         nl_tot(icanop) = n0 * exp(-kn * lc) 
+        fnl_oth = k0_fnl_struc - k1_fnl_struc * nl_tot(icanop)
         fnl_chl(icanop) = (k0_fnl_chl - k1_fnl_chl * exp(-kfnl_chl * lc)) / chl2n
         ! standard OCN approach: fraction in indenpent of depth
-        fnl_et(icanop) = 0.1_wp * nf     ! OBS: currently only for code consistency set to 0.1*nf 
-        fnl_rub(icanop) = 0.1_wp * nf    ! OBS: currently only for code consistency set to 0.1*nf
-        ! dummy QUINCY appraoch: fraction of electron transport linked to 
+        !fnl_et(icanop) = 0.273_wp * nf     ! OBS: currently only for code consistency 
+        !fnl_rub(icanop) = 0.128_wp * nf    ! OBS: currently only for code consistency
         ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
-        !fnl_et(icanop) = fnl_chl(icanop) * 24.0_wp/39.8_wp 
+        fnl_et(icanop) = (1._wp - (fnl_oth + fnl_chl(icanop))) * (1._wp / (1._wp + jmax2n/vcmax2n))
         ! fraction of Rubisco is determined as the remainder
-        !fnl_rub(icanop) = 1._wp - fnl_chl(icanop) - fnl_et(icanop)
+        fnl_rub(icanop) = 1._wp - fnl_oth - fnl_chl(icanop) - fnl_et(icanop)
         lc = lc + canopy_layer_depth_act(icanop) / 2._wp & 
              + canopy_layer_depth_act(icanop+1) / 2._wp
     ENDIF

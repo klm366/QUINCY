@@ -44,6 +44,7 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: jmax2n                       ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
   REAL(wp),SAVE :: vcmax2n                      ! Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
   REAL(wp),SAVE :: chl2n                        ! moles chlorophyll per mol of N
+  REAL(wp),SAVE :: k1_fnl_struc                 ! slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
   REAL(wp),SAVE :: pO2                          ! Partial Pressure of O2 in kPa
   REAL(wp),SAVE :: E0kc                         ! Baseline of Michaelis-Menten constant of Rubisco for CO2 (unit?)
   REAL(wp),SAVE :: E1kc                         ! Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 (unit?)
@@ -88,7 +89,7 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: sla
      REAL(wp),DIMENSION(npft) :: cn_leaf
      REAL(wp),DIMENSION(npft) :: np_leaf
-     REAL(wp),DIMENSION(npft) :: fn_struc_leaf
+     REAL(wp),DIMENSION(npft) :: k0_fnl_struc
      REAL(wp),DIMENSION(npft) :: nf 
      REAL(wp),DIMENSION(npft) :: tjmax_opt
      REAL(wp),DIMENSION(npft) :: tjmax_omega
@@ -129,6 +130,8 @@ MODULE mo_veg_parameters
   CONTAINS 
 
     SUBROUTINE init_veg_parameters
+   
+      USE mo_land_constants
 
       !IMPLICIT NONE
       ! 
@@ -212,11 +215,13 @@ MODULE mo_veg_parameters
       ps_it_max = 10
 
       ! Parameters describing the PS ~ An relationship
-      ! OBS: CURRENTLY THESE VALUES ARE MULTIPLIED BY 10 FOR BACKWARDS COMPATABILITY
-      ! NEEDS TO BE REPLACED BY REAL VALUES
-      jmax2n=1.2_wp  ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
-      vcmax2n=2.3_wp ! Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
-      chl2n=1000._wp/39.5_wp  ! moles chlorophyll per mol of N
+      ! Values from Niinemets 1997 (SC 01/16)
+      jmax2n=17.6_wp/4.0_wp   ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
+      vcmax2n=1.8_wp          ! Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
+      ! values from Evans 1988
+      chl2n=1000._wp/25.5_wp  ! moles chlorophyll per mmol N
+      ! slope of the relationship of structural leaf N against leaf N in fraction/mmol (Friend 1997)
+      k1_fnl_struc=71.4_wp * molar_mass_N / 1000000._wp
       ! parameters describing the canopy profile of N 
       !  extinction coefficient to describe decline of N within the canopy 
       kn = 0.11_wp
@@ -258,8 +263,8 @@ MODULE mo_veg_parameters
       veg_param%cn_leaf(:) = 42.0_wp * molar_mass_N / molar_mass_C 
       ! default leaf N:P (molN/molP) if not calculated dynamically 
       veg_param%np_leaf(:) = 14.0_wp * molar_mass_P / molar_mass_N 
-      ! fraction of leaf N not used for photosynthesis 
-      veg_param%fn_struc_leaf(:) = 0.83_wp 
+      ! fraction of leaf N not used for photosynthesis (Friend 1997) 
+      veg_param%k0_fnl_struc(:) = 0.83_wp 
       ! nitrogen scaling parameter for photosynthesis calculation 
       veg_param%nf(:) = 1.83_wp
       ! initial value of the temperature optimum of electron transport and its shape parameter (deg C)
