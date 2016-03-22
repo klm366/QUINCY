@@ -11,9 +11,10 @@ PROGRAM canopy_model_driver
 
   USE mo_kind
   USE mo_base_memory
+  USE mo_atmland_memory
   USE mo_atmland_constants
   USE mo_atmland_util
-  USE mo_atmland_forcing
+  USE mo_atmland_forcing, ONLY: init_forcing, update_forcing
   USE mo_land_constants
   USE mo_veg_parameters
   USE mo_veg_radiation
@@ -23,43 +24,11 @@ PROGRAM canopy_model_driver
 
   TYPE(VegetationParameterClass),SAVE :: veg_param     ! data structure for vegetation parameters
   TYPE(TileClass),DIMENSION(ntile), SAVE :: tile       ! data structure for dynamic vegetation and soil variables
+  TYPE(t_slm_grid)                  :: grid             ! data structure for coordinates
 
-  REAL(wp) :: &                                        ! model forcing
-      t_air            , &
-      q_air            , &
-      rain             , &
-      snow             , &
-      wind_air         , &
-      wind_10m         , &
-      lw_srf_down      , &
-      swvis_srf_down   , &
-      swnir_srf_down   , &
-      swpar_srf_down   , &
-      swpar_fdiffuse   , &
-      press_srf        , &
-      drag_srf         , &
-      t_acoef          , &
-      t_bcoef          , &
-      q_acoef          , &
-      q_bcoef          , &
-      pch              , &
-      cos_zenith_angle , &
-      co2_mixing_ratio
-  REAL(wp) :: &                                       ! tentative model output for atmosphere from radiation routine
-      alb_vis_dif ,   &
-      alb_nir_dif ,   &
-      alb_vis_dir ,   &
-      alb_nir_dir ,   &  
-      ga, &
-      vpd
   INTEGER :: i,lun
   REAL(wp) :: time
   INTEGER :: ntimestep 
-  REAL(wp) :: sw_toa_down                  ! potential radiation at the top of the atmosphere
-  REAL(wp) :: longitude, latitude          ! coordinates of point to be simulated
-  REAL(wp) :: annual_t_air_min, annual_t_air_max         ! annual minimum and maximum daily t_air 
-  REAL(wp) :: diurnal_temp_range           ! diurnal temperature range
- 
   REAL(wp) :: ref_t_air = 25.0_wp          ! temperature in deg C 
   REAL(wp) :: ref_vpd = 1000._wp           ! vpd in Pa
   REAL(wp) :: ref_rh = 0.8_wp              ! relative humidity in fractions 
@@ -84,39 +53,14 @@ PROGRAM canopy_model_driver
   time = 0.0                               ! start at mid-night 1.Jan
   dt = 1800.0_wp                           ! time-step in seconds
   ntimestep = NINT(10.0_wp * one_year * one_day / dt)  ! number of time steps
-  latitude = 50.0_wp                       ! latitude in degrees
-  longitude = 0.0_wp                       ! longitude in degrees
-  annual_t_air_min = -5.0_wp + Tzero       ! annual minumum average day temperature 
-  annual_t_air_max = 25.0_wp + Tzero       ! annual maximum average day temperature
-  diurnal_temp_range = 15.0_wp             ! diurnal temperature range 
   !
   ! 1.2 Initalisation of met-forcing to standard values 
   ! 
-  t_air = ref_t_air + Tzero
-  press_srf = standard_press_srf 
-  q_air = calc_spec_humidity_sat(t_air,press_srf) - ref_vpd / press_srf * eps_vpd
-  co2_mixing_ratio = ref_co2 
-  rain = 0.0_wp
-  snow = 0.0_wp
-  swvis_srf_down = ref_swdown
-  swnir_srf_down = swvis_srf_down * 0.1_wp
-  swpar_srf_down = swvis_srf_down 
-  swpar_fdiffuse = ref_fdiffuse
-  wind_air = ref_wind 
-  wind_10m = wind_air
-  lw_srf_down = 0.0_wp
-  drag_srf = 1.0_wp
-  t_acoef = 0.0_wp
-  t_bcoef = 0.0_wp
-  q_acoef = 0.0_wp
-  q_bcoef = 0.0_wp
-  pch = 0.0_wp
-  cos_zenith_angle = ref_cos_angle 
-  ga = .1_wp / ( drag_srf * wind_10m ) 
+  CALL init_forcing(grid)
   !
   ! 1.3 Initialisation of soil and vegetation (so far relevant) 
   !
-  veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(t_air - Tzero)
+  veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(atm2land%t_air - Tzero)
   tile(:)%soil%theta = ref_theta
   tile(1)%plant%lai = ref_lai 
   tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
@@ -125,33 +69,23 @@ PROGRAM canopy_model_driver
   ! 
   DO i = 1,ntimestep
      !
-     ! 2.1 advance timer and set orbital parameters 
+     ! 2.1 advance timer
      !
      time = time + dt/one_day
-     CALL update_orbital_parameters(time,declination,sw_toa_down)
      ! 
      ! 2.2 update time-variant forcing
      !
-     t_air = generate_inst_temperature(latitude,time,declination,annual_t_air_min, & 
-               annual_t_air_max,diurnal_temp_range)
-     cos_zenith_angle = calc_solar_angle(latitude,longitude,time)
-     swvis_srf_down = MAX(0.0,ref_swdown * cos_zenith_angle) 
-     swnir_srf_down = swvis_srf_down * 0.1_wp
-     swpar_srf_down = swvis_srf_down
-     swpar_fdiffuse = calc_sw_fdiffuse(swvis_srf_down,sw_toa_down,cos_zenith_angle) 
-     q_air = ref_rh * calc_spec_humidity_sat(t_air,press_srf)
+     CALL update_forcing(time,grid)
      ! 
      ! 3.0 do canopy calculation
      ! 
-     CALL update_radiation(tile,swvis_srf_down,swnir_srf_down,swpar_srf_down, &
-                              swpar_fdiffuse,cos_zenith_angle,alb_vis_dif,alb_vis_dir, &
-                              alb_nir_dif,alb_nir_dir)
+     CALL update_radiation(tile)
 
-     CALL update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,veg_param)
+     CALL update_canopy_fluxes(tile,veg_param)
      ! 
      ! 4.0 write output 
      !
-     WRITE(12,'(5F16.7)') t_air, swpar_srf_down * sw2par, & 
+     WRITE(12,'(5F16.7)') atm2land%t_air, atm2land%swpar_srf_down * sw2par, & 
            tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc,tile(1)%plant%flux%ci
      !
      ! 5.0 check timer  

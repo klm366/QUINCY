@@ -56,6 +56,12 @@ MODULE mo_atmland_memory
 
   END TYPE t_land2atm_memory
 
+  TYPE(t_atm2land_memory), SAVE           :: atm2land         ! atmostphere to land 
+  TYPE(t_land2atm_memory), SAVE           :: land2atm         ! land to atmosphere
+
+  PUBLIC :: atm2land,land2atm
+
+
 CONTAINS
 
 END MODULE mo_atmland_memory

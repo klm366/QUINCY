@@ -12,18 +12,13 @@ MODULE mo_atmland_forcing
   USE mo_kind
   USE mo_base_configuration
   USE mo_land_constants
-  USE mo_atmland_memory
+  USE mo_atmland_memory, ONLY: atm2land,land2atm
   USE mo_atmland_util
   USE mo_atmland_constants
 
 
   IMPLICIT NONE
 
-  TYPE(t_atm2land_memory), SAVE           :: atm2land         ! atmostphere to land 
-  TYPE(t_land2atm_memory), SAVE           :: land2atm         ! land to atmosphere
-
-  REAL(wp) :: time                         ! displays the 'real time' in days; time == 1.0 after one day has passed
-  INTEGER :: ntimestep
   REAL(wp) :: sw_toa_down                            ! potential radiation at the top of the atmosphere
   REAL(wp) :: longitude, latitude                    ! coordinates of point to be simulated
   REAL(wp) :: annual_t_air_min, annual_t_air_max     ! annual minimum and maximum daily t_air
@@ -37,16 +32,21 @@ MODULE mo_atmland_forcing
   REAL(wp) :: ref_cos_angle = 1.0_wp       ! cosine of zenith angle
   REAL(wp) :: ref_co2 = 380.0_wp           ! co2 in ppm
   REAL(wp) :: ref_wind = 1.0_wp            ! wind in m/s
-  REAL(wp) :: ref_theta = 100._wp          ! soil water availability in %
-  REAL(wp) :: ref_lai = 3._wp              ! LAI
-  REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
+  REAL(wp) :: ref_latitude = 50.0_wp       ! latitude in degrees
+  REAL(wp) :: ref_longitude = 0.0_wp       ! longitude in degrees
 
+  PRIVATE
+
+  PUBLIC :: init_forcing,update_forcing
 
 CONTAINS
 
-  SUBROUTINE init_atmland_forcing
+  SUBROUTINE init_forcing(grid)
     ! docu
+    USE mo_base_memory
     IMPLICIT NONE
+    ! 0.1 Input
+    TYPE(t_slm_grid) :: grid
 
     ! Initialization
     annual_t_air_min = -5.0_wp + Tzero       ! annual minumum average day temperature
@@ -76,11 +76,19 @@ CONTAINS
     atm2land%pch = 0.0_wp
     atm2land%cos_zenith_angle = ref_cos_angle
     atm2land%ga = .1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
-  END SUBROUTINE init_atmland_forcing
 
-  SUBROUTINE update_forcing
+    grid%lon = ref_longitude
+    grid%lat = ref_latitude
+
+  END SUBROUTINE init_forcing
+
+  SUBROUTINE update_forcing(time,grid)
     ! called in the time loop in plant_model_driver subsequently to advancing the timer
+    USE mo_base_memory
     IMPLICIT NONE
+    ! 0.1 Input
+    REAL(wp),INTENT(in) :: time 
+    TYPE(t_slm_grid) :: grid
 
      CALL update_orbital_parameters(time,declination,sw_toa_down)
      ! 
@@ -92,9 +100,9 @@ CONTAINS
        CASE('readfile')
          ! implement later
        CASE('generate')
-         atm2land%t_air = generate_inst_temperature(latitude,time,declination,annual_t_air_min, &
+         atm2land%t_air = generate_inst_temperature(grid%lat,time,declination,annual_t_air_min, &
          annual_t_air_max,diurnal_temp_range)
-         atm2land%cos_zenith_angle = calc_solar_angle(latitude,longitude,time)
+         atm2land%cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)
          atm2land%swvis_srf_down = MAX(0.0, ref_swdown * atm2land%cos_zenith_angle)
          atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
          atm2land%swpar_srf_down = atm2land%swvis_srf_down

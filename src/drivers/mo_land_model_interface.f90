@@ -82,11 +82,9 @@ tile(1)%plant%lai=6.2_wp
 !tile(2)%plant%lai=5.0_wp
 tile(1)%plant%pftid=1
 !tile(2)%plant%pftid=2
-     CALL update_radiation(tile,swvis_srf_down,swnir_srf_down,swpar_srf_down, &
-                              swpar_fdiffuse,cos_zenith_angle,alb_vis_dif,alb_vis_dir, &
-                              alb_nir_dif,alb_nir_dir)
+     CALL update_radiation(tile)
 
-     CALL update_canopy_fluxes(tile,t_air,q_air,press_srf,co2_mixing_ratio,ga,veg_param)
+     CALL update_canopy_fluxes(tile,veg_param)
 
      CALL update_vegetation(tile,t_air,veg_param)
 

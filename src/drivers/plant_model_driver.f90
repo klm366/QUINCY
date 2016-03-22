@@ -13,6 +13,8 @@ PROGRAM plant_model_driver
   USE mo_base_constants
   USE mo_atmland_constants
   USE mo_land_memory,        ONLY: init_tile_variable_accumulation
+  USE mo_land_constants
+  USE mo_atmland_memory
   USE mo_atmland_util
   USE mo_atmland_forcing
   USE mo_veg_parameters
@@ -29,8 +31,14 @@ PROGRAM plant_model_driver
 
   TYPE(VegetationParameterClass),SAVE     :: veg_param        ! data structure for vegetation parameters
   TYPE(TileClass),DIMENSION(ntile), SAVE  :: tile             ! data structure for dynamic vegetation and soil variables
+  TYPE(t_slm_grid), SAVE                  :: grid             ! data structure for coordinates 
 
   INTEGER :: i
+  REAL(wp) :: time                         ! displays the 'real time' in days; time == 1.0 after one day has passed
+  INTEGER :: ntimestep
+  REAL(wp) :: ref_theta = 100._wp          ! soil water availability in %
+  REAL(wp) :: ref_lai = 3._wp              ! LAI
+  REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
 
   ! variables for reading model-options from file (namelist.plant)
   INTEGER           :: f_unit      = 0
@@ -54,7 +62,7 @@ PROGRAM plant_model_driver
   CALL init_plant_variable_accumulation(tile)   ! set initial average values, defined in mo_veg_memory
   CALL init_tile_variable_accumulation(tile)    ! set initial average values, defined in mo_land_memory
   !CALL init_soil_variable_accumulation(tile) follows later
-  CALL init_atmland_forcing
+  CALL init_forcing(grid)
 
   ! 
   ! 1.1 Initialise time step
@@ -62,8 +70,6 @@ PROGRAM plant_model_driver
   time = 0.0_wp
   dt = 1800.0_wp     ! time step length in seconds
   ntimestep = NINT(10.0_wp * one_year * one_day / dt)  ! number of time steps
-  latitude = 50.0_wp                       ! latitude in degrees
-  longitude = 0.0_wp                       ! longitude in degrees
   ! 
   ! 1.2 Initialise tile
   ! 
@@ -118,7 +124,7 @@ PROGRAM plant_model_driver
      ! 
      ! 2.2 set orbital parameters and update time-variant forcing
      ! 
-     CALL update_forcing  ! see mo_atmland_forcing
+     CALL update_forcing(time,grid)  ! see mo_atmland_forcing
      ! 
      ! 3.0 canopy calculation fluxes
      ! 

@@ -129,7 +129,12 @@ MODULE mo_base_memory
      TYPE(SoilClass) :: soil
      TYPE(AccumulationTileClass) :: accumulated
   END TYPE TileClass  
- 
+
+  TYPE t_slm_grid ! temporary place for storing grid coordinates, will require a proper module file later
+     REAL(wp) :: lon
+     REAL(wp) :: lat
+  END TYPE t_slm_grid
+
 ! PUBLIC :: ElementAdd,ElementSub,ElementMul,ElementDiv
  
 CONTAINS
