@@ -67,6 +67,7 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
      CALL calc_canopy_n_distribution(tile(t)%plant%pool%leaf%nitrogen,tile(t)%plant%lai, & 
                                      canopy_layer_depth_act, &
                                      veg_param%nf(pftid), & 
+                                     veg_param%fn_struc_leaf(pftid), & 
                                      tile(t)%plant%canopy_layer(:)%nl_tot, & 
                                      tile(t)%plant%canopy_layer(:)%fnl_chl, & 
                                      tile(t)%plant%canopy_layer(:)%fnl_et, & 
@@ -110,7 +111,8 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
 
   END SUBROUTINE update_canopy_fluxes
 
-SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,nl_tot,fnl_chl,fnl_et,fnl_rub)
+SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,fn_struc_leaf,& 
+                                      nl_tot,fnl_chl,fnl_et,fnl_rub)
   !
   ! Dummy routine to produce the within canopy distribution of N of OCN
   ! NB: Should be replaced by Silvia's allocation scheme and feed back information on foliar C:N to 
@@ -124,6 +126,7 @@ SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,nl_to
   REAL(wp), INTENT(in)    :: lai              ! total foliar area (m2 / m2)
   REAL(wp), DIMENSION(ncanop), INTENT(in) :: canopy_layer_depth_act ! depth of canopy layers (in units LAI)
   REAL(wp), INTENT(in)    :: nf               ! Andrew's tuning constant 
+  REAL(wp), INTENT(in)    :: fn_struc_leaf    ! fraction of N not used for photosynthesis
   ! 0.2 In- and Output
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: nl_tot           ! total N content of the layer
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_chl          ! fraction of N in chlorophyll content per layer
@@ -133,7 +136,6 @@ SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,nl_to
   REAL(wp) :: n0                              ! foliar N content of top-most layer
   REAL(wp) :: lc
   INTEGER :: icanop
-  REAL(wp) :: structural_n = 34.0_wp          ! non-photosynthetic leaf N default (mmol m-2; Evans, 1988)
 
   ! calculate top of the canopy N 
   ! standard OCN approach, including the conversion to mmol N / m2(lai)

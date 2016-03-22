@@ -56,7 +56,8 @@ CONTAINS
     ! 
     ! 2.0 update target C:N:P for each tissue type
     !
-    CALL update_stoichiometry(target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, & 
+    CALL update_stoichiometry(veg_param%cn_leaf(plant%pftid),veg_param%np_leaf(plant%pftid), & 
+                              target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, & 
                               target_cn_fruit,target_np_leaf,target_np_fine_root,target_np_coarse_root, & 
                               target_np_sap_wood,target_np_fruit)
     !
@@ -392,16 +393,19 @@ CONTAINS
 
   END SUBROUTINE calc_allocation_fraction
 
-  SUBROUTINE update_stoichiometry(target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, & 
-                              target_cn_fruit,target_np_leaf,target_np_fine_root,target_np_coarse_root, & 
-                              target_np_sap_wood,target_np_fruit)
+  SUBROUTINE update_stoichiometry(cn_leaf,np_leaf,target_cn_leaf,target_cn_fine_root,target_cn_coarse_root, & 
+                              target_cn_sap_wood,target_cn_fruit,target_np_leaf,target_np_fine_root, & 
+                              target_np_coarse_root,target_np_sap_wood,target_np_fruit)
     ! 
     ! Routine to calculate the target stoichiometry of the newly growth tissue
     ! for now: prescribed C:N:P - should be part of the optimality approach
     ! Output: target stoichiometries
     ! 
-    USE mo_land_constants
+    USE mo_veg_parameters, ONLY: root2leaf_cn,root2leaf_np,wood2leaf_cn,wood2leaf_np
     IMPLICIT NONE
+    ! 0.1: Input
+    REAL(wp), INTENT(in) :: cn_leaf
+    REAL(wp), INTENT(in) :: np_leaf
     ! 0.2: Output
     REAL(wp), INTENT(out) ::  target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, &
                               target_cn_fruit,target_np_leaf,target_np_fine_root,target_np_coarse_root, &
@@ -409,18 +413,18 @@ CONTAINS
                               ! target C:N and N:P rations (Ops! this is in mol:mol)
 
     ! for now prescribed and based on OCN
-    target_cn_leaf = 25.0_wp * molar_mass_N / molar_mass_C  ! CN adjusted for g/g to mol/mol
-    target_cn_fine_root = target_cn_leaf / 0.85_wp 
-    target_cn_coarse_root = target_cn_leaf / 0.125_wp 
-    target_cn_sap_wood = target_cn_leaf / 0.125_wp
-    target_cn_fruit = target_cn_leaf / 0.85_wp 
+    target_cn_leaf = cn_leaf
+    target_cn_fine_root = target_cn_leaf / root2leaf_cn
+    target_cn_coarse_root = target_cn_leaf / wood2leaf_cn
+    target_cn_sap_wood = target_cn_leaf / wood2leaf_cn 
+    target_cn_fruit = target_cn_leaf / root2leaf_cn
 
     ! Mock allocation fractions for P, assuming a univeral aim of N:P = 14 ("optimal") 
-    target_np_leaf = 14.0_wp * molar_mass_P / molar_mass_N  ! NP adjusted for g/g to mol/mol
-    target_np_fine_root = target_np_leaf / 0.85_wp
-    target_np_coarse_root = target_np_leaf / 0.125_wp
-    target_np_sap_wood = target_np_leaf / 0.125_wp
-    target_np_fruit = target_np_leaf / 0.85_wp
+    target_np_leaf = np_leaf 
+    target_np_fine_root = target_np_leaf / root2leaf_np
+    target_np_coarse_root = target_np_leaf / wood2leaf_np
+    target_np_sap_wood = target_np_leaf / wood2leaf_np
+    target_np_fruit = target_np_leaf / root2leaf_np
 
   END SUBROUTINE update_stoichiometry
 

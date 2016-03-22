@@ -72,11 +72,9 @@ PROGRAM plant_model_driver
   tile(:)%plant%lai = 1.0_wp
   DO i = 1,ntile
      tile(i)%plant%pool%leaf%carbon = tile(i)%plant%lai / veg_param%sla(tile(i)%plant%pftid)
+     tile(i)%plant%pool%leaf%nitrogen = tile(i)%plant%pool%leaf%carbon / veg_param%cn_leaf(tile(i)%plant%pftid)
+     tile(i)%plant%pool%leaf%phosphorus = tile(i)%plant%pool%leaf%nitrogen / veg_param%np_leaf(tile(i)%plant%pftid)
   ENDDO 
-  tile(:)%plant%pool%leaf%nitrogen = tile(:)%plant%pool%leaf%carbon / & 
-        ( 25.0_wp * molar_mass_N / molar_mass_C )
-  tile(:)%plant%pool%leaf%phosphorus = tile(:)%plant%pool%leaf%nitrogen / &
-        ( 14.0_wp * molar_mass_P / molar_mass_N )
   tile(:)%plant%pool%labile%carbon = 100.0_wp
   tile(:)%plant%pool%labile%nitrogen = 10.0_wp
   tile(:)%plant%pool%labile%phosphorus = 1.0_wp

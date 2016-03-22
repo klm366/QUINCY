@@ -35,6 +35,10 @@ MODULE mo_veg_parameters
   ! Resporption parameters
   REAL(wp),SAVE :: resorption_default           ! default fraction of nutrient resporption before leaf shedding
   REAL(wp),SAVE :: resorption_wood              ! default fraction of nutrient resporption before wood death
+  REAL(wp),SAVE :: root2leaf_cn                 ! relative C:N of fine roots compared to leaves
+  REAL(wp),SAVE :: wood2leaf_cn                 ! relative C:N of woody biomass compared to leaves
+  REAL(wp),SAVE :: root2leaf_np                 ! relative N of fine roots compared to leaves
+  REAL(wp),SAVE :: wood2leaf_np                 ! relative N:P of woody biomass compared to leaves
 
   ! Parameters used in the photosynthesis routine
   REAL(wp),SAVE :: jmax2n                       ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
@@ -82,6 +86,9 @@ MODULE mo_veg_parameters
      INTEGER,DIMENSION(npft) :: growthform 
      REAL(wp),DIMENSION(npft) :: tau_leaf
      REAL(wp),DIMENSION(npft) :: sla
+     REAL(wp),DIMENSION(npft) :: cn_leaf
+     REAL(wp),DIMENSION(npft) :: np_leaf
+     REAL(wp),DIMENSION(npft) :: fn_struc_leaf
      REAL(wp),DIMENSION(npft) :: nf 
      REAL(wp),DIMENSION(npft) :: tjmax_opt
      REAL(wp),DIMENSION(npft) :: tjmax_omega
@@ -165,6 +172,14 @@ MODULE mo_veg_parameters
       resorption_default = 0.5_wp 
       ! default fraction of nutrient resporption before wood death 
       resorption_wood = 0.2_wp 
+      ! ratio of root C:N to leaf C:N
+      root2leaf_cn = 0.85_wp 
+      ! ratio of root C:N to leaf C:N
+      wood2leaf_cn = 0.85_wp 
+      ! ratio of root N:P to leaf N:P
+      root2leaf_np = 1.0_wp 
+      ! ratio of root N:P to leaf N:P
+      wood2leaf_np = 1.0_wp 
 
       ! Parameters used in the photosynthesis routine
       ! Partial Pressure of O2 in kPa
@@ -229,7 +244,7 @@ MODULE mo_veg_parameters
       ! This subroutine initalise plant type specific parameters
       ! This should obviously not be hard coded, but read from a file
       !
-      USE mo_land_constants, ONLY: molar_mass_C
+      USE mo_land_constants, ONLY: molar_mass_C,molar_mass_N,molar_mass_P
       IMPLICIT NONE
       TYPE(VegetationParameterClass),INTENT(inout) :: veg_param
  
@@ -239,6 +254,12 @@ MODULE mo_veg_parameters
       veg_param%tau_leaf(:) = 0.3_wp 
       ! specific leaf area of a plant (m2 / mol C) 
       veg_param%sla(:) = 10.0_wp / 1000.0_wp * molar_mass_C 
+      ! default leaf C:N (molC/molN) if not calculated dynamically 
+      veg_param%cn_leaf(:) = 42.0_wp * molar_mass_N / molar_mass_C 
+      ! default leaf N:P (molN/molP) if not calculated dynamically 
+      veg_param%np_leaf(:) = 14.0_wp * molar_mass_P / molar_mass_N 
+      ! fraction of leaf N not used for photosynthesis 
+      veg_param%fn_struc_leaf(:) = 0.83_wp 
       ! nitrogen scaling parameter for photosynthesis calculation 
       veg_param%nf(:) = 1.83_wp
       ! initial value of the temperature optimum of electron transport and its shape parameter (deg C)

@@ -78,6 +78,7 @@ $(MODEL_LIB)(mo_veg_interface.o): \
 $(MODEL_LIB)(mo_veg_growth.o): \
   $(BASE_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) \
+  $(MODEL_LIB)(mo_veg_parameters.o) \
   $(MODEL_LIB)(mo_veg_memory.o)
 
 $(MODEL_LIB)(mo_veg_respiration.o): \
