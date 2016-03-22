@@ -12,6 +12,7 @@ MODULE mo_veg_radiation
   USE mo_kind
   USE mo_base_memory
   USE mo_atmland_memory
+  USE mo_atmland_forcing  ! for global atm2land & land2atm
   USE mo_land_constants
 
   PRIVATE
@@ -20,17 +21,15 @@ MODULE mo_veg_radiation
 
 CONTAINS
 
-  SUBROUTINE update_radiation(tile, atm2land, land2atm)
+  SUBROUTINE update_radiation(tile) ! atm2land land2atm are global TYPES, see mo_atmland_forcing
   ! calculate surface radiation reflection and absorption in PAR band
   !! currently no albedo calculation...
   ! 
   IMPLICIT NONE
   ! 0.1 Input
-  TYPE(t_atm2land_memory), INTENT(in)        :: atm2land
   ! 0.2 modified Input
   TYPE(TileClass),DIMENSION(ntile),INTENT(inout) :: tile
   ! 0.3 Output
-  TYPE(t_land2atm_memory), INTENT(out)        :: land2atm
   ! 0.4 Local
   INTEGER :: t
   !

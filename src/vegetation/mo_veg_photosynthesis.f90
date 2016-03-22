@@ -9,12 +9,13 @@
 !!
 MODULE mo_veg_photosynthesis
 
- USE mo_kind, ONLY: wp
- USE mo_base_constants, ONLY: ncanop,ntile,dt
- USE mo_base_memory
- USE mo_atmland_memory
- USE mo_veg_parameters
- USE mo_veg_radiation, ONLY: calc_canopy_layer_depth
+  USE mo_kind, ONLY: wp
+  USE mo_base_constants, ONLY: ncanop,ntile,dt
+  USE mo_base_memory
+  USE mo_atmland_memory
+  USE mo_atmland_forcing  ! for global atm2land & land2atm
+  USE mo_veg_parameters
+  USE mo_veg_radiation, ONLY: calc_canopy_layer_depth
 
   IMPLICIT NONE
 
@@ -24,12 +25,11 @@ MODULE mo_veg_photosynthesis
 
 CONTAINS
 
-SUBROUTINE update_canopy_fluxes(tile, atm2land, veg_param)
+SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, see mo_atmland_forcing
 
    IMPLICIT NONE
    ! 0.1 Input
    TYPE(VegetationParameterClass), INTENT(in) :: veg_param  ! list of vegetation parameters
-   TYPE(t_atm2land_memory), INTENT(in)        :: atm2land
    ! 0.2 In-Output
    TYPE(TileClass),DIMENSION(ntile) :: tile  ! root tile
    ! 0.3 Output

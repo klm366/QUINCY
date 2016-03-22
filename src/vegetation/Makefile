@@ -98,12 +98,14 @@ $(MODEL_LIB)(mo_veg_parameters.o): \
 $(MODEL_LIB)(mo_veg_radiation.o): \
   $(BASE_LIB)(mo_kind.o) \
   $(ATM_LIB)(mo_atmland_memory.o) \
+  $(ATM_LIB)(mo_atmland_forcing.o) \
   $(LAND_LIB)(mo_land_constants.o) \
   $(MODEL_LIB)(mo_veg_parameters.o)
 
 $(MODEL_LIB)(mo_veg_photosynthesis.o): \
   $(BASE_LIB)(mo_kind.o) \
   $(ATM_LIB)(mo_atmland_memory.o) \
+  $(ATM_LIB)(mo_atmland_forcing.o) \
   $(LAND_LIB)(mo_land_constants.o) \
   $(MODEL_LIB)(mo_veg_parameters.o) \
   $(MODEL_LIB)(mo_veg_respiration.o) \

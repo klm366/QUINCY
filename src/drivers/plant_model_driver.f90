@@ -12,11 +12,9 @@ PROGRAM plant_model_driver
   USE mo_base_memory
   USE mo_base_constants
   USE mo_atmland_constants
-  USE mo_land_constants
   USE mo_land_memory,        ONLY: init_tile_variable_accumulation
   USE mo_atmland_util
   USE mo_atmland_forcing
-  USE mo_atmland_memory 
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
@@ -31,27 +29,6 @@ PROGRAM plant_model_driver
 
   TYPE(VegetationParameterClass),SAVE     :: veg_param        ! data structure for vegetation parameters
   TYPE(TileClass),DIMENSION(ntile), SAVE  :: tile             ! data structure for dynamic vegetation and soil variables
-  TYPE(t_atm2land_memory)                 :: atm2land         ! atmostphere to land 
-  TYPE(t_land2atm_memory)                 :: land2atm         ! land to atmosphere
-
-  REAL(wp) :: time                         ! displays the 'real time' in days; time == 1.0 after one day has passed
-  INTEGER :: ntimestep
-  REAL(wp) :: sw_toa_down                  ! potential radiation at the top of the atmosphere
-  REAL(wp) :: longitude, latitude          ! coordinates of point to be simulated
-  REAL(wp) :: annual_t_air_min, annual_t_air_max         ! annual minimum and maximum daily t_air
-  REAL(wp) :: diurnal_temp_range           ! diurnal temperature range
-
-  REAL(wp) :: ref_t_air = 25.0_wp          ! temperature in deg C
-  REAL(wp) :: ref_vpd = 1000._wp           ! vpd in Pa
-  REAL(wp) :: ref_rh = 0.8_wp              ! relative humidity in fractions
-  REAL(wp) :: ref_swdown = 652.173913_wp   ! PAR in W m-2
-  REAL(wp) :: ref_fdiffuse = 0.2_wp        ! diffuse fraction
-  REAL(wp) :: ref_cos_angle = 1.0_wp       ! cosine of zenith angle
-  REAL(wp) :: ref_co2 = 380.0_wp           ! co2 in ppm
-  REAL(wp) :: ref_wind = 1.0_wp            ! wind in m/s
-  REAL(wp) :: ref_theta = 100._wp          ! soil water availability in %
-  REAL(wp) :: ref_lai = 3._wp              ! LAI
-  REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
 
   INTEGER :: i
 
@@ -68,7 +45,7 @@ PROGRAM plant_model_driver
   LOGICAL      :: flag_optimal_Nleaf         = .FALSE.  ! .TRUE. .FALSE.
 
   ! 
-  ! 1.0 Initialisation of vegetation parameters and constants
+  ! 1.0 Initialisation of vegetation parameters, constants and forcing
   ! 
   CALL init_base_constants
   CALL init_atmland_constants
@@ -77,6 +54,8 @@ PROGRAM plant_model_driver
   CALL init_plant_variable_accumulation(tile)   ! set initial average values, defined in mo_veg_memory
   CALL init_tile_variable_accumulation(tile)    ! set initial average values, defined in mo_land_memory
   !CALL init_soil_variable_accumulation(tile) follows later
+  CALL init_atmland_forcing
+
   ! 
   ! 1.1 Initialise time step
   ! 
@@ -85,35 +64,8 @@ PROGRAM plant_model_driver
   ntimestep = NINT(10.0_wp * one_year * one_day / dt)  ! number of time steps
   latitude = 50.0_wp                       ! latitude in degrees
   longitude = 0.0_wp                       ! longitude in degrees
-  annual_t_air_min = -5.0_wp + Tzero       ! annual minumum average day temperature
-  annual_t_air_max = 25.0_wp + Tzero       ! annual maximum average day temperature
-  diurnal_temp_range = .1_wp             ! diurnal temperature range
   ! 
-  ! 1.2 Initalisation of met-forcing to standard values
-  ! 
-  atm2land%t_air = ref_t_air + Tzero
-  atm2land%press_srf = standard_press_srf
-  atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - ref_vpd / atm2land%press_srf * eps_vpd
-  atm2land%co2_mixing_ratio = ref_co2
-  atm2land%rain = 0.0_wp
-  atm2land%snow = 0.0_wp
-  atm2land%swvis_srf_down = ref_swdown
-  atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
-  atm2land%swpar_srf_down = atm2land%swvis_srf_down
-  atm2land%swpar_fdiffuse = ref_fdiffuse
-  atm2land%wind_air = ref_wind
-  atm2land%wind_10m = atm2land%wind_air
-  atm2land%lw_srf_down = 0.0_wp
-  atm2land%drag_srf = 1.0_wp
-  atm2land%t_acoef = 0.0_wp
-  atm2land%t_bcoef = 0.0_wp
-  atm2land%q_acoef = 0.0_wp
-  atm2land%q_bcoef = 0.0_wp
-  atm2land%pch = 0.0_wp
-  atm2land%cos_zenith_angle = ref_cos_angle
-  atm2land%ga = .1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
-  ! 
-  ! 1.3 Initialise tile
+  ! 1.2 Initialise tile
   ! 
   veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(atm2land%t_air - Tzero) 
   tile(:)%soil%theta = ref_theta
@@ -129,7 +81,7 @@ PROGRAM plant_model_driver
   tile(:)%plant%pool%labile%nitrogen = 10.0_wp
   tile(:)%plant%pool%labile%phosphorus = 1.0_wp
   ! 
-  ! 1.4 Read Model options from file (see src/shared & test_bed/plant/namelist.plant)
+  ! 1.3 Read Model options from file (see src/shared & test_bed/plant/namelist.plant)
   ! 
   NAMELIST /plant_model_options/  &    ! see file namelist & READ() function below
     read_output_interval_pool, &
@@ -153,7 +105,7 @@ PROGRAM plant_model_driver
   options%model%flag_optimal_Nfraction = flag_optimal_Nfraction
   options%model%flag_optimal_Nleaf     = flag_optimal_Nleaf
   ! 
-  ! 1.5 Initialise output and accumulation, and open output files; see mo_veg_output
+  ! 1.4 Initialise output and accumulation, and open output files; see mo_veg_output
   ! 
   CALL open_pool_output_files
   CALL open_flux_output_files
@@ -162,33 +114,18 @@ PROGRAM plant_model_driver
   ! 
   DO i = 1,ntimestep
      ! 
-     ! 2.1 advance timer and set orbital parameters
+     ! 2.1 advance timer
      ! 
      time = time + dt/one_day 
-     CALL update_orbital_parameters(time,declination,sw_toa_down)
      ! 
-     ! 2.2 update time-variant forcing
+     ! 2.2 set orbital parameters and update time-variant forcing
      ! 
-     SELECT CASE(options%forcing%option_forcing)  ! see mo_base_configuration
-       CASE('constant')
-         ! default input values are not changed ?
-       CASE('readfile')
-         ! implement later
-       CASE('generate')
-         atm2land%t_air = generate_inst_temperature(latitude,time,declination,annual_t_air_min, &
-         annual_t_air_max,diurnal_temp_range)
-         atm2land%cos_zenith_angle = calc_solar_angle(latitude,longitude,time)
-         atm2land%swvis_srf_down = MAX(0.0, ref_swdown * atm2land%cos_zenith_angle)
-         atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
-         atm2land%swpar_srf_down = atm2land%swvis_srf_down
-         atm2land%swpar_fdiffuse = calc_sw_fdiffuse(atm2land%swvis_srf_down, sw_toa_down, atm2land%cos_zenith_angle)
-         atm2land%q_air = ref_rh * calc_spec_humidity_sat(atm2land%t_air, atm2land%press_srf)
-     END SELECT
+     CALL update_forcing  ! see mo_atmland_forcing
      ! 
      ! 3.0 canopy calculation fluxes
      ! 
-     CALL update_radiation(tile, atm2land, land2atm)
-     CALL update_canopy_fluxes(tile, atm2land, veg_param)
+     CALL update_radiation(tile)                 ! atm2land land2atm are global TYPES, see mo_atmland_forcing
+     CALL update_canopy_fluxes(tile, veg_param)  ! atm2land is a global TYPE, see mo_atmland_forcing
      ! 
      ! 4.0 calculate vegetation growth and turnover
      ! 

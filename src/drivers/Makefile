@@ -78,8 +78,8 @@ $(BINDIR)/plant.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXSHARE_LIB) $(SXBA
 all_libs:
 	@$(M_K) libbase
 	@$(M_K) libshared
-	@$(M_K) libatmland
 	@$(M_K) libland
+	@$(M_K) libatmland
 	@$(M_K) libvegetation
 
 libatmland:

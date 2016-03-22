@@ -3,6 +3,8 @@ include ../../util/Make.inc.local
 #---------------------------------------------------------------------
 BASE_LIB = $(LIBDIR)/lib_base.a
 SXBASE_LIB = $(BASE_LIB)
+LAND_LIB = $(LIBDIR)/lib_land.a
+SXLAND_LIB = $(LAND_LIB)
 MODEL_LIB = $(LIBDIR)/lib_atmland.a
 SXMODEL_LIB = $(MODEL_LIB)
 
@@ -23,6 +25,7 @@ OBJSMODS1 = $(MODS1:.f90=.o)
 
 #-
 all:
+	@$(M_K) libland
 	@$(M_K) libbase
 	@$(M_K) m_all
 	@echo atmland is OK
@@ -32,6 +35,9 @@ atmland:
 	@echo atmland is OK
 
 m_all: $(MODEL_LIB)($(OBJSMODS1))
+
+libland:
+	(cd ../land; $(M_K) -f Makefile land)
 
 libbase:
 	(cd ../base; $(M_K) -f Makefile)
@@ -53,8 +59,13 @@ $(MODEL_LIB)(mo_atmland_constants.o): \
 
 $(MODEL_LIB)(mo_atmland_forcing.o): \
   $(BASE_LIB)(mo_kind.o) \
+  $(BASE_LIB)(mo_base_configuration.o) \
+  $(BASE_LIB)(mo_base_constants.o) \
   $(MODEL_LIB)(mo_atmland_constants.o) \
-  $(MODEL_LIB)(mo_atmland_util.o)
+  $(MODEL_LIB)(mo_atmland_memory.o) \
+  $(MODEL_LIB)(mo_atmland_util.o) \
+  $(MODEL_LIB)(mo_atmland_constants.o) \
+  $(LAND_LIB)(mo_land_constants.o)
 
 $(MODEL_LIB)(mo_atmland_util.o): \
   $(BASE_LIB)(mo_kind.o) \
