@@ -11,12 +11,16 @@ PROGRAM plant_model_driver
   USE mo_kind,               ONLY: wp
   USE mo_base_memory
   USE mo_base_constants
+  USE mo_base_configuration
+  ! atmland
   USE mo_atmland_constants
-  USE mo_land_memory,        ONLY: init_tile_variable_accumulation
-  USE mo_land_constants
   USE mo_atmland_memory
   USE mo_atmland_util
   USE mo_atmland_forcing
+  ! land
+  USE mo_land_memory,        ONLY: init_tile_variable_accumulation
+  USE mo_land_constants
+  ! vegetation
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
@@ -24,6 +28,7 @@ PROGRAM plant_model_driver
   USE mo_veg_output
   USE mo_veg_memory,         ONLY: init_plant_variable_accumulation
   USE mo_veg_util
+  ! shared
   USE mo_namelist,           ONLY: POSITIONED, open_nml, position_nml  ! read model options from file
 
 
@@ -52,7 +57,7 @@ PROGRAM plant_model_driver
   LOGICAL      :: flag_optimal_Nfraction     = .FALSE.  ! .TRUE. .FALSE.
   LOGICAL      :: flag_optimal_Nleaf         = .FALSE.  ! .TRUE. .FALSE.
   ! forcing options; define variables that contain values as read from file, passed to options% ... then
-  CHARACTER(8) :: create_forcing
+  CHARACTER(8) :: create_forcing             = 'generate'
   ! 
   ! 1.0 Initialisation of vegetation parameters, constants and forcing
   ! 

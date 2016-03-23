@@ -1,0 +1,12 @@
+&CANOPY_MODEL_OPTIONS
+  ! options for the canopy model, read by the canopy_model_driver
+  flag_optimal_Nfraction=.TRUE.
+  flag_optimal_Nleaf=.TRUE.
+/
+&FORCING_CTL
+  ! options for plant model forcing
+  ! create forcing: constant readfile generate
+  create_forcing="readfile"
+/
+
+

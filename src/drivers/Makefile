@@ -55,11 +55,11 @@ transient_canopy:
 	@echo transient canopy is OK
 
 m_transient_canopy: $(BINDIR)/transient_canopy.x
-$(BINDIR)/transient_canopy.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) \
+$(BINDIR)/transient_canopy.x: $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXSHARE_LIB) $(SXBASE_LIB) \
   $(MODEL_LIB)(transient_canopy_model_driver.o)
 	$(A_G) $(MODEL_LIB) transient_canopy_model_driver.o
 	$(F_L) -o $(BINDIR)/transient_canopy.x transient_canopy_model_driver.o \
-            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXBASE_LIB) 
+            $(SXMODEL_LIB) $(SXVEG_LIB) $(SXLAND_LIB) $(SXATM_LIB) $(SXSHARE_LIB) $(SXBASE_LIB) 
 	$(RM) transient_canopy_model_driver.o 
 
 plant: 

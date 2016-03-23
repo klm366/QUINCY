@@ -6,7 +6,7 @@ system(paste("../../",comp,"/bin/canopy.x",sep=''))
 flist = list.files(path= ".",patter="fort*")
 nplot=length(flist)
 
-pdf("canopy_plots.pdf")
+pdf("canopy_plots.pdf", paper="a4", height=10, width=8, pointsize=12, bg="white", family="Helvetica", version="1.6")
 mat=matrix(seq(1,3*nplot,1),nrow=nplot,ncol=3,byrow=T)
 layout(mat)
 par(mai=c(0.5,0.5,0,0))
