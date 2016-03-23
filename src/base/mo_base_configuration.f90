@@ -30,7 +30,7 @@ MODULE mo_base_configuration
   TYPE ForcingOptionsClass
     ! Driver related:
     ! Set forcing to one of three options
-    CHARACTER(8) :: option_forcing    = 'readfile'  ! options: constant readfile generate 
+    CHARACTER(8) :: option_forcing    = 'generate'  ! options: constant readfile generate 
   END TYPE ForcingOptionsClass
 
   TYPE VegetationOptionsClass

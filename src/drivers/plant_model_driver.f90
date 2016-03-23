@@ -51,7 +51,8 @@ PROGRAM plant_model_driver
   INTEGER      :: output_end_date            = 100
   LOGICAL      :: flag_optimal_Nfraction     = .FALSE.  ! .TRUE. .FALSE.
   LOGICAL      :: flag_optimal_Nleaf         = .FALSE.  ! .TRUE. .FALSE.
-
+  ! forcing options; define variables that contain values as read from file, passed to options% ... then
+  CHARACTER(8) :: create_forcing
   ! 
   ! 1.0 Initialisation of vegetation parameters, constants and forcing
   ! 
@@ -87,27 +88,44 @@ PROGRAM plant_model_driver
   ! 
   ! 1.3 Read Model options from file (see src/shared & test_bed/plant/namelist.plant)
   ! 
-  NAMELIST /plant_model_options/  &    ! see file namelist & READ() function below
-    read_output_interval_pool, &
-    read_output_interval_flux, &
-    output_start_date, &
-    output_end_date, &
-    flag_optimal_Nfraction, &
-    flag_optimal_Nleaf
-  ! read the namelist
-  nml_unit = open_nml  ('namelist.plant')
-  f_unit = position_nml ('PLANT_MODEL_OPTIONS', nml_unit, status=read_status)
-    SELECT CASE (read_status)
-      CASE (POSITIONED)
-        READ (f_unit, plant_model_options)
-    END SELECT
-  ! pass values as read from file
-  options%model%output_interval_pool   = read_output_interval_pool
-  options%model%output_interval_flux   = read_output_interval_flux
-  options%model%output_start_date      = output_start_date
-  options%model%output_end_date        = output_end_date
-  options%model%flag_optimal_Nfraction = flag_optimal_Nfraction
-  options%model%flag_optimal_Nleaf     = flag_optimal_Nleaf
+    ! 
+    ! 1.3.1 &PLANT_MODEL_OPTIONS
+    ! 
+    NAMELIST /plant_model_options/  &    ! see file namelist & READ() function below
+      read_output_interval_pool, &
+      read_output_interval_flux, &
+      output_start_date, &
+      output_end_date, &
+      flag_optimal_Nfraction, &
+      flag_optimal_Nleaf
+    ! read the namelist
+    nml_unit = open_nml  ('namelist.plant')
+    f_unit = position_nml ('PLANT_MODEL_OPTIONS', nml_unit, status=read_status)
+      SELECT CASE (read_status)
+        CASE (POSITIONED)
+          READ (f_unit, plant_model_options)
+      END SELECT
+    ! pass values as read from file
+    options%model%output_interval_pool   = read_output_interval_pool
+    options%model%output_interval_flux   = read_output_interval_flux
+    options%model%output_start_date      = output_start_date
+    options%model%output_end_date        = output_end_date
+    options%model%flag_optimal_Nfraction = flag_optimal_Nfraction
+    options%model%flag_optimal_Nleaf     = flag_optimal_Nleaf
+    ! 
+    ! 1.3.2 &FORCING_CTL
+    ! 
+    NAMELIST /forcing_ctl/  &    ! see file namelist & READ() function below
+      create_forcing
+    ! read the namelist
+    nml_unit = open_nml  ('namelist.plant')
+    f_unit = position_nml ('FORCING_CTL', nml_unit, status=read_status)
+      SELECT CASE (read_status)
+        CASE (POSITIONED)
+          READ (f_unit, forcing_ctl)
+      END SELECT
+    ! pass values as read from file to the variable set in mo_base_configuration
+    options%forcing%option_forcing = create_forcing
   ! 
   ! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
   ! 

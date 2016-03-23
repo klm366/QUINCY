@@ -7,5 +7,10 @@
   flag_optimal_Nfraction=.TRUE.
   flag_optimal_Nleaf=.TRUE.
 /
+&FORCING_CTL
+  ! options for plant model forcing
+  ! create forcing: constant readfile generate
+  create_forcing="readfile"
+/
 
 
