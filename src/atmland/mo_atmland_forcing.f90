@@ -37,7 +37,7 @@ MODULE mo_atmland_forcing
 
   PRIVATE
 
-  PUBLIC :: init_forcing,update_forcing
+  PUBLIC :: init_forcing,update_forcing,open_forcing_input_file,close_forcing_input_file
 
 CONTAINS
 
@@ -98,10 +98,16 @@ CONTAINS
        CASE('constant')
          ! default input values are not changed ?
        CASE('readfile')
-         ! implement later
+         ! read climate data from file climate.dat in test_bed/plant
+         ! climate.dat is a copy from /Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET/file...
+         CALL read_forcing
+         atm2land%cos_zenith_angle = calc_solar_angle(latitude,longitude,time)
+         atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
+         atm2land%swpar_srf_down = atm2land%swvis_srf_down
+         atm2land%swpar_fdiffuse = calc_sw_fdiffuse(atm2land%swvis_srf_down, sw_toa_down, atm2land%cos_zenith_angle)
        CASE('generate')
          atm2land%t_air = generate_inst_temperature(grid%lat,time,declination,annual_t_air_min, &
-         annual_t_air_max,diurnal_temp_range)
+                          annual_t_air_max,diurnal_temp_range)
          atm2land%cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)
          atm2land%swvis_srf_down = MAX(0.0, ref_swdown * atm2land%cos_zenith_angle)
          atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
@@ -111,6 +117,87 @@ CONTAINS
      END SELECT
 
   END SUBROUTINE update_forcing
+
+  SUBROUTINE read_forcing
+    ! read one line from file per timestep
+    ! if file ends, start again at top of file with reading lines
+    ! parameter units are re-scaled accordingly to the needs of SLM
+    ! the two header-lines may be neglected
+    ! write column headers of output files for fluxes
+    IMPLICIT NONE
+    ! 0.3 Local
+    INTEGER  :: stat  = 0
+    INTEGER  :: lun   = 100
+    REAL(wp) :: year  = 0  ! dummy variable
+    REAL(wp) :: day   = 0  ! dummy variable
+    REAL(wp) :: hour  = 0  ! dummy variable
+    REAL(wp) :: nhx   = 0  ! dummy variable for nhx_srf_down
+    REAL(wp) :: nox   = 0  ! dummy variable for noy_srf_down
+    ! 1.0 Set write options
+    lun=100
+    ! the read statement, by default, reads a list of values in a line and then advances to the beginning of the next line
+    READ(lun,*, IOSTAT=stat) year, day, hour, & 
+                     atm2land%swvis_srf_down,   atm2land%lw_srf_down, atm2land%t_air,    atm2land%q_air,    &
+                     atm2land%press_srf,        atm2land%rain,        atm2land%snow,     atm2land%wind_air, &
+                     atm2land%co2_mixing_ratio,                                                             &
+                     nhx, nox
+    IF(IS_IOSTAT_END(stat)) THEN  ! if end of file (IS_IOSTAT_END(stat) == Test for end-of-file value)
+      ! start reading from line one & read header into dummy
+      REWIND(lun)
+      CALL read_forcing_header
+      READ(lun,*) year, day, hour, &
+                     atm2land%swvis_srf_down,   atm2land%lw_srf_down, atm2land%t_air,    atm2land%q_air,    &
+                     atm2land%press_srf,        atm2land%rain,        atm2land%snow,     atm2land%wind_air, &
+                     atm2land%co2_mixing_ratio,                                                             &
+                     nhx, nox
+    END IF
+
+    ! parameter units are re-scaled
+    atm2land%q_air     = atm2land%q_air / 1000._wp
+    atm2land%press_srf = atm2land%press_srf * 100._wp
+    atm2land%rain      = atm2land%rain / 86400._wp
+    atm2land%snow      = atm2land%snow / 86400._wp
+
+  END SUBROUTINE read_forcing
+
+  SUBROUTINE open_forcing_input_file
+    ! open the file test_bed/plant/climate.dat
+    ! only IF model option is set to READ !
+    IMPLICIT NONE
+    ! 0.3 local
+    INTEGER :: lun = 100
+    CHARACTER(100) :: fname = "filename"
+    ! 1.0 open file for READ
+    IF(options%forcing%option_forcing == 'readfile') THEN
+      lun=100
+      fname = 'climate.dat'
+      OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
+      ! 2.0 read the two header lines into dummy variables
+      CALL read_forcing_header
+    END IF
+  END SUBROUTINE open_forcing_input_file
+
+  SUBROUTINE close_forcing_input_file
+    ! simply close the file climate.dat
+    IMPLICIT NONE
+    IF(options%forcing%option_forcing == 'readfile') THEN
+      CLOSE(100)
+    END IF
+  END SUBROUTINE close_forcing_input_file
+
+  SUBROUTINE read_forcing_header
+    ! read only the header into a dummy variable to advanve the READ to the 3rd line in the file
+    IMPLICIT NONE
+    ! 0.3 Local
+    CHARACTER(200) :: header_dummy1 = "header"
+    CHARACTER(200) :: header_dummy2 = "header"
+    INTEGER :: lun = 100
+    ! 1.0 read header
+    lun=100
+    READ(lun,'(a)') header_dummy1   ! header line 1
+    READ(lun,'(a)') header_dummy2   ! header line 2
+
+  END SUBROUTINE read_forcing_header
 
   FUNCTION generate_inst_temperature(latitude,time,declination,annual_t_air_min, &
                annual_t_air_max,diurnal_temp_range) RESULT(temperature)

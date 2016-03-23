@@ -57,7 +57,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.3 Local
     INTEGER :: lun = 10
-    ! 1.0 Set write options and write headers
+    ! 1.0 write headers
     lun=10
     WRITE(lun,'(2a)'), 'Time Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
                      'Fruit_C Labile_C Reserve_C SeedBank_C'
@@ -76,7 +76,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.3 Local
     INTEGER :: lun = 30
-    ! 1.0 Set write options
+    ! 1.0 write headers
     lun=30
     WRITE(lun,'(a)'), 'Time GPP GrowthResp NPP'
     lun=lun+1

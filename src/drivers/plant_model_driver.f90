@@ -109,7 +109,11 @@ PROGRAM plant_model_driver
   options%model%flag_optimal_Nfraction = flag_optimal_Nfraction
   options%model%flag_optimal_Nleaf     = flag_optimal_Nleaf
   ! 
-  ! 1.4 Initialise output and accumulation, and open output files; see mo_veg_output
+  ! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
+  ! 
+  CALL open_forcing_input_file  ! only if: options%forcing%option_forcing == 'readfile'
+  ! 
+  ! 1.5 Initialise output and accumulation, and open output files; see mo_veg_output
   ! 
   CALL open_pool_output_files
   CALL open_flux_output_files
@@ -122,7 +126,7 @@ PROGRAM plant_model_driver
      ! 
      time = time + dt/one_day 
      ! 
-     ! 2.2 set orbital parameters and update time-variant forcing
+     ! 2.2 set orbital parameters and update time-variant forcing; 
      ! 
      CALL update_forcing(time,grid)  ! see mo_atmland_forcing
      ! 
@@ -155,6 +159,7 @@ PROGRAM plant_model_driver
   ENDDO
 
   CALL close_output_files
+  CALL close_forcing_input_file  ! only if: options%forcing%option_forcing == 'readfile'
 
 
 END PROGRAM plant_model_driver
