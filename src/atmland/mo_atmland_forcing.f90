@@ -90,7 +90,6 @@ CONTAINS
     REAL(wp),INTENT(in) :: time 
     TYPE(t_slm_grid) :: grid
 
-     CALL update_orbital_parameters(time,declination,sw_toa_down)
      ! 
      ! 2.2 update time-variant forcing
      ! 
@@ -100,12 +99,14 @@ CONTAINS
        CASE('readfile')
          ! read climate data from file climate.dat in test_bed/plant
          ! climate.dat is a copy from /Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET/file...
+         CALL update_orbital_parameters(time,declination,sw_toa_down)
          CALL read_forcing
          atm2land%cos_zenith_angle = calc_solar_angle(latitude,longitude,time)
          atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
          atm2land%swpar_srf_down = atm2land%swvis_srf_down
          atm2land%swpar_fdiffuse = calc_sw_fdiffuse(atm2land%swvis_srf_down, sw_toa_down, atm2land%cos_zenith_angle)
        CASE('generate')
+         CALL update_orbital_parameters(time,declination,sw_toa_down)
          atm2land%t_air = generate_inst_temperature(grid%lat,time,declination,annual_t_air_min, &
                           annual_t_air_max,diurnal_temp_range)
          atm2land%cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)
