@@ -61,7 +61,7 @@ MODULE mo_lake_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_lake_memory(mem, prefix, suffix)
+  SUBROUTINE Init_lake_memory(mem, prefix, suffix, lct_type)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -72,6 +72,7 @@ CONTAINS
     CLASS(t_lake_memory), INTENT(inout) :: mem
     CHARACTER(len=*),     INTENT(in)    :: prefix
     CHARACTER(len=*),     INTENT(in)    :: suffix
+    INTEGER, OPTIONAL, INTENT(in) :: lct_type
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid

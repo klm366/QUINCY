@@ -48,39 +48,15 @@ MODULE mo_srf_interface
     PROCEDURE :: Register_tasks => Register_srf_tasks
   END TYPE t_srf_process
 
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_surface_energy
-    PROCEDURE, NOPASS :: Aggregate => aggregate_surface_energy
-  END TYPE tsk_surface_energy
-
-  INTERFACE tsk_surface_energy
-    PROCEDURE Create_task_surface_energy
-  END INTERFACE tsk_surface_energy
-
   CHARACTER(len=*), PARAMETER :: modname = 'mo_srf_interface'
 
 CONTAINS
-
-  FUNCTION Create_task_surface_energy(model_id) RESULT(return_ptr)
-
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_surface_energy::return_ptr)
-
-    return_ptr%name = 'surface_energy'
-    return_ptr%process_id = SRF
-    return_ptr%owner_model_id = model_id
-
-  END FUNCTION Create_task_surface_energy
 
   SUBROUTINE Register_srf_tasks(this, model_id)
 
     CLASS(t_srf_process), INTENT(inout) :: this
     INTEGER, INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_surface_energy(model_id))
 
   END SUBROUTINE Register_srf_tasks
   !
@@ -133,7 +109,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime, steplen
-        
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_skin_fraction'
 
     iblk    = options%iblk
@@ -244,238 +220,6 @@ CONTAINS
 
   END SUBROUTINE update_surface_energy
 
-  SUBROUTINE update_surface_energy_land(tile, config, options)
-
-    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_srf_process,            ONLY: surface_temp_implicit
-    USE mo_echam_vdiff_params,     ONLY: tpfac2, tpfac3
-    USE mo_jsb_physical_constants, ONLY: tmelt
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    ! Local variables
-    !
-    dsl4jsb_Def_config(SRF)
-    dsl4jsb_Def_memory(SRF)
-    dsl4jsb_Def_memory(SOIL)
-    dsl4jsb_Def_memory(ATM2LAND)
-
-    LOGICAL                       :: lstart
-
-    ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_srf
-    dsl4jsb_Real2D_onChunk :: t_srf_old
-    dsl4jsb_Real2D_onChunk :: t_srf_unfilt
-    dsl4jsb_Real2D_onChunk :: t_srf_unfilt_old
-    dsl4jsb_Real2D_onChunk :: t_eff_srf
-    dsl4jsb_Real2D_onChunk :: qsat_srf
-!!$   dsl4jsb_Real2D_onChunk :: qsat_srf_old
-    dsl4jsb_Real2D_onChunk :: s_srf
-!!$   dsl4jsb_Real2D_onChunk :: s_srf_old
-    dsl4jsb_Real2D_onChunk :: press_srf
-    dsl4jsb_Real2D_onChunk :: q_air
-    dsl4jsb_Real2D_onChunk :: fact_qsat_srf
-    dsl4jsb_Real2D_onChunk :: fact_q_air
-    dsl4jsb_Real2D_onChunk :: drag_srf
-    dsl4jsb_Real2D_onChunk :: rad_srf_net
-    dsl4jsb_Real2D_onChunk :: grnd_hflx
-    dsl4jsb_Real2D_onChunk :: hcap_grnd
-    dsl4jsb_Real2D_onChunk :: wsn_srf
-    dsl4jsb_Real2D_onChunk :: sfract_srf
-    dsl4jsb_Real2D_onChunk :: t_acoef
-    dsl4jsb_Real2D_onChunk :: t_bcoef
-    dsl4jsb_Real2D_onChunk :: q_acoef
-    dsl4jsb_Real2D_onChunk :: q_bcoef
-    dsl4jsb_Real2D_onChunk :: glacier
-
-    ! Locally allocated vectors
-    !
-    REAL(wp) ::             &
-      qsat_srf_old(options%nc),     &
-      s_srf_old(options%nc),        &
-      dQdT(options%nc),             & !< Sensitivity of saturated surface specific humidity to temperature
-      t2s_conv(options%nc),         & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
-      heat_tcoef(options%nc)          !< Heat transfer coefficient (rho*C_h*|v|)
-
-    INTEGER :: iblk, ics, ice, nc
-    REAL(wp) :: steplen
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy_land'
-
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
-    steplen = options%steplen
-
-    IF (.NOT. tile%Is_process_active(SRF)) RETURN
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    dsl4jsb_Get_config(SRF)
-
-    ! Get reference to variables for current block
-    !
-    dsl4jsb_Get_memory(SRF)
-    dsl4jsb_Get_memory(SOIL)
-    dsl4jsb_Get_memory(ATM2LAND)
-
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)     ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)         ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)      ! IN
-
-    dsl4jsb_Get_var2D_onChunk(SRF,      t_srf)         ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      t_srf_old)     ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      t_srf_unfilt)  ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      t_srf_unfilt_old) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      t_eff_srf)     ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      qsat_srf)      ! OUT
-!!$    dsl4jsb_Get_var2D_onChunk( SRF,      qsat_srf_old) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      s_srf)         ! OUT
-!!$    dsl4jsb_Get_var2D_onChunk( SRF,      s_srf_old)  ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      fact_q_air)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      fact_qsat_srf) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      rad_srf_net)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      wsn_srf)       ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      sfract_srf)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      glacier)       ! OUT
-
-    dsl4jsb_Get_var2D_onChunk( SOIL,    grnd_hflx)     ! OUT
-    dsl4jsb_Get_var2D_onChunk( SOIL,    hcap_grnd)     ! OUT
-
-    ! Save old surface temperature and saturation spec. humidity
-!!$    t_srf_unfilt_old(:) = t_srf_unfilt(:)
-!!$    t_srf_old   (:) = t_srf(:)
-    ! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in convect_tables
-    t_srf_unfilt_old(:) = MAX(MIN(t_srf_unfilt(:), 380._wp), 100._wp)
-    t_srf_old(:)        = MAX(MIN(t_srf(:),        380._wp), 100._wp)
-    qsat_srf_old(:) = qsat(t_srf_old(:), press_srf(:))
-
-    ! Calculate surface saturation specific humidity
-
-    ! Update surface temperature
-    !
-    ! 1. Compute sensitivity of surface saturation specific humidity to temperature
-    dQdT(:) = ( qsat(t_srf(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
-
-    ! 2. Old dry static energy
-    s_srf_old(:) = surface_dry_static_energy( t_srf_old(:), &
-                                            & q_effective(qsat_srf_old(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
-
-    t2s_conv(:) = s_srf_old(:) / t_srf_old(:)  !
-
-    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
-
-    ! Compute new surface temperature and saturation humidity
-    IF (ALL(qsat_srf(:) < 0._wp)) THEN          ! Start of experiment
-      lstart = .TRUE.
-      s_srf(:) = s_srf_old(:)
-    ELSE
-      lstart = .FALSE.
-      CALL surface_temp_implicit( nc, steplen, &
-        t2s_conv(:), &
-        t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
-        s_srf_old(:), qsat_srf_old(:), dQdT(:), &
-        rad_srf_net(:), grnd_hflx(:), heat_tcoef(:), &
-        fact_q_air(:), fact_qsat_srf(:), &
-        sfract_srf(:), hcap_grnd(:), &
-        & s_srf(:))
-    END IF
-
-    ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
-    t_srf_unfilt(:) = ( tpfac2 * s_srf(:) + tpfac3 * s_srf_old(:) ) / t2s_conv(:)
-
-    ! Correct new dry static energy for snowmelt
-    WHERE (wsn_srf(:) > dsl4jsb_Config(SRF)%wsn_critical .OR. glacier(:) > 0.5_wp)
-      s_srf(:) = MIN(s_srf(:) / t2s_conv(:), tmelt) * t2s_conv(:)
-    END WHERE
-
-    ! Compute new surface qsat (after correction of dry static energy for snow melt!)
-    qsat_srf(:) = 0._wp
-    IF (lstart) THEN
-      qsat_srf(:) = qsat_srf_old(:)
-    ELSE
-      qsat_srf(:) = qsat_srf_old(:) + dQdT(:) * (s_srf(:) - s_srf_old(:)) / t2s_conv(:)
-    END IF
-
-    ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
-    t_eff_srf(:) = (t_srf_old(:)**3 * (4._wp * s_srf(:)/t2s_conv(:) - 3._wp * t_srf_old(:))) ** 0.25_wp
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE update_surface_energy_land
-
-  SUBROUTINE update_surface_energy_lake(tile, config, options)
-
-    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_srf_process,            ONLY: surface_temp_implicit
-    USE mo_echam_vdiff_params,     ONLY: tpfac2, tpfac3
-    USE mo_jsb_physical_constants, ONLY: tmelt
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    dsl4jsb_Def_memory(SRF)
-    dsl4jsb_Def_memory(LAKE)
-
-    ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_srf
-
-    ! Local variables
-    INTEGER :: iblk, ics, ice, nc
-    LOGICAL                       :: lstart
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy_lake'
-
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
-
-    IF (.NOT. tile%Is_process_active(SRF)) RETURN
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    ! Get reference to variables for current block
-    !
-    dsl4jsb_Get_memory(SRF)
-    dsl4jsb_Get_memory(LAKE)
-
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf) ! IN
-
-    t_srf(:) = dsl4jsb_var2D_onChunk(LAKE,t_srf)
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE update_surface_energy_lake
-
-  SUBROUTINE aggregate_surface_energy(tile, config, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_energy'
-
-    INTEGER :: iblk, ics, ice, nc
-
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_surface_energy
   !
   ! ================================================================================================================================
   !
