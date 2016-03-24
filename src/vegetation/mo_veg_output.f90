@@ -22,7 +22,9 @@ MODULE mo_veg_output
 
   REAL(wp), SAVE :: gpp_acc              = 0.  ! flux accumulation, see write_output_flux(time, tile)
   REAL(wp), SAVE :: growth_resp_acc      = 0.
+  REAL(wp), SAVE :: maint_resp_acc       = 0.
   REAL(wp), SAVE :: npp_acc              = 0.
+  REAL(wp), SAVE :: res_use_c_acc        = 0.
   REAL(wp), SAVE :: uptake_n_acc         = 0.
   REAL(wp), SAVE :: uptake_p_acc         = 0.
 
@@ -78,7 +80,7 @@ CONTAINS
     INTEGER :: lun = 30
     ! 1.0 write headers
     lun=30
-    WRITE(lun,'(a)'), 'Time GPP GrowthResp NPP'
+    WRITE(lun,'(a)'), 'Time GPP GrowthResp MaintResp NPP ReserveUse'
     lun=lun+1
     WRITE(lun,'(a)'), 'Time NUP'
     lun=lun+1
@@ -229,13 +231,15 @@ CONTAINS
     !     for any interval larger timestep multiply by dt
     ! 
     IF(output_interval_flux < 1.0_wp) THEN
-      dt_one = 1.0_wp    ! interval = timestep
+        dt_one = 1.0_wp                 ! interval = timestep
       ELSE
-        dt_one = dt      ! interval > timestep
+        dt_one = dt / 1000000.0_wp      ! interval > timestep
     END IF
     gpp_acc          = gpp_acc         + tile(1)%plant%flux%gpp                * dt_one
     growth_resp_acc  = growth_resp_acc + tile(1)%plant%flux%growth_respiration * dt_one
+    maint_resp_acc   = maint_resp_acc  + tile(1)%plant%flux%maint_respiration  * dt_one
     npp_acc          = npp_acc         + tile(1)%plant%flux%npp                * dt_one
+    res_use_c_acc    = res_use_c_acc   + tile(1)%plant%flux%reserve_use%carbon * dt_one *1000000._wp/dt
     uptake_n_acc     = uptake_n_acc    + tile(1)%plant%flux%uptake_n           * dt_one
     uptake_p_acc     = uptake_p_acc    + tile(1)%plant%flux%uptake_p           * dt_one
     ! 
@@ -243,14 +247,16 @@ CONTAINS
     ! 
     IF( MODULO(time, output_interval_flux) < eps8 .OR. ABS(output_interval_flux - MODULO(time, output_interval_flux)) < eps8) THEN
      lun=30
-     write(lun,'(4F22.6)') time, gpp_acc, growth_resp_acc, npp_acc
+     write(lun,'(6F22.6)') time, gpp_acc, growth_resp_acc, maint_resp_acc, npp_acc, res_use_c_acc
      lun=lun+1
      write(lun,'(2F22.6)') time, uptake_n_acc
      lun=lun+1
      write(lun,'(2F22.6)') time, uptake_p_acc
      gpp_acc         = 0._wp
      growth_resp_acc = 0._wp
+     maint_resp_acc  = 0._wp
      npp_acc         = 0._wp
+     res_use_c_acc   = 0._wp
      uptake_n_acc    = 0._wp
      uptake_p_acc    = 0._wp
     END IF
