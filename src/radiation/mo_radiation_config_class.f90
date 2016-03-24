@@ -9,15 +9,18 @@
 !!
 MODULE mo_rad_config_class
 #ifndef __NO_JSBACH__
-
+  ! -------------------------------------------------------------------------------------------------------
+  ! Used variables of module
+  
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
+  ! -------------------------------------------------------------------------------------------------------
+  ! Module variables 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: t_rad_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_rad_config
@@ -57,7 +60,11 @@ MODULE mo_rad_config_class
   CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_config_class'
 
 CONTAINS
-
+  ! -------------------------------------------------------------------------------------------------------
+  !> Initialize radiation process
+  !!
+  !! @param[inout]     config     Configuration type of process (t_rad_config)
+  !!  
   SUBROUTINE Init_radiation_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml

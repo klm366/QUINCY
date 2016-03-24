@@ -1,5 +1,7 @@
-!================================================================================================================================
+! ===============================================================================================================================
 ! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
+! === ... <FIRST NAME LAST NAME>    with your name e.g. "Martin Mustermann"                                                   ===
+! === ... <DATE>                    with the present date in YYYY-MM-DD format e.g. "2016-04-30"                              ===
 ! === ... <PROCESS_NAME_UPPER_CASE> with your process name e.g. "ALBEDO"                                                      ===
 ! === ... <PROCESS_NAME_LOWER_CASE> with your process name e.g. "albedo"                                                      ===
 ! === ... <EXPLANATIION_OF_PROCESS> with a short explanation line e.g.                                                        ===
@@ -9,8 +11,8 @@
 ! === !X marks lines with examples (e.g:), templates (if necessary:) and implementations points (Implementation:) that you    ===
 ! === have to adapt to your process.                                                                                          ===
 ! ===                                                                                                                         ===
-! === Finally delete this Header.                                                                                             ===
-!================================================================================================================================
+! === Finally delete this header.                                                                                             ===
+! ===============================================================================================================================
 
 
 
@@ -43,10 +45,10 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
   ! Use of processes in this module
   dsl4jsb_Use_processes <PROCESS_NAME_UPPER_CASE>
 
-  ! Use process configurations
+  ! Use of process configurations
   dsl4jsb_Use_config(<PROCESS_NAME_UPPER_CASE>)
 
-  ! Use process memories
+  ! Use of process memories
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
   dsl4jsb_Use_memory(<PROCESS_NAME_UPPER_CASE>)
 
@@ -104,8 +106,8 @@ CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for <PROCESS_NAME_LOWER_CASE> process
   !!
+  !! @param[in,out] this      Instance of <PROCESS_NAME_LOWER_CASE> process class  
   !! @param[in]     model_id  Model id  
-  !! @param[in,out] this      Instance of <PROCESS_NAME_LOWER_CASE> process class
   !!
   SUBROUTINE Register_<PROCESS_NAME_LOWER_CASE>_tasks(this, model_id)
 
@@ -121,9 +123,9 @@ CONTAINS
   !! @brief Implementation of "update" for task "<PROCESS_NAME_LOWER_CASE>"
   !! Task "<PROCESS_NAME_LOWER_CASE>" <EXPLANATIION_OF_PROCESS>.
   !!
-  !! @param[in]     config  Vector of process configurations.
-  !! @param[in]     options Additional run-time parameters.  
   !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     config  Vector of process configurations.
+  !! @param[in]     options Additional run-time parameters.
   !!
   SUBROUTINE update_<PROCESS_NAME_LOWER_CASE>(tile, config, options)
 
@@ -173,9 +175,9 @@ CONTAINS
   !>
   !! Implementation of "aggregate" for task "<PROCESS_NAME_LOWER_CASE>"
   !! 
+  !! @param[in,out] tile    Tile for which routine is executed.  
   !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.  
-  !! @param[in,out] tile    Tile for which routine is executed.
   !!
   SUBROUTINE aggregate_<PROCESS_NAME_LOWER_CASE>(tile, config, options)
 
