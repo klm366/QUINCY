@@ -172,7 +172,8 @@ SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par
   ! Calculation of net photosynthesis and canopy conductance according to Friend & Kiang 2005, J Climate
   ! accounts for temperature acclimation of JMAX according to Friend, 2010 J Exp Bot
     
-  USE mo_land_constants
+  USE mo_land_constants   ! still necessary ?
+  USE mo_atmland_constants, ONLY: Tzero
   USE mo_veg_parameters
   USE mo_veg_respiration, ONLY: temperature_response_respiration
 
@@ -248,7 +249,7 @@ SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par
      pcp = exp(E0pcp - E1pcp/rtck) * ppm2Pa 
 
      ! N specific rate of electron transport rate
-     n1 = jmax2n * fnl_et * exp(-(((temp - TZero - tjmax_opt)/tjmax_omega)**2)) * beta_soil_ps
+     n1 = jmax2n * fnl_et * exp(-(((temp - Tzero - tjmax_opt)/tjmax_omega)**2)) * beta_soil_ps
 
      ! N specific rate of Rubisco turnover 
      n2 = vcmax2n * fnl_rub * exp(E0v - E1v/rtck) * beta_soil_ps
@@ -368,7 +369,8 @@ END SUBROUTINE calc_photosynthesis
   FUNCTION calc_atm_moisture_stress(temp,q_air,press_srf) RESULT(beta)
      ! Function to calculate atmospheric drought stress factor
      USE mo_kind, ONLY: wp
-     USE mo_land_constants, ONLY: calc_spec_humidity_sat,eps_vpd
+     USE mo_atmland_constants, ONLY: eps_vpd
+     USE mo_atmland_util, ONLY: calc_spec_humidity_sat
      IMPLICIT NONE
      ! 0.1 Input
      REAL(wp),INTENT(in) :: temp               ! temperature in K

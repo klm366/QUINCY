@@ -3,6 +3,8 @@ include ../../util/Make.inc.local
 #---------------------------------------------------------------------
 BASE_LIB = $(LIBDIR)/lib_base.a
 SXBASE_LIB = $(BASE_LIB)
+ATM_LIB = $(LIBDIR)/lib_atmland.a
+SXATM_LIB = $(ATM_LIB)
 MODEL_LIB = $(LIBDIR)/lib_land.a
 SXMODEL_LIB = $(MODEL_LIB)
 
@@ -22,6 +24,7 @@ OBJSMODS1 = $(MODS1:.f90=.o)
 
 #-
 all:
+	@$(M_K) libatm
 	@$(M_K) libbase
 	@$(M_K) m_all
 	@echo land is OK
@@ -32,6 +35,8 @@ land:
 
 m_all: $(MODEL_LIB)($(OBJSMODS1))
 
+libatm:
+	(cd ../atmland; $(M_K) -f Makefile atmland)
 
 libbase:
 	(cd ../base; $(M_K) -f Makefile)
@@ -58,5 +63,6 @@ $(MODEL_LIB)(mo_land_util.o): \
   $(BASE_LIB)(mo_base_memory.o) \
   $(BASE_LIB)(mo_base_util_functions.o) \
   $(BASE_LIB)(mo_base_constants.o) \
+  $(ATM_LIB)(mo_atmland_memory.o) \
   $(MODEL_LIB)(mo_land_parameters.o)
 

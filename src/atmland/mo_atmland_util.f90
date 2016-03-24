@@ -15,7 +15,7 @@ MODULE mo_atmland_util
 
   PRIVATE
 
-  PUBLIC :: calc_solar_angle,update_orbital_parameters,calc_sw_fdiffuse
+  PUBLIC :: calc_solar_angle, update_orbital_parameters, calc_sw_fdiffuse, calc_spec_humidity_sat
 
 CONTAINS
 
@@ -91,6 +91,30 @@ CONTAINS
     ENDIF
 
   END FUNCTION calc_sw_fdiffuse
+
+  FUNCTION calc_spec_humidity_sat(temp,press_srf) RESULT(q_sat)
+        ! constants for the calculation of atmospheric water content at saturation
+        ! from Campell and Norman's Introduction to Environmental Biophysics
+     USE mo_kind, ONLY: wp
+     USE mo_atmland_constants, ONLY: eps_vpd, Tzero
+     IMPLICIT NONE 
+     ! 0.1 Input
+     REAL(wp) :: temp            ! temperature (K)
+     REAL(wp) :: press_srf       ! atmospheric pressure (Pa) 
+     ! 0.3 Output 
+     REAL(wp) :: q_sat           ! saturating specific humidity (g/g) 
+     ! 0.4 Local
+     REAL(wp) :: a = 611.0_wp    ! Pa
+     REAL(wp) :: b = 17.502_wp   ! einheitenlos
+     REAL(wp) :: c = 240.97      ! °C
+     REAL(wp) :: esat            ! saturating vapour pressure (Pa)
+
+     ! calculating saturating vapour pressure [Pa] (Campbell & Norman)
+     esat = a * exp(b * (temp - Tzero)/(temp - Tzero + c))
+     ! conversion to saturating specific humidity [kg kg-1]
+     q_sat = eps_vpd * esat/(press_srf - (1.0_wp - eps_vpd) * esat)
+
+  END FUNCTION calc_spec_humidity_sat
 
   SUBROUTINE update_orbital_parameters(time,declination,sw_toa_down) 
     ! subroutine to calculate declination for a given day as a function of orbital parameters

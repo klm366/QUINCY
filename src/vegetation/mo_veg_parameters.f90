@@ -115,14 +115,14 @@ MODULE mo_veg_parameters
     ! interval over which the values are accumulated/ averaged
     ! interval in days !!
     ! see mo_base_memory for defintion of TYPEs that keep the starting/default value
-    REAL(wp) :: par_sunlit = 2._wp
-    REAL(wp) :: par_shaded = 2._wp
-    REAL(wp) :: fleaf_sunlit = 2._wp
-    REAL(wp) :: beta_air = 2._wp
-    REAL(wp) :: beta_soil_ps = 2._wp
-    REAL(wp) :: beta_soil_gs = 2._wp
+    REAL(wp) :: par_sunlit   = 1._wp
+    REAL(wp) :: par_shaded   = 1._wp
+    REAL(wp) :: fleaf_sunlit = 1._wp
+    REAL(wp) :: beta_air     = 1._wp
+    REAL(wp) :: beta_soil_ps = 1._wp
+    REAL(wp) :: beta_soil_gs = 1._wp
 
-    REAL(wp) :: weekly = 7._wp         ! 7 days; constant across the model
+    REAL(wp) :: weekly       = 7._wp         ! 7 days; constant across the model
   END TYPE AccumulationIntervalPlantClass
 
 

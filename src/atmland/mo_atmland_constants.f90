@@ -32,6 +32,23 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: dusk_time 
   REAL(wp),SAVE :: tmp_peak_time 
 
+  ! conversion factors
+  REAL(wp),SAVE :: sw2par                      ! W / µmol / s
+  REAL(wp),SAVE :: Tzero                       ! melting point in K
+  REAL(wp),SAVE :: standard_press_srf          ! standard pressure in Pa
+  REAL(wp),SAVE :: eps_vpd                     ! eps_vpd used for unit conversion Pa -> g g-1
+
+  REAL(wp),SAVE :: def_t_air                   ! temperature in deg K
+  REAL(wp),SAVE :: def_vpd                     ! vpd in Pa
+  REAL(wp),SAVE :: def_rh                      ! relative humidity in fractions
+  REAL(wp),SAVE :: def_swdown                  ! PAR in W m-2
+  REAL(wp),SAVE :: def_fdiffuse                ! diffuse fraction
+  REAL(wp),SAVE :: def_cos_angle               ! cosine of zenith angle
+  REAL(wp),SAVE :: def_co2                     ! co2 in ppm
+  REAL(wp),SAVE :: def_wind                    ! wind in m/s
+  REAL(wp),SAVE :: def_latitude                ! latitude in degrees
+  REAL(wp),SAVE :: def_longitude               ! longitude in degrees
+
   PUBLIC :: init_atmland_constants
  
 CONTAINS
@@ -70,6 +87,25 @@ CONTAINS
   min_daylength = 4._wp / hourday
   tmp_peak_time = 14.0_wp / hourday
   dusk_time = 1.0_wp / hourday
+  ! 
+  ! conversion factors
+  sw2par              = 2.3_wp  
+  Tzero               = 273.15_wp  
+  standard_press_srf  = 101300.0_wp  
+  eps_vpd             = 0.622_wp  
+  ! 
+  ! default values
+  def_t_air = 298.15_wp
+  def_vpd = 1000._wp   
+  def_rh = 0.8_wp      
+  def_swdown = 652.173913_wp
+  def_fdiffuse = 0.2_wp     
+  def_cos_angle = 1.0_wp    
+  def_co2 = 380.0_wp        
+  def_wind = 1.0_wp         
+  def_latitude = 50.0_wp    
+  def_longitude = 0.0_wp    
+
 
   END SUBROUTINE init_atmland_constants
 

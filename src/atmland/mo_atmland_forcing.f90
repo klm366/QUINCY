@@ -11,7 +11,6 @@ MODULE mo_atmland_forcing
 
   USE mo_kind
   USE mo_base_configuration
-  USE mo_land_constants
   USE mo_atmland_memory, ONLY: atm2land,land2atm
   USE mo_atmland_util
   USE mo_atmland_constants
@@ -23,17 +22,6 @@ MODULE mo_atmland_forcing
   REAL(wp) :: longitude, latitude                    ! coordinates of point to be simulated
   REAL(wp) :: annual_t_air_min, annual_t_air_max     ! annual minimum and maximum daily t_air
   REAL(wp) :: diurnal_temp_range                     ! diurnal temperature range
-
-  REAL(wp) :: ref_t_air = 25.0_wp          ! temperature in deg C
-  REAL(wp) :: ref_vpd = 1000._wp           ! vpd in Pa
-  REAL(wp) :: ref_rh = 0.8_wp              ! relative humidity in fractions
-  REAL(wp) :: ref_swdown = 652.173913_wp   ! PAR in W m-2
-  REAL(wp) :: ref_fdiffuse = 0.2_wp        ! diffuse fraction
-  REAL(wp) :: ref_cos_angle = 1.0_wp       ! cosine of zenith angle
-  REAL(wp) :: ref_co2 = 380.0_wp           ! co2 in ppm
-  REAL(wp) :: ref_wind = 1.0_wp            ! wind in m/s
-  REAL(wp) :: ref_latitude = 50.0_wp       ! latitude in degrees
-  REAL(wp) :: ref_longitude = 0.0_wp       ! longitude in degrees
 
   PRIVATE
 
@@ -55,17 +43,17 @@ CONTAINS
     ! 
     ! Initalisation of met-forcing to standard values
     ! 
-    atm2land%t_air = ref_t_air + Tzero
+    atm2land%t_air = def_t_air
     atm2land%press_srf = standard_press_srf
-    atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - ref_vpd / atm2land%press_srf * eps_vpd
-    atm2land%co2_mixing_ratio = ref_co2
+    atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - def_vpd / atm2land%press_srf * eps_vpd
+    atm2land%co2_mixing_ratio = def_co2
     atm2land%rain = 0.0_wp
     atm2land%snow = 0.0_wp
-    atm2land%swvis_srf_down = ref_swdown
+    atm2land%swvis_srf_down = def_swdown
     atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
     atm2land%swpar_srf_down = atm2land%swvis_srf_down
-    atm2land%swpar_fdiffuse = ref_fdiffuse
-    atm2land%wind_air = ref_wind
+    atm2land%swpar_fdiffuse = def_fdiffuse
+    atm2land%wind_air = def_wind
     atm2land%wind_10m = atm2land%wind_air
     atm2land%lw_srf_down = 0.0_wp
     atm2land%drag_srf = 1.0_wp
@@ -74,11 +62,11 @@ CONTAINS
     atm2land%q_acoef = 0.0_wp
     atm2land%q_bcoef = 0.0_wp
     atm2land%pch = 0.0_wp
-    atm2land%cos_zenith_angle = ref_cos_angle
+    atm2land%cos_zenith_angle = def_cos_angle
     atm2land%ga = .1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
 
-    grid%lon = ref_longitude
-    grid%lat = ref_latitude
+    grid%lon = def_longitude
+    grid%lat = def_latitude
 
   END SUBROUTINE init_forcing
 
@@ -110,11 +98,11 @@ CONTAINS
          atm2land%t_air = generate_inst_temperature(grid%lat,time,declination,annual_t_air_min, &
                           annual_t_air_max,diurnal_temp_range)
          atm2land%cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)
-         atm2land%swvis_srf_down = MAX(0.0, ref_swdown * atm2land%cos_zenith_angle)
+         atm2land%swvis_srf_down = MAX(0.0, def_swdown * atm2land%cos_zenith_angle)
          atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
          atm2land%swpar_srf_down = atm2land%swvis_srf_down
          atm2land%swpar_fdiffuse = calc_sw_fdiffuse(atm2land%swvis_srf_down, sw_toa_down, atm2land%cos_zenith_angle)
-         atm2land%q_air = ref_rh * calc_spec_humidity_sat(atm2land%t_air, atm2land%press_srf)
+         atm2land%q_air = def_rh * calc_spec_humidity_sat(atm2land%t_air, atm2land%press_srf)
      END SELECT
 
   END SUBROUTINE update_forcing

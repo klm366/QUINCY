@@ -11,9 +11,11 @@ PROGRAM canopy_model_driver
 
   USE mo_kind
   USE mo_base_memory
-  USE mo_land_constants
+  USE mo_atmland_util
   USE mo_atmland_memory
   USE mo_atmland_forcing
+  USE mo_atmland_constants
+  USE mo_land_constants   ! still necessary ?
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis

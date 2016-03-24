@@ -11,7 +11,8 @@ PROGRAM canopy_model_driver
 
   USE mo_kind
   USE mo_base_memory
-  USE mo_land_constants
+  USE mo_atmland_constants
+  USE mo_land_constants     ! still necessary ?
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
@@ -70,7 +71,7 @@ PROGRAM canopy_model_driver
   !
   ! 1.1 Initalisation of met-forcing which is assumed constant 
   ! 
-  t_air = ref_t_air + Tzero
+  t_air = ref_t_air + Tzero   ! conversion from K to °C, anywhere else K is used by default
   press_srf = standard_press_srf 
   q_air = calc_spec_humidity_sat(t_air,press_srf) - ref_vpd / press_srf * eps_vpd
   co2_mixing_ratio = ref_co2 

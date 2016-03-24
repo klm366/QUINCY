@@ -93,9 +93,9 @@ CONTAINS
     tile(:)%plant%accumulated%par_sunlit        = 10._wp
     tile(:)%plant%accumulated%par_shaded        = 10._wp
     tile(:)%plant%accumulated%fleaf_sunlit      = 10._wp
-    tile(:)%plant%accumulated%beta_air          = 10._wp
-    tile(:)%plant%accumulated%beta_soil_ps      = 10._wp
-    tile(:)%plant%accumulated%beta_soil_gs      = 10._wp
+    tile(:)%plant%accumulated%beta_air          = 1._wp
+    tile(:)%plant%accumulated%beta_soil_ps      = 1._wp
+    tile(:)%plant%accumulated%beta_soil_gs      = 1._wp
     tile(:)%plant%accumulated%gpp_week               = 1._wp
     tile(:)%plant%accumulated%maint_respiration_week = 1._wp
   END SUBROUTINE init_plant_variable_accumulation

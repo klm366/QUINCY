@@ -19,7 +19,7 @@ PROGRAM plant_model_driver
   USE mo_atmland_forcing
   ! land
   USE mo_land_memory,        ONLY: init_tile_variable_accumulation
-  USE mo_land_constants
+  USE mo_land_constants    ! still necessary ?
   USE mo_land_util
   ! vegetation
   USE mo_veg_parameters
@@ -80,7 +80,7 @@ PROGRAM plant_model_driver
   ! 
   ! 1.2 Initialise tile
   ! 
-  veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(atm2land%t_air - Tzero) 
+  veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(atm2land%t_air - Tzero)   ! conversion from K to °C
   tile(:)%soil%theta = ref_theta
   tile(:)%plant%lai = 1.0_wp
   DO i = 1,ntile
@@ -156,8 +156,8 @@ PROGRAM plant_model_driver
      ! 
      ! 3.0 canopy calculation fluxes
      ! 
-     CALL update_radiation(tile)                 ! atm2land land2atm are global TYPES, see mo_atmland_forcing
-     CALL update_canopy_fluxes(tile, veg_param)  ! atm2land is a global TYPE, see mo_atmland_forcing
+     CALL update_radiation(tile)                 ! atm2land land2atm are global TYPES, see mo_atmland_memory
+     CALL update_canopy_fluxes(tile, veg_param)  ! atm2land is a global TYPE, see mo_atmland_memory
      ! 
      ! 4.0 calculate vegetation growth and turnover
      ! 
@@ -166,7 +166,7 @@ PROGRAM plant_model_driver
      ! 5.0 Accumulation
      ! 
      CALL update_vegetation_moving_averages(tile)
-     CALL update_tile_moving_averages(tile, atm2land%t_air)
+     CALL update_tile_moving_averages(tile)
      ! 
      ! 6.0 Output
      ! 

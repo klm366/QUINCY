@@ -436,7 +436,7 @@ CONTAINS
     ! of low temperatures (<5°C) and low moisture (<20% saturation). Additionally, phenological dormancy
     ! is accounted for (OBS: not yet implemented!)
     !
-    USE mo_land_constants, ONLY: Tzero
+    USE mo_atmland_constants, ONLY: Tzero
     USE mo_veg_parameters, ONLY: lambda_tau_labile_temp,weibull_k_tau_labile_temp,& 
                                  lambda_tau_labile_theta,weibull_k_tau_labile_theta,tau_labile_default
     IMPLICIT NONE

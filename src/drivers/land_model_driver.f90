@@ -11,7 +11,8 @@ PROGRAM land_model_driver
   USE mo_kind
   USE mo_base_constants
   USE mo_atmland_constants
-  USE mo_land_constants
+  USE mo_atmland_util, ONLY: calc_spec_humidity_sat
+  USE mo_land_constants        ! still necessary ?
   USE mo_land_model_interface, ONLY: land_model_interface 
   USE mo_veg_parameters
 
@@ -41,7 +42,7 @@ PROGRAM land_model_driver
       cos_zenith_angle , &
       co2_mixing_ratio
 
-  REAL(wp) :: ref_t_air = 25.0_wp          ! temperature in deg C
+  REAL(wp) :: ref_t_air = 298.15_wp        ! temperature in K
   REAL(wp) :: ref_vpd = 1000._wp           ! vpd in Pa
   REAL(wp) :: ref_swdown = 652.173913_wp   ! PAR in W m-2
   REAL(wp) :: ref_fdiffuse = 0.2_wp        ! diffuse fraction
@@ -67,7 +68,7 @@ PROGRAM land_model_driver
   !
   ! 1.1 Initalisation of met-forcing which is assumed constant
   !
-  t_air = ref_t_air + Tzero
+  t_air = ref_t_air   ! in K
   press_srf = standard_press_srf
   q_air = calc_spec_humidity_sat(t_air,press_srf) - ref_vpd / press_srf * eps_vpd
   co2_mixing_ratio = ref_co2

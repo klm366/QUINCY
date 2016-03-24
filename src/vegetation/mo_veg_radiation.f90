@@ -72,7 +72,7 @@ CONTAINS
     !         fsl:  fraction of foliage that is sunlit
 
     USE mo_base_constants, ONLY: ncanop,canopy_layer_depth
-    USE mo_land_constants, ONLY: eps8,sw2par
+    USE mo_atmland_constants, ONLY: sw2par
     USE mo_veg_parameters, ONLY: sigma,kbl0,kdf0,rho2sbeta
 
     IMPLICIT NONE

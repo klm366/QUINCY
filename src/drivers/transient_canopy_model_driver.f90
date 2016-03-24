@@ -18,7 +18,7 @@ PROGRAM canopy_model_driver
   USE mo_atmland_util
   USE mo_atmland_forcing
   ! land
-  USE mo_land_constants
+  USE mo_land_constants     ! still necessary ?
   ! vegetation
   USE mo_veg_parameters
   USE mo_veg_radiation
@@ -65,7 +65,7 @@ PROGRAM canopy_model_driver
   ! 
   ! 1.2 Initialise tile (Initialisation of soil and vegetation, so far relevant) 
   ! 
-  veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(atm2land%t_air - Tzero)
+  veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(atm2land%t_air - Tzero)  ! conversion from K to °C
   tile(:)%soil%theta = ref_theta
   tile(1)%plant%lai = ref_lai 
   tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
