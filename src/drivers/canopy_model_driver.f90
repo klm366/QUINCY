@@ -39,12 +39,13 @@ PROGRAM canopy_model_driver
   REAL(wp) :: ref_theta = 100._wp          ! soil water availability in %
   REAL(wp) :: ref_lai = 3._wp              ! LAI
   REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
+  INTEGER :: pft = 1                       ! PFT identifier
   !
   ! 1.0 Initialisation of vegetation parameters and constants
   ! 
   CALL init_base_constants
-  CALL init_pft_param_table(veg_param)
-  CALL init_veg_parameters
+  CALL init_atmland_constants
+  CALL init_veg_parameters(veg_param)
   CALL init_forcing(grid)
   !
   ! 1.1 Initalisation of met-forcing which is assumed constant 
@@ -75,7 +76,12 @@ PROGRAM canopy_model_driver
   !
   tile(:)%soil%theta = ref_theta
   tile(1)%plant%lai = ref_lai 
-  tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
+  IF(pft==0) THEN
+    tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
+  ELSE
+    tile(1)%plant%pool%leaf%nitrogen=tile(1)%plant%lai/veg_param%sla(pft)/veg_param%cn_leaf(pft)
+    tile(1)%plant%pftid=pft
+  ENDIF
   ! 
   ! 2.0 Sensitivity plots
   ! 
@@ -93,7 +99,10 @@ PROGRAM canopy_model_driver
      CALL update_canopy_fluxes(tile,veg_param)
 
      WRITE(lun,'(4F16.7)') atm2land%swpar_srf_down * sw2par, & 
-           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci
+           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci !,&
+!           tile(1)%plant%flux%an,
+!           tile(1)%plant%flux%ci/atm2land%co2_mixing_ratio,tile(1)%plant%pool%leaf%nitrogen*molar_mass_N,&
+!           tile(1)%plant%flux%an/(tile(1)%plant%pool%leaf%nitrogen*molar_mass_N)
 
   ENDDO
   atm2land%swvis_srf_down = ref_swdown

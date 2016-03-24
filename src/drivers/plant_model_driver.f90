@@ -50,8 +50,7 @@ PROGRAM plant_model_driver
   ! 
   CALL init_base_constants
   CALL init_atmland_constants
-  CALL init_pft_param_table(veg_param)
-  CALL init_veg_parameters
+  CALL init_veg_parameters(veg_param)
   CALL init_plant_variable_accumulation(tile)   ! set initial average values, defined in mo_veg_memory
   CALL init_tile_variable_accumulation(tile)    ! set initial average values, defined in mo_land_memory
   !CALL init_soil_variable_accumulation(tile) follows later

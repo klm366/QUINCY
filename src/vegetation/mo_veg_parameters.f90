@@ -41,6 +41,7 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: wood2leaf_np                 ! relative N:P of woody biomass compared to leaves
 
   ! Parameters used in the photosynthesis routine
+  REAL(wp),SAVE :: carbon_per_dryweight_leaf    ! carbon mass per unit dry weight of leaves (gC / g DW) 
   REAL(wp),SAVE :: jmax2n                       ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
   REAL(wp),SAVE :: vcmax2n                      ! Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
   REAL(wp),SAVE :: chl2n                        ! moles chlorophyll per mol of N
@@ -85,6 +86,7 @@ MODULE mo_veg_parameters
 
   TYPE VegetationParameterClass
      INTEGER,DIMENSION(npft) :: growthform 
+     INTEGER,DIMENSION(npft) :: ps_pathway
      REAL(wp),DIMENSION(npft) :: tau_leaf
      REAL(wp),DIMENSION(npft) :: sla
      REAL(wp),DIMENSION(npft) :: cn_leaf
@@ -126,13 +128,14 @@ MODULE mo_veg_parameters
   END TYPE AccumulationIntervalPlantClass
 
 
-  PUBLIC :: init_veg_parameters,init_pft_param_table
+  PUBLIC :: init_veg_parameters
 
   CONTAINS 
 
-    SUBROUTINE init_veg_parameters
+    SUBROUTINE init_veg_parameters(veg_param)
    
       USE mo_land_constants
+      TYPE(VegetationParameterClass),INTENT(inout) :: veg_param
 
       !IMPLICIT NONE
       ! 
@@ -215,6 +218,8 @@ MODULE mo_veg_parameters
       ! maximum number of iteration in photosynthesis calculation (should probably be in mo_base_constants)
       ps_it_max = 10
 
+      ! carbon content of leaves per dry matter
+      carbon_per_dryweight_leaf = 0.48_wp ! g C / g DW
       ! Parameters describing the PS ~ An relationship
       ! Values from Niinemets 1997 (SC 01/16)
       jmax2n=17.6_wp/4.0_wp   ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
@@ -243,6 +248,8 @@ MODULE mo_veg_parameters
       ! Extinction coefficient for PAR on chlorophyll
       ka = 0.005_wp
 
+      CALL init_pft_param_table(veg_param)
+
     END SUBROUTINE init_veg_parameters
 
     SUBROUTINE init_pft_param_table(veg_param)
@@ -254,26 +261,58 @@ MODULE mo_veg_parameters
       IMPLICIT NONE
       TYPE(VegetationParameterClass),INTENT(inout) :: veg_param
  
+      ! types are 
+      ! 1) broad leaved evergreen (rainforest) 
+      ! 2) broad leaved evergreen (xeric forest) 
+      ! 3) broad leaved deciduous (rain green) 
+      ! 4) broad leaved deciduous (summer green) 
+      ! 5) needle-leaved evergreen
+      ! 6) needle-leaved deciduous 
+      ! 7) C3 grass
+      ! 8) C4 grass
       ! vegetation growth form
-      veg_param%growthform(:) = itree
+      veg_param%growthform(:) = & 
+      (/itree,itree,itree,itree,itree,itree,igrass,igrass/)
+      ! photosynthetic path way 
+      veg_param%ps_pathway(:) = & 
+      (/ic3phot,ic3phot,ic3phot,ic3phot,ic3phot,ic3phot,ic3phot,ic4phot/)
       ! average turnover (1/lifetime) of a leaf (1/years) 
-      veg_param%tau_leaf(:) = 0.3_wp 
+      ! From Kattge et al. 2011, Table 5, including conversion from month lifetime to annual turnover
+      veg_param%tau_leaf(:) = 12._wp / & 
+      (/16.83_wp,15.88_wp,5.83_wp,5.83_wp,39.7_wp,6.08_wp,3.85_wp,3.85_wp/)
       ! specific leaf area of a plant (m2 / mol C) 
-      veg_param%sla(:) = 10.0_wp / 1000.0_wp * molar_mass_C 
+      ! From Kattge et al. 2011, Table 5, including conversion from mm/mgDW to m2/mol
+      veg_param%sla(:) = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * &
+      (/9.46_wp,8.99_wp,15.4_wp,15.4_wp,5.0_wp,10.09_wp,20.12_wp,19.23_wp/) 
       ! default leaf C:N (molC/molN) if not calculated dynamically 
-      veg_param%cn_leaf(:) = 42.0_wp * molar_mass_N / molar_mass_C 
+      ! From Kattge et al. 2011, Table 5, including conversion from mg/g to mol/mol
+      veg_param%cn_leaf(:) = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / & 
+      (/16.89_wp,13.73_wp,21.32_wp,21.32_wp,12.09_wp,19.37_wp,17.84_wp,14.14_wp/) 
       ! default leaf N:P (molN/molP) if not calculated dynamically 
-      veg_param%np_leaf(:) = 14.0_wp * molar_mass_P / molar_mass_N 
+      ! From Kattge et al. 2011, Table 5, including conversion from mg/g to mol/mol
+      veg_param%np_leaf(:) = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / veg_param%cn_leaf(:) / &
+      (/0.86_wp,0.84_wp,1.44_wp,1.44_wp,1.23_wp,1.83_wp,1.43_wp,1.36_wp/)
       ! fraction of leaf N not used for photosynthesis (Friend 1997) 
-      veg_param%k0_fnl_struc(:) = 0.83_wp 
+      ! temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5
+      veg_param%k0_fnl_struc(:) = & 
+      !(/0.67_wp,0.67_wp,0.67_wp,0.67_wp,0.83_wp,0.83_wp,0.67_wp,0.67_wp/) 
+      (/0.79_wp,0.73_wp,0.67_wp,0.7_wp,0.87_wp,0.83_wp,0.5_wp,0.67_wp/) 
+      !Le Maire et al. 2012 (derived from grasses, does not give plausble results for needles)
+      !0.012_wp / 0.48_wp * molar_mass_C / molar_mass_N / veg_param%sla(:)/&
+      !(1._wp / veg_param%sla(:) / veg_param%cn_leaf(:)) 
       ! nitrogen scaling parameter for photosynthesis calculation 
       veg_param%nf(:) = 1.83_wp
       ! initial value of the temperature optimum of electron transport and its shape parameter (deg C)
       veg_param%tjmax_opt(:) = 17._wp
       veg_param%tjmax_omega(:) = 18._wp
       ! intercept and slope of the An ~gs relationship (mmol/µmol)
-      veg_param%g0(:) = 0.01_wp
-      veg_param%g1(:) = 9.3_wp
+      veg_param%g0(:) = & ! 0.01_wp
+      (/0.01_wp,0.01_wp,0.01_wp,0.01_wp,0.01_wp,0.01_wp,0.03_wp,0.03_wp/)
+      veg_param%g1(:) = & !9.3_wp
+      ! g1 in Ball & Berry relationship, tuned to get similar Amax/N values as with Lin et al. g1 
+      (/9.3_wp,8.3_wp,7.0_wp,10.9_wp,5.5_wp,7.0_wp,9.3_wp,1.62_wp/)
+      ! g1 in kPa^0.5 as in Lin et al. 2015, Nat CC. OBS: no values for Larches - assigned broad leaved value!
+      !(/3.77_wp,3.37_wp,2.98_wp,4.64_wp,2.35_wp,4.64_wp,4.16_wp,1.62_wp/)
       ! Weibull parameters describing the response of leaf-level photosynthesis to 
       ! fractional water availability
       veg_param%lambda_soil_ps(:) = 3.0_wp

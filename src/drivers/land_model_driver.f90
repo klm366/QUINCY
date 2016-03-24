@@ -63,8 +63,7 @@ PROGRAM land_model_driver
   !
   CALL init_base_constants
   CALL init_atmland_constants
-  CALL init_pft_param_table(veg_param)
-  CALL init_veg_parameters
+  CALL init_veg_parameters(veg_param)
   !
   ! 1.1 Initalisation of met-forcing which is assumed constant
   !

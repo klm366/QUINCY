@@ -94,11 +94,13 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
 
      ! integrate to canopy level values
      tile(t)%plant%flux%gpp = 0.0_wp
+     tile(t)%plant%flux%an = 0.0_wp
      tile(t)%plant%flux%maint_respiration_leaf = 0.0_wp
      tile(t)%plant%flux%gc = 0.0_wp
      tile(t)%plant%flux%ci = 0.0_wp
      DO icanop = 1,ncanop
         tile(t)%plant%flux%gpp = tile(t)%plant%flux%gpp + agl(icanop) * canopy_layer_depth_act(icanop) 
+        tile(t)%plant%flux%an = tile(t)%plant%flux%an + anl(icanop) * canopy_layer_depth_act(icanop) 
         tile(t)%plant%flux%maint_respiration_leaf = tile(t)%plant%flux%maint_respiration_leaf + & 
                rl(icanop) * canopy_layer_depth_act(icanop) 
         tile(t)%plant%flux%gc = tile(t)%plant%flux%gc + gsl(icanop) * canopy_layer_depth_act(icanop)
@@ -139,7 +141,7 @@ SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,k0_fn
   INTEGER :: icanop
 
   ! calculate top of the canopy N 
-  IF(lai >= canopy_layer_depth_act(1)) THEN
+  IF(lai > canopy_layer_depth_act(1)) THEN
      n0 = totalN * 1000._wp * kn / (1._wp - exp(-kn * lai))
   ELSE 
      n0 = totalN * 1000._wp
@@ -334,9 +336,12 @@ SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par
         ! Net layer photosynthesis (umol[CO2]/m2/s)
         anl = agl - rl
 
-        ! calculate canopy conductance (m/s)
+        ! calculate canopy conductance (m/s) following Ball & Berry
         gsl = MAX(g0, g0 + g1 * anl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * & 
               rtck / press_srf
+        ! calculate canopy conductance (m/s) following Medlyn et al. 2011
+        !gsl = MAX(g0, 1.6_wp * ( 1._wp + g1 * beta_air * beta_soil_gs ) * anl / ( co2_mixing_ratio )) * & 
+        !      rtck / press_srf
         ! New internal CO2 from balance of supply and demand
         ! ci = cs - An * r_tot (Friend 2005 eq. 7)
         ! Friend 2005 eq. 8: r_tot = ( 1.42 / gsl + 1.60 / (speed * q_cdrag)) 
@@ -381,11 +386,15 @@ END SUBROUTINE calc_photosynthesis
                                                ! use in conductance calculation
      ! 0.4 Local
      REAL(wp) :: q_sat                         ! saturating specific humidity 
+     REAL(wp) :: vpd                           ! vapour pressure deficit 
 
      ! saturating specific humidity [kg kg-1]
      q_sat = calc_spec_humidity_sat(temp,press_srf) 
+     ! vapour pressure deficit [kPa] 
+     vpd = MAX(q_sat - q_air,0.0_wp) * press_srf / eps_vpd / 1000._wp
      ! scalar for atmospheric humidity as relative humidity (fractions)
-     beta = q_air/q_sat 
+     beta = q_air/q_sat ! Ball & Berry
+     !beta = MIN(5._wp,1._wp / SQRT(vpd + eps8)) ! Medlyn et al. 2011
 
   END FUNCTION calc_atm_moisture_stress
 

@@ -37,6 +37,7 @@ MODULE mo_base_memory
      TYPE(VegPool) :: growth              ! growth of tissues (mol m-2 timestep-1)
      TYPE(VegPool) :: litterfall          ! litter fall (mol m-2 timestep-1)
      REAL(wp) :: gpp                      ! gross photosynthesis (µmol CO2 m-2 s-1)
+     REAL(wp) :: an                       ! net photosynthesis (µmol CO2 m-2 s-1)
      REAL(wp) :: gpp_c13                  ! gross photosynthesis (µmol 13CO2 m-2 s-1)
      REAL(wp) :: gpp_c14                  ! gross photosynthesis (µmol 14CO2 m-2 s-1)
      REAL(wp) :: maint_respiration_leaf   ! foliar maintenance respiration (µmol CO2 m-2 s-1)
