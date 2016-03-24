@@ -166,13 +166,13 @@ MODULE mo_veg_parameters
       lambda_tau_labile_theta = 0.1_wp
       weibull_k_tau_labile_theta = 2.0_wp
       ! pull from reserve to labile pool due to phenology (1-exp(-(lambda * lai/target_lai)^k))
-      lambda_phiphen = 2._wp
+      lambda_phiphen = 1.8_wp
       weibull_k_phiphen = 4.0_wp
       ! pull from reserve to labile pool due to maintenance of labile pool (1-exp(-(lambda * labile/target_labile)^k))
-      lambda_phimaint = 1.2_wp
+      lambda_phimaint = 4.0_wp
       weibull_k_phimaint = 1.2_wp
       ! pull from reserve to labile pool due to maintenance of labile pool (1-exp(-(lambda * labile/target_labile)^k))
-      lambda_phistore = 4._wp
+      lambda_phistore = 2._wp
       weibull_k_phistore = 3._wp
 
       ! default fraction of nutrient resporption before leaf shedding

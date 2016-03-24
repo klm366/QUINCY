@@ -152,7 +152,7 @@ CONTAINS
        phi_phenology = exp(-(lambda_phiphen * lai / target_lai )**weibull_k_phiphen) & 
                        - exp(-(lambda_phiphen)**weibull_k_phiphen) 
     IF(target_labile_pool > eps8 .AND. labile_pool%carbon < target_labile_pool) & 
-       phi_maintenance = exp(-(lambda_phimaint * labile_pool%carbon / target_labile_pool)**weibull_k_phimaint) & 
+       phi_maintenance = exp(-(lambda_phimaint * MAX(0.0_wp,labile_pool%carbon) / target_labile_pool)**weibull_k_phimaint) & 
                        - exp(-(lambda_phimaint)**weibull_k_phimaint)
     IF(target_reserve_pool > eps8 .AND. reserve_pool%carbon < target_reserve_pool) & 
        phi_storage = exp(-(lambda_phistore * reserve_pool%carbon / target_reserve_pool)**weibull_k_phistore) & 
