@@ -13,7 +13,8 @@ SIZE    = size
 #-
 MODS1 = mo_land_constants.f90 \
 		mo_land_memory.f90 \
-		mo_land_parameters.f90
+		mo_land_parameters.f90 \
+        mo_land_util.f90
 
 OBJSMODS1 = $(MODS1:.f90=.o)
 #-
@@ -30,6 +31,7 @@ land:
 	@echo land is OK
 
 m_all: $(MODEL_LIB)($(OBJSMODS1))
+
 
 libbase:
 	(cd ../base; $(M_K) -f Makefile)
@@ -50,3 +52,11 @@ $(MODEL_LIB)(mo_land_parameters.o): \
 
 $(MODEL_LIB)(mo_land_memory.o): \
   $(BASE_LIB)(mo_kind.o)
+
+$(MODEL_LIB)(mo_land_util.o): \
+  $(BASE_LIB)(mo_kind.o) \
+  $(BASE_LIB)(mo_base_memory.o) \
+  $(BASE_LIB)(mo_base_util_functions.o) \
+  $(BASE_LIB)(mo_base_constants.o) \
+  $(MODEL_LIB)(mo_land_parameters.o)
+

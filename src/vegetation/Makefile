@@ -123,6 +123,5 @@ $(MODEL_LIB)(mo_veg_util.o): \
   $(BASE_LIB)(mo_base_memory.o) \
   $(BASE_LIB)(mo_base_util_functions.o) \
   $(BASE_LIB)(mo_base_constants.o) \
-  $(LAND_LIB)(mo_land_parameters.o) \
   $(MODEL_LIB)(mo_veg_parameters.o)
 

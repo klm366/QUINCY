@@ -121,7 +121,8 @@ MODULE mo_veg_parameters
     REAL(wp) :: beta_air = 2._wp
     REAL(wp) :: beta_soil_ps = 2._wp
     REAL(wp) :: beta_soil_gs = 2._wp
-    REAL(wp) :: weekly = 7._wp
+
+    REAL(wp) :: weekly = 7._wp         ! 7 days; constant across the model
   END TYPE AccumulationIntervalPlantClass
 
 

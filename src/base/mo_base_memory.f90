@@ -114,14 +114,19 @@ MODULE mo_base_memory
   END TYPE SoilClass
 
   ! 
-  ! Tile (integrates plant & soil)
+  ! Tile ( TileClass: integrates tile, plant & soil )
   ! 
   TYPE AccumulationTileClass
     ! definition of averages of variable across a certain period (model time steps)
+    ! see mo_land_memory for initialization of default values
     ! Environmental forcing
     REAL(wp) :: t_air = 1._wp
     REAL(wp) :: q_air = 1._wp
     REAL(wp) :: press_surf = 1._wp
+    ! memory of certain variables
+    REAL(wp) :: t_air_week     = 1._wp   ! 7 days
+    REAL(wp) :: t_air_month    = 1._wp   ! 30 days
+    REAL(wp) :: t_air_longterm = 1._wp   ! 30 years == 10950 days
   END TYPE AccumulationTileClass
 
   TYPE TileClass

@@ -20,6 +20,7 @@ PROGRAM plant_model_driver
   ! land
   USE mo_land_memory,        ONLY: init_tile_variable_accumulation
   USE mo_land_constants
+  USE mo_land_util
   ! vegetation
   USE mo_veg_parameters
   USE mo_veg_radiation
@@ -165,6 +166,7 @@ PROGRAM plant_model_driver
      ! 5.0 Accumulation
      ! 
      CALL update_vegetation_moving_averages(tile)
+     CALL update_tile_moving_averages(tile, atm2land%t_air)
      ! 
      ! 6.0 Output
      ! 

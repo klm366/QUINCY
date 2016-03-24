@@ -27,9 +27,12 @@ CONTAINS
     ! 
     ! 1.0 initialize default values
     ! 
-    tile(:)%accumulated%t_air             = 1._wp
-    tile(:)%accumulated%q_air             = 1._wp
+    tile(:)%accumulated%t_air             = 200._wp   ! temperature in K
+    tile(:)%accumulated%q_air             = 200._wp
     tile(:)%accumulated%press_surf        = 1._wp
+    tile(:)%accumulated%t_air_week        = 200._wp
+    tile(:)%accumulated%t_air_month       = 200._wp
+    tile(:)%accumulated%t_air_longterm    = 200._wp
   END SUBROUTINE init_tile_variable_accumulation
 
 END MODULE mo_land_memory
