@@ -13,7 +13,7 @@ MODULE mo_veg_output
   USE mo_kind, ONLY: wp, eps8
   USE mo_base_memory, ONLY: TileClass
   USE mo_base_constants, ONLY: ntile, one_day, dt
-  USE mo_base_configuration, ONLY: options
+  USE mo_base_config, ONLY: options
 
   IMPLICIT NONE
 
@@ -98,7 +98,7 @@ CONTAINS
     ! 
     ! 1.1 transform interval string to interval number (e.g. week -> 7)
     !   it is not necessary to pass 'options%model%output_interval_pool' as argument to open_pool_output_files
-    !   as 'options' is global & defined with SAVE in mo_base_configuration and initialized before this function is called
+    !   as 'options' is global & defined with SAVE in mo_base_config and initialized before this function is called
     ! 
     output_interval_pool = calc_output_time_interval(options%model%output_interval_pool)
     ! 

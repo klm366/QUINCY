@@ -10,7 +10,7 @@
 MODULE mo_atmland_forcing
 
   USE mo_kind
-  USE mo_base_configuration
+  USE mo_base_config
   USE mo_atmland_memory, ONLY: atm2land,land2atm
   USE mo_atmland_util
   USE mo_atmland_constants
@@ -81,7 +81,7 @@ CONTAINS
      ! 
      ! 2.2 update time-variant forcing
      ! 
-     SELECT CASE(options%forcing%option_forcing)  ! see mo_base_configuration
+     SELECT CASE(options%forcing%option_forcing)  ! see mo_base_config
        CASE('constant')
          ! default input values are not changed ?
        CASE('readfile')

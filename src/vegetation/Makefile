@@ -3,6 +3,8 @@ include ../../util/Make.inc.local
 #---------------------------------------------------------------------
 BASE_LIB = $(LIBDIR)/lib_base.a
 SXBASE_LIB = $(BASE_LIB)
+SHARED_LIB = $(LIBDIR)/lib_shared.a
+SXSHARED_LIB = $(SHARED_LIB)
 ATM_LIB = $(LIBDIR)/lib_atmland.a
 SXATM_LIB = $(ATM_LIB)
 LAND_LIB = $(LIBDIR)/lib_land.a
@@ -25,7 +27,8 @@ MODS1 = mo_veg_memory.f90 \
         mo_veg_growth.f90 \
         mo_veg_radiation.f90 \
         mo_veg_output.f90 \
-        mo_veg_util.f90
+        mo_veg_util.f90 \
+        mo_veg_config_class.f90
 
 
 OBJSMODS1 = $(MODS1:.f90=.o)
@@ -36,6 +39,7 @@ OBJSMODS1 = $(MODS1:.f90=.o)
 all:
 	@$(M_K) libland
 	@$(M_K) libatm
+	@$(M_K) libshared
 	@$(M_K) libbase
 	@$(M_K) m_all
 	@echo  vegetation is OK
@@ -51,6 +55,9 @@ libland:
 
 libatm:
 	(cd ../atmland; $(M_K) -f Makefile atmland)
+
+libshared:
+	(cd ../shared; $(M_K) -f Makefile shared)
 
 libbase:
 	(cd ../base; $(M_K) -f Makefile)
@@ -118,7 +125,7 @@ $(MODEL_LIB)(mo_veg_output.o): \
   $(BASE_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) \
   $(BASE_LIB)(mo_base_constants.o) \
-  $(BASE_LIB)(mo_base_configuration.o)
+  $(BASE_LIB)(mo_base_config.o)
 
 $(MODEL_LIB)(mo_veg_util.o): \
   $(BASE_LIB)(mo_kind.o) \
@@ -126,4 +133,9 @@ $(MODEL_LIB)(mo_veg_util.o): \
   $(BASE_LIB)(mo_base_util_functions.o) \
   $(BASE_LIB)(mo_base_constants.o) \
   $(MODEL_LIB)(mo_veg_parameters.o)
+
+$(MODEL_LIB)(mo_veg_config_class.o): \
+  $(BASE_LIB)(mo_kind.o) \
+  $(BASE_LIB)(mo_base_config.o) \
+  $(SHARED_LIB)(mo_namelist.o)
 

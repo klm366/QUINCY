@@ -1,10 +1,10 @@
 &PLANT_MODEL_OPTIONS
   ! options for the plant model, read by the plant_model_driver
-  read_output_interval_pool="daily"
-  read_output_interval_flux="daily"
+  read_output_interval_pool="weekly"
+  read_output_interval_flux="weekly"
   output_start_date=1
   output_end_date=200
-  flag_optimal_Nfraction=.TRUE.
+  flag_optimal_Nfraction=.FALSE.
   flag_optimal_Nleaf=.TRUE.
 /
 &FORCING_CTL

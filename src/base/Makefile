@@ -14,7 +14,7 @@ MODS1 = mo_kind.f90 \
         mo_base_constants.f90 \
         mo_base_memory.f90 \
         mo_base_util_functions.f90 \
-        mo_base_configuration.f90
+        mo_base_config.f90
 
 OBJSMODS1 = $(MODS1:.f90=.o)
 #-
@@ -45,6 +45,6 @@ $(MODEL_LIB)(mo_base_memory.o): \
 $(MODEL_LIB)(mo_base_util_functions.o): \
   $(MODEL_LIB)(mo_kind.o)
 
-$(MODEL_LIB)(mo_base_configuration.o): \
+$(MODEL_LIB)(mo_base_config.o): \
   $(MODEL_LIB)(mo_kind.o)
 

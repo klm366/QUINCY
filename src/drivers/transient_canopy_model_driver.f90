@@ -11,7 +11,7 @@ PROGRAM canopy_model_driver
   USE mo_kind
   USE mo_base_memory
   USE mo_base_constants
-  USE mo_base_configuration
+  USE mo_base_config
   ! atmland
   USE mo_atmland_constants
   USE mo_atmland_memory
@@ -100,7 +100,7 @@ PROGRAM canopy_model_driver
         CASE (POSITIONED)
           READ (f_unit, forcing_ctl)
       END SELECT
-    ! pass values as read from file to the variable set in mo_base_configuration
+    ! pass values as read from file to the variable set in mo_base_config
     options%forcing%option_forcing = create_forcing
   ! 
   ! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing

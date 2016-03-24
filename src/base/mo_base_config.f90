@@ -6,8 +6,9 @@
 !!
 !! @par Revision History
 !! First version by Jan Engel (2016-03-08)
+!! Renamed mo_base_configuration to mo_base_config by Jan Engel (2016-03-24)
 !!
-MODULE mo_base_configuration
+MODULE mo_base_config
 
   USE mo_kind, ONLY : wp
 
@@ -53,4 +54,4 @@ MODULE mo_base_configuration
 
   PUBLIC :: options			        ! only this main options TYPE is global
 
-END MODULE mo_base_configuration
+END MODULE mo_base_config
