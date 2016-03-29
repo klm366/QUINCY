@@ -46,6 +46,7 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: vcmax2n                      ! Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
   REAL(wp),SAVE :: chl2n                        ! moles chlorophyll per mol of N
   REAL(wp),SAVE :: k1_fnl_struc                 ! slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
+  REAL(wp),SAVE :: jmax2vcmax                   ! ratio of Jmax25/Vcmax25 for prescribed leaf N 
   REAL(wp),SAVE :: pO2                          ! Partial Pressure of O2 in kPa
   REAL(wp),SAVE :: E0kc                         ! Baseline of Michaelis-Menten constant of Rubisco for CO2 (unit?)
   REAL(wp),SAVE :: E1kc                         ! Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 (unit?)
@@ -228,6 +229,8 @@ MODULE mo_veg_parameters
       chl2n=1000._wp/25.5_wp  ! moles chlorophyll per mmol N
       ! slope of the relationship of structural leaf N against leaf N in fraction/mmol (Friend 1997)
       k1_fnl_struc=71.4_wp * molar_mass_N / 1000000._wp
+      ! in static leaf N mode: prescribed ratio of Jmax25/Vcmax25
+      jmax2vcmax=1.92_wp      ! text book
       ! parameters describing the canopy profile of N 
       !  extinction coefficient to describe decline of N within the canopy 
       kn = 0.11_wp
@@ -296,7 +299,7 @@ MODULE mo_veg_parameters
       ! temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5
       veg_param%k0_fnl_struc(:) = & 
       !(/0.67_wp,0.67_wp,0.67_wp,0.67_wp,0.83_wp,0.83_wp,0.67_wp,0.67_wp/) 
-      (/0.79_wp,0.73_wp,0.67_wp,0.7_wp,0.87_wp,0.83_wp,0.5_wp,0.67_wp/) 
+      (/0.79_wp,0.73_wp,0.67_wp,0.67_wp,0.87_wp,0.83_wp,0.3_wp,0.67_wp/) 
       !Le Maire et al. 2012 (derived from grasses, does not give plausble results for needles)
       !0.012_wp / 0.48_wp * molar_mass_C / molar_mass_N / veg_param%sla(:)/&
       !(1._wp / veg_param%sla(:) / veg_param%cn_leaf(:)) 

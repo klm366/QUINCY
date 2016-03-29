@@ -157,7 +157,7 @@ SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,k0_fn
         !fnl_et(icanop) = 0.273_wp * nf     ! OBS: currently only for code consistency 
         !fnl_rub(icanop) = 0.128_wp * nf    ! OBS: currently only for code consistency
         ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
-        fnl_et(icanop) = (1._wp - (fnl_oth + fnl_chl(icanop))) * (1._wp / (1._wp + jmax2n/vcmax2n))
+        fnl_et(icanop) = (1._wp - (fnl_oth + fnl_chl(icanop))) / (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
         ! fraction of Rubisco is determined as the remainder
         fnl_rub(icanop) = 1._wp - fnl_oth - fnl_chl(icanop) - fnl_et(icanop)
         lc = lc + canopy_layer_depth_act(icanop) / 2._wp & 
