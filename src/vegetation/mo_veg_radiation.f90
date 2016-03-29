@@ -194,8 +194,10 @@ CONTAINS
            ! lai = lc + canopy_layer_depth_act
            canopy_layer_depth_act(icanop) = lai - lc 
        ENDIF
-     lc = lc + canopy_layer_depth_act(icanop)
+       lc = lc + canopy_layer_depth_act(icanop)
      ENDDO
+     ! make sure all LAI is represented by letting last layer go to the end of the canopy
+     IF(lc < lai ) canopy_layer_depth_act(ncanop) = canopy_layer_depth_act(ncanop) + lai - lc
   ENDIF
 
   END FUNCTION calc_canopy_layer_depth
