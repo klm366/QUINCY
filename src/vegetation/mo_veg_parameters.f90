@@ -149,8 +149,9 @@ MODULE mo_veg_parameters
       ! Taken from Sprugel et al. Respiration from the organ level to the stand. 
       ! In: Smith WK, Hinckley, T.M., editor. Physiological Ecology of Coniferous Forests.
       ! San Diego, CA, USA: Academic Press; 1996.
-      ! Note converted from 7.4 e-7 to 1.48 e-6 to account for the different values of the Lloyd&Taylor equation
-      fmaint_rate_base = 1.48_wp 
+      ! Note converted from 7.4 e-7 to 1.25 e-6 to account for the different values of the Lloyd&Taylor equation
+      ! such that the applied rates a comparable at 15-20°C
+      fmaint_rate_base = 1.25_wp 
       ! parameters in the Lloyd and Taylor temperature response function (Lloyd & Taylor, 1996, Funct. Ecol.) 
       t_maint_k1 = 308.56_wp  
       t_maint_k2 = 56.02_wp
@@ -183,7 +184,7 @@ MODULE mo_veg_parameters
       ! ratio of root C:N to leaf C:N
       root2leaf_cn = 0.85_wp 
       ! ratio of root C:N to leaf C:N
-      wood2leaf_cn = 0.85_wp 
+      wood2leaf_cn = 0.145_wp 
       ! ratio of root N:P to leaf N:P
       root2leaf_np = 1.0_wp 
       ! ratio of root N:P to leaf N:P
