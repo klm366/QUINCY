@@ -44,6 +44,7 @@ PROGRAM plant_model_driver
   REAL(wp) :: ref_theta  = 100._wp         ! soil water availability in %
   REAL(wp) :: ref_lai    = 3._wp           ! LAI
   REAL(wp) :: ref_nleaf  = 2.0_wp          ! N leaf per unit leaf area in gN/m2
+  REAL(wp) :: ref_pft = 1                  ! PFT to be simulated
 
   ! 
   ! 1.0 Initialisation of vegetation parameters, constants and forcing
@@ -67,6 +68,7 @@ PROGRAM plant_model_driver
   veg_param%tjmax_opt(:)  = 20._wp+0.35_wp*(atm2land%t_air - Tzero)   ! conversion from K to °C
   tile(:)%soil%theta      = ref_theta
   tile(:)%plant%lai       = 1.0_wp
+  tile(1)%plant%pftid     = ref_pft
   DO i = 1,ntile
      tile(i)%plant%pool%leaf%carbon = tile(i)%plant%lai / veg_param%sla(tile(i)%plant%pftid)
      tile(i)%plant%pool%leaf%nitrogen = tile(i)%plant%pool%leaf%carbon / veg_param%cn_leaf(tile(i)%plant%pftid)

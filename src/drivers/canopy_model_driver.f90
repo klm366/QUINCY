@@ -39,7 +39,7 @@ PROGRAM canopy_model_driver
   REAL(wp) :: ref_theta = 100._wp          ! soil water availability in %
   REAL(wp) :: ref_lai = 3._wp              ! LAI
   REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
-  INTEGER :: pft = 1                       ! PFT identifier
+  INTEGER  :: ref_pft = 1                  ! PFT identifier
   !
   ! 1.0 Initialisation of vegetation parameters and constants
   ! 
@@ -76,11 +76,14 @@ PROGRAM canopy_model_driver
   !
   tile(:)%soil%theta = ref_theta
   tile(1)%plant%lai = ref_lai 
-  IF(pft==0) THEN
+  IF(ref_pft==0) THEN
     tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
   ELSE
-    tile(1)%plant%pool%leaf%nitrogen=tile(1)%plant%lai/veg_param%sla(pft)/veg_param%cn_leaf(pft)
-    tile(1)%plant%pftid=pft
+    tile(1)%plant%pool%leaf%nitrogen=tile(1)%plant%lai & 
+            / veg_param%sla(ref_pft)/veg_param%cn_leaf(ref_pft)
+    tile(1)%plant%pool%leaf%phosphorus=tile(1)%plant%pool%leaf%nitrogen & 
+             / veg_param%np_leaf(ref_pft)
+    tile(1)%plant%pftid=ref_pft
   ENDIF
   ! 
   ! 2.0 Sensitivity plots
@@ -214,5 +217,23 @@ PROGRAM canopy_model_driver
 
   ENDDO
   tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
+
+  ! 2.8 PFT
+  lun = lun + 1
+  WRITE(lun,*) 'Nleaf A GC CI'
+  DO i = 1,npft
+     tile(1)%plant%pool%leaf%nitrogen=tile(1)%plant%lai/veg_param%sla(i)/veg_param%cn_leaf(i)
+     tile(1)%plant%pool%leaf%phosphorus=tile(1)%plant%pool%leaf%nitrogen/veg_param%np_leaf(i)
+     tile(1)%plant%pftid=i
+
+     CALL update_radiation(tile)
+     CALL update_canopy_fluxes(tile,veg_param)
+
+     WRITE(lun,'(4F16.7)') tile(1)%plant%pool%leaf%nitrogen/tile(1)%plant%lai*molar_mass_N, & 
+           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci
+
+  ENDDO 
+STOP
+  
 
 END PROGRAM canopy_model_driver
