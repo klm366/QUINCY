@@ -432,7 +432,7 @@ and \\texttt{timemean}($X$) defined as
             if D: in_files.append ( D )
             if U: in_files.append ( U )
             exp.B4J_index [ "A" ] = A = None
-            
+
             self.logger.debug ( exp )
 
             
@@ -912,6 +912,10 @@ and \\texttt{timemean}($X$) defined as
         
     
         # 4.b) if report is switched on, prepare text blocks
+
+        print self
+        print '############'
+        print self.analyses
             
         self.logger.debug ( "Exiting." )
         

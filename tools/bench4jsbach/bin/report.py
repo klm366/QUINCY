@@ -37,7 +37,7 @@ doc_template = """
 %(body)s
 
 \section{Summary}
-%(epilog)s \lipsum[1]
+%(epilog)s
 
 \end{document}
 """
@@ -243,6 +243,56 @@ the plots\\\\
         self.body += section
     
 
+    def write_summary ( self ):
+        
+        return """This chapter provides a brief overview of the analyses and
+        benchmarks being done.
+        
+        \\begin{tabularx}{\\linewidth}{lLL}
+        \\toprule
+        \\textbf{variable} & \\textbf{analyis} & \\textbf{candidate} \\\\
+        \\addlinespace
+        \\cmidrule(r){1-3}
+        %s
+        \\\\ \\bottomrule
+        \\end{tabularx}
+        
+        """ % ( '\\\\\n'.join ( '%s & %s & %s' %\
+        (( teXify ( varname ),
+        teXify ( str ( analysesitemdict [ 'name' ])),
+        'candidate') \
+        if self.analyses [ varname ].index ( analysesitemdict ) == 0 \
+        else ( '',
+        teXify ( str ( analysesitemdict [ 'title' ])),
+        teXify ( str ( analysesitemdict [ 'name' ])))) \
+        for varname in self.analyses \
+              for analysesitemdict in self.analyses [ varname ] ))
+
+    
+
+    
+        # return """This chapter provides a brief overview of the analyses and
+        # #benchmarks being done.
+        
+        # \\begin{tabularx}{\\linewidth}{lLL}
+        # \\toprule
+        # \\textbf{variable} & \\textbf{analyis method} & \\textbf{classification string} \\\\
+        # \\addlinespace
+        # \\cmidrule(r){1-3}
+        # %s
+        # \\\\ \\bottomrule
+        # \\end{tabularx}
+        
+        # """ % ( '\\\\\n'.join ( '%s & %s & %s' %\
+        # (( teXify ( varname ),
+        # teXify ( str ( analysesitemdict [ 'title' ])),
+        # teXify ( str ( analysesitemdict [ 'name' ]))) \
+        # if self.analyses [ varname ].index ( analysesitemdict ) == 0 \
+        # else ( '',
+        # teXify ( str ( analysesitemdict [ 'title' ])),
+        # teXify ( str ( analysesitemdict [ 'name' ])))) \
+        # for varname in self.analyses \
+        #       for analysesitemdict in self.analyses [ varname ] ))
         
     def write_report ( self ):
         self.logger.debug ( "Starting." )
@@ -268,8 +318,7 @@ the plots\\\\
                                 'graphicpath': self.graphic_path,
                                 'abstract'   : self.write_description (),
                                 'body'       : self.body,
-                                'epilog'     : """This chapter provides a brief overview of the analyses and 
-                                benchmarks being done."""}
+                                'epilog'     : self.write_summary ()}
 
         self.logger.debug ( "Latex source code: " + log_message_newline +\
                             page )
