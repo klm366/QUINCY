@@ -1,4 +1,4 @@
-!!
+!>
 !! @brief driver for the stand-alone canopy model (fapar and photosynthesis) 
 !!
 !! @author

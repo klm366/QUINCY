@@ -1,4 +1,4 @@
-!!
+!>
 !! @brief driver for the stand-alone plant growth 
 !!
 !! @author

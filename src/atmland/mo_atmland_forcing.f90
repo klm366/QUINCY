@@ -1,4 +1,4 @@
-!!
+!>
 !! @brief dummy forcing routine for generic forcing 
 !!
 !! @author

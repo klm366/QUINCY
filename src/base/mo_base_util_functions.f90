@@ -1,4 +1,4 @@
-!!
+!>
 !! @brief generic functions useful across the whole model
 !!
 !! @author

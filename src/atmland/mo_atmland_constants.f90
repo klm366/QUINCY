@@ -1,4 +1,4 @@
-!!
+!>
 !! @brief memory structure for atm->land and land->atm processes (not used yet) 
 !!
 !! @author

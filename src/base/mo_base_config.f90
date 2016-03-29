@@ -1,4 +1,4 @@
-!!
+!>
 !! @brief flags (switches) to en-/disable certain model functionalities
 !!
 !! @author

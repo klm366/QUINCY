@@ -5,7 +5,7 @@
   output_start_date=1
   output_end_date=200
   flag_optimal_Nfraction=.FALSE.
-  flag_optimal_Nleaf=.TRUE.
+  flag_optimal_Nleaf=.FALSE.
 /
 &FORCING_CTL
   ! options for plant model forcing

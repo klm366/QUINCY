@@ -1,4 +1,4 @@
-!!
+!>
 !! @brief: taken from MPI-ESM 1.2 to set kind and minimum precision of calculation 
 !!
 !! @author

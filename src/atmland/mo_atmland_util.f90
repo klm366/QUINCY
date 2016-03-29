@@ -1,4 +1,4 @@
-!!
+!>
 !! @brief functions needed to calculate variables affecting the atm-land interface 
 !!
 !! @author

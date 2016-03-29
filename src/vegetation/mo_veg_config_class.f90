@@ -1,4 +1,4 @@
-!!
+!>
 !! @brief contains structures and methods for veg config, including namelist read
 !!
 !! @author
