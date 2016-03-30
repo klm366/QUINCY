@@ -61,18 +61,27 @@ analyses_var_test_item = { 'name'     : None,
                            'matrix'   : False,
                            'vector'   : False,
                            'cans'     : [],
+                           'summary'  : False,
                            'title'    : None }
 
 analyses_var_test_can_item = { 'name'     : None,
                                'infiles'  : [],
                                'outfiles' : [],
+                               'sum_no'   : None,
+                               'sum_unit' : 'one',
                                'plots'    : []}
 
-def init_analyses_var_test_can_item ( name = None ):
+
+
+def init_analyses_var_test_can_item ( name = None, sum_unit = 'one' ):
+
     ret =  copy.deepcopy ( analyses_var_test_can_item )
-    ret [ 'name' ] = name 
+
+    ret [ 'name' ]     = name
+    ret [ 'sum_unit' ] = sum_unit
+
     return ret
-                   
+
 
 
 def includegraphics_template ( path, width = '1', hspace = '0' ):
@@ -263,10 +272,10 @@ the plots\\\\
         'candidate') \
         if self.analyses [ varname ].index ( analysesitemdict ) == 0 \
         else ( '',
-        teXify ( str ( analysesitemdict [ 'title' ])),
-        teXify ( str ( analysesitemdict [ 'name' ])))) \
+        teXify ( str ( analysesitemdict [ 'name' ])),
+               '' )) \
         for varname in self.analyses \
-              for analysesitemdict in self.analyses [ varname ] ))
+            for analysesitemdict in self.analyses [ varname ] if analysesitemdict [ 'summary' ] == True ))
 
     
 

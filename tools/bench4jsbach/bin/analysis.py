@@ -270,8 +270,10 @@ and \\texttt{timemean}($X$) defined as
         globalNtime_mean [ 'title' ]  = 'Global and time mean'
         globalNtime_mean [ 'matrix' ] = False
         globalNtime_mean [ 'vector' ] = True
-        globalNtime_mean [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
+        globalNtime_mean [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name,
+                                                                            sum_unit = 'W m-2' ) \
                                           for can in self.experiments if can.B4J_iscan ]
+        globalNtime_mean [ 'summary' ] = True
         self.analyses [ A_varname ].append ( globalNtime_mean )
         
         
@@ -523,10 +525,12 @@ and \\texttt{timemean}($X$) defined as
 
         # 4.a) collecting information for common adjustment of colorbar
         delta_min = sys.float_info.max
-        delta_max = sys.float_info.min
+        delta_max = - sys.float_info.max
         can.B4J_index [ "delta_maxs" ] = []
         can.B4J_index [ "delta_mins" ] = []
     
+       
+        delta_name = 'delta'
         
         for can in self.experiments:
             if not can.B4J_iscan: continue
@@ -545,15 +549,16 @@ and \\texttt{timemean}($X$) defined as
                     'startdate'      : str ( yearlist [ 0 ]),
                     'finaldate'      : str ( yearlist [ -1 ]),
                     'suffix'         : write_suffix }
-                cdo.mul ( input=" -sub " +\
-                          can.B4J_index [ "A_sm" ] + " " +\
-                          ref.B4J_index [ "A_sm" ] + " " +\
-                          ref.B4J_index [ "D_sm" ],
-                          output=can.B4J_index [ delta_str ],
-                          options='-f %s' % write_suffix )
+                cdo.setname ( "delta",
+                              input=" -setunit,'W m-2' -setcode,'9999' -mul -sub " +\
+                              can.B4J_index [ "A_sm" ] + " " +\
+                              ref.B4J_index [ "A_sm" ] + " " +\
+                              ref.B4J_index [ "D_sm" ],
+                              output=can.B4J_index [ delta_str ],
+                              options='-f %s' % write_suffix )
 
                 nc_fid = Dataset ( can.B4J_index [ delta_str ], 'r')
-                albedo_delta = nc_fid.variables [ A_varname ][ : ] 
+                albedo_delta = nc_fid.variables [ delta_name ][ : ] 
                 nc_fid.close ()
                 vmax = albedo_delta.max ()
                 vmin = albedo_delta.min ()
@@ -703,7 +708,7 @@ and \\texttt{timemean}($X$) defined as
                 for i in range ( 4 ):
                     ax [i] = plt.subplot ( gs1 [ i ])
                     d [i] = Data ( can.B4J_index [ delta_str ],
-                                   'albedo',
+                                   delta_name,
                                    read       = True,
                                    start_time = dates [ i ],
                                    label      = seasons [ i ] )    
@@ -782,12 +787,12 @@ and \\texttt{timemean}($X$) defined as
                 globalNtime_mean_can [ 'infiles' ].append ( can.B4J_index [ gm_str ])
                 nc_fid = Dataset ( can.B4J_index [ gm_str ])  
                 time = nc_fid.variables [ 'time' ][ : ]
-                albedo_gm = nc_fid.variables['albedo'][:] 
+                albedo_gm = nc_fid.variables[delta_name][:] 
                 nc_fid.close ()
 
                 globalNtime_mean_can [ 'infiles' ].append ( can.B4J_index [ tm_str ])
                 nc_fid = Dataset ( can.B4J_index [ tm_str ], 'r')
-                albedo_tm = nc_fid.variables [ 'albedo' ][ : ] 
+                albedo_tm = nc_fid.variables [ delta_name ][ : ] 
                 nc_fid.close ()
 
                 xcoords, ycoords = self.get_seasonal_period_2d_coords ( time, albedo_gm [ :, 0, 0 ],
@@ -864,12 +869,12 @@ and \\texttt{timemean}($X$) defined as
                 globalNtime_dev_can [ 'infiles' ].append ( can.B4J_index [ gd_str ])
                 nc_fid = Dataset ( can.B4J_index [ gd_str ])  
                 time = nc_fid.variables [ 'time' ][ : ]
-                albedo_gd = nc_fid.variables['albedo'][:] 
+                albedo_gd = nc_fid.variables[delta_name][:] 
                 nc_fid.close ()
 
                 globalNtime_dev_can [ 'infiles' ].append ( can.B4J_index [ td_str ])
                 nc_fid = Dataset ( can.B4J_index [ td_str ], 'r')
-                albedo_td = nc_fid.variables [ 'albedo' ][ : ] 
+                albedo_td = nc_fid.variables [ delta_name ][ : ] 
                 nc_fid.close ()
 
                 xcoords, ycoords = self.get_seasonal_period_2d_coords ( time, albedo_gd [ :, 0, 0 ],
