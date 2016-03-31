@@ -1,8 +1,8 @@
 # site specific compiler settings
 COMP = x86_64-gfortran
 C_N = gfortran-mp-4.5
-M_K = gmake --no-print-directory
-F_C = $(C_N) -c
+M_K = make --no-print-directory
+F_C = $(C_N) -c -cpp -ffree-line-length-0
 F_O = -O -I$(MODDIR) -J${MODDIR}
 F_L = $(C_N)
 A_C = ar -r
