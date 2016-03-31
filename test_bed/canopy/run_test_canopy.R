@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 #program to plot cexchange output 
 make=read.delim('../../util/Make.inc.local',header=F,sep="=",stringsAsFactors=F)
 comp=gsub(" $","",gsub("^ ","",make[gsub(" $","",make[,1])=="COMP",2]))

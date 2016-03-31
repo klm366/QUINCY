@@ -30,6 +30,7 @@ PROGRAM plant_model_driver
   USE mo_veg_memory,         ONLY: init_plant_variable_accumulation
   USE mo_veg_util
   USE mo_veg_config_class
+  USE mo_veg_soil
 
 
   IMPLICIT NONE
@@ -67,6 +68,8 @@ PROGRAM plant_model_driver
   ! 
   veg_param%tjmax_opt(:)  = 20._wp+0.35_wp*(atm2land%t_air - Tzero)   ! conversion from K to °C
   tile(:)%soil%theta      = ref_theta
+  tile(:)%soil%ammonium = 1.0_wp
+  tile(:)%soil%phosphate  = 1.0_wp
   tile(:)%plant%lai       = 1.0_wp
   tile(1)%plant%pftid     = ref_pft
   DO i = 1,ntile
@@ -77,6 +80,8 @@ PROGRAM plant_model_driver
   tile(:)%plant%pool%labile%carbon      = 100.0_wp
   tile(:)%plant%pool%labile%nitrogen    = 10.0_wp
   tile(:)%plant%pool%labile%phosphorus  = 1.0_wp
+  tile(:)%soil%ammonium = 1.0_wp
+  tile(:)%soil%phosphate  = 1.0_wp
   ! 
   ! 1.3 Read veg config paramter from namelist 
   ! 
@@ -101,32 +106,35 @@ PROGRAM plant_model_driver
      ! 
      ! 2.2 set orbital parameters and update time-variant forcing; 
      ! 
-     CALL update_forcing(time,grid)  ! see mo_atmland_forcing
+     CALL update_forcing(time,grid)  
      ! 
      ! 3.0 canopy calculation fluxes
      ! 
-     CALL update_radiation(tile)                 ! atm2land land2atm are global TYPES, see mo_atmland_memory
-     CALL update_canopy_fluxes(tile, veg_param)  ! atm2land is a global TYPE, see mo_atmland_memory
+     CALL update_radiation(tile)    
      ! 
-     ! 4.0 calculate vegetation growth and turnover
+     ! 4.0 update soil (biogeochemical part - here only N/P uptake)
      ! 
-     CALL update_vegetation(tile,atm2land%t_air,veg_param)
+     CALL calc_nutrient_uptake(tile, veg_param)  
+     !  
+     ! 5.0 calculate vegetation growth and turnover
      ! 
-     ! 5.0 Accumulation
+     CALL update_vegetation(tile,veg_param)
+     ! 
+     ! 6.0 Accumulation
      ! 
      CALL update_vegetation_moving_averages(tile)
      CALL update_tile_moving_averages(tile)
      ! 
-     ! 6.0 Output
+     ! 7.0 Output
      ! 
-     ! 6.1 pool: write output in certain intervals, see mo_veg_output
+     ! 7.1 pool: write output in certain intervals, see mo_veg_output
      ! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
      ! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
      CALL write_output_pool(time, tile)
-     ! 6.2 flux: write output in certain intervals, see mo_veg_output
+     ! 7.2 flux: write output in certain intervals, see mo_veg_output
      CALL write_output_flux(time, tile)
      ! 
-     ! 7.0 check timer
+     ! 8.0 check timer
      ! 
      IF(time > one_year) time = time - one_year   ! largest value of time ~ 365; see mo_base_constants
 

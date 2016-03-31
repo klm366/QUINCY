@@ -31,7 +31,7 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
    ! 0.1 Input
    TYPE(VegetationParameterClass), INTENT(in) :: veg_param  ! list of vegetation parameters
    ! 0.2 In-Output
-   TYPE(TileClass),DIMENSION(ntile) :: tile  ! root tile
+   TYPE(TileClass), INTENT(inout)             :: tile       ! current tile
    ! 0.3 Output
    ! 0.4 Local
    REAL(wp),DIMENSION(ncanop) :: agl,anl,rl,gsl,cil
@@ -40,76 +40,72 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
    REAL(wp) :: beta_soil_ps
    REAL(wp) :: beta_soil_gs
    INTEGER :: pftid
-   INTEGER :: t,icanop
+   INTEGER :: icanop
 
-   DO t = 1,ntile
+   ! initialse output
+   agl(:) = 0.0_wp 
+   anl(:) = 0.0_wp 
+   rl(:) = 0.0_wp
+   gsl(:) = 0.0_wp
+   cil(:) = 0.0_wp     
 
-     ! initialse output
-     agl(:) = 0.0_wp 
-     anl(:) = 0.0_wp 
-     rl(:) = 0.0_wp
-     gsl(:) = 0.0_wp
-     cil(:) = 0.0_wp     
+   pftid = tile%plant%pftid
 
-     pftid = tile(t)%plant%pftid
+   ! calculate the moisture scaling factor for photosynthesis
+   beta_air = calc_atm_moisture_stress(atm2land%t_air,atm2land%q_air,atm2land%press_srf) 
+   beta_soil_ps = calc_soil_moisture_stress(tile%soil%theta, & 
+                       veg_param%lambda_soil_ps(pftid),veg_param%weibull_k_soil_ps(pftid))
+   beta_soil_gs = calc_soil_moisture_stress(tile%soil%theta, &
+                       veg_param%lambda_soil_gs(pftid),veg_param%weibull_k_soil_gs(pftid))
 
-     ! calculate the moisture scaling factor for photosynthesis
-     beta_air = calc_atm_moisture_stress(atm2land%t_air,atm2land%q_air,atm2land%press_srf) 
-     beta_soil_ps = calc_soil_moisture_stress(tile(t)%soil%theta, & 
-                         veg_param%lambda_soil_ps(pftid),veg_param%weibull_k_soil_ps(pftid))
-     beta_soil_gs = calc_soil_moisture_stress(tile(t)%soil%theta, &
-                         veg_param%lambda_soil_gs(pftid),veg_param%weibull_k_soil_gs(pftid))
+   ! determine actual canopy layers
+   canopy_layer_depth_act = calc_canopy_layer_depth(tile%plant%lai)
 
-     ! determine actual canopy layers
-     canopy_layer_depth_act = calc_canopy_layer_depth(tile(t)%plant%lai)
+   ! update N distribution in the canopy
+   CALL calc_canopy_n_distribution(tile%plant%pool%leaf%nitrogen,tile%plant%lai, & 
+                                   canopy_layer_depth_act, &
+                                   veg_param%nf(pftid), & 
+                                   veg_param%k0_fnl_struc(pftid), & 
+                                   tile%plant%canopy_layer(:)%nl_tot, & 
+                                   tile%plant%canopy_layer(:)%fnl_chl, & 
+                                   tile%plant%canopy_layer(:)%fnl_et, & 
+                                   tile%plant%canopy_layer(:)%fnl_rub)
+   ! calculate photosynthesis per layer
+   DO icanop = 1,ncanop
+      IF(canopy_layer_depth_act(icanop).GT.0.0_wp)THEN
 
-     ! update N distribution in the canopy
-     CALL calc_canopy_n_distribution(tile(t)%plant%pool%leaf%nitrogen,tile(t)%plant%lai, & 
-                                     canopy_layer_depth_act, &
-                                     veg_param%nf(pftid), & 
-                                     veg_param%k0_fnl_struc(pftid), & 
-                                     tile(t)%plant%canopy_layer(:)%nl_tot, & 
-                                     tile(t)%plant%canopy_layer(:)%fnl_chl, & 
-                                     tile(t)%plant%canopy_layer(:)%fnl_et, & 
-                                     tile(t)%plant%canopy_layer(:)%fnl_rub)
-     ! calculate photosynthesis per layer
-     DO icanop = 1,ncanop
-        IF(canopy_layer_depth_act(icanop).GT.0.0_wp)THEN
+        CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+                                 tile%plant%canopy_layer(icanop)%par_sunlit, &
+                                 tile%plant%canopy_layer(icanop)%par_shaded, & 
+                                 tile%plant%canopy_layer(icanop)%fleaf_sunlit, &
+                                 beta_air,beta_soil_ps,beta_soil_gs, &
+                                 tile%plant%canopy_layer(icanop)%fnl_chl, & 
+                                 tile%plant%canopy_layer(icanop)%fnl_et, & 
+                                 tile%plant%canopy_layer(icanop)%fnl_rub, & 
+                                 tile%plant%canopy_layer(icanop)%nl_tot, & 
+                                 veg_param%tjmax_opt(pftid), &
+                                 veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
+                                 agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop))
 
-          CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
-                                    tile(t)%plant%canopy_layer(icanop)%par_sunlit, &
-                                    tile(t)%plant%canopy_layer(icanop)%par_shaded, & 
-                                    tile(t)%plant%canopy_layer(icanop)%fleaf_sunlit, &
-                                    beta_air,beta_soil_ps,beta_soil_gs, &
-                                    tile(t)%plant%canopy_layer(icanop)%fnl_chl, & 
-                                    tile(t)%plant%canopy_layer(icanop)%fnl_et, & 
-                                    tile(t)%plant%canopy_layer(icanop)%fnl_rub, & 
-                                    tile(t)%plant%canopy_layer(icanop)%nl_tot, & 
-                                    veg_param%tjmax_opt(pftid), &
-                                    veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
-                                    agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop))
-
-        ENDIF
-     ENDDO
-
-     ! integrate to canopy level values
-     tile(t)%plant%flux%gpp = 0.0_wp
-     tile(t)%plant%flux%an = 0.0_wp
-     tile(t)%plant%flux%maint_respiration_leaf = 0.0_wp
-     tile(t)%plant%flux%gc = 0.0_wp
-     tile(t)%plant%flux%ci = 0.0_wp
-     DO icanop = 1,ncanop
-        tile(t)%plant%flux%gpp = tile(t)%plant%flux%gpp + agl(icanop) * canopy_layer_depth_act(icanop) 
-        tile(t)%plant%flux%an = tile(t)%plant%flux%an + anl(icanop) * canopy_layer_depth_act(icanop) 
-        tile(t)%plant%flux%maint_respiration_leaf = tile(t)%plant%flux%maint_respiration_leaf + & 
-               rl(icanop) * canopy_layer_depth_act(icanop) 
-        tile(t)%plant%flux%gc = tile(t)%plant%flux%gc + gsl(icanop) * canopy_layer_depth_act(icanop)
-        tile(t)%plant%flux%ci = tile(t)%plant%flux%ci + cil(icanop) * canopy_layer_depth_act(icanop)
-     ENDDO
-
-     tile(t)%plant%flux%ci = tile(t)%plant%flux%ci / sum(canopy_layer_depth_act)
-
+     ENDIF
   ENDDO
+
+  ! integrate to canopy level values
+  tile%plant%flux%gpp = 0.0_wp
+  tile%plant%flux%an = 0.0_wp
+  tile%plant%flux%maint_respiration_leaf = 0.0_wp
+  tile%plant%flux%gc = 0.0_wp
+  tile%plant%flux%ci = 0.0_wp
+  DO icanop = 1,ncanop
+     tile%plant%flux%gpp = tile%plant%flux%gpp + agl(icanop) * canopy_layer_depth_act(icanop) 
+     tile%plant%flux%an = tile%plant%flux%an + anl(icanop) * canopy_layer_depth_act(icanop) 
+     tile%plant%flux%maint_respiration_leaf = tile%plant%flux%maint_respiration_leaf + & 
+            rl(icanop) * canopy_layer_depth_act(icanop) 
+     tile%plant%flux%gc = tile%plant%flux%gc + gsl(icanop) * canopy_layer_depth_act(icanop)
+     tile%plant%flux%ci = tile%plant%flux%ci + cil(icanop) * canopy_layer_depth_act(icanop)
+  ENDDO
+
+  tile%plant%flux%ci = tile%plant%flux%ci / sum(canopy_layer_depth_act)
 
   END SUBROUTINE update_canopy_fluxes
 

@@ -26,6 +26,7 @@ MODULE mo_base_config
     ! Set whether model runs optimising schemes:
     LOGICAL :: flag_optimal_Nfraction = .FALSE.
     LOGICAL :: flag_optimal_Nleaf     = .FALSE.
+    LOGICAL :: flag_calc_soil_uptake  = .FALSE.  ! .TRUE. .FALSE.
   END TYPE ModelOptionsClass
 
   TYPE ForcingOptionsClass

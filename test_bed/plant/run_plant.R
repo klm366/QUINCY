@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # program to plot plant model output 
 #  changed pattern to "*.txt" in line 8 [Jan Engel 20160315]
 #  set pdf options [Jan Engel 20160316]

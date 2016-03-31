@@ -72,10 +72,7 @@ MODULE mo_base_memory
      REAL(wp) :: fleaf_sunlit = 0.0_wp ! fraction of layer which is sunlit
   END TYPE VegCanopy
 
-  ! 
-  ! Plant
-  ! 
-  TYPE AccumulationPlantClass
+ TYPE AccumulationPlantClass
     ! definition of averages of variable across a certain period (model time steps)
     ! init subroutine in mo_veg_memory
     ! Light in the canopy
@@ -89,6 +86,9 @@ MODULE mo_base_memory
     ! memory of fluxes
     REAL(wp) :: gpp_week = 0._wp                   ! gpp of the last week (µmol m-2 s-1)
     REAL(wp) :: maint_respiration_week = 0._wp     ! maintenance respiration of the last week (µmol m-2 s-1)
+    ! nutrient demand for plant uptake
+    REAL(wp) :: demand_uptake_n = 0.0_wp           ! scalar of Vmax for root N uptake 
+    REAL(wp) :: demand_uptake_p = 0.0_wp           ! scalar of Vmax for root P uptake
   END TYPE AccumulationPlantClass
 
   TYPE PlantClass
@@ -97,7 +97,10 @@ MODULE mo_base_memory
      TYPE(VegCanopy),DIMENSION(ncanop) :: canopy_layer
      TYPE(AccumulationPlantClass) :: accumulated
      INTEGER :: pftid = 1
-     REAL(wp) :: lai
+     REAL(wp) :: lai                               ! actual leaf area index
+     REAL(wp) :: target_cn_leaf                    ! target foliar C:N ratio
+     REAL(wp) :: target_np_leaf                    ! target foliar N:P ratio 
+ 
   END TYPE PlantClass
 
   ! 
@@ -111,7 +114,10 @@ MODULE mo_base_memory
 
   TYPE SoilClass
     !TYPE(AccumulationSoilClass) :: accumulated    ! activate when soil model needs it
-    REAL(wp) :: theta
+    REAL(wp) :: theta                 ! fractional water holding capacity
+    REAL(wp) :: bucket_size           ! actual water bucket size (mm)
+    REAL(wp) :: ammonium              ! soil ammonium concentration (mmol/L)
+    REAL(wp) :: phosphate             ! soil P concentration (mmol/L)
   END TYPE SoilClass
 
   ! 

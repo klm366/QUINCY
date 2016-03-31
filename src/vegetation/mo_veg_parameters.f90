@@ -112,6 +112,12 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: allom_k2
      REAL(wp),DIMENSION(npft) :: tau_fruit
      REAL(wp),DIMENSION(npft) :: tau_seed
+     REAL(wp),DIMENSION(npft) :: vmax_uptake_n
+     REAL(wp),DIMENSION(npft) :: soil_n_aff1 
+     REAL(wp),DIMENSION(npft) :: soil_n_aff2 
+     REAL(wp),DIMENSION(npft) :: vmax_uptake_p
+     REAL(wp),DIMENSION(npft) :: soil_p_aff1 
+     REAL(wp),DIMENSION(npft) :: soil_p_aff2 
   END TYPE VegetationParameterClass
 
   TYPE AccumulationIntervalPlantClass 
@@ -124,6 +130,7 @@ MODULE mo_veg_parameters
     REAL(wp) :: beta_air     = 1._wp
     REAL(wp) :: beta_soil_ps = 1._wp
     REAL(wp) :: beta_soil_gs = 1._wp
+    REAL(wp) :: demand_uptake = 3._wp
 
     REAL(wp) :: weekly       = 7._wp         ! 7 days; constant across the model
   END TYPE AccumulationIntervalPlantClass
@@ -345,6 +352,18 @@ MODULE mo_veg_parameters
       veg_param%tau_fruit(:) = 1.0_wp
       ! turnover time of the fruit pool (1/years)
       veg_param%tau_seed(:) = 1.0_wp
+      ! vmax of N uptake (~µmol N / mol C / s)
+      veg_param%vmax_uptake_n(:) = 714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
+      ! low-affinity uptake (L/mmol) 
+      veg_param%soil_n_aff1(:) = 0.105_wp      ! tuned from OCN's 0.05 m2/gN assuming 150 L per m2
+      ! half saturation of high-affinity uptake (mmol/L) 
+      veg_param%soil_n_aff2(:) = 0.4_wp        ! tuned from OCN's 0.84 gN/m2 assuming 150 L per m2
+      ! vmax of P uptake (~µmol P / mol C / s)
+      veg_param%vmax_uptake_p(:) = 714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
+      ! low-affinity uptake (L/mmol) 
+      veg_param%soil_p_aff1(:) = 0.105_wp      ! tuned from OCN's 0.05 m2/gN assuming 150 L per m2
+      ! half saturation of high-affinity uptake (mmol/L) 
+      veg_param%soil_p_aff2(:) = 0.4_wp        ! tuned from OCN's 0.84 gN/m2 assuming 150 L per m2
 
     END SUBROUTINE init_pft_param_table 
 

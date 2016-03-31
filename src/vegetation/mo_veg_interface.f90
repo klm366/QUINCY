@@ -11,6 +11,7 @@ MODULE mo_veg_interface
 
   USE mo_kind
   USE mo_base_memory
+  USE mo_atmland_memory
 
   IMPLICIT NONE
 
@@ -20,7 +21,7 @@ MODULE mo_veg_interface
 
 CONTAINS
 
-  SUBROUTINE update_vegetation(tile,t_air,veg_param)
+  SUBROUTINE update_vegetation(tile,veg_param)
     !
     ! calls the vegetation interface
     ! TBD: Merge with interface? Somewhat a strategic decision for all header routines
@@ -29,26 +30,30 @@ CONTAINS
     ! 
     USE mo_land_constants
     USE mo_veg_parameters, ONLY: VegetationParameterClass
+    USE mo_veg_photosynthesis, ONLY: update_canopy_fluxes
 
     IMPLICIT NONE
 
     ! 0.1 Input
     TYPE(VegetationParameterClass),INTENT(in) :: veg_param   ! vegetation type parameters
-    REAL(wp),INTENT(in) :: t_air                             ! ambient air temperature (K)
     ! 0.2 In- and Output
     TYPE(TileClass), DIMENSION(ntile), INTENT(inout) :: tile
     ! 0.4 Local
     INTEGER :: t
 
     DO t = 1,ntile
- 
-       CALL vegetation_interface(tile(t)%plant,t_air,tile(t)%soil%theta,veg_param)
+
+       ! photosynthesis and leaf respiration 
+       CALL update_canopy_fluxes(tile(t), veg_param)
+
+       ! growth, respiration and turnover
+       CALL vegetation_interface(tile(t)%plant,tile(t)%soil%theta,veg_param)
 
     END DO
  
   END SUBROUTINE update_vegetation
 
-  SUBROUTINE vegetation_interface(plant,t_air,theta,veg_param)
+  SUBROUTINE vegetation_interface(plant,theta,veg_param)
     ! 
     ! update vegetation pools given pre-calculated rates of 
     ! net C, N and P uptake 
@@ -64,20 +69,19 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 Input
     TYPE(VegetationParameterClass),INTENT(in) :: veg_param      ! vegetation type parameters
-    REAL(wp),INTENT(in) :: t_air                                ! ambient air temperature (K)
     REAL(wp),INTENT(in) :: theta                                ! soil moisture (%)
     ! 0.2 In- and Output
     TYPE(PlantClass),INTENT(inout) :: plant
     ! 
     ! 1.0 Calculate growth
     ! 
-    CALL  calc_growth(t_air,theta,plant,veg_param,plant%flux%growth, & 
+    CALL  calc_growth(atm2land%t_air,theta,plant,veg_param,plant%flux%growth, & 
             plant%flux%growth_respiration,plant%flux%growth_respiration_c13,plant%flux%growth_respiration_c14,& 
             plant%flux%reserve_use)
     ! 
     ! 1.5 Calculate maintenance respiration
     ! 
-    CALL  calc_maintenance_respiration(t_air,t_air,plant%pool%sap_wood%nitrogen,plant%pool%fine_root%nitrogen, &
+    CALL  calc_maintenance_respiration(atm2land%t_air,atm2land%t_air,plant%pool%sap_wood%nitrogen,plant%pool%fine_root%nitrogen, &
             plant%pool%coarse_root%nitrogen,plant%pool%labile%carbon,plant%pool%labile%carbon13, & 
             plant%pool%labile%carbon14,plant%flux%maint_respiration_leaf,&
             plant%flux%maint_respiration,plant%flux%maint_respiration_c13,plant%flux%maint_respiration_c14)
@@ -99,14 +103,12 @@ CONTAINS
     !
     ! 4.0 Add nutrients from uptake calculations
     !
-    plant%flux%uptake_n = MAX( ( plant%pool%labile%carbon + plant%flux%growth%labile%carbon) /25.0_wp - & 
-                plant%pool%labile%nitrogen, 0.0_wp ) 
-    plant%flux%uptake_n15 = plant%flux%uptake_n * 0.0002_wp 
-    plant%flux%uptake_p = MAX( (plant%pool%labile%nitrogen+plant%flux%uptake_n)/14.0_wp - &
-                plant%pool%labile%phosphorus, 0.0_wp ) 
-    plant%flux%growth%labile%nitrogen = plant%flux%growth%labile%nitrogen + plant%flux%uptake_n
-    plant%flux%growth%labile%nitrogen15 = plant%flux%growth%labile%nitrogen15 + plant%flux%uptake_n15
-    plant%flux%growth%labile%phosphorus = plant%flux%growth%labile%phosphorus + plant%flux%uptake_p
+    plant%flux%growth%labile%nitrogen = plant%flux%growth%labile%nitrogen + &
+       plant%flux%uptake_n * dt / 1.e6
+    plant%flux%growth%labile%nitrogen15 = plant%flux%growth%labile%nitrogen15 + & 
+       plant%flux%uptake_n15 * dt / 1.e6
+    plant%flux%growth%labile%phosphorus = plant%flux%growth%labile%phosphorus + &
+       plant%flux%uptake_p * dt / 1.e6
     !
     ! 5.0 update labile pool and reserve 
     ! 

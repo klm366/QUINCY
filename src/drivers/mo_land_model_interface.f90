@@ -84,9 +84,9 @@ tile(1)%plant%pftid=1
 !tile(2)%plant%pftid=2
      CALL update_radiation(tile)
 
-     CALL update_canopy_fluxes(tile,veg_param)
+     CALL update_canopy_fluxes(tile(1),veg_param)
 
-     CALL update_vegetation(tile,t_air,veg_param)
+     CALL update_vegetation(tile,veg_param)
 
   END SUBROUTINE land_model_interface
 

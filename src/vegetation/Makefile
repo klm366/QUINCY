@@ -26,6 +26,7 @@ MODS1 = mo_veg_memory.f90 \
         mo_veg_turnover.f90 \
         mo_veg_growth.f90 \
         mo_veg_radiation.f90 \
+        mo_veg_soil.f90 \
         mo_veg_output.f90 \
         mo_veg_util.f90 \
         mo_veg_config_class.f90
@@ -79,6 +80,7 @@ $(MODEL_LIB)(mo_veg_interface.o): \
   $(BASE_LIB)(mo_base_memory.o) \
   $(MODEL_LIB)(mo_veg_memory.o) \
   $(MODEL_LIB)(mo_veg_growth.o) \
+  $(MODEL_LIB)(mo_veg_photosynthesis.o) \
   $(MODEL_LIB)(mo_veg_respiration.o) \
   $(MODEL_LIB)(mo_veg_turnover.o)
 
@@ -90,6 +92,10 @@ $(MODEL_LIB)(mo_veg_growth.o): \
   $(MODEL_LIB)(mo_veg_memory.o)
 
 $(MODEL_LIB)(mo_veg_respiration.o): \
+  $(BASE_LIB)(mo_kind.o) \
+  $(MODEL_LIB)(mo_veg_parameters.o) 
+
+$(MODEL_LIB)(mo_veg_soil.o): \
   $(BASE_LIB)(mo_kind.o) \
   $(MODEL_LIB)(mo_veg_parameters.o) 
 

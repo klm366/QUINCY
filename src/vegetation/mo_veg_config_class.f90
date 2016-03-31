@@ -27,6 +27,7 @@ MODULE mo_veg_config_class
   INTEGER      :: output_end_date            = 100
   LOGICAL      :: flag_optimal_Nfraction     = .FALSE.  ! .TRUE. .FALSE.
   LOGICAL      :: flag_optimal_Nleaf         = .FALSE.  ! .TRUE. .FALSE.
+  LOGICAL      :: flag_calc_soil_uptake      = .FALSE.  ! .TRUE. .FALSE.
   ! forcing options; define variables that contain values as read from file, passed to options% ... then
   CHARACTER(8) :: create_forcing             = 'generate'
 
@@ -49,7 +50,8 @@ CONTAINS
       output_start_date, &
       output_end_date, &
       flag_optimal_Nfraction, &
-      flag_optimal_Nleaf
+      flag_optimal_Nleaf, &
+      flag_calc_soil_uptake
     ! read the namelist
     nml_unit = open_nml  ('namelist.plant')
     f_unit = position_nml ('PLANT_MODEL_OPTIONS', nml_unit, status=read_status)
@@ -64,6 +66,7 @@ CONTAINS
     options%model%output_end_date        = output_end_date
     options%model%flag_optimal_Nfraction = flag_optimal_Nfraction
     options%model%flag_optimal_Nleaf     = flag_optimal_Nleaf
+    options%model%flag_calc_soil_uptake  = flag_calc_soil_uptake
     ! 
     ! 1.3.2 &FORCING_CTL
     ! 
