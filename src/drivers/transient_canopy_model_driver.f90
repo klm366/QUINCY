@@ -130,7 +130,7 @@ PROGRAM canopy_model_driver
      ! 3.0 canopy calculation fluxes
      ! 
      CALL update_radiation(tile)                 ! atm2land land2atm are global TYPES, see mo_atmland_forcing
-     CALL update_canopy_fluxes(tile, veg_param)  ! atm2land is a global TYPE, see mo_atmland_forcing
+     CALL update_canopy_fluxes(tile(1), veg_param)  ! atm2land is a global TYPE, see mo_atmland_forcing
      ! 
      ! 4.0 write output  -> filename: fort.20
      !
