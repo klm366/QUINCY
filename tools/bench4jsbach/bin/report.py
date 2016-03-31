@@ -62,13 +62,13 @@ analyses_var_test_item = { 'name'     : None,
                            'vector'   : False,
                            'cans'     : [],
                            'summary'  : False,
+                           'sum_unit' : None,
                            'title'    : None }
 
 analyses_var_test_can_item = { 'name'     : None,
                                'infiles'  : [],
                                'outfiles' : [],
-                               'sum_no'   : None,
-                               'sum_unit' : 'one',
+                               'benchmark': None,
                                'plots'    : []}
 
 
@@ -193,8 +193,8 @@ table below.
         self.logger.debug ( "Starting." )
         varname = "albedo"
         albedo_body = "" 
-        self.logger.debug ( "self.analyses buffer: " + log_message_newline +\
-                            json.dumps ( self.analyses ))
+        # self.logger.debug ( "self.analyses buffer: " + log_message_newline +\
+        #                     json.dumps ( self.analyses ))
 
         for analyse in self.analyses [ varname ]:
             
@@ -253,56 +253,36 @@ the plots\\\\
     
 
     def write_summary ( self ):
+      
+        return """This chapter provides an overview of benchmarks being done.\\\\\\medskip
         
-        return """This chapter provides a brief overview of the analyses and
-        benchmarks being done.
-        
-        \\begin{tabularx}{\\linewidth}{lLL}
+        \\begin{tabularx}{\\linewidth}{lLL%s} """ % ( self.n_cans * "L" ) +\
+    """
         \\toprule
-        \\textbf{variable} & \\textbf{analyis} & \\textbf{candidate} \\\\
+        \\textbf{variable} & \\textbf{analyis} & \\textbf{unit} &
+        \\multicolumn{%d}{p{%dcm}}{\\centering \\textbf{candidate}} \\\\
+        """ % ( self.n_cans, 4 ) +\
+    """
+    & & & %s \\\\
+    """ % ( ' & '.join ( '%s' % can.B4J_name for can in self.experiments if can.B4J_iscan )) +\
+    """
         \\addlinespace
-        \\cmidrule(r){1-3}
+        \\cmidrule(r){1-%d}
+        """ % ( 3 + self.n_cans ) +\
+            """
         %s
         \\\\ \\bottomrule
         \\end{tabularx}
         
-        """ % ( '\\\\\n'.join ( '%s & %s & %s' %\
-        (( teXify ( varname ),
+        """ % ( '\\\\\n'.join ( '%s & %s & %s & %s' %\
+        ( teXify ( varname ),
         teXify ( str ( analysesitemdict [ 'name' ])),
-        'candidate') \
-        if self.analyses [ varname ].index ( analysesitemdict ) == 0 \
-        else ( '',
-        teXify ( str ( analysesitemdict [ 'name' ])),
-               '' )) \
+        teXify ( str ( analysesitemdict [ 'unit' ])),
+        '%s' % ( ' & '.join ( '%.4e' % analysesitemdict [ 'cans' ][ i ][ 'benchmark' ] for i in range ( self.n_cans )))) \
         for varname in self.analyses \
             for analysesitemdict in self.analyses [ varname ] if analysesitemdict [ 'summary' ] == True ))
 
-    
-
-    
-        # return """This chapter provides a brief overview of the analyses and
-        # #benchmarks being done.
-        
-        # \\begin{tabularx}{\\linewidth}{lLL}
-        # \\toprule
-        # \\textbf{variable} & \\textbf{analyis method} & \\textbf{classification string} \\\\
-        # \\addlinespace
-        # \\cmidrule(r){1-3}
-        # %s
-        # \\\\ \\bottomrule
-        # \\end{tabularx}
-        
-        # """ % ( '\\\\\n'.join ( '%s & %s & %s' %\
-        # (( teXify ( varname ),
-        # teXify ( str ( analysesitemdict [ 'title' ])),
-        # teXify ( str ( analysesitemdict [ 'name' ]))) \
-        # if self.analyses [ varname ].index ( analysesitemdict ) == 0 \
-        # else ( '',
-        # teXify ( str ( analysesitemdict [ 'title' ])),
-        # teXify ( str ( analysesitemdict [ 'name' ])))) \
-        # for varname in self.analyses \
-        #       for analysesitemdict in self.analyses [ varname ] ))
-        
+            
     def write_report ( self ):
         self.logger.debug ( "Starting." )
         source_path  = os.path.join ( self.report_path, "sources" )

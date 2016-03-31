@@ -34,6 +34,8 @@ class Bench_Object ( Analysis, Report ):
     bench_config_path = None
     config            = None
     experiments       = []
+    n_cans            = 0
+    n_refs            = 0
     logger            = None
     logger_name       = 'B4J_LOGGER'
     reporting         = True
@@ -136,6 +138,8 @@ class Bench_Object ( Analysis, Report ):
                 e = Experiment ( **kwargs )
             self.experiments.append ( e )
         if n_refs < 1 or n_cans < 1: raise Exception ( "No candidate or no reference experiment defined."  )
+        self.n_cans = n_cans
+        self.n_refs = n_refs
         
         self.logger.debug ( "Exiting." )
 

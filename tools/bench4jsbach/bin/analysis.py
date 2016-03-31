@@ -265,15 +265,16 @@ and \\texttt{timemean}($X$) defined as
 
 """
         globalNtime_mean = copy.deepcopy ( analyses_var_test_item )
-        globalNtime_mean [ 'name' ]   = 'globalNtime_mean'
+        globalNtime_mean [ 'name' ]    = 'globalNtime_mean'
         globalNtime_mean [ 'teXts' ]. append ( teXt )
-        globalNtime_mean [ 'title' ]  = 'Global and time mean'
-        globalNtime_mean [ 'matrix' ] = False
-        globalNtime_mean [ 'vector' ] = True
-        globalNtime_mean [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name,
-                                                                            sum_unit = 'W m-2' ) \
+        globalNtime_mean [ 'title' ]   = 'Global and time mean'
+        globalNtime_mean [ 'matrix' ]  = False
+        globalNtime_mean [ 'vector' ]  = True
+        globalNtime_mean [ 'cans' ]    = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
                                           for can in self.experiments if can.B4J_iscan ]
         globalNtime_mean [ 'summary' ] = True
+        globalNtime_mean [ 'unit' ]    = 'W m-2'
+
         self.analyses [ A_varname ].append ( globalNtime_mean )
         
         
@@ -308,13 +309,15 @@ and \\texttt{timemean}($X$) defined as
 
 """
         globalNtime_dev = copy.deepcopy ( analyses_var_test_item )
-        globalNtime_dev [ 'name' ]   = 'globalNtime_dev'
-        globalNtime_dev [ 'teXts' ]. append ( teXt )
-        globalNtime_dev [ 'title' ]  = 'Global and time mean deviation'
-        globalNtime_dev [ 'matrix' ] = False
-        globalNtime_dev [ 'vector' ] = True
-        globalNtime_dev [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
+        globalNtime_dev [ 'name' ]    = 'globalNtime_dev'
+        globalNtime_dev [ 'teXts' ].append ( teXt )
+        globalNtime_dev [ 'title' ]   = 'Global and time mean deviation'
+        globalNtime_dev [ 'matrix' ]  = False
+        globalNtime_dev [ 'vector' ]  = True
+        globalNtime_dev [ 'cans' ]    = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
                                           for can in self.experiments if can.B4J_iscan ]
+        globalNtime_dev [ 'summary' ] = True
+        globalNtime_dev [ 'unit' ]    = 'W m-2'
         self.analyses [ A_varname ].append ( globalNtime_dev )
         
         for exp in self.experiments:
@@ -600,6 +603,11 @@ and \\texttt{timemean}($X$) defined as
                 cdo.timmean ( input=can.B4J_index [ gm_str ],
                               output=can.B4J_index [ tm_str ],
                               options='-f %s' % write_suffix )
+                nc_fid = Dataset ( can.B4J_index [ tm_str ], 'r')
+                albedo_delta = nc_fid.variables [ delta_name ][ : ] 
+                nc_fid.close ()
+                globalNtime_mean [ 'cans' ][ can.B4J_canno ][ 'benchmark' ] = albedo_delta [ 0 ][ 0 ][ 0 ]
+                
 
                 # 3.d) global mean deviation
                 gd_str = "gd-ref%d" % ref.B4J_refno
@@ -630,6 +638,10 @@ and \\texttt{timemean}($X$) defined as
                 cdo.timmean ( input=can.B4J_index [ gd_str ],
                               output=can.B4J_index [ td_str ],
                               options='-f %s' % write_suffix )
+                nc_fid = Dataset ( can.B4J_index [ td_str ], 'r')
+                albedo_delta = nc_fid.variables [ delta_name ][ : ] 
+                nc_fid.close ()
+                globalNtime_dev [ 'cans' ][ can.B4J_canno ][ 'benchmark' ] = albedo_delta [ 0 ][ 0 ][ 0 ]
 
                 
                 
