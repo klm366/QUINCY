@@ -233,8 +233,8 @@ MODULE mo_veg_parameters
       ! Values from Niinemets 1997 (SC 01/16)
       jmax2n=17.6_wp/4.0_wp   ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
       vcmax2n=1.8_wp          ! Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
-      ! values from Evans 1988
-      chl2n=1000._wp/25.5_wp  ! moles chlorophyll per mmol N
+      ! values from Evans 1989, Oecologia, 78: 9-19 (Table 2)
+      chl2n=1000._wp/39.8_wp  ! µmol Chloroplast per mmol N (light harvesting complex)
       ! slope of the relationship of structural leaf N against leaf N in fraction/mmol (Friend 1997)
       k1_fnl_struc=71.4_wp * molar_mass_N / 1000000._wp
       ! in static leaf N mode: prescribed ratio of Jmax25/Vcmax25
@@ -307,7 +307,7 @@ MODULE mo_veg_parameters
       ! temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5
       veg_param%k0_fnl_struc(:) = & 
       !(/0.67_wp,0.67_wp,0.67_wp,0.67_wp,0.83_wp,0.83_wp,0.67_wp,0.67_wp/) 
-      (/0.79_wp,0.73_wp,0.67_wp,0.67_wp,0.87_wp,0.83_wp,0.3_wp,0.67_wp/) 
+      (/0.75_wp,0.70_wp,0.63_wp,0.63_wp,0.83_wp,0.79_wp,0.3_wp,0.67_wp/) 
       !Le Maire et al. 2012 (derived from grasses, does not give plausble results for needles)
       !0.012_wp / 0.48_wp * molar_mass_C / molar_mass_N / veg_param%sla(:)/&
       !(1._wp / veg_param%sla(:) / veg_param%cn_leaf(:)) 
