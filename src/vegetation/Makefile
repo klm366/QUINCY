@@ -1,10 +1,10 @@
 #---------------------------------------------------------------------
 include ../../util/Make.inc.local
 #---------------------------------------------------------------------
-BASE_LIB = $(LIBDIR)/lib_base.a
-SXBASE_LIB = $(BASE_LIB)
 SHARED_LIB = $(LIBDIR)/lib_shared.a
 SXSHARED_LIB = $(SHARED_LIB)
+BASE_LIB = $(LIBDIR)/lib_base.a
+SXBASE_LIB = $(BASE_LIB)
 ATM_LIB = $(LIBDIR)/lib_atmland.a
 SXATM_LIB = $(ATM_LIB)
 LAND_LIB = $(LIBDIR)/lib_land.a
@@ -40,8 +40,8 @@ OBJSMODS1 = $(MODS1:.f90=.o)
 all:
 	@$(M_K) libland
 	@$(M_K) libatm
-	@$(M_K) libshared
 	@$(M_K) libbase
+	@$(M_K) libshared
 	@$(M_K) m_all
 	@echo  vegetation is OK
 
@@ -72,11 +72,11 @@ clean:
 	$(RM) $(MODEL_LIB)
 
 $(MODEL_LIB)(mo_veg_memory.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) 
 
 $(MODEL_LIB)(mo_veg_interface.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) \
   $(MODEL_LIB)(mo_veg_memory.o) \
   $(MODEL_LIB)(mo_veg_growth.o) \
@@ -85,39 +85,39 @@ $(MODEL_LIB)(mo_veg_interface.o): \
   $(MODEL_LIB)(mo_veg_turnover.o)
 
 $(MODEL_LIB)(mo_veg_growth.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) \
   $(ATM_LIB)(mo_atmland_constants.o) \
   $(MODEL_LIB)(mo_veg_parameters.o) \
   $(MODEL_LIB)(mo_veg_memory.o)
 
 $(MODEL_LIB)(mo_veg_respiration.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(MODEL_LIB)(mo_veg_parameters.o) 
 
 $(MODEL_LIB)(mo_veg_soil.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(MODEL_LIB)(mo_veg_parameters.o) 
 
 $(MODEL_LIB)(mo_veg_turnover.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) \
   $(LAND_LIB)(mo_land_constants.o) \
   $(MODEL_LIB)(mo_veg_memory.o)
 
 $(MODEL_LIB)(mo_veg_parameters.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_constants.o) 
 
 $(MODEL_LIB)(mo_veg_radiation.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(ATM_LIB)(mo_atmland_memory.o) \
   $(ATM_LIB)(mo_atmland_forcing.o) \
   $(ATM_LIB)(mo_atmland_constants.o) \
   $(MODEL_LIB)(mo_veg_parameters.o)
 
 $(MODEL_LIB)(mo_veg_photosynthesis.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(ATM_LIB)(mo_atmland_memory.o) \
   $(ATM_LIB)(mo_atmland_forcing.o) \
   $(ATM_LIB)(mo_atmland_constants.o) \
@@ -128,20 +128,20 @@ $(MODEL_LIB)(mo_veg_photosynthesis.o): \
   $(MODEL_LIB)(mo_veg_radiation.o)
 
 $(MODEL_LIB)(mo_veg_output.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) \
   $(BASE_LIB)(mo_base_constants.o) \
   $(BASE_LIB)(mo_base_config.o)
 
 $(MODEL_LIB)(mo_veg_util.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) \
   $(BASE_LIB)(mo_base_util_functions.o) \
   $(BASE_LIB)(mo_base_constants.o) \
   $(MODEL_LIB)(mo_veg_parameters.o)
 
 $(MODEL_LIB)(mo_veg_config_class.o): \
-  $(BASE_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_config.o) \
   $(SHARED_LIB)(mo_namelist.o)
 

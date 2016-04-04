@@ -25,12 +25,13 @@ MODULE mo_io_units
   INTEGER, PARAMETER :: filename_max = 1024
   
   ! Standard I/O-units
-  
-#ifdef hpux
-  INTEGER, PARAMETER :: nerr  = 7     ! error output
-#else
+
+! preprocessor directived commented to make gfortran work, Jan Engel, 20160404  
+!#ifdef hpux
+!  INTEGER, PARAMETER :: nerr  = 7     ! error output
+!#else
   INTEGER, PARAMETER :: nerr  = 0     ! error output
-#endif
+!#endif
   INTEGER, PARAMETER :: nlog  = 1     ! standard log file unit
   INTEGER, PARAMETER :: nin   = 5     ! standard input
   INTEGER, PARAMETER :: nout  = 6     ! standard output  
