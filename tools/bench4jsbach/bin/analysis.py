@@ -24,7 +24,7 @@ from pycmbs.mapping import map_plot
 from util import logger as dkl_logger, touch
 from experiment import MPIESM1_Experiment
 
-from report import ( analyses_var_item,
+from report import ( analyses_analyses,
                      analyses_var_test_item,
                      analyses_var_test_can_item,
                      init_analyses_var_test_can_item )
@@ -197,7 +197,7 @@ DETAILS
         read_suffix  = "grb"
         write_suffix = "nc"
 
-        self.analyses [ A_varname ] = copy.deepcopy ( analyses_var_item )
+        self.analyses_fields [ A_varname ] = copy.deepcopy ( analyses_analyses )
 
         # preparation of runtime storage and texts for analyses 
         # 3.a)
@@ -232,7 +232,7 @@ and \\texttt{yseasmean}($X$) defined as
         delta [ 'vector' ] = False
         delta [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
                                for can in self.experiments if can.B4J_iscan ]
-        self.analyses [ A_varname ].append ( delta )
+        self.analyses_fields [ A_varname ][ delta [ 'name' ]] = delta
 
         
         # 3.b,c)
@@ -275,7 +275,7 @@ and \\texttt{timemean}($X$) defined as
         globalNtime_mean [ 'summary' ] = True
         globalNtime_mean [ 'unit' ]    = 'W m-2'
 
-        self.analyses [ A_varname ].append ( globalNtime_mean )
+        self.analyses_fields [ A_varname ][ globalNtime_mean [ 'name' ]] = globalNtime_mean
         
         
         # 3.d,e)
@@ -318,7 +318,7 @@ and \\texttt{timemean}($X$) defined as
                                           for can in self.experiments if can.B4J_iscan ]
         globalNtime_dev [ 'summary' ] = True
         globalNtime_dev [ 'unit' ]    = 'W m-2'
-        self.analyses [ A_varname ].append ( globalNtime_dev )
+        self.analyses_fields [ A_varname ][ globalNtime_dev [ 'name' ]] = globalNtime_dev
         
         for exp in self.experiments:
             exp.B4J_index.clear ()
@@ -696,7 +696,7 @@ and \\texttt{timemean}($X$) defined as
 
                 # 4.a.3.a)
                 
-                delta = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "delta" ), None )
+                delta = self.analyses_fields [ A_varname ][ 'delta' ]
                 assert delta
                 
                 dates = cdo.showtimestamp ( input = can.B4J_index [ delta_str ] )[ 0 ].split ( " ")
@@ -764,7 +764,7 @@ and \\texttt{timemean}($X$) defined as
         
         # 4.a.3.b,c)
 
-        globalNtime_mean = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "globalNtime_mean" ), None )
+        globalNtime_mean = self.analyses_fields [ A_varname ][ 'globalNtime_mean' ]
         assert globalNtime_mean
         
         for can in self.experiments:
@@ -846,7 +846,7 @@ and \\texttt{timemean}($X$) defined as
         
         # 4.a.3.d,e)
 
-        globalNtime_dev = next (( item for item in self.analyses [ A_varname ] if item [ 'name' ] == "globalNtime_dev" ), None )
+        globalNtime_dev = self.analyses_fields [ A_varname ][ 'globalNtime_dev' ]
         assert globalNtime_dev
         
         for can in self.experiments:
@@ -932,7 +932,7 @@ and \\texttt{timemean}($X$) defined as
 
         print self
         print '############'
-        print self.analyses
+        print self.analyses_fields
             
         self.logger.debug ( "Exiting." )
         

@@ -31,27 +31,29 @@ doc_template = """
 \maketitle
 \\thispagestyle{empty}
 
-\section{Benchmark description}
+\\section{Benchmark description}
 %(abstract)s
 
 %(body)s
 
-\section{Summary}
+\\section{Summary}
 %(epilog)s
 
 \end{document}
 """
-section_template = """\section{%(section)s}
+section_template = """\\section{%(section)s}
 %(body)s"""
 
-subsection_template = """\subsection{%(subsection)s}"""
-subsubsection_template = """\subsubsection{%(subsubsection)s}"""
+subsection_template = """\\subsection{%(subsection)s}"""
+subsubsection_template = """\\subsubsection{%(subsubsection)s}"""
 
 report_dirname = "report"
 source_dirname = "sources"
 
 
-analyses_var_item = []
+#analyses_var_item = []
+analyses_analyses = {}
+
 
 analyses_var_test_item = { 'name'     : None,
                            'infiles'  : [],
@@ -120,7 +122,7 @@ def teXify ( string ):
 class Report ( object ):
     body = ""
     graphic = None
-    analyses = {}
+    analyses_fields = {}
 
     def __init__ ( self ):
         super ( Report, self ).__init__ ()
@@ -164,15 +166,11 @@ table below.
               if ref.B4J_isref else '' \
                 for ref in self.experiments ),
     '\\\\\n'.join ( '%s & %s & %s' %\
-                    (( teXify ( varname ),
-                      teXify ( str ( analysesitemdict [ 'title' ])),
-                      teXify ( str ( analysesitemdict [ 'name' ]))) \
-                    if self.analyses [ varname ].index ( analysesitemdict ) == 0 \
-                    else ( '',
-                           teXify ( str ( analysesitemdict [ 'title' ])),
-                           teXify ( str ( analysesitemdict [ 'name' ])))) \
-                    for varname in self.analyses \
-                    for analysesitemdict in self.analyses [ varname ] ))
+                    ( teXify ( varname ),
+                      teXify ( str ( analysis [ 'title' ])),
+                      teXify ( str ( analysis [ 'name' ]))) 
+                    for varname, value in self.analyses_fields.iteritems () \
+                    for key, analysis in self.analyses_fields [ varname ].iteritems ()))
 
         description += subsection_template % { 'subsection': 'Candidate experiments to benchmark' }
     
@@ -196,7 +194,10 @@ table below.
         # self.logger.debug ( "self.analyses buffer: " + log_message_newline +\
         #                     json.dumps ( self.analyses ))
 
-        for analyse in self.analyses [ varname ]:
+        for key, analyse in self.analyses_fields [ varname ].iteritems ():
+
+            print '#################'
+            print analyse
             
             albedo_body += subsection_template % { 'subsection': teXify ( analyse [ 'title' ])}
             albedo_body +=  analyse [ 'teXts' ][ 0 ]
@@ -276,11 +277,11 @@ the plots\\\\
         
         """ % ( '\\\\\n'.join ( '%s & %s & %s & %s' %\
         ( teXify ( varname ),
-        teXify ( str ( analysesitemdict [ 'name' ])),
-        teXify ( str ( analysesitemdict [ 'unit' ])),
-        '%s' % ( ' & '.join ( '%.4e' % analysesitemdict [ 'cans' ][ i ][ 'benchmark' ] for i in range ( self.n_cans )))) \
-        for varname in self.analyses \
-            for analysesitemdict in self.analyses [ varname ] if analysesitemdict [ 'summary' ] == True ))
+        teXify ( str ( analysis [ 'name' ])),
+        teXify ( str ( analysis [ 'unit' ])),
+        '%s' % ( ' & '.join ( '%.4e' % analysis [ 'cans' ][ i ][ 'benchmark' ] for i in range ( self.n_cans )))) \
+        for varname, val in self.analyses_fields.iteritems () \
+            for key, analysis in self.analyses_fields [ varname ].iteritems () if analysis [ 'summary' ] == True ))
 
             
     def write_report ( self ):
@@ -342,7 +343,7 @@ the plots\\\\
     def __repr__ ( self ):
         super ( Report, self ).__repr__ ()
         print "Report.__repr__:"
-        print "Superclass Report object: analyses = ", print_item_or_list_rec ( self.analyses, 0 )
+        #print "Superclass Report object: analyses = ", print_item_or_list_rec ( self.analyses_fields, 0 )
                 
         return ""
 
