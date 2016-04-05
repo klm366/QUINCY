@@ -55,8 +55,8 @@ source_dirname = "sources"
 # analyses_fields      = {}, fe: analyses_fields [ 'albedo' ] =  {}
 # analyses_II_analyses = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ] = {}
 # analyses_III_dicts   = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ] = {}
-# analyses_IV_cans     = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ '0' ] = {}
-# analyses_V_refs      = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ '0' ][ '0' ] = value
+# analyses_IV_cans     = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ 'benches' ] = {}
+# analyses_V_benches      = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ 'benches' ][ '0' ] = value
 
 
 analyses_II_analyses = {}
@@ -67,28 +67,19 @@ analyses_III_dicts = { 'name'     : None,
                        'outfiles' : [],
                        'plots'    : [],
                        'teXts'    : [],
-                       'matrix'   : False,
-                       'vector'   : False,
-                       'cans'     : [],
-                       'summary'  : False,
-                       'unit' : None,
+                       'ismatrix' : False,
+                       'isvector' : False,
+                       'cans'     : {},
+                       'isbench'  : False,
+                       'unit'     : None,
                        'title'    : None }
 
-analyses_IV_cans = { 'name'     : None,
-                     'infiles'  : [],
+analyses_IV_cans = { 'infiles'  : [],
                      'outfiles' : [],
-                     'benchmark': None,
-                     'plots'    : []}
+                     'plots'    : [],
+                     'benches'  : {}}
 
-
-
-def init_analyses_var_test_can_item ( name = None ):
-
-    ret =  copy.deepcopy ( analyses_IV_cans )
-
-    ret [ 'name' ]     = name
-
-    return ret
+analyses_V_benches = {}
 
 
 
@@ -207,7 +198,7 @@ table below.
             
             albedo_body += subsection_template % { 'subsection': teXify ( analyse [ 'title' ])}
             albedo_body +=  analyse [ 'teXts' ][ 0 ]
-            if analyse [ 'matrix' ]:
+            if analyse [ 'ismatrix' ]:
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
                     can_name = teXify ( can.B4J_name )
@@ -227,7 +218,7 @@ table below.
                                                                        hspace     = '-3.3' )
                             no += 1
                             
-            elif analyse [ 'vector' ]:
+            elif analyse [ 'isvector' ]:
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
                     can_name = teXify ( can.B4J_name )
@@ -273,7 +264,7 @@ the plots\\\\
             for var in self.analyses_fields.keys ():
                 cv = 0
                 for name, ana in { k : a for k, a in self.analyses_fields [ var ].iteritems () \
-                                   if a [ 'summary' ] == True }.iteritems ():
+                                   if a [ 'isbench' ] == True }.iteritems ():
                     ca = 0
                     if cv != 0:
                         ret += "\\cmidrule(r){2-%d}" % n_col

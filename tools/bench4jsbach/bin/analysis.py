@@ -26,8 +26,7 @@ from experiment import MPIESM1_Experiment
 
 from report import ( analyses_II_analyses,
                      analyses_III_dicts,
-                     analyses_IV_cans,
-                     init_analyses_var_test_can_item )
+                     analyses_IV_cans )
 
 streams = { "echam": [ "echam", "co2" ],
             "jsbach": [ "jsbach", "land", "surf", "veg", "yasso", "accw" ]}
@@ -225,13 +224,13 @@ and \\texttt{yseasmean}($X$) defined as
 
 """  
         delta = copy.deepcopy ( analyses_III_dicts )
-        delta [ 'name' ]   = 'delta'
+        delta [ 'name' ]     = 'delta'
         delta [ 'teXts' ]. append ( teXt )
-        delta [ 'title' ]  = 'Seasonal mean difference'
-        delta [ 'matrix' ] = True
-        delta [ 'vector' ] = False
-        delta [ 'cans' ]   = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
-                               for can in self.experiments if can.B4J_iscan ]
+        delta [ 'title' ]    = 'Seasonal mean difference'
+        delta [ 'ismatrix' ] = True
+        delta [ 'isvector' ] = False
+        delta [ 'cans' ]     = { '%d' % can.B4J_canno : copy.deepcopy ( analyses_IV_cans ) \
+                                            for can in range ( self.n_cans )}
         self.analyses_fields [ A_varname ][ delta [ 'name' ]] = delta
 
         
@@ -265,15 +264,16 @@ and \\texttt{timemean}($X$) defined as
 
 """
         globalNtime_mean = copy.deepcopy ( analyses_III_dicts )
-        globalNtime_mean [ 'name' ]    = 'globalNtime_mean'
+        globalNtime_mean [ 'name' ]      = 'globalNtime_mean'
         globalNtime_mean [ 'teXts' ]. append ( teXt )
-        globalNtime_mean [ 'title' ]   = 'Global and time mean'
-        globalNtime_mean [ 'matrix' ]  = False
-        globalNtime_mean [ 'vector' ]  = True
-        globalNtime_mean [ 'cans' ]    = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
-                                          for can in self.experiments if can.B4J_iscan ]
-        globalNtime_mean [ 'summary' ] = True
-        globalNtime_mean [ 'unit' ]    = 'W m-2'
+        globalNtime_mean [ 'title' ]     = 'Global and time mean'
+        globalNtime_mean [ 'ismatrix' ]  = False
+        globalNtime_mean [ 'isvector' ]  = True
+        globalNtime_mean [ 'cans' ]      = 
+        globalNtime_dev [ 'cans' ]      = { '%d' % can.B4J_canno : copy.deepcopy ( analyses_IV_cans ) \
+                                            for can in range ( self.n_cans )}
+        globalNtime_mean [ 'isbench' ]   = True
+        globalNtime_mean [ 'unit' ]      = 'W m-2'
 
         self.analyses_fields [ A_varname ][ globalNtime_mean [ 'name' ]] = globalNtime_mean
         
@@ -309,15 +309,15 @@ and \\texttt{timemean}($X$) defined as
 
 """
         globalNtime_dev = copy.deepcopy ( analyses_III_dicts )
-        globalNtime_dev [ 'name' ]    = 'globalNtime_dev'
+        globalNtime_dev [ 'name' ]      = 'globalNtime_dev'
         globalNtime_dev [ 'teXts' ].append ( teXt )
-        globalNtime_dev [ 'title' ]   = 'Global and time mean deviation'
-        globalNtime_dev [ 'matrix' ]  = False
-        globalNtime_dev [ 'vector' ]  = True
-        globalNtime_dev [ 'cans' ]    = [ init_analyses_var_test_can_item ( name = can.B4J_name ) \
-                                          for can in self.experiments if can.B4J_iscan ]
-        globalNtime_dev [ 'summary' ] = True
-        globalNtime_dev [ 'unit' ]    = 'W m-2'
+        globalNtime_dev [ 'title' ]     = 'Global and time mean deviation'
+        globalNtime_dev [ 'ismatrix' ]  = False
+        globalNtime_dev [ 'isvector' ]  = True
+        globalNtime_dev [ 'cans' ]      = { '%d' % can.B4J_canno : copy.deepcopy ( analyses_IV_cans ) \
+                                            for can in range ( self.n_cans )}
+        globalNtime_dev [ 'isbench' ]   = True
+        globalNtime_dev [ 'unit' ]      = 'W m-2'
         self.analyses_fields [ A_varname ][ globalNtime_dev [ 'name' ]] = globalNtime_dev
         
         for exp in self.experiments:
