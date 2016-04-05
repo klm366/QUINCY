@@ -51,36 +51,42 @@ report_dirname = "report"
 source_dirname = "sources"
 
 
-#analyses_var_item = []
-analyses_analyses = {}
+# structure of self.analyses:
+# analyses_fields      = {}, fe: analyses_fields [ 'albedo' ] =  {}
+# analyses_II_analyses = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ] = {}
+# analyses_III_dicts   = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ] = {}
+# analyses_IV_cans     = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ '0' ] = {}
+# analyses_V_refs      = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ '0' ][ '0' ] = value
 
 
-analyses_var_test_item = { 'name'     : None,
-                           'infiles'  : [],
-                           'outfiles' : [],
-                           'plots'    : [],
-                           'teXts'    : [],
-                           'matrix'   : False,
-                           'vector'   : False,
-                           'cans'     : [],
-                           'summary'  : False,
-                           'sum_unit' : None,
-                           'title'    : None }
-
-analyses_var_test_can_item = { 'name'     : None,
-                               'infiles'  : [],
-                               'outfiles' : [],
-                               'benchmark': None,
-                               'plots'    : []}
+analyses_II_analyses = {}
 
 
+analyses_III_dicts = { 'name'     : None,
+                       'infiles'  : [],
+                       'outfiles' : [],
+                       'plots'    : [],
+                       'teXts'    : [],
+                       'matrix'   : False,
+                       'vector'   : False,
+                       'cans'     : [],
+                       'summary'  : False,
+                       'unit' : None,
+                       'title'    : None }
 
-def init_analyses_var_test_can_item ( name = None, sum_unit = 'one' ):
+analyses_IV_cans = { 'name'     : None,
+                     'infiles'  : [],
+                     'outfiles' : [],
+                     'benchmark': None,
+                     'plots'    : []}
 
-    ret =  copy.deepcopy ( analyses_var_test_can_item )
+
+
+def init_analyses_var_test_can_item ( name = None ):
+
+    ret =  copy.deepcopy ( analyses_IV_cans )
 
     ret [ 'name' ]     = name
-    ret [ 'sum_unit' ] = sum_unit
 
     return ret
 
@@ -254,35 +260,72 @@ the plots\\\\
     
 
     def write_summary ( self ):
+
+        ref_by_refno = { str ( ref.B4J_refno ): ref for ref in self.experiments if ref.B4J_isref }
+        can_by_canno = { str ( can.B4J_canno ): can for can in self.experiments if can.B4J_iscan }
+        print "ref_by_refno: "
+        print ref_by_refno
+
+        def writeAnalysesTabularx ():
+
+            n_col = 4 + self.n_cans
+            ret = ""
+            for var in self.analyses_fields.keys ():
+                cv = 0
+                for name, ana in { k : a for k, a in self.analyses_fields [ var ].iteritems () \
+                                   if a [ 'summary' ] == True }.iteritems ():
+                    ca = 0
+                    if cv != 0:
+                        ret += "\\cmidrule(r){2-%d}" % n_col
+                    for refno  in range ( self.n_refs ):
+                        if cv == 0:
+                            ret += var
+                            cv += 1
+                        ret += ' & '
+                        if ca == 0:
+                            ret += ana [ 'name' ] + ' & ' + ana [ 'unit' ]
+                            ca += 1
+                        else:
+                            ret += ' & '
+                        ret += ' & '
+                        ret +=  '\\textbf{%s}' % teXify ( ref_by_refno [ '%d' % refno ].B4J_name )
+                        for canno in range ( self.n_cans ):
+                            ret += ' & '
+                            if can_by_canno [ '%d' % canno ].B4J_name == ref_by_refno [ '%d' % refno ].B4J_name:
+                                ret += '-'
+                            else:
+                                try:
+                                    ret += '%.4e' % ana [ 'cans' ][ '%d' % canno ][ '%d' % refno ]
+                                except:
+                                    ret += "-"
+                        
+                        ret += ' \\\\\n'
+
+            print ret
+            return ret
       
         return """This chapter provides an overview of benchmarks being done.\\\\\\medskip
         
-        \\begin{tabularx}{\\linewidth}{lLL%s} """ % ( self.n_cans * "L" ) +\
-    """
+        \\scriptsize
+        \\begin{tabularx}{\\linewidth}{rrrr%s} 
+        """ % ( self.n_cans * "r" ) +\
+        """
         \\toprule
-        \\textbf{variable} & \\textbf{analyis} & \\textbf{unit} &
+        \\textbf{field} & \\textbf{analyis} & \\textbf{unit} & \\textbf{reference} &
         \\multicolumn{%d}{p{%dcm}}{\\centering \\textbf{candidate}} \\\\
-        """ % ( self.n_cans, 4 ) +\
-    """
-    & & & %s \\\\
-    """ % ( ' & '.join ( '%s' % can.B4J_name for can in self.experiments if can.B4J_iscan )) +\
-    """
+        """ % ( self.n_cans, self.n_cans * 2 ) +\
+        """
         \\addlinespace
-        \\cmidrule(r){1-%d}
-        """ % ( 3 + self.n_cans ) +\
-            """
+        & & & & %s \\\\
+        \\addlinespace
+        \\midrule
+        """ % teXify (( ' & '.join ( ' \\textbf{%s}' % can.B4J_name for can in self.experiments if can.B4J_iscan ))) +\
+        """
         %s
-        \\\\ \\bottomrule
+        \\bottomrule
         \\end{tabularx}
         
-        """ % ( '\\\\\n'.join ( '%s & %s & %s & %s' %\
-        ( teXify ( varname ),
-        teXify ( str ( analysis [ 'name' ])),
-        teXify ( str ( analysis [ 'unit' ])),
-        '%s' % ( ' & '.join ( '%.4e' % analysis [ 'cans' ][ i ][ 'benchmark' ] for i in range ( self.n_cans )))) \
-        for varname, val in self.analyses_fields.iteritems () \
-            for key, analysis in self.analyses_fields [ varname ].iteritems () if analysis [ 'summary' ] == True ))
-
+        """ % writeAnalysesTabularx ()
             
     def write_report ( self ):
         self.logger.debug ( "Starting." )

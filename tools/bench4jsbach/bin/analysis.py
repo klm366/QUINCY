@@ -24,9 +24,9 @@ from pycmbs.mapping import map_plot
 from util import logger as dkl_logger, touch
 from experiment import MPIESM1_Experiment
 
-from report import ( analyses_analyses,
-                     analyses_var_test_item,
-                     analyses_var_test_can_item,
+from report import ( analyses_II_analyses,
+                     analyses_III_dicts,
+                     analyses_IV_cans,
                      init_analyses_var_test_can_item )
 
 streams = { "echam": [ "echam", "co2" ],
@@ -197,7 +197,7 @@ DETAILS
         read_suffix  = "grb"
         write_suffix = "nc"
 
-        self.analyses_fields [ A_varname ] = copy.deepcopy ( analyses_analyses )
+        self.analyses_fields [ A_varname ] = copy.deepcopy ( analyses_II_analyses )
 
         # preparation of runtime storage and texts for analyses 
         # 3.a)
@@ -224,7 +224,7 @@ and \\texttt{yseasmean}($X$) defined as
 \\end{eqnarray*}
 
 """  
-        delta = copy.deepcopy ( analyses_var_test_item )
+        delta = copy.deepcopy ( analyses_III_dicts )
         delta [ 'name' ]   = 'delta'
         delta [ 'teXts' ]. append ( teXt )
         delta [ 'title' ]  = 'Seasonal mean difference'
@@ -264,7 +264,7 @@ and \\texttt{timemean}($X$) defined as
 \\end{eqnarray*}
 
 """
-        globalNtime_mean = copy.deepcopy ( analyses_var_test_item )
+        globalNtime_mean = copy.deepcopy ( analyses_III_dicts )
         globalNtime_mean [ 'name' ]    = 'globalNtime_mean'
         globalNtime_mean [ 'teXts' ]. append ( teXt )
         globalNtime_mean [ 'title' ]   = 'Global and time mean'
@@ -308,7 +308,7 @@ and \\texttt{timemean}($X$) defined as
 \\end{eqnarray*}
 
 """
-        globalNtime_dev = copy.deepcopy ( analyses_var_test_item )
+        globalNtime_dev = copy.deepcopy ( analyses_III_dicts )
         globalNtime_dev [ 'name' ]    = 'globalNtime_dev'
         globalNtime_dev [ 'teXts' ].append ( teXt )
         globalNtime_dev [ 'title' ]   = 'Global and time mean deviation'
@@ -606,7 +606,7 @@ and \\texttt{timemean}($X$) defined as
                 nc_fid = Dataset ( can.B4J_index [ tm_str ], 'r')
                 albedo_delta = nc_fid.variables [ delta_name ][ : ] 
                 nc_fid.close ()
-                globalNtime_mean [ 'cans' ][ can.B4J_canno ][ 'benchmark' ] = albedo_delta [ 0 ][ 0 ][ 0 ]
+                globalNtime_mean [ 'cans' ][ '%d' % can.B4J_canno ][ '%d' % ref.B4J_refno ] = albedo_delta [ 0 ][ 0 ][ 0 ]
                 
 
                 # 3.d) global mean deviation
@@ -641,7 +641,7 @@ and \\texttt{timemean}($X$) defined as
                 nc_fid = Dataset ( can.B4J_index [ td_str ], 'r')
                 albedo_delta = nc_fid.variables [ delta_name ][ : ] 
                 nc_fid.close ()
-                globalNtime_dev [ 'cans' ][ can.B4J_canno ][ 'benchmark' ] = albedo_delta [ 0 ][ 0 ][ 0 ]
+                globalNtime_dev [ 'cans' ][ '%d' % can.B4J_canno ][ '%d' % ref.B4J_refno ] = albedo_delta [ 0 ][ 0 ][ 0 ]
 
                 
                 
