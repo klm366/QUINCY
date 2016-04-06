@@ -67,7 +67,7 @@ MODULE mo_atmland_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_atm2land_memory(mem, prefix, suffix)
+  SUBROUTINE Init_atm2land_memory(mem, prefix, suffix, lct_type)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -75,8 +75,9 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
     CLASS(t_atm2land_memory),  INTENT(inout) :: mem
-    CHARACTER(len=*),          INTENT(in) :: prefix
-    CHARACTER(len=*),          INTENT(in) :: suffix
+    CHARACTER(len=*),          INTENT(in)    :: prefix
+    CHARACTER(len=*),          INTENT(in)    :: suffix
+    INTEGER, OPTIONAL,         INTENT(in)    :: lct_type
 
     TYPE(t_jsb_grid),        POINTER :: hgrid
     TYPE(t_jsb_vgrid),       POINTER :: surface
@@ -218,7 +219,7 @@ CONTAINS
 
   END SUBROUTINE Init_atm2land_memory
 
-  SUBROUTINE Init_land2atm_memory(mem, prefix, suffix)
+  SUBROUTINE Init_land2atm_memory(mem, prefix, suffix, lct_type)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -226,8 +227,9 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
     CLASS(t_land2atm_memory),   INTENT(inout) :: mem
-    CHARACTER(len=*),           INTENT(in) :: prefix
-    CHARACTER(len=*),           INTENT(in) :: suffix
+    CHARACTER(len=*),           INTENT(in)    :: prefix
+    CHARACTER(len=*),           INTENT(in)    :: suffix
+    INTEGER, OPTIONAL,          INTENT(in)    :: lct_type
 
     TYPE(t_jsb_grid),        POINTER :: hgrid
     TYPE(t_jsb_vgrid),       POINTER :: surface

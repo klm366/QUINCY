@@ -11,10 +11,13 @@ MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
+  USE mo_exception,           ONLY: message_text, message, finish
+  USE mo_io_units,            ONLY: filename_max
+
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
-  USE mo_exception,           ONLY: message_text, message, finish
+  USE mo_jsb_lct_class,       ONLY: t_jsb_lct
   USE mo_jsb_config_class,    ONLY: t_jsb_config_p
 
   IMPLICIT NONE
@@ -22,13 +25,15 @@ MODULE mo_jsb_tile_class
 
   PUBLIC :: t_jsb_tile_abstract
 
-  INTEGER, PARAMETER :: max_depth_of_tile_tree = 3
+!!$  INTEGER, PARAMETER :: max_depth_of_tile_tree = 3
 
   TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
-    INTEGER                                :: lct_type
+    TYPE(t_jsb_lct)                        :: lct
     INTEGER                                :: process_action(max_no_of_processes)
     REAL(wp),                   POINTER    :: fract     (:,:)  !< Cover fraction of this tile (relative to parent tile)
     REAL(wp),                   POINTER    :: fract_max (:,:)  !< Maximum potential cover fraction for this tile (rel. to parent)
+    CHARACTER(LEN=filename_max)            :: fract_filename   !< Name of file to read tile fractions from (all tiles except root)
+                                                               !! The variable names must be "fract[_max]_"//tile%name
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
     CLASS(t_jsb_memory_p),      POINTER    :: mem(:)
     CLASS(t_jsb_tile_abstract), POINTER    :: parent_tile => NULL()

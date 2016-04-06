@@ -48,14 +48,12 @@ MODULE mo_jsb_config_class
 
 CONTAINS
 
-  FUNCTION new_model_config(namelist_filename) RESULT(config)
+  FUNCTION new_model_config(namelist_filename) RESULT(model_config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
-    CHARACTER(len=*), INTENT(in) :: namelist_filename
-    TYPE(t_jsb_model_config), POINTER :: config !R faende es besser wenn die config Pointer schon im Namen unterschieden wuerden, macht es einfacher zu grepen...hier und in "Subroutine init_base" m_config
-
-    TYPE(t_jsb_model_config), POINTER :: new
+    CHARACTER(len=*),         INTENT(in) :: namelist_filename
+    TYPE(t_jsb_model_config), POINTER    :: model_config
 
     CHARACTER(len=filename_max) :: grid_filename
     CHARACTER(len=30)           :: grid_name
@@ -75,7 +73,7 @@ CONTAINS
 
     CALL message(TRIM(routine), 'Starting model configuration from '//TRIM(namelist_filename))
 
-    ALLOCATE(new)
+    ALLOCATE(model_config)
 
     ! Set defaults
     grid_filename = ''
@@ -88,17 +86,15 @@ CONTAINS
     nml_unit = position_nml('jsb_grid_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_grid_nml)
 
-    new%grid_filename = grid_filename
-    new%grid_name     = grid_name
+    model_config%grid_filename = grid_filename
+    model_config%grid_name     = grid_name
 
     nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
 
-    new%usecase       = usecase
+    model_config%usecase       = usecase
 
     CALL close_nml(nml_handler)
-
-    config => new
 
   END FUNCTION new_model_config
 

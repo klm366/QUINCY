@@ -129,14 +129,15 @@ CONTAINS
 !!$      &                          ', nblk='//int2string(iblk), all_print=.TRUE.)
     IF (debug_on() .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
+    ! Update options
+    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, dtime=dtime, steplen=steplen)
+
     ! Put atmospheric forcing into the atm2land memory.
     tile => model%Get_top_tile()
     CALL update_atm2land(                      &
       & tile,                                  &
       & model%Get_process_configs(),           &
-      & iblk,                                  &
-      & ics,                                   &
-      & ice,                                   &
+      & model%options,                         &
       & t_air            = t_air(:),           &
       & q_air            = q_air(:),           &
       & rain             = rain(:),            &
@@ -158,9 +159,6 @@ CONTAINS
       & cos_zenith_angle = cos_zenith_angle(:) &
       & )
     NULLIFY(tile)
-
-    ! Update options
-    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, dtime=dtime, steplen=steplen)
 
     ! Run tasks in queue
     CALL model%Run_tasks()
@@ -225,9 +223,7 @@ CONTAINS
     CALL update_land2atm(                   &
       & tile,                               &
       & model%Get_process_configs(),        &
-      & iblk,                               &
-      & ics,                                &
-      & ice,                                &
+      & model%options,                      &
       & t_srf          = t_srf(:),          &
       & t_eff_srf      = t_eff_srf(:),      &
       & qsat_srf       = qsat_srf(:),       &

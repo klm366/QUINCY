@@ -49,22 +49,24 @@ MODULE mo_jsb_tile
 
 CONTAINS
 
-  FUNCTION Construct_tile(name, description, processes, varlist_name, lct_type, &
-    & process_actions, parent, model_id, grid_id) RESULT(return_ptr)
+  FUNCTION Construct_tile(name, description, processes, varlist_name, lct, &
+    & process_actions, parent, model_id, grid_id, fract_filename) RESULT(return_ptr)
 
-    USE mo_jsb_process_factory,   ONLY: Create_process_memory, Get_process_name, SRF, ATM2LAND, LAND2ATM
-    USE mo_jsb_memory_class, ONLY: t_jsb_memory
-    USE mo_util,            ONLY: one_of
+    USE mo_jsb_process_factory, ONLY: Create_process_memory, Get_process_name, SEB, ATM2LAND, LAND2ATM
+    USE mo_jsb_memory_class,    ONLY: t_jsb_memory
+    USE mo_jsb_lct_class,       ONLY: t_jsb_lct, LAND_TYPE, LAKE_TYPE
+    USE mo_util,                ONLY: one_of
 
     CHARACTER(len=*),  INTENT(in)           :: name
     CHARACTER(len=*),  INTENT(in)           :: description
     INTEGER,           INTENT(in)           :: processes(:)
     CHARACTER(len=*),  INTENT(in)           :: varlist_name
-    INTEGER,           INTENT(in)           :: lct_type
+    TYPE(t_jsb_lct),   INTENT(in)           :: lct
     INTEGER,           INTENT(in), OPTIONAL :: process_actions(:)
     CLASS(t_jsb_tile), POINTER,    OPTIONAL :: parent
-    INTEGER,           INTENT(in), OPTIONAL :: model_id   ! Only needed if parent is not present
-    INTEGER,           INTENT(in), OPTIONAL :: grid_id    ! Only needed if parent is not present
+    INTEGER,           INTENT(in), OPTIONAL :: model_id       !< Only needed if parent is not present
+    INTEGER,           INTENT(in), OPTIONAL :: grid_id        !< Only needed if parent is not present
+    CHARACTER(len=*),  INTENT(in), OPTIONAL :: fract_filename !< Name of file with tile fractions
     CLASS(t_jsb_tile), POINTER              :: return_ptr
 
     CHARACTER(LEN=15)                     :: process_name
@@ -89,7 +91,11 @@ CONTAINS
 
     ! Initialize further components of t_jsb_tile_abstract extended type
 
-    return_ptr%lct_type = lct_type
+    IF (PRESENT(parent)) THEN
+      IF (ASSOCIATED(parent%parent) .AND. (lct%id == LAND_TYPE .OR. lct%id == LAKE_TYPE)) &
+        & CALL finish(TRIM(routine), 'Tiles with lct LAND_TYPE or LAKE_TYPE must be direct children of root tile.')
+    END IF
+    return_ptr%lct = lct
 
     IF (PRESENT(process_actions)) THEN
       IF (SIZE(processes) /= SIZE(process_actions)) &
@@ -110,8 +116,14 @@ CONTAINS
       IF (PRESENT(grid_id))  return_ptr%grid_id = grid_id
     END IF
 
+    ! Initialize and read tile fractions
     IF (ASSOCIATED(return_ptr%parent_tile)) THEN
-      CALL Init_tile(return_ptr, TRIM(varlist_name), '', TRIM(name), return_ptr%grid_id)
+      IF (PRESENT(fract_filename)) THEN
+        CALL Init_tile(return_ptr, TRIM(varlist_name), '', TRIM(name), return_ptr%grid_id, fract_filename)
+      ELSE
+        ! Temporary: Should eventually be read from tile/model namelist or xml
+        CALL Init_tile(return_ptr, TRIM(varlist_name), '', TRIM(name), return_ptr%grid_id, 'bc_land_frac.nc')
+      END IF
     ELSE
       CALL Init_tile(return_ptr, TRIM(varlist_name), '', '', return_ptr%grid_id)
     END IF
@@ -127,9 +139,17 @@ CONTAINS
       return_ptr%process_action(i) = SKIP_
       must_create_memory_parents = .FALSE.
       iproc = -1
-      j = one_of(i, processes)
+      IF (SIZE(processes) > 0) THEN
+        j = one_of(i, processes)
+      ELSE
+        j = 0
+      END IF
       IF (j > 0) THEN
         iproc = processes(j)
+
+        IF (iproc == SEB .AND. (lct%id /= LAND_TYPE .AND. lct%id /= LAKE_TYPE)) &
+          & CALL finish(TRIM(routine), 'SEB process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
+
         IF (PRESENT(process_actions)) THEN
           return_ptr%process_action(iproc) = process_actions(j)
         ELSE
@@ -194,9 +214,9 @@ CONTAINS
           ALLOCATE(return_ptr%mem(iproc)%p%owner_tile_path(SIZE(return_ptr%path)))
           return_ptr%mem(iproc)%p%owner_tile_path(:) = return_ptr%path(:)
           IF (ASSOCIATED(return_ptr%parent_tile)) THEN
-            CALL return_ptr%mem(iproc)%p%Init(TRIM(process_name), TRIM(name))
+            CALL return_ptr%mem(iproc)%p%Init(TRIM(process_name), TRIM(name), lct%id)
           ELSE
-            CALL return_ptr%mem(iproc)%p%Init(TRIM(process_name), '')
+            CALL return_ptr%mem(iproc)%p%Init(TRIM(process_name), '', lct%id)
           END IF
           CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(return_ptr%name))
         END SELECT
@@ -206,27 +226,26 @@ CONTAINS
       IF (must_create_memory_parents) THEN
         tmp_tile => return_ptr%parent_tile
         DO WHILE (ASSOCIATED(tmp_tile))
-          IF (ASSOCIATED(tmp_tile%mem(iproc)%p)) THEN
-            tmp_tile => tmp_tile%parent_tile
-            CYCLE
+          IF (.NOT. ASSOCIATED(tmp_tile%mem(iproc)%p)) THEN
+            tmp_ptr => Create_process_memory(iproc)
+            SELECT TYPE (tmp_ptr)
+            CLASS IS (t_jsb_memory)
+              tmp_tile%mem(iproc)%p => tmp_ptr
+              tmp_tile%mem(iproc)%p%id = iproc
+              tmp_tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
+              tmp_tile%mem(iproc)%p%grid_id = return_ptr%grid_id
+              tmp_tile%mem(iproc)%p%owner_model_id = return_ptr%owner_model_id
+              CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(tmp_tile%name))
+            END SELECT
+            NULLIFY(tmp_ptr)
           END IF
-          !return_ptr%param(iproc)%p => t_jsb_param(iproc)
-          tmp_ptr => Create_process_memory(iproc)
-          SELECT TYPE (tmp_ptr)
-          CLASS IS (t_jsb_memory)
-            tmp_tile%mem(iproc)%p => tmp_ptr
-            tmp_tile%mem(iproc)%p%id = iproc
-            tmp_tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
-            tmp_tile%mem(iproc)%p%grid_id = return_ptr%grid_id
-            tmp_tile%mem(iproc)%p%owner_model_id = return_ptr%owner_model_id
-            IF (ASSOCIATED(tmp_tile%parent_tile)) THEN
-              CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), TRIM(tmp_tile%name))
-            ELSE
-              CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), '')
-            END IF
-            CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(tmp_tile%name))
-          END SELECT
-          NULLIFY(tmp_ptr)
+          ! Note: Init for mem(iproc) might be called several times and must make sure that only those parts of the
+          ! memory (for certain lct%id) are created that haven't been initialized before.
+          IF (ASSOCIATED(tmp_tile%parent_tile)) THEN
+            CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), TRIM(tmp_tile%name), lct%id)
+          ELSE
+            CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), '', lct%id)
+          END IF
           tmp_tile => tmp_tile%parent_tile
         END DO
         NULLIFY(tmp_tile)
@@ -237,23 +256,29 @@ CONTAINS
 
   END FUNCTION Construct_tile
 
-  SUBROUTINE Init_tile(tile, varlist_name, prefix, suffix, grid_id)
+  SUBROUTINE Init_tile(tile, varlist_name, prefix, suffix, grid_id, fract_filename)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist, jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
+      &                             jsb_netcdf_read_2d, ncfile_has_var
 
     CLASS(t_jsb_tile), POINTER,  INTENT(inout) :: tile
     CHARACTER(len=*),            INTENT(in)    :: varlist_name
-    CHARACTER(len=*),            INTENT(in)    :: prefix        ! Prefix for variable names
+    CHARACTER(len=*),            INTENT(in)    :: prefix         ! Prefix for variable names
     CHARACTER(len=*),            INTENT(in)    :: suffix
     INTEGER,                     INTENT(in)    :: grid_id
+    CHARACTER(len=*), OPTIONAL,  INTENT(in)    :: fract_filename !< Name of file with tile fractions
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     CHARACTER(len=10)          :: parent_tile_name
     INTEGER                    :: table
+    TYPE(t_input_file)         :: input_file
+    REAL(wp),          POINTER :: return_pointer(:,:)
+    CHARACTER(len=50)          :: name_loc
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_tile'
 
@@ -265,29 +290,57 @@ CONTAINS
     parent_tile_name = tile%Get_parent_name()
     IF (parent_tile_name == '') parent_tile_name = 'grid box  '
 
-    CALL jsb_add_var(TRIM(varlist_name), prefix//'fract'//suffix, tile%fract,                                 &
+    CALL jsb_add_var(TRIM(varlist_name), 'fract', tile%fract,                                 &
       & hgrid, surface,                                                                                         &
-      & t_cf('land_area_fraction', '',                                                                          &
+      & t_cf('tile_fraction', '',                                                                          &
       &      'fraction of '//TRIM(parent_tile_name)//' covered by '//TRIM(tile%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp)
 
-    CALL jsb_add_var(TRIM(varlist_name), prefix//'fract_max'//suffix, tile%fract_max,                         &
+    CALL jsb_add_var(TRIM(varlist_name), 'fract_max', tile%fract_max,                         &
       & hgrid, surface,                                                                                         &
-      & t_cf('land_area_fraction', '',                                                                          &
-      &      'fraction of '//TRIM(parent_tile_name)//' covered by '//TRIM(tile%name)),                      &
+      & t_cf('tile_fraction_max', '',                                                                          &
+      &      'max fraction of '//TRIM(parent_tile_name)//' covered by '//TRIM(tile%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp)
 
-    tile%fract = 1._wp
-    tile%fract_max = 1._wp
+    IF (.NOT. PRESENT(fract_filename)) THEN
+      tile%fract    (:,:) = 1._wp
+      tile%fract_max(:,:) = 1._wp
+    ELSE
+      input_file = jsb_netcdf_open_input(TRIM(fract_filename), tile%owner_model_id)
+
+      name_loc = 'fract'
+      IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
+      IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+      return_pointer => jsb_netcdf_read_2d(         &
+        & input_file,                               &
+        & variable_name=TRIM(name_loc),             &
+        & fill_array = tile%fract)
+
+      name_loc = 'fract_max'
+      IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
+      IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+      IF (ncfile_has_var(TRIM(fract_filename), TRIM(name_loc))) THEN
+        return_pointer => jsb_netcdf_read_2d(         &
+          & input_file,                               &
+          & variable_name=TRIM(name_loc),             &
+          & fill_array = tile%fract_max)
+      ELSE
+        tile%fract_max(:,:) = 1._wp
+      END IF
+
+      CALL jsb_netcdf_close_file(input_file)
+    END IF
 
   END SUBROUTINE Init_tile
 
   ! Task handler function for tile
   FUNCTION Process_task_on_tile(this, hsm, msg_in) RESULT(return_ptr)
+
+    USE mo_util, ONLY: one_of
 
     CLASS(t_jsb_tile),  INTENT(inout) :: this
     CLASS(t_Hsm),       INTENT(in)    :: hsm
@@ -310,16 +363,22 @@ CONTAINS
       task => model%current_task
 
       IF (debug_on() .AND. model%options%iblk == 1) THEN
-        CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
-          &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name))
-        !CALL this%Print()
+        IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
+          CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
+            &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name))
+!!$        PRINT*,'AAA ', TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
+!!$          &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name)
+!!$        CALL this%Print()
+        END IF
       END IF
 
       SELECT CASE (TRIM(msg%action%name))
       CASE ('START')
         IF (.NOT. this%visited) THEN
           IF (this%process_action(task%process_id) >= AGGREGATE_) THEN
-            IF (this%Has_children()) THEN
+            IF (this%Has_children() .AND. &
+              & this%process_action(task%process_id) /= ON_SUBTREE_ .AND. &
+              & this%process_action(task%process_id) /= ON_TILE_) THEN
               CALL model%Start_state(this%first_child)
             END IF
           ELSE IF (ASSOCIATED(this%next_sibling)) THEN
@@ -328,8 +387,10 @@ CONTAINS
         END IF
       CASE ('INTEGRATE')
         IF (this%process_action(task%process_id) >= AGGREGATE_) THEN
-          IF (this%Has_children()) THEN
-            CALL model%Goto(this%first_child)
+          IF (this%Has_children() .AND. &
+            & this%process_action(task%process_id) /= ON_SUBTREE_ .AND. &
+            & this%process_action(task%process_id) /= ON_TILE_) THEN
+            CALL model%GOTO(this%first_child)
           ELSE
             task%msg => msg
             CALL task%Do_it(this, model%Get_process_configs(), model%options)
@@ -386,7 +447,11 @@ CONTAINS
 
     SELECT TYPE(model=>hsm)
     CLASS IS (t_jsb_model)
-      IF (debug_on() .AND. model%options%iblk == 1) CALL message(TRIM(routine),'Finished')
+      IF (debug_on() .AND. model%options%iblk == 1) THEN
+        IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
+          CALL message(TRIM(routine),'Finished')
+        END IF
+      END IF
     END SELECT
 
   END FUNCTION Process_task_on_tile

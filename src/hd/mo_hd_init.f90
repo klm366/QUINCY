@@ -94,7 +94,7 @@ CONTAINS
 
 
     ! Initialize data from input file
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD)%bc_filename), model%id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD)%bc_filename), model%grid_id)
 
     ! HD model mask: -1 ocean, 0: ocean inflow cells, 1: land with outflow, 2: internal drainage
     return_pointer => jsb_netcdf_read_2d(         &
@@ -216,7 +216,7 @@ CONTAINS
 
     CALL message(TRIM(routine), 'Initializing hd memory from '//TRIM(dsl4jsb_Config(HD)%ic_filename))
 
-!vg     input_file = jsb_netcdf_open_input(TRIM(model%config%hd%ic_filename), model%id)
+!vg     input_file = jsb_netcdf_open_input(TRIM(model%config%hd%ic_filename), model%grid_id)
 
     ! Initialize boundary conditions
     !

@@ -53,7 +53,8 @@ MODULE mo_soil_memory_class
       vhcap               ,    & !< Volumetric heat capacity of dry soil [J m-3 K-1]
       hdiff               ,    & !< Thermal diffusivity of soil [m2 s-1]
       alb_vis_soil        ,    & !< Albedo of the soil in the visible range
-      alb_nir_soil               !< Albedo of the soil in the NIR range
+      alb_nir_soil        ,    & !< Albedo of the soil in the NIR range
+      oro_stddev                 !< Standard deviation of orography
     !
     ! Energy state
     TYPE(t_jsb_var_real3d) :: &
@@ -64,52 +65,20 @@ MODULE mo_soil_memory_class
       hcap_grnd     , &  !< Heat capacity of the ground [J m-2 K-1]
       hcap_grnd_old      !< Heat capacity of the ground [J m-2 K-1] (old)
     !
-    ! Water state
-    TYPE(t_jsb_var_real2d) :: &
-      wfract_soil   ,   & !< Wet (skin reservoir) fraction of soil []
-      wsr_soil      ,   & !< Water content in skin reservoir on soil [m]
-      sfract_soil   ,   & !< Snow fraction of soil []
-      wsn_soil      ,   & !< Water content of snow reservoir of soil [m water equivalent]
-      overflow      ,   & !< Water content of reservoir for overflown soil water (terraplanet) [m] 
-      ws                  !< Water content in the whole soil column [m]
-    TYPE(t_jsb_var_real3d) :: &
-      ws_l          ,   & !< Water content in soil layers [m]
-      ws_sat_l      ,   & !< Water content of soil layers at saturation (derived from soil porosity) [m]
-      ws_fc_l       ,   & !< Water content of soil layers at field capacity (derived from volumetric field capacity)[m]
-      ws_pwp_l            !< Water content of soil layers at permanent wilting point (derived from vol. perm wilt point) [m]
-    !
     ! Energy fluxes
     TYPE(t_jsb_var_real2d) :: &
       grnd_hflx        ,  &  !< ground heat flux
       grnd_hflx_old          !< ground heat flux (old)
-    !
-    ! Water fluxes
-    TYPE(t_jsb_var_real2d) :: &
-      & runoff         , & !< surface runoff
-      & drainage       , & !< drainage
-      & pme_glacier    , & !< P-E on glaciers
-      & discharge      , & !< discharge (local)
-      & discharge_ocean, & !< discharge to the ocean
-      & internal_drain     !< internal drain
+
   CONTAINS
     PROCEDURE :: Init => Init_soil_memory
   END TYPE t_soil_memory
 
-  ! Note: Would be nicer to be able to overload the "=" operator, but that would be more
-  ! complicated because we only want to copy parts of the arrays (ics:ice,iblk)
-!!$  INTERFACE copy_soil_mem
-!!$    MODULE PROCEDURE copy_t_soil_energy_state
-!!$  END INTERFACE copy_soil_mem
-!!$
-!!$  INTERFACE add_soil_mem
-!!$    MODULE PROCEDURE add_t_soil_energy_state
-!!$  END INTERFACE add_soil_mem
-
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_memory_class'
 
-CONTAINS 
+CONTAINS
 
-  SUBROUTINE Init_soil_memory(mem, prefix, suffix)
+  SUBROUTINE Init_soil_memory(mem, prefix, suffix, lct_type)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -120,6 +89,7 @@ CONTAINS
     CLASS(t_soil_memory), INTENT(inout) :: mem
     CHARACTER(len=*),     INTENT(in)    :: prefix
     CHARACTER(len=*),     INTENT(in)    :: suffix
+    INTEGER, OPTIONAL,    INTENT(in)    :: lct_type
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_e, soil_w      ! Vertical grids
@@ -134,6 +104,8 @@ CONTAINS
     surface => Get_vgrid('surface')
     soil_e  => Get_vgrid('soil_depth_energy')
     soil_w  => Get_vgrid('soil_depth_water')
+
+    IF (ASSOCIATED(mem%soil_depth%ptr)) RETURN
 
     CALL jsb_add_var( mem, 'soil_depth', mem%soil_depth,                         &
       & hgrid, surface,                                                                    &
@@ -212,6 +184,13 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
+    CALL jsb_add_var( mem, 'oro_stddev', mem%oro_stddev,                     &
+      & hgrid, surface,                                                                    &
+      & t_cf('orography_standard_deviation', '', ''),                        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
     CALL jsb_add_var( mem, 't_soil', mem%t_soil,                                 &
       & hgrid, soil_e,                                                                     &
       & t_cf('soil_temperature', 'K', ''),                                                 &
@@ -261,144 +240,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'wfract_soil', mem%wfract_soil,                       &
-      & hgrid, surface,                                                                    &
-      & t_cf('wet_fraction_soil', '', ''),                                                 &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'wsr_soil', mem%wsr_soil,                             &
-      & hgrid, surface,                                                                    &
-      & t_cf('skin_reservoir_soil', 'm', ''),                                              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'sfract_soil', mem%sfract_soil,                       &
-      & hgrid, surface,                                                                    &
-      & t_cf('snow_fraction_soil', '', ''),                                                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'wsn_soil', mem%wsn_soil,                             &
-      & hgrid, surface,                                                                    &
-      & t_cf('snow_water_equivalent_soil', 'm', ''),                                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'overflow', mem%overflow,                             &
-      & hgrid, surface,                                                                    &
-      & t_cf('overflown_soil_moisture', 'm', ''),                                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'ws_l', mem%ws_l,                                     &
-      & hgrid, soil_w,                                                                     &
-      & t_cf('soil_moisture', 'm', ''),                                                    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'ws_fc_l', mem%ws_fc_l,                               &
-      & hgrid, soil_w,                                                                     &
-      & t_cf('field_capacity', 'm', ''),                                                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'ws_pwp_l', mem%ws_pwp_l,                             &
-      & hgrid, soil_w,                                                                     &
-      & t_cf('permanent_wilting_point', 'm', ''),                                          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'ws_sat_l', mem%ws_sat_l,                             &
-      & hgrid, soil_w,                                                                     &
-      & t_cf('water holding capacity', 'm', ''),                                           &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'ws', mem%ws,                                         &
-      & hgrid, surface,                                                                    &
-      & t_cf('soil_moisture', 'm', ''),                                                    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'runoff', mem%runoff,                   &
-      & hgrid, surface,                                                                    &
-      & t_cf('surface_runoff', 'kg m-2 s-1', 'Surface runoff'),                            &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'drainage', mem%drainage,               &
-      & hgrid, surface,                                                                    &
-      & t_cf('drainage', 'kg m-2 s-1', 'drainage'),                                        &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'pme_glacier', mem%pme_glacier,         &
-      & hgrid, surface,                                                                    &
-      & t_cf('pme_glacier', 'kg m-2 s-1', 'P-E on glaciers'),                              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'discharge', mem%discharge,             &
-      & hgrid, surface,                                                                    &
-      & t_cf('discharge', 'kg m-2 s-1', 'local discharge'),                                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'discharge_ocean', mem%discharge_ocean, &
-      & hgrid, surface,                                                                    &
-      & t_cf('discharge_ocean', 'kg m-2 s-1', 'discharge to the ocean'),                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'internal_drain', mem%internal_drain,           &
-      & hgrid, surface,                                                                    &
-      & t_cf('internal_drain', 'kg m-2 s-1', 'internal drainage'),                         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-
     END SUBROUTINE Init_soil_memory
-
-!!$  SUBROUTINE copy_t_soil_energy_state(in, out, iblk, ics, ice)
-!!$
-!!$    TYPE(t_soil_energy_state), INTENT(in)    :: in
-!!$    TYPE(t_soil_energy_state), INTENT(inout) :: out
-!!$    INTEGER,                   INTENT(in)    :: iblk, ics, ice
-!!$
-!!$    out%t_soil        (ics:ice, :, iblk) = in%t_soil        (ics:ice, :, iblk)
-!!$    out%t_soil_acoef  (ics:ice, :, iblk) = in%t_soil_acoef  (ics:ice, :, iblk)
-!!$    out%t_soil_bcoef  (ics:ice, :, iblk) = in%t_soil_bcoef  (ics:ice, :, iblk)
-!!$
-!!$  END SUBROUTINE copy_t_soil_energy_state
-!!$
-!!$  SUBROUTINE add_t_soil_energy_state(in1, in2, out, iblk, ics, ice)
-!!$
-!!$    TYPE(t_soil_energy_state), INTENT(in)    :: in1, in2
-!!$    TYPE(t_soil_energy_state), INTENT(inout) :: out
-!!$    INTEGER,                   INTENT(in)    :: iblk, ics, ice
-!!$
-!!$    out%t_soil        (ics:ice, :, iblk) = in1%t_soil        (ics:ice, :, iblk) + in2%t_soil        (ics:ice, :, iblk)
-!!$    out%t_soil_acoef  (ics:ice, :, iblk) = in1%t_soil_acoef  (ics:ice, :, iblk) + in2%t_soil_acoef  (ics:ice, :, iblk)
-!!$    out%t_soil_bcoef  (ics:ice, :, iblk) = in1%t_soil_bcoef  (ics:ice, :, iblk) + in2%t_soil_bcoef  (ics:ice, :, iblk)
-!!$
-!!$  END SUBROUTINE add_t_soil_energy_state
 
 #endif
 END MODULE mo_soil_memory_class

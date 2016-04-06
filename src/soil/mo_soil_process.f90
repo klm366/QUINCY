@@ -17,7 +17,7 @@ MODULE mo_soil_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: snow_fract, relative_humidity, update_surf_down, update_soiltemp, update_surf_up
+  PUBLIC :: snow_fract_noforest, relative_humidity, update_surf_down, update_soiltemp, update_surf_up
   PUBLIC :: init_soil_temperature
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_process'
@@ -26,7 +26,7 @@ CONTAINS
 
   !< Roesch et al. 2002, Climate Dynamics
   !
-  REAL(wp) ELEMENTAL FUNCTION snow_fract(snow, orodev)
+  REAL(wp) ELEMENTAL FUNCTION snow_fract_noforest(snow, orodev)
 
     USE mo_soil_constants, ONLY: wsn2frac_const, wsn2frac_eps, wsn2frac_sigfac
 
@@ -34,10 +34,10 @@ CONTAINS
       & snow,   &
       & orodev
 
-    snow_fract = wsn2frac_const * TANH(snow * 100._wp) &
+    snow_fract_noforest = wsn2frac_const * TANH(snow * 100._wp) &
                                & * SQRT(snow * 1000._wp / (snow * 1000._wp + wsn2frac_eps + wsn2frac_sigfac * orodev))
 
-  END FUNCTION snow_fract
+  END FUNCTION snow_fract_noforest
 
   REAL(wp) ELEMENTAL FUNCTION relative_humidity(ws, fc)
 
@@ -728,7 +728,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
      , etrans, redevap                    &
 !!$     , vfc, vpwp &
      , spsi                           &
-     , overflow                       &
+     , w_soil_overflow                       &
      , jllog                                     &
      , l_tpe_open                      &
      , l_tpe_closed                    &
@@ -900,7 +900,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !!$  REAL(wp), INTENT(in)   , optional :: vfc(kbdim)
 !!$  REAL(wp), INTENT(in)   , optional :: vpwp(kbdim)
   REAL(wp), INTENT(in)   , optional :: spsi(kbdim)
-  REAL(wp), INTENT(inout), optional :: overflow(kbdim) ! excess of water in the terraplanet setup (l_tpe_closed = true)
+  REAL(wp), INTENT(inout), optional :: w_soil_overflow(kbdim) ! excess of water in the terraplanet setup (l_tpe_closed = true)
 
   INTEGER,  INTENT(inout), optional :: jllog      ! gridbox number for logoutput in SOILHYD
   LOGICAL,  INTENT(in),    OPTIONAL :: l_tpe_open   ! Switch for terraplanet setup, open water cycle
@@ -982,7 +982,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !!$      zdrain(jl) = 0._wp
 !!$      zraind(jl) = prain(jl) * zdtime/rhoh2o
       !vg: potential evaporation from skin reservoir
-      !vg:  = (1-snow_fract) * skinres_fract * evap_pot  [kg/m2/s] -> [m]
+      !vg:  = (1-snow_fract_noforest) * skinres_fract * evap_pot  [kg/m2/s] -> [m]
       zevwld(jl) = (1._wp-pcvs(jl))*pcvw(jl)*pevapot(jl)*zdtime/rhoh2o
     END IF
   ENDDO
@@ -1126,7 +1126,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
             wsi , wsim1m,                           &
             dzr, dzrsi,    dzsi, zwsat, zwsfc,      &
             zinfil, zdrain, aetrans, aebsoil,       &
-            redevap, overflow, ltpe_closed)
+            redevap, w_soil_overflow, ltpe_closed)
 
       ! Drainage calculation [m] with 5 layer soil scheme
       CALL SoilHyd(kb1, kbdim, kbdim, nsoil,      &
@@ -1134,7 +1134,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
            wsi, dzsi, zwsat, zwsfc,               &
            fksat, vpor, bclapp, fmpot,            &
            zdrain, spsi, zwpwp, zdel,             &
-           overflow, ltpe_closed)
+           w_soil_overflow, ltpe_closed)
 
       ! Second half of the water is infiltrated after SOILHYD
       isch = 2     ! Changes by infiltration
@@ -1143,7 +1143,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
             wsi , wsim1m,                           &
             dzr, dzrsi,    dzsi, zwsat, zwsfc,      &
             zinfil, zdrain, aetrans, aebsoil,       &
-            redevap, overflow, ltpe_closed)
+            redevap, w_soil_overflow, ltpe_closed)
 
       ! Does overflow occur due to infiltration in the layers? --> added to drainage
       DO jk=1, nsoil
@@ -1152,8 +1152,8 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
             IF (wsi(jl,jk) > zwsfc(jl,jk)) THEN                        !vg  soil moisture above field capacity
               IF (ltpe_closed) THEN
                 ! modification for TPE
-                ! put drainage in overflow pool
-                overflow(jl) = overflow(jl) + wsi(jl,jk) - zwsfc(jl,jk)
+                ! put drainage in w_soil_overflow pool
+                w_soil_overflow(jl) = w_soil_overflow(jl) + wsi(jl,jk) - zwsfc(jl,jk)
               ELSE
                 zdrain(jl) = zdrain(jl) + wsi(jl,jk) - zwsfc(jl,jk)    !vg  excess moisture goes to drainage
               ENDIF
@@ -1161,10 +1161,10 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
             ELSE ! wsi <= zwsfc
               IF (ltpe_closed) THEN
                 ! modification for TPE
-                ! refill soil moisture from overflow pool
-                remoist = MIN(overflow(jl), zwsfc(jl,jk) - wsi(jl,jk))
+                ! refill soil moisture from w_soil_overflow pool
+                remoist = MIN(w_soil_overflow(jl), zwsfc(jl,jk) - wsi(jl,jk))
                 wsi(jl,jk) = wsi(jl,jk) + remoist
-                overflow(jl) = overflow(jl) - remoist
+                w_soil_overflow(jl) = w_soil_overflow(jl) - remoist
               ENDIF
             ENDIF
             IF (ltpe_open) THEN
@@ -1235,7 +1235,7 @@ END SUBROUTINE update_surf_up
 
 SUBROUTINE soilhyd(kidia, kfdia, klon, kdeep, zdiagt, loland, ilog, jllog,  &
     wsi, dzsi, zwsat, zwsfc, fksat, vpor, bclapp, fmpot,  &
-    zdrain, spsi, zwpwp, zdel, overflow, ltpe_closed )
+    zdrain, spsi, zwpwp, zdel, w_soil_overflow, ltpe_closed )
 !     **************************************************************************
 
 !     ******* SOIL HYDROLOGY - Routine to be build into REMO
@@ -1370,7 +1370,7 @@ REAL(wp), INTENT(INOUT)                  :: zdrain(klon)
 REAL(wp), INTENT(IN)                     :: spsi(klon)
 REAL(wp), INTENT(IN)                     :: zwpwp(klon,kdeep)
 REAL(wp), INTENT(IN)                     :: zdel(kdeep)
-REAL(wp), INTENT(INOUT), OPTIONAL        :: overflow(klon)
+REAL(wp), INTENT(INOUT), OPTIONAL        :: w_soil_overflow(klon)
 LOGICAL,  INTENT(IN),    OPTIONAL        :: ltpe_closed
 
 REAL(wp), PARAMETER :: zeps   = 1.e-15_wp
@@ -1729,8 +1729,8 @@ LOGICAL  :: l_tpe_closed
         IF (wsi(jl,i) > zwsfc(jl,i)) THEN
           IF (l_tpe_closed) THEN
             ! modification for TPE
-            ! redirect overflow from drainage to overflow pool
-            overflow(jl) = overflow(jl) + wsi(jl,i) - zwsfc(jl,i)
+            ! redirect overflow from drainage to w_soil_overflow pool
+            w_soil_overflow(jl) = w_soil_overflow(jl) + wsi(jl,i) - zwsfc(jl,i)
           ELSE
             zdrain(jl) = zdrain(jl) + wsi(jl,i) - zwsfc(jl,i)
           END IF
@@ -1779,7 +1779,7 @@ LOGICAL  :: l_tpe_closed
           IF (l_tpe_closed) THEN
             ! modification for TPE
             ! redirect percolation from drainage to overflow pool
-            overflow(jl) = overflow(jl) + zperc(jl,i)
+            w_soil_overflow(jl) = w_soil_overflow(jl) + zperc(jl,i)
           ELSE
             zdrain(jl) = zdrain(jl) + zperc(jl,i)
           END IF
@@ -1794,7 +1794,7 @@ LOGICAL  :: l_tpe_closed
       IF (l_tpe_closed) THEN
         ! modification for TPE
         ! redirect percolation from drainage to overflow pool
-        overflow(jl) = overflow(jl) + zperc(jl,kdeep)
+        w_soil_overflow(jl) = w_soil_overflow(jl) + zperc(jl,kdeep)
       ELSE
         zdrain(jl) = zdrain(jl) + zperc(jl,kdeep)
       END IF
@@ -1822,8 +1822,8 @@ LOGICAL  :: l_tpe_closed
       IF (wsi(jl,1) > zwsfc(jl,1)) THEN
         IF (l_tpe_closed) THEN
           ! modification for TPE
-          ! redirect overflow from drainage to overflow pool
-          overflow(jl) = overflow(jl) + wsi(jl,1) - zwsfc(jl,1)
+          ! redirect w_soil_overflow from drainage to overflow pool
+          w_soil_overflow(jl) = w_soil_overflow(jl) + wsi(jl,1) - zwsfc(jl,1)
         ELSE
           zdrain(jl) = zdrain(jl) + wsi(jl,1) - zwsfc(jl,1)
         END IF
@@ -1985,7 +1985,7 @@ SUBROUTINE soilchange (kidia, kfdia, klon, kdeep,  isch ,  &
 !         ***   Vertical water fluxes  -- evap. fluxes over land
     finfil, drain, aetrans, aebsoil,                  &
 !         ***   Reduction of evaporation if necessary
-    redevap, overflow, ltpe_closed)
+    redevap, w_soil_overflow, ltpe_closed)
 
 !     Intermediate routine for changing 5 soil moisture layers due to
 !     evaporation fluxes, infiltration and drainage that are calculated
@@ -2085,7 +2085,7 @@ REAL(wp), INTENT(INOUT)                  :: drain(klon)
 REAL(wp), INTENT(IN)                     :: aetrans(klon)
 REAL(wp), INTENT(IN)                     :: aebsoil(klon)
 REAL(wp), INTENT(INOUT)                  :: redevap(klon)
-REAL(wp), INTENT(INOUT), OPTIONAL        :: overflow(klon)
+REAL(wp), INTENT(INOUT), OPTIONAL        :: w_soil_overflow(klon)
 LOGICAL,  INTENT(IN),    OPTIONAL        :: ltpe_closed
 
 REAL(wp), PARAMETER :: zeps = 1.e-15_wp
@@ -2235,7 +2235,7 @@ LOGICAL  :: l_tpe_closed
           wsi(jl,jk) = wsi(jl,jk) + zover(jl)
           IF (l_tpe_closed) THEN
             IF (wsi(jl,jk) > zwsfc(jl,jk)) THEN
-              overflow(jl) = overflow(jl) + wsi(jl,jk) - zwsfc(jl,jk)
+              w_soil_overflow(jl) = w_soil_overflow(jl) + wsi(jl,jk) - zwsfc(jl,jk)
               wsi(jl,jk) = zwsfc(jl,jk)
             END IF
             zover(jl) = 0._wp

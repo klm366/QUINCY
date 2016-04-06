@@ -12,10 +12,8 @@ MODULE mo_jsb_process_class
 
   USE mo_exception,           ONLY: message, finish
 
-  USE mo_hsm_class,           ONLY: t_Message, t_hsm
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_process_task_p
   USE mo_jsb_config_class,    ONLY: t_jsb_config
-  USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_process_factory, ONLY: Get_process_name
 
   IMPLICIT NONE

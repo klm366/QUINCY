@@ -116,7 +116,7 @@ CONTAINS
     ! Initialize physical state
     !
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(RAD)%bc_filename), model%id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(RAD)%bc_filename), model%grid_id)
 
     ! background albedo
     return_pointer => jsb_netcdf_read_2d(         &
@@ -126,8 +126,8 @@ CONTAINS
     dsl4jsb_var2D_onDomain(RAD,alb_background) = &
       MERGE(dsl4jsb_var2D_onDomain(RAD,alb_background), 0._wp, dsl4jsb_var2D_onDomain(RAD,alb_background) >= 0._wp)
 
-    dsl4jsb_var2D_onDomain(RAD,alb_vis_srf) = dsl4jsb_var2D_onDomain(RAD,alb_background)
-    dsl4jsb_var2D_onDomain(RAD,alb_nir_srf) = dsl4jsb_var2D_onDomain(RAD,alb_background)
+    dsl4jsb_var2D_onDomain(RAD,alb_vis) = dsl4jsb_var2D_onDomain(RAD,alb_background)
+    dsl4jsb_var2D_onDomain(RAD,alb_nir) = dsl4jsb_var2D_onDomain(RAD,alb_background)
 
     ! soil albedo
     return_pointer => jsb_netcdf_read_2d(         &
@@ -169,14 +169,6 @@ CONTAINS
 !     dsl4jsb_var2D_onDomain(RAD,swnir_srf_net)   = 0._wp
 !     dsl4jsb_var2D_onDomain(RAD,lw_srf_net)      = 0._wp
 !     dsl4jsb_var2D_onDomain(RAD,rad_srf_net)     = 0._wp
-
-    ! Propagate initial conditions down the tile structure, starting with the tile with which this subroutine was called initially
-    ! TBD: sub-tiles should not read the netcdf files again
-!!$    IF (tile%no_of_sub_tiles > 0) THEN
-!!$      DO i=1,tile%no_of_sub_tiles
-!!$        CALL radiation_init_ic(tile%sub_tiles(i))
-!!$      END DO
-!!$    END IF
 
   END SUBROUTINE radiation_init_ic
 

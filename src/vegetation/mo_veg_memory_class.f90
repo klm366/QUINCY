@@ -24,30 +24,21 @@ MODULE mo_veg_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_veg_memory
     !
     ! Parameters
-    TYPE(t_jsb_var_real2d) :: &
-      & lai            , &  !< Leaf area index
-      & fract_fpc      , &  !< Foliage projected cover (fraction of ground area occupied by the vertical projection of foliage)
-      & fract_fpc_max  , &  !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
-      & fract_forest   , &  !< Forest fraction
-      & canopy_cond    , &  !< Canopy conductance (1/resistance)
-      & skin_can_depth , &  !< Depth of skin reservoir on canopy
-      & root_depth     , &  !< Rooting depth [m]
-      & alb_vis_can    , &  !< Albedo of the canopy in the visible range
-      & alb_nir_can         !< Albedo of the canopy in the NIR range
-    TYPE(t_jsb_var_real3d) :: &
+    TYPE(t_jsb_var_real2d) ::                      &
+      & lai,                 &  !< Leaf area index
+      & fract_fpc,           &  !< Foliage projected cover (fraction of ground area occupied by the vertical projection of foliage)
+      & fract_fpc_max,       &  !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
+      & fract_forest,        &  !< Forest fraction
+      & canopy_cond,         & ! Canopy conductance without water limit  [m/s] (mean value)
+      & canopy_cond_limited, & ! Canopy conductance water limit [m/s] (mean value)
+      & skin_can_depth,      &  !< Depth of skin reservoir on canopy
+      & root_depth,          &  !< Rooting depth [m]
+      & alb_vis_can,         &  !< Albedo of the canopy in the visible range
+      & alb_nir_can             !< Albedo of the canopy in the NIR range
+    TYPE(t_jsb_var_real3d) ::               &
       & root_depth_l     !< Rooted depth per soil layer (until rooting depth) [m]
     REAL(wp), POINTER :: lai_mon(:,:,:) !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
 
-    ! Water state
-    TYPE(t_jsb_var_real2d) :: &
-      & wfract_can  , &  !< Wet (skin reservoir) fraction of canopy
-      & wsr_can     , &  !< Water content in skin reservoir on canopy [m]
-      & sfract_can  , &  !< Snow fraction of canopy
-      & wsn_can     , &  !< Water content of snow reservoir onn canopy [m water equivalent]
-      & ws_root     , &  !< Water content in root zone of the soil [m]
-      & ws_fc_root  , &  !< Water content at field capacity in root zone of the soil [m]
-      & ws_pwp_root , &  !< Water content at permanent wilting point in root zone of the soil [m]
-      & water_stress     !< Water stress factor (1: no water stress, 0: infinite stress)
   CONTAINS
     PROCEDURE :: Init => Init_veg_memory
   END TYPE t_veg_memory
@@ -56,7 +47,7 @@ MODULE mo_veg_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_veg_memory(mem, prefix, suffix)
+  SUBROUTINE Init_veg_memory(mem, prefix, suffix, lct_type)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -65,8 +56,9 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
     CLASS(t_veg_memory), INTENT(inout) :: mem
-    CHARACTER(len=*),   INTENT(in)    :: prefix
-    CHARACTER(len=*),   INTENT(in)    :: suffix
+    CHARACTER(len=*),    INTENT(in)    :: prefix
+    CHARACTER(len=*),    INTENT(in)    :: suffix
+    INTEGER, OPTIONAL,   INTENT(in)    :: lct_type
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_w              ! Vertical grids
@@ -80,6 +72,8 @@ CONTAINS
 
     surface => get_vgrid('surface')
     soil_w  => get_vgrid('soil_depth_water')
+
+    IF (ASSOCIATED(mem%lai%ptr)) RETURN
 
     CALL jsb_add_var( mem, 'lai', mem%lai,                             &
       & hgrid, surface,                                                 &
@@ -124,6 +118,13 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
+    CALL jsb_add_var( mem, 'canopy_cond_limited', mem%canopy_cond_limited,     &
+      & hgrid, surface,                                                 &
+      & t_cf('canopy_conductance_limited', '', ''),                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
     CALL jsb_add_var( mem, 'skin_can_depth', mem%skin_can_depth,       &
       & hgrid, surface,                                                 &
       & t_cf('canopy_skin_depth', 'm', ''),                                      &
@@ -133,87 +134,32 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'root_depth', mem%root_depth,               &
       & hgrid, surface,                                                 &
-      & t_cf('rooting_depth', '', ''),                                           &
+      & t_cf('rooting_depth', '', ''),                                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
     CALL jsb_add_var( mem, 'root_depth_l', mem%root_depth_l,           &
       & hgrid, soil_w,                                                                      &
-      & t_cf('root_depth_layer', 'm', ''),                                       &
+      & t_cf('root_depth_layer', 'm', ''),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
     CALL jsb_add_var( mem, 'alb_vis_can', mem%alb_vis_can,             &
       & hgrid, surface,                                                 &
-      & t_cf('canopy_albedo_visible', '', ''),                                   &
+      & t_cf('canopy_albedo_visible', '', ''),                          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'alb_nir_can', mem%alb_nir_can,             &
       & hgrid, surface,                                                 &
-      & t_cf('canopy_albedo_nir', '', ''),                                       &
+      & t_cf('canopy_albedo_nir', '', ''),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'wfract_can', mem%wfract_can,                         &
-      & hgrid, surface,                                                           &
-      & t_cf('wet_fraction_canopy', '', ''),                                               &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'wsr_can', mem%wsr_can,                               &
-      & hgrid, surface,                                                           &
-      & t_cf('skin_reservoir_canopy', 'm', ''),                                            &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'sfract_can', mem%sfract_can,                         &
-      & hgrid, surface,                                                           &
-      & t_cf('snow_fraction_canopy', '', ''),                                              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'wsn_can', mem%wsn_can,                               &
-      & hgrid, surface,                                                           &
-      & t_cf('snow_water_equivalent_canopy', 'm', ''),                                     &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'ws_root', mem%ws_root,                               &
-      & hgrid, surface,                                                           &
-      & t_cf('soil_moisture_root', 'm', ''),                                               &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'ws_fc_root', mem%ws_fc_root,                         &
-      & hgrid, surface,                                                           &
-      & t_cf('field_capacity_root', 'm', ''),                                              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'ws_pwp_root', mem%ws_pwp_root,                       &
-      & hgrid, surface,                                                           &
-      & t_cf('wilting_root', 'm', ''),                                                     &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'water_stress', mem%water_stress,                     &
-      & hgrid, surface,                                                           &
-      & t_cf('water_stress_factor', '', ''),                                               &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
 
   END SUBROUTINE Init_veg_memory
 

@@ -18,12 +18,17 @@ MODULE mo_atmland_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+  USE mo_jsb_lct_class,      ONLY: LAKE_TYPE
 
-  dsl4jsb_Use_processes ATM2LAND, SRF, SOIL
+  dsl4jsb_Use_processes ATM2LAND, SEB, TURB, SOIL, HYDRO, RAD
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
 !!$  dsl4jsb_Use_memory(ATM2LAND)
-  dsl4jsb_Use_memory(SRF)
+  dsl4jsb_Use_memory(SEB)
+  dsl4jsb_Use_memory(TURB)
   dsl4jsb_Use_memory(SOIL)
+  dsl4jsb_Use_memory(HYDRO)
+  dsl4jsb_Use_memory(RAD)
 
   IMPLICIT NONE
   PRIVATE
@@ -52,15 +57,17 @@ CONTAINS
       & pch(:), cos_zenith_angle(:)
 
     dsl4jsb_Def_memory(ATM2LAND)
-    
+
     INTEGER ::  iblk, ics, ice
-    
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_atm2land'
-    
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    
+
     IF (ice-ics+1 /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(ATM2LAND)
@@ -95,8 +102,8 @@ CONTAINS
     & t_wtr, t_ice, ice_fract_lake)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-    INTEGER,            INTENT(in)  :: iblk, ics, ice
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
     REAL(wp), OPTIONAL, INTENT(out) ::                                               &
       & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                               &
       & fact_q_air(:), fact_qsat_srf(:),                                             &
@@ -105,43 +112,58 @@ CONTAINS
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
       & t_wtr(:), t_ice(:), ice_fract_lake(:)
 
-    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_memory(TURB)
     dsl4jsb_Def_memory(SOIL)
+    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(RAD)
 
     INTEGER ::  iblk, ics, ice
-    
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_land2atm'
-    
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    
+
     IF (ice-ics+1 /= SIZE(t_srf,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
-    dsl4jsb_Get_memory(SRF)
+    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(TURB)
     dsl4jsb_Get_memory(SOIL)
+    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(RAD)
 
-    IF (PRESENT(t_srf))           t_srf(:)            = dsl4jsb_var2D_onChunk(SRF,t_srf)
-    IF (PRESENT(t_eff_srf))       t_eff_srf(:)        = dsl4jsb_var2D_onChunk(SRF,t_eff_srf)
-    IF (PRESENT(qsat_srf))        qsat_srf(:)         = dsl4jsb_var2D_onChunk(SRF,qsat_srf)
-    IF (PRESENT(s_srf))           s_srf(:)            = dsl4jsb_var2D_onChunk(SRF,s_srf)
-    IF (PRESENT(fact_q_air))      fact_q_air(:)       = dsl4jsb_var2D_onChunk(SRF,fact_q_air)
-    IF (PRESENT(fact_qsat_srf))   fact_qsat_srf(:)    = dsl4jsb_var2D_onChunk(SRF,fact_qsat_srf)
-    IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(SRF,evapotrans)
-    IF (PRESENT(latent_hflx))     latent_hflx(:)      = dsl4jsb_var2D_onChunk(SRF,latent_hflx)
-    IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = dsl4jsb_var2D_onChunk(SRF,sensible_hflx)
-    IF (PRESENT(grnd_hflx))       grnd_hflx(:)        = dsl4jsb_var2D_onChunk(SOIL,grnd_hflx_old)
-    IF (PRESENT(grnd_hcap))       grnd_hcap(:)        = dsl4jsb_var2D_onChunk(SOIL,hcap_grnd_old)
-    IF (PRESENT(rough_h_srf))     rough_h_srf(:)      = dsl4jsb_var2D_onChunk(SRF,rough_h_srf)
-    IF (PRESENT(rough_m_srf))     rough_m_srf(:)      = dsl4jsb_var2D_onChunk(SRF,rough_m_srf)
-    IF (PRESENT(tte_corr))        tte_corr(:)         = dsl4jsb_var2D_onChunk(SRF,tte_corr)
-    IF (PRESENT(alb_vis_dir))     alb_vis_dir(:)      = dsl4jsb_var2D_onChunk(SRF,alb_vis_srf)  ! Temporary
-    IF (PRESENT(alb_vis_dif))     alb_vis_dif(:)      = dsl4jsb_var2D_onChunk(SRF,alb_vis_srf)  ! Temporary
-    IF (PRESENT(alb_nir_dir))     alb_nir_dir(:)      = dsl4jsb_var2D_onChunk(SRF,alb_nir_srf)  ! Temporary
-    IF (PRESENT(alb_nir_dif))     alb_nir_dif(:)      = dsl4jsb_var2D_onChunk(SRF,alb_nir_srf)  ! Temporary
-    IF (PRESENT(t_wtr))           t_wtr(:)            = dsl4jsb_var2D_onChunk(SRF,t_srf)        ! Temporary
-    IF (PRESENT(t_ice))           t_ice(:)            = 273.15_wp                               ! Temporary
-    IF (PRESENT(ice_fract_lake))  ice_fract_lake(:)   = 0._wp                                   ! Temporary
+    IF (PRESENT(t_srf))           t_srf(:)            = dsl4jsb_var2D_onChunk(SEB,t)
+    IF (PRESENT(t_eff_srf))       t_eff_srf(:)        = dsl4jsb_var2D_onChunk(SEB,t_eff)
+    IF (PRESENT(qsat_srf))        qsat_srf(:)         = dsl4jsb_var2D_onChunk(SEB,qsat_star)
+    IF (PRESENT(s_srf))           s_srf(:)            = dsl4jsb_var2D_onChunk(SEB,s_star)
+    IF (PRESENT(fact_q_air))      fact_q_air(:)       = dsl4jsb_var2D_onChunk(SEB,fact_q_air)
+    IF (PRESENT(fact_qsat_srf))   fact_qsat_srf(:)    = dsl4jsb_var2D_onChunk(SEB,fact_qsat_srf)
+    IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(HYDRO,evapotrans)
+    IF (PRESENT(latent_hflx))     latent_hflx(:)      = dsl4jsb_var2D_onChunk(SEB,latent_hflx)
+    IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = dsl4jsb_var2D_onChunk(SEB,sensible_hflx)
+    IF (PRESENT(grnd_hflx))       grnd_hflx(:)        = dsl4jsb_var2D_onChunk(SEB,forc_hflx)
+    IF (PRESENT(grnd_hcap))       grnd_hcap(:)        = dsl4jsb_var2D_onChunk(SEB,heat_cap_old)
+    IF (PRESENT(rough_h_srf))     rough_h_srf(:)      = dsl4jsb_var2D_onChunk(TURB,rough_h)
+    IF (PRESENT(rough_m_srf))     rough_m_srf(:)      = dsl4jsb_var2D_onChunk(TURB,rough_m)
+    IF (PRESENT(tte_corr))        tte_corr(:)         = dsl4jsb_var2D_onChunk(HYDRO,tte_corr)
+    IF (PRESENT(alb_vis_dir))     alb_vis_dir(:)      = dsl4jsb_var2D_onChunk(RAD,alb_vis)  ! Temporary
+    IF (PRESENT(alb_vis_dif))     alb_vis_dif(:)      = dsl4jsb_var2D_onChunk(RAD,alb_vis)  ! Temporary
+    IF (PRESENT(alb_nir_dir))     alb_nir_dir(:)      = dsl4jsb_var2D_onChunk(RAD,alb_nir)  ! Temporary
+    IF (PRESENT(alb_nir_dif))     alb_nir_dif(:)      = dsl4jsb_var2D_onChunk(RAD,alb_nir)  ! Temporary
+
+    IF (tile%lct%Contains(LAKE_TYPE)) THEN
+      IF (PRESENT(t_wtr))           t_wtr(:)            = dsl4jsb_var2D_onChunk(SEB,t_wtr)        ! Temporary
+      IF (PRESENT(t_ice))           t_ice(:)            = dsl4jsb_var2D_onChunk(SEB,t_ice)        ! Temporary
+      IF (PRESENT(ice_fract_lake))  ice_fract_lake(:)   = 0._wp                                   ! Temporary
+    ELSE
+      IF (PRESENT(t_wtr))           t_wtr(:)            = 0._wp                                   ! Temporary
+      IF (PRESENT(t_ice))           t_ice(:)            = 0._wp                                   ! Temporary
+      IF (PRESENT(ice_fract_lake))  ice_fract_lake(:)   = 0._wp                                   ! Temporary
+    END IF
 
   END SUBROUTINE update_land2atm
 

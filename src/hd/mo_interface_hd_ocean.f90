@@ -26,8 +26,8 @@ MODULE mo_interface_hd_ocean
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SOIL
-  dsl4jsb_Use_memory(SOIL)
+  dsl4jsb_Use_processes HYDRO
+  dsl4jsb_Use_memory(HYDRO)
 
   IMPLICIT NONE
   PRIVATE
@@ -71,7 +71,7 @@ CONTAINS
     !
     TYPE(t_jsb_grid),  POINTER    :: grid
 
-    dsl4jsb_Def_memory(SOIL)
+    dsl4jsb_Def_memory(HYDRO)
 
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':interface_hd_ocean'
 
@@ -97,9 +97,9 @@ CONTAINS
     grid => Get_grid(options%grid_id)
 
     ! Get reference to variables in memory
-    dsl4jsb_Get_memory(SOIL)
+    dsl4jsb_Get_memory(HYDRO)
 
-    dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean) ! IN
+    dsl4jsb_Get_var2D_onDomain(HYDRO, discharge_ocean) ! IN
 
     ! Send river discharge
     ! --------------------

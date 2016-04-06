@@ -16,13 +16,13 @@ MODULE mo_veg_util
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: water_in_root_zone
+  PUBLIC :: get_water_in_root_zone
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_util'
 
 CONTAINS
 
-  FUNCTION water_in_root_zone(w, z, zr) RESULT(wr)
+  FUNCTION get_water_in_root_zone(w, z, zr) RESULT(wr)
 
     REAL(wp), INTENT(in) :: &
       & w (:,:), &         !< Water content of soil layers
@@ -40,7 +40,7 @@ CONTAINS
       & nr
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':water_in_root_zone'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_water_in_root_zone'
 
     n  = SIZE(z,2)    ! Number of soil layers
     nr = SIZE(zr,2)  ! Number of root layers
@@ -63,7 +63,7 @@ CONTAINS
       z_sum_m1(:) = z_sum_m1(:) + z(:,i)
     END DO
 
-  END FUNCTION water_in_root_zone
+  END FUNCTION get_water_in_root_zone
 
 #endif
 END MODULE mo_veg_util

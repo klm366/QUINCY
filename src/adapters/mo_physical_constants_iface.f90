@@ -25,9 +25,17 @@ MODULE mo_physical_constants_iface
     alf,             & !< Latent heat for fusion                 [J/kg]
     tmelt,           & !< Melting temperature of ice/snow        [K]
 #ifdef __ICON__
+    clw,             & !< Specific heat of liquid water          [J/(K kg)]
+    rhoi,            & !< Density of (sea) ice                   [kg/m3]
+    rhos,            & !< Density of snow                        [kg/m3]
     ki,              & !< Heat conductivity of ice               [J/(m s K)]
+    ks,              & !< Heat conductivity of snow              [J/(m s K)]
 #else
+    clw => cpliq,    & !< Specific heat of liquid water          [J/(K kg)]
+    rhoi => rhoice   & !< Density of (sea) ice                   [kg/m3]
+    rhos => rhosno   & !< Density of snow                        [kg/m3]
     ki => alice,     & !< Heat conductivity of ice               [J/(m s K)]
+    ks => alsno,     & !< Heat conductivity of snow              [J/(m s K)]
 #endif
     ! Auxiliary constants
     rvd1  => vtmpc1, & !< = rv/rd-1                              []

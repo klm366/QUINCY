@@ -22,14 +22,16 @@ MODULE mo_soil_interface
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE
 
-  dsl4jsb_Use_processes SOIL, SRF, VEG, ATM2LAND
+  dsl4jsb_Use_processes SOIL, SEB, VEG, ATM2LAND, HYDRO
   dsl4jsb_Use_config(SOIL)
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
 !!$  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(SOIL)
-  dsl4jsb_Use_memory(SRF)
+  dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(VEG)
+  dsl4jsb_Use_memory(HYDRO)
 
   IMPLICIT NONE
   PRIVATE
@@ -69,26 +71,27 @@ CONTAINS
     !
     dsl4jsb_Def_config(SOIL)
     dsl4jsb_Def_memory(SOIL)
-    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(SEB)
     dsl4jsb_Def_memory(VEG)
     dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_memory(HYDRO)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: fract
-    dsl4jsb_Real2D_onChunk :: t_srf_unfilt
+    dsl4jsb_Real2D_onChunk :: t_unfilt
     dsl4jsb_Real2D_onChunk :: tte_corr
     dsl4jsb_Real2D_onChunk :: t_air
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: wind_10m
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
-    dsl4jsb_Real2D_onChunk :: wsr_soil
-    dsl4jsb_Real2D_onChunk :: wsr_srf
-    dsl4jsb_Real2D_onChunk :: wfract_srf
-    dsl4jsb_Real2D_onChunk :: wsn_soil
-    dsl4jsb_Real2D_onChunk :: wsn_srf
-    dsl4jsb_Real2D_onChunk :: sfract_srf
-    dsl4jsb_Real2D_onChunk :: wsn_can
+    dsl4jsb_Real2D_onChunk :: w_skin_soil
+    dsl4jsb_Real2D_onChunk :: w_skin_srf
+    dsl4jsb_Real2D_onChunk :: fract_water_srf
+    dsl4jsb_Real2D_onChunk :: w_snow_soil
+    dsl4jsb_Real2D_onChunk :: w_snow_srf
+    dsl4jsb_Real2D_onChunk :: fract_snow_srf
+    dsl4jsb_Real2D_onChunk :: w_snow_can
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: hcap_grnd
@@ -107,22 +110,21 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: pme_glacier
-    dsl4jsb_Real2D_onChunk :: ws
-    dsl4jsb_Real3D_onChunk :: ws_l
-    dsl4jsb_Real3D_onChunk :: ws_fc_l
-    dsl4jsb_Real3D_onChunk :: ws_pwp_l
+    dsl4jsb_Real2D_onChunk :: w_soil_column
+    dsl4jsb_Real3D_onChunk :: w_soil_sl
+    dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
+    dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl
     dsl4jsb_Real2D_onChunk :: soil_depth
-    dsl4jsb_Real2D_onChunk :: ws_root
-    dsl4jsb_Real2D_onChunk :: ws_fc_root
+    dsl4jsb_Real2D_onChunk :: w_soil_root
+    dsl4jsb_Real2D_onChunk :: w_soil_root_fc
     dsl4jsb_Real2D_onChunk :: root_depth
     dsl4jsb_Real2D_onChunk :: shc
     dsl4jsb_Real2D_onChunk :: mpot
     dsl4jsb_Real2D_onChunk :: bclapp
     dsl4jsb_Real2D_onChunk :: vpor
     dsl4jsb_Real2D_onChunk :: psdi
-    dsl4jsb_Real2D_onChunk :: overflow
-    dsl4jsb_Real2D_onChunk :: glacier
-    dsl4jsb_Real2D_onChunk :: wsn_glacier
+    dsl4jsb_Real2D_onChunk :: w_soil_overflow
+    dsl4jsb_Real2D_onChunk :: w_snow_glacier
 
 
     ! Locally allocated vectors
@@ -151,7 +153,7 @@ CONTAINS
     LOGICAL  :: l_tpe_closed = .FALSE.
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime, steplen
-    
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_1'
 
     iblk  = options%iblk
@@ -160,7 +162,7 @@ CONTAINS
     nc    = options%nc
     dtime = options%dtime
     steplen = options%steplen
-    
+
     IF (.NOT. tile%Is_process_active(SOIL)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
@@ -177,68 +179,73 @@ CONTAINS
     IF (ALL(fract(:) < EPSILON(1._wp))) RETURN
 
     dsl4jsb_Get_memory(SOIL)
-    dsl4jsb_Get_memory(SRF)
+    dsl4jsb_Get_memory(SEB)
     dsl4jsb_Get_memory(VEG)
     dsl4jsb_Get_memory(ATM2LAND)
+    dsl4jsb_Get_memory(HYDRO)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_air) ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air) ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, wind_10m) ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, rain) ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, snow) ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_air)         ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)         ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, wind_10m)      ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, rain)          ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, snow)          ! IN
 
-    dsl4jsb_Get_var2D_onChunk(SOIL, wsr_soil) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, wsn_soil) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, hcap_grnd) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, hcap_grnd_old) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, vhcap) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, hdiff) ! OUT
-    dsl4jsb_Get_var3D_onChunk(SOIL, t_soil_acoef) ! OUT
-    dsl4jsb_Get_var3D_onChunk(SOIL, t_soil_bcoef) ! OUT
-    dsl4jsb_Get_var3D_onChunk(SOIL, t_soil) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, grnd_hflx) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, grnd_hflx_old) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, runoff) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, drainage) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, pme_glacier) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, ws) ! OUT
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_l) ! OUT
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_fc_l) ! OUT
-    dsl4jsb_Get_var3D_onChunk(SOIL, ws_pwp_l) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, soil_depth) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SOIL, shc) ! IN
-    dsl4jsb_Get_var2D_onChunk(SOIL, mpot) ! IN
-    dsl4jsb_Get_var2D_onChunk(SOIL, bclapp) ! IN
-    dsl4jsb_Get_var2D_onChunk(SOIL, vpor) ! IN
-    dsl4jsb_Get_var2D_onChunk(SOIL, psdi) ! IN
-    dsl4jsb_Get_var2D_onChunk(SOIL, overflow) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     hcap_grnd)     ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     hcap_grnd_old) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     vhcap)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     hdiff)         ! OUT
+    dsl4jsb_Get_var3D_onChunk(SOIL,     t_soil_acoef)  ! OUT
+    dsl4jsb_Get_var3D_onChunk(SOIL,     t_soil_bcoef)  ! OUT
+    dsl4jsb_Get_var3D_onChunk(SOIL,     t_soil)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     grnd_hflx)     ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     grnd_hflx_old) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     soil_depth)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     shc)           ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL,     mpot)          ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL,     bclapp)        ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL,     vpor)          ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL,     psdi)          ! IN
 
-    dsl4jsb_Get_var2D_onChunk(SRF, t_srf_unfilt) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF, tte_corr) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF, wsr_srf) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF, wfract_srf) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF, wsn_srf) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF, sfract_srf) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF, evapotrans) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF, trans) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF, evapopot) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF, oro_stddev) ! IN
-    dsl4jsb_Get_var2D_onChunk(SRF, glacier) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF, wsn_glacier) ! OUT
+    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_sl)     ! OUT
+    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_fc_sl)  ! OUT
+    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_srf)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_srf)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapotrans)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    trans)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapopot)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_glacier) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_can)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root_fc) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_column) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_soil)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_soil)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    runoff)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    drainage)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    pme_glacier)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_overflow) ! OUT
 
-    dsl4jsb_Get_var2D_onChunk(VEG, wsn_can) ! OUT
-    dsl4jsb_Get_var2D_onChunk(VEG, lai) ! IN
-    dsl4jsb_Get_var2D_onChunk(VEG, fract_fpc_max) ! OUT
-    dsl4jsb_Get_var2D_onChunk(VEG, ws_root) ! OUT
-    dsl4jsb_Get_var2D_onChunk(VEG, ws_fc_root) ! OUT
-    dsl4jsb_Get_var2D_onChunk(VEG, root_depth) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    tte_corr)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SOIL,     oro_stddev)    ! IN
+
+    dsl4jsb_Get_var2D_onChunk(VEG, lai)                ! IN
+    dsl4jsb_Get_var2D_onChunk(VEG, fract_fpc_max)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(VEG, root_depth)         ! OUT
 
     is_present(:)    = .TRUE.
-    is_glacier(:)    = ( glacier(:) > 0.5_wp )
+    IF (tile%lct%id == GLACIER_TYPE) THEN
+      is_glacier(:) = .TRUE.
+    ELSE
+      is_glacier(:) = .FALSE.
+    END IF
 
-    IF (ALL(wsn_srf(:) < 0._wp)) THEN          ! Start of experiment
+    IF (ALL(w_snow_srf(:) < 0._wp)) THEN          ! Start of experiment
       lstart = .TRUE.
-      wsn_srf(:) = 0._wp
+      w_snow_srf(:) = 0._wp
     ELSE
       lstart = .FALSE.
     END IF
@@ -257,8 +264,8 @@ CONTAINS
     END IF
 
     CALL update_surf_down(nc, dtime, lstart, &
-      & q_air(:), t_srf_unfilt(:), wind_10m(:), t_air(:), wsr_soil(:), wfract_srf(:), &
-      & wsr_max(:), wsn_soil(:), sfract_srf(:), wsn_can(:), wsn_glacier(:), &
+      & q_air(:), t_unfilt(:), wind_10m(:), t_air(:), w_skin_soil(:), fract_water_srf(:), &
+      & wsr_max(:), w_snow_soil(:), fract_snow_srf(:), w_snow_can(:), w_snow_glacier(:), &
       & hcap_grnd(:), evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), rain(:),  snow(:), &
       & is_present(:), is_glacier(:), pme_glacier(:), &
 !!$      & snow_acc(:), snow_melt_acc(:), glacier_runoff_acc(:), &
@@ -273,7 +280,7 @@ CONTAINS
     hcap_grnd_old(:) = hcap_grnd(:)
 
     CALL update_soiltemp(nc, dsl4jsb_Config(SOIL)%nsoil_water, dtime, lstart, &
-      & t_srf_unfilt(:), wsn_soil(:), hdiff(:), vhcap(:), &
+      & t_unfilt(:), w_snow_soil(:), hdiff(:), vhcap(:), &
       & t_soil_acoef(:,:), t_soil_bcoef(:,:), t_soil(:,:), &
       & hcap_grnd(:), grnd_hflx(:), &
       & is_present(:), is_glacier(:))
@@ -281,41 +288,47 @@ CONTAINS
 !vg:  runoff_hd and drainage_hd no longer needed
 !vg:  accumulation does not make sense (no reset)
     CALL update_surf_up(nc, dtime, dsl4jsb_Config(SOIL)%nsoil_water, &
-      & wsr_soil(:), wfract_srf(:), wsr_max(:), &
-      & ws_root(:), ws_fc_root(:), &
-      & t_soil(:,1), sfract_srf(:), oro_stddev(:), &
+      & w_skin_soil(:), fract_water_srf(:), wsr_max(:), &
+      & w_soil_root(:), w_soil_root_fc(:), &
+      & t_soil(:,1), fract_snow_srf(:), oro_stddev(:), &
       & evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), &
       & rain(:), is_present(:), is_glacier(:), &
       & runoff(:), drainage(:), & !vg runoff_hd(:), drainage_hd(:), &
       & melt_water_excess(:), skin_res_evap(:), &
       & dsl4jsb_Config(SOIL)%dz_water(1:dsl4jsb_Config(SOIL)%nsoil_water), &
-      & ws_l(:,:), ws_fc_l(:,:), ws_pwp_l(:,:), root_depth(:), soil_depth(:), &
+      & w_soil_sl(:,:), w_soil_fc_sl(:,:), w_soil_pwp_sl(:,:), root_depth(:), soil_depth(:), &
       & shc(:), mpot(:), bclapp(:), vpor(:), &
       & trans(:), reduced_evap(:), &
 !!$      & SPREAD(0.318517_wp, NCOPIES=nc, DIM=1), & !Temporary
 !!$      & SPREAD(0.185245_wp, NCOPIES=nc, DIM=1), & !Temporary
       & psdi(:), &
-      & overflow(:), &
+      & w_soil_overflow(:), &
       & jllog, &
       & l_tpe_open, &
       & l_tpe_closed & ! IN
       & )
 
-    ws(:) = SUM(ws_l(:,:), DIM=2)
+    w_soil_column(:) = SUM(w_soil_sl(:,:), DIM=2)
 
-    wsn_srf(:) = wsn_soil(:) + wsn_can(:)
-    wsr_srf(:) = wsr_soil(:) ! + wsr_can(:)
+    w_snow_srf(:) = w_snow_soil(:) + w_snow_can(:)
+    w_skin_srf(:) = w_skin_soil(:) ! + w_skin_can(:)
 
   END SUBROUTINE update_soil_1
 
+
   SUBROUTINE update_soil_2(tile, config, options)
 
+    ! ---------------------------
+    ! Variables
+
+    ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    
+
     ! Local variables
-    !
+
+
     ! Pointers to variables in memory
     REAL(wp), POINTER ::       &
       & fract          (:)
@@ -324,14 +337,17 @@ CONTAINS
     !
 !!$    REAL(wp) :: &
     INTEGER :: iblk, ics, ice, nc
-    
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_2'
+
+    ! ---------------------------
+    ! Go
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
-    
+
     IF (.NOT. tile%Is_process_active(SOIL)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')

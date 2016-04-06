@@ -16,7 +16,7 @@ MODULE mo_radiation_constants
   PUBLIC
 
   REAL(wp), PARAMETER ::                  &
-     Epar                   = 2.2E5_wp,   & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1.  R: for update_par                                     
+     Epar                   = 2.2E5_wp,   & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1.  R: for update_par
      SoilReflectivityParMin = 0.0_wp,     & ! Minimum soil reflectivity in PAR region.  R: for update_par  
 !     LaiMax = 8._wp,                      & ! Maximum LAI (used for nitrogen scaling) 
      LaiMin = 1.E-9_wp,                   & ! Minimum Lai in PAR computation.R: for calc_fapar_lai_cl
@@ -58,5 +58,6 @@ MODULE mo_radiation_constants
     AlbedoSnowCan        = 0.2     ! Albedo of snow on canopy
     !AlbedoSnowMin        = 0.4,   & ! Minimum possible snow albedo   ! Temporary, will depend on vegetation type
     !AlbedoSnowMax        = 0.8      ! Maximum possible snow albedo   ! Temporary
+
 #endif
 END MODULE mo_radiation_constants

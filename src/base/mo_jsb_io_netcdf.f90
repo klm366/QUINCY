@@ -4,13 +4,11 @@ MODULE mo_jsb_io_netcdf
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish, message
 
-  USE mo_jsb_io_netcdf_iface, ONLY: nf_open, nf_inq_dimid, nf_close, &
+  USE mo_jsb_io_netcdf_iface, ONLY: nf_open, nf_inq_dimid, nf_inq_varid, nf_close, &
     NF_NOWRITE, NF_NOERR, nf, t_input_file, netcdf_open_input, netcdf_close_file, &
     netcdf_read_2d, netcdf_read_2d_time, netcdf_read_2d_extdim
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_grid,           ONLY: Get_grid
-  USE mo_jsb_class,          ONLY: get_model
 
   IMPLICIT NONE
 
@@ -18,25 +16,23 @@ MODULE mo_jsb_io_netcdf
 
   PUBLIC :: t_input_file, jsb_netcdf_open_input, jsb_netcdf_close_file, &
             jsb_netcdf_read_2d_time, jsb_netcdf_read_2d, jsb_netcdf_read_2d_extdim, &
-            ncfile_has_dim
+            ncfile_has_dim, ncfile_has_var
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_netcdf'
 
 CONTAINS
 
-  TYPE(t_input_file) FUNCTION jsb_netcdf_open_input(filename, model_id)
+  TYPE(t_input_file) FUNCTION jsb_netcdf_open_input(filename, grid_id)
 
     CHARACTER(LEN=*), INTENT(in) :: filename
-    INTEGER,          INTENT(in) :: model_id
+    INTEGER,          INTENT(in) :: grid_id
 
-    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_netcdf_open_input'
 
-    model => get_model(model_id)
-    grid => Get_grid(model%grid_id)
+    grid => Get_grid(grid_id)
 
     jsb_netcdf_open_input = netcdf_open_input(filename, patch=grid%patch, decomp=grid%decomposition)
 
@@ -122,6 +118,24 @@ CONTAINS
     CALL nf(nf_close(ncid), routine)
 
   END FUNCTION ncfile_has_dim
+
+  LOGICAL FUNCTION ncfile_has_var(filename, varname)
+
+    CHARACTER(LEN=*), INTENT(in) :: filename
+    CHARACTER(LEN=*), INTENT(in) :: varname
+
+    INTEGER :: ncid, varid, status
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':ncfile_has_var'
+
+    CALL nf(nf_open(TRIM(filename), NF_NOWRITE, ncid), routine)
+
+    status = nf_inq_varid(ncid, TRIM(varname), varid)
+    ncfile_has_var = (status == NF_NOERR)
+
+    CALL nf(nf_close(ncid), routine)
+
+  END FUNCTION ncfile_has_var
 
 #endif
 END MODULE mo_jsb_io_netcdf

@@ -21,17 +21,18 @@ MODULE mo_soil_config_class
   PUBLIC :: t_soil_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_soil_config
-     INTEGER :: nsoil_energy
-     INTEGER :: nsoil_water
-     REAL(wp), ALLOCATABLE :: soil_depth_energy(:)
-     REAL(wp), ALLOCATABLE :: soil_depth_water(:)
-     REAL(wp), ALLOCATABLE :: dz_energy(:)
-     REAL(wp), ALLOCATABLE :: dz_water(:)
-     REAL(wp) :: wsr_capacity               !< Water holding capacity of ground skin reservoir [m water equivalent]
-     REAL(wp) :: wsn_capacity               !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
-   CONTAINS
-     PROCEDURE :: Init => Init_soil_config
-  END type t_soil_config
+    CHARACTER(len=filename_max) :: bc_sso_filename
+    INTEGER :: nsoil_energy
+    INTEGER :: nsoil_water
+    REAL(wp), ALLOCATABLE :: soil_depth_energy(:)
+    REAL(wp), ALLOCATABLE :: soil_depth_water(:)
+    REAL(wp), ALLOCATABLE :: dz_energy(:)
+    REAL(wp), ALLOCATABLE :: dz_water(:)
+    REAL(wp) :: wsr_capacity               !< Water holding capacity of ground skin reservoir [m water equivalent]
+    REAL(wp) :: wsn_capacity               !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
+  CONTAINS
+    PROCEDURE :: Init => Init_soil_config
+  END TYPE t_soil_config
 
   INTEGER, PARAMETER :: max_soil_layers = 20
 
@@ -49,7 +50,7 @@ CONTAINS
     CLASS(t_soil_config), INTENT(inout) :: config
 
     LOGICAL  :: active
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     INTEGER  :: nsoil_energy, nsoil_water
     REAL(wp) :: dz_energy(max_soil_layers)
     REAL(wp) :: dz_water(max_soil_layers)
@@ -58,6 +59,7 @@ CONTAINS
     NAMELIST /jsb_soil_nml/                     &
       active,                                   &
       ic_filename, bc_filename,                 &
+      bc_sso_filename,                          &
       nsoil_energy, nsoil_water,                &
       dz_energy, dz_water,                      &
       wsr_capacity, wsn_capacity
@@ -72,15 +74,16 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting soil configuration')
 
     ! Set defaults
-    active         = .FALSE.
-    ic_filename    = 'ic_land_soil.nc'
-    bc_filename    = 'bc_land_soil.nc'
-    nsoil_energy   = 5
-    nsoil_water    = 5
-    dz_energy(1:5) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/) ; dz_energy(6:max_soil_layers) = 0._wp
-    dz_water (1:5) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/) ; dz_water (6:max_soil_layers) = 0._wp
-    wsr_capacity   = 2.E-4_wp
-    wsn_capacity   = 2.E-4_wp
+    active          = .FALSE.
+    ic_filename     = 'ic_land_soil.nc'
+    bc_filename     = 'bc_land_soil.nc'
+    bc_sso_filename = 'bc_land_sso.nc'
+    nsoil_energy    = 5
+    nsoil_water     = 5
+    dz_energy(1:5)  = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/) ; dz_energy(6:max_soil_layers) = 0._wp
+    dz_water (1:5)  = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/) ; dz_water (6:max_soil_layers) = 0._wp
+    wsr_capacity    = 2.E-4_wp
+    wsn_capacity    = 2.E-4_wp
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -102,6 +105,7 @@ CONTAINS
     config%active                    = active
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
+    config%bc_sso_filename           = bc_sso_filename
     config%nsoil_energy              = nsoil_energy
     config%nsoil_water               = nsoil_water
     config%soil_depth_energy(1)      = dz_energy(1)

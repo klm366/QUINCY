@@ -211,14 +211,15 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Run_tasks'
 
-    this%current_task => this%queue%task
-    CALL this%Start() ! Start state machine
+!!$    this%current_task => this%queue%task
+!!$    CALL this%Start() ! Start state machine
 
     current_queue_element => this%queue
     DO WHILE (ASSOCIATED(current_queue_element))
 
       ASSOCIATE(task => current_queue_element%task)
         this%current_task => task
+        CALL this%Start() ! Start state machine
         msg%action => this%Get_action('INTEGRATE')
 !!$        IF (.NOT. ASSOCIATED(task%action)) &
 !!$          & CALL finish(TRIM(routine), 'Action not set for task')
