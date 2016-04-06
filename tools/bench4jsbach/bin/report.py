@@ -12,7 +12,7 @@ doc_template = """
 \\usepackage{graphicx}
 \\usepackage{color}
 
-\\usepackage{booktabs,tabularx,ragged2e,makecell}
+\\usepackage{booktabs,tabularx,ragged2e,makecell, rotating}
 \\newcolumntype{Y}{>{\\raggedright\\arraybackslash}X}
 \\newcolumntype{L}{>{\\arraybackslash}X}
 \
@@ -277,7 +277,9 @@ the plots\\\\
                         else:
                             ret += ' & '
                         ret += ' & '
-                        ret +=  '\\textbf{%s}' % teXify ( ref_by_refno [ '%d' % refno ].B4J_name )
+                        ret +=  '\\textbf{%s}' % teXify ( ref_by_refno [ '%d' % refno ].B4J_name ) \
+                               if len ( ref_by_refno [ '%d' % refno ].B4J_name ) <= 10 else \
+                               '$\mathbf{R_{%d}}$' % refno
                         for canno in range ( self.n_cans ):
                             ret += ' & '
                             if can_by_canno [ '%d' % canno ].B4J_name == ref_by_refno [ '%d' % refno ].B4J_name:
@@ -301,14 +303,15 @@ the plots\\\\
         """
         \\toprule
         \\textbf{field} & \\textbf{analyis} & \\textbf{unit} & \\textbf{reference} &
-        \\multicolumn{%d}{p{%dcm}}{\\centering \\textbf{candidate}} \\\\
-        """ % ( self.n_cans, self.n_cans * 2 ) +\
+        \\multicolumn{%d}{p{%dcm}}{\\RaggedLeft \\textbf{candidate}} \\\\
+        """ % ( self.n_cans,  self.n_cans * 2 ) +\
         """
         \\addlinespace
         & & & & %s \\\\
         \\addlinespace
         \\midrule
-        """ % teXify (( ' & '.join ( ' \\textbf{%s}' % can.B4J_name for can in self.experiments if can.B4J_iscan ))) +\
+        """ % teXify (( ' & '.join ( ' \\textbf{%s}' % can.B4J_name if len ( can.B4J_name ) <= 10 else \
+        '$\mathbf{C_{%d}}$' % can.B4J_canno for can in self.experiments if can.B4J_iscan ))) +\
         """
         %s
         \\bottomrule

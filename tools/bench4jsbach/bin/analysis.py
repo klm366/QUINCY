@@ -22,7 +22,7 @@ import numpy as np
 from pycmbs.mapping import map_plot
 
 from util import logger as dkl_logger, touch
-from experiment import MPIESM1_Experiment
+from experiment import MPIESM1_Experiment, CMIP5_Experiment
 
 from report import ( analyses_II_analyses,
                      analyses_III_dicts,
@@ -446,19 +446,22 @@ and \\texttt{timemean}($X$) defined as
         # 1.  find variable data files
        
         # # 1.a) find variable data files
-        # for exp in self.experiments:
-        #     pattern = '*%s*%s*.%s' % ( A_varname, exp.B4J_name, write_suffix )
-        #     exp.B4J_index [ "A" ] = A = find_files ( pattern, exp.B4J_path, single = True, raise_e = False )
-        #     if A: in_files.append ( A )
-        #     if exp.B4J_isref or not A:
-        #         pattern = '*%s*%s*.%s' % ( D_varname, exp.B4J_name, write_suffix )
-        #         exp.B4J_index [ "D" ] = D = find_files ( pattern, exp.B4J_path, single = True, raise_e = True )
-        #         if D: in_files.append ( D )
-        #     if not A:
-        #         pattern = '*%s*%s*.%s' % ( U_varname, exp.B4J_name, write_suffix )
-        #         exp.B4J_index [ "U" ]  = U = find_files ( pattern, exp.B4J_path, single = True, raise_e = True )
-        #         if U: in_files.append ( U )
-        #     self.logger.debug ( exp )
+        
+        cmip5_exps = ( e for e in self.experiments if type ( e ) == CMIP5_Experiment ) 
+        for exp in cmip5_exps:
+            pattern = '*%s*%s*.%s' % ( A_varname, exp.B4J_name, write_suffix )
+            exp.B4J_index [ "A" ] = A = None
+            exp.B4J_index [ "A" ] = A = find_files ( pattern, exp.B4J_path, single = True, raise_e = False )
+            if A: in_files.append ( A )
+            if exp.B4J_isref or not A:
+                pattern = '*%s*%s*.%s' % ( D_varname, exp.B4J_name, write_suffix )
+                exp.B4J_index [ "D" ] = D = find_files ( pattern, exp.B4J_path, single = True, raise_e = True )
+                if D: in_files.append ( D )
+            if not A:
+                pattern = '*%s*%s*.%s' % ( U_varname, exp.B4J_name, write_suffix )
+                exp.B4J_index [ "U" ]  = U = find_files ( pattern, exp.B4J_path, single = True, raise_e = True )
+                if U: in_files.append ( U )
+            self.logger.debug ( exp )
 
 
         yearlist = get_largest_common_yearlist ( in_files )
@@ -643,7 +646,7 @@ and \\texttt{timemean}($X$) defined as
                 albedo_delta = nc_fid.variables [ delta_name ][ : ] 
                 nc_fid.close ()
                 globalNtime_dev [ 'cans' ][ '%d' % can.B4J_canno ][ 'benches' ][ '%d' % ref.B4J_refno ] = \
-                    albedo_delta [ 0 ][ 0 ][ 0 ]})
+                    albedo_delta [ 0 ][ 0 ][ 0 ]
 
                 
                 
@@ -700,6 +703,8 @@ and \\texttt{timemean}($X$) defined as
                 
                 delta = self.analyses_fields [ A_varname ][ 'delta' ]
                 assert delta
+                
+                delta_str = "delta-ref%d" % ref.B4J_refno
                 
                 dates = cdo.showtimestamp ( input = can.B4J_index [ delta_str ] )[ 0 ].split ( " ")
                 dates = [ datetime.strptime ( str ( x ), '%Y-%m-%dT%H:%M:%S') for x in dates if x ]
