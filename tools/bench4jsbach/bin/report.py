@@ -205,8 +205,7 @@ table below.
                     title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
                             ( can_name, can.B4J_canno ) 
                     albedo_body += subsubsection_template % { 'subsubsection': title }
-                    analyse_can = next (( item for item in analyse [ 'cans' ] \
-                                          if item [ 'name' ] == can.B4J_name ), None )
+                    analyse_can = analyse [ 'cans' ][ '%d' % can.B4J_canno ]
                     if len ( analyse_can [ 'plots' ]):
                         no = 0
                         for ref in self.experiments:
@@ -225,8 +224,7 @@ table below.
                     title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
                             ( can_name, can.B4J_canno ) 
                     albedo_body += subsubsection_template % { 'subsubsection': title }
-                    analyse_can = next (( item for item in analyse [ 'cans' ] \
-                                          if item [ 'name' ] == can.B4J_name ), None )
+                    analyse_can = analyse [ 'cans' ][ '%d' % can.B4J_canno ]
                     if len ( analyse_can [ 'plots' ]):
                         plot = analyse_can [ 'plots' ][ 0 ]
                         albedo_body += includegraphics_template ( plot,
@@ -274,7 +272,7 @@ the plots\\\\
                             cv += 1
                         ret += ' & '
                         if ca == 0:
-                            ret += ana [ 'name' ] + ' & ' + ana [ 'unit' ]
+                            ret += teXify ( ana [ 'name' ]) + ' & ' + teXify ( ana [ 'unit' ])
                             ca += 1
                         else:
                             ret += ' & '
@@ -286,7 +284,7 @@ the plots\\\\
                                 ret += '-'
                             else:
                                 try:
-                                    ret += '%.4e' % ana [ 'cans' ][ '%d' % canno ][ '%d' % refno ]
+                                    ret += '%.4e' % ana [ 'cans' ][ '%d' % canno ][ 'benches' ][ '%d' % refno ]
                                 except:
                                     ret += "-"
                         

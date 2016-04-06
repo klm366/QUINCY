@@ -26,7 +26,8 @@ from experiment import MPIESM1_Experiment
 
 from report import ( analyses_II_analyses,
                      analyses_III_dicts,
-                     analyses_IV_cans )
+                     analyses_IV_cans,
+                     analyses_V_benches )
 
 streams = { "echam": [ "echam", "co2" ],
             "jsbach": [ "jsbach", "land", "surf", "veg", "yasso", "accw" ]}
@@ -229,8 +230,8 @@ and \\texttt{yseasmean}($X$) defined as
         delta [ 'title' ]    = 'Seasonal mean difference'
         delta [ 'ismatrix' ] = True
         delta [ 'isvector' ] = False
-        delta [ 'cans' ]     = { '%d' % can.B4J_canno : copy.deepcopy ( analyses_IV_cans ) \
-                                            for can in range ( self.n_cans )}
+        delta [ 'cans' ]     = { '%d' % canno : copy.deepcopy ( analyses_IV_cans ) \
+                                 for canno in range ( self.n_cans )}
         self.analyses_fields [ A_varname ][ delta [ 'name' ]] = delta
 
         
@@ -269,9 +270,8 @@ and \\texttt{timemean}($X$) defined as
         globalNtime_mean [ 'title' ]     = 'Global and time mean'
         globalNtime_mean [ 'ismatrix' ]  = False
         globalNtime_mean [ 'isvector' ]  = True
-        globalNtime_mean [ 'cans' ]      = 
-        globalNtime_dev [ 'cans' ]      = { '%d' % can.B4J_canno : copy.deepcopy ( analyses_IV_cans ) \
-                                            for can in range ( self.n_cans )}
+        globalNtime_mean [ 'cans' ]      = { '%d' % canno : copy.deepcopy ( analyses_IV_cans ) \
+                                            for canno in range ( self.n_cans )}
         globalNtime_mean [ 'isbench' ]   = True
         globalNtime_mean [ 'unit' ]      = 'W m-2'
 
@@ -314,11 +314,12 @@ and \\texttt{timemean}($X$) defined as
         globalNtime_dev [ 'title' ]     = 'Global and time mean deviation'
         globalNtime_dev [ 'ismatrix' ]  = False
         globalNtime_dev [ 'isvector' ]  = True
-        globalNtime_dev [ 'cans' ]      = { '%d' % can.B4J_canno : copy.deepcopy ( analyses_IV_cans ) \
-                                            for can in range ( self.n_cans )}
+        globalNtime_dev [ 'cans' ]      = { '%d' % canno : copy.deepcopy ( analyses_IV_cans ) \
+                                            for canno in range ( self.n_cans )}
         globalNtime_dev [ 'isbench' ]   = True
         globalNtime_dev [ 'unit' ]      = 'W m-2'
         self.analyses_fields [ A_varname ][ globalNtime_dev [ 'name' ]] = globalNtime_dev
+        
         
         for exp in self.experiments:
             exp.B4J_index.clear ()
@@ -529,14 +530,14 @@ and \\texttt{timemean}($X$) defined as
         # 4.a) collecting information for common adjustment of colorbar
         delta_min = sys.float_info.max
         delta_max = - sys.float_info.max
-        can.B4J_index [ "delta_maxs" ] = []
-        can.B4J_index [ "delta_mins" ] = []
-    
        
         delta_name = 'delta'
         
         for can in self.experiments:
             if not can.B4J_iscan: continue
+            
+            can.B4J_index [ "delta_maxs" ] = []
+            can.B4J_index [ "delta_mins" ] = []
                                    
             for ref in self.experiments:
                 if not ref.B4J_isref:            continue
@@ -606,7 +607,7 @@ and \\texttt{timemean}($X$) defined as
                 nc_fid = Dataset ( can.B4J_index [ tm_str ], 'r')
                 albedo_delta = nc_fid.variables [ delta_name ][ : ] 
                 nc_fid.close ()
-                globalNtime_mean [ 'cans' ][ '%d' % can.B4J_canno ][ '%d' % ref.B4J_refno ] = albedo_delta [ 0 ][ 0 ][ 0 ]
+                globalNtime_mean [ 'cans' ][ '%d' % can.B4J_canno ][ 'benches' ][ '%d' % ref.B4J_refno ] = albedo_delta [ 0 ][ 0 ][ 0 ]
                 
 
                 # 3.d) global mean deviation
@@ -641,7 +642,8 @@ and \\texttt{timemean}($X$) defined as
                 nc_fid = Dataset ( can.B4J_index [ td_str ], 'r')
                 albedo_delta = nc_fid.variables [ delta_name ][ : ] 
                 nc_fid.close ()
-                globalNtime_dev [ 'cans' ][ '%d' % can.B4J_canno ][ '%d' % ref.B4J_refno ] = albedo_delta [ 0 ][ 0 ][ 0 ]
+                globalNtime_dev [ 'cans' ][ '%d' % can.B4J_canno ][ 'benches' ][ '%d' % ref.B4J_refno ] = \
+                    albedo_delta [ 0 ][ 0 ][ 0 ]})
 
                 
                 
@@ -746,7 +748,7 @@ and \\texttt{timemean}($X$) defined as
                 plt.savefig ( can.B4J_index [ plot_delta_str ] )
                 plt.close ()
 
-                delta_can = next (( item for item in delta [ 'cans' ] if item [ 'name' ] == can.B4J_name ), None )
+                delta_can = delta [ 'cans' ][ '%d' % can.B4J_canno ]
                 assert delta_can
                 delta_can [ 'infiles' ].append ( can.B4J_index [ delta_str ])
                 delta_can [ 'plots' ].append ( can.B4J_index [ plot_delta_str ])
@@ -778,8 +780,7 @@ and \\texttt{timemean}($X$) defined as
                 'startdate'      : str ( yearlist [ 0 ]),
                 'finaldate'      : str ( yearlist [ -1 ]),  
                 'suffix'         : 'png' }
-            globalNtime_mean_can = next (( item for item in globalNtime_mean [ 'cans' ] \
-                                           if item [ 'name' ] == can.B4J_name ), None )
+            globalNtime_mean_can = globalNtime_mean [ 'cans' ][ '%d' % can.B4J_canno ]
             assert globalNtime_mean_can
             globalNtime_mean_can [ 'plots' ].append ( plot_globalNtime_mean_str )
             
@@ -860,8 +861,7 @@ and \\texttt{timemean}($X$) defined as
                 'startdate'      : str ( yearlist [ 0 ]),
                 'finaldate'      : str ( yearlist [ -1 ]),  
                 'suffix'         : 'png' }
-            globalNtime_dev_can = next (( item for item in globalNtime_dev [ 'cans' ] \
-                                           if item [ 'name' ] == can.B4J_name ), None )
+            globalNtime_dev_can = globalNtime_dev [ 'cans' ][ '%d' % can.B4J_canno ]
             assert globalNtime_dev_can
             globalNtime_dev_can [ 'plots' ].append ( plot_globalNtime_dev_str )
             
@@ -899,7 +899,7 @@ and \\texttt{timemean}($X$) defined as
                            colored_dots [ ref.B4J_refno ],
                            label = r'$gd_{C_{%s}R_{%s}}$'% ( can.B4J_canno, ref.B4J_refno ) +\
                            r', $R_{%s}$: ' % ref.B4J_refno + ref.B4J_name )
-                plt.axhline ( albedo_td [ 0, 0, 0 ],
+                plt.axhline ( albedo_td [ 0, 0, 0 ], 
                               color =  colors [ ref.B4J_refno ],
                               label = r'$td_{C_{%s}R_{%s}}$'% ( can.B4J_canno, ref.B4J_refno ))
 
