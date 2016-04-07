@@ -11,21 +11,22 @@ PROGRAM canopy_model_driver
   USE mo_kind
   USE mo_base_memory
   USE mo_base_constants
-!  USE mo_jsb_config_class,   ONLY: t_jsb_config
+!  USE mo_jsb_config_class,      ONLY: t_jsb_config
   ! atmland
   USE mo_atmland_constants
   USE mo_atmland_memory
   USE mo_atmland_util
   USE mo_atmland_forcing
+  USE mo_atmland_config_class,  ONLY: atmland_config
   ! land
-  USE mo_land_constants     ! still necessary ?
+  USE mo_land_constants         ! still necessary ?
   ! vegetation
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
-  USE mo_veg_config_class,   ONLY: veg_config
+  USE mo_veg_config_class,      ONLY: veg_config
   ! shared
-  USE mo_namelist,           ONLY: POSITIONED, open_nml, position_nml  ! read model options from file
+  USE mo_namelist,              ONLY: POSITIONED, open_nml, position_nml  ! read model options from file
 
   IMPLICIT NONE
 
@@ -79,10 +80,12 @@ PROGRAM canopy_model_driver
     tile(1)%plant%pftid=ref_pft
   ENDIF
   ! 
-  ! 1.3 Read Model options from file (see src/shared & test_bed/plant/namelist.plant)
+  ! 1.3 Read config paramters from namelist.canopy
   ! 
-  veg_config%namelist_filename = 'namelist.canopy' !does it define the filename at t_jsb_config level available to all processes ?
+  veg_config%namelist_filename        = 'namelist.canopy'
+  atmland_config%namelist_filename    = 'namelist.canopy'
   CALL veg_config%Init
+  CALL atmland_config%Init
   ! 
   ! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
   ! 

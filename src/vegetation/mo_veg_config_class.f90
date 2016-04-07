@@ -27,7 +27,6 @@ MODULE mo_veg_config_class
     CHARACTER(8)     :: output_interval_pool, output_interval_flux
     INTEGER          :: output_start_date, output_end_date
     LOGICAL          :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake
-    CHARACTER(8)     :: option_forcing
     CONTAINS
       PROCEDURE :: Init => Init_veg_config
   END Type t_veg_config
@@ -49,7 +48,6 @@ CONTAINS
     CHARACTER(8) :: read_output_interval_pool, read_output_interval_flux
     INTEGER      :: output_start_date, output_end_date
     LOGICAL      :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake
-    CHARACTER(8) :: create_forcing
 
     NAMELIST /vegetation_ctl/  & 
       read_output_interval_pool, &
@@ -59,8 +57,6 @@ CONTAINS
       flag_optimal_Nfraction, &
       flag_optimal_Nleaf, &
       flag_calc_soil_uptake
-    NAMELIST /forcing_ctl/  &     ! --> 2do: move to atm2land
-        create_forcing
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -77,8 +73,6 @@ CONTAINS
     flag_optimal_Nfraction     = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_Nleaf         = .FALSE.  ! .TRUE. .FALSE.
     flag_calc_soil_uptake      = .FALSE.  ! .TRUE. .FALSE.
-    ! Set defaults
-    create_forcing             = 'generate'
 
     ! &VEGETATION_CTL
     ! 
@@ -95,16 +89,6 @@ CONTAINS
     config%flag_optimal_Nfraction = flag_optimal_Nfraction
     config%flag_optimal_Nleaf     = flag_optimal_Nleaf
     config%flag_calc_soil_uptake  = flag_calc_soil_uptake
-
-    ! &FORCING_CTL  --> 2do: move to atm2land config file
-    ! 
-    ! read the namelist
-    nml_handler = open_nml(TRIM(config%namelist_filename))
-    nml_unit = position_nml('FORCING_CTL', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, forcing_ctl)
-    CALL close_nml(nml_handler)
-    ! pass values as read from file
-    config%option_forcing = create_forcing
 
   END SUBROUTINE Init_veg_config
 

@@ -13,6 +13,7 @@ MODULE mo_atmland_forcing
   USE mo_atmland_memory, ONLY: atm2land,land2atm
   USE mo_atmland_util
   USE mo_atmland_constants
+  USE mo_atmland_config_class,  ONLY: atmland_config
 
 
   IMPLICIT NONE
@@ -79,13 +80,10 @@ CONTAINS
     REAL(wp),INTENT(in) :: time 
     TYPE(t_slm_grid) :: grid
 
-  CHARACTER(8)  :: option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
-  !option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
-
      ! 
      ! 2.2 update time-variant forcing
      ! 
-     SELECT CASE(option_forcing)  ! see mo_base_config
+     SELECT CASE(atmland_config%option_forcing)  ! see mo_base_config
        CASE('constant')
          ! default input values are not changed ?
        CASE('readfile')
@@ -158,12 +156,10 @@ CONTAINS
     ! only IF model option is set to READ !
     IMPLICIT NONE
     ! 0.3 local
-  CHARACTER(8)  :: option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
-  !option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
     INTEGER :: lun = 100
     CHARACTER(100) :: fname = "filename"
     ! 1.0 open file for READ
-    IF(option_forcing == 'readfile') THEN
+    IF(atmland_config%option_forcing == 'readfile') THEN
       lun=100
       fname = 'climate.dat'
       OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
@@ -175,9 +171,7 @@ CONTAINS
   SUBROUTINE close_forcing_input_file
     ! simply close the file climate.dat
     IMPLICIT NONE
-  CHARACTER(8)  :: option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
-  !option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
-    IF(option_forcing == 'readfile') THEN
+    IF(atmland_config%option_forcing == 'readfile') THEN
       CLOSE(100)
     END IF
   END SUBROUTINE close_forcing_input_file

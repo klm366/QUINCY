@@ -8,28 +8,29 @@
 !! First version by Sönke Zaehle (2015-12-04)
 !!
 PROGRAM plant_model_driver
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,                  ONLY: wp
   USE mo_base_memory
   USE mo_base_constants
-!  USE mo_jsb_config_class,   ONLY: t_jsb_config
+!  USE mo_jsb_config_class,       ONLY: t_jsb_config
   ! atmland
   USE mo_atmland_constants
   USE mo_atmland_memory
   USE mo_atmland_util
   USE mo_atmland_forcing
+  USE mo_atmland_config_class,  ONLY: atmland_config
   ! land
-  USE mo_land_memory,        ONLY: init_tile_variable_accumulation
-  USE mo_land_constants    ! still necessary ?
+  USE mo_land_memory,           ONLY: init_tile_variable_accumulation
+  USE mo_land_constants         ! still necessary ?
   USE mo_land_util
   ! vegetation
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
-  USE mo_veg_interface,      ONLY: update_vegetation
+  USE mo_veg_interface,         ONLY: update_vegetation
   USE mo_veg_output
-  USE mo_veg_memory,         ONLY: init_plant_variable_accumulation
+  USE mo_veg_memory,            ONLY: init_plant_variable_accumulation
   USE mo_veg_util
-  USE mo_veg_config_class,   ONLY: veg_config
+  USE mo_veg_config_class,      ONLY: veg_config
   USE mo_veg_soil
 
 
@@ -85,8 +86,10 @@ PROGRAM plant_model_driver
   ! 
   ! 1.3 Read config paramters from namelist.plant 
   ! 
-  veg_config%namelist_filename = 'namelist.plant' !does it define the filename at t_jsb_config level available to all processes ?
+  veg_config%namelist_filename        = 'namelist.plant'
+  atmland_config%namelist_filename    = 'namelist.plant'
   CALL veg_config%Init
+  CALL atmland_config%Init
   ! 
   ! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
   ! 
