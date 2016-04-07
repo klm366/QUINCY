@@ -23,6 +23,9 @@ doc_template = """
 
 \\setlength{\parindent}{0pt}
 
+\\usepackage{hyperref}
+\\hypersetup{colorlinks=true, linkcolor=blue}
+
 
 \\begin{document}
 
@@ -67,6 +70,7 @@ analyses_III_dicts = { 'name'     : None,
                        'outfiles' : [],
                        'plots'    : [],
                        'teXts'    : [],
+                       'type'     : None,
                        'ismatrix' : False,
                        'isvector' : False,
                        'cans'     : {},
@@ -127,6 +131,56 @@ class Report ( object ):
 
     def write_description ( self ):
 
+        def writeAnalysesTabularx ():
+
+            n_col = 4 + self.n_cans
+            ret = ""
+            for fie, ana in self.analyses_fields.iteritems ():
+                cv = 0
+                for nam, dic in ana.iteritems ():
+                    ca = 0
+                    if cv != 0:
+                        ret += "\\cmidrule(r){2-%d}" % n_col
+                    for refno  in range ( self.n_refs ):
+                        if cv == 0:
+                            ret += var
+                            cv += 1
+                        ret += ' & '
+                        if ca == 0:
+                            ret += teXify ( ana [ 'name' ]) + ' & ' + teXify ( ana [ 'unit' ])
+                            ca += 1
+                        else:
+                            ret += ' & '
+                        ret += ' & '
+                        ret +=  '\\textbf{%s}' % teXify ( ref_by_refno [ '%d' % refno ].B4J_name ) \
+                               if len ( ref_by_refno [ '%d' % refno ].B4J_name ) <= 10 else \
+                               '$\mathbf{R_{%d}}$' % refno
+                        for canno in range ( self.n_cans ):
+                            ret += ' & '
+                            if can_by_canno [ '%d' % canno ].B4J_name == ref_by_refno [ '%d' % refno ].B4J_name:
+                                ret += '-'
+                            else:
+                                try:
+                                    ret += '%.4e' % ana [ 'cans' ][ '%d' % canno ][ 'benches' ][ '%d' % refno ]
+                                except:
+                                    ret += "-"
+                        
+                        ret += ' \\\\\n'
+
+            print ret
+            return ret
+    '\\\\\n'.join ( '%s & %s & %s & %s & %s' %\
+                    ( teXify ( varname ),
+                      teXify ( str ( analysis [ 'title' ])),
+                      teXify ( str ( analysis [ 'name' ])),
+                      teXify ( analysis [ 'type' ]),
+                      "p.\\pageref{%s}" % analysis [ 'name' ]) \
+for varname, value in self.analyses_fields.iteritems () \
+                    for key, analysis in self.analyses_fields [ varname ].iteritems ())
+
+    
+    
+
         analysis_table = [ ]
 
         description = """
@@ -134,40 +188,33 @@ In this benchmark report, the candidate experiments
 \\begin{itemize}
 %s
 \\end{itemize}
+""" % ''.join ( '\\item {!s} ($C_{{{!s}}}$)'.format ( teXify ( can.B4J_name ), str ( can.B4J_canno )) \
+if can.B4J_iscan else '' for can in self.experiments ) +\
+"""
 are compared with the reference experiments
 \\begin{itemize}
 %s
 \\end{itemize} 
 \\ \\\\ \\\\
-
+""" % ''.join ( '\\item {!s} ($R_{{{!s}}}$)'.format ( teXify ( ref.B4J_name ),
+                                                   str ( ref.B4J_refno )) \
+              if ref.B4J_isref else '' \
+                for ref in self.experiments ) +\
+"""
 The variables tested and the analyses and plots made are listed in the 
 table below.
 \\ \\\\
 
-\\begin{tabularx}{\\linewidth}{lLL}
+\\begin{tabularx}{\\linewidth}{rrrrr}
 \\toprule
-\\textbf{variable} & \\textbf{analyis method} & \\textbf{classification string} \\\\
+\\textbf{field} & \\textbf{analyis method} & \\textbf{classification string} & \\textbf{type} & \\textbf{page} \\\\
 \\addlinespace
-\\cmidrule(r){1-3}
+\\midrule
 %s
 \\\\ \\bottomrule
 \\end{tabularx}
 
-""" %(
-    ''.join ( '\\item {!s} ($C_{{{!s}}}$)'.format ( teXify ( can.B4J_name ),
-                                                    str ( can.B4J_canno )) \
-              if can.B4J_iscan else '' \
-                for can in self.experiments ),
-    ''.join ( '\\item {!s} ($R_{{{!s}}}$)'.format ( teXify ( ref.B4J_name ),
-                                                   str ( ref.B4J_refno )) \
-              if ref.B4J_isref else '' \
-                for ref in self.experiments ),
-    '\\\\\n'.join ( '%s & %s & %s' %\
-                    ( teXify ( varname ),
-                      teXify ( str ( analysis [ 'title' ])),
-                      teXify ( str ( analysis [ 'name' ]))) 
-                    for varname, value in self.analyses_fields.iteritems () \
-                    for key, analysis in self.analyses_fields [ varname ].iteritems ()))
+""" %  writeAnalysesTabularx ()
 
         description += subsection_template % { 'subsection': 'Candidate experiments to benchmark' }
     
@@ -192,11 +239,9 @@ table below.
         #                     json.dumps ( self.analyses ))
 
         for key, analyse in self.analyses_fields [ varname ].iteritems ():
-
-            print '#################'
-            print analyse
             
             albedo_body += subsection_template % { 'subsection': teXify ( analyse [ 'title' ])}
+            albedo_body += "\n\\label{%s}" % analyse [ 'name' ]
             albedo_body +=  analyse [ 'teXts' ][ 0 ]
             if analyse [ 'ismatrix' ]:
                 for can in self.experiments:
@@ -298,7 +343,7 @@ the plots\\\\
         return """This chapter provides an overview of benchmarks being done.\\\\\\medskip
         
         \\scriptsize
-        \\begin{tabularx}{\\linewidth}{rrrr%s} y
+        \\begin{tabularx}{\\linewidth}{rrrr%s}
         """ % ( self.n_cans * "r" ) +\
         """
         \\toprule

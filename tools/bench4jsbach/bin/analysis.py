@@ -229,6 +229,7 @@ and \\texttt{yseasmean}($X$) defined as
         delta [ 'name' ]     = 'delta'
         delta [ 'teXts' ]. append ( teXt )
         delta [ 'title' ]    = 'Seasonal mean difference'
+        delta [ 'type' ]     = 'map'
         delta [ 'ismatrix' ] = True
         delta [ 'isvector' ] = False
         delta [ 'cans' ]     = { '%d' % canno : copy.deepcopy ( analyses_IV_cans ) \
@@ -269,6 +270,7 @@ and \\texttt{timemean}($X$) defined as
         globalNtime_mean [ 'name' ]      = 'globalNtime_mean'
         globalNtime_mean [ 'teXts' ]. append ( teXt )
         globalNtime_mean [ 'title' ]     = 'Global and time mean'
+        globalNtime_mean [ 'type' ]      = 'metric'
         globalNtime_mean [ 'ismatrix' ]  = False
         globalNtime_mean [ 'isvector' ]  = True
         globalNtime_mean [ 'cans' ]      = { '%d' % canno : copy.deepcopy ( analyses_IV_cans ) \
@@ -313,6 +315,7 @@ and \\texttt{timemean}($X$) defined as
         globalNtime_dev [ 'name' ]      = 'globalNtime_dev'
         globalNtime_dev [ 'teXts' ].append ( teXt )
         globalNtime_dev [ 'title' ]     = 'Global and time mean deviation'
+        globalNtime_dev [ 'type' ]     = 'metric'
         globalNtime_dev [ 'ismatrix' ]  = False
         globalNtime_dev [ 'isvector' ]  = True
         globalNtime_dev [ 'cans' ]      = { '%d' % canno : copy.deepcopy ( analyses_IV_cans ) \
