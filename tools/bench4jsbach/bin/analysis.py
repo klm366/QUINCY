@@ -2,6 +2,7 @@
 # -*- coding:  utf-8 -*-
 from __future__ import division
 
+from collections import OrderedDict
 
 import os, sys, shutil
 import fnmatch, re
@@ -686,7 +687,8 @@ and \\texttt{timemean}($X$) defined as
                                                             len ( ticks ) - 1, tick_interleave_no ))
         vals                 = np.interp ( ticks, [ leftlevel_left_val, midval, rightlevel_right_val ],
                                            [ 0, 0.5, 1 ])
-        colors               = plt.cm.bwr ( vals )
+        colors               = plt.cm.RdBu ( vals )
+        #colors               = plt.cm.bwr ( vals )
         cmap, norm           = mcolors.from_levels_and_colors ( levels, colors )
 
 

@@ -3,7 +3,7 @@
 import os, subprocess, shutil, re
 import json
 import copy
-
+from collections import OrderedDict
 from util import log_message_newline, print_none, print_item_or_list_rec
 
 doc_template = """
@@ -59,7 +59,7 @@ source_dirname = "sources"
 # analyses_V_benches      = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ 'benches' ][ '0' ] = value
 
 
-analyses_II_analyses = {}
+analyses_II_analyses = OrderedDict ()
 
 
 analyses_III_dicts = { 'name'     : None,
@@ -119,7 +119,7 @@ def teXify ( string ):
 class Report ( object ):
     body = ""
     graphic = None
-    analyses_fields = {}
+    analyses_fields = OrderedDict ()
 
     def __init__ ( self ):
         super ( Report, self ).__init__ ()
@@ -298,13 +298,13 @@ the plots\\\\
         return """This chapter provides an overview of benchmarks being done.\\\\\\medskip
         
         \\scriptsize
-        \\begin{tabularx}{\\linewidth}{rrrr%s} 
+        \\begin{tabularx}{\\linewidth}{rrrr%s} y
         """ % ( self.n_cans * "r" ) +\
         """
         \\toprule
         \\textbf{field} & \\textbf{analyis} & \\textbf{unit} & \\textbf{reference} &
-        \\multicolumn{%d}{p{%dcm}}{\\RaggedLeft \\textbf{candidate}} \\\\
-        """ % ( self.n_cans,  self.n_cans * 2 ) +\
+        \\multicolumn{%d}{p{%.1fcm}}{\\RaggedLeft \\textbf{candidate}} \\\\
+        """ % ( self.n_cans,  self.n_cans * 1.5 ) +\
         """
         \\addlinespace
         & & & & %s \\\\
