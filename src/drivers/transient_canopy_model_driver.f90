@@ -11,7 +11,7 @@ PROGRAM canopy_model_driver
   USE mo_kind
   USE mo_base_memory
   USE mo_base_constants
-  USE mo_base_config
+!  USE mo_jsb_config_class,   ONLY: t_jsb_config
   ! atmland
   USE mo_atmland_constants
   USE mo_atmland_memory
@@ -23,6 +23,7 @@ PROGRAM canopy_model_driver
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
+  USE mo_veg_config_class,   ONLY: veg_config
   ! shared
   USE mo_namelist,           ONLY: POSITIONED, open_nml, position_nml  ! read model options from file
 
@@ -80,36 +81,8 @@ PROGRAM canopy_model_driver
   ! 
   ! 1.3 Read Model options from file (see src/shared & test_bed/plant/namelist.plant)
   ! 
-    ! 
-    ! 1.3.1 &CANOPY_MODEL_OPTIONS
-    ! 
-    NAMELIST /canopy_model_options/  &    ! see file namelist & READ() function below
-      flag_optimal_Nfraction, &
-      flag_optimal_Nleaf
-    ! read the namelist
-    nml_unit = open_nml  ('namelist.canopy')
-    f_unit = position_nml ('CANOPY_MODEL_OPTIONS', nml_unit, status=read_status)
-      SELECT CASE (read_status)
-        CASE (POSITIONED)
-          READ (f_unit, canopy_model_options)
-      END SELECT
-    ! pass values as read from file
-    options%model%flag_optimal_Nfraction = flag_optimal_Nfraction
-    options%model%flag_optimal_Nleaf     = flag_optimal_Nleaf
-    ! 
-    ! 1.3.2 &FORCING_CTL
-    ! 
-    NAMELIST /forcing_ctl/  &    ! see file namelist & READ() function below
-      create_forcing
-    ! read the namelist
-    nml_unit = open_nml  ('namelist.canopy')
-    f_unit = position_nml ('FORCING_CTL', nml_unit, status=read_status)
-      SELECT CASE (read_status)
-        CASE (POSITIONED)
-          READ (f_unit, forcing_ctl)
-      END SELECT
-    ! pass values as read from file to the variable set in mo_base_config
-    options%forcing%option_forcing = create_forcing
+  veg_config%namelist_filename = 'namelist.canopy' !does it define the filename at t_jsb_config level available to all processes ?
+  CALL veg_config%Init
   ! 
   ! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
   ! 

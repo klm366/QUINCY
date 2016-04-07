@@ -97,7 +97,10 @@ $(MODEL_LIB)(mo_veg_respiration.o): \
 
 $(MODEL_LIB)(mo_veg_soil.o): \
   $(SHARED_LIB)(mo_kind.o) \
-  $(MODEL_LIB)(mo_veg_parameters.o) 
+  $(BASE_LIB)(mo_base_memory.o) \
+  $(BASE_LIB)(mo_base_util_functions.o) \
+  $(MODEL_LIB)(mo_veg_parameters.o) \
+  $(MODEL_LIB)(mo_veg_config_class.o)
 
 $(MODEL_LIB)(mo_veg_turnover.o): \
   $(SHARED_LIB)(mo_kind.o) \
@@ -131,7 +134,7 @@ $(MODEL_LIB)(mo_veg_output.o): \
   $(SHARED_LIB)(mo_kind.o) \
   $(BASE_LIB)(mo_base_memory.o) \
   $(BASE_LIB)(mo_base_constants.o) \
-  $(BASE_LIB)(mo_base_config.o)
+  $(MODEL_LIB)(mo_veg_config_class.o)
 
 $(MODEL_LIB)(mo_veg_util.o): \
   $(SHARED_LIB)(mo_kind.o) \
@@ -142,6 +145,8 @@ $(MODEL_LIB)(mo_veg_util.o): \
 
 $(MODEL_LIB)(mo_veg_config_class.o): \
   $(SHARED_LIB)(mo_kind.o) \
-  $(BASE_LIB)(mo_base_config.o) \
-  $(SHARED_LIB)(mo_namelist.o)
+  $(SHARED_LIB)(mo_namelist.o) \
+  $(SHARED_LIB)(mo_exception.o) \
+  $(SHARED_LIB)(mo_io_units.o) \
+  $(BASE_LIB)(mo_jsb_config_class.o)
 

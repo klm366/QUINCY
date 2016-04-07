@@ -1,4 +1,4 @@
-&CANOPY_MODEL_OPTIONS
+&VEGETATION_CTL
   ! options for the canopy model, read by the canopy_model_driver
   flag_optimal_Nfraction=.TRUE.
   flag_optimal_Nleaf=.TRUE.

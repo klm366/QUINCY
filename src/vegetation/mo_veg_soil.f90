@@ -22,9 +22,9 @@ CONTAINS
     ! routine to simulate N and P uptake from soil in the absence of a proper soil model
     ! - alternative use - supply N and P to maintain a certain target C:N:P of the labile pool
     USE mo_base_memory
-    USE mo_base_config, ONLY: options
-    USE mo_veg_parameters
     USE mo_base_util_functions, ONLY: moving_avrg
+    USE mo_veg_parameters
+    USE mo_veg_config_class,   ONLY: veg_config
 
     IMPLICIT NONE
     ! 0.1 Input
@@ -41,7 +41,7 @@ CONTAINS
     
        pftid = tile(t)%plant%pftid
 
-       IF(options%model%flag_calc_soil_uptake) THEN ! case of root and demand based N/P uptake
+       IF(veg_config%flag_calc_soil_uptake) THEN ! case of root and demand based N/P uptake
           !
           ! 1. calculate current "labile" C:N:P   
           ! 

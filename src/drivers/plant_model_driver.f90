@@ -11,7 +11,7 @@ PROGRAM plant_model_driver
   USE mo_kind,               ONLY: wp
   USE mo_base_memory
   USE mo_base_constants
-  USE mo_base_config
+!  USE mo_jsb_config_class,   ONLY: t_jsb_config
   ! atmland
   USE mo_atmland_constants
   USE mo_atmland_memory
@@ -29,7 +29,7 @@ PROGRAM plant_model_driver
   USE mo_veg_output
   USE mo_veg_memory,         ONLY: init_plant_variable_accumulation
   USE mo_veg_util
-  USE mo_veg_config_class
+  USE mo_veg_config_class,   ONLY: veg_config
   USE mo_veg_soil
 
 
@@ -83,13 +83,14 @@ PROGRAM plant_model_driver
   tile(:)%soil%ammonium = 1.0_wp
   tile(:)%soil%phosphate  = 1.0_wp
   ! 
-  ! 1.3 Read veg config paramter from namelist 
+  ! 1.3 Read config paramters from namelist.plant 
   ! 
-  CALL new_veg_config
+  veg_config%namelist_filename = 'namelist.plant' !does it define the filename at t_jsb_config level available to all processes ?
+  CALL veg_config%Init
   ! 
   ! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
   ! 
-  CALL open_forcing_input_file  ! only if: options%forcing%option_forcing == 'readfile'
+  CALL open_forcing_input_file  ! only if: option_forcing == 'readfile'
   ! 
   ! 1.5 Initialise output and accumulation, and open output files; see mo_veg_output
   ! 
@@ -141,7 +142,7 @@ PROGRAM plant_model_driver
   ENDDO
 
   CALL close_output_files
-  CALL close_forcing_input_file  ! only if: options%forcing%option_forcing == 'readfile'
+  CALL close_forcing_input_file  ! only if: option_forcing == 'readfile'
 
 
 END PROGRAM plant_model_driver

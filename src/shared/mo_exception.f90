@@ -133,7 +133,7 @@ CONTAINS
 !~ #ifndef __STANDALONE
 !~        CALL util_exit(iexit)
 !~ #else
-!~        STOP 'mo_exception: finish ..'
+       STOP 'mo_exception: finish ..'
 !~ #endif
 !~     END IF
 

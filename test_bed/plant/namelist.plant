@@ -1,4 +1,4 @@
-&PLANT_MODEL_OPTIONS
+&VEGETATION_CTL
   ! options for the plant model, read by the plant_model_driver
   read_output_interval_pool="weekly"
   read_output_interval_flux="weekly"

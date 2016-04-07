@@ -10,7 +10,6 @@
 MODULE mo_atmland_forcing
 
   USE mo_kind
-  USE mo_base_config
   USE mo_atmland_memory, ONLY: atm2land,land2atm
   USE mo_atmland_util
   USE mo_atmland_constants
@@ -23,9 +22,11 @@ MODULE mo_atmland_forcing
   REAL(wp) :: annual_t_air_min, annual_t_air_max     ! annual minimum and maximum daily t_air
   REAL(wp) :: diurnal_temp_range                     ! diurnal temperature range
 
+
   PRIVATE
 
   PUBLIC :: init_forcing,update_forcing,open_forcing_input_file,close_forcing_input_file
+
 
 CONTAINS
 
@@ -78,10 +79,13 @@ CONTAINS
     REAL(wp),INTENT(in) :: time 
     TYPE(t_slm_grid) :: grid
 
+  CHARACTER(8)  :: option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
+  !option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
+
      ! 
      ! 2.2 update time-variant forcing
      ! 
-     SELECT CASE(options%forcing%option_forcing)  ! see mo_base_config
+     SELECT CASE(option_forcing)  ! see mo_base_config
        CASE('constant')
          ! default input values are not changed ?
        CASE('readfile')
@@ -154,10 +158,12 @@ CONTAINS
     ! only IF model option is set to READ !
     IMPLICIT NONE
     ! 0.3 local
+  CHARACTER(8)  :: option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
+  !option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
     INTEGER :: lun = 100
     CHARACTER(100) :: fname = "filename"
     ! 1.0 open file for READ
-    IF(options%forcing%option_forcing == 'readfile') THEN
+    IF(option_forcing == 'readfile') THEN
       lun=100
       fname = 'climate.dat'
       OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
@@ -169,7 +175,9 @@ CONTAINS
   SUBROUTINE close_forcing_input_file
     ! simply close the file climate.dat
     IMPLICIT NONE
-    IF(options%forcing%option_forcing == 'readfile') THEN
+  CHARACTER(8)  :: option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
+  !option_forcing = 'readfile'  ! temporary until atmland has an own config (currently in vegetation)
+    IF(option_forcing == 'readfile') THEN
       CLOSE(100)
     END IF
   END SUBROUTINE close_forcing_input_file
