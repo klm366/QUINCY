@@ -5,8 +5,8 @@
 !!  Reiner Schnur, MPI-M Hamburg
 !!
 !! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!! replacing the previous mo_veg_config_class created 2016-03-17, which was based on the JSBACH4 mo_veg_config_class anyway
+!! First version by Reiner Schnur (2013-04-04);
+!! replaces the previous mo_veg_config_class created 2016-03-17 that was based on the JSBACH4 mo_veg_config_class anyway;
 !! integration into SLM by Jan Engel, MPI BGC (20160401)
 !!
 MODULE mo_veg_config_class
@@ -25,7 +25,7 @@ MODULE mo_veg_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     CHARACTER(8)     :: output_interval_pool, output_interval_flux
-    INTEGER          :: output_start_date, output_end_date
+    INTEGER          :: output_start_year, output_end_year, pft_id
     LOGICAL          :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake
     CONTAINS
       PROCEDURE :: Init => Init_veg_config
@@ -44,19 +44,21 @@ CONTAINS
 
     CLASS(t_veg_config), INTENT(inout) :: config
 
-    LOGICAL      :: active
+    ! variables for reading from namlist, identical to variable-name in namelist
+    !LOGICAL      :: active
     CHARACTER(8) :: read_output_interval_pool, read_output_interval_flux
-    INTEGER      :: output_start_date, output_end_date
+    INTEGER      :: output_start_first_day_year, output_end_last_day_year, plant_functional_type_id
     LOGICAL      :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake
 
-    NAMELIST /vegetation_ctl/  & 
-      read_output_interval_pool, &
-      read_output_interval_flux, &
-      output_start_date, &
-      output_end_date, &
-      flag_optimal_Nfraction, &
-      flag_optimal_Nleaf, &
-      flag_calc_soil_uptake
+    NAMELIST /vegetation_ctl/       & 
+      read_output_interval_pool,    &
+      read_output_interval_flux,    &
+      output_start_first_day_year,  &
+      output_end_last_day_year,     &
+      flag_optimal_Nfraction,       &
+      flag_optimal_Nleaf,           &
+      flag_calc_soil_uptake,        &
+      plant_functional_type_id
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -66,29 +68,32 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
-    read_output_interval_pool  = 'monthly'   ! used for read from file
-    read_output_interval_flux  = 'monthly'   ! 
-    output_start_date          = 1
-    output_end_date            = 100
-    flag_optimal_Nfraction     = .FALSE.  ! .TRUE. .FALSE.
-    flag_optimal_Nleaf         = .FALSE.  ! .TRUE. .FALSE.
-    flag_calc_soil_uptake      = .FALSE.  ! .TRUE. .FALSE.
+    read_output_interval_pool      = 'monthly'   ! used for read from file
+    read_output_interval_flux      = 'monthly'   ! 
+    output_start_first_day_year    = 1
+    output_end_last_day_year       = 20
+    flag_optimal_Nfraction         = .FALSE.  ! .TRUE. .FALSE.
+    flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
+    flag_calc_soil_uptake          = .FALSE.  ! .TRUE. .FALSE.
+    plant_functional_type_id       = 1
 
-    ! &VEGETATION_CTL
-    ! 
     ! read the namelist
+    ! 
+    ! &VEGETATION_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
     nml_unit = position_nml('VEGETATION_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, vegetation_ctl)
     CALL close_nml(nml_handler)
+
     ! pass values as read from file
     config%output_interval_pool   = read_output_interval_pool
     config%output_interval_flux   = read_output_interval_flux
-    config%output_start_date      = output_start_date
-    config%output_end_date        = output_end_date
+    config%output_start_year      = output_start_first_day_year
+    config%output_end_year        = output_end_last_day_year
     config%flag_optimal_Nfraction = flag_optimal_Nfraction
     config%flag_optimal_Nleaf     = flag_optimal_Nleaf
     config%flag_calc_soil_uptake  = flag_calc_soil_uptake
+    config%pft_id                 = plant_functional_type_id
 
   END SUBROUTINE Init_veg_config
 

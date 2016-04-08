@@ -32,7 +32,6 @@ PROGRAM canopy_model_driver
 
   TYPE(VegetationParameterClass),SAVE     :: veg_param   ! data structure for vegetation parameters
   TYPE(TileClass),DIMENSION(ntile), SAVE  :: tile        ! data structure for dynamic vegetation and soil variables
-  TYPE(t_slm_grid)                        :: grid        ! data structure for coordinates
 
   INTEGER :: i
   REAL(wp) :: time
@@ -40,52 +39,42 @@ PROGRAM canopy_model_driver
   REAL(wp) :: ref_theta = 100._wp          ! soil water availability in %
   REAL(wp) :: ref_lai = 3._wp              ! LAI
   REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
-  REAL(wp) :: ref_pft = 1                  ! PFT to be simulated
 
-  ! variables for reading model-options from file (namelist.plant)
-  INTEGER           :: f_unit      = 0
-  INTEGER           :: read_status = 0
-  INTEGER, SAVE     :: nml_unit    = 0     ! copied from JSBACH3 mo_jsbach.f90 | Unit of the jsbach namelist
-  ! define variables, and set their default values, used for read model-options from file, and passed to options% ... then
-  LOGICAL      :: flag_optimal_Nfraction     = .FALSE.  ! .TRUE. .FALSE.
-  LOGICAL      :: flag_optimal_Nleaf         = .FALSE.  ! .TRUE. .FALSE.
-  ! forcing options; define variables that contain values as read from file, passed to options% ... then
-  CHARACTER(8) :: create_forcing             = 'generate'
   ! 
-  ! 1.0 Initialisation of vegetation parameters, constants and forcing
-  ! 
-  CALL init_base_constants
-  CALL init_atmland_constants
-  CALL init_veg_parameters(veg_param)
-  CALL init_forcing(grid)
-  ! 
-  ! 1.1 Initialise time step
-  ! 
-  time = 0.0_wp
-  dt = 1800.0_wp     ! time step length in seconds
-  ntimestep = NINT(10.0_wp * one_year * one_day / dt)  ! number of time steps
-  ! 
-  ! 1.2 Initialise tile (Initialisation of soil and vegetation, so far relevant) 
-  ! 
-  veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(atm2land%t_air - Tzero)  ! conversion from K to °C
-  tile(:)%soil%theta = ref_theta
-  tile(1)%plant%lai = ref_lai 
-  IF(ref_pft==0) THEN
-    tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
-  ELSE
-    tile(1)%plant%pool%leaf%nitrogen=tile(1)%plant%lai & 
-             / veg_param%sla(ref_pft)/veg_param%cn_leaf(ref_pft)
-    tile(1)%plant%pool%leaf%phosphorus=tile(1)%plant%pool%leaf%nitrogen & 
-             / veg_param%np_leaf(ref_pft)
-    tile(1)%plant%pftid=ref_pft
-  ENDIF
-  ! 
-  ! 1.3 Read config paramters from namelist.canopy
+  ! 1.0 Read config paramters from namelist.canopy
   ! 
   veg_config%namelist_filename        = 'namelist.canopy'
   atmland_config%namelist_filename    = 'namelist.canopy'
   CALL veg_config%Init
   CALL atmland_config%Init
+  ! 
+  ! 1.1 Initialisation of vegetation parameters, constants and forcing
+  ! 
+  CALL init_base_constants
+  CALL init_atmland_constants
+  CALL init_veg_parameters(veg_param)
+  CALL init_forcing    ! needs atmland_config%Init to run before
+  ! 
+  ! 1.2 Initialise time step
+  ! 
+  time = 0.0_wp
+  dt = 1800.0_wp     ! time step length in seconds
+  ntimestep = NINT(10.0_wp * one_year * one_day / dt)  ! number of time steps
+  ! 
+  ! 1.3 Initialise tile (Initialisation of soil and vegetation, so far relevant) 
+  ! 
+  veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(atm2land%t_air - Tzero)  ! conversion from K to °C
+  tile(:)%soil%theta = ref_theta
+  tile(1)%plant%lai = ref_lai 
+  IF(veg_config%pft_id==0) THEN
+    tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
+  ELSE
+    tile(1)%plant%pool%leaf%nitrogen=tile(1)%plant%lai & 
+             / veg_param%sla(veg_config%pft_id)/veg_param%cn_leaf(veg_config%pft_id)
+    tile(1)%plant%pool%leaf%phosphorus=tile(1)%plant%pool%leaf%nitrogen & 
+             / veg_param%np_leaf(veg_config%pft_id)
+    tile(1)%plant%pftid=veg_config%pft_id
+  ENDIF
   ! 
   ! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
   ! 
@@ -101,7 +90,7 @@ PROGRAM canopy_model_driver
      ! 
      ! 2.2 set orbital parameters and update time-variant forcing; 
      ! 
-     CALL update_forcing(time,grid)  ! see mo_atmland_forcing
+     CALL update_forcing(time)  ! see mo_atmland_forcing
      ! 
      ! 3.0 canopy calculation fluxes
      ! 

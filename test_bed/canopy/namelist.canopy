@@ -1,12 +1,24 @@
 &VEGETATION_CTL
-  ! options for the canopy model, read by the canopy_model_driver
+  ! options for the vegetation, read by the canopy_model_driver
   flag_optimal_Nfraction=.TRUE.
   flag_optimal_Nleaf=.TRUE.
+  plant_functional_type_id=1
 /
 &FORCING_CTL
   ! options for plant model forcing
   ! create forcing: constant readfile generate
   create_forcing="readfile"
 /
-
+&GRID_CTL
+  read_latitude=50.0
+  read_longitude=0.0
+/
+&BASE_CTL
+  ! basic model config
+  time_step_length_sec=1800.0
+  ! units: y years, w weeks, d days
+  simulation_length_unit="y"
+  ! integer values
+  simulation_length_number=20
+/
 

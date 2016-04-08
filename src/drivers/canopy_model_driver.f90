@@ -15,16 +15,17 @@ PROGRAM canopy_model_driver
   USE mo_atmland_memory
   USE mo_atmland_forcing
   USE mo_atmland_constants
+  USE mo_atmland_config_class,  ONLY: atmland_config
   USE mo_land_constants   ! still necessary ?
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
+  USE mo_veg_config_class,      ONLY: veg_config
 
   IMPLICIT NONE
 
   TYPE(VegetationParameterClass),SAVE    :: veg_param     ! data structure for vegetation parameters
   TYPE(TileClass),DIMENSION(ntile), SAVE :: tile       ! data structure for dynamic vegetation and soil variables
-  TYPE(t_slm_grid), SAVE                 :: grid             ! data structure for coordinates
 
   REAL(wp) :: vpd
   INTEGER :: i,lun
@@ -40,27 +41,27 @@ PROGRAM canopy_model_driver
   REAL(wp) :: ref_lai = 3._wp              ! LAI
   REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
   INTEGER  :: ref_pft = 1                  ! PFT identifier
-  !
+
+  ! 
   ! 1.0 Initialisation of vegetation parameters and constants
   ! 
   CALL init_base_constants
   CALL init_atmland_constants
   CALL init_veg_parameters(veg_param)
-  CALL init_forcing(grid)
   !
   ! 1.1 Initalisation of met-forcing which is assumed constant 
   ! 
-  atm2land%t_air = ref_t_air + Tzero
-  atm2land%press_srf = standard_press_srf 
-  atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - ref_vpd / atm2land%press_srf * eps_vpd
-  atm2land%co2_mixing_ratio = ref_co2 
+  atm2land%t_air = def_t_air
+  atm2land%press_srf = standard_press_srf
+  atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - def_vpd / atm2land%press_srf * eps_vpd
+  atm2land%co2_mixing_ratio = def_co2
   atm2land%rain = 0.0_wp
   atm2land%snow = 0.0_wp
-  atm2land%swvis_srf_down = ref_swdown
+  atm2land%swvis_srf_down = def_swdown
   atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
-  atm2land%swpar_srf_down = atm2land%swvis_srf_down 
-  atm2land%swpar_fdiffuse = ref_fdiffuse
-  atm2land%wind_air = ref_wind 
+  atm2land%swpar_srf_down = atm2land%swvis_srf_down
+  atm2land%swpar_fdiffuse = def_fdiffuse
+  atm2land%wind_air = def_wind
   atm2land%wind_10m = atm2land%wind_air
   atm2land%lw_srf_down = 0.0_wp
   atm2land%drag_srf = 1.0_wp
@@ -69,11 +70,13 @@ PROGRAM canopy_model_driver
   atm2land%q_acoef = 0.0_wp
   atm2land%q_bcoef = 0.0_wp
   atm2land%pch = 0.0_wp
-  atm2land%cos_zenith_angle = ref_cos_angle 
-  atm2land%ga = .1_wp / ( atm2land%drag_srf * atm2land%wind_10m ) 
-  !
+  atm2land%cos_zenith_angle = def_cos_angle
+  atm2land%ga = .1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
+  grid%lat = 50.0
+  grid%lon = 0.0
+  ! 
   ! 1.2 Initialisation of soil and vegetation (so far relevant) 
-  !
+  ! 
   tile(:)%soil%theta = ref_theta
   tile(1)%plant%lai = ref_lai 
   IF(ref_pft==0) THEN

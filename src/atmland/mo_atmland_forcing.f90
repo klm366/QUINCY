@@ -19,7 +19,6 @@ MODULE mo_atmland_forcing
   IMPLICIT NONE
 
   REAL(wp) :: sw_toa_down                            ! potential radiation at the top of the atmosphere
-  REAL(wp) :: longitude, latitude                    ! coordinates of point to be simulated
   REAL(wp) :: annual_t_air_min, annual_t_air_max     ! annual minimum and maximum daily t_air
   REAL(wp) :: diurnal_temp_range                     ! diurnal temperature range
 
@@ -31,12 +30,10 @@ MODULE mo_atmland_forcing
 
 CONTAINS
 
-  SUBROUTINE init_forcing(grid)
+  SUBROUTINE init_forcing
     ! docu
     USE mo_base_memory
     IMPLICIT NONE
-    ! 0.1 Input
-    TYPE(t_slm_grid) :: grid
 
     ! Initialization
     annual_t_air_min = -5.0_wp + Tzero       ! annual minumum average day temperature
@@ -67,18 +64,17 @@ CONTAINS
     atm2land%cos_zenith_angle = def_cos_angle
     atm2land%ga = .1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
 
-    grid%lon = def_longitude
-    grid%lat = def_latitude
+    grid%lat = atmland_config%lat
+    grid%lon = atmland_config%lon
 
   END SUBROUTINE init_forcing
 
-  SUBROUTINE update_forcing(time,grid)
+  SUBROUTINE update_forcing(time)
     ! called in the time loop in plant_model_driver subsequently to advancing the timer
     USE mo_base_memory
     IMPLICIT NONE
     ! 0.1 Input
     REAL(wp),INTENT(in) :: time 
-    TYPE(t_slm_grid) :: grid
 
      ! 
      ! 2.2 update time-variant forcing
@@ -91,7 +87,7 @@ CONTAINS
          ! climate.dat is a copy from /Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET/file...
          CALL update_orbital_parameters(time,declination,sw_toa_down)
          CALL read_forcing
-         atm2land%cos_zenith_angle = calc_solar_angle(latitude,longitude,time)
+         atm2land%cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)
          atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
          atm2land%swpar_srf_down = atm2land%swvis_srf_down
          atm2land%swpar_fdiffuse = calc_sw_fdiffuse(atm2land%swvis_srf_down, sw_toa_down, atm2land%cos_zenith_angle)

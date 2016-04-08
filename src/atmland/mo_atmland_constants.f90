@@ -46,8 +46,6 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: def_cos_angle               ! cosine of zenith angle
   REAL(wp),SAVE :: def_co2                     ! co2 in ppm
   REAL(wp),SAVE :: def_wind                    ! wind in m/s
-  REAL(wp),SAVE :: def_latitude                ! latitude in degrees
-  REAL(wp),SAVE :: def_longitude               ! longitude in degrees
 
   PUBLIC :: init_atmland_constants
  
@@ -103,9 +101,6 @@ CONTAINS
   def_cos_angle = 1.0_wp    
   def_co2 = 380.0_wp        
   def_wind = 1.0_wp         
-  def_latitude = 50.0_wp    
-  def_longitude = 0.0_wp    
-
 
   END SUBROUTINE init_atmland_constants
 

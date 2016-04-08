@@ -142,10 +142,11 @@ MODULE mo_base_memory
      TYPE(AccumulationTileClass) :: accumulated
   END TYPE TileClass  
 
-  TYPE t_slm_grid ! temporary place for storing grid coordinates, will require a proper module file later
+  TYPE t_slm_grid           ! temporary ! -> will be stored in a /base/mo_grid_class later on (see JSBACH4)
      REAL(wp) :: lon
      REAL(wp) :: lat
   END TYPE t_slm_grid
+  TYPE(t_slm_grid) :: grid  !< currently initialized with namelist parameter values
 
 ! PUBLIC :: ElementAdd,ElementSub,ElementMul,ElementDiv
  

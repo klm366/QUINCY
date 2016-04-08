@@ -38,7 +38,6 @@ PROGRAM plant_model_driver
 
   TYPE(VegetationParameterClass),SAVE     :: veg_param        ! data structure for vegetation parameters
   TYPE(TileClass),DIMENSION(ntile), SAVE  :: tile             ! data structure for dynamic vegetation and soil variables
-  TYPE(t_slm_grid), SAVE                  :: grid             ! data structure for coordinates 
 
   INTEGER  :: i
   REAL(wp) :: time                         ! displays the 'real time' in days; time == 1.0 after one day has passed
@@ -46,10 +45,16 @@ PROGRAM plant_model_driver
   REAL(wp) :: ref_theta  = 100._wp         ! soil water availability in %
   REAL(wp) :: ref_lai    = 3._wp           ! LAI
   REAL(wp) :: ref_nleaf  = 2.0_wp          ! N leaf per unit leaf area in gN/m2
-  REAL(wp) :: ref_pft = 1                  ! PFT to be simulated
 
   ! 
-  ! 1.0 Initialisation of vegetation parameters, constants and forcing
+  ! 1.0 Read config paramters from namelist.plant 
+  ! 
+  veg_config%namelist_filename        = 'namelist.plant'
+  atmland_config%namelist_filename    = 'namelist.plant'
+  CALL veg_config%Init
+  CALL atmland_config%Init
+  ! 
+  ! 1.1 Initialisation of vegetation parameters, constants and forcing
   ! 
   CALL init_base_constants
   CALL init_atmland_constants
@@ -57,22 +62,22 @@ PROGRAM plant_model_driver
   CALL init_plant_variable_accumulation(tile)   ! set initial average values, defined in mo_veg_memory
   CALL init_tile_variable_accumulation(tile)    ! set initial average values, defined in mo_land_memory
   !CALL init_soil_variable_accumulation(tile) follows later
-  CALL init_forcing(grid)
+  CALL init_forcing   ! needs atmland_config%Init to run before
   ! 
-  ! 1.1 Initialise time step
+  ! 1.2 Initialise time step
   ! 
   time       = 0.0_wp
   dt         = 1800.0_wp                                 ! time step length in seconds
   ntimestep  = NINT(10.0_wp * one_year * one_day / dt)   ! number of time steps
   ! 
-  ! 1.2 Initialise tile
+  ! 1.3 Initialise tile
   ! 
   veg_param%tjmax_opt(:)  = 20._wp+0.35_wp*(atm2land%t_air - Tzero)   ! conversion from K to °C
   tile(:)%soil%theta      = ref_theta
   tile(:)%soil%ammonium = 1.0_wp
   tile(:)%soil%phosphate  = 1.0_wp
   tile(:)%plant%lai       = 1.0_wp
-  tile(1)%plant%pftid     = ref_pft
+  tile(1)%plant%pftid     = veg_config%pft_id
   DO i = 1,ntile
      tile(i)%plant%pool%leaf%carbon = tile(i)%plant%lai / veg_param%sla(tile(i)%plant%pftid)
      tile(i)%plant%pool%leaf%nitrogen = tile(i)%plant%pool%leaf%carbon / veg_param%cn_leaf(tile(i)%plant%pftid)
@@ -83,13 +88,6 @@ PROGRAM plant_model_driver
   tile(:)%plant%pool%labile%phosphorus  = 1.0_wp
   tile(:)%soil%ammonium = 1.0_wp
   tile(:)%soil%phosphate  = 1.0_wp
-  ! 
-  ! 1.3 Read config paramters from namelist.plant 
-  ! 
-  veg_config%namelist_filename        = 'namelist.plant'
-  atmland_config%namelist_filename    = 'namelist.plant'
-  CALL veg_config%Init
-  CALL atmland_config%Init
   ! 
   ! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
   ! 
@@ -110,7 +108,7 @@ PROGRAM plant_model_driver
      ! 
      ! 2.2 set orbital parameters and update time-variant forcing; 
      ! 
-     CALL update_forcing(time,grid)  
+     CALL update_forcing(time)  
      ! 
      ! 3.0 canopy calculation fluxes
      ! 
