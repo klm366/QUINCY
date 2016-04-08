@@ -32,6 +32,14 @@ class Experiment ( object ):
         return "\n%s object %s ( \n\t%s )" % ( self.__class__.__name__, self.B4J_name,
                     ",\n\t".join ( '{!s}\t: {!r}'.format ( k, str ( print_none ( v ))) \
                     for (k,v) in sorted ( self.__dict__.iteritems ())))
+
+    def teX_short_repr ( self, shortname = 'can'  ):
+        from report import teXify
+        
+        return '%s \\textbf{%s object {\\tt %s}}' % ( teXify ( self.__class__.__name__ ),
+                                                      teXify ( self.B4J_name ),
+                                                      '($\mathbf{C_{%d}}$)' % self.B4J_canno if shortname == 'can' else \
+                                                      '($\mathbf{R_{%d}}$)' % self.B4J_refno )
     
 
     def teX_repr ( self ):
@@ -63,7 +71,7 @@ class Experiment ( object ):
         return """
 \\begin{tabularx}{\\linewidth}{lL}
 \\toprule
-\\multicolumn{2}{l}{%s \\textbf{%s object {\\tt %s}}}  \\\\
+\\multicolumn{2}{l}{%s \\textbf{%s object {\\tt %s}}} \\phantomsection\\label{%s} \\\\
 \\addlinespace
 \\cmidrule(r){1-2}
 %s
@@ -72,6 +80,7 @@ class Experiment ( object ):
 """ % ( teXify ( self.__class__.__name__ ),
         teXify ( self.B4J_name ),
         '($\mathbf{C_{%d}}$)' % self.B4J_canno if self.B4J_iscan else '($\mathbf{R_{%d}}$)' % self.B4J_refno,
+        self.B4J_name,
         """\\\\
 """.join ( '{!s} & {!s}'.format ( teXify ( str ( k )), force_breaks ( teXify ( str ( v )), 50 )) \
            if not isinstance ( v, dict ) else '&'

@@ -23,6 +23,18 @@ doc_template = """
 
 \\setlength{\parindent}{0pt}
 
+\\usepackage{geometry}
+ \\geometry{
+ a4paper,
+ total={140mm,247mm},
+ left=30mm,
+ top=40mm,
+ }
+
+%% dina4 : 21 cm x 29,7 cm 
+
+
+
 \\usepackage{hyperref}
 \\hypersetup{colorlinks=true, linkcolor=blue}
 
@@ -58,8 +70,8 @@ source_dirname = "sources"
 # analyses_fields      = {}, fe: analyses_fields [ 'albedo' ] =  {}
 # analyses_II_analyses = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ] = {}
 # analyses_III_dicts   = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ] = {}
-# analyses_IV_cans     = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ 'benches' ] = {}
-# analyses_V_benches      = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ 'benches' ][ '0' ] = value
+# analyses_IV_cans     = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ '0' ][ 'benches' ] = {}
+# analyses_V_benches      = {}, fe: analyses_fields [ 'albedo' ][ 'wdsgt_mean' ][ 'cans' ][ '0' ][ 'benches' ][ '0' ] = value
 
 
 analyses_II_analyses = OrderedDict ()
@@ -132,53 +144,21 @@ class Report ( object ):
     def write_description ( self ):
 
         def writeAnalysesTabularx ():
-
-            n_col = 4 + self.n_cans
             ret = ""
             for fie, ana in self.analyses_fields.iteritems ():
                 cv = 0
-                for nam, dic in ana.iteritems ():
-                    ca = 0
-                    if cv != 0:
-                        ret += "\\cmidrule(r){2-%d}" % n_col
-                    for refno  in range ( self.n_refs ):
-                        if cv == 0:
-                            ret += var
-                            cv += 1
-                        ret += ' & '
-                        if ca == 0:
-                            ret += teXify ( ana [ 'name' ]) + ' & ' + teXify ( ana [ 'unit' ])
-                            ca += 1
-                        else:
-                            ret += ' & '
-                        ret += ' & '
-                        ret +=  '\\textbf{%s}' % teXify ( ref_by_refno [ '%d' % refno ].B4J_name ) \
-                               if len ( ref_by_refno [ '%d' % refno ].B4J_name ) <= 10 else \
-                               '$\mathbf{R_{%d}}$' % refno
-                        for canno in range ( self.n_cans ):
-                            ret += ' & '
-                            if can_by_canno [ '%d' % canno ].B4J_name == ref_by_refno [ '%d' % refno ].B4J_name:
-                                ret += '-'
-                            else:
-                                try:
-                                    ret += '%.4e' % ana [ 'cans' ][ '%d' % canno ][ 'benches' ][ '%d' % refno ]
-                                except:
-                                    ret += "-"
-                        
-                        ret += ' \\\\\n'
-
+                for ana_nam, ana_dict in ana.iteritems ():
+                    if cv == 0:
+                        ret += fie
+                        cv += 1
+                    ret += ' & '
+                    ret += ' %s & %s & %s & %s \\\\' % \
+                           ( teXify ( ana_dict [ 'title' ]),
+                             teXify ( ana_dict [ 'name' ]),
+                             teXify ( ana_dict [ 'type' ]),
+                              "p.\\pageref{%s}" % ana_dict [ 'name' ])
             print ret
             return ret
-    '\\\\\n'.join ( '%s & %s & %s & %s & %s' %\
-                    ( teXify ( varname ),
-                      teXify ( str ( analysis [ 'title' ])),
-                      teXify ( str ( analysis [ 'name' ])),
-                      teXify ( analysis [ 'type' ]),
-                      "p.\\pageref{%s}" % analysis [ 'name' ]) \
-for varname, value in self.analyses_fields.iteritems () \
-                    for key, analysis in self.analyses_fields [ varname ].iteritems ())
-
-    
     
 
         analysis_table = [ ]
@@ -205,14 +185,16 @@ The variables tested and the analyses and plots made are listed in the
 table below.
 \\ \\\\
 
+\\scriptsize
 \\begin{tabularx}{\\linewidth}{rrrrr}
 \\toprule
 \\textbf{field} & \\textbf{analyis method} & \\textbf{classification string} & \\textbf{type} & \\textbf{page} \\\\
 \\addlinespace
 \\midrule
 %s
-\\\\ \\bottomrule
+\\bottomrule
 \\end{tabularx}
+\\normalsize
 
 """ %  writeAnalysesTabularx ()
 
@@ -225,9 +207,15 @@ table below.
         description += subsection_template % { 'subsection': 'Reference experiments' }
         for ref in self.experiments:
             if not ref.B4J_isref: continue
-            if ref.B4J_name == can.B4J_name: continue
-            description +=  ref.teX_repr ()
-
+            if ref.B4J_iscan:
+                description +=  """
+%s %s
+\\\\\\medskip
+""" % ( ref.teX_short_repr ( shortname = 'ref' ),
+         ' see p.\\pageref{%s} ({\\tt $C_{%d}$})' % (  ref.B4J_name, ref.B4J_canno ))
+            else: 
+                description +=  ref.teX_repr ()
+                
         return description 
     
 
