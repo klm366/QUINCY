@@ -11,7 +11,7 @@ PROGRAM canopy_model_driver
   USE mo_kind
   USE mo_base_memory
   USE mo_base_constants
-!  USE mo_jsb_config_class,      ONLY: t_jsb_config
+  USE mo_base_config_class,     ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
   ! atmland
   USE mo_atmland_constants
   USE mo_atmland_memory
@@ -26,16 +26,17 @@ PROGRAM canopy_model_driver
   USE mo_veg_photosynthesis
   USE mo_veg_config_class,      ONLY: veg_config
   ! shared
-  USE mo_namelist,              ONLY: POSITIONED, open_nml, position_nml  ! read model options from file
+  !USE mo_namelist,              ONLY: POSITIONED, open_nml, position_nml  ! read model options from file
 
   IMPLICIT NONE
 
   TYPE(VegetationParameterClass),SAVE     :: veg_param   ! data structure for vegetation parameters
   TYPE(TileClass),DIMENSION(ntile), SAVE  :: tile        ! data structure for dynamic vegetation and soil variables
 
-  INTEGER :: i
-  REAL(wp) :: time
-  INTEGER :: ntimestep 
+  INTEGER  :: i
+  REAL(wp) :: time_day                     ! displays the 'real time' in days; time_day == 1.0 after one day has passed
+  INTEGER  :: time_year                    ! displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
+  INTEGER  :: ntimestep 
   REAL(wp) :: ref_theta = 100._wp          ! soil water availability in %
   REAL(wp) :: ref_lai = 3._wp              ! LAI
   REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
@@ -43,8 +44,10 @@ PROGRAM canopy_model_driver
   ! 
   ! 1.0 Read config paramters from namelist.canopy
   ! 
+  base_config%namelist_filename       = 'namelist.canopy'
   veg_config%namelist_filename        = 'namelist.canopy'
   atmland_config%namelist_filename    = 'namelist.canopy'
+  CALL base_config%Init
   CALL veg_config%Init
   CALL atmland_config%Init
   ! 
@@ -57,9 +60,10 @@ PROGRAM canopy_model_driver
   ! 
   ! 1.2 Initialise time step
   ! 
-  time = 0.0_wp
-  dt = 1800.0_wp     ! time step length in seconds
-  ntimestep = NINT(10.0_wp * one_year * one_day / dt)  ! number of time steps
+  time_day   = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
+  time_year  = 1                           ! the 1st year of a simulation == 1 (not zero)
+  dt        = base_config%dt               ! time step length in seconds, default: 1800.0 == 30 minutes
+  ntimestep = base_config%Timesteps()      ! number of time steps
   ! 
   ! 1.3 Initialise tile (Initialisation of soil and vegetation, so far relevant) 
   ! 
@@ -86,11 +90,11 @@ PROGRAM canopy_model_driver
      ! 
      ! 2.1 advance timer
      ! 
-     time = time + dt/one_day 
+     time_day  = time_day + dt/one_day         ! time in days
      ! 
      ! 2.2 set orbital parameters and update time-variant forcing; 
      ! 
-     CALL update_forcing(time)  ! see mo_atmland_forcing
+     CALL update_forcing(time_day)  ! see mo_atmland_forcing
      ! 
      ! 3.0 canopy calculation fluxes
      ! 
@@ -98,13 +102,16 @@ PROGRAM canopy_model_driver
      CALL update_canopy_fluxes(tile(1), veg_param)  ! atm2land is a global TYPE, see mo_atmland_forcing
      ! 
      ! 4.0 write output  -> filename: fort.20
-     !
+     ! 
      WRITE(20,'(5F16.7)') atm2land%t_air, atm2land%swpar_srf_down * sw2par, & 
            tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc,tile(1)%plant%flux%ci
-     !
-     ! 5.0 check timer  
-     !
-     IF(time > one_year) time = time - one_year
+     ! 
+     ! 5.0 check timer; adjust year counter
+     ! 
+     IF(time_day > one_year) THEN
+       time_day  = time_day - one_year   ! largest value of time ~ 365; see mo_base_constants
+       time_year = time_year + 1
+     END IF
   ENDDO
 
 END PROGRAM canopy_model_driver

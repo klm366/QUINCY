@@ -11,7 +11,7 @@ PROGRAM plant_model_driver
   USE mo_kind,                  ONLY: wp
   USE mo_base_memory
   USE mo_base_constants
-!  USE mo_jsb_config_class,       ONLY: t_jsb_config
+  USE mo_base_config_class,     ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
   ! atmland
   USE mo_atmland_constants
   USE mo_atmland_memory
@@ -40,7 +40,8 @@ PROGRAM plant_model_driver
   TYPE(TileClass),DIMENSION(ntile), SAVE  :: tile             ! data structure for dynamic vegetation and soil variables
 
   INTEGER  :: i
-  REAL(wp) :: time                         ! displays the 'real time' in days; time == 1.0 after one day has passed
+  REAL(wp) :: time_day                     ! displays the 'real time' in days; time_day == 1.0 after one day has passed
+  INTEGER  :: time_year                    ! displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
   INTEGER  :: ntimestep
   REAL(wp) :: ref_theta  = 100._wp         ! soil water availability in %
   REAL(wp) :: ref_lai    = 3._wp           ! LAI
@@ -49,8 +50,10 @@ PROGRAM plant_model_driver
   ! 
   ! 1.0 Read config paramters from namelist.plant 
   ! 
+  base_config%namelist_filename       = 'namelist.plant'
   veg_config%namelist_filename        = 'namelist.plant'
   atmland_config%namelist_filename    = 'namelist.plant'
+  CALL base_config%Init
   CALL veg_config%Init
   CALL atmland_config%Init
   ! 
@@ -66,9 +69,10 @@ PROGRAM plant_model_driver
   ! 
   ! 1.2 Initialise time step
   ! 
-  time       = 0.0_wp
-  dt         = 1800.0_wp                                 ! time step length in seconds
-  ntimestep  = NINT(10.0_wp * one_year * one_day / dt)   ! number of time steps
+  time_day   = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
+  time_year  = 1                           ! the 1st year of a simulation == 1 (not zero)
+  dt         = base_config%dt              ! time step length in seconds, default: 1800.0 == 30 minutes
+  ntimestep  = base_config%Timesteps()     ! number of time steps
   ! 
   ! 1.3 Initialise tile
   ! 
@@ -104,11 +108,11 @@ PROGRAM plant_model_driver
      ! 
      ! 2.1 advance timer
      ! 
-     time = time + dt/one_day 
+     time_day  = time_day  + dt/one_day         ! time in days
      ! 
      ! 2.2 set orbital parameters and update time-variant forcing; 
      ! 
-     CALL update_forcing(time)  
+     CALL update_forcing(time_day)  
      ! 
      ! 3.0 canopy calculation fluxes
      ! 
@@ -132,13 +136,16 @@ PROGRAM plant_model_driver
      ! 7.1 pool: write output in certain intervals, see mo_veg_output
      ! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
      ! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-     CALL write_output_pool(time, tile)
+     CALL write_output_pool(time_day, time_year, tile)
      ! 7.2 flux: write output in certain intervals, see mo_veg_output
-     CALL write_output_flux(time, tile)
+     CALL write_output_flux(time_day, time_year, tile)
      ! 
-     ! 8.0 check timer
+     ! 8.0 check timer; adjust year counter
      ! 
-     IF(time > one_year) time = time - one_year   ! largest value of time ~ 365; see mo_base_constants
+     IF(time_day > one_year) THEN
+       time_day  = time_day - one_year   ! largest value of time ~ 365; see mo_base_constants
+       time_year = time_year + 1
+     END IF
 
   ENDDO
 

@@ -7,15 +7,15 @@
 &FORCING_CTL
   ! options for plant model forcing
   ! create forcing: constant readfile generate
-  create_forcing="readfile"
+  option_forcing="readfile"
 /
 &GRID_CTL
-  read_latitude=50.0
-  read_longitude=0.0
+  latitude=50.0
+  longitude=0.0
 /
 &BASE_CTL
   ! basic model config
-  time_step_length_sec=1800.0
+  dt_time_step_length_sec=1800.0
   ! units: y years, w weeks, d days
   simulation_length_unit="y"
   ! integer values

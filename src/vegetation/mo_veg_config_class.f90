@@ -25,7 +25,8 @@ MODULE mo_veg_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     CHARACTER(8)     :: output_interval_pool, output_interval_flux
-    INTEGER          :: output_start_year, output_end_year, pft_id
+    INTEGER          :: output_start_first_day_year, output_end_last_day_year !< output: 1st to last day of the year(s) provided
+    INTEGER          :: pft_id
     LOGICAL          :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake
     CONTAINS
       PROCEDURE :: Init => Init_veg_config
@@ -46,13 +47,13 @@ CONTAINS
 
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL      :: active
-    CHARACTER(8) :: read_output_interval_pool, read_output_interval_flux
+    CHARACTER(8) :: output_interval_pool, output_interval_flux
     INTEGER      :: output_start_first_day_year, output_end_last_day_year, plant_functional_type_id
     LOGICAL      :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake
 
     NAMELIST /vegetation_ctl/       & 
-      read_output_interval_pool,    &
-      read_output_interval_flux,    &
+      output_interval_pool,         &
+      output_interval_flux,         &
       output_start_first_day_year,  &
       output_end_last_day_year,     &
       flag_optimal_Nfraction,       &
@@ -68,10 +69,10 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
-    read_output_interval_pool      = 'monthly'   ! used for read from file
-    read_output_interval_flux      = 'monthly'   ! 
+    output_interval_pool           = 'monthly' 
+    output_interval_flux           = 'monthly' 
     output_start_first_day_year    = 1
-    output_end_last_day_year       = 20
+    output_end_last_day_year       = 10
     flag_optimal_Nfraction         = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
     flag_calc_soil_uptake          = .FALSE.  ! .TRUE. .FALSE.
@@ -86,14 +87,14 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
-    config%output_interval_pool   = read_output_interval_pool
-    config%output_interval_flux   = read_output_interval_flux
-    config%output_start_year      = output_start_first_day_year
-    config%output_end_year        = output_end_last_day_year
-    config%flag_optimal_Nfraction = flag_optimal_Nfraction
-    config%flag_optimal_Nleaf     = flag_optimal_Nleaf
-    config%flag_calc_soil_uptake  = flag_calc_soil_uptake
-    config%pft_id                 = plant_functional_type_id
+    config%output_interval_pool          = output_interval_pool
+    config%output_interval_flux          = output_interval_flux
+    config%output_start_first_day_year   = output_start_first_day_year
+    config%output_end_last_day_year      = output_end_last_day_year
+    config%flag_optimal_Nfraction        = flag_optimal_Nfraction
+    config%flag_optimal_Nleaf            = flag_optimal_Nleaf
+    config%flag_calc_soil_uptake         = flag_calc_soil_uptake
+    config%pft_id                        = plant_functional_type_id
 
   END SUBROUTINE Init_veg_config
 

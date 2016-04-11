@@ -15,7 +15,8 @@ SIZE    = size
 MODS1 = mo_base_constants.f90 \
         mo_base_memory.f90 \
         mo_base_util_functions.f90 \
-        mo_jsb_config_class.f90
+        mo_jsb_config_class.f90 \
+        mo_base_config_class.f90
 
 OBJSMODS1 = $(MODS1:.f90=.o)
 #-
@@ -52,4 +53,11 @@ $(MODEL_LIB)(mo_base_util_functions.o): \
 
 $(MODEL_LIB)(mo_jsb_config_class.o): \
   $(SHARED_LIB)(mo_io_units.o)
+
+$(MODEL_LIB)(mo_base_config_class.o): \
+  $(SHARED_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_namelist.o) \
+  $(SHARED_LIB)(mo_exception.o) \
+  $(SHARED_LIB)(mo_io_units.o) \
+  $(MODEL_LIB)(mo_jsb_config_class.o)
 

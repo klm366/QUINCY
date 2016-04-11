@@ -41,15 +41,15 @@ CONTAINS
 
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL      :: active
-    CHARACTER(8) :: create_forcing
-    REAL(wp)     :: read_latitude, read_longitude
+    CHARACTER(8) :: option_forcing
+    REAL(wp)     :: latitude, longitude
 
     NAMELIST /forcing_ctl/  &  
-        create_forcing
+        option_forcing
 
     NAMELIST /grid_ctl/     &  
-        read_latitude,      &
-        read_longitude
+        latitude,           &
+        longitude
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -59,9 +59,9 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting atmland configuration')
 
     ! Set defaults
-    create_forcing             = 'generate'
-    read_latitude              = 50.91   ! about the MPI-BGC Jena
-    read_longitude             = 11.56   ! about the MPI-BGC Jena
+    option_forcing        = 'generate'
+    latitude              = 50.91   ! about the MPI-BGC Jena
+    longitude             = 11.56   ! about the MPI-BGC Jena
 
 
     ! read the namelist
@@ -78,9 +78,9 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
-    config%option_forcing = create_forcing
-    config%lat            = read_latitude
-    config%lon            = read_longitude
+    config%option_forcing = option_forcing
+    config%lat            = latitude
+    config%lon            = longitude
 
   END SUBROUTINE Init_atmland_config
 

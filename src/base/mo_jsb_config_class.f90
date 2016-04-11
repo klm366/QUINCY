@@ -45,6 +45,7 @@ MODULE mo_jsb_config_class
     END SUBROUTINE Init_config
   END INTERFACE
 
+
 !  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_config_class'
 
 !CONTAINS

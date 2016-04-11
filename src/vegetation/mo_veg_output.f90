@@ -175,89 +175,104 @@ CONTAINS
   ! 
   ! write data to files in a certain interval and accumulate fluxes
   ! 
-  SUBROUTINE write_output_pool(time, tile)
+  SUBROUTINE write_output_pool(time_d, time_y, tile)
     ! write file output for pools at a certain interval accordingly to input
     IMPLICIT NONE
     ! 0.1 Input
-    REAL(wp), INTENT(in) :: time
-    !REAL(wp), INTENT(in) :: output_interval_pool
+    REAL(wp), INTENT(in) :: time_d  ! time in days
+    INTEGER,  INTENT(in) :: time_y  ! time in years; the 1st year of a simulation == year 1 (not zero)
     TYPE(TileClass), DIMENSION(ntile), INTENT(in) :: tile
     ! 0.2 Output
     ! 
     ! 0.3 Local
     INTEGER :: lun = 10
 
-    IF( MODULO(time, output_interval_pool) < eps8 .OR. ABS(output_interval_pool - MODULO(time, output_interval_pool)) < eps8) THEN
-     lun=10
-     write(lun,'(10F12.6)') time,tile(1)%plant%pool%leaf%carbon,&
+    ! 
+    ! 1.0 check output start & end 
+    !     and write pools if appropriate with output_interval
+    ! 
+    IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
+      IF( MODULO(time_d, output_interval_pool) < eps8 .OR. &
+         & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps8) THEN
+       lun=10
+       write(lun,'(10F12.6)') time_d,tile(1)%plant%pool%leaf%carbon,&
          tile(1)%plant%pool%fine_root%carbon,tile(1)%plant%pool%sap_wood%carbon,&
          tile(1)%plant%pool%heart_wood%carbon,tile(1)%plant%pool%coarse_root%carbon,&
          tile(1)%plant%pool%fruit%carbon,tile(1)%plant%pool%labile%carbon,&
          tile(1)%plant%pool%reserve%carbon,tile(1)%plant%pool%seed_bed%carbon
-     lun=lun+1
-     write(lun,'(10F12.6)') time,tile(1)%plant%pool%leaf%nitrogen,&
+       lun=lun+1
+       write(lun,'(10F12.6)') time_d,tile(1)%plant%pool%leaf%nitrogen,&
          tile(1)%plant%pool%fine_root%nitrogen,tile(1)%plant%pool%sap_wood%nitrogen,&
          tile(1)%plant%pool%heart_wood%nitrogen,tile(1)%plant%pool%coarse_root%nitrogen,&
          tile(1)%plant%pool%fruit%nitrogen,tile(1)%plant%pool%labile%nitrogen,&
          tile(1)%plant%pool%reserve%nitrogen,tile(1)%plant%pool%seed_bed%nitrogen
-     lun=lun+1
-     write(lun,'(10F12.6)') time,tile(1)%plant%pool%leaf%phosphorus,&
+       lun=lun+1
+       write(lun,'(10F12.6)') time_d,tile(1)%plant%pool%leaf%phosphorus,&
          tile(1)%plant%pool%fine_root%phosphorus,tile(1)%plant%pool%sap_wood%phosphorus,&
          tile(1)%plant%pool%heart_wood%phosphorus,tile(1)%plant%pool%coarse_root%phosphorus,&
          tile(1)%plant%pool%fruit%phosphorus,tile(1)%plant%pool%labile%phosphorus,&
          tile(1)%plant%pool%reserve%phosphorus,tile(1)%plant%pool%seed_bed%carbon
-     !lun=lun+1
-     !write(lun,'(2F12.6)') time, tile(1)%plant%lai 
+       !lun=lun+1
+       !write(lun,'(2F12.6)') time_d, tile(1)%plant%lai 
+      END IF
     END IF
   END SUBROUTINE write_output_pool
 
-  SUBROUTINE write_output_flux(time, tile)
+  SUBROUTINE write_output_flux(time_d, time_y, tile)
     ! write file output for fluxes at a certain interval accordingly to input
     IMPLICIT NONE
     ! 0.1 Input
-    REAL(wp), INTENT(in) :: time
-    !REAL(wp), INTENT(in) :: output_interval_flux
+    REAL(wp), INTENT(in) :: time_d  ! time in days
+    INTEGER,  INTENT(in) :: time_y  ! time in years; the 1st year of a simulation == year 1 (not zero)
     TYPE(TileClass), DIMENSION(ntile), INTENT(in) :: tile
     ! 0.2 Output
     ! 
     ! 0.3 Local
     INTEGER :: lun = 30 
-    REAL(wp) :: dt_one = 1.0
+    REAL(wp) :: dt_one = 1.0_wp
+
 
     ! 
-    ! 1.0 accumulate fluxes across the timesteps of one interval
-    !     for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1
-    !     for any interval larger timestep multiply by dt
+    ! 1.0 check output start & end 
+    !     and write pools if appropriate with output_interval
     ! 
-    IF(output_interval_flux < 1.0_wp) THEN
-        dt_one = 1.0_wp                 ! interval = timestep
-      ELSE
-        dt_one = dt / 1000000.0_wp      ! interval > timestep
-    END IF
-    gpp_acc          = gpp_acc         + tile(1)%plant%flux%gpp                * dt_one
-    growth_resp_acc  = growth_resp_acc + tile(1)%plant%flux%growth_respiration * dt_one
-    maint_resp_acc   = maint_resp_acc  + tile(1)%plant%flux%maint_respiration  * dt_one
-    npp_acc          = npp_acc         + tile(1)%plant%flux%npp                * dt_one
-    res_use_c_acc    = res_use_c_acc   + tile(1)%plant%flux%reserve_use%carbon * dt_one *1000000._wp/dt
-    uptake_n_acc     = uptake_n_acc    + tile(1)%plant%flux%uptake_n           * dt_one
-    uptake_p_acc     = uptake_p_acc    + tile(1)%plant%flux%uptake_p           * dt_one
-    ! 
-    ! 2.0 write fluxes and set to zero
-    ! 
-    IF( MODULO(time, output_interval_flux) < eps8 .OR. ABS(output_interval_flux - MODULO(time, output_interval_flux)) < eps8) THEN
-     lun=30
-     write(lun,'(6F22.6)') time, gpp_acc, growth_resp_acc, maint_resp_acc, npp_acc, res_use_c_acc
-     lun=lun+1
-     write(lun,'(2F22.6)') time, uptake_n_acc
-     lun=lun+1
-     write(lun,'(2F22.6)') time, uptake_p_acc
-     gpp_acc         = 0._wp
-     growth_resp_acc = 0._wp
-     maint_resp_acc  = 0._wp
-     npp_acc         = 0._wp
-     res_use_c_acc   = 0._wp
-     uptake_n_acc    = 0._wp
-     uptake_p_acc    = 0._wp
+    IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
+      ! 
+      ! 1.1 accumulate fluxes across the timesteps of one interval
+      !     for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1
+      !     for any interval larger timestep multiply by dt
+      ! 
+      IF(output_interval_flux < 1.0_wp) THEN
+          dt_one = 1.0_wp                 ! interval = timestep
+        ELSE
+          dt_one = dt / 1000000.0_wp      ! interval > timestep
+      END IF
+      gpp_acc          = gpp_acc         + tile(1)%plant%flux%gpp                * dt_one
+      growth_resp_acc  = growth_resp_acc + tile(1)%plant%flux%growth_respiration * dt_one
+      maint_resp_acc   = maint_resp_acc  + tile(1)%plant%flux%maint_respiration  * dt_one
+      npp_acc          = npp_acc         + tile(1)%plant%flux%npp                * dt_one
+      res_use_c_acc    = res_use_c_acc   + tile(1)%plant%flux%reserve_use%carbon * dt_one *1000000._wp/dt
+      uptake_n_acc     = uptake_n_acc    + tile(1)%plant%flux%uptake_n           * dt_one
+      uptake_p_acc     = uptake_p_acc    + tile(1)%plant%flux%uptake_p           * dt_one
+      ! 
+      ! 1.2 write fluxes and set to zero
+      ! 
+      IF( MODULO(time_d, output_interval_flux) < eps8 .OR. &
+         & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps8) THEN
+        lun=30
+        write(lun,'(6F22.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc, npp_acc, res_use_c_acc
+        lun=lun+1
+        write(lun,'(2F22.6)') time_d, uptake_n_acc
+        lun=lun+1
+        write(lun,'(2F22.6)') time_d, uptake_p_acc
+        gpp_acc         = 0._wp
+        growth_resp_acc = 0._wp
+        maint_resp_acc  = 0._wp
+        npp_acc         = 0._wp
+        res_use_c_acc   = 0._wp
+        uptake_n_acc    = 0._wp
+        uptake_p_acc    = 0._wp
+      END IF
     END IF
   END SUBROUTINE write_output_flux
 
