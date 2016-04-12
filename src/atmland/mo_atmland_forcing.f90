@@ -150,17 +150,27 @@ CONTAINS
   SUBROUTINE open_forcing_input_file
     ! open the file test_bed/plant/climate.dat
     ! only IF model option is set to READ !
+    USE mo_exception, ONLY: finish
     IMPLICIT NONE
     ! 0.3 local
+    LOGICAL :: file_exists
     INTEGER :: lun = 100
     CHARACTER(100) :: fname = "filename"
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_atmland_forcing:open_forcing_input_file'
     ! 1.0 open file for READ
     IF(atmland_config%option_forcing == 'readfile') THEN
       lun=100
       fname = 'climate.dat'
-      OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
-      ! 2.0 read the two header lines into dummy variables
-      CALL read_forcing_header
+      ! check if file exists
+      INQUIRE(FILE=fname, EXIST=file_exists)
+      ! open if fname == True
+      IF(file_exists) THEN
+        OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
+        ! 2.0 read the two header lines into dummy variables
+        CALL read_forcing_header
+      ELSE
+        CALL finish(TRIM(routine), 'climate forcing: climate.dat could not be opened, file does not exist')
+      END IF
     END IF
   END SUBROUTINE open_forcing_input_file
 

@@ -66,6 +66,7 @@ $(MODEL_LIB)(mo_atmland_constants.o): \
 
 $(MODEL_LIB)(mo_atmland_forcing.o): \
   $(SHARED_LIB)(mo_kind.o) \
+  $(SHARED_LIB)(mo_exception.o) \
   $(BASE_LIB)(mo_base_constants.o) \
   $(MODEL_LIB)(mo_atmland_constants.o) \
   $(MODEL_LIB)(mo_atmland_memory.o) \
