@@ -92,23 +92,26 @@ CONTAINS
 
   END FUNCTION calc_sw_fdiffuse
 
-  FUNCTION calc_spec_humidity_sat(temp,press_srf) RESULT(q_sat)
+  PURE ELEMENTAL FUNCTION calc_spec_humidity_sat(temp,press_srf) RESULT(q_sat)
         ! constants for the calculation of atmospheric water content at saturation
         ! from Campell and Norman's Introduction to Environmental Biophysics
      USE mo_kind, ONLY: wp
      USE mo_atmland_constants, ONLY: eps_vpd, Tzero
      IMPLICIT NONE 
      ! 0.1 Input
-     REAL(wp) :: temp            ! temperature (K)
-     REAL(wp) :: press_srf       ! atmospheric pressure (Pa) 
+     REAL(wp), INTENT(in) :: temp            ! temperature (K)
+     REAL(wp), INTENT(in) :: press_srf       ! atmospheric pressure (Pa) 
      ! 0.3 Output 
      REAL(wp) :: q_sat           ! saturating specific humidity (g/g) 
      ! 0.4 Local
-     REAL(wp) :: a = 611.0_wp    ! Pa
-     REAL(wp) :: b = 17.502_wp   ! einheitenlos
-     REAL(wp) :: c = 240.97      ! °C
      REAL(wp) :: esat            ! saturating vapour pressure (Pa)
+     REAL(wp) :: a               ! Pa
+     REAL(wp) :: b               ! einheitenlos
+     REAL(wp) :: c               ! °C
 
+     a = 611.0_wp    
+     b = 17.502_wp  
+     c = 240.97_wp    
      ! calculating saturating vapour pressure [Pa] (Campbell & Norman)
      esat = a * exp(b * (temp - Tzero)/(temp - Tzero + c))
      ! conversion to saturating specific humidity [kg kg-1]

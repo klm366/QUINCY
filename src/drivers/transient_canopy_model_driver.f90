@@ -24,6 +24,7 @@ PROGRAM canopy_model_driver
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
+  USE mo_veg_soil
   USE mo_veg_config_class,      ONLY: veg_config
   ! shared
   !USE mo_namelist,              ONLY: POSITIONED, open_nml, position_nml  ! read model options from file
@@ -37,7 +38,6 @@ PROGRAM canopy_model_driver
   REAL(wp) :: time_day                     ! displays the 'real time' in days; time_day == 1.0 after one day has passed
   INTEGER  :: time_year                    ! displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
   INTEGER  :: ntimestep 
-  REAL(wp) :: ref_theta = 100._wp          ! soil water availability in %
   REAL(wp) :: ref_lai = 3._wp              ! LAI
   REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
 
@@ -68,7 +68,8 @@ PROGRAM canopy_model_driver
   ! 1.3 Initialise tile (Initialisation of soil and vegetation, so far relevant) 
   ! 
   veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(atm2land%t_air - Tzero)  ! conversion from K to °C
-  tile(:)%soil%theta = ref_theta
+  tile(:)%soil%moisture   = veg_config%soil_awc_prescribe
+  tile(:)%soil%theta      = veg_config%soil_theta_prescribe
   tile(1)%plant%lai = ref_lai 
   IF(veg_config%pft_id==0) THEN
     tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
@@ -100,11 +101,12 @@ PROGRAM canopy_model_driver
      ! 
      CALL update_radiation(tile)                 ! atm2land land2atm are global TYPES, see mo_atmland_forcing
      CALL update_canopy_fluxes(tile(1), veg_param)  ! atm2land is a global TYPE, see mo_atmland_forcing
+     CALL update_vegsoil_physics(tile)
      ! 
      ! 4.0 write output  -> filename: fort.20
      ! 
-     WRITE(20,'(5F16.7)') atm2land%t_air, atm2land%swpar_srf_down * sw2par, & 
-           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc,tile(1)%plant%flux%ci
+     WRITE(20,'(6F16.7)') time_day+time_year*one_year,atm2land%t_air, atm2land%swpar_srf_down * sw2par, & 
+           tile(1)%plant%flux%gpp,tile(1)%plant%gc,tile(1)%plant%flux%ci
      ! 
      ! 5.0 check timer; adjust year counter
      ! 

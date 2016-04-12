@@ -3,10 +3,13 @@
   output_interval_pool="weekly"
   output_interval_flux="weekly"
   output_start_first_day_year=1
-  output_end_last_day_year=12
+  output_end_last_day_year=20
   flag_optimal_Nfraction=.FALSE.
   flag_optimal_Nleaf=.FALSE.
-  flag_calc_soil_uptake=.FALSE.
+  flag_calc_soil_uptake=.TRUE.
+  flag_calc_soil_moisture=.FALSE.
+  soil_awc_prescribe=300.0
+  soil_theta_prescribe=100.0
   plant_functional_type_id=1
 /
 &FORCING_CTL

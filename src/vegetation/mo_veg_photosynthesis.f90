@@ -27,6 +27,7 @@ CONTAINS
 
 SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, see mo_atmland_forcing
 
+ USE mo_base_util_functions, ONLY: moving_avrg
    IMPLICIT NONE
    ! 0.1 Input
    TYPE(VegetationParameterClass), INTENT(in) :: veg_param  ! list of vegetation parameters
@@ -58,6 +59,8 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
    beta_soil_gs = calc_soil_moisture_stress(tile%soil%theta, &
                        veg_param%lambda_soil_gs(pftid),veg_param%weibull_k_soil_gs(pftid))
 
+   tile%plant%accumulated%beta_soil_gs = moving_avrg( &
+                       tile%plant%accumulated%beta_soil_gs, beta_soil_gs, 1._wp / ( 7._wp * one_day/dt))
    ! determine actual canopy layers
    canopy_layer_depth_act = calc_canopy_layer_depth(tile%plant%lai)
 
@@ -94,14 +97,14 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
   tile%plant%flux%gpp = 0.0_wp
   tile%plant%flux%an = 0.0_wp
   tile%plant%flux%maint_respiration_leaf = 0.0_wp
-  tile%plant%flux%gc = 0.0_wp
+  tile%plant%gc = 0.0_wp
   tile%plant%flux%ci = 0.0_wp
   DO icanop = 1,ncanop
      tile%plant%flux%gpp = tile%plant%flux%gpp + agl(icanop) * canopy_layer_depth_act(icanop) 
      tile%plant%flux%an = tile%plant%flux%an + anl(icanop) * canopy_layer_depth_act(icanop) 
      tile%plant%flux%maint_respiration_leaf = tile%plant%flux%maint_respiration_leaf + & 
             rl(icanop) * canopy_layer_depth_act(icanop) 
-     tile%plant%flux%gc = tile%plant%flux%gc + gsl(icanop) * canopy_layer_depth_act(icanop)
+     tile%plant%gc = tile%plant%gc + gsl(icanop) * canopy_layer_depth_act(icanop)
      tile%plant%flux%ci = tile%plant%flux%ci + cil(icanop) * canopy_layer_depth_act(icanop)
   ENDDO
 

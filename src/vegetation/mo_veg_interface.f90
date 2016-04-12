@@ -31,6 +31,7 @@ CONTAINS
     USE mo_land_constants
     USE mo_veg_parameters, ONLY: VegetationParameterClass
     USE mo_veg_photosynthesis, ONLY: update_canopy_fluxes
+    USE mo_veg_phenology, ONLY: update_phenology
 
     IMPLICIT NONE
 
@@ -42,6 +43,14 @@ CONTAINS
     INTEGER :: t
 
     DO t = 1,ntile
+       ! 
+       ! 1.0 update phenological state
+       ! 
+       CALL update_phenology(veg_param%phenology_type(tile(t)%plant%pftid),tile(t)%plant%accumulated%gpp_week, &
+                             tile(t)%plant%accumulated%maint_respiration_week,tile(t)%plant%mean_leaf_age, & 
+                             tile(t)%accumulated%t_air_week,tile(t)%accumulated%t_air_month, & 
+                             tile(t)%plant%accumulated%beta_soil_gs,tile(t)%plant%accumulated%gdd, & 
+                             tile(t)%plant%accumulated%nd_dormance,tile(t)%plant%growing_season)  
 
        ! photosynthesis and leaf respiration 
        CALL update_canopy_fluxes(tile(t), veg_param)
@@ -73,24 +82,24 @@ CONTAINS
     ! 0.2 In- and Output
     TYPE(PlantClass),INTENT(inout) :: plant
     ! 
-    ! 1.0 Calculate growth
+    ! 2.0 Calculate growth
     ! 
     CALL  calc_growth(atm2land%t_air,theta,plant,veg_param,plant%flux%growth, & 
             plant%flux%growth_respiration,plant%flux%growth_respiration_c13,plant%flux%growth_respiration_c14,& 
             plant%flux%reserve_use)
     ! 
-    ! 1.5 Calculate maintenance respiration
-    ! 
+    ! 2.5 Calculate maintenance respiration
+    !
     CALL  calc_maintenance_respiration(atm2land%t_air,atm2land%t_air,plant%pool%sap_wood%nitrogen,plant%pool%fine_root%nitrogen, &
             plant%pool%coarse_root%nitrogen,plant%pool%labile%carbon,plant%pool%labile%carbon13, & 
             plant%pool%labile%carbon14,plant%flux%maint_respiration_leaf,&
             plant%flux%maint_respiration,plant%flux%maint_respiration_c13,plant%flux%maint_respiration_c14)
     ! 
-    ! 2.0 Calculate turnover from tissue aging and senescence
+    ! 3.0 Calculate turnover from tissue aging and senescence
     !
     CALL calc_turnover(plant,veg_param)
     !
-    ! 3.0 Add carbon from photosynthesis to the labile pool
+    ! 4.1 Add carbon from photosynthesis to the labile pool
     !
     plant%flux%npp = plant%flux%gpp - plant%flux%growth_respiration - plant%flux%maint_respiration 
     plant%flux%npp_c13 = plant%flux%gpp_c13 - plant%flux%growth_respiration_c13 - plant%flux%maint_respiration_c13 
@@ -101,7 +110,7 @@ CONTAINS
     plant%flux%growth%labile%carbon14 = plant%flux%growth%labile%carbon14 + & 
        plant%flux%npp_c14 * dt / 1.e6
     !
-    ! 4.0 Add nutrients from uptake calculations
+    ! 4.2 Add nutrients from uptake calculations
     !
     plant%flux%growth%labile%nitrogen = plant%flux%growth%labile%nitrogen + &
        plant%flux%uptake_n * dt / 1.e6
@@ -110,12 +119,12 @@ CONTAINS
     plant%flux%growth%labile%phosphorus = plant%flux%growth%labile%phosphorus + &
        plant%flux%uptake_p * dt / 1.e6
     !
-    ! 5.0 update labile pool and reserve 
+    ! 5.1 update labile pool and reserve 
     ! 
     plant%pool%labile = ElementAdd(plant%pool%labile,plant%flux%reserve_use)
     plant%pool%reserve = ElementSub(plant%pool%reserve,plant%flux%reserve_use)
     ! 
-    ! 5.1 update fluxes from retranslocation of leaves
+    ! 5.2 update fluxes from retranslocation of leaves
     !
     plant%pool%leaf%nitrogen = plant%pool%leaf%nitrogen - plant%flux%leaf_resorption_n
     plant%pool%labile%nitrogen = plant%pool%labile%nitrogen + plant%flux%leaf_resorption_n
@@ -132,6 +141,15 @@ CONTAINS
     ! 7.0 Update plant diagnostics
     !
     plant%lai = plant%pool%leaf%carbon * veg_param%sla(plant%pftid)
+    CALL update_allometry(plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon, & 
+                          veg_param%wood_density(plant%pftid),veg_param%allom_k1(plant%pftid),&
+                          veg_param%allom_k2(plant%pftid),plant%diameter,plant%height)
+    IF(plant%pool%leaf%carbon .GT. eps8) THEN 
+       plant%mean_leaf_age = & 
+          (plant%mean_leaf_age + dt/one_day) * (1._wp - plant%flux%growth%leaf%carbon/plant%pool%leaf%carbon)
+    ELSE 
+       plant%mean_leaf_age = 0.0_wp
+    ENDIF
 
   END SUBROUTINE vegetation_interface
 

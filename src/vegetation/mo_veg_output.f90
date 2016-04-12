@@ -8,10 +8,12 @@
 !! First version by Jan Engel (2016-03-14)
 !!
 MODULE mo_veg_output
+  !! this module may be not necessary anymore when QUINCY is linked with JSBACH !!
 
   USE mo_kind, ONLY: wp, eps8
   USE mo_base_memory, ONLY: TileClass
   USE mo_base_constants, ONLY: ntile, one_day, dt
+  USE mo_veg_parameters, ONLY: VegetationParameterClass
   USE mo_veg_config_class,   ONLY: veg_config
 
   IMPLICIT NONE
@@ -25,7 +27,13 @@ MODULE mo_veg_output
   REAL(wp), SAVE :: npp_acc              = 0.
   REAL(wp), SAVE :: res_use_c_acc        = 0.
   REAL(wp), SAVE :: uptake_n_acc         = 0.
+  REAL(wp), SAVE :: resorption_n_acc     = 0.
+  REAL(wp), SAVE :: res_use_n_acc        = 0.
   REAL(wp), SAVE :: uptake_p_acc         = 0.
+  REAL(wp), SAVE :: resorption_p_acc     = 0.
+  REAL(wp), SAVE :: res_use_p_acc        = 0.
+  REAL(wp), SAVE :: transpiration_acc    = 0.
+  REAL(wp), SAVE :: gc_acc               = 0.
 
 CONTAINS
 
@@ -68,8 +76,11 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(2a)'), 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
                      'Fruit_P Labile_P Reserve_P SeedBank_P'
-    !lun=lun+1
-    !WRITE(lun,'(a)'), 'Time LAI'
+    lun=lun+1
+    WRITE(lun,'(a)'), 'Time SoilMoisture'
+    lun=lun+1
+    WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R'
+
   END SUBROUTINE init_output_writing_pool
 
   SUBROUTINE init_output_writing_flux
@@ -81,9 +92,11 @@ CONTAINS
     lun=30
     WRITE(lun,'(a)'), 'Time GPP GrowthResp MaintResp NPP ReserveUse'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time NUP'
+    WRITE(lun,'(a)'), 'Time NUP Resorption ReserveUse'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time PUP'
+    WRITE(lun,'(a)'), 'Time PUP Resorption ReserveUse'
+    lun=lun+1
+    WRITE(lun,'(a)'), 'Time Transpiration GC'
   END SUBROUTINE init_output_writing_flux
 
   ! 
@@ -124,9 +137,12 @@ CONTAINS
     lun=lun+1
     fname = 'poolP_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    !lun=lun+1
-    !fname = 'LAI_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
-    !OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
+    fname = 'poolH2O_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
+    fname = 'veg_diagnostics_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     ! 
     ! 3.0 write column headers into output files
     ! 
@@ -166,6 +182,9 @@ CONTAINS
     lun=lun+1
     fname = 'fluxP_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
+    fname = 'fluxH2O_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     ! 
     ! 3.0 write column headers into output files
     ! 
@@ -175,17 +194,20 @@ CONTAINS
   ! 
   ! write data to files in a certain interval and accumulate fluxes
   ! 
-  SUBROUTINE write_output_pool(time_d, time_y, tile)
+  SUBROUTINE write_output_pool(time_d, time_y, tile, veg_param)
     ! write file output for pools at a certain interval accordingly to input
+    USE mo_veg_parameters, ONLY: itree
     IMPLICIT NONE
     ! 0.1 Input
     REAL(wp), INTENT(in) :: time_d  ! time in days
     INTEGER,  INTENT(in) :: time_y  ! time in years; the 1st year of a simulation == year 1 (not zero)
     TYPE(TileClass), DIMENSION(ntile), INTENT(in) :: tile
+    TYPE(VegetationParameterClass),INTENT(in)     :: veg_param        ! data structure for vegetation parameters
     ! 0.2 Output
     ! 
     ! 0.3 Local
     INTEGER :: lun = 10
+    REAL(wp) :: hlp1
 
     ! 
     ! 1.0 check output start & end 
@@ -211,9 +233,17 @@ CONTAINS
          tile(1)%plant%pool%fine_root%phosphorus,tile(1)%plant%pool%sap_wood%phosphorus,&
          tile(1)%plant%pool%heart_wood%phosphorus,tile(1)%plant%pool%coarse_root%phosphorus,&
          tile(1)%plant%pool%fruit%phosphorus,tile(1)%plant%pool%labile%phosphorus,&
-         tile(1)%plant%pool%reserve%phosphorus,tile(1)%plant%pool%seed_bed%carbon
-       !lun=lun+1
-       !write(lun,'(2F12.6)') time_d, tile(1)%plant%lai 
+         tile(1)%plant%pool%reserve%phosphorus,tile(1)%plant%pool%seed_bed%phosphorus
+       lun=lun+1
+       write(lun,'(9F12.6)') time_d, tile(1)%soil%moisture
+       lun=lun+1
+       IF(veg_param%growthform(tile(1)%plant%pftid) == itree) THEN 
+          hlp1 = tile(1)%plant%lai/(tile(1)%plant%pool%sap_wood%carbon / tile(1)%plant%height / veg_param%wood_density(tile(1)%plant%pftid))
+       ELSE
+          hlp1 = tile(1)%plant%pool%sap_wood%carbon/tile(1)%plant%pool%leaf%carbon
+       ENDIF
+       write(lun,'(9F12.6)') time_d, tile(1)%plant%height, tile(1)%plant%diameter, tile(1)%plant%lai, &
+         hlp1,tile(1)%plant%pool%leaf%carbon/tile(1)%plant%pool%fine_root%carbon
       END IF
     END IF
   END SUBROUTINE write_output_pool
@@ -253,7 +283,13 @@ CONTAINS
       npp_acc          = npp_acc         + tile(1)%plant%flux%npp                * dt_one
       res_use_c_acc    = res_use_c_acc   + tile(1)%plant%flux%reserve_use%carbon * dt_one *1000000._wp/dt
       uptake_n_acc     = uptake_n_acc    + tile(1)%plant%flux%uptake_n           * dt_one
+      resorption_n_acc = resorption_n_acc+ tile(1)%plant%flux%leaf_resorption_n  * dt_one *1000000._wp/dt
+      res_use_n_acc    = res_use_n_acc   + tile(1)%plant%flux%reserve_use%nitrogen * dt_one *1000000._wp/dt
       uptake_p_acc     = uptake_p_acc    + tile(1)%plant%flux%uptake_p           * dt_one
+      resorption_p_acc = resorption_p_acc+ tile(1)%plant%flux%leaf_resorption_p  * dt_one *1000000._wp/dt
+      res_use_p_acc    = res_use_p_acc   + tile(1)%plant%flux%reserve_use%phosphorus * dt_one *1000000._wp/dt
+      transpiration_acc= transpiration_acc+ tile(1)%plant%flux%transpiration * dt_one 
+      gc_acc           = tile(1)%plant%gc * dt_one 
       ! 
       ! 1.2 write fluxes and set to zero
       ! 
@@ -262,16 +298,24 @@ CONTAINS
         lun=30
         write(lun,'(6F22.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc, npp_acc, res_use_c_acc
         lun=lun+1
-        write(lun,'(2F22.6)') time_d, uptake_n_acc
+        write(lun,'(4F22.6)') time_d, uptake_n_acc, resorption_n_acc, res_use_n_acc
         lun=lun+1
-        write(lun,'(2F22.6)') time_d, uptake_p_acc
+        write(lun,'(4F22.6)') time_d, uptake_p_acc, resorption_p_acc, res_use_p_acc
+        lun=lun+1
+        write(lun,'(12F16.8)') time_d, transpiration_acc, gc_acc
         gpp_acc         = 0._wp
         growth_resp_acc = 0._wp
         maint_resp_acc  = 0._wp
         npp_acc         = 0._wp
         res_use_c_acc   = 0._wp
         uptake_n_acc    = 0._wp
+        resorption_n_acc = 0.0_wp
+        res_use_n_acc   = 0._wp
         uptake_p_acc    = 0._wp
+        resorption_p_acc = 0.0_wp
+        res_use_p_acc   = 0._wp
+        transpiration_acc = 0.0_wp
+        gc_acc = 0.0_wp
       END IF
     END IF
   END SUBROUTINE write_output_flux
@@ -286,7 +330,10 @@ CONTAINS
     CLOSE(10)  ! please consider the unit names used in open_output_files
     CLOSE(11)
     CLOSE(12)
+    CLOSE(13)
     CLOSE(30)
+    CLOSE(31)
+    CLOSE(32)
   END SUBROUTINE close_output_files
 
 END MODULE mo_veg_output

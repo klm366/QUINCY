@@ -43,9 +43,6 @@ PROGRAM plant_model_driver
   REAL(wp) :: time_day                     ! displays the 'real time' in days; time_day == 1.0 after one day has passed
   INTEGER  :: time_year                    ! displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
   INTEGER  :: ntimestep
-  REAL(wp) :: ref_theta  = 100._wp         ! soil water availability in %
-  REAL(wp) :: ref_lai    = 3._wp           ! LAI
-  REAL(wp) :: ref_nleaf  = 2.0_wp          ! N leaf per unit leaf area in gN/m2
 
   ! 
   ! 1.0 Read config paramters from namelist.plant 
@@ -77,21 +74,17 @@ PROGRAM plant_model_driver
   ! 1.3 Initialise tile
   ! 
   veg_param%tjmax_opt(:)  = 20._wp+0.35_wp*(atm2land%t_air - Tzero)   ! conversion from K to °C
-  tile(:)%soil%theta      = ref_theta
-  tile(:)%soil%ammonium = 1.0_wp
-  tile(:)%soil%phosphate  = 1.0_wp
-  tile(:)%plant%lai       = 1.0_wp
+  tile(:)%soil%moisture   = veg_config%soil_awc_prescribe
+  tile(:)%soil%theta      = veg_config%soil_theta_prescribe 
+  tile(:)%soil%ammonium   = 0.2_wp
+  tile(:)%soil%phosphate  = 0.01_wp
   tile(1)%plant%pftid     = veg_config%pft_id
+  tile(:)%plant%pool%reserve%carbon     = 50.0_wp
   DO i = 1,ntile
-     tile(i)%plant%pool%leaf%carbon = tile(i)%plant%lai / veg_param%sla(tile(i)%plant%pftid)
-     tile(i)%plant%pool%leaf%nitrogen = tile(i)%plant%pool%leaf%carbon / veg_param%cn_leaf(tile(i)%plant%pftid)
-     tile(i)%plant%pool%leaf%phosphorus = tile(i)%plant%pool%leaf%nitrogen / veg_param%np_leaf(tile(i)%plant%pftid)
+     tile(i)%plant%pool%reserve%nitrogen   = tile(i)%plant%pool%reserve%carbon / (1._wp + fresp_growth) / & 
+                                             veg_param%cn_leaf(tile(i)%plant%pftid)
+     tile(i)%plant%pool%reserve%phosphorus = tile(i)%plant%pool%reserve%nitrogen / veg_param%np_leaf(tile(i)%plant%pftid)
   ENDDO 
-  tile(:)%plant%pool%labile%carbon      = 100.0_wp
-  tile(:)%plant%pool%labile%nitrogen    = 10.0_wp
-  tile(:)%plant%pool%labile%phosphorus  = 1.0_wp
-  tile(:)%soil%ammonium = 1.0_wp
-  tile(:)%soil%phosphate  = 1.0_wp
   ! 
   ! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
   ! 
@@ -120,15 +113,19 @@ PROGRAM plant_model_driver
      ! 
      ! 4.0 update soil (biogeochemical part - here only N/P uptake)
      ! 
-     CALL calc_nutrient_uptake(tile, veg_param)  
+     CALL update_vegsoil_bgc(tile, veg_param)  
      !  
      ! 5.0 calculate vegetation growth and turnover
      ! 
      CALL update_vegetation(tile,veg_param)
+     !
+     ! 5.1 update soil water bucket 
+     !
+     CALL update_vegsoil_physics(tile)
      ! 
      ! 6.0 Accumulation
      ! 
-     CALL update_vegetation_moving_averages(tile)
+     CALL update_vegetation_memory(tile)
      CALL update_tile_moving_averages(tile)
      ! 
      ! 7.0 Output
@@ -136,7 +133,7 @@ PROGRAM plant_model_driver
      ! 7.1 pool: write output in certain intervals, see mo_veg_output
      ! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
      ! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-     CALL write_output_pool(time_day, time_year, tile)
+     CALL write_output_pool(time_day, time_year, tile, veg_param)
      ! 7.2 flux: write output in certain intervals, see mo_veg_output
      CALL write_output_flux(time_day, time_year, tile)
      ! 

@@ -105,7 +105,7 @@ PROGRAM canopy_model_driver
      CALL update_canopy_fluxes(tile(1),veg_param)
 
      WRITE(lun,'(4F16.7)') atm2land%swpar_srf_down * sw2par, & 
-           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci !,&
+           tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci !,&
 !           tile(1)%plant%flux%an,
 !           tile(1)%plant%flux%ci/atm2land%co2_mixing_ratio,tile(1)%plant%pool%leaf%nitrogen*molar_mass_N,&
 !           tile(1)%plant%flux%an/(tile(1)%plant%pool%leaf%nitrogen*molar_mass_N)
@@ -129,7 +129,7 @@ PROGRAM canopy_model_driver
      CALL update_canopy_fluxes(tile(1),veg_param)
 
      WRITE(lun,'(4F16.7)') atm2land%t_air, &  
-           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci
+           tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
   ENDDO
   atm2land%t_air = ref_t_air + Tzero
@@ -147,7 +147,7 @@ PROGRAM canopy_model_driver
      CALL update_canopy_fluxes(tile(1),veg_param)
 
      WRITE(lun,'(4F16.7)') atm2land%co2_mixing_ratio, &
-           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci
+           tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
   ENDDO
   atm2land%co2_mixing_ratio = ref_co2 
@@ -164,7 +164,7 @@ PROGRAM canopy_model_driver
      vpd = ( calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - atm2land%q_air ) / eps_vpd * atm2land%press_srf / 1000.0_wp
 
      WRITE(lun,'(4F16.7)') vpd, &
-           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci
+           tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
   ENDDO
   atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - ref_vpd / atm2land%press_srf * eps_vpd
@@ -182,7 +182,7 @@ PROGRAM canopy_model_driver
      CALL update_canopy_fluxes(tile(1),veg_param)
 
      WRITE(lun,'(4F16.7)') tile(1)%soil%theta, &
-           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci
+           tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
   ENDDO
   tile(1)%soil%theta = ref_theta
@@ -200,7 +200,7 @@ PROGRAM canopy_model_driver
      CALL update_canopy_fluxes(tile(1),veg_param)
 
      WRITE(lun,'(4F16.7)') tile(1)%plant%lai, &
-           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci
+           tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
   ENDDO
   tile(1)%plant%lai = ref_lai 
@@ -216,7 +216,7 @@ PROGRAM canopy_model_driver
      CALL update_canopy_fluxes(tile(1),veg_param)
 
      WRITE(lun,'(4F16.7)') tile(1)%plant%pool%leaf%nitrogen/tile(1)%plant%lai*molar_mass_N, & 
-           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci
+           tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
   ENDDO
   tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
@@ -232,8 +232,8 @@ PROGRAM canopy_model_driver
      CALL update_radiation(tile)
      CALL update_canopy_fluxes(tile(1),veg_param)
 
-     WRITE(lun,'(4F16.7)') tile(1)%plant%pool%leaf%nitrogen/tile(1)%plant%lai*molar_mass_N, & 
-           tile(1)%plant%flux%gpp,tile(1)%plant%flux%gc*1000._wp,tile(1)%plant%flux%ci
+     WRITE(lun,'(i,3F16.7)') tile(1)%plant%pftid, &
+           tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
   ENDDO 
 STOP

@@ -72,6 +72,17 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: k1_fnl_chl                   ! parameters to describe the varying fraction of N in chlorophyll through the canopy
   REAL(wp),SAVE :: kfnl_chl                     ! parameters to describe the varying fraction of N in chlorophyll through the canopy
 
+  ! parameters used for phenology calculations
+  REAL(wp),SAVE :: min_lai                      ! minimum LAI beyond which all leaves are shed
+  REAL(wp),SAVE :: min_leaf_age                 ! minimum leaf age before senescence is permitted (days) 
+  REAL(wp),SAVE :: gdd_t_air_threshold          ! temperature threshold for growing degree days 
+  REAL(wp),SAVE :: gdd_req_max                  ! maximum GDD requirement
+  REAL(wp),SAVE :: k_gdd_dormance               ! exponent factor in GDD - nd_dormance equation 
+  REAL(wp),SAVE :: t_air_senescence             ! weekly air temperature initiating leaf senescence
+  REAL(wp),SAVE :: beta_soil_flush_grass        ! value of beta_soil at leaf flushing for grass
+  REAL(wp),SAVE :: beta_soil_flush_tree         ! value of beta_soil at leaf flushing for trees 
+  REAL(wp),SAVE :: beta_soil_senescence_tree    ! value of beta_soil at leaf shedding for trees
+
   ! Parameters required for albedo and fapar calculation
   REAL(wp),SAVE :: ka                           ! Extinction coefficient for PAR on chlorophyll
   REAL(wp),SAVE :: sigma                        ! single leaf scattering albedo 
@@ -79,15 +90,24 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: kdf0                         ! extinction coefficient for diffuse PAR (Spitters eq. 7) 
   REAL(wp),SAVE :: rho2sbeta                    ! scaling factor of solar angle in reflection calculation (mo_veg_fapar) 
 
+  ! other
+  REAL(wp),SAVE :: min_height                   ! minimum permissable height of an individual
+  REAL(wp),SAVE :: sm2lm_grass                  ! stem mass to leaf mass ratio of grasses
+
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
-  INTEGER,SAVE :: itree = 1 
-  INTEGER,SAVE :: igrass = 2 
-  INTEGER,SAVE :: ic3phot = 1
-  INTEGER,SAVE :: ic4phot = 2 
+  INTEGER,PARAMETER :: itree = 1 
+  INTEGER,PARAMETER :: igrass = 2 
+  INTEGER,PARAMETER :: ic3phot = 1
+  INTEGER,PARAMETER :: ic4phot = 2 
+  INTEGER,PARAMETER :: ievergreen = 1 
+  INTEGER,PARAMETER :: iraingreen = 2 
+  INTEGER,PARAMETER :: isummergreen = 3 
+  INTEGER,PARAMETER :: iperennial = 4 
 
   TYPE VegetationParameterClass
      INTEGER,DIMENSION(npft) :: growthform 
      INTEGER,DIMENSION(npft) :: ps_pathway
+     INTEGER,DIMENSION(npft) :: phenology_type
      REAL(wp),DIMENSION(npft) :: tau_leaf
      REAL(wp),DIMENSION(npft) :: sla
      REAL(wp),DIMENSION(npft) :: cn_leaf
@@ -130,7 +150,7 @@ MODULE mo_veg_parameters
     REAL(wp) :: beta_air     = 1._wp
     REAL(wp) :: beta_soil_ps = 1._wp
     REAL(wp) :: beta_soil_gs = 1._wp
-    REAL(wp) :: demand_uptake = 3._wp
+    REAL(wp) :: demand_uptake = 1._wp
 
     REAL(wp) :: weekly       = 7._wp         ! 7 days; constant across the model
   END TYPE AccumulationIntervalPlantClass
@@ -143,6 +163,7 @@ MODULE mo_veg_parameters
     SUBROUTINE init_veg_parameters(veg_param)
    
       USE mo_land_constants
+      USE mo_atmland_constants
       TYPE(VegetationParameterClass),INTENT(inout) :: veg_param
 
       !IMPLICIT NONE
@@ -158,14 +179,14 @@ MODULE mo_veg_parameters
       ! San Diego, CA, USA: Academic Press; 1996.
       ! Note converted from 7.4 e-7 to 1.25 e-6 to account for the different values of the Lloyd&Taylor equation
       ! such that the applied rates a comparable at 15-20°C
-      fmaint_rate_base = 1.25_wp 
+      fmaint_rate_base = 1._wp 
       ! parameters in the Lloyd and Taylor temperature response function (Lloyd & Taylor, 1996, Funct. Ecol.) 
       t_maint_k1 = 308.56_wp  
       t_maint_k2 = 56.02_wp
       t_maint_k3 = 227.13_wp
 
       ! default turnover time of the labile carbo-hydrates (in days)
-      tau_labile_default = 0.1_wp 
+      tau_labile_default = 0.2_wp 
       ! temperature scalar on turnover time of labile pool (1-exp(-(lambda * T)^k))
       ! tuned to reduce growth between 5°C to zero at 0°C
       lambda_tau_labile_temp = 0.5_wp
@@ -258,6 +279,30 @@ MODULE mo_veg_parameters
       rho2sbeta = 1.6_wp
       ! Extinction coefficient for PAR on chlorophyll
       ka = 0.005_wp
+  
+      ! minimum LAI for phenology calculations
+      min_lai = 0.1_wp
+      ! temperature threshold for growing degree days 
+      gdd_t_air_threshold = 5.0_wp + Tzero
+      ! maximal GDD requirement (assuming no dormance) 
+      gdd_req_max = 800._wp
+      ! temperature threshold for growing degree days 
+      k_gdd_dormance = 0.0098_wp
+      ! weekly temperature initiating leaf senescence
+      t_air_senescence = 5.0_wp + Tzero
+      ! value of beta_soil for leaf flushing for trees
+      beta_soil_flush_grass = 0.9_wp
+      ! value of beta_soil for leaf flushing for trees
+      beta_soil_flush_tree = 0.98_wp
+      ! value of beta_soil at shedding of leaves for trees
+      beta_soil_senescence_tree  = 0.5_wp
+      ! minimum leaf age beyond which phenological senescence can set in (days) 
+      min_leaf_age = 10.0_wp
+
+      ! minimum permissable height of an individual
+      min_height = 0.1_wp
+      ! stem mass to leaf mass ratio of grasses
+      sm2lm_grass = 0.05_wp
 
       CALL init_pft_param_table(veg_param)
 
@@ -287,6 +332,9 @@ MODULE mo_veg_parameters
       ! photosynthetic path way 
       veg_param%ps_pathway(:) = & 
       (/ic3phot,ic3phot,ic3phot,ic3phot,ic3phot,ic3phot,ic3phot,ic4phot/)
+      ! photosynthetic path way 
+      veg_param%phenology_type(:) = & 
+      (/ievergreen,ievergreen,iraingreen,isummergreen,ievergreen,isummergreen,iperennial,iperennial/)
       ! average turnover (1/lifetime) of a leaf (1/years) 
       ! From Kattge et al. 2011, Table 5, including conversion from month lifetime to annual turnover
       veg_param%tau_leaf(:) = 12._wp / & 
@@ -335,31 +383,39 @@ MODULE mo_veg_parameters
       ! turnover time of the sapwood pool (1/years)
       veg_param%tau_sap_wood(:) = 0.05_wp
       ! wood density (mol C / m3)
-      veg_param%wood_density(:) = 30000.0_wp / molar_mass_C
+      veg_param%wood_density(:) = & 
+      (/30000.0_wp,30000.0_wp,30000.0_wp,30000.0_wp,30000.0_wp,30000.0_wp,22000._wp,22000._wp/) / molar_mass_C
       ! leaf area to sapwood area ratio 
       veg_param%k_latosa(:) = 4000.0_wp 
       ! trade-off parametr for hydraulic investment into sapwood or fine roots 
-      veg_param%k_rtos(:) = 1.0_wp / (veg_param%k_latosa(:) / veg_param%sla(:) / veg_param%wood_density(:))
+      WHERE(veg_param%growthform /= igrass)
+        veg_param%k_rtos(:) = 1.0_wp / (veg_param%k_latosa(:) / veg_param%sla(:) / veg_param%wood_density(:))
+      ELSEWHERE
+        veg_param%k_rtos(:) = 0.5_wp / sm2lm_grass
+      ENDWHERE
       ! average turnover (1/lifetime) of a fine root (1/years) 
-      veg_param%tau_fine_root(:) = 0.7_wp 
+      veg_param%tau_fine_root(:) = & 
+      (/0.7_wp,0.7_wp,0.7_wp,0.7_wp,0.7_wp,0.7_wp,1.2_wp,1.2_wp/) 
       ! average turnover (1/lifetime) of a coarse root (1/years) 
       veg_param%tau_coarse_root(:) = 0.1_wp 
       ! paramter in height diameter relationship 
-      veg_param%allom_k1(:) = 55.0_wp 
+      veg_param%allom_k1(:) = & 
+      (/55.0_wp,55.0_wp,55.0_wp,55.0_wp,55.0_wp,55.0_wp,20._wp,20._wp/) 
       ! paramter in height diameter relationship
-      veg_param%allom_k2(:) = 0.65 
+      veg_param%allom_k2(:) = & 
+      (/0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.5_wp,0.5_wp/) 
       ! turnover time of the fruit pool (1/years)
       veg_param%tau_fruit(:) = 1.0_wp
       ! turnover time of the fruit pool (1/years)
       veg_param%tau_seed(:) = 1.0_wp
       ! vmax of N uptake (~µmol N / mol C / s)
-      veg_param%vmax_uptake_n(:) = 714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
+      veg_param%vmax_uptake_n(:) = 14._wp !714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
       ! low-affinity uptake (L/mmol) 
       veg_param%soil_n_aff1(:) = 0.105_wp      ! tuned from OCN's 0.05 m2/gN assuming 150 L per m2
       ! half saturation of high-affinity uptake (mmol/L) 
       veg_param%soil_n_aff2(:) = 0.4_wp        ! tuned from OCN's 0.84 gN/m2 assuming 150 L per m2
       ! vmax of P uptake (~µmol P / mol C / s)
-      veg_param%vmax_uptake_p(:) = 714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
+      veg_param%vmax_uptake_p(:) = 14.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
       ! low-affinity uptake (L/mmol) 
       veg_param%soil_p_aff1(:) = 0.105_wp      ! tuned from OCN's 0.05 m2/gN assuming 150 L per m2
       ! half saturation of high-affinity uptake (mmol/L) 

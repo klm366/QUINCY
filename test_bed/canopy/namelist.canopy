@@ -1,7 +1,10 @@
 &VEGETATION_CTL
   ! options for the vegetation, read by the canopy_model_driver
-  flag_optimal_Nfraction=.TRUE.
-  flag_optimal_Nleaf=.TRUE.
+  flag_optimal_Nfraction=.FALSE.
+  flag_optimal_Nleaf=.FALSE.
+  flag_calc_soil_moisture=.FALSE.
+  soil_awc_prescribe=300.0
+  soil_theta_prescribe=100.0
   plant_functional_type_id=1
 /
 &FORCING_CTL
@@ -19,6 +22,6 @@
   ! units: y years, w weeks, d days
   simulation_length_unit="y"
   ! integer values
-  simulation_length_number=20
+  simulation_length_number=5
 /
 

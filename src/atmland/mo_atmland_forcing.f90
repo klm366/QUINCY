@@ -144,7 +144,8 @@ CONTAINS
     atm2land%press_srf = atm2land%press_srf * 100._wp
     atm2land%rain      = atm2land%rain / 86400._wp
     atm2land%snow      = atm2land%snow / 86400._wp
-
+    atm2land%wind_10m  = atm2land%wind_air
+    atm2land%ga = 0.1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
   END SUBROUTINE read_forcing
 
   SUBROUTINE open_forcing_input_file

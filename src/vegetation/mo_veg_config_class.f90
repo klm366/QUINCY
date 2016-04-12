@@ -27,7 +27,8 @@ MODULE mo_veg_config_class
     CHARACTER(8)     :: output_interval_pool, output_interval_flux
     INTEGER          :: output_start_first_day_year, output_end_last_day_year !< output: 1st to last day of the year(s) provided
     INTEGER          :: pft_id
-    LOGICAL          :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake
+    LOGICAL          :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake, flag_calc_soil_moisture
+    REAL(wp)         :: soil_awc_prescribe, soil_theta_prescribe
     CONTAINS
       PROCEDURE :: Init => Init_veg_config
   END Type t_veg_config
@@ -49,7 +50,8 @@ CONTAINS
     !LOGICAL      :: active
     CHARACTER(8) :: output_interval_pool, output_interval_flux
     INTEGER      :: output_start_first_day_year, output_end_last_day_year, plant_functional_type_id
-    LOGICAL      :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake
+    LOGICAL      :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake, flag_calc_soil_moisture
+    REAL(wp)     :: soil_awc_prescribe, soil_theta_prescribe
 
     NAMELIST /vegetation_ctl/       & 
       output_interval_pool,         &
@@ -59,6 +61,9 @@ CONTAINS
       flag_optimal_Nfraction,       &
       flag_optimal_Nleaf,           &
       flag_calc_soil_uptake,        &
+      flag_calc_soil_moisture,      &
+      soil_awc_prescribe,           &
+      soil_theta_prescribe,         &
       plant_functional_type_id
 
     ! variables for reading model-options from namelist
@@ -76,6 +81,9 @@ CONTAINS
     flag_optimal_Nfraction         = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
     flag_calc_soil_uptake          = .FALSE.  ! .TRUE. .FALSE.
+    flag_calc_soil_moisture        = .FALSE.  ! .TRUE. .FALSE.
+    soil_awc_prescribe             = 300.0_wp
+    soil_theta_prescribe           = 100.0_wp 
     plant_functional_type_id       = 1
 
     ! read the namelist
@@ -94,6 +102,9 @@ CONTAINS
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction
     config%flag_optimal_Nleaf            = flag_optimal_Nleaf
     config%flag_calc_soil_uptake         = flag_calc_soil_uptake
+    config%flag_calc_soil_moisture       = flag_calc_soil_moisture
+    config%soil_awc_prescribe            = soil_awc_prescribe 
+    config%soil_theta_prescribe          = soil_theta_prescribe 
     config%pft_id                        = plant_functional_type_id
 
   END SUBROUTINE Init_veg_config

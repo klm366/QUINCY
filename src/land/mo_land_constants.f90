@@ -11,7 +11,8 @@ MODULE mo_land_constants
  
   USE mo_kind
   ! physical constants
-  REAL(wp), PARAMETER :: r_gas     = 8.3144_wp   ! universal gas constant (J / mol / K) 
+  REAL(wp), PARAMETER :: r_gas     = 8.3144_wp       ! universal gas constant (J / mol / K) 
+  REAL(wp), PARAMETER :: r_gas_dryair = 287.058_wp   ! specific gas constant for dry air (J / kg / K) 
   ! molar masses
   REAL(wp), SAVE :: molar_mass_C   = 12.0112_wp  ! g C / mol C
   REAL(wp), SAVE :: molar_mass_C12 = 12.0_wp     ! g C / mol C

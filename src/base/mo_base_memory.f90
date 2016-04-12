@@ -56,7 +56,7 @@ MODULE mo_base_memory
      REAL(wp) :: leaf_resorption_n        ! resorption of N upon leaf senescence (mol m-2 timestep-1)
      REAL(wp) :: leaf_resorption_n15      ! resorption of 15N upon leaf senescence (mol m-2 timestep-1)
      REAL(wp) :: leaf_resorption_p        ! resorption of P upon leaf senescence (mol m-2 timestep-1)
-     REAL(wp) :: gc
+     REAL(wp) :: transpiration            ! transpiration in kg m-2 s-1
      REAL(wp) :: ci
      TYPE(Element) :: reserve_use         ! net flux between reserve and labile pool (mol m-2 timestep-1)
                                           !  (+ve: flux to labile; -ve flux from labile) 
@@ -80,15 +80,18 @@ MODULE mo_base_memory
     REAL(wp) :: par_shaded = 1._wp
     REAL(wp) :: fleaf_sunlit = 1._wp
     ! Soil moisture (currently in mo_veg_photosynthesis)
-    REAL(wp) :: beta_air = 1._wp
-    REAL(wp) :: beta_soil_ps = 1._wp
-    REAL(wp) :: beta_soil_gs = 1._wp
+    REAL(wp) :: beta_air = 0._wp
+    REAL(wp) :: beta_soil_ps = 0._wp
+    REAL(wp) :: beta_soil_gs = 0._wp
     ! memory of fluxes
     REAL(wp) :: gpp_week = 0._wp                   ! gpp of the last week (µmol m-2 s-1)
     REAL(wp) :: maint_respiration_week = 0._wp     ! maintenance respiration of the last week (µmol m-2 s-1)
     ! nutrient demand for plant uptake
     REAL(wp) :: demand_uptake_n = 0.0_wp           ! scalar of Vmax for root N uptake 
     REAL(wp) :: demand_uptake_p = 0.0_wp           ! scalar of Vmax for root P uptake
+    ! phenological variables
+    REAL(wp) :: gdd                                ! growing degree days above 5°C
+    REAL(wp) :: nd_dormance                        ! number of days since last growing season 
   END TYPE AccumulationPlantClass
 
   TYPE PlantClass
@@ -97,9 +100,15 @@ MODULE mo_base_memory
      TYPE(VegCanopy),DIMENSION(ncanop) :: canopy_layer
      TYPE(AccumulationPlantClass) :: accumulated
      INTEGER :: pftid = 1
+     REAL(wp) :: height                            ! plant height in m
+     REAL(wp) :: diameter                          ! plant diameter in m
      REAL(wp) :: lai                               ! actual leaf area index
      REAL(wp) :: target_cn_leaf                    ! target foliar C:N ratio
      REAL(wp) :: target_np_leaf                    ! target foliar N:P ratio 
+     REAL(wp) :: mean_leaf_age                     ! average foliage age in days 
+     REAL(wp) :: gc
+
+     LOGICAL :: growing_season = .TRUE.           ! logical to identify whether the plant is in the growing season or not
  
   END TYPE PlantClass
 
@@ -115,7 +124,7 @@ MODULE mo_base_memory
   TYPE SoilClass
     !TYPE(AccumulationSoilClass) :: accumulated    ! activate when soil model needs it
     REAL(wp) :: theta                 ! fractional water holding capacity
-    REAL(wp) :: bucket_size           ! actual water bucket size (mm)
+    REAL(wp) :: moisture              ! actual plant available water content (mm)
     REAL(wp) :: ammonium              ! soil ammonium concentration (mmol/L)
     REAL(wp) :: phosphate             ! soil P concentration (mmol/L)
   END TYPE SoilClass
@@ -131,9 +140,9 @@ MODULE mo_base_memory
     REAL(wp) :: q_air = 1._wp
     REAL(wp) :: press_surf = 1._wp
     ! memory of certain variables
-    REAL(wp) :: t_air_week     = 1._wp   ! 7 days
-    REAL(wp) :: t_air_month    = 1._wp   ! 30 days
-    REAL(wp) :: t_air_longterm = 1._wp   ! 30 years == 10950 days
+    REAL(wp) :: t_air_week     = 273.15_wp   ! 7 days
+    REAL(wp) :: t_air_month    = 273.15_wp   ! 30 days
+    REAL(wp) :: t_air_longterm = 273.15_wp   ! 30 years == 10950 days
   END TYPE AccumulationTileClass
 
   TYPE TileClass
