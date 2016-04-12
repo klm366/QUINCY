@@ -71,16 +71,20 @@ class Experiment ( object ):
         return """
 \\begin{tabularx}{\\linewidth}{lL}
 \\toprule
-\\multicolumn{2}{l}{%s \\textbf{%s object {\\tt %s}}} \\phantomsection\\label{%s} \\\\
+\\multicolumn{2}{l}{\\phantomsection\\label{%s} %s \\textbf{%s object {\\tt %s}}} \\\\
 \\addlinespace
 \\cmidrule(r){1-2}
 %s
 \\\\ \\bottomrule
-\\end{tabularx}
-""" % ( teXify ( self.__class__.__name__ ),
+\\end{tabularx}\-\\\\\\bigskip
+
+
+
+
+""" % ( self.B4J_name,
+        teXify ( self.__class__.__name__ ),
         teXify ( self.B4J_name ),
         '($\mathbf{C_{%d}}$)' % self.B4J_canno if self.B4J_iscan else '($\mathbf{R_{%d}}$)' % self.B4J_refno,
-        self.B4J_name,
         """\\\\
 """.join ( '{!s} & {!s}'.format ( teXify ( str ( k )), force_breaks ( teXify ( str ( v )), 50 )) \
            if not isinstance ( v, dict ) else '&'

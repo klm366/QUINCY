@@ -29,6 +29,7 @@ doc_template = """
  total={140mm,247mm},
  left=30mm,
  top=40mm,
+ bottom=30mm
  }
 
 %% dina4 : 21 cm x 29,7 cm 
@@ -75,6 +76,7 @@ source_dirname = "sources"
 
 
 analyses_II_analyses = OrderedDict ()
+analyses_II_analyses [ 'teXts' ] = ""
 
 
 analyses_III_dicts = { 'name'     : None,
@@ -94,7 +96,7 @@ analyses_IV_cans = { 'infiles'  : [],
                      'outfiles' : [],
                      'plots'    : [],
                      'benches'  : {}}
-
+ 
 analyses_V_benches = {}
 
 
@@ -148,6 +150,7 @@ class Report ( object ):
             for fie, ana in self.analyses_fields.iteritems ():
                 cv = 0
                 for ana_nam, ana_dict in ana.iteritems ():
+                    if ana_nam == "teXts": continue
                     if cv == 0:
                         ret += fie
                         cv += 1
@@ -185,7 +188,6 @@ The variables tested and the analyses and plots made are listed in the
 table below.
 \\ \\\\
 
-\\scriptsize
 \\begin{tabularx}{\\linewidth}{rrrrr}
 \\toprule
 \\textbf{field} & \\textbf{analyis method} & \\textbf{classification string} & \\textbf{type} & \\textbf{page} \\\\
@@ -194,7 +196,6 @@ table below.
 %s
 \\bottomrule
 \\end{tabularx}
-\\normalsize
 
 """ %  writeAnalysesTabularx ()
 
@@ -227,9 +228,12 @@ table below.
         #                     json.dumps ( self.analyses ))
 
         for key, analyse in self.analyses_fields [ varname ].iteritems ():
-            
-            albedo_body += subsection_template % { 'subsection': teXify ( analyse [ 'title' ])}
+
+            if key == "teXts": continue
+
             albedo_body += "\n\\label{%s}" % analyse [ 'name' ]
+            albedo_body += "\\hypertarget{%s}{}" % analyse [ 'name' ]
+            albedo_body += subsection_template % { 'subsection': teXify ( analyse [ 'title' ])}
             albedo_body +=  analyse [ 'teXts' ][ 0 ]
             if analyse [ 'ismatrix' ]:
                 for can in self.experiments:
@@ -264,8 +268,11 @@ table below.
                                                                   width    = '1',
                                                                   hspace   = '0' )
 
+        section_intro = self.analyses_fields [ varname ][ "teXts" ]
 
-        section_intro = """The the output data of the analyses can be found in \\\\ 
+        section_intro += """\\\\\\medskip
+
+The the output data of the analyses can be found in \\\\ 
 \\bigskip
 
   \\-\ \\hspace{.5cm} \\texttt{%s},\\\\
@@ -295,7 +302,8 @@ the plots\\\\
             for var in self.analyses_fields.keys ():
                 cv = 0
                 for name, ana in { k : a for k, a in self.analyses_fields [ var ].iteritems () \
-                                   if a [ 'isbench' ] == True }.iteritems ():
+                                   if not k == "teXts" and a [ 'isbench' ] == True }.iteritems ():
+                    if name == "teXts": continue
                     ca = 0
                     if cv != 0:
                         ret += "\\cmidrule(r){2-%d}" % n_col
@@ -305,7 +313,9 @@ the plots\\\\
                             cv += 1
                         ret += ' & '
                         if ca == 0:
-                            ret += teXify ( ana [ 'name' ]) + ' & ' + teXify ( ana [ 'unit' ])
+                            ret += "\\hyperlink{%s}{%s} " % \
+                                   ( ana [ 'name' ], teXify ( ana [ 'name' ])) +\
+                                   ' & ' + teXify ( ana [ 'unit' ])
                             ca += 1
                         else:
                             ret += ' & '
@@ -330,7 +340,6 @@ the plots\\\\
       
         return """This chapter provides an overview of benchmarks being done.\\\\\\medskip
         
-        \\scriptsize
         \\begin{tabularx}{\\linewidth}{rrrr%s}
         """ % ( self.n_cans * "r" ) +\
         """

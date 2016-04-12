@@ -30,6 +30,8 @@ from report import ( analyses_II_analyses,
                      analyses_IV_cans,
                      analyses_V_benches )
 
+from report import teXify
+
 streams = { "echam": [ "echam", "co2" ],
             "jsbach": [ "jsbach", "land", "surf", "veg", "yasso", "accw" ]}
 
@@ -199,6 +201,7 @@ DETAILS
         write_suffix = "nc"
 
         self.analyses_fields [ A_varname ] = copy.deepcopy ( analyses_II_analyses )
+        self.analyses_fields [ A_varname ][ 'teXts' ] = teXify ( """The analysis and the benchmarking of the land surface albedo aims at elaborating the climate relevance of the albedo differences between the candidate experiment and the reference dataset. Therefore, signals in net surface solar radiation that result from differences in land surface albedo (instead of signals in surface albedo itself) are shown. """ )
 
         # preparation of runtime storage and texts for analyses 
         # 3.a)
