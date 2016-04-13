@@ -1,0 +1,10 @@
+field_name=string()
+frequency=option(yearly,monthly,6-hourly,default=monthly)
+teXts=string()
+[analyses]
+[[__many__]]
+name=string()
+title=string(default=None)
+type=option(map,metric,default=None)
+isbench=boolean(default=False)
+teXts=string(default=None)

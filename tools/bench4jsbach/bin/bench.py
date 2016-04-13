@@ -4,22 +4,27 @@ import os, subprocess, shutil,getpass,datetime
 from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
 from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool
 import configobj
+from validate import Validator
 from sets import Set
 from analysis import Analysis
 from report import Report
 
 
-REF_EXP_IDX       = 0
-SWITCHED_ON_IDX   = TYPE_IDX = 0
-TEMP_SCALE_IDX    = PATH_IDX = 1
-ISREF_IDX         = 2
-ISCAN_IDX         = 3
+REF_EXP_IDX              = 0
+SWITCHED_ON_IDX          = TYPE_IDX = 0
+TEMP_SCALE_IDX           = PATH_IDX = 1
+ISREF_IDX                = 2
+ISCAN_IDX                = 3
 VARNAME_4_CMIP5_METADATA = 'rsds'
-bench4jsbach_base =  os.environ [ 'BENCH4JSBACH_BASE' ]
+
+bench4jsbach_base        =  os.environ [ 'BENCH4JSBACH_BASE' ]
 if not bench4jsbach_base: raise Exception ( "Environment variable not set." )
-config_template   = os.path.join ( bench4jsbach_base, "configuration", "template.cfg" )
-work_base         = os.path.join ( bench4jsbach_base, "work" )
-bench_dirnames    = [ "config", "data", "graphic", "report", "logging" ]
+bench4jsbach_configuration =  os.path.join ( bench4jsbach_base, "configuration" )
+config_template            = os.path.join ( bench4jsbach_configuration, "template.cfg" )
+b4j_configspec_fn          = os.path.join ( bench4jsbach_configuration, "b4j_config.spec" )
+b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configuration, "b4j_field_config.spec" )
+work_base                  = os.path.join ( bench4jsbach_base, "work" )
+bench_dirnames             = [ "config", "data", "graphic", "report", "logging" ]
 
 
 class Bench_Object ( Analysis, Report ):
@@ -52,13 +57,36 @@ class Bench_Object ( Analysis, Report ):
             dkl_logger.debug ( "Exiting." )
             return
         bench_config_path = config_arg
-        
-        # read config object
+ 
+        # read configspec and config
+        if not os.path.isfile ( b4j_configspec_fn ):
+            raise Exception ( "\nERROR no file named %s." %  \
+                              b4j_configspec_fn )
         try:
-            config = configobj.ConfigObj ( bench_config_path )
+            configspec = configobj.ConfigObj ( b4j_configspec_fn,
+                                               interpolation=False,
+                                               list_values=False,
+                                               _inspec=True)
         except ( configobj.ConfigObjError, IOError), e:
-            print 'Could not read "%s": %s' % ( bench_config_path, e)
+            print 'Could not read "%s": %s' % ( b4j_configspec_fn, e )
+            
+        try:
+            config = configobj.ConfigObj ( bench_config_path,
+                                           configspec=configspec )
+        except ( configobj.ConfigObjError, IOError), e:
+            print '\nCould not read "%s": %s' % ( bench_config_path, e)
+            
         dkl_logger.debug ( "Read configuration file %s." % ( bench_config_path ))
+
+        val  = Validator()
+        test = config.validate ( val )
+        if test == False:
+            raise Exception (  "\nERROR validating configuration %s with specialization %s.\n" %\
+                               ( bench_config_path, b4j_configspec_fn ))
+        else:
+            dkl_logger.debug ( "\nValidation of configuration from %s with specification from %s successfully run." % \
+                ( bench_config_path, b4j_configspec_fn ))
+
             
         # TODO: validation. First shot:
         try:
@@ -140,6 +168,8 @@ class Bench_Object ( Analysis, Report ):
         if n_refs < 1 or n_cans < 1: raise Exception ( "No candidate or no reference experiment defined."  )
         self.n_cans = n_cans
         self.n_refs = n_refs
+
+        print self
         
         self.logger.debug ( "Exiting." )
 
@@ -161,8 +191,10 @@ class Bench_Object ( Analysis, Report ):
         with open ( config_template ) as f:
             template_contents = f.read ()
         config_contents = template_contents % { '<BENCH_NAME>': self.bench_name,
+                                                '<BENCH_CONFIGSPEC_FNAME>': b4j_configspec_fn,
                                                 '<AUTHOR_NAME>': getpass.getuser (),
-                                                '<TODAY>': str ( datetime.date.today ())}
+                                                '<TODAY>': str ( datetime.date.today ()),
+                                                '<FIELDS_CONFIGSPEC_FAME>' : b4j_field_configspec_fn }
         with open ( self.bench_config_path, "w" ) as f:
             f.write ( config_contents )
 

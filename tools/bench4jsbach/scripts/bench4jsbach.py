@@ -49,39 +49,39 @@ else:
 
     b4j_obj = bench.Bench_Object ( sys.argv [ 1 ])
 
-    # analysis
-    for var,var_bench in b4j_obj.config [ 'variables' ].iteritems():
+    # # analysis
+    # for var,var_bench in b4j_obj.config [ 'variables' ].iteritems():
 
-        if not var_bench [ bench.SWITCHED_ON_IDX ]: continue
+    #     if not var_bench [ bench.SWITCHED_ON_IDX ]: continue
 
-        fun_suffixes =  [ "_analyse" ]
-        fun_suffixes.append ( "_section" ) if b4j_obj.reporting else None
+    #     fun_suffixes =  [ "_analyse" ]
+    #     fun_suffixes.append ( "_section" ) if b4j_obj.reporting else None
         
-        for fun_suffix in fun_suffixes:
-            fun_name = var + fun_suffix
-            try:
-                fun = getattr ( b4j_obj, fun_name )
-                b4j_obj.logger.debug ( "Loaded function '%s'." % fun_name )
-            except Exception, e:
-                raise AttributeError ( "%s. \n Bench object has no attribute '%s'" % 
-                                       ( str ( e ), fun_name ))
+    #     for fun_suffix in fun_suffixes:
+    #         fun_name = var + fun_suffix
+    #         try:
+    #             fun = getattr ( b4j_obj, fun_name )
+    #             b4j_obj.logger.debug ( "Loaded function '%s'." % fun_name )
+    #         except Exception, e:
+    #             raise AttributeError ( "%s. \n Bench object has no attribute '%s'" % 
+    #                                    ( str ( e ), fun_name ))
 
-            ret = fun ()
+    #         ret = fun ()
         
-        b4j_obj.logger.debug ( "Finished analysis of '%s' successfully." % var ) if not ret else \
-                b4j_obj.logger.debug ( "Analysis of '%s' failed." % var )
+    #     b4j_obj.logger.debug ( "Finished analysis of '%s' successfully." % var ) if not ret else \
+    #             b4j_obj.logger.debug ( "Analysis of '%s' failed." % var )
 
-    print b4j_obj
+    # print b4j_obj
     
-    b4j_obj.write_report () if b4j_obj.reporting else None
+    # b4j_obj.write_report () if b4j_obj.reporting else None
     
-    b4j_obj.logger.debug ( "Exiting." )
+    # b4j_obj.logger.debug ( "Exiting." )
 
-    stop = timeit.default_timer ()
+    # stop = timeit.default_timer ()
 
-    print "\n******************************************"
-    print "* BENCH4JSBACH: "
-    print "* Finished successfully. Elapsed time %.4f seconds." % ( stop - start )
-    if b4j_obj.reporting: print "* Find the report %s in %s." % ( b4j_obj.bench_name + '.pdf',
-                                                                  b4j_obj.report_path )
-    print "******************************************"
+    # print "\n******************************************"
+    # print "* BENCH4JSBACH: "
+    # print "* Finished successfully. Elapsed time %.4f seconds." % ( stop - start )
+    # if b4j_obj.reporting: print "* Find the report %s in %s." % ( b4j_obj.bench_name + '.pdf',
+    #                                                               b4j_obj.report_path )
+    # print "******************************************"

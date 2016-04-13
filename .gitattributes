@@ -264,5 +264,7 @@ tools/bench4jsbach/bin/experiment.py -text
 tools/bench4jsbach/bin/redmine_read.py -text
 tools/bench4jsbach/bin/report.py -text
 tools/bench4jsbach/bin/util.py -text
+tools/bench4jsbach/configuration/b4j_config.spec -text
+tools/bench4jsbach/configuration/b4j_field_config.spec -text
 tools/bench4jsbach/configuration/template.cfg -text
 tools/bench4jsbach/scripts/bench4jsbach.py -text
