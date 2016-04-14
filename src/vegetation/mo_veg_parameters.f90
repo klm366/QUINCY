@@ -94,6 +94,10 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: min_height                   ! minimum permissable height of an individual
   REAL(wp),SAVE :: sm2lm_grass                  ! stem mass to leaf mass ratio of grasses
 
+  ! vegetation dynamics
+  REAL(wp), SAVE :: background_mort_rate_tree   ! background mortality rate of trees in static mortality case
+  REAL(wp), SAVE :: background_mort_rate_grass  ! background mortality rate of grasses in static mortality case
+
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   INTEGER,PARAMETER :: itree = 1 
   INTEGER,PARAMETER :: igrass = 2 
@@ -299,6 +303,11 @@ MODULE mo_veg_parameters
       beta_soil_senescence_tree  = 0.5_wp
       ! minimum leaf age beyond which phenological senescence can set in (days) 
       min_leaf_age = 10.0_wp
+
+      ! background mortality rate for trees in static mortality case (1/year)
+      background_mort_rate_tree = 0.01_wp
+      ! background mortality rate for grass in static mortality case (1/year)
+      background_mort_rate_grass = 0.01_wp
 
       ! minimum permissable height of an individual
       min_height = 0.1_wp

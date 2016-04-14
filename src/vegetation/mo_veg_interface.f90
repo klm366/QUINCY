@@ -74,6 +74,7 @@ CONTAINS
     USE mo_veg_parameters, ONLY: VegetationParameterClass
     USE mo_veg_turnover
     USE mo_veg_growth
+    USE mo_veg_dynamics, ONLY: update_veg_dynamics
     USE mo_veg_respiration, ONLY: calc_maintenance_respiration
     IMPLICIT NONE
     ! 0.1 Input
@@ -98,6 +99,7 @@ CONTAINS
     ! 3.0 Calculate turnover from tissue aging and senescence
     !
     CALL calc_turnover(plant,veg_param)
+    CALL update_veg_dynamics(plant,veg_param)
     !
     ! 4.1 Add carbon from photosynthesis to the labile pool
     !
