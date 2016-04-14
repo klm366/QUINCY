@@ -25,6 +25,7 @@ b4j_configspec_fn          = os.path.join ( bench4jsbach_configuration, "b4j_con
 b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configuration, "b4j_field_config.spec" )
 work_base                  = os.path.join ( bench4jsbach_base, "work" )
 bench_dirnames             = [ "config", "data", "graphic", "report", "logging" ]
+    
 
 
 class Bench_Object ( Analysis, Report ):
@@ -133,43 +134,43 @@ class Bench_Object ( Analysis, Report ):
             if not os.path.isfile ( self.land_sea_mask ): raise
         except:
             raise Exception ( "Error with land sea mask." )
-            
+
         es = self.config [ "experiments" ]
         from analysis import find_files
         n_refs = n_cans = 0
-        for en in es:
+        for en, attr in es.iteritems ():
             name = en
-            path = es [ en ][ PATH_IDX ]
-            iscan = str2bool ( es [ en ][ ISCAN_IDX ])
-            isref = str2bool ( es [ en ][ ISREF_IDX ])
+            etype = attr.get ( "type", "CMIP5" )
+            path = attr [ "path" ]
+            iscan = attr.get ( 'iscan', True )
+            isref = attr.get ( 'isref', False )
             n_cans += 1 if iscan else 0
             n_refs += 1 if isref else 0
             canno = n_cans - 1 if iscan else None
             refno = n_refs - 1 if isref else None
             kwargs = { 'B4J_name'  : name,
-                       'B4J_etype' : es [ en ][ TYPE_IDX ],
+                       'B4J_etype' : etype,
                        'B4J_path'  : path,
                        'B4J_iscan' : iscan,
                        'B4J_isref' : isref,
                        'B4J_canno' : canno,
                        'B4J_refno' : refno,
                        'B4J_bench' : self }
-            if es [ en ][ TYPE_IDX ] == "CMIP5":
+            if etype == "CMIP5":
                 varfile = find_files ( "*%s*%s*%s" % \
                                         ( VARNAME_4_CMIP5_METADATA, name, '.nc' ),
                                         path, raise_e = True )
                 kwargs [ 'var_filename' ] = varfile
                 e = CMIP5_Experiment ( **kwargs )
-            elif es [ en ] [ TYPE_IDX ] == "MPIESM1":
+            elif etype == "MPIESM1":
                 e = MPIESM1_Experiment ( **kwargs )
             else:
                 e = Experiment ( **kwargs )
             self.experiments.append ( e )
-        if n_refs < 1 or n_cans < 1: raise Exception ( "No candidate or no reference experiment defined."  )
+        if n_refs < 1 or n_cans < 1:
+            raise Exception ( "No candidate or no reference experiment defined."  )
         self.n_cans = n_cans
         self.n_refs = n_refs
-
-        print self
         
         self.logger.debug ( "Exiting." )
 
