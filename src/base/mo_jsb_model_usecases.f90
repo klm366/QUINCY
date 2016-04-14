@@ -20,7 +20,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_grid,            ONLY: Get_Grid
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
-    &                               BOX_TYPE, LAND_TYPE, GLACIER_TYPE, PFT_TYPE, LAKE_TYPE
+    &                               LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -80,8 +80,7 @@ CONTAINS
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile',            &
       & processes=(/ATM2LAND,LAND2ATM,RAD,SEB,TURB,SOIL,HYDRO,VEG/), &
-      & varlist_name=model%shortname, &
-      & lct=t_jsb_lct(LAND_TYPE), &
+      & lcts=(/t_jsb_lct(LAND_TYPE),t_jsb_lct(BARE_TYPE),t_jsb_lct(VEG_TYPE),t_jsb_lct(GLACIER_TYPE)/), &
       & model_id=model%id, grid_id=model%grid_id)
 
     model%top => box_tile
@@ -106,8 +105,7 @@ CONTAINS
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile',            &
       & processes=(/ATM2LAND,LAND2ATM,RAD,SEB,TURB,SOIL,HYDRO,VEG,HD/), &
-      & varlist_name=model%shortname, &
-      & lct=t_jsb_lct(LAND_TYPE), &
+      & lcts=(/t_jsb_lct(LAND_TYPE),t_jsb_lct(BARE_TYPE),t_jsb_lct(VEG_TYPE),t_jsb_lct(GLACIER_TYPE)/), &
       & model_id=model%id, grid_id=model%grid_id)
 
     model%top => box_tile
@@ -155,19 +153,19 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile',            &
-      & processes=(/ATM2LAND,LAND2ATM,RAD,TURB/), &
-      & varlist_name=model%shortname, &
-      & lct=t_jsb_lct(LAND_TYPE), &
+      & processes=(/ATM2LAND,LAND2ATM,RAD,HYDRO,TURB/), &
       & model_id=model%id, grid_id=model%grid_id)
     model%top => box_tile
 
       land_tile => t_jsb_tile('land', 'Land tile', &
-        & processes=(/SEB,HYDRO,SOIL,VEG/), process_actions=(/ON_TILE_,ON_TILE_,ON_LEAFS_,ON_LEAFS_/), &
-        & varlist_name=model%shortname, lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        & processes=(/SEB,SOIL,VEG/), process_actions=(/ON_TILE_,ON_LEAFS_,ON_LEAFS_/), &
+        & lcts=(/t_jsb_lct(LAND_TYPE),t_jsb_lct(BARE_TYPE),t_jsb_lct(VEG_TYPE),t_jsb_lct(GLACIER_TYPE)/), &
+        & parent=box_tile)
 
       lake_tile => t_jsb_tile('lake', 'Lake tile', &
         & processes=(/SEB/), process_actions=(/ON_TILE_/), &
-        & varlist_name=model%shortname, lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+        & lcts=(/t_jsb_lct(LAKE_TYPE)/), &
+        & parent=box_tile)
 
     CALL box_tile%Print()
       CALL land_tile%Print()
@@ -190,24 +188,25 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,LAND2ATM,RAD,TURB/), &
-      varlist_name=model%shortname, lct=t_jsb_lct(BOX_TYPE), model_id=model%id, grid_id=model%grid_id)
+      & model_id=model%id, grid_id=model%grid_id)
     model%top => box_tile
 
       land_tile => t_jsb_tile('land', 'Land tile', &
         & processes=(/SEB,HYDRO/), process_actions=(/ON_TILE_,ON_TILE_/), &
 !!$        & processes=(/SRF,RAD/), process_actions=(/ON_TILE_,ON_LEAFS_/), &
 !!$                            & processes=(/SRF/), process_actions=(/ON_SUBTREE_/), &
-        & varlist_name=model%shortname, lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+        & lcts=(/t_jsb_lct(LAND_TYPE)/), &
+        & parent=box_tile)
 
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL/), &
-          & varlist_name=model%shortname, lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+          & lcts=(/t_jsb_lct(GLACIER_TYPE)/), parent=land_tile)
 
         soilveg_tile => t_jsb_tile('soilveg', 'Soil/veg/glacier tile', processes=(/SOIL,VEG/), &
-          & varlist_name=model%shortname, lct=t_jsb_lct(PFT_TYPE), parent=land_tile)
+          & lcts=(/t_jsb_lct(VEG_TYPE), t_jsb_lct(BARE_TYPE)/), parent=land_tile)
 
       lake_tile => t_jsb_tile('lake', 'Lake tile', &
         & processes=(/SEB/), process_actions=(/ON_TILE_/), &
-        & varlist_name=model%shortname, lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+        & lcts=(/t_jsb_lct(LAKE_TYPE)/), parent=box_tile)
 
     CALL box_tile%Print()
       CALL land_tile%Print()

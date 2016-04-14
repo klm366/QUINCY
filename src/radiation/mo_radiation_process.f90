@@ -69,28 +69,29 @@ CONTAINS
 
    END SUBROUTINE calc_radiation_surface_net
 
-      ELEMENTAL SUBROUTINE calc_par(dtime,                  & ! input
-                                 ncanopy,                & ! input 
-                                 icanopy,                & ! input                                 
-                                 waterLimitationFlag,    & ! input
-                                 use_alb_veg_simple,     & ! input
-                                 par,                    & ! input                                 
-                                 alb_vis_soil,           & ! input
-                                 lai,                    & ! input
-                                 cos_zenith_angle,       & ! input
-                                 frac_par_direct,        & ! input
-                                 canopy_bound_lai,       & ! input
-                                 canopy_bound_lai_delta, & ! input
-                                 B4_layer_above,         & ! in and out                                 
-                                 par_down_mol,           & ! output, used outside for photosynthesis
-                                 soil_reflectivity_par,  & ! output, R: could also be local as it is not used outside in the moment, 
-                                                           ! however I want it in the model output and thus it has to be updated by returning it
-                                 faPAR_cl,               & ! output, R: could also be local as it is not used outside in the moment,
-                                                           ! however I want it in the model output and thus it has to be updated by returning it
-                                 lai_cl,                 & ! output, R: could also be local as it is not used outside in the moment,
-                                                           ! however I want it in the model output and thus it has to be updated by returning it
-                                 apar_per_lai_cl  )        ! output, used outside for assimilation
-                                 
+   ELEMENTAL SUBROUTINE calc_par( &
+     & dtime,                  & ! input
+     & ncanopy,                & ! input 
+     & icanopy,                & ! input                                 
+     & waterLimitationFlag,    & ! input
+     & use_alb_veg_simple,     & ! input
+     & par,                    & ! input                                 
+     & alb_vis_soil,           & ! input
+     & lai,                    & ! input
+     & cos_zenith_angle,       & ! input
+     & frac_par_direct,        & ! input
+     & canopy_bound_lai,       & ! input
+     & canopy_bound_lai_delta, & ! input
+     & B4_layer_above,         & ! in and out                                 
+     & par_down_mol,           & ! output, used outside for photosynthesis
+     & soil_reflectivity_par,  & ! output, R: could also be local as it is not used outside in the moment, 
+                                 ! however I want it in the model output and thus it has to be updated by returning it
+     & faPAR_cl,               & ! output, R: could also be local as it is not used outside in the moment,
+                                 ! however I want it in the model output and thus it has to be updated by returning it
+     & lai_cl,                 & ! output, R: could also be local as it is not used outside in the moment,
+                                 ! however I want it in the model output and thus it has to be updated by returning it
+     & apar_per_lai_cl  )        ! output, used outside for assimilation
+
       !-----------------------------------------------------------------------
       !  DECLARATIONS      
       USE mo_radiation_constants,  ONLY: Epar,                  & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1
@@ -484,30 +485,28 @@ CONTAINS
 
    END SUBROUTINE calc_fapar_lai_cl
 
-   
   ELEMENTAL SUBROUTINE calc_glacier_albedo(t_srf,         &
                                            swvis_srf_net, &
                                            swnir_srf_net, &
                                            alb_vis_srf,   &
-                                           alb_nir_srf )        
-                                
+                                           alb_nir_srf )
+
     !-----------------------------------------------------------------------
-    !  DECLARATIONS                               
+    !  DECLARATIONS
     USE mo_radiation_constants, ONLY: AlbedoGlacierVisMin,  & ! Albedo of glacier in the visible range at the melting point
                                       AlbedoGlacierVisMax,  & ! Albedo of glacier in the visible range at hard frost
                                       TempAlbedoGlacierMax, & ! Maximum glacier albedo at this temperature below melting point of H2O
                                       AlbedoGlacierNirMin,  & ! Albedo of glacier in the NIR range at at the melting point
-                                      AlbedoGlacierNirMax     ! Albedo of glacier in the NIR range at hard frost     
-                                  
-    USE mo_physical_constants, ONLY: tmelt
-    
+                                      AlbedoGlacierNirMax     ! Albedo of glacier in the NIR range at hard frost
+    USE mo_jsb_physical_constants, ONLY: tmelt
+
     !-----------------------------------------------------------------------
-    !  ARGUMENTS    
+    !  ARGUMENTS
     REAL(wp),  INTENT(in)  ::                &
                               t_srf,         &
                               swvis_srf_net, &
                               swnir_srf_net
-                              
+
     REAL(wp),  INTENT(out) ::                 &
                              alb_vis_srf,     & ! Albedo of canopy in the VIS range without snow cover.
                              alb_nir_srf        ! Albedo of canopy in the NIR range without snow cover.
@@ -710,8 +709,8 @@ CONTAINS
                                       AlbedoSnowAngle,   & ! Maximal rel. reduction of snow absorption by large solar zenith angle
                                       TempAlbedoSnowMax    ! Maximum snow albedo at this temperature below melting point of H2O
                                      
-    USE mo_physical_constants,  ONLY: tmelt                ! tmelt =273.15_wp            
-    USE mo_jsb_lctlib_class,    ONLY: lctlib
+    USE mo_jsb_physical_constants,  ONLY: tmelt                ! tmelt =273.15_wp            
+    USE mo_jsb_lctlib_class,        ONLY: lctlib
         
     !-----------------------------------------------------------------------
     !  ARGUMENTS
@@ -952,9 +951,9 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS                               
-    USE mo_physical_constants,  ONLY: tmelt
-    USE mo_radiation_constants, ONLY: AlbedoSnowCan
-    USE mo_jsb_lctlib_class,    ONLY: lctlib
+    USE mo_jsb_physical_constants,  ONLY: tmelt
+    USE mo_radiation_constants,     ONLY: AlbedoSnowCan
+    USE mo_jsb_lctlib_class,        ONLY: lctlib
     
     !-----------------------------------------------------------------------
     !  ARGUMENTS     

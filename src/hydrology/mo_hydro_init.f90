@@ -17,10 +17,10 @@ MODULE mo_hydro_init
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
+  USE mo_jsb_lct_class,     ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE, Contains_lct
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_config_class,  ONLY: t_jsb_config_p
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
-                                  jsb_netcdf_read_2d, jsb_netcdf_read_2d_time, jsb_netcdf_read_2d_extdim
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes HYDRO, SOIL, VEG
   dsl4jsb_Use_config(HYDRO)
@@ -135,79 +135,79 @@ CONTAINS
     CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))
 
     !----------
-    ! Initialize hydrology variables from bc file
-
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO)%bc_filename), model%grid_id)
-
-    ! Water content at field capacity
-    !
-    ! Read volumetric field capacity from boundary condition file
-    vfc => jsb_netcdf_read_2d(                         &
-      & input_file,                                    &
-      & variable_name='soil_field_cap')
-    vfc(:,:) = MERGE(vfc(:,:), 0._wp, vfc(:,:) >= 0._wp)
-
-    ! Get field capacity by multiplying with soil layer thicknesses
-    DO i=1,dsl4jsb_Config(SOIL)%nsoil_water
-      dsl4jsb_var3D_ptr(HYDRO,w_soil_fc_sl) (:,i,:) = vfc(:,:) * dsl4jsb_var3D_ptr(SOIL,soil_depth_l) (:,i,:)
-    END DO
-    DEALLOCATE(vfc)
-
-    ! Water content at permanent wilting point
-    !
-    ! Read volumetric wilting point from boundary condition file
-    vpwp => jsb_netcdf_read_2d(                         &
-      & input_file,                                     &
-      & variable_name='wilting_point')
-    vpwp(:,:) = MERGE(vpwp(:,:), 0._wp, vpwp(:,:) >= 0._wp)
-
-    ! Get permanent wilting point by multiplying with soil layer thicknesses
-    DO i=1,dsl4jsb_Config(SOIL)%nsoil_water
-      dsl4jsb_var3D_ptr(HYDRO,w_soil_pwp_sl) (:,i,:) = vpwp(:,:) * dsl4jsb_var3D_ptr(SOIL,soil_depth_l) (:,i,:)
-    END DO
-    DEALLOCATE(vpwp)
-
-    ! Water content at saturation (water holding capacity)
-    !
-    ! Get water holding capacity by multiplying volumetric porosity with soil layer thicknesses
-    DO i=1,dsl4jsb_Config(SOIL)%nsoil_water
-      dsl4jsb_var3D_ptr(HYDRO,w_soil_sat_sl) (:,i,:) = &
-        dsl4jsb_var2D_onDomain(SOIL,vpor) * dsl4jsb_var3D_ptr(SOIL,soil_depth_l) (:,i,:)
-    END DO
-    CALL jsb_netcdf_close_file(input_file)
-
     !----------
-    ! Initialize hydrology variables from ic file
 
-    input_file = jsb_netcdf_open_input(dsl4jsb_Config(HYDRO)%ic_filename, model%grid_id)
+    IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, BARE_TYPE) &
+      & .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
 
-    ! Initial snow depth
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='snow',                     &
-      & fill_array = dsl4jsb_var2D_ptr(HYDRO, w_snow_soil))
-    dsl4jsb_var2D_onDomain(HYDRO, w_snow_soil) = &
-      MERGE(dsl4jsb_var2D_onDomain(HYDRO,w_snow_soil), 0._wp, dsl4jsb_var2D_onDomain(HYDRO,w_snow_soil) >= 0._wp)
+      ! Initialize hydrology variables from bc file
 
-    ! Initial soil moisture
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='init_moist',               &
-      & fill_array = dsl4jsb_var2D_ptr(HYDRO, w_soil_column))
-    dsl4jsb_var2D_onDomain(HYDRO,w_soil_column) = &
-      MERGE(dsl4jsb_var2D_onDomain(HYDRO,w_soil_column), 0._wp, dsl4jsb_var2D_onDomain(HYDRO,w_soil_column) >= 0._wp)
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO)%bc_filename), model%grid_id)
 
-    ! Initial w_soil_overflown water
-    dsl4jsb_var2D_onDomain(HYDRO,w_soil_overflow) = 0._wp
-    DO isoil=1,dsl4jsb_Config(SOIL)%nsoil_water
-      return_pointer3d => jsb_netcdf_read_2d_extdim(  &
-        & input_file,                                 &
-        & variable_name='layer_moist',                &
+      ! Water content at field capacity
+      !
+      ! Read volumetric field capacity from boundary condition file
+      vfc => input_file%Read_2d(                         &
+        & variable_name='soil_field_cap')
+      vfc(:,:) = MERGE(vfc(:,:), 0._wp, vfc(:,:) >= 0._wp)
+
+      ! Get field capacity by multiplying with soil layer thicknesses
+      DO i=1,dsl4jsb_Config(SOIL)%nsoil_water
+        dsl4jsb_var3D_ptr(HYDRO,w_soil_fc_sl) (:,i,:) = vfc(:,:) * dsl4jsb_var3D_ptr(SOIL,soil_depth_l) (:,i,:)
+      END DO
+      DEALLOCATE(vfc)
+
+      ! Water content at permanent wilting point
+      !
+      ! Read volumetric wilting point from boundary condition file
+      vpwp => input_file%Read_2d(                         &
+        & variable_name='wilting_point')
+      vpwp(:,:) = MERGE(vpwp(:,:), 0._wp, vpwp(:,:) >= 0._wp)
+
+      ! Get permanent wilting point by multiplying with soil layer thicknesses
+      DO i=1,dsl4jsb_Config(SOIL)%nsoil_water
+        dsl4jsb_var3D_ptr(HYDRO,w_soil_pwp_sl) (:,i,:) = vpwp(:,:) * dsl4jsb_var3D_ptr(SOIL,soil_depth_l) (:,i,:)
+      END DO
+      DEALLOCATE(vpwp)
+
+      ! Water content at saturation (water holding capacity)
+      !
+      ! Get water holding capacity by multiplying volumetric porosity with soil layer thicknesses
+      DO i=1,dsl4jsb_Config(SOIL)%nsoil_water
+        dsl4jsb_var3D_ptr(HYDRO,w_soil_sat_sl) (:,i,:) = &
+          dsl4jsb_var2D_onDomain(SOIL,vpor) * dsl4jsb_var3D_ptr(SOIL,soil_depth_l) (:,i,:)
+      END DO
+
+      CALL input_file%Close()
+
+      ! Initialize hydrology variables from ic file
+
+      input_file = jsb_netcdf_open_input(dsl4jsb_Config(HYDRO)%ic_filename, model%grid_id)
+
+      ! Initial snow depth
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='snow',                     &
+        & fill_array = dsl4jsb_var2D_ptr(HYDRO, w_snow_soil))
+      dsl4jsb_var2D_onDomain(HYDRO, w_snow_soil) = &
+        & MERGE(dsl4jsb_var2D_onDomain(HYDRO,w_snow_soil), 0._wp, dsl4jsb_var2D_onDomain(HYDRO,w_snow_soil) >= 0._wp)
+
+      ! Initial soil moisture
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='init_moist',               &
+        & fill_array = dsl4jsb_var2D_ptr(HYDRO, w_soil_column))
+      dsl4jsb_var2D_onDomain(HYDRO,w_soil_column) = &
+        & MERGE(dsl4jsb_var2D_onDomain(HYDRO,w_soil_column), 0._wp, dsl4jsb_var2D_onDomain(HYDRO,w_soil_column) >= 0._wp)
+
+      ! Initial w_soil_overflown water
+      dsl4jsb_var2D_onDomain(HYDRO,w_soil_overflow) = 0._wp
+      DO isoil=1,dsl4jsb_Config(SOIL)%nsoil_water
+        return_pointer3d => input_file%Read_2d_extdim(  &
+          & variable_name='layer_moist',                &
 !!$        & fill_array = soil_mem%w_soil_sl,                      &
-        & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
-      dsl4jsb_var3D_ptr(HYDRO,w_soil_sl) (:,isoil,:) = &
-        MERGE(return_pointer3d(:,:,1), 0._wp, return_pointer3d(:,:,1) >= 0._wp)
-    END DO
+          & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
+        dsl4jsb_var3D_ptr(HYDRO,w_soil_sl) (:,isoil,:) = &
+          & MERGE(return_pointer3d(:,:,1), 0._wp, return_pointer3d(:,:,1) >= 0._wp)
+      END DO
 !!$      soil_mem%w_soil_sl%ptr(:,:,:) = MERGE(soil_mem%w_soil_sl%ptr(:,:,:), 0._wp, soil_mem%w_soil_sl%ptr(:,:,:) >= 0._wp)
 
 !!$    ! Temporary: Distribute water content of whole column to layers. Should be read in from ini file.
@@ -218,61 +218,27 @@ CONTAINS
 !!$        soil_mem%w_soil_sl%ptr(:,isoil,:) = 0._wp
 !!$      END WHERE
 !!$    END DO
-    CALL jsb_netcdf_close_file(input_file)
+      CALL input_file%Close()
 
-    ! Initialize water fluxes
-    !
-    dsl4jsb_var2D_onDomain(HYDRO, runoff)   = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, drainage) = 0._wp
+    END IF
 
-    dsl4jsb_var2D_onDomain(HYDRO, evapopot)       = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, evapotrans)     = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, trans)          = 0._wp
-
-    ! Initialize water state
-    dsl4jsb_var2D_onDomain(HYDRO, fract_water_soil) = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, fract_snow_soil)  = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, fract_water_srf)  = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, fract_snow_srf)   = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, fract_water_can)  = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, fract_snow_can)   = 0._wp
-
-    ! Initialize water state
-    dsl4jsb_var2D_onDomain(HYDRO, w_skin_soil)    = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, w_skin_srf)     = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, w_snow_srf)     = -1._wp    ! -1 used to determine start of experiment
-    dsl4jsb_var2D_onDomain(HYDRO, w_snow_glacier) = 20._wp    ! Temporary initialization of glacier thickness
-    dsl4jsb_var2D_onDomain(HYDRO, w_skin_can)     = 0._wp
-    dsl4jsb_var2D_onDomain(HYDRO, w_snow_can)     = 0._wp
-
-    ! Calculate water content and field capacity in the root zone
-    DO i=1,SIZE(dsl4jsb_var2D_ptr(HYDRO, w_soil_root), 2)
-      dsl4jsb_var2D_ptr(HYDRO, w_soil_root)       (:,  i)    = get_water_in_root_zone( &
-        & dsl4jsb_var3D_ptr(HYDRO, w_soil_sl)     (:,:,i), &
-        & dsl4jsb_var3D_ptr(SOIL, soil_depth_l)   (:,:,i), &
-        & dsl4jsb_var3D_ptr(VEG, root_depth_l)    (:,:,i))
-      dsl4jsb_var2D_ptr(HYDRO, w_soil_root_fc)    (:,  i)    = get_water_in_root_zone( &
-        & dsl4jsb_var3D_ptr(HYDRO, w_soil_fc_sl)  (:,:,i), &
-        & dsl4jsb_var3D_ptr(SOIL, soil_depth_l)   (:,:,i), &
-        & dsl4jsb_var3D_ptr(VEG, root_depth_l)    (:,:,i))
-      dsl4jsb_var2D_ptr(HYDRO, w_soil_root_pwp)   (:,  i)    = get_water_in_root_zone( &
-        & dsl4jsb_var3D_ptr(HYDRO, w_soil_pwp_sl) (:,:,i), &
-        & dsl4jsb_var3D_ptr(SOIL, soil_depth_l)   (:,:,i), &
-        & dsl4jsb_var3D_ptr(VEG, root_depth_l)    (:,:,i))
-    END DO
-!!$    veg_mem%w_soil_root%ptr    (:,:) = 0._wp
-!!$    veg_mem%w_soil_root_fc%ptr (:,:) = 0._wp
-!!$    veg_mem%w_soil_root_pwp%ptr(:,:) = 0._wp
-
-    dsl4jsb_var2d_onDomain(HYDRO, water_stress) = 0._wp
-
-    ! Propagate initial conditions down the tile structure, starting with the tile with which this subroutine was called initially
-    ! TBD: sub-tiles should not read the netcdf files again
-!!$    IF (tile%no_of_sub_tiles > 0) THEN
-!!$      DO i=1,tile%no_of_sub_tiles
-!!$        CALL hydrology_init_ic(tile%sub_tiles(i))
-!!$      END DO
-!!$    END IF
+    IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
+      ! Calculate water content and field capacity in the root zone
+      DO i=1,SIZE(dsl4jsb_var2D_ptr(HYDRO, w_soil_root), 2)
+        dsl4jsb_var2D_ptr(HYDRO, w_soil_root)       (:,  i)    = get_water_in_root_zone( &
+          & dsl4jsb_var3D_ptr(HYDRO, w_soil_sl)     (:,:,i), &
+          & dsl4jsb_var3D_ptr(SOIL, soil_depth_l)   (:,:,i), &
+          & dsl4jsb_var3D_ptr(VEG, root_depth_l)    (:,:,i))
+        dsl4jsb_var2D_ptr(HYDRO, w_soil_root_fc)    (:,  i)    = get_water_in_root_zone( &
+          & dsl4jsb_var3D_ptr(HYDRO, w_soil_fc_sl)  (:,:,i), &
+          & dsl4jsb_var3D_ptr(SOIL, soil_depth_l)   (:,:,i), &
+          & dsl4jsb_var3D_ptr(VEG, root_depth_l)    (:,:,i))
+        dsl4jsb_var2D_ptr(HYDRO, w_soil_root_pwp)   (:,  i)    = get_water_in_root_zone( &
+          & dsl4jsb_var3D_ptr(HYDRO, w_soil_pwp_sl) (:,:,i), &
+          & dsl4jsb_var3D_ptr(SOIL, soil_depth_l)   (:,:,i), &
+          & dsl4jsb_var3D_ptr(VEG, root_depth_l)    (:,:,i))
+      END DO
+    END IF
 
   END SUBROUTINE hydro_init_ic
 

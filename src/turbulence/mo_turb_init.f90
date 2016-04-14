@@ -17,8 +17,7 @@ MODULE mo_turb_init
 
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_config_class,  ONLY: t_jsb_config_p
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
-    jsb_netcdf_read_2d, jsb_netcdf_read_2d_time
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
 #ifndef __NO_JSBACH_HD__
@@ -100,14 +99,13 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB)%bc_filename), model%grid_id)
 
     ! Surface roughness length
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='roughness_length',         &
       & fill_array = dsl4jsb_var2D_ptr(TURB,rough_m))
     dsl4jsb_var2D_onDomain(TURB,rough_m) = &
       MERGE(dsl4jsb_var2D_onDomain(TURB,rough_m), 1._wp, dsl4jsb_var2D_onDomain(TURB,rough_m) > 0._wp)
 
-    CALL jsb_netcdf_close_file(input_file)
+    CALL input_file%Close()
 
   END SUBROUTINE turb_init_ic
 

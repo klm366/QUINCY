@@ -21,6 +21,8 @@ MODULE mo_hydro_config_class
   PUBLIC :: t_hydro_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
+    REAL(wp) :: wsn_critical    !< Critical snow depth for correction of new surface temperature [m water equivalent]
+    LOGICAL  :: l_glac_in_soil  !< Treat glacier as part of soil, not separate glacier tile
   CONTAINS
     PROCEDURE :: Init => Init_hydro_config
   END type t_hydro_config
@@ -37,11 +39,15 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    REAL(wp)                    :: wsn_critical
+    LOGICAL                     :: l_glac_in_soil
 
     NAMELIST /jsb_hydro_nml/         &
-         active,                         &
-         ic_filename,                    &
-         bc_filename
+         active,                     &
+         ic_filename,                &
+         bc_filename,                &
+         wsn_critical,               &
+         l_glac_in_soil
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -50,9 +56,11 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting hydro configuration')
 
     ! Set defaults
-    active              = .TRUE.
-    bc_filename         = 'bc_land_hydro.nc'  !R: gibts im Moment noch nicht
-    ic_filename         = 'ic_land_hydro.nc'  !R: gibts im Moment noch nicht
+    active          = .TRUE.
+    bc_filename     = 'bc_land_hydro.nc'  !R: gibts im Moment noch nicht
+    ic_filename     = 'ic_land_hydro.nc'  !R: gibts im Moment noch nicht
+    wsn_critical    = 5.85036E-3_wp
+    l_glac_in_soil  = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -62,6 +70,8 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
+    config%wsn_critical        = wsn_critical
+    config%l_glac_in_soil      = l_glac_in_soil
 
     CALL close_nml(nml_handler)
 

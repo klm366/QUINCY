@@ -12,9 +12,11 @@ MODULE mo_rad_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
+  USE mo_util, ONLY: One_of
+
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, PFT_TYPE, LAKE_TYPE, Contains_lct
+  USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAKE_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -41,7 +43,7 @@ MODULE mo_rad_memory_class
       & alb_nir_snow            !< Albedo of snow in the NIR range
 
     !
-    ! Additional variables for BARE or PFT lct_type
+    ! Additional variables for soil
     TYPE(t_jsb_var_real2d) :: &
       & alb_vis_soil,         & !< Albedo in VIS range of soil (may incl. litter layer and carbon within soil)
                                 !! If use_albedo_soil_scheme = .FALSE. it is not calculated but taken from
@@ -55,7 +57,7 @@ MODULE mo_rad_memory_class
                                 ! SOC dependend albedo calculation
 
     !
-    ! Additional variables for PFT lct_type
+    ! Additional variables for vegetation
     TYPE(t_jsb_var_real2d) :: &
       & alb_vis_can,          & !< Albedo of canopy (without snow cover) in VIS range. Is never calculated:
                                 !! If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyVIS)
@@ -95,7 +97,7 @@ MODULE mo_rad_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_type)
+  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -106,7 +108,7 @@ CONTAINS
     CLASS(t_rad_memory), INTENT(inout) :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
-    INTEGER, OPTIONAL,   INTENT(in)    :: lct_type
+    INTEGER,             INTENT(in)    :: lct_ids(:)
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
@@ -194,9 +196,8 @@ CONTAINS
 
     END IF
 
-    ! Additional variables for LAND, BARE or PFT lct (soil)
-    IF ((Contains_lct(lct_type, BARE_TYPE) .OR. Contains_lct(lct_type, PFT_TYPE)   &
-      &                                    .OR. Contains_lct(lct_type, LAND_TYPE)) &
+    ! Additional variables for soil
+    IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0) &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
 
       CALL jsb_add_var( mem, 'alb_vis_soil', mem%alb_vis_soil,      &
@@ -229,9 +230,8 @@ CONTAINS
 
     END IF
 
-    ! Additional variables for LAND or PFT lct (vegetation)
-    IF ((Contains_lct(lct_type, LAND_TYPE) .OR. Contains_lct(lct_type, PFT_TYPE)) &
-      & .AND. .NOT. ASSOCIATED(mem%alb_vis_can%ptr)) THEN
+    ! Additional variables for vegetation
+    IF (One_of(VEG_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%alb_vis_can%ptr)) THEN
 
       CALL jsb_add_var( mem, 'alb_vis_can', mem%alb_vis_can,        &
       & hgrid, surface,                                                           &
@@ -361,8 +361,8 @@ CONTAINS
 
     END IF
 
-    ! Additional variables for LAKE lct
-    IF (Contains_lct(lct_type, LAKE_TYPE) .AND. .NOT. ASSOCIATED(mem%alb_wtr%ptr)) THEN
+    ! Additional variables for lakes
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%alb_wtr%ptr)) THEN
 
       CALL jsb_add_var( mem, 'alb_wtr', mem%alb_wtr,                                &
         & hgrid, surface,                                                           &

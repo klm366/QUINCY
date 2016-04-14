@@ -217,6 +217,13 @@ CONTAINS
         CYCLE
       END IF
 
+      ! Initialize tile memory and read tile fractions
+      IF (ASSOCIATED(tile%parent_tile)) THEN
+        CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name))
+      ELSE
+        CALL tile%Init(TRIM(model%shortname), '', '')
+      END IF
+
       ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL radiation_init(tile, p_configs)

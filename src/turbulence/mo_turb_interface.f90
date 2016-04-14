@@ -115,7 +115,7 @@ CONTAINS
   SUBROUTINE update_roughness(tile, config, options)
 
     USE mo_turb_constants, ONLY: blending_height, roughness_snow
-    USE mo_jsb_lct_class,  ONLY: LAKE_TYPE
+    USE mo_jsb_lct_class,  ONLY: LAKE_TYPE, Contains_lct
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
@@ -160,7 +160,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_soil) ! IN
       rough_h(:) =          fract_snow_soil(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
         &        + (1._wp - fract_snow_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
-    ELSE IF (tile%lct%Contains(LAKE_TYPE)) THEN
+    ELSE IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_ice) ! IN
       rough_h(:) =          fract_snow_ice(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
         &        + (1._wp - fract_snow_ice(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
@@ -168,7 +168,7 @@ CONTAINS
       CALL finish(TRIM(routine), 'Don"t know what to do.')
     END IF
 
-    ! Limit roughness length for heat by 1m (see below Eq.5.6 in ECHAM5 manual)
+    ! Limit roughness length for heat by 1 m (see below Eq.5.6 in ECHAM5 manual)
     rough_h(:) = MIN(1._wp, blending_height * EXP(-1._wp / SQRT(rough_h(:))))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

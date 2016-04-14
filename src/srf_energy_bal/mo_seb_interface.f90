@@ -20,7 +20,7 @@ MODULE mo_seb_interface
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE
+  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, Contains_lct
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -145,14 +145,13 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(SEB)) RETURN
 
-    SELECT CASE (tile%lct%id)
-    CASE (LAKE_TYPE)
+    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
       CALL update_surface_energy_lake(tile, config, options)
-    CASE (LAND_TYPE)
+    ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
       CALL update_surface_energy_land(tile, config, options)
-    CASE DEFAULT
+    ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
-    END SELECT
+    END IF
 
   END SUBROUTINE update_surface_energy
 
@@ -198,14 +197,13 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(SEB)) RETURN
 
-    SELECT CASE (tile%lct%id)
-    CASE (LAKE_TYPE)
+    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
       ! Nothing to do
-    CASE (LAND_TYPE)
+    ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
       CALL update_asselin_land(tile, config, options)
-    CASE DEFAULT
+    ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
-    END SELECT
+    END IF
 
   END SUBROUTINE update_asselin
 

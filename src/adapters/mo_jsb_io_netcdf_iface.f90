@@ -39,6 +39,11 @@ MODULE mo_jsb_io_netcdf_iface
     INTEGER :: nproma  = -1
     INTEGER :: ngpblks = -1
 #endif
+  CONTAINS
+    PROCEDURE :: Close          => netcdf_close_file
+    PROCEDURE :: Read_2d        => netcdf_read_real_2d
+    PROCEDURE :: Read_2d_time   => netcdf_read_real_2d_time
+    PROCEDURE :: Read_2d_extdim => netcdf_read_real_2d_extdim
   END TYPE t_input_file
 
   INTERFACE netcdf_read_2d
@@ -112,7 +117,7 @@ CONTAINS
 
   SUBROUTINE netcdf_close_file(input_file)
 
-    TYPE(t_input_file), INTENT(inout) :: input_file
+    CLASS(t_input_file), INTENT(inout) :: input_file
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':netcdf_close_file'
 
@@ -127,7 +132,7 @@ CONTAINS
 
   FUNCTION netcdf_read_real_2d(input_file, variable_name, fill_array)
 
-    TYPE(t_input_file), INTENT(inout) :: input_file
+    CLASS(t_input_file), INTENT(inout) :: input_file
     CHARACTER(LEN=*),   INTENT(in)    :: variable_name
     REAL(wp), TARGET, OPTIONAL        :: fill_array(:,:)
     REAL(wp), POINTER                 :: netcdf_read_real_2d(:,:)
@@ -179,7 +184,7 @@ CONTAINS
   FUNCTION netcdf_read_real_2d_time(input_file, variable_name, fill_array, &
     start_time_step, end_time_step)
 
-    TYPE(t_input_file), INTENT(inout) :: input_file
+    CLASS(t_input_file), INTENT(inout) :: input_file
     CHARACTER(LEN=*),   INTENT(in)    :: variable_name
     REAL(wp), TARGET, OPTIONAL        :: fill_array(:,:,:)
     INTEGER, OPTIONAL,  INTENT(in)    :: start_time_step, end_time_step
@@ -196,7 +201,7 @@ CONTAINS
   FUNCTION netcdf_read_real_2d_extdim(input_file, variable_name, fill_array, &
     start_extdim, end_extdim, extdim_name)
 
-    TYPE(t_input_file),         INTENT(inout) :: input_file
+    CLASS(t_input_file),         INTENT(inout) :: input_file
     CHARACTER(LEN=*),           INTENT(in)    :: variable_name
     REAL(wp), TARGET, OPTIONAL                :: fill_array(:,:,:)
     INTEGER, OPTIONAL,          INTENT(in)    :: start_extdim, end_extdim

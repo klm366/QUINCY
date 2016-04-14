@@ -40,7 +40,7 @@ CONTAINS
   SUBROUTINE update_surface_energy_lake(tile, config, options)
 
     USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_jsb_lct_class,          ONLY: LAKE_TYPE
+    USE mo_jsb_lct_class,          ONLY: LAKE_TYPE, Contains_lct
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -90,7 +90,7 @@ CONTAINS
     nc    = options%nc
     dtime = options%dtime
 
-    IF (.NOT. tile%Is_process_active(SEB) .OR. .NOT. tile%lct%id == LAKE_TYPE) RETURN
+    IF (.NOT. tile%Is_process_active(SEB) .OR. .NOT. Contains_lct(tile%lcts, LAKE_TYPE)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

@@ -19,8 +19,7 @@ MODULE mo_soil_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_config_class,  ONLY: t_jsb_config_p
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
-                                  jsb_netcdf_read_2d, jsb_netcdf_read_2d_time, jsb_netcdf_read_2d_extdim
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes SOIL, SEB, VEG
   dsl4jsb_Use_config(SOIL)
@@ -87,14 +86,14 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SOIL)%bc_sso_filename), model%grid_id)
 
     ! Orography
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
+!!$      & input_file,                               &
       & variable_name='orostd',                   &
       & fill_array = dsl4jsb_var2D_ptr(SOIL,oro_stddev))
     dsl4jsb_var2D_onDomain(SOIL,oro_stddev) = &
       & MERGE(dsl4jsb_var2D_onDomain(SOIL,oro_stddev), 0._wp, dsl4jsb_var2D_onDomain(SOIL,oro_stddev) >= 0._wp)
 
-    CALL jsb_netcdf_close_file(input_file)
+    CALL input_file%Close()
 
   END SUBROUTINE soil_init_bc
 
@@ -150,8 +149,7 @@ CONTAINS
 
     ! Total soil depth until bedrock
 
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='soil_depth',               &
       & fill_array = dsl4jsb_var2D_ptr(SOIL, soil_depth))
     dsl4jsb_var2D_onDomain(SOIL, soil_depth) = &
@@ -164,48 +162,42 @@ CONTAINS
       & dsl4jsb_Config(SOIL)%dz_water(1:dsl4jsb_Config(SOIL)%nsoil_water))    ! Soil layer thicknesses from namelist
 
     ! Volumetric soil porosity
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & fill_array = dsl4jsb_var2D_ptr(SOIL, vpor),  &
       & variable_name='soil_porosity')
     dsl4jsb_var2D_onDomain(SOIL, vpor) = &
       MERGE(dsl4jsb_var2D_onDomain(SOIL, vpor), 0.2_wp, dsl4jsb_var2D_onDomain(SOIL, vpor) >= 0._wp)
 
     ! Saturated hydraulic conductivity
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='hyd_cond_sat',             &
       & fill_array = dsl4jsb_var2D_ptr(SOIL, shc))
     dsl4jsb_var2D_onDomain(SOIL, shc) = &
       MERGE(dsl4jsb_var2D_onDomain(SOIL, shc), 4.e-6_wp, dsl4jsb_var2D_onDomain(SOIL, shc) >= 0._wp)
 
     ! Matrix potential
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='moisture_pot',             &
       & fill_array = dsl4jsb_var2D_ptr(SOIL, mpot))
     dsl4jsb_var2D_onDomain(SOIL, mpot) = &
       MERGE(dsl4jsb_var2D_onDomain(SOIL, mpot), 0.2_wp, dsl4jsb_var2D_onDomain(SOIL, mpot) >= 0._wp)
 
     ! Exponent B in Clapp and Hornberger
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='bclapp',                   &
       & fill_array = dsl4jsb_var2D_ptr(SOIL, bclapp))
     dsl4jsb_var2D_onDomain(SOIL, bclapp) = &
       MERGE(dsl4jsb_var2D_onDomain(SOIL, bclapp), 6._wp, dsl4jsb_var2D_onDomain(SOIL, bclapp) >= 0._wp)
 
     ! Pore size distribution index
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='pore_size_index',          &
       & fill_array = dsl4jsb_var2D_ptr(SOIL, psdi))
     dsl4jsb_var2D_onDomain(SOIL, psdi) = &
       MERGE(dsl4jsb_var2D_onDomain(SOIL, psdi), 0.25_wp, dsl4jsb_var2D_onDomain(SOIL, psdi) >= 0._wp)
 
     ! Thermal diffusivity of soil
-    fao => jsb_netcdf_read_2d(                    &
-      & input_file,                               &
+    fao => input_file%Read_2d(                    &
       & variable_name='fao')
     fao(:,:) = MERGE(fao(:,:), 0._wp, fao(:,:) >= 0._wp)
     fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), MIN(REAL(UBOUND(fao_thermal_diff,1),wp), fao(:,:)))
@@ -216,8 +208,7 @@ CONTAINS
 !!$    soil_mem%hdiff%ptr(:,:) = RESHAPE(fao_thermal_diff(PACK(NINT(fao(:,:)), fao(:,:) > -1._wp)), /( SIZE(fao(:,:),1),SIZE(fao(:,:),2) )/ )
 
     ! Volumetric heat capacity of dry soil
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='heat_capacity',            &
       & fill_array = dsl4jsb_var2D_ptr(SOIL, vhcap))
     dsl4jsb_var2D_onDomain(SOIL, vhcap) = &
@@ -225,8 +216,7 @@ CONTAINS
 
     ! Root depth
     IF (tile%Is_process_active(VEG)) THEN
-      return_pointer => jsb_netcdf_read_2d(         &
-        & input_file,                               &
+      return_pointer => input_file%Read_2d(         &
         & variable_name='root_depth',               &
         & fill_array = dsl4jsb_var2D_ptr(VEG, root_depth))
       dsl4jsb_var2D_onDomain(VEG, root_depth) = &
@@ -239,7 +229,7 @@ CONTAINS
         & dsl4jsb_Config(SOIL)%dz_water(1:dsl4jsb_Config(SOIL)%nsoil_water))    ! Soil layer thicknesses from namelist
     END IF
 
-    CALL jsb_netcdf_close_file(input_file)                              ! Temporary
+    CALL input_file%Close()                              ! Temporary
 
     ! Initialize energy state
     !
@@ -249,8 +239,7 @@ CONTAINS
     ! Soil temperatures
     !
     ! Read climatological surface temperature
-    t_srf_mon => jsb_netcdf_read_2d_time(         &   ! Temporary
-      & input_file,                               &
+    t_srf_mon => input_file%Read_2d_time(         &   ! Temporary
       & variable_name='surf_temp')
     t_srf_mon(:,:,:) = MERGE(t_srf_mon(:,:,:), 280._wp, t_srf_mon(:,:,:) > 0._wp)
 
@@ -266,7 +255,7 @@ CONTAINS
 ! R    dsl4jsb_var2D_onDomain(SOIL, hcap_grnd_old) = 0._wp
 
 
-    CALL jsb_netcdf_close_file(input_file)
+    CALL input_file%Close()
 
 
     ! Initialize energy fluxes

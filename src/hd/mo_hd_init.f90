@@ -19,8 +19,7 @@ MODULE mo_hd_init
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_config_class,    ONLY: t_jsb_config_p
   USE mo_jsb_class,           ONLY: get_model
-  USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
-                                    jsb_netcdf_read_2d, jsb_netcdf_read_2d_extdim
+  USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid, get_blk_start, get_blk_end, get_col_start, get_col_end
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_decomposition_tools, ONLY: get_local_index
@@ -97,44 +96,37 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD)%bc_filename), model%grid_id)
 
     ! HD model mask: -1 ocean, 0: ocean inflow cells, 1: land with outflow, 2: internal drainage
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='MASK',                     &
       & fill_array = dsl4jsb_var2D_ptr(HD,hd_mask))
 
     ! Retention constant of overland flow [day]
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='ALF_K',                    &
       & fill_array = dsl4jsb_var2D_ptr(HD,ret_overlflow))
 
     ! Number of overland flow reservoirs
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='ALF_N',                    &
       & fill_array = dsl4jsb_var2D_ptr(HD,nres_overlflow))
 
     ! Retention constant of river flow [day]
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='ARF_K',                    &
       & fill_array = dsl4jsb_var2D_ptr(HD,ret_riverflow))
 
     ! Number of river flow reservoirs
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='ARF_N',                    &
       & fill_array = dsl4jsb_var2D_ptr(HD,nres_riverflow))
 
     ! Retention constant for base flow [day]
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='AGF_K',                    &
       & fill_array = dsl4jsb_var2D_ptr(HD,ret_baseflow))
 
     ! Global index neighbouring grid cells upstream
-    return_pointer3d => jsb_netcdf_read_2d_extdim(  &
-      & input_file,                                 &
+    return_pointer3d => input_file%Read_2d_extdim(  &
       & variable_name='CELLS_UP',                   &
       & start_extdim=1, end_extdim=hd__mem%nneigh,    &
       & extdim_name='nneigh')
@@ -171,7 +163,7 @@ CONTAINS
       END DO
     END DO
 
-    CALL jsb_netcdf_close_file(input_file)
+    CALL input_file%Close()
 
   END SUBROUTINE hd_init_bc
 
@@ -222,24 +214,21 @@ CONTAINS
     !
 
 !vg     ! Overlandflow reservoir
-!vg     return_pointer => jsb_netcdf_read_2d_extdim(  &
-!vg       & input_file,                               &
+!vg     return_pointer => input_file%Read_2d_extdim(  &
 !vg       & variable_name='FLFMEM',                   &
 !vg       & start_extdim=1,                           &
 !vg       & end_extdim=hd_mem%nres_o_max,             &
 !vg       & fill_array = hd__mem%overlflow_res%ptr)
 !vg 
 !vg     ! Baseflow reservoir
-!vg     return_pointer => jsb_netcdf_read_2d_extdim(  &
-!vg       & input_file,                               &
+!vg     return_pointer => input_file%Read_2d_extdim(  &
 !vg       & variable_name='FGMEM',                    &
 !vg       & start_extdim=1,                           &
 !vg       & end_extdim=hd%hd_hd_mem%nres_b_max,        &
 !vg       & fill_array = hd_mem%baseflow_res%ptr)
 !vg 
 !vg     ! Riverflow reservoir
-!vg     return_pointer => jsb_netcdf_read_2d_extdim(  &
-!vg       & input_file,                               &
+!vg     return_pointer => input_file%Read_2d_extdim(  &
 !vg       & variable_name='FRFMEM',                   &
 !vg       & start_extdim=1,                           &
 !vg       & end_extdim=hd%hd_hd_mem%nres_r_max,        &

@@ -12,11 +12,13 @@ MODULE mo_seb_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
+  USE mo_util, ONLY: One_of
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE, Contains_lct
+  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_physical_constants, ONLY: tmelt
+
   IMPLICIT NONE
   PRIVATE
 
@@ -75,7 +77,7 @@ MODULE mo_seb_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_type)
+  SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
@@ -85,7 +87,7 @@ CONTAINS
     CLASS(t_seb_memory), INTENT(inout) :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
-    INTEGER, OPTIONAL,   INTENT(in)    :: lct_type
+    INTEGER,             INTENT(in)    :: lct_ids(:)
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
@@ -150,7 +152,7 @@ CONTAINS
     END IF
 
     ! Additional variables for LAND lct
-    IF (Contains_lct(lct_type, LAND_TYPE) .AND. .NOT. ASSOCIATED(mem%s_star%ptr)) THEN
+    IF (One_of(LAND_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%s_star%ptr)) THEN
 
       CALL jsb_add_var( mem, 's_sfc', mem%s_star,                                            &
         & hgrid, surface,                                                                    &
@@ -203,8 +205,8 @@ CONTAINS
 
     END IF
 
-    ! Additional variables for LAKE lct
-    IF (Contains_lct(lct_type, LAKE_TYPE) .AND. .NOT. ASSOCIATED(mem%t_wtr%ptr)) THEN
+    ! Additional variables for lakes
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_wtr%ptr)) THEN
 
       CALL jsb_add_var( mem, 't_wtr', mem%t_wtr,                                       &
         & hgrid, surface,                                                              &

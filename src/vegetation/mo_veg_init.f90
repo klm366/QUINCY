@@ -19,8 +19,7 @@ MODULE mo_veg_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_config_class,  ONLY: t_jsb_config_p
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
-                                  jsb_netcdf_read_2d_time, jsb_netcdf_read_2d
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes VEG, SOIL, HYDRO
   dsl4jsb_Use_config(VEG)
@@ -115,13 +114,11 @@ CONTAINS
 
     ! Initialize physical state
     !
-
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(VEG)%bc_filename), model%grid_id)
 
     ! Leaf area index
     ! Get monthly LAI climatology
-    lai_mon => jsb_netcdf_read_2d_time(    &
-      & input_file,                        &
+    lai_mon => input_file%Read_2d_time(    &
       & variable_name='lai_clim')
     lai_mon(:,:,:) = MERGE(lai_mon(:,:,:), 0._wp, lai_mon(:,:,:) > 0._wp)
     veg__mem%lai_mon(:,:,2:13) = lai_mon(:,:,1:12)
@@ -134,8 +131,7 @@ CONTAINS
       wgt1 * veg__mem%lai_mon(:,:,nmw1+1) + wgt2 * veg__mem%lai_mon(:,:,nmw2+1)
 
     ! Forest fraction
-    return_pointer => jsb_netcdf_read_2d(        &
-      & input_file,                              &
+    return_pointer => input_file%Read_2d(        &
       & variable_name='forest_fract',            &
       & fill_array = dsl4jsb_var2D_ptr(VEG, fract_forest))
     dsl4jsb_var2D_onDomain(VEG, fract_forest) = &
@@ -145,13 +141,12 @@ CONTAINS
 
     dsl4jsb_var2D_onDomain(VEG, skin_can_depth) = dsl4jsb_Config(VEG)%wsr_capacity * dsl4jsb_var2D_onDomain(VEG, lai) 
 
-    CALL jsb_netcdf_close_file(input_file)
+    CALL input_file%Close()
 
     input_file = jsb_netcdf_open_input('bc_land_frac.nc', model%grid_id)     ! Temporary
 
     ! Maximum foliage projected cover
-    return_pointer => jsb_netcdf_read_2d(        &
-      & input_file,                              &
+    return_pointer => input_file%Read_2d(        &
       & variable_name='veg_ratio_max',           &
       & fill_array = dsl4jsb_var2D_ptr(VEG, fract_fpc_max))
     dsl4jsb_var2D_onDomain(VEG, fract_fpc_max) = &
@@ -162,7 +157,7 @@ CONTAINS
       get_foliage_projected_cover(dsl4jsb_var2D_onDomain(VEG, fract_fpc_max), dsl4jsb_var2D_onDomain(VEG, lai), &
       SPREAD(SPREAD(2._wp, DIM=1, NCOPIES=SIZE(dsl4jsb_var2D_ptr(VEG, lai),1)), DIM=2, NCOPIES=SIZE(dsl4jsb_var2D_ptr(VEG, lai),2))) ! Temporary
 
-    CALL jsb_netcdf_close_file(input_file)
+    CALL input_file%Close()
 
   END SUBROUTINE veg_init_ic
 

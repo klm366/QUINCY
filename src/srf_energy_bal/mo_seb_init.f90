@@ -19,8 +19,7 @@ MODULE mo_seb_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_config_class,  ONLY: t_jsb_config_p
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
-    jsb_netcdf_read_2d, jsb_netcdf_read_2d_time
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes SEB
   dsl4jsb_Use_config(SEB)
@@ -105,13 +104,12 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SEB)%ic_filename), model%grid_id)
 
     ! Initial surface temperature
-!!$    return_pointer => jsb_netcdf_read_2d(         &
+!!$    return_pointer => input_file%Read_2d(         &
 !!$      & filename=seb_conf%ic_filename,        &
 !!$      & variable_name='surface_temperature',          &
 !!$      fill_array=seb__mem%t%ptr,                        &
 !!$      & model_id=model%id)
-    t_mon => jsb_netcdf_read_2d_time(         &   ! Temporary
-      &        input_file,                    &
+    t_mon => input_file%Read_2d_time(         &   ! Temporary
       &        variable_name='surf_temp')
     t_mon(:,:,:) = MERGE(t_mon(:,:,:), 280._wp, t_mon(:,:,:) > 0._wp)
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
@@ -133,7 +131,7 @@ CONTAINS
 
     DEALLOCATE(t_mon)
 
-    CALL jsb_netcdf_close_file(input_file)
+    CALL input_file%Close()
 
   END SUBROUTINE seb_init_ic
 

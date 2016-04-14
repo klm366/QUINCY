@@ -19,8 +19,7 @@ MODULE mo_radiation_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_config_class,  ONLY: t_jsb_config_p
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_close_file, jsb_netcdf_open_input, &
-                                  jsb_netcdf_read_2d, jsb_netcdf_read_2d_time, jsb_netcdf_read_2d_extdim
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes RAD
   dsl4jsb_Use_config(RAD)
@@ -119,8 +118,7 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(RAD)%bc_filename), model%grid_id)
 
     ! background albedo
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='alb_background',           &
       & fill_array = dsl4jsb_var2D_ptr(RAD,alb_background))
     dsl4jsb_var2D_onDomain(RAD,alb_background) = &
@@ -130,36 +128,32 @@ CONTAINS
     dsl4jsb_var2D_onDomain(RAD,alb_nir) = dsl4jsb_var2D_onDomain(RAD,alb_background)
 
     ! soil albedo
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='alb_vis_soil',          &
       & fill_array = dsl4jsb_var2D_ptr(RAD, alb_vis_soil))
     dsl4jsb_var2D_onDomain(RAD, alb_vis_soil) = &
       MERGE(dsl4jsb_var2D_onDomain(RAD,alb_vis_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD,alb_vis_soil) >= 0._wp)
 
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='alb_nir_soil',          &
       & fill_array = dsl4jsb_var2D_ptr(RAD, alb_nir_soil))
     dsl4jsb_var2D_onDomain(RAD,alb_nir_soil) = &
       MERGE(dsl4jsb_var2D_onDomain(RAD,alb_nir_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD,alb_nir_soil) >= 0._wp)
 
     ! vegetation albedo
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='alb_vis_can',           &
       & fill_array = dsl4jsb_var2D_ptr(RAD, alb_vis_can))
     dsl4jsb_var2D_onDomain(RAD, alb_vis_can) = &
       MERGE(dsl4jsb_var2D_onDomain(RAD, alb_vis_can), 0._wp, dsl4jsb_var2D_onDomain(RAD, alb_vis_can) >= 0._wp)
 
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
+    return_pointer => input_file%Read_2d(         &
       & variable_name='alb_nir_can',           &
       & fill_array = dsl4jsb_var2D_ptr(RAD, alb_nir_can))
     dsl4jsb_var2D_onDomain(RAD, alb_nir_can) = &
       MERGE(dsl4jsb_var2D_onDomain(RAD, alb_nir_can), 0._wp, dsl4jsb_var2D_onDomain(RAD, alb_nir_can) >= 0._wp)
 
-    CALL jsb_netcdf_close_file(input_file)
+    CALL input_file%Close()
 
     ! Initialize variables
     !

@@ -22,7 +22,7 @@ MODULE mo_soil_interface
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE
+  USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
 
   dsl4jsb_Use_processes SOIL, SEB, VEG, ATM2LAND, HYDRO
   dsl4jsb_Use_config(SOIL)
@@ -237,7 +237,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG, root_depth)         ! OUT
 
     is_present(:)    = .TRUE.
-    IF (tile%lct%id == GLACIER_TYPE) THEN
+    IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
       is_glacier(:) = .TRUE.
     ELSE
       is_glacier(:) = .FALSE.

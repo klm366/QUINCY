@@ -78,7 +78,7 @@ MODULE mo_soil_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_soil_memory(mem, prefix, suffix, lct_type)
+  SUBROUTINE Init_soil_memory(mem, prefix, suffix, lct_ids)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -89,7 +89,7 @@ CONTAINS
     CLASS(t_soil_memory), INTENT(inout) :: mem
     CHARACTER(len=*),     INTENT(in)    :: prefix
     CHARACTER(len=*),     INTENT(in)    :: suffix
-    INTEGER, OPTIONAL,    INTENT(in)    :: lct_type
+    INTEGER,              INTENT(in)    :: lct_ids(:)
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_e, soil_w      ! Vertical grids

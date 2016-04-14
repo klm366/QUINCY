@@ -21,7 +21,7 @@ MODULE mo_radiation_interface
   USE mo_exception,          ONLY: message, finish
 
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE, BARE_TYPE, PFT_TYPE
+  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE, BARE_TYPE, VEG_TYPE
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options

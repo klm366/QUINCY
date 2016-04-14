@@ -12,6 +12,7 @@ MODULE mo_jsb_memory_class
 
   USE mo_kind,              ONLY: wp
 !!$  USE mo_exception,         ONLY: message
+  USE mo_jsb_config_class, ONLY: t_jsb_config
   USE mo_jsb_var_class, ONLY: t_jsb_var_p
 
 !  USE mo_jsb_process_factory, ONLY: Create_process_memory
@@ -45,11 +46,11 @@ MODULE mo_jsb_memory_class
   END TYPE t_jsb_memory_p
 
   ABSTRACT INTERFACE
-    SUBROUTINE Init_memory(mem, prefix, suffix, lct_type)
-      IMPORT :: t_jsb_memory
+    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids)
+      IMPORT :: t_jsb_memory, t_jsb_config
       CLASS(t_jsb_memory), INTENT(inout) :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
-      INTEGER, OPTIONAL,   INTENT(in)    :: lct_type
+      INTEGER,             INTENT(in)    :: lct_ids(:)
     END SUBROUTINE Init_memory
   END INTERFACE
 

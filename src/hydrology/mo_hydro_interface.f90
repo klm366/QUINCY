@@ -64,6 +64,18 @@ MODULE mo_hydro_interface
     PROCEDURE :: Register_tasks => Register_hydro_tasks        !< Registers tasks for hydro process
   END TYPE t_hydro_process
 
+  !> Type definition for snow_hydrology task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_snow_hydrology
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_snow_hydrology
+    PROCEDURE, NOPASS :: Aggregate => aggregate_snow_hydrology
+  END TYPE tsk_snow_hydrology
+
+  !> Constructor interface for snow_hydrology task
+  INTERFACE tsk_snow_hydrology
+    PROCEDURE Create_task_snow_hydrology
+  END INTERFACE tsk_snow_hydrology
+
   !> Type definition for snow_and_skin_fraction task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_snow_and_skin_fraction
   CONTAINS
@@ -80,7 +92,25 @@ CONTAINS
 
   ! ================================================================================================================================
   !! Constructors for tasks
+  !!
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for snow hydrology task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "snow_hydrology"
+  !!
+  FUNCTION Create_task_snow_hydrology(model_id) RESULT(return_ptr)
 
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_snow_hydrology::return_ptr)
+
+    return_ptr%name = 'snow_hydrology'
+    return_ptr%process_id = HYDRO
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_snow_hydrology
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for snow_and_skin_fraction task
   !!
@@ -111,12 +141,73 @@ CONTAINS
     CLASS(t_hydro_process), INTENT(inout) :: this
     INTEGER,               INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_snow_and_skin_fraction(model_id))
+    CALL this%Register_task(tsk_snow_hydrology         (model_id))
+    CALL this%Register_task(tsk_snow_and_skin_fraction (model_id))
 
   END SUBROUTINE Register_Hydro_Tasks
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation of "update" for task "snow_hydrology"
+  !! Task "update_snow_hydrology" calculates the new snow depth and fraction
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     config  Vector of process configurations.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_snow_hydrology(tile, config, options)
+
+    USE mo_seb_land, ONLY: update_surface_energy_land
+    USE mo_seb_lake, ONLY: update_surface_energy_lake
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_hydrology'
+
+    IF (.NOT. tile%Is_process_active(SNOW)) RETURN
+
+    SELECT CASE (tile%lct%id)
+    CASE (LAKE_TYPE)
+      CALL update_surface_energy_lake(tile, config, options)
+    CASE (LAND_TYPE)
+      CALL update_surface_energy_land(tile, config, options)
+    CASE DEFAULT
+      CALL finish(TRIM(routine), 'Called for invalid lct_type')
+    END SELECT
+
+  END SUBROUTINE update_snow_hydrology
+
+  SUBROUTINE aggregate_snow_hydrology(tile, config, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_snow_hydrology'
+
+    INTEGER :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_snow_hydrology
   !
   ! ================================================================================================================================
   !
+  !! @brief Implementation of "update" for task "snow_and_skin_fraction"
+  !! Task "update_snow_and_skin_fraction" calculates the new snow and wet skin fractions
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     config  Vector of process configurations.
+  !! @param[in]     options Additional run-time parameters.
+  !!
   SUBROUTINE update_snow_and_skin_fraction( tile, config, options)
 
     ! ---------------------------

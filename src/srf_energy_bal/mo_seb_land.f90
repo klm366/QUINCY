@@ -19,11 +19,12 @@ MODULE mo_seb_land
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
-  USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE
+  USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
   USE mo_jsb_control,        ONLY: debug_on
 
   dsl4jsb_Use_processes SEB, RAD, ATM2LAND, SOIL, HYDRO
   dsl4jsb_Use_config(SEB)
+  dsl4jsb_Use_config(HYDRO)
 
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
 !!$  dsl4jsb_Use_memory(ATM2LAND)
@@ -57,6 +58,7 @@ CONTAINS
     ! Local variables
     !
     dsl4jsb_Def_config(SEB)
+    dsl4jsb_Def_config(HYDRO)
     dsl4jsb_Def_memory(SEB)
     dsl4jsb_Def_memory(RAD)
     dsl4jsb_Def_memory(SOIL)
@@ -116,6 +118,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_config(SEB)
+    dsl4jsb_Get_config(HYDRO)
 
     ! Get reference to variables for current block
     !
@@ -151,7 +154,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk( SOIL,    grnd_hflx)      ! IN
     dsl4jsb_Get_var2D_onChunk( SOIL,    hcap_grnd)      ! IN
 
-    IF (tile%lct%id == GLACIER_TYPE) THEN
+    IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
       is_glacier(:) = .TRUE.
     ELSE
       is_glacier(:) = .FALSE.
@@ -210,7 +213,7 @@ CONTAINS
     t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
 
     ! Correct new dry static energy for snowmelt
-    WHERE (w_snow_srf(:) > dsl4jsb_Config(SEB)%wsn_critical .OR. is_glacier(:))
+    WHERE (w_snow_srf(:) > dsl4jsb_Config(HYDRO)%wsn_critical .OR. is_glacier(:))
       s_star(:) = MIN(s_star(:) / t2s_conv(:), tmelt) * t2s_conv(:)
     END WHERE
 

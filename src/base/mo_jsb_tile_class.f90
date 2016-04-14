@@ -28,7 +28,7 @@ MODULE mo_jsb_tile_class
 !!$  INTEGER, PARAMETER :: max_depth_of_tile_tree = 3
 
   TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
-    TYPE(t_jsb_lct)                        :: lct
+    TYPE(t_jsb_lct),        ALLOCATABLE    :: lcts(:)          !< List of land cover types for tile
     INTEGER                                :: process_action(max_no_of_processes)
     REAL(wp),                   POINTER    :: fract     (:,:)  !< Cover fraction of this tile (relative to parent tile)
     REAL(wp),                   POINTER    :: fract_max (:,:)  !< Maximum potential cover fraction for this tile (rel. to parent)
@@ -40,9 +40,12 @@ MODULE mo_jsb_tile_class
     INTEGER                                :: grid_id = -1
     INTEGER                                :: owner_model_id = 0
   CONTAINS
+    PROCEDURE                              :: Add_lct
+    PROCEDURE                              :: Add_lct_to_parents
     PROCEDURE                              :: Get_parent_memory
     PROCEDURE                              :: Is_process_active
     PROCEDURE                              :: Set_process_action_parents
+    PROCEDURE(Init_interface),    DEFERRED :: Init
     PROCEDURE(Print_interface),   DEFERRED :: Print
     PROCEDURE(Handler_interface), DEFERRED :: Handler
   END type t_jsb_tile_abstract
@@ -56,6 +59,16 @@ MODULE mo_jsb_tile_class
   TYPE t_jsb_tile_abstract_p
     CLASS(t_jsb_tile_abstract), POINTER :: p
   END TYPE t_jsb_tile_abstract_p
+
+  ABSTRACT INTERFACE
+    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix)
+      IMPORT :: t_jsb_tile_abstract
+      CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+      CHARACTER(len=*),           INTENT(in)    :: varlist_name
+      CHARACTER(len=*),           INTENT(in)    :: prefix
+      CHARACTER(len=*),           INTENT(in)    :: suffix
+    END SUBROUTINE Init_interface
+  END INTERFACE
 
   ABSTRACT INTERFACE
     FUNCTION Handler_interface(this, hsm, msg_in) RESULT(return_ptr)
@@ -137,6 +150,48 @@ CONTAINS
     END DO
 
   END SUBROUTINE Set_process_action_parents
+
+  SUBROUTINE Add_lct(this, lct)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+    TYPE(t_jsb_lct),            INTENT(in)    :: lct
+
+    INTEGER :: ilct
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_lct'
+
+    IF (.NOT. ALLOCATED(this%lcts)) THEN
+      ALLOCATE(this%lcts(1))
+      this%lcts(1) = lct
+    ELSE
+      DO ilct=1,SIZE(this%lcts)
+        IF (this%lcts(ilct)%id == lct%id) RETURN
+      END DO
+      this%lcts = (/ this%lcts, lct /)
+    END IF
+
+  END SUBROUTINE Add_lct
+
+  SUBROUTINE Add_lct_to_parents(this, lct)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+    TYPE(t_jsb_lct),            INTENT(in)    :: lct
+
+    CLASS(t_State), POINTER :: current
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_lct_to_parents'
+
+    current => this%parent
+
+    DO WHILE (ASSOCIATED(current))
+      SELECT TYPE (current)
+      CLASS IS (t_jsb_tile_abstract)
+        CALL current%Add_lct(lct)
+      END SELECT
+      current => current%parent
+    END DO
+
+  END SUBROUTINE Add_lct_to_parents
 
 #endif
 END MODULE mo_jsb_tile_class

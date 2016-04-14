@@ -19,7 +19,7 @@ MODULE mo_atmland_interface
   USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
-  USE mo_jsb_lct_class,      ONLY: LAKE_TYPE
+  USE mo_jsb_lct_class,      ONLY: LAKE_TYPE, Contains_lct
 
   dsl4jsb_Use_processes ATM2LAND, SEB, TURB, SOIL, HYDRO, RAD
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
@@ -155,7 +155,7 @@ CONTAINS
     IF (PRESENT(alb_nir_dir))     alb_nir_dir(:)      = dsl4jsb_var2D_onChunk(RAD,alb_nir)  ! Temporary
     IF (PRESENT(alb_nir_dif))     alb_nir_dif(:)      = dsl4jsb_var2D_onChunk(RAD,alb_nir)  ! Temporary
 
-    IF (tile%lct%Contains(LAKE_TYPE)) THEN
+    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
       IF (PRESENT(t_wtr))           t_wtr(:)            = dsl4jsb_var2D_onChunk(SEB,t_wtr)        ! Temporary
       IF (PRESENT(t_ice))           t_ice(:)            = dsl4jsb_var2D_onChunk(SEB,t_ice)        ! Temporary
       IF (PRESENT(ice_fract_lake))  ice_fract_lake(:)   = 0._wp                                   ! Temporary
