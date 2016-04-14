@@ -25,9 +25,9 @@ MODULE mo_base_config_class
     REAL(wp)         :: dt        !< length of one time step in seconds; base_ctl namelist: read_dt_time_step_length_sec
     CHARACTER(1)     :: simulation_length_unit
     INTEGER          :: simulation_length_number
-    CONTAINS
-      PROCEDURE :: Init => Init_base_config
-      PROCEDURE :: Timesteps => Get_timstep_number
+  CONTAINS
+    PROCEDURE :: Init => Init_base_config
+    PROCEDURE :: Timesteps => Get_timstep_number
   END Type t_base_config
 
   TYPE(t_base_config), SAVE :: base_config
@@ -81,8 +81,8 @@ CONTAINS
 
   END SUBROUTINE Init_base_config
 
+  !< calculates the number of timesteps the model may run based on config-options set in the namelist
   FUNCTION Get_timstep_number(this) RESULT(timesteps)
-    ! calculates the number of timesteps the model may run based on config-options set in the namelist
     USE mo_base_constants, ONLY: one_day, one_year  ! length of one year in days, length of one day in seconds
     IMPLICIT NONE 
     CLASS(t_base_config), INTENT(in) :: this

@@ -49,7 +49,9 @@ $(MODEL_LIB)(mo_base_memory.o): \
   $(MODEL_LIB)(mo_base_constants.o)
 
 $(MODEL_LIB)(mo_base_util_functions.o): \
-  $(SHARED_LIB)(mo_kind.o)
+  $(SHARED_LIB)(mo_kind.o) \
+  $(MODEL_LIB)(mo_base_constants.o) \
+  $(MODEL_LIB)(mo_base_memory.o)
 
 $(MODEL_LIB)(mo_jsb_config_class.o): \
   $(SHARED_LIB)(mo_io_units.o)

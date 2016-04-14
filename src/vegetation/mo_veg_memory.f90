@@ -79,25 +79,25 @@ CONTAINS
      p3%seed_bed = ElementDiv(p1%seed_bed,p2%seed_bed)
  END FUNCTION VegPoolDiv  
 
-  SUBROUTINE init_plant_variable_accumulation(tile)
-    ! set intial values for parameters that accumulate values (average) across a certain period
-    ! called in plant_model_driver section 1.0
-    ! the interval is defined in mo_veg_parameters
+  !> set intial values for parameters that accumulate values (average) across a certain period; 
+  !! called in plant_model_driver section 1.0; 
+  !! the interval is defined in mo_veg_parameters
+  SUBROUTINE init_plant_variable_accumulation(accumulated)
     USE mo_base_memory
     IMPLICIT NONE
     ! 0.2 Output
-    TYPE(TileClass), DIMENSION(ntile), INTENT(out) :: tile 
+    TYPE(AccumulationPlantClass), INTENT(out) :: accumulated 
     ! 
-    ! 1.0 initialize default values
+    ! 1.0 initialize default values; tile(:)%plant%accumulated
     ! 
-    tile(:)%plant%accumulated%par_sunlit        = 10._wp
-    tile(:)%plant%accumulated%par_shaded        = 10._wp
-    tile(:)%plant%accumulated%fleaf_sunlit      = 10._wp
-    tile(:)%plant%accumulated%beta_air          = 1._wp
-    tile(:)%plant%accumulated%beta_soil_ps      = 1._wp
-    tile(:)%plant%accumulated%beta_soil_gs      = 1._wp
-    tile(:)%plant%accumulated%gpp_week               = 1._wp
-    tile(:)%plant%accumulated%maint_respiration_week = 1._wp
+    accumulated%par_sunlit        = 10._wp
+    accumulated%par_shaded        = 10._wp
+    accumulated%fleaf_sunlit      = 10._wp
+    accumulated%beta_air          = 1._wp
+    accumulated%beta_soil_ps      = 1._wp
+    accumulated%beta_soil_gs      = 1._wp
+    accumulated%gpp_week               = 1._wp
+    accumulated%maint_respiration_week = 1._wp
   END SUBROUTINE init_plant_variable_accumulation
 
 END MODULE mo_veg_memory

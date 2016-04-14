@@ -76,9 +76,9 @@ MODULE mo_base_memory
     ! definition of averages of variable across a certain period (model time steps)
     ! init subroutine in mo_veg_memory
     ! Light in the canopy
-    REAL(wp) :: par_sunlit = 1._wp
-    REAL(wp) :: par_shaded = 1._wp
-    REAL(wp) :: fleaf_sunlit = 1._wp
+    REAL(wp),DIMENSION(ncanop) :: par_sunlit = 1._wp
+    REAL(wp),DIMENSION(ncanop) :: par_shaded = 1._wp
+    REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit = 1._wp
     ! Soil moisture (currently in mo_veg_photosynthesis)
     REAL(wp) :: beta_air = 0._wp
     REAL(wp) :: beta_soil_ps = 0._wp

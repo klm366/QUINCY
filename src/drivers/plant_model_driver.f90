@@ -11,6 +11,7 @@ PROGRAM plant_model_driver
   USE mo_kind,                  ONLY: wp
   USE mo_base_memory
   USE mo_base_constants
+  USE mo_base_util_functions,   ONLY: daily_average
   USE mo_base_config_class,     ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
   ! atmland
   USE mo_atmland_constants
@@ -43,6 +44,7 @@ PROGRAM plant_model_driver
   REAL(wp) :: time_day                     ! displays the 'real time' in days; time_day == 1.0 after one day has passed
   INTEGER  :: time_year                    ! displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
   INTEGER  :: ntimestep
+  REAL(wp) :: timestep_prop_day            ! proportion of one day that is simulated with one timestep (dt/one_day)
 
   ! 
   ! 1.0 Read config paramters from namelist.plant 
@@ -59,17 +61,19 @@ PROGRAM plant_model_driver
   CALL init_base_constants
   CALL init_atmland_constants
   CALL init_veg_parameters(veg_param)
-  CALL init_plant_variable_accumulation(tile)   ! set initial average values, defined in mo_veg_memory
+  CALL init_plant_variable_accumulation(tile(1)%plant%accumulated)   ! set initial average values, defined in mo_veg_memory
   CALL init_tile_variable_accumulation(tile)    ! set initial average values, defined in mo_land_memory
   !CALL init_soil_variable_accumulation(tile) follows later
-  CALL init_forcing   ! needs atmland_config%Init to run before
+  CALL init_forcing                             ! needs atmland_config%Init to run before
+  CALL daily_average(1)%init                    !< initially sets all variables to zero or .FALSE.
   ! 
   ! 1.2 Initialise time step
   ! 
-  time_day   = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
-  time_year  = 1                           ! the 1st year of a simulation == 1 (not zero)
-  dt         = base_config%dt              ! time step length in seconds, default: 1800.0 == 30 minutes
-  ntimestep  = base_config%Timesteps()     ! number of time steps
+  time_day          = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
+  time_year         = 1                           ! the 1st year of a simulation == 1 (not zero)
+  dt                = base_config%dt              ! time step length in seconds, default: 1800.0 == 30 minutes
+  ntimestep         = base_config%Timesteps()     ! number of time steps
+  timestep_prop_day = dt/one_day                  ! proportion of one day that is simulated with one timestep
   ! 
   ! 1.3 Initialise tile
   ! 
@@ -101,7 +105,7 @@ PROGRAM plant_model_driver
      ! 
      ! 2.1 advance timer
      ! 
-     time_day  = time_day  + dt/one_day         ! time in days
+     time_day  = time_day  + timestep_prop_day         ! time in days
      ! 
      ! 2.2 set orbital parameters and update time-variant forcing; 
      ! 
@@ -126,6 +130,7 @@ PROGRAM plant_model_driver
      ! 6.0 Accumulation
      ! 
      CALL update_vegetation_memory(tile)
+     CALL daily_average(1)%calc_avrg(tile(1)%plant, time_day, timestep_prop_day) !< average_per_day(:)%calc_avrg(tile(:)%plant)
      CALL update_tile_moving_averages(tile)
      ! 
      ! 7.0 Output

@@ -140,10 +140,11 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: soil_p_aff2 
   END TYPE VegetationParameterClass
 
+  !> interval over which the values are accumulated/ averaged (in moving_avrg()); 
+  !! interval in days !! ; 
+  !! see mo_base_memory for defintion of TYPEs that keep the starting/default value; 
+  !! initialization in mo_veg_util & mo_veg_soil
   TYPE AccumulationIntervalPlantClass 
-    ! interval over which the values are accumulated/ averaged
-    ! interval in days !!
-    ! see mo_base_memory for defintion of TYPEs that keep the starting/default value
     REAL(wp) :: par_sunlit   = 1._wp
     REAL(wp) :: par_shaded   = 1._wp
     REAL(wp) :: fleaf_sunlit = 1._wp
