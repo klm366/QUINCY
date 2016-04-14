@@ -380,7 +380,7 @@ CONTAINS
          sap_wood_carbon_inc = ( leaf_carbon_inc + leaf_carbon ) * sm2lm_grass - sap_wood_carbon
 
       CASE DEFAULT
-       WRITE(message_text,'(a,i)') 'invalid growthform type ',growthform
+       WRITE(message_text,'(a,i4)') 'invalid growthform type ',growthform
        CALL finish("mo_veg_growth",message_text)
     END SELECT
 
@@ -496,7 +496,7 @@ CONTAINS
          target_cn_coarse_root = target_cn_leaf / root2leaf_cn
          target_cn_sap_wood = target_cn_leaf / root2leaf_cn 
       CASE DEFAULT
-         WRITE(message_text,'(a,i)') 'invalid growthform type ',growthform
+         WRITE(message_text,'(a,i4)') 'invalid growthform type ',growthform
          CALL finish("mo_veg_growth:update_stoichiometry",message_text)
     END SELECT
     target_cn_fruit = target_cn_leaf / root2leaf_cn
@@ -512,7 +512,7 @@ CONTAINS
          target_np_coarse_root = target_np_leaf / root2leaf_np
          target_np_sap_wood = target_np_leaf / root2leaf_np
       CASE DEFAULT
-         WRITE(message_text,'(a,i)') 'invalid growthform type ',growthform
+         WRITE(message_text,'(a,i4)') 'invalid growthform type ',growthform
          CALL finish("mo_veg_growth:update_stoichiometry",message_text)
     END SELECT
     target_np_fruit = target_np_leaf / root2leaf_np

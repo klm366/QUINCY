@@ -182,7 +182,7 @@ CONTAINS
           IF(lai < min_lai) fturn_leaf = 1.0_wp
        ENDIF
       CASE DEFAULT
-          WRITE(message_text,'(a,i)') 'invalid phenology type ',phenology_type
+          WRITE(message_text,'(a,i4)') 'invalid phenology type ',phenology_type
           CALL finish("mo_veg_turnover:update_turnover_fraction",message_text) 
     END SELECT
     ! 
@@ -194,7 +194,7 @@ CONTAINS
       CASE (igrass)
         fturn_sap_wood = fturn_leaf
       CASE DEFAULT
-          WRITE(message_text,'(a,i)') 'invalid growthform',growthform 
+          WRITE(message_text,'(a,i4)') 'invalid growthform',growthform 
           CALL finish("mo_veg_turnover:update_turnover_fraction",message_text) 
     ENDSELECT 
     !

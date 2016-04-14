@@ -1,0 +1,29 @@
+mo_atmland_memory.o: \
+  mo_kind.o
+
+mo_atmland_constants.o: \
+  mo_kind.o \
+  mo_base_constants.o
+
+mo_atmland_forcing.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_base_constants.o \
+  mo_base_memory.o \
+  mo_atmland_constants.o \
+  mo_atmland_memory.o \
+  mo_atmland_util.o \
+  mo_atmland_constants.o \
+  mo_atmland_config_class.o
+
+mo_atmland_util.o: \
+  mo_kind.o \
+  mo_atmland_constants.o
+
+mo_atmland_config_class.o: \
+  mo_kind.o \
+  mo_namelist.o \
+  mo_exception.o \
+  mo_io_units.o \
+  mo_jsb_config_class.o
+

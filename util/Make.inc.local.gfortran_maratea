@@ -7,13 +7,3 @@ F_O = -O -I$(MODDIR) -J${MODDIR}
 F_L = $(C_N)
 A_C = ar -r
 A_G = ar -x
-##
-## generic infrastructure for all make files
-##
-CDIR = $(addprefix ../../,$(COMP))
-LIBDIR = $(addsuffix /build/mod,$(CDIR))
-BDIR = $(addsuffix /bin,$(CDIR))
-BINDIR = $(strip $(BDIR))
-MODDIR = $(LIBDIR)
-$(shell [ ! -d $(MODDIR) ] && mkdir -p $(MODDIR))
-$(shell [ ! -d $(BINDIR) ] && mkdir -p $(BINDIR))

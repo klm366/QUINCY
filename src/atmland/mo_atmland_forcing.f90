@@ -96,7 +96,7 @@ CONTAINS
          atm2land%t_air = generate_inst_temperature(grid%lat,time,declination,annual_t_air_min, &
                           annual_t_air_max,diurnal_temp_range)
          atm2land%cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)
-         atm2land%swvis_srf_down = MAX(0.0, def_swdown * atm2land%cos_zenith_angle)
+         atm2land%swvis_srf_down = MAX(0.0_wp, def_swdown * atm2land%cos_zenith_angle)
          atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
          atm2land%swpar_srf_down = atm2land%swvis_srf_down
          atm2land%swpar_fdiffuse = calc_sw_fdiffuse(atm2land%swvis_srf_down, sw_toa_down, atm2land%cos_zenith_angle)

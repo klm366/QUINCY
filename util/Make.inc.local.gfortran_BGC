@@ -1,6 +1,6 @@
 # site specific compiler settings
 COMP = x86_64-gfortran
-C_N = gfortran
+C_N = /usr/bin/gcc-4.4
 M_K = gmake --no-print-directory
 F_C = $(C_N) -c -cpp -ffree-line-length-0
 F_O = -O -I$(MODDIR) -J${MODDIR}

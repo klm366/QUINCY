@@ -64,7 +64,7 @@ CONTAINS
             IF(t_air_week > gdd_t_air_threshold .AND. beta_soil_gs > beta_soil_flush_grass) & 
                growing_season = .TRUE.
          CASE DEFAULT            ! abord if here
-            WRITE(message_text,'(a,i)') 'invalid phenology type ',phenology_type
+            WRITE(message_text,'(a,i4)') 'invalid phenology type ',phenology_type
             CALL finish("mo_veg_phenology:update_phenology",message_text) 
        END SELECT
     ELSE                         ! If in the growing season, check whether growing season has ended
@@ -83,7 +83,7 @@ CONTAINS
                 .AND. mean_leaf_age > min_leaf_age) & 
                growing_season = .FALSE.
          CASE DEFAULT            ! abord if here
-            WRITE(message_text,'(a,i)') 'invalid phenology type ',phenology_type
+            WRITE(message_text,'(a,i4)') 'invalid phenology type ',phenology_type
             CALL finish("mo_veg_phenology:update_phenology",message_text) 
        END SELECT
     ENDIF   
