@@ -5,18 +5,21 @@
 !!  Reiner Schnur, MPI-M Hamburg
 !!
 !! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!! JN (2016-02-20) io namelist subroutine for jsb4 standalone
+!! First version                                 by Reiner Schnur (2013-04-04)
+!! IO namelist subroutine for jsb4 standalone    by Julia Nabel (2016-02-20)
 !!
 MODULE mo_jsb_io_iface
 #ifndef __NO_JSBACH__
+
   USE mo_kind,               ONLY: wp
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
   USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, close_nml, position_nml
 
+  USE mo_kind,          ONLY: wp
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
   USE mo_grib2,         ONLY: t_grib2_var, grib2_var
+  USE mo_io_config,     ONLY: lnetcdf_flt64_output
   USE mo_cdi,           ONLY: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24, ZAXIS_SURFACE, &
                             & ZAXIS_DEPTH_BELOW_LAND, FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, TSTEP_CONSTANT, &
                             & zaxisCreate, zaxisDestroy, zaxisInqName, zaxisInqSize, &
@@ -32,6 +35,7 @@ MODULE mo_jsb_io_iface
   PRIVATE
 
   PUBLIC :: t_cf_var, t_grib2_var, grib2_var
+  PUBLIC :: Get_netcdf_precision
   PUBLIC :: DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
             ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                   &
             FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2, &
@@ -41,7 +45,6 @@ MODULE mo_jsb_io_iface
             zaxisDefName, zaxisDefLevels, zaxisDefLbounds,  &
             zaxisDefUbounds, zaxisDefUnits, zaxisDefLongname, &
             Create_zaxis, read_io_namelist
-
 
 #ifndef __ICON__
   TYPE t_cf_var
@@ -74,8 +77,24 @@ MODULE mo_jsb_io_iface
 
 CONTAINS
 
-#ifndef __ICON__
+  FUNCTION Get_netcdf_precision() RESULT(return_value)
 
+    INTEGER :: return_value
+
+#ifdef __ICON__
+    IF (lnetcdf_flt64_output) THEN
+      return_value = DATATYPE_FLT64
+    ELSE
+      return_value = DATATYPE_FLT32
+    END IF
+#else
+    ! This might be overwritten by ECHAM in mo_output.f90 based on the value of grib precision.
+    return_value = DATATYPE_FLT32
+#endif
+
+  END FUNCTION Get_netcdf_precision
+
+#ifndef __ICON__
   ! constructor for GRIB2 derived data type
   FUNCTION grib2_var(discipline, category, number, bits, gridtype, subgridtype)
     INTEGER, INTENT(IN) :: discipline
@@ -97,7 +116,7 @@ CONTAINS
   END FUNCTION grib2_var
 #endif
 
-    SUBROUTINE Create_zaxis(cdiZaxisID, echamZaxisID, cdi_axis_type, length, name, &
+  SUBROUTINE Create_zaxis(cdiZaxisID, echamZaxisID, cdi_axis_type, length, name, &
     & levels, units, longname, lbounds, ubounds)
 
     INTEGER,           INTENT(inout) :: cdiZaxisID
@@ -128,7 +147,7 @@ CONTAINS
 #endif
 
   END SUBROUTINE Create_zaxis
-  
+
   SUBROUTINE read_io_namelist(filename)
 
     USE mo_jsb_test, ONLY: read_interface_vars, write_interface_vars
@@ -182,8 +201,8 @@ CONTAINS
       CALL p_bcast(write_interface_vars, p_io)
     ENDIF
 #endif
-  END SUBROUTINE read_io_namelist
 
+  END SUBROUTINE read_io_namelist
 
 #endif
 END MODULE mo_jsb_io_iface

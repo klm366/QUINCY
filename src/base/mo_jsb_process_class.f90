@@ -15,7 +15,7 @@ MODULE mo_jsb_process_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_process
+  PUBLIC :: t_jsb_process, t_jsb_process_p
 
   TYPE t_jsb_process
     INTEGER                      :: id = 0
@@ -23,6 +23,10 @@ MODULE mo_jsb_process_class
   CONTAINS
     PROCEDURE :: Configure => Configure_process
   END TYPE t_jsb_process
+
+  TYPE t_jsb_process_p
+    TYPE(t_jsb_process), POINTER :: p
+  END TYPE t_jsb_process_p
 
 CONTAINS
 
@@ -34,11 +38,21 @@ CONTAINS
     INTEGER,              INTENT(in)    :: iproc
     CHARACTER(LEN=*),     INTENT(in)    :: namelist_filename
 
-    SELECT TYPE (this)
-    CLASS IS (t_jsb_process)
-      this%id       = iproc
-      this%config  => Create_process_config(iproc, TRIM(namelist_filename))
+    CLASS(t_jsb_config), POINTER :: config
+
+    this%id       = iproc
+
+    config  => Create_process_config(iproc, TRIM(namelist_filename))
+
+    IF (.NOT. ASSOCIATED(config)) RETURN
+
+    SELECT TYPE (config)
+    CLASS IS (t_jsb_config)
+      this%config => config
+      CALL this%config%Init()
     END SELECT
+
+    NULLIFY(config)
 
   END SUBROUTINE Configure_process
 

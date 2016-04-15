@@ -16,9 +16,10 @@ MODULE mo_jsb_varlist_iface
   USE mo_var_list,           ONLY: new_var_list_icon => new_var_list, &
                                    default_var_list_settings,         &
                                    get_var_list,                      &
-                                   add_var_icon => add_var
+                                   add_var_icon => add_var,           &
+                                   find_list_element
   USE mo_var_metadata_types, ONLY: t_var_metadata
-  USE mo_linked_list,        ONLY: t_var_list, t_list_element, find_list_element
+  USE mo_linked_list,        ONLY: t_var_list, t_list_element
 #else
   USE mo_memory_base,        ONLY: new_stream,                       &
                                    get_var_list => get_stream,       &

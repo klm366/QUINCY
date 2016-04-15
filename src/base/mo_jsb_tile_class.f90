@@ -130,7 +130,7 @@ CONTAINS
   SUBROUTINE Init_tile(tile, varlist_name, prefix, suffix, grid_id)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits, nc_bits, t_cf, t_grib1, t_grib2, tables
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -159,14 +159,14 @@ CONTAINS
     CALL jsb_add_var(TRIM(varlist_name), prefix//'fract'//suffix, tile%fract,                                 &
       hgrid, surface,                                                                                         &
       t_cf('land_area_fraction', '',                                                                          &
-               'fraction of '//TRIM(parent_tile_name)//' covered by '//TRIM(tile%name), nc_bits),             &
+               'fraction of '//TRIM(parent_tile_name)//' covered by '//TRIM(tile%name)),                      &
       t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       initval_r=0.0_wp)
 
     CALL jsb_add_var(TRIM(varlist_name), prefix//'fract_max'//suffix, tile%fract_max,                         &
       hgrid, surface,                                                                                         &
       t_cf('land_area_fraction', '',                                                                          &
-               'fraction of '//TRIM(parent_tile_name)//' covered by '//TRIM(tile%name), nc_bits),             &
+               'fraction of '//TRIM(parent_tile_name)//' covered by '//TRIM(tile%name)),                      &
       t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       initval_r=0.0_wp)
 

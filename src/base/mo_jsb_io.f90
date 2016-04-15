@@ -3,6 +3,7 @@ MODULE mo_jsb_io
 
   USE mo_kind, ONLY: wp
   USE mo_jsb_io_iface, ONLY:                                           &
+    Get_netcdf_precision,                                              &
     DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
     ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                             &
     FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,           &
@@ -40,6 +41,11 @@ MODULE mo_jsb_io
     INTEGER :: bits
   END TYPE t_grib2
 
+  ! Derived-type constructor for t_cf
+  INTERFACE t_cf
+    PROCEDURE Construct_cf
+  END INTERFACE t_cf
+
   INTEGER, PARAMETER :: max_tables = 5
   INTEGER, PARAMETER :: max_cdi_zaxis_ids = 20
 
@@ -53,12 +59,34 @@ MODULE mo_jsb_io
 
 CONTAINS
 
+  FUNCTION Construct_cf(standard_name, units, long_name, datatype) RESULT(return_value)
+
+    CHARACTER(len=*), INTENT(in) :: standard_name
+    CHARACTER(len=*), INTENT(in) :: units
+    CHARACTER(len=*), INTENT(in) :: long_name
+    INTEGER, OPTIONAL,  INTENT(in) :: datatype
+    TYPE(t_cf)         :: return_value
+
+    return_value%standard_name = TRIM(standard_name)
+    return_value%units         = TRIM(units)
+    return_value%long_name     = TRIM(long_name)
+    IF (PRESENT(datatype)) THEN
+      return_value%datatype = datatype
+    ELSE
+      return_value%datatype = Get_netcdf_precision()
+    END IF
+
+  END FUNCTION Construct_cf
+
   !>
   !! @brief Initialize io control for JSBACH
   !!
   SUBROUTINE init_io(namelist_filename)
+
     CHARACTER(len=*), INTENT(in) :: namelist_filename
+    
     CALL read_io_namelist(TRIM(namelist_filename))
+  
   END SUBROUTINE init_io
 
 #endif
