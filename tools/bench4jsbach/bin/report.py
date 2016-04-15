@@ -76,21 +76,20 @@ source_dirname = "sources"
 
 
 analyses_II_analyses = OrderedDict ()
-analyses_II_analyses [ 'teXts' ] = ""
 
-
-analyses_III_dicts = { 'name'     : None,
-                       'infiles'  : [],
-                       'outfiles' : [],
-                       'plots'    : [],
-                       'teXts'    : [],
-                       'type'     : None,
-                       'ismatrix' : False,
-                       'isvector' : False,
-                       'cans'     : {},
-                       'isbench'  : False,
-                       'unit'     : None,
-                       'title'    : None }
+analyses_III_dicts = { 'name'            : None,
+                       'title'           : None,
+                       'unit'            : None,
+                       'type'            : None,
+                       'isbench'         : False,
+                       'abstract'        : None,
+                       'technical_teXed' : None,
+                       'cans'            : {},
+                       'infiles'         : [],
+                       'outfiles'        : [],
+                       'plots'           : [],
+                       'ismatrix'        : False,
+                       'isvector'        : False }
 
 analyses_IV_cans = { 'infiles'  : [],
                      'outfiles' : [],

@@ -245,7 +245,7 @@ configuration file '%s' have to accord with the corresponding section name
 
                 self.analyses_fields [ f_n ] = copy.deepcopy ( analyses_II_analyses )
                 self.analyses_fields [ f_n ][ 'frequency' ] = field_config [ 'frequency' ]
-                self.analyses_fields [ f_n ][ 'teXts' ] = field_config [ 'teXts' ]
+                self.analyses_fields [ f_n ][ 'abstract' ] = field_config [ 'abstract' ]
                 a_s = field_config [ 'analyses' ]
                 for a_n, a_attr in a_s.iteritems ():
                     if a_attr and isinstance ( a_attr, configobj.Section ):
@@ -253,14 +253,16 @@ configuration file '%s' have to accord with the corresponding section name
                 
                         # frequency, teXts, analyses
                         a_dict = copy.deepcopy ( analyses_III_dicts )
-                        a_dict [ 'name' ]     = a_attr [ "name" ]
-                        a_dict [ 'title' ]    = a_attr [ "title" ]
-                        a_dict [ 'unit' ]     = a_attr [ "unit" ]
-                        a_dict [ 'type' ]     = a_attr [ "type" ]
-                        a_dict [ 'isbench' ]  = a_attr [ "isbench" ]
-                        a_dict [ 'teXts' ]    = a_attr [ "teXts" ]
-                        a_dict [ 'cans' ]     = { '%d' % canno : copy.deepcopy ( analyses_IV_cans ) \
-                                                 for canno in range ( self.n_cans )}
+                        a_dict [ 'name' ]            = a_attr [ "name" ]
+                        a_dict [ 'title' ]           = a_attr [ "title" ]
+                        a_dict [ 'unit' ]            = a_attr [ "unit" ]
+                        a_dict [ 'type' ]            = a_attr [ "type" ]
+                        a_dict [ 'isbench' ]         = a_attr [ "isbench" ]
+                        a_dict [ 'abstract' ]        = a_attr [ "abstract" ]
+                        a_dict [ 'technical_teXed' ] = a_attr [ "technical_teXed" ]
+                        a_dict [ 'cans' ]            = { '%d' % \
+                            canno : copy.deepcopy ( analyses_IV_cans ) \
+                                    for canno in range ( self.n_cans )}
                         self.analyses_fields [ f_n ][ a_dict [ 'name' ]] = a_dict
 
                 
