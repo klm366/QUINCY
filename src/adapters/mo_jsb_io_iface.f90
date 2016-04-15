@@ -14,8 +14,6 @@ MODULE mo_jsb_io_iface
   USE mo_kind,               ONLY: wp
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
   USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, close_nml, position_nml
-
-  USE mo_kind,          ONLY: wp
 #ifdef __ICON__
   USE mo_cf_convention, ONLY: t_cf_var
   USE mo_grib2,         ONLY: t_grib2_var, grib2_var

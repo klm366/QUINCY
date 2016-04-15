@@ -75,7 +75,11 @@ CONTAINS
 #endif
 
     !needs to be done after the decomposition is initialised; required for get_lon and get_lat, especially for site-level sims
+#ifndef __ICON__
     CALL get_lons_and_lats_from_file(jsbach%models(model_id)%m%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
+#else
+    CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
+#endif
 
     grid => new_grid(decomp=decomposition)
 

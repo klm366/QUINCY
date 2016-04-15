@@ -80,8 +80,14 @@ CONTAINS
     IF (.NOT. time_initialized) THEN
       CALL message(TRIM(routine), 'Initializing JSBACH time')
 
+      ! TBD: remove #ifdef
+#ifdef __ICON__
+    IF (PRESENT(namelist_filename)) THEN
+      CALL read_time_namelist(TRIM(namelist_filename))
+#else
       IF (PRESENT(namelist_filename) .AND. PRESENT(restart_jsbach)) THEN
         CALL read_time_namelist(TRIM(namelist_filename), restart_jsbach)
+#endif
       ENDIF
 
       IF (PRESENT(model_shortname)) THEN
