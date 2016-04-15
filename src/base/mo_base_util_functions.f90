@@ -26,9 +26,12 @@ MODULE mo_base_util_functions
     REAL(wp), DIMENSION(ncanop)     :: avrg_prev_par_shaded_day      !<  average of the previous day
     REAL(wp), DIMENSION(ncanop)     :: avrg_prev_fleaf_sunlit_day    !<  average of the previous day
     ! accumulated value of the current day & number of values accumulated
-    REAL(wp), DIMENSION(ncanop, 2)  :: curr_par_sunlit_day           !<  (1) value (2) counter; acc over current day
-    REAL(wp), DIMENSION(ncanop, 2)  :: curr_par_shaded_day           !<  (1) value (2) counter; acc over current day
-    REAL(wp), DIMENSION(ncanop, 2)  :: curr_fleaf_sunlit_day         !<  (1) value (2) counter; acc over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_sunlit_day        !<  (1) value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_shaded_day        !<  (1) value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_fleaf_sunlit_day      !<  (1) value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_sunlit_day      !<  (2) counter of acc values over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_shaded_day      !<  (2) counter of acc values over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_fleaf_sunlit_day    !<  (2) counter of acc values over current day
     ! condition per variable and timestep
     LOGICAL                         :: l_par_sunlit_day              !< whether sunlight is available at canopy top
     LOGICAL                         :: l_par_shaded_day              !< whether sunlight is available at canopy top
@@ -104,9 +107,12 @@ CONTAINS
     this%avrg_prev_par_shaded_day    = 0.0_wp
     this%avrg_prev_fleaf_sunlit_day  = 0.0_wp
 
-    this%curr_par_sunlit_day    = 0.0_wp
-    this%curr_par_shaded_day    = 0.0_wp
-    this%curr_fleaf_sunlit_day  = 0.0_wp
+    this%curr_val_par_sunlit_day      = 0.0_wp
+    this%curr_val_par_shaded_day      = 0.0_wp
+    this%curr_val_fleaf_sunlit_day    = 0.0_wp
+    this%curr_count_par_sunlit_day    = 0.0_wp
+    this%curr_count_par_shaded_day    = 0.0_wp
+    this%curr_count_fleaf_sunlit_day  = 0.0_wp
 
     this%l_par_sunlit_day    = .FALSE.
     this%l_par_shaded_day    = .FALSE.
@@ -115,13 +121,14 @@ CONTAINS
   END SUBROUTINE initialization_of_variables
 
   SUBROUTINE update_conditions_current_timestep (this, plant)
-    USE mo_base_memory,   ONLY: PlantClass
+    USE mo_base_memory,    ONLY: PlantClass
+    USE mo_atmland_memory, ONLY: atm2land
     IMPLICIT NONE 
     TYPE(PlantClass), INTENT(in) :: plant        !< mo_base_memory: TYPE(PlantClass) :: plant; initialized in TYPE TileClass
     CLASS(t_daily_average), INTENT(inout) :: this
 
     ! condition type 1: light > zero
-    IF(plant%canopy_layer(1)%par_sunlit + plant%canopy_layer(1)%par_shaded > eps8) THEN
+    IF(atm2land%swpar_srf_down > eps8) THEN
       this%l_par_sunlit_day    = .TRUE.
       this%l_par_shaded_day    = .TRUE.
       this%l_fleaf_sunlit_day  = .TRUE.
@@ -146,22 +153,22 @@ CONTAINS
 
     IF(this%l_par_sunlit_day) THEN
       DO i=1,ncanop
-        this%curr_par_sunlit_day(i,1) = this%curr_par_sunlit_day(i,1) + plant%canopy_layer(i)%par_sunlit
-        this%curr_par_sunlit_day(i,2) = this%curr_par_sunlit_day(i,2) + 1.0_wp
+        this%curr_val_par_sunlit_day(i) = this%curr_val_par_sunlit_day(i) + plant%canopy_layer(i)%par_sunlit
+        this%curr_count_par_sunlit_day(i) = this%curr_count_par_sunlit_day(i) + 1.0_wp
       END DO
     END IF
 
     IF(this%l_par_shaded_day) THEN
       DO i=1,ncanop
-        this%curr_par_shaded_day(i,1) = this%curr_par_shaded_day(i,1) + plant%canopy_layer(i)%par_shaded
-        this%curr_par_shaded_day(i,2) = this%curr_par_shaded_day(i,2) + 1.0_wp
+        this%curr_val_par_shaded_day(i) = this%curr_val_par_shaded_day(i) + plant%canopy_layer(i)%par_shaded
+        this%curr_count_par_shaded_day(i) = this%curr_count_par_shaded_day(i) + 1.0_wp
       END DO
     END IF
 
     IF(this%l_fleaf_sunlit_day) THEN
       DO i=1,ncanop
-        this%curr_fleaf_sunlit_day(i,1) = this%curr_fleaf_sunlit_day(i,1) + plant%canopy_layer(i)%fleaf_sunlit
-        this%curr_fleaf_sunlit_day(i,2) = this%curr_fleaf_sunlit_day(i,2) + 1.0_wp
+        this%curr_val_fleaf_sunlit_day(i) = this%curr_val_fleaf_sunlit_day(i) + plant%canopy_layer(i)%fleaf_sunlit
+        this%curr_count_fleaf_sunlit_day(i) = this%curr_count_fleaf_sunlit_day(i) + 1.0_wp
       END DO
     END IF
 
@@ -188,34 +195,37 @@ CONTAINS
       !! check if at least one value had been assigned at the current day, avoiding division by zero 
       DO i=1,ncanop
         ! avrg_prev_par_sunlit_day
-        IF( this%curr_par_sunlit_day(i,2) < eps8 ) THEN
+        IF( this%curr_count_par_sunlit_day(i) < eps8 ) THEN
           this%avrg_prev_par_sunlit_day(i)    = 0.0_wp
           ELSE
-          this%avrg_prev_par_sunlit_day(i)    = this%curr_par_sunlit_day(i,1) / this%curr_par_sunlit_day(i,2)
+          this%avrg_prev_par_sunlit_day(i)    = this%curr_val_par_sunlit_day(i) / this%curr_count_par_sunlit_day(i)
         END IF
         ! avrg_prev_par_shaded_day
-        IF( this%curr_par_shaded_day(i,2) < eps8 ) THEN
+        IF( this%curr_count_par_shaded_day(i) < eps8 ) THEN
           this%avrg_prev_par_shaded_day(i)    = 0.0_wp
           ELSE
-          this%avrg_prev_par_shaded_day(i)    = this%curr_par_shaded_day(i,1)   / this%curr_par_shaded_day(i,2)
+          this%avrg_prev_par_shaded_day(i)    = this%curr_val_par_shaded_day(i)   / this%curr_count_par_shaded_day(i)
         END IF
         ! avrg_prev_fleaf_sunlit_day
-        IF( this%curr_fleaf_sunlit_day(i,2) < eps8 ) THEN
+        IF( this%curr_count_fleaf_sunlit_day(i) < eps8 ) THEN
           this%avrg_prev_fleaf_sunlit_day(i)  = 0.0_wp
           ELSE
-          this%avrg_prev_fleaf_sunlit_day(i)  = this%curr_fleaf_sunlit_day(i,1) / this%curr_fleaf_sunlit_day(i,2)
+          this%avrg_prev_fleaf_sunlit_day(i)  = this%curr_val_fleaf_sunlit_day(i) / this%curr_count_fleaf_sunlit_day(i)
         END IF
       END DO
-      !test
-      !write(*,*) time_day, &
-      !           NINT(this%curr_par_sunlit_day(1,2)), this%avrg_prev_par_sunlit_day(1), &
-      !           NINT(this%curr_par_shaded_day(1,2)), this%avrg_prev_par_shaded_day(1), &
-      !           NINT(this%curr_fleaf_sunlit_day(1,2)), this%avrg_prev_fleaf_sunlit_day(1)
+      
+      !write(*,*) time_day, &   ! may enable for testing
+      !           NINT(this%curr_count_par_sunlit_day(1)), this%avrg_prev_par_sunlit_day(1), &
+      !           NINT(this%curr_count_par_shaded_day(1)), this%avrg_prev_par_shaded_day(1), &
+      !           NINT(this%curr_count_fleaf_sunlit_day(1)), this%avrg_prev_fleaf_sunlit_day(1)
 
       !< set all values of the current day to zero (code can be copied from initialization_of_variables above)
-      this%curr_par_sunlit_day    = 0.0_wp
-      this%curr_par_shaded_day    = 0.0_wp
-      this%curr_fleaf_sunlit_day  = 0.0_wp
+      this%curr_val_par_sunlit_day      = 0.0_wp
+      this%curr_val_par_shaded_day      = 0.0_wp
+      this%curr_val_fleaf_sunlit_day    = 0.0_wp
+      this%curr_count_par_sunlit_day    = 0.0_wp
+      this%curr_count_par_shaded_day    = 0.0_wp
+      this%curr_count_fleaf_sunlit_day  = 0.0_wp
     END IF
 
   END SUBROUTINE calculate_avrg_previous_day
