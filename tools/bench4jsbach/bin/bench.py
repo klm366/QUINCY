@@ -1,13 +1,20 @@
 #! /usr/bin/env python
 
 import os, subprocess, shutil,getpass,datetime
-from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
-from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool
+import copy
 import configobj
 from validate import Validator
 from sets import Set
+
+
+from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
+from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool
 from analysis import Analysis
 from report import Report
+from report import ( analyses_II_analyses,
+                     analyses_III_dicts,
+                     analyses_IV_cans,
+                     analyses_V_benches )
 
 
 REF_EXP_IDX              = 0
@@ -129,11 +136,10 @@ class Bench_Object ( Analysis, Report ):
 
         self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
 
-        try:
-            self.land_sea_mask = config [ "land_sea_mask" ]
-            if not os.path.isfile ( self.land_sea_mask ): raise
-        except:
-            raise Exception ( "Error with land sea mask." )
+        self.land_sea_mask = config [ "land_sea_mask" ]
+        if not os.path.isfile ( self.land_sea_mask ):
+            raise Exception ( "Error: Path for land sea mask '%s' does not exists." % \
+                              self.land_sea_mask )
 
         es = self.config [ "experiments" ]
         from analysis import find_files
@@ -171,8 +177,99 @@ class Bench_Object ( Analysis, Report ):
             raise Exception ( "No candidate or no reference experiment defined."  )
         self.n_cans = n_cans
         self.n_refs = n_refs
+
+        self.init_analyses ()
         
         self.logger.debug ( "Exiting." )
+
+
+        
+    def init_analyses ( self ):
+        self.logger.debug ( "Starting." )
+        
+        print self.analyses_fields
+        
+        # read configspec object
+        if not os.path.isfile ( b4j_field_configspec_fn ):
+            raise Exception ( "\nERROR no file named %s." % \
+                              b4j_field_configspec_fn )
+        try:
+            field_configspec = configobj.ConfigObj ( b4j_field_configspec_fn,
+                                                     interpolation=False,
+                                                     list_values=False,
+                                                     _inspec=True)
+        except ( configobj.ConfigObjError, IOError), e:
+            print 'Could not read configspec object from file %s: %s' % \
+                ( b4j_field_configspec_fn, e)
+
+
+
+        print "\nConfiguration specialization for analyses configs read.\n"
+
+
+        f_s = self.config [ "fields" ]
+        for f_n, f_attr in f_s.iteritems ():
+            if f_attr and isinstance ( f_attr, configobj.Section ):
+                print "in loop for field %s: " % f_n
+                field_config_fn = f_attr [ "config_fname" ]
+                field_config_path = os.path.join ( self.config_path, field_config_fn )
+                if not os.path.isfile ( field_config_path ):
+                    raise Exception ( "\nERROR no file named %s." % field_config_path )
+                try:
+                    field_config = configobj.ConfigObj ( field_config_path,
+                                                         configspec=field_configspec )
+                except ( configobj.ConfigObjError, IOError), e:
+                    print 'Could not read field config object from file %s: %s' % \
+                        ( field_config_path, e)
+        
+                val  = Validator()
+                test = field_config.validate ( val )
+                if test == False:
+                    raise Exception (  "\nERROR validating configuration %s with specialization %s.\n" %\
+                                       ( field_config_path, b4j_field_configspec_fn ))
+                else:
+                    print """\nValidation of configuration for analyses of field '%s' with files 
+'%s' and '%s' successfully run.\n""" %  ( f_n, field_config_path, b4j_field_configspec_fn )
+
+                    
+                # validated field configuration now in field_config
+                # initializing analyses_fields
+
+                field_name = field_config [ 'field_name' ]
+                if field_name != f_n:
+                    raise Exception ( """
+\n\nERROR: By convention the value for the attribute 'field_name' in the field 
+configuration file '%s' have to accord with the corresponding section name 
+ ( here:= '%s' ) in the b4j main configuration file '%s'.\n""" % \
+                                      ( field_config_path, f_n, self.bench_config_path ))
+
+                self.analyses_fields [ f_n ] = copy.deepcopy ( analyses_II_analyses )
+                self.analyses_fields [ f_n ][ 'frequency' ] = field_config [ 'frequency' ]
+                self.analyses_fields [ f_n ][ 'teXts' ] = field_config [ 'teXts' ]
+                a_s = field_config [ 'analyses' ]
+                for a_n, a_attr in a_s.iteritems ():
+                    if a_attr and isinstance ( a_attr, configobj.Section ):
+                        print "in loop for analyse %s: " % a_n
+                
+                        # frequency, teXts, analyses
+                        a_dict = copy.deepcopy ( analyses_III_dicts )
+                        a_dict [ 'name' ]     = a_attr [ "name" ]
+                        a_dict [ 'title' ]    = a_attr [ "title" ]
+                        a_dict [ 'unit' ]     = a_attr [ "unit" ]
+                        a_dict [ 'type' ]     = a_attr [ "type" ]
+                        a_dict [ 'isbench' ]  = a_attr [ "isbench" ]
+                        a_dict [ 'teXts' ]    = a_attr [ "teXts" ]
+                        a_dict [ 'cans' ]     = { '%d' % canno : copy.deepcopy ( analyses_IV_cans ) \
+                                                 for canno in range ( self.n_cans )}
+                        self.analyses_fields [ f_n ][ a_dict [ 'name' ]] = a_dict
+
+                
+            
+        print self.analyses_fields
+        
+        self.logger.debug ( "Exiting." )
+
+        
 
 
     def _writeconfig__init__ ( self, config_arg ):

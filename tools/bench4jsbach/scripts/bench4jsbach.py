@@ -48,6 +48,12 @@ else:
     print "******************************************"
 
     b4j_obj = bench.Bench_Object ( sys.argv [ 1 ])
+    
+    print "******************************************"
+    print "* BENCH4JSBACH: "
+    print "* Initialized Bench_Object. Defining Analyses."
+    print "* Reading configuration file '%s'." %  sys.argv [ 1 ]
+    print "******************************************"
 
     # # analysis
     # for var,var_bench in b4j_obj.config [ 'variables' ].iteritems():
