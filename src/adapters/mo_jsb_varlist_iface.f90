@@ -27,8 +27,8 @@ MODULE mo_jsb_varlist_iface
                                    default_stream_setting
   USE mo_linked_list,        ONLY: t_var_list => t_stream,           &
                                    t_var_metadata => memory_info,    &
-                                   t_list_element => list_element
-  USE mo_var_list,           ONLY: find_list_element
+                                   t_list_element => list_element,   &
+                                   find_list_element
 #endif
 
   USE mo_jsb_io_iface, ONLY: t_cf_var, t_grib2_var

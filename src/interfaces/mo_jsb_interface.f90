@@ -57,13 +57,16 @@ CONTAINS
                            & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,&
                            & rough_h_srf, rough_m_srf,                                    &
                            & tte_corr,                                                    &
-                           & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
+                           & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif, evapopot)
 
     USE mo_veg_interface,     ONLY: update_vegetation_1, update_vegetation_2
     USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, &
                                     update_surface_energy, update_surface_fluxes, update_t_srf_asselin, &
                                     update_humidity_scaling, update_roughness
     USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
+
+    USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
+
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_interface,      ONLY: update_hd
 #endif
@@ -117,6 +120,7 @@ CONTAINS
       & alb_nir_dir      (:), &
       & alb_vis_dif      (:), &
       & alb_nir_dif      (:)
+    REAL(wp), INTENT(out), OPTIONAL :: evapopot(:)
 
     ! Local variables
     !
@@ -129,6 +133,12 @@ CONTAINS
     dsl4jsb_Def_memory(SRF)
 
     INTEGER :: nc, i
+
+    IF (write_interface_vars) THEN
+       CALL write_interface_variables(ics, ice, iblk, t_air, q_air, rain, snow, wind_air, wind_10m, &
+             & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf,    &
+             & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
+    END IF
 
     CALL timer_start(timer_jsbach)
 
@@ -223,9 +233,10 @@ CONTAINS
     CALL update_t_srf_asselin(tile, iblk, ics, ice, nc)
 
     ! Finally, give the required variables back to the atmosphere
+    ! Note: evapopot is an optional parameter, so it has to be passed without the colon!
     CALL update_land2atm(tile, iblk, ics, ice,                                                                                  &
       & t_srf=t_srf(:), t_eff_srf=t_eff_srf(:), qsat_srf=qsat_srf(:), s_srf=s_srf(:),                                           &
-      & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:),                                                               &
+      & fact_q_air=fact_q_air(:), fact_qsat_srf=fact_qsat_srf(:), evapopot=evapopot,                                            &
       & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:),                                   &
       & grnd_hflx=grnd_hflx(:), grnd_hcap=grnd_hcap,                                                                            &
       & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &

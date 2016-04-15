@@ -39,10 +39,12 @@ CONTAINS
 
   SUBROUTINE init_base(master_namelist_filename)
 
-    USE mo_jsb_control,        ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, jsbach_runs_standalone
+    USE mo_jsb_control,        ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
+      & jsbach_runs_standalone, jsbach_is_restarted
     USE mo_jsb_parallel_iface, ONLY: init_parallel_iface, init_mpi_communicators
     USE mo_jsb_model_class,    ONLY: t_jsb_model, new_model
     USE mo_jsb_config_class,   ONLY: new_model_config
+    USE mo_jsb_time,           ONLY: init_time
     !USE mo_jsb_domain,         ONLY: init_domains
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
@@ -59,7 +61,7 @@ CONTAINS
 
     CALL init_parallel_iface
 
-    IF (jsbach_runs_standalone()) CALL init_mpi_communicators
+    !IF (jsbach_runs_standalone()) CALL init_mpi_communicators !TODO-check-with-RMS: remove: done in the driver!
 
     no_of_models = get_no_of_models()
     ALLOCATE(jsbach%models(no_of_models))
@@ -81,9 +83,16 @@ CONTAINS
        NULLIFY(current)
        current => jsbach%models(model_idx)%m
        current%config => new_model_config(current%namelist_filename)
+
+       IF (jsbach_runs_standalone()) THEN
+         CALL init_time(TRIM(current%namelist_filename), TRIM(current%shortname), jsbach_is_restarted())
+       ELSE
+         CALL init_time()
+       END IF
+
     END DO
 
-    !IF (jsbach_runs_standalone) CALL init_domains(jsbach%models(:)%grid%filename)
+    !IF (jsbach_runs_standalone) CALL init_domains(jsbach%models(:)%grid%filename) !TODO-check-with-RMS: delete!?
 
     CALL message(TRIM(routine), 'done basic initialization')
 

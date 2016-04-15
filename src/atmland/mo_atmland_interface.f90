@@ -72,7 +72,7 @@ CONTAINS
 
   SUBROUTINE update_land2atm(tile, iblk, ics, ice,                      &
     & t_srf, t_eff_srf, qsat_srf, s_srf,                                &
-    & fact_q_air, fact_qsat_srf,                                        &
+    & fact_q_air, fact_qsat_srf, evapopot,                              &
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,     &
     & rough_h_srf, rough_m_srf, tte_corr,                               &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
@@ -81,7 +81,7 @@ CONTAINS
     INTEGER,            INTENT(in) :: iblk, ics, ice
     REAL(wp), OPTIONAL, INTENT(out) ::                                               &
       & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                               &
-      & fact_q_air(:), fact_qsat_srf(:),                                             &
+      & fact_q_air(:), fact_qsat_srf(:), evapopot(:),                                &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
       & rough_h_srf(:), rough_m_srf(:), tte_corr(:),                                 &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:)
@@ -102,6 +102,7 @@ CONTAINS
     IF (PRESENT(s_srf))           s_srf(:)            = dsl4jsb_var2D_onChunk(SRF,s_srf)
     IF (PRESENT(fact_q_air))      fact_q_air(:)       = dsl4jsb_var2D_onChunk(SRF,fact_q_air)
     IF (PRESENT(fact_qsat_srf))   fact_qsat_srf(:)    = dsl4jsb_var2D_onChunk(SRF,fact_qsat_srf)
+    IF (PRESENT(evapopot))        evapopot(:)         = dsl4jsb_var2D_onChunk(SRF,evapopot)
     IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(SRF,evapotrans)
     IF (PRESENT(latent_hflx))     latent_hflx(:)      = dsl4jsb_var2D_onChunk(SRF,latent_hflx)
     IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = dsl4jsb_var2D_onChunk(SRF,sensible_hflx)

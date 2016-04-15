@@ -243,7 +243,16 @@ CONTAINS
     USE mo_phy_schemes,        ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_srf_process,        ONLY: surface_temp_implicit
 !!$    USE mo_srf_constants,      ONLY: eps
+
+#ifndef STANDALONE
+#ifdef __ICON__
     USE mo_echam_vdiff_params, ONLY: tpfac2, tpfac3
+#else
+    ! get cvdifts and calculate tpfac2, tpfac3 as done for ICON in mo_echam_vdiff_params
+    USE mo_physc2, ONLY: cvdifts
+#endif
+#endif
+
     USE mo_physical_constants, ONLY: tmelt
 
     TYPE(t_jsb_tile),  POINTER    :: tile
@@ -295,7 +304,16 @@ CONTAINS
       t2s_conv(nc),         & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
       heat_tcoef(nc)          !< Heat transfer coefficient (rho*C_h*|v|)
 
+#ifndef __ICON__
+    REAL(wp) :: tpfac2, tpfac3
+#endif
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
+
+#ifdef STANDALONE
+    REAL(wp) :: cvdifts
+    cvdifts = 1.5_wp
+#endif
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface temperature')
 
@@ -374,6 +392,12 @@ CONTAINS
         sfract_srf(:), hcap_grnd(:), &
         & s_srf(:))
     END IF
+
+#ifndef __ICON__
+    ! JN: required constants which for ICON are defined in mo_echam_vdiff_params
+    tpfac2  = 1._wp / cvdifts
+    tpfac3  = 1._wp - tpfac2
+#endif
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     t_srf_unfilt(:) = ( tpfac2 * s_srf(:) + tpfac3 * s_srf_old(:) ) / t2s_conv(:)

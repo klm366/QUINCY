@@ -30,7 +30,14 @@ CONTAINS
     &            pcfh, pcair, pcsat, pfracsu, pgrdcap,        &
     &            psnew)
 
-    USE mo_echam_vdiff_params, ONLY: cvdifts   ! TBD: change to 1. for standalone JSBACH
+#ifndef STANDALONE
+#ifdef __ICON__
+    USE mo_echam_vdiff_params, ONLY: cvdifts
+#else
+    USE mo_physc2, ONLY: cvdifts
+#endif
+#endif
+
     USE mo_physical_constants, ONLY: &
       & cpd, &
       & vtmpc2, &
@@ -52,6 +59,11 @@ CONTAINS
     REAL(wp) :: zcolin(klon), zcohfl(klon), zcoind(klon), zicp(klon), zca(klon), zcs(klon)
     REAL(wp) :: pdt
     REAL(wp) :: pc16
+
+#ifdef STANDALONE
+    REAL(wp) :: cvdifts
+    cvdifts = 1.5_wp
+#endif
 
     pdt     = cvdifts * steplen
     pc16    = cpd * vtmpc2
