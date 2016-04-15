@@ -265,6 +265,11 @@ configuration file '%s' have to accord with the corresponding section name
                                     for canno in range ( self.n_cans )}
                         self.analyses_fields [ f_n ][ a_dict [ 'name' ]] = a_dict
 
+                        print
+                        print a_n
+                        print a_dict
+                        print
+
                 
             
         print self.analyses_fields
