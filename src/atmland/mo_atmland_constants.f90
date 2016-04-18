@@ -1,5 +1,5 @@
 !>
-!! @brief memory structure for atm->land and land->atm processes (not used yet) 
+!! @brief atmosphere-land constants, orbital parameters, conversion factors, plus init routine 
 !!
 !! @author
 !!  Sönke Zaehle, MPI-BGC Jena 
@@ -13,48 +13,50 @@ MODULE mo_atmland_constants
   USE mo_base_constants, ONLY: hourday
 
   ! orbital parameters (not calculated - do I need to include this dynamically later?)
-  REAL(wp),SAVE :: eccentricity                ! eccentricity of the Earth's orbit
-  REAL(wp),SAVE :: perihel                     ! perihel of the Earth's orbit
-  REAL(wp),SAVE :: solstice                    ! day of the year at which solstice occurs 
-  REAL(wp),SAVE :: obliquity                   ! obliquity of the Earth's orbit
-  REAL(wp),SAVE :: declination                 ! solar declination (degrees, angle sun at equator)
-  LOGICAL,SAVE  :: angle_at_GMT                ! logical to simulate solar angle according to local time or GMT 
-  REAL(wp),SAVE :: reference_longitude_GMT     ! reference longitude for GMT correction 
-  REAL(wp),SAVE :: solar_constant              ! solar shortwave radiation (W m-2) 
-  REAL(wp),SAVE :: k1_fdiff                    ! constants for calculation of diffuse radiation
-  REAL(wp),SAVE :: k2_fdiff                    ! calculation from transmission as in 
-  REAL(wp),SAVE :: k3_fdiff                    ! calc_diffuse_radiation_fraction
-  REAL(wp),SAVE :: k4_fdiff                    ! 
-  REAL(wp),SAVE :: min_sw_fdiffuse             ! minimum diffuse fraction in shortwave downward flux
-  REAL(wp),SAVE :: max_transmission_fdiff      ! atmospheric transmission rate above which the 
-                                               ! diffuse fraction becomes minimal
-  REAL(wp),SAVE :: min_daylength
-  REAL(wp),SAVE :: dusk_time 
-  REAL(wp),SAVE :: tmp_peak_time 
+  REAL(wp),SAVE :: eccentricity                !< eccentricity of the Earth's orbit
+  REAL(wp),SAVE :: perihel                     !< perihel of the Earth's orbit
+  REAL(wp),SAVE :: solstice                    !< day of the year at which solstice occurs 
+  REAL(wp),SAVE :: obliquity                   !< obliquity of the Earth's orbit
+  REAL(wp),SAVE :: declination                 !< solar declination (degrees, angle sun at equator)
+  LOGICAL,SAVE  :: angle_at_GMT                !< logical to simulate solar angle according to local time or GMT 
+  REAL(wp),SAVE :: reference_longitude_GMT     !< reference longitude for GMT correction 
+  REAL(wp),SAVE :: solar_constant              !< solar shortwave radiation (W m-2) 
+  REAL(wp),SAVE :: k1_fdiff                    !< constants for calculation of diffuse radiation
+  REAL(wp),SAVE :: k2_fdiff                    !< calculation from transmission as in 
+  REAL(wp),SAVE :: k3_fdiff                    !< calc_diffuse_radiation_fraction
+  REAL(wp),SAVE :: k4_fdiff                    !<  
+  REAL(wp),SAVE :: min_sw_fdiffuse             !< minimum diffuse fraction in shortwave downward flux
+  REAL(wp),SAVE :: max_transmission_fdiff      !< atmospheric transmission rate above which the diffuse fraction becomes minimal
+  REAL(wp),SAVE :: min_daylength               !< ?
+  REAL(wp),SAVE :: dusk_time                   !< ?
+  REAL(wp),SAVE :: tmp_peak_time               !< ?
 
   ! conversion factors
-  REAL(wp),SAVE :: sw2par                      ! W / µmol / s
-  REAL(wp),SAVE :: Tzero                       ! melting point in K
-  REAL(wp),SAVE :: standard_press_srf          ! standard pressure in Pa
-  REAL(wp),SAVE :: eps_vpd                     ! eps_vpd used for unit conversion Pa -> g g-1
+  REAL(wp),SAVE :: sw2par                      !< W / µmol / s
+  REAL(wp),SAVE :: Tzero                       !< melting point in K
+  REAL(wp),SAVE :: standard_press_srf          !< standard pressure in Pa
+  REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
 
-  REAL(wp),SAVE :: def_t_air                   ! temperature in deg K
-  REAL(wp),SAVE :: def_vpd                     ! vpd in Pa
-  REAL(wp),SAVE :: def_rh                      ! relative humidity in fractions
-  REAL(wp),SAVE :: def_swdown                  ! PAR in W m-2
-  REAL(wp),SAVE :: def_fdiffuse                ! diffuse fraction
-  REAL(wp),SAVE :: def_cos_angle               ! cosine of zenith angle
-  REAL(wp),SAVE :: def_co2                     ! co2 in ppm
-  REAL(wp),SAVE :: def_wind                    ! wind in m/s
+  REAL(wp),SAVE :: def_t_air                   !< temperature in deg K
+  REAL(wp),SAVE :: def_vpd                     !< vpd in Pa
+  REAL(wp),SAVE :: def_rh                      !< relative humidity in fractions
+  REAL(wp),SAVE :: def_swdown                  !< PAR in W m-2
+  REAL(wp),SAVE :: def_fdiffuse                !< diffuse fraction
+  REAL(wp),SAVE :: def_cos_angle               !< cosine of zenith angle
+  REAL(wp),SAVE :: def_co2                     !< co2 in ppm
+  REAL(wp),SAVE :: def_wind                    !< wind in m/s
 
   PUBLIC :: init_atmland_constants
  
 CONTAINS
 
+  !-----------------------------------------------------------------------------------------------------
+  !> initialise atmland constants
+  !! 
+  !! initialise Earth's orbit; solar angle calculation, solar constant, diffuse fraction calculation
+  !! diurnal temperature calculation, conversion factors, default values
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_atmland_constants
-  ! 
-  ! subroutine to initialise atmland constants
-  !
   IMPLICIT NONE
   ! 
   ! initialise Earth's orbit

@@ -1,5 +1,5 @@
 !>
-!! @brief memory structure for atm->land and land->atm processes (not used yet) 
+!! @brief memory structure for atm->land and land->atm processes 
 !!
 !! @author
 !!  Sönke Zaehle, MPI-BGC Jena 

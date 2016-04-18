@@ -5,7 +5,7 @@
 !! file COPYING in the root of the source tree for this code.
 !! Where software is supplied by third parties, it is indicated in the headers of the routines.
 !!
-!! @brief copied here and left untouched
+!! @brief Tools for namelist reading
 !!
 !! @author who copied the file here
 !!  Jan Engel, MPI-BGC Jena
@@ -13,17 +13,20 @@
 !! @par Revision History
 !! First version by Jan Engel (2016-03-18)
 !!
+!! @par ECHAM
+!!  this module originates from ECHAM, file is left untouched
+!!
 MODULE mo_namelist
   ! position_nml - position namelist file for reading
-  !
+  ! 
   ! Author:
-  !
+  ! 
   ! L. Kornblueh, MPI, March 2001, original source
   ! L. Kornblueh, MPI, January 2003, added error message for open
   ! L. Kornblueh, MPI, April 2005, added close_nml
   ! L. Kornblueh, MPI, February 2011, make it more usable, when 
   !               having multiple files open
-  !
+  ! 
 
   USE mo_util_string,   ONLY: tolower
   USE mo_filename,      ONLY: find_next_free_unit  

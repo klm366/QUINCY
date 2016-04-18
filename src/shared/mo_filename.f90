@@ -5,7 +5,7 @@
 !! file COPYING in the root of the source tree for this code.
 !! Where software is supplied by third parties, it is indicated in the headers of the routines.
 !!
-!! @brief copied here and commented some lines out using "!~ "
+!! @brief quantities needed for file names etc.
 !!
 !! @author who copied the file here
 !!  Jan Engel, MPI-BGC Jena
@@ -13,14 +13,17 @@
 !! @par Revision History
 !! First version by Jan Engel (2016-03-18)
 !!
+!! @par ECHAM
+!!  this module originates from ECHAM, some lines are commented out using "!~ "
+!!
 MODULE mo_filename
 
   ! -----------------------------------------------------------------
-  !
+  ! 
   ! module *mo_filename* - quantities needed for file names etc.
-  !
+  ! 
   ! -----------------------------------------------------------------
-  !
+  ! 
   ! L. Kornblueh, MPI, April 1998, added NWP forecast mode
   ! I. Kirchner,  MPI, April 2001, revision
   ! A. Rhodin,    MPI, June  2001, adapted to stream interface

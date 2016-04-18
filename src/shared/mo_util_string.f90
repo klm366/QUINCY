@@ -5,13 +5,16 @@
 !! file COPYING in the root of the source tree for this code.
 !! Where software is supplied by third parties, it is indicated in the headers of the routines.
 !!
-!! @brief copied here and left untouched
+!! @brief This module holds string conversion utilities
 !!
 !! @author who copied the file here
 !!  Jan Engel, MPI-BGC Jena
 !!
 !! @par Revision History
 !! First version by Jan Engel (2016-03-18)
+!!
+!! @par ECHAM
+!!  this module originates from ECHAM, file is left untouched
 !!
 MODULE mo_util_string
   !----------------------------------------------

@@ -25,7 +25,6 @@ CONTAINS
   !!  
   !! @todo debugging necessary - kills plants for no reason. implementation of full DGVM-style dynamics.   
   !-----------------------------------------------------------------------------------------------------
-
   SUBROUTINE update_veg_dynamics(plant, veg_param)
 
     USE mo_base_constants
@@ -34,16 +33,15 @@ CONTAINS
     USE mo_veg_parameters
 
     IMPLICIT NONE
-    ! 0.1 Input
+    ! 0.1 InOut
     TYPE(VegetationParameterClass),INTENT(in) :: veg_param            !< list of vegetation parameters
-    ! 0.2 Inout
     TYPE(PlantClass),INTENT(inout)            :: plant                !< current plant  
-    ! 0.4 Local
+    ! 0.2 Local
     TYPE(Element)                             :: mortality_spread_element
     TYPE(VegPool)                             :: mortality_spread_pool
     TYPE(VegPool)                             :: litter_from_mortality
     TYPE(VegPool)                             :: hlp1 
-    REAL(wp)                                   :: mortality
+    REAL(wp)                                  :: mortality
 
     ! select rate and convert from 1/year to 1/timestep
     SELECT CASE (veg_param%growthform(plant%pftid))
@@ -55,7 +53,7 @@ CONTAINS
           WRITE(message_text,'(a,i4)') 'invalid growthform',veg_param%growthform(plant%pftid)
           CALL finish("mo_veg_dynamics:update_iveg_dynamics",message_text) 
     ENDSELECT 
-    !
+    ! 
     ! apply rate to all elements of a pool
     mortality_spread_element%carbon = mortality 
     mortality_spread_element%nitrogen = mortality
@@ -63,7 +61,7 @@ CONTAINS
     mortality_spread_element%carbon13 = mortality
     mortality_spread_element%carbon14 = mortality
     mortality_spread_element%nitrogen15 = mortality
-    !
+    ! 
     ! apply rate to all pools
     mortality_spread_pool%leaf = mortality_spread_element
     mortality_spread_pool%fine_root = mortality_spread_element
