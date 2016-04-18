@@ -10,7 +10,8 @@
 MODULE mo_jsb_lct_class
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,           ONLY: message_text, message, finish
+  USE mo_kind,      ONLY: wp
+  USE mo_exception, ONLY: message_text, message, finish
 
   IMPLICIT NONE
   PRIVATE
@@ -30,9 +31,10 @@ MODULE mo_jsb_lct_class
   END ENUM
 
   TYPE t_jsb_lct
-    INTEGER           :: id = 0           !< Id for lct, one of enumeration above
-    CHARACTER(LEN=5)  :: name = ""        !< Short name for lct
-    CHARACTER(LEN=30) :: long_name = ""   !< Long name for lct
+    INTEGER           :: id = 0               !< Id for lct, one of enumeration above
+    CHARACTER(LEN=5)  :: name = ""            !< Short name for lct
+    CHARACTER(LEN=30) :: long_name = ""       !< Long name for lct
+    REAL(wp), POINTER :: fract(:,:) => NULL() !< Cover fraction of this lct (relative to tile that owns this lct)
   CONTAINS
     PROCEDURE :: Get_name     => Get_lct_type_name
     PROCEDURE :: Get_longname => Get_lct_type_longname
@@ -110,18 +112,22 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_type_name'
 
-    SELECT CASE(this%id)
-    CASE (LAND_TYPE)
-      return_value = 'land'
-    CASE (VEG_TYPE)
-      return_value = 'veg'
-    CASE (BARE_TYPE)
-      return_value = 'bare'
-    CASE (GLACIER_TYPE)
-      return_value = 'glac'
-    CASE (LAKE_TYPE)
-      return_value = 'lake'
-    END SELECT
+    IF (this%name /= '') THEN
+      return_value = TRIM(this%name)
+    ELSE
+      SELECT CASE(this%id)
+      CASE (LAND_TYPE)
+        return_value = 'land'
+      CASE (VEG_TYPE)
+        return_value = 'veg'
+      CASE (BARE_TYPE)
+        return_value = 'bare'
+      CASE (GLACIER_TYPE)
+        return_value = 'glac'
+      CASE (LAKE_TYPE)
+        return_value = 'lake'
+      END SELECT
+    END IF
 
   END FUNCTION Get_lct_type_name
 
@@ -132,18 +138,22 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_type_longname'
 
-    SELECT CASE(this%id)
-    CASE (LAND_TYPE)
-      return_value = 'Land (veg/soil/glac)'
-    CASE (VEG_TYPE)
-      return_value = 'Vegetated'
-    CASE (BARE_TYPE)
-      return_value = 'Bare soil'
-    CASE (GLACIER_TYPE)
-      return_value = 'Glacier'
-    CASE (LAKE_TYPE)
-      return_value = 'Lake'
-    END SELECT
+    IF (this%long_name /= '') THEN
+      return_value = TRIM(this%long_name)
+    ELSE
+      SELECT CASE(this%id)
+      CASE (LAND_TYPE)
+        return_value = 'Land (veg/soil/glac)'
+      CASE (VEG_TYPE)
+        return_value = 'Vegetated'
+      CASE (BARE_TYPE)
+        return_value = 'Bare soil'
+      CASE (GLACIER_TYPE)
+        return_value = 'Glacier'
+      CASE (LAKE_TYPE)
+        return_value = 'Lake'
+      END SELECT
+    END IF
 
   END FUNCTION Get_lct_type_longname
 

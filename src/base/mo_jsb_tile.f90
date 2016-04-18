@@ -244,6 +244,7 @@ CONTAINS
     TYPE(t_input_file)         :: input_file
     REAL(wp),          POINTER :: return_pointer(:,:)
     CHARACTER(len=50)          :: name_loc
+    INTEGER                    :: ilct
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_tile'
 
@@ -274,10 +275,10 @@ CONTAINS
           this%mem(iproc)%p%owner_proc_id = iproc
           ALLOCATE(this%mem(iproc)%p%owner_tile_path(SIZE(this%path)))
           this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
-          IF (ASSOCIATED(this%parent_tile)) THEN
-            CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(this%name), this%lcts(:)%id, this%owner_model_id)
+          IF (prefix /= '') THEN
+            CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
           ELSE
-            CALL this%mem(iproc)%p%Init(TRIM(process_name), '', this%lcts(:)%id, this%owner_model_id)
+            CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
           END IF
           CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
         END SELECT
@@ -302,8 +303,9 @@ CONTAINS
           END IF
           ! Note: Init for mem(iproc) might be called several times for the same tile and must make sure that only
           ! those parts of the memory (for certain lct%id) are created that haven't been initialized before.
-          IF (ASSOCIATED(tmp_tile%parent_tile)) THEN
-            CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), TRIM(tmp_tile%name), tmp_tile%lcts(:)%id, this%owner_model_id)
+          IF (prefix /= '') THEN
+            CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(tmp_tile%name), &
+              &                             tmp_tile%lcts(:)%id, this%owner_model_id)
           ELSE
             CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), '', tmp_tile%lcts(:)%id, this%owner_model_id)
           END IF
@@ -322,10 +324,11 @@ CONTAINS
     parent_tile_name = this%Get_parent_name()
     IF (parent_tile_name == '') parent_tile_name = 'grid box  '
 
+    ! Add fraction(s) of this tile to stream
     CALL jsb_add_var(TRIM(varlist_name), 'fract', this%fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &
-      &      'fraction of '//TRIM(parent_tile_name)//' covered by '//TRIM(this%name)),                      &
+      &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp)
@@ -333,11 +336,12 @@ CONTAINS
     CALL jsb_add_var(TRIM(varlist_name), 'fract_max', this%fract_max,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max', '',                                                                          &
-      &      'max fraction of '//TRIM(parent_tile_name)//' covered by '//TRIM(this%name)),                      &
+      &      'max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp)
 
+    ! Initialize fraction(s) of this tile from input file
     IF (this%fract_filename == '') THEN
       this%fract    (:,:) = 1._wp
       this%fract_max(:,:) = 1._wp
@@ -365,6 +369,18 @@ CONTAINS
       CALL input_file%Close()
 
     END IF
+
+    ! Loop over lcts of this tile and add fractions for each lct
+    DO ilct=1,SIZE(this%lcts)
+      CALL jsb_add_var(TRIM(varlist_name), 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,           &
+        & hgrid, surface,                                                                                         &
+        & t_cf('lct_fraction', '',                                                                                &
+        &      'fraction of '//TRIM(this%name)//' covered by tile '//TRIM(this%lcts(ilct)%name)),                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+        & prefix, suffix,                                                                                         &
+        & initval_r=0.0_wp)
+
+    END DO
 
   END SUBROUTINE Init_tile
 

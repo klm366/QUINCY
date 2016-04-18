@@ -139,15 +139,15 @@ CONTAINS
   !! @param[in]     model_id  Model id
   !! @param[in,out] this      Instance of HYDRO process class
   !!
-  SUBROUTINE Register_hydro_tasks(this, model_id)
+  SUBROUTINE Register_hydro_tasks(process, model_id)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
+    CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_snow_hydrology         (model_id))
-    CALL this%Register_task(tsk_snow_and_skin_fraction (model_id))
+    CALL process%Register_task(tsk_snow_hydrology         (model_id))
+    CALL process%Register_task(tsk_snow_and_skin_fraction (model_id))
 
-  END SUBROUTINE Register_Hydro_Tasks
+  END SUBROUTINE Register_hydro_tasks
   ! ================================================================================================================================
   !>
   !! @brief Implementation of "update" for task "snow_hydrology"

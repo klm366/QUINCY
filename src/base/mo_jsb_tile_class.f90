@@ -29,8 +29,8 @@ MODULE mo_jsb_tile_class
   TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
     TYPE(t_jsb_lct),        ALLOCATABLE    :: lcts(:)          !< List of land cover types for tile
     INTEGER,                ALLOCATABLE    :: process_action(:)
-    REAL(wp),                   POINTER    :: fract     (:,:)  !< Cover fraction of this tile (relative to parent tile)
-    REAL(wp),                   POINTER    :: fract_max (:,:)  !< Maximum potential cover fraction for this tile (rel. to parent)
+    REAL(wp),                   POINTER    :: fract     (:,:)  !< Fraction of this tile (relative to parent tile)
+    REAL(wp),                   POINTER    :: fract_max (:,:)  !< Maximum potential fraction for this tile (rel. to parent)
     CHARACTER(LEN=filename_max)            :: fract_filename   !< Name of file to read tile fractions from (all tiles except root)
                                                                !! The variable names must be "fract[_max]_"//tile%name
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
@@ -154,6 +154,7 @@ CONTAINS
       this%lcts(1) = lct
     ELSE
       DO ilct=1,SIZE(this%lcts)
+        ! If this lct is already registered in the tile%lcts, do nothing and return
         IF (this%lcts(ilct)%id == lct%id) RETURN
       END DO
       this%lcts = (/ this%lcts, lct /)
