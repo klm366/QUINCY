@@ -375,16 +375,15 @@ CONTAINS
       CALL jsb_add_var(TRIM(varlist_name), 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,           &
         & hgrid, surface,                                                                                         &
         & t_cf('lct_fraction', '',                                                                                &
-        &      'fraction of '//TRIM(this%name)//' covered by tile '//TRIM(this%lcts(ilct)%name)),                 &
+        &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
         & initval_r=0.0_wp)
-
     END DO
 
   END SUBROUTINE Init_tile
 
-  ! Task handler function for tile
+  ! Task handler function for tile (HSM message handler)
   FUNCTION Process_task_on_tile(this, hsm, msg_in) RESULT(return_ptr)
 
     USE mo_util, ONLY: one_of
