@@ -22,7 +22,6 @@ MODULE mo_jsb_interface
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_Task_queue
   USE mo_hsm_class,           ONLY: t_Hsm, t_Message, t_State
-  USE mo_jsb_process_factory, ONLY: RAD
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
   USE mo_jsb_parallel_iface,  ONLY: get_my_global_mpi_id
@@ -136,7 +135,6 @@ CONTAINS
     tile => model%Get_top_tile()
     CALL update_atm2land(                      &
       & tile,                                  &
-      & model%Get_process_configs(),           &
       & model%options,                         &
       & t_air            = t_air(:),           &
       & q_air            = q_air(:),           &
@@ -222,7 +220,6 @@ CONTAINS
     tile => model%Get_top_tile()
     CALL update_land2atm(                   &
       & tile,                               &
-      & model%Get_process_configs(),        &
       & model%options,                      &
       & t_srf          = t_srf(:),          &
       & t_eff_srf      = t_eff_srf(:),      &
@@ -322,10 +319,10 @@ CONTAINS
     tile => model%Get_top_tile()
 
 #ifndef __NO_JSBACH_HD__
-      CALL hd_lateral_flow(tile, model%Get_process_configs(), model%options)
-      CALL hd_check_water_budget(tile, model%Get_process_configs(), model%options)
+      CALL hd_lateral_flow(tile, model%options)
+      CALL hd_check_water_budget(tile, model%options)
 
-      CALL interface_hd_ocean(tile, model%Get_process_configs(), model%options)
+      CALL interface_hd_ocean(tile, model%options)
 #endif
 
   END SUBROUTINE jsbach_finish_timestep

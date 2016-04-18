@@ -71,7 +71,7 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Get_tile
     PROCEDURE :: Get_process
     PROCEDURE :: Queue_task
-    PROCEDURE :: Get_process_configs
+!!$    PROCEDURE :: Get_process_configs
 !!$    PROCEDURE :: Process_task
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
@@ -96,8 +96,7 @@ CONTAINS
   !!
   FUNCTION new_model(id, name, shortname, description, namelist_filename) RESULT(return_ptr)
 
-    USE mo_jsb_process_factory, ONLY: max_no_of_processes
-    USE mo_jsb_process, ONLY: Create_process
+!!$    USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
 
     INTEGER,                    INTENT(in) :: id
     CHARACTER(len=*),           INTENT(in) :: name
@@ -127,10 +126,10 @@ CONTAINS
 
 !!$    return_ptr%Hsm => return_ptr%t_Hsm
 
-    ALLOCATE(return_ptr%processes(max_no_of_processes))
-    DO iproc=1,max_no_of_processes
-      return_ptr%processes(iproc)%p => Create_process(iproc, return_ptr%id, TRIM(namelist_filename))
-    END DO
+!!$    ALLOCATE(return_ptr%processes(max_no_of_processes))
+!!$    DO iproc=1,max_no_of_processes
+!!$      return_ptr%processes(iproc)%p => Create_process(iproc, return_ptr%id, TRIM(namelist_filename))
+!!$    END DO
 
     ALLOCATE(return_ptr%queue)
 
@@ -171,23 +170,23 @@ CONTAINS
 
   END SUBROUTINE Configure_model_processes
 
-  FUNCTION Get_process_configs(this) RESULT(return_ptr)
-
-    CLASS(t_jsb_model), INTENT(in) :: this
-    CLASS(t_jsb_config_p), POINTER :: return_ptr(:)
-
-    INTEGER :: iproc
-
-    ALLOCATE(return_ptr(SIZE(this%processes)))
-    DO iproc=1,SIZE(this%processes)
-      IF (ASSOCIATED(this%processes(iproc)%p)) THEN
-        return_ptr(iproc)%p => this%processes(iproc)%p%config
-      ELSE
-        return_ptr(iproc)%p => NULL()
-      END IF
-    END DO
-
-  END FUNCTION Get_process_configs
+!!$  FUNCTION Get_process_configs(this) RESULT(return_ptr)
+!!$
+!!$    CLASS(t_jsb_model), INTENT(in) :: this
+!!$    CLASS(t_jsb_config_p), POINTER :: return_ptr(:)
+!!$
+!!$    INTEGER :: iproc
+!!$
+!!$    ALLOCATE(return_ptr(SIZE(this%processes)))
+!!$    DO iproc=1,SIZE(this%processes)
+!!$      IF (ASSOCIATED(this%processes(iproc)%p)) THEN
+!!$        return_ptr(iproc)%p => this%processes(iproc)%p%config
+!!$      ELSE
+!!$        return_ptr(iproc)%p => NULL()
+!!$      END IF
+!!$    END DO
+!!$
+!!$  END FUNCTION Get_process_configs
   !
   ! State machine engine
   !
@@ -363,12 +362,11 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, grid_id, dtime, steplen, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, dtime, steplen, iblk, ics, ice, nc)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
 
     CLASS(t_jsb_model), INTENT(inout) :: this
-    INTEGER,  OPTIONAL, INTENT(in)    :: grid_id
     REAL(wp), OPTIONAL, INTENT(in)    :: dtime
     REAL(wp), OPTIONAL, INTENT(in)    :: steplen
     INTEGER,  OPTIONAL, INTENT(in)    :: iblk
@@ -376,7 +374,6 @@ CONTAINS
     INTEGER,  OPTIONAL, INTENT(in)    :: ice
     INTEGER,  OPTIONAL, INTENT(in)    :: nc
 
-    CALL assign_if_present(this%options%grid_id, grid_id)
     CALL assign_if_present(this%options%dtime,   dtime)
     CALL assign_if_present(this%options%steplen, steplen)
     CALL assign_if_present(this%options%iblk,    iblk)

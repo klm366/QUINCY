@@ -46,11 +46,12 @@ MODULE mo_jsb_memory_class
   END TYPE t_jsb_memory_p
 
   ABSTRACT INTERFACE
-    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids)
+    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, model_id)
       IMPORT :: t_jsb_memory, t_jsb_config
       CLASS(t_jsb_memory), INTENT(inout) :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
       INTEGER,             INTENT(in)    :: lct_ids(:)
+      INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory
   END INTERFACE
 

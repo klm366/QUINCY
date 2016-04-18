@@ -23,7 +23,7 @@ MODULE mo_jsb_tile
     &                               SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_msg
-  USE mo_jsb_config_class,    ONLY: t_jsb_config_p
+  USE mo_jsb_config_class,    ONLY: t_jsb_config, t_jsb_config_p
 
   IMPLICIT NONE
   PRIVATE
@@ -57,7 +57,7 @@ CONTAINS
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_util,                ONLY: one_of
     USE mo_jsb_lct_class,       ONLY: t_jsb_lct, LAND_TYPE, LAKE_TYPE, Contains_lct
-    USE mo_jsb_process_factory, ONLY: Get_process_name, SEB, ATM2LAND, LAND2ATM
+    USE mo_jsb_process_class,   ONLY: SEB, ATM2LAND, LAND2ATM, Get_process_name
 
     CHARACTER(len=*),  INTENT(in)           :: name
     CHARACTER(len=*),  INTENT(in)           :: description
@@ -90,6 +90,8 @@ CONTAINS
     END IF
 
     ! Initialize further components of t_jsb_tile_abstract extended type
+
+    ALLOCATE(return_ptr%process_action(max_no_of_processes))
 
     IF (PRESENT(lcts)) THEN
 
@@ -215,7 +217,8 @@ CONTAINS
   !
   SUBROUTINE Init_tile(this, varlist_name, prefix, suffix)
 
-    USE mo_jsb_process_factory, ONLY: Create_process_memory, Get_process_name, SEB, ATM2LAND, LAND2ATM
+    USE mo_jsb_process_factory, ONLY: Create_process_memory
+    USE mo_jsb_process_class,   ONLY: SEB, ATM2LAND, LAND2ATM, Get_process_name
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist, jsb_add_var
@@ -272,9 +275,9 @@ CONTAINS
           ALLOCATE(this%mem(iproc)%p%owner_tile_path(SIZE(this%path)))
           this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
           IF (ASSOCIATED(this%parent_tile)) THEN
-            CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(this%name), this%lcts(:)%id)
+            CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(this%name), this%lcts(:)%id, this%owner_model_id)
           ELSE
-            CALL this%mem(iproc)%p%Init(TRIM(process_name), '', this%lcts(:)%id)
+            CALL this%mem(iproc)%p%Init(TRIM(process_name), '', this%lcts(:)%id, this%owner_model_id)
           END IF
           CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
         END SELECT
@@ -300,9 +303,9 @@ CONTAINS
           ! Note: Init for mem(iproc) might be called several times for the same tile and must make sure that only
           ! those parts of the memory (for certain lct%id) are created that haven't been initialized before.
           IF (ASSOCIATED(tmp_tile%parent_tile)) THEN
-            CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), TRIM(tmp_tile%name), tmp_tile%lcts(:)%id)
+            CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), TRIM(tmp_tile%name), tmp_tile%lcts(:)%id, this%owner_model_id)
           ELSE
-            CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), '', tmp_tile%lcts(:)%id)
+            CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), '', tmp_tile%lcts(:)%id, this%owner_model_id)
           END IF
           tmp_tile => tmp_tile%parent_tile
         END DO
@@ -421,7 +424,7 @@ CONTAINS
             CALL model%GOTO(this%first_child)
           ELSE
             task%msg => msg
-            CALL task%Do_it(this, model%Get_process_configs(), model%options)
+            CALL task%Do_it(this, model%options)
             IF (ASSOCIATED(this%next_sibling)) THEN
               IF (this%next_sibling%Has_children()) THEN
                 CALL model%Goto(this%next_sibling%first_child)
@@ -454,7 +457,7 @@ CONTAINS
       CASE ('AGGREGATE')
         IF (this%process_action(task%process_id) >= AGGREGATE_ .AND. this%visited) THEN
           task%msg => msg
-          CALL task%Do_it(this, model%Get_process_configs(), model%options)
+          CALL task%Do_it(this, model%options)
         END IF
         IF (ASSOCIATED(this%next_sibling)) THEN
           msg%action => model%Get_action('INTEGRATE')
@@ -486,8 +489,7 @@ CONTAINS
 
   SUBROUTINE Print_tile(this)
 
-    USE mo_jsb_process_factory, ONLY: Get_process_name
-    USE mo_jsb_process_class,   ONLY: Get_action_name
+    USE mo_jsb_process_class,  ONLY: Get_process_name, Get_action_name
 
     CLASS(t_jsb_tile), INTENT(in) :: this
 

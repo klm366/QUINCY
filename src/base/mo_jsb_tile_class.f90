@@ -16,7 +16,6 @@ MODULE mo_jsb_tile_class
 
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
-  USE mo_jsb_process_factory, ONLY: max_no_of_processes
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct
   USE mo_jsb_config_class,    ONLY: t_jsb_config_p
 
@@ -29,7 +28,7 @@ MODULE mo_jsb_tile_class
 
   TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
     TYPE(t_jsb_lct),        ALLOCATABLE    :: lcts(:)          !< List of land cover types for tile
-    INTEGER                                :: process_action(max_no_of_processes)
+    INTEGER,                ALLOCATABLE    :: process_action(:)
     REAL(wp),                   POINTER    :: fract     (:,:)  !< Cover fraction of this tile (relative to parent tile)
     REAL(wp),                   POINTER    :: fract_max (:,:)  !< Maximum potential cover fraction for this tile (rel. to parent)
     CHARACTER(LEN=filename_max)            :: fract_filename   !< Name of file to read tile fractions from (all tiles except root)
@@ -49,16 +48,6 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Print_interface),   DEFERRED :: Print
     PROCEDURE(Handler_interface), DEFERRED :: Handler
   END type t_jsb_tile_abstract
-
-  !>
-  !! Container CLASS for tiles
-  !!
-  !! Contains pointer to an instance of type t_jsb_tile_abstract in order to allow arrays
-  !! of pointers to tiles.
-  !!
-  TYPE t_jsb_tile_abstract_p
-    CLASS(t_jsb_tile_abstract), POINTER :: p
-  END TYPE t_jsb_tile_abstract_p
 
   ABSTRACT INTERFACE
     SUBROUTINE Init_interface(this, varlist_name, prefix, suffix)

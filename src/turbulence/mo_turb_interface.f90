@@ -19,8 +19,10 @@ MODULE mo_turb_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -42,15 +44,15 @@ MODULE mo_turb_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_turb_process
+  PUBLIC :: Register_turb_tasks !,t_turb_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_turb_interface'
 
-  !> Type definition for turbulence process
-  TYPE, EXTENDS(t_jsb_process) :: t_turb_process
-  CONTAINS
-    PROCEDURE :: Register_tasks => Register_turb_tasks        !< Registers tasks for turbulence process
-  END TYPE t_turb_process
+!!$  !> Type definition for turbulence process
+!!$  TYPE, EXTENDS(t_jsb_process) :: t_turb_process
+!!$  CONTAINS
+!!$    PROCEDURE :: Register_tasks => Register_turb_tasks        !< Registers tasks for turbulence process
+!!$  END TYPE t_turb_process
 
   !> Type definition for surface_roughness task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_roughness
@@ -96,8 +98,8 @@ CONTAINS
   !!
   SUBROUTINE Register_turb_tasks(this, model_id)
 
-    CLASS(t_turb_process), INTENT(inout) :: this
-    INTEGER,               INTENT(in)    :: model_id
+    CLASS(t_jsb_process), INTENT(inout) :: this
+    INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_surface_roughness(model_id))
 
@@ -108,17 +110,15 @@ CONTAINS
   !! @brief Implementation of "update" for task "surface_roughness"
   !! Task "<PROCESS_NAME_LOWER_CASE>" <EXPLANATIION_OF_PROCESS>.
   !!
-  !! @param[in]     config  Vector of process configurations.
-  !! @param[in]     options Additional run-time parameters.
   !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_roughness(tile, config, options)
+  SUBROUTINE update_roughness(tile, options)
 
     USE mo_turb_constants, ONLY: blending_height, roughness_snow
     USE mo_jsb_lct_class,  ONLY: LAKE_TYPE, Contains_lct
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Declare process memories
@@ -134,6 +134,8 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_roughness'
 
     ! Get local variables from options argument
@@ -146,6 +148,8 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(TURB)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
 
     ! Get process memories
     dsl4jsb_Get_memory(TURB)
@@ -179,15 +183,15 @@ CONTAINS
   !>
   !! Implementation of "aggregate" for task "surface_roughness"
   !!
-  !! @param[in]     config  Vector of process configurations.
-  !! @param[in]     options Additional run-time parameters.
   !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE aggregate_roughness(tile, config, options)
+  SUBROUTINE aggregate_roughness(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_roughness'
 
@@ -202,6 +206,8 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     !X Implementation: Start your process scheme here...
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -212,9 +218,8 @@ CONTAINS
   !>
   !! @brief Another task for "<PROCESS_NAME_LOWER_CASE>"
   !!
-  !! @param[in]     config  Vector of process configurations.
-  !! @param[in]     options Additional run-time parameters.
   !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
   !  ....
 
 #endif

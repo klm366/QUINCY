@@ -147,11 +147,11 @@ CONTAINS
 
   SUBROUTINE init_model_common(model)
 
-    USE mo_jsb_process_factory, ONLY: SEB, TURB, SOIL, HYDRO, VEG, RAD, HD
+    USE mo_jsb_process_class,   ONLY: SEB, TURB, SOIL, HYDRO, VEG, RAD, HD
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
+    USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_model_class,     ONLY: print_model
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-    USE mo_jsb_config_class,    ONLY: t_jsb_config_p
     USE mo_jsb_model_usecases,  ONLY: init_usecase
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
@@ -170,14 +170,17 @@ CONTAINS
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
     CLASS(t_jsb_tile_abstract), POINTER :: tile
-    CLASS(t_jsb_config_p),      POINTER :: p_configs(:)
     TYPE(t_jsb_vgrid),          POINTER :: surface                      ! Vertical grid
+    INTEGER                             :: iproc
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_common'
 
-    CALL model%Configure_processes()
+    ALLOCATE(model%processes(max_no_of_processes))
+    DO iproc=1,max_no_of_processes
+      model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
+    END DO
 
-    CALL model%Set_options(grid_id = model%grid_id)
+    CALL model%Configure_processes()
 
     surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
     CALL register_vgrid(surface)
@@ -208,7 +211,6 @@ CONTAINS
     tile => model%Get_top_tile()
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
-    p_configs => model%Get_process_configs()
 
     DO WHILE (ASSOCIATED(tile))
 
@@ -226,35 +228,35 @@ CONTAINS
 
       ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
-        CALL radiation_init(tile, p_configs)
+        CALL radiation_init(tile)
       END IF
 
       IF (one_of(tile%process_action(SEB), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
-        CALL seb_init(tile, p_configs)
+        CALL seb_init(tile)
       END IF
 
       IF (one_of(tile%process_action(TURB), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
-        CALL turb_init(tile, p_configs)
+        CALL turb_init(tile)
       END IF
 
       IF (one_of(tile%process_action(SOIL), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
-        CALL soil_init(tile, p_configs)
+        CALL soil_init(tile)
       END IF
 
       IF (one_of(tile%process_action(HYDRO), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
-        CALL hydro_init(tile, p_configs)
+        CALL hydro_init(tile)
       END IF
 
       ! Vegetation must be initialized after soil!
       IF (one_of(tile%process_action(VEG), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
-        CALL veg_init_bc(tile, p_configs)
-        CALL veg_init_ic(tile, p_configs)
+        CALL veg_init_bc(tile)
+        CALL veg_init_ic(tile)
       END IF
 
 #ifndef __NO_JSBACH_HD__
       IF (one_of(tile%process_action(HD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
-        CALL hd_init_bc(tile, p_configs)
-        CALL hd_init_ic(tile, p_configs)
+        CALL hd_init_bc(tile)
+        CALL hd_init_ic(tile)
       END IF
 #endif
 

@@ -11,6 +11,9 @@ MODULE mo_veg_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
+
+  USE mo_jsb_model_class,  ONLY: t_jsb_model
+  USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
@@ -47,7 +50,7 @@ MODULE mo_veg_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_veg_memory(mem, prefix, suffix, lct_ids)
+  SUBROUTINE Init_veg_memory(mem, prefix, suffix, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -59,12 +62,16 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: model_id
 
+    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_w              ! Vertical grids
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_memory'
+
+    model => Get_model(model_id)
 
     table = tables(1)
 

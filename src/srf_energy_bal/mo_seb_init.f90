@@ -18,12 +18,13 @@ MODULE mo_seb_init
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
-  USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes SEB
   dsl4jsb_Use_config(SEB)
   dsl4jsb_Use_memory(SEB)
+  ! Hack until createMakefile handles cpp includes (TBD)
+  USE mo_seb_memory_class, ONLY: t_seb_memory
 
   IMPLICIT NONE
   PRIVATE
@@ -37,22 +38,20 @@ CONTAINS
   !
   !> Intialize soil process (after memory has been set up)
   !
-  SUBROUTINE seb_init(tile, config)
+  SUBROUTINE seb_init(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':seb_init'
 
-    CALL seb_init_bc(tile, config)
-    CALL seb_init_ic(tile, config)
+    CALL seb_init_bc(tile)
+    CALL seb_init_ic(tile)
 
   END SUBROUTINE seb_init
 
-  SUBROUTINE seb_init_bc(tile, config)
+  SUBROUTINE seb_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
     TYPE(t_jsb_model),       POINTER :: model
 
@@ -62,14 +61,11 @@ CONTAINS
 
   END SUBROUTINE seb_init_bc
 
-  RECURSIVE SUBROUTINE seb_init_ic(tile, config)
+  RECURSIVE SUBROUTINE seb_init_ic(tile)
 
     USE mo_jsb_time, ONLY: get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
-
-    TYPE(t_jsb_model),        POINTER :: model
 
     dsl4jsb_Def_config(SEB)
     dsl4jsb_Def_memory(SEB)
@@ -83,6 +79,8 @@ CONTAINS
     INTEGER  :: i
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2, n1, n2
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':seb_init_ic'
 

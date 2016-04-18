@@ -14,7 +14,7 @@ MODULE mo_jsb_model_usecases
   USE mo_kind,                ONLY: wp
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_process_factory, ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, RAD, HD
+  USE mo_jsb_process_class,   ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, RAD, HD
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,            ONLY: Get_Grid
@@ -187,12 +187,13 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     ! Create root of the tile structure representing the whole grid box
-    box_tile => t_jsb_tile('box', 'Top tile', processes=(/ATM2LAND,LAND2ATM,RAD,TURB/), &
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      &processes=(/ATM2LAND,LAND2ATM,RAD,HYDRO,TURB/), &
       & model_id=model%id, grid_id=model%grid_id)
     model%top => box_tile
 
       land_tile => t_jsb_tile('land', 'Land tile', &
-        & processes=(/SEB,HYDRO/), process_actions=(/ON_TILE_,ON_TILE_/), &
+        & processes=(/SEB/), process_actions=(/ON_TILE_/), &
 !!$        & processes=(/SRF,RAD/), process_actions=(/ON_TILE_,ON_LEAFS_/), &
 !!$                            & processes=(/SRF/), process_actions=(/ON_SUBTREE_/), &
         & lcts=(/t_jsb_lct(LAND_TYPE)/), &

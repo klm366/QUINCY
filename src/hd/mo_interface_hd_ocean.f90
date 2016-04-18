@@ -14,6 +14,8 @@ MODULE mo_interface_hd_ocean
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: finish, warning
 
+  USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
@@ -22,7 +24,7 @@ MODULE mo_interface_hd_ocean
   USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name
 #endif
 
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -61,10 +63,9 @@ CONTAINS
   END SUBROUTINE jsb_fdef_hd_fields
 #endif
 
-  SUBROUTINE interface_hd_ocean(tile, config, options)
+  SUBROUTINE interface_hd_ocean(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in) :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in) :: options
 
     ! Local variables
@@ -72,6 +73,8 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER    :: grid
 
     dsl4jsb_Def_memory(HYDRO)
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':interface_hd_ocean'
 
@@ -94,7 +97,9 @@ CONTAINS
     IF (ASSOCIATED(tile%parent)) &
       & CALL finish(TRIM(routine), 'HD model works on root tile only!')
 
-    grid => Get_grid(options%grid_id)
+    model => Get_model(tile%owner_model_id)
+
+    grid => Get_grid(model%grid_id)
 
     ! Get reference to variables in memory
     dsl4jsb_Get_memory(HYDRO)

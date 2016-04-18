@@ -17,9 +17,11 @@ MODULE mo_soil_interface
 
   USE mo_jsb_control,     ONLY: debug_on
 
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
@@ -37,12 +39,12 @@ MODULE mo_soil_interface
   PRIVATE
 
   PUBLIC :: update_soil_1, update_soil_2
-  PUBLIC :: t_soil_process
+  PUBLIC :: Register_soil_tasks !,t_soil_process
 
-  TYPE, EXTENDS(t_jsb_process) :: t_soil_process
-CONTAINS
-  PROCEDURE :: Register_tasks => Register_soil_tasks
-END TYPE t_soil_process
+!!$  TYPE, EXTENDS(t_jsb_process) :: t_soil_process
+!!$  CONTAINS
+!!$    PROCEDURE :: Register_tasks => Register_soil_tasks
+!!$  END TYPE t_soil_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_interface'
 
@@ -50,8 +52,8 @@ CONTAINS
 
   SUBROUTINE Register_soil_tasks(this, model_id)
 
-    CLASS(t_soil_process), INTENT(inout) :: this
-    INTEGER, INTENT(in) :: model_id
+    CLASS(t_jsb_process), INTENT(inout) :: this
+    INTEGER,              INTENT(in)    :: model_id
 
     !CALL this%Register_task(tsk_radiation_surface(name="radiation_surface", process_id=SOIL))
 
@@ -59,12 +61,11 @@ CONTAINS
 
   ! TBD: At the moment, the hydrology for soil and canopy is handled together in the soil process (as in echam6).
   ! This will be changed later.
-  SUBROUTINE update_soil_1(tile, config, options)
+  SUBROUTINE update_soil_1(tile, options)
 
     USE mo_soil_process, ONLY: update_surf_down, update_soiltemp, update_surf_up
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
@@ -154,6 +155,8 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime, steplen
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_1'
 
     iblk  = options%iblk
@@ -166,6 +169,8 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(SOIL)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
+
+    model => Get_model(tile%owner_model_id)
 
 !!$    soil_conf => Get_soil_config(model)
     dsl4jsb_Get_config(SOIL)
@@ -316,14 +321,13 @@ CONTAINS
   END SUBROUTINE update_soil_1
 
 
-  SUBROUTINE update_soil_2(tile, config, options)
+  SUBROUTINE update_soil_2(tile, options)
 
     ! ---------------------------
     ! Variables
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
@@ -337,6 +341,8 @@ CONTAINS
     !
 !!$    REAL(wp) :: &
     INTEGER :: iblk, ics, ice, nc
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_2'
 
@@ -352,6 +358,8 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
+    model => Get_model(tile%owner_model_id)
+
     ! Get reference to variables for current block
     !
     fract                => tile%fract                               (ics:ice,    iblk)
@@ -359,14 +367,12 @@ CONTAINS
 
   END SUBROUTINE update_soil_2
 
-    SUBROUTINE aggregate_soil(tile, config, options)
+    SUBROUTINE aggregate_soil(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-!!$    TYPE(t_jsb_model), POINTER :: model
-!!$    CLASS(t_jsb_tile), POINTER :: tile
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_soil'
 
@@ -376,6 +382,8 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
+
+    model => Get_model(tile%owner_model_id)
 
   END SUBROUTINE aggregate_soil
 

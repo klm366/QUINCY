@@ -19,9 +19,11 @@ MODULE mo_veg_interface
 
   USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
 
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -35,7 +37,7 @@ MODULE mo_veg_interface
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(VEG)
-  dsl4jsb_Use_memory(RAD)  
+  dsl4jsb_Use_memory(RAD)
   dsl4jsb_Use_memory(HYDRO)
   !dsl4jsb_Use_memory(ASSIMI)
 
@@ -43,12 +45,12 @@ MODULE mo_veg_interface
   PRIVATE
 
   PUBLIC :: update_vegetation_2, update_vegetation_conductance
-  PUBLIC :: t_veg_process
+  PUBLIC :: Register_veg_tasks !,t_veg_process
 
-  TYPE, EXTENDS(t_jsb_process) :: t_veg_process
-  CONTAINS
-    PROCEDURE :: Register_tasks => Register_veg_tasks
-  END TYPE t_veg_process
+!!$  TYPE, EXTENDS(t_jsb_process) :: t_veg_process
+!!$  CONTAINS
+!!$    PROCEDURE :: Register_tasks => Register_veg_tasks
+!!$  END TYPE t_veg_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_interface'
 
@@ -56,14 +58,14 @@ CONTAINS
 
   SUBROUTINE Register_veg_tasks(this, model_id)
 
-    CLASS(t_veg_process), INTENT(inout) :: this
-    INTEGER, INTENT(in) :: model_id
+    CLASS(t_jsb_process), INTENT(inout) :: this
+    INTEGER,              INTENT(in)    :: model_id
 
     !CALL this%Register_task(tsk_radiation_surface(name="radiation_surface", process_id=VEG))
 
   END SUBROUTINE Register_veg_tasks
 
-  SUBROUTINE update_vegetation_conductance(tile, config, options)
+  SUBROUTINE update_vegetation_conductance(tile, options)
     ! ---------------------------
     ! Variables
 
@@ -74,7 +76,6 @@ CONTAINS
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_config(VEG)
@@ -110,18 +111,22 @@ CONTAINS
     INTEGER :: p_pe
     INTEGER :: iblk, ics, ice, nc
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_conductance'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
-    
+
     IF (.NOT. tile%Is_process_active(VEG)) RETURN
 
 !!$    p_pe = get_my_global_mpi_id()
 !!$    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update on PE '//int2string(p_pe), all_print=.TRUE.)
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of vegetation_1 ')
+
+    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(VEG)
     dsl4jsb_Get_config(SOIL)
@@ -197,7 +202,7 @@ CONTAINS
   END SUBROUTINE update_vegetation_conductance
 
 
-  SUBROUTINE update_vegetation_2(tile, config, options)
+  SUBROUTINE update_vegetation_2(tile, options)
 
     ! ---------------------------
     ! Variables
@@ -210,7 +215,6 @@ CONTAINS
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     !----------------------------
@@ -252,6 +256,8 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_2'
 
     ! ---------------------------
@@ -266,6 +272,8 @@ CONTAINS
 
     p_pe = get_my_global_mpi_id()
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
+
+    model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
@@ -313,14 +321,12 @@ CONTAINS
   END SUBROUTINE update_vegetation_2
 
 
-    SUBROUTINE aggregate_veg(tile, config, options)
+    SUBROUTINE aggregate_veg(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-!!$    TYPE(t_jsb_model), POINTER :: model
-!!$    CLASS(t_jsb_tile), POINTER :: tile
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_veg'
 
@@ -330,6 +336,8 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
+
+    model => Get_model(tile%owner_model_id)
 
   END SUBROUTINE aggregate_veg
 

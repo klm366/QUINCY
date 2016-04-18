@@ -14,12 +14,14 @@ MODULE mo_radiation_interface
 #include "dsl_jsbach.inc"
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
-  
+
   ! Use of basic structures
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
 
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE, BARE_TYPE, VEG_TYPE
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
@@ -48,15 +50,10 @@ MODULE mo_radiation_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_rad_process
 
-  !> Type definition for radiation process
-  TYPE, EXTENDS(t_jsb_process) :: t_rad_process
-  CONTAINS
-    PROCEDURE :: Register_tasks => Register_radiation_tasks
-  END TYPE t_rad_process
+  PUBLIC :: Register_radiation_tasks
 
-  !> Type definition for radiation task
+  !> Type definition for radiation_surface task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_radiation_surface
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_radiation_surface
@@ -102,15 +99,14 @@ CONTAINS
   !!
   SUBROUTINE Register_radiation_tasks(this, model_id)
 
-    CLASS(t_rad_process), INTENT(inout) :: this
+    CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER, INTENT(in) :: model_id
 
-!!$    CALL this%Register_task(tsk_Radiation_surface(name="radiation_surface", process_id=RAD))
     CALL this%Register_task(tsk_Radiation_surface(model_id))
 
   END SUBROUTINE Register_radiation_tasks
 
-  SUBROUTINE update_radiation_surface(tile, config, options)
+  SUBROUTINE update_radiation_surface(tile, options)
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
@@ -119,7 +115,6 @@ CONTAINS
     !-----------------------------------------------------------------------
     !  ARGUMENTS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options), INTENT(in) :: options
 
     !-----------------------------------------------------------------------
@@ -146,6 +141,8 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice, nc
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation_surface'
 
     iblk = options%iblk
@@ -156,6 +153,8 @@ CONTAINS
     !-----------------------------------------------------------------------
     !
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(ATM2LAND)
     dsl4jsb_Get_memory(RAD)
@@ -191,11 +190,12 @@ CONTAINS
 
   END SUBROUTINE update_radiation_surface
 
-  SUBROUTINE aggregate_radiation_surface(tile, config, options)
+  SUBROUTINE aggregate_radiation_surface(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_radiation_surface'
 
@@ -208,11 +208,13 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_radiation_surface
 
-  SUBROUTINE update_radiation_par(tile, config, options, waterLimitationFlag)
+  SUBROUTINE update_radiation_par(tile, options, waterLimitationFlag)
 
     ! ---------------------------
     ! Variables
@@ -223,7 +225,6 @@ CONTAINS
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     LOGICAL,                    INTENT(in)    :: waterLimitationFlag  ! Chooses between computation of water limited (true) and ...
                                                                       ! ... water unlimited (.FALSE.)
@@ -246,6 +247,8 @@ CONTAINS
 !    REAL(wp), DIMENSION(:)            :: frac_diffuse_par(nc), & ! in JSBACH3 received from atmosphere; however only used to calculate
                                                                  ! frac_par_direct, which is in JSBACH4 already in the "memory" => should be unnecessary and frac_par_direct should be received from the atmosphere...
 
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_par'
 
@@ -295,7 +298,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of par')
 
-    !model => get_model(tile%owner_model_id)
+    model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables
     ! laut momentaner dsl:  CALL Get_process_config(config(PROC)%p, PROC__conf)
@@ -416,7 +419,8 @@ CONTAINS
   ! R: The principal sequence of calls for a process in the new JSBACH4 scheme should be similar for each tile. However, the schemes for
   !    the albedo can not be called for each tile in the same sequence of calls/procedures only with different tile specific constants/properties
   !    (like alb_vis_mineralsoil or snow_fract). Therefore it is still necessary to differentiate the albedo schemes for each tile.
-  SUBROUTINE update_radiation_albedo( tile, config, options)
+
+  SUBROUTINE update_radiation_albedo( tile, options)
 
     ! ---------------------------
     ! Variables
@@ -429,7 +433,6 @@ CONTAINS
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     !----------------------------
@@ -490,6 +493,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: swvis_srf_net
     dsl4jsb_Real2D_onChunk :: swnir_srf_net
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER    :: routine = TRIM(modname)//':update_radiation_albedo'
 
     ! ---------------------------
@@ -500,6 +505,8 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime ! time step in seconds e.g. for one day=86400
+
+    model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables
     ! laut momentaner dsl:  CALL Get_process_config(config(PROC)%p, PROC__conf)

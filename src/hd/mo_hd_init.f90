@@ -40,10 +40,9 @@ MODULE mo_hd_init
 
 CONTAINS
 
-  SUBROUTINE hd_init_bc(tile, config)
+  SUBROUTINE hd_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract),  INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
     TYPE(t_jsb_model), POINTER       :: model
     TYPE(t_jsb_grid),  POINTER       :: grid
@@ -82,7 +81,7 @@ CONTAINS
     !
     ! Number of base flow reservoirs
     dsl4jsb_var2D_onDomain(HD, nres_baseflow) = 1._wp
-    
+
     ! Maximum number of reservoirs
     hd__mem%nres_o_max = 1
     hd__mem%nres_b_max = 1
@@ -167,13 +166,10 @@ CONTAINS
 
   END SUBROUTINE hd_init_bc
 
-  SUBROUTINE hd_init_ic(tile, config)
-
+  SUBROUTINE hd_init_ic(tile)
 
     CLASS(t_jsb_tile_abstract),  INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
-    TYPE(t_jsb_model),       POINTER :: model
     dsl4jsb_Def_config(HD)
     dsl4jsb_Def_memory(HD)
     dsl4jsb_Def_memory(SRF)
@@ -184,6 +180,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: land
 
     TYPE(t_input_file) :: input_file
+
+    TYPE(t_jsb_model),       POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':hd_init_ic'
 

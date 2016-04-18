@@ -17,7 +17,8 @@ MODULE mo_atmland_interface
 
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_config_class,   ONLY: t_jsb_config
+  USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_lct_class,      ONLY: LAKE_TYPE, Contains_lct
 
@@ -39,7 +40,7 @@ MODULE mo_atmland_interface
 
 CONTAINS
 
-  SUBROUTINE update_atm2land(tile, config, options,                &
+  SUBROUTINE update_atm2land(tile, options,                        &
     & t_air, q_air, rain, snow, wind_air, wind_10m,                &
     & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
     & press_srf, drag_srf,                                         &
@@ -47,7 +48,6 @@ CONTAINS
     & pch, cos_zenith_angle)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)         :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     REAL(wp), OPTIONAL, INTENT(in) ::                                            &
       & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:),          &
@@ -93,7 +93,7 @@ CONTAINS
 
   END SUBROUTINE update_atm2land
 
-  SUBROUTINE update_land2atm(tile, config, options,                     &
+  SUBROUTINE update_land2atm(tile, options,                             &
     & t_srf, t_eff_srf, qsat_srf, s_srf,                                &
     & fact_q_air, fact_qsat_srf,                                        &
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,     &
@@ -102,7 +102,6 @@ CONTAINS
     & t_wtr, t_ice, ice_fract_lake)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     REAL(wp), OPTIONAL, INTENT(out) ::                                               &
       & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                               &

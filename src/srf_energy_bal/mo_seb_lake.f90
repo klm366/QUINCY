@@ -15,6 +15,8 @@ MODULE mo_seb_lake
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
 
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
@@ -37,14 +39,13 @@ MODULE mo_seb_lake
 
 CONTAINS
 
-  SUBROUTINE update_surface_energy_lake(tile, config, options)
+  SUBROUTINE update_surface_energy_lake(tile, options)
 
     USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_jsb_lct_class,          ONLY: LAKE_TYPE, Contains_lct
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_config(SEB)
@@ -82,6 +83,8 @@ CONTAINS
       & min_ice_depth    !< Minimum ice thickness to start ice formation
     LOGICAL  :: lstart
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy_lake'
 
     iblk  = options%iblk
@@ -93,6 +96,8 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(SEB) .OR. .NOT. Contains_lct(tile%lcts, LAKE_TYPE)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(SEB)
 

@@ -14,9 +14,7 @@ MODULE mo_turb_init
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-
   USE mo_jsb_class,         ONLY: get_model
-  USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
@@ -40,22 +38,20 @@ CONTAINS
   !
   !> Intialize turbulence process (after memory has been set up)
   !
-  SUBROUTINE turb_init(tile, config)
+  SUBROUTINE turb_init(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':turb_init'
 
-    CALL turb_init_bc(tile, config)
-    CALL turb_init_ic(tile, config)
+    CALL turb_init_bc(tile)
+    CALL turb_init_ic(tile)
 
   END SUBROUTINE turb_init
 
-  SUBROUTINE turb_init_bc(tile, config)
+  SUBROUTINE turb_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
     TYPE(t_jsb_model),       POINTER :: model
 
@@ -65,10 +61,9 @@ CONTAINS
 
   END SUBROUTINE turb_init_bc
 
-  RECURSIVE SUBROUTINE turb_init_ic(tile, config)
+  RECURSIVE SUBROUTINE turb_init_ic(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
 
     TYPE(t_jsb_model),        POINTER :: model
     dsl4jsb_Def_config(TURB)

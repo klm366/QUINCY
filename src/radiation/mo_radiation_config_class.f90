@@ -21,7 +21,8 @@ MODULE mo_rad_config_class
   ! Module variables 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_rad_config
+
+  PUBLIC :: t_rad_config !, Get_rad_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_rad_config
      LOGICAL                     :: use_alb_veg_simple        ! For vegetation tiles: use the simplified albedo calculations
@@ -130,6 +131,27 @@ CONTAINS
     config%albedo_age_weight         = albedo_age_weight
 
   END SUBROUTINE Init_radiation_config
+
+!!$  SUBROUTINE Get_rad_config(config, return_ptr)
+!!$
+!!$    CLASS(t_jsb_config), POINTER :: config
+!!$    TYPE(t_rad_config),  POINTER :: return_ptr
+!!$
+!!$    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_rad_config'
+!!$
+!!$    return_ptr => NULL()
+!!$
+!!$    IF (.NOT. ASSOCIATED(config)) RETURN
+!!$
+!!$    SELECT TYPE (config)
+!!$    TYPE IS (t_rad_config)
+!!$      return_ptr => config
+!!$    END SELECT
+!!$
+!!$    IF (.NOT. ASSOCIATED(return_ptr)) &
+!!$      CALL finish(TRIM(routine), 'Process has no configuration')
+!!$
+!!$  END SUBROUTINE Get_rad_config
 
 #endif
 END MODULE mo_rad_config_class

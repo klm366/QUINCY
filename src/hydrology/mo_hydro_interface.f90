@@ -21,8 +21,11 @@ MODULE mo_hydro_interface
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
 
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, Contains_lct
+  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 !  USE mo_jsb_parallel_iface, ONLY: get_my_global_mpi_id
@@ -48,7 +51,7 @@ MODULE mo_hydro_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_hydro_process
+  PUBLIC :: Register_hydro_tasks !,t_hydro_process
 
   dsl4jsb_Def_memory(RAD)
   dsl4jsb_Def_memory(SOIL)
@@ -58,11 +61,11 @@ MODULE mo_hydro_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_interface'
 
-  !> Type definition for hydrology process
-  TYPE, EXTENDS(t_jsb_process) :: t_hydro_process
-  CONTAINS
-    PROCEDURE :: Register_tasks => Register_hydro_tasks        !< Registers tasks for hydro process
-  END TYPE t_hydro_process
+!!$  !> Type definition for hydrology process
+!!$  TYPE, EXTENDS(t_jsb_process) :: t_hydro_process
+!!$  CONTAINS
+!!$    PROCEDURE :: Register_tasks => Register_hydro_tasks        !< Registers tasks for hydro process
+!!$  END TYPE t_hydro_process
 
   !> Type definition for snow_hydrology task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_snow_hydrology
@@ -138,8 +141,8 @@ CONTAINS
   !!
   SUBROUTINE Register_hydro_tasks(this, model_id)
 
-    CLASS(t_hydro_process), INTENT(inout) :: this
-    INTEGER,               INTENT(in)    :: model_id
+    CLASS(t_jsb_process), INTENT(inout) :: this
+    INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_snow_hydrology         (model_id))
     CALL this%Register_task(tsk_snow_and_skin_fraction (model_id))
@@ -151,38 +154,40 @@ CONTAINS
   !! Task "update_snow_hydrology" calculates the new snow depth and fraction
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_snow_hydrology(tile, config, options)
+  SUBROUTINE update_snow_hydrology(tile, options)
 
     USE mo_seb_land, ONLY: update_surface_energy_land
     USE mo_seb_lake, ONLY: update_surface_energy_lake
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_hydrology'
 
-    IF (.NOT. tile%Is_process_active(SNOW)) RETURN
+    IF (.NOT. tile%Is_process_active(HYDRO)) RETURN
 
-    SELECT CASE (tile%lct%id)
-    CASE (LAKE_TYPE)
-      CALL update_surface_energy_lake(tile, config, options)
-    CASE (LAND_TYPE)
-      CALL update_surface_energy_land(tile, config, options)
-    CASE DEFAULT
+    model => Get_model(tile%owner_model_id)
+
+    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
+      CALL update_surface_energy_lake(tile, options)
+    ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
+      CALL update_surface_energy_land(tile, options)
+    ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
-    END SELECT
+    END IF
 
   END SUBROUTINE update_snow_hydrology
 
-  SUBROUTINE aggregate_snow_hydrology(tile, config, options)
+  SUBROUTINE aggregate_snow_hydrology(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_snow_hydrology'
 
@@ -195,6 +200,8 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_snow_hydrology
@@ -205,10 +212,9 @@ CONTAINS
   !! Task "update_snow_and_skin_fraction" calculates the new snow and wet skin fractions
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_snow_and_skin_fraction( tile, config, options)
+  SUBROUTINE update_snow_and_skin_fraction( tile, options)
 
     ! ---------------------------
     ! Variables
@@ -221,12 +227,13 @@ CONTAINS
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     !----------------------------
     ! Local variables
     REAL(wp) :: wsr_capacity
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_skin_fraction'
 
@@ -277,6 +284,8 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(HYDRO)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables
     dsl4jsb_Get_config(SOIL)
@@ -341,15 +350,15 @@ CONTAINS
   !>
   !! Implementation of "aggregate" for task "snow_and_skin_fraction"
   !!
-  !! @param[in]     config  Vector of process configurations.
-  !! @param[in]     options Additional run-time parameters.
   !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE aggregate_snow_and_skin_fraction(tile, config, options)
+  SUBROUTINE aggregate_snow_and_skin_fraction(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_snow_and_skin_fraction'
 
@@ -363,6 +372,8 @@ CONTAINS
     nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
 
     !X Implementation: Start your process scheme here...
 

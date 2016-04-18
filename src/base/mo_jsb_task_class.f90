@@ -15,7 +15,6 @@ MODULE mo_jsb_task_class
 
   USE mo_hsm_class,       ONLY: t_jsb_task_msg => t_Message
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class, ONLY: t_jsb_config_p
 
   IMPLICIT NONE
   PRIVATE
@@ -25,7 +24,6 @@ MODULE mo_jsb_task_class
   TYPE t_jsb_task_options
     REAL(wp) :: dtime   = -1._wp
     REAL(wp) :: steplen = -1._wp
-    INTEGER  :: grid_id = -1
     INTEGER  :: iblk    = -1  ! Number of current block (chunk)
     INTEGER  :: ics     = -1  ! Index of chunk start
     INTEGER  :: ice     = -1  ! Index of chunk end
@@ -52,20 +50,18 @@ MODULE mo_jsb_task_class
   END TYPE t_jsb_process_task
 
   ABSTRACT INTERFACE
-    SUBROUTINE Integrate_task(tile, config, options)
-      IMPORT :: t_jsb_tile_abstract, t_jsb_config_p, t_jsb_task_options
-      CLASS(t_jsb_tile_abstract),         INTENT(inout) :: tile
-      CLASS(t_jsb_config_p),     INTENT(in) :: config(:)
-      TYPE(t_jsb_task_options),  INTENT(in) :: options
+    SUBROUTINE Integrate_task(tile, options)
+      IMPORT :: t_jsb_tile_abstract, t_jsb_task_options
+      CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+      TYPE(t_jsb_task_options),   INTENT(in) :: options
     END SUBROUTINE Integrate_task
   END INTERFACE
 
   ABSTRACT INTERFACE
-    SUBROUTINE Aggregate_task(tile, config, options)
-      IMPORT :: t_jsb_tile_abstract, t_jsb_config_p, t_jsb_task_options
-      CLASS(t_jsb_tile_abstract),         INTENT(inout) :: tile
-      CLASS(t_jsb_config_p),     INTENT(in) :: config(:)
-      TYPE(t_jsb_task_options),  INTENT(in) :: options
+    SUBROUTINE Aggregate_task(tile, options)
+      IMPORT :: t_jsb_tile_abstract, t_jsb_task_options
+      CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+      TYPE(t_jsb_task_options),   INTENT(in) :: options
     END SUBROUTINE Aggregate_task
   END INTERFACE
 
@@ -84,13 +80,11 @@ MODULE mo_jsb_task_class
 
 CONTAINS
 
-!!$  SUBROUTINE Do_it(task, mem, config)
-  SUBROUTINE Do_it(this, tile, config, options)
+  SUBROUTINE Do_it(this, tile, options)
 
-    CLASS(t_jsb_process_task), INTENT(in) :: this
-    CLASS(t_jsb_tile_abstract),     INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),     INTENT(in) :: config(:)
-    TYPE(t_jsb_task_options),  INTENT(in) :: options
+    CLASS(t_jsb_process_task),  INTENT(in)    :: this
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Do_it'
 
@@ -111,9 +105,9 @@ CONTAINS
 !!$
       SELECT CASE(TRIM(this%msg%action%name))
       CASE ('INTEGRATE')
-        CALL this%Integrate(tile, config, options)
+        CALL this%Integrate(tile, options)
       CASE ('AGGREGATE')
-        CALL this%Aggregate(tile, config, options)
+        CALL this%Aggregate(tile, options)
       CASE DEFAULT
         CALL finish(TRIM(routine), 'Unknown action for task'//TRIM(this%name))
       END SELECT

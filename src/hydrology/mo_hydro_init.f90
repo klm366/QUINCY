@@ -19,7 +19,6 @@ MODULE mo_hydro_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_lct_class,     ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE, Contains_lct
   USE mo_jsb_class,         ONLY: get_model
-  USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes HYDRO, SOIL, VEG
@@ -41,22 +40,20 @@ CONTAINS
   !
   !> Intialize hydrology process (after memory has been set up)
   !
-  SUBROUTINE hydro_init(tile, config)
+  SUBROUTINE hydro_init(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':hydro_init'
 
-    CALL hydro_init_bc(tile, config)
-    CALL hydro_init_ic(tile, config)
+    CALL hydro_init_bc(tile)
+    CALL hydro_init_ic(tile)
 
   END SUBROUTINE hydro_init
 
-  SUBROUTINE hydro_init_bc(tile, config)
+  SUBROUTINE hydro_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
 
     TYPE(t_jsb_model),       POINTER :: model
 
@@ -78,7 +75,7 @@ CONTAINS
   END SUBROUTINE hydro_init_bc
 
 
-  RECURSIVE SUBROUTINE hydro_init_ic(tile, config)
+  SUBROUTINE hydro_init_ic(tile)
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
@@ -88,11 +85,9 @@ CONTAINS
     !-----------------------------------------------------------------------
     !  ARGUMENTS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES
-    TYPE(t_jsb_model),         POINTER :: model
     dsl4jsb_Def_config(HYDRO)
     dsl4jsb_Def_config(SOIL)
 
@@ -112,33 +107,35 @@ CONTAINS
       & vpwp (:,  :),  & !< Volumetric soil permanent wilting point [m/m]
       & vfc  (:,  :)     !< Volumetric soil field capacity [m/m]
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':hydro_init_ic'
+    TYPE(t_jsb_model), POINTER :: model
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':hydro_init_ic'
 
     !-----------------------------------------------------------------------
     ! CONTENT
 
-    model => get_model(tile%owner_model_id)
+    IF (.NOT. tile%Is_process_active(HYDRO)) RETURN
 
-    ! Get hydrology memory of the tile
-    dsl4jsb_Get_memory(HYDRO)
-    dsl4jsb_Get_memory(SOIL)
-    dsl4jsb_Get_memory(VEG)
+    CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))
+
+    model => Get_model(tile%owner_model_id)
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO)
-    dsl4jsb_Get_config(SOIL)
     !dsl4jsb_Get_config(VEG)
 
-    IF (.NOT. dsl4jsb_Config(HYDRO)%active) RETURN
-
-    CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))
+    ! Get hydrology memory of the tile
+    dsl4jsb_Get_memory(HYDRO)
 
     !----------
     !----------
 
     IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, BARE_TYPE) &
       & .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
+
+      dsl4jsb_Get_config(SOIL)
+      dsl4jsb_Get_memory(SOIL)
+      dsl4jsb_Get_memory(VEG)
 
       ! Initialize hydrology variables from bc file
 

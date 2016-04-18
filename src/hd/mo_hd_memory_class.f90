@@ -57,7 +57,7 @@ MODULE mo_hd_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_hd_memory(mem, prefix, suffix, lct_type, l_opt1)
+  SUBROUTINE Init_hd_memory(mem, prefix, suffix, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -68,8 +68,8 @@ CONTAINS
     CLASS(t_hd_memory), INTENT(inout) :: mem
     CHARACTER(len=*),   INTENT(in)    :: prefix
     CHARACTER(len=*),   INTENT(in)    :: suffix
-    INTEGER, OPTIONAL,  INTENT(in)    :: lct_type
-    LOGICAL, OPTIONAL,  INTENT(in)    :: l_opt1
+    INTEGER,            INTENT(in)    :: lct_ids(:)
+    INTEGER,            INTENT(in)    :: model_id
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                      ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, hd_o, hd_b, hd_r  ! Vertical grids

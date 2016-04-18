@@ -19,9 +19,11 @@ MODULE mo_seb_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, Contains_lct
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -35,14 +37,14 @@ MODULE mo_seb_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_seb_process
+  PUBLIC :: Register_seb_tasks !,t_seb_process
   !
   ! ================================================================================================================================
   !
-  TYPE, EXTENDS(t_jsb_process) :: t_seb_process
-  CONTAINS
-    PROCEDURE :: Register_tasks => Register_seb_tasks
-  END TYPE t_seb_process
+!!$  TYPE, EXTENDS(t_jsb_process) :: t_seb_process
+!!$  CONTAINS
+!!$    PROCEDURE :: Register_tasks => Register_seb_tasks
+!!$  END TYPE t_seb_process
 
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
   CONTAINS
@@ -114,8 +116,8 @@ CONTAINS
   !!
   SUBROUTINE Register_seb_tasks(this, model_id)
 
-    CLASS(t_seb_process), INTENT(inout) :: this
-    INTEGER, INTENT(in) :: model_id
+    CLASS(t_jsb_process), INTENT(inout) :: this
+    INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_surface_energy(model_id))
     CALL this%Register_task(tsk_asselin_filter(model_id))
@@ -129,37 +131,40 @@ CONTAINS
   !! net radiation, ground heat).
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_surface_energy(tile, config, options)
+  SUBROUTINE update_surface_energy(tile, options)
 
     USE mo_seb_land, ONLY: update_surface_energy_land
     USE mo_seb_lake, ONLY: update_surface_energy_lake
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
 
     IF (.NOT. tile%Is_process_active(SEB)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
-      CALL update_surface_energy_lake(tile, config, options)
+      CALL update_surface_energy_lake(tile, options)
     ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
-      CALL update_surface_energy_land(tile, config, options)
+      CALL update_surface_energy_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
 
   END SUBROUTINE update_surface_energy
 
-  SUBROUTINE aggregate_surface_energy(tile, config, options)
+  SUBROUTINE aggregate_surface_energy(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_energy'
 
@@ -171,6 +176,8 @@ CONTAINS
     nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -185,33 +192,37 @@ CONTAINS
   !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_asselin(tile, config, options)
+  SUBROUTINE update_asselin(tile, options)
 
     USE mo_seb_land, ONLY: update_asselin_land
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_asselin'
 
     IF (.NOT. tile%Is_process_active(SEB)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
       ! Nothing to do
     ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
-      CALL update_asselin_land(tile, config, options)
+      CALL update_asselin_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
 
   END SUBROUTINE update_asselin
 
-  SUBROUTINE aggregate_asselin(tile, config, options)
+  SUBROUTINE aggregate_asselin(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_asselin'
 
@@ -223,6 +234,8 @@ CONTAINS
     nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

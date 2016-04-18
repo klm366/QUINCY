@@ -11,12 +11,22 @@
 MODULE mo_rad_memory_class
 #ifndef __NO_JSBACH__
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
+  USE mo_jsb_model_class,  ONLY: t_jsb_model
+  USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAKE_TYPE
+
+  ! Use of processes in this module
+  dsl4jsb_Use_processes RAD
+
+  ! Use process configurations
+  dsl4jsb_Use_config(RAD)
 
   IMPLICIT NONE
   PRIVATE
@@ -97,7 +107,7 @@ MODULE mo_rad_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids)
+  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -109,18 +119,27 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: model_id
 
+    dsl4jsb_Def_config(RAD)
+
+    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_memory'
 
+    model => Get_model(model_id)
+
     table = tables(1)
 
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
 !!$    canopy_layer => Get_vgrid('canopy_layer')
+
+        dsl4jsb_Get_config(RAD)
+!!$    SELECT TYPE (conf=>model%processes(RAD)%p%config) ; TYPE IS (t_rad_config); rad__conf => conf; END SELECT
 
     IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
 

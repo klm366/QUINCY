@@ -18,7 +18,6 @@ MODULE mo_soil_init
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
-  USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes SOIL, SEB, VEG
@@ -43,24 +42,21 @@ CONTAINS
   !
   !> Intialize soil process (after memory has been set up)
   !
-  SUBROUTINE soil_init(tile, config)
+  SUBROUTINE soil_init(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init'
 
-    CALL soil_init_bc(tile, config)
-    CALL soil_init_ic(tile, config)
+    CALL soil_init_bc(tile)
+    CALL soil_init_ic(tile)
 
   END SUBROUTINE soil_init
 
-  SUBROUTINE soil_init_bc(tile, config)
+  SUBROUTINE soil_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
-    TYPE(t_jsb_model),       POINTER :: model
     dsl4jsb_Def_config(SOIL)
     dsl4jsb_Def_memory(SOIL)
 
@@ -68,6 +64,8 @@ CONTAINS
       & return_pointer (:,  :)    !< temporary pointer
 
     TYPE(t_input_file) :: input_file
+
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init_bc'
 
@@ -97,13 +95,12 @@ CONTAINS
 
   END SUBROUTINE soil_init_bc
 
-  RECURSIVE SUBROUTINE soil_init_ic(tile, config)
+  SUBROUTINE soil_init_ic(tile)
 
     USE mo_soil_process, ONLY: init_soil_temperature
     USE mo_soil_util,    ONLY: soil_depth_to_layers_2d
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p), INTENT(in)    :: config(:)
 
     TYPE(t_jsb_model),         POINTER :: model
     dsl4jsb_Def_config(SOIL)
