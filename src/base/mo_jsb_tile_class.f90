@@ -17,7 +17,6 @@ MODULE mo_jsb_tile_class
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct
-  USE mo_jsb_config_class,    ONLY: t_jsb_config_p
 
   IMPLICIT NONE
   PRIVATE
