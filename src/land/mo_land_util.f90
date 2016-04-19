@@ -21,7 +21,7 @@ CONTAINS
     ! calculate/ accumulate the moving average of certain vegetation variables across a certain interval of timesteps
     ! for initial average values of vegetation variables see mo_veg_memory; init subroutine called in plant_model_driver
     USE mo_base_memory, ONLY: TileClass
-    USE mo_base_util_functions, ONLY: moving_avrg
+    USE mo_base_util, ONLY: moving_avrg
     USE mo_base_constants, ONLY: dt, one_day, ntile
     USE mo_atmland_memory , ONLY: atm2land
     USE mo_land_parameters, ONLY: AccumulationIntervalTileClass

@@ -1,5 +1,5 @@
 !>
-!! @brief generic functions useful across the whole model
+!! @brief generic functions and specific TYPE's useful across the whole model
 !!
 !! @author
 !!  Jan Engel, MPI-BGC Jena
@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Jan Engel (2016-03-02)
 !!
-MODULE mo_base_util_functions
+MODULE mo_base_util
 
   USE mo_kind,            ONLY: wp, eps8
   USE mo_base_constants,  ONLY: ncanop, ntile
@@ -271,4 +271,4 @@ CONTAINS
 
   END SUBROUTINE calculate_avrg_previous_day
 
-END MODULE mo_base_util_functions
+END MODULE mo_base_util

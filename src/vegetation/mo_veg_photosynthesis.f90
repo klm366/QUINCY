@@ -27,7 +27,7 @@ CONTAINS
 
 SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, see mo_atmland_forcing
 
- USE mo_base_util_functions, ONLY: moving_avrg
+ USE mo_base_util, ONLY: moving_avrg
    IMPLICIT NONE
    ! 0.1 Input
    TYPE(VegetationParameterClass), INTENT(in) :: veg_param  ! list of vegetation parameters

@@ -25,7 +25,7 @@ CONTAINS
     ! routine to simulate N and P uptake from soil in the absence of a proper soil model
     ! - alternative use - supply N and P to maintain a certain target C:N:P of the labile pool
     USE mo_base_memory
-    USE mo_base_util_functions, ONLY: moving_avrg
+    USE mo_base_util,        ONLY: moving_avrg
     USE mo_veg_parameters
 
     IMPLICIT NONE

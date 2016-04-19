@@ -11,7 +11,7 @@ PROGRAM plant_model_driver
   USE mo_kind,                  ONLY: wp
   USE mo_base_memory
   USE mo_base_constants
-  USE mo_base_util_functions,   ONLY: daily_average
+  USE mo_base_util,             ONLY: daily_average
   USE mo_base_config_class,     ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
   ! atmland
   USE mo_atmland_constants

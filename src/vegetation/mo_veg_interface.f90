@@ -68,13 +68,13 @@ CONTAINS
     ! net C, N and P uptake 
     ! !! OBS: incomplete!!
     ! 
-    USE mo_base_memory, ONLY: ElementAdd,ElementSub
-    USE mo_base_util_functions, ONLY: moving_avrg ! temporarily only!
-    USE mo_veg_memory, ONLY: VegPoolAdd,VegPoolSub
-    USE mo_veg_parameters, ONLY: VegetationParameterClass
+    USE mo_base_memory,     ONLY: ElementAdd,ElementSub
+    USE mo_base_util,       ONLY: moving_avrg ! temporarily only!
+    USE mo_veg_memory,      ONLY: VegPoolAdd,VegPoolSub
+    USE mo_veg_parameters,  ONLY: VegetationParameterClass
     USE mo_veg_turnover
     USE mo_veg_growth
-    USE mo_veg_dynamics, ONLY: update_veg_dynamics
+    USE mo_veg_dynamics,    ONLY: update_veg_dynamics
     USE mo_veg_respiration, ONLY: calc_maintenance_respiration
     IMPLICIT NONE
     ! 0.1 Input

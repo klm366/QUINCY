@@ -32,23 +32,27 @@ OBJSMODS = $(OBJFILES:.f90=.o)
 .SUFFIXES: .o .f90
 
 all: $(BINDIR)/land.x
-$(BINDIR)/land.x: $(LIBRARY) land_model_driver.o
-	$(F_L) -o $(BINDIR)/land.x $(LIBRARY)
+$(BINDIR)/land.x: $(LIBRARY) 
+	$(F_C) $(F_O) land_model_driver_test.f90
+	$(F_L) -o $(BINDIR)/land.x land_model_driver.o $(LIBRARY)
 	@echo "land model is ok"
 
+canopy_test: $(BINDIR)/canopy_test.x
+$(BINDIR)/canopy_test.x: $(LIBRARY) 
+	$(F_C) $(F_O) canopy_model_driver_test.f90
+	$(F_L) -o $(BINDIR)/canopy_test.x canopy_model_driver_test.o $(LIBRARY)
+	@echo "canopy_test model is ok"
+
 canopy: $(BINDIR)/canopy.x
-$(BINDIR)/canopy.x: $(LIBRARY) canopy_model_driver.o
-	$(F_L) -o $(BINDIR)/canopy.x $(LIBRARY)
+$(BINDIR)/canopy.x:  $(LIBRARY) 
+	$(F_C) $(F_O) canopy_model_driver.f90
+	$(F_L) -o $(BINDIR)/canopy.x canopy_model_driver.o $(LIBRARY)
 	@echo "canopy model is ok"
 
-transient_canopy: $(BINDIR)/transient_canopy.x
-$(BINDIR)/transient_canopy.x:  $(LIBRARY) transient_canopy_model_driver.o
-	$(F_L) -o $(BINDIR)/transient_canopy.x $(LIBRARY)
-	@echo "transient_canopy model is ok"
-
 plant: $(BINDIR)/plant.x
-$(BINDIR)/plant.x:  $(LIBRARY) plant_model_driver.o
-	$(F_L) -o $(BINDIR)/plant.x $(LIBRARY)
+$(BINDIR)/plant.x:  $(LIBRARY) 
+	$(F_C) $(F_O) plant_model_driver.f90
+	$(F_L) -o $(BINDIR)/plant.x plant_model_driver.o $(LIBRARY)
 	@echo "plant model is ok"
 
 lib: $(LIBRARY)
@@ -63,13 +67,14 @@ help:
 	@echo "commands available with make:"
 	@echo "help:              this help" 
 	@echo "all (or nothing):  stand alone land model (complete)" 
-	@echo "canopy:            stand alone canopy model" 
+	@echo "canopy:            stand alone canopy model"
+	@echo "canopy_test:       stand alone canopy model for testing"  
 	@echo "plant:             stand alone plant model without canopy" 
 	@echo "clean:             clean up library files" 
 
 %.o: %.f90
 	$(F_C) $(F_O) $<
-	@$(A_C) $(LIBRARY) $*.o
+	$(A_C) $(LIBRARY) $*.o
 	@cp $*.o $(OBJDIR)
 	@$(RM) $*.o
 #
