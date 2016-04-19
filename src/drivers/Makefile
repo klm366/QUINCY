@@ -35,24 +35,28 @@ all: $(BINDIR)/land.x
 $(BINDIR)/land.x: $(LIBRARY) 
 	$(F_C) $(F_O) land_model_driver_test.f90
 	$(F_L) -o $(BINDIR)/land.x land_model_driver.o $(LIBRARY)
+	@$(RM) land_model_driver.o
 	@echo "land model is ok"
 
-canopy_test: $(BINDIR)/canopy_test.x
-$(BINDIR)/canopy_test.x: $(LIBRARY) 
-	$(F_C) $(F_O) canopy_model_driver_test.f90
-	$(F_L) -o $(BINDIR)/canopy_test.x canopy_model_driver_test.o $(LIBRARY)
-	@echo "canopy_test model is ok"
+test_canopy: $(BINDIR)/test_canopy.x
+$(BINDIR)/test_canopy.x: $(LIBRARY) 
+	$(F_C) $(F_O) canopy_test_model_driver.f90
+	$(F_L) -o $(BINDIR)/test_canopy.x canopy_test_model_driver.o $(LIBRARY)
+	@$(RM) canopy_test_model_driver.o
+	@echo "test canopy model is ok"
 
 canopy: $(BINDIR)/canopy.x
 $(BINDIR)/canopy.x:  $(LIBRARY) 
 	$(F_C) $(F_O) canopy_model_driver.f90
 	$(F_L) -o $(BINDIR)/canopy.x canopy_model_driver.o $(LIBRARY)
+	@$(RM) canopy_model_driver.o
 	@echo "canopy model is ok"
 
 plant: $(BINDIR)/plant.x
 $(BINDIR)/plant.x:  $(LIBRARY) 
 	$(F_C) $(F_O) plant_model_driver.f90
 	$(F_L) -o $(BINDIR)/plant.x plant_model_driver.o $(LIBRARY)
+	@$(RM) plant_model_driver.o
 	@echo "plant model is ok"
 
 lib: $(LIBRARY)
@@ -68,13 +72,13 @@ help:
 	@echo "help:              this help" 
 	@echo "all (or nothing):  stand alone land model (complete)" 
 	@echo "canopy:            stand alone canopy model"
-	@echo "canopy_test:       stand alone canopy model for testing"  
+	@echo "test_canopy:       stand alone canopy model for testing"  
 	@echo "plant:             stand alone plant model without canopy" 
 	@echo "clean:             clean up library files" 
 
 %.o: %.f90
 	$(F_C) $(F_O) $<
-	$(A_C) $(LIBRARY) $*.o
+	@$(A_C) $(LIBRARY) $*.o
 	@cp $*.o $(OBJDIR)
 	@$(RM) $*.o
 #
