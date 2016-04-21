@@ -30,6 +30,7 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: min_daylength               !< ?
   REAL(wp),SAVE :: dusk_time                   !< ?
   REAL(wp),SAVE :: tmp_peak_time               !< ?
+  REAL(wp),SAVE :: min_cos_zenith_angle        !< minimum zenith angle for which PAR is calculated, see atm2land%cos_zenith_angle
 
   ! conversion factors
   REAL(wp),SAVE :: sw2par                      !< W / µmol / s
@@ -70,6 +71,7 @@ CONTAINS
   !
   angle_at_GMT = .FALSE.
   reference_longitude_GMT = 0.0_wp
+  min_cos_zenith_angle = 0.02_wp ! in JSBACH they use: mo_bethy_constants.f90:  REAL(dp), PARAMETER :: ZenithMinPar = 1.E-3_dp
   ! 
   ! initialise solar constant
   ! 

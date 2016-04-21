@@ -72,7 +72,7 @@ CONTAINS
     !         fsl:  fraction of foliage that is sunlit
 
     USE mo_base_constants, ONLY: ncanop,canopy_layer_depth
-    USE mo_atmland_constants, ONLY: sw2par
+    USE mo_atmland_constants, ONLY: sw2par, min_cos_zenith_angle
     USE mo_veg_parameters, ONLY: sigma,kbl0,kdf0,rho2sbeta
 
     IMPLICIT NONE
@@ -95,16 +95,20 @@ CONTAINS
     REAL(wp) :: idrdra               ! direct PAR remaining direct at lc (umol/m2/s) 
     REAL(wp) :: temp1,temp2,radf1,radf2,radf3,radf3b,radf4   ! dummy variables
     REAL(wp), DIMENSION(ncanop) :: canopy_layer_depth_act  ! actual depth of canopy layers (account for incomplete lower bound) 
-    INTEGER :: icanop
+    INTEGER  :: icanop
+    REAL(wp) :: tmp_cos_zenith_angle   ! local variable of solar angle (radians)
 
     par_sunlit(:) = 0.0_wp 
     par_shaded(:) = 0.0_wp
     fleaf_sunlit(:) = 0.0_wp
+    tmp_cos_zenith_angle = cos_zenith_angle
 
     canopy_layer_depth_act = calc_canopy_layer_depth(lai)
 
-    ! only do calculations during daylight
-    IF((swpar_srf_down > eps8) .AND. (cos_zenith_angle > eps8) .AND. lai .GT. eps8) THEN 
+    IF(cos_zenith_angle < min_cos_zenith_angle) tmp_cos_zenith_angle = min_cos_zenith_angle  ! allows negative zenith angle
+
+    ! only do calculations if daylight is available, either direct or diffuse (in case of negative cos_zenith_angle)
+    IF((swpar_srf_down > eps8) .AND. lai .GT. eps8) THEN  
 
        ! Downwelling direct PAR umol/m2/s
        ipar_dr = (1.0_wp - swpar_fdiffuse) * sw2par * swpar_srf_down
@@ -117,11 +121,11 @@ CONTAINS
        temp2 = 2.0_wp * (1.0_wp - temp1)/(1.0_wp + temp1)
 
        ! Fraction of PAR reflected by green closed canopy (fraction); eq. 1
-       rho = temp2/(1.0_wp + rho2sbeta * cos_zenith_angle)
+       rho = temp2/(1.0_wp + rho2sbeta * tmp_cos_zenith_angle)
 
        ! Extinction coefficient for PAR over black leaves in canopy
-       kdf = kdf0 * SQRT(1.0_wp - sigma)
-       kbl = kbl0 * kdf/(0.8_wp * temp1 * cos_zenith_angle)
+       kdf = kdf0 * temp1  ! temp1 == SQRT(1.0_wp - sigma)
+       kbl = kbl0 * kdf/(0.8_wp * temp1 * tmp_cos_zenith_angle)
 
        ! Some factors for radiation calculations that change with time
        radf1 = (1.0_wp - rho) * ipar_df * kdf            ! eq 10
@@ -148,7 +152,7 @@ CONTAINS
                 ! Direct PAR penetrating sunlit foliage at lc (umol/m2/s)
                 idra = radf2 * exp(radf4 * lc)
                 ! Mean direct PAR remaining direct at lc (umol/m2/s)
-                idrdra = radf3 * exp(radf4 * lc)
+                idrdra = radf3 * exp(-kbl * lc)  ! radf4 replaced by -kbl according to Wang2003 (error in Spitters 1986 Eqn.12)
                 ! PAR penetrating shaded foliage at lc (umol/m2/s)
                 ! Sum of diffuse radiation and diffuse component of direct flux; eq 13
                 par_shaded(icanop) = idfa + max((idra - idrdra), 0.0_wp)

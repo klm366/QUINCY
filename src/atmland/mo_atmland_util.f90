@@ -62,7 +62,7 @@ CONTAINS
     ! function to calculate the fraction of diffuse light in the shortwave downward flux
     ! at the surface
     USE mo_atmland_constants, ONLY : k1_fdiff,k2_fdiff,k3_fdiff,k4_fdiff,max_transmission_fdiff, & 
-                                     min_sw_fdiffuse
+                                     min_sw_fdiffuse, min_cos_zenith_angle
     IMPLICIT NONE
     ! 0.1 Input
     REAL(wp) :: sw_srf_down           ! surface downward shortwave radiation flux
@@ -73,7 +73,7 @@ CONTAINS
     ! 0.4 Local
     REAL(wp) :: transmission          ! fraction of radiation reaching surface
 
-    IF(cos_zenith_angle >= eps8)THEN
+    IF(cos_zenith_angle >= min_cos_zenith_angle) THEN  ! only if zenith angle is larger then min_cos_zenith_angle
 
       transmission = sw_srf_down / ( sw_toa_down * cos_zenith_angle )     
 
@@ -84,7 +84,7 @@ CONTAINS
             (k2_fdiff + transmission * ( k3_fdiff + k4_fdiff * transmission )))
       ENDIF
 
-    ELSE
+    ELSE ! assume that only diffuse light is available
   
       sw_fdiffuse = 1.0_wp
   
