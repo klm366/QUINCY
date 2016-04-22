@@ -125,7 +125,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: vpor
     dsl4jsb_Real2D_onChunk :: psdi
     dsl4jsb_Real2D_onChunk :: w_soil_overflow
-    dsl4jsb_Real2D_onChunk :: w_snow_glacier
+    dsl4jsb_Real2D_onChunk :: w_snow_glac
 
 
     ! Locally allocated vectors
@@ -221,7 +221,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO,    evapotrans)    ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    trans)         ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    evapopot)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_glacier) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_glac)   ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_can)    ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root)   ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root_fc) ! OUT
@@ -270,7 +270,7 @@ CONTAINS
 
     CALL update_surf_down(nc, dtime, lstart, &
       & q_air(:), t_unfilt(:), wind_10m(:), t_air(:), w_skin_soil(:), fract_water_srf(:), &
-      & wsr_max(:), w_snow_soil(:), fract_snow_srf(:), w_snow_can(:), w_snow_glacier(:), &
+      & wsr_max(:), w_snow_soil(:), fract_snow_srf(:), w_snow_can(:), w_snow_glac(:), &
       & hcap_grnd(:), evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), rain(:),  snow(:), &
       & is_present(:), is_glacier(:), pme_glacier(:), &
 !!$      & snow_acc(:), snow_melt_acc(:), glacier_runoff_acc(:), &

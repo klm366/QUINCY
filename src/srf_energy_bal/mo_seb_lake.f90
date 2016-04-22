@@ -22,13 +22,14 @@ MODULE mo_seb_lake
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_control,        ONLY: debug_on
 
-  dsl4jsb_Use_processes SEB, RAD, ATM2LAND
+  dsl4jsb_Use_processes SEB, RAD, HYDRO, ATM2LAND
   dsl4jsb_Use_config(SEB)
 
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
 !!$  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(RAD)
+  dsl4jsb_Use_memory(HYDRO)
 
   IMPLICIT NONE
   PRIVATE
@@ -51,6 +52,7 @@ CONTAINS
     dsl4jsb_Def_config(SEB)
     dsl4jsb_Def_memory(SEB)
     dsl4jsb_Def_memory(RAD)
+    dsl4jsb_Def_memory(HYDRO)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -62,8 +64,8 @@ CONTAINS
       & sensible_hflx, &
       & forc_hflx, &
       & rad_srf_net, &
-      & ice_fract, &
-      & ice_depth
+      & fract_lice, &
+      & depth_lice
 
     ! Local variables
     REAL(wp) :: &
@@ -108,6 +110,7 @@ CONTAINS
     !
     dsl4jsb_Get_memory(SEB)
     dsl4jsb_Get_memory(RAD)
+    dsl4jsb_Get_memory(HYDRO)
 
     dsl4jsb_Get_var2D_onChunk(SEB, t)         ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, t_wtr)     ! OUT
@@ -116,8 +119,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB, latent_hflx)         ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, sensible_hflx)         ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, forc_hflx)         ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, ice_fract) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, ice_depth) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO, fract_lice) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO, depth_lice) ! OUT
 
     dsl4jsb_Get_var2D_onChunk(RAD, rad_srf_net)         ! OUT
 
@@ -136,7 +139,7 @@ CONTAINS
       & hcap_wtr(:),                                    & !< inout; Heat capacity of lake over open water
       & l_ice_formation(:),                             & !< inout; Indicator for ice formation
       & l_ice_melting(:),                               & !< in;    Indicator for ice melting = .FALSE.
-      & ice_fract(:) > 0.5_wp,                          & !< in;    Indicator for ice cover
+      & fract_lice(:) > 0.5_wp,                         & !< in;    Indicator for ice cover
       & dtime,                                          & !< in;    Time step
       & ml_depth,                                       & !< in;    Mixed-layer depth
       & min_ice_depth)                                    !< in;    Minimum ice thickness
@@ -158,13 +161,13 @@ CONTAINS
       & hcap_wtr(:),                                    & !< inout; Heat capacity of lake over open water (not changed)
       & l_ice_formation(:),                             & !< inout; Indicator for ice formation (not changed)
       & l_ice_melting(:),                               & !< in;    Indicator for ice melting = .TRUE.
-      & ice_fract(:) > 0.5_wp,                          & !< in;    Indicator for ice cover
+      & fract_lice(:) > 0.5_wp,                         & !< in;    Indicator for ice cover
       & dtime,                                          & !< in;    Time step
       & ml_depth,                                       & !< in;    Mixed-layer depth
       & min_ice_depth)                                    !< in;    Minimum ice thickness
 
-    t       (:) = (1._wp - ice_fract(:)) * t_wtr   (:) + ice_fract(:) * t_ice   (:)
-    heat_cap(:) = (1._wp - ice_fract(:)) * hcap_wtr(:) + ice_fract(:) * hcap_ice(:)
+    t       (:) = (1._wp - fract_lice(:)) * t_wtr   (:) + fract_lice(:) * t_ice   (:)
+    heat_cap(:) = (1._wp - fract_lice(:)) * hcap_wtr(:) + fract_lice(:) * hcap_ice(:)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

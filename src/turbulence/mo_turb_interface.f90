@@ -129,7 +129,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rough_m
     dsl4jsb_Real2D_onChunk :: rough_h
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
-    dsl4jsb_Real2D_onChunk :: fract_snow_ice
+    dsl4jsb_Real2D_onChunk :: fract_snow_lice
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
@@ -165,9 +165,9 @@ CONTAINS
       rough_h(:) =          fract_snow_soil(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
         &        + (1._wp - fract_snow_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
     ELSE IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_ice) ! IN
-      rough_h(:) =          fract_snow_ice(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
-        &        + (1._wp - fract_snow_ice(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
+      dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_lice) ! IN
+      rough_h(:) =          fract_snow_lice(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
+        &        + (1._wp - fract_snow_lice(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
     ELSE
       CALL finish(TRIM(routine), 'Don"t know what to do.')
     END IF

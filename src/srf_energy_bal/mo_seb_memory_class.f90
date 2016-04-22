@@ -67,10 +67,8 @@ MODULE mo_seb_memory_class
       & t_wtr,                & !< Lake surface temperature (water)                                [K]
       & t_ice,                & !< Lake surface temperature (ice)                                  [K]
       & t_wtr_old,            & !< Lake surface temperature (water) at previous timestep           [K]
-      & t_ice_old,            & !< Lake surface temperature (ice) at previous timestep             [K]
-      & ice_depth,            & !< Thickness of ice on lake                                        [m]
-      & ice_fract               !< Fraction of ice on lake                                         []
-    !
+      & t_ice_old               !< Lake surface temperature (ice) at previous timestep             [K]
+
   CONTAINS
     PROCEDURE :: Init => Init_seb_memory
   END TYPE t_seb_memory
@@ -227,20 +225,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & initval_r=tmelt )
-
-      CALL jsb_add_var( mem, 'ice_depth', mem%ice_depth,                               &
-        & hgrid, surface,                                                              &
-        & t_cf('ice_thickness', 'm', 'thickness of ice on lake'),                      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp )
-
-      CALL jsb_add_var( mem, 'ice_fract', mem%ice_fract,                               &
-        & hgrid, surface,                                                              &
-        & t_cf('ice_fract', '', 'fraction of ice on lake'),                            &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp )
 
     END IF
 

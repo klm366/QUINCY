@@ -30,15 +30,16 @@ MODULE mo_hydro_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
 
     TYPE(t_jsb_var_real2d) :: &
-      & fract_water_srf,  & !< Wet (skin reservoir) fraction of tile                                    []
-      & fract_snow_srf,   & !< Snow fraction of tile                                                    []
-      & w_skin_srf,       & !< Water content in skin reservoir                                          [m]
-      & w_snow_srf,       & !< Water content of snow reservoir                                          [m water equivalent]
+      & fract_water,      & !< Wet (skin reservoir) fraction of tile                                    []
+      & fract_snow,       & !< Snow fraction of tile                                                    []
+      & w_skin,           & !< Water content in skin reservoir                                          [m]
+      & w_snow,           & !< Water content of snow reservoir                                          [m water equivalent]
       & tte_corr            !< Correction term of TTE for snow melt
 
     TYPE(t_jsb_var_real2d) :: &
-      & evapopot,         & !< Potential evaporation
-      & evapotrans          !< Evapotranspiration
+      & snowmelt,         & !< Snow melt                                                                [kg m-2 s-1]
+      & evapopot,         & !< Potential evaporation                                                    [kg m-2 s-1]
+      & evapotrans          !< Evapotranspiration                                                       [kg m-2 s-1]
 
     TYPE(t_jsb_var_real2d) :: &
       & runoff,           & !< surface runoff
@@ -50,7 +51,7 @@ MODULE mo_hydro_memory_class
     ! Additional variables for soil
     TYPE(t_jsb_var_real2d) :: &
       & fract_water_soil, & !< Wet (skin reservoir) fraction of soil                                    []
-      & fract_snow_soil,  & !< Snow fraction of soil                                                    []
+      & fract_snow_soil,  & !< Snow fraction on soil                                                    []
       & w_skin_soil,      & !< Water content in skin reservoir on soil                                  [m]
       & w_snow_soil,      & !< Water content of snow reservoir of soil                                  [m water equivalent]
       & w_soil_overflow,  & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
@@ -67,8 +68,8 @@ MODULE mo_hydro_memory_class
     ! Additional variables for PFT lct_type
     TYPE(t_jsb_var_real2d) :: &
       & fract_water_can,  & !< Wet (skin reservoir) fraction of canopy                                  []
-      & fract_snow_can,   & !< Snow fraction of canopy                                                  []
-      & w_snow_can,       & !< Water content of snow reservoir onn canopy                               [m water equivalent]
+      & fract_snow_can,   & !< Snow fraction on canopy                                                  []
+      & w_snow_can,       & !< Water content of snow reservoir on canopy                                [m water equivalent]
       & w_skin_can,       & !< Water content in skin reservoir on canopy                                [m]
       & w_soil_root,      & !< Water content in root zone of the soil                                   [m]
       & w_soil_root_fc,   & !< Water content at field capacity in root zone of the soil                 [m]
@@ -78,7 +79,8 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & w_snow_glacier,   & !< Water content of snow on glacier                                         [m water equivalent]
+      & fract_snow_glac,  & !< Snow fraction on glacier                                                 []
+      & w_snow_glac,      & !< Water content of snow on glacier                                         [m water equivalent]
       & pme_glacier         !< P-E on glaciers
 
     ! Additional variables if no separate glacier lct_type is used and glaciers are treated as part of SOIL lct_type
@@ -87,10 +89,10 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & ice_depth,        & !< Thickness of ice on lake                                                 [m]
-      & ice_fract,        & !< Fraction of ice on lake                                                  []
-      & fract_snow_ice,   & !< Snow fraction on lake ice                                                []
-      & w_snow_ice          !< Water content of snow on (lake) ice                                      [m water equivalent]
+      & depth_lice,       & !< Thickness of ice on lake                                                 [m]
+      & fract_lice,       & !< Fraction of lake ice                                                     []
+      & fract_snow_lice,  & !< Fraction of swow on lake ice                                             []
+      & w_snow_lice         !< Water content of snow on lake ice                                        [m water equivalent]
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
@@ -167,16 +169,26 @@ CONTAINS
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'evapopot', mem%evapopot,                                     &
+    ! Potential evapotranspiration/sublimation
+    CALL jsb_add_var( mem, 'snowmelt', mem%snowmelt,                                     &
       & hgrid, surface,                                                                  &
-      & t_cf('surface_evaporation_potential', '', 'Potential evaporation from surface'), &
+      & t_cf('snow_melt', 'kg m-2 s-1', 'Snow melt on surface'),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 
+    ! Potential evapotranspiration/sublimation
+    CALL jsb_add_var( mem, 'evapopot', mem%evapopot,                                     &
+      & hgrid, surface,                                                                  &
+      & t_cf('surface_evaporation_potential', 'kg m-2 s-1', 'Potential evaporation from surface'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+      & prefix, suffix,                                                              &
+      & initval_r=0.0_wp )
+
+    ! Total evapotranspiration, including sublimation
     CALL jsb_add_var( mem, 'evapotrans', mem%evapotrans,                                 &
       & hgrid, surface,                                                                  &
-      & t_cf('surface_evapotranspiration', '', 'Evapotranspiration from surface'),       &
+      & t_cf('surface_evapotranspiration', 'kg m-2 s-1', 'Evapotranspiration from surface'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
@@ -372,7 +384,14 @@ CONTAINS
       &  )                                          &
       &  .AND. .NOT. ASSOCIATED(mem%pme_glacier%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'w_snow_glacier', mem%w_snow_glacier,  &
+      CALL jsb_add_var( mem, 'fract_snow_glac', mem%fract_snow_glac, &
+        & hgrid, surface,                                                            &
+        & t_cf('fraction of snow on glacier', '-', ''),                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'w_snow_glac', mem%w_snow_glac,  &
         & hgrid, surface,                                                           &
         & t_cf('Water content of snow reservoir on glacier', 'm', ''),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
@@ -390,16 +409,32 @@ CONTAINS
 
     ! Additional variables for LAKE lct
     IF (      One_of(LAKE_TYPE, lct_ids(:)) > 0 &
-      & .AND. .NOT. ASSOCIATED(mem%fract_snow_ice%ptr)) THEN
+      & .AND. .NOT. ASSOCIATED(mem%depth_lice%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'fract_snow_ice', mem%fract_snow_ice, &
+      CALL jsb_add_var( mem, 'depth_lice', mem%depth_lice,                             &
+        & hgrid, surface,                                                              &
+        & t_cf('ice_thickness', 'm', 'thickness of ice on lake'),                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp )
+
+      ! Fraction of ice on lake, rel. to lake fraction
+      CALL jsb_add_var( mem, 'fract_lice', mem%fract_lice,                             &
+        & hgrid, surface,                                                              &
+        & t_cf('fract_lice', '', 'fraction of ice on lake'),                           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp )
+
+      !Fraction of snow on lake ice, rel. to ice fraction
+      CALL jsb_add_var( mem, 'fract_snow_lice', mem%fract_snow_lice, &
         & hgrid, surface,                                                          &
         & t_cf('fraction of snow on lake ice', '-', ''),                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'w_snow_ice', mem%w_snow_ice,  &
+      CALL jsb_add_var( mem, 'w_snow_lice', mem%w_snow_lice,  &
         & hgrid, surface,                                                           &
         & t_cf('Water content of snow reservoir on lake ice', 'm', ''),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &

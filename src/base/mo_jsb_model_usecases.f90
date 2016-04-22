@@ -157,9 +157,10 @@ CONTAINS
       & model_id=model%id, grid_id=model%grid_id)
     model%top => box_tile
 
-      land_tile => t_jsb_tile('land', 'Land tile', &
+    land_tile => t_jsb_tile('land', 'Land tile', &
         & processes=(/SEB,SOIL,VEG/), process_actions=(/ON_TILE_,ON_LEAFS_,ON_LEAFS_/), &
-        & lcts=(/t_jsb_lct(LAND_TYPE),t_jsb_lct(BARE_TYPE),t_jsb_lct(VEG_TYPE),t_jsb_lct(GLACIER_TYPE)/), &
+        ! & lcts=(/t_jsb_lct(LAND_TYPE),t_jsb_lct(BARE_TYPE),t_jsb_lct(VEG_TYPE),t_jsb_lct(GLACIER_TYPE)/), &
+        & lcts=(/t_jsb_lct(LAND_TYPE)/), &
         & parent=box_tile)
 
       lake_tile => t_jsb_tile('lake', 'Lake tile', &
@@ -202,7 +203,7 @@ CONTAINS
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL/), &
           & lcts=(/t_jsb_lct(GLACIER_TYPE)/), parent=land_tile)
 
-        soilveg_tile => t_jsb_tile('soilveg', 'Soil/veg/glacier tile', processes=(/SOIL,VEG/), &
+        soilveg_tile => t_jsb_tile('soilveg', 'Soil/veg tile', processes=(/SOIL,VEG/), &
           & lcts=(/t_jsb_lct(VEG_TYPE), t_jsb_lct(BARE_TYPE)/), parent=land_tile)
 
       lake_tile => t_jsb_tile('lake', 'Lake tile', &

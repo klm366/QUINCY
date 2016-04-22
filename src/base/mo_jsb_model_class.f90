@@ -302,9 +302,6 @@ CONTAINS
 
     NULLIFY(next)
 
-    IF (.NOT. ASSOCIATED(return_ptr)) &
-      & CALL finish(TRIM(routine), 'Could not find next tile')
-
   END FUNCTION Goto_next_tile
 
   FUNCTION Get_next_tile(this) RESULT(return_ptr)

@@ -43,6 +43,7 @@ MODULE mo_hydro_interface
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
 !  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(HYDRO)
+  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(VEG)
@@ -53,12 +54,6 @@ MODULE mo_hydro_interface
 
   PUBLIC :: Register_hydro_tasks !,t_hydro_process
 
-  dsl4jsb_Def_memory(RAD)
-  dsl4jsb_Def_memory(SOIL)
-  dsl4jsb_Def_memory(HYDRO)
-  dsl4jsb_Def_memory(VEG)
-  dsl4jsb_Def_memory(ATM2LAND)
-
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_interface'
 
 !!$  !> Type definition for hydrology process
@@ -68,16 +63,16 @@ MODULE mo_hydro_interface
 !!$  END TYPE t_hydro_process
 
   !> Type definition for snow_hydrology task
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_snow_hydrology
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_snow_and_ice_hydrology
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_snow_hydrology
-    PROCEDURE, NOPASS :: Aggregate => aggregate_snow_hydrology
-  END TYPE tsk_snow_hydrology
+    PROCEDURE, NOPASS :: Integrate => update_snow_and_ice_hydrology
+    PROCEDURE, NOPASS :: Aggregate => aggregate_snow_and_ice_hydrology
+  END TYPE tsk_snow_and_ice_hydrology
 
   !> Constructor interface for snow_hydrology task
-  INTERFACE tsk_snow_hydrology
-    PROCEDURE Create_task_snow_hydrology
-  END INTERFACE tsk_snow_hydrology
+  INTERFACE tsk_snow_and_ice_hydrology
+    PROCEDURE Create_task_snow_and_ice_hydrology
+  END INTERFACE tsk_snow_and_ice_hydrology
 
   !> Type definition for snow_and_skin_fraction task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_snow_and_skin_fraction
@@ -102,18 +97,18 @@ CONTAINS
   !! @param[in]     model_id     Model id
   !! @return        return_ptr   Instance of process task "snow_hydrology"
   !!
-  FUNCTION Create_task_snow_hydrology(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_snow_and_ice_hydrology(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_snow_hydrology::return_ptr)
+    ALLOCATE(tsk_snow_and_ice_hydrology::return_ptr)
 
-    return_ptr%name = 'snow_hydrology'
+    return_ptr%name = 'snow_ice_hydrology'
     return_ptr%process_id = HYDRO
     return_ptr%owner_model_id = model_id
 
-  END FUNCTION Create_task_snow_hydrology
+  END FUNCTION Create_task_snow_and_ice_hydrology
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for snow_and_skin_fraction task
   !!
@@ -144,7 +139,7 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL process%Register_task(tsk_snow_hydrology         (model_id))
+    CALL process%Register_task(tsk_snow_and_ice_hydrology (model_id))
     CALL process%Register_task(tsk_snow_and_skin_fraction (model_id))
 
   END SUBROUTINE Register_hydro_tasks
@@ -156,40 +151,83 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_snow_hydrology(tile, options)
-
-    USE mo_seb_land, ONLY: update_surface_energy_land
-    USE mo_seb_lake, ONLY: update_surface_energy_lake
+  SUBROUTINE update_snow_and_ice_hydrology(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_hydrology'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_ice_hydrology'
 
     IF (.NOT. tile%Is_process_active(HYDRO)) RETURN
 
     model => Get_model(tile%owner_model_id)
 
     IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
-      CALL update_surface_energy_lake(tile, options)
+      CALL update_snow_and_ice_hydrology_lake(tile, options)
     ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
-      CALL update_surface_energy_land(tile, options)
+!!$      CALL update_snow_and_ice_hydrology_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
 
-  END SUBROUTINE update_snow_hydrology
+  END SUBROUTINE update_snow_and_ice_hydrology
 
-  SUBROUTINE aggregate_snow_hydrology(tile, options)
+  SUBROUTINE update_snow_and_ice_hydrology_lake(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_snow_hydrology'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_ice_hydrology_lake'
+
+    INTEGER :: iblk, ics, ice, nc
+
+    !-----------------------------------------------------------------------
+    ! POINTERS TO VARIABLES IN MEMORY
+    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(ATM2LAND)
+
+    ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: snow
+    dsl4jsb_Real2D_onChunk :: snowmelt
+    dsl4jsb_Real2D_onChunk :: depth_lice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Set pointers
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, snow)               ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    snowmelt)           ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    depth_lice)         ! inout
+
+    ! Calculate new snow cover
+    ! Tendency = snowfall + sublimation - snowmelt
+    CALL calc_lice_snow_depth(snow(:), snowmelt(:))
+
+    ! Calculate new ice thickness
+    CALL calc_lice_thickness(depth_lice(:), )
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_snow_and_ice_hydrology_lake
+
+  SUBROUTINE aggregate_snow_and_ice_hydrology(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_snow_and_ice_hydrology'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -204,7 +242,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_snow_hydrology
+  END SUBROUTINE aggregate_snow_and_ice_hydrology
   !
   ! ================================================================================================================================
   !
@@ -259,10 +297,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_water_can
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
     dsl4jsb_Real2D_onChunk :: fract_water_soil
-    dsl4jsb_Real2D_onChunk :: fract_snow_ice
+    dsl4jsb_Real2D_onChunk :: fract_snow_lice
     dsl4jsb_Real2D_onChunk :: w_snow_can
     dsl4jsb_Real2D_onChunk :: w_snow_soil
-    dsl4jsb_Real2D_onChunk :: w_snow_ice
+    dsl4jsb_Real2D_onChunk :: w_snow_lice
     dsl4jsb_Real2D_onChunk :: w_skin_can
     dsl4jsb_Real2D_onChunk :: w_skin_soil
     dsl4jsb_Real2D_onChunk :: oro_stddev
@@ -310,7 +348,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_can)       ! IN
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_soil)      ! IN
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_soil)      ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_ice)       ! IN
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_lice)      ! IN
 
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_srf)  ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_soil) ! OUT
@@ -318,7 +356,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_srf)   ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_soil)  ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_can)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_ice)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_lice)  ! OUT
 
     CALL calc_snow_and_skin_fraction( &
       & dtime,               & ! in
@@ -335,14 +373,14 @@ CONTAINS
       & w_skin_can(:),       & ! in
       & w_snow_soil(:),      & ! in
       & w_snow_can(:),       & ! in
-      & w_snow_ice(:),       & ! in
+      & w_snow_lice(:),       & ! in
       & fract_snow_can(:),   & ! inout
       & fract_water_can(:),  & ! out
       & fract_water_soil(:), & ! out
       & fract_water_srf(:),  & ! out
       & fract_snow_soil(:),  & ! out
       & fract_snow_srf(:),   & ! out
-      & fract_snow_ice(:)  )   ! out
+      & fract_snow_lice(:)  )  ! out
 
   END SUBROUTINE update_snow_and_skin_fraction
 
