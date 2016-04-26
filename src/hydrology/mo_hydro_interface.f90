@@ -43,7 +43,6 @@ MODULE mo_hydro_interface
   USE mo_atmland_memory_class, ONLY: t_atm2land_memory
 !  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(HYDRO)
-  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(VEG)
@@ -211,10 +210,10 @@ CONTAINS
 
     ! Calculate new snow cover
     ! Tendency = snowfall + sublimation - snowmelt
-    CALL calc_lice_snow_depth(snow(:), snowmelt(:))
+    !CALL calc_lice_snow_depth(snow(:), snowmelt(:))
 
     ! Calculate new ice thickness
-    CALL calc_lice_thickness(depth_lice(:), )
+    !CALL calc_lice_thickness(depth_lice(:), )
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -286,12 +285,13 @@ CONTAINS
     dsl4jsb_Def_memory(SEB)
     dsl4jsb_Def_memory(HYDRO)
     dsl4jsb_Def_memory(VEG)
-
+    dsl4jsb_Def_memory(SOIL)
+    
     ! Pointers to variables in memory
     !dsl4jsb_Real2D_onChunk :: glacier
     dsl4jsb_Real2D_onChunk :: lai
-    dsl4jsb_Real2D_onChunk :: fract_snow_srf
-    dsl4jsb_Real2D_onChunk :: fract_water_srf
+    dsl4jsb_Real2D_onChunk :: fract_snow
+    dsl4jsb_Real2D_onChunk :: fract_water
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: fract_snow_can
     dsl4jsb_Real2D_onChunk :: fract_water_can
@@ -326,13 +326,15 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables
-    dsl4jsb_Get_config(SOIL)
+    dsl4jsb_Get_config(SOIL)   
+    
     wsr_capacity = dsl4jsb_Config(SOIL)%wsr_capacity
 
     dsl4jsb_Get_memory(ATM2LAND)
     dsl4jsb_Get_memory(SEB)
     dsl4jsb_Get_memory(VEG)
     dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(SOIL) 
 
     ! Set pointers
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)         ! IN
@@ -350,10 +352,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_soil)      ! IN
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_lice)      ! IN
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_srf)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)  ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_soil) ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_can)  ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_srf)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)   ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_soil)  ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_can)   ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_lice)  ! OUT
@@ -377,9 +379,9 @@ CONTAINS
       & fract_snow_can(:),   & ! inout
       & fract_water_can(:),  & ! out
       & fract_water_soil(:), & ! out
-      & fract_water_srf(:),  & ! out
+      & fract_water(:),  & ! out
       & fract_snow_soil(:),  & ! out
-      & fract_snow_srf(:),   & ! out
+      & fract_snow(:),   & ! out
       & fract_snow_lice(:)  )  ! out
 
   END SUBROUTINE update_snow_and_skin_fraction

@@ -27,7 +27,9 @@ MODULE mo_jsb_process_factory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
-  USE mo_radiation_interface,  ONLY: Register_radiation_tasks
+  USE mo_assimi_interface,     ONLY: Register_assimi_tasks
+  USE mo_assimi_config_class,  ONLY: t_assimi_config
+  USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_rad_config_class,     ONLY: t_rad_config
   USE mo_seb_interface,        ONLY: Register_seb_tasks
   USE mo_seb_config_class,     ONLY: t_seb_config
@@ -44,7 +46,7 @@ MODULE mo_jsb_process_factory
   USE mo_hd_config_class,      ONLY: t_hd_config
 #endif
 
-  USE mo_jsb_process_class, ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD
+  USE mo_jsb_process_class, ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI
 
   IMPLICIT NONE
   PRIVATE
@@ -73,7 +75,7 @@ CONTAINS
 
     SELECT CASE (iproc)
     CASE (RAD)
-      CALL Register_radiation_tasks(return_ptr, model_id)
+      CALL Register_rad_tasks(return_ptr, model_id)
       ALLOCATE(t_rad_config::return_ptr%config)
     CASE (SEB)
       CALL Register_seb_tasks(return_ptr, model_id)
@@ -90,6 +92,9 @@ CONTAINS
     CASE (VEG)
       CALL Register_veg_tasks(return_ptr, model_id)
       ALLOCATE(t_veg_config::return_ptr%config)
+    CASE (ASSIMI)
+      CALL Register_assimi_tasks(return_ptr, model_id)
+      ALLOCATE(t_assimi_config::return_ptr%config)      
 #ifndef __NO_JSBACH_HD__
     CASE (HD)
       CALL Register_hd_tasks(return_ptr, model_id)

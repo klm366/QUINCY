@@ -273,7 +273,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
 !!$ TR  USE mo_physc2
 !!$ TR  USE mo_constants
 !!$ TR  USE mo_vegetation ! only cvinter is used
-!!$ TR  USE mo_radiation
+!!$ TR  USE mo_rad
 
   INTEGER,  INTENT(in) :: kbdim
   REAL(wp), INTENT(in) :: delta_time
@@ -851,7 +851,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !!$ TR  USE mo_control,        ONLY: ngl
 !!$ TR  USE mo_param_switches, ONLY: lsurf
 !!$ TR  USE mo_vegetation ! only cvinter is used
-!!$ TR  USE mo_radiation
+!!$ TR  USE mo_rad
 !!$ TR#ifdef STANDALONE
 !!$ TR  USE mo_jsbach_comm_to_echam5mods, ONLY: nlat
 !!$ TR#endif

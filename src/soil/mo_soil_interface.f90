@@ -87,11 +87,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
     dsl4jsb_Real2D_onChunk :: w_skin_soil
-    dsl4jsb_Real2D_onChunk :: w_skin_srf
-    dsl4jsb_Real2D_onChunk :: fract_water_srf
+    dsl4jsb_Real2D_onChunk :: w_skin
+    dsl4jsb_Real2D_onChunk :: fract_water
     dsl4jsb_Real2D_onChunk :: w_snow_soil
-    dsl4jsb_Real2D_onChunk :: w_snow_srf
-    dsl4jsb_Real2D_onChunk :: fract_snow_srf
+    dsl4jsb_Real2D_onChunk :: w_snow
+    dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: w_snow_can
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
@@ -214,10 +214,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_sl)     ! OUT
     dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_fc_sl)  ! OUT
     dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl) ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_srf)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_srf) ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_srf)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow) ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    evapotrans)    ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    trans)         ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    evapopot)      ! OUT
@@ -248,9 +248,9 @@ CONTAINS
       is_glacier(:) = .FALSE.
     END IF
 
-    IF (ALL(w_snow_srf(:) < 0._wp)) THEN          ! Start of experiment
+    IF (ALL(w_snow(:) < 0._wp)) THEN          ! Start of experiment
       lstart = .TRUE.
-      w_snow_srf(:) = 0._wp
+      w_snow(:) = 0._wp
     ELSE
       lstart = .FALSE.
     END IF
@@ -269,8 +269,8 @@ CONTAINS
     END IF
 
     CALL update_surf_down(nc, dtime, lstart, &
-      & q_air(:), t_unfilt(:), wind_10m(:), t_air(:), w_skin_soil(:), fract_water_srf(:), &
-      & wsr_max(:), w_snow_soil(:), fract_snow_srf(:), w_snow_can(:), w_snow_glac(:), &
+      & q_air(:), t_unfilt(:), wind_10m(:), t_air(:), w_skin_soil(:), fract_water(:), &
+      & wsr_max(:), w_snow_soil(:), fract_snow(:), w_snow_can(:), w_snow_glac(:), &
       & hcap_grnd(:), evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), rain(:),  snow(:), &
       & is_present(:), is_glacier(:), pme_glacier(:), &
 !!$      & snow_acc(:), snow_melt_acc(:), glacier_runoff_acc(:), &
@@ -293,9 +293,9 @@ CONTAINS
 !vg:  runoff_hd and drainage_hd no longer needed
 !vg:  accumulation does not make sense (no reset)
     CALL update_surf_up(nc, dtime, dsl4jsb_Config(SOIL)%nsoil_water, &
-      & w_skin_soil(:), fract_water_srf(:), wsr_max(:), &
+      & w_skin_soil(:), fract_water(:), wsr_max(:), &
       & w_soil_root(:), w_soil_root_fc(:), &
-      & t_soil(:,1), fract_snow_srf(:), oro_stddev(:), &
+      & t_soil(:,1), fract_snow(:), oro_stddev(:), &
       & evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), &
       & rain(:), is_present(:), is_glacier(:), &
       & runoff(:), drainage(:), & !vg runoff_hd(:), drainage_hd(:), &
@@ -315,8 +315,8 @@ CONTAINS
 
     w_soil_column(:) = SUM(w_soil_sl(:,:), DIM=2)
 
-    w_snow_srf(:) = w_snow_soil(:) + w_snow_can(:)
-    w_skin_srf(:) = w_skin_soil(:) ! + w_skin_can(:)
+    w_snow(:) = w_snow_soil(:) + w_snow_can(:)
+    w_skin(:) = w_skin_soil(:) ! + w_skin_can(:)
 
   END SUBROUTINE update_soil_1
 

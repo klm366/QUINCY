@@ -8,7 +8,7 @@
 !! First version by Rainer Schneck (2015-04-14)
 !!
 
-MODULE mo_radiation_interface
+MODULE mo_rad_interface
 #ifndef __NO_JSBACH__
 
 #include "dsl_jsbach.inc"
@@ -51,7 +51,7 @@ MODULE mo_radiation_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_radiation_tasks
+  PUBLIC :: Register_rad_tasks
 
   !> Type definition for radiation_surface task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_radiation_surface
@@ -64,7 +64,7 @@ MODULE mo_radiation_interface
     PROCEDURE Create_task_radiation_surface
   END INTERFACE tsk_radiation_surface
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_radiation_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_interface'
 
 CONTAINS
   ! ================================================================================================================================
@@ -97,20 +97,20 @@ CONTAINS
   !! @param[in,out] this      Instance of <PROCESS_NAME_LOWER_CASE> process class
   !! @param[in]     model_id  Model id
   !!
-  SUBROUTINE Register_radiation_tasks(this, model_id)
+  SUBROUTINE Register_rad_tasks(this, model_id)
 
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER, INTENT(in) :: model_id
 
     CALL this%Register_task(tsk_Radiation_surface(model_id))
 
-  END SUBROUTINE Register_radiation_tasks
+  END SUBROUTINE Register_rad_tasks
 
   SUBROUTINE update_radiation_surface(tile, options)
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_radiation_process, ONLY: calc_radiation_surface_net
+    USE mo_rad_process, ONLY: calc_radiation_surface_net
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
@@ -221,7 +221,7 @@ CONTAINS
 
     ! Used variables
     ! sollen jetzt in dieses File hier kommen:
-    USE mo_radiation_process,    ONLY: calc_fapar_lai_cl, calc_par
+    USE mo_rad_process,    ONLY: calc_fapar_lai_cl, calc_par
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -427,9 +427,9 @@ CONTAINS
 
     ! Used variables
     ! sollen jetzt in dieses File hier kommen:
-    USE mo_radiation_process,    ONLY: get_surface_albedo_simple, calc_soil_albedo, calc_glacier_albedo, &
+    USE mo_rad_process,    ONLY: get_surface_albedo_simple, calc_soil_albedo, calc_glacier_albedo, &
                                        calc_sky_view_fractions, calc_snow_albedo, calc_merge_albedos
-    USE mo_radiation_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp
+    USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -672,4 +672,4 @@ CONTAINS
   END SUBROUTINE update_radiation_albedo
 
 #endif
-END MODULE mo_radiation_interface
+END MODULE mo_rad_interface

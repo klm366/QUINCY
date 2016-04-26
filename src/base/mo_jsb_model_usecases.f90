@@ -14,7 +14,7 @@ MODULE mo_jsb_model_usecases
   USE mo_kind,                ONLY: wp
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_process_class,   ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, RAD, HD
+  USE mo_jsb_process_class,   ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, RAD, HD, ASSIMI
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,            ONLY: Get_Grid
@@ -203,7 +203,7 @@ CONTAINS
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL/), &
           & lcts=(/t_jsb_lct(GLACIER_TYPE)/), parent=land_tile)
 
-        soilveg_tile => t_jsb_tile('soilveg', 'Soil/veg tile', processes=(/SOIL,VEG/), &
+        soilveg_tile => t_jsb_tile('soilveg', 'Soil/veg tile', processes=(/SOIL,VEG, ASSIMI/), &
           & lcts=(/t_jsb_lct(VEG_TYPE), t_jsb_lct(BARE_TYPE)/), parent=land_tile)
 
       lake_tile => t_jsb_tile('lake', 'Lake tile', &

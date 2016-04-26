@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the memory class for hydrology.
+!! @brief Contains the memory class for the hydrology process.
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
@@ -27,6 +27,7 @@ MODULE mo_hydro_memory_class
 
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
+  !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
 
     TYPE(t_jsb_var_real2d) :: &
@@ -132,30 +133,31 @@ CONTAINS
     !canopy_layer => Get_vgrid('canopy_layer')
     soil_w       => Get_vgrid('soil_depth_water')
 
-    IF (ASSOCIATED(mem%fract_water_srf%ptr)) RETURN
+    ! Common variables
+    IF (ASSOCIATED(mem%fract_water%ptr)) RETURN
 
-    CALL jsb_add_var( mem, 'fract_water_srf', mem%fract_water_srf, &
+    CALL jsb_add_var( mem, 'fract_water', mem%fract_water, &
       & hgrid, surface,                                                            &
       & t_cf('fraction of water on surface surface_wet_fraction', '-', ''),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, 'fract_snow_srf', mem%fract_snow_srf, &
+    CALL jsb_add_var( mem, 'fract_snow', mem%fract_snow, &
       & hgrid, surface,                                                          &
       & t_cf('fraction of snow on surface', '-', ''),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'w_skin_srf', mem%w_skin_srf,      &
+    CALL jsb_add_var( mem, 'w_skin', mem%w_skin,      &
       & hgrid, surface,                                                       &
       & t_cf('Water content in skin reservoir of surface. surface_skin_reservoir', 'm', ''), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'w_snow_srf', mem%w_snow_srf,      &
+    CALL jsb_add_var( mem, 'w_snow', mem%w_snow,      &
       & hgrid, surface,                                                       &
       & t_cf('Water content of snow reservoir on surface', 'm', ''), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &

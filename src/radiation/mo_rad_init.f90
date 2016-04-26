@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-10-09)
 !!
-MODULE mo_radiation_init
+MODULE mo_rad_init
 #ifndef __NO_JSBACH__
 
 #include "dsl_jsbach.inc"
@@ -28,27 +28,27 @@ MODULE mo_radiation_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: radiation_init
+  PUBLIC :: rad_init
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_radiation_init'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_init'
 
 CONTAINS
 
   !
   !> Intialize radiation process (after memory has been set up)
   !
-  SUBROUTINE radiation_init(tile)
+  SUBROUTINE rad_init(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':radiation_init'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rad_init'
 
-    CALL radiation_init_bc(tile)
-!!$    CALL radiation_init_ic(tile)
+    CALL rad_init_bc(tile)
+!!$    CALL rad_init_ic(tile)
 
-  END SUBROUTINE radiation_init
+  END SUBROUTINE rad_init
 
-  SUBROUTINE radiation_init_bc(tile)
+  SUBROUTINE rad_init_bc(tile)
     !-----------------------------------------------------------------------
     !  ARGUMENTS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -58,7 +58,7 @@ CONTAINS
     TYPE(t_jsb_model),       POINTER :: model
     dsl4jsb_Def_memory(RAD)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':radiation_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rad_init_bc'
 
     !-----------------------------------------------------------------------
     ! CONTENT
@@ -74,12 +74,12 @@ CONTAINS
 
     ! R: nothing to do in the moment ...
 
-  END SUBROUTINE radiation_init_bc
+  END SUBROUTINE rad_init_bc
 
-  RECURSIVE SUBROUTINE radiation_init_ic(tile)
+  RECURSIVE SUBROUTINE rad_init_ic(tile)
 
-!    USE mo_radiation_process, ONLY: init_radiation_temperature
-!    USE mo_radiation_util,    ONLY: radiation_depth_to_layers_2d
+!    USE mo_rad_process, ONLY: init_radiation_temperature
+!    USE mo_rad_util,    ONLY: radiation_depth_to_layers_2d
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -95,7 +95,7 @@ CONTAINS
     TYPE(t_input_file) :: input_file
     INTEGER :: i, n1, n2
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':radiation_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rad_init_ic'
 
     model => get_model(tile%owner_model_id)
 
@@ -161,7 +161,7 @@ CONTAINS
 !     dsl4jsb_var2D_onDomain(RAD,lw_srf_net)      = 0._wp
 !     dsl4jsb_var2D_onDomain(RAD,rad_srf_net)     = 0._wp
 
-  END SUBROUTINE radiation_init_ic
+  END SUBROUTINE rad_init_ic
 
 #endif
-END MODULE mo_radiation_init
+END MODULE mo_rad_init

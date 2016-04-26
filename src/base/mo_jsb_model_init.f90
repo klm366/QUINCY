@@ -147,7 +147,7 @@ CONTAINS
 
   SUBROUTINE init_model_common(model)
 
-    USE mo_jsb_process_class,   ONLY: SEB, TURB, SOIL, HYDRO, VEG, RAD, HD
+    USE mo_jsb_process_class,   ONLY: SEB, TURB, SOIL, HYDRO, VEG, RAD, HD, ASSIMI
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_model_class,     ONLY: print_model
@@ -158,7 +158,7 @@ CONTAINS
     USE mo_soil_init,           ONLY: soil_init
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_veg_init,            ONLY: veg_init_ic, veg_init_bc
-    USE mo_radiation_init,      ONLY: radiation_init
+    USE mo_rad_init,      ONLY: rad_init
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
@@ -194,10 +194,12 @@ CONTAINS
     END IF
 
     ! Temporary for testing ... should be in separate subroutine
-    CALL model%Queue_task(RAD,  "radiation_surface")
-    CALL model%Queue_task(SEB,  "surface_energy")
-    CALL model%Queue_task(TURB, "surface_roughness")
-    CALL model%Queue_task(SEB,  "asselin_filter")      ! Should always be the last task
+    CALL model%Queue_task(RAD,    "radiation_surface")
+    CALL model%Queue_task(SEB,    "surface_energy")
+    CALL model%Queue_task(TURB,   "surface_roughness")
+    CALL model%Queue_task(ASSIMI, "update_assimilation_scaling_factors")
+    CALL model%Queue_task(ASSIMI, "update_assimilation")
+    CALL model%Queue_task(SEB,    "asselin_filter")      ! Should always be the last task
 
     CALL print_model(model)
     CALL model%Print_actions()
@@ -228,7 +230,7 @@ CONTAINS
 
       ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
-        CALL radiation_init(tile)
+        CALL rad_init(tile)
       END IF
 
       IF (one_of(tile%process_action(SEB), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN

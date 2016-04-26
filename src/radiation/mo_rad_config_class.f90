@@ -55,7 +55,7 @@ MODULE mo_rad_config_class
                                                               ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
                                                               !                            the snow albedo resulting from both schemes
    CONTAINS
-     PROCEDURE :: Init => Init_radiation_config
+     PROCEDURE :: Init => Init_rad_config
   END type t_rad_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_config_class'
@@ -66,7 +66,7 @@ CONTAINS
   !!
   !! @param[inout]     config     Configuration type of process (t_rad_config)
   !!  
-  SUBROUTINE Init_radiation_config(config)
+  SUBROUTINE Init_rad_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
@@ -96,7 +96,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_radiation_config'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_config'
 
     CALL message(TRIM(routine), 'Starting radiation configuration')
 
@@ -130,7 +130,7 @@ CONTAINS
     config%use_alb_canopy            = use_alb_canopy
     config%albedo_age_weight         = albedo_age_weight
 
-  END SUBROUTINE Init_radiation_config
+  END SUBROUTINE Init_rad_config
 
 !!$  SUBROUTINE Get_rad_config(config, return_ptr)
 !!$

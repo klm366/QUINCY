@@ -86,8 +86,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rad_srf_net
     dsl4jsb_Real2D_onChunk :: grnd_hflx
     dsl4jsb_Real2D_onChunk :: hcap_grnd
-    dsl4jsb_Real2D_onChunk :: w_snow_srf
-    dsl4jsb_Real2D_onChunk :: fract_snow_srf
+    dsl4jsb_Real2D_onChunk :: w_snow
+    dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: t_acoef
     dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: q_acoef
@@ -153,8 +153,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB,      fact_q_air)     ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB,      fact_qsat_srf)  ! OUT
     dsl4jsb_Get_var2D_onChunk(RAD,      rad_srf_net)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_srf)     ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)     ! OUT
 
     dsl4jsb_Get_var2D_onChunk( SOIL,    grnd_hflx)      ! IN
     dsl4jsb_Get_var2D_onChunk( SOIL,    hcap_grnd)      ! IN
@@ -210,7 +210,7 @@ CONTAINS
         s_old(:), qsat_srf_old(:), dQdT(:), &
         rad_srf_net(:), forc_hflx(:), heat_tcoef(:), &
         fact_q_air(:), fact_qsat_srf(:), &
-        fract_snow_srf(:), heat_cap(:), &
+        fract_snow(:), heat_cap(:), &
         & s_star(:))
     END IF
 
@@ -218,7 +218,7 @@ CONTAINS
     t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
 
     ! Correct new dry static energy for snowmelt
-    WHERE (w_snow_srf(:) > dsl4jsb_Config(HYDRO)%wsn_critical .OR. is_glacier(:))
+    WHERE (w_snow(:) > dsl4jsb_Config(HYDRO)%wsn_critical .OR. is_glacier(:))
       s_star(:) = MIN(s_star(:) / t2s_conv(:), tmelt) * t2s_conv(:)
     END WHERE
 

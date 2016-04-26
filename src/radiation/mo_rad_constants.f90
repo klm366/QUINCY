@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-05-15)
 !!
-MODULE mo_radiation_constants
+MODULE mo_rad_constants
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
@@ -60,4 +60,4 @@ MODULE mo_radiation_constants
     !AlbedoSnowMax        = 0.8      ! Maximum possible snow albedo   ! Temporary
 
 #endif
-END MODULE mo_radiation_constants
+END MODULE mo_rad_constants

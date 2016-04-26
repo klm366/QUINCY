@@ -37,6 +37,8 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
 
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_class,          ONLY: Get_model    
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -127,10 +129,9 @@ CONTAINS
   !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_<PROCESS_NAME_LOWER_CASE>(tile, config, options)
+  SUBROUTINE update_<PROCESS_NAME_LOWER_CASE>(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Declare process memories
@@ -158,6 +159,8 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+    
     ! Get process memories
     dsl4jsb_Get_memory(<PROCESS_NAME_UPPER_CASE>)
 
@@ -179,10 +182,9 @@ CONTAINS
   !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.  
   !!
-  SUBROUTINE aggregate_<PROCESS_NAME_LOWER_CASE>(tile, config, options)
+  SUBROUTINE aggregate_<PROCESS_NAME_LOWER_CASE>(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_<PROCESS_NAME_LOWER_CASE>'
@@ -201,6 +203,7 @@ CONTAINS
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)    
     !X Implementation: Start your process scheme here...
     
     

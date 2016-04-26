@@ -31,6 +31,7 @@ MODULE mo_seb_memory_class
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_seb_memory
     !
+    ! Common variables
     TYPE(t_jsb_var_real2d) :: &
       & t,                    & !< Surface temperature                                             [K]
       & t_old,                & !< Surface temperature at previous timestep                        [K]
@@ -61,7 +62,7 @@ MODULE mo_seb_memory_class
                                 !! evapotranspiration                                              []
       & fact_qsat_srf           !< Similar factor for surface values of specific humidity
                                 !! and dry static energy
-      !
+    !
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
       & t_wtr,                & !< Lake surface temperature (water)                                [K]
@@ -105,6 +106,7 @@ CONTAINS
     surface => Get_vgrid('surface')
 
     IF (.NOT. ASSOCIATED(mem%t%ptr)) THEN
+      ! Common variables
       CALL jsb_add_var( mem, 't', mem%t,                                               &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
