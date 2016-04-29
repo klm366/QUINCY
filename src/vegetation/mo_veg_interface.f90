@@ -22,7 +22,7 @@ MODULE mo_veg_interface
 CONTAINS
 
   SUBROUTINE update_vegetation(tile,veg_param)
-    !
+    ! 
     ! calls the vegetation interface
     ! TBD: Merge with interface? Somewhat a strategic decision for all header routines
     ! where will the loop over tiles and gridcells happen. For the case of vegeation it may
@@ -46,12 +46,11 @@ CONTAINS
        ! 
        ! 1.0 update phenological state
        ! 
-       CALL update_phenology(veg_param%phenology_type(tile(t)%plant%pftid),tile(t)%plant%accumulated%gpp_week, &
+      CALL update_phenology(veg_param%phenology_type(tile(t)%plant%pftid),tile(t)%plant%accumulated%gpp_week, &
                              tile(t)%plant%accumulated%maint_respiration_week,tile(t)%plant%mean_leaf_age, & 
                              tile(t)%accumulated%t_air_week,tile(t)%accumulated%t_air_month, & 
                              tile(t)%plant%accumulated%beta_soil_gs,tile(t)%plant%accumulated%gdd, & 
                              tile(t)%plant%accumulated%nd_dormance,tile(t)%plant%growing_season)  
-
        ! photosynthesis and leaf respiration 
        CALL update_canopy_fluxes(tile(t), veg_param)
 

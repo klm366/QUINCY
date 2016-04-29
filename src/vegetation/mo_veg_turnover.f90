@@ -21,7 +21,7 @@ MODULE mo_veg_turnover
 CONTAINS
 
   SUBROUTINE calc_turnover(plant,veg_param)
-    !
+    ! 
     ! Routine to calculate litter fall resulting from tissue senesence, 
     ! as well as turnover of sapwood and fruit pools,
     ! and turnover of foliar and root nutrients (not yet implemented) 
@@ -36,7 +36,7 @@ CONTAINS
     TYPE(PlantClass), INTENT(inout) :: plant
     ! 0.4 Local 
     REAL(wp)                        :: fturn_leaf,fturn_fine_root,fturn_coarse_root,fturn_sap_wood, &
-                                       fturn_heart_wood,fturn_seed_bed 
+                                       fturn_seed_bed 
     REAL(wp)                        :: nitrogen_resorption, phosphorus_resorption
 
     !
@@ -49,7 +49,7 @@ CONTAINS
                                   veg_param%tau_leaf(plant%pftid),veg_param%tau_fine_root(plant%pftid), & 
                                   veg_param%tau_coarse_root(plant%pftid),veg_param%tau_sap_wood(plant%pftid), & 
                                   veg_param%tau_seed(plant%pftid),fturn_leaf,fturn_fine_root,fturn_coarse_root, & 
-                                  fturn_sap_wood,fturn_heart_wood,fturn_seed_bed)
+                                  fturn_sap_wood,fturn_seed_bed)
     !
     ! 2.1 C Litter fall
     !
@@ -57,7 +57,6 @@ CONTAINS
     plant%flux%litterfall%fine_root%carbon = fturn_fine_root * plant%pool%fine_root%carbon 
     plant%flux%litterfall%coarse_root%carbon = fturn_coarse_root * plant%pool%coarse_root%carbon 
     plant%flux%litterfall%sap_wood%carbon = fturn_sap_wood * plant%pool%sap_wood%carbon 
-    plant%flux%litterfall%heart_wood%carbon = fturn_heart_wood * plant%pool%heart_wood%carbon 
     plant%flux%litterfall%seed_bed%carbon = fturn_seed_bed * plant%pool%seed_bed%carbon 
 
     !
@@ -70,7 +69,6 @@ CONTAINS
     plant%flux%litterfall%fine_root%nitrogen = fturn_fine_root * plant%pool%fine_root%nitrogen 
     plant%flux%litterfall%coarse_root%nitrogen = fturn_coarse_root * plant%pool%coarse_root%nitrogen 
     plant%flux%litterfall%sap_wood%nitrogen = fturn_sap_wood * plant%pool%sap_wood%nitrogen 
-    plant%flux%litterfall%heart_wood%nitrogen = fturn_heart_wood * plant%pool%heart_wood%nitrogen 
     plant%flux%litterfall%seed_bed%nitrogen = fturn_seed_bed * plant%pool%seed_bed%nitrogen 
 
     !
@@ -83,7 +81,6 @@ CONTAINS
     plant%flux%litterfall%fine_root%phosphorus = fturn_fine_root * plant%pool%fine_root%phosphorus 
     plant%flux%litterfall%coarse_root%phosphorus = fturn_coarse_root * plant%pool%coarse_root%phosphorus 
     plant%flux%litterfall%sap_wood%phosphorus = fturn_sap_wood * plant%pool%sap_wood%phosphorus 
-    plant%flux%litterfall%heart_wood%phosphorus = fturn_heart_wood * plant%pool%heart_wood%phosphorus 
     plant%flux%litterfall%seed_bed%phosphorus = fturn_seed_bed * plant%pool%seed_bed%phosphorus 
 
     !
@@ -93,7 +90,6 @@ CONTAINS
     plant%flux%litterfall%fine_root%carbon13 = fturn_fine_root * plant%pool%fine_root%carbon13 
     plant%flux%litterfall%coarse_root%carbon13 = fturn_coarse_root * plant%pool%coarse_root%carbon13 
     plant%flux%litterfall%sap_wood%carbon13 = fturn_sap_wood * plant%pool%sap_wood%carbon13 
-    plant%flux%litterfall%heart_wood%carbon13 = fturn_heart_wood * plant%pool%heart_wood%carbon13 
     plant%flux%litterfall%seed_bed%carbon13 = fturn_seed_bed * plant%pool%seed_bed%carbon13 
 
     !
@@ -103,7 +99,6 @@ CONTAINS
     plant%flux%litterfall%fine_root%carbon14 = fturn_fine_root * plant%pool%fine_root%carbon14 
     plant%flux%litterfall%coarse_root%carbon14 = fturn_coarse_root * plant%pool%coarse_root%carbon14 
     plant%flux%litterfall%sap_wood%carbon14 = fturn_sap_wood * plant%pool%sap_wood%carbon14 
-    plant%flux%litterfall%heart_wood%carbon14 = fturn_heart_wood * plant%pool%heart_wood%carbon14 
     plant%flux%litterfall%seed_bed%carbon14 = fturn_seed_bed * plant%pool%seed_bed%carbon14 
 
     !
@@ -114,7 +109,6 @@ CONTAINS
     plant%flux%litterfall%fine_root%nitrogen15 = fturn_fine_root * plant%pool%fine_root%nitrogen15 
     plant%flux%litterfall%coarse_root%nitrogen15 = fturn_coarse_root * plant%pool%coarse_root%nitrogen15 
     plant%flux%litterfall%sap_wood%nitrogen15 = fturn_sap_wood * plant%pool%sap_wood%nitrogen15 
-    plant%flux%litterfall%heart_wood%nitrogen15 = fturn_heart_wood * plant%pool%heart_wood%nitrogen15 
     plant%flux%litterfall%seed_bed%nitrogen15 = fturn_seed_bed * plant%pool%seed_bed%nitrogen15 
 
     !
@@ -134,7 +128,7 @@ CONTAINS
   END SUBROUTINE calc_turnover
 
   SUBROUTINE update_turnover_fraction(growing_season,lai,phenology_type,growthform,tau_leaf,tau_fine_root,tau_coarse_root,tau_sap_wood,tau_seed, & 
-                                      fturn_leaf,fturn_fine_root,fturn_coarse_root,fturn_sap_wood,fturn_heart_wood,fturn_seed_bed)
+                                      fturn_leaf,fturn_fine_root,fturn_coarse_root,fturn_sap_wood,fturn_seed_bed)
     !
     ! routine to calculate fractional loss of biomass from a plant compartment
     ! varies with phenology for leaves
@@ -159,7 +153,7 @@ CONTAINS
     ! 0.3 Output
     REAL(wp), INTENT(out) :: fturn_leaf,fturn_fine_root, &            ! fractional biomass loss to litter 
                              fturn_coarse_root,fturn_sap_wood, &      ! for each plant pool
-                             fturn_heart_wood,fturn_seed_bed 
+                             fturn_seed_bed 
 
     ! 
     ! foliage turnover - flat rate for evergreens, dual rates for deciduous
@@ -186,11 +180,11 @@ CONTAINS
           CALL finish("mo_veg_turnover:update_turnover_fraction",message_text) 
     END SELECT
     ! 
-    ! sapwood turnover - flat rate for evergreens, synced with leaves for grasses
+    ! stem turnover for grasses; synced with leaves
     ! 
     SELECT CASE (growthform)
       CASE (itree)
-        fturn_sap_wood = tau_sap_wood * dt/one_day/one_year
+        fturn_sap_wood = 0.0_wp
       CASE (igrass)
         fturn_sap_wood = fturn_leaf
       CASE DEFAULT
@@ -202,7 +196,6 @@ CONTAINS
     !
     fturn_fine_root = tau_fine_root * dt/one_day/one_year
     fturn_coarse_root = tau_coarse_root * dt/one_day/one_year
-    fturn_heart_wood = tau_sap_wood * dt/one_day/one_year
     fturn_seed_bed = tau_seed * dt/one_day/one_year
 
   END SUBROUTINE update_turnover_fraction

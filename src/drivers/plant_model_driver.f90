@@ -29,7 +29,7 @@ PROGRAM plant_model_driver
   USE mo_veg_photosynthesis
   USE mo_veg_interface,         ONLY: update_vegetation
   USE mo_veg_output
-  USE mo_veg_memory,            ONLY: init_plant_variable_accumulation
+  USE mo_veg_memory,            ONLY: init_plant_variable_accumulation, set_zero_fluxes_of_plant_pools
   USE mo_veg_util
   USE mo_veg_config_class,      ONLY: veg_config
   USE mo_veg_soil
@@ -60,11 +60,17 @@ PROGRAM plant_model_driver
   ! 
   CALL init_base_constants
   CALL init_atmland_constants
+  ! vegetation (2do: may combine into one function init_vegetation() )
+  CALL init_element_zero                                    ! mo_base_memory
+  CALL set_zero_fluxes_of_plant_pools(tile(1)%plant%flux)   ! mo_veg_memory ; called each timestep in update_vegetation()
+  CALL init_plant(tile(1)%plant)                            ! mo_base_memory; 
   CALL init_veg_parameters(veg_param)
+ ! forcing
+  CALL init_forcing                             ! needs atmland_config%Init to run before
+  ! accumulation
   CALL init_plant_variable_accumulation(tile(1)%plant%accumulated)   ! set initial average values, defined in mo_veg_memory
   CALL init_tile_variable_accumulation(tile)    ! set initial average values, defined in mo_land_memory
   !CALL init_soil_variable_accumulation(tile) follows later
-  CALL init_forcing                             ! needs atmland_config%Init to run before
   CALL daily_average(1)%init                    !< initially sets all variables to zero or .FALSE.
   ! 
   ! 1.2 Initialise time step
@@ -107,7 +113,11 @@ PROGRAM plant_model_driver
      ! 
      time_day  = time_day  + timestep_prop_day         ! time in days
      ! 
-     ! 2.2 set orbital parameters and update time-variant forcing; 
+     ! 2.2 set vegetation fluxes to zero
+     ! 
+     CALL set_zero_fluxes_of_plant_pools(tile(1)%plant%flux)   ! mo_veg_memory
+     ! 
+     ! 2.3 set orbital parameters and update time-variant forcing; 
      ! 
      CALL update_forcing(time_day)  
      ! 
@@ -149,7 +159,7 @@ PROGRAM plant_model_driver
        time_year = time_year + 1
      END IF
 
-  ENDDO
+  END DO
 
   CALL close_output_files
   CALL close_forcing_input_file  ! only if: option_forcing == 'readfile'

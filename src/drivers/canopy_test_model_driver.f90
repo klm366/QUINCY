@@ -21,6 +21,7 @@ PROGRAM canopy_test_model_driver
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
   USE mo_veg_config_class,      ONLY: veg_config
+  USE mo_veg_memory,            ONLY: set_zero_fluxes_of_plant_pools
 
   IMPLICIT NONE
 
@@ -47,8 +48,12 @@ PROGRAM canopy_test_model_driver
   ! 
   CALL init_base_constants
   CALL init_atmland_constants
+  ! vegetation
+  CALL init_element_zero                                    ! mo_base_memory
+  CALL set_zero_fluxes_of_plant_pools(tile(1)%plant%flux)   ! mo_veg_memory ; called each timestep in update_vegetation()
+  CALL init_plant(tile(1)%plant)                            ! mo_base_memory; 
   CALL init_veg_parameters(veg_param)
-  !
+  ! 
   ! 1.1 Initalisation of met-forcing which is assumed constant 
   ! 
   atm2land%t_air = def_t_air

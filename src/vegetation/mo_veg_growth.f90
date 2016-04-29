@@ -19,27 +19,38 @@ MODULE mo_veg_growth
 
 CONTAINS
 
-  SUBROUTINE calc_growth(t_air,theta,plant,veg_param,growth,growth_respiration,growth_respiration_c13,growth_respiration_c14,reserve_use)
-    !
-    ! Routine to calculate plant growth 
-    ! 
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate plant growth (flux%growth)
+  !! 
+  !! 1.0 calculate potential growth rate relative to labile pool size
+  !!
+  !! 2.0 update target C:N:P for each tissue type
+  !!
+  !! 3.0 calculate allocation coefficients for structural plant pools (leaves, wood, root)
+  !!
+  !! 4.0 partition labile carbon into growth, reserve and fruit growth (not yet implemented)
+  !!
+  !! 5.0 diagnose growth respiration and partition growth to tissue types, convert to µmol m-2 s-1
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_growth &
+    & (t_air, theta,plant, veg_param, growth, growth_respiration, growth_respiration_c13, growth_respiration_c14, reserve_use)
+
     USE mo_base_memory, ONLY: ElementMul
     USE mo_veg_parameters
 
     IMPLICIT NONE
 
-    ! 0.1 Input
-    REAL(wp), INTENT(in) :: t_air                              ! ambient air temperature (K)
-    REAL(wp), INTENT(in) :: theta                              ! soil moisture (%)
-    TYPE(PlantClass), INTENT(in) :: plant                      ! plant structure
-    TYPE(VegetationParameterClass),INTENT(in) :: veg_param     ! vegetation type parameters
-    ! 0.3 Output
-    TYPE(VegPool),INTENT(out) :: growth                        ! growth rate (mol m-2 timestep-1)
-    REAL(wp),INTENT(out) :: growth_respiration,growth_respiration_c13,growth_respiration_c14
-                                                               ! growth respiration rate 
-                                                               ! (µmol m-2 s-1) 
-    TYPE(Element),INTENT(out) :: reserve_use                   ! net reserve use (mol m-2 timestep-1) 
-    ! 0.4 Local
+    ! 0.1 InOut
+    REAL(wp), INTENT(in)         :: t_air                      !< ambient air temperature (K)
+    REAL(wp), INTENT(in)         :: theta                      !< soil moisture (%)
+    TYPE(PlantClass), INTENT(in) :: plant                      !< plant structure
+    TYPE(VegetationParameterClass),INTENT(in) :: veg_param     !< vegetation type parameters
+    TYPE(VegPool),INTENT(out)    :: growth                     !< flux%growth; growth rate (mol m-2 timestep-1)
+    REAL(wp),INTENT(out)         :: growth_respiration         !< growth respiration rate  (µmol m-2 s-1)
+    REAL(wp),INTENT(out)         :: growth_respiration_c13     !< growth respiration rate  (µmol m-2 s-1)
+    REAL(wp),INTENT(out)         :: growth_respiration_c14     !< growth respiration rate  (µmol m-2 s-1)
+    TYPE(Element),INTENT(out)    :: reserve_use                !< net reserve use (mol m-2 timestep-1) 
+    ! 0.2 Local
     TYPE(VegPool) :: falloc                                    ! fractional allocation to pools
     REAL(wp) :: nreq_growth,preq_growth                        ! N and P reqiurement of growth (mol N / P per mol C)
     REAL(wp) :: target_lai                                     ! LAI implied from sap wood area 
@@ -54,16 +65,16 @@ CONTAINS
                               target_np_sap_wood,target_np_fruit
     ! 
     ! 1.0 calculate potential growth rate relative to labile pool size
-    !
+    ! 
     tau_labile_pot = meristem_activity(t_air,theta,plant%growing_season)
     ! 
     ! 2.0 update target C:N:P for each tissue type
-    !
+    ! 
     CALL update_stoichiometry(veg_param%growthform(plant%pftid),veg_param%cn_leaf(plant%pftid),veg_param%np_leaf(plant%pftid), & 
                               target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, & 
                               target_cn_fruit,target_np_leaf,target_np_fine_root,target_np_coarse_root, & 
                               target_np_sap_wood,target_np_fruit)
-    !
+    ! 
     ! 3.0 calculate allocation coefficients for structural plant pools (leaves, wood, root)
     ! 
     CALL calc_allocation_fraction(tau_labile_pot,plant%pool%leaf%carbon,plant%pool%sap_wood%carbon, & 
@@ -79,7 +90,7 @@ CONTAINS
                               target_lai,target_reserve_pool_carbon,target_reserve_pool_nitrogen, & 
                               target_reserve_pool_phosphorus)
     ! 
-    ! 4.0 partition labile carbon into growth, reserve and fruit growth (not yet implemented).
+    ! 4.0 partition labile carbon into growth, reserve and fruit growth (not yet implemented)
     ! OBS: Should maintenance respiration be here as well??
     ! 
     CALL calc_partitioning(tau_labile_pot,plant%growing_season,plant%accumulated%gpp_week, & 
@@ -87,7 +98,7 @@ CONTAINS
                               target_reserve_pool_carbon,target_reserve_pool_nitrogen, & 
                               target_reserve_pool_phosphorus,nreq_growth,preq_growth, & 
                               plant%pool%labile,plant%pool%reserve,growth%labile,reserve_use)
-    !
+    ! 
     ! 5.0 diagnose growth respiration and partition growth to tissue types, convert to µmol m-2 s-1
     ! 
     growth_respiration = fresp_growth * growth%labile%carbon * 1.e6 / dt
@@ -110,56 +121,74 @@ CONTAINS
 
   END SUBROUTINE calc_growth 
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate meristem activity and thus labile pool turnover
+  !! 
+  !! Input: mol N and P required per mol C growth, current labile and reserve pools, target lai and reserve pool sizes
+  !! 
+  !! Output: growth rate and reserve useage
+  !!
+  !! 1.0 desired size of the labile pool
+  !! 
+  !! 2.1 mobilisation of carbon reserve
+  !! 
+  !! 2.2 convert phi to turnover times (1/timestep)
+  !! 
+  !! 2.3 net transfer of N from labile to reserve
+  !! 
+  !! 2.4 net transfer of P from labile to reserve
+  !! 
+  !! 3.0 Elemental limitation of growth, N & P
+  !! @todo 3.0 should be replaced at a later stage - here to conserve mass
+  !! 
+  !! 4.0 Calculate final growth rate
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_partitioning(tau_labile_pot,growing_season,gpp_week,rm_week,lai,target_lai, & 
                                target_reserve_pool_carbon, target_reserve_pool_nitrogen, target_reserve_pool_phosphorus, & 
                                nreq_growth,preq_growth,labile_pool,reserve_pool,growth,reserve_use)
-    ! 
-    ! Routine to calculate meristem activity and thus labile pool turnover
-    ! Input: mol N and P required per mol C growth, current labile and reserve pools, target lai and reserve pool sizes
-    ! Output: growth rate and reserve useage
-    ! 
+
     USE mo_base_memory
     USE mo_land_constants
     USE mo_veg_parameters
     IMPLICIT NONE
-    ! 0. Input
-    REAL(wp),INTENT(in)       :: tau_labile_pot            ! potential labile pool turnover (1/day) 
-    LOGICAL,INTENT(in)        :: growing_season            ! does the plant intend to grow?
-    REAL(wp),INTENT(in)       :: gpp_week                  ! last weeks GPP (µmol CO2/m2/s) 
-    REAL(wp),INTENT(in)       :: rm_week                   ! last weeks Rm (µmol CO2/m2/s)
-    REAL(wp),INTENT(in)       :: lai                       ! current LAI 
-    REAL(wp),INTENT(in)       :: target_lai                ! target LAI 
-    REAL(wp),INTENT(in)       :: target_reserve_pool_carbon       ! desirable size (mol C/m2) of the reserve pool 
-    REAL(wp),INTENT(in)       :: target_reserve_pool_nitrogen     ! desirable size (mol N/m2) of the reserve pool 
-    REAL(wp),INTENT(in)       :: target_reserve_pool_phosphorus   ! desirable size (mol P/m2) of the reserve pool 
-    REAL(wp),INTENT(in)       :: nreq_growth,preq_growth   ! N and P requirement for unit growth in C and N
-    TYPE(Element),INTENT(in)  :: labile_pool               ! the plant's labile pool size
-    TYPE(Element),INTENT(in)  :: reserve_pool              ! the plant's reserve pool size
-    ! 0.2 Output
-    TYPE(Element),INTENT(out) :: growth                    ! current growth rate (mol/time step)
-    TYPE(Element),INTENT(out) :: reserve_use               ! current resource use rate (mol/time step) (+ve: net flux to labile
-                                                           !                                            -ve: net flux to reserve
-    ! 0.3 Local
+    ! 0.1 InOut
+    LOGICAL,INTENT(in)        :: growing_season            !< does the plant intend to grow?
+    REAL(wp),INTENT(in)       :: tau_labile_pot            !< potential labile pool turnover (1/day) 
+    REAL(wp),INTENT(in)       :: gpp_week                  !< last weeks GPP (µmol CO2/m2/s) 
+    REAL(wp),INTENT(in)       :: rm_week                   !< last weeks Rm (µmol CO2/m2/s)
+    REAL(wp),INTENT(in)       :: lai                       !< current LAI 
+    REAL(wp),INTENT(in)       :: target_lai                !< target LAI 
+    REAL(wp),INTENT(in)       :: target_reserve_pool_carbon       !< desirable size (mol C/m2) of the reserve pool 
+    REAL(wp),INTENT(in)       :: target_reserve_pool_nitrogen     !< desirable size (mol N/m2) of the reserve pool 
+    REAL(wp),INTENT(in)       :: target_reserve_pool_phosphorus   !< desirable size (mol P/m2) of the reserve pool 
+    REAL(wp),INTENT(in)       :: nreq_growth,preq_growth   !< N and P requirement for unit growth in C and N
+    TYPE(Element),INTENT(in)  :: labile_pool               !< the plant's labile pool size
+    TYPE(Element),INTENT(in)  :: reserve_pool              !< the plant's reserve pool size
+    TYPE(Element),INTENT(out) :: growth                    !< current growth rate (mol/time step)
+    TYPE(Element),INTENT(out) :: reserve_use               !> current resource use rate (mol/time step) (+ve: net flux to labile
+                                                           !!                                            -ve: net flux to reserve
+    ! 0.2 Local
     REAL(wp)                  :: tau_labile                ! actual turnover time of labile pool (1/day)
-    REAL(wp)                  :: phi_phenology,phi_maintenance,phi_storage 
+    REAL(wp)                  :: phi_phenology,phi_maintenance,phi_storage  ! ??
                                                            ! relative need for C for phenology, maintenance and storage 
     REAL(wp)                  :: target_labile_pool_carbon        ! desirable size (mol C/m2) of the labile pool
     REAL(wp)                  :: target_labile_pool_nitrogen      ! desirable size (mol N/m2) of the labile pool
     REAL(wp)                  :: target_labile_pool_phosphorus    ! desirable size (mol P/m2) of the labile pool
     REAL(wp)                  :: hlp1                      ! helper variable
-    !
-    ! 1. desired size of the labile pool, taken as the average input + maintenance requirements of the last week
+    ! 
+    ! 1.0 desired size of the labile pool, taken as the average input + maintenance requirements of the last week
     !    scaled to the default turnover time of the labile pool
     !    for N and P this corresponds to the current growth C:N:P  
-    !
+    ! 
     target_labile_pool_carbon = MAX( gpp_week , rm_week ) * one_day / 1.e6 / tau_labile_default
     target_labile_pool_nitrogen = labile_pool%carbon * nreq_growth
     target_labile_pool_phosphorus = labile_pool%nitrogen * preq_growth
-    !
+    ! 
     ! 2.1 mobilisation of carbon reserve: calculate the pull from reserve to labile (phi_phenology,phi_maintenance) or
     !     push from labile to reserve (phi_storage) depending on the difference of the LAI/labile/reserve from
     !     their targets. phi_storage is adjusted by phi_phenology to avoid storage building to interfere with flushing 
-    !
+    ! 
     phi_phenology = 0._wp
     phi_maintenance = 0._wp
     phi_storage = 0._wp
@@ -167,31 +196,37 @@ CONTAINS
     IF(lai < hlp1 .AND. growing_season) & 
        phi_phenology = exp(-(lambda_phiphen * lai / hlp1 )**weibull_k_phiphen) & 
                        - exp(-(lambda_phiphen)**weibull_k_phiphen) 
+
     hlp1 = MAX(0.0_wp,labile_pool%carbon)
     IF(target_labile_pool_carbon > eps8 .AND. hlp1 < target_labile_pool_carbon) & 
        phi_maintenance = exp(-(lambda_phimaint * hlp1 / target_labile_pool_carbon)**weibull_k_phimaint) & 
                        - exp(-(lambda_phimaint)**weibull_k_phimaint)
-    IF(target_reserve_pool_carbon > eps8 .AND. reserve_pool%carbon < target_reserve_pool_carbon) & 
-       phi_storage = exp(-(lambda_phistore * reserve_pool%carbon / target_reserve_pool_carbon)**weibull_k_phistore) & 
+
+    hlp1 = MAX(0.0_wp,reserve_pool%carbon)
+    IF(target_reserve_pool_carbon > eps8 .AND. hlp1 < target_reserve_pool_carbon) & 
+       phi_storage = exp(-(lambda_phistore * hlp1 / target_reserve_pool_carbon)**weibull_k_phistore) & 
                        - exp(-(lambda_phistore)**weibull_k_phistore)
+
     ! adjust push towards reserve at times of low LAI or labile pool to give priority to growth and maintentance 
     phi_storage = phi_storage * ( 1.0_wp - phi_phenology) 
     IF(phi_maintenance > 0.75_wp) phi_storage = phi_storage * 4.0_wp * ( 1.0_wp - phi_maintenance) 
-    !
+    ! 
     ! 2.2 convert phi to turnover times (1/timestep), taking account that flushing can only happen if the meristem is active
     ! 
     phi_phenology = phi_phenology * tau_labile_pot * dt/one_day   
     phi_maintenance = phi_maintenance * tau_labile_default * dt/one_day
     phi_storage = phi_storage * tau_labile_default * dt/one_day
-    reserve_use%carbon = ((phi_phenology + phi_maintenance) * reserve_pool%carbon - & 
+
+    reserve_use%carbon   = ((phi_phenology + phi_maintenance) * reserve_pool%carbon - & 
                            phi_storage * labile_pool%carbon) 
     reserve_use%carbon13 = ((phi_phenology + phi_maintenance) * reserve_pool%carbon13 - & 
                              phi_storage * labile_pool%carbon13) 
     reserve_use%carbon14 = ((phi_phenology + phi_maintenance) * reserve_pool%carbon14 - & 
                              phi_storage * labile_pool%carbon14) 
-    !
+
+    ! 
     ! 2.3 net transfer of N from labile to reserve
-    !
+    ! 
     phi_maintenance = 0._wp
     phi_storage = 0._wp
     hlp1 = MAX(0.0_wp,labile_pool%nitrogen)
@@ -206,9 +241,9 @@ CONTAINS
                            phi_storage * labile_pool%nitrogen) * tau_labile_default * dt/one_day
     reserve_use%nitrogen15 = (phi_maintenance * reserve_pool%nitrogen15 - & 
                            phi_storage * labile_pool%nitrogen15) * tau_labile_default * dt/one_day
-    !
+    ! 
     ! 2.4 net transfer of P from labile to reserve
-    !
+    ! 
     phi_maintenance = 0._wp
     phi_storage = 0._wp
     hlp1 = MAX(0.0_wp,labile_pool%phosphorus)
@@ -221,9 +256,9 @@ CONTAINS
 
     reserve_use%phosphorus = (phi_maintenance * reserve_pool%phosphorus - & 
                            phi_storage * labile_pool%phosphorus) * tau_labile_default * dt/one_day
-    !
+    ! 
     ! 3.0 Elemental limitation of growth (this should be replaced at a later stage - here to conserve mass)
-    !
+    ! 
     ! 3.1 N
     tau_labile=tau_labile_pot * dt / one_day
     growth%carbon = tau_labile * labile_pool%carbon
@@ -247,7 +282,7 @@ CONTAINS
     ENDIF 
 
     ! 4.0 Calculate final growth rate
-    !
+    ! 
     growth%carbon = tau_labile * labile_pool%carbon
     growth%nitrogen = MIN(tau_labile * labile_pool%nitrogen, nreq_growth * growth%carbon)
     growth%phosphorus = MIN(tau_labile * labile_pool%phosphorus, preq_growth * growth%nitrogen)
@@ -257,13 +292,15 @@ CONTAINS
 
   END SUBROUTINE calc_partitioning 
 
+
+
   SUBROUTINE calc_allocation_fraction(tau_labile_pot,leaf_carbon,sap_wood_carbon,heart_wood_carbon,root_carbon,labile_carbon, &
                               sla,k_latosa,k_rtos,wood_density,allom_k1,allom_k2,tau_leaf,tau_fine_root,growthform, &
                               target_cn_leaf,target_cn_fine_root,target_cn_coarse_root, & 
                               target_cn_sap_wood,target_cn_fruit,target_np_leaf,target_np_fine_root, & 
                               target_np_coarse_root,target_np_sap_wood,target_np_fruit,falloc,nreq_growth,& 
                               preq_growth,target_lai,target_reserve_pool_carbon,target_reserve_pool_nitrogen,target_reserve_pool_phosphorus)
-    !
+    ! 
     ! Routine to calculate allocation fractions for each element
     ! Input: target stoichiometry of the tissue types
     ! Output: 1) Allocation coefficients for the distribution of biomass for growth

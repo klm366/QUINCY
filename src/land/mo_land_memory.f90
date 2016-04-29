@@ -22,8 +22,8 @@ CONTAINS
     ! the interval is defined in mo_land_parameters
     USE mo_base_memory
     IMPLICIT NONE
-    ! 0.2 Output
-    TYPE(TileClass), DIMENSION(ntile), INTENT(out) :: tile 
+    ! 0.1 InOut
+    TYPE(TileClass), DIMENSION(ntile), INTENT(inout) :: tile 
     ! 
     ! 1.0 initialize default values
     ! 

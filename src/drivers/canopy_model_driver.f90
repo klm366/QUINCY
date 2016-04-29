@@ -26,6 +26,7 @@ PROGRAM canopy_model_driver
   USE mo_veg_photosynthesis
   USE mo_veg_soil
   USE mo_veg_config_class,      ONLY: veg_config
+  USE mo_veg_memory,            ONLY: set_zero_fluxes_of_plant_pools
   ! shared
   !USE mo_namelist,              ONLY: POSITIONED, open_nml, position_nml  ! read model options from file
 
@@ -38,6 +39,7 @@ PROGRAM canopy_model_driver
   REAL(wp) :: time_day                     ! displays the 'real time' in days; time_day == 1.0 after one day has passed
   INTEGER  :: time_year                    ! displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
   INTEGER  :: ntimestep 
+  REAL(wp) :: timestep_prop_day            ! proportion of one day that is simulated with one timestep (dt/one_day)
   REAL(wp) :: ref_lai = 3._wp              ! LAI
   REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
 
@@ -55,7 +57,12 @@ PROGRAM canopy_model_driver
   ! 
   CALL init_base_constants
   CALL init_atmland_constants
+  ! vegetation (2do: may combine into one function init_vegetation() )
+  CALL init_element_zero                                    ! mo_base_memory
+  CALL set_zero_fluxes_of_plant_pools(tile(1)%plant%flux)   ! mo_veg_memory ; called each timestep in update_vegetation()
+  CALL init_plant(tile(1)%plant)                            ! mo_base_memory; 
   CALL init_veg_parameters(veg_param)
+  ! forcing
   CALL init_forcing    ! needs atmland_config%Init to run before
   ! 
   ! 1.2 Initialise time step
@@ -64,6 +71,7 @@ PROGRAM canopy_model_driver
   time_year  = 1                           ! the 1st year of a simulation == 1 (not zero)
   dt        = base_config%dt               ! time step length in seconds, default: 1800.0 == 30 minutes
   ntimestep = base_config%Timesteps()      ! number of time steps
+  timestep_prop_day = dt/one_day                  ! proportion of one day that is simulated with one timestep
   ! 
   ! 1.3 Initialise tile (Initialisation of soil and vegetation, so far relevant) 
   ! 
@@ -91,9 +99,13 @@ PROGRAM canopy_model_driver
      ! 
      ! 2.1 advance timer
      ! 
-     time_day  = time_day + dt/one_day         ! time in days
+     time_day  = time_day  + timestep_prop_day         ! time in days
      ! 
-     ! 2.2 set orbital parameters and update time-variant forcing; 
+     ! 2.2 set vegetation fluxes to zero
+     ! 
+     CALL set_zero_fluxes_of_plant_pools(tile(1)%plant%flux)   ! mo_veg_memory
+     ! 
+     ! 2.3 set orbital parameters and update time-variant forcing; 
      ! 
      CALL update_forcing(time_day)  ! see mo_atmland_forcing
      ! 

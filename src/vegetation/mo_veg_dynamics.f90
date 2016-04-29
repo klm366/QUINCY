@@ -22,8 +22,10 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculate establishment and mortality of a population (currently static mortality rate only) 
-  !!  
-  !! @todo debugging necessary - kills plants for no reason. implementation of full DGVM-style dynamics.   
+  !!
+  !! a background_mort_rate exists for each trees and grasses, defined as mortality rate per year
+  !!
+  !! flux%litterfall & flux%growth is set to zero each timestep in the plant model driver 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_veg_dynamics(plant, veg_param)
 
@@ -40,15 +42,14 @@ CONTAINS
     TYPE(Element)                             :: mortality_spread_element
     TYPE(VegPool)                             :: mortality_spread_pool
     TYPE(VegPool)                             :: litter_from_mortality
-    TYPE(VegPool)                             :: hlp1 
     REAL(wp)                                  :: mortality
 
     ! select rate and convert from 1/year to 1/timestep
     SELECT CASE (veg_param%growthform(plant%pftid))
       CASE (itree)
-         mortality = background_mort_rate_tree / one_year / one_day * dt
+         mortality = ((background_mort_rate_tree /  one_year) / one_day) * dt
       CASE (igrass)
-         mortality = background_mort_rate_grass / one_year / one_day * dt
+         mortality = ((background_mort_rate_grass / one_year) / one_day) * dt
       CASE DEFAULT
           WRITE(message_text,'(a,i4)') 'invalid growthform',veg_param%growthform(plant%pftid)
           CALL finish("mo_veg_dynamics:update_iveg_dynamics",message_text) 
@@ -74,8 +75,7 @@ CONTAINS
 
     ! calculate litter fall from mortality
     litter_from_mortality = VegPoolMul(mortality_spread_pool,plant%pool)
-    !plant%flux%litterfall = VegPoolAdd(plant%flux%litterfall,litter_from_mortality)
-
+    plant%flux%litterfall = VegPoolAdd(plant%flux%litterfall,litter_from_mortality)
   END SUBROUTINE update_veg_dynamics
 
 END MODULE mo_veg_dynamics
