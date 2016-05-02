@@ -28,7 +28,7 @@ CONTAINS
   IMPLICIT NONE
   ! 0.1 Input
   ! 0.2 modified Input
-  TYPE(TileClass),DIMENSION(ntile),INTENT(inout) :: tile
+  TYPE(t_slm_tile),DIMENSION(ntile),INTENT(inout) :: tile
   ! 0.3 Output
   ! 0.4 Local
   INTEGER :: t

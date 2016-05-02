@@ -25,8 +25,8 @@ PROGRAM canopy_test_model_driver
 
   IMPLICIT NONE
 
-  TYPE(VegetationParameterClass),SAVE    :: veg_param     ! data structure for vegetation parameters
-  TYPE(TileClass),DIMENSION(ntile), SAVE :: tile       ! data structure for dynamic vegetation and soil variables
+  TYPE(t_slm_veg_param),SAVE              :: veg_param  ! data structure for vegetation parameters
+  TYPE(t_slm_tile),DIMENSION(ntile), SAVE :: tile       ! data structure for dynamic vegetation and soil variables
 
   REAL(wp) :: vpd
   INTEGER :: i,lun

@@ -11,14 +11,14 @@ PROGRAM land_model_driver
   USE mo_kind
   USE mo_base_constants
   USE mo_atmland_constants
-  USE mo_atmland_util, ONLY: calc_spec_humidity_sat
+  USE mo_atmland_util,         ONLY: calc_spec_humidity_sat
   USE mo_land_constants        ! still necessary ?
   USE mo_land_model_interface, ONLY: land_model_interface 
   USE mo_veg_parameters
 
   IMPLICIT NONE
 
-   TYPE(VegetationParameterClass),SAVE :: veg_param    ! data structure for vegetation parameter
+   TYPE(t_slm_veg_param),SAVE :: veg_param    ! data structure for vegetation parameter
 
    REAL(wp) :: &                                       ! model forcing
       t_air            , &

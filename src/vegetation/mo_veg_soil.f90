@@ -29,15 +29,14 @@ CONTAINS
     USE mo_veg_parameters
 
     IMPLICIT NONE
-    ! 0.1 Input
-    TYPE(VegetationParameterClass),INTENT(in) :: veg_param     ! vegetation type parameters
-    ! 0.2 Inout
-    TYPE(TileClass), DIMENSION(ntile), INTENT(inout) :: tile
-    ! 0.4 Local
-    TYPE(AccumulationIntervalPlantClass) :: plant_acc_interval ! intervals over which variables are averaged
-    REAL(wp) :: clab, nlab, plab ! plant labile pools of carbon, nitrogen and phosphorus
-    REAL(wp) :: f_n_demand, f_p_demand ! relative plant demand for N and P 
-    INTEGER :: t,pftid
+    ! 0.1 InOut
+    TYPE(t_slm_veg_param),INTENT(in)                   :: veg_param     ! vegetation type parameters
+    TYPE(t_slm_tile), DIMENSION(ntile), INTENT(inout)  :: tile
+    ! 0.2 Local
+    TYPE(AccumulationIntervalPlantClass) :: plant_acc_interval   ! intervals over which variables are averaged
+    REAL(wp) :: clab, nlab, plab                                 ! plant labile pools of carbon, nitrogen and phosphorus
+    REAL(wp) :: f_n_demand, f_p_demand                           ! relative plant demand for N and P 
+    INTEGER :: t,pftid                                           ! iterate over tiles; ID of the pft
 
     DO t = 1,ntile
     
@@ -117,8 +116,8 @@ CONTAINS
     USE mo_land_constants, ONLY: r_gas_dryair
     IMPLICIT NONE
     ! 0.2 Inout
-    !TYPE(TileClass), DIMENSION(ntile), INTENT(inout) :: tile
-    TYPE(TileClass), INTENT(inout) :: tile
+    !TYPE(t_slm_tile), DIMENSION(ntile), INTENT(inout) :: tile
+    TYPE(t_slm_tile), INTENT(inout) :: tile
     ! 0.4 local
     INTEGER :: t
     REAL(wp) :: q_sat

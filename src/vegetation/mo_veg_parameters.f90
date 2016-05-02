@@ -108,7 +108,12 @@ MODULE mo_veg_parameters
   INTEGER,PARAMETER :: isummergreen = 3 
   INTEGER,PARAMETER :: iperennial = 4 
 
-  TYPE VegetationParameterClass
+  !-----------------------------------------------------------------------------------------------------
+  !> global constants to describe the vegetation processes
+  !! 
+  !! each variable is a vector over all plant functional types (pft with number npft)
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_slm_veg_param
      INTEGER,DIMENSION(npft) :: growthform 
      INTEGER,DIMENSION(npft) :: ps_pathway
      INTEGER,DIMENSION(npft) :: phenology_type
@@ -142,7 +147,7 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: vmax_uptake_p
      REAL(wp),DIMENSION(npft) :: soil_p_aff1 
      REAL(wp),DIMENSION(npft) :: soil_p_aff2 
-  END TYPE VegetationParameterClass
+  END TYPE t_slm_veg_param
 
   !> interval over which the values are accumulated/ averaged (in moving_avrg()); 
   !! interval in days !! ; 
@@ -169,7 +174,7 @@ MODULE mo_veg_parameters
    
       USE mo_land_constants
       USE mo_atmland_constants
-      TYPE(VegetationParameterClass),INTENT(inout) :: veg_param
+      TYPE(t_slm_veg_param),INTENT(inout) :: veg_param
 
       !IMPLICIT NONE
       ! 
@@ -322,10 +327,11 @@ MODULE mo_veg_parameters
       ! 
       ! This subroutine initalise plant type specific parameters
       ! This should obviously not be hard coded, but read from a file
-      !
+      ! 
       USE mo_land_constants, ONLY: molar_mass_C,molar_mass_N,molar_mass_P
       IMPLICIT NONE
-      TYPE(VegetationParameterClass),INTENT(inout) :: veg_param
+      ! 0.1 InOut
+      TYPE(t_slm_veg_param),INTENT(inout) :: veg_param         !< vegatetion parameter structure
  
       ! types are 
       ! 1) broad leaved evergreen (rainforest) 

@@ -10,10 +10,10 @@
 MODULE mo_veg_output
   !! this module may be not necessary anymore when QUINCY is linked with JSBACH !!
 
-  USE mo_kind, ONLY: wp, eps8
-  USE mo_base_memory, ONLY: TileClass
-  USE mo_base_constants, ONLY: ntile, one_day, dt
-  USE mo_veg_parameters, ONLY: VegetationParameterClass
+  USE mo_kind,               ONLY: wp, eps8
+  USE mo_base_memory,        ONLY: t_slm_tile
+  USE mo_base_constants,     ONLY: ntile, one_day, dt
+  USE mo_veg_parameters,     ONLY: t_slm_veg_param
   USE mo_veg_config_class,   ONLY: veg_config
 
   IMPLICIT NONE
@@ -191,18 +191,18 @@ CONTAINS
     CALL init_output_writing_flux
   END SUBROUTINE open_flux_output_files
 
-  ! 
-  ! write data to files in a certain interval and accumulate fluxes
-  ! 
+  !> write data to files in a certain interval and accumulate fluxes 
+  !! 
+  !! write file output for pools at a certain interval accordingly to input
   SUBROUTINE write_output_pool(time_d, time_y, tile, veg_param)
-    ! write file output for pools at a certain interval accordingly to input
+
     USE mo_veg_parameters, ONLY: itree
     IMPLICIT NONE
     ! 0.1 Input
-    REAL(wp), INTENT(in) :: time_d  ! time in days
-    INTEGER,  INTENT(in) :: time_y  ! time in years; the 1st year of a simulation == year 1 (not zero)
-    TYPE(TileClass), DIMENSION(ntile), INTENT(in) :: tile
-    TYPE(VegetationParameterClass),INTENT(in)     :: veg_param        ! data structure for vegetation parameters
+    REAL(wp), INTENT(in) :: time_d  !< time in days
+    INTEGER,  INTENT(in) :: time_y  !< time in years; the 1st year of a simulation == year 1 (not zero)
+    TYPE(t_slm_tile), DIMENSION(ntile), INTENT(in) :: tile             !< tile parameters
+    TYPE(t_slm_veg_param),INTENT(in)               :: veg_param        !< data structure for vegetation parameters
     ! 0.2 Output
     ! 
     ! 0.3 Local
@@ -254,7 +254,7 @@ CONTAINS
     ! 0.1 Input
     REAL(wp), INTENT(in) :: time_d  ! time in days
     INTEGER,  INTENT(in) :: time_y  ! time in years; the 1st year of a simulation == year 1 (not zero)
-    TYPE(TileClass), DIMENSION(ntile), INTENT(in) :: tile
+    TYPE(t_slm_tile), DIMENSION(ntile), INTENT(in) :: tile
     ! 0.2 Output
     ! 
     ! 0.3 Local

@@ -146,11 +146,11 @@ CONTAINS
   !! variable TRUE or FALSE, valid for one timestep
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_conditions_current_timestep (this, plant)
-    USE mo_base_memory,    ONLY: PlantClass
+    USE mo_base_memory,    ONLY: t_slm_plant
     USE mo_atmland_memory, ONLY: atm2land
 
     IMPLICIT NONE 
-    TYPE(PlantClass), INTENT(in) :: plant          !< mo_base_memory: TYPE(PlantClass) :: plant; initialized in TYPE TileClass
+    TYPE(t_slm_plant), INTENT(in) :: plant          !< mo_base_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
     CLASS(t_daily_average), INTENT(inout) :: this  !< TYPE t_daily_average
 
     ! condition type 1: light > zero
@@ -173,10 +173,10 @@ CONTAINS
   !! per variable the values are summed up and the number of summed values is stored
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE accumulate_values_over_current_day (this, plant)
-    USE mo_base_memory,   ONLY: PlantClass
+    USE mo_base_memory,   ONLY: t_slm_plant
     IMPLICIT NONE 
     ! 0.1 InOut
-    TYPE(PlantClass), INTENT(in) :: plant          !< mo_base_memory: TYPE(PlantClass) :: plant; initialized in TYPE TileClass
+    TYPE(t_slm_plant), INTENT(in) :: plant          !< mo_base_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
     CLASS(t_daily_average), INTENT(inout) :: this  !< TYPE t_daily_average
     ! 0.2 Local
     INTEGER  :: i                                  ! loop over canopy layers
@@ -216,12 +216,12 @@ CONTAINS
   !! daily_average(:) has the same dimension as tile(:)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calculate_avrg_previous_day (this, plant, time_day, timestep_prop_day)
-    USE mo_base_memory,     ONLY: PlantClass
+    USE mo_base_memory,     ONLY: t_slm_plant
     IMPLICIT NONE 
     ! 0.1 InOut
-    TYPE(PlantClass), INTENT(in) :: plant        !< mo_base_memory: TYPE(PlantClass) :: plant; initialized in TYPE TileClass
-    REAL(wp), INTENT(in)         :: time_day           !< time in days
-    REAL(wp), INTENT(in)         :: timestep_prop_day  !< length of one time step (proportion of one day)
+    TYPE(t_slm_plant), INTENT(in) :: plant        !< mo_base_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
+    REAL(wp), INTENT(in)          :: time_day           !< time in days
+    REAL(wp), INTENT(in)          :: timestep_prop_day  !< length of one time step (proportion of one day)
     CLASS(t_daily_average), INTENT(inout) :: this      !< TYPE t_daily_average
     ! 0.2 Local
     INTEGER  :: i                                   ! loop over canopy layers

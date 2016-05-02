@@ -36,12 +36,12 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(VegetationParameterClass),INTENT(in) :: veg_param            !< list of vegetation parameters
-    TYPE(PlantClass),INTENT(inout)            :: plant                !< current plant  
+    TYPE(t_slm_veg_param),INTENT(in)          :: veg_param            !< list of vegetation parameters
+    TYPE(t_slm_plant),INTENT(inout)           :: plant                !< current plant  
     ! 0.2 Local
-    TYPE(Element)                             :: mortality_spread_element
-    TYPE(VegPool)                             :: mortality_spread_pool
-    TYPE(VegPool)                             :: litter_from_mortality
+    TYPE(t_element)                           :: mortality_spread_element
+    TYPE(t_slm_veg_pool)                      :: mortality_spread_pool
+    TYPE(t_slm_veg_pool)                      :: litter_from_mortality
     REAL(wp)                                  :: mortality
 
     ! select rate and convert from 1/year to 1/timestep

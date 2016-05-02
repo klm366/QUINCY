@@ -18,7 +18,7 @@ MODULE mo_land_model_interface
 
   PUBLIC :: land_model_interface
 
-  TYPE(TileClass), DIMENSION(ntile), SAVE        :: tile
+  TYPE(t_slm_tile), DIMENSION(ntile), SAVE        :: tile
 
   CONTAINS
 
@@ -56,7 +56,7 @@ MODULE mo_land_model_interface
       pch              , &
       cos_zenith_angle , & 
       co2_mixing_ratio  
-    TYPE(VegetationParameterClass) :: veg_param
+    TYPE(t_slm_veg_param) :: veg_param
     ! 0.4 Local
     REAL(wp) :: & 
       alb_vis_dif ,   &

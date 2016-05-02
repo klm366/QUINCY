@@ -31,9 +31,9 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 Input
-    TYPE(VegetationParameterClass), INTENT(in) :: veg_param 
+    TYPE(t_slm_veg_param), INTENT(in) :: veg_param 
     ! 0.2 In- and Output
-    TYPE(PlantClass), INTENT(inout) :: plant
+    TYPE(t_slm_plant), INTENT(inout) :: plant
     ! 0.4 Local 
     REAL(wp)                        :: fturn_leaf,fturn_fine_root,fturn_coarse_root,fturn_sap_wood, &
                                        fturn_seed_bed 
@@ -210,10 +210,13 @@ CONTAINS
     ! 
     USE mo_base_constants, ONLY: dt, one_day, one_year
     IMPLICIT NONE
+    ! 0.1 InOut
     REAL(wp), INTENT(in) :: tau_pool
     REAL(wp), INTENT(in) :: resorption
-
-    TYPE(Element),INTENT(inout) :: source_flux,sink_flux,storage_flux,source_pool
+    TYPE(t_element),INTENT(inout) :: source_flux
+    TYPE(t_element),INTENT(inout) :: sink_flux
+    TYPE(t_element),INTENT(inout) :: storage_flux
+    TYPE(t_element),INTENT(inout) :: source_pool
 
     source_flux%carbon = source_flux%carbon - tau_pool * dt/one_day/one_year * source_pool%carbon
     sink_flux%carbon = tau_pool * dt/one_day/one_year * source_pool%carbon
@@ -246,7 +249,7 @@ CONTAINS
     USE mo_veg_parameters
 
     IMPLICIT NONE
-    TYPE(PlantClass) :: plant
+    TYPE(t_slm_plant) :: plant
     REAL(wp) :: resorption
 
     resorption = resorption_default
@@ -261,7 +264,7 @@ CONTAINS
     USE mo_veg_parameters
 
     IMPLICIT NONE
-    TYPE(PlantClass) :: plant
+    TYPE(t_slm_plant) :: plant
     REAL(wp) :: resorption 
 
     resorption = resorption_default

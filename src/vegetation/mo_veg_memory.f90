@@ -18,8 +18,8 @@ CONTAINS
  FUNCTION VegPoolAdd(p1,p2) RESULT(p3)
      USE mo_base_memory
      IMPLICIT NONE
-     TYPE(VegPool), INTENT(in) :: p1,p2
-     TYPE(VegPool) :: p3
+     TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
+     TYPE(t_slm_veg_pool) :: p3
      p3%leaf          = ElementAdd(p1%leaf,p2%leaf)
      p3%fine_root     = ElementAdd(p1%fine_root,p2%fine_root)
      p3%coarse_root   = ElementAdd(p1%coarse_root,p2%coarse_root)
@@ -34,8 +34,8 @@ CONTAINS
  FUNCTION VegPoolSub(p1,p2) RESULT(p3)
      USE mo_base_memory
      IMPLICIT NONE
-     TYPE(VegPool), INTENT(in) :: p1,p2
-     TYPE(VegPool) :: p3
+     TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
+     TYPE(t_slm_veg_pool) :: p3
      p3%leaf = ElementSub(p1%leaf,p2%leaf)
      p3%fine_root = ElementSub(p1%fine_root,p2%fine_root)
      p3%coarse_root = ElementSub(p1%coarse_root,p2%coarse_root)
@@ -50,8 +50,8 @@ CONTAINS
  FUNCTION VegPoolMul(p1,p2) RESULT(p3)
      USE mo_base_memory
      IMPLICIT NONE
-     TYPE(VegPool), INTENT(in) :: p1,p2
-     TYPE(VegPool) :: p3
+     TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
+     TYPE(t_slm_veg_pool) :: p3
      p3%leaf = ElementMul(p1%leaf,p2%leaf)
      p3%fine_root = ElementMul(p1%fine_root,p2%fine_root)
      p3%coarse_root = ElementMul(p1%coarse_root,p2%coarse_root)
@@ -66,8 +66,8 @@ CONTAINS
  FUNCTION VegPoolDiv(p1,p2) RESULT(p3)
      USE mo_base_memory
      IMPLICIT NONE
-     TYPE(VegPool), INTENT(in) :: p1,p2
-     TYPE(VegPool) :: p3
+     TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
+     TYPE(t_slm_veg_pool) :: p3
      p3%leaf = ElementDiv(p1%leaf,p2%leaf)
      p3%fine_root = ElementDiv(p1%fine_root,p2%fine_root)
      p3%coarse_root = ElementDiv(p1%coarse_root,p2%coarse_root)
@@ -89,9 +89,9 @@ CONTAINS
     USE mo_base_memory
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(VegPool), INTENT(inout) :: one_flux_of_pools
+    TYPE(t_slm_veg_pool), INTENT(inout) :: one_flux_of_pools
 
-     one_flux_of_pools%leaf         = element_zero   ! TYPE(Element) :: element_zero; see mo_base_memory
+     one_flux_of_pools%leaf         = element_zero   ! TYPE(t_element) :: element_zero; see mo_base_memory
      one_flux_of_pools%fine_root    = element_zero
      one_flux_of_pools%coarse_root  = element_zero
      one_flux_of_pools%sap_wood     = element_zero
@@ -112,12 +112,12 @@ CONTAINS
     USE mo_base_memory
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(VegFlux), INTENT(inout) :: flux
+    TYPE(t_slm_veg_flux), INTENT(inout) :: flux
 
     CALL set_zero_flux_of_plant_pools(flux%growth)
     CALL set_zero_flux_of_plant_pools(flux%litterfall)
 
-    flux%reserve_use             = element_zero    ! TYPE(Element) :: reserve_use
+    flux%reserve_use             = element_zero    ! TYPE(t_element) :: reserve_use
 
     flux%gpp                     = 0.0_wp  !< gross photosynthesis (µmol CO2 m-2 s-1)
     flux%an                      = 0.0_wp  !< net photosynthesis (µmol CO2 m-2 s-1)

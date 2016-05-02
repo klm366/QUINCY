@@ -11,8 +11,12 @@ MODULE mo_atmland_memory
 
   USE mo_kind, ONLY: wp
 
-  TYPE t_atm2land_memory
-
+  !-----------------------------------------------------------------------------------------------------
+  !> variables for atmostphere to land processes
+  !! 
+  !! includes e.g. air temperature, rain, snow, wind, certain sunlight parameters, ...
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_atm2land
     REAL(wp) :: &
       t_air            , &
       q_air            , &
@@ -36,10 +40,14 @@ MODULE mo_atmland_memory
       co2_mixing_ratio , &
       ga
 
-  END TYPE t_atm2land_memory
+  END TYPE t_atm2land
 
-  TYPE t_land2atm_memory
-
+  !-----------------------------------------------------------------------------------------------------
+  !> variables for land to atmosphere processes
+  !! 
+  !! includes e.g. surface temperature, certain albedo parameters, ..
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_land2atm
     REAL(wp) :: &
       t_srf       ,   &
       t_eff_srf   ,   &
@@ -54,10 +62,10 @@ MODULE mo_atmland_memory
       alb_nir_dir ,   &
       vpd
 
-  END TYPE t_land2atm_memory
+  END TYPE t_land2atm
 
-  TYPE(t_atm2land_memory), SAVE           :: atm2land         ! atmostphere to land 
-  TYPE(t_land2atm_memory), SAVE           :: land2atm         ! land to atmosphere
+  TYPE(t_atm2land), SAVE           :: atm2land         ! atmostphere to land 
+  TYPE(t_land2atm), SAVE           :: land2atm         ! land to atmosphere
 
   PUBLIC :: atm2land,land2atm
 

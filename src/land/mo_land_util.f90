@@ -17,18 +17,19 @@ MODULE mo_land_util
 
 CONTAINS
 
+  !> calculate/ accumulate the moving average of certain vegetation variables across a certain interval of timesteps
+  !! for initial average values of vegetation variables see mo_veg_memory; init subroutine called in plant_model_driver
   SUBROUTINE update_tile_moving_averages(tile)
-    ! calculate/ accumulate the moving average of certain vegetation variables across a certain interval of timesteps
-    ! for initial average values of vegetation variables see mo_veg_memory; init subroutine called in plant_model_driver
-    USE mo_base_memory, ONLY: TileClass
-    USE mo_base_util, ONLY: moving_avrg
-    USE mo_base_constants, ONLY: dt, one_day, ntile
+
+    USE mo_base_memory,     ONLY: t_slm_tile
+    USE mo_base_util,       ONLY: moving_avrg
+    USE mo_base_constants,  ONLY: dt, one_day, ntile
     USE mo_atmland_memory , ONLY: atm2land
     USE mo_land_parameters, ONLY: AccumulationIntervalTileClass
     IMPLICIT NONE
-    ! 0.2. In- & Output
-    TYPE(TileClass), DIMENSION(ntile), INTENT(inout) :: tile 
-    ! 0.4 Local
+    ! 0.1 InOut
+    TYPE(t_slm_tile), DIMENSION(ntile), INTENT(inout) :: tile 
+    ! 0.2 Local
     TYPE(AccumulationIntervalTileClass) :: tile_acc_interval ! intervals over which variables are averaged mo_land_parameters
 
     ! moving_avrg( current average, new value, weight of new value, use function TRUE FALSE [OPTIONAL argument] )

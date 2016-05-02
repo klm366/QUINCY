@@ -29,18 +29,17 @@ CONTAINS
     ! be beneficial to keep the loop outside the actual growth routine
     ! 
     USE mo_land_constants
-    USE mo_veg_parameters, ONLY: VegetationParameterClass
+    USE mo_veg_parameters,     ONLY: t_slm_veg_param
     USE mo_veg_photosynthesis, ONLY: update_canopy_fluxes
-    USE mo_veg_phenology, ONLY: update_phenology
+    USE mo_veg_phenology,      ONLY: update_phenology
 
     IMPLICIT NONE
 
-    ! 0.1 Input
-    TYPE(VegetationParameterClass),INTENT(in) :: veg_param   ! vegetation type parameters
-    ! 0.2 In- and Output
-    TYPE(TileClass), DIMENSION(ntile), INTENT(inout) :: tile
-    ! 0.4 Local
-    INTEGER :: t
+    ! 0.1 InOut
+    TYPE(t_slm_veg_param),INTENT(in) :: veg_param                !< vegetation type parameters
+    TYPE(t_slm_tile), DIMENSION(ntile), INTENT(inout) :: tile    !< tile parameters
+    ! 0.2 Local
+    INTEGER :: t                                                 ! iterate over tiles
 
     DO t = 1,ntile
        ! 
@@ -70,17 +69,17 @@ CONTAINS
     USE mo_base_memory,     ONLY: ElementAdd,ElementSub
     USE mo_base_util,       ONLY: moving_avrg ! temporarily only!
     USE mo_veg_memory,      ONLY: VegPoolAdd,VegPoolSub
-    USE mo_veg_parameters,  ONLY: VegetationParameterClass
+    USE mo_veg_parameters,  ONLY: t_slm_veg_param
     USE mo_veg_turnover
     USE mo_veg_growth
     USE mo_veg_dynamics,    ONLY: update_veg_dynamics
     USE mo_veg_respiration, ONLY: calc_maintenance_respiration
     IMPLICIT NONE
-    ! 0.1 Input
-    TYPE(VegetationParameterClass),INTENT(in) :: veg_param      ! vegetation type parameters
-    REAL(wp),INTENT(in) :: theta                                ! soil moisture (%)
-    ! 0.2 In- and Output
-    TYPE(PlantClass),INTENT(inout) :: plant
+    ! 0.1 InOut
+    TYPE(t_slm_veg_param),INTENT(in) :: veg_param             ! vegetation type parameters
+    REAL(wp),INTENT(in)              :: theta                 ! soil moisture (%)
+    TYPE(t_slm_plant),INTENT(inout)  :: plant
+
     ! 
     ! 2.0 Calculate growth
     ! 

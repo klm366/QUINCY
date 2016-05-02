@@ -29,12 +29,10 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
 
  USE mo_base_util, ONLY: moving_avrg
    IMPLICIT NONE
-   ! 0.1 Input
-   TYPE(VegetationParameterClass), INTENT(in) :: veg_param  ! list of vegetation parameters
-   ! 0.2 In-Output
-   TYPE(TileClass), INTENT(inout)             :: tile       ! current tile
-   ! 0.3 Output
-   ! 0.4 Local
+   ! 0.1 InOut
+   TYPE(t_slm_veg_param), INTENT(in)           :: veg_param  ! list of vegetation parameters
+   TYPE(t_slm_tile), INTENT(inout)             :: tile       ! current tile
+   ! 0.2 Local
    REAL(wp),DIMENSION(ncanop) :: agl,anl,rl,gsl,cil
    REAL(wp),DIMENSION(ncanop) :: canopy_layer_depth_act
    REAL(wp) :: beta_air

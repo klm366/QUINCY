@@ -37,8 +37,8 @@ PROGRAM plant_model_driver
 
   IMPLICIT NONE
 
-  TYPE(VegetationParameterClass),SAVE     :: veg_param        ! data structure for vegetation parameters
-  TYPE(TileClass),DIMENSION(ntile), SAVE  :: tile             ! data structure for dynamic vegetation and soil variables
+  TYPE(t_slm_veg_param),SAVE               :: veg_param        ! data structure for vegetation parameters
+  TYPE(t_slm_tile),DIMENSION(ntile), SAVE  :: tile             ! data structure for dynamic vegetation and soil variables
 
   INTEGER  :: i
   REAL(wp) :: time_day                     ! displays the 'real time' in days; time_day == 1.0 after one day has passed

@@ -23,7 +23,7 @@ CONTAINS
     USE mo_base_memory
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(TileClass), DIMENSION(ntile), INTENT(inout) :: tile 
+    TYPE(t_slm_tile), DIMENSION(ntile), INTENT(inout) :: tile 
     ! 
     ! 1.0 initialize default values
     ! 
