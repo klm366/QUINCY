@@ -58,7 +58,7 @@ MODULE mo_assimi_interface
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_assimi
     !LOGICAL      :: waterLimitationFlag
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => assimilation_waterlimited   !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Integrate => assimilation_waterunlimited   !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_assimi            !< Aggregates computed task variables
   END TYPE tsk_assimi
   
@@ -128,8 +128,10 @@ CONTAINS
      !    alternatively in SUBROUTINE orbit_kepler. Therefore this seems to be a problem solved with the development of ICON...
      !    Note: problem still exists in the 26.10.2015 version of icon-les-dev !
      !    However taken from mo_psrad_orbit works... perhaps precompiler command necessary here...
-    USE mo_psrad_orbit,           ONLY: inquire_declination
-     
+    USE mo_psrad_orbit,       ONLY: inquire_declination
+    USE mo_jsb_grid,          ONLY: Get_grid
+    USE mo_assimi_process,    ONLY: calc_assimilation_scaling_factors
+    
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -149,8 +151,9 @@ CONTAINS
     dsl4jsb_Def_memory(VEG)
     
     ! Declare pointers to variables in memory
-    INTEGER, POINTER       :: ncanopy          ! number of canopy layers
-    dsl4jsb_Real3D_onChunk :: canopy_bound_lai
+    INTEGER,  POINTER               :: ncanopy          ! number of canopy layers
+    REAL(wp), POINTER, DIMENSION(:) :: canopy_bound_lai
+    dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: lat    
     
@@ -175,8 +178,8 @@ CONTAINS
     dsl4jsb_Get_memory(VEG)
     
     ! Get process variables
-    ncanopy                  => dsl4jsb_Config(ASSIMI)%config%ncanopy          ! IN
-    canopy_bound_lai         => dsl4jsb_Config(ASSIMI)%%canopy_bound_lai ! IN
+    ncanopy                  => dsl4jsb_Config(ASSIMI)%ncanopy          ! IN
+    canopy_bound_lai         => dsl4jsb_Config(ASSIMI)%canopy_bound_lai ! IN
     grid => Get_grid(model%grid_id)                           ! IN
     lat  => grid%lat(ics:ice, iblk)                           ! IN
     
@@ -209,7 +212,7 @@ CONTAINS
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
-  END SUBROUTINE update_assimi
+  END SUBROUTINE assimilation_scaling_factors
   
   ! ================================================================================================================================
   !>
@@ -266,7 +269,7 @@ CONTAINS
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
-  END SUBROUTINE update_assimi
+  END SUBROUTINE assimilation_waterunlimited
     
   
   ! -------------------------------------------------------------------------------------------------------

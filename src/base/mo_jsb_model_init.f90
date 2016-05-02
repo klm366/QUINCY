@@ -215,12 +215,13 @@ CONTAINS
                                                                   ! R: bezieht. Außerdem wäre auch jede andere Speicherstelle die sich nicht
                                                                   ! R: bei/während der Abarbeitung der Queue ändert unnütz. Die Speicherstelle
                                                                   ! R: müsste unter model%queue% z.B. als task_config liegen.
-                                                                  ! R: So wie es jetzt ist, dass die Tasks je nach Konfiguration eigenständige
-                                                                  ! R: Tasks sein müssen finde ich gar nicht so schlecht. Denn dadurch gibt
+                                                                  ! R: So wie es jetzt ist (dass die Tasks je nach Konfiguration eigenständige
+                                                                  ! R: Tasks sein müssen) finde ich gar nicht so schlecht. Denn dadurch gibt
                                                                   ! R: es keine "Abhängigkeiten" des Tasks in der Queue sondern nur eindeutig
                                                                   ! R: definierte Tasks. Mit welchen IFs man die Queue auch erstellt hat, am 
                                                                   ! R: Ende ist sie eindeutig und man kann sich die Tasks eindeutig ausgegeben
-                                                                  ! R: lassen.
+                                                                  ! R: lassen. Außerdem: die Konfiguration beinhaltet nicht die 
+                                                                  ! R: Fallunterscheidungen für jedes Tile und LCT-Typ usw....
                                                                   
     ! include here the tasks soil_hydrology and vegetation_conductance
     CALL model%Queue_task(ASSIMI, "assimilation_waterunlimited")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
