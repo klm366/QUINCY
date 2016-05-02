@@ -59,15 +59,15 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
   
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_<PROCESS_NAME_LOWER_CASE>_process
+  PUBLIC :: Register_<PROCESS_NAME_LOWER_CASE>_tasks !, t_<PROCESS_NAME_LOWER_CASE>_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_<PROCESS_NAME_LOWER_CASE>_interface'
   
   !> Type definition for <PROCESS_NAME_LOWER_CASE> process
-  TYPE, EXTENDS(t_jsb_process) :: t_<PROCESS_NAME_LOWER_CASE>_process
-  CONTAINS
-    PROCEDURE :: Register_tasks => Register_<PROCESS_NAME_LOWER_CASE>_tasks        !< Registers tasks for <PROCESS_NAME_LOWER_CASE> process
-  END TYPE t_<PROCESS_NAME_LOWER_CASE>_process
+!   TYPE, EXTENDS(t_jsb_process) :: t_<PROCESS_NAME_LOWER_CASE>_process
+!   CONTAINS
+!     PROCEDURE :: Register_tasks => Register_<PROCESS_NAME_LOWER_CASE>_tasks        !< Registers tasks for <PROCESS_NAME_LOWER_CASE> process
+!   END TYPE t_<PROCESS_NAME_LOWER_CASE>_process
   
   !> Type definition for <PROCESS_NAME_LOWER_CASE> task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_<PROCESS_NAME_LOWER_CASE>
@@ -126,25 +126,25 @@ CONTAINS
   !! Task "<PROCESS_NAME_LOWER_CASE>" <EXPLANATIION_OF_PROCESS>.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.
   !!
   SUBROUTINE update_<PROCESS_NAME_LOWER_CASE>(tile, options)
 
+    ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Local variables
+    INTEGER  :: iblk, ics, ice, nc
+    !X if necessary: REAL(wp) :: dtime, steplen
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_<PROCESS_NAME_LOWER_CASE>'
+
 
     ! Declare process memories
     dsl4jsb_Def_memory(<PROCESS_NAME_UPPER_CASE>)
 
     ! Declare pointers to variables in memory
     !X e.g: dsl4jsb_Real2D_onChunk :: t_srf
-
-    ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
-    !X if necessary: REAL(wp) :: dtime, steplen
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_<PROCESS_NAME_LOWER_CASE>'
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -155,7 +155,7 @@ CONTAINS
     !X if necessary: steplen = options%steplen
     
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(<PROCESS_NAME_UPPER_CASE>)) RETURN
+    !IF (.NOT. tile%Is_process_active(<PROCESS_NAME_UPPER_CASE>)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -179,19 +179,18 @@ CONTAINS
   !! Implementation of "aggregate" for task "<PROCESS_NAME_LOWER_CASE>"
   !! 
   !! @param[in,out] tile    Tile for which routine is executed.  
-  !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.  
   !!
   SUBROUTINE aggregate_<PROCESS_NAME_LOWER_CASE>(tile, options)
 
+    ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_<PROCESS_NAME_LOWER_CASE>'
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_<PROCESS_NAME_LOWER_CASE>'
     
     ! Get local variables from options argument
     iblk = options%iblk
@@ -216,7 +215,6 @@ CONTAINS
   !>
   !! @brief Another task for "<PROCESS_NAME_LOWER_CASE>"
   !!
-  !! @param[in]     config  Vector of process configurations.
   !! @param[in]     options Additional run-time parameters.  
   !! @param[in,out] tile    Tile for which routine is executed.
   !  ....

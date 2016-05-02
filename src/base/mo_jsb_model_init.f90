@@ -197,8 +197,36 @@ CONTAINS
     CALL model%Queue_task(RAD,    "radiation_surface")
     CALL model%Queue_task(SEB,    "surface_energy")
     CALL model%Queue_task(TURB,   "surface_roughness")
-    CALL model%Queue_task(ASSIMI, "update_assimilation_scaling_factors")
-    CALL model%Queue_task(ASSIMI, "update_assimilation")
+    CALL model%Queue_task(ASSIMI, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited 
+                                                                  ! and assimilation_waterunlimited
+    CALL model%Queue_task(ASSIMI, "assimilation_waterlimited")    ! first call without water limitation (waterLimitationFlag =.FALSE.)
+                                                                  ! R: Das ist eine grundsätzliche Entscheidung hier:
+                                                                  ! R: Ein Task könnte unterschiedliche Konfigurationen habe.
+                                                                  ! R: So wie die Struktur jetzt ist, MUSS jede dieser Konfigurationen
+                                                                  ! R: ein eigener Task sein, denn die Queue (model%queue%next%...%task) 
+                                                                  ! R: zeigt immer auf einen Task der unter model%processes(2)%p%task_list(:)
+                                                                  ! R: steht. Würde man zwischen den Aufrufen hier versuchen den Task zu
+                                                                  ! R: konfigurieren z.B. model%queue%next%...%task%waterLimitationFlag = .TRUE.
+                                                                  ! R: so würde später wenn die Queue abgearbeitet wird immer nur die letzte 
+                                                                  ! R: Konfiguration existieren, da der Task nur einmal existiert und die Queue
+                                                                  ! R: nur Pointer auf diesen einen Task hat.
+                                                                  ! R: Die Konfiguration gehört nicht zu model%processes(2)%p%config da sie
+                                                                  ! R: sich nicht auf einen gesamten Prozess sondern nur auf einen Task darin
+                                                                  ! R: bezieht. Außerdem wäre auch jede andere Speicherstelle die sich nicht
+                                                                  ! R: bei/während der Abarbeitung der Queue ändert unnütz. Die Speicherstelle
+                                                                  ! R: müsste unter model%queue% z.B. als task_config liegen.
+                                                                  ! R: So wie es jetzt ist, dass die Tasks je nach Konfiguration eigenständige
+                                                                  ! R: Tasks sein müssen finde ich gar nicht so schlecht. Denn dadurch gibt
+                                                                  ! R: es keine "Abhängigkeiten" des Tasks in der Queue sondern nur eindeutig
+                                                                  ! R: definierte Tasks. Mit welchen IFs man die Queue auch erstellt hat, am 
+                                                                  ! R: Ende ist sie eindeutig und man kann sich die Tasks eindeutig ausgegeben
+                                                                  ! R: lassen.
+                                                                  
+    ! include here the tasks soil_hydrology and vegetation_conductance
+    CALL model%Queue_task(ASSIMI, "assimilation_waterunlimited")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
+                                                         ! should be called after the soil hydrology is calculated (former update_soil_1)
+                                                         !              and after the vegetation conductance is calculated 
+                                                         !              (former update_vegetation_conductanc)
     CALL model%Queue_task(SEB,    "asselin_filter")      ! Should always be the last task
 
     CALL print_model(model)

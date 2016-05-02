@@ -24,8 +24,9 @@ MODULE mo_assimi_config_class
   PUBLIC :: t_assimi_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
-     !X e.g: LOGICAL                     :: use_alb_veg_simple
-
+     INTEGER                             :: ncanopy          ! number of canopy layers for the assimi process
+                                                             ! R: could be different for other processes e.g. for radiation
+     REAL(wp), DIMENSION(:), ALLOCATABLE :: canopy_bound_lai
    CONTAINS
      PROCEDURE :: Init => Init_assimi_config
   END type t_assimi_config
@@ -46,11 +47,11 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    !X e.g: LOGICAL                     :: use_alb_veg_simple
+    INTEGER                     :: ncanopy, i
 
     NAMELIST /jsb_assimi_nml/      &
-         active,                      &
-         ic_filename,                 &
+         active,                   &
+         ic_filename,              &
          bc_filename
          !X e.g: use_assimi_veg_simple
 
@@ -64,6 +65,8 @@ CONTAINS
     active              = .TRUE.
     bc_filename         = 'bc_land_assimi.nc'
     ic_filename         = 'ic_land_assimi.nc'
+    ncanopy             = 3
+
     !X e.g: use_alb_veg_simple        = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -76,8 +79,15 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
-    !X e.g: config%use_alb_veg_simple        = use_alb_veg_simple
+    config%ncanopy             = ncanopy    
     
+    ! Prepare canopy boundaries of lai_cl
+    ALLOCATE(config%canopy_bound_lai(0:ncanopy))
+    DO i=0,ncanopy
+       config%canopy_bound_lai(i) = REAL(i,wp) / REAL(ncanopy,wp)
+       !write(*,*) "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR: canopy_bound_lai(i)" , new%canopy_bound_lai(i)
+    END DO
+
   END SUBROUTINE Init_assimi_config
 
 #endif
