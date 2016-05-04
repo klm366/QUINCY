@@ -39,7 +39,7 @@ CONTAINS
   SUBROUTINE calc_maintenance_respiration(t_stem,t_root,sap_wood_nitrogen,fine_root_nitrogen,coarse_root_nitrogen,&
                   labile_carbon,labile_carbon13,labile_carbon14,maint_respiration_leaf,& 
                   maint_respiration,maint_respiration_c13,maint_respiration_c14)
-    !
+    ! 
     ! Routine to calculate plant maintenance respiration based on the tissue N contents
     ! 
     USE mo_veg_parameters, ONLY: fmaint_rate_base

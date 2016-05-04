@@ -1,17 +1,3 @@
 mo_land_constants.o: \
   mo_kind.o
 
-mo_land_parameters.o: \
-  mo_kind.o
-
-mo_land_memory.o: \
-  mo_kind.o
-
-mo_land_util.o: \
-  mo_kind.o \
-  mo_base_memory.o \
-  mo_base_util.o \
-  mo_base_constants.o \
-  mo_atmland_memory.o \
-  mo_land_parameters.o
-

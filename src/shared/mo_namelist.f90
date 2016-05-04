@@ -46,6 +46,9 @@ MODULE mo_namelist
 
   PUBLIC :: positioned, missing, closed, length_error, read_error
 
+  !> used to read namlist files, originates from ECHAM
+  !! 
+  !! used in SLM without any modification
   TYPE t_namelist
     CHARACTER(len=64) :: filename
     INTEGER :: fileunit

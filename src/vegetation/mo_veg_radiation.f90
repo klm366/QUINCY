@@ -26,13 +26,12 @@ CONTAINS
   !! currently no albedo calculation...
   ! 
   IMPLICIT NONE
-  ! 0.1 Input
-  ! 0.2 modified Input
+  ! 0.1 InOut
   TYPE(t_slm_tile),DIMENSION(ntile),INTENT(inout) :: tile
-  ! 0.3 Output
-  ! 0.4 Local
+  ! 0.2 Local
   INTEGER :: t
-  !
+
+  ! 
   ! 1.0 initalise output
   ! 
   land2atm%alb_nir_dif = 0.0_wp

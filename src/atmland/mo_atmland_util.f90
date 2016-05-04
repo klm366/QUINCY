@@ -19,28 +19,32 @@ MODULE mo_atmland_util
 
 CONTAINS
 
+  !-----------------------------------------------------------------------------------------------------
+  !> function to calculate solar angle (expressed as cosine of the solar zenith angle)
+  !! 
+  !! the solar angle is calculated for a given latitude and longitude and time of the day
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_solar_angle(latitude,longitude,time) RESULT(cos_zenith_angle)
-    ! function to calculate solar angle (expressed as cosine of the solar zenith angle) 
-    ! for a given latitude and longitude and time of the day
+
     USE mo_base_constants, ONLY: deg2rad,degcircle,hourday,pi 
     USE mo_atmland_constants, ONLY: declination,angle_at_GMT,reference_longitude_GMT
 
     IMPLICIT NONE
     ! 0.1 Input
-    REAL(wp) :: latitude                    ! latitude in degree
-    REAL(wp) :: longitude                   ! longitude in degree
-    REAL(wp) :: time                        ! days since 1. January
-    ! 0.3 Output
-    REAL(wp) :: cos_zenith_angle            ! cosine of solar zenith angle 
-    ! 0.4 Local variables
+    REAL(wp), INTENT(in) :: latitude                    !< latitude in degree
+    REAL(wp), INTENT(in) :: longitude                   !< longitude in degree
+    REAL(wp), INTENT(in) :: time                        !< days since 1. January
+    REAL(wp)             :: cos_zenith_angle            !< cosine of solar zenith angle 
+    ! 0.2 Local
     REAL(wp) :: sin_delta                   ! sine of declination 
     REAL(wp) :: cos_delta                   ! cosine of declination 
     REAL(wp) :: hour                        ! current hour 
     REAL(wp) :: hour_angle                  ! solar hour angle
     REAL(wp) :: angle_offset                ! offset for solar angle
-    !
-    ! 1.0 calculate the solar hour angle in radians
-    !  
+
+    !> 1.0 calculate the solar hour angle in radians
+    !! 
+    !! 
     hour = ( time - NINT(time-0.5_wp) ) * hourday
     IF(angle_at_GMT) THEN
        angle_offset = degcircle/hourday*(longitude - reference_longitude_GMT)
@@ -48,9 +52,10 @@ CONTAINS
        angle_offset = 0.0_wp 
     ENDIF
     hour_angle = 2.0_wp*pi*(hour-hourday/2.0_wp+angle_offset)/hourday
-    ! 
-    ! 2.0 actual solar angle accounting for current solar declination 
-    ! 
+
+    !> 2.0 actual solar angle accounting for current solar declination 
+    !! 
+    !! 
     cos_delta = COS(declination)
     sin_delta = SIN(declination)
     cos_zenith_angle=SIN(latitude*deg2rad)*sin_delta & 

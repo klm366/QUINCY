@@ -16,14 +16,14 @@ MODULE mo_base_util
  
   PRIVATE
  
-  PUBLIC :: moving_avrg, daily_average, test_real_for_NaN, test_int_for_NaN
+  PUBLIC :: daily_average, moving_average, test_real_for_NaN, test_int_for_NaN, calc_moving_avrg
 
   !-----------------------------------------------------------------------------------------------------
   !> Type for storing and calculating averages per day for multiple variables
   !!
-  !! includes the PROCEDURE's necessary to do so, makes the average of the previous day globally 
-  !! available;
-  !! for each tile, one object is initialized
+  !! includes the PROCEDURE's necessary to do so \n 
+  !! makes the average of the previous day globally available \n
+  !! for each tile one object is initialized: DIMENSION(ntile)
   !-----------------------------------------------------------------------------------------------------
   TYPE :: t_daily_average
     ! the 1st index of an array can be addressed with 1 (i.e. not 0 !)
@@ -43,13 +43,104 @@ MODULE mo_base_util
     LOGICAL                         :: l_par_shaded_day              !< whether sunlight is available at canopy top
     LOGICAL                         :: l_fleaf_sunlit_day            !< whether sunlight is available at canopy top
   CONTAINS
-    PROCEDURE :: init              => initialization_of_variables
+    PROCEDURE :: init              => init_daily_avrg_variables
     PROCEDURE :: update_conditions => update_conditions_current_timestep
     PROCEDURE :: accumulate        => accumulate_values_over_current_day
     PROCEDURE :: calc_avrg         => calculate_avrg_previous_day  ! at the end of calculations of the last timestep per day
   END TYPE t_daily_average
 
-  TYPE(t_daily_average), SAVE, DIMENSION(ntile) :: daily_average 
+  !-----------------------------------------------------------------------------------------------------
+  !> Type for storing and calculating the moving averages for multiple variables across the model
+  !!
+  !! initial default values and accumulation period per variable is set
+  !!
+  !! includes the PROCEDURE's necessary to do so \n
+  !! makes the moving averages globally available \n
+  !! for each tile one object is initialized: DIMENSION(ntile)
+  !!
+  !! @todo integrate PROCEDURE:calc_moving_avrg into t_moving_average
+  !! @todo discuss whether switches get an own TYPE
+  !! @todo gdd & nd_dormance calculation is NOT using moving_average, may calc these variables elsewhere
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_moving_average
+    !< 1.0 variables that store averages
+    !! 
+    ! 1.1 light in the canopy
+    REAL(wp),DIMENSION(ncanop) :: par_sunlit
+    REAL(wp),DIMENSION(ncanop) :: par_shaded
+    REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit
+    ! 1.2 soil moisture (currently in mo_veg_photosynthesis)
+    REAL(wp) :: beta_air                     !< not used (scaling factor to account for air humidity effects on conductance)
+    REAL(wp) :: beta_soil_ps                 !< not used (scaling factor to account for soil moisture constraints on conductance)
+    REAL(wp) :: beta_soil_gs                 !< scaling factor to account for soil moisture constraints on conductance
+    ! 1.3 memory of fluxes
+    REAL(wp) :: gpp_week                                   !< gpp of the last week (µmol m-2 s-1)
+    REAL(wp) :: maint_respiration_week                     !< maintenance respiration of the last week (µmol m-2 s-1)
+    ! 1.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
+    REAL(wp) :: demand_uptake_n                            !< scalar of Vmax for root N uptake 
+    REAL(wp) :: demand_uptake_p                            !< scalar of Vmax for root P uptake
+    ! 1.5 phenological variables
+    REAL(wp) :: gdd                                        !< growing degree days above 5°C
+    REAL(wp) :: nd_dormance                                !< number of days since last growing season 
+    ! 1.6 environmental forcing
+    REAL(wp) :: t_air             ! = 1._wp
+    REAL(wp) :: q_air             ! = 1._wp
+    REAL(wp) :: press_surf        ! = 1._wp
+    ! 1.7 memory of certain variables, temperature, ...
+    REAL(wp) :: t_air_week         ! = 273.15_wp   ! 7 days
+    REAL(wp) :: t_air_month        ! = 273.15_wp   ! 30 days
+    REAL(wp) :: t_air_longterm     ! = 273.15_wp   ! 30 years == 10950 days
+
+    !< 2.0 accumulation period per variable in days !!
+    !! 
+    ! 2.0a some default values
+    REAL(wp) :: p_weekly                 !< 7 days; constant across the model
+    REAL(wp) :: p_monthly                !< 30 days; constant across the model
+    REAL(wp) :: p_longterm               !< 10950 days (30 years); constant across the model
+    ! 2.1 light in the canopy (for all canopy_layer the same period)
+    REAL(wp) :: p_par_sunlit 
+    REAL(wp) :: p_par_shaded 
+    REAL(wp) :: p_fleaf_sunlit 
+    ! 2.2 soil moisture
+    REAL(wp) :: p_beta_air 
+    REAL(wp) :: p_beta_soil_ps 
+    REAL(wp) :: p_beta_soil_gs 
+    ! 2.3 memory of fluxes are averaged weekly, thus, p_weekly is used
+
+    ! 2.4 nutrient demand for plant uptake
+    REAL(wp) :: p_demand_uptake_n 
+    REAL(wp) :: p_demand_uptake_p 
+    ! 2.5 phenological variables are not calculated using the calc_moving_avrg, thus, no "period values"
+
+    ! 2.6 environmental forcing
+    REAL(wp) :: p_t_air 
+    REAL(wp) :: p_q_air 
+    REAL(wp) :: p_press_surf 
+    ! 2.7 memory of certain variables: default averaging period values are used, according to variable names (week, month, ..)
+
+
+    !< 3.0 switches and inherent variables
+    !! 
+    !! @todo may create a new TYPE for switches - veg, soil, atmland etc, which are updated (i.e. procedure call) in interfaces
+    LOGICAL  :: gdd_t_air_threshold_crossed    !< IF(atm2land%t_air > gdd_t_air_threshold) = .TRUE. ; called in veg_interface
+    Real(wp) :: gdd_t_air_threshold_crossed_amount  !<  atm2land%t_air - gdd_t_air_threshold
+    LOGICAL  :: t_air_week_lt_Tzero            !< is TRUE if t_air_week < Tzero
+
+
+  CONTAINS
+    !< 4.0 procedures
+    !! 
+    PROCEDURE :: init                => init_moving_avrg_variables
+    PROCEDURE :: update_veg_switches => moving_avrg_update_veg_switches
+!    PROCEDURE :: calc_moving_avrg    => calculate_moving_average_of_variable
+    PROCEDURE :: update_veg          => update_veg_moving_avrg_variables
+    PROCEDURE :: update_soil         => update_soil_moving_avrg_variables
+    PROCEDURE :: update_tile         => update_tile_moving_avrg_variables
+  END TYPE t_moving_average
+
+
+  TYPE(t_daily_average), SAVE, DIMENSION(ntile)  :: daily_average
+  TYPE(t_moving_average), SAVE, DIMENSION(ntile) :: moving_average  
 
 CONTAINS
 
@@ -84,40 +175,11 @@ CONTAINS
   END FUNCTION test_int_for_NaN
 
   !-----------------------------------------------------------------------------------------------------
-  !> moving average 
-  !!
-  !! calculates the average across a certain period preceding to the current value; 
-  !! actually, the average gets rather estimated than exactly calculated using the weighted arithmetic mean 
-  !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION moving_avrg(cav,nv,w,mask) RESULT(nav)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    REAL(wp), INTENT(in)            :: cav     !< current average value
-    REAL(wp), INTENT(in)            :: nv      !< new value
-    REAL(wp), INTENT(in)            :: w       !< weight of the new value
-    LOGICAL, OPTIONAL, INTENT(in)   :: mask    !< bool, whether the new average is calculated from the nv, or av is used as nav
-    REAL(wp)                        :: nav     !< function output: the new average
-    ! 0.2 Local
-    LOGICAL                         :: l_mask  ! True/ False of the Optional variable mask present
-
-    ! check whether the optional statement is provided
-    l_mask = .FALSE.
-    IF(PRESENT(mask))  l_mask = mask
-
-    ! calc average as weighted mean
-    IF(l_mask) THEN
-      nav = cav
-    ELSE
-      nav = cav * (1.0_wp - w) + nv * w
-    END IF
-  END FUNCTION moving_avrg
-
-  !-----------------------------------------------------------------------------------------------------
   !> intialize all variables (TYPE t_daily_average)
   !! 
   !! just set to zero or FALSE, called in the driver
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE initialization_of_variables (this)
+  SUBROUTINE init_daily_avrg_variables (this)
     IMPLICIT NONE 
     CLASS(t_daily_average), INTENT(inout) :: this
 
@@ -135,7 +197,7 @@ CONTAINS
     this%l_par_sunlit_day    = .FALSE.
     this%l_par_shaded_day    = .FALSE.
     this%l_fleaf_sunlit_day  = .FALSE.
-  END SUBROUTINE initialization_of_variables
+  END SUBROUTINE init_daily_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------
   !> definition and check of conditions for each variable (TYPE t_daily_average)
@@ -222,7 +284,7 @@ CONTAINS
     TYPE(t_slm_plant), INTENT(in) :: plant        !< mo_base_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
     REAL(wp), INTENT(in)          :: time_day           !< time in days
     REAL(wp), INTENT(in)          :: timestep_prop_day  !< length of one time step (proportion of one day)
-    CLASS(t_daily_average), INTENT(inout) :: this      !< TYPE t_daily_average
+    CLASS(t_daily_average), INTENT(inout) :: this       !< TYPE t_daily_average
     ! 0.2 Local
     INTEGER  :: i                                   ! loop over canopy layers
 
@@ -270,5 +332,249 @@ CONTAINS
     END IF
 
   END SUBROUTINE calculate_avrg_previous_day
+
+  !-----------------------------------------------------------------------------------------------------
+  !> intialize all variables (TYPE t_daily_average)
+  !! 
+  !! just set to zero or FALSE, called in the driver
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_moving_avrg_variables (this)
+    IMPLICIT NONE 
+    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
+
+    !< 1.0 init/set reasonable default values
+    !!
+    ! 1.1 light in the canopy
+    this%par_sunlit                    = 1.0_wp
+    this%par_shaded                    = 1.0_wp
+    this%fleaf_sunlit                  = 1.0_wp
+    ! 1.2 soil moisture
+    this%beta_air                      = 1.0_wp
+    this%beta_soil_ps                  = 1.0_wp
+    this%beta_soil_gs                  = 1.0_wp
+    ! 1.3 memory of fluxes
+    this%gpp_week                      = 1.0_wp
+    this%maint_respiration_week        = 1.0_wp
+    ! 1.4 nutrient demand for plant uptake
+    this%demand_uptake_n               = 0.1_wp
+    this%demand_uptake_p               = 0.1_wp
+    ! 1.5 phenological variables
+    this%gdd                           = 1.0_wp
+    this%nd_dormance                   = 1.0_wp
+    ! 1.6 environmental forcing
+    this%t_air                         = 283.15_wp   ! 10°C; temperature in K
+    this%q_air                         = 283.15_wp   ! 10°C; temperature in K
+    this%press_surf                    = 1._wp
+    ! 1.7 memory of certain variables, temperature [K], ...
+    this%t_air_week                    = 283.15_wp   ! 10°C; 7  days
+    this%t_air_month                   = 283.15_wp   ! 10°C; 30 days
+    this%t_air_longterm                = 283.15_wp   ! 10°C; 30 years == 10950 days
+
+    !< 2.0 init/set accumulation period per variable in days !!
+    !!
+    ! 2.0a some default values
+    this%p_weekly                      = 7._wp     ! 7 days; constant across the model
+    this%p_monthly                     = 30._wp    ! 30 days; constant across the model
+    this%p_longterm                    = 10950._wp ! 10950 days (30 years); constant across the model
+    ! 2.1 light in the canopy (for all canopy_layer the same period)
+    this%p_par_sunlit                  = 1.0_wp 
+    this%p_par_shaded                  = 1.0_wp 
+    this%p_fleaf_sunlit                = 1.0_wp  
+    ! 2.2 soil moisture
+    this%p_beta_air                    = this%p_weekly  ! 1._wp 
+    this%p_beta_soil_ps                = this%p_weekly  ! 1._wp 
+    this%p_beta_soil_gs                = this%p_weekly  ! 1._wp 
+
+    ! 2.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
+    this%p_demand_uptake_n             = 3.0_wp 
+    this%p_demand_uptake_p             = 3.0_wp 
+
+    ! 2.6 environmental forcing
+    this%p_t_air                       = 1.0_wp
+    this%p_q_air                       = 1.0_wp
+    this%p_press_surf                  = 1.0_wp
+
+
+    ! 3.0 switches and inherent variables
+    this%gdd_t_air_threshold_crossed   = .FALSE.
+    this%gdd_t_air_threshold_crossed_amount = 0.0_wp
+    this%t_air_week_lt_Tzero           = .FALSE.
+
+
+  END SUBROUTINE init_moving_avrg_variables
+
+  !-----------------------------------------------------------------------------------------------------
+  !> update certain switches needed for vegetation moving average calculations
+  !!
+  !! called in mo_veg_interface:update_vegetation 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE  moving_avrg_update_veg_switches (this, t_air, gdd_t_air_threshold, Tzero)
+    IMPLICIT NONE 
+    REAL(wp), INTENT(in)                   :: t_air                !< current air temperature
+    REAL(wp), INTENT(in)                   :: gdd_t_air_threshold  !< temperature threshold for growing degree days
+    REAL(wp), INTENT(in)                   :: Tzero                !< melting point in K
+    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
+
+    !> 1.0 air temperature > threshold for growing degree days
+    !! 
+    IF(t_air > gdd_t_air_threshold) THEN
+      this%gdd_t_air_threshold_crossed        = .TRUE.
+      this%gdd_t_air_threshold_crossed_amount = t_air - gdd_t_air_threshold
+    ELSE
+      this%gdd_t_air_threshold_crossed        = .FALSE.
+    END IF
+
+    !> 2.0 weekly averaged air temperature < melting point in K
+    !! @todo tis is not an veg parameter ! -> may move into another (new) subroutine
+    IF(this%t_air_week < Tzero) THEN
+      this%t_air_week_lt_Tzero = .TRUE.
+    ELSE
+      this%t_air_week_lt_Tzero = .FALSE.
+    END IF
+
+  END SUBROUTINE moving_avrg_update_veg_switches
+
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate and return the moving average of a single variable or an array
+  !!
+  !! calculates the average across a certain period preceding to the current value; 
+  !! actually, the average gets rather estimated than exactly calculated using the weighted arithmetic mean 
+  !-----------------------------------------------------------------------------------------------------
+!  PURE ELEMENTAL FUNCTION calculate_moving_average_of_variable(cav,nv,w,mask) RESULT(nav)
+  PURE ELEMENTAL FUNCTION calc_moving_avrg(cav,nv,w,mask) RESULT(nav)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp), INTENT(in)            :: cav     !< current average value
+    REAL(wp), INTENT(in)            :: nv      !< new value
+    REAL(wp), INTENT(in)            :: w       !< weight of the new value
+    LOGICAL, OPTIONAL, INTENT(in)   :: mask    !< bool, whether the new average is calculated from the nv, or av is used as nav
+    REAL(wp)                        :: nav     !< function output: the new average
+    ! 0.2 Local
+    LOGICAL                         :: l_mask  ! True/ False of the Optional variable mask present
+
+    ! check whether the optional statement is provided
+    l_mask = .FALSE.
+    IF(PRESENT(mask))  l_mask = mask
+
+    ! calc average as weighted mean
+    IF(l_mask) THEN
+      nav = cav
+    ELSE
+      nav = cav * (1.0_wp - w) + nv * w
+    END IF
+!  END FUNCTION calculate_moving_average_of_variable
+  END FUNCTION calc_moving_avrg
+
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate moving average of vegetation variables
+  !!
+  !! called in the driver at the end of each timestep
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE update_veg_moving_avrg_variables (this, plant, itile)
+
+    USE mo_base_constants,    ONLY: dt, one_day
+    USE mo_base_memory,       ONLY: t_slm_plant
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    INTEGER, INTENT(in)                    :: itile       !< number of the tile the plant is from
+    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
+    TYPE(t_slm_plant), INTENT(inout)       :: plant       !< plant variables and data
+    ! 0.2 Local
+    INTEGER    :: i
+
+    ! moving_avrg( 
+    !             current average, new value, weight of new value, 
+    !                 use function TRUE FALSE [OPTIONAL argument] )
+    ! returns: new current average
+
+    this%par_sunlit(:)    = calc_moving_avrg(this%par_sunlit(:), daily_average(itile)%avrg_prev_par_sunlit_day(:), &
+                                               1.0_wp / (this%p_par_sunlit * one_day/ dt))
+    this%par_shaded(:)    = calc_moving_avrg(this%par_shaded(:), daily_average(itile)%avrg_prev_par_shaded_day(:), &
+                                               1.0_wp / (this%p_par_shaded * one_day/ dt))
+    this%fleaf_sunlit(:)  = calc_moving_avrg(this%fleaf_sunlit(:), daily_average(itile)%avrg_prev_fleaf_sunlit_day(:), &
+                                               1.0_wp / (this%p_fleaf_sunlit * one_day/ dt))
+
+    this%beta_soil_gs     = calc_moving_avrg(this%beta_soil_gs, plant%beta_soil_gs, &
+                                               1._wp / ( this%p_beta_soil_gs * one_day/dt))
+
+    this%gpp_week                = calc_moving_avrg(this%gpp_week, plant%flux%gpp, &
+                                               1.0_wp / (this%p_weekly * one_day/ dt))
+    this%maint_respiration_week  = calc_moving_avrg(this%maint_respiration_week, plant%flux%maint_respiration, &
+                                               1.0_wp / (this%p_weekly * one_day/ dt))
+
+    ! gdd & nd_dormance
+    IF(this%gdd_t_air_threshold_crossed) THEN   ! == IF(atm2land%t_air > gdd_t_air_threshold)
+       this%gdd = (this%gdd + this%gdd_t_air_threshold_crossed_amount) * dt/one_day
+    ENDIF
+
+    IF(this%t_air_week_lt_Tzero) this%gdd = 0.0_wp
+
+    IF (plant%growing_season) THEN   ! growing_season == TRUE
+      this%gdd         = 0.0_wp
+      this%nd_dormance = 0.0_wp
+    ELSE
+      this%nd_dormance = this%nd_dormance + dt/one_day 
+    ENDIF
+
+  END SUBROUTINE update_veg_moving_avrg_variables
+
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate moving average of soil variables
+  !!
+  !! called in the driver at the end of each timestep
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE update_soil_moving_avrg_variables (this, plant)
+
+    USE mo_base_constants,    ONLY: dt, one_day
+    USE mo_base_memory,       ONLY: t_slm_plant
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
+    TYPE(t_slm_plant), INTENT(inout)       :: plant       !< plant variables and data
+
+    ! moving_avrg( 
+    !             current average, new value, weight of new value, 
+    !                 use function TRUE FALSE [OPTIONAL argument] )
+    ! returns: new current average
+
+    this%demand_uptake_n = calc_moving_avrg(this%demand_uptake_n, plant%f_n_demand, &
+                                                 1.0_wp / (this%p_demand_uptake_n * one_day/ dt), &
+                                                 plant%pool%fine_root%carbon < eps8)
+    this%demand_uptake_p = calc_moving_avrg(this%demand_uptake_p, plant%f_p_demand, &
+                                                 1.0_wp / (this%p_demand_uptake_p * one_day/ dt), &
+                                                 plant%pool%fine_root%carbon < eps8)
+
+  END SUBROUTINE update_soil_moving_avrg_variables
+
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate moving average of tile variables
+  !!
+  !! called in the driver at the end of each timestep
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE update_tile_moving_avrg_variables (this, t_air)
+
+    USE mo_base_constants,    ONLY: dt, one_day
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp), INTENT(in)                   :: t_air       !< current air temperature
+    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
+
+    ! moving_avrg( 
+    !             current average, new value, weight of new value, 
+    !                 use function TRUE FALSE [OPTIONAL argument] )
+    ! returns: new current average
+
+    this%t_air_week       = calc_moving_avrg(this%t_air_week, t_air, &
+                                                  1.0_wp / (this%p_weekly * one_day/ dt))
+    this%t_air_month      = calc_moving_avrg(this%t_air_month, t_air, &
+                                                  1.0_wp / (this%p_monthly * one_day/ dt))
+    this%t_air_longterm   = calc_moving_avrg(this%t_air_longterm, t_air, &
+                                                  1.0_wp / (this%p_longterm * one_day/ dt))
+
+  END SUBROUTINE update_tile_moving_avrg_variables
+
 
 END MODULE mo_base_util

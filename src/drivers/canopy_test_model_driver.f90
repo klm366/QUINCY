@@ -16,7 +16,7 @@ PROGRAM canopy_test_model_driver
   USE mo_atmland_forcing
   USE mo_atmland_constants
   USE mo_atmland_config_class,  ONLY: atmland_config
-  USE mo_land_constants   ! still necessary ?
+  USE mo_land_constants,        ONLY: molar_mass_N
   USE mo_veg_parameters
   USE mo_veg_radiation
   USE mo_veg_photosynthesis

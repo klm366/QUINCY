@@ -13,12 +13,12 @@ MODULE mo_base_memory
   USE mo_base_constants
 
   !-----------------------------------------------------------------------------------------------------
-  !> elements used across veg & soil of the model (C N P C13 C14 N15)
+  !> elements used across veg & soil of the model (C N P 13C 14C 15N)
   !! 
   !! this type is used for all tissues, pools, fluxes in vegetation and soil;
   !! changes made here affect the whole model
   !-----------------------------------------------------------------------------------------------------
-  TYPE t_element ! Element
+  TYPE t_element 
      REAL(wp) :: carbon      !< total carbon concentration of pool in mol / m2
      REAL(wp) :: nitrogen    !< totol nitrogen concentration of pool in mol / m2
      REAL(wp) :: phosphorus  !< phosphorus concentration of pool in mol / m2
@@ -56,8 +56,10 @@ MODULE mo_base_memory
   !! plant\%flux\%reserve_use
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_veg_flux 
-     TYPE(t_slm_veg_pool) :: growth         !< change in plant%pool due to growth per timestep growth of tissues (mol m-2 timestep-1)
-     TYPE(t_slm_veg_pool) :: litterfall     !< change in plant%pool due to litterfall (incl. mortality) per timestep (mol m-2 timestep-1)
+     TYPE(t_element)      :: reserve_use  !< net flux between reserve and labile pool (mol m-2 timestep-1)
+                                          !!  (+ve: flux to labile; -ve flux from labile) 
+     TYPE(t_slm_veg_pool) :: growth       !< add to      plant%pool due to growth     per timestep (mol m-2 timestep-1)
+     TYPE(t_slm_veg_pool) :: litterfall   !< remove from plant%pool due to litterfall per timestep (mol m-2 timestep-1)
      REAL(wp) :: gpp                      !< gross photosynthesis (µmol CO2 m-2 s-1)
      REAL(wp) :: an                       !< net photosynthesis (µmol CO2 m-2 s-1)
      REAL(wp) :: gpp_c13                  !< gross photosynthesis (µmol 13CO2 m-2 s-1)
@@ -72,16 +74,14 @@ MODULE mo_base_memory
      REAL(wp) :: npp                      !< net primary production (µmol CO2 m-2 s-1)
      REAL(wp) :: npp_c13                  !< net primary production (µmol 13CO2 m-2 s-1)
      REAL(wp) :: npp_c14                  !< net primary production (µmol 14CO2 m-2 s-1)
-     REAL(wp) :: uptake_n                 !< N uptake from soil ( ? )
-     REAL(wp) :: uptake_n15               !< 15N uptake from soil ( ? ) 
-     REAL(wp) :: uptake_p                 !< P uptake from soil ( ? )
+     REAL(wp) :: uptake_n                 !< N uptake from soil ( is that correct? )
+     REAL(wp) :: uptake_n15               !< 15N uptake from soil ( is that correct? ) 
+     REAL(wp) :: uptake_p                 !< P uptake from soil ( is that correct? )
      REAL(wp) :: leaf_resorption_n        !< resorption of N upon leaf senescence (mol m-2 timestep-1)
      REAL(wp) :: leaf_resorption_n15      !< resorption of 15N upon leaf senescence (mol m-2 timestep-1)
      REAL(wp) :: leaf_resorption_p        !< resorption of P upon leaf senescence (mol m-2 timestep-1)
      REAL(wp) :: transpiration            !< transpiration in kg m-2 s-1
      REAL(wp) :: ci                       !< ??
-     TYPE(t_element) :: reserve_use       !< net flux between reserve and labile pool (mol m-2 timestep-1)
-                                          !!  (+ve: flux to labile; -ve flux from labile) 
   END TYPE t_slm_veg_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -99,28 +99,6 @@ MODULE mo_base_memory
      REAL(wp) :: fleaf_sunlit          !< fraction of layer which is sunlit
   END TYPE t_slm_canopy_layer
 
- TYPE AccumulationPlantClass
-    ! definition of averages of variable across a certain period (model time steps)
-    ! init subroutine in mo_veg_memory
-    ! Light in the canopy
-    REAL(wp),DIMENSION(ncanop) :: par_sunlit = 1._wp
-    REAL(wp),DIMENSION(ncanop) :: par_shaded = 1._wp
-    REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit = 1._wp
-    ! Soil moisture (currently in mo_veg_photosynthesis)
-    REAL(wp) :: beta_air = 0._wp
-    REAL(wp) :: beta_soil_ps = 0._wp
-    REAL(wp) :: beta_soil_gs = 0._wp
-    ! memory of fluxes
-    REAL(wp) :: gpp_week = 0._wp                   ! gpp of the last week (µmol m-2 s-1)
-    REAL(wp) :: maint_respiration_week = 0._wp     ! maintenance respiration of the last week (µmol m-2 s-1)
-    ! nutrient demand for plant uptake
-    REAL(wp) :: demand_uptake_n = 0.0_wp           ! scalar of Vmax for root N uptake 
-    REAL(wp) :: demand_uptake_p = 0.0_wp           ! scalar of Vmax for root P uptake
-    ! phenological variables
-    REAL(wp) :: gdd                                ! growing degree days above 5°C
-    REAL(wp) :: nd_dormance                        ! number of days since last growing season 
-  END TYPE AccumulationPlantClass
-
   !-----------------------------------------------------------------------------------------------------
   !> all variables of vegetation per tile
   !! 
@@ -130,7 +108,6 @@ MODULE mo_base_memory
      TYPE(t_slm_veg_pool) :: pool                  !< the actual vegetation pools
      TYPE(t_slm_veg_flux) :: flux                  !< contains growth and litter fall fluxes per timestep for each pool
      TYPE(t_slm_canopy_layer),DIMENSION(ncanop) :: canopy_layer  !< vegetation variables per canopy layer
-     TYPE(AccumulationPlantClass)      :: accumulated            !< will be deleted soon : Jan
      INTEGER  :: pftid                             !< ID of the plant functional type; namelist parameter
      REAL(wp) :: height                            !< plant height in m
      REAL(wp) :: diameter                          !< plant diameter in m
@@ -139,13 +116,19 @@ MODULE mo_base_memory
      REAL(wp) :: target_np_leaf                    !< target foliar N:P ratio 
      REAL(wp) :: mean_leaf_age                     !< average foliage age in days 
      REAL(wp) :: gc                                !< ??
+     REAL(wp) :: f_n_demand                        !< relative plant demand for N; see update_vegsoil_bgc
+     REAL(wp) :: f_p_demand                        !< relative plant demand for P; see update_vegsoil_bgc
+     REAL(wp) :: beta_air                          !< scaling factor to account for air humidity effects on conductance
+     REAL(wp) :: beta_soil_ps                      !< scaling factor to account for soil moisture constraints on conductance
+     REAL(wp) :: beta_soil_gs                      !< scaling factor to account for soil moisture constraints on conductance
      LOGICAL  :: growing_season                    !< logical to identify whether the plant is in the growing season or not
    END TYPE t_slm_plant
 
   !-----------------------------------------------------------------------------------------------------
   !> all (or most ?) variables of soil per tile
   !! 
-  !! including all pools and all fluxes
+  !! including all pools and all fluxes \n
+  !! @todo this will be extended by an extra soil model
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_soil
     REAL(wp) :: theta                 !< fractional water holding capacity
@@ -154,49 +137,32 @@ MODULE mo_base_memory
     REAL(wp) :: phosphate             !< soil P concentration (mmol/L)
   END TYPE t_slm_soil
 
-  ! 
-  ! Tile ( t_slm_tile: integrates tile, plant & soil )
-  ! 
-  TYPE AccumulationTileClass
-    ! definition of averages of variable across a certain period (model time steps)
-    ! see mo_land_memory for initialization of default values
-    ! Environmental forcing
-    REAL(wp) :: t_air = 1._wp
-    REAL(wp) :: q_air = 1._wp
-    REAL(wp) :: press_surf = 1._wp
-    ! memory of certain variables
-    REAL(wp) :: t_air_week     = 273.15_wp   ! 7 days
-    REAL(wp) :: t_air_month    = 273.15_wp   ! 30 days
-    REAL(wp) :: t_air_longterm = 273.15_wp   ! 30 years == 10950 days
-  END TYPE AccumulationTileClass
-
   !-----------------------------------------------------------------------------------------------------
   !> integrates all variables of one tile
   !!
-  !! including plant soil
-  !! 
+  !! including plant and soil \n
+  !! TYPE(t_slm_tile) :: tile --> declaration of tile in the driver \n
   !! note: during model simulations tiles may run parallel !
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_tile
      TYPE(t_slm_plant)   :: plant
      TYPE(t_slm_soil)    :: soil
-
-     TYPE(AccumulationTileClass) :: accumulated   !! <-  is going to be an own type with procedures soon -> Jan
   END TYPE t_slm_tile  
 
   !-----------------------------------------------------------------------------------------------------
-  !> longitude and latitude of a tile(?)
+  !> longitude and latitude of a tile
   !!
   !! note: this TYPE is just a temporary solution \n
-  !! migration to /base/mo_grid_class may follow
+  !! migration to /base/mo_grid_class may follow, depending on structure in JSBACH4
   !-----------------------------------------------------------------------------------------------------
-  TYPE t_slm_grid           ! temporary ! -> will be stored in a /base/mo_grid_class later on (see JSBACH4)
+  TYPE t_slm_grid 
      REAL(wp) :: lon
      REAL(wp) :: lat
   END TYPE t_slm_grid
-  TYPE(t_slm_grid) :: grid  !< currently initialized with namelist parameter values
 
-  TYPE(t_element) :: element_zero   !< all variables are zero, is used for setting other elements zero frequently
+  TYPE(t_slm_grid)  :: grid           !< currently initialized with namelist parameter values
+  TYPE(t_element)   :: element_zero   !< all variables are zero, is used for setting other elements zero frequently
+
 ! PUBLIC :: ElementAdd,ElementSub,ElementMul,ElementDiv
  
 CONTAINS
@@ -253,6 +219,11 @@ CONTAINS
     plant%target_np_leaf   = 0.0_wp
     plant%mean_leaf_age    = 0.0_wp
     plant%gc               = 0.0_wp
+    plant%f_n_demand       = 0.0_wp
+    plant%f_p_demand       = 0.0_wp
+    plant%beta_air         = 0.0_wp
+    plant%beta_soil_ps     = 0.0_wp
+    plant%beta_soil_gs     = 0.0_wp
     plant%growing_season   = .TRUE.     ! LOGICAL
   END SUBROUTINE init_plant
 

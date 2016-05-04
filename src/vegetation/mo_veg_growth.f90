@@ -24,14 +24,18 @@ CONTAINS
   !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_growth &
-    & (t_air, theta,plant, veg_param, growth, growth_respiration, growth_respiration_c13, growth_respiration_c14, reserve_use)
+    & (t_air, theta, plant, veg_param, &
+    &  growth, growth_respiration, growth_respiration_c13, growth_respiration_c14, &
+    &  reserve_use, itile)
 
     USE mo_base_memory, ONLY: ElementMul
+    USE mo_base_util,   ONLY: moving_average
     USE mo_veg_parameters
 
     IMPLICIT NONE
 
     ! 0.1 InOut
+    INTEGER,INTENT(in)               :: itile                      !< tile number i -> needed for moving_average(itile)%
     REAL(wp), INTENT(in)             :: t_air                      !< ambient air temperature (K)
     REAL(wp), INTENT(in)             :: theta                      !< soil moisture (%)
     TYPE(t_slm_plant), INTENT(in)    :: plant                      !< plant structure
@@ -88,8 +92,10 @@ CONTAINS
     !! 
     !! @todo not yet implemented
     !! @todo OBS: Should maintenance respiration be here as well??
-    CALL calc_partitioning(tau_labile_pot,plant%growing_season,plant%accumulated%gpp_week, & 
-                              plant%accumulated%maint_respiration_week,plant%lai,target_lai, & 
+    CALL calc_partitioning(tau_labile_pot,plant%growing_season, &
+                              moving_average(itile)%gpp_week, & 
+                              moving_average(itile)%maint_respiration_week, &
+                              plant%lai,target_lai, & 
                               target_reserve_pool_carbon,target_reserve_pool_nitrogen, & 
                               target_reserve_pool_phosphorus,nreq_growth,preq_growth, & 
                               plant%pool%labile,plant%pool%reserve,growth%labile,reserve_use)
@@ -132,7 +138,6 @@ CONTAINS
                                nreq_growth, preq_growth, labile_pool, reserve_pool, growth, reserve_use)
 
     USE mo_base_memory
-    USE mo_land_constants
     USE mo_veg_parameters
     IMPLICIT NONE
     ! 0.1 InOut
@@ -308,9 +313,7 @@ CONTAINS
                               preq_growth,target_lai,target_reserve_pool_carbon,target_reserve_pool_nitrogen,&
                               target_reserve_pool_phosphorus)
 
-    USE mo_land_constants
     USE mo_base_memory
-    USE mo_base_constants, ONLY: pi
     USE mo_veg_parameters
 
     IMPLICIT NONE
@@ -574,7 +577,7 @@ CONTAINS
     ! result from the dynamic of the labile pool. This function therefore only takes account of the impact
     ! of low temperatures (<5°C) and low moisture (<20% saturation). Additionally, phenological dormancy
     ! is accounted for (OBS: not yet implemented!)
-    !
+    ! 
     USE mo_atmland_constants, ONLY: Tzero
     USE mo_veg_parameters, ONLY: lambda_tau_labile_temp,weibull_k_tau_labile_temp,& 
                                  lambda_tau_labile_theta,weibull_k_tau_labile_theta,tau_labile_default
@@ -604,10 +607,10 @@ CONTAINS
   END FUNCTION meristem_activity 
 
   PURE ELEMENTAL SUBROUTINE update_allometry(woody_biomass,wood_density,allom_k1,allom_k2,diameter,height)
-    !
+    ! 
     ! subroutine to diagnose diameter and height from woody biomass by inverting H = k_allom1 * D ** k_allom2
     ! assuming that the trunk of a tree is a cylinder (branches collapsed to trunk) 
-    !
+    ! 
     USE mo_base_constants, ONLY: pi
     USE mo_veg_parameters, ONLY: min_height 
     IMPLICIT NONE

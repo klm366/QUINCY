@@ -23,6 +23,11 @@ MODULE mo_veg_config_class
 !  PUBLIC :: t_veg_config
   PUBLIC :: veg_config
 
+  !-----------------------------------------------------------------------------------------------------
+  !> configuration of the vegetation process, derived from t_jsb_config
+  !! 
+  !! currently it does mainly: reading parameters from namelist
+  !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     CHARACTER(8)     :: output_interval_pool, output_interval_flux
     INTEGER          :: output_start_first_day_year, output_end_last_day_year !< output: 1st to last day of the year(s) provided

@@ -5,7 +5,12 @@ mo_veg_memory.o: \
 mo_veg_interface.o: \
   mo_kind.o \
   mo_base_memory.o \
+  mo_base_util.o \
+  mo_atmland_constants.o \
+  mo_atmland_memory.o \
+  mo_land_constants.o \
   mo_veg_memory.o \
+  mo_veg_parameters.o \
   mo_veg_growth.o \
   mo_veg_photosynthesis.o \
   mo_veg_respiration.o \
@@ -17,9 +22,10 @@ mo_veg_growth.o: \
   mo_kind.o \
   mo_exception.o \
   mo_base_memory.o \
+  mo_base_util.o \
+  mo_base_constants.o \
   mo_atmland_constants.o \
-  mo_veg_parameters.o \
-  mo_veg_memory.o
+  mo_veg_parameters.o
 
 mo_veg_respiration.o: \
   mo_kind.o \
@@ -59,7 +65,6 @@ mo_veg_radiation.o: \
 
 mo_veg_photosynthesis.o: \
   mo_kind.o \
-  mo_base_util.o \
   mo_atmland_memory.o \
   mo_atmland_forcing.o \
   mo_atmland_constants.o \
@@ -74,14 +79,6 @@ mo_veg_output.o: \
   mo_base_memory.o \
   mo_base_constants.o \
   mo_veg_config_class.o
-
-mo_veg_util.o: \
-  mo_kind.o \
-  mo_base_memory.o \
-  mo_base_util.o \
-  mo_base_constants.o \
-  mo_atmland_memory.o \
-  mo_veg_parameters.o
 
 mo_veg_config_class.o: \
   mo_kind.o \

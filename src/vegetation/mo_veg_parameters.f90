@@ -149,23 +149,6 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: soil_p_aff2 
   END TYPE t_slm_veg_param
 
-  !> interval over which the values are accumulated/ averaged (in moving_avrg()); 
-  !! interval in days !! ; 
-  !! see mo_base_memory for defintion of TYPEs that keep the starting/default value; 
-  !! initialization in mo_veg_util & mo_veg_soil
-  TYPE AccumulationIntervalPlantClass 
-    REAL(wp) :: par_sunlit   = 1._wp
-    REAL(wp) :: par_shaded   = 1._wp
-    REAL(wp) :: fleaf_sunlit = 1._wp
-    REAL(wp) :: beta_air     = 1._wp
-    REAL(wp) :: beta_soil_ps = 1._wp
-    REAL(wp) :: beta_soil_gs = 1._wp
-    REAL(wp) :: demand_uptake = 1._wp
-
-    REAL(wp) :: weekly       = 7._wp         ! 7 days; constant across the model
-  END TYPE AccumulationIntervalPlantClass
-
-
   PUBLIC :: init_veg_parameters
 
   CONTAINS 
@@ -174,6 +157,7 @@ MODULE mo_veg_parameters
    
       USE mo_land_constants
       USE mo_atmland_constants
+      ! 0.1 InOut
       TYPE(t_slm_veg_param),INTENT(inout) :: veg_param
 
       !IMPLICIT NONE
@@ -323,25 +307,29 @@ MODULE mo_veg_parameters
 
     END SUBROUTINE init_veg_parameters
 
+
+    !-----------------------------------------------------------------------------------------------------
+    !> initialization of plant type specific parameters (t_slm_veg_param)
+    !! 
+    !! @todo This should obviously not be hard coded, but read from a file
+    !-----------------------------------------------------------------------------------------------------
     SUBROUTINE init_pft_param_table(veg_param)
-      ! 
-      ! This subroutine initalise plant type specific parameters
-      ! This should obviously not be hard coded, but read from a file
-      ! 
+
       USE mo_land_constants, ONLY: molar_mass_C,molar_mass_N,molar_mass_P
       IMPLICIT NONE
       ! 0.1 InOut
       TYPE(t_slm_veg_param),INTENT(inout) :: veg_param         !< vegatetion parameter structure
  
-      ! types are 
-      ! 1) broad leaved evergreen (rainforest) 
-      ! 2) broad leaved evergreen (xeric forest) 
-      ! 3) broad leaved deciduous (rain green) 
-      ! 4) broad leaved deciduous (summer green) 
-      ! 5) needle-leaved evergreen
-      ! 6) needle-leaved deciduous 
-      ! 7) C3 grass
-      ! 8) C4 grass
+      !> plant functional types are: \n
+      !! 1) broad leaved evergreen (rainforest) \n
+      !! 2) broad leaved evergreen (xeric forest) \n
+      !! 3) broad leaved deciduous (rain green) \n
+      !! 4) broad leaved deciduous (summer green) \n
+      !! 5) needle-leaved evergreen \n
+      !! 6) needle-leaved deciduous \n
+      !! 7) C3 grass \n
+      !! 8) C4 grass
+
       ! vegetation growth form
       veg_param%growthform(:) = & 
       (/itree,itree,itree,itree,itree,itree,igrass,igrass/)

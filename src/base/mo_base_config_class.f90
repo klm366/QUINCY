@@ -21,6 +21,11 @@ MODULE mo_base_config_class
 
   PUBLIC :: base_config
 
+  !-----------------------------------------------------------------------------------------------------
+  !> configuration of the model base, derived from t_jsb_config
+  !! 
+  !! currently it does mainly: reading parameters from namelist
+  !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_base_config
     REAL(wp)         :: dt        !< length of one time step in seconds; base_ctl namelist: read_dt_time_step_length_sec
     CHARACTER(1)     :: simulation_length_unit

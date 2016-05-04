@@ -7,6 +7,7 @@ mo_base_memory.o: \
 
 mo_base_util.o: \
   mo_kind.o \
+  mo_base_constants.o \
   mo_atmland_memory.o
 
 mo_jsb_config_class.o: \

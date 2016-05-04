@@ -23,7 +23,12 @@ MODULE mo_jsb_config_class
 !  TYPE t_jsb_model_config
 !  END TYPE t_jsb_model_config
 
-  ! abstract TYPE that cannot be initialized
+  !-----------------------------------------------------------------------------------------------------
+  !> abstract TYPE for configuration that cannot be initialized
+  !! 
+  !! is used by other process configurations, e.g. veg and base \n
+  !! based on the idea of how the configuration is done in JSBACH4 
+  !-----------------------------------------------------------------------------------------------------
   TYPE, ABSTRACT :: t_jsb_config
     LOGICAL :: active
     CHARACTER(LEN=filename_max) :: namelist_filename

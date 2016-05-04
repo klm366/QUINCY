@@ -18,17 +18,20 @@ MODULE mo_veg_phenology
 
 CONTAINS
 
+  !-----------------------------------------------------------------------------------------------------
+  !> determine onset and end of the growing season for some PFT
+  !! 
+  !! PFT: evergreen, raingreen, cold-deciduous trees and perennial grasses \n
+  !! 
+  !! @todo OBS: currently uncalibrated, in particular rain green phenology \n
+  !!  Known Issues: strange interannual variability of grass senescences \n
+  !!  Dev: Have more cost-benefit in decision to start/stop growing season \n
+  !!      what about seasonality beyond off/on behaviour? -> implies some collaboration between
+  !!      turnover rates and phenology -> should the two be linked? 
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_phenology(phenology_type,gpp_week,maint_respiration_week,mean_leaf_age, & 
                               t_air_week,t_air_month,beta_soil_gs,gdd,nd_dormance,growing_season) 
-    ! 
-    ! Routine to determine onset and end of the growing season for evergreen, raingreen
-    !  cold-deciduous trees and perennial grasses
-    ! OBS: currently uncalibrated, in particular rain green phenology
-    ! Known Issues: strange interannual variability of grass senescences
-    ! Dev: Have more cost-benefit in decision to start/stop growing season
-    !      what about seasonality beyond off/on behaviour? -> implies some collaboration between
-    !      turnover rates and phenology -> should the two be linked? 
-    !
+
     USE mo_kind, ONLY: eps4
     USE mo_atmland_constants, ONLY: Tzero
     USE mo_veg_parameters, ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
@@ -36,20 +39,19 @@ CONTAINS
                                  beta_soil_flush_grass,beta_soil_flush_tree,beta_soil_senescence_tree, & 
                                  min_leaf_age
     IMPLICIT NONE
-    ! 0.1 Input
-    INTEGER,INTENT(in) :: phenology_type                 ! type of phenology
-    REAL(wp),INTENT(in) :: gpp_week                      ! weekly gross primary production (~µmol/m2/s)
-    REAL(wp),INTENT(in) :: maint_respiration_week        ! weekly maintenance respiration (~µmol/m2/s)
-    REAL(wp),INTENT(in) :: mean_leaf_age                 ! average age of foliage (days)
-    REAL(wp),INTENT(in) :: t_air_week                    ! weekly avearge air temperature (K)
-    REAL(wp),INTENT(in) :: t_air_month                   ! monthly average air temperature (K)
-    REAL(wp),INTENT(in) :: beta_soil_gs                  ! weekly soil moisture stress (--)
-    REAL(wp),INTENT(in) :: gdd                           ! growing degree days (days)
-    REAL(wp),INTENT(in) :: nd_dormance                   ! number of dormancy days (days)
-    ! 0.2 Inout
-    LOGICAL, INTENT(inout) :: growing_season             ! whether or not a plant is in the growing season
-    ! 0.4 Local
-    REAL(wp) :: hlp1 
+    ! 0.1 InOut
+    INTEGER,INTENT(in) :: phenology_type                 !< type of phenology
+    REAL(wp),INTENT(in) :: gpp_week                      !< weekly gross primary production (~µmol/m2/s)
+    REAL(wp),INTENT(in) :: maint_respiration_week        !< weekly maintenance respiration (~µmol/m2/s)
+    REAL(wp),INTENT(in) :: mean_leaf_age                 !< average age of foliage (days)
+    REAL(wp),INTENT(in) :: t_air_week                    !< weekly avearge air temperature (K)
+    REAL(wp),INTENT(in) :: t_air_month                   !< monthly average air temperature (K)
+    REAL(wp),INTENT(in) :: beta_soil_gs                  !< weekly soil moisture stress (--)
+    REAL(wp),INTENT(in) :: gdd                           !< growing degree days (days)
+    REAL(wp),INTENT(in) :: nd_dormance                   !< number of dormancy days (days)
+    LOGICAL, INTENT(inout) :: growing_season             !< whether or not a plant is in the growing season
+    ! 0.2 Local
+    REAL(wp) :: hlp1                                     ! helper variable for tmp values
 
     IF(.NOT.growing_season) THEN ! If not in growing season, check whether growing season has started
        SELECT CASE (phenology_type)

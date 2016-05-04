@@ -20,6 +20,11 @@ MODULE mo_atmland_config_class
 
   PUBLIC :: atmland_config
 
+  !-----------------------------------------------------------------------------------------------------
+  !> configuration of the atmland process, derived from t_jsb_config
+  !! 
+  !! currently it does mainly: reading parameters from namelist
+  !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_atmland_config
     CHARACTER(8)     :: option_forcing
     REAL(wp)         :: lat, lon   

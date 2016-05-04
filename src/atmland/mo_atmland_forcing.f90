@@ -10,7 +10,7 @@
 MODULE mo_atmland_forcing
 
   USE mo_kind
-  USE mo_atmland_memory, ONLY: atm2land,land2atm
+  USE mo_atmland_memory,        ONLY: atm2land, land2atm
   USE mo_atmland_util
   USE mo_atmland_constants
   USE mo_atmland_config_class,  ONLY: atmland_config
@@ -25,7 +25,7 @@ MODULE mo_atmland_forcing
 
   PRIVATE
 
-  PUBLIC :: init_forcing,update_forcing,open_forcing_input_file,close_forcing_input_file
+  PUBLIC :: init_forcing, update_forcing, open_forcing_input_file, close_forcing_input_file
 
 
 CONTAINS

@@ -12,10 +12,10 @@ MODULE mo_veg_photosynthesis
   USE mo_kind, ONLY: wp
   USE mo_base_constants, ONLY: ncanop,ntile,dt
   USE mo_base_memory
-  USE mo_atmland_memory
-  USE mo_atmland_forcing  ! for global atm2land & land2atm
+  USE mo_atmland_memory, ONLY: atm2land, land2atm
+  USE mo_atmland_forcing
   USE mo_veg_parameters
-  USE mo_veg_radiation, ONLY: calc_canopy_layer_depth
+  USE mo_veg_radiation,  ONLY: calc_canopy_layer_depth
 
   IMPLICIT NONE
 
@@ -25,23 +25,19 @@ MODULE mo_veg_photosynthesis
 
 CONTAINS
 
-SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, see mo_atmland_forcing
+SUBROUTINE update_canopy_fluxes(tile, veg_param)
 
- USE mo_base_util, ONLY: moving_avrg
    IMPLICIT NONE
    ! 0.1 InOut
-   TYPE(t_slm_veg_param), INTENT(in)           :: veg_param  ! list of vegetation parameters
-   TYPE(t_slm_tile), INTENT(inout)             :: tile       ! current tile
+   TYPE(t_slm_veg_param), INTENT(in)           :: veg_param  !< list of vegetation parameters
+   TYPE(t_slm_tile), INTENT(inout)             :: tile       !< current tile
    ! 0.2 Local
    REAL(wp),DIMENSION(ncanop) :: agl,anl,rl,gsl,cil
    REAL(wp),DIMENSION(ncanop) :: canopy_layer_depth_act
-   REAL(wp) :: beta_air
-   REAL(wp) :: beta_soil_ps
-   REAL(wp) :: beta_soil_gs
    INTEGER :: pftid
    INTEGER :: icanop
 
-   ! initialse output
+   ! initialise output
    agl(:) = 0.0_wp 
    anl(:) = 0.0_wp 
    rl(:) = 0.0_wp
@@ -51,14 +47,12 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
    pftid = tile%plant%pftid
 
    ! calculate the moisture scaling factor for photosynthesis
-   beta_air = calc_atm_moisture_stress(atm2land%t_air,atm2land%q_air,atm2land%press_srf) 
-   beta_soil_ps = calc_soil_moisture_stress(tile%soil%theta, & 
+   tile%plant%beta_air = calc_atm_moisture_stress(atm2land%t_air,atm2land%q_air,atm2land%press_srf) 
+   tile%plant%beta_soil_ps = calc_soil_moisture_stress(tile%soil%theta, & 
                        veg_param%lambda_soil_ps(pftid),veg_param%weibull_k_soil_ps(pftid))
-   beta_soil_gs = calc_soil_moisture_stress(tile%soil%theta, &
+   tile%plant%beta_soil_gs = calc_soil_moisture_stress(tile%soil%theta, &
                        veg_param%lambda_soil_gs(pftid),veg_param%weibull_k_soil_gs(pftid))
 
-   tile%plant%accumulated%beta_soil_gs = moving_avrg( &
-                       tile%plant%accumulated%beta_soil_gs, beta_soil_gs, 1._wp / ( 7._wp * one_day/dt))
    ! determine actual canopy layers
    canopy_layer_depth_act = calc_canopy_layer_depth(tile%plant%lai)
 
@@ -79,7 +73,7 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param) ! atm2land is a global TYPE, se
                                  tile%plant%canopy_layer(icanop)%par_sunlit, &
                                  tile%plant%canopy_layer(icanop)%par_shaded, & 
                                  tile%plant%canopy_layer(icanop)%fleaf_sunlit, &
-                                 beta_air,beta_soil_ps,beta_soil_gs, &
+                                 tile%plant%beta_air,tile%plant%beta_soil_ps,tile%plant%beta_soil_gs, &
                                  tile%plant%canopy_layer(icanop)%fnl_chl, & 
                                  tile%plant%canopy_layer(icanop)%fnl_et, & 
                                  tile%plant%canopy_layer(icanop)%fnl_rub, & 
@@ -164,46 +158,48 @@ SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,k0_fn
 
 END SUBROUTINE calc_canopy_n_distribution
 
-SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par_shaded,fleaf_sunlit,beta_air,beta_soil_ps, &
+  !-----------------------------------------------------------------------------------------------------
+  !> Calculation of net photosynthesis and canopy conductance
+  !! 
+  !! according to Friend & Kiang 2005, J Climate \n
+  !! accounts for temperature acclimation of JMAX according to Friend, 2010 J Exp Bot
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par_shaded,fleaf_sunlit,beta_air,beta_soil_ps, &
                           beta_soil_gs,fnl_chl,fnl_et,fnl_rub,nfmol,tjmax_opt,tjmax_omega,g0,g1, &
                           agl,anl,rl,gsl,cil)  
-
-  ! Calculation of net photosynthesis and canopy conductance according to Friend & Kiang 2005, J Climate
-  ! accounts for temperature acclimation of JMAX according to Friend, 2010 J Exp Bot
     
-  USE mo_land_constants   ! still necessary ?
-  USE mo_atmland_constants, ONLY: Tzero
+  USE mo_land_constants,     ONLY: r_gas
+  USE mo_atmland_constants,  ONLY: Tzero
   USE mo_veg_parameters
-  USE mo_veg_respiration, ONLY: temperature_response_respiration
+  USE mo_veg_respiration,    ONLY: temperature_response_respiration
 
   IMPLICIT NONE
 
-  ! 0.1 Input
-  REAL(wp) :: temp                    ! temperature used for photosynthesis calculation (K) 
-  REAL(wp) :: press_srf               ! air pressure (Pa) 
-  REAL(wp) :: ga                      ! aerodynamic conductance (m s-1) 
-  REAL(wp) :: par_sunlit              ! PAR of sunlit foliage par per canopy layer (µmol m-2 s-1)
-  REAL(wp) :: par_shaded              ! PAR of shaded foliage par per canopy layer (µmol m-2 s-1)
-  REAL(wp) :: fleaf_sunlit            ! fraction of canopy layer that is sunlit 
-  REAL(wp) :: co2_mixing_ratio        ! CO2 concentration of the free air (ppm)
-  REAL(wp) :: beta_air                ! scaling factor to account for air humidity effects on conductance
-  REAL(wp) :: beta_soil_ps            ! scaling factor to account for soil moisture constraints on conductance
-  REAL(wp) :: beta_soil_gs            ! scaling factor to account for soil moisture constraints on conductance
-  REAL(wp) :: fnl_et                  ! N specific rate of electron transport (µmol CO2 / mmol N /s )
-  REAL(wp) :: fnl_rub                 ! N specific rate of carboylation (µmol CO2 / mmol N /s )
-  REAL(wp) :: fnl_chl                 ! fractional chlorophyll content
-  REAL(wp) :: nfmol                   ! foliar N content
-  REAL(wp) :: tjmax_opt               ! temperature optimum of electron transport
-  REAL(wp) :: tjmax_omega             ! shape-parameter of temperature sensitivity of electron transport
-  REAL(wp) :: g0                      ! offset of the stomatal conductance ~ An relationship 
-  REAL(wp) :: g1                      ! slope of the stomatal conductance ~ An relationship
-  ! 0.3 Output
-  REAL(wp),INTENT(OUT) :: agl         ! gross photsynthesis of layer (µmol CO2 / m2 /s) 
-  REAL(wp),INTENT(OUT) :: anl         ! net photsynthesis of layer (µmol CO2 / m2 /s)
-  REAL(wp),INTENT(OUT) :: rl          ! net canopy layer respiration (µmol CO2 / m2 /s)
-  REAL(wp),INTENT(OUT) :: gsl         ! canopy conductance of layer (m / s) !! TO BE REDEFINED AS mmol / m2 / s??
-  REAL(wp),INTENT(OUT) :: cil         ! internal leaf concentration of layer (ppm)
-  ! 0.4 Local
+  ! 0.1 InOut
+  REAL(wp),INTENT(IN) :: temp                    !< temperature used for photosynthesis calculation (K) 
+  REAL(wp),INTENT(IN) :: press_srf               !< air pressure (Pa) 
+  REAL(wp),INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1) 
+  REAL(wp),INTENT(IN) :: par_sunlit              !< PAR of sunlit foliage par per canopy layer (µmol m-2 s-1)
+  REAL(wp),INTENT(IN) :: par_shaded              !< PAR of shaded foliage par per canopy layer (µmol m-2 s-1)
+  REAL(wp),INTENT(IN) :: fleaf_sunlit            !< fraction of canopy layer that is sunlit 
+  REAL(wp),INTENT(IN) :: co2_mixing_ratio        !< CO2 concentration of the free air (ppm)
+  REAL(wp),INTENT(IN) :: beta_air                !< scaling factor to account for air humidity effects on conductance
+  REAL(wp),INTENT(IN) :: beta_soil_ps            !< scaling factor to account for soil moisture constraints on conductance
+  REAL(wp),INTENT(IN) :: beta_soil_gs            !< scaling factor to account for soil moisture constraints on conductance
+  REAL(wp),INTENT(IN) :: fnl_et                  !< N specific rate of electron transport (µmol CO2 / mmol N /s )
+  REAL(wp),INTENT(IN) :: fnl_rub                 !< N specific rate of carboylation (µmol CO2 / mmol N /s )
+  REAL(wp),INTENT(IN) :: fnl_chl                 !< fractional chlorophyll content
+  REAL(wp),INTENT(IN) :: nfmol                   !< foliar N content
+  REAL(wp),INTENT(IN) :: tjmax_opt               !< temperature optimum of electron transport
+  REAL(wp),INTENT(IN) :: tjmax_omega             !< shape-parameter of temperature sensitivity of electron transport
+  REAL(wp),INTENT(IN) :: g0                      !< offset of the stomatal conductance ~ An relationship 
+  REAL(wp),INTENT(IN) :: g1                      !< slope of the stomatal conductance ~ An relationship
+  REAL(wp),INTENT(OUT) :: agl         !< gross photsynthesis of layer (µmol CO2 / m2 /s) 
+  REAL(wp),INTENT(OUT) :: anl         !< net photsynthesis of layer (µmol CO2 / m2 /s)
+  REAL(wp),INTENT(OUT) :: rl          !< net canopy layer respiration (µmol CO2 / m2 /s)
+  REAL(wp),INTENT(OUT) :: gsl         !< canopy conductance of layer (m / s) !! TO BE REDEFINED AS mmol / m2 / s??
+  REAL(wp),INTENT(OUT) :: cil         !< internal leaf concentration of layer (ppm)
+  ! 0.2 Local
   REAL(wp) :: kc,ko,km                ! Michaelis-Menten Kinetic parameters for Rubisco (Pa)
   REAL(wp) :: pcp                     ! Photosynthetic compensation point (Pa)
   REAL(wp) :: f_resp                  ! N-specific layer respiration rate (µmol CO2 / mmol N /s) 
@@ -222,134 +218,137 @@ SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par
   INTEGER :: it                       ! Iteration loop counter
   LOGICAL :: last_call                ! boolean to stop iteration at low conductance
 
-  ! static energy (R_gas: J mol-1 K-1 -> rtck: J mol-1)
+  !> static energy (R_gas: J mol-1 K-1 -> rtck: J mol-1)
   rtck = r_gas * temp 
-  ! conversion of ppm to Pa
+  !> conversion of ppm to Pa
   ppm2Pa = press_srf * 1.e-06
   
-  !  Net canopy layer respiration (umol[CO2]/m2/s)
+  !>  Net canopy layer respiration (umol[CO2]/m2/s)
   rl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp) * nfmol
 
-  ! initialise output for no-light condition
+  !> @par IF: initialise output for no-light condition
   IF(par_sunlit + par_shaded <= eps8) THEN
     agl = 0.0_wp 
     anl = agl - rl
     gsl = MAX(g0,g0 + g1 * anl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf 
     cil = co2_mixing_ratio * ppm2Pa
-  ELSE !  calculate photosynthesis only if it's day
-
-     ! Michaelis-Menten constant of Rubisco for CO2 (Pa)
+  !> @par ELSE: calculate photosynthesis only if it's day
+  ELSE
+     !> Michaelis-Menten constant of Rubisco for CO2 (Pa)
      kc = exp(E0kc - E1kc/rtck) * ppm2Pa 
-     ! Michaelis-Menten constant of Rubisco for O2 (kPa)
+     !> Michaelis-Menten constant of Rubisco for O2 (kPa)
      ko = exp(E0ko - E1ko/rtck) * ppm2Pa 
-     ! Combined Rubisco Km for CO2 (Pa); kc (1 + pO2/ko) is part of equation 5 in Kull and Kruijt 1998
+     !> Combined Rubisco Km for CO2 (Pa); kc (1 + pO2/ko) is part of equation 5 in Kull and Kruijt 1998
      km = kc * (1.0_wp + pO2/ko)
-     ! Photorespiratory compensation point (Pa[CO2])
+     !> Photorespiratory compensation point (Pa[CO2])
      pcp = exp(E0pcp - E1pcp/rtck) * ppm2Pa 
 
-     ! N specific rate of electron transport rate
+     !> N specific rate of electron transport rate
      n1 = jmax2n * fnl_et * exp(-(((temp - Tzero - tjmax_opt)/tjmax_omega)**2)) * beta_soil_ps
 
-     ! N specific rate of Rubisco turnover 
+     !> N specific rate of Rubisco turnover 
      n2 = vcmax2n * fnl_rub * exp(E0v - E1v/rtck) * beta_soil_ps
 
-     ! temperature function for PeP C4 photosynthesis 
+     !> temperature function for PeP C4 photosynthesis 
      kt3 = 2**((temp - TZero - Tref_pep )/ Tbase_pep)
 
-     ! Initial guess of leaf internal CO2 concentration
+     !> Initial guess of leaf internal CO2 concentration
      cil = co2_mixing_ratio * CiCa_default_C3 
 
-     ! iteration to find correct combination of cil, Anl and gsl
+     !> iteration to find correct combination of cil, Anl and gsl
      anl_old = 1000.0_wp
      danl = 1.0_wp
      it = 1
      last_call = .FALSE.
+     !> @par DO WHILE (it < ps_it_max .AND. danl > eps4 )
      DO WHILE (it < ps_it_max .AND. danl > eps4 ) 
 
-        ! ci sensitivity of Electron-transport limited photosynthesis
+        !> ci sensitivity of Electron-transport limited photosynthesis
         m1 = cil/(cil + 2.0_wp * pcp)
 
-        ! ci sensitivity of Rubisco-limited photosynthesis
+        !> ci sensitivity of Rubisco-limited photosynthesis
         m2 = cil/(cil + km)
  
-        ! N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
+        !> N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
         msat = MIN(m1 * n1, m2 * n2)
 
-        ! nlim factor (part of equation 12 (Kull and Kruijt 1998))
+        !> nlim factor (part of equation 12 (Kull and Kruijt 1998))
         nco = msat/(alpha_i * ka * m1)
 
-        ! A couple of factors to calculate photosynthesis
-        !  parts of equations 14-16 of Kull and Kruijt 1998
+        !> A couple of factors to calculate photosynthesis
+        !!  parts of equations 14-16 of Kull and Kruijt 1998
         agsf1 = MAX(1.0_wp - pcp / cil, 0.0_wp)
         agsf2 = agsf1 * alpha_i * m1
         agsf1 = agsf1 * msat
 
-        ! fabsb: fraction of possible PAR absorption in present light conditions
+        !> fabsb: fraction of possible PAR absorption in present light conditions
         fabsb = exp(-ka * chl2n * fnl_chl * nfmol)
 
-        !  Case of no direct radiation
+        !> @par IF: Case of no direct radiation
         IF (fleaf_sunlit <= eps8) THEN
-           !  Theoretical cumulative N at co-limitation by Rubisco and
-           !  light absorption in sunlit foliage (mmol[N]/m2))
+           !>  Theoretical cumulative N at co-limitation by Rubisco and
+           !!  light absorption in sunlit foliage (mmol[N]/m2))
            nlim = -log(nco/(par_shaded * chl2n * fnl_chl + eps8))/(ka * chl2n * fnl_chl)
            nsat = MAX(MIN(nlim, nfmol), 0.0_wp)
 
-           ! Relative PAR absorption in light-limited region (fraction)
+           !> Relative PAR absorption in light-limited region (fraction)
            fabs = exp(-ka * chl2n * fnl_chl * nsat) - fabsb
 
-           ! Rate of gross photosynthesis (umol/m2/s)
-           !  sum of photosynthesis in colimited, light saturated PS and PS in the 
-           !  light-limited region (assumed to scale linearily with light) 
+           !> Rate of gross photosynthesis (umol/m2/s)
+           !!  sum of photosynthesis in colimited, light saturated PS and PS in the 
+           !!  light-limited region (assumed to scale linearily with light) 
            agl = agsf1 * nsat + agsf2 * par_shaded * fabs
 
-        ELSE !  Case of direct and diffuse radiation
-          !  Theoretical cumulative N at co-limitation by Rubisco and
-          !  light absorption in sunlit foliage (mmol[N]/m2))
+        !> @par ELSE: Case of direct and diffuse radiation
+        ELSE 
+          !>  Theoretical cumulative N at co-limitation by Rubisco and
+          !!  light absorption in sunlit foliage (mmol[N]/m2))
           nlim = -log(nco/(par_sunlit * chl2n * fnl_chl + eps8))/(ka * chl2n * fnl_chl)
           nsat = MAX(MIN(nlim, nfmol), 0.0_wp)
 
-          !  Relative PAR absorption in light-limited region of sunlit foliage (fraction)
+          !>  Relative PAR absorption in light-limited region of sunlit foliage (fraction)
           fabs = exp(-ka * chl2n * fnl_chl * nsat) - fabsb
 
-          ! Rate of gross photosynthesis in sunlit foliage (umol/m2/s)
+          !> Rate of gross photosynthesis in sunlit foliage (umol/m2/s)
           agsl = agsf1 * nsat + agsf2 * par_sunlit * fabs
 
-          ! Theoretical cumulative N at co-limitation by Rubisco and
-          !  light absorption in shaded foliage (mmol[N]/m2))
+          !> Theoretical cumulative N at co-limitation by Rubisco and
+          !!  light absorption in shaded foliage (mmol[N]/m2))
           nlim = -log(nco/(par_shaded * chl2n * fnl_chl + eps8))/(ka * chl2n * fnl_chl)
           nsat = MAX(MIN(nlim, nfmol), 0.0_wp)
 
-          !  Relative PAR absorption in light-limited region of shaded foliage (fraction)
+          !> Relative PAR absorption in light-limited region of shaded foliage (fraction)
           fabs = exp(-ka * chl2n * fnl_chl * nsat) - fabsb
 
-          ! Rate of gross photosynthesis in shaded foliage (umol/m2/s)
+          !> Rate of gross photosynthesis in shaded foliage (umol/m2/s)
           agsh = agsf1 * nsat + agsf2 * par_shaded* fabs
 
-          ! Mean gross photosynthesis over sunlit and shaded fractions (umol/m2/s)
+          !> Mean gross photosynthesis over sunlit and shaded fractions (umol/m2/s)
           agl = fleaf_sunlit * agsl + (1.0_wp - fleaf_sunlit) * agsh
 
-        ENDIF
-        
-        ! Net layer photosynthesis (umol[CO2]/m2/s)
+        END IF
+        !> END IF
+
+        !> Net layer photosynthesis (umol[CO2]/m2/s)
         anl = agl - rl
 
-        ! calculate canopy conductance (m/s) following Ball & Berry
+        !> calculate canopy conductance (m/s) following Ball & Berry
         gsl = MAX(g0, g0 + g1 * anl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * & 
               rtck / press_srf
-        ! calculate canopy conductance (m/s) following Medlyn et al. 2011
-        !gsl = MAX(g0, 1.6_wp * ( 1._wp + g1 * beta_air * beta_soil_gs ) * anl / ( co2_mixing_ratio )) * & 
-        !      rtck / press_srf
-        ! New internal CO2 from balance of supply and demand
-        ! ci = cs - An * r_tot (Friend 2005 eq. 7)
-        ! Friend 2005 eq. 8: r_tot = ( 1.42 / gsl + 1.60 / (speed * q_cdrag)) 
+        !> calculate canopy conductance (m/s) following Medlyn et al. 2011
+        !! gsl = MAX(g0, 1.6_wp * ( 1._wp + g1 * beta_air * beta_soil_gs ) * anl / ( co2_mixing_ratio )) * rtck / press_srf
+
+        !> New internal CO2 from balance of supply and demand
+        !! ci = cs - An * r_tot (Friend 2005 eq. 7)
+        !! Friend 2005 eq. 8: r_tot = ( 1.42 / gsl + 1.60 / (speed * q_cdrag)) 
         cil = co2_mixing_ratio * ppm2Pa - anl * rtck * 1e-06 * (1.42_wp/gsl + 1.6_wp/ga)
         cil = MAX (cil, pcp) 
 
-        ! change in An since last iteration and save new anl 
+        !> change in An since last iteration and save new anl 
         danl = abs(anl-anl_old)
         anl_old = anl
 
-        ! break-off point for numerical stability at low conductance
+        !> break-off point for numerical stability at low conductance
         IF(last_call) THEN
            it = ps_it_max + 1
            cil = pcp 
@@ -360,13 +359,14 @@ SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par
 !        ENDIF 
         it =  it + 1
      END DO
-
+     !> END DO WHILE
   ENDIF
+  !> END IF
 
-  ! for output purposes, convert ci to ppm
+  !> for output purposes, convert ci to ppm
   cil = cil / ppm2Pa
 
-END SUBROUTINE calc_photosynthesis
+  END SUBROUTINE calc_photosynthesis
 
   FUNCTION calc_atm_moisture_stress(temp,q_air,press_srf) RESULT(beta)
      ! Function to calculate atmospheric drought stress factor

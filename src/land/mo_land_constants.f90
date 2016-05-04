@@ -10,6 +10,9 @@
 MODULE mo_land_constants
  
   USE mo_kind
+
+  IMPLICIT NONE
+
   ! physical constants
   REAL(wp), PARAMETER :: r_gas     = 8.3144_wp       ! universal gas constant (J / mol / K) 
   REAL(wp), PARAMETER :: r_gas_dryair = 287.058_wp   ! specific gas constant for dry air (J / kg / K) 

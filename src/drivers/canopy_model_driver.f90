@@ -19,7 +19,7 @@ PROGRAM canopy_model_driver
   USE mo_atmland_forcing
   USE mo_atmland_config_class,  ONLY: atmland_config
   ! land
-  USE mo_land_constants         ! still necessary ?
+  USE mo_land_constants,        ONLY: molar_mass_N
   ! vegetation
   USE mo_veg_parameters
   USE mo_veg_radiation
