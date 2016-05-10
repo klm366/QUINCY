@@ -10,7 +10,6 @@
 MODULE mo_veg_interface
 
   USE mo_kind
-  USE mo_atmland_memory
 
   IMPLICIT NONE
 
@@ -21,22 +20,24 @@ MODULE mo_veg_interface
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> calls the vegetation interface
+  !> update vegetation pools given pre-calculated rates of net C, N and P uptake
   !! 
-  !! @todo TBD: Merge with interface? \n
-  !! Somewhat a strategic decision for all header routines
-  !! where will the loop over tiles and gridcells happen. For the case of vegeation it may
-  !! be beneficial to keep the loop outside the actual growth routine
+  !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_vegetation(plant, soil, veg_param)
 
-    USE mo_land_constants
     USE mo_base_memory,        ONLY: t_slm_soil
-    USE mo_veg_memory
     USE mo_atmland_constants,  ONLY: Tzero
+    USE mo_atmland_memory
+    USE mo_land_constants
+    USE mo_veg_memory
     USE mo_veg_parameters,     ONLY: t_slm_veg_param, gdd_t_air_threshold
     USE mo_veg_photosynthesis, ONLY: update_canopy_fluxes
     USE mo_veg_phenology,      ONLY: update_phenology
+    USE mo_veg_turnover
+    USE mo_veg_growth
+    USE mo_veg_dynamics,       ONLY: update_veg_dynamics
+    USE mo_veg_respiration,    ONLY: calc_maintenance_respiration
 
     IMPLICIT NONE
 
@@ -66,44 +67,13 @@ CONTAINS
 
     !> 1.2 photosynthesis and leaf respiration 
     !! 
-    !! 
+    !! @todo may move elsewhere
     CALL update_canopy_fluxes(plant, soil, veg_param)
-
-    !> 1.3 growth, respiration and turnover
-    !! 
-    !!
-    CALL vegetation_interface(plant, soil%theta, veg_param)
-  END SUBROUTINE update_vegetation
-
-  !-----------------------------------------------------------------------------------------------------
-  !> update vegetation pools given pre-calculated rates of net C, N and P uptake
-  !! 
-  !! @todo OBS: incomplete!!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE vegetation_interface(plant, theta, veg_param)
-
-    USE mo_veg_memory
-    USE mo_veg_parameters,  ONLY: t_slm_veg_param
-    USE mo_veg_turnover
-    USE mo_veg_growth
-    USE mo_veg_dynamics,    ONLY: update_veg_dynamics
-    USE mo_veg_respiration, ONLY: calc_maintenance_respiration
-
-    IMPLICIT NONE
-
-    ! 0.1 InOut
-    TYPE(t_slm_veg_param),INTENT(in) :: veg_param             !< vegetation type parameters
-    REAL(wp),INTENT(in)              :: theta                 !< soil moisture (%)
-    TYPE(t_slm_plant),INTENT(inout)  :: plant                 !< plant variables and data
-
-    !> 1.0 ??
-    !! 
-    !! 
 
     !> 2.0 Calculate growth
     !! 
     !! 
-    CALL  calc_growth(atm2land%t_air,theta,plant,veg_param,plant%flux%growth, & 
+    CALL  calc_growth(atm2land%t_air,soil%theta,plant,veg_param,plant%flux%growth, & 
             plant%flux%growth_respiration,plant%flux%growth_respiration_c13,plant%flux%growth_respiration_c14,& 
             plant%flux%reserve_use)
 
@@ -179,6 +149,6 @@ CONTAINS
        plant%mean_leaf_age = 0.0_wp
     ENDIF
 
-  END SUBROUTINE vegetation_interface
+  END SUBROUTINE update_vegetation
 
 END MODULE mo_veg_interface
