@@ -10,7 +10,8 @@
 MODULE mo_land_model_interface
 
   USE mo_kind
-  USE mo_base_memory
+  USE mo_base_memory,      ONLY: t_slm_tile
+  USE mo_base_constants,   ONLY: ntile
 
   IMPLICIT NONE
 
@@ -22,6 +23,11 @@ MODULE mo_land_model_interface
 
   CONTAINS
 
+  !-----------------------------------------------------------------------------------------------------
+  !> land model interface
+  !! 
+  !! @todo includes an undesirable fix for now (see subroutine input variables)
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE land_model_interface(t_air,q_air,rain,snow,wind_air,wind_10m,lw_srf_down,swvis_srf_down, &
                                   swnir_srf_down,swpar_srf_down,swpar_fdiffuse,press_srf,drag_srf,t_acoef,t_bcoef, & 
                                   q_acoef,q_bcoef,pch,cos_zenith_angle,co2_mixing_ratio, &
@@ -34,8 +40,8 @@ MODULE mo_land_model_interface
     USE mo_veg_photosynthesis
 
     IMPLICIT NONE
-    ! 0.1 Input
-    REAL(wp) :: &
+    ! 0.1 InOut
+    REAL(wp) ::          &
       t_air            , &
       q_air            , &
       rain             , &
@@ -57,16 +63,18 @@ MODULE mo_land_model_interface
       cos_zenith_angle , & 
       co2_mixing_ratio  
     TYPE(t_slm_veg_param) :: veg_param
-    ! 0.4 Local
-    REAL(wp) :: & 
+    ! 0.2 Local
+    REAL(wp) ::       & 
       alb_vis_dif ,   &
       alb_nir_dif ,   &
       alb_vis_dir ,   &
       alb_nir_dir ,   &  
-      ga, &
+      ga,             &
       vpd
+    INTEGER  :: itile                        !< the current tile(i), for looping over ntile
 
-      ga = 1._wp / ( drag_srf * wind_10m ) 
+
+    ga = 1._wp / ( drag_srf * wind_10m ) 
 
 !write(*,*) 'interface C',tile%plant%pool%fine_root%carbon,&
 ! tile%plant%pool%fine_root%carbon,tile%plant%pool%coarse_root%carbon,&
@@ -77,17 +85,18 @@ MODULE mo_land_model_interface
 ! tile%plant%pool%sap_wood%nitrogen,tile%plant%pool%heart_wood%nitrogen,&
 ! tile%plant%pool%fruit%nitrogen,tile%plant%pool%labile%nitrogen
 !write(*,*) 'CN', tile%plant%pool%leaf%carbon/tile%plant%pool%leaf%nitrogen*12.0/14.0,&
-!tile%plant%pool%fine_root%carbon/tile%plant%pool%fine_root%nitrogen*12.0/14.0 
-tile(1)%plant%lai=6.2_wp
-!tile(2)%plant%lai=5.0_wp
-tile(1)%plant%pftid=1
-!tile(2)%plant%pftid=2
-     CALL update_radiation(tile)
 
-     CALL update_canopy_fluxes(tile(1),veg_param)
+    DO itile = 1,ntile
+      !tile%plant%pool%fine_root%carbon/tile%plant%pool%fine_root%nitrogen*12.0/14.0 
+      tile(itile)%plant%lai=6.2_wp
+      !tile(2)%plant%lai=5.0_wp
+      tile(itile)%plant%pftid=1
+      !tile(2)%plant%pftid=2
 
-     CALL update_vegetation(tile,veg_param)
-
+      CALL update_radiation(tile(itile)%plant)                                        !< mo_veg_radiation
+      CALL update_canopy_fluxes(tile(itile)%plant, tile(itile)%soil, veg_param)       !< mo_veg_photosynthesis
+      CALL update_vegetation(tile(itile)%plant, tile(itile)%soil, veg_param)          !< mo_veg_interface
+    END DO
   END SUBROUTINE land_model_interface
 
 END MODULE mo_land_model_interface

@@ -30,7 +30,7 @@ CONTAINS
   SUBROUTINE update_veg_dynamics(plant, veg_param)
 
     USE mo_base_constants
-    USE mo_base_memory
+    USE mo_land_memory,    ONLY: t_element
     USE mo_veg_memory
     USE mo_veg_parameters
 

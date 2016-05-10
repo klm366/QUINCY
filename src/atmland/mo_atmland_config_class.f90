@@ -38,12 +38,17 @@ MODULE mo_atmland_config_class
 
 CONTAINS
 
+  !-----------------------------------------------------------------------------------------------------
+  !> configuration routine of t_atmland_config
+  !! 
+  !! currently it does only: read parameters from namelist
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_atmland_config(config)
 
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml
-
-    CLASS(t_atmland_config), INTENT(inout) :: config
-
+    ! 0.1 InOut
+    CLASS(t_atmland_config), INTENT(inout) :: config    !< config type for atmland
+    ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL      :: active
     CHARACTER(8) :: option_forcing

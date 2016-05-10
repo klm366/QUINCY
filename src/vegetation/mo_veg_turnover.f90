@@ -11,7 +11,6 @@ MODULE mo_veg_turnover
 
   USE mo_kind
   USE mo_exception, ONLY: message_text, finish
-  USE mo_base_memory
   USE mo_veg_memory
 
   PRIVATE
@@ -28,6 +27,7 @@ CONTAINS
     ! 
     USE mo_land_constants
     USE mo_veg_parameters
+    USE mo_base_constants,     ONLY: zero
 
     IMPLICIT NONE
     ! 0.1 Input
@@ -129,13 +129,13 @@ CONTAINS
 
   SUBROUTINE update_turnover_fraction(growing_season,lai,phenology_type,growthform,tau_leaf,tau_fine_root,tau_coarse_root,tau_sap_wood,tau_seed, & 
                                       fturn_leaf,fturn_fine_root,fturn_coarse_root,fturn_sap_wood,fturn_seed_bed)
-    !
+    ! 
     ! routine to calculate fractional loss of biomass from a plant compartment
     ! varies with phenology for leaves
     ! different treatment of sapweeod for trees (real sapwood) and grasses (halms)
     ! OBS: for now, root turnover is a constant  - should probably be more dynamic in the future
     ! OBS: for now, heartwood also turns over to litter -> should become a part of plant mortality later
-    !
+    ! 
     USE mo_base_constants, ONLY: dt, one_day, one_year
     USE mo_veg_parameters, ONLY: itree,igrass,ievergreen,iraingreen,isummergreen,iperennial,min_lai
 

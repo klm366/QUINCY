@@ -44,13 +44,18 @@ MODULE mo_veg_config_class
 
 CONTAINS
 
+  !-----------------------------------------------------------------------------------------------------
+  !> configuration routine of t_veg_config
+  !! 
+  !! currently it does only: read parameters from namelist
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_veg_config(config)   ! 'config' == t_veg_config, see ABSTRACT INTERFACE -> SUBROUTINE Init_config(config)
 !    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 !    using the old JSBACH3 functions instead of wrappers implemented in JSBACH4 -> mo_jsb_namelist_iface
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
-
-    CLASS(t_veg_config), INTENT(inout) :: config
-
+    ! 0.1 InOut
+    CLASS(t_veg_config), INTENT(inout) :: config    !< config type for veg
+    ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL      :: active
     CHARACTER(8) :: output_interval_pool, output_interval_flux

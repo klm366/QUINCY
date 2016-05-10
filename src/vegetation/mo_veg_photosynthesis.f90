@@ -10,8 +10,9 @@
 MODULE mo_veg_photosynthesis
 
   USE mo_kind, ONLY: wp
-  USE mo_base_constants, ONLY: ncanop,ntile,dt
-  USE mo_base_memory
+  USE mo_base_constants, ONLY: ncanop, dt
+  USE mo_veg_memory
+  USE mo_base_memory,    ONLY: t_slm_soil
   USE mo_atmland_memory, ONLY: atm2land, land2atm
   USE mo_atmland_forcing
   USE mo_veg_parameters
@@ -25,12 +26,20 @@ MODULE mo_veg_photosynthesis
 
 CONTAINS
 
-SUBROUTINE update_canopy_fluxes(tile, veg_param)
+  !-----------------------------------------------------------------------------------------------------
+  !> update canopy fluxes, includes calculation of photosynthesis
+  !! 
+  !! integrates: \n
+  !! CALL calc_canopy_n_distribution \n
+  !! CALL calc_photosynthesis
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE update_canopy_fluxes(plant, soil, veg_param)
 
    IMPLICIT NONE
    ! 0.1 InOut
    TYPE(t_slm_veg_param), INTENT(in)           :: veg_param  !< list of vegetation parameters
-   TYPE(t_slm_tile), INTENT(inout)             :: tile       !< current tile
+   TYPE(t_slm_soil), INTENT(in)                :: soil       !< soil variables per tile
+   TYPE(t_slm_plant), INTENT(inout)            :: plant      !< plant variables per tile
    ! 0.2 Local
    REAL(wp),DIMENSION(ncanop) :: agl,anl,rl,gsl,cil
    REAL(wp),DIMENSION(ncanop) :: canopy_layer_depth_act
@@ -44,40 +53,40 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param)
    gsl(:) = 0.0_wp
    cil(:) = 0.0_wp     
 
-   pftid = tile%plant%pftid
+   pftid = plant%pftid
 
    ! calculate the moisture scaling factor for photosynthesis
-   tile%plant%beta_air = calc_atm_moisture_stress(atm2land%t_air,atm2land%q_air,atm2land%press_srf) 
-   tile%plant%beta_soil_ps = calc_soil_moisture_stress(tile%soil%theta, & 
+   plant%beta_air = calc_atm_moisture_stress(atm2land%t_air,atm2land%q_air,atm2land%press_srf) 
+   plant%beta_soil_ps = calc_soil_moisture_stress(soil%theta, & 
                        veg_param%lambda_soil_ps(pftid),veg_param%weibull_k_soil_ps(pftid))
-   tile%plant%beta_soil_gs = calc_soil_moisture_stress(tile%soil%theta, &
+   plant%beta_soil_gs = calc_soil_moisture_stress(soil%theta, &
                        veg_param%lambda_soil_gs(pftid),veg_param%weibull_k_soil_gs(pftid))
 
    ! determine actual canopy layers
-   canopy_layer_depth_act = calc_canopy_layer_depth(tile%plant%lai)
+   canopy_layer_depth_act = calc_canopy_layer_depth(plant%lai)
 
    ! update N distribution in the canopy
-   CALL calc_canopy_n_distribution(tile%plant%pool%leaf%nitrogen,tile%plant%lai, & 
+   CALL calc_canopy_n_distribution(plant%pool%leaf%nitrogen,plant%lai, & 
                                    canopy_layer_depth_act, &
                                    veg_param%nf(pftid), & 
                                    veg_param%k0_fnl_struc(pftid), & 
-                                   tile%plant%canopy_layer(:)%nl_tot, & 
-                                   tile%plant%canopy_layer(:)%fnl_chl, & 
-                                   tile%plant%canopy_layer(:)%fnl_et, & 
-                                   tile%plant%canopy_layer(:)%fnl_rub)
+                                   plant%canopy_layer(:)%nl_tot, & 
+                                   plant%canopy_layer(:)%fnl_chl, & 
+                                   plant%canopy_layer(:)%fnl_et, & 
+                                   plant%canopy_layer(:)%fnl_rub)
    ! calculate photosynthesis per layer
    DO icanop = 1,ncanop
       IF(canopy_layer_depth_act(icanop).GT.0.0_wp)THEN
 
         CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
-                                 tile%plant%canopy_layer(icanop)%par_sunlit, &
-                                 tile%plant%canopy_layer(icanop)%par_shaded, & 
-                                 tile%plant%canopy_layer(icanop)%fleaf_sunlit, &
-                                 tile%plant%beta_air,tile%plant%beta_soil_ps,tile%plant%beta_soil_gs, &
-                                 tile%plant%canopy_layer(icanop)%fnl_chl, & 
-                                 tile%plant%canopy_layer(icanop)%fnl_et, & 
-                                 tile%plant%canopy_layer(icanop)%fnl_rub, & 
-                                 tile%plant%canopy_layer(icanop)%nl_tot, & 
+                                 plant%canopy_layer(icanop)%par_sunlit, &
+                                 plant%canopy_layer(icanop)%par_shaded, & 
+                                 plant%canopy_layer(icanop)%fleaf_sunlit, &
+                                 plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
+                                 plant%canopy_layer(icanop)%fnl_chl, & 
+                                 plant%canopy_layer(icanop)%fnl_et, & 
+                                 plant%canopy_layer(icanop)%fnl_rub, & 
+                                 plant%canopy_layer(icanop)%nl_tot, & 
                                  veg_param%tjmax_opt(pftid), &
                                  veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
                                  agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop))
@@ -85,47 +94,51 @@ SUBROUTINE update_canopy_fluxes(tile, veg_param)
      ENDIF
   ENDDO
 
-  ! integrate to canopy level values
-  tile%plant%flux%gpp = 0.0_wp
-  tile%plant%flux%an = 0.0_wp
-  tile%plant%flux%maint_respiration_leaf = 0.0_wp
-  tile%plant%gc = 0.0_wp
-  tile%plant%flux%ci = 0.0_wp
+  !> integrate to canopy level values
+  !! 
+  !! fluxes were set to zero before by set_zero_fluxes_of_plant_pools
+!  plant%flux%gpp = 0.0_wp
+!  plant%flux%an = 0.0_wp
+!  plant%flux%maint_respiration_leaf = 0.0_wp
+!  plant%flux%ci = 0.0_wp
+  plant%gc = 0.0_wp 
   DO icanop = 1,ncanop
-     tile%plant%flux%gpp = tile%plant%flux%gpp + agl(icanop) * canopy_layer_depth_act(icanop) 
-     tile%plant%flux%an = tile%plant%flux%an + anl(icanop) * canopy_layer_depth_act(icanop) 
-     tile%plant%flux%maint_respiration_leaf = tile%plant%flux%maint_respiration_leaf + & 
+     plant%flux%gpp = plant%flux%gpp + agl(icanop) * canopy_layer_depth_act(icanop) 
+     plant%flux%an = plant%flux%an + anl(icanop) * canopy_layer_depth_act(icanop) 
+     plant%flux%maint_respiration_leaf = plant%flux%maint_respiration_leaf + & 
             rl(icanop) * canopy_layer_depth_act(icanop) 
-     tile%plant%gc = tile%plant%gc + gsl(icanop) * canopy_layer_depth_act(icanop)
-     tile%plant%flux%ci = tile%plant%flux%ci + cil(icanop) * canopy_layer_depth_act(icanop)
+     plant%gc = plant%gc + gsl(icanop) * canopy_layer_depth_act(icanop)
+     plant%flux%ci = plant%flux%ci + cil(icanop) * canopy_layer_depth_act(icanop)
   ENDDO
 
-  tile%plant%flux%ci = tile%plant%flux%ci / sum(canopy_layer_depth_act)
+  plant%flux%ci = plant%flux%ci / sum(canopy_layer_depth_act)
 
   END SUBROUTINE update_canopy_fluxes
 
-SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,k0_fnl_struc,& 
+  !-----------------------------------------------------------------------------------------------------
+  !> Dummy routine to produce the within canopy distribution of N of OCN
+  !! 
+  !! @todo replace by Silvia's allocation scheme and feed back information on foliar C:N to growth routine
+  !! @par note 
+  !!  it includes "nf" as input, i.e. Andrew's tuning constant
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,k0_fnl_struc,& 
                                       nl_tot,fnl_chl,fnl_et,fnl_rub)
-  !
-  ! Dummy routine to produce the within canopy distribution of N of OCN
-  ! NB: Should be replaced by Silvia's allocation scheme and feed back information on foliar C:N to 
-  !     growth routine
-  !
+
   USE mo_veg_parameters, ONLY: kn,k0_fnl_chl,k1_fnl_chl,kfnl_chl,jmax2n,vcmax2n,k1_fnl_struc
  
   IMPLICIT NONE
-  ! 0.1 Input
-  REAL(wp), INTENT(in)    :: totalN           ! total foliar N (mol / m2)
-  REAL(wp), INTENT(in)    :: lai              ! total foliar area (m2 / m2)
-  REAL(wp), DIMENSION(ncanop), INTENT(in) :: canopy_layer_depth_act ! depth of canopy layers (in units LAI)
-  REAL(wp), INTENT(in)    :: nf               ! Andrew's tuning constant 
-  REAL(wp), INTENT(in)    :: k0_fnl_struc     ! maximum fraction of N not used for photosynthesis 
-  ! 0.2 In- and Output
-  REAL(wp),DIMENSION(ncanop),INTENT(inout) :: nl_tot           ! total N content of the layer
-  REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_chl          ! fraction of N in chlorophyll content per layer
-  REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_et           ! fraction of N used for electron-transport per layer
-  REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_rub          ! fraction of N used for Rubisco per layer
-  ! 0.4 Local
+  ! 0.1 InOut
+  REAL(wp), INTENT(in)    :: totalN           !< total foliar N (mol / m2)
+  REAL(wp), INTENT(in)    :: lai              !< total foliar area (m2 / m2)
+  REAL(wp), DIMENSION(ncanop), INTENT(in) :: canopy_layer_depth_act !< depth of canopy layers (in units LAI)
+  REAL(wp), INTENT(in)    :: nf               !< Andrew's tuning constant 
+  REAL(wp), INTENT(in)    :: k0_fnl_struc     !< maximum fraction of N not used for photosynthesis 
+  REAL(wp),DIMENSION(ncanop),INTENT(inout) :: nl_tot           !< total N content of the layer
+  REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_chl          !< fraction of N in chlorophyll content per layer
+  REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_et           !< fraction of N used for electron-transport per layer
+  REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_rub          !< fraction of N used for Rubisco per layer
+  ! 0.2 Local
   REAL(wp) :: n0                              ! foliar N content of top-most layer
   REAL(wp) :: fnl_oth                         ! fraction of N not associated with PS
   REAL(wp) :: lc
@@ -155,8 +168,7 @@ SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,k0_fn
              + canopy_layer_depth_act(icanop+1) / 2._wp
     ENDIF
   ENDDO
-
-END SUBROUTINE calc_canopy_n_distribution
+  END SUBROUTINE calc_canopy_n_distribution
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculation of net photosynthesis and canopy conductance
@@ -368,20 +380,25 @@ END SUBROUTINE calc_canopy_n_distribution
 
   END SUBROUTINE calc_photosynthesis
 
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate atmospheric drought stress factor
+  !!
+  !! @par Literature:
+  !! Ball & Berry: beta = q_air/q_sat \n
+  !! NOT used, Medlyn et al. 2011: beta = MIN(5._wp,1._wp / SQRT(vpd + eps8))
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_atm_moisture_stress(temp,q_air,press_srf) RESULT(beta)
-     ! Function to calculate atmospheric drought stress factor
-     USE mo_kind, ONLY: wp
-     USE mo_atmland_constants, ONLY: eps_vpd
-     USE mo_atmland_util, ONLY: calc_spec_humidity_sat
+
+     USE mo_atmland_constants,  ONLY: eps_vpd
+     USE mo_atmland_util,       ONLY: calc_spec_humidity_sat
+
      IMPLICIT NONE
-     ! 0.1 Input
-     REAL(wp),INTENT(in) :: temp               ! temperature in K
-     REAL(wp),INTENT(in) :: q_air              ! specific air humidity (g g-1)
-     REAL(wp),INTENT(in) :: press_srf          ! air pressure (Pa)
-     ! 0.3 Output
-     REAL(wp) :: beta                          ! atmospheric moisture scalar for
-                                               ! use in conductance calculation
-     ! 0.4 Local
+     ! 0.1 InOut
+     REAL(wp),INTENT(in) :: temp               !< temperature in K
+     REAL(wp),INTENT(in) :: q_air              !< specific air humidity (g g-1)
+     REAL(wp),INTENT(in) :: press_srf          !< air pressure (Pa)
+     REAL(wp) :: beta                          !< atmospheric moisture scalar for use in conductance calculation
+     ! 0.2 Local
      REAL(wp) :: q_sat                         ! saturating specific humidity 
      REAL(wp) :: vpd                           ! vapour pressure deficit 
 
@@ -392,23 +409,25 @@ END SUBROUTINE calc_canopy_n_distribution
      ! scalar for atmospheric humidity as relative humidity (fractions)
      beta = q_air/q_sat ! Ball & Berry
      !beta = MIN(5._wp,1._wp / SQRT(vpd + eps8)) ! Medlyn et al. 2011
-
   END FUNCTION calc_atm_moisture_stress
 
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate soil moisture stress on photosynthesis or conductance given current soil moisture
+  !! 
+  !! @todo this should account for rooting and soil moisture profile in the long-term
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_soil_moisture_stress(theta,lambda,weibull_k) RESULT(beta)
-     ! Function to calculate soil moisture stress on photosynthesis or conductance
-     ! given current soil moisture
-     ! Note: this should account for rooting and soil moisture profile in the long-term
-     USE mo_kind, ONLY : wp
-     IMPLICIT NONE
-     ! 0.1 Input
-     REAL(wp),INTENT(in) :: theta       ! soil plant available water (%)
-     REAL(wp),INTENT(in) :: lambda      ! slope parameter of Weibull function
-     REAL(wp),INTENT(in) :: weibull_k   ! shape parameter of Weibull function
-     ! 0.3 Output
-     REAL(wp) :: beta
-     ! 1. Moisture stress now as a Weibull function to avoid MIN/MAX statements
-     beta = 1.0_wp - exp(-(lambda*theta/100._wp)**weibull_k)
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp),INTENT(in) :: theta       !< soil plant available water (%)
+    REAL(wp),INTENT(in) :: lambda      !< slope parameter of Weibull function
+    REAL(wp),INTENT(in) :: weibull_k   !< shape parameter of Weibull function
+    REAL(wp) :: beta                   !< plant\%beta_soil_ps / plant\%beta_soil_gs
+
+    !> 1.0 Moisture stress now as a Weibull function to avoid MIN/MAX statements
+    !!
+    beta = 1.0_wp - exp(-(lambda*theta/100._wp)**weibull_k)
   END FUNCTION calc_soil_moisture_stress
 
 END MODULE mo_veg_photosynthesis

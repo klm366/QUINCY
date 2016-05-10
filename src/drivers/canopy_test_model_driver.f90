@@ -10,7 +10,9 @@
 PROGRAM canopy_test_model_driver
 
   USE mo_kind
+  USE mo_exception,             ONLY: finish ! message_text
   USE mo_base_memory
+  USE mo_base_constants
   USE mo_atmland_util
   USE mo_atmland_memory
   USE mo_atmland_forcing
@@ -21,7 +23,7 @@ PROGRAM canopy_test_model_driver
   USE mo_veg_radiation
   USE mo_veg_photosynthesis
   USE mo_veg_config_class,      ONLY: veg_config
-  USE mo_veg_memory,            ONLY: set_zero_fluxes_of_plant_pools
+  USE mo_veg_memory
 
   IMPLICIT NONE
 
@@ -43,60 +45,70 @@ PROGRAM canopy_test_model_driver
   REAL(wp) :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
   INTEGER  :: ref_pft = 1                  ! PFT identifier
 
-  ! 
-  ! 1.0 Initialisation of vegetation parameters and constants
-  ! 
+  ! check number of tiles, exit if more than one tile was defined (canopy output routines can handle just one; for now)
+  IF(ntile > 1) CALL finish('canopy_test_model_driver','Sorry, the canopy_test_model_driver currently works with one tile only')
+
+  !! note: section numbering is not consistent with the canopy_model_driver !!
+
+  !> 1.0 Initialisation of vegetation parameters and constants
+  !!
+  !!  
   CALL init_base_constants
   CALL init_atmland_constants
   ! vegetation
-  CALL init_element_zero                                    ! mo_base_memory
+  CALL init_element_zero                                    ! mo_veg_memory
+  CALL init_plant(tile(1)%plant)                            ! mo_veg_memory; 
   CALL set_zero_fluxes_of_plant_pools(tile(1)%plant%flux)   ! mo_veg_memory ; called each timestep in update_vegetation()
-  CALL init_plant(tile(1)%plant)                            ! mo_base_memory; 
-  CALL init_veg_parameters(veg_param)
-  ! 
-  ! 1.1 Initalisation of met-forcing which is assumed constant 
-  ! 
-  atm2land%t_air = def_t_air
-  atm2land%press_srf = standard_press_srf
-  atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - def_vpd / atm2land%press_srf * eps_vpd
+  CALL init_veg_parameters(veg_param)                       ! mo_veg_parameters
+  ! no forcing
+
+  !> 1.1 Initalisation of met-forcing which is assumed constant 
+  !! 
+  !!  
+  atm2land%t_air            = def_t_air
+  atm2land%press_srf        = standard_press_srf
+  atm2land%q_air            = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - def_vpd / atm2land%press_srf * eps_vpd
   atm2land%co2_mixing_ratio = def_co2
-  atm2land%rain = 0.0_wp
-  atm2land%snow = 0.0_wp
-  atm2land%swvis_srf_down = def_swdown
-  atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
-  atm2land%swpar_srf_down = atm2land%swvis_srf_down
-  atm2land%swpar_fdiffuse = def_fdiffuse
-  atm2land%wind_air = def_wind
-  atm2land%wind_10m = atm2land%wind_air
-  atm2land%lw_srf_down = 0.0_wp
-  atm2land%drag_srf = 1.0_wp
-  atm2land%t_acoef = 0.0_wp
-  atm2land%t_bcoef = 0.0_wp
-  atm2land%q_acoef = 0.0_wp
-  atm2land%q_bcoef = 0.0_wp
-  atm2land%pch = 0.0_wp
+  atm2land%rain             = 0.0_wp
+  atm2land%snow             = 0.0_wp
+  atm2land%swvis_srf_down   = def_swdown
+  atm2land%swnir_srf_down   = atm2land%swvis_srf_down * 0.1_wp
+  atm2land%swpar_srf_down   = atm2land%swvis_srf_down
+  atm2land%swpar_fdiffuse   = def_fdiffuse
+  atm2land%wind_air         = def_wind
+  atm2land%wind_10m         = atm2land%wind_air
+  atm2land%lw_srf_down      = 0.0_wp
+  atm2land%drag_srf         = 1.0_wp
+  atm2land%t_acoef          = 0.0_wp
+  atm2land%t_bcoef          = 0.0_wp
+  atm2land%q_acoef          = 0.0_wp
+  atm2land%q_bcoef          = 0.0_wp
+  atm2land%pch              = 0.0_wp
   atm2land%cos_zenith_angle = def_cos_angle
-  atm2land%ga = .1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
-  grid%lat = 50.0
-  grid%lon = 0.0
-  ! 
-  ! 1.2 Initialisation of soil and vegetation (so far relevant) 
-  ! 
-  tile(:)%soil%theta = ref_theta
-  tile(1)%plant%lai = ref_lai 
+  atm2land%ga               = 0.1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
+  grid%lat                  = 50.0_wp
+  grid%lon                  = 0.0_wp
+
+  !> 1.2 Initialisation of soil and vegetation (so far relevant) 
+  !!
+  !!  
+  tile(1)%soil%theta  = ref_theta
+  tile(1)%plant%lai   = ref_lai 
   IF(ref_pft==0) THEN
-    tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
+    tile(1)%plant%pool%leaf%nitrogen     = ref_nleaf / molar_mass_N * tile(1)%plant%lai
   ELSE
-    tile(1)%plant%pool%leaf%nitrogen=tile(1)%plant%lai & 
-            / veg_param%sla(ref_pft)/veg_param%cn_leaf(ref_pft)
-    tile(1)%plant%pool%leaf%phosphorus=tile(1)%plant%pool%leaf%nitrogen & 
-             / veg_param%np_leaf(ref_pft)
-    tile(1)%plant%pftid=ref_pft
+    tile(1)%plant%pool%leaf%nitrogen     = tile(1)%plant%lai / veg_param%sla(ref_pft) / veg_param%cn_leaf(ref_pft)
+    tile(1)%plant%pool%leaf%phosphorus   = tile(1)%plant%pool%leaf%nitrogen / veg_param%np_leaf(ref_pft)
+    tile(1)%plant%pftid                  = ref_pft
   ENDIF
-  ! 
-  ! 2.0 Sensitivity plots
-  ! 
-  ! 2.1 PAR (0-1500 µmol m-2 s-1)
+
+  !> 2.0 Sensitivity plots
+  !!
+  !!  
+
+  !> 2.1 PAR (0-1500 µmol m-2 s-1)
+  !! 
+  !! 
   lun = 10
   WRITE(lun,*) 'PAR A GC CI' 
   atm2land%swvis_srf_down = 0.0_wp
@@ -106,8 +118,9 @@ PROGRAM canopy_test_model_driver
      atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
      atm2land%swpar_srf_down = atm2land%swvis_srf_down
 
-     CALL update_radiation(tile)
-     CALL update_canopy_fluxes(tile(1),veg_param)
+     !! canopy calculation fluxes
+     CALL update_radiation(tile(1)%plant)                                     !< mo_veg_radiation
+     CALL update_canopy_fluxes(tile(1)%plant, tile(1)%soil, veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') atm2land%swpar_srf_down * sw2par, & 
            tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci !,&
@@ -115,12 +128,14 @@ PROGRAM canopy_test_model_driver
 !           tile(1)%plant%flux%ci/atm2land%co2_mixing_ratio,tile(1)%plant%pool%leaf%nitrogen*molar_mass_N,&
 !           tile(1)%plant%flux%an/(tile(1)%plant%pool%leaf%nitrogen*molar_mass_N)
 
-  ENDDO
+  END DO
   atm2land%swvis_srf_down = ref_swdown
   atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
   atm2land%swpar_srf_down = atm2land%swvis_srf_down 
 
-  ! 2.2 Temperature (-5,60 °C)
+  !> 2.2 Temperature (-5,60 °C)
+  !! 
+  !! 
   lun = lun + 1
   WRITE(lun,*) 'T A GC CI' 
   atm2land%t_air = - 5.0_wp + Tzero
@@ -130,17 +145,20 @@ PROGRAM canopy_test_model_driver
      atm2land%q_air = 0.8_wp * calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf)
      veg_param%tjmax_opt(:) = 20._wp+0.35_wp*(atm2land%t_air - Tzero)
 
-     CALL update_radiation(tile)
-     CALL update_canopy_fluxes(tile(1),veg_param)
+     !! canopy calculation fluxes
+     CALL update_radiation(tile(1)%plant)                                     !< mo_veg_radiation
+     CALL update_canopy_fluxes(tile(1)%plant, tile(1)%soil, veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') atm2land%t_air, &  
            tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
-  ENDDO
+  END DO
   atm2land%t_air = ref_t_air + Tzero
   atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - ref_vpd / atm2land%press_srf * eps_vpd
 
-  ! 2.3 atmospheric CO2 (175 - 1000 ppm) 
+  !> 2.3 atmospheric CO2 (175 - 1000 ppm) 
+  !! 
+  !! 
   lun = lun + 1 
   WRITE(lun,*) 'CO2 A GC CI' 
   atm2land%co2_mixing_ratio = 150._wp
@@ -148,34 +166,40 @@ PROGRAM canopy_test_model_driver
 
      atm2land%co2_mixing_ratio = atm2land%co2_mixing_ratio + 25._wp
 
-     CALL update_radiation(tile)
-     CALL update_canopy_fluxes(tile(1),veg_param)
+     !! canopy calculation fluxes
+     CALL update_radiation(tile(1)%plant)                                     !< mo_veg_radiation
+     CALL update_canopy_fluxes(tile(1)%plant, tile(1)%soil, veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') atm2land%co2_mixing_ratio, &
            tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
-  ENDDO
+  END DO
   atm2land%co2_mixing_ratio = ref_co2 
 
-  ! 2.4 VPD (0-3.3 kPa) 
+  !> 2.4 VPD (0-3.3 kPa) 
+  !! 
+  !! 
   lun = lun + 1
   WRITE(lun,*) 'VPD A GC CI' 
   DO i = 1,30
      atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - i * 100.0_wp / atm2land%press_srf * eps_vpd
 
-     CALL update_radiation(tile)
-     CALL update_canopy_fluxes(tile(1),veg_param)
+     !! canopy calculation fluxes
+     CALL update_radiation(tile(1)%plant)                                     !< mo_veg_radiation
+     CALL update_canopy_fluxes(tile(1)%plant, tile(1)%soil, veg_param)        !< mo_veg_photosynthesis
 
      vpd = ( calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - atm2land%q_air ) / eps_vpd * atm2land%press_srf / 1000.0_wp
 
      WRITE(lun,'(4F16.7)') vpd, &
            tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
-  ENDDO
+  END DO
   atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - ref_vpd / atm2land%press_srf * eps_vpd
   vpd = ( calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - atm2land%q_air ) / eps_vpd * atm2land%press_srf / 1000.0_wp
 
-  ! 2.5 Theta (0-100 %)
+  !> 2.5 Theta (0-100 %)
+  !! 
+  !! 
   lun = lun + 1
   WRITE(lun,*) 'THETA A GC CI' 
   tile(1)%soil%theta = 0.0_wp
@@ -183,16 +207,19 @@ PROGRAM canopy_test_model_driver
 
      tile(1)%soil%theta = tile(1)%soil%theta + 1.0_wp 
 
-     CALL update_radiation(tile)
-     CALL update_canopy_fluxes(tile(1),veg_param)
+     !! canopy calculation fluxes
+     CALL update_radiation(tile(1)%plant)                                     !< mo_veg_radiation
+     CALL update_canopy_fluxes(tile(1)%plant, tile(1)%soil, veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') tile(1)%soil%theta, &
            tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
-  ENDDO
+  END DO
   tile(1)%soil%theta = ref_theta
 
-  ! 2.6 LAI (0-11)
+  !> 2.6 LAI (0-11)
+  !! 
+  !! 
   lun = lun + 1
   WRITE(lun,*) 'LAI A GC CI'
   tile(1)%plant%lai = 0.0_wp
@@ -201,32 +228,38 @@ PROGRAM canopy_test_model_driver
      tile(1)%plant%lai = tile(1)%plant%lai + 0.5_wp 
      tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
 
-     CALL update_radiation(tile)
-     CALL update_canopy_fluxes(tile(1),veg_param)
+     !! canopy calculation fluxes
+     CALL update_radiation(tile(1)%plant)                                     !< mo_veg_radiation
+     CALL update_canopy_fluxes(tile(1)%plant, tile(1)%soil, veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') tile(1)%plant%lai, &
            tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
-  ENDDO
+  END DO
   tile(1)%plant%lai = ref_lai 
 
-  ! 2.7 leaf N (0.5-3 g N / m2(LAI))
+  !> 2.7 leaf N (0.5-3 g N / m2(LAI))
+  !! 
+  !! 
   lun = lun + 1
   WRITE(lun,*) 'Nleaf A GC CI'
   DO i = 1,24
 
      tile(1)%plant%pool%leaf%nitrogen=0.125_wp*(i)/molar_mass_N*tile(1)%plant%lai
 
-     CALL update_radiation(tile)
-     CALL update_canopy_fluxes(tile(1),veg_param)
+     !! canopy calculation fluxes
+     CALL update_radiation(tile(1)%plant)                                     !< mo_veg_radiation
+     CALL update_canopy_fluxes(tile(1)%plant, tile(1)%soil, veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') tile(1)%plant%pool%leaf%nitrogen/tile(1)%plant%lai*molar_mass_N, & 
            tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
-  ENDDO
+  END DO
   tile(1)%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile(1)%plant%lai
 
-  ! 2.8 PFT
+  !> 2.8 PFT
+  !! 
+  !! 
   lun = lun + 1
   WRITE(lun,*) 'Nleaf A GC CI'
   DO i = 1,npft
@@ -234,14 +267,14 @@ PROGRAM canopy_test_model_driver
      tile(1)%plant%pool%leaf%phosphorus=tile(1)%plant%pool%leaf%nitrogen/veg_param%np_leaf(i)
      tile(1)%plant%pftid=i
 
-     CALL update_radiation(tile)
-     CALL update_canopy_fluxes(tile(1),veg_param)
+     !! canopy calculation fluxes
+     CALL update_radiation(tile(1)%plant)                                     !< mo_veg_radiation
+     CALL update_canopy_fluxes(tile(1)%plant, tile(1)%soil, veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(i,3F16.7)') tile(1)%plant%pftid, &
            tile(1)%plant%flux%gpp,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
-  ENDDO 
+  END DO 
 STOP
-  
 
 END PROGRAM canopy_test_model_driver

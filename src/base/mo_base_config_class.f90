@@ -41,14 +41,19 @@ MODULE mo_base_config_class
 
 CONTAINS
 
+  !-----------------------------------------------------------------------------------------------------
+  !> configuration routine of t_base_config
+  !! 
+  !! currently it does only: read parameters from namelist
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_base_config(config)  ! this is a temporary solution until the JSBACH4 config style is adopted in full
 
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml
-
-    CLASS(t_base_config), INTENT(inout) :: config
-
+    ! 0.1 InOut
+    CLASS(t_base_config), INTENT(inout) :: config    !< config type for base
+    ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
-    !LOGICAL      :: active
+    !LOGICAL          :: active
     REAL(wp)         :: dt_time_step_length_sec   ! model-variable: dt 
     CHARACTER(1)     :: simulation_length_unit
     INTEGER          :: simulation_length_number
@@ -83,14 +88,21 @@ CONTAINS
     config%dt                         = dt_time_step_length_sec
     config%simulation_length_unit     = simulation_length_unit
     config%simulation_length_number   = simulation_length_number
-
   END SUBROUTINE Init_base_config
 
-  !< calculates the number of timesteps the model may run based on config-options set in the namelist
+  !-----------------------------------------------------------------------------------------------------
+  !> calculates the number of timesteps the model may run based on config-options set in the namelist
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION Get_timstep_number(this) RESULT(timesteps)
+
     USE mo_base_constants, ONLY: one_day, one_year  ! length of one year in days, length of one day in seconds
+
     IMPLICIT NONE 
-    CLASS(t_base_config), INTENT(in) :: this
+    ! 0.1 InOut
+    CLASS(t_base_config), INTENT(in) :: this        !< config type for base
+    ! 0.2 Local
     INTEGER                          :: timesteps    
 
     SELECT CASE(this%simulation_length_unit)
@@ -103,7 +115,6 @@ CONTAINS
       CASE DEFAULT
         timesteps = 1
     END SELECT 
-
   END FUNCTION Get_timstep_number
 
 

@@ -9,7 +9,7 @@
 !!
 MODULE mo_land_constants
  
-  USE mo_kind
+  USE mo_kind,   ONLY: wp
 
   IMPLICIT NONE
 

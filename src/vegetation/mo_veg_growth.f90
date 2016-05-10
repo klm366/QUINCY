@@ -10,8 +10,8 @@
 MODULE mo_veg_growth
 
   USE mo_kind
-  USE mo_exception, ONLY: message_text, finish
-  USE mo_base_memory
+  USE mo_exception,      ONLY: message_text, finish
+  USE mo_base_constants
 
   PRIVATE
 
@@ -26,16 +26,15 @@ CONTAINS
   SUBROUTINE calc_growth &
     & (t_air, theta, plant, veg_param, &
     &  growth, growth_respiration, growth_respiration_c13, growth_respiration_c14, &
-    &  reserve_use, itile)
+    &  reserve_use)
 
-    USE mo_base_memory, ONLY: ElementMul
-    USE mo_base_util,   ONLY: moving_average
+    USE mo_veg_memory
     USE mo_veg_parameters
+    USE mo_land_memory,   ONLY: t_element
 
     IMPLICIT NONE
 
     ! 0.1 InOut
-    INTEGER,INTENT(in)               :: itile                      !< tile number i -> needed for moving_average(itile)%
     REAL(wp), INTENT(in)             :: t_air                      !< ambient air temperature (K)
     REAL(wp), INTENT(in)             :: theta                      !< soil moisture (%)
     TYPE(t_slm_plant), INTENT(in)    :: plant                      !< plant structure
@@ -93,8 +92,8 @@ CONTAINS
     !! @todo not yet implemented
     !! @todo OBS: Should maintenance respiration be here as well??
     CALL calc_partitioning(tau_labile_pot,plant%growing_season, &
-                              moving_average(itile)%gpp_week, & 
-                              moving_average(itile)%maint_respiration_week, &
+                              plant%moving_average%gpp_week, & 
+                              plant%moving_average%maint_respiration_week, &
                               plant%lai,target_lai, & 
                               target_reserve_pool_carbon,target_reserve_pool_nitrogen, & 
                               target_reserve_pool_phosphorus,nreq_growth,preq_growth, & 
@@ -137,8 +136,9 @@ CONTAINS
                                target_reserve_pool_carbon, target_reserve_pool_nitrogen, target_reserve_pool_phosphorus, & 
                                nreq_growth, preq_growth, labile_pool, reserve_pool, growth, reserve_use)
 
-    USE mo_base_memory
+    USE mo_land_memory,    ONLY: t_element
     USE mo_veg_parameters
+
     IMPLICIT NONE
     ! 0.1 InOut
     LOGICAL,INTENT(in)          :: growing_season            !< does the plant intend to grow?
@@ -313,7 +313,7 @@ CONTAINS
                               preq_growth,target_lai,target_reserve_pool_carbon,target_reserve_pool_nitrogen,&
                               target_reserve_pool_phosphorus)
 
-    USE mo_base_memory
+    USE mo_veg_memory,     ONLY: t_slm_veg_pool
     USE mo_veg_parameters
 
     IMPLICIT NONE
