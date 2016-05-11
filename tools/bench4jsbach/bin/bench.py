@@ -1,20 +1,15 @@
 #! /usr/bin/env python
 
-import os, subprocess, shutil,getpass,datetime
+import os, sys, subprocess, shutil, getpass, datetime
 import copy
 import configobj
 from validate import Validator
 from sets import Set
 
-
 from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
 from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool
 from analysis import Analysis
 from report import Report
-from report import ( analyses_II_analyses,
-                     analyses_III_dicts,
-                     analyses_IV_cans,
-                     analyses_V_benches )
 
 
 REF_EXP_IDX              = 0
@@ -26,32 +21,33 @@ VARNAME_4_CMIP5_METADATA = 'rsds'
 
 bench4jsbach_base        =  os.environ [ 'BENCH4JSBACH_BASE' ]
 if not bench4jsbach_base: raise Exception ( "Environment variable not set." )
-bench4jsbach_configuration =  os.path.join ( bench4jsbach_base, "configuration" )
-config_template            = os.path.join ( bench4jsbach_configuration, "template.cfg" )
-b4j_configspec_fn          = os.path.join ( bench4jsbach_configuration, "b4j_config.spec" )
-b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configuration, "b4j_field_config.spec" )
+bench4jsbach_configs =  os.path.join ( bench4jsbach_base, "configs" )
+config_template            = os.path.join ( bench4jsbach_configs, "b4j_template.cfg" )
+b4j_configspec_fn          = os.path.join ( bench4jsbach_configs, "b4j_config.spec" )
+b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configs, "b4j_field_config.spec" )
 work_base                  = os.path.join ( bench4jsbach_base, "work" )
-bench_dirnames             = [ "config", "data", "graphic", "report", "logging" ]
+bench_dirnames             = [ "scripts", "configs", "data", "graphics", "report", "logging" ]
     
 
 
 class Bench_Object ( Analysis, Report ):
     bench_name        = None
     bench_path        = None
-    config_path       = None
+    bench_configs_path = None
+    scripts_path       = None
+    configs_path       = None
     data_path         = None
-    graphic_path      = None
+    graphics_path      = None
     report_path       = None
     logging_path      = None
     logfile_path      = None
-    bench_config_path = None
     config            = None
     experiments       = []
     n_cans            = 0
     n_refs            = 0
     logger            = None
     logger_name       = 'B4J_LOGGER'
-    reporting         = True
+    reporting         = False
     land_sea_mask     = None
     
     
@@ -64,7 +60,7 @@ class Bench_Object ( Analysis, Report ):
             self._writeconfig__init__ ( config_arg )
             dkl_logger.debug ( "Exiting." )
             return
-        bench_config_path = config_arg
+        bench_configs_path = config_arg
  
         # read configspec and config
         if not os.path.isfile ( b4j_configspec_fn ):
@@ -79,54 +75,52 @@ class Bench_Object ( Analysis, Report ):
             print 'Could not read "%s": %s' % ( b4j_configspec_fn, e )
             
         try:
-            config = configobj.ConfigObj ( bench_config_path,
+            config = configobj.ConfigObj ( bench_configs_path,
                                            configspec=configspec )
         except ( configobj.ConfigObjError, IOError), e:
-            print '\nCould not read "%s": %s' % ( bench_config_path, e)
+            print '\nCould not read "%s": %s' % ( bench_configs_path, e)
             
-        dkl_logger.debug ( "Read configuration file %s." % ( bench_config_path ))
+        dkl_logger.debug ( "Read configuration file %s." % ( bench_configs_path ))
 
         val  = Validator()
         test = config.validate ( val )
-        if test == False:
-            raise Exception (  "\nERROR validating configuration %s with specialization %s.\n" %\
-                               ( bench_config_path, b4j_configspec_fn ))
-        else:
+        if test == True:          
             dkl_logger.debug ( "\nValidation of configuration from %s with specification from %s successfully run." % \
-                ( bench_config_path, b4j_configspec_fn ))
-
+                ( bench_configs_path, b4j_configspec_fn ))
+        else:
+            raise Exception (  "\nERROR validating configuration %s with specialization %s:\n%s" %\
+                               ( bench_configs_path, b4j_configspec_fn,
+                                 ', '.join ( "item '%s'" %  k for k,v in test.items () if v == False)))
+            sys.exit(1)
             
-        # TODO: validation. First shot:
-        try:
-            bench_name = config [ "bench_name" ]
-        except:
-            raise Exception (  "ERROR reading token 'bench_name' from configuration file %s." % \
-                               bench_config_path )
+        bench_name = config [ "bench_name" ]
         
         # check environment
-        bench_config_path = os.path.abspath ( bench_config_path )
-        config_path =  os.path.dirname ( bench_config_path ) 
-        bench_path = os.path.dirname ( config_path )
+        bench_configs_path = os.path.abspath ( bench_configs_path )
+        configs_path =  os.path.dirname ( bench_configs_path ) 
+        bench_path = os.path.dirname ( configs_path )
         if not os.path.basename ( bench_path ) == bench_name:
             raise Exception ( "Directory structure found differs from assumption." )
+            sys.exit ( 1 )
         onlydirs = [ d for d in os.listdir ( bench_path ) \
                      if os.path.isdir ( os.path.join ( bench_path, d ))]
         if not Set ( onlydirs ).issuperset ( Set ( bench_dirnames )):
             raise Exception ( "Directory structure found differs from assumption." )
+            sys.exit ( 1 )
 
         # all tests succeeded
         self.bench_name        = bench_name
         self.bench_path        = bench_path
-        self.bench_config_path = bench_config_path
+        self.bench_configs_path = bench_configs_path
         self.config            = config
         for n in bench_dirnames:
             path = os.path.join ( self.bench_path, n )
             setattr ( self,  n + "_path",  path )
 
-        self.logfile_path = os.path.join ( self.logging_path,
-                                           self.bench_name + '_' +\
-                                           str ( datetime.datetime.now ().strftime ( '%Y%m%d%H%M' )) +\
-                                           '.out' )
+        # self.logfile_path = os.path.join ( self.logging_path,
+        #                                    self.bench_name + '_' +\
+        #                                    str ( datetime.datetime.now ().strftime ( '%Y%m%d%H%M' )) +\
+        #                                    '.out' )
 
         dkl_logger.debug ( "Logger switched to %s. It will write to file " % self.logger_name + \
                            log_message_newline +\
@@ -136,6 +130,7 @@ class Bench_Object ( Analysis, Report ):
 
         self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
 
+        self.reporting     = config [ "reporting" ]
         self.land_sea_mask = config [ "land_sea_mask" ]
         if not os.path.isfile ( self.land_sea_mask ):
             raise Exception ( "Error: Path for land sea mask '%s' does not exists." % \
@@ -178,21 +173,20 @@ class Bench_Object ( Analysis, Report ):
         self.n_cans = n_cans
         self.n_refs = n_refs
 
-        self.init_analyses ()
+        self.init_diagnostics ()
         
         self.logger.debug ( "Exiting." )
 
 
         
-    def init_analyses ( self ):
+    def init_diagnostics ( self ):
         self.logger.debug ( "Starting." )
-        
-        print self.analyses_fields
         
         # read configspec object
         if not os.path.isfile ( b4j_field_configspec_fn ):
             raise Exception ( "\nERROR no file named %s." % \
                               b4j_field_configspec_fn )
+            sys.exit ( 1 )
         try:
             field_configspec = configobj.ConfigObj ( b4j_field_configspec_fn,
                                                      interpolation=False,
@@ -201,79 +195,62 @@ class Bench_Object ( Analysis, Report ):
         except ( configobj.ConfigObjError, IOError), e:
             print 'Could not read configspec object from file %s: %s' % \
                 ( b4j_field_configspec_fn, e)
+            sys.exit ( 1 )
 
-
-
-        print "\nConfiguration specialization for analyses configs read.\n"
-
+        self.logger.debug (  "Configuration specialization for field configs read." )        
 
         f_s = self.config [ "fields" ]
+        
         for f_n, f_attr in f_s.iteritems ():
+            
             if f_attr and isinstance ( f_attr, configobj.Section ):
-                print "in loop for field %s: " % f_n
                 field_config_fn = f_attr [ "config_fname" ]
-                field_config_path = os.path.join ( self.config_path, field_config_fn )
-                if not os.path.isfile ( field_config_path ):
-                    raise Exception ( "\nERROR no file named %s." % field_config_path )
+                field_configs_path = self.get_b4j_path ( field_config_fn, "configs" )
+                
                 try:
-                    field_config = configobj.ConfigObj ( field_config_path,
+                    field_config = configobj.ConfigObj ( field_configs_path,
                                                          configspec=field_configspec )
                 except ( configobj.ConfigObjError, IOError), e:
                     print 'Could not read field config object from file %s: %s' % \
-                        ( field_config_path, e)
-        
+                        ( field_configs_path, e)
+                    sys.exit ( 1 )
+
                 val  = Validator()
-                test = field_config.validate ( val )
-                if test == False:
-                    raise Exception (  "\nERROR validating configuration %s with specialization %s.\n" %\
-                                       ( field_config_path, b4j_field_configspec_fn ))
+                test = field_config.validate ( val, preserve_errors=True )
+                if test == True:
+                    self.logger.debug (  """\nValidation of configuration for diagnostics for field '%s' with files 
+'%s' and '%s' successfully run.\n""" %  ( f_n, field_configs_path, b4j_field_configspec_fn ))
                 else:
-                    print """\nValidation of configuration for analyses of field '%s' with files 
-'%s' and '%s' successfully run.\n""" %  ( f_n, field_config_path, b4j_field_configspec_fn )
+                    print test
+                    raise Exception (  "\nERROR validating configuration %s with specialization %s.\n%s" %\
+                                       ( field_configs_path, b4j_field_configspec_fn,
+                                         ', '.join ( "item '%s'" %  k for k,v in test.items () if v == False)))
+                    # TODO: use flattenErrors ( test ) to print exact source of error
+                    sys.exit ( 1 )
 
-                    
                 # validated field configuration now in field_config
-                # initializing analyses_fields
-
+                # initializing diagnostic_fields
+                
                 field_name = field_config [ 'field_name' ]
                 if field_name != f_n:
                     raise Exception ( """
 \n\nERROR: By convention the value for the attribute 'field_name' in the field 
 configuration file '%s' have to accord with the corresponding section name 
  ( here:= '%s' ) in the b4j main configuration file '%s'.\n""" % \
-                                      ( field_config_path, f_n, self.bench_config_path ))
+                                      ( field_configs_path, f_n, self.bench_configs_path ))
+                    sys.exit ( 1 )
 
-                self.analyses_fields [ f_n ] = copy.deepcopy ( analyses_II_analyses )
-                self.analyses_fields [ f_n ][ 'frequency' ] = field_config [ 'frequency' ]
-                self.analyses_fields [ f_n ][ 'abstract' ] = field_config [ 'abstract' ]
-                a_s = field_config [ 'analyses' ]
-                for a_n, a_attr in a_s.iteritems ():
-                    if a_attr and isinstance ( a_attr, configobj.Section ):
-                        print "in loop for analyse %s: " % a_n
+                    
+                self.diagnostic_fields [ f_n ] = field_config                
+                self.diagnostic_fields [ f_n ][ 'graphics_path' ]  = self.graphics_path + os.sep + f_n
+                self.diagnostic_fields [ f_n ][ 'data_path' ] = self.data_path + os.sep + f_n
+                for d in [ self.diagnostic_fields [ f_n ][ 'graphics_path' ],
+                           self.diagnostic_fields [ f_n ][ 'data_path' ]]:
+                    try:
+                        os.makedirs ( d )
+                    except:
+                        pass
                 
-                        # frequency, teXts, analyses
-                        a_dict = copy.deepcopy ( analyses_III_dicts )
-                        a_dict [ 'name' ]            = a_attr [ "name" ]
-                        a_dict [ 'title' ]           = a_attr [ "title" ]
-                        a_dict [ 'unit' ]            = a_attr [ "unit" ]
-                        a_dict [ 'type' ]            = a_attr [ "type" ]
-                        a_dict [ 'isbench' ]         = a_attr [ "isbench" ]
-                        a_dict [ 'abstract' ]        = a_attr [ "abstract" ]
-                        a_dict [ 'technical_teXed' ] = a_attr [ "technical_teXed" ]
-                        a_dict [ 'cans' ]            = { '%d' % \
-                            canno : copy.deepcopy ( analyses_IV_cans ) \
-                                    for canno in range ( self.n_cans )}
-                        self.analyses_fields [ f_n ][ a_dict [ 'name' ]] = a_dict
-
-                        print
-                        print a_n
-                        print a_dict
-                        print
-
-                
-            
-        print self.analyses_fields
-        
         self.logger.debug ( "Exiting." )
 
         
@@ -291,8 +268,8 @@ configuration file '%s' have to accord with the corresponding section name
             path = os.path.join ( self.bench_path, n )
             setattr ( self,  n + "_path",  path )
             os.makedirs ( path )
-
-        self.bench_config_path = os.path.join ( self.config_path, self.bench_name + ".cfg" )
+            
+        self.bench_configs_path = os.path.join ( self.configs_path, self.bench_name + ".cfg" )
         with open ( config_template ) as f:
             template_contents = f.read ()
         config_contents = template_contents % { '<BENCH_NAME>': self.bench_name,
@@ -300,33 +277,62 @@ configuration file '%s' have to accord with the corresponding section name
                                                 '<AUTHOR_NAME>': getpass.getuser (),
                                                 '<TODAY>': str ( datetime.date.today ()),
                                                 '<FIELDS_CONFIGSPEC_FAME>' : b4j_field_configspec_fn }
-        with open ( self.bench_config_path, "w" ) as f:
+        with open ( self.bench_configs_path, "w" ) as f:
             f.write ( config_contents )
 
         dkl_logger.debug ( "Exiting." )
+
+
+    def get_b4j_path ( self, filename, b4j_filetype ):
+        assert b4j_filetype and b4j_filetype in bench_dirnames
+
+        dirmap = {  "scripts" : [  self.scripts_path,
+                                   bench4jsbach_base + "/prod/scripts" ],
+                    "configs" : [ self.configs_path,
+                                  bench4jsbach_base + "/prod/configs" ],
+                    "data" : [ self.data_path ], 
+                    "graphics" : [ self.graphics_path ],
+                    "report" : [ self.report_path ],
+                    "logging" : [ self.logging_path ]}
+        
+        dirpath = dirmap [ b4j_filetype ]
+
+        for dp in dirpath:
+            filepath = dp + os.sep + filename
+            if os.path.isfile ( filepath ):
+                break
+            elif dirpath.index ( dp ) == len ( dirpath ) -1:
+                print ( "ERROR: No file named '%s' found." % filename )
+                sys.exit ( 1 )
+            else:
+                pass
+
+        return filepath
+            
+
+        
 
         
     def __repr__ ( self ):
         repr =  """\n\n{} ( bench_name = {}, 
 \tbench_path        = {},
-\tconfig_path       = {},
+\tconfigs_path       = {},
 \tdata_path         = {}, 
-\tgraphic_path      = {}, 
+\tgraphics_path      = {}, 
 \treport_path       = {}, 
-\tbench_config_path = {}, 
+\tbench_configs_path = {}, 
 \tconfig            = {}, 
 \texperiments       = {}\n\n""".format ( self.__class__.__name__,
                 print_none ( self.bench_name        ),
                 print_none ( self.bench_path        ),
-                print_none ( self.config_path       ),
+                print_none ( self.configs_path       ),
                 print_none ( self.data_path         ),
-                print_none ( self.graphic_path      ),
+                print_none ( self.graphics_path      ),
                 print_none ( self.report_path       ),
-                print_none ( self.bench_config_path ),
+                print_none ( self.bench_configs_path ),
                 print_none ( self.config            ),
                 print_none ( self.experiments ))#.replace ( "\n", "" )
 
-        print repr
     
         super ( Bench_Object, self ).__repr__ ()
 
