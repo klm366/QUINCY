@@ -64,6 +64,7 @@ mo_veg_parameters.o: \
 
 mo_veg_radiation.o: \
   mo_kind.o \
+  mo_base_memory.o \
   mo_base_constants.o \
   mo_atmland_memory.o \
   mo_atmland_constants.o \
@@ -85,6 +86,7 @@ mo_veg_photosynthesis.o: \
 
 mo_veg_output.o: \
   mo_kind.o \
+  mo_base_memory.o \
   mo_base_constants.o \
   mo_veg_memory.o \
   mo_veg_parameters.o \
@@ -105,3 +107,8 @@ mo_veg_dynamics.o: \
   mo_land_memory.o \
   mo_veg_memory.o \
   mo_veg_parameters.o
+
+mo_veg_util.o: \
+  mo_kind.o \
+  mo_base_memory.o \
+  mo_veg_memory.o

@@ -10,6 +10,7 @@
 MODULE mo_veg_photosynthesis
 
   USE mo_kind, ONLY: wp
+  USE mo_base_memory,    ONLY: t_slm_tile
   USE mo_base_constants, ONLY: ncanop, dt
   USE mo_veg_memory
   USE mo_base_memory,    ONLY: t_slm_soil
@@ -33,23 +34,28 @@ CONTAINS
   !! CALL calc_canopy_n_distribution \n
   !! CALL calc_photosynthesis
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_canopy_fluxes(plant, soil, veg_param)
+  SUBROUTINE update_canopy_fluxes(tile, veg_param)
 
    IMPLICIT NONE
    ! 0.1 InOut
-   TYPE(t_slm_veg_param), INTENT(in)           :: veg_param  !< list of vegetation parameters
-   TYPE(t_slm_soil), INTENT(in)                :: soil       !< soil variables per tile
-   TYPE(t_slm_plant), INTENT(inout)            :: plant      !< plant variables per tile
+   TYPE(t_slm_veg_param), INTENT(in)        :: veg_param      !< list of vegetation parameters
+   TYPE(t_slm_tile),INTENT(inout), TARGET   :: tile           !< one tile
    ! 0.2 Local
-   REAL(wp),DIMENSION(ncanop) :: agl,anl,rl,gsl,cil
-   REAL(wp),DIMENSION(ncanop) :: canopy_layer_depth_act
-   INTEGER :: pftid
-   INTEGER :: icanop
+   TYPE(t_slm_soil),POINTER         :: soil                   ! soil variables per tile
+   TYPE(t_slm_plant),POINTER        :: plant                  ! plant variables per tile
+   REAL(wp),DIMENSION(ncanop)       :: agl,anl,rl,gsl,cil
+   REAL(wp),DIMENSION(ncanop)       :: canopy_layer_depth_act
+   INTEGER                          :: pftid                  ! plant functional type ID
+   INTEGER                          :: icanop                 ! for looping across ncanopy layers
+
+   !  bi-directional pointer
+   plant => tile%plant
+   soil  => tile%soil
 
    ! initialise output
    agl(:) = 0.0_wp 
    anl(:) = 0.0_wp 
-   rl(:) = 0.0_wp
+   rl(:)  = 0.0_wp
    gsl(:) = 0.0_wp
    cil(:) = 0.0_wp     
 
@@ -96,7 +102,7 @@ CONTAINS
 
   !> integrate to canopy level values
   !! 
-  !! fluxes were set to zero before by set_zero_fluxes_of_plant_pools
+  !! fluxes were set to zero before by set_zero_fluxes_of_plant_pools in the driver
 !  plant%flux%gpp = 0.0_wp
 !  plant%flux%an = 0.0_wp
 !  plant%flux%maint_respiration_leaf = 0.0_wp

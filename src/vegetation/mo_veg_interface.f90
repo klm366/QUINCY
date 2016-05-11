@@ -24,9 +24,9 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_vegetation(plant, soil, veg_param)
+  SUBROUTINE update_vegetation(tile, veg_param)
 
-    USE mo_base_memory,        ONLY: t_slm_soil
+    USE mo_base_memory,        ONLY: t_slm_soil, t_slm_tile
     USE mo_atmland_constants,  ONLY: Tzero
     USE mo_atmland_memory
     USE mo_land_constants
@@ -42,9 +42,15 @@ CONTAINS
     IMPLICIT NONE
 
     ! 0.1 InOut
-    TYPE(t_slm_veg_param),INTENT(in) :: veg_param      !< vegetation type parameters
-    TYPE(t_slm_soil), INTENT(in)     :: soil           !< soil variables per tile
-    TYPE(t_slm_plant), INTENT(inout) :: plant          !< plant variables per tile
+    TYPE(t_slm_veg_param),INTENT(in)        :: veg_param     !< vegetation type parameters
+    TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile          !< one tile
+    ! 0.2 Local
+    TYPE(t_slm_soil),POINTER         :: soil           ! soil variables per tile
+    TYPE(t_slm_plant),POINTER        :: plant          ! plant variables per tile
+
+    !  bi-directional pointer
+    plant => tile%plant
+    soil  => tile%soil
 
     !> 1.0 update vegetation parameter switches
     !! 
@@ -68,7 +74,7 @@ CONTAINS
     !> 1.2 photosynthesis and leaf respiration 
     !! 
     !! @todo may move elsewhere
-    CALL update_canopy_fluxes(plant, soil, veg_param)
+    CALL update_canopy_fluxes(tile, veg_param)
 
     !> 2.0 Calculate growth
     !! 

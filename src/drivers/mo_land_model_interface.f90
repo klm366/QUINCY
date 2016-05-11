@@ -10,6 +10,7 @@
 MODULE mo_land_model_interface
 
   USE mo_kind
+  USE mo_exception,        ONLY: finish
   USE mo_base_memory,      ONLY: t_slm_tile
   USE mo_base_constants,   ONLY: ntile
 
@@ -26,6 +27,7 @@ MODULE mo_land_model_interface
   !-----------------------------------------------------------------------------------------------------
   !> land model interface
   !! 
+  !! @todo land model interface is not working; science need to be integrated and improved
   !! @todo includes an undesirable fix for now (see subroutine input variables)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE land_model_interface(t_air,q_air,rain,snow,wind_air,wind_10m,lw_srf_down,swvis_srf_down, &
@@ -73,6 +75,10 @@ MODULE mo_land_model_interface
       vpd
     INTEGER  :: itile                        !< the current tile(i), for looping over ntile
 
+!! stop here -----------------
+CALL finish('land_model_interface','Stop! The land model is currently not working. Science needs to be improved to make it work.')
+!! stop here -----------------
+
 
     ga = 1._wp / ( drag_srf * wind_10m ) 
 
@@ -93,9 +99,9 @@ MODULE mo_land_model_interface
       tile(itile)%plant%pftid=1
       !tile(2)%plant%pftid=2
 
-      CALL update_radiation(tile(itile)%plant)                                        !< mo_veg_radiation
-      CALL update_canopy_fluxes(tile(itile)%plant, tile(itile)%soil, veg_param)       !< mo_veg_photosynthesis
-      CALL update_vegetation(tile(itile)%plant, tile(itile)%soil, veg_param)          !< mo_veg_interface
+      CALL update_radiation(tile(itile))                         !< mo_veg_radiation
+      CALL update_canopy_fluxes(tile(itile), veg_param)          !< mo_veg_photosynthesis
+      CALL update_vegetation(tile(itile), veg_param)             !< mo_veg_interface
     END DO
   END SUBROUTINE land_model_interface
 

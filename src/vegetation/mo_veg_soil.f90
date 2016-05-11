@@ -28,21 +28,26 @@ CONTAINS
   !! 
   !! @todo a proper soil model
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_vegsoil_bgc(plant, soil, veg_param)
+  SUBROUTINE update_vegsoil_bgc(tile, veg_param)
 
-    USE mo_base_memory,      ONLY: t_slm_soil
+    USE mo_base_memory,      ONLY: t_slm_soil, t_slm_tile
     USE mo_veg_memory,       ONLY: t_slm_plant
     USE mo_base_constants,   ONLY: dt
     USE mo_veg_parameters
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_veg_param), INTENT(in) :: veg_param      !< vegetation type parameters
-    TYPE(t_slm_soil), INTENT(in)      :: soil           !< soil variables per tile
-    TYPE(t_slm_plant), INTENT(inout)  :: plant          !< plant variables per tile
+    TYPE(t_slm_veg_param), INTENT(in)       :: veg_param     !< vegetation type parameters
+    TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile          !< one tile
     ! 0.2 Local
+    TYPE(t_slm_soil),POINTER      :: soil               ! soil variables per tile
+    TYPE(t_slm_plant),POINTER     :: plant              ! plant variables per tile
     REAL(wp) :: clab, nlab, plab                        ! plant labile pools of carbon, nitrogen and phosphorus
     INTEGER  :: pftid                                   ! ID of the pft
+
+    !  bi-directional pointer
+    plant => tile%plant
+    soil  => tile%soil
 
     pftid = plant%pftid
 
@@ -113,9 +118,9 @@ CONTAINS
   !! 
   !! two cases considered: a) dynamic water uptake calculation, b) prescribed values from namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_vegsoil_physics(plant, soil)
+  SUBROUTINE update_vegsoil_physics(tile)
 
-    USE mo_base_memory,       ONLY: t_slm_soil
+    USE mo_base_memory,       ONLY: t_slm_soil, t_slm_tile
     USE mo_veg_memory,        ONLY: t_slm_plant
     USE mo_base_constants,    ONLY: dt
     USE mo_atmland_memory,    ONLY: atm2land
@@ -124,12 +129,17 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_plant), INTENT(inout) :: plant          !< plant variables per tile
-    TYPE(t_slm_soil), INTENT(inout)  :: soil           !< soil variables per tile
+    TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile     !< one tile
     ! 0.2 Local
+    TYPE(t_slm_soil),POINTER                :: soil     ! soil variables per tile
+    TYPE(t_slm_plant),POINTER               :: plant    ! plant variables per tile
     INTEGER  :: t
     REAL(wp) :: q_sat
     REAL(wp) :: evaporation
+
+    !  bi-directional pointer
+    plant => tile%plant
+    soil  => tile%soil
 
     IF(veg_config%flag_calc_soil_moisture) THEN ! case of dynamic water uptake calculation 
 

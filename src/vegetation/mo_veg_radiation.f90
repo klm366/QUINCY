@@ -22,14 +22,20 @@ CONTAINS
   !! 
   !! @todo currently no albedo calculation
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_radiation(plant)
+  SUBROUTINE update_radiation(tile)
 
+    USE mo_base_memory,      ONLY: t_slm_tile
     USE mo_veg_memory,       ONLY: t_slm_plant
     USE mo_atmland_memory,   ONLY: atm2land, land2atm
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_plant),INTENT(inout) :: plant    !< plant per tile
+    TYPE(t_slm_tile),INTENT(inout), TARGET :: tile    !< one tile
+    ! 0.2 Local
+    TYPE(t_slm_plant),POINTER              :: plant   ! plant of one tile
+
+    !  bi-directional pointer
+    plant => tile%plant
 
     !> 1.0 initalise output
     !!

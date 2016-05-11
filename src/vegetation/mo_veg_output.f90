@@ -302,24 +302,30 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> Pools: write data to files in a certain interval
   !! 
-  !! write intervall accordingly to namelist
+  !! write-interval accordingly to namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_pool(time_d, time_y, plant, veg_param, soil_moisture, itile)
+  SUBROUTINE write_output_pool(tile, veg_param, time_d, time_y, itile)
 
+    USE mo_base_memory,      ONLY: t_slm_tile
     USE mo_veg_memory,       ONLY: t_slm_plant
     USE mo_veg_parameters,   ONLY: itree, t_slm_veg_param
 
     IMPLICIT NONE
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: time_d  !< time in days
-    INTEGER,  INTENT(in) :: time_y  !< time in years; the 1st year of a simulation == year 1 (not zero)
-    INTEGER,  INTENT(in) :: itile   !< number of current tile
-    REAL(wp), INTENT(in) :: soil_moisture !< soil moisture; tile(itile)\%soil\%moisture
-    TYPE(t_slm_plant), INTENT(in)      :: plant       !< plant parameters for one tile
-    TYPE(t_slm_veg_param),INTENT(in)   :: veg_param   !< data structure for vegetation parameters
+    TYPE(t_slm_tile),INTENT(in), TARGET  :: tile        !< one tile
+    TYPE(t_slm_veg_param),INTENT(in)     :: veg_param   !< data structure for vegetation parameters
+    REAL(wp), INTENT(in)                 :: time_d      !< time in days
+    INTEGER,  INTENT(in)                 :: time_y      !< time in years; the 1st year of a simulation == year 1 (not zero)
+    INTEGER,  INTENT(in)                 :: itile       !< number of current tile
     ! 0.2 Local
-    INTEGER  :: lun
-    REAL(wp) :: hlp1
+    TYPE(t_slm_plant),POINTER        :: plant          ! plant variables per tile
+    REAL(wp)         ,POINTER        :: soil_moisture  ! soil moisture; tile(itile)\%soil\%moisture
+    INTEGER                          :: lun            ! locical unit number
+    REAL(wp)                         :: hlp1           ! helper variable
+
+    !  bi-directional pointer, though, bi-directionality is not necessary here
+    plant         => tile%plant
+    soil_moisture => tile%soil%moisture
 
     !> 1.0 check output start & end, and write pools if appropriate with output_interval
     !! 
@@ -362,23 +368,27 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> Fluxes: write data to files in a certain interval and accumulate fluxes
   !! 
-  !! write intervall accordingly to namelist
+  !! write-interval accordingly to namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_flux(time_d, time_y, plant, itile)
+  SUBROUTINE write_output_flux(tile, time_d, time_y, itile)
 
+    USE mo_base_memory,    ONLY: t_slm_tile
     USE mo_veg_memory,     ONLY: t_slm_plant
     USE mo_base_constants, ONLY: dt
 
     IMPLICIT NONE
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: time_d  !< time in days
-    INTEGER,  INTENT(in) :: time_y  !< time in years; the 1st year of a simulation == year 1 (not zero)
-    INTEGER,  INTENT(in) :: itile   !< number of current tile
-    TYPE(t_slm_plant), INTENT(in) :: plant  !< plant parameters for one tile
+    TYPE(t_slm_tile),INTENT(in), TARGET  :: tile    !< one tile
+    REAL(wp), INTENT(in)                 :: time_d  !< time in days
+    INTEGER,  INTENT(in)                 :: time_y  !< time in years; the 1st year of a simulation == year 1 (not zero)
+    INTEGER,  INTENT(in)                 :: itile   !< number of current tile
     ! 0.2 Local
-    INTEGER :: lun
-    REAL(wp) :: dt_one = 1.0_wp
+    TYPE(t_slm_plant),POINTER    :: plant           ! plant variables per tile
+    INTEGER                      :: lun             ! locical unit number
+    REAL(wp), SAVE               :: dt_one = 1.0_wp ! just 1.0
 
+    !  bi-directional pointer, though, bi-directionality is not necessary here
+    plant => tile%plant
 
     !> 1.0 check output start & end, and write pools if appropriate with output_interval
     !! 

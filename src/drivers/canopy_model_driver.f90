@@ -8,8 +8,10 @@
 !! First version by Sönke Zaehle (2015-12-04)
 !!
 PROGRAM canopy_model_driver
+  ! shared
   USE mo_kind
   USE mo_exception,             ONLY: finish ! message_text
+  ! base
   USE mo_base_memory,           ONLY: t_slm_tile
   USE mo_base_constants
   USE mo_base_config_class,     ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
@@ -28,8 +30,7 @@ PROGRAM canopy_model_driver
   USE mo_veg_soil
   USE mo_veg_config_class,      ONLY: veg_config
   USE mo_veg_memory
-  ! shared
-  !USE mo_namelist,              ONLY: POSITIONED, open_nml, position_nml  ! read model options from file
+  USE mo_veg_util
 
   IMPLICIT NONE
 
@@ -64,10 +65,10 @@ PROGRAM canopy_model_driver
   CALL init_base_constants
   CALL init_atmland_constants
   ! vegetation (2do: may combine into one function init_vegetation() )
-  CALL init_element_zero                                        ! mo_veg_memory
-  CALL init_plant(tile(itile)%plant)                            ! mo_veg_memory 
-  CALL set_zero_fluxes_of_plant_pools(tile(itile)%plant%flux)   ! mo_veg_memory ; called each timestep in update_vegetation()
-  CALL init_veg_parameters(veg_param)                           ! mo_veg_parameters
+  CALL init_element_zero                               ! mo_veg_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
+  CALL init_plant(tile(itile))                         ! mo_veg_util 
+  CALL set_zero_fluxes_of_plant_pools(tile(itile))     ! mo_veg_util; called each timestep in update_vegetation()
+  CALL init_veg_parameters(veg_param)                  ! mo_veg_parameters
   ! forcing
   CALL init_forcing                                             ! needs atmland_config%Init to run before
 
@@ -118,23 +119,23 @@ PROGRAM canopy_model_driver
     CALL update_forcing(time_day)  ! see mo_atmland_forcing
 
     !! NO tile loop - compared to the plant model driver !!
-    !! the below section numbers equal the plant_model_driver section !!
+    !! the below section numbers equal the plant_model_driver section numbers !!
 
       !! 3.1 set vegetation fluxes to zero
       !! 
       !! 
-      CALL set_zero_fluxes_of_plant_pools(tile(itile)%plant%flux)   !< set to zero all fluxes of the plant pools; mo_veg_memory
+      CALL set_zero_fluxes_of_plant_pools(tile(itile))   !< set to zero all fluxes of the plant pools; mo_veg_util
 
       !! 3.2 canopy calculation fluxes
       !! 
       !! 
-      CALL update_radiation(tile(itile)%plant)                                     !< mo_veg_radiation
-      CALL update_canopy_fluxes(tile(itile)%plant, tile(itile)%soil, veg_param)    !< mo_veg_photosynthesis
+      CALL update_radiation(tile(itile))                      !< mo_veg_radiation
+      CALL update_canopy_fluxes(tile(itile), veg_param)       !< mo_veg_photosynthesis
 
       !! 3.5 update soil water bucket 
       !! 
       !! 
-      CALL update_vegsoil_physics(tile(itile)%plant, tile(itile)%soil)  !< mo_veg_soil
+      CALL update_vegsoil_physics(tile(itile))                !< mo_veg_soil
 
       !! 3.8 output fluxes -> filename: fort.20
       !! 

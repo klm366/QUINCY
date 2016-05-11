@@ -31,8 +31,10 @@
   !! 2.3 [Time loop] check timer; adjust year counter
   !! 
 PROGRAM plant_model_driver
+  ! shared
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: finish ! message_text
+  ! base
   USE mo_base_memory,           ONLY: t_slm_tile
   USE mo_base_constants
 !  USE mo_base_util 
@@ -56,7 +58,7 @@ PROGRAM plant_model_driver
   USE mo_veg_memory
   USE mo_veg_config_class,      ONLY: veg_config
   USE mo_veg_soil
-
+  USE mo_veg_util
 
   IMPLICIT NONE
 
@@ -90,12 +92,12 @@ PROGRAM plant_model_driver
   CALL init_base_constants
   CALL init_atmland_constants
   ! vegetation (2do: may combine into one function init_vegetation() )
-  CALL init_element_zero                                          ! mo_veg_memory
+  CALL init_element_zero                               ! mo_veg_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
   DO itile = 1,ntile
-    CALL init_plant(tile(itile)%plant)                            ! mo_veg_memory; 
-    CALL set_zero_fluxes_of_plant_pools(tile(itile)%plant%flux)   ! mo_veg_memory ; called each timestep in update_vegetation()
+    CALL init_plant(tile(itile))                       ! mo_veg_util 
+    CALL set_zero_fluxes_of_plant_pools(tile(itile))   ! mo_veg_util; called each timestep (see Tile loop below)
   END DO
-  CALL init_veg_parameters(veg_param)                             ! mo_veg_parameters
+  CALL init_veg_parameters(veg_param)                  ! mo_veg_parameters
   ! forcing
   CALL init_forcing                                !< needs atmland_config%Init to run before
   ! accumulation
@@ -167,27 +169,27 @@ PROGRAM plant_model_driver
       !! 3.1 set vegetation fluxes to zero
       !! 
       !! 
-      CALL set_zero_fluxes_of_plant_pools(tile(itile)%plant%flux)  !< set to zero all fluxes of the plant pools; mo_veg_memory
+      CALL set_zero_fluxes_of_plant_pools(tile(itile))  !< set to zero all fluxes of the plant pools; mo_veg_util
 
       !! 3.2 canopy calculation fluxes
       !! 
       !! 
-      CALL update_radiation(tile(itile)%plant)  !< mo_veg_radiation
+      CALL update_radiation(tile(itile))  !< mo_veg_radiation
 
       !! 3.3 update soil (biogeochemical part - here only N/P uptake)
       !! 
       !! 
-      CALL update_vegsoil_bgc(tile(itile)%plant, tile(itile)%soil, veg_param)  !< mo_veg_soil
+      CALL update_vegsoil_bgc(tile(itile), veg_param)  !< mo_veg_soil
 
       !! 3.4 calculate vegetation growth and turnover
       !! 
       !! 
-      CALL update_vegetation(tile(itile)%plant, tile(itile)%soil, veg_param)   !< mo_veg_interface
+      CALL update_vegetation(tile(itile), veg_param)   !< mo_veg_interface
 
       !! 3.5 update soil water bucket 
       !! 
       !! 
-      CALL update_vegsoil_physics(tile(itile)%plant, tile(itile)%soil)  !< mo_veg_soil
+      CALL update_vegsoil_physics(tile(itile))  !< mo_veg_soil
 
       !! 3.6 Accumulation
       !! 
@@ -201,12 +203,12 @@ PROGRAM plant_model_driver
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
       !! 
-      CALL write_output_pool(time_day, time_year, tile(itile)%plant, veg_param, tile(itile)%soil%moisture, itile)
+      CALL write_output_pool(tile(itile), veg_param, time_day, time_year, itile)
 
       !! 3.8 output flux: write output in certain intervals, see mo_veg_output
       !! 
       !! 
-      CALL write_output_flux(time_day, time_year, tile(itile)%plant, itile)
+      CALL write_output_flux(tile(itile), time_day, time_year, itile)
 
     END DO ! end tile loop
 
