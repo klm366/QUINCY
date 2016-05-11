@@ -30,6 +30,7 @@ CONTAINS
     USE mo_atmland_constants,  ONLY: Tzero
     USE mo_atmland_memory
     USE mo_land_constants
+    USE mo_land_memory,        ONLY: add_elements, subtract_elements
     USE mo_veg_memory
     USE mo_veg_parameters,     ONLY: t_slm_veg_param, gdd_t_air_threshold
     USE mo_veg_photosynthesis, ONLY: update_canopy_fluxes
@@ -122,8 +123,8 @@ CONTAINS
     !> 5.1 update labile pool and reserve 
     !! 
     !! 
-    plant%pool%labile = ElementAdd(plant%pool%labile,plant%flux%reserve_use)
-    plant%pool%reserve = ElementSub(plant%pool%reserve,plant%flux%reserve_use)
+    plant%pool%labile = add_elements(plant%pool%labile,plant%flux%reserve_use)
+    plant%pool%reserve = subtract_elements(plant%pool%reserve,plant%flux%reserve_use)
 
     !> 5.2 update fluxes from retranslocation of leaves
     !! 
@@ -138,8 +139,8 @@ CONTAINS
     !> 6.0 Update plant biogeochemical pools with growth and litterfall
     !! 
     !! 
-    plant%pool = VegPoolSub(plant%pool,plant%flux%litterfall)
-    plant%pool = VegPoolAdd(plant%pool,plant%flux%growth)
+    plant%pool = subtract_veg_pools(plant%pool,plant%flux%litterfall)
+    plant%pool = add_veg_pools(plant%pool,plant%flux%growth)
 
     !> 7.0 Update plant diagnostics
     !! 

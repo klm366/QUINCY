@@ -74,8 +74,8 @@ CONTAINS
     mortality_spread_pool%reserve = mortality_spread_element
 
     ! calculate litter fall from mortality
-    litter_from_mortality = VegPoolMul(mortality_spread_pool,plant%pool)
-    plant%flux%litterfall = VegPoolAdd(plant%flux%litterfall,litter_from_mortality)
+    litter_from_mortality = multiply_veg_pools(mortality_spread_pool,plant%pool)
+    plant%flux%litterfall = add_veg_pools(plant%flux%litterfall,litter_from_mortality)
   END SUBROUTINE update_veg_dynamics
 
 END MODULE mo_veg_dynamics

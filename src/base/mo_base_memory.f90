@@ -52,7 +52,6 @@ MODULE mo_base_memory
 
   TYPE(t_slm_grid)  :: grid           !< currently initialized with namelist parameter values
 
-! PUBLIC :: ElementAdd,ElementSub,ElementMul,ElementDiv
  
 !CONTAINS
 

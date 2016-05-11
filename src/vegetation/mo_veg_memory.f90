@@ -239,123 +239,95 @@ MODULE mo_veg_memory
   TYPE(t_element)   :: element_zero   !< all variables are zero, is used for setting other elements zero frequently
 
 
-!  PUBLIC :: VegPoolAdd,VegPoolSub,VegPoolMul,VegPoolDiv
-
 CONTAINS
 
- !> Element Functions
- !!
- !!
-  FUNCTION ElementAdd(e1,e2) RESULT(e3)
-     IMPLICIT NONE
-     TYPE(t_element), INTENT(in) :: e1,e2
-     TYPE(t_element) :: e3
-     e3%carbon = e1%carbon + e2%carbon 
-     e3%nitrogen = e1%nitrogen + e2%nitrogen 
-     e3%phosphorus = e1%phosphorus + e2%phosphorus 
-     e3%carbon13 = e1%carbon13 + e2%carbon13 
-     e3%carbon14 = e1%carbon14 + e2%carbon14
-     e3%nitrogen15 = e1%nitrogen15 + e2%nitrogen15
-  END FUNCTION ElementAdd  
+  !-----------------------------------------------------------------------------------------------------
+  !> addition of two vegetation pools is returned
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION add_veg_pools(p1,p2) RESULT(p3) 
 
-  FUNCTION ElementSub(e1,e2) RESULT(e3)
-     IMPLICIT NONE
-     TYPE(t_element), INTENT(in) :: e1,e2
-     TYPE(t_element) :: e3
-     e3%carbon = e1%carbon - e2%carbon 
-     e3%nitrogen = e1%nitrogen - e2%nitrogen 
-     e3%phosphorus = e1%phosphorus - e2%phosphorus 
-     e3%carbon13 = e1%carbon13 - e2%carbon13 
-     e3%carbon14 = e1%carbon14 - e2%carbon14
-     e3%nitrogen15 = e1%nitrogen15 - e2%nitrogen15
-  END FUNCTION ElementSub  
+    USE mo_land_memory,   ONLY: add_elements
 
-  FUNCTION ElementMul(e1,e2) RESULT(e3)
-     IMPLICIT NONE
-     TYPE(t_element), INTENT(in) :: e1,e2
-     TYPE(t_element) :: e3
-     e3%carbon = e1%carbon * e2%carbon 
-     e3%nitrogen = e1%nitrogen * e2%nitrogen 
-     e3%phosphorus = e1%phosphorus * e2%phosphorus 
-     e3%carbon13 = e1%carbon13 * e2%carbon13 
-     e3%carbon14 = e1%carbon14 * e2%carbon14
-     e3%nitrogen15 = e1%nitrogen15 * e2%nitrogen15
-  END FUNCTION ElementMul
-
-  FUNCTION ElementDiv(e1,e2) RESULT(e3)
-     IMPLICIT NONE
-     TYPE(t_element), INTENT(in) :: e1,e2
-     TYPE(t_element) :: e3
-     e3%carbon = e1%carbon / e2%carbon 
-     e3%nitrogen = e1%nitrogen / e2%nitrogen 
-     e3%phosphorus = e1%phosphorus / e2%phosphorus 
-     e3%carbon13 = e1%carbon13 / e2%carbon13 
-     e3%carbon14 = e1%carbon14 / e2%carbon14
-     e3%nitrogen15 = e1%nitrogen15 / e2%nitrogen15
-  END FUNCTION ElementDiv  
-
- !> VegPool Functions
- !!
- !!
- FUNCTION VegPoolAdd(p1,p2) RESULT(p3)
      IMPLICIT NONE
      TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
      TYPE(t_slm_veg_pool) :: p3
-     p3%leaf          = ElementAdd(p1%leaf,p2%leaf)
-     p3%fine_root     = ElementAdd(p1%fine_root,p2%fine_root)
-     p3%coarse_root   = ElementAdd(p1%coarse_root,p2%coarse_root)
-     p3%sap_wood      = ElementAdd(p1%sap_wood,p2%sap_wood)
-     p3%heart_wood    = ElementAdd(p1%heart_wood,p2%heart_wood)
-     p3%labile        = ElementAdd(p1%labile,p2%labile)
-     p3%reserve       = ElementAdd(p1%reserve,p2%reserve)
-     p3%fruit         = ElementAdd(p1%fruit,p2%fruit)
-     p3%seed_bed      = ElementAdd(p1%seed_bed,p2%seed_bed)
- END FUNCTION VegPoolAdd  
+     p3%leaf          = add_elements(p1%leaf,p2%leaf)
+     p3%fine_root     = add_elements(p1%fine_root,p2%fine_root)
+     p3%coarse_root   = add_elements(p1%coarse_root,p2%coarse_root)
+     p3%sap_wood      = add_elements(p1%sap_wood,p2%sap_wood)
+     p3%heart_wood    = add_elements(p1%heart_wood,p2%heart_wood)
+     p3%labile        = add_elements(p1%labile,p2%labile)
+     p3%reserve       = add_elements(p1%reserve,p2%reserve)
+     p3%fruit         = add_elements(p1%fruit,p2%fruit)
+     p3%seed_bed      = add_elements(p1%seed_bed,p2%seed_bed)
+  END FUNCTION add_veg_pools  
 
- FUNCTION VegPoolSub(p1,p2) RESULT(p3)
+  !-----------------------------------------------------------------------------------------------------
+  !> subtraction of vegetation pool p1 - p2 is returned
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION subtract_veg_pools(p1,p2) RESULT(p3) 
+
+    USE mo_land_memory,   ONLY: subtract_elements
+
      IMPLICIT NONE
      TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
      TYPE(t_slm_veg_pool) :: p3
-     p3%leaf = ElementSub(p1%leaf,p2%leaf)
-     p3%fine_root = ElementSub(p1%fine_root,p2%fine_root)
-     p3%coarse_root = ElementSub(p1%coarse_root,p2%coarse_root)
-     p3%sap_wood = ElementSub(p1%sap_wood,p2%sap_wood)
-     p3%heart_wood = ElementSub(p1%heart_wood,p2%heart_wood)
-     p3%labile = ElementSub(p1%labile,p2%labile)
-     p3%reserve = ElementSub(p1%reserve,p2%reserve)
-     p3%fruit = ElementSub(p1%fruit,p2%fruit)
-     p3%seed_bed = ElementSub(p1%seed_bed,p2%seed_bed)
- END FUNCTION VegPoolSub  
+     p3%leaf          = subtract_elements(p1%leaf,p2%leaf)
+     p3%fine_root     = subtract_elements(p1%fine_root,p2%fine_root)
+     p3%coarse_root   = subtract_elements(p1%coarse_root,p2%coarse_root)
+     p3%sap_wood      = subtract_elements(p1%sap_wood,p2%sap_wood)
+     p3%heart_wood    = subtract_elements(p1%heart_wood,p2%heart_wood)
+     p3%labile        = subtract_elements(p1%labile,p2%labile)
+     p3%reserve       = subtract_elements(p1%reserve,p2%reserve)
+     p3%fruit         = subtract_elements(p1%fruit,p2%fruit)
+     p3%seed_bed      = subtract_elements(p1%seed_bed,p2%seed_bed)
+  END FUNCTION subtract_veg_pools  
 
- FUNCTION VegPoolMul(p1,p2) RESULT(p3)
+  !-----------------------------------------------------------------------------------------------------
+  !> multiplication of two vegetation pools is returned
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION multiply_veg_pools(p1,p2) RESULT(p3) 
+
+    USE mo_land_memory,   ONLY: multiply_elements
+
      IMPLICIT NONE
      TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
      TYPE(t_slm_veg_pool) :: p3
-     p3%leaf = ElementMul(p1%leaf,p2%leaf)
-     p3%fine_root = ElementMul(p1%fine_root,p2%fine_root)
-     p3%coarse_root = ElementMul(p1%coarse_root,p2%coarse_root)
-     p3%sap_wood = ElementMul(p1%sap_wood,p2%sap_wood)
-     p3%heart_wood = ElementMul(p1%heart_wood,p2%heart_wood)
-     p3%labile = ElementMul(p1%labile,p2%labile)
-     p3%reserve = ElementMul(p1%reserve,p2%reserve)
-     p3%fruit = ElementMul(p1%fruit,p2%fruit)
-     p3%seed_bed = ElementMul(p1%seed_bed,p2%seed_bed)
- END FUNCTION VegPoolMul  
+     p3%leaf          = multiply_elements(p1%leaf,p2%leaf)
+     p3%fine_root     = multiply_elements(p1%fine_root,p2%fine_root)
+     p3%coarse_root   = multiply_elements(p1%coarse_root,p2%coarse_root)
+     p3%sap_wood      = multiply_elements(p1%sap_wood,p2%sap_wood)
+     p3%heart_wood    = multiply_elements(p1%heart_wood,p2%heart_wood)
+     p3%labile        = multiply_elements(p1%labile,p2%labile)
+     p3%reserve       = multiply_elements(p1%reserve,p2%reserve)
+     p3%fruit         = multiply_elements(p1%fruit,p2%fruit)
+     p3%seed_bed      = multiply_elements(p1%seed_bed,p2%seed_bed)
+  END FUNCTION multiply_veg_pools  
 
- FUNCTION VegPoolDiv(p1,p2) RESULT(p3)
+  !-----------------------------------------------------------------------------------------------------
+  !> division of vegetation pool p1 by p2 is returned
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION divide_veg_pools(p1,p2) RESULT(p3) 
+
+    USE mo_land_memory,   ONLY: divide_elements
+
      IMPLICIT NONE
      TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
      TYPE(t_slm_veg_pool) :: p3
-     p3%leaf = ElementDiv(p1%leaf,p2%leaf)
-     p3%fine_root = ElementDiv(p1%fine_root,p2%fine_root)
-     p3%coarse_root = ElementDiv(p1%coarse_root,p2%coarse_root)
-     p3%sap_wood = ElementDiv(p1%sap_wood,p2%sap_wood)
-     p3%heart_wood = ElementDiv(p1%heart_wood,p2%heart_wood)
-     p3%labile = ElementDiv(p1%labile,p2%labile)
-     p3%reserve = ElementDiv(p1%reserve,p2%reserve)
-     p3%fruit = ElementDiv(p1%fruit,p2%fruit)
-     p3%seed_bed = ElementDiv(p1%seed_bed,p2%seed_bed)
- END FUNCTION VegPoolDiv  
+     p3%leaf          = divide_elements(p1%leaf,p2%leaf)
+     p3%fine_root     = divide_elements(p1%fine_root,p2%fine_root)
+     p3%coarse_root   = divide_elements(p1%coarse_root,p2%coarse_root)
+     p3%sap_wood      = divide_elements(p1%sap_wood,p2%sap_wood)
+     p3%heart_wood    = divide_elements(p1%heart_wood,p2%heart_wood)
+     p3%labile        = divide_elements(p1%labile,p2%labile)
+     p3%reserve       = divide_elements(p1%reserve,p2%reserve)
+     p3%fruit         = divide_elements(p1%fruit,p2%fruit)
+     p3%seed_bed      = divide_elements(p1%seed_bed,p2%seed_bed)
+  END FUNCTION divide_veg_pools  
 
   !-----------------------------------------------------------------------------------------------------
   !> intialize all variables (TYPE t_daily_average)

@@ -30,7 +30,7 @@ CONTAINS
 
     USE mo_veg_memory
     USE mo_veg_parameters
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_land_memory,   ONLY: t_element, multiply_elements
 
     IMPLICIT NONE
 
@@ -106,11 +106,11 @@ CONTAINS
     growth_respiration_c13 = fresp_growth * growth%labile%carbon13 * 1.e6 / dt
     growth_respiration_c14 = fresp_growth * growth%labile%carbon14 * 1.e6 / dt
 
-    growth%leaf = ElementMul ( falloc%leaf, growth%labile )
-    growth%fine_root = ElementMul ( falloc%fine_root, growth%labile ) 
-    growth%coarse_root = ElementMul ( falloc%coarse_root, growth%labile ) 
-    growth%sap_wood = ElementMul ( falloc%sap_wood, growth%labile ) 
-    growth%fruit = ElementMul ( falloc%fruit, growth%labile ) 
+    growth%leaf        = multiply_elements ( falloc%leaf, growth%labile )
+    growth%fine_root   = multiply_elements ( falloc%fine_root, growth%labile ) 
+    growth%coarse_root = multiply_elements ( falloc%coarse_root, growth%labile ) 
+    growth%sap_wood    = multiply_elements ( falloc%sap_wood, growth%labile ) 
+    growth%fruit       = multiply_elements ( falloc%fruit, growth%labile ) 
 
     !> 5.1 invert flux of labile to be out of the labile pool
     !! 
