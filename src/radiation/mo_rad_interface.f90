@@ -102,7 +102,7 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER, INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_Radiation_surface(model_id))
+    CALL this%Register_task(tsk_radiation_surface(model_id))
 
   END SUBROUTINE Register_rad_tasks
 

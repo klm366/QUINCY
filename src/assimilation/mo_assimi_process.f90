@@ -16,21 +16,22 @@ MODULE mo_assimi_process
    IMPLICIT NONE
    PRIVATE
 
-   PUBLIC :: calc_assimilation_scaling_factors, calc_assimilation, calc_NPP_rate
+   PUBLIC :: calc_assimilation_scaling_factors, calc_assimilation_waterunlimited, calc_assimilation_waterlimited, calc_NPP_rate
    
    CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_process'
 
 CONTAINS
 
-   ELEMENTAL SUBROUTINE calc_assimilation_scaling_factors(declination,      & ! input
-                                                          canopy_bound_lai, & ! input
-                                                          lai,              & ! input
-                                                          lat,              & ! input  
-                                                          assimi_scaling_fact_cl ) ! output
+   ELEMENTAL SUBROUTINE calc_assimilation_scaling_factors( &
+      declination,            & ! input
+      canopy_bound_lai,       & ! input
+      lai,                    & ! input
+      lat,                    & ! input  
+      assimi_scaling_fact_cl )  ! output
     
       ! Declarations 
       USE mo_hydro_constants,   ONLY: LaiLimit
-      USE mo_math_constants,        ONLY: pi
+      USE mo_math_constants,    ONLY: pi
     
       ! Arguments                       
       REAL(wp), INTENT(in)   ::                  & 
@@ -76,83 +77,79 @@ CONTAINS
    END SUBROUTINE calc_assimilation_scaling_factors 
    
    
-   ELEMENTAL SUBROUTINE calc_assimilation( nc,             & ! in
-                                  waterLimitationFlag,     & ! in
-                                  carbox_rate_max_leaf,    & ! in  
-                                  ETransport,              & ! in
-                                  C4flag,                  & ! in
-                                  t_air,                   & ! in
-                                  press_srf,               & ! in
-                                  par_down_mol,            & ! in
-                                  apar_per_lai_cl,         & ! in
-                                  CO2_mol_mixing_ratio,    & ! in
-                                  N_scaling_factors,       & ! in
-                                  CO2_conc_leaf_cl,        & ! inout
-                                  canopy_cond_cl,          & ! inout                                            
-                                  gross_assimilation_cl,   & ! out
-                                  dark_respiration_cl,     & ! out
-                                  carbox_rate_max_cl,      & ! out
-                                  e_transport_rate_max_cl, & ! out
-                                  carbox_rate_cl,          & ! out
-                                  e_transport_rate_cl      & ! out
-                                  )
+   ELEMENTAL SUBROUTINE calc_assimilation_waterunlimited( &
+      nc,                      & ! in
+      !waterLimitationFlag,     & ! in
+      carbox_rate_max_leaf,    & ! in  
+      ETransport,              & ! in
+      C4flag,                  & ! in
+      t_air,                   & ! in
+      press_srf,               & ! in
+      par_down_mol,            & ! in
+      apar_per_lai_cl,         & ! in
+      CO2_mol_mixing_ratio,    & ! in
+      N_scaling_factors,       & ! in
+      CO2_conc_leaf_cl,        & ! inout for no water limitation case here
+      canopy_cond_cl,          & ! inout                
+      !gross_assimilation_cl,   & ! out
+      dark_respiration_cl,     & ! out
+      !carbox_rate_max_cl,      & ! out
+      !e_transport_rate_max_cl, & ! out
+      carbox_rate_cl  & !,          & ! out
+      !e_transport_rate_cl      & ! out
+      )
    
    
       !-----------------------------------------------------------------------
-      !  DECLARATIONS                               
+      !  DECLARATIONS   
       USE mo_assimi_constants, ONLY: molarMassDryAir, molarMassCO2
-      USE mo_assimi_constants                                       ! we need all of them, except of f_aut_leaf and cCost. 
-      USE mo_physical_constants,  ONLY: tmelt, R_gas => argas       ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
+      USE mo_assimi_constants                                      ! we need all of them, except of f_aut_leaf and cCost.
+      USE mo_physical_constants, ONLY: tmelt, R_gas => argas       ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
  
       !-----------------------------------------------------------------------
       !  ARGUMENTS
       INTEGER,  INTENT(in)     :: nc      
-      LOGICAL,  INTENT(in)     :: waterLimitationFlag 
+      !LOGICAL,  INTENT(in)     :: waterLimitationFlag 
       
-      REAL(wp),  INTENT(inout) ::                          & ! R: Diese Variablen hier sind nur deshalb nicht INTENT(in) weil ich sie
-                                                             !    als Workaround unten setzen muss! In der Endversion sollten sie
-                                                             !    INTENT(in) bleiben. 
-                                  carbox_rate_max_leaf,    & ! Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2(leaf)/s] 
+      REAL(wp),  INTENT(in) ::                             &  
+                                  carbox_rate_max_leaf,    & ! Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2(leaf)/s]
                                                              !        from lctlib file.
                                   ETransport,              & ! Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2/s]
-                                  CO2_mol_mixing_ratio       ! CO2 substance mixing ratio [molCO2/molDryAir] 
+                                  CO2_mol_mixing_ratio       ! CO2 substance mixing ratio [molCO2/molDryAir]
                                 ! C4flag,                    ! R: Nur falls man C4flag statt logical als real haben möchte.
-                                                             ! Photosynthetic pathway (C3: 0; C4: 1) 
+                                                             ! Photosynthetic pathway (C3: 0; C4: 1)
                                                                    
       LOGICAL,    INTENT(in)   ::                          &
                                   C4flag                     ! R: In JSBACH3 ist C4flag für Gitterzelle notwendig, da ein Tile C3 oder C4 in
-                                                             !    Abhängikeit vom GP sein kann. In JSBACH4 ist ein Tile wahrscheinlich
-                                                             !    entweder C3 oder C4 unabhängig von der Region. Daher ist das hier noch
-                                                             !    ein Provisorium.
+                                                             !    Abhängikeit vom GP sein kann. In JSBACH4 soll ein Tile wahrscheinlich
+                                                             !    entweder C3 oder C4 unabhängig von der Region sein.
       
       REAL(wp),  INTENT(in)    ::                          &
                                   par_down_mol,            & ! Downward PAR flux in mol (photons)/(m^2 s)
-                                  press_srf,               & ! Surface pressure 
-                                  ! R: As soon as I get CO2 from the atmosphere
-                                  !CO2_kg_mixing_ratio, & ! CO2 mass      mixing ratio [kgCO2/kgDryAir]
+                                  press_srf,               & ! Surface pressure
                                   t_air                      ! Atmosphere temperature (lowest layer) in Kelvin
                                 
                                   
       REAL(wp),  INTENT(in)     ::                         &
                                   apar_per_lai_cl,         & ! Absorbed PAR of canopy layer.
-                                  N_scaling_factors          ! 
+                                  N_scaling_factors          ! Enzymatic scaling with canopy height
                                   
       REAL(wp),  INTENT(inout)  ::                         &                                  
-                                  CO2_conc_leaf_cl,        & ! CO2 concentration inside leaf [mol(CO2)/mol(Air)] (identical for all layers): 
-                                                             ! Input:  for waterLimitationFlag =.false. 
-                                                             ! Output: only for waterLimitationFlag =.true.                                       
-                                  canopy_cond_cl             ! Output: only for waterLimitationFlag =.false
-                                                             ! Input:  for waterLimitationFlag =.true.
+                                  CO2_conc_leaf_cl           ! CO2 concentration inside leaf [mol(CO2)/mol(Air)] (identical for all layers): 
+                                                             ! InOut: for no water limitation case here
+                                                             
+
                                   
-      REAL(wp),  INTENT(out)    ::                         &                                  
-                                  gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [MOL(CO2) / M^2(leaf area) S]
+      REAL(wp),  INTENT(out)    ::                         &
+                                  canopy_cond_cl,          & ! Only output for waterunlimited case here.      
+                                  !gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [MOL(CO2) / M^2(leaf area) S]
                                   dark_respiration_cl,     & ! 
-                                  carbox_rate_max_cl,      & ! Maximum carboxylation rate of canopy layer (=VCmax)
-                                                             ! [Mol(CO2)/m^2(canopy)/s]. carbox_rate_max_leaf adapted to canopy layer 
-                                                             ! and actual temperature.
-                                  e_transport_rate_max_cl, & ! 
-                                  carbox_rate_cl,          & ! 
-                                  e_transport_rate_cl        ! 
+                                  !carbox_rate_max_cl,      & ! Maximum carboxylation rate of canopy layer (=VCmax)
+                                  !                           ! [Mol(CO2)/m^2(canopy)/s]. carbox_rate_max_leaf adapted to canopy layer
+                                  !                           ! and actual temperature.
+                                  !e_transport_rate_max_cl, & !
+                                  carbox_rate_cl !,          & !
+                                  !e_transport_rate_cl        !
 
       !-----------------------------------------------------------------------
       !  LOCAL VARIABLES
@@ -221,18 +218,6 @@ CONTAINS
       END IF
       
     
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      ! R: just some fixed values as workaround until we can get them otherwise...
-    
-      ! Convert CO2 mass mixing ratio [kg/kg] to substance mixing ratio [mol/mol]
-      ! just a workaround until CO2 can be received from atmosphere and the following line can be used (CO2_mol_mixing_ratio is only used here, so it is not necessary to put it into a funktion under the carbon process, however, the funktion is already written (see mo_carbon_interface.f90)
-      ! CO2_mol_mixing_ratio = CO2_kg_mixing_ratio * molarMassDryAir / molarMassCO2   
-      ! CO2_mol_mixing_ratio = 0.280 
-      ! carbox_rate_max_leaf = 50.
-      ! ETransport           = 100.
-      ! C4flag               = 0 ! C3=0, C4=1
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
       T1 =  25._wp + tmelt   ! 25 degress Celsius expressed in Kelvin 
     
       TC = t_air - tmelt     ! change temperature dimension from Kelvin to Celcius
@@ -244,8 +229,6 @@ CONTAINS
       !---------------------------------------------------------------------------------
       !                  FIRST ENTRY, TC=TA, CI0 => GC0, AC0                 
       !---------------------------------------------------------------------------------  
-
-      IF (.not. waterLimitationFlag) THEN   ! First call: no water limitation
                                
          IF (.not. C4flag) THEN
          !WHERE (.not. C4flag)    ! R: only for test issues when this subroutine is not elemental
@@ -473,8 +456,161 @@ CONTAINS
          END IF  ! C3/C4
          !ENDWHERE
                
+
+      RETURN
+ 
+    END SUBROUTINE calc_assimilation_waterunlimited
+
+
+   
+   ELEMENTAL SUBROUTINE calc_assimilation_waterlimited( &
+      nc,                      & ! in
+      !waterLimitationFlag,     & ! in
+      carbox_rate_max_leaf,    & ! in  
+      ETransport,              & ! in
+      C4flag,                  & ! in
+      t_air,                   & ! in
+      press_srf,               & ! in
+      par_down_mol,            & ! in
+      apar_per_lai_cl,         & ! in
+      CO2_mol_mixing_ratio,    & ! in
+      N_scaling_factors,       & ! in
+      CO2_conc_leaf_cl,        & ! out only for the water limited case here  
+      canopy_cond_cl,          & ! in  only for the water limited case here                
+      gross_assimilation_cl,   & ! out
+      dark_respiration_cl,     & ! out
+      carbox_rate_max_cl,      & ! out
+      e_transport_rate_max_cl, & ! out
+      carbox_rate_cl,          & ! out
+      e_transport_rate_cl      & ! out
+      )
+   
+   
+      !-----------------------------------------------------------------------
+      !  DECLARATIONS   
+      USE mo_assimi_constants, ONLY: molarMassDryAir, molarMassCO2
+      USE mo_assimi_constants                                      ! we need all of them, except of f_aut_leaf and cCost.
+      USE mo_physical_constants, ONLY: tmelt, R_gas => argas       ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
+ 
+      !-----------------------------------------------------------------------
+      !  ARGUMENTS
+      INTEGER,  INTENT(in)     :: nc      
+      !LOGICAL,  INTENT(in)     :: waterLimitationFlag 
       
-      ELSE   !  with water limitation (now canopy_conductance is input and Ci is calculated)
+      REAL(wp),  INTENT(in) ::                             & 
+                                  carbox_rate_max_leaf,    & ! Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2(leaf)/s]
+                                                             !        from lctlib file.
+                                  ETransport,              & ! Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2/s]
+                                  CO2_mol_mixing_ratio       ! CO2 substance mixing ratio [molCO2/molDryAir]
+                                ! C4flag,                    ! R: Nur falls man C4flag statt logical als real haben möchte.
+                                                             ! Photosynthetic pathway (C3: 0; C4: 1)
+                                                                   
+      LOGICAL,    INTENT(in)   ::                          &
+                                  C4flag                     ! R: In JSBACH3 ist C4flag für Gitterzelle notwendig, da ein Tile C3 oder C4 in
+                                                             !    Abhängikeit vom GP sein kann. In JSBACH4 soll ein Tile wahrscheinlich
+                                                             !    entweder C3 oder C4 unabhängig von der Region sein.
+      
+      REAL(wp),  INTENT(in)    ::                          &
+                                  par_down_mol,            & ! Downward PAR flux in mol (photons)/(m^2 s)
+                                  press_srf,               & ! Surface pressure
+                                  t_air                      ! Atmosphere temperature (lowest layer) in Kelvin
+                                
+                                  
+      REAL(wp),  INTENT(in)     ::                         &
+                                  apar_per_lai_cl,         & ! Absorbed PAR of canopy layer.
+                                  N_scaling_factors,       & ! Enzymatic scaling with canopy height
+                                  canopy_cond_cl             ! Input only for the water limited case here                                  
+                                                                   
+      REAL(wp),  INTENT(out)    ::                         &                                  
+                                  CO2_conc_leaf_cl,        & ! CO2 concentration inside leaf [mol(CO2)/mol(Air)] (identical for all layers): 
+                                                             ! Output only for the water limited case here      
+                                  gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [MOL(CO2) / M^2(leaf area) S]
+                                  dark_respiration_cl,     & ! 
+                                  carbox_rate_max_cl,      & ! Maximum carboxylation rate of canopy layer (=VCmax)
+                                                             ! [Mol(CO2)/m^2(canopy)/s]. carbox_rate_max_leaf adapted to canopy layer
+                                                             ! and actual temperature.
+                                  e_transport_rate_max_cl, & !
+                                  carbox_rate_cl,          & !
+                                  e_transport_rate_cl        !
+
+      !-----------------------------------------------------------------------
+      !  LOCAL VARIABLES
+! !     INTEGER                           :: icanopy
+! !     INTEGER                           :: i
+
+      CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_assimilation'
+      
+      REAL(wp) :: CO2_kg_mixing_ratio   ! R: Nur weil ich sie als Workaround unten setzen muss! In der Endversion sollte das hier 
+                                        !    raus fliegen und Variablendefinition oben verwendet werden.
+    
+      REAL(wp) ::           &
+                 T0,        & ! Temperature relative to 25 degree Celcius, i.e. T - 25
+                 T1,        & ! 25 degress Celsius expressed in Kelvin 
+                 KC,        & ! Michaelis-Menten constant for CO2
+                 KO,        & ! Michaelis-Menten constant for O2
+                 GAM,       & ! COMPENSATION POINT WITHOUT DARK RESPIRATION [MOL(CO2) / MOL(AIR)]
+                 HITINHIB,  & ! Hight temperature inhibition
+                              ! Value to inhibit Assimilation and Respiration at temperatures above 
+               ! 55 Celsius from Collatz et al., Physiological and environmental regulation
+                              ! of stomatal conductance, photosynthesis and transpiration: a model that 
+               ! includes a laminar boundary layer,
+                              ! Agricultural and Forest Meteorology, 54, pp. 107-136, 1991
+                 DARKINHIB, & ! Dark inhibition
+               ! Value to inhibit Dark-Respiration in light
+                              ! after Brooks and Farquhar, Effect of temperature on the CO2/O2 specifity on RBisCO
+               ! and the rate of respiration in the light, Planta 165, 397-406, 1985
+               ! It is fitted to inhibit the dark-respiration to 50% of it's uninhibited value 
+               ! up from 50 umol/m^2s total solar downward radiation, i.e. 25 umol/m^2s downward PAR
+                              ! (idea for improvement: darkinhib should be closer to 1 at very high latitudes)
+               ! The FUNCTION is an own creation.
+                 K1,        & ! helper
+                 K2           ! helper    
+                
+      REAL(wp) ::           & ! variables with canopy layer
+                 VCMAX,     & ! MAXIMUM CARBOXYLATION RATE [MOL(CO2)/M^2 S] 
+                 JMAX,      & ! MAXIMUM RATE OF ELECTRON TRANSPORT [MOL(CO2)/M^2 S]
+                 K,         & ! CO2 SPECIFICITY OF PECASE  
+                 T,         & ! Canopy Temperature in Kelvin    
+                 TC,        & ! Canopy Temperature (leaf) in Celsius.                             
+                 GASS,      & ! gross assimilation (formerly called A)
+                 DARK_RESP, & ! dark respiration (formerly called RD).    
+                 JE,        & ! Electron transport rate (Knorr, Eq. 102c)
+                 JC,        & ! Carboxylation rate (Knorr, Eq. 102b)
+                 J0,        &
+                 J1,        &
+                 G0,        & 
+                 W1,        & ! helper
+                 W2,        & ! helper
+                 B,         & ! helper
+                 C            ! helper
+                                          
+      !-----------------------------------------------------------------------    
+      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
+      ! IF (one_of('calc_assimilation', tile%components) < 1) RETURN
+ 
+      !-----------------------------------------------------------------------
+      ! CONTENT 
+
+      ! Prepare CO2_conc_leaf_cl
+      ! R: siehe mo_bethy.f90, Zeile 709
+      IF (C4flag) THEN ! landcover type is C4 plants
+         CO2_conc_leaf_cl = FCI1C4 * CO2_mol_mixing_ratio
+      ELSE       ! landcover type is C3 plants
+         CO2_conc_leaf_cl = FCI1C3 * CO2_mol_mixing_ratio
+      END IF
+      
+    
+      T1 =  25._wp + tmelt   ! 25 degress Celsius expressed in Kelvin 
+    
+      TC = t_air - tmelt     ! change temperature dimension from Kelvin to Celcius
+
+      T0 = t_air - T1        ! Atmosphere temperature (lowest layer) in Kelvin minus 
+                             ! 25 degress Celsius expressed in Kelvin 
+                             ! => relative T to 25 degree Celcius
+      
+      !---------------------------------------------------------------------------------
+      !                  FIRST ENTRY, TC=TA, CI0 => GC0, AC0                 
+      !---------------------------------------------------------------------------------  
           
           IF (.not. C4flag) THEN
           !WHERE (.not. C4flag) ! R: only for test issues when this subroutine is not elemental
@@ -702,14 +838,11 @@ CONTAINS
           carbox_rate_max_cl      = VCMAX            ! max carboxylation rate
           e_transport_rate_max_cl = JMAX             ! max e-transport rate
           carbox_rate_cl          = JC               ! carboxylation rate
-          e_transport_rate_cl     = JE               ! e-transport rate
-              
-      ENDIF    ! water limitation   
+          e_transport_rate_cl     = JE               ! e-transport rate  
 
       RETURN
  
-    END SUBROUTINE calc_assimilation
-
+    END SUBROUTINE calc_assimilation_waterlimited
     
     
     ELEMENTAL SUBROUTINE calc_NPP_rate(gross_assimilation, dark_respiration, NPP_rate)

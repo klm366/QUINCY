@@ -1,10 +1,11 @@
 ! ===============================================================================================================================
 ! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
 ! === ... <FIRST NAME LAST NAME>    with your name e.g. "Martin Mustermann"                                                   ===
-! === ... <DATE>                    with the present date in YYYY-MM-DD format e.g. "2016-04-30"                              ===
-! === ... <PROCESS_NAME_UPPER_CASE> with your process name e.g. "ALBEDO"                                                      ===
-! === ... <PROCESS_NAME_LOWER_CASE> with your process name e.g. "albedo"                                                      ===
-! === ... <EXPLANATIION_OF_PROCESS> with a short explanation line e.g.                                                        ===
+! === ... <DATE>                    with the present date in YYYY-MM-DD format, e.g. "2016-04-30"                             ===
+! === ... <PROCESS_NAME_UPPER_CASE> with your process name, e.g. "ALBEDO"                                                     ===
+! === ... <PROCESS_NAME_LOWER_CASE> with your process name, e.g. "albedo"                                                     ===
+! === ... <TASK>                    with the name of a task of the process, e.g. "snow_albedo"                                ===
+! === ... <EXPLANATIION_OF_PROCESS> with a short explanation line, e.g.                                                       ===
 ! ===     "computes the surface temperature from latent and sensible heat flux, net radiation and below ground sensible heat" ===
 ! ===                                                                                                                         ===
 ! === Then go through the code line by line to adapt it to your needs:                                                        ===
@@ -70,17 +71,19 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
 !   END TYPE t_<PROCESS_NAME_LOWER_CASE>_process
   
   !> Type definition for <PROCESS_NAME_LOWER_CASE> task
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_<PROCESS_NAME_LOWER_CASE>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_<PROCESS_NAME_LOWER_CASE>     !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_<PROCESS_NAME_LOWER_CASE>  !< Aggregates computed task variables
-  END TYPE tsk_<PROCESS_NAME_LOWER_CASE>
+    PROCEDURE, NOPASS :: Integrate => update_<PROCESS_NAME_LOWER_CASE>_<TASK>     !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_<PROCESS_NAME_LOWER_CASE>_<TASK>  !< Aggregates computed task variables
+  END TYPE tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>
   
   !> Constructor interface for <PROCESS_NAME_LOWER_CASE> task
-  INTERFACE tsk_<PROCESS_NAME_LOWER_CASE>
-    PROCEDURE Create_task_<PROCESS_NAME_LOWER_CASE>                        !< Constructor function for task
-  END INTERFACE tsk_<PROCESS_NAME_LOWER_CASE>
+  INTERFACE tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>
+    PROCEDURE Create_task_<PROCESS_NAME_LOWER_CASE>_<TASK>                        !< Constructor function for task
+  END INTERFACE tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>
 
+  !X Repeat here for each additional task of the process the two blocks above ...
+  
 CONTAINS
 
   ! ================================================================================================================================
@@ -92,19 +95,21 @@ CONTAINS
   !! @param[in]     model_id     Model id
   !! @return        return_ptr   Instance of process task "<PROCESS_NAME_LOWER_CASE>"
   !!
-  FUNCTION Create_task_<PROCESS_NAME_LOWER_CASE>(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_<PROCESS_NAME_LOWER_CASE>_<TASK>(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_<PROCESS_NAME_LOWER_CASE>::return_ptr)
+    ALLOCATE(tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>::return_ptr)
 
-    return_ptr%name = '<PROCESS_NAME_LOWER_CASE>'
+    return_ptr%name = '<PROCESS_NAME_LOWER_CASE>_<TASK>'
     return_ptr%process_id = <PROCESS_NAME_UPPER_CASE>
     return_ptr%owner_model_id = model_id
 
-  END FUNCTION Create_task_<PROCESS_NAME_LOWER_CASE>
+  END FUNCTION Create_task_<PROCESS_NAME_LOWER_CASE>_<TASK>
   
+  !X Repeat here for each additional task of the process the function above ...
+    
   ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for <PROCESS_NAME_LOWER_CASE> process
   !!
@@ -116,8 +121,9 @@ CONTAINS
     CLASS(t_<PROCESS_NAME_LOWER_CASE>_process), INTENT(inout) :: this
     INTEGER,               INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_<PROCESS_NAME_LOWER_CASE>(model_id))
-
+    CALL this%Register_task(tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>(model_id))
+    !X Repeat the line above here for each additional task of the process ...
+    
   END SUBROUTINE Register_<PROCESS_NAME_LOWER_CASE>_tasks
 
   ! ================================================================================================================================

@@ -141,7 +141,7 @@ CONTAINS
 
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-!!$    canopy_layer => Get_vgrid('canopy_layer')
+       canopy_layer => Get_vgrid('canopy_layer')
 
         dsl4jsb_Get_config(RAD)
 !!$    SELECT TYPE (conf=>model%processes(RAD)%p%config) ; TYPE IS (t_rad_config); rad__conf => conf; END SELECT
@@ -341,47 +341,47 @@ CONTAINS
         & prefix, suffix,                                                           &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_wp )
 
-!!$    CALL jsb_add_var( mem, 'lai_cl', mem%lai_cl, &
-!!$      & hgrid, canopy_layer,                                                          &
-!!$      & t_cf('LAI for each canopy layer', '', ''),                           &
-!!$      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
-!!$      & prefix, suffix,                                                           &
-!!$      & lrestart=.FALSE., initval_r=0.0_wp )
-!!$
-!!$    CALL jsb_add_var( mem, 'faPAR_cl', mem%faPAR_cl, &
-!!$      & hgrid, canopy_layer,                                                                   &
-!!$      & t_cf('Absorbed PAR per canopy layer [fraction of irradiance]', '', ''),  &
-!!$      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-!!$      & prefix, suffix,                                                           &
-!!$      & lrestart=.FALSE., initval_r=0.0_wp )
-!!$
-!!$    CALL jsb_add_var( mem, 'apar_per_lai_cl', mem%apar_per_lai_cl, &
-!!$      & hgrid, canopy_layer,                                                               &
-!!$      & t_cf('Absorbed PAR per canopy layer (LAI area).', '', ''),                      &
-!!$      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
-!!$      & prefix, suffix,                                                           &
-!!$      & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-!!$
-!!$    CALL jsb_add_var( mem, 'apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc, &
-!!$      & hgrid, canopy_layer,                                                                             &
-!!$      & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''),     &
-!!$      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
-!!$      & prefix, suffix,                                                           &
-!!$      & lrestart=.FALSE., initval_r=0.0_wp )
-!!$
-!!$    CALL jsb_add_var( mem, 'apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg, &
-!!$      & hgrid, canopy_layer,                                                                               &
-!!$      & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''),        &
-!!$      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
-!!$      & prefix, suffix,                                                           &
-!!$      & lrestart=.FALSE., initval_r=0.0_wp )
-!!$
-!!$    CALL jsb_add_var( mem, 'apar_nacc', mem%apar_nacc, &
-!!$      & hgrid, canopy_layer,                                                                             &
-!!$      & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''),     &
-!!$      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
-!!$      & prefix, suffix,                                                           &
-!!$      & lrestart=.FALSE., initval_r=0.0_wp )
+       CALL jsb_add_var( mem, 'lai_cl', mem%lai_cl, &
+         & hgrid, canopy_layer,                                                          &
+         & t_cf('LAI for each canopy layer', '', ''),                           &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+         & prefix, suffix,                                                           &
+         & lrestart=.FALSE., initval_r=0.0_wp )
+   
+       CALL jsb_add_var( mem, 'faPAR_cl', mem%faPAR_cl, &
+         & hgrid, canopy_layer,                                                                   &
+         & t_cf('Absorbed PAR per canopy layer [fraction of irradiance]', '', ''),  &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+         & prefix, suffix,                                                           &
+         & lrestart=.FALSE., initval_r=0.0_wp )
+   
+       CALL jsb_add_var( mem, 'apar_per_lai_cl', mem%apar_per_lai_cl, &
+         & hgrid, canopy_layer,                                                               &
+         & t_cf('Absorbed PAR per canopy layer (LAI area).', '', ''),                      &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+         & prefix, suffix,                                                           &
+         & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+   
+       CALL jsb_add_var( mem, 'apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc, &
+         & hgrid, canopy_layer,                                                                             &
+         & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''),     &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
+         & prefix, suffix,                                                           &
+         & lrestart=.FALSE., initval_r=0.0_wp )
+   
+       CALL jsb_add_var( mem, 'apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg, &
+         & hgrid, canopy_layer,                                                                               &
+         & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''),        &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
+         & prefix, suffix,                                                           &
+         & lrestart=.FALSE., initval_r=0.0_wp )
+   
+       CALL jsb_add_var( mem, 'apar_nacc', mem%apar_nacc, &
+         & hgrid, canopy_layer,                                                                             &
+         & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''),     &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
+         & prefix, suffix,                                                           &
+         & lrestart=.FALSE., initval_r=0.0_wp )
 
     END IF
 
