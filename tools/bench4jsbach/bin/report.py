@@ -390,10 +390,10 @@ table below. You may find detailed information on each method following the appr
         
     def __repr__ ( self ):
         super ( Report, self ).__repr__ ()
-        print "Report.__repr__:"
-        #print "Superclass Report object: diagnostic fields = ", print_item_or_list_rec ( self.diagnostic_fields, 0 )
+        rep =  """\n\nSuperclass object {} ()\n\n""".\
+              format ( Report.__name__ )
                 
-        return ""
+        return rep
 
 if __name__ == '__main__':
 

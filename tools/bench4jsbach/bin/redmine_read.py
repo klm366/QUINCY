@@ -8,24 +8,42 @@ redmine_user                  = 'deike.kleberg'
 redmine_key                   = '676af888885116cd94e9c36cd0a703826aa706e8'
 redmine_project               = 'jsbach-bench'
 redmine_wikipage              = 'Bench4jsbach_simulations'
-                          
-table_starttoken              = '<notextile></notextile>\r\n\r\n'
-table_endtoken                = '\r\n\r\n<notextile></notextile>'
+
+roles                         = [ "ref", "can" ]
+ref_table_starttoken          = '\n<notextile></notextile>\r\n\r\n'
+ref_table_endtoken            = '\r\n\r\n<notextile></notextile>\r\n'
+can_table_starttoken          = '\n<notextile></notextile><notextile></notextile>\r\n\r\n'
+can_table_endtoken            = '\r\n\r\n<notextile></notextile><notextile></notextile>'
 
 column_header_simulation_name = 'simulation_name'
 column_header_data_storage    = 'data_storage'
 
-this_key                      = 'vga0188'
+this_key                      = 'vga0187'
+this_role                     = 'can'
 
 
-class Reference_experiment_description ( object ):
+class Wikitable_experiment_description ( object ):
 
-    def __init__ ( self, experiment_key ):
-        self.__dict__.update ( self.redmine_wiki_table_read ( experiment_key ))
+    def __init__ ( self, redmine_url, redmine_user, redmine_key,
+                   redmine_project, redmine_wikipage,
+                   experiment_role, experiment_key ):
+        self.__dict__.update ( self.redmine_wiki_table_read ( redmine_url,
+                                                              redmine_user,
+                                                              redmine_key,
+                                                              redmine_project,
+                                                              redmine_wikipage,
+                                                              experiment_role,
+                                                              experiment_key ))
 
 
-    def redmine_wiki_table_read ( self, experiment_key ):
-        
+    def redmine_wiki_table_read ( self, redmine_url, redmine_user,
+                                  redmine_key, redmine_project, redmine_wikipage,
+                                  experiment_role, experiment_key ):
+
+        assert experiment_role in roles, "No role for experiment given."
+        table_starttoken = ref_table_starttoken if experiment_role == "ref" else can_table_starttoken
+        table_endtoken = ref_table_endtoken if experiment_role == "ref" else can_table_endtoken
+
         redmine   = Redmine ( redmine_url, username = redmine_user,
                               key = redmine_key )
         project   = redmine.project.get ( redmine_project )
@@ -81,12 +99,15 @@ class Reference_experiment_description ( object ):
 if __name__ == '__main__':
 
     name = this_key
-
-    red = Reference_experiment_description ( name )
+    role = this_role
+    
+    red = Wikitable_experiment_description ( redmine_url, redmine_user, redmine_key,
+                   redmine_project, redmine_wikipage, role, name )
     assert red.__dict__, 'No experiment "%s" found.' % name
 
     print '\nRedmine reference experiment description:  \n%s\n' % \
           ''.join('{!s} = {!r},\n'.\
                   format ( key, val) for ( key, val ) in red.__dict__.iteritems ())
+    print red.data_storage
     print 'Data directory of', this_key, 'exists: ',  red.check_for_local_data ()
     

@@ -8,7 +8,7 @@ from sets import Set
 import subprocess
 
 from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
-from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool
+from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool,print_item_or_list_rec
 from diagnostics import Diagnostics, find_files
 from report import Report
 
@@ -204,14 +204,19 @@ class Bench_Object ( Diagnostics, Report ):
             n_refs += 1 if isref else 0
             canno = n_cans - 1 if iscan else None
             refno = n_refs - 1 if isref else None
-            kwargs = { 'B4J_name'  : name,
-                       'B4J_etype' : etype,
-                       'B4J_path'  : path,
-                       'B4J_iscan' : iscan,
-                       'B4J_isref' : isref,
-                       'B4J_canno' : canno,
-                       'B4J_refno' : refno,
-                       'B4J_bench' : self }
+            kwargs = { 'B4J_name'         : name,
+                       'B4J_etype'        : etype,
+                       'B4J_path'         : path,
+                       'B4J_iscan'        : iscan,
+                       'B4J_isref'        : isref,
+                       'B4J_canno'        : canno,
+                       'B4J_refno'        : refno,
+                       'B4J_bench'        : self,
+                       'redmine_url'      : self.config [ 'redmine_url' ],
+                       'redmine_user'     : self.config [ 'redmine_user' ],
+                       'redmine_key'      : self.config [ 'redmine_key' ],
+                       'redmine_project'  : self.config [ 'redmine_project' ],
+                       'redmine_wikipage' : self.config [ 'redmine_wikipage' ]}
             if etype == "CMIP5":
                 varfile = find_files ( "*%s*%s*%s" % \
                                         ( VARNAME_4_CMIP5_METADATA, name, '.nc' ),
@@ -231,9 +236,6 @@ class Bench_Object ( Diagnostics, Report ):
         self.init_diagnostics ()
         
         self.logger.debug ( "Exiting." )
-
-        print self.experiments
-        sys.exit (0)
 
         
     def init_diagnostics ( self ):
@@ -374,12 +376,9 @@ configuration file '%s' have to accord with the corresponding section name
 
         return filepath
             
-
-        
-
         
     def __repr__ ( self ):
-        repr =  """\n\n{} ( bench_name = {}, 
+        rep =  """\n\n{} ( bench_name = {}, 
 \tbench_path        = {},
 \tconfigs_path       = {},
 \tdata_path         = {}, 
@@ -387,7 +386,7 @@ configuration file '%s' have to accord with the corresponding section name
 \treport_path       = {}, 
 \tbench_configs_path = {}, 
 \tconfig            = {}, 
-\texperiments       = {}\n\n""".format ( self.__class__.__name__,
+\texperiments       = {})\n\n""".format ( self.__class__.__name__,
                 print_none ( self.bench_name        ),
                 print_none ( self.bench_path        ),
                 print_none ( self.configs_path       ),
@@ -395,13 +394,13 @@ configuration file '%s' have to accord with the corresponding section name
                 print_none ( self.graphics_path      ),
                 print_none ( self.report_path       ),
                 print_none ( self.bench_configs_path ),
-                print_none ( self.config            ),
-                print_none ( self.experiments ))#.replace ( "\n", "" )
-
-    
-        super ( Bench_Object, self ).__repr__ ()
-
-        return ""
+                print_item_or_list_rec ( self.config, 28 ),
+                print_none ( self.experiments ))
+        
+        rep += Diagnostics.__repr__ ( self )
+        rep += Report.__repr__ ( self )
+        
+        return rep
         
     
 

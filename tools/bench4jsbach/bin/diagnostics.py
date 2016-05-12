@@ -388,3 +388,9 @@ class Diagnostics ( object ):
         self.logger.debug ( "Exiting." )
         return 0
         
+    def __repr__ ( self ):
+        super ( Diagnostics, self ).__repr__ ()
+        rep =  """\n\nSuperclass object {} ()\n\n""".\
+              format ( Diagnostics.__name__ )
+        
+        return rep

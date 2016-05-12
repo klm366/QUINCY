@@ -1,9 +1,10 @@
 #! /usr/bin/env python
 
-import os
+import os, sys
 from netCDF4 import Dataset
 import fnmatch, re , shutil
 
+from redmine_read import Wikitable_experiment_description
 from util import print_none
 
 
@@ -62,8 +63,25 @@ class Experiment ( object ):
         self.B4J_refno    = kwargs.get ( "B4J_refno", None )
         self.B4J_index    = {}
 
-        if not self.path:
-            
+        if not self.B4J_path:
+            try:
+                redmine_row =  Wikitable_experiment_description (
+                    kwargs.get ( 'redmine_url' ),
+                    kwargs.get ( 'redmine_user' ),
+                    kwargs.get ( 'redmine_key' ),
+                    kwargs.get ( 'redmine_project' ),
+                    kwargs.get ( 'redmine_wikipage' ),
+                    "can" if self.B4J_iscan else "ref",
+                    self.B4J_name )
+            except:
+                print "No experiment description found for %s." % self.B4J_name
+                sys.exit ( 1 )
+            # print '\nRedmine reference experiment description:  \n%s\n' % \
+            #       ''.join('{!s} = {!r},\n'.\
+            #               format ( key, val) for ( key, val ) in redmine_row.__dict__.iteritems ())
+
+            self.B4J_path = redmine_row.data_storage
+
 
     def fetch_outdata ( self, arg1, arg2 ):
         print "hello from superclass experiments method fetch outdata."
@@ -164,7 +182,7 @@ class CMIP5_Experiment ( Experiment ):
 class MPIESM1_Experiment ( Experiment ):
 
     def __init__ ( self, **kwargs ):
-        print "###################### hello ####################"
+        print "###################### go on here  ####################"
         Experiment.__init__ ( self, **kwargs )
         #super(Experiment, self).__init__(**kwargs)
         print "MPIESM1_Experiment attributes:"
