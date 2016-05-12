@@ -9,7 +9,7 @@ import subprocess
 
 from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
 from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool
-from diagnostics import Diagnostics
+from diagnostics import Diagnostics, find_files
 from report import Report
 
 #from datetime import datetime
@@ -193,12 +193,11 @@ class Bench_Object ( Diagnostics, Report ):
                               self.land_sea_mask )
 
         es = self.config [ "experiments" ]
-        from analysis import find_files
         n_refs = n_cans = 0
         for en, attr in es.iteritems ():
             name = en
             etype = attr.get ( "type", "CMIP5" )
-            path = attr [ "path" ]
+            path = attr.get ( "path", None )
             iscan = attr.get ( 'iscan', True )
             isref = attr.get ( 'isref', False )
             n_cans += 1 if iscan else 0
@@ -233,6 +232,8 @@ class Bench_Object ( Diagnostics, Report ):
         
         self.logger.debug ( "Exiting." )
 
+        print self.experiments
+        sys.exit (0)
 
         
     def init_diagnostics ( self ):
@@ -260,7 +261,7 @@ class Bench_Object ( Diagnostics, Report ):
         for f_n, f_attr in f_s.iteritems ():
             
             if f_attr and isinstance ( f_attr, configobj.Section ):
-                field_config_fn = f_attr [ "config_fname" ]
+                field_config_fn = f_attr [ "config_filename" ]
                 field_configs_path = self.get_b4j_path ( field_config_fn, "configs" )
                 
                 try:

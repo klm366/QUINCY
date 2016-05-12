@@ -61,7 +61,9 @@ class Experiment ( object ):
         self.B4J_canno    = kwargs.get ( "B4J_canno", None )
         self.B4J_refno    = kwargs.get ( "B4J_refno", None )
         self.B4J_index    = {}
-        
+
+        if not self.path:
+            
 
     def fetch_outdata ( self, arg1, arg2 ):
         print "hello from superclass experiments method fetch outdata."
