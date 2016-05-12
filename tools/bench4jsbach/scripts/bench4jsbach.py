@@ -51,7 +51,7 @@ else:
     
     print "******************************************"
     print "* BENCH4JSBACH: "
-    print "* Initialized Bench_Object. Defining Analyses."
+    print "* Initialized Bench_Object. Defining Diagnostics."
     print "* Reading configuration file '%s'." %  sys.argv [ 1 ]
     print "******************************************"
 

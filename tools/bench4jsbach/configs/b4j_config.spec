@@ -1,5 +1,10 @@
 bench_name=string()
 author=string()
+institute=string()
+department=string()
+git_repository=string()
+git_branch=string()
+git_sha=string()
 reporting=boolean()
 land_sea_mask=string()
 
@@ -7,10 +12,10 @@ land_sea_mask=string()
 [[__many__]]
 name=string()
 type=option('CMIP5','MPIESM1')
-path=string()
+path=string(default=None)
 iscan=boolean()
 isref=boolean()
 
 [fields]
 [[__many__]]
-config_fname=string()
+config_filename=string()

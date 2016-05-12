@@ -132,13 +132,13 @@ def get_largest_common_yearlist ( filelist ):
     return range ( startyear, endyear + 1 ) if startyear <= endyear else []
 
 
-class Analysis ( object ):
+class Diagnostics ( object ):
     # TODO: take varname out as it is already in path
     path_template = """%(path)s/%(classification)s_%(expname)s_%(startdate)s-%(finaldate)s.%(suffix)s"""
 
 
     def __init__ ( self, **kwargs ):
-        super ( Analysis, self ).__init__()
+        super ( Diagnostics, self ).__init__()
         try:
             if self.logger: pass
         except:

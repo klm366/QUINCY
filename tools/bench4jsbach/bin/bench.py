@@ -5,10 +5,11 @@ import copy
 import configobj
 from validate import Validator
 from sets import Set
+import subprocess
 
 from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
 from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool
-from analysis import Analysis
+from diagnostics import Diagnostics
 from report import Report
 
 
@@ -27,10 +28,28 @@ b4j_configspec_fn          = os.path.join ( bench4jsbach_configs, "b4j_config.sp
 b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configs, "b4j_field_config.spec" )
 work_base                  = os.path.join ( bench4jsbach_base, "work" )
 bench_dirnames             = [ "scripts", "configs", "data", "graphics", "report", "logging" ]
+
     
+def get_git_origin ():
+    p = subprocess.Popen ([ "git", "remote", "-v" ], stdout=subprocess.PIPE )
+    out, err = p.communicate()
+    return out.strip() if not err else err.strip()
+
+    
+def get_git_branch ():
+    p = subprocess.Popen ([ "git", "branch" ], stdout=subprocess.PIPE )
+    out, err = p.communicate()
+    strl=out.split('\n')
+    return [ s.strip ( ' *' ) for s in strl if '*' in s ][ 0 ]
+
+    
+def get_git_sha ():
+    p = subprocess.Popen ([ "git", "rev-parse", "HEAD" ], stdout=subprocess.PIPE )
+    out, err = p.communicate()
+    return out.strip() if not err else err.strip()
 
 
-class Bench_Object ( Analysis, Report ):
+class Bench_Object ( Diagnostics, Report ):
     bench_name        = None
     bench_path        = None
     bench_configs_path = None
@@ -275,6 +294,9 @@ configuration file '%s' have to accord with the corresponding section name
         config_contents = template_contents % { '<BENCH_NAME>': self.bench_name,
                                                 '<BENCH_CONFIGSPEC_FNAME>': b4j_configspec_fn,
                                                 '<AUTHOR_NAME>': getpass.getuser (),
+                                                '<GIT_ORIGIN>': get_git_origin (),
+                                                '<GIT_BRANCH>': get_git_branch (),
+                                                '<GIT_SHA>': get_git_sha (),
                                                 '<TODAY>': str ( datetime.date.today ()),
                                                 '<FIELDS_CONFIGSPEC_FAME>' : b4j_field_configspec_fn }
         with open ( self.bench_configs_path, "w" ) as f:
