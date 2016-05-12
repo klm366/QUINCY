@@ -32,12 +32,21 @@ work_base                  = os.path.join ( bench4jsbach_base, "work" )
 bench_dirnames             = [ "scripts", "configs", "data", "graphics", "report", "logging" ]
 
 
-    
 def get_git_origin ():
     p = subprocess.Popen ([ "git", "remote", "-v" ], stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE )
     out, err = p.communicate()
-    return out.strip() if not err else err.strip()
+
+    if not err:
+        strl=out.split('\n')
+        strm=[ s.split('\t') for s in strl if '\t' in s]
+        strdsl=[[l[0]]+l[1].split() for l in strm]
+        ret=[l[0]+l[2]+':'+l[1] for l in strdsl]
+        ret=','.join(s for s in ret) + ','
+    else:
+        ret = "error,"
+
+    return ret
 
     
 def get_git_branch ():
@@ -322,7 +331,7 @@ configuration file '%s' have to accord with the corresponding section name
         config_contents = template_contents % { '<BENCH_NAME>': self.bench_name,
                                                 '<BENCH_CONFIGSPEC_FNAME>': b4j_configspec_fn,
                                                 '<AUTHOR_NAME>': getpass.getuser (),
-                                                '<GIT_ORIGIN>': get_git_origin (),
+                                                '<GIT_ORIGIN>': '%s' % get_git_origin (),
                                                 '<GIT_BRANCH>': get_git_branch (),
                                                 '<GIT_SHA>': get_git_sha (),
                                                 '<GIT_STATUS>': get_git_status (),
