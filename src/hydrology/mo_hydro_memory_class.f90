@@ -90,8 +90,6 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & depth_lice,       & !< Thickness of ice on lake                                                 [m]
-      & fract_lice,       & !< Fraction of lake ice                                                     []
       & fract_snow_lice,  & !< Fraction of swow on lake ice                                             []
       & w_snow_lice         !< Water content of snow on lake ice                                        [m water equivalent]
 
@@ -411,34 +409,19 @@ CONTAINS
 
     ! Additional variables for LAKE lct
     IF (      One_of(LAKE_TYPE, lct_ids(:)) > 0 &
-      & .AND. .NOT. ASSOCIATED(mem%depth_lice%ptr)) THEN
-
-      CALL jsb_add_var( mem, 'depth_lice', mem%depth_lice,                             &
-        & hgrid, surface,                                                              &
-        & t_cf('ice_thickness', 'm', 'thickness of ice on lake'),                      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp )
-
-      ! Fraction of ice on lake, rel. to lake fraction
-      CALL jsb_add_var( mem, 'fract_lice', mem%fract_lice,                             &
-        & hgrid, surface,                                                              &
-        & t_cf('fract_lice', '', 'fraction of ice on lake'),                           &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp )
+      & .AND. .NOT. ASSOCIATED(mem%fract_snow_lice%ptr)) THEN
 
       !Fraction of snow on lake ice, rel. to ice fraction
       CALL jsb_add_var( mem, 'fract_snow_lice', mem%fract_snow_lice, &
         & hgrid, surface,                                                          &
-        & t_cf('fraction of snow on lake ice', '-', ''),                    &
+        & t_cf('fract_snow_lice', '-', 'fraction of snow on lake ice'),                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'w_snow_lice', mem%w_snow_lice,  &
         & hgrid, surface,                                                           &
-        & t_cf('Water content of snow reservoir on lake ice', 'm', ''),     &
+        & t_cf('w_snow_lice', 'm water equivalent', 'Water content of snow reservoir on lake ice'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )

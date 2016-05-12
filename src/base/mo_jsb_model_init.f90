@@ -158,7 +158,7 @@ CONTAINS
     USE mo_soil_init,           ONLY: soil_init
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_veg_init,            ONLY: veg_init_ic, veg_init_bc
-    USE mo_rad_init,      ONLY: rad_init
+    USE mo_rad_init,            ONLY: rad_init
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
@@ -195,7 +195,10 @@ CONTAINS
 
     ! Temporary for testing ... should be in separate subroutine
     CALL model%Queue_task(RAD,    "radiation_surface")
+    !CALL model%Queue_task(HYDRO, "snow_and_skin_fraction")
     CALL model%Queue_task(SEB,    "surface_energy")
+    CALL model%Queue_task(SEB,   "surface_fluxes")
+    CALL model%Queue_task(HYDRO, "snow_ice_hydrology")
     CALL model%Queue_task(TURB,   "surface_roughness")
     CALL model%Queue_task(ASSIMI, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited 
                                                                   ! and assimilation_waterunlimited

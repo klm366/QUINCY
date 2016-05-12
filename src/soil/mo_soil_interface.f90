@@ -214,10 +214,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_sl)     ! OUT
     dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_fc_sl)  ! OUT
     dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl) ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water) ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)    ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    evapotrans)    ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    trans)         ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    evapopot)      ! OUT

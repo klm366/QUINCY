@@ -38,7 +38,7 @@ MODULE mo_seb_land
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: update_surface_energy_land, update_asselin_land
+  PUBLIC :: update_surface_energy_land, update_asselin_land, update_surface_fluxes_land
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_seb_land'
 
@@ -350,6 +350,119 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_asselin_land
+
+  SUBROUTINE update_surface_fluxes_land(tile, options)
+
+    USE mo_phy_schemes,            ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_jsb_physical_constants, ONLY: alv, als
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Local variables
+    !
+    dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(ATM2LAND)
+
+    ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: qsat_star
+    dsl4jsb_Real2D_onChunk :: s_star
+    dsl4jsb_Real2D_onChunk :: t_acoef
+    dsl4jsb_Real2D_onChunk :: t_bcoef
+    dsl4jsb_Real2D_onChunk :: q_acoef
+    dsl4jsb_Real2D_onChunk :: q_bcoef
+    dsl4jsb_Real2D_onChunk :: fact_qsat_srf
+    dsl4jsb_Real2D_onChunk :: fact_qsat_trans_srf
+    dsl4jsb_Real2D_onChunk :: fact_q_air
+    dsl4jsb_Real2D_onChunk :: drag_srf
+    dsl4jsb_Real2D_onChunk :: latent_hflx
+    dsl4jsb_Real2D_onChunk :: sensible_hflx
+    dsl4jsb_Real2D_onChunk :: evapopot
+    dsl4jsb_Real2D_onChunk :: evapotrans
+    dsl4jsb_Real2D_onChunk :: trans
+    dsl4jsb_Real2D_onChunk :: fract_snow
+
+    ! Locally allocated vectors
+    !
+    REAL(wp) ::                &
+      & s_air          (options%nc),   &  !< Dry static energy at lowest atmospheric level
+      & q_air          (options%nc),   &  !< Humidity at lowest atmospheric level
+      & q_air_eff      (options%nc),   &  !< Effective humidity at lowest atmospheric level
+      & qsat_srf_eff   (options%nc),   &  !< Effective surface saturation specific humidity
+      heat_tcoef       (options%nc)       !< Heat transfer coefficient (rho*C_h*|v|)
+
+    INTEGER  :: iblk, ics, ice, nc
+    REAL(wp) :: steplen
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes_land'
+
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    steplen = options%steplen
+
+    IF (.NOT. tile%Is_process_active(SEB)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface fluxes')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(ATM2LAND)
+
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)      ! IN
+
+    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_star)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      s_star)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      fact_q_air)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      fact_qsat_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      fact_qsat_trans_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      sensible_hflx) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      latent_hflx)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,      evapotrans)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,      trans)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,      evapopot)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,      fract_snow)    ! OUT
+
+    ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
+    !
+    s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
+    q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:)
+
+    ! Transfer coefficient
+    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+
+    ! Compute effective air moisture and surface saturation humidity
+    q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
+                              & SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
+    qsat_srf_eff(:) = q_effective(qsat_star(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
+
+    ! Compute moisture fluxes
+    !
+    evapotrans(:) = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:))        ! Evapotranspiratin
+    evapopot  (:) = heat_tcoef(:) * (q_air    (:) - qsat_star    (:))       ! Potential evaporation
+    trans     (:) = fact_qsat_trans_srf(:) * evapopot(:)                    ! Transpiration
+
+    ! Compute sensible heat flux
+    !
+    sensible_hflx(:) = heat_tcoef(:) * (s_air(:) - s_star(:))
+
+    ! Compute latent heat flux
+    !
+    latent_hflx(:) = alv * evapotrans(:) + (als - alv) * fract_snow(:) * evapopot(:)
+
+  END SUBROUTINE update_surface_fluxes_land
 
 #endif
 END MODULE mo_seb_land

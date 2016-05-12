@@ -51,6 +51,7 @@ CONTAINS
 
     dsl4jsb_Def_config(SEB)
     dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_memory(ATM2LAND)
     dsl4jsb_Def_memory(RAD)
     dsl4jsb_Def_memory(HYDRO)
 
@@ -60,19 +61,26 @@ CONTAINS
       & t_wtr, &
       & t_ice, &
       & heat_cap, &
-      & latent_hflx, &
-      & sensible_hflx, &
-      & forc_hflx, &
+      & snow, &
+      & latent_hflx_wtr, &
+      & sensible_hflx_wtr, &
+      & latent_hflx_ice, &
+      & sensible_hflx_ice, &
+      & hflx_form_ice, &
+      & hflx_cond_ice, &
+      & hflx_melt_ice, &
+      & hflx_melt_snow, &
       & rad_srf_net, &
       & fract_lice, &
-      & depth_lice
+      & depth_lice, &
+      & fract_snow_lice, &
+      & w_snow_lice
 
     ! Local variables
     REAL(wp) :: &
       hcap_wtr(options%nc), &
       hcap_ice(options%nc), &
       t_freeze(options%nc), &
-      hflx_ice_melting(options%nc), &
       zero(options%nc)
     LOGICAL :: &
       l_ice_formation(options%nc), &
@@ -109,23 +117,33 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(ATM2LAND)
     dsl4jsb_Get_memory(RAD)
     dsl4jsb_Get_memory(HYDRO)
 
-    dsl4jsb_Get_var2D_onChunk(SEB, t)         ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, t_wtr)     ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, t_ice)     ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, heat_cap)     ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, latent_hflx)         ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, sensible_hflx)         ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, forc_hflx)         ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO, fract_lice) ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO, depth_lice) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, t)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, t_wtr)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, t_ice)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, heat_cap)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, hflx_form_ice) ! inout
+    dsl4jsb_Get_var2D_onChunk(SEB, hflx_cond_ice)
+    dsl4jsb_Get_var2D_onChunk(SEB, hflx_melt_ice)
+    dsl4jsb_Get_var2D_onChunk(SEB, hflx_melt_snow)
 
-    dsl4jsb_Get_var2D_onChunk(RAD, rad_srf_net)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, snow)               ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, latent_hflx_wtr)    ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, sensible_hflx_wtr)  ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, latent_hflx_ice)    ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, sensible_hflx_ice)  ! in
+
+    dsl4jsb_Get_var2D_onChunk(SEB, fract_lice) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, depth_lice) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_lice)    ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO, w_snow_lice) ! OUT
+
+    dsl4jsb_Get_var2D_onChunk(RAD, rad_srf_net)         ! in
 
     zero            (:) = 0._wp
-    hflx_ice_melting(:) = 0._wp
     hcap_wtr        (:) = 0._wp
     hcap_ice        (:) = 0._wp
     l_ice_formation (:) = .FALSE.
@@ -134,11 +152,12 @@ CONTAINS
     ! Calculate new water temperature and residual heat flux for ice formation over open water!
     CALL calc_lake_wtr_temp( &
       & t_wtr(:),                                       & !< inout; Surface temperature over open water
-      & rad_srf_net(:)+latent_hflx(:)+sensible_hflx(:), & !< in;    Sum of all radiative and turbulent surface heat fluxes
-      & forc_hflx(:),                                   & !< inout; Residual heat flux from ice formation (realized or unrealized)
+      & rad_srf_net(:) +                                &
+      &   latent_hflx_wtr(:)+sensible_hflx_wtr(:),      & !< in;    Sum of all radiative and turbulent surface heat fluxes
+      & hflx_form_ice(:),                               & !< inout; Residual heat flux for ice formation (realized or unrealized)
       & hcap_wtr(:),                                    & !< inout; Heat capacity of lake over open water
-      & l_ice_formation(:),                             & !< inout; Indicator for ice formation
-      & l_ice_melting(:),                               & !< in;    Indicator for ice melting = .FALSE.
+      & l_ice_formation(:),                             & !< out;   Indicator for ice formation
+      & l_ice_melting(:),                               & !< inout; Indicator for ice melting = .FALSE.
       & fract_lice(:) > 0.5_wp,                         & !< in;    Indicator for ice cover
       & dtime,                                          & !< in;    Time step
       & ml_depth,                                       & !< in;    Mixed-layer depth
@@ -148,16 +167,27 @@ CONTAINS
       CALL finish(TRIM(routine),'hcap_wtr can"t be zero')
     END IF
 
-    t_ice(:) = tmelt
+    ! Calculate new ice thickness
+    ! Tendency = freezing + conductive heat flux - ice melting + sublimation/deposition
+    CALL calc_lice_thickness(                           &
+      & depth_lice(:),                                  & !< inout; Ice thickness [m]
+      & fract_lice(:),                                  & !< inout; Indicator for ice cover
+      & hflx_form_ice(:),                               & !< inout; Heat flux for (complete) ice formation (l_ice_formation = T)
+      & latent_hflx_ice(:),                             & !< in;    Latent heat flux for ice
+      & hflx_cond_ice(:),                               & !< in;    Conductive heat flux for ice
+      & hflx_melt_ice(:),                               & !< inout; Heat flux from unrealized or complete ice melting
+      & l_ice_formation(:),                             & !< in;    Indicator for ice formation
+      & l_ice_melting(:),                               & !< inout; Indicator for ice melting
+      & fract_snow_lice(:),                             & !< in;    Fraction of snow on ice
+      & min_ice_depth,                                  & !< in;    Mininum ice thickness
+      & dtime                                           & !< in;    Time step
+      & )
 
-    ! Calculate new ice depth and residual heat flux from melting over ice
-
-    
     ! Calculate new water temperature for the case of complete ice melting
     CALL calc_lake_wtr_temp( &
       & t_wtr(:),                                       & !< inout; Surface temperature over open water
       & zero(:),                                        & !< in;    Sum of radiative and turbulent surface heat fluxes (not used)
-      & hflx_ice_melting(:),                            & !< inout; Residual heat flux from unrealized ice melting (not changed)
+      & hflx_melt_ice(:),                               & !< inout; Residual heat flux from unrealized ice melting
       & hcap_wtr(:),                                    & !< inout; Heat capacity of lake over open water (not changed)
       & l_ice_formation(:),                             & !< inout; Indicator for ice formation (not changed)
       & l_ice_melting(:),                               & !< in;    Indicator for ice melting = .TRUE.
@@ -165,6 +195,23 @@ CONTAINS
       & dtime,                                          & !< in;    Time step
       & ml_depth,                                       & !< in;    Mixed-layer depth
       & min_ice_depth)                                    !< in;    Minimum ice thickness
+
+    ! Calculate new ice temperature and heat fluxes from melting of snow and ice
+    CALL calc_lake_ice_temp( &
+      & t_ice(:), &
+      & hcap_ice, &
+      & hflx_cond_ice, &
+      & hflx_melt_snow, &
+      & hflx_melt_ice, &
+      & rad_srf_net(:) +                                &
+      &   latent_hflx_ice(:)+sensible_hflx_ice(:),      & !< in;    Sum of all radiative and turbulent surface heat fluxes
+      & latent_hflx_ice(:),                             & !< in;
+      & snow(:),                                        & !< in; Snow fall
+      & depth_lice, &
+      & w_snow_lice, &
+      & fract_snow_lice, &
+      & min_ice_depth, &
+      & dtime)
 
     t       (:) = (1._wp - fract_lice(:)) * t_wtr   (:) + fract_lice(:) * t_ice   (:)
     heat_cap(:) = (1._wp - fract_lice(:)) * hcap_wtr(:) + fract_lice(:) * hcap_ice(:)
@@ -179,25 +226,34 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, clw, rhoi, alf
 
-    REAL(wp), INTENT(inout) :: t_wtr
-    REAL(wp), INTENT(in)    :: hflx
-    REAL(wp), INTENT(inout) :: hflx_resid
-    REAL(wp), INTENT(inout) :: hcap
-    LOGICAL,  INTENT(inout) :: l_ice_formation
-    LOGICAL,  INTENT(in)    :: l_ice_melting
-    LOGICAL,  INTENT(in)    :: l_ice
-    REAL(wp), INTENT(in)    :: dtime
-    REAL(wp), INTENT(in)    :: ml_depth
-    REAL(wp), INTENT(in)    :: min_ice_depth
+    REAL(wp), INTENT(inout) :: t_wtr            !< Surface temperature over open water
+    REAL(wp), INTENT(in)    :: hflx             !< Sum of all radiative and turbulent surface heat fluxes
+    REAL(wp), INTENT(inout) :: hflx_resid       !< Heat flux for ice formation or melting
+                                                !! l_ice_melting = .TRUE.  : heat flux from complete ice melting (input)
+                                                !!                           zero on output
+                                                !!               = .FALSE. : heat flux from unrealized ice formation from
+                                                !!                           previous time step (input),
+                                                !!                           heat flux from realized or unrealized ice formation
+                                                !!                           in this time step (output)
+    REAL(wp), INTENT(inout) :: hcap             !< Heat capacity of lake over open water
+    LOGICAL,  INTENT(inout) :: l_ice_formation  !< Indicator for ice formation
+    LOGICAL,  INTENT(inout) :: l_ice_melting    !< Indicator for (complete) ice melting
+    LOGICAL,  INTENT(in)    :: l_ice            !< Indicator for ice cover
+    REAL(wp), INTENT(in)    :: dtime            !< Time step
+    REAL(wp), INTENT(in)    :: ml_depth         !< Mixed-layer depth
+    REAL(wp), INTENT(in)    :: min_ice_depth    !< Mininum ice thickness
 
     REAL(wp) :: &
       & t_star, &
       & t_freeze
 
+    ! Lake tile is either not covered by ice or completely covered.
     IF (l_ice) RETURN
 
     IF (l_ice_melting) THEN
       t_wtr = t_wtr + dtime * hflx_resid / hcap
+      hflx_resid = 0._wp
+      l_ice_melting = .FALSE.
     ELSE
       ! Heat capacity of lake over open water
       ! Note: This is currently constant but in the future, different mixed-layer depths might be used
@@ -227,7 +283,144 @@ CONTAINS
 
   END SUBROUTINE calc_lake_wtr_temp
 
+  ! Calculate new surface water temperature
+  ELEMENTAL PURE SUBROUTINE calc_lake_ice_temp(t_ice, hcap_ice, hflx_cond_ice, hflx_melt_snow, hflx_melt_ice, &
+    &                                          hflx, lhflx, snowfall, hi, hs, fs, hi_min, dtime)
+
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, clw, rhoi, rhos, als, alf, ki, ks, ci, cs
+
+    REAL(wp), INTENT(inout) :: t_ice
+    REAL(wp), INTENT(out)   :: hcap_ice       !< Heat capacity of thin ice surface layer
+    REAL(wp), INTENT(out)   :: hflx_cond_ice
+    REAL(wp), INTENT(out)   :: hflx_melt_snow
+    REAL(wp), INTENT(inout) :: hflx_melt_ice  !< in:  Residual heat flux from unrealized ice melting
+                                              !! out: Heat flux from melting of ice
+    REAL(wp), INTENT(in)    :: hflx           !< Sum of all surface heat fluxes (net radiation + sensible + latent)
+    REAL(wp), INTENT(in)    :: lhflx          !< Latent surface heat flux for ice
+    REAL(wp), INTENT(in)    :: snowfall       !< Snow fall                [kg m-2 s-1]
+    REAL(wp), INTENT(in)    :: hi             !< Ice thickness [m]
+    REAL(wp), INTENT(inout) :: hs             !< Snow depth [m water equivalent]
+    REAL(wp), INTENT(in)    :: fs             !< Fraction of snow on ice
+    REAL(wp), INTENT(in)    :: hi_min
+    REAL(wp), INTENT(in)    :: dtime
+
+    REAL(wp) :: hi_eff     !< Effective ice thickness including snow cover
+    REAL(wp) :: hflx_melt  !< Excess heat available for melting snow and ice
+    REAL(wp) :: delta_hs
+    REAL(wp) :: delta_t_ice
+
+    hcap_ice = rhoi * ci * hi_min + rhoh2o * cs * hs
+
+    hi_eff = hi + (ki / ks) * (rhoh2o / rhos) * hs
+
+    IF (hi < hi_min) THEN
+      t_ice = tmelt
+      hflx_cond_ice = 0._wp
+      hflx_melt_snow = 0._wp
+      hflx_melt_ice = 0._wp
+      hs = 0._wp
+      RETURN
+    END IF
+
+    ! Preliminary snow depth
+    hs = hs + (dtime / rhoh2o) * ( snowfall           & ! Snowfall
+      &                          + fs * lhflx / als   & ! Sublimation (< 0) resp. deposition (> 0)
+      &                          )
+    hs = MAX(hs, 0._wp)
+
+    ! Preliminary ice temperature
+    t_ice = ( hflx + hflx_melt_ice + hcap_ice * t_ice / dtime + ki * tmelt / hi_eff ) / ( hcap_ice / dtime + ki / hi_eff)
+
+    hflx_melt_snow = 0._wp
+    hflx_melt_ice  = 0._wp
+
+    IF (t_ice > tmelt .AND. hs > 0._wp) THEN        ! Melting for snow first
+      ! Excess heat which is available for melting of snow (first) and ice (as soon as snow is  melted away completely)
+      hflx_melt = ( hcap_ice / dtime + ki /hi_eff ) * (t_ice - tmelt)
+      ! Change in snow depth due to melting
+      delta_hs = MIN(hs, dtime * hflx_melt / alf / rhoh2o)             ! positive
+      ! Change in ice temperature resulting from snow melt
+      hflx_melt_snow = delta_hs * rhoh2o *alf / dtime                  ! Heat that was used for melting the snow
+      delta_t_ice = hflx_melt_snow / ( hcap_ice/dtime + ki/hi_eff)     ! positive
+      t_ice = t_ice - delta_t_ice
+      ! Update snow depth, eff. ice thickness and heat capacity of thin ice layer (including snow)
+      hs = hs - delta_hs
+      hi_eff = hi + (ki / ks) * (rhoh2o / rhos) * hs
+      hcap_ice = rhoi * ci * hi_min + rhoh2o * cs * hs
+    END IF
+    IF (t_ice > tmelt) THEN                         ! Melting of ice after complete melting of snow
+      hflx_melt_ice = ( hcap_ice/dtime + ki/hi_eff) * (t_ice - tmelt)
+      t_ice = tmelt
+    END IF
+
+    ! Diagnose conductive heat flux for changing ice thickness in next time step
+    hflx_cond_ice = - ki * (t_ice - tmelt) / hi_eff
+
+  END SUBROUTINE calc_lake_ice_temp
+
   ! Calculation of ice depth and fraction
+  PURE ELEMENTAL SUBROUTINE calc_lice_thickness( &
+    & hi,                                        &
+    & fi,                                        &
+    & hflx_form_ice,                             &
+    & lhflx,                                     &
+    & hflx_cond_ice,                             &
+    & hflx_melt_ice,                             &
+    & l_ice_formation,                           &
+    & l_ice_melting,                             &
+    & fs,                                        &
+    & hi_min,                                    &
+    & dtime                                      &
+    & )
+
+    USE mo_jsb_physical_constants, ONLY: rhoi, alf, als
+
+    REAL(wp), INTENT(inout) :: hi              !< Ice thickness [m]
+    REAL(wp), INTENT(inout) :: fi              !< Ice fraction  []
+    REAL(wp), INTENT(inout) :: hflx_form_ice   !< Residual heat flux from ice formation (complete or unrealized) [W m-2 = J m-2 s-1]
+    REAL(wp), INTENT(in)    :: lhflx           !< Latent heat flux of ice  [W m-2 = J m-2 s-1]
+    REAL(wp), INTENT(in)    :: hflx_cond_ice   !< Conductive heat flux of ice [W m-2 = J m-2 s-1]
+    REAL(wp), INTENT(inout) :: hflx_melt_ice   !< Heat flux from melting of ice [W m-2 = J m-2 s-1]
+                                               !! in:  flux from unrealized ice melting from previous time step
+                                               !! out: flux from unrealized or complete ice melting during this time step
+    LOGICAL,  INTENT(in)    :: l_ice_formation !< Indicator for ice formation
+    LOGICAL,  INTENT(inout) :: l_ice_melting   !< Indicator for complete ice melting
+    REAL(wp), INTENT(in)    :: fs              !< Fraction of snow on ice
+    REAL(wp), INTENT(in)    :: hi_min          !< Minimum ice thickness [m]
+    REAL(wp), INTENT(in)    :: dtime
+
+    IF (l_ice_formation) THEN                              ! Formation of a new slab of ice
+
+      hi = - hflx_form_ice * dtime / (rhoi * alf)
+      fi = 1._wp
+      hflx_form_ice = 0._wp
+
+    ELSE IF (hi >= hi_min) THEN                            ! Ice already present
+
+      hi = hi + (dtime / rhoi) * (   (hflx_cond_ice - hflx_melt_ice) / alf    &
+        &                          + (1._wp - fs) * lhflx / als               &
+        &                        )
+
+      IF (hi >= hi_min) THEN
+        hflx_melt_ice = 0._wp
+        fi = 1._wp
+        l_ice_melting = .FALSE.
+      ELSE IF (hi <= 0._wp) THEN                              ! Complete melting
+        hflx_melt_ice = - rhoi * alf * hi / dtime             ! >= 0
+        hi = 0._wp
+        fi = 0._wp
+        l_ice_melting = .TRUE.
+      ELSE                                                    ! Unrealized melting
+        hflx_melt_ice = rhoi * alf * (hi_min - hi) / dtime    ! > 0
+        hi = hi_min
+        fi = 1._wp
+        l_ice_melting = .FALSE.
+      END IF
+
+    END IF
+
+  END SUBROUTINE calc_lice_thickness
+
   ELEMENTAL PURE SUBROUTINE calc_lake_ice(t_ice, hflx_resid, l_ice_formation, ice_depth, ice_fract, snow_depth, t_wtr, &
     & dtime, min_ice_depth)
 

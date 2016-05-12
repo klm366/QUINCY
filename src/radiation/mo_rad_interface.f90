@@ -23,7 +23,7 @@ MODULE mo_rad_interface
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE, BARE_TYPE, VEG_TYPE
+  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE, BARE_TYPE, VEG_TYPE, Contains_lct
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -173,6 +173,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD,      alb_vis)        ! IN
     dsl4jsb_Get_var2D_onChunk(RAD,      alb_nir)        ! IN
 
+    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
+    END IF
     CALL calc_radiation_surface_net( &
       & swvis_srf_down(:),    & ! input
       & swnir_srf_down(:),    & ! input
@@ -554,14 +556,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD,      alb_nir_mineralsoil)   ! INOUT
     dsl4jsb_Get_var2D_onChunk(RAD,      sky_view_fract)        ! INOUT
     dsl4jsb_Get_var2D_onChunk(RAD,      sky_view_fract_stem)   ! INOUT
-
-    ! All calculations of the albedo should only be performed for the lowest child tile.
-    ! If the tile is NOT the lowest child tile (ANY parent-vegetation-tile) do not calculate the albedo but accumultate it from the child tiles.
-    ! Note, to implement this concept the JSBACH3-concept of the subroutine update_soil_albedo had to be changed
-
-    ! if tile is NOT lowest child tile (ANY parent-vegetation-tile):
-    ! Just accumulate the albedo of its childs
-    ! if tile is a lowest child tile:
 
        ! if tile is lake:
 

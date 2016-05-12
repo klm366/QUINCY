@@ -26,12 +26,16 @@ MODULE mo_physical_constants_iface
     tmelt,           & !< Melting temperature of ice/snow        [K]
 #ifdef __ICON__
     clw,             & !< Specific heat of liquid water          [J/(K kg)]
+    ci,              & !< Heat capacity of ice                   [J/(K kg)]
+    cs,              & !< Specific heat of snow                  [J/(K kg)]
     rhoi,            & !< Density of (sea) ice                   [kg/m3]
     rhos,            & !< Density of snow                        [kg/m3]
     ki,              & !< Heat conductivity of ice               [J/(m s K)]
     ks,              & !< Heat conductivity of snow              [J/(m s K)]
 #else
     clw => cpliq,    & !< Specific heat of liquid water          [J/(K kg)]
+    ci => cpice,     & !< Specific heat of ice                   [J/(K kg)]
+    cs => cpsno,     & !< Specific heat of snow                  [J/(K kg)]
     rhoi => rhoice   & !< Density of (sea) ice                   [kg/m3]
     rhos => rhosno   & !< Density of snow                        [kg/m3]
     ki => alice,     & !< Heat conductivity of ice               [J/(m s K)]

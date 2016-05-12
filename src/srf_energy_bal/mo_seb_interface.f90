@@ -41,11 +41,6 @@ MODULE mo_seb_interface
   !
   ! ================================================================================================================================
   !
-!!$  TYPE, EXTENDS(t_jsb_process) :: t_seb_process
-!!$  CONTAINS
-!!$    PROCEDURE :: Register_tasks => Register_seb_tasks
-!!$  END TYPE t_seb_process
-
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_surface_energy
@@ -65,6 +60,16 @@ MODULE mo_seb_interface
   INTERFACE tsk_asselin_filter
     PROCEDURE Create_task_asselin_filter
   END INTERFACE tsk_asselin_filter
+
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_fluxes
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_surface_fluxes
+    PROCEDURE, NOPASS :: Aggregate => aggregate_surface_fluxes
+  END TYPE tsk_surface_fluxes
+
+  INTERFACE tsk_surface_fluxes
+    PROCEDURE Create_task_surface_fluxes
+  END INTERFACE tsk_surface_fluxes
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_seb_interface'
 
@@ -109,6 +114,25 @@ CONTAINS
   END FUNCTION Create_task_asselin_filter
 
   ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for surface_energy fluxes
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "surface_fluxes"
+  !!
+  FUNCTION Create_task_surface_fluxes(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_surface_fluxes::return_ptr)
+
+    return_ptr%name = 'surface_fluxes'
+    return_ptr%process_id = SEB
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_surface_fluxes
+
+  ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for surface energy process
   !!
   !! @param[in,out] this      Instance of surface energy process class
@@ -121,6 +145,7 @@ CONTAINS
 
     CALL this%Register_task(tsk_surface_energy(model_id))
     CALL this%Register_task(tsk_asselin_filter(model_id))
+    CALL this%Register_task(tsk_surface_fluxes(model_id))
 
   END SUBROUTINE Register_seb_tasks
 
@@ -240,6 +265,61 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_asselin
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation of "update" for task "surface fluxes"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_surface_fluxes(tile, options)
+
+    USE mo_seb_land, ONLY: update_surface_fluxes_land
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes'
+
+    IF (.NOT. tile%Is_process_active(SEB)) RETURN
+
+    model => Get_model(tile%owner_model_id)
+
+    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
+      ! Do nothing
+    ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
+      CALL update_surface_fluxes_land(tile, options)
+    ELSE
+      CALL finish(TRIM(routine), 'Called for invalid lct_type')
+    END IF
+
+  END SUBROUTINE update_surface_fluxes
+
+  SUBROUTINE aggregate_surface_fluxes(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_fluxes'
+
+    INTEGER :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_surface_fluxes
   !
   ! ================================================================================================================================
   !

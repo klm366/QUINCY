@@ -45,7 +45,10 @@ CONTAINS
     & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
     & press_srf, drag_srf,                                         &
     & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
-    & pch, cos_zenith_angle)
+    & pch, cos_zenith_angle,                                       &
+    & latent_hflx_wtr, sensible_hflx_wtr,                          &
+    & latent_hflx_ice, sensible_hflx_ice                           &
+    & )
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -54,7 +57,9 @@ CONTAINS
       & lw_srf_down(:), swvis_srf_down(:), swnir_srf_down(:), swpar_srf_down(:), &
       & press_srf(:), drag_srf(:),                                               &
       & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),                          &
-      & pch(:), cos_zenith_angle(:)
+      & pch(:), cos_zenith_angle(:),                                             &
+      & latent_hflx_wtr(:), sensible_hflx_wtr(:),                                &
+      & latent_hflx_ice(:), sensible_hflx_ice(:)
 
     dsl4jsb_Def_memory(ATM2LAND)
 
@@ -72,34 +77,39 @@ CONTAINS
 
     dsl4jsb_Get_memory(ATM2LAND)
 
-    IF (PRESENT(t_air))            dsl4jsb_var2D_onChunk(ATM2LAND,t_air)            = t_air            (:)
-    IF (PRESENT(q_air))            dsl4jsb_var2D_onChunk(ATM2LAND,q_air)            = q_air            (:)
-    IF (PRESENT(rain))             dsl4jsb_var2D_onChunk(ATM2LAND,rain)             = rain             (:)
-    IF (PRESENT(snow))             dsl4jsb_var2D_onChunk(ATM2LAND,snow)             = snow             (:)
-    IF (PRESENT(wind_air))         dsl4jsb_var2D_onChunk(ATM2LAND,wind_air)         = wind_air         (:)
-    IF (PRESENT(wind_10m))         dsl4jsb_var2D_onChunk(ATM2LAND,wind_10m)         = wind_10m         (:)
-    IF (PRESENT(lw_srf_down))      dsl4jsb_var2D_onChunk(ATM2LAND,lw_srf_down)      = lw_srf_down      (:)
-    IF (PRESENT(swvis_srf_down))   dsl4jsb_var2D_onChunk(ATM2LAND,swvis_srf_down)   = swvis_srf_down   (:)
-    IF (PRESENT(swnir_srf_down))   dsl4jsb_var2D_onChunk(ATM2LAND,swnir_srf_down)   = swnir_srf_down   (:)
-    IF (PRESENT(swpar_srf_down))   dsl4jsb_var2D_onChunk(ATM2LAND,swpar_srf_down)   = swpar_srf_down   (:)
-    IF (PRESENT(press_srf))        dsl4jsb_var2D_onChunk(ATM2LAND,press_srf)        = press_srf        (:)
-    IF (PRESENT(drag_srf))         dsl4jsb_var2D_onChunk(ATM2LAND,drag_srf)         = drag_srf         (:)
-    IF (PRESENT(t_acoef))          dsl4jsb_var2D_onChunk(ATM2LAND,t_acoef)          = t_acoef          (:)
-    IF (PRESENT(t_bcoef))          dsl4jsb_var2D_onChunk(ATM2LAND,t_bcoef)          = t_bcoef          (:)
-    IF (PRESENT(q_acoef))          dsl4jsb_var2D_onChunk(ATM2LAND,q_acoef)          = q_acoef          (:)
-    IF (PRESENT(q_bcoef))          dsl4jsb_var2D_onChunk(ATM2LAND,q_bcoef)          = q_bcoef          (:)
-    IF (PRESENT(pch))              dsl4jsb_var2D_onChunk(ATM2LAND,pch)              = pch              (:)
-    IF (PRESENT(cos_zenith_angle)) dsl4jsb_var2D_onChunk(ATM2LAND,cos_zenith_angle) = cos_zenith_angle (:)
+    IF (PRESENT(t_air))             dsl4jsb_var2D_onChunk(ATM2LAND,t_air)             = t_air             (:)
+    IF (PRESENT(q_air))             dsl4jsb_var2D_onChunk(ATM2LAND,q_air)             = q_air             (:)
+    IF (PRESENT(rain))              dsl4jsb_var2D_onChunk(ATM2LAND,rain)              = rain              (:)
+    IF (PRESENT(snow))              dsl4jsb_var2D_onChunk(ATM2LAND,snow)              = snow              (:)
+    IF (PRESENT(wind_air))          dsl4jsb_var2D_onChunk(ATM2LAND,wind_air)          = wind_air          (:)
+    IF (PRESENT(wind_10m))          dsl4jsb_var2D_onChunk(ATM2LAND,wind_10m)          = wind_10m          (:)
+    IF (PRESENT(lw_srf_down))       dsl4jsb_var2D_onChunk(ATM2LAND,lw_srf_down)       = lw_srf_down       (:)
+    IF (PRESENT(swvis_srf_down))    dsl4jsb_var2D_onChunk(ATM2LAND,swvis_srf_down)    = swvis_srf_down    (:)
+    IF (PRESENT(swnir_srf_down))    dsl4jsb_var2D_onChunk(ATM2LAND,swnir_srf_down)    = swnir_srf_down    (:)
+    IF (PRESENT(swpar_srf_down))    dsl4jsb_var2D_onChunk(ATM2LAND,swpar_srf_down)    = swpar_srf_down    (:)
+    IF (PRESENT(press_srf))         dsl4jsb_var2D_onChunk(ATM2LAND,press_srf)         = press_srf         (:)
+    IF (PRESENT(drag_srf))          dsl4jsb_var2D_onChunk(ATM2LAND,drag_srf)          = drag_srf          (:)
+    IF (PRESENT(t_acoef))           dsl4jsb_var2D_onChunk(ATM2LAND,t_acoef)           = t_acoef           (:)
+    IF (PRESENT(t_bcoef))           dsl4jsb_var2D_onChunk(ATM2LAND,t_bcoef)           = t_bcoef           (:)
+    IF (PRESENT(q_acoef))           dsl4jsb_var2D_onChunk(ATM2LAND,q_acoef)           = q_acoef           (:)
+    IF (PRESENT(q_bcoef))           dsl4jsb_var2D_onChunk(ATM2LAND,q_bcoef)           = q_bcoef           (:)
+    IF (PRESENT(pch))               dsl4jsb_var2D_onChunk(ATM2LAND,pch)               = pch               (:)
+    IF (PRESENT(cos_zenith_angle))  dsl4jsb_var2D_onChunk(ATM2LAND,cos_zenith_angle)  = cos_zenith_angle  (:)
+    IF (PRESENT(latent_hflx_wtr))   dsl4jsb_var2D_onChunk(ATM2LAND,latent_hflx_wtr)   = latent_hflx_wtr   (:)
+    IF (PRESENT(sensible_hflx_wtr)) dsl4jsb_var2D_onChunk(ATM2LAND,sensible_hflx_wtr) = sensible_hflx_wtr (:)
+    IF (PRESENT(latent_hflx_ice))   dsl4jsb_var2D_onChunk(ATM2LAND,latent_hflx_ice)   = latent_hflx_ice   (:)
+    IF (PRESENT(sensible_hflx_ice)) dsl4jsb_var2D_onChunk(ATM2LAND,sensible_hflx_ice) = sensible_hflx_ice (:)
 
   END SUBROUTINE update_atm2land
 
-  SUBROUTINE update_land2atm(tile, options,                             &
-    & t_srf, t_eff_srf, qsat_srf, s_srf,                                &
-    & fact_q_air, fact_qsat_srf,                                        &
-    & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,     &
-    & rough_h_srf, rough_m_srf, tte_corr,                               &
-    & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,               &
-    & t_wtr, t_ice, ice_fract_lake)
+  SUBROUTINE update_land2atm(tile, options,                                          &
+    & t_srf, t_eff_srf, qsat_srf, s_srf,                                             &
+    & fact_q_air, fact_qsat_srf,                                                     &
+    & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,                  &
+    & rough_h_srf, rough_m_srf, tte_corr,                                            &
+    & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
+    & t_wtr, t_ice, ice_fract_lake,                                                  &
+    & alb_vis_dir_wtr, alb_vis_dif_wtr, alb_nir_dir_wtr, alb_nir_dif_wtr, albedo_ice)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -109,7 +119,9 @@ CONTAINS
       & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
       & rough_h_srf(:), rough_m_srf(:), tte_corr(:),                                 &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
-      & t_wtr(:), t_ice(:), ice_fract_lake(:)
+      & t_wtr(:), t_ice(:), ice_fract_lake(:),                                       &
+      & alb_vis_dir_wtr(:), alb_vis_dif_wtr(:), alb_nir_dir_wtr(:),                  &
+      & alb_nir_dif_wtr(:), albedo_ice(:)
 
     dsl4jsb_Def_memory(SEB)
     dsl4jsb_Def_memory(TURB)
@@ -158,10 +170,20 @@ CONTAINS
       IF (PRESENT(t_wtr))           t_wtr(:)            = dsl4jsb_var2D_onChunk(SEB,t_wtr)        ! Temporary
       IF (PRESENT(t_ice))           t_ice(:)            = dsl4jsb_var2D_onChunk(SEB,t_ice)        ! Temporary
       IF (PRESENT(ice_fract_lake))  ice_fract_lake(:)   = 0._wp                                   ! Temporary
+      IF (PRESENT(alb_vis_dir_wtr)) alb_vis_dir_wtr(:)  = dsl4jsb_var2D_onChunk(RAD,alb_vis_dir_wtr)  ! Temporary
+      IF (PRESENT(alb_vis_dif_wtr)) alb_vis_dif_wtr(:)  = dsl4jsb_var2D_onChunk(RAD,alb_vis_dif_wtr)  ! Temporary
+      IF (PRESENT(alb_nir_dir_wtr)) alb_nir_dir_wtr(:)  = dsl4jsb_var2D_onChunk(RAD,alb_nir_dir_wtr)  ! Temporary
+      IF (PRESENT(alb_nir_dif_wtr)) alb_nir_dif_wtr(:)  = dsl4jsb_var2D_onChunk(RAD,alb_nir_dif_wtr)  ! Temporary
+      IF (PRESENT(albedo_ice))      albedo_ice          = dsl4jsb_var2D_onChunk(RAD, albedo_ice)
     ELSE
       IF (PRESENT(t_wtr))           t_wtr(:)            = 0._wp                                   ! Temporary
       IF (PRESENT(t_ice))           t_ice(:)            = 0._wp                                   ! Temporary
       IF (PRESENT(ice_fract_lake))  ice_fract_lake(:)   = 0._wp                                   ! Temporary
+      IF (PRESENT(alb_vis_dir_wtr)) alb_vis_dir_wtr(:)  = 0.07_wp
+      IF (PRESENT(alb_vis_dif_wtr)) alb_vis_dif_wtr(:)  = 0.07_wp
+      IF (PRESENT(alb_nir_dir_wtr)) alb_nir_dir_wtr(:)  = 0.07_wp
+      IF (PRESENT(alb_nir_dif_wtr)) alb_nir_dif_wtr(:)  = 0.07_wp
+      IF (PRESENT(albedo_ice))      albedo_ice(:)       = 0.55_wp
     END IF
 
   END SUBROUTINE update_land2atm

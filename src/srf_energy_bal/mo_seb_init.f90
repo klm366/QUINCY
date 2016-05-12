@@ -23,8 +23,6 @@ MODULE mo_seb_init
   dsl4jsb_Use_processes SEB
   dsl4jsb_Use_config(SEB)
   dsl4jsb_Use_memory(SEB)
-  ! Hack until createMakefile handles cpp includes (TBD)
-  USE mo_seb_memory_class, ONLY: t_seb_memory
 
   IMPLICIT NONE
   PRIVATE

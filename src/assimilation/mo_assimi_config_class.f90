@@ -11,14 +11,14 @@ MODULE mo_assimi_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
-  
+
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
-  ! Module variables 
+  ! Module variables
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_assimi_config
@@ -38,7 +38,7 @@ CONTAINS
   !> Initialize assimi process
   !!
   !! @param[inout]     config     Configuration type of process (t_assimi_config)
-  !!  
+  !!
   SUBROUTINE Init_assimi_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml

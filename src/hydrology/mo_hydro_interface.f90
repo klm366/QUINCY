@@ -164,7 +164,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
-      CALL update_snow_and_ice_hydrology_lake(tile, options)
+      !! Currently done in SEB process
     ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
 !!$      CALL update_snow_and_ice_hydrology_land(tile, options)
     ELSE
@@ -172,52 +172,6 @@ CONTAINS
     END IF
 
   END SUBROUTINE update_snow_and_ice_hydrology
-
-  SUBROUTINE update_snow_and_ice_hydrology_lake(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    TYPE(t_jsb_model), POINTER :: model
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snow_and_ice_hydrology_lake'
-
-    INTEGER :: iblk, ics, ice, nc
-
-    !-----------------------------------------------------------------------
-    ! POINTERS TO VARIABLES IN MEMORY
-    dsl4jsb_Def_memory(HYDRO)
-    dsl4jsb_Def_memory(ATM2LAND)
-
-    ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: snow
-    dsl4jsb_Real2D_onChunk :: snowmelt
-    dsl4jsb_Real2D_onChunk :: depth_lice
-
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
-
-    ! Set pointers
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, snow)               ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    snowmelt)           ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    depth_lice)         ! inout
-
-    ! Calculate new snow cover
-    ! Tendency = snowfall + sublimation - snowmelt
-    !CALL calc_lice_snow_depth(snow(:), snowmelt(:))
-
-    ! Calculate new ice thickness
-    !CALL calc_lice_thickness(depth_lice(:), )
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE update_snow_and_ice_hydrology_lake
 
   SUBROUTINE aggregate_snow_and_ice_hydrology(tile, options)
 
@@ -286,7 +240,7 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO)
     dsl4jsb_Def_memory(VEG)
     dsl4jsb_Def_memory(SOIL)
-    
+
     ! Pointers to variables in memory
     !dsl4jsb_Real2D_onChunk :: glacier
     dsl4jsb_Real2D_onChunk :: lai
@@ -332,6 +286,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(ATM2LAND)
     dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(SOIL)
     dsl4jsb_Get_memory(VEG)
     dsl4jsb_Get_memory(HYDRO)
     dsl4jsb_Get_memory(SOIL) 
@@ -352,10 +307,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_soil)      ! IN
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_lice)      ! IN
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)      ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_soil) ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_can)  ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)       ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_soil)  ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_can)   ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_lice)  ! OUT
@@ -375,13 +330,13 @@ CONTAINS
       & w_skin_can(:),       & ! in
       & w_snow_soil(:),      & ! in
       & w_snow_can(:),       & ! in
-      & w_snow_lice(:),       & ! in
+      & w_snow_lice(:),      & ! in
       & fract_snow_can(:),   & ! inout
       & fract_water_can(:),  & ! out
       & fract_water_soil(:), & ! out
-      & fract_water(:),  & ! out
+      & fract_water(:),      & ! out
       & fract_snow_soil(:),  & ! out
-      & fract_snow(:),   & ! out
+      & fract_snow(:),       & ! out
       & fract_snow_lice(:)  )  ! out
 
   END SUBROUTINE update_snow_and_skin_fraction

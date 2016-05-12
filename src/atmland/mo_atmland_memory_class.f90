@@ -23,28 +23,39 @@ MODULE mo_atmland_memory_class
 
   PUBLIC :: t_atm2land_memory, t_land2atm_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20
+  INTEGER, PARAMETER :: max_no_of_vars = 30
 
   TYPE, EXTENDS(t_jsb_memory) :: t_atm2land_memory
     TYPE(t_jsb_var_real2d) :: &
-      t_air            , &
-      q_air            , &
-      rain             , &
-      snow             , &
-      wind_air         , &
-      wind_10m         , &
-      lw_srf_down      , &
-      swvis_srf_down   , &
-      swnir_srf_down   , &
-      swpar_srf_down   , &
-      press_srf        , &
-      drag_srf         , &
-      t_acoef          , &
-      t_bcoef          , &
-      q_acoef          , &
-      q_bcoef          , &
-      pch              , &
-      cos_zenith_angle
+      t_air              , &
+      q_air              , &
+      rain               , &
+      snow               , &
+      wind_air           , &
+      wind_10m           , &
+      lw_srf_down        , &
+      swvis_srf_down     , &
+      swnir_srf_down     , &
+      swpar_srf_down     , &
+      press_srf          , &
+      drag_srf           , &
+      t_acoef            , &
+      t_bcoef            , &
+      q_acoef            , &
+      q_bcoef            , &
+      pch                , &
+      cos_zenith_angle   , &
+      ! For lakes:
+      lw_srf_wtr_down    , &
+      swvis_srf_wtr_down , &
+      swnir_srf_wtr_down , &
+      lw_srf_ice_down    , &
+      swvis_srf_ice_down , &
+      swnir_srf_ice_down , &
+      latent_hflx_wtr    , &
+      sensible_hflx_wtr  , &
+      latent_hflx_ice    , &
+      sensible_hflx_ice
   CONTAINS
     PROCEDURE :: Init => Init_atm2land_memory
   END TYPE t_atm2land_memory
@@ -220,6 +231,76 @@ CONTAINS
     CALL jsb_add_var( mem, 'cos_zenith_angle', mem%cos_zenith_angle,&
       & hgrid, surface,                                                      &
       & t_cf('cosine_zenith_angle', '', ''),                                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'lw_srf_wtr_down', mem%lw_srf_wtr_down,           &
+      & hgrid, surface,                                                      &
+      & t_cf('downward_longwave_radiation', 'W/m2', ''),                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'swvis_srf_wtr_down', mem%swvis_srf_wtr_down,     &
+      & hgrid, surface,                                                      &
+      & t_cf('downward_visible_shortwave_radiation', 'W/m2', ''),            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'swnir_srf_wtr_down', mem%swnir_srf_wtr_down,     &
+      & hgrid, surface,                                                      &
+      & t_cf('downward_nir_shortwave_radiation', 'W/m2', ''),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'lw_srf_ice_down', mem%lw_srf_ice_down,           &
+      & hgrid, surface,                                                      &
+      & t_cf('downward_longwave_radiation', 'W/m2', ''),                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'swvis_srf_ice_down', mem%swvis_srf_ice_down,     &
+      & hgrid, surface,                                                      &
+      & t_cf('downward_visible_shortwave_radiation', 'W/m2', ''),            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'swnir_srf_ice_down', mem%swnir_srf_ice_down,     &
+      & hgrid, surface,                                                      &
+      & t_cf('downward_nir_shortwave_radiation', 'W/m2', ''),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr,           &
+      & hgrid, surface,                                                      &
+      & t_cf('latent_hflx_wtr', '', 'Latent heat flux over lake water'),     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'sensible_hflx_wtr', mem%sensible_hflx_wtr,       &
+      & hgrid, surface,                                                      &
+      & t_cf('sensible_hflx_wtr', '', 'Sensible heat flux over lake water'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'latent_hflx_ice', mem%latent_hflx_ice,           &
+      & hgrid, surface,                                                      &
+      & t_cf('latent_hflx_ice', '', 'Latent heat flux over lake ice'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'sensible_hflx_ice', mem%sensible_hflx_ice,       &
+      & hgrid, surface,                                                      &
+      & t_cf('sensible_hflx_ice', '', 'Sensible heat flux over lake ice'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )

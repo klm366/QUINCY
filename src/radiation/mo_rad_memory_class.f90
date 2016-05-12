@@ -96,8 +96,13 @@ MODULE mo_rad_memory_class
     !
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & alb_wtr,              & !< Albedo of open (lake) water
-      & alb_ice                 !< Albedo of ice on lake
+      & rad_net_wtr,          & !< Net radiation over lake water
+      & rad_net_ice,          & !< Net radiation over lake ice
+      & alb_vis_dir_wtr,      & !< Albedo of open (lake) water
+      & alb_vis_dif_wtr,      & !< Albedo of open (lake) water
+      & alb_nir_dir_wtr,      & !< Albedo of open (lake) water
+      & alb_nir_dif_wtr,      & !< Albedo of open (lake) water
+      & albedo_ice              !< Albedo of ice on lake
 
   CONTAINS
     PROCEDURE :: Init => Init_rad_memory
@@ -381,21 +386,56 @@ CONTAINS
     END IF
 
     ! Additional variables for lakes
-    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%alb_wtr%ptr)) THEN
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%rad_net_wtr%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'alb_wtr', mem%alb_wtr,                                &
+      CALL jsb_add_var( mem, 'rad_net_wtr', mem%rad_net_wtr,                        &
         & hgrid, surface,                                                           &
-        & t_cf('albedo_wtr', '', 'Albedo of open water'),                           &
+        & t_cf('rad_net_wtr', '', 'Net surface radiation over lake water'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+        & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'alb_ice', mem%alb_ice,                                &
+      CALL jsb_add_var( mem, 'rad_net_ice', mem%rad_net_ice,                        &
+        & hgrid, surface,                                                           &
+        & t_cf('rad_net_ice', '', 'Net surface radiation over lake ice'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'alb_vis_dir_wtr', mem%alb_vis_dir_wtr,                &
+        & hgrid, surface,                                                           &
+        & t_cf('albedo_vis_dir_wtr', '', 'Albedo of open water (vis dir)'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
+
+      CALL jsb_add_var( mem, 'alb_vis_dif_wtr', mem%alb_vis_dif_wtr,                &
+        & hgrid, surface,                                                           &
+        & t_cf('albedo_vis_dif_wtr', '', 'Albedo of open water (vis dif)'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
+
+      CALL jsb_add_var( mem, 'alb_nir_dir_wtr', mem%alb_nir_dir_wtr,                &
+        & hgrid, surface,                                                           &
+        & t_cf('albedo_nir_dir_wtr', '', 'Albedo of open water (nir dir)'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
+
+      CALL jsb_add_var( mem, 'alb_nir_dif_wtr', mem%alb_nir_dif_wtr,                &
+        & hgrid, surface,                                                           &
+        & t_cf('albedo_nir_dif_wtr', '', 'Albedo of open water (nir dif)'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
+
+      CALL jsb_add_var( mem, 'albedo_ice', mem%albedo_ice,                          &
         & hgrid, surface,                                                           &
         & t_cf('albedo_ice', '', 'Albedo of ice on water'),                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.55_wp )
 
     END IF
 
