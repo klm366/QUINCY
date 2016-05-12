@@ -12,6 +12,8 @@ from util import logger as dkl_logger, setup_logger, print_none, log_message_new
 from diagnostics import Diagnostics
 from report import Report
 
+#from datetime import datetime
+
 
 REF_EXP_IDX              = 0
 SWITCHED_ON_IDX          = TYPE_IDX = 0
@@ -29,25 +31,51 @@ b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configs, "b4j_field_con
 work_base                  = os.path.join ( bench4jsbach_base, "work" )
 bench_dirnames             = [ "scripts", "configs", "data", "graphics", "report", "logging" ]
 
+
     
 def get_git_origin ():
-    p = subprocess.Popen ([ "git", "remote", "-v" ], stdout=subprocess.PIPE )
+    p = subprocess.Popen ([ "git", "remote", "-v" ], stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE )
     out, err = p.communicate()
     return out.strip() if not err else err.strip()
 
     
 def get_git_branch ():
-    p = subprocess.Popen ([ "git", "branch" ], stdout=subprocess.PIPE )
+    p = subprocess.Popen ([ "git", "branch" ], stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE )
     out, err = p.communicate()
     strl=out.split('\n')
     return [ s.strip ( ' *' ) for s in strl if '*' in s ][ 0 ]
 
     
 def get_git_sha ():
-    p = subprocess.Popen ([ "git", "rev-parse", "HEAD" ], stdout=subprocess.PIPE )
+    p = subprocess.Popen ([ "git", "rev-parse", "HEAD" ], stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE )
     out, err = p.communicate()
     return out.strip() if not err else err.strip()
 
+
+def get_git_status ():
+    p = subprocess.Popen ([ "git", "status", "--short" ], stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE )
+    out, err = p.communicate()
+    if not err:
+        strl=out.strip().split('\n')
+        modified_files = [ s.strip ( ' M' ) for s in strl if 'M' in s ]
+        ret = "modified" if modified_files else "clean"
+    else:
+        ret = "error"
+    return ret
+
+def get_ip_address ():
+    import socket
+    return socket.gethostbyname ( socket.gethostname ())
+
+def get_hostname ():
+    import socket
+    name, hlist, alist = socket.gethostbyaddr ( 
+        socket.gethostbyname ( socket.gethostname ())) 
+    return name.split ( '.' )[ 0 ]
 
 class Bench_Object ( Diagnostics, Report ):
     bench_name        = None
@@ -297,7 +325,12 @@ configuration file '%s' have to accord with the corresponding section name
                                                 '<GIT_ORIGIN>': get_git_origin (),
                                                 '<GIT_BRANCH>': get_git_branch (),
                                                 '<GIT_SHA>': get_git_sha (),
+                                                '<GIT_STATUS>': get_git_status (),
+                                                '<HOSTNAME>': get_hostname (),
+                                                '<IP_ADDRESS>': get_ip_address (),
+                                                '<B4J_BASE>': bench4jsbach_base,
                                                 '<TODAY>': str ( datetime.date.today ()),
+                                                '<TIMESTAMP>': datetime.datetime.utcnow(),
                                                 '<FIELDS_CONFIGSPEC_FAME>' : b4j_field_configspec_fn }
         with open ( self.bench_configs_path, "w" ) as f:
             f.write ( config_contents )
