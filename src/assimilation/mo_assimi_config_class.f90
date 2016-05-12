@@ -42,12 +42,16 @@ CONTAINS
   SUBROUTINE Init_assimi_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
 
     CLASS(t_assimi_config), INTENT(inout) :: config
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     INTEGER                     :: ncanopy, i
+    TYPE(t_jsb_vgrid), POINTER  :: canopy_layer
 
     NAMELIST /jsb_assimi_nml/      &
          active,                   &
@@ -79,8 +83,13 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
-    config%ncanopy             = ncanopy    
-    
+    config%ncanopy             = ncanopy
+
+    ! Create vertical axis
+    canopy_layer  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
+      levels=(/ (REAL(i,kind=wp),i=1,config%ncanopy) /), units='')
+    CALL register_vgrid(canopy_layer)
+
     ! Prepare canopy boundaries of lai_cl
     ALLOCATE(config%canopy_bound_lai(0:ncanopy))
     DO i=0,ncanopy

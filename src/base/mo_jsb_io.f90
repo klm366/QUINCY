@@ -5,7 +5,7 @@ MODULE mo_jsb_io
   USE mo_jsb_io_iface, ONLY:                                           &
     Get_netcdf_precision,                                              &
     DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
-    ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                             &
+    ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC,              &
     FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,           &
     GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL,                 &
     TSTEP_CONSTANT,                                                    &
