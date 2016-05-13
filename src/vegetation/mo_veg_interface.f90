@@ -20,7 +20,7 @@ MODULE mo_veg_interface
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> update vegetation pools given pre-calculated rates of net C, N and P uptake
+  !> update vegetation pools
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
@@ -48,6 +48,8 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER         :: soil           ! soil variables per tile
     TYPE(t_slm_plant),POINTER        :: plant          ! plant variables per tile
+    ! 0.2 Local
+    REAL(wp) :: hlp1
 
     !  bi-directional pointer
     plant => tile%plant
@@ -80,9 +82,7 @@ CONTAINS
     !> 2.0 Calculate growth
     !! 
     !! 
-    CALL  calc_growth(atm2land%t_air,soil%theta,plant,veg_param,plant%flux%growth, & 
-            plant%flux%growth_respiration,plant%flux%growth_respiration_c13,plant%flux%growth_respiration_c14,& 
-            plant%flux%reserve_use)
+    CALL  calc_growth(atm2land%t_air,soil%theta,plant,veg_param) 
 
     !> 2.5 Calculate maintenance respiration
     !! 
@@ -146,9 +146,12 @@ CONTAINS
     !! 
     !! 
     plant%lai = plant%pool%leaf%carbon * veg_param%sla(plant%pftid)
-    CALL update_allometry(plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon, & 
-                          veg_param%wood_density(plant%pftid),veg_param%allom_k1(plant%pftid),&
-                          veg_param%allom_k2(plant%pftid),plant%diameter,plant%height)
+    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon, & 
+                          veg_param%wood_density(plant%pftid),veg_param%sla(plant%pftid), &
+                          veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
+                          veg_param%k_latosa(plant%pftid),veg_param%k_rtos(plant%pftid), &
+                          veg_param%growthform(plant%pftid), & 
+                          plant%diameter,plant%height,hlp1,hlp1,hlp1,hlp1)
     IF(plant%pool%leaf%carbon .GT. eps8) THEN 
        plant%mean_leaf_age = & 
           (plant%mean_leaf_age + dt/one_day) * (1._wp - plant%flux%growth%leaf%carbon/plant%pool%leaf%carbon)

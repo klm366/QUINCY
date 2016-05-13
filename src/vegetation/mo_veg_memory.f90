@@ -77,6 +77,8 @@ MODULE mo_veg_memory
     ! 1.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
     REAL(wp) :: demand_uptake_n                            !< scalar of Vmax for root N uptake 
     REAL(wp) :: demand_uptake_p                            !< scalar of Vmax for root P uptake
+    REAL(wp) :: growth_req_n_week         !< moles N required for a unit of C growth under current allocation fractions
+    REAL(wp) :: growth_req_p_week         !< moles P required for a unit of N growth under current allocation fractions
     ! 1.5 phenological variables
     REAL(wp) :: gdd                                        !< growing degree days above 5°C
     REAL(wp) :: nd_dormance                                !< number of days since last growing season 
@@ -233,6 +235,8 @@ MODULE mo_veg_memory
     REAL(wp) :: beta_soil_ps                      !< scaling factor to account for soil moisture constraints on conductance
     REAL(wp) :: beta_soil_gs                      !< scaling factor to account for soil moisture constraints on conductance
     LOGICAL  :: growing_season                    !< logical to identify whether the plant is in the growing season or not
+    REAL(wp) :: growth_req_n                      !< moles N required for a unit of C growth under current allocation fractions 
+    REAL(wp) :: growth_req_p                      !< moles P required for a unit of N growth under current allocation fractions 
    END TYPE t_slm_plant
 
 
@@ -509,6 +513,8 @@ CONTAINS
     ! 1.4 nutrient demand for plant uptake
     this%demand_uptake_n               = 0.1_wp
     this%demand_uptake_p               = 0.1_wp
+    this%growth_req_n_week             = 1._wp / 25._wp 
+    this%growth_req_p_week             = 1._wp / 14._wp
     ! 1.5 phenological variables
     this%gdd                           = 1.0_wp
     this%nd_dormance                   = 1.0_wp
@@ -649,6 +655,12 @@ CONTAINS
                                                1.0_wp / (this%p_weekly * one_day/ dt))
     this%maint_respiration_week  = this%calc_moving_avrg(this%maint_respiration_week, plant%flux%maint_respiration, &
                                                1.0_wp / (this%p_weekly * one_day/ dt))
+    this%growth_req_n_week       = this%calc_moving_avrg(this%growth_req_n_week, plant%growth_req_n, &
+                                               1.0_wp / (this%p_weekly * one_day/ dt), &
+                                               plant%growth_req_n < eps8)
+    this%growth_req_p_week       = this%calc_moving_avrg(this%growth_req_p_week, plant%growth_req_p, &
+                                               1.0_wp / (this%p_weekly * one_day/ dt), & 
+                                               plant%growth_req_p < eps8)
 
     ! gdd & nd_dormance
     IF(this%gdd_t_air_threshold_crossed) THEN   ! == IF(atm2land%t_air > gdd_t_air_threshold)
