@@ -180,7 +180,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, soilveg_tile
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, pft_tile
     TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_tiles'
@@ -192,6 +192,7 @@ CONTAINS
       &processes=(/ATM2LAND,LAND2ATM,RAD,HYDRO,TURB/), &
       & model_id=model%id, grid_id=model%grid_id)
     model%top => box_tile
+    CALL box_tile%Print()
 
       land_tile => t_jsb_tile('land', 'Land tile', &
         & processes=(/SEB/), process_actions=(/ON_TILE_/), &
@@ -199,21 +200,19 @@ CONTAINS
 !!$                            & processes=(/SRF/), process_actions=(/ON_SUBTREE_/), &
         & lcts=(/t_jsb_lct(LAND_TYPE)/), &
         & parent=box_tile)
+      CALL land_tile%Print()
 
-        glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL/), &
-          & lcts=(/t_jsb_lct(GLACIER_TYPE)/), parent=land_tile)
+!!$        glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL/), &
+!!$          & lcts=(/t_jsb_lct(GLACIER_TYPE)/), parent=land_tile)
+!!$        CALL glacier_tile%Print()
 
-        soilveg_tile => t_jsb_tile('soilveg', 'Soil/veg tile', processes=(/SOIL,VEG, ASSIMI/), &
-          & lcts=(/t_jsb_lct(VEG_TYPE), t_jsb_lct(BARE_TYPE)/), parent=land_tile)
+        pft_tile => t_jsb_tile('pft1', 'PFT1 tile', processes=(/SOIL,VEG,ASSIMI/), &
+          & lcts=(/t_jsb_lct(VEG_TYPE)/), parent=land_tile)
+        CALL pft_tile%Print()
 
       lake_tile => t_jsb_tile('lake', 'Lake tile', &
         & processes=(/SEB/), process_actions=(/ON_TILE_/), &
         & lcts=(/t_jsb_lct(LAKE_TYPE)/), parent=box_tile)
-
-    CALL box_tile%Print()
-      CALL land_tile%Print()
-        CALL glacier_tile%Print()
-        CALL soilveg_tile%Print()
       CALL lake_tile%Print()
 
     NULLIFY(box_tile)

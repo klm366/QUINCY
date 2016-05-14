@@ -138,7 +138,7 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL process%Register_task(tsk_snow_and_ice_hydrology (model_id))
+    !CALL process%Register_task(tsk_snow_and_ice_hydrology (model_id))
     CALL process%Register_task(tsk_snow_and_skin_fraction (model_id))
 
   END SUBROUTINE Register_hydro_tasks

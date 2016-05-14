@@ -23,12 +23,11 @@ MODULE mo_jsb_process_factory
   USE mo_soil_memory_class,    ONLY: t_soil_memory
   USE mo_hydro_memory_class,   ONLY: t_hydro_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
+  USE mo_assimi_memory_class,  ONLY: t_assimi_memory
   USE mo_rad_memory_class,     ONLY: t_rad_memory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
-  USE mo_assimi_interface,     ONLY: Register_assimi_tasks
-  USE mo_assimi_config_class,  ONLY: t_assimi_config
   USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_rad_config_class,     ONLY: t_rad_config
   USE mo_seb_interface,        ONLY: Register_seb_tasks
@@ -41,6 +40,8 @@ MODULE mo_jsb_process_factory
   USE mo_hydro_config_class,   ONLY: t_hydro_config
   USE mo_veg_interface,        ONLY: Register_veg_tasks
   USE mo_veg_config_class,     ONLY: t_veg_config
+  USE mo_assimi_interface,     ONLY: Register_assimi_tasks
+  USE mo_assimi_config_class,  ONLY: t_assimi_config
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_interface,         ONLY: Register_hd_tasks
   USE mo_hd_config_class,      ONLY: t_hd_config
@@ -94,7 +95,7 @@ CONTAINS
       ALLOCATE(t_veg_config::return_ptr%config)
     CASE (ASSIMI)
       CALL Register_assimi_tasks(return_ptr, model_id)
-      ALLOCATE(t_assimi_config::return_ptr%config)      
+      ALLOCATE(t_assimi_config::return_ptr%config)
 #ifndef __NO_JSBACH_HD__
     CASE (HD)
       CALL Register_hd_tasks(return_ptr, model_id)
@@ -118,6 +119,7 @@ CONTAINS
     USE mo_soil_memory_class,    ONLY: max_no_of_soil_vars => max_no_of_vars
     USE mo_hydro_memory_class,   ONLY: max_no_of_hydro_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
+    USE mo_assimi_memory_class,  ONLY: max_no_of_assimi_vars => max_no_of_vars
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
@@ -148,6 +150,9 @@ CONTAINS
     CASE(VEG)
       ALLOCATE(t_veg_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_veg_vars
+    CASE(ASSIMI)
+      ALLOCATE(t_assimi_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_assimi_vars
     CASE(RAD)
       ALLOCATE(t_rad_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_rad_vars
