@@ -176,6 +176,7 @@ MODULE mo_veg_memory
      REAL(wp) :: gpp_c13                  !< gross photosynthesis (µmol 13CO2 m-2 s-1)
      REAL(wp) :: gpp_c14                  !< gross photosynthesis (µmol 14CO2 m-2 s-1)
      REAL(wp) :: maint_respiration_leaf   !< foliar maintenance respiration (µmol CO2 m-2 s-1)
+     REAL(wp) :: maint_respiration_pot    !< potential maintenance respiration (µmol CO2 m-2 s-1)
      REAL(wp) :: maint_respiration        !< maintenance respiration (µmol CO2 m-2 s-1)
      REAL(wp) :: maint_respiration_c13    !< maintenance respiration (µmol 13CO2 m-2 s-1)
      REAL(wp) :: maint_respiration_c14    !< maintenance respiration (µmol 14CO2 m-2 s-1)
@@ -653,7 +654,7 @@ CONTAINS
 
     this%gpp_week                = this%calc_moving_avrg(this%gpp_week, plant%flux%gpp, &
                                                1.0_wp / (this%p_weekly * one_day/ dt))
-    this%maint_respiration_week  = this%calc_moving_avrg(this%maint_respiration_week, plant%flux%maint_respiration, &
+    this%maint_respiration_week  = this%calc_moving_avrg(this%maint_respiration_week, plant%flux%maint_respiration_pot, &
                                                1.0_wp / (this%p_weekly * one_day/ dt))
     this%growth_req_n_week       = this%calc_moving_avrg(this%growth_req_n_week, plant%growth_req_n, &
                                                1.0_wp / (this%p_weekly * one_day/ dt), &

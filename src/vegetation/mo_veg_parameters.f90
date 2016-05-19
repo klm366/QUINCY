@@ -74,6 +74,7 @@ MODULE mo_veg_parameters
 
   ! parameters used for phenology calculations
   REAL(wp),SAVE :: min_lai                      ! minimum LAI beyond which all leaves are shed
+  REAL(wp),SAVE :: target_lai_max               ! maximum LAI target for reserve use calculations 
   REAL(wp),SAVE :: min_leaf_age                 ! minimum leaf age before senescence is permitted (days) 
   REAL(wp),SAVE :: gdd_t_air_threshold          ! temperature threshold for growing degree days 
   REAL(wp),SAVE :: gdd_req_max                  ! maximum GDD requirement
@@ -93,6 +94,10 @@ MODULE mo_veg_parameters
   ! other
   REAL(wp),SAVE :: min_height                   ! minimum permissable height of an individual
   REAL(wp),SAVE :: sm2lm_grass                  ! stem mass to leaf mass ratio of grasses
+  REAL(wp),SAVE :: lambda_fruit_alloc           ! parameter in the Weibull function controlling fruit growth
+  REAL(wp),SAVE :: weibull_k_fruit_alloc        ! parameter in the Weibull function controlling fruit growth
+  REAL(wp),SAVE :: offset_fruit_alloc           ! parameter in the Weibull function controlling fruit growth
+  REAL(wp),SAVE :: min_falloc_fruit             ! minimum fraction of allocation going to fruit (flowers etc.)
 
   ! vegetation dynamics
   REAL(wp), SAVE :: background_mort_rate_tree   ! background mortality rate of trees in static mortality case
@@ -135,6 +140,8 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: wood_density 
      REAL(wp),DIMENSION(npft) :: k_latosa 
      REAL(wp),DIMENSION(npft) :: k_rtos 
+     REAL(wp),DIMENSION(npft) :: k_crtos 
+     REAL(wp),DIMENSION(npft) :: k_max_falloc_fruit
      REAL(wp),DIMENSION(npft) :: tau_fine_root
      REAL(wp),DIMENSION(npft) :: tau_coarse_root
      REAL(wp),DIMENSION(npft) :: allom_k1
@@ -276,6 +283,8 @@ MODULE mo_veg_parameters
   
       ! minimum LAI for phenology calculations
       min_lai = 0.1_wp
+      ! minimum LAI for phenology calculations
+      target_lai_max = 5.0_wp
       ! temperature threshold for growing degree days 
       gdd_t_air_threshold = 5.0_wp + Tzero
       ! maximal GDD requirement (assuming no dormance) 
@@ -302,6 +311,12 @@ MODULE mo_veg_parameters
       min_height = 0.1_wp
       ! stem mass to leaf mass ratio of grasses
       sm2lm_grass = 0.05_wp
+      ! Parameters controlling fruit allocation in: exp(-(lambda * reserve_use+offset)^k) 
+      lambda_fruit_alloc = 10.0_wp
+      weibull_k_fruit_alloc = 2.0_wp
+      offset_fruit_alloc = 0.1_wp ! ~µmol C / m2 / s
+      ! minimum fraction of allocation going to fruit (flowers etc.)
+      min_falloc_fruit = 0.01_wp
 
       CALL init_pft_param_table(veg_param)
 
@@ -391,11 +406,19 @@ MODULE mo_veg_parameters
       (/30000.0_wp,30000.0_wp,30000.0_wp,30000.0_wp,30000.0_wp,30000.0_wp,22000._wp,22000._wp/) / molar_mass_C
       ! leaf area to sapwood area ratio 
       veg_param%k_latosa(:) = 4000.0_wp 
+      ! coarse root to sapwood mass ratio 
+      veg_param%k_crtos(:) = 0.2_wp
       ! trade-off parametr for hydraulic investment into sapwood or fine roots 
       WHERE(veg_param%growthform /= igrass)
         veg_param%k_rtos(:) = 1.0_wp / (veg_param%k_latosa(:) / veg_param%sla(:) / veg_param%wood_density(:))
       ELSEWHERE
         veg_param%k_rtos(:) = 0.5_wp / sm2lm_grass
+      ENDWHERE
+      ! maximum fraction of biomass growth going to fruits 
+      WHERE(veg_param%growthform /= igrass)
+        veg_param%k_max_falloc_fruit(:) = 0.1_wp 
+      ELSEWHERE
+        veg_param%k_max_falloc_fruit(:) = 0.2_wp 
       ENDWHERE
       ! average turnover (1/lifetime) of a fine root (1/years) 
       veg_param%tau_fine_root(:) = & 

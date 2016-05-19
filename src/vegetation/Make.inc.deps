@@ -27,7 +27,8 @@ mo_veg_growth.o: \
   mo_land_memory.o \
   mo_atmland_constants.o \
   mo_veg_memory.o \
-  mo_veg_parameters.o
+  mo_veg_parameters.o \
+  mo_veg_respiration.o
 
 mo_veg_respiration.o: \
   mo_kind.o \

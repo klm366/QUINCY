@@ -143,6 +143,7 @@ CONTAINS
     flux%gpp_c13                 = 0.0_wp  !< gross photosynthesis (µmol 13CO2 m-2 s-1)
     flux%gpp_c14                 = 0.0_wp  !< gross photosynthesis (µmol 14CO2 m-2 s-1)
     flux%maint_respiration_leaf  = 0.0_wp  !< foliar maintenance respiration (µmol CO2 m-2 s-1)
+    flux%maint_respiration_pot   = 0.0_wp  !< maintenance respiration (µmol CO2 m-2 s-1)
     flux%maint_respiration       = 0.0_wp  !< maintenance respiration (µmol CO2 m-2 s-1)
     flux%maint_respiration_c13   = 0.0_wp  !< maintenance respiration (µmol 13CO2 m-2 s-1)
     flux%maint_respiration_c14   = 0.0_wp  !< maintenance respiration (µmol 14CO2 m-2 s-1)

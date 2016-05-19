@@ -122,7 +122,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)'), 'Time SoilMoisture'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R'
+    WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R S2C BCF'
   END SUBROUTINE init_output_writing_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -360,7 +360,11 @@ CONTAINS
           hlp1 = plant%pool%sap_wood%carbon/plant%pool%leaf%carbon
        ENDIF
        write(lun,'(9F12.6)') time_d, plant%height, plant%diameter, plant%lai, &
-         hlp1,plant%pool%leaf%carbon/plant%pool%fine_root%carbon
+         hlp1,plant%pool%leaf%carbon/plant%pool%fine_root%carbon,& 
+         plant%pool%coarse_root%carbon/plant%pool%sap_wood%carbon, & 
+         (plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)/ & 
+         (plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon+&
+            plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)
       END IF
     END IF
   END SUBROUTINE write_output_pool

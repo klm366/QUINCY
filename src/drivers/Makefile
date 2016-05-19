@@ -32,8 +32,8 @@ OBJSMODS = $(OBJFILES:.f90=.o)
 .SUFFIXES: .o .f90
 
 all: $(BINDIR)/land.x
-$(BINDIR)/land.x: $(LIBRARY) land_model_driver_test.f90
-	$(F_C) $(F_O) land_model_driver_test.f90
+$(BINDIR)/land.x: $(LIBRARY) land_model_driver.f90
+	$(F_C) $(F_O) land_model_driver.f90
 	$(F_L) -o $(BINDIR)/land.x land_model_driver.o $(LIBRARY)
 	@$(RM) land_model_driver.o
 	@echo "land model is ok"

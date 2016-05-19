@@ -79,18 +79,10 @@ CONTAINS
     !! @todo may move elsewhere
     CALL update_canopy_fluxes(tile, veg_param)
 
-    !> 2.0 Calculate growth
+    !> 2.0 Calculate growth and maintenance
     !! 
     !! 
-    CALL  calc_growth(atm2land%t_air,soil%theta,plant,veg_param) 
-
-    !> 2.5 Calculate maintenance respiration
-    !! 
-    !! 
-    CALL  calc_maintenance_respiration(atm2land%t_air,atm2land%t_air,plant%pool%sap_wood%nitrogen,plant%pool%fine_root%nitrogen, &
-            plant%pool%coarse_root%nitrogen,plant%pool%labile%carbon,plant%pool%labile%carbon13, & 
-            plant%pool%labile%carbon14,plant%flux%maint_respiration_leaf,&
-            plant%flux%maint_respiration,plant%flux%maint_respiration_c13,plant%flux%maint_respiration_c14)
+    CALL  calc_growth(soil%theta,plant,veg_param) 
 
     !> 3.0 Calculate turnover from tissue aging and senescence
     !! 
