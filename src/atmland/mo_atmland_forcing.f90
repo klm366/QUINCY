@@ -132,16 +132,16 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.2 Local
-    INTEGER  :: stat  = 0
-    INTEGER  :: lun   = 100
-    REAL(wp) :: year  = 0     ! dummy variable
-    REAL(wp) :: day   = 0     ! dummy variable
-    REAL(wp) :: hour  = 0     ! dummy variable
-    REAL(wp) :: nhx   = 0     ! dummy variable for nhx_srf_down
-    REAL(wp) :: nox   = 0     ! dummy variable for noy_srf_down
+    INTEGER  :: stat 
+    INTEGER  :: lun  
+    REAL(wp) :: year      ! dummy variable
+    REAL(wp) :: day       ! dummy variable
+    REAL(wp) :: hour      ! dummy variable
+    REAL(wp) :: nhx       ! dummy variable for nhx_srf_down
+    REAL(wp) :: nox       ! dummy variable for noy_srf_down
 
-    ! 1.0 Set write options
-    lun=100
+    ! 1.0 Set read options
+    lun=9
     ! the read statement, by default, reads a list of values in a line and then advances to the beginning of the next line
     READ(lun,*, IOSTAT=stat) year, day, hour, & 
                      atm2land%swvis_srf_down,   atm2land%lw_srf_down, atm2land%t_air,    atm2land%q_air,    &
@@ -172,6 +172,8 @@ CONTAINS
   !> open the file test_bed/plant/climate.dat, only IF model option is set to READ
   !! 
   !! called in the driver
+  !! 
+  !! note: lun is set to 9 (see ticket 31)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE open_forcing_input_file
 
@@ -180,13 +182,13 @@ CONTAINS
     IMPLICIT NONE
     ! 0.3 local
     LOGICAL :: file_exists
-    INTEGER :: lun = 100
-    CHARACTER(100) :: fname = "filename"
+    INTEGER :: lun 
+    CHARACTER(100) :: fname 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_atmland_forcing:open_forcing_input_file'
 
     !> 1.0 open file for READ
     IF(atmland_config%option_forcing == 'readfile') THEN
-      lun=100
+      lun=9
       fname = 'climate.dat'
       ! check if file exists
       INQUIRE(FILE=fname, EXIST=file_exists)
@@ -210,7 +212,7 @@ CONTAINS
 
     IMPLICIT NONE
     IF(atmland_config%option_forcing == 'readfile') THEN
-      CLOSE(100)
+      CLOSE(9)
     END IF
   END SUBROUTINE close_forcing_input_file
 
@@ -225,10 +227,10 @@ CONTAINS
     ! 0.2 Local
     CHARACTER(200) :: header_dummy1 = "header"
     CHARACTER(200) :: header_dummy2 = "header"
-    INTEGER :: lun = 100
+    INTEGER :: lun 
 
     !> 1.0 read header
-    lun=100
+    lun=9
     READ(lun,'(a)') header_dummy1   ! header line 1
     READ(lun,'(a)') header_dummy2   ! header line 2
   END SUBROUTINE read_forcing_header

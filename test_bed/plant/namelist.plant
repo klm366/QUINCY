@@ -3,7 +3,7 @@
   output_interval_pool="weekly"
   output_interval_flux="weekly"
   output_start_first_day_year=1
-  output_end_last_day_year=20
+  output_end_last_day_year=30
   flag_optimal_Nfraction=.FALSE.
   flag_optimal_Nleaf=.FALSE.
   flag_calc_soil_uptake=.TRUE.
@@ -27,6 +27,6 @@
   ! units: y years, w weeks, d days
   simulation_length_unit="y"
   ! integer values
-  simulation_length_number=20
+  simulation_length_number=30
 /
 

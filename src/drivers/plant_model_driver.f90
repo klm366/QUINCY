@@ -132,10 +132,10 @@ PROGRAM plant_model_driver
                                                 veg_param%np_leaf(tile(itile)%plant%pftid)
   END DO 
 
-  !! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
+  !! 1.4 open input files (and read the header into dummy variables)
   !! 
   !! 
-  CALL open_forcing_input_file  ! only if: option_forcing == 'readfile'
+  CALL open_forcing_input_file  ! mo_atmland_forcing; only if: option_forcing == 'readfile'
 
   !! 1.5 Initialise output and flux accumulation, and open output files; see mo_veg_output
   !! 
@@ -197,7 +197,7 @@ PROGRAM plant_model_driver
       CALL tile(itile)%plant%daily_average%calc_avrg(tile(itile)%plant, time_day, timestep_prop_day) !< daily avrg of the prev day
       CALL tile(itile)%plant%moving_average%update_veg(tile(itile)%plant)          !< moving averages - vegetation
       CALL tile(itile)%plant%moving_average%update_soil(tile(itile)%plant)         !< moving averages - soil -> plant N & P uptake
-      CALL tile(itile)%plant%moving_average%update_tile(atm2land%t_air)            !< moving averages - atmland -> temperatur
+      CALL tile(itile)%plant%moving_average%update_tile(atm2land%t_air, atm2land%press_srf)  !< moving averages - atmland
 
       !! 3.7 output pool: write output in certain intervals, see mo_veg_output
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days

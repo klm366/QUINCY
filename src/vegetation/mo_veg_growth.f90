@@ -153,7 +153,7 @@ CONTAINS
 
     !> 3.0 Elemental limitation of growth, N & P
     !! 
-    !! @todo 3.0 should be replaced at a later stage - here to conserve mass
+    !! @todo Elemental limitation of growth (N & P) should be replaced at a later stage - here to conserve mass
 
     !> 3.1 N
     !! 
@@ -548,8 +548,8 @@ CONTAINS
   !!  
   !! Output: net flux between reserve and labile pools 
   !----------------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_reserve_useage(tau_labile_pot, growing_season, gpp_week, & 
-                               growth_req_n_week, growth_req_p_week, rm_week, sla, tau_leaf, tau_fine_root, & 
+  PURE ELEMENTAL FUNCTION calc_reserve_useage(tau_labile_pot, growing_season, gpp_week, rm_week, & 
+                               growth_req_n_week, growth_req_p_week, sla, tau_leaf, tau_fine_root, & 
                                target_cn_leaf, target_cn_fine_root, target_np_leaf, target_np_fine_root, & 
                                leaf2root_mass_ratio, lai, target_lai, labile_pool, reserve_pool) & 
                                RESULT (reserve_use)

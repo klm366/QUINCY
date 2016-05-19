@@ -27,11 +27,12 @@ print(" processing output data")
 # loop over each tiles:
 for(ti in 1:tileNum)
 {
-  print(paste0(" tile ",ti,"/",tileNum)) # message
-  flist_pool = Sys.glob(paste0("pool*_tile",ti,"_",tstep_pool,".txt")) 
-  flist_pool = c(flist_pool,Sys.glob(paste0("veg_diagnostics*_tile",ti,"_",tstep_pool,".txt"))) 
+  # message
+  print(paste0(" tile ",ti,"/",tileNum))
+  flist_pool = Sys.glob(paste0("pool*_tile",ti,"_",tstep_pool,"*.txt")) 
+  flist_pool = c(flist_pool,Sys.glob(paste0("veg_diagnostics*_tile",ti,"_",tstep_pool,"*.txt"))) 
 
-  flist_flux = Sys.glob(paste0("flux*_tile",ti,"_",tstep_pool,".txt")) 
+  flist_flux = Sys.glob(paste0("flux*_tile",ti,"_",tstep_pool,"*.txt")) 
   #create overall file list
   flist=c(flist_pool,flist_flux)
   nplot=length(flist)

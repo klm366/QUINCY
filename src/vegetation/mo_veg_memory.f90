@@ -664,7 +664,7 @@ CONTAINS
 
     ! gdd & nd_dormance
     IF(this%gdd_t_air_threshold_crossed) THEN   ! == IF(atm2land%t_air > gdd_t_air_threshold)
-       this%gdd = (this%gdd + this%gdd_t_air_threshold_crossed_amount) * dt/one_day
+       this%gdd = this%gdd + this%gdd_t_air_threshold_crossed_amount * dt/one_day
     ENDIF
 
     IF(this%t_air_week_lt_Tzero) this%gdd = 0.0_wp
@@ -709,19 +709,25 @@ CONTAINS
   !!
   !! called in the driver at the end of each timestep
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_tile_moving_avrg_variables (this, t_air)
+  SUBROUTINE update_tile_moving_avrg_variables (this, t_air, press_surf)
 
     USE mo_base_constants,    ONLY: dt, one_day
 
     IMPLICIT NONE
     ! 0.1 InOut
-    REAL(wp), INTENT(in)                   :: t_air       !< current air temperature
+    REAL(wp), INTENT(in)                   :: t_air       !< current air temperature from atm2land:mo_atmland_memory
+    REAL(wp), INTENT(in)                   :: press_surf  !< variable from atm2land:mo_atmland_memory
     CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
 
     ! moving_avrg( 
     !             current average, new value, weight of new value, 
     !                 use function TRUE FALSE [OPTIONAL argument] )
     ! returns: new current average
+
+    this%t_air            = this%calc_moving_avrg(this%t_air, t_air, &
+                                                  1.0_wp / (this%p_t_air * one_day/ dt))
+    this%press_surf       = this%calc_moving_avrg(this%press_surf, press_surf, &
+                                                  1.0_wp / (this%p_press_surf * one_day/ dt))
 
     this%t_air_week       = this%calc_moving_avrg(this%t_air_week, t_air, &
                                                   1.0_wp / (this%p_weekly * one_day/ dt))
