@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
+!! added one layer soil model by Rainer Schneck (2016-05-19)
 !!
 MODULE mo_soil_interface
 #ifndef __NO_JSBACH__
@@ -232,14 +233,34 @@ CONTAINS
       snow_melt(:) = 0._wp
     END IF
 
-    CALL update_surf_down(nc, dtime, lstart, &
-      & q_air(:), t_srf_unfilt(:), wind_10m(:), t_air(:), wsr_soil(:), wfract_srf(:), &
-      & wsr_max(:), wsn_soil(:), sfract_srf(:), wsn_can(:), wsn_glacier(:), &
-      & hcap_grnd(:), evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), rain(:),  snow(:), &
-      & is_present(:), is_glacier(:), pme_glacier(:), &
+    CALL update_surf_down( & ! R: Wasserfluxe in die Surface und Schneeschmelze/Sublimation
+      & nc,              & ! In
+      & dtime,           & ! In
+      & lstart,          & ! In
+      & q_air(:),        & ! In
+      & t_srf_unfilt(:), & ! InOut
+      & wind_10m(:),     & ! In
+      & t_air(:),        & ! In
+      & wsr_soil(:),     & ! InOut
+      & wfract_srf(:),   & ! In
+      & wsr_max(:),      & ! In
+      & wsn_soil(:),     & ! InOut
+      & sfract_srf(:),   & ! In
+      & wsn_can(:),      & ! InOut
+      & wsn_glacier(:),  & ! InOut
+      & hcap_grnd(:),    & ! In
+      & evapotrans(:),   & ! In
+      & evapopot(:),     & ! In
+      & evapotrans_no_snow_skin(:), & ! Out
+      & rain(:),         & ! In
+      & snow(:),         & ! In
+      & is_present(:),   & ! In
+      & is_glacier(:),   & ! In
+      & pme_glacier(:),  & ! Out
 !!$      & snow_acc(:), snow_melt_acc(:), glacier_runoff_acc(:), &
-      melt_water_excess(:), &
-      & tte_corr(:), snow_melt(:) &
+      & melt_water_excess(:), & ! Out
+      & tte_corr(:),     & ! Out
+      & snow_melt(:)     & ! Out
       & )
 
     ! Save old ground heat flux and heat capacity before updating
@@ -253,30 +274,86 @@ CONTAINS
       & t_soil_acoef(:,:), t_soil_bcoef(:,:), t_soil(:,:), &
       & hcap_grnd(:), grnd_hflx(:), &
       & is_present(:), is_glacier(:))
-
-!vg:  runoff_hd and drainage_hd no longer needed
-!vg:  accumulation does not make sense (no reset)
-    CALL update_surf_up(nc, dtime, dsl4jsb_Config(SOIL)%nsoil_water, &
-      & wsr_soil(:), wfract_srf(:), wsr_max(:), &
-      & ws_root(:), ws_fc_root(:), &
-      & t_soil(:,1), sfract_srf(:), oro_stddev(:), &
-      & evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), &
-      & rain(:), is_present(:), is_glacier(:), &
-      & runoff(:), drainage(:), & !vg runoff_hd(:), drainage_hd(:), &
-      & melt_water_excess(:), skin_res_evap(:), &
-      & dsl4jsb_Config(SOIL)%dz_water(1:dsl4jsb_Config(SOIL)%nsoil_water), &
-      & ws_l(:,:), ws_fc_l(:,:), ws_pwp_l(:,:), root_depth(:), soil_depth(:), &
-      & shc(:), mpot(:), bclapp(:), vpor(:), &
-      & trans(:), reduced_evap(:), &
+      
+    if (dsl4jsb_Config(SOIL)%nsoil_water > 1) THEN
+      CALL update_surf_up(&
+        & nc, dtime, dsl4jsb_Config(SOIL)%nsoil_water, & ! In (all)
+        & wsr_soil(:),    & ! InOut. Water content in skin reservoir
+!                           ! R: Note, this is possibly not fully correct, it was an average value over the tiles in JSBACH3 (SkinReservoire_tile)
+!                           !    which was especially created and handled (avoids that it is the same as in the 1 layer soil model
+!                           !    as it is here in JSBACH4).
+        & wfract_srf(:),  & ! In
+                            ! R: Note, this is possibly not fully correct, it was an average value over the tiles in JSBACH3 (WetSkin_frac)
+!                           !    which was especially created (avoids that it is the same as in the 1 layer soil model
+!                           !    as it is here in JSBACH4).
+        & wsr_max(:),     & ! In
+                            ! R: Note,  this is possibly not fully correct, it was an average value over the tiles in JSBACH3 (MaxSkinResCap)
+!                           !    which was especially created (avoids that it is the same as in the 1 layer soil model
+!                           !    as it is here in JSBACH4). Intend "in" when used in update_surf_down.
+        & ws_root(:),     & ! InOut
+        & ws_fc_root(:),  & ! In
+        & t_soil(:,1),    & ! In
+        & sfract_srf(:),  & ! In
+        & oro_stddev(:),  & ! In
+        & evapotrans(:),  & ! In. New in JSBACH4, but not used in the moment
+        & evapopot(:),    & ! In
+        & evapotrans_no_snow_skin(:), & ! InOut
+        & rain(:),        & ! In
+        & is_present(:),  & ! In
+        & is_glacier(:),  & ! In
+        & runoff(:),      & ! InOut
+        & drainage(:),    & ! InOut
+!vg     & runoff_hd(:),   &
+!vg     & drainage_hd(:), &
+        & melt_water_excess(:), & ! In
+        & skin_res_evap(:), & ! Out
+        & dsl4jsb_Config(SOIL)%dz_water(1:dsl4jsb_Config(SOIL)%nsoil_water), &  ! In
+        & ws_l(:,:),      & ! InOut
+        & ws_fc_l(:,:),   & ! In
+        & ws_pwp_l(:,:),  & ! In
+        & root_depth(:),  & ! In
+        & soil_depth(:),  & ! In
+        & shc(:),         & ! In
+        & mpot(:),        & ! In
+        & bclapp(:),      & ! In
+        & vpor(:),        & ! In
+        & trans(:),       & ! In
+        & reduced_evap(:), & ! Out
 !!$      & SPREAD(0.318517_wp, NCOPIES=nc, DIM=1), & !Temporary
 !!$      & SPREAD(0.185245_wp, NCOPIES=nc, DIM=1), & !Temporary
-      & psdi(:), &
-      & overflow(:), &
-      & jllog, &
-      & l_tpe_open, &
-      & l_tpe_closed &
-      & )
-
+        & psdi(:),        & ! In
+        & overflow(:),    & ! InOut
+        & jllog,          & ! Inout
+        & l_tpe_open,     & ! In
+        & l_tpe_closed    & ! In
+        & )    
+    ELSE
+      CALL update_surf_up(&
+        & nc, dtime, dsl4jsb_Config(SOIL)%nsoil_water, & ! In (all)
+        & wsr_soil(:),    & ! InOut. Water content in skin reservoir
+!                           ! R: Note, this is correct as it was NOT an average value over the tiles in JSBACH3 but soil%skin_reservoir
+        & wfract_srf(:),  & ! In. R: Note, this is correct as it was NOT an average value over the tiles in JSBACH3 but wet_skin_fract
+        & wsr_max(:),     & ! In. R: Note, this is correct as it was NOT an average value over the tiles in JSBACH3 but skin_reservoir_max
+        & ws_root(:),     & ! InOut
+        & ws_fc_root(:),  & ! In
+        & t_soil(:,1),    & ! In
+        & sfract_srf(:),  & ! In
+        & oro_stddev(:),  & ! In
+        & evapotrans(:),  & ! In
+        & evapopot(:),    & ! In
+        & evapotrans_no_snow_skin(:), & ! InOut
+        & rain(:),        & ! In
+        & is_present(:),  & ! In
+        & is_glacier(:),  & ! In
+        & runoff(:),      & ! InOut
+        & drainage(:),    & ! InOut
+!vg     & runoff_hd(:),   &
+!vg     & drainage_hd(:), &
+        & melt_water_excess(:), & ! In
+        & skin_res_evap(:) & ! Out
+        & )
+    END IF
+    
     ws(:) = SUM(ws_l(:,:), DIM=2)
 
     wsn_srf(:) = wsn_soil(:) + wsn_can(:)

@@ -64,7 +64,7 @@ MODULE mo_srf_memory_class
     ! Water State
     TYPE(t_jsb_var_real2d) :: &
       wfract_srf    ,   & !< Wet (skin reservoir) fraction of tile []
-      wsr_srf       ,   & !< Water content in skin reservoir [m]
+      wsr_srf       ,   & !< Water content in skin reservoir (without snow) [m]
       sfract_srf    ,   & !< Snow fraction of tile []
       wsn_srf       ,   & !< Water content of snow reservoir [m water equivalent]
       wsn_glacier         !< Water content of snow on glacier [m water equivalent]

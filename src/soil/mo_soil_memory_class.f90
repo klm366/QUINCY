@@ -67,7 +67,7 @@ MODULE mo_soil_memory_class
     ! Water state
     TYPE(t_jsb_var_real2d) :: &
       wfract_soil   ,   & !< Wet (skin reservoir) fraction of soil []
-      wsr_soil      ,   & !< Water content in skin reservoir on soil [m]
+      wsr_soil      ,   & !< Water content in skin reservoir (without snow) on soil [m]
       sfract_soil   ,   & !< Snow fraction of soil []
       wsn_soil      ,   & !< Water content of snow reservoir of soil [m water equivalent]
       overflow      ,   & !< Water content of reservoir for overflown soil water (terraplanet) [m] 

@@ -162,22 +162,22 @@ CONTAINS
 
   END SUBROUTINE init_soil_temperature
 
-SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
+SUBROUTINE update_surf_down (      &
+       kbdim, delta_time, lstart   &
      , pqm1, ptsl, pspeed10, ptm1  &
-     , pwl, pcvw, pwlmx &
-     , psn, pcvs, psnc,       pgld             &
-     , pgrndcapc &
+     , pwl,       pcvw,     pwlmx  & !<-
+     , psn, pcvs, psnc,     pgld   &
+     , pgrndcapc                   &
 !!$     , paphm1, paphms1, ptte             &     ! ATTENTION!
-     , pevapl,     pevapot, pevwsd                    &
-     , prain, psnow                            &
-     , lmask, lpglac       &
-     , palac &
-!!$     , psnacl, psnmel, progl &
+     , pevapl,     pevapot, pevwsd &
+     , prain, psnow                &
+     , lmask, lpglac               &
+     , palac                       &
+!!$     , psnacl, psnmel, progl &    !<-
      , pmlres, tte_corr &
 !++mgs : add instantaneous snow melt for drydep calculation
-     , psmelt   &
+     , psmelt   &                    !<-
 !--mgs
-
      )
 
   USE mo_physical_constants, ONLY: alf, cpd, vtmpc2, tmelt, g=>grav
@@ -187,9 +187,9 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   ! ptsl          Sfc temp [K] at timestep t+dt (unfiltered)
   ! pspeed10      Wind speed at 10m height [m/s] ... from 'vdiff'
   ! ptm1          Air temp [K] at timestep t-dt (filtered)
-  ! pwl           Water content [m] in skin reservoir
+  ! pwl           Water content [delta_timem] in skin reservoir
   !               (vegetation and bare soil)
-  ! pcvw          Skin reservoir fraction (= pwl/pwlmx, see *vdiff*)
+  ! pcvw          Skin reservoir fraction (= pwl/pwlmx, see *vdiff*) !<- NEU
   ! pwlmx         Skin reservoir [m] (calculated in *vdiff* as a function
   !               of vegetation index and leaf area index)
   ! psn           Snow depth [m water equivalent] at the ground
@@ -310,20 +310,20 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   !  local arrays
   !
   INTEGER :: jl
-  REAL(wp) ::                                                             &
-       zraind (kbdim),       zsnowd(kbdim),         zevttd(kbdim)        &
-       , zevsnd(kbdim),        zevwld(kbdim)        &
-       , zrogl(kbdim)         &
-       , zsnmel(kbdim),        zsn(kbdim)                                 &
+  REAL(wp) ::                                                       &
+       zraind (kbdim),       zsnowd(kbdim),         zevttd(kbdim)   &
+       , zevsnd(kbdim),        zevwld(kbdim)                        &
+       , zrogl(kbdim)                                               &
+       , zsnmel(kbdim),        zsn(kbdim)                           &
        ,        zsncmelt(kbdim)
 !!$       , zdp(kbdim),
   REAL(wp) :: zlfdcp(kbdim)
   !
   !  local scalars
   !
-  REAL(wp) ::                                                             &
-       zsmelt, zsnmlt,      &
-       zmprcp,    &
+  REAL(wp) ::              &
+       zsmelt, zsnmlt,     &
+       zmprcp,             &
        zc2, zc3, zsncp, zexpt, zexpw, zsncmax, zsncwind
   REAL(wp) :: zdtime, zrcp, zsncfac
   !
@@ -482,9 +482,9 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
 
 END SUBROUTINE update_surf_down
 
-SUBROUTINE update_soiltemp(nidx,nsoil                        &
-                         , delta_time                        &
-                         , lstart                            &
+SUBROUTINE update_soiltemp(nidx,nsoil                        & ! unterschied
+                         , delta_time                        & ! unterschied
+                         , lstart                            & ! unterschied
                          , pts                               &
                          , psn                               &
                          , psodif, prgcgn                    &
@@ -710,28 +710,46 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 
 END SUBROUTINE update_soiltemp
 
-SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
-     , pwl, pcvw, pwlmx &
-     , pws, pwsmx &
-     , ptsoil, pcvs          &
-     , porostd &
-     , pevapl,     pevapot, pevwsd                     &
-     , prain                           &
-     , lmask, lpglac &
-     , prunoff, pdrain &
-!vg      , pros_hd,    pdrain_hd                   &
-     , pmlres &
-     , zevwld &
-!     Soil moisture layers, evap. fluxes over land
-     , zdel, wsi, zwsfc, zwpwp           &
-     , dzr, dzs, fksat , fmpot , bclapp, vpor     &
-     , etrans, redevap                    &
-!!$     , vfc, vpwp &
-     , spsi                           &
-     , overflow                       &
-     , jllog                                     &
-     , l_tpe_open                      &
-     , l_tpe_closed                    &
+SUBROUTINE update_surf_up (     &
+      kbdim, delta_time, nsoil, & ! In (all)
+      pwl,                      & ! InOut
+      pcvw,                     & ! In
+      pwlmx,                    & ! In
+      pws,                      & ! InOut
+      pwsmx,                    & ! In
+      ptsoil,                   & ! In
+      pcvs,                     & ! In
+      porostd,                  & ! In
+      pevapl,                   & ! In, but in the moment not used!
+      pevapot,                  & ! In
+      pevwsd,                   & ! InOut. New in JSBACH4 as compared to JSBACH3, but never used.
+      prain,                    & ! In
+      lmask,                    & ! In
+      lpglac,                   & ! In
+      prunoff,                  & ! InOut
+      pdrain,                   & ! InOut
+!vg      , pros_hd,    pdrain_hd  & ! R: alternative to use for HD model
+      pmlres,                   & ! In
+      zevwld,                   & ! Out
+      ! for calculations with soil moisture layers, optional, evap. fluxes over land:
+      zdel,                     & ! In
+      wsi,                      & ! InOut
+      zwsfc,                    & ! In
+      zwpwp,                    & ! In. New in JSBACH4 as compared to JSBACH3
+      dzr,                      & ! In
+      dzs,                      & ! In
+      fksat,                    & ! In
+      fmpot,                    & ! In
+      bclapp,                   & ! In
+      vpor,                     & ! In
+      etrans,                   & ! In
+      redevap,                  & ! Out
+!!$     , vfc, vpwp &  ! nicht in JSBACH4
+      spsi,                     & ! In
+      overflow,                 & ! InOut. New in JSBACH4 as compared to JSBACH3
+      jllog,                    & ! InOut
+      l_tpe_open,               & ! In. New in JSBACH4 as compared to JSBACH3
+      l_tpe_closed              & ! In. New in JSBACH4 as compared to JSBACH3
      )
 !
 !     ------------------------------------------------------------------
@@ -887,8 +905,8 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 ! Soil moisture layers, evap. fluxes over land.
   REAL(wp), INTENT(in)   , optional :: zdel(nsoil)
   REAL(wp), INTENT(inout), optional :: wsi(kbdim,nsoil)
-  REAL(wp), INTENT(in), optional :: zwsfc(kbdim,nsoil)
-  REAL(wp), INTENT(in), optional :: zwpwp(kbdim,nsoil)
+  REAL(wp), INTENT(in)   , optional :: zwsfc(kbdim,nsoil)
+  REAL(wp), INTENT(in)   , optional :: zwpwp(kbdim,nsoil)
   REAL(wp), INTENT(in)   , optional :: dzr(kbdim)
   REAL(wp), INTENT(in)   , optional :: dzs(kbdim)
   REAL(wp), INTENT(in)   , optional :: fksat(kbdim)
@@ -903,38 +921,38 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
   REAL(wp), INTENT(inout), optional :: overflow(kbdim) ! excess of water in the terraplanet setup (l_tpe_closed = true)
 
   INTEGER,  INTENT(inout), optional :: jllog      ! gridbox number for logoutput in SOILHYD
-  LOGICAL,  INTENT(in),    OPTIONAL :: l_tpe_open   ! Switch for terraplanet setup, open water cycle
-  LOGICAL,  INTENT(in),    OPTIONAL :: l_tpe_closed ! Switch for terraplanet setup, closed water cycle
+  LOGICAL,  INTENT(in)   , optional :: l_tpe_open   ! Switch for terraplanet setup, open water cycle
+  LOGICAL,  INTENT(in)   , optional :: l_tpe_closed ! Switch for terraplanet setup, closed water cycle
 !
 !  local variables
 !
   INTEGER :: jl,jk
-  REAL(wp) ::                                                             &
-       zraind (kbdim)      &
+  REAL(wp) ::                             &
+       zraind (kbdim)                     &
      , zros(kbdim),          zdrain(kbdim)
 
-  REAL(wp) ::                                                             &
-       zorvari, zorvars, zdrmin, zdrmax, zdrexp, zsmelt,              &
-       zmprcp, zwlp, zwptr, zwdtr, zwslim, zconw2, zconw3, zconw4,    &
-       zroeff, zbws, zb1, zbm, zconw1, zlyeps, zvol, zprfl,           &
-       zlysic, zwsup, zsncp, zexpt, zexpw, zsncmax, zsncwind
-  REAL(wp) :: zdtime, zrcp, zsncfac
+  REAL(wp) ::                                                  &
+       zorvari, zorvars, zdrmin, zdrmax, zdrexp, zsmelt,       &
+       zmprcp, zwlp, zwptr, zwdtr, zwslim, zconw2, zconw3,     & !, zconw4
+       zroeff, zbws, zb1, zbm, zconw1, zlyeps, zvol, zprfl,    &
+       zlysic, zwsup, zsncp, zsncmax, zsncwind                   !, zexpt, zexpw
+  REAL(wp) :: zdtime, zsncfac                                    !, zrcp
   ! variables for terraplanet
   REAL(wp) :: remoist
   LOGICAL  :: ltpe_open, ltpe_closed
 
   ! Variables necessary for evaporation fluxes and 5 soil layers
   REAL(wp), PARAMETER :: cvinter = 0.25  !!$ TR for JSBACH testing
-  REAL(wp), PARAMETER :: zeps  = 1.e-10_wp
+  !REAL(wp), PARAMETER :: zeps  = 1.e-10_wp
   REAL(wp), PARAMETER :: zfak1 = 1._wp           ! =1., Dummy for SOILCHANGE (not used)
   INTEGER,  PARAMETER :: kb1   = 1               ! = 1, Digit for 1st field value for transfer to subroutine
   INTEGER,  PARAMETER :: ilog  = 0               ! Switch for logoutput in SOILHYD
 !!!!  PARAMETER (jllog=918, ilog=3)        ! No logoutput for ilog=0
 
-  REAL(wp) ::                                                         &
-       dzrsi(kbdim, nsoil), dzsi(kbdim, nsoil),                       &
+  REAL(wp) ::                                     &
+       dzrsi(kbdim, nsoil), dzsi(kbdim, nsoil),   &
        zwsat(kbdim,nsoil),                        &
-!!$       zwpwp(kbdim,nsoil),                                            &
+!!$       zwpwp(kbdim,nsoil),                      &
        wsim1m(kbdim, nsoil), aebsoil(kbdim), aetrans(kbdim)
 
   REAL(wp) :: zinfil(kbdim)    ! Infiltration for transfer to SOILCHANGE - was previously a local scalar
@@ -1056,13 +1074,23 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !*    4.2.1  Surface runoff, infiltration and evaporation from soil
 
         ! Positive Enoskin_nosnow is added to throughfall if the old bucket is used
-
-!         ******* Positive EBSoil and Etrans are added to throughfall separately
-!         ******* Negative fluxes change soil moisture in SOILCHANGE.
+        IF (nsoil == 1) THEN
+          IF (pevwsd(jl) >= 0.0_wp) THEN
+            zprfl = pmlres(jl)+zraind(jl)+pevwsd(jl)
+          ELSE
+            pws(jl) = pws(jl)    + pevwsd(jl)
+            zprfl   = pmlres(jl) + zraind(jl)
+          END IF
+        END IF
+          
+        !******* Positive EBSoil and Etrans are added to throughfall separately
+        !******* Negative fluxes change soil moisture in SOILCHANGE.
+        IF (nsoil == 5) THEN
           zprfl = pmlres(jl)+zraind(jl)                           !vg  water reaching the soil = meltwater + rain reaching the soil
           IF (aebsoil(jl) >= 0.0_wp) zprfl = zprfl + aebsoil(jl)  !vg  add bare soil evaporation
           IF (aetrans(jl) >= 0.0_wp) zprfl = zprfl + aetrans(jl)  !vg  add transpiration
-        
+        END IF
+          
         IF (ltpe_closed) THEN   !vg  only used with terra planet: runoff swiched off
           zros(jl)   = 0._wp
           zinfil(jl) = zprfl
@@ -1087,6 +1115,8 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
               zros(jl)   = 0._wp   !vg  no runoff as no water reaches the soil or soil is too dry (below 5%-limit)
               zinfil(jl) = zprfl
             END IF
+            ! In multi-layer scheme, infiltration changes soil moisture in SOILCHANGE.
+            IF (nsoil == 1) pws(jl) = pws(jl)+zinfil(jl) 
           END IF
         END IF
 !
@@ -1094,7 +1124,45 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !
       ENDIF
     ENDDO
-!
+    
+    IF (nsoil == 1) THEN
+
+      DO jl=1,kbdim
+
+        IF (lmask(jl) .AND. .NOT.lpglac(jl)) THEN
+
+!         *** Term shifting moved from the beginning of the original soil hydrology loop
+          zwdtr  = 0.90_wp*pwsmx(jl)
+          zwslim = 0.05_wp*pwsmx(jl)
+          zconw2 = pwsmx(jl)-zwdtr
+          zconw3 = zdrmax-zdrmin
+
+          IF (pws(jl) <= zwslim) THEN
+            zdrain(jl) = 0._wp
+          ELSE
+            IF (ptsoil(jl) > tmelt) THEN
+              zdrain(jl) = zdrmin*MAX(pws(jl)/pwsmx(jl),0.7_wp)
+              IF (pws(jl) > zwdtr) THEN
+                 zdrain(jl) = zdrain(jl)+zconw3*((pws(jl)-zwdtr)/zconw2)**zdrexp
+              END IF
+              zdrain(jl) = zdrain(jl)*zdtime
+              zdrain(jl) = MIN(zdrain(jl),pws(jl)-zwslim)
+              pws(jl)    = pws(jl)-zdrain(jl)
+            ELSE
+              zdrain(jl) = 0._wp
+            END IF
+          END IF
+          zwsup    = MAX(pws(jl)-pwsmx(jl),0._wp)
+          pws(jl)  = pws(jl)-zwsup
+          zros(jl) = zros(jl)+zdrain(jl)+zwsup
+        ELSE
+           pws(jl) = 0._wp
+        END IF
+      ENDDO
+
+     END IF
+    
+    IF (nsoil == 5) THEN
       !  Change of soil moisture in 5 layers
       !  change belongs to one time step = zdtime
 
@@ -1198,7 +1266,10 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !vg         ENDIF
 !vg       ENDDO
 !vg 
-!vg !
+!vg
+
+    END IF ! nsoil ==5
+
 !vg !*  4.2.3  Runoff and drainage for the HD-Model [m]
 !vg !
 !vg     DO jl=1,kbdim
