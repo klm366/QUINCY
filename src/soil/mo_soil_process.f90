@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
+!! added one layer soil model by Rainer Schneck (2016-05-19)
 !!
 MODULE mo_soil_process
 #ifndef __NO_JSBACH__
@@ -509,9 +510,9 @@ SUBROUTINE update_surf_down (      &
 
 END SUBROUTINE update_surf_down
 
-SUBROUTINE update_soiltemp(nidx,nsoil                        & ! unterschied
-                         , delta_time                        & ! unterschied
-                         , lstart                            & ! unterschied
+SUBROUTINE update_soiltemp(nidx,nsoil                        &
+                         , delta_time                        &
+                         , lstart                            &
                          , pts                               &
                          , psn                               &
                          , psodif, prgcgn                    &
@@ -569,21 +570,21 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        & ! unterschied
 !-----------------------------------------------------------------------
 !  ARGUMENTS
 !
-  INTEGER, Intent(in)  ::  nidx                 !! length of the vector
-  INTEGER, Intent(in)  ::  nsoil                !! number of soil layers (fixed to 5)
-  REAL(wp), Intent(in)     ::  delta_time       !! time step
-  LOGICAL, INTENT(in)  :: lstart
-  REAL(wp), Intent(in)     ::  pts(nidx)            !! surface temperature at top of soil [K]
-  REAL(wp), Intent(in)     ::  psn(nidx)            !! equivalent snow depth [m water]
-  REAL(wp), Intent(in)     ::  psodif(nidx)         !! soil temperature diffusivity [m^2/s]
-  REAL(wp), Intent(in)     ::  prgcgn(nidx)         !! soil heat capacity [J/m^3K]
-  REAL(wp), Intent(inout)  ::  pgrndc(nidx,nsoil)   !!
-  REAL(wp), Intent(inout)  ::  pgrndd(nidx,nsoil)   !!
-  REAL(wp), Intent(inout)  ::  ptsoil(nidx,nsoil)   !! soil temperature [K]
-  REAL(wp), Intent(out)    ::  pgrndcapc(nidx)      !!
-  REAL(wp), Intent(out)    ::  pgrndhflx(nidx)      !! ground heat flux
-  LOGICAL, Intent(in)  ::  lmask(nidx)
-  LOGICAL, Intent(in)  ::  ldglac(nidx)         !! glacier mask
+  INTEGER, Intent(in)     ::  nidx                 !! length of the vector
+  INTEGER, Intent(in)     ::  nsoil                !! number of soil layers (default is 5)
+  REAL(wp), Intent(in)    ::  delta_time       !! time step
+  LOGICAL, INTENT(in)     ::  lstart
+  REAL(wp), Intent(in)    ::  pts(nidx)            !! surface temperature at top of soil [K]
+  REAL(wp), Intent(in)    ::  psn(nidx)            !! equivalent snow depth [m water]
+  REAL(wp), Intent(in)    ::  psodif(nidx)         !! soil temperature diffusivity [m^2/s]
+  REAL(wp), Intent(in)    ::  prgcgn(nidx)         !! soil heat capacity [J/m^3K]
+  REAL(wp), Intent(inout) ::  pgrndc(nidx,nsoil)   !!
+  REAL(wp), Intent(inout) ::  pgrndd(nidx,nsoil)   !!
+  REAL(wp), Intent(inout) ::  ptsoil(nidx,nsoil)   !! soil temperature [K]
+  REAL(wp), Intent(out)   ::  pgrndcapc(nidx)      !!
+  REAL(wp), Intent(out)   ::  pgrndhflx(nidx)      !! ground heat flux
+  LOGICAL, Intent(in)     ::  lmask(nidx)
+  LOGICAL, Intent(in)     ::  ldglac(nidx)         !! glacier mask
 !
 !     ------------------------------------------------------------------
 !
@@ -611,7 +612,9 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        & ! unterschied
   zsn_dens = 330.0_wp                                 !! snow density              [kg/m**3]
   zsn_capa = 634500.0_wp                              !! snow  heat capacity   [j/m**3/k]
   cdel = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)         !! thicknesses of soil layers [m]
+                                                                  ! R: this should be taken from dsl4jsb_Config(SOIL)%dz_energy
   cmid = (/0.0325_wp,0.192_wp,0.7755_wp,2.683_wp,6.984_wp/)       !! depth of mids of soil layers [m]
+
 !
 !*    1.2 COMPUTING SOME USEFUL CONSTANTS.
 !
