@@ -113,4 +113,5 @@ mo_veg_dynamics.o: \
 mo_veg_util.o: \
   mo_kind.o \
   mo_base_memory.o \
+  mo_land_memory.o \
   mo_veg_memory.o

@@ -23,6 +23,7 @@ PROGRAM canopy_model_driver
   USE mo_atmland_config_class,  ONLY: atmland_config
   ! land
   USE mo_land_constants,        ONLY: molar_mass_N
+  USE mo_land_util,             ONLY: init_element_zero
   ! vegetation
   USE mo_veg_parameters
   USE mo_veg_radiation
@@ -64,8 +65,8 @@ PROGRAM canopy_model_driver
   !! 
   CALL init_base_constants
   CALL init_atmland_constants
-  ! vegetation (2do: may combine into one function init_vegetation() )
-  CALL init_element_zero                               ! mo_veg_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
+  CALL init_element_zero                               ! mo_land_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
+  ! vegetation
   CALL init_plant(tile(itile))                         ! mo_veg_util 
   CALL set_zero_fluxes_of_plant_pools(tile(itile))     ! mo_veg_util; called each timestep in update_vegetation()
   CALL init_veg_parameters(veg_param)                  ! mo_veg_parameters

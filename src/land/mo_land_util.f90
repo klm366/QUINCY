@@ -9,8 +9,38 @@
 !!
 MODULE mo_land_util
 
-!!! 20160504 Jan:
-!!! all moved to mo_base_util:t_moving_average && then to mo_veg_memory with r126
-!!! Make.inc.deps adapted accordingly
+  USE mo_kind,         ONLY: wp
+
+  IMPLICIT NONE
+
+
+
+
+CONTAINS
+
+  !-----------------------------------------------------------------------------------------------------
+  !> initialize the derived TYPE t_element element_zero with zero
+  !! 
+  !! this is done only one time, this element_zero is used to set other derived TYPE's of t_element to zero
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_element_zero
+
+    USE mo_land_memory,  ONLY: element_zero   ! TYPE(t_element) :: element_zero | defined & declared in mo_land_memory
+
+    element_zero%carbon     = 0.0_wp
+    element_zero%nitrogen   = 0.0_wp
+    element_zero%phosphorus = 0.0_wp
+    element_zero%carbon13   = 0.0_wp
+    element_zero%carbon14   = 0.0_wp
+    element_zero%nitrogen15 = 0.0_wp
+  END SUBROUTINE init_element_zero
+
+
+
+
+
+
+
+
 
 END MODULE mo_land_util

@@ -48,7 +48,7 @@ PROGRAM plant_model_driver
   ! land
 !  USE mo_land_constants  
 !  USE mo_land_memory   
-!  USE mo_land_util   
+  USE mo_land_util,             ONLY: init_element_zero
   ! vegetation
   USE mo_veg_parameters
   USE mo_veg_radiation
@@ -91,8 +91,8 @@ PROGRAM plant_model_driver
   !! 
   CALL init_base_constants
   CALL init_atmland_constants
-  ! vegetation (2do: may combine into one function init_vegetation() )
-  CALL init_element_zero                               ! mo_veg_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
+  CALL init_element_zero                               ! mo_land_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
+  ! vegetation
   DO itile = 1,ntile
     CALL init_plant(tile(itile))                       ! mo_veg_util 
     CALL set_zero_fluxes_of_plant_pools(tile(itile))   ! mo_veg_util; called each timestep (see Tile loop below)

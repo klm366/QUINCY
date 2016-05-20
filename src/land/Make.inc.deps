@@ -4,3 +4,7 @@ mo_land_constants.o: \
 mo_land_memory.o: \
   mo_kind.o
 
+mo_land_util.o: \
+  mo_kind.o \
+  mo_land_memory.o
+

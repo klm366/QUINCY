@@ -13,6 +13,7 @@ PROGRAM canopy_test_model_driver
   USE mo_exception,             ONLY: finish ! message_text
   USE mo_base_memory
   USE mo_base_constants
+  USE mo_land_util,             ONLY: init_element_zero
   USE mo_atmland_util
   USE mo_atmland_memory
   USE mo_atmland_forcing
@@ -56,8 +57,8 @@ PROGRAM canopy_test_model_driver
   !!  
   CALL init_base_constants
   CALL init_atmland_constants
+  CALL init_element_zero                               ! mo_land_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
   ! vegetation
-  CALL init_element_zero                               ! mo_veg_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
   CALL init_plant(tile(1))                             ! mo_veg_util 
   CALL set_zero_fluxes_of_plant_pools(tile(1))         ! mo_veg_util; called each timestep in update_vegetation()
   CALL init_veg_parameters(veg_param)                  ! mo_veg_parameters
