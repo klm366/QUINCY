@@ -193,7 +193,7 @@ CONTAINS
 SUBROUTINE update_surf_down (      &
        kbdim, delta_time, lstart   &
      , pqm1, ptsl, pspeed10, ptm1  &
-     , pwl,       pcvw,     pwlmx  & !<-
+     , pwl,       pcvw,     pwlmx  &
      , psn, pcvs, psnc,     pgld   &
      , pgrndcapc                   &
 !!$     , paphm1, paphms1, ptte             &     ! ATTENTION!
@@ -201,10 +201,10 @@ SUBROUTINE update_surf_down (      &
      , prain, psnow                &
      , lmask, lpglac               &
      , palac                       &
-!!$     , psnacl, psnmel, progl &    !<-
+!!$     , psnacl, psnmel, progl &
      , pmlres, tte_corr &
 !++mgs : add instantaneous snow melt for drydep calculation
-     , psmelt   &                    !<-
+     , psmelt   &    
 !--mgs
      )
 
@@ -215,9 +215,9 @@ SUBROUTINE update_surf_down (      &
   ! ptsl          Sfc temp [K] at timestep t+dt (unfiltered)
   ! pspeed10      Wind speed at 10m height [m/s] ... from 'vdiff'
   ! ptm1          Air temp [K] at timestep t-dt (filtered)
-  ! pwl           Water content [delta_timem] in skin reservoir
+  ! pwl           Water content [m] in skin reservoir
   !               (vegetation and bare soil)
-  ! pcvw          Skin reservoir fraction (= pwl/pwlmx, see *vdiff*) !<- NEU
+  ! pcvw          Skin reservoir fraction (= pwl/pwlmx, see *vdiff*)
   ! pwlmx         Skin reservoir [m] (calculated in *vdiff* as a function
   !               of vegetation index and leaf area index)
   ! psn           Snow depth [m water equivalent] at the ground
