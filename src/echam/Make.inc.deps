@@ -1,8 +1,11 @@
 mo_exception.o: \
   mo_io_units.o
+
 mo_namelist.o: mo_util_string.o mo_filename.o mo_exception.o
+
 mo_filename.o: \
   mo_exception.o
+
 mo_util_string.o: \
   mo_kind.o
 
