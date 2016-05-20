@@ -339,7 +339,7 @@ CONTAINS
         & t_soil(:,1),    & ! In
         & sfract_srf(:),  & ! In
         & oro_stddev(:),  & ! In
-        & evapotrans(:),  & ! In
+        & evapotrans(:),  & ! In. New in JSBACH4, but not used in the moment
         & evapopot(:),    & ! In
         & evapotrans_no_snow_skin(:), & ! InOut
         & rain(:),        & ! In

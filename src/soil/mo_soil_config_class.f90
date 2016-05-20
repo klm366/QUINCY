@@ -25,10 +25,11 @@ MODULE mo_soil_config_class
      INTEGER :: nsoil_water
      REAL(wp), ALLOCATABLE :: soil_depth_energy(:)
      REAL(wp), ALLOCATABLE :: soil_depth_water(:)
-     REAL(wp), ALLOCATABLE :: dz_energy(:)
-     REAL(wp), ALLOCATABLE :: dz_water(:)
+     REAL(wp), ALLOCATABLE :: dz_energy(:)  !< layer thickness (dz means "delta z")
+     REAL(wp), ALLOCATABLE :: dz_water(:)   !< layer thickness (dz means "delta z")
      REAL(wp) :: wsr_capacity               !< Water holding capacity of ground skin reservoir [m water equivalent]
      REAL(wp) :: wsn_capacity               !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
+     REAL(wp) :: ws_wilt_fract              !< Fractional soil moisture content at the wilting point (fraction of maximum moisture)
    CONTAINS
      PROCEDURE :: Init => Init_soil_config
   END type t_soil_config
@@ -53,14 +54,14 @@ CONTAINS
     INTEGER  :: nsoil_energy, nsoil_water
     REAL(wp) :: dz_energy(max_soil_layers)
     REAL(wp) :: dz_water(max_soil_layers)
-    REAL(wp) :: wsr_capacity, wsn_capacity
+    REAL(wp) :: wsr_capacity, wsn_capacity, ws_wilt_fract
 
     NAMELIST /jsb_soil_nml/                     &
       active,                                   &
       ic_filename, bc_filename,                 &
       nsoil_energy, nsoil_water,                &
       dz_energy, dz_water,                      &
-      wsr_capacity, wsn_capacity
+      wsr_capacity, wsn_capacity, ws_wilt_fract
 
     INTEGER :: nml_handler, nml_unit, istat, i
     CHARACTER(len=filename_max) :: namelist_filename
@@ -81,6 +82,7 @@ CONTAINS
     dz_water (1:5) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/) ; dz_water (6:max_soil_layers) = 0._wp
     wsr_capacity   = 2.E-4_wp
     wsn_capacity   = 2.E-4_wp
+    ws_wilt_fract  = 0.35_wp
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -109,14 +111,14 @@ CONTAINS
       config%soil_depth_energy(i) = config%soil_depth_energy(i-1) + dz_energy(i)
     END DO
     config%soil_depth_water(1)       = dz_water(1)
-    DO i=2,nsoil_water
+    DO i=2,nsoil_water ! R: Note: if nsoil_water is 1 this loop will be skiped automatically
       config%soil_depth_water(i) = config%soil_depth_water(i-1) + dz_water(i)
     END DO
     config%dz_energy(1:nsoil_energy) = dz_energy(1:nsoil_energy)
     config%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)
     config%wsr_capacity              = wsr_capacity
     config%wsn_capacity              = wsn_capacity
-
+    config%ws_wilt_fract             = ws_wilt_fract
     IF (.NOT. active) RETURN
 
     ! Create vertical axes

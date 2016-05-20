@@ -17,7 +17,8 @@ MODULE mo_soil_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: snow_fract, relative_humidity, update_surf_down, update_soiltemp, update_surf_up
+  PUBLIC :: snow_fract, relative_humidity, get_relative_humidity_onelayer
+  PUBLIC :: update_surf_down, update_soiltemp, update_surf_up
   PUBLIC :: init_soil_temperature
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_process'
@@ -58,6 +59,32 @@ CONTAINS
 
   END FUNCTION relative_humidity
 
+
+  ! R: Note: The "ELEMENTAL FUNCTION relative_humidity" above corresponds to "FUNCTION calc_relative_humidity_upper" in JSBACH3
+  !          However, in JSBACH3 for the one layer soil model relative humidity is not calculated in the same way.
+  !          It is calculated in "FUNCTION calc_relative_humidity" which corresponds to the following function below:
+  FUNCTION get_relative_humidity_onelayer(moisture, ws_fc_l, ws_wilt_fract) RESULT(rel_humidity)
+
+    USE mo_math_constants,  ONLY: pi
+
+    REAL(wp), INTENT(in)  :: moisture(:)
+    REAL(wp), INTENT(in)  :: ws_fc_l(:)
+    REAL(wp), INTENT(in)  :: ws_wilt_fract
+    REAL(wp)              :: rel_humidity(SIZE(moisture))
+    REAL(wp)              :: moisture_limit(SIZE(moisture))
+    REAL(wp)              :: evap_stop(SIZE(moisture))
+
+    evap_stop      = MIN(0.1_wp, ws_fc_l)
+    moisture_limit = ws_fc_l - evap_stop
+
+    WHERE (moisture > moisture_limit .AND. moisture > ws_wilt_fract*ws_fc_l)
+       rel_humidity = 0.5_wp * (1._wp - COS((moisture-moisture_limit) * pi / evap_stop))
+    ELSEWHERE
+       rel_humidity = 0._wp
+    END WHERE
+
+  END FUNCTION get_relative_humidity_onelayer
+  
   !>
   !
   ! Initialize soil and surface temperature 
@@ -720,9 +747,9 @@ SUBROUTINE update_surf_up (     &
       ptsoil,                   & ! In
       pcvs,                     & ! In
       porostd,                  & ! In
-      pevapl,                   & ! In, but in the moment not used!
+      pevapl,                   & ! In, but in the moment not used! New in JSBACH4 as compared to JSBACH3.
       pevapot,                  & ! In
-      pevwsd,                   & ! InOut. New in JSBACH4 as compared to JSBACH3, but never used.
+      pevwsd,                   & ! InOut
       prain,                    & ! In
       lmask,                    & ! In
       lpglac,                   & ! In
@@ -734,7 +761,7 @@ SUBROUTINE update_surf_up (     &
       ! for calculations with soil moisture layers, optional, evap. fluxes over land:
       zdel,                     & ! In
       wsi,                      & ! InOut
-      zwsfc,                    & ! In
+      zwsfc,                    & ! In. In JSBACH3 it was InOut
       zwpwp,                    & ! In. New in JSBACH4 as compared to JSBACH3
       dzr,                      & ! In
       dzs,                      & ! In
@@ -1085,7 +1112,7 @@ SUBROUTINE update_surf_up (     &
           
         !******* Positive EBSoil and Etrans are added to throughfall separately
         !******* Negative fluxes change soil moisture in SOILCHANGE.
-        IF (nsoil == 5) THEN
+        IF (nsoil > 1) THEN
           zprfl = pmlres(jl)+zraind(jl)                           !vg  water reaching the soil = meltwater + rain reaching the soil
           IF (aebsoil(jl) >= 0.0_wp) zprfl = zprfl + aebsoil(jl)  !vg  add bare soil evaporation
           IF (aetrans(jl) >= 0.0_wp) zprfl = zprfl + aetrans(jl)  !vg  add transpiration
@@ -1162,7 +1189,7 @@ SUBROUTINE update_surf_up (     &
 
      END IF
     
-    IF (nsoil == 5) THEN
+    IF (nsoil > 1) THEN
       !  Change of soil moisture in 5 layers
       !  change belongs to one time step = zdtime
 

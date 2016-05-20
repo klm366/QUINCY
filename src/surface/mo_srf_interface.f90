@@ -562,7 +562,7 @@ CONTAINS
 
     USE mo_srf_constants,  ONLY: rhoh2o
     USE mo_soil_constants, ONLY: ws_wilt_fract
-    USE mo_soil_process,   ONLY: relative_humidity
+    USE mo_soil_process,   ONLY: relative_humidity, get_relative_humidity_onelayer
 
     TYPE(t_jsb_tile),  POINTER    :: tile
     INTEGER,           INTENT(in) :: iblk, ics, ice, nc
@@ -574,6 +574,7 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL)
     dsl4jsb_Def_memory(VEG)
     dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_config(SOIL)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: fract_fpc
@@ -591,6 +592,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fact_qsat_trans_srf
     dsl4jsb_Real2D_onChunk :: qsat_srf
     dsl4jsb_Real2D_onChunk :: canopy_cond
+    dsl4jsb_Real2D_onChunk :: ws_fc_root
     dsl4jsb_Real2D_onChunk :: pch
     dsl4jsb_Real2D_onChunk :: wind_air
     dsl4jsb_Real2D_onChunk :: q_air
@@ -618,6 +620,7 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL)
     dsl4jsb_Get_memory(VEG)
     dsl4jsb_Get_memory(ATM2LAND)
+    dsl4jsb_Get_config(SOIL)
 
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, pch,      IN)
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, wind_air, IN)
@@ -636,6 +639,10 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(VEG, fract_fpc,   OUT)
     dsl4jsb_Get_var2D_onChunk(VEG, canopy_cond, OUT)
+    dsl4jsb_Get_var2D_onChunk(VEG, ws_fc_root,  IN)
+   
+    
+    
 !!$    sfract_can       => tile%mem%veg  %sfract_can%ptr          (ics:ice,    iblk)
 !!$    sfract_soil      => tile%mem%soil %sfract_soil%ptr         (ics:ice,    iblk)
 !!$    wfract_can       => tile%mem%veg  %wfract_can%ptr          (ics:ice,    iblk)
@@ -653,9 +660,14 @@ CONTAINS
       fact_qsat_trans(:) = 0._wp
     END WHERE
     fact_qair_veg(:) = fact_qsat_veg(:)
-
-    rel_hum(:) = relative_humidity(ws_l(:,1), ws_fc_l(:,1))
-
+    
+    IF (dsl4jsb_Config(SOIL)%nsoil_water > 1) THEN
+       rel_hum(:) = relative_humidity(ws_l(:,1), ws_fc_l(:,1))
+    END IF
+    IF (dsl4jsb_Config(SOIL)%nsoil_water == 1) THEN
+       rel_hum(:) = get_relative_humidity_onelayer(ws_l(:,1), ws_fc_root(:), dsl4jsb_Config(SOIL)%ws_wilt_fract) ! ws_fc_root(:) vs. ws_fc_l
+    END IF
+    
     WHERE (qsat_srf(:) * rel_hum(:) > q_air(:) .AND. rel_hum(:) > 1.e-10_wp)
       fact_qsat_soil(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * &
         & (wfract_srf(:) + (1._wp - wfract_srf(:)) * rel_hum(:))
