@@ -32,9 +32,11 @@ CONTAINS
   SUBROUTINE update_phenology(phenology_type,gpp_week,maint_respiration_week,mean_leaf_age, & 
                               t_air_week,t_air_month,beta_soil_gs,gdd,nd_dormance,growing_season) 
 
-    USE mo_kind, ONLY: eps4
-    USE mo_atmland_constants, ONLY: Tzero
-    USE mo_veg_parameters, ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
+    USE mo_kind,               ONLY: eps4
+    USE mo_base_constants,     ONLY: dt, one_day
+    USE mo_atmland_constants,  ONLY: Tzero
+    USE mo_atmland_memory,     ONLY: atm2land
+    USE mo_veg_parameters,     ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
                                  gdd_req_max,gdd_t_air_threshold,k_gdd_dormance,t_air_senescence, & 
                                  beta_soil_flush_grass,beta_soil_flush_tree,beta_soil_senescence_tree, & 
                                  min_leaf_age
@@ -47,12 +49,14 @@ CONTAINS
     REAL(wp),INTENT(in) :: t_air_week                    !< weekly avearge air temperature (K)
     REAL(wp),INTENT(in) :: t_air_month                   !< monthly average air temperature (K)
     REAL(wp),INTENT(in) :: beta_soil_gs                  !< weekly soil moisture stress (--)
-    REAL(wp),INTENT(in) :: gdd                           !< growing degree days (days)
-    REAL(wp),INTENT(in) :: nd_dormance                   !< number of dormancy days (days)
+    REAL(wp),INTENT(inout) :: gdd                        !< growing degree days (days)
+    REAL(wp),INTENT(inout) :: nd_dormance                !< number of dormancy days (days)
     LOGICAL, INTENT(inout) :: growing_season             !< whether or not a plant is in the growing season
     ! 0.2 Local
     REAL(wp) :: hlp1                                     ! helper variable for tmp values
 
+    !> 1.0 check growing season has started or ended
+    !! 
     IF(.NOT.growing_season) THEN ! If not in growing season, check whether growing season has started
        SELECT CASE (phenology_type)
          CASE (ievergreen)       ! nothing to do here
@@ -89,6 +93,22 @@ CONTAINS
             CALL finish("mo_veg_phenology:update_phenology",message_text) 
        END SELECT
     ENDIF   
+
+    !> 2.1 gdd counter
+    !! 
+    IF(atm2land%t_air > gdd_t_air_threshold) THEN
+       gdd = gdd + ((atm2land%t_air - gdd_t_air_threshold) * dt/one_day)
+    ENDIF
+    IF(t_air_week < Tzero) gdd = 0.0_wp
+
+    !> 2.2 nd_dormance counter
+    !! 
+    IF (growing_season) THEN 
+      gdd         = 0.0_wp
+      nd_dormance = 0.0_wp
+    ELSE
+      nd_dormance = nd_dormance + dt/one_day 
+    ENDIF
 
   END SUBROUTINE update_phenology 
 

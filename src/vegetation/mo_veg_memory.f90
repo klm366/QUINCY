@@ -56,9 +56,6 @@ MODULE mo_veg_memory
   !!
   !! includes the PROCEDURE's necessary to do so \n
   !! makes the moving averages globally available
-  !!
-  !! @todo discuss whether switches get an own TYPE --> YES
-  !! @todo gdd & nd_dormance calculation is NOT using moving_average, may calc these variables elsewhere
   !-----------------------------------------------------------------------------------------------------
   TYPE t_moving_average
     !< 1.0 variables that store averages
@@ -79,14 +76,11 @@ MODULE mo_veg_memory
     REAL(wp) :: demand_uptake_p                            !< scalar of Vmax for root P uptake
     REAL(wp) :: growth_req_n_week         !< moles N required for a unit of C growth under current allocation fractions
     REAL(wp) :: growth_req_p_week         !< moles P required for a unit of N growth under current allocation fractions
-    ! 1.5 phenological variables
-    REAL(wp) :: gdd                                        !< growing degree days above 5°C
-    REAL(wp) :: nd_dormance                                !< number of days since last growing season 
-    ! 1.6 environmental forcing
+    ! 1.5 environmental forcing
     REAL(wp) :: t_air             ! = 1._wp
     REAL(wp) :: q_air             ! = 1._wp
     REAL(wp) :: press_surf        ! = 1._wp
-    ! 1.7 memory of certain variables, temperature, ...
+    ! 1.6 memory of certain variables, temperature, ...
     REAL(wp) :: t_air_week         ! = 273.15_wp   ! 7 days
     REAL(wp) :: t_air_month        ! = 273.15_wp   ! 30 days
     REAL(wp) :: t_air_longterm     ! = 273.15_wp   ! 30 years == 10950 days
@@ -110,28 +104,16 @@ MODULE mo_veg_memory
     ! 2.4 nutrient demand for plant uptake
     REAL(wp) :: p_demand_uptake_n 
     REAL(wp) :: p_demand_uptake_p 
-    ! 2.5 phenological variables are not calculated using the calc_moving_avrg, thus, no "period values"
-
-    ! 2.6 environmental forcing
+    ! 2.5 environmental forcing
     REAL(wp) :: p_t_air 
     REAL(wp) :: p_q_air 
     REAL(wp) :: p_press_surf 
-    ! 2.7 memory of certain variables: default averaging period values are used, according to variable names (week, month, ..)
-
-
-    !< 3.0 switches and inherent variables
-    !! 
-    !! @todo create a new TYPE for switches - veg, soil, atmland etc, which are updated (i.e. procedure call) in interfaces
-    !!  integrated into tile%plant
-    LOGICAL  :: gdd_t_air_threshold_crossed    !< IF(atm2land%t_air > gdd_t_air_threshold) = .TRUE. ; called in veg_interface
-    Real(wp) :: gdd_t_air_threshold_crossed_amount  !<  atm2land%t_air - gdd_t_air_threshold
-    LOGICAL  :: t_air_week_lt_Tzero            !< is TRUE if t_air_week < Tzero
+    ! 2.6 memory of certain variables: default averaging period values are used, according to variable names (week, month, ..)
 
   CONTAINS
     !< 4.0 procedures
     !! 
     PROCEDURE :: init                => init_moving_avrg_variables
-    PROCEDURE :: update_veg_switches => moving_avrg_update_veg_switches
     PROCEDURE :: calc_moving_avrg    => calculate_moving_average_of_variable
     PROCEDURE :: update_veg          => update_veg_moving_avrg_variables
     PROCEDURE :: update_soil         => update_soil_moving_avrg_variables
@@ -238,6 +220,8 @@ MODULE mo_veg_memory
     LOGICAL  :: growing_season                    !< logical to identify whether the plant is in the growing season or not
     REAL(wp) :: growth_req_n                      !< moles N required for a unit of C growth under current allocation fractions 
     REAL(wp) :: growth_req_p                      !< moles P required for a unit of N growth under current allocation fractions 
+    REAL(wp) :: gdd                               !< growing degree days above 5°C
+    REAL(wp) :: nd_dormance                       !< number of days since last growing season 
    END TYPE t_slm_plant
 
 
@@ -516,14 +500,11 @@ CONTAINS
     this%demand_uptake_p               = 0.1_wp
     this%growth_req_n_week             = 1._wp / 25._wp 
     this%growth_req_p_week             = 1._wp / 14._wp
-    ! 1.5 phenological variables
-    this%gdd                           = 1.0_wp
-    this%nd_dormance                   = 1.0_wp
-    ! 1.6 environmental forcing
+    ! 1.5 environmental forcing
     this%t_air                         = 283.15_wp   ! 10°C; temperature in K
     this%q_air                         = 283.15_wp   ! 10°C; temperature in K
     this%press_surf                    = 1._wp
-    ! 1.7 memory of certain variables, temperature [K], ...
+    ! 1.6 memory of certain variables, temperature [K], ...
     this%t_air_week                    = 283.15_wp   ! 10°C; 7  days
     this%t_air_month                   = 283.15_wp   ! 10°C; 30 days
     this%t_air_longterm                = 283.15_wp   ! 10°C; 30 years == 10950 days
@@ -539,58 +520,19 @@ CONTAINS
     this%p_par_shaded                  = 1.0_wp 
     this%p_fleaf_sunlit                = 1.0_wp  
     ! 2.2 soil moisture
-    this%p_beta_air                    = this%p_weekly  ! 1._wp 
-    this%p_beta_soil_ps                = this%p_weekly  ! 1._wp 
-    this%p_beta_soil_gs                = this%p_weekly  ! 1._wp 
+    this%p_beta_air                    = this%p_weekly  
+    this%p_beta_soil_ps                = this%p_weekly  
+    this%p_beta_soil_gs                = this%p_weekly  
 
     ! 2.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
     this%p_demand_uptake_n             = 3.0_wp 
     this%p_demand_uptake_p             = 3.0_wp 
 
-    ! 2.6 environmental forcing
+    ! 2.5 environmental forcing
     this%p_t_air                       = 1.0_wp
     this%p_q_air                       = 1.0_wp
     this%p_press_surf                  = 1.0_wp
-
-
-    ! 3.0 switches and inherent variables
-    this%gdd_t_air_threshold_crossed   = .FALSE.
-    this%gdd_t_air_threshold_crossed_amount = 0.0_wp
-    this%t_air_week_lt_Tzero           = .FALSE.
-
-
   END SUBROUTINE init_moving_avrg_variables
-
-  !-----------------------------------------------------------------------------------------------------
-  !> update certain switches needed for vegetation moving average calculations
-  !!
-  !! called in mo_veg_interface:update_vegetation 
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE  moving_avrg_update_veg_switches (this, t_air, gdd_t_air_threshold, Tzero)
-    IMPLICIT NONE 
-    REAL(wp), INTENT(in)                   :: t_air                !< current air temperature
-    REAL(wp), INTENT(in)                   :: gdd_t_air_threshold  !< temperature threshold for growing degree days
-    REAL(wp), INTENT(in)                   :: Tzero                !< melting point in K
-    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
-
-    !> 1.0 air temperature > threshold for growing degree days
-    !! 
-    IF(t_air > gdd_t_air_threshold) THEN
-      this%gdd_t_air_threshold_crossed        = .TRUE.
-      this%gdd_t_air_threshold_crossed_amount = t_air - gdd_t_air_threshold
-    ELSE
-      this%gdd_t_air_threshold_crossed        = .FALSE.
-    END IF
-
-    !> 2.0 weekly averaged air temperature < melting point in K
-    !! @todo this is not an veg parameter ! -> may move into another (new) subroutine
-    IF(this%t_air_week < Tzero) THEN
-      this%t_air_week_lt_Tzero = .TRUE.
-    ELSE
-      this%t_air_week_lt_Tzero = .FALSE.
-    END IF
-
-  END SUBROUTINE moving_avrg_update_veg_switches
 
   !-----------------------------------------------------------------------------------------------------
   !> calculate and return the moving average of a single variable or an array
@@ -663,19 +605,6 @@ CONTAINS
                                                1.0_wp / (this%p_weekly * one_day/ dt), & 
                                                plant%growth_req_p < eps8)
 
-    ! gdd & nd_dormance
-    IF(this%gdd_t_air_threshold_crossed) THEN   ! == IF(atm2land%t_air > gdd_t_air_threshold)
-       this%gdd = this%gdd + this%gdd_t_air_threshold_crossed_amount * dt/one_day
-    ENDIF
-
-    IF(this%t_air_week_lt_Tzero) this%gdd = 0.0_wp
-
-    IF (plant%growing_season) THEN   ! growing_season == TRUE
-      this%gdd         = 0.0_wp
-      this%nd_dormance = 0.0_wp
-    ELSE
-      this%nd_dormance = this%nd_dormance + dt/one_day 
-    ENDIF
   END SUBROUTINE update_veg_moving_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------

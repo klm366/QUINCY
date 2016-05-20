@@ -27,12 +27,10 @@ CONTAINS
   SUBROUTINE update_vegetation(tile, veg_param)
 
     USE mo_base_memory,        ONLY: t_slm_soil, t_slm_tile
-    USE mo_atmland_constants,  ONLY: Tzero
-    USE mo_atmland_memory
     USE mo_land_constants
     USE mo_land_memory,        ONLY: add_elements, subtract_elements
     USE mo_veg_memory
-    USE mo_veg_parameters,     ONLY: t_slm_veg_param, gdd_t_air_threshold
+    USE mo_veg_parameters,     ONLY: t_slm_veg_param
     USE mo_veg_photosynthesis, ONLY: update_canopy_fluxes
     USE mo_veg_phenology,      ONLY: update_phenology
     USE mo_veg_turnover
@@ -48,21 +46,15 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER         :: soil           ! soil variables per tile
     TYPE(t_slm_plant),POINTER        :: plant          ! plant variables per tile
-    ! 0.2 Local
-    REAL(wp) :: hlp1
+    REAL(wp)                         :: hlp1
 
     !  bi-directional pointer
     plant => tile%plant
     soil  => tile%soil
 
-    !> 1.0 update vegetation parameter switches
+    !> 1.0 update phenological state
     !! 
-    !! @todo we might find a better (more general) solution for this
-    CALL plant%moving_average%update_veg_switches(atm2land%t_air, gdd_t_air_threshold, Tzero)
-
-    !> 1.1 update phenological state
-    !! 
-    !! 
+    !! includes growing_season, gdd and nd_dormance
     CALL update_phenology(veg_param%phenology_type(plant%pftid), &
                           plant%moving_average%gpp_week, &
                           plant%moving_average%maint_respiration_week, &
@@ -70,11 +62,11 @@ CONTAINS
                           plant%moving_average%t_air_week, &
                           plant%moving_average%t_air_month, &
                           plant%moving_average%beta_soil_gs, &
-                          plant%moving_average%gdd, &
-                          plant%moving_average%nd_dormance, &
+                          plant%gdd, &
+                          plant%nd_dormance, &
                           plant%growing_season)  
 
-    !> 1.2 photosynthesis and leaf respiration 
+    !> 1.1 photosynthesis and leaf respiration 
     !! 
     !! @todo may move elsewhere
     CALL update_canopy_fluxes(tile, veg_param)

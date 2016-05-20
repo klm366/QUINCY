@@ -7,8 +7,6 @@ mo_veg_memory.o: \
 mo_veg_interface.o: \
   mo_kind.o \
   mo_base_memory.o \
-  mo_atmland_constants.o \
-  mo_atmland_memory.o \
   mo_land_constants.o \
   mo_land_memory.o \
   mo_veg_memory.o \
@@ -48,7 +46,9 @@ mo_veg_soil.o: \
 mo_veg_phenology.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_base_constants.o \
   mo_atmland_constants.o \
+  mo_atmland_memory.o \
   mo_veg_parameters.o 
 
 mo_veg_turnover.o: \

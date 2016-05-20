@@ -69,6 +69,10 @@ CONTAINS
     plant%beta_air         = 0.0_wp
     plant%beta_soil_ps     = 0.0_wp
     plant%beta_soil_gs     = 0.0_wp
+    plant%growth_req_n     = 0.0_wp
+    plant%growth_req_p     = 0.0_wp
+    plant%gdd              = 1.0_wp
+    plant%nd_dormance      = 1.0_wp
     plant%growing_season   = .TRUE.     ! LOGICAL
   END SUBROUTINE init_plant
 
