@@ -57,9 +57,13 @@ else:
 
 
 
-    print "################## b4j_obj ##############"
-    print b4j_obj
-    print "#########################################"
+    #print "################## b4j_obj ##############"
+    #print b4j_obj
+    #print "#########################################"
+
+    # fetch outdata
+    for exp in b4j_obj.experiments:
+        exp.fetch_outdata_all ()
     
     # # diagnosis
     # for f_n,f_bench in b4j_obj.config [ 'fields' ].iteritems():

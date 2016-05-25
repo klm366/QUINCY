@@ -1,0 +1,13 @@
+echo '$# = ' $#
+echo '$0 = ' $0
+echo '$1 = ' $1
+echo '$2 = ' $2
+
+path=$1
+file=$2
+
+pftp << EOF
+cd ${path}
+ls -l
+get ${file} 
+EOF

@@ -14,7 +14,6 @@ from report import Report
 
 #from datetime import datetime
 
-
 REF_EXP_IDX              = 0
 SWITCHED_ON_IDX          = TYPE_IDX = 0
 TEMP_SCALE_IDX           = PATH_IDX = 1
@@ -22,14 +21,15 @@ ISREF_IDX                = 2
 ISCAN_IDX                = 3
 VARNAME_4_CMIP5_METADATA = 'rsds'
 
-bench4jsbach_base        =  os.environ [ 'BENCH4JSBACH_BASE' ]
+bench4jsbach_base          =  os.environ [ 'BENCH4JSBACH_BASE' ]
 if not bench4jsbach_base: raise Exception ( "Environment variable not set." )
-bench4jsbach_configs =  os.path.join ( bench4jsbach_base, "configs" )
+bench4jsbach_configs       =  os.path.join ( bench4jsbach_base, "configs" )
+bench4jsbach_scripts       =  os.path.join ( bench4jsbach_base, "scripts" )
 config_template            = os.path.join ( bench4jsbach_configs, "b4j_template.cfg" )
 b4j_configspec_fn          = os.path.join ( bench4jsbach_configs, "b4j_config.spec" )
 b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configs, "b4j_field_config.spec" )
 work_base                  = os.path.join ( bench4jsbach_base, "work" )
-bench_dirnames             = [ "scripts", "configs", "data", "graphics", "report", "logging" ]
+bench_dirnames             = [ "configs", "data", "graphics", "logging", "report", "scripts", "temp" ]
 
 
 def get_git_origin ():
@@ -87,24 +87,25 @@ def get_hostname ():
     return name.split ( '.' )[ 0 ]
 
 class Bench_Object ( Diagnostics, Report ):
-    bench_name        = None
-    bench_path        = None
+    bench_name         = None
+    bench_path         = None
     bench_configs_path = None
-    scripts_path       = None
     configs_path       = None
-    data_path         = None
+    data_path          = None
     graphics_path      = None
-    report_path       = None
-    logging_path      = None
-    logfile_path      = None
-    config            = None
-    experiments       = []
-    n_cans            = 0
-    n_refs            = 0
-    logger            = None
-    logger_name       = 'B4J_LOGGER'
-    reporting         = False
-    land_sea_mask     = None
+    logging_path       = None
+    logfile_path       = None
+    report_path        = None
+    scripts_path       = None
+    temp_path          = None
+    config             = None
+    experiments        = []
+    n_cans             = 0
+    n_refs             = 0
+    logger             = None
+    logger_name        = 'B4J_LOGGER'
+    reporting          = False
+    land_sea_mask      = None
     
     
     def __init__ ( self, config_arg, **kwargs ):
@@ -222,11 +223,11 @@ class Bench_Object ( Diagnostics, Report ):
                                         ( VARNAME_4_CMIP5_METADATA, name, '.nc' ),
                                         path, raise_e = True )
                 kwargs [ 'var_filename' ] = varfile
-                e = CMIP5_Experiment ( **kwargs )
+                e = CMIP5_Experiment ( self, **kwargs )
             elif etype == "MPIESM1":
-                e = MPIESM1_Experiment ( **kwargs )
+                e = MPIESM1_Experiment ( self, **kwargs )
             else:
-                e = Experiment ( **kwargs )
+                e = Experiment ( self, **kwargs )
             self.experiments.append ( e )
         if n_refs < 1 or n_cans < 1:
             raise Exception ( "No candidate or no reference experiment defined."  )
@@ -234,6 +235,9 @@ class Bench_Object ( Diagnostics, Report ):
         self.n_refs = n_refs
 
         self.init_diagnostics ()
+
+        print "###############"
+        print self.diagnostic_fields
         
         self.logger.debug ( "Exiting." )
 

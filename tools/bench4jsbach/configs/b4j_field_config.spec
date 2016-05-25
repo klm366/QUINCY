@@ -7,9 +7,13 @@ documentation=string()
 
 [fetch]
 [[__many__]]
-name=string()
+longname=string()
 unit=string()
+[[[__many__]]]
+name=string()
 code=string()
+submodel=string(default=None)
+stream=string(default=None)
 
 [preprocessing]
 exec=string()
