@@ -28,7 +28,7 @@ if os.path.isdir ( bin_dir ):
 else:
     raise Exception ( "Directory %s with source files not found." % bin_dir )
 from util import print_item_or_list_rec
-from analysis import get_seasonal_period_2d_coords
+from diagnostics import get_seasonal_period_2d_coords
 
 
 #print 'Number of arguments:', len(sys.argv), 'arguments.'

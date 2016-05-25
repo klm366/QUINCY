@@ -5,10 +5,10 @@ from netCDF4 import Dataset
 import fnmatch, re , shutil
 from redmine_read import Wikitable_experiment_description
 from util import print_none
+from cdo import Cdo
 
 ARCHIVE_PREFIX = "/hpss/arch/"
-
-
+STREAM_SUFFIX  = "_stream"
 
 def find_files ( pattern, path, single = True, raise_e = False ):
     assert os.path.isdir ( path ) and isinstance ( pattern, str )
@@ -93,63 +93,92 @@ class Experiment ( object ):
         from bench import bench4jsbach_scripts
 
         self.B4J_parent.logger.debug ( "Starting" )
-
-        # if data files are in archive
-        if self.B4J_path.startswith ( ARCHIVE_PREFIX ):
-            fetchfile_list=[]
-            for field_name, field_config in self.B4J_parent.diagnostic_fields.iteritems ():
-                print "######### ", field_name
-                assert 'fetch' in field_config, "No 'fetch'-section defined for %s." % field_name
-                for file_name, file_config in field_config ['fetch' ].iteritems ():
-                    print file_name
-                    print file_config
-                    modeltype = self.__class__.__name__.split ( "_" )[ 0 ]
-                    assert modeltype in file_config, "No '%s'-section defined for %s." % file_name
-                    print file_config [ modeltype ]
-                    if field_config [ "frequence" ] == "monthly":
-                        frequence_fix = self.outdata_frequence_fixes [ field_config [ "frequence" ]]
-                        finalyearstring = self.outdata_finalyear_tmpl % { 'finalyear': self.B4J_finalyear }
-                        print frequence_fix
-                        print finalyearstring
-                    else:
-                        frequence_fix = ""
-                        finalyearstring = ""
-                    fetchpath = self.B4J_path + os.sep + self.outdata_subpath + os.sep + file_config [ modeltype ][ "submodel" ]
-
-                    fetchfile = self.outdata_fn_tmpl % { "expname"           : self.B4J_name,
-                                                         "submodel"          : file_config [ modeltype ][ "submodel" ],
-                                                         "stream"            : file_config [ modeltype ][ "stream" ],
-                                                         "cond_frequencefix" : frequence_fix,
-                                                         "startyear"         : self.B4J_startyear,
-                                                         "cond_finalyearstr" : finalyearstring,
-                                                         "postfix"           : self.outdata_postfix }
-                    fetchfile_list.append (( fetchpath, fetchfile ))
-                                                         
-            fetchfile_list = list ( set ( fetchfile_list ))
-            print fetchfile_list
-            print "########### end field fetch file config ############"
-
-            # fetch data files from archive
-            workingdir = os.getcwd ()
-            os.chdir ( self.B4J_parent.temp_path )
-            exe = os.path.join ( bench4jsbach_scripts, "b4j_getdata_pftp" )
-            assert os.path.isfile ( exe ) and os.access ( exe, os.X_OK ), "File %s is not executable." % exe
-            for fetchfile in fetchfile_list:
-                sp = subprocess.Popen( [ exe + " " + fetchfile [ 0 ] + " " + fetchfile [ 1 ]], shell=True,
-                                       stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
-                stdout, stderr = sp.communicate()
-                if sp.returncode:
-                    print "stdout: ", stdout
-                    print "stderr: ", stderr
-                    print "returncode: %d" % sp.returncode
-                    sys.exit ( sp.returncode )
-                else:
-                    print stdout
-            os.chdir ( workingdir )
-            self.B4J_parent.logger.debug ( "Fetched outdata for %s successfully into %s." % (
-                self.B4J_name, self.B4J_parent.temp_path ))
-
         
+        modeltype = self.__class__.__name__.split ( "_" )[ 0 ]
+        from_archive = self.B4J_path.startswith ( ARCHIVE_PREFIX )
+
+        if from_archive: fetchfile_list = []
+        for field_name, field_config in self.B4J_parent.diagnostic_fields.iteritems ():
+            assert 'fetch' in field_config, "No 'fetch'-section defined for %s." % field_name
+            for file_name, file_config in field_config ['fetch' ].iteritems ():
+                assert modeltype in file_config, "No '%s'-section defined for %s." % file_name
+                if field_config [ "frequence" ] == "monthly":
+                    frequence_fix = self.outdata_frequence_fixes [ field_config [ "frequence" ]]
+                    finalyearstring = self.outdata_finalyear_tmpl % { 'finalyear': self.B4J_finalyear }
+                else:
+                    frequence_fix = ""
+                    finalyearstring = ""
+                fetchpath = self.B4J_path + os.sep + self.outdata_subpath + os.sep + file_config [ modeltype ][ "submodel" ]
+
+                fetchfile = self.outdata_fn_tmpl % { "expname"           : self.B4J_name,
+                                                     "submodel"          : file_config [ modeltype ][ "submodel" ],
+                                                     "stream"            : file_config [ modeltype ][ "stream" ],
+                                                     "cond_frequencefix" : frequence_fix,
+                                                     "startyear"         : self.B4J_startyear,
+                                                     "cond_finalyearstr" : finalyearstring,
+                                                     "postfix"           : self.outdata_postfix }
+                if from_archive:
+                    fetchfile_list.append (( fetchpath, fetchfile ))
+                    self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( self.B4J_parent.temp_path, fetchfile )
+                else:
+                    self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( fetchpath, fetchfile ) 
+                                                         
+        if from_archive:
+            fetchfile_list = list ( set ( fetchfile_list ))
+
+        # fetch data files from archive
+        # if from_archive:
+        #     workingdir = os.getcwd ()
+        #     os.chdir ( self.B4J_parent.temp_path )
+        #     exe = os.path.join ( bench4jsbach_scripts, "b4j_getdata_pftp" )
+        #     assert os.path.isfile ( exe ) and os.access ( exe, os.X_OK ), "File %s is not executable." % exe
+        #     for fetchfile in fetchfile_list:
+        #         sp = subprocess.Popen( [ exe + " " + fetchfile [ 0 ] + " " + fetchfile [ 1 ]], shell=True,
+        #                                stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
+        #         stdout, stderr = sp.communicate()
+        #         if sp.returncode:
+        #             print "stdout: ", stdout
+        #             print "stderr: ", stderr
+        #             print "returncode: %d" % sp.returncode
+        #             sys.exit ( sp.returncode )
+        #         else:
+        #             print stdout
+        #     os.chdir ( workingdir )
+        #     self.B4J_parent.logger.debug ( "Fetched outdata from archive for %s successfully into %s." % (
+        #         self.B4J_name, self.B4J_parent.temp_path ))
+
+
+        # select years and codes
+
+        cdo = Cdo ()
+
+        for fieldname, fielddict in self.B4J_parent.diagnostic_fields.iteritems ():
+            assert 'fetch' in fielddict, "No 'fetch'-section defined for %s." % fieldname
+            yearlist = range ( int ( fielddict [ 'startyear' ]), int ( fielddict [ 'finalyear' ]) + 1 )
+            for fileid, filedict in fielddict ['fetch' ].iteritems ():
+                self.B4J_index [ fileid ] = self.B4J_parent.path_template % { 
+                    'path'           : fielddict [ "data_path" ],
+                    'classification' : fileid,
+                    'expname'        : self.B4J_name,
+                    'startdate'      : fielddict [ 'startyear' ],
+                    'finaldate'      : fielddict [ 'finalyear' ],
+                    'suffix'         : fielddict [ 'suffix' ]}
+                assert modeltype in filedict, "No '%s'-section defined for %s." % fileid
+        
+                # cdo.selyear ( ','.join ( repr ( y ) for y in yearlist ),
+                #               input = " -selcode,%s %s" % ( filedict [ modeltype ][ 'code' ],
+                #                                             self.B4J_index [ fileid + STREAM_SUFFIX ]),
+                #               output = self.B4J_index [ fileid ],
+                #               options = ' -f %s' % fielddict [ 'suffix' ] +\
+                #                         ' -t %s' % "/scratch/mpi/mpiles/m300050/git/jsbach/tools/bench4jsbach/models/mpiesm1/codes/echam6_echam.codes" )
+        
+                cdo.selcode (  filedict [ modeltype ][ 'code' ],
+                              input = " -selyear," + ','.join ( repr ( y ) for y in yearlist ) +\
+                               " " + self.B4J_index [ fileid + STREAM_SUFFIX ],
+                              output = self.B4J_index [ fileid ],
+                              options = ' -f %s' % fielddict [ 'suffix' ] +\
+                                        ' -t %s' % "/scratch/mpi/mpiles/m300050/git/jsbach/tools/bench4jsbach/models/mpiesm1/codes/echam6_echam.codes" )
+
         self.B4J_parent.logger.debug ( "Exiting" )
 
 
@@ -216,7 +245,7 @@ class Experiment ( object ):
         '($\mathbf{C_{%d}}$)' % self.B4J_canno if self.B4J_iscan else '($\mathbf{R_{%d}}$)' % self.B4J_refno,
         """\\\\
 """.join ( '{!s} & {!s}'.format ( teXify ( str ( k )), force_breaks ( teXify ( str ( v )), 50 )) \
-           if not isinstance ( v, dict ) else '&'
+           if not isinstance ( v, dict ) and not k == "B4J_parent" else '&'
            for ( k, v ) in sorted ( self.__dict__.iteritems ())))
 
 

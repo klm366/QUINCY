@@ -239,7 +239,7 @@ table below. You may find detailed information on each method following the appr
                 dss += teXify ( ss_dict [ 'abstract' ]) 
                 
                 for can in self.experiments:
-                    if not can.B4J_iscan: contiunue
+                    if not can.B4J_iscan: continue
                     can_name = teXify ( can.B4J_name )
                     title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
                             ( can_name, can.B4J_canno ) 
@@ -340,7 +340,7 @@ table below. You may find detailed information on each method following the appr
     def write_report ( self ):
         self.logger.debug ( "Starting." )
         source_path  = os.path.join ( self.report_path, "sources" )
-        tmp_path     = os.path.join ( self.report_path, "tmp" )
+        tmp_path     = os.path.join ( self.report_path, "temp" )
         if not os.path.exists ( source_path ):
             os.makedirs ( source_path )
         if not os.path.exists ( tmp_path ):

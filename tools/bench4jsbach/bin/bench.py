@@ -235,9 +235,6 @@ class Bench_Object ( Diagnostics, Report ):
         self.n_refs = n_refs
 
         self.init_diagnostics ()
-
-        print "###############"
-        print self.diagnostic_fields
         
         self.logger.debug ( "Exiting." )
 
