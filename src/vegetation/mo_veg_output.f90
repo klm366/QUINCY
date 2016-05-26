@@ -110,7 +110,8 @@ CONTAINS
 
     !> 1.0 write headers
     !!
-    lun = 10 * itile
+    !! lun of pools starts at a multiple of 100
+    lun = 100 * itile
     WRITE(lun,'(2a)'), 'Time Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
                      'Fruit_C Labile_C Reserve_C SeedBank_C'
     lun=lun+1
@@ -140,7 +141,8 @@ CONTAINS
 
     !> 1.0 write headers
     !!
-    lun = 500 + (10 * itile)
+    !! lun of fluxes starts at a multiple of 100, plus 50
+    lun = (100 * itile) + 50
     WRITE(lun,'(a)'), 'Time GPP GrowthResp MaintResp NPP ReserveUse'
     lun=lun+1
     WRITE(lun,'(a)'), 'Time NUP Resorption_N ReserveUse'
@@ -204,7 +206,7 @@ CONTAINS
     !> 2.2 define open() statements for file output
     !! 
     !! 
-    lun = 10 * itile
+    lun = 100 * itile
     fname = 'poolC_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
@@ -280,7 +282,7 @@ CONTAINS
     !> 2.2 define open() statements for file output
     !! 
     !! 
-    lun = 500 + (10 * itile)
+    lun = (100 * itile) + 50
     fname = 'fluxC_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
@@ -333,7 +335,7 @@ CONTAINS
     IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
       IF( MODULO(time_d, output_interval_pool) < eps8 .OR. &
          & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps8) THEN
-       lun = 10 * itile
+       lun = 100 * itile
        write(lun,'(10F12.6)') time_d,plant%pool%leaf%carbon,&
          plant%pool%fine_root%carbon,plant%pool%sap_wood%carbon,&
          plant%pool%heart_wood%carbon,plant%pool%coarse_root%carbon,&
@@ -428,7 +430,7 @@ CONTAINS
       IF( MODULO(time_d, output_interval_flux) < eps8 .OR. &
          & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps8) THEN
         ! write
-        lun = 500 + (10 * itile)
+        lun = (100 * itile) + 50
         write(lun,'(6F22.6)') time_d, gpp_acc(itile), growth_resp_acc(itile), maint_resp_acc(itile), &
                               npp_acc(itile), res_use_c_acc(itile)
         lun=lun+1
@@ -455,19 +457,21 @@ CONTAINS
     END IF
   END SUBROUTINE write_output_flux
 
-  ! 
-  ! close files
-  ! 
+  !-----------------------------------------------------------------------------------------------------
+  !> Pools and Fluxes: close files
+  !! 
+  !! at this point of the simulation all data has been written
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE close_output_files(itile)
-    ! close output files after all data have been written
+
     IMPLICIT NONE
-    ! 0.1 Input
+    ! 0.1 InOut
     INTEGER, INTENT(in)  :: itile   !< number of current tile 1-...
     ! 0.2 Local
     INTEGER :: lun
 
     ! 1.0 pools
-    lun = 10 * itile
+    lun = 100 * itile
     CLOSE(lun) ! 0
     lun=lun+1
     CLOSE(lun) ! 1
@@ -479,7 +483,7 @@ CONTAINS
     CLOSE(lun) ! 4
 
     ! 2.0 fluxes
-    lun = 500 + (10 * itile)
+    lun = (100 * itile) + 50
     CLOSE(lun) ! 0
     lun=lun+1
     CLOSE(lun) ! 1

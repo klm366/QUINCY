@@ -74,7 +74,7 @@ PROGRAM plant_model_driver
   INTEGER  :: itile                        !< the current tile(i), for looping over ntile
 
   ! check number of tiles, exit if more than output routines can handle (for now)
-  IF(ntile > 49) CALL finish('plant_model_driver','Number of tiles is too large for veg_output to work reliable; see lun')
+  IF(ntile > 10) CALL finish('plant_model_driver','Number of tiles is too large for veg_output to work reliable; see lun')
 
   !! 1.0 Read config paramters from namelist.plant section
   !!
