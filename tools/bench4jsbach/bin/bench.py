@@ -7,12 +7,15 @@ from validate import Validator
 from sets import Set
 import subprocess
 
+from wikipage import Bench4JSBach_Wikipage
 from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
 from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool,print_item_or_list_rec
 from diagnostics import Diagnostics, find_files
 from report import Report
 
 #from datetime import datetime
+
+LOGSTREAM_2_FILE = False
 
 REF_EXP_IDX              = 0
 SWITCHED_ON_IDX          = TYPE_IDX = 0
@@ -99,6 +102,7 @@ class Bench_Object ( Diagnostics, Report ):
     scripts_path       = None
     temp_path          = None
     config             = None
+    wikipage           = None
     experiments        = []
     n_cans             = 0
     n_refs             = 0
@@ -174,17 +178,18 @@ class Bench_Object ( Diagnostics, Report ):
             path = os.path.join ( self.bench_path, n )
             setattr ( self,  n + "_path",  path )
 
-        # self.logfile_path = os.path.join ( self.logging_path,
-        #                                    self.bench_name + '_' +\
-        #                                    str ( datetime.datetime.now ().strftime ( '%Y%m%d%H%M' )) +\
-        #                                    '.out' )
+        if LOGSTREAM_2_FILE:
+            self.logfile_path = os.path.join ( self.logging_path,
+                                               self.bench_name + '_' +\
+                                               str ( datetime.datetime.now ().strftime ( '%Y%m%d%H%M' )) +\
+                                               '.out' )
 
-        dkl_logger.debug ( "Logger switched to %s. It will write to file " % self.logger_name + \
-                           log_message_newline +\
-                           "'%s' of now." % self.logfile_path +\
-                           log_message_newline +\
-                           "Processing might take a while ..." )
-
+            dkl_logger.debug ( "Logger switched to %s. It will write to file " % self.logger_name + \
+                               log_message_newline +\
+                               "'%s' of now." % self.logfile_path +\
+                               log_message_newline +\
+                               "Processing might take a while ..." )
+        
         self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
 
         self.reporting     = config [ "reporting" ]
@@ -192,6 +197,8 @@ class Bench_Object ( Diagnostics, Report ):
         if not os.path.isfile ( self.land_sea_mask ):
             raise Exception ( "Error: Path for land sea mask '%s' does not exists." % \
                               self.land_sea_mask )
+        self.wikipage =  Bench4JSBach_Wikipage ( self.config [ 'redmine_user' ],
+                                                 self.config [ 'redmine_key' ])
 
         es = self.config [ "experiments" ]
         n_refs = n_cans = 0
@@ -213,11 +220,8 @@ class Bench_Object ( Diagnostics, Report ):
                        'B4J_canno'        : canno,
                        'B4J_refno'        : refno,
                        'B4J_bench'        : self,
-                       'redmine_url'      : self.config [ 'redmine_url' ],
                        'redmine_user'     : self.config [ 'redmine_user' ],
-                       'redmine_key'      : self.config [ 'redmine_key' ],
-                       'redmine_project'  : self.config [ 'redmine_project' ],
-                       'redmine_wikipage' : self.config [ 'redmine_wikipage' ]}
+                       'redmine_key'      : self.config [ 'redmine_key' ]}
             if etype == "CMIP5":
                 varfile = find_files ( "*%s*%s*%s" % \
                                         ( VARNAME_4_CMIP5_METADATA, name, '.nc' ),

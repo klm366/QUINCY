@@ -318,7 +318,7 @@ class Diagnostics ( object ):
                                     elif exp=='can' and mem=='name':
                                         title_args.append ( can.B4J_name )
                                     elif exp=='ref' and mem=='no':
-                                        title_args.append ( ref.B4J_canno )
+                                        title_args.append ( ref.B4J_refno )
                                     elif exp=='ref' and mem=='name':
                                         title_args.append ( ref.B4J_name )
                                     else:

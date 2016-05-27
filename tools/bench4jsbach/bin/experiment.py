@@ -3,7 +3,6 @@
 import os, sys, subprocess
 from netCDF4 import Dataset
 import fnmatch, re , shutil
-from redmine_read import Wikitable_experiment_description
 from util import print_none
 from cdo import Cdo
 
@@ -70,23 +69,14 @@ class Experiment ( object ):
 
         if not self.B4J_path:
             try:
-                redmine_row =  Wikitable_experiment_description (
-                    kwargs.get ( 'redmine_url' ),
-                    kwargs.get ( 'redmine_user' ),
-                    kwargs.get ( 'redmine_key' ),
-                    kwargs.get ( 'redmine_project' ),
-                    kwargs.get ( 'redmine_wikipage' ),
-                    "can" if self.B4J_iscan else "ref",
-                    self.B4J_name )
+                exp_metadata = self.B4J_parent.wikipage.fetch_simulation_row (
+                    "can" if self.B4J_iscan else "ref", self.B4J_name )
             except:
                 print "No experiment description found for %s." % self.B4J_name
                 sys.exit ( 1 )
-            # print '\nRedmine reference experiment description:  \n%s\n' % \
-            #       ''.join('{!s} = {!r},\n'.\
-            #               format ( key, val) for ( key, val ) in redmine_row.__dict__.iteritems ())
-            self.B4J_path = redmine_row.data_storage
-            self.B4J_startyear = redmine_row.simulation_period.split ( '-' )[ 0 ]
-            self.B4J_finalyear = redmine_row.simulation_period.split ( '-' )[ 1 ]
+            self.B4J_path = exp_metadata [ "data_storage" ]
+            self.B4J_startyear = exp_metadata [ "simulation_period" ].split ( '-' )[ 0 ]
+            self.B4J_finalyear = exp_metadata [ "simulation_period" ].split ( '-' )[ 1 ]
 
 
     def fetch_outdata_all ( self ):
@@ -118,34 +108,34 @@ class Experiment ( object ):
                                                      "cond_finalyearstr" : finalyearstring,
                                                      "postfix"           : self.outdata_postfix }
                 if from_archive:
-                    fetchfile_list.append (( fetchpath, fetchfile ))
                     self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( self.B4J_parent.temp_path, fetchfile )
+                    if not os.path.isfile ( self.B4J_index [ file_name + STREAM_SUFFIX ]):
+                        fetchfile_list.append (( fetchpath, fetchfile ))
                 else:
                     self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( fetchpath, fetchfile ) 
-                                                         
-        if from_archive:
-            fetchfile_list = list ( set ( fetchfile_list ))
 
-        # fetch data files from archive
-        # if from_archive:
-        #     workingdir = os.getcwd ()
-        #     os.chdir ( self.B4J_parent.temp_path )
-        #     exe = os.path.join ( bench4jsbach_scripts, "b4j_getdata_pftp" )
-        #     assert os.path.isfile ( exe ) and os.access ( exe, os.X_OK ), "File %s is not executable." % exe
-        #     for fetchfile in fetchfile_list:
-        #         sp = subprocess.Popen( [ exe + " " + fetchfile [ 0 ] + " " + fetchfile [ 1 ]], shell=True,
-        #                                stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
-        #         stdout, stderr = sp.communicate()
-        #         if sp.returncode:
-        #             print "stdout: ", stdout
-        #             print "stderr: ", stderr
-        #             print "returncode: %d" % sp.returncode
-        #             sys.exit ( sp.returncode )
-        #         else:
-        #             print stdout
-        #     os.chdir ( workingdir )
-        #     self.B4J_parent.logger.debug ( "Fetched outdata from archive for %s successfully into %s." % (
-        #         self.B4J_name, self.B4J_parent.temp_path ))
+        if from_archive and fetchfile_list:
+            fetchfile_list = list ( set ( fetchfile_list ))
+            workingdir = os.getcwd ()
+            os.chdir ( self.B4J_parent.temp_path )
+            exe = os.path.join ( bench4jsbach_scripts, "b4j_getdata_pftp" )
+            assert os.path.isfile ( exe ) and os.access ( exe, os.X_OK ), "File %s is not executable." % exe
+            self.B4J_parent.logger.debug ( "Fetching outdata from archive for %s into %s. This might take a while ..." % (
+                self.B4J_name, self.B4J_parent.temp_path ))
+            for fetchfile in fetchfile_list:
+                sp = subprocess.Popen( [ exe + " " + fetchfile [ 0 ] + " " + fetchfile [ 1 ]], shell=True,
+                                       stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
+                stdout, stderr = sp.communicate()
+                if sp.returncode:
+                    print "stdout: ", stdout
+                    print "stderr: ", stderr
+                    print "returncode: %d" % sp.returncode
+                    sys.exit ( sp.returncode )
+                else:
+                    print stdout
+            self.B4J_parent.logger.debug ( "Fetched outdata from archive for %s successfully into %s." % (
+                self.B4J_name, self.B4J_parent.temp_path ))
+            os.chdir ( workingdir )
 
 
         # select years and codes
@@ -164,14 +154,7 @@ class Experiment ( object ):
                     'finaldate'      : fielddict [ 'finalyear' ],
                     'suffix'         : fielddict [ 'suffix' ]}
                 assert modeltype in filedict, "No '%s'-section defined for %s." % fileid
-        
-                # cdo.selyear ( ','.join ( repr ( y ) for y in yearlist ),
-                #               input = " -selcode,%s %s" % ( filedict [ modeltype ][ 'code' ],
-                #                                             self.B4J_index [ fileid + STREAM_SUFFIX ]),
-                #               output = self.B4J_index [ fileid ],
-                #               options = ' -f %s' % fielddict [ 'suffix' ] +\
-                #                         ' -t %s' % "/scratch/mpi/mpiles/m300050/git/jsbach/tools/bench4jsbach/models/mpiesm1/codes/echam6_echam.codes" )
-        
+                
                 cdo.selcode (  filedict [ modeltype ][ 'code' ],
                               input = " -selyear," + ','.join ( repr ( y ) for y in yearlist ) +\
                                " " + self.B4J_index [ fileid + STREAM_SUFFIX ],
@@ -193,7 +176,7 @@ class Experiment ( object ):
     def teX_short_repr ( self, shortname = 'can'  ):
         from report import teXify
         
-        return '%s \\textbf{%s object {\\tt %s}}' % ( teXify ( self.__class__.__name__ ),
+        return '%s object \\textbf{%s {\\tt %s}}' % ( teXify ( self.__class__.__name__ ),
                                                       teXify ( self.B4J_name ),
                                                       '($\mathbf{C_{%d}}$)' % self.B4J_canno if shortname == 'can' else \
                                                       '($\mathbf{R_{%d}}$)' % self.B4J_refno )
@@ -228,7 +211,7 @@ class Experiment ( object ):
         return """
 \\begin{tabularx}{\\linewidth}{lL}
 \\toprule
-\\multicolumn{2}{l}{\\phantomsection\\label{%s}\\hypertarget{%s} %s \\textbf{%s object {\\tt %s}}} \\\\
+\\multicolumn{2}{l}{\\phantomsection\\label{%s}\\hypertarget{%s} %s object \\textbf{%s {\\tt %s}}} \\\\
 \\addlinespace
 \\cmidrule(r){1-2}
 %s
@@ -286,12 +269,12 @@ class MPIESM1_Experiment ( Experiment ):
     outdata_postfix         = "grb"
 
     def __init__ ( self, parent, **kwargs ):
-        print "###################### go on here  ####################"
+        print "###################### go on here, subclass %s ####################" % self.__class__.__name__
         Experiment.__init__ ( self, parent, **kwargs )
         #super(Experiment, self).__init__(**kwargs)
         self.outdata_subpath = self.B4J_name + os.sep + "outdata"
-        print "MPIESM1_Experiment attributes:"
-        print self.__dict__
+        #print "MPIESM1_Experiment attributes:"
+        #print self.__dict__
 
 
     def fetch_oudata ( self, varname, newpath ):
