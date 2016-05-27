@@ -74,12 +74,14 @@ CONTAINS
    ! update N distribution in the canopy
    CALL calc_canopy_n_distribution(plant%pool%leaf%nitrogen,plant%lai, & 
                                    canopy_layer_depth_act, &
+                                   veg_param%ps_pathway(pftid), & 
                                    veg_param%nf(pftid), & 
                                    veg_param%k0_fnl_struc(pftid), & 
                                    plant%canopy_layer(:)%nl_tot, & 
                                    plant%canopy_layer(:)%fnl_chl, & 
                                    plant%canopy_layer(:)%fnl_et, & 
-                                   plant%canopy_layer(:)%fnl_rub)
+                                   plant%canopy_layer(:)%fnl_rub, & 
+                                   plant%canopy_layer(:)%fnl_pepc)
    ! calculate photosynthesis per layer
    DO icanop = 1,ncanop
       IF(canopy_layer_depth_act(icanop).GT.0.0_wp)THEN
@@ -92,7 +94,9 @@ CONTAINS
                                  plant%canopy_layer(icanop)%fnl_chl, & 
                                  plant%canopy_layer(icanop)%fnl_et, & 
                                  plant%canopy_layer(icanop)%fnl_rub, & 
+                                 plant%canopy_layer(icanop)%fnl_pepc, & 
                                  plant%canopy_layer(icanop)%nl_tot, & 
+                                 veg_param%ps_pathway(pftid), &
                                  veg_param%tjmax_opt(pftid), &
                                  veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
                                  agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop))
@@ -128,26 +132,31 @@ CONTAINS
   !! @par note 
   !!  it includes "nf" as input, i.e. Andrew's tuning constant
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,nf,k0_fnl_struc,& 
-                                      nl_tot,fnl_chl,fnl_et,fnl_rub)
+  SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,ps_pathway,nf,k0_fnl_struc,& 
+                                      nl_tot,fnl_chl,fnl_et,fnl_rub,fnl_pepc)
 
-  USE mo_veg_parameters, ONLY: kn,k0_fnl_chl,k1_fnl_chl,kfnl_chl,jmax2n,vcmax2n,k1_fnl_struc
+  USE mo_veg_parameters, ONLY: kn,k0_fnl_chl_C3,k0_fnl_chl_C4,k1_fnl_chl_C3,k1_fnl_chl_C4,kfnl_chl, & 
+                               jmax2n,vcmax2n,jmax2vcmax_C3,jmax2vcmax_C4,k1_fnl_struc,k0_fnl_pepc,ic4phot
  
   IMPLICIT NONE
   ! 0.1 InOut
   REAL(wp), INTENT(in)    :: totalN           !< total foliar N (mol / m2)
   REAL(wp), INTENT(in)    :: lai              !< total foliar area (m2 / m2)
   REAL(wp), DIMENSION(ncanop), INTENT(in) :: canopy_layer_depth_act !< depth of canopy layers (in units LAI)
+  INTEGER, INTENT(in)     :: ps_pathway       !< photosynthetic pathway (C3|C4) 
   REAL(wp), INTENT(in)    :: nf               !< Andrew's tuning constant 
   REAL(wp), INTENT(in)    :: k0_fnl_struc     !< maximum fraction of N not used for photosynthesis 
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: nl_tot           !< total N content of the layer
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_chl          !< fraction of N in chlorophyll content per layer
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_et           !< fraction of N used for electron-transport per layer
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_rub          !< fraction of N used for Rubisco per layer
+  REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_pepc         !< fraction of N used for PEPC per layer
   ! 0.2 Local
   REAL(wp) :: n0                              ! foliar N content of top-most layer
   REAL(wp) :: fnl_oth                         ! fraction of N not associated with PS
-  REAL(wp) :: lc
+  REAL(wp) :: k0_fnl_chl,k1_fnl_chl           ! factors in chlorophyll profile calculation 
+  REAL(wp) :: jmax2vcmax                      ! jmax to vcmax ratio
+  REAL(wp) :: lc                              ! cummulative LAI
   INTEGER :: icanop
 
   ! calculate top of the canopy N 
@@ -158,6 +167,18 @@ CONTAINS
   ENDIF
 
   lc = canopy_layer_depth_act(1) / 2._wp
+  IF(ps_pathway == ic4phot) THEN
+      jmax2vcmax = jmax2vcmax_C4
+      k0_fnl_chl = k0_fnl_chl_C4
+      k1_fnl_chl = k1_fnl_chl_C4
+      fnl_pepc = k0_fnl_pepc
+  ELSE 
+      jmax2vcmax = jmax2vcmax_C3
+      k0_fnl_chl = k0_fnl_chl_C3
+      k1_fnl_chl = k1_fnl_chl_C3
+      fnl_pepc = 0.0_wp
+  ENDIF
+
   DO icanop = 1,ncanop
      IF(canopy_layer_depth_act(icanop).GT.eps8) THEN
         nl_tot(icanop) = n0 * exp(-kn * lc) 
@@ -167,9 +188,9 @@ CONTAINS
         !fnl_et(icanop) = 0.273_wp * nf     ! OBS: currently only for code consistency 
         !fnl_rub(icanop) = 0.128_wp * nf    ! OBS: currently only for code consistency
         ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
-        fnl_et(icanop) = (1._wp - (fnl_oth + fnl_chl(icanop))) / (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
+        fnl_et(icanop) = (1._wp - (fnl_oth + fnl_chl(icanop) + fnl_pepc(icanop) )) / (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
         ! fraction of Rubisco is determined as the remainder
-        fnl_rub(icanop) = 1._wp - fnl_oth - fnl_chl(icanop) - fnl_et(icanop)
+        fnl_rub(icanop) = 1._wp - fnl_oth - fnl_chl(icanop) - fnl_et(icanop) - fnl_pepc(icanop)
         lc = lc + canopy_layer_depth_act(icanop) / 2._wp & 
              + canopy_layer_depth_act(icanop+1) / 2._wp
     ENDIF
@@ -183,7 +204,7 @@ CONTAINS
   !! accounts for temperature acclimation of JMAX according to Friend, 2010 J Exp Bot
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par_shaded,fleaf_sunlit,beta_air,beta_soil_ps, &
-                          beta_soil_gs,fnl_chl,fnl_et,fnl_rub,nfmol,tjmax_opt,tjmax_omega,g0,g1, &
+                          beta_soil_gs,fnl_chl,fnl_et,fnl_rub,fnl_pepc,nfmol,ps_pathway,tjmax_opt,tjmax_omega,g0,g1, &
                           agl,anl,rl,gsl,cil)  
     
   USE mo_shared_constants,     ONLY: r_gas
@@ -204,27 +225,28 @@ CONTAINS
   REAL(wp),INTENT(IN) :: beta_air                !< scaling factor to account for air humidity effects on conductance
   REAL(wp),INTENT(IN) :: beta_soil_ps            !< scaling factor to account for soil moisture constraints on conductance
   REAL(wp),INTENT(IN) :: beta_soil_gs            !< scaling factor to account for soil moisture constraints on conductance
-  REAL(wp),INTENT(IN) :: fnl_et                  !< N specific rate of electron transport (µmol CO2 / mmol N /s )
-  REAL(wp),INTENT(IN) :: fnl_rub                 !< N specific rate of carboylation (µmol CO2 / mmol N /s )
-  REAL(wp),INTENT(IN) :: fnl_chl                 !< fractional chlorophyll content
-  REAL(wp),INTENT(IN) :: nfmol                   !< foliar N content
+  REAL(wp),INTENT(IN) :: fnl_et                  !< fraction of foliar N allocated to electron transport 
+  REAL(wp),INTENT(IN) :: fnl_rub                 !< fraction of foliar N allocated to Rubisco
+  REAL(wp),INTENT(IN) :: fnl_pepc                !< fraction of foliar N allocated to PEPC complex (C4 only)
+  REAL(wp),INTENT(IN) :: fnl_chl                 !< fraction of foliar N allocated to Chlorophyll
+  REAL(wp),INTENT(IN) :: nfmol                   !< total foliar N content
+  INTEGER,INTENT(IN)  :: ps_pathway              !< photosynthetic pathway 
   REAL(wp),INTENT(IN) :: tjmax_opt               !< temperature optimum of electron transport
   REAL(wp),INTENT(IN) :: tjmax_omega             !< shape-parameter of temperature sensitivity of electron transport
   REAL(wp),INTENT(IN) :: g0                      !< offset of the stomatal conductance ~ An relationship 
   REAL(wp),INTENT(IN) :: g1                      !< slope of the stomatal conductance ~ An relationship
-  REAL(wp),INTENT(OUT) :: agl         !< gross photsynthesis of layer (µmol CO2 / m2 /s) 
-  REAL(wp),INTENT(OUT) :: anl         !< net photsynthesis of layer (µmol CO2 / m2 /s)
-  REAL(wp),INTENT(OUT) :: rl          !< net canopy layer respiration (µmol CO2 / m2 /s)
-  REAL(wp),INTENT(OUT) :: gsl         !< canopy conductance of layer (m / s) !! TO BE REDEFINED AS mmol / m2 / s??
-  REAL(wp),INTENT(OUT) :: cil         !< internal leaf concentration of layer (ppm)
+  REAL(wp),INTENT(OUT) :: agl                    !< gross photsynthesis of layer (µmol CO2 / m2 /s) 
+  REAL(wp),INTENT(OUT) :: anl                    !< net photsynthesis of layer (µmol CO2 / m2 /s)
+  REAL(wp),INTENT(OUT) :: rl                     !< net canopy layer respiration (µmol CO2 / m2 /s)
+  REAL(wp),INTENT(OUT) :: gsl                    !< canopy conductance of layer (m / s) 
+  REAL(wp),INTENT(OUT) :: cil                    !< leaf internal CO2 concentration of layer (ppm)
   ! 0.2 Local
   REAL(wp) :: kc,ko,km                ! Michaelis-Menten Kinetic parameters for Rubisco (Pa)
   REAL(wp) :: pcp                     ! Photosynthetic compensation point (Pa)
   REAL(wp) :: f_resp                  ! N-specific layer respiration rate (µmol CO2 / mmol N /s) 
-  REAL(wp) :: kt3                     ! temperature scalar for PeP limited-photosynthesis
   REAL(wp) :: nsat,nlim               ! foliar N that is light saturated / limited (mmol N)
-  REAL(wp) :: n1,n2                   ! N specific rates of electron-transport/Rubisco limited PS
-  REAL(wp) :: m1,m2                   ! ci sensitivity of electron-transport/Rubisco limited PS
+  REAL(wp) :: n1,n2,n3                ! N specific rates of electron-transport/Rubisco/PEPc limited PS
+  REAL(wp) :: m1,m2,m3                ! ci sensitivity of electron-transport/Rubisco/PEPc limited PS
   REAL(wp) :: msat                    ! N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
   REAL(wp) :: nco                     ! co-limitation factor 
   REAL(wp) :: agsh,agsl               ! gross photosynthesis on sunlit/shaded leaves (µmol / m2 / s) 
@@ -267,11 +289,13 @@ CONTAINS
      !> N specific rate of Rubisco turnover 
      n2 = vcmax2n * fnl_rub * exp(E0v - E1v/rtck) * beta_soil_ps
 
-     !> temperature function for PeP C4 photosynthesis 
-     kt3 = 2**((temp - TZero - Tref_pep )/ Tbase_pep)
-
      !> Initial guess of leaf internal CO2 concentration
-     cil = co2_mixing_ratio * CiCa_default_C3 
+     SELECT CASE (ps_pathway)
+     CASE (ic3phot)
+        cil = co2_mixing_ratio * CiCa_default_C3 * ppm2Pa
+     CASE (ic4phot)
+        cil = co2_mixing_ratio * CiCa_default_C4 * ppm2Pa
+     ENDSELECT
 
      !> iteration to find correct combination of cil, Anl and gsl
      anl_old = 1000.0_wp
@@ -281,23 +305,51 @@ CONTAINS
      !> @par DO WHILE (it < ps_it_max .AND. danl > eps4 )
      DO WHILE (it < ps_it_max .AND. danl > eps4 ) 
 
-        !> ci sensitivity of Electron-transport limited photosynthesis
-        m1 = cil/(cil + 2.0_wp * pcp)
+        SELECT CASE (ps_pathway)
+        CASE (ic3phot)
+           !> ci sensitivity of Electron-transport limited photosynthesis
+           m1 = cil/(cil + 2.0_wp * pcp)
 
-        !> ci sensitivity of Rubisco-limited photosynthesis
-        m2 = cil/(cil + km)
+           !> ci sensitivity of Rubisco-limited photosynthesis
+           m2 = cil/(cil + km)
  
-        !> N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
-        msat = MIN(m1 * n1, m2 * n2)
+           !> N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
+           msat = MIN(m1 * n1, m2 * n2)
 
-        !> nlim factor (part of equation 12 (Kull and Kruijt 1998))
-        nco = msat/(alpha_i * ka * m1)
+           !> nlim factor (part of equation 12 (Kull and Kruijt 1998))
+           nco = msat/(alpha_i_C3 * ka * m1)
 
-        !> A couple of factors to calculate photosynthesis
-        !!  parts of equations 14-16 of Kull and Kruijt 1998
-        agsf1 = MAX(1.0_wp - pcp / cil, 0.0_wp)
-        agsf2 = agsf1 * alpha_i * m1
-        agsf1 = agsf1 * msat
+           !> A couple of factors to calculate photosynthesis
+           !!  parts of equations 14-16 of Kull and Kruijt 1998
+           agsf1 = MAX(1.0_wp - pcp / cil, 0.0_wp)
+           agsf2 = agsf1 * alpha_i_C3 * m1
+           agsf1 = agsf1 * msat
+
+        CASE (ic4phot)
+           !> N specific rate of PePc limited photosynthessis 
+           n3 = pepc2n * fnl_pepc * 2**((temp - TZero - Tref_pepc )/ Tbase_pepc)
+
+           !> ci sensitivity of Electron-transport limited photosynthesis
+           m1 = ci_max/(ci_max + 2.0_wp * pcp)
+
+           !> ci sensitivity of Rubisco-limited photosynthesis
+           m2 = ci_max/(ci_max + km)
+ 
+           !> ci sensitivity of PePc-limited photosynthesis
+           m3 = cil / press_srf
+
+           !> N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
+           msat = MIN(MIN(m1 * n1, m2 * n2), m3 * n3)
+           !> nlim factor (part of equation 12 (Kull and Kruijt 1998))
+           nco = msat/(alpha_i_C4 * ka * m1)
+
+           !> A couple of factors to calculate photosynthesis
+           !!  parts of equations 14-16 of Kull and Kruijt 1998
+           agsf1 = MAX(1.0_wp - pcp / ci_max, 0.0_wp)
+           agsf2 = agsf1 * alpha_i_C4 * m1
+           agsf1 = agsf1 * msat
+  
+        END SELECT
 
         !> fabsb: fraction of possible PAR absorption in present light conditions
         fabsb = exp(-ka * chl2n * fnl_chl * nfmol)
@@ -358,8 +410,10 @@ CONTAINS
 
         !> New internal CO2 from balance of supply and demand
         !! ci = cs - An * r_tot (Friend 2005 eq. 7)
-        !! Friend 2005 eq. 8: r_tot = ( 1.42 / gsl + 1.60 / (speed * q_cdrag)) 
-        cil = co2_mixing_ratio * ppm2Pa - anl * rtck * 1e-06 * (1.42_wp/gsl + 1.6_wp/ga)
+        !! Friend 2005 eq. 8: r_tot = ( Dh2oco2_air / gsl + Dh2oco2_turb / (speed * q_cdrag)) 
+        !! Corrected to Bonan et al. 2008, Ecol. Clim: accounting for the molecular diffusion differences
+        !! at the stomatal interface (1.6) and in the boundary layer, where turbulence plays a role (1.37)
+        cil = co2_mixing_ratio * ppm2Pa - anl * rtck * 1e-06 * (Dwv2co2_air/gsl + Dwv2co2_turb/ga)
         cil = MAX (cil, pcp) 
 
         !> change in An since last iteration and save new anl 

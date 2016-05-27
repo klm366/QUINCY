@@ -44,10 +44,13 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: carbon_per_dryweight_leaf    ! carbon mass per unit dry weight of leaves (gC / g DW) 
   REAL(wp),SAVE :: jmax2n                       ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
   REAL(wp),SAVE :: vcmax2n                      ! Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
+  REAL(wp),SAVE :: k0_fnl_pepc                  ! fraction of N in PEP and PPKD (C4 plants only) 
+  REAL(wp),SAVE :: pepc2n                       ! PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C
   REAL(wp),SAVE :: chl2n                        ! moles chlorophyll per mol of N
   REAL(wp),SAVE :: k1_fnl_struc                 ! slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
-  REAL(wp),SAVE :: jmax2vcmax                   ! ratio of Jmax25/Vcmax25 for prescribed leaf N 
-  REAL(wp),SAVE :: pO2                          ! Partial Pressure of O2 in kPa
+  REAL(wp),SAVE :: jmax2vcmax_C3                ! ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants)
+  REAL(wp),SAVE :: jmax2vcmax_C4                ! ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants)
+  ! temperature sensitivies of PS processes
   REAL(wp),SAVE :: E0kc                         ! Baseline of Michaelis-Menten constant of Rubisco for CO2 (unit?)
   REAL(wp),SAVE :: E1kc                         ! Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 (unit?)
   REAL(wp),SAVE :: E0ko                         ! Baseline of Michealis-Menten Kintetics for Rubisco-oxigination
@@ -56,21 +59,26 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: E1pcp                        ! Temperature sensitivity of photosynthetic compensation point
   REAL(wp),SAVE :: E0v                          ! Baseline of Rubisco
   REAL(wp),SAVE :: E1v                          ! Temperature sensitivity of Rubisco
-  REAL(wp),SAVE :: Tref_pep                     ! Temperature sensitivity of PeP C4 photosynthesis 
-  REAL(wp),SAVE :: Tbase_pep                    ! Temperature sensitivity of PeP C4 photosynthesis
-  REAL(wp),SAVE :: alpha_i                      ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))
+  REAL(wp),SAVE :: Tref_pepc                    ! Temperature sensitivity of PeP C4 photosynthesis 
+  REAL(wp),SAVE :: Tbase_pepc                   ! Temperature sensitivity of PeP C4 photosynthesis
+  REAL(wp),SAVE :: alpha_i_C3                   ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))
+  REAL(wp),SAVE :: alpha_i_C4                   ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))
                                                 ! µmol CO2 / mol quanta) 
-  REAL(wp),SAVE :: CiCa_min                     ! allowable minimum leaf Ci:Ca for numerical stability
-  REAL(wp),SAVE :: CiCa_max                     ! allowable maximum leaf Ci:Ca for numerical stability
+  REAL(wp),SAVE :: pO2                          ! Partial Pressure of O2 in kPa
   REAL(wp),SAVE :: CiCa_default_C3              ! default Ci:Ca for C3 plants
   REAL(wp),SAVE :: CiCa_default_C4              ! default Ci:Ca for C4 plants
   REAL(wp),SAVE :: ps_it_max                    ! maximum iteration of PS calculation
+  REAL(wp),SAVE :: ci_max                       ! saturating Ci in Pa C4 plants
+  REAL(wp),SAVE :: Dwv2co2_air                  ! ratio of diffusion coefficient for H2O and CO2 in air 
+  REAL(wp),SAVE :: Dwv2co2_turb                 ! ratio of diffusion coefficient for H2O and CO2 in turbulent air 
   
   ! parameters for canopy profile and canopy light extinction
   REAL(wp),SAVE :: kn                           ! extinction coefficient to describe decline of N within the canopy 
-  REAL(wp),SAVE :: k0_fnl_chl                   ! parameters to describe the varying fraction of N in chlorophyll through the canopy
-  REAL(wp),SAVE :: k1_fnl_chl                   ! parameters to describe the varying fraction of N in chlorophyll through the canopy
-  REAL(wp),SAVE :: kfnl_chl                     ! parameters to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp),SAVE :: k0_fnl_chl_C3                ! parameter to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp),SAVE :: k0_fnl_chl_C4                ! parameter to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp),SAVE :: k1_fnl_chl_C3                ! parameter to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp),SAVE :: k1_fnl_chl_C4                ! parameter to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp),SAVE :: kfnl_chl                     ! parameter to describe the varying fraction of N in chlorophyll through the canopy
 
   ! parameters used for phenology calculations
   REAL(wp),SAVE :: min_lai                      ! minimum LAI beyond which all leaves are shed
@@ -164,6 +172,7 @@ MODULE mo_veg_parameters
    
       USE mo_shared_constants
       USE mo_atmland_constants
+      USE mo_shared_constants
       ! 0.1 InOut
       TYPE(t_slm_veg_param),INTENT(inout) :: veg_param
 
@@ -238,16 +247,22 @@ MODULE mo_veg_parameters
       E0kt = 18.72_wp
       E1kt = 46390.0_wp
       ! Temperature sensitivity of PeP C4 photosynthesis
-      Tref_pep = 25._wp
-      Tbase_pep = 10._wp
+      Tref_pepc = 25._wp
+      Tbase_pepc = 10._wp
       ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I)) 
-      ! µmol CO2 / mol quanta)
-      alpha_i = 0.08_wp
+      ! µmol CO2 / mol quanta), lower in C4 plants because of bundle-sheat, Collatz / Friend
+      alpha_i_C3 = 0.08_wp
+      alpha_i_C4 = 0.048_wp
       ! initial guess of the leaf Ci to Ca ratio
       CiCa_default_C3 = 0.7_wp
-      CiCa_default_C4 = 0.95_wp
+      CiCa_default_C4 = 0.4_wp
+      ci_max = 7800.0_wp ! saturating Ci in Pa
       ! maximum number of iteration in photosynthesis calculation (should probably be in mo_base_constants)
       ps_it_max = 10
+      ! ratio of the molecular diffusion constants of water and CO2 in air (Nobel, Plant Phys. 2005, p 380)
+      Dwv2co2_air = Dwv / Dco2 
+      ! ratio of the diffusion constant of water and CO2 in air, accounting for turbulent transfer (Nobel, Plant Phys. 2005, p 380) 
+      Dwv2co2_turb = ( Dwv / Dco2  ) ** (2._wp/3_wp)
 
       ! carbon content of leaves per dry matter
       carbon_per_dryweight_leaf = 0.48_wp ! g C / g DW
@@ -255,18 +270,26 @@ MODULE mo_veg_parameters
       ! Values from Niinemets 1997 (SC 01/16)
       jmax2n=17.6_wp/4.0_wp   ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
       vcmax2n=1.8_wp          ! Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
+      k0_fnl_pepc=0.045_wp    ! fraction of N in PEP and PPDK (Makino et al. 2003 / Tazoe et al. PCE 2006, 29, 691-700)
+      ! PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C, derived from k = 0.7 mol m-2 s-1 (Collatz et al. 1992)
+      ! assuming 157 mmol N / m-2 leaf N and 4.5 % of leaf N in PS 
+      pepc2n=98777.97_wp  ! PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C
+      ! Value from Friend et al. 2009 
       ! values from Evans 1989, Oecologia, 78: 9-19 (Table 2)
       chl2n=1000._wp/39.8_wp  ! µmol Chloroplast per mmol N (light harvesting complex)
       ! slope of the relationship of structural leaf N against leaf N in fraction/mmol (Friend 1997)
       k1_fnl_struc=71.4_wp * molar_mass_N / 1000000._wp
       ! in static leaf N mode: prescribed ratio of Jmax25/Vcmax25
-      jmax2vcmax=1.92_wp      ! text book
+      jmax2vcmax_C3=1.92_wp      ! text book
+      jmax2vcmax_C4=1.4_wp       ! calibrated to have Jmax=vcmax at 25 deg
       ! parameters describing the canopy profile of N 
       !  extinction coefficient to describe decline of N within the canopy 
       kn = 0.11_wp
       ! parameters to describe the varying fraction of N in chlorophyll through the canopy
-      k0_fnl_chl = 6.0_wp
-      k1_fnl_chl = 3.6_wp
+      k0_fnl_chl_C3 = 6.0_wp
+      k0_fnl_chl_C4 = 15.0_wp
+      k1_fnl_chl_C3 = 3.6_wp
+      k1_fnl_chl_C4 = 4.4_wp
       kfnl_chl = 0.7_wp
 
       ! Parameters required for albedo and fapar calculation
@@ -374,21 +397,22 @@ MODULE mo_veg_parameters
       ! temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5
       veg_param%k0_fnl_struc(:) = & 
       !(/0.67_wp,0.67_wp,0.67_wp,0.67_wp,0.83_wp,0.83_wp,0.67_wp,0.67_wp/) 
-      (/0.75_wp,0.70_wp,0.63_wp,0.63_wp,0.83_wp,0.79_wp,0.3_wp,0.67_wp/) 
+      (/0.75_wp,0.70_wp,0.63_wp,0.63_wp,0.83_wp,0.79_wp,0.3_wp,0.3_wp/) 
       !Le Maire et al. 2012 (derived from grasses, does not give plausble results for needles)
       !0.012_wp / 0.48_wp * molar_mass_C / molar_mass_N / veg_param%sla(:)/&
       !(1._wp / veg_param%sla(:) / veg_param%cn_leaf(:)) 
       ! nitrogen scaling parameter for photosynthesis calculation 
       veg_param%nf(:) = 1.83_wp
       ! initial value of the temperature optimum of electron transport and its shape parameter (deg C)
-      veg_param%tjmax_opt(:) = 17._wp
+      veg_param%tjmax_opt(:) = & 
+      (/17._wp,17._wp,17._wp,17._wp,17._wp,17._wp,17._wp,35._wp/)
       veg_param%tjmax_omega(:) = 18._wp
       ! intercept and slope of the An ~gs relationship (mmol/µmol)
       veg_param%g0(:) = & ! 0.01_wp
       (/0.01_wp,0.01_wp,0.01_wp,0.01_wp,0.01_wp,0.01_wp,0.03_wp,0.03_wp/)
       veg_param%g1(:) = & !9.3_wp
       ! g1 in Ball & Berry relationship, tuned to get similar Amax/N values as with Lin et al. g1 
-      (/9.3_wp,8.3_wp,7.0_wp,10.9_wp,5.5_wp,7.0_wp,9.3_wp,1.62_wp/)
+      (/9.3_wp,8.3_wp,7.0_wp,10.9_wp,5.5_wp,7.0_wp,9.3_wp,2.0_wp/)
       ! g1 in kPa^0.5 as in Lin et al. 2015, Nat CC. OBS: no values for Larches - assigned broad leaved value!
       !(/3.77_wp,3.37_wp,2.98_wp,4.64_wp,2.35_wp,4.64_wp,4.16_wp,1.62_wp/)
       ! Weibull parameters describing the response of leaf-level photosynthesis to 
