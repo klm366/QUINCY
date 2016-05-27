@@ -12,7 +12,7 @@ PROGRAM land_model_driver
   USE mo_base_constants
   USE mo_atmland_constants
   USE mo_atmland_util,         ONLY: calc_spec_humidity_sat
-  USE mo_land_constants        ! still necessary ?
+  USE mo_shared_constants        ! still necessary ?
   USE mo_land_model_interface, ONLY: land_model_interface 
   USE mo_veg_parameters
 

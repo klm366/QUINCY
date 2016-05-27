@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Sönke Zaehle (2015-12-04)
 !!
-MODULE mo_land_constants
+MODULE mo_shared_constants
  
   USE mo_kind,   ONLY: wp
 
@@ -27,4 +27,4 @@ MODULE mo_land_constants
   REAL(wp), SAVE :: molar_mass_P   = 30.997_wp   ! g P / mol P
 
 
-END MODULE mo_land_constants
+END MODULE mo_shared_constants

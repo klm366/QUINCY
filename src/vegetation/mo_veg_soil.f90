@@ -125,7 +125,7 @@ CONTAINS
     USE mo_base_constants,    ONLY: dt
     USE mo_atmland_memory,    ONLY: atm2land
     USE mo_atmland_util,      ONLY: calc_spec_humidity_sat
-    USE mo_land_constants,    ONLY: r_gas_dryair
+    USE mo_shared_constants,    ONLY: r_gas_dryair
 
     IMPLICIT NONE
     ! 0.1 InOut

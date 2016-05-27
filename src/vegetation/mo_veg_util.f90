@@ -27,7 +27,7 @@ CONTAINS
 
     USE mo_base_memory,       ONLY: t_slm_tile
     USE mo_veg_memory,        ONLY: t_slm_plant
-    USE mo_land_memory,       ONLY: element_zero
+    USE mo_shared_memory,       ONLY: element_zero
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -85,13 +85,13 @@ CONTAINS
   SUBROUTINE set_zero_flux_of_plant_pools(one_flux_of_pools)
 
     USE mo_veg_memory,  ONLY: t_slm_veg_pool
-    USE mo_land_memory, ONLY: element_zero
+    USE mo_shared_memory, ONLY: element_zero
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_veg_pool), INTENT(inout) :: one_flux_of_pools
 
-     one_flux_of_pools%leaf         = element_zero   ! TYPE(t_element) :: element_zero; see mo_land_memory
+     one_flux_of_pools%leaf         = element_zero   ! TYPE(t_element) :: element_zero; see mo_shared_memory
      one_flux_of_pools%fine_root    = element_zero
      one_flux_of_pools%coarse_root  = element_zero
      one_flux_of_pools%sap_wood     = element_zero
@@ -112,7 +112,7 @@ CONTAINS
 
     USE mo_base_memory,       ONLY: t_slm_tile
     USE mo_veg_memory,        ONLY: t_slm_veg_flux
-    USE mo_land_memory,       ONLY: element_zero
+    USE mo_shared_memory,       ONLY: element_zero
 
     IMPLICIT NONE
     ! 0.1 InOut

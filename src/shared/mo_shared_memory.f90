@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Jan Engel (2016-03-10)
 !!
-MODULE mo_land_memory
+MODULE mo_shared_memory
 
   USE mo_kind,    ONLY: wp
 
@@ -251,4 +251,4 @@ CONTAINS
     t3%nitrogen15 = s1 / this2%nitrogen15
   END FUNCTION divide_elements_scalar_type  
 
-END MODULE mo_land_memory
+END MODULE mo_shared_memory

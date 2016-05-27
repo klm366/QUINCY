@@ -25,7 +25,7 @@ CONTAINS
     ! as well as turnover of sapwood and fruit pools,
     ! and turnover of foliar and root nutrients (not yet implemented) 
     ! 
-    USE mo_land_constants
+    USE mo_shared_constants
     USE mo_veg_parameters
     USE mo_base_constants,     ONLY: zero
 

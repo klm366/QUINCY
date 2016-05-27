@@ -46,9 +46,9 @@ PROGRAM plant_model_driver
   USE mo_atmland_forcing
   USE mo_atmland_config_class,  ONLY: atmland_config
   ! land
-!  USE mo_land_constants  
-!  USE mo_land_memory   
-  USE mo_land_util,             ONLY: init_element_zero
+!  USE mo_shared_constants  
+!  USE mo_shared_memory   
+  USE mo_shared_util,           ONLY: init_element_zero
   ! vegetation
   USE mo_veg_parameters
   USE mo_veg_radiation
@@ -91,7 +91,7 @@ PROGRAM plant_model_driver
   !! 
   CALL init_base_constants
   CALL init_atmland_constants
-  CALL init_element_zero                               ! mo_land_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
+  CALL init_element_zero                               ! mo_shared_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
   ! vegetation
   DO itile = 1,ntile
     CALL init_plant(tile(itile))                       ! mo_veg_util 

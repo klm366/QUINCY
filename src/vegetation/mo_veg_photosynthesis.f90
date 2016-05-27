@@ -186,7 +186,7 @@ CONTAINS
                           beta_soil_gs,fnl_chl,fnl_et,fnl_rub,nfmol,tjmax_opt,tjmax_omega,g0,g1, &
                           agl,anl,rl,gsl,cil)  
     
-  USE mo_land_constants,     ONLY: r_gas
+  USE mo_shared_constants,     ONLY: r_gas
   USE mo_atmland_constants,  ONLY: Tzero
   USE mo_veg_parameters
   USE mo_veg_respiration,    ONLY: temperature_response_respiration

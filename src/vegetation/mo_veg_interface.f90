@@ -27,8 +27,8 @@ CONTAINS
   SUBROUTINE update_vegetation(tile, veg_param)
 
     USE mo_base_memory,        ONLY: t_slm_soil, t_slm_tile
-    USE mo_land_constants
-    USE mo_land_memory,        ONLY: t_element
+    USE mo_shared_constants
+    USE mo_shared_memory,        ONLY: t_element
     USE mo_veg_memory
     USE mo_veg_parameters,     ONLY: t_slm_veg_param
     USE mo_veg_photosynthesis, ONLY: update_canopy_fluxes

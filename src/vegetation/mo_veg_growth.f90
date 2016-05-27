@@ -29,7 +29,7 @@ CONTAINS
 
     USE mo_veg_memory
     USE mo_veg_parameters
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
     IMPLICIT NONE
 
@@ -121,7 +121,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_partitioning(tau_labile_pot,falloc,plant) 
 
-    USE mo_land_memory,    ONLY: t_element
+    USE mo_shared_memory,    ONLY: t_element
     USE mo_veg_respiration, ONLY: calc_maintenance_respiration
     USE mo_veg_parameters
 
@@ -610,7 +610,7 @@ CONTAINS
                                leaf2root_mass_ratio, lai, target_lai, labile_pool, reserve_pool) & 
                                RESULT (reserve_use)
 
-    USE mo_land_memory,    ONLY: t_element
+    USE mo_shared_memory,    ONLY: t_element
     USE mo_veg_parameters
 
     IMPLICIT NONE

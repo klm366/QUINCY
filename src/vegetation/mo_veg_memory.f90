@@ -11,7 +11,7 @@ MODULE mo_veg_memory
 
   USE mo_kind,            ONLY: wp, eps8
   USE mo_base_constants,  ONLY: ncanop, dt, one_day
-  USE mo_land_memory,     ONLY: t_element
+  USE mo_shared_memory,     ONLY: t_element
 
   IMPLICIT NONE
 
@@ -251,7 +251,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION add_veg_pools_type_type(this,t2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this, t2         !< any t_slm_veg_pool
@@ -273,7 +273,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION add_veg_pools_type_scalar(this,s2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
@@ -296,7 +296,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION add_veg_pools_scalar_type(s1,this2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      REAL, INTENT(in)                  :: s1          !< any scalar
@@ -319,7 +319,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION subtract_veg_pools_type_type(this,t2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this, t2         !< any t_slm_veg_pool
@@ -341,7 +341,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION subtract_veg_pools_type_scalar(this,s2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
@@ -364,7 +364,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION subtract_veg_pools_scalar_type(s1,this2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      REAL, INTENT(in)                  :: s1          !< any scalar
@@ -387,7 +387,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION multiply_veg_pools_type_type(this,t2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this, t2         !< any t_slm_veg_pool
@@ -409,7 +409,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION multiply_veg_pools_type_scalar(this,s2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
@@ -432,7 +432,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION multiply_veg_pools_scalar_type(s1,this2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      REAL, INTENT(in)                  :: s1          !< any scalar
@@ -455,7 +455,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION divide_veg_pools_type_type(this,t2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this, t2         !< any t_slm_veg_pool
@@ -477,7 +477,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION divide_veg_pools_type_scalar(this,s2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
@@ -500,7 +500,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION divide_veg_pools_scalar_type(s1,this2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: t_element
+    USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
      REAL, INTENT(in)                  :: s1          !< any scalar

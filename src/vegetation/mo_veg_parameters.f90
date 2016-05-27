@@ -162,7 +162,7 @@ MODULE mo_veg_parameters
 
     SUBROUTINE init_veg_parameters(veg_param)
    
-      USE mo_land_constants
+      USE mo_shared_constants
       USE mo_atmland_constants
       ! 0.1 InOut
       TYPE(t_slm_veg_param),INTENT(inout) :: veg_param
@@ -330,7 +330,7 @@ MODULE mo_veg_parameters
     !-----------------------------------------------------------------------------------------------------
     SUBROUTINE init_pft_param_table(veg_param)
 
-      USE mo_land_constants, ONLY: molar_mass_C,molar_mass_N,molar_mass_P
+      USE mo_shared_constants, ONLY: molar_mass_C,molar_mass_N,molar_mass_P
       IMPLICIT NONE
       ! 0.1 InOut
       TYPE(t_slm_veg_param),INTENT(inout) :: veg_param         !< vegatetion parameter structure

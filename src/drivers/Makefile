@@ -19,11 +19,11 @@ STRIP   = strip
 SIZE    = size
 #---------------------------------------------------------------------
 #-
-VPATH = ../atmland:../base:../drivers:../land:../echam:../vegetation:$(OBJDIR)
+VPATH = ../atmland:../base:../drivers:../shared:../echam:../vegetation:$(OBJDIR)
 MODS = $(shell find ../atmland/ -name '*.f90' -print)
 MODS += $(shell find ../base/ -name '*.f90' -print)
 MODS += $(shell find ../drivers/ -name 'mo*.f90' -print)
-MODS += $(shell find ../land/ -name '*.f90' -print)
+MODS += $(shell find ../shared/ -name '*.f90' -print)
 MODS += $(shell find ../echam/ -name '*.f90' -print)
 MODS += $(shell find ../vegetation/ -name '*.f90' -print)
 
@@ -87,6 +87,6 @@ help:
 include ../echam/Make.inc.deps
 include ../base/Make.inc.deps
 include ../atmland/Make.inc.deps
-include ../land/Make.inc.deps
+include ../shared/Make.inc.deps
 include ../vegetation/Make.inc.deps
 include ../drivers/Make.inc.deps

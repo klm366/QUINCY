@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Jan Engel (2016-03-23)
 !!
-MODULE mo_land_util
+MODULE mo_shared_util
 
   USE mo_kind,         ONLY: wp
 
@@ -25,7 +25,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_element_zero
 
-    USE mo_land_memory,  ONLY: element_zero   ! TYPE(t_element) :: element_zero | defined & declared in mo_land_memory
+    USE mo_shared_memory,  ONLY: element_zero   ! TYPE(t_element) :: element_zero | defined & declared in mo_shared_memory
 
     element_zero%carbon     = 0.0_wp
     element_zero%nitrogen   = 0.0_wp
@@ -43,4 +43,4 @@ CONTAINS
 
 
 
-END MODULE mo_land_util
+END MODULE mo_shared_util
