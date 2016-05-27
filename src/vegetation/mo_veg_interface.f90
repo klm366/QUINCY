@@ -28,7 +28,7 @@ CONTAINS
 
     USE mo_base_memory,        ONLY: t_slm_soil, t_slm_tile
     USE mo_land_constants
-    USE mo_land_memory,        ONLY: add_elements, subtract_elements
+    USE mo_land_memory,        ONLY: t_element
     USE mo_veg_memory
     USE mo_veg_parameters,     ONLY: t_slm_veg_param
     USE mo_veg_photosynthesis, ONLY: update_canopy_fluxes
@@ -107,8 +107,8 @@ CONTAINS
     !> 5.1 update labile pool and reserve 
     !! 
     !! 
-    plant%pool%labile = add_elements(plant%pool%labile,plant%flux%reserve_use)
-    plant%pool%reserve = subtract_elements(plant%pool%reserve,plant%flux%reserve_use)
+    plant%pool%labile  = plant%pool%labile  + plant%flux%reserve_use
+    plant%pool%reserve = plant%pool%reserve - plant%flux%reserve_use
 
     !> 5.2 update fluxes from retranslocation of leaves
     !! 
@@ -123,8 +123,8 @@ CONTAINS
     !> 6.0 Update plant biogeochemical pools with growth and litterfall
     !! 
     !! 
-    plant%pool = subtract_veg_pools(plant%pool,plant%flux%litterfall)
-    plant%pool = add_veg_pools(plant%pool,plant%flux%growth)
+    plant%pool = plant%pool - plant%flux%litterfall
+    plant%pool = plant%pool + plant%flux%growth
 
     !> 7.0 Update plant diagnostics
     !! 

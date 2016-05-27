@@ -121,7 +121,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_partitioning(tau_labile_pot,falloc,plant) 
 
-    USE mo_land_memory,    ONLY: t_element,multiply_elements
+    USE mo_land_memory,    ONLY: t_element
     USE mo_veg_respiration, ONLY: calc_maintenance_respiration
     USE mo_veg_parameters
 
@@ -200,11 +200,11 @@ CONTAINS
 
     !> 4.0 partition growth to tissue types
     !! 
-    plant%flux%growth%leaf        = multiply_elements( falloc%leaf, growth )
-    plant%flux%growth%fine_root   = multiply_elements( falloc%fine_root, growth ) 
-    plant%flux%growth%coarse_root = multiply_elements( falloc%coarse_root, growth ) 
-    plant%flux%growth%sap_wood    = multiply_elements( falloc%sap_wood, growth ) 
-    plant%flux%growth%fruit       = multiply_elements( falloc%fruit, growth ) 
+    plant%flux%growth%leaf        = falloc%leaf        * growth
+    plant%flux%growth%fine_root   = falloc%fine_root   * growth 
+    plant%flux%growth%coarse_root = falloc%coarse_root * growth
+    plant%flux%growth%sap_wood    = falloc%sap_wood    * growth
+    plant%flux%growth%fruit       = falloc%fruit       * growth
 
     !> 4.1 invert flux of labile to be out of the labile pool
     !! 

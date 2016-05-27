@@ -128,15 +128,33 @@ MODULE mo_veg_memory
   !! flux: there are two fluxes per pool of a tissue, growth & litterfall (in & out of pool)
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_veg_pool 
-     TYPE(t_element) :: leaf           !< foliage
-     TYPE(t_element) :: fine_root      !< fine roots (< 2mm diameter)
-     TYPE(t_element) :: coarse_root    !< coarse roots (> 2mm diameter)
-     TYPE(t_element) :: sap_wood       !< living wood for water and phloem transport
-     TYPE(t_element) :: heart_wood     !< dead standing wood
-     TYPE(t_element) :: labile         !< meristem carbon
-     TYPE(t_element) :: reserve        !< storage
-     TYPE(t_element) :: fruit          !< live propagation pool
-     TYPE(t_element) :: seed_bed       !< fruit mass on ground
+    TYPE(t_element) :: leaf           !< foliage
+    TYPE(t_element) :: fine_root      !< fine roots (< 2mm diameter)
+    TYPE(t_element) :: coarse_root    !< coarse roots (> 2mm diameter)
+    TYPE(t_element) :: sap_wood       !< living wood for water and phloem transport
+    TYPE(t_element) :: heart_wood     !< dead standing wood
+    TYPE(t_element) :: labile         !< meristem carbon
+    TYPE(t_element) :: reserve        !< storage
+    TYPE(t_element) :: fruit          !< live propagation pool
+    TYPE(t_element) :: seed_bed       !< fruit mass on ground
+  CONTAINS
+    PRIVATE
+    PROCEDURE :: add_veg_pools_type_type
+    PROCEDURE :: add_veg_pools_type_scalar
+    PROCEDURE, PASS(this2) :: add_veg_pools_scalar_type
+    GENERIC, PUBLIC :: OPERATOR(+) => add_veg_pools_type_type, add_veg_pools_type_scalar, add_veg_pools_scalar_type
+    PROCEDURE :: subtract_veg_pools_type_type
+    PROCEDURE :: subtract_veg_pools_type_scalar
+    PROCEDURE, PASS(this2) :: subtract_veg_pools_scalar_type
+    GENERIC, PUBLIC :: OPERATOR(-) => subtract_veg_pools_type_type, subtract_veg_pools_type_scalar, subtract_veg_pools_scalar_type
+    PROCEDURE :: multiply_veg_pools_type_type
+    PROCEDURE :: multiply_veg_pools_type_scalar
+    PROCEDURE, PASS(this2) :: multiply_veg_pools_scalar_type
+    GENERIC, PUBLIC :: OPERATOR(*) => multiply_veg_pools_type_type, multiply_veg_pools_type_scalar, multiply_veg_pools_scalar_type
+    PROCEDURE :: divide_veg_pools_type_type
+    PROCEDURE :: divide_veg_pools_type_scalar
+    PROCEDURE, PASS(this2) :: divide_veg_pools_scalar_type
+    GENERIC, PUBLIC :: OPERATOR(/) => divide_veg_pools_type_type, divide_veg_pools_type_scalar, divide_veg_pools_scalar_type
   END TYPE t_slm_veg_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -228,92 +246,277 @@ MODULE mo_veg_memory
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> addition of two vegetation pools is returned
+  !> 1.0 addition of two vegetation pools: type + type
   !! 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION add_veg_pools(p1,p2) RESULT(p3) 
+  PURE ELEMENTAL FUNCTION add_veg_pools_type_type(this,t2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: add_elements
+    USE mo_land_memory,   ONLY: t_element
 
      IMPLICIT NONE
-     TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
-     TYPE(t_slm_veg_pool) :: p3
-     p3%leaf          = add_elements(p1%leaf,p2%leaf)
-     p3%fine_root     = add_elements(p1%fine_root,p2%fine_root)
-     p3%coarse_root   = add_elements(p1%coarse_root,p2%coarse_root)
-     p3%sap_wood      = add_elements(p1%sap_wood,p2%sap_wood)
-     p3%heart_wood    = add_elements(p1%heart_wood,p2%heart_wood)
-     p3%labile        = add_elements(p1%labile,p2%labile)
-     p3%reserve       = add_elements(p1%reserve,p2%reserve)
-     p3%fruit         = add_elements(p1%fruit,p2%fruit)
-     p3%seed_bed      = add_elements(p1%seed_bed,p2%seed_bed)
-  END FUNCTION add_veg_pools  
+     CLASS(t_slm_veg_pool), INTENT(in) :: this, t2         !< any t_slm_veg_pool
+     TYPE(t_slm_veg_pool)              :: t3               !< any t_slm_veg_pool
+     t3%leaf          = this%leaf        + t2%leaf         ! operator overload, see t_element
+     t3%fine_root     = this%fine_root   + t2%fine_root
+     t3%coarse_root   = this%coarse_root + t2%coarse_root
+     t3%sap_wood      = this%sap_wood    + t2%sap_wood
+     t3%heart_wood    = this%heart_wood  + t2%heart_wood
+     t3%labile        = this%labile      + t2%labile
+     t3%reserve       = this%reserve     + t2%reserve
+     t3%fruit         = this%fruit       + t2%fruit
+     t3%seed_bed      = this%seed_bed    + t2%seed_bed
+  END FUNCTION add_veg_pools_type_type  
 
   !-----------------------------------------------------------------------------------------------------
-  !> subtraction of vegetation pool p1 - p2 is returned
+  !> 1.1 addition of two vegetation pools: type + scalar
   !! 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION subtract_veg_pools(p1,p2) RESULT(p3) 
+  PURE ELEMENTAL FUNCTION add_veg_pools_type_scalar(this,s2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: subtract_elements
+    USE mo_land_memory,   ONLY: t_element
 
      IMPLICIT NONE
-     TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
-     TYPE(t_slm_veg_pool) :: p3
-     p3%leaf          = subtract_elements(p1%leaf,p2%leaf)
-     p3%fine_root     = subtract_elements(p1%fine_root,p2%fine_root)
-     p3%coarse_root   = subtract_elements(p1%coarse_root,p2%coarse_root)
-     p3%sap_wood      = subtract_elements(p1%sap_wood,p2%sap_wood)
-     p3%heart_wood    = subtract_elements(p1%heart_wood,p2%heart_wood)
-     p3%labile        = subtract_elements(p1%labile,p2%labile)
-     p3%reserve       = subtract_elements(p1%reserve,p2%reserve)
-     p3%fruit         = subtract_elements(p1%fruit,p2%fruit)
-     p3%seed_bed      = subtract_elements(p1%seed_bed,p2%seed_bed)
-  END FUNCTION subtract_veg_pools  
+     CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
+     REAL, INTENT(in)                  :: s2          !< any scalar
+     TYPE(t_slm_veg_pool)              :: t3
+     t3%leaf          = this%leaf        + s2         ! operator overload, see t_element
+     t3%fine_root     = this%fine_root   + s2
+     t3%coarse_root   = this%coarse_root + s2
+     t3%sap_wood      = this%sap_wood    + s2
+     t3%heart_wood    = this%heart_wood  + s2
+     t3%labile        = this%labile      + s2
+     t3%reserve       = this%reserve     + s2
+     t3%fruit         = this%fruit       + s2
+     t3%seed_bed      = this%seed_bed    + s2
+  END FUNCTION add_veg_pools_type_scalar  
 
   !-----------------------------------------------------------------------------------------------------
-  !> multiplication of two vegetation pools is returned
+  !> 1.2 addition of two vegetation pools: scalar + type
   !! 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION multiply_veg_pools(p1,p2) RESULT(p3) 
+  PURE ELEMENTAL FUNCTION add_veg_pools_scalar_type(s1,this2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: multiply_elements
+    USE mo_land_memory,   ONLY: t_element
 
      IMPLICIT NONE
-     TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
-     TYPE(t_slm_veg_pool) :: p3
-     p3%leaf          = multiply_elements(p1%leaf,p2%leaf)
-     p3%fine_root     = multiply_elements(p1%fine_root,p2%fine_root)
-     p3%coarse_root   = multiply_elements(p1%coarse_root,p2%coarse_root)
-     p3%sap_wood      = multiply_elements(p1%sap_wood,p2%sap_wood)
-     p3%heart_wood    = multiply_elements(p1%heart_wood,p2%heart_wood)
-     p3%labile        = multiply_elements(p1%labile,p2%labile)
-     p3%reserve       = multiply_elements(p1%reserve,p2%reserve)
-     p3%fruit         = multiply_elements(p1%fruit,p2%fruit)
-     p3%seed_bed      = multiply_elements(p1%seed_bed,p2%seed_bed)
-  END FUNCTION multiply_veg_pools  
+     REAL, INTENT(in)                  :: s1          !< any scalar
+     CLASS(t_slm_veg_pool), INTENT(in) :: this2       !< any t_slm_veg_pool
+     TYPE(t_slm_veg_pool)              :: t3
+     t3%leaf          = s1 + this2%leaf               ! operator overload, see t_element
+     t3%fine_root     = s1 + this2%fine_root 
+     t3%coarse_root   = s1 + this2%coarse_root
+     t3%sap_wood      = s1 + this2%sap_wood  
+     t3%heart_wood    = s1 + this2%heart_wood
+     t3%labile        = s1 + this2%labile 
+     t3%reserve       = s1 + this2%reserve 
+     t3%fruit         = s1 + this2%fruit 
+     t3%seed_bed      = s1 + this2%seed_bed 
+  END FUNCTION add_veg_pools_scalar_type  
 
   !-----------------------------------------------------------------------------------------------------
-  !> division of vegetation pool p1 by p2 is returned
+  !> 2.0 subtraction of two vegetation pools: type - type
   !! 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION divide_veg_pools(p1,p2) RESULT(p3) 
+  PURE ELEMENTAL FUNCTION subtract_veg_pools_type_type(this,t2) RESULT(t3) 
 
-    USE mo_land_memory,   ONLY: divide_elements
+    USE mo_land_memory,   ONLY: t_element
 
      IMPLICIT NONE
-     TYPE(t_slm_veg_pool), INTENT(in) :: p1,p2
-     TYPE(t_slm_veg_pool) :: p3
-     p3%leaf          = divide_elements(p1%leaf,p2%leaf)
-     p3%fine_root     = divide_elements(p1%fine_root,p2%fine_root)
-     p3%coarse_root   = divide_elements(p1%coarse_root,p2%coarse_root)
-     p3%sap_wood      = divide_elements(p1%sap_wood,p2%sap_wood)
-     p3%heart_wood    = divide_elements(p1%heart_wood,p2%heart_wood)
-     p3%labile        = divide_elements(p1%labile,p2%labile)
-     p3%reserve       = divide_elements(p1%reserve,p2%reserve)
-     p3%fruit         = divide_elements(p1%fruit,p2%fruit)
-     p3%seed_bed      = divide_elements(p1%seed_bed,p2%seed_bed)
-  END FUNCTION divide_veg_pools  
+     CLASS(t_slm_veg_pool), INTENT(in) :: this, t2         !< any t_slm_veg_pool
+     TYPE(t_slm_veg_pool)              :: t3               !< any t_slm_veg_pool
+     t3%leaf          = this%leaf        - t2%leaf         ! operator overload, see t_element
+     t3%fine_root     = this%fine_root   - t2%fine_root
+     t3%coarse_root   = this%coarse_root - t2%coarse_root
+     t3%sap_wood      = this%sap_wood    - t2%sap_wood
+     t3%heart_wood    = this%heart_wood  - t2%heart_wood
+     t3%labile        = this%labile      - t2%labile
+     t3%reserve       = this%reserve     - t2%reserve
+     t3%fruit         = this%fruit       - t2%fruit
+     t3%seed_bed      = this%seed_bed    - t2%seed_bed
+  END FUNCTION subtract_veg_pools_type_type  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> 2.1 subtraction of two vegetation pools: type - scalar
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION subtract_veg_pools_type_scalar(this,s2) RESULT(t3) 
+
+    USE mo_land_memory,   ONLY: t_element
+
+     IMPLICIT NONE
+     CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
+     REAL, INTENT(in)                  :: s2          !< any scalar
+     TYPE(t_slm_veg_pool)              :: t3
+     t3%leaf          = this%leaf        - s2         ! operator overload, see t_element
+     t3%fine_root     = this%fine_root   - s2
+     t3%coarse_root   = this%coarse_root - s2
+     t3%sap_wood      = this%sap_wood    - s2
+     t3%heart_wood    = this%heart_wood  - s2
+     t3%labile        = this%labile      - s2
+     t3%reserve       = this%reserve     - s2
+     t3%fruit         = this%fruit       - s2
+     t3%seed_bed      = this%seed_bed    - s2
+  END FUNCTION subtract_veg_pools_type_scalar  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> 2.2 subtraction of two vegetation pools: scalar - type
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION subtract_veg_pools_scalar_type(s1,this2) RESULT(t3) 
+
+    USE mo_land_memory,   ONLY: t_element
+
+     IMPLICIT NONE
+     REAL, INTENT(in)                  :: s1          !< any scalar
+     CLASS(t_slm_veg_pool), INTENT(in) :: this2       !< any t_slm_veg_pool
+     TYPE(t_slm_veg_pool)              :: t3
+     t3%leaf          = s1 - this2%leaf               ! operator overload, see t_element
+     t3%fine_root     = s1 - this2%fine_root 
+     t3%coarse_root   = s1 - this2%coarse_root
+     t3%sap_wood      = s1 - this2%sap_wood  
+     t3%heart_wood    = s1 - this2%heart_wood
+     t3%labile        = s1 - this2%labile 
+     t3%reserve       = s1 - this2%reserve 
+     t3%fruit         = s1 - this2%fruit 
+     t3%seed_bed      = s1 - this2%seed_bed 
+  END FUNCTION subtract_veg_pools_scalar_type  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> 3.0 multiplication of two vegetation pools: type * type
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION multiply_veg_pools_type_type(this,t2) RESULT(t3) 
+
+    USE mo_land_memory,   ONLY: t_element
+
+     IMPLICIT NONE
+     CLASS(t_slm_veg_pool), INTENT(in) :: this, t2         !< any t_slm_veg_pool
+     TYPE(t_slm_veg_pool)              :: t3               !< any t_slm_veg_pool
+     t3%leaf          = this%leaf        * t2%leaf         ! operator overload, see t_element
+     t3%fine_root     = this%fine_root   * t2%fine_root
+     t3%coarse_root   = this%coarse_root * t2%coarse_root
+     t3%sap_wood      = this%sap_wood    * t2%sap_wood
+     t3%heart_wood    = this%heart_wood  * t2%heart_wood
+     t3%labile        = this%labile      * t2%labile
+     t3%reserve       = this%reserve     * t2%reserve
+     t3%fruit         = this%fruit       * t2%fruit
+     t3%seed_bed      = this%seed_bed    * t2%seed_bed
+  END FUNCTION multiply_veg_pools_type_type  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> 3.1 multiplication of two vegetation pools: type * scalar
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION multiply_veg_pools_type_scalar(this,s2) RESULT(t3) 
+
+    USE mo_land_memory,   ONLY: t_element
+
+     IMPLICIT NONE
+     CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
+     REAL, INTENT(in)                  :: s2          !< any scalar
+     TYPE(t_slm_veg_pool)              :: t3
+     t3%leaf          = this%leaf        * s2         ! operator overload, see t_element
+     t3%fine_root     = this%fine_root   * s2
+     t3%coarse_root   = this%coarse_root * s2
+     t3%sap_wood      = this%sap_wood    * s2
+     t3%heart_wood    = this%heart_wood  * s2
+     t3%labile        = this%labile      * s2
+     t3%reserve       = this%reserve     * s2
+     t3%fruit         = this%fruit       * s2
+     t3%seed_bed      = this%seed_bed    * s2
+  END FUNCTION multiply_veg_pools_type_scalar  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> 3.2 multiplication of two vegetation pools: scalar * type
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION multiply_veg_pools_scalar_type(s1,this2) RESULT(t3) 
+
+    USE mo_land_memory,   ONLY: t_element
+
+     IMPLICIT NONE
+     REAL, INTENT(in)                  :: s1          !< any scalar
+     CLASS(t_slm_veg_pool), INTENT(in) :: this2       !< any t_slm_veg_pool
+     TYPE(t_slm_veg_pool)              :: t3
+     t3%leaf          = s1 * this2%leaf               ! operator overload, see t_element
+     t3%fine_root     = s1 * this2%fine_root 
+     t3%coarse_root   = s1 * this2%coarse_root
+     t3%sap_wood      = s1 * this2%sap_wood  
+     t3%heart_wood    = s1 * this2%heart_wood
+     t3%labile        = s1 * this2%labile 
+     t3%reserve       = s1 * this2%reserve 
+     t3%fruit         = s1 * this2%fruit 
+     t3%seed_bed      = s1 * this2%seed_bed 
+  END FUNCTION multiply_veg_pools_scalar_type  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> 4.0 division of two vegetation pools: type / type
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION divide_veg_pools_type_type(this,t2) RESULT(t3) 
+
+    USE mo_land_memory,   ONLY: t_element
+
+     IMPLICIT NONE
+     CLASS(t_slm_veg_pool), INTENT(in) :: this, t2         !< any t_slm_veg_pool
+     TYPE(t_slm_veg_pool)              :: t3               !< any t_slm_veg_pool
+     t3%leaf          = this%leaf        / t2%leaf         ! operator overload, see t_element
+     t3%fine_root     = this%fine_root   / t2%fine_root
+     t3%coarse_root   = this%coarse_root / t2%coarse_root
+     t3%sap_wood      = this%sap_wood    / t2%sap_wood
+     t3%heart_wood    = this%heart_wood  / t2%heart_wood
+     t3%labile        = this%labile      / t2%labile
+     t3%reserve       = this%reserve     / t2%reserve
+     t3%fruit         = this%fruit       / t2%fruit
+     t3%seed_bed      = this%seed_bed    / t2%seed_bed
+  END FUNCTION divide_veg_pools_type_type  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> 4.1 division of two vegetation pools: type / scalar
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION divide_veg_pools_type_scalar(this,s2) RESULT(t3) 
+
+    USE mo_land_memory,   ONLY: t_element
+
+     IMPLICIT NONE
+     CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
+     REAL, INTENT(in)                  :: s2          !< any scalar
+     TYPE(t_slm_veg_pool)              :: t3
+     t3%leaf          = this%leaf        / s2         ! operator overload, see t_element
+     t3%fine_root     = this%fine_root   / s2
+     t3%coarse_root   = this%coarse_root / s2
+     t3%sap_wood      = this%sap_wood    / s2
+     t3%heart_wood    = this%heart_wood  / s2
+     t3%labile        = this%labile      / s2
+     t3%reserve       = this%reserve     / s2
+     t3%fruit         = this%fruit       / s2
+     t3%seed_bed      = this%seed_bed    / s2
+  END FUNCTION divide_veg_pools_type_scalar  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> 4.2 division of two vegetation pools: scalar / type
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION divide_veg_pools_scalar_type(s1,this2) RESULT(t3) 
+
+    USE mo_land_memory,   ONLY: t_element
+
+     IMPLICIT NONE
+     REAL, INTENT(in)                  :: s1          !< any scalar
+     CLASS(t_slm_veg_pool), INTENT(in) :: this2       !< any t_slm_veg_pool
+     TYPE(t_slm_veg_pool)              :: t3
+     t3%leaf          = s1 / this2%leaf               ! operator overload, see t_element
+     t3%fine_root     = s1 / this2%fine_root 
+     t3%coarse_root   = s1 / this2%coarse_root
+     t3%sap_wood      = s1 / this2%sap_wood  
+     t3%heart_wood    = s1 / this2%heart_wood
+     t3%labile        = s1 / this2%labile 
+     t3%reserve       = s1 / this2%reserve 
+     t3%fruit         = s1 / this2%fruit 
+     t3%seed_bed      = s1 / this2%seed_bed 
+  END FUNCTION divide_veg_pools_scalar_type  
+
 
   !-----------------------------------------------------------------------------------------------------
   !> intialize all variables (TYPE t_daily_average)

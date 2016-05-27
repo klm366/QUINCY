@@ -56,26 +56,26 @@ CONTAINS
     ENDSELECT 
     ! 
     ! apply rate to all elements of a pool
-    mortality_spread_element%carbon = mortality 
-    mortality_spread_element%nitrogen = mortality
+    mortality_spread_element%carbon     = mortality 
+    mortality_spread_element%nitrogen   = mortality
     mortality_spread_element%phosphorus = mortality
-    mortality_spread_element%carbon13 = mortality
-    mortality_spread_element%carbon14 = mortality
+    mortality_spread_element%carbon13   = mortality
+    mortality_spread_element%carbon14   = mortality
     mortality_spread_element%nitrogen15 = mortality
     ! 
     ! apply rate to all pools
-    mortality_spread_pool%leaf = mortality_spread_element
-    mortality_spread_pool%fine_root = mortality_spread_element
+    mortality_spread_pool%leaf        = mortality_spread_element
+    mortality_spread_pool%fine_root   = mortality_spread_element
     mortality_spread_pool%coarse_root = mortality_spread_element
-    mortality_spread_pool%sap_wood = mortality_spread_element
-    mortality_spread_pool%heart_wood = mortality_spread_element
-    mortality_spread_pool%fruit = mortality_spread_element
-    mortality_spread_pool%labile = mortality_spread_element
-    mortality_spread_pool%reserve = mortality_spread_element
+    mortality_spread_pool%sap_wood    = mortality_spread_element
+    mortality_spread_pool%heart_wood  = mortality_spread_element
+    mortality_spread_pool%fruit       = mortality_spread_element
+    mortality_spread_pool%labile      = mortality_spread_element
+    mortality_spread_pool%reserve     = mortality_spread_element
 
     ! calculate litter fall from mortality
-    litter_from_mortality = multiply_veg_pools(mortality_spread_pool,plant%pool)
-    plant%flux%litterfall = add_veg_pools(plant%flux%litterfall,litter_from_mortality)
+    litter_from_mortality = mortality_spread_pool * plant%pool
+    plant%flux%litterfall = plant%flux%litterfall + litter_from_mortality
   END SUBROUTINE update_veg_dynamics
 
 END MODULE mo_veg_dynamics
