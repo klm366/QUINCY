@@ -118,7 +118,7 @@ class Experiment ( object ):
             fetchfile_list = list ( set ( fetchfile_list ))
             workingdir = os.getcwd ()
             os.chdir ( self.B4J_parent.temp_path )
-            exe = os.path.join ( bench4jsbach_scripts, "b4j_getdata_pftp" )
+            exe = os.path.join ( bench4jsbach_scripts, "b4j_fetch_archived_file.ksh" )
             assert os.path.isfile ( exe ) and os.access ( exe, os.X_OK ), "File %s is not executable." % exe
             self.B4J_parent.logger.debug ( "Fetching outdata from archive for %s into %s. This might take a while ..." % (
                 self.B4J_name, self.B4J_parent.temp_path ))
