@@ -40,7 +40,7 @@ CONTAINS
     LOGICAL                   :: l_result
     l_result = .FALSE.
     IF(test_var /= test_var) l_result = .TRUE.
-    IF(l_result == .FALSE.) THEN
+    IF(.NOT.l_result) THEN
       IF(test_var - 1 .eq. test_var) l_result = .TRUE.
     END IF
   END FUNCTION test_int_for_NaN_and_Infinity
@@ -58,7 +58,7 @@ CONTAINS
     LOGICAL                   :: l_result
     l_result = .FALSE.
     IF(test_var /= test_var) l_result = .TRUE.
-    IF(l_result == .FALSE.) THEN
+    IF(.NOT.l_result) THEN
       IF(test_var - 1.0_wp .eq. test_var) l_result = .TRUE.
     END IF
   END FUNCTION test_real_for_NaN_and_Infinity
