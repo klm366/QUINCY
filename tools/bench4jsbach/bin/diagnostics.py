@@ -163,7 +163,7 @@ class Diagnostics ( object ):
         # for exp in self.experiments:
         #     for fileid, filedict in fielddict [ 'fetch' ].iteritems ():
         #         exp.B4J_index [ fileid ] = self.path_template % { 
-        #             'path'           : fielddict [ "data_path" ],
+        #             'path'           : fielddict [ "processed_path" ],
         #             'classification' : fileid,
         #             'expname'        : exp.B4J_name,
         #             'startdate'      : fielddict [ 'startyear' ],
@@ -186,7 +186,7 @@ class Diagnostics ( object ):
         
         ########## FETCH LAND SEA MASK, TODO: TESTS #######################
         slf_varname = "slf"
-        land_sea_mask = fielddict [ "data_path" ] + os.sep + \
+        land_sea_mask = fielddict [ "processed_path" ] + os.sep + \
                         slf_varname + "_" + os.path.basename ( self.land_sea_mask )
         cdo.selname ( slf_varname, input = self.land_sea_mask, output = land_sea_mask )
         self.logger.debug ( "Fetched land sea mask '%s'." %  land_sea_mask )
@@ -204,7 +204,7 @@ class Diagnostics ( object ):
             for output_item, output_dict in fielddict [ 'preprocessing' ].iteritems ():
                 if not isinstance ( output_dict, configobj.Section ): continue
                 exp.B4J_index [ output_item ] = self.path_template % { 
-                    'path'           : fielddict [ "data_path" ],
+                    'path'           : fielddict [ "processed_path" ],
                     'classification' : output_item,
                     'expname'        : exp.B4J_name,
                     'startdate'      : fielddict [ 'startyear' ],
@@ -247,7 +247,7 @@ class Diagnostics ( object ):
                     if not isinstance ( output_dict, configobj.Section ): continue
                     classification_str = "%s_ref%d" % ( output_item,  ref.B4J_refno )
                     can.B4J_index [ classification_str ] = self.path_template % { 
-                        'path'           : fielddict [ "data_path" ],
+                        'path'           : fielddict [ "processed_path" ],
                         'classification' : classification_str,
                         'expname'        : can.B4J_name,
                         'startdate'      : fielddict [ 'startyear' ],

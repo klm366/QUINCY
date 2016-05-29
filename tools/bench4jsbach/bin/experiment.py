@@ -8,6 +8,7 @@ from cdo import Cdo
 
 ARCHIVE_PREFIX = "/hpss/arch/"
 STREAM_SUFFIX  = "_stream"
+CODES_SUFFIX   = "_codes"
 
 def find_files ( pattern, path, single = True, raise_e = False ):
     assert os.path.isdir ( path ) and isinstance ( pattern, str )
@@ -93,35 +94,51 @@ class Experiment ( object ):
             for file_name, file_config in field_config ['fetch' ].iteritems ():
                 assert modeltype in file_config, "No '%s'-section defined for %s." % file_name
                 if field_config [ "frequence" ] == "monthly":
-                    frequence_fix = self.outdata_frequence_fixes [ field_config [ "frequence" ]]
+                    frequence_infix = self.outdata_frequence_infixes [ field_config [ "frequence" ]]
                     finalyearstring = self.outdata_finalyear_tmpl % { 'finalyear': self.B4J_finalyear }
                 else:
-                    frequence_fix = ""
+                    frequence_infix = ""
                     finalyearstring = ""
                 fetchpath = self.B4J_path + os.sep + self.outdata_subpath + os.sep + file_config [ modeltype ][ "submodel" ]
 
                 fetchfile = self.outdata_fn_tmpl % { "expname"           : self.B4J_name,
                                                      "submodel"          : file_config [ modeltype ][ "submodel" ],
                                                      "stream"            : file_config [ modeltype ][ "stream" ],
-                                                     "cond_frequencefix" : frequence_fix,
+                                                     "cond_frequencefix" : frequence_infix,
                                                      "startyear"         : self.B4J_startyear,
                                                      "cond_finalyearstr" : finalyearstring,
-                                                     "postfix"           : self.outdata_postfix }
+                                                     "suffix"           : self.outdata_suffix }
                 if from_archive:
-                    self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( self.B4J_parent.temp_path, fetchfile )
+                    self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( self.B4J_parent.downloads_path, fetchfile )
                     if not os.path.isfile ( self.B4J_index [ file_name + STREAM_SUFFIX ]):
                         fetchfile_list.append (( fetchpath, fetchfile ))
                 else:
                     self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( fetchpath, fetchfile ) 
 
+                fetchcodespath    = self.B4J_path + os.sep + self.subpath 
+                fetchcodestarfile = self.codesfiles_tar_tmpl % { "expname" : self.B4J_name }
+                fetchcodesfile    = self.codesfiles_fn_tmpl % { "expname"  : self.B4J_name,
+                                                        "submodel" : file_config [ modeltype ][ "submodel" ],
+                                                        "stream"   : file_config [ modeltype ][ "stream" ],
+                                                        "suffix"  : self.codesfiles_suffix }
+
+                if from_archive:
+                    self.B4J_index [ file_name + CODES_SUFFIX ] = os.path.join ( self.B4J_parent.downloads_path, fetchcodesfile )
+                    if not os.path.isfile ( self.B4J_index [ file_name + CODES_SUFFIX ]) and \
+                           not os.path.isfile ( fetchcodestarfile ):
+                        fetchfile_list.append (( fetchcodespath, fetchcodestarfile ))
+                else:
+                    # to check: path of codes file in not archived mpiesm1 experiment
+                    self.B4J_index [ file_name + CODES_SUFFIX ] + os.path.join ( fetchcodespath, fetchcodesfile )
+
         if from_archive and fetchfile_list:
             fetchfile_list = list ( set ( fetchfile_list ))
             workingdir = os.getcwd ()
-            os.chdir ( self.B4J_parent.temp_path )
+            os.chdir ( self.B4J_parent.downloads_path )
             exe = os.path.join ( bench4jsbach_scripts, "b4j_fetch_archived_file.ksh" )
             assert os.path.isfile ( exe ) and os.access ( exe, os.X_OK ), "File %s is not executable." % exe
-            self.B4J_parent.logger.debug ( "Fetching outdata from archive for %s into %s. This might take a while ..." % (
-                self.B4J_name, self.B4J_parent.temp_path ))
+            self.B4J_parent.logger.debug ( "Fetching outdata and codes files from archive for %s into %s. This might take a while ..." % (
+                self.B4J_name, self.B4J_parent.downloads_path ))
             for fetchfile in fetchfile_list:
                 sp = subprocess.Popen( [ exe + " " + fetchfile [ 0 ] + " " + fetchfile [ 1 ]], shell=True,
                                        stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
@@ -134,7 +151,26 @@ class Experiment ( object ):
                 else:
                     print stdout
             self.B4J_parent.logger.debug ( "Fetched outdata from archive for %s successfully into %s." % (
-                self.B4J_name, self.B4J_parent.temp_path ))
+                self.B4J_name, self.B4J_parent.downloads_path ))
+          
+            # extract codesfiles and delete tarball
+            if ( fetchcodespath, fetchcodestarfile ) in fetchfile_list:
+                for cmd in [[ "tar -xf %s --wildcards --no-anchored --strip=1 '*.%s'" %
+                              ( fetchcodestarfile, self.codesfiles_suffix  )],
+                            [ "rm -f %s" % fetchcodestarfile ]]:
+                    sp = subprocess.Popen( cmd, shell=True,
+                                           stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
+                    stdout, stderr = sp.communicate()
+                    if sp.returncode:
+                        print "stdout: ", stdout
+                        print "stderr: ", stderr
+                        print "returncode: %d" % sp.returncode
+                        sys.exit ( sp.returncode )
+                    else:
+                        print stdout
+                self.B4J_parent.logger.debug ( "Extracted all codesfiles from %s to %s, deleted tarball." %
+                                               ( fetchcodestarfile, self.B4J_parent.downloads_path ))
+                
             os.chdir ( workingdir )
 
 
@@ -147,20 +183,22 @@ class Experiment ( object ):
             yearlist = range ( int ( fielddict [ 'startyear' ]), int ( fielddict [ 'finalyear' ]) + 1 )
             for fileid, filedict in fielddict ['fetch' ].iteritems ():
                 self.B4J_index [ fileid ] = self.B4J_parent.path_template % { 
-                    'path'           : fielddict [ "data_path" ],
+                    'path'           : fielddict [ "processed_path" ],
                     'classification' : fileid,
                     'expname'        : self.B4J_name,
                     'startdate'      : fielddict [ 'startyear' ],
                     'finaldate'      : fielddict [ 'finalyear' ],
                     'suffix'         : fielddict [ 'suffix' ]}
                 assert modeltype in filedict, "No '%s'-section defined for %s." % fileid
+
+                assert os.path.isfile ( self.B4J_index [ fileid + CODES_SUFFIX ])
                 
                 cdo.selcode (  filedict [ modeltype ][ 'code' ],
                               input = " -selyear," + ','.join ( repr ( y ) for y in yearlist ) +\
                                " " + self.B4J_index [ fileid + STREAM_SUFFIX ],
                               output = self.B4J_index [ fileid ],
                               options = ' -f %s' % fielddict [ 'suffix' ] +\
-                                        ' -t %s' % "/scratch/mpi/mpiles/m300050/git/jsbach/tools/bench4jsbach/models/mpiesm1/codes/echam6_echam.codes" )
+                                        ' -t %s' % self.B4J_index [ fileid + CODES_SUFFIX ])
 
         self.B4J_parent.logger.debug ( "Exiting" )
 
@@ -175,6 +213,7 @@ class Experiment ( object ):
 
     def teX_short_repr ( self, shortname = 'can'  ):
         from report import teXify
+        
         
         return '%s object \\textbf{%s {\\tt %s}}' % ( teXify ( self.__class__.__name__ ),
                                                       teXify ( self.B4J_name ),
@@ -260,19 +299,23 @@ class CMIP5_Experiment ( Experiment ):
         return oldpath
 
 
-
+# status: only for archived experiment
 class MPIESM1_Experiment ( Experiment ):
-    outdata_fn_tmpl         ="""%(expname)s_%(submodel)s_%(stream)s_%(cond_frequencefix)s%(startyear)s%(cond_finalyearstr)s.%(postfix)s"""
-    outdata_finalyear_tmpl  ="""-%(finalyear)s"""
-    outdata_frequence_fixes ={ "monthly" : "mm_" }
-    outdata_subpath         = None
-    outdata_postfix         = "grb"
+    codesfiles_tar_tmpl       = "%(expname)s_log.tar"
+    codesfiles_fn_tmpl        = "%(expname)s_%(submodel)s_%(stream)s.%(suffix)s"
+    codesfiles_suffix         = "codes"
+    outdata_fn_tmpl           = """%(expname)s_%(submodel)s_%(stream)s_%(cond_frequencefix)s%(startyear)s%(cond_finalyearstr)s.%(suffix)s"""
+    outdata_finalyear_tmpl    = """-%(finalyear)s"""
+    outdata_frequence_infixes = { "monthly" : "mm_" }
+    outdata_subpath           = None
+    outdata_suffix            = "grb"
 
     def __init__ ( self, parent, **kwargs ):
         print "###################### go on here, subclass %s ####################" % self.__class__.__name__
         Experiment.__init__ ( self, parent, **kwargs )
         #super(Experiment, self).__init__(**kwargs)
-        self.outdata_subpath = self.B4J_name + os.sep + "outdata"
+        self.subpath         = self.B4J_name
+        self.outdata_subpath = self.subpath + os.sep + "outdata"
         #print "MPIESM1_Experiment attributes:"
         #print self.__dict__
 

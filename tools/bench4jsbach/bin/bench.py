@@ -32,7 +32,7 @@ config_template            = os.path.join ( bench4jsbach_configs, "b4j_template.
 b4j_configspec_fn          = os.path.join ( bench4jsbach_configs, "b4j_config.spec" )
 b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configs, "b4j_field_config.spec" )
 work_base                  = os.path.join ( bench4jsbach_base, "work" )
-bench_dirnames             = [ "configs", "data", "graphics", "logging", "report", "scripts", "temp" ]
+bench_dirnames             = [ "configs", "processed", "graphics", "logging", "report", "scripts", "downloads" ]
 
 
 def get_git_origin ():
@@ -94,13 +94,13 @@ class Bench_Object ( Diagnostics, Report ):
     bench_path         = None
     bench_configs_path = None
     configs_path       = None
-    data_path          = None
+    processed_path     = None
     graphics_path      = None
     logging_path       = None
     logfile_path       = None
     report_path        = None
     scripts_path       = None
-    temp_path          = None
+    download_path      = None
     config             = None
     wikipage           = None
     experiments        = []
@@ -307,9 +307,9 @@ configuration file '%s' have to accord with the corresponding section name
                     
                 self.diagnostic_fields [ f_n ] = field_config                
                 self.diagnostic_fields [ f_n ][ 'graphics_path' ]  = self.graphics_path + os.sep + f_n
-                self.diagnostic_fields [ f_n ][ 'data_path' ] = self.data_path + os.sep + f_n
+                self.diagnostic_fields [ f_n ][ 'processed_path' ] = self.processed_path + os.sep + f_n
                 for d in [ self.diagnostic_fields [ f_n ][ 'graphics_path' ],
-                           self.diagnostic_fields [ f_n ][ 'data_path' ]]:
+                           self.diagnostic_fields [ f_n ][ 'processed_path' ]]:
                     try:
                         os.makedirs ( d )
                     except:
@@ -358,14 +358,14 @@ configuration file '%s' have to accord with the corresponding section name
     def get_b4j_path ( self, filename, b4j_filetype ):
         assert b4j_filetype and b4j_filetype in bench_dirnames
 
-        dirmap = {  "scripts" : [  self.scripts_path,
-                                   bench4jsbach_base + "/prod/scripts" ],
-                    "configs" : [ self.configs_path,
-                                  bench4jsbach_base + "/prod/configs" ],
-                    "data" : [ self.data_path ], 
-                    "graphics" : [ self.graphics_path ],
-                    "report" : [ self.report_path ],
-                    "logging" : [ self.logging_path ]}
+        dirmap = {  "scripts"   : [  self.scripts_path,
+                                     bench4jsbach_base + "/prod/scripts" ],
+                    "configs"   : [ self.configs_path,
+                                    bench4jsbach_base + "/prod/configs" ],
+                    "processed" : [ self.processed_path ], 
+                    "graphics"  : [ self.graphics_path ],
+                    "report"    : [ self.report_path ],
+                    "logging"   : [ self.logging_path ]}
         
         dirpath = dirmap [ b4j_filetype ]
 
@@ -386,7 +386,7 @@ configuration file '%s' have to accord with the corresponding section name
         rep =  """\n\n{} ( bench_name = {}, 
 \tbench_path        = {},
 \tconfigs_path       = {},
-\tdata_path         = {}, 
+\tprocessed_path         = {}, 
 \tgraphics_path      = {}, 
 \treport_path       = {}, 
 \tbench_configs_path = {}, 
@@ -395,7 +395,7 @@ configuration file '%s' have to accord with the corresponding section name
                 print_none ( self.bench_name        ),
                 print_none ( self.bench_path        ),
                 print_none ( self.configs_path       ),
-                print_none ( self.data_path         ),
+                print_none ( self.processed_path     ),
                 print_none ( self.graphics_path      ),
                 print_none ( self.report_path       ),
                 print_none ( self.bench_configs_path ),
