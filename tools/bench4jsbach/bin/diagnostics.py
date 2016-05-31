@@ -184,12 +184,12 @@ class Diagnostics ( object ):
         
         cdo = Cdo ()
         
-        ########## FETCH LAND SEA MASK, TODO: TESTS #######################
-        slf_varname = "slf"
-        land_sea_mask = fielddict [ "processed_path" ] + os.sep + \
-                        slf_varname + "_" + os.path.basename ( self.land_sea_mask )
-        cdo.selname ( slf_varname, input = self.land_sea_mask, output = land_sea_mask )
-        self.logger.debug ( "Fetched land sea mask '%s'." %  land_sea_mask )
+        # ########## FETCH LAND SEA MASK, TODO: TESTS #######################
+        # slf_varname = "slf"
+        # land_sea_mask = fielddict [ "processed_path" ] + os.sep + \
+        #                 slf_varname + "_" + os.path.basename ( self.land_sea_mask )
+        # cdo.selname ( slf_varname, input = self.land_sea_mask, output = land_sea_mask )
+        # self.logger.debug ( "Fetched land sea mask '%s'." %  land_sea_mask )
 
         ################ PREPROCESSING ####################tre
         executable = self.get_b4j_path (  fielddict [ 'preprocessing' ][ 'exec' ], "scripts" )
@@ -237,7 +237,7 @@ class Diagnostics ( object ):
                 
                 arglist = [ "startyear:" + startyear,  "finalyear:" + finalyear,
                             "suffix:" +  fielddict [ 'suffix' ],
-                            "land_sea_mask:" + land_sea_mask ]
+                            "land_sea_mask:" + ref.land_sea_mask ]
                             
                 for key in input_list:
                     arglist.append ( "can.%s" % key + ':' + can.B4J_index [ key ])
@@ -286,7 +286,7 @@ class Diagnostics ( object ):
 
                         arglist = [ "startyear:" + startyear,  "finalyear:" + finalyear,
                                     "suffix:" +  fielddict [ 'suffix' ],
-                                    "land_sea_mask:" + land_sea_mask ]
+                                    "land_sea_mask:" + ref.land_sea_mask ]
 
                         for key in input_list:
                             classification_str =  "%s_ref%d" % ( key,  ref.B4J_refno )

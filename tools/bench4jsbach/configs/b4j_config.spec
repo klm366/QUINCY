@@ -17,7 +17,6 @@ redmine_key=string()
 institute=string()
 department=string()
 reporting=boolean()
-land_sea_mask=string()
 
 [experiments]
 [[__many__]]

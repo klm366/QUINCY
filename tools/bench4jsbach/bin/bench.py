@@ -109,7 +109,6 @@ class Bench_Object ( Diagnostics, Report ):
     logger             = None
     logger_name        = 'B4J_LOGGER'
     reporting          = False
-    land_sea_mask      = None
     
     
     def __init__ ( self, config_arg, **kwargs ):
@@ -193,10 +192,6 @@ class Bench_Object ( Diagnostics, Report ):
         self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
 
         self.reporting     = config [ "reporting" ]
-        self.land_sea_mask = config [ "land_sea_mask" ]
-        if not os.path.isfile ( self.land_sea_mask ):
-            raise Exception ( "Error: Path for land sea mask '%s' does not exists." % \
-                              self.land_sea_mask )
         self.wikipage =  Bench4JSBach_Wikipage ( self.config [ 'redmine_user' ],
                                                  self.config [ 'redmine_key' ])
 

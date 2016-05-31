@@ -44,20 +44,23 @@ def find_files ( pattern, path, single = True, raise_e = False ):
 
 
 class Experiment ( object ):
-    B4J_parent    = None
-    B4J_id        = None
-    B4J_name      = None
-    B4J_etype     = None
-    B4J_startyear = None
-    B4J_finalyear = None
-    B4J_path      = None
-    B4J_isref     = False
-    B4J_iscan     = True
-    B4J_index     = None
-    B4J_canno     = None
-    B4J_refno     = None
-    
-    def __init__ ( self, parent, **kwargs ):
+    B4J_parent      = None
+    B4J_id          = None
+    B4J_name        = None
+    B4J_etype       = None
+    B4J_atmres      = None
+    B4J_oceres      = None
+    B4J_startyear   = None
+    B4J_finalyear   = None
+    B4J_path        = None
+    B4J_landseamask = None
+    B4J_isref       = False
+    B4J_iscan       = True
+    B4J_index       = None
+    B4J_canno       = None
+    B4J_refno       = None
+                    
+    def __init__ (   self, parent, **kwargs ):
         self.B4J_parent   = parent
         self.B4J_name     = kwargs.get ( "B4J_name" )
         self.B4J_etype    = kwargs.get ( "B4J_etype", None )
@@ -75,7 +78,9 @@ class Experiment ( object ):
             except:
                 print "No experiment description found for %s." % self.B4J_name
                 sys.exit ( 1 )
-            self.B4J_path = exp_metadata [ "data_storage" ]
+            self.B4J_path      = exp_metadata [ "data_storage" ]
+            self.B4J_atmres    = exp_metadata [ "atm_res" ]
+            self.B4J_oceres    = exp_metadata [ "oce_res" ]
             self.B4J_startyear = exp_metadata [ "simulation_period" ].split ( '-' )[ 0 ]
             self.B4J_finalyear = exp_metadata [ "simulation_period" ].split ( '-' )[ 1 ]
 
@@ -200,6 +205,22 @@ class Experiment ( object ):
                               options = ' -f %s' % fielddict [ 'suffix' ] +\
                                         ' -t %s' % self.B4J_index [ fileid + CODES_SUFFIX ])
 
+        # fetch land-sea-mask
+        lsm_path = self.land_sea_mask_path_tmpl % { "atm_res" : self.B4J_atmres,
+                                                    "oce_res" : self.B4J_oceres }
+        assert os.path.isfile ( lsm_path ), "No file found for %s." % lsm_path 
+        self.land_sea_mask  = self.B4J_parent.path_template % { 
+            'path'           : fielddict [ "processed_path" ],
+            'classification' : "land_sea_mask",
+            'expname'        : self.B4J_name,
+            'startdate'      : fielddict [ 'startyear' ],
+            'finaldate'      : fielddict [ 'finalyear' ],
+            'suffix'         : fielddict [ 'suffix' ]}
+        slf_varname = "slf"
+        cdo.selname ( slf_varname, input = lsm_path, output = self.land_sea_mask )
+        self.B4J_parent.logger.debug ( "Fetched land sea mask '%s'." %  self.land_sea_mask )
+
+
         self.B4J_parent.logger.debug ( "Exiting" )
 
 
@@ -309,6 +330,8 @@ class MPIESM1_Experiment ( Experiment ):
     outdata_frequence_infixes = { "monthly" : "mm_" }
     outdata_subpath           = None
     outdata_suffix            = "grb"
+
+    land_sea_mask_path_tmpl   = "/pool/data/JSBACH/input/r0007/%(atm_res)s/jsbach_%(atm_res)s%(oce_res)s_11tiles_5layers_1850.nc"
 
     def __init__ ( self, parent, **kwargs ):
         print "###################### go on here, subclass %s ####################" % self.__class__.__name__
