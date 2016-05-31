@@ -44,7 +44,7 @@ def find_files ( pattern, path, single = True, raise_e = False ):
 
 
 class Experiment ( object ):
-    B4J_parent      = None
+    B4J_obj      = None
     B4J_id          = None
     B4J_name        = None
     B4J_etype       = None
@@ -60,8 +60,8 @@ class Experiment ( object ):
     B4J_canno       = None
     B4J_refno       = None
                     
-    def __init__ (   self, parent, **kwargs ):
-        self.B4J_parent   = parent
+    def __init__ (   self, b4j_obj, **kwargs ):
+        self.B4J_obj   = b4j_obj
         self.B4J_name     = kwargs.get ( "B4J_name" )
         self.B4J_etype    = kwargs.get ( "B4J_etype", None )
         self.B4J_path     = kwargs.get ( "B4J_path", None )
@@ -73,7 +73,7 @@ class Experiment ( object ):
 
         if not self.B4J_path:
             try:
-                exp_metadata = self.B4J_parent.wikipage.fetch_simulation_row (
+                exp_metadata = self.B4J_obj.wikipage.fetch_simulation_row (
                     "can" if self.B4J_iscan else "ref", self.B4J_name )
             except:
                 print "No experiment description found for %s." % self.B4J_name
@@ -88,13 +88,13 @@ class Experiment ( object ):
     def fetch_outdata_all ( self ):
         from bench import bench4jsbach_scripts
 
-        self.B4J_parent.logger.debug ( "Starting" )
+        self.B4J_obj.logger.debug ( "Starting" )
         
         modeltype = self.__class__.__name__.split ( "_" )[ 0 ]
         from_archive = self.B4J_path.startswith ( ARCHIVE_PREFIX )
 
         if from_archive: fetchfile_list = []
-        for field_name, field_config in self.B4J_parent.diagnostic_fields.iteritems ():
+        for field_name, field_config in self.B4J_obj.diagnostic_fields.iteritems ():
             assert 'fetch' in field_config, "No 'fetch'-section defined for %s." % field_name
             for file_name, file_config in field_config ['fetch' ].iteritems ():
                 assert modeltype in file_config, "No '%s'-section defined for %s." % file_name
@@ -114,7 +114,7 @@ class Experiment ( object ):
                                                      "cond_finalyearstr" : finalyearstring,
                                                      "suffix"           : self.outdata_suffix }
                 if from_archive:
-                    self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( self.B4J_parent.downloads_path, fetchfile )
+                    self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( self.B4J_obj.downloads_path, fetchfile )
                     if not os.path.isfile ( self.B4J_index [ file_name + STREAM_SUFFIX ]):
                         fetchfile_list.append (( fetchpath, fetchfile ))
                 else:
@@ -128,7 +128,7 @@ class Experiment ( object ):
                                                         "suffix"  : self.codesfiles_suffix }
 
                 if from_archive:
-                    self.B4J_index [ file_name + CODES_SUFFIX ] = os.path.join ( self.B4J_parent.downloads_path, fetchcodesfile )
+                    self.B4J_index [ file_name + CODES_SUFFIX ] = os.path.join ( self.B4J_obj.downloads_path, fetchcodesfile )
                     if not os.path.isfile ( self.B4J_index [ file_name + CODES_SUFFIX ]) and \
                            not os.path.isfile ( fetchcodestarfile ):
                         fetchfile_list.append (( fetchcodespath, fetchcodestarfile ))
@@ -139,11 +139,11 @@ class Experiment ( object ):
         if from_archive and fetchfile_list:
             fetchfile_list = list ( set ( fetchfile_list ))
             workingdir = os.getcwd ()
-            os.chdir ( self.B4J_parent.downloads_path )
+            os.chdir ( self.B4J_obj.downloads_path )
             exe = os.path.join ( bench4jsbach_scripts, "b4j_fetch_archived_file.ksh" )
             assert os.path.isfile ( exe ) and os.access ( exe, os.X_OK ), "File %s is not executable." % exe
-            self.B4J_parent.logger.debug ( "Fetching outdata and codes files from archive for %s into %s. This might take a while ..." % (
-                self.B4J_name, self.B4J_parent.downloads_path ))
+            self.B4J_obj.logger.debug ( "Fetching outdata and codes files from archive for %s into %s. This might take a while ..." % (
+                self.B4J_name, self.B4J_obj.downloads_path ))
             for fetchfile in fetchfile_list:
                 sp = subprocess.Popen( [ exe + " " + fetchfile [ 0 ] + " " + fetchfile [ 1 ]], shell=True,
                                        stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
@@ -155,8 +155,8 @@ class Experiment ( object ):
                     sys.exit ( sp.returncode )
                 else:
                     print stdout
-            self.B4J_parent.logger.debug ( "Fetched outdata from archive for %s successfully into %s." % (
-                self.B4J_name, self.B4J_parent.downloads_path ))
+            self.B4J_obj.logger.debug ( "Fetched outdata from archive for %s successfully into %s." % (
+                self.B4J_name, self.B4J_obj.downloads_path ))
           
             # extract codesfiles and delete tarball
             if ( fetchcodespath, fetchcodestarfile ) in fetchfile_list:
@@ -173,8 +173,8 @@ class Experiment ( object ):
                         sys.exit ( sp.returncode )
                     else:
                         print stdout
-                self.B4J_parent.logger.debug ( "Extracted all codesfiles from %s to %s, deleted tarball." %
-                                               ( fetchcodestarfile, self.B4J_parent.downloads_path ))
+                self.B4J_obj.logger.debug ( "Extracted all codesfiles from %s to %s, deleted tarball." %
+                                               ( fetchcodestarfile, self.B4J_obj.downloads_path ))
                 
             os.chdir ( workingdir )
 
@@ -183,11 +183,11 @@ class Experiment ( object ):
 
         cdo = Cdo ()
 
-        for fieldname, fielddict in self.B4J_parent.diagnostic_fields.iteritems ():
+        for fieldname, fielddict in self.B4J_obj.diagnostic_fields.iteritems ():
             assert 'fetch' in fielddict, "No 'fetch'-section defined for %s." % fieldname
             yearlist = range ( int ( fielddict [ 'startyear' ]), int ( fielddict [ 'finalyear' ]) + 1 )
             for fileid, filedict in fielddict ['fetch' ].iteritems ():
-                self.B4J_index [ fileid ] = self.B4J_parent.path_template % { 
+                self.B4J_index [ fileid ] = self.B4J_obj.path_template % { 
                     'path'           : fielddict [ "processed_path" ],
                     'classification' : fileid,
                     'expname'        : self.B4J_name,
@@ -209,7 +209,7 @@ class Experiment ( object ):
         lsm_path = self.land_sea_mask_path_tmpl % { "atm_res" : self.B4J_atmres,
                                                     "oce_res" : self.B4J_oceres }
         assert os.path.isfile ( lsm_path ), "No file found for %s." % lsm_path 
-        self.land_sea_mask  = self.B4J_parent.path_template % { 
+        self.land_sea_mask  = self.B4J_obj.path_template % { 
             'path'           : fielddict [ "processed_path" ],
             'classification' : "land_sea_mask",
             'expname'        : self.B4J_name,
@@ -218,10 +218,10 @@ class Experiment ( object ):
             'suffix'         : fielddict [ 'suffix' ]}
         slf_varname = "slf"
         cdo.selname ( slf_varname, input = lsm_path, output = self.land_sea_mask )
-        self.B4J_parent.logger.debug ( "Fetched land sea mask '%s'." %  self.land_sea_mask )
+        self.B4J_obj.logger.debug ( "Fetched land sea mask '%s'." %  self.land_sea_mask )
 
 
-        self.B4J_parent.logger.debug ( "Exiting" )
+        self.B4J_obj.logger.debug ( "Exiting" )
 
 
     def fetch_outdata ( self, arg1, arg2 ):
@@ -288,18 +288,18 @@ class Experiment ( object ):
         '($\mathbf{C_{%d}}$)' % self.B4J_canno if self.B4J_iscan else '($\mathbf{R_{%d}}$)' % self.B4J_refno,
         """\\\\
 """.join ( '{!s} & {!s}'.format ( teXify ( str ( k )), force_breaks ( teXify ( str ( v )), 50 )) \
-           if not isinstance ( v, dict ) and not k == "B4J_parent" else '&'
+           if not isinstance ( v, dict ) and not k == "B4J_obj" else '&'
            for ( k, v ) in sorted ( self.__dict__.iteritems ())))
 
 
 class CMIP5_Experiment ( Experiment ):
     suffix = 'nc'
     
-    def __init__ ( self,  parent, **kwargs ):
+    def __init__ ( self,  b4j_obj, **kwargs ):
         var_filename = kwargs.pop ( "var_filename", None )
         assert var_filename and os.path.isfile ( var_filename )
 
-        Experiment.__init__ ( self, parent, **kwargs )
+        Experiment.__init__ ( self, b4j_obj, **kwargs )
         
         nc_fid  = Dataset ( var_filename, 'r' )
         nc_attrs = nc_fid.ncattrs ()
@@ -333,9 +333,9 @@ class MPIESM1_Experiment ( Experiment ):
 
     land_sea_mask_path_tmpl   = "/pool/data/JSBACH/input/r0007/%(atm_res)s/jsbach_%(atm_res)s%(oce_res)s_11tiles_5layers_1850.nc"
 
-    def __init__ ( self, parent, **kwargs ):
+    def __init__ ( self, b4j_obj, **kwargs ):
         print "###################### go on here, subclass %s ####################" % self.__class__.__name__
-        Experiment.__init__ ( self, parent, **kwargs )
+        Experiment.__init__ ( self, b4j_obj, **kwargs )
         #super(Experiment, self).__init__(**kwargs)
         self.subpath         = self.B4J_name
         self.outdata_subpath = self.subpath + os.sep + "outdata"
