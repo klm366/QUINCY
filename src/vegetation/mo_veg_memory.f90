@@ -190,9 +190,9 @@ MODULE mo_veg_memory
      REAL(wp) :: uptake_n                 !< N uptake from soil ( is that correct? )
      REAL(wp) :: uptake_n15               !< 15N uptake from soil ( is that correct? ) 
      REAL(wp) :: uptake_p                 !< P uptake from soil ( is that correct? )
-     REAL(wp) :: leaf_resorption_n             !< resorption of N upon tissue senescence (mol m-2 timestep-1)
-     REAL(wp) :: leaf_resorption_n15           !< resorption of 15N upon tissue senescence (mol m-2 timestep-1)
-     REAL(wp) :: leaf_resorption_p             !< resorption of P upon tissue senescence (mol m-2 timestep-1)
+     REAL(wp) :: resorption_n             !< resorption of N upon tissue senescence (mol m-2 timestep-1)
+     REAL(wp) :: resorption_n15           !< resorption of 15N upon tissue senescence (mol m-2 timestep-1)
+     REAL(wp) :: resorption_p             !< resorption of P upon tissue senescence (mol m-2 timestep-1)
      REAL(wp) :: transpiration            !< transpiration in kg m-2 s-1
      REAL(wp) :: ci                       !< ??
   END TYPE t_slm_veg_flux
