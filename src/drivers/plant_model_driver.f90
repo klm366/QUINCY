@@ -45,10 +45,11 @@ PROGRAM plant_model_driver
   USE mo_atmland_util
   USE mo_atmland_forcing
   USE mo_atmland_config_class,  ONLY: atmland_config
-  ! land
+  ! shared 
 !  USE mo_shared_constants  
 !  USE mo_shared_memory   
   USE mo_shared_util,           ONLY: init_element_zero
+  USE mo_shared_isotope,        ONLY: calc_fractionation 
   ! vegetation
   USE mo_veg_parameters
   USE mo_veg_radiation
@@ -72,6 +73,7 @@ PROGRAM plant_model_driver
   INTEGER  :: itimestep                    !< current timestep i, looping over timesteps ntimestep
   REAL(wp) :: timestep_prop_day            !< proportion of one day that is simulated with one timestep (dt/one_day)
   INTEGER  :: itile                        !< the current tile(i), for looping over ntile
+  REAL(wp) :: hlp1
 
   ! check number of tiles, exit if more than output routines can handle (for now)
   IF(ntile > 10) CALL finish('plant_model_driver','Number of tiles is too large for veg_output to work reliable; see lun')
@@ -130,6 +132,26 @@ PROGRAM plant_model_driver
                                                 (1._wp + fresp_growth) / veg_param%cn_leaf(tile(itile)%plant%pftid)
     tile(itile)%plant%pool%reserve%phosphorus = tile(itile)%plant%pool%reserve%nitrogen / &
                                                 veg_param%np_leaf(tile(itile)%plant%pftid)
+    IF(veg_param%ps_pathway(tile(itile)%plant%pftid) == ic3phot)THEN
+       hlp1 = discrimination_ps(CiCa_default_C3*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
+                                'C13',veg_param%ps_pathway(tile(itile)%plant%pftid))
+    ELSE
+       hlp1 = discrimination_ps(CiCa_default_C4*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
+                                'C13',veg_param%ps_pathway(tile(itile)%plant%pftid))
+    ENDIF
+    tile(itile)%plant%pool%reserve%carbon13   = calc_fractionation(atm2land%co2_mixing_ratio, & 
+                                                                   atm2land%co2_mixing_ratio_C13,hlp1) & 
+                                                * tile(itile)%plant%pool%reserve%carbon 
+    IF(veg_param%ps_pathway(tile(itile)%plant%pftid) == ic3phot)THEN
+       hlp1 = discrimination_ps(CiCa_default_C3*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
+                                'C14',veg_param%ps_pathway(tile(itile)%plant%pftid))
+    ELSE
+       hlp1 = discrimination_ps(CiCa_default_C4*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
+                                'C14',veg_param%ps_pathway(tile(itile)%plant%pftid))
+    ENDIF
+    tile(itile)%plant%pool%reserve%carbon14   = calc_fractionation(atm2land%co2_mixing_ratio, & 
+                                                                   atm2land%co2_mixing_ratio_C14,hlp1) & 
+                                                * tile(itile)%plant%pool%reserve%carbon 
   END DO 
 
   !! 1.4 open input files (and read the header into dummy variables)

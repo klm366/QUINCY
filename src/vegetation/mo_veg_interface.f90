@@ -125,6 +125,17 @@ CONTAINS
     !! 
     plant%pool = plant%pool - plant%flux%litterfall
     plant%pool = plant%pool + plant%flux%growth
+ 
+    !> 6.1 Radioactive decay of C14 in living plant tissue
+    plant%pool%leaf%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%leaf%carbon14
+    plant%pool%fine_root%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%fine_root%carbon14
+    plant%pool%sap_wood%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%sap_wood%carbon14
+    plant%pool%heart_wood%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%heart_wood%carbon14
+    plant%pool%coarse_root%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%coarse_root%carbon14
+    plant%pool%fruit%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%fruit%carbon14
+    plant%pool%labile%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%labile%carbon14
+    plant%pool%reserve%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%reserve%carbon14
+    plant%pool%seed_bed%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%seed_bed%carbon14
 
     !> 7.0 Update plant diagnostics
     !! 

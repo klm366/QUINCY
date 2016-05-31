@@ -405,13 +405,13 @@ CONTAINS
        falloc%fine_root%carbon13 = falloc%fine_root%carbon
        falloc%coarse_root%carbon13 = falloc%coarse_root%carbon
        falloc%sap_wood%carbon13 = falloc%sap_wood%carbon
-       falloc%fruit%carbon13 = falloc%sap_wood%carbon
+       falloc%fruit%carbon13 = falloc%fruit%carbon
    
        falloc%leaf%carbon14 = falloc%leaf%carbon
        falloc%fine_root%carbon14 = falloc%fine_root%carbon
        falloc%coarse_root%carbon14 = falloc%coarse_root%carbon
        falloc%sap_wood%carbon14 = falloc%sap_wood%carbon
-       falloc%fruit%carbon14 = falloc%sap_wood%carbon
+       falloc%fruit%carbon14 = falloc%fruit%carbon
    
        falloc%leaf%nitrogen15 = falloc%leaf%nitrogen
        falloc%fine_root%nitrogen15 = falloc%fine_root%nitrogen

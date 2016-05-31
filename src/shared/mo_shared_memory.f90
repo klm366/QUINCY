@@ -24,7 +24,7 @@ MODULE mo_shared_memory
     REAL(wp) :: nitrogen    !< totol nitrogen concentration of pool in mol / m2
     REAL(wp) :: phosphorus  !< phosphorus concentration of pool in mol / m2
     REAL(wp) :: carbon13    !< 13carbon concentration of pool in mol / m2
-    REAL(wp) :: carbon14    !< 14carbon concentration of pool in mol / m2
+    REAL(wp) :: carbon14    !< 14carbon concentration of pool in pmol / m2
     REAL(wp) :: nitrogen15  !< 15nitrogen concentration of pool in mol / m2
   CONTAINS
     PRIVATE

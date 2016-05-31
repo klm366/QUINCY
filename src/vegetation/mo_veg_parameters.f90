@@ -13,64 +13,71 @@ MODULE mo_veg_parameters
   USE mo_base_constants, ONLY: npft
 
   ! Respiration parameters
-  REAL(wp),SAVE :: fresp_growth                 ! growth respiration per unit new biomass 
-  REAL(wp),SAVE :: fmaint_rate_base             ! N-specific maintenance respiration rate (µmol CO2 / mmol N / s) 
-  REAL(wp),SAVE :: t_maint_k1                   ! Coefficient in the equation for temperature sensitivity of foliar respiration 
-  REAL(wp),SAVE :: t_maint_k2                   ! Coefficient in the equation for temperature sensitivity of foliar respiration
-  REAL(wp),SAVE :: t_maint_k3                   ! Coefficient in the equation for temperature sensitivity of foliar respiration 
+  REAL(wp),SAVE :: fresp_growth                 !< growth respiration per unit new biomass 
+  REAL(wp),SAVE :: fmaint_rate_base             !< N-specific maintenance respiration rate (µmol CO2 / mmol N / s) 
+  REAL(wp),SAVE :: t_maint_k1                   !< Coefficient in the equation for temperature sensitivity of foliar respiration 
+  REAL(wp),SAVE :: t_maint_k2                   !< Coefficient in the equation for temperature sensitivity of foliar respiration
+  REAL(wp),SAVE :: t_maint_k3                   !< Coefficient in the equation for temperature sensitivity of foliar respiration 
 
   ! Labile pool parameters 
-  REAL(wp),SAVE :: tau_labile_default           ! default turnover time of the labile carbo-hydrates (in days)
-  REAL(wp),SAVE :: lambda_tau_labile_temp       ! lambda in temperature response function of labile pool 
-  REAL(wp),SAVE :: weibull_k_tau_labile_temp    ! k in temperature response function of labile pool 
-  REAL(wp),SAVE :: lambda_tau_labile_theta      ! lambda in moisture response function of labile pool 
-  REAL(wp),SAVE :: weibull_k_tau_labile_theta   ! k in moisture response function of labile pool 
-  REAL(wp),SAVE :: lambda_phiphen               ! lambda in storage response function to phenology 
-  REAL(wp),SAVE :: weibull_k_phiphen            ! k in in storage response function to phenology 
-  REAL(wp),SAVE :: lambda_phimaint              ! lambda in storage response function to maintenance needs 
-  REAL(wp),SAVE :: weibull_k_phimaint           ! k in in storage response function to maintenance needs
-  REAL(wp),SAVE :: lambda_phistore              ! lambda in storage response function to storage size
-  REAL(wp),SAVE :: weibull_k_phistore           ! k in in storage response function to storage size 
+  REAL(wp),SAVE :: tau_labile_default           !< default turnover time of the labile carbo-hydrates (in days)
+  REAL(wp),SAVE :: lambda_tau_labile_temp       !< lambda in temperature response function of labile pool 
+  REAL(wp),SAVE :: weibull_k_tau_labile_temp    !< k in temperature response function of labile pool 
+  REAL(wp),SAVE :: lambda_tau_labile_theta      !< lambda in moisture response function of labile pool 
+  REAL(wp),SAVE :: weibull_k_tau_labile_theta   !< k in moisture response function of labile pool 
+  REAL(wp),SAVE :: lambda_phiphen               !< lambda in storage response function to phenology 
+  REAL(wp),SAVE :: weibull_k_phiphen            !< k in in storage response function to phenology 
+  REAL(wp),SAVE :: lambda_phimaint              !< lambda in storage response function to maintenance needs 
+  REAL(wp),SAVE :: weibull_k_phimaint           !< k in in storage response function to maintenance needs
+  REAL(wp),SAVE :: lambda_phistore              !< lambda in storage response function to storage size
+  REAL(wp),SAVE :: weibull_k_phistore           !< k in in storage response function to storage size 
 
   ! Resporption parameters
-  REAL(wp),SAVE :: resorption_default           ! default fraction of nutrient resporption before leaf shedding
-  REAL(wp),SAVE :: resorption_wood              ! default fraction of nutrient resporption before wood death
-  REAL(wp),SAVE :: root2leaf_cn                 ! relative C:N of fine roots compared to leaves
-  REAL(wp),SAVE :: wood2leaf_cn                 ! relative C:N of woody biomass compared to leaves
-  REAL(wp),SAVE :: root2leaf_np                 ! relative N of fine roots compared to leaves
-  REAL(wp),SAVE :: wood2leaf_np                 ! relative N:P of woody biomass compared to leaves
+  REAL(wp),SAVE :: resorption_default           !< default fraction of nutrient resporption before leaf shedding
+  REAL(wp),SAVE :: resorption_wood              !< default fraction of nutrient resporption before wood death
+  REAL(wp),SAVE :: root2leaf_cn                 !< relative C:N of fine roots compared to leaves
+  REAL(wp),SAVE :: wood2leaf_cn                 !< relative C:N of woody biomass compared to leaves
+  REAL(wp),SAVE :: root2leaf_np                 !< relative N of fine roots compared to leaves
+  REAL(wp),SAVE :: wood2leaf_np                 !< relative N:P of woody biomass compared to leaves
 
-  ! Parameters used in the photosynthesis routine
-  REAL(wp),SAVE :: carbon_per_dryweight_leaf    ! carbon mass per unit dry weight of leaves (gC / g DW) 
-  REAL(wp),SAVE :: jmax2n                       ! electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
-  REAL(wp),SAVE :: vcmax2n                      ! Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
-  REAL(wp),SAVE :: k0_fnl_pepc                  ! fraction of N in PEP and PPKD (C4 plants only) 
-  REAL(wp),SAVE :: pepc2n                       ! PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C
-  REAL(wp),SAVE :: chl2n                        ! moles chlorophyll per mol of N
-  REAL(wp),SAVE :: k1_fnl_struc                 ! slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
-  REAL(wp),SAVE :: jmax2vcmax_C3                ! ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants)
-  REAL(wp),SAVE :: jmax2vcmax_C4                ! ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants)
+  ! Parameters describing photosynthetic activity 
+  REAL(wp),SAVE :: jmax2n                       !< electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
+  REAL(wp),SAVE :: vcmax2n                      !< Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
+  REAL(wp),SAVE :: k0_fnl_pepc                  !< fraction of N in PEP and PPKD (C4 plants only) 
+  REAL(wp),SAVE :: pepc2n                       !< PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C
+  REAL(wp),SAVE :: chl2n                        !< moles chlorophyll per mol of N
+  REAL(wp),SAVE :: k1_fnl_struc                 !< slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
+  REAL(wp),SAVE :: jmax2vcmax_C3                !< ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants)
+  REAL(wp),SAVE :: jmax2vcmax_C4                !< ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants)
   ! temperature sensitivies of PS processes
-  REAL(wp),SAVE :: E0kc                         ! Baseline of Michaelis-Menten constant of Rubisco for CO2 (unit?)
-  REAL(wp),SAVE :: E1kc                         ! Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 (unit?)
-  REAL(wp),SAVE :: E0ko                         ! Baseline of Michealis-Menten Kintetics for Rubisco-oxigination
-  REAL(wp),SAVE :: E1ko                         ! Temperature sensitivity of Michealis-Menten Kintetics for Rubisco-oxigination
-  REAL(wp),SAVE :: E0pcp                        ! Baseline of photosynthetic compensation point
-  REAL(wp),SAVE :: E1pcp                        ! Temperature sensitivity of photosynthetic compensation point
-  REAL(wp),SAVE :: E0v                          ! Baseline of Rubisco
-  REAL(wp),SAVE :: E1v                          ! Temperature sensitivity of Rubisco
-  REAL(wp),SAVE :: Tref_pepc                    ! Temperature sensitivity of PeP C4 photosynthesis 
-  REAL(wp),SAVE :: Tbase_pepc                   ! Temperature sensitivity of PeP C4 photosynthesis
-  REAL(wp),SAVE :: alpha_i_C3                   ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))
-  REAL(wp),SAVE :: alpha_i_C4                   ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))
-                                                ! µmol CO2 / mol quanta) 
-  REAL(wp),SAVE :: pO2                          ! Partial Pressure of O2 in kPa
-  REAL(wp),SAVE :: CiCa_default_C3              ! default Ci:Ca for C3 plants
-  REAL(wp),SAVE :: CiCa_default_C4              ! default Ci:Ca for C4 plants
-  REAL(wp),SAVE :: ps_it_max                    ! maximum iteration of PS calculation
-  REAL(wp),SAVE :: ci_max                       ! saturating Ci in Pa C4 plants
-  REAL(wp),SAVE :: Dwv2co2_air                  ! ratio of diffusion coefficient for H2O and CO2 in air 
-  REAL(wp),SAVE :: Dwv2co2_turb                 ! ratio of diffusion coefficient for H2O and CO2 in turbulent air 
+  REAL(wp),SAVE :: E0kc                         !< Baseline of Michaelis-Menten constant of Rubisco for CO2 (unit?)
+  REAL(wp),SAVE :: E1kc                         !< Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 (unit?)
+  REAL(wp),SAVE :: E0ko                         !< Baseline of Michealis-Menten Kintetics for Rubisco-oxigination
+  REAL(wp),SAVE :: E1ko                         !< Temperature sensitivity of Michealis-Menten Kintetics for Rubisco-oxigination
+  REAL(wp),SAVE :: E0pcp                        !< Baseline of photosynthetic compensation point
+  REAL(wp),SAVE :: E1pcp                        !< Temperature sensitivity of photosynthetic compensation point
+  REAL(wp),SAVE :: E0v                          !< Baseline of Rubisco
+  REAL(wp),SAVE :: E1v                          !< Temperature sensitivity of Rubisco
+  REAL(wp),SAVE :: Tref_pepc                    !< Temperature sensitivity of PeP C4 photosynthesis 
+  REAL(wp),SAVE :: Tbase_pepc                   !< Temperature sensitivity of PeP C4 photosynthesis
+  REAL(wp),SAVE :: alpha_i_C3                   !< intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))
+  REAL(wp),SAVE :: alpha_i_C4                   !< intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))
+                                                !< µmol CO2 / mol quanta) 
+  REAL(wp),SAVE :: pO2                          !< Partial Pressure of O2 in kPa
+  REAL(wp),SAVE :: CiCa_default_C3              !< default Ci:Ca for C3 plants
+  REAL(wp),SAVE :: CiCa_default_C4              !< default Ci:Ca for C4 plants
+  REAL(wp),SAVE :: ps_it_max                    !< maximum iteration of PS calculation
+  REAL(wp),SAVE :: ci_max                       !< saturating Ci in Pa C4 plants
+  REAL(wp),SAVE :: Dwv2co2_air                  !< ratio of diffusion coefficient for H2O and CO2 in air 
+  REAL(wp),SAVE :: Dwv2co2_turb                 !< ratio of diffusion coefficient for H2O and CO2 in turbulent air 
+  ! parameters describing the fractionation due to photosynthesis
+  REAL(wp),SAVE :: discr_ps_a_C13               !< discrimination of C13 due to stomatal diffusion
+  REAL(wp),SAVE :: discr_ps_b_C13               !< discrimination of C13 due to Rubisco
+  REAL(wp),SAVE :: discr_ps_c_C13               !< discrimination of C13 due to PEP C 
+  REAL(wp),SAVE :: discr_ps_a_C14               !< discrimination of C13 due to stomatal diffusion
+  REAL(wp),SAVE :: discr_ps_b_C14               !< discrimination of C13 due to Rubisco
+  REAL(wp),SAVE :: discr_ps_c_C14               !< discrimination of C13 due to PEP C
+  REAL(wp),SAVE :: discr_ps_phi                 !< leakage rate of bundle sheath cells
   
   ! parameters for canopy profile and canopy light extinction
   REAL(wp),SAVE :: kn                           ! extinction coefficient to describe decline of N within the canopy 
@@ -100,6 +107,7 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: rho2sbeta                    ! scaling factor of solar angle in reflection calculation (mo_veg_fapar) 
 
   ! other
+  REAL(wp),SAVE :: carbon_per_dryweight_leaf    !< carbon mass per unit dry weight of leaves (gC / g DW) 
   REAL(wp),SAVE :: min_height                   ! minimum permissable height of an individual
   REAL(wp),SAVE :: sm2lm_grass                  ! stem mass to leaf mass ratio of grasses
   REAL(wp),SAVE :: lambda_fruit_alloc           ! parameter in the Weibull function controlling fruit growth
@@ -282,6 +290,16 @@ MODULE mo_veg_parameters
       ! in static leaf N mode: prescribed ratio of Jmax25/Vcmax25
       jmax2vcmax_C3=1.92_wp      ! text book
       jmax2vcmax_C4=1.4_wp       ! calibrated to have Jmax=vcmax at 25 deg
+ 
+     ! parameters describing the isotopic discrimination of PS, derived from Drake 2014, Radiocarbon, 56, 29-38
+      discr_ps_a_C13 = 4.4_wp  
+      discr_ps_b_C13 = 27.0_wp
+      discr_ps_c_C13 = 5.7_wp
+      discr_ps_a_C14 = discr_ps_a_C13 * 1.97_wp
+      discr_ps_b_C14 = discr_ps_b_C13 * 1.89_wp
+      discr_ps_c_C14 = discr_ps_c_C13 * 1.89_wp 
+      discr_ps_phi = 0.16_wp ! a typical value cf Hatch et al. 1995, Plant Phys. 108, 173-181
+
       ! parameters describing the canopy profile of N 
       !  extinction coefficient to describe decline of N within the canopy 
       kn = 0.11_wp

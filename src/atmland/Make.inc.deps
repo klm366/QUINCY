@@ -3,7 +3,8 @@ mo_atmland_memory.o: \
 
 mo_atmland_constants.o: \
   mo_kind.o \
-  mo_base_constants.o
+  mo_base_constants.o \
+  mo_shared_isotope.o
 
 mo_atmland_forcing.o: \
   mo_kind.o \

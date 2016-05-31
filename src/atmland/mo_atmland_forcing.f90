@@ -10,6 +10,7 @@
 MODULE mo_atmland_forcing
 
   USE mo_kind
+  USE mo_shared_isotope
   USE mo_atmland_memory,        ONLY: atm2land, land2atm
   USE mo_atmland_util
   USE mo_atmland_constants
@@ -39,6 +40,7 @@ CONTAINS
 
     USE mo_base_memory,   ONLY: grid
     IMPLICIT NONE
+    REAL(wp) :: C13C12_mixing_ratio,C14C_mixing_ratio
 
     !> Initialization of temperatures
     !! 
@@ -50,27 +52,32 @@ CONTAINS
     !> Initalisation of met-forcing to standard values
     !! 
     !! 
-    atm2land%t_air            = def_t_air
-    atm2land%press_srf        = standard_press_srf
-    atm2land%q_air            = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - def_vpd / atm2land%press_srf * eps_vpd
-    atm2land%co2_mixing_ratio = def_co2
-    atm2land%rain             = 0.0_wp
-    atm2land%snow             = 0.0_wp
-    atm2land%swvis_srf_down   = def_swdown
-    atm2land%swnir_srf_down   = atm2land%swvis_srf_down * 0.1_wp
-    atm2land%swpar_srf_down   = atm2land%swvis_srf_down
-    atm2land%swpar_fdiffuse   = def_fdiffuse
-    atm2land%wind_air         = def_wind
-    atm2land%wind_10m         = atm2land%wind_air
-    atm2land%lw_srf_down      = 0.0_wp
-    atm2land%drag_srf         = 1.0_wp
-    atm2land%t_acoef          = 0.0_wp
-    atm2land%t_bcoef          = 0.0_wp
-    atm2land%q_acoef          = 0.0_wp
-    atm2land%q_bcoef          = 0.0_wp
-    atm2land%pch              = 0.0_wp
-    atm2land%cos_zenith_angle = def_cos_angle
-    atm2land%ga               = 0.1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
+    atm2land%t_air                = def_t_air
+    atm2land%press_srf            = standard_press_srf
+    atm2land%q_air                = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) & 
+                                    - def_vpd / atm2land%press_srf * eps_vpd
+    atm2land%co2_mixing_ratio     = def_co2
+    C13C12_mixing_ratio           = calc_mixing_ratio_C13C12(def_co2_deltaC13) 
+    atm2land%co2_mixing_ratio_c13 = atm2land%co2_mixing_ratio / (1._wp + 1._wp/C13C12_mixing_ratio)
+    C14C_mixing_ratio             = calc_mixing_ratio_C14C(def_co2_deltaC13,def_co2_deltaC14)
+    atm2land%co2_mixing_ratio_c14 = C14C_mixing_ratio * atm2land%co2_mixing_ratio 
+    atm2land%rain                 = 0.0_wp
+    atm2land%snow                 = 0.0_wp
+    atm2land%swvis_srf_down       = def_swdown
+    atm2land%swnir_srf_down       = atm2land%swvis_srf_down * 0.1_wp
+    atm2land%swpar_srf_down       = atm2land%swvis_srf_down
+    atm2land%swpar_fdiffuse       = def_fdiffuse
+    atm2land%wind_air             = def_wind
+    atm2land%wind_10m             = atm2land%wind_air
+    atm2land%lw_srf_down          = 0.0_wp
+    atm2land%drag_srf             = 1.0_wp
+    atm2land%t_acoef              = 0.0_wp
+    atm2land%t_bcoef              = 0.0_wp
+    atm2land%q_acoef              = 0.0_wp
+    atm2land%q_bcoef              = 0.0_wp
+    atm2land%pch                  = 0.0_wp
+    atm2land%cos_zenith_angle     = def_cos_angle
+    atm2land%ga                   = 0.1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
 
     !> Initialization of of grid\% lon and lat
     !! 
@@ -139,6 +146,7 @@ CONTAINS
     REAL(wp) :: hour      ! dummy variable
     REAL(wp) :: nhx       ! dummy variable for nhx_srf_down
     REAL(wp) :: nox       ! dummy variable for noy_srf_down
+    REAL(wp) :: hlp1      ! dummy variable 
 
     ! 1.0 Set read options
     lun=9
@@ -165,7 +173,11 @@ CONTAINS
     atm2land%rain      = atm2land%rain / 86400._wp
     atm2land%snow      = atm2land%snow / 86400._wp
     atm2land%wind_10m  = atm2land%wind_air
-    atm2land%ga = 0.1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
+    atm2land%ga        = 0.1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
+    hlp1 = calc_mixing_ratio_C13C12(def_co2_deltaC13)
+    atm2land%co2_mixing_ratio_c13 = atm2land%co2_mixing_ratio / (1._wp + 1._wp/hlp1)
+    hlp1 = calc_mixing_ratio_C14C(def_co2_deltaC13,def_co2_deltaC14)
+    atm2land%co2_mixing_ratio_c14 = hlp1 * atm2land%co2_mixing_ratio 
   END SUBROUTINE read_forcing
 
   !-----------------------------------------------------------------------------------------------------

@@ -8,3 +8,7 @@ mo_shared_util.o: \
   mo_kind.o \
   mo_shared_memory.o
 
+mo_shared_isotope.o: \
+  mo_kind.o \
+  mo_shared_constants.o
+

@@ -38,13 +38,16 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: standard_press_srf          !< standard pressure in Pa
   REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
 
+  ! default values of model forcing for model testing:
   REAL(wp),SAVE :: def_t_air                   !< temperature in deg K
   REAL(wp),SAVE :: def_vpd                     !< vpd in Pa
   REAL(wp),SAVE :: def_rh                      !< relative humidity in fractions
   REAL(wp),SAVE :: def_swdown                  !< PAR in W m-2
   REAL(wp),SAVE :: def_fdiffuse                !< diffuse fraction
   REAL(wp),SAVE :: def_cos_angle               !< cosine of zenith angle
-  REAL(wp),SAVE :: def_co2                     !< co2 in ppm
+  REAL(wp),SAVE :: def_co2                     !< atmospheric CO2 in ppm
+  REAL(wp),SAVE :: def_co2_deltaC13            !< molar mixing ratio of 13C / 12C of atmospheric CO2
+  REAL(wp),SAVE :: def_co2_deltaC14            !< molar mixing ratio of 14C / 12C of atmospheric CO2 
   REAL(wp),SAVE :: def_wind                    !< wind in m/s
 
   PUBLIC :: init_atmland_constants
@@ -104,6 +107,8 @@ CONTAINS
   def_fdiffuse = 0.2_wp     
   def_cos_angle = 1.0_wp    
   def_co2 = 380.0_wp        
+  def_co2_deltaC13 = -7.5_wp 
+  def_co2_deltaC14 = -14.9_wp
   def_wind = 1.0_wp         
 
   END SUBROUTINE init_atmland_constants

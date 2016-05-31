@@ -38,6 +38,8 @@ MODULE mo_atmland_memory
       pch              , &
       cos_zenith_angle , &
       co2_mixing_ratio , &
+      co2_mixing_ratio_C13 , &
+      co2_mixing_ratio_C14 , &
       ga
 
   END TYPE t_atm2land

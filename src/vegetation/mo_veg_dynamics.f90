@@ -30,7 +30,7 @@ CONTAINS
   SUBROUTINE update_veg_dynamics(plant, veg_param)
 
     USE mo_base_constants
-    USE mo_shared_memory,    ONLY: t_element
+    USE mo_shared_memory,    ONLY: t_element, element_zero
     USE mo_veg_memory
     USE mo_veg_parameters
 
@@ -72,6 +72,7 @@ CONTAINS
     mortality_spread_pool%fruit       = mortality_spread_element
     mortality_spread_pool%labile      = mortality_spread_element
     mortality_spread_pool%reserve     = mortality_spread_element
+    mortality_spread_pool%seed_bed    = element_zero 
 
     ! calculate litter fall from mortality
     litter_from_mortality = mortality_spread_pool * plant%pool

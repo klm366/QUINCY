@@ -23,7 +23,7 @@ MODULE mo_veg_photosynthesis
 
   PRIVATE
 
-  PUBLIC :: update_canopy_fluxes
+  PUBLIC :: update_canopy_fluxes,discrimination_ps
 
 CONTAINS
 
@@ -36,6 +36,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_canopy_fluxes(tile, veg_param)
 
+   USE mo_shared_constants
+   USE mo_shared_isotope
+
    IMPLICIT NONE
    ! 0.1 InOut
    TYPE(t_slm_veg_param), INTENT(in)        :: veg_param      !< list of vegetation parameters
@@ -47,6 +50,7 @@ CONTAINS
    REAL(wp),DIMENSION(ncanop)       :: canopy_layer_depth_act
    INTEGER                          :: pftid                  ! plant functional type ID
    INTEGER                          :: icanop                 ! for looping across ncanopy layers
+   REAL(wp)                         :: hlp1                   ! dummy variable 
 
    !  bi-directional pointer
    plant => tile%plant
@@ -114,6 +118,15 @@ CONTAINS
   plant%gc = 0.0_wp 
   DO icanop = 1,ncanop
      plant%flux%gpp = plant%flux%gpp + agl(icanop) * canopy_layer_depth_act(icanop) 
+     IF(agl(icanop) > eps8) THEN
+        hlp1 = discrimination_ps(cil(icanop),atm2land%co2_mixing_ratio,'C13',veg_param%ps_pathway(pftid))
+        plant%flux%gpp_C13 = plant%flux%gpp_C13 + agl(icanop) * canopy_layer_depth_act(icanop) * & 
+                             calc_fractionation(atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio_C13,hlp1)
+        hlp1 = discrimination_ps(cil(icanop),atm2land%co2_mixing_ratio,'C14',veg_param%ps_pathway(pftid))
+        plant%flux%gpp_C14 = plant%flux%gpp_C14 + agl(icanop) * canopy_layer_depth_act(icanop) * & 
+                             calc_fractionation(atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio_C14, & 
+                             hlp1,scale_correction_C14)
+     ENDIF
      plant%flux%an = plant%flux%an + anl(icanop) * canopy_layer_depth_act(icanop) 
      plant%flux%maint_respiration_leaf = plant%flux%maint_respiration_leaf + & 
             rl(icanop) * canopy_layer_depth_act(icanop) 
@@ -489,5 +502,45 @@ CONTAINS
     !!
     beta = 1.0_wp - exp(-(lambda*theta/100._wp)**weibull_k)
   END FUNCTION calc_soil_moisture_stress
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Calculate discrimination of C13 and C14 due to photosynthesis 
+  !!
+  !! Follows the orignial ideas of Farquhar, as described in 
+  !! Drake (2014), Radiocarbon, 56, 29-38 
+  !! 
+  !! Input: leaf-level Ci and Ca, photosynthetic pathway (C3/C4) and name of the isotope
+  !!
+  !! Output: Discrimination (per mill) 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION discrimination_ps(ci,ca,isotope_name,ps_pathway) RESULT(discrimination)
+
+    USE mo_veg_parameters
+    IMPLICIT NONE
+    ! 0.1 Inout 
+    REAL(wp),INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm) 
+    REAL(wp),INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm) 
+    CHARACTER(3),INTENT(in) :: isotope_name       !< isotope C13 or C14
+    INTEGER,INTENT(in) :: ps_pathway              !< photosynthetic pathway (C3 or C4)
+    REAL(wp) :: discrimination                    !< isotopic discrimination (per mill)
+
+    SELECT CASE(ps_pathway)
+    CASE (ic3phot)
+      SELECT CASE(isotope_name)
+        CASE ('C13')
+          discrimination = discr_ps_a_C13 + (discr_ps_b_C13 - discr_ps_a_C13) * ci/ca
+        CASE ('C14')
+          discrimination = discr_ps_a_C14 + (discr_ps_b_C14 - discr_ps_a_C14) * ci/ca
+      END SELECT
+    CASE (ic4phot)
+      SELECT CASE(isotope_name)
+        CASE ('C13')
+          discrimination = discr_ps_a_C13 + (discr_ps_c_C13 + discr_ps_phi * discr_ps_b_C13 - discr_ps_a_C13) * ci/ca
+        CASE ('C14')
+          discrimination = discr_ps_a_C14 + (discr_ps_c_C14 + discr_ps_phi * discr_ps_b_C14 - discr_ps_a_C14) * ci/ca
+      END SELECT
+    END SELECT
+
+  END FUNCTION discrimination_ps
 
 END MODULE mo_veg_photosynthesis

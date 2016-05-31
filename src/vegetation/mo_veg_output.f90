@@ -25,6 +25,16 @@ MODULE mo_veg_output
   REAL(wp), DIMENSION(ntile), SAVE :: maint_resp_acc       
   REAL(wp), DIMENSION(ntile), SAVE :: npp_acc              
   REAL(wp), DIMENSION(ntile), SAVE :: res_use_c_acc        
+  REAL(wp), DIMENSION(ntile), SAVE :: gpp_C13_acc             
+  REAL(wp), DIMENSION(ntile), SAVE :: growth_resp_C13_acc      
+  REAL(wp), DIMENSION(ntile), SAVE :: maint_resp_C13_acc       
+  REAL(wp), DIMENSION(ntile), SAVE :: npp_C13_acc              
+  REAL(wp), DIMENSION(ntile), SAVE :: res_use_C13_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: gpp_C14_acc             
+  REAL(wp), DIMENSION(ntile), SAVE :: growth_resp_C14_acc      
+  REAL(wp), DIMENSION(ntile), SAVE :: maint_resp_C14_acc       
+  REAL(wp), DIMENSION(ntile), SAVE :: npp_C14_acc              
+  REAL(wp), DIMENSION(ntile), SAVE :: res_use_C14_acc        
   REAL(wp), DIMENSION(ntile), SAVE :: uptake_n_acc         
   REAL(wp), DIMENSION(ntile), SAVE :: resorption_n_acc     
   REAL(wp), DIMENSION(ntile), SAVE :: res_use_n_acc        
@@ -54,6 +64,16 @@ CONTAINS
     maint_resp_acc    = 0._wp   
     npp_acc           = 0._wp   
     res_use_c_acc     = 0._wp   
+    gpp_C13_acc       = 0.0_wp
+    growth_resp_C13_acc = 0.0_wp
+    maint_resp_C13_acc = 0.0_wp
+    npp_C13_acc       = 0.0_wp
+    res_use_C13_acc   = 0.0_wp
+    gpp_C14_acc       = 0.0_wp
+    growth_resp_C14_acc = 0.0_wp
+    maint_resp_C14_acc = 0.0_wp
+    npp_C14_acc       = 0.0_wp
+    res_use_C14_acc   = 0.0_wp
     uptake_n_acc      = 0._wp   
     resorption_n_acc  = 0._wp  
     res_use_n_acc     = 0._wp  
@@ -115,6 +135,11 @@ CONTAINS
     WRITE(lun,'(2a)'), 'Time Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
                      'Fruit_C Labile_C Reserve_C SeedBank_C'
     lun=lun+1
+    WRITE(lun,'(4a)'), 'Time Leaf_dC13 FineRoot_dC13 SapWood_dC13 HeartWood_dC13 CoarseRoot_dC13 ', & 
+                     'Fruit_dC13 Labile_dC13 Reserve_dC13 SeedBank_dC13 Leaf_DC14 FineRoot_DC14 ', &
+                     'SapWood_DC14 HeartWood_DC14 CoarseRoot_DC14 Fruit_DC14 Labile_DC14 ', &
+                     'Reserve_DC14 SeedBank_DC14'
+    lun=lun+1
     WRITE(lun,'(2a)'), 'Time Leaf_N FineRoot_N SapWood_N HeartWood_N CoarseRoot_N ', & 
                      'Fruit_N Labile_N Reserve_N SeedBank_N'
     lun=lun+1
@@ -124,6 +149,7 @@ CONTAINS
     WRITE(lun,'(a)'), 'Time SoilMoisture'
     lun=lun+1
     WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R S2C BCF'
+
   END SUBROUTINE init_output_writing_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -144,6 +170,9 @@ CONTAINS
     !! lun of fluxes starts at a multiple of 100, plus 50
     lun = (100 * itile) + 50
     WRITE(lun,'(a)'), 'Time GPP GrowthResp MaintResp NPP ReserveUse'
+    lun=lun+1   
+    WRITE(lun,'(2a)'), 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 NPP_dC13 ReserveUse_dC13 ', &
+                      'GPP_DC14 GrowthResp_DC14 MaintResp_DC14 NPP_DC14 ReserveUse_DC14'
     lun=lun+1
     WRITE(lun,'(a)'), 'Time NUP Resorption_N ReserveUse'
     lun=lun+1
@@ -208,6 +237,9 @@ CONTAINS
     !! 
     lun = 100 * itile
     fname = 'poolC_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
+    fname = 'pooldC13dC14_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
     fname = 'poolN_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
@@ -286,6 +318,9 @@ CONTAINS
     fname = 'fluxC_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
+    fname = 'fluxdC13dC14_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
     fname = 'fluxN_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
@@ -311,6 +346,7 @@ CONTAINS
     USE mo_base_memory,      ONLY: t_slm_tile
     USE mo_veg_memory,       ONLY: t_slm_plant
     USE mo_veg_parameters,   ONLY: itree, t_slm_veg_param
+    USE mo_shared_isotope,   ONLY: calc_delta_C13,calc_delta_C14
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -324,6 +360,8 @@ CONTAINS
     REAL(wp)         ,POINTER        :: soil_moisture  ! soil moisture; tile(itile)\%soil\%moisture
     INTEGER                          :: lun            ! locical unit number
     REAL(wp)                         :: hlp1           ! helper variable
+    REAL(wp)                         :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
+                                        dC13fruit,dC13labile,dC13reserve,dC13seedbank
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
     plant         => tile%plant
@@ -341,6 +379,27 @@ CONTAINS
          plant%pool%heart_wood%carbon,plant%pool%coarse_root%carbon,&
          plant%pool%fruit%carbon,plant%pool%labile%carbon,&
          plant%pool%reserve%carbon,plant%pool%seed_bed%carbon
+       lun=lun+1
+       dC13leaf        = calc_delta_C13(plant%pool%leaf%carbon,plant%pool%leaf%carbon13)
+       dC13fine_root   = calc_delta_C13(plant%pool%fine_root%carbon,plant%pool%fine_root%carbon13)
+       dC13sap_wood    = calc_delta_C13(plant%pool%sap_wood%carbon,plant%pool%sap_wood%carbon13)
+       dC13heart_wood  = calc_delta_C13(plant%pool%heart_wood%carbon,plant%pool%heart_wood%carbon13)
+       dC13coarse_root = calc_delta_C13(plant%pool%coarse_root%carbon,plant%pool%coarse_root%carbon13)
+       dC13fruit       = calc_delta_C13(plant%pool%fruit%carbon,plant%pool%fruit%carbon13)
+       dC13labile      = calc_delta_C13(plant%pool%labile%carbon,plant%pool%labile%carbon13)
+       dC13reserve     = calc_delta_C13(plant%pool%reserve%carbon,plant%pool%reserve%carbon13)
+       dC13seedbank    = calc_delta_C13(plant%pool%seed_bed%carbon,plant%pool%seed_bed%carbon13)
+       write(lun,'(19F12.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
+         dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seedbank, & 
+         calc_delta_C14(plant%pool%leaf%carbon,plant%pool%leaf%carbon14,dC13leaf),&
+         calc_delta_C14(plant%pool%fine_root%carbon,plant%pool%fine_root%carbon14,dC13fine_root),&
+         calc_delta_C14(plant%pool%sap_wood%carbon,plant%pool%sap_wood%carbon14,dC13sap_wood),&
+         calc_delta_C14(plant%pool%heart_wood%carbon,plant%pool%heart_wood%carbon14,dC13heart_wood),&
+         calc_delta_C14(plant%pool%coarse_root%carbon,plant%pool%coarse_root%carbon14,dC13coarse_root),&
+         calc_delta_C14(plant%pool%fruit%carbon,plant%pool%fruit%carbon14,dC13fruit),&
+         calc_delta_C14(plant%pool%labile%carbon,plant%pool%labile%carbon14,dC13labile),&
+         calc_delta_C14(plant%pool%reserve%carbon,plant%pool%reserve%carbon14,dC13reserve),&
+         calc_delta_C14(plant%pool%seed_bed%carbon,plant%pool%seed_bed%carbon14,dC13seedbank)
        lun=lun+1
        write(lun,'(10F12.6)') time_d,plant%pool%leaf%nitrogen,&
          plant%pool%fine_root%nitrogen,plant%pool%sap_wood%nitrogen,&
@@ -381,6 +440,7 @@ CONTAINS
     USE mo_base_memory,    ONLY: t_slm_tile
     USE mo_veg_memory,     ONLY: t_slm_plant
     USE mo_base_constants, ONLY: dt
+    USE mo_shared_isotope, ONLY: calc_delta_C13,calc_delta_C14
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -392,6 +452,7 @@ CONTAINS
     TYPE(t_slm_plant),POINTER    :: plant           ! plant variables per tile
     INTEGER                      :: lun             ! locical unit number
     REAL(wp), SAVE               :: dt_one = 1.0_wp ! just 1.0
+    REAL(wp)                     :: dC13gpp,dC13rg,dC13rm,dC13npp,dC13res
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
     plant => tile%plant
@@ -415,6 +476,16 @@ CONTAINS
       maint_resp_acc(itile)   = maint_resp_acc(itile)    + plant%flux%maint_respiration       * dt_one
       npp_acc(itile)          = npp_acc(itile)           + plant%flux%npp                     * dt_one
       res_use_c_acc(itile)    = res_use_c_acc(itile)     + plant%flux%reserve_use%carbon      * dt_one *1000000._wp/dt
+      gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + plant%flux%gpp_c13                * dt_one
+      growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + plant%flux%growth_respiration_c13 * dt_one
+      maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + plant%flux%maint_respiration_c13  * dt_one
+      npp_C13_acc(itile)          = npp_C13_acc(itile)           + plant%flux%npp_c13                * dt_one
+      res_use_C13_acc(itile)      = res_use_C13_acc(itile)       + plant%flux%reserve_use%carbon13   * dt_one *1000000._wp/dt
+      gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + plant%flux%gpp_c14                * dt_one
+      growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + plant%flux%growth_respiration_c14 * dt_one
+      maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + plant%flux%maint_respiration_c14  * dt_one
+      npp_C14_acc(itile)          = npp_C14_acc(itile)           + plant%flux%npp_c14                * dt_one
+      res_use_C14_acc(itile)      = res_use_C14_acc(itile)       + plant%flux%reserve_use%carbon14   * dt_one *1000000._wp/dt
       uptake_n_acc(itile)     = uptake_n_acc(itile)      + plant%flux%uptake_n                * dt_one
       resorption_n_acc(itile) = resorption_n_acc(itile)  + plant%flux%leaf_resorption_n       * dt_one *1000000._wp/dt
       res_use_n_acc(itile)    = res_use_n_acc(itile)     + plant%flux%reserve_use%nitrogen    * dt_one *1000000._wp/dt
@@ -431,12 +502,24 @@ CONTAINS
          & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps8) THEN
         ! write
         lun = (100 * itile) + 50
-        write(lun,'(6F22.6)') time_d, gpp_acc(itile), growth_resp_acc(itile), maint_resp_acc(itile), &
+        write(lun,'(6F12.6)') time_d, gpp_acc(itile), growth_resp_acc(itile), maint_resp_acc(itile), &
                               npp_acc(itile), res_use_c_acc(itile)
         lun=lun+1
-        write(lun,'(4F22.6)') time_d, uptake_n_acc(itile), resorption_n_acc(itile), res_use_n_acc(itile)
+        dC13gpp = calc_delta_C13(gpp_acc(itile),gpp_C13_acc(itile))
+        dC13rg = calc_delta_C13(growth_resp_acc(itile),growth_resp_C13_acc(itile))
+        dC13rm = calc_delta_C13(maint_resp_acc(itile),maint_resp_C13_acc(itile)) 
+        dC13npp = calc_delta_C13(npp_acc(itile),npp_C13_acc(itile))
+        dC13res = calc_delta_C13(res_use_c_acc(itile),res_use_C13_acc(itile))
+        write(lun,'(11F16.6)') time_d,dC13gpp,dC13rg,dC13rm,dC13npp,dC13res, & 
+                              calc_delta_C14(gpp_acc(itile),gpp_C14_acc(itile),dC13gpp), & 
+                              calc_delta_C14(growth_resp_acc(itile),growth_resp_C14_acc(itile),dC13rg), & 
+                              calc_delta_C14(maint_resp_acc(itile),maint_resp_C14_acc(itile),dC13rm), & 
+                              calc_delta_C14(npp_acc(itile),npp_C14_acc(itile),dC13npp), & 
+                              calc_delta_C14(res_use_c_acc(itile),res_use_C14_acc(itile),dC13res)
         lun=lun+1
-        write(lun,'(4F22.6)') time_d, uptake_p_acc(itile), resorption_p_acc(itile), res_use_p_acc(itile)
+        write(lun,'(4F12.6)') time_d, uptake_n_acc(itile), resorption_n_acc(itile), res_use_n_acc(itile)
+        lun=lun+1
+        write(lun,'(4F12.6)') time_d, uptake_p_acc(itile), resorption_p_acc(itile), res_use_p_acc(itile)
         lun=lun+1
         write(lun,'(12F16.8)') time_d, transpiration_acc(itile), gc_acc(itile)
         ! set zero
@@ -445,6 +528,16 @@ CONTAINS
         maint_resp_acc(itile)    = 0.0_wp
         npp_acc(itile)           = 0.0_wp
         res_use_c_acc(itile)     = 0.0_wp
+        gpp_C13_acc(itile)       = 0.0_wp
+        growth_resp_C13_acc(itile) = 0.0_wp
+        maint_resp_C13_acc(itile) = 0.0_wp
+        npp_C13_acc(itile)       = 0.0_wp
+        res_use_C13_acc(itile)   = 0.0_wp
+        gpp_C14_acc(itile)       = 0.0_wp
+        growth_resp_C14_acc(itile) = 0.0_wp
+        maint_resp_C14_acc(itile) = 0.0_wp
+        npp_C14_acc(itile)       = 0.0_wp
+        res_use_C14_acc(itile)   = 0.0_wp
         uptake_n_acc(itile)      = 0.0_wp
         resorption_n_acc(itile)  = 0.0_wp
         res_use_n_acc(itile)     = 0.0_wp
@@ -481,6 +574,8 @@ CONTAINS
     CLOSE(lun) ! 3
     lun=lun+1
     CLOSE(lun) ! 4
+    lun=lun+1
+    CLOSE(lun) ! 5
 
     ! 2.0 fluxes
     lun = (100 * itile) + 50
@@ -491,6 +586,8 @@ CONTAINS
     CLOSE(lun) ! 2
     lun=lun+1
     CLOSE(lun) ! 3
+    lun=lun+1
+    CLOSE(lun) ! 4
   END SUBROUTINE close_output_files
 
 END MODULE mo_veg_output
