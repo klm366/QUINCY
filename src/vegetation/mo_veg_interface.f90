@@ -110,15 +110,12 @@ CONTAINS
     plant%pool%labile  = plant%pool%labile  + plant%flux%reserve_use
     plant%pool%reserve = plant%pool%reserve - plant%flux%reserve_use
 
-    !> 5.2 update fluxes from retranslocation of leaves
+    !> 5.2 update fluxes from retranslocation of leaves and other senescing tissues
     !! 
     !! 
-    plant%pool%leaf%nitrogen = plant%pool%leaf%nitrogen - plant%flux%leaf_resorption_n
-    plant%pool%labile%nitrogen = plant%pool%labile%nitrogen + plant%flux%leaf_resorption_n
-    plant%pool%leaf%phosphorus = plant%pool%leaf%phosphorus - plant%flux%leaf_resorption_p
-    plant%pool%labile%phosphorus = plant%pool%labile%phosphorus + plant%flux%leaf_resorption_p
-    plant%pool%leaf%nitrogen15 = plant%pool%leaf%nitrogen15 - plant%flux%leaf_resorption_n15
-    plant%pool%labile%nitrogen15 = plant%pool%labile%nitrogen15 + plant%flux%leaf_resorption_n15
+    plant%pool%labile%nitrogen = plant%pool%labile%nitrogen + plant%flux%resorption_n
+    plant%pool%labile%phosphorus = plant%pool%labile%phosphorus + plant%flux%resorption_p
+    plant%pool%labile%nitrogen15 = plant%pool%labile%nitrogen15 + plant%flux%resorption_n15
 
     !> 6.0 Update plant biogeochemical pools with growth and litterfall
     !! 

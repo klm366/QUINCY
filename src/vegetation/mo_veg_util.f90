@@ -146,9 +146,9 @@ CONTAINS
     flux%uptake_n                = 0.0_wp  !< ??
     flux%uptake_n15              = 0.0_wp  !< ??
     flux%uptake_p                = 0.0_wp  !< ??
-    flux%leaf_resorption_n       = 0.0_wp  !< resorption of N upon leaf senescence (mol m-2 timestep-1)
-    flux%leaf_resorption_n15     = 0.0_wp  !< resorption of 15N upon leaf senescence (mol m-2 timestep-1)
-    flux%leaf_resorption_p       = 0.0_wp  !< resorption of P upon leaf senescence (mol m-2 timestep-1)
+    flux%resorption_n            = 0.0_wp  !< resorption of N upon tissue senescence (mol m-2 timestep-1)
+    flux%resorption_n15          = 0.0_wp  !< resorption of 15N upon tissue senescence (mol m-2 timestep-1)
+    flux%resorption_p            = 0.0_wp  !< resorption of P upon tissue senescence (mol m-2 timestep-1)
     flux%transpiration           = 0.0_wp  !< transpiration in kg m-2 s-1
     flux%ci                      = 0.0_wp  !< ??
   END SUBROUTINE set_zero_fluxes_of_plant_pools

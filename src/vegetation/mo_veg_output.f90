@@ -487,10 +487,10 @@ CONTAINS
       npp_C14_acc(itile)          = npp_C14_acc(itile)           + plant%flux%npp_c14                * dt_one
       res_use_C14_acc(itile)      = res_use_C14_acc(itile)       + plant%flux%reserve_use%carbon14   * dt_one *1000000._wp/dt
       uptake_n_acc(itile)     = uptake_n_acc(itile)      + plant%flux%uptake_n                * dt_one
-      resorption_n_acc(itile) = resorption_n_acc(itile)  + plant%flux%leaf_resorption_n       * dt_one *1000000._wp/dt
+      resorption_n_acc(itile) = resorption_n_acc(itile)  + plant%flux%resorption_n            * dt_one *1000000._wp/dt
       res_use_n_acc(itile)    = res_use_n_acc(itile)     + plant%flux%reserve_use%nitrogen    * dt_one *1000000._wp/dt
       uptake_p_acc(itile)     = uptake_p_acc(itile)      + plant%flux%uptake_p                * dt_one
-      resorption_p_acc(itile) = resorption_p_acc(itile)  + plant%flux%leaf_resorption_p       * dt_one *1000000._wp/dt
+      resorption_p_acc(itile) = resorption_p_acc(itile)  + plant%flux%resorption_p            * dt_one *1000000._wp/dt
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + plant%flux%reserve_use%phosphorus  * dt_one *1000000._wp/dt
       transpiration_acc(itile)= transpiration_acc(itile) + plant%flux%transpiration           * dt_one 
       gc_acc(itile)           = plant%gc                                                      * dt_one 

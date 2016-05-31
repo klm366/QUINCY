@@ -155,6 +155,7 @@ MODULE mo_veg_memory
     PROCEDURE :: divide_veg_pools_type_scalar
     PROCEDURE, PASS(this2) :: divide_veg_pools_scalar_type
     GENERIC, PUBLIC :: OPERATOR(/) => divide_veg_pools_type_type, divide_veg_pools_type_scalar, divide_veg_pools_scalar_type
+    PROCEDURE, PUBLIC, PASS(this2) :: init => init_veg_pool
   END TYPE t_slm_veg_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -189,9 +190,9 @@ MODULE mo_veg_memory
      REAL(wp) :: uptake_n                 !< N uptake from soil ( is that correct? )
      REAL(wp) :: uptake_n15               !< 15N uptake from soil ( is that correct? ) 
      REAL(wp) :: uptake_p                 !< P uptake from soil ( is that correct? )
-     REAL(wp) :: leaf_resorption_n        !< resorption of N upon leaf senescence (mol m-2 timestep-1)
-     REAL(wp) :: leaf_resorption_n15      !< resorption of 15N upon leaf senescence (mol m-2 timestep-1)
-     REAL(wp) :: leaf_resorption_p        !< resorption of P upon leaf senescence (mol m-2 timestep-1)
+     REAL(wp) :: leaf_resorption_n             !< resorption of N upon tissue senescence (mol m-2 timestep-1)
+     REAL(wp) :: leaf_resorption_n15           !< resorption of 15N upon tissue senescence (mol m-2 timestep-1)
+     REAL(wp) :: leaf_resorption_p             !< resorption of P upon tissue senescence (mol m-2 timestep-1)
      REAL(wp) :: transpiration            !< transpiration in kg m-2 s-1
      REAL(wp) :: ci                       !< ??
   END TYPE t_slm_veg_flux
@@ -518,6 +519,27 @@ CONTAINS
      t3%seed_bed      = s1 / this2%seed_bed 
   END FUNCTION divide_veg_pools_scalar_type  
 
+  !-----------------------------------------------------------------------------------------------------
+  !> 5.0 initialise veg pool with scalar 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL SUBROUTINE init_veg_pool(this2,s1)
+
+    USE mo_shared_memory,   ONLY: t_element
+
+    IMPLICIT NONE
+    REAL(wp), INTENT(in)         :: s1
+    CLASS(t_slm_veg_pool), INTENT(out) :: this2 
+     CALL this2%leaf%init(s1)
+     CALL this2%fine_root%init(s1)
+     CALL this2%coarse_root%init(s1)
+     CALL this2%sap_wood%init(s1)
+     CALL this2%heart_wood%init(s1)
+     CALL this2%labile%init(s1)
+     CALL this2%reserve%init(s1)
+     CALL this2%fruit%init(s1)
+     CALL this2%seed_bed%init(s1)
+  END SUBROUTINE init_veg_pool 
 
   !-----------------------------------------------------------------------------------------------------
   !> intialize all variables (TYPE t_daily_average)

@@ -152,6 +152,7 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: weibull_k_soil_ps
      REAL(wp),DIMENSION(npft) :: lambda_soil_gs
      REAL(wp),DIMENSION(npft) :: weibull_k_soil_gs
+     REAL(wp),DIMENSION(npft) :: tau_branches
      REAL(wp),DIMENSION(npft) :: tau_sap_wood
      REAL(wp),DIMENSION(npft) :: wood_density 
      REAL(wp),DIMENSION(npft) :: k_latosa 
@@ -441,6 +442,8 @@ MODULE mo_veg_parameters
       ! fractional water availability
       veg_param%lambda_soil_gs(:) = veg_param%lambda_soil_ps(:)
       veg_param%weibull_k_soil_gs(:) = veg_param%weibull_k_soil_ps(:)
+      ! turnover time of the fraction of sapwood that is in branches (10%) (1/years)
+      veg_param%tau_branches(:) = 0.01_wp
       ! turnover time of the sapwood pool (1/years)
       veg_param%tau_sap_wood(:) = 0.05_wp
       ! wood density (mol C / m3)

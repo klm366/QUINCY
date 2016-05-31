@@ -44,6 +44,7 @@ MODULE mo_shared_memory
     PROCEDURE :: divide_elements_type_scalar
     PROCEDURE, PASS(this2) :: divide_elements_scalar_type
     GENERIC, PUBLIC :: OPERATOR(/) => divide_elements_type_type, divide_elements_type_scalar, divide_elements_scalar_type
+    PROCEDURE, PUBLIC, PASS(this2) :: init => init_element
   END TYPE t_element
 
   TYPE(t_element) :: element_zero   !< all variables are zero, is used for setting other elements zero frequently
@@ -250,5 +251,21 @@ CONTAINS
     t3%carbon14   = s1 / this2%carbon14
     t3%nitrogen15 = s1 / this2%nitrogen15
   END FUNCTION divide_elements_scalar_type  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> 5.0 Initialisation of elements of a tissue by a scalar 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL SUBROUTINE init_element(this2,s1)
+    IMPLICIT NONE
+    REAL(wp), INTENT(in)         :: s1
+    CLASS(t_element), INTENT(out) :: this2 
+    this2%carbon     = s1 
+    this2%nitrogen   = s1 
+    this2%phosphorus = s1 
+    this2%carbon13   = s1 
+    this2%carbon14   = s1 
+    this2%nitrogen15 = s1 
+  END SUBROUTINE init_element 
 
 END MODULE mo_shared_memory

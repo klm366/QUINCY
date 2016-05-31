@@ -10,7 +10,6 @@
 MODULE mo_veg_turnover
 
   USE mo_kind
-  USE mo_exception, ONLY: message_text, finish
   USE mo_veg_memory
 
   PRIVATE
@@ -19,229 +18,126 @@ MODULE mo_veg_turnover
 
 CONTAINS
 
+  !-----------------------------------------------------------------------------------------------------
+  !> Calculates litter fall resulting from tissue senesence, including nutrient resorption, 
+  !! as well as turnover of sapwood ito heartwood and and fruits to seed_bed 
+  !!
+  !! @todo: mo_Veg_turnover: implement continuous turnover of foliar and root nutrients
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_turnover(plant,veg_param)
-    ! 
-    ! Routine to calculate litter fall resulting from tissue senesence, 
-    ! as well as turnover of sapwood and fruit pools,
-    ! and turnover of foliar and root nutrients (not yet implemented) 
-    ! 
+
+    USE mo_base_constants,     ONLY: one_day, one_year
     USE mo_shared_constants
     USE mo_veg_parameters
-    USE mo_base_constants,     ONLY: zero
 
     IMPLICIT NONE
-    ! 0.1 Input
+    ! 0.1 InOut
     TYPE(t_slm_veg_param), INTENT(in) :: veg_param 
-    ! 0.2 In- and Output
     TYPE(t_slm_plant), INTENT(inout) :: plant
-    ! 0.4 Local 
-    REAL(wp)                        :: fturn_leaf,fturn_fine_root,fturn_coarse_root,fturn_sap_wood, &
-                                       fturn_seed_bed 
-    REAL(wp)                        :: nitrogen_resorption, phosphorus_resorption
+    ! 0.2 Local 
+    TYPE(t_slm_veg_pool)                :: litterfall,growth
+    REAL(wp)                        :: resorption_n,resorption_n15,resorption_p
+    REAL(wp)                        :: fturn_leaf,fturn
+    REAL(wp)                        :: nitrogen_resorption_fract, phosphorus_resorption_fract
 
-    !
-    ! 1.0 initialise resporption and turnover rates
-    !
-    nitrogen_resorption = update_nitrogen_resorption(plant)
-    phosphorus_resorption = update_phosphorus_resorption(plant)
-    CALL update_turnover_fraction(plant%growing_season,plant%lai,veg_param%phenology_type(plant%pftid), & 
-                                  veg_param%growthform(plant%pftid), &
-                                  veg_param%tau_leaf(plant%pftid),veg_param%tau_fine_root(plant%pftid), & 
-                                  veg_param%tau_coarse_root(plant%pftid),veg_param%tau_sap_wood(plant%pftid), & 
-                                  veg_param%tau_seed(plant%pftid),fturn_leaf,fturn_fine_root,fturn_coarse_root, & 
-                                  fturn_sap_wood,fturn_seed_bed)
-    !
-    ! 2.1 C Litter fall
-    !
-    plant%flux%litterfall%leaf%carbon = fturn_leaf * plant%pool%leaf%carbon 
-    plant%flux%litterfall%fine_root%carbon = fturn_fine_root * plant%pool%fine_root%carbon 
-    plant%flux%litterfall%coarse_root%carbon = fturn_coarse_root * plant%pool%coarse_root%carbon 
-    plant%flux%litterfall%sap_wood%carbon = fturn_sap_wood * plant%pool%sap_wood%carbon 
-    plant%flux%litterfall%seed_bed%carbon = fturn_seed_bed * plant%pool%seed_bed%carbon 
+    !> 1.0 initialise resporption and turnover rates
+    !!
+    !! 
+    CALL growth%init(0.0_wp)
+    CALL litterfall%init(0.0_wp)
+    nitrogen_resorption_fract = update_nitrogen_resorption_fract(plant)
+    phosphorus_resorption_fract = update_phosphorus_resorption_fract(plant)
+    !> 2.0 foliage turnover 
+    !! flat rate for evergreens, dual rates for deciduous
+    !! includes retention of nutrients 
+    SELECT CASE (veg_param%phenology_type(plant%pftid))
+      CASE (ievergreen)
+         fturn_leaf = veg_param%tau_leaf(plant%pftid) * dt/one_day/one_year 
+      CASE (iraingreen, isummergreen)
+         IF(plant%growing_season)THEN
+            fturn_leaf = 0.0_wp              ! herbivory
+         ELSE
+            fturn_leaf = 0.2_wp * dt/one_day ! senescence
+            ! if LAI dropy below minimum threshold, dump all leaves
+            IF(plant%lai < min_lai) fturn_leaf = 1.0_wp
+         ENDIF
+      CASE (iperennial)
+         IF(plant%growing_season)THEN
+            fturn_leaf = veg_param%tau_leaf(plant%pftid) * dt/one_day/one_year
+         ELSE
+            fturn_leaf = 0.2_wp * dt/one_day
+            IF(plant%lai < min_lai) fturn_leaf = 1.0_wp
+       ENDIF
+    END SELECT
+    litterfall%leaf = fturn_leaf * plant%pool%leaf
 
-    !
-    ! 2.2 N Litter fall: a fraction of foliar N becomes resorpted into the labile pool
-    ! not entirely happy with this solution of resportion. Ideally the resportion should be 
-    ! calculated as a separate function and costly in terms of C
-    !
-    plant%flux%litterfall%leaf%nitrogen = fturn_leaf * (1.0_wp -nitrogen_resorption) * plant%pool%leaf%nitrogen 
-    plant%flux%leaf_resorption_n = fturn_leaf * nitrogen_resorption * plant%pool%leaf%nitrogen
-    plant%flux%litterfall%fine_root%nitrogen = fturn_fine_root * plant%pool%fine_root%nitrogen 
-    plant%flux%litterfall%coarse_root%nitrogen = fturn_coarse_root * plant%pool%coarse_root%nitrogen 
-    plant%flux%litterfall%sap_wood%nitrogen = fturn_sap_wood * plant%pool%sap_wood%nitrogen 
-    plant%flux%litterfall%seed_bed%nitrogen = fturn_seed_bed * plant%pool%seed_bed%nitrogen 
+    !> 2.1 Nutrient resportion from foliage turnover
+    !! 
+    resorption_n = nitrogen_resorption_fract * litterfall%leaf%nitrogen
+    litterfall%leaf%nitrogen = litterfall%leaf%nitrogen - resorption_n 
+    resorption_n15 = nitrogen_resorption_fract * litterfall%leaf%nitrogen15
+    litterfall%leaf%nitrogen15 = litterfall%leaf%nitrogen15 - resorption_n15 
+    resorption_p = phosphorus_resorption_fract * litterfall%leaf%phosphorus
+    litterfall%leaf%phosphorus = litterfall%leaf%phosphorus - resorption_p
 
-    !
-    ! 2.3 P Litter fall: a fraction of foliar P becomes resorpted into the labile pool
-    ! not entirely happy with this solution of resportion. Ideally the resportion should be 
-    ! calculated as a separate function and costly in terms of C
-    !
-    plant%flux%litterfall%leaf%phosphorus = fturn_leaf * (1.0_wp-phosphorus_resorption) * plant%pool%leaf%phosphorus 
-    plant%flux%leaf_resorption_p = fturn_leaf * phosphorus_resorption * plant%pool%leaf%phosphorus 
-    plant%flux%litterfall%fine_root%phosphorus = fturn_fine_root * plant%pool%fine_root%phosphorus 
-    plant%flux%litterfall%coarse_root%phosphorus = fturn_coarse_root * plant%pool%coarse_root%phosphorus 
-    plant%flux%litterfall%sap_wood%phosphorus = fturn_sap_wood * plant%pool%sap_wood%phosphorus 
-    plant%flux%litterfall%seed_bed%phosphorus = fturn_seed_bed * plant%pool%seed_bed%phosphorus 
+    !> 3.0 fine root turnover to litter
+    !! 
+    fturn = veg_param%tau_fine_root(plant%pftid) * dt/one_day/one_year
+    litterfall%fine_root = fturn * plant%pool%fine_root
 
-    !
-    ! 2.4 C13 Litter fall
-    !
-    plant%flux%litterfall%leaf%carbon13 = fturn_leaf * plant%pool%leaf%carbon13 
-    plant%flux%litterfall%fine_root%carbon13 = fturn_fine_root * plant%pool%fine_root%carbon13 
-    plant%flux%litterfall%coarse_root%carbon13 = fturn_coarse_root * plant%pool%coarse_root%carbon13 
-    plant%flux%litterfall%sap_wood%carbon13 = fturn_sap_wood * plant%pool%sap_wood%carbon13 
-    plant%flux%litterfall%seed_bed%carbon13 = fturn_seed_bed * plant%pool%seed_bed%carbon13 
+    !> 4.0 coarse root turnover to litter 
+    !! 
+    fturn = veg_param%tau_coarse_root(plant%pftid) * dt/one_day/one_year 
+    litterfall%coarse_root = fturn * plant%pool%coarse_root
 
-    !
-    ! 2.5 C14 Litter fall
-    !
-    plant%flux%litterfall%leaf%carbon14 = fturn_leaf * plant%pool%leaf%carbon14 
-    plant%flux%litterfall%fine_root%carbon14 = fturn_fine_root * plant%pool%fine_root%carbon14 
-    plant%flux%litterfall%coarse_root%carbon14 = fturn_coarse_root * plant%pool%coarse_root%carbon14 
-    plant%flux%litterfall%sap_wood%carbon14 = fturn_sap_wood * plant%pool%sap_wood%carbon14 
-    plant%flux%litterfall%seed_bed%carbon14 = fturn_seed_bed * plant%pool%seed_bed%carbon14 
+    !> 5.0 sapwood turnover 
+    !> 5.1 litter production from halms (grasses), or branches (trees)
+    !! 
+    SELECT CASE (veg_param%growthform(plant%pftid))
+      CASE (itree)
+        fturn = veg_param%tau_branches(plant%pftid) * dt/one_day/one_year 
+      CASE (igrass) ! for grases follows leaf phenology
+        fturn = fturn_leaf
+    ENDSELECT 
+    litterfall%sap_wood = fturn * plant%pool%sap_wood
 
-    !
-    ! 2.6 N15 Litter fall
-    !
-    plant%flux%litterfall%leaf%nitrogen15 = fturn_leaf * (1.0_wp-nitrogen_resorption) * plant%pool%leaf%nitrogen15 
-    plant%flux%leaf_resorption_n15 = fturn_leaf * nitrogen_resorption * plant%pool%leaf%nitrogen15
-    plant%flux%litterfall%fine_root%nitrogen15 = fturn_fine_root * plant%pool%fine_root%nitrogen15 
-    plant%flux%litterfall%coarse_root%nitrogen15 = fturn_coarse_root * plant%pool%coarse_root%nitrogen15 
-    plant%flux%litterfall%sap_wood%nitrogen15 = fturn_sap_wood * plant%pool%sap_wood%nitrogen15 
-    plant%flux%litterfall%seed_bed%nitrogen15 = fturn_seed_bed * plant%pool%seed_bed%nitrogen15 
+    !> 5.2 heart wood formation, including nutrient retention 
+    !! 
+    IF(veg_param%growthform(plant%pftid) == itree)THEN
+        fturn = veg_param%tau_sap_wood(plant%pftid) * dt/one_day/one_year 
+        growth%heart_wood = fturn * plant%pool%sap_wood
+        growth%sap_wood = growth%sap_wood - growth%heart_wood 
+        ! Nutrient retention 
+        resorption_n = resorption_n + resorption_wood * growth%heart_wood%nitrogen 
+        growth%heart_wood%nitrogen = (1._wp - resorption_wood) * growth%heart_wood%nitrogen
+        resorption_n15 = resorption_n15 + resorption_wood * growth%heart_wood%nitrogen15 
+        growth%heart_wood%nitrogen15 =  (1._wp - resorption_wood) * growth%heart_wood%nitrogen15
+        resorption_p = resorption_p + phosphorus_resorption_fract * growth%heart_wood%phosphorus 
+        growth%heart_wood%phosphorus = (1._wp - resorption_wood) * growth%heart_wood%phosphorus
+    ENDIF 
 
-    !
-    ! calculate transformation from sapwood into heart wood for trees 
-    ! 
-    SELECT CASE(veg_param%growthform(plant%pftid))
-       CASE (itree)
-          CALL calc_pool_turnover(plant%pool%sap_wood,veg_param%tau_sap_wood(plant%pftid),resorption_wood, & 
-                                  plant%flux%growth%sap_wood,plant%flux%growth%heart_wood,plant%flux%growth%labile)
-       END SELECT
-    !
-    ! calculate transformation from fruit into seed_bed 
-    ! 
-    CALL calc_pool_turnover(plant%pool%fruit,veg_param%tau_fruit(plant%pftid),zero, & 
-                            plant%flux%growth%fruit,plant%flux%growth%seed_bed,plant%flux%growth%labile)
+    !> 6.0 fruit turnover to seed_bed
+    !! 
+    fturn = veg_param%tau_fruit(plant%pftid) * dt/one_day/one_year 
+    growth%seed_bed = fturn * plant%pool%fruit
+    growth%fruit = growth%fruit - growth%seed_bed
+
+    !> 7.0 seed-bed turnover to litter 
+    !! 
+    fturn = veg_param%tau_seed(plant%pftid) * dt/one_day/one_year 
+    litterfall%seed_bed = fturn * plant%pool%seed_bed
+
+    !> 8.0 update litter, growth and resorption of the plant class
+    !!
+    plant%flux%litterfall     = plant%flux%litterfall     + litterfall
+    plant%flux%growth         = plant%flux%growth         + growth
+    plant%flux%resorption_n   = plant%flux%resorption_n   + resorption_n
+    plant%flux%resorption_n15 = plant%flux%resorption_n15 + resorption_n15
+    plant%flux%resorption_p   = plant%flux%resorption_p   + resorption_p
 
   END SUBROUTINE calc_turnover
 
-  SUBROUTINE update_turnover_fraction(growing_season,lai,phenology_type,growthform,tau_leaf,tau_fine_root,tau_coarse_root,tau_sap_wood,tau_seed, & 
-                                      fturn_leaf,fturn_fine_root,fturn_coarse_root,fturn_sap_wood,fturn_seed_bed)
-    ! 
-    ! routine to calculate fractional loss of biomass from a plant compartment
-    ! varies with phenology for leaves
-    ! different treatment of sapweeod for trees (real sapwood) and grasses (halms)
-    ! OBS: for now, root turnover is a constant  - should probably be more dynamic in the future
-    ! OBS: for now, heartwood also turns over to litter -> should become a part of plant mortality later
-    ! 
-    USE mo_base_constants, ONLY: dt, one_day, one_year
-    USE mo_veg_parameters, ONLY: itree,igrass,ievergreen,iraingreen,isummergreen,iperennial,min_lai
-
-    IMPLICIT NONE
-    ! 0.1 Input
-    LOGICAL, INTENT(in)   :: growing_season       ! whether or not this plant is in the growing season 
-    REAL(wp), INTENT(in)  :: lai                  ! current leaf area index 
-    INTEGER, INTENT(in)   :: phenology_type       ! phenology type 
-    INTEGER, INTENT(in)   :: growthform           ! plant growth form 
-    REAL(wp), INTENT(in)  :: tau_leaf             ! default turnover time of leaves (1/years)
-    REAL(wp), INTENT(in)  :: tau_fine_root        ! default turnover time of fine roots (1/years)
-    REAL(wp), INTENT(in)  :: tau_coarse_root      ! default turnover time of coarse roots (1/years)
-    REAL(wp), INTENT(in)  :: tau_sap_wood         ! default turnover time of wood  (1/years)
-    REAL(wp), INTENT(in)  :: tau_seed             ! default turnover time of seeds (1/years)
-    ! 0.3 Output
-    REAL(wp), INTENT(out) :: fturn_leaf,fturn_fine_root, &            ! fractional biomass loss to litter 
-                             fturn_coarse_root,fturn_sap_wood, &      ! for each plant pool
-                             fturn_seed_bed 
-
-    ! 
-    ! foliage turnover - flat rate for evergreens, dual rates for deciduous
-    ! 
-    SELECT CASE (phenology_type)
-      CASE (ievergreen)
-         fturn_leaf = tau_leaf * dt/one_day/one_year
-      CASE (iraingreen, isummergreen)
-       IF(growing_season)THEN
-          fturn_leaf = 0.0_wp 
-       ELSE
-          fturn_leaf = 0.2_wp * dt/one_day
-          IF(lai < min_lai) fturn_leaf = 1.0_wp
-       ENDIF
-      CASE (iperennial)
-       IF(growing_season)THEN
-          fturn_leaf = tau_leaf * dt/one_day/one_year
-       ELSE
-          fturn_leaf = 0.2_wp * dt/one_day
-          IF(lai < min_lai) fturn_leaf = 1.0_wp
-       ENDIF
-      CASE DEFAULT
-          WRITE(message_text,'(a,i4)') 'invalid phenology type ',phenology_type
-          CALL finish("mo_veg_turnover:update_turnover_fraction",message_text) 
-    END SELECT
-    ! 
-    ! stem turnover for grasses; synced with leaves
-    ! 
-    SELECT CASE (growthform)
-      CASE (itree)
-        fturn_sap_wood = 0.0_wp
-      CASE (igrass)
-        fturn_sap_wood = fturn_leaf
-      CASE DEFAULT
-          WRITE(message_text,'(a,i4)') 'invalid growthform',growthform 
-          CALL finish("mo_veg_turnover:update_turnover_fraction",message_text) 
-    ENDSELECT 
-    !
-    ! all other pools turn over at a flat rate - should be adjusted potentially later
-    !
-    fturn_fine_root = tau_fine_root * dt/one_day/one_year
-    fturn_coarse_root = tau_coarse_root * dt/one_day/one_year
-    fturn_seed_bed = tau_seed * dt/one_day/one_year
-
-  END SUBROUTINE update_turnover_fraction
-
-  SUBROUTINE calc_pool_turnover(source_pool, tau_pool, resorption, source_flux, sink_flux, storage_flux) 
-    !
-    ! calculates mass transfer from one pool to another due to senesences
-    !   used for sapwood -> heartwood
-    !            fruit -> seed_bed 
-    !   this is the only process forming these pools, added to the growth term of the respective 
-    !   sink pools
-    ! 
-    USE mo_base_constants, ONLY: dt, one_day, one_year
-    IMPLICIT NONE
-    ! 0.1 InOut
-    REAL(wp), INTENT(in) :: tau_pool
-    REAL(wp), INTENT(in) :: resorption
-    TYPE(t_element),INTENT(inout) :: source_flux
-    TYPE(t_element),INTENT(inout) :: sink_flux
-    TYPE(t_element),INTENT(inout) :: storage_flux
-    TYPE(t_element),INTENT(inout) :: source_pool
-
-    source_flux%carbon = source_flux%carbon - tau_pool * dt/one_day/one_year * source_pool%carbon
-    sink_flux%carbon = tau_pool * dt/one_day/one_year * source_pool%carbon
-
-    source_flux%nitrogen = source_flux%nitrogen - tau_pool * dt/one_day/one_year * source_pool%nitrogen
-    sink_flux%nitrogen = ( 1.0_wp - resorption ) * tau_pool * dt/one_day/one_year * source_pool%nitrogen
-    storage_flux%nitrogen = storage_flux%nitrogen + resorption * tau_pool * dt/one_day/one_year * source_pool%nitrogen
-
-    source_flux%phosphorus = source_flux%phosphorus - tau_pool * dt/one_day/one_year * source_pool%phosphorus
-    sink_flux%phosphorus = ( 1.0_wp - resorption )  * tau_pool * dt/one_day/one_year * source_pool%phosphorus
-    storage_flux%phosphorus = storage_flux%phosphorus + resorption * tau_pool * dt/one_day/one_year * source_pool%phosphorus
-
-    source_flux%carbon13 = source_flux%carbon13 - tau_pool * dt/one_day/one_year * source_pool%carbon13
-    sink_flux%carbon13 = tau_pool * dt/one_day/one_year * source_pool%carbon13
-
-    source_flux%carbon14 = source_flux%carbon14 - tau_pool * dt/one_day/one_year * source_pool%carbon14
-    sink_flux%carbon14 = tau_pool * dt/one_day/one_year * source_pool%carbon14
-
-    source_flux%nitrogen15 = source_flux%nitrogen15 - tau_pool * dt/one_day/one_year * source_pool%nitrogen15
-    sink_flux%nitrogen15 = ( 1.0_wp - resorption ) * tau_pool * dt/one_day/one_year * source_pool%nitrogen15
-    storage_flux%nitrogen15 = storage_flux%nitrogen15 + resorption * tau_pool * dt/one_day/one_year * source_pool%nitrogen15
-
-  END SUBROUTINE calc_pool_turnover
-
-  FUNCTION update_nitrogen_resorption(plant) RESULT (resorption)
+  FUNCTION update_nitrogen_resorption_fract(plant) RESULT (resorption)
     !
     ! funtion to calculate fractional N resorption from leaves 
     !   should be made dynamically dependended on N stress later 
@@ -256,7 +152,7 @@ CONTAINS
 
   END FUNCTION
 
-  FUNCTION update_phosphorus_resorption(plant) RESULT (resorption)
+  FUNCTION update_phosphorus_resorption_fract(plant) RESULT (resorption)
     !
     ! funtion to calculate fractional P resorption from leaves 
     !   should be made dynamically dependended on P stress later 
