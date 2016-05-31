@@ -20,9 +20,10 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculates litter fall resulting from tissue senesence, including nutrient resorption, 
-  !! as well as turnover of sapwood ito heartwood and and fruits to seed_bed 
+  !! as well as turnover of sapwood to heartwood and fruits to seed_bed 
   !!
-  !! @todo: mo_Veg_turnover: implement continuous turnover of foliar and root nutrients
+  !! @todo: mo_veg_turnover: implement continuous turnover of foliar and root nutrients
+  !! @todo: mo_veg_turnover: herbivory on leaves as turnover term? 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_turnover(plant,veg_param)
 
@@ -33,23 +34,23 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_veg_param), INTENT(in) :: veg_param 
-    TYPE(t_slm_plant), INTENT(inout) :: plant
+    TYPE(t_slm_plant), INTENT(inout)  :: plant
     ! 0.2 Local 
-    TYPE(t_slm_veg_pool)                :: litterfall,growth
-    REAL(wp)                        :: resorption_n,resorption_n15,resorption_p
-    REAL(wp)                        :: fturn_leaf,fturn
-    REAL(wp)                        :: nitrogen_resorption_fract, phosphorus_resorption_fract
+    TYPE(t_slm_veg_pool)              :: litterfall,growth
+    REAL(wp)                          :: resorption_n,resorption_n15,resorption_p
+    REAL(wp)                          :: fturn_leaf,fturn
+    REAL(wp)                          :: nitrogen_resorption_fract, phosphorus_resorption_fract
 
-    !> 1.0 initialise resporption and turnover rates
+    !> 1.0 initialise output variables and resorption fractions 
     !!
-    !! 
     CALL growth%init(0.0_wp)
     CALL litterfall%init(0.0_wp)
     nitrogen_resorption_fract = update_nitrogen_resorption_fract(plant)
     phosphorus_resorption_fract = update_phosphorus_resorption_fract(plant)
-    !> 2.0 foliage turnover 
-    !! flat rate for evergreens, dual rates for deciduous
-    !! includes retention of nutrients 
+
+    !> 2.0 foliage turnover, including resorption of nutrients 
+    !!
+    !! flat rate for evergreens, dual rates for deciduous (senescence after the growing season)
     SELECT CASE (veg_param%phenology_type(plant%pftid))
       CASE (ievergreen)
          fturn_leaf = veg_param%tau_leaf(plant%pftid) * dt/one_day/one_year 
@@ -58,20 +59,21 @@ CONTAINS
             fturn_leaf = 0.0_wp              ! herbivory
          ELSE
             fturn_leaf = 0.2_wp * dt/one_day ! senescence
-            ! if LAI dropy below minimum threshold, dump all leaves
+            ! if LAI drops below minimum threshold, dump all leaves
             IF(plant%lai < min_lai) fturn_leaf = 1.0_wp
          ENDIF
       CASE (iperennial)
          IF(plant%growing_season)THEN
             fturn_leaf = veg_param%tau_leaf(plant%pftid) * dt/one_day/one_year
          ELSE
+            ! if LAI drops below minimum threshold, dump all leaves
             fturn_leaf = 0.2_wp * dt/one_day
             IF(plant%lai < min_lai) fturn_leaf = 1.0_wp
        ENDIF
     END SELECT
     litterfall%leaf = fturn_leaf * plant%pool%leaf
 
-    !> 2.1 Nutrient resportion from foliage turnover
+    !> 2.1 Nutrient resorption from foliage turnover
     !! 
     resorption_n = nitrogen_resorption_fract * litterfall%leaf%nitrogen
     litterfall%leaf%nitrogen = litterfall%leaf%nitrogen - resorption_n 
@@ -91,8 +93,8 @@ CONTAINS
     litterfall%coarse_root = fturn * plant%pool%coarse_root
 
     !> 5.0 sapwood turnover 
-    !> 5.1 litter production from halms (grasses), or branches (trees)
     !! 
+    !> 5.1 litter production from halms (grasses), or branches (trees)
     SELECT CASE (veg_param%growthform(plant%pftid))
       CASE (itree)
         fturn = veg_param%tau_branches(plant%pftid) * dt/one_day/one_year 
@@ -101,13 +103,13 @@ CONTAINS
     ENDSELECT 
     litterfall%sap_wood = fturn * plant%pool%sap_wood
 
-    !> 5.2 heart wood formation, including nutrient retention 
+    !> 5.2 heart wood formation, including nutrient resorption
     !! 
     IF(veg_param%growthform(plant%pftid) == itree)THEN
         fturn = veg_param%tau_sap_wood(plant%pftid) * dt/one_day/one_year 
         growth%heart_wood = fturn * plant%pool%sap_wood
         growth%sap_wood = growth%sap_wood - growth%heart_wood 
-        ! Nutrient retention 
+        ! Nutrient resorption
         resorption_n = resorption_n + resorption_wood * growth%heart_wood%nitrogen 
         growth%heart_wood%nitrogen = (1._wp - resorption_wood) * growth%heart_wood%nitrogen
         resorption_n15 = resorption_n15 + resorption_wood * growth%heart_wood%nitrogen15 
