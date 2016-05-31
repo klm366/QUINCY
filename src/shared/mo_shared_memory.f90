@@ -74,7 +74,7 @@ CONTAINS
   PURE ELEMENTAL FUNCTION add_elements_type_scalar(this,s2) RESULT(t3)
     IMPLICIT NONE
     CLASS(t_element), INTENT(in) :: this
-    REAL, INTENT(in)             :: s2
+    REAL(wp), INTENT(in)         :: s2
     TYPE(t_element)              :: t3
     t3%carbon     = this%carbon     + s2
     t3%nitrogen   = this%nitrogen   + s2
@@ -90,7 +90,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION add_elements_scalar_type(s1,this2) RESULT(t3)
     IMPLICIT NONE
-    REAL, INTENT(in)             :: s1
+    REAL(wp), INTENT(in)         :: s1
     CLASS(t_element), INTENT(in) :: this2
     TYPE(t_element)              :: t3
     t3%carbon     = s1 + this2%carbon
@@ -124,7 +124,7 @@ CONTAINS
   PURE ELEMENTAL FUNCTION subtract_elements_type_scalar(this,s2) RESULT(t3)
     IMPLICIT NONE
     CLASS(t_element), INTENT(in) :: this
-    REAL, INTENT(in)             :: s2
+    REAL(wp), INTENT(in)         :: s2
     TYPE(t_element)              :: t3
     t3%carbon     = this%carbon     - s2
     t3%nitrogen   = this%nitrogen   - s2
@@ -140,7 +140,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION subtract_elements_scalar_type(s1,this2) RESULT(t3)
     IMPLICIT NONE
-    REAL, INTENT(in)             :: s1
+    REAL(wp), INTENT(in)         :: s1
     CLASS(t_element), INTENT(in) :: this2
     TYPE(t_element)              :: t3
     t3%carbon     = s1 - this2%carbon
@@ -174,7 +174,7 @@ CONTAINS
   PURE ELEMENTAL FUNCTION multiply_elements_type_scalar(this,s2) RESULT(t3)
     IMPLICIT NONE
     CLASS(t_element), INTENT(in) :: this
-    REAL, INTENT(in)             :: s2
+    REAL(wp), INTENT(in)         :: s2
     TYPE(t_element)              :: t3
     t3%carbon     = this%carbon     * s2
     t3%nitrogen   = this%nitrogen   * s2
@@ -190,7 +190,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION multiply_elements_scalar_type(s1,this2) RESULT(t3)
     IMPLICIT NONE
-    REAL, INTENT(in)             :: s1
+    REAL(wp), INTENT(in)         :: s1
     CLASS(t_element), INTENT(in) :: this2
     TYPE(t_element)              :: t3
     t3%carbon     = s1 * this2%carbon
@@ -224,7 +224,7 @@ CONTAINS
   PURE ELEMENTAL FUNCTION divide_elements_type_scalar(this,s2) RESULT(t3)
     IMPLICIT NONE
     CLASS(t_element), INTENT(in) :: this
-    REAL, INTENT(in)             :: s2
+    REAL(wp), INTENT(in)         :: s2
     TYPE(t_element)              :: t3
     t3%carbon     = this%carbon     / s2
     t3%nitrogen   = this%nitrogen   / s2
@@ -240,7 +240,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION divide_elements_scalar_type(s1,this2) RESULT(t3)
     IMPLICIT NONE
-    REAL, INTENT(in)             :: s1
+    REAL(wp), INTENT(in)         :: s1
     CLASS(t_element), INTENT(in) :: this2
     TYPE(t_element)              :: t3
     t3%carbon     = s1 / this2%carbon

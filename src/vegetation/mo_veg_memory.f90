@@ -278,7 +278,7 @@ CONTAINS
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
-     REAL, INTENT(in)                  :: s2          !< any scalar
+     REAL(wp), INTENT(in)              :: s2          !< any scalar
      TYPE(t_slm_veg_pool)              :: t3
      t3%leaf          = this%leaf        + s2         ! operator overload, see t_element
      t3%fine_root     = this%fine_root   + s2
@@ -300,7 +300,7 @@ CONTAINS
     USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
-     REAL, INTENT(in)                  :: s1          !< any scalar
+     REAL(wp), INTENT(in)              :: s1          !< any scalar
      CLASS(t_slm_veg_pool), INTENT(in) :: this2       !< any t_slm_veg_pool
      TYPE(t_slm_veg_pool)              :: t3
      t3%leaf          = s1 + this2%leaf               ! operator overload, see t_element
@@ -346,7 +346,7 @@ CONTAINS
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
-     REAL, INTENT(in)                  :: s2          !< any scalar
+     REAL(wp), INTENT(in)              :: s2          !< any scalar
      TYPE(t_slm_veg_pool)              :: t3
      t3%leaf          = this%leaf        - s2         ! operator overload, see t_element
      t3%fine_root     = this%fine_root   - s2
@@ -368,7 +368,7 @@ CONTAINS
     USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
-     REAL, INTENT(in)                  :: s1          !< any scalar
+     REAL(wp), INTENT(in)              :: s1          !< any scalar
      CLASS(t_slm_veg_pool), INTENT(in) :: this2       !< any t_slm_veg_pool
      TYPE(t_slm_veg_pool)              :: t3
      t3%leaf          = s1 - this2%leaf               ! operator overload, see t_element
@@ -414,7 +414,7 @@ CONTAINS
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
-     REAL, INTENT(in)                  :: s2          !< any scalar
+     REAL(wp), INTENT(in)              :: s2          !< any scalar
      TYPE(t_slm_veg_pool)              :: t3
      t3%leaf          = this%leaf        * s2         ! operator overload, see t_element
      t3%fine_root     = this%fine_root   * s2
@@ -436,7 +436,7 @@ CONTAINS
     USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
-     REAL, INTENT(in)                  :: s1          !< any scalar
+     REAL(wp), INTENT(in)              :: s1          !< any scalar
      CLASS(t_slm_veg_pool), INTENT(in) :: this2       !< any t_slm_veg_pool
      TYPE(t_slm_veg_pool)              :: t3
      t3%leaf          = s1 * this2%leaf               ! operator overload, see t_element
@@ -482,7 +482,7 @@ CONTAINS
 
      IMPLICIT NONE
      CLASS(t_slm_veg_pool), INTENT(in) :: this        !< any t_slm_veg_pool
-     REAL, INTENT(in)                  :: s2          !< any scalar
+     REAL(wp), INTENT(in)              :: s2          !< any scalar
      TYPE(t_slm_veg_pool)              :: t3
      t3%leaf          = this%leaf        / s2         ! operator overload, see t_element
      t3%fine_root     = this%fine_root   / s2
@@ -504,7 +504,7 @@ CONTAINS
     USE mo_shared_memory,   ONLY: t_element
 
      IMPLICIT NONE
-     REAL, INTENT(in)                  :: s1          !< any scalar
+     REAL(wp), INTENT(in)              :: s1          !< any scalar
      CLASS(t_slm_veg_pool), INTENT(in) :: this2       !< any t_slm_veg_pool
      TYPE(t_slm_veg_pool)              :: t3
      t3%leaf          = s1 / this2%leaf               ! operator overload, see t_element
