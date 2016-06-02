@@ -10,6 +10,9 @@ ARCHIVE_PREFIX = "/hpss/arch/"
 STREAM_SUFFIX  = "_stream"
 CODES_SUFFIX   = "_codes"
 
+HOST_AVAIL = { "thunder" : [ "thunder4", "thunder5" ],
+               "mistral" : [ "mlogin105" ]}
+
 def find_files ( pattern, path, single = True, raise_e = False ):
     assert os.path.isdir ( path ) and isinstance ( pattern, str )
     
@@ -44,7 +47,7 @@ def find_files ( pattern, path, single = True, raise_e = False ):
 
 
 class Experiment ( object ):
-    B4J_obj      = None
+    B4J_obj         = None
     B4J_id          = None
     B4J_name        = None
     B4J_etype       = None
@@ -52,6 +55,7 @@ class Experiment ( object ):
     B4J_oceres      = None
     B4J_startyear   = None
     B4J_finalyear   = None
+    B4J_host        = None
     B4J_path        = None
     B4J_landseamask = None
     B4J_isref       = False
@@ -78,6 +82,10 @@ class Experiment ( object ):
             except:
                 print "No experiment description found for %s." % self.B4J_name
                 sys.exit ( 1 )
+
+
+            print exp_metadata
+            self.B4J_host      = exp_metadata [ "host" ]
             self.B4J_path      = exp_metadata [ "data_storage" ]
             self.B4J_atmres    = exp_metadata [ "atm_res" ]
             self.B4J_oceres    = exp_metadata [ "oce_res" ]
@@ -86,12 +94,19 @@ class Experiment ( object ):
 
 
     def fetch_outdata_all ( self ):
-        from bench import bench4jsbach_scripts
+        from bench import bench4jsbach_scripts, get_hostname
 
         self.B4J_obj.logger.debug ( "Starting" )
         
         modeltype = self.__class__.__name__.split ( "_" )[ 0 ]
-        from_archive = self.B4J_path.startswith ( ARCHIVE_PREFIX )
+        #from_archive = self.B4J_path.startswith ( ARCHIVE_PREFIX )
+
+        host = get_hostname ()
+
+        print host
+        print self.B4J_host
+        
+        sys.exit ( 0 )
 
         if from_archive: fetchfile_list = []
         for field_name, field_config in self.B4J_obj.diagnostic_fields.iteritems ():
