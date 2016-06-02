@@ -67,7 +67,8 @@ CONTAINS
   !! 
   !! @par Spitters Eq. 12 is wrong
   !!  accordingly to Wang2003, "radf4" was replaced by "-kbl" when calculating "idrdra"
-  !! 
+  !! @todo: link canopy light calculation with albedo and fapar calculation. OBS: light is calculated 
+  !!        for all canopy layers irrespective of whether or not there are leaves 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_fapar(swpar_srf_down,swpar_fdiffuse,cos_zenith_angle,& 
                         lai,par_sunlit,par_shaded,fleaf_sunlit)
@@ -138,32 +139,29 @@ CONTAINS
        lc = canopy_layer_depth(1)/2.0_wp
        DO icanop = 1,ncanop
   
-          IF(canopy_layer_depth_act(icanop).GT.eps8) THEN
+          IF (radf2 <= eps8) THEN ! case of only diffuse radiation
+             !> Eq.10 Mean PAR penetrating foliage at lc (umol/m2/s)
+             par_shaded(icanop) = radf1 * exp(-kdf * lc)     ! eq 10
+          ELSE ! Case of direct and diffuse radiation
+             ! Sunlit foliage at lc (fraction)
+             ! kbl: Extinction coefficient for PAR over black leaves in canopy
+             fleaf_sunlit(icanop) = exp(-kbl * lc)
+             !> Eq.10 Diffuse PAR penetrating foliage at lc (umol/m2/s)
+             idfa = radf1 * exp(-kdf * lc)       
+             ! Direct PAR penetrating sunlit foliage at lc (umol/m2/s)
+             idra = radf2 * exp(radf4 * lc)
+             !> Eq.12 corrected following Wang2003 Mean direct PAR remaining direct at lc (umol/m2/s)
+             idrdra = radf3 * exp(-kbl * lc)  ! radf4 replaced by -kbl according to Wang2003 (error in Spitters 1986 Eqn.12)
+             ! PAR penetrating shaded foliage at lc (umol/m2/s)
+             !> Eq.13 Sum of diffuse radiation and diffuse component of direct flux
+             par_shaded(icanop) = idfa + max((idra - idrdra), 0.0_wp)
+             ! PAR penetrating sunlit foliage at lc (umol/m2/s)
+             ! sum of diffuse and direct radiation
+             par_sunlit(icanop) = par_shaded(icanop) + radf3
+          ENDIF 
 
-             IF (radf2 <= eps8) THEN ! case of only diffuse radiation
-                !> Eq.10 Mean PAR penetrating foliage at lc (umol/m2/s)
-                par_shaded(icanop) = radf1 * exp(-kdf * lc)     ! eq 10
-             ELSE ! Case of direct and diffuse radiation
-                ! Sunlit foliage at lc (fraction)
-                ! kbl: Extinction coefficient for PAR over black leaves in canopy
-                fleaf_sunlit(icanop) = exp(-kbl * lc)
-                !> Eq.10 Diffuse PAR penetrating foliage at lc (umol/m2/s)
-                idfa = radf1 * exp(-kdf * lc)       
-                ! Direct PAR penetrating sunlit foliage at lc (umol/m2/s)
-                idra = radf2 * exp(radf4 * lc)
-                !> Eq.12 corrected following Wang2003 Mean direct PAR remaining direct at lc (umol/m2/s)
-                idrdra = radf3 * exp(-kbl * lc)  ! radf4 replaced by -kbl according to Wang2003 (error in Spitters 1986 Eqn.12)
-                ! PAR penetrating shaded foliage at lc (umol/m2/s)
-                !> Eq.13 Sum of diffuse radiation and diffuse component of direct flux
-                par_shaded(icanop) = idfa + max((idra - idrdra), 0.0_wp)
-                ! PAR penetrating sunlit foliage at lc (umol/m2/s)
-                ! sum of diffuse and direct radiation
-                par_sunlit(icanop) = par_shaded(icanop) + radf3
-            ENDIF 
-
-            IF(icanop < ncanop) & 
-              lc = lc + canopy_layer_depth(icanop)/2.0_wp + canopy_layer_depth(icanop+1)/2.0_wp
-          ENDIF
+          IF(icanop < ncanop) & 
+            lc = lc + canopy_layer_depth(icanop)/2.0_wp + canopy_layer_depth(icanop+1)/2.0_wp
 
        ENDDO
 

@@ -208,6 +208,7 @@ MODULE mo_veg_memory
      REAL(wp) :: fnl_et                !< fraction of N in electron transport 
      REAL(wp) :: fnl_rub               !< fraction of N in Rubisco 
      REAL(wp) :: fnl_pepc              !< fraction of N in PEP carboylase (C4 plants only)
+     REAL(wp) :: fnl_oth               !< fraction of N not associated with photosynthesis 
      REAL(wp) :: par_sunlit            !< PAR on sunlit leaves (µmol m-2 s-1)
      REAL(wp) :: par_shaded            !< PAR on shaded leaves (µmol m-2 s-1)
      REAL(wp) :: fleaf_sunlit          !< fraction of layer which is sunlit

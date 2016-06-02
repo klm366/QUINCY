@@ -79,13 +79,13 @@ CONTAINS
    CALL calc_canopy_n_distribution(plant%pool%leaf%nitrogen,plant%lai, & 
                                    canopy_layer_depth_act, &
                                    veg_param%ps_pathway(pftid), & 
-                                   veg_param%nf(pftid), & 
                                    veg_param%k0_fnl_struc(pftid), & 
                                    plant%canopy_layer(:)%nl_tot, & 
                                    plant%canopy_layer(:)%fnl_chl, & 
                                    plant%canopy_layer(:)%fnl_et, & 
                                    plant%canopy_layer(:)%fnl_rub, & 
-                                   plant%canopy_layer(:)%fnl_pepc)
+                                   plant%canopy_layer(:)%fnl_pepc, &
+                                   plant%canopy_layer(:)%fnl_oth)
    ! calculate photosynthesis per layer
    DO icanop = 1,ncanop
       IF(canopy_layer_depth_act(icanop).GT.0.0_wp)THEN
@@ -145,28 +145,27 @@ CONTAINS
   !! @par note 
   !!  it includes "nf" as input, i.e. Andrew's tuning constant
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,ps_pathway,nf,k0_fnl_struc,& 
-                                      nl_tot,fnl_chl,fnl_et,fnl_rub,fnl_pepc)
+  SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,ps_pathway,k0_fnl_struc,& 
+                                      nl_tot,fnl_chl,fnl_et,fnl_rub,fnl_pepc,fnl_oth)
 
   USE mo_veg_parameters, ONLY: kn,k0_fnl_chl_C3,k0_fnl_chl_C4,k1_fnl_chl_C3,k1_fnl_chl_C4,kfnl_chl, & 
                                jmax2n,vcmax2n,jmax2vcmax_C3,jmax2vcmax_C4,k1_fnl_struc,k0_fnl_pepc,ic4phot
  
   IMPLICIT NONE
   ! 0.1 InOut
-  REAL(wp), INTENT(in)    :: totalN           !< total foliar N (mol / m2)
-  REAL(wp), INTENT(in)    :: lai              !< total foliar area (m2 / m2)
+  REAL(wp), INTENT(in)    :: totalN                            !< total foliar N (mol / m2)
+  REAL(wp), INTENT(in)    :: lai                               !< total foliar area (m2 / m2)
   REAL(wp), DIMENSION(ncanop), INTENT(in) :: canopy_layer_depth_act !< depth of canopy layers (in units LAI)
-  INTEGER, INTENT(in)     :: ps_pathway       !< photosynthetic pathway (C3|C4) 
-  REAL(wp), INTENT(in)    :: nf               !< Andrew's tuning constant 
-  REAL(wp), INTENT(in)    :: k0_fnl_struc     !< maximum fraction of N not used for photosynthesis 
+  INTEGER, INTENT(in)     :: ps_pathway                        !< photosynthetic pathway (C3|C4) 
+  REAL(wp), INTENT(in)    :: k0_fnl_struc                      !< maximum fraction of N not used for photosynthesis 
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: nl_tot           !< total N content of the layer
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_chl          !< fraction of N in chlorophyll content per layer
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_et           !< fraction of N used for electron-transport per layer
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_rub          !< fraction of N used for Rubisco per layer
   REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_pepc         !< fraction of N used for PEPC per layer
+  REAL(wp),DIMENSION(ncanop),INTENT(inout) :: fnl_oth          !< fraction of N not associated with PS
   ! 0.2 Local
   REAL(wp) :: n0                              ! foliar N content of top-most layer
-  REAL(wp) :: fnl_oth                         ! fraction of N not associated with PS
   REAL(wp) :: k0_fnl_chl,k1_fnl_chl           ! factors in chlorophyll profile calculation 
   REAL(wp) :: jmax2vcmax                      ! jmax to vcmax ratio
   REAL(wp) :: lc                              ! cummulative LAI
@@ -195,15 +194,13 @@ CONTAINS
   DO icanop = 1,ncanop
      IF(canopy_layer_depth_act(icanop).GT.eps8) THEN
         nl_tot(icanop) = n0 * exp(-kn * lc) 
-        fnl_oth = k0_fnl_struc - k1_fnl_struc * nl_tot(icanop)
+        fnl_oth(icanop) = k0_fnl_struc - k1_fnl_struc * nl_tot(icanop)
         fnl_chl(icanop) = (k0_fnl_chl - k1_fnl_chl * exp(-kfnl_chl * lc)) / chl2n
-        ! standard OCN approach: fraction in indenpent of depth
-        !fnl_et(icanop) = 0.273_wp * nf     ! OBS: currently only for code consistency 
-        !fnl_rub(icanop) = 0.128_wp * nf    ! OBS: currently only for code consistency
         ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
-        fnl_et(icanop) = (1._wp - (fnl_oth + fnl_chl(icanop) + fnl_pepc(icanop) )) / (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
+        fnl_et(icanop) = (1._wp - (fnl_oth(icanop) + fnl_chl(icanop) + fnl_pepc(icanop) )) / & 
+                         (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
         ! fraction of Rubisco is determined as the remainder
-        fnl_rub(icanop) = 1._wp - fnl_oth - fnl_chl(icanop) - fnl_et(icanop) - fnl_pepc(icanop)
+        fnl_rub(icanop) = 1._wp - fnl_oth(icanop) - fnl_chl(icanop) - fnl_et(icanop) - fnl_pepc(icanop)
         lc = lc + canopy_layer_depth_act(icanop) / 2._wp & 
              + canopy_layer_depth_act(icanop+1) / 2._wp
     ENDIF
@@ -330,12 +327,12 @@ CONTAINS
            msat = MIN(m1 * n1, m2 * n2)
 
            !> nlim factor (part of equation 12 (Kull and Kruijt 1998))
-           nco = msat/(alpha_i_C3 * ka * m1)
+           nco = msat/(alpha_i * ka * m1)
 
            !> A couple of factors to calculate photosynthesis
            !!  parts of equations 14-16 of Kull and Kruijt 1998
            agsf1 = MAX(1.0_wp - pcp / cil, 0.0_wp)
-           agsf2 = agsf1 * alpha_i_C3 * m1
+           agsf2 = agsf1 * alpha_i * m1
            agsf1 = agsf1 * msat
 
         CASE (ic4phot)
@@ -354,12 +351,12 @@ CONTAINS
            !> N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
            msat = MIN(MIN(m1 * n1, m2 * n2), m3 * n3)
            !> nlim factor (part of equation 12 (Kull and Kruijt 1998))
-           nco = msat/(alpha_i_C4 * ka * m1)
+           nco = msat/(alpha_i * ka * m1)
 
            !> A couple of factors to calculate photosynthesis
            !!  parts of equations 14-16 of Kull and Kruijt 1998
            agsf1 = MAX(1.0_wp - pcp / ci_max, 0.0_wp)
-           agsf2 = agsf1 * alpha_i_C4 * m1
+           agsf2 = agsf1 * alpha_i * m1
            agsf1 = agsf1 * msat
   
         END SELECT

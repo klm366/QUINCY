@@ -26,7 +26,6 @@ CONTAINS
   !! @par alternative use
   !! supply N and P to maintain a certain target C:N:P of the labile pool
   !! 
-  !! @todo a proper soil model
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_vegsoil_bgc(tile, veg_param)
 
@@ -58,33 +57,25 @@ CONTAINS
 
       !> 1.1 calculate current "labile" C:N:P   
       !! 
-      !!
-      clab = plant%pool%leaf%carbon + plant%pool%fine_root%carbon + & 
-             plant%pool%labile%carbon
-      nlab = plant%pool%leaf%nitrogen + plant%pool%fine_root%nitrogen + & 
-             plant%pool%labile%nitrogen
-      plab = plant%pool%leaf%phosphorus + plant%pool%fine_root%phosphorus + & 
-             plant%pool%labile%phosphorus
+      clab = plant%pool%labile%carbon
+      nlab = plant%pool%labile%nitrogen
+      plab = plant%pool%labile%phosphorus
 
-      !> 1.2 convert this into an instantaneous scalar of nutrient demand (above a target minimum C:N:P)
-      !! 
+      !> 1.2 convert this into an instantaneous scalar of nutrient demand
+      !!     taken as the weekly growth requirement of the nutrient
       !! 
       IF(clab > eps8) THEN
-         plant%f_n_demand = MAX(1._wp / veg_param%cn_leaf(pftid) - nlab / clab, 0.0_wp) 
+         plant%f_n_demand = MAX(plant%moving_average%growth_req_n_week - nlab / clab, 0.0_wp) 
       ELSE
          plant%f_n_demand = 1.0_wp
       ENDIF
       IF(nlab > eps8) THEN
-         plant%f_p_demand = MAX(1._wp / veg_param%np_leaf(pftid) - plab / nlab, 0.0_wp)
+         plant%f_p_demand = MAX(plant%moving_average%growth_req_p_week - plab / nlab, 0.0_wp)
       ELSE
          plant%f_p_demand = 1.0_wp
       ENDIF
 
-      !> 1.3 average demand over a couple of days to get rid of diurnal C cycle:    
-      !! ==> has been moved completely to tile%plant%moving_average -> PROCEDURE: update_soil
-      !! 
-
-      !> 1.4 calculate N, P uptake according to OCN 
+      !> 1.3 calculate N, P uptake according to OCN 
       !! 
       !!
       plant%flux%uptake_n = veg_param%vmax_uptake_n(pftid) * &
@@ -100,8 +91,8 @@ CONTAINS
 
     !> 2.0 ELSE: maintain prescribed C:N:P irrespective of nutrient uptake capacity == no nutrient limitation case 
     !! 
-    !! @todo 2.0 is only a fallback option
     ELSE
+
       ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
       plant%flux%uptake_n = MAX(plant%pool%labile%carbon / veg_param%cn_leaf(pftid) - & 
                                         plant%pool%labile%nitrogen, 0.0_wp) * 1.e6 / dt

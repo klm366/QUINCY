@@ -60,8 +60,7 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: E1v                          !< Temperature sensitivity of Rubisco
   REAL(wp),SAVE :: Tref_pepc                    !< Temperature sensitivity of PeP C4 photosynthesis 
   REAL(wp),SAVE :: Tbase_pepc                   !< Temperature sensitivity of PeP C4 photosynthesis
-  REAL(wp),SAVE :: alpha_i_C3                   !< intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))
-  REAL(wp),SAVE :: alpha_i_C4                   !< intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))
+  REAL(wp),SAVE :: alpha_i                      !< intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))
                                                 !< µmol CO2 / mol quanta) 
   REAL(wp),SAVE :: pO2                          !< Partial Pressure of O2 in kPa
   REAL(wp),SAVE :: CiCa_default_C3              !< default Ci:Ca for C3 plants
@@ -80,44 +79,44 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: discr_ps_phi                 !< leakage rate of bundle sheath cells
   
   ! parameters for canopy profile and canopy light extinction
-  REAL(wp),SAVE :: kn                           ! extinction coefficient to describe decline of N within the canopy 
-  REAL(wp),SAVE :: k0_fnl_chl_C3                ! parameter to describe the varying fraction of N in chlorophyll through the canopy
-  REAL(wp),SAVE :: k0_fnl_chl_C4                ! parameter to describe the varying fraction of N in chlorophyll through the canopy
-  REAL(wp),SAVE :: k1_fnl_chl_C3                ! parameter to describe the varying fraction of N in chlorophyll through the canopy
-  REAL(wp),SAVE :: k1_fnl_chl_C4                ! parameter to describe the varying fraction of N in chlorophyll through the canopy
-  REAL(wp),SAVE :: kfnl_chl                     ! parameter to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp),SAVE :: kn                           !< extinction coefficient to describe decline of N within the canopy 
+  REAL(wp),SAVE :: k0_fnl_chl_C3                !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp),SAVE :: k0_fnl_chl_C4                !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp),SAVE :: k1_fnl_chl_C3                !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp),SAVE :: k1_fnl_chl_C4                !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+  REAL(wp),SAVE :: kfnl_chl                     !< parameter to describe the varying fraction of N in chlorophyll through the canopy
 
   ! parameters used for phenology calculations
-  REAL(wp),SAVE :: min_lai                      ! minimum LAI beyond which all leaves are shed
-  REAL(wp),SAVE :: target_lai_max               ! maximum LAI target for reserve use calculations 
-  REAL(wp),SAVE :: min_leaf_age                 ! minimum leaf age before senescence is permitted (days) 
-  REAL(wp),SAVE :: gdd_t_air_threshold          ! temperature threshold for growing degree days 
-  REAL(wp),SAVE :: gdd_req_max                  ! maximum GDD requirement
-  REAL(wp),SAVE :: k_gdd_dormance               ! exponent factor in GDD - nd_dormance equation 
-  REAL(wp),SAVE :: t_air_senescence             ! weekly air temperature initiating leaf senescence
-  REAL(wp),SAVE :: beta_soil_flush_grass        ! value of beta_soil at leaf flushing for grass
-  REAL(wp),SAVE :: beta_soil_flush_tree         ! value of beta_soil at leaf flushing for trees 
-  REAL(wp),SAVE :: beta_soil_senescence_tree    ! value of beta_soil at leaf shedding for trees
+  REAL(wp),SAVE :: min_lai                      !< minimum LAI beyond which all leaves are shed
+  REAL(wp),SAVE :: target_lai_max               !< maximum LAI target for reserve use calculations 
+  REAL(wp),SAVE :: min_leaf_age                 !< minimum leaf age before senescence is permitted (days) 
+  REAL(wp),SAVE :: gdd_t_air_threshold          !< temperature threshold for growing degree days 
+  REAL(wp),SAVE :: gdd_req_max                  !< maximum GDD requirement
+  REAL(wp),SAVE :: k_gdd_dormance               !< exponent factor in GDD - nd_dormance equation 
+  REAL(wp),SAVE :: t_air_senescence             !< weekly air temperature initiating leaf senescence
+  REAL(wp),SAVE :: beta_soil_flush_grass        !< value of beta_soil at leaf flushing for grass
+  REAL(wp),SAVE :: beta_soil_flush_tree         !< value of beta_soil at leaf flushing for trees 
+  REAL(wp),SAVE :: beta_soil_senescence_tree    !< value of beta_soil at leaf shedding for trees
 
   ! Parameters required for albedo and fapar calculation
-  REAL(wp),SAVE :: ka                           ! Extinction coefficient for PAR on chlorophyll
-  REAL(wp),SAVE :: sigma                        ! single leaf scattering albedo 
-  REAL(wp),SAVE :: kbl0                         ! extinction coefficient over black leaves 
-  REAL(wp),SAVE :: kdf0                         ! extinction coefficient for diffuse PAR (Spitters eq. 7) 
-  REAL(wp),SAVE :: rho2sbeta                    ! scaling factor of solar angle in reflection calculation (mo_veg_fapar) 
+  REAL(wp),SAVE :: ka                           !< Extinction coefficient for PAR on chlorophyll
+  REAL(wp),SAVE :: sigma                        !< single leaf scattering albedo 
+  REAL(wp),SAVE :: kbl0                         !< extinction coefficient over black leaves 
+  REAL(wp),SAVE :: kdf0                         !< extinction coefficient for diffuse PAR (Spitters eq. 7) 
+  REAL(wp),SAVE :: rho2sbeta                    !< scaling factor of solar angle in reflection calculation (mo_veg_fapar) 
 
   ! other
   REAL(wp),SAVE :: carbon_per_dryweight_leaf    !< carbon mass per unit dry weight of leaves (gC / g DW) 
-  REAL(wp),SAVE :: min_height                   ! minimum permissable height of an individual
-  REAL(wp),SAVE :: sm2lm_grass                  ! stem mass to leaf mass ratio of grasses
-  REAL(wp),SAVE :: lambda_fruit_alloc           ! parameter in the Weibull function controlling fruit growth
-  REAL(wp),SAVE :: weibull_k_fruit_alloc        ! parameter in the Weibull function controlling fruit growth
-  REAL(wp),SAVE :: offset_fruit_alloc           ! parameter in the Weibull function controlling fruit growth
-  REAL(wp),SAVE :: min_falloc_fruit             ! minimum fraction of allocation going to fruit (flowers etc.)
+  REAL(wp),SAVE :: min_height                   !< minimum permissable height of an individual
+  REAL(wp),SAVE :: sm2lm_grass                  !< stem mass to leaf mass ratio of grasses
+  REAL(wp),SAVE :: lambda_fruit_alloc           !< parameter in the Weibull function controlling fruit growth
+  REAL(wp),SAVE :: weibull_k_fruit_alloc        !< parameter in the Weibull function controlling fruit growth
+  REAL(wp),SAVE :: offset_fruit_alloc           !< parameter in the Weibull function controlling fruit growth
+  REAL(wp),SAVE :: min_falloc_fruit             !< minimum fraction of allocation going to fruit (flowers etc.)
 
   ! vegetation dynamics
-  REAL(wp), SAVE :: background_mort_rate_tree   ! background mortality rate of trees in static mortality case
-  REAL(wp), SAVE :: background_mort_rate_grass  ! background mortality rate of grasses in static mortality case
+  REAL(wp), SAVE :: background_mort_rate_tree   !< background mortality rate of trees in static mortality case
+  REAL(wp), SAVE :: background_mort_rate_grass  !< background mortality rate of grasses in static mortality case
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   INTEGER,PARAMETER :: itree = 1 
@@ -143,7 +142,6 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: cn_leaf
      REAL(wp),DIMENSION(npft) :: np_leaf
      REAL(wp),DIMENSION(npft) :: k0_fnl_struc
-     REAL(wp),DIMENSION(npft) :: nf 
      REAL(wp),DIMENSION(npft) :: tjmax_opt
      REAL(wp),DIMENSION(npft) :: tjmax_omega
      REAL(wp),DIMENSION(npft) :: g0
@@ -258,10 +256,10 @@ MODULE mo_veg_parameters
       ! Temperature sensitivity of PeP C4 photosynthesis
       Tref_pepc = 25._wp
       Tbase_pepc = 10._wp
-      ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I)) 
-      ! µmol CO2 / mol quanta), lower in C4 plants because of bundle-sheat, Collatz / Friend
-      alpha_i_C3 = 0.08_wp
-      alpha_i_C4 = 0.048_wp
+      ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))) (µmol CO2 / mol quanta)
+      ! accounting for the absorptance of leaves (0.85), the maximum quantum yield of PS II (0.7)
+      ! the fraction of total light that reaches PS II (0.5) and the NADPH limited RubGeneration (jointly leading to 0.066)
+      alpha_i = 0.85_wp * 0.066_wp 
       ! initial guess of the leaf Ci to Ca ratio
       CiCa_default_C3 = 0.7_wp
       CiCa_default_C4 = 0.4_wp
@@ -420,8 +418,6 @@ MODULE mo_veg_parameters
       !Le Maire et al. 2012 (derived from grasses, does not give plausble results for needles)
       !0.012_wp / 0.48_wp * molar_mass_C / molar_mass_N / veg_param%sla(:)/&
       !(1._wp / veg_param%sla(:) / veg_param%cn_leaf(:)) 
-      ! nitrogen scaling parameter for photosynthesis calculation 
-      veg_param%nf(:) = 1.83_wp
       ! initial value of the temperature optimum of electron transport and its shape parameter (deg C)
       veg_param%tjmax_opt(:) = & 
       (/17._wp,17._wp,17._wp,17._wp,17._wp,17._wp,17._wp,35._wp/)
