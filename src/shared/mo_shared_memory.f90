@@ -259,7 +259,7 @@ CONTAINS
   PURE ELEMENTAL SUBROUTINE init_element(this2,s1)
     IMPLICIT NONE
     REAL(wp), INTENT(in)         :: s1
-    CLASS(t_element), INTENT(out) :: this2 
+    CLASS(t_element), INTENT(inout) :: this2 
     this2%carbon     = s1 
     this2%nitrogen   = s1 
     this2%phosphorus = s1 

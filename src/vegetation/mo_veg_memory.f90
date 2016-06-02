@@ -530,7 +530,7 @@ CONTAINS
 
     IMPLICIT NONE
     REAL(wp), INTENT(in)         :: s1
-    CLASS(t_slm_veg_pool), INTENT(out) :: this2 
+    CLASS(t_slm_veg_pool), INTENT(inout) :: this2 
      CALL this2%leaf%init(s1)
      CALL this2%fine_root%init(s1)
      CALL this2%coarse_root%init(s1)
