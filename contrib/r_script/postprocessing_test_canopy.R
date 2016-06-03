@@ -1,8 +1,10 @@
 #!/usr/bin/env Rscript
-#program to plot cexchange output 
-make=read.delim('../../util/Make.inc.local',header=F,sep="=",stringsAsFactors=F)
-comp=gsub(" $","",gsub("^ ","",make[gsub(" $","",make[,1])=="COMP",2]))
-system(paste("../../",comp,"/bin/test_canopy.x",sep=''))
+
+# postprocessing of output data (e.g. plot canopy model output)
+# called from contrib/site_level/run_slm.sh (HPC simulations) or run_canopy.R (local SLM runs)
+
+# message
+print(" postprocessing SLM output")
 
 flist = list.files(path= ".",patter="fort*")
 nplot=length(flist)
@@ -17,4 +19,7 @@ for (i in 1:nplot) {
   plot(dat[,1],dat[,3],xlab=colnames(dat)[1],ylab=colnames(dat)[3],type='l')
   plot(dat[,1],dat[,4],xlab=colnames(dat)[1],ylab=colnames(dat)[4],type='l')
 }
-dev.off()
+garbage <- dev.off()  # run dev.off() but suppress the notification it usually provides
+
+# message
+print(" finished postprocessing SLM output !")

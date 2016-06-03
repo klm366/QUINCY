@@ -1,16 +1,10 @@
 #!/usr/bin/env Rscript
-# program to plot plant model output, for multiple tiles separately (if applicable)
+
+# this script does: postprocessing of output data (e.g. plot plant model output)
+# it is called either by contrib/site_level/run_slm.sh (HPC simulations) or run_plant.R (local SLM runs)
 
 # string function to remove trailing/leading blanks
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
-
-# message
-print(" running model simulations !")
-
-# run plant.x
-make=read.delim('../../util/Make.inc.local',header=F,sep="=",stringsAsFactors=F)
-comp=trim(make[trim(make[,1])=="COMP",2])
-system(paste("../../",comp,"/bin/plant.x",sep=''))
 
 #read timestep of output file from namelist for pool & flux
 namelist=read.delim('namelist.plant',header=F,sep="=",stringsAsFactors=F)
@@ -22,7 +16,7 @@ tstep_flux=trim(namelist[trim(namelist[,1])=="output_interval_flux",2])
 tileNum<-length(grep("poolC_tile*",list.files()))
 
 # message
-print(" processing output data")
+print(" postprocessing SLM output")
 
 # loop over each tiles:
 for(ti in 1:tileNum)
@@ -52,4 +46,4 @@ dev.off()
 } # end loop over tiles
 
 # message
-print(" finished !")
+print(" finished postprocessing SLM output !")
