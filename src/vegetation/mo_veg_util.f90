@@ -146,6 +146,12 @@ CONTAINS
     flux%uptake_n                = 0.0_wp  !< ??
     flux%uptake_n15              = 0.0_wp  !< ??
     flux%uptake_p                = 0.0_wp  !< ??
+    flux%recycling_leaf_n        = 0.0_wp  !< net flux of N to leaf from enzyme breakdown and replacement (mol m-2 timestep-1)
+    flux%recycling_leaf_n15      = 0.0_wp  !< net flux of 15N to leaf from enzyme breakdown and replacement (mol m-2 timestep-1) 
+    flux%recycling_leaf_p        = 0.0_wp  !< net flux of P to leaf from enzyme breakdown and replacement (mol m-2 timestep-1)
+    flux%recycling_fine_root_n   = 0.0_wp  !< net flux of N to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1)
+    flux%recycling_fine_root_n15 = 0.0_wp  !< net flux of 15N to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1) 
+    flux%recycling_fine_root_p   = 0.0_wp  !< net flux of P to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1)
     flux%resorption_n            = 0.0_wp  !< resorption of N upon tissue senescence (mol m-2 timestep-1)
     flux%resorption_n15          = 0.0_wp  !< resorption of 15N upon tissue senescence (mol m-2 timestep-1)
     flux%resorption_p            = 0.0_wp  !< resorption of P upon tissue senescence (mol m-2 timestep-1)

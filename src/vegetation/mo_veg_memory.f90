@@ -193,6 +193,12 @@ MODULE mo_veg_memory
      REAL(wp) :: resorption_n             !< resorption of N upon tissue senescence (mol m-2 timestep-1)
      REAL(wp) :: resorption_n15           !< resorption of 15N upon tissue senescence (mol m-2 timestep-1)
      REAL(wp) :: resorption_p             !< resorption of P upon tissue senescence (mol m-2 timestep-1)
+     REAL(wp) :: recycling_leaf_n         !< net flux of N to leaf from enzyme breakdown and replacement (mol m-2 timestep-1)
+     REAL(wp) :: recycling_leaf_n15       !< net flux of 15N to leaf from enzyme breakdown and replacement (mol m-2 timestep-1) 
+     REAL(wp) :: recycling_leaf_p         !< net flux of P to leaf from enzyme breakdown and replacement (mol m-2 timestep-1)
+     REAL(wp) :: recycling_fine_root_n    !< net flux of N to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1)
+     REAL(wp) :: recycling_fine_root_n15  !< net flux of 15N to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1) 
+     REAL(wp) :: recycling_fine_root_p    !< net flux of P to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1)
      REAL(wp) :: transpiration            !< transpiration in kg m-2 s-1
      REAL(wp) :: ci                       !< ??
   END TYPE t_slm_veg_flux

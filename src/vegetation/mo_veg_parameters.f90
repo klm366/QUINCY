@@ -49,6 +49,7 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: k1_fnl_struc                 !< slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
   REAL(wp),SAVE :: jmax2vcmax_C3                !< ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants)
   REAL(wp),SAVE :: jmax2vcmax_C4                !< ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants)
+  REAL(wp),SAVE :: tau_canopy_acclimation       !< time scale of acclimation of canopy processes (N, P, T) (days)
   ! temperature sensitivies of PS processes
   REAL(wp),SAVE :: E0kc                         !< Baseline of Michaelis-Menten constant of Rubisco for CO2 (unit?)
   REAL(wp),SAVE :: E1kc                         !< Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 (unit?)
@@ -289,6 +290,8 @@ MODULE mo_veg_parameters
       ! in static leaf N mode: prescribed ratio of Jmax25/Vcmax25
       jmax2vcmax_C3=1.92_wp      ! text book
       jmax2vcmax_C4=1.4_wp       ! calibrated to have Jmax=vcmax at 25 deg
+      ! time scale of canopy acclimation (days)
+      tau_canopy_acclimation = 10._wp 
  
      ! parameters describing the isotopic discrimination of PS, derived from Drake 2014, Radiocarbon, 56, 29-38
       discr_ps_a_C13 = 4.4_wp  

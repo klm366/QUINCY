@@ -28,13 +28,9 @@ MODULE mo_veg_output
   REAL(wp), DIMENSION(ntile), SAVE :: gpp_C13_acc             
   REAL(wp), DIMENSION(ntile), SAVE :: growth_resp_C13_acc      
   REAL(wp), DIMENSION(ntile), SAVE :: maint_resp_C13_acc       
-  REAL(wp), DIMENSION(ntile), SAVE :: npp_C13_acc              
-  REAL(wp), DIMENSION(ntile), SAVE :: res_use_C13_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: gpp_C14_acc             
   REAL(wp), DIMENSION(ntile), SAVE :: growth_resp_C14_acc      
   REAL(wp), DIMENSION(ntile), SAVE :: maint_resp_C14_acc       
-  REAL(wp), DIMENSION(ntile), SAVE :: npp_C14_acc              
-  REAL(wp), DIMENSION(ntile), SAVE :: res_use_C14_acc        
   REAL(wp), DIMENSION(ntile), SAVE :: uptake_n_acc         
   REAL(wp), DIMENSION(ntile), SAVE :: resorption_n_acc     
   REAL(wp), DIMENSION(ntile), SAVE :: res_use_n_acc        
@@ -67,13 +63,9 @@ CONTAINS
     gpp_C13_acc       = 0.0_wp
     growth_resp_C13_acc = 0.0_wp
     maint_resp_C13_acc = 0.0_wp
-    npp_C13_acc       = 0.0_wp
-    res_use_C13_acc   = 0.0_wp
     gpp_C14_acc       = 0.0_wp
     growth_resp_C14_acc = 0.0_wp
     maint_resp_C14_acc = 0.0_wp
-    npp_C14_acc       = 0.0_wp
-    res_use_C14_acc   = 0.0_wp
     uptake_n_acc      = 0._wp   
     resorption_n_acc  = 0._wp  
     res_use_n_acc     = 0._wp  
@@ -171,8 +163,8 @@ CONTAINS
     lun = (100 * itile) + 50
     WRITE(lun,'(a)'), 'Time GPP GrowthResp MaintResp NPP ReserveUse'
     lun=lun+1   
-    WRITE(lun,'(2a)'), 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 NPP_dC13 ReserveUse_dC13 ', &
-                      'GPP_DC14 GrowthResp_DC14 MaintResp_DC14 NPP_DC14 ReserveUse_DC14'
+    WRITE(lun,'(2a)'), 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
+                      'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
     lun=lun+1
     WRITE(lun,'(a)'), 'Time NUP Resorption_N ReserveUse'
     lun=lun+1
@@ -452,7 +444,7 @@ CONTAINS
     TYPE(t_slm_plant),POINTER    :: plant           ! plant variables per tile
     INTEGER                      :: lun             ! locical unit number
     REAL(wp), SAVE               :: dt_one = 1.0_wp ! just 1.0
-    REAL(wp)                     :: dC13gpp,dC13rg,dC13rm,dC13npp,dC13res
+    REAL(wp)                     :: dC13gpp,dC13rg,dC13rm
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
     plant => tile%plant
@@ -479,18 +471,16 @@ CONTAINS
       gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + plant%flux%gpp_c13                * dt_one
       growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + plant%flux%growth_respiration_c13 * dt_one
       maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + plant%flux%maint_respiration_c13  * dt_one
-      npp_C13_acc(itile)          = npp_C13_acc(itile)           + plant%flux%npp_c13                * dt_one
-      res_use_C13_acc(itile)      = res_use_C13_acc(itile)       + plant%flux%reserve_use%carbon13   * dt_one *1000000._wp/dt
       gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + plant%flux%gpp_c14                * dt_one
       growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + plant%flux%growth_respiration_c14 * dt_one
       maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + plant%flux%maint_respiration_c14  * dt_one
-      npp_C14_acc(itile)          = npp_C14_acc(itile)           + plant%flux%npp_c14                * dt_one
-      res_use_C14_acc(itile)      = res_use_C14_acc(itile)       + plant%flux%reserve_use%carbon14   * dt_one *1000000._wp/dt
       uptake_n_acc(itile)     = uptake_n_acc(itile)      + plant%flux%uptake_n                * dt_one
-      resorption_n_acc(itile) = resorption_n_acc(itile)  + plant%flux%resorption_n            * dt_one *1000000._wp/dt
+      resorption_n_acc(itile) = resorption_n_acc(itile)  + ( plant%flux%recycling_leaf_n + &
+                                plant%flux%recycling_fine_root_n + plant%flux%resorption_n )  * dt_one *1000000._wp/dt
       res_use_n_acc(itile)    = res_use_n_acc(itile)     + plant%flux%reserve_use%nitrogen    * dt_one *1000000._wp/dt
       uptake_p_acc(itile)     = uptake_p_acc(itile)      + plant%flux%uptake_p                * dt_one
-      resorption_p_acc(itile) = resorption_p_acc(itile)  + plant%flux%resorption_p            * dt_one *1000000._wp/dt
+      resorption_p_acc(itile) = (resorption_p_accitile)  + ( plant%flux%recycling_leaf_p + & 
+                                plant%flux%recycling_fine_root_p + plant%flux%resorption_p )  * dt_one *1000000._wp/dt
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + plant%flux%reserve_use%phosphorus  * dt_one *1000000._wp/dt
       transpiration_acc(itile)= transpiration_acc(itile) + plant%flux%transpiration           * dt_one 
       gc_acc(itile)           = plant%gc                                                      * dt_one 
@@ -508,14 +498,10 @@ CONTAINS
         dC13gpp = calc_delta_C13(gpp_acc(itile),gpp_C13_acc(itile))
         dC13rg = calc_delta_C13(growth_resp_acc(itile),growth_resp_C13_acc(itile))
         dC13rm = calc_delta_C13(maint_resp_acc(itile),maint_resp_C13_acc(itile)) 
-        dC13npp = calc_delta_C13(npp_acc(itile),npp_C13_acc(itile))
-        dC13res = calc_delta_C13(res_use_c_acc(itile),res_use_C13_acc(itile))
-        write(lun,'(11F16.6)') time_d,dC13gpp,dC13rg,dC13rm,dC13npp,dC13res, & 
+        write(lun,'(7F16.6)') time_d,dC13gpp,dC13rg,dC13rm, & 
                               calc_delta_C14(gpp_acc(itile),gpp_C14_acc(itile),dC13gpp), & 
                               calc_delta_C14(growth_resp_acc(itile),growth_resp_C14_acc(itile),dC13rg), & 
-                              calc_delta_C14(maint_resp_acc(itile),maint_resp_C14_acc(itile),dC13rm), & 
-                              calc_delta_C14(npp_acc(itile),npp_C14_acc(itile),dC13npp), & 
-                              calc_delta_C14(res_use_c_acc(itile),res_use_C14_acc(itile),dC13res)
+                              calc_delta_C14(maint_resp_acc(itile),maint_resp_C14_acc(itile),dC13rm)
         lun=lun+1
         write(lun,'(4F12.6)') time_d, uptake_n_acc(itile), resorption_n_acc(itile), res_use_n_acc(itile)
         lun=lun+1
@@ -531,13 +517,9 @@ CONTAINS
         gpp_C13_acc(itile)       = 0.0_wp
         growth_resp_C13_acc(itile) = 0.0_wp
         maint_resp_C13_acc(itile) = 0.0_wp
-        npp_C13_acc(itile)       = 0.0_wp
-        res_use_C13_acc(itile)   = 0.0_wp
         gpp_C14_acc(itile)       = 0.0_wp
         growth_resp_C14_acc(itile) = 0.0_wp
         maint_resp_C14_acc(itile) = 0.0_wp
-        npp_C14_acc(itile)       = 0.0_wp
-        res_use_C14_acc(itile)   = 0.0_wp
         uptake_n_acc(itile)      = 0.0_wp
         resorption_n_acc(itile)  = 0.0_wp
         res_use_n_acc(itile)     = 0.0_wp
