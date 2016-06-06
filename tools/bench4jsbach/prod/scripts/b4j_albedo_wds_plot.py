@@ -90,9 +90,11 @@ colors               = plt.cm.RdBu ( vals )
 cmap, norm           = mcolors.from_levels_and_colors ( levels, colors )
 
 cdo = Cdo ()
+
 dates = cdo.showtimestamp ( input =  kwargs [ 'albedo_wds' ])[ 0 ].split ( " ")
 dates = [ datetime.strptime ( str ( x ), '%Y-%m-%dT%H:%M:%S') for x in dates if x ]
-
+# dkl: hack, problem with minutes of datetime.datetime in pycmbs data
+dates = [ date.replace ( minute=0 ) for date in dates ]
 
 f = plt.figure ( figsize = ( 16, 10 ))
 ax = [ f.add_subplot ( 2, 2, i + 1 ) for i in range ( 4 )]

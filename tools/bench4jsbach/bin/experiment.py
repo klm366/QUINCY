@@ -11,7 +11,8 @@ STREAM_SUFFIX  = "_stream"
 CODES_SUFFIX   = "_codes"
 
 HOST_AVAIL = { "thunder" : [ "thunder4", "thunder5" ],
-               "mistral" : [ "mlogin105" ]}
+               "mistral" : [ "mlogin100", "mlogin101", "mlogin102", "mlogin103", "mlogin104", "mlogin105" ],
+               "archive" : []}
 
 def find_files ( pattern, path, single = True, raise_e = False ):
     assert os.path.isdir ( path ) and isinstance ( pattern, str )
@@ -92,21 +93,46 @@ class Experiment ( object ):
             self.B4J_startyear = exp_metadata [ "simulation_period" ].split ( '-' )[ 0 ]
             self.B4J_finalyear = exp_metadata [ "simulation_period" ].split ( '-' )[ 1 ]
 
+            
+    def accumulate_streams ( self, orig_dir, orig_template, startyear, finalyear, target_path ):
+        self.B4J_obj.logger.debug ( "Starting." )
+        print "orig_dir: ", orig_dir
+        print "orig_template: ", orig_template
+        print "startyear: ", startyear
+        print "finalyear: ", finalyear
+        print "target_path: ", target_path
+
+
+        cdo = Cdo ()
+        sy = int ( startyear )
+        fy = int ( finalyear )
+        try:
+            os.remove ( target_path )
+        except OSError:
+            pass
+        cdo.mergetime ( input = [ os.path.join ( orig_dir, orig_template % { 'year' : y }) for y in range ( sy, fy + 1 )],
+                        output = target_path )
+        self.B4J_obj.logger.debug ( "Exiting." )
+    
 
     def fetch_outdata_all ( self ):
         from bench import bench4jsbach_scripts, get_hostname
 
         self.B4J_obj.logger.debug ( "Starting" )
         
-        modeltype = self.__class__.__name__.split ( "_" )[ 0 ]
-        #from_archive = self.B4J_path.startswith ( ARCHIVE_PREFIX )
+        modeltype    = self.__class__.__name__.split ( "_" )[ 0 ]
+        from_archive = self.B4J_path.startswith ( ARCHIVE_PREFIX ) 
+        host         = get_hostname ()
+        from_remote  = host not in HOST_AVAIL [ self.B4J_host ] or from_archive
+        accumulated  = True if from_archive else False
 
-        host = get_hostname ()
-
-        print host
-        print self.B4J_host
+        print "from_remote:  %d" % ( 1 if from_remote else 0 )
+        print "accumulated: %d" % ( 1 if accumulated else 0 )
         
-        sys.exit ( 0 )
+
+        self.B4J_obj.logger.debug ( "Prepare fetching %s data%s." % ( \
+            "remote" if from_remote else "local",
+            " from archive" if from_archive else "" ))
 
         if from_archive: fetchfile_list = []
         for field_name, field_config in self.B4J_obj.diagnostic_fields.iteritems ():
@@ -120,6 +146,7 @@ class Experiment ( object ):
                     frequence_infix = ""
                     finalyearstring = ""
                 fetchpath = self.B4J_path + os.sep + self.outdata_subpath + os.sep + file_config [ modeltype ][ "submodel" ]
+                print "fetchpath: ", fetchpath
 
                 fetchfile = self.outdata_fn_tmpl % { "expname"           : self.B4J_name,
                                                      "submodel"          : file_config [ modeltype ][ "submodel" ],
@@ -128,12 +155,38 @@ class Experiment ( object ):
                                                      "startyear"         : self.B4J_startyear,
                                                      "cond_finalyearstr" : finalyearstring,
                                                      "suffix"           : self.outdata_suffix }
+                print "fetchfile: ", fetchfile
+                
                 if from_archive:
                     self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( self.B4J_obj.downloads_path, fetchfile )
                     if not os.path.isfile ( self.B4J_index [ file_name + STREAM_SUFFIX ]):
                         fetchfile_list.append (( fetchpath, fetchfile ))
+                elif accumulated:
+                    self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( fetchpath, fetchfile )
                 else:
-                    self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( fetchpath, fetchfile ) 
+                    
+                    accumulated_fn = self.outdata_fn_tmpl % { "expname"           : self.B4J_name,
+                                                              "submodel"          : file_config [ modeltype ][ "submodel" ],
+                                                              "stream"            : file_config [ modeltype ][ "stream" ],
+                                                              "cond_frequencefix" : frequence_infix,
+                                                              "startyear"         : field_config [ 'startyear' ],
+                                                              "cond_finalyearstr" : self.outdata_finalyear_tmpl % { 'finalyear': field_config [ 'finalyear' ]},
+                                                              "suffix"            : self.outdata_suffix }
+                    self.B4J_index [ file_name + STREAM_SUFFIX ] = os.path.join ( self.B4J_obj.downloads_path, accumulated_fn )
+                    origin_template = self.outdata_fn_tmpl % { "expname"           : self.B4J_name,
+                                                               "submodel"          : file_config [ modeltype ][ "submodel" ],
+                                                               "stream"            : file_config [ modeltype ][ "stream" ],
+                                                               "cond_frequencefix" : frequence_infix,
+                                                               "startyear"         : "%(year)d",
+                                                               "cond_finalyearstr" : "",
+                                                               "suffix"            : self.outdata_suffix }
+                    self.accumulate_streams ( fetchpath,
+                                              origin_template,
+                                              field_config [ 'startyear' ],
+                                              field_config [ 'finalyear' ],
+                                              self.B4J_index [ file_name + STREAM_SUFFIX ] )
+                    
+                print "self.B4J_index [ file_name + STREAM_SUFFIX ]: ", self.B4J_index [ file_name + STREAM_SUFFIX ]
 
                 fetchcodespath    = self.B4J_path + os.sep + self.subpath 
                 fetchcodestarfile = self.codesfiles_tar_tmpl % { "expname" : self.B4J_name }
@@ -142,14 +195,22 @@ class Experiment ( object ):
                                                         "stream"   : file_config [ modeltype ][ "stream" ],
                                                         "suffix"  : self.codesfiles_suffix }
 
+                print "fetchcodespath: ", fetchcodespath
+                print "fetchcodestarfile: ", fetchcodestarfile
+                print "fetchcodesfile: ", fetchcodesfile
+
                 if from_archive:
                     self.B4J_index [ file_name + CODES_SUFFIX ] = os.path.join ( self.B4J_obj.downloads_path, fetchcodesfile )
                     if not os.path.isfile ( self.B4J_index [ file_name + CODES_SUFFIX ]) and \
                            not os.path.isfile ( fetchcodestarfile ):
                         fetchfile_list.append (( fetchcodespath, fetchcodestarfile ))
                 else:
+                    print 
                     # to check: path of codes file in not archived mpiesm1 experiment
-                    self.B4J_index [ file_name + CODES_SUFFIX ] + os.path.join ( fetchcodespath, fetchcodesfile )
+                    self.B4J_index [ file_name + CODES_SUFFIX ] = os.path.join (  self.B4J_path, self.codefiles_subpath, fetchcodesfile )
+                
+                print "self.B4J_index [ file_name + CODES_SUFFIX ]: ", self.B4J_index [ file_name + CODES_SUFFIX ]    
+
 
         if from_archive and fetchfile_list:
             fetchfile_list = list ( set ( fetchfile_list ))
@@ -211,6 +272,7 @@ class Experiment ( object ):
                     'suffix'         : fielddict [ 'suffix' ]}
                 assert modeltype in filedict, "No '%s'-section defined for %s." % fileid
 
+                print self.B4J_index [ fileid + CODES_SUFFIX ]
                 assert os.path.isfile ( self.B4J_index [ fileid + CODES_SUFFIX ])
                 
                 cdo.selcode (  filedict [ modeltype ][ 'code' ],
@@ -340,6 +402,7 @@ class MPIESM1_Experiment ( Experiment ):
     codesfiles_tar_tmpl       = "%(expname)s_log.tar"
     codesfiles_fn_tmpl        = "%(expname)s_%(submodel)s_%(stream)s.%(suffix)s"
     codesfiles_suffix         = "codes"
+    codesfiles_subpath        = None
     outdata_fn_tmpl           = """%(expname)s_%(submodel)s_%(stream)s_%(cond_frequencefix)s%(startyear)s%(cond_finalyearstr)s.%(suffix)s"""
     outdata_finalyear_tmpl    = """-%(finalyear)s"""
     outdata_frequence_infixes = { "monthly" : "mm_" }
@@ -352,8 +415,9 @@ class MPIESM1_Experiment ( Experiment ):
         print "###################### go on here, subclass %s ####################" % self.__class__.__name__
         Experiment.__init__ ( self, b4j_obj, **kwargs )
         #super(Experiment, self).__init__(**kwargs)
-        self.subpath         = self.B4J_name
-        self.outdata_subpath = self.subpath + os.sep + "outdata"
+        self.subpath           = self.B4J_name
+        self.outdata_subpath   = os.path.join ( self.subpath, "outdata" )
+        self.codefiles_subpath = os.path.join ( self.subpath, "log" )
         #print "MPIESM1_Experiment attributes:"
         #print self.__dict__
 

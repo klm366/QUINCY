@@ -286,7 +286,7 @@ class Diagnostics ( object ):
 
                         arglist = [ "startyear:" + startyear,  "finalyear:" + finalyear,
                                     "suffix:" +  fielddict [ 'suffix' ],
-                                    "land_sea_mask:" + ref.land_sea_mask ]
+                                    "land_sea_mask:" + can.land_sea_mask ]
 
                         for key in input_list:
                             classification_str =  "%s_ref%d" % ( key,  ref.B4J_refno )
