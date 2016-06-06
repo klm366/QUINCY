@@ -32,8 +32,7 @@ MODULE mo_veg_interface
   dsl4jsb_Use_config(SOIL)
   dsl4jsb_Use_config(RAD)
 
-  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$  dsl4jsb_Use_memory(atm2land)
+  dsl4jsb_Use_memory(atm2land)
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(VEG)

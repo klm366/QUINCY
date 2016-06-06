@@ -24,12 +24,12 @@ MODULE mo_seb_land
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
   USE mo_jsb_control,        ONLY: debug_on
 
-  dsl4jsb_Use_processes SEB, RAD, ATM2LAND, SOIL, HYDRO
+  dsl4jsb_Use_processes SEB, RAD, ATM2LAND, LAND2ATM, SOIL, HYDRO
   dsl4jsb_Use_config(SEB)
   dsl4jsb_Use_config(HYDRO)
 
-  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$  dsl4jsb_Use_memory(ATM2LAND)
+  dsl4jsb_Use_memory(ATM2LAND)
+  ! dsl4jsb_Use_memory(LAND2ATM)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(RAD)
   dsl4jsb_Use_memory(SOIL)
@@ -65,6 +65,7 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL)
     dsl4jsb_Def_memory(HYDRO)
     dsl4jsb_Def_memory(ATM2LAND)
+    ! dsl4jsb_Def_memory(LAND2ATM)
 
     LOGICAL                       :: lstart
 
@@ -132,6 +133,7 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL)
     dsl4jsb_Get_memory(HYDRO)
     dsl4jsb_Get_memory(ATM2LAND)
+    ! dsl4jsb_Get_memory(LAND2ATM)
 
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef)        ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef)        ! IN
@@ -141,7 +143,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)       ! IN
 
-    dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! in
     dsl4jsb_Get_var2D_onChunk(SEB,      t_old)          ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt)       ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt_old)   ! OUT
@@ -334,10 +336,10 @@ CONTAINS
     !
     dsl4jsb_Get_memory(SEB)
 
-    dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_old)          ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt)       ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt_old)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! out
+    dsl4jsb_Get_var2D_onChunk(SEB,      t_old)          ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt)       ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt_old)   ! in
 
     ! Asselin time filter, if applicable
     eps = get_asselin_coef()

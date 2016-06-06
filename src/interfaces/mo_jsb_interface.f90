@@ -54,12 +54,11 @@ CONTAINS
     & tte_corr,                                                    &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,          &
     ! For lakes:
-    & latent_hflx_wtr, sensible_hflx_wtr,                          & !< in
+    & albedo_wtr, latent_hflx_wtr, sensible_hflx_wtr,              & !< in
     & t_wtr,                                                       & !< out
     & latent_hflx_ice, sensible_hflx_ice,                          & !< in
     & t_ice, ice_fract_lake,                                       & !< out
-    & alb_vis_dir_wtr, alb_vis_dif_wtr, alb_nir_dir_wtr,           & !< out
-    & alb_nir_dif_wtr, albedo_ice                                  & !< out
+    & albedo_ice                                                   & !< out
     & )
 
     INTEGER :: p_pe
@@ -93,6 +92,7 @@ CONTAINS
       & pch               (:), &
       & cos_zenith_angle  (:), &
       ! For lakes:
+      & albedo_wtr        (:), &
       & latent_hflx_wtr   (:), &
       & sensible_hflx_wtr (:), &
       & latent_hflx_ice   (:), &
@@ -119,10 +119,6 @@ CONTAINS
       & t_wtr             (:), &
       & t_ice             (:), &
       & ice_fract_lake    (:), &
-      & alb_vis_dir_wtr   (:), &
-      & alb_vis_dif_wtr   (:), &
-      & alb_nir_dir_wtr   (:), &
-      & alb_nir_dif_wtr   (:), &
       & albedo_ice        (:)
 
     ! Local variables
@@ -174,6 +170,7 @@ CONTAINS
       & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       ! For lakes:
+      & albedo_wtr         = albedo_wtr(:),         &
       & latent_hflx_wtr    = latent_hflx_wtr(:),    &
       & sensible_hflx_wtr  = sensible_hflx_wtr(:),  &
       & latent_hflx_ice    = latent_hflx_ice(:),    &
@@ -265,10 +262,6 @@ CONTAINS
       & t_wtr           = t_wtr(:),           &
       & t_ice           = t_ice(:),           &
       & ice_fract_lake  = ice_fract_lake(:),  &
-      & alb_vis_dir_wtr = alb_vis_dir_wtr(:), &
-      & alb_vis_dif_wtr = alb_vis_dif_wtr(:), &
-      & alb_nir_dir_wtr = alb_nir_dir_wtr(:), &
-      & alb_nir_dif_wtr = alb_nir_dif_wtr(:), &
       & albedo_ice      = albedo_ice(:)       &
       & )
     NULLIFY(tile)

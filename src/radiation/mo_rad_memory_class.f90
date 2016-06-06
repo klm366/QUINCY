@@ -37,7 +37,7 @@ MODULE mo_rad_memory_class
 
   TYPE, EXTENDS(t_jsb_memory) :: t_rad_memory
 
-    TYPE(t_jsb_var_real2d) :: &
+    TYPE(t_jsb_var_real2d)  :: &
       & sw_srf_net,           & !< net shortwave radiation at surface
       & swvis_srf_net,        & !< net shortwave radiation at surface in visible range
       & swnir_srf_net,        & !< net shortwave radiation at surface in NIR range
@@ -98,10 +98,6 @@ MODULE mo_rad_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & rad_net_wtr,          & !< Net radiation over lake water
       & rad_net_ice,          & !< Net radiation over lake ice
-      & alb_vis_dir_wtr,      & !< Albedo of open (lake) water
-      & alb_vis_dif_wtr,      & !< Albedo of open (lake) water
-      & alb_nir_dir_wtr,      & !< Albedo of open (lake) water
-      & alb_nir_dif_wtr,      & !< Albedo of open (lake) water
       & albedo_ice              !< Albedo of ice on lake
 
   CONTAINS
@@ -120,7 +116,7 @@ CONTAINS
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
-    CLASS(t_rad_memory), INTENT(inout) :: mem
+    CLASS(t_rad_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
@@ -141,9 +137,9 @@ CONTAINS
 
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-       canopy_layer => Get_vgrid('canopy_layer')
+    canopy_layer => Get_vgrid('canopy_layer')
 
-        dsl4jsb_Get_config(RAD)
+    dsl4jsb_Get_config(RAD)
 !!$    SELECT TYPE (conf=>model%processes(RAD)%p%config) ; TYPE IS (t_rad_config); rad__conf => conf; END SELECT
 
     IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
@@ -258,11 +254,11 @@ CONTAINS
     IF (One_of(VEG_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%alb_vis_can%ptr)) THEN
 
       CALL jsb_add_var( mem, 'alb_vis_can', mem%alb_vis_can,        &
-      & hgrid, surface,                                                           &
-      & t_cf('albedo_vis_canopy', '', ''),                               &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-      & prefix, suffix,                                                           &
-      & initval_r=0.0_wp )
+        & hgrid, surface,                                                           &
+        & t_cf('albedo_vis_canopy', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_nir_can', mem%alb_nir_can,        &
         & hgrid, surface,                                                           &
@@ -347,35 +343,35 @@ CONTAINS
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
          & prefix, suffix,                                                           &
          & lrestart=.FALSE., initval_r=0.0_wp )
-   
+
        CALL jsb_add_var( mem, 'faPAR_cl', mem%faPAR_cl, &
          & hgrid, canopy_layer,                                                                   &
          & t_cf('Absorbed PAR per canopy layer [fraction of irradiance]', '', ''),  &
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
          & prefix, suffix,                                                           &
          & lrestart=.FALSE., initval_r=0.0_wp )
-   
+
        CALL jsb_add_var( mem, 'apar_per_lai_cl', mem%apar_per_lai_cl, &
          & hgrid, canopy_layer,                                                               &
          & t_cf('Absorbed PAR per canopy layer (LAI area).', '', ''),                      &
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
          & prefix, suffix,                                                           &
          & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-   
+
        CALL jsb_add_var( mem, 'apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc, &
          & hgrid, canopy_layer,                                                                             &
          & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''),     &
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
          & prefix, suffix,                                                           &
          & lrestart=.FALSE., initval_r=0.0_wp )
-   
+
        CALL jsb_add_var( mem, 'apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg, &
          & hgrid, canopy_layer,                                                                               &
          & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''),        &
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
          & prefix, suffix,                                                           &
          & lrestart=.FALSE., initval_r=0.0_wp )
-   
+
        CALL jsb_add_var( mem, 'apar_nacc', mem%apar_nacc, &
          & hgrid, canopy_layer,                                                                             &
          & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''),     &
@@ -401,34 +397,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & initval_r=0.0_wp )
-
-      CALL jsb_add_var( mem, 'alb_vis_dir_wtr', mem%alb_vis_dir_wtr,                &
-        & hgrid, surface,                                                           &
-        & t_cf('albedo_vis_dir_wtr', '', 'Albedo of open water (vis dir)'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-        & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
-
-      CALL jsb_add_var( mem, 'alb_vis_dif_wtr', mem%alb_vis_dif_wtr,                &
-        & hgrid, surface,                                                           &
-        & t_cf('albedo_vis_dif_wtr', '', 'Albedo of open water (vis dif)'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-        & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
-
-      CALL jsb_add_var( mem, 'alb_nir_dir_wtr', mem%alb_nir_dir_wtr,                &
-        & hgrid, surface,                                                           &
-        & t_cf('albedo_nir_dir_wtr', '', 'Albedo of open water (nir dir)'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-        & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
-
-      CALL jsb_add_var( mem, 'alb_nir_dif_wtr', mem%alb_nir_dif_wtr,                &
-        & hgrid, surface,                                                           &
-        & t_cf('albedo_nir_dif_wtr', '', 'Albedo of open water (nir dif)'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-        & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
 
       CALL jsb_add_var( mem, 'albedo_ice', mem%albedo_ice,                          &
         & hgrid, surface,                                                           &

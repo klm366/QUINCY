@@ -48,6 +48,7 @@ MODULE mo_hsm_class
     CHARACTER(len=50)           :: description
 !!$    INTEGER                     :: id
     INTEGER                     :: path(MAX_STATE_NESTING) = -1
+    INTEGER, PRIVATE            :: no_of_children = -1
     !
     LOGICAL                     :: visited = .FALSE.
     CLASS(t_State), POINTER     :: parent       => NULL()
@@ -59,19 +60,21 @@ MODULE mo_hsm_class
 !!$    PROCEDURE(Handler_interface), POINTER :: Handler           ! State's handler function
   CONTAINS
     PROCEDURE :: Init_state
-    PROCEDURE :: Get_parent      => Get_parent_state
-    PROCEDURE :: Get_parent_name => Get_parent_name_state
-    PROCEDURE :: Has_children    => Has_children_state
-    PROCEDURE :: Has_siblings    => Has_siblings_state
-    PROCEDURE :: Is_first_child  => Is_first_child_state
-    PROCEDURE :: Is_last_child   => Is_last_child_state
+    PROCEDURE :: Get_parent         => Get_parent_state
+    PROCEDURE :: Get_parent_name    => Get_parent_name_state
+    PROCEDURE :: Get_no_of_children => Get_no_of_children_state
+    PROCEDURE :: Get_pos_of_child   => Get_pos_of_child_state
+    PROCEDURE :: Has_children       => Has_children_state
+    PROCEDURE :: Has_siblings       => Has_siblings_state
+    PROCEDURE :: Is_first_child     => Is_first_child_state
+    PROCEDURE :: Is_last_child      => Is_last_child_state
     PROCEDURE :: Print_state
-    PROCEDURE :: Is_equal        => Is_equal_state
-    GENERIC   :: OPERATOR(==)    => Is_equal
-    PROCEDURE :: Is_not_equal    => Is_not_equal_state
-    GENERIC   :: OPERATOR(/=)    => Is_not_equal
+    PROCEDURE :: Is_equal           => Is_equal_state
+    GENERIC   :: OPERATOR(==)       => Is_equal
+    PROCEDURE :: Is_not_equal       => Is_not_equal_state
+    GENERIC   :: OPERATOR(/=)       => Is_not_equal
+    PROCEDURE :: Process_message    => Process_message_state
     PROCEDURE(Handler_interface), DEFERRED :: Handler             ! State's handler function
-    PROCEDURE :: Process_message => Process_message_state
   END TYPE t_State
 
   ! Derived-type constructor
@@ -315,6 +318,49 @@ CONTAINS
 
   END FUNCTION Is_first_child_state
 
+  FUNCTION Get_no_of_children_state(this) RESULT(return_value)
+
+    CLASS(t_State), INTENT(inout) :: this
+    INTEGER                       :: return_value
+
+    CLASS(t_State), POINTER :: current
+
+    IF (this%no_of_children >= 0) THEN
+      return_value = this%no_of_children
+      RETURN
+    END IF
+
+    IF (this%Has_children()) THEN
+      return_value = 1
+      current => this%first_child
+      DO WHILE (.NOT. current%Is_last_child())
+        current => current%next_sibling
+        return_value = return_value + 1
+      END DO
+    ELSE
+      return_value = 0
+    END IF
+    this%no_of_children = return_value
+
+  END FUNCTION Get_no_of_children_state
+
+  FUNCTION Get_pos_of_child_state(this) RESULT(return_value)
+
+    CLASS(t_State), INTENT(in) :: this
+    INTEGER                    :: return_value
+
+    INTEGER :: depth
+
+    IF (ALL(this%path > 0)) THEN
+      depth = SIZE(this%path)
+    ELSE
+      depth = MINLOC(this%path, DIM=1) - 1
+    END IF
+
+    return_value = this%path(depth)
+
+  END FUNCTION
+
   SUBROUTINE Print_state(this)
 
     CLASS(t_State), INTENT(in) :: this
@@ -482,7 +528,7 @@ CONTAINS
   FUNCTION Get_state_hsm(this, path) RESULT(return_ptr)
 
     CLASS(t_hsm), INTENT(in) :: this
-    INTEGER,      INTENT(in) :: path(MAX_STATE_NESTING)
+    INTEGER,      INTENT(in) :: path(:)
     CLASS(t_State), POINTER  :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_state_hsm'

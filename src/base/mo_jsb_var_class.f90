@@ -1,31 +1,50 @@
 MODULE mo_jsb_var_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: wp, dp
   USE mo_exception, ONLY: finish
+
+  USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_p
+  PUBLIC :: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var, t_jsb_var_p
 
   ENUM, BIND(C)
-    ENUMERATOR :: REAL2D=1, READ3D
+    ENUMERATOR :: REAL2D=1, REAL3D
   END ENUM
 
   TYPE, ABSTRACT :: t_jsb_var
 !!$    INTEGER           :: type = REAL2D
-    CHARACTER(len=5) :: inout = 'IN'
+    CHARACTER(len=VARNAME_LEN) :: name            ! Name of variable
+    CHARACTER(len=VARNAME_LEN) :: full_name       ! Full name of variable in varlist, including prefix and suffix
+    INTEGER                    :: owner_proc_id = -1
+    INTEGER, ALLOCATABLE       :: owner_tile_path(:)
+    REAL(dp)                   :: missval
   CONTAINS
-    PROCEDURE :: Set_inout => Set_var_inout
   END TYPE t_jsb_var
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
     REAL(wp), POINTER :: ptr(:,:) => NULL()
+  CONTAINS
+    PROCEDURE :: Add_real2d                       ! Add two variables of type t_jsb_var_real2d
+    PROCEDURE :: Add_real2d_and_scalar            ! Add varialbe of type t_jsb_var_real2d with REAL scalar
+    PROCEDURE :: Add_real2d_and_field             ! Add varialbe of type t_jsb_var_real2d with REAL 2-d field
+    GENERIC   :: OPERATOR(+) => Add_real2d, Add_real2d_and_scalar, Add_real2d_and_field
+    PROCEDURE :: Multiply_real2d_with_field       ! Multiply varialbe of type t_jsb_var_real2d with REAL 2-d field
+    GENERIC   :: OPERATOR(*) => Multiply_real2d_with_field
   END TYPE t_jsb_var_real2d
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real3d
     REAL(wp), POINTER :: ptr(:,:,:) => NULL()
+  CONTAINS
+    PROCEDURE :: Add_real3d
+    PROCEDURE :: Add_real3d_and_scalar            ! Add varialbe of type t_jsb_var_real3d with REAL scalar
+    PROCEDURE :: Add_real3d_and_field             ! Add varialbe of type t_jsb_var_real3d with REAL 3d-field
+    GENERIC   :: OPERATOR(+) => Add_real3d, Add_real3d_and_scalar, Add_real3d_and_field
+    PROCEDURE :: Multiply_real3d_with_field       ! Multiply varialbe of type t_jsb_var_real3d with REAL 3-d field
+    GENERIC   :: OPERATOR(*) => Multiply_real3d_with_field
   END TYPE t_jsb_var_real3d
 
   TYPE t_jsb_var_p
@@ -64,32 +83,103 @@ CONTAINS
 !!$
 !!$  END FUNCTION Create_jsb_var
 
-  SUBROUTINE Set_var_inout(this, attr)
+  FUNCTION Add_real2d(var1, var2) RESULT(var3)
 
-    USE mo_util, ONLY: toupper
+    CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
+    TYPE(t_jsb_var_real2d)              :: var3
 
-    CLASS(t_jsb_var), INTENT(inout) :: this
-    CHARACTER(len=*), INTENT(in), OPTIONAL  :: attr
+    var3%ptr(:,:) = var1%ptr(:,:) + var2%ptr(:,:)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_var_inout'
+  END FUNCTION Add_real2d
 
-    IF (.NOT. PRESENT(attr)) THEN
-      this%inout = "OUT"
-      RETURN
-    END IF
+  FUNCTION Add_real2d_and_scalar(var1, scalar) RESULT(var3)
 
-    SELECT CASE (toupper(TRIM(ADJUSTL(attr))))
-    CASE("OUT")
-      this%inout = "OUT"
-    CASE("IN")
-      this%inout = "IN"
-    CASE("INOUT")
-      this%inout = "INOUT"
-    CASE DEFAULT
-      CALL finish(TRIM(routine), "Invalid intent specified for jsb_var")
-    END SELECT
+    CLASS(t_jsb_var_real2d), INTENT(in) :: var1
+    REAL(wp),                INTENT(in) :: scalar
+    TYPE(t_jsb_var_real2d)              :: var3
 
-  END SUBROUTINE Set_var_inout
+    var3%ptr(:,:) = var1%ptr(:,:) + scalar
+
+  END FUNCTION Add_real2d_and_scalar
+
+  FUNCTION Add_real2d_and_field(var1, field) RESULT(var3)
+
+    CLASS(t_jsb_var_real2d), INTENT(in) :: var1
+    REAL(wp),                INTENT(in) :: field(:,:)
+    TYPE(t_jsb_var_real2d)              :: var3
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_real2d_and_field'
+
+    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
+      & CALL finish(TRIM(routine), 'Dimension mismatch')
+
+    var3%ptr(:,:) = var1%ptr(:,:) + field(:,:)
+
+  END FUNCTION Add_real2d_and_field
+
+  FUNCTION Add_real3d(var1, var2) RESULT(var3)
+
+    CLASS(t_jsb_var_real3d), INTENT(in) :: var1, var2
+    TYPE(t_jsb_var_real3d)              :: var3
+
+    var3%ptr(:,:,:) = var1%ptr(:,:,:) + var2%ptr(:,:,:)
+
+  END FUNCTION Add_real3d
+
+  FUNCTION Add_real3d_and_scalar(var1, scalar) RESULT(var3)
+
+    CLASS(t_jsb_var_real3d), INTENT(in) :: var1
+    REAL(wp),                INTENT(in) :: scalar
+    TYPE(t_jsb_var_real3d)              :: var3
+
+    var3%ptr(:,:,:) = var1%ptr(:,:,:) + scalar
+
+  END FUNCTION Add_real3d_and_scalar
+
+  FUNCTION Add_real3d_and_field(var1, field) RESULT(var3)
+
+    CLASS(t_jsb_var_real3d), INTENT(in) :: var1
+    REAL(wp),                INTENT(in) :: field(:,:,:)
+    TYPE(t_jsb_var_real3d)              :: var3
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_real3d_and_field'
+
+    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
+      & CALL finish(TRIM(routine), 'Dimension mismatch')
+
+    var3%ptr(:,:,:) = var1%ptr(:,:,:) + field(:,:,:)
+
+  END FUNCTION Add_real3d_and_field
+
+  FUNCTION Multiply_real2d_with_field(var1, field) RESULT(var3)
+
+    CLASS(t_jsb_var_real2d), INTENT(in) :: var1
+    REAL(wp),                INTENT(in) :: field(:,:)
+    TYPE(t_jsb_var_real2d)              :: var3
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_real2d_with_field'
+
+    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
+      & CALL finish(TRIM(routine), 'Dimension mismatch')
+
+    var3%ptr(:,:) = var1%ptr(:,:) * field(:,:)
+
+  END FUNCTION Multiply_real2d_with_field
+
+  FUNCTION Multiply_real3d_with_field(var1, field) RESULT(var3)
+
+    CLASS(t_jsb_var_real3d), INTENT(in) :: var1
+    REAL(wp),                INTENT(in) :: field(:,:,:)
+    TYPE(t_jsb_var_real3d)              :: var3
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_real3d_with_field'
+
+    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
+      & CALL finish(TRIM(routine), 'Dimension mismatch')
+
+    var3%ptr(:,:,:) = var1%ptr(:,:,:) + field(:,:,:)
+
+  END FUNCTION Multiply_real3d_with_field
 
 #endif
 END MODULE mo_jsb_var_class

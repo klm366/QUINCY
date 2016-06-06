@@ -34,7 +34,7 @@ MODULE mo_assimi_interface
   dsl4jsb_Use_config(ASSIMI)
 
   ! Use of process memories (t_assimi_memory)
-  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
+  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(ASSIMI)
   dsl4jsb_Use_memory(VEG)
   dsl4jsb_Use_memory(RAD)
@@ -294,7 +294,6 @@ CONTAINS
   SUBROUTINE update_assimilation_waterunlimited(tile, options)
 
     USE mo_assimi_process,      ONLY: calc_assimilation_waterunlimited, calc_NPP_rate
-    USE mo_jsb_lctlib_class,    ONLY: lctlib
     USE mo_bc_greenhouse_gases, ONLY: ghg_co2mmr ! CO2 mass mixing ratio of dry air in kg/kg. Could be named herer CO2_kg_mixing_ratio.
                                                  ! This is preliminary.
                                                  ! ghg_co2mmr [kg/kg] = zco2int [m³/m³]  * amco2 [g/mol] / amd [g/mol]
@@ -419,17 +418,17 @@ CONTAINS
 
     ncanopy                  => dsl4jsb_Config(ASSIMI)%ncanopy
 
-    carbox_rate_max_leaf  = SPREAD(lctlib%CarboxRate, NCOPIES=nc, DIM=1) ! IN
+    carbox_rate_max_leaf  = SPREAD(dsl4jsb_Lctlib(CarboxRate), NCOPIES=nc, DIM=1) ! IN
                                                                          ! R: necessary as this must be a field for
                                                                          !    ELEMENTAL calc_assimilation
                                                                          !    e.g. carbox_rate_max_leaf =  50.
 
-    ETransport = SPREAD(lctlib%ETransport, NCOPIES=nc, DIM=1)            ! IN
+    ETransport = SPREAD(dsl4jsb_Lctlib(ETransport), NCOPIES=nc, DIM=1)            ! IN
                                                                          ! R: necessary as this must be a field for
                                                                          !    ELEMENTAL calc_assimilation
                                                                          !    e.g. ETransport = 100.
 
-    C4flag = SPREAD(lctlib%C4flag, NCOPIES=nc, DIM=1)                    ! IN
+    C4flag = SPREAD(dsl4jsb_Lctlib(C4flag), NCOPIES=nc, DIM=1)                    ! IN
                                                                          ! R: necessary as this must be a field for
                                                                          !    ELEMENTAL calc_assimilation
 
@@ -522,7 +521,6 @@ CONTAINS
   SUBROUTINE update_assimilation_waterlimited(tile, options)
 
     USE mo_assimi_process,      ONLY: calc_assimilation_waterlimited, calc_NPP_rate
-    USE mo_jsb_lctlib_class,    ONLY: lctlib
     USE mo_bc_greenhouse_gases, ONLY: ghg_co2mmr ! CO2 mass mixing ratio of dry air in kg/kg. Could be named herer CO2_kg_mixing_ratio.
                                                  ! This is preliminary.
                                                  ! ghg_co2mmr [kg/kg] = zco2int [m³/m³]  * amco2 [g/mol] / amd [g/mol]
@@ -649,17 +647,17 @@ CONTAINS
 
     ncanopy                  => dsl4jsb_Config(ASSIMI)%ncanopy          ! IN
 
-    carbox_rate_max_leaf  = SPREAD(lctlib%CarboxRate, NCOPIES=nc, DIM=1) ! IN
+    carbox_rate_max_leaf  = SPREAD(dsl4jsb_Lctlib(CarboxRate), NCOPIES=nc, DIM=1) ! IN
                                                                          ! R: necessary as this must be a field for
                                                                          !    ELEMENTAL calc_assimilation
                                                                          !    e.g. carbox_rate_max_leaf =  50.
 
-    ETransport = SPREAD(lctlib%ETransport, NCOPIES=nc, DIM=1)            ! IN
+    ETransport = SPREAD(dsl4jsb_Lctlib(ETransport), NCOPIES=nc, DIM=1)            ! IN
                                                                          ! R: necessary as this must be a field for
                                                                          !    ELEMENTAL calc_assimilation
                                                                          !    e.g. ETransport = 100.
 
-    C4flag = SPREAD(lctlib%C4flag, NCOPIES=nc, DIM=1)                    ! IN.
+    C4flag = SPREAD(dsl4jsb_Lctlib(C4flag), NCOPIES=nc, DIM=1)                    ! IN.
                                                                          ! R: necessary as this must be a field for
                                                                          !    ELEMENTAL calc_assimilation
 

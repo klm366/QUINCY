@@ -11,49 +11,49 @@ MODULE mo_rad_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
-  
+
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
-  ! Module variables 
+  ! Module variables
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_rad_config !, Get_rad_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_rad_config
-     LOGICAL                     :: use_alb_veg_simple        ! For vegetation tiles: use the simplified albedo calculations
-     LOGICAL                     :: use_alb_soil_scheme       ! For vegetation and bare soil tiles:
-                                                              !   use the complex calculations of the soil albedo from carbon in and on the soil 
-                                                              !   (accunts for the soil under vegetation and for bare soil)
-                                                              !   if vegetation tile: only used if use_alb_veg_simple=.FALSE.
-     LOGICAL                     :: use_alb_mineralsoil_const ! For vegetation and bare soil tiles:
-                                                              !   if TRUE constant parameter values are used for the albedo of the mineral soil
-                                                              !   if FALSE values for the albedo of the mineral soil are taken from
-                                                              !   bc_land_phys.nc file.
-     CHARACTER(len=10)           :: use_alb_soil_organic_C    ! For vegetation and bare soil tiles:
-                                                              !   if linear: the albedo of the soil without covering litter but with carbon in it
-                                                              !   is calculated from the mineral soil albedo minus a reduction calculated
-                                                              !   linearily from the carbon in the soil
-                                                              !   if log: the albedo of the soil without covering litter but with carbon in it
-                                                              !   is calculated from a logarithmic falling funktion shapened by the mineral soil
-                                                              !   albedo and the carbon content within the soil
-                                                              !   linearily from the carbon in the soil
-     LOGICAL                     :: use_alb_soil_litter       ! For vegetation and bare soil tiles:
-                                                              !   TRUE: the soil albedo includes the albedo of the litter cover above it
-                                                              !   FALSE the soil albedo ignores the albedo of the litter cover above it
-     
-     LOGICAL                     :: use_alb_canopy            ! Only for vegetation tiles:
-                                                              !   TRUE:  canopy albedo is taken from bc_land_phys.nc file. 
-                                                              !   FALSE: canopy albedo is taken from lctlib file.
-     REAL(wp)                    :: albedo_age_weight         ! 0: snow age scheme with zero weight: only temperature scheme for snow albedo 
-                                                              !    is used
-                                                              ! 1: only snow age scheme is used, temperature scheme with zero weight
-                                                              ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
-                                                              !                            the snow albedo resulting from both schemes
+    LOGICAL           :: use_alb_veg_simple        !< Use the simplified albedo calculations for vegetation tiles
+    LOGICAL           :: use_alb_soil_scheme       !< For vegetation and bare soil tiles:
+                                                   !!   Use the complex calculations of the soil albedo from carbon in and
+                                                   !!   on the soil (accunts for the soil under vegetation and for bare soil)
+                                                   !!   if vegetation tile: only used if use_alb_veg_simple=.FALSE.
+    LOGICAL           :: use_alb_mineralsoil_const !< For vegetation and bare soil tiles:
+                                                   !!   if TRUE constant parameter values are used for albedo of the mineral soil
+                                                   !!   if FALSE values for albedo of the mineral soil are taken from
+                                                   !!   bc_land_phys.nc file.
+    CHARACTER(len=10) :: use_alb_soil_organic_C    !< For vegetation and bare soil tiles:
+                                                   !!   if linear: the albedo of soil without covering litter but with carbon in it
+                                                   !!     is calculated from the mineral soil albedo minus a reduction calculated
+                                                   !!     linearily from the carbon in the soil
+                                                   !!   if log: the albedo of soil without covering litter but with carbon in it
+                                                   !!     is calculated from a logarithmically decreasing function shaped by
+                                                   !!     the mineral soil albedo and the carbon content within the soil
+                                                   !!     linearily from the carbon in the soil
+    LOGICAL           :: use_alb_soil_litter       !< For vegetation and bare soil tiles:
+                                                   !!   TRUE: soil albedo includes the albedo of the litter cover above it
+                                                   !!   FALSE soil albedo ignores the albedo of the litter cover above it
+
+    LOGICAL           :: use_alb_canopy            !< Only for vegetation tiles:
+                                                   !!   TRUE:  canopy albedo is taken from bc_land_phys.nc file
+                                                   !!   FALSE: canopy albedo is taken from lctlib file
+    REAL(wp)          :: albedo_age_weight         !< 0: snow age scheme with zero weight: only temperature scheme for snow albedo
+                                                   !!      is used
+                                                   !! 1: only snow age scheme is used, temperature scheme with zero weight
+                                                   !! 0 < albedo_age_weight < 1: snow albedo is calculated by linearly weighting
+                                                   !!                            the snow albedo resulting from both schemes
    CONTAINS
      PROCEDURE :: Init => Init_rad_config
   END type t_rad_config
@@ -65,7 +65,7 @@ CONTAINS
   !> Initialize radiation process
   !!
   !! @param[inout]     config     Configuration type of process (t_rad_config)
-  !!  
+  !!
   SUBROUTINE Init_rad_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml

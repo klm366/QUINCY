@@ -25,8 +25,7 @@ MODULE mo_seb_lake
   dsl4jsb_Use_processes SEB, RAD, HYDRO, ATM2LAND
   dsl4jsb_Use_config(SEB)
 
-  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$  dsl4jsb_Use_memory(ATM2LAND)
+  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(RAD)
   dsl4jsb_Use_memory(HYDRO)
@@ -74,7 +73,9 @@ CONTAINS
       & fract_lice, &
       & depth_lice, &
       & fract_snow_lice, &
-      & w_snow_lice
+      & w_snow_lice, &
+      & rad_net_wtr, &
+      & rad_net_ice
 
     ! Local variables
     REAL(wp) :: &
@@ -121,7 +122,7 @@ CONTAINS
     dsl4jsb_Get_memory(RAD)
     dsl4jsb_Get_memory(HYDRO)
 
-    dsl4jsb_Get_var2D_onChunk(SEB, t)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, t)   ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, t_wtr)      ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, t_ice)      ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, heat_cap)   ! OUT
@@ -141,7 +142,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_lice)    ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO, w_snow_lice) ! OUT
 
-    dsl4jsb_Get_var2D_onChunk(RAD, rad_srf_net)         ! in
+    dsl4jsb_Get_var2D_onChunk(RAD, rad_net_wtr)         ! in
+    dsl4jsb_Get_var2D_onChunk(RAD, rad_net_ice)         ! in
 
     zero            (:) = 0._wp
     hcap_wtr        (:) = 0._wp
@@ -152,7 +154,7 @@ CONTAINS
     ! Calculate new water temperature and residual heat flux for ice formation over open water!
     CALL calc_lake_wtr_temp( &
       & t_wtr(:),                                       & !< inout; Surface temperature over open water
-      & rad_srf_net(:) +                                &
+      & rad_net_wtr(:) +                                &
       &   latent_hflx_wtr(:)+sensible_hflx_wtr(:),      & !< in;    Sum of all radiative and turbulent surface heat fluxes
       & hflx_form_ice(:),                               & !< inout; Residual heat flux for ice formation (realized or unrealized)
       & hcap_wtr(:),                                    & !< inout; Heat capacity of lake over open water
@@ -163,7 +165,7 @@ CONTAINS
       & ml_depth,                                       & !< in;    Mixed-layer depth
       & min_ice_depth)                                    !< in;    Minimum ice thickness
 
-    IF (ANY(hcap_wtr(:) < EPSILON(1._wp))) THEN
+    IF (ANY(fract_lice(:) <= 0.5_wp .AND. hcap_wtr(:) < EPSILON(1._wp))) THEN
       CALL finish(TRIM(routine),'hcap_wtr can"t be zero')
     END IF
 
@@ -203,7 +205,7 @@ CONTAINS
       & hflx_cond_ice, &
       & hflx_melt_snow, &
       & hflx_melt_ice, &
-      & rad_srf_net(:) +                                &
+      & rad_net_ice(:) +                                &
       &   latent_hflx_ice(:)+sensible_hflx_ice(:),      & !< in;    Sum of all radiative and turbulent surface heat fluxes
       & latent_hflx_ice(:),                             & !< in;
       & snow(:),                                        & !< in; Snow fall
@@ -213,7 +215,7 @@ CONTAINS
       & min_ice_depth, &
       & dtime)
 
-    t       (:) = (1._wp - fract_lice(:)) * t_wtr   (:) + fract_lice(:) * t_ice   (:)
+    t(:) = (1._wp - fract_lice(:)) * t_wtr   (:) + fract_lice(:) * t_ice   (:)
     heat_cap(:) = (1._wp - fract_lice(:)) * hcap_wtr(:) + fract_lice(:) * hcap_ice(:)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')

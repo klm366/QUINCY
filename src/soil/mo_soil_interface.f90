@@ -28,8 +28,7 @@ MODULE mo_soil_interface
 
   dsl4jsb_Use_processes SOIL, SEB, VEG, ATM2LAND, HYDRO
   dsl4jsb_Use_config(SOIL)
-  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$  dsl4jsb_Use_memory(ATM2LAND)
+  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(VEG)
@@ -180,7 +179,7 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    fract                => tile%fract                               (ics:ice,    iblk)
+    CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))
     IF (ALL(fract(:) < EPSILON(1._wp))) RETURN
 
     dsl4jsb_Get_memory(SOIL)
@@ -362,7 +361,7 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    fract                => tile%fract                               (ics:ice,    iblk)
+    CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))
     IF (ALL(fract(:) < EPSILON(1._wp))) RETURN
 
   END SUBROUTINE update_soil_2

@@ -18,7 +18,7 @@ MODULE mo_jsb_tile
 
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator_p, t_jsb_aggregator
   USE mo_jsb_process_class,   ONLY: t_jsb_process_p, &
     &                               SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
@@ -51,7 +51,7 @@ MODULE mo_jsb_tile
 
 CONTAINS
 
-  FUNCTION Construct_tile(name, description, processes, lcts, &
+  FUNCTION Construct_tile(name, description, processes, lct, &
     & process_actions, parent, model_id, grid_id, fract_filename) RESULT(return_ptr)
 
     USE mo_jsb_class,           ONLY: Get_model
@@ -62,7 +62,7 @@ CONTAINS
     CHARACTER(len=*),  INTENT(in)           :: name
     CHARACTER(len=*),  INTENT(in)           :: description
     INTEGER,           INTENT(in)           :: processes(:)
-    TYPE(t_jsb_lct),   INTENT(in), OPTIONAL :: lcts(:)
+    TYPE(t_jsb_lct),   INTENT(in), OPTIONAL :: lct
     INTEGER,           INTENT(in), OPTIONAL :: process_actions(:)
     CLASS(t_jsb_tile), POINTER,    OPTIONAL :: parent
     INTEGER,           INTENT(in), OPTIONAL :: model_id       !< Only needed if parent is not present
@@ -93,29 +93,25 @@ CONTAINS
 
     ALLOCATE(return_ptr%process_action(max_no_of_processes))
 
-    IF (PRESENT(lcts)) THEN
+    IF (PRESENT(lct)) THEN
 
       IF (PRESENT(parent)) THEN
-        IF (ASSOCIATED(parent%parent) .AND. (Contains_lct(lcts(:), LAND_TYPE) .OR. Contains_lct(lcts, LAKE_TYPE))) &
+        IF (ASSOCIATED(parent%parent) .AND. (lct%id == LAND_TYPE .OR. lct%id == LAKE_TYPE)) &
           & CALL finish(TRIM(routine), 'Tiles with lct LAND_TYPE or LAKE_TYPE must be direct children of root tile.')
       END IF
 
-      !ALLOCATE(return_ptr%lcts(SIZE(lcts))
-      DO i=1,SIZE(lcts)
-        CALL return_ptr%Add_lct(lcts(i))
-        CALL return_ptr%Add_lct_to_parents(lcts(i))
-      END DO
+      CALL return_ptr%Add_lct(lct)
+      CALL return_ptr%Add_lct_to_parents(lct)
 
-    END IF
-
-    IF (ASSOCIATED(return_ptr%parent_tile)) THEN
-      IF (PRESENT(fract_filename)) THEN
-        return_ptr%fract_filename = TRIM(fract_filename)
-      ELSE
-        return_ptr%fract_filename = 'bc_land_frac.nc'
-      END IF
     ELSE
-      return_ptr%fract_filename = ''
+
+      IF (PRESENT(parent)) THEN
+        SELECT TYPE (parent)
+        CLASS IS (t_jsb_tile)
+          CALL return_ptr%Add_lct(parent%lcts(1))
+        END SELECT
+      END IF
+
     END IF
 
     IF (PRESENT(process_actions)) THEN
@@ -141,6 +137,16 @@ CONTAINS
       ELSE
         CALL finish(TRIM(routine), 'Need grid_id')
       END IF
+    END IF
+
+    IF (ASSOCIATED(return_ptr%parent_tile)) THEN
+      IF (PRESENT(fract_filename)) THEN
+        return_ptr%fract_filename = TRIM(fract_filename)
+      ELSE
+        return_ptr%fract_filename = 'bc_land_frac.nc'
+      END IF
+    ELSE
+      return_ptr%fract_filename = ''
     END IF
 
     ! Loop over all processes and set actions for this tile
@@ -220,12 +226,12 @@ CONTAINS
     USE mo_jsb_process_factory, ONLY: Create_process_memory
     USE mo_jsb_process_class,   ONLY: SEB, ATM2LAND, LAND2ATM, Get_process_name
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-
-    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
-    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input, ncfile_has_var
+    USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
+    USE mo_jsb_varlist,         ONLY: t_jsb_varlist, Get_varlist, jsb_add_var
+    USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input, ncfile_has_var
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
@@ -237,14 +243,16 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),   POINTER :: tmp_tile
     CHARACTER(LEN=15)                     :: process_name
 
+    TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
+    CLASS(t_jsb_aggregator),                  POINTER :: aggregator
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     CHARACTER(len=10)          :: parent_tile_name
     INTEGER                    :: table
     TYPE(t_input_file)         :: input_file
-    REAL(wp),          POINTER :: return_pointer(:,:)
+    REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
     CHARACTER(len=50)          :: name_loc
-    INTEGER                    :: ilct
+    INTEGER                    :: ilct, i
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_tile'
 
@@ -262,6 +270,7 @@ CONTAINS
 
       IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
+        CALL message(TRIM(routine), 'Linked memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name)//' to parent')
       ELSE
         !this%param(iproc)%p => t_jsb_param(iproc)
         tmp_ptr => Create_process_memory(iproc)
@@ -275,6 +284,7 @@ CONTAINS
           this%mem(iproc)%p%owner_proc_id = iproc
           ALLOCATE(this%mem(iproc)%p%owner_tile_path(SIZE(this%path)))
           this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
+          this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
           IF (prefix /= '') THEN
             CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
           ELSE
@@ -297,6 +307,9 @@ CONTAINS
               tmp_tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
               tmp_tile%mem(iproc)%p%grid_id = this%grid_id
               tmp_tile%mem(iproc)%p%owner_model_id = this%owner_model_id
+              ALLOCATE(tmp_tile%mem(iproc)%p%owner_tile_path(SIZE(tmp_tile%path)))
+              tmp_tile%mem(iproc)%p%owner_tile_path(:) = tmp_tile%path(:)
+              tmp_tile%mem(iproc)%p%owner_tile_name = TRIM(tmp_tile%name)
               CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(tmp_tile%name))
             END SELECT
             NULLIFY(tmp_ptr)
@@ -325,49 +338,106 @@ CONTAINS
     IF (parent_tile_name == '') parent_tile_name = 'grid box  '
 
     ! Add fraction(s) of this tile to stream
-    CALL jsb_add_var(TRIM(varlist_name), 'fract', this%fract,                                 &
+    CALL jsb_add_var(TRIM(varlist_name), 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &
       &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp)
+    CALL this%Set_fract_ptr(tmp_fract)
 
-    CALL jsb_add_var(TRIM(varlist_name), 'fract_max', this%fract_max,                         &
+    CALL jsb_add_var(TRIM(varlist_name), 'fract_max', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max', '',                                                                          &
       &      'max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp)
+    CALL this%Set_fract_max_ptr(tmp_fract)
+
+    CALL jsb_add_var(TRIM(varlist_name), 'fract_old', tmp_fract,                                 &
+      & hgrid, surface,                                                                                         &
+      & t_cf('tile_fraction_old', '',                                                                          &
+      &      'old fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp)
+    CALL this%Set_fract_old_ptr(tmp_fract)
+
+    CALL jsb_add_var(TRIM(varlist_name), 'fract_max_old', tmp_fract,                         &
+      & hgrid, surface,                                                                                         &
+      & t_cf('tile_fraction_max_old', '',                                                                          &
+      &      'old max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp)
+    CALL this%Set_fract_max_old_ptr(tmp_fract)
+    NULLIFY(tmp_fract)
+
+    ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
+    this%l_fract_children_changed(:,:) = .TRUE.
 
     ! Initialize fraction(s) of this tile from input file
+    ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
     IF (this%fract_filename == '') THEN
-      this%fract    (:,:) = 1._wp
-      this%fract_max(:,:) = 1._wp
+      IF (ASSOCIATED(this%parent)) THEN
+        tmp_fract(:,:) = 1._wp / REAL(this%parent%Get_no_of_children(), wp)
+      ELSE
+        tmp_fract(:,:) = 1._wp
+      END IF
+      CALL this%Set_fraction(fract=tmp_fract(:,:))
+      tmp_fract(:,:) = 1._wp
+      CALL this%Set_fraction(fract_max=tmp_fract(:,:))
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%owner_model_id)
 
       name_loc = 'fract'
       IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
       IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
-      return_pointer => input_file%Read_2d(         &
-        & variable_name=TRIM(name_loc),             &
-        & fill_array = this%fract)
+      IF (ncfile_has_var(TRIM(this%fract_filename), TRIM(name_loc))) THEN
+        return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
+        CALL this%Set_fraction(fract=return_pointer(:,:))
+      ELSE
+        CALL finish(TRIM(routine), 'Fraction '//TRIM(name_loc)//' for tile '//TRIM(this%name)// &
+          &                        ' not found in '//TRIM(this%fract_filename))
+      END IF
 
       name_loc = 'fract_max'
       IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
       IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
       IF (ncfile_has_var(TRIM(this%fract_filename), TRIM(name_loc))) THEN
-        return_pointer => input_file%Read_2d(         &
-          & variable_name=TRIM(name_loc),             &
-          & fill_array = this%fract_max)
+        return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
+        CALL this%Set_fraction(fract_max=return_pointer(:,:))
       ELSE
-        this%fract_max(:,:) = 1._wp
+        tmp_fract(:,:) = 1._wp
+        CALL this%Set_fraction(fract_max=tmp_fract(:,:))
       END IF
 
       CALL input_file%Close()
 
+    END IF
+    DEALLOCATE(tmp_fract)
+
+    ! If tile has children, create and register aggregator
+    IF (this%Has_children()) THEN
+      aggregator_weighted_by_fract => t_jsb_aggregator_weighted_by_fract(this)
+      CALL this%Register_aggregator(aggregator_weighted_by_fract)
+    END IF
+
+    ! If tile has parent, put fractions of current tile into corresponding aggregator of parent
+    IF (ASSOCIATED(this%parent)) THEN
+      i = this%Get_pos_of_child()
+      SELECT TYPE (parent => this%parent)
+      CLASS IS (t_jsb_tile)
+        aggregator => parent%Get_aggregator('weighted_by_fract')
+        IF (ASSOCIATED(aggregator)) THEN
+          SELECT TYPE (aggregator)
+          TYPE IS (t_jsb_aggregator_weighted_by_fract)
+            CALL this%Get_fraction(aggregator%fractions(:,:,i))
+          END SELECT
+        END IF
+      END SELECT
     END IF
 
     ! Loop over lcts of this tile and add fractions for each lct
@@ -514,6 +584,10 @@ CONTAINS
 
     ! Print for basic type
     CALL this%Print_state()
+
+    IF (this%fract_filename /= '') THEN
+      CALL message('     fract_filename', TRIM(this%fract_filename))
+    END IF
 
     ! Additional prints for tile type
     IF (ALLOCATED(this%lcts)) THEN

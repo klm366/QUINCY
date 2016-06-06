@@ -23,8 +23,7 @@ MODULE mo_atmland_interface
   USE mo_jsb_lct_class,      ONLY: LAKE_TYPE, Contains_lct
 
   dsl4jsb_Use_processes ATM2LAND, SEB, TURB, SOIL, HYDRO, RAD
-  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-!!$  dsl4jsb_Use_memory(ATM2LAND)
+  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(TURB)
   dsl4jsb_Use_memory(SOIL)
@@ -46,6 +45,7 @@ CONTAINS
     & press_srf, drag_srf,                                         &
     & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
     & pch, cos_zenith_angle,                                       &
+    & albedo_wtr,                                                  &
     & latent_hflx_wtr, sensible_hflx_wtr,                          &
     & latent_hflx_ice, sensible_hflx_ice                           &
     & )
@@ -58,6 +58,7 @@ CONTAINS
       & press_srf(:), drag_srf(:),                                               &
       & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),                          &
       & pch(:), cos_zenith_angle(:),                                             &
+      & albedo_wtr(:),                                                           &
       & latent_hflx_wtr(:), sensible_hflx_wtr(:),                                &
       & latent_hflx_ice(:), sensible_hflx_ice(:)
 
@@ -95,6 +96,7 @@ CONTAINS
     IF (PRESENT(q_bcoef))           dsl4jsb_var2D_onChunk(ATM2LAND,q_bcoef)           = q_bcoef           (:)
     IF (PRESENT(pch))               dsl4jsb_var2D_onChunk(ATM2LAND,pch)               = pch               (:)
     IF (PRESENT(cos_zenith_angle))  dsl4jsb_var2D_onChunk(ATM2LAND,cos_zenith_angle)  = cos_zenith_angle  (:)
+    IF (PRESENT(albedo_wtr))        dsl4jsb_var2D_onChunk(ATM2LAND,albedo_wtr)        = albedo_wtr        (:)
     IF (PRESENT(latent_hflx_wtr))   dsl4jsb_var2D_onChunk(ATM2LAND,latent_hflx_wtr)   = latent_hflx_wtr   (:)
     IF (PRESENT(sensible_hflx_wtr)) dsl4jsb_var2D_onChunk(ATM2LAND,sensible_hflx_wtr) = sensible_hflx_wtr (:)
     IF (PRESENT(latent_hflx_ice))   dsl4jsb_var2D_onChunk(ATM2LAND,latent_hflx_ice)   = latent_hflx_ice   (:)
@@ -147,7 +149,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO)
     dsl4jsb_Get_memory(RAD)
 
-    IF (PRESENT(t_srf))           t_srf(:)            = dsl4jsb_var2D_onChunk(SEB,t)
+    IF (PRESENT(t_srf))           t_srf(:)            = dsl4jsb_var2D_onChunk(SEB,t_filt)
     IF (PRESENT(t_eff_srf))       t_eff_srf(:)        = dsl4jsb_var2D_onChunk(SEB,t_eff)
     IF (PRESENT(qsat_srf))        qsat_srf(:)         = dsl4jsb_var2D_onChunk(SEB,qsat_star)
     IF (PRESENT(s_srf))           s_srf(:)            = dsl4jsb_var2D_onChunk(SEB,s_star)
@@ -170,19 +172,11 @@ CONTAINS
       IF (PRESENT(t_wtr))           t_wtr(:)            = dsl4jsb_var2D_onChunk(SEB,t_wtr)        ! Temporary
       IF (PRESENT(t_ice))           t_ice(:)            = dsl4jsb_var2D_onChunk(SEB,t_ice)        ! Temporary
       IF (PRESENT(ice_fract_lake))  ice_fract_lake(:)   = 0._wp                                   ! Temporary
-      IF (PRESENT(alb_vis_dir_wtr)) alb_vis_dir_wtr(:)  = dsl4jsb_var2D_onChunk(RAD,alb_vis_dir_wtr)  ! Temporary
-      IF (PRESENT(alb_vis_dif_wtr)) alb_vis_dif_wtr(:)  = dsl4jsb_var2D_onChunk(RAD,alb_vis_dif_wtr)  ! Temporary
-      IF (PRESENT(alb_nir_dir_wtr)) alb_nir_dir_wtr(:)  = dsl4jsb_var2D_onChunk(RAD,alb_nir_dir_wtr)  ! Temporary
-      IF (PRESENT(alb_nir_dif_wtr)) alb_nir_dif_wtr(:)  = dsl4jsb_var2D_onChunk(RAD,alb_nir_dif_wtr)  ! Temporary
       IF (PRESENT(albedo_ice))      albedo_ice          = dsl4jsb_var2D_onChunk(RAD, albedo_ice)
     ELSE
       IF (PRESENT(t_wtr))           t_wtr(:)            = 0._wp                                   ! Temporary
       IF (PRESENT(t_ice))           t_ice(:)            = 0._wp                                   ! Temporary
       IF (PRESENT(ice_fract_lake))  ice_fract_lake(:)   = 0._wp                                   ! Temporary
-      IF (PRESENT(alb_vis_dir_wtr)) alb_vis_dir_wtr(:)  = 0.07_wp
-      IF (PRESENT(alb_vis_dif_wtr)) alb_vis_dif_wtr(:)  = 0.07_wp
-      IF (PRESENT(alb_nir_dir_wtr)) alb_nir_dir_wtr(:)  = 0.07_wp
-      IF (PRESENT(alb_nir_dif_wtr)) alb_nir_dif_wtr(:)  = 0.07_wp
       IF (PRESENT(albedo_ice))      albedo_ice(:)       = 0.55_wp
     END IF
 

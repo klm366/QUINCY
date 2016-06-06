@@ -21,7 +21,7 @@ MODULE mo_seb_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, Contains_lct
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -166,6 +166,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    INTEGER :: iblk, ics, ice
+
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
@@ -189,6 +191,10 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_memory(SEB)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_energy'
@@ -203,6 +209,23 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(SEB)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(SEB, t_unfilt,     weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB, lw_srf_net,     weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB, sw_srf_net,     weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB, swvis_srf_net,  weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB, swnir_srf_net,  weighted_by_fract)
+
+    ! IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
+
+      dsl4jsb_Aggregate_onChunk(SEB, t_wtr,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB, t_ice,    weighted_by_fract)
+
+    ! END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -224,16 +247,22 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    INTEGER :: iblk, ics, ice
+
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_asselin'
 
     IF (.NOT. tile%Is_process_active(SEB)) RETURN
 
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
     model => Get_model(tile%owner_model_id)
 
     IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
-      ! Nothing to do
+      ! No Asselin filter for lake tile
     ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
       CALL update_asselin_land(tile, options)
     ELSE
@@ -247,20 +276,40 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_memory(SEB)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_asselin'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(SEB)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(SEB, t,      weighted_by_fract)
+
+    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
+      ! No Asselin filter for lake tile
+    ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
+
+      weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+      dsl4jsb_Aggregate_onChunk(SEB, t_filt, weighted_by_fract)
+    ELSE
+      CALL finish(TRIM(routine), 'Called for invalid lct_type')
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

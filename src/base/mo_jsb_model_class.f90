@@ -19,6 +19,7 @@ MODULE mo_jsb_model_class
   USE mo_jsb_process_class, ONLY: t_jsb_process, t_jsb_process_p
   USE mo_jsb_task_class,    ONLY: t_jsb_process_task, t_Task_queue, t_jsb_task_msg, t_jsb_task_options
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
+  USE mo_jsb_lctlib_class,  ONLY: t_lctlib
 
   IMPLICIT NONE
   PRIVATE
@@ -51,6 +52,7 @@ MODULE mo_jsb_model_class
     TYPE(t_Task_queue),        POINTER :: queue        => NULL()
     CLASS(t_jsb_process_task), POINTER :: current_task => NULL()
 !!$    TYPE(t_hsm),              POINTER :: hsm
+    TYPE(t_lctlib)                     :: lctlib
   CONTAINS
     ! From base type:
     ! PROCEDURE :: Get_current
@@ -86,6 +88,8 @@ MODULE mo_jsb_model_class
   TYPE t_jsb_model_m
     TYPE(t_jsb_model), POINTER :: m
   END TYPE t_jsb_model_m
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_class'
 
 CONTAINS
 

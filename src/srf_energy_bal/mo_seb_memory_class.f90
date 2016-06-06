@@ -54,6 +54,7 @@ MODULE mo_seb_memory_class
       & t_unfilt,             & !< Surface temperature, unfiltered (before Asselin)                [K]
       & t_unfilt_old,         & !< Surface temperature at previous timestep, unfiltered            [K]
                                 !! (before Asselin)
+      & t_filt,               & !< Surface temperature, filtered (after Asselin)                   [K]
       & t_eff,                & !< Effective surface temperature (see manual)                      [K]
                                 !! This is the surface temperature used in the atmospheric
                                 !! radiative heating
@@ -92,7 +93,7 @@ CONTAINS
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
-    CLASS(t_seb_memory), INTENT(inout) :: mem
+    CLASS(t_seb_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
@@ -154,7 +155,7 @@ CONTAINS
         & t_cf('sensible_hflx', 'W m-2', 'sensible heat flux at surface'),             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & initval_r=280.0_wp )
+        & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'forc_hflx', mem%forc_hflx,                               &
         & hgrid, surface,                                                              &
@@ -191,6 +192,13 @@ CONTAINS
       CALL jsb_add_var( mem, 't_unfilt_old', mem%t_unfilt_old,                               &
         & hgrid, surface,                                                                    &
         & t_cf('sfc_temp_unfilt_old', 'K', 'unf. surface temperature at previous timestep'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & prefix, suffix,                                                                    &
+        & initval_r=280.0_wp )
+
+      CALL jsb_add_var( mem, 't_filt', mem%t_filt,                                           &
+        & hgrid, surface,                                                                    &
+        & t_cf('sfc_temp_filt', 'K', 'filtered surface temperature'),                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & initval_r=280.0_wp )

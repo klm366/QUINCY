@@ -159,12 +159,13 @@ CONTAINS
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_veg_init,            ONLY: veg_init_ic, veg_init_bc
     USE mo_rad_init,            ONLY: rad_init
+    ! USE mo_assimi_init,         ONLY: assimi_init
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid
-    USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
+    USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
@@ -174,6 +175,8 @@ CONTAINS
     INTEGER                             :: iproc
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_common'
+
+    CALL cdiDefMissval(missval)
 
     ALLOCATE(model%processes(max_no_of_processes))
     DO iproc=1,max_no_of_processes
@@ -185,6 +188,9 @@ CONTAINS
     surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
     CALL register_vgrid(surface)
 
+    CALL model%lctlib%Init('lctlib_nlct21.def')
+    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
+
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
       CALL init_usecase(model)
@@ -194,42 +200,43 @@ CONTAINS
     END IF
 
     ! Temporary for testing ... should be in separate subroutine
-    CALL model%Queue_task(RAD,    "radiation_surface")
+    CALL model%Queue_task(RAD,    "surface_radiation")
     !CALL model%Queue_task(HYDRO, "snow_and_skin_fraction")
     CALL model%Queue_task(SEB,    "surface_energy")
-    CALL model%Queue_task(SEB,   "surface_fluxes")
+    CALL model%Queue_task(SEB,    "surface_fluxes")
     !CALL model%Queue_task(HYDRO, "snow_ice_hydrology")
+    CALL model%Queue_task(RAD,    "albedo")
     CALL model%Queue_task(TURB,   "surface_roughness")
     CALL model%Queue_task(ASSIMI, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
                                                                   ! and assimilation_waterunlimited
     CALL model%Queue_task(ASSIMI, "assimilation_waterlimited")    ! first call without water limitation (waterLimitationFlag =.FALSE.)
-                                                                  ! R: Das ist eine grundsätzliche Entscheidung hier:
-                                                                  ! R: Ein Task könnte unterschiedliche Konfigurationen habe.
-                                                                  ! R: So wie die Struktur jetzt ist, MUSS jede dieser Konfigurationen
-                                                                  ! R: ein eigener Task sein, denn die Queue (model%queue%next%...%task)
-                                                                  ! R: zeigt immer auf einen Task der unter model%processes(2)%p%task_list(:)
-                                                                  ! R: steht. Würde man zwischen den Aufrufen hier versuchen den Task zu
-                                                                  ! R: konfigurieren z.B. model%queue%next%...%task%waterLimitationFlag = .TRUE.
-                                                                  ! R: so würde später wenn die Queue abgearbeitet wird immer nur die letzte
-                                                                  ! R: Konfiguration existieren, da der Task nur einmal existiert und die Queue
-                                                                  ! R: nur Pointer auf diesen einen Task hat.
-                                                                  ! R: Die Konfiguration gehört nicht zu model%processes(2)%p%config da sie
-                                                                  ! R: sich nicht auf einen gesamten Prozess sondern nur auf einen Task darin
-                                                                  ! R: bezieht. Außerdem wäre auch jede andere Speicherstelle die sich nicht
-                                                                  ! R: bei/während der Abarbeitung der Queue ändert unnütz. Die Speicherstelle
-                                                                  ! R: müsste unter model%queue% z.B. als task_config liegen.
-                                                                  ! R: So wie es jetzt ist (dass die Tasks je nach Konfiguration eigenständige
-                                                                  ! R: Tasks sein müssen) finde ich gar nicht so schlecht. Denn dadurch gibt
-                                                                  ! R: es keine "Abhängigkeiten" des Tasks in der Queue sondern nur eindeutig
-                                                                  ! R: definierte Tasks. Mit welchen IFs man die Queue auch erstellt hat, am
-                                                                  ! R: Ende ist sie eindeutig und man kann sich die Tasks eindeutig ausgegeben
-                                                                  ! R: lassen. Außerdem: die Konfiguration beinhaltet nicht die
-                                                                  ! R: Fallunterscheidungen für jedes Tile und LCT-Typ usw....
+    ! R: Das ist eine grundsätzliche Entscheidung hier:
+    ! R: Ein Task könnte unterschiedliche Konfigurationen habe.
+    ! R: So wie die Struktur jetzt ist, MUSS jede dieser Konfigurationen
+    ! R: ein eigener Task sein, denn die Queue (model%queue%next%...%task)
+    ! R: zeigt immer auf einen Task der unter model%processes(2)%p%task_list(:)
+    ! R: steht. Würde man zwischen den Aufrufen hier versuchen den Task zu
+    ! R: konfigurieren z.B. model%queue%next%...%task%waterLimitationFlag = .TRUE.
+    ! R: so würde später wenn die Queue abgearbeitet wird immer nur die letzte
+    ! R: Konfiguration existieren, da der Task nur einmal existiert und die Queue
+    ! R: nur Pointer auf diesen einen Task hat.
+    ! R: Die Konfiguration gehört nicht zu model%processes(2)%p%config da sie
+    ! R: sich nicht auf einen gesamten Prozess sondern nur auf einen Task darin
+    ! R: bezieht. Außerdem wäre auch jede andere Speicherstelle die sich nicht
+    ! R: bei/während der Abarbeitung der Queue ändert unnütz. Die Speicherstelle
+    ! R: müsste unter model%queue% z.B. als task_config liegen.
+    ! R: So wie es jetzt ist (dass die Tasks je nach Konfiguration eigenständige
+    ! R: Tasks sein müssen) finde ich gar nicht so schlecht. Denn dadurch gibt
+    ! R: es keine "Abhängigkeiten" des Tasks in der Queue sondern nur eindeutig
+    ! R: definierte Tasks. Mit welchen IFs man die Queue auch erstellt hat, am
+    ! R: Ende ist sie eindeutig und man kann sich die Tasks eindeutig ausgegeben
+    ! R: lassen. Außerdem: die Konfiguration beinhaltet nicht die
+    ! R: Fallunterscheidungen für jedes Tile und LCT-Typ usw....
 
     ! include here the tasks soil_hydrology and vegetation_conductance
     CALL model%Queue_task(ASSIMI, "assimilation_waterunlimited")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
-                                                         ! should be called after the soil hydrology is calculated (former update_soil_1)
-                                                         !              and after the vegetation conductance is calculated
+                                                   ! should be called after the soil hydrology is calculated (former update_soil_1)
+                                                   !              and after the vegetation conductance is calculated
                                                          !              (former update_vegetation_conductanc)
     CALL model%Queue_task(SEB,    "asselin_filter")      ! Should always be the last task
 
@@ -286,6 +293,11 @@ CONTAINS
         CALL veg_init_bc(tile)
         CALL veg_init_ic(tile)
       END IF
+
+      ! IF (one_of(tile%process_action(ASSIMI), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      !   CALL assimi_init_bc(tile)
+      !   CALL assimi_init_ic(tile)
+      ! END IF
 
 #ifndef __NO_JSBACH_HD__
       IF (one_of(tile%process_action(HD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN

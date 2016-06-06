@@ -33,8 +33,7 @@ MODULE mo_turb_interface
   dsl4jsb_Use_config(TURB)
 
   ! Use process memories
-  ! dsl4jsb_Use_memory(ATM2LAND)
-  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
+  dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(TURB)
   dsl4jsb_Use_memory(HYDRO)
 

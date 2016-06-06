@@ -10,7 +10,7 @@
 MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d
@@ -84,7 +84,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
@@ -97,7 +97,7 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(wp)          :: missval_r_loc
+    REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: pos_of_var
 
@@ -128,6 +128,15 @@ CONTAINS
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc)
+
+    var%name = TRIM(name)
+    var%full_name = TRIM(name_loc)
+    var%missval = missval_r_loc
+    
+    var%owner_proc_id = mem%owner_proc_id
+
+    ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
+    var%owner_tile_path(:) = mem%owner_tile_path(:)
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
@@ -166,7 +175,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     REAL(wp),             POINTER,    OPTIONAL :: p5(:,:,:,:,:)       ! provided pointer
@@ -179,7 +188,7 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(wp)          :: missval_r_loc
+    REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(3), gdims(3)
     INTEGER           :: pos_of_var
 
@@ -227,6 +236,15 @@ CONTAINS
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5)
 
+    var%name = TRIM(name)
+    var%full_name = TRIM(name_loc)
+    var%missval = missval_r_loc
+
+    var%owner_proc_id = mem%owner_proc_id
+
+    ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
+    var%owner_tile_path(:) = mem%owner_tile_path(:)
+
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
@@ -263,7 +281,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
@@ -276,7 +294,7 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(wp)          :: missval_r_loc
+    REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r2d'
