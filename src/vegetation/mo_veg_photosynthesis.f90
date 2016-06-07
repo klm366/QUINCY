@@ -132,6 +132,8 @@ CONTAINS
             rl(icanop) * canopy_layer_depth_act(icanop) 
      plant%gc = plant%gc + gsl(icanop) * canopy_layer_depth_act(icanop)
      plant%flux%ci = plant%flux%ci + cil(icanop) * canopy_layer_depth_act(icanop)
+     ! get the net photosynthesis of the lowest canopy layer at this timestep
+     IF(canopy_layer_depth_act(icanop) > 0.0_wp) plant%boc_an = anl(icanop)
   ENDDO
 
   plant%flux%ci = plant%flux%ci / sum(canopy_layer_depth_act)

@@ -81,9 +81,11 @@ MODULE mo_veg_memory
     REAL(wp) :: q_air             ! = 1._wp
     REAL(wp) :: press_surf        ! = 1._wp
     ! 1.6 memory of certain variables, temperature, ...
-    REAL(wp) :: t_air_week         ! = 273.15_wp   ! 7 days
-    REAL(wp) :: t_air_month        ! = 273.15_wp   ! 30 days
-    REAL(wp) :: t_air_longterm     ! = 273.15_wp   ! 30 years == 10950 days
+    REAL(wp) :: t_air_week        ! = 273.15_wp   ! 7 days
+    REAL(wp) :: t_air_month       ! = 273.15_wp   ! 30 days
+    REAL(wp) :: t_air_longterm    ! = 273.15_wp   ! 30 years == 10950 days
+    ! 1.7 plant status parameter
+    REAL(wp) :: boc_an            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
 
     !< 2.0 accumulation period per variable in days !!
     !! 
@@ -91,6 +93,7 @@ MODULE mo_veg_memory
     REAL(wp) :: p_weekly                 !< 7 days; constant across the model
     REAL(wp) :: p_monthly                !< 30 days; constant across the model
     REAL(wp) :: p_longterm               !< 10950 days (30 years); constant across the model
+    REAL(wp) :: p_tau_veg_dynamics       !<  multiple years
     ! 2.1 light in the canopy (for all canopy_layer the same period)
     REAL(wp) :: p_par_sunlit 
     REAL(wp) :: p_par_shaded 
@@ -109,6 +112,9 @@ MODULE mo_veg_memory
     REAL(wp) :: p_q_air 
     REAL(wp) :: p_press_surf 
     ! 2.6 memory of certain variables: default averaging period values are used, according to variable names (week, month, ..)
+
+    ! 2.7 plant status parameter
+    REAL(wp) :: p_boc_an          !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
 
   CONTAINS
     !< 4.0 procedures
@@ -232,6 +238,7 @@ MODULE mo_veg_memory
     TYPE(t_daily_average)  :: daily_average       !< structure to calculate and store all moving average values
     TYPE(t_moving_average) :: moving_average      !< structure to calculate and store all moving average values
     INTEGER  :: pftid                             !< ID of the plant functional type; namelist parameter
+    LOGICAL  :: growing_season                    !< logical to identify whether the plant is in the growing season or not
     REAL(wp) :: height                            !< plant height in m
     REAL(wp) :: diameter                          !< plant diameter in m
     REAL(wp) :: lai                               !< actual leaf area index
@@ -244,11 +251,11 @@ MODULE mo_veg_memory
     REAL(wp) :: beta_air                          !< scaling factor to account for air humidity effects on conductance
     REAL(wp) :: beta_soil_ps                      !< scaling factor to account for soil moisture constraints on conductance
     REAL(wp) :: beta_soil_gs                      !< scaling factor to account for soil moisture constraints on conductance
-    LOGICAL  :: growing_season                    !< logical to identify whether the plant is in the growing season or not
     REAL(wp) :: growth_req_n                      !< moles N required for a unit of C growth under current allocation fractions 
     REAL(wp) :: growth_req_p                      !< moles P required for a unit of N growth under current allocation fractions 
     REAL(wp) :: gdd                               !< growing degree days above 5°C
     REAL(wp) :: nd_dormance                       !< number of days since last growing season 
+    REAL(wp) :: boc_an                            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
    END TYPE t_slm_plant
 
 
@@ -738,6 +745,8 @@ CONTAINS
     this%t_air_week                    = 283.15_wp   ! 10°C; 7  days
     this%t_air_month                   = 283.15_wp   ! 10°C; 30 days
     this%t_air_longterm                = 283.15_wp   ! 10°C; 30 years == 10950 days
+    ! 1.7 plant status parameter
+    this%boc_an                        = 0.1_wp      !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
 
     !< 2.0 init/set accumulation period per variable in days !!
     !!
@@ -745,6 +754,7 @@ CONTAINS
     this%p_weekly                      = 7._wp     ! 7 days; constant across the model
     this%p_monthly                     = 30._wp    ! 30 days; constant across the model
     this%p_longterm                    = 10950._wp ! 10950 days (30 years); constant across the model
+    this%p_tau_veg_dynamics            = 1095._wp  ! 365* 3 
     ! 2.1 light in the canopy (for all canopy_layer the same period)
     this%p_par_sunlit                  = 1.0_wp 
     this%p_par_shaded                  = 1.0_wp 
@@ -762,13 +772,16 @@ CONTAINS
     this%p_t_air                       = 1.0_wp
     this%p_q_air                       = 1.0_wp
     this%p_press_surf                  = 1.0_wp
+    ! 2.7 plant status parameter
+    this%p_boc_an                      = this%p_tau_veg_dynamics
   END SUBROUTINE init_moving_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------
   !> calculate and return the moving average of a single variable or an array
   !!
   !! calculates the average across a certain period preceding to the current value; 
-  !! actually, the average gets rather estimated than exactly calculated using the weighted arithmetic mean 
+  !! actually, the average gets rather estimated than exactly calculated using the weighted arithmetic mean \n
+  !! if optional parameter 'mask' is present: the moving average is calculated if mask = TRUE !
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calculate_moving_average_of_variable(this, cav,nv,w,mask) RESULT(nav)
 
@@ -783,15 +796,17 @@ CONTAINS
     ! 0.2 Local
     LOGICAL                             :: l_mask ! True/ False of the Optional variable mask present
 
+    ! set TRUE per default, i.e. can only be FALSE if 'mask' is is present
+    l_mask = .TRUE.
+
     ! check whether the optional statement is provided
-    l_mask = .FALSE.
     IF(PRESENT(mask))  l_mask = mask
 
     ! calc average as weighted mean
     IF(l_mask) THEN
-      nav = cav
-    ELSE
       nav = cav * (1.0_wp - w) + nv * w
+    ELSE
+      nav = cav
     END IF
   END FUNCTION calculate_moving_average_of_variable
 
@@ -828,12 +843,17 @@ CONTAINS
                                                1.0_wp / (this%p_weekly * one_day/ dt))
     this%maint_respiration_week  = this%calc_moving_avrg(this%maint_respiration_week, plant%flux%maint_respiration_pot, &
                                                1.0_wp / (this%p_weekly * one_day/ dt))
+
     this%growth_req_n_week       = this%calc_moving_avrg(this%growth_req_n_week, plant%growth_req_n, &
                                                1.0_wp / (this%p_weekly * one_day/ dt), &
-                                               plant%growth_req_n < eps8)
+                                               plant%growth_req_n > eps8)
     this%growth_req_p_week       = this%calc_moving_avrg(this%growth_req_p_week, plant%growth_req_p, &
                                                1.0_wp / (this%p_weekly * one_day/ dt), & 
-                                               plant%growth_req_p < eps8)
+                                               plant%growth_req_p > eps8)
+
+    this%boc_an                  = this%calc_moving_avrg(this%boc_an, plant%boc_an, &
+                                               1.0_wp / (this%p_boc_an * one_day/ dt), & 
+                                               plant%pool%leaf%carbon > eps8)
 
   END SUBROUTINE update_veg_moving_avrg_variables
 
@@ -858,10 +878,10 @@ CONTAINS
 
     this%demand_uptake_n = this%calc_moving_avrg(this%demand_uptake_n, plant%f_n_demand, &
                                                  1.0_wp / (this%p_demand_uptake_n * one_day/ dt), &
-                                                 plant%pool%fine_root%carbon < eps8)
+                                                 plant%pool%fine_root%carbon > eps8)
     this%demand_uptake_p = this%calc_moving_avrg(this%demand_uptake_p, plant%f_p_demand, &
                                                  1.0_wp / (this%p_demand_uptake_p * one_day/ dt), &
-                                                 plant%pool%fine_root%carbon < eps8)
+                                                 plant%pool%fine_root%carbon > eps8)
   END SUBROUTINE update_soil_moving_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------

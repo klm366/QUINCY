@@ -479,7 +479,7 @@ CONTAINS
                                 plant%flux%recycling_fine_root_n + plant%flux%resorption_n )  * dt_one *1000000._wp/dt
       res_use_n_acc(itile)    = res_use_n_acc(itile)     + plant%flux%reserve_use%nitrogen    * dt_one *1000000._wp/dt
       uptake_p_acc(itile)     = uptake_p_acc(itile)      + plant%flux%uptake_p                * dt_one
-      resorption_p_acc(itile) = (resorption_p_accitile)  + ( plant%flux%recycling_leaf_p + & 
+      resorption_p_acc(itile) = resorption_p_acc(itile)  + ( plant%flux%recycling_leaf_p + & 
                                 plant%flux%recycling_fine_root_p + plant%flux%resorption_p )  * dt_one *1000000._wp/dt
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + plant%flux%reserve_use%phosphorus  * dt_one *1000000._wp/dt
       transpiration_acc(itile)= transpiration_acc(itile) + plant%flux%transpiration           * dt_one 

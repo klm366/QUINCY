@@ -58,6 +58,7 @@ CONTAINS
     plant%canopy_layer(:)%fleaf_sunlit = 0.0_wp
     ! plant variables
     plant%pftid            = 1          ! INTEGER
+    plant%growing_season   = .TRUE.     ! LOGICAL
     plant%height           = 0.0_wp
     plant%diameter         = 0.0_wp
     plant%lai              = 0.0_wp
@@ -74,7 +75,7 @@ CONTAINS
     plant%growth_req_p     = 0.0_wp
     plant%gdd              = 1.0_wp
     plant%nd_dormance      = 1.0_wp
-    plant%growing_season   = .TRUE.     ! LOGICAL
+    plant%boc_an           = 1.0_wp
   END SUBROUTINE init_plant
 
   !-----------------------------------------------------------------------------------------------------
