@@ -1,0 +1,195 @@
+\chapter{Vegetation}
+
+%\newpage
+\begin{sidewaystable}
+\section{Parameters}
+
+Parameter List and Information according to mo\_veg\_parameters from SLM r163 (20160607). \\
+
+%\resizebox{\textwidth}{!}{  % to resize table to fit the page, needs \usepackage{graphicx}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|c|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+% Example:
+% $\tau_{labile,def}$ & default turnover time of labile pool & \texttt{tau\_labile\_default} & \ref{eq\_tau\_lab} & 1.0 & \cite{zaehle:2013} \\ 
+
+% Respiration parameters
+• & growth respiration per unit new biomass & \texttt{fresp\_growth} & • & • & • & • \\ 
+• & N-specific maintenance respiration rate & \texttt{fmaint\_rate\_base} & $\mu$mol CO2/ mmol N/ s & • & • & • \\ 
+• & Coefficient in the equation for temperature sensitivity of foliar respiration & \texttt{t\_maint\_k1} & • & • & • & • \\ 
+• & same as above & \texttt{t\_maint\_k2} & • & • & • & • \\ 
+• & same as above & \texttt{t\_maint\_k3} & • & • & • & • \\ 
+% Labile pool parameters 
+• & default turnover time of the labile carbo-hydrates & \texttt{tau\_labile\_default} & days & • & • & • \\ 
+• & lambda in temperature response function of labile pool & \texttt{lambda\_tau\_labile\_temp} & • & • & • & • \\ 
+• & k in temperature response function of labile pool & \texttt{weibull\_k\_tau\_labile\_temp} & • & • & • & • \\ 
+• & lambda in moisture response function of labile pool & \texttt{lambda\_tau\_labile\_theta} & • & • & • & • \\ 
+• & k in moisture response function of labile pool & \texttt{weibull\_k\_tau\_labile\_theta} & • & • & • & • \\ 
+• & lambda in storage response function to phenology & \texttt{lambda\_phiphen} & • & • & • & • \\ 
+• & k in in storage response function to phenology & \texttt{weibull\_k\_phiphen} & • & • & • & • \\ 
+• & lambda in storage response function to maintenance needs & \texttt{lambda\_phimaint} & • & • & • & • \\ 
+• & k in in storage response function to maintenance needs & \texttt{weibull\_k\_phimaint} & • & • & • & • \\ 
+• & lambda in storage response function to storage size& \texttt{lambda\_phistore} & • & • & • & • \\ 
+• & k in in storage response function to storage size & \texttt{weibull\_k\_phistore} & • & • & • & • \\ 
+% Resporption parameters
+• & default fraction of nutrient resporption before leaf shedding & \texttt{resorption\_default} & • & • & • & • \\ 
+• & default fraction of nutrient resporption before wood death & \texttt{resorption\_wood} & • & • & • & • \\ 
+• & relative C:N of fine roots compared to leaves & \texttt{root2leaf\_cn} & • & • & • & • \\ 
+• & relative C:N of woody biomass compared to leaves & \texttt{wood2leaf\_cn} & • & • & • & • \\ 
+• & relative N of fine roots compared to leaves & \texttt{root2leaf\_np} & • & • & • & • \\ 
+• & relative N:P of woody biomass compared to leaves & \texttt{wood2leaf\_np} & • & • & • & • \\ 
+\hline 
+\end{tabularx}
+%}  % end \resizebox
+\end{sidewaystable}
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|c|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+% Parameters describing photosynthetic activity
+• & electron-transport limited carboxylation rate & \texttt{jmax2n} & per $\mu$mol CO2/ mmol N in ET & • & • & • \\ 
+• & Rubisco limited carboxylation rate & \texttt{vcmax2n} & per $\mu$mol CO2/ mmol N in RUB & • & • & • \\ 
+• & fraction of N in PEP and PPKD (C4 plants only) & \texttt{k0\_fnl\_pepc} & • & • & • & • \\ 
+• & PEP C limited carboxylation rate & \texttt{pepc2n} & per $\mu$mol CO2/ mmol N in PEP C & • & • & • \\ 
+• & moles chlorophyll per mol of N & \texttt{chl2n} & • & • & • & • \\ 
+• & slope of the fraction of leaf N not associated with PS against leaf N & \texttt{k1\_fnl\_struc} & --/mmolN & • & • & • \\ 
+• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants) & \texttt{jmax2vcmax\_C3} & • & • & • & • \\ 
+• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants) & \texttt{jmax2vcmax\_C4} & • & • & • & • \\
+• & time scale of acclimation of canopy processes (N, P, T) & \texttt{tau\_canopy\_acclimation} & days & • & • & • \\ 
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|c|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+% temperature sensitivies of PS processes
+• & Baseline of Michaelis-Menten constant of Rubisco for CO2 & \texttt{E0kc} & • & • & • & • \\
+• & Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 & \texttt{E1kc} & • & • & • & • \\  
+• & Baseline of Michealis-Menten Kintetics for Rubisco-oxigination & \texttt{E0ko} & • & • & • & • \\  
+• & Temperature sensitivity of Michealis-Menten Kintetics for Rubisco-oxigination & \texttt{E1ko} & • & • & • & • \\  
+• & Baseline of photosynthetic compensation point & \texttt{E0pcp} & • & • & • & • \\  
+• & Temperature sensitivity of photosynthetic compensation point & \texttt{E1pcp} & • & • & • & • \\  
+• & Baseline of Rubisco & \texttt{E0v} & • & • & • & • \\  
+• & Temperature sensitivity of Rubisco & \texttt{E1v} & • & • & • & • \\  
+• & Temperature sensitivity of PeP C4 photosynthesis ?? & \texttt{Tref\_pepc} & • & • & • & • \\  
+• & Temperature sensitivity of PeP C4 photosynthesis ?? & \texttt{Tbase\_pepc} & • & • & • & • \\  
+• & intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I)) & \texttt{alpha\_i} & $\mu$mol CO2/ mol quanta & • & • & • \\  
+• & Partial Pressure of O2 & \texttt{pO2} & kPa & • & • & • \\  
+• & default Ci:Ca for C3 plants & \texttt{CiCa\_default\_C3} & • & • & • & • \\  
+• & default Ci:Ca for C4 plants & \texttt{CiCa\_default\_C4} & • & • & • & • \\  
+• & maximum iteration of PS calculation & \texttt{ps\_it\_max} & • & • & • & • \\  
+• & saturating Ci in Pa C4 plants & \texttt{ci\_max} & • & • & • & • \\  
+• & ratio of diffusion coefficient for H2O and CO2 in air & \texttt{Dwv2co2\_air} & • & • & • & • \\  
+• & ratio of diffusion coefficient for H2O and CO2 in turbulent air & \texttt{Dwv2co2\_turb} & • & • & • & • \\  
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|c|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+% parameters describing the fractionation due to photosynthesis
+• & discrimination of C13 due to stomatal diffusion & \texttt{discr\_ps\_a\_C13} & • & • & • & • \\  
+• & discrimination of C13 due to Rubisco & \texttt{discr\_ps\_b\_C13} & • & • & • & • \\
+• & discrimination of C13 due to PEP C & \texttt{discr\_ps\_c\_C13} & • & • & • & • \\  
+• & discrimination of C13 due to stomatal diffusion & \texttt{discr\_ps\_a\_C14} & • & • & • & • \\    
+• & discrimination of C13 due to Rubisco & \texttt{discr\_ps\_b\_C14} & • & • & • & • \\  
+• & discrimination of C13 due to PEP C & \texttt{discr\_ps\_c\_C14} & • & • & • & • \\    
+• & leakage rate of bundle sheath cells & \texttt{discr\_ps\_phi} & • & • & • & • \\  
+% parameters for canopy profile and canopy light extinction
+• & extinction coefficient to describe decline of N within the canopy & \texttt{kn} & • & • & • & • \\    
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k0\_fnl\_chl\_C3} & • & • & • & • \\  
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k0\_fnl\_chl\_C4} & • & • & • & • \\    
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fnl\_chl\_C3} & • & • & • & • \\  
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fnl\_chl\_C4} & • & • & • & • \\    
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{kfnl\_chl} & • & • & • & • \\  
+% parameters used for phenology calculations
+• & minimum LAI beyond which all leaves are shed & \texttt{min\_lai} & • & • & • & • \\    
+• & maximum LAI target for reserve use calculations & \texttt{target\_lai\_max} & • & • & • & • \\  
+• & minimum leaf age before senescence is permitted & \texttt{min\_leaf\_age} & days & • & • & • \\        
+• & temperature threshold for growing degree days & \texttt{gdd\_t\_air\_threshold} & • & • & • & • \\    
+• & maximum GDD requirement & \texttt{gdd\_req\_max} & • & • & • & • \\  
+• & exponent factor in GDD - nd\_dormance equation & \texttt{k\_gdd\_dormance} & • & • & • & • \\        
+• & weekly air temperature initiating leaf senescence & \texttt{t\_air\_senescence} & • & • & • & • \\    
+• & value of beta\_soil at leaf flushing for grass & \texttt{beta\_soil\_flush\_grass} & • & • & • & • \\  
+• & value of beta\_soil at leaf flushing for trees & \texttt{beta\_soil\_flush\_tree} & • & • & • & • \\        
+• & value of beta\_soil at leaf shedding for trees & \texttt{beta\_soil\_senescence\_tree} & • & • & • & • \\    
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|c|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+% parameters required for albedo and fapar calculation
+• & Extinction coefficient for PAR on chlorophyll & \texttt{ka} & • & • & • & • \\  
+• & single leaf scattering albedo & \texttt{sigma} & • & • & • & • \\        
+• & extinction coefficient over black leaves & \texttt{kbl0} & • & • & • & • \\    
+• & extinction coefficient for diffuse PAR & \texttt{kdf0} & • & • & • & Spitters eq. 7 \\  
+• & scaling factor of solar angle in reflection calculation (mo\_veg\_fapar) & \texttt{rho2sbeta} & • & • & • & • \\        
+% other
+• & carbon mass per unit dry weight of leaves & \texttt{carbon\_per\_dryweight\_leaf} & g C/ g DW & • & • & • \\    
+• & minimum permissable height of an individual & \texttt{min\_height} & • & • & • & • \\  
+• & stem mass to leaf mass ratio of grasses & \texttt{sm2lm\_grass} & • & • & • & • \\        
+• & parameter in the Weibull function controlling fruit growth ?? & \texttt{lambda\_fruit\_alloc} & • & • & • & • \\    
+• & parameter in the Weibull function controlling fruit growth ?? & \texttt{weibull\_k\_fruit\_alloc} & • & • & • & • \\  
+• & parameter in the Weibull function controlling fruit growth ?? & \texttt{offset\_fruit\_alloc} & • & • & • & • \\        
+• & minimum fraction of allocation going to fruit (flowers etc.) & \texttt{min\_falloc\_fruit} & • & • & • & • \\    
+% vegetation dynamics
+• & background mortality rate of trees in static mortality case & \texttt{background\_mort\_rate\_tree} & • & • & • & • \\  
+• & background mortality rate of grasses in static mortality case & \texttt{background\_mort\_rate\_grass} & • & • & • & • \\        
+ 
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\              
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+\pagebreak
+
+\newpage
+\section{Memory and Util}
+
+
+\section{Radiation (albedo + fapar)}
+
+
+\section{Photosynthesis}
+
+
+
+\section{Growth}
+
+
+
+\section{Phenology}
+
+
+\section{Turnover}
+
+
+
+\section{Vegetation Dynamics}
+
+
+

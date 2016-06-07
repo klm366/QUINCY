@@ -20,7 +20,7 @@ siteCompilation="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 customSiteList="no"          # set either to yes or no (small caps)
 customSiteListFileName=""    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model
-slmModel="canopy"             # plant and canopy are currently available
+slmModel="plant"             # plant and canopy are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
 singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteCompilation
 

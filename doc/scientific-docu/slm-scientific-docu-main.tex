@@ -1,0 +1,76 @@
+\documentclass[11pt,oneside,openright,a4paper]{book}  % twoside,
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2cm]{geometry}    % bindingoffset=1.0cm, --> use only if 'twoside'
+\usepackage{mathtools}
+\usepackage{tabularx}
+%\usepackage{pdflscape}    % enabling single pages to be landscape oriented
+\usepackage{rotating}      % rotates figures tables etc
+%\usepackage{graphicx}
+%\usepackage{tabu}
+%\usepackage{cite}        % eventually necessary later
+%\usepackage{showframe}   % enable to get margins, header and footer visualized
+
+\usepackage{fancyhdr}
+\setlength{\headheight}{15pt}
+\pagestyle{fancyplain}
+\fancyhf{}
+%\lhead{ \fancyplain{}{Author Name} }
+\rhead{ \fancyplain{}{\leftmark} }
+\cfoot{ \fancyplain{}{\thepage} }
+
+\renewcommand{\chaptermark}[1]{ \markboth{#1}{} }  % print the actual name of the chapter without converting it to uppercase
+\renewcommand{\sectionmark}[1]{ \markright{#1} }   % print the actual name of the section without converting it to uppercase
+
+\renewcommand{\headrulewidth}{0pt}  % define the thickness of the decorative lines on the header
+\renewcommand{\footrulewidth}{0pt}  % define the thickness of the decorative lines on the footer
+
+\everymath{\displaystyle}  % cause the line to be taller, but will cause exponents and indices to be displayed correctly for some math operators
+
+% ----------- end header ----------- %
+
+% ----------- Title page, 2nd page and TOC ----------- %
+
+\begin{document}
+
+\title{%
+  \textbf{S}....\textbf{L}and\textbf{M}odel\\
+  \large Scientific Documentation}
+\author{QUINCY Team}
+\date{This pdf was compiled: \today}
+\maketitle
+
+
+% 2nd page: empty
+\newpage
+\mbox{}
+
+% 3rd page: TOC
+\tableofcontents
+
+
+
+% ----------- start with content ----------- %
+\chapter{Preface}
+
+
+
+
+% ----------- Including all Chapters via individual files ----------- %
+
+% All
+\input{chapters/slm-scientific-docu-all.tex}
+% Vegetation
+\input{chapters/slm-scientific-docu-veg.tex}
+% AtmLand
+\input{chapters/slm-scientific-docu-atmland.tex}
+% Soil
+\input{chapters/slm-scientific-docu-soil.tex}
+
+
+
+% ----------- References - BibTeX ----------- %
+\bibliography{bibtex/slm-scientific-docu} 
+\bibliographystyle{apalike} 
+
+\end{document}
