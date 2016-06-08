@@ -365,7 +365,7 @@ configuration file '%s' have to accord with the corresponding section name
         dirpath = dirmap [ b4j_filetype ]
 
         for dp in dirpath:
-            filepath = dp + os.sep + filename
+            filepath = os.path.join ( dp, filename )
             if os.path.isfile ( filepath ):
                 break
             elif dirpath.index ( dp ) == len ( dirpath ) -1:

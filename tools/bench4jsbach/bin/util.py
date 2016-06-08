@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 
 import os,sys,logging,textwrap
+import subprocess
+
 
 default_logger_name = 'DKL_LOGGER'
 log_message_newline = "\n  #\t"
@@ -104,6 +106,21 @@ def touch ( filename ):
         os.utime ( filename, None )
     else:
         open ( filename, 'a' ).close ()
+
+
+
+def subprocessing ( cmd ):
+    sp = subprocess.Popen ( cmd, shell=True,
+                            stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
+    stdout, stderr = sp.communicate()
+    if sp.returncode:
+        print "stdout: ", stdout
+        print "stderr: ", stderr
+        print "returncode: %d" % sp.returncode
+        sys.exit ( sp.returncode )
+    else:
+        print stdout
+
 
 
 if __name__ == '__main__':

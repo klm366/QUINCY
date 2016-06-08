@@ -3,7 +3,7 @@
 import os, sys, subprocess
 from netCDF4 import Dataset
 import fnmatch, re , shutil
-from util import print_none
+from util import print_none, subprocessing
 from cdo import Cdo
 
 ARCHIVE_PREFIX = "/hpss/arch/"
@@ -11,11 +11,13 @@ STREAM_SUFFIX  = "_stream"
 CODES_SUFFIX   = "_codes"
 
 HOST_AVAIL = { "thunder" : { "login_name" : "thunder4",
-                             "names": [ "thunder4", "thunder5" ]},
+                             "names"      : [ "thunder4", "thunder5" ],
+                             "cdo_path"   : "/sw/squeeze-x64/cdo-1.7.1-gcc48/bin" },
                "mistral" : { "login_name" : "mistral.dkrz.de",
-                             "names": [ "mlogin100", "mlogin101", "mlogin102", "mlogin103", "mlogin104", "mlogin105" ]},
+                             "names"      : [ "mlogin100", "mlogin101", "mlogin102", "mlogin103", "mlogin104", "mlogin105" ],
+                             "cdo_path"   : "/sw/rhel6-x64/cdo/cdo-1.7.0-magicsxx-gcc48/bin" },
                "archive" : { "login_name" : None,
-                             "names": []}}
+                             "names"      : []}}
 
 def find_files ( pattern, path, single = True, raise_e = False ):
     assert os.path.isdir ( path ) and isinstance ( pattern, str )
@@ -96,82 +98,60 @@ class Experiment ( object ):
             self.B4J_startyear = exp_metadata [ "simulation_period" ].split ( '-' )[ 0 ]
             self.B4J_finalyear = exp_metadata [ "simulation_period" ].split ( '-' )[ 1 ]
 
-            
-    def accumulate_streams ( self, orig_dir, orig_fn_tmpl, startyear, finalyear, target_path ):
+    def remotehost_processing ( self, cmd ):
+        cmd = "ssh %s@%s '%s'" % ( self.B4J_obj.config [ 'author' ],
+                                   HOST_AVAIL [ self.B4J_host ][ 'login_name' ],
+                                   cmd )
+        return subprocessing ( cmd )
+
+
+    def remotehost_fetching ( self, remote_path, target_path ):
+        cmd = "scp %s@%s:%s %s" % ( self.B4J_obj.config [ 'author' ],
+                                    HOST_AVAIL [ self.B4J_host ][ 'login_name' ],
+                                    remote_path,
+                                    target_path )
+        return subprocessing ( cmd )
+
+    
+    def accumulate_streams ( self, orig_dir, orig_fn_tmpl, startyear, finalyear, target_path, from_remote ):
         self.B4J_obj.logger.debug ( "Starting." )
-        print "orig_dir: ", orig_dir
-        print "orig_fn_tmpl: ", orig_fn_tmpl
-        print "startyear: ", startyear
-        print "finalyear: ", finalyear
-        print "target_path: ", target_path
 
-        # case from_remote
+        sy  = int ( startyear )
+        fy  = int ( finalyear )
 
-        remote_temp_dir = "B4J_TEMP_DIR"
-        remote_temp_fn  = "B4J_TEMP_FILE" + '.' + self.outdata_suffix
-        remote_temp_path = os.path.join ( remote_temp_dir, remote_temp_fn )
-        
-        user   = self.B4J_obj.config [ 'author' ]
-        server = HOST_AVAIL [ self.B4J_host ][ 'login_name' ]
-        cmd    = "ssh %s@%s 'rm -rf %s; mkdir %s'" % ( user, server, remote_temp_dir, remote_temp_dir )
-
-        print cmd
-        
-        sp = subprocess.Popen ( cmd, shell=True,
-                               stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
-        stdout, stderr = sp.communicate()
-        if sp.returncode:
-            print "stdout: ", stdout
-            print "stderr: ", stderr
-            print "returncode: %d" % sp.returncode
-            sys.exit ( sp.returncode )
+        if not from_remote:
+            cdo = Cdo ()
+            try:
+                os.remove ( target_path )
+            except OSError:
+                pass
+            cdo.mergetime ( input = [ os.path.join ( orig_dir, orig_fn_tmpl % { 'year' : y }) for y in range ( sy, fy + 1 )],
+                            output = target_path )
         else:
-            print stdout
+            remote_temp_dir  = "B4J_TEMP_DIR"
+            remote_temp_fn   = orig_fn_tmpl % { "year" : "%s-%s" % ( startyear, finalyear )} 
+            remote_temp_path = os.path.join ( remote_temp_dir, remote_temp_fn )
 
-        sy  = 3300#int ( startyear )
-        fy  = 3329#int ( finalyear )
-        ofnt = orig_fn_tmpl.replace ( '%(year)d', '${y}' )
-        print ofnt
-        cmd = """
-        echo $(hostname);
-        i=0;
-        for y in `seq %d 1 %d`;do
-        echo $y
-        ARRAY[$i]=%s/%s;
-        echo ${ARRAY[i]}
-        i=$i+1;
-        done;
-        cdo mergetime ${ARRAY[*]} %s;
-        """ % ( sy, fy, orig_dir, ofnt, remote_temp_path )
+            ofnt = orig_fn_tmpl.replace ( '%(year)s', '${y}' )
 
-        print cmd
-        
-        
-        sp = subprocess.Popen ( cmd, shell=True,
-                               stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
-        stdout, stderr = sp.communicate()
-        if sp.returncode:
-            print "stdout: ", stdout
-            print "stderr: ", stderr
-            print "returncode: %d" % sp.returncode
-            sys.exit ( sp.returncode )
-        else:
-            print stdout
+            remote_cmd = """
+            echo 'on server' $(hostname);
+            mkdir -p %s;
+            for y in `seq %d 1 %d`;do
+            ARRAY[$i]=%s/%s;
+            echo ${ARRAY[i]}
+            i=$i+1;
+            done;
+            export PATH=%s:$PATH;
+            rm -f %s;
+            cdo mergetime ${ARRAY[*]} %s;
+            """ % ( remote_temp_dir, sy, fy, orig_dir, ofnt,
+            HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
+            remote_temp_path, remote_temp_path )
 
-
-        # end case from_remote
-
-        # cdo = Cdo ()
-        # sy = int ( startyear )
-        # fy = int ( finalyear )
-        # try:
-        #     os.remove ( target_path )
-        # except OSError:
-        #     pass
-        # cdo.mergetime ( input = [ os.path.join ( orig_dir, orig_fn_tmpl % { 'year' : y }) for y in range ( sy, fy + 1 )],
-        #                 output = target_path )
-
-        
+            self.remotehost_processing ( remote_cmd )
+            self.remotehost_fetching ( remote_temp_path, target_path )
+            self.remotehost_processing ( "rm -rf %s" % remote_temp_dir )
         
         self.B4J_obj.logger.debug ( "Exiting." )
 
@@ -219,14 +199,15 @@ class Experiment ( object ):
                                                             "submodel"          : file_config [ modeltype ][ "submodel" ],
                                                             "stream"            : file_config [ modeltype ][ "stream" ],
                                                             "cond_frequencefix" : self.outdata_frequence_infixes [ 'monthly' ],
-                                                            "startyear"         : "%(year)d",
+                                                            "startyear"         : "%(year)s",
                                                             "cond_finalyearstr" : "",
                                                             "suffix"            : self.outdata_suffix }
                     self.accumulate_streams ( orig_path,
                                               orig_fn_tmpl,
                                               field_config [ 'startyear' ],
                                               field_config [ 'finalyear' ],
-                                              self.B4J_index [ dest_path_token ] )
+                                              self.B4J_index [ dest_path_token ],
+                                              from_remote )
                     
                                     
         self.B4J_obj.logger.debug ( "Exiting" )
