@@ -1,5 +1,20 @@
 \chapter{Vegetation}
 
+\section{Photosynthesis}
+
+
+
+\section{Growth}
+
+
+
+\section{Phenology}
+
+
+\section{Turnover}
+
+\section{Vegetation Dynamics}
+
 %\newpage
 \begin{sidewaystable}
 \section{Parameters}
@@ -15,12 +30,13 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 % Example:
 % $\tau_{labile,def}$ & default turnover time of labile pool & \texttt{tau\_labile\_default} & \ref{eq\_tau\_lab} & 1.0 & \cite{zaehle:2013} \\ 
 
-% Respiration parameters
-• & growth respiration per unit new biomass & \texttt{fresp\_growth} & • & • & • & • \\ 
-• & N-specific maintenance respiration rate & \texttt{fmaint\_rate\_base} & $\mu$mol CO2/ mmol N/ s & • & • & • \\ 
-• & Coefficient in the equation for temperature sensitivity of foliar respiration & \texttt{t\_maint\_k1} & • & • & • & • \\ 
-• & same as above & \texttt{t\_maint\_k2} & • & • & • & • \\ 
-• & same as above & \texttt{t\_maint\_k3} & • & • & • & • \\ 
+\multicolumn{6}{l}{\bf Respiration parameters}\\
+\hline
+• & growth respiration per unit new biomass & \texttt{fresp\_growth} & mol mol\^{-1} & • & 0.25 & Needed \\ 
+• & Maintenance respiration rate & \texttt{fmaint\_rate\_base} & $\mu$mol CO2/ mmol N/ s & • & 1.25 & • \\ 
+• & Temperature sensitivity of maintenance respiration & \texttt{t\_maint\_k1} & • & • & 308.58 & • \\ 
+• & same as above & \texttt{t\_maint\_k2} & • & • & 50.02 & • \\ 
+• & same as above & \texttt{t\_maint\_k3} & • & • & 227.13 & • \\ 
 % Labile pool parameters 
 • & default turnover time of the labile carbo-hydrates & \texttt{tau\_labile\_default} & days & • & • & • \\ 
 • & lambda in temperature response function of labile pool & \texttt{lambda\_tau\_labile\_temp} & • & • & • & • \\ 
@@ -168,28 +184,7 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 \pagebreak
 
 \newpage
-\section{Memory and Util}
 
-
-\section{Radiation (albedo + fapar)}
-
-
-\section{Photosynthesis}
-
-
-
-\section{Growth}
-
-
-
-\section{Phenology}
-
-
-\section{Turnover}
-
-
-
-\section{Vegetation Dynamics}
 
 
 

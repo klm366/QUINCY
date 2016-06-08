@@ -1,0 +1,50 @@
+\chapter{Optimality concepts}\label{ch:optimality}
+
+%\newpage
+\section{NItrogen allocation to the canopy}\label{sec:optimal_n_canopy}
+
+
+\section{Optimal nitrogen allocation to photosynthetic components}\label{sec:optimal_N_frac}
+Within the framework of a new plant growth model (to be described elsewhere) we implement an optimal nitrogen allocation scheme to and within the canopy. The main assumption behind this scheme is that plants have the capacity to plastically allocate N to the leaves in order to  maximize their net carbon gain given available plant N.
+
+For the allocation within the canopy, we assume that leaf N is partitioned into three photosynthetic pools and one other pool which includes but is not limited to cell wall N and N in DNA and non-photosynthetic enzymes. Because of structural and physiological constraints on the latter pool, denoted by $f_{oth}$, we further assume that it is not allocated to dynamically and it is equal to a fixed fraction of leaf N. However, the fraction of N in each of the three photosynthetic pools - light capture $f_{chl}$, electron transport $f_{et}$ and carboxylation $f_{rub}$ - can change in response to environmental conditions. Theoretical solutions to this problem have been proposed previously, but here we aim to represent optimal allocation in real time which poses some additional problems to finding the solutions that give the highest carbon assimilation. 
+
+At each timestep, the three fractions, $f_i$ where $i$ can be either of $chl$, $et$ or $rub$, can change in order to increase carbon assimilation (or GPP per leaf area), by a given amount, $df_{max}$:
+\begin{equation}
+ f_{i, new}=f_{i, old}+df_{max}, if GPP(f_{i, new})>GPP(f_{i, old})
+\end{equation}
+That is, if the GPP, given the current environmental conditions and new fractions $f_{i, new}$ is larger than the GPP given current conditions and previous fractions $f_{i, old}$. All fractions can and must change simultaneously in order to conserve mass. There is no analytical solution given the photosynthetic model used so that the new fractions are determined at each timestep using a one step 'search algorithm', which determines the direction of change in the chlorophyll fraction and based on this then computes the other two fractions where an optimal value can be calculated analytically.
+
+\section{Carbon allocation to roots vs. leaves}\label{sec:optimal_allocation}
+Biomass allocation schemes based on allometry and the pipe model assume a physical/mathematical relationship between the leaf, shoot and root components based on physical integrity and water relations. However, this can lead to an imbalance in the nutrients available to growth as the leaf:root ratio also drives the C:N ratio available to plants. 
+
+We propose an optimal allocation scheme in which the leaf:root ratio is driven by the C:N requirements of plant growth. To this purpose we define the potential carbon growth rate and the potential nitrogen growth rate. The carbon growth rate is simply equal to the NPP:
+\begin{equation}
+ G_{C}=NPP
+\end{equation}
+To determine the effect of leaf growth on carbon uptake, we define a variable $dNPP$ calculated as the change in NPP for a very small change in leaf mass.
+
+The nitrogen growth rate is defined as the amount of carbon equivalent to the amount of nitrogen that can be taken up in one timestep by the current root mass, given the plant growth C:N ratio.
+\begin{equation}
+ G_N=g_NRr_{cn-p}
+\end{equation}
+where $g_N$ is the N uptake rate per unit root mass ($\mu$mewl N mewl$^{-1}$C), $R$ is root mass (mewl C) and $r_{cn-p}$ is whole plant CM ratio (mewl C mewl$^{-1}$N). To achieve optimal allocation, that is, to reach maximum biomass growth and not have any C or N available but not used, the two growth rates must be equal.
+\begin{equation}\label{eqn:l2r}
+ NPP=g_NRr_{cn-p}
+\end{equation}
+
+In addition to the optimal condition, we use the structural constraint of the pipe model to prescribe the leaf to sapwood ratio:
+\begin{equation}\label{eqn:l2s}
+ L = k_{l2s} S
+\end{equation}
+
+To be able to determine growth at each timestep, we need to calculate the C increments for each pool - leaf, dL, sapwood dS, root dR, given available carbon for growth, $B_{inc}$
+\begin{equation}\label{eqn:growth_inc}
+ B_{inc}=dL+dS+dR
+\end{equation}
+
+Solving equations \ref{eqn:l2r}-\ref{eqn:growth_inc} gives growth increments at each model timestep, resulting in a dynamic allocation to leaves and roots. Given the potential small model timestep we compute averages of the variables needed ($NPP, dNPP, g_N and r_{cn-p}$) over a time scale of $\tau_{allocation}$ to avoid diurnal and other short-term variation in leaf to root ratios.
+
+
+
+
