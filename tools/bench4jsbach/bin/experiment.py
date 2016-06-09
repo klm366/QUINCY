@@ -113,7 +113,7 @@ class Experiment ( object ):
         return subprocessing ( cmd )
 
     
-    def accumulate_streams ( self, orig_dir, orig_fn_tmpl, startyear, finalyear, target_path, from_remote ):
+    def accumulate_streams ( self, orig_dir, orig_fn_tmpl, startyear, finalyear, selcodes, format, codes_path, target_path, from_remote ):
         self.B4J_obj.logger.debug ( "Starting." )
 
         sy  = int ( startyear )
@@ -129,8 +129,11 @@ class Experiment ( object ):
                             output = target_path )
         else:
             remote_temp_dir  = "B4J_TEMP_DIR"
-            remote_temp_fn   = orig_fn_tmpl % { "year" : "%s-%s" % ( startyear, finalyear )} 
+            remote_temp_fn   = ( orig_fn_tmpl % { "year" : "%s-%s" % ( startyear, finalyear )}).replace ( '.grb', '.nc' )
+#            remote_temp_fn = remote_temp_fn.replace ( '.grb', '.nc' )
             remote_temp_path = os.path.join ( remote_temp_dir, remote_temp_fn )
+
+            
 
             ofnt = orig_fn_tmpl.replace ( '%(year)s', '${y}' )
 
@@ -144,10 +147,12 @@ class Experiment ( object ):
             done;
             export PATH=%s:$PATH;
             rm -f %s;
-            cdo mergetime ${ARRAY[*]} %s;
+            cdo -f %s -t %s select,code=%s ${ARRAY[*]} %s;
             """ % ( remote_temp_dir, sy, fy, orig_dir, ofnt,
             HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
-            remote_temp_path, remote_temp_path )
+            remote_temp_path, format, codes_path, selcodes, remote_temp_path )
+
+            print remote_cmd
 
             self.remotehost_processing ( remote_cmd )
             self.remotehost_fetching ( remote_temp_path, target_path )
@@ -172,6 +177,9 @@ class Experiment ( object ):
                                      ( " acculated" if accumulated else " not accumulated" ),
                                      ( " from %s" % self.B4J_host if from_remote else "" )))
         
+        
+        if from_remote: fetchfile_list = []
+        
         for field_name, field_config in self.B4J_obj.diagnostic_fields.iteritems ():
             assert 'fetch' in field_config, "No 'fetch'-section defined for %s." % field_name
             for file_name, file_config in field_config ['fetch' ].iteritems ():
@@ -190,7 +198,7 @@ class Experiment ( object ):
                                                   "cond_frequencefix" : self.outdata_frequence_infixes [ 'monthly' ],
                                                   "startyear"         : field_config [ 'startyear' ],
                                                   "cond_finalyearstr" : self.outdata_finalyear_tmpl % { 'finalyear': field_config [ 'finalyear' ]},
-                                                  "suffix"            : self.outdata_suffix }
+                                                  "suffix"            : field_config [ 'suffix' ]}#self.outdata_suffix }
                     self.B4J_index [ dest_path_token ] = os.path.join ( self.B4J_obj.downloads_path, fn )
                     print self.B4J_index [ dest_path_token ]
                     
@@ -202,10 +210,20 @@ class Experiment ( object ):
                                                             "startyear"         : "%(year)s",
                                                             "cond_finalyearstr" : "",
                                                             "suffix"            : self.outdata_suffix }
+                    
+                    codes_path  = os.path.join ( self.B4J_path, self.B4J_name, self.codesfiles_subpath,
+                                                 self.codesfiles_fn_tmpl % { "expname": self.B4J_name,
+                                                                             "submodel": file_config [ modeltype ][ "submodel" ],
+                                                                             "stream": file_config [ modeltype ][ "stream" ],
+                                                                             "suffix": self.codesfiles_suffix })
+                    print codes_path
                     self.accumulate_streams ( orig_path,
                                               orig_fn_tmpl,
                                               field_config [ 'startyear' ],
                                               field_config [ 'finalyear' ],
+                                              file_config [ modeltype ][ 'code' ],
+                                              field_config [ 'suffix' ],
+                                              codes_path,
                                               self.B4J_index [ dest_path_token ],
                                               from_remote )
                     
@@ -499,10 +517,10 @@ class CMIP5_Experiment ( Experiment ):
 
 # status: only for archived experiment
 class MPIESM1_Experiment ( Experiment ):
-    codesfiles_tar_tmpl       = "%(expname)s_log.tar"
-    codesfiles_fn_tmpl        = "%(expname)s_%(submodel)s_%(stream)s.%(suffix)s"
     codesfiles_suffix         = "codes"
-    codesfiles_subpath        = None
+    codesfiles_subpath        = 'log'
+    codesfiles_fn_tmpl        = "%(expname)s_%(submodel)s_%(stream)s.%(suffix)s"
+    codesfiles_tar_tmpl       = "%(expname)s_log.tar"
     
     outdata_fn_tmpl           = """%(expname)s_%(submodel)s_%(stream)s_%(cond_frequencefix)s%(startyear)s%(cond_finalyearstr)s.%(suffix)s"""
     outdata_finalyear_tmpl    = """-%(finalyear)s"""
