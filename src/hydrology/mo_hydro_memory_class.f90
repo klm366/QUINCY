@@ -40,7 +40,7 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & snowmelt,         & !< Snow melt                                                                [kg m-2 s-1]
       & evapopot,         & !< Potential evaporation                                                    [kg m-2 s-1]
-      & evapotrans          !< Evapotranspiration                                                       [kg m-2 s-1]
+      & evapotranspiration  !< Evapotranspiration                                                       [kg m-2 s-1]
 
     TYPE(t_jsb_var_real2d) :: &
       & runoff,           & !< surface runoff
@@ -48,6 +48,10 @@ MODULE mo_hydro_memory_class
       & discharge,        & !< discharge (local)
       & discharge_ocean,  & !< discharge to the ocean
       & internal_drain      !< internal drain
+
+    ! Additional variables for land type
+    TYPE(t_jsb_var_real2d) :: &
+      & evapo_lnd         ! !< Evapotranspiration over vegetation and bare soil type 
 
     ! Additional variables for soil
     TYPE(t_jsb_var_real2d) :: &
@@ -90,6 +94,8 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
+      & evapo_wtr,        & !< Evaporation over lake water
+      & evapo_ice,        & !< Evaporation over lake ice
       & fract_snow_lice,  & !< Fraction of swow on lake ice                                             []
       & w_snow_lice         !< Water content of snow on lake ice                                        [m water equivalent]
 
@@ -162,6 +168,22 @@ CONTAINS
       & prefix, suffix,                                                              &
       & initval_r=-1.0_wp )    ! -1 used to determine start of experiment
 
+      ! Total evapotranspiration, including sublimation
+    CALL jsb_add_var( mem, 'evapotranspiration', mem%evapotranspiration,                    &
+      & hgrid, surface,                                                                  &
+      & t_cf('surface_evapotranspiration', 'kg m-2 s-1', 'Evapotranspiration from surface'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+      & prefix, suffix,                                                              &
+      & initval_r=0.0_wp )
+
+      ! Potential evapotranspiration/sublimation
+    CALL jsb_add_var( mem, 'evapopot', mem%evapopot,                                     &
+      & hgrid, surface,                                                                  &
+      & t_cf('surface_evaporation_potential', 'kg m-2 s-1', 'Potential evaporation from surface'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+      & prefix, suffix,                                                              &
+      & initval_r=0.0_wp )
+
     CALL jsb_add_var( mem, 'tte_corr', mem%tte_corr,                                     &
       & hgrid, surface,                                                                  &
       & t_cf('tte_correction_snowmelt', '', ''),                                         &
@@ -173,22 +195,6 @@ CONTAINS
     CALL jsb_add_var( mem, 'snowmelt', mem%snowmelt,                                     &
       & hgrid, surface,                                                                  &
       & t_cf('snow_melt', 'kg m-2 s-1', 'Snow melt on surface'),                         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
-      & prefix, suffix,                                                              &
-      & initval_r=0.0_wp )
-
-    ! Potential evapotranspiration/sublimation
-    CALL jsb_add_var( mem, 'evapopot', mem%evapopot,                                     &
-      & hgrid, surface,                                                                  &
-      & t_cf('surface_evaporation_potential', 'kg m-2 s-1', 'Potential evaporation from surface'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
-      & prefix, suffix,                                                              &
-      & initval_r=0.0_wp )
-
-    ! Total evapotranspiration, including sublimation
-    CALL jsb_add_var( mem, 'evapotrans', mem%evapotrans,                                 &
-      & hgrid, surface,                                                                  &
-      & t_cf('surface_evapotranspiration', 'kg m-2 s-1', 'Evapotranspiration from surface'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
@@ -227,6 +233,23 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
+
+    ! Additional variables for land type
+    IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
+      &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+      &  )                                       &
+      &  .AND. .NOT. ASSOCIATED(mem%evapo_lnd%ptr) ) THEN
+
+      ! Total evapotranspiration, including sublimation
+      CALL jsb_add_var( mem, 'evapo_lnd', mem%evapo_lnd,                                 &
+        & hgrid, surface,                                                                  &
+        & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp )
+
+    END IF
 
     ! Additional variables for soil
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
@@ -409,7 +432,21 @@ CONTAINS
 
     ! Additional variables for LAKE lct
     IF (      One_of(LAKE_TYPE, lct_ids(:)) > 0 &
-      & .AND. .NOT. ASSOCIATED(mem%fract_snow_lice%ptr)) THEN
+      & .AND. .NOT. ASSOCIATED(mem%evapo_wtr%ptr)) THEN
+
+      CALL jsb_add_var( mem, 'evapo_wtr', mem%evapo_wtr,                                 &
+        & hgrid, surface,                                                                  &
+        & t_cf('surface_evapotranspiration_wtr', 'kg m-2 s-1', 'Evapotranspiration from lake water'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'evapo_ice', mem%evapo_ice,                                 &
+        & hgrid, surface,                                                                  &
+        & t_cf('surface_evapotranspiration_ice', 'kg m-2 s-1', 'Evapotranspiration from lake ice'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp )
 
       !Fraction of snow on lake ice, rel. to ice fraction
       CALL jsb_add_var( mem, 'fract_snow_lice', mem%fract_snow_lice, &

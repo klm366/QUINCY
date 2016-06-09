@@ -12,11 +12,13 @@ MODULE mo_atm2land_memory_class
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
+  USE mo_util,              ONLY: One_of
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
+  USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -47,10 +49,16 @@ MODULE mo_atm2land_memory_class
       cos_zenith_angle   , &
       ! For lakes:
       albedo_wtr         , &
-      latent_hflx_wtr    , &
-      sensible_hflx_wtr  , &
-      latent_hflx_ice    , &
-      sensible_hflx_ice
+      drag_wtr           , &
+      drag_ice           , &
+      t_acoef_wtr        , &
+      t_bcoef_wtr        , &
+      q_acoef_wtr        , &
+      q_bcoef_wtr        , &
+      t_acoef_ice        , &
+      t_bcoef_ice        , &
+      q_acoef_ice        , &
+      q_bcoef_ice
   CONTAINS
     PROCEDURE :: Init => Init_atm2land_memory
   END TYPE t_atm2land_memory
@@ -213,40 +221,86 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'albedo_wtr', mem%albedo_wtr,                     &
-      & hgrid, surface,                                                      &
-      & t_cf('albedo_wtr', '', 'Albedo of open lake water'),                 &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
 
-    CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr,           &
-      & hgrid, surface,                                                      &
-      & t_cf('latent_hflx_wtr', '', 'Latent heat flux over lake water'),     &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
+      CALL jsb_add_var( mem, 'drag_wtr', mem%drag_wtr,                &
+        & hgrid, surface,                                                      &
+        & t_cf('surface_drag_wtr', '', ''),                                    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'sensible_hflx_wtr', mem%sensible_hflx_wtr,       &
-      & hgrid, surface,                                                      &
-      & t_cf('sensible_hflx_wtr', '', 'Sensible heat flux over lake water'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
+      CALL  jsb_add_var( mem, 'drag_ice', mem%drag_ice,                &
+        & hgrid, surface,                                                      &
+        & t_cf('surface_drag_ice', '', ''),                                    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'latent_hflx_ice', mem%latent_hflx_ice,           &
-      & hgrid, surface,                                                      &
-      & t_cf('latent_hflx_ice', '', 'Latent heat flux over lake ice'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
+      CALL jsb_add_var( mem, 't_acoef_wtr', mem%t_acoef_wtr,                   &
+        & hgrid, surface,                                                      &
+        & t_cf('temperature_acoef_wtr', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'sensible_hflx_ice', mem%sensible_hflx_ice,       &
-      & hgrid, surface,                                                      &
-      & t_cf('sensible_hflx_ice', '', 'Sensible heat flux over lake ice'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
+      CALL jsb_add_var( mem, 't_bcoef_wtr', mem%t_bcoef_wtr,                   &
+        & hgrid, surface,                                                      &
+        & t_cf('temperature_acoef_wtr', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'q_acoef_wtr', mem%q_acoef_wtr,                   &
+        & hgrid, surface,                                                      &
+        & t_cf('specific_humidity_acoef_wtr', '', ''),                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'q_bcoef_wtr', mem%q_bcoef_wtr,                   &
+        & hgrid, surface,                                                      &
+        & t_cf('specific_humidity_bcoef_wtr', '', ''),                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 't_acoef_ice', mem%t_acoef_ice,                   &
+        & hgrid, surface,                                                      &
+        & t_cf('temperature_acoef_ice', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 't_bcoef_ice', mem%t_bcoef_ice,                   &
+        & hgrid, surface,                                                      &
+        & t_cf('temperature_acoef_ice', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'q_acoef_ice', mem%q_acoef_ice,                   &
+        & hgrid, surface,                                                      &
+        & t_cf('specific_humidity_acoef_ice', '', ''),                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'q_bcoef_ice', mem%q_bcoef_ice,                   &
+        & hgrid, surface,                                                      &
+        & t_cf('specific_humidity_bcoef_ice', '', ''),                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'albedo_wtr', mem%albedo_wtr,                     &
+        & hgrid, surface,                                                      &
+        & t_cf('albedo_wtr', '', 'Albedo of open lake water'),                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.07_wp )
+
+    END IF
 
   END SUBROUTINE Init_atm2land_memory
 

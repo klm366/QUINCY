@@ -12,11 +12,13 @@ MODULE mo_land2atm_memory_class
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
+  USE mo_util,              ONLY: One_of
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
+  USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -37,7 +39,11 @@ MODULE mo_land2atm_memory_class
       alb_vis_dif ,   &
       alb_nir_dif ,   &
       alb_vis_dir ,   &
-      alb_nir_dir 
+      alb_nir_dir ,   &
+      latent_hflx_wtr    , &
+      sensible_hflx_wtr  , &
+      latent_hflx_ice    , &
+      sensible_hflx_ice
   CONTAINS
     PROCEDURE :: Init => Init_land2atm_memory
   END TYPE t_land2atm_memory
@@ -150,6 +156,38 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
+
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%latent_hflx_wtr%ptr)) THEN
+
+      CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr,           &
+        & hgrid, surface,                                                      &
+        & t_cf('latent_hflx_wtr', '', 'Latent heat flux over lake water'),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'sensible_hflx_wtr', mem%sensible_hflx_wtr,       &
+        & hgrid, surface,                                                      &
+        & t_cf('sensible_hflx_wtr', '', 'Sensible heat flux over lake water'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'latent_hflx_ice', mem%latent_hflx_ice,           &
+        & hgrid, surface,                                                      &
+        & t_cf('latent_hflx_ice', '', 'Latent heat flux over lake ice'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'sensible_hflx_ice', mem%sensible_hflx_ice,       &
+        & hgrid, surface,                                                      &
+        & t_cf('sensible_hflx_ice', '', 'Sensible heat flux over lake ice'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & initval_r=0.0_wp )
+
+    END IF
 
   END SUBROUTINE Init_land2atm_memory
 

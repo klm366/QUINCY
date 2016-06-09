@@ -307,10 +307,12 @@ CONTAINS
     dsl4jsb_Def_memory(SEB)
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t
-    dsl4jsb_Real2D_onChunk :: t_old
-    dsl4jsb_Real2D_onChunk :: t_unfilt
-    dsl4jsb_Real2D_onChunk :: t_unfilt_old
+    dsl4jsb_Real2D_onChunk :: &
+      & t,           &
+      & t_filt,      &
+      & t_old,       &
+      & t_unfilt,    &
+      & t_unfilt_old
 
     ! Locally allocated variables
     !
@@ -337,6 +339,7 @@ CONTAINS
     dsl4jsb_Get_memory(SEB)
 
     dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! out
+    dsl4jsb_Get_var2D_onChunk(SEB,      t_filt)         ! out
     dsl4jsb_Get_var2D_onChunk(SEB,      t_old)          ! in
     dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt)       ! in
     dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt_old)   ! in
@@ -344,10 +347,11 @@ CONTAINS
     ! Asselin time filter, if applicable
     eps = get_asselin_coef()
     IF (eps > 0._wp) THEN
-      t(:) = t_unfilt_old(:) + eps * (t_old(:) - 2._wp * t_unfilt_old(:) + t_unfilt(:))
+      t_filt(:) = t_unfilt_old(:) + eps * (t_old(:) - 2._wp * t_unfilt_old(:) + t_unfilt(:))
     ELSE
-      t(:) = t_unfilt(:)
+      t_filt(:) = t_unfilt(:)
     END IF
+    t(:) = t_filt(:)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -381,7 +385,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: latent_hflx
     dsl4jsb_Real2D_onChunk :: sensible_hflx
     dsl4jsb_Real2D_onChunk :: evapopot
-    dsl4jsb_Real2D_onChunk :: evapotrans
+    dsl4jsb_Real2D_onChunk :: evapotranspiration
+    dsl4jsb_Real2D_onChunk :: evapo_lnd
     dsl4jsb_Real2D_onChunk :: trans
     dsl4jsb_Real2D_onChunk :: fract_snow
 
@@ -419,23 +424,24 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO)
     dsl4jsb_Get_memory(ATM2LAND)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)      ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef)             ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef)             ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef)             ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef)             ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)            ! in
 
-    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_star)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      s_star)         ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      fact_q_air)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      fact_qsat_srf) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      fact_qsat_trans_srf) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      sensible_hflx) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      latent_hflx)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,      evapotrans)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,      trans)         ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,      evapopot)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,      fract_snow)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_star)           ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      s_star)              ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      fact_q_air)          ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      fact_qsat_srf)       ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      fact_qsat_trans_srf) ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      sensible_hflx)       ! out
+    dsl4jsb_Get_var2D_onChunk(SEB,      latent_hflx)         ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapo_lnd)           ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapotranspiration)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    trans)               ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapopot)            ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)          ! in
 
     ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
     !
@@ -452,7 +458,8 @@ CONTAINS
 
     ! Compute moisture fluxes
     !
-    evapotrans(:) = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:))        ! Evapotranspiratin
+    evapo_lnd (:) = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:))        ! Evapotranspiratin
+    evapotranspiration(:) = evapo_lnd(:)
     evapopot  (:) = heat_tcoef(:) * (q_air    (:) - qsat_star    (:))       ! Potential evaporation
     trans     (:) = fact_qsat_trans_srf(:) * evapopot(:)                    ! Transpiration
 
@@ -462,7 +469,7 @@ CONTAINS
 
     ! Compute latent heat flux
     !
-    latent_hflx(:) = alv * evapotrans(:) + (als - alv) * fract_snow(:) * evapopot(:)
+    latent_hflx(:) = alv * evapotranspiration(:) + (als - alv) * fract_snow(:) * evapopot(:)
 
   END SUBROUTINE update_surface_fluxes_land
 

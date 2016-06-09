@@ -51,7 +51,6 @@ MODULE mo_jsb_model_class
     TYPE(t_jsb_process_p),     POINTER :: processes(:)
     TYPE(t_Task_queue),        POINTER :: queue        => NULL()
     CLASS(t_jsb_process_task), POINTER :: current_task => NULL()
-!!$    TYPE(t_hsm),              POINTER :: hsm
     TYPE(t_lctlib)                     :: lctlib
   CONTAINS
     ! From base type:

@@ -33,7 +33,7 @@ MODULE mo_seb_lake
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: update_surface_energy_lake
+  PUBLIC :: update_surface_energy_lake, update_surface_fluxes_lake
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_seb_lake'
 
@@ -59,7 +59,12 @@ CONTAINS
       & t, &
       & t_wtr, &
       & t_ice, &
+      & qsat_wtr, &
+      & qsat_ice, &
+      & s_wtr, &
+      & s_ice, &
       & heat_cap, &
+      & press_srf, &
       & snow, &
       & latent_hflx_wtr, &
       & sensible_hflx_wtr, &
@@ -125,17 +130,22 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB, t)   ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, t_wtr)      ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, t_ice)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, qsat_wtr)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, qsat_ice)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, s_wtr)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB, s_ice)      ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, heat_cap)   ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, hflx_form_ice) ! inout
     dsl4jsb_Get_var2D_onChunk(SEB, hflx_cond_ice)
     dsl4jsb_Get_var2D_onChunk(SEB, hflx_melt_ice)
     dsl4jsb_Get_var2D_onChunk(SEB, hflx_melt_snow)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, snow)               ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, latent_hflx_wtr)    ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, sensible_hflx_wtr)  ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, latent_hflx_ice)    ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, sensible_hflx_ice)  ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)     ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, snow)          ! in
+    dsl4jsb_Get_var2D_onChunk(SEB, latent_hflx_wtr)    ! in
+    dsl4jsb_Get_var2D_onChunk(SEB, sensible_hflx_wtr)  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB, latent_hflx_ice)    ! in
+    dsl4jsb_Get_var2D_onChunk(SEB, sensible_hflx_ice)  ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB, fract_lice) ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB, depth_lice) ! OUT
@@ -214,6 +224,11 @@ CONTAINS
       & fract_snow_lice, &
       & min_ice_depth, &
       & dtime)
+
+    qsat_wtr(:) = qsat(t_wtr(:), press_srf(:))
+    qsat_ice(:) = qsat(t_ice(:), press_srf(:))
+    s_wtr(:)    = surface_dry_static_energy(t_wtr(:), qsat_wtr(:))
+    s_ice(:)    = surface_dry_static_energy(t_ice(:), qsat_ice(:))
 
     t(:) = (1._wp - fract_lice(:)) * t_wtr   (:) + fract_lice(:) * t_ice   (:)
     heat_cap(:) = (1._wp - fract_lice(:)) * hcap_wtr(:) + fract_lice(:) * hcap_ice(:)
@@ -496,6 +511,154 @@ CONTAINS
 !!$    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 !!$
 !!$  END SUBROUTINE update_asselin_lake
+
+  SUBROUTINE update_surface_fluxes_lake(tile, options)
+
+    USE mo_phy_schemes,            ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_jsb_physical_constants, ONLY: alv, als
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Local variables
+    !
+    dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(ATM2LAND)
+
+    ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: &
+      & evapopot,       &
+      & evapotranspiration
+    dsl4jsb_Real2D_onChunk :: qsat_wtr
+    dsl4jsb_Real2D_onChunk :: s_wtr
+    dsl4jsb_Real2D_onChunk :: t_acoef_wtr
+    dsl4jsb_Real2D_onChunk :: t_bcoef_wtr
+    dsl4jsb_Real2D_onChunk :: q_acoef_wtr
+    dsl4jsb_Real2D_onChunk :: q_bcoef_wtr
+    dsl4jsb_Real2D_onChunk :: drag_wtr
+    dsl4jsb_Real2D_onChunk :: latent_hflx_wtr
+    dsl4jsb_Real2D_onChunk :: sensible_hflx_wtr
+    dsl4jsb_Real2D_onChunk :: evapo_wtr
+    dsl4jsb_Real2D_onChunk :: qsat_ice
+    dsl4jsb_Real2D_onChunk :: s_ice
+    dsl4jsb_Real2D_onChunk :: t_acoef_ice
+    dsl4jsb_Real2D_onChunk :: t_bcoef_ice
+    dsl4jsb_Real2D_onChunk :: q_acoef_ice
+    dsl4jsb_Real2D_onChunk :: q_bcoef_ice
+    dsl4jsb_Real2D_onChunk :: drag_ice
+    dsl4jsb_Real2D_onChunk :: latent_hflx_ice
+    dsl4jsb_Real2D_onChunk :: sensible_hflx_ice
+    dsl4jsb_Real2D_onChunk :: evapo_ice
+    dsl4jsb_Real2D_onChunk :: fract_lice
+
+    ! Locally allocated vectors
+    !
+    REAL(wp) ::                &
+      & s_air          (options%nc),   &  !< Dry static energy at lowest atmospheric level
+      & q_air          (options%nc),   &  !< Humidity at lowest atmospheric level
+      heat_tcoef       (options%nc)       !< Heat transfer coefficient (rho*C_h*|v|)
+
+    INTEGER  :: iblk, ics, ice, nc
+    REAL(wp) :: steplen
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes_lake'
+
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    steplen = options%steplen
+
+    IF (.NOT. tile%Is_process_active(SEB)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface fluxes')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(ATM2LAND)
+
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef_wtr)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef_wtr)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef_wtr)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef_wtr)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef_ice)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef_ice)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef_ice)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef_ice)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_wtr)          ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_ice)          ! IN
+
+    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_wtr)          ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      s_wtr)             ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_ice)          ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      s_ice)             ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      fract_lice)        ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      sensible_hflx_wtr) ! out
+    dsl4jsb_Get_var2D_onChunk(SEB,      latent_hflx_wtr)   ! out
+    dsl4jsb_Get_var2D_onChunk(SEB,      sensible_hflx_ice) ! out
+    dsl4jsb_Get_var2D_onChunk(SEB,      latent_hflx_ice)   ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapo_wtr)         ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapo_ice)         ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapopot)          ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapotranspiration) ! out
+
+    ! ================================================================================================================================
+    ! Surface fluxes for lake water
+
+    ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
+    !
+    s_air(:) = t_acoef_wtr(:) * s_wtr   (:) + t_bcoef_wtr(:)
+    q_air(:) = q_acoef_wtr(:) * qsat_wtr(:) + q_bcoef_wtr(:)
+
+    ! Transfer coefficient
+    heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)
+
+    ! Compute moisture fluxes
+    !
+    evapo_wtr (:) = heat_tcoef(:) * (q_air(:) - qsat_wtr(:))       ! Potential evaporation
+
+    ! Compute sensible heat flux
+    !
+    sensible_hflx_wtr(:) = heat_tcoef(:) * (s_air(:) - s_wtr(:))
+
+    ! Compute latent heat flux
+    !
+    latent_hflx_wtr(:) = alv * evapo_wtr(:)
+
+    ! ================================================================================================================================
+    ! Surface fluxes for lake ice
+
+    ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
+    !
+    s_air(:) = t_acoef_ice(:) * s_ice   (:) + t_bcoef_ice(:)
+    q_air(:) = q_acoef_ice(:) * qsat_ice(:) + q_bcoef_ice(:)
+
+    ! Transfer coefficient
+    heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)
+
+    ! Compute moisture fluxes
+    !
+    evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_ice(:))       ! Potential evaporation
+
+    ! Compute sensible heat flux
+    !
+    sensible_hflx_ice(:) = heat_tcoef(:) * (s_air(:) - s_ice(:))
+
+    ! Compute latent heat flux
+    !
+    latent_hflx_ice(:) = als * evapo_ice(:)
+
+    evapopot          (:) = (1._wp - fract_lice(:)) * evapo_wtr   (:) + fract_lice(:) * evapo_ice   (:)
+    evapotranspiration(:) = evapopot(:)
+
+  END SUBROUTINE update_surface_fluxes_lake
 
 #endif
 END MODULE mo_seb_lake

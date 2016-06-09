@@ -54,11 +54,14 @@ CONTAINS
     & tte_corr,                                                    &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,          &
     ! For lakes:
-    & albedo_wtr, latent_hflx_wtr, sensible_hflx_wtr,              & !< in
-    & t_wtr,                                                       & !< out
-    & latent_hflx_ice, sensible_hflx_ice,                          & !< in
-    & t_ice, ice_fract_lake,                                       & !< out
-    & albedo_ice                                                   & !< out
+    & albedo_wtr,                                                  & !< in
+    & drag_wtr, drag_ice,                                          & !< in
+    & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,          & !< in
+    & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,          & !< in
+    & t_wtr, evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,        & !< out
+    & t_ice, evapo_ice, latent_hflx_ice, sensible_hflx_ice,        & !< out
+    & albedo_ice,                                                  & !< out
+    & ice_fract_lake                                               & !< out
     & )
 
     INTEGER :: p_pe
@@ -92,11 +95,17 @@ CONTAINS
       & pch               (:), &
       & cos_zenith_angle  (:), &
       ! For lakes:
-      & albedo_wtr        (:), &
-      & latent_hflx_wtr   (:), &
-      & sensible_hflx_wtr (:), &
-      & latent_hflx_ice   (:), &
-      & sensible_hflx_ice (:)
+      & drag_wtr          (:), &
+      & drag_ice          (:), &
+      & t_acoef_wtr       (:), &
+      & t_bcoef_wtr       (:), &
+      & q_acoef_wtr       (:), &
+      & q_bcoef_wtr       (:), &
+      & t_acoef_ice       (:), &
+      & t_bcoef_ice       (:), &
+      & q_acoef_ice       (:), &
+      & q_bcoef_ice       (:), &
+      & albedo_wtr        (:)
     REAL(wp), INTENT(out) ::   &
       & t_srf             (:), &
       & t_eff_srf         (:), &
@@ -115,9 +124,16 @@ CONTAINS
       & alb_vis_dir       (:), &
       & alb_nir_dir       (:), &
       & alb_vis_dif       (:), &
-      & alb_nir_dif       (:), &
+      & alb_nir_dif       (:)
+    REAL(wp), INTENT(out) ::   &
       & t_wtr             (:), &
+      & evapo_wtr         (:), &
+      & latent_hflx_wtr   (:), &
+      & sensible_hflx_wtr (:), &
       & t_ice             (:), &
+      & evapo_ice         (:), &
+      & latent_hflx_ice   (:), &
+      & sensible_hflx_ice (:), &
       & ice_fract_lake    (:), &
       & albedo_ice        (:)
 
@@ -170,11 +186,17 @@ CONTAINS
       & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       ! For lakes:
-      & albedo_wtr         = albedo_wtr(:),         &
-      & latent_hflx_wtr    = latent_hflx_wtr(:),    &
-      & sensible_hflx_wtr  = sensible_hflx_wtr(:),  &
-      & latent_hflx_ice    = latent_hflx_ice(:),    &
-      & sensible_hflx_ice  = sensible_hflx_ice(:)   &
+      & drag_wtr           = drag_wtr(:),           &
+      & drag_ice           = drag_ice(:),           &
+      & t_acoef_wtr        = t_acoef_wtr(:),        &
+      & t_bcoef_wtr        = t_bcoef_wtr(:),        &
+      & q_acoef_wtr        = q_acoef_wtr(:),        &
+      & q_bcoef_wtr        = q_bcoef_wtr(:),        &
+      & t_acoef_ice        = t_acoef_ice(:),        &
+      & t_bcoef_ice        = t_bcoef_ice(:),        &
+      & q_acoef_ice        = q_acoef_ice(:),        &
+      & q_bcoef_ice        = q_bcoef_ice(:),        &
+      & albedo_wtr         = albedo_wtr(:)          &
       & )
     NULLIFY(tile)
 
@@ -260,9 +282,15 @@ CONTAINS
       & alb_vis_dif     = alb_vis_dif(:),     &
       & alb_nir_dif     = alb_nir_dif(:),     &
       & t_wtr           = t_wtr(:),           &
-      & t_ice           = t_ice(:),           &
-      & ice_fract_lake  = ice_fract_lake(:),  &
-      & albedo_ice      = albedo_ice(:)       &
+      & evapo_wtr       = evapo_wtr(:),       &
+      & latent_hflx_wtr    = latent_hflx_wtr(:),    &
+      & sensible_hflx_wtr  = sensible_hflx_wtr(:),  &
+      & t_ice           = t_ice(:),                 &
+      & evapo_ice       = evapo_ice(:),             &
+      & latent_hflx_ice    = latent_hflx_ice(:),    &
+      & sensible_hflx_ice  = sensible_hflx_ice(:),  &
+      & ice_fract_lake  = ice_fract_lake(:),        &
+      & albedo_ice      = albedo_ice(:)             &
       & )
     NULLIFY(tile)
 

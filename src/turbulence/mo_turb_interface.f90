@@ -21,7 +21,7 @@ MODULE mo_turb_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -47,12 +47,6 @@ MODULE mo_turb_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_turb_interface'
 
-!!$  !> Type definition for turbulence process
-!!$  TYPE, EXTENDS(t_jsb_process) :: t_turb_process
-!!$  CONTAINS
-!!$    PROCEDURE :: Register_tasks => Register_turb_tasks        !< Registers tasks for turbulence process
-!!$  END TYPE t_turb_process
-
   !> Type definition for surface_roughness task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_roughness
   CONTAINS
@@ -64,6 +58,18 @@ MODULE mo_turb_interface
   INTERFACE tsk_surface_roughness
     PROCEDURE Create_task_surface_roughness                        !< Constructor function for task
   END INTERFACE tsk_surface_roughness
+
+  !> Type definition for humidity_scaling task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_humidity_scaling
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_humidity_scaling     !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_humidity_scaling  !< Aggregates computed task variables
+  END TYPE tsk_humidity_scaling
+
+  !> Constructor interface for humidity scaling task
+  INTERFACE tsk_humidity_scaling
+    PROCEDURE Create_task_humidity_scaling                        !< Constructor function for task
+  END INTERFACE tsk_humidity_scaling
 
 CONTAINS
 
@@ -90,6 +96,25 @@ CONTAINS
   END FUNCTION Create_task_surface_roughness
 
   ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for humidity_scaling task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "tsk_humidity_scaling"
+  !!
+  FUNCTION Create_task_humidity_scaling(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_humidity_scaling::return_ptr)
+
+    return_ptr%name = 'humidity_scaling'
+    return_ptr%process_id = TURB
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_humidity_scaling
+
+  ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for turbulence process
   !!
   !! @param[in]     model_id  Model id
@@ -101,6 +126,7 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_surface_roughness(model_id))
+    CALL this%Register_task(tsk_humidity_scaling(model_id))
 
   END SUBROUTINE Register_Turb_Tasks
 
@@ -190,6 +216,10 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_memory(TURB)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_roughness'
@@ -207,11 +237,148 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    !X Implementation: Start your process scheme here...
+    dsl4jsb_Get_memory(TURB)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(TURB, rough_h,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_roughness
+
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation of "update" for task "humidity_scaling"
+  !! Task "<PROCESS_NAME_LOWER_CASE>" <EXPLANATIION_OF_PROCESS>.
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_humidity_scaling(tile, options)
+
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_soil_constants,         ONLY: ws_wilt_fract
+    USE mo_soil_process,           ONLY: relative_humidity
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Declare pointers to process configs and memory
+    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(ATM2LAND)
+
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: &
+      & fract_fpc, &
+      ws_l, &
+      ws_fc_l, &
+      ws_pwp_l, &
+!!$      sfract_can, &
+!!$      sfract_soil, &
+!!$      wfract_can, &
+!!$      wfract_soil, &
+      sfract_srf, &
+      wfract_srf, &
+      fact_q_air, &
+      fact_qsat_srf, &
+      fact_qsat_trans_srf, &
+      qsat_srf, &
+      canopy_cond, &
+      pch, &
+      wind_air, &
+      q_air
+
+    ! Locally variables
+    REAL(wp) :: &
+      fact_qsat_veg(options%nc),   &
+      fact_qsat_trans(options%nc), &
+      fact_qsat_soil(options%nc),  &
+      fact_qair_veg(options%nc),   &
+      fact_qair_soil(options%nc),  &
+      rel_hum(options%nc)
+
+    INTEGER :: iblk, ics, ice, nc
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (.NOT. tile%Is_process_active(TURB)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of humidity weights')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Get pointers to process configs and memory
+    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(ATM2LAND)
+
+    ! Set pointers to variables in memory
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, pch)                 ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, wind_air)            ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)               ! in
+
+    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_srf)            ! in
+    dsl4jsb_Get_var2D_onChunk(SRF,      sfract_srf)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      wfract_srf)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_q_air)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_qsat_srf)       ! OUT
+    dsl4jsb_Get_var2D_onChunk(SRF,      fact_qsat_trans_srf) ! OUT
+
+    dsl4jsb_Get_var3D_onChunk(SOIL,     ws_l)                ! IN
+    dsl4jsb_Get_var3D_onChunk(SOIL,     ws_fc_l)             ! IN
+    dsl4jsb_Get_var3D_onChunk(SOIL,     ws_pwp_l)            ! IN
+
+    dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc)           ! IN
+    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)         ! IN
+!!$    sfract_can       => tile%mem%veg  %sfract_can%ptr          (ics:ice,    iblk)
+!!$    sfract_soil      => tile%mem%soil %sfract_soil%ptr         (ics:ice,    iblk)
+!!$    wfract_can       => tile%mem%veg  %wfract_can%ptr          (ics:ice,    iblk)
+!!$    wfract_soil      => tile%mem%soil %wfract_soil%ptr         (ics:ice,    iblk)
+
+    WHERE (ws_l(:,1) > ws_pwp_l(:,1))
+      fact_qsat_veg(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) *   &
+        & (wfract_srf(:) + ( 1._wp - wfract_srf(:)) /                &
+        & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:))))
+      fact_qsat_trans(:) = (1._wp - sfract_srf(:)) * &
+        & (1._wp - wfract_srf(:)) /                  &
+        & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:)))
+    ELSEWHERE
+      fact_qsat_veg(:)   = sfract_srf(:) + (1._wp - sfract_srf(:)) * wfract_srf(:)
+      fact_qsat_trans(:) = 0._wp
+    END WHERE
+    fact_qair_veg(:) = fact_qsat_veg(:)
+
+    rel_hum(:) = relative_humidity(ws_l(:,1), ws_fc_l(:,1))
+
+    WHERE (qsat_srf(:) * rel_hum(:) > q_air(:) .AND. rel_hum(:) > 1.e-10_wp)
+      fact_qsat_soil(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * &
+        & (wfract_srf(:) + (1._wp - wfract_srf(:)) * rel_hum(:))
+      fact_qair_soil(:) = 1._wp
+    ELSEWHERE
+      fact_qsat_soil(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * wfract_srf(:)
+      fact_qair_soil(:) = fact_qsat_soil(:)
+    END WHERE
+    WHERE (q_air(:) > qsat_srf(:))
+      fact_qsat_soil(:) = 1._wp
+      fact_qair_soil(:) = 1._wp
+    END WHERE
+
+    fact_qsat_srf(:) = fract_fpc(:) * fact_qsat_veg(:) + (1._wp - fract_fpc(:)) * fact_qsat_soil(:)
+    fact_q_air(:)    = fract_fpc(:) * fact_qair_veg(:) + (1._wp - fract_fpc(:)) * fact_qair_soil(:)
+    fact_qsat_trans_srf(:) = fract_fpc(:) * fact_qsat_trans(:)
+
+  END SUBROUTINE update_humidity_scaling
 
   ! ================================================================================================================================
   !>
