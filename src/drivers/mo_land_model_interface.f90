@@ -74,7 +74,7 @@ MODULE mo_land_model_interface
       ga,             &
       vpd
     INTEGER  :: itile                        !< the current tile(i), for looping over ntile
-
+    REAL(wp) :: dir_delta_leaf_cn
 !! stop here -----------------
 CALL finish('land_model_interface','Stop! The land model is currently not working. Science needs to be improved to make it work.')
 !! stop here -----------------
@@ -100,7 +100,7 @@ CALL finish('land_model_interface','Stop! The land model is currently not workin
       !tile(2)%plant%pftid=2
 
       CALL update_radiation(tile(itile))                         !< mo_veg_radiation
-      CALL update_canopy_fluxes(tile(itile), veg_param)          !< mo_veg_photosynthesis
+      CALL update_canopy_fluxes(tile(itile), veg_param, dir_delta_leaf_cn)          !< mo_veg_photosynthesis
       CALL update_vegetation(tile(itile), veg_param)             !< mo_veg_interface
     END DO
   END SUBROUTINE land_model_interface

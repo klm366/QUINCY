@@ -16,7 +16,7 @@ MODULE mo_veg_soil
 
   PRIVATE
 
-  PUBLIC :: update_vegsoil_bgc, update_vegsoil_physics
+  PUBLIC :: update_vegsoil_bgc, update_vegsoil_physics, update_soil_pool
 
 CONTAINS
 
@@ -92,7 +92,6 @@ CONTAINS
     !> 2.0 ELSE: maintain prescribed C:N:P irrespective of nutrient uptake capacity == no nutrient limitation case 
     !! 
     ELSE
-
       ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
       plant%flux%uptake_n = MAX(plant%pool%labile%carbon / veg_param%cn_leaf(pftid) - & 
                                         plant%pool%labile%nitrogen, 0.0_wp) * 1.e6 / dt
@@ -102,8 +101,67 @@ CONTAINS
                                            plant%pool%labile%phosphorus, 0.0_wp) * 1.e6 / dt
 
     ENDIF     
+
+    !> 3.0 Calculate potential N uptake per unit root
+    !!
+    plant%flux%dN_up = veg_param%vmax_uptake_n(pftid) * &
+                       plant%moving_average%demand_uptake_n * & 
+                       soil%ammonium * ( veg_param%soil_n_aff1(pftid) + & 
+                       1._wp / ( veg_param%soil_n_aff2(pftid) + soil%ammonium ))
+
   END SUBROUTINE update_vegsoil_bgc
 
+ !-----------------------------------------------------------------------------------------------------
+  !> routine to update soil litter and mineral pools
+  !! @todo add C and P pools. Add proper decomposition
+  !-----------------------------------------------------------------------------------------------------
+
+  SUBROUTINE update_soil_pool(tile, veg_param)
+
+    USE mo_base_memory,      ONLY: t_slm_soil, t_slm_tile
+    USE mo_base_constants,   ONLY: dt
+    USE mo_veg_memory,       ONLY: t_slm_plant
+    USE mo_veg_parameters
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    TYPE(t_slm_veg_param), INTENT(in)       :: veg_param     !< vegetation type parameters
+    TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile          !< one tile
+    ! 0.2 Local
+    TYPE(t_slm_soil),POINTER      :: soil               ! soil variables per tile
+    TYPE(t_slm_plant),POINTER     :: plant              ! plant variables per tile
+    INTEGER  :: pftid                                   ! ID of the pft
+    REAl(wp) :: soil_depth = 1.0 ! soil depth, m
+
+    !  bi-directional pointer
+    plant => tile%plant
+    soil  => tile%soil
+
+    pftid = plant%pftid
+
+    !> 1 Calculate soil litter pool decomposition. Currently only for N
+    !!    
+    !! Needs temperature and moisture correction
+    soil%flux%loss%litter = 1.0_wp/tau_litter * soil%pool%litter
+    
+    !> 2 Update soil litter pool. Probably needs splitting into structural and non-structural litter
+    !!
+    soil%pool%litter = soil%pool%litter + plant%flux%litterfall%leaf
+    soil%pool%litter = soil%pool%litter + plant%flux%litterfall%fine_root
+    soil%pool%litter = soil%pool%litter + plant%flux%litterfall%coarse_root
+    soil%pool%litter = soil%pool%litter + plant%flux%litterfall%heart_wood
+
+    soil%pool%litter = soil%pool%litter - soil%flux%loss%litter * dt
+    
+    !> 3 Update mineral pool
+    !! 
+!SZ BLARPP. check units
+    soil%ammonium = soil%ammonium   + soil%flux%loss%litter%nitrogen*dt*  1.e3 / soil_depth * 1.e-3
+    soil%ammonium = soil%ammonium   - plant%flux%uptake_n * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
+    !soil%phosphate = soil%phosphate + soil%flux%loss%litter%phosphorus*dt*  1.e3 / soil_depth * 1.e-3
+    !soil%phosphate = soil%phosphate - plant%flux%uptake_p * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
+
+    END SUBROUTINE update_soil_pool
   !-----------------------------------------------------------------------------------------------------
   !> update soil moisture and theta for the plant only model
   !! 
@@ -116,7 +174,7 @@ CONTAINS
     USE mo_base_constants,    ONLY: dt
     USE mo_atmland_memory,    ONLY: atm2land
     USE mo_atmland_util,      ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants,    ONLY: r_gas_dryair
+    USE mo_shared_constants,  ONLY: r_gas_dryair
 
     IMPLICIT NONE
     ! 0.1 InOut

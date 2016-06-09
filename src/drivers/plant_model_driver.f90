@@ -73,7 +73,9 @@ PROGRAM plant_model_driver
   INTEGER  :: itimestep                    !< current timestep i, looping over timesteps ntimestep
   REAL(wp) :: timestep_prop_day            !< proportion of one day that is simulated with one timestep (dt/one_day)
   INTEGER  :: itile                        !< the current tile(i), for looping over ntile
+  INTEGER  :: icanop                       !< the current canopy layer, for looping over ncanop
   REAL(wp) :: hlp1
+  REAl(wp), DIMENSION(ncanop) :: canopy_layer_depth_act !< actual canopy layer depth ?
 
   ! check number of tiles, exit if more than output routines can handle (for now)
   IF(ntile > 10) CALL finish('plant_model_driver','Number of tiles is too large for veg_output to work reliable; see lun')
@@ -126,7 +128,10 @@ PROGRAM plant_model_driver
     tile(itile)%soil%theta                    = veg_config%soil_theta_prescribe 
     tile(itile)%soil%ammonium                 = 0.2_wp
     tile(itile)%soil%phosphate                = 0.01_wp
+    tile(itile)%soil%pool%litter%nitrogen     = 5.0_wp
     tile(itile)%plant%pftid                   = veg_config%pft_id
+    tile(itile)%plant%target_cn_leaf          = veg_param%cn_leaf(tile(itile)%plant%pftid)
+    tile(itile)%plant%target_np_leaf          = veg_param%np_leaf(tile(itile)%plant%pftid)
     tile(itile)%plant%pool%reserve%carbon     = 50.0_wp
     tile(itile)%plant%pool%reserve%nitrogen   = tile(itile)%plant%pool%reserve%carbon / &
                                                 (1._wp + fresp_growth) / veg_param%cn_leaf(tile(itile)%plant%pftid)
@@ -152,9 +157,28 @@ PROGRAM plant_model_driver
     tile(itile)%plant%pool%reserve%carbon14   = calc_fractionation(atm2land%co2_mixing_ratio, & 
                                                                    atm2land%co2_mixing_ratio_C14,hlp1) & 
                                                 * tile(itile)%plant%pool%reserve%carbon 
-  END DO 
 
-  !! 1.4 open input files (and read the header into dummy variables)
+!SZ BLARPP, needs a better solution
+!possibly already fixed - needs a check
+    !> initialise canopy N concentrations and fractions
+    !! @todo: ticket #48 remove if not required anymore  
+    canopy_layer_depth_act = calc_canopy_layer_depth(tile(itile)%plant%lai)
+
+    CALL calc_canopy_n_distribution( &
+      tile(itile)%plant%pool%leaf%nitrogen, tile(itile)%plant%lai, &
+      canopy_layer_depth_act, & 
+      veg_param%ps_pathway(tile(itile)%plant%pftid), &
+      veg_param%k0_fnl_struc(tile(itile)%plant%pftid),& 
+      tile(itile)%plant%canopy_layer(:)%nl_tot, &
+      tile(itile)%plant%canopy_layer(:)%fnl_chl, &
+      tile(itile)%plant%canopy_layer(:)%fnl_et, &
+      tile(itile)%plant%canopy_layer(:)%fnl_rub, &
+      tile(itile)%plant%canopy_layer(:)%fnl_pepc, &
+      tile(itile)%plant%canopy_layer(:)%fnl_oth)                    
+
+  END DO ! end loop over tiles
+
+  !! 1.4 open input files (and read the header into dummy variables); see mo_atmland_forcing
   !! 
   !! 
   CALL open_forcing_input_file  ! mo_atmland_forcing; only if: option_forcing == 'readfile'
@@ -208,26 +232,32 @@ PROGRAM plant_model_driver
       !! 
       CALL update_vegetation(tile(itile), veg_param)   !< mo_veg_interface
 
-      !! 3.5 update soil water bucket 
+      !! 3.5 update soil litter and mineral N pools if using basic soil model
+      !! 
+      !! 
+      IF (veg_config%flag_base_soil_model) CALL update_soil_pool(tile(itile), veg_param)  !< mo_veg_soil
+
+      !! 3.6 update soil water bucket 
       !! 
       !! 
       CALL update_vegsoil_physics(tile(itile))  !< mo_veg_soil
 
-      !! 3.6 Accumulation
+      !! 3.7 Accumulation
       !! 
       !! daily & moving average
       CALL tile(itile)%plant%daily_average%calc_avrg(tile(itile)%plant, time_day, timestep_prop_day) !< daily avrg of the prev day
       CALL tile(itile)%plant%moving_average%update_veg(tile(itile)%plant)          !< moving averages - vegetation
       CALL tile(itile)%plant%moving_average%update_soil(tile(itile)%plant)         !< moving averages - soil -> plant N & P uptake
-      CALL tile(itile)%plant%moving_average%update_tile(atm2land%t_air, atm2land%press_srf)  !< moving averages - atmland
+      CALL tile(itile)%plant%moving_average%update_tile(atm2land%t_air, & 
+                atm2land%press_srf, atm2land%q_air) !< moving averages - atmland
 
-      !! 3.7 output pool: write output in certain intervals, see mo_veg_output
+      !! 3.8 output pool: write output in certain intervals, see mo_veg_output
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
       !! 
       CALL write_output_pool(tile(itile), veg_param, time_day, time_year, itile)
 
-      !! 3.8 output flux: write output in certain intervals, see mo_veg_output
+      !! 3.9 output flux: write output in certain intervals, see mo_veg_output
       !! 
       !! 
       CALL write_output_flux(tile(itile), time_day, time_year, itile)

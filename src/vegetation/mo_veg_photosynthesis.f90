@@ -18,12 +18,13 @@ MODULE mo_veg_photosynthesis
   USE mo_atmland_forcing
   USE mo_veg_parameters
   USE mo_veg_radiation,  ONLY: calc_canopy_layer_depth
+  USE mo_veg_config_class,ONLY: veg_config
 
   IMPLICIT NONE
 
   PRIVATE
 
-  PUBLIC :: update_canopy_fluxes,discrimination_ps
+  PUBLIC :: calc_canopy_n_distribution,update_canopy_fluxes,discrimination_ps
 
 CONTAINS
 
@@ -34,7 +35,7 @@ CONTAINS
   !! CALL calc_canopy_n_distribution \n
   !! CALL calc_photosynthesis
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_canopy_fluxes(tile, veg_param)
+  SUBROUTINE update_canopy_fluxes(tile, veg_param, direction)
 
    USE mo_shared_constants
    USE mo_shared_isotope
@@ -43,6 +44,7 @@ CONTAINS
    ! 0.1 InOut
    TYPE(t_slm_veg_param), INTENT(in)        :: veg_param      !< list of vegetation parameters
    TYPE(t_slm_tile),INTENT(inout), TARGET   :: tile           !< one tile
+   REAL(wp), INTENT(out)                    :: direction      ! direction of change for optimal leaf N - lower, equal or higher
    ! 0.2 Local
    TYPE(t_slm_soil),POINTER         :: soil                   ! soil variables per tile
    TYPE(t_slm_plant),POINTER        :: plant                  ! plant variables per tile
@@ -75,7 +77,7 @@ CONTAINS
    ! determine actual canopy layers
    canopy_layer_depth_act = calc_canopy_layer_depth(plant%lai)
 
-   ! update N distribution in the canopy
+   ! calculate N distribution in the canopy
    CALL calc_canopy_n_distribution(plant%pool%leaf%nitrogen,plant%lai, & 
                                    canopy_layer_depth_act, &
                                    veg_param%ps_pathway(pftid), & 
@@ -86,11 +88,26 @@ CONTAINS
                                    plant%canopy_layer(:)%fnl_rub, & 
                                    plant%canopy_layer(:)%fnl_pepc, &
                                    plant%canopy_layer(:)%fnl_oth)
+
    ! calculate photosynthesis per layer
    DO icanop = 1,ncanop
-      IF(canopy_layer_depth_act(icanop).GT.0.0_wp)THEN
+      IF(canopy_layer_depth_act(icanop) > 0.0_wp)THEN
 
-        CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+          ! optimize N fractions if desired
+          IF (veg_config%flag_optimal_Nfraction)THEN
+              CALL optimize_fractions(plant%canopy_layer(icanop)%fnl_chl,& 
+                         plant%canopy_layer(icanop)%fnl_rub,&
+                         plant%canopy_layer(icanop)%fnl_et,&
+                         plant%canopy_layer(icanop)%fnl_pepc, & 
+                         plant%canopy_layer(icanop)%fnl_oth,&
+                         plant%canopy_layer(icanop)%nl_tot, dnf, plant%moving_average%par_sunlit(icanop),&
+                         plant%moving_average%par_shaded(icanop), plant%moving_average%fleaf_sunlit(icanop),&
+                         plant%moving_average%t_air, plant%moving_average%press_surf,plant%moving_average%beta_air,&
+                         plant%moving_average%beta_soil_ps,&
+                         plant%moving_average%beta_soil_gs, veg_param, pftid)
+          ENDIF
+
+          CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
                                  plant%canopy_layer(icanop)%par_sunlit, &
                                  plant%canopy_layer(icanop)%par_shaded, & 
                                  plant%canopy_layer(icanop)%fleaf_sunlit, &
@@ -103,19 +120,16 @@ CONTAINS
                                  veg_param%ps_pathway(pftid), &
                                  veg_param%tjmax_opt(pftid), &
                                  veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
-                                 agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop))
+                                 agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop), &
+                                 hlp1,hlp1,hlp1)
 
      ENDIF
   ENDDO
 
   !> integrate to canopy level values
   !! 
-  !! fluxes were set to zero before by set_zero_fluxes_of_plant_pools in the driver
-!  plant%flux%gpp = 0.0_wp
-!  plant%flux%an = 0.0_wp
-!  plant%flux%maint_respiration_leaf = 0.0_wp
-!  plant%flux%ci = 0.0_wp
   plant%gc = 0.0_wp 
+
   DO icanop = 1,ncanop
      plant%flux%gpp = plant%flux%gpp + agl(icanop) * canopy_layer_depth_act(icanop) 
      IF(agl(icanop) > eps8) THEN
@@ -138,14 +152,23 @@ CONTAINS
 
   plant%flux%ci = plant%flux%ci / sum(canopy_layer_depth_act)
 
+     ! optimize total N allocated to leaf pool
+     IF (veg_config%flag_optimal_Nleaf) &
+          CALL  optimize_Nleaf(plant, canopy_layer_depth_act, veg_param,&
+          plant%moving_average%t_air, plant%moving_average%press_surf, plant%moving_average%beta_air,&
+          plant%moving_average%beta_soil_ps,plant%moving_average%beta_soil_gs, &
+          direction)
+
+     ! calculate NPP increment, needed for optimal allocation scheme
+     IF (veg_config%flag_optimal_allocation) CALL calc_npp_increment(plant, veg_param, plant%flux%dnpp)
   END SUBROUTINE update_canopy_fluxes
 
   !-----------------------------------------------------------------------------------------------------
-  !> Dummy routine to produce the within canopy distribution of N of OCN
+  !> Calculates N content for each canopy layer
   !! 
-  !! @todo replace by Silvia's allocation scheme and feed back information on foliar C:N to growth routine
-  !! @par note 
-  !!  it includes "nf" as input, i.e. Andrew's tuning constant
+  !! calculates total canopy layer N content its non-photosynthetic fraction\n
+  !! a) for the case of static N allocation fractions, these are set here\n
+  !! for the case of optimal N allocation, only total updates of new/old canopy layer sections\n 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_canopy_n_distribution(totalN,lai,canopy_layer_depth_act,ps_pathway,k0_fnl_struc,& 
                                       nl_tot,fnl_chl,fnl_et,fnl_rub,fnl_pepc,fnl_oth)
@@ -170,42 +193,81 @@ CONTAINS
   REAL(wp) :: n0                              ! foliar N content of top-most layer
   REAL(wp) :: k0_fnl_chl,k1_fnl_chl           ! factors in chlorophyll profile calculation 
   REAL(wp) :: jmax2vcmax                      ! jmax to vcmax ratio
+  REAL(wp) :: f_pepc                          ! fraction of N in PEP Carboxylase
   REAL(wp) :: lc                              ! cummulative LAI
   INTEGER :: icanop
 
-  ! calculate top of the canopy N 
-  IF(lai > canopy_layer_depth_act(1)) THEN
-     n0 = totalN * 1000._wp * kn / (1._wp - exp(-kn * lai))
-  ELSE 
-     n0 = totalN * 1000._wp
-  ENDIF
-
-  lc = canopy_layer_depth_act(1) / 2._wp
+  ! set pathway specific constants
   IF(ps_pathway == ic4phot) THEN
       jmax2vcmax = jmax2vcmax_C4
       k0_fnl_chl = k0_fnl_chl_C4
       k1_fnl_chl = k1_fnl_chl_C4
-      fnl_pepc = k0_fnl_pepc
+      f_pepc     = k0_fnl_pepc
   ELSE 
       jmax2vcmax = jmax2vcmax_C3
       k0_fnl_chl = k0_fnl_chl_C3
       k1_fnl_chl = k1_fnl_chl_C3
-      fnl_pepc = 0.0_wp
+      f_pepc     = 0.0_wp
   ENDIF
 
+  !> 1.0 calculate top of the canopy N 
+  !!
+  IF(lai > canopy_layer_depth_act(1)) THEN
+     n0 = totalN * 1000._wp * kn / (1._wp - exp(-kn * lai))
+  ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
+     n0 = totalN * 1000._wp
+  ENDIF
+
+  !> 2.0 update fractions if not optimised
+  !!
+  lc = canopy_layer_depth_act(1) / 2._wp
   DO icanop = 1,ncanop
      IF(canopy_layer_depth_act(icanop).GT.eps8) THEN
+        !> 2.1 set total canopy layer N and non-photosynthetic fractions 
+        !!
         nl_tot(icanop) = n0 * exp(-kn * lc) 
         fnl_oth(icanop) = k0_fnl_struc - k1_fnl_struc * nl_tot(icanop)
-        fnl_chl(icanop) = (k0_fnl_chl - k1_fnl_chl * exp(-kfnl_chl * lc)) / chl2n
-        ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
-        fnl_et(icanop) = (1._wp - (fnl_oth(icanop) + fnl_chl(icanop) + fnl_pepc(icanop) )) / & 
-                         (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
-        ! fraction of Rubisco is determined as the remainder
-        fnl_rub(icanop) = 1._wp - fnl_oth(icanop) - fnl_chl(icanop) - fnl_et(icanop) - fnl_pepc(icanop)
+
+        !> 2.2 for the static case, set fractions in Rub, ET, Chlorophyll and PEPC (if C4 plant)
+        !!
+        IF (.NOT.veg_config%flag_optimal_Nfraction) THEN
+           fnl_chl(icanop) = (k0_fnl_chl - k1_fnl_chl * exp(-kfnl_chl * lc)) / chl2n
+           fnl_pepc(:) = f_pepc
+           ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
+           fnl_et(icanop) = (1._wp - (fnl_oth(icanop) + fnl_chl(icanop) + fnl_pepc(icanop) )) / & 
+                            (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
+           ! fraction of Rubisco is determined as the remainder
+           fnl_rub(icanop) = 1._wp - fnl_oth(icanop) - fnl_chl(icanop) - fnl_et(icanop) - fnl_pepc(icanop)
+
+        !> 2.3 for the optimal case, only initialise layers if new       
+        ELSE
+           IF(fnl_chl(icanop)<eps8)THEN ! new layer with new leaves
+              IF(icanop == 1)THEN ! first layers: use static allocation as first guess
+                 fnl_chl(icanop) = (k0_fnl_chl - k1_fnl_chl * exp(-kfnl_chl * lc)) / chl2n
+                 ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
+                 fnl_et(icanop) = (1._wp - (fnl_oth(icanop) + fnl_chl(icanop) + fnl_pepc(icanop) )) / & 
+                                   (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
+                 ! fraction of Rubisco is determined as the remainder
+                 fnl_rub(icanop) = 1._wp - fnl_oth(icanop) - fnl_chl(icanop) - fnl_et(icanop) - fnl_pepc(icanop)
+              ELSE ! other layers: copy from above layer
+                 fnl_chl(icanop)  = fnl_chl(icanop-1)
+                 fnl_et(icanop)   = fnl_et(icanop-1) 
+                 fnl_rub(icanop)  = fnl_rub(icanop-1) 
+                 fnl_pepc(icanop) = fnl_pepc(icanop-1)
+              ENDIF
+           ENDIF
+        ENDIF
         lc = lc + canopy_layer_depth_act(icanop) / 2._wp & 
              + canopy_layer_depth_act(icanop+1) / 2._wp
-    ENDIF
+      ELSE
+        nl_tot(icanop)   = 0.0_wp
+        fnl_oth(icanop)  = 1.0_wp
+        fnl_chl(icanop)  = 0.0_wp
+        fnl_et(icanop)   = 0.0_wp
+        fnl_rub(icanop)  = 0.0_wp
+        fnl_pepc(icanop) = 0.0_wp
+      ENDIF
+
   ENDDO
   END SUBROUTINE calc_canopy_n_distribution
 
@@ -217,7 +279,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par_shaded,fleaf_sunlit,beta_air,beta_soil_ps, &
                           beta_soil_gs,fnl_chl,fnl_et,fnl_rub,fnl_pepc,nfmol,ps_pathway,tjmax_opt,tjmax_omega,g0,g1, &
-                          agl,anl,rl,gsl,cil)  
+                          agl,anl,rl,gsl,cil,m_rub,m_et,m_pepc)  
     
   USE mo_shared_constants,     ONLY: r_gas
   USE mo_atmland_constants,  ONLY: Tzero
@@ -252,6 +314,9 @@ CONTAINS
   REAL(wp),INTENT(OUT) :: rl                     !< net canopy layer respiration (µmol CO2 / m2 /s)
   REAL(wp),INTENT(OUT) :: gsl                    !< canopy conductance of layer (m / s) 
   REAL(wp),INTENT(OUT) :: cil                    !< leaf internal CO2 concentration of layer (ppm)
+  REAL(wp),INTENT(OUT) :: m_rub                  !< CO2 limitation of Rubisco factor for calculating optimal N fraction
+  REAL(wp),INTENT(OUT) :: m_et                   !< CO2 limitation of ET factor for calculating optimal N fraction
+  REAL(wp),INTENT(OUT) :: m_pepc                 !< CO2 limitation for PEPC factor for calculating optimal N fraction
   ! 0.2 Local
   REAL(wp) :: kc,ko,km                ! Michaelis-Menten Kinetic parameters for Rubisco (Pa)
   REAL(wp) :: pcp                     ! Photosynthetic compensation point (Pa)
@@ -280,10 +345,13 @@ CONTAINS
 
   !> @par IF: initialise output for no-light condition
   IF(par_sunlit + par_shaded <= eps8) THEN
-    agl = 0.0_wp 
-    anl = agl - rl
-    gsl = MAX(g0,g0 + g1 * anl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf 
-    cil = co2_mixing_ratio * ppm2Pa
+    agl    = 0.0_wp 
+    anl    = agl - rl
+    gsl    = MAX(g0,g0 + g1 * anl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf 
+    cil    = co2_mixing_ratio * ppm2Pa
+    m_et   = 0.0_wp
+    m_rub  = 0.0_wp
+    m_pepc = 0.0_wp
   !> @par ELSE: calculate photosynthesis only if it's day
   ELSE
      !> Michaelis-Menten constant of Rubisco for CO2 (Pa)
@@ -362,6 +430,11 @@ CONTAINS
            agsf1 = agsf1 * msat
   
         END SELECT
+
+        ! output factors for optimal fraction calculation
+        m_et = m1 * n1 / fnl_et
+        m_rub = m2 * n2 / fnl_rub
+        m_rub = m3 * n3 / fnl_pepc
 
         !> fabsb: fraction of possible PAR absorption in present light conditions
         fabsb = exp(-ka * chl2n * fnl_chl * nfmol)
@@ -451,6 +524,362 @@ CONTAINS
   cil = cil / ppm2Pa
 
   END SUBROUTINE calc_photosynthesis
+
+  ! --------------------------------------------------------------------------------------------------
+  !> Subroutine to opimize fraction of leaf N allocated to each photosynthetic component 
+  !! Calculates carbon assimilation (agl, anl) by varying fractions in either directions and determines
+  !! fractions that give maximum assimilation
+  !-------------------------------------------------------------------------------------------------------
+  SUBROUTINE optimize_fractions(fnl_chl, fnl_rub, fnl_et,fnl_pepc,fnl_oth,nl_tot, dnf, par_sunlit, par_shaded, fleaf_sunlit,&
+       t_air,press_srf,  beta_air,beta_soil_ps,beta_soil_gs, veg_param, pftid)
+
+
+    IMPLICIT NONE
+    ! 0.1 Input
+    REAl(wp), INTENT(in) :: nl_tot
+    REAL(wp), INTENT(in) :: dnf                           ! maximum fraction by which fractions can be modified
+    REAL(wp), INTENT(in) :: par_sunlit, par_shaded, fleaf_sunlit ! light for layer
+    REAl(wp), INTENT(in) :: t_air, press_Srf
+    REAL(wp), INTENT(in) :: beta_air,beta_soil_ps,beta_soil_gs   ! soil moisture
+    INTEGER, INTENT(in) :: pftid
+    TYPE(t_slm_veg_param), INTENT(in) :: veg_param
+    REAL(wp), INTENT(in) :: fnl_oth
+    ! 0.2 Input/output
+    REAL(wp), INTENT(inout) :: fnl_chl, fnl_rub, fnl_et, fnl_pepc ! photosynthetic fractions at previous step
+    ! 0.3 Output
+    REAL(wp) ::  agl, anl, rl, cil,  gsl    ! photosynthesis outputs
+    ! 0.4 Local
+    REAL(wp) :: fnl_chl0, fnl_rub0, fnl_et0, fnl_pepc0
+    REAl(wp) :: agl0, anl0, rl0, cil0,  gsl0
+    REAL(wp) :: m_rub, m_et, m_pepc,fnl_rub_opt, fnl_et_opt
+    INTEGER :: i
+ 
+   
+    ! set fractions to previous values. In current code chl + et+ rub=1
+    ! all other routines chl +et +rub +oth = 1
+    fnl_chl0 = fnl_chl/(1._wp-fnl_oth)
+    fnl_rub0 = fnl_rub/(1._wp-fnl_oth)
+    fnl_et0 = fnl_et/(1._wp-fnl_oth)
+    fnl_pepc0 = fnl_pepc/(1._wp-fnl_oth)
+    
+    ! calculate photosynthesis with previous fractions
+    CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+         par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
+         fnl_chl0*(1._wp-fnl_oth), fnl_et0*(1._wp-fnl_oth), fnl_rub0*(1._wp-fnl_oth), & 
+         fnl_pepc0*(1._wp-fnl_oth),nl_tot, veg_param%ps_pathway(pftid), & 
+         veg_param%tjmax_opt(pftid),veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
+         agl0,anl0,rl0,gsl0,cil0, m_rub,m_et,m_pepc)
+    
+    ! increase N fraction in chlorophyll
+    fnl_chl = MIN(fnl_chl0 * (1 + dnf), 1.0_wp)
+    
+    ! optimal N fraction assuming Aj=Av
+    ! fraction in Rubisco
+    fnl_rub_opt = (1 - fnl_chl)/(1 + (m_rub)/(m_et))
+    ! fraction in electron transport
+    fnl_et_opt = fnl_rub_opt * (m_rub)/(m_et)
+    
+    ! check if changing fraction to optimal values is possible in one timestep
+    IF (ABS(fnl_rub_opt-fnl_rub) / fnl_rub <= dnf .AND. ABS(fnl_et_opt-fnl_et) / fnl_et <= dnf) THEN
+       fnl_rub = fnl_rub_opt
+       fnl_et = fnl_et_opt
+    ELSEIF (fnl_rub < fnl_rub_opt) THEN
+       fnl_rub = MIN(fnl_rub * (1+dnf), fnl_rub_opt)
+       fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+    ELSE
+       fnl_rub = MAX(fnl_rub * (1-dnf), fnl_rub_opt)
+       fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+    ENDIF
+                   
+       
+    ! re-calculate photosynthesis
+    CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+         par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
+         fnl_chl*(1._wp-fnl_oth), fnl_et*(1._wp-fnl_oth), fnl_rub*(1._wp-fnl_oth), & 
+         fnl_pepc*(1._wp-fnl_oth),nl_tot, veg_param%ps_pathway(pftid), & 
+         veg_param%tjmax_opt(pftid),veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
+         agl,anl,rl,gsl,cil,m_rub,m_et,m_pepc)
+    
+   ! check if change has increased photosynthesis. If not
+    IF (anl < anl0) THEN
+       
+       ! decrease N fraction in chlorophyll
+       fnl_chl = MAX(fnl_chl0 *(1 - dnf), eps8)
+       fnl_et = fnl_et0
+       fnl_rub = fnl_rub0
+     
+       ! optimal N fraction assuming Aj=Av
+       ! fraction in Rubisco
+       fnl_rub_opt = (1 - fnl_chl)/(1 + (m_rub)/(m_et))
+       ! fraction in electron transport
+       fnl_et_opt = fnl_rub_opt * (m_rub)/(m_et)
+       
+       ! check if changing fraction to optimal values is possible in one timestep
+       IF (ABS(fnl_rub_opt-fnl_rub) / fnl_rub <= dnf .AND. ABS(fnl_et_opt-fnl_et) / fnl_et <= dnf) THEN
+          fnl_rub = fnl_rub_opt
+          fnl_et = fnl_et_opt
+       ELSEIF (fnl_rub < fnl_rub_opt) THEN
+          fnl_rub = MIN(fnl_rub * (1+dnf), fnl_rub_opt)
+          fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+       ELSE
+          fnl_rub = MAX(fnl_rub * (1-dnf), fnl_rub_opt)
+          fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+       ENDIF
+            
+ 
+       ! re-calculate photosynthesis
+       CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+            par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
+            fnl_chl*(1._wp-fnl_oth), fnl_et*(1._wp-fnl_oth), fnl_rub*(1._wp-fnl_oth), & 
+            fnl_pepc*(1._wp-fnl_oth),nl_tot, veg_param%ps_pathway(pftid), & 
+            veg_param%tjmax_opt(pftid),veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
+            agl,anl,rl,gsl,cil,m_rub,m_et,m_pepc)
+
+       ! if photosyntheis has still not increased, do not change fnl_chl
+       IF (anl < anl0) THEN
+          fnl_chl = fnl_chl0
+          fnl_et = fnl_et0
+          fnl_rub = fnl_rub0
+          ! optimal N fraction assuming Aj=Av
+          ! fraction in Rubisco
+          fnl_rub_opt = (1 - fnl_chl)/(1 + (m_rub)/(m_et))
+          ! fraction in electron transport
+          fnl_et_opt = fnl_rub_opt * (m_rub)/(m_et)
+         
+          ! check if changing fraction to optimal values is possible in one timestep
+          IF (ABS(fnl_rub_opt-fnl_rub) / fnl_rub <= dnf .AND. ABS(fnl_et_opt-fnl_et) / fnl_et <= dnf) THEN
+             fnl_rub = fnl_rub_opt
+             fnl_et = fnl_et_opt
+          ELSEIF (fnl_rub < fnl_rub_opt) THEN
+             fnl_rub = MIN(fnl_rub * (1+dnf), fnl_rub_opt)
+             fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+          ELSE
+             fnl_rub = MAX(fnl_rub * (1-dnf), fnl_rub_opt)
+             fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+          ENDIF
+          CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+               par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
+               fnl_chl*(1._wp-fnl_oth), fnl_et*(1._wp-fnl_oth), fnl_rub*(1._wp-fnl_oth), & 
+               fnl_pepc*(1._wp-fnl_oth),nl_tot, veg_param%ps_pathway(pftid), & 
+               veg_param%tjmax_opt(pftid),veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
+               agl,anl,rl,gsl,cil,m_rub,m_et,m_pepc)
+       ENDIF
+    ENDIF
+    ! Transform to external values. In current code chl + et+ rub=1
+    ! all other routines chl +et +rub +oth = 1
+    fnl_chl = fnl_chl*(1-fnl_oth)
+    fnl_rub = fnl_rub*(1-fnl_oth)
+    fnl_et = fnl_et*(1-fnl_oth)
+    fnl_pepc = fnl_pepc*(1-fnl_oth)
+      
+  END SUBROUTINE optimize_fractions
+
+  ! --------------------------------------------------------------------------------------------------
+  !> Subroutine to determine direction in which total leaf N should change in order to increase NPP
+  !! Parameter direction is passed on to the growth subroutine to calulate new CN targets
+  !----------------------------------------------------------------------------------------------------
+
+
+  SUBROUTINE optimize_Nleaf(plant, canopy_layer_depth_act,veg_param, t_air, press_Srf,beta_air,beta_soil_ps,beta_soil_gs,&
+       direction)
+    
+    USE mo_veg_respiration
+    USE mo_veg_memory, ONLY: t_slm_plant, t_slm_veg_pool
+    USE mo_veg_parameters
+    
+    IMPLICIT NONE
+    ! 0.1 Input
+    TYPE(t_slm_plant), INTENT(in)        :: plant                  ! plant variables per tile
+    TYPE(t_slm_veg_param), INTENT(in) :: veg_param     
+    REAL(wp), DIMENSION(ncanop), INTENT(in) :: canopy_layer_depth_act
+    REAL(wp) :: t_air, press_Srf
+    REAL(wp) ::  beta_air,beta_soil_ps,beta_soil_gs
+    
+
+    ! 0.2 Output
+    REAL(wp), INTENT(out) :: direction
+     
+    ! 0.3 Local
+    INTEGER :: icanop, dd, t
+    TYPE(t_slm_veg_pool) :: new
+    REAL(wp),DIMENSION(ncanop, 3) :: agl,anl,rl,gsl,cil
+    REAL(wp) :: dn=0.01_wp
+    REAL(wp) :: m_rub, m_et, m_pepc
+    REAL(wp), DIMENSION(3) :: npp_direction, gpp_direction, rl_direction
+    INTEGER :: pftid
+    REAL(wp), DIMENSION(ncanop) :: nl_tot, fnl_oth, fnl_chl, fnl_et, fnl_rub, fnl_pepc
+    REAL(wp), DIMENSION(3) :: maint_respiration
+    REAL(Wp) :: maint_respiration_c13,maint_respiration_c14
+
+    pftid = plant%pftid
+    fnl_chl = plant%canopy_layer(:)%fnl_chl
+    fnl_et = plant%canopy_layer(:)%fnl_et
+    fnl_rub = plant%canopy_layer(:)%fnl_rub
+    ! initialse output
+    agl(:, :) = 0.0_wp 
+    anl(:, :) = 0.0_wp 
+    rl(:, :) = 0.0_wp
+    gsl(:, :) = 0.0_wp
+    cil(:, :) = 0.0_wp 
+    ! Calculate photosynthesis with lower, current and higher leaf N to determine optimal canopy N
+    DO dd = -1, 1
+        
+       new%leaf%nitrogen = plant%pool%leaf%nitrogen * (1.0_wp + REAL(dd) * dn)
+       
+       ! update N distribution in the canopy
+       CALL calc_canopy_n_distribution(plant%pool%leaf%nitrogen,plant%lai, & 
+            canopy_layer_depth_act,veg_param%ps_pathway(pftid), &
+            veg_param%k0_fnl_struc(pftid), nl_tot, fnl_chl, fnl_et, fnl_rub, fnl_pepc, fnl_oth)    
+ 
+
+        ! calculate photosynthesis for each layer
+
+       DO icanop =1, ncanop
+          IF(canopy_layer_depth_act(icanop).GT.0.0)THEN
+             CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+                  plant%moving_average%par_sunlit(icanop),plant%moving_average%par_shaded(icanop),& 
+                  plant%moving_average%fleaf_sunlit(icanop), &
+                  beta_air,beta_soil_ps,beta_soil_gs, &
+                  plant%canopy_layer(icanop)%fnl_chl,&
+                  plant%canopy_layer(icanop)%fnl_et,& 
+                  plant%canopy_layer(icanop)%fnl_rub,&
+                  plant%canopy_layer(icanop)%fnl_pepc,&
+                  nl_tot(icanop),&
+                  veg_param%ps_pathway(pftid), & 
+                  veg_param%tjmax_opt(pftid), &
+                  veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
+                  agl(icanop, dd+2),anl(icanop, dd+2),rl(icanop, dd+2),gsl(icanop, dd+2),cil(icanop, dd+2),&
+                  m_rub, m_et, m_pepc)
+          
+                 
+          ENDIF
+       ENDDO
+    ENDDO
+
+       ! calculate NPP for each leaf N value (lower, equal, higher)
+       gpp_direction(:) = 0.0_wp
+       rl_direction(:)=0.0_wp
+       DO t=1, 3
+          DO icanop=1, ncanop
+             gpp_direction(t) = gpp_direction(t) + agl(icanop, t)
+             rl_direction(t) = rl_direction(t) + rl(icanop,t)
+          ENDDO
+       ENDDO
+
+
+       DO dd=-1, 1
+       ! Calculate nitrogen in all other pools assuming lower leaf nitrogen
+       ! OBS: currently assuming N is atken from fine root pool since respiration 
+       ! fucntion is linear with sum of pools. Should eb changed if adding stema nd root temperature
+       new%fine_root%nitrogen = plant%pool%fine_root%nitrogen * (1 - REAL(dd) * dn)
+       new%coarse_root%nitrogen = plant%pool%coarse_root%nitrogen
+       new%sap_wood%nitrogen = plant%pool%sap_wood%nitrogen
+        !Calculate whole plant respiration
+ 
+        maint_respiration(dd+2) = calc_maintenance_respiration(t_air,t_air,new%sap_wood%nitrogen,&
+             new%fine_root%nitrogen, new%coarse_root%nitrogen) + rl_direction(dd+2)
+        ! calculate NPP
+          npp_direction(dd+2) = gpp_direction(dd+2)-maint_respiration(dd+2)
+     ENDDO
+               
+       ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
+       direction = REAL(MAXLOC(npp_direction, 1)) - 2.0_wp
+
+ END SUBROUTINE optimize_Nleaf
+
+ !------------------------------------------------------------------------------------------------------
+ !> Subroutine to calculate change in NPP with very small change in LAI
+ !! Needed for calculation of optimal leaf and root allocation fraction. See mo_veg_growth
+ !-----------------------------------------------------------------------------------------------------
+
+ SUBROUTINE calc_npp_increment(plant, veg_param, dNPP)
+
+   IMPLICIT NONE
+   !0.0 In- and output
+   TYPE(t_slm_plant), INTENT(in) :: plant
+   TYPE(t_slm_veg_param), INTENT(in) :: veg_param    
+   REAL(wp), INTENT(out) :: dNPP
+   !0.1 Local variables
+   REAL(wp) :: lai, nitrogen
+   REAL(wp), DIMENSION(ncanop) :: canopy_layer_depth_act
+   REAl(wp), DIMENSION(ncanop) :: fnl_oth, nl_tot, fnl_chl0, fnl_et0, fnl_rub0, fnl_pepc0, fnl_oth0
+   REAl(wp) ::  fnl_chl, fnl_et, fnl_rub, fnl_pepc
+   REAL(wp) :: gpp, maint_respiration_leaf
+   REAL(wp), DIMENSION(ncanop) :: agl, anl, rl, gsl, cil
+   REAL(wp) :: hlp1 
+   INTEGER :: icanop, pftid
+
+   pftid = plant%pftid
+   fnl_chl0 = plant%canopy_layer(:)%fnl_chl
+   fnl_et0 = plant%canopy_layer(:)%fnl_et
+   fnl_rub0 = plant%canopy_layer(:)%fnl_rub
+   fnl_pepc0 = plant%canopy_layer(:)%fnl_pepc
+
+   ! increase LAI by small increment
+   lai = plant%lai + eps4 * veg_param%sla(pftid)
+   ! recalculate number of canopy layers with new LAI
+   canopy_layer_depth_act = calc_canopy_layer_depth(lai)
+!SZ BLARPP: why not the current C:N?
+   nitrogen = plant%pool%leaf%nitrogen + eps4 * plant%target_cn_leaf
+
+!SZ BLARPP: I don't think this is needed from here-----
+
+   ! calculate N distribution in the canopy
+!SZ BLARPP: if this call is requred at all, should it not return fn_rub... ?
+    CALL calc_canopy_n_distribution(nitrogen,lai, & 
+            canopy_layer_depth_act, veg_param%ps_pathway(pftid), & 
+            veg_param%k0_fnl_struc(pftid), nl_tot, fnl_chl0, fnl_et0, fnl_rub0, fnl_pepc0, fnl_oth0)    
+
+
+   ! Loop over canopy layers
+   ! calculate photosynthesis per layer
+   DO icanop = 1,ncanop
+                  
+      ! set N fractions to previous step values
+      IF (plant%canopy_layer(icanop)%fnl_chl>0.0) THEN
+! I don't see why this is not based on fnl_X0 - this overrides all the above!
+         fnl_chl = plant%canopy_layer(icanop)%fnl_chl
+         fnl_et  = plant%canopy_layer(icanop)%fnl_et
+         fnl_rub = plant%canopy_layer(icanop)%fnl_rub
+         fnl_pepc = plant%canopy_layer(icanop)%fnl_pepc
+      ELSE
+         fnl_chl = plant%canopy_layer(icanop-1)%fnl_chl
+         fnl_et  = plant%canopy_layer(icanop-1)%fnl_et
+         fnl_rub = plant%canopy_layer(icanop-1)%fnl_rub
+         fnl_pepc = plant%canopy_layer(icanop-1)%fnl_pepc
+      END IF
+!SZ BLARPP ---- till here -----------------------           
+        ! only calculate phosynthesis if leaves present in layer
+        IF (canopy_layer_depth_act(icanop).GT.eps8)THEN   
+           
+           CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+                plant%canopy_layer(icanop)%par_sunlit, plant%canopy_layer(icanop)%par_shaded,& 
+                plant%canopy_layer(icanop)%fleaf_sunlit, &
+                plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
+                fnl_chl,fnl_et,fnl_rub,fnl_pepc,&
+                plant%canopy_layer(icanop)%nl_tot,& 
+                veg_param%ps_pathway(pftid), &
+                veg_param%tjmax_opt(pftid), &
+                veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
+                agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop),&
+                hlp1,hlp1,hlp1)
+        END IF
+        
+     END DO ! icanop = 1,ncanop
+     
+     ! integrate fluxes over the canopy
+     gpp = 0._wp
+     maint_respiration_leaf = 0._wp
+     DO icanop = 1,ncanop
+        gpp = gpp + agl(icanop) * canopy_layer_depth_act(icanop)  
+        maint_respiration_leaf = maint_respiration_leaf + & 
+            rl(icanop) * canopy_layer_depth_act(icanop) 
+     ENDDO
+
+     ! increment in NPP
+     dNPP = (gpp - plant%flux%gpp) - (maint_respiration_leaf - plant%flux%maint_respiration_leaf)
+
+ END SUBROUTINE calc_npp_increment
 
   !-----------------------------------------------------------------------------------------------------
   !> calculate atmospheric drought stress factor

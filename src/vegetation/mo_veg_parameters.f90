@@ -86,6 +86,10 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: k1_fnl_chl_C3                !< parameter to describe the varying fraction of N in chlorophyll through the canopy
   REAL(wp),SAVE :: k1_fnl_chl_C4                !< parameter to describe the varying fraction of N in chlorophyll through the canopy
   REAL(wp),SAVE :: kfnl_chl                     !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+!SZ BLARPP: can these have more accessible names?
+  ! parameters for changes in canopy N fractions
+  REAL(wp), SAVE :: dn
+  REAl(wp), SAVE :: dnf
 
   ! parameters used for phenology calculations
   REAL(wp),SAVE :: min_lai                      !< minimum LAI beyond which all leaves are shed
@@ -118,6 +122,9 @@ MODULE mo_veg_parameters
   ! vegetation dynamics
   REAL(wp), SAVE :: background_mort_rate_tree   !< background mortality rate of trees in static mortality case
   REAL(wp), SAVE :: background_mort_rate_grass  !< background mortality rate of grasses in static mortality case
+
+  ! soil pools
+  REAL(wp), SAVE :: tau_litter                  ! soil litter pool turnover time
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   INTEGER,PARAMETER :: itree = 1 
@@ -323,6 +330,11 @@ MODULE mo_veg_parameters
       rho2sbeta = 1.6_wp
       ! Extinction coefficient for PAR on chlorophyll
       ka = 0.005_wp
+
+      ! maximum change in CN ratio of canopy
+      dn = 0.001_wp
+      ! maximum change in photosynthetic N fractions
+      dnf = 0.01_wp
   
       ! minimum LAI for phenology calculations
       min_lai = 0.1_wp
@@ -360,6 +372,8 @@ MODULE mo_veg_parameters
       offset_fruit_alloc = 0.1_wp ! ~µmol C / m2 / s
       ! minimum fraction of allocation going to fruit (flowers etc.)
       min_falloc_fruit = 0.01_wp
+      ! soil litter turnover pool, s equivalent to 1 year
+      tau_litter = 1.0_wp * 3600.0_wp * 24.0_wp * 365.0_wp
 
       CALL init_pft_param_table(veg_param)
 

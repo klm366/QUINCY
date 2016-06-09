@@ -86,7 +86,12 @@ MODULE mo_veg_memory
     REAL(wp) :: t_air_longterm    ! = 273.15_wp   ! 30 years == 10950 days
     ! 1.7 plant status parameter
     REAL(wp) :: boc_an            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
-
+    ! 1.8 variables needed for optimal allocation calculations
+!@todo ticket 50: more telling names?
+    REAL(wp) :: dNPP              ! rate of change in NPP with  increment in leaf mass, mumol C mol-1
+    REAL(wp) :: dN_up             ! rate of growth per unit root, mumol N mol-1
+    REAl(wp) :: npp_alloc         ! NPP
+    REAL(wp) :: cn_plant          ! plant growth cn ration, equivalent to 1/growth_req_n
     !< 2.0 accumulation period per variable in days !!
     !! 
     ! 2.0a some default values
@@ -94,27 +99,17 @@ MODULE mo_veg_memory
     REAL(wp) :: p_monthly                !< 30 days; constant across the model
     REAL(wp) :: p_longterm               !< 10950 days (30 years); constant across the model
     REAL(wp) :: p_tau_veg_dynamics       !<  multiple years
-    ! 2.1 light in the canopy (for all canopy_layer the same period)
-    REAL(wp) :: p_par_sunlit 
-    REAL(wp) :: p_par_shaded 
-    REAL(wp) :: p_fleaf_sunlit 
-    ! 2.2 soil moisture
-    REAL(wp) :: p_beta_air 
-    REAL(wp) :: p_beta_soil_ps 
-    REAL(wp) :: p_beta_soil_gs 
-    ! 2.3 memory of fluxes are averaged weekly, thus, p_weekly is used
 
     ! 2.4 nutrient demand for plant uptake
     REAL(wp) :: p_demand_uptake_n 
     REAL(wp) :: p_demand_uptake_p 
-    ! 2.5 environmental forcing
-    REAL(wp) :: p_t_air 
-    REAL(wp) :: p_q_air 
-    REAL(wp) :: p_press_surf 
     ! 2.6 memory of certain variables: default averaging period values are used, according to variable names (week, month, ..)
 
     ! 2.7 plant status parameter
     REAL(wp) :: p_boc_an          !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
+    ! 2.8 Intervals for optimal processes
+    REAL(wp) :: p_optNfrac               !< interval for optimal N fractions
+    REAL(wp) :: p_opt_alloc              !< interval for optimal biomass allocation
 
   CONTAINS
     !< 4.0 procedures
@@ -206,7 +201,9 @@ MODULE mo_veg_memory
      REAL(wp) :: recycling_fine_root_n15  !< net flux of 15N to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1) 
      REAL(wp) :: recycling_fine_root_p    !< net flux of P to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1)
      REAL(wp) :: transpiration            !< transpiration in kg m-2 s-1
-     REAL(wp) :: ci                       !< ??
+     REAL(wp) :: ci                       !< leaf internal co2 concentration
+     REAL(wp) :: dNPP                     !< incremental change in NPP. Needed for optimal allocation
+     REAL(wp) :: dN_up                    !< incremental change in N-based growth, needed for optimal allocation
   END TYPE t_slm_veg_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -739,15 +736,19 @@ CONTAINS
     this%growth_req_p_week             = 1._wp / 14._wp
     ! 1.5 environmental forcing
     this%t_air                         = 283.15_wp   ! 10°C; temperature in K
-    this%q_air                         = 283.15_wp   ! 10°C; temperature in K
+    this%q_air                         = 0.001_wp    ! air specific humidity
     this%press_surf                    = 1._wp
     ! 1.6 memory of certain variables, temperature [K], ...
     this%t_air_week                    = 283.15_wp   ! 10°C; 7  days
     this%t_air_month                   = 283.15_wp   ! 10°C; 30 days
     this%t_air_longterm                = 283.15_wp   ! 10°C; 30 years == 10950 days
     ! 1.7 plant status parameter
-    this%boc_an                        = 0.1_wp      !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
-
+    this%boc_an                        = 0.0_wp      ! net photosynthesis at bottom of canopy (lowest canopy layer existing)
+    ! 1.8 Optimal allocation
+    this%dN_up                         = 0._wp
+    this%dNPP                          = 0._wp
+    this%cn_plant                      = 1._wp
+    this%npp_alloc                     = 1._wp
     !< 2.0 init/set accumulation period per variable in days !!
     !!
     ! 2.0a some default values
@@ -755,25 +756,18 @@ CONTAINS
     this%p_monthly                     = 30._wp    ! 30 days; constant across the model
     this%p_longterm                    = 10950._wp ! 10950 days (30 years); constant across the model
     this%p_tau_veg_dynamics            = 1095._wp  ! 365* 3 
-    ! 2.1 light in the canopy (for all canopy_layer the same period)
-    this%p_par_sunlit                  = 1.0_wp 
-    this%p_par_shaded                  = 1.0_wp 
-    this%p_fleaf_sunlit                = 1.0_wp  
-    ! 2.2 soil moisture
-    this%p_beta_air                    = this%p_weekly  
-    this%p_beta_soil_ps                = this%p_weekly  
-    this%p_beta_soil_gs                = this%p_weekly  
+    this%p_optNfrac                    = 10.0_wp   ! timescale of optimal canopy processes
 
     ! 2.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
     this%p_demand_uptake_n             = 3.0_wp 
     this%p_demand_uptake_p             = 3.0_wp 
 
-    ! 2.5 environmental forcing
-    this%p_t_air                       = 1.0_wp
-    this%p_q_air                       = 1.0_wp
-    this%p_press_surf                  = 1.0_wp
     ! 2.7 plant status parameter
     this%p_boc_an                      = this%p_tau_veg_dynamics
+
+    ! 2.8 Optimal allocation
+    this%p_opt_alloc = 20._wp
+
   END SUBROUTINE init_moving_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------
@@ -824,36 +818,46 @@ CONTAINS
     CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
     TYPE(t_slm_plant), INTENT(inout)       :: plant       !< plant variables and data
 
+    REAl(wp) :: hlp
     ! moving_avrg( 
     !             current average, new value, weight of new value, 
     !                 use function TRUE FALSE [OPTIONAL argument] )
     ! returns: new current average
 
     this%par_sunlit(:)    = this%calc_moving_avrg(this%par_sunlit(:), plant%daily_average%avrg_prev_par_sunlit_day(:), &
-                                               1.0_wp / (this%p_par_sunlit * one_day/ dt))
+                                               1.0_wp / (this%p_optNfrac * one_day/ dt))
     this%par_shaded(:)    = this%calc_moving_avrg(this%par_shaded(:), plant%daily_average%avrg_prev_par_shaded_day(:), &
-                                               1.0_wp / (this%p_par_shaded * one_day/ dt))
+                                               1.0_wp / (this%p_optNfrac * one_day/ dt))
     this%fleaf_sunlit(:)  = this%calc_moving_avrg(this%fleaf_sunlit(:), plant%daily_average%avrg_prev_fleaf_sunlit_day(:), &
-                                               1.0_wp / (this%p_fleaf_sunlit * one_day/ dt))
-
+                                               1.0_wp / (this%p_optNfrac * one_day/ dt))
     this%beta_soil_gs     = this%calc_moving_avrg(this%beta_soil_gs, plant%beta_soil_gs, &
-                                               1._wp / ( this%p_beta_soil_gs * one_day/dt))
-
+                                               1._wp / ( this%p_optNfrac * one_day/dt))
+    this%beta_soil_ps     = this%calc_moving_avrg(this%beta_soil_ps, plant%beta_soil_ps, &
+                                               1._wp / ( this%p_optNfrac * one_day/dt))
+    this%beta_air         = this%calc_moving_avrg(this%beta_air, plant%beta_air, &
+                                               1._wp / ( this%p_optNfrac * one_day/dt))
     this%gpp_week                = this%calc_moving_avrg(this%gpp_week, plant%flux%gpp, &
                                                1.0_wp / (this%p_weekly * one_day/ dt))
     this%maint_respiration_week  = this%calc_moving_avrg(this%maint_respiration_week, plant%flux%maint_respiration_pot, &
                                                1.0_wp / (this%p_weekly * one_day/ dt))
-
     this%growth_req_n_week       = this%calc_moving_avrg(this%growth_req_n_week, plant%growth_req_n, &
                                                1.0_wp / (this%p_weekly * one_day/ dt), &
                                                plant%growth_req_n > eps8)
     this%growth_req_p_week       = this%calc_moving_avrg(this%growth_req_p_week, plant%growth_req_p, &
                                                1.0_wp / (this%p_weekly * one_day/ dt), & 
                                                plant%growth_req_p > eps8)
-
     this%boc_an                  = this%calc_moving_avrg(this%boc_an, plant%boc_an, &
                                                1.0_wp / (this%p_boc_an * one_day/ dt), & 
                                                plant%pool%leaf%carbon > eps8)
+    this%dNPP 				     = this%calc_moving_avrg(this%dNPP, plant%flux%dNPP, & 
+                                               1.0_wp/(this%p_opt_alloc * one_day/dt))
+    IF (plant%growth_req_n > 0._wp)THEN
+       hlp = 1._wp/plant%growth_req_n
+    ELSE
+       hlp=0._wp
+    ENDIF
+    this%cn_plant = this%calc_moving_avrg(this%cn_plant, hlp, 1.0_wp/(this%p_opt_alloc * one_day/dt))
+    this%npp_alloc = this%calc_moving_avrg(this%npp_alloc, plant%flux%npp, 1.0_wp / (this%p_opt_alloc * one_day/dt))
 
   END SUBROUTINE update_veg_moving_avrg_variables
 
@@ -861,6 +865,7 @@ CONTAINS
   !> calculate moving average of soil variables
   !!
   !! called in the driver at the end of each timestep
+  !! @todo ticket #49 merge with update_veg... thse are plant specific variables
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_soil_moving_avrg_variables (this, plant)
 
@@ -882,6 +887,8 @@ CONTAINS
     this%demand_uptake_p = this%calc_moving_avrg(this%demand_uptake_p, plant%f_p_demand, &
                                                  1.0_wp / (this%p_demand_uptake_p * one_day/ dt), &
                                                  plant%pool%fine_root%carbon > eps8)
+    this%dN_up = this%calc_moving_avrg(this%dN_up, plant%flux%dN_up, 1.0_wp / (this%p_opt_alloc * one_day/dt))
+   
   END SUBROUTINE update_soil_moving_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------
@@ -889,14 +896,15 @@ CONTAINS
   !!
   !! called in the driver at the end of each timestep
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_tile_moving_avrg_variables (this, t_air, press_surf)
+  SUBROUTINE update_tile_moving_avrg_variables (this, t_air, press_surf, q_air)
 
     USE mo_base_constants,    ONLY: dt, one_day
 
     IMPLICIT NONE
     ! 0.1 InOut
-    REAL(wp), INTENT(in)                   :: t_air       !< current air temperature from atm2land:mo_atmland_memory
-    REAL(wp), INTENT(in)                   :: press_surf  !< variable from atm2land:mo_atmland_memory
+    REAL(wp), INTENT(in)                   :: t_air       !< current air temperature 
+    REAL(wp), INTENT(in)                   :: press_surf  !< current air pressure  
+    REAl(wp), INTENT(in)                   :: q_air       !< current air specific humidity
     CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
 
     ! moving_avrg( 
@@ -905,16 +913,18 @@ CONTAINS
     ! returns: new current average
 
     this%t_air            = this%calc_moving_avrg(this%t_air, t_air, &
-                                                  1.0_wp / (this%p_t_air * one_day/ dt))
+                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
     this%press_surf       = this%calc_moving_avrg(this%press_surf, press_surf, &
-                                                  1.0_wp / (this%p_press_surf * one_day/ dt))
-
+                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
+    this%q_air       = this%calc_moving_avrg(this%q_air, q_air, &
+                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
     this%t_air_week       = this%calc_moving_avrg(this%t_air_week, t_air, &
                                                   1.0_wp / (this%p_weekly * one_day/ dt))
     this%t_air_month      = this%calc_moving_avrg(this%t_air_month, t_air, &
                                                   1.0_wp / (this%p_monthly * one_day/ dt))
     this%t_air_longterm   = this%calc_moving_avrg(this%t_air_longterm, t_air, &
                                                   1.0_wp / (this%p_longterm * one_day/ dt))
+
   END SUBROUTINE update_tile_moving_avrg_variables
 
 

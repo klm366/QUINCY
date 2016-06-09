@@ -140,7 +140,11 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)'), 'Time SoilMoisture'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R S2C BCF'
+    WRITE(lun,'(a)'), 'Time LitterN MineralN'
+    lun=lun+1
+    WRITE(lun,'(a)'), 'Time CanopyLayer f_et f_rub f_chl f_oth'
+    lun=lun+1
+    WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant'
 
   END SUBROUTINE init_output_writing_pool
 
@@ -243,6 +247,12 @@ CONTAINS
     fname = 'poolH2O_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
+    fname = 'poolsoilN_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
+    fname = 'canopy_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
     fname = 'veg_diagnostics_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
@@ -335,7 +345,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE write_output_pool(tile, veg_param, time_d, time_y, itile)
 
-    USE mo_base_memory,      ONLY: t_slm_tile
+    USE mo_base_constants,   ONLY: ncanop
+    USE mo_base_memory,      ONLY: t_slm_tile, t_slm_soil
     USE mo_veg_memory,       ONLY: t_slm_plant
     USE mo_veg_parameters,   ONLY: itree, t_slm_veg_param
     USE mo_shared_isotope,   ONLY: calc_delta_C13,calc_delta_C14
@@ -349,15 +360,16 @@ CONTAINS
     INTEGER,  INTENT(in)                 :: itile       !< number of current tile
     ! 0.2 Local
     TYPE(t_slm_plant),POINTER        :: plant          ! plant variables per tile
-    REAL(wp)         ,POINTER        :: soil_moisture  ! soil moisture; tile(itile)\%soil\%moisture
+    TYPE(t_slm_soil),POINTER         :: soil           ! soil variables per tile
     INTEGER                          :: lun            ! locical unit number
+    INTEGER                          :: icanop         ! loop over ncanop
     REAL(wp)                         :: hlp1           ! helper variable
     REAL(wp)                         :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
                                         dC13fruit,dC13labile,dC13reserve,dC13seedbank
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
     plant         => tile%plant
-    soil_moisture => tile%soil%moisture
+    soil          => tile%soil
 
     !> 1.0 check output start & end, and write pools if appropriate with output_interval
     !! 
@@ -405,19 +417,30 @@ CONTAINS
          plant%pool%fruit%phosphorus,plant%pool%labile%phosphorus,&
          plant%pool%reserve%phosphorus,plant%pool%seed_bed%phosphorus
        lun=lun+1
-       write(lun,'(9F12.6)') time_d, soil_moisture
+       write(lun,'(9F12.6)') time_d, soil%moisture
        lun=lun+1
+       write(lun,'(3F12.6)') time_d, soil%pool%litter%nitrogen, soil%ammonium
+       lun=lun+1
+       DO icanop=1, ncanop
+         write(lun,'(6F12.6)') time_d, REAL(icanop), plant%canopy_layer(icanop)%fnl_et, &
+                               plant%canopy_layer(icanop)%fnl_rub, plant%canopy_layer(icanop)%fnl_chl,&
+                               plant%canopy_layer(icanop)%fnl_oth
+       END DO
+
        IF(veg_param%growthform(plant%pftid) == itree) THEN 
           hlp1 = plant%lai/(plant%pool%sap_wood%carbon / plant%height / veg_param%wood_density(plant%pftid))
        ELSE
           hlp1 = plant%pool%sap_wood%carbon/plant%pool%leaf%carbon
        ENDIF
-       write(lun,'(9F12.6)') time_d, plant%height, plant%diameter, plant%lai, &
+       lun=lun+1
+       write(lun,'(13F12.6)') time_d, plant%height, plant%diameter, plant%lai, &
          hlp1,plant%pool%leaf%carbon/plant%pool%fine_root%carbon,& 
          plant%pool%coarse_root%carbon/plant%pool%sap_wood%carbon, & 
          (plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)/ & 
          (plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon+&
-            plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)
+            plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon), &
+                             plant%target_cn_leaf, plant%moving_average%dNPP, plant%moving_average%dN_up,&
+                             plant%moving_average%cn_plant
       END IF
     END IF
   END SUBROUTINE write_output_pool

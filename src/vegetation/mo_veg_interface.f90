@@ -46,6 +46,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER         :: soil           ! soil variables per tile
     TYPE(t_slm_plant),POINTER        :: plant          ! plant variables per tile
+    REAL(wp)                         :: direction      ! indicates direction of change in leaf CN ratio to maximise NPP
     REAL(wp)                         :: hlp1
 
     !  bi-directional pointer
@@ -68,21 +69,28 @@ CONTAINS
 
     !> 1.1 photosynthesis and leaf respiration 
     !! 
-    !! @todo may move elsewhere
-    CALL update_canopy_fluxes(tile, veg_param)
+    !! @todo ticket #47
+    !! 
+    CALL update_canopy_fluxes(tile, veg_param, direction)
 
     !> 2.0 Calculate growth and maintenance
     !! 
     !! 
-    CALL  calc_growth(soil%theta,plant,veg_param) 
+    CALL  calc_growth(soil%theta,plant,veg_param, direction)
 
     !> 3.0 Calculate turnover from tissue aging and senescence
     !! 
     !! 
     CALL calc_turnover(plant,veg_param)
-    CALL update_veg_dynamics(plant,veg_param)
+ 
+    !> 4.0 Calculate vegetation dynamics
+    !! 
+    !! 
+   CALL update_veg_dynamics(plant,veg_param)
 
-    !> 4.1 Add carbon from photosynthesis to the labile pool
+    !> 5.0 update pools
+    !!
+    !> 5.1 Add carbon from photosynthesis to the labile pool
     !! 
     !! 
     plant%flux%npp = plant%flux%gpp - plant%flux%growth_respiration - plant%flux%maint_respiration 
@@ -94,7 +102,7 @@ CONTAINS
     plant%flux%growth%labile%carbon14 = plant%flux%growth%labile%carbon14 + & 
        plant%flux%npp_c14 * dt / 1.e6
 
-    !> 4.2 Add nutrients from uptake calculations
+    !> 5.2 Add nutrients from uptake calculations
     !! 
     !! 
     plant%flux%growth%labile%nitrogen = plant%flux%growth%labile%nitrogen + &
@@ -104,7 +112,7 @@ CONTAINS
     plant%flux%growth%labile%phosphorus = plant%flux%growth%labile%phosphorus + &
        plant%flux%uptake_p * dt / 1.e6
 
-    !> 5.1 update labile pool and reserve 
+    !> 5.3 update labile pool and reserve 
     !! 
     plant%pool%labile  = plant%pool%labile  + plant%flux%reserve_use
     plant%pool%reserve = plant%pool%reserve - plant%flux%reserve_use
@@ -115,7 +123,7 @@ CONTAINS
     plant%pool%labile%phosphorus = plant%pool%labile%phosphorus + plant%flux%resorption_p
     plant%pool%labile%nitrogen15 = plant%pool%labile%nitrogen15 + plant%flux%resorption_n15
 
-    !> 5.3 update fluxes from replacing enzymes and other biochemicals
+    !> 5.4 update fluxes from replacing enzymes and other biochemicals
     !!
     plant%pool%labile%nitrogen = plant%pool%labile%nitrogen & 
         + plant%flux%recycling_leaf_n + plant%flux%recycling_fine_root_n 
@@ -151,12 +159,14 @@ CONTAINS
     !! 
     !! 
     plant%lai = plant%pool%leaf%carbon * veg_param%sla(plant%pftid)
-    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon, & 
-                          veg_param%wood_density(plant%pftid),veg_param%sla(plant%pftid), &
-                          veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
-                          veg_param%k_latosa(plant%pftid),veg_param%k_rtos(plant%pftid), &
-                          veg_param%growthform(plant%pftid), & 
-                          plant%diameter,plant%height,hlp1,hlp1,hlp1,hlp1)
+    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%pool%labile%carbon,&
+         plant%pool%labile%nitrogen, veg_param%wood_density(plant%pftid), & 
+         veg_param%sla(plant%pftid),veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
+         veg_param%k_latosa(plant%pftid),veg_param%k_rtos(plant%pftid),veg_param%growthform(plant%pftid), & 
+         plant%moving_average%cn_plant,plant%moving_average%dnpp,plant%moving_average%dN_up, &
+         plant%moving_average%npp_alloc,plant%diameter,plant%height,hlp1,hlp1, &
+         hlp1,hlp1,hlp1, hlp1)  
+
     IF(plant%pool%leaf%carbon .GT. eps8) THEN 
        plant%mean_leaf_age = & 
           (plant%mean_leaf_age + dt/one_day) * (1._wp - plant%flux%growth%leaf%carbon/plant%pool%leaf%carbon)
