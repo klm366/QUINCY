@@ -158,39 +158,12 @@ class Diagnostics ( object ):
         
         fielddict = self.diagnostic_fields [ fieldname ]
 
-        ############ FETCH FILES ###############
-        # in_files = []
-        # for exp in self.experiments:
-        #     for fileid, filedict in fielddict [ 'fetch' ].iteritems ():
-        #         exp.B4J_index [ fileid ] = self.path_template % { 
-        #             'path'           : fielddict [ "processed_path" ],
-        #             'classification' : fileid,
-        #             'expname'        : exp.B4J_name,
-        #             'startdate'      : fielddict [ 'startyear' ],
-        #             'finaldate'      : fielddict [ 'finalyear' ],
-        #             'suffix'         : fielddict [ 'suffix' ]}
-        #         in_files.append ( exp.fetch_outdata ( filedict [ 'name' ], exp.B4J_index [ fileid ]))
-        # self.logger.debug ( "Fetched input files for field %s and all experiments." %  fieldname )
-        
-        # ########## CHECK TIME PERIOD, WORKAROUND ON WRONG PLACE ##################
-        # yearlist = get_largest_common_yearlist ( in_files ) # TODO: put this call before actually fetching the data 
-        # if int ( yearlist [ 0 ]) > int ( fielddict [ 'startyear' ]) or\
-        #    int ( yearlist [ -1 ]) < int ( fielddict [ 'finalyear' ]):
-        #     raise Exception ( "Error in benchmark configuration, choosen period does not match data files." )
-        #     sys.exit ( 1 )
         startyear =  fielddict [ 'startyear' ]
         finalyear = fielddict [ 'finalyear' ]
         yearlist = range ( int ( startyear ), int ( finalyear ) + 1 )
         
         cdo = Cdo ()
         
-        # ########## FETCH LAND SEA MASK, TODO: TESTS #######################
-        # slf_varname = "slf"
-        # land_sea_mask = fielddict [ "processed_path" ] + os.sep + \
-        #                 slf_varname + "_" + os.path.basename ( self.land_sea_mask )
-        # cdo.selname ( slf_varname, input = self.land_sea_mask, output = land_sea_mask )
-        # self.logger.debug ( "Fetched land sea mask '%s'." %  land_sea_mask )
-
         ################ PREPROCESSING ####################tre
         executable = self.get_b4j_path (  fielddict [ 'preprocessing' ][ 'exec' ], "scripts" )
         input_list = fielddict [ 'preprocessing' ][ 'input' ]

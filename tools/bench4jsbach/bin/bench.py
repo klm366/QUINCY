@@ -83,11 +83,6 @@ def get_ip_address ():
     import socket
     return socket.gethostbyname ( socket.gethostname ())
 
-def get_hostname ():
-    import socket
-    name, hlist, alist = socket.gethostbyaddr ( 
-        socket.gethostbyname ( socket.gethostname ())) 
-    return name.split ( '.' )[ 0 ]
 
 class Bench_Object ( Diagnostics, Report ):
     bench_name         = None

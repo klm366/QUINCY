@@ -55,16 +55,9 @@ else:
     print "* Reading configuration file '%s'." %  sys.argv [ 1 ]
     print "******************************************"
 
-
-
-    #print "################## b4j_obj ##############"
-    #print b4j_obj
-    #print "#########################################"
-
     # fetch outdata
     for exp in b4j_obj.experiments:
-        #exp.fetch_outdata_all ()
-        exp.fetch_outdata_new ()
+        exp.fetch_outdata ()
 
     # diagnosis
     for f_n,f_bench in b4j_obj.config [ 'fields' ].iteritems():
