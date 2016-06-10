@@ -113,7 +113,7 @@ class Experiment ( object ):
         return subprocessing ( cmd )
 
     
-    def accumulate_streams ( self, orig_dir, orig_fn_tmpl, startyear, finalyear,
+    def accumulate_streams ( self, orig_dirpath, orig_fn_tmpl, startyear, finalyear,
                              selcodes, suffix, codes_path, target_path, from_remote ):
         self.B4J_obj.logger.debug ( "Starting." )
 
@@ -126,9 +126,13 @@ class Experiment ( object ):
                 os.remove ( target_path )
             except OSError:
                 pass
-            cdo.mergetime ( input = [ os.path.join ( orig_dir, orig_fn_tmpl % { 'year' : y }) for y in range ( sy, fy + 1 )],
+            cdo.mergetime ( input = [ os.path.join ( orig_dirpath, orig_fn_tmpl % { 'year' : y }) for y in range ( sy, fy + 1 )],
                             output = target_path )
         elif not os.path.isfile ( target_path ):
+            assert 'cdo_path' in HOST_AVAIL [ self.B4J_host ] and \
+                'login_name' in  HOST_AVAIL [ self.B4J_host ],\
+                "Configuration for host %s incomplete." %  HOST_AVAIL [ self.B4J_host ]
+            
             target_fn = os.path.basename ( target_path )
             ofnt     = orig_fn_tmpl.replace ( '%(year)s', '${y}' )
 
@@ -143,7 +147,7 @@ class Experiment ( object ):
             rm -f %s;
             cdo -f %s -t %s select,code=%s ${ARRAY[*]} %s;
             """ % (
-                sy, fy, orig_dir, ofnt,
+                sy, fy, orig_dirpath, ofnt,
                 HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
                 target_fn, suffix, codes_path, selcodes, target_fn )
 
@@ -178,9 +182,7 @@ class Experiment ( object ):
                                      ( " acculated" if accumulated else " not accumulated" ),
                                      ( " from %s" % self.B4J_host if from_remote else "" )))
         
-        
-        if from_remote: fetchfile_list = []
-        
+                
         for fieldname, fielddict in self.B4J_obj.diagnostic_fields.iteritems ():
             assert 'fetch' in fielddict, "No 'fetch'-section defined for %s." % fieldname
             for fileid, filedict in fielddict ['fetch' ].iteritems ():
@@ -200,28 +202,30 @@ class Experiment ( object ):
                         'finaldate'      : fielddict [ 'finalyear' ],
                         'suffix'         : fielddict [ 'suffix' ]}
                     
-                    orig_path    = os.path.join ( self.B4J_path, self.outdata_subpath, filedict [ modeltype ][ "submodel" ])
-                    orig_fn_tmpl = self.outdata_fn_tmpl % { "expname"           : self.B4J_name,
-                                                            "submodel"          : filedict [ modeltype ][ "submodel" ],
-                                                            "stream"            : filedict [ modeltype ][ "stream" ],
-                                                            "cond_frequencefix" : self.outdata_frequence_infixes [ 'monthly' ],
-                                                            "startyear"         : "%(year)s",
-                                                            "cond_finalyearstr" : "",
-                                                            "suffix"            : self.outdata_suffix }
+                    orig_dirpath = os.path.join ( self.outdata_dirpath, filedict [ modeltype ][ "submodel" ])
+                    orig_fn_tmpl = self.outfiles_dict [ 'fn_tmpl' ]  % {
+                        "expname"             : self.B4J_name,
+                        "submodel"            : filedict [ modeltype ][ "submodel" ],
+                        "stream"              : filedict [ modeltype ][ "stream" ],
+                        "cond_frequenceinfix" : self.outfiles_dict [  "frequence_infixes" ][ 'monthly' ],
+                        "startyear"           : "%(year)s",
+                        "cond_finalyearstr"   : "",
+                        "suffix"              : self.outfiles_dict [ 'suffix' ]}
                     
-                    codes_path  = os.path.join ( self.B4J_path, self.B4J_name, self.codesfiles_subpath,
-                                                 self.codesfiles_fn_tmpl % { "expname": self.B4J_name,
-                                                                             "submodel": filedict [ modeltype ][ "submodel" ],
-                                                                             "stream": filedict [ modeltype ][ "stream" ],
-                                                                             "suffix": self.codesfiles_suffix })
-                    print codes_path
-                    self.accumulate_streams ( orig_path,
+                    codesfile_path = os.path.join ( self.codesfiles_dirpath,
+                                                    self.codesfiles_dict [ "fn_tmpl" ] % {
+                                                        "expname" : self.B4J_name,
+                                                        "submodel": filedict [ modeltype ][ "submodel" ],
+                                                        "stream"  : filedict [ modeltype ][ "stream" ],
+                                                        "suffix"  : self.codesfiles_dict [ 'suffix' ]})
+                    
+                    self.accumulate_streams ( orig_dirpath,
                                               orig_fn_tmpl,
                                               fielddict [ 'startyear' ],
                                               fielddict [ 'finalyear' ],
                                               filedict [ modeltype ][ 'code' ],
                                               fielddict [ 'suffix' ],
-                                              codes_path,
+                                              codesfile_path,
                                               self.B4J_index [ fileid ],
                                               from_remote )
                     
@@ -515,28 +519,28 @@ class CMIP5_Experiment ( Experiment ):
 
 # status: only for archived experiment
 class MPIESM1_Experiment ( Experiment ):
-    codesfiles_suffix         = "codes"
-    codesfiles_subpath        = 'log'
-    codesfiles_fn_tmpl        = "%(expname)s_%(submodel)s_%(stream)s.%(suffix)s"
-    codesfiles_tar_tmpl       = "%(expname)s_log.tar"
     
-    outdata_fn_tmpl           = """%(expname)s_%(submodel)s_%(stream)s_%(cond_frequencefix)s%(startyear)s%(cond_finalyearstr)s.%(suffix)s"""
-    outdata_finalyear_tmpl    = """-%(finalyear)s"""
-    outdata_frequence_infixes = { "monthly" : "mm_" }
-    outdata_subpath           = None
-    outdata_suffix            = "grb"
+    codesfiles_dict = { "suffix"        : "codes",
+                        "dirname"       : "log",
+                        "fn_tmpl"       : "%(expname)s_%(submodel)s_%(stream)s.%(suffix)s",
+                        "tar_fn_tmpl"   : "%(expname)s_log.tar" }
 
+    outfiles_dict = { "suffix"            : "grb",
+                      "dirname"           : "outdata",
+                      "fn_tmpl"           : """%(expname)s_%(submodel)s_%(stream)s_%(cond_frequenceinfix)s%(startyear)s%(cond_finalyearstr)s.%(suffix)s""",
+                      "frequence_infixes" : { "monthly" : "mm_" },
+                      "finalyear_tmpl"    : "-%(finalyear)s" }
+                      
+
+    
     land_sea_mask_path_tmpl   = "/pool/data/JSBACH/input/r0007/%(atm_res)s/jsbach_%(atm_res)s%(oce_res)s_11tiles_5layers_1850.nc"
 
     def __init__ ( self, b4j_obj, **kwargs ):
-        print "###################### go on here, subclass %s ####################" % self.__class__.__name__
         Experiment.__init__ ( self, b4j_obj, **kwargs )
-        #super(Experiment, self).__init__(**kwargs)
-        self.subpath           = self.B4J_name
-        self.outdata_subpath   = os.path.join ( self.subpath, "outdata" )
-        self.codefiles_subpath = os.path.join ( self.subpath, "log" )
-        #print "MPIESM1_Experiment attributes:"
-        #print self.__dict__
+        self.outdata_dirpath   = os.path.join ( self.B4J_path, self.B4J_name, self.outfiles_dict [ "dirname" ])
+        self.codesfiles_dirpath = os.path.join ( self.B4J_path, self.B4J_name, self.codesfiles_dict [ 'dirname' ])
+        print "MPIESM1_Experiment attributes:"
+        print self.__dict__
 
 
     def fetch_oudata ( self, varname, newpath ):
