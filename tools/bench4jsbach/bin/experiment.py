@@ -3,7 +3,7 @@
 import os, sys, subprocess
 from netCDF4 import Dataset
 import fnmatch, re , shutil
-from util import print_none, subprocessing
+from util import print_none, subprocessing, getdomain
 from cdo import Cdo
 
 ARCHIVE_PREFIX = "/hpss/arch/"
@@ -12,12 +12,16 @@ CODES_SUFFIX   = "_codes"
 
 HOST_AVAIL = { "thunder" : { "login_name" : "thunder4",
                              "names"      : [ "thunder4", "thunder5" ],
+                             "domain"     : "zmaw.de",
                              "cdo_path"   : "/sw/squeeze-x64/cdo-1.7.1-gcc48/bin" },
                "mistral" : { "login_name" : "mistral.dkrz.de",
                              "names"      : [ "mlogin100", "mlogin101", "mlogin102", "mlogin103", "mlogin104", "mlogin105" ],
+                             "domain"     : "hpc.dkrz.de",
                              "cdo_path"   : "/sw/rhel6-x64/cdo/cdo-1.7.0-magicsxx-gcc48/bin" },
                "archive" : { "login_name" : None,
                              "names"      : []}}
+
+              
 
 def find_files ( pattern, path, single = True, raise_e = False ):
     assert os.path.isdir ( path ) and isinstance ( pattern, str )
@@ -111,6 +115,29 @@ class Experiment ( object ):
                                     remote_path,
                                     target_path )
         return subprocessing ( cmd )
+
+    
+    def fetch_land_sea_mask ( self, origin_path, target_path, varname ):
+        
+            target_fn = os.path.basename ( target_path )
+            
+            remote_cmd = """
+            echo 'on server' $(hostname);
+            export PATH=%s:$PATH;
+            rm -f %s;
+            cdo selname,%s %s %s
+            """ % (
+                HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
+                target_fn, varname, origin_path, target_fn )
+
+            
+            self.remotehost_processing ( remote_cmd )
+            self.B4J_obj.logger.debug ( "Executed command successfully." )
+            self.remotehost_fetching ( target_fn, self.land_sea_mask )
+            self.B4J_obj.logger.debug ( "Copied file to local machine successfully." )
+            self.remotehost_processing ( "rm -f %s" % target_fn )
+            self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
+        
 
     
     def accumulate_streams ( self, orig_dirpath, orig_fn_tmpl, startyear, finalyear,
@@ -228,7 +255,29 @@ class Experiment ( object ):
                                               codesfile_path,
                                               self.B4J_index [ fileid ],
                                               from_remote )
-                    
+
+        
+        # fetch land-sea-mask
+        lsm_path = self.pool_dict [ "lsm_path_tmpl" ] % { "atm_res" : self.B4J_atmres,
+                                                          "oce_res" : self.B4J_oceres }
+        slf_varname = "slf"
+        self.land_sea_mask  = self.B4J_obj.path_template % { 
+            'path'           : fielddict [ "processed_path" ],
+            'classification' : "land_sea_mask",
+            'expname'        : self.B4J_name,
+            'startdate'      : fielddict [ 'startyear' ],
+            'finaldate'      : fielddict [ 'finalyear' ],
+            'suffix'         : fielddict [ 'suffix' ]}
+        
+        b4j_domain = getdomain ()
+
+        if b4j_domain in self.pool_dict [ 'domains' ]:
+            assert os.path.isfile ( lsm_path ), "No file found for %s." % lsm_path 
+            cdo.selname ( slf_varname, input = lsm_path, output = self.land_sea_mask )
+        else:
+            self.fetch_land_sea_mask ( lsm_path, self.land_sea_mask, slf_varname )
+
+        self.B4J_obj.logger.debug ( "Fetched land sea mask '%s'." %  self.land_sea_mask )         
                                     
         self.B4J_obj.logger.debug ( "Exiting" )
         
@@ -531,9 +580,8 @@ class MPIESM1_Experiment ( Experiment ):
                       "frequence_infixes" : { "monthly" : "mm_" },
                       "finalyear_tmpl"    : "-%(finalyear)s" }
                       
-
-    
-    land_sea_mask_path_tmpl   = "/pool/data/JSBACH/input/r0007/%(atm_res)s/jsbach_%(atm_res)s%(oce_res)s_11tiles_5layers_1850.nc"
+    pool_dict = { "domains"       : [ "zmaw.de", "hpc.dkrz.de" ],
+                  "lsm_path_tmpl" : "/pool/data/JSBACH/input/r0007/%(atm_res)s/jsbach_%(atm_res)s%(oce_res)s_11tiles_5layers_1850.nc" }
 
     def __init__ ( self, b4j_obj, **kwargs ):
         Experiment.__init__ ( self, b4j_obj, **kwargs )

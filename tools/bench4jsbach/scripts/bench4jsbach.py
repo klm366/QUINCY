@@ -66,14 +66,14 @@ else:
         #exp.fetch_outdata_all ()
         exp.fetch_outdata_new ()
 
-    # # diagnosis
-    # for f_n,f_bench in b4j_obj.config [ 'fields' ].iteritems():
-    #     ret = b4j_obj.diagnostic_generic ( f_n )
-    #     b4j_obj.logger.debug ( "Finished diagnostic for '%s' successfully." % f_n ) if not ret else \
-    #             b4j_obj.logger.debug ( "Diagnostic for '%s' failed." % f_n )
+    # diagnosis
+    for f_n,f_bench in b4j_obj.config [ 'fields' ].iteritems():
+        ret = b4j_obj.diagnostic_generic ( f_n )
+        b4j_obj.logger.debug ( "Finished diagnostic for '%s' successfully." % f_n ) if not ret else \
+                b4j_obj.logger.debug ( "Diagnostic for '%s' failed." % f_n )
 
-    # # reporting
-    # b4j_obj.write_report () if b4j_obj.reporting else None
+    # reporting
+    b4j_obj.write_report () if b4j_obj.reporting else None
     
     b4j_obj.logger.debug ( "Exiting." )
 
