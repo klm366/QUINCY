@@ -113,7 +113,8 @@ class Experiment ( object ):
         return subprocessing ( cmd )
 
     
-    def accumulate_streams ( self, orig_dir, orig_fn_tmpl, startyear, finalyear, selcodes, format, codes_path, target_path, from_remote ):
+    def accumulate_streams ( self, orig_dir, orig_fn_tmpl, startyear, finalyear,
+                             selcodes, suffix, codes_path, target_path, from_remote ):
         self.B4J_obj.logger.debug ( "Starting." )
 
         sy  = int ( startyear )
@@ -127,19 +128,12 @@ class Experiment ( object ):
                 pass
             cdo.mergetime ( input = [ os.path.join ( orig_dir, orig_fn_tmpl % { 'year' : y }) for y in range ( sy, fy + 1 )],
                             output = target_path )
-        else:
-            remote_temp_dir  = "B4J_TEMP_DIR"
-            remote_temp_fn   = ( orig_fn_tmpl % { "year" : "%s-%s" % ( startyear, finalyear )}).replace ( '.grb', '.nc' )
-#            remote_temp_fn = remote_temp_fn.replace ( '.grb', '.nc' )
-            remote_temp_path = os.path.join ( remote_temp_dir, remote_temp_fn )
-
-            
-
-            ofnt = orig_fn_tmpl.replace ( '%(year)s', '${y}' )
+        elif not os.path.isfile ( target_path ):
+            target_fn = os.path.basename ( target_path )
+            ofnt     = orig_fn_tmpl.replace ( '%(year)s', '${y}' )
 
             remote_cmd = """
             echo 'on server' $(hostname);
-            mkdir -p %s;
             for y in `seq %d 1 %d`;do
             ARRAY[$i]=%s/%s;
             echo ${ARRAY[i]}
@@ -148,16 +142,23 @@ class Experiment ( object ):
             export PATH=%s:$PATH;
             rm -f %s;
             cdo -f %s -t %s select,code=%s ${ARRAY[*]} %s;
-            """ % ( remote_temp_dir, sy, fy, orig_dir, ofnt,
-            HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
-            remote_temp_path, format, codes_path, selcodes, remote_temp_path )
+            """ % (
+                sy, fy, orig_dir, ofnt,
+                HOST_AVAIL [ self.B4J_host ][ 'cdo_path' ],
+                target_fn, suffix, codes_path, selcodes, target_fn )
 
-            print remote_cmd
+            self.B4J_obj.logger.debug ( "Before executing command '%s' on %s." % (
+                remote_cmd, HOST_AVAIL [ self.B4J_host ][ 'login_name' ]))
 
             self.remotehost_processing ( remote_cmd )
-            self.remotehost_fetching ( remote_temp_path, target_path )
-            self.remotehost_processing ( "rm -rf %s" % remote_temp_dir )
-        
+            self.B4J_obj.logger.debug ( "Executed command successfully." )
+            self.remotehost_fetching ( target_fn, target_path )
+            self.B4J_obj.logger.debug ( "Copied file to local machine successfully." )
+            self.remotehost_processing ( "rm -f %s" % target_fn )
+            self.B4J_obj.logger.debug ( "Deleted remote file successfully." )
+        else:
+            pass
+            
         self.B4J_obj.logger.debug ( "Exiting." )
 
 
@@ -180,32 +181,29 @@ class Experiment ( object ):
         
         if from_remote: fetchfile_list = []
         
-        for field_name, field_config in self.B4J_obj.diagnostic_fields.iteritems ():
-            assert 'fetch' in field_config, "No 'fetch'-section defined for %s." % field_name
-            for file_name, file_config in field_config ['fetch' ].iteritems ():
-                assert modeltype in file_config, "No '%s'-section defined for %s." % file_name
+        for fieldname, fielddict in self.B4J_obj.diagnostic_fields.iteritems ():
+            assert 'fetch' in fielddict, "No 'fetch'-section defined for %s." % fieldname
+            for fileid, filedict in fielddict ['fetch' ].iteritems ():
+                assert modeltype in filedict, "No '%s'-section defined for %s." % fileid
                 
-                print file_name
+                print fileid
 
                 if not accumulated:
-                    assert "submodel" in file_config [ modeltype ] and\
-                           "stream" in file_config [ modeltype ]
+                    assert "submodel" in filedict [ modeltype ] and\
+                           "stream" in filedict [ modeltype ]
 
-                    dest_path_token =  file_name + STREAM_SUFFIX                     
-                    fn = self.outdata_fn_tmpl % { "expname"           : self.B4J_name,
-                                                  "submodel"          : file_config [ modeltype ][ "submodel" ],
-                                                  "stream"            : file_config [ modeltype ][ "stream" ],
-                                                  "cond_frequencefix" : self.outdata_frequence_infixes [ 'monthly' ],
-                                                  "startyear"         : field_config [ 'startyear' ],
-                                                  "cond_finalyearstr" : self.outdata_finalyear_tmpl % { 'finalyear': field_config [ 'finalyear' ]},
-                                                  "suffix"            : field_config [ 'suffix' ]}#self.outdata_suffix }
-                    self.B4J_index [ dest_path_token ] = os.path.join ( self.B4J_obj.downloads_path, fn )
-                    print self.B4J_index [ dest_path_token ]
+                    self.B4J_index [ fileid ] = self.B4J_obj.path_template % { 
+                        'path'           : fielddict [ "processed_path" ],
+                        'classification' : fileid,
+                        'expname'        : self.B4J_name,
+                        'startdate'      : fielddict [ 'startyear' ],
+                        'finaldate'      : fielddict [ 'finalyear' ],
+                        'suffix'         : fielddict [ 'suffix' ]}
                     
-                    orig_path    = os.path.join ( self.B4J_path, self.outdata_subpath, file_config [ modeltype ][ "submodel" ])
+                    orig_path    = os.path.join ( self.B4J_path, self.outdata_subpath, filedict [ modeltype ][ "submodel" ])
                     orig_fn_tmpl = self.outdata_fn_tmpl % { "expname"           : self.B4J_name,
-                                                            "submodel"          : file_config [ modeltype ][ "submodel" ],
-                                                            "stream"            : file_config [ modeltype ][ "stream" ],
+                                                            "submodel"          : filedict [ modeltype ][ "submodel" ],
+                                                            "stream"            : filedict [ modeltype ][ "stream" ],
                                                             "cond_frequencefix" : self.outdata_frequence_infixes [ 'monthly' ],
                                                             "startyear"         : "%(year)s",
                                                             "cond_finalyearstr" : "",
@@ -213,18 +211,18 @@ class Experiment ( object ):
                     
                     codes_path  = os.path.join ( self.B4J_path, self.B4J_name, self.codesfiles_subpath,
                                                  self.codesfiles_fn_tmpl % { "expname": self.B4J_name,
-                                                                             "submodel": file_config [ modeltype ][ "submodel" ],
-                                                                             "stream": file_config [ modeltype ][ "stream" ],
+                                                                             "submodel": filedict [ modeltype ][ "submodel" ],
+                                                                             "stream": filedict [ modeltype ][ "stream" ],
                                                                              "suffix": self.codesfiles_suffix })
                     print codes_path
                     self.accumulate_streams ( orig_path,
                                               orig_fn_tmpl,
-                                              field_config [ 'startyear' ],
-                                              field_config [ 'finalyear' ],
-                                              file_config [ modeltype ][ 'code' ],
-                                              field_config [ 'suffix' ],
+                                              fielddict [ 'startyear' ],
+                                              fielddict [ 'finalyear' ],
+                                              filedict [ modeltype ][ 'code' ],
+                                              fielddict [ 'suffix' ],
                                               codes_path,
-                                              self.B4J_index [ dest_path_token ],
+                                              self.B4J_index [ fileid ],
                                               from_remote )
                     
                                     
