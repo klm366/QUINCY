@@ -217,8 +217,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB, t_unfilt,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB, t_eff,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB, qsat_star,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, fact_q_air,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, fact_qsat_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB, t_unfilt,      weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(SEB, lw_srf_net,     weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(SEB, sw_srf_net,     weighted_by_fract)

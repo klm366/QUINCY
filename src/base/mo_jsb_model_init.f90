@@ -204,7 +204,6 @@ CONTAINS
     !CALL model%Queue_task(HYDRO, "snow_and_skin_fraction")
     CALL model%Queue_task(SEB,    "surface_energy")
     CALL model%Queue_task(SEB,    "surface_fluxes")
-    !CALL model%Queue_task(HYDRO, "snow_ice_hydrology")
     CALL model%Queue_task(RAD,    "albedo")
     CALL model%Queue_task(TURB,   "surface_roughness")
     CALL model%Queue_task(ASSIMI, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
@@ -238,6 +237,7 @@ CONTAINS
                                                    ! should be called after the soil hydrology is calculated (former update_soil_1)
                                                    !              and after the vegetation conductance is calculated
                                                          !              (former update_vegetation_conductanc)
+    CALL model%Queue_task(TURB,   "humidity_scaling")
     CALL model%Queue_task(SEB,    "asselin_filter")      ! Should always be the last task
 
     CALL print_model(model)

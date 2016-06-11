@@ -459,7 +459,7 @@ CONTAINS
     USE mo_util, ONLY: one_of
 
     CLASS(t_jsb_tile),  INTENT(inout) :: this
-    CLASS(t_Hsm),       INTENT(in)    :: hsm
+    CLASS(t_Hsm),       INTENT(inout) :: hsm
     CLASS(t_Message),   INTENT(in)    :: msg_in
     CLASS(t_Message),   POINTER       :: return_ptr
 

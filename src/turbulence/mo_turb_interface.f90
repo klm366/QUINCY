@@ -22,12 +22,13 @@ MODULE mo_turb_interface
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
+  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE, BARE_TYPE, VEG_TYPE, Contains_lct
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes TURB, HYDRO, SOIL
+  dsl4jsb_Use_processes TURB, SEB, HYDRO, SOIL, VEG, ATM2LAND
 
   ! Use process configurations
   dsl4jsb_Use_config(TURB)
@@ -35,6 +36,8 @@ MODULE mo_turb_interface
   ! Use process memories
   dsl4jsb_Use_memory(ATM2LAND)
   dsl4jsb_Use_memory(TURB)
+  dsl4jsb_Use_memory(SEB)
+  dsl4jsb_Use_memory(VEG)
   dsl4jsb_Use_memory(HYDRO)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -141,7 +144,6 @@ CONTAINS
   SUBROUTINE update_roughness(tile, options)
 
     USE mo_turb_constants, ONLY: blending_height, roughness_snow
-    USE mo_jsb_lct_class,  ONLY: LAKE_TYPE, Contains_lct
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -265,7 +267,8 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Declare pointers to process configs and memory
-    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(TURB)
+    dsl4jsb_Def_memory(SEB)
     dsl4jsb_Def_memory(HYDRO)
     dsl4jsb_Def_memory(VEG)
     dsl4jsb_Def_memory(ATM2LAND)
@@ -273,23 +276,21 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
       & fract_fpc, &
-      ws_l, &
-      ws_fc_l, &
-      ws_pwp_l, &
-!!$      sfract_can, &
-!!$      sfract_soil, &
-!!$      wfract_can, &
-!!$      wfract_soil, &
-      sfract_srf, &
-      wfract_srf, &
-      fact_q_air, &
-      fact_qsat_srf, &
-      fact_qsat_trans_srf, &
-      qsat_srf, &
-      canopy_cond, &
-      pch, &
-      wind_air, &
-      q_air
+      & fract_snow, &
+      & fract_water, &
+      & fact_q_air, &
+      & fact_qsat_srf, &
+      & fact_qsat_trans_srf, &
+      & qsat_star, &
+      & canopy_cond, &
+      & pch, &
+      & wind_air, &
+      & q_air
+
+    dsl4jsb_Real3D_onChunk :: &
+      & w_soil_sl,    &
+      & w_soil_fc_sl, &
+      & w_soil_pwp_sl
 
     ! Locally variables
     REAL(wp) :: &
@@ -298,7 +299,8 @@ CONTAINS
       fact_qsat_soil(options%nc),  &
       fact_qair_veg(options%nc),   &
       fact_qair_soil(options%nc),  &
-      rel_hum(options%nc)
+      rel_hum(options%nc),         &
+      zfract_fpc(options%nc)
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -311,74 +313,144 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(TURB)) RETURN
+    IF (.NOT. tile%Is_process_active(TURB) .OR. Contains_lct(tile%lcts, LAKE_TYPE)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of humidity weights')
 
     model => Get_model(tile%owner_model_id)
 
     ! Get pointers to process configs and memory
+    dsl4jsb_Get_memory(ATM2LAND)
+    dsl4jsb_Get_memory(TURB)
     dsl4jsb_Get_memory(SEB)
     dsl4jsb_Get_memory(HYDRO)
-    dsl4jsb_Get_memory(VEG)
-    dsl4jsb_Get_memory(ATM2LAND)
+    IF (Contains_lct(tile%lcts, VEG_TYPE)) THEN
+      dsl4jsb_Get_memory(VEG)
+    END IF
 
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, pch)                 ! in
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, wind_air)            ! in
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)               ! in
 
-    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_srf)            ! in
-    dsl4jsb_Get_var2D_onChunk(SRF,      sfract_srf)          ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      wfract_srf)          ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      fact_q_air)          ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      fact_qsat_srf)       ! OUT
-    dsl4jsb_Get_var2D_onChunk(SRF,      fact_qsat_trans_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_star)           ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)          ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)         ! in
+    dsl4jsb_Get_var2D_onChunk(TURB,     fact_q_air)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_srf)       ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_trans_srf) ! OUT
 
-    dsl4jsb_Get_var3D_onChunk(SOIL,     ws_l)                ! IN
-    dsl4jsb_Get_var3D_onChunk(SOIL,     ws_fc_l)             ! IN
-    dsl4jsb_Get_var3D_onChunk(SOIL,     ws_pwp_l)            ! IN
+    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_sl)           ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_fc_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl)       ! in
+  
 
-    dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc)           ! IN
-    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)         ! IN
-!!$    sfract_can       => tile%mem%veg  %sfract_can%ptr          (ics:ice,    iblk)
-!!$    sfract_soil      => tile%mem%soil %sfract_soil%ptr         (ics:ice,    iblk)
-!!$    wfract_can       => tile%mem%veg  %wfract_can%ptr          (ics:ice,    iblk)
-!!$    wfract_soil      => tile%mem%soil %wfract_soil%ptr         (ics:ice,    iblk)
+    IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
 
-    WHERE (ws_l(:,1) > ws_pwp_l(:,1))
-      fact_qsat_veg(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) *   &
-        & (wfract_srf(:) + ( 1._wp - wfract_srf(:)) /                &
-        & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:))))
-      fact_qsat_trans(:) = (1._wp - sfract_srf(:)) * &
-        & (1._wp - wfract_srf(:)) /                  &
-        & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:)))
-    ELSEWHERE
-      fact_qsat_veg(:)   = sfract_srf(:) + (1._wp - sfract_srf(:)) * wfract_srf(:)
+      dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc)           ! in
+      dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)         ! in
+
+      WHERE (w_soil_sl(:,1) > w_soil_pwp_sl(:,1))
+        fact_qsat_veg(:) = fract_snow(:) + (1._wp - fract_snow(:)) *   &
+          & (fract_water(:) + ( 1._wp - fract_water(:)) /                &
+          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:))))
+        fact_qsat_trans(:) = (1._wp - fract_snow(:)) * &
+          & (1._wp - fract_water(:)) /                  &
+          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:)))
+      ELSEWHERE
+        fact_qsat_veg(:)   = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
+        fact_qsat_trans(:) = 0._wp
+      END WHERE
+      fact_qair_veg(:) = fact_qsat_veg(:)
+      zfract_fpc(:)      = fract_fpc(:)
+
+    ELSE
+
+      fact_qsat_veg(:)   = 0._wp
       fact_qsat_trans(:) = 0._wp
-    END WHERE
-    fact_qair_veg(:) = fact_qsat_veg(:)
+      fact_qair_veg(:)   = 0._wp
+      zfract_fpc(:)      = 0._wp
+    END IF
 
-    rel_hum(:) = relative_humidity(ws_l(:,1), ws_fc_l(:,1))
+    IF (Contains_lct(tile%lcts, BARE_TYPE) .OR. Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
 
-    WHERE (qsat_srf(:) * rel_hum(:) > q_air(:) .AND. rel_hum(:) > 1.e-10_wp)
-      fact_qsat_soil(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * &
-        & (wfract_srf(:) + (1._wp - wfract_srf(:)) * rel_hum(:))
-      fact_qair_soil(:) = 1._wp
-    ELSEWHERE
-      fact_qsat_soil(:) = sfract_srf(:) + (1._wp - sfract_srf(:)) * wfract_srf(:)
-      fact_qair_soil(:) = fact_qsat_soil(:)
-    END WHERE
-    WHERE (q_air(:) > qsat_srf(:))
+      rel_hum(:) = relative_humidity(w_soil_sl(:,1), w_soil_fc_sl(:,1))
+
+      WHERE (qsat_star(:) * rel_hum(:) > q_air(:) .AND. rel_hum(:) > 1.e-10_wp)
+        fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * &
+          & (fract_water(:) + (1._wp - fract_water(:)) * rel_hum(:))
+        fact_qair_soil(:) = 1._wp
+      ELSEWHERE
+        fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
+        fact_qair_soil(:) = fact_qsat_soil(:)
+      END WHERE
+      WHERE (q_air(:) > qsat_star(:))
+        fact_qsat_soil(:) = 1._wp
+        fact_qair_soil(:) = 1._wp
+      END WHERE
+
+    ELSE IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
+
       fact_qsat_soil(:) = 1._wp
       fact_qair_soil(:) = 1._wp
-    END WHERE
 
-    fact_qsat_srf(:) = fract_fpc(:) * fact_qsat_veg(:) + (1._wp - fract_fpc(:)) * fact_qsat_soil(:)
-    fact_q_air(:)    = fract_fpc(:) * fact_qair_veg(:) + (1._wp - fract_fpc(:)) * fact_qair_soil(:)
-    fact_qsat_trans_srf(:) = fract_fpc(:) * fact_qsat_trans(:)
+    ELSE
+
+      fact_qsat_soil(:) = 0._wp
+      fact_qair_soil(:) = 0._wp
+
+    END IF
+
+    fact_qsat_srf(:) = zfract_fpc(:) * fact_qsat_veg(:) + (1._wp - zfract_fpc(:)) * fact_qsat_soil(:)
+    fact_q_air(:)    = zfract_fpc(:) * fact_qair_veg(:) + (1._wp - zfract_fpc(:)) * fact_qair_soil(:)
+    fact_qsat_trans_srf(:) = zfract_fpc(:) * fact_qsat_trans(:)
 
   END SUBROUTINE update_humidity_scaling
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "surface_roughness"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE aggregate_humidity_scaling(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(TURB)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_humidity_scaling'
+
+    ! Local variables
+    INTEGER  :: iblk, ics, ice, nc
+
+    ! Get local variables from options argument
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(TURB)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(TURB, fact_q_air,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB, fact_qsat_srf,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB, fact_qsat_trans_srf, weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_humidity_scaling
 
   ! ================================================================================================================================
   !>

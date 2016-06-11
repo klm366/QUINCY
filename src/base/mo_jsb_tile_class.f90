@@ -99,7 +99,7 @@ MODULE mo_jsb_tile_class
     FUNCTION Handler_interface(this, hsm, msg_in) RESULT(return_ptr)
       IMPORT :: t_jsb_tile_abstract, t_Hsm, t_Message
       CLASS(t_jsb_tile_abstract),  INTENT(inout) :: this
-      CLASS(t_Hsm),                INTENT(in)    :: hsm
+      CLASS(t_Hsm),                INTENT(inout) :: hsm
       CLASS(t_Message),            INTENT(in)    :: msg_in
       CLASS(t_Message),            POINTER       :: return_ptr
     END FUNCTION Handler_interface

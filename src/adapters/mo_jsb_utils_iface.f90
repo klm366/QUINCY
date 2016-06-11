@@ -19,5 +19,10 @@ MODULE mo_jsb_utils_iface
   USE mo_memory_base,   ONLY: assign_if_present
 #endif
 
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: assign_if_present
+
 #endif
 END MODULE mo_jsb_utils_iface

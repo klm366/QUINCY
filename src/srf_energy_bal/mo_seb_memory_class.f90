@@ -55,15 +55,9 @@ MODULE mo_seb_memory_class
       & t_unfilt_old,         & !< Surface temperature at previous timestep, unfiltered            [K]
                                 !! (before Asselin)
       & t_filt,               & !< Surface temperature, filtered (after Asselin)                   [K]
-      & t_eff,                & !< Effective surface temperature (see manual)                      [K]
+      & t_eff                   !< Effective surface temperature (see manual)                      [K]
                                 !! This is the surface temperature used in the atmospheric
                                 !! radiative heating
-      & fact_q_air,           & !< Factor for lowest atm. level in formulation of surface fluxes
-                                !! of specific humidity and dry static energy to account for
-                                !! evapotranspiration                                              []
-      & fact_qsat_srf,        & !< Similar factor for surface values of specific humidity
-                                !! and dry static energy
-      & fact_qsat_trans_srf     !< Similar factor for transpiration
     !
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -217,27 +211,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & initval_r=280.0_wp )
-
-      CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,                                   &
-        & hgrid, surface,                                                                    &
-        & t_cf('fact_q_air', '', ''),                                                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & initval_r=0.0_wp )
-
-      CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf,                             &
-        & hgrid, surface,                                                                    &
-        & t_cf('fact_qsat_srf', '', ''),                                                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & initval_r=0.0_wp )
-
-      CALL jsb_add_var( mem, 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,                 &
-        & hgrid, surface,                                                                    &
-        & t_cf('fact_qsat_trans_srf', '', ''),                                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & initval_r=0.0_wp )
 
     END IF
 

@@ -23,7 +23,6 @@ MODULE mo_rad_interface
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_var_class,       ONLY: t_jsb_var
   USE mo_jsb_lct_class,       ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE, BARE_TYPE, VEG_TYPE, Contains_lct
   USE mo_jsb_config_class,    ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,   ONLY: t_jsb_process
@@ -312,12 +311,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD, swvis_srf_net,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD, swnir_srf_net,  weighted_by_fract)
 
-    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
-
-      dsl4jsb_Aggregate_onChunk(RAD, rad_net_wtr,    weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD, rad_net_ice,    weighted_by_fract)
-
-    END IF
+    dsl4jsb_Aggregate_onChunk(RAD, rad_net_wtr,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD, rad_net_ice,    weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -799,7 +794,7 @@ CONTAINS
     IF (Contains_lct(tile%lcts, VEG_TYPE)) THEN
 
       dsl4jsb_Get_var2D_onChunk(RAD,      sky_view_fract)        ! INOUT
-     dsl4jsb_Get_var2D_onChunk(RAD,      sky_view_fract_stem)   ! INOUT
+      dsl4jsb_Get_var2D_onChunk(RAD,      sky_view_fract_stem)   ! INOUT
 
 
       CALL calc_sky_view_fractions(lai(:),                & ! In

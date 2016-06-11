@@ -136,7 +136,7 @@ MODULE mo_hsm_class
     FUNCTION Handler_interface(this, hsm, msg_in) RESULT(msg_out)
       IMPORT :: t_State, t_Hsm, t_Message
       CLASS(t_State),   INTENT(inout) :: this
-      CLASS(t_Hsm),     INTENT(in)    :: hsm
+      CLASS(t_Hsm),     INTENT(inout) :: hsm
       CLASS(t_Message), INTENT(in)    :: msg_in
       CLASS(t_Message), POINTER       :: msg_out
     END FUNCTION Handler_interface
@@ -421,7 +421,7 @@ CONTAINS
   FUNCTION Process_message_state(this, hsm, msg) RESULT(return_ptr)
 
     CLASS(t_State),   INTENT(inout) :: this
-    CLASS(t_Hsm),     INTENT(in)    :: hsm
+    CLASS(t_Hsm),     INTENT(inout) :: hsm
     CLASS(t_Message), INTENT(in)    :: msg
 !!$    CLASS(t_Message), POINTER       :: msg
     CLASS(t_Message), POINTER       :: return_ptr
@@ -450,11 +450,16 @@ CONTAINS
     CLASS(t_Hsm), INTENT(inout) :: self
     CHARACTER(len=*), INTENT(in)         :: name
 
+    TYPE(t_Action), POINTER :: action
     INTEGER :: i
 
     ALLOCATE(self%actions(MAX_ACTIONS))
+    NULLIFY(action)
     DO i=1,MAX_ACTIONS
-      self%actions(i) = t_Action("")
+      !self%actions(i) = t_Action("")     ! This generates an internal compiler error with gfortran
+      action => t_Action("")
+      self%actions(i) = action
+      DEALLOCATE(action)
     END DO
     CALL self%Register_action(t_Action("ENTER"))
     CALL self%Register_action(t_Action("EXIT"))

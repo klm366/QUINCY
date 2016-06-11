@@ -24,7 +24,7 @@ MODULE mo_seb_land
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
   USE mo_jsb_control,        ONLY: debug_on
 
-  dsl4jsb_Use_processes SEB, RAD, ATM2LAND, LAND2ATM, SOIL, HYDRO
+  dsl4jsb_Use_processes SEB, RAD, TURB, ATM2LAND, LAND2ATM, SOIL, HYDRO
   dsl4jsb_Use_config(SEB)
   dsl4jsb_Use_config(HYDRO)
 
@@ -32,6 +32,7 @@ MODULE mo_seb_land
   ! dsl4jsb_Use_memory(LAND2ATM)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(RAD)
+  dsl4jsb_Use_memory(TURB)
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(HYDRO)
 
@@ -62,6 +63,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO)
     dsl4jsb_Def_memory(SEB)
     dsl4jsb_Def_memory(RAD)
+    dsl4jsb_Def_memory(TURB)
     dsl4jsb_Def_memory(SOIL)
     dsl4jsb_Def_memory(HYDRO)
     dsl4jsb_Def_memory(ATM2LAND)
@@ -130,6 +132,7 @@ CONTAINS
     !
     dsl4jsb_Get_memory(SEB)
     dsl4jsb_Get_memory(RAD)
+    dsl4jsb_Get_memory(TURB)
     dsl4jsb_Get_memory(SOIL)
     dsl4jsb_Get_memory(HYDRO)
     dsl4jsb_Get_memory(ATM2LAND)
@@ -152,11 +155,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB,      s_star)         ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB,      heat_cap)       ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB,      forc_hflx)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      fact_q_air)     ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      fact_qsat_srf)  ! OUT
-    dsl4jsb_Get_var2D_onChunk(RAD,      rad_srf_net)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow)         ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)     ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB,     fact_q_air)     ! in
+    dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_srf)  ! in
+    dsl4jsb_Get_var2D_onChunk(RAD,      rad_srf_net)    ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow)         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)     ! in
 
     dsl4jsb_Get_var2D_onChunk( SOIL,    grnd_hflx)      ! IN
     dsl4jsb_Get_var2D_onChunk( SOIL,    hcap_grnd)      ! IN
@@ -368,6 +371,7 @@ CONTAINS
     ! Local variables
     !
     dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_memory(TURB)
     dsl4jsb_Def_memory(HYDRO)
     dsl4jsb_Def_memory(ATM2LAND)
 
@@ -421,6 +425,7 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(TURB)
     dsl4jsb_Get_memory(HYDRO)
     dsl4jsb_Get_memory(ATM2LAND)
 
@@ -432,9 +437,9 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SEB,      qsat_star)           ! in
     dsl4jsb_Get_var2D_onChunk(SEB,      s_star)              ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      fact_q_air)          ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      fact_qsat_srf)       ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      fact_qsat_trans_srf) ! in
+    dsl4jsb_Get_var2D_onChunk(TURB,     fact_q_air)          ! in
+    dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_srf)       ! in
+    dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_trans_srf) ! in
     dsl4jsb_Get_var2D_onChunk(SEB,      sensible_hflx)       ! out
     dsl4jsb_Get_var2D_onChunk(SEB,      latent_hflx)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    evapo_lnd)           ! out
