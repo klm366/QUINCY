@@ -19,12 +19,12 @@ STRIP   = strip
 SIZE    = size
 #---------------------------------------------------------------------
 #-
-VPATH = ../atmland:../base:../drivers:../shared:../echam:../vegetation:$(OBJDIR)
+VPATH = ../atmland:../echam:../base:../drivers:../shared:../vegetation:$(OBJDIR)
 MODS = $(shell find ../atmland/ -name '*.f90' -print)
+MODS += $(shell find ../echam/ -name '*.f90' -print)
 MODS += $(shell find ../base/ -name '*.f90' -print)
 MODS += $(shell find ../drivers/ -name 'mo*.f90' -print)
 MODS += $(shell find ../shared/ -name '*.f90' -print)
-MODS += $(shell find ../echam/ -name '*.f90' -print)
 MODS += $(shell find ../vegetation/ -name '*.f90' -print)
 
 OBJFILES = $(notdir $(MODS))

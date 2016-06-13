@@ -9,8 +9,8 @@
 !!
 MODULE mo_veg_memory
 
-  USE mo_kind,            ONLY: wp, eps8
-  USE mo_base_constants,  ONLY: ncanop, dt, one_day
+  USE mo_kind,              ONLY: wp, eps8
+  USE mo_base_constants,    ONLY: ncanop, dt, one_day
   USE mo_shared_memory,     ONLY: t_element
 
   IMPLICIT NONE
@@ -117,7 +117,7 @@ MODULE mo_veg_memory
     PROCEDURE :: init                => init_moving_avrg_variables
     PROCEDURE :: calc_moving_avrg    => calculate_moving_average_of_variable
     PROCEDURE :: update_veg          => update_veg_moving_avrg_variables
-    PROCEDURE :: update_soil         => update_soil_moving_avrg_variables
+    !PROCEDURE :: update_soil         => update_soil_moving_avrg_variables
     PROCEDURE :: update_tile         => update_tile_moving_avrg_variables
   END TYPE t_moving_average
 
@@ -817,8 +817,8 @@ CONTAINS
     ! 0.1 InOut
     CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
     TYPE(t_slm_plant), INTENT(inout)       :: plant       !< plant variables and data
-
-    REAl(wp) :: hlp
+    ! 0.2 Local
+    REAl(wp)                               :: hlp
     ! moving_avrg( 
     !             current average, new value, weight of new value, 
     !                 use function TRUE FALSE [OPTIONAL argument] )
@@ -851,45 +851,55 @@ CONTAINS
                                                plant%pool%leaf%carbon > eps8)
     this%dNPP 				     = this%calc_moving_avrg(this%dNPP, plant%flux%dNPP, & 
                                                1.0_wp/(this%p_opt_alloc * one_day/dt))
-    IF (plant%growth_req_n > 0._wp)THEN
-       hlp = 1._wp/plant%growth_req_n
-    ELSE
-       hlp=0._wp
-    ENDIF
-    this%cn_plant = this%calc_moving_avrg(this%cn_plant, hlp, 1.0_wp/(this%p_opt_alloc * one_day/dt))
-    this%npp_alloc = this%calc_moving_avrg(this%npp_alloc, plant%flux%npp, 1.0_wp / (this%p_opt_alloc * one_day/dt))
+    this%demand_uptake_n         = this%calc_moving_avrg(this%demand_uptake_n, plant%f_n_demand, &
+                                               1.0_wp / (this%p_demand_uptake_n * one_day/ dt), &
+                                               plant%pool%fine_root%carbon > eps8)
+    this%demand_uptake_p         = this%calc_moving_avrg(this%demand_uptake_p, plant%f_p_demand, &
+                                               1.0_wp / (this%p_demand_uptake_p * one_day/ dt), &
+                                               plant%pool%fine_root%carbon > eps8)
+    this%dN_up                   = this%calc_moving_avrg(this%dN_up, plant%flux%dN_up, &
+                                               1.0_wp / (this%p_opt_alloc * one_day/dt))
+
+    !> docu ? 
+    !! introducing a helper variable for calc the moving avrg of: \n
+    !! cn_plant and \n
+    !! npp_alloc
+    IF (plant%growth_req_n > eps8) THEN
+        hlp = 1._wp/plant%growth_req_n
+      ELSE
+        hlp = 0._wp
+    END IF
+    ! cn_plant : need hlp variable !
+    this%cn_plant                = this%calc_moving_avrg(this%cn_plant, hlp, &
+                                               1.0_wp / (this%p_opt_alloc * one_day/dt))
+    ! npp_alloc : need hlp variable !
+    this%npp_alloc               = this%calc_moving_avrg(this%npp_alloc, plant%flux%npp, &
+                                               1.0_wp / (this%p_opt_alloc * one_day/dt))
 
   END SUBROUTINE update_veg_moving_avrg_variables
 
-  !-----------------------------------------------------------------------------------------------------
-  !> calculate moving average of soil variables
-  !!
-  !! called in the driver at the end of each timestep
-  !! @todo ticket #49 merge with update_veg... thse are plant specific variables
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_soil_moving_avrg_variables (this, plant)
+!  !-----------------------------------------------------------------------------------------------------
+!  !> calculate moving average of soil variables
+!  !!
+!  !! called in the driver at the end of each timestep
+!  !-----------------------------------------------------------------------------------------------------
+!  SUBROUTINE update_soil_moving_avrg_variables (this, plant)
 
-    USE mo_base_constants,    ONLY: dt, one_day
+!    USE mo_base_constants,    ONLY: dt, one_day
 
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
-    TYPE(t_slm_plant), INTENT(inout)       :: plant       !< plant variables and data
+!    IMPLICIT NONE
+!    ! 0.1 InOut
+!    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
+!    TYPE(t_slm_plant), INTENT(inout)       :: plant       !< plant variables and data
 
-    ! moving_avrg( 
-    !             current average, new value, weight of new value, 
-    !                 use function TRUE FALSE [OPTIONAL argument] )
-    ! returns: new current average
+!    ! moving_avrg( 
+!    !             current average, new value, weight of new value, 
+!    !                 use function TRUE FALSE [OPTIONAL argument] )
+!    ! returns: new current average
 
-    this%demand_uptake_n = this%calc_moving_avrg(this%demand_uptake_n, plant%f_n_demand, &
-                                                 1.0_wp / (this%p_demand_uptake_n * one_day/ dt), &
-                                                 plant%pool%fine_root%carbon > eps8)
-    this%demand_uptake_p = this%calc_moving_avrg(this%demand_uptake_p, plant%f_p_demand, &
-                                                 1.0_wp / (this%p_demand_uptake_p * one_day/ dt), &
-                                                 plant%pool%fine_root%carbon > eps8)
-    this%dN_up = this%calc_moving_avrg(this%dN_up, plant%flux%dN_up, 1.0_wp / (this%p_opt_alloc * one_day/dt))
-   
-  END SUBROUTINE update_soil_moving_avrg_variables
+
+!   
+!  END SUBROUTINE update_soil_moving_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------
   !> calculate moving average of tile variables

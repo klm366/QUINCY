@@ -247,7 +247,7 @@ PROGRAM plant_model_driver
       !! daily & moving average
       CALL tile(itile)%plant%daily_average%calc_avrg(tile(itile)%plant, time_day, timestep_prop_day) !< daily avrg of the prev day
       CALL tile(itile)%plant%moving_average%update_veg(tile(itile)%plant)          !< moving averages - vegetation
-      CALL tile(itile)%plant%moving_average%update_soil(tile(itile)%plant)         !< moving averages - soil -> plant N & P uptake
+      !CALL tile(itile)%plant%moving_average%update_soil(tile(itile)%plant)         !< moving averages - soil -> plant N & P uptake
       CALL tile(itile)%plant%moving_average%update_tile(atm2land%t_air, & 
                 atm2land%press_srf, atm2land%q_air) !< moving averages - atmland
 

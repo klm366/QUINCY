@@ -38,6 +38,8 @@ PROGRAM canopy_model_driver
   TYPE(t_slm_veg_param),SAVE               :: veg_param   ! data structure for vegetation parameters
   TYPE(t_slm_tile),DIMENSION(ntile), SAVE  :: tile        ! data structure for dynamic vegetation and soil variables
 
+  REAL(wp) :: direction    ! this is a temporary solution to make the canopy model compile
+
   REAL(wp) :: time_day                     !< displays the 'real time' in days; time_day == 1.0 after one day has passed
   INTEGER  :: time_year                    !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
   INTEGER  :: ntimestep                    !< number of timesteps the model runs
@@ -46,6 +48,8 @@ PROGRAM canopy_model_driver
   INTEGER  :: itile     = 1                !< the current tile(i), for looping over ntile
   REAL(wp) :: ref_lai   = 3._wp            !< LAI
   REAL(wp) :: ref_nleaf = 2.0_wp           !< N leaf per unit leaf area in gN/m2
+
+  direction = 1.0_wp         ! this is a temporary solution to make the canopy model compile 
 
   ! check number of tiles, exit if more than one tile was defined (canopy output routines can handle just one; for now)
   IF(ntile > 1) CALL finish('canopy_model_driver','Number of tiles is too large for output routines to work reliable')
@@ -130,8 +134,10 @@ PROGRAM canopy_model_driver
       !! 3.2 canopy calculation fluxes
       !! 
       !! 
-      CALL update_radiation(tile(itile))                      !< mo_veg_radiation
-      CALL update_canopy_fluxes(tile(itile), veg_param)       !< mo_veg_photosynthesis
+      CALL update_radiation(tile(itile))                                 !< mo_veg_radiation
+    !> update_canopy_fluxes needs the direction variable to work
+    !! @todo: ticket #52 , proper implementation of "direction" consistent with plant model
+      CALL update_canopy_fluxes(tile(itile), veg_param, direction)       !< mo_veg_photosynthesis
 
       !! 3.5 update soil water bucket 
       !! 
