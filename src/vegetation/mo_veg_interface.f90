@@ -22,13 +22,13 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> update vegetation pools
   !! 
-  !! 
+  !! main subroutine of the process: vegetation
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_vegetation(tile, veg_param)
 
     USE mo_base_memory,        ONLY: t_slm_soil, t_slm_tile
     USE mo_shared_constants
-    USE mo_shared_memory,        ONLY: t_element
+    USE mo_shared_memory,      ONLY: t_element
     USE mo_veg_memory
     USE mo_veg_parameters,     ONLY: t_slm_veg_param
     USE mo_veg_photosynthesis, ONLY: update_canopy_fluxes
@@ -47,7 +47,7 @@ CONTAINS
     TYPE(t_slm_soil),POINTER         :: soil           ! soil variables per tile
     TYPE(t_slm_plant),POINTER        :: plant          ! plant variables per tile
     REAL(wp)                         :: direction      ! indicates direction of change in leaf CN ratio to maximise NPP
-    REAL(wp)                         :: hlp1
+    REAL(wp)                         :: hlp1           ! helper variable
 
     !  bi-directional pointer
     plant => tile%plant
@@ -69,7 +69,7 @@ CONTAINS
 
     !> 1.1 photosynthesis and leaf respiration 
     !! 
-    !! @todo ticket #47
+    !! @todo ticket #47 : update_canopy_fluxes(); e.g. pass plant as parameter, not tile
     !! 
     CALL update_canopy_fluxes(tile, veg_param, direction)
 
@@ -88,7 +88,7 @@ CONTAINS
     !! 
    CALL update_veg_dynamics(plant,veg_param)
 
-    !> 5.0 update pools
+    !> 5.0 Update pools:
     !!
     !> 5.1 Add carbon from photosynthesis to the labile pool
     !! 
@@ -96,21 +96,21 @@ CONTAINS
     plant%flux%npp = plant%flux%gpp - plant%flux%growth_respiration - plant%flux%maint_respiration 
     plant%flux%npp_c13 = plant%flux%gpp_c13 - plant%flux%growth_respiration_c13 - plant%flux%maint_respiration_c13 
     plant%flux%npp_c14 = plant%flux%gpp_c14 - plant%flux%growth_respiration_c14 - plant%flux%maint_respiration_c14 
-    plant%flux%growth%labile%carbon = plant%flux%growth%labile%carbon + plant%flux%npp * dt / 1.e6
+    plant%flux%growth%labile%carbon = plant%flux%growth%labile%carbon + plant%flux%npp * dt / 1000000.0_wp
     plant%flux%growth%labile%carbon13 = plant%flux%growth%labile%carbon13 + & 
-       plant%flux%npp_c13 * dt / 1.e6
+       plant%flux%npp_c13 * dt / 1000000.0_wp
     plant%flux%growth%labile%carbon14 = plant%flux%growth%labile%carbon14 + & 
-       plant%flux%npp_c14 * dt / 1.e6
+       plant%flux%npp_c14 * dt / 1000000.0_wp
 
     !> 5.2 Add nutrients from uptake calculations
     !! 
     !! 
     plant%flux%growth%labile%nitrogen = plant%flux%growth%labile%nitrogen + &
-       plant%flux%uptake_n * dt / 1.e6
+       plant%flux%uptake_n * dt / 1000000.0_wp
     plant%flux%growth%labile%nitrogen15 = plant%flux%growth%labile%nitrogen15 + & 
-       plant%flux%uptake_n15 * dt / 1.e6
+       plant%flux%uptake_n15 * dt / 1000000.0_wp
     plant%flux%growth%labile%phosphorus = plant%flux%growth%labile%phosphorus + &
-       plant%flux%uptake_p * dt / 1.e6
+       plant%flux%uptake_p * dt / 1000000.0_wp
 
     !> 5.3 update labile pool and reserve 
     !! 
@@ -145,15 +145,15 @@ CONTAINS
     plant%pool = plant%pool + plant%flux%growth
  
     !> 6.1 Radioactive decay of C14 in living plant tissue
-    plant%pool%leaf%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%leaf%carbon14
-    plant%pool%fine_root%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%fine_root%carbon14
-    plant%pool%sap_wood%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%sap_wood%carbon14
-    plant%pool%heart_wood%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%heart_wood%carbon14
-    plant%pool%coarse_root%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%coarse_root%carbon14
-    plant%pool%fruit%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%fruit%carbon14
-    plant%pool%labile%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%labile%carbon14
-    plant%pool%reserve%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%reserve%carbon14
-    plant%pool%seed_bed%carbon14 = (1._wp - lambda_C14 * dt ) * plant%pool%seed_bed%carbon14
+    plant%pool%leaf%carbon14         = (1._wp - lambda_C14 * dt ) * plant%pool%leaf%carbon14
+    plant%pool%fine_root%carbon14    = (1._wp - lambda_C14 * dt ) * plant%pool%fine_root%carbon14
+    plant%pool%sap_wood%carbon14     = (1._wp - lambda_C14 * dt ) * plant%pool%sap_wood%carbon14
+    plant%pool%heart_wood%carbon14   = (1._wp - lambda_C14 * dt ) * plant%pool%heart_wood%carbon14
+    plant%pool%coarse_root%carbon14  = (1._wp - lambda_C14 * dt ) * plant%pool%coarse_root%carbon14
+    plant%pool%fruit%carbon14        = (1._wp - lambda_C14 * dt ) * plant%pool%fruit%carbon14
+    plant%pool%labile%carbon14       = (1._wp - lambda_C14 * dt ) * plant%pool%labile%carbon14
+    plant%pool%reserve%carbon14      = (1._wp - lambda_C14 * dt ) * plant%pool%reserve%carbon14
+    plant%pool%seed_bed%carbon14     = (1._wp - lambda_C14 * dt ) * plant%pool%seed_bed%carbon14
 
     !> 7.0 Update plant diagnostics
     !! 
@@ -168,11 +168,11 @@ CONTAINS
          hlp1,hlp1,hlp1, hlp1)  
 
     IF(plant%pool%leaf%carbon .GT. eps8) THEN 
-       plant%mean_leaf_age = & 
+        plant%mean_leaf_age = & 
           (plant%mean_leaf_age + dt/one_day) * (1._wp - plant%flux%growth%leaf%carbon/plant%pool%leaf%carbon)
-    ELSE 
-       plant%mean_leaf_age = 0.0_wp
-    ENDIF
+      ELSE 
+        plant%mean_leaf_age = 0.0_wp
+    END IF
 
   END SUBROUTINE update_vegetation
 

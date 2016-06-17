@@ -30,12 +30,12 @@ MODULE mo_veg_memory
     REAL(wp), DIMENSION(ncanop)     :: avrg_prev_par_shaded_day      !<  average of the previous day
     REAL(wp), DIMENSION(ncanop)     :: avrg_prev_fleaf_sunlit_day    !<  average of the previous day
     ! accumulated value of the current day & number of values accumulated
-    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_sunlit_day        !<  (1) value accumulated over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_shaded_day        !<  (1) value accumulated over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_val_fleaf_sunlit_day      !<  (1) value accumulated over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_sunlit_day      !<  (2) counter of acc values over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_shaded_day      !<  (2) counter of acc values over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_count_fleaf_sunlit_day    !<  (2) counter of acc values over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_sunlit_day        !<  value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_shaded_day        !<  value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_fleaf_sunlit_day      !<  value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_sunlit_day      !<  counter of acc values over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_shaded_day      !<  counter of acc values over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_fleaf_sunlit_day    !<  counter of acc values over current day
     ! condition per variable and timestep
     LOGICAL                         :: l_par_sunlit_day              !< whether sunlight is available at canopy top
     LOGICAL                         :: l_par_shaded_day              !< whether sunlight is available at canopy top
@@ -55,7 +55,7 @@ MODULE mo_veg_memory
   !! initial default values and accumulation period per variable are set
   !!
   !! includes the PROCEDURE's necessary to do so \n
-  !! makes the moving averages globally available
+  !! is integrated into tile: tile\%plant\%moving_average
   !-----------------------------------------------------------------------------------------------------
   TYPE t_moving_average
     !< 1.0 variables that store averages
@@ -69,31 +69,35 @@ MODULE mo_veg_memory
     REAL(wp) :: beta_soil_ps                 !< not used (scaling factor to account for soil moisture constraints on conductance)
     REAL(wp) :: beta_soil_gs                 !< scaling factor to account for soil moisture constraints on conductance
     ! 1.3 memory of fluxes
-    REAL(wp) :: gpp_week                                   !< gpp of the last week (µmol m-2 s-1)
-    REAL(wp) :: maint_respiration_week                     !< maintenance respiration of the last week (µmol m-2 s-1)
+    REAL(wp) :: gpp_week                     !< gpp of the last week (µmol m-2 s-1)
+    REAL(wp) :: maint_respiration_week       !< maintenance respiration of the last week (µmol m-2 s-1)
     ! 1.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
-    REAL(wp) :: demand_uptake_n                            !< scalar of Vmax for root N uptake 
-    REAL(wp) :: demand_uptake_p                            !< scalar of Vmax for root P uptake
-    REAL(wp) :: growth_req_n_week         !< moles N required for a unit of C growth under current allocation fractions
-    REAL(wp) :: growth_req_p_week         !< moles P required for a unit of N growth under current allocation fractions
+    REAL(wp) :: demand_uptake_n              !< scalar of Vmax for root N uptake 
+    REAL(wp) :: demand_uptake_p              !< scalar of Vmax for root P uptake
+    REAL(wp) :: growth_req_n_week            !< moles N required for a unit of C growth under current allocation fractions
+    REAL(wp) :: growth_req_p_week            !< moles P required for a unit of N growth under current allocation fractions
     ! 1.5 environmental forcing
-    REAL(wp) :: t_air             ! = 1._wp
-    REAL(wp) :: q_air             ! = 1._wp
-    REAL(wp) :: press_surf        ! = 1._wp
+    REAL(wp) :: t_air             !< air temp
+    REAL(wp) :: q_air             !< air q ?
+    REAL(wp) :: press_surf        !< ? air pressure at surface
     ! 1.6 memory of certain variables, temperature, ...
-    REAL(wp) :: t_air_week        ! = 273.15_wp   ! 7 days
-    REAL(wp) :: t_air_month       ! = 273.15_wp   ! 30 days
-    REAL(wp) :: t_air_longterm    ! = 273.15_wp   ! 30 years == 10950 days
+    REAL(wp) :: t_air_week        !< avrg air temperaure across 7 days
+    REAL(wp) :: t_air_month       !< avrg air temperaure across 30 days
+    REAL(wp) :: t_air_longterm    !< avrg air temperaure across 30 years == 10950 days
     ! 1.7 plant status parameter
     REAL(wp) :: boc_an            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 variables needed for optimal allocation calculations
-!@todo ticket 50: more telling names?
-    REAL(wp) :: dNPP              ! rate of change in NPP with  increment in leaf mass, mumol C mol-1
-    REAL(wp) :: dN_up             ! rate of growth per unit root, mumol N mol-1
-    REAl(wp) :: npp_alloc         ! NPP
-    REAL(wp) :: cn_plant          ! plant growth cn ration, equivalent to 1/growth_req_n
+!> @todo ticket 50: veg_memory:TYPE t_moving_average -> more telling names for dNPP dN_up npp_alloc cn_plant
+!! 
+    REAL(wp) :: dNPP              !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
+    REAL(wp) :: dN_up             !< rate of growth per unit root, mumol N mol-1
+    REAl(wp) :: npp_alloc         !< NPP
+    REAL(wp) :: cn_plant          !< plant growth cn ration, equivalent to 1/growth_req_n
+
+
     !< 2.0 accumulation period per variable in days !!
     !! 
+
     ! 2.0a some default values
     REAL(wp) :: p_weekly                 !< 7 days; constant across the model
     REAL(wp) :: p_monthly                !< 30 days; constant across the model
@@ -106,7 +110,7 @@ MODULE mo_veg_memory
     ! 2.6 memory of certain variables: default averaging period values are used, according to variable names (week, month, ..)
 
     ! 2.7 plant status parameter
-    REAL(wp) :: p_boc_an          !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
+    REAL(wp) :: p_boc_an                 !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 2.8 Intervals for optimal processes
     REAL(wp) :: p_optNfrac               !< interval for optimal N fractions
     REAL(wp) :: p_opt_alloc              !< interval for optimal biomass allocation

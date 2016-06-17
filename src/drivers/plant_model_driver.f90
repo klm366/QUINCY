@@ -35,10 +35,11 @@ PROGRAM plant_model_driver
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: finish ! message_text
   ! base
-  USE mo_base_memory,           ONLY: t_slm_tile
+  USE mo_base_memory,           ONLY: t_slm_tile, t_model
   USE mo_base_constants
 !  USE mo_base_util 
   USE mo_base_config_class,     ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
+!  USE mo_base_slm_parameter_class
   ! atmland
   USE mo_atmland_constants
   USE mo_atmland_memory
@@ -63,8 +64,9 @@ PROGRAM plant_model_driver
 
   IMPLICIT NONE
 
-  TYPE(t_slm_veg_param),SAVE               :: veg_param        ! data structure for vegetation parameters
-  TYPE(t_slm_tile),DIMENSION(ntile), SAVE  :: tile             ! data structure for dynamic vegetation and soil variables
+  TYPE(t_model), SAVE                      :: model            !< very basic version of one JSBACH4 model
+  TYPE(t_slm_veg_param),SAVE               :: veg_param        !< data structure for vegetation parameters
+  TYPE(t_slm_tile),DIMENSION(ntile), SAVE  :: tile             !< data structure for dynamic vegetation and soil variables
 
   ! Local variables
   REAL(wp) :: time_day                     !< displays the 'real time' in days; time_day == 1.0 after one day has passed
@@ -90,6 +92,14 @@ PROGRAM plant_model_driver
   CALL veg_config%Init
   CALL atmland_config%Init
 
+  !! 1.0a init land cover type data for tile: this manual way is just a temporary solution !
+  !! 
+  !! @todo update Intel compiler to enable: init lcts of the tile via PROCEDURE Construct_jsb_lct
+  tile%lcts%id        = 2                  ! VEG_TYPE     !< Vegetated
+  tile%lcts%name      = "veg"              ! Short name for lct
+  tile%lcts%long_name = "slm vegetation"   ! Long name for lct
+  tile%lcts%lib_id    = veg_config%pft_id  ! pftID == column number in model%slm_parameter (SLM) == Id of lct in lctlib (JSBACH4)
+
   !! 1.1 Initialisation of vegetation parameters, constants and forcing section
   !! 
   !! 
@@ -109,6 +119,14 @@ PROGRAM plant_model_driver
     CALL tile(itile)%plant%daily_average%init      !< initially sets all variables to zero or .FALSE.
     CALL tile(itile)%plant%moving_average%init     !< init variables with reasonable default values and sets accumulation periods
   END DO
+
+  !! 1.1a init parameters -- replaces veg_param and all other parameters from mo_veg_parameters.f90
+  !! 
+  !! currently integrates vegetation parameters; may cover all parameters specific for a tile (also soil ?!)
+  !! use dsl4jsb_Lctlib(PARAM) (include/dsl_jsbach.inc) to get the value of a specific parameter
+  !! needs USE mo_base_slm_parameter_class
+  !! model%slm_parameter is meant to REPLACE completely: veg_param and mo_veg_parameters
+!  CALL model%slm_parameter%init
 
   !! 1.2 Initialise time step
   !! 

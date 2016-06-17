@@ -6,6 +6,7 @@
   output_end_last_day_year=30
   flag_optimal_Nfraction=.FALSE.
   flag_optimal_Nleaf=.FALSE.
+  flag_optimal_allocation=.FALSE.
   flag_calc_soil_uptake=.TRUE.
   flag_calc_soil_moisture=.FALSE.
   flag_base_soil_model=.FALSE.

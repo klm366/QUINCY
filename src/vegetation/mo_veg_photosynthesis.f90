@@ -703,7 +703,6 @@ CONTAINS
     INTEGER :: icanop, dd, t
     TYPE(t_slm_veg_pool) :: new
     REAL(wp),DIMENSION(ncanop, 3) :: agl,anl,rl,gsl,cil
-    REAL(wp) :: dn=0.01_wp
     REAL(wp) :: m_rub, m_et, m_pepc
     REAL(wp), DIMENSION(3) :: npp_direction, gpp_direction, rl_direction
     INTEGER :: pftid

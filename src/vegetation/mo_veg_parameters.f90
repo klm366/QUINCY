@@ -124,7 +124,7 @@ MODULE mo_veg_parameters
   REAL(wp), SAVE :: background_mort_rate_grass  !< background mortality rate of grasses in static mortality case
 
   ! soil pools
-  REAL(wp), SAVE :: tau_litter                  ! soil litter pool turnover time
+  REAL(wp), SAVE :: tau_litter                  !< soil litter pool turnover time
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   INTEGER,PARAMETER :: itree = 1 
@@ -258,9 +258,9 @@ MODULE mo_veg_parameters
       ! Temperature sensitivity and baseline of Rubisco
       E0v = 26.35_wp
       E1v = 65330.0_wp
-      ! Temperature sensitivity and baseline value of foliar respiration
-      E0kt = 18.72_wp
-      E1kt = 46390.0_wp
+   ! Temperature sensitivity and baseline value of foliar respiration
+   !E0kt = 18.72_wp
+   !E1kt = 46390.0_wp
       ! Temperature sensitivity of PeP C4 photosynthesis
       Tref_pepc = 25._wp
       Tbase_pepc = 10._wp
@@ -273,11 +273,11 @@ MODULE mo_veg_parameters
       CiCa_default_C4 = 0.4_wp
       ci_max = 7800.0_wp ! saturating Ci in Pa
       ! maximum number of iteration in photosynthesis calculation (should probably be in mo_base_constants)
-      ps_it_max = 10
+      ps_it_max = 10._wp
       ! ratio of the molecular diffusion constants of water and CO2 in air (Nobel, Plant Phys. 2005, p 380)
       Dwv2co2_air = Dwv / Dco2 
       ! ratio of the diffusion constant of water and CO2 in air, accounting for turbulent transfer (Nobel, Plant Phys. 2005, p 380) 
-      Dwv2co2_turb = ( Dwv / Dco2  ) ** (2._wp/3_wp)
+      Dwv2co2_turb = ( Dwv / Dco2  ) ** (2._wp/3._wp)
 
       ! carbon content of leaves per dry matter
       carbon_per_dryweight_leaf = 0.48_wp ! g C / g DW
@@ -305,7 +305,7 @@ MODULE mo_veg_parameters
       discr_ps_b_C13 = 27.0_wp
       discr_ps_c_C13 = 5.7_wp
       discr_ps_a_C14 = discr_ps_a_C13 * 1.97_wp
-      discr_ps_b_C14 = discr_ps_b_C13 * 1.89_wp
+      discr_ps_b_C14 = discr_ps_b_C13 * 1.97_wp
       discr_ps_c_C14 = discr_ps_c_C13 * 1.89_wp 
       discr_ps_phi = 0.16_wp ! a typical value cf Hatch et al. 1995, Plant Phys. 108, 173-181
 

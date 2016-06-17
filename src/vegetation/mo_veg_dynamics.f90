@@ -25,7 +25,7 @@ CONTAINS
   !!
   !! a background_mort_rate exists for each trees and grasses, defined as mortality rate per year
   !!
-  !! flux%litterfall & flux%growth is set to zero each timestep in the plant model driver 
+  !! flux\%litterfall & flux\%growth is set to zero each timestep in the plant model driver 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_veg_dynamics(plant, veg_param)
 
@@ -44,7 +44,8 @@ CONTAINS
     TYPE(t_slm_veg_pool)                      :: litter_from_mortality
     REAL(wp)                                  :: mortality
 
-    ! select rate and convert from 1/year to 1/timestep
+    !> 1.0 select rate and convert from 1/year to 1/timestep
+    !! 
     SELECT CASE (veg_param%growthform(plant%pftid))
       CASE (itree)
          mortality = ((background_mort_rate_tree /  one_year) / one_day) * dt
@@ -54,16 +55,18 @@ CONTAINS
           WRITE(message_text,'(a,i4)') 'invalid growthform',veg_param%growthform(plant%pftid)
           CALL finish("mo_veg_dynamics:update_iveg_dynamics",message_text) 
     ENDSELECT 
-    ! 
-    ! apply rate to all elements of a pool
+
+    !> 2.0 apply rate to all elements of a pool
+    !!
     mortality_spread_element%carbon     = mortality 
     mortality_spread_element%nitrogen   = mortality
     mortality_spread_element%phosphorus = mortality
     mortality_spread_element%carbon13   = mortality
     mortality_spread_element%carbon14   = mortality
     mortality_spread_element%nitrogen15 = mortality
-    ! 
-    ! apply rate to all pools
+
+    !> 3.0 apply rate to all pools
+    !!
     mortality_spread_pool%leaf        = mortality_spread_element
     mortality_spread_pool%fine_root   = mortality_spread_element
     mortality_spread_pool%coarse_root = mortality_spread_element
@@ -74,7 +77,8 @@ CONTAINS
     mortality_spread_pool%reserve     = mortality_spread_element
     mortality_spread_pool%seed_bed    = element_zero 
 
-    ! calculate litter fall from mortality
+    !> 4.0 calculate litter fall from mortality
+    !!
     litter_from_mortality = mortality_spread_pool * plant%pool
     plant%flux%litterfall = plant%flux%litterfall + litter_from_mortality
   END SUBROUTINE update_veg_dynamics

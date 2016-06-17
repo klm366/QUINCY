@@ -6,7 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04);
-!! replaces the previous mo_veg_config_class created 2016-03-17 that was based on the JSBACH4 mo_veg_config_class anyway;
+!! replaces the previous SLM mo_veg_config_class created 2016-03-17 that was based on the JSBACH4 mo_veg_config_class anyway;
 !! integration into SLM by Jan Engel, MPI BGC (20160401)
 !!
 MODULE mo_veg_config_class
@@ -78,8 +78,8 @@ CONTAINS
       flag_optimal_Nleaf,           &
       flag_optimal_allocation,      &
       flag_calc_soil_uptake,        &
-      flag_base_soil_model,         &
       flag_calc_soil_moisture,      &
+      flag_base_soil_model,         &
       soil_awc_prescribe,           &
       soil_theta_prescribe,         &
       plant_functional_type_id
@@ -98,9 +98,9 @@ CONTAINS
     output_end_last_day_year       = 10
     flag_optimal_Nfraction         = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
-    flag_optimal_allocation        = .FALSE.
+    flag_optimal_allocation        = .FALSE.  ! .TRUE. .FALSE.
     flag_calc_soil_uptake          = .FALSE.  ! .TRUE. .FALSE.
-    flag_base_soil_model           = .FALSE.
+    flag_base_soil_model           = .FALSE.  ! .TRUE. .FALSE.
     flag_calc_soil_moisture        = .FALSE.  ! .TRUE. .FALSE.
     soil_awc_prescribe             = 300.0_wp
     soil_theta_prescribe           = 100.0_wp 
@@ -123,7 +123,7 @@ CONTAINS
     config%flag_optimal_Nleaf            = flag_optimal_Nleaf
     config%flag_optimal_allocation       = flag_optimal_allocation
     config%flag_calc_soil_uptake         = flag_calc_soil_uptake
-    config%flag_base_soil_model         = flag_base_soil_model
+    config%flag_base_soil_model          = flag_base_soil_model
     config%flag_calc_soil_moisture       = flag_calc_soil_moisture
     config%soil_awc_prescribe            = soil_awc_prescribe 
     config%soil_theta_prescribe          = soil_theta_prescribe 
