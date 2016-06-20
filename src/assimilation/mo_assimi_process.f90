@@ -13,6 +13,8 @@ MODULE mo_assimi_process
    USE mo_kind,      ONLY: wp
    USE mo_exception, ONLY: message
 
+   USE mo_jsb_lctlib_class, ONLY: t_lctlib_element
+
    IMPLICIT NONE
    PRIVATE
 
@@ -78,11 +80,11 @@ CONTAINS
 
 
    ELEMENTAL SUBROUTINE calc_assimilation_waterunlimited( &
-      nc,                      & ! in
       !waterLimitationFlag,     & ! in
-      carbox_rate_max_leaf,    & ! in
-      ETransport,              & ! in
-      C4flag,                  & ! in
+      lctlib,                  & ! in
+      !carbox_rate_max_leaf,    & ! in
+      !ETransport,              & ! in
+      !C4flag,                  & ! in
       t_air,                   & ! in
       press_srf,               & ! in
       par_down_mol,            & ! in
@@ -108,21 +110,22 @@ CONTAINS
 
       !-----------------------------------------------------------------------
       !  ARGUMENTS
-      INTEGER,  INTENT(in)     :: nc
       !LOGICAL,  INTENT(in)     :: waterLimitationFlag
 
       REAL(wp),  INTENT(in) ::                             &
-                                  carbox_rate_max_leaf,    & ! Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2(leaf)/s]
-                                                             !        from lctlib file.
-                                  ETransport,              & ! Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2/s]
+!                                  carbox_rate_max_leaf,    & ! Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2(leaf)/s]
+!                                                             !        from lctlib file.
+!                                  ETransport,              & ! Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2/s]
                                   CO2_mol_mixing_ratio       ! CO2 substance mixing ratio [molCO2/molDryAir]
                                 ! C4flag,                    ! R: Nur falls man C4flag statt logical als real haben möchte.
                                                              ! Photosynthetic pathway (C3: 0; C4: 1)
 
-      LOGICAL,    INTENT(in)   ::                          &
-                                  C4flag                     ! R: In JSBACH3 ist C4flag für Gitterzelle notwendig, da ein Tile C3 oder C4 in
+!      LOGICAL,    INTENT(in)   ::                          &
+!                                  C4flag                     ! R: In JSBACH3 ist C4flag für Gitterzelle notwendig, da ein Tile C3 oder C4 in
                                                              !    Abhängikeit vom GP sein kann. In JSBACH4 soll ein Tile wahrscheinlich
                                                              !    entweder C3 oder C4 unabhängig von der Region sein.
+
+      TYPE(t_lctlib_element), INTENT(in) :: lctlib
 
       REAL(wp),  INTENT(in)    ::                          &
                                   par_down_mol,            & ! Downward PAR flux in mol (photons)/(m^2 s)
@@ -211,7 +214,7 @@ CONTAINS
 
       ! Prepare CO2_conc_leaf_cl
       ! R: siehe mo_bethy.f90, Zeile 709
-      IF (C4flag) THEN ! landcover type is C4 plants
+      IF (lctlib%C4flag) THEN ! landcover type is C4 plants
          CO2_conc_leaf_cl = FCI1C4 * CO2_mol_mixing_ratio
       ELSE       ! landcover type is C3 plants
          CO2_conc_leaf_cl = FCI1C3 * CO2_mol_mixing_ratio
@@ -230,7 +233,7 @@ CONTAINS
       !                  FIRST ENTRY, TC=TA, CI0 => GC0, AC0
       !---------------------------------------------------------------------------------
 
-         IF (.not. C4flag) THEN
+         IF (.not. lctlib%C4flag) THEN
          !WHERE (.not. C4flag)    ! R: only for test issues when this subroutine is not elemental
 
          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -273,7 +276,7 @@ CONTAINS
             ! exponentially inside the canopy. This is reflected directly in the values of PVM
             ! and PJM at 25 Celsius (PVM * nscl),  Knorr (107/108)
             !---------------------------------------------------------------------------------
-            VCMAX = carbox_rate_max_leaf * N_scaling_factors &
+            VCMAX = lctlib%CarboxRate * N_scaling_factors &
                        * EXP(EV / R_gas * T0 * T1**(-1) * t_air**(-1))
 
             !---------------------------------------------------------------------------------
@@ -283,7 +286,7 @@ CONTAINS
             !  J = J(25C) * TC / 25 WHERE J(25) = J0 * N_scaling_factors
             ! ?????????????????????/ minOfMaxCarboxrate=1E-12 vielleicht etwas gering
             !---------------------------------------------------------------------------------
-            JMAX = ETransport * N_scaling_factors * TC/25._wp
+            JMAX = lctlib%ETransport * N_scaling_factors * TC/25._wp
             JMAX = MAX(JMAX,minOfMaxCarboxrate) ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 21. Stelle nach
                                                 !    Komma. Ursache: epsilon ist 2.22E-16 (JSBACH3 und JSBACH4).
 
@@ -336,9 +339,9 @@ CONTAINS
             !---------------------------------------------------------------------------------
             DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol,0.0_wp)) ! R: bei gleichem Input keine Abweichung (22 Stellen nach Komma)
 
-            DARK_RESP = FRDC3 * carbox_rate_max_leaf * N_scaling_factors &
+            DARK_RESP = FRDC3 * lctlib%CarboxRate * N_scaling_factors &
                      * EXP(ER * T0 / R_gas  * T1**(-1) * t_air**(-1)) &
-                     * HITINHIB * DARKINHIB                               ! R: auch wenn FRDC3, carbox_rate_max_leaf, N_scaling_factors, ER, T0,
+                     * HITINHIB * DARKINHIB                               ! R: auch wenn FRDC3, CarboxRate, N_scaling_factors, ER, T0,
                                                                           !    T1, R_gas, t_air, HITINHIB, DARKINHIB gleich sind entstehen ab der
                                                                           !    16. Stelle nach Komma Abweichungen wg. EXP.
 
@@ -363,7 +366,7 @@ CONTAINS
                                                               !    Mit Abweichung die von DARK_RESP kommt ist die Maximal-Abweichung dann schon
                                                               !    ab 12. Stelle nach dem Komma.
 
-         ELSE IF (C4flag) THEN
+         ELSE IF (lctlib%C4flag) THEN
           !ELSEWHERE (C4flag)  ! R: only for test issues when this subroutine is not elemental
 
          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -396,13 +399,13 @@ CONTAINS
             !   which is not considered in INITVEGDATA
             ! K scales of course with EK
             !---------------------------------------------------------------------------------
-            K = ETransport * 1.E3_wp * N_scaling_factors &
+            K = lctlib%ETransport * 1.E3_wp * N_scaling_factors &
                      * EXP(EK * T0 / R_gas * T1**(-1) * t_air**(-1))  ! R: Abweichung ab der 16. Stelle nach dem Komma also im Bereich EPSILON
 
             !---------------------------------------------------------------------------------
             ! same as C3
             !---------------------------------------------------------------------------------
-            VCMAX = carbox_rate_max_leaf * N_scaling_factors &
+            VCMAX = lctlib%CarboxRate * N_scaling_factors &
                      * EXP(EV / R_gas * T0 * T1**(-1) * t_air**(-1))  ! R: Abweichung ab der 19. Stelle nach dem Komma also im Bereich EPSILON
 
             !---------------------------------------------------------------------------------
@@ -411,7 +414,7 @@ CONTAINS
             !---------------------------------------------------------------------------------
             DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol,0.0_wp)) ! R: keine Abweichung
             HITINHIB  = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )        ! R: keine Abweichung
-            DARK_RESP = FRDC4 * carbox_rate_max_leaf * N_scaling_factors * &
+            DARK_RESP = FRDC4 * lctlib%CarboxRate * N_scaling_factors * &
                             EXP(ER * T0 / R_gas * T1**(-1) * t_air**(-1)) * HITINHIB  * DARKINHIB ! R: Abweichung ab der 15. Stelle nach dem Komma also im Bereich EPSILON
 
             !---------------------------------------------------------------------------------
@@ -465,11 +468,8 @@ CONTAINS
 
 
    ELEMENTAL SUBROUTINE calc_assimilation_waterlimited( &
-      nc,                      & ! in
       !waterLimitationFlag,     & ! in
-      carbox_rate_max_leaf,    & ! in
-      ETransport,              & ! in
-      C4flag,                  & ! in
+      lctlib,                  & ! in
       t_air,                   & ! in
       press_srf,               & ! in
       par_down_mol,            & ! in
@@ -495,21 +495,19 @@ CONTAINS
 
       !-----------------------------------------------------------------------
       !  ARGUMENTS
-      INTEGER,  INTENT(in)     :: nc
       !LOGICAL,  INTENT(in)     :: waterLimitationFlag
 
+      TYPE(t_lctlib_element), INTENT(in) :: lctlib
+
       REAL(wp),  INTENT(in) ::                             &
-                                  carbox_rate_max_leaf,    & ! Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2(leaf)/s]
-                                                             !        from lctlib file.
-                                  ETransport,              & ! Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2/s]
                                   CO2_mol_mixing_ratio       ! CO2 substance mixing ratio [molCO2/molDryAir]
                                 ! C4flag,                    ! R: Nur falls man C4flag statt logical als real haben möchte.
                                                              ! Photosynthetic pathway (C3: 0; C4: 1)
 
-      LOGICAL,    INTENT(in)   ::                          &
-                                  C4flag                     ! R: In JSBACH3 ist C4flag für Gitterzelle notwendig, da ein Tile C3 oder C4 in
-                                                             !    Abhängikeit vom GP sein kann. In JSBACH4 soll ein Tile wahrscheinlich
-                                                             !    entweder C3 oder C4 unabhängig von der Region sein.
+!      LOGICAL,    INTENT(in)   ::                          &
+!                                  C4flag                     ! R: In JSBACH3 ist C4flag für Gitterzelle notwendig, da ein Tile C3 oder C4 in
+!                                                             !    Abhängikeit vom GP sein kann. In JSBACH4 soll ein Tile wahrscheinlich
+!                                                             !    entweder C3 oder C4 unabhängig von der Region sein.
 
       REAL(wp),  INTENT(in)    ::                          &
                                   par_down_mol,            & ! Downward PAR flux in mol (photons)/(m^2 s)
@@ -594,7 +592,7 @@ CONTAINS
 
       ! Prepare CO2_conc_leaf_cl
       ! R: siehe mo_bethy.f90, Zeile 709
-      IF (C4flag) THEN ! landcover type is C4 plants
+      IF (lctlib%C4flag) THEN ! landcover type is C4 plants
          CO2_conc_leaf_cl = FCI1C4 * CO2_mol_mixing_ratio
       ELSE       ! landcover type is C3 plants
          CO2_conc_leaf_cl = FCI1C3 * CO2_mol_mixing_ratio
@@ -613,7 +611,7 @@ CONTAINS
       !                  FIRST ENTRY, TC=TA, CI0 => GC0, AC0
       !---------------------------------------------------------------------------------
 
-      IF (.NOT. C4flag) THEN
+      IF (.NOT. lctlib%C4flag) THEN
         !WHERE (.not. C4flag) ! R: only for test issues when this subroutine is not elemental
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -631,16 +629,16 @@ CONTAINS
                                                                    !    t_air genau gleich. (Grund warum hier Abweichung größer als oben:
                                                                    !    KO0 ist um Faktor 3 größer als KC0.)
         GAM = MAX (1.7E-6_wp * TC, 0._wp)                          ! R: Keine Abweichungen
-        VCMAX = carbox_rate_max_leaf * N_scaling_factors &
+        VCMAX = lctlib%CarboxRate * N_scaling_factors &
                   * EXP(EV * T0 / R_gas * T1**(-1) * t_air**(-1) ) ! PVM=PVM0*N_scaling_factors*EXP(Energy scaled relative 25C)
                                                                    ! R: Abweichung ab der 17. Stelle nach dem Komma
 
         DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol,0.0_wp)) ! R: keine Abweichungen
         HITINHIB  = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )        ! R: keine Abweichungen
-        DARK_RESP = FRDC3 * carbox_rate_max_leaf * N_scaling_factors     &     ! RD=RD0*N_scaling_factors*EXP(Energy scaled relative 25C)
+        DARK_RESP = FRDC3 * lctlib%CarboxRate * N_scaling_factors     &     ! RD=RD0*N_scaling_factors*EXP(Energy scaled relative 25C)
                   * EXP(ER * T0  / R_gas * T1**(-1) * t_air**(-1) ) &            ! with RD0 proportional PVM0 at 25C
                   * HITINHIB * DARKINHIB                                         ! R: Abweichung ab der 15. Stelle nach dem Komma
-        JMAX = ETransport * N_scaling_factors     &  ! PJM=PJM0*N_scaling_factors*EXP(Energy scaled relative 25C)
+        JMAX = lctlib%ETransport * N_scaling_factors     &  ! PJM=PJM0*N_scaling_factors*EXP(Energy scaled relative 25C)
                   * TC / 25._wp                        ! R: bis hierher keinerlei Abweichung. N_scaling_factors und ETransport genau gleich.!
         JMAX = MAX(JMAX, minOfMaxCarboxrate) ! R: Abweichung nur für Fall minOfmaxCarboxrate und dann ab der 13. Stelle nach dem Komma
                                              !    weil minOfMaxCarboxrate = 1.0e-12 ist
@@ -777,14 +775,14 @@ CONTAINS
         !   => A = JC - RD ^ A = JE - RD
         !---------------------------------------------------------------------------------
 
-        K = ETransport * 1.E3_wp * N_scaling_factors   &             ! K=K0*N_scaling_factors*EXP(Energie scaled relative 25C)
+        K = lctlib%ETransport * 1.E3_wp * N_scaling_factors   &      ! K=K0*N_scaling_factors*EXP(Energie scaled relative 25C)
                 * EXP(EK * T0 / R_gas * T1**(-1) * t_air**(-1) )     ! in mmol CO2 Pecase for C4.
-        VCMAX = carbox_rate_max_leaf * N_scaling_factors &           ! PVM=PVM0*N_scaling_factors*EXP(Energie
+        VCMAX = lctlib%CarboxRate * N_scaling_factors &              ! PVM=PVM0*N_scaling_factors*EXP(Energie
                    * EXP(EV * T0 / R_gas * T1**(-1) * t_air**(-1) )  ! R: Abweichung an der 22. Stelle.
 
         DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol,0.0_wp)) ! R: keine Abweichungen
         HITINHIB  = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )        ! R: keine Abweichungen
-        DARK_RESP = FRDC4 * carbox_rate_max_leaf * N_scaling_factors  & ! DARK_RESP=RD0*N_scaling_factors*EXP(Energie scaled relative 25C)
+        DARK_RESP = FRDC4 * lctlib%CarboxRate * N_scaling_factors  &    ! DARK_RESP=RD0*N_scaling_factors*EXP(Energie scaled relative 25C)
                    * EXP(ER * T0 / R_gas * T1**(-1) * t_air**(-1) )   & ! with RD0 proportional PVM0 at 25C
                    * HITINHIB * DARKINHIB                               ! Abweichung ab der 16. Stelle nach dem Komma
         !---------------------------------------------------------------------------------

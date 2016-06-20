@@ -299,7 +299,6 @@ CONTAINS
                                                  ! ghg_co2mmr [kg/kg] = zco2int [m³/m³]  * amco2 [g/mol] / amd [g/mol]
                                                  ! mass mixing ratio  = vol mixing ratio * MM CO2        / MM dry air
     USE mo_carbon_constants,    ONLY: molarMassDryAir, molarMassCO2
-    USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -310,7 +309,6 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: iblk, ics, ice, nc
     INTEGER                             :: icanopy
-    TYPE(t_lctlib_element), POINTER     :: lctlib
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_assimilation_waterunlimited'
 
@@ -409,8 +407,6 @@ CONTAINS
 
     ncanopy                  => dsl4jsb_Config(ASSIMI)%ncanopy
 
-    lctlib => dsl4jsb_Lctlib_ptr
-
     ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
     ! Note: the conversion to CO2_mol_mixing_ratio is only used here therefore a separate function is unnecessary.
 
@@ -422,11 +418,8 @@ CONTAINS
 
     DO icanopy=1,ncanopy
        CALL calc_assimilation_waterunlimited(                      &
-                               nc,                                 & ! in
                                !waterLimitationFlag,                & ! in
-                               lctlib%CarboxRate,                  & ! in
-                               lctlib%ETransport,                  & ! in
-                               lctlib%C4flag,                      & ! in <-- evtl. nicht in Endversion!
+                               dsl4jsb_Lctlib,                     & ! in
                                t_air(:),                           & ! in
                                press_srf(:),                       & ! in
                                par_down_mol(:),                    & ! in
@@ -513,7 +506,6 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: iblk, ics, ice, nc
     INTEGER                             :: icanopy
-    LOGICAL, DIMENSION(:), ALLOCATABLE  :: C4flag  ! R: C4flag is taken from lctlib and then expanded to this variable here
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_assimilation_waterunlimited'
 
@@ -560,23 +552,12 @@ CONTAINS
                                                       ! Output only for the water limited case here
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
 
-
-    REAL(wp), DIMENSION(:), ALLOCATABLE   ::           &
-                                 carbox_rate_max_leaf, & ! Input. Maximum carboxylation rate at 25 Celsius [1.E-6 * Mol(CO2)/m^2(leaf)/s]
-                                                         ! ?from lctlib file?.
-                                 ETransport              ! Input. Maximum electron transport rate at 25 Celsius [1.E-6 * Mol/m^2/s]
-
-
     ! Get local variables from options argument
     dtime   = options%dtime
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-
-    ALLOCATE(C4flag(nc))
-    ALLOCATE(carbox_rate_max_leaf(nc))
-    ALLOCATE(ETransport(nc))
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(ASSIMI)) RETURN
@@ -624,20 +605,6 @@ CONTAINS
 
     ncanopy                  => dsl4jsb_Config(ASSIMI)%ncanopy          ! IN
 
-    carbox_rate_max_leaf  = SPREAD(dsl4jsb_Lctlib(CarboxRate), NCOPIES=nc, DIM=1) ! IN
-                                                                         ! R: necessary as this must be a field for
-                                                                         !    ELEMENTAL calc_assimilation
-                                                                         !    e.g. carbox_rate_max_leaf =  50.
-
-    ETransport = SPREAD(dsl4jsb_Lctlib(ETransport), NCOPIES=nc, DIM=1)            ! IN
-                                                                         ! R: necessary as this must be a field for
-                                                                         !    ELEMENTAL calc_assimilation
-                                                                         !    e.g. ETransport = 100.
-
-    C4flag = SPREAD(dsl4jsb_Lctlib(C4flag), NCOPIES=nc, DIM=1)                    ! IN.
-                                                                         ! R: necessary as this must be a field for
-                                                                         !    ELEMENTAL calc_assimilation
-
     ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
     ! Note: the conversion to CO2_mol_mixing_ratio is only used here therefore a separate function is unnecessary.
 
@@ -664,13 +631,8 @@ CONTAINS
 
     DO icanopy=1,ncanopy
        CALL calc_assimilation_waterlimited(                      &
-                             nc,                                 & ! in
                              !waterLimitationFlag,                & ! in
-                             carbox_rate_max_leaf,               & ! in
-                             ETransport,                         & ! in
-                             C4flag(:),                          & ! in <-- evtl. nicht in Endversion!
-                                                                   !    This presumes that lctlib points to tile specific values
-                                                                   !    e.g. lctlib object is part of the tile object
+                             dsl4jsb_Lctlib,                     & ! in
                              t_air(:),                           & ! in
                              press_srf(:),                       & ! in
                              par_down_mol(:),                    & ! in

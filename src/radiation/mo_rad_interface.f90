@@ -757,8 +757,8 @@ CONTAINS
 ! !                                     alb_nir_mineralsoil(:),    & ! InOut
 ! !                                     alb_vis_soil(:),           & ! InOut
 ! !                                     alb_nir_soil(:),           & ! InOut
-! !                                     dsl4jsb_Lctlib(specificLeafArea_C), &
-! !                                     dsl4jsb_Lctlib(AlbedoLitterVIS) &
+! !                                     dsl4jsb_Lctlib_param(specificLeafArea_C), &
+! !                                     dsl4jsb_Lctlib_param(AlbedoLitterVIS) &
 ! !                                     )
 ! !
 ! !            ELSE
@@ -801,7 +801,7 @@ CONTAINS
         & cos_zenith_angle(:),   & ! In
         & sky_view_fract(:),     & ! Out
         & sky_view_fract_stem(:), & ! Out
-        & dsl4jsb_Lctlib(StemArea) &
+        & dsl4jsb_Lctlib_param(StemArea) &
         & )
 
       ! R: All inputs are constants, not necessary to calculate this for each grid cell again. Therefore here
@@ -823,7 +823,7 @@ CONTAINS
         & alb_nir_can(:),             & ! in
         & alb_vis(:),                 & ! out
         & alb_nir(:),                 & ! out
-        & dsl4jsb_Lctlib(ForestFlag), & ! in
+        & dsl4jsb_Lctlib_param(ForestFlag), & ! in
         & l_day(:)                    &
         & )
 
