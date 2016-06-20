@@ -32,10 +32,10 @@ MODULE mo_veg_output
   REAL(wp), DIMENSION(ntile), SAVE :: growth_resp_C14_acc      
   REAL(wp), DIMENSION(ntile), SAVE :: maint_resp_C14_acc       
   REAL(wp), DIMENSION(ntile), SAVE :: uptake_n_acc         
-  REAL(wp), DIMENSION(ntile), SAVE :: resorption_n_acc     
+  REAL(wp), DIMENSION(ntile), SAVE :: recycling_n_acc     
   REAL(wp), DIMENSION(ntile), SAVE :: res_use_n_acc        
   REAL(wp), DIMENSION(ntile), SAVE :: uptake_p_acc         
-  REAL(wp), DIMENSION(ntile), SAVE :: resorption_p_acc     
+  REAL(wp), DIMENSION(ntile), SAVE :: recycling_p_acc     
   REAL(wp), DIMENSION(ntile), SAVE :: res_use_p_acc        
   REAL(wp), DIMENSION(ntile), SAVE :: transpiration_acc    
   REAL(wp), DIMENSION(ntile), SAVE :: gc_acc               
@@ -67,10 +67,10 @@ CONTAINS
     growth_resp_C14_acc = 0.0_wp
     maint_resp_C14_acc = 0.0_wp
     uptake_n_acc      = 0._wp   
-    resorption_n_acc  = 0._wp  
+    recycling_n_acc  = 0._wp  
     res_use_n_acc     = 0._wp  
     uptake_p_acc      = 0._wp
-    resorption_p_acc  = 0._wp  
+    recycling_p_acc  = 0._wp  
     res_use_p_acc     = 0._wp   
     transpiration_acc = 0._wp 
     gc_acc            = 0._wp
@@ -498,12 +498,12 @@ CONTAINS
       growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + plant%flux%growth_respiration_c14 * dt_one
       maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + plant%flux%maint_respiration_c14  * dt_one
       uptake_n_acc(itile)     = uptake_n_acc(itile)      + plant%flux%uptake_n                * dt_one
-      resorption_n_acc(itile) = resorption_n_acc(itile)  + ( plant%flux%recycling_leaf_n + &
-                                plant%flux%recycling_fine_root_n + plant%flux%resorption_n )  * dt_one *1000000._wp/dt
+      recycling_n_acc(itile) = recycling_n_acc(itile)  + ( plant%flux%recycling_leaf_n + &
+                                plant%flux%recycling_fine_root_n + plant%flux%recycling_sap_wood_n )  * dt_one *1000000._wp/dt
       res_use_n_acc(itile)    = res_use_n_acc(itile)     + plant%flux%reserve_use%nitrogen    * dt_one *1000000._wp/dt
       uptake_p_acc(itile)     = uptake_p_acc(itile)      + plant%flux%uptake_p                * dt_one
-      resorption_p_acc(itile) = resorption_p_acc(itile)  + ( plant%flux%recycling_leaf_p + & 
-                                plant%flux%recycling_fine_root_p + plant%flux%resorption_p )  * dt_one *1000000._wp/dt
+      recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( plant%flux%recycling_leaf_p + & 
+                                plant%flux%recycling_fine_root_p + plant%flux%recycling_sap_wood_p ) * dt_one *1000000._wp/dt
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + plant%flux%reserve_use%phosphorus  * dt_one *1000000._wp/dt
       transpiration_acc(itile)= transpiration_acc(itile) + plant%flux%transpiration           * dt_one 
       gc_acc(itile)           = plant%gc                                                      * dt_one 
@@ -526,9 +526,9 @@ CONTAINS
                               calc_delta_C14(growth_resp_acc(itile),growth_resp_C14_acc(itile),dC13rg), & 
                               calc_delta_C14(maint_resp_acc(itile),maint_resp_C14_acc(itile),dC13rm)
         lun=lun+1
-        write(lun,'(4F12.6)') time_d, uptake_n_acc(itile), resorption_n_acc(itile), res_use_n_acc(itile)
+        write(lun,'(4F12.6)') time_d, uptake_n_acc(itile), recycling_n_acc(itile), res_use_n_acc(itile)
         lun=lun+1
-        write(lun,'(4F12.6)') time_d, uptake_p_acc(itile), resorption_p_acc(itile), res_use_p_acc(itile)
+        write(lun,'(4F12.6)') time_d, uptake_p_acc(itile), recycling_p_acc(itile), res_use_p_acc(itile)
         lun=lun+1
         write(lun,'(12F16.8)') time_d, transpiration_acc(itile), gc_acc(itile)
         ! set zero
@@ -544,10 +544,10 @@ CONTAINS
         growth_resp_C14_acc(itile) = 0.0_wp
         maint_resp_C14_acc(itile) = 0.0_wp
         uptake_n_acc(itile)      = 0.0_wp
-        resorption_n_acc(itile)  = 0.0_wp
+        recycling_n_acc(itile)   = 0.0_wp
         res_use_n_acc(itile)     = 0.0_wp
         uptake_p_acc(itile)      = 0.0_wp
-        resorption_p_acc(itile)  = 0.0_wp
+        recycling_p_acc(itile)   = 0.0_wp
         res_use_p_acc(itile)     = 0.0_wp
         transpiration_acc(itile) = 0.0_wp
         gc_acc(itile)            = 0.0_wp

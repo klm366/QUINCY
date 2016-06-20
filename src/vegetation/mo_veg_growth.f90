@@ -869,41 +869,46 @@ CONTAINS
     ! 0.2 Local
     REAL(wp)                         :: labile_dn15              ! labile pools 15N to N molar mixing ratio
     REAL(wp)                         :: scal                     ! helper variable
+    REAL(wp)                         :: recycling_leaf,recycling_fine_root  ! more helpers
 
     IF(plant%growing_season)THEN 
        !> 1.0 replace overturning N from leaves and roots by new N from the labile pool using the target C:N
        !!
-       plant%flux%recycling_leaf_n = ( plant%pool%leaf%nitrogen - & 
+       recycling_leaf = ( plant%pool%leaf%nitrogen - & 
                   plant%pool%leaf%carbon / plant%target_cn_leaf ) * tau_canopy_acclimation * dt / one_day
-       plant%flux%recycling_fine_root_n = ( plant%pool%fine_root%nitrogen - &
+       recycling_fine_root = ( plant%pool%fine_root%nitrogen - &
                   plant%pool%fine_root%carbon / target_cn_fine_root ) * tau_canopy_acclimation * dt / one_day
        !> 1.1 if N is addded to leaves or fine root (negative flux), make sure there is enough labile N to support this
        !! 
-       IF( -1.0_wp * (plant%flux%recycling_leaf_n + plant%flux%recycling_fine_root_n) > eps8) THEN
+       IF( -1.0_wp * (recycling_leaf + recycling_fine_root) > eps8) THEN
           scal = -1.0_wp * ( tau_labile_default * dt / one_day * plant%pool%labile%nitrogen ) / & 
-                           ( plant%flux%recycling_leaf_n + plant%flux%recycling_fine_root_n ) 
+                           ( recycling_leaf + recycling_fine_root ) 
           IF(scal < 1.0_wp) THEN
-             plant%flux%recycling_leaf_n = plant%flux%recycling_leaf_n * scal
-             plant%flux%recycling_fine_root_n = plant%flux%recycling_fine_root_n * scal
+             recycling_leaf = recycling_leaf * scal
+             recycling_fine_root = recycling_fine_root * scal
           ENDIF
        ENDIF
+       plant%flux%recycling_leaf_n      = plant%flux%recycling_leaf_n      + recycling_leaf
+       plant%flux%recycling_fine_root_n = plant%flux%recycling_fine_root_n + recycling_fine_root
    
        !> 2.0 replace overturning P from leaves and roots by new N from the labile pool using the target N:P
        !!
-       plant%flux%recycling_leaf_p = ( plant%pool%leaf%phosphorus - & 
+       recycling_leaf = ( plant%pool%leaf%phosphorus - & 
                   plant%pool%leaf%nitrogen / plant%target_np_leaf ) * tau_canopy_acclimation * dt / one_day
-       plant%flux%recycling_fine_root_p = ( plant%pool%fine_root%phosphorus - &
+       recycling_fine_root = ( plant%pool%fine_root%phosphorus - &
                   plant%pool%fine_root%nitrogen / target_np_fine_root ) * tau_canopy_acclimation * dt / one_day
        !> 2.1 if P is addded to leaves or fine root, make sure there is enough labile P to support this
        !! 
-       IF( -1.0_wp * ( plant%flux%recycling_leaf_p + plant%flux%recycling_fine_root_p ) > eps8) THEN
+       IF( -1.0_wp * ( recycling_leaf + recycling_fine_root ) > eps8) THEN
           scal = -1.0_wp * ( tau_labile_default * dt / one_day * plant%pool%labile%phosphorus ) / & 
-                           ( plant%flux%recycling_leaf_p + plant%flux%recycling_fine_root_p ) 
+                           ( recycling_leaf + recycling_fine_root ) 
           IF(scal < 1.0_wp) THEN
-             plant%flux%recycling_leaf_p = plant%flux%recycling_leaf_p * scal
-             plant%flux%recycling_fine_root_p = plant%flux%recycling_fine_root_p * scal
+             recycling_leaf = recycling_leaf * scal
+             recycling_fine_root = recycling_fine_root * scal
           ENDIF
        ENDIF
+       plant%flux%recycling_leaf_p        = plant%flux%recycling_leaf_p        + recycling_leaf
+       plant%flux%recycling_fine_root_p   = plant%flux%recycling_fine_root_p   + recycling_fine_root
    
        !> 3.0 replace overturning 15N from leaves and roots by new 15N from the labile pool using the target C:N
        !! and the labile pool's 15N molar mixing ratio
@@ -913,20 +918,22 @@ CONTAINS
        ELSE 
           labile_dn15 = 0.0_wp
        ENDIF
-       plant%flux%recycling_leaf_n15 = ( labile_dn15 * plant%pool%leaf%carbon / plant%target_cn_leaf - & 
+       recycling_leaf = ( labile_dn15 * plant%pool%leaf%carbon / plant%target_cn_leaf - & 
                   labile_dn15 * plant%pool%leaf%carbon ) * tau_canopy_acclimation * dt / one_day
-       plant%flux%recycling_fine_root_n15 = ( plant%pool%fine_root%nitrogen15 - & 
+       recycling_fine_root = ( plant%pool%fine_root%nitrogen15 - & 
                   labile_dn15 * plant%pool%fine_root%carbon / target_cn_fine_root ) * tau_canopy_acclimation * dt / one_day
        !> 3.1 if N is addded to leaves or fine root, make sure there is enough labile N to support this
        !! 
-       IF( -1.0_wp * ( plant%flux%recycling_leaf_n15 + plant%flux%recycling_fine_root_n15 ) > eps8) THEN
+       IF( -1.0_wp * ( recycling_leaf + recycling_fine_root ) > eps8) THEN
           scal = -1.0_wp * ( tau_labile_default * dt / one_day * plant%pool%labile%nitrogen15 ) / & 
-                           ( plant%flux%recycling_leaf_n15 + plant%flux%recycling_fine_root_n15 ) 
+                           ( recycling_leaf + recycling_fine_root ) 
           IF(scal < 1.0_wp) THEN
-             plant%flux%recycling_leaf_n15 = plant%flux%recycling_leaf_n15 * scal
-             plant%flux%recycling_fine_root_n15 = plant%flux%recycling_fine_root_n15 * scal
+             recycling_leaf = recycling_leaf * scal
+             recycling_fine_root = recycling_fine_root * scal
           ENDIF
        ENDIF
+       plant%flux%recycling_leaf_n15      = plant%flux%recycling_leaf_n15      + recycling_leaf
+       plant%flux%recycling_fine_root_n15 = plant%flux%recycling_fine_root_n15 + recycling_fine_root
     ENDIF
 
   END SUBROUTINE calc_nutrient_recycling

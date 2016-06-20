@@ -147,15 +147,15 @@ CONTAINS
     flux%uptake_n                = 0.0_wp  !< ??
     flux%uptake_n15              = 0.0_wp  !< ??
     flux%uptake_p                = 0.0_wp  !< ??
-    flux%recycling_leaf_n        = 0.0_wp  !< net flux of N to leaf from enzyme breakdown and replacement (mol m-2 timestep-1)
-    flux%recycling_leaf_n15      = 0.0_wp  !< net flux of 15N to leaf from enzyme breakdown and replacement (mol m-2 timestep-1) 
-    flux%recycling_leaf_p        = 0.0_wp  !< net flux of P to leaf from enzyme breakdown and replacement (mol m-2 timestep-1)
-    flux%recycling_fine_root_n   = 0.0_wp  !< net flux of N to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1)
-    flux%recycling_fine_root_n15 = 0.0_wp  !< net flux of 15N to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1) 
-    flux%recycling_fine_root_p   = 0.0_wp  !< net flux of P to fine roots from enzyme breakdown and replacement (mol m-2 timestep-1)
-    flux%resorption_n            = 0.0_wp  !< resorption of N upon tissue senescence (mol m-2 timestep-1)
-    flux%resorption_n15          = 0.0_wp  !< resorption of 15N upon tissue senescence (mol m-2 timestep-1)
-    flux%resorption_p            = 0.0_wp  !< resorption of P upon tissue senescence (mol m-2 timestep-1)
+    flux%recycling_leaf_n        = 0.0_wp  !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
+    flux%recycling_leaf_n15      = 0.0_wp  !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    flux%recycling_leaf_p        = 0.0_wp  !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
+    flux%recycling_fine_root_n   = 0.0_wp  !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
+    flux%recycling_fine_root_n15 = 0.0_wp  !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    flux%recycling_fine_root_p   = 0.0_wp  !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
+    flux%recycling_sap_wood_n    = 0.0_wp  !< net flux of N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
+    flux%recycling_sap_wood_n15  = 0.0_wp  !< net flux of 15N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    flux%recycling_sap_wood_p    = 0.0_wp  !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
     flux%transpiration           = 0.0_wp  !< transpiration in kg m-2 s-1
     flux%ci                      = 0.0_wp  !< ??
   END SUBROUTINE set_zero_fluxes_of_plant_pools

@@ -76,7 +76,7 @@ CONTAINS
     !> 2.0 Calculate growth and maintenance
     !! 
     !! 
-    CALL  calc_growth(soil%theta,plant,veg_param, direction)
+    CALL calc_growth(soil%theta,plant,veg_param, direction)
 
     !> 3.0 Calculate turnover from tissue aging and senescence
     !! 
@@ -117,33 +117,32 @@ CONTAINS
     plant%pool%labile  = plant%pool%labile  + plant%flux%reserve_use
     plant%pool%reserve = plant%pool%reserve - plant%flux%reserve_use
 
-    !> 5.2 update fluxes from retranslocation of leaves and other senescing tissues
-    !! 
-    plant%pool%labile%nitrogen = plant%pool%labile%nitrogen + plant%flux%resorption_n
-    plant%pool%labile%phosphorus = plant%pool%labile%phosphorus + plant%flux%resorption_p
-    plant%pool%labile%nitrogen15 = plant%pool%labile%nitrogen15 + plant%flux%resorption_n15
-
-    !> 5.4 update fluxes from replacing enzymes and other biochemicals
+    !> 5.4 update fluxes from continuous nutrient turnover and resorption 
     !!
-    plant%pool%labile%nitrogen = plant%pool%labile%nitrogen & 
-        + plant%flux%recycling_leaf_n + plant%flux%recycling_fine_root_n 
+    plant%pool%labile%nitrogen = plant%pool%labile%nitrogen + plant%flux%recycling_leaf_n & 
+         + plant%flux%recycling_fine_root_n + plant%flux%recycling_sap_wood_n
     plant%pool%leaf%nitrogen = plant%pool%leaf%nitrogen - plant%flux%recycling_leaf_n
     plant%pool%fine_root%nitrogen = plant%pool%fine_root%nitrogen - plant%flux%recycling_fine_root_n
-    plant%pool%labile%phosphorus = plant%pool%labile%phosphorus & 
-        + plant%flux%recycling_leaf_p + plant%flux%recycling_fine_root_p 
+    plant%pool%sap_wood%nitrogen = plant%pool%sap_wood%nitrogen - plant%flux%recycling_sap_wood_n
+
+    plant%pool%labile%phosphorus = plant%pool%labile%phosphorus + plant%flux%recycling_leaf_p & 
+        + plant%flux%recycling_fine_root_p + plant%flux%recycling_sap_wood_p
     plant%pool%leaf%phosphorus = plant%pool%leaf%phosphorus - plant%flux%recycling_leaf_p
     plant%pool%fine_root%phosphorus = plant%pool%fine_root%phosphorus - plant%flux%recycling_fine_root_p
-    plant%pool%labile%nitrogen15 = plant%pool%labile%nitrogen15 & 
-        + plant%flux%recycling_leaf_n15 + plant%flux%recycling_fine_root_n15 
+    plant%pool%sap_wood%phosphorus = plant%pool%sap_wood%phosphorus - plant%flux%recycling_sap_wood_p
+
+    plant%pool%labile%nitrogen15 = plant%pool%labile%nitrogen15 + plant%flux%recycling_leaf_n15 & 
+        + plant%flux%recycling_fine_root_n15 + plant%flux%recycling_sap_wood_n15
     plant%pool%leaf%nitrogen15 = plant%pool%leaf%nitrogen15 - plant%flux%recycling_leaf_n15
     plant%pool%fine_root%nitrogen15 = plant%pool%fine_root%nitrogen15 - plant%flux%recycling_fine_root_n15
+    plant%pool%sap_wood%nitrogen15 = plant%pool%sap_wood%nitrogen15 - plant%flux%recycling_sap_wood_n15
 
     !> 6.0 Update plant biogeochemical pools with growth and litterfall
     !! 
     !! 
     plant%pool = plant%pool - plant%flux%litterfall
     plant%pool = plant%pool + plant%flux%growth
- 
+
     !> 6.1 Radioactive decay of C14 in living plant tissue
     plant%pool%leaf%carbon14         = (1._wp - lambda_C14 * dt ) * plant%pool%leaf%carbon14
     plant%pool%fine_root%carbon14    = (1._wp - lambda_C14 * dt ) * plant%pool%fine_root%carbon14
