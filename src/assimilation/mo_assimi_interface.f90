@@ -206,11 +206,14 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    TYPE(t_jsb_model), POINTER        :: model
-    INTEGER                           :: iblk, ics, ice, nc
-    TYPE(t_jsb_grid),  POINTER        :: grid
-    REAL(wp)                          :: declination ! Solar Declination angle
-    INTEGER                           :: i
+    TYPE(t_jsb_model), POINTER   :: model
+    TYPE(t_jsb_grid),  POINTER   :: grid
+    INTEGER                      :: iblk, ics, ice, nc
+    REAL(wp)                     :: lat(options%nc)
+    REAL(wp)                     :: declination ! Solar Declination angle
+    INTEGER                      :: i
+    INTEGER                      :: ncanopy          ! number of canopy layers
+    REAL(wp),          POINTER   :: canopy_bound_lai(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':assimilation_scaling_factors'
 
@@ -220,11 +223,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG)
 
     ! Declare pointers to variables in memory
-    INTEGER,  POINTER               :: ncanopy          ! number of canopy layers
-    REAL(wp), POINTER, DIMENSION(:) :: canopy_bound_lai
     dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl
     dsl4jsb_Real2D_onChunk :: lai
-    dsl4jsb_Real2D_onChunk :: lat
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -247,13 +247,14 @@ CONTAINS
     dsl4jsb_Get_memory(VEG)
 
     ! Get process variables
-    ncanopy                  => dsl4jsb_Config(ASSIMI)%ncanopy          ! IN
-    canopy_bound_lai         => dsl4jsb_Config(ASSIMI)%canopy_bound_lai ! IN
-    grid => Get_grid(model%grid_id)                           ! IN
-    lat  => grid%lat(ics:ice, iblk)                           ! IN
+    ncanopy          =  dsl4jsb_Config(ASSIMI)%ncanopy
+    canopy_bound_lai(0:ncanopy) => dsl4jsb_Config(ASSIMI)%canopy_bound_lai(0:ncanopy)
 
-    dsl4jsb_Get_var2D_onChunk(VEG, lai)                       ! IN
-    dsl4jsb_Get_var3D_onChunk(ASSIMI, assimi_scaling_fact_cl) ! OUT
+    grid => Get_grid(model%grid_id)
+    lat(:)  = grid%lat(ics:ice, iblk)                           ! in
+
+    dsl4jsb_Get_var2D_onChunk(VEG, lai)                       ! in
+    dsl4jsb_Get_var3D_onChunk(ASSIMI, assimi_scaling_fact_cl) ! out
 
     ! ---------------------------
     ! Go
@@ -261,23 +262,18 @@ CONTAINS
     CALL inquire_declination(declination) ! R: do not put this in elemental procedure as it would not be pure...
                                           ! e.g. declination = 0.006918_wp
 
-    DO i=1,ncanopy
-       CALL calc_assimilation_scaling_factors(declination,                 & ! input
-                                              canopy_bound_lai(i-1),       & ! input
-                                              lai(:),                      & ! input
-                                              lat(:),                      & ! input
-                                              assimi_scaling_fact_cl(:,i)  & ! output
-                                              )
-    END DO
-
-  RETURN
-
-!     R: to do when the jsbach4 "case" structure is included...
-!     DO i=1,ncanopy
-!        WHERE(.NOT. mask(:) .OR. .NOT. lctlib%NitrogenScalingFlag(lct(:)))
-!           assimi_scaling_fact_cl(:,i) = 1._wp ! to some vegetation classes nitrogen scaling is not applied
-!        END WHERE
-!     END DO
+    IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
+      DO i=1,ncanopy
+        CALL calc_assimilation_scaling_factors(declination,                 & ! input
+                                               canopy_bound_lai(i-1),       & ! input
+                                               lai(:),                      & ! input
+                                               lat(:),                      & ! input
+                                               assimi_scaling_fact_cl(:,i)  & ! output
+                                               )
+      END DO
+    ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
+      assimi_scaling_fact_cl(:,:) = 1._wp
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

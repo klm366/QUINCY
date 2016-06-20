@@ -26,7 +26,7 @@ MODULE mo_assimi_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
      INTEGER                             :: ncanopy          ! number of canopy layers for the assimi process
                                                              ! R: could be different for other processes e.g. for radiation
-     REAL(wp), DIMENSION(:), ALLOCATABLE :: canopy_bound_lai
+     REAL(wp), ALLOCATABLE :: canopy_bound_lai(:)
    CONTAINS
      PROCEDURE :: Init => Init_assimi_config
   END type t_assimi_config
