@@ -152,6 +152,7 @@ CONTAINS
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_model_class,     ONLY: print_model
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+    USE mo_jsb_lctlib_class,    ONLY: Read_lctlib
     USE mo_jsb_model_usecases,  ONLY: init_usecase
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
@@ -188,7 +189,7 @@ CONTAINS
     surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
     CALL register_vgrid(surface)
 
-    CALL model%lctlib%Init('lctlib_nlct21.def')
+    model%lctlib => Read_lctlib('lctlib_nlct21.def')
     CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
 
     IF (model%config%usecase /= '') THEN
