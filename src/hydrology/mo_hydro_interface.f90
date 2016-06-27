@@ -34,7 +34,7 @@ MODULE mo_hydro_interface
   ! Use of processes in this module
   dsl4jsb_Use_processes SEB, SOIL, VEG, ATM2LAND, RAD, HYDRO
 
-  ! Use process configurations
+  ! Use of process configurations
   dsl4jsb_Use_config(SEB)
   dsl4jsb_Use_config(SOIL)
   dsl4jsb_Use_config(RAD)
@@ -46,7 +46,9 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(VEG)
   dsl4jsb_Use_memory(RAD)
-
+  
+  ! -------------------------------------------------------------------------------------------------------
+  ! Module variables
   IMPLICIT NONE
   PRIVATE
 
@@ -88,7 +90,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !! Constructors for tasks
-  !!
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for snow hydrology task
   !!
@@ -107,6 +109,7 @@ CONTAINS
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_snow_and_ice_hydrology
+  
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for snow_and_skin_fraction task
   !!
@@ -141,9 +144,10 @@ CONTAINS
     CALL process%Register_task(tsk_snow_and_skin_fraction (model_id))
 
   END SUBROUTINE Register_hydro_tasks
+  
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "snow_hydrology"
+  !! @brief Implementation of "update" for task "snow_and_ice_hydrology"
   !! Task "update_snow_hydrology" calculates the new snow depth and fraction
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -172,6 +176,13 @@ CONTAINS
 
   END SUBROUTINE update_snow_and_ice_hydrology
 
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "snow_and_ice_hydrology"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!  
   SUBROUTINE aggregate_snow_and_ice_hydrology(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

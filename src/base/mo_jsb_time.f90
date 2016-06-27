@@ -30,6 +30,7 @@ MODULE mo_jsb_time
             get_day, get_secs_of_day
   PUBLIC :: get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
+  PUBLIC :: timeStep_in_days, time_steps_per_day
 
   INTEGER                :: number_timesteps
   REAL(wp)               :: timestep_length
@@ -243,5 +244,36 @@ CONTAINS
 
   END FUNCTION get_year_at_model_start
 
+  
+  REAL(wp) FUNCTION timeStep_in_days() ! EXPRESS the time step in days (as fraction of day)
+    USE mo_jsb_time_iface,   ONLY: get_time_dt
+
+    REAL(wp)                 :: dtime
+
+    dtime = get_time_dt()
+    timeStep_in_days = dtime / 86400._wp
+
+  END FUNCTION timeStep_in_days
+
+
+  INTEGER FUNCTION time_steps_per_day() ! NUMBER of time steps per day
+    USE mo_jsb_time_iface,   ONLY: get_time_dt
+
+    REAL(wp)                 :: dtime
+
+    dtime = get_time_dt()
+
+    ! Set time_steps_per_day
+    IF( mod(86400,INT(dtime)) /= 0) THEN ! For computing the mean day temperature it is assumed that each day
+                                         ! is computed with a fixed number of time steps. Therefore the program is
+                                         ! stopped wheen day length is not an integer multiple of the time step.
+       CALL finish("function time_steps_per_day","ERROR: Day length is not an integer multiple of the time step!")
+    ELSE
+       time_steps_per_day = 86400/int(dtime)
+    END IF
+
+  END FUNCTION time_steps_per_day
+
+   
 #endif
 END MODULE mo_jsb_time

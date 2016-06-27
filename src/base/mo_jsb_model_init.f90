@@ -147,7 +147,7 @@ CONTAINS
 
   SUBROUTINE init_model_common(model)
 
-    USE mo_jsb_process_class,   ONLY: SEB, TURB, SOIL, HYDRO, VEG, RAD, HD, ASSIMI
+    USE mo_jsb_process_class,   ONLY: SEB, TURB, SOIL, HYDRO, VEG, RAD, HD, ASSIMI, PHENO
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_model_class,     ONLY: print_model
@@ -161,6 +161,7 @@ CONTAINS
     USE mo_veg_init,            ONLY: veg_init_ic, veg_init_bc
     USE mo_rad_init,            ONLY: rad_init
     ! USE mo_assimi_init,         ONLY: assimi_init
+    USE mo_pheno_init,          ONLY: pheno_init
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
@@ -235,12 +236,14 @@ CONTAINS
 
     ! include here the tasks soil_hydrology and vegetation_conductance
     CALL model%Queue_task(ASSIMI, "assimilation_waterunlimited")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
-                                                   ! should be called after the soil hydrology is calculated (former update_soil_1)
-                                                   !              and after the vegetation conductance is calculated
-                                                         !              (former update_vegetation_conductanc)
+                                                                  ! should be called after the soil hydrology is calculated
+                                                                  ! (former update_soil_1) and after the vegetation conductance is calculated
+                                                                  ! (former update_vegetation_conductanc)
     CALL model%Queue_task(TURB,   "humidity_scaling")
+    CALL model%Queue_task(PHENO,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
+                                                         ! but in JSBACH3 it was here at the end...
+    
     CALL model%Queue_task(SEB,    "asselin_filter")      ! Should always be the last task
-
     CALL print_model(model)
     CALL model%Print_actions()
 
@@ -299,6 +302,10 @@ CONTAINS
       !   CALL assimi_init_bc(tile)
       !   CALL assimi_init_ic(tile)
       ! END IF
+
+      IF (one_of(tile%process_action(PHENO), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+        CALL pheno_init(tile)
+      END IF
 
 #ifndef __NO_JSBACH_HD__
       IF (one_of(tile%process_action(HD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN

@@ -108,6 +108,9 @@ CONTAINS
     config%bc_sso_filename           = bc_sso_filename
     config%nsoil_energy              = nsoil_energy
     config%nsoil_water               = nsoil_water
+
+    IF (nsoil_water .le. 0) CALL finish('Init_soil_config','Initialization with non positive number of soil layers')
+
     config%soil_depth_energy(1)      = dz_energy(1)
     DO i=2,nsoil_energy
       config%soil_depth_energy(i) = config%soil_depth_energy(i-1) + dz_energy(i)

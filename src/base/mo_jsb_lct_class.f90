@@ -23,7 +23,7 @@ MODULE mo_jsb_lct_class
 
   ENUM, BIND(C)
     ENUMERATOR ::      &
-      & LAND_TYPE,     & !< Land lct to specify tile that computes the implicit surface energy balance
+      & LAND_TYPE = 1, & !< Land lct to specify tile that computes the implicit surface energy balance
       & VEG_TYPE,      & !< Vegetated
       & BARE_TYPE,     & !< Bare soil
       & GLACIER_TYPE,  & !< Glacier

@@ -35,13 +35,12 @@ MODULE mo_seb_interface
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
+  
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: Register_seb_tasks !,t_seb_process
-  !
-  ! ================================================================================================================================
-  !
+
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_surface_energy
@@ -76,6 +75,9 @@ MODULE mo_seb_interface
 
 CONTAINS
 
+  ! ================================================================================================================================
+  !! Constructors for tasks
+  
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for surface_energy task
   !!
@@ -132,8 +134,8 @@ CONTAINS
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_surface_fluxes
-
-  ! -------------------------------------------------------------------------------------------------------
+  
+  ! =======================================================================================================
   !> Register tasks for surface energy process
   !!
   !! @param[in,out] this      Instance of surface energy process class
@@ -187,6 +189,12 @@ CONTAINS
 
   END SUBROUTINE update_surface_energy
 
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "surface_energy"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
   SUBROUTINE aggregate_surface_energy(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -233,7 +241,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_energy
-  !
+
   ! ================================================================================================================================
   !>
   !! @brief Implementation of "update" for task "asselin_filter"
@@ -274,6 +282,12 @@ CONTAINS
 
   END SUBROUTINE update_asselin
 
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "asselin_filter"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
   SUBROUTINE aggregate_asselin(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -307,6 +321,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_asselin
+  
   ! ================================================================================================================================
   !>
   !! @brief Implementation of "update" for task "surface fluxes"
@@ -340,6 +355,12 @@ CONTAINS
 
   END SUBROUTINE update_surface_fluxes
 
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "surface_fluxes"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.  
   SUBROUTINE aggregate_surface_fluxes(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

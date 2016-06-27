@@ -26,22 +26,40 @@ MODULE mo_seb_memory_class
 
   PUBLIC :: t_seb_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40
+  INTEGER, PARAMETER :: max_no_of_vars = 50
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_seb_memory
     !
     ! Common variables
-    TYPE(t_jsb_var_real2d) :: &
-      & t,                    & !< Surface temperature                                             [K]
-      & t_old,                & !< Surface temperature at previous timestep                        [K]
-      & heat_cap,             & !< Heat capacity of surface layer                                  [J m-2 K-1]
-      & heat_cap_old,         & !< Heat capacity of surface layer at previous timestep             [J m-2 K-1]
-      & latent_hflx,          & !< Latent heat flux                                                [W m-2]
-      & sensible_hflx,        & !< Sensible heat flux                                              [W m-2]
-      & forc_hflx               !< Additional heat flux at surface                                 [W m-2]
-                                !! (additional to radiative fluxes and latent and sensible
-                                !!  heat fluxes, e.g. ground heat flux)
+    TYPE(t_jsb_var_real2d) ::   &
+      & previous_day_temp_mean, & ! mean day air-temperature [Celsius] of previous day,
+                                  ! because not known for ..
+                                  ! current day; updated at the beginning of each new day (stream)
+      & previous_day_temp_min,  & ! minimum air-temperature [Celsius] of previous day, because not known for  ..
+                                  ! current day; updated at the beginning of each new day (stream)
+      & previous_day_temp_max,  & ! maximum air-temperature [Celsius] of previous day, because not known for   ..
+                                  ! current day; updated at the beginning of each new day (stream)
+      & pseudo_soil_temp,       & ! Pseudo-soil-temperature [Celsius]: a weighted running mean of the land ...
+                                  ! surface temperature, to simulate soil temperature. Updated every time step ..
+                                  ! by the subroutine "pseudo_soil_temp()". (stream)
+      & day_temp_sum,           & ! sum of air temperatures since midnight (needed to compute mean air
+                                  ! temperature) [Celsius * 1] (stream)
+      & day_temp_min,           & ! minimum of air temperatures since midnight (needed to compute growing
+                                  ! degree days GDD) [Celsius * 1] (stream)
+      & day_temp_max,           & ! maximum of air temperatures since midnight (needed to compute growing
+                                  ! degree days GDD) [Celsius * 1] (stream)
+      & N_pseudo_soil_temp,     & ! Normalization for computing the pseudo soil temperature
+      & F_pseudo_soil_temp,     & ! exponential factor used for updating the pseudo soil temperature
+      & t,                      & !< Surface temperature                                             [K]
+      & t_old,                  & !< Surface temperature at previous timestep                        [K]
+      & heat_cap,               & !< Heat capacity of surface layer                                  [J m-2 K-1]
+      & heat_cap_old,           & !< Heat capacity of surface layer at previous timestep             [J m-2 K-1]
+      & latent_hflx,            & !< Latent heat flux                                                [W m-2]
+      & sensible_hflx,          & !< Sensible heat flux                                              [W m-2]
+      & forc_hflx                 !< Additional heat flux at surface                                 [W m-2]
+                                  !! (additional to radiative fluxes and latent and sensible
+                                  !!  heat fluxes, e.g. ground heat flux)
     !
     ! Additional variables for LAND lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -115,8 +133,71 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    IF (.NOT. ASSOCIATED(mem%t%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%previous_day_temp_mean%ptr)) THEN
       ! Common variables
+      CALL jsb_add_var( mem, 'previous_day_temp_mean', mem%previous_day_temp_mean, &
+        & hgrid, surface,                                                          &
+        & t_cf('previous_day_temp_mean', '', ''),                                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+        & prefix, suffix,                                                          &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'previous_day_temp_min', mem%previous_day_temp_min, &
+        & hgrid, surface,                                                        &
+        & t_cf('previous_day_temp_min', '', ''),                                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'previous_day_temp_max', mem%previous_day_temp_max, &
+        & hgrid, surface,                                                        &
+        & t_cf('albedo_nir_previous_day_temp_maxsnow', '', ''),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'pseudo_soil_temp', mem%pseudo_soil_temp,           &
+        & hgrid, surface,                                                        &
+        & t_cf('pseudo_soil_temp', '', ''),                                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10.0_wp )
+
+      CALL jsb_add_var( mem,'day_temp_sum', mem%day_temp_sum,                    &
+        & hgrid, surface,                                                        &
+        & t_cf('day_temp_sum', '', ''),                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & loutput=.TRUE., lrestart=.TRUE.)
+
+     CALL jsb_add_var( mem,'day_temp_min', mem%day_temp_min,                     &
+        & hgrid, surface,                                                        &
+        & t_cf('day_temp_min', '', ''),                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & loutput=.TRUE., lrestart=.TRUE.)
+
+     CALL jsb_add_var( mem,'day_temp_max', mem%day_temp_max,                     &
+        & hgrid, surface,                                                        &
+        & t_cf('day_temp_max', '', ''),                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & loutput=.TRUE., lrestart=.TRUE.)
+        
+    CALL jsb_add_var( mem,'N_pseudo_soil_temp', mem%N_pseudo_soil_temp,          &
+        & hgrid, surface,                                                        &
+        & t_cf('N_pseudo_soil_temp', '', ''),                                    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &        
+        & loutput=.TRUE., lrestart=.TRUE.)
+
+     CALL jsb_add_var( mem,'F_pseudo_soil_temp', mem%F_pseudo_soil_temp,         &
+        & hgrid, surface,                                                        &
+        & t_cf('F_pseudo_soil_temp', '', ''),                                    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &        
+        & loutput=.TRUE., lrestart=.TRUE.)
+
       CALL jsb_add_var( mem, 't', mem%t,                                               &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp', 'K', 'surface temperature'),                                &

@@ -37,14 +37,34 @@ CONTAINS
   !> Intialize soil process (after memory has been set up)
   !
   SUBROUTINE seb_init(tile)
+    USE mo_jsb_time,        ONLY: timeStep_in_days
+    USE mo_pheno_constants, ONLY: PhenoParam
 
+    TYPE(t_jsb_model), POINTER                :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':seb_init'
 
+    dsl4jsb_Real2D_onDomain :: &
+      & F_pseudo_soil_temp,    &
+      & N_pseudo_soil_temp
+
+    dsl4jsb_Def_memory(SEB)
+    
     CALL seb_init_bc(tile)
     CALL seb_init_ic(tile)
+    
+    ! Initial values for the calculation of pseudo_soil_temp in SUBROUTINE calc_pseudo_soil_temp
+    dsl4jsb_Get_memory(SEB)
 
+    model => get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_var2D_onDomain(SEB, N_pseudo_soil_temp) ! OUT
+    dsl4jsb_Get_var2D_onDomain(SEB, F_pseudo_soil_temp) ! OUT
+
+    F_pseudo_soil_temp = EXP(-timeStep_in_days()/PhenoParam%EG_SG%tau_pseudo_soil)
+    N_pseudo_soil_temp = 1._wp / (1._wp - F_pseudo_soil_temp)
+    
   END SUBROUTINE seb_init
 
   SUBROUTINE seb_init_bc(tile)

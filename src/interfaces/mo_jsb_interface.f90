@@ -68,6 +68,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':interface_full'
 
+    ! Arguments
     INTEGER, INTENT(in) :: &
       & model_id,          &
       & iblk,              &
@@ -134,16 +135,18 @@ CONTAINS
       & evapo_ice         (:), &
       & latent_hflx_ice   (:), &
       & sensible_hflx_ice (:), &
-      & ice_fract_lake    (:), &
-      & albedo_ice        (:)
+      & albedo_ice        (:), & 
+      & ice_fract_lake    (:)
 
     ! Local variables
-    !
     CLASS(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
     INTEGER :: nc, i
 
+    ! ---------------------------
+    ! Go
+    
     CALL timer_start(timer_jsbach)
 
     nc = ice - ics + 1
@@ -285,12 +288,12 @@ CONTAINS
       & evapo_wtr       = evapo_wtr(:),       &
       & latent_hflx_wtr    = latent_hflx_wtr(:),    &
       & sensible_hflx_wtr  = sensible_hflx_wtr(:),  &
-      & t_ice           = t_ice(:),                 &
-      & evapo_ice       = evapo_ice(:),             &
+      & t_ice              = t_ice(:),              &
+      & evapo_ice          = evapo_ice(:),          &
       & latent_hflx_ice    = latent_hflx_ice(:),    &
       & sensible_hflx_ice  = sensible_hflx_ice(:),  &
-      & ice_fract_lake  = ice_fract_lake(:),        &
-      & albedo_ice      = albedo_ice(:)             &
+      & ice_fract_lake     = ice_fract_lake(:),     &
+      & albedo_ice         = albedo_ice(:)          &
       & )
     NULLIFY(tile)
 

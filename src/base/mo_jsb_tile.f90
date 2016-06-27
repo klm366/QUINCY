@@ -155,7 +155,8 @@ CONTAINS
       return_ptr%process_action(i) = SKIP_
       iproc = -1
       IF (SIZE(processes) > 0) THEN
-        j = one_of(i, processes)
+        j = one_of(i, processes) ! i counts through the number of all processes, j is the number of the i-process
+                                 ! within the processes vector (input) 
       ELSE
         j = 0
       END IF
@@ -478,15 +479,15 @@ CONTAINS
 
       task => model%current_task
 
-      IF (debug_on() .AND. model%options%iblk == 1) THEN
-        IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
-          CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
-            &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name))
+!      IF (debug_on() .AND. model%options%iblk == 1) THEN
+!        IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
+!          CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
+!            &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name))
 !!$        PRINT*,'AAA ', TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
 !!$          &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name)
 !!$        CALL this%Print()
-        END IF
-      END IF
+!        END IF
+!      END IF
 
       SELECT CASE (TRIM(msg%action%name))
       CASE ('START')

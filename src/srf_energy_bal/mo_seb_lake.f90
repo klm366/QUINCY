@@ -305,7 +305,7 @@ CONTAINS
     &                                          hflx, lhflx, snowfall, hi, hs, fs, hi_min, dtime)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, clw, rhoi, rhos, als, alf, ki, ks, ci, cs
-
+    
     REAL(wp), INTENT(inout) :: t_ice
     REAL(wp), INTENT(out)   :: hcap_ice       !< Heat capacity of thin ice surface layer
     REAL(wp), INTENT(out)   :: hflx_cond_ice

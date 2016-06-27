@@ -78,6 +78,7 @@ MODULE mo_rad_interface
   CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_interface'
 
 CONTAINS
+
   ! ================================================================================================================================
   !! Constructors for tasks
 
@@ -119,7 +120,7 @@ CONTAINS
 
   END FUNCTION Create_task_albedo
 
-  ! -------------------------------------------------------------------------------------------------------
+  ! ================================================================================================================================
   !> Register tasks for radiation process
   !!
   !! @param[in,out] this      Instance of <PROCESS_NAME_LOWER_CASE> process class
@@ -136,9 +137,13 @@ CONTAINS
   END SUBROUTINE Register_rad_tasks
 
   ! ================================================================================================================================
-  !! Surface radiation
-  ! ================================================================================================================================
-
+  !>
+  !! @brief Implementation to update the surface radiation
+  !! Task "surface_radiation" calculates the net radiations at the surface.
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
   SUBROUTINE update_surface_radiation(tile, options)
 
     USE mo_rad_process, ONLY: calc_radiation_surface_net
@@ -278,6 +283,13 @@ CONTAINS
 
   END SUBROUTINE update_surface_radiation
 
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "surface_radiation"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
   SUBROUTINE aggregate_surface_radiation(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -317,11 +329,15 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_radiation
-
+  
   ! ================================================================================================================================
-  !! Photosynthetically active radiation
-  ! ================================================================================================================================
-
+  !>
+  !! @brief Implementation to update the photosynthetically active radiation
+  !! Task "radiation_par" calculates PAR and APAR.
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
   SUBROUTINE update_radiation_par(tile, options, waterLimitationFlag)
 
     ! ---------------------------
@@ -523,20 +539,26 @@ CONTAINS
   END SUBROUTINE update_radiation_par
 
   ! ================================================================================================================================
-  !! Albedo
-  ! ================================================================================================================================
-
+  !>
+  !! @brief Implementation to update the albedo
+  !! Task "albedo" calculates several albedos.
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
   SUBROUTINE update_albedo(tile, options)
 
+    ! Declarations
     USE mo_rad_process,    ONLY: get_surface_albedo_simple, calc_soil_albedo, calc_albedo_ice, calc_glacier_albedo, &
                                  calc_sky_view_fractions, calc_snow_albedo, Merge_albedos, &
                                  Has_minimal_radiation
     USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp
 
+    ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    ! Declare pointers to process configs and memory
+    ! Declare pointers to process configuration and memory
     dsl4jsb_Def_config(RAD)
     dsl4jsb_Def_memory(RAD)
     dsl4jsb_Def_memory(SEB)
@@ -581,32 +603,31 @@ CONTAINS
       & w_snow_lice, &
       & albedo_ice
 
-    !----------------------------
     ! Local variables
-
-    LOGICAL,  POINTER :: &
+    TYPE(t_jsb_model), POINTER             :: model
+    INTEGER                                :: iblk, ics, ice, nc
+    REAL(wp)                               :: dtime
+    
+    LOGICAL,  POINTER ::           &
       & use_alb_veg_simple,        &
       & use_alb_soil_scheme,       &
       & use_alb_soil_litter,       &
       & use_alb_mineralsoil_const, &
       & use_alb_canopy
 
-    LOGICAL :: l_day(options%nc)
+    LOGICAL :: l_day(options%nc), &
+               ForestFlag  ! to be taken from the lctlib ("true" for forest landcover types)
 
     CHARACTER(len=10), POINTER :: use_alb_soil_organic_C
 
     REAL(wp), POINTER :: albedo_age_weight    ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
                                               !                            the snow albedo resulting from both schemes
-    REAL(wp)          :: AlbedoCanopySnow
-
-
-    INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: dtime
-
-    TYPE(t_jsb_model), POINTER :: model
+    REAL(wp)          :: AlbedoCanopySnow, &
+                         StemArea             ! to be taken from the lctlib. (Area of stems and branches of woody plants.)
 
     CHARACTER(len=*), PARAMETER    :: routine = TRIM(modname)//':update_albedo'
 
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
@@ -625,7 +646,8 @@ CONTAINS
     IF (Contains_lct(tile%lcts, VEG_TYPE)) THEN
       dsl4jsb_Get_memory(VEG)
     END IF
-
+    
+    ! Set pointers to variables in config
     use_alb_veg_simple        => dsl4jsb_Config(RAD)       %use_alb_veg_simple
     use_alb_soil_scheme       => dsl4jsb_Config(RAD)       %use_alb_soil_scheme
     use_alb_mineralsoil_const => dsl4jsb_Config(RAD)       %use_alb_mineralsoil_const
@@ -638,7 +660,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, cos_zenith_angle)      ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, swvis_srf_down)        ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, swnir_srf_down)        ! IN
-
 
     dsl4jsb_Get_var2D_onChunk(SEB,      t)                     ! IN
 
@@ -685,10 +706,10 @@ CONTAINS
 !        ELSE
 
       CALL calc_glacier_albedo( &
-        & t(:),           & ! in
-        & alb_vis(:),     & ! inout
-        & alb_nir(:),     & ! inout
-        & l_day           & ! in
+        & t(:),                 & ! in
+        & alb_vis(:),           & ! inout
+        & alb_nir(:),           & ! inout
+        & l_day                 & ! in
         & )
 
 !        END IF
@@ -776,8 +797,8 @@ CONTAINS
     IF (Contains_lct(tile%lcts, BARE_TYPE) &
       & .OR. Contains_lct(tile%lcts, VEG_TYPE)) THEN
 
-      dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_soil)       ! IN
-      dsl4jsb_Get_var2D_onChunk(RAD,      snow_age)              ! IN
+      dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_soil)       ! IN
+      dsl4jsb_Get_var2D_onChunk(RAD,   snow_age)              ! IN
 
       CALL calc_snow_albedo( &
         fract_snow_soil(:),  & ! In
@@ -797,10 +818,11 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD,      sky_view_fract_stem)   ! INOUT
 
 
-      CALL calc_sky_view_fractions(lai(:),                & ! In
-        & cos_zenith_angle(:),   & ! In
-        & sky_view_fract(:),     & ! Out
-        & sky_view_fract_stem(:), & ! Out
+      CALL calc_sky_view_fractions( &
+        & lai(:),                   & ! In
+        & cos_zenith_angle(:),      & ! In
+        & sky_view_fract(:),        & ! Out
+        & sky_view_fract_stem(:),   & ! Out
         & dsl4jsb_Lctlib_param(StemArea) &
         & )
 
@@ -809,22 +831,22 @@ CONTAINS
       ! Weight between age and temperature impact on snow albedo for snow on canopy
       AlbedoCanopySnow = albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
 
-      CALL Merge_albedos( &
-        & sky_view_fract(:),          & ! in
-        & sky_view_fract_stem(:),     & ! in
-        & AlbedoCanopySnow,           & ! in
-        & fract_snow_soil(:),         & ! in
-        & fract_snow_can(:),          & ! in
-        & alb_vis_snow(:),            & ! in
-        & alb_nir_snow(:),            & ! in
-        & alb_vis_soil(:),            & ! in
-        & alb_nir_soil(:),            & ! in
-        & alb_vis_can(:),             & ! in
-        & alb_nir_can(:),             & ! in
-        & alb_vis(:),                 & ! out
-        & alb_nir(:),                 & ! out
+      CALL Merge_albedos(          &
+        & sky_view_fract(:),       & ! in
+        & sky_view_fract_stem(:),  & ! in
+        & AlbedoCanopySnow,        & ! in
+        & fract_snow_soil(:),      & ! in
+        & fract_snow_can(:),       & ! in
+        & alb_vis_snow(:),         & ! in
+        & alb_nir_snow(:),         & ! in
+        & alb_vis_soil(:),         & ! in
+        & alb_nir_soil(:),         & ! in
+        & alb_vis_can(:),          & ! in
+        & alb_nir_can(:),          & ! in
+        & alb_vis(:),              & ! out
+        & alb_nir(:),              & ! out
         & dsl4jsb_Lctlib_param(ForestFlag), & ! in
-        & l_day(:)                    &
+        & l_day(:)                 &
         & )
 
     END IF
@@ -832,7 +854,14 @@ CONTAINS
 ! !         END IF ! from use_alb_veg_simple
 
   END SUBROUTINE update_albedo
-
+  
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "albedo"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
   SUBROUTINE aggregate_albedo(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

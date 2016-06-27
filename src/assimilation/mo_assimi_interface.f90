@@ -462,7 +462,7 @@ CONTAINS
 !    R: siehe mo_jsbach_interface.f90, Zeile 671
 !    R: this call should be after the first call of update_assimilation and before the first
 !       call of update_soil.
-!       Diese Übergabe ist in JSBACH4 nicht mehr notwendig, da Variable canopy_cond nicht mehr lokal ist
+!       Diese Übergabe ist in JSBACH4 nicht mehr notwendig, da Variable canopy_cond nicht mehr lokal ist:
 !       canopy_conductance_unstressed(1:nidx,1:ntiles)=theLand%Vegetation%canopy_conductance_bethy(kidx0:kidx1,1:ntiles)
 
 
@@ -505,12 +505,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_assimilation_waterunlimited'
 
-    ! Declare process memories
+    ! Declare pointers to process configuration and memory
     dsl4jsb_Def_memory(ASSIMI)
     dsl4jsb_Def_memory(VEG)
     dsl4jsb_Def_memory(RAD)
     dsl4jsb_Def_memory(ATM2LAND)
-
     dsl4jsb_Def_config(ASSIMI)
 
     ! Declare pointers to variables in memory

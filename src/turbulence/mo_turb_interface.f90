@@ -275,25 +275,25 @@ CONTAINS
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
-      & fract_fpc, &
-      & fract_snow, &
-      & fract_water, &
-      & fact_q_air, &
-      & fact_qsat_srf, &
-      & fact_qsat_trans_srf, &
-      & qsat_star, &
-      & canopy_cond, &
-      & pch, &
-      & wind_air, &
+      & fract_fpc,            &
+      & fract_snow,           &
+      & fract_water,          &
+      & fact_q_air,           &
+      & fact_qsat_srf,        &
+      & fact_qsat_trans_srf,  &
+      & qsat_star,            &
+      & canopy_cond,          &
+      & pch,                  &
+      & wind_air,             &
       & q_air
 
     dsl4jsb_Real3D_onChunk :: &
-      & w_soil_sl,    &
-      & w_soil_fc_sl, &
+      & w_soil_sl,            &
+      & w_soil_fc_sl,         &
       & w_soil_pwp_sl
 
     ! Locally variables
-    REAL(wp) :: &
+    REAL(wp) ::                    &
       fact_qsat_veg(options%nc),   &
       fact_qsat_trans(options%nc), &
       fact_qsat_soil(options%nc),  &
@@ -307,7 +307,8 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
-
+    
+    ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
@@ -344,7 +345,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_fc_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl)       ! in
   
-
+    ! ---------------------------
+    ! Go
+    
     IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
 
       dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc)           ! in
@@ -409,7 +412,7 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "surface_roughness"
+  !! Implementation of "aggregate" for task "humidity_scaling"
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.

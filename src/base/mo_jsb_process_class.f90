@@ -19,7 +19,7 @@ MODULE mo_jsb_process_class
   PRIVATE
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name
-  PUBLIC :: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI
+  PUBLIC :: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -41,7 +41,7 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-    ENUMERATOR :: ATM2LAND=1, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI
+    ENUMERATOR :: ATM2LAND=1, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
   END ENUM
 
   ! Process actions
@@ -77,7 +77,9 @@ CONTAINS
     CASE (RAD)
       return_value = 'rad'
     CASE (ASSIMI)
-      return_value = 'assimi'      
+      return_value = 'assimi'
+    CASE (PHENO)
+      return_value = 'pheno'      
 #ifndef __NO_JSBACH_HD__
     CASE (HD)
       return_value = 'hd'

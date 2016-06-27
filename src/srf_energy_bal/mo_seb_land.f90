@@ -49,10 +49,11 @@ CONTAINS
   !
   SUBROUTINE update_surface_energy_land(tile, options)
 
+    !USE mo_seb_process,            ONLY: calc_previous_day_variables, calc_pseudo_soil_temp
     USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_echam_vdiff_params,     ONLY: tpfac2, tpfac3
     USE mo_jsb_physical_constants, ONLY: tmelt
-    USE mo_jsb_time,               ONLY: get_asselin_coef
+    USE mo_jsb_time,               ONLY: get_asselin_coef, is_newday, timeStep_in_days, time_steps_per_day
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -69,9 +70,21 @@ CONTAINS
     dsl4jsb_Def_memory(ATM2LAND)
     ! dsl4jsb_Def_memory(LAND2ATM)
 
-    LOGICAL                       :: lstart
+    LOGICAL                :: lstart
 
     ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: day_temp_min
+    dsl4jsb_Real2D_onChunk :: day_temp_max
+    dsl4jsb_Real2D_onChunk :: day_temp_sum
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_mean    
+    dsl4jsb_Real2D_onChunk :: previous_day_NPP_rate
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_min
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_max
+    dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp
+    dsl4jsb_Real2D_onChunk :: N_pseudo_soil_temp
+    dsl4jsb_Real2D_onChunk :: pseudo_soil_temp
+    
     dsl4jsb_Real2D_onChunk :: t
     dsl4jsb_Real2D_onChunk :: t_old
     dsl4jsb_Real2D_onChunk :: t_unfilt
@@ -98,17 +111,19 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    REAL(wp) ::             &
-      qsat_srf_old(options%nc),     &
-      s_old(options%nc),        &
-      dQdT(options%nc),             & !< Sensitivity of saturated surface specific humidity to temperature
-      t2s_conv(options%nc),         & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
-      heat_tcoef(options%nc)          !< Heat transfer coefficient (rho*C_h*|v|)
+    REAL(wp), DIMENSION(options%nc)  :: &
+      qsat_srf_old,     &
+      s_old,            &
+      dQdT,             & !< Sensitivity of saturated surface specific humidity to temperature
+      t2s_conv,         & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
+      heat_tcoef,       & !< Heat transfer coefficient (rho*C_h*|v|)
+      t_air_in_Celcius  
+      
     LOGICAL :: &
       is_glacier(options%nc)
 
     INTEGER :: iblk, ics, ice, nc
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen !, dtime
     REAL(wp) :: eps
 
     TYPE(t_jsb_model), POINTER :: model
@@ -120,7 +135,8 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     steplen = options%steplen
-
+    !dtime   = options%dtime
+    
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
@@ -138,6 +154,7 @@ CONTAINS
     dsl4jsb_Get_memory(ATM2LAND)
     ! dsl4jsb_Get_memory(LAND2ATM)
 
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef)        ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef)        ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef)        ! IN
@@ -145,6 +162,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)       ! IN
+    
+    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_mean) ! IN
+    dsl4jsb_Get_var2D_onChunk(SEB,      day_temp_sum)           ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      day_temp_min)           ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      day_temp_max)           ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_min)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_max)  ! OUT
+    
+    dsl4jsb_Get_var2D_onChunk(SEB,      N_pseudo_soil_temp)     ! IN
+    dsl4jsb_Get_var2D_onChunk(SEB,      F_pseudo_soil_temp)     ! IN
+    dsl4jsb_Get_var2D_onChunk(SEB,      pseudo_soil_temp)       ! INOUT
 
     dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! in
     dsl4jsb_Get_var2D_onChunk(SEB,      t_old)          ! OUT
@@ -161,8 +189,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)     ! in
 
-    dsl4jsb_Get_var2D_onChunk( SOIL,    grnd_hflx)      ! IN
-    dsl4jsb_Get_var2D_onChunk( SOIL,    hcap_grnd)      ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL,     grnd_hflx)      ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL,     hcap_grnd)      ! IN
 
     IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
       is_glacier(:) = .TRUE.
@@ -176,6 +204,30 @@ CONTAINS
       lstart = .FALSE.
     END IF
 
+    ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
+    ! necessary for the phenology process
+    t_air_in_Celcius = t_air - tmelt  ! convert Kelvin in Celcius
+    ! Sum up of the previous day temperatures
+    CALL calc_previous_day_variables(is_newday(),               & ! Input
+                                     t_air_in_Celcius(:),       & ! Input
+                                     !dtime,                     & ! Input
+                                     time_steps_per_day(),      & ! Input
+                                     previous_day_temp_mean(:), & ! Output (for summer- and evergreen)
+                                     day_temp_sum(:),           & ! InOut
+                                     previous_day_temp_min(:),  & ! Output (for crop)
+                                     day_temp_min(:),           & ! InOut
+                                     previous_day_temp_max(:),  & ! Output (for crop)
+                                     day_temp_max(:) )            ! InOut
+
+    ! Update of pseudo-soil temperature for each time step
+    CALL calc_pseudo_soil_temp(t_air_in_Celcius(:)  , & ! Input
+                               N_pseudo_soil_temp(:), & ! Input
+                               F_pseudo_soil_temp(:), & ! Input
+                               pseudo_soil_temp(:)  )   ! InOut (for summer-, evergreen and crop)
+
+
+
+    
     ! Save old surface temperature and saturation spec. humidity
 !!$    t_srf_unfilt_old(:) = t_srf_unfilt(:)
 !!$    t_srf_old   (:) = t_srf(:)
@@ -477,6 +529,112 @@ CONTAINS
     latent_hflx(:) = alv * evapotranspiration(:) + (als - alv) * fract_snow(:) * evapopot(:)
 
   END SUBROUTINE update_surface_fluxes_land
+
+
+    ! Updates the mean day temperature ("previous_day_temp_mean(:)") from air temperature and the mean day NPP-rate
+  ! (field previous_day_NPP(:,:)
+  ELEMENTAL SUBROUTINE calc_previous_day_variables(is_newday,              & ! Input
+                                                   t_air_in_Celcius,       & ! Input
+                                                   !dtime,                  & ! Input
+                                                   time_steps_per_day,     & ! Input
+                                                   previous_day_temp_mean, & ! Output
+                                                   day_temp_sum,           & ! InOut
+                                                   previous_day_temp_min,  & ! Output
+                                                   day_temp_min,           & ! InOut
+                                                   previous_day_temp_max,  & ! Output
+                                                   day_temp_max )            ! InOut
+
+    !-----------------------------------------------------------------------
+    !  DECLARATIONS
+
+    !-----------------------------------------------------------------------
+    !  ARGUMENTS
+    LOGICAL,   intent(in)    :: is_newday
+
+    REAL(wp),  intent(in)    :: t_air_in_Celcius!,  & ! air temperature at current time step in lowest atmospheric layer in Celcius
+                                !dtime
+
+    INTEGER,  intent(in)     :: time_steps_per_day
+
+    REAL(wp),  intent(out)   :: previous_day_temp_mean, &
+                                previous_day_temp_min,  &
+                                previous_day_temp_max
+
+    REAL(wp),  intent(inout) :: day_temp_sum,           &
+                                day_temp_min,           &
+                                day_temp_max
+
+
+    !-----------------------------------------------------------------------
+    !  LOCAL VARIABLES
+
+
+    !-----------------------------------------------------------------------
+    ! CONTENT
+
+    ! --- update mean day values
+
+    ! Note that updating is done globally at the same time step, i.e. for different longitudes the updating happens at different
+    ! local times.
+
+    IF(is_newday) THEN  ! day has changed --> recompute mean, min, max day temperature of previous day
+                        ! and reinitialize day_temp_sum(), day_temp_min(), day_temp_max()
+       previous_day_temp_mean = day_temp_sum/time_steps_per_day
+       day_temp_sum = t_air_in_Celcius
+
+       previous_day_temp_min = day_temp_min
+       day_temp_min = t_air_in_Celcius
+
+       previous_day_temp_max = day_temp_max
+       day_temp_max = t_air_in_Celcius
+
+    ELSE  ! day has not changed
+       day_temp_sum = day_temp_sum  + t_air_in_Celcius
+
+       IF (day_temp_min > t_air_in_Celcius)   day_temp_min = t_air_in_Celcius
+       IF (day_temp_max < t_air_in_Celcius)   day_temp_max = t_air_in_Celcius
+    END IF
+
+  END SUBROUTINE calc_previous_day_variables
+
+
+  ! --- update_pseudo_soil_temp() --------------------------------------------------------------------------------------------------
+  !
+  ! This routine computes a weighted running mean of the air temperature, which is interpreted here as a pseudo soil temperature:
+  ! (1)   T_ps(t) = N^(-1) * SUM(t'=-infty,t) T(t')*exp(-(t-t')*delta/tau_soil),
+  ! where "T(t)" is the air temperature at time step with number "t", "delta" the length of the time step (in days) and
+  ! "tau_soil" is the characteristic time for loosing the memory of temperature in the soil (also in days; this is a tuning
+  ! parameter! The normalization "N" is
+  ! (2)   N = SUM(t'=-infty,t) exp(-(t-t')*delta/tau_soil) = 1/(1 - exp(-delta/tau_soil)).
+  ! This normalization constant (called "N_pseudo_soil_temp") is computed during initialization of this phenology module.
+  ! Computation of T_ps(t) is performed iteratively: it follows from (1)
+  !                    T(t+1)          delta
+  ! (3)   T_ps(t+1) =  ------ + exp(- --------) * T_ps(t).
+  !                      N            tau_soil
+  ! The exponential factor (called F_pseudo_soil_temp) is computed during initialization of this phenology module.
+  !
+  ! Technically the only effect of this routine is an update of the field "pseudo_soil_temp(:)". The routine has to be called
+  ! once every time step for every grid point.
+  !
+  ! Remark: Instead of air-temperature one could try to use the bottom temperature to compute the pseudo_soil_temp.
+  !
+  ELEMENTAL SUBROUTINE calc_pseudo_soil_temp(t_air_in_Celcius,   & ! Input
+                                             N_pseudo_soil_temp, & ! Input
+                                             F_pseudo_soil_temp, & ! Input
+                                             pseudo_soil_temp    & ! InOut
+                                             )
+
+    REAL(wp),  intent(in)    ::                     &
+                                t_air_in_Celcius,   &
+                                N_pseudo_soil_temp, &
+                                F_pseudo_soil_temp
+
+    REAL(wp),  intent(inout) :: pseudo_soil_temp
+
+
+    pseudo_soil_temp= t_air_in_Celcius / N_pseudo_soil_temp  +  F_pseudo_soil_temp * pseudo_soil_temp
+
+  END SUBROUTINE calc_pseudo_soil_temp
 
 #endif
 END MODULE mo_seb_land

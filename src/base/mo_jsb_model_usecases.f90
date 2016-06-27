@@ -14,7 +14,7 @@ MODULE mo_jsb_model_usecases
   USE mo_kind,                ONLY: wp
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_process_class,   ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, RAD, HD, ASSIMI
+  USE mo_jsb_process_class,   ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, RAD, HD, ASSIMI, PHENO
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,            ONLY: Get_Grid
@@ -207,11 +207,11 @@ CONTAINS
 !!$          & lcts=(/t_jsb_lct(GLACIER_TYPE, lib_id=1)/), parent=land_tile)
 !!$        CALL glacier_tile%Print()
 
-        pft_tile => t_jsb_tile('pft1', 'Tropical evergreen trees', processes=(/SOIL,VEG,ASSIMI/), &
+        pft_tile => t_jsb_tile('pft1', 'Tropical evergreen trees', processes=(/SOIL,VEG,ASSIMI,PHENO/), &
           & lct=t_jsb_lct(VEG_TYPE, lib_id=2), parent=land_tile, fract_filename='')
         CALL pft_tile%Print()
 
-        pft_tile => t_jsb_tile('pft2', 'Tropical deciduous trees', processes=(/SOIL,VEG,ASSIMI/), &
+        pft_tile => t_jsb_tile('pft2', 'Tropical deciduous trees', processes=(/SOIL,VEG,ASSIMI,PHENO/), &
           & lct=t_jsb_lct(VEG_TYPE, lib_id=3), parent=land_tile, fract_filename='')
         CALL pft_tile%Print()
 
