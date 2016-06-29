@@ -433,14 +433,15 @@ CONTAINS
           hlp1 = plant%pool%sap_wood%carbon/plant%pool%leaf%carbon
        ENDIF
        lun=lun+1
-       write(lun,'(13F12.6)') time_d, plant%height, plant%diameter, plant%lai, &
+       write(lun,'(14F12.6)') time_d, plant%height, plant%diameter, plant%lai, &
          hlp1,plant%pool%leaf%carbon/plant%pool%fine_root%carbon,& 
          plant%pool%coarse_root%carbon/plant%pool%sap_wood%carbon, & 
          (plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)/ & 
          (plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon+&
             plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon), &
-                             plant%target_cn_leaf, plant%moving_average%dNPP, plant%moving_average%dN_up,&
-                             plant%moving_average%cn_plant
+                             plant%target_cn_leaf, plant%moving_average%unit_npp, plant%moving_average%unit_uptake_n,&
+                             plant%moving_average%growth_cn_plant, plant%moving_average%allometry_npp, &
+                             plant%growing_season
       END IF
     END IF
   END SUBROUTINE write_output_pool

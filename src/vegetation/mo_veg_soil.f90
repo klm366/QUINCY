@@ -104,10 +104,10 @@ CONTAINS
 
     !> 3.0 Calculate potential N uptake per unit root
     !!
-    plant%flux%dN_up = veg_param%vmax_uptake_n(pftid) * &
-                       plant%moving_average%demand_uptake_n * & 
-                       soil%ammonium * ( veg_param%soil_n_aff1(pftid) + & 
-                       1._wp / ( veg_param%soil_n_aff2(pftid) + soil%ammonium ))
+    plant%flux%unit_uptake_n = veg_param%vmax_uptake_n(pftid) * &
+                               plant%moving_average%demand_uptake_n * & 
+                               soil%ammonium * ( veg_param%soil_n_aff1(pftid) + & 
+                               1._wp / ( veg_param%soil_n_aff2(pftid) + soil%ammonium ))
 
   END SUBROUTINE update_vegsoil_bgc
 
@@ -158,6 +158,7 @@ CONTAINS
 !SZ BLARPP. check units
     soil%ammonium = soil%ammonium   + soil%flux%loss%litter%nitrogen*dt*  1.e3 / soil_depth * 1.e-3
     soil%ammonium = soil%ammonium   - plant%flux%uptake_n * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
+    soil%ammonium = soil%ammonium   + veg_param%bnf_base(plant%pftid) * dt * 1.e3 / soil_depth * 1.e-3
     !soil%phosphate = soil%phosphate + soil%flux%loss%litter%phosphorus*dt*  1.e3 / soil_depth * 1.e-3
     !soil%phosphate = soil%phosphate - plant%flux%uptake_p * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
 

@@ -1,18 +1,18 @@
 &VEGETATION_CTL
   ! options for the vegetation, read by the plant_model_driver
-  output_interval_pool="weekly"
-  output_interval_flux="weekly"
+  output_interval_pool="daily"
+  output_interval_flux="daily"
   output_start_first_day_year=1
   output_end_last_day_year=30
   flag_optimal_Nfraction=.FALSE.
   flag_optimal_Nleaf=.FALSE.
-  flag_optimal_allocation=.FALSE.
+  flag_optimal_allocation=.TRUE.
   flag_calc_soil_uptake=.TRUE.
   flag_calc_soil_moisture=.FALSE.
-  flag_base_soil_model=.FALSE.
+  flag_base_soil_model=.TRUE.
   soil_awc_prescribe=300.0
   soil_theta_prescribe=100.0
-  plant_functional_type_id=5
+  plant_functional_type_id=4
 /
 &FORCING_CTL
   ! options for plant model forcing

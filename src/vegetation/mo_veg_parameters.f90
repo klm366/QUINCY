@@ -86,10 +86,10 @@ MODULE mo_veg_parameters
   REAL(wp),SAVE :: k1_fnl_chl_C3                !< parameter to describe the varying fraction of N in chlorophyll through the canopy
   REAL(wp),SAVE :: k1_fnl_chl_C4                !< parameter to describe the varying fraction of N in chlorophyll through the canopy
   REAL(wp),SAVE :: kfnl_chl                     !< parameter to describe the varying fraction of N in chlorophyll through the canopy
-!SZ BLARPP: can these have more accessible names?
+
   ! parameters for changes in canopy N fractions
-  REAL(wp), SAVE :: dn
-  REAl(wp), SAVE :: dnf
+  REAL(wp), SAVE :: delta_n_fraction           !< maximum fractional change for optimal adjustment of photosynthetic N fraction
+  REAl(wp), SAVE :: delta_n_leaf               !< maximum fractional change for optimal adjsutment of canopy N allocation
 
   ! parameters used for phenology calculations
   REAL(wp),SAVE :: min_lai                      !< minimum LAI beyond which all leaves are shed
@@ -177,6 +177,7 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: vmax_uptake_p
      REAL(wp),DIMENSION(npft) :: soil_p_aff1 
      REAL(wp),DIMENSION(npft) :: soil_p_aff2 
+     REAL(wp),DIMENSION(npft) :: bnf_base
   END TYPE t_slm_veg_param
 
   PUBLIC :: init_veg_parameters
@@ -332,9 +333,9 @@ MODULE mo_veg_parameters
       ka = 0.005_wp
 
       ! maximum change in CN ratio of canopy
-      dn = 0.001_wp
+      delta_n_leaf = 0.001_wp
       ! maximum change in photosynthetic N fractions
-      dnf = 0.01_wp
+      delta_n_fraction = 0.01_wp
   
       ! minimum LAI for phenology calculations
       min_lai = 0.1_wp
@@ -505,6 +506,9 @@ MODULE mo_veg_parameters
       veg_param%soil_p_aff1(:) = 0.105_wp      ! tuned from OCN's 0.05 m2/gN assuming 150 L per m2
       ! half saturation of high-affinity uptake (mmol/L) 
       veg_param%soil_p_aff2(:) = 0.4_wp        ! tuned from OCN's 0.84 gN/m2 assuming 150 L per m2
+      ! placeholder constant BNf rate, required to keepsoil NH4 at constant levels mumol N s-1
+      veg_param%bnf_base(:) = &
+      (/2.6_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9, 5.0_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9/)
 
     END SUBROUTINE init_pft_param_table 
 

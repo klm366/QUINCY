@@ -87,13 +87,13 @@ MODULE mo_veg_memory
     ! 1.7 plant status parameter
     REAL(wp) :: boc_an            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 variables needed for optimal allocation calculations
-!> @todo ticket 50: veg_memory:TYPE t_moving_average -> more telling names for dNPP dN_up npp_alloc cn_plant
-!! 
-    REAL(wp) :: dNPP              !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
-    REAL(wp) :: dN_up             !< rate of growth per unit root, mumol N mol-1
-    REAl(wp) :: npp_alloc         !< NPP
-    REAL(wp) :: cn_plant          !< plant growth cn ration, equivalent to 1/growth_req_n
 
+    REAL(wp) :: unit_npp                   !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
+    REAL(wp) :: unit_uptake_n              !< rate of growth per unit root, mumol N mol-1
+    REAl(wp) :: allometry_npp              !< average NPP
+    REAL(wp) :: growth_cn_plant            !< plant growth cn ratio, equivalent to 1/growth_req_n
+    REAL(Wp) :: leaf2root_mass_ratio       !< leaf to root mass ratio
+    TYPE(t_element) :: allometry_labile    !< moving average of labile pools neeeded for allometry calculations
 
     !< 2.0 accumulation period per variable in days !!
     !! 
@@ -101,6 +101,7 @@ MODULE mo_veg_memory
     ! 2.0a some default values
     REAL(wp) :: p_weekly                 !< 7 days; constant across the model
     REAL(wp) :: p_monthly                !< 30 days; constant across the model
+    REAL(wp) :: p_yearly                 !< 365 days
     REAL(wp) :: p_longterm               !< 10950 days (30 years); constant across the model
     REAL(wp) :: p_tau_veg_dynamics       !<  multiple years
 
@@ -206,8 +207,8 @@ MODULE mo_veg_memory
      REAL(wp) :: recycling_sap_wood_p     !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
      REAL(wp) :: transpiration            !< transpiration in kg m-2 s-1
      REAL(wp) :: ci                       !< leaf internal co2 concentration
-     REAL(wp) :: dNPP                     !< incremental change in NPP. Needed for optimal allocation
-     REAL(wp) :: dN_up                    !< incremental change in N-based growth, needed for optimal allocation
+     REAL(wp) :: unit_npp                 !< incremental change in NPP. Needed for optimal allocation
+     REAL(wp) :: unit_uptake_n            !< incremental change in N-based growth, needed for optimal allocation
   END TYPE t_slm_veg_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -749,18 +750,22 @@ CONTAINS
     ! 1.7 plant status parameter
     this%boc_an                        = 0.0_wp      ! net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 Optimal allocation
-    this%dN_up                         = 0._wp
-    this%dNPP                          = 0._wp
-    this%cn_plant                      = 1._wp
-    this%npp_alloc                     = 1._wp
+    this%unit_uptake_n                 = 0._wp
+    this%unit_npp                      = 0._wp
+    this%growth_cn_plant               = 1._wp
+    this%allometry_npp                 = 1._wp
+    this%allometry_labile%carbon       = 1._wp
+    this%allometry_labile%nitrogen     = 1._wp
+    this%leaf2root_mass_ratio          = 1._wp
     !< 2.0 init/set accumulation period per variable in days !!
     !!
     ! 2.0a some default values
     this%p_weekly                      = 7._wp     ! 7 days; constant across the model
     this%p_monthly                     = 30._wp    ! 30 days; constant across the model
+    this%p_yearly                      = 365._wp   ! 365 days
     this%p_longterm                    = 10950._wp ! 10950 days (30 years); constant across the model
     this%p_tau_veg_dynamics            = 1095._wp  ! 365* 3 
-    this%p_optNfrac                    = 10.0_wp   ! timescale of optimal canopy processes
+    this%p_optNfrac                    = 20.0_wp   ! timescale of optimal canopy processes
 
     ! 2.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
     this%p_demand_uptake_n             = 3.0_wp 
@@ -853,32 +858,32 @@ CONTAINS
     this%boc_an                  = this%calc_moving_avrg(this%boc_an, plant%boc_an, &
                                                1.0_wp / (this%p_boc_an * one_day/ dt), & 
                                                plant%pool%leaf%carbon > eps8)
-    this%dNPP 				     = this%calc_moving_avrg(this%dNPP, plant%flux%dNPP, & 
-                                               1.0_wp/(this%p_opt_alloc * one_day/dt))
-    this%demand_uptake_n         = this%calc_moving_avrg(this%demand_uptake_n, plant%f_n_demand, &
-                                               1.0_wp / (this%p_demand_uptake_n * one_day/ dt), &
-                                               plant%pool%fine_root%carbon > eps8)
-    this%demand_uptake_p         = this%calc_moving_avrg(this%demand_uptake_p, plant%f_p_demand, &
-                                               1.0_wp / (this%p_demand_uptake_p * one_day/ dt), &
-                                               plant%pool%fine_root%carbon > eps8)
-    this%dN_up                   = this%calc_moving_avrg(this%dN_up, plant%flux%dN_up, &
-                                               1.0_wp / (this%p_opt_alloc * one_day/dt))
+    this%unit_npp                = this%calc_moving_avrg(this%unit_npp, plant%flux%unit_npp, & 
+                                               1.0_wp/(this%p_opt_alloc * one_day/dt), plant%growing_season)
+    IF (plant%growth_req_n > 0._wp)THEN
+       hlp = 1._wp/plant%growth_req_n
+    ELSE
+       hlp=0._wp
+    ENDIF
+    this%growth_cn_plant = this%calc_moving_avrg(this%growth_cn_plant, hlp, 1.0_wp/(this%p_opt_alloc * one_day/dt), plant%growing_season)
+    this%allometry_npp = this%calc_moving_avrg(this%allometry_npp, plant%flux%npp, &
+         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
+    this%allometry_labile%nitrogen = this%calc_moving_avrg(this%allometry_labile%nitrogen, plant%pool%labile%nitrogen, &
+         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
+    this%allometry_labile%carbon = this%calc_moving_avrg(this%allometry_labile%carbon, plant%pool%labile%carbon, &
+         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
+ 
+ this%demand_uptake_n = this%calc_moving_avrg(this%demand_uptake_n, plant%f_n_demand, &
+                                                 1.0_wp / (this%p_demand_uptake_n * one_day/ dt), &
+                                                 plant%pool%fine_root%carbon > eps8)
+    this%demand_uptake_p = this%calc_moving_avrg(this%demand_uptake_p, plant%f_p_demand, &
+                                                 1.0_wp / (this%p_demand_uptake_p * one_day/ dt), &
+                                                 plant%pool%fine_root%carbon > eps8)
+    this%unit_uptake_n = this%calc_moving_avrg(this%unit_uptake_n, plant%flux%unit_uptake_n, 1.0_wp / (this%p_opt_alloc * one_day/dt),&
+         plant%growing_season)
 
-    !> docu ? 
-    !! introducing a helper variable for calc the moving avrg of: \n
-    !! cn_plant and \n
-    !! npp_alloc
-    IF (plant%growth_req_n > eps8) THEN
-        hlp = 1._wp/plant%growth_req_n
-      ELSE
-        hlp = 0._wp
-    END IF
-    ! cn_plant : need hlp variable !
-    this%cn_plant                = this%calc_moving_avrg(this%cn_plant, hlp, &
-                                               1.0_wp / (this%p_opt_alloc * one_day/dt))
-    ! npp_alloc : need hlp variable !
-    this%npp_alloc               = this%calc_moving_avrg(this%npp_alloc, plant%flux%npp, &
-                                               1.0_wp / (this%p_opt_alloc * one_day/dt))
+     this%leaf2root_mass_ratio = this%calc_moving_avrg(this%leaf2root_mass_ratio, plant%pool%leaf%carbon/plant%pool%fine_root%carbon,&
+          1.0_wp/(this%p_yearly * one_day/dt), plant%pool%leaf%carbon>eps8)
 
   END SUBROUTINE update_veg_moving_avrg_variables
 
@@ -901,9 +906,9 @@ CONTAINS
 !    !                 use function TRUE FALSE [OPTIONAL argument] )
 !    ! returns: new current average
 
-
-!   
-!  END SUBROUTINE update_soil_moving_avrg_variables
+   
+   
+! END SUBROUTINE update_soil_moving_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------
   !> calculate moving average of tile variables

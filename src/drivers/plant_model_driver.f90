@@ -144,7 +144,7 @@ PROGRAM plant_model_driver
   DO itile = 1,ntile
     tile(itile)%soil%moisture                 = veg_config%soil_awc_prescribe
     tile(itile)%soil%theta                    = veg_config%soil_theta_prescribe 
-    tile(itile)%soil%ammonium                 = 0.2_wp
+    tile(itile)%soil%ammonium                 = 0.1_wp
     tile(itile)%soil%phosphate                = 0.01_wp
     tile(itile)%soil%pool%litter%nitrogen     = 5.0_wp
     tile(itile)%plant%pftid                   = veg_config%pft_id
@@ -176,23 +176,6 @@ PROGRAM plant_model_driver
                                                                    atm2land%co2_mixing_ratio_C14,hlp1) & 
                                                 * tile(itile)%plant%pool%reserve%carbon 
 
-!SZ BLARPP, needs a better solution
-!possibly already fixed - needs a check
-    !> initialise canopy N concentrations and fractions
-    !! @todo: ticket #48 remove if not required anymore  
-    canopy_layer_depth_act = calc_canopy_layer_depth(tile(itile)%plant%lai)
-
-    CALL calc_canopy_n_distribution( &
-      tile(itile)%plant%pool%leaf%nitrogen, tile(itile)%plant%lai, &
-      canopy_layer_depth_act, & 
-      veg_param%ps_pathway(tile(itile)%plant%pftid), &
-      veg_param%k0_fnl_struc(tile(itile)%plant%pftid),& 
-      tile(itile)%plant%canopy_layer(:)%nl_tot, &
-      tile(itile)%plant%canopy_layer(:)%fnl_chl, &
-      tile(itile)%plant%canopy_layer(:)%fnl_et, &
-      tile(itile)%plant%canopy_layer(:)%fnl_rub, &
-      tile(itile)%plant%canopy_layer(:)%fnl_pepc, &
-      tile(itile)%plant%canopy_layer(:)%fnl_oth)                    
 
   END DO ! end loop over tiles
 
@@ -205,6 +188,7 @@ PROGRAM plant_model_driver
   !! 
   !! 
   CALL init_veg_output_variables          ! mo_veg_output : interval variables & flux accumulation per tile
+
   DO itile = 1,ntile
     CALL open_pool_output_files(itile)
     CALL open_flux_output_files(itile)

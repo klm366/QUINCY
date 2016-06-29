@@ -40,31 +40,23 @@ CONTAINS
     TYPE(t_slm_veg_param),INTENT(in) :: veg_param                  !< vegetation type parameters
     REAL(wp), INTENT(in)             :: direction                  !< direction of change in leaf CN ratio to maximise NPP
     ! 0.2 Local
-    TYPE(t_slm_veg_pool) :: falloc                    ! fractional allocation to pools
-    REAL(wp) :: growth_req_n,growth_req_p             ! N and P reqiurement of growth (mol N / P per mol C)
-    REAL(wp) :: target_lai                            ! LAI implied from sap wood area 
-    REAL(wp) :: tau_labile_pot                        ! labile pool turnover rate assuming only temperature and moisture constraints (no stoichiometry)
-    REAL(wp) :: target_cn_fine_root,    &             ! target C:N and N:P ratios for various non-leaf tissues (mol/mol)
-                target_cn_coarse_root,    &
-                target_cn_sap_wood,    &
-                target_cn_fruit,        &
-                target_np_fine_root,    &
-                target_np_coarse_root, &
-                target_np_sap_wood,    &
-                target_np_fruit
-    REAL(wp) :: diameter,                  &
-                height,                  &
-                dheight,                  &
-                leaf2sapwood_mass_ratio,  & 
-                leaf2root_mass_ratio
-    REAl(wp) :: k1_opt,                    &
-                k2_opt
+    TYPE(t_slm_veg_pool) :: falloc                                 ! fractional allocation to pools
+    REAL(wp) :: growth_req_n,growth_req_p                          ! N and P reqiurement of growth (mol N / P per mol C)
+    REAL(wp) :: target_lai                                         ! LAI implied from sap wood area 
+    REAL(wp) :: tau_labile_pot                                     ! labile pool turnover rate assuming only temperature and moisture
+                                                                   ! constraints (no stoichiometry)
+    ! target C:N and N:P ratios for various non-leaf tissues (mol/mol)
+    REAL(wp) :: target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, &
+                              target_cn_fruit,target_np_fine_root,target_np_coarse_root, &
+                              target_np_sap_wood,target_np_fruit
+    REAL(wp) :: diameter,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio
+    REAl(wp) :: k1_opt, k2_opt
 
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
     tau_labile_pot = meristem_activity(atm2land%t_air,theta,plant%growing_season)
-
+  
     !> 2.0 update target C:N:P for each tissue type
     !! 
     !! 
@@ -76,12 +68,12 @@ CONTAINS
     !> 3.0 calculate current allometry 
     !! 
     !! 
-    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%pool%labile%carbon,&
-         plant%pool%labile%nitrogen, veg_param%wood_density(plant%pftid), & 
+    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%moving_average%allometry_labile%carbon,&
+         plant%moving_average%allometry_labile%nitrogen, veg_param%wood_density(plant%pftid), & 
          veg_param%sla(plant%pftid),veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
          veg_param%k_latosa(plant%pftid),veg_param%k_rtos(plant%pftid),veg_param%growthform(plant%pftid), & 
-         plant%moving_average%cn_plant,plant%moving_average%dnpp,plant%moving_average%dN_up, &
-         plant%moving_average%npp_alloc,diameter,height,dheight,leaf2sapwood_mass_ratio, & 
+         plant%moving_average%growth_cn_plant,plant%moving_average%unit_npp,plant%moving_average%unit_uptake_n, &
+         plant%moving_average%allometry_npp,diameter,height,dheight,leaf2sapwood_mass_ratio, & 
          leaf2root_mass_ratio,target_lai,k1_opt, k2_opt)  
 
     !> 4.0 calculate net flux between reserve and labile pool 
@@ -95,7 +87,7 @@ CONTAINS
                               veg_param%sla(plant%pftid), &
                               veg_param%tau_leaf(plant%pftid),veg_param%tau_fine_root(plant%pftid), & 
                               plant%target_cn_leaf, target_cn_fine_root, & 
-                              plant%target_np_leaf, target_np_fine_root, leaf2root_mass_ratio, &
+                              plant%target_np_leaf, target_np_fine_root, plant%moving_average%leaf2root_mass_ratio, &
                               plant%lai,target_lai, &
                               plant%pool%labile,plant%pool%reserve)
     CALL calc_nutrient_recycling(plant, target_cn_fine_root, target_np_fine_root)
@@ -122,7 +114,6 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculate partitioning of labile pool outflow into maintenance, growth respiration and growth 
-  !!
   !! Follows the concept of Amthor: Growth = Yg * (P - Rm), where\n
   !!   Yg = growth efficiency of biomass production (1-fresp_growth)\n
   !!   P  = current turnover of labile pool (Amthor's production)\n
@@ -138,20 +129,19 @@ CONTAINS
   SUBROUTINE calc_partitioning(tau_labile_pot,falloc,plant) 
 
     USE mo_shared_memory,    ONLY: t_element
-    USE mo_veg_respiration,  ONLY: calc_maintenance_respiration
+    USE mo_veg_respiration, ONLY: calc_maintenance_respiration
     USE mo_veg_parameters
 
     IMPLICIT NONE
     ! 0.1 InOut
-    REAL(wp),INTENT(in)                    :: tau_labile_pot       !< potential labile pool turnover (1/day) 
-    TYPE(t_slm_veg_pool), INTENT(in)       :: falloc               !< allocation coefficients 
-    TYPE(t_slm_plant),INTENT(inout),TARGET :: plant                !< plant structure
+    REAL(wp),INTENT(in)         :: tau_labile_pot            !< potential labile pool turnover (1/day) 
+    TYPE(t_slm_veg_pool), INTENT(in) :: falloc               !< allocation coefficients 
+    TYPE(t_slm_plant),INTENT(inout),TARGET :: plant
     ! 0.2 Local
     REAL(wp)                  :: tau_labile                ! actual turnover time of labile pool (1/day)
-    TYPE(t_element),POINTER   :: growth                    ! pool for growth
-    TYPE(t_element),POINTER   :: labile_pool               ! labile pool
+    TYPE(t_element),POINTER :: growth
+    TYPE(t_element),POINTER :: labile_pool
 
-    !  bi-directional pointer
     labile_pool => plant%pool%labile
     growth => plant%flux%growth%labile
 
@@ -168,7 +158,7 @@ CONTAINS
     ! actual rate of maintentance respiration (µmol C / m2 / s), constrained to 
     ! support leaf respiration, but not more than the current labile pool turnover
     plant%flux%maint_respiration = MAX(plant%flux%maint_respiration_leaf, & 
-                                   MIN(tau_labile_default / one_day * labile_pool%carbon * 1000000.0_wp, &
+                                   MIN(tau_labile_default / one_day * labile_pool%carbon * 1.e6, &
                                    plant%flux%maint_respiration_pot))
 
     !> 2.0 Determine C, N, P use for growth
@@ -177,7 +167,7 @@ CONTAINS
     !! is determined from the labile turnover minus the carbon used for maintenance, i
     !! accounting for the fraction of growth respiration required to achieve this growth, to ensure that
     !! growth does not empty the labile pool
-    growth%carbon = (labile_pool%carbon * tau_labile_pot * dt/one_day - plant%flux%maint_respiration * dt / 1000000.0_wp ) * & 
+    growth%carbon = (labile_pool%carbon * tau_labile_pot * dt/one_day -  plant%flux%maint_respiration * dt / 1.e6 ) * & 
                     1._wp /  (1._wp + fresp_growth) 
     IF(growth%carbon < eps8) growth%carbon = 0.0_wp
 
@@ -196,7 +186,7 @@ CONTAINS
         growth%carbon = growth%nitrogen / plant%growth_req_n
  
     ! Diagnose growth respiration (µmol C / m2 / s)
-    plant%flux%growth_respiration = fresp_growth * growth%carbon * 1000000.0_wp / dt
+    plant%flux%growth_respiration = fresp_growth * growth%carbon * 1.e6 / dt
 
     !> 3.0 Calculate isotopic signature of respiration fluxes, and growth
     !!
@@ -244,8 +234,8 @@ CONTAINS
   !!         (1) Allocation coefficients for the distribution of biomass for growth;\n
   !!         (2) total N and P required to sustain a unit of growth (in mol); \n
   !!
-  !! @todo: calc_allocation_fraction(): check calculation of b_inc. \n Currently a fixed value for stability,
-  !!        Needs to be adjusted to better match prescribed allometry and to account for falloc_fruit
+  !! @todo: calc_allocation_fraction: check calculation of b_inc. Currently a fixed value for stability,
+  !!        Needs to be adjusted to better match prescriebed allometry and to account for falloc_fruit
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_allocation_fraction(tau_labile_pot,leaf_carbon,sap_wood_carbon,coarse_root_carbon,root_carbon,labile_carbon, &
                               growthform,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio,coarse_root2sapwood_ratio, & 
@@ -271,8 +261,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: leaf2sapwood_mass_ratio    !< leaf to shoot mass ratio
     REAL(wp), INTENT(in) :: leaf2root_mass_ratio       !< leaf to root mass ratio
     REAL(wp), INTENT(in) :: coarse_root2sapwood_ratio  !< sapwood to coarse root mass ratio 
-    REAL(wp), INTENT(in) :: k1_opt                     !< ?? 
-    REAL(wp), INTENT(in) :: k2_opt                     !< ?? 
+    REAL(wp), INTENT(in) :: k1_opt                     !< coefficient for optimal leaf:root ratio
+    REAL(wp), INTENT(in) :: k2_opt                     !< coefficient for optimal leaf:root ratio
     REAL(wp), INTENT(in) :: k_max_falloc_fruit         !< maximum fraction allocation to fruits 
     REAL(wp), INTENT(in) :: target_cn_leaf             !< target C:N ratio for tissue type 
     REAL(wp), INTENT(in) :: target_cn_fine_root        !< target C:N ratio for tissue type 
@@ -354,12 +344,15 @@ CONTAINS
              sap_wood_carbon_inc = MAX((( leaf_carbon + leaf_carbon_inc ) / leaf2sapwood_mass_ratio * height - sap_wood_carbon) / & 
                   (1._wp - ( leaf_carbon + leaf_carbon_inc ) / leaf2sapwood_mass_ratio * dheight ), 0.0_wp)        
              IF (sap_wood_carbon_inc > 0.0_wp) THEN
-                 root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
-               ELSE
-                 leaf_carbon_inc = MAX((b_inc - k1_opt + root_carbon)/(1.0_wp + k2_opt), 0.0_wp)
-                 root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
+                coarse_root_carbon_inc = MAX((sap_wood_carbon + sap_wood_carbon_inc) * coarse_root2sapwood_ratio & 
+                     - coarse_root_carbon, 0.0_wp)
+                root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
+             ELSE
+                leaf_carbon_inc = MAX((b_inc - k1_opt + root_carbon)/(1+k2_opt), 0.0_wp)
+                root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
+                sap_wood_carbon_inc = 0.0_wp
+                coarse_root_carbon_inc = 0.0_wp
              ENDIF
-             coarse_root_carbon_inc = 0.0_wp
           ELSE 
 
  	         !> 1.2b solving the allometric rations between leaf and root, leaf and sapwood and sapwood and coarse roots 
@@ -377,12 +370,12 @@ CONTAINS
                 coarse_root_carbon_inc = MAX((sap_wood_carbon + sap_wood_carbon_inc) * coarse_root2sapwood_ratio & 
                                            - coarse_root_carbon, 0.0_wp)
                 root_carbon_inc = MAX(( leaf_carbon + leaf_carbon_inc ) / leaf2root_mass_ratio - root_carbon, 0.0_wp)
-               ELSE ! special case of no wood growth (phenology etc.): redistribute available carbon 
+             ELSE ! special case of no wood growth (phenology etc.): redistribute available carbon 
                 leaf_carbon_inc = MAX(( b_inc - leaf_carbon / leaf2root_mass_ratio + root_carbon ) / & 
                                     (1.0_wp + 1._wp/ leaf2root_mass_ratio),0.0_wp)
                 root_carbon_inc = MAX(0.0_wp,MIN(b_inc - leaf_carbon_inc, & 
                                        ( leaf_carbon_inc + leaf_carbon ) / leaf2root_mass_ratio - root_carbon))
-                sap_wood_carbon_inc    = 0.0_wp
+                sap_wood_carbon_inc = 0.0_wp
                 coarse_root_carbon_inc = 0.0_wp
              ENDIF
           ENDIF
@@ -442,17 +435,15 @@ CONTAINS
 
        !> 3.0 Allocation factors for P, derived from the target N:P ratios and the N partitioning coefficients
        !! 
-
-       !> 3.1 P required to sustain a unit of N growth
-       !!
+       !! 
+       ! P required to sustain a unit of N growth
        growth_req_p = falloc%leaf%nitrogen / target_np_leaf + & 
                       falloc%fine_root%nitrogen / target_np_fine_root + &
                       falloc%coarse_root%nitrogen / target_np_coarse_root + &
                       falloc%sap_wood%nitrogen / target_np_sap_wood + & 
                       falloc%fruit%nitrogen / target_np_fruit 
    
-       !> 3.1 Adjustment of P allocation factors
-       !!
+       ! Adjustment of P allocation factors
        IF(growth_req_p > eps8)THEN
           falloc%leaf%phosphorus = falloc%leaf%nitrogen / target_np_leaf / growth_req_p
           falloc%fine_root%phosphorus = falloc%fine_root%nitrogen / target_np_fine_root / growth_req_p 
@@ -509,6 +500,7 @@ CONTAINS
     REAL(wp), INTENT(out)            :: target_np_coarse_root  !< coarse root target N:P
     REAL(wp), INTENT(out)            :: target_np_sap_wood     !< sap wood target N:P
     REAL(wp), INTENT(out)            :: target_np_fruit        !< fruit target N:P
+
     ! 0.2 Local
     REAL(wp) :: diff_adjust
     REAL(wp) :: cn_leaf_act 
@@ -520,7 +512,7 @@ CONTAINS
        ! value needed to slow change in cn_target to allow cn_actual to reach target
        diff_adjust = MIN(1.0_wp,  1.0_wp/(ABS(plant%target_cn_leaf - cn_leaf_act)))
        ! update leaf CN target. direction has values of -1, 0 or 1
-       plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - direction * dn * diff_adjust)
+       plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - direction * delta_n_leaf * diff_adjust)
     ENDIF
 
     !> 2.0 determine C:N of other plant tissues
@@ -617,18 +609,18 @@ CONTAINS
     REAL(wp),INTENT(in)  :: k_latosa                !< leaf area to sapwood area ratio 
     REAL(wp),INTENT(in)  :: k_rtos                  !< root to sapwood mass ratio
     INTEGER,INTENT(in)   :: growthform              !< plant growth form 
-    REAl(wp), INTENT(in) :: cn_plant                !< ? C:N plant
-    REAl(wp), INTENT(in) :: dnpp                    !< ?
-    REAl(wp), INTENT(in) :: dN_up                   !< ? delta N uptake
-    REAl(wp), INTENT(in) :: npp                     !< ? netto primary production
+    REAl(wp), INTENT(in) :: cn_plant                !< C:N of whole plant growth increment
+    REAl(wp), INTENT(in) :: dnpp                    !< unit increase in NPP for unti increase in leaf mass
+    REAl(wp), INTENT(in) :: dN_up                   !< unit N uptake per unit root mass
+    REAl(wp), INTENT(in) :: npp                     !< net primary productivity
     REAL(wp),INTENT(out) :: diameter                !< diameter (m)
     REAL(wp),INTENT(out) :: height                  !< height (m)
     REAL(wp),INTENT(out) :: dheight                 !< change in height (m) resulting from a small change in woody biomass
     REAL(wp),INTENT(out) :: leaf2sapwood_mass_ratio !< leaf to sapwood mass ratio 
     REAL(wp),INTENT(out) :: leaf2root_mass_ratio    !< leaf to root mass ratio
     REAL(wp),INTENT(out) :: target_lai              !< lai implied by current available supporting structure 
-    REAL(Wp),INTENT(out) :: k1_opt, &               !< ? optimization some ..
-                            k2_opt                  !< ? optimization some ..
+    REAL(Wp),INTENT(out) :: k1_opt, &               !< coefficient in optimized leaf:root ratio
+                            k2_opt                  !< coefficient in optimized leaf:root ratio
     ! 0.2 Local
     REAL(wp)             :: diameter2               ! diameter (m) resulting from a infitisemal small increase in woody biomas 
 
@@ -755,7 +747,7 @@ CONTAINS
     !!  scaled to the default turnover time of the labile pool
     !! 
     !! for N and P this corresponds to the current growth C:N:P  
-    target_labile_pool_carbon = MAX( gpp_week , rm_week ) * one_day / 1000000.0_wp / tau_labile_default
+    target_labile_pool_carbon = MAX( gpp_week , rm_week ) * one_day / 1.e6 / tau_labile_default
     target_labile_pool_nitrogen = labile_pool%carbon * growth_req_n_week
     target_labile_pool_phosphorus = labile_pool%nitrogen * growth_req_p_week
 
