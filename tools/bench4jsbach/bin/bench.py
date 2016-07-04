@@ -9,7 +9,9 @@ import subprocess
 
 from wikipage import Bench4JSBach_Wikipage
 from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
-from util import logger as dkl_logger, setup_logger, print_none, log_message_newline, str2bool,print_item_or_list_rec
+from util import ( logger as dkl_logger, setup_logger, print_none,
+                   log_message_newline, str2bool,print_item_or_list_rec,
+                   gethostname )
 from diagnostics import Diagnostics, find_files
 from report import Report
 
@@ -32,7 +34,8 @@ config_template            = os.path.join ( bench4jsbach_configs, "b4j_template.
 b4j_configspec_fn          = os.path.join ( bench4jsbach_configs, "b4j_config.spec" )
 b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configs, "b4j_field_config.spec" )
 work_base                  = os.path.join ( bench4jsbach_base, "work" )
-bench_dirnames             = [ "configs", "processed", "graphics", "logging", "report", "scripts", "downloads" ]
+bench_dirnames             = [ "configs", "processed", "graphics", "logging",
+                               "report", "scripts", "downloads" ]
 
 
 def get_git_origin ():
@@ -333,7 +336,7 @@ configuration file '%s' have to accord with the corresponding section name
                                                 '<GIT_BRANCH>': get_git_branch (),
                                                 '<GIT_SHA>': get_git_sha (),
                                                 '<GIT_STATUS>': get_git_status (),
-                                                '<HOSTNAME>': get_hostname (),
+                                                '<HOSTNAME>': gethostname (),
                                                 '<IP_ADDRESS>': get_ip_address (),
                                                 '<B4J_BASE>': bench4jsbach_base,
                                                 '<TODAY>': str ( datetime.date.today ()),
