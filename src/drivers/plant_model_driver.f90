@@ -197,7 +197,7 @@ PROGRAM plant_model_driver
   !! 2.0 time loop
   !! 
   !! 
-  DO itimestep = 1,ntimestep
+  DO itimestep = 1, ntimestep
 
     !! 2.1 advance timer
     !! 
@@ -252,7 +252,6 @@ PROGRAM plant_model_driver
       !CALL tile(itile)%plant%moving_average%update_soil(tile(itile)%plant)         !< moving averages - soil -> plant N & P uptake
       CALL tile(itile)%plant%moving_average%update_tile(atm2land%t_air, & 
                 atm2land%press_srf, atm2land%q_air) !< moving averages - atmland
-
       !! 3.8 output pool: write output in certain intervals, see mo_veg_output
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days

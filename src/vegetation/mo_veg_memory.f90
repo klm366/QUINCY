@@ -765,7 +765,7 @@ CONTAINS
     this%p_yearly                      = 365._wp   ! 365 days
     this%p_longterm                    = 10950._wp ! 10950 days (30 years); constant across the model
     this%p_tau_veg_dynamics            = 1095._wp  ! 365* 3 
-    this%p_optNfrac                    = 20.0_wp   ! timescale of optimal canopy processes
+    this%p_optNfrac                    = 10.0_wp   ! timescale of optimal canopy processes
 
     ! 2.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
     this%p_demand_uptake_n             = 3.0_wp 

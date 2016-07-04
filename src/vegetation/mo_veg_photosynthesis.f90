@@ -94,7 +94,7 @@ CONTAINS
       IF(canopy_layer_depth_act(icanop) > 0.0_wp)THEN
 
           ! optimize N fractions if desired
-          IF (veg_config%flag_optimal_Nfraction)THEN
+          IF (veg_config%flag_optimal_Nfraction.AND.plant%growing_season)THEN
               CALL optimize_fractions(plant%canopy_layer(icanop)%fnl_chl,& 
                          plant%canopy_layer(icanop)%fnl_rub,&
                          plant%canopy_layer(icanop)%fnl_et,&
@@ -568,6 +568,10 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
     fnl_et0 = fnl_et/(1._wp-fnl_oth)
     fnl_pepc0 = fnl_pepc/(1._wp-fnl_oth)
     
+    fnl_chl = fnl_chl0
+    fnl_et = fnl_et0
+    fnl_rub = fnl_rub0
+    
     ! calculate photosynthesis with previous fractions
     CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
          par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
@@ -591,10 +595,10 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
        fnl_et = fnl_et_opt
     ELSEIF (fnl_rub < fnl_rub_opt) THEN
        fnl_rub = MIN(fnl_rub * (1+delta_n_fraction), fnl_rub_opt)
-       fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+       fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
     ELSE
        fnl_rub = MAX(fnl_rub * (1-delta_n_fraction), fnl_rub_opt)
-       fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+       fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
     ENDIF
                    
        
@@ -619,19 +623,18 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
        fnl_rub_opt = (1 - fnl_chl)/(1 + (m_rub)/(m_et))
        ! fraction in electron transport
        fnl_et_opt = fnl_rub_opt * (m_rub)/(m_et)
-       
+      
        ! check if changing fraction to optimal values is possible in one timestep
        IF (ABS(fnl_rub_opt-fnl_rub) / fnl_rub <= delta_n_fraction .AND. ABS(fnl_et_opt-fnl_et) / fnl_et <= delta_n_fraction) THEN
           fnl_rub = fnl_rub_opt
           fnl_et = fnl_et_opt
        ELSEIF (fnl_rub < fnl_rub_opt) THEN
           fnl_rub = MIN(fnl_rub * (1+delta_n_fraction), fnl_rub_opt)
-          fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+          fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
        ELSE
           fnl_rub = MAX(fnl_rub * (1-delta_n_fraction), fnl_rub_opt)
-          fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+          fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
        ENDIF
-            
  
        ! re-calculate photosynthesis
        CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
@@ -658,11 +661,12 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
              fnl_et = fnl_et_opt
           ELSEIF (fnl_rub < fnl_rub_opt) THEN
              fnl_rub = MIN(fnl_rub * (1+delta_n_fraction), fnl_rub_opt)
-             fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+             fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
           ELSE
              fnl_rub = MAX(fnl_rub * (1-delta_n_fraction), fnl_rub_opt)
-             fnl_et = MAX(1 - fnl_rub - fnl_chl, 0.0_wp)
+             fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
           ENDIF
+ 
           CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
                par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
                fnl_chl*(1._wp-fnl_oth), fnl_et*(1._wp-fnl_oth), fnl_rub*(1._wp-fnl_oth), & 
@@ -671,6 +675,7 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
                agl,anl,rl,gsl,cil,m_rub,m_et,m_pepc)
        ENDIF
     ENDIF
+
     ! Transform to external values. In current code chl + et+ rub=1
     ! all other routines chl +et +rub +oth = 1
     fnl_chl = fnl_chl*(1-fnl_oth)

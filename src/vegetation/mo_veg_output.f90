@@ -422,9 +422,9 @@ CONTAINS
        write(lun,'(3F12.6)') time_d, soil%pool%litter%nitrogen, soil%ammonium
        lun=lun+1
        DO icanop=1, ncanop
-         write(lun,'(6F12.6)') time_d, REAL(icanop), plant%canopy_layer(icanop)%fnl_et, &
+         write(lun,'(7F12.6)') time_d, REAL(icanop), plant%canopy_layer(icanop)%fnl_et, &
                                plant%canopy_layer(icanop)%fnl_rub, plant%canopy_layer(icanop)%fnl_chl,&
-                               plant%canopy_layer(icanop)%fnl_oth
+                               plant%canopy_layer(icanop)%fnl_oth, plant%canopy_layer(icanop)%nl_tot
        END DO
 
        IF(veg_param%growthform(plant%pftid) == itree) THEN 
@@ -441,7 +441,7 @@ CONTAINS
             plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon), &
                              plant%target_cn_leaf, plant%moving_average%unit_npp, plant%moving_average%unit_uptake_n,&
                              plant%moving_average%growth_cn_plant, plant%moving_average%allometry_npp, &
-                             plant%growing_season
+                             plant%moving_average%beta_soil_gs
       END IF
     END IF
   END SUBROUTINE write_output_pool
