@@ -600,19 +600,19 @@ CONTAINS
 
     j = 0
     fractions(:,:) = 0._wp
-    fract_sum(:) = 0._wp
+    fract_sum(:)   = 0._wp
+    data     (:,:) = 0._wp
     current => tile%first_child
     DO i=1,no_children
       SELECT TYPE (current)
       CLASS IS (t_jsb_tile_abstract)
+        IF (.NOT. ASSOCIATED(current%mem(iproc)%p)) CYCLE     ! Process is not active on child tile
         var_tmp => current%mem(iproc)%p%Get_var_real2d(TRIM(var%name))
         IF (ASSOCIATED(var_tmp)) THEN
           fractions(:,i) = this%fractions(ics:ice,iblk,i)
           fract_sum(:)   = fract_sum(:) + fractions(:,i)
           data     (:,i) = var_tmp%ptr(ics:ice,iblk)
           j = j + 1
-        ELSE
-          data(:,i) = 0._wp
         END IF
       END SELECT
       current => current%next_sibling
@@ -672,20 +672,20 @@ CONTAINS
     ALLOCATE(fract_sum(nc                              ))
 
     j = 0
-    fractions(:,:) = 0._wp
-    fract_sum(:) = 0._wp
+    fractions(:,:)   = 0._wp
+    fract_sum(:  )   = 0._wp
+    data     (:,:,:) = 0._wp
     current => tile%first_child
     DO i=1,no_children
       SELECT TYPE (current)
       CLASS IS (t_jsb_tile_abstract)
+        IF (.NOT. ASSOCIATED(current%mem(iproc)%p)) CYCLE     ! Process is not active on child tile
         var_tmp => current%mem(iproc)%p%Get_var_real3d(TRIM(var%name))
         IF (ASSOCIATED(var_tmp)) THEN
           fractions(:,i) = this%fractions(ics:ice,iblk,i)
           fract_sum(:)   = fract_sum(:) + fractions(:,i)
           data     (:,:,i) = var_tmp%ptr(ics:ice,:,iblk)
           j = j + 1
-        ELSE
-          data(:,:,i) = 0._wp
         END IF
       END SELECT
       current => current%next_sibling
