@@ -57,13 +57,15 @@ MODULE mo_base_memory
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_tile
-     TYPE(t_jsb_lct)     :: lcts      !< data on land cover type of the tile
      TYPE(t_slm_plant)   :: plant     !< plant construct of tile
      TYPE(t_slm_soil)    :: soil      !< soil construct of tile
+
+     TYPE(t_jsb_lct)     :: lcts      !< data on land cover type of the tile
+     INTEGER             :: owner_model_id = 0   ! necessary for using lctlib
   END TYPE t_slm_tile  
 
   !-----------------------------------------------------------------------------------------------------
-  !> very basic version of the JSBACH4: TYPE, EXTENDS(t_Hsm) :: t_jsb_model
+  !> very basic version of the JSBACH4: TYPE, EXTENDS(t_Hsm) :: t_jsb_model in mo_jsb_model_class
   !!
   !! @todo t_model may be initialized in plant_model_driver for now, but should be init in land_model_interface
   !! 
@@ -73,9 +75,21 @@ MODULE mo_base_memory
   TYPE t_model
     INTEGER                            :: id                !< Model id
     CHARACTER(len=10)                  :: shortname         !< Model short name
-    TYPE(t_slm_parameter)              :: slm_parameter     !< SLM parameter; may considers all param for lct "Vegetated",\n 
-                                                            !! equivalent to the JSBACH4 TYPE t_lctlib, which may change in
-                                                            !! both name and structure (init) in the near future of JSBACH4 dev.
+    !CHARACTER(len=132)                 :: description       !< Model description
+    !CHARACTER(len=filename_max)        :: namelist_filename !< Model namelist file
+    !TYPE(t_jsb_model_config),  POINTER :: config            !< Configuration
+    !TYPE(t_jsb_task_options)           :: options           !< Options needed by tasks
+    !INTEGER                            :: grid_id
+    !TYPE(t_jsb_process_p),     POINTER :: processes(:)
+    !TYPE(t_Task_queue),        POINTER :: queue        => NULL()
+    !CLASS(t_jsb_process_task), POINTER :: current_task => NULL()
+    TYPE(t_slm_parameter)              :: slm_parameter     !< contains all parameters, each with Dimension(npft) \n
+                                                            !! should be deleted in a later version prior to slm-jsbach4 linking
+    TYPE(t_lctlib_element),POINTER     :: lctlib(:)         !< each lctlib(pft_id) contains all parameter values of pft_id \n
+                                                            !! this structure makes parameters accessible throughout the model \n
+                                                            !! consistently with jsbach4
+
+
   END TYPE t_model
 
   !-----------------------------------------------------------------------------------------------------

@@ -23,6 +23,7 @@ plant_model_driver.o: \
   mo_base_constants.o \
   mo_base_util.o \
   mo_base_config_class.o \
+  mo_base_slm_parameter_class.o \
   mo_shared_util.o \
   mo_shared_isotope.o \
   mo_atmland_constants.o \

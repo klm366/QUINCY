@@ -285,7 +285,7 @@ PROGRAM canopy_test_model_driver
      CALL update_radiation(tile(1))                       !< mo_veg_radiation
      CALL update_canopy_fluxes(tile(1), veg_param, direction)        !< mo_veg_photosynthesis
 
-     WRITE(lun,'(i,3F16.7)') tile(1)%plant%pftid, &
+     WRITE(lun,'(I1,3F16.7)') tile(1)%plant%pftid, &
            tile(1)%plant%flux%an,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
 
   END DO 

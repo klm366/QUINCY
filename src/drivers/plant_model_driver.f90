@@ -122,11 +122,13 @@ PROGRAM plant_model_driver
 
   !! 1.1a init parameters -- replaces veg_param and all other parameters from mo_veg_parameters.f90
   !! 
-  !! currently integrates vegetation parameters; may cover all parameters specific for a tile (also soil ?!)
-  !! use dsl4jsb_Lctlib(PARAM) (include/dsl_jsbach.inc) to get the value of a specific parameter
-  !! needs USE mo_base_slm_parameter_class
-  !! model%slm_parameter is meant to REPLACE completely: veg_param and mo_veg_parameters
-!  CALL model%slm_parameter%init
+  !! see email of Reiner from 20.6.16 \n
+  !! in jsbach4 this is part of the model_init routine
+  !! 
+  model%id = 0              ! this is just an arbitrary value consistent with tile%owner_model_id
+  model%shortname = "slm"
+!  CALL model%slm_parameter%init   ! should be deleted in a later version prior to slm-jsbach4 linking
+!  model%lctlib => slm_lctlib_wrapper(model%slm_parameter)     ! mo_base_slm_parameter_class
 
   !! 1.2 Initialise time step
   !! 

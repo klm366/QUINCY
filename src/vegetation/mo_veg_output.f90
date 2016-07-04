@@ -144,7 +144,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)'), 'Time CanopyLayer f_et f_rub f_chl f_oth'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant'
+    WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp beta_soil_gs'
 
   END SUBROUTINE init_output_writing_pool
 
@@ -433,15 +433,22 @@ CONTAINS
           hlp1 = plant%pool%sap_wood%carbon/plant%pool%leaf%carbon
        ENDIF
        lun=lun+1
-       write(lun,'(14F12.6)') time_d, plant%height, plant%diameter, plant%lai, &
-         hlp1,plant%pool%leaf%carbon/plant%pool%fine_root%carbon,& 
+       write(lun,'(14F12.6)') time_d, &
+         plant%height, &
+         plant%diameter, &
+         plant%lai, &
+         hlp1,&   ! La2Sa
+         plant%pool%leaf%carbon/plant%pool%fine_root%carbon, & ! L2R
          plant%pool%coarse_root%carbon/plant%pool%sap_wood%carbon, & 
          (plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)/ & 
-         (plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon+&
+            (plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon + &
             plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon), &
-                             plant%target_cn_leaf, plant%moving_average%unit_npp, plant%moving_average%unit_uptake_n,&
-                             plant%moving_average%growth_cn_plant, plant%moving_average%allometry_npp, &
-                             plant%moving_average%beta_soil_gs
+         plant%target_cn_leaf, &
+         plant%moving_average%unit_npp, &
+         plant%moving_average%unit_uptake_n, &
+         plant%moving_average%growth_cn_plant, &
+         plant%moving_average%allometry_npp, &
+         plant%moving_average%beta_soil_gs
       END IF
     END IF
   END SUBROUTINE write_output_pool
