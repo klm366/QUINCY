@@ -31,7 +31,7 @@
   !! 2.3 [Time loop] check timer; adjust year counter
   !! 
 PROGRAM plant_model_driver
-  ! shared
+  ! echam
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: finish ! message_text
   ! base
