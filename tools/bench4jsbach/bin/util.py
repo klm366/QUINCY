@@ -142,12 +142,30 @@ def getdomain ():
     return domainname
 
 
-
 def gethostname ():
     import socket
     name, hlist, alist = socket.gethostbyaddr ( 
         socket.gethostbyname ( socket.gethostname ())) 
     return name.split ( '.' )[ 0 ]
+
+
+# returns string containing tree in listform
+def get_filesystem_tree ( rootDir ):
+    def get_tree_nodes ( rootDir ):
+        accum_str = ""
+        for item in os.listdir ( rootDir ):
+            accum_str += "\n[" + item
+            path = os.path.join ( rootDir, item ) 
+            if os.path.isdir ( path ):
+                intermediate = get_tree_nodes ( path )
+                accum_str += intermediate
+            accum_str += "]"
+        return accum_str
+
+    ret = "[" + rootDir
+    ret += get_tree_nodes ( rootDir )
+    ret += "\n]"
+    return ret
 
 
 if __name__ == '__main__':
@@ -158,6 +176,9 @@ if __name__ == '__main__':
     logger.debug ( message )
     logger.error ( "This is a test." )
     logger.info  ( "This is a test." )
+
+    print get_filesystem_tree ( "/home/deike/git/jsbach/tools/bench4jsbach" )
+    
     logger.debug ( "Exiting" )
 
 
