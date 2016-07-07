@@ -150,21 +150,24 @@ def gethostname ():
 
 
 # returns string containing tree in listform
-def get_filesystem_tree ( rootDir ):
+def get_filesystem_tree ( rootDir, onlydirs = True ):
     def get_tree_nodes ( rootDir ):
         accum_str = ""
         for item in os.listdir ( rootDir ):
-            accum_str += "\n[" + item
-            path = os.path.join ( rootDir, item ) 
+            path = os.path.join ( rootDir, item )
+            pickit = not onlydirs or os.path.isdir ( path )
+            accum_str += "\n[" + item if pickit else ""
             if os.path.isdir ( path ):
-                intermediate = get_tree_nodes ( path )
-                accum_str += intermediate
-            accum_str += "]"
+                accum_str += get_tree_nodes ( path )
+            accum_str += "]" if pickit else ""
         return accum_str
+    
+    assert rootDir and os.path.isdir ( rootDir )
 
     ret = "[" + rootDir
     ret += get_tree_nodes ( rootDir )
     ret += "\n]"
+    
     return ret
 
 

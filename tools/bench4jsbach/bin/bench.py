@@ -34,8 +34,14 @@ config_template            = os.path.join ( bench4jsbach_configs, "b4j_template.
 b4j_configspec_fn          = os.path.join ( bench4jsbach_configs, "b4j_config.spec" )
 b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configs, "b4j_field_config.spec" )
 work_base                  = os.path.join ( bench4jsbach_base, "work" )
-bench_dirnames             = [ "configs", "processed", "graphics", "logging",
-                               "report", "scripts", "downloads" ]
+bench_dirnames             = [ "configs",
+                               "downloads",
+                               "graphics",
+                               "interpolated_selected",
+                               "logging",
+                               "processed",
+                               "report",
+                               "scripts" ]
 
 
 def get_git_origin ():
