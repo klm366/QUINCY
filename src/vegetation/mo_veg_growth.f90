@@ -513,7 +513,7 @@ CONTAINS
     !! 
     IF (veg_config%flag_optimal_Nleaf.AND.plant%growing_season) THEN
        ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
-       plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - plant%leaf_cn_direction * delta_n_leaf * diff_adjust)
+       plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - plant%leaf_cn_direction * delta_n_leaf)
     ENDIF
 
     !> 2.0 determine C:N of other plant tissues
