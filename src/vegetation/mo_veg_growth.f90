@@ -68,10 +68,11 @@ CONTAINS
     !! 
     !! 
     CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%moving_average%allometry_labile%carbon,&
-         plant%moving_average%allometry_labile%nitrogen, veg_param%wood_density(plant%pftid), & 
-         veg_param%sla(plant%pftid),veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
+         plant%moving_average%allometry_labile%nitrogen, plant%moving_average%allometry_labile%phosphorus,&
+         veg_param%wood_density(plant%pftid), veg_param%sla(plant%pftid),veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
          veg_param%k_latosa(plant%pftid),veg_param%k_rtos(plant%pftid),veg_param%growthform(plant%pftid), & 
-         plant%moving_average%growth_cn_plant,plant%moving_average%unit_npp,plant%moving_average%unit_uptake_n, &
+         plant%moving_average%growth_cn_plant,plant%moving_average%growth_cp_plant, plant%moving_average%unit_npp,&
+         plant%moving_average%unit_uptake_n,plant%moving_average%unit_uptake_p, &
          plant%moving_average%allometry_npp,diameter,height,dheight,leaf2sapwood_mass_ratio, & 
          leaf2root_mass_ratio,target_lai,k1_opt, k2_opt)  
 
@@ -382,11 +383,19 @@ CONTAINS
       !> 1.2 grass
       !!
       CASE(igrass)
-         leaf_carbon_inc = MAX( ( b_inc - leaf_carbon / leaf2root_mass_ratio + sap_wood_carbon + root_carbon ) / & 
-                            (1.0_wp + 1._wp / leaf2sapwood_mass_ratio + 1._wp / leaf2root_mass_ratio ) , 0.0_wp) 
-         root_carbon_inc = MAX(MIN( b_inc, ( leaf_carbon + leaf_carbon_inc ) / leaf2root_mass_ratio - root_carbon), 0.0_wp)
-         sap_wood_carbon_inc = ( leaf_carbon_inc + leaf_carbon ) / leaf2sapwood_mass_ratio - sap_wood_carbon
-         coarse_root_carbon_inc = 0.0_wp
+         IF (veg_config%flag_optimal_allocation) THEN
+            leaf_carbon_inc = MAX((b_inc - k1_opt - leaf_carbon/leaf2sapwood_mass_ratio + root_carbon + &
+                 sap_wood_carbon) / (1 + k2_opt + 1/leaf2sapwood_mass_ratio), 0.0_wp)
+            root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
+            sap_wood_carbon_inc = ( leaf_carbon_inc + leaf_carbon ) / leaf2sapwood_mass_ratio - sap_wood_carbon
+            coarse_root_carbon_inc = 0.0_wp
+         ELSE
+            leaf_carbon_inc = MAX( ( b_inc - leaf_carbon / leaf2root_mass_ratio + sap_wood_carbon + root_carbon ) / & 
+                 (1.0_wp + 1._wp / leaf2sapwood_mass_ratio + 1._wp / leaf2root_mass_ratio ) , 0.0_wp) 
+            root_carbon_inc = MAX(MIN( b_inc, ( leaf_carbon + leaf_carbon_inc ) / leaf2root_mass_ratio - root_carbon), 0.0_wp)
+            sap_wood_carbon_inc = ( leaf_carbon_inc + leaf_carbon ) / leaf2sapwood_mass_ratio - sap_wood_carbon
+            coarse_root_carbon_inc = 0.0_wp
+         ENDIF
       !> 1.2 default - write and finish
       !!
       CASE DEFAULT
@@ -499,16 +508,10 @@ CONTAINS
     REAL(wp), INTENT(out)            :: target_np_sap_wood     !< sap wood target N:P
     REAL(wp), INTENT(out)            :: target_np_fruit        !< fruit target N:P
 
-    ! 0.2 Local
-    REAL(wp) :: diff_adjust
-    REAL(wp) :: cn_leaf_act 
-    
+
     !> 1.0 calculate optimal allocation fractions
     !! 
-    IF (veg_config%flag_optimal_Nleaf .AND. plant%pool%leaf%nitrogen > eps8) THEN
-       cn_leaf_act = plant%pool%leaf%carbon / plant%pool%leaf%nitrogen
-       ! value needed to slow change in cn_target to allow cn_actual to reach target
-       diff_adjust = MIN(1.0_wp,  1.0_wp/(ABS(plant%target_cn_leaf - cn_leaf_act)))
+    IF (veg_config%flag_optimal_Nleaf.AND.plant%growing_season) THEN
        ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
        plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - plant%leaf_cn_direction * delta_n_leaf * diff_adjust)
     ENDIF
@@ -588,8 +591,8 @@ CONTAINS
   !!
   !! calculates maximum LAI given current root and sapwood mass
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE calc_allometry(sap_wood_carbon,heart_wood_carbon, labile_carbon, labile_nitrogen, &
-       wood_density,sla,allom_k1, allom_k2,k_latosa,k_rtos,growthform,cn_plant, dnpp, dN_up, npp, &
+  PURE ELEMENTAL SUBROUTINE calc_allometry(sap_wood_carbon,heart_wood_carbon, labile_carbon, labile_nitrogen, labile_phosphorus,&
+       wood_density,sla,allom_k1, allom_k2,k_latosa,k_rtos,growthform,cn_plant, cp_plant,  dnpp, dN_up, dP_up, npp, &
        diameter,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio,target_lai, k1_opt, k2_opt)
     
     USE mo_base_constants, ONLY: pi
@@ -601,6 +604,7 @@ CONTAINS
     REAL(wp),INTENT(in)  :: wood_density            !< wood density (mol C / m3)
     REAl(wp),INTENT(in)  :: labile_carbon           !< labile carbon 
     REAL(wp),INTENT(in)  :: labile_nitrogen         !< labile nitrogen
+    REAL(wp),INTENT(in)  :: labile_phosphorus         !< labile phosphorus
     REAL(wp),INTENT(in)  :: sla                     !< specific leaf area (mol C / m2)
     REAL(wp),INTENT(in)  :: allom_k1                !< coeffcient in H-D relationship
     REAL(wp),INTENT(in)  :: allom_k2                !< exponent in H-D relationship
@@ -608,8 +612,10 @@ CONTAINS
     REAL(wp),INTENT(in)  :: k_rtos                  !< root to sapwood mass ratio
     INTEGER,INTENT(in)   :: growthform              !< plant growth form 
     REAl(wp), INTENT(in) :: cn_plant                !< C:N of whole plant growth increment
+    REAl(wp), INTENT(in) :: cp_plant                !< C:P of whole plant growth increment
     REAl(wp), INTENT(in) :: dnpp                    !< unit increase in NPP for unti increase in leaf mass
     REAl(wp), INTENT(in) :: dN_up                   !< unit N uptake per unit root mass
+    REAl(wp), INTENT(in) :: dP_up                   !< unit P uptake per unit root mass
     REAl(wp), INTENT(in) :: npp                     !< net primary productivity
     REAL(wp),INTENT(out) :: diameter                !< diameter (m)
     REAL(wp),INTENT(out) :: height                  !< height (m)
@@ -653,8 +659,16 @@ CONTAINS
            !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
            !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
            !! NPP = gN * R * cn_plant
-           k1_opt = (npp + labile_carbon - labile_nitrogen * cn_plant)/(dN_up * cn_plant)
-           k2_opt = dnpp/(dN_up * cn_plant)
+           !! Or similar relationships for P
+           IF ( (npp + labile_carbon - labile_nitrogen * cn_plant)/(dN_up * cn_plant) >= &
+                 (npp + labile_carbon - labile_phosphorus * cp_plant)/(dP_up * cp_plant)) THEN
+              ! if N is more limiting than P
+              k1_opt = (npp + labile_carbon - labile_nitrogen * cn_plant)/(dN_up * cn_plant)
+              k2_opt = dnpp/(dN_up * cn_plant)
+           ELSE
+              k1_opt = (npp + labile_carbon - labile_phosphorus * cp_plant)/(dP_up * cp_plant)
+              k2_opt = dnpp/(dP_up * cp_plant)
+           ENDIF
         ELSE             
            ! scaling factor for root to leaf mass
            ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
@@ -671,8 +685,24 @@ CONTAINS
       CASE (igrass)
          ! leaf to stem mass ratio
          leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
-         ! leaf:root ratio - should be calculated dynamically balancing transpiration and nutrient costs
-         leaf2root_mass_ratio = sm2lm_grass * k_rtos 
+         ! leaf:root ratio
+         IF (veg_config%flag_optimal_allocation) THEN
+            !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
+            !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
+            !! NPP = gN * R * cn_plant
+            !! Or similar relationships for P
+            IF ( (npp + labile_carbon - labile_nitrogen * cn_plant)/(dN_up * cn_plant) >= &
+                 (npp + labile_carbon - labile_phosphorus * cp_plant)/(dP_up * cp_plant)) THEN
+               ! if N is more limiting than P
+               k1_opt = (npp + labile_carbon - labile_nitrogen * cn_plant)/(dN_up * cn_plant)
+               k2_opt = dnpp/(dN_up * cn_plant)
+            ELSE
+               k1_opt = (npp + labile_carbon - labile_phosphorus * cp_plant)/(dP_up * cp_plant)
+               k2_opt = dnpp/(dP_up * cp_plant)
+            ENDIF
+         ELSE      
+            leaf2root_mass_ratio = sm2lm_grass * k_rtos 
+         ENDIF
          ! full leaf area - should depend on carbon balance of lowest leaf - works in principle but needs some filtering
          target_lai = 6.0_wp
     ENDSELECT

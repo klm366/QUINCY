@@ -89,9 +89,11 @@ MODULE mo_veg_memory
     ! 1.8 variables needed for optimal allocation calculations
 
     REAL(wp) :: unit_npp                   !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
-    REAL(wp) :: unit_uptake_n              !< rate of growth per unit root, mumol N mol-1
+    REAL(wp) :: unit_uptake_n              !< rate of N uptkae per unit root, mumol N mol-1
+    REAL(wp) :: unit_uptake_p              !< rate of P uptake per unit root, mumol P mol-1
     REAl(wp) :: allometry_npp              !< average NPP
     REAL(wp) :: growth_cn_plant            !< plant growth cn ratio, equivalent to 1/growth_req_n
+    REAL(wp) :: growth_cp_plant            !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)
     REAL(Wp) :: leaf2root_mass_ratio       !< leaf to root mass ratio
     TYPE(t_element) :: allometry_labile    !< moving average of labile pools neeeded for allometry calculations
 
@@ -209,6 +211,7 @@ MODULE mo_veg_memory
      REAL(wp) :: ci                       !< leaf internal co2 concentration
      REAL(wp) :: unit_npp                 !< incremental change in NPP. Needed for optimal allocation
      REAL(wp) :: unit_uptake_n            !< incremental change in N-based growth, needed for optimal allocation
+     REAL(wp) :: unit_uptake_p            !< incremental change in P-based growth, needed for optimal allocation
   END TYPE t_slm_veg_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -752,11 +755,14 @@ CONTAINS
     this%boc_an                        = 0.0_wp      ! net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 Optimal allocation
     this%unit_uptake_n                 = 0._wp
+    this%unit_uptake_p                 = 0._wp
     this%unit_npp                      = 0._wp
     this%growth_cn_plant               = 1._wp
+    this%growth_cp_plant               = 1._wp
     this%allometry_npp                 = 1._wp
     this%allometry_labile%carbon       = 1._wp
     this%allometry_labile%nitrogen     = 1._wp
+    this%allometry_labile%phosphorus     = 1._wp
     this%leaf2root_mass_ratio          = 1._wp
     !< 2.0 init/set accumulation period per variable in days !!
     !!
@@ -867,9 +873,19 @@ CONTAINS
        hlp=0._wp
     ENDIF
     this%growth_cn_plant = this%calc_moving_avrg(this%growth_cn_plant, hlp, 1.0_wp/(this%p_opt_alloc * one_day/dt), plant%growing_season)
+    
+    IF (plant%growth_req_n > 0._wp .AND. plant%growth_req_p > 0._wp)THEN
+       hlp = 1._wp/(plant%growth_req_n * plant%growth_req_p)
+    ELSE
+       hlp=0._wp
+    ENDIF
+    this%growth_cp_plant = this%calc_moving_avrg(this%growth_cp_plant, hlp, 1.0_wp/(this%p_opt_alloc * one_day/dt), plant%growing_season)
+
     this%allometry_npp = this%calc_moving_avrg(this%allometry_npp, plant%flux%npp, &
          1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
     this%allometry_labile%nitrogen = this%calc_moving_avrg(this%allometry_labile%nitrogen, plant%pool%labile%nitrogen, &
+         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
+    this%allometry_labile%phosphorus = this%calc_moving_avrg(this%allometry_labile%phosphorus, plant%pool%labile%phosphorus, &
          1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
     this%allometry_labile%carbon = this%calc_moving_avrg(this%allometry_labile%carbon, plant%pool%labile%carbon, &
          1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
@@ -881,6 +897,8 @@ CONTAINS
                                                  1.0_wp / (this%p_demand_uptake_p * one_day/ dt), &
                                                  plant%pool%fine_root%carbon > eps8)
     this%unit_uptake_n = this%calc_moving_avrg(this%unit_uptake_n, plant%flux%unit_uptake_n, 1.0_wp / (this%p_opt_alloc * one_day/dt),&
+         plant%growing_season)
+    this%unit_uptake_p = this%calc_moving_avrg(this%unit_uptake_p, plant%flux%unit_uptake_p, 1.0_wp / (this%p_opt_alloc * one_day/dt),&
          plant%growing_season)
 
      this%leaf2root_mass_ratio = this%calc_moving_avrg(this%leaf2root_mass_ratio, plant%pool%leaf%carbon/plant%pool%fine_root%carbon,&

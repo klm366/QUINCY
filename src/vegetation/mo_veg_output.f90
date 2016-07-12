@@ -142,7 +142,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)'), 'Time LitterN MineralN'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time CanopyLayer f_et f_rub f_chl f_oth'
+    WRITE(lun,'(a)'), 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth'
     lun=lun+1
     WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp beta_soil_gs'
 
@@ -192,12 +192,12 @@ CONTAINS
     ! 0.2 Local
     INTEGER        :: lun           ! logical unit number
     CHARACTER(100) :: fname         ! filename
-    CHARACTER(20)  :: opt           ! option according to namlist parameters
+    CHARACTER(30)  :: opt           ! option according to namlist parameters
     CHARACTER(5)   :: char_itile    ! itile transferred into a character -> 6 digits == max number of itile is 99999
 
 
     !> 1.0 init
-    opt = ""
+    opt = " "
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
     !! 
@@ -220,13 +220,10 @@ CONTAINS
     !> 2.1 get options (opt) for filenames
     !! 
     !! 
-    IF(veg_config%flag_optimal_Nfraction .AND. veg_config%flag_optimal_Nleaf) THEN
-      opt = "_optNfrac_optNleaf"
-      ELSE IF(veg_config%flag_optimal_Nfraction) THEN
-        opt = "_optNfrac"
-      ELSE IF(veg_config%flag_optimal_Nleaf) THEN
-        opt = "_optNleaf"
-    END IF
+    IF (veg_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
+    IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
+    IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+     
 
     !> 2.2 define open() statements for file output
     !! 
@@ -277,12 +274,12 @@ CONTAINS
     ! 0.2 Local
     INTEGER        :: lun           ! logical unit number
     CHARACTER(100) :: fname         ! filename
-    CHARACTER(20)  :: opt           ! option according to namlist parameters
+    CHARACTER(30)  :: opt           ! option according to namlist parameters
     CHARACTER(5)   :: char_itile    ! itile transferred into a character -> 6 digits == max number of itile is 99999
 
 
     !> 1.0 init
-    opt = ""
+    opt = " "
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
     !! 
@@ -305,13 +302,9 @@ CONTAINS
     !> 2.1 get options (opt) for filenames
     !! 
     !! 
-    IF(veg_config%flag_optimal_Nfraction .AND. veg_config%flag_optimal_Nleaf) THEN
-      opt = "_optNfrac_optNleaf"
-      ELSE IF(veg_config%flag_optimal_Nfraction) THEN
-        opt = "_optNfrac"
-      ELSE IF(veg_config%flag_optimal_Nleaf) THEN
-        opt = "_optNleaf"
-    END IF
+    IF (veg_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
+    IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
+    IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
 
     !> 2.2 define open() statements for file output
     !! 
@@ -424,7 +417,7 @@ CONTAINS
        DO icanop=1, ncanop
          write(lun,'(7F12.6)') time_d, REAL(icanop), plant%canopy_layer(icanop)%fnl_et, &
                                plant%canopy_layer(icanop)%fnl_rub, plant%canopy_layer(icanop)%fnl_chl,&
-                               plant%canopy_layer(icanop)%fnl_oth, plant%canopy_layer(icanop)%nl_tot
+                               plant%canopy_layer(icanop)%fnl_pepc, plant%canopy_layer(icanop)%fnl_oth
        END DO
 
        IF(veg_param%growthform(plant%pftid) == itree) THEN 
@@ -433,22 +426,15 @@ CONTAINS
           hlp1 = plant%pool%sap_wood%carbon/plant%pool%leaf%carbon
        ENDIF
        lun=lun+1
-       write(lun,'(14F12.6)') time_d, &
-         plant%height, &
-         plant%diameter, &
-         plant%lai, &
-         hlp1,&   ! La2Sa
-         plant%pool%leaf%carbon/plant%pool%fine_root%carbon, & ! L2R
+       write(lun,'(14F12.6)') time_d, plant%height, plant%diameter, plant%lai, &
+         hlp1,plant%pool%leaf%carbon/plant%pool%fine_root%carbon,& 
          plant%pool%coarse_root%carbon/plant%pool%sap_wood%carbon, & 
          (plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)/ & 
-            (plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon + &
+         (plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon+&
             plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon), &
-         plant%target_cn_leaf, &
-         plant%moving_average%unit_npp, &
-         plant%moving_average%unit_uptake_n, &
-         plant%moving_average%growth_cn_plant, &
-         plant%moving_average%allometry_npp, &
-         plant%moving_average%beta_soil_gs
+                             plant%target_cn_leaf, plant%moving_average%unit_npp, plant%moving_average%unit_uptake_n,&
+                             plant%moving_average%growth_cn_plant, plant%moving_average%allometry_npp, &
+                             plant%growing_season
       END IF
     END IF
   END SUBROUTINE write_output_pool

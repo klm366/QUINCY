@@ -108,6 +108,10 @@ CONTAINS
                                plant%moving_average%demand_uptake_n * & 
                                soil%ammonium * ( veg_param%soil_n_aff1(pftid) + & 
                                1._wp / ( veg_param%soil_n_aff2(pftid) + soil%ammonium ))
+    plant%flux%unit_uptake_p = veg_param%vmax_uptake_p(pftid) * &
+                               plant%moving_average%demand_uptake_p * & 
+                               soil%phosphate * ( veg_param%soil_p_aff1(pftid) + & 
+                               1._wp / ( veg_param%soil_p_aff2(pftid) + soil%phosphate ))
 
   END SUBROUTINE update_vegsoil_bgc
 
@@ -213,7 +217,6 @@ CONTAINS
             - plant%flux%transpiration - evaporation) * dt
        ! constrain to possible solutions
        soil%moisture = MAX(MIN(soil%moisture,veg_config%soil_awc_prescribe),0.0_wp)
-
        ! scale to relative water availability (%)
        soil%theta = soil%moisture / veg_config%soil_awc_prescribe * 100._wp
 

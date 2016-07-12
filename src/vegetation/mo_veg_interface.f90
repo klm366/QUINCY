@@ -158,11 +158,12 @@ CONTAINS
     !! 
     plant%lai = plant%pool%leaf%carbon * veg_param%sla(plant%pftid)
     CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%pool%labile%carbon,&
-         plant%pool%labile%nitrogen, veg_param%wood_density(plant%pftid), & 
+         plant%pool%labile%nitrogen, plant%pool%labile%phosphorus, veg_param%wood_density(plant%pftid), & 
          veg_param%sla(plant%pftid),veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
          veg_param%k_latosa(plant%pftid),veg_param%k_rtos(plant%pftid),veg_param%growthform(plant%pftid), & 
-         plant%moving_average%growth_cn_plant,plant%moving_average%unit_npp,plant%moving_average%unit_uptake_n, &
-         plant%moving_average%allometry_npp,plant%diameter,plant%height,hlp1,hlp1, &
+         plant%moving_average%growth_cn_plant,plant%moving_average%growth_cp_plant,plant%moving_average%unit_npp,&
+         plant%moving_average%unit_uptake_n, &
+         plant%moving_average%unit_uptake_p, plant%moving_average%allometry_npp,plant%diameter,plant%height,hlp1,hlp1, &
          hlp1,hlp1,hlp1, hlp1)  
 
     IF(plant%pool%leaf%carbon .GT. eps8) THEN 

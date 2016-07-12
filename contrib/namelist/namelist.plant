@@ -9,10 +9,10 @@
   flag_optimal_allocation=.FALSE.
   flag_calc_soil_uptake=.TRUE.
   flag_calc_soil_moisture=.FALSE.
-  flag_base_soil_model=.TRUE.
+  flag_base_soil_model=.FALSE.
   soil_awc_prescribe=300.0
   soil_theta_prescribe=100.0
-  plant_functional_type_id=5
+  plant_functional_type_id=1
 /
 &FORCING_CTL
   ! options for plant model forcing

@@ -333,9 +333,9 @@ MODULE mo_veg_parameters
       ka = 0.005_wp
 
       ! maximum change in CN ratio of canopy
-      delta_n_leaf = 0.001_wp
+      delta_n_leaf = 0.0001_wp
       ! maximum change in photosynthetic N fractions
-      delta_n_fraction = 0.01_wp
+      delta_n_fraction = 0.001_wp
   
       ! minimum LAI for phenology calculations
       min_lai = 0.1_wp

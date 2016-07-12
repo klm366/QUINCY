@@ -247,6 +247,7 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
                  ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
                  fnl_et(icanop) = (1._wp - (fnl_oth(icanop) + fnl_chl(icanop) + fnl_pepc(icanop) )) / & 
                                    (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
+                 fnl_pepc(icanop)=f_pepc
                  ! fraction of Rubisco is determined as the remainder
                  fnl_rub(icanop) = 1._wp - fnl_oth(icanop) - fnl_chl(icanop) - fnl_et(icanop) - fnl_pepc(icanop)
               ELSE ! other layers: copy from above layer
@@ -555,8 +556,9 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
     ! 0.4 Local
     REAL(wp) :: fnl_chl0, fnl_rub0, fnl_et0, fnl_pepc0
     REAl(wp) :: agl0, anl0, rl0, cil0,  gsl0
-    REAL(wp) :: m_rub, m_et, m_pepc,fnl_rub_opt, fnl_et_opt
+    REAL(wp) :: m_rub, m_et, m_pepc,fnl_rub_opt, fnl_et_opt, fnl_pepc_opt
     INTEGER :: i
+    REAL(wp):: hlp
  
    
     ! set fractions to previous values. In current code chl + et+ rub=1
@@ -569,7 +571,8 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
     fnl_chl = fnl_chl0
     fnl_et = fnl_et0
     fnl_rub = fnl_rub0
-    
+    fnl_pepc = fnl_pepc0
+
     ! calculate photosynthesis with previous fractions
     CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
          par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
@@ -581,22 +584,48 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
     ! increase N fraction in chlorophyll
     fnl_chl = MIN(fnl_chl0 * (1 + delta_n_fraction), 1.0_wp)
     
-    ! optimal N fraction assuming Aj=Av
-    ! fraction in Rubisco
-    fnl_rub_opt = (1 - fnl_chl)/(1 + (m_rub)/(m_et))
-    ! fraction in electron transport
-    fnl_et_opt = fnl_rub_opt * (m_rub)/(m_et)
-    
+    ! optimal N fraction assuming Aj=Av=Apepc
+    IF (m_pepc > 0._wp) THEN
+       ! fraction in Rubisco
+       fnl_rub_opt = (1 - fnl_chl)/(1 + m_rub/m_et + m_rub/m_pepc)
+       ! fraction in electron transport
+       fnl_et_opt = fnl_rub_opt * m_rub/m_et
+       ! fraction in PEPc
+       fnl_pepc_opt = fnl_rub_opt * m_rub/m_pepc
+    ELSE
+       ! fraction in Rubisco
+       fnl_rub_opt = (1 - fnl_chl)/(1 + (m_rub)/(m_et))
+       ! fraction in electron transport
+       fnl_et_opt = fnl_rub_opt * (m_rub)/(m_et)
+       ! fraction in PEPc
+       fnl_pepc_opt = 0._wp
+    ENDIF
+ 
     ! check if changing fraction to optimal values is possible in one timestep
-    IF (ABS(fnl_rub_opt-fnl_rub) / fnl_rub <= delta_n_fraction .AND. ABS(fnl_et_opt-fnl_et) / fnl_et <= delta_n_fraction) THEN
+    IF (ABS(fnl_rub_opt-fnl_rub) / fnl_rub <= delta_n_fraction .AND. &
+         ABS(fnl_et_opt-fnl_et) / fnl_et <= delta_n_fraction .AND. &
+         ABS(fnl_pepc_opt-fnl_pepc) / fnl_pepc <= delta_n_fraction) THEN
        fnl_rub = fnl_rub_opt
        fnl_et = fnl_et_opt
+       fnl_pepc = fnl_pepc_opt
     ELSEIF (fnl_rub < fnl_rub_opt) THEN
        fnl_rub = MIN(fnl_rub * (1+delta_n_fraction), fnl_rub_opt)
-       fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
+       IF (fnl_pepc < fnl_pepc_opt) THEN
+          fnl_pepc = MAX(fnl_pepc * (1+delta_n_fraction), fnl_pepc_opt)
+          fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+       ELSE
+          fnl_pepc = MIN(fnl_pepc * (1-delta_n_fraction), fnl_pepc_opt)
+          fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+       ENDIF
     ELSE
-       fnl_rub = MAX(fnl_rub * (1-delta_n_fraction), fnl_rub_opt)
-       fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
+       fnl_rub = MIN(fnl_rub * (1-delta_n_fraction), fnl_rub_opt)
+       IF (fnl_pepc < fnl_pepc_opt) THEN
+          fnl_pepc = MAX(fnl_pepc * (1+delta_n_fraction), fnl_pepc_opt)
+          fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+       ELSE
+          fnl_pepc = MIN(fnl_pepc * (1-delta_n_fraction), fnl_pepc_opt)
+          fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+       ENDIF
     ENDIF
                    
        
@@ -606,7 +635,7 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
          fnl_chl*(1._wp-fnl_oth), fnl_et*(1._wp-fnl_oth), fnl_rub*(1._wp-fnl_oth), & 
          fnl_pepc*(1._wp-fnl_oth),nl_tot, veg_param%ps_pathway(pftid), & 
          veg_param%tjmax_opt(pftid),veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
-         agl,anl,rl,gsl,cil,m_rub,m_et,m_pepc)
+         agl,anl,rl,gsl,cil,hlp, hlp, hlp)
     
    ! check if change has increased photosynthesis. If not
     IF (anl < anl0) THEN
@@ -616,71 +645,115 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
        fnl_et = fnl_et0
        fnl_rub = fnl_rub0
      
-       ! optimal N fraction assuming Aj=Av
-       ! fraction in Rubisco
-       fnl_rub_opt = (1 - fnl_chl)/(1 + (m_rub)/(m_et))
-       ! fraction in electron transport
-       fnl_et_opt = fnl_rub_opt * (m_rub)/(m_et)
-      
-       ! check if changing fraction to optimal values is possible in one timestep
-       IF (ABS(fnl_rub_opt-fnl_rub) / fnl_rub <= delta_n_fraction .AND. ABS(fnl_et_opt-fnl_et) / fnl_et <= delta_n_fraction) THEN
-          fnl_rub = fnl_rub_opt
-          fnl_et = fnl_et_opt
-       ELSEIF (fnl_rub < fnl_rub_opt) THEN
-          fnl_rub = MIN(fnl_rub * (1+delta_n_fraction), fnl_rub_opt)
-          fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
+       ! optimal N fraction assuming Aj=Av=Apepc
+       IF (m_pepc > 0._wp) THEN
+          ! fraction in Rubisco
+          fnl_rub_opt = (1 - fnl_chl)/(1 + m_rub/m_et + m_rub/m_pepc)
+          ! fraction in electron transport
+          fnl_et_opt = fnl_rub_opt * m_rub/m_et
+          ! fraction in PEPc
+          fnl_pepc_opt = fnl_rub_opt * m_rub/m_pepc
        ELSE
-          fnl_rub = MAX(fnl_rub * (1-delta_n_fraction), fnl_rub_opt)
-          fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
+          ! fraction in Rubisco
+          fnl_rub_opt = (1 - fnl_chl)/(1 + (m_rub)/(m_et))
+          ! fraction in electron transport
+          fnl_et_opt = fnl_rub_opt * (m_rub)/(m_et)
+          ! fraction in PEPc
+          fnl_pepc_opt = 0._wp
        ENDIF
  
+       ! check if changing fraction to optimal values is possible in one timestep
+       IF (ABS(fnl_rub_opt-fnl_rub) / fnl_rub <= delta_n_fraction .AND. &
+            ABS(fnl_et_opt-fnl_et) / fnl_et <= delta_n_fraction .AND. &
+            ABS(fnl_pepc_opt-fnl_pepc) / fnl_pepc <= delta_n_fraction) THEN
+          fnl_rub = fnl_rub_opt
+          fnl_et = fnl_et_opt
+          fnl_pepc = fnl_pepc_opt
+       ELSEIF (fnl_rub < fnl_rub_opt) THEN
+          fnl_rub = MIN(fnl_rub * (1+delta_n_fraction), fnl_rub_opt)
+          IF (fnl_pepc < fnl_pepc_opt) THEN
+             fnl_pepc = MAX(fnl_pepc * (1+delta_n_fraction), fnl_pepc_opt)
+             fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+          ELSE
+             fnl_pepc = MIN(fnl_pepc * (1-delta_n_fraction), fnl_pepc_opt)
+             fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+          ENDIF
+       ELSE
+          fnl_rub = MIN(fnl_rub * (1-delta_n_fraction), fnl_rub_opt)
+          IF (fnl_pepc < fnl_pepc_opt) THEN
+             fnl_pepc = MAX(fnl_pepc * (1+delta_n_fraction), fnl_pepc_opt)
+             fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+          ELSE
+             fnl_pepc = MIN(fnl_pepc * (1-delta_n_fraction), fnl_pepc_opt)
+             fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+          ENDIF
+       ENDIF
+       
        ! re-calculate photosynthesis
        CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
             par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
             fnl_chl*(1._wp-fnl_oth), fnl_et*(1._wp-fnl_oth), fnl_rub*(1._wp-fnl_oth), & 
             fnl_pepc*(1._wp-fnl_oth),nl_tot, veg_param%ps_pathway(pftid), & 
             veg_param%tjmax_opt(pftid),veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
-            agl,anl,rl,gsl,cil,m_rub,m_et,m_pepc)
+            agl,anl,rl,gsl,cil,hlp, hlp,hlp)
 
        ! if photosyntheis has still not increased, do not change fnl_chl
        IF (anl < anl0) THEN
           fnl_chl = fnl_chl0
           fnl_et = fnl_et0
           fnl_rub = fnl_rub0
-          ! optimal N fraction assuming Aj=Av
-          ! fraction in Rubisco
-          fnl_rub_opt = (1 - fnl_chl)/(1 + (m_rub)/(m_et))
-          ! fraction in electron transport
-          fnl_et_opt = fnl_rub_opt * (m_rub)/(m_et)
-         
-          ! check if changing fraction to optimal values is possible in one timestep
-          IF (ABS(fnl_rub_opt-fnl_rub) / fnl_rub <= delta_n_fraction .AND. ABS(fnl_et_opt-fnl_et) / fnl_et <= delta_n_fraction) THEN
-             fnl_rub = fnl_rub_opt
-             fnl_et = fnl_et_opt
-          ELSEIF (fnl_rub < fnl_rub_opt) THEN
-             fnl_rub = MIN(fnl_rub * (1+delta_n_fraction), fnl_rub_opt)
-             fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
-          ELSE
-             fnl_rub = MAX(fnl_rub * (1-delta_n_fraction), fnl_rub_opt)
-             fnl_et = MAX(1 - fnl_rub - fnl_chl, eps8)
-          ENDIF
- 
-          CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
-               par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
-               fnl_chl*(1._wp-fnl_oth), fnl_et*(1._wp-fnl_oth), fnl_rub*(1._wp-fnl_oth), & 
-               fnl_pepc*(1._wp-fnl_oth),nl_tot, veg_param%ps_pathway(pftid), & 
-               veg_param%tjmax_opt(pftid),veg_param%tjmax_omega(pftid),veg_param%g0(pftid),veg_param%g1(pftid), &
-               agl,anl,rl,gsl,cil,m_rub,m_et,m_pepc)
-       ENDIF
-    ENDIF
 
+          ! optimal N fraction assuming Aj=Av=Apepc
+          IF (m_pepc > 0._wp) THEN
+             ! fraction in Rubisco
+             fnl_rub_opt = (1 - fnl_chl)/(1 + m_rub/m_et + m_rub/m_pepc)
+             ! fraction in electron transport
+             fnl_et_opt = fnl_rub_opt * m_rub/m_et
+             ! fraction in PEPc
+             fnl_pepc_opt = fnl_rub_opt * m_rub/m_pepc
+          ELSE
+          ! fraction in Rubisco
+             fnl_rub_opt = (1 - fnl_chl)/(1 + (m_rub)/(m_et))
+             ! fraction in electron transport
+             fnl_et_opt = fnl_rub_opt * (m_rub)/(m_et)
+             ! fraction in PEPc
+             fnl_pepc_opt = 0._wp
+          ENDIF
+        ! check if changing fraction to optimal values is possible in one timestep
+       IF (ABS(fnl_rub_opt-fnl_rub) / fnl_rub <= delta_n_fraction .AND. &
+            ABS(fnl_et_opt-fnl_et) / fnl_et <= delta_n_fraction .AND. &
+            ABS(fnl_pepc_opt-fnl_pepc) / fnl_pepc <= delta_n_fraction) THEN
+          fnl_rub = fnl_rub_opt
+          fnl_et = fnl_et_opt
+          fnl_pepc = fnl_pepc_opt
+       ELSEIF (fnl_rub < fnl_rub_opt) THEN
+          fnl_rub = MIN(fnl_rub * (1+delta_n_fraction), fnl_rub_opt)
+          IF (fnl_pepc < fnl_pepc_opt) THEN
+             fnl_pepc = MAX(fnl_pepc * (1+delta_n_fraction), fnl_pepc_opt)
+             fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+          ELSE
+             fnl_pepc = MIN(fnl_pepc * (1-delta_n_fraction), fnl_pepc_opt)
+             fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+          ENDIF
+       ELSE
+          fnl_rub = MIN(fnl_rub * (1-delta_n_fraction), fnl_rub_opt)
+          IF (fnl_pepc < fnl_pepc_opt) THEN
+             fnl_pepc = MAX(fnl_pepc * (1+delta_n_fraction), fnl_pepc_opt)
+             fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+          ELSE
+             fnl_pepc = MIN(fnl_pepc * (1-delta_n_fraction), fnl_pepc_opt)
+             fnl_et = MAX(1 -fnl_rub - fnl_pepc - fnl_chl, eps8)
+          ENDIF
+       ENDIF       
+    ENDIF
+ ENDIf
     ! Transform to external values. In current code chl + et+ rub=1
     ! all other routines chl +et +rub +oth = 1
     fnl_chl = fnl_chl*(1-fnl_oth)
     fnl_rub = fnl_rub*(1-fnl_oth)
     fnl_et = fnl_et*(1-fnl_oth)
     fnl_pepc = fnl_pepc*(1-fnl_oth)
-   
+
   END SUBROUTINE optimize_fractions
 
   ! --------------------------------------------------------------------------------------------------
@@ -731,7 +804,7 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
        new%leaf%nitrogen = plant%pool%leaf%nitrogen * (1.0_wp + REAL(dd) * delta_n_leaf)
        
        ! update N distribution in the canopy
-       CALL calc_canopy_n_distribution(plant%pool%leaf%nitrogen,plant%lai, & 
+       CALL calc_canopy_n_distribution(new%leaf%nitrogen,plant%lai, & 
             canopy_layer_depth_act,veg_param%ps_pathway(pftid), &
             veg_param%k0_fnl_struc(pftid), nl_tot, fnl_chl, fnl_et, fnl_rub, fnl_pepc, fnl_oth)    
  
@@ -785,7 +858,7 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
         ! calculate NPP
           npp_direction(dd+2) = gpp_direction(dd+2)-maint_respiration(dd+2)
      ENDDO
-               
+        
        ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
        plant%leaf_cn_direction = REAL(MAXLOC(npp_direction, 1)) - 2.0_wp
 
