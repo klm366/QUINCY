@@ -62,17 +62,17 @@ CONTAINS
 
       !! 1 set vegetation fluxes to zero
       !! 
-      !! 
+      !! ==> integrate into vegetation process
       CALL set_zero_fluxes_of_plant_pools(tile)  !< set to zero all fluxes of the plant pools; mo_veg_util
 
       !! 2 canopy calculation fluxes
       !! 
-      !! 
+      !! ==> process radiation
       CALL update_radiation(tile)  !< mo_veg_radiation
 
       !! 3 update soil (biogeochemical part - here only N/P uptake)
       !! 
-      !! 
+      !! ==> 
       CALL update_vegsoil_bgc(tile, veg_param)  !< mo_veg_soil
 
       !! 4 calculate vegetation growth and turnover

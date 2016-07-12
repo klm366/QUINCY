@@ -258,6 +258,7 @@ MODULE mo_veg_memory
     REAL(wp) :: gdd                               !< growing degree days above 5°C
     REAL(wp) :: nd_dormance                       !< number of days since last growing season 
     REAL(wp) :: boc_an                            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
+    REAL(wp) :: leaf_cn_direction                 !< indicates direction of change in leaf CN ratio to maximise NPP
    END TYPE t_slm_plant
 
 

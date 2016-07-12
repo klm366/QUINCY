@@ -76,6 +76,7 @@ CONTAINS
     plant%gdd              = 1.0_wp
     plant%nd_dormance      = 1.0_wp
     plant%boc_an           = 1.0_wp
+    plant%leaf_cn_direction = 1.0_wp
   END SUBROUTINE init_plant
 
   !-----------------------------------------------------------------------------------------------------

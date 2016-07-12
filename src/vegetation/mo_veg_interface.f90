@@ -46,7 +46,6 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER         :: soil           ! soil variables per tile
     TYPE(t_slm_plant),POINTER        :: plant          ! plant variables per tile
-    REAL(wp)                         :: direction      ! indicates direction of change in leaf CN ratio to maximise NPP
     REAL(wp)                         :: hlp1           ! helper variable
 
     !  bi-directional pointer
@@ -71,12 +70,12 @@ CONTAINS
     !! 
     !! @todo ticket #47 : update_canopy_fluxes(); e.g. pass plant as parameter, not tile
     !! 
-    CALL update_canopy_fluxes(tile, veg_param, direction)
+    CALL update_canopy_fluxes(tile, veg_param)
 
     !> 2.0 Calculate growth and maintenance
     !! 
     !! 
-    CALL calc_growth(soil%theta,plant,veg_param, direction)
+    CALL calc_growth(soil%theta,plant,veg_param)
 
     !> 3.0 Calculate turnover from tissue aging and senescence
     !! 

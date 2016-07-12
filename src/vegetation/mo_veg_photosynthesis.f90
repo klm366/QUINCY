@@ -35,7 +35,7 @@ CONTAINS
   !! CALL calc_canopy_n_distribution \n
   !! CALL calc_photosynthesis
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_canopy_fluxes(tile, veg_param, direction)
+  SUBROUTINE update_canopy_fluxes(tile, veg_param)
 
    USE mo_shared_constants
    USE mo_shared_isotope
@@ -44,7 +44,6 @@ CONTAINS
    ! 0.1 InOut
    TYPE(t_slm_veg_param), INTENT(in)        :: veg_param      !< list of vegetation parameters
    TYPE(t_slm_tile),INTENT(inout), TARGET   :: tile           !< one tile
-   REAL(wp), INTENT(out)                    :: direction      ! direction of change for optimal leaf N - lower, equal or higher
    ! 0.2 Local
    TYPE(t_slm_soil),POINTER         :: soil                   ! soil variables per tile
    TYPE(t_slm_plant),POINTER        :: plant                  ! plant variables per tile
@@ -156,8 +155,7 @@ CONTAINS
      IF (veg_config%flag_optimal_Nleaf) &
           CALL  optimize_Nleaf(plant, canopy_layer_depth_act, veg_param,&
           plant%moving_average%t_air, plant%moving_average%press_surf, plant%moving_average%beta_air,&
-          plant%moving_average%beta_soil_ps,plant%moving_average%beta_soil_gs, &
-          direction)
+          plant%moving_average%beta_soil_ps,plant%moving_average%beta_soil_gs )
 
      ! calculate NPP increment, needed for optimal allocation scheme
      !IF (veg_config%flag_optimal_allocation) 
@@ -687,12 +685,12 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
 
   ! --------------------------------------------------------------------------------------------------
   !> Subroutine to determine direction in which total leaf N should change in order to increase NPP
-  !! Parameter direction is passed on to the growth subroutine to calulate new CN targets
+  !! 
+  !! Parameter leaf_cn_direction
   !----------------------------------------------------------------------------------------------------
 
 
-  SUBROUTINE optimize_Nleaf(plant, canopy_layer_depth_act,veg_param, t_air, press_Srf,beta_air,beta_soil_ps,beta_soil_gs,&
-       direction)
+  SUBROUTINE optimize_Nleaf(plant, canopy_layer_depth_act,veg_param, t_air, press_Srf,beta_air,beta_soil_ps,beta_soil_gs)
     
     USE mo_veg_respiration
     USE mo_veg_memory, ONLY: t_slm_plant, t_slm_veg_pool
@@ -700,15 +698,11 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
     
     IMPLICIT NONE
     ! 0.1 Input
-    TYPE(t_slm_plant), INTENT(in)        :: plant                  ! plant variables per tile
-    TYPE(t_slm_veg_param), INTENT(in) :: veg_param     
+    TYPE(t_slm_plant), INTENT(inout)        :: plant                  ! plant variables per tile
+    TYPE(t_slm_veg_param), INTENT(in)       :: veg_param     
     REAL(wp), DIMENSION(ncanop), INTENT(in) :: canopy_layer_depth_act
     REAL(wp) :: t_air, press_Srf
     REAL(wp) ::  beta_air,beta_soil_ps,beta_soil_gs
-    
-
-    ! 0.2 Output
-    REAL(wp), INTENT(out) :: direction
      
     ! 0.3 Local
     INTEGER :: icanop, dd, t
@@ -793,7 +787,7 @@ CALL calc_npp_increment(plant, veg_param, plant%flux%unit_npp)
      ENDDO
                
        ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
-       direction = REAL(MAXLOC(npp_direction, 1)) - 2.0_wp
+       plant%leaf_cn_direction = REAL(MAXLOC(npp_direction, 1)) - 2.0_wp
 
  END SUBROUTINE optimize_Nleaf
 

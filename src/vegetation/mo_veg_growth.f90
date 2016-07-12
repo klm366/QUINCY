@@ -26,7 +26,7 @@ CONTAINS
   !> calculate plant growth (flux\%growth)
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_growth (theta, plant, veg_param,  direction)
+  SUBROUTINE calc_growth (theta, plant, veg_param)
 
     USE mo_veg_memory
     USE mo_veg_parameters
@@ -38,7 +38,6 @@ CONTAINS
     REAL(wp), INTENT(in)             :: theta                      !< soil moisture (%)
     TYPE(t_slm_plant), INTENT(inout) :: plant                      !< plant structure
     TYPE(t_slm_veg_param),INTENT(in) :: veg_param                  !< vegetation type parameters
-    REAL(wp), INTENT(in)             :: direction                  !< direction of change in leaf CN ratio to maximise NPP
     ! 0.2 Local
     TYPE(t_slm_veg_pool) :: falloc                                 ! fractional allocation to pools
     REAL(wp) :: growth_req_n,growth_req_p                          ! N and P reqiurement of growth (mol N / P per mol C)
@@ -60,7 +59,7 @@ CONTAINS
     !> 2.0 update target C:N:P for each tissue type
     !! 
     !! 
-    CALL update_stoichiometry(plant,veg_param%growthform(plant%pftid),direction, & 
+    CALL update_stoichiometry(plant,veg_param%growthform(plant%pftid), & 
                               target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, & 
                               target_cn_fruit,target_np_fine_root,target_np_coarse_root, & 
                               target_np_sap_wood,target_np_fruit)
@@ -482,7 +481,7 @@ CONTAINS
     !! Includes optimal CN ratio calculation \n
     !! Output: target stoichiometries
     ! --------------------------------------------------------------------------------------------
-  SUBROUTINE update_stoichiometry(plant,growthform,direction,target_cn_fine_root,target_cn_coarse_root, & 
+  SUBROUTINE update_stoichiometry(plant,growthform,target_cn_fine_root,target_cn_coarse_root, & 
                               target_cn_sap_wood,target_cn_fruit,target_np_fine_root, & 
                               target_np_coarse_root,target_np_sap_wood,target_np_fruit)
 
@@ -491,7 +490,6 @@ CONTAINS
     ! 0.1 InOut
     INTEGER, INTENT(in)              :: growthform             !< plant growth form
     TYPE(t_slm_plant), INTENT(inout) :: plant                  !< plant structure
-    REAL(wp), INTENT(in)             :: direction              !< direction of change in leaf N
     REAL(wp), INTENT(out)            :: target_cn_fine_root    !< fine root target C:N
     REAL(wp), INTENT(out)            :: target_cn_coarse_root  !< coarse root target C:N
     REAL(wp), INTENT(out)            :: target_cn_sap_wood     !< sap wood target C:N
@@ -511,8 +509,8 @@ CONTAINS
        cn_leaf_act = plant%pool%leaf%carbon / plant%pool%leaf%nitrogen
        ! value needed to slow change in cn_target to allow cn_actual to reach target
        diff_adjust = MIN(1.0_wp,  1.0_wp/(ABS(plant%target_cn_leaf - cn_leaf_act)))
-       ! update leaf CN target. direction has values of -1, 0 or 1
-       plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - direction * delta_n_leaf * diff_adjust)
+       ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
+       plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - plant%leaf_cn_direction * delta_n_leaf * diff_adjust)
     ENDIF
 
     !> 2.0 determine C:N of other plant tissues
