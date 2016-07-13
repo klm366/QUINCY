@@ -144,7 +144,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)'), 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp beta_soil_gs'
+    WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season'
 
   END SUBROUTINE init_output_writing_pool
 
@@ -357,6 +357,8 @@ CONTAINS
     INTEGER                          :: lun            ! locical unit number
     INTEGER                          :: icanop         ! loop over ncanop
     REAL(wp)                         :: hlp1           ! helper variable
+    REAL(wp)                         :: l2r, s2c, bcf  !helper ratio variables
+    REAl(wp)                         :: growing_season_float !output variable for growing season
     REAL(wp)                         :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
                                         dC13fruit,dC13labile,dC13reserve,dC13seedbank
 
@@ -421,20 +423,48 @@ CONTAINS
        END DO
 
        IF(veg_param%growthform(plant%pftid) == itree) THEN 
-          hlp1 = plant%lai/(plant%pool%sap_wood%carbon / plant%height / veg_param%wood_density(plant%pftid))
+          IF (plant%pool%sap_wood%carbon > eps8) THEN
+             hlp1 = plant%lai/(plant%pool%sap_wood%carbon / plant%height / veg_param%wood_density(plant%pftid))
+          ELSE
+             hlp1 = 0._wp
+          ENDIF
        ELSE
-          hlp1 = plant%pool%sap_wood%carbon/plant%pool%leaf%carbon
+          IF (plant%pool%leaf%carbon>eps8) THEN
+             hlp1 = plant%pool%sap_wood%carbon/plant%pool%leaf%carbon
+          ELSE
+             hlp1 = 0._wp
+          ENDIF
        ENDIF
-       lun=lun+1
-       write(lun,'(14F12.6)') time_d, plant%height, plant%diameter, plant%lai, &
-         hlp1,plant%pool%leaf%carbon/plant%pool%fine_root%carbon,& 
-         plant%pool%coarse_root%carbon/plant%pool%sap_wood%carbon, & 
-         (plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)/ & 
+       IF (plant%pool%fine_root%carbon > eps8) THEN
+          l2r = plant%pool%leaf%carbon/plant%pool%fine_root%carbon
+       ELSE
+          l2r = 0._wp
+       ENDIF
+       IF (plant%pool%sap_wood%carbon>eps8) THEN
+          s2c =  plant%pool%coarse_root%carbon/plant%pool%sap_wood%carbon
+       ELSE
+          s2c = 0._wp
+       ENDIF
+       IF ((plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon+&
+            plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)>eps8) THEN
+          bcf =  (plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)/ & 
          (plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon+&
-            plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon), &
-                             plant%target_cn_leaf, plant%moving_average%unit_npp, plant%moving_average%unit_uptake_n,&
-                             plant%moving_average%growth_cn_plant, plant%moving_average%allometry_npp, &
-                             plant%growing_season
+            plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)
+       ELSE
+          bcf = 0._wp
+       ENDIF
+       ! transition from bool to 0/1 for growing season
+       IF (plant%growing_season) THEN
+         growing_season_float = 1.0_wp
+         ELSE
+         growing_season_float = 0.0_wp
+       END IF 
+       lun=lun+1
+       write(lun,'(16F20.6)') time_d, plant%height, plant%diameter, plant%lai, &
+         hlp1,l2r,s2c, bcf, &
+         plant%target_cn_leaf, plant%moving_average%unit_npp, plant%moving_average%unit_uptake_n,&
+         plant%moving_average%growth_cn_plant, plant%moving_average%allometry_npp, &
+         growing_season_float
       END IF
     END IF
   END SUBROUTINE write_output_pool

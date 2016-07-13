@@ -13,12 +13,12 @@
 ########################################################################################################
 
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp'experimentalID'
-experimentalID=""         # set something useful for you (allowed only: alphanumeric '_' '-') - if empty current date is used
+experimentalID="benchmark"         # set something useful for you (allowed only: alphanumeric '_' '-') - if empty current date is used
 # select sites: FLUXNET or CRUNCEPv5
-siteCompilation="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
+siteCompilation="c"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="no"          # set either to yes or no (small caps)
-customSiteListFileName=""    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
+customSiteList="yes"          # set either to yes or no (small caps)
+customSiteListFileName="benchmark_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model
 slmModel="plant"             # plant and canopy are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
