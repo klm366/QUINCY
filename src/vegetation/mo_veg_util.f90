@@ -14,70 +14,10 @@ MODULE mo_veg_util
 
   IMPLICIT NONE
 
-!  PUBLIC :: 
+  PUBLIC :: set_zero_fluxes_of_plant_pools
 
 CONTAINS
 
-  !-----------------------------------------------------------------------------------------------------
-  !> initialize all plant variables for pools and so, not fluxes
-  !! 
-  !! called in the driver; for fluxes see mo_veg_memory:set_zero_fluxes_of_plant_pools
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_plant(tile)
-
-    USE mo_base_memory,       ONLY: t_slm_tile
-    USE mo_veg_memory,        ONLY: t_slm_plant
-    USE mo_shared_memory,       ONLY: element_zero
-
-    IMPLICIT NONE
-    ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(inout), TARGET :: tile    !< one tile
-    ! 0.2 Local
-    TYPE(t_slm_plant),POINTER              :: plant   ! plant of one tile
-
-    !  bi-directional pointer
-    plant => tile%plant
-
-    ! pools
-    plant%pool%leaf         = element_zero   ! TYPE(t_element) :: element_zero
-    plant%pool%fine_root    = element_zero
-    plant%pool%coarse_root  = element_zero
-    plant%pool%sap_wood     = element_zero
-    plant%pool%heart_wood   = element_zero
-    plant%pool%labile       = element_zero
-    plant%pool%reserve      = element_zero
-    plant%pool%fruit        = element_zero
-    plant%pool%seed_bed     = element_zero
-    ! canopy layers
-    plant%canopy_layer(:)%nl_tot       = 0.0_wp
-    plant%canopy_layer(:)%fnl_chl      = 0.0_wp
-    plant%canopy_layer(:)%fnl_et       = 0.0_wp
-    plant%canopy_layer(:)%fnl_rub      = 0.0_wp
-    plant%canopy_layer(:)%par_sunlit   = 0.0_wp
-    plant%canopy_layer(:)%par_shaded   = 0.0_wp
-    plant%canopy_layer(:)%fleaf_sunlit = 0.0_wp
-    ! plant variables
-    plant%pftid            = 1          ! INTEGER
-    plant%growing_season   = .TRUE.     ! LOGICAL
-    plant%height           = 0.0_wp
-    plant%diameter         = 0.0_wp
-    plant%lai              = 0.0_wp
-    plant%target_cn_leaf   = 0.0_wp
-    plant%target_np_leaf   = 0.0_wp
-    plant%mean_leaf_age    = 0.0_wp
-    plant%gc               = 0.0_wp
-    plant%f_n_demand       = 0.0_wp
-    plant%f_p_demand       = 0.0_wp
-    plant%beta_air         = 0.0_wp
-    plant%beta_soil_ps     = 0.0_wp
-    plant%beta_soil_gs     = 0.0_wp
-    plant%growth_req_n     = 0.0_wp
-    plant%growth_req_p     = 0.0_wp
-    plant%gdd              = 1.0_wp
-    plant%nd_dormance      = 1.0_wp
-    plant%boc_an           = 1.0_wp
-    plant%leaf_cn_direction = 1.0_wp
-  END SUBROUTINE init_plant
 
   !-----------------------------------------------------------------------------------------------------
   !> initalize and set zero elements of all tissues 

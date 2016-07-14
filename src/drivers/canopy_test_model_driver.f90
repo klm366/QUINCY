@@ -61,7 +61,7 @@ PROGRAM canopy_test_model_driver
   CALL init_atmland_constants
   CALL init_element_zero                               ! mo_shared_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
   ! vegetation
-  CALL init_plant(tile(1))                             ! mo_veg_util 
+  CALL tile(1)%plant%init                              ! mo_veg_memory  ==> may move to veg init (or model init ?)
   CALL set_zero_fluxes_of_plant_pools(tile(1))         ! mo_veg_util; called each timestep in update_vegetation()
   CALL init_veg_parameters(veg_param)                  ! mo_veg_parameters
   ! no forcing
@@ -125,7 +125,7 @@ PROGRAM canopy_test_model_driver
      !! canopy calculation fluxes
      CALL set_zero_fluxes_of_plant_pools(tile(1))
      CALL update_radiation(tile(1))                       !< mo_veg_radiation
-     CALL update_canopy_fluxes(tile(1), veg_param, direction)        !< mo_veg_photosynthesis
+     CALL update_canopy_fluxes(tile(1), veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') atm2land%swpar_srf_down * sw2par, & 
            tile(1)%plant%flux%an,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci !,&
@@ -154,7 +154,7 @@ PROGRAM canopy_test_model_driver
      !! canopy calculation fluxes
      CALL set_zero_fluxes_of_plant_pools(tile(1))
      CALL update_radiation(tile(1))                       !< mo_veg_radiation
-     CALL update_canopy_fluxes(tile(1), veg_param, direction)        !< mo_veg_photosynthesis
+     CALL update_canopy_fluxes(tile(1), veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') atm2land%t_air, &  
            tile(1)%plant%flux%an,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
@@ -177,7 +177,7 @@ PROGRAM canopy_test_model_driver
      !! canopy calculation fluxes
      CALL set_zero_fluxes_of_plant_pools(tile(1))
      CALL update_radiation(tile(1))                       !< mo_veg_radiation
-     CALL update_canopy_fluxes(tile(1), veg_param, direction)        !< mo_veg_photosynthesis
+     CALL update_canopy_fluxes(tile(1), veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') atm2land%co2_mixing_ratio, &
            tile(1)%plant%flux%an,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
@@ -196,7 +196,7 @@ PROGRAM canopy_test_model_driver
      !! canopy calculation fluxes
      CALL set_zero_fluxes_of_plant_pools(tile(1))
      CALL update_radiation(tile(1))                       !< mo_veg_radiation
-     CALL update_canopy_fluxes(tile(1), veg_param, direction)        !< mo_veg_photosynthesis
+     CALL update_canopy_fluxes(tile(1), veg_param)        !< mo_veg_photosynthesis
 
      vpd = ( calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - atm2land%q_air ) / eps_vpd * atm2land%press_srf / 1000.0_wp
 
@@ -220,7 +220,7 @@ PROGRAM canopy_test_model_driver
      !! canopy calculation fluxes
      CALL set_zero_fluxes_of_plant_pools(tile(1))
      CALL update_radiation(tile(1))                       !< mo_veg_radiation
-     CALL update_canopy_fluxes(tile(1), veg_param, direction)        !< mo_veg_photosynthesis
+     CALL update_canopy_fluxes(tile(1), veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') tile(1)%soil%theta, &
            tile(1)%plant%flux%an,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
@@ -242,7 +242,7 @@ PROGRAM canopy_test_model_driver
      !! canopy calculation fluxes
      CALL set_zero_fluxes_of_plant_pools(tile(1))
      CALL update_radiation(tile(1))                       !< mo_veg_radiation
-     CALL update_canopy_fluxes(tile(1), veg_param, direction)        !< mo_veg_photosynthesis
+     CALL update_canopy_fluxes(tile(1), veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') tile(1)%plant%lai, &
            tile(1)%plant%flux%an,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
@@ -262,7 +262,7 @@ PROGRAM canopy_test_model_driver
      !! canopy calculation fluxes
      CALL set_zero_fluxes_of_plant_pools(tile(1))
      CALL update_radiation(tile(1))                       !< mo_veg_radiation
-     CALL update_canopy_fluxes(tile(1), veg_param, direction)        !< mo_veg_photosynthesis
+     CALL update_canopy_fluxes(tile(1), veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(4F16.7)') tile(1)%plant%pool%leaf%nitrogen/tile(1)%plant%lai*molar_mass_N, & 
            tile(1)%plant%flux%an,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci
@@ -283,7 +283,7 @@ PROGRAM canopy_test_model_driver
      !! canopy calculation fluxes
      CALL set_zero_fluxes_of_plant_pools(tile(1))
      CALL update_radiation(tile(1))                       !< mo_veg_radiation
-     CALL update_canopy_fluxes(tile(1), veg_param, direction)        !< mo_veg_photosynthesis
+     CALL update_canopy_fluxes(tile(1), veg_param)        !< mo_veg_photosynthesis
 
      WRITE(lun,'(I1,3F16.7)') tile(1)%plant%pftid, &
            tile(1)%plant%flux%an,tile(1)%plant%gc*1000._wp,tile(1)%plant%flux%ci

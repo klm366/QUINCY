@@ -163,7 +163,7 @@ MODULE mo_veg_memory
     PROCEDURE :: divide_veg_pools_type_scalar
     PROCEDURE, PASS(this2) :: divide_veg_pools_scalar_type
     GENERIC, PUBLIC :: OPERATOR(/) => divide_veg_pools_type_type, divide_veg_pools_type_scalar, divide_veg_pools_scalar_type
-    PROCEDURE, PUBLIC, PASS(this2) :: init => init_veg_pool
+    PROCEDURE, PUBLIC :: init => init_veg_pool
   END TYPE t_slm_veg_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -262,6 +262,9 @@ MODULE mo_veg_memory
     REAL(wp) :: nd_dormance                       !< number of days since last growing season 
     REAL(wp) :: boc_an                            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     REAL(wp) :: leaf_cn_direction                 !< indicates direction of change in leaf CN ratio to maximise NPP
+  CONTAINS
+    PRIVATE
+    PROCEDURE, PUBLIC :: init => init_plant
    END TYPE t_slm_plant
 
 
@@ -543,22 +546,22 @@ CONTAINS
   !> 5.0 initialise veg pool with scalar 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE init_veg_pool(this2,s1)
+  PURE ELEMENTAL SUBROUTINE init_veg_pool(this,s)
 
     USE mo_shared_memory,   ONLY: t_element
 
     IMPLICIT NONE
-    REAL(wp), INTENT(in)         :: s1
-    CLASS(t_slm_veg_pool), INTENT(inout) :: this2 
-     CALL this2%leaf%init(s1)
-     CALL this2%fine_root%init(s1)
-     CALL this2%coarse_root%init(s1)
-     CALL this2%sap_wood%init(s1)
-     CALL this2%heart_wood%init(s1)
-     CALL this2%labile%init(s1)
-     CALL this2%reserve%init(s1)
-     CALL this2%fruit%init(s1)
-     CALL this2%seed_bed%init(s1)
+    REAL(wp), INTENT(in)         :: s
+    CLASS(t_slm_veg_pool), INTENT(inout) :: this
+     CALL this%leaf%init(s)
+     CALL this%fine_root%init(s)
+     CALL this%coarse_root%init(s)
+     CALL this%sap_wood%init(s)
+     CALL this%heart_wood%init(s)
+     CALL this%labile%init(s)
+     CALL this%reserve%init(s)
+     CALL this%fruit%init(s)
+     CALL this%seed_bed%init(s)
   END SUBROUTINE init_veg_pool 
 
   !-----------------------------------------------------------------------------------------------------
@@ -964,6 +967,72 @@ CONTAINS
                                                   1.0_wp / (this%p_longterm * one_day/ dt))
 
   END SUBROUTINE update_tile_moving_avrg_variables
+
+  !-----------------------------------------------------------------------------------------------------
+  !> 5.0 Initialisation all plant variables including pools and canopy layer attributes
+  !! 
+  !! currently called in the driver \n
+  !! for fluxes see mo_veg_memory:set_zero_fluxes_of_plant_pools
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL SUBROUTINE init_plant(this)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_plant), INTENT(inout) :: this 
+    ! 0.2 Local
+     REAL(wp) :: pool_init, &                ! pools
+                 canopy_layer_init, &        ! canopy layers
+                 plant_var_init_zero, &      ! plant variables -> pftid & growing_season are extra
+                 plant_var_init_one          ! plant variables
+
+     pool_init           = 0.0_wp
+     canopy_layer_init   = 0.0_wp
+     plant_var_init_zero = 0.0_wp
+     plant_var_init_one  = 1.0_wp
+
+    ! pools
+    CALL this%pool%leaf%init(pool_init)
+    CALL this%pool%fine_root%init(pool_init)
+    CALL this%pool%coarse_root%init(pool_init)
+    CALL this%pool%sap_wood%init(pool_init)
+    CALL this%pool%heart_wood%init(pool_init)
+    CALL this%pool%labile%init(pool_init)
+    CALL this%pool%reserve%init(pool_init)
+    CALL this%pool%fruit%init(pool_init)
+    CALL this%pool%seed_bed%init(pool_init)
+    ! canopy layers
+    this%canopy_layer(:)%nl_tot       = canopy_layer_init
+    this%canopy_layer(:)%fnl_chl      = canopy_layer_init
+    this%canopy_layer(:)%fnl_et       = canopy_layer_init
+    this%canopy_layer(:)%fnl_rub      = canopy_layer_init
+    this%canopy_layer(:)%par_sunlit   = canopy_layer_init
+    this%canopy_layer(:)%par_shaded   = canopy_layer_init
+    this%canopy_layer(:)%fleaf_sunlit = canopy_layer_init
+    ! plant variables
+    this%pftid            = 1          ! INTEGER
+    this%growing_season   = .TRUE.     ! LOGICAL
+    this%height           = plant_var_init_zero
+    this%diameter         = plant_var_init_zero
+    this%lai              = plant_var_init_zero
+    this%target_cn_leaf   = plant_var_init_zero
+    this%target_np_leaf   = plant_var_init_zero
+    this%mean_leaf_age    = plant_var_init_zero
+    this%gc               = plant_var_init_zero
+    this%f_n_demand       = plant_var_init_zero
+    this%f_p_demand       = plant_var_init_zero
+    this%beta_air         = plant_var_init_zero
+    this%beta_soil_ps     = plant_var_init_zero
+    this%beta_soil_gs     = plant_var_init_zero
+    this%growth_req_n     = plant_var_init_zero
+    this%growth_req_p     = plant_var_init_zero
+    this%gdd                = plant_var_init_one
+    this%nd_dormance        = plant_var_init_one
+    this%boc_an             = plant_var_init_one
+    this%leaf_cn_direction  = plant_var_init_one
+  END SUBROUTINE init_plant 
+
+
+
+
 
 
 END MODULE mo_veg_memory

@@ -108,7 +108,7 @@ PROGRAM plant_model_driver
   CALL init_element_zero                               ! mo_shared_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
   ! vegetation
   DO itile = 1,ntile
-    CALL init_plant(tile(itile))                       ! mo_veg_util 
+    CALL tile(itile)%plant%init                       ! mo_veg_memory  ==> may move to veg init (or model init ?)
     CALL set_zero_fluxes_of_plant_pools(tile(itile))   ! mo_veg_util; called each timestep (see Tile loop below)
   END DO
   CALL init_veg_parameters(veg_param)                  ! mo_veg_parameters

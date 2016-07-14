@@ -34,7 +34,7 @@ PROGRAM land_model_driver
                                         fresp_growth, ic3phot, CiCa_default_C3, CiCa_default_C4
   USE mo_veg_config_class,        ONLY: veg_config
   USE mo_veg_photosynthesis,      ONLY: discrimination_ps 
-  USE mo_veg_util,                ONLY: init_plant, set_zero_fluxes_of_plant_pools 
+  USE mo_veg_util,                ONLY: set_zero_fluxes_of_plant_pools
   USE mo_veg_output,              ONLY: init_veg_output_variables, open_pool_output_files, open_flux_output_files, &
                                         close_output_files
 
@@ -70,7 +70,7 @@ PROGRAM land_model_driver
   CALL veg_config%Init
   CALL atmland_config%Init
 
-  !! 1.1 Model init
+  !! 1.1 Model init   ===> move to extra file
   !!
   !!  
   !! see email of Reiner from 20.6.16 \n
@@ -103,7 +103,7 @@ PROGRAM land_model_driver
 
   ! vegetation
   DO itile = 1,ntile
-    CALL init_plant(tile(itile))                       ! mo_veg_util 
+    CALL tile(itile)%plant%init                       ! mo_veg_memory  ==> may move to veg init (or model init ?)
     CALL set_zero_fluxes_of_plant_pools(tile(itile))   ! mo_veg_util; called each timestep (see Tile loop below)
   END DO
   CALL init_veg_parameters(veg_param)                  ! mo_veg_parameters
@@ -187,6 +187,9 @@ PROGRAM land_model_driver
     !! 2.3 land model interface
     !! 
     !! 
+    !! ==> implement later: diff between models by: land_model_interface(tile, model, ....)
+    !! model would be one of the strings land plant canopy soil canopy_test -> use enum to attach numbers to strings !!
+    !! ==> 
     CALL land_model_interface(tile(1), veg_param, &
                               atm2land%t_air, atm2land%press_srf, atm2land%q_air, &
                               time_day, time_year, timestep_prop_day &

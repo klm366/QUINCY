@@ -71,7 +71,7 @@ PROGRAM canopy_model_driver
   CALL init_atmland_constants
   CALL init_element_zero                               ! mo_shared_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
   ! vegetation
-  CALL init_plant(tile(itile))                         ! mo_veg_util 
+  CALL tile(itile)%plant%init                       ! mo_veg_memory  ==> may move to veg init (or model init ?)
   CALL set_zero_fluxes_of_plant_pools(tile(itile))     ! mo_veg_util; called each timestep in update_vegetation()
   CALL init_veg_parameters(veg_param)                  ! mo_veg_parameters
   ! forcing
@@ -137,7 +137,7 @@ PROGRAM canopy_model_driver
       CALL update_radiation(tile(itile))                                 !< mo_veg_radiation
     !> update_canopy_fluxes needs the direction variable to work
     !! @todo: ticket #52 , proper implementation of "direction" consistent with plant model
-      CALL update_canopy_fluxes(tile(itile), veg_param, direction)       !< mo_veg_photosynthesis
+      CALL update_canopy_fluxes(tile(itile), veg_param)       !< mo_veg_photosynthesis
 
       !! 3.5 update soil water bucket 
       !! 
