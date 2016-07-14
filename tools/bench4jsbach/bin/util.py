@@ -150,7 +150,7 @@ def gethostname ():
 
 
 # returns string containing tree in listform
-def get_filesystem_tree ( rootDir, onlydirs = True ):
+def get_filesystem_tree_tikz ( rootDir, onlydirs = True ):
     def get_tree_nodes ( rootDir ):
         accum_str = ""
         for item in os.listdir ( rootDir ):
@@ -163,10 +163,47 @@ def get_filesystem_tree ( rootDir, onlydirs = True ):
         return accum_str
     
     assert rootDir and os.path.isdir ( rootDir )
+    ret = """
+\\begin{figure}[h!]
+  \\begin{center}
+      \\begin{forest}
+       dir tree
+       [ %s
+       %s
+       ]
+       \end{forest}
+    \caption{Filesystem tree \texttt{%s}.}
+  \end{center}
+\end{figure}
+""" % ( rootDir, get_tree_nodes ( rootDir ), rootDir )
+    
+    return ret
 
-    ret = "[" + rootDir
-    ret += get_tree_nodes ( rootDir )
-    ret += "\n]"
+
+# returns string containing tree in listform
+def get_filesystem_tree_dirtree ( rootDir, onlydirs = True ):
+    def get_tree_nodes ( rootDir, layer ):
+        accum_str = ""
+        layer += 1
+        dirlist =  sorted ( os.listdir ( rootDir ), key=str.lower ) if os.listdir ( rootDir )  else []
+        for item in dirlist:
+            path = os.path.join ( rootDir, item )
+            pickit = not onlydirs or os.path.isdir ( path )
+            accum_str += "\n.%d %s." % (layer, item ) if pickit else ""
+            if os.path.isdir ( path ):
+                accum_str += get_tree_nodes ( path, layer )
+        return accum_str
+    
+    assert rootDir and os.path.isdir ( rootDir )
+
+    ret = """
+\\begin{figure}[h!]
+\\dirtree{%%
+.1 %s.""" % rootDir
+    ret += get_tree_nodes ( rootDir, 1 )
+    ret += """\n}
+\\caption{Filesystem tree \\texttt{%s}.}
+\\end{figure}""" % rootDir
     
     return ret
 
