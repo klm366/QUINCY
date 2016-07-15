@@ -22,7 +22,6 @@ PROGRAM land_model_driver
   USE mo_base_memory,             ONLY: t_slm_tile, t_model
   USE mo_base_config_class,       ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
   ! shared
-  USE mo_shared_util,             ONLY: init_element_zero
   USE mo_shared_isotope,          ONLY: calc_fractionation 
   ! atmland
   USE mo_atmland_constants
@@ -34,7 +33,6 @@ PROGRAM land_model_driver
                                         fresp_growth, ic3phot, CiCa_default_C3, CiCa_default_C4
   USE mo_veg_config_class,        ONLY: veg_config
   USE mo_veg_photosynthesis,      ONLY: discrimination_ps 
-  USE mo_veg_util,                ONLY: set_zero_fluxes_of_plant_pools
   USE mo_veg_output,              ONLY: init_veg_output_variables, open_pool_output_files, open_flux_output_files, &
                                         close_output_files
 
@@ -92,7 +90,6 @@ PROGRAM land_model_driver
   ! vegetation parameters, constants and forcing section
   CALL init_base_constants
   CALL init_atmland_constants
-  CALL init_element_zero                               ! mo_shared_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
 
   ! init time
   time_day          = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
@@ -104,7 +101,7 @@ PROGRAM land_model_driver
   ! vegetation
   DO itile = 1,ntile
     CALL tile(itile)%plant%init                       ! mo_veg_memory  ==> may move to veg init (or model init ?)
-    CALL set_zero_fluxes_of_plant_pools(tile(itile))   ! mo_veg_util; called each timestep (see Tile loop below)
+    CALL tile(itile)%plant%flux%set_zero              ! mo_veg_memory  ==> may move to veg init (or model init ?)
   END DO
   CALL init_veg_parameters(veg_param)                  ! mo_veg_parameters
   ! forcing

@@ -25,7 +25,7 @@ shared text
 echam text
 
 
-
+\newpage
 \section{Land Model Driver}
 
 
@@ -36,34 +36,34 @@ land model driver text
 \section{Land Model Interface}
 
 
-The interface (drivers/mo{\_}land{\_}model{\_}interface.f90) runs SLM for one time step.
+The interface (interfaces/mo{\_}slm{\_}interface.f90) runs SLM (land, plant, canopy, soil, test_canopy) for one time step.
 \\
 
 \textbf{Processes are:}
-\begin{easylist}[itemize]
-& radiation (1 RAD)
-& photosynthesis (named assimilation in JSBACH4) (2 PHOT)
-& vegetation (3 VEG)
-& soil (4 SOIL)
-\end{easylist}
+\begin{itemize}
+\item radiation (1 RAD)
+\item assimilation (2 ASSIMI) (prev. named photosynthesis)
+\item vegetation (3 VEG)
+\item soil (4 SOIL)
+\end{itemize}
 ~\\
 Note, the names (short and long) and process numbers (currently 1-4) may be changed in the future to be consistent with jsbach4.
 ~\\
 
 \textbf{Call-Tree a.k.a. Queue:}
 \\
-\begin{easylist}[enumerate]
-& update{\_}radiation() RAD
-& update{\_}vegsoil{\_}bgc SOIL
-& update{\_}phenology VEG
-& update{\_}canopy{\_}fluxes PHOT
-& calc{\_}growth VEG
-& calc{\_}turnover VEG
-& update{\_}veg{\_}dynamics VEG
-& update{\_}soil{\_}pool SOIL
-& update{\_}vegsoil{\_}physics SOIL
-& update{\_}veg{\_}pools VEG
-\end{easylist}
+\begin{enumerate}
+\item update{\_}radiation() RAD
+\item update{\_}vegsoil{\_}bgc SOIL
+\item update{\_}phenology VEG
+\item update{\_}canopy{\_}fluxes ASSIMI
+\item calc{\_}growth VEG
+\item calc{\_}turnover VEG
+\item update{\_}veg{\_}dynamics VEG
+\item update{\_}soil{\_}pool SOIL
+\item update{\_}vegsoil{\_}physics SOIL
+\item update{\_}veg{\_}pools VEG
+\end{enumerate}
 
 
 

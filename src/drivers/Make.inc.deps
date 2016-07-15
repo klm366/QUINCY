@@ -1,7 +1,6 @@
 mo_land_model_interface.o: \
   mo_kind.o \
   mo_base_memory.o \
-  mo_veg_util.o \
   mo_veg_parameters.o \
   mo_veg_interface.o \
   mo_veg_radiation.o \
@@ -15,7 +14,6 @@ land_model_driver.o: \
   mo_base_memory.o \
   mo_base_constants.o \
   mo_base_config_class.o \
-  mo_shared_util.o \
   mo_shared_isotope.o \
   mo_atmland_constants.o \
   mo_atmland_memory.o \
@@ -24,7 +22,6 @@ land_model_driver.o: \
   mo_veg_parameters.o \
   mo_veg_config_class.o \
   mo_veg_photosynthesis.o \
-  mo_veg_util.o \
   mo_veg_output.o
 
 plant_model_driver.o: \
@@ -35,7 +32,6 @@ plant_model_driver.o: \
   mo_base_util.o \
   mo_base_config_class.o \
   mo_base_slm_parameter_class.o \
-  mo_shared_util.o \
   mo_shared_isotope.o \
   mo_atmland_constants.o \
   mo_atmland_memory.o \
@@ -49,8 +45,7 @@ plant_model_driver.o: \
   mo_veg_output.o \
   mo_veg_memory.o \
   mo_veg_config_class.o \
-  mo_veg_soil.o \
-  mo_veg_util.o
+  mo_veg_soil.o
 
 canopy_model_driver.o: \
   mo_kind.o \
@@ -58,7 +53,6 @@ canopy_model_driver.o: \
   mo_base_memory.o \
   mo_base_constants.o \
   mo_base_config_class.o \
-  mo_shared_util.o \
   mo_atmland_constants.o \
   mo_atmland_config_class.o \
   mo_atmland_forcing.o \
@@ -77,7 +71,6 @@ canopy_test_model_driver.o: \
   mo_exception.o \
   mo_base_memory.o \
   mo_base_constants.o \
-  mo_shared_util.o \
   mo_atmland_constants.o \
   mo_atmland_config_class.o \
   mo_atmland_forcing.o \

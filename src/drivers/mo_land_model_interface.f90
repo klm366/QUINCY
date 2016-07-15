@@ -37,7 +37,6 @@ CONTAINS
 
     USE mo_kind
     USE mo_base_memory,             ONLY: t_slm_tile
-    USE mo_veg_util,                ONLY: set_zero_fluxes_of_plant_pools
     USE mo_veg_parameters,          ONLY: t_slm_veg_param
     USE mo_veg_interface,           ONLY: update_vegetation
     USE mo_veg_radiation,           ONLY: update_radiation
@@ -63,7 +62,7 @@ CONTAINS
       !! 1 set vegetation fluxes to zero
       !! 
       !! ==> integrate into vegetation process
-      CALL set_zero_fluxes_of_plant_pools(tile)  !< set to zero all fluxes of the plant pools; mo_veg_util
+      CALL tile%plant%flux%set_zero              ! mo_veg_memory
 
       !! 2 canopy calculation fluxes
       !! 

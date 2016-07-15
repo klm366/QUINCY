@@ -212,6 +212,9 @@ MODULE mo_veg_memory
      REAL(wp) :: unit_npp                 !< incremental change in NPP. Needed for optimal allocation
      REAL(wp) :: unit_uptake_n            !< incremental change in N-based growth, needed for optimal allocation
      REAL(wp) :: unit_uptake_p            !< incremental change in P-based growth, needed for optimal allocation
+  CONTAINS
+    PRIVATE
+    PROCEDURE, PUBLIC :: set_zero => set_zero_veg_flux
   END TYPE t_slm_veg_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -1030,9 +1033,56 @@ CONTAINS
     this%leaf_cn_direction  = plant_var_init_one
   END SUBROUTINE init_plant 
 
+  !-----------------------------------------------------------------------------------------------------
+  !> initalize or just set zero all vegetation memory (plant\%flux)
+  !!
+  !! is initially called in the driver, 
+  !! and then called every timestep in beginning of mo_veg_interface --> move to 1st Task of veg called
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE set_zero_veg_flux(this)
 
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_veg_flux),INTENT(inout)  :: this    !< fluxes of plant
+    ! 0.2 Local
+    REAL(wp) :: flux_zero
 
+    flux_zero = 0.0_wp
 
+    CALL this%reserve_use%init(0.0_wp)   ! t_element init
+    CALL this%growth%init(0.0_wp)        ! t_slm_veg_pool init
+    CALL this%litterfall%init(0.0_wp)    ! t_slm_veg_pool init
+
+    this%gpp                     = flux_zero  !< gross photosynthesis (µmol CO2 m-2 s-1)
+    this%an                      = flux_zero  !< net photosynthesis (µmol CO2 m-2 s-1)
+    this%gpp_c13                 = flux_zero  !< gross photosynthesis (µmol 13CO2 m-2 s-1)
+    this%gpp_c14                 = flux_zero  !< gross photosynthesis (µmol 14CO2 m-2 s-1)
+    this%maint_respiration_leaf  = flux_zero  !< foliar maintenance respiration (µmol CO2 m-2 s-1)
+    this%maint_respiration_pot   = flux_zero  !< maintenance respiration (µmol CO2 m-2 s-1)
+    this%maint_respiration       = flux_zero  !< maintenance respiration (µmol CO2 m-2 s-1)
+    this%maint_respiration_c13   = flux_zero  !< maintenance respiration (µmol 13CO2 m-2 s-1)
+    this%maint_respiration_c14   = flux_zero  !< maintenance respiration (µmol 14CO2 m-2 s-1)
+    this%growth_respiration      = flux_zero  !< growth respiration (µmol CO2 m-2 s-1)
+    this%growth_respiration_c13  = flux_zero  !< growth respiration (µmol 13CO2 m-2 s-1)
+    this%growth_respiration_c14  = flux_zero  !< growth respiration (µmol 14CO2 m-2 s-1)
+    this%npp                     = flux_zero  !< net primary production (µmol CO2 m-2 s-1)
+    this%npp_c13                 = flux_zero  !< net primary production (µmol 13CO2 m-2 s-1)
+    this%npp_c14                 = flux_zero  !< net primary production (µmol 14CO2 m-2 s-1)
+    this%uptake_n                = flux_zero  !< ??
+    this%uptake_n15              = flux_zero  !< ??
+    this%uptake_p                = flux_zero  !< ??
+    this%recycling_leaf_n        = flux_zero  !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
+    this%recycling_leaf_n15      = flux_zero  !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    this%recycling_leaf_p        = flux_zero  !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
+    this%recycling_fine_root_n   = flux_zero  !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
+    this%recycling_fine_root_n15 = flux_zero  !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    this%recycling_fine_root_p   = flux_zero  !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
+    this%recycling_sap_wood_n    = flux_zero  !< net flux of N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
+    this%recycling_sap_wood_n15  = flux_zero  !< net flux of 15N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    this%recycling_sap_wood_p    = flux_zero  !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
+    this%transpiration           = flux_zero  !< transpiration in kg m-2 s-1
+    this%ci                      = flux_zero  !< ??
+  END SUBROUTINE set_zero_veg_flux
 
 
 END MODULE mo_veg_memory

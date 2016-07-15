@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Jan Engel (2016-03-23)
+!! 2nd version by Jan Engel (2016-07-15); all content removed, see SVN r198 & trac ticket #63
 !!
 MODULE mo_shared_util
 
@@ -16,25 +17,7 @@ MODULE mo_shared_util
 
 
 
-CONTAINS
-
-  !-----------------------------------------------------------------------------------------------------
-  !> initialize the derived TYPE t_element element_zero with zero
-  !! 
-  !! this is done only one time, this element_zero is used to set other derived TYPE's of t_element to zero
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_element_zero
-
-    USE mo_shared_memory,  ONLY: element_zero   ! TYPE(t_element) :: element_zero | defined & declared in mo_shared_memory
-
-    element_zero%carbon     = 0.0_wp
-    element_zero%nitrogen   = 0.0_wp
-    element_zero%phosphorus = 0.0_wp
-    element_zero%carbon13   = 0.0_wp
-    element_zero%carbon14   = 0.0_wp
-    element_zero%nitrogen15 = 0.0_wp
-  END SUBROUTINE init_element_zero
-
+!CONTAINS
 
 
 

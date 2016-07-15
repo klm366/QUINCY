@@ -49,7 +49,6 @@ PROGRAM plant_model_driver
   ! shared 
 !  USE mo_shared_constants  
 !  USE mo_shared_memory   
-  USE mo_shared_util,           ONLY: init_element_zero
   USE mo_shared_isotope,        ONLY: calc_fractionation 
   ! vegetation
   USE mo_veg_parameters
@@ -60,7 +59,6 @@ PROGRAM plant_model_driver
   USE mo_veg_memory
   USE mo_veg_config_class,      ONLY: veg_config
   USE mo_veg_soil
-  USE mo_veg_util
 
   IMPLICIT NONE
 
@@ -105,11 +103,10 @@ PROGRAM plant_model_driver
   !! 
   CALL init_base_constants
   CALL init_atmland_constants
-  CALL init_element_zero                               ! mo_shared_util; run before init_plant() & set_zero_fluxes_of_plant_pools()
   ! vegetation
   DO itile = 1,ntile
     CALL tile(itile)%plant%init                       ! mo_veg_memory  ==> may move to veg init (or model init ?)
-    CALL set_zero_fluxes_of_plant_pools(tile(itile))   ! mo_veg_util; called each timestep (see Tile loop below)
+    CALL tile(itile)%plant%flux%set_zero              ! mo_veg_memory  ==> may move to veg init (or model init ?)
   END DO
   CALL init_veg_parameters(veg_param)                  ! mo_veg_parameters
   ! forcing
@@ -219,7 +216,7 @@ PROGRAM plant_model_driver
       !! 3.1 set vegetation fluxes to zero
       !! 
       !! 
-      CALL set_zero_fluxes_of_plant_pools(tile(itile))  !< set to zero all fluxes of the plant pools; mo_veg_util
+      CALL tile(itile)%plant%flux%set_zero
 
       !! 3.2 canopy calculation fluxes
       !! 

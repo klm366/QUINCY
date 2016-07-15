@@ -47,8 +47,6 @@ MODULE mo_shared_memory
     PROCEDURE, PUBLIC :: init => init_element
   END TYPE t_element
 
-  TYPE(t_element) :: element_zero   !< all variables are zero, is used for setting other elements zero frequently
-
 
 CONTAINS
 

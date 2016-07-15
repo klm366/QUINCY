@@ -110,12 +110,9 @@ mo_veg_dynamics.o: \
   mo_exception.o \
   mo_base_memory.o \
   mo_base_constants.o \
-  mo_shared_memory.o \
   mo_veg_memory.o \
   mo_veg_parameters.o
 
 mo_veg_util.o: \
-  mo_kind.o \
-  mo_base_memory.o \
-  mo_shared_memory.o \
-  mo_veg_memory.o
+  mo_kind.o
+
