@@ -147,6 +147,7 @@ PROGRAM plant_model_driver
     tile(itile)%soil%phosphate                = 0.01_wp
     tile(itile)%soil%pool%litter%nitrogen     = 5.0_wp
     tile(itile)%plant%pftid                   = veg_config%pft_id
+    tile(itile)%plant%dens_ind                = 1.0_wp 
     tile(itile)%plant%target_cn_leaf          = veg_param%cn_leaf(tile(itile)%plant%pftid)
     tile(itile)%plant%target_np_leaf          = veg_param%np_leaf(tile(itile)%plant%pftid)
     tile(itile)%plant%pool%reserve%carbon     = 50.0_wp

@@ -33,7 +33,7 @@ CONTAINS
     USE mo_base_memory, ONLY: t_slm_tile
     USE mo_base_constants
     USE mo_atmland_constants, ONLY: Tzero
-    USE mo_shared_memory,    ONLY: t_element, element_zero, init_element
+    USE mo_shared_memory,    ONLY: init_element
     USE mo_veg_memory
     USE mo_veg_parameters
 
