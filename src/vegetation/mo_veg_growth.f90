@@ -67,7 +67,7 @@ CONTAINS
     !> 3.0 calculate current allometry 
     !! 
     !! 
-    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%moving_average%allometry_labile%carbon,&
+    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind,plant%moving_average%allometry_labile%carbon,&
          plant%moving_average%allometry_labile%nitrogen, plant%moving_average%allometry_labile%phosphorus,&
          veg_param%wood_density(plant%pftid), veg_param%sla(plant%pftid),veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
          veg_param%k_latosa(plant%pftid),veg_param%k_rtos(plant%pftid),veg_param%growthform(plant%pftid), & 
@@ -90,7 +90,7 @@ CONTAINS
                               plant%target_np_leaf, target_np_fine_root, plant%moving_average%leaf2root_mass_ratio, &
                               plant%lai,target_lai, &
                               plant%pool%labile,plant%pool%reserve)
-    CALL calc_nutrient_recycling(plant, target_cn_fine_root, target_np_fine_root)
+    !CALL calc_nutrient_recycling(plant, target_cn_fine_root, target_np_fine_root)
 
     !> 5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)
     !! 
@@ -591,7 +591,7 @@ CONTAINS
   !!
   !! calculates maximum LAI given current root and sapwood mass
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE calc_allometry(sap_wood_carbon,heart_wood_carbon, labile_carbon, labile_nitrogen, labile_phosphorus,&
+  PURE ELEMENTAL SUBROUTINE calc_allometry(sap_wood_carbon,heart_wood_carbon,dens_ind, labile_carbon, labile_nitrogen, labile_phosphorus,&
        wood_density,sla,allom_k1, allom_k2,k_latosa,k_rtos,growthform,cn_plant, cp_plant,  dnpp, dN_up, dP_up, npp, &
        diameter,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio,target_lai, k1_opt, k2_opt)
     
@@ -601,10 +601,11 @@ CONTAINS
     ! 0.1 InOut
     REAL(wp),INTENT(in)  :: sap_wood_carbon         !< woody biomass of an individual tree (mol C)
     REAL(wp),INTENT(in)  :: heart_wood_carbon       !< woody biomass of an individual tree (mol C)
+    REAL(wp),INTENT(in)  :: dens_ind                !< density of populations (#indivuduals /m2) 
     REAL(wp),INTENT(in)  :: wood_density            !< wood density (mol C / m3)
     REAl(wp),INTENT(in)  :: labile_carbon           !< labile carbon 
     REAL(wp),INTENT(in)  :: labile_nitrogen         !< labile nitrogen
-    REAL(wp),INTENT(in)  :: labile_phosphorus         !< labile phosphorus
+    REAL(wp),INTENT(in)  :: labile_phosphorus       !< labile phosphorus
     REAL(wp),INTENT(in)  :: sla                     !< specific leaf area (mol C / m2)
     REAL(wp),INTENT(in)  :: allom_k1                !< coeffcient in H-D relationship
     REAL(wp),INTENT(in)  :: allom_k2                !< exponent in H-D relationship
@@ -637,15 +638,21 @@ CONTAINS
         ! Diameter and Height calculated assuming that 
         !   all woody biomass forms a cylinder: diameter = SQRT(4 * wood volume / height / pi)
         !   height = allom_k1 * diameter ^ allom_k2
-        diameter = ( ( sap_wood_carbon + heart_wood_carbon ) / & 
-                     (wood_density * pi/4._wp * allom_k1)) ** (1._wp/(2._wp + allom_k2))
-        height = MAX(min_height,allom_k1 * (diameter ** allom_k2))
+        IF(dens_ind > eps8) THEN
+           diameter = ( ( sap_wood_carbon + heart_wood_carbon ) / dens_ind / & 
+                        (wood_density * pi/4._wp * allom_k1)) ** (1._wp/(2._wp + allom_k2))
+           height = MAX(min_height,allom_k1 * (diameter ** allom_k2))
 
-        ! Calculate change of height given a small change in woody biomass
-        diameter2 = ( ( sap_wood_carbon + heart_wood_carbon + eps4 ) / & 
-                      (wood_density * pi/4._wp * allom_k1)) ** (1._wp/(2._wp + allom_k2))
-        dheight = MAX(min_height,allom_k1 * (diameter2 ** allom_k2)) - height
-
+           ! Calculate change of height given a small change in woody biomass
+           diameter2 = ( ( sap_wood_carbon + heart_wood_carbon + eps4 ) / dens_ind / & 
+                         (wood_density * pi/4._wp * allom_k1)) ** (1._wp/(2._wp + allom_k2))
+           dheight = MAX(min_height,allom_k1 * (diameter2 ** allom_k2)) - height
+        ELSE 
+           diameter = 0.0_wp
+           height = 0.0_wp
+           dheight = 0.0_wp
+        ENDIF
+ 
         ! scaling factor for leaf to wood mass, derived from pipe-model (Shinozaki et al. 1964, J J Ecol)
         ! leaf area = k_latosa * sap_wood area
         ! => Cl * sla = k * Cs / wood_density / height

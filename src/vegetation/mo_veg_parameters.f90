@@ -122,6 +122,15 @@ MODULE mo_veg_parameters
   ! vegetation dynamics
   REAL(wp), SAVE :: background_mort_rate_tree   !< background mortality rate of trees in static mortality case
   REAL(wp), SAVE :: background_mort_rate_grass  !< background mortality rate of grasses in static mortality case
+  REAL(wp), SAVE :: lambda_mort_light           !< parameter in the Weibull function controlling self-thinning mortality 
+  REAL(wp), SAVE :: k_mort_light                !< parameter in the Weibull function controlling self-thinning mortality 
+  REAL(wp), SAVE :: lambda_est_temp             !< parameter in the Weibull function controlling temperature-limited establishment 
+  REAL(wp), SAVE :: k_est_temp                  !< parameter in the Weibull function controlling temperature-limited establishment 
+  REAL(wp), SAVE :: lambda_est_moist            !< parameter in the Weibull function controlling moisture-limited establishment 
+  REAL(wp), SAVE :: k_est_moist                 !< parameter in the Weibull function controlling moisture-limited establishment 
+! these parameters are more canopy process related, but only useful for veg-dynamics?
+  REAL(wp), SAVE :: toc_rfr_ratio               !< top of the canopy red:farred ratio
+  REAL(wp), SAVE :: k_r2fr_chl                  !< extinction of red:farred ratio on leaf chlorophyll (1/mmol N)
 
   ! soil pools
   REAL(wp), SAVE :: tau_litter                  !< soil litter pool turnover time
@@ -170,7 +179,8 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: allom_k1
      REAL(wp),DIMENSION(npft) :: allom_k2
      REAL(wp),DIMENSION(npft) :: tau_fruit
-     REAL(wp),DIMENSION(npft) :: tau_seed
+     REAL(wp),DIMENSION(npft) :: tau_seed_litter
+     REAL(wp),DIMENSION(npft) :: tau_seed_est
      REAL(wp),DIMENSION(npft) :: vmax_uptake_n
      REAL(wp),DIMENSION(npft) :: soil_n_aff1 
      REAL(wp),DIMENSION(npft) :: soil_n_aff2 
@@ -178,6 +188,9 @@ MODULE mo_veg_parameters
      REAL(wp),DIMENSION(npft) :: soil_p_aff1 
      REAL(wp),DIMENSION(npft) :: soil_p_aff2 
      REAL(wp),DIMENSION(npft) :: bnf_base
+     REAL(wp),DIMENSION(npft) :: lambda_est_light 
+     REAL(wp),DIMENSION(npft) :: k_est_light 
+     REAL(wp),DIMENSION(npft) :: seed_size 
   END TYPE t_slm_veg_param
 
   PUBLIC :: init_veg_parameters
@@ -362,6 +375,24 @@ MODULE mo_veg_parameters
       background_mort_rate_tree = 0.01_wp
       ! background mortality rate for grass in static mortality case (1/year)
       background_mort_rate_grass = 0.01_wp
+      ! parameter in the Weibull function controlling self-thinning mortality 
+      lambda_mort_light = 0.15_wp 
+      ! parameter in the Weibull function controlling self-thinning mortality 
+      k_mort_light = 4.0_wp
+      ! parameter in the Weibull function controlling temperature-limited establishment
+      lambda_est_temp = 0.1_wp 
+      ! parameter in the Weibull function controlling temperature-limited establishment
+      k_est_temp = 4.0_wp
+      ! parameter in the Weibull function controlling moisture-limited establishment              
+      lambda_est_moist = 0.1_wp         
+      ! parameter in the Weibull function controlling moisture-limited establishment              
+      k_est_moist = 2.0_wp
+! these parameters are more canopy process related, but only useful for veg-dynamics?
+      ! top of the canopy red:farred ratio (Kull & Kruij 1998)
+      toc_rfr_ratio = 1.2_wp    
+      ! difference between far red and red extinction on chlorophyll (Kull & Krujit 1998 for the 
+      ! far red value, tuned to get a R:FR ratio of 0.15 at full canopy closure (a common value)           
+      k_r2fr_chl = 0.0012_wp - 0.012_wp                
 
       ! minimum permissable height of an individual
       min_height = 0.1_wp
@@ -492,8 +523,10 @@ MODULE mo_veg_parameters
       (/0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.5_wp,0.5_wp/) 
       ! turnover time of the fruit pool (1/years)
       veg_param%tau_fruit(:) = 1.0_wp
-      ! turnover time of the fruit pool (1/years)
-      veg_param%tau_seed(:) = 1.0_wp
+      ! turnover time of the seed bed to litter (1/years)
+      veg_param%tau_seed_litter(:) = 0.1_wp
+      ! turnover time of the seed bed to establishment (1/years)
+      veg_param%tau_seed_est(:) = 0.3_wp
       ! vmax of N uptake (~µmol N / mol C / s)
       veg_param%vmax_uptake_n(:) = 14._wp !714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
       ! low-affinity uptake (L/mmol) 
@@ -509,6 +542,13 @@ MODULE mo_veg_parameters
       ! placeholder constant BNf rate, required to keepsoil NH4 at constant levels mumol N s-1
       veg_param%bnf_base(:) = &
       (/2.6_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9, 5.0_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9/)
+
+      ! parameter in the Weibull function controlling light-limited establishment 
+      veg_param%lambda_est_light(:) = 1.1_wp        
+      ! parameter in the Weibull function controlling light-limited establishment
+      veg_param%k_est_light(:) = 4.0_wp
+      ! seed size (mol C)
+      veg_param%seed_size(:) = 0.1
 
     END SUBROUTINE init_pft_param_table 
 

@@ -144,7 +144,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)'), 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time Height Diameter LAI La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season'
+    WRITE(lun,'(a)'), 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season'
 
   END SUBROUTINE init_output_writing_pool
 
@@ -460,7 +460,7 @@ CONTAINS
          growing_season_float = 0.0_wp
        END IF 
        lun=lun+1
-       write(lun,'(16F20.6)') time_d, plant%height, plant%diameter, plant%lai, &
+       write(lun,'(16F20.6)') time_d, plant%height, plant%diameter, plant%lai, plant%dens_ind, &
          hlp1,l2r,s2c, bcf, &
          plant%target_cn_leaf, plant%moving_average%unit_npp, plant%moving_average%unit_uptake_n,&
          plant%moving_average%growth_cn_plant, plant%moving_average%allometry_npp, &

@@ -176,6 +176,7 @@ MODULE mo_veg_memory
   !! plant\%flux\%reserve_use
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_veg_flux 
+     TYPE(t_element)      :: establishment !< flux between seed bed and reserve (mol m-2 timestep-1)
      TYPE(t_element)      :: reserve_use  !< net flux between reserve and labile pool (mol m-2 timestep-1)
                                           !!  (+ve: flux to labile; -ve flux from labile) 
      TYPE(t_slm_veg_pool) :: growth       !< add to      plant%pool due to growth     per timestep (mol m-2 timestep-1)
@@ -212,6 +213,7 @@ MODULE mo_veg_memory
      REAL(wp) :: unit_npp                 !< incremental change in NPP. Needed for optimal allocation
      REAL(wp) :: unit_uptake_n            !< incremental change in N-based growth, needed for optimal allocation
      REAL(wp) :: unit_uptake_p            !< incremental change in P-based growth, needed for optimal allocation
+     REAL(wp) :: delta_dens_ind           !< change in density of individuals (#/m2/timestep)
   CONTAINS
     PRIVATE
     PROCEDURE, PUBLIC :: set_zero => set_zero_veg_flux
@@ -249,6 +251,7 @@ MODULE mo_veg_memory
     LOGICAL  :: growing_season                    !< logical to identify whether the plant is in the growing season or not
     REAL(wp) :: height                            !< plant height in m
     REAL(wp) :: diameter                          !< plant diameter in m
+    REAL(wp) :: dens_ind                          !< density of individuals (#/m2) 
     REAL(wp) :: lai                               !< actual leaf area index
     REAL(wp) :: target_cn_leaf                    !< target foliar C:N ratio
     REAL(wp) :: target_np_leaf                    !< target foliar N:P ratio 
@@ -758,7 +761,7 @@ CONTAINS
     this%t_air_month                   = 283.15_wp   ! 10°C; 30 days
     this%t_air_longterm                = 283.15_wp   ! 10°C; 30 years == 10950 days
     ! 1.7 plant status parameter
-    this%boc_an                        = 0.0_wp      ! net photosynthesis at bottom of canopy (lowest canopy layer existing)
+    this%boc_an                        = 5.0_wp      ! net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 Optimal allocation
     this%unit_uptake_n                 = 0._wp
     this%unit_uptake_p                 = 0._wp
@@ -777,7 +780,7 @@ CONTAINS
     this%p_monthly                     = 30._wp    ! 30 days; constant across the model
     this%p_yearly                      = 365._wp   ! 365 days
     this%p_longterm                    = 10950._wp ! 10950 days (30 years); constant across the model
-    this%p_tau_veg_dynamics            = 1095._wp  ! 365* 3 
+    this%p_tau_veg_dynamics            = 90._wp  ! 365* 3 
     this%p_optNfrac                    = 10.0_wp   ! timescale of optimal canopy processes
 
     ! 2.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
@@ -1082,6 +1085,7 @@ CONTAINS
     this%recycling_sap_wood_p    = flux_zero  !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
     this%transpiration           = flux_zero  !< transpiration in kg m-2 s-1
     this%ci                      = flux_zero  !< ??
+    this%delta_dens_ind          = flux_zero  !< ??
   END SUBROUTINE set_zero_veg_flux
 
 

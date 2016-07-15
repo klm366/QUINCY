@@ -134,7 +134,7 @@ CONTAINS
 
     !> 7.0 seed-bed turnover to litter 
     !! 
-    fturn = veg_param%tau_seed(plant%pftid) * dt/one_day/one_year 
+    fturn = veg_param%tau_seed_litter(plant%pftid) * dt/one_day/one_year 
     litterfall%seed_bed = fturn * plant%pool%seed_bed
 
     !> 8.0 update litter, growth and recycling of the plant class

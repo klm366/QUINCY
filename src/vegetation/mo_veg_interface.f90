@@ -85,7 +85,7 @@ CONTAINS
     !> 4.0 Calculate vegetation dynamics
     !! 
     !! 
-   CALL update_veg_dynamics(plant,veg_param)
+    CALL update_veg_dynamics(tile,veg_param)
 
     !> 5.0 Update pools:
     !!
@@ -136,11 +136,13 @@ CONTAINS
     plant%pool%fine_root%nitrogen15 = plant%pool%fine_root%nitrogen15 - plant%flux%recycling_fine_root_n15
     plant%pool%sap_wood%nitrogen15 = plant%pool%sap_wood%nitrogen15 - plant%flux%recycling_sap_wood_n15
 
-    !> 6.0 Update plant biogeochemical pools with growth and litterfall
+    !> 6.0 Update plant biogeochemical pools with growth, litterfall and establishment
     !! 
     !! 
     plant%pool = plant%pool - plant%flux%litterfall
     plant%pool = plant%pool + plant%flux%growth
+    plant%pool%reserve  = plant%pool%reserve  + plant%flux%establishment
+    plant%pool%seed_bed = plant%pool%seed_bed - plant%flux%establishment
 
     !> 6.1 Radioactive decay of C14 in living plant tissue
     plant%pool%leaf%carbon14         = (1._wp - lambda_C14 * dt ) * plant%pool%leaf%carbon14
@@ -157,7 +159,8 @@ CONTAINS
     !! 
     !! 
     plant%lai = plant%pool%leaf%carbon * veg_param%sla(plant%pftid)
-    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%pool%labile%carbon,&
+    plant%dens_ind = plant%dens_ind + plant%flux%delta_dens_ind
+    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind,plant%pool%labile%carbon,&
          plant%pool%labile%nitrogen, plant%pool%labile%phosphorus, veg_param%wood_density(plant%pftid), & 
          veg_param%sla(plant%pftid),veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
          veg_param%k_latosa(plant%pftid),veg_param%k_rtos(plant%pftid),veg_param%growthform(plant%pftid), & 

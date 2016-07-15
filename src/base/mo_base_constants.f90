@@ -12,7 +12,7 @@ MODULE mo_base_constants
   USE mo_kind, ONLY : wp
 
   INTEGER, PARAMETER :: npft = 8                !< number of PFTs simulated by the model
-  INTEGER, PARAMETER :: ntile = 1               !< number of tiles simulated by the model; see also itile in the driver
+  INTEGER, PARAMETER :: ntile = 3               !< number of tiles simulated by the model; see also itile in the driver
   INTEGER, PARAMETER :: ncanop = 20             !< number of canopy layer simulated by the model
   INTEGER, PARAMETER :: nsoil = 15              !< number of soil layer simulated by the model
   ! convenience 

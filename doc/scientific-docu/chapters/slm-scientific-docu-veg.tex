@@ -15,6 +15,55 @@
 
 \section{Vegetation Dynamics}
 
+Within each tile, vegetation is represented by an average individual representation of the PFT. For a tree or shrub, this average individual is described by its height, diameter and individual density ($dens_{ind}$), whereas grasses do not have these attributes. The module \texttt{mo\_veg\_dynamics} describes the within-tile vegetation dynamics through density dependent establishment and mortality, as well as a dynamic background mortality related to the overall health of the plant (the latter is not yet implemented). The module has the option to be switched off with the flag \texttt{flag\_tile\_veg\_dynamics}, in which case a prescribed background mortality is used to estimate litter fall from mortality.  
+
+\subsection{Mortality}
+
+Background mortality $f_{mort,background}$ is currently treated as a PFT-specific constant. 
+
+Self-thinning mortality considers the fact that even though the model only considers an average individual, this population will be composed of smaller and larger individuals. Self-thinning therefore considers the efficiency of growth for those individuals at the bottom of the canopy by looking at the lowest canopy layer net carbon gain ($C_{gain,boc}$) defined as 
+
+\begin{equation}
+C_{gain,boc} = A_{n,boc} -  (1 + f_{resp,growth}) * \tau_{leaf} / sla
+\end{equation}
+ 
+ where $A_{n,boc}$ is the running average of net photosynthesis of the lowest layer, and the remainder described the annual construction costs for this layer. $C_{gain,boc}$ is turned into an annual mortality rate using a Weibull function
+ 
+\begin{equation}
+f_{mort.thinning} = 1 - exp^{-(\lambda_{mort,light}*C_{gain,boc} )^{k_{mort,light}}}
+\end{equation}
+
+Total mortality is then simply the sum of the two terms.
+
+\begin{equation}
+f_{mort} =  f_{mort,background} + f_{mort.thinning}
+\end{equation}
+
+Litter fall from vegetation dynamics is then the product of the current pool size and $f_mort$. For trees, the appropriate number of individuals are also removed. This does not affect the size of trees, as woody biomass and individuum density are modified proportionally.
+
+ \subsection{Establishment}
+ 
+ The establishment of a PFT is dependent on the size of the seed bed and an average seed bed turnover rate ($\tau_{seed,est}$), which are modified by light, weekly temperature and top-soil moisture conditions at the forest floor using Weibull functions. Light limitation of establishment is calculated from the Red:Farred ratio at the forest floor, which is calculated from \cite{kull:1998} as
+ 
+ \begin{equation}
+rfr_{ratio} = rfr_{ratio,toc} * exp ^{k_{r2fr_ch} * chlorophyll_{canopy}} 
+\end{equation}
+   
+where $rfr_{ratio,toc}$ is the average Red:FarRed ratio of ambient light (1.2), and $chlorophyll_{canopy}$ is the total canopy chlorophyll content (mmol N m-2).  
+  
+The actual, annual establishment flux is then
+
+\begin{equation}
+flux_{est} = flim_{light} * flim_{temp} * flim_{moist} * \tau_{seed,est} * seed\_bed
+\end{equation}
+  
+from with the number of new individuals can be calculated using a PFT-specific seed size:
+
+\begin{equation}
+ind_{est} = flux_{est} / seed\_size
+\end{equation}
+
+  
 %\newpage
 \begin{sidewaystable}
 \section{Parameters}
