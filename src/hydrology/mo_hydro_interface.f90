@@ -23,7 +23,7 @@ MODULE mo_hydro_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, Contains_lct
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -32,7 +32,7 @@ MODULE mo_hydro_interface
 !  USE mo_util,               ONLY: one_of, int2string
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB, SOIL, VEG, ATM2LAND, RAD, HYDRO
+  dsl4jsb_Use_processes SEB, SOIL, VEG, PHENO, ATM2LAND, RAD, HYDRO
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB)
@@ -45,6 +45,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(VEG)
+  dsl4jsb_Use_memory(PHENO)
   dsl4jsb_Use_memory(RAD)
   
   ! -------------------------------------------------------------------------------------------------------
@@ -55,12 +56,6 @@ MODULE mo_hydro_interface
   PUBLIC :: Register_hydro_tasks !,t_hydro_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_interface'
-
-!!$  !> Type definition for hydrology process
-!!$  TYPE, EXTENDS(t_jsb_process) :: t_hydro_process
-!!$  CONTAINS
-!!$    PROCEDURE :: Register_tasks => Register_hydro_tasks        !< Registers tasks for hydro process
-!!$  END TYPE t_hydro_process
 
   !> Type definition for snow_hydrology task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_snow_and_ice_hydrology
@@ -249,6 +244,7 @@ CONTAINS
     dsl4jsb_Def_memory(SEB)
     dsl4jsb_Def_memory(HYDRO)
     dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(PHENO)
     dsl4jsb_Def_memory(SOIL)
 
     ! Pointers to variables in memory
@@ -298,6 +294,7 @@ CONTAINS
     dsl4jsb_Get_memory(SEB)
     dsl4jsb_Get_memory(SOIL)
     dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(PHENO)
     dsl4jsb_Get_memory(HYDRO)
     dsl4jsb_Get_memory(SOIL) 
 
@@ -308,7 +305,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SOIL,     oro_stddev)       ! IN
     dsl4jsb_Get_var2D_onChunk(SEB,      t)                ! IN
-    dsl4jsb_Get_var2D_onChunk(VEG,      lai)              ! IN
+    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)              ! IN
     dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc_max)    ! IN
 
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_can)       ! IN
@@ -325,6 +322,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_can)   ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_lice)  ! OUT
 
+    ! TBD: On glacier: Wet skin fraction = 0, snow fraction =1, snow depth = 0
     CALL calc_snow_and_skin_fraction( &
       & dtime,               & ! in
       & steplen,             & ! in
@@ -363,24 +361,35 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_memory(HYDRO)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_snow_and_skin_fraction'
 
-    ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
 
-    ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
-    !X Implementation: Start your process scheme here...
+    dsl4jsb_Get_memory(HYDRO)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(HYDRO, fract_water,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, fract_water_soil, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, fract_water_can,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, fract_snow,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, fract_snow_soil,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, fract_snow_can,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, fract_snow_lice,  weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

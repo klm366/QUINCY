@@ -45,11 +45,14 @@ CONTAINS
     & press_srf, drag_srf,                                         &
     & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
     & pch, cos_zenith_angle,                                       &
+    & CO2_air,                                                     &
     & drag_wtr, drag_ice,                                          &
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,          &
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,          &
     & albedo_wtr                                                   &
     & )
+
+    USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -59,6 +62,7 @@ CONTAINS
       & press_srf(:), drag_srf(:),                                               &
       & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),                          &
       & pch(:), cos_zenith_angle(:),                                             &
+      & CO2_air(:),                                                              &
       & drag_wtr(:), drag_ice(:),                                                &
       & t_acoef_wtr(:), t_bcoef_wtr(:), q_acoef_wtr(:), q_bcoef_wtr(:),          &
       & t_acoef_ice(:), t_bcoef_ice(:), q_acoef_ice(:), q_bcoef_ice(:),          &
@@ -98,6 +102,11 @@ CONTAINS
     IF (PRESENT(q_bcoef))           dsl4jsb_var2D_onChunk(ATM2LAND,q_bcoef)           = q_bcoef           (:)
     IF (PRESENT(pch))               dsl4jsb_var2D_onChunk(ATM2LAND,pch)               = pch               (:)
     IF (PRESENT(cos_zenith_angle))  dsl4jsb_var2D_onChunk(ATM2LAND,cos_zenith_angle)  = cos_zenith_angle  (:)
+    IF (PRESENT(CO2_air)) THEN
+      dsl4jsb_var2D_onChunk(ATM2LAND, CO2_air)               = CO2_air(:)
+      ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
+      dsl4jsb_var2D_onChunk(ATM2LAND, CO2_air_mol) = CO2_air(:) * molarMassDryAir / molarMassCO2
+    END IF
 
     IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
 
@@ -199,10 +208,16 @@ CONTAINS
       IF (PRESENT(ice_fract_lake))    ice_fract_lake(:)    = dsl4jsb_var2D_onChunk(SEB,   fract_lice)
       IF (PRESENT(albedo_ice))        albedo_ice           = dsl4jsb_var2D_onChunk(RAD,   albedo_ice)
     ELSE
-      IF (PRESENT(t_wtr))           t_wtr(:)            = 0._wp                                   ! Temporary
-      IF (PRESENT(t_ice))           t_ice(:)            = 0._wp                                   ! Temporary
-      IF (PRESENT(ice_fract_lake))  ice_fract_lake(:)   = 0._wp                                   ! Temporary
-      IF (PRESENT(albedo_ice))      albedo_ice(:)       = 0.55_wp
+      IF (PRESENT(t_wtr))             t_wtr(:)             = 0._wp                                   ! Temporary
+      IF (PRESENT(t_ice))             t_ice(:)             = 0._wp                                   ! Temporary
+      IF (PRESENT(evapo_wtr))         evapo_wtr(:)         = 0._wp
+      IF (PRESENT(latent_hflx_wtr))   latent_hflx_wtr(:)   = 0._wp
+      IF (PRESENT(sensible_hflx_wtr)) sensible_hflx_wtr(:) = 0._wp
+      IF (PRESENT(evapo_ice))         evapo_ice(:)         = 0._wp
+      IF (PRESENT(latent_hflx_ice))   latent_hflx_ice(:)   = 0._wp
+      IF (PRESENT(sensible_hflx_ice)) sensible_hflx_ice(:) = 0._wp
+      IF (PRESENT(ice_fract_lake))    ice_fract_lake(:)    = 0._wp                                   ! Temporary
+      IF (PRESENT(albedo_ice))        albedo_ice(:)        = 0.55_wp
     END IF
 
   END SUBROUTINE update_land2atm

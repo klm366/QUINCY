@@ -15,6 +15,7 @@ MODULE mo_physical_constants_iface
   USE mo_physical_constants, ONLY: &
     grav,            & !< Avg. gravitational acceleration        [m/s2]
     stbo,            & !< Stephan-Boltzmann constant             [W/(m2 K4)]
+    argas,           & !< Molar/universal/ideal gas constant     [J/(K mol)]
     zemiss_def,      & !< Long-wave surface emissivity factor    []
     rd,              & !< Gas constant                           [J/(K kg)]
     cpd,             & !< Specific heat at constant pressure     [J/(K kg)]
@@ -24,6 +25,8 @@ MODULE mo_physical_constants_iface
     als,             & !< Latent heat for sublimation            [J/kg]
     alf,             & !< Latent heat for fusion                 [J/kg]
     tmelt,           & !< Melting temperature of ice/snow        [K]
+    amd,             & !< Molar weight of dry air                [g/mol]
+    amco2,           & !< Molar weight of CO2                    [g/mol]
 #ifdef __ICON__
     clw,             & !< Specific heat of liquid water          [J/(K kg)]
     ci,              & !< Heat capacity of ice                   [J/(K kg)]
@@ -45,6 +48,7 @@ MODULE mo_physical_constants_iface
     rvd1  => vtmpc1, & !< = rv/rd-1                              []
     cpvd1 => vtmpc2, & !< = cpv/cpd-1                            []
     clw                !< Specific heat capacity of liquid water [J/(K kg)]
+
   IMPLICIT NONE
   PUBLIC
 

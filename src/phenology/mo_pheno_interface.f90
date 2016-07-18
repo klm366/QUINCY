@@ -17,12 +17,12 @@ MODULE mo_pheno_interface
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -113,13 +113,46 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  !!
-  ! Corresponds to JSBACH3 CASE('LOGROP').
   ! 
   SUBROUTINE update_phenology(tile, options)
 
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_config(PHENO)
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_phenology'
+
+    IF (.NOT. tile%Is_process_active(PHENO)) RETURN
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(PHENO)
+
+    SELECT CASE (TRIM(dsl4jsb_Config(PHENO)%scheme))
+    CASE ('logrop')
+      CALL update_phenology_logrop(tile, options)
+    CASE ('climatology')
+      CALL update_phenology_climatology(tile, options)
+    CASE DEFAULT
+      CALL finish('Invalid scheme for phenology')
+    END SELECT
+
+  END SUBROUTINE update_phenology
+
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation of 'LOGROP' phenology scheme
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  !
+  SUBROUTINE update_phenology_logrop(tile, options)
+
     ! Declarations
-    USE mo_exception,            ONLY: finish
     USE mo_pheno_process,        ONLY: calc_previous_day_NPP, calc_summergreen_phenology, calc_evergreen_phenology, &
                                        calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology
     USE mo_jsb_time_iface,       ONLY: get_time_current, get_year_day    
@@ -140,8 +173,6 @@ CONTAINS
     INTEGER                                :: iblk, ics, ice, nc
     REAL(wp)                               :: dtime
 
-    CHARACTER(len=*), PARAMETER            :: routine = TRIM(modname)//':update_phenology'
-
     INTEGER                                :: day_of_year                                              
     
     REAL(wp), DIMENSION(options%nc)        :: w_soil_filling,  &
@@ -151,46 +182,47 @@ CONTAINS
                                               
     TYPE(t_jsb_grid),  POINTER             :: grid
     
-   ! Declare pointers for process configuration and memory
-   dsl4jsb_Def_config(ASSIMI)
-   dsl4jsb_Def_config(PHENO)   
-   dsl4jsb_Def_memory(RAD)
-   dsl4jsb_Def_memory(VEG)
-   dsl4jsb_Def_memory(ATM2LAND)
-   dsl4jsb_Def_memory(HYDRO)
-   dsl4jsb_Def_memory(PHENO)
-   dsl4jsb_Def_memory(ASSIMI)
-   dsl4jsb_Def_memory(SEB)
+    ! Declare pointers for process configuration and memory
+    dsl4jsb_Def_config(ASSIMI)
+    dsl4jsb_Def_config(PHENO)   
+    dsl4jsb_Def_memory(RAD)
+    dsl4jsb_Def_memory(PHENO)
+    dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(ASSIMI)
+    dsl4jsb_Def_memory(SEB)
 
-   ! Declare pointers for variables in memory
-   INTEGER, POINTER                 :: ncanopy     ! number of canopy layers
+    ! Declare pointers for variables in memory
+    INTEGER                :: ncanopy     ! number of canopy layers
 
-   !INTEGER, POINTER                 :: acc_counter ! counter for each delta_time step since the last variable output
-   !LOGICAL, POINTER                 :: use_alb_veg_simple
-   !LOGICAL, POINTER                 :: first_call_phenology_this_day
+    !INTEGER, POINTER                 :: acc_counter ! counter for each delta_time step since the last variable output
+    !LOGICAL, POINTER                 :: use_alb_veg_simple
+    !LOGICAL, POINTER                 :: first_call_phenology_this_day
 
-   dsl4jsb_Real2D_onChunk :: t_air
-   dsl4jsb_Real2D_onChunk :: NPP_rate
-   dsl4jsb_Real2D_onChunk :: w_soil_rel
-   dsl4jsb_Real2D_onChunk :: lat
-   dsl4jsb_Real2D_onChunk :: heat_sum_SG
-   dsl4jsb_Real2D_onChunk :: heat_sum_EG
-   dsl4jsb_Real2D_onChunk :: heat_sum_CRP
-   dsl4jsb_Real2D_onChunk :: heat_sum_winter
-   dsl4jsb_Real2D_onChunk :: days_since_growth_begin_SG
-   dsl4jsb_Real2D_onChunk :: days_since_growth_begin_EG
-   dsl4jsb_Real2D_onChunk :: growth_phase_SG
-   dsl4jsb_Real2D_onChunk :: growth_phase_EG
-   dsl4jsb_Real2D_onChunk :: growth_phase_CRP
-   dsl4jsb_Real2D_onChunk :: previous_day_temp_mean
-   dsl4jsb_Real2D_onChunk :: pseudo_soil_temp
-   dsl4jsb_Real2D_onChunk :: chill_days_SG
-   dsl4jsb_Real2D_onChunk :: chill_days_EG
-   dsl4jsb_Real2D_onChunk :: lai
-   dsl4jsb_Real2D_onChunk :: day_NPP_sum
-   dsl4jsb_Real2D_onChunk :: previous_day_NPP_rate
-   dsl4jsb_Real2D_onChunk :: previous_day_temp_min
-   dsl4jsb_Real2D_onChunk :: previous_day_temp_max
+    dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: NPP_rate
+    dsl4jsb_Real2D_onChunk :: w_soil_rel
+    dsl4jsb_Real2D_onChunk :: lat
+    dsl4jsb_Real2D_onChunk :: heat_sum_SG
+    dsl4jsb_Real2D_onChunk :: heat_sum_EG
+    dsl4jsb_Real2D_onChunk :: heat_sum_CRP
+    dsl4jsb_Real2D_onChunk :: heat_sum_winter
+    dsl4jsb_Real2D_onChunk :: days_since_growth_begin_SG
+    dsl4jsb_Real2D_onChunk :: days_since_growth_begin_EG
+    dsl4jsb_Real2D_onChunk :: growth_phase_SG
+    dsl4jsb_Real2D_onChunk :: growth_phase_EG
+    dsl4jsb_Real2D_onChunk :: growth_phase_CRP
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_mean
+    dsl4jsb_Real2D_onChunk :: pseudo_soil_temp
+    dsl4jsb_Real2D_onChunk :: chill_days_SG
+    dsl4jsb_Real2D_onChunk :: chill_days_EG
+    dsl4jsb_Real2D_onChunk :: lai
+    dsl4jsb_Real2D_onChunk :: day_NPP_sum
+    dsl4jsb_Real2D_onChunk :: previous_day_NPP_rate
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_min
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_max
+
+    CHARACTER(len=*), PARAMETER            :: routine = TRIM(modname)//':update_phenology_logrop'
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -210,12 +242,12 @@ CONTAINS
     dsl4jsb_Get_config(ASSIMI)
     dsl4jsb_Get_memory(ATM2LAND)    
     dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(PHENO)
     dsl4jsb_Get_memory(PHENO)
     dsl4jsb_Get_memory(ASSIMI)
     
     ! Set pointers to variables in config or in the "grid"
-    ncanopy => dsl4jsb_Config(ASSIMI)%ncanopy     ! IN
+    ncanopy =  dsl4jsb_Config(ASSIMI)%ncanopy     ! IN
     grid    => Get_grid(model%grid_id)            ! IN
     lat     => grid%lat(ics:ice, iblk)            ! IN
 
@@ -230,7 +262,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_min)  ! IN
     dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_max)  ! IN
         
-    dsl4jsb_Get_var2D_onChunk(VEG,      lai)                    ! INOUT
+    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)                    ! INOUT
     dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_SG)            ! INOUT
     dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_EG)            ! INOUT
     dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_CRP)           ! INOUT
@@ -423,8 +455,62 @@ CONTAINS
 
     RETURN
     
-   END SUBROUTINE update_phenology
+   END SUBROUTINE update_phenology_logrop
   
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation of 'climatology' phenology scheme
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  !
+  SUBROUTINE update_phenology_climatology(tile, options)
+
+    USE mo_jsb_time, ONLY: get_time_interpolation_weights
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Local variables
+    INTEGER  :: iblk, ics, ice
+    REAL(wp) :: wgt1, wgt2
+    INTEGER  :: nmw1,nmw2
+
+    TYPE(t_jsb_model), POINTER  :: model
+
+    dsl4jsb_Def_memory(PHENO)
+
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: lai
+    REAL(wp), POINTER      :: lai_mon(:,:)
+
+    CHARACTER(len=*), PARAMETER            :: routine = TRIM(modname)//':update_phenology_climatology'
+
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+
+    ! If process is not active on this tile, do nothing
+    IF (.NOT. tile%Is_process_active(PHENO)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(PHENO)
+
+    dsl4jsb_Get_var2D_onChunk(PHENO, lai)            ! out
+    lai_mon(1:,0:) => pheno__mem%lai_mon (ics:ice, iblk, :) ! in
+
+    CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
+    lai(:) = REAL(wgt1,wp) * lai_mon(:,nmw1) + REAL(wgt2,wp) * lai_mon(:,nmw2)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_phenology_climatology
+
   ! -------------------------------------------------------------------------------------------------------
   !>
   !! Implementation of "aggregate" for task "phenology"
@@ -436,7 +522,13 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
     TYPE(t_jsb_model), POINTER                :: model
+
+    dsl4jsb_Def_config(PHENO)
+    dsl4jsb_Def_memory(PHENO)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_phenology'
 
@@ -456,8 +548,20 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(PHENO)
+
+    dsl4jsb_Get_memory(PHENO)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(PHENO, lai,    weighted_by_fract)
+
     !X Implementation: Start your process scheme here...
     !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen pheno Tasks aggregiert werden sollen.
+
+    IF (TRIM(dsl4jsb_Config(PHENO)%scheme) == 'logrop') THEN
+
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -55,8 +55,6 @@ MODULE mo_soil_memory_class
       shc                 ,    & !< Saturated hydraulic conductivity [m/s]
       vhcap               ,    & !< Volumetric heat capacity of dry soil [J m-3 K-1]
       hdiff               ,    & !< Thermal diffusivity of soil [m2 s-1]
-      alb_vis_soil        ,    & !< Albedo of the soil in the visible range
-      alb_nir_soil        ,    & !< Albedo of the soil in the NIR range
       oro_stddev                 !< Standard deviation of orography
     !
     ! Energy state
@@ -65,8 +63,8 @@ MODULE mo_soil_memory_class
       t_soil_acoef  , &
       t_soil_bcoef
     TYPE(t_jsb_var_real2d) :: &
-      hcap_grnd     , &  !< Heat capacity of the ground [J m-2 K-1]
-      hcap_grnd_old      !< Heat capacity of the ground [J m-2 K-1] (old)
+      hcap_grnd     , &  !< Heat capacity of the ground (uppermost layer)        [J m-2 K-1]
+      hcap_grnd_old      !< Heat capacity of the ground (uppermost_layer), old   [J m-2 K-1]
     !
     ! Energy fluxes
     TYPE(t_jsb_var_real2d) :: &
@@ -179,20 +177,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
-
-    CALL jsb_add_var( mem, 'alb_vis_soil', mem%alb_vis_soil,                     &
-      & hgrid, surface,                                                                    &
-      & t_cf('soil_albedo_visible ', '', ''),                                              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'alb_nir_soil', mem%alb_nir_soil,                     &
-      & hgrid, surface,                                                                    &
-      & t_cf('soil_albedo_nir', '', ''),                                                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'oro_stddev', mem%oro_stddev,                     &
       & hgrid, surface,                                                                    &

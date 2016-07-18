@@ -101,7 +101,6 @@ CONTAINS
       CALL finish(TRIM(routine), 'Task is for another process')
 
     IF (.NOT. ALLOCATED(this%task_list)) THEN
-      !ALLOCATE(this%task_list(1))
       this%task_list = (/ t_jsb_process_task_p(task) /)
     ELSE
       this%task_list = (/ this%task_list, t_jsb_process_task_p(task) /)
@@ -146,10 +145,7 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(this%config)) RETURN
 
-!!$    SELECT TYPE (config=>this%config)
-!!$    CLASS IS (t_jsb_config)
-      CALL this%config%Init()
-!!$    END SELECT
+    CALL this%config%Init()
 
   END SUBROUTINE Configure_process
 

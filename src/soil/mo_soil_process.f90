@@ -17,8 +17,8 @@ MODULE mo_soil_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: snow_fract_noforest, relative_humidity, update_surf_down, update_soiltemp, update_surf_up
-  PUBLIC :: init_soil_temperature
+  PUBLIC :: snow_fract_noforest, relative_humidity, update_surf_down_soil, update_surf_down_glacier, &
+    & update_soiltemp, update_surf_up, init_soil_temperature
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_process'
 
@@ -162,20 +162,18 @@ CONTAINS
 
   END SUBROUTINE init_soil_temperature
 
-SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
+  PURE ELEMENTAL SUBROUTINE update_surf_down_soil ( delta_time, lstart  &
      , pqm1, ptsl, pspeed10, ptm1  &
      , pwl, pcvw, pwlmx &
-     , psn, pcvs, psnc,       pgld             &
+     , psn, pcvs, psnc             &
      , pgrndcapc &
 !!$     , paphm1, paphms1, ptte             &     ! ATTENTION!
      , pevapl,     pevapot, pevwsd                    &
      , prain, psnow                            &
-     , lmask, lpglac       &
-     , palac &
-!!$     , psnacl, psnmel, progl &
-     , pmlres, tte_corr &
+!!$     , psnacl, psnmel&
+     , pmlres &
 !++mgs : add instantaneous snow melt for drydep calculation
-     , psmelt   &
+     , psmelt, tte_corr   &
 !--mgs
 
      )
@@ -195,18 +193,14 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   ! psn           Snow depth [m water equivalent] at the ground
   ! pcvs          Fractional snow cover (function of psn in *physc*)
   ! psnc          Snow depth [m water equivalent] at the canopy
-  ! pgld          Glacier depth (including snow) [m water equivalent]
   ! pgrndcapc     Heat capacity of the uppermost soil layer [j/m**2/K]
   ! pevapl        Total evapotranspiration, including sublimation [kg/m**2/s]
   ! pevapot       Potential evaporation/sublimation [kg/m**2/s]
   ! pevwsd        Evapotranspiration without sublimation and evaporation from interception reservoir [kg/m**2]
   ! prain         Totalrainfall [kg/m**2/s]
   ! psnow         Total snowfall [kg/m**2/s]
-  ! lpglac        Logical glacier mask
-  ! palac         Precipitation minus sublimation at glacier points [kg/m**2/s]
   ! psnacl        Snow budget at non-glacier points [kg/m**2] (accumul.)
   ! psnmel        Snow melt [kg/m**2] (accumulated for diagnostics)
-  ! progl         Glacier runoff (rain+snow/ice melt) [kg/m**2] (accumul.)
   !
   ! The following local variables represent the respective fluxes
   ! integrated over one timestep (delta_time) and divided by the density of
@@ -217,7 +211,6 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   ! zevttd        Total evaporation
   ! zevsnd        Sublimation from snow
   ! zevwld        Evaporation from the skin reservoir
-  ! zrogl         Runoff at glacier points (rain and melt, but no calving)
   ! zsnmel        Snow/ice melt at land and glacier points
   ! zsncmelt      Snow melt in the canopy
   ! zsn           Snow budget at non-glacier points (snowfall-subl-melt)
@@ -275,49 +268,44 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
 !!$ TR  USE mo_vegetation ! only cvinter is used
 !!$ TR  USE mo_rad
 
-  INTEGER,  INTENT(in) :: kbdim
   REAL(wp), INTENT(in) :: delta_time
   LOGICAL,  INTENT(in) :: lstart
-  LOGICAL,  INTENT(in) :: lmask(kbdim)
-  LOGICAL,  INTENT(in) :: lpglac(kbdim)
-  REAL(wp), INTENT(in) :: pqm1(kbdim)
-  REAL(wp), INTENT(in) :: pspeed10(kbdim)
-  REAL(wp), INTENT(in) :: ptm1(kbdim)
-  REAL(wp), INTENT(in) :: pcvw(kbdim)
-  REAL(wp), INTENT(in) :: pwlmx(kbdim)
-  REAL(wp), INTENT(in) :: pcvs(kbdim)
-  REAL(wp), INTENT(in) :: pgrndcapc(kbdim)
-  REAL(wp), INTENT(in) :: pevapl(kbdim)
-  REAL(wp), INTENT(in) :: pevapot(kbdim)
-  REAL(wp), INTENT(in) :: prain(kbdim)
-  REAL(wp), INTENT(in) :: psnow(kbdim)
+  REAL(wp), INTENT(in) :: pqm1
+  REAL(wp), INTENT(in) :: ptsl
+  REAL(wp), INTENT(in) :: pspeed10
+  REAL(wp), INTENT(in) :: ptm1
+  REAL(wp), INTENT(in) :: pcvw
+  REAL(wp), INTENT(in) :: pwlmx
+  REAL(wp), INTENT(in) :: pcvs
+  REAL(wp), INTENT(in) :: pgrndcapc
+  REAL(wp), INTENT(in) :: pevapl
+  REAL(wp), INTENT(in) :: pevapot
+  REAL(wp), INTENT(in) :: prain
+  REAL(wp), INTENT(in) :: psnow
 
-  REAL(wp), INTENT(inout) :: ptsl(kbdim)
-  REAL(wp), INTENT(inout) :: pwl(kbdim)
-  REAL(wp), INTENT(inout) :: psn(kbdim)
-  REAL(wp), INTENT(inout) :: psnc(kbdim)
-  REAL(wp), INTENT(inout) :: pgld(kbdim)
-!!$  REAL(wp), INTENT(inout) :: psnacl(kbdim)
-!!$  REAL(wp), INTENT(inout) :: psnmel(kbdim)
-!!$  REAL(wp), INTENT(inout) :: progl(kbdim)
+  REAL(wp), INTENT(inout) :: pwl
+  REAL(wp), INTENT(inout) :: psn
+  REAL(wp), INTENT(inout) :: psnc
+!!$  REAL(wp), INTENT(inout) :: psnacl
+!!$  REAL(wp), INTENT(inout) :: psnmel
+!!$  REAL(wp), INTENT(inout) :: progl
 
-  REAL(wp), INTENT(out)   :: pevwsd(kbdim)
-  REAL(wp), INTENT(out)   :: palac(kbdim)
-  REAL(wp), INTENT(out)   :: tte_corr(kbdim)
-  REAL(wp), INTENT(out)   :: pmlres(kbdim)
-  REAL(wp), INTENT(out)   :: psmelt(kbdim)   !++mgs
+  REAL(wp), INTENT(out)   :: pevwsd
+  REAL(wp), INTENT(out)   :: tte_corr
+  REAL(wp), INTENT(out)   :: pmlres
+  REAL(wp), INTENT(out)   :: psmelt
   !
   !  local arrays
   !
   INTEGER :: jl
   REAL(wp) ::                                                             &
-       zraind (kbdim),       zsnowd(kbdim),         zevttd(kbdim)        &
-       , zevsnd(kbdim),        zevwld(kbdim)        &
-       , zrogl(kbdim)         &
-       , zsnmel(kbdim),        zsn(kbdim)                                 &
-       ,        zsncmelt(kbdim)
-!!$       , zdp(kbdim),
-  REAL(wp) :: zlfdcp(kbdim)
+       zraind ,       zsnowd,         zevttd        &
+       , zevsnd,        zevwld        &
+       , zrogl         &
+       , zsnmel,        zsn                                 &
+       ,        zsncmelt
+!!$       , zdp,
+  REAL(wp) :: zlfdcp
   !
   !  local scalars
   !
@@ -337,33 +325,23 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   zc2=1.87E5_wp
   zc3=1.56E5_wp
   zsncfac=rhoh2o*g/zdtime
-  !
-  !     ------------------------------------------------------------------
-  !
-  !*    1.     Convert water fluxes to [m water equivalent * timestep]
-  !
-  DO 110 jl=1,kbdim
-     palac(jl)=0._wp
-     zrogl(jl)=0._wp
-     pmlres(jl)=0._wp
-     zsn(jl)=0._wp
-     zsnmel(jl)=0._wp
-     zsncmelt(jl)=0._wp
-     zraind(jl)=prain(jl)             *zdtime/rhoh2o                   !rain     [kg m-2 s-1] -> [m]
-     zsnowd(jl)=psnow(jl)             *zdtime/rhoh2o                   !snowfall [kg m-2 s-1] -> [m]
-     IF(lmask(jl)) THEN
-        zrcp=1._wp/(cpd*(1._wp+cpvd1*MAX(0.0_wp,pqm1(jl))))
-        zlfdcp(jl)=alf*zrcp
-        zevttd(jl)=pevapl(jl)                        *zdtime/rhoh2o    !evapotransp. [kg m-2 s-1] -> [m]
-        zevsnd(jl)=pcvs(jl)*pevapot(jl)              *zdtime/rhoh2o    !pot. sublimation from snow [m]
-        zevwld(jl)=(1._wp-pcvs(jl))*pcvw(jl)*pevapot(jl)*zdtime/rhoh2o !pot. evaporation from skinreservoir [m]
-        pevwsd(jl)=zevttd(jl)-zevsnd(jl)                               ! [m]
-     ELSE
-        pevwsd(jl) = 0._wp ! Sain initialization for diagnostics
-     END IF
-110 END DO
-  !
-!!$ TR  IF(lsurf) THEN
+
+  zrogl    = 0._wp
+  pmlres   = 0._wp
+  zsnmel   = 0._wp
+  zsncmelt = 0._wp
+
+  ! Convert water fluxes to [m water equivalent * timestep]
+  zraind=prain             *zdtime/rhoh2o                   !rain     [kg m-2 s-1] -> [m]
+  zsnowd=psnow             *zdtime/rhoh2o                   !snowfall [kg m-2 s-1] -> [m]
+  zevttd=pevapl                        *zdtime/rhoh2o    !evapotransp. [kg m-2 s-1] -> [m]
+  zevsnd=pcvs*pevapot              *zdtime/rhoh2o    !pot. sublimation from snow [m]
+  zevwld=(1._wp-pcvs)*pcvw*pevapot*zdtime/rhoh2o !pot. evaporation from skinreservoir [m]
+  pevwsd=zevttd-zevsnd                               ! [m]
+
+  zrcp=1._wp/(cpd*(1._wp+cpvd1*MAX(0.0_wp,pqm1)))
+  zlfdcp=alf*zrcp
+
      !
      !     ------------------------------------------------------------------
      !
@@ -372,115 +350,246 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      !*    2.1    Snow changes in the canopy (interception of snowfall,
      !            sublimation, melting, unloading due to wind)
      !
-     DO 210 jl=1,kbdim
-        IF (lmask(jl) .AND. .NOT.lpglac(jl)) THEN
-           zsn(jl)=zsnowd(jl)+zevsnd(jl)                       ! [m]
-           zsncmax=MAX(0.0_wp,pwlmx(jl)-cwlmax)
-           zmprcp=MIN(zsnowd(jl)*cvinter,zsncmax-psnc(jl))
-           zsncp=psnc(jl)+zmprcp
-           zsnowd(jl)=zsnowd(jl)-zmprcp
-           psnc(jl)=MIN(MAX(0._wp,zsncp+zevsnd(jl)),zsncmax)
-           zevsnd(jl)=zevsnd(jl)-(psnc(jl)-zsncp)
-           zexpt=MAX(0._wp,ptm1(jl)+3._wp-tmelt)*zdtime/zc2
-           zexpw=pspeed10(jl)*zdtime/zc3
-           zsncmelt(jl)=psnc(jl)*(1._wp-EXP(-zexpt))
-           psnc(jl)=psnc(jl)-zsncmelt(jl)
-           zsncwind=psnc(jl)*(1._wp-EXP(-zexpw))
-           psnc(jl)=psnc(jl)-zsncwind
-           zsnowd(jl)=zsnowd(jl)+zsncwind
-           tte_corr(jl)=zsncmelt(jl)*zsncfac*zlfdcp(jl)
+      zsn=zsnowd+zevsnd                       ! [m]
+      zsncmax=MAX(0.0_wp,pwlmx-cwlmax)
+      zmprcp=MIN(zsnowd*cvinter,zsncmax-psnc)
+      zsncp=psnc+zmprcp
+      zsnowd=zsnowd-zmprcp
+      psnc=MIN(MAX(0._wp,zsncp+zevsnd),zsncmax)
+      zevsnd=zevsnd-(psnc-zsncp)
+      zexpt=MAX(0._wp,ptm1+3._wp-tmelt)*zdtime/zc2
+      zexpw=pspeed10*zdtime/zc3
+      zsncmelt=psnc*(1._wp-EXP(-zexpt))
+      psnc=psnc-zsncmelt
+      zsncwind=psnc*(1._wp-EXP(-zexpw))
+      psnc=psnc-zsncwind
+      zsnowd=zsnowd+zsncwind
+      ! TBD - Question: Why is tte_corr only done for snowmelt in canopy?
+      tte_corr=zsncmelt*zsncfac*zlfdcp ! unit: K kg m-1 s-3 = K Pa s-1 (will be devided by pressure difference in atmosphere)
            !
-           !   pwl(jl)=pwl(jl)+zsncmelt(jl) see section 2.5
+           !   pwl=pwl+zsncmelt see section 2.5
            !
-        ELSE                         !vg  on glacier:
-           psnc(jl)=0._wp            !vg    no snow on canopy
-           tte_corr(jl) = 0._wp      !vg    no snow melt correction
-        END IF
-210  END DO
      !
      !*    2.2    Snowfall and sublimation on land (excluding glaciers)
      !
-     DO 220 jl=1,kbdim
-        IF (lmask(jl) .AND. .NOT.lpglac(jl)) THEN
-           psn(jl)=psn(jl)+zsnowd(jl)+zevsnd(jl)
-           IF (psn(jl).LT.0._wp) THEN
-              pevwsd(jl)=pevwsd(jl)+psn(jl)
-              psn(jl)=0._wp
+           psn=psn+zsnowd+zevsnd
+           IF (psn.LT.0._wp) THEN
+              pevwsd=pevwsd+psn
+              psn=0._wp
            END IF
-        ELSE                         !vg  glacier:
-           psn(jl)=0._wp             !vg     no snow on glaciers
-        END IF
-220  END DO
-     !
-     !*    2.3    Snowfall and sublimation on glaciers and diagnostics
-     !
-     DO 230 jl=1,kbdim
-        IF (lpglac(jl)) THEN
-           pgld(jl)=pgld(jl)+zsnowd(jl)+zevsnd(jl)      !vg  glacier depth [m] = glacier depth + snowfall + sublimation of snow
-           palac(jl)=zraind(jl)+zsnowd(jl)+zevttd(jl)   !vg  P-E on glaciers [m] = rainfall + snowfall + evaporation (incl. sublim.) 
-           zrogl(jl)=zraind(jl)                         !vg  glacier runoff = rainfall [m]
-        END IF
-230  END DO
      !
      !*    2.4    Snow and glacier melt
      !
      IF (.NOT. lstart) THEN
-        DO 240 jl=1,kbdim
-           IF (lmask(jl)) THEN
-              IF (ptsl(jl).GT.tmelt) THEN               !vg  temperature > 0 degC
-                 IF (lpglac(jl)) THEN                                    !vg  glacier:
-                    zsnmel(jl)=pgrndcapc(jl)*(ptsl(jl)-tmelt)/(alf*rhoh2o)  !vg  snow and ice melt [m]
-                    pgld(jl)=pgld(jl)-zsnmel(jl)                            !vg  adapt glacier depth to snow and ice melt
-                    zrogl(jl)=zrogl(jl)+zsnmel(jl)                          !vg  add melt water to glacier runoff
-                    ptsl(jl)=tmelt                                          !vg  surface temp. limited to 0 degC
-                 ELSE IF (psn(jl).GT.0._wp) THEN                         !vg  snow cover at non glacier land:
-                    zsmelt=pgrndcapc(jl)*(ptsl(jl)-tmelt)/(alf*rhoh2o)      !vg  potential snow and ice melt [m]
-                    zsnmel(jl)=MIN(psn(jl),zsmelt)                          !vg  actual snow and ice melt [m]
-                    ptsl(jl)=ptsl(jl)-zsnmel(jl)*alf*rhoh2o/pgrndcapc(jl)   !vg  re-calculation of surface temp.
-                    psn(jl)=MAX(psn(jl)-zsnmel(jl),0._wp)                   !vg  re-calculation of snow depth
+              IF (ptsl.GT.tmelt) THEN               !vg  temperature > 0 degC
+                 IF (psn.GT.0._wp) THEN                         !vg  snow cover at non glacier land:
+                    zsmelt=pgrndcapc*(ptsl-tmelt)/(alf*rhoh2o)      !vg  potential snow and ice melt [m]
+                    zsnmel=MIN(psn,zsmelt)                          !vg  actual snow and ice melt [m]
+                    psn=MAX(psn-zsnmel,0._wp)                   !vg  re-calculation of snow depth
                  END IF
               END IF
-           END IF
-240     END DO
      END IF
      !
      !*    2.5    Snow budget and meltwater (glacier-free land only)
      !
-     DO 250 jl=1,kbdim
-        IF (lmask(jl) .AND. .NOT.lpglac(jl)) THEN
-           pwl(jl)=pwl(jl)+zsncmelt(jl)                  ! Add melt water on canopy to skin reservoir
-           zsnmlt=zsnmel(jl)+MAX(0._wp,pwl(jl)-pwlmx(jl))   ! Excess water on canopy drips to ground and
-           pwl(jl)=MIN(pwlmx(jl),pwl(jl))                ! skin reservoir on canopy is set to maximum
-           pmlres(jl)=zsnmlt
-           zsnmel(jl)=zsnmel(jl)+zsncmelt(jl)
-           zsn(jl)=zsn(jl)-zsnmel(jl)
-        END IF
-250  END DO
+           pwl=pwl+zsncmelt                  ! Add melt water on canopy to skin reservoir
+           zsnmlt=zsnmel+MAX(0._wp,pwl-pwlmx)   ! Excess water on canopy drips to ground and
+           pwl=MIN(pwlmx,pwl)                ! skin reservoir on canopy is set to maximum
+           pmlres=zsnmlt
+           zsnmel=zsnmel+zsncmelt
+           zsn=zsn-zsnmel
      !
      ! Accumulate water fluxes
      ! Note: conversion from m water equivalent to kg/m^2s - multiply by rhoh2o / zdtime
      !       accumulation - multiply by zdtime
-     DO 601 jl=1,kbdim
-        IF (lmask(jl)) THEN
-!!$            IF (.NOT. lpglac(jl)) psnacl(jl) = psnacl(jl)  +zsn(jl) * rhoh2o
+!!$            IF (.NOT. lpglac) psnacl = psnacl  +zsn * rhoh2o
+!!$            psnmel = psnmel  +zsnmel * rhoh2o
+!!$            IF (lpglac) progl  = progl   +zrogl  *rhoh2o
+
+      psmelt = zsnmel * rhoh2o / zdtime
+
+END SUBROUTINE update_surf_down_soil
+
+  PURE ELEMENTAL SUBROUTINE update_surf_down_glacier ( delta_time, lstart,  &
+    & ptsl,            & !< in
+    & pcvs,            & !< in 
+    & pgrndcapc,       & !< in
+    & pevapl,          & !< in
+    & pevapot,         & !< in
+    & prain, psnow,    & !< in
+    & pgld,            & !< inout
+    & pevwsd,          & !< out
+
+!!$     , paphm1, paphms1, ptte             &     ! ATTENTION!
+    & palac,           & !< out
+    & psmelt,          & !< out
+!!$     , psnacl, psnmel, progl &
+    & tte_corr &
+    & )
+
+    USE mo_jsb_physical_constants, ONLY: alf, cpd, cpvd1, tmelt, g=>grav
+
+  !
+  !     ------------------------------------------------------------------
+  ! ptsl          Sfc temp [K] at timestep t+dt (unfiltered)
+  ! pcvs          Fractional snow cover (function of psn in *physc*)
+  ! pgld          Glacier depth (including snow) [m water equivalent]
+  ! pgrndcapc     Heat capacity of the uppermost soil layer [j/m**2/K]
+  ! pevapl        Total evapotranspiration, including sublimation [kg/m**2/s]
+  ! pevapot       Potential evaporation/sublimation [kg/m**2/s]
+  ! pevwsd        Evapotranspiration without sublimation and evaporation from interception reservoir [kg/m**2]
+  ! prain         Totalrainfall [kg/m**2/s]
+  ! psnow         Total snowfall [kg/m**2/s]
+  ! palac         Precipitation minus sublimation at glacier points [kg/m**2/s]
+  ! psnacl        Snow budget at non-glacier points [kg/m**2] (accumul.)
+  ! psnmel        Snow melt [kg/m**2] (accumulated for diagnostics)
+  ! progl         Glacier runoff (rain+snow/ice melt) [kg/m**2] (accumul.)
+  !
+  ! The following local variables represent the respective fluxes
+  ! integrated over one timestep (delta_time) and divided by the density of
+  ! water (rhoh2o). Units are m water equivalent.
+  !
+  ! zraind        Total rain
+  ! zsnowd        Total snowfall
+  ! zevttd        Total evaporation
+  ! zevsnd        Sublimation from snow
+  ! zrogl         Runoff at glacier points (rain and melt, but no calving)
+  ! zsnmel        Snow/ice melt at land and glacier points
+  ! tte_corr      Correction term for temperature tendencies accounting for snow melt
+  ! psmelt        instantaneous snow melt rate (for dry deposition)
+  !
+  !       Rest folgt spaeter ....
+  !
+  !     *SURF* - UPDATES LAND VALUES OF TEMPERATURE, MOISTURE AND SNOW.
+  !              CALCULATE FLUXES OF TOTAL RAIN, TOTAL SNOW AND EVAPO-
+  !              RATION FROM THE THREE RESERVOIRS (SN, WS, WL)
+  !              CONVERT FLUXES (KG/M**2*S) TO CHANGES OF WATER LEVELS (M)
+  !              DURING TIMESTEP DELTA_TIME.
+  !
+  !     J.F.GELEYN     E.C.M.W.F.     08/06/82.
+  !     MODIFIED BY
+  !     C.A.BLONDIN    E.C.M.W.F.    18/12/86.
+  !     MODIFIED BY L.DUMENIL      MET.INST.HH     20/05/88
+  !     J.-P. SCHULZ   MPI - 1997 : IMPLEMENTATION OF IMPLICIT
+  !                                 COUPLING BETWEEN LAND SURFACE
+  !                                 AND ATMOSPHERE.
+  !     MODIFIED BY E. ROECKNER    MPI - SEPT 1998
+  !     MODIFIED BY M. ESCH        MPI - APR  1999
+  !     MODIFIED BY E. ROECKNER    MPI - JAN  2001
+  !     MODIFIED BY I. Kirchner    MPI - MARCH 2001 date/time control
+  !     MODIFIED BY E. ROECKNER    MPI - SEP  2002 interception reservoir
+  !                                                for snow changed
+  !     MODIFIED BY L. KORNBLUEH   MPI - JAN  2003 removed MERGE
+  !
+  !     MODIFICATION
+  !
+  !     PURPOSE
+  !
+  !     INTERFACE.
+  !
+  !          *SURF* IS CALLED FROM *PHYSC*.
+  !
+  !     METHOD.
+  !
+  !     EXTERNALS.
+  !
+  !          NONE.
+  !
+  !     REFERENCE.
+  !
+  !          SEE SOIL PROCESSES' PART OF THE MODEL'S DOCUMENTATION FOR
+  !     DETAILS ABOUT THE MATHEMATICS OF THIS ROUTINE.
+  !
+!!$ TR  USE mo_param_switches ! only lsurf is used
+!!$ TR  USE mo_physc2
+!!$ TR  USE mo_constants
+!!$ TR  USE mo_vegetation ! only cvinter is used
+!!$ TR  USE mo_rad
+
+    REAL(wp), INTENT(in) :: delta_time
+    LOGICAL,  INTENT(in) :: lstart
+    REAL(wp), INTENT(in) :: &
+      & ptsl, &
+      & pcvs, &
+      & pgrndcapc, &
+      & pevapl, &
+      & pevapot, &
+      & prain, &
+      & psnow
+
+    REAL(wp), INTENT(inout) :: &
+      & pgld
+!!$  REAL(wp), INTENT(inout) :: psnacl
+!!$  REAL(wp), INTENT(inout) :: psnmel
+!!$  REAL(wp), INTENT(inout) :: progl
+
+    REAL(wp), INTENT(out)   :: &
+      & pevwsd, &
+      & palac, &
+      & tte_corr, &
+      & psmelt
+    !
+    !  local arrays
+    !
+    REAL(wp) ::                                                             &
+      & zraind, &
+      & zsnowd, &
+      & zevttd, &
+      & zevsnd, &
+      & zrogl,  &
+      & zsnmel, &
+!!$       , zdp,
+      & zsmelt, &
+      & zsnmlt
+    REAL(wp) :: zdtime
+    !
+    !      Parameters
+    !
+    REAL(wp), PARAMETER :: cvinter = 0.25_wp  !!$ TR for JSBACH testing
+    REAL(wp), PARAMETER :: cwlmax = 2.E-4_wp  !!$ TR for JSBACH testing
+
+    zdtime = delta_time
+    !
+    !     ------------------------------------------------------------------
+    !
+    !*    1.     Convert water fluxes to [m water equivalent * timestep]
+    !
+    zrogl=0._wp
+    zsnmel=0._wp
+    zraind=prain          * zdtime/rhoh2o    !rain     [kg m-2 s-1] -> [m]
+    zsnowd=psnow          * zdtime/rhoh2o    !snowfall [kg m-2 s-1] -> [m]
+    zevttd=pevapl         * zdtime/rhoh2o    !evapotransp. [kg m-2 s-1] -> [m]
+    zevsnd=pcvs * pevapot * zdtime/rhoh2o    !pot. sublimation from snow [m]
+    !
+    !     ------------------------------------------------------------------
+    pevwsd = zevttd - zevsnd                               ! [m]
+    !
+    tte_corr = 0._wp      ! no snow melt correction for glaciers
+    !
+    !*    2.3    Snowfall and sublimation on glaciers and diagnostics
+    !
+    pgld = pgld + zsnowd + zevsnd      !vg  glacier depth [m] = glacier depth + snowfall + sublimation of snow
+    palac = zraind + zsnowd + zevttd   !vg  P-E on glaciers [m] = rainfall + snowfall + evaporation (incl. sublim.) 
+    zrogl = zraind                         !vg  glacier runoff = rainfall [m]
+    !
+    !*    2.4    Snow and glacier melt
+    !
+    IF (.NOT. lstart .AND. ptsl > tmelt) THEN
+      zsnmel = pgrndcapc * (ptsl - tmelt) / (alf * rhoh2o)  ! snow and ice melt [m]
+      pgld   = pgld - zsnmel                                ! adapt glacier depth to snow and ice melt
+      zrogl  = zrogl + zsnmel                               ! add melt water to glacier runoff
+    END IF
+    !
+    ! Accumulate water fluxes
+    ! Note: conversion from m water equivalent to kg/m^2s - multiply by rhoh2o / zdtime
+    !       accumulation - multiply by zdtime
 !!$            psnmel(jl) = psnmel(jl)  +zsnmel(jl) * rhoh2o
 !!$            IF (lpglac(jl)) progl(jl)  = progl(jl)   +zrogl(jl)  *rhoh2o
-!vg>>
-          palac(jl) = palac(jl) * rhoh2o/zdtime  ! [m] -> [kg m-2 s-1]
-!vg<<
-        END IF
-601  END DO
+    palac = palac * rhoh2o/zdtime  ! [m] -> [kg m-2 s-1]
 
-!++mgs
-!--- Included for dry deposition ---------------------------------------
-      psmelt(1:kbdim) = zsnmel(1:kbdim) * rhoh2o
-!--mgs
+    psmelt = zsnmel * rhoh2o / zdtime
 
-!!$ TR  END IF
-  !
-  RETURN
-
-END SUBROUTINE update_surf_down
+END SUBROUTINE update_surf_down_glacier
 
 SUBROUTINE update_soiltemp(nidx,nsoil                        &
                          , delta_time                        &
@@ -491,7 +600,7 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
                          , pgrndc, pgrndd                    &
                          , ptsoil                            &
                          , pgrndcapc, pgrndhflx              &
-                         , lmask, ldglac                     &
+                         , ldglac                     &
                          )
 !
 !   AUTHOR:  FREDERIC HOURDIN     30/01/92
@@ -555,7 +664,6 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
   REAL(wp), Intent(inout)  ::  ptsoil(nidx,nsoil)   !! soil temperature [K]
   REAL(wp), Intent(out)    ::  pgrndcapc(nidx)      !!
   REAL(wp), Intent(out)    ::  pgrndhflx(nidx)      !! ground heat flux
-  LOGICAL, Intent(in)  ::  lmask(nidx)
   LOGICAL, Intent(in)  ::  ldglac(nidx)         !! glacier mask
 !
 !     ------------------------------------------------------------------
@@ -595,10 +703,10 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !*    1.3 COMPUTE OF THE SOIL THERMAL CONDUCTIVITY [J/S/M/K] FROM
 !*        THE SOIL TEMPERATURE DIFFUSIVITY [M**2/S].
 !
-  WHERE (lmask(:) .AND. ldglac(:))
+  WHERE (ldglac(:))
     zso_capa(:) = zrici
     zso_cond(:) = zso_capa(:) * zdifiz
-  ELSEWHERE (lmask(:))
+  ELSEWHERE
     zso_capa(:) = prgcgn(:)
     zso_cond(:) = zso_capa(:) * psodif(:)
   END WHERE
@@ -606,10 +714,8 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !*    1.4 PRE-SET THERMAL CONDUCTIVITY AT ALL LEVELS.
 !
   DO jk = 1,nsoil
-    WHERE (lmask)
       zkappa(:,jk) = zso_cond(:)
       zcapa(:,jk)  = zso_capa(:)
-    END WHERE
   END DO
 
 !
@@ -627,7 +733,7 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !   Deeper layers
 !
     DO jk = 1,nsoil-1
-      WHERE(lmask) ptsoil(:,jk+1) = pgrndc(:,jk) + pgrndd(:,jk) * ptsoil(:,jk)
+      ptsoil(:,jk+1) = pgrndc(:,jk) + pgrndd(:,jk) * ptsoil(:,jk)
     END DO
 
   END IF
@@ -636,7 +742,6 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !   COMPUTATION OF THE CGRD AND DGRD COEFFICIENTS FOR THE NEXT STEP
 !   ---------------------------------------------------------------
 !
-  WHERE (lmask)
 
     zsnow_h(:) = psn(:) * RhoH2O / zsn_dens
 !
@@ -654,10 +759,8 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
       zcapa(:,1) = zso_capa(:)
       zkappa(:,1) = zso_cond(:)
     ENDWHERE
-  END WHERE
 !
   DO jk = 2, nsoil - 2
-    WHERE (lmask)
        WHERE ( zsnow_h(:) > cmid(jk+1) )
           zcapa(:,jk) = zsn_capa
           zkappa(:,jk) = zsn_cond
@@ -670,29 +773,24 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
           zcapa(:,jk) = zso_capa(:)
           zkappa(:,jk) = zso_cond(:)
        ENDWHERE
-     END WHERE
   END DO
 !
   DO jk=1,nsoil
-    WHERE (lmask) zdz2(:,jk) = zcapa(:,jk) * cdel(jk) / delta_time
+    zdz2(:,jk) = zcapa(:,jk) * cdel(jk) / delta_time
   END DO
 !
   DO jk=1,nsoil-1
-    WHERE (lmask) zdz1(:,jk) = zd1(jk) * zkappa(:,jk)
+    zdz1(:,jk) = zd1(jk) * zkappa(:,jk)
   END DO
 !
-  WHERE (lmask)
     z1(:) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
     pgrndc(:,nsoil-1) = zdz2(:,nsoil) * ptsoil(:,nsoil) / z1(:)
     pgrndd(:,nsoil-1) = zdz1(:,nsoil-1) / z1(:)
-  END WHERE
 !
   DO jk=nsoil-1,2,-1
-    WHERE (lmask)
       z1(:) = 1._wp / (zdz2(:,jk) + zdz1(:,jk-1) + zdz1(:,jk) * (1._wp - pgrndd(:,jk)))
       pgrndc(:,jk-1) = (ptsoil(:,jk) * zdz2(:,jk) + zdz1(:,jk) * pgrndc(:,jk)) * z1(:)
       pgrndd(:,jk-1) = zdz1(:,jk-1) * z1(:)
-    END WHERE
   END DO
 !
 !   ---------------------------------------------------------
@@ -700,13 +798,8 @@ SUBROUTINE update_soiltemp(nidx,nsoil                        &
 !   CALORIFIC CAPACITY OF THE GROUND:
 !   ---------------------------------------------------------
 !
-  WHERE (lmask)
     pgrndhflx(:) = zdz1(:,1) * (pgrndc(:,1) + (pgrndd(:,1) - 1._wp) * ptsoil(:,1))
     pgrndcapc(:) = (zdz2(:,1) * delta_time + delta_time * (1._wp - pgrndd(:,1)) * zdz1(:,1))
-  ELSEWHERE
-    pgrndhflx = 0._wp
-    pgrndcapc = 0._wp
-  END WHERE
 
 END SUBROUTINE update_soiltemp
 

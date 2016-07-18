@@ -34,8 +34,7 @@ MODULE mo_hydro_memory_class
       & fract_water,      & !< Wet (skin reservoir) fraction of tile                                    []
       & fract_snow,       & !< Snow fraction of tile                                                    []
       & w_skin,           & !< Water content in skin reservoir                                          [m]
-      & w_snow,           & !< Water content of snow reservoir                                          [m water equivalent]
-      & tte_corr            !< Correction term of TTE for snow melt
+      & w_snow              !< Water content of snow reservoir                                          [m water equivalent]
 
     TYPE(t_jsb_var_real2d) :: &
       & snowmelt,         & !< Snow melt                                                                [kg m-2 s-1]
@@ -51,7 +50,9 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
-      & evapo_lnd         ! !< Evapotranspiration over vegetation and bare soil type 
+      & evapo_lnd,        & !< Evapotranspiration over vegetation and bare soil type 
+      & tte_corr            !< Correction term for temperature tendency due to snowmelt                 [K Pa s-1]
+                            !! (is divided by pressure difference [Pa] in the atmosphere)
 
     ! Additional variables for soil
     TYPE(t_jsb_var_real2d) :: &
@@ -85,7 +86,7 @@ MODULE mo_hydro_memory_class
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_glac,  & !< Snow fraction on glacier                                                 []
-      & w_snow_glac,      & !< Water content of snow on glacier                                         [m water equivalent]
+      & w_glac,           & !< Glacier depth including snow on glacier                                  [m water equivalent]
       & pme_glacier         !< P-E on glaciers
 
     ! Additional variables if no separate glacier lct_type is used and glaciers are treated as part of SOIL lct_type
@@ -184,13 +185,6 @@ CONTAINS
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'tte_corr', mem%tte_corr,                                     &
-      & hgrid, surface,                                                                  &
-      & t_cf('tte_correction_snowmelt', '', ''),                                         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
-      & prefix, suffix,                                                              &
-      & initval_r=0.0_wp )
-
     ! Potential evapotranspiration/sublimation
     CALL jsb_add_var( mem, 'snowmelt', mem%snowmelt,                                     &
       & hgrid, surface,                                                                  &
@@ -245,6 +239,13 @@ CONTAINS
       CALL jsb_add_var( mem, 'evapo_lnd', mem%evapo_lnd,                                 &
         & hgrid, surface,                                                                  &
         & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'tte_corr', mem%tte_corr,                                     &
+        & hgrid, surface,                                                                  &
+        & t_cf('tte_correction_snowmelt', 'K s-1', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )
@@ -403,7 +404,6 @@ CONTAINS
 
     ! Additional variables for GLACIER lct
     IF ( (     One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
-      &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  )                                          &
       &  .AND. .NOT. ASSOCIATED(mem%pme_glacier%ptr)) THEN
 
@@ -414,9 +414,9 @@ CONTAINS
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'w_snow_glac', mem%w_snow_glac,  &
+      CALL jsb_add_var( mem, 'w_glac', mem%w_glac,  &
         & hgrid, surface,                                                           &
-        & t_cf('Water content of snow reservoir on glacier', 'm', ''),     &
+        & t_cf('Water content of glacier including snow', 'm', ''),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                              &
         & initval_r=20.0_wp )

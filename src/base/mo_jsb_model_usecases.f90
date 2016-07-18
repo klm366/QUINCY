@@ -79,7 +79,7 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile',            &
-      & processes=(/ATM2LAND,LAND2ATM,RAD,SEB,TURB,SOIL,HYDRO,VEG/), &
+      & processes=(/ATM2LAND,LAND2ATM,RAD,SEB,TURB,SOIL,HYDRO,PHENO,VEG/), &
       & lct=t_jsb_lct(LAND_TYPE), &
       & model_id=model%id, grid_id=model%grid_id)
 

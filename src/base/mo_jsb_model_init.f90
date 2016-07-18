@@ -203,45 +203,33 @@ CONTAINS
 
     ! Temporary for testing ... should be in separate subroutine
     CALL model%Queue_task(RAD,    "surface_radiation")
-    !CALL model%Queue_task(HYDRO, "snow_and_skin_fraction")
+    !CALL model%Queue_task(HYDRO,  "snow_and_skin_fraction")
     CALL model%Queue_task(SEB,    "surface_energy")
     CALL model%Queue_task(SEB,    "surface_fluxes")
     CALL model%Queue_task(RAD,    "albedo")
     CALL model%Queue_task(TURB,   "surface_roughness")
-    CALL model%Queue_task(ASSIMI, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
-                                                                  ! and assimilation_waterunlimited
-    CALL model%Queue_task(ASSIMI, "assimilation_waterlimited")    ! first call without water limitation (waterLimitationFlag =.FALSE.)
-    ! R: Das ist eine grundsätzliche Entscheidung hier:
-    ! R: Ein Task könnte unterschiedliche Konfigurationen habe.
-    ! R: So wie die Struktur jetzt ist, MUSS jede dieser Konfigurationen
-    ! R: ein eigener Task sein, denn die Queue (model%queue%next%...%task)
-    ! R: zeigt immer auf einen Task der unter model%processes(2)%p%task_list(:)
-    ! R: steht. Würde man zwischen den Aufrufen hier versuchen den Task zu
-    ! R: konfigurieren z.B. model%queue%next%...%task%waterLimitationFlag = .TRUE.
-    ! R: so würde später wenn die Queue abgearbeitet wird immer nur die letzte
-    ! R: Konfiguration existieren, da der Task nur einmal existiert und die Queue
-    ! R: nur Pointer auf diesen einen Task hat.
-    ! R: Die Konfiguration gehört nicht zu model%processes(2)%p%config da sie
-    ! R: sich nicht auf einen gesamten Prozess sondern nur auf einen Task darin
-    ! R: bezieht. Außerdem wäre auch jede andere Speicherstelle die sich nicht
-    ! R: bei/während der Abarbeitung der Queue ändert unnütz. Die Speicherstelle
-    ! R: müsste unter model%queue% z.B. als task_config liegen.
-    ! R: So wie es jetzt ist (dass die Tasks je nach Konfiguration eigenständige
-    ! R: Tasks sein müssen) finde ich gar nicht so schlecht. Denn dadurch gibt
-    ! R: es keine "Abhängigkeiten" des Tasks in der Queue sondern nur eindeutig
-    ! R: definierte Tasks. Mit welchen IFs man die Queue auch erstellt hat, am
-    ! R: Ende ist sie eindeutig und man kann sich die Tasks eindeutig ausgegeben
-    ! R: lassen. Außerdem: die Konfiguration beinhaltet nicht die
-    ! R: Fallunterscheidungen für jedes Tile und LCT-Typ usw....
-
-    ! include here the tasks soil_hydrology and vegetation_conductance
-    CALL model%Queue_task(ASSIMI, "assimilation_waterunlimited")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
-                                                                  ! should be called after the soil hydrology is calculated
-                                                                  ! (former update_soil_1) and after the vegetation conductance is calculated
-                                                                  ! (former update_vegetation_conductanc)
+    CALL model%Queue_task(SOIL,   "soil_temp_and_hydro")
+    CALL model%Queue_task(SEB,    "snowmelt_correction")
+    IF (model%processes(ASSIMI)%p%config%active) THEN
+      CALL model%Queue_task(ASSIMI, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
+                                                                    ! and assimilation_waterunlimited
+    END IF
+    IF (model%processes(ASSIMI)%p%config%active) THEN
+      CALL model%Queue_task(ASSIMI, "canopy_cond_unstressed")  ! first call without water limitation (waterLimitationFlag =.FALSE.)
+    ELSE
+      CALL model%Queue_task(VEG,    "canopy_cond_unstressed")
+    END IF
+    CALL model%Queue_task(VEG,    "canopy_cond_stressed")
+    IF (model%processes(ASSIMI)%p%config%active) THEN
+      CALL model%Queue_task(ASSIMI, "assimilation")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
+                                                     ! should be called after the soil hydrology is calculated
+                                                     ! (former update_soil_1) and after the vegetation conductance is calculated
+                                                     ! (former update_vegetation_conductanc)
+    END IF
     CALL model%Queue_task(TURB,   "humidity_scaling")
+    CALL model%Queue_task(VEG,    "foliage_projected_cover")
     CALL model%Queue_task(PHENO,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
-                                                         ! but in JSBACH3 it was here at the end...
+                                                           ! but in JSBACH3 it was here at the end...
     
     CALL model%Queue_task(SEB,    "asselin_filter")      ! Should always be the last task
     CALL print_model(model)
@@ -292,7 +280,11 @@ CONTAINS
         CALL hydro_init(tile)
       END IF
 
-      ! Vegetation must be initialized after soil!
+      IF (one_of(tile%process_action(PHENO), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+        CALL pheno_init(tile)
+      END IF
+
+      ! Vegetation must be initialized after soil and after pheno!
       IF (one_of(tile%process_action(VEG), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL veg_init_bc(tile)
         CALL veg_init_ic(tile)
@@ -302,10 +294,6 @@ CONTAINS
       !   CALL assimi_init_bc(tile)
       !   CALL assimi_init_ic(tile)
       ! END IF
-
-      IF (one_of(tile%process_action(PHENO), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
-        CALL pheno_init(tile)
-      END IF
 
 #ifndef __NO_JSBACH_HD__
       IF (one_of(tile%process_action(HD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN

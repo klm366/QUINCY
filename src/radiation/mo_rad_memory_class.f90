@@ -140,7 +140,6 @@ CONTAINS
     canopy_layer => Get_vgrid('canopy_layer')
 
     dsl4jsb_Get_config(RAD)
-!!$    SELECT TYPE (conf=>model%processes(RAD)%p%config) ; TYPE IS (t_rad_config); rad__conf => conf; END SELECT
 
     IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
 

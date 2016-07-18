@@ -92,6 +92,7 @@ CONTAINS
 
     ! Wet skin fraction on canopy
 !!$    fract_water_can = MERGE(MIN(1._wp, w_skin_can / wsr_max), 0._wp, wsr_max > EPSILON(1._wp))
+    ! TBD
     fract_water_can = 0._wp
 
     ! Snow fraction on soil
@@ -124,7 +125,7 @@ CONTAINS
     END IF
 
     fract_water_srf = fract_water_soil + fract_water_can ! <---- dadurch lookup table overflow
-    fract_snow_srf = fract_snow_soil ! + fract_snow_can
+    fract_snow_srf = fract_snow_soil ! + fract_snow_can    TBD
 
 
    END SUBROUTINE calc_snow_and_skin_fraction

@@ -21,13 +21,13 @@ MODULE mo_veg_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes VEG, SOIL, SEB, ATM2LAND, RAD, HYDRO !, ASSIMI
+  dsl4jsb_Use_processes VEG, PHENO, SOIL, SEB, ATM2LAND, RAD, HYDRO !, ASSIMI
   dsl4jsb_Use_config(VEG)
   dsl4jsb_Use_config(SOIL)
   dsl4jsb_Use_config(RAD)
@@ -36,6 +36,7 @@ MODULE mo_veg_interface
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(VEG)
+  dsl4jsb_Use_memory(PHENO)
   dsl4jsb_Use_memory(RAD)
   dsl4jsb_Use_memory(HYDRO)
   !dsl4jsb_Use_memory(ASSIMI)
@@ -43,28 +44,208 @@ MODULE mo_veg_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: update_vegetation_2, update_vegetation_conductance
-  PUBLIC :: Register_veg_tasks !,t_veg_process
-
-!!$  TYPE, EXTENDS(t_jsb_process) :: t_veg_process
-!!$  CONTAINS
-!!$    PROCEDURE :: Register_tasks => Register_veg_tasks
-!!$  END TYPE t_veg_process
+  PUBLIC :: Register_veg_tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_interface'
 
+  !> Type definition for canopy_cond_unstressed task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_unstressed
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_canopy_cond_unstressed
+    PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_unstressed
+  END TYPE tsk_canopy_cond_unstressed
+
+  !> Constructor interface for canopy_cond_unstressed task
+  INTERFACE tsk_canopy_cond_unstressed
+    PROCEDURE Create_task_canopy_cond_unstressed
+  END INTERFACE tsk_canopy_cond_unstressed
+
+  !> Type definition for canopy_cond_stressed task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_stressed
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_canopy_cond_stressed
+    PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_stressed
+  END TYPE tsk_canopy_cond_stressed
+
+  !> Constructor interface for canopy_cond_stressed task
+  INTERFACE tsk_canopy_cond_stressed
+    PROCEDURE Create_task_canopy_cond_stressed
+  END INTERFACE tsk_canopy_cond_stressed
+
+  !> Type definition for foliage_projected_cover task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_foliage_projected_cover
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_fpc
+    PROCEDURE, NOPASS :: Aggregate => aggregate_fpc
+  END TYPE tsk_foliage_projected_cover
+
+  !> Constructor interface for foliage_projected_cover task
+  INTERFACE tsk_foliage_projected_cover
+    PROCEDURE Create_task_foliage_projected_cover
+  END INTERFACE tsk_foliage_projected_cover
+
 CONTAINS
 
-  SUBROUTINE Register_veg_tasks(this, model_id)
+  ! ================================================================================================================================
+  !! Constructors for tasks
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for canopy_cond_unstressed task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "canopy_cond_unstressed"
+  !!
+  FUNCTION Create_task_canopy_cond_unstressed(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_canopy_cond_unstressed::return_ptr)
+
+    return_ptr%name = 'canopy_cond_unstressed'
+    return_ptr%process_id = VEG
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_canopy_cond_unstressed
+  
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for canopy_cond_stressed task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "canopy_cond_stressed"
+  !!
+  FUNCTION Create_task_canopy_cond_stressed(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_canopy_cond_stressed::return_ptr)
+
+    return_ptr%name = 'canopy_cond_stressed'
+    return_ptr%process_id = VEG
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_canopy_cond_stressed
+  
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for foliage_projected_cover task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "foliage_projected_cover"
+  !!
+  FUNCTION Create_task_foliage_projected_cover(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_foliage_projected_cover::return_ptr)
+
+    return_ptr%name = 'foliage_projected_cover'
+    return_ptr%process_id = VEG
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_foliage_projected_cover
+  
+  SUBROUTINE Register_veg_tasks(process, model_id)
+
+    CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
 
-    !CALL this%Register_task(tsk_radiation_surface(name="radiation_surface", process_id=VEG))
+    CALL process%Register_task(tsk_canopy_cond_unstressed(model_id))
+    CALL process%Register_task(tsk_canopy_cond_stressed(model_id))
+    CALL process%Register_task(tsk_foliage_projected_cover(model_id))
 
   END SUBROUTINE Register_veg_tasks
 
-  SUBROUTINE update_vegetation_conductance(tile, options)
+  SUBROUTINE update_canopy_cond_unstressed(tile, options)
+    ! ---------------------------
+    ! Variables
+
+    ! Used variables
+    USE mo_veg_process, ONLY: get_canopy_conductance
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(PHENO)
+    dsl4jsb_Def_memory(ATM2LAND)
+
+    dsl4jsb_Real2D_onChunk :: lai
+    dsl4jsb_Real2D_onChunk :: swpar_srf_down
+    dsl4jsb_Real2D_onChunk :: canopy_cond
+
+    INTEGER :: nsoil
+
+    INTEGER :: p_pe
+    INTEGER :: iblk, ics, ice, nc
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_cond_unstressed'
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (.NOT. tile%Is_process_active(VEG)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(PHENO)
+    dsl4jsb_Get_memory(ATM2LAND)
+
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swpar_srf_down) ! IN
+    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)            ! IN
+    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)    ! OUT
+
+    ! Compute (max) canopy (stomatal) conductance with no water stress
+    canopy_cond(:) = get_canopy_conductance( lai(:), swpar_srf_down(:) )
+
+  END SUBROUTINE update_canopy_cond_unstressed
+
+  SUBROUTINE aggregate_canopy_cond_unstressed(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(VEG)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_canopy_cond_unstressed'
+
+    INTEGER :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(VEG)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(VEG,    canopy_cond,    weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_canopy_cond_unstressed
+
+  SUBROUTINE update_canopy_cond_stressed(tile, options)
     ! ---------------------------
     ! Variables
 
@@ -83,6 +264,7 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL)
     dsl4jsb_Def_memory(SEB)
     dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(PHENO)
     dsl4jsb_Def_memory(ATM2LAND)
     dsl4jsb_Def_memory(HYDRO)
     !dsl4jsb_Def_memory(ASSIMI)
@@ -112,7 +294,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_conductance'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_cond_stressed'
 
     iblk = options%iblk
     ics  = options%ics
@@ -121,9 +303,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(VEG)) RETURN
 
-!!$    p_pe = get_my_global_mpi_id()
-!!$    IF (iblk == 1) CALL message(TRIM(routine), 'Starting update on PE '//int2string(p_pe), all_print=.TRUE.)
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of vegetation_1 ')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
@@ -135,47 +315,28 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(PHENO)
     dsl4jsb_Get_memory(SEB)
     dsl4jsb_Get_memory(SOIL)
     dsl4jsb_Get_memory(ATM2LAND)
     dsl4jsb_Get_memory(HYDRO)
-    !dsl4jsb_Get_memory(ASSIMI)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swpar_srf_down) ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)          ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)      ! IN
-
-    dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! IN
-    dsl4jsb_Get_var3D_onChunk(SOIL, soil_depth_l)       ! IN
-    !dsl4jsb_Get_var2D_onChunk(HYDRO, w_soil_column)    ! OUT
-    dsl4jsb_Get_var3D_onChunk(HYDRO, w_soil_sl)         ! IN
-    dsl4jsb_Get_var3D_onChunk(HYDRO, w_soil_fc_sl)      ! IN
-    dsl4jsb_Get_var3D_onChunk(HYDRO, w_soil_pwp_sl)     ! IN
-
-    dsl4jsb_Get_var2D_onChunk(VEG,      lai)            ! IN
-    dsl4jsb_Get_var3D_onChunk(VEG,      root_depth_l)   ! IN
-    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond_limited) ! OUT
-    dsl4jsb_Get_var3D_onChunk(VEG,      root_depth_l)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root)        ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root_fc)     ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root_pwp)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    water_stress)   ! OUT
-
-
-
-    ! Compute (max) canopy (stomatal) conductance with no water stress
-    SELECT CASE(TRIM(dsl4jsb_Config(VEG)%scheme_stom_cond))
-      CASE('echam5')  ! R: only if the assimilation process is not active!?
-        canopy_cond(:) = get_canopy_conductance( lai(:), swpar_srf_down(:) )
-
-!!$      CASE('bethy') ! R: the assimilation process is called from the main interface before this procedure and should not be called here!
-!!$        ! TBD: Call bethy to compute unstressed canopy conductance
-
-      CASE default
-        CALL finish( TRIM(routine), 'Canopy conductance scheme '//TRIM(dsl4jsb_Config(VEG)%scheme_stom_cond)//&
-                   & 'not supported.')
-    END SELECT
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)               ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)           ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      t)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL,     soil_depth_l)        ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_sl)           ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_fc_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl)       ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)                 ! in
+    dsl4jsb_Get_var3D_onChunk(VEG,      root_depth_l)        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond_limited) ! out
+    dsl4jsb_Get_var3D_onChunk(VEG,      root_depth_l)        ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root)         ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root_fc)      ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root_pwp)     ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    water_stress)        ! out
 
     ! Get water stress
 
@@ -196,12 +357,51 @@ CONTAINS
                                                     q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
                                                     )
 
-    ! Compute skin reservoir fraction on canopy
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_vegetation_conductance
+  END SUBROUTINE update_canopy_cond_stressed
 
+  SUBROUTINE aggregate_canopy_cond_stressed(tile, options)
 
-  SUBROUTINE update_vegetation_2(tile, options)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(HYDRO)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_canopy_cond_stressed'
+
+    INTEGER :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(HYDRO)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(VEG,   canopy_cond_limited, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, w_soil_root,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, w_soil_root_fc,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, w_soil_root_pwp,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, water_stress,        weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_canopy_cond_stressed
+
+  SUBROUTINE update_fpc(tile, options)
 
     ! ---------------------------
     ! Variables
@@ -210,7 +410,6 @@ CONTAINS
     ! sollen jetzt in dieses File hier kommen:
     !USE mo_veg_process, ONLY: canopy_albedo, get_foliage_projected_cover
     USE mo_veg_process, ONLY: get_foliage_projected_cover
-    USE mo_jsb_time,    ONLY: get_time_interpolation_weights
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -225,39 +424,21 @@ CONTAINS
 
     INTEGER :: p_pe
 
-    REAL(wp) :: wgt1, wgt2
-    INTEGER  :: nmw1,nmw2
-
     ! Declare pointers of type process __conf and __mem
     dsl4jsb_Def_memory(VEG)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(SOIL)
-    dsl4jsb_Def_memory(RAD)
-    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(PHENO)
 
-    ! Declare pointers of type variable in memory
-    dsl4jsb_Real2D_onChunk :: t
+    ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    dsl4jsb_Real2D_onChunk :: fract_forest
-!!$   dsl4jsb_Real2D_onChunk :: alb_vis_can
-!!$   dsl4jsb_Real2D_onChunk :: alb_nir_can
-!!$   dsl4jsb_Real2D_onChunk :: alb_vis_soil
-!!$   dsl4jsb_Real2D_onChunk :: alb_nir_soil
-    dsl4jsb_Real2D_onChunk :: alb_vis
-    dsl4jsb_Real2D_onChunk :: alb_nir
-    dsl4jsb_Real2D_onChunk :: alb_background
-    dsl4jsb_Real2D_onChunk :: fract_snow_can
-    dsl4jsb_Real2D_onChunk :: fract_snow_soil
-    REAL(wp), POINTER :: lai_mon       (:,:)
 
 
     INTEGER  :: iblk, ics, ice, nc
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegetation_2'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fpc'
 
     ! ---------------------------
     ! Go
@@ -270,64 +451,40 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(VEG)) RETURN
 
     p_pe = get_my_global_mpi_id()
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(VEG)
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(SOIL)
+    dsl4jsb_Get_memory(PHENO)
 
-    dsl4jsb_Get_var2D_onChunk(VEG,   lai)            ! OUT
-    dsl4jsb_Get_var2D_onChunk(VEG,   fract_fpc)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(VEG,   fract_fpc_max)  ! OUT
-    dsl4jsb_Get_var2D_onChunk(VEG,   fract_forest)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_can) ! OUT
-!!$    alb_vis_can  => tile%mem%veg  %alb_vis_can%ptr     (ics:ice,    iblk)
-!!$    alb_nir_can  => tile%mem%veg  %alb_nir_can%ptr     (ics:ice,    iblk)
-
-!!$    alb_vis_soil => tile%mem%soil %alb_vis_soil%ptr    (ics:ice,    iblk)
-!!$    alb_nir_soil => tile%mem%soil %alb_nir_soil%ptr    (ics:ice,    iblk)
-    dsl4jsb_Get_var2D_onChunk(SEB,   t)              ! OUT
-    dsl4jsb_Get_var2D_onChunk(RAD,   alb_vis)        ! OUT
-    dsl4jsb_Get_var2D_onChunk(RAD,   alb_nir)        ! OUT
-    dsl4jsb_Get_var2D_onChunk(RAD,   alb_background) ! OUT
-
-    dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_soil)! OUT
-
-    lai_mon      => veg__mem%lai_mon (ics:ice,    iblk, :)
-
-    ! Update leaf area index
-    !
-    ! At the moment by interpolating monthly climatological LAI
-    CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    lai(:) = REAL(wgt1,wp) * lai_mon(:,nmw1+1) + REAL(wgt2,wp) * lai_mon(:,nmw2+1)
+    dsl4jsb_Get_var2D_onChunk(PHENO, lai)            ! in
+    dsl4jsb_Get_var2D_onChunk(VEG,   fract_fpc_max)  ! in
+    dsl4jsb_Get_var2D_onChunk(VEG,   fract_fpc)      ! out
 
     ! Update foliage projected cover
     !
     ! TBD: Use clumpiness factor instead of 1._wp
     fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), SPREAD(1._wp, DIM=1, NCOPIES=SIZE(lai,1)))
 
-    ! Update albedo
-    ! TBD: use newer albedo scheme
-! R: entspricht meiner Funktion get_surface_albedo_simple. Wird bei mir aber vom Hauptinterface gecallt und soll auch nicht in update_vegetation. 
-!     alb_vis(:) = canopy_albedo(t(:), fract_forest(:), fract_snow_soil(:), fract_snow_can(:), lai(:), &
-!                    & SPREAD(albedo_snow_min, NCOPIES=nc, DIM=1), SPREAD(albedo_snow_max, NCOPIES=nc, DIM=1), alb_background(:))
-!     alb_nir(:) = alb_vis(:)
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_vegetation_2
+  END SUBROUTINE update_fpc
 
-
-    SUBROUTINE aggregate_veg(tile, options)
+  SUBROUTINE aggregate_fpc(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_veg'
+    dsl4jsb_Def_memory(VEG)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_fpc'
 
     INTEGER :: iblk, ics, ice, nc
 
@@ -336,9 +493,19 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
 
-  END SUBROUTINE aggregate_veg
+    dsl4jsb_Get_memory(VEG)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(VEG, fract_fpc, weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_fpc
 
 #endif
 END MODULE mo_veg_interface

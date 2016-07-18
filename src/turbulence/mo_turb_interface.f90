@@ -316,7 +316,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(TURB) .OR. Contains_lct(tile%lcts, LAKE_TYPE)) RETURN
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of humidity weights')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
@@ -325,7 +325,7 @@ CONTAINS
     dsl4jsb_Get_memory(TURB)
     dsl4jsb_Get_memory(SEB)
     dsl4jsb_Get_memory(HYDRO)
-    IF (Contains_lct(tile%lcts, VEG_TYPE)) THEN
+    IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
       dsl4jsb_Get_memory(VEG)
     END IF
 
@@ -407,6 +407,8 @@ CONTAINS
     fact_qsat_srf(:) = zfract_fpc(:) * fact_qsat_veg(:) + (1._wp - zfract_fpc(:)) * fact_qsat_soil(:)
     fact_q_air(:)    = zfract_fpc(:) * fact_qair_veg(:) + (1._wp - zfract_fpc(:)) * fact_qair_soil(:)
     fact_qsat_trans_srf(:) = zfract_fpc(:) * fact_qsat_trans(:)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_humidity_scaling
 

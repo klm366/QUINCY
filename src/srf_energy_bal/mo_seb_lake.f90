@@ -79,6 +79,7 @@ CONTAINS
       & depth_lice, &
       & fract_snow_lice, &
       & w_snow_lice, &
+      & w_snow, &
       & rad_net_wtr, &
       & rad_net_ice
 
@@ -151,6 +152,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB, depth_lice) ! OUT
     dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_lice)    ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO, w_snow_lice) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO, w_snow)      ! OUT
 
     dsl4jsb_Get_var2D_onChunk(RAD, rad_net_wtr)         ! in
     dsl4jsb_Get_var2D_onChunk(RAD, rad_net_ice)         ! in
@@ -232,6 +234,7 @@ CONTAINS
 
     t(:) = (1._wp - fract_lice(:)) * t_wtr   (:) + fract_lice(:) * t_ice   (:)
     heat_cap(:) = (1._wp - fract_lice(:)) * hcap_wtr(:) + fract_lice(:) * hcap_ice(:)
+    w_snow(:) = fract_lice(:) * w_snow_lice(:)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

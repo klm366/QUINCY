@@ -30,7 +30,7 @@ MODULE mo_rad_interface
   !USE mo_jsb_aggregate_class, ONLY: t_jsb_aggregator
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB, SOIL, VEG, ATM2LAND, RAD, HYDRO
+  dsl4jsb_Use_processes SEB, SOIL, VEG, PHENO, ATM2LAND, RAD, HYDRO
 
   ! Use process configurations
   dsl4jsb_Use_config(SEB)
@@ -42,6 +42,7 @@ MODULE mo_rad_interface
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(SEB)
   dsl4jsb_Use_memory(VEG)
+  dsl4jsb_Use_memory(PHENO)
   dsl4jsb_Use_memory(RAD)
   dsl4jsb_Use_memory(HYDRO)
 
@@ -382,7 +383,7 @@ CONTAINS
     dsl4jsb_Def_memory(RAD)
     dsl4jsb_Def_config(SEB)
     dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(PHENO)
     dsl4jsb_Def_memory(ATM2LAND)
 
     ! Declare pointers of type variable in memory
@@ -428,7 +429,7 @@ CONTAINS
     ! müsste jetzt aber direkt aus Vektor config(:) genommen werden den ich oben daher als Argument übergebe ...
     dsl4jsb_Get_config(RAD)
     dsl4jsb_Get_memory(RAD)
-    dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(PHENO)
     dsl4jsb_Get_memory(ATM2LAND)
 
     ! Set pointers
@@ -450,7 +451,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD,      frac_par_direct)       ! IN
     dsl4jsb_Get_var2D_onChunk(RAD,      alb_vis_soil)          ! IN
     dsl4jsb_Get_var2D_onChunk(RAD,      alb_background)        ! IN
-    dsl4jsb_Get_var2D_onChunk(VEG,      lai)                   ! INOUT
+    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)                   ! INOUT
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, cos_zenith_angle)      ! IN
     dsl4jsb_Get_var3D_onChunk(RAD,      lai_cl)                ! INOUT
     dsl4jsb_Get_var3D_onChunk(RAD,      faPAR_cl)              ! INOUT
@@ -566,6 +567,7 @@ CONTAINS
     !RMS dsl4jsb_Def_memory(CARBON)
     dsl4jsb_Def_memory(HYDRO)
     dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(PHENO)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -645,6 +647,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO)
     IF (Contains_lct(tile%lcts, VEG_TYPE)) THEN
       dsl4jsb_Get_memory(VEG)
+      dsl4jsb_Get_memory(PHENO)
     END IF
     
     ! Set pointers to variables in config
@@ -739,7 +742,7 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(RAD,      alb_vis_mineralsoil)   ! INOUT
       dsl4jsb_Get_var2D_onChunk(RAD,      alb_nir_mineralsoil)   ! INOUT
-      dsl4jsb_Get_var2D_onChunk(VEG,      lai)                   ! IN
+      dsl4jsb_Get_var2D_onChunk(PHENO,    lai)                   ! IN
       dsl4jsb_Get_var2D_onChunk(VEG,      fract_forest)          ! IN
       dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_can)        ! IN
       dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_soil)       ! IN

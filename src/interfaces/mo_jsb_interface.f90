@@ -46,7 +46,7 @@ CONTAINS
     & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
     & press_srf, drag_srf,                                         &
     & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
-    & pch, cos_zenith_angle,                                       &
+    & pch, cos_zenith_angle, CO2_air,                              &
     & t_srf, t_eff_srf, qsat_srf, s_srf,                           &
     & fact_q_air, fact_qsat_srf,                                   &
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,&
@@ -95,6 +95,7 @@ CONTAINS
       & q_bcoef           (:), &
       & pch               (:), &
       & cos_zenith_angle  (:), &
+      & CO2_air           (:), &
       ! For lakes:
       & drag_wtr          (:), &
       & drag_ice          (:), &
@@ -142,7 +143,7 @@ CONTAINS
     CLASS(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
-    INTEGER :: nc, i
+    INTEGER :: nc
 
     ! ---------------------------
     ! Go
@@ -188,6 +189,7 @@ CONTAINS
       & q_bcoef            = q_bcoef(:),            &
       & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
+      & CO2_air            = CO2_air(:),            &
       ! For lakes:
       & drag_wtr           = drag_wtr(:),           &
       & drag_ice           = drag_ice(:),           &
@@ -206,61 +208,6 @@ CONTAINS
     ! Run tasks in queue
     CALL model%Run_tasks()
 
-
-!!$    ! Update wet skin and snow fractions
-!!$    CALL  update_snow_and_skin_fraction(tile, iblk, ics, ice, nc, dtime, steplen)
-!!$
-!!$    ! Compute new surface temperatures and saturation surface specific humidity
-!!$    CALL update_surface_energy(tile, iblk, ics, ice, nc, dtime, steplen)
-!!$
-!!$    ! Compute surface fluxes of heat and moisture based on the new surface temperature and qsat
-!!$    CALL update_surface_fluxes(tile, iblk, ics, ice, nc, steplen)
-!!$
-!!$    ! First part of vegetation that is applied before the soil is updated,
-!!$    ! in particular:
-!!$    ! 1. Compute canopy conductance not limited by water stress
-!!$    ! 2. Compute soil moisture in root zone
-!!$    ! 3. Compute water stress factor
-!!$    ! 4. Compute canopy conductance limited by water stress
-!!$    ! 5. Compute skin reservoir and snow fractions on canopy
-!!$    !    For the moment, this is done in update_soil_1 to be compatible with echam6
-!!$    CALL update_vegetation_1(tile, iblk, ics, ice, nc)
-!!$
-!!$    ! Soil hydrology
-!!$    CALL update_soil_1(tile, iblk, ics, ice, nc, dtime, steplen)
-!!$
-!!$#ifndef __NO_JSBACH_HD__
-!!$    dsl4jsb_Get_config(HD)
-!!$
-!!$    IF (tile%Is_process_active(HD)) THEN
-!!$      CALL update_hd(tile, iblk, ics, ice, nc, steplen)
-!!$    END IF
-!!$#endif
-!!$
-!!$    ! Re-calculate wet skin and snow fractions with updated moisture parameters
-!!$    CALL  update_snow_and_skin_fraction(tile, iblk, ics, ice, nc, dtime, steplen)
-!!$
-!!$    ! Update effective evaporation weights for qsat and q_air
-!!$    CALL update_humidity_scaling(tile, iblk, ics, ice, nc)
-!!$
-!!$    ! Second part of vegetation that is applied after the soil has been updated,
-!!$    ! in particular:
-!!$    ! 1. Update LAI and foliage projected cover
-!!$    ! 2. Compute canopy albedo
-!!$    CALL update_vegetation_2(tile, iblk, ics, ice, nc)
-!!$
-!!$    ! Second part of soil that is applied after the soil energy and water balance has been updated,
-!!$    ! in particular:
-!!$    ! 1. Compute ground albedo (at the moment this is done together with canopy in update_vegetation_2)
-!!$    CALL update_soil_2(tile, iblk, ics, ice, nc)
-!!$
-!!$    ! Update roughness length
-!!$    ! At the moment, roughness length for momentum is read in from ini file, only for heat is changed here
-!!$    CALL update_roughness(tile, iblk, ics, ice, nc)
-!!$
-!!$    ! Apply Asselin time filter for surface temperature (t_srf)
-!!$    CALL update_t_srf_asselin(tile, iblk, ics, ice, nc)
-!!$
     ! Finally, give the required variables back to the atmosphere
     tile => model%Get_top_tile()
     CALL update_land2atm(                     &

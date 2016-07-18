@@ -29,17 +29,14 @@ MODULE mo_assimi_memory_class
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
      ! t_canopy_sum variables
-     TYPE(t_jsb_var_real2d) ::                             &
-                               CO2_mol_mixing_ratio,       & ! CO2 substance mixing ratio [molCO2/molDryAir]
-                                                             ! (of lowest atmosphere level)
-                               gross_assimilation,         & ! GROSS PHOTOSYNTHESIS at each time step
-                                                             ! [MOL(CO2) / M^2(ground) S]  (mean value)
-                               dark_respiration,           & ! DARK RESPIRATION OF LEAF at each time step
-                                                             ! [MOL(CO2) / M^2(ground) S]  (mean value)
-                               NPP_rate,                   & ! Net primary production rate [mol(CO2)/(m^2 s)]
-                               canopy_cond_over_time
+    TYPE(t_jsb_var_real2d) ::                             &
+      gross_assimilation,         & ! GROSS PHOTOSYNTHESIS at each time step
+                                    ! [MOL(CO2) / M^2(ground) S]  (mean value)
+      dark_respiration,           & ! DARK RESPIRATION OF LEAF at each time step
+                                    ! [MOL(CO2) / M^2(ground) S]  (mean value)
+      NPP_rate,                   & ! Net primary production rate [mol(CO2)/(m^2 s)]
+      canopy_cond_over_time
 
-!                                         CO2_mol_mixing_ratio,           & ! CO2 substance mixing ratio [molCO2/molDryAir]
 !                                         CO2_conc_leaf,                  & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
 !                                         CO2_conc_leaf_acc,              & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
 !                                                                           ! (mean value)
@@ -117,14 +114,7 @@ CONTAINS
     surface => Get_vgrid('surface')
     canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ASSOCIATED(mem%CO2_mol_mixing_ratio%ptr)) THEN
-
-      CALL jsb_add_var( mem, 'CO2_mol_mixing_ratio', mem%CO2_mol_mixing_ratio, &
-        & hgrid, surface,                                                                                &
-        & t_cf('CO2_mol_mixing_ratio', '-', 'CO2 substance mixing ratio of lowest atmosphere level'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
-        & prefix, suffix,                                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+    IF (.NOT. ASSOCIATED(mem%gross_assimilation%ptr)) THEN
 
       CALL jsb_add_var( mem, 'gross_assimilation', mem%gross_assimilation, &
         & hgrid, surface,                                                                              &

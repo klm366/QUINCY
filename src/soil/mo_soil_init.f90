@@ -209,7 +209,7 @@ CONTAINS
       & variable_name='heat_capacity',            &
       & fill_array = dsl4jsb_var2D_ptr(SOIL, vhcap))
     dsl4jsb_var2D_onDomain(SOIL, vhcap) = &
-      MERGE(dsl4jsb_var2D_onDomain(SOIL, vhcap), 2.e6_wp, dsl4jsb_var2D_onDomain(SOIL, vhcap) >= 0._wp)
+      MERGE(dsl4jsb_var2D_onDomain(SOIL, vhcap), 2.e6_wp, dsl4jsb_var2D_onDomain(SOIL, vhcap) > 0._wp)
 
     ! Root depth
     IF (tile%Is_process_active(VEG)) THEN

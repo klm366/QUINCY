@@ -28,7 +28,6 @@ MODULE mo_veg_memory_class
     !
     ! Parameters
     TYPE(t_jsb_var_real2d) ::                      &
-      & lai,                 &  !< Leaf area index
       & fract_fpc,           &  !< Foliage projected cover (fraction of ground area occupied by the vertical projection of foliage)
       & fract_fpc_max,       &  !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
       & fract_forest,        &  !< Forest fraction
@@ -40,7 +39,6 @@ MODULE mo_veg_memory_class
       & alb_nir_can             !< Albedo of the canopy in the NIR range
     TYPE(t_jsb_var_real3d) ::               &
       & root_depth_l     !< Rooted depth per soil layer (until rooting depth) [m]
-    REAL(wp), POINTER :: lai_mon(:,:,:) !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
 
   CONTAINS
     PROCEDURE :: Init => Init_veg_memory
@@ -80,22 +78,7 @@ CONTAINS
     surface => get_vgrid('surface')
     soil_w  => get_vgrid('soil_depth_water')
 
-    IF (ASSOCIATED(mem%lai%ptr)) RETURN
-
-    CALL jsb_add_var( mem, 'lai', mem%lai,                             &
-      & hgrid, surface,                                                 &
-      & t_cf('leaf_area_index', '', ''),                                         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-      & prefix, suffix,                                                      &
-      & initval_r=0.0_wp )
-
-      ! Note: extra dimensions (except levels) are not allowed in echam streams
-!!$      CALL jsb_add_var( mem, 'lai_mon', mem%lai_mon,                     &
-!!$        & hgrid, surface,                                                 &
-!!$        & t_cf('monthly_leaf_area_index', '', ''),                                 &
-!!$        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-!!$        & extra_dim_n=14, initval_r=0.0_wp, loutput=.FALSE., lrestart=.FALSE. )
-    ALLOCATE(mem%lai_mon(hgrid%nproma, hgrid%nblks, 14))
+    IF (ASSOCIATED(mem%fract_fpc%ptr)) RETURN
 
     CALL jsb_add_var( mem, 'fract_fpc', mem%fract_fpc,                 &
       & hgrid, surface,                                                 &

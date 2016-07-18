@@ -25,7 +25,7 @@ MODULE mo_atm2land_memory_class
 
   PUBLIC :: t_atm2land_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 30
+  INTEGER, PARAMETER :: max_no_of_vars = 35
 
   TYPE, EXTENDS(t_jsb_memory) :: t_atm2land_memory
     TYPE(t_jsb_var_real2d) :: &
@@ -47,6 +47,8 @@ MODULE mo_atm2land_memory_class
       q_bcoef            , &
       pch                , &
       cos_zenith_angle   , &
+      CO2_air            , &
+      CO2_air_mol        , &
       ! For lakes:
       albedo_wtr         , &
       drag_wtr           , &
@@ -220,6 +222,20 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'CO2_air', mem%CO2_air, &
+      & hgrid, surface,                                                                                &
+      & t_cf('CO2_air', '[kg(CO2)/kg(air)]', 'CO2 mass mixing ratio of lowest atmosphere level'),      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
+      & prefix, suffix,                                                                                &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'CO2_air_mol', mem%CO2_air_mol, &
+      & hgrid, surface,                                                                                &
+      & t_cf('CO2_air_mol', '[mol(CO2)/mol(air)]', 'CO2 mol mixing ratio of lowest atmosphere level'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
+      & prefix, suffix,                                                                                &
+      & lrestart=.FALSE., initval_r=0.0_wp )
 
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
 

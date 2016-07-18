@@ -562,14 +562,14 @@ CONTAINS
 
     return_ptr => msg
 
-    SELECT TYPE(model=>hsm)
-    CLASS IS (t_jsb_model)
-      IF (debug_on() .AND. model%options%iblk == 1) THEN
-        IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
-          CALL message(TRIM(routine),'Finished')
-        END IF
-      END IF
-    END SELECT
+    !SELECT TYPE(model=>hsm)
+    !CLASS IS (t_jsb_model)
+    !  IF (debug_on() .AND. model%options%iblk == 1) THEN
+    !    IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
+    !      CALL message(TRIM(routine),'Finished')
+    !    END IF
+    !  END IF
+    !END SELECT
 
   END FUNCTION Process_task_on_tile
 

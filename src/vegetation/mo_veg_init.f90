@@ -20,12 +20,13 @@ MODULE mo_veg_init
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
-  dsl4jsb_Use_processes VEG, SOIL, HYDRO
+  dsl4jsb_Use_processes VEG, PHENO, SOIL, HYDRO
   dsl4jsb_Use_config(VEG)
   dsl4jsb_Use_config(SOIL)
   dsl4jsb_Use_config(HYDRO)
 
   dsl4jsb_Use_memory(VEG)
+  dsl4jsb_Use_memory(PHENO)
   dsl4jsb_Use_memory(SOIL)
   dsl4jsb_Use_memory(HYDRO)
 
@@ -63,7 +64,6 @@ CONTAINS
     USE mo_veg_process, ONLY: get_foliage_projected_cover
     !USE mo_veg_util,    ONLY: get_water_in_root_zone
     USE mo_soil_util,   ONLY: soil_depth_to_layers_2d
-    USE mo_jsb_time,    ONLY: get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract),  INTENT(inout) :: tile
 
@@ -73,6 +73,7 @@ CONTAINS
     dsl4jsb_Def_config(SOIL)
 
     dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(PHENO)
     dsl4jsb_Def_memory(SOIL)
     dsl4jsb_Def_memory(HYDRO)
 
@@ -84,15 +85,13 @@ CONTAINS
 
     TYPE(t_input_file) :: input_file
 
-    REAL(wp) :: wgt1, wgt2
-    INTEGER  :: nmw1,nmw2
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init_ic'
 
     model => get_model(tile%owner_model_id)
 
     ! Get veg memory of the tile
     dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(PHENO)
     dsl4jsb_Get_memory(SOIL)
     dsl4jsb_Get_memory(HYDRO)
 
@@ -113,20 +112,6 @@ CONTAINS
     !
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(VEG)%bc_filename), model%grid_id)
 
-    ! Leaf area index
-    ! Get monthly LAI climatology
-    lai_mon => input_file%Read_2d_time(    &
-      & variable_name='lai_clim')
-    lai_mon(:,:,:) = MERGE(lai_mon(:,:,:), 0._wp, lai_mon(:,:,:) > 0._wp)
-    veg__mem%lai_mon(:,:,2:13) = lai_mon(:,:,1:12)
-    veg__mem%lai_mon(:,:,1   ) = lai_mon(:,:,12  )
-    veg__mem%lai_mon(:,:,14  ) = lai_mon(:,:,1   )
-    DEALLOCATE(lai_mon)
-
-    CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    dsl4jsb_var2D_onDomain(VEG, lai) = &
-      wgt1 * veg__mem%lai_mon(:,:,nmw1+1) + wgt2 * veg__mem%lai_mon(:,:,nmw2+1)
-
     ! Forest fraction
     return_pointer => input_file%Read_2d(        &
       & variable_name='forest_fract',            &
@@ -136,7 +121,6 @@ CONTAINS
 
 ! R    dsl4jsb_var2D_onDomain(VEG, canopy_cond) = 0._wp
 
-    dsl4jsb_var2D_onDomain(VEG, skin_can_depth) = dsl4jsb_Config(VEG)%wsr_capacity * dsl4jsb_var2D_onDomain(VEG, lai) 
 
     CALL input_file%Close()
 
@@ -151,8 +135,9 @@ CONTAINS
 
 !!$    veg_mem%fract_fpc(:,:) = get_foliage_projected_cover(veg_mem%fract_fpc_max%ptr(:,:), veg_mem%lai%ptr(:,:), veg_mem%clump%ptr(:,:))
     dsl4jsb_var2D_onDomain(VEG, fract_fpc) = &
-      get_foliage_projected_cover(dsl4jsb_var2D_onDomain(VEG, fract_fpc_max), dsl4jsb_var2D_onDomain(VEG, lai), &
-      SPREAD(SPREAD(2._wp, DIM=1, NCOPIES=SIZE(dsl4jsb_var2D_ptr(VEG, lai),1)), DIM=2, NCOPIES=SIZE(dsl4jsb_var2D_ptr(VEG, lai),2))) ! Temporary
+      get_foliage_projected_cover(dsl4jsb_var2D_onDomain(VEG, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO, lai), &
+        & SPREAD(SPREAD(2._wp, DIM=1, NCOPIES=SIZE(dsl4jsb_var2D_ptr(PHENO, lai),1)), &
+        &        DIM=2, NCOPIES=SIZE(dsl4jsb_var2D_ptr(PHENO, lai),2))) ! Temporary
 
     CALL input_file%Close()
 
