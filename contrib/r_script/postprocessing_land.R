@@ -39,7 +39,9 @@ for(ti in 1:tileNum)
     mat=matrix(seq(1,2*round(nvar/2)+2,1),nrow=round(nvar/2)+1,ncol=2,byrow=T) 
     layout(mat)
     par(mai=c(0.5,1,0,0))
-    for (v in 2:nvar) plot(dat[,v],ylab=colnames(dat)[v],type='l')
+    for (v in 2:nvar) {
+      if(!all(is.na(dat[,v]))) plot(dat[,v],ylab=colnames(dat)[v],type='l')
+    }
   }
 
 dev.off()

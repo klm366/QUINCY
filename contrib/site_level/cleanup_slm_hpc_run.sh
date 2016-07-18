@@ -44,6 +44,10 @@ if [ "$array" == "yes" ]
   mv "$simFold""error/err.txt" "$simFold""$singleSiteName""/error/"
 fi
 
+## create an md5sum file for all output files, i.e. files in the folder "output"
+md5sum "$simFold"*/output/* > "$simFold"md5sum-output-files.txt
+
+
 ## remove some folders not needed anymore ##
 rm -r "$simFold"default_files
 rm -r "$simFold"error

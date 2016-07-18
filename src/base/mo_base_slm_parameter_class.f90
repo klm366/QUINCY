@@ -167,7 +167,8 @@ MODULE mo_base_slm_parameter_class
      REAL(wp),DIMENSION(npft) :: allom_k1
      REAL(wp),DIMENSION(npft) :: allom_k2
      REAL(wp),DIMENSION(npft) :: tau_fruit
-     REAL(wp),DIMENSION(npft) :: tau_seed
+     REAL(wp),DIMENSION(npft) :: tau_seed_litter
+     REAL(wp),DIMENSION(npft) :: tau_seed_est
      REAL(wp),DIMENSION(npft) :: vmax_uptake_n
      REAL(wp),DIMENSION(npft) :: soil_n_aff1 
      REAL(wp),DIMENSION(npft) :: soil_n_aff2 
@@ -175,6 +176,9 @@ MODULE mo_base_slm_parameter_class
      REAL(wp),DIMENSION(npft) :: soil_p_aff1 
      REAL(wp),DIMENSION(npft) :: soil_p_aff2 
      REAL(wp),DIMENSION(npft) :: bnf_base
+     REAL(wp),DIMENSION(npft) :: lambda_est_light
+     REAL(wp),DIMENSION(npft) :: k_est_light
+     REAL(wp),DIMENSION(npft) :: seed_size
   CONTAINS
     PROCEDURE :: init => init_slm_parameter
   END TYPE t_slm_parameter
@@ -349,7 +353,8 @@ MODULE mo_base_slm_parameter_class
      REAL(wp) :: allom_k1
      REAL(wp) :: allom_k2
      REAL(wp) :: tau_fruit
-     REAL(wp) :: tau_seed
+     REAL(wp) :: tau_seed_litter
+     REAL(wp) :: tau_seed_est
      REAL(wp) :: vmax_uptake_n
      REAL(wp) :: soil_n_aff1 
      REAL(wp) :: soil_n_aff2 
@@ -357,6 +362,9 @@ MODULE mo_base_slm_parameter_class
      REAL(wp) :: soil_p_aff1 
      REAL(wp) :: soil_p_aff2 
      REAL(wp) :: bnf_base
+     REAL(wp) :: lambda_est_light
+     REAL(wp) :: k_est_light
+     REAL(wp) :: seed_size
   END TYPE t_lctlib_element
 
 !  PRIVATE
@@ -659,8 +667,10 @@ CONTAINS
       (/0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.5_wp,0.5_wp/) 
       ! turnover time of the fruit pool (1/years)
       this%tau_fruit(:) = 1.0_wp
-      ! turnover time of the fruit pool (1/years)
-      this%tau_seed(:) = 1.0_wp
+      ! turnover time of the seed bed to litter (1/years)
+      this%tau_seed_litter(:) = 0.1_wp
+      ! turnover time of the seed bed to establishment (1/years)
+      this%tau_seed_est(:) = 0.3_wp
       ! vmax of N uptake (~µmol N / mol C / s)
       this%vmax_uptake_n(:) = 14._wp !714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
       ! low-affinity uptake (L/mmol) 
@@ -676,6 +686,12 @@ CONTAINS
       ! placeholder constant BNf rate, required to keep soil NH4 at constant levels mumol N s-1 
       this%bnf_base(:) = & 
       (/2.6_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9, 5.0_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9, 2.6_wp*1.e-9/) 
+      ! parameter in the Weibull function controlling light-limited establishment 
+      this%lambda_est_light(:) = 1.1_wp        
+      ! parameter in the Weibull function controlling light-limited establishment
+      this%k_est_light(:) = 4.0_wp
+      ! seed size (mol C)
+      this%seed_size(:) = 0.1_wp
     END SUBROUTINE init_slm_parameter 
 
   !-----------------------------------------------------------------------------------------------------
@@ -696,119 +712,119 @@ CONTAINS
 
       !> pass parameters from slm_parameter to lctlib
       !! 
-      ! Respiration parameters
-      lctlib(1:npft)%fresp_growth               = slm_parameter%fresp_growth(1:npft)
-      lctlib(1:npft)%fmaint_rate_base           = slm_parameter%fmaint_rate_base(1:npft)
-      lctlib(1:npft)%t_maint_k1                 = slm_parameter%t_maint_k1(1:npft)
-      lctlib(1:npft)%t_maint_k2                 = slm_parameter%t_maint_k2(1:npft)
-      lctlib(1:npft)%t_maint_k3                 = slm_parameter%t_maint_k3(1:npft)
+!      ! Respiration parameters
+!      lctlib(1:npft)%fresp_growth               = slm_parameter%fresp_growth(1:npft)
+!      lctlib(1:npft)%fmaint_rate_base           = slm_parameter%fmaint_rate_base(1:npft)
+!      lctlib(1:npft)%t_maint_k1                 = slm_parameter%t_maint_k1(1:npft)
+!      lctlib(1:npft)%t_maint_k2                 = slm_parameter%t_maint_k2(1:npft)
+!      lctlib(1:npft)%t_maint_k3                 = slm_parameter%t_maint_k3(1:npft)
 
-      ! Labile pool parameters 
-      lctlib(1:npft)%tau_labile_default         = slm_parameter%tau_labile_default(1:npft)
-      lctlib(1:npft)%lambda_tau_labile_temp     = slm_parameter%lambda_tau_labile_temp(1:npft)
-      lctlib(1:npft)%weibull_k_tau_labile_temp  = slm_parameter%weibull_k_tau_labile_temp(1:npft)
-      lctlib(1:npft)%lambda_tau_labile_theta    = slm_parameter%lambda_tau_labile_theta(1:npft)
-      lctlib(1:npft)%weibull_k_tau_labile_theta = slm_parameter%weibull_k_tau_labile_theta(1:npft)
-      lctlib(1:npft)%lambda_phiphen             = slm_parameter%lambda_phiphen(1:npft)
-      lctlib(1:npft)%weibull_k_phiphen          = slm_parameter%weibull_k_phiphen(1:npft)
-      lctlib(1:npft)%lambda_phimaint            = slm_parameter%lambda_phimaint(1:npft)
-      lctlib(1:npft)%weibull_k_phimaint         = slm_parameter%weibull_k_phimaint(1:npft)
-      lctlib(1:npft)%lambda_phistore            = slm_parameter%lambda_phistore(1:npft)
-      lctlib(1:npft)%weibull_k_phistore         = slm_parameter%weibull_k_phistore(1:npft)
+!      ! Labile pool parameters 
+!      lctlib(1:npft)%tau_labile_default         = slm_parameter%tau_labile_default(1:npft)
+!      lctlib(1:npft)%lambda_tau_labile_temp     = slm_parameter%lambda_tau_labile_temp(1:npft)
+!      lctlib(1:npft)%weibull_k_tau_labile_temp  = slm_parameter%weibull_k_tau_labile_temp(1:npft)
+!      lctlib(1:npft)%lambda_tau_labile_theta    = slm_parameter%lambda_tau_labile_theta(1:npft)
+!      lctlib(1:npft)%weibull_k_tau_labile_theta = slm_parameter%weibull_k_tau_labile_theta(1:npft)
+!      lctlib(1:npft)%lambda_phiphen             = slm_parameter%lambda_phiphen(1:npft)
+!      lctlib(1:npft)%weibull_k_phiphen          = slm_parameter%weibull_k_phiphen(1:npft)
+!      lctlib(1:npft)%lambda_phimaint            = slm_parameter%lambda_phimaint(1:npft)
+!      lctlib(1:npft)%weibull_k_phimaint         = slm_parameter%weibull_k_phimaint(1:npft)
+!      lctlib(1:npft)%lambda_phistore            = slm_parameter%lambda_phistore(1:npft)
+!      lctlib(1:npft)%weibull_k_phistore         = slm_parameter%weibull_k_phistore(1:npft)
 
-      ! Resporption parameters
-      lctlib(1:npft)%resorption_default         = slm_parameter%resorption_default(1:npft)
-      lctlib(1:npft)%resorption_wood            = slm_parameter%resorption_wood(1:npft)
-      lctlib(1:npft)%root2leaf_cn               = slm_parameter%root2leaf_cn(1:npft)
-      lctlib(1:npft)%wood2leaf_cn               = slm_parameter%wood2leaf_cn(1:npft)
-      lctlib(1:npft)%root2leaf_np               = slm_parameter%root2leaf_np(1:npft)
-      lctlib(1:npft)%wood2leaf_np               = slm_parameter%wood2leaf_np(1:npft)
+!      ! Resporption parameters
+!      lctlib(1:npft)%resorption_default         = slm_parameter%resorption_default(1:npft)
+!      lctlib(1:npft)%resorption_wood            = slm_parameter%resorption_wood(1:npft)
+!      lctlib(1:npft)%root2leaf_cn               = slm_parameter%root2leaf_cn(1:npft)
+!      lctlib(1:npft)%wood2leaf_cn               = slm_parameter%wood2leaf_cn(1:npft)
+!      lctlib(1:npft)%root2leaf_np               = slm_parameter%root2leaf_np(1:npft)
+!      lctlib(1:npft)%wood2leaf_np               = slm_parameter%wood2leaf_np(1:npft)
 
-      ! Parameters describing photosynthetic activity 
-      lctlib(1:npft)%jmax2n                     = slm_parameter%jmax2n(1:npft)
-      lctlib(1:npft)%vcmax2n                    = slm_parameter%vcmax2n(1:npft)
-      lctlib(1:npft)%k0_fnl_pepc                = slm_parameter%k0_fnl_pepc(1:npft)
-      lctlib(1:npft)%pepc2n                     = slm_parameter%pepc2n(1:npft)
-      lctlib(1:npft)%chl2n                      = slm_parameter%chl2n(1:npft)
-      lctlib(1:npft)%k1_fnl_struc               = slm_parameter%k1_fnl_struc(1:npft)
-      lctlib(1:npft)%jmax2vcmax_C3              = slm_parameter%jmax2vcmax_C3(1:npft)
-      lctlib(1:npft)%jmax2vcmax_C4              = slm_parameter%jmax2vcmax_C4(1:npft)
-      lctlib(1:npft)%tau_canopy_acclimation     = slm_parameter%tau_canopy_acclimation(1:npft)
-      ! temperature sensitivies of PS processes
-      lctlib(1:npft)%E0kc                       = slm_parameter%E0kc(1:npft)
-      lctlib(1:npft)%E1kc                       = slm_parameter%E1kc(1:npft)
-      lctlib(1:npft)%E0ko                       = slm_parameter%E0ko(1:npft)
-      lctlib(1:npft)%E1ko                       = slm_parameter%E1ko(1:npft)
-      lctlib(1:npft)%E0pcp                      = slm_parameter%E0pcp(1:npft)
-      lctlib(1:npft)%E1pcp                      = slm_parameter%E1pcp(1:npft)
-      lctlib(1:npft)%E0v                        = slm_parameter%E0v(1:npft)
-      lctlib(1:npft)%E1v                        = slm_parameter%E1v(1:npft)
-      lctlib(1:npft)%Tref_pepc                  = slm_parameter%Tref_pepc(1:npft)
-      lctlib(1:npft)%Tbase_pepc                 = slm_parameter%Tbase_pepc(1:npft)
-      lctlib(1:npft)%alpha_i                    = slm_parameter%alpha_i(1:npft)
-                            
-      lctlib(1:npft)%pO2                        = slm_parameter%pO2(1:npft)
-      lctlib(1:npft)%CiCa_default_C3            = slm_parameter%CiCa_default_C3(1:npft)
-      lctlib(1:npft)%CiCa_default_C4            = slm_parameter%CiCa_default_C4(1:npft)
-      lctlib(1:npft)%ps_it_max                  = slm_parameter%ps_it_max(1:npft)
-      lctlib(1:npft)%ci_max                     = slm_parameter%ci_max(1:npft)
-      lctlib(1:npft)%Dwv2co2_air                = slm_parameter%Dwv2co2_air(1:npft)
-      lctlib(1:npft)%Dwv2co2_turb               = slm_parameter%Dwv2co2_turb(1:npft)
-      ! parameters describing the fractionation due to photosynthesis
-      lctlib(1:npft)%discr_ps_a_C13             = slm_parameter%discr_ps_a_C13(1:npft)
-      lctlib(1:npft)%discr_ps_b_C13             = slm_parameter%discr_ps_b_C13(1:npft)
-      lctlib(1:npft)%discr_ps_c_C13             = slm_parameter%discr_ps_c_C13(1:npft)
-      lctlib(1:npft)%discr_ps_a_C14             = slm_parameter%discr_ps_a_C14(1:npft)
-      lctlib(1:npft)%discr_ps_b_C14             = slm_parameter%discr_ps_b_C14(1:npft)
-      lctlib(1:npft)%discr_ps_c_C14             = slm_parameter%discr_ps_c_C14(1:npft)
-      lctlib(1:npft)%discr_ps_phi               = slm_parameter%discr_ps_phi(1:npft)
-  
-      ! parameters for canopy profile and canopy light extinction
-      lctlib(1:npft)%kn                         = slm_parameter%kn(1:npft)
-      lctlib(1:npft)%k0_fnl_chl_C3              = slm_parameter%k0_fnl_chl_C3(1:npft)
-      lctlib(1:npft)%k0_fnl_chl_C4              = slm_parameter%k0_fnl_chl_C4(1:npft)
-      lctlib(1:npft)%k1_fnl_chl_C3              = slm_parameter%k1_fnl_chl_C3(1:npft)
-      lctlib(1:npft)%k1_fnl_chl_C4              = slm_parameter%k1_fnl_chl_C4(1:npft)
-      lctlib(1:npft)%kfnl_chl                   = slm_parameter%kfnl_chl(1:npft)
+!      ! Parameters describing photosynthetic activity 
+!      lctlib(1:npft)%jmax2n                     = slm_parameter%jmax2n(1:npft)
+!      lctlib(1:npft)%vcmax2n                    = slm_parameter%vcmax2n(1:npft)
+!      lctlib(1:npft)%k0_fnl_pepc                = slm_parameter%k0_fnl_pepc(1:npft)
+!      lctlib(1:npft)%pepc2n                     = slm_parameter%pepc2n(1:npft)
+!      lctlib(1:npft)%chl2n                      = slm_parameter%chl2n(1:npft)
+!      lctlib(1:npft)%k1_fnl_struc               = slm_parameter%k1_fnl_struc(1:npft)
+!      lctlib(1:npft)%jmax2vcmax_C3              = slm_parameter%jmax2vcmax_C3(1:npft)
+!      lctlib(1:npft)%jmax2vcmax_C4              = slm_parameter%jmax2vcmax_C4(1:npft)
+!      lctlib(1:npft)%tau_canopy_acclimation     = slm_parameter%tau_canopy_acclimation(1:npft)
+!      ! temperature sensitivies of PS processes
+!      lctlib(1:npft)%E0kc                       = slm_parameter%E0kc(1:npft)
+!      lctlib(1:npft)%E1kc                       = slm_parameter%E1kc(1:npft)
+!      lctlib(1:npft)%E0ko                       = slm_parameter%E0ko(1:npft)
+!      lctlib(1:npft)%E1ko                       = slm_parameter%E1ko(1:npft)
+!      lctlib(1:npft)%E0pcp                      = slm_parameter%E0pcp(1:npft)
+!      lctlib(1:npft)%E1pcp                      = slm_parameter%E1pcp(1:npft)
+!      lctlib(1:npft)%E0v                        = slm_parameter%E0v(1:npft)
+!      lctlib(1:npft)%E1v                        = slm_parameter%E1v(1:npft)
+!      lctlib(1:npft)%Tref_pepc                  = slm_parameter%Tref_pepc(1:npft)
+!      lctlib(1:npft)%Tbase_pepc                 = slm_parameter%Tbase_pepc(1:npft)
+!      lctlib(1:npft)%alpha_i                    = slm_parameter%alpha_i(1:npft)
+!                            
+!      lctlib(1:npft)%pO2                        = slm_parameter%pO2(1:npft)
+!      lctlib(1:npft)%CiCa_default_C3            = slm_parameter%CiCa_default_C3(1:npft)
+!      lctlib(1:npft)%CiCa_default_C4            = slm_parameter%CiCa_default_C4(1:npft)
+!      lctlib(1:npft)%ps_it_max                  = slm_parameter%ps_it_max(1:npft)
+!      lctlib(1:npft)%ci_max                     = slm_parameter%ci_max(1:npft)
+!      lctlib(1:npft)%Dwv2co2_air                = slm_parameter%Dwv2co2_air(1:npft)
+!      lctlib(1:npft)%Dwv2co2_turb               = slm_parameter%Dwv2co2_turb(1:npft)
+!      ! parameters describing the fractionation due to photosynthesis
+!      lctlib(1:npft)%discr_ps_a_C13             = slm_parameter%discr_ps_a_C13(1:npft)
+!      lctlib(1:npft)%discr_ps_b_C13             = slm_parameter%discr_ps_b_C13(1:npft)
+!      lctlib(1:npft)%discr_ps_c_C13             = slm_parameter%discr_ps_c_C13(1:npft)
+!      lctlib(1:npft)%discr_ps_a_C14             = slm_parameter%discr_ps_a_C14(1:npft)
+!      lctlib(1:npft)%discr_ps_b_C14             = slm_parameter%discr_ps_b_C14(1:npft)
+!      lctlib(1:npft)%discr_ps_c_C14             = slm_parameter%discr_ps_c_C14(1:npft)
+!      lctlib(1:npft)%discr_ps_phi               = slm_parameter%discr_ps_phi(1:npft)
+!  
+!      ! parameters for canopy profile and canopy light extinction
+!      lctlib(1:npft)%kn                         = slm_parameter%kn(1:npft)
+!      lctlib(1:npft)%k0_fnl_chl_C3              = slm_parameter%k0_fnl_chl_C3(1:npft)
+!      lctlib(1:npft)%k0_fnl_chl_C4              = slm_parameter%k0_fnl_chl_C4(1:npft)
+!      lctlib(1:npft)%k1_fnl_chl_C3              = slm_parameter%k1_fnl_chl_C3(1:npft)
+!      lctlib(1:npft)%k1_fnl_chl_C4              = slm_parameter%k1_fnl_chl_C4(1:npft)
+!      lctlib(1:npft)%kfnl_chl                   = slm_parameter%kfnl_chl(1:npft)
 
-      ! parameters for changes in canopy N fractions
-      lctlib(1:npft)%delta_n_leaf               = slm_parameter%delta_n_leaf(1:npft)
-      lctlib(1:npft)%delta_n_fraction           = slm_parameter%delta_n_fraction(1:npft)
+!      ! parameters for changes in canopy N fractions
+!      lctlib(1:npft)%delta_n_leaf               = slm_parameter%delta_n_leaf(1:npft)
+!      lctlib(1:npft)%delta_n_fraction           = slm_parameter%delta_n_fraction(1:npft)
 
-      ! parameters used for phenology calculations
-      lctlib(1:npft)%min_lai                    = slm_parameter%min_lai(1:npft)
-      lctlib(1:npft)%target_lai_max             = slm_parameter%target_lai_max(1:npft)
-      lctlib(1:npft)%min_leaf_age               = slm_parameter%min_leaf_age(1:npft)
-      lctlib(1:npft)%gdd_t_air_threshold        = slm_parameter%gdd_t_air_threshold(1:npft)
-      lctlib(1:npft)%gdd_req_max                = slm_parameter%gdd_req_max(1:npft)
-      lctlib(1:npft)%k_gdd_dormance             = slm_parameter%k_gdd_dormance(1:npft)
-      lctlib(1:npft)%t_air_senescence           = slm_parameter%t_air_senescence(1:npft)
-      lctlib(1:npft)%beta_soil_flush_grass      = slm_parameter%beta_soil_flush_grass(1:npft)
-      lctlib(1:npft)%beta_soil_flush_tree       = slm_parameter%beta_soil_flush_tree(1:npft)
-      lctlib(1:npft)%beta_soil_senescence_tree  = slm_parameter%beta_soil_senescence_tree(1:npft)
+!      ! parameters used for phenology calculations
+!      lctlib(1:npft)%min_lai                    = slm_parameter%min_lai(1:npft)
+!      lctlib(1:npft)%target_lai_max             = slm_parameter%target_lai_max(1:npft)
+!      lctlib(1:npft)%min_leaf_age               = slm_parameter%min_leaf_age(1:npft)
+!      lctlib(1:npft)%gdd_t_air_threshold        = slm_parameter%gdd_t_air_threshold(1:npft)
+!      lctlib(1:npft)%gdd_req_max                = slm_parameter%gdd_req_max(1:npft)
+!      lctlib(1:npft)%k_gdd_dormance             = slm_parameter%k_gdd_dormance(1:npft)
+!      lctlib(1:npft)%t_air_senescence           = slm_parameter%t_air_senescence(1:npft)
+!      lctlib(1:npft)%beta_soil_flush_grass      = slm_parameter%beta_soil_flush_grass(1:npft)
+!      lctlib(1:npft)%beta_soil_flush_tree       = slm_parameter%beta_soil_flush_tree(1:npft)
+!      lctlib(1:npft)%beta_soil_senescence_tree  = slm_parameter%beta_soil_senescence_tree(1:npft)
 
-      ! Parameters required for albedo and fapar calculation
-      lctlib(1:npft)%ka                         = slm_parameter%ka(1:npft)
-      lctlib(1:npft)%sigma                      = slm_parameter%sigma(1:npft)
-      lctlib(1:npft)%kbl0                       = slm_parameter%kbl0(1:npft)
-      lctlib(1:npft)%kdf0                       = slm_parameter%kdf0(1:npft)
-      lctlib(1:npft)%rho2sbeta                  = slm_parameter%rho2sbeta(1:npft)
+!      ! Parameters required for albedo and fapar calculation
+!      lctlib(1:npft)%ka                         = slm_parameter%ka(1:npft)
+!      lctlib(1:npft)%sigma                      = slm_parameter%sigma(1:npft)
+!      lctlib(1:npft)%kbl0                       = slm_parameter%kbl0(1:npft)
+!      lctlib(1:npft)%kdf0                       = slm_parameter%kdf0(1:npft)
+!      lctlib(1:npft)%rho2sbeta                  = slm_parameter%rho2sbeta(1:npft)
 
-      ! other
-      lctlib(1:npft)%carbon_per_dryweight_leaf  = slm_parameter%carbon_per_dryweight_leaf(1:npft)
-      lctlib(1:npft)%min_height                 = slm_parameter%min_height(1:npft)
-      lctlib(1:npft)%sm2lm_grass                = slm_parameter%sm2lm_grass(1:npft)
-      lctlib(1:npft)%lambda_fruit_alloc         = slm_parameter%lambda_fruit_alloc(1:npft)
-      lctlib(1:npft)%weibull_k_fruit_alloc      = slm_parameter%weibull_k_fruit_alloc(1:npft)
-      lctlib(1:npft)%offset_fruit_alloc         = slm_parameter%offset_fruit_alloc(1:npft)
-      lctlib(1:npft)%min_falloc_fruit           = slm_parameter%min_falloc_fruit(1:npft)
+!      ! other
+!      lctlib(1:npft)%carbon_per_dryweight_leaf  = slm_parameter%carbon_per_dryweight_leaf(1:npft)
+!      lctlib(1:npft)%min_height                 = slm_parameter%min_height(1:npft)
+!      lctlib(1:npft)%sm2lm_grass                = slm_parameter%sm2lm_grass(1:npft)
+!      lctlib(1:npft)%lambda_fruit_alloc         = slm_parameter%lambda_fruit_alloc(1:npft)
+!      lctlib(1:npft)%weibull_k_fruit_alloc      = slm_parameter%weibull_k_fruit_alloc(1:npft)
+!      lctlib(1:npft)%offset_fruit_alloc         = slm_parameter%offset_fruit_alloc(1:npft)
+!      lctlib(1:npft)%min_falloc_fruit           = slm_parameter%min_falloc_fruit(1:npft)
 
-      ! vegetation dynamics
-      lctlib(1:npft)%background_mort_rate_tree  = slm_parameter%background_mort_rate_tree(1:npft)
-      lctlib(1:npft)%background_mort_rate_grass = slm_parameter%background_mort_rate_grass(1:npft)
+!      ! vegetation dynamics
+!      lctlib(1:npft)%background_mort_rate_tree  = slm_parameter%background_mort_rate_tree(1:npft)
+!      lctlib(1:npft)%background_mort_rate_grass = slm_parameter%background_mort_rate_grass(1:npft)
 
-      ! soil pools
-      lctlib(1:npft)%tau_litter                 = slm_parameter%tau_litter(1:npft)
+!      ! soil pools
+!      lctlib(1:npft)%tau_litter                 = slm_parameter%tau_litter(1:npft)
 
       ! previously stored in TYPE(t_slm_veg_param),INTENT(inout) :: veg_param
          lctlib(1:npft)%growthform        = slm_parameter%growthform(1:npft)
@@ -839,7 +855,8 @@ CONTAINS
          lctlib(1:npft)%allom_k1          = slm_parameter%allom_k1(1:npft)
          lctlib(1:npft)%allom_k2          = slm_parameter%allom_k2(1:npft)
          lctlib(1:npft)%tau_fruit         = slm_parameter%tau_fruit(1:npft)
-         lctlib(1:npft)%tau_seed          = slm_parameter%tau_seed(1:npft)
+         lctlib(1:npft)%tau_seed_litter   = slm_parameter%tau_seed_litter(1:npft)
+         lctlib(1:npft)%tau_seed_est      = slm_parameter%tau_seed_est(1:npft)
          lctlib(1:npft)%vmax_uptake_n     = slm_parameter%vmax_uptake_n(1:npft)
          lctlib(1:npft)%soil_n_aff1       = slm_parameter%soil_n_aff1(1:npft)
          lctlib(1:npft)%soil_n_aff2       = slm_parameter%soil_n_aff2(1:npft)
@@ -847,6 +864,9 @@ CONTAINS
          lctlib(1:npft)%soil_p_aff1       = slm_parameter%soil_p_aff1(1:npft)
          lctlib(1:npft)%soil_p_aff2       = slm_parameter%soil_p_aff2(1:npft)
          lctlib(1:npft)%bnf_base          = slm_parameter%bnf_base(1:npft)
+         lctlib(1:npft)%lambda_est_light  = slm_parameter%lambda_est_light(1:npft)
+         lctlib(1:npft)%k_est_light       = slm_parameter%k_est_light(1:npft)
+         lctlib(1:npft)%seed_size         = slm_parameter%seed_size(1:npft)
 
     END FUNCTION slm_lctlib_wrapper
 

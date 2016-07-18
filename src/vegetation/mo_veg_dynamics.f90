@@ -33,7 +33,6 @@ CONTAINS
     USE mo_base_memory, ONLY: t_slm_tile
     USE mo_base_constants
     USE mo_atmland_constants, ONLY: Tzero
-    USE mo_shared_memory,    ONLY: init_element
     USE mo_veg_memory
     USE mo_veg_parameters
 
@@ -107,9 +106,9 @@ CONTAINS
 
     !> 5.0 calculate litter fall from mortality
     !!
-    CALL init_veg_pool(mortality,mortality_rate)
+    CALL mortality%init(mortality_rate)   ! set mortality to mortality_rate
 !@todo: veg_dynamics: it would probably make things easier if the seed bed was part of the plant, but not the pool structure?
-    CALL init_element(mortality%seed_bed,0.0_wp)
+    CALL mortality%seed_bed%init(0.0_wp)  ! set seed_bed to zero
     litter_flux_mortality = mortality * tile%plant%pool
     tile%plant%flux%litterfall = tile%plant%flux%litterfall + litter_flux_mortality
    

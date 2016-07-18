@@ -12,8 +12,8 @@
 ####### simulation specific options you may want to change #############################################
 ########################################################################################################
 
-# folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp'experimentalID'
-experimentalID="benchmark"         # set something useful for you (allowed only: alphanumeric '_' '-') - if empty current date is used
+# folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
+experimentalID=""         # set something useful for you (allowed only: alphanumeric '_' '-'); if empty ( experimentalID="" ) current date is used
 # select sites: FLUXNET or CRUNCEPv5
 siteCompilation="c"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
@@ -60,7 +60,7 @@ return 0
 # lists to validate against
 validateSiteCompilation="f c"
 validateCustomSiteList="yes no"
-validateSlmModel="plant canopy land"
+validateSlmModel="plant canopy" # land"
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
 
@@ -79,7 +79,7 @@ if [ -z $experimentalID ]
   experimentalID=$(date +%Y%m%d_%H%M%S)
 fi
 # define job name
-jobName="exp""$experimentalID"  # name of the job(array) -> must start with a character make work (see below): bsub -w "ended($jobName)"
+jobName="exp_""$experimentalID"  # name of the job(array) -> must start with a character make work (see below): bsub -w "ended($jobName)"
 simFold="$bgiScratchUserFold""$jobName""/"
 # check if folder with this experimentalID already exists
 if [ -d "$simFold" ]

@@ -771,7 +771,7 @@ CONTAINS
     this%allometry_npp                 = 1._wp
     this%allometry_labile%carbon       = 1._wp
     this%allometry_labile%nitrogen     = 1._wp
-    this%allometry_labile%phosphorus     = 1._wp
+    this%allometry_labile%phosphorus   = 1._wp
     this%leaf2root_mass_ratio          = 1._wp
     !< 2.0 init/set accumulation period per variable in days !!
     !!
@@ -780,7 +780,7 @@ CONTAINS
     this%p_monthly                     = 30._wp    ! 30 days; constant across the model
     this%p_yearly                      = 365._wp   ! 365 days
     this%p_longterm                    = 10950._wp ! 10950 days (30 years); constant across the model
-    this%p_tau_veg_dynamics            = 90._wp  ! 365* 3 
+    this%p_tau_veg_dynamics            = 90._wp    ! 90 days
     this%p_optNfrac                    = 10.0_wp   ! timescale of optimal canopy processes
 
     ! 2.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)

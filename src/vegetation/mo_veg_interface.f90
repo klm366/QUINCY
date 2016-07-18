@@ -55,16 +55,7 @@ CONTAINS
     !> 1.0 update phenological state
     !! 
     !! includes growing_season, gdd and nd_dormance
-    CALL update_phenology(veg_param%phenology_type(plant%pftid), &
-                          plant%moving_average%gpp_week, &
-                          plant%moving_average%maint_respiration_week, &
-                          plant%mean_leaf_age, &
-                          plant%moving_average%t_air_week, &
-                          plant%moving_average%t_air_month, &
-                          plant%moving_average%beta_soil_gs, &
-                          plant%gdd, &
-                          plant%nd_dormance, &
-                          plant%growing_season)  
+    CALL update_phenology(tile, veg_param%phenology_type(plant%pftid))
 
     !> 1.1 photosynthesis and leaf respiration 
     !! 

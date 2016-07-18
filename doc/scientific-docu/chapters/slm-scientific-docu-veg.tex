@@ -258,10 +258,29 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 • & parameter in the Weibull function controlling fruit growth ?? & \texttt{offset\_fruit\_alloc} & $\mu$mol C/ m2/ s & • & 0.1 & • \\        
 • & minimum fraction of allocation going to fruit (flowers etc.) & \texttt{min\_falloc\_fruit} & • & • & 0.01 & • \\    
 \hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
 \multicolumn{6}{l}{\bf Vegetation dynamics}\\
 \hline
 • & background mortality rate of trees in static mortality case & \texttt{background\_mort\_rate\_tree} & • & • & 0.01 & • \\  
-• & background mortality rate of grasses in static mortality case & \texttt{background\_mort\_rate\_grass} & • & • & 0.01 & • \\   
+• & background mortality rate of grasses in static mortality case & \texttt{background\_mort\_rate\_grass} & • & • & 0.01 & • \\
+• & controlling self-thinning mortality & \texttt{lambda\_mort\_light} & • & • & 0.15 & • \\
+• & controlling self-thinning mortality & \texttt{k\_mort\_light} & • & • & 4.0 & • \\
+• & controlling temperature-limited establishment & \texttt{lambda\_est\_temp} & • & • & 0.1 & • \\
+• & controlling temperature-limited establishment & \texttt{k\_est\_temp} & • & • & 4.0 & • \\
+• & controlling moisture-limited establishment & \texttt{lambda\_est\_moist} & • & • & 0.1 & • \\
+• & controlling moisture-limited establishment & \texttt{k\_est\_moist} & • & • & 2.0 & • \\
+• & top of the canopy red:farred ratio & \texttt{toc\_rfr\_ratio} & • & • & 1.2 & Kull \& Kruij 1998 \\
+• & extinction of red:farred ratio on leaf chlorophyll & \texttt{k\_r2fr\_chl} & 1/ mmol N & • & 0.0012 - 0.012 & Kull \& Krujit 1998, tuned \\   
 \hline 
 \multicolumn{6}{l}{\bf Soil pools}\\
 \hline
@@ -283,12 +302,13 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value (8 PFT) & 
 • & photosynthetic path way  & \texttt{ps\_pathway} & • & • & • & • \\
 • & phenological type & \texttt{phenology\_type} & • & • & • & • \\
 • & average turnover (1/lifetime) of a leaf (1/years) & \texttt{tau\_leaf} & • & • & • & • \\
-• & turnover time of the fraction of sapwood that is in branches (10\%) (1/years) & \texttt{tau\_branches} & • & • & 0.01 & • \\
-• & turnover time of the sapwood pool (1/years) & \texttt{tau\_sap\_wood} & • & • & 0.05 & • \\
+• & turnover time of the fraction of sapwood that is in branches (10\%) & \texttt{tau\_branches} & 1/years & • & 0.01 & • \\
+• & turnover time of the sapwood pool & \texttt{tau\_sap\_wood} & 1/years & • & 0.05 & • \\
 • & average turnover (1/lifetime) of a fine root (1/years) & \texttt{tau\_fine\_root} & • & • & • & • \\
 • & average turnover (1/lifetime) of a coarse root (1/years) & \texttt{tau\_coarse\_root} & • & • & 0.1 & • \\
-• & turnover time of the fruit pool (1/years) & \texttt{tau\_fruit} & • & • & 1.0 & • \\
-• & turnover time of the fruit pool (1/years) & \texttt{tau\_seed} & • & • & 1.0 & • \\
+• & turnover time of the fruit pool & \texttt{tau\_fruit} & 1/years & • & 1.0 & • \\
+• & turnover time of the seed bed to litter & \texttt{tau\_seed\_litter} & 1/years & • & 0.1 & • \\
+• & turnover time of the seed bed to establishment & \texttt{tau\_seed\_est} & 1/years & • & 0.3 & • \\
 • & specific leaf area of a plant & \texttt{sla} & $m^{2}$ / mol C & • & • & • \\
 • & default leaf C:N, if not calculated dynamically & \texttt{cn\_leaf} & molC/molN & • & • & Kattge et al. 2011, Table 5 \\
 • & default leaf N:P, if not calculated dynamically & \texttt{np\_leaf} & molN/molP & • & • & Kattge et al. 2011, Table 5 \\
@@ -328,6 +348,10 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value (8 PFT) & 
 • & half saturation of high-affinity uptake & \texttt{soil\_n\_aff2} & mmol/L & • & 0.4 & tuned from OCN \\
 • & low-affinity uptake & \texttt{soil\_p\_aff1} & L/mmol & • & 0.105 & tuned from OCN \\
 • & half saturation of high-affinity uptake & \texttt{soil\_p\_aff2} & mmol/L & • & 0.4 & tuned from OCN \\
+• & placeholder constant BNf rate & \texttt{bnf\_base} & $\mu$mol N/ s & • & • & • \\
+• & controlling light-limited establishment & \texttt{lambda\_est\_light} & • & • & • & • \\
+• & controlling light-limited establishment & \texttt{k\_est\_light} & • & • & • & • \\
+• & seed size & \texttt{seed\_size} & mol C & • & • & • \\
  
 % • & • & \texttt{} & • & • & • & • \\
 % • & • & \texttt{} & • & • & • & • \\
