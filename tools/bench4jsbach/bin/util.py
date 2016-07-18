@@ -109,17 +109,24 @@ def touch ( filename ):
 
 
 
-def subprocessing ( cmd ):
+def subprocessing ( cmd, exit_on_error = True ):
+    ret = 0
     sp = subprocess.Popen ( cmd, shell=True,
-                            stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE )
     stdout, stderr = sp.communicate()
     if sp.returncode:
         print "stdout: ", stdout
         print "stderr: ", stderr
         print "returncode: %d" % sp.returncode
-        sys.exit ( sp.returncode )
+        if exit_on_error:
+            sys.exit ( sp.returncode )
+        else:
+            ret = sp.returncode
     else:
         print stdout
+
+    return ret
 
 
 def getdomain ():
@@ -168,11 +175,10 @@ def get_filesystem_tree_tikz ( rootDir, onlydirs = True ):
   \\begin{center}
       \\begin{forest}
        dir tree
-       [ %s
-       %s
+       [ %s %s
        ]
        \end{forest}
-    \caption{Filesystem tree \texttt{%s}.}
+    \caption{Filesystem tree \\texttt{%s}.}
   \end{center}
 \end{figure}
 """ % ( rootDir, get_tree_nodes ( rootDir ), rootDir )
