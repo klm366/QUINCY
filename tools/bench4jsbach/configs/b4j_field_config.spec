@@ -1,6 +1,4 @@
 field_name=string()
-startyear=string()
-finalyear=string()
 suffix=string()
 frequency=option(yearly,monthly,6-hourly,default=monthly)
 documentation=string()

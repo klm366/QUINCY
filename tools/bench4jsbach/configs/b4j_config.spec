@@ -24,7 +24,9 @@ name=string()
 type=option('CMIP5','MPIESM1')
 path=string(default=None)
 iscan=boolean()
-isref=boolean()   
+isref=boolean() 
+startyear=string()
+finalyear=string()  
 
 [fields]
 [[__many__]]

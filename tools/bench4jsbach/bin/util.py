@@ -109,7 +109,7 @@ def touch ( filename ):
 
 
 
-def subprocessing ( cmd, exit_on_error = True ):
+def subprocessing ( cmd, exit_on_error = True, print_stdout = False ):
     ret = 0
     sp = subprocess.Popen ( cmd, shell=True,
                             stdout=subprocess.PIPE,
@@ -124,7 +124,8 @@ def subprocessing ( cmd, exit_on_error = True ):
         else:
             ret = sp.returncode
     else:
-        print stdout
+        if print_stdout:
+            print stdout
 
     return ret
 

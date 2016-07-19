@@ -31,7 +31,7 @@ elif not os.path.isfile ( sys.argv [ 1 ]):
     print "* BENCH4JSBACH: "
     print "* Creating environment and configfile for new bench4jsbach object '%s'." % \
           sys.argv [ 1 ]
-    print "******************************************"
+    print "******************************************\n"
 
     b4j_obj = bench.Bench_Object ( sys.argv [ 1 ])
         
@@ -54,6 +54,7 @@ else:
     print "* Initialized Bench_Object. Defining Diagnostics."
     print "* Reading configuration file '%s'." %  sys.argv [ 1 ]
     print "******************************************"
+
 
     # fetch outdata
     for exp in b4j_obj.experiments:

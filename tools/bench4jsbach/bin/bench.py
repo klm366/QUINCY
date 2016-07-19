@@ -207,6 +207,8 @@ class Bench_Object ( Diagnostics, Report ):
             path = attr.get ( "path", None )
             iscan = attr.get ( 'iscan', True )
             isref = attr.get ( 'isref', False )
+            startyear = attr.get ( 'startyear', None )
+            finalyear = attr.get ( 'finalyear', None )
             n_cans += 1 if iscan else 0
             n_refs += 1 if isref else 0
             canno = n_cans - 1 if iscan else None
@@ -216,6 +218,8 @@ class Bench_Object ( Diagnostics, Report ):
                        'B4J_path'         : path,
                        'B4J_iscan'        : iscan,
                        'B4J_isref'        : isref,
+                       'B4J_startyear'    : startyear,
+                       'B4J_finalyear'    : finalyear,
                        'B4J_canno'        : canno,
                        'B4J_refno'        : refno,
                        'B4J_bench'        : self,

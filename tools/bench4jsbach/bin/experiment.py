@@ -75,15 +75,17 @@ class Experiment ( object ):
     B4J_refno       = None
                     
     def __init__ (   self, b4j_obj, **kwargs ):
-        self.B4J_obj   = b4j_obj
-        self.B4J_name     = kwargs.get ( "B4J_name" )
-        self.B4J_etype    = kwargs.get ( "B4J_etype", None )
-        self.B4J_path     = kwargs.get ( "B4J_path", None )
-        self.B4J_isref    = kwargs.get ( "B4J_isref", False )
-        self.B4J_iscan    = kwargs.get ( "B4J_iscan", True )
-        self.B4J_canno    = kwargs.get ( "B4J_canno", None )
-        self.B4J_refno    = kwargs.get ( "B4J_refno", None )
-        self.B4J_index    = {}
+        self.B4J_obj       = b4j_obj
+        self.B4J_name      = kwargs.get ( "B4J_name" )
+        self.B4J_etype     = kwargs.get ( "B4J_etype", None )
+        self.B4J_path      = kwargs.get ( "B4J_path", None )
+        self.B4J_isref     = kwargs.get ( "B4J_isref", False )
+        self.B4J_iscan     = kwargs.get ( "B4J_iscan", True )
+        self.B4J_canno     = kwargs.get ( "B4J_canno", None )
+        self.B4J_refno     = kwargs.get ( "B4J_refno", None )
+        self.B4J_startyear = kwargs.get ( "B4J_startyear", None )
+        self.B4J_finalyear = kwargs.get ( "B4J_finalyear", None )
+        self.B4J_index     = {}
 
         if not self.B4J_path:
             try:
@@ -99,8 +101,6 @@ class Experiment ( object ):
             self.B4J_path      = exp_metadata [ "data_storage" ]
             self.B4J_atmres    = exp_metadata [ "atm_res" ]
             self.B4J_oceres    = exp_metadata [ "oce_res" ]
-            self.B4J_startyear = exp_metadata [ "simulation_period" ].split ( '-' )[ 0 ]
-            self.B4J_finalyear = exp_metadata [ "simulation_period" ].split ( '-' )[ 1 ]
 
         host         = gethostname ()
         self.from_archive = self.B4J_host == 'archive'
@@ -283,8 +283,8 @@ class Experiment ( object ):
                     'path'           : fielddict [ "processed_path" ],
                     'classification' : fileid,
                     'expname'        : self.B4J_name,
-                    'startdate'      : fielddict [ 'startyear' ],
-                    'finaldate'      : fielddict [ 'finalyear' ],
+                    'startdate'      : self.B4J_startyear,
+                    'finaldate'      : self.B4J_finalyear,
                     'suffix'         : fielddict [ 'suffix' ]}
                 
                 orig_dirpath = os.path.join ( self.outdata_dirpath, filedict [ self.modeltype ][ "submodel" ])
@@ -310,8 +310,8 @@ class Experiment ( object ):
                     
                     self.accumulate_streams ( orig_dirpath,
                                               orig_fn_tmpl,
-                                              fielddict [ 'startyear' ],
-                                              fielddict [ 'finalyear' ],
+                                              self.B4J_startyear,
+                                              self.B4J_finalyear,
                                               filedict [ self.modeltype ][ 'code' ],
                                               fielddict [ 'suffix' ],
                                               codesfile_path,
@@ -386,8 +386,8 @@ class Experiment ( object ):
             'path'           : fielddict [ "processed_path" ],
             'classification' : "land_sea_mask",
             'expname'        : self.B4J_name,
-            'startdate'      : fielddict [ 'startyear' ],
-            'finaldate'      : fielddict [ 'finalyear' ],
+            'startdate'      : self.B4J_startyear,
+            'finaldate'      : self.B4J_finalyear,
             'suffix'         : fielddict [ 'suffix' ]}
         
         b4j_domain = getdomain ()
