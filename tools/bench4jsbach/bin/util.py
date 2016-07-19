@@ -109,11 +109,16 @@ def touch ( filename ):
 
 
 
-def subprocessing ( cmd, exit_on_error = True, print_stdout = False ):
+def subprocessing ( cmd,
+                    exit_on_error = True,
+                    print_stdout  = False,
+                    shell_arg     = True,
+                    stdout_arg    = subprocess.PIPE,
+                    stderr_arg    = subprocess.PIPE ):
     ret = 0
-    sp = subprocess.Popen ( cmd, shell=True,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE )
+    sp = subprocess.Popen ( cmd, shell=shell_arg,
+                            stdout=stdout_arg,
+                            stderr=stderr_arg )
     stdout, stderr = sp.communicate()
     if sp.returncode:
         print "stdout: ", stdout

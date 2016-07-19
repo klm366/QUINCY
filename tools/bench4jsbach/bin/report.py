@@ -258,18 +258,24 @@ In this benchmark report, the candidate experiments
 \\begin{itemize}
 %s
 \\end{itemize}
-""" % ''.join ( '\\item {!s} ($C_{{{!s}}}$)'.format ( teXify ( can.B4J_name ), str ( can.B4J_canno )) \
-if can.B4J_iscan else '' for can in self.experiments ) +\
+""" % ''.join ( '\\item {!s} ($C_{{{!s}}}$), selected period {!s}-{!s}'.\
+                format ( teXify ( can.B4J_name ),
+                         str ( can.B4J_canno ),
+                         can.B4J_startyear,
+                         can.B4J_finalyear ) \
+                if can.B4J_iscan else '' for can in self.experiments ) +\
 """
 are compared with the reference experiments
 \\begin{itemize}
 %s
 \\end{itemize} 
 \\ \\\\ \\\\
-""" % ''.join ( '\\item {!s} ($R_{{{!s}}}$)'.format ( teXify ( ref.B4J_name ),
-                                                   str ( ref.B4J_refno )) \
-              if ref.B4J_isref else '' \
-                for ref in self.experiments ) +\
+""" % ''.join ( '\\item {!s} ($R_{{{!s}}}$), selected period {!s}-{!s}'.\
+                format ( teXify ( ref.B4J_name ),
+                         str ( ref.B4J_refno ),
+                         ref.B4J_startyear,
+                         ref.B4J_finalyear ) \
+              if ref.B4J_isref else '' for ref in self.experiments ) +\
 """
 The fields tested and the diagnostics and plots made are listed in the 
 table below. You may find detailed information on each method following the appropriate link.

@@ -26,7 +26,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 from pycmbs.mapping import map_plot
 
-from util import logger as dkl_logger, touch
+from util import logger as dkl_logger, touch, subprocessing
 from experiment import MPIESM1_Experiment, CMIP5_Experiment
 
 from report import teXify
@@ -184,17 +184,9 @@ class Diagnostics ( object ):
                     'finaldate'      : exp.B4J_finalyear,
                     'suffix'         : fielddict [ 'suffix' ]}
                 arglist.append ( output_item + ":" + exp.B4J_index [ output_item ])
-                                     
-            sp = subprocess.Popen( ["python", executable ] +  arglist,
-                                   stdout=subprocess.PIPE)#, stderr=subprocess.PIPE)
-            stdout, stderr = sp.communicate()
-            if sp.returncode:
-                print "stdout: ", stdout
-                print "stderr: ", stderr
-                print "returncode: %d" % sp.returncode
-                sys.exit ( sp.returncode )
-            else:
-                print stdout
+
+            cmd = ["python", executable ] +  arglist
+            subprocessing ( cmd, shell_arg = False, stderr_arg = None )
         self.logger.debug ( "Finished preprocessing with %s for field %s and all experiments successfully." %  \
                             ( executable, fieldname ))
         
@@ -227,17 +219,10 @@ class Diagnostics ( object ):
                         'finaldate'      : can.B4J_finalyear,
                         'suffix'         : fielddict [ 'suffix' ]}
                     arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
-                                     
-                sp = subprocess.Popen( ["python", executable ] +  arglist,
-                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                stdout, stderr = sp.communicate()
-                if sp.returncode:
-                    print "stdout: ", stdout
-                    print "stderr: ", stderr
-                    print "returncode: %d" % sp.returncode
-                    sys.exit ( sp.returncode )
-                else:
-                    print stdout
+
+                cmd = ["python", executable ] +  arglist
+                subprocessing ( cmd, shell_arg = False, stderr_arg = None )
+                
         self.logger.debug ( "Finished diagnostic with %s for field %s and all experiments successfully." %  \
                             ( executable, fieldname ))
 
@@ -300,17 +285,9 @@ class Diagnostics ( object ):
                             except:
                                 print "ERROR in plotting title."
 
-                        sp = subprocess.Popen( ["python", executable ] +  arglist,
-                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        stdout, stderr = sp.communicate()
-                        print stdout
-                        if sp.returncode:
-                            print "stdout: ", stdout
-                            print "stderr: ", stderr
-                            print "returncode: %d" % sp.returncode
-                            sys.exit ( sp.returncode )
-                        else:
-                            print stdout
+                        cmd = ["python", executable ] +  arglist
+                        subprocessing ( cmd, shell_arg = False, stderr_arg = None )
+                        
             elif p_dict [ 'nref' ] == "multiple":
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
@@ -339,17 +316,8 @@ class Diagnostics ( object ):
                             'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
                         arglist.append ( output_item + ":" + can.B4J_index [ output_item ])
 
-                    sp = subprocess.Popen( ["python", executable ] +  arglist,
-                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    stdout, stderr = sp.communicate()
-                    print stdout
-                    if sp.returncode:
-                        print "stdout: ", stdout
-                        print "stderr: ", stderr
-                        print "returncode: %d" % sp.returncode
-                        sys.exit ( sp.returncode )
-                    else:
-                        print stdout
+                    cmd = ["python", executable ] +  arglist
+                    subprocessing ( cmd, shell_arg = False, stderr_arg = None )
 
             else:
                 print ( "ERROR: case '%s' not implemented yet." % p_dict [ 'nref' ])
