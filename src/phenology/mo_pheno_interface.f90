@@ -224,20 +224,22 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER            :: routine = TRIM(modname)//':update_phenology_logrop'
 
-    ! Get local variables from options argument
+    ! Set local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    
+
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(PHENO)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    ! Set model
     model => Get_model(tile%owner_model_id)
-    ! Get pointers to process configs and memory
+
+    ! Set pointers to process configs and memory
     dsl4jsb_Get_config(PHENO)
     dsl4jsb_Get_config(ASSIMI)
     dsl4jsb_Get_memory(ATM2LAND)    
@@ -245,41 +247,46 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO)
     dsl4jsb_Get_memory(PHENO)
     dsl4jsb_Get_memory(ASSIMI)
-    
-    ! Set pointers to variables in config or in the "grid"
-    ncanopy =  dsl4jsb_Config(ASSIMI)%ncanopy     ! IN
-    grid    => Get_grid(model%grid_id)            ! IN
-    lat     => grid%lat(ics:ice, iblk)            ! IN
+
+    ncanopy =  dsl4jsb_Config(ASSIMI)%ncanopy
+
+    grid    => Get_grid(model%grid_id)
+    lat     => grid%lat(ics:ice, iblk)
 
     !first_call_phenology_this_day  => model%processes(PHENO)%config%first_call_phenology_this_day(ics:ice,iblk)
     
     ! Set pointers to variables in memory
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_air)                  ! IN
-    dsl4jsb_Get_var2D_onChunk(ASSIMI,   NPP_rate)               ! IN
-    dsl4jsb_Get_var2D_onChunk(PHENO,    w_soil_rel)             ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_air)                  ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI,   NPP_rate)               ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO,    w_soil_rel)             ! in
     
-    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_mean) ! IN
-    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_min)  ! IN
-    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_max)  ! IN
+    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_mean) ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_min)  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_max)  ! in
         
-    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)                    ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_SG)            ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_EG)            ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_CRP)           ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_winter)        ! INOUT    
+    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)                    ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_SG)            ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_EG)            ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_CRP)           ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_winter)        ! inout
     
-    dsl4jsb_Get_var2D_onChunk(PHENO,    days_since_growth_begin_SG) ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    days_since_growth_begin_EG) ! INOUT
+    dsl4jsb_Get_var2D_onChunk(PHENO,    days_since_growth_begin_SG) ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    days_since_growth_begin_EG) ! inout
     
-    dsl4jsb_Get_var2D_onChunk(SEB,      pseudo_soil_temp)       ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    growth_phase_SG)        ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    growth_phase_EG)        ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    growth_phase_CRP)       ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    chill_days_SG)          ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    chill_days_EG)          ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB,      pseudo_soil_temp)       ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    growth_phase_SG)        ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    growth_phase_EG)        ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    growth_phase_CRP)       ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    chill_days_SG)          ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    chill_days_EG)          ! inout
 
-    dsl4jsb_Get_var2D_onChunk(PHENO,    day_NPP_sum)            ! INOUT
-    dsl4jsb_Get_var2D_onChunk(PHENO,    previous_day_NPP_rate)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(PHENO,    day_NPP_sum)            ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO,    previous_day_NPP_rate)  ! out
+    
+    ! If process is not active on this tile, do nothing
+    IF (.NOT. tile%Is_process_active(PHENO)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! ---------------------------
     ! Go

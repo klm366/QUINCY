@@ -19,8 +19,9 @@ MODULE mo_rad_process
   PUBLIC :: &
     & calc_radiation_surface_net, &
     & calc_par, calc_fapar_lai_cl, &
-    & calc_albedo_ice, calc_glacier_albedo, Has_minimal_radiation, &
-    &       calc_soil_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos, get_surface_albedo_simple
+    & calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation, &
+    & calc_soil_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
+    & get_surface_albedo_simple
 
   INTERFACE Has_minimal_radiation
     MODULE PROCEDURE Has_minimal_radiation_1
@@ -32,12 +33,12 @@ MODULE mo_rad_process
 CONTAINS
 
   PURE ELEMENTAL SUBROUTINE calc_radiation_surface_net( &
-    & swvis_down,    & ! input
-    & swnir_down,    & ! input
-    & alb_vis,       & ! input
-    & alb_nir,       & ! input
-    & lw_down,       & ! input
-    & t,             & ! input
+    & swvis_down,    & ! in
+    & swnir_down,    & ! in
+    & alb_vis,       & ! in
+    & alb_nir,       & ! in
+    & lw_down,       & ! in
+    & t,             & ! in
     & rad_net,       & ! output
     & swvis_net,     & ! output, optional
     & swnir_net,     & ! output, optional
@@ -58,8 +59,8 @@ CONTAINS
     REAL(wp),  INTENT(out) :: &
       & rad_net
     REAL(wp),  INTENT(out), OPTIONAL :: &
-      & swvis_net, &
-      & swnir_net, &
+      & swvis_net, & ! net shortwave radiation in visible range
+      & swnir_net, & ! net shortwave radiation in near infrared range
       & sw_net,    &
       & lw_net
 
@@ -83,41 +84,37 @@ CONTAINS
 
   END SUBROUTINE calc_radiation_surface_net
 
-   ELEMENTAL SUBROUTINE calc_par( &
-     & dtime,                  & ! input
-     & ncanopy,                & ! input
-     & icanopy,                & ! input
-     & waterLimitationFlag,    & ! input
-     & use_alb_veg_simple,     & ! input
-     & par,                    & ! input
-     & alb_vis_soil,           & ! input
-     & lai,                    & ! input
-     & cos_zenith_angle,       & ! input
-     & frac_par_direct,        & ! input
-     & canopy_bound_lai,       & ! input
-     & canopy_bound_lai_delta, & ! input
-     & B4_layer_above,         & ! in and out
-     & par_down_mol,           & ! output, used outside for photosynthesis
-     & soil_reflectivity_par,  & ! output, R: could also be local as it is not used outside in the moment,
-                                 ! however I want it in the model output and thus it has to be updated by returning it
-     & faPAR_cl,               & ! output, R: could also be local as it is not used outside in the moment,
-                                 ! however I want it in the model output and thus it has to be updated by returning it
-     & lai_cl,                 & ! output, R: could also be local as it is not used outside in the moment,
-                                 ! however I want it in the model output and thus it has to be updated by returning it
-     & apar_per_lai_cl  )        ! output, used outside for assimilation
+  ELEMENTAL SUBROUTINE calc_par( &
+     & dtime,                    & ! in
+     & ncanopy,                  & ! in
+     & icanopy,                  & ! in
+     & use_alb_veg_simple,       & ! in
+     & par,                      & ! in
+     & alb_vis_soil,             & ! in
+     & lai,                      & ! in
+     & cos_zenith_angle,         & ! in
+     & frac_par_direct,          & ! in
+     & canopy_bound_lai,         & ! in
+     & canopy_bound_lai_delta,   & ! in
+     & B4_layer_above,           & ! inout
+     & par_down_mol,             & ! output, used outside for photosynthesis
+     & soil_reflectivity_par,    & ! output, R: could also be local as it is not used outside in the moment,
+                                   ! however I want it in the model output and thus it has to be updated by returning it
+     & faPAR_cl,                 & ! output, R: could also be local as it is not used outside in the moment,
+                                   ! however I want it in the model output and thus it has to be updated by returning it
+     & lai_cl,                   & ! output, R: could also be local as it is not used outside in the moment,
+                                   ! however I want it in the model output and thus it has to be updated by returning it
+     & apar_per_lai_cl  )          ! output, used outside for assimilation
 
-      !-----------------------------------------------------------------------
-      !  DECLARATIONS
+      ! Use declarations
       USE mo_rad_constants,  ONLY: Epar,                  & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1
-                                         SoilReflectivityParMin   ! Minimum soil reflectivity in PAR region
+                                   SoilReflectivityParMin   ! Minimum soil reflectivity in PAR region
 
-      !-----------------------------------------------------------------------
-      !  ARGUMENTS
+      ! Arguments
       INTEGER,  INTENT(in)     :: ncanopy, &
                                   icanopy
 
-      LOGICAL,  INTENT(in)     :: waterLimitationFlag,   &
-                                  use_alb_veg_simple
+      LOGICAL,  INTENT(in)     :: use_alb_veg_simple
 
       REAL(wp),  INTENT(in)    :: dtime,                 &  ! time step in seconds e.g. for one day=86400
                                   par,                   &
@@ -136,14 +133,10 @@ CONTAINS
                                   lai_cl,                &
                                   apar_per_lai_cl
 
-      !-----------------------------------------------------------------------
-      !  LOCAL VARIABLES
 
-
-      !-----------------------------------------------------------------------
-      ! CONTENT
-
-
+      ! ---------------------------
+      ! Go
+      
       ! Expresse radiation in  mol(photons)/(m^2 s)
       par_down_mol = par / Epar
 
@@ -173,33 +166,27 @@ CONTAINS
     ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
     ! par and fraction of absorbed PAR
     apar_per_lai_cl = par_down_mol * faPAR_cl / (MAX(lai_cl,1.e-10_wp))
-    ! R: Folgendes fällt weg:
-    ! mask(1:nidx,itile) <--theLand%Surface%is_vegetation(kidx0:kidx1,1:ntiles)
-    ! apar_per_lai_cl(:,icanopy) = MERGE(apar_per_lai_cl(:,icanopy),0._dp,mask(1:nidx,itile))
-    ! Da damit die Wüstenflächen auf 0 gesetzt werden und JSBACH4 diese Prozedur dann
-    ! gar nicht erst aufruft für diese tile.
 
    END SUBROUTINE calc_par
 
 
-   ELEMENTAL SUBROUTINE calc_fapar_lai_cl(ncanopy,                &
-                                          icanopy,                &
-                                          lai,                    &
-                                          soil_reflectivity_par,  &
-                                          cos_zenith_angle,       &
-                                          frac_par_direct,        &
-                                          canopy_bound_lai,       &
-                                          canopy_bound_lai_delta, &
-                                          B4_layer_above,         & ! <- inout
-                                          faPAR_cl,               & ! <- out
-                                          lai_cl )                  ! <- out
+   ELEMENTAL SUBROUTINE calc_fapar_lai_cl( &
+     & ncanopy,                & ! in
+     & icanopy,                & ! in
+     & lai,                    & ! in
+     & soil_reflectivity_par,  & ! in
+     & cos_zenith_angle,       & ! in
+     & frac_par_direct,        & ! in
+     & canopy_bound_lai,       & ! in
+     & canopy_bound_lai_delta, & ! in
+     & B4_layer_above,         & ! inout
+     & faPAR_cl,               & ! out
+     & lai_cl )                  ! out
 
-     !-----------------------------------------------------------------------
-     !  DECLARATIONS
+     ! Use declarations
      USE mo_rad_constants,   ONLY: FcMax, FcMin, ZenithMinPar, LaiMin, LaiLimit
 
-     !-----------------------------------------------------------------------
-     !  ARGUMENTS
+     ! Arguments
      INTEGER,  intent(in)    :: ncanopy,                & ! Number of canopy layers (constant)
                                 icanopy                   ! Actual numer of the canopy layer.  (Varies only for each canopy layer.)
 
@@ -217,20 +204,15 @@ CONTAINS
      REAL(wp), intent(out)   :: faPAR_cl, & ! Fraction of absorbed PAR per leaf area (Varies per grid cell and for each canopy layer.)
                                 lai_cl      ! LAI. (Varies per grid cell and for each canopy layer.)
 
-     !-----------------------------------------------------------------------
-     !  LOCAL VARIABLES
+     ! Local variables
      REAL(wp)            :: ZH, K0, ZP1, Q0, Q1, B0, B1,    & ! These variables vary per grid cell
                             EKL, EHL, B4, FC, FSHD,         & ! These variables vary per grid cell, FC =fractional vegetation cover
                             ZP0, EKL0, EHL0, X0, X1, X2, F    ! These variables do not vary per grid cell
 
      REAL(wp), PARAMETER :: OMEGA = 0.12_wp   ! single leaf scattering albedo
 
-     !-----------------------------------------------------------------------
-     ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
-     ! IF (one_of('calc_apar_lai_cl', tile%components) < 1) RETURN
-
-     !-----------------------------------------------------------------------
-     ! CONTENT
+     ! ---------------------------
+     ! Go
 
      ! initialize output variables
      lai_cl   = 0._wp
@@ -501,32 +483,38 @@ CONTAINS
   !
   !---------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE ELEMENTAL SUBROUTINE calc_albedo_ice( &
-    & t,      &
-    & snow,   &
-    & albedo, &
-    & l_day   &
+  PURE ELEMENTAL SUBROUTINE calc_alb_lice( &
+    & l_day,       &
+    & t,           &
+    & w_snow_lice, &
+    & alb_lice     &
     & )
 
-    USE mo_rad_constants, ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax, AlbedoLakeSnowMin, AlbedoLakeSnowMax
+    ! Use declarations
+    USE mo_rad_constants,          ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax, AlbedoLakeSnowMin, AlbedoLakeSnowMax
     USE mo_jsb_physical_constants, ONLY: tmelt
 
-    REAL(wp), INTENT(in)    :: &
-      & t, &
-      & snow
-    REAL(wp), INTENT(inout) :: &
-      & albedo
+    ! Arguments
     LOGICAL,  INTENT(in)    :: &
       & l_day
+    REAL(wp), INTENT(in)    :: &
+      & t,                     &
+      & w_snow_lice
+    REAL(wp), INTENT(inout) :: &
+      & alb_lice
 
-    REAL(wp) :: t_upper_limit  ! Upper temperature limit for cold snow albedo
+    ! Local variables
+    REAL(wp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
     REAL(wp) :: alb_min, alb_max ! Minimum and maximum snow albedo
-
+    
+    ! ---------------------------
+    ! Go
+    
     IF (.NOT. l_day) RETURN
 
     t_upper_limit = tmelt - 1._wp
 
-    IF (snow > 0.01_wp) THEN
+    IF (w_snow_lice > 0.01_wp) THEN
       alb_min = AlbedoLakeSnowMin
       alb_max = AlbedoLakeSnowMax
     ELSE
@@ -536,28 +524,27 @@ CONTAINS
 
     ! Temperature-dependent snow albedo
     IF (t >= tmelt) THEN
-      albedo = alb_min
+      alb_lice = alb_min
     ELSE IF (t < t_upper_limit) THEN
-      albedo = alb_max
+      alb_lice = alb_max
     ELSE
-      albedo = alb_min + &
+      alb_lice = alb_min + &
         &      ( ((alb_max - alb_min) / (tmelt - t_upper_limit)) &  ! Change of snow albedo per deg C
         &        * (tmelt - t))
     END IF
 
-  END SUBROUTINE calc_albedo_ice
+  END SUBROUTINE calc_alb_lice
   !
   !---------------------------------------------------------------------------------------------------------------------------------
   !
   PURE ELEMENTAL SUBROUTINE calc_glacier_albedo( &
-    & t,       &
+    & l_day,   &
+    & t,       &    
     & alb_vis, &
-    & alb_nir, &
-    & l_day    &
+    & alb_nir  &
     & )
 
-    !-----------------------------------------------------------------------
-    !  DECLARATIONS
+    ! Use declarations
     USE mo_rad_constants, ONLY: AlbedoGlacierVisMin,  & ! Albedo of glacier in the visible range at the melting point
                                 AlbedoGlacierVisMax,  & ! Albedo of glacier in the visible range at hard frost
                                 TempAlbedoGlacierMax, & ! Maximum glacier albedo at this temperature below melting point of H2O
@@ -565,32 +552,34 @@ CONTAINS
                                 AlbedoGlacierNirMax     ! Albedo of glacier in the NIR range at hard frost
     USE mo_jsb_physical_constants, ONLY: tmelt
 
-    !-----------------------------------------------------------------------
-    !  ARGUMENTS
-    REAL(wp), INTENT(in)  :: &
+    ! Arguments
+    LOGICAL,  INTENT(in)    :: &
+      & l_day          
+    REAL(wp), INTENT(in)    :: &
       & t
     REAL(wp), INTENT(inout) :: &
       & alb_vis, & ! Albedo of canopy in the VIS range without snow cover.
       & alb_nir    ! Albedo of canopy in the NIR range without snow cover.
-    LOGICAL, INTENT(in) :: &
-      l_day
 
+    ! ---------------------------
+    ! Go
+
+    IF (.NOT. l_day) RETURN
+    
     ! calculate new glacier albedo (visible and NIR) only at grid points with solar radiation (i.e. during daytime)
-    IF (l_day) THEN
-       IF (t >= tmelt) THEN
-          alb_vis = AlbedoGlacierVisMin
-          alb_nir  = AlbedoGlacierNirMin
-       ELSE IF (t < tmelt - TempAlbedoGlacierMax) THEN
-          alb_vis = AlbedoGlacierVisMax
-          alb_nir  = AlbedoGlacierNirMax
-       ELSE
-          alb_vis = AlbedoGlacierVisMin + &
-               (tmelt - t) * (AlbedoGlacierVisMax - AlbedoGlacierVisMin) / &
-               TempAlbedoGlacierMax
-          alb_nir = AlbedoGlacierNirMin + &
-               (tmelt - t) * (AlbedoGlacierNirMax - AlbedoGlacierNirMin) / &
-                TempAlbedoGlacierMax
-       END IF
+    IF (t >= tmelt) THEN
+       alb_vis = AlbedoGlacierVisMin
+       alb_nir = AlbedoGlacierNirMin
+    ELSE IF (t < tmelt - TempAlbedoGlacierMax) THEN
+       alb_vis = AlbedoGlacierVisMax
+       alb_nir = AlbedoGlacierNirMax
+    ELSE
+       alb_vis = AlbedoGlacierVisMin + &
+            (tmelt - t) * (AlbedoGlacierVisMax - AlbedoGlacierVisMin) / &
+            TempAlbedoGlacierMax
+       alb_nir = AlbedoGlacierNirMin + &
+            (tmelt - t) * (AlbedoGlacierNirMax - AlbedoGlacierNirMin) / &
+             TempAlbedoGlacierMax
     END IF
 
   END SUBROUTINE calc_glacier_albedo
@@ -616,43 +605,42 @@ CONTAINS
   ! In this case this "well separated" result is as reasonable as the "well mixed" result of JSBACH3.
 
   ELEMENTAL SUBROUTINE calc_soil_albedo( &
+    & l_day,                     &
     & use_alb_mineralsoil_const, &
     & use_alb_soil_organic_C,    &
     & use_alb_soil_litter,       &
     & Cpool_litter_green_ag,     &
     & Cpool_slow,                &
+    & SpecificLeafArea_C,        &
+    & AlbedoLitterVIS,           &
     & alb_vis_mineralsoil,       & ! InOut
     & alb_nir_mineralsoil,       & ! InOut
     & alb_vis_soil,              & ! InOut
-    & alb_nir_soil,              & ! InOut
-    & SpecificLeafArea_C,        &
-    & AlbedoLitterVIS            &
+    & alb_nir_soil               & ! InOut
     & )
 
-
-    !-----------------------------------------------------------------------
-    !  DECLARATIONS
+    ! Use declarations
     USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for alb_vis_mineralsoil
-    !-----------------------------------------------------------------------
-    !  ARGUMENTS
+
+    ! Arguments
+    LOGICAL,      INTENT(in)    :: l_day
     LOGICAL,      INTENT(in)    :: use_alb_mineralsoil_const
     CHARACTER,    INTENT(in)    :: use_alb_soil_organic_C
     LOGICAL,      INTENT(in)    :: use_alb_soil_litter
 
     REAL(wp),     INTENT(in)    :: Cpool_litter_green_ag, & !
                                    Cpool_slow
+    REAL(wp),     INTENT(in)    :: SpecificLeafArea_C,    &
+                                   AlbedoLitterVIS                                   
     REAL(wp),     INTENT(inout) ::                        &
                                    alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
                                                                 ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
                                    alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
                                    alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
                                    alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
-    REAL(wp),     INTENT(in)    :: SpecificLeafArea_C,    &
-                                   AlbedoLitterVIS
 
 
-    !-----------------------------------------------------------------------
-    !  LOCAL VARIABLES
+    ! Local variables
     REAL(wp), PARAMETER ::                                   &
                            Scalfact_SOC_to_alb_vis = 3.e-4 , & ! Factor to scale soil organic content (SOC)
                                                                       ! to a albedo reduction for the vis range
@@ -667,14 +655,16 @@ CONTAINS
                             alb_vis_litter,         &
                             alb_nir_litter
 
-    !-----------------------------------------------------------------------
-    ! CONTENT
+    ! ---------------------------
+    ! Go
 
-     ! use constant mineral soil albedos?
-     IF (use_alb_mineralsoil_const) THEN ! all background soil albedo values are set to the same value
-        alb_vis_mineralsoil = AlbedoSoilConstVis
-        alb_nir_mineralsoil = AlbedoSoilConstNir
-     END IF
+    IF (.NOT. l_day) RETURN
+    
+    ! use constant mineral soil albedos?
+    IF (use_alb_mineralsoil_const) THEN ! all background soil albedo values are set to the same value
+       alb_vis_mineralsoil = AlbedoSoilConstVis
+       alb_nir_mineralsoil = AlbedoSoilConstNir
+    END IF
 
     ! albedo of soil with carbon content but without litter
     ! R: In JSBACH3 albedo_desert_dry_vis is either set to (1) AlbedoSoilConstVis or to albedo_soil_vis_base, which is (dependent on
@@ -730,49 +720,48 @@ CONTAINS
   !---------------------------------------------------------------------------------------------------------------------------------
   !
   ELEMENTAL SUBROUTINE calc_snow_albedo( &
-    & fract_snow_soil,   &
-    & snow_age,          &
-    & cos_zenith_angle,  &
-    & albedo_age_weight, &
-    & t_srf,             &
-    & alb_vis_snow,      & ! Out
-    & alb_nir_snow       & ! Out
+    & l_day,             & ! in
+    & fract_snow_soil,   & ! in
+    & snow_age,          & ! in
+    & cos_zenith_angle,  & ! in
+    & albedo_age_weight, & ! in
+    & t_srf,             & ! in
+    & alb_vis_snow,      & ! inout
+    & alb_nir_snow       & ! inout
     & )
 
-    !-----------------------------------------------------------------------
-    !  DECLARATIONS
+    ! Declarations
     USE mo_rad_constants, ONLY: &
-      & ZenithAngleFactor, & ! Factor in solar zenith angle dependence of snow albedo
-                                ! (the increase of snow albedo is the higher this factor
-      & AlbedoSnowVisMax_age,  &
-      & AlbedoSnowNirMax_age,  &
-      & AlbedoSnowVisAge,  & ! Maximal rel. reduction of snow albedo by aging in the visible range
-      & AlbedoSnowNirAge,  & ! Maximal rel. reduction of snow albedo by aging in the NIR range
-      & AlbedoSnowAngle,   & ! Maximal rel. reduction of snow absorption by large solar zenith angle
-      & TempAlbedoSnowMax, & ! Maximum snow albedo at this temperature below melting point of H2O
-      & AlbedoSnowVisMin_temp, &
-      & AlbedoSnowNirMin_temp, &
-      & AlbedoSnowVisMax_temp, &
+      & ZenithAngleFactor,      & ! Factor in solar zenith angle dependence of snow albedo
+                                  ! (the increase of snow albedo is the higher this factor)
+      & AlbedoSnowVisMax_age,   &
+      & AlbedoSnowNirMax_age,   &
+      & AlbedoSnowVisAge,       & ! Maximal rel. reduction of snow albedo by aging in the visible range
+      & AlbedoSnowNirAge,       & ! Maximal rel. reduction of snow albedo by aging in the NIR range
+      & AlbedoSnowAngle,        & ! Maximal rel. reduction of snow absorption by large solar zenith angle
+      & TempAlbedoSnowMax,      & ! Maximum snow albedo at this temperature below melting point of H2O
+      & AlbedoSnowVisMin_temp,  &
+      & AlbedoSnowNirMin_temp,  &
+      & AlbedoSnowVisMax_temp,  &
       & AlbedoSnowNirMax_temp
 
-    USE mo_jsb_physical_constants,  ONLY: tmelt                ! tmelt =273.15_wp
+    USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
 
-    !-----------------------------------------------------------------------
-    !  ARGUMENTS
-    REAL(wp), INTENT(in)  ::                      & !
-                             fract_snow_soil,     & ! Fraction of snow covered ground
-                             snow_age,            & ! non-dimensional age of snow
-                             cos_zenith_angle,    & ! cosinus of zenith angle of incoming radiation
-                             albedo_age_weight,   & ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
-                                                    !                            the snow albedo resulting from both age and temperature schemes
+    ! Arguments
+    LOGICAL,  INTENT(in)  :: l_day
+    REAL(wp), INTENT(in)  ::                    & !
+                             fract_snow_soil,   & ! Fraction of snow covered ground
+                             snow_age,          & ! non-dimensional age of snow
+                             cos_zenith_angle,  & ! cosinus of zenith angle of incoming radiation
+                             albedo_age_weight, & ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
+                                                  !                            the snow albedo resulting from both age and temperature schemes
                              t_srf
 
-    REAL(wp), INTENT(out) ::                &
+    REAL(wp), INTENT(inout) ::              &
                              alb_vis_snow,  & ! Albedo of canopy in the VIS range without snow cover.
                              alb_nir_snow     ! Albedo of canopy in the NIR range without snow cover.
 
-    !-----------------------------------------------------------------------
-    !  LOCAL VARIABLES
+    ! Local variables
     REAL(wp)              ::                    &
                              alb_vis_snow_age,  &
                              alb_nir_snow_age,  &
@@ -781,17 +770,20 @@ CONTAINS
                              snow_age_factor,   &
                              snow_albedo_angle_factor
 
-    !-----------------------------------------------------------------------
-    ! CONTENT
+    ! Initialize local variables
     alb_vis_snow_age  = 0.0_wp
     alb_nir_snow_age  = 0.0_wp
     alb_vis_snow_temp = 0.0_wp
     alb_nir_snow_temp = 0.0_wp
     alb_vis_snow      = 0.0_wp
     alb_nir_snow      = 0.0_wp
+    
+    ! ---------------------------
+    ! Go
 
+    IF (.NOT. l_day) RETURN
 
-    ! calculate albedo of snow dependent on age (snow age scheme, BATS)
+    ! calculate albedo of snow dependent on age (snow age scheme, from BATS model of NCAR)
     IF (fract_snow_soil > EPSILON(1._wp)) THEN
        snow_age_factor = snow_age / (1._wp + snow_age)
        IF (cos_zenith_angle < 0.5_wp) THEN
@@ -813,7 +805,7 @@ CONTAINS
     END IF
 
 
-    ! calculate albedo of snow dependent on temperature (snow temperature scheme)
+    ! calculate albedo of snow dependent on temperature (snow temperature scheme, from echam5 model of MPI-M)
     IF (t_srf >= tmelt) THEN
           alb_vis_snow_temp = AlbedoSnowVisMin_temp
           alb_nir_snow_temp = AlbedoSnowNirMin_temp
@@ -829,7 +821,6 @@ CONTAINS
                AlbedoSnowNirMin_temp) / TempAlbedoSnowMax
     END IF
 
-
     ! weight age vs. temperature of snow albedo to receive alb_vis_snow and alb_nir_snow
     alb_vis_snow = albedo_age_weight * alb_vis_snow_age + &
                               (1._wp - albedo_age_weight) * alb_vis_snow_temp
@@ -840,32 +831,32 @@ CONTAINS
   !
   !---------------------------------------------------------------------------------------------------------------------------------
   !
-  ELEMENTAL SUBROUTINE calc_sky_view_fractions(lai,                & ! In
-                                               cos_zenith_angle,   & ! In
-                                               sky_view_fract,     & ! Out
-                                               sky_view_fract_stem,& ! Out
-                                               StemArea            )
+  ELEMENTAL SUBROUTINE calc_sky_view_fractions( &
+    & l_day,              & ! in
+    & lai,                & ! in
+    & cos_zenith_angle,   & ! in
+    & StemArea,           & ! in
+    & sky_view_fract,     & ! out
+    & sky_view_fract_stem & ! out
+    & )
 
-    !-----------------------------------------------------------------------
-    !  DECLARATIONS
+    ! Use declarations
     USE mo_rad_constants,  ONLY: SkyViewFactor ! Constant in calculating the sky view fractions
 
-    !-----------------------------------------------------------------------
-    !  ARGUMENTS
+    ! Arguments
+    LOGICAL,  INTENT(in)  :: l_day
     REAL(wp), INTENT(in)  :: lai,              & ! leaf area index
-                             cos_zenith_angle    ! cosinus of zenith angle of incoming radiation
+                             cos_zenith_angle, & ! cosinus of zenith angle of incoming radiation
+                             StemArea
     REAL(wp), INTENT(out) :: sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
                                                  ! (Falling with rising LAI.)
                              sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
-    REAL(wp), INTENT(in)  :: StemArea
 
-    !-----------------------------------------------------------------------
-    !  LOCAL VARIABLES
-
-
-    !-----------------------------------------------------------------------
-    ! CONTENT
-
+    ! ---------------------------
+    ! Go
+    
+    IF (.NOT. l_day) RETURN
+    
     ! Fraction of "visible" bare ground below vegetation regarding only the LAI coverage
     sky_view_fract = EXP(- SkyViewFactor * lai)
 
@@ -878,9 +869,9 @@ CONTAINS
   !
   !---------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE ELEMENTAL SUBROUTINE Merge_albedos( &
-    & alb_vis,             & ! inout
-    & alb_nir,             & ! inout
+  PURE ELEMENTAL SUBROUTINE Merge_albedos_of_vegtile( &
+    & l_day,               & ! in
+    & l_forest,            & ! in
     & sky_view_fract,      & ! in
     & sky_view_fract_stem, & ! in
     & AlbedoCanopySnow,    & ! in
@@ -892,114 +883,112 @@ CONTAINS
     & alb_nir_soil,        & ! in
     & alb_vis_can,         & ! in
     & alb_nir_can,         & ! in
-    & l_forest,            & ! in
-    & l_day                & ! in
+    & alb_vis,             & ! inout
+    & alb_nir              & ! inout
     & )
-
+    
+    ! Arguments
+    LOGICAL,  INTENT(in) :: l_day ! flag to indicate if it is day or night
+    LOGICAL,  INTENT(in) :: l_forest
+        
     REAL(wp), INTENT(in) :: &
       sky_view_fract,       &
       sky_view_fract_stem,  &
       AlbedoCanopySnow,     &
       fract_snow_soil,      & ! Snow covered area fraction of soil
       fract_snow_can,       & ! Fraction of snow covered canopy (forest)
-      alb_vis_snow,         &
-      alb_nir_snow,         &
+      alb_vis_snow,         & ! Note, this snow albedo is used only for snow on soil.
+                              ! The albedo for snow on canopy (AlbedoCanopySnow) is not the same.
+      alb_nir_snow,         & ! See comment above
       alb_vis_soil,         &
       alb_nir_soil,         &
       alb_vis_can,          & ! Albedo of canopy in the VIS range without snow cover.
       alb_nir_can             ! Albedo of canopy in the NIR range without snow cover.
-    LOGICAL,  INTENT(in) :: &
-      & l_forest,           &
-      & l_day                 ! flag to indicate if it is day or night
 
     REAL(wp), INTENT(inout) :: &
       & alb_vis, &
       & alb_nir
 
-     !-----------------------------------------------------------------------
-     !  LOCAL VARIABLES
+    ! Local variables
     REAL(wp) :: &
       & alb_vis_nostems, & ! albedo vis of surface without considering the snow cover
                            ! when it is assumed that no stems (but only the canopy) cover the soil
       & alb_nir_nostems
-     !-----------------------------------------------------------------------
-     ! CONTENT
+      
+    ! ---------------------------
+    ! Go
 
+    IF (.NOT. l_day) RETURN
 
-    ! calculate new albedo (visible and NIR) only at grid points with solar radiation or at model initialisation
-    IF (l_day) THEN
-      alb_vis_nostems = (1.0_wp - sky_view_fract) * alb_vis_can + sky_view_fract * alb_vis_soil
-      alb_nir_nostems = (1.0_wp - sky_view_fract) * alb_nir_can + sky_view_fract * alb_nir_soil
-      ! albedo of forests = weighted mean of albedo of ground below canopy and albedo of canopy
-      IF (l_forest) THEN
-        alb_vis = MAX( &
+    alb_vis_nostems = (1.0_wp - sky_view_fract) * alb_vis_can + sky_view_fract * alb_vis_soil
+    alb_nir_nostems = (1.0_wp - sky_view_fract) * alb_nir_can + sky_view_fract * alb_nir_soil
+
+    ! albedo of forests = weighted mean of albedo of ground below canopy and albedo of canopy
+    IF (l_forest) THEN
+      alb_vis = MAX( &
           ! Albedo of the (snow covered and uncoverd) visible soil:
-          (sky_view_fract - sky_view_fract_stem) *                                                  &
-          (fract_snow_soil * alb_vis_snow        + (1.0_wp - fract_snow_soil) * alb_vis_soil) &
-                                                 +                                                  &
+        & (sky_view_fract - sky_view_fract_stem)                                                  &
+        &   * (fract_snow_soil * alb_vis_snow        + (1.0_wp - fract_snow_soil) * alb_vis_soil) &
+        & +                                                                                       &
           ! Albedo of the visible canopy (snow covered and uncoverd) but only stems:
           ! alb_vis_soil represents here the stem albedo (consistent with the input datasets
           ! where the albedo soil represents the ground albedo for LAI=0 which includes stems)
-               sky_view_fract_stem                       *                                                  &
-               (fract_snow_can * AlbedoCanopySnow        + (1.0_wp - fract_snow_can) * alb_vis_soil)  &
-                                                               +                                                  &
-               ! Albedo of the visible canopy (snow covered and uncoverd) without stems:
-               (1.0_wp - sky_view_fract)                 *                                                  &
-               (fract_snow_can * AlbedoCanopySnow        + (1.0_wp - fract_snow_can) * alb_vis_can)   &
-               !
-               ! OR if the albedo is higher, use the albedo without regarding stems:
-               , alb_vis_nostems)
+        & sky_view_fract_stem                                                                     &
+        &   * (fract_snow_can * AlbedoCanopySnow     + (1.0_wp - fract_snow_can) * alb_vis_soil)  &
+        & +                                                                                       &
+          ! Albedo of the visible canopy (snow covered and uncoverd) without stems:
+        & (1.0_wp - sky_view_fract)                                                               &
+        &   * (fract_snow_can * AlbedoCanopySnow     + (1.0_wp - fract_snow_can) * alb_vis_can)   &
+          !
+          ! OR use the albedo without regarding stems if then the albedo is higher:
+        & , alb_vis_nostems)
 
-        alb_nir =  MAX( &
-               ! Albedo of the (snow covered and uncoverd) visible soil:
-               (sky_view_fract - sky_view_fract_stem) *                                                   &
-               (fract_snow_soil * alb_nir_snow        +  (1.0_wp - fract_snow_soil) * alb_nir_soil) &
-                                                            +                                                   &
-               ! Albedo of the visible canopy (snow covered and uncoverd) but only stems:
-               sky_view_fract_stem                       *                                                   &
-               (fract_snow_can * AlbedoCanopySnow        +  (1.0_wp - fract_snow_can) * alb_nir_soil)  &
-                                                            +                                                   &
-               ! Albedo of the visible canopy (snow covered and uncoverd) without stems:
-               (1.0_wp - sky_view_fract)                 *                                                   &
-               (fract_snow_can * AlbedoCanopySnow        +  (1.0_wp - fract_snow_can) * alb_nir_can)   &
-               !
-               ! OR if the albedo is higher,  use the albedo without regarding stems:
-               , alb_nir_nostems)
-      ELSE
-        alb_vis = MAX( &
+      alb_nir =  MAX( &
           ! Albedo of the (snow covered and uncoverd) visible soil:
-          fract_snow_soil * alb_vis_snow         + (1.0_wp - fract_snow_soil) * alb_vis_nostems &
-               , alb_vis_nostems)
+        & (sky_view_fract - sky_view_fract_stem)                                                   &
+        &   * (fract_snow_soil * alb_nir_snow        +  (1.0_wp - fract_snow_soil) * alb_nir_soil) &
+        & +                                                                                        &
+          ! Albedo of the visible canopy (snow covered and uncoverd) but only stems:
+        & sky_view_fract_stem                                                                      &
+        &   * (fract_snow_can * AlbedoCanopySnow     +  (1.0_wp - fract_snow_can) * alb_nir_soil)  &
+        & +                                                                                        &
+          ! Albedo of the visible canopy (snow covered and uncoverd) without stems:
+        & (1.0_wp - sky_view_fract)                                                                &
+        &   * (fract_snow_can * AlbedoCanopySnow     +  (1.0_wp - fract_snow_can) * alb_nir_can)   &
+          !
+          ! OR use the albedo without regarding stems if then the albedo is higher:
+        & , alb_nir_nostems)
+    ELSE
+      alb_vis = MAX( &
+        ! Albedo of the (snow covered and uncoverd) visible soil:
+        & fract_snow_soil * alb_vis_snow         + (1.0_wp - fract_snow_soil) * alb_vis_nostems &
+        &      , alb_vis_nostems)
+       alb_nir = MAX( &
+        ! Albedo of the (snow covered and uncoverd) visible soil:
+        & fract_snow_soil * alb_nir_snow         + (1.0_wp - fract_snow_soil) * alb_nir_nostems &
+        &      , alb_nir_nostems)
+    END IF ! l_forest
 
-        alb_nir = MAX( &
-          ! Albedo of the (snow covered and uncoverd) visible soil:
-          fract_snow_soil * alb_nir_snow         + (1.0_wp - fract_snow_soil) * alb_nir_nostems &
-               , alb_nir_nostems)
-      END IF ! l_forest
-    !ELSE (l_day )
-    !   This case is not considered in JSBACH3
-    END IF ! l_day
-
-  END SUBROUTINE Merge_albedos
+  END SUBROUTINE Merge_albedos_of_vegtile
   !
   !---------------------------------------------------------------------------------------------------------------------------------
   !
   ! This is the echam5 scheme
-   REAL(wp) PURE ELEMENTAL FUNCTION get_surface_albedo_simple(t_srf,         &
-                                                         fract_forest,      &
-                                                         grnd_snow_fract,   & ! R: fract_snow_soil umbenannt, da grnd_snow_fract nicht unbedingt dasselbe sein muss...
-                                                         fract_snow_can,    &
-                                                         lai,               &
-                                                         alb_background     &
-                                                         )
+  REAL(wp) PURE ELEMENTAL FUNCTION get_surface_albedo_simple( &
+    & t_srf,             &
+    & fract_forest,      &
+    & grnd_snow_fract,   & ! R: fract_snow_soil umbenannt, da grnd_snow_fract nicht unbedingt dasselbe sein muss...
+    & fract_snow_can,    &
+    & lai,               &
+    & alb_background     &
+    & )
 
     !-----------------------------------------------------------------------
-    !  DECLARATIONS
+    ! Use declarations
     USE mo_jsb_physical_constants,  ONLY: tmelt
     USE mo_rad_constants,     ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple
 
-    !-----------------------------------------------------------------------
-    !  ARGUMENTS
+    ! Arguments
     REAL(wp), INTENT(in) ::                  &
                             t_srf,           &
                             fract_forest,    &
@@ -1008,8 +997,7 @@ CONTAINS
                             lai,             &
                             alb_background
 
-    !-----------------------------------------------------------------------
-    !  LOCAL VARIABLES
+    ! Local variables
     REAL(wp) ::                                   &
                             sky_view_fract,       &  ! R: how much of light reaches the ground through the canopy
                             forest_view_fract,    &  ! R: how much of light is catched only by forest
@@ -1018,8 +1006,8 @@ CONTAINS
                             albedo_grnd,          &  ! Albedo on ground
                             albedo_can               ! Albedo on canopy
 
-    !-----------------------------------------------------------------------
-    ! CONTENT
+    ! ---------------------------
+    ! Go
 
     ! Calculate albedo_grnd incl. snowcover
     min_temp_snow_albedo = tmelt - 5._wp

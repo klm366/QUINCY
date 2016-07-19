@@ -18,6 +18,7 @@ MODULE mo_rad_init
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
+  USE mo_jsb_lct_class,     ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, Contains_lct
   USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
@@ -44,7 +45,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rad_init'
 
     CALL rad_init_bc(tile)
-!!$    CALL rad_init_ic(tile)
+    CALL rad_init_ic(tile)
 
   END SUBROUTINE rad_init
 
@@ -68,7 +69,7 @@ CONTAINS
     ! Get radiation memory of the tile
     dsl4jsb_Get_memory(RAD)
 
-!!$    IF (.NOT. ASSOCIATED(rad__mem)) RETURN
+    IF (.NOT. ASSOCIATED(rad__mem)) RETURN
 
     CALL message(TRIM(routine), 'Setting  radiation boundary conditions for tile '//TRIM(tile%name))
 
@@ -80,6 +81,7 @@ CONTAINS
 
 !    USE mo_rad_process, ONLY: init_radiation_temperature
 !    USE mo_rad_util,    ONLY: radiation_depth_to_layers_2d
+    USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -88,13 +90,15 @@ CONTAINS
     dsl4jsb_Def_memory(RAD)
 
     INTEGER :: iradiation
-    REAL(wp), POINTER ::                         &
-                         return_pointer (:,  :), & !< temporary pointer
-                         return_pointer3d(:,:,:)
+    REAL(wp), POINTER :: &
+      & return_pointer  (:,  :), & !< temporary pointer
+      & return_pointer3d(:,:,:)
+    REAL(WP) :: &
+      albedo_age_weight
 
     TYPE(t_input_file) :: input_file
     INTEGER :: i, n1, n2
-
+                         
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rad_init_ic'
 
     model => get_model(tile%owner_model_id)
@@ -114,9 +118,11 @@ CONTAINS
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(RAD)%bc_filename), model%grid_id)
 
-    ! background albedo
+    ! TBD: adapt names of variables in input files to names in memory
+
+    ! background albedo (without snow or canopy)
     return_pointer => input_file%Read_2d(         &
-      & variable_name='alb_background',           &
+      & variable_name='albedo',           &
       & fill_array = dsl4jsb_var2D_ptr(RAD,alb_background))
     dsl4jsb_var2D_onDomain(RAD,alb_background) = &
       MERGE(dsl4jsb_var2D_onDomain(RAD,alb_background), 0._wp, dsl4jsb_var2D_onDomain(RAD,alb_background) >= 0._wp)
@@ -125,41 +131,54 @@ CONTAINS
     dsl4jsb_var2D_onDomain(RAD,alb_nir) = dsl4jsb_var2D_onDomain(RAD,alb_background)
 
     ! soil albedo
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='alb_vis_soil',          &
-      & fill_array = dsl4jsb_var2D_ptr(RAD, alb_vis_soil))
-    dsl4jsb_var2D_onDomain(RAD, alb_vis_soil) = &
-      MERGE(dsl4jsb_var2D_onDomain(RAD,alb_vis_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD,alb_vis_soil) >= 0._wp)
+    IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, BARE_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='albedo_soil_vis',             &
+        & fill_array = dsl4jsb_var2D_ptr(RAD, alb_vis_soil))
+      dsl4jsb_var2D_onDomain(RAD, alb_vis_soil) = &
+        MERGE(dsl4jsb_var2D_onDomain(RAD,alb_vis_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD,alb_vis_soil) >= 0._wp)
 
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='alb_nir_soil',          &
-      & fill_array = dsl4jsb_var2D_ptr(RAD, alb_nir_soil))
-    dsl4jsb_var2D_onDomain(RAD,alb_nir_soil) = &
-      MERGE(dsl4jsb_var2D_onDomain(RAD,alb_nir_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD,alb_nir_soil) >= 0._wp)
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='albedo_soil_nir',          &
+        & fill_array = dsl4jsb_var2D_ptr(RAD, alb_nir_soil))
+      dsl4jsb_var2D_onDomain(RAD,alb_nir_soil) = &
+        MERGE(dsl4jsb_var2D_onDomain(RAD,alb_nir_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD,alb_nir_soil) >= 0._wp)
+    END IF
 
     ! vegetation albedo
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='alb_vis_can',           &
-      & fill_array = dsl4jsb_var2D_ptr(RAD, alb_vis_can))
-    dsl4jsb_var2D_onDomain(RAD, alb_vis_can) = &
-      MERGE(dsl4jsb_var2D_onDomain(RAD, alb_vis_can), 0._wp, dsl4jsb_var2D_onDomain(RAD, alb_vis_can) >= 0._wp)
+    IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='albedo_veg_vis',           &
+        & fill_array = dsl4jsb_var2D_ptr(RAD, alb_vis_can))
+      dsl4jsb_var2D_onDomain(RAD, alb_vis_can) = &
+        MERGE(dsl4jsb_var2D_onDomain(RAD, alb_vis_can), 0._wp, dsl4jsb_var2D_onDomain(RAD, alb_vis_can) >= 0._wp)
 
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='alb_nir_can',           &
-      & fill_array = dsl4jsb_var2D_ptr(RAD, alb_nir_can))
-    dsl4jsb_var2D_onDomain(RAD, alb_nir_can) = &
-      MERGE(dsl4jsb_var2D_onDomain(RAD, alb_nir_can), 0._wp, dsl4jsb_var2D_onDomain(RAD, alb_nir_can) >= 0._wp)
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='albedo_veg_nir',           &
+        & fill_array = dsl4jsb_var2D_ptr(RAD, alb_nir_can))
+      dsl4jsb_var2D_onDomain(RAD, alb_nir_can) = &
+        MERGE(dsl4jsb_var2D_onDomain(RAD, alb_nir_can), 0._wp, dsl4jsb_var2D_onDomain(RAD, alb_nir_can) >= 0._wp)
+
+      ! Initialize variables
+    
+      ! The albedo of snow on canopy:
+      ! R: In the model the albedo of snow is weighted with albedo_age_weight between two albedo schemes (age and temperature).
+      !    For snow ON SOIL this is done with calculations of snow age and temperature and with differentiation between vis and nir
+      !    (see mo_rad_process in subroutine calc_snow_albedo).
+      !    However, for snow ON CANOPY the albedo from the age scheme and the albedo from the temperature scheme are simply assumed
+      !    to be constant (see the following lines).
+      !    Therefore as all inputs to this equation are constants, it was not necessary to calculate it for each time step and block
+      !    again (as it was in JSBACH3 in mo_land_surface: update_albedo_snowage_temp). Therefore it put it here and not in
+      !    merge_albedos_of_vegtile.
+      albedo_age_weight = dsl4jsb_Config(RAD)%albedo_age_weight
+
+      ! Weight between age and temperature impact on snow albedo for snow on canopy
+      dsl4jsb_Config(RAD)%AlbedoCanopySnow = &
+        & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
+    
+    END IF
 
     CALL input_file%Close()
-
-    ! Initialize variables
-    !
-
-!     dsl4jsb_var2D_onDomain(RAD,sw_srf_net)      = 0._wp
-!     dsl4jsb_var2D_onDomain(RAD,swvis_srf_net)   = 0._wp
-!     dsl4jsb_var2D_onDomain(RAD,swnir_srf_net)   = 0._wp
-!     dsl4jsb_var2D_onDomain(RAD,lw_srf_net)      = 0._wp
-!     dsl4jsb_var2D_onDomain(RAD,rad_srf_net)     = 0._wp
 
   END SUBROUTINE rad_init_ic
 

@@ -79,14 +79,14 @@ MODULE mo_seb_memory_class
     !
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & t_wtr,                & !< Lake surface temperature (water)                                [K]
-      & t_ice,                & !< Lake surface temperature (ice)                                  [K]
-!!$      & t_wtr_old,            & !< Lake surface temperature (water) at previous timestep           [K]
-!!$      & t_ice_old,            & !< Lake surface temperature (ice) at previous timestep             [K]
+      & t_lwtr,               & !< Lake surface temperature (water)                                [K]
+      & t_lice,               & !< Lake surface temperature (ice)                                  [K]
+!!$      & t_lwtr_old,            & !< Lake surface temperature (water) at previous timestep           [K]
+!!$      & t_lice_old,            & !< Lake surface temperature (ice) at previous timestep             [K]
       & s_wtr,                & !< Surface dry static energy over lake water                       [m2 s-2]
-      & qsat_wtr,             & !< Saturation specific humidity at surface over lake water         [kg kg-1]
+      & qsat_lwtr,            & !< Saturation specific humidity at surface over lake water        [kg kg-1]
       & s_ice,                & !< Surface dry static energy over lake ice                         [m2 s-2]
-      & qsat_ice,             & !< Saturation specific humidity at surface over lake ice           [kg kg-1]
+      & qsat_lice,            & !< Saturation specific humidity at surface over lake ice           [kg kg-1]
       & latent_hflx_wtr,      &
       & sensible_hflx_wtr,    &
       & latent_hflx_ice,      &
@@ -95,7 +95,7 @@ MODULE mo_seb_memory_class
       & fract_lice,           & !< Fraction of lake ice                                            []
       & hflx_form_ice,        & !< Heat flux for ice formation                                     [W m-2]
       & hflx_cond_ice,        & !< Conductive heat flux for ice on lakes
-      & hflx_melt_ice,        & !< Heat flux from melting ice on lakes
+      & hflx_melt_lice,        & !< Heat flux from melting ice on lakes
       & hflx_melt_snow          !< Heat flux from melting snow on lake ice
 
   CONTAINS
@@ -296,16 +296,16 @@ CONTAINS
     END IF
 
     ! Additional variables for lakes
-    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_wtr%ptr)) THEN
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_lwtr%ptr)) THEN
 
-      CALL jsb_add_var( mem, 't_wtr', mem%t_wtr,                                       &
+      CALL jsb_add_var( mem, 't_lwtr', mem%t_lwtr,                                       &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & initval_r=280.0_wp )
 
-      CALL jsb_add_var( mem, 't_ice', mem%t_ice,                                       &
+      CALL jsb_add_var( mem, 't_lice', mem%t_lice,                                       &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
@@ -319,9 +319,9 @@ CONTAINS
         & prefix, suffix,                                                                    &
         & initval_r=2.9E5_wp )
 
-      CALL jsb_add_var( mem, 'qsat_wtr', mem%qsat_wtr,                                       &
+      CALL jsb_add_var( mem, 'qsat_lwtr', mem%qsat_lwtr,                                       &
         & hgrid, surface,                                                                    &
-        & t_cf('sfc_qsat_wtr', 'm2 s-2', 'surface specific humidity at saturation (lake wtr)'), &
+        & t_cf('sfc_qsat_lwtr', 'm2 s-2', 'surface specific humidity at saturation (lake wtr)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & initval_r=0.0075_wp )
@@ -333,9 +333,9 @@ CONTAINS
         & prefix, suffix,                                                                    &
         & initval_r=2.9E5_wp )
 
-      CALL jsb_add_var( mem, 'qsat_ice', mem%qsat_ice,                                       &
+      CALL jsb_add_var( mem, 'qsat_lice', mem%qsat_lice,                                       &
         & hgrid, surface,                                                                    &
-        & t_cf('sfc_qsat_ice', 'm2 s-2', 'surface specific humidity at saturation (lake ice)'), &
+        & t_cf('sfc_qsat_lice', 'm2 s-2', 'surface specific humidity at saturation (lake ice)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & initval_r=0.0075_wp )
@@ -397,9 +397,9 @@ CONTAINS
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'hflx_melt_ice', mem%hflx_melt_ice,                       &
+      CALL jsb_add_var( mem, 'hflx_melt_lice', mem%hflx_melt_lice,                       &
         & hgrid, surface,                                                              &
-        & t_cf('hflx_melt_ice', 'W m-2)', 'heat flux from ice melt on lakes'),         &
+        & t_cf('hflx_melt_lice', 'W m-2)', 'heat flux from ice melt on lakes'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )

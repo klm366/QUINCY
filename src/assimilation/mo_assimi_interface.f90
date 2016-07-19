@@ -179,7 +179,7 @@ CONTAINS
   ! Note that this routine should only be applied to special vegetation classes
   SUBROUTINE update_assimilation_scaling_factors(tile, options)
 
-    ! Declarations
+    ! Use declarations
     !USE mo_orbit,                 ONLY: inquire_declination
      ! R: Returns declination calculated in last orbit call.
      !    Problem: FATAL ERROR in inquire_declination: Not Initialized
@@ -377,6 +377,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    ! Get model
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(ASSIMI)
@@ -529,7 +530,7 @@ CONTAINS
                                                       ! Output only for the water limited case here
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
 
-    ! Get local variables from options argument
+    ! Set local variables from options argument
     dtime   = options%dtime
     iblk    = options%iblk
     ics     = options%ics
@@ -541,8 +542,10 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    ! Set model
     model => Get_model(tile%owner_model_id)
 
+    ! Set process config and memories
     dsl4jsb_Get_config(ASSIMI)
 
     ncanopy = dsl4jsb_Config(ASSIMI)%ncanopy

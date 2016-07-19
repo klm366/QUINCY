@@ -439,7 +439,7 @@ CONTAINS
       & e_transport_rate_cl        !
 
     !-----------------------------------------------------------------------
-    !  LOCAL VARIABLES
+    ! Local variables
 ! !     INTEGER                           :: icanopy
 ! !     INTEGER                           :: i
 
@@ -728,39 +728,40 @@ CONTAINS
   END SUBROUTINE calc_assimilation_waterlimited
 
 
-    ELEMENTAL SUBROUTINE calc_NPP_rate(gross_assimilation, dark_respiration, NPP_rate)
+  ELEMENTAL SUBROUTINE calc_NPP_rate( &
+    & gross_assimilation, &
+    & dark_respiration,   &
+    & NPP_rate )
 
-      !-----------------------------------------------------------------------
-      !  DECLARATIONS
-      USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
+    ! Use Declarations
+    USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
 
-      !-----------------------------------------------------------------------
-      !  ARGUMENTS
-      REAL(wp),  INTENT(in)     :: gross_assimilation, & ! Gross primary product (where photorespiration has already  ..
-                                                         ! .. been accounted for) [mol(CO2)/(m^2 s)]
-                                   dark_respiration      ! Dark respiration of leaves [mol(CO2)/(m^2 s)]
+    ! Arguments
+    REAL(wp),  INTENT(in) :: &
+      & gross_assimilation, & ! Gross primary product (where photorespiration has already  ..
+                              ! .. been accounted for) [mol(CO2)/(m^2 s)]
+      & dark_respiration      ! Dark respiration of leaves [mol(CO2)/(m^2 s)]
 
-      REAL(wp),  INTENT(out)    :: NPP_rate              ! Net primary production rate [mol(CO2)/(m^2 s)]
+    REAL(wp),  INTENT(out) :: &
+      & NPP_rate            ! Net primary production rate [mol(CO2)/(m^2 s)]
 
-      !-----------------------------------------------------------------------
-      !  LOCAL VARIABLES
-      CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_NPP_rate'
+    ! Local variables
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_NPP_rate'
 
-      REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp)/cCost
-      REAL(wp)             :: maintenanceRespiration ! R_m
-      REAL(wp)             :: growthRespiration      ! R_g
+    REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
+    REAL(wp)             :: maintenanceRespiration ! R_m
+    REAL(wp)             :: growthRespiration      ! R_g
 
+    !-----------------------------------------------------------------------
+    ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
+    ! IF (one_of('calc_assimilation', tile%components) < 1) RETURN
 
-      !-----------------------------------------------------------------------
-      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
-      ! IF (one_of('calc_assimilation', tile%components) < 1) RETURN
+    ! ---------------------------
+    ! Go
 
-      !-----------------------------------------------------------------------
-      ! CONTENT
-
-      maintenanceRespiration = dark_respiration/f_aut_leaf
-      growthRespiration = max(0._wp,hlp*(gross_assimilation - maintenanceRespiration))
-      NPP_rate = gross_assimilation - maintenanceRespiration - growthRespiration
+    maintenanceRespiration = dark_respiration / f_aut_leaf
+    growthRespiration = max(0._wp,hlp * (gross_assimilation - maintenanceRespiration))
+    NPP_rate = gross_assimilation - maintenanceRespiration - growthRespiration
 
   END SUBROUTINE calc_NPP_rate
 

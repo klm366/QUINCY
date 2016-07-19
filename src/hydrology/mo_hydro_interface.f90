@@ -212,10 +212,7 @@ CONTAINS
   !!
   SUBROUTINE update_snow_and_skin_fraction( tile, options)
 
-    ! ---------------------------
-    ! Variables
-
-    ! Used variables
+    ! Use declarations
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_hydro_process,          ONLY: calc_snow_and_skin_fraction
@@ -236,9 +233,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime, steplen
 
-    !-----------------------------------------------------------------------
-    ! POINTERS TO VARIABLES IN MEMORY
-
+    ! Declare pointers for process configuration and memory
     dsl4jsb_Def_memory(ATM2LAND)
     dsl4jsb_Def_config(SOIL)
     dsl4jsb_Def_memory(SEB)
@@ -247,7 +242,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO)
     dsl4jsb_Def_memory(SOIL)
 
-    ! Pointers to variables in memory
+    ! Declare pointers for variables in memory
     !dsl4jsb_Real2D_onChunk :: glacier
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_snow
@@ -285,7 +280,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    ! Get reference to variables
+    ! Set pointers to process configs and memory
     dsl4jsb_Get_config(SOIL)   
     
     wsr_capacity = dsl4jsb_Config(SOIL)%wsr_capacity
@@ -299,28 +294,28 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL) 
 
     ! Set pointers
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)         ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)            ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)        ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)         ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)            ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)        ! in
 
-    dsl4jsb_Get_var2D_onChunk(SOIL,     oro_stddev)       ! IN
-    dsl4jsb_Get_var2D_onChunk(SEB,      t)                ! IN
-    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)              ! IN
-    dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc_max)    ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL,     oro_stddev)       ! in
+    dsl4jsb_Get_var2D_onChunk(SEB,      t)                ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc_max)    ! in
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_can)       ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_can)       ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_soil)      ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_soil)      ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_lice)      ! IN
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_can)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_can)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_soil)      ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_soil)      ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_lice)      ! in
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_soil) ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_can)  ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)       ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_soil)  ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_can)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_lice)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)      ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_soil) ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_can)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_soil)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_can)   ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_lice)  ! out
 
     ! TBD: On glacier: Wet skin fraction = 0, snow fraction =1, snow depth = 0
     CALL calc_snow_and_skin_fraction( &

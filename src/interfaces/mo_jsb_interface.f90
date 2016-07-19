@@ -41,27 +41,56 @@ MODULE mo_jsb_interface
 CONTAINS
 
   SUBROUTINE interface_full( &
-    & model_id, iblk, ics, ice, dtime, steplen,                    &
-    & t_air, q_air, rain, snow, wind_air, wind_10m,                &
-    & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
-    & press_srf, drag_srf,                                         &
-    & t_acoef, t_bcoef, q_acoef, q_bcoef,                          &
-    & pch, cos_zenith_angle, CO2_air,                              &
-    & t_srf, t_eff_srf, qsat_srf, s_srf,                           &
-    & fact_q_air, fact_qsat_srf,                                   &
-    & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,&
-    & rough_h_srf, rough_m_srf,                                    &
-    & tte_corr,                                                    &
-    & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,          &
+    & model_id,         &
+    & iblk, ics, ice, dtime, steplen, &
+    & t_air,            &
+    & q_air,            &
+    & rain,             &  
+    & snow,             &
+    & wind_air,         &
+    & wind_10m,         &
+    & lw_srf_down,      &
+    & swvis_srf_down,   &
+    & swnir_srf_down,   &
+    & swpar_srf_down,   &
+    & frac_par_diffuse, &
+    & press_srf,        &
+    & drag_srf,         &
+    & t_acoef,          &
+    & t_bcoef,          &
+    & q_acoef,          &
+    & q_bcoef,          &
+    & pch,              &
+    & cos_zenith_angle, &
+    & CO2_air,          &
+    & t_srf,            &
+    & t_eff_srf,        &
+    & qsat_srf,         &
+    & s_srf,            &
+    & fact_q_air,       &
+    & fact_qsat_srf,    &
+    & evapotrans,       &
+    & latent_hflx,      &
+    & sensible_hflx,    &
+    & grnd_hflx,        &
+    & grnd_hcap,        &
+    & rough_h_srf,      &
+    & rough_m_srf,      &
+    & tte_corr,         &
+    & alb_vis_dir,      &
+    & alb_nir_dir,      &
+    & alb_vis_dif,      &
+    & alb_nir_dif,      &
     ! For lakes:
-    & albedo_wtr,                                                  & !< in
-    & drag_wtr, drag_ice,                                          & !< in
-    & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,          & !< in
-    & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,          & !< in
-    & t_wtr, evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,        & !< out
-    & t_ice, evapo_ice, latent_hflx_ice, sensible_hflx_ice,        & !< out
-    & albedo_ice,                                                  & !< out
-    & ice_fract_lake                                               & !< out
+    & albedo_lwtr,      & !< in
+    & drag_wtr,         &
+    & drag_ice,         & !< in
+    & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,     & !< in
+    & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,     & !< in
+    & t_lwtr, evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,  & !< out
+    & t_lice, evapo_ice, latent_hflx_ice, sensible_hflx_ice,  & !< out
+    & albedo_lice,                                            & !< out
+    & ice_fract_lake                                          & !< out
     & )
 
     INTEGER :: p_pe
@@ -87,6 +116,7 @@ CONTAINS
       & swvis_srf_down    (:), &
       & swnir_srf_down    (:), &
       & swpar_srf_down    (:), &
+      & frac_par_diffuse  (:), &
       & press_srf         (:), &
       & drag_srf          (:), &
       & t_acoef           (:), &
@@ -107,7 +137,7 @@ CONTAINS
       & t_bcoef_ice       (:), &
       & q_acoef_ice       (:), &
       & q_bcoef_ice       (:), &
-      & albedo_wtr        (:)
+      & albedo_lwtr       (:)
     REAL(wp), INTENT(out) ::   &
       & t_srf             (:), &
       & t_eff_srf         (:), &
@@ -128,15 +158,15 @@ CONTAINS
       & alb_vis_dif       (:), &
       & alb_nir_dif       (:)
     REAL(wp), INTENT(out) ::   &
-      & t_wtr             (:), &
+      & t_lwtr            (:), &
       & evapo_wtr         (:), &
       & latent_hflx_wtr   (:), &
       & sensible_hflx_wtr (:), &
-      & t_ice             (:), &
+      & t_lice            (:), &
       & evapo_ice         (:), &
       & latent_hflx_ice   (:), &
       & sensible_hflx_ice (:), &
-      & albedo_ice        (:), & 
+      & albedo_lice       (:), &
       & ice_fract_lake    (:)
 
     ! Local variables
@@ -181,6 +211,7 @@ CONTAINS
       & swvis_srf_down     = swvis_srf_down(:),     &
       & swnir_srf_down     = swnir_srf_down(:),     &
       & swpar_srf_down     = swpar_srf_down(:),     &
+      & frac_par_diffuse   = frac_par_diffuse(:),   &
       & press_srf          = press_srf(:),          &
       & drag_srf           = drag_srf(:),           &
       & t_acoef            = t_acoef(:),            &
@@ -201,7 +232,7 @@ CONTAINS
       & t_bcoef_ice        = t_bcoef_ice(:),        &
       & q_acoef_ice        = q_acoef_ice(:),        &
       & q_bcoef_ice        = q_bcoef_ice(:),        &
-      & albedo_wtr         = albedo_wtr(:)          &
+      & albedo_lwtr        = albedo_lwtr(:)         &
       & )
     NULLIFY(tile)
 
@@ -231,16 +262,16 @@ CONTAINS
       & alb_nir_dir     = alb_nir_dir(:),     &
       & alb_vis_dif     = alb_vis_dif(:),     &
       & alb_nir_dif     = alb_nir_dif(:),     &
-      & t_wtr           = t_wtr(:),           &
+      & t_lwtr          = t_lwtr(:),          &
       & evapo_wtr       = evapo_wtr(:),       &
       & latent_hflx_wtr    = latent_hflx_wtr(:),    &
       & sensible_hflx_wtr  = sensible_hflx_wtr(:),  &
-      & t_ice              = t_ice(:),              &
+      & t_lice             = t_lice(:),             &
       & evapo_ice          = evapo_ice(:),          &
       & latent_hflx_ice    = latent_hflx_ice(:),    &
       & sensible_hflx_ice  = sensible_hflx_ice(:),  &
       & ice_fract_lake     = ice_fract_lake(:),     &
-      & albedo_ice         = albedo_ice(:)          &
+      & albedo_lice        = albedo_lice(:)         &
       & )
     NULLIFY(tile)
 

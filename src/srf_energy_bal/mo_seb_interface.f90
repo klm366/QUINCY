@@ -262,12 +262,12 @@ CONTAINS
     ! dsl4jsb_Aggregate_onChunk(SEB, swvis_srf_net,  weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(SEB, swnir_srf_net,  weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(SEB, t_wtr,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, t_ice,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, s_wtr,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, s_ice,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, qsat_wtr, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, qsat_ice, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB, t_lwtr,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB, t_lice,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB, s_wtr,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB, s_ice,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB, qsat_lwtr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB, qsat_lice, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

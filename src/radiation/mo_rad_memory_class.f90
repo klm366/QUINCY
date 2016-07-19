@@ -38,27 +38,35 @@ MODULE mo_rad_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_rad_memory
 
     TYPE(t_jsb_var_real2d)  :: &
-      & sw_srf_net,           & !< net shortwave radiation at surface
-      & swvis_srf_net,        & !< net shortwave radiation at surface in visible range
-      & swnir_srf_net,        & !< net shortwave radiation at surface in NIR range
-      & lw_srf_net,           & !< net longwave radiation at surface
-      & rad_srf_net             !< net radiation at surface
+      & sw_srf_net,            & !< net shortwave radiation at surface
+      & swvis_srf_net,         & !< net shortwave radiation at surface in visible range
+      & swnir_srf_net,         & !< net shortwave radiation at surface in NIR range
+      & lw_srf_net,            & !< net longwave radiation at surface
+      & rad_srf_net              !< net radiation at surface
 
-    TYPE(t_jsb_var_real2d) ::                     &
-      & alb_background,       & !< Background albedo (without snow or canopy)
-                                !! Note, alb_background is ONLY for FUNCTION vegetation_albedo_simple_echam5 ?and update_par?.
-      & alb_vis,              & !< Albedo in the VIS (visible) range
-      & alb_nir,              & !< Albedo in the NIR (near-infrared) range
-      & alb_vis_snow,         & !< Albedo of snow in the VIS range
-      & alb_nir_snow            !< Albedo of snow in the NIR range
+    TYPE(t_jsb_var_real2d) :: &
+      & alb_background,       & ! Background albedo (without snow or canopy) of tile
+                                ! Note, alb_background is ONLY used for FUNCTION get_surface_albedo_simple.
+      & alb_vis,              & ! Albedo of the whole tile in the VIS (visible) range
+      & alb_nir,              & ! Albedo of the whole tile in the NIR (near-infrared) range
+      & alb_vis_snow,         & ! Albedo of snow in the VIS range
+      & alb_nir_snow            ! Albedo of snow in the NIR range
 
     !
     ! Additional variables for soil
     TYPE(t_jsb_var_real2d) :: &
-      & alb_vis_soil,         & !< Albedo in VIS range of soil (may incl. litter layer and carbon within soil)
-                                !! If use_albedo_soil_scheme = .FALSE. it is not calculated but taken from
-                                !! bc_land_phys.nc file in the initialization
-      & alb_nir_soil,         & ! Same for NIR
+      & alb_vis_soil,         & ! Albedo in VIS range of soil
+                                ! Initialized from bc_land_phys.nc file.
+                                ! If use_albedo_soil_scheme =
+                                !   .TRUE.:  then it is calculated and may incl. litter layer and carbon within soil dependent
+                                !            on the use_alb_soil_organic_C and use_alb_soil_litter switches.
+                                !   .FALSE.: it is not calculated but remains as taken from bc_land_phys.nc file during
+                                !            initialization. alb_vis_soil of the bc_land_phys.nc file represents the soil albedo
+                                !            including carbon in the soil as well as litter on the soil, but without the canopy
+                                !            above. It was calculated from MODIS data (aboard the TERRA satellite) using linear
+                                !            regression to project the albedo when fapar=0 (LAI/Canopy =0) (for details see
+                                !            JSBACH3 documentation 4.1.1 or ask Thomas Raddatz).
+      & alb_nir_soil,         & ! Same as alb_vis_soil but for NIR.
       ! R: Albedo of mineral soil is needed when Freya scheme is used. Not in the bc_lnd_phy.nc file yet!
       & alb_vis_mineralsoil,  & !< Albedo of soil without carbon or litter.
                                 !! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE.
@@ -69,36 +77,42 @@ MODULE mo_rad_memory_class
     !
     ! Additional variables for vegetation
     TYPE(t_jsb_var_real2d) :: &
-      & alb_vis_can,          & !< Albedo of canopy (without snow cover) in VIS range. Is never calculated:
-                                !! If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyVIS)
+      & alb_vis_can,          & ! Albedo of canopy (without snow cover) in VIS range.
+                                ! Never calculated. Initialized from bc_land_phys.nc file.
+                                ! If use_alb_canopy =
+                                !   .TRUE.:  remains as taken from bc_land_phys.nc file during initialization. These data were
+                                !            calculated from MODIS data (aboard the TERRA satellite) using linear regression to project
+                                !            the albedo when fapar=1 (LAI/Canopy >=1) (for details see JSBACH3 documentation 4.1.1
+                                !            or ask Thomas Raddatz).
+                                !   .FALSE.: taken from lctlib file (AlbedoCanopyVIS)
       & alb_nir_can,          & !< Albedo of canopy (without snow cover) in NIR range. Is never calculated:
                                 !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
-      & sky_view_fract,       & !< Fraction of "visible" bare ground below vegetation without accounting for stems
-      & sky_view_fract_stem,  & !< Fraction of soil below vegetation which is covered by stems but not by LAI
+      & sky_view_fract,       & ! Fraction of bare ground below vegetation (without accounting for stems) that is "visible" for the sun
+      & sky_view_fract_stem,  & ! Fraction of soil below vegetation which is (for the sun) covered by stems but not by LAI
       & snow_age,             &
       !
       & par,                  & ! sw_par_down from atmosphere in [W/m^2]
-      & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s)
+      & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s) but only for current time step/"delta_time"
       & faPAR,                & ! fraction of PAR absorbed by the canopy
       & par_down_mol_nacc,    & ! incoming PAR accumulated (over output timestep) in mol(photons)/(m^2)
       & par_down_mol_tavg,    & ! incoming PAR (mean value over output timestep) [MOL PHOTONS/M^2 S]
-      & soil_reflectivity_par,& ! Soil reflectivity in the PAR region
+      & soil_reflectivity_par,& ! Soil reflectivity in the PAR region but only for current time step/"delta_time"
       & frac_par_direct,      & ! Fraction of direct PAR
       & apar_nacc
 
     TYPE(t_jsb_var_real3d) :: & ! alt: (nland, ncanopy, ntiles)
       & lai_cl,               & ! LAI per canopy layer; preliminarily, should later be put to another process...
       & faPAR_cl,             & ! Absorbed PAR per canopy layer [fraction of irradiance]
-      & apar_per_lai_cl,      & ! Absorbed PAR per canopy layer. [(absorbed photons) / (m^2(leaf area) s)]
+      & apar_per_lai_cl,      & ! Absorbed PAR per canopy layer. Only for current time step/dtime. [(absorbed photons) / (m^2(leaf area) s)]
       & apar_per_lai_cl_nacc, & ! PAR absorbed by the canopy accumulated (over output timestep) in mol(photons)/m^2
       & apar_per_lai_cl_tavg    ! PAR absorbed by the canopy (mean value over output timestep)  in mol(photons)/(m^2 * s)
 
     !
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & rad_net_wtr,          & !< Net radiation over lake water
-      & rad_net_ice,          & !< Net radiation over lake ice
-      & albedo_ice              !< Albedo of ice on lake
+      & rad_net_lwtr,         & !< Net radiation over lake water
+      & rad_net_lice,         & !< Net radiation over lake ice
+      & albedo_lice             !< Albedo of ice on lake
 
   CONTAINS
     PROCEDURE :: Init => Init_rad_memory
@@ -204,14 +218,14 @@ CONTAINS
         & t_cf('albedo_vis_snow', '', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE.)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'alb_nir_snow', mem%alb_nir_snow,      &
         & hgrid, surface,                                                           &
         & t_cf('albedo_nir_snow', '', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE.)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
     END IF
 
@@ -238,14 +252,14 @@ CONTAINS
         & t_cf('alb_vis_mineralsoil', '', ''),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE.)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'alb_nir_mineralsoil', mem%alb_nir_mineralsoil, &
         & hgrid, surface,                                                                    &
         & t_cf('alb_nir_mineralsoil', '', ''),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.TRUE.)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
     END IF
 
@@ -278,14 +292,14 @@ CONTAINS
         & t_cf('sky_view_fract', '', ''),                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.FALSE.)
+        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'sky_view_fract_stem', mem%sky_view_fract_stem,       &
         & hgrid, surface,                                                             &
         & t_cf('sky_view_fract_stem', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
         & prefix, suffix,                                                           &
-        & loutput=.TRUE., lrestart=.FALSE.)
+        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'par', mem%par, &
         & hgrid, surface,                                                                &
@@ -381,25 +395,25 @@ CONTAINS
     END IF
 
     ! Additional variables for lakes
-    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%rad_net_wtr%ptr)) THEN
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%rad_net_lwtr%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'rad_net_wtr', mem%rad_net_wtr,                        &
+      CALL jsb_add_var( mem, 'rad_net_lwtr', mem%rad_net_lwtr,                      &
         & hgrid, surface,                                                           &
-        & t_cf('rad_net_wtr', '', 'Net surface radiation over lake water'),         &
+        & t_cf('rad_net_lwtr', '', 'Net surface radiation over lake water'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'rad_net_ice', mem%rad_net_ice,                        &
+      CALL jsb_add_var( mem, 'rad_net_lice', mem%rad_net_lice,                      &
         & hgrid, surface,                                                           &
-        & t_cf('rad_net_ice', '', 'Net surface radiation over lake ice'),         &
+        & t_cf('rad_net_lice', '', 'Net surface radiation over lake ice'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'albedo_ice', mem%albedo_ice,                          &
+      CALL jsb_add_var( mem, 'albedo_lice', mem%albedo_lice,                        &
         & hgrid, surface,                                                           &
-        & t_cf('albedo_ice', '', 'Albedo of ice on water'),                         &
+        & t_cf('albedo_lice', '', 'Albedo of ice on water'),                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.55_wp )

@@ -23,28 +23,28 @@ MODULE mo_hydro_process
 CONTAINS
 
   ELEMENTAL SUBROUTINE calc_snow_and_skin_fraction( &
-    & dtime,         & ! input
-    & steplen,       & ! input
-    & wsr_capacity,  & ! input
-    & lai,           & ! input
-    & oro_stddev,    & ! input
-    & fract_fpc_max, & ! input
-    & t_srf,         & ! input
-    & press_srf,     & ! input
-    & drag_srf,      & ! input
-    & q_air,         & ! input
-    & w_skin_soil,   & ! input
-    & w_skin_can,    & ! input
-    & w_snow_soil,   & ! input
-    & w_snow_can,    & ! input
-    & w_snow_ice,    & ! input
-    & fract_snow_can, & !InOut
-    & fract_water_can,    & ! output
-    & fract_water_soil,   & ! output
-    & fract_water_srf,    & ! output
-    & fract_snow_soil,    & ! output
-    & fract_snow_srf,     & ! output
-    & fract_snow_ice      & ! output
+    & dtime,          & ! in
+    & steplen,        & ! in
+    & wsr_capacity,   & ! in
+    & lai,            & ! in
+    & oro_stddev,     & ! in
+    & fract_fpc_max,  & ! in
+    & t_srf,          & ! in
+    & press_srf,      & ! in
+    & drag_srf,       & ! in
+    & q_air,          & ! in
+    & w_skin_soil,    & ! in
+    & w_skin_can,     & ! in
+    & w_snow_soil,    & ! in
+    & w_snow_can,     & ! in
+    & w_snow_ice,     & ! in
+    & fract_snow_can, & ! inout
+    & fract_water_can,    & ! out
+    & fract_water_soil,   & ! out
+    & fract_water_srf,    & ! out
+    & fract_snow_soil,    & ! out
+    & fract_snow_srf,     & ! out
+    & fract_snow_ice      & ! out
     & )
 
     USE mo_soil_process,           ONLY: snow_fract_noforest
