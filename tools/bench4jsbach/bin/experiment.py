@@ -60,6 +60,7 @@ class Experiment ( object ):
     B4J_obj         = None
     B4J_id          = None
     B4J_name        = None
+    B4J_name_orig   = None
     B4J_etype       = None
     B4J_atmres      = None
     B4J_oceres      = None
@@ -77,6 +78,7 @@ class Experiment ( object ):
     def __init__ (   self, b4j_obj, **kwargs ):
         self.B4J_obj       = b4j_obj
         self.B4J_name      = kwargs.get ( "B4J_name" )
+        self.B4J_name_orig = kwargs.get ( "B4J_name_orig" )
         self.B4J_etype     = kwargs.get ( "B4J_etype", None )
         self.B4J_path      = kwargs.get ( "B4J_path", None )
         self.B4J_isref     = kwargs.get ( "B4J_isref", False )
@@ -90,9 +92,9 @@ class Experiment ( object ):
         if not self.B4J_path:
             try:
                 exp_metadata = self.B4J_obj.wikipage.fetch_simulation_row (
-                    "can" if self.B4J_iscan else "ref", self.B4J_name )
+                    "can" if self.B4J_iscan else "ref", self.B4J_name_orig )
             except:
-                print "No experiment description found for %s." % self.B4J_name
+                print "No experiment description found for %s." % self.B4J_name_orig
                 sys.exit ( 1 )
 
 
@@ -151,7 +153,7 @@ class Experiment ( object ):
 
         sy  = int ( startyear )
         fy  = int ( finalyear )
-
+        
         if not from_remote:
             cdo = Cdo ()
             try:
@@ -209,7 +211,7 @@ class Experiment ( object ):
         exe = os.path.join ( bench4jsbach_scripts, "b4j_fetch_archived_file.ksh" )
         assert os.path.isfile ( exe ) and os.access ( exe, os.X_OK ), "File %s is not executable." % exe
         self.B4J_obj.logger.debug ( "Fetching outdata and codes files from archive for %s into %s. This might take a while ..." % (
-            self.B4J_name, self.B4J_obj.downloads_path ))
+            self.B4J_name_orig, self.B4J_obj.downloads_path ))
         
         for origin_dirpath, origin_filename in fetchfile_list:
             sp = subprocess.Popen( [ exe + " " + origin_dirpath + " " + origin_filename ], shell=True,
@@ -224,10 +226,10 @@ class Experiment ( object ):
                 print stdout
                 
             self.B4J_obj.logger.debug ( "Fetched outdata from archive for %s successfully into %s." % (
-                self.B4J_name, self.B4J_obj.downloads_path ))
+                self.B4J_name_orig, self.B4J_obj.downloads_path ))
 
             # assuming tarball containing codesfiles in work/b4jname/downloads
-            codes_tar_fn = self.codesfiles_dict [ 'tar_fn_tmpl' ] % { "expname" : self.B4J_name }
+            codes_tar_fn = self.codesfiles_dict [ 'tar_fn_tmpl' ] % { "expname" : self.B4J_name_orig }
             if origin_filename == codes_tar_fn:
                 for cmd in [[ "tar -xf %s --wildcards --no-anchored --strip=1 '*.%s'" %
                               ( codes_tar_fn, self.codesfiles_dict [ "suffix" ])],
@@ -293,7 +295,7 @@ class Experiment ( object ):
                 if not self.accumulated:
                     
                     orig_fn_tmpl = self.outfiles_dict [ 'fn_tmpl' ]  % {
-                        "expname"             : self.B4J_name,
+                        "expname"             : self.B4J_name_orig,
                         "submodel"            : filedict [ self.modeltype ][ "submodel" ],
                         "stream"              : filedict [ self.modeltype ][ "stream" ],
                         "cond_frequenceinfix" : frequence_infix,
@@ -303,7 +305,7 @@ class Experiment ( object ):
                     
                     codesfile_path = os.path.join ( self.codesfiles_dirpath,
                                                     self.codesfiles_dict [ "fn_tmpl" ] % {
-                                                        "expname" : self.B4J_name,
+                                                        "expname" : self.B4J_name_orig,
                                                         "submodel": filedict [ self.modeltype ][ "submodel" ],
                                                         "stream"  : filedict [ self.modeltype ][ "stream" ],
                                                         "suffix"  : self.codesfiles_dict [ 'suffix' ]})
@@ -320,7 +322,7 @@ class Experiment ( object ):
                 # finished fetching outdata, not self.accumulated
                 else:
                     orig_filename = self.outfiles_dict [ "fn_tmpl" ]  % {
-                        "expname"             : self.B4J_name,
+                        "expname"             : self.B4J_name_orig,
                         "submodel"            : filedict [ self.modeltype ][ "submodel" ],
                         "stream"              : filedict [ self.modeltype ][ "stream" ],
                         "cond_frequenceinfix" : frequence_infix,
@@ -329,7 +331,7 @@ class Experiment ( object ):
                         "suffix"              : self.outfiles_dict [ 'suffix' ]}
 
                     codes_filename = self.codesfiles_dict [  "fn_tmpl" ] % {
-                        "expname"  : self.B4J_name,
+                        "expname"  : self.B4J_name_orig,
                         "submodel" : filedict [ self.modeltype ][ "submodel" ],
                         "stream"   : filedict [ self.modeltype ][ "stream" ],
                         "suffix"   : self.codesfiles_dict [ "suffix" ]}
@@ -341,7 +343,7 @@ class Experiment ( object ):
                             
                         self.B4J_index [ fileid + CODES_SUFFIX ] = os.path.join ( self.B4J_obj.downloads_path, codes_filename )
                         if not os.path.isfile ( self.B4J_index [ fileid + CODES_SUFFIX ]):
-                            fetchfile_list.append (( self.dirpath, self.codesfiles_dict [ 'tar_fn_tmpl' ] % { "expname" : self.B4J_name }))
+                            fetchfile_list.append (( self.dirpath, self.codesfiles_dict [ 'tar_fn_tmpl' ] % { "expname" : self.B4J_name_orig }))
                     else:
                         self.B4J_index [ fileid + STREAM_SUFFIX ] = os.path.join ( orig_dirpath, orig_filename )
 
@@ -510,7 +512,7 @@ class MPIESM1_Experiment ( Experiment ):
 
     def __init__ ( self, b4j_obj, **kwargs ):
         Experiment.__init__ ( self, b4j_obj, **kwargs )
-        self.dirpath            = os.path.join ( self.B4J_path, self.B4J_name )
+        self.dirpath            = os.path.join ( self.B4J_path, self.B4J_name_orig )
         self.outdata_dirpath    = os.path.join ( self.dirpath, self.outfiles_dict [ "dirname" ])
         self.codesfiles_dirpath = os.path.join ( self.dirpath, self.codesfiles_dict [ 'dirname' ])
         self.modeltype          = self.__class__.__name__.split ( "_" )[ 0 ]

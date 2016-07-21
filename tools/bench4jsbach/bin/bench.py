@@ -203,6 +203,7 @@ class Bench_Object ( Diagnostics, Report ):
         n_refs = n_cans = 0
         for en, attr in es.iteritems ():
             name = en
+            name_orig = attr.get ( "name_orig", None )
             etype = attr.get ( "type", "CMIP5" )
             path = attr.get ( "path", None )
             iscan = attr.get ( 'iscan', True )
@@ -214,6 +215,7 @@ class Bench_Object ( Diagnostics, Report ):
             canno = n_cans - 1 if iscan else None
             refno = n_refs - 1 if isref else None
             kwargs = { 'B4J_name'         : name,
+                       'B4J_name_orig'    : name_orig,
                        'B4J_etype'        : etype,
                        'B4J_path'         : path,
                        'B4J_iscan'        : iscan,

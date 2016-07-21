@@ -20,7 +20,7 @@ reporting=boolean()
 
 [experiments]
 [[__many__]]
-name=string()
+name_orig=string()
 type=option('CMIP5','MPIESM1')
 path=string(default=None)
 iscan=boolean()

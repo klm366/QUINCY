@@ -476,10 +476,11 @@ table below. You may find detailed information on each method following the appr
                              "[ %s ]" %','.join ("{!s}".format ( l ) for l in args ))
         
 
-        try:
-            subprocess.check_call ( args )
-        except:
-            raise Exception ( "Subprocess call 'pdflatex' failed" )
+        for i in range ( 2 ):
+            try:
+                subprocess.check_call ( args )
+            except:
+                raise Exception ( "Subprocess call 'pdflatex' failed" )
 
         pdf_filename = self.bench_name + '.pdf'
         try:
