@@ -113,7 +113,7 @@ class Experiment ( object ):
         cmd = "ssh %s@%s '%s'" % ( self.B4J_obj.config [ 'author' ],
                                    HOST_AVAIL [ self.B4J_host ][ 'login_name' ],
                                    cmd )
-        return subprocessing ( cmd )
+        return subprocessing ( cmd, shell_arg = False )
 
 
     def remotehost_fetching ( self, remote_path, target_path ):
