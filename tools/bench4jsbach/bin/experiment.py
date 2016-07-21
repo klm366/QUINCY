@@ -113,7 +113,7 @@ class Experiment ( object ):
         cmd = "ssh %s@%s '%s'" % ( self.B4J_obj.config [ 'author' ],
                                    HOST_AVAIL [ self.B4J_host ][ 'login_name' ],
                                    cmd )
-        return subprocessing ( cmd, shell_arg = False )
+        return subprocessing ( cmd )
 
 
     def remotehost_fetching ( self, remote_path, target_path ):
@@ -187,7 +187,7 @@ class Experiment ( object ):
 
             self.B4J_obj.logger.debug ( "Before executing command '%s' on %s." % (
                 remote_cmd, HOST_AVAIL [ self.B4J_host ][ 'login_name' ]))
-
+            
             self.remotehost_processing ( remote_cmd )
             self.B4J_obj.logger.debug ( "Executed command successfully." )
             self.remotehost_fetching ( target_fn, target_path )

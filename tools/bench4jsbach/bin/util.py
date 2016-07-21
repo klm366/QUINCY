@@ -115,8 +115,12 @@ def subprocessing ( cmd,
                     shell_arg     = True,
                     stdout_arg    = subprocess.PIPE,
                     stderr_arg    = subprocess.PIPE ):
+    #logger.debug ( "Starting" )
+    #logger.debug ( "\n\ncommand: %s\n\n" % cmd )
+    
     ret = 0
-    sp = subprocess.Popen ( cmd, shell=shell_arg,
+    sp = subprocess.Popen ( cmd,
+                            shell=shell_arg,
                             stdout=stdout_arg,
                             stderr=stderr_arg )
     stdout, stderr = sp.communicate()
@@ -132,6 +136,7 @@ def subprocessing ( cmd,
         if print_stdout:
             print stdout
 
+    #logger.debug ( "Exiting" )
     return ret
 
 
