@@ -46,18 +46,14 @@ CONTAINS
     ! local variables
     ! ---------------
 
-    REAL(wp), ALLOCATABLE    :: amod(:)
-    REAL(wp), ALLOCATABLE    :: akdiv(:)
-    REAL(wp), ALLOCATABLE    :: inflow_cascade(:) !< inflow into each level of the cascade
+    REAL(wp) :: &
+      & amod(nc),          &
+      & akdiv(nc),         &
+      & inflow_cascade(nc)   !< inflow into each level of the cascade
 
-    INTEGER ::  res, nres_max
-
+    INTEGER :: res, nres_max
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reservoir_cascade'
-
-    ALLOCATE(amod(nc))
-    ALLOCATE(akdiv(nc))
-    ALLOCATE(inflow_cascade(nc))
 
     WHERE (nres > 0)       !< land - without internal drainage cells
       ! unit conversions: [day] -> [seconds]
@@ -84,8 +80,6 @@ CONTAINS
 
     ! conversions: [m3] -> [m3/s]
     outflow(:) = outflow(:) / steplen
-
-    DEALLOCATE(amod, akdiv)
 
   END SUBROUTINE reservoir_cascade
 

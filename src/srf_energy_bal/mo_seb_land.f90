@@ -470,8 +470,8 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(SEB)) RETURN
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface fluxes')
-
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    
     model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
@@ -527,6 +527,8 @@ CONTAINS
     ! Compute latent heat flux
     !
     latent_hflx(:) = alv * evapotranspiration(:) + (als - alv) * fract_snow(:) * evapopot(:)
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_surface_fluxes_land
 

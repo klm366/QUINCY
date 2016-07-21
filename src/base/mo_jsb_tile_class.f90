@@ -32,9 +32,11 @@ MODULE mo_jsb_tile_class
   TYPE, ABSTRACT :: t_jsb_aggregator
     CHARACTER(len=25) :: name
   CONTAINS
-    PROCEDURE(aggregate_interface_2d), DEFERRED :: Aggregate_2d
-    PROCEDURE(aggregate_interface_3d), DEFERRED :: Aggregate_3d
-    GENERIC                                     :: Aggregate => Aggregate_2d, Aggregate_3d
+    PROCEDURE(aggregate_interface_2d), DEFERRED             :: Aggregate_2d
+    PROCEDURE(aggregate_interface_3d), DEFERRED             :: Aggregate_3d
+    GENERIC                                                 :: Aggregate => Aggregate_2d, Aggregate_3d
+    PROCEDURE(aggregate_interface_setopt_logical), DEFERRED :: Set_aggregator_option_logical
+    GENERIC                                                 :: Set_option => Set_aggregator_option_logical
   END TYPE t_jsb_aggregator
 
   TYPE t_jsb_aggregator_p
@@ -51,8 +53,10 @@ MODULE mo_jsb_tile_class
     REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to parent)
     REAL(wp), PRIVATE,          POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
-    CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from (all tiles except
-                                                                   !! root). The variable names must be "fract[_max]_"//tile%name
+    CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from. The variable names
+                                                                   !! must be either "fract[_max]_"//tile%name, or specified by 
+                                                                   !! fract_varname.
+    CHARACTER(LEN=20)                      :: fract_varname        !< Name of variable containing fractions for this tile
     LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:)
     TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
@@ -127,16 +131,25 @@ MODULE mo_jsb_tile_class
       TYPE(t_jsb_var_real3d),     INTENT(inout) :: var
       INTEGER,                    INTENT(in)    :: ics, ice, iblk
     END SUBROUTINE aggregate_interface_3d
+    SUBROUTINE aggregate_interface_setopt_logical(this, name, value)
+      IMPORT :: t_jsb_aggregator
+      CLASS(t_jsb_aggregator), INTENT(inout) :: this
+      CHARACTER(len=*)       , INTENT(in)    :: name
+      LOGICAL,                 INTENT(in)    :: value
+    END SUBROUTINE aggregate_interface_setopt_logical
   END INTERFACE
 
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_weighted_by_fract
     REAL(wp), ALLOCATABLE :: fractions(:,:,:)
+    LOGICAL               :: l_all_tiles = .FALSE.  !< If true, include tiles in weighing that don't have the 
+                                                    !  variable under consideration
   CONTAINS
     PROCEDURE :: Set_fractions => Set_fractions_aggregator
 !    PROCEDURE :: Aggregate => Aggregate_weighted_by_fract_2d
 !    PROCEDURE :: Aggregate => Aggregate_weighted_by_fract_3d
-    PROCEDURE :: Aggregate_2d => Aggregate_weighted_by_fract_2d
-    PROCEDURE :: Aggregate_3d => Aggregate_weighted_by_fract_3d
+    PROCEDURE :: Aggregate_2d                  => Aggregate_weighted_by_fract_2d
+    PROCEDURE :: Aggregate_3d                  => Aggregate_weighted_by_fract_3d
+    PROCEDURE :: Set_aggregator_option_logical => Aggregate_weighted_by_fract_set_option_logical
   END TYPE t_jsb_aggregator_weighted_by_fract
 
   INTERFACE t_jsb_aggregator_weighted_by_fract
@@ -480,23 +493,32 @@ CONTAINS
 
   END SUBROUTINE Register_aggregator
 
-  FUNCTION Get_aggregator(this, name) RESULT(aggregator)
+  FUNCTION Get_aggregator(this, name, copy) RESULT(aggregator)
 
     USE mo_hsm_class,      ONLY: t_State
 
     CLASS(t_jsb_tile_abstract), INTENT(in) :: this
     CHARACTER(len=*),           INTENT(in) :: name
+    LOGICAL, OPTIONAL,          INTENT(in) :: copy
     CLASS(t_jsb_aggregator),    POINTER    :: aggregator
 
     CLASS(t_State),   POINTER :: current
     INTEGER :: i
+    LOGICAL :: l_copy
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_aggregator'
+
+    l_copy = .FALSE.
+    IF (PRESENT(copy)) l_copy = copy
 
     aggregator => NULL()
     DO i=1,SIZE(this%aggregators)
       IF (TRIM(this%aggregators(i)%p%name) == TRIM(name)) THEN
-        aggregator => this%aggregators(i)%p
+        IF (l_copy) THEN
+          ALLOCATE(aggregator, source=this%aggregators(i)%p)
+        ELSE
+          aggregator => this%aggregators(i)%p
+        END IF
         EXIT
       END IF
     END DO
@@ -608,10 +630,10 @@ CONTAINS
       CLASS IS (t_jsb_tile_abstract)
         IF (.NOT. ASSOCIATED(current%mem(iproc)%p)) CYCLE     ! Process is not active on child tile
         var_tmp => current%mem(iproc)%p%Get_var_real2d(TRIM(var%name))
-        IF (ASSOCIATED(var_tmp)) THEN
+        IF (ASSOCIATED(var_tmp) .OR. this%l_all_tiles) THEN
           fractions(:,i) = this%fractions(ics:ice,iblk,i)
           fract_sum(:)   = fract_sum(:) + fractions(:,i)
-          data     (:,i) = var_tmp%ptr(ics:ice,iblk)
+          IF (ASSOCIATED(var_tmp)) data(:,i) = var_tmp%ptr(ics:ice,iblk)
           j = j + 1
         END IF
       END SELECT
@@ -631,7 +653,11 @@ CONTAINS
       var%ptr(ics:ice,iblk) = missval
     END WHERE
 
-    IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
+    IF (this%l_all_tiles) THEN
+      IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
+    ELSE
+      IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
+    END IF
 
   END SUBROUTINE Aggregate_weighted_by_fract_2d
 
@@ -681,10 +707,10 @@ CONTAINS
       CLASS IS (t_jsb_tile_abstract)
         IF (.NOT. ASSOCIATED(current%mem(iproc)%p)) CYCLE     ! Process is not active on child tile
         var_tmp => current%mem(iproc)%p%Get_var_real3d(TRIM(var%name))
-        IF (ASSOCIATED(var_tmp)) THEN
+        IF (ASSOCIATED(var_tmp) .OR. this%l_all_tiles) THEN
           fractions(:,i) = this%fractions(ics:ice,iblk,i)
           fract_sum(:)   = fract_sum(:) + fractions(:,i)
-          data     (:,:,i) = var_tmp%ptr(ics:ice,:,iblk)
+          IF (ASSOCIATED(var_tmp)) data(:,:,i) = var_tmp%ptr(ics:ice,:,iblk)
           j = j + 1
         END IF
       END SELECT
@@ -705,9 +731,26 @@ CONTAINS
       END WHERE
     END DO
 
-    IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
+    IF (this%l_all_tiles) THEN
+      IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
+    ELSE
+      IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//')')
+    END IF
 
   END SUBROUTINE Aggregate_weighted_by_fract_3d
+
+  SUBROUTINE Aggregate_weighted_by_fract_set_option_logical(this, name, value)
+
+    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
+    CHARACTER(len=*),                          INTENT(in)    :: name
+    LOGICAL,                                   INTENT(in)    :: value
+
+    SELECT CASE (TRIM(name))
+    CASE ('l_all_tiles')
+      this%l_all_tiles = value
+    END SELECT
+
+  END SUBROUTINE Aggregate_weighted_by_fract_set_option_logical
 
 #endif
 END MODULE mo_jsb_tile_class

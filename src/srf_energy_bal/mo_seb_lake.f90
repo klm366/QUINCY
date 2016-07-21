@@ -576,8 +576,8 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(SEB)) RETURN
 
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update of surface fluxes')
-
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    
     ! Get model
     model => Get_model(tile%owner_model_id)
 
@@ -663,6 +663,8 @@ CONTAINS
 
     evapopot          (:) = (1._wp - fract_lice(:)) * evapo_wtr   (:) + fract_lice(:) * evapo_ice   (:)
     evapotranspiration(:) = evapopot(:)
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_surface_fluxes_lake
 

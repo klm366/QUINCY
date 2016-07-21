@@ -403,8 +403,6 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_par'
-    
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(RAD)
     dsl4jsb_Def_config(ASSIMI)
@@ -414,10 +412,9 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO)
     dsl4jsb_Def_memory(ATM2LAND)
 
-    ! Declare pointers for variables in memory
-    INTEGER, POINTER       :: ncanopy               ! number of canopy layers
+    INTEGER :: ncanopy               ! number of canopy layers
     !INTEGER, POINTER       :: acc_counter           ! counter for each delta_time step since the last variable output
-    LOGICAL, POINTER       :: use_alb_veg_simple    !
+    LOGICAL :: use_alb_veg_simple    !
 
     dsl4jsb_Real2D_onChunk :: par                   ! Downward PAR flux in [W/m^2], Photosynth. Active Radiation (400-700nm)
     dsl4jsb_Real2D_onChunk :: par_down_mol          ! Downward PAR flux in mol (photons)/(m^2 s)
@@ -439,6 +436,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_nacc  ! Absorbed PAR accumulated [MOL PHOTONS/M^2 ]
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_tavg  ! Absorbed PAR [MOL PHOTONS/M^2 S] (time mean value)
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation_par'
+    
     ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
@@ -446,6 +445,10 @@ CONTAINS
     nc    = options%nc
     dtime = options%dtime ! time step in seconds e.g. for one day=86400
 
+    IF (tile%lcts(1)%id /= VEG_TYPE) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    
     ! Get model
     model => Get_model(tile%owner_model_id)
     
@@ -456,10 +459,12 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO)
     dsl4jsb_Get_memory(ATM2LAND)
 
-    ! Set pointers to variables in config or in the "grid"
-    ncanopy                     => dsl4jsb_Config(ASSIMI)% ncanopy
+    ! If process is not active on this tile, do nothing
+    IF (.NOT. tile%Is_process_active(RAD)) RETURN
+
+    ncanopy                     =  dsl4jsb_Config(ASSIMI)%ncanopy
+    use_alb_veg_simple          =  dsl4jsb_Config(RAD)%use_alb_veg_simple
     canopy_bound_lai(0:ncanopy) => dsl4jsb_Config(ASSIMI)% canopy_bound_lai(0:ncanopy)
-    use_alb_veg_simple          => dsl4jsb_Config(RAD)   % use_alb_veg_simple
     
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(ATM2LAND, cos_zenith_angle)      ! in (received from the atmosphere)
@@ -483,15 +488,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD,      apar_per_lai_cl_nacc)  ! inout
     dsl4jsb_Get_var3D_onChunk(RAD,      apar_per_lai_cl_tavg)  ! inout
     dsl4jsb_Get_var2D_onChunk(RAD,      apar_nacc)             ! inout
-    
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(RAD)) RETURN
-
-    IF (tile%lcts(1)%id /= VEG_TYPE) THEN
-       CALL finish(TRIM(routine), 'The programm tries to calculate par on a non vegetated tile...')
-    END IF
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     
     ! ---------------------------
     ! Go
@@ -522,35 +518,36 @@ CONTAINS
          & frac_par_direct(:),        & ! in
          & canopy_bound_lai(icanopy), & ! in
          & canopy_bound_lai_delta,    & ! in
-         & B4_layer_above,            & ! in and out
-         & par_down_mol,              & ! output, used outside for assimilation
-         & soil_reflectivity_par,     & ! output, R: could also be local as it is not used outside in the moment,
+         & B4_layer_above,            & ! inout
+         & par_down_mol(:),           & ! out, used outside for assimilation
+         & soil_reflectivity_par(:),  & ! out, R: could also be local as it is not used outside in the moment,
                                         ! however I want it in the model output and thus it has to be updated by returning it
-         & faPAR_cl(:,icanopy),       & ! output, R: could also be local as it is not used outside in the moment,
+         & faPAR_cl(:,icanopy),       & ! out, R: could also be local as it is not used outside in the moment,
                                         ! however I want it in the model output and thus it has to be updated by returning it
-         & lai_cl(:,icanopy),         & ! output, R: could also be local as it is not used outside in the moment,
+         & lai_cl(:,icanopy),         & ! out, R: could also be local as it is not used outside in the moment,
                                         ! however I want it in the model output and thus it has to be updated by returning it
-         & apar_per_lai_cl(:,icanopy) ) ! output, used outside for assimilation
+         & apar_per_lai_cl(:,icanopy) ) ! out, used outside for assimilation
     END DO
 
     ! R: Note, the following code is preliminary and should be replaced later by an laccu-procedure.
     !    For the correct integration over time as it is done now, this task must be called only once per timestep.
     ! Accumulate incoming par in mol(photons)/(m^2) over time
-    par_down_mol_nacc = par_down_mol_nacc + par_down_mol * dtime ! Change explanation:
-                                                                 ! "par/Epar" was unnecessarily double calculated. In JSBACH3
-                                                                 ! "CALL add(..., laccu=.TRUE.)" accumulates variable and sets it to zero
-                                                                 ! after writen out. As "laccu" does not exist in JSBACH4 (it could be
-                                                                 ! added) I added a workaround.
-                                                                 ! acc_counter, par_down_mol_nacc, apar_per_lai_cl_nacc is set to zero
-                                                                 ! when the output is written.
+    par_down_mol_nacc(:) = par_down_mol_nacc(:) + par_down_mol(:) * dtime ! Change explanation:
+                                                            ! "par/Epar" was unnecessarily double calculated. In JSBACH3
+                                                            ! "CALL add(..., laccu=.TRUE.)" accumulates variable and sets it to zero
+                                                            ! after writen out. As "laccu" does not exist in JSBACH4 (it could be
+                                                            ! added) I added a workaround.
+                                                            ! acc_counter, par_down_mol_nacc, apar_per_lai_cl_nacc is set to zero
+                                                            ! when the output is written.
     ! R: This whole workaround should get abitary soon...
     !acc_counter = acc_counter + 1
     !par_down_mol_tavg = par_down_mol_nacc / dtime / acc_counter
-
-    apar_per_lai_cl_nacc  = apar_per_lai_cl_nacc + apar_per_lai_cl * dtime
+    apar_per_lai_cl_nacc(:,:)  = apar_per_lai_cl_nacc(:,:) + apar_per_lai_cl(:,:) * dtime
     ! R: This whole workaround (acc_counter) should get abitary soon...
     !apar_per_lai_cl_tavg(:,icanopy)  = apar_per_lai_cl_nacc(:,icanopy) / dtime / acc_counter
-    apar_nacc                     = apar_nacc + par_down_mol * faPAR_cl(:,icanopy) * dtime
+    DO icanopy=1,ncanopy
+      apar_nacc(:) = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
+    END DO
 
 !        ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
 !        ! par and fraction of absorbed PAR
@@ -566,6 +563,8 @@ CONTAINS
 !           !apar_per_lai_cl_tavg(:,icanopy)  = apar_per_lai_cl_nacc(:,icanopy) / dtime / acc_counter
 !           apar_nacc(:)                     = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
 !        END IF
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_radiation_par
 

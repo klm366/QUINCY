@@ -175,7 +175,6 @@ CONTAINS
       & reduced_evap
 
     LOGICAL :: &
-      is_present(options%nc), &
       is_glacier(options%nc)
 
     INTEGER :: jllog
@@ -255,11 +254,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO,    tte_corr)      ! out
     dsl4jsb_Get_var2D_onChunk(SOIL,     oro_stddev)    ! in
 
-    is_present(:)    = .TRUE.
     IF (tile%lcts(1)%id == GLACIER_TYPE) THEN
       is_glacier(:) = .TRUE.
       dsl4jsb_Get_var2D_onChunk(HYDRO,    w_glac)        ! inout
-      dsl4jsb_Get_var2D_onChunk(HYDRO,    pme_glacier)   ! out
     ELSE
       is_glacier(:) = .FALSE.
       dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_sl)     ! inout
@@ -318,13 +315,14 @@ CONTAINS
         & snow(:),                    & !< in
         & w_glac(:),                  & !< inout
         & evapotrans_no_snow_skin(:), & !< out
-        & pme_glacier(:),             & !< out
+        & runoff(:),                  & !< out
         !& snow_acc(:),                &
         !& snow_melt_acc(:),           &
         !& glacier_runoff_acc(:),      &
         & snowmelt(:),                & !< out
         & tte_corr(:)                 & !< out
         & )
+      drainage(:) = 0._wp
     ELSE
       CALL update_surf_down_soil(     &
         & dtime,                      & !< in
@@ -383,51 +381,55 @@ CONTAINS
       & is_glacier(:)      & !< in
       & )
 
-!vg:  runoff_hd and drainage_hd no longer needed
-!vg:  accumulation does not make sense (no reset)
-    CALL update_surf_up( &
-      & nc,                               & !< in
-      & dtime,                            & !< in
-      & dsl4jsb_Config(SOIL)%nsoil_water, & !< in
-      & w_skin_soil(:),                   & !< inout
-      & fract_water(:),                   & !< in
-      & wsr_max(:),                       & !< in
-      & w_soil_root(:),                   & !< inout
-      & w_soil_root_fc(:),                & !< in
-      & t_soil(:,1),                      & !< in
-      & fract_snow(:),                    & !< in
-      & oro_stddev(:),                    & !< in
-      & evapotranspiration(:),            & !< in
-      & evapopot(:),                      & !< in
-      & evapotrans_no_snow_skin(:),       & !< inout
-      & rain(:),                          & !< in
-      & is_present(:),                    & !< in
-      & is_glacier(:),                    & !< in
-      & runoff(:),                        & !< inout
-      & drainage(:),                      &  !< inout
-      !vg runoff_hd(:), drainage_hd(:), &
-      & melt_water_excess(:),             & !< in
-      & skin_res_evap(:),                 & !< out
-      & dsl4jsb_Config(SOIL)%dz_water(1:dsl4jsb_Config(SOIL)%nsoil_water), & !< in
-      & w_soil_sl(:,:),                   & !< inout
-      & w_soil_fc_sl(:,:),                & !< in
-      & w_soil_pwp_sl(:,:),               & !< in
-      & root_depth(:),                    & !< in
-      & soil_depth(:),                    & !< in
-      & shc(:),                           & !< in
-      & mpot(:),                          & !< in
-      & bclapp(:),                        & !< in
-      & vpor(:),                          & !< in
-      & trans(:),                         & !< in
-      & reduced_evap(:),                  & !< out
-!!$      & SPREAD(0.318517_wp, NCOPIES=nc, DIM=1), & !Temporary
-!!$      & SPREAD(0.185245_wp, NCOPIES=nc, DIM=1), & !Temporary
-      & psdi(:),                          & !< in
-      & w_soil_overflow(:),               & !< inout
-      & jllog,                            & !< out
-      & l_tpe_open,                       & !< in
-      & l_tpe_closed                      & !< in
-      & )
+    IF (tile%lcts(1)%id == GLACIER_TYPE) THEN
+      ! Don't change evapotrans_no_snow_skin
+      ! Runoff and drainage already computed above
+      skin_res_evap(:) = 0._wp
+    ELSE
+      !vg:  runoff_hd and drainage_hd no longer needed
+      !vg:  accumulation does not make sense (no reset)
+      CALL update_surf_up( &
+        & nc,                               & !< in
+        & dtime,                            & !< in
+        & dsl4jsb_Config(SOIL)%nsoil_water, & !< in
+        & w_skin_soil(:),                   & !< inout
+        & fract_water(:),                   & !< in
+        & wsr_max(:),                       & !< in
+        & w_soil_root(:),                   & !< inout
+        & w_soil_root_fc(:),                & !< in
+        & t_soil(:,1),                      & !< in
+        & fract_snow(:),                    & !< in
+        & oro_stddev(:),                    & !< in
+        & evapotranspiration(:),            & !< in
+        & evapopot(:),                      & !< in
+        & evapotrans_no_snow_skin(:),       & !< inout ; TBD: diagnostic, currently not used
+        & rain(:),                          & !< in
+        & runoff(:),                        & !< inout
+        & drainage(:),                      &  !< inout
+        !vg runoff_hd(:), drainage_hd(:), &
+        & melt_water_excess(:),             & !< in
+        & skin_res_evap(:),                 & !< out ; TBD: diagnostic, currently not used
+        & dsl4jsb_Config(SOIL)%dz_water(1:dsl4jsb_Config(SOIL)%nsoil_water), & !< in
+        & w_soil_sl(:,:),                   & !< inout
+        & w_soil_fc_sl(:,:),                & !< in
+        & w_soil_pwp_sl(:,:),               & !< in
+        & root_depth(:),                    & !< in
+        & soil_depth(:),                    & !< in
+        & shc(:),                           & !< in
+        & mpot(:),                          & !< in
+        & bclapp(:),                        & !< in
+        & vpor(:),                          & !< in
+        & trans(:),                         & !< in
+        & reduced_evap(:),                  & !< out
+  !!$      & SPREAD(0.318517_wp, NCOPIES=nc, DIM=1), & !Temporary
+  !!$      & SPREAD(0.185245_wp, NCOPIES=nc, DIM=1), & !Temporary
+        & psdi(:),                          & !< in
+        & w_soil_overflow(:),               & !< inout
+        & jllog,                            & !< out
+        & l_tpe_open,                       & !< in
+        & l_tpe_closed                      & !< in
+        & )
+    END IF
 
     w_soil_column(:) = SUM(w_soil_sl(:,:), DIM=2)
 
@@ -468,7 +470,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO)
     dsl4jsb_Get_memory(SEB)
 
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract", copy=.TRUE.)
 
     dsl4jsb_Aggregate_onChunk(SOIL,  hcap_grnd,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SOIL,  hcap_grnd_old,   weighted_by_fract)
@@ -480,12 +482,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO, w_skin,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, w_snow,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, snowmelt,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, runoff,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, drainage,        weighted_by_fract)
-    !dsl4jsb_Aggregate_onChunk(SEB,   t_unfilt,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, tte_corr,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, w_glac,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, pme_glacier,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, w_soil_sl,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, w_soil_column,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, w_skin_soil,     weighted_by_fract)
@@ -493,6 +491,13 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO, w_soil_overflow, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, w_snow_can,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, w_soil_root,     weighted_by_fract)
+
+    CALL weighted_by_fract%Set_option('l_all_tiles', .TRUE.)
+
+    dsl4jsb_Aggregate_onChunk(HYDRO, runoff,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, drainage,        weighted_by_fract)
+
+    DEALLOCATE(weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

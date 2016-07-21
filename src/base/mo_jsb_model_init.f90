@@ -206,10 +206,15 @@ CONTAINS
     !CALL model%Queue_task(HYDRO,  "snow_and_skin_fraction")
     CALL model%Queue_task(SEB,    "surface_energy")
     CALL model%Queue_task(SEB,    "surface_fluxes")
-    CALL model%Queue_task(RAD,    "radiation_par")
+    IF (model%processes(ASSIMI)%p%config%active) THEN
+      CALL model%Queue_task(RAD,    "radiation_par")
+    END IF
     CALL model%Queue_task(RAD,    "albedo")
     CALL model%Queue_task(TURB,   "surface_roughness")
     CALL model%Queue_task(SOIL,   "soil_temp_and_hydro")
+#ifndef __NO_JSBACH_HD__
+    CALL model%Queue_task(HD,     "hd_local_outflow")
+#endif
     CALL model%Queue_task(SEB,    "snowmelt_correction")
     IF (model%processes(ASSIMI)%p%config%active) THEN
       CALL model%Queue_task(ASSIMI, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
@@ -221,6 +226,7 @@ CONTAINS
       CALL model%Queue_task(VEG,    "canopy_cond_unstressed")
     END IF
     CALL model%Queue_task(VEG,    "canopy_cond_stressed")
+    !CALL model%Queue_task(HYDRO,  "snow_and_skin_fraction")
     IF (model%processes(ASSIMI)%p%config%active) THEN
       CALL model%Queue_task(ASSIMI, "assimilation")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
                                                      ! should be called after the soil hydrology is calculated

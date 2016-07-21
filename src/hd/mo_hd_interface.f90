@@ -106,12 +106,8 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO)
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: land
-    dsl4jsb_Real2D_onChunk :: lake
-    dsl4jsb_Real2D_onChunk :: glacier
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
-    dsl4jsb_Real2D_onChunk :: pme_glacier
     dsl4jsb_Real2D_onChunk :: discharge
     dsl4jsb_Real2D_onChunk :: outflow_runoff
     dsl4jsb_Real2D_onChunk :: outflow_drainage
@@ -128,7 +124,9 @@ CONTAINS
 
     REAL(wp), POINTER :: area(:)
 
-    REAL(wp), ALLOCATABLE :: inflow(:)
+    REAL(wp), DIMENSION(options%nc) :: &
+      & tile_fract, &
+      & inflow
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -145,19 +143,25 @@ CONTAINS
     nc      = options%nc
     steplen = options%steplen
 
+    IF (ASSOCIATED(tile%parent)) &
+      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
+
     model => Get_model(tile%owner_model_id)
 
     IF (.NOT. tile%Is_process_active(HD)) RETURN
-
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
-
-    grid => Get_grid(model%grid_id)
 
     dsl4jsb_Get_config(HD)
 
     IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
 
-    ! Get reference to variables for current block
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
+
+    grid => Get_grid(model%grid_id)
+
+    ! Configuration parameters from the namelist
+    routing_scheme    = dsl4jsb_Config(HD)%routing_scheme
+
+    ! Get reference to variables in memory
     !
     dsl4jsb_Get_memory(HD)
     dsl4jsb_Get_memory(SEB)
@@ -166,60 +170,48 @@ CONTAINS
 
     area => grid %area (ics:ice, iblk)
 
-    dsl4jsb_Get_var2D_onChunk(SEB,  land)         ! IN
-    dsl4jsb_Get_var2D_onChunk(SEB,  lake)         ! IN
-    dsl4jsb_Get_var2D_onChunk(SEB,  glacier)      ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO, runoff)      ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO, drainage)    ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO, pme_glacier) ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO, discharge)   ! INOUT
+    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
-    dsl4jsb_Get_var3D_onChunk(HD, overlflow_res)    ! OUT
-    dsl4jsb_Get_var3D_onChunk(HD, baseflow_res)     ! OUT
-    dsl4jsb_Get_var3D_onChunk(HD, riverflow_res)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HD, ret_overlflow)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HD, nres_overlflow)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(HD, ret_baseflow)     ! OUT
-    dsl4jsb_Get_var2D_onChunk(HD, nres_baseflow)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HD, ret_riverflow)    ! OUT
-    dsl4jsb_Get_var2D_onChunk(HD, nres_riverflow)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(HD, outflow_runoff)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(HD, outflow_drainage) ! OUT
-    dsl4jsb_Get_var2D_onChunk(HD, outflow_rivers)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO, runoff)      ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO, drainage)    ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO, discharge)   ! in
 
-
-    ! Configuration parameters from the namelist
-    routing_scheme    = dsl4jsb_Config(HD)%routing_scheme
-
+    dsl4jsb_Get_var2D_onChunk(HD, ret_overlflow)    ! in
+    dsl4jsb_Get_var2D_onChunk(HD, nres_overlflow)   ! in
+    dsl4jsb_Get_var2D_onChunk(HD, ret_baseflow)     ! in
+    dsl4jsb_Get_var2D_onChunk(HD, nres_baseflow)    ! in
+    dsl4jsb_Get_var2D_onChunk(HD, ret_riverflow)    ! in
+    dsl4jsb_Get_var2D_onChunk(HD, nres_riverflow)   ! in
+    dsl4jsb_Get_var3D_onChunk(HD, overlflow_res)    ! inout
+    dsl4jsb_Get_var3D_onChunk(HD, baseflow_res)     ! inout
+    dsl4jsb_Get_var3D_onChunk(HD, riverflow_res)    ! inout
+    dsl4jsb_Get_var2D_onChunk(HD, outflow_runoff)   ! out
+    dsl4jsb_Get_var2D_onChunk(HD, outflow_drainage) ! out
+    dsl4jsb_Get_var2D_onChunk(HD, outflow_rivers)   ! out
 
     SELECT CASE (TRIM(routing_scheme))
     CASE ('full')
 
-      ALLOCATE(inflow(nc))
-
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
-      inflow(:) = (runoff(:) * land + pme_glacier(:) * glacier) * area / rhoh2o
+      !inflow(:) = (runoff(:) * land + pme_glacier(:) * glacier) * area / rhoh2o
+      inflow(:) = runoff(:) * tile_fract(:) * area / rhoh2o
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
 
-      inflow(:) = drainage(:) * land * area / rhoh2o
+      !inflow(:) = drainage(:) * land * area / rhoh2o
+      inflow(:) = drainage(:) * tile_fract(:) * area / rhoh2o
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_baseflow(:),  nres_baseflow(:),  baseflow_res(:,:),  outflow_drainage(:))
 
-      inflow(:) = discharge(:) * land * area / rhoh2o
+      !inflow(:) = discharge(:) * land * area / rhoh2o
+      inflow(:) = discharge(:) * tile_fract(:) * area / rhoh2o
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_riverflow(:), nres_riverflow(:), riverflow_res(:,:), outflow_rivers(:))
-
-      DEALLOCATE (inflow)
-
-    CASE ('weighted_to_coast', 'weighted_to_ocean', 'equally_to_coast', 'equally_to_ocean')
-      !
-      ! dummy version of HD model
-      !
-      discharge(:) = land(:) * (runoff(:) + drainage(:) + pme_glacier(:))
 
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
       CALL finish(TRIM(routine), message_text)
 
     END SELECT
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_hd
 
@@ -262,9 +254,7 @@ CONTAINS
     REAL(wp), POINTER :: area(:,:)
 
     dsl4jsb_Real2D_onDomain :: &
-      & land,                  &
       & hd_mask,               &
-      & coast_ocean,           &
       & outflow_runoff,        &
       & outflow_drainage,      &
       & outflow_rivers,        &
@@ -301,11 +291,6 @@ CONTAINS
 
     LOGICAL  :: debug_hd
 
-    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
-
-    IF (ASSOCIATED(tile%parent)) &
-      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
-
     model => Get_model(tile%owner_model_id)
 
     grid => Get_grid(model%grid_id)
@@ -313,6 +298,11 @@ CONTAINS
     dsl4jsb_Get_config(HD)
 
     IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    IF (ASSOCIATED(tile%parent)) &
+      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
 
     ! Get reference to variables for current block
     !
@@ -331,9 +321,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD, outflow_rivers)   ! OUT
     dsl4jsb_Get_var3D_onDomain(HD, nidx_upstream)    ! IN
     dsl4jsb_Get_var3D_onDomain(HD, bidx_upstream)    ! IN
-
-    dsl4jsb_Get_var2D_onDomain(SEB, land)        ! IN
-    dsl4jsb_Get_var2D_onDomain(SEB, coast_ocean) ! IN
 
     dsl4jsb_Get_var2D_onDomain(HYDRO, discharge)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO, discharge_ocean) ! OUT
@@ -439,22 +426,6 @@ CONTAINS
         discharge_ocean(:,:) = discharge_ocean(:,:)*rhoh2o/area(:,:)
       END WHERE
 
-    CASE ('weighted_to_coast')
-
-      ! Dummy discharge: the discharge is equally distributed to all coastal ocean cells
-
-      global_discharge = global_sum_array(discharge(:,:)*land(:,:)*area(:,:)*in_domain(:,:))
-
-      ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
-      cos_lat(:,:) = MERGE(COS(grid%lat(:,:)), 0._wp, coast_ocean(:,:) == 1._wp)
-      sum_weights = global_sum_array(coast_ocean(:,:)*cos_lat(:,:)*area(:,:)*in_domain(:,:))
-      WHERE (coast_ocean(:,:) == 1._wp)
-        discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
-      ELSEWHERE
-        discharge_ocean(:,:) = 0._wp
-      END WHERE
-      discharge(:,:) = 0._wp
-
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
       CALL finish(TRIM(routine), message_text)
@@ -496,11 +467,8 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: &
-      & land            , &
-      & glacier         , &
       & runoff          , &
       & drainage        , &
-      & pme_glacier     , &
       & discharge       , &
       & discharge_ocean
 
@@ -512,8 +480,9 @@ CONTAINS
     LOGICAL,  POINTER ::    &
       & is_in_domain (:,:)      ! T: cell in domain (not halo)
 
-    REAL(wp), ALLOCATABLE  ::   &
-      & in_domain       (:,:) ! 1: cell in domain, 0: halo cell
+    REAL(wp), ALLOCATABLE  ::  &
+      & tile_fract (:,:), &
+      & in_domain  (:,:) ! 1: cell in domain, 0: halo cell
 
     REAL(wp) ::              &
       & steplen,             &
@@ -524,13 +493,6 @@ CONTAINS
 
     LOGICAL :: debug_hd, diag_water_budget
 
-    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
-
-    IF (ASSOCIATED(tile%parent)) &
-      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
-
-    steplen = options%steplen
-
     model => Get_model(tile%owner_model_id)
 
     grid => Get_grid(model%grid_id)
@@ -538,6 +500,13 @@ CONTAINS
     dsl4jsb_Get_config(HD)
 
     IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    IF (ASSOCIATED(tile%parent)) &
+      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
+
+    steplen = options%steplen
 
     dsl4jsb_Get_memory(HD)
     dsl4jsb_Get_memory(SEB)
@@ -555,16 +524,12 @@ CONTAINS
     area            => grid%area                                (:,:)
     is_in_domain    => grid%patch%cells%decomp_info%owner_mask  (:,:)
 
-    dsl4jsb_Get_var2D_onDomain(SEB, land)    ! IN
-    dsl4jsb_Get_var2D_onDomain(SEB, glacier) ! IN
-
     dsl4jsb_Get_var3D_onDomain(HD, overlflow_res) ! IN
     dsl4jsb_Get_var3D_onDomain(HD, baseflow_res) ! IN
     dsl4jsb_Get_var3D_onDomain(HD, riverflow_res) ! IN
 
     dsl4jsb_Get_var2D_onDomain(HYDRO, runoff)          ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO, drainage)        ! IN
-    dsl4jsb_Get_var2D_onDomain(HYDRO, pme_glacier)     ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO, discharge)       ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO, discharge_ocean) ! IN
 
@@ -610,22 +575,20 @@ CONTAINS
       CALL message(routine, message_text)
     END IF
 
+    ALLOCATE(tile_fract(nproma, nblks))
+    CALL tile%Get_fraction(fract=tile_fract(:,:))
     water_fluxes = &
-           global_sum_array(runoff             *area/rhoh2o*land*in_domain)  & !< runoff                 [kg m-2 s-1] -> [m3/s]
-         + global_sum_array(pme_glacier*glacier*area/rhoh2o*land*in_domain)  & !< P-E over glaciers      [kg m-2 s-1] -> [m3/s]
-         + global_sum_array(drainage           *area/rhoh2o*land*in_domain)  & !< drainage               [kg m-2 s-1] -> [m3/s]
+           global_sum_array(runoff             *area/rhoh2o*tile_fract*in_domain)  & !< runoff                 [kg m-2 s-1] -> [m3/s]
+         + global_sum_array(drainage           *area/rhoh2o*tile_fract*in_domain)  & !< drainage               [kg m-2 s-1] -> [m3/s]
          - global_sum_array(discharge_ocean    *area/rhoh2o     *in_domain)    !< discharge to the ocean [kg m-2 s-1] -> [m3/s]
 
     IF (debug_hd) THEN
       CALL message(routine, 'global water fluxes in time interval:')
       WRITE(message_text,*) '-   runoff                : ', &
-           global_sum_array(runoff/rhoh2o*area*land*in_domain*steplen), ' m3'
-      CALL message(routine, message_text)
-      WRITE(message_text,*) '-   pme_glacier           : ', &
-           global_sum_array(pme_glacier/rhoh2o*glacier*area*land*in_domain*steplen), ' m3'
+           global_sum_array(runoff/rhoh2o*area*tile_fract*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-   drainage              : ', &
-           global_sum_array(drainage/rhoh2o*area*land*in_domain*steplen), ' m3'
+           global_sum_array(drainage/rhoh2o*area*tile_fract*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-   discharge_ocean (neg.): ', &
            global_sum_array(discharge_ocean/rhoh2o*area*in_domain*steplen), ' m3'

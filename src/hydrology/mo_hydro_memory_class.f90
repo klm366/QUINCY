@@ -86,8 +86,7 @@ MODULE mo_hydro_memory_class
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_glac,  & !< Snow fraction on glacier                                                 []
-      & w_glac,           & !< Glacier depth including snow on glacier                                  [m water equivalent]
-      & pme_glacier         !< P-E on glaciers
+      & w_glac              !< Glacier depth including snow on glacier                                  [m water equivalent]
 
     ! Additional variables if no separate glacier lct_type is used and glaciers are treated as part of SOIL lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -405,7 +404,7 @@ CONTAINS
     ! Additional variables for GLACIER lct
     IF ( (     One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &  )                                          &
-      &  .AND. .NOT. ASSOCIATED(mem%pme_glacier%ptr)) THEN
+      &  .AND. .NOT. ASSOCIATED(mem%fract_snow_glac%ptr)) THEN
 
       CALL jsb_add_var( mem, 'fract_snow_glac', mem%fract_snow_glac, &
         & hgrid, surface,                                                            &
@@ -420,13 +419,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                              &
         & initval_r=20.0_wp )
-
-      CALL jsb_add_var( mem, 'pme_glacier', mem%pme_glacier,         &
-        & hgrid, surface,                                                                    &
-        & t_cf('pme_glacier', 'kg m-2 s-1', 'P-E on glaciers'),                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp )
 
     END IF
 

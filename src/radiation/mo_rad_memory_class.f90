@@ -20,7 +20,7 @@ MODULE mo_rad_memory_class
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAKE_TYPE
+  USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, LAKE_TYPE
 
   ! Use of processes in this module
   dsl4jsb_Use_processes RAD
@@ -230,7 +230,8 @@ CONTAINS
     END IF
 
     ! Additional variables for soil
-    IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0) &
+    IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0   &
+      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                                   &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
 
       CALL jsb_add_var( mem, 'alb_vis_soil', mem%alb_vis_soil,      &
@@ -264,7 +265,8 @@ CONTAINS
     END IF
 
     ! Additional variables for vegetation
-    IF (One_of(VEG_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%alb_vis_can%ptr)) THEN
+    IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
+      & .AND. .NOT. ASSOCIATED(mem%alb_vis_can%ptr)) THEN
 
       CALL jsb_add_var( mem, 'alb_vis_can', mem%alb_vis_can,        &
         & hgrid, surface,                                                           &

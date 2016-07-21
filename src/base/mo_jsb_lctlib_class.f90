@@ -864,6 +864,7 @@ CONTAINS
 
 
     IF(my_process_is_mpi_parallel()) THEN
+       CALL p_bcast(npft, p_io)
        CALL p_bcast(lctlib(:)%LctNumber, p_io)
        DO i=1,nlct
           CALL p_bcast(lctlib(i)%LctName, p_io)

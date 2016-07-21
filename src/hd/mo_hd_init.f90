@@ -26,10 +26,9 @@ MODULE mo_hd_init
   USE mo_sync,                ONLY: global_max
   USE mo_jsb_parallel_iface,  ONLY: get_my_global_mpi_id
 
-  dsl4jsb_Use_processes HD, SRF
+  dsl4jsb_Use_processes HD
   dsl4jsb_Use_config(HD)
   dsl4jsb_Use_memory(HD)
-  dsl4jsb_Use_memory(SRF)
 
   IMPLICIT NONE
   PRIVATE
@@ -90,6 +89,9 @@ CONTAINS
     ! Maximum number of inflow neighbor cells
     hd__mem%nneigh = 6
 
+    !CALL message(TRIM(routine), 'Initializing HD fractions for tile '//TRIM(tile%name)//&
+    !  &                         ' from '//TRIM(dsl4jsb_Config(HD)%fract_filneame))
+    !input_file = jsb_netcdf_open_input('TRIM(dsl4jsb_Config(HD)%fract_filneame', model%id)
 
     ! Initialize data from input file
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD)%bc_filename), model%grid_id)
@@ -172,20 +174,20 @@ CONTAINS
 
     dsl4jsb_Def_config(HD)
     dsl4jsb_Def_memory(HD)
-    dsl4jsb_Def_memory(SRF)
 
     REAL(wp), POINTER :: &
-      & return_pointer (:,:)       !< temporary pointer
-
-    dsl4jsb_Real2D_onDomain :: land
+      & tile_fract(:,:), &
+      & ptr(:,:)            !< temporary pointer
 
     TYPE(t_input_file) :: input_file
 
-    TYPE(t_jsb_model),       POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':hd_init_ic'
 
     model => get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
 
     ! Get hd config
     dsl4jsb_Get_config(HD)
@@ -194,11 +196,6 @@ CONTAINS
 
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD)
-    dsl4jsb_Get_memory(SRF)
-
-    ! Land sea mask
-    dsl4jsb_Get_var2D_onDomain(SRF, land) ! IN
-
 
     IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) /= 'full') RETURN
 
@@ -212,31 +209,31 @@ CONTAINS
     !
 
 !vg     ! Overlandflow reservoir
-!vg     return_pointer => input_file%Read_2d_extdim(  &
+!vg     ptr => input_file%Read_2d_extdim(  &
 !vg       & variable_name='FLFMEM',                   &
 !vg       & start_extdim=1,                           &
 !vg       & end_extdim=hd_mem%nres_o_max,             &
 !vg       & fill_array = hd__mem%overlflow_res%ptr)
 !vg 
 !vg     ! Baseflow reservoir
-!vg     return_pointer => input_file%Read_2d_extdim(  &
+!vg     ptr => input_file%Read_2d_extdim(  &
 !vg       & variable_name='FGMEM',                    &
 !vg       & start_extdim=1,                           &
 !vg       & end_extdim=hd%hd_hd_mem%nres_b_max,        &
 !vg       & fill_array = hd_mem%baseflow_res%ptr)
 !vg 
 !vg     ! Riverflow reservoir
-!vg     return_pointer => input_file%Read_2d_extdim(  &
+!vg     ptr => input_file%Read_2d_extdim(  &
 !vg       & variable_name='FRFMEM',                   &
 !vg       & start_extdim=1,                           &
 !vg       & end_extdim=hd%hd_hd_mem%nres_r_max,        &
 !vg       & fill_array = hd_mem%riverflow_res%ptr)
 
-!vg>>
-dsl4jsb_var3D_onDomain(HD,overlflow_res) = 1000._wp * SPREAD(land, DIM=2, NCOPIES=hd__mem%nres_o_max)
-dsl4jsb_var3D_onDomain(HD,baseflow_res)  = 5000._wp * SPREAD(land, DIM=2, NCOPIES=hd__mem%nres_b_max)
-dsl4jsb_var3D_onDomain(HD,riverflow_res) = 1000._wp * SPREAD(land, DIM=2, NCOPIES=hd__mem%nres_r_max)
-!vg<<
+    ALLOCATE(tile_fract(grid%nproma, grid%nblks))
+    CALL tile%Get_fraction(fract=tile_fract(:,:))
+    dsl4jsb_var3D_onDomain(HD,overlflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_o_max)
+    dsl4jsb_var3D_onDomain(HD,baseflow_res)  = 5000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_b_max)
+    dsl4jsb_var3D_onDomain(HD,riverflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_r_max)
 
   END SUBROUTINE hd_init_ic
 

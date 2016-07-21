@@ -52,7 +52,7 @@ MODULE mo_jsb_tile
 CONTAINS
 
   FUNCTION Construct_tile(name, description, processes, lct, &
-    & process_actions, parent, model_id, grid_id, fract_filename) RESULT(return_ptr)
+    & process_actions, parent, model_id, grid_id, fract_filename, fract_varname) RESULT(return_ptr)
 
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_util,                ONLY: one_of
@@ -68,6 +68,7 @@ CONTAINS
     INTEGER,           INTENT(in), OPTIONAL :: model_id       !< Only needed if parent is not present
     INTEGER,           INTENT(in), OPTIONAL :: grid_id        !< Only needed if parent is not present
     CHARACTER(len=*),  INTENT(in), OPTIONAL :: fract_filename !< Name of file with tile fractions
+    CHARACTER(len=*),  INTENT(in), OPTIONAL :: fract_varname  !< Name of fraction variable in fract_filename
     CLASS(t_jsb_tile), POINTER              :: return_ptr
 
     TYPE(t_jsb_config_p),         POINTER :: configs(:)
@@ -139,14 +140,16 @@ CONTAINS
       END IF
     END IF
 
-    IF (ASSOCIATED(return_ptr%parent_tile)) THEN
-      IF (PRESENT(fract_filename)) THEN
-        return_ptr%fract_filename = TRIM(fract_filename)
-      ELSE
-        return_ptr%fract_filename = 'bc_land_frac.nc'
-      END IF
+    IF (PRESENT(fract_filename)) THEN
+      return_ptr%fract_filename = TRIM(fract_filename)
     ELSE
-      return_ptr%fract_filename = ''
+      return_ptr%fract_filename = 'bc_land_frac.nc'
+    END IF
+
+    IF (PRESENT(fract_varname)) THEN
+      return_ptr%fract_varname = TRIM(fract_varname)
+    ELSE
+      return_ptr%fract_varname = ''
     END IF
 
     ! Loop over all processes and set actions for this tile
@@ -393,9 +396,13 @@ CONTAINS
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%owner_model_id)
 
-      name_loc = 'fract'
-      IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
-      IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+      IF (this%fract_varname == '') THEN
+        name_loc = 'fract'
+        IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
+        IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+      ELSE
+        name_loc = TRIM(this%fract_varname)
+      END IF
       IF (ncfile_has_var(TRIM(this%fract_filename), TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
         CALL this%Set_fraction(fract=return_pointer(:,:))
@@ -404,9 +411,13 @@ CONTAINS
           &                        ' not found in '//TRIM(this%fract_filename))
       END IF
 
-      name_loc = 'fract_max'
-      IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
-      IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+      IF (this%fract_varname == '') THEN
+        name_loc = 'fract_max'
+        IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
+        IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+      ELSE
+        name_loc = TRIM(this%fract_varname)//'_max'
+      END IF
       IF (ncfile_has_var(TRIM(this%fract_filename), TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
         CALL this%Set_fraction(fract_max=return_pointer(:,:))
