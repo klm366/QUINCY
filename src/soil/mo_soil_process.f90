@@ -17,7 +17,7 @@ MODULE mo_soil_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: snow_fract_noforest, relative_humidity, update_surf_down_soil, update_surf_down_glacier, &
+  PUBLIC :: Get_snow_fract_noforest, relative_humidity, update_surf_down_soil, update_surf_down_glacier, &
     & update_soiltemp, update_surf_up, init_soil_temperature
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_process'
@@ -26,7 +26,7 @@ CONTAINS
 
   !< Roesch et al. 2002, Climate Dynamics
   !
-  REAL(wp) ELEMENTAL FUNCTION snow_fract_noforest(snow, orodev)
+  REAL(wp) ELEMENTAL FUNCTION Get_snow_fract_noforest(snow, orodev)
 
     USE mo_soil_constants, ONLY: wsn2frac_const, wsn2frac_eps, wsn2frac_sigfac
 
@@ -34,10 +34,10 @@ CONTAINS
       & snow,   &
       & orodev
 
-    snow_fract_noforest = wsn2frac_const * TANH(snow * 100._wp) &
+    Get_snow_fract_noforest = wsn2frac_const * TANH(snow * 100._wp) &
                                & * SQRT(snow * 1000._wp / (snow * 1000._wp + wsn2frac_eps + wsn2frac_sigfac * orodev))
 
-  END FUNCTION snow_fract_noforest
+  END FUNCTION Get_snow_fract_noforest
 
   REAL(wp) ELEMENTAL FUNCTION relative_humidity(ws, fc)
 

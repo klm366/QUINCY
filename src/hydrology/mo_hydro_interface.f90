@@ -24,7 +24,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, Contains_lct
+  USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE, BARE_TYPE, VEG_TYPE, Contains_lct
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -215,7 +215,7 @@ CONTAINS
     ! Use declarations
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
-    USE mo_hydro_process,          ONLY: calc_snow_and_skin_fraction
+    USE mo_hydro_process,          ONLY: calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare
     ! sollte jetzt in dieses File hier kommen: USE mo_hydro_process,  ONLY: calc_hydro_snow_and_skin_fraction
 
     ! Arguments
@@ -246,9 +246,10 @@ CONTAINS
     !dsl4jsb_Real2D_onChunk :: glacier
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_snow
-    dsl4jsb_Real2D_onChunk :: fract_water
+    dsl4jsb_Real2D_onChunk :: fract_water_veg
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: fract_snow_can
+    dsl4jsb_Real2D_onChunk :: fract_snow_veg
     dsl4jsb_Real2D_onChunk :: fract_water_can
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
     dsl4jsb_Real2D_onChunk :: fract_water_soil
@@ -309,39 +310,78 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_soil)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_lice)      ! in
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)      ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_veg)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_soil) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_can)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_soil)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_veg)   ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_can)   ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_lice)  ! out
 
-    ! TBD: On glacier: Wet skin fraction = 0, snow fraction =1, snow depth = 0
-    CALL calc_snow_and_skin_fraction( &
-      & dtime,               & ! in
-      & steplen,             & ! in
-      & wsr_capacity,        & ! in
-      & lai(:),              & ! in
-      & oro_stddev(:),       & ! in
-      & fract_fpc_max(:),    & ! in
-      & t(:),                & ! in
-      & press_srf(:),        & ! in
-      & drag_srf(:),         & ! in
-      & q_air(:),            & ! in
-      & w_skin_soil(:),      & ! in
-      & w_skin_can(:),       & ! in
-      & w_snow_soil(:),      & ! in
-      & w_snow_can(:),       & ! in
-      & w_snow_lice(:),      & ! in
-      & fract_snow_can(:),   & ! inout
-      & fract_water_can(:),  & ! out
-      & fract_water_soil(:), & ! out
-      & fract_water(:),      & ! out
-      & fract_snow_soil(:),  & ! out
-      & fract_snow(:),       & ! out
-      & fract_snow_lice(:)  )  ! out
+    IF (tile%lcts(1)%id == LAKE_TYPE) THEN
+      CALL calc_wskin_fractions_lice( &
+        & w_snow_lice(:),             & ! in
+        & fract_snow_lice(:)          & ! out
+        & )
+    END IF
 
+    IF (tile%lcts(1)%id == GLACIER_TYPE) THEN
+      ! TBD: On glacier: Wet skin fraction = 0, snow fraction =1, snow depth = 0
+      !fract_skin_glacier(:) = 0._wp
+      !fract_snow(:)     = 1._wp
+      !w_snow_glacier(:) = 0._wp
+    END IF
+
+    IF (tile%lcts(1)%id == VEG_TYPE) THEN
+      CALL calc_wskin_fractions_veg( &
+        & dtime,                     & ! in
+        & steplen,                   & ! in
+        & wsr_capacity,              & ! in
+        & lai(:),                    & ! in
+        & oro_stddev(:),             & ! in
+        & fract_fpc_max(:),          & ! in
+        & t(:),                      & ! in
+        & press_srf(:),              & ! in
+        & drag_srf(:),               & ! in
+        & q_air(:),                  & ! in
+        & w_skin_soil(:),            & ! in
+        & w_skin_can(:),             & ! in
+        & w_snow_soil(:),            & ! in
+        & w_snow_can(:),             & ! in
+        & fract_snow_can(:),         & ! inout
+        & fract_water_can(:),        & ! out
+        & fract_water_soil(:),       & ! out
+        & fract_water_veg(:),        & ! out
+        & fract_snow_soil(:),        & ! out
+        & fract_snow_veg(:)          & ! out
+        & )
+   END IF
+
+    
+    IF (tile%lcts(1)%id == BARE_TYPE) THEN
+      CALL calc_wskin_fractions_bare( &
+        & dtime,                      & ! in
+        & steplen,                    & ! in
+        & wsr_capacity,               & ! in
+        & lai(:),                     & ! in
+        & oro_stddev(:),              & ! in
+        & fract_fpc_max(:),           & ! in
+        & t(:),                       & ! in
+        & press_srf(:),               & ! in
+        & drag_srf(:),                & ! in
+        & q_air(:),                   & ! in
+        & w_skin_soil(:),             & ! in
+        & w_snow_soil(:),             & ! in
+        & fract_water_soil(:),        & ! out
+        & fract_snow_soil(:)          & ! out
+        & )
+   END IF
+
+
+
+
+      
   END SUBROUTINE update_snow_and_skin_fraction
 
   ! -------------------------------------------------------------------------------------------------------
@@ -378,7 +418,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO, fract_water,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, fract_water_veg,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, fract_water_soil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, fract_water_can,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, fract_snow,       weighted_by_fract)

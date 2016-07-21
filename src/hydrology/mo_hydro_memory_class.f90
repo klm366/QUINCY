@@ -31,15 +31,15 @@ MODULE mo_hydro_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
 
     TYPE(t_jsb_var_real2d) :: &
-      & fract_water,      & !< Wet (skin reservoir) fraction of tile                                    []
-      & fract_snow,       & !< Snow fraction of tile                                                    []
-      & w_skin,           & !< Water content in skin reservoir                                          [m]
-      & w_snow              !< Water content of snow reservoir                                          [m water equivalent]
+      & fract_water,      & !< Wet (skin reservoir) fraction of tile                               [] ! R: TBD: probably better without box
+      & fract_snow,       & !< Snow fraction of tile                                                   []
+      & w_skin,           & !< Water content in skin reservoir                                         [m]
+      & w_snow              !< Water content of snow reservoir                                         [m water equivalent]
 
     TYPE(t_jsb_var_real2d) :: &
-      & snowmelt,         & !< Snow melt                                                                [kg m-2 s-1]
-      & evapopot,         & !< Potential evaporation                                                    [kg m-2 s-1]
-      & evapotranspiration  !< Evapotranspiration                                                       [kg m-2 s-1]
+      & snowmelt,         & !< Snow melt                                                               [kg m-2 s-1]
+      & evapopot,         & !< Potential evaporation                                                   [kg m-2 s-1]
+      & evapotranspiration  !< Evapotranspiration                                                      [kg m-2 s-1]
 
     TYPE(t_jsb_var_real2d) :: &
       & runoff,           & !< surface runoff
@@ -73,6 +73,8 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for PFT lct_type
     TYPE(t_jsb_var_real2d) :: &
+      & fract_water_veg,  & !< Wet (skin reservoir) fraction of tile                                []
+      & fract_snow_veg,  &
       & fract_water_can,  & !< Wet (skin reservoir) fraction of canopy                                  []
       & fract_snow_can,   & !< Snow fraction on canopy                                                  []
       & w_snow_can,       & !< Water content of snow reservoir on canopy                                [m water equivalent]
@@ -138,9 +140,9 @@ CONTAINS
     soil_w       => Get_vgrid('soil_depth_water')
 
     ! Common variables
-    IF (ASSOCIATED(mem%fract_water%ptr)) RETURN
+    IF (ASSOCIATED(mem%fract_water_veg%ptr)) RETURN
 
-    CALL jsb_add_var( mem, 'fract_water', mem%fract_water, &
+    CALL jsb_add_var( mem, 'fract_water_veg', mem%fract_water_veg, &
       & hgrid, surface,                                                            &
       & t_cf('fraction of water on surface surface_wet_fraction', '-', ''),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &

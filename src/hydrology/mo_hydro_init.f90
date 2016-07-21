@@ -96,16 +96,13 @@ CONTAINS
     dsl4jsb_Def_memory(VEG)
 
     INTEGER :: ihydrology
-    REAL(wp), POINTER ::                         &
-      & return_pointer (:,  :), & !< temporary pointer
-      & return_pointer3d(:,:,:)
+    REAL(wp), POINTER ::         &
+      & return_pointer  (:,  :), & !< temporary pointer
+      & return_pointer3d(:,:,:), &
+      & prt_2D          (:,  :)
 
     TYPE(t_input_file) :: input_file
     INTEGER :: i, isoil
-
-    REAL(wp), POINTER ::                &
-      & vpwp (:,  :),  & !< Volumetric soil permanent wilting point [m/m]
-      & vfc  (:,  :)     !< Volumetric soil field capacity [m/m]
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -144,28 +141,29 @@ CONTAINS
       ! Water content at field capacity
       !
       ! Read volumetric field capacity from boundary condition file
-      vfc => input_file%Read_2d(                         &
-        & variable_name='soil_field_cap')
-      vfc(:,:) = MERGE(vfc(:,:), 0._wp, vfc(:,:) >= 0._wp)
+      prt_2D => input_file%Read_2d(                         &
+       & variable_name='soil_field_cap')  !< Volumetric soil field capacity [m/m]
+                                          ! TBD: R: please change name in infile to w_soil_fcvol or another name that indicates "volumetric"
+      prt_2D(:,:) = MERGE(prt_2D(:,:), 0._wp, prt_2D(:,:) >= 0._wp)
 
       ! Get field capacity by multiplying with soil layer thicknesses
       DO i=1,dsl4jsb_Config(SOIL)%nsoil_water
-        dsl4jsb_var3D_ptr(HYDRO,w_soil_fc_sl) (:,i,:) = vfc(:,:) * dsl4jsb_var3D_ptr(SOIL,soil_depth_l) (:,i,:)
+        dsl4jsb_var3D_ptr(HYDRO,w_soil_fc_sl) (:,i,:) = prt_2D(:,:) * dsl4jsb_var3D_ptr(SOIL,soil_depth_l) (:,i,:)
       END DO
-      DEALLOCATE(vfc)
+      DEALLOCATE(prt_2D)
 
       ! Water content at permanent wilting point
       !
       ! Read volumetric wilting point from boundary condition file
-      vpwp => input_file%Read_2d(                         &
-        & variable_name='wilting_point')
-      vpwp(:,:) = MERGE(vpwp(:,:), 0._wp, vpwp(:,:) >= 0._wp)
+      prt_2D => input_file%Read_2d(                         &
+        & variable_name='wilting_point') !< Volumetric soil permanent wilting point [m/m]
+      prt_2D(:,:) = MERGE(prt_2D(:,:), 0._wp, prt_2D(:,:) >= 0._wp)
 
       ! Get permanent wilting point by multiplying with soil layer thicknesses
       DO i=1,dsl4jsb_Config(SOIL)%nsoil_water
-        dsl4jsb_var3D_ptr(HYDRO,w_soil_pwp_sl) (:,i,:) = vpwp(:,:) * dsl4jsb_var3D_ptr(SOIL,soil_depth_l) (:,i,:)
+        dsl4jsb_var3D_ptr(HYDRO,w_soil_pwp_sl) (:,i,:) = prt_2D(:,:) * dsl4jsb_var3D_ptr(SOIL,soil_depth_l) (:,i,:)
       END DO
-      DEALLOCATE(vpwp)
+      DEALLOCATE(prt_2D)
 
       ! Water content at saturation (water holding capacity)
       !
