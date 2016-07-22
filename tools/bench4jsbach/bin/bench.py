@@ -162,8 +162,8 @@ class Bench_Object ( Diagnostics, Report ):
         
         # check environment
         bench_configs_path = os.path.abspath ( bench_configs_path )
-        configs_path =  os.path.dirname ( bench_configs_path ) 
-        bench_path = os.path.dirname ( configs_path )
+        configs_path       = os.path.dirname ( bench_configs_path ) 
+        bench_path         = os.path.dirname ( configs_path )
         if not os.path.basename ( bench_path ) == bench_name:
             raise Exception ( "Directory structure found differs from assumption." )
             sys.exit ( 1 )
@@ -174,14 +174,12 @@ class Bench_Object ( Diagnostics, Report ):
             sys.exit ( 1 )
 
         # all tests succeeded
-        self.bench_name        = bench_name
-        self.bench_path        = bench_path
+        self.bench_name         = bench_name
+        self.bench_path         = bench_path
         self.bench_configs_path = bench_configs_path
-        self.config            = config
+        self.config             = config
         for n in bench_dirnames:
-            print n
             path = os.path.join ( self.bench_path, n )
-            print path
             setattr ( self,  n + "_path",  path )
 
         if LOGSTREAM_2_FILE:
@@ -198,38 +196,45 @@ class Bench_Object ( Diagnostics, Report ):
         
         self.logger = setup_logger ( name = self.logger_name, filename = self.logfile_path )
 
-        self.reporting     = config [ "reporting" ]
-        self.wikipage =  Bench4JSBach_Wikipage ( self.config [ 'redmine_user' ],
+        self.reporting = config [ "reporting" ]
+        self.wikipage  = Bench4JSBach_Wikipage ( self.config [ 'redmine_user' ],
                                                  self.config [ 'redmine_key' ])
 
         es = self.config [ "experiments" ]
         n_refs = n_cans = 0
         for en, attr in es.iteritems ():
-            name = en
-            name_orig = attr.get ( "name_orig", None )
-            etype = attr.get ( "type", "CMIP5" )
-            path = attr.get ( "path", None )
-            iscan = attr.get ( 'iscan', True )
-            isref = attr.get ( 'isref', False )
-            startyear = attr.get ( 'startyear', None )
-            finalyear = attr.get ( 'finalyear', None )
-            n_cans += 1 if iscan else 0
-            n_refs += 1 if isref else 0
-            canno = n_cans - 1 if iscan else None
-            refno = n_refs - 1 if isref else None
-            kwargs = { 'B4J_name'         : name,
-                       'B4J_name_orig'    : name_orig,
-                       'B4J_etype'        : etype,
-                       'B4J_path'         : path,
-                       'B4J_iscan'        : iscan,
-                       'B4J_isref'        : isref,
-                       'B4J_startyear'    : startyear,
-                       'B4J_finalyear'    : finalyear,
-                       'B4J_canno'        : canno,
-                       'B4J_refno'        : refno,
-                       'B4J_bench'        : self,
-                       'redmine_user'     : self.config [ 'redmine_user' ],
-                       'redmine_key'      : self.config [ 'redmine_key' ]}
+            name        = en
+            name_orig   = attr.get ( "name_orig", None )
+            etype       = attr.get ( "type", "CMIP5" )
+            path        = attr.get ( "path", None )
+            host        = attr.get ( "host", None )
+            iscan       = attr.get ( 'iscan', True )
+            isref       = attr.get ( 'isref', False )
+            startyear   = attr.get ( 'startyear', None )
+            endyear     = attr.get ( 'endyear', None )
+            initialyear = attr.get ( 'initialyear', None )
+            finalyear   = attr.get ( 'finalyear', None )
+            n_cans     += 1 if iscan else 0
+            n_refs     += 1 if isref else 0
+            canno       = n_cans - 1 if iscan else None
+            refno       = n_refs - 1 if isref else None
+            kwargs      = { 'B4J_name'         : name,
+                            'B4J_name_orig'    : name_orig,
+                            'B4J_etype'        : etype,
+                            'B4J_path'         : path,
+                            'B4J_host'         : host,
+                            'B4J_iscan'        : iscan,
+                            'B4J_isref'        : isref,
+                            'B4J_startyear'    : startyear,
+                            'B4J_endyear'      : endyear,
+                            'B4J_initialyear'  : initialyear,
+                            'B4J_finalyear'    : finalyear,
+                            'B4J_canno'        : canno,
+                            'B4J_refno'        : refno,
+                            'B4J_bench'        : self,
+                            'redmine_user'     : self.config [ 'redmine_user' ],
+                            'redmine_key'      : self.config [ 'redmine_key' ]}
+            
             if etype == "CMIP5":
                 varfile = find_files ( "*%s*%s*%s" % \
                                         ( VARNAME_4_CMIP5_METADATA, name, '.nc' ),

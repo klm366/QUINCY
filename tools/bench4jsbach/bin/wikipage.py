@@ -17,8 +17,11 @@ can_table_endtoken            = '\r\n\r\n<notextile></notextile><notextile></not
 b4j_table_starttoken          = '\r\n<notextile></notextile><notextile></notextile><notextile></notextile>\r\n\r\n'
 b4j_table_endtoken            = '\r\n\r\n<notextile></notextile><notextile></notextile><notextile></notextile>\r\n'
 
-column_header_simulation_name = 'simulation_name'
-column_header_data_storage    = 'data_storage'
+column_header_simulation_name   = 'simulation_name'
+column_header_data_storage      = 'data_storage'
+column_header_simulation_period = 'simulation_period'
+detail_initialyear              = 'initialyear'
+detail_finalyear                = 'finalyear'
 
 
 class Bench4JSBach_Wikipage ( object ):
@@ -41,6 +44,28 @@ class Bench4JSBach_Wikipage ( object ):
         self.redmine_project      = redmine.project.get ( self.project_name )
         self.redmine_wikipage     = redmine.wiki_page.get ( self.wikipage_name,
                                                     project_id = self.redmine_project.id )
+
+    def fetch_simulation_row_split_period ( self, experiment_role, experiment_key  ):
+        def is_number ( s ):
+            try:
+                int ( s )
+                return True
+            except ValueError:
+                return False
+            
+        tablerow = self.fetch_simulation_row ( experiment_role, experiment_key )
+        if tablerow:
+            simulation_period = tablerow.get ( 'simulation_period' )
+            if simulation_period:
+                years = filter ( None, simulation_period.split ( '-' ))
+                assert len ( years ) == 2 and \
+                       all ( is_number ( s ) for s in years ) and \
+                       years [ 0 ] < years [ 1 ]
+            tablerow [ detail_initialyear ] = years [ 0 ]
+            tablerow [ detail_finalyear ]   = years [ 1 ]
+            tablerow.pop ( column_header_simulation_period, None )
+            
+        return tablerow            
 
 
     def fetch_simulation_row ( self, experiment_role, experiment_key ):

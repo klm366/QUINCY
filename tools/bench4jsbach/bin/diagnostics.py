@@ -157,19 +157,15 @@ class Diagnostics ( object ):
 
         
         fielddict = self.diagnostic_fields [ fieldname ]
-
-#        startyear =  fielddict [ 'startyear' ]
-#        finalyear = fielddict [ 'finalyear' ]
-#        yearlist = range ( int ( startyear ), int ( finalyear ) + 1 )
         
         cdo = Cdo ()
         
-        ################ PREPROCESSING ####################tre
+        ################ PREPROCESSING ####################
         executable = self.get_b4j_path (  fielddict [ 'preprocessing' ][ 'exec' ], "scripts" )
         input_list = fielddict [ 'preprocessing' ][ 'input' ]
 
         for exp in self.experiments:
-            arglist = [ "startyear:" + exp.B4J_startyear,  "finalyear:" + exp.B4J_finalyear ]
+            arglist = [ "startyear:" + exp.B4J_startyear,  "finalyear:" + exp.B4J_endyear ]
                             
             for key in input_list:
                 arglist.append ( key + ':' + exp.B4J_index [ key ])
@@ -181,7 +177,7 @@ class Diagnostics ( object ):
                     'classification' : output_item,
                     'expname'        : exp.B4J_name,
                     'startdate'      : exp.B4J_startyear,
-                    'finaldate'      : exp.B4J_finalyear,
+                    'finaldate'      : exp.B4J_endyear,
                     'suffix'         : fielddict [ 'suffix' ]}
                 arglist.append ( output_item + ":" + exp.B4J_index [ output_item ])
 
@@ -200,7 +196,7 @@ class Diagnostics ( object ):
                 if not ref.B4J_isref:            continue
                 if ref.B4J_name == can.B4J_name: continue
                 
-                arglist = [ "startyear:" + ref.B4J_startyear,  "finalyear:" + ref.B4J_finalyear,
+                arglist = [ "startyear:" + ref.B4J_startyear,  "finalyear:" + ref.B4J_endyear,
                             "suffix:" +  fielddict [ 'suffix' ],
                             "land_sea_mask:" + ref.land_sea_mask ]
                             
@@ -216,7 +212,7 @@ class Diagnostics ( object ):
                         'classification' : classification_str,
                         'expname'        : can.B4J_name,
                         'startdate'      : can.B4J_startyear,
-                        'finaldate'      : can.B4J_finalyear,
+                        'finaldate'      : can.B4J_endyear,
                         'suffix'         : fielddict [ 'suffix' ]}
                     arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
 
@@ -242,7 +238,7 @@ class Diagnostics ( object ):
                         if not ref.B4J_isref:            continue
                         if ref.B4J_name == can.B4J_name: continue
 
-                        arglist = [ "startyear:" + can.B4J_startyear,  "finalyear:" + can.B4J_finalyear,
+                        arglist = [ "startyear:" + can.B4J_startyear,  "finalyear:" + can.B4J_endyear,
                                     "suffix:" +  fielddict [ 'suffix' ],
                                     "land_sea_mask:" + can.land_sea_mask ]
 
@@ -258,7 +254,7 @@ class Diagnostics ( object ):
                                 'classification' : classification_str,
                                 'expname'        : can.B4J_name,
                                 'startdate'      : can.B4J_startyear,
-                                'finaldate'      : can.B4J_finalyear,
+                                'finaldate'      : can.B4J_endyear,
                                 'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
                             arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
                             
@@ -293,7 +289,7 @@ class Diagnostics ( object ):
                     if not can.B4J_iscan: continue
 
                     arglist = [ "can_name:" + can.B4J_name, "canno:%d" % can.B4J_canno,
-                                "startyear:" + can.B4J_startyear,  "finalyear:" + can.B4J_finalyear ]
+                                "startyear:" + can.B4J_startyear,  "finalyear:" + can.B4J_endyear ]
 
                     for ref in self.experiments:
                         if not ref.B4J_isref:            continue
@@ -312,7 +308,7 @@ class Diagnostics ( object ):
                             'classification' : output_item,
                             'expname'        : can.B4J_name,
                             'startdate'      : can.B4J_startyear,
-                            'finaldate'      : can.B4J_finalyear,
+                            'finaldate'      : can.B4J_endyear,
                             'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
                         arglist.append ( output_item + ":" + can.B4J_index [ output_item ])
 

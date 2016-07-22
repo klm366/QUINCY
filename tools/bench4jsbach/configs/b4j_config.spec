@@ -23,10 +23,13 @@ reporting=boolean()
 name_orig=string()
 type=option('CMIP5','MPIESM1')
 path=string(default=None)
+host=string(default=None)
 iscan=boolean()
 isref=boolean() 
 startyear=string()
-finalyear=string()  
+endyear=string()
+initialyear=string(default=None)
+finalyear=string(default=None)  
 
 [fields]
 [[__many__]]

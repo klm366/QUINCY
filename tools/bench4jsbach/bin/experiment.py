@@ -65,6 +65,8 @@ class Experiment ( object ):
     B4J_atmres      = None
     B4J_oceres      = None
     B4J_startyear   = None
+    B4J_endyear     = None
+    B4J_initialyear = None
     B4J_finalyear   = None
     B4J_host        = None
     B4J_path        = None
@@ -76,33 +78,36 @@ class Experiment ( object ):
     B4J_refno       = None
                     
     def __init__ (   self, b4j_obj, **kwargs ):
-        self.B4J_obj       = b4j_obj
-        self.B4J_name      = kwargs.get ( "B4J_name" )
-        self.B4J_name_orig = kwargs.get ( "B4J_name_orig" )
-        self.B4J_etype     = kwargs.get ( "B4J_etype", None )
-        self.B4J_path      = kwargs.get ( "B4J_path", None )
-        self.B4J_isref     = kwargs.get ( "B4J_isref", False )
-        self.B4J_iscan     = kwargs.get ( "B4J_iscan", True )
-        self.B4J_canno     = kwargs.get ( "B4J_canno", None )
-        self.B4J_refno     = kwargs.get ( "B4J_refno", None )
-        self.B4J_startyear = kwargs.get ( "B4J_startyear", None )
-        self.B4J_finalyear = kwargs.get ( "B4J_finalyear", None )
-        self.B4J_index     = {}
+        self.B4J_obj         = b4j_obj
+        self.B4J_name        = kwargs.get ( "B4J_name" )
+        self.B4J_name_orig   = kwargs.get ( "B4J_name_orig" )
+        self.B4J_etype       = kwargs.get ( "B4J_etype", None )
+        self.B4J_path        = kwargs.get ( "B4J_path", None )
+        self.B4J_host        = kwargs.get ( "B4J_host", None )
+        self.B4J_isref       = kwargs.get ( "B4J_isref", False )
+        self.B4J_iscan       = kwargs.get ( "B4J_iscan", True )
+        self.B4J_canno       = kwargs.get ( "B4J_canno", None )
+        self.B4J_refno       = kwargs.get ( "B4J_refno", None )
+        self.B4J_startyear   = kwargs.get ( "B4J_startyear", None )
+        self.B4J_endyear     = kwargs.get ( "B4J_endyear", None )
+        self.B4J_initialyear = kwargs.get ( "B4J_initialyear", None )
+        self.B4J_finalyear   = kwargs.get ( "B4J_finalyear", None )
+        self.B4J_index       = {}
 
         if not self.B4J_path:
-            try:
-                exp_metadata = self.B4J_obj.wikipage.fetch_simulation_row (
-                    "can" if self.B4J_iscan else "ref", self.B4J_name_orig )
-            except:
-                print "No experiment description found for %s." % self.B4J_name_orig
-                sys.exit ( 1 )
+            exp_metadata = self.B4J_obj.wikipage.fetch_simulation_row_split_period (
+                "can" if self.B4J_iscan else "ref", self.B4J_name_orig ) 
+            if not exp_metadata:
+                raise KeyError ( "No experiment description found for %s." % self.B4J_name_orig )
 
-
-            print exp_metadata
-            self.B4J_host      = exp_metadata [ "host" ]
-            self.B4J_path      = exp_metadata [ "data_storage" ]
-            self.B4J_atmres    = exp_metadata [ "atm_res" ]
-            self.B4J_oceres    = exp_metadata [ "oce_res" ]
+            self.B4J_obj.logger.debug ( "Read experiment metadata from wikipage :\n %s " % exp_metadata )
+            
+            self.B4J_host        = exp_metadata [ "host" ]
+            self.B4J_path        = exp_metadata [ "data_storage" ]
+            self.B4J_initialyear = self.B4J_initialyear or exp_metadata [ "initialyear" ]
+            self.B4J_finalyear   = self.B4J_finalyear or exp_metadata [ "finalyear" ]
+            self.B4J_atmres      = exp_metadata [ "atm_res" ]
+            self.B4J_oceres      = exp_metadata [ "oce_res" ]
 
         host         = gethostname ()
         self.from_archive = self.B4J_host == 'archive'
@@ -259,7 +264,7 @@ class Experiment ( object ):
 
         self.B4J_obj.logger.debug ( """Prepare fetching%s%s output data%s.""" %
                                     (( " remote" if self.from_remote else "local" ),
-                                     ( " acculated" if self.accumulated else " not self.accumulated" ),
+                                     ( " accumulated" if self.accumulated else " not self.accumulated" ),
                                      ( " from %s" % self.B4J_host if self.from_remote else "" )))   
   
         if self.from_archive: fetchfile_list = []
@@ -326,7 +331,7 @@ class Experiment ( object ):
                         "submodel"            : filedict [ self.modeltype ][ "submodel" ],
                         "stream"              : filedict [ self.modeltype ][ "stream" ],
                         "cond_frequenceinfix" : frequence_infix,
-                        "startyear"           : self.B4J_startyear,
+                        "startyear"           : self.B4J_initialyear,
                         "cond_finalyearstr"   : finalyearstring,
                         "suffix"              : self.outfiles_dict [ 'suffix' ]}
 
@@ -356,14 +361,14 @@ class Experiment ( object ):
             
             for fieldname, fielddict in self.B4J_obj.diagnostic_fields.iteritems ():
                 assert 'fetch' in fielddict, "No 'fetch'-section defined for %s." % fieldname
-                yearlist = range ( int ( fielddict [ 'startyear' ]), int ( fielddict [ 'finalyear' ]) + 1 )
+                yearlist = range ( int ( self.B4J_startyear ), int ( self.B4J_endyear ) + 1 )
                 for fileid, filedict in fielddict ['fetch' ].iteritems ():
                     self.B4J_index [ fileid ] = self.B4J_obj.path_template % { 
-                        'path'           : fielddict [ "processed_path" ],
+                        'path'           : self.B4J_obj.interpolated_selected_path,
                         'classification' : fileid,
                         'expname'        : self.B4J_name,
-                        'startdate'      : fielddict [ 'startyear' ],
-                        'finaldate'      : fielddict [ 'finalyear' ],
+                        'startdate'      : self.B4J_startyear,
+                        'finaldate'      : self.B4J_endyear,
                         'suffix'         : fielddict [ 'suffix' ]}
                     assert self.modeltype in filedict, "No '%s'-section defined for %s." % fileid
                     assert os.path.isfile ( self.B4J_index [ fileid + CODES_SUFFIX ])
