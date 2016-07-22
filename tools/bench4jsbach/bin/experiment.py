@@ -282,7 +282,7 @@ class Experiment ( object ):
                 self.B4J_obj.logger.debug ( "Fetch data for file '%s'." % fileid )
 
                 self.B4J_index [ fileid ] = self.B4J_obj.path_template % { 
-                    'path'           : fielddict [ "processed_path" ],
+                    'path'           : self.B4J_obj.interpolated_selected_path,
                     'classification' : fileid,
                     'expname'        : self.B4J_name,
                     'startdate'      : self.B4J_startyear,
@@ -385,7 +385,7 @@ class Experiment ( object ):
         slf_varname = "slf"
         self.B4J_obj.logger.debug ( "Fetching land_sea_mask '%s' from %s." % ( slf_varname, lsm_path ))
         self.land_sea_mask  = self.B4J_obj.path_template % { 
-            'path'           : fielddict [ "processed_path" ],
+            'path'           : self.B4J_obj.interpolated_selected_path,
             'classification' : "land_sea_mask",
             'expname'        : self.B4J_name,
             'startdate'      : self.B4J_startyear,
