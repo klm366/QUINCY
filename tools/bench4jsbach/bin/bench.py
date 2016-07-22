@@ -100,6 +100,7 @@ class Bench_Object ( Diagnostics, Report ):
     configs_path       = None
     processed_path     = None
     graphics_path      = None
+    interpolated_selected_path  = None
     logging_path       = None
     logfile_path       = None
     report_path        = None
@@ -178,7 +179,9 @@ class Bench_Object ( Diagnostics, Report ):
         self.bench_configs_path = bench_configs_path
         self.config            = config
         for n in bench_dirnames:
+            print n
             path = os.path.join ( self.bench_path, n )
+            print path
             setattr ( self,  n + "_path",  path )
 
         if LOGSTREAM_2_FILE:
@@ -363,14 +366,15 @@ configuration file '%s' have to accord with the corresponding section name
     def get_b4j_path ( self, filename, b4j_filetype ):
         assert b4j_filetype and b4j_filetype in bench_dirnames
 
-        dirmap = {  "scripts"   : [  self.scripts_path,
-                                     bench4jsbach_base + "/prod/scripts" ],
-                    "configs"   : [ self.configs_path,
+        dirmap = {  "configs"   : [ self.configs_path,
                                     bench4jsbach_base + "/prod/configs" ],
-                    "processed" : [ self.processed_path ], 
                     "graphics"  : [ self.graphics_path ],
+                    "interpolated_selected": [ self.interpolated_selected_path ],
+                    "logging"   : [ self.logging_path ],
+                    "processed" : [ self.processed_path ], 
                     "report"    : [ self.report_path ],
-                    "logging"   : [ self.logging_path ]}
+                    "scripts"   : [  self.scripts_path,
+                                     bench4jsbach_base + "/prod/scripts" ]}
         
         dirpath = dirmap [ b4j_filetype ]
 
@@ -388,23 +392,27 @@ configuration file '%s' have to accord with the corresponding section name
             
         
     def __repr__ ( self ):
-        rep =  """\n\n{} ( bench_name = {}, 
-\tbench_path        = {},
-\tconfigs_path       = {},
-\tprocessed_path         = {}, 
-\tgraphics_path      = {}, 
-\treport_path       = {}, 
-\tbench_configs_path = {}, 
-\tconfig            = {}, 
-\texperiments       = {})\n\n""".format ( self.__class__.__name__,
-                print_none ( self.bench_name        ),
-                print_none ( self.bench_path        ),
-                print_none ( self.configs_path       ),
-                print_none ( self.processed_path     ),
-                print_none ( self.graphics_path      ),
-                print_none ( self.report_path       ),
-                print_none ( self.bench_configs_path ),
-                print_item_or_list_rec ( self.config, 28 ),
+        rep =  """\n\n{} ( 
+\tbench_name                 = {}, 
+\tbench_path                 = {},
+\tbench_configs_path         = {}, 
+\tconfigs_path               = {},
+\tgraphics_path              = {}, 
+\tinterpolated_selected_path = {}, 
+\tprocessed_path             = {}, 
+\treport_path                = {}, 
+\tconfig                     = {}, 
+\texperiments                = {})\n\n""".format (
+                self.__class__.__name__,
+                print_none ( self.bench_name                      ),
+                print_none ( self.bench_path                      ),
+                print_none ( self.bench_configs_path              ),
+                print_none ( self.configs_path                    ),
+                print_none ( self.graphics_path                   ),
+                print_none ( self.interpolated_selected_path      ),
+                print_none ( self.processed_path                  ),
+                print_none ( self.report_path                     ),
+                print_item_or_list_rec ( self.config, 28          ),
                 print_none ( self.experiments ))
         
         rep += Diagnostics.__repr__ ( self )
