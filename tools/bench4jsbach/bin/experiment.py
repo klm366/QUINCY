@@ -2,9 +2,14 @@
 
 import os, sys, subprocess
 from netCDF4 import Dataset
-import fnmatch, re , shutil
-from util import print_none, subprocessing, getdomain, gethostname
 from cdo import Cdo
+
+from util import (
+    getdomain,
+    gethostname,
+    print_none,
+    subprocessing )
+
 
 ARCHIVE_PREFIX = "/hpss/arch/"
 STREAM_SUFFIX  = "_stream"

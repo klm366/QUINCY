@@ -1,12 +1,18 @@
 #! /usr/bin/env python
 
 import sys, os, subprocess, shutil, re
-import json
-import copy
 from collections import OrderedDict
-from util import log_message_newline, print_none, print_item_or_list_rec, get_filesystem_tree_dirtree, get_filesystem_tree_tikz, subprocessing
 import configobj
 from netCDF4 import Dataset
+
+from util import (
+    get_filesystem_tree_dirtree,
+    get_filesystem_tree_tikz,
+    log_message_newline,
+    print_none,
+    print_item_or_list_rec,
+    subprocessing )
+
 
 doc_template = """
 \\documentclass[]{article}

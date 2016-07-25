@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 
-import os,sys,logging,textwrap
-import subprocess
+import os, sys, logging, subprocess, textwrap
 
 
 default_logger_name = 'DKL_LOGGER'
@@ -111,7 +110,7 @@ def touch ( filename ):
 
 def subprocessing ( cmd,
                     exit_on_error = True,
-                    print_stdout  = False,
+                    print_stdout  = True,
                     shell_arg     = True,
                     stdout_arg    = subprocess.PIPE,
                     stderr_arg    = subprocess.PIPE ):

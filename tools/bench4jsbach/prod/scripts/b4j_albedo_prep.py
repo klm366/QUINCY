@@ -4,6 +4,9 @@
 import sys, os
 from cdo import Cdo
 
+# print "Starting %s" % os.path.realpath(__file__)
+
+
 try:
     b4j_base = os.environ [ 'BENCH4JSBACH_BASE' ]
 except KeyError: 
@@ -17,12 +20,12 @@ else:
     raise Exception ( "Directory %s with source files not found." % bin_dir )
 from util import print_item_or_list_rec
 
-#print 'Number of arguments:', len(sys.argv), 'arguments.'
-#print 'Argument List:', str(sys.argv)
+# print 'Number of arguments:', len(sys.argv), 'arguments.'
+# print 'Argument List:', str(sys.argv)
 
 kwargs        =  dict ( token.split ( ':' ) for token in sys.argv [ 1: ])
-#print "subprocess '%s', kwargs = " % __file__
-#print print_item_or_list_rec ( kwargs, 3 )
+# print "subprocess '%s', kwargs = " % __file__
+# print print_item_or_list_rec ( kwargs, 3 )
 
 fieldname      = "albedo"
 yearliststring = ','.join ( repr ( y ) for y in range ( int ( kwargs [ 'startyear' ]),
@@ -50,3 +53,6 @@ cdo.yseasmean ( input="-selyear," + yearliststring + \
                 output=kwargs [ 'D_seasmean' ])
 
 #print "Preprocessing for field %s with '%s' run successfully." % ( fieldname, __file__ )
+
+
+# print "Exiting %s" % os.path.realpath(__file__)

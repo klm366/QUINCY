@@ -1,18 +1,27 @@
 #! /usr/bin/env python
 
 import os, sys, subprocess, shutil, getpass, datetime
-import copy
 import configobj
 from validate import Validator
 from sets import Set
 import subprocess
 
 from wikipage import Bench4JSBach_Wikipage
-from experiment import Experiment, CMIP5_Experiment, MPIESM1_Experiment
-from util import ( logger as dkl_logger, setup_logger, print_none,
-                   log_message_newline, str2bool,print_item_or_list_rec,
-                   gethostname )
-from diagnostics import Diagnostics, find_files
+from experiment import (
+    Experiment,
+    CMIP5_Experiment,
+    MPIESM1_Experiment )
+from util import (
+    gethostname,
+    log_message_newline,
+    logger as dkl_logger,
+    print_item_or_list_rec,
+    print_none,
+    setup_logger,
+    str2bool )
+from diagnostics import (
+    Diagnostics,
+    find_files )
 from report import Report
 
 #from datetime import datetime

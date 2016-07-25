@@ -2,34 +2,27 @@
 # -*- coding:  utf-8 -*-
 from __future__ import division
 
-from collections import OrderedDict
-
-import os, sys, shutil
+import os, sys
 import fnmatch, re
 import warnings
 from datetime import datetime
-import subprocess
-import itertools
 import configobj
-from cdo import Cdo
 from sets import Set
-import copy
-from netCDF4 import Dataset
-from util import print_item_or_list_rec
+from collections import OrderedDict
 
-from pycmbs.data import Data
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import matplotlib.gridspec as gridspec
-import matplotlib.colorbar as colorbar
-import matplotlib.ticker as ticker
 import numpy as np
-from pycmbs.mapping import map_plot
+from cdo import Cdo
 
-from util import logger as dkl_logger, touch, subprocessing
-from experiment import MPIESM1_Experiment, CMIP5_Experiment
-
+from util import (
+    logger as dkl_logger,
+    print_item_or_list_rec,
+    subprocessing,
+    touch )
+from experiment import (
+    MPIESM1_Experiment,
+    CMIP5_Experiment )
 from report import teXify
+
 
 streams = { "echam": [ "echam", "co2" ],
             "jsbach": [ "jsbach", "land", "surf", "veg", "yasso", "accw" ]}
