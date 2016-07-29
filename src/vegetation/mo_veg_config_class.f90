@@ -32,9 +32,6 @@ MODULE mo_veg_config_class
     CHARACTER(8)     :: output_interval_pool, output_interval_flux
     INTEGER          :: output_start_first_day_year, output_end_last_day_year !< output: 1st to last day of the year(s) provided
     INTEGER          :: pft_id
-    LOGICAL          :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
-    LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
-    LOGICAL          :: flag_optimal_allocation    !< optimise plant allocation
     LOGICAL          :: flag_calc_soil_uptake      !< calculate N:P uptake from roots
     LOGICAL          :: flag_calc_soil_moisture    !< calcualte water bucket 
     LOGICAL          :: flag_base_soil_model       !< calculate soil N:P budget
@@ -66,8 +63,8 @@ CONTAINS
     !LOGICAL      :: active
     CHARACTER(8) :: output_interval_pool, output_interval_flux
     INTEGER      :: output_start_first_day_year, output_end_last_day_year, plant_functional_type_id
-    LOGICAL      :: flag_optimal_Nfraction, flag_optimal_Nleaf, flag_calc_soil_uptake, flag_calc_soil_moisture
-    LOGICAL      :: flag_optimal_allocation, flag_base_soil_model, flag_tile_veg_dynamics
+    LOGICAL      :: flag_calc_soil_uptake, flag_calc_soil_moisture
+    LOGICAL      :: flag_base_soil_model, flag_tile_veg_dynamics
     REAL(wp)     :: soil_awc_prescribe, soil_theta_prescribe
 
     NAMELIST /vegetation_ctl/       & 
@@ -75,9 +72,6 @@ CONTAINS
       output_interval_flux,         &
       output_start_first_day_year,  &
       output_end_last_day_year,     &
-      flag_optimal_Nfraction,       &
-      flag_optimal_Nleaf,           &
-      flag_optimal_allocation,      &
       flag_calc_soil_uptake,        &
       flag_calc_soil_moisture,      &
       flag_base_soil_model,         &
@@ -98,9 +92,6 @@ CONTAINS
     output_interval_flux           = 'monthly' 
     output_start_first_day_year    = 1
     output_end_last_day_year       = 10
-    flag_optimal_Nfraction         = .FALSE.  ! .TRUE. .FALSE.
-    flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
-    flag_optimal_allocation        = .FALSE.  ! .TRUE. .FALSE.
     flag_calc_soil_uptake          = .FALSE.  ! .TRUE. .FALSE.
     flag_base_soil_model           = .FALSE.  ! .TRUE. .FALSE.
     flag_calc_soil_moisture        = .FALSE.  ! .TRUE. .FALSE.
@@ -122,9 +113,6 @@ CONTAINS
     config%output_interval_flux          = output_interval_flux
     config%output_start_first_day_year   = output_start_first_day_year
     config%output_end_last_day_year      = output_end_last_day_year
-    config%flag_optimal_Nfraction        = flag_optimal_Nfraction
-    config%flag_optimal_Nleaf            = flag_optimal_Nleaf
-    config%flag_optimal_allocation       = flag_optimal_allocation
     config%flag_calc_soil_uptake         = flag_calc_soil_uptake
     config%flag_base_soil_model          = flag_base_soil_model
     config%flag_calc_soil_moisture       = flag_calc_soil_moisture

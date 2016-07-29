@@ -1,0 +1,7 @@
+mo_soil_interface.o: \
+  mo_kind.o \
+  mo_exception.o
+
+mo_soil_constants.o: \
+  mo_kind.o
+

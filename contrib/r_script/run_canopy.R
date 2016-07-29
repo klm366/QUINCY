@@ -12,11 +12,11 @@ if (length(wrongFolder) > 0) {
   stop("\n >> You may not run this script from contrib/r_script/ BUT cd into contrib/test_bed/canopy/ and run from there <<") }
 
 # message
-print(" running model simulations !")
+print(" running canopy-model simulations (using land.x) !")
 
 make=read.delim('../../../util/Make.inc.local',header=F,sep="=",stringsAsFactors=F)
 comp=gsub(" $","",gsub("^ ","",make[gsub(" $","",make[,1])=="COMP",2]))
-system(paste("../../../",comp,"/bin/canopy.x",sep=''))
+system(paste("../../../",comp,"/bin/land.x",sep=''))
 
 # call postprocessing_canopy.R 
 system("Rscript ./postprocessing_canopy.R")

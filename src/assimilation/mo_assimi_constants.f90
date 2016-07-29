@@ -1,0 +1,177 @@
+!>
+!! @brief Contains constants for the assimilation process
+!!
+!! @author
+!!  Jan Engel, MPI-BGC Jena
+!!
+!! @par Revision History
+!! First version by Jan Engel (2016-07-21)
+!!
+MODULE mo_assimi_constants
+
+  USE mo_kind,                 ONLY: wp
+
+
+  IMPLICIT NONE
+
+  PUBLIC
+
+
+  ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
+  REAL(wp), SAVE :: &      ! In Fortran 2003 and Fortran 2008, a maximum of 255 continuation lines are allowed
+      ! Values from Niinemets 1997 (SC 01/16)
+      jmax2n        ,     &  !< electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
+      vcmax2n       ,     &  !< Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
+      k0_fnl_pepc   ,     &  !< fraction of N in PEP and PPDK (Makino et al. 2003 / Tazoe et al. PCE 2006, 29, 691-700)
+      ! PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C, derived from k = 0.7 mol m-2 s-1 (Collatz et al. 1992)
+      ! assuming 157 mmol N / m-2 leaf N and 4.5 % of leaf N in PS 
+      pepc2n        ,     & !< PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C
+      ! Value from Friend et al. 2009 
+      ! values from Evans 1989, Oecologia, 78: 9-19 (Table 2)
+      chl2n         ,     & !< µmol Chloroplast per mmol N (light harvesting complex)
+      ! slope of the relationship of structural leaf N against leaf N in fraction/mmol (Friend 1997)
+      k1_fnl_struc  ,     & !< slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
+      ! in static leaf N mode: prescribed ratio of Jmax25/Vcmax25
+      jmax2vcmax_C3 ,     &  !< text book; ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants)
+      jmax2vcmax_C4          !< calibrated to have Jmax=vcmax at 25 deg; ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants)
+      ! moved to mo_veg_constants tau_canopy_acclimation = 10._wp  ,     & !< time scale of acclimation of canopy processes (N, P, T) (days)
+
+  ! Parameters used in the photosynthesis routine (temperature sensitivies of PS processes)
+  REAL(wp), SAVE :: &
+      ! Temperature sensitivity and baseline of Michaelis-Menten constant of Rubisco for CO2 (unit?)
+      E0kc    ,     & !< Baseline of Michaelis-Menten constant of Rubisco for CO2 (unit?)
+      E1kc    ,     & !< Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 (unit?)
+      ! Temperature sensitivity and baseline of Michealis-Menten Kintetics for Rubisco-oxigination     
+      E0ko    ,     & !< Baseline of Michealis-Menten Kintetics for Rubisco-oxigination
+      E1ko    ,     & !< Temperature sensitivity of Michealis-Menten Kintetics for Rubisco-oxigination
+      ! Temperature sensitivity and baseline of photosynthetic compensation point
+      E0pcp   ,     & !< Baseline of photosynthetic compensation point
+      E1pcp   ,     & !< Temperature sensitivity of photosynthetic compensation point
+      ! Temperature sensitivity and baseline of Rubisco
+      E0v     ,     & !< Baseline of Rubisco
+      E1v     ,     & !< Temperature sensitivity of Rubisco
+
+        ! delete ?
+        ! Temperature sensitivity and baseline value of foliar respiration
+        ! E0kt = 18.72_wp
+        ! E1kt = 46390.0_wp
+
+      ! Temperature sensitivity of PeP C4 photosynthesis
+      Tref_pepc   ,     & !< Temperature sensitivity of PeP C4 photosynthesis 
+      Tbase_pepc  ,     & !< Temperature sensitivity of PeP C4 photosynthesis
+      ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))) (µmol CO2 / mol quanta)
+      ! accounting for the absorptance of leaves (0.85), the maximum quantum yield of PS II (0.7)
+      ! the fraction of total light that reaches PS II (0.5) and the NADPH limited RubGeneration (jointly leading to 0.066)
+      alpha_i     ,     & !< intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I)) (µmol CO2 / mol quanta)
+
+      ! Partial Pressure of O2 in kPa
+      pO2             ,     & !< Partial Pressure of O2 in kPa
+      ! initial guess of the leaf Ci to Ca ratio
+      CiCa_default_C3 ,     & !< default Ci:Ca for C3 plants
+      CiCa_default_C4 ,     & !< default Ci:Ca for C4 plants
+      ! maximum number of iteration in photosynthesis calculation (should probably be in mo_base_constants)
+      ps_it_max       ,     & !< maximum iteration of PS calculation
+      ci_max          ,     & !< saturating Ci in Pa C4 plants
+      ! ratio of the molecular diffusion constants of water and CO2 in air (Nobel, Plant Phys. 2005, p 380)
+      Dwv2co2_air     ,     & !< ratio of diffusion coefficient for H2O and CO2 in air 
+      ! ratio of the diffusion constant of water and CO2 in air, accounting for turbulent transfer (Nobel, Plant Phys. 2005, p 380) 
+      Dwv2co2_turb            !< ratio of diffusion coefficient for H2O and CO2 in turbulent air 
+
+  ! parameters describing the isotopic discrimination of PS (fractionation due to photosynthesis), derived from Drake 2014, Radiocarbon, 56, 29-38
+  REAL(wp), SAVE :: &     
+      discr_ps_a_C13  ,     &  !< discrimination of C13 due to stomatal diffusion
+      discr_ps_b_C13  ,     &  !< discrimination of C13 due to Rubisco
+      discr_ps_c_C13  ,     &  !< discrimination of C13 due to PEP C 
+      discr_ps_a_C14  ,     &  !< discrimination of C14 due to stomatal diffusion
+      discr_ps_b_C14  ,     &  !< discrimination of C14 due to Rubisco
+      discr_ps_c_C14  ,     &  !< discrimination of C14 due to PEP C
+      discr_ps_phi             !< leakage rate of bundle sheath cells; a typical value cf Hatch et al. 1995, Plant Phys. 108, 173-181
+
+  ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
+  REAL(wp), SAVE :: &     
+      kn             ,   & !< extinction coefficient to describe decline of N within the canopy
+      ! parameters to describe the varying fraction of N in chlorophyll through the canopy
+      k0_fnl_chl_C3  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+      k0_fnl_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+      k1_fnl_chl_C3  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+      k1_fnl_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+      kfnl_chl              !< parameter to describe the varying fraction of N in chlorophyll through the canopy
+
+  ! parameters for changes in canopy N fractions
+  REAL(wp), SAVE :: &     
+      ! maximum change in photosynthetic N fractions
+      delta_n_fraction  ,     & !< maximum fractional change for optimal adjustment of photosynthetic N fraction
+      ! maximum change in CN ratio of canopy
+      delta_n_leaf      !< maximum fractional change for optimal adjsutment of canopy N allocation
+
+CONTAINS
+
+  !-----------------------------------------------------------------------------------------------------
+  !> initialize constants used in the assimilation process
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_assimi_constants
+
+    USE mo_shared_constants,    ONLY: molar_mass_N, &   !< parameter from mo_shared_constants
+                                      Dwv, &            !< parameter from mo_shared_constants - diffusion coefficient for water vapour in air
+                                      Dco2, &           !< parameter from mo_shared_constants - diffusion coefficient for CO2 in air
+                                      Tzero
+
+    IMPLICIT NONE
+
+
+  ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
+      jmax2n        = 17.6_wp/4.0_wp
+      vcmax2n       = 1.8_wp       
+      k0_fnl_pepc   = 0.045_wp 
+      pepc2n        = 98777.97_wp 
+      chl2n         = 1000._wp/39.8_wp 
+      k1_fnl_struc  = 71.4_wp * molar_mass_N / 1000000._wp 
+      jmax2vcmax_C3 = 1.92_wp 
+      jmax2vcmax_C4 = 1.4_wp  
+      ! moved to mo_veg_constants tau_canopy_acclimation = 10._wp  ,     & !< time scale of acclimation of canopy processes (N, P, T) (days)
+
+  ! Parameters used in the photosynthesis routine (temperature sensitivies of PS processes)
+      E0kc            = 38.05_wp 
+      E1kc            = 79430.0_wp 
+      E0ko            = 20.3_wp 
+      E1ko            = 36380.0_wp 
+      E0pcp           = 19.02_wp 
+      E1pcp           = 37830.0_wp 
+      E0v             = 26.35_wp 
+      E1v             = 65330.0_wp
+      Tref_pepc       = 25._wp 
+      Tbase_pepc      = 10._wp 
+      alpha_i         = 0.85_wp * 0.066_wp  
+      pO2             = 20.9_wp 
+      CiCa_default_C3 = 0.7_wp
+      CiCa_default_C4 = 0.4_wp
+      ps_it_max       = 10._wp 
+      ci_max          = 7800.0_wp  
+      Dwv2co2_air     = Dwv / Dco2  
+      Dwv2co2_turb    = ( Dwv / Dco2  ) ** (2._wp/3._wp) 
+
+  ! parameters describing the isotopic discrimination of PS (fractionation due to photosynthesis), derived from Drake 2014, Radiocarbon, 56, 29-38
+      discr_ps_a_C13 = 4.4_wp   
+      discr_ps_b_C13 = 27.0_wp 
+      discr_ps_c_C13 = 5.7_wp 
+      discr_ps_a_C14 = discr_ps_a_C13 * 1.97_wp 
+      discr_ps_b_C14 = discr_ps_b_C13 * 1.97_wp 
+      discr_ps_c_C14 = discr_ps_c_C13 * 1.89_wp 
+      discr_ps_phi   = 0.16_wp 
+
+  ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
+      kn            = 0.11_wp
+      k0_fnl_chl_C3 = 6.0_wp
+      k0_fnl_chl_C4 = 15.0_wp
+      k1_fnl_chl_C3 = 3.6_wp
+      k1_fnl_chl_C4 = 4.4_wp
+      kfnl_chl      = 0.7_wp
+
+  ! parameters for changes in canopy N fractions
+      delta_n_fraction  = 0.001_wp 
+      delta_n_leaf      = 0.0001_wp    
+
+  END SUBROUTINE init_assimi_constants
+
+END MODULE mo_assimi_constants

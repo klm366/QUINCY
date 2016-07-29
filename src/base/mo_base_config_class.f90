@@ -27,9 +27,10 @@ MODULE mo_base_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_base_config
-    REAL(wp)         :: dt        !< length of one time step in seconds; base_ctl namelist: read_dt_time_step_length_sec
-    CHARACTER(1)     :: simulation_length_unit
-    INTEGER          :: simulation_length_number
+    REAL(wp)          :: dt        !< length of one time step in seconds; base_ctl namelist: read_dt_time_step_length_sec
+    CHARACTER(1)      :: simulation_length_unit
+    INTEGER           :: simulation_length_number
+    CHARACTER(len=20) :: slm_model_name
   CONTAINS
     PROCEDURE :: Init => Init_base_config
     PROCEDURE :: Timesteps => Get_timstep_number
@@ -54,14 +55,16 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL          :: active
-    REAL(wp)         :: dt_time_step_length_sec   ! model-variable: dt 
-    CHARACTER(1)     :: simulation_length_unit
-    INTEGER          :: simulation_length_number
+    REAL(wp)          :: dt_time_step_length_sec   ! model-variable: dt 
+    CHARACTER(1)      :: simulation_length_unit
+    INTEGER           :: simulation_length_number
+    CHARACTER(len=20) :: slm_model_name
 
     NAMELIST /base_ctl/            &  
         dt_time_step_length_sec,   &
         simulation_length_unit,    &
-        simulation_length_number
+        simulation_length_number,  &
+        slm_model_name
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -74,6 +77,7 @@ CONTAINS
     dt_time_step_length_sec       = 1800.0_wp
     simulation_length_unit        = 'y'        ! y years, w weeks, d days
     simulation_length_number      = 20 
+    slm_model_name                = 'land'
 
 
     ! read the namelist
@@ -88,6 +92,7 @@ CONTAINS
     config%dt                         = dt_time_step_length_sec
     config%simulation_length_unit     = simulation_length_unit
     config%simulation_length_number   = simulation_length_number
+    config%slm_model_name             = slm_model_name
   END SUBROUTINE Init_base_config
 
   !-----------------------------------------------------------------------------------------------------

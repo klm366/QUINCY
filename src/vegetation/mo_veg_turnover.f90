@@ -10,10 +10,14 @@
 MODULE mo_veg_turnover
 
   USE mo_kind
+  USE mo_jsb_lctlib_class,     ONLY: t_lctlib_element
   USE mo_veg_memory
+  USE mo_veg_constants
+
+
+  IMPLICIT NONE
 
   PRIVATE
-
   PUBLIC :: calc_turnover
 
 CONTAINS
@@ -22,24 +26,29 @@ CONTAINS
   !> Calculates litter fall resulting from tissue senesence, including nutrient recycling, 
   !! as well as turnover of sapwood to heartwood and fruits to seed_bed 
   !!
-  !! @todo: mo_veg_turnover: herbivory on leaves as turnover term? 
+  !! @todo: mo_veg_turnover:calc_turnover -> herbivory on leaves as turnover term? 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_turnover(plant,veg_param)
+  SUBROUTINE calc_turnover(tile, lctlib)
 
+    USE mo_base_memory,        ONLY: t_slm_tile
     USE mo_base_constants,     ONLY: one_day, one_year
     USE mo_shared_constants
-    USE mo_veg_parameters
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_veg_param), INTENT(in) :: veg_param 
-    TYPE(t_slm_plant), INTENT(inout)  :: plant
+    TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile      !< one tile
+    TYPE(t_lctlib_element),INTENT(in)       :: lctlib    !< land-cover-type library - parameters for one pft
     ! 0.2 Local 
+    TYPE(t_slm_plant),POINTER         :: plant     ! plant variables per tile
     TYPE(t_slm_veg_pool)              :: litterfall,growth
     REAL(wp)                          :: recycling_leaf_n,recycling_leaf_n15,recycling_leaf_p
     REAL(wp)                          :: recycling_sap_wood_n,recycling_sap_wood_n15,recycling_sap_wood_p
     REAL(wp)                          :: fturn_leaf,fturn
     REAL(wp)                          :: nitrogen_recycling_fract, phosphorus_recycling_fract
+
+    ! bi-directional pointer
+    plant => tile%plant
+
 
     !> 1.0 initialise output variables
     !!
@@ -55,9 +64,9 @@ CONTAINS
     !> 2.0 foliage turnover, including recycling of nutrients 
     !!
     !! flat rate for evergreens, dual rates for deciduous (senescence after the growing season)
-    SELECT CASE (veg_param%phenology_type(plant%pftid))
+    SELECT CASE (lctlib%phenology_type)
       CASE (ievergreen)
-         fturn_leaf = veg_param%tau_leaf(plant%pftid) * dt/one_day/one_year 
+         fturn_leaf = lctlib%tau_leaf * dt/one_day/one_year 
       CASE (iraingreen, isummergreen)
          IF(plant%growing_season)THEN
             fturn_leaf = 0.0_wp              ! herbivory
@@ -68,7 +77,7 @@ CONTAINS
          ENDIF
       CASE (iperennial)
          IF(plant%growing_season)THEN
-            fturn_leaf = veg_param%tau_leaf(plant%pftid) * dt/one_day/one_year
+            fturn_leaf = lctlib%tau_leaf * dt/one_day/one_year
          ELSE
             ! if LAI drops below minimum threshold, dump all leaves
             fturn_leaf = 0.2_wp * dt/one_day
@@ -90,20 +99,20 @@ CONTAINS
 
     !> 3.0 fine root turnover to litter
     !! 
-    fturn = veg_param%tau_fine_root(plant%pftid) * dt/one_day/one_year
+    fturn = lctlib%tau_fine_root * dt/one_day/one_year
     litterfall%fine_root = fturn * plant%pool%fine_root
 
     !> 4.0 coarse root turnover to litter 
     !! 
-    fturn = veg_param%tau_coarse_root(plant%pftid) * dt/one_day/one_year 
+    fturn = lctlib%tau_coarse_root * dt/one_day/one_year 
     litterfall%coarse_root = fturn * plant%pool%coarse_root
 
     !> 5.0 sapwood turnover 
     !! 
     !> 5.1 litter production from halms (grasses), or branches (trees)
-    SELECT CASE (veg_param%growthform(plant%pftid))
+    SELECT CASE (lctlib%growthform)
       CASE (itree)
-        fturn = veg_param%tau_branches(plant%pftid) * dt/one_day/one_year 
+        fturn = lctlib%tau_branches * dt/one_day/one_year 
       CASE (igrass) ! for grases follows leaf phenology
         fturn = fturn_leaf
     ENDSELECT 
@@ -111,8 +120,8 @@ CONTAINS
 
     !> 5.2 heart wood formation, including nutrient recycling
     !! 
-    IF(veg_param%growthform(plant%pftid) == itree)THEN
-        fturn = veg_param%tau_sap_wood(plant%pftid) * dt/one_day/one_year 
+    IF(lctlib%growthform == itree)THEN
+        fturn = lctlib%tau_sap_wood * dt/one_day/one_year 
         growth%heart_wood = fturn * plant%pool%sap_wood
         growth%sap_wood = growth%sap_wood - growth%heart_wood 
         ! Nutrient recycling
@@ -128,13 +137,13 @@ CONTAINS
 
     !> 6.0 fruit turnover to seed_bed
     !! 
-    fturn = veg_param%tau_fruit(plant%pftid) * dt/one_day/one_year 
+    fturn = lctlib%tau_fruit * dt/one_day/one_year 
     growth%seed_bed = fturn * plant%pool%fruit
     growth%fruit = growth%fruit - growth%seed_bed
 
     !> 7.0 seed-bed turnover to litter 
     !! 
-    fturn = veg_param%tau_seed_litter(plant%pftid) * dt/one_day/one_year 
+    fturn = lctlib%tau_seed_litter * dt/one_day/one_year 
     litterfall%seed_bed = fturn * plant%pool%seed_bed
 
     !> 8.0 update litter, growth and recycling of the plant class
@@ -150,14 +159,16 @@ CONTAINS
 
   END SUBROUTINE calc_turnover
 
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate fractional N recycling from leaves 
+  !!
+  !! should be made dynamically dependended on N stress later 
+  !!
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION update_nitrogen_recycling_fract(plant) RESULT (recycling)
-    !
-    ! funtion to calculate fractional N recycling from leaves 
-    !   should be made dynamically dependended on N stress later 
-    !
-    USE mo_veg_parameters
 
     IMPLICIT NONE
+
     TYPE(t_slm_plant) :: plant
     REAL(wp) :: recycling
 
@@ -165,14 +176,16 @@ CONTAINS
 
   END FUNCTION
 
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate fractional P recycling from leaves
+  !!
+  !! should be made dynamically dependended on P stress later
+  !!
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION update_phosphorus_recycling_fract(plant) RESULT (recycling)
-    !
-    ! funtion to calculate fractional P recycling from leaves 
-    !   should be made dynamically dependended on P stress later 
-    !
-    USE mo_veg_parameters
 
     IMPLICIT NONE
+
     TYPE(t_slm_plant) :: plant
     REAL(wp) :: recycling 
 

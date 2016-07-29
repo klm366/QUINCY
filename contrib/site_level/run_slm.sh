@@ -36,13 +36,13 @@ slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
 
 
 ## further variables ##
-slmNamelist="namelist.""$slmModel"
-slmBinary="$slmModel"".x"
+slmNamelist="namelist.slm"
+slmBinary="land.x"
 slmRscript="postprocessing_""$slmModel"".R"       ## just the R-Script for postprocessing output data
 
 
 ##############################################################################
-## get job & site specific data ##############################################
+## get job / site specific data ##############################################
 ##############################################################################
 siteData=0             # containing all data of the site as presented in the "$siteList" / all_site_list.dat
 # 1:Site-ID 2:lon 3:lat 4:PFT 5:start 6:end 7:lon_gmt 8:clay 9:silt 10:sand 11:awc 12:pH 13:LAI 14:Nleaf 15:SLA 16:Height 17:PlantYear
@@ -105,9 +105,9 @@ case "$pftName" in
 esac
 
 
-## manipulate the namelist ##
-# function: pass the variable_name ($1) & the new_value ($2)
-# $namelist contains the path and filename of the namelist (defined above)
+## manipulate the namelist - parameters specific to this job / site ##
+ # function: pass the variable_name ($1) & the new_value ($2)
+ # $slmNamelist refers to the namelist file name, assuming the namelist file is located in the current folder !
 function changeNamelistValue {
 oldValue=$(grep $1 ./"$slmNamelist" | awk -F "=" '{print $2}')   # get the old value that should be replaced
 lineNum=$(grep -n $1 ./"$slmNamelist" | cut -d : -f 1)           # get line number of variable $1

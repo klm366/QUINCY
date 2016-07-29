@@ -9,8 +9,9 @@
 !!
 MODULE mo_veg_phenology
 
-  USE mo_kind, ONLY: wp
-  USE mo_exception, ONLY: message_text, finish
+  USE mo_kind,          ONLY: wp, eps4
+  USE mo_exception,     ONLY: message_text, finish
+
 
   IMPLICIT NONE
 
@@ -29,34 +30,34 @@ CONTAINS
   !!      what about seasonality beyond off/on behaviour? -> implies some collaboration between
   !!      turnover rates and phenology -> should the two be linked? 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_phenology(tile, phenology_type)
+  SUBROUTINE update_phenology(tile, lctlib)
 
-    USE mo_kind,               ONLY: eps4
     USE mo_base_constants,     ONLY: dt, one_day
     USE mo_base_memory,        ONLY: t_slm_tile
-    USE mo_veg_memory
-    USE mo_atmland_constants,  ONLY: Tzero
+    USE mo_jsb_lctlib_class,   ONLY: t_lctlib_element
+    USE mo_shared_constants,   ONLY: Tzero
     USE mo_atmland_memory,     ONLY: atm2land
-    USE mo_veg_parameters,     ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
+    USE mo_veg_memory
+    USE mo_veg_constants,      ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
                                  gdd_req_max,gdd_t_air_threshold,k_gdd_dormance,t_air_senescence, & 
                                  beta_soil_flush_grass,beta_soil_flush_tree,beta_soil_senescence_tree, & 
                                  min_leaf_age
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile      !< one tile
-    INTEGER,INTENT(in) :: phenology_type                 !< type of phenology
+    TYPE(t_lctlib_element),INTENT(in)       :: lctlib    !< land-cover-type library - parameters for one pft
     ! 0.2 Local
     TYPE(t_slm_plant),POINTER               :: plant     ! plant variables per tile
     REAL(wp) :: hlp1                                     ! helper variable for tmp values
 
-    !  bi-directional pointer
+    ! bi-directional pointer
     plant => tile%plant
 
 
     !> 1.0 check growing season has started or ended
     !! 
     IF(.NOT.plant%growing_season) THEN ! If not in growing season, check whether growing season has started
-       SELECT CASE (phenology_type)
+       SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is above specified threshold
             IF(plant%moving_average%beta_soil_gs > beta_soil_flush_tree) plant%growing_season = .TRUE.
@@ -68,11 +69,11 @@ CONTAINS
             IF(plant%moving_average%t_air_week > gdd_t_air_threshold .AND. &
                plant%moving_average%beta_soil_gs > beta_soil_flush_grass) plant%growing_season = .TRUE.
          CASE DEFAULT            ! abord if here
-            WRITE(message_text,'(a,i4)') 'invalid phenology type ',phenology_type
+            WRITE(message_text,'(a,i4)') 'invalid phenology type ',lctlib%phenology_type
             CALL finish("mo_veg_phenology:update_phenology",message_text) 
        END SELECT
     ELSE                         ! If in the growing season, check whether growing season has ended
-       SELECT CASE (phenology_type)
+       SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is below given threshold AND leaves have been out a given number of days
             IF(plant%moving_average%beta_soil_gs < beta_soil_senescence_tree .AND. plant%mean_leaf_age > min_leaf_age ) & 
@@ -89,7 +90,7 @@ CONTAINS
                 plant%mean_leaf_age > min_leaf_age) &
                 plant%growing_season = .FALSE.
          CASE DEFAULT            ! abord if here
-            WRITE(message_text,'(a,i4)') 'invalid phenology type ',phenology_type
+            WRITE(message_text,'(a,i4)') 'invalid phenology type ',lctlib%phenology_type
             CALL finish("mo_veg_phenology:update_phenology",message_text) 
        END SELECT
     ENDIF   

@@ -7,7 +7,7 @@
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
 #read timestep of output file from namelist for pool & flux
-namelist=read.delim('namelist.plant',header=F,sep="=",stringsAsFactors=F)
+namelist=read.delim('namelist.slm',header=F,sep="=",stringsAsFactors=F)
 tstep_pool=trim(namelist[trim(namelist[,1])=="output_interval_pool",2])
 tstep_flux=trim(namelist[trim(namelist[,1])=="output_interval_flux",2])
 

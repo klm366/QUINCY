@@ -1,0 +1,347 @@
+!>
+!! @brief Contains routines for model init
+!!
+!! @author
+!!  Jan Engel, MPI-BGC Jena
+!!
+!! @par Revision History
+!! First version by Jan Engel (2016-07-22); starting with custom SLM init, moving to default JSBACH4 init later
+!!
+MODULE mo_jsb_model_init
+
+    USE mo_kind
+    USE mo_exception,                       ONLY: finish, message, message_text
+    ! base
+    USE mo_base_constants
+    USE mo_base_memory,                     ONLY: t_slm_tile, t_model, grid   ! 'grid ' is needed by init_slm_test_canopy
+    USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
+    USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, init_lctlib
+    ! shared
+    USE mo_shared_isotope,                  ONLY: calc_fractionation 
+    USE mo_shared_constants,                ONLY: init_shared_constants, molar_mass_N, Dwv, Dco2, Tzero
+    ! atmland
+    USE mo_atmland_constants
+    USE mo_atmland_memory
+    USE mo_atmland_forcing,                 ONLY: init_forcing 
+    USE mo_atmland_config_class,            ONLY: atmland_config
+    ! radiation
+    USE mo_rad_constants,                   ONLY: init_rad_constants
+    ! assimilation (photosynthesis)
+    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps 
+    USE mo_assimi_constants
+    USE mo_assimi_config_class,             ONLY: assimi_config
+    ! vegetation
+    USE mo_veg_constants
+    USE mo_veg_config_class,                ONLY: veg_config
+
+
+  IMPLICIT NONE
+
+  PRIVATE
+  PUBLIC :: init_model
+  PUBLIC :: time_day, time_year, ntimestep, itimestep, timestep_prop_day
+
+
+    ! variables for the driver
+    REAL(wp) :: time_day                     !< displays the 'real time' in days; time_day == 1.0 after one day has passed
+    INTEGER  :: time_year                    !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
+    INTEGER  :: ntimestep                    !< number of timesteps the model runs
+    INTEGER  :: itimestep                    !< current timestep i, looping over timesteps ntimestep
+    REAL(wp) :: timestep_prop_day            !< proportion of one day that is simulated with one timestep (dt/one_day)
+
+  INTERFACE init_model
+    MODULE PROCEDURE init_slm
+    !MODULE PROCEDURE init_model_standalone
+  END INTERFACE init_model
+
+
+CONTAINS
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> init all processes and memory of SLM
+  !!
+  !! @todo mo_jsb_model_init: processes may init themselves
+  !! 
+  !! @todo mo_jsb_model_init: move to default JSBACH4 init style
+  !!  
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_slm(model, tile) !(model_id, model_name)
+
+
+    IMPLICIT NONE
+
+    ! 0.1 InOut
+    TYPE(t_model),INTENT(inout)                 :: model      !< data structure for dynamic vegetation and soil variables
+    TYPE(t_slm_tile),INTENT(inout)              :: tile       !< data structure for dynamic vegetation and soil variables
+    ! 0.2 Local
+
+
+    ! check number of tiles, exit if more than output routines can handle
+    IF(ntile > 1) CALL finish('land_model_driver-init_routine','Number of tiles is too large, i.e. larger than 1')
+    ! 
+
+
+    !! 1 Read config paramters from namelist.plant section
+    !!
+    !!  
+    base_config%namelist_filename       = 'namelist.slm'
+    assimi_config%namelist_filename     = 'namelist.slm'
+    veg_config%namelist_filename        = 'namelist.slm'
+    atmland_config%namelist_filename    = 'namelist.slm'
+    CALL base_config%Init              ! includes base_config%slm_model_name => land plant soil canopy test_canopy
+    CALL assimi_config%Init
+    CALL veg_config%Init
+    CALL atmland_config%Init
+
+
+    !! 2 Model init
+    !!
+    !!  
+    !! 
+    model%id = 0                                    ! this is just an arbitrary value consistent with tile%owner_model_id
+    model%shortname = "slm"                         ! arbitrary name
+
+
+    !! 3 Initialise: tile, parameters (constants), plant, time
+    !! 
+    !! 
+    !! @todo land model driver: update Intel compiler to enable: init lcts of the tile via PROCEDURE Construct_jsb_lct
+    ! lcts
+    tile%lcts%id        = 2                  ! VEG_TYPE     2 == Vegetated
+    tile%lcts%name      = "veg"              ! Short name for lct
+    tile%lcts%long_name = "slm vegetation"   ! Long name for lct
+    tile%lcts%lib_id    = veg_config%pft_id  ! pftID == column number in model%lctlib == ID of lct in lctlib (JSBACH4)
+
+    ! init constants across processes and model structures
+    CALL init_base_constants          ! may be 1st of the 'init constants'
+    CALL init_shared_constants        ! may be 2nd of the 'init constants'
+    CALL init_rad_constants           ! may be 3rd of the 'init constants'
+    CALL init_atmland_constants       ! uses hourday                  defined in mo_base_constants
+    CALL init_assimi_constants        ! uses molar_mass_N, Dwv, Dco2  defined in mo_shared_constants
+    CALL init_veg_constants           ! uses Tzero                    defined in mo_shared_constants
+      ! CALL init_soil_constants
+
+    ! plant
+    CALL tile%plant%init                  ! mo_veg_memory  ==> may move to veg init (or model init ?)
+    CALL tile%plant%flux%set_zero         ! mo_veg_memory  ==> may move to veg init (or model init ?)
+    model%lctlib => init_lctlib()         ! initialize the lctlib with parameters values across PFT's
+
+    ! init time
+    time_day          = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
+    time_year         = 1                           ! the 1st year of a simulation == 1 (not zero)
+    dt                = base_config%dt              ! time step length in seconds, default: 1800.0 == 30 minutes
+    ntimestep         = base_config%Timesteps()     ! number of time steps
+    timestep_prop_day = dt/one_day                  ! proportion of one day that is simulated with one timestep
+
+
+    !! 4 run model-specific init routine  (land plant soil canopy test_canopy)
+    !! 
+    !! 
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land')
+        CALL init_slm_land(model, tile)
+      CASE('plant')
+        ! currently same as land -> calling simply 'init_slm_land'!
+        CALL init_slm_land(model, tile)
+      CASE('soil')
+        CALL finish('land_model_driver-init_routine','Nice try, but the soil model does not exist yet :) ')
+      CASE('canopy')
+        CALL init_slm_canopy(model, tile)
+      CASE('test_canopy')
+        CALL init_slm_test_canopy(model, tile)
+      CASE DEFAULT
+        CALL finish('land_model_driver-init_routine','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
+     END SELECT
+
+  END SUBROUTINE init_slm
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> init routine specific to the land model
+  !!
+  !! called from init_slm
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_slm_land(model, tile) !(model_id, model_name)
+
+    IMPLICIT NONE
+
+    ! 0.1 InOut
+    TYPE(t_model),INTENT(inout),TARGET           :: model      !< data structure for dynamic vegetation and soil variables
+    TYPE(t_slm_tile),INTENT(inout)               :: tile       !< data structure for dynamic vegetation and soil variables
+    ! 0.2 Local
+    TYPE(t_lctlib_element),POINTER               :: lctlib     !< land-cover-type library - parameter across pft's
+    REAL(wp)                                     :: hlp1
+
+    !  bi-directional pointer
+    lctlib => model%lctlib(tile%lcts%lib_id)
+
+    ! forcing
+    CALL init_forcing                       !< needs atmland_config%Init to run before
+    ! accumulation
+    CALL tile%plant%daily_average%init      !< initially sets all variables to zero or .FALSE.
+    CALL tile%plant%moving_average%init     !< init variables with reasonable default values and sets accumulation periods
+
+
+      lctlib%tjmax_opt                   = 20._wp+0.35_wp*(atm2land%t_air - Tzero)   ! conversion from K to °C
+      tile%soil%moisture                 = veg_config%soil_awc_prescribe
+      tile%soil%theta                    = veg_config%soil_theta_prescribe 
+      tile%soil%ammonium                 = 0.1_wp
+      tile%soil%phosphate                = 0.01_wp
+      tile%soil%pool%litter%nitrogen     = 5.0_wp
+      tile%plant%pftid                   = veg_config%pft_id
+      tile%plant%dens_ind                = 1.0_wp 
+      tile%plant%target_cn_leaf          = lctlib%cn_leaf
+      tile%plant%target_np_leaf          = lctlib%np_leaf
+      tile%plant%pool%reserve%carbon     = 50.0_wp
+      tile%plant%pool%reserve%nitrogen   = tile%plant%pool%reserve%carbon / &
+                                                  (1._wp + fresp_growth) / lctlib%cn_leaf
+      tile%plant%pool%reserve%phosphorus = tile%plant%pool%reserve%nitrogen / &
+                                                  lctlib%np_leaf
+      IF(lctlib%ps_pathway == ic3phot)THEN
+         hlp1 = discrimination_ps(CiCa_default_C3*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
+                                  'C13',lctlib%ps_pathway)
+      ELSE
+         hlp1 = discrimination_ps(CiCa_default_C4*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
+                                  'C13',lctlib%ps_pathway)
+      ENDIF
+      tile%plant%pool%reserve%carbon13   = calc_fractionation(atm2land%co2_mixing_ratio, & 
+                                                                     atm2land%co2_mixing_ratio_C13,hlp1) & 
+                                                  * tile%plant%pool%reserve%carbon 
+      IF(lctlib%ps_pathway == ic3phot)THEN
+         hlp1 = discrimination_ps(CiCa_default_C3*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
+                                  'C14',lctlib%ps_pathway)
+      ELSE
+         hlp1 = discrimination_ps(CiCa_default_C4*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
+                                  'C14',lctlib%ps_pathway)
+      ENDIF
+      tile%plant%pool%reserve%carbon14   = calc_fractionation(atm2land%co2_mixing_ratio, & 
+                                                                     atm2land%co2_mixing_ratio_C14,hlp1) & 
+                                                  * tile%plant%pool%reserve%carbon 
+  END SUBROUTINE init_slm_land
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> init routine specific to the canopy model
+  !!
+  !! called from init_slm
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_slm_canopy(model, tile) !(model_id, model_name)
+
+    IMPLICIT NONE
+
+    ! 0.1 InOut
+    TYPE(t_model),INTENT(inout),TARGET           :: model      !< data structure for dynamic vegetation and soil variables
+    TYPE(t_slm_tile),INTENT(inout)               :: tile       !< data structure for dynamic vegetation and soil variables
+    ! 0.2 Local
+    TYPE(t_lctlib_element),POINTER               :: lctlib     !< land-cover-type library - parameter across pft's
+    REAL(wp)                                     :: ref_lai    !< LAI
+    REAL(wp)                                     :: ref_nleaf  !< N leaf per unit leaf area in gN/m2
+
+    !  bi-directional pointer
+    lctlib => model%lctlib(tile%lcts%lib_id)
+
+    ref_lai   = 3._wp
+    ref_nleaf = 2.0_wp
+
+    ! forcing
+    CALL init_forcing                                !< needs atmland_config%Init to run before
+
+    !! 1.3 Initialise tile
+    !! 
+    !! Initialisation of soil and vegetation, so far relevant
+    lctlib%tjmax_opt     = 20._wp+0.35_wp*(atm2land%t_air - Tzero)  ! conversion from K to °C
+    tile%soil%moisture   = veg_config%soil_awc_prescribe
+    tile%soil%theta      = veg_config%soil_theta_prescribe
+    tile%plant%lai       = ref_lai 
+    IF(veg_config%pft_id==0) THEN
+      tile%plant%pool%leaf%nitrogen   = ref_nleaf / molar_mass_N * tile%plant%lai
+    ELSE
+      tile%plant%pool%leaf%nitrogen   = tile%plant%lai / & 
+                                                lctlib%sla / lctlib%cn_leaf
+      tile%plant%pool%leaf%phosphorus = tile%plant%pool%leaf%nitrogen / & 
+                                                lctlib%np_leaf
+      tile%plant%pftid                = veg_config%pft_id
+    ENDIF
+
+  END SUBROUTINE init_slm_canopy
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> init routine specific to the test_canopy model
+  !!
+  !! called from init_slm
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_slm_test_canopy(model, tile) !(model_id, model_name)
+
+    USE mo_atmland_util,     ONLY: calc_spec_humidity_sat
+
+    IMPLICIT NONE
+
+    TYPE(t_model),INTENT(inout),TARGET           :: model      !< data structure for dynamic vegetation and soil variables
+    TYPE(t_slm_tile),INTENT(inout)               :: tile       !< data structure for dynamic vegetation and soil variables
+    ! 0.2 Local
+    TYPE(t_lctlib_element),POINTER               :: lctlib     !< land-cover-type library - parameter across pft's
+
+
+    ! parameters (specific to the test_canopy model)
+    ! these parameters were also defined in mo_land_model_interface:run_test_canopy_model !!
+    REAL(wp),SAVE :: ref_t_air = 25.0_wp          ! temperature in deg C 
+    REAL(wp),SAVE :: ref_vpd = 1000._wp           ! vpd in Pa
+    REAL(wp),SAVE :: ref_swdown = 652.173913_wp   ! PAR in W m-2
+    REAL(wp),SAVE :: ref_fdiffuse = 0.2_wp        ! diffuse fraction
+    REAL(wp),SAVE :: ref_cos_angle = 1.0_wp       ! cosine of zenith angle
+    REAL(wp),SAVE :: ref_co2 = 380.0_wp           ! co2 in ppm
+    REAL(wp),SAVE :: ref_wind = 1.0_wp            ! wind in m/s
+    REAL(wp),SAVE :: ref_theta = 100._wp          ! soil water availability in %
+    REAL(wp),SAVE :: ref_lai = 3._wp              ! LAI
+    REAL(wp),SAVE :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
+    INTEGER ,SAVE :: ref_pft = 1                  ! PFT identifier
+
+    !  bi-directional pointer
+    lctlib => model%lctlib(ref_pft)
+
+
+    !> 1.1 Initalisation of met-forcing which is assumed constant 
+    !! 
+    !!  
+    atm2land%t_air            = ref_t_air + TZero 
+    atm2land%press_srf        = standard_press_srf
+    atm2land%q_air            = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - def_vpd / atm2land%press_srf * eps_vpd
+    atm2land%co2_mixing_ratio = def_co2
+    atm2land%rain             = 0.0_wp
+    atm2land%snow             = 0.0_wp
+    atm2land%swvis_srf_down   = ref_swdown
+    atm2land%swnir_srf_down   = atm2land%swvis_srf_down * 0.1_wp
+    atm2land%swpar_srf_down   = atm2land%swvis_srf_down
+    atm2land%swpar_fdiffuse   = ref_fdiffuse
+    atm2land%wind_air         = ref_wind
+    atm2land%wind_10m         = atm2land%wind_air
+    atm2land%lw_srf_down      = 0.0_wp
+    atm2land%drag_srf         = 1.0_wp
+    atm2land%t_acoef          = 0.0_wp
+    atm2land%t_bcoef          = 0.0_wp
+    atm2land%q_acoef          = 0.0_wp
+    atm2land%q_bcoef          = 0.0_wp
+    atm2land%pch              = 0.0_wp
+    atm2land%cos_zenith_angle = ref_cos_angle
+    atm2land%ga               = 0.1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
+    grid%lat                  = 50.0_wp
+    grid%lon                  = 0.0_wp
+
+    !> 1.2 Initialisation of soil and vegetation (so far relevant) 
+    !!
+    !!  
+    tile%soil%theta  = ref_theta
+    tile%plant%lai   = ref_lai 
+    IF(ref_pft==0) THEN
+      tile%plant%pool%leaf%nitrogen     = ref_nleaf / molar_mass_N * tile%plant%lai
+    ELSE
+      tile%plant%pool%leaf%nitrogen     = tile%plant%lai / lctlib%sla / lctlib%cn_leaf
+      tile%plant%pool%leaf%phosphorus   = tile%plant%pool%leaf%nitrogen / lctlib%np_leaf
+      tile%plant%pftid                  = ref_pft
+    ENDIF
+
+  END SUBROUTINE init_slm_test_canopy
+
+END MODULE mo_jsb_model_init

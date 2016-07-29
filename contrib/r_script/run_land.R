@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 # program to run SLM locally, i.e. not at the HPC
-# do NOT run this Script in contrib/r_script/ BUT cd into contrib/test_bed/plant/ and run from there !!
+# do NOT run this Script in contrib/r_script/ BUT cd into contrib/test_bed/land/ and run from there !!
 # postprocessign of output data (e.g. plot land model output): postprocessing_land.R 
 
 # prevent running this script in contrib/r_script/

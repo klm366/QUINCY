@@ -10,16 +10,22 @@
 MODULE mo_veg_soil
 
   USE mo_kind,               ONLY: wp, eps8
+  USE mo_jsb_lctlib_class,   ONLY: t_lctlib_element
   USE mo_veg_config_class,   ONLY: veg_config
+  USE mo_veg_constants
+
 
   IMPLICIT NONE
 
   PRIVATE
-
   PUBLIC :: update_vegsoil_bgc, update_vegsoil_physics, update_soil_pool
+
 
 CONTAINS
 
+  !-----------------------------------------------------------------------------------------------------
+  ! Main Task
+  ! 
   !-----------------------------------------------------------------------------------------------------
   !> routine to simulate N and P uptake from soil in the absence of a proper soil model
   !! 
@@ -27,28 +33,25 @@ CONTAINS
   !! supply N and P to maintain a certain target C:N:P of the labile pool
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_vegsoil_bgc(tile, veg_param)
+  SUBROUTINE update_vegsoil_bgc(tile, lctlib)
 
     USE mo_base_memory,      ONLY: t_slm_soil, t_slm_tile
     USE mo_veg_memory,       ONLY: t_slm_plant
     USE mo_base_constants,   ONLY: dt
-    USE mo_veg_parameters
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_veg_param), INTENT(in)       :: veg_param     !< vegetation type parameters
-    TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile          !< one tile
+    TYPE(t_lctlib_element),INTENT(in)        :: lctlib        !< land-cover-type library - parameters for one pft
+    TYPE(t_slm_tile),INTENT(inout), TARGET   :: tile          !< one tile
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER      :: soil               ! soil variables per tile
     TYPE(t_slm_plant),POINTER     :: plant              ! plant variables per tile
     REAL(wp) :: clab, nlab, plab                        ! plant labile pools of carbon, nitrogen and phosphorus
-    INTEGER  :: pftid                                   ! ID of the pft
 
     !  bi-directional pointer
     plant => tile%plant
     soil  => tile%soil
 
-    pftid = plant%pftid
 
     !> 1.0 IF: root and demand based N/P uptake   
     !! 
@@ -78,25 +81,25 @@ CONTAINS
       !> 1.3 calculate N, P uptake according to OCN 
       !! 
       !!
-      plant%flux%uptake_n = veg_param%vmax_uptake_n(pftid) * &
+      plant%flux%uptake_n = lctlib%vmax_uptake_n * &
               plant%moving_average%demand_uptake_n * & 
-              soil%ammonium * ( veg_param%soil_n_aff1(pftid) + & 
-                1._wp / ( veg_param%soil_n_aff2(pftid) + soil%ammonium )) * & 
+              soil%ammonium * ( lctlib%soil_n_aff1 + & 
+                1._wp / ( lctlib%soil_n_aff2 + soil%ammonium )) * & 
               plant%pool%fine_root%carbon
-      plant%flux%uptake_p = veg_param%vmax_uptake_p(pftid) * & 
+      plant%flux%uptake_p = lctlib%vmax_uptake_p * & 
               plant%moving_average%demand_uptake_p * & 
-              soil%phosphate * ( veg_param%soil_p_aff1(pftid) + & 
-                1._wp / ( veg_param%soil_p_aff2(pftid) + soil%phosphate )) * & 
+              soil%phosphate * ( lctlib%soil_p_aff1 + & 
+                1._wp / ( lctlib%soil_p_aff2 + soil%phosphate )) * & 
               plant%pool%fine_root%carbon
 
     !> 2.0 ELSE: maintain prescribed C:N:P irrespective of nutrient uptake capacity == no nutrient limitation case 
     !! 
     ELSE
       ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
-      plant%flux%uptake_n = MAX(plant%pool%labile%carbon / veg_param%cn_leaf(pftid) - & 
+      plant%flux%uptake_n = MAX(plant%pool%labile%carbon / lctlib%cn_leaf - & 
                                         plant%pool%labile%nitrogen, 0.0_wp) * 1.e6 / dt
       ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
-      plant%flux%uptake_p = MAX(plant%pool%labile%nitrogen / veg_param%np_leaf(pftid) + & 
+      plant%flux%uptake_p = MAX(plant%pool%labile%nitrogen / lctlib%np_leaf + & 
                                            plant%flux%uptake_n * dt / 1.e6 - &
                                            plant%pool%labile%phosphorus, 0.0_wp) * 1.e6 / dt
 
@@ -104,44 +107,44 @@ CONTAINS
 
     !> 3.0 Calculate potential N uptake per unit root
     !!
-    plant%flux%unit_uptake_n = veg_param%vmax_uptake_n(pftid) * &
+    plant%flux%unit_uptake_n = lctlib%vmax_uptake_n * &
                                plant%moving_average%demand_uptake_n * & 
-                               soil%ammonium * ( veg_param%soil_n_aff1(pftid) + & 
-                               1._wp / ( veg_param%soil_n_aff2(pftid) + soil%ammonium ))
-    plant%flux%unit_uptake_p = veg_param%vmax_uptake_p(pftid) * &
+                               soil%ammonium * ( lctlib%soil_n_aff1 + & 
+                               1._wp / ( lctlib%soil_n_aff2 + soil%ammonium ))
+    plant%flux%unit_uptake_p = lctlib%vmax_uptake_p * &
                                plant%moving_average%demand_uptake_p * & 
-                               soil%phosphate * ( veg_param%soil_p_aff1(pftid) + & 
-                               1._wp / ( veg_param%soil_p_aff2(pftid) + soil%phosphate ))
+                               soil%phosphate * ( lctlib%soil_p_aff1 + & 
+                               1._wp / ( lctlib%soil_p_aff2 + soil%phosphate ))
 
   END SUBROUTINE update_vegsoil_bgc
 
- !-----------------------------------------------------------------------------------------------------
-  !> routine to update soil litter and mineral pools
-  !! @todo add C and P pools. Add proper decomposition
   !-----------------------------------------------------------------------------------------------------
-
-  SUBROUTINE update_soil_pool(tile, veg_param)
+  ! Main Task
+  ! 
+  !-----------------------------------------------------------------------------------------------------
+  !> routine to update soil litter and mineral pools
+  !! 
+  !! @todo add C and P pools, add proper decomposition: mo_veg_soil:update_soil_pool
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE update_soil_pool(tile, lctlib)
 
     USE mo_base_memory,      ONLY: t_slm_soil, t_slm_tile
     USE mo_base_constants,   ONLY: dt
     USE mo_veg_memory,       ONLY: t_slm_plant
-    USE mo_veg_parameters
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_veg_param), INTENT(in)       :: veg_param     !< vegetation type parameters
-    TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile          !< one tile
+    TYPE(t_lctlib_element),INTENT(in)         :: lctlib        !< land-cover-type library - parameters for one pft
+    TYPE(t_slm_tile),INTENT(inout), TARGET    :: tile          !< one tile
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER      :: soil               ! soil variables per tile
     TYPE(t_slm_plant),POINTER     :: plant              ! plant variables per tile
-    INTEGER  :: pftid                                   ! ID of the pft
     REAl(wp) :: soil_depth = 1.0 ! soil depth, m
 
     !  bi-directional pointer
     plant => tile%plant
     soil  => tile%soil
 
-    pftid = plant%pftid
 
     !> 1 Calculate soil litter pool decomposition. Currently only for N
     !!    
@@ -162,15 +165,19 @@ CONTAINS
 !SZ BLARPP. check units
     soil%ammonium = soil%ammonium   + soil%flux%loss%litter%nitrogen*dt*  1.e3 / soil_depth * 1.e-3
     soil%ammonium = soil%ammonium   - plant%flux%uptake_n * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
-    soil%ammonium = soil%ammonium   + veg_param%bnf_base(plant%pftid) * dt * 1.e3 / soil_depth * 1.e-3
+    soil%ammonium = soil%ammonium   + lctlib%bnf_base * dt * 1.e3 / soil_depth * 1.e-3
     !soil%phosphate = soil%phosphate + soil%flux%loss%litter%phosphorus*dt*  1.e3 / soil_depth * 1.e-3
     !soil%phosphate = soil%phosphate - plant%flux%uptake_p * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
 
     END SUBROUTINE update_soil_pool
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Main Task
+  ! 
   !-----------------------------------------------------------------------------------------------------
   !> update soil moisture and theta for the plant only model
   !! 
-  !! two cases considered: a) dynamic water uptake calculation, b) prescribed values from namelist
+  !! two cases considered: \n a) dynamic water uptake calculation, \n b) prescribed values from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_vegsoil_physics(tile)
 

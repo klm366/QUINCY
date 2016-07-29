@@ -11,8 +11,10 @@ MODULE mo_veg_respiration
 
   USE mo_kind
 
-  PRIVATE
 
+  IMPLICIT NONE
+
+  PRIVATE
   PUBLIC :: calc_maintenance_respiration,temperature_response_respiration
 
 CONTAINS
@@ -27,7 +29,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION temperature_response_respiration(temp) RESULT(temp_response)
 
-    USE mo_veg_parameters, ONLY: t_maint_k1, t_maint_k2, t_maint_k3
+    USE mo_veg_constants, ONLY: t_maint_k1, t_maint_k2, t_maint_k3
 
     IMPLICIT NONE
 
@@ -53,7 +55,7 @@ CONTAINS
                                fine_root_nitrogen,coarse_root_nitrogen) & 
                                RESULT(maint_respiration)
 
-    USE mo_veg_parameters, ONLY: fmaint_rate_base
+    USE mo_veg_constants, ONLY: fmaint_rate_base
 
     IMPLICIT NONE
 

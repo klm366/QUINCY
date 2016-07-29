@@ -9,8 +9,9 @@
 !!
 MODULE mo_atmland_constants
 
-  USE mo_kind, ONLY: wp
-  USE mo_base_constants, ONLY: hourday
+  USE mo_kind,            ONLY: wp
+
+  IMPLICIT NONE
 
   ! orbital parameters (not calculated - do I need to include this dynamically later?)
   REAL(wp),SAVE :: eccentricity                !< eccentricity of the Earth's orbit
@@ -34,7 +35,6 @@ MODULE mo_atmland_constants
 
   ! conversion factors
   REAL(wp),SAVE :: sw2par                      !< W / µmol / s
-  REAL(wp),SAVE :: Tzero                       !< melting point in K
   REAL(wp),SAVE :: standard_press_srf          !< standard pressure in Pa
   REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
 
@@ -50,7 +50,8 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: def_co2_deltaC14            !< molar mixing ratio of 14C / 12C of atmospheric CO2 
   REAL(wp),SAVE :: def_wind                    !< wind in m/s
 
-  PUBLIC :: init_atmland_constants
+
+  PUBLIC
  
 CONTAINS
 
@@ -61,55 +62,58 @@ CONTAINS
   !! diurnal temperature calculation, conversion factors, default values
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_atmland_constants
-  IMPLICIT NONE
-  ! 
-  ! initialise Earth's orbit
-  !  
-  obliquity = 23.446_wp
-  perihel = 102.04_wp
-  eccentricity = 0.016724_wp
-  solstice = 174.0_wp   ! 23rd June
-  !
-  ! initialise solar angle calculation
-  !
-  angle_at_GMT = .FALSE.
-  reference_longitude_GMT = 0.0_wp
-  min_cos_zenith_angle = 0.02_wp ! in JSBACH they use: mo_bethy_constants.f90:  REAL(dp), PARAMETER :: ZenithMinPar = 1.E-3_dp
-  ! 
-  ! initialise solar constant
-  ! 
-  solar_constant = 1370.0_wp
-  ! 
-  ! initalise diffuse fraction calculation
-  k1_fdiff = 1.0045_wp
-  k2_fdiff = 0.0435_wp
-  k3_fdiff = -3.5227_wp
-  k4_fdiff = 2.6313_wp
-  min_sw_fdiffuse = 0.1667_wp 
-  max_transmission_fdiff = 0.75_wp
-  ! 
-  ! initialise diurnal temperature calculation
-  min_daylength = 4._wp / hourday
-  tmp_peak_time = 14.0_wp / hourday
-  dusk_time = 1.0_wp / hourday
-  ! 
-  ! conversion factors
-  sw2par              = 2.3_wp  
-  Tzero               = 273.15_wp  
-  standard_press_srf  = 101300.0_wp  
-  eps_vpd             = 0.622_wp  
-  ! 
-  ! default values
-  def_t_air = 298.15_wp
-  def_vpd = 1000._wp   
-  def_rh = 0.8_wp      
-  def_swdown = 652.173913_wp
-  def_fdiffuse = 0.2_wp     
-  def_cos_angle = 1.0_wp    
-  def_co2 = 380.0_wp        
-  def_co2_deltaC13 = -7.5_wp 
-  def_co2_deltaC14 = -14.9_wp
-  def_wind = 1.0_wp         
+
+    USE mo_base_constants,  ONLY: hourday
+
+    IMPLICIT NONE
+
+    ! 
+    ! initialise Earth's orbit
+    !  
+    obliquity = 23.446_wp
+    perihel = 102.04_wp
+    eccentricity = 0.016724_wp
+    solstice = 174.0_wp   ! 23rd June
+    !
+    ! initialise solar angle calculation
+    !
+    angle_at_GMT = .FALSE.
+    reference_longitude_GMT = 0.0_wp
+    min_cos_zenith_angle = 0.02_wp ! in JSBACH they use: mo_bethy_constants.f90:  REAL(dp), PARAMETER :: ZenithMinPar = 1.E-3_dp
+    ! 
+    ! initialise solar constant
+    ! 
+    solar_constant = 1370.0_wp
+    ! 
+    ! initalise diffuse fraction calculation
+    k1_fdiff = 1.0045_wp
+    k2_fdiff = 0.0435_wp
+    k3_fdiff = -3.5227_wp
+    k4_fdiff = 2.6313_wp
+    min_sw_fdiffuse = 0.1667_wp 
+    max_transmission_fdiff = 0.75_wp
+    ! 
+    ! initialise diurnal temperature calculation
+    min_daylength = 4._wp / hourday
+    tmp_peak_time = 14.0_wp / hourday
+    dusk_time = 1.0_wp / hourday
+    ! 
+    ! conversion factors
+    sw2par              = 2.3_wp  
+    standard_press_srf  = 101300.0_wp  
+    eps_vpd             = 0.622_wp  
+    ! 
+    ! default values
+    def_t_air = 298.15_wp
+    def_vpd = 1000._wp   
+    def_rh = 0.8_wp      
+    def_swdown = 652.173913_wp
+    def_fdiffuse = 0.2_wp     
+    def_cos_angle = 1.0_wp    
+    def_co2 = 380.0_wp        
+    def_co2_deltaC13 = -7.5_wp 
+    def_co2_deltaC14 = -14.9_wp
+    def_wind = 1.0_wp         
 
   END SUBROUTINE init_atmland_constants
 

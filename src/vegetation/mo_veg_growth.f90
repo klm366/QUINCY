@@ -10,11 +10,13 @@
 MODULE mo_veg_growth
 
   USE mo_kind
-  USE mo_exception,          ONLY: message_text, finish
+  USE mo_exception,             ONLY: message_text, finish
   USE mo_base_constants
-  USE mo_atmland_memory,     ONLY: atm2land, land2atm
+  USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+  USE mo_atmland_memory,        ONLY: atm2land, land2atm
   USE mo_veg_memory
-  USE mo_veg_config_class,   ONLY: veg_config
+  USE mo_veg_constants
+  USE mo_assimi_config_class,   ONLY: assimi_config
 
   PRIVATE
 
@@ -26,19 +28,19 @@ CONTAINS
   !> calculate plant growth (flux\%growth)
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_growth (theta, plant, veg_param)
+  SUBROUTINE calc_growth (tile, lctlib)
 
+    USE mo_base_memory,         ONLY: t_slm_tile
     USE mo_veg_memory
-    USE mo_veg_parameters
-    USE mo_shared_memory,   ONLY: t_element
+    USE mo_shared_memory,       ONLY: t_element
 
     IMPLICIT NONE
 
     ! 0.1 InOut
-    REAL(wp), INTENT(in)             :: theta                      !< soil moisture (%)
-    TYPE(t_slm_plant), INTENT(inout) :: plant                      !< plant structure
-    TYPE(t_slm_veg_param),INTENT(in) :: veg_param                  !< vegetation type parameters
+    TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile      !< one tile
+    TYPE(t_lctlib_element),INTENT(in)       :: lctlib    !< land-cover-type library - parameters for one pft
     ! 0.2 Local
+    TYPE(t_slm_plant),POINTER               :: plant     ! plant variables per tile
     TYPE(t_slm_veg_pool) :: falloc                                 ! fractional allocation to pools
     REAL(wp) :: growth_req_n,growth_req_p                          ! N and P reqiurement of growth (mol N / P per mol C)
     REAL(wp) :: target_lai                                         ! LAI implied from sap wood area 
@@ -51,15 +53,19 @@ CONTAINS
     REAL(wp) :: diameter,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio
     REAl(wp) :: k1_opt, k2_opt
 
+    ! bi-directional pointer
+    plant => tile%plant
+
+
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    tau_labile_pot = meristem_activity(atm2land%t_air,theta,plant%growing_season)
+    tau_labile_pot = meristem_activity(atm2land%t_air,tile%soil%theta,plant%growing_season)
   
     !> 2.0 update target C:N:P for each tissue type
     !! 
     !! 
-    CALL update_stoichiometry(plant,veg_param%growthform(plant%pftid), & 
+    CALL update_stoichiometry(plant,lctlib%growthform, & 
                               target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, & 
                               target_cn_fruit,target_np_fine_root,target_np_coarse_root, & 
                               target_np_sap_wood,target_np_fruit)
@@ -69,8 +75,8 @@ CONTAINS
     !! 
     CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind,plant%moving_average%allometry_labile%carbon,&
          plant%moving_average%allometry_labile%nitrogen, plant%moving_average%allometry_labile%phosphorus,&
-         veg_param%wood_density(plant%pftid), veg_param%sla(plant%pftid),veg_param%allom_k1(plant%pftid),veg_param%allom_k2(plant%pftid), & 
-         veg_param%k_latosa(plant%pftid),veg_param%k_rtos(plant%pftid),veg_param%growthform(plant%pftid), & 
+         lctlib%wood_density, lctlib%sla,lctlib%allom_k1,lctlib%allom_k2, & 
+         lctlib%k_latosa,lctlib%k_rtos,lctlib%growthform, & 
          plant%moving_average%growth_cn_plant,plant%moving_average%growth_cp_plant, plant%moving_average%unit_npp,&
          plant%moving_average%unit_uptake_n,plant%moving_average%unit_uptake_p, &
          plant%moving_average%allometry_npp,diameter,height,dheight,leaf2sapwood_mass_ratio, & 
@@ -84,8 +90,8 @@ CONTAINS
                               plant%moving_average%maint_respiration_week, &
                               plant%moving_average%growth_req_n_week, &
                               plant%moving_average%growth_req_p_week, &
-                              veg_param%sla(plant%pftid), &
-                              veg_param%tau_leaf(plant%pftid),veg_param%tau_fine_root(plant%pftid), & 
+                              lctlib%sla, &
+                              lctlib%tau_leaf,lctlib%tau_fine_root, & 
                               plant%target_cn_leaf, target_cn_fine_root, & 
                               plant%target_np_leaf, target_np_fine_root, plant%moving_average%leaf2root_mass_ratio, &
                               plant%lai,target_lai, &
@@ -97,9 +103,9 @@ CONTAINS
     !! 
     CALL calc_allocation_fraction(tau_labile_pot,plant%pool%leaf%carbon,plant%pool%sap_wood%carbon, &
          plant%pool%coarse_root%carbon,plant%pool%fine_root%carbon,plant%pool%labile%carbon,&
-         veg_param%growthform(plant%pftid), &
+         lctlib%growthform, &
          height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio, & 
-         veg_param%k_crtos(plant%pftid),k1_opt,k2_opt,veg_param%k_max_falloc_fruit(plant%pftid),& 
+         lctlib%k_crtos,k1_opt,k2_opt,lctlib%k_max_falloc_fruit,& 
          plant%target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, &
          target_cn_fruit,plant%target_np_leaf,target_np_fine_root,target_np_coarse_root, &
          target_np_sap_wood,target_np_fruit,plant%flux%reserve_use%carbon, & 
@@ -129,14 +135,13 @@ CONTAINS
   SUBROUTINE calc_partitioning(tau_labile_pot,falloc,plant) 
 
     USE mo_shared_memory,    ONLY: t_element
-    USE mo_veg_respiration, ONLY: calc_maintenance_respiration
-    USE mo_veg_parameters
+    USE mo_veg_respiration,  ONLY: calc_maintenance_respiration
 
     IMPLICIT NONE
     ! 0.1 InOut
-    REAL(wp),INTENT(in)         :: tau_labile_pot            !< potential labile pool turnover (1/day) 
-    TYPE(t_slm_veg_pool), INTENT(in) :: falloc               !< allocation coefficients 
-    TYPE(t_slm_plant),INTENT(inout),TARGET :: plant
+    REAL(wp),INTENT(in)                     :: tau_labile_pot       !< potential labile pool turnover (1/day) 
+    TYPE(t_slm_veg_pool), INTENT(in)        :: falloc               !< allocation coefficients 
+    TYPE(t_slm_plant),INTENT(inout),TARGET  :: plant                !< plant structure
     ! 0.2 Local
     REAL(wp)                  :: tau_labile                ! actual turnover time of labile pool (1/day)
     TYPE(t_element),POINTER :: growth
@@ -237,15 +242,38 @@ CONTAINS
   !! @todo: calc_allocation_fraction: check calculation of b_inc. Currently a fixed value for stability,
   !!        Needs to be adjusted to better match prescriebed allometry and to account for falloc_fruit
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_allocation_fraction(tau_labile_pot,leaf_carbon,sap_wood_carbon,coarse_root_carbon,root_carbon,labile_carbon, &
-                              growthform,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio,coarse_root2sapwood_ratio, & 
-                              k1_opt, k2_opt,k_max_falloc_fruit,target_cn_leaf,target_cn_fine_root,target_cn_coarse_root, & 
-                              target_cn_sap_wood,target_cn_fruit,target_np_leaf,target_np_fine_root, & 
-                              target_np_coarse_root,target_np_sap_wood,target_np_fruit,reserve_use_carbon,falloc,growth_req_n,& 
-                              growth_req_p)
+  SUBROUTINE calc_allocation_fraction(tau_labile_pot, &
+                                      leaf_carbon, &
+                                      sap_wood_carbon, &
+                                      coarse_root_carbon, &
+                                      root_carbon, &
+                                      labile_carbon, &
+                                      growthform, &
+                                      height, &
+                                      dheight, &
+                                      leaf2sapwood_mass_ratio, &
+                                      leaf2root_mass_ratio, &
+                                      coarse_root2sapwood_ratio, & 
+                                      k1_opt, &
+                                      k2_opt, &
+                                      k_max_falloc_fruit, &
+                                      target_cn_leaf, &
+                                      target_cn_fine_root, &
+                                      target_cn_coarse_root, & 
+                                      target_cn_sap_wood, &
+                                      target_cn_fruit, &
+                                      target_np_leaf, &
+                                      target_np_fine_root, & 
+                                      target_np_coarse_root, &
+                                      target_np_sap_wood, &
+                                      target_np_fruit, &
+                                      reserve_use_carbon, &
+                                      falloc, &
+                                      growth_req_n, & 
+                                      growth_req_p)
 
     USE mo_veg_memory,     ONLY: t_slm_veg_pool
-    USE mo_veg_parameters, ONLY: itree, igrass, lambda_fruit_alloc, weibull_k_fruit_alloc, min_falloc_fruit, offset_fruit_alloc
+    USE mo_veg_constants,  ONLY: itree, igrass, lambda_fruit_alloc, weibull_k_fruit_alloc, min_falloc_fruit, offset_fruit_alloc
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -331,8 +359,8 @@ CONTAINS
           wood_carbon = sap_wood_carbon + coarse_root_carbon
 
           !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> 
-          !! rewrite "IF (veg_config\%flag_optimal_allocation)" such that instead of kopt1 and 2 leaf2root_mass ratio can be given
-          IF (veg_config%flag_optimal_allocation) THEN
+          !! rewrite "IF (assimi_config\%flag_optimal_allocation)" such that instead of kopt1 and 2 leaf2root_mass ratio can be given
+          IF (assimi_config%flag_optimal_allocation) THEN
 
              !> 1.2a Calculate allocation fractions assuming optimal relationship between leaf and root allocation
              !! 
@@ -383,7 +411,7 @@ CONTAINS
       !> 1.2 grass
       !!
       CASE(igrass)
-         IF (veg_config%flag_optimal_allocation) THEN
+         IF (assimi_config%flag_optimal_allocation) THEN
             leaf_carbon_inc = MAX((b_inc - k1_opt - leaf_carbon/leaf2sapwood_mass_ratio + root_carbon + &
                  sap_wood_carbon) / (1 + k2_opt + 1/leaf2sapwood_mass_ratio), 0.0_wp)
             root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
@@ -484,17 +512,18 @@ CONTAINS
 
   END SUBROUTINE calc_allocation_fraction
 
-    ! ------------------------------------------------------------------------------------------
-    !> Routine to calculate the target stoichiometry of the newly growth tissue
-    !! 
-    !! Includes optimal CN ratio calculation \n
-    !! Output: target stoichiometries
-    ! --------------------------------------------------------------------------------------------
+  ! ------------------------------------------------------------------------------------------
+  !> Routine to calculate the target stoichiometry of the newly growth tissue
+  !! 
+  !! Includes optimal CN ratio calculation \n
+  !! Output: target stoichiometries
+  ! --------------------------------------------------------------------------------------------
   SUBROUTINE update_stoichiometry(plant,growthform,target_cn_fine_root,target_cn_coarse_root, & 
                               target_cn_sap_wood,target_cn_fruit,target_np_fine_root, & 
                               target_np_coarse_root,target_np_sap_wood,target_np_fruit)
 
-    USE mo_veg_parameters
+    USE mo_assimi_constants,     ONLY: delta_n_leaf
+
     IMPLICIT NONE
     ! 0.1 InOut
     INTEGER, INTENT(in)              :: growthform             !< plant growth form
@@ -511,7 +540,7 @@ CONTAINS
 
     !> 1.0 calculate optimal allocation fractions
     !! 
-    IF (veg_config%flag_optimal_Nleaf.AND.plant%growing_season) THEN
+    IF (assimi_config%flag_optimal_Nleaf.AND.plant%growing_season) THEN
        ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
        plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - plant%leaf_cn_direction * delta_n_leaf)
     ENDIF
@@ -554,8 +583,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION meristem_activity(t_air,theta,growing_season) RESULT(tau_labile_pot)
 
-    USE mo_atmland_constants, ONLY: Tzero
-    USE mo_veg_parameters,    ONLY: lambda_tau_labile_temp, weibull_k_tau_labile_temp, & 
+    USE mo_shared_constants,  ONLY: Tzero
+    USE mo_veg_constants,     ONLY: lambda_tau_labile_temp, weibull_k_tau_labile_temp, & 
                                     lambda_tau_labile_theta,weibull_k_tau_labile_theta,tau_labile_default
     IMPLICIT NONE
     ! 0.1 InOut
@@ -596,7 +625,7 @@ CONTAINS
        diameter,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio,target_lai, k1_opt, k2_opt)
     
     USE mo_base_constants, ONLY: pi
-    USE mo_veg_parameters, ONLY: min_height, itree, igrass, sm2lm_grass, target_lai_max
+    USE mo_veg_constants,  ONLY: min_height, itree, igrass, sm2lm_grass, target_lai_max
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp),INTENT(in)  :: sap_wood_carbon         !< woody biomass of an individual tree (mol C)
@@ -662,7 +691,7 @@ CONTAINS
         ! full leaf area implied by current sapwood area
         target_lai = sap_wood_carbon * k_latosa / wood_density / height
 
-        IF (veg_config%flag_optimal_allocation) THEN
+        IF (assimi_config%flag_optimal_allocation) THEN
            !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
            !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
            !! NPP = gN * R * cn_plant
@@ -693,7 +722,7 @@ CONTAINS
          ! leaf to stem mass ratio
          leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
          ! leaf:root ratio
-         IF (veg_config%flag_optimal_allocation) THEN
+         IF (assimi_config%flag_optimal_allocation) THEN
             !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
             !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
             !! NPP = gN * R * cn_plant
@@ -736,7 +765,6 @@ CONTAINS
                                RESULT (reserve_use)
 
     USE mo_shared_memory,    ONLY: t_element
-    USE mo_veg_parameters
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -887,7 +915,8 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE calc_nutrient_recycling(plant, target_cn_fine_root, target_np_fine_root)
 
-    USE mo_veg_parameters, ONLY: tau_canopy_acclimation, tau_labile_default
+    USE mo_veg_constants, ONLY: tau_canopy_acclimation, tau_labile_default
+
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_plant), INTENT(inout) :: plant                    !< plant object

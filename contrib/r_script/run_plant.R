@@ -15,12 +15,12 @@ if (length(wrongFolder) > 0) {
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
 # message
-print(" running model simulations !")
+print(" running plant-model simulations (using land.x) !")
 
 # run plant.x
 make=read.delim('../../../util/Make.inc.local',header=F,sep="=",stringsAsFactors=F)
 comp=trim(make[trim(make[,1])=="COMP",2])
-system(paste("../../../",comp,"/bin/plant.x",sep=''))
+system(paste("../../../",comp,"/bin/land.x",sep=''))
 
 # call postprocessing_plant.R 
 system("Rscript ./postprocessing_plant.R")

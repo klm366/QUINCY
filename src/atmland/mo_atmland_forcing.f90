@@ -38,9 +38,13 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_forcing
 
-    USE mo_base_memory,   ONLY: grid
+    USE mo_base_memory,             ONLY: grid
+    USE mo_shared_constants,        ONLY: Tzero
+
     IMPLICIT NONE
-    REAL(wp) :: C13C12_mixing_ratio,C14C_mixing_ratio
+
+    REAL(wp) :: C13C12_mixing_ratio, &
+                C14C_mixing_ratio
 
     !> Initialization of temperatures
     !! 

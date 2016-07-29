@@ -40,13 +40,13 @@ CONTAINS
 
   IMPLICIT NONE
 
-    pi = 4.0_wp * ATAN(1.0_wp)
+    pi      = 4.0_wp * ATAN(1.0_wp)
     deg2rad = pi / 180.0_wp
 
     canopy_layer_depth(:) = 0.5_wp
 
-    one_day = 86400._wp
-    one_year = 365._wp
+    one_day   = 86400._wp
+    one_year  = 365._wp
   END SUBROUTINE init_base_constants
 
 END MODULE mo_base_constants

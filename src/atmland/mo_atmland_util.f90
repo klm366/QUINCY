@@ -63,19 +63,22 @@ CONTAINS
 
   END FUNCTION calc_solar_angle
 
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate the fraction of diffuse light in the shortwave downward flux at the surface
+  !!
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_sw_fdiffuse(sw_srf_down,sw_toa_down,cos_zenith_angle) RESULT(sw_fdiffuse)
-    ! function to calculate the fraction of diffuse light in the shortwave downward flux
-    ! at the surface
+
     USE mo_atmland_constants, ONLY : k1_fdiff,k2_fdiff,k3_fdiff,k4_fdiff,max_transmission_fdiff, & 
                                      min_sw_fdiffuse, min_cos_zenith_angle
     IMPLICIT NONE
-    ! 0.1 Input
-    REAL(wp) :: sw_srf_down           ! surface downward shortwave radiation flux
-    REAL(wp) :: sw_toa_down           ! top-of-atmoshere downward shortwave radiation flux
-    REAL(wp) :: cos_zenith_angle      ! cosine of solar zenith angle
-    ! 0.3 Output
-    REAL(wp) :: sw_fdiffuse           ! fraction of surface downward radiation flux that is diffuse
-    ! 0.4 Local
+    ! 0.1 InOut
+    REAL(wp) :: sw_srf_down           !< surface downward shortwave radiation flux
+    REAL(wp) :: sw_toa_down           !< top-of-atmoshere downward shortwave radiation flux
+    REAL(wp) :: cos_zenith_angle      !< cosine of solar zenith angle
+    REAL(wp) :: sw_fdiffuse           !< fraction of surface downward radiation flux that is diffuse
+    ! 0.2 Local
     REAL(wp) :: transmission          ! fraction of radiation reaching surface
 
     IF(cos_zenith_angle >= min_cos_zenith_angle) THEN  ! only if zenith angle is larger then min_cos_zenith_angle
@@ -97,18 +100,23 @@ CONTAINS
 
   END FUNCTION calc_sw_fdiffuse
 
+  !-----------------------------------------------------------------------------------------------------
+  !> calculation of atmospheric water content at saturation
+  !!
+  !! constants for the calculation of atmospheric water content at saturation
+  !! from Campell and Norman's Introduction to Environmental Biophysics
+  !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_spec_humidity_sat(temp,press_srf) RESULT(q_sat)
-        ! constants for the calculation of atmospheric water content at saturation
-        ! from Campell and Norman's Introduction to Environmental Biophysics
-     USE mo_kind, ONLY: wp
-     USE mo_atmland_constants, ONLY: eps_vpd, Tzero
-     IMPLICIT NONE 
-     ! 0.1 Input
-     REAL(wp), INTENT(in) :: temp            ! temperature (K)
-     REAL(wp), INTENT(in) :: press_srf       ! atmospheric pressure (Pa) 
-     ! 0.3 Output 
-     REAL(wp) :: q_sat           ! saturating specific humidity (g/g) 
-     ! 0.4 Local
+
+    USE mo_atmland_constants,       ONLY: eps_vpd
+    USE mo_shared_constants,        ONLY: Tzero
+
+    IMPLICIT NONE 
+     ! 0.1 InOut
+     REAL(wp), INTENT(in) :: temp            !< temperature (K)
+     REAL(wp), INTENT(in) :: press_srf       !< atmospheric pressure (Pa) 
+     REAL(wp)             :: q_sat           !< saturating specific humidity (g/g) 
+     ! 0.2 Local
      REAL(wp) :: esat            ! saturating vapour pressure (Pa)
      REAL(wp) :: a               ! Pa
      REAL(wp) :: b               ! einheitenlos
@@ -124,28 +132,32 @@ CONTAINS
 
   END FUNCTION calc_spec_humidity_sat
 
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate declination for a given day as a function of orbital parameters
+  !!
+  !! given this, the potential shortwave radiation at the top of the atmosphere is also calculated \n
+  !! the implementation here is taken from ORCHIDEE, as described in 
+  !! the PhD thesis of Marie-France Loutre, ASTR-UCL, Belgium, 1993
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_orbital_parameters(time,declination,sw_toa_down) 
-    ! subroutine to calculate declination for a given day as a function of orbital parameters
-    ! given this, the potential shortwave radiation at the top of the atmosphere is also calculated
-    ! the implementation here is taken from ORCHIDEE, as described in 
-    ! the PhD thesis of Marie-France Loutre, ASTR-UCL, Belgium, 1993
 
-    USE mo_base_constants, ONLY : deg2rad 
-    USE mo_atmland_constants, ONLY : obliquity,perihel,eccentricity,solar_constant
+    USE mo_base_constants,        ONLY : deg2rad 
+    USE mo_atmland_constants,     ONLY : obliquity, perihel, eccentricity, solar_constant
 
     IMPLICIT NONE
-    ! 0.1 Input
-    REAL(wp),INTENT(in) :: time              ! days since January 1st
-    ! 0.3 Output
-    REAL(wp),INTENT(out) :: declination      ! solar declination 
-    REAL(wp),INTENT(out) :: sw_toa_down      ! shortwave downward flux at the top of the atmosphere (W m-2) 
-    ! 0.4 Local
+    ! 0.1 InOut
+    REAL(wp),INTENT(in) :: time              !< days since January 1st
+    REAL(wp),INTENT(out) :: declination      !< solar declination 
+    REAL(wp),INTENT(out) :: sw_toa_down      !< shortwave downward flux at the top of the atmosphere (W m-2) 
+    ! 0.2 Local
     REAL(wp) :: so                           ! sine of obliquity
     REAL(wp) :: sd,cd                        ! sine and cosine of declination
     REAL(wp) :: xl,xllp                      ! perihel in radians
     REAL(wp) :: xee,xse                      ! helper variables for eccentricity calculation
     REAL(wp) :: ranm,rlam,xlam,dlamm,ranv    ! helper variables for anomaly calculation of eath orbit
     REAL(wp) :: dist                         ! distance sun-Earth for potential radiation calculation 
+
+
     ! 
     ! 1.0 calculate orbital parameters
     ! 

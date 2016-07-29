@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## 20160603
+## 20160726
 ##
 ## > prepare and start run_slm.sh script to run SLM simulations across multiple sites
 ## > the prep_run_slm.sh & run_slm-sh should be located in trunk/contrib/site_level/ (same for any branch)
@@ -17,10 +17,10 @@ experimentalID=""         # set something useful for you (allowed only: alphanum
 # select sites: FLUXNET or CRUNCEPv5
 siteCompilation="c"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="yes"          # set either to yes or no (small caps)
+customSiteList="no"          # set either to yes or no (small caps)
 customSiteListFileName="benchmark_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
-# specify SLM model
-slmModel="plant"             # plant and canopy are currently available
+# specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
+slmModel="land"             # land, plant are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
 singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteCompilation
 
@@ -60,7 +60,7 @@ return 0
 # lists to validate against
 validateSiteCompilation="f c"
 validateCustomSiteList="yes no"
-validateSlmModel="plant canopy" # land"
+validateSlmModel="land plant"  # soil canopy
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
 
@@ -68,8 +68,9 @@ validateEmailNotification="yes no"
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 mkdir -p "$bgiScratchUserFold"
-slmBinary="../../x86_64-intel/bin/""$slmModel"".x"
-slmNamelist="../namelist/namelist.""$slmModel"
+slmBinary="../../x86_64-intel/bin/land.x"                  ## just one binary for all models
+slmNamelistFilename="namelist.slm"
+slmNamelist="../namelist/""$slmNamelistFilename"           ## just one namelist for all models
 slmRscript="../r_script/postprocessing_""$slmModel"".R"    ## just the R-Script for postprocessing output data
 
 ## experimental ID & simulation specific folders at scratch ##
@@ -276,6 +277,29 @@ cp "$slmRscript"    "$simFoldDefaultFiles"
 
 ## syncronize all data with file system ##
 sync
+
+
+## define a function that manipulates the namelist && change namelist according to options ##
+# model: slm_model_name = land plant soil canopy
+# 2 do: add other options like optimization
+
+ # this function is copied from run_slm.sh without any modification
+ # function: pass the variable_name ($1) & the new_value ($2)
+ # $slmNamelist refers to the namelist file name, assuming the namelist file is located in the current folder !
+function changeNamelistValue {
+oldValue=$(grep $1 "$simFoldDefaultFiles""$slmNamelistFilename" | awk -F "=" '{print $2}')   # get the old value that should be replaced
+lineNum=$(grep -n $1 "$simFoldDefaultFiles""$slmNamelistFilename" | cut -d : -f 1)           # get line number of variable $1
+sed -i "$lineNum"s/$oldValue/$2/ "$simFoldDefaultFiles""$slmNamelistFilename"                # replace the old value in line $lineNum with $2
+return 0                                                         # get return value with: return_value=$?
+}
+ # examples:
+ #changeNamelistValue simulation_length_number 300
+ #changeNamelistValue output_interval_flux \"monthly\"
+ #changeNamelistValue flag_calc_soil_moisture .FALSE.
+ #changeNamelistValue soil_theta_prescribe 122.7
+
+changeNamelistValue slm_model_name "$slmModel"
+
 
 ## start job with simulations by starting the job(array) -> run_slm.sh ##
 if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used

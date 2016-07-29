@@ -9,7 +9,4 @@ mo_filename.o: \
 mo_util_string.o: \
   mo_kind.o
 
-mo_jsb_lct_class: \
-  mo_kind.o \
-  mo_exception.o
 

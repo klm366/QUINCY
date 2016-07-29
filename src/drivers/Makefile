@@ -19,12 +19,15 @@ STRIP   = strip
 SIZE    = size
 #---------------------------------------------------------------------
 #-
-VPATH = ../atmland:../echam:../base:../drivers:../shared:../vegetation:$(OBJDIR)
+VPATH = ../atmland:../echam:../base:../drivers:../shared:../assimilation:../radiation:../soil:../vegetation:$(OBJDIR)
 MODS = $(shell find ../atmland/ -name '*.f90' -print)
 MODS += $(shell find ../echam/ -name '*.f90' -print)
 MODS += $(shell find ../base/ -name '*.f90' -print)
 MODS += $(shell find ../drivers/ -name 'mo*.f90' -print)
 MODS += $(shell find ../shared/ -name '*.f90' -print)
+MODS += $(shell find ../assimilation/ -name '*.f90' -print)
+MODS += $(shell find ../radiation/ -name '*.f90' -print)
+MODS += $(shell find ../soil/ -name '*.f90' -print)
 MODS += $(shell find ../vegetation/ -name '*.f90' -print)
 
 OBJFILES = $(notdir $(MODS))
@@ -38,26 +41,6 @@ $(BINDIR)/land.x: $(LIBRARY) land_model_driver.f90
 	@$(RM) land_model_driver.o
 	@echo "land model is ok"
 
-test_canopy: $(BINDIR)/test_canopy.x
-$(BINDIR)/test_canopy.x: $(LIBRARY) canopy_test_model_driver.f90
-	$(F_C) $(F_O) canopy_test_model_driver.f90
-	$(F_L) -o $(BINDIR)/test_canopy.x canopy_test_model_driver.o $(LIBRARY)
-	@$(RM) canopy_test_model_driver.o
-	@echo "test canopy model is ok"
-
-canopy: $(BINDIR)/canopy.x
-$(BINDIR)/canopy.x:  $(LIBRARY) canopy_model_driver.f90 
-	$(F_C) $(F_O) canopy_model_driver.f90
-	$(F_L) -o $(BINDIR)/canopy.x canopy_model_driver.o $(LIBRARY)
-	@$(RM) canopy_model_driver.o
-	@echo "canopy model is ok"
-
-plant: $(BINDIR)/plant.x
-$(BINDIR)/plant.x:  $(LIBRARY) plant_model_driver.f90 
-	$(F_C) $(F_O) plant_model_driver.f90
-	$(F_L) -o $(BINDIR)/plant.x plant_model_driver.o $(LIBRARY)
-	@$(RM) plant_model_driver.o
-	@echo "plant model is ok"
 
 lib: $(LIBRARY)
 	@echo library is updated
@@ -71,9 +54,6 @@ help:
 	@echo "commands available with make:"
 	@echo "help:              this help" 
 	@echo "all (or nothing):  stand alone land model (complete)" 
-	@echo "canopy:            stand alone canopy model"
-	@echo "test_canopy:       stand alone canopy model for testing"  
-	@echo "plant:             stand alone plant model" 
 	@echo "clean:             clean up library files" 
 
 %.o: %.f90
@@ -88,5 +68,8 @@ include ../echam/Make.inc.deps
 include ../base/Make.inc.deps
 include ../atmland/Make.inc.deps
 include ../shared/Make.inc.deps
+include ../assimilation/Make.inc.deps
+include ../radiation/Make.inc.deps
+include ../soil/Make.inc.deps
 include ../vegetation/Make.inc.deps
 include ../drivers/Make.inc.deps

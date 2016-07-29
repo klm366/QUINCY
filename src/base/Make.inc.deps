@@ -4,7 +4,8 @@ mo_base_constants.o: \
 mo_base_memory.o: \
   mo_kind.o \
   mo_jsb_lct_class.o \
-  mo_base_slm_parameter_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_shared_memory.o \
   mo_veg_memory.o
 
 mo_base_util.o: \
@@ -21,9 +22,36 @@ mo_base_config_class.o: \
   mo_base_constants.o \
   mo_jsb_config_class.o
 
-mo_base_slm_parameter_class.o: \
+mo_jsb_lctlib_class.o: \
   mo_kind.o \
   mo_base_constants.o \
   mo_shared_constants.o \
-  mo_atmland_constants.o
+  mo_atmland_constants.o \
+  mo_veg_constants.o
+
+mo_jsb_lct_class: \
+  mo_kind.o \
+  mo_exception.o
+
+mo_jsb_model_init.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_base_constants.o \
+  mo_base_memory.o \
+  mo_base_config_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_shared_isotope.o \
+  mo_shared_constants.o \
+  mo_atmland_constants.o \
+  mo_atmland_memory.o \
+  mo_atmland_forcing.o \
+  mo_atmland_config_class.o \
+  mo_atmland_util.o \
+  mo_rad_constants.o \
+  mo_assimi_config_class.o \
+  mo_assimi_constants.o \
+  mo_assimi_update_canopy_fluxes.o \
+  mo_veg_constants.o \
+  mo_veg_config_class.o
+
 

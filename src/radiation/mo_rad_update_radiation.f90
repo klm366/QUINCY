@@ -6,21 +6,29 @@
 !!
 !! @par Revision History
 !! First version by Sönke Zaehle (2015-12-04)
+!! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_radiation.f90 radiation/mo_rad_update_radiation.f90
 !!
-MODULE mo_veg_radiation
+MODULE mo_rad_update_radiation
 
-  USE mo_kind,       ONLY: wp, eps8
+  USE mo_kind,          ONLY: wp, eps8
+  USE mo_rad_constants
+
+
+
+  IMPLICIT NONE
 
   PRIVATE
-
   PUBLIC :: update_radiation, calc_canopy_layer_depth
 
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
+  ! Main Task
+  ! 
+  !-----------------------------------------------------------------------------------------------------
   !> calculate surface radiation reflection and absorption in PAR band
   !! 
-  !! @todo currently no albedo calculation
+  !! @todo currently no albedo calculation in the update_radiation routine
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_radiation(tile)
 
@@ -75,7 +83,6 @@ CONTAINS
 
     USE mo_base_constants,     ONLY: ncanop,canopy_layer_depth
     USE mo_atmland_constants,  ONLY: sw2par, min_cos_zenith_angle
-    USE mo_veg_parameters,     ONLY: sigma,kbl0,kdf0,rho2sbeta
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -205,4 +212,4 @@ CONTAINS
     ENDIF
   END FUNCTION calc_canopy_layer_depth
 
-END MODULE mo_veg_radiation
+END MODULE mo_rad_update_radiation

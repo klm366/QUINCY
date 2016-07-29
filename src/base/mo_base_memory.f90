@@ -11,7 +11,7 @@ MODULE mo_base_memory
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_lct_class
-  USE mo_base_slm_parameter_class
+  USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
   USE mo_veg_memory,              ONLY: t_slm_plant
   USE mo_shared_memory,           ONLY: t_element
 
@@ -67,7 +67,6 @@ MODULE mo_base_memory
   !-----------------------------------------------------------------------------------------------------
   !> very basic version of the JSBACH4: TYPE, EXTENDS(t_Hsm) :: t_jsb_model in mo_jsb_model_class
   !!
-  !! @todo t_model may be initialized in plant_model_driver for now, but should be init in land_model_interface
   !! 
   !! 
   !! 
@@ -83,12 +82,9 @@ MODULE mo_base_memory
     !TYPE(t_jsb_process_p),     POINTER :: processes(:)
     !TYPE(t_Task_queue),        POINTER :: queue        => NULL()
     !CLASS(t_jsb_process_task), POINTER :: current_task => NULL()
-    TYPE(t_slm_parameter)              :: slm_parameter     !< contains all parameters, each with Dimension(npft) \n
-                                                            !! should be deleted in a later version prior to slm-jsbach4 linking
     TYPE(t_lctlib_element),POINTER     :: lctlib(:)         !< each lctlib(pft_id) contains all parameter values of pft_id \n
                                                             !! this structure makes parameters accessible throughout the model \n
                                                             !! consistently with jsbach4
-
 
   END TYPE t_model
 

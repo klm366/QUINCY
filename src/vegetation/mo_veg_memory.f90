@@ -64,7 +64,7 @@ MODULE mo_veg_memory
     REAL(wp),DIMENSION(ncanop) :: par_sunlit
     REAL(wp),DIMENSION(ncanop) :: par_shaded
     REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit
-    ! 1.2 soil moisture (currently in mo_veg_photosynthesis)
+    ! 1.2 soil moisture (currently in mo_assimi_update_canopy_fluxes)
     REAL(wp) :: beta_air                     !< not used (scaling factor to account for air humidity effects on conductance)
     REAL(wp) :: beta_soil_ps                 !< not used (scaling factor to account for soil moisture constraints on conductance)
     REAL(wp) :: beta_soil_gs                 !< scaling factor to account for soil moisture constraints on conductance

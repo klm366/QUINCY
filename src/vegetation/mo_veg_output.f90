@@ -10,9 +10,12 @@
 MODULE mo_veg_output
   !! this module may be not necessary anymore when QUINCY is linked with JSBACH !!
 
-  USE mo_kind,               ONLY: wp, eps8
-  USE mo_base_constants,     ONLY: ntile
-  USE mo_veg_config_class,   ONLY: veg_config
+  USE mo_kind,                  ONLY: wp, eps8
+  USE mo_base_constants,        ONLY: ntile
+  USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+  USE mo_veg_config_class,      ONLY: veg_config
+  USE mo_assimi_config_class,   ONLY: assimi_config
+
 
   IMPLICIT NONE
 
@@ -220,9 +223,9 @@ CONTAINS
     !> 2.1 get options (opt) for filenames
     !! 
     !! 
-    IF (veg_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
-    IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
-    IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+    IF (assimi_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
+    IF (assimi_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
+    IF (assimi_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
      
 
     !> 2.2 define open() statements for file output
@@ -302,9 +305,9 @@ CONTAINS
     !> 2.1 get options (opt) for filenames
     !! 
     !! 
-    IF (veg_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
-    IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
-    IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+    IF (assimi_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
+    IF (assimi_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
+    IF (assimi_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
 
     !> 2.2 define open() statements for file output
     !! 
@@ -336,18 +339,18 @@ CONTAINS
   !! 
   !! write-interval accordingly to namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_pool(tile, veg_param, time_d, time_y, itile)
+  SUBROUTINE write_output_pool(tile, lctlib, time_d, time_y, itile)
 
     USE mo_base_constants,   ONLY: ncanop
     USE mo_base_memory,      ONLY: t_slm_tile, t_slm_soil
     USE mo_veg_memory,       ONLY: t_slm_plant
-    USE mo_veg_parameters,   ONLY: itree, t_slm_veg_param
+    USE mo_veg_constants,    ONLY: itree
     USE mo_shared_isotope,   ONLY: calc_delta_C13,calc_delta_C14
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(in), TARGET  :: tile        !< one tile
-    TYPE(t_slm_veg_param),INTENT(in)     :: veg_param   !< data structure for vegetation parameters
+    TYPE(t_lctlib_element),INTENT(in)    :: lctlib      !< land-cover-type library - parameters for one pft
     REAL(wp), INTENT(in)                 :: time_d      !< time in days
     INTEGER,  INTENT(in)                 :: time_y      !< time in years; the 1st year of a simulation == year 1 (not zero)
     INTEGER,  INTENT(in)                 :: itile       !< number of current tile
@@ -422,9 +425,9 @@ CONTAINS
                                plant%canopy_layer(icanop)%fnl_pepc, plant%canopy_layer(icanop)%fnl_oth
        END DO
 
-       IF(veg_param%growthform(plant%pftid) == itree) THEN 
+       IF(lctlib%growthform == itree) THEN 
           IF (plant%pool%sap_wood%carbon > eps8) THEN
-             hlp1 = plant%lai/(plant%pool%sap_wood%carbon / plant%height / veg_param%wood_density(plant%pftid))
+             hlp1 = plant%lai/(plant%pool%sap_wood%carbon / plant%height / lctlib%wood_density)
           ELSE
              hlp1 = 0._wp
           ENDIF

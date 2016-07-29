@@ -9,13 +9,12 @@
 !!
 MODULE mo_veg_dynamics
 
-  USE mo_kind, ONLY: wp
-  USE mo_veg_config_class, ONLY: veg_config
+  USE mo_kind,                 ONLY: wp, eps4
+
 
   IMPLICIT NONE
 
   PRIVATE
-
   PUBLIC :: update_veg_dynamics
 
 CONTAINS
@@ -27,18 +26,21 @@ CONTAINS
   !!
   !! flux\%litterfall & flux\%growth is set to zero each timestep in the plant model driver 
   !-----------------------------------------------------------------------------------------------------
-  !PURE ELEMENTAL SUBROUTINE update_veg_dynamics(tile, veg_param)
-  SUBROUTINE update_veg_dynamics(tile, veg_param)
+  !PURE ELEMENTAL SUBROUTINE update_veg_dynamics(tile, lctlib)
+  SUBROUTINE update_veg_dynamics(tile, lctlib)
 
-    USE mo_base_memory, ONLY: t_slm_tile
+    USE mo_base_memory,           ONLY: t_slm_tile
     USE mo_base_constants
-    USE mo_atmland_constants, ONLY: Tzero
+    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+    USE mo_shared_constants,      ONLY: Tzero
+    USE mo_veg_config_class,      ONLY: veg_config
+    USE mo_veg_constants
     USE mo_veg_memory
-    USE mo_veg_parameters
+
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_veg_param),INTENT(in)          :: veg_param            !< list of vegetation parameters
+    TYPE(t_lctlib_element),INTENT(in)         :: lctlib         !< land-cover-type library - parameters for one pft
     TYPE(t_slm_tile),INTENT(inout)            :: tile                 !< current tile 
     ! 0.2 Local
     TYPE(t_slm_veg_pool)                      :: mortality
@@ -53,7 +55,7 @@ CONTAINS
 
     !> 1.0 background mortality 
     !! select rate and convert from 1/year to 1/timestep
-    SELECT CASE (veg_param%growthform(tile%plant%pftid))
+    SELECT CASE (lctlib%growthform)
       CASE (itree)
          mortality_rate = ((background_mort_rate_tree /  one_year) / one_day) * dt
       CASE (igrass)
@@ -67,7 +69,7 @@ CONTAINS
        !! in mol / m2 LAI / year
        !! transformed to a mortality estimate using a Weibull function
        boc_cbalance = tile%plant%moving_average%boc_an * one_day * one_year / 1.e6 & 
-                    - ( 1._wp + fresp_growth ) * veg_param%tau_leaf(tile%plant%pftid)/veg_param%sla(tile%plant%pftid)
+                    - ( 1._wp + fresp_growth ) * lctlib%tau_leaf/lctlib%sla
        IF(boc_cbalance < -eps4 )THEN
           mortality_rate = mortality_rate & 
                            + ( 1._wp - exp ( - ( - lambda_mort_light * boc_cbalance ) ** k_mort_light)) & 
@@ -82,7 +84,7 @@ CONTAINS
          tc = tc + tile%plant%canopy_layer(icanop)%nl_tot*tile%plant%canopy_layer(icanop)%fnl_chl
        ENDDO
        rfr_ratio = toc_rfr_ratio * exp( k_r2fr_chl * tc) 
-       flim_light = 1._wp-exp(-(veg_param%lambda_est_light(tile%plant%pftid)*rfr_ratio)**veg_param%k_est_light(tile%plant%pftid))
+       flim_light = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio)**lctlib%k_est_light)
    
        !> 3.2 temperature and soil moisture limitation 
        !! OBS: should be top soil moisture!
@@ -92,14 +94,14 @@ CONTAINS
        !> 3.3 actual establishment rate and associated matter flux from seed bed to reserve pool
        !!
        establishment_rate = flim_light * flim_temp * flim_moist * & 
-                            veg_param%tau_seed_est(tile%plant%pftid) / one_year / one_day * dt
+                            lctlib%tau_seed_est / one_year / one_day * dt
        tile%plant%flux%establishment = establishment_rate * tile%plant%pool%seed_bed 
 
        !> 4.0 diagnose change in the number of individuals (#/m2)
        !!
-       IF(veg_param%growthform(tile%plant%pftid)==itree) &
+       IF(lctlib%growthform==itree) &
        tile%plant%flux%delta_dens_ind = & 
-              tile%plant%flux%establishment%carbon/veg_param%seed_size(tile%plant%pftid) & 
+              tile%plant%flux%establishment%carbon/lctlib%seed_size & 
               - mortality_rate * tile%plant%dens_ind 
 
     ENDIF
