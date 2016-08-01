@@ -127,7 +127,7 @@ def get_largest_common_yearlist ( filelist ):
 
 class Diagnostics ( object ):
     # TODO: take varname out as it is already in path
-    path_template = """%(path)s/%(classification)s_%(expname)s_%(startdate)s-%(finaldate)s.%(suffix)s"""
+    path_template = """%(path)s/%(classification)s_%(expname)s_%(startdate)s-%(enddate)s.%(suffix)s"""
 
 
     def __init__ ( self, **kwargs ):
@@ -170,7 +170,7 @@ class Diagnostics ( object ):
                     'classification' : output_item,
                     'expname'        : exp.B4J_name,
                     'startdate'      : exp.B4J_startyear,
-                    'finaldate'      : exp.B4J_endyear,
+                    'enddate'        : exp.B4J_endyear,
                     'suffix'         : fielddict [ 'suffix' ]}
                 arglist.append ( output_item + ":" + exp.B4J_index [ output_item ])
 
@@ -205,7 +205,7 @@ class Diagnostics ( object ):
                         'classification' : classification_str,
                         'expname'        : can.B4J_name,
                         'startdate'      : can.B4J_startyear,
-                        'finaldate'      : can.B4J_endyear,
+                        'enddate'        : can.B4J_endyear,
                         'suffix'         : fielddict [ 'suffix' ]}
                     arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
 
@@ -247,7 +247,7 @@ class Diagnostics ( object ):
                                 'classification' : classification_str,
                                 'expname'        : can.B4J_name,
                                 'startdate'      : can.B4J_startyear,
-                                'finaldate'      : can.B4J_endyear,
+                                'enddate'        : can.B4J_endyear,
                                 'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
                             arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
                             
@@ -301,7 +301,7 @@ class Diagnostics ( object ):
                             'classification' : output_item,
                             'expname'        : can.B4J_name,
                             'startdate'      : can.B4J_startyear,
-                            'finaldate'      : can.B4J_endyear,
+                            'enddate'        : can.B4J_endyear,
                             'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
                         arglist.append ( output_item + ":" + can.B4J_index [ output_item ])
 

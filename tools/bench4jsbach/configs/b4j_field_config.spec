@@ -5,7 +5,7 @@ documentation=string()
 
 [fetch]
 [[__many__]]
-longname=string()
+longname=string(default=None)
 unit=string()
 [[[__many__]]]
 name=string()
@@ -39,7 +39,7 @@ technical_teXed=string(default=None)
 [[__many__]]
 title=string(default=None)
 name=string()
-type=option(map,metric)
+type=option(map,metric,barchart)
 isbench=boolean()
 benchvar=string(default=None)
 benchunit=string(default=None)

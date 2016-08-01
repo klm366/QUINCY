@@ -157,12 +157,12 @@ class Experiment ( object ):
         
 
     
-    def accumulate_streams ( self, orig_dirpath, orig_fn_tmpl, startyear, finalyear,
+    def accumulate_streams ( self, orig_dirpath, orig_fn_tmpl, startyear, endyear,
                              selcodes, suffix, codes_path, target_path, from_remote ):
         self.B4J_obj.logger.debug ( "Starting." )
 
         sy  = int ( startyear )
-        fy  = int ( finalyear )
+        fy  = int ( endyear )
         
         if not from_remote:
             cdo = Cdo ()
@@ -281,7 +281,7 @@ class Experiment ( object ):
             
             frequence_infix = self.outfiles_dict [ 'frequence_infixes' ][ fielddict [ "frequence" ]]\
                               if fielddict [ "frequence" ] == "monthly" else "" 
-            finalyearstring = self.outfiles_dict [ 'finalyear_tmpl' ] % { 'finalyear': self.B4J_finalyear }\
+            endyearstring = self.outfiles_dict [ 'endyear_tmpl' ] % { 'endyear': self.B4J_endyear }\
                               if self.accumulated else ""
                 
             for fileid, filedict in fielddict [ 'fetch' ].iteritems ():
@@ -296,7 +296,7 @@ class Experiment ( object ):
                     'classification' : fileid,
                     'expname'        : self.B4J_name,
                     'startdate'      : self.B4J_startyear,
-                    'finaldate'      : self.B4J_finalyear,
+                    'enddate'      : self.B4J_endyear,
                     'suffix'         : fielddict [ 'suffix' ]}
                 
                 orig_dirpath = os.path.join ( self.outdata_dirpath, filedict [ self.modeltype ][ "submodel" ])
@@ -310,7 +310,7 @@ class Experiment ( object ):
                         "stream"              : filedict [ self.modeltype ][ "stream" ],
                         "cond_frequenceinfix" : frequence_infix,
                         "startyear"           : "%(year)s",
-                        "cond_finalyearstr"   : "",
+                        "cond_endyearstr"   : "",
                         "suffix"              : self.outfiles_dict [ 'suffix' ]}
                     
                     codesfile_path = os.path.join ( self.codesfiles_dirpath,
@@ -323,7 +323,7 @@ class Experiment ( object ):
                     self.accumulate_streams ( orig_dirpath,
                                               orig_fn_tmpl,
                                               self.B4J_startyear,
-                                              self.B4J_finalyear,
+                                              self.B4J_endyear,
                                               filedict [ self.modeltype ][ 'code' ],
                                               fielddict [ 'suffix' ],
                                               codesfile_path,
@@ -337,7 +337,7 @@ class Experiment ( object ):
                         "stream"              : filedict [ self.modeltype ][ "stream" ],
                         "cond_frequenceinfix" : frequence_infix,
                         "startyear"           : self.B4J_initialyear,
-                        "cond_finalyearstr"   : finalyearstring,
+                        "cond_endyearstr"     : endyearstring,
                         "suffix"              : self.outfiles_dict [ 'suffix' ]}
 
                     codes_filename = self.codesfiles_dict [  "fn_tmpl" ] % {
@@ -373,7 +373,7 @@ class Experiment ( object ):
                         'classification' : fileid,
                         'expname'        : self.B4J_name,
                         'startdate'      : self.B4J_startyear,
-                        'finaldate'      : self.B4J_endyear,
+                        'enddate'        : self.B4J_endyear,
                         'suffix'         : fielddict [ 'suffix' ]}
                     assert self.modeltype in filedict, "No '%s'-section defined for %s." % fileid
                     assert os.path.isfile ( self.B4J_index [ fileid + CODES_SUFFIX ])
@@ -399,7 +399,7 @@ class Experiment ( object ):
             'classification' : "land_sea_mask",
             'expname'        : self.B4J_name,
             'startdate'      : self.B4J_startyear,
-            'finaldate'      : self.B4J_finalyear,
+            'enddate'        : self.B4J_endyear,
             'suffix'         : fielddict [ 'suffix' ]}
         
         b4j_domain = getdomain ()
@@ -513,9 +513,9 @@ class MPIESM1_Experiment ( Experiment ):
 
     outfiles_dict = { "suffix"            : "grb",
                       "dirname"           : "outdata",
-                      "fn_tmpl"           : """%(expname)s_%(submodel)s_%(stream)s_%(cond_frequenceinfix)s%(startyear)s%(cond_finalyearstr)s.%(suffix)s""",
+                      "fn_tmpl"           : """%(expname)s_%(submodel)s_%(stream)s_%(cond_frequenceinfix)s%(startyear)s%(cond_endyearstr)s.%(suffix)s""",
                       "frequence_infixes" : { "monthly" : "mm_" },
-                      "finalyear_tmpl"    : "-%(finalyear)s" }
+                      "endyear_tmpl"    : "-%(endyear)s" }
                       
     pool_dict = { "domains"       : [ "zmaw.de", "hpc.dkrz.de" ],
                   "lsm_path_tmpl" : "/pool/data/JSBACH/input/r0007/%(atm_res)s/jsbach_%(atm_res)s%(oce_res)s_11tiles_5layers_1850.nc" }

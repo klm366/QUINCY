@@ -268,7 +268,7 @@ In this benchmark report, the candidate experiments
                 format ( teXify ( can.B4J_name ),
                          str ( can.B4J_canno ),
                          can.B4J_startyear,
-                         can.B4J_finalyear ) \
+                         can.B4J_endyear ) \
                 if can.B4J_iscan else '' for can in self.experiments ) +\
 """
 are compared with the reference experiments
@@ -280,7 +280,7 @@ are compared with the reference experiments
                 format ( teXify ( ref.B4J_name ),
                          str ( ref.B4J_refno ),
                          ref.B4J_startyear,
-                         ref.B4J_finalyear ) \
+                         ref.B4J_endyear ) \
               if ref.B4J_isref else '' for ref in self.experiments ) +\
 """
 The fields tested and the diagnostics and plots made are listed in the 
