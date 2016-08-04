@@ -212,8 +212,10 @@ CONTAINS
     !
     dsl4jsb_Get_memory(SOIL)
     dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(VEG)
-    dsl4jsb_Get_memory(PHENO)
+    IF (One_of(tile%lcts(1)%id, (/VEG_TYPE,LAND_TYPE/)) > 0) THEN
+      dsl4jsb_Get_memory(VEG)
+      dsl4jsb_Get_memory(PHENO)
+    END IF
     dsl4jsb_Get_memory(ATM2LAND)
     dsl4jsb_Get_memory(HYDRO)
 
@@ -242,9 +244,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin)        ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)   ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow)        ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_soil)   ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO,    evapotranspiration) ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    trans)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO,    evapopot)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO,    snowmelt)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    runoff)        ! out
@@ -264,12 +266,12 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl) ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_column) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_soil)   ! inout
-      dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_soil)   ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_overflow) ! inout
       IF (One_of(tile%lcts(1)%id, (/VEG_TYPE ,LAND_TYPE/)) > 0) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_can)    ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root)   ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root_fc) ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO,    trans)         ! in
         dsl4jsb_Get_var2D_onChunk(VEG,   fract_fpc_max)    ! in
         dsl4jsb_Get_var2D_onChunk(VEG,   root_depth)       ! in
       END IF
@@ -323,6 +325,7 @@ CONTAINS
         & tte_corr(:)                 & !< out
         & )
       drainage(:) = 0._wp
+      w_snow_soil(:) = 0._wp
     ELSE
       CALL update_surf_down_soil(     &
         & dtime,                      & !< in
@@ -431,10 +434,18 @@ CONTAINS
         & )
     END IF
 
-    w_soil_column(:) = SUM(w_soil_sl(:,:), DIM=2)
-
-    w_snow(:) = w_snow_soil(:) + w_snow_can(:)
-    w_skin(:) = w_skin_soil(:) ! + w_skin_can(:)
+    SELECT CASE (tile%lcts(1)%id)
+    CASE (GLACIER_TYPE)
+      w_snow(:) = 0._wp
+    CASE (BARE_TYPE)
+      w_soil_column(:) = SUM(w_soil_sl(:,:), DIM=2)
+      w_snow(:) = w_snow_soil(:)
+      w_skin(:) = w_skin_soil(:)
+    CASE (VEG_TYPE)
+      w_soil_column(:) = SUM(w_soil_sl(:,:), DIM=2)
+      w_snow(:) = w_snow_soil(:) + w_snow_can(:)
+      w_skin(:) = w_skin_soil(:) ! + w_skin_can(:)
+    END SELECT
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

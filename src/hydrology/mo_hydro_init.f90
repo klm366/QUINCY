@@ -68,7 +68,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(HYDRO)) RETURN
 
-    CALL message(TRIM(routine), 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
+    !CALL message(TRIM(routine), 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
 
     ! R: nothing to do in the moment ...
 
@@ -119,12 +119,10 @@ CONTAINS
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO)
-    !dsl4jsb_Get_config(VEG)
 
     ! Get hydrology memory of the tile
     dsl4jsb_Get_memory(HYDRO)
 
-    !----------
     !----------
 
     IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, BARE_TYPE) &
@@ -132,7 +130,6 @@ CONTAINS
 
       dsl4jsb_Get_config(SOIL)
       dsl4jsb_Get_memory(SOIL)
-      dsl4jsb_Get_memory(VEG)
 
       ! Initialize hydrology variables from bc file
 
@@ -217,8 +214,9 @@ CONTAINS
 
     END IF
 
-    IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
+    IF (Contains_lct(tile%lcts, VEG_TYPE)) THEN
       ! Calculate water content and field capacity in the root zone
+      dsl4jsb_Get_memory(VEG)
       DO i=1,SIZE(dsl4jsb_var2D_ptr(HYDRO, w_soil_root), 2)
         dsl4jsb_var2D_ptr(HYDRO, w_soil_root)       (:,  i)    = get_water_in_root_zone( &
           & dsl4jsb_var3D_ptr(HYDRO, w_soil_sl)     (:,:,i), &

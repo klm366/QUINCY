@@ -63,4 +63,4 @@
 #define dsl4jsb_var2d_ptr dsl4jsb_var2D_ptr
 #define dsl4jsb_var3d_ptr dsl4jsb_var3D_ptr
 
-#define dsl4jsb_Aggregate_onChunk(PROC,var,agg) CALL agg%Aggregate(tile, CONCATENATE2(PROC,__mem)%var,ics,ice,iblk)
+#define dsl4jsb_Aggregate_onChunk(PROC,var,agg) CALL agg%Aggregate(tile, CONCATENATE2(PROC,__mem)%var,ics,ice,iblk,routine)

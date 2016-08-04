@@ -204,14 +204,21 @@ CONTAINS
 !!$  END SUBROUTINE Process_task
 !!$
 
-  SUBROUTINE Run_tasks(this)
+  SUBROUTINE Run_tasks(this, debug)
 
     CLASS(t_jsb_model), INTENT(inout) :: this
+    LOGICAL, OPTIONAL,  INTENT(in)    :: debug
 
-    CLASS(t_Task_queue), POINTER :: current_queue_element
-    TYPE(t_jsb_task_msg) :: msg
+    CLASS(t_Task_queue),  POINTER :: current_queue_element
+    CLASS(t_jsb_task_msg), POINTER :: msg
+    LOGICAL :: l_debug
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Run_tasks'
+
+    l_debug = .FALSE.
+    IF (PRESENT(debug)) l_debug = debug
+
+    ALLOCATE(t_jsb_task_msg::msg)
 
     current_queue_element => this%queue
     DO WHILE (ASSOCIATED(current_queue_element))
@@ -221,7 +228,7 @@ CONTAINS
           this%current_task => task
           CALL this%Start() ! Start state machine
           msg%action => this%Get_action('INTEGRATE')
-          CALL this%Process_message(msg)
+          CALL this%Process_message(msg, l_debug)
         END IF
       END ASSOCIATE
 

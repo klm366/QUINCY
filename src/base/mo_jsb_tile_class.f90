@@ -117,19 +117,21 @@ MODULE mo_jsb_tile_class
   END INTERFACE
 
   ABSTRACT INTERFACE
-    SUBROUTINE aggregate_interface_2d(this, tile, var, ics, ice, iblk)
+    SUBROUTINE aggregate_interface_2d(this, tile, var, ics, ice, iblk, caller)
       IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real2d
       CLASS(t_jsb_aggregator),    INTENT(inout) :: this
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
       TYPE(t_jsb_var_real2d),     INTENT(inout) :: var
       INTEGER,                    INTENT(in)    :: ics, ice, iblk
+      CHARACTER(len=*),           INTENT(in)    :: caller
     END SUBROUTINE aggregate_interface_2d
-    SUBROUTINE aggregate_interface_3d(this, tile, var, ics, ice, iblk)
+    SUBROUTINE aggregate_interface_3d(this, tile, var, ics, ice, iblk,caller)
       IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real3d
       CLASS(t_jsb_aggregator),    INTENT(inout) :: this
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
       TYPE(t_jsb_var_real3d),     INTENT(inout) :: var
       INTEGER,                    INTENT(in)    :: ics, ice, iblk
+      CHARACTER(len=*),           INTENT(in)    :: caller
     END SUBROUTINE aggregate_interface_3d
     SUBROUTINE aggregate_interface_setopt_logical(this, name, value)
       IMPORT :: t_jsb_aggregator
@@ -560,6 +562,7 @@ CONTAINS
 
     INTEGER :: no_children, i
     CLASS(t_State), POINTER :: current
+    REAL(wp), ALLOCATABLE :: fract(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_fractions_aggregator'
 
@@ -576,15 +579,19 @@ CONTAINS
         current => current%next_sibling
       END DO
 
-      IF (ASSOCIATED(tile%parent) .AND. ANY(SUM(this%fractions(ics:ice,iblk,:), DIM=2) < 1._wp - EPSILON(1._wp))) &
+      ALLOCATE(fract(ice-ics+1))
+      fract(:) = tile%fract(ics:ice,iblk)
+      IF (ASSOCIATED(tile%parent) &
+        & .AND. ANY(SUM(this%fractions(ics:ice,iblk,:), DIM=2) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) &
         & CALL finish(TRIM(routine), 'Sum of tile fractions is not 1')
+      DEALLOCATE(fract)
 
       tile%l_fract_children_changed(ics:ice,iblk) = .FALSE.
     END IF
 
   END SUBROUTINE Set_fractions_aggregator
 
-  SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk)
+  SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk, caller)
 
     USE mo_hsm_class,      ONLY: t_State
 
@@ -592,6 +599,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
     TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
+    CHARACTER(len=*),                          INTENT(in)    :: caller
 
     INTEGER :: no_children, i, j, iproc, nc
     CLASS(t_State), POINTER :: current
@@ -600,7 +608,9 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: data_sum(:), fract_sum(:)
     REAL(dp) :: missval
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Aggregate_weighted_by_fract_2d'
+    CHARACTER(len=256) :: routine
+
+    routine = TRIM(modname)//':Aggregate_weighted_by_fract_2d'//'(called by '//TRIM(caller)//')'
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
@@ -628,13 +638,16 @@ CONTAINS
     DO i=1,no_children
       SELECT TYPE (current)
       CLASS IS (t_jsb_tile_abstract)
-        IF (.NOT. ASSOCIATED(current%mem(iproc)%p)) CYCLE     ! Process is not active on child tile
-        var_tmp => current%mem(iproc)%p%Get_var_real2d(TRIM(var%name))
-        IF (ASSOCIATED(var_tmp) .OR. this%l_all_tiles) THEN
-          fractions(:,i) = this%fractions(ics:ice,iblk,i)
-          fract_sum(:)   = fract_sum(:) + fractions(:,i)
-          IF (ASSOCIATED(var_tmp)) data(:,i) = var_tmp%ptr(ics:ice,iblk)
-          j = j + 1
+        IF (ASSOCIATED(current%mem(iproc)%p)) THEN  ! Process is not active on child tile
+          var_tmp => current%mem(iproc)%p%Get_var_real2d(TRIM(var%name))
+          IF (ASSOCIATED(var_tmp) .OR. this%l_all_tiles) THEN
+            fractions(:,i) = this%fractions(ics:ice,iblk,i)
+            fract_sum(:)   = fract_sum(:) + fractions(:,i)
+            IF (ASSOCIATED(var_tmp)) THEN
+              data(:,i) = var_tmp%ptr(ics:ice,iblk)
+              j = j + 1
+            END IF
+          END IF
         END IF
       END SELECT
       current => current%next_sibling
@@ -661,7 +674,7 @@ CONTAINS
 
   END SUBROUTINE Aggregate_weighted_by_fract_2d
 
-  SUBROUTINE Aggregate_weighted_by_fract_3d(this, tile, var, ics, ice, iblk)
+  SUBROUTINE Aggregate_weighted_by_fract_3d(this, tile, var, ics, ice, iblk, caller)
 
     USE mo_hsm_class,      ONLY: t_State
 
@@ -669,6 +682,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
     TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
+    CHARACTER(len=*),                          INTENT(in)    :: caller
 
     INTEGER :: no_children, i, j, iproc, nc, ilev
     CLASS(t_State), POINTER :: current
@@ -677,7 +691,9 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: data_sum(:), fract_sum(:)
     REAL(dp) :: missval
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Aggregate_weighted_by_fract_3d'
+    CHARACTER(len=256) :: routine
+
+    routine = TRIM(modname)//':Aggregate_weighted_by_fract_2d'//'(called by '//TRIM(caller)//')'
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
@@ -705,13 +721,16 @@ CONTAINS
     DO i=1,no_children
       SELECT TYPE (current)
       CLASS IS (t_jsb_tile_abstract)
-        IF (.NOT. ASSOCIATED(current%mem(iproc)%p)) CYCLE     ! Process is not active on child tile
-        var_tmp => current%mem(iproc)%p%Get_var_real3d(TRIM(var%name))
-        IF (ASSOCIATED(var_tmp) .OR. this%l_all_tiles) THEN
-          fractions(:,i) = this%fractions(ics:ice,iblk,i)
-          fract_sum(:)   = fract_sum(:) + fractions(:,i)
-          IF (ASSOCIATED(var_tmp)) data(:,:,i) = var_tmp%ptr(ics:ice,:,iblk)
-          j = j + 1
+        IF (ASSOCIATED(current%mem(iproc)%p)) THEN   ! Process is not active on child tile
+          var_tmp => current%mem(iproc)%p%Get_var_real3d(TRIM(var%name))
+          IF (ASSOCIATED(var_tmp) .OR. this%l_all_tiles) THEN
+            fractions(:,i) = this%fractions(ics:ice,iblk,i)
+            fract_sum(:)   = fract_sum(:) + fractions(:,i)
+            IF (ASSOCIATED(var_tmp)) THEN
+              data(:,:,i) = var_tmp%ptr(ics:ice,:,iblk)
+              j = j + 1
+            END IF
+          END IF
         END IF
       END SELECT
       current => current%next_sibling

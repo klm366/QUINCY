@@ -73,7 +73,6 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for PFT lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & fract_water_veg,  & !< Wet (skin reservoir) fraction of tile                                []
       & fract_snow_veg,  &
       & fract_water_can,  & !< Wet (skin reservoir) fraction of canopy                                  []
       & fract_snow_can,   & !< Snow fraction on canopy                                                  []
@@ -140,9 +139,9 @@ CONTAINS
     soil_w       => Get_vgrid('soil_depth_water')
 
     ! Common variables
-    IF (ASSOCIATED(mem%fract_water_veg%ptr)) RETURN
+    IF (ASSOCIATED(mem%fract_water%ptr)) RETURN
 
-    CALL jsb_add_var( mem, 'fract_water_veg', mem%fract_water_veg, &
+    CALL jsb_add_var( mem, 'fract_water', mem%fract_water, &
       & hgrid, surface,                                                            &
       & t_cf('fraction of water on surface surface_wet_fraction', '-', ''),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
@@ -229,6 +228,13 @@ CONTAINS
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 
+    CALL jsb_add_var( mem, 'tte_corr', mem%tte_corr,                                     &
+      & hgrid, surface,                                                                  &
+      & t_cf('tte_correction_snowmelt', 'K s-1', ''),                                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+      & prefix, suffix,                                                              &
+      & initval_r=0.0_wp )
+
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
@@ -244,16 +250,32 @@ CONTAINS
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'tte_corr', mem%tte_corr,                                     &
-        & hgrid, surface,                                                                  &
-        & t_cf('tte_correction_snowmelt', 'K s-1', ''),                                    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+    END IF
+
+    ! Additional variables for soil
+    IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
+      &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
+      &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
+      &  )                                       &
+      &  .AND. .NOT. ASSOCIATED(mem%fract_snow_soil%ptr) ) THEN
+
+      CALL jsb_add_var( mem, 'fract_snow_soil', mem%fract_snow_soil, &
+        & hgrid, surface,                                                            &
+        & t_cf('fraction of snow on soil', '-', ''),                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'w_snow_soil', mem%w_snow_soil, &
+        & hgrid, surface,                                                    &
+        & t_cf('Water content of snow reservoir on soil', 'm', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )
 
     END IF
 
-    ! Additional variables for soil
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
@@ -267,24 +289,10 @@ CONTAINS
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL jsb_add_var( mem, 'fract_snow_soil', mem%fract_snow_soil, &
-        & hgrid, surface,                                                            &
-        & t_cf('fraction of snow on soil', '-', ''),                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp )
-
       CALL jsb_add_var( mem, 'w_skin_soil', mem%w_skin_soil,    &
         & hgrid, surface,                                                       &
         & t_cf('Water content in skin reservoir on soil', 'm', ''),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp )
-
-      CALL jsb_add_var( mem, 'w_snow_soil', mem%w_snow_soil, &
-        & hgrid, surface,                                                    &
-        & t_cf('Water content of snow reservoir on soil', 'm', ''), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )
 

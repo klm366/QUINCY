@@ -246,7 +246,7 @@ CONTAINS
     !dsl4jsb_Real2D_onChunk :: glacier
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_snow
-    dsl4jsb_Real2D_onChunk :: fract_water_veg
+    dsl4jsb_Real2D_onChunk :: fract_water
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: fract_snow_can
     dsl4jsb_Real2D_onChunk :: fract_snow_veg
@@ -304,22 +304,22 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO,    lai)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc_max)    ! in
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_can)       ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_can)       ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_soil)      ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_soil)      ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_lice)      ! in
+    IF (tile%lcts(1)%id == VEG_TYPE .OR. tile%lcts(1)%id == LAND_TYPE) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_soil)      ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_soil)      ! in
+    END IF
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_veg)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_soil) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water_can)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_soil)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_veg)   ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_can)   ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_lice)  ! out
 
     IF (tile%lcts(1)%id == LAKE_TYPE) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_lice)      ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_lice)  ! out
       CALL calc_wskin_fractions_lice( &
         & w_snow_lice(:),             & ! in
         & fract_snow_lice(:)          & ! out
@@ -330,10 +330,11 @@ CONTAINS
       ! TBD: On glacier: Wet skin fraction = 0, snow fraction =1, snow depth = 0
       !fract_skin_glacier(:) = 0._wp
       !fract_snow(:)     = 1._wp
-      !w_snow_glacier(:) = 0._wp
     END IF
 
-    IF (tile%lcts(1)%id == VEG_TYPE) THEN
+    IF (tile%lcts(1)%id == VEG_TYPE .OR. tile%lcts(1)%id == LAND_TYPE) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_can)       ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO,    w_skin_can)       ! in
       CALL calc_wskin_fractions_veg( &
         & dtime,                     & ! in
         & steplen,                   & ! in
@@ -352,7 +353,7 @@ CONTAINS
         & fract_snow_can(:),         & ! inout
         & fract_water_can(:),        & ! out
         & fract_water_soil(:),       & ! out
-        & fract_water_veg(:),        & ! out
+        & fract_water(:),            & ! out
         & fract_snow_soil(:),        & ! out
         & fract_snow_veg(:)          & ! out
         & )
@@ -418,7 +419,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO, fract_water_veg,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO, fract_water,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, fract_water_soil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, fract_water_can,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO, fract_snow,       weighted_by_fract)

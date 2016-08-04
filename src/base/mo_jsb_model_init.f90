@@ -216,10 +216,10 @@ CONTAINS
     CALL model%Queue_task(HD,     "hd_local_outflow")
 #endif
     CALL model%Queue_task(SEB,    "snowmelt_correction")
-    IF (model%processes(ASSIMI)%p%config%active) THEN
+    !IF (model%processes(ASSIMI)%p%config%active) THEN
       CALL model%Queue_task(ASSIMI, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
                                                                     ! and assimilation_waterunlimited
-    END IF
+    !END IF
     IF (model%processes(ASSIMI)%p%config%active) THEN
       CALL model%Queue_task(ASSIMI, "canopy_cond_unstressed")  ! first call without water limitation (waterLimitationFlag =.FALSE.)
     ELSE
@@ -227,12 +227,12 @@ CONTAINS
     END IF
     CALL model%Queue_task(VEG,    "canopy_cond_stressed")
     !CALL model%Queue_task(HYDRO,  "snow_and_skin_fraction")
-    IF (model%processes(ASSIMI)%p%config%active) THEN
+    !IF (model%processes(ASSIMI)%p%config%active) THEN
       CALL model%Queue_task(ASSIMI, "assimilation")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
                                                      ! should be called after the soil hydrology is calculated
                                                      ! (former update_soil_1) and after the vegetation conductance is calculated
                                                      ! (former update_vegetation_conductanc)
-    END IF
+    !END IF
     CALL model%Queue_task(TURB,   "humidity_scaling")
     CALL model%Queue_task(VEG,    "foliage_projected_cover")
     CALL model%Queue_task(PHENO,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
@@ -308,6 +308,25 @@ CONTAINS
         CALL hd_init_ic(tile)
       END IF
 #endif
+
+      tile => model%Goto_next_tile()
+
+    END DO
+
+
+    ! Iterate over tiles again and print tile information (after ALL tiles have been initialized above)
+    CALL model%Reset_tiles()
+    tile => model%Get_top_tile()
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited) THEN  ! Have been here before
+        tile => model%Goto_next_tile()
+        CYCLE
+      END IF
+      CALL tile%Print()
 
       tile => model%Goto_next_tile()
 

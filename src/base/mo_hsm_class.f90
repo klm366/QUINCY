@@ -422,11 +422,13 @@ CONTAINS
 
     CLASS(t_State),   INTENT(inout) :: this
     CLASS(t_Hsm),     INTENT(inout) :: hsm
-    CLASS(t_Message), INTENT(in)    :: msg
+    CLASS(t_Message), INTENT(in),   POINTER :: msg
 !!$    CLASS(t_Message), POINTER       :: msg
     CLASS(t_Message), POINTER       :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_message_state'
+
+    IF (.NOT. ASSOCIATED(msg)) RETURN
 
 !!$    this%msg => msg
 !!$    this%hsm => hsm
@@ -435,6 +437,8 @@ CONTAINS
 
     SELECT CASE (TRIM(msg%action%name))
     CASE ('START')
+      this%visited = .TRUE.
+    CASE ('ENTER')
       this%visited = .TRUE.
     CASE ('EXIT')
       this%visited = .FALSE.
@@ -563,12 +567,21 @@ CONTAINS
   END FUNCTION Get_state_hsm
 
   ! State transition
-  SUBROUTINE Goto_state_hsm(this, that)
+  SUBROUTINE Goto_state_hsm(this, that, debug)
 
     CLASS(t_hsm), INTENT(inout) :: this
     CLASS(t_State), INTENT(in), TARGET :: that
+    LOGICAL, OPTIONAL, INTENT(in) :: debug
+
+    LOGICAL :: l_debug
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Goto_state_hsm'
+
+    l_debug = .FALSE.
+    IF (PRESENT(debug)) l_debug = debug
+
+    IF (l_debug) CALL message(TRIM(routine), 'Taking transition from '//TRIM(this%current%name)//&
+      &                                                         ' to '//TRIM(that%name))
 
     IF (ASSOCIATED(this%next)) &
       & CALL finish(TRIM(routine), 'Transition already in progress')
@@ -638,13 +651,15 @@ CONTAINS
 
     CLASS(t_Hsm), INTENT(inout) :: this
 
-    TYPE(t_Message)           :: start_msg, entry_msg
+    CLASS(t_Message), POINTER :: start_msg, entry_msg
     CLASS(t_Message), POINTER :: tmp_msg
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Start_hsm'
 
 !!$    CALL message(TRIM(routine), 'Starting hsm ...')
 
+    ALLOCATE(t_Message::start_msg)
+    ALLOCATE(t_Message::entry_msg)
     start_msg%action => this%Get_action('START')
     entry_msg%action => this%Get_action('ENTER')
 
@@ -666,29 +681,39 @@ CONTAINS
   !
   ! State machine engine
   !
-  SUBROUTINE Process_message_hsm(this, msg)
+  SUBROUTINE Process_message_hsm(this, msg, debug)
 
     CLASS(t_Hsm),     TARGET, INTENT(inout) :: this
 !!$    CLASS(t_Message), POINTER       :: msg
-    CLASS(t_Message), INTENT(in) :: msg
+    CLASS(t_Message), POINTER, INTENT(in) :: msg
+    LOGICAL, OPTIONAL, INTENT(in) :: debug
 
     CLASS(t_State),   POINTER :: state
     CLASS(t_Message), POINTER :: new_msg, tmp_msg
-    TYPE(t_Message)           :: start_msg
+    CLASS(t_Message),  POINTER :: start_msg
     !CLASS(t_Hsm),     POINTER :: hsm
+    LOGICAL :: l_debug
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_message_hsm'
 
+    l_debug = .FALSE.
+    IF (PRESENT(debug)) l_debug = debug
+
 !!$    CALL message(TRIM(routine), 'Processing message '//TRIM(msg%name)//' on hsm ...')
 
+    IF (.NOT. ASSOCIATED(msg)) RETURN
+
     !hsm => this
+    ALLOCATE(t_Message::start_msg)
     start_msg%action => this%Get_action('START')
 
 !!$    CALL this%Process_exit_to_LCA()
 
     ALLOCATE(new_msg, source=msg)
     state => this%current
+    IF (l_debug) CALL message(TRIM(routine), 'Starting loop, message action is '//TRIM(msg%action%name))
     DO WHILE (ASSOCIATED(state))
+      IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
       this%source => state
       new_msg => state%Process_message(this, new_msg)
       CALL this%Process_exit_to_LCA()
@@ -718,6 +743,16 @@ CONTAINS
       END IF
     END DO
 
+    IF (l_debug) THEN
+      IF (ASSOCIATED(new_msg)) THEN
+        CALL message(TRIM(routine), 'Exited loop, new message action is '//TRIM(new_msg%action%name))
+      ELSE
+        CALL message(TRIM(routine), 'Exited loop, new message action is NULL')
+      END IF
+    END IF
+
+    DEALLOCATE(start_msg)
+
 !!$    CALL message(TRIM(routine), 'Processing finished.')
 
   END SUBROUTINE Process_message_hsm
@@ -727,7 +762,7 @@ CONTAINS
 
     CLASS(t_Hsm), INTENT(inout) :: this
 
-    TYPE(t_Message) :: entry_msg
+    CLASS(t_Message), POINTER :: entry_msg
     CLASS(t_Message), POINTER :: tmp_msg
     CLASS(t_State), POINTER :: state
     TYPE(t_State_p) :: entrypath(MAX_STATE_NESTING)
@@ -737,6 +772,7 @@ CONTAINS
 
 !!$    CALL message(TRIM(routine), 'Processing entry messages to next ...')
 
+    ALLOCATE(t_Message::entry_msg)
     entry_msg%action => this%Get_action('ENTER')
 
     i = 0
@@ -753,6 +789,8 @@ CONTAINS
       tmp_msg => state%Process_message(this, entry_msg)
     END DO
 
+    DEALLOCATE(entry_msg)
+
 !!$    CALL message(TRIM(routine), 'Processing of entry messages finished.')
 
   END SUBROUTINE Process_entry_to_next
@@ -765,7 +803,7 @@ CONTAINS
     CLASS(t_Hsm),   INTENT(inout) :: this
 !    CLASS(t_State), INTENT(in)    :: that
 
-    TYPE(t_Message)           :: exit_msg
+    CLASS(t_Message), POINTER :: exit_msg
     CLASS(t_Message), POINTER :: tmp_msg
     CLASS(t_State),   POINTER :: state
     INTEGER                   :: i
@@ -776,6 +814,7 @@ CONTAINS
 
 !!$    CALL message(TRIM(routine), 'Processing exit messages to lca ...'//int2string(this%levels_to_lca))
 
+    ALLOCATE(t_Message::exit_msg)
     exit_msg%action => this%Get_action('EXIT')
 
     state => this%current
@@ -797,6 +836,8 @@ CONTAINS
 
     this%current => state
     this%levels_to_lca = -1
+
+    DEALLOCATE(exit_msg)
 
 !!$    CALL message(TRIM(routine), 'Processing of exit messages finished.')
 

@@ -161,9 +161,22 @@ CONTAINS
 
   END FUNCTION get_no_of_models
 
-  LOGICAL FUNCTION debug_on()
+  LOGICAL FUNCTION debug_on(level)
 
-    debug_on = debug > 0
+    CHARACTER(len=*), OPTIONAL, INTENT(in) :: level
+
+    IF (PRESENT(level)) THEN
+      SELECT CASE (TRIM(level))
+      CASE ('basic')
+        debug_on = debug >= 1
+      CASE ('detail')
+        debug_on = debug >= 2
+      CASE ('hsm')
+        debug_on = debug >= 3
+      END SELECT
+    ELSE
+      debug_on = debug > 0
+    END IF
 
   END FUNCTION debug_on
 

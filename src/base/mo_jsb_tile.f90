@@ -61,7 +61,7 @@ CONTAINS
 
     CHARACTER(len=*),  INTENT(in)           :: name
     CHARACTER(len=*),  INTENT(in)           :: description
-    INTEGER,           INTENT(in)           :: processes(:)
+    INTEGER,           INTENT(in), OPTIONAL :: processes(:)
     TYPE(t_jsb_lct),   INTENT(in), OPTIONAL :: lct
     INTEGER,           INTENT(in), OPTIONAL :: process_actions(:)
     CLASS(t_jsb_tile), POINTER,    OPTIONAL :: parent
@@ -115,7 +115,7 @@ CONTAINS
 
     END IF
 
-    IF (PRESENT(process_actions)) THEN
+    IF (PRESENT(processes) .AND. PRESENT(process_actions)) THEN
       IF (SIZE(processes) /= SIZE(process_actions)) &
         & CALL finish(TRIM(routine), 'Size of processes and process_actions must be equal!')
     END IF
@@ -157,17 +157,18 @@ CONTAINS
     DO i=1,max_no_of_processes
       return_ptr%process_action(i) = SKIP_
       iproc = -1
-      IF (SIZE(processes) > 0) THEN
-        j = one_of(i, processes) ! i counts through the number of all processes, j is the number of the i-process
-                                 ! within the processes vector (input) 
-      ELSE
-        j = 0
+      j = 0
+      IF (PRESENT(processes)) THEN
+        IF (SIZE(processes) > 0) THEN
+          j = one_of(i, processes) ! i counts through the number of all processes, j is the number of the i-process
+                                   ! within the processes vector (input)
+        END IF
       END IF
       IF (j > 0) THEN
         iproc = processes(j)
 
         IF (iproc == SEB .AND. ALLOCATED(return_ptr%lcts)) THEN
-          IF (.NOT. Contains_lct(return_ptr%lcts, LAND_TYPE) .AND. .NOT. Contains_lct(return_ptr%lcts, LAKE_TYPE)) THEN
+          IF (return_ptr%lcts(1)%id /= LAND_TYPE .AND. return_ptr%lcts(1)%id /= LAKE_TYPE) THEN
             CALL finish(TRIM(routine), 'SEB process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
           END IF
         END IF
@@ -193,7 +194,7 @@ CONTAINS
 !!$          return_ptr%process_action(iproc) = sibling%process_action(iproc)
 !!$        END SELECT
       ELSE IF (ASSOCIATED(return_ptr%parent_tile)) THEN
-        IF (return_ptr%parent_tile%process_action(i) > AGGREGATE_) THEN
+        !IF (return_ptr%parent_tile%process_action(i) > AGGREGATE_) THEN
           iproc = i
           SELECT CASE (return_ptr%parent_tile%process_action(iproc))
           CASE (SKIP_)
@@ -212,7 +213,7 @@ CONTAINS
               return_ptr%process_action(iproc) = INHERIT_
             END IF
           END SELECT
-        END IF
+        !END IF
       END IF
 
 !!$      IF (iproc < 1) CYCLE
@@ -223,7 +224,7 @@ CONTAINS
   END FUNCTION Construct_tile
 
   ! Note: It is important that Init_tile is only called for the tiles after the hierarchical tile tree has
-  !       been completely constructed. Therefore, Init_tile is called from model_init_common.
+  !       been completely constructed. Therefore, Init_tile is called from init_model_common.
   !
   SUBROUTINE Init_tile(this, varlist_name, prefix, suffix)
 
@@ -269,6 +270,11 @@ CONTAINS
       this%mem(iproc)%p => NULL()
 
       IF (this%process_action(iproc) == SKIP_) CYCLE
+
+      IF (this%process_action(iproc) == ON_LEAFS_) THEN
+        IF (ASSOCIATED(this%parent_tile)) this%parent_tile%process_action(iproc) = AGGREGATE_
+        IF (.NOT. this%Has_children()) this%process_action(iproc) = ON_TILE_
+      END IF
 
       process_name = Get_process_name(iproc)
 
@@ -468,7 +474,7 @@ CONTAINS
   ! Task handler function for tile (HSM message handler)
   FUNCTION Process_task_on_tile(this, hsm, msg_in) RESULT(return_ptr)
 
-    USE mo_util, ONLY: one_of
+    USE mo_util, ONLY: one_of, logical2string
 
     CLASS(t_jsb_tile),  INTENT(inout) :: this
     CLASS(t_Hsm),       INTENT(inout) :: hsm
@@ -477,8 +483,10 @@ CONTAINS
 
     CLASS(t_jsb_task_msg), POINTER :: msg
     INTEGER :: iproc
+    LOGICAL :: l_debug
 
     CLASS(t_jsb_process_task), POINTER :: task
+    INTEGER :: iblk
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_task_on_tile'
 
@@ -488,17 +496,26 @@ CONTAINS
     SELECT TYPE(model=>hsm)
     CLASS IS (t_jsb_model)
 
+      iblk = model%options%iblk
+      l_debug = debug_on('hsm') .AND. iblk == 1
+
       task => model%current_task
 
-!      IF (debug_on() .AND. model%options%iblk == 1) THEN
-!        IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
-!          CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
-!            &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name))
+      IF (l_debug) THEN
+        !IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
+          CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
+            &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name)//&
+            &                         '(visited='//logical2string(this%visited)//')')
 !!$        PRINT*,'AAA ', TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
 !!$          &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name)
 !!$        CALL this%Print()
-!        END IF
-!      END IF
+        !END IF
+      ELSE IF (debug_on('detail') .AND. iblk == 1) THEN
+        IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
+          CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
+            &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name))
+        END IF
+      END IF
 
       SELECT CASE (TRIM(msg%action%name))
       CASE ('START')
@@ -518,19 +535,19 @@ CONTAINS
           IF (this%Has_children() .AND. &
             & this%process_action(task%process_id) /= ON_SUBTREE_ .AND. &
             & this%process_action(task%process_id) /= ON_TILE_) THEN
-            CALL model%GOTO(this%first_child)
+            CALL model%Goto(this%first_child, l_debug)
           ELSE
             task%msg => msg
             CALL task%Do_it(this, model%options)
             IF (ASSOCIATED(this%next_sibling)) THEN
-              IF (this%next_sibling%Has_children()) THEN
-                CALL model%Goto(this%next_sibling%first_child)
-              ELSE
-                CALL model%Goto(this%next_sibling)
-              END IF
+              !IF (this%next_sibling%Has_children()) THEN
+              !  CALL model%Goto(this%next_sibling%first_child, l_debug)
+              !ELSE
+                CALL model%Goto(this%next_sibling, l_debug)
+              !END IF
             ELSE IF (ASSOCIATED(this%parent)) THEN
               msg%action => model%Get_action('AGGREGATE')
-              CALL model%Goto(this%parent)
+              CALL model%Goto(this%parent, l_debug)
             ELSE
               this%visited = .FALSE.
               msg => NULL()
@@ -539,13 +556,13 @@ CONTAINS
         ELSE
           IF (ASSOCIATED(this%next_sibling)) THEN
             IF (this%next_sibling%Has_children()) THEN
-              CALL model%Goto(this%next_sibling%first_child)
+              CALL model%Goto(this%next_sibling%first_child, l_debug)
             ELSE
-              CALL model%Goto(this%next_sibling)
+              CALL model%Goto(this%next_sibling, l_debug)
             END IF
           ELSE IF (ASSOCIATED(this%parent)) THEN
             msg%action => model%Get_action('AGGREGATE')
-            CALL model%Goto(this%parent)
+            CALL model%Goto(this%parent, l_debug)
           ELSE
             this%visited = .FALSE.
             msg => NULL()
@@ -558,13 +575,13 @@ CONTAINS
         END IF
         IF (ASSOCIATED(this%next_sibling)) THEN
           msg%action => model%Get_action('INTEGRATE')
-          CALL model%Goto(this%next_sibling)
+          CALL model%Goto(this%next_sibling, l_debug)
         ELSE IF (this == model%top) THEN
           this%visited = .FALSE.
           msg => NULL()
         ELSE
           msg%action => model%Get_action('AGGREGATE')
-          CALL model%Goto(this%parent)
+          CALL model%Goto(this%parent, l_debug)
         END IF
       END SELECT
     CLASS DEFAULT
@@ -573,14 +590,22 @@ CONTAINS
 
     return_ptr => msg
 
-    !SELECT TYPE(model=>hsm)
-    !CLASS IS (t_jsb_model)
-    !  IF (debug_on() .AND. model%options%iblk == 1) THEN
-    !    IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
-    !      CALL message(TRIM(routine),'Finished')
-    !    END IF
-    !  END IF
-    !END SELECT
+    SELECT TYPE(model=>hsm)
+    CLASS IS (t_jsb_model)
+      IF (l_debug) THEN
+        !IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
+        IF (ASSOCIATED(msg)) THEN
+          CALL message(TRIM(routine),'Finished (new message action is '//TRIM(msg%action%name)//')')
+        ELSE
+          CALL message(TRIM(routine),'Finished (new message is NULL)')
+        END IF
+        !END IF
+      ELSE IF (debug_on('detail') .AND. iblk == 1) THEN
+        IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
+          CALL message(TRIM(routine),'Finished')
+        END IF
+      END IF
+    END SELECT
 
   END FUNCTION Process_task_on_tile
 

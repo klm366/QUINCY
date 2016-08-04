@@ -13,7 +13,7 @@ MODULE mo_util
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: one_of, toupper, int2string
+  PUBLIC :: one_of, toupper, int2string, logical2string
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -100,6 +100,18 @@ CONTAINS
     int2string = ADJUSTL(int2string)
     !
   END FUNCTION int2string
+
+  FUNCTION logical2string(value)
+    CHARACTER(len=7) :: logical2string ! result
+    LOGICAL, INTENT(in) :: value
+    !
+    IF (value) THEN
+      logical2string = '.TRUE.'
+    ELSE
+      logical2string = '.FALSE.'
+    END IF
+    !
+  END FUNCTION logical2string
 
 #endif
 END MODULE mo_util

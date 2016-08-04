@@ -210,12 +210,12 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
+    IF (tile%lcts(1)%id == LAKE_TYPE) THEN
       CALL update_surface_energy_lake(tile, options)
-    ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
+    ELSE IF (tile%lcts(1)%id == LAND_TYPE) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE
-      CALL finish(TRIM(routine), 'Called for invalid lct_type')
+      CALL finish(TRIM(routine), 'Called for invalid lct_type '//TRIM(tile%lcts(1)%name)//' on tile '//TRIM(tile%name))
     END IF
 
   END SUBROUTINE update_surface_energy

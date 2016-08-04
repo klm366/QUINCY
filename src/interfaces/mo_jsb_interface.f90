@@ -190,7 +190,7 @@ CONTAINS
 !!$    p_pe = get_my_global_mpi_id()
 !!$    CALL message( TRIM(routine), 'Updating '//TRIM(model%name)//' on PE '//int2string(p_pe)// &
 !!$      &                          ', nblk='//int2string(iblk), all_print=.TRUE.)
-    IF (debug_on() .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
+    IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, dtime=dtime, steplen=steplen)
@@ -237,7 +237,7 @@ CONTAINS
     NULLIFY(tile)
 
     ! Run tasks in queue
-    CALL model%Run_tasks()
+    CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
 
     ! Finally, give the required variables back to the atmosphere
     tile => model%Get_top_tile()
@@ -279,7 +279,7 @@ CONTAINS
 !!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
 !!$      &                             ' on PE '//int2string(p_pe)//' completed.', &
 !!$      &              all_print=.TRUE.)
-    IF (debug_on() .AND. iblk == 1) &
+    IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
     CALL timer_stop(timer_jsbach)

@@ -47,7 +47,7 @@ MODULE mo_jsb_process_class
   ! Process actions
   ! It is important that AGGREGATE comes before the other actions
   ENUM, BIND(C)
-    ENUMERATOR :: SKIP_=0, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
+    ENUMERATOR :: SKIP_=0, INHERIT_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_
   END ENUM
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_class'

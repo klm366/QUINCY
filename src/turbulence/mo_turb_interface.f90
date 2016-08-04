@@ -341,9 +341,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_srf)       ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_trans_srf) ! OUT
 
-    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_sl)           ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_fc_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl)       ! in
+    IF (Contains_lct(tile%lcts, BARE_TYPE) .OR. Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
+      dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_sl)           ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_fc_sl)        ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl)       ! in
+    END IF
   
     ! ---------------------------
     ! Go

@@ -112,6 +112,7 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc)  :: &
+      fract,            &
       qsat_srf_old,     &
       s_old,            &
       dQdT,             & !< Sensitivity of saturated surface specific humidity to temperature
@@ -270,6 +271,12 @@ CONTAINS
         fract_snow(:), heat_cap(:), &
         & s_star(:))
     END IF
+
+    ! TBD - hack for oceans boxes
+    CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))
+    WHERE (fract(:) < EPSILON(1._wp))
+      s_star(:) = s_old(:)
+    END WHERE
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
