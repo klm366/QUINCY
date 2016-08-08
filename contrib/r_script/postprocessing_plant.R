@@ -34,6 +34,7 @@ for(ti in 1:tileNum)
   # plot data
   pdf(paste0("plant_plots_tile",ti,".pdf"), paper="a4", height=10, width=8, pointsize=12, bg="white", family="Helvetica", version="1.6")
   for (i in 1:nplot) {
+    print(paste('reading',flist[i]))
     dat=read.table(flist[i],header=T)
     nvar=dim(dat)[2]
     mat=matrix(seq(1,2*round(nvar/2)+2,1),nrow=round(nvar/2)+1,ncol=2,byrow=T) 

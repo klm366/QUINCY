@@ -183,7 +183,6 @@ CONTAINS
     CALL tile%plant%moving_average%init     !< init variables with reasonable default values and sets accumulation periods
 
 
-      lctlib%tjmax_opt                   = 20._wp+0.35_wp*(atm2land%t_air - Tzero)   ! conversion from K to °C
       tile%soil%moisture                 = veg_config%soil_awc_prescribe
       tile%soil%theta                    = veg_config%soil_theta_prescribe 
       tile%soil%ammonium                 = 0.1_wp
@@ -246,11 +245,13 @@ CONTAINS
 
     ! forcing
     CALL init_forcing                                !< needs atmland_config%Init to run before
+    ! accumulation
+    CALL tile%plant%daily_average%init      !< initially sets all variables to zero or .FALSE.
+    CALL tile%plant%moving_average%init     !< init variables with reasonable default values and sets accumulation periods
 
     !! 1.3 Initialise tile
     !! 
     !! Initialisation of soil and vegetation, so far relevant
-    lctlib%tjmax_opt     = 20._wp+0.35_wp*(atm2land%t_air - Tzero)  ! conversion from K to °C
     tile%soil%moisture   = veg_config%soil_awc_prescribe
     tile%soil%theta      = veg_config%soil_theta_prescribe
     tile%plant%lai       = ref_lai 

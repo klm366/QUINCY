@@ -155,6 +155,13 @@ CONTAINS
       CALL update_canopy_fluxes   (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_vegsoil_physics (tile)
 
+    !! accumulation - daily & moving average
+    !! 
+      CALL tile%plant%daily_average%calc_avrg(tile%plant, time_day, timestep_prop_day) !< daily avrg of the prev day
+      CALL tile%plant%moving_average%update_veg(tile%plant)               !< moving averages - vegetation
+      !CALL tile%plant%moving_average%update_soil(tile%plant)             !< moving averages - soil -> plant N & P uptake
+      CALL tile%plant%moving_average%update_tile(atm2land%t_air, atm2land%press_srf, atm2land%q_air) !< moving averages - atmland
+
     !! output fluxes -> filename: fort.20
     !! output also some atm2land variables
     !! 
@@ -217,7 +224,7 @@ CONTAINS
 
     !  bi-directional pointer
     lctlib => model%lctlib(ref_pft)
-
+    tile%plant%moving_average%t_jmax_opt = 20._wp+0.35_wp*(atm2land%t_air - Tzero)
 
   !> 2.0 Sensitivity plots
   !!
@@ -228,7 +235,7 @@ CONTAINS
   !! 
   lun = 10
   WRITE(lun,*) 'PAR A GC CI' 
-  atm2land%swvis_srf_down = -99.0_wp
+  atm2land%swvis_srf_down = 0.0_wp 
   DO i = 1,16
 
      atm2land%swvis_srf_down = atm2land%swvis_srf_down + 100.0_wp / 2.3_wp
@@ -257,12 +264,12 @@ CONTAINS
   lun = lun + 1
   WRITE(lun,*) 'T A GC CI' 
   atm2land%t_air = - 5.0_wp + Tzero
-  hlp1 = lctlib%tjmax_opt
+  hlp1 = tile%plant%moving_average%t_jmax_opt
   DO i = 1,70
 
      atm2land%t_air = atm2land%t_air + 1.0_wp 
      atm2land%q_air = 0.8_wp * calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf)
-     lctlib%tjmax_opt = 20._wp+0.35_wp*(atm2land%t_air - Tzero)
+     tile%plant%moving_average%t_jmax_opt = 20._wp+0.35_wp*(atm2land%t_air - Tzero)
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
@@ -275,7 +282,7 @@ CONTAINS
   END DO
   atm2land%t_air    = ref_t_air + Tzero
   atm2land%q_air    = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - ref_vpd / atm2land%press_srf * eps_vpd
-  lctlib%tjmax_opt  = hlp1
+  tile%plant%moving_average%t_jmax_opt = hlp1 
 
   !> 2.3 atmospheric CO2 (175 - 1000 ppm) 
   !! 

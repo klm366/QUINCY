@@ -98,7 +98,7 @@ CONTAINS
                                    plant%canopy_layer(:)%fnl_rub, & 
                                    plant%canopy_layer(:)%fnl_pepc, &
                                    plant%canopy_layer(:)%fnl_oth)
-
+write(90,*) 'plant%moving_average%t_jmax_opt',plant%moving_average%t_jmax_opt,lctlib%t_jmax_opt
    ! calculate photosynthesis per layer
    DO icanop = 1,ncanop
       IF(canopy_layer_depth_act(icanop) > 0.0_wp)THEN
@@ -114,7 +114,8 @@ CONTAINS
                          plant%moving_average%par_shaded(icanop), plant%moving_average%fleaf_sunlit(icanop),&
                          plant%moving_average%t_air, plant%moving_average%press_surf,plant%moving_average%beta_air,&
                          plant%moving_average%beta_soil_ps,&
-                         plant%moving_average%beta_soil_gs, lctlib)
+                         plant%moving_average%beta_soil_gs,&
+                         plant%moving_average%t_jmax_opt, lctlib)
           ENDIF
 
           CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
@@ -128,8 +129,8 @@ CONTAINS
                                  plant%canopy_layer(icanop)%fnl_pepc, & 
                                  plant%canopy_layer(icanop)%nl_tot, & 
                                  lctlib%ps_pathway, &
-                                 lctlib%tjmax_opt, &
-                                 lctlib%tjmax_omega,lctlib%g0,lctlib%g1, &
+                                 plant%moving_average%t_jmax_opt, &
+                                 lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
                                  agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop), &
                                  hlp1,hlp1,hlp1)
 
@@ -162,15 +163,22 @@ CONTAINS
 
   plant%flux%ci = plant%flux%ci / sum(canopy_layer_depth_act)
 
-     ! optimize total N allocated to leaf pool
-     IF (assimi_config%flag_optimal_Nleaf) &
+  IF(assimi_config%flag_t_jmax_acclimation) THEN 
+     plant%t_jmax_opt = t_jmax_offset + t_jmax_slope * ( atm2land%t_air - TZero ) 
+     plant%t_jmax_opt = MIN(MAX(plant%t_jmax_opt,t_jmax_opt_min),t_jmax_opt_max)
+  ELSE 
+     plant%t_jmax_opt = lctlib%t_jmax_opt
+  ENDIF
+
+  ! optimize total N allocated to leaf pool
+  IF (assimi_config%flag_optimal_Nleaf) &
           CALL  optimize_Nleaf(plant, canopy_layer_depth_act, lctlib,&
           plant%moving_average%t_air, plant%moving_average%press_surf, plant%moving_average%beta_air,&
-          plant%moving_average%beta_soil_ps,plant%moving_average%beta_soil_gs )
+          plant%moving_average%beta_soil_ps,plant%moving_average%beta_soil_gs)
 
      ! calculate NPP increment, needed for optimal allocation scheme
      !IF (assimi_config%flag_optimal_allocation) 
-CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
+    CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
 
   END SUBROUTINE update_canopy_fluxes
 
@@ -296,7 +304,7 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
   !! accounts for temperature acclimation of JMAX according to Friend, 2010 J Exp Bot
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_photosynthesis(temp,press_srf,co2_mixing_ratio,ga,par_sunlit,par_shaded,fleaf_sunlit,beta_air,beta_soil_ps, &
-                          beta_soil_gs,fnl_chl,fnl_et,fnl_rub,fnl_pepc,nfmol,ps_pathway,tjmax_opt,tjmax_omega,g0,g1, &
+                          beta_soil_gs,fnl_chl,fnl_et,fnl_rub,fnl_pepc,nfmol,ps_pathway,t_jmax_opt,t_jmax_omega,g0,g1, &
                           agl,anl,rl,gsl,cil,m_rub,m_et,m_pepc)  
     
   USE mo_shared_constants,    ONLY: r_gas, Tzero
@@ -322,8 +330,8 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
   REAL(wp),INTENT(IN) :: fnl_chl                 !< fraction of foliar N allocated to Chlorophyll
   REAL(wp),INTENT(IN) :: nfmol                   !< total foliar N content
   INTEGER,INTENT(IN)  :: ps_pathway              !< photosynthetic pathway 
-  REAL(wp),INTENT(IN) :: tjmax_opt               !< temperature optimum of electron transport
-  REAL(wp),INTENT(IN) :: tjmax_omega             !< shape-parameter of temperature sensitivity of electron transport
+  REAL(wp),INTENT(IN) :: t_jmax_opt              !< temperature optimum of electron transport
+  REAL(wp),INTENT(IN) :: t_jmax_omega             !< shape-parameter of temperature sensitivity of electron transport
   REAL(wp),INTENT(IN) :: g0                      !< offset of the stomatal conductance ~ An relationship 
   REAL(wp),INTENT(IN) :: g1                      !< slope of the stomatal conductance ~ An relationship
   REAL(wp),INTENT(OUT) :: agl                    !< gross photsynthesis of layer (µmol CO2 / m2 /s) 
@@ -381,7 +389,7 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
      pcp = exp(E0pcp - E1pcp/rtck) * ppm2Pa 
 
      !> N specific rate of electron transport rate
-     n1 = jmax2n * fnl_et * exp(-(((temp - Tzero - tjmax_opt)/tjmax_omega)**2)) * beta_soil_ps
+     n1 = jmax2n * fnl_et * exp(-(((temp - Tzero - t_jmax_opt)/t_jmax_omega)**2)) * beta_soil_ps
 
      !> N specific rate of Rubisco turnover 
      n2 = vcmax2n * fnl_rub * exp(E0v - E1v/rtck) * beta_soil_ps
@@ -555,7 +563,7 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
   !! fractions that give maximum assimilation
   !-------------------------------------------------------------------------------------------------------
   SUBROUTINE optimize_fractions(fnl_chl, fnl_rub, fnl_et,fnl_pepc,fnl_oth,nl_tot, dnf, par_sunlit, par_shaded, fleaf_sunlit,&
-       t_air,press_srf,  beta_air,beta_soil_ps,beta_soil_gs, lctlib)
+       t_air,press_srf,  beta_air,beta_soil_ps,beta_soil_gs,t_jmax_opt, lctlib)
 
 
     IMPLICIT NONE
@@ -565,6 +573,7 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
     REAL(wp), INTENT(in) :: par_sunlit, par_shaded, fleaf_sunlit ! light for layer
     REAl(wp), INTENT(in) :: t_air, press_Srf
     REAL(wp), INTENT(in) :: beta_air,beta_soil_ps,beta_soil_gs   ! soil moisture
+    REAL(wp), INTENT(in) :: t_jmax_opt 
     TYPE(t_lctlib_element),INTENT(in)        :: lctlib         !< land-cover-type library - parameters for one pft
     REAL(wp), INTENT(in) :: fnl_oth
     REAL(wp), INTENT(inout) :: fnl_chl, fnl_rub, fnl_et, fnl_pepc ! photosynthetic fractions at previous step | Input/output
@@ -594,7 +603,7 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
          par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
          fnl_chl0*(1._wp-fnl_oth), fnl_et0*(1._wp-fnl_oth), fnl_rub0*(1._wp-fnl_oth), & 
          fnl_pepc0*(1._wp-fnl_oth),nl_tot, lctlib%ps_pathway, & 
-         lctlib%tjmax_opt,lctlib%tjmax_omega,lctlib%g0,lctlib%g1, &
+         t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
          agl0,anl0,rl0,gsl0,cil0, m_rub,m_et,m_pepc)
     
     ! increase N fraction in chlorophyll
@@ -650,7 +659,7 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
          par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
          fnl_chl*(1._wp-fnl_oth), fnl_et*(1._wp-fnl_oth), fnl_rub*(1._wp-fnl_oth), & 
          fnl_pepc*(1._wp-fnl_oth),nl_tot, lctlib%ps_pathway, & 
-         lctlib%tjmax_opt,lctlib%tjmax_omega,lctlib%g0,lctlib%g1, &
+         t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
          agl,anl,rl,gsl,cil,hlp, hlp, hlp)
     
    ! check if change has increased photosynthesis. If not
@@ -710,7 +719,7 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
             par_sunlit,par_shaded, fleaf_sunlit,beta_air,beta_soil_ps,beta_soil_gs, &
             fnl_chl*(1._wp-fnl_oth), fnl_et*(1._wp-fnl_oth), fnl_rub*(1._wp-fnl_oth), & 
             fnl_pepc*(1._wp-fnl_oth),nl_tot, lctlib%ps_pathway, & 
-            lctlib%tjmax_opt,lctlib%tjmax_omega,lctlib%g0,lctlib%g1, &
+            t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
             agl,anl,rl,gsl,cil,hlp, hlp,hlp)
 
        ! if photosyntheis has still not increased, do not change fnl_chl
@@ -780,7 +789,8 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
   !! 
   !! Parameter leaf_cn_direction
   !----------------------------------------------------------------------------------------------------
-  SUBROUTINE optimize_Nleaf(plant, canopy_layer_depth_act,lctlib, t_air, press_Srf,beta_air,beta_soil_ps,beta_soil_gs)
+  SUBROUTINE optimize_Nleaf(plant, canopy_layer_depth_act,lctlib, t_air, press_Srf,beta_air,beta_soil_ps, & 
+                          beta_soil_gs)
     
     USE mo_veg_respiration
     USE mo_veg_memory, ONLY: t_slm_plant, t_slm_veg_pool
@@ -837,8 +847,8 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
                   plant%canopy_layer(icanop)%fnl_pepc,&
                   nl_tot(icanop),&
                   lctlib%ps_pathway, & 
-                  lctlib%tjmax_opt, &
-                  lctlib%tjmax_omega,lctlib%g0,lctlib%g1, &
+                  plant%moving_average%t_jmax_opt, &                  
+                  lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
                   agl(icanop, dd+2),anl(icanop, dd+2),rl(icanop, dd+2),gsl(icanop, dd+2),cil(icanop, dd+2),&
                   m_rub, m_et, m_pepc)
           
@@ -933,8 +943,8 @@ CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
                 plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
                 fnl_chl(icanop),fnl_et(icanop),fnl_rub(icanop),fnl_pepc(icanop), nl_tot(icanop),& 
                 lctlib%ps_pathway, &
-                lctlib%tjmax_opt, &
-                lctlib%tjmax_omega,lctlib%g0,lctlib%g1, &
+                plant%moving_average%t_jmax_opt, &                  
+                lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
                 agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop),&
                 hlp1,hlp1,hlp1)
         END IF

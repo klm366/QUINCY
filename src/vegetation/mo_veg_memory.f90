@@ -29,17 +29,21 @@ MODULE mo_veg_memory
     REAL(wp), DIMENSION(ncanop)     :: avrg_prev_par_sunlit_day      !<  average of the previous day
     REAL(wp), DIMENSION(ncanop)     :: avrg_prev_par_shaded_day      !<  average of the previous day
     REAL(wp), DIMENSION(ncanop)     :: avrg_prev_fleaf_sunlit_day    !<  average of the previous day
+    REAL(wp)                        :: avrg_prev_t_jmax_opt_day      !<  average of the previous day
     ! accumulated value of the current day & number of values accumulated
     REAL(wp), DIMENSION(ncanop)     :: curr_val_par_sunlit_day        !<  value accumulated over current day
     REAL(wp), DIMENSION(ncanop)     :: curr_val_par_shaded_day        !<  value accumulated over current day
     REAL(wp), DIMENSION(ncanop)     :: curr_val_fleaf_sunlit_day      !<  value accumulated over current day
+    REAL(wp)                        :: curr_val_t_jmax_opt_day        !<  value accumulated over current day 
     REAL(wp), DIMENSION(ncanop)     :: curr_count_par_sunlit_day      !<  counter of acc values over current day
     REAL(wp), DIMENSION(ncanop)     :: curr_count_par_shaded_day      !<  counter of acc values over current day
     REAL(wp), DIMENSION(ncanop)     :: curr_count_fleaf_sunlit_day    !<  counter of acc values over current day
+    REAL(wp)                        :: curr_count_t_jmax_opt_day      !<  counter of acc values over current day
     ! condition per variable and timestep
     LOGICAL                         :: l_par_sunlit_day              !< whether sunlight is available at canopy top
     LOGICAL                         :: l_par_shaded_day              !< whether sunlight is available at canopy top
     LOGICAL                         :: l_fleaf_sunlit_day            !< whether sunlight is available at canopy top
+    LOGICAL                         :: l_t_jmax_opt_day              !< whether sunlight is available at canopy top
   CONTAINS
     PROCEDURE :: init              => init_daily_avrg_variables
     PROCEDURE :: update_conditions => update_conditions_current_timestep
@@ -84,6 +88,7 @@ MODULE mo_veg_memory
     REAL(wp) :: t_air_week        !< avrg air temperaure across 7 days
     REAL(wp) :: t_air_month       !< avrg air temperaure across 30 days
     REAL(wp) :: t_air_longterm    !< avrg air temperaure across 30 years == 10950 days
+    REAL(wp) :: t_jmax_opt        !< optimim temperature for electron transport of photosynthesis
     ! 1.7 plant status parameter
     REAL(wp) :: boc_an            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 variables needed for optimal allocation calculations
@@ -266,6 +271,7 @@ MODULE mo_veg_memory
     REAL(wp) :: growth_req_p                      !< moles P required for a unit of N growth under current allocation fractions 
     REAL(wp) :: gdd                               !< growing degree days above 5°C
     REAL(wp) :: nd_dormance                       !< number of days since last growing season 
+    REAL(wp) :: t_jmax_opt                        !y current optimum temperature for eletron transport of photosynthesis
     REAL(wp) :: boc_an                            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     REAL(wp) :: leaf_cn_direction                 !< indicates direction of change in leaf CN ratio to maximise NPP
   CONTAINS
@@ -582,17 +588,21 @@ CONTAINS
     this%avrg_prev_par_sunlit_day    = 0.0_wp    ! this sets the complete array to 0.0_wp
     this%avrg_prev_par_shaded_day    = 0.0_wp
     this%avrg_prev_fleaf_sunlit_day  = 0.0_wp
+    this%avrg_prev_t_jmax_opt_day    = 17.0_wp   ! set here to avoid referencing assim_constants
 
     this%curr_val_par_sunlit_day      = 0.0_wp
     this%curr_val_par_shaded_day      = 0.0_wp
     this%curr_val_fleaf_sunlit_day    = 0.0_wp
+    this%curr_val_t_jmax_opt_day      = 0.0_wp
     this%curr_count_par_sunlit_day    = 0.0_wp
     this%curr_count_par_shaded_day    = 0.0_wp
     this%curr_count_fleaf_sunlit_day  = 0.0_wp
+    this%curr_count_t_jmax_opt_day    = 0.0_wp
 
     this%l_par_sunlit_day    = .FALSE.
     this%l_par_shaded_day    = .FALSE.
     this%l_fleaf_sunlit_day  = .FALSE.
+    this%l_t_jmax_opt_day    = .FALSE.
   END SUBROUTINE init_daily_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------
@@ -615,10 +625,12 @@ CONTAINS
       this%l_par_sunlit_day    = .TRUE.
       this%l_par_shaded_day    = .TRUE.
       this%l_fleaf_sunlit_day  = .TRUE.
+      this%l_t_jmax_opt_day    = .TRUE.
     ELSE
       this%l_par_sunlit_day    = .FALSE.
       this%l_par_shaded_day    = .FALSE.
       this%l_fleaf_sunlit_day  = .FALSE.      
+      this%l_t_jmax_opt_day    = .FALSE.
     END IF
     ! condition type 2:
         ! ... currently none
@@ -658,6 +670,11 @@ CONTAINS
         this%curr_val_fleaf_sunlit_day(i) = this%curr_val_fleaf_sunlit_day(i) + plant%canopy_layer(i)%fleaf_sunlit
         this%curr_count_fleaf_sunlit_day(i) = this%curr_count_fleaf_sunlit_day(i) + 1.0_wp
       END DO
+    END IF
+
+    IF(this%l_t_jmax_opt_day) THEN
+       this%curr_val_t_jmax_opt_day = this%curr_val_t_jmax_opt_day + plant%t_jmax_opt
+       this%curr_count_t_jmax_opt_day = this%curr_count_t_jmax_opt_day + 1.0_wp
     END IF
 
   END SUBROUTINE accumulate_values_over_current_day
@@ -708,6 +725,12 @@ CONTAINS
           this%avrg_prev_fleaf_sunlit_day(i)  = this%curr_val_fleaf_sunlit_day(i) / this%curr_count_fleaf_sunlit_day(i)
         END IF
       END DO
+
+      IF( this%curr_count_t_jmax_opt_day < eps8 ) THEN
+        this%avrg_prev_t_jmax_opt_day  = 0.0_wp
+      ELSE
+        this%avrg_prev_t_jmax_opt_day  = this%curr_val_t_jmax_opt_day / this%curr_count_t_jmax_opt_day
+      END IF
       
       !write(*,*) time_day, &   ! may enable for testing
       !           NINT(this%curr_count_par_sunlit_day(1)), this%avrg_prev_par_sunlit_day(1), &
@@ -760,6 +783,8 @@ CONTAINS
     this%t_air_week                    = 283.15_wp   ! 10°C; 7  days
     this%t_air_month                   = 283.15_wp   ! 10°C; 30 days
     this%t_air_longterm                = 283.15_wp   ! 10°C; 30 years == 10950 days
+    ! 1.6.1 electron transport optimum temperature [°C], ...
+    this%t_jmax_opt                    = 17._wp   ! 17°C
     ! 1.7 plant status parameter
     this%boc_an                        = 5.0_wp      ! net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 Optimal allocation
@@ -861,6 +886,8 @@ CONTAINS
                                                1._wp / ( this%p_optNfrac * one_day/dt))
     this%beta_air         = this%calc_moving_avrg(this%beta_air, plant%beta_air, &
                                                1._wp / ( this%p_optNfrac * one_day/dt))
+    this%t_jmax_opt       = this%calc_moving_avrg(this%t_jmax_opt, plant%daily_average%avrg_prev_t_jmax_opt_day, &
+                                               1._wp / ( this%p_weekly * one_day/dt))
     this%gpp_week                = this%calc_moving_avrg(this%gpp_week, plant%flux%gpp, &
                                                1.0_wp / (this%p_weekly * one_day/ dt))
     this%maint_respiration_week  = this%calc_moving_avrg(this%maint_respiration_week, plant%flux%maint_respiration_pot, &
@@ -1025,9 +1052,10 @@ CONTAINS
     this%gc               = plant_var_init_zero
     this%f_n_demand       = plant_var_init_zero
     this%f_p_demand       = plant_var_init_zero
-    this%beta_air         = plant_var_init_zero
-    this%beta_soil_ps     = plant_var_init_zero
-    this%beta_soil_gs     = plant_var_init_zero
+    this%beta_air         = plant_var_init_one
+    this%beta_soil_ps     = plant_var_init_one
+    this%beta_soil_gs     = plant_var_init_one
+    this%t_jmax_opt       = plant_var_init_zero
     this%growth_req_n     = plant_var_init_zero
     this%growth_req_p     = plant_var_init_zero
     this%gdd                = plant_var_init_one

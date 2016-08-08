@@ -50,15 +50,16 @@ MODULE mo_assimi_constants
       ! Temperature sensitivity and baseline of Rubisco
       E0v     ,     & !< Baseline of Rubisco
       E1v     ,     & !< Temperature sensitivity of Rubisco
-
-        ! delete ?
-        ! Temperature sensitivity and baseline value of foliar respiration
-        ! E0kt = 18.72_wp
-        ! E1kt = 46390.0_wp
-
+      ! Temperature sensitivity of Electron transport
+      t_jmax_offset, & !< Offset of the Tjmax~Tair relationship
+      t_jmax_slope, &  !< slope of the Tjmax~Tair relationship (candidate for PFT specific parameterisation?)
+      t_jmax_opt_min, & !< Minimum of optimum Tjmax 
+      t_jmax_opt_max, & !< Maximum of optimum Tjmax
       ! Temperature sensitivity of PeP C4 photosynthesis
       Tref_pepc   ,     & !< Temperature sensitivity of PeP C4 photosynthesis 
-      Tbase_pepc  ,     & !< Temperature sensitivity of PeP C4 photosynthesis
+      Tbase_pepc         !< Temperature sensitivity of PeP C4 photosynthesis
+
+  REAL(wp), SAVE :: &
       ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))) (µmol CO2 / mol quanta)
       ! accounting for the absorptance of leaves (0.85), the maximum quantum yield of PS II (0.7)
       ! the fraction of total light that reaches PS II (0.5) and the NADPH limited RubGeneration (jointly leading to 0.066)
@@ -140,6 +141,10 @@ CONTAINS
       E1pcp           = 37830.0_wp 
       E0v             = 26.35_wp 
       E1v             = 65330.0_wp
+      t_jmax_offset   = 17.0_wp
+      t_jmax_slope    = 0.35_wp
+      t_jmax_opt_min  = t_jmax_offset 
+      t_jmax_opt_max  = 38.0_wp
       Tref_pepc       = 25._wp 
       Tbase_pepc      = 10._wp 
       alpha_i         = 0.85_wp * 0.066_wp  

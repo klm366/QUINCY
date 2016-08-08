@@ -38,8 +38,8 @@ MODULE mo_jsb_lctlib_class
      REAL(wp) :: cn_leaf
      REAL(wp) :: np_leaf
      REAL(wp) :: k0_fnl_struc
-     REAL(wp) :: tjmax_opt
-     REAL(wp) :: tjmax_omega
+     REAL(wp) :: t_jmax_opt
+     REAL(wp) :: t_jmax_omega
      REAL(wp) :: g0
      REAL(wp) :: g1
      REAL(wp) :: lambda_soil_ps
@@ -139,9 +139,9 @@ CONTAINS
       !0.012_wp / 0.48_wp * molar_mass_C / molar_mass_N / lctlib(1:npft)%sla/&
       !(1._wp / lctlib(1:npft)%sla / lctlib(1:npft)%cn_leaf) 
       ! initial value of the temperature optimum of electron transport and its shape parameter (deg C)
-      lctlib(1:npft)%tjmax_opt = & 
-      (/17._wp,17._wp,17._wp,17._wp,17._wp,17._wp,17._wp,35._wp/)
-      lctlib(1:npft)%tjmax_omega = 18._wp
+      lctlib(1:npft)%t_jmax_opt = & 
+      (/30._wp,30._wp,25._wp,25._wp,25._wp,25._wp,25._wp,35._wp/)
+      lctlib(1:npft)%t_jmax_omega = 18._wp
       ! intercept and slope of the An ~gs relationship (mmol/µmol)
       lctlib(1:npft)%g0 = & ! 0.01_wp
       (/0.01_wp,0.01_wp,0.01_wp,0.01_wp,0.01_wp,0.01_wp,0.03_wp,0.03_wp/)

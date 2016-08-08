@@ -391,7 +391,7 @@ CONTAINS
        dC13labile      = calc_delta_C13(plant%pool%labile%carbon,plant%pool%labile%carbon13)
        dC13reserve     = calc_delta_C13(plant%pool%reserve%carbon,plant%pool%reserve%carbon13)
        dC13seedbank    = calc_delta_C13(plant%pool%seed_bed%carbon,plant%pool%seed_bed%carbon13)
-       write(lun,'(19F12.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
+       write(lun,'(19F18.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
          dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seedbank, & 
          calc_delta_C14(plant%pool%leaf%carbon,plant%pool%leaf%carbon14,dC13leaf),&
          calc_delta_C14(plant%pool%fine_root%carbon,plant%pool%fine_root%carbon14,dC13fine_root),&
@@ -548,7 +548,7 @@ CONTAINS
         dC13gpp = calc_delta_C13(gpp_acc(itile),gpp_C13_acc(itile))
         dC13rg = calc_delta_C13(growth_resp_acc(itile),growth_resp_C13_acc(itile))
         dC13rm = calc_delta_C13(maint_resp_acc(itile),maint_resp_C13_acc(itile)) 
-        write(lun,'(7F16.6)') time_d,dC13gpp,dC13rg,dC13rm, & 
+        write(lun,'(7F18.6)') time_d,dC13gpp,dC13rg,dC13rm, & 
                               calc_delta_C14(gpp_acc(itile),gpp_C14_acc(itile),dC13gpp), & 
                               calc_delta_C14(growth_resp_acc(itile),growth_resp_C14_acc(itile),dC13rg), & 
                               calc_delta_C14(maint_resp_acc(itile),maint_resp_C14_acc(itile),dC13rm)

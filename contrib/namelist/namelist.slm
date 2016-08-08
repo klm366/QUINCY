@@ -18,6 +18,7 @@
   flag_optimal_Nfraction=.FALSE.
   flag_optimal_Nleaf=.FALSE.
   flag_optimal_allocation=.FALSE.
+  flag_t_jmax_acclimation=.FALSE.
 /
 &FORCING_CTL
   ! options for plant model forcing
