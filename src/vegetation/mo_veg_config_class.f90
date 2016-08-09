@@ -36,6 +36,7 @@ MODULE mo_veg_config_class
     LOGICAL          :: flag_calc_soil_moisture    !< calcualte water bucket 
     LOGICAL          :: flag_base_soil_model       !< calculate soil N:P budget
     LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics
+    LOGICAL          :: flag_start_bareground      !< start from bareground?
     REAL(wp)         :: soil_awc_prescribe, soil_theta_prescribe
     CONTAINS
       PROCEDURE :: Init => Init_veg_config
@@ -64,7 +65,7 @@ CONTAINS
     CHARACTER(8) :: output_interval_pool, output_interval_flux
     INTEGER      :: output_start_first_day_year, output_end_last_day_year, plant_functional_type_id
     LOGICAL      :: flag_calc_soil_uptake, flag_calc_soil_moisture
-    LOGICAL      :: flag_base_soil_model, flag_tile_veg_dynamics
+    LOGICAL      :: flag_base_soil_model, flag_tile_veg_dynamics, flag_start_bareground
     REAL(wp)     :: soil_awc_prescribe, soil_theta_prescribe
 
     NAMELIST /vegetation_ctl/       & 
@@ -76,6 +77,7 @@ CONTAINS
       flag_calc_soil_moisture,      &
       flag_base_soil_model,         &
       flag_tile_veg_dynamics,       &
+      flag_start_bareground,        &
       soil_awc_prescribe,           &
       soil_theta_prescribe,         &
       plant_functional_type_id
@@ -96,6 +98,7 @@ CONTAINS
     flag_base_soil_model           = .FALSE.  ! .TRUE. .FALSE.
     flag_calc_soil_moisture        = .FALSE.  ! .TRUE. .FALSE.
     flag_tile_veg_dynamics         = .FALSE.  ! .TRUE. .FALSE.
+    flag_start_bareground          = .FALSE.  ! .TRUE. .FALSE.
     soil_awc_prescribe             = 300.0_wp
     soil_theta_prescribe           = 100.0_wp 
     plant_functional_type_id       = 1
@@ -117,6 +120,7 @@ CONTAINS
     config%flag_base_soil_model          = flag_base_soil_model
     config%flag_calc_soil_moisture       = flag_calc_soil_moisture
     config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  
+    config%flag_start_bareground         = flag_start_bareground
     config%soil_awc_prescribe            = soil_awc_prescribe 
     config%soil_theta_prescribe          = soil_theta_prescribe 
     config%pft_id                        = plant_functional_type_id

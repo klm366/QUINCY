@@ -164,6 +164,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_slm_land(model, tile) !(model_id, model_name)
 
+    USE mo_shared_memory, ONLY: t_element
+
     IMPLICIT NONE
 
     ! 0.1 InOut
@@ -171,6 +173,7 @@ CONTAINS
     TYPE(t_slm_tile),INTENT(inout)               :: tile       !< data structure for dynamic vegetation and soil variables
     ! 0.2 Local
     TYPE(t_lctlib_element),POINTER               :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_element)                              :: init_pool  !< land-cover-type library - parameter across pft's
     REAL(wp)                                     :: hlp1
 
     !  bi-directional pointer
@@ -189,14 +192,22 @@ CONTAINS
       tile%soil%phosphate                = 0.01_wp
       tile%soil%pool%litter%nitrogen     = 5.0_wp
       tile%plant%pftid                   = veg_config%pft_id
-      tile%plant%dens_ind                = 1.0_wp 
       tile%plant%target_cn_leaf          = lctlib%cn_leaf
       tile%plant%target_np_leaf          = lctlib%np_leaf
-      tile%plant%pool%reserve%carbon     = 50.0_wp
-      tile%plant%pool%reserve%nitrogen   = tile%plant%pool%reserve%carbon / &
-                                                  (1._wp + fresp_growth) / lctlib%cn_leaf
-      tile%plant%pool%reserve%phosphorus = tile%plant%pool%reserve%nitrogen / &
-                                                  lctlib%np_leaf
+
+      IF(veg_config%flag_start_bareground)THEN
+         init_pool%carbon        = lctlib%seed_size * 10.0_wp
+         tile%plant%dens_ind     = 0.0_wp 
+      ELSE
+         init_pool%carbon        = 50.0_wp 
+         tile%plant%dens_ind     = 1.0_wp 
+      ENDIF
+
+      init_pool%nitrogen  = init_pool%carbon / &
+                            (1._wp + fresp_growth) / lctlib%cn_leaf
+      init_pool%phosphorus = init_pool%nitrogen / &
+                            lctlib%np_leaf
+
       IF(lctlib%ps_pathway == ic3phot)THEN
          hlp1 = discrimination_ps(CiCa_default_C3*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
                                   'C13',lctlib%ps_pathway)
@@ -204,9 +215,10 @@ CONTAINS
          hlp1 = discrimination_ps(CiCa_default_C4*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
                                   'C13',lctlib%ps_pathway)
       ENDIF
-      tile%plant%pool%reserve%carbon13   = calc_fractionation(atm2land%co2_mixing_ratio, & 
-                                                                     atm2land%co2_mixing_ratio_C13,hlp1) & 
-                                                  * tile%plant%pool%reserve%carbon 
+      init_pool%carbon13 = calc_fractionation(atm2land%co2_mixing_ratio, & 
+                                              atm2land%co2_mixing_ratio_C13,hlp1) & 
+                                            * init_pool%carbon 
+
       IF(lctlib%ps_pathway == ic3phot)THEN
          hlp1 = discrimination_ps(CiCa_default_C3*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
                                   'C14',lctlib%ps_pathway)
@@ -214,9 +226,16 @@ CONTAINS
          hlp1 = discrimination_ps(CiCa_default_C4*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
                                   'C14',lctlib%ps_pathway)
       ENDIF
-      tile%plant%pool%reserve%carbon14   = calc_fractionation(atm2land%co2_mixing_ratio, & 
-                                                                     atm2land%co2_mixing_ratio_C14,hlp1) & 
-                                                  * tile%plant%pool%reserve%carbon 
+      init_pool%carbon14 = calc_fractionation(atm2land%co2_mixing_ratio, & 
+                                              atm2land%co2_mixing_ratio_C14,hlp1) & 
+                                            * init_pool%carbon
+
+      IF(veg_config%flag_start_bareground)THEN
+         tile%plant%pool%seed_bed = init_pool 
+      ELSE
+         tile%plant%pool%reserve  = init_pool 
+      ENDIF
+ 
   END SUBROUTINE init_slm_land
 
 

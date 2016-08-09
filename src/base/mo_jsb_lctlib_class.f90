@@ -218,7 +218,7 @@ CONTAINS
       ! parameter in the Weibull function controlling light-limited establishment
       lctlib(1:npft)%k_est_light = 4.0_wp
       ! seed size (mol C)
-      lctlib(1:npft)%seed_size = 0.1_wp
+      lctlib(1:npft)%seed_size = 2.0_wp 
 
     END FUNCTION init_lctlib 
 

@@ -102,7 +102,7 @@ CONTAINS
     !! 
     plant%pool = plant%pool - plant%flux%litterfall
     plant%pool = plant%pool + plant%flux%growth
-    plant%pool%reserve  = plant%pool%reserve  + plant%flux%establishment
+    plant%pool%labile  = plant%pool%labile  + plant%flux%establishment
     plant%pool%seed_bed = plant%pool%seed_bed - plant%flux%establishment
 
     !> 6.1 Radioactive decay of C14 in living plant tissue
