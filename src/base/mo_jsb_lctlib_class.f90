@@ -83,7 +83,7 @@ CONTAINS
   !!
   !! 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION init_lctlib RESULT(lctlib)
+  FUNCTION init_lctlib() RESULT(lctlib)
 
     USE mo_base_constants,          ONLY: npft
     USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2 
