@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""The module contains experiment related functionality and data."""
 
 import os, sys, subprocess
 from netCDF4 import Dataset
@@ -29,6 +30,15 @@ HOST_AVAIL = { "thunder" : { "login_name" : "thunder4",
               
 
 def find_files ( pattern, path, single = True, raise_e = False ):
+    """This is the find_files function.
+    
+    :param pattern: pattern string.
+    :param path: path string.
+    :param single: boolean.
+    :param raise_e: boolean.
+    :rtype string, list
+    """
+    
     assert os.path.isdir ( path ) and isinstance ( pattern, str )
     
     paths = []
@@ -62,6 +72,10 @@ def find_files ( pattern, path, single = True, raise_e = False ):
 
 
 class Experiment ( object ):
+    """A superclass representing the metadata for climate model simulation output
+and observational datasets.
+    """
+    
     B4J_obj         = None
     B4J_id          = None
     B4J_name        = None
@@ -83,6 +97,31 @@ class Experiment ( object ):
     B4J_refno       = None
                     
     def __init__ (   self, b4j_obj, **kwargs ):
+        """The Experiment objects are initialized by the runscript, reading 
+        the attributes from a configuration file.
+        
+        Parameters
+        ----------
+        B4J_obj         :
+        B4J_id          :
+        B4J_name        :
+        B4J_name_orig   :
+        B4J_etype       :
+        B4J_atmres      :
+        B4J_oceres      :
+        B4J_startyear   :
+        B4J_endyear     :
+        B4J_initialyear :
+        B4J_finalyear   :
+        B4J_host        :
+        B4J_path        :
+        B4J_landseamask :
+        B4J_isref       :
+        B4J_iscan       :
+        B4J_index       :
+        B4J_canno       :
+        B4J_refno       :        
+        """
         self.B4J_obj         = b4j_obj
         self.B4J_name        = kwargs.get ( "B4J_name" )
         self.B4J_name_orig   = kwargs.get ( "B4J_name_orig" )
@@ -263,6 +302,8 @@ class Experiment ( object ):
             
 
     def fetch_outdata ( self ):
+        """Fetch outdata.
+"""
         from bench import bench4jsbach_scripts
         
         self.B4J_obj.logger.debug ( "Starting" )
