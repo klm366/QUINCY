@@ -15,14 +15,16 @@
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
 experimentalID=""         # set something useful for you (allowed only: alphanumeric '_' '-'); if empty ( experimentalID="" ) current date is used
 # select sites: FLUXNET or CRUNCEPv5
-siteCompilation="c"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
+siteCompilation="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
 customSiteList="no"          # set either to yes or no (small caps)
-customSiteListFileName="benchmark_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
+customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
 singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteCompilation
+# run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
+specialFluxnetOutput="no"    # set either to yes or no (small caps)
 
 # details about the HPC, if unsure stick with these default values
 queue="BTM"                  # available queues: all io BTM mpi_large
@@ -63,6 +65,7 @@ validateCustomSiteList="yes no"
 validateSlmModel="land plant"  # soil canopy
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
+validateSpecialFluxnetOutput="yes no"
 
 ## set and create basic folders and files ##
 username=$(whoami)
@@ -124,6 +127,7 @@ validateUserConfigValues "$customSiteList" "$validateCustomSiteList" "customSite
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$queue" "$validateQueue" "queue"
 validateUserConfigValues "$emailNotification" "$validateEmailNotification" "emailNotification"
+validateUserConfigValues "$specialFluxnetOutput" "$validateSpecialFluxnetOutput" "specialFluxnetOutput"
 
 ## site compilation: FLUXNET or CRUNCEPv5 ##
 if [ $siteCompilation == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
@@ -155,6 +159,18 @@ if [ $customSiteList == "yes" ]
     exit
     fi
   fi
+  # test if forcing data exist in the site-list-folder specified, for all sites specified in the custom site list
+  siteList_lineNumber=$(wc -l "$siteListFileName" | awk '{print $1}')
+  for (( a=2; a<=$siteList_lineNumber; a++ ))
+    do
+      siteName=$(sed -n "$a"p "$siteListFileName" | awk '{print $1}')  # -n  == quiet/silent
+      if ! ls -la $siteDataFold | grep $siteName > /dev/null  # if forcing file not found
+        then
+          echo "EXIT! The site ""$siteName"" from your custom site_list.dat does not exist in the siteCompilation folder (f [FLUXNET], c [CRUNCEPv5]): ""$siteCompilation"" !"
+          rm -r "$simFold"  # deleting the already created simulation folder
+          exit
+      fi
+  done
   # copy custom site-list and set link to file accordingly
   cp "$siteListFileName" "$simFoldDefaultFiles"
   siteList="$simFoldDefaultFiles""$siteListFileName"
@@ -168,6 +184,16 @@ if [ ! -z $(echo $jobName | tr -d "[:alnum:]" | tr -d "_" | tr -d "-") ]  # if "
  then
   echo "EXIT! Please use an experimental ID that is alphanumeric, i.e. without any special characters."
   exit
+fi
+
+## validate options linked with specialFluxnetOutput ##
+if [ $specialFluxnetOutput == "yes" ]
+ then
+    if [ $siteCompilation != "f" ] 
+      then
+        echo "EXIT! You may use a FLUXNET site when you enable special fluxnet-simulation output."
+        exit
+    fi
 fi
 
 ## validate allocated memory ##
@@ -263,9 +289,10 @@ if [ ! -z "$singleSiteName" ]
 fi
 
 ## pass info about files to run_slm.sh via an extra file ("$simFoldDefaultFiles""config.txt") ##
-echo "$siteList"     >  "$simFoldDefaultFiles""config.txt"
-echo "$siteDataFold" >> "$simFoldDefaultFiles""config.txt"
-echo "$slmModel"     >> "$simFoldDefaultFiles""config.txt"
+echo "$siteList"              >  "$simFoldDefaultFiles""config.txt"
+echo "$siteDataFold"          >> "$simFoldDefaultFiles""config.txt"
+echo "$slmModel"              >> "$simFoldDefaultFiles""config.txt"
+echo "$specialFluxnetOutput"  >> "$simFoldDefaultFiles""config.txt"
 #echo "$"    >> "$simFoldDefaultFiles""config.txt"
 #echo "$"    >> "$simFoldDefaultFiles""config.txt"
 #echo "$"    >> "$simFoldDefaultFiles""config.txt"
@@ -278,7 +305,6 @@ cp "$slmRscript"    "$simFoldDefaultFiles"
 ## syncronize all data with file system ##
 sync
 
-
 ## define a function that manipulates the namelist && change namelist according to options ##
 # model: slm_model_name = land plant soil canopy
 # 2 do: add other options like optimization
@@ -287,19 +313,25 @@ sync
  # function: pass the variable_name ($1) & the new_value ($2)
  # $slmNamelist refers to the namelist file name, assuming the namelist file is located in the current folder !
 function changeNamelistValue {
-oldValue=$(grep $1 "$simFoldDefaultFiles""$slmNamelistFilename" | awk -F "=" '{print $2}')   # get the old value that should be replaced
-lineNum=$(grep -n $1 "$simFoldDefaultFiles""$slmNamelistFilename" | cut -d : -f 1)           # get line number of variable $1
+oldValue=$(grep -w $1 "$simFoldDefaultFiles""$slmNamelistFilename" | awk -F "=" '{print $2}' | tr -d '"') # get the old value that should be replaced
+lineNum=$(grep -wn $1 "$simFoldDefaultFiles""$slmNamelistFilename" | cut -d : -f 1)          # get line number of variable $1
 sed -i "$lineNum"s/$oldValue/$2/ "$simFoldDefaultFiles""$slmNamelistFilename"                # replace the old value in line $lineNum with $2
 return 0                                                         # get return value with: return_value=$?
 }
  # examples:
  #changeNamelistValue simulation_length_number 300
- #changeNamelistValue output_interval_flux \"monthly\"
+ #changeNamelistValue output_interval_flux monthly    # quotation marks not needed
  #changeNamelistValue flag_calc_soil_moisture .FALSE.
  #changeNamelistValue soil_theta_prescribe 122.7
 
 changeNamelistValue slm_model_name "$slmModel"
-
+if [ "$specialFluxnetOutput" == "yes" ]
+  then
+    changeNamelistValue fluxnet_output yes
+  else
+    changeNamelistValue fluxnet_output not
+fi
+sync
 
 ## start job with simulations by starting the job(array) -> run_slm.sh ##
 if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used

@@ -21,10 +21,12 @@ PROGRAM land_model_driver
   USE mo_base_memory,             ONLY: t_slm_tile, t_model
   USE mo_base_config_class,       ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
   USE mo_jsb_model_init,          ONLY: init_model, &          ! 'init_model' is an interface
-                                        time_day, time_year, ntimestep, itimestep, timestep_prop_day 
+                                        time_day, time_year, ntimestep, itimestep, timestep_prop_day, &
+                                        fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
   ! atmland
   USE mo_atmland_forcing,         ONLY: update_forcing, open_forcing_input_file, close_forcing_input_file
   ! vegetation
+  USE mo_veg_config_class,        ONLY: veg_config  ! used for 'special case: fluxnet output'
   USE mo_veg_output,              ONLY: init_veg_output_variables, &
                                         open_pool_output_files, &
                                         open_flux_output_files, &
@@ -75,6 +77,10 @@ PROGRAM land_model_driver
 
     !! 3.1 advance timer
     !! 
+    !! Note \n 
+    !!  for each timestep the model simulates what happens during the period:
+    !!  time_day (end of prevous timestep)  -->  time_day  + timestep_prop_day
+    !! 
     time_day  = time_day  + timestep_prop_day         ! time in days
 
     !! 3.2 set orbital parameters and update time-variant forcing
@@ -98,6 +104,24 @@ PROGRAM land_model_driver
       time_year = time_year + 1
     END IF
 
+    !! 3.5 special case: fluxnet output
+    !! 
+    IF(base_config%fluxnet_output == 'yes') THEN
+      IF (itimestep == fluxnet_output_start) THEN         ! start of fluxnet output (at each timestep)
+          fluxnet_output_status = 2                       ! status update: currently writing output data
+          CALL close_output_files(1)                      ! 1 == itile
+          veg_config%output_interval_pool   = 'timestep' 
+          veg_config%output_interval_flux   = 'timestep' 
+          CALL open_pool_output_files(1)                  ! 1 == itile 
+          CALL open_flux_output_files(1)                  ! 1 == itile 
+
+      ELSE IF (itimestep == fluxnet_output_stop) THEN     ! stop of fluxnet output; NO output after this timestep anyway
+          fluxnet_output_status = 3                       ! status update: writing output data finished
+          CALL close_output_files(1)                      ! 1 == itile
+
+      END IF
+    END IF
+
   END DO  ! end time loop 
 
 
@@ -105,7 +129,7 @@ PROGRAM land_model_driver
   !! 
   !! Close output and forcing files
   !! 
-  CALL close_output_files(1)     ! 1 == itile 
+  IF (fluxnet_output_status == 0) CALL close_output_files(1)     ! 1 == itile 
   CALL close_forcing_input_file  ! only if: option_forcing == 'readfile'
 
 END PROGRAM land_model_driver

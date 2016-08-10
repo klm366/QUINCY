@@ -31,6 +31,8 @@ MODULE mo_base_config_class
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
+    CHARACTER(3)      :: fluxnet_output
+    INTEGER           :: fluxnet_output_length
   CONTAINS
     PROCEDURE :: Init => Init_base_config
     PROCEDURE :: Timesteps => Get_timstep_number
@@ -59,12 +61,16 @@ CONTAINS
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
+    CHARACTER(3)      :: fluxnet_output
+    INTEGER           :: fluxnet_output_length
 
     NAMELIST /base_ctl/            &  
         dt_time_step_length_sec,   &
         simulation_length_unit,    &
         simulation_length_number,  &
-        slm_model_name
+        slm_model_name,            &
+        fluxnet_output,            &
+        fluxnet_output_length
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -75,9 +81,11 @@ CONTAINS
 
     ! Set defaults
     dt_time_step_length_sec       = 1800.0_wp
-    simulation_length_unit        = 'y'        ! y years, w weeks, d days
+    simulation_length_unit        = 'y'        ! y (years), w (weeks), d (days)
     simulation_length_number      = 20 
     slm_model_name                = 'land'
+    fluxnet_output                = 'not'        ! yes, not
+    fluxnet_output_length         = 2
 
 
     ! read the namelist
@@ -93,6 +101,8 @@ CONTAINS
     config%simulation_length_unit     = simulation_length_unit
     config%simulation_length_number   = simulation_length_number
     config%slm_model_name             = slm_model_name
+    config%fluxnet_output             = fluxnet_output
+    config%fluxnet_output_length      = fluxnet_output_length
   END SUBROUTINE Init_base_config
 
   !-----------------------------------------------------------------------------------------------------

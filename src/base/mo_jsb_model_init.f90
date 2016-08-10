@@ -40,6 +40,7 @@ MODULE mo_jsb_model_init
   PRIVATE
   PUBLIC :: init_model
   PUBLIC :: time_day, time_year, ntimestep, itimestep, timestep_prop_day
+  PUBLIC :: fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
 
 
     ! variables for the driver
@@ -48,6 +49,13 @@ MODULE mo_jsb_model_init
     INTEGER  :: ntimestep                    !< number of timesteps the model runs
     INTEGER  :: itimestep                    !< current timestep i, looping over timesteps ntimestep
     REAL(wp) :: timestep_prop_day            !< proportion of one day that is simulated with one timestep (dt/one_day)
+
+    ! special case: fluxnet output
+    INTEGER  :: fluxnet_output_length        !< number of timesteps data may be written out to file, only for fluxnet sites
+    INTEGER  :: fluxnet_output_start         !< write output at each time step starting with this timestep, only for fluxnet sites
+    INTEGER  :: fluxnet_output_stop          !< write output at each time step stopping with this timestep, only for fluxnet sites
+    INTEGER  :: fluxnet_output_status        !< a simple status var to inform other processes about it
+                                             !! 0: not activiated at all [default], 1: active, 2: currently writing, 3: finished
 
   INTERFACE init_model
     MODULE PROCEDURE init_slm
@@ -135,7 +143,33 @@ CONTAINS
     timestep_prop_day = dt/one_day                  ! proportion of one day that is simulated with one timestep
 
 
-    !! 4 run model-specific init routine  (land plant soil canopy test_canopy)
+    !! 4 Initialise: Fluxnet specific simulation output
+    !! 
+    !! the last full "forcing period" is written into extra output files with half-hourly write-out of values
+    fluxnet_output_status = 0
+    IF (base_config%fluxnet_output == 'yes' .AND. atmland_config%option_forcing == 'readfile') THEN
+      fluxnet_output_status = 1
+      ! check whether simulation length covers at least one complete fluxnet forcing period (i.e. fluxnet_output_length)
+      fluxnet_output_length = NINT(base_config%fluxnet_output_length * one_year * one_day / base_config%dt)
+      IF (fluxnet_output_length > ntimestep) THEN
+        CALL finish('land_model_driver-init_routine','Simulation is too short for fluxnet output of one full forcing period')
+      END IF
+
+      ! calc timestep when fluxnet output starts
+      fluxnet_output_start  = fluxnet_output_length * FLOOR((ntimestep / fluxnet_output_length ) - 1.0_wp)
+      ! calc timestep when fluxnet output stops
+      fluxnet_output_stop   = fluxnet_output_start + fluxnet_output_length
+
+      ! check whether genral output start and stop covers the 'Fluxnet specific simulation output'
+      IF ( (veg_config%output_end_last_day_year * one_year * one_day / base_config%dt) < fluxnet_output_stop) THEN
+        CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
+      END IF
+      IF ( (((veg_config%output_start_first_day_year - 1) * one_year * one_day + 1) / base_config%dt) > fluxnet_output_start) THEN
+        CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
+      END IF
+    END IF
+
+    !! 5 run model-specific init routine  (land plant soil canopy test_canopy)
     !! 
     !! 
     SELECT CASE(TRIM(base_config%slm_model_name))

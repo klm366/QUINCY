@@ -98,7 +98,7 @@ CONTAINS
                                    plant%canopy_layer(:)%fnl_rub, & 
                                    plant%canopy_layer(:)%fnl_pepc, &
                                    plant%canopy_layer(:)%fnl_oth)
-write(90,*) 'plant%moving_average%t_jmax_opt',plant%moving_average%t_jmax_opt,lctlib%t_jmax_opt
+
    ! calculate photosynthesis per layer
    DO icanop = 1,ncanop
       IF(canopy_layer_depth_act(icanop) > 0.0_wp)THEN

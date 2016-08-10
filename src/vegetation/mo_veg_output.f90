@@ -13,6 +13,7 @@ MODULE mo_veg_output
   USE mo_kind,                  ONLY: wp, eps8
   USE mo_base_constants,        ONLY: ntile
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+  USE mo_jsb_model_init,        ONLY: fluxnet_output_status   ! used for 'special case: fluxnet output'
   USE mo_veg_config_class,      ONLY: veg_config
   USE mo_assimi_config_class,   ONLY: assimi_config
 
@@ -369,6 +370,12 @@ CONTAINS
     plant         => tile%plant
     soil          => tile%soil
 
+
+    !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
+    !! 
+    !! same for write_output_flux
+    IF (fluxnet_output_status < 3) THEN   ! this switch includes the rest of this routine
+
     !> 1.0 check output start & end, and write pools if appropriate with output_interval
     !! 
     !! 
@@ -470,6 +477,7 @@ CONTAINS
          growing_season_float
       END IF
     END IF
+    END IF  ! on/off switch specific to 'special case: fluxnet output'
   END SUBROUTINE write_output_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -498,6 +506,12 @@ CONTAINS
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
     plant => tile%plant
+
+
+    !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
+    !! 
+    !! same for write_output_pool
+    IF (fluxnet_output_status < 3) THEN   ! this switch includes the rest of this routine
 
     !> 1.0 check output start & end, and write pools if appropriate with output_interval
     !! 
@@ -580,6 +594,7 @@ CONTAINS
         gc_acc(itile)            = 0.0_wp
       END IF
     END IF
+    END IF  ! on/off switch specific to 'special case: fluxnet output'
   END SUBROUTINE write_output_flux
 
   !-----------------------------------------------------------------------------------------------------

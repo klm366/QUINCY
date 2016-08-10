@@ -14,6 +14,12 @@ tstep_flux=trim(namelist[trim(namelist[,1])=="output_interval_flux",2])
 # get number of tiles calculated -> needs "poolC_tilex_weekly.txt" as output files
 # list all files in folder, grep for "poolC_tile*", and check vector length
 tileNum<-length(grep("poolC_tile*",list.files()))
+# if output files with "timestep" intervall exist, assume these are for "special case: fluxnet output" and do not consider for figure creation
+filenameWithAnyNumber<-c("poolC_tile","[0-9]+","_timestep.txt")
+if (length( grep(paste0(filenameWithAnyNumber,collapse = ""),list.files()) ) > 0)
+{
+  tileNum <- tileNum - (tileNum/2)
+}
 
 # message
 print(" postprocessing SLM output")
@@ -34,7 +40,7 @@ for(ti in 1:tileNum)
   # plot data
   pdf(paste0("plant_plots_tile",ti,".pdf"), paper="a4", height=10, width=8, pointsize=12, bg="white", family="Helvetica", version="1.6")
   for (i in 1:nplot) {
-    print(paste('reading',flist[i]))
+    print(paste('   reading',flist[i]))
     dat=read.table(flist[i],header=T)
     nvar=dim(dat)[2]
     mat=matrix(seq(1,2*round(nvar/2)+2,1),nrow=round(nvar/2)+1,ncol=2,byrow=T) 

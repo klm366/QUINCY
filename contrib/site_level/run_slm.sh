@@ -33,6 +33,7 @@ jobIndex=$LSB_JOBINDEX            # index number of the job (in the job array: 2
 siteList=$(sed -n 1p "$simFoldDefaultFiles""config.txt")    # -n  == quiet/silent
 siteDataFold=$(sed -n 2p "$simFoldDefaultFiles""config.txt")
 slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
+specialFluxnetOutput=$(sed -n 4p "$simFoldDefaultFiles""config.txt")
 
 
 ## further variables ##
@@ -109,20 +110,29 @@ esac
  # function: pass the variable_name ($1) & the new_value ($2)
  # $slmNamelist refers to the namelist file name, assuming the namelist file is located in the current folder !
 function changeNamelistValue {
-oldValue=$(grep $1 ./"$slmNamelist" | awk -F "=" '{print $2}')   # get the old value that should be replaced
-lineNum=$(grep -n $1 ./"$slmNamelist" | cut -d : -f 1)           # get line number of variable $1
+oldValue=$(grep -w $1 ./"$slmNamelist" | awk -F "=" '{print $2}' | tr -d '"') # get the old value that should be replaced
+lineNum=$(grep -wn $1 ./"$slmNamelist" | cut -d : -f 1)          # get line number of variable $1
 sed -i "$lineNum"s/$oldValue/$2/ ./"$slmNamelist"                # replace the old value in line $lineNum with $2
 return 0                                                         # get return value with: return_value=$?
 }
  # examples:
  #changeNamelistValue simulation_length_number 300
- #changeNamelistValue output_interval_flux \"monthly\"
+ #changeNamelistValue output_interval_flux monthly    # quotation marks not needed
  #changeNamelistValue flag_calc_soil_moisture .FALSE.
  #changeNamelistValue soil_theta_prescribe 122.7
 
 changeNamelistValue longitude "$(awk '{print $2}' <<< "$siteData")"
 changeNamelistValue latitude  "$(awk '{print $3}' <<< "$siteData")"
 changeNamelistValue plant_functional_type_id "$pftID"
+# special fluxnet output #
+if [ $specialFluxnetOutput == "yes" ]
+  then
+    year1=$(awk '{print $5}' <<< "$siteData")
+    year2=$(awk '{print $6}' <<< "$siteData")
+    forcingPeriodLength=$(($year2-$year1+1))
+    changeNamelistValue fluxnet_output_length "$forcingPeriodLength"
+fi
+sync
 
 
 ## run the simulation ##
@@ -133,6 +143,7 @@ sync
 
 ## run the R Script ##
 Rscript ./"$slmRscript"
+sync
 
 ## cleanup some job specific files ##
 rm ./climate.dat

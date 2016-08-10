@@ -69,6 +69,7 @@ mo_veg_output.o: \
   mo_base_memory.o \
   mo_base_constants.o \
   mo_jsb_lctlib_class.o \
+  mo_jsb_model_init.o \
   mo_shared_isotope.o \
   mo_assimi_config_class.o \
   mo_veg_memory.o \
