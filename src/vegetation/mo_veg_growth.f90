@@ -16,7 +16,8 @@ MODULE mo_veg_growth
   USE mo_atmland_memory,        ONLY: atm2land, land2atm
   USE mo_veg_memory
   USE mo_veg_constants
-  USE mo_assimi_config_class,   ONLY: assimi_config
+  USE mo_veg_config_class,      ONLY: veg_config
+
 
   PRIVATE
 
@@ -359,8 +360,8 @@ CONTAINS
           wood_carbon = sap_wood_carbon + coarse_root_carbon
 
           !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> 
-          !! rewrite "IF (assimi_config\%flag_optimal_allocation)" such that instead of kopt1 and 2 leaf2root_mass ratio can be given
-          IF (assimi_config%flag_optimal_allocation) THEN
+          !! rewrite "IF (veg_config\%flag_optimal_allocation)" such that instead of kopt1 and 2 leaf2root_mass ratio can be given
+          IF (veg_config%flag_optimal_allocation) THEN
 
              !> 1.2a Calculate allocation fractions assuming optimal relationship between leaf and root allocation
              !! 
@@ -411,7 +412,7 @@ CONTAINS
       !> 1.2 grass
       !!
       CASE(igrass)
-         IF (assimi_config%flag_optimal_allocation) THEN
+         IF (veg_config%flag_optimal_allocation) THEN
             leaf_carbon_inc = MAX((b_inc - k1_opt - leaf_carbon/leaf2sapwood_mass_ratio + root_carbon + &
                  sap_wood_carbon) / (1 + k2_opt + 1/leaf2sapwood_mass_ratio), 0.0_wp)
             root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
@@ -540,7 +541,7 @@ CONTAINS
 
     !> 1.0 calculate optimal allocation fractions
     !! 
-    IF (assimi_config%flag_optimal_Nleaf.AND.plant%growing_season) THEN
+    IF (veg_config%flag_optimal_Nleaf.AND.plant%growing_season) THEN
        ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
        plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - plant%leaf_cn_direction * delta_n_leaf)
     ENDIF
@@ -691,7 +692,7 @@ CONTAINS
         ! full leaf area implied by current sapwood area
         target_lai = sap_wood_carbon * k_latosa / wood_density / height
 
-        IF (assimi_config%flag_optimal_allocation) THEN
+        IF (veg_config%flag_optimal_allocation) THEN
            !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
            !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
            !! NPP = gN * R * cn_plant
@@ -722,7 +723,7 @@ CONTAINS
          ! leaf to stem mass ratio
          leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
          ! leaf:root ratio
-         IF (assimi_config%flag_optimal_allocation) THEN
+         IF (veg_config%flag_optimal_allocation) THEN
             !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
             !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
             !! NPP = gN * R * cn_plant

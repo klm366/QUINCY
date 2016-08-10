@@ -26,6 +26,7 @@ MODULE mo_assimi_update_canopy_fluxes
   USE mo_rad_constants,         ONLY: ka
 
   USE mo_veg_memory
+  USE mo_veg_config_class,      ONLY: veg_config
   USE mo_veg_constants,         ONLY: itree, igrass, ic3phot, ic4phot, ievergreen, iraingreen, isummergreen, iperennial, &
                                       fmaint_rate_base 
 
@@ -171,13 +172,13 @@ CONTAINS
   ENDIF
 
   ! optimize total N allocated to leaf pool
-  IF (assimi_config%flag_optimal_Nleaf) &
+  IF (veg_config%flag_optimal_Nleaf) &
           CALL  optimize_Nleaf(plant, canopy_layer_depth_act, lctlib,&
           plant%moving_average%t_air, plant%moving_average%press_surf, plant%moving_average%beta_air,&
           plant%moving_average%beta_soil_ps,plant%moving_average%beta_soil_gs)
 
      ! calculate NPP increment, needed for optimal allocation scheme
-     !IF (assimi_config%flag_optimal_allocation) 
+     !IF (veg_config%flag_optimal_allocation) 
     CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
 
   END SUBROUTINE update_canopy_fluxes

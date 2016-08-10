@@ -29,15 +29,20 @@ MODULE mo_veg_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
-    CHARACTER(8)     :: output_interval_pool, output_interval_flux
-    INTEGER          :: output_start_first_day_year, output_end_last_day_year !< output: 1st to last day of the year(s) provided
+    CHARACTER(8)     :: output_interval_pool, &
+                        output_interval_flux
+    INTEGER          :: output_start_first_day_year, &  !< output start at the 1st  day of this year
+                        output_end_last_day_year        !< output stop  at the last day of this year
     INTEGER          :: pft_id
     LOGICAL          :: flag_calc_soil_uptake      !< calculate N:P uptake from roots
     LOGICAL          :: flag_calc_soil_moisture    !< calcualte water bucket 
     LOGICAL          :: flag_base_soil_model       !< calculate soil N:P budget
     LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics
     LOGICAL          :: flag_start_bareground      !< start from bareground?
-    REAL(wp)         :: soil_awc_prescribe, soil_theta_prescribe
+    LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
+    LOGICAL          :: flag_optimal_allocation    !< optimise plant allocation
+    REAL(wp)         :: soil_awc_prescribe, &
+                        soil_theta_prescribe
     CONTAINS
       PROCEDURE :: Init => Init_veg_config
   END Type t_veg_config
@@ -66,6 +71,7 @@ CONTAINS
     INTEGER      :: output_start_first_day_year, output_end_last_day_year, plant_functional_type_id
     LOGICAL      :: flag_calc_soil_uptake, flag_calc_soil_moisture
     LOGICAL      :: flag_base_soil_model, flag_tile_veg_dynamics, flag_start_bareground
+    LOGICAL      :: flag_optimal_Nleaf, flag_optimal_allocation
     REAL(wp)     :: soil_awc_prescribe, soil_theta_prescribe
 
     NAMELIST /vegetation_ctl/       & 
@@ -78,6 +84,8 @@ CONTAINS
       flag_base_soil_model,         &
       flag_tile_veg_dynamics,       &
       flag_start_bareground,        &
+      flag_optimal_Nleaf,           &
+      flag_optimal_allocation,      & 
       soil_awc_prescribe,           &
       soil_theta_prescribe,         &
       plant_functional_type_id
@@ -99,6 +107,8 @@ CONTAINS
     flag_calc_soil_moisture        = .FALSE.  ! .TRUE. .FALSE.
     flag_tile_veg_dynamics         = .FALSE.  ! .TRUE. .FALSE.
     flag_start_bareground          = .FALSE.  ! .TRUE. .FALSE.
+    flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
+    flag_optimal_allocation        = .FALSE.  ! .TRUE. .FALSE.
     soil_awc_prescribe             = 300.0_wp
     soil_theta_prescribe           = 100.0_wp 
     plant_functional_type_id       = 1
@@ -121,6 +131,8 @@ CONTAINS
     config%flag_calc_soil_moisture       = flag_calc_soil_moisture
     config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  
     config%flag_start_bareground         = flag_start_bareground
+    config%flag_optimal_Nleaf            = flag_optimal_Nleaf
+    config%flag_optimal_allocation       = flag_optimal_allocation
     config%soil_awc_prescribe            = soil_awc_prescribe 
     config%soil_theta_prescribe          = soil_theta_prescribe 
     config%pft_id                        = plant_functional_type_id

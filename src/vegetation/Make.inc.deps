@@ -22,7 +22,7 @@ mo_veg_growth.o: \
   mo_shared_memory.o \
   mo_shared_constants.o \
   mo_assimi_constants.o \
-  mo_assimi_config_class.o \
+  mo_veg_config_class.o \
   mo_veg_memory.o \
   mo_veg_constants.o \
   mo_veg_respiration.o

@@ -29,8 +29,6 @@ MODULE mo_assimi_config_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
     LOGICAL          :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
-    LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
-    LOGICAL          :: flag_optimal_allocation    !< optimise plant allocation
     LOGICAL          :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
     CONTAINS
       PROCEDURE :: Init => Init_assimi_config
@@ -56,15 +54,10 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL      :: active
-    LOGICAL      :: flag_optimal_Nfraction, &
-                    flag_optimal_Nleaf, &
-                    flag_optimal_allocation, &
-                    flag_t_jmax_acclimation
+    LOGICAL      :: flag_optimal_Nfraction, flag_t_jmax_acclimation
 
     NAMELIST /assimilation_ctl/     & 
       flag_optimal_Nfraction,       &
-      flag_optimal_Nleaf,           &
-      flag_optimal_allocation,      & 
       flag_t_jmax_acclimation
 
     ! variables for reading model-options from namelist
@@ -76,8 +69,6 @@ CONTAINS
 
     ! Set defaults
     flag_optimal_Nfraction         = .FALSE.  ! .TRUE. .FALSE.
-    flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
-    flag_optimal_allocation        = .FALSE.  ! .TRUE. .FALSE.
     flag_t_jmax_acclimation        = .FALSE.  ! .TRUE. .FALSE.
 
     ! read the namelist
@@ -90,8 +81,6 @@ CONTAINS
 
     ! pass values as read from file
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction
-    config%flag_optimal_Nleaf            = flag_optimal_Nleaf
-    config%flag_optimal_allocation       = flag_optimal_allocation
     config%flag_t_jmax_acclimation       = flag_t_jmax_acclimation
 
   END SUBROUTINE Init_assimi_config

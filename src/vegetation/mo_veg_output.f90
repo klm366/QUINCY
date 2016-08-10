@@ -225,8 +225,8 @@ CONTAINS
     !! 
     !! 
     IF (assimi_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
-    IF (assimi_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
-    IF (assimi_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+    IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
+    IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
      
 
     !> 2.2 define open() statements for file output
@@ -307,8 +307,8 @@ CONTAINS
     !! 
     !! 
     IF (assimi_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
-    IF (assimi_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
-    IF (assimi_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+    IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
+    IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
 
     !> 2.2 define open() statements for file output
     !! 
