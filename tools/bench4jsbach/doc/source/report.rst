@@ -10,7 +10,7 @@ Examples
 Examples of |b4j| generated reports can be found on the wikipage
 |wiki|. To get an impression follow the link and open one of the listed reports.
 
-.. figure::  ./graphic/Bench4jsbach_simulations-2-yac.jpg
+.. figure::  ./graphic/b4j-wiki-runs.jpg
    :width: 100 %
 
    **Figure:** Detail from |wiki|
@@ -61,23 +61,23 @@ are supplied.
 We have selected some extracts exemplarily.
 
 
-.. figure::  ./graphic/albedo_gtm-plot.jpg
+.. figure::  ./graphic/diagfield-smwd-plot.jpg
    :width: 90 %
 
    **Figure:** Example for difference plot of seasonal mean . 
    
 
-.. figure::  ./graphic/seas-mean-diff-formular.jpg
+.. figure::  ./graphic/diagfield-smwd-docu.jpg
    :width: 90 %
 
    **Figure:** Example part of documentation of a diagnostic method.
 
-.. figure::  ./graphic/albedo_gtms-plot.jpg
+.. figure::  ./graphic/diagfield-gtsmwd-plot.jpg
    :width: 90 %
 
    **Figure:** Example for difference plot of global and time mean for one candidate and two references. 
 
-.. figure::  ./graphic/albedo_gtms-formular.jpg
+.. figure::  ./graphic/diagfield-gtsmwd-docu.jpg
    :width: 80 %
 
    **Figure:** Example part of documentation of a diagnostic method. 
@@ -89,7 +89,7 @@ Summary
 For the evaluation and the closing of the report an overview of all diagnostic is given in a
 benchmark value table.
 
-.. figure::  ./graphic/summary.jpg
+.. figure::  ./graphic/report-summary.jpg
    :width: 75 %
 
    **Figure:** Example summary with three experiments, both as candidates and references. 

@@ -28,7 +28,7 @@ Getting Started
 :work:    currently hardcoded working directory
 
 
-.. figure::  ./graphic/workingdir_bench4jsbach.jpg
+.. figure::  ./graphic/b4j-basedir.jpg
    :width: 35 %
 
    **Figure:** \<mypath\>/jsbach/tools/bench4jsbach
@@ -78,8 +78,8 @@ Experiments
   
     [experiments]
         [[tra0163]]
-	    # host=mistral
-            # path=/mnt/lustre01/work/mh0469/m212070/Cosmos/mpiesm-1.2.00/experiments
+	    @host=mistral@
+            @path=/mnt/lustre01/work/mh0469/m212070/Cosmos/mpiesm-1.2.00/experiments@
             type=MPIESM1	    
             candidate=True
             reference=False
@@ -88,14 +88,14 @@ Experiments
  
 .. raw:: html
 
-    <font color=#D8D8D8>Todo: Would be good to grey out the now commented lines in the listing.</font>   
+    <font color=#D8D8D8>Todo: Find a method to grey the now commented lines ('@') in the listing.</font>   
 
 References
 ----------
 
 You can find reference experiments on the wikipage |wiki|.
 
-.. figure::  ./graphic/Bench4jsbach_simulations-references.jpg
+.. figure::  ./graphic/b4j-wiki-ref.jpg
    :width: 90 %
 
    **Figure:** Detail from |wiki|
