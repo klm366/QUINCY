@@ -37,7 +37,7 @@ numberCpuMax=80              # maximum number of simulations started in parallel
 ########################################################################################################
 
 
-## change into the directory where this script is located; thus, you can start this script from anywhere ##
+## change into the directory where this script is located; thus, you can start this script from anywhere (no need to cd into a specific directory) ##
 cd "$( dirname "$0" )"
 
 ## prepare Validation of user-defined model-options ##
@@ -45,7 +45,7 @@ cd "$( dirname "$0" )"
 # $1 must be a part of $2 list, else the script is stopped
 # example: validateUserConfigValues "$queue" "$validateQueue"
 function validateUserConfigValues {
-validate="$(grep "$1" <<< "$2")"
+validate="$(grep -w "$1" <<< "$2")"
 if [ -z "${validate// }" ]  # the search term is available yes / no  [-z test is explicitly for: the length of string is zero]
  then 
   echo "EXIT! > ""$1"" <  is not a valid value for parameter ""$3"", please change and restart prep_run_slm.sh"
