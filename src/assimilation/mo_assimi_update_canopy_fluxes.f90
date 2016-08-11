@@ -93,12 +93,12 @@ CONTAINS
                                    canopy_layer_depth_act, &
                                    lctlib%ps_pathway, & 
                                    lctlib%k0_fnl_struc, & 
-                                   plant%canopy_layer(:)%nl_tot, & 
-                                   plant%canopy_layer(:)%fnl_chl, & 
-                                   plant%canopy_layer(:)%fnl_et, & 
-                                   plant%canopy_layer(:)%fnl_rub, & 
-                                   plant%canopy_layer(:)%fnl_pepc, &
-                                   plant%canopy_layer(:)%fnl_oth)
+                                   plant%canopy_layer%nl_tot(:), & 
+                                   plant%canopy_layer%fnl_chl(:), & 
+                                   plant%canopy_layer%fnl_et(:), & 
+                                   plant%canopy_layer%fnl_rub(:), & 
+                                   plant%canopy_layer%fnl_pepc(:), &
+                                   plant%canopy_layer%fnl_oth(:))
 
    ! calculate photosynthesis per layer
    DO icanop = 1,ncanop
@@ -106,29 +106,37 @@ CONTAINS
 
           ! optimize N fractions if desired
           IF (assimi_config%flag_optimal_Nfraction.AND.plant%growing_season)THEN
-              CALL optimize_fractions(plant%canopy_layer(icanop)%fnl_chl,& 
-                         plant%canopy_layer(icanop)%fnl_rub,&
-                         plant%canopy_layer(icanop)%fnl_et,&
-                         plant%canopy_layer(icanop)%fnl_pepc, & 
-                         plant%canopy_layer(icanop)%fnl_oth,&
-                         plant%canopy_layer(icanop)%nl_tot, delta_n_fraction, plant%moving_average%par_sunlit(icanop),&
-                         plant%moving_average%par_shaded(icanop), plant%moving_average%fleaf_sunlit(icanop),&
-                         plant%moving_average%t_air, plant%moving_average%press_surf,plant%moving_average%beta_air,&
+              CALL optimize_fractions( &
+                         plant%canopy_layer%fnl_chl(icanop),& 
+                         plant%canopy_layer%fnl_rub(icanop),&
+                         plant%canopy_layer%fnl_et(icanop),&
+                         plant%canopy_layer%fnl_pepc(icanop), & 
+                         plant%canopy_layer%fnl_oth(icanop),&
+                         plant%canopy_layer%nl_tot(icanop), &
+                         delta_n_fraction, &
+                         plant%moving_average%par_sunlit(icanop),&
+                         plant%moving_average%par_shaded(icanop), &
+                         plant%moving_average%fleaf_sunlit(icanop),&
+                         plant%moving_average%t_air, &
+                         plant%moving_average%press_surf,&
+                         plant%moving_average%beta_air,&
                          plant%moving_average%beta_soil_ps,&
                          plant%moving_average%beta_soil_gs,&
                          plant%moving_average%t_jmax_opt, lctlib)
           ENDIF
 
           CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
-                                 plant%canopy_layer(icanop)%par_sunlit, &
-                                 plant%canopy_layer(icanop)%par_shaded, & 
-                                 plant%canopy_layer(icanop)%fleaf_sunlit, &
-                                 plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
-                                 plant%canopy_layer(icanop)%fnl_chl, & 
-                                 plant%canopy_layer(icanop)%fnl_et, & 
-                                 plant%canopy_layer(icanop)%fnl_rub, & 
-                                 plant%canopy_layer(icanop)%fnl_pepc, & 
-                                 plant%canopy_layer(icanop)%nl_tot, & 
+                                 plant%canopy_layer%par_sunlit(icanop), &
+                                 plant%canopy_layer%par_shaded(icanop), & 
+                                 plant%canopy_layer%fleaf_sunlit(icanop), &
+                                 plant%beta_air,&
+                                 plant%beta_soil_ps,&
+                                 plant%beta_soil_gs, &
+                                 plant%canopy_layer%fnl_chl(icanop), & 
+                                 plant%canopy_layer%fnl_et(icanop), & 
+                                 plant%canopy_layer%fnl_rub(icanop), & 
+                                 plant%canopy_layer%fnl_pepc(icanop), & 
+                                 plant%canopy_layer%nl_tot(icanop), & 
                                  lctlib%ps_pathway, &
                                  plant%moving_average%t_jmax_opt, &
                                  lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
@@ -814,9 +822,9 @@ CONTAINS
     REAL(wp), DIMENSION(3) :: maint_respiration
     REAL(Wp) :: maint_respiration_c13,maint_respiration_c14
 
-    fnl_chl = plant%canopy_layer(:)%fnl_chl
-    fnl_et = plant%canopy_layer(:)%fnl_et
-    fnl_rub = plant%canopy_layer(:)%fnl_rub
+    fnl_chl = plant%canopy_layer%fnl_chl(:)
+    fnl_et = plant%canopy_layer%fnl_et(:)
+    fnl_rub = plant%canopy_layer%fnl_rub(:)
     ! initialse output
     agl(:, :) = 0.0_wp 
     anl(:, :) = 0.0_wp 
@@ -842,10 +850,10 @@ CONTAINS
                   plant%moving_average%par_sunlit(icanop),plant%moving_average%par_shaded(icanop),& 
                   plant%moving_average%fleaf_sunlit(icanop), &
                   beta_air,beta_soil_ps,beta_soil_gs, &
-                  plant%canopy_layer(icanop)%fnl_chl,&
-                  plant%canopy_layer(icanop)%fnl_et,& 
-                  plant%canopy_layer(icanop)%fnl_rub,&
-                  plant%canopy_layer(icanop)%fnl_pepc,&
+                  plant%canopy_layer%fnl_chl(icanop),&
+                  plant%canopy_layer%fnl_et(icanop),& 
+                  plant%canopy_layer%fnl_rub(icanop),&
+                  plant%canopy_layer%fnl_pepc(icanop),&
                   nl_tot(icanop),&
                   lctlib%ps_pathway, & 
                   plant%moving_average%t_jmax_opt, &                  
@@ -912,10 +920,10 @@ CONTAINS
    REAL(wp) :: hlp1 
    INTEGER :: icanop
 
-   fnl_chl = plant%canopy_layer(:)%fnl_chl
-   fnl_et = plant%canopy_layer(:)%fnl_et
-   fnl_rub = plant%canopy_layer(:)%fnl_rub
-   fnl_pepc = plant%canopy_layer(:)%fnl_pepc
+   fnl_chl = plant%canopy_layer%fnl_chl(:)
+   fnl_et = plant%canopy_layer%fnl_et(:)
+   fnl_rub = plant%canopy_layer%fnl_rub(:)
+   fnl_pepc = plant%canopy_layer%fnl_pepc(:)
 
    ! increase LAI by small increment
    lai = plant%lai + 0.3_wp * lctlib%sla
@@ -939,8 +947,8 @@ CONTAINS
         IF (canopy_layer_depth_act(icanop).GT.eps8)THEN   
            
            CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
-                plant%canopy_layer(icanop)%par_sunlit, plant%canopy_layer(icanop)%par_shaded,& 
-                plant%canopy_layer(icanop)%fleaf_sunlit, &
+                plant%canopy_layer%par_sunlit(icanop), plant%canopy_layer%par_shaded(icanop),& 
+                plant%canopy_layer%fleaf_sunlit(icanop), &
                 plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
                 fnl_chl(icanop),fnl_et(icanop),fnl_rub(icanop),fnl_pepc(icanop), nl_tot(icanop),& 
                 lctlib%ps_pathway, &

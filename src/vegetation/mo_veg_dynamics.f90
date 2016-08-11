@@ -81,7 +81,7 @@ CONTAINS
        !! depending on the red to far-red ratio of the light at the bottom of the canopy
        tc = 0.0_wp
        DO icanop=1,ncanop
-         tc = tc + tile%plant%canopy_layer(icanop)%nl_tot*tile%plant%canopy_layer(icanop)%fnl_chl
+         tc = tc + tile%plant%canopy_layer%nl_tot(icanop) * tile%plant%canopy_layer%fnl_chl(icanop)
        ENDDO
        rfr_ratio = toc_rfr_ratio * exp( k_r2fr_chl * tc) 
        flim_light = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio)**lctlib%k_est_light)

@@ -225,20 +225,20 @@ MODULE mo_veg_memory
   END TYPE t_slm_veg_flux
 
   !-----------------------------------------------------------------------------------------------------
-  !> vegetation canopy structure (for each layer)
+  !> vegetation canopy structure 
   !! 
-  !! number of layers is: ncanop
+  !! each variable has the information about the layer; layers go from 1 to ncanop
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_canopy_layer
-     REAL(wp) :: nl_tot                !< N in canopy layer (mmol / m2 (LAI))
-     REAL(wp) :: fnl_chl               !< fraction of N in chlorophyll (pigments only!)
-     REAL(wp) :: fnl_et                !< fraction of N in electron transport 
-     REAL(wp) :: fnl_rub               !< fraction of N in Rubisco 
-     REAL(wp) :: fnl_pepc              !< fraction of N in PEP carboylase (C4 plants only)
-     REAL(wp) :: fnl_oth               !< fraction of N not associated with photosynthesis 
-     REAL(wp) :: par_sunlit            !< PAR on sunlit leaves (µmol m-2 s-1)
-     REAL(wp) :: par_shaded            !< PAR on shaded leaves (µmol m-2 s-1)
-     REAL(wp) :: fleaf_sunlit          !< fraction of layer which is sunlit
+     REAL(wp),DIMENSION(ncanop) :: nl_tot                !< N in canopy layer (mmol / m2 (LAI))
+     REAL(wp),DIMENSION(ncanop) :: fnl_chl               !< fraction of N in chlorophyll (pigments only!)
+     REAL(wp),DIMENSION(ncanop) :: fnl_et                !< fraction of N in electron transport 
+     REAL(wp),DIMENSION(ncanop) :: fnl_rub               !< fraction of N in Rubisco 
+     REAL(wp),DIMENSION(ncanop) :: fnl_pepc              !< fraction of N in PEP carboylase (C4 plants only)
+     REAL(wp),DIMENSION(ncanop) :: fnl_oth               !< fraction of N not associated with photosynthesis 
+     REAL(wp),DIMENSION(ncanop) :: par_sunlit            !< PAR on sunlit leaves (µmol m-2 s-1)
+     REAL(wp),DIMENSION(ncanop) :: par_shaded            !< PAR on shaded leaves (µmol m-2 s-1)
+     REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit          !< fraction of layer which is sunlit
   END TYPE t_slm_canopy_layer
 
   !-----------------------------------------------------------------------------------------------------
@@ -247,11 +247,11 @@ MODULE mo_veg_memory
   !! including all pools and all fluxes
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_plant 
-    TYPE(t_slm_veg_pool)   :: pool                !< the actual vegetation pools
-    TYPE(t_slm_veg_flux)   :: flux                !< contains growth and litter fall fluxes per timestep for each pool
-    TYPE(t_slm_canopy_layer),DIMENSION(ncanop) :: canopy_layer  !< vegetation variables per canopy layer
-    TYPE(t_daily_average)  :: daily_average       !< structure to calculate and store all moving average values
-    TYPE(t_moving_average) :: moving_average      !< structure to calculate and store all moving average values
+    TYPE(t_slm_veg_pool)      :: pool             !< the actual vegetation pools
+    TYPE(t_slm_veg_flux)      :: flux             !< contains growth and litter fall fluxes per timestep for each pool
+    TYPE(t_slm_canopy_layer)  :: canopy_layer     !< vegetation variables per canopy layer
+    TYPE(t_daily_average)     :: daily_average    !< structure to calculate and store all moving average values
+    TYPE(t_moving_average)    :: moving_average   !< structure to calculate and store all moving average values
     INTEGER  :: pftid                             !< ID of the plant functional type; namelist parameter
     LOGICAL  :: growing_season                    !< logical to identify whether the plant is in the growing season or not
     REAL(wp) :: height                            !< plant height in m
@@ -653,21 +653,21 @@ CONTAINS
 
     IF(this%l_par_sunlit_day) THEN
       DO i=1,ncanop
-        this%curr_val_par_sunlit_day(i) = this%curr_val_par_sunlit_day(i) + plant%canopy_layer(i)%par_sunlit
+        this%curr_val_par_sunlit_day(i) = this%curr_val_par_sunlit_day(i) + plant%canopy_layer%par_sunlit(i)
         this%curr_count_par_sunlit_day(i) = this%curr_count_par_sunlit_day(i) + 1.0_wp
       END DO
     END IF
 
     IF(this%l_par_shaded_day) THEN
       DO i=1,ncanop
-        this%curr_val_par_shaded_day(i) = this%curr_val_par_shaded_day(i) + plant%canopy_layer(i)%par_shaded
+        this%curr_val_par_shaded_day(i) = this%curr_val_par_shaded_day(i) + plant%canopy_layer%par_shaded(i)
         this%curr_count_par_shaded_day(i) = this%curr_count_par_shaded_day(i) + 1.0_wp
       END DO
     END IF
 
     IF(this%l_fleaf_sunlit_day) THEN
       DO i=1,ncanop
-        this%curr_val_fleaf_sunlit_day(i) = this%curr_val_fleaf_sunlit_day(i) + plant%canopy_layer(i)%fleaf_sunlit
+        this%curr_val_fleaf_sunlit_day(i) = this%curr_val_fleaf_sunlit_day(i) + plant%canopy_layer%fleaf_sunlit(i)
         this%curr_count_fleaf_sunlit_day(i) = this%curr_count_fleaf_sunlit_day(i) + 1.0_wp
       END DO
     END IF
@@ -1033,13 +1033,13 @@ CONTAINS
     CALL this%pool%fruit%init(pool_init)
     CALL this%pool%seed_bed%init(pool_init)
     ! canopy layers
-    this%canopy_layer(:)%nl_tot       = canopy_layer_init
-    this%canopy_layer(:)%fnl_chl      = canopy_layer_init
-    this%canopy_layer(:)%fnl_et       = canopy_layer_init
-    this%canopy_layer(:)%fnl_rub      = canopy_layer_init
-    this%canopy_layer(:)%par_sunlit   = canopy_layer_init
-    this%canopy_layer(:)%par_shaded   = canopy_layer_init
-    this%canopy_layer(:)%fleaf_sunlit = canopy_layer_init
+    this%canopy_layer%nl_tot(:)       = canopy_layer_init
+    this%canopy_layer%fnl_chl(:)      = canopy_layer_init
+    this%canopy_layer%fnl_et(:)       = canopy_layer_init
+    this%canopy_layer%fnl_rub(:)      = canopy_layer_init
+    this%canopy_layer%par_sunlit(:)   = canopy_layer_init
+    this%canopy_layer%par_shaded(:)   = canopy_layer_init
+    this%canopy_layer%fleaf_sunlit(:) = canopy_layer_init
     ! plant variables
     this%pftid            = 1          ! INTEGER
     this%growing_season   = .TRUE.     ! LOGICAL

@@ -58,9 +58,9 @@ CONTAINS
     !! 
     CALL calc_fapar(atm2land%swpar_srf_down, atm2land%swpar_fdiffuse, atm2land%cos_zenith_angle, & 
                      plant%lai, &
-                     plant%canopy_layer(:)%par_sunlit, & 
-                     plant%canopy_layer(:)%par_shaded, &
-                     plant%canopy_layer(:)%fleaf_sunlit)
+                     plant%canopy_layer%par_sunlit(:), & 
+                     plant%canopy_layer%par_shaded(:), &
+                     plant%canopy_layer%fleaf_sunlit(:))
   END SUBROUTINE update_radiation
 
   !-----------------------------------------------------------------------------------------------------

@@ -427,9 +427,9 @@ CONTAINS
        write(lun,'(3F12.6)') time_d, soil%pool%litter%nitrogen, soil%ammonium
        lun=lun+1
        DO icanop=1, ncanop
-         write(lun,'(7F12.6)') time_d, REAL(icanop), plant%canopy_layer(icanop)%fnl_et, &
-                               plant%canopy_layer(icanop)%fnl_rub, plant%canopy_layer(icanop)%fnl_chl,&
-                               plant%canopy_layer(icanop)%fnl_pepc, plant%canopy_layer(icanop)%fnl_oth
+         write(lun,'(7F12.6)') time_d, REAL(icanop), plant%canopy_layer%fnl_et(icanop), &
+                               plant%canopy_layer%fnl_rub(icanop), plant%canopy_layer%fnl_chl(icanop),&
+                               plant%canopy_layer%fnl_pepc(icanop), plant%canopy_layer%fnl_oth(icanop)
        END DO
 
        IF(lctlib%growthform == itree) THEN 
