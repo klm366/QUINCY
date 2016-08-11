@@ -36,6 +36,7 @@ CONTAINS
     USE mo_base_config_class,       ONLY: base_config
     USE mo_atmland_memory
     USE mo_veg_output,              ONLY: write_output_pool, write_output_flux
+    USE mo_veg_config_class,        ONLY: veg_config  ! used to switch on/off the update_soil_pool via flag_base_soil_model
 
     ! used only for the canopy model:
     USE mo_atmland_constants,       ONLY: sw2par
@@ -78,7 +79,9 @@ CONTAINS
       CALL calc_growth            (tile, model%lctlib(tile%lcts%lib_id))
       CALL calc_turnover          (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_veg_dynamics    (tile, model%lctlib(tile%lcts%lib_id))
-      CALL update_soil_pool       (tile, model%lctlib(tile%lcts%lib_id))
+      IF (veg_config%flag_base_soil_model) THEN   ! switch: soil model 
+        CALL update_soil_pool       (tile, model%lctlib(tile%lcts%lib_id))
+      END IF
       CALL update_vegsoil_physics (tile)
       CALL update_veg_pools       (tile, model%lctlib(tile%lcts%lib_id))
 
@@ -117,7 +120,9 @@ CONTAINS
       CALL calc_growth            (tile, model%lctlib(tile%lcts%lib_id))
       CALL calc_turnover          (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_veg_dynamics    (tile, model%lctlib(tile%lcts%lib_id))
-      CALL update_soil_pool       (tile, model%lctlib(tile%lcts%lib_id))
+      IF (veg_config%flag_base_soil_model) THEN   ! switch: soil model 
+        CALL update_soil_pool       (tile, model%lctlib(tile%lcts%lib_id))
+      END IF
       CALL update_vegsoil_physics (tile)
       CALL update_veg_pools       (tile, model%lctlib(tile%lcts%lib_id))
 
