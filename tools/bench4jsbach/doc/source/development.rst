@@ -70,7 +70,8 @@ Configuration
 **Listing:** albedo.cfg, example
 
 .. figure:: ./graphic/diagfield-conf.jpg
-   :target: file:///home/deike/git/jsbach/tools/bench4jsbach/doc/source/graphic/diagfield-conf-overlay.jpg
+   :target: {{ workdir }}/graphic/diagfield-conf-overlay.jpg
+
 
 
 I/O Dependencies
