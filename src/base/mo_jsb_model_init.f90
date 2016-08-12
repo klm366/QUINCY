@@ -147,7 +147,7 @@ CONTAINS
     !! 
     !! the last full "forcing period" is written into extra output files with half-hourly write-out of values
     fluxnet_output_status = 0
-    IF (base_config%fluxnet_output == 'yes' .AND. atmland_config%option_forcing == 'readfile') THEN
+    IF (base_config%fluxnet_output .AND. atmland_config%option_forcing == 'readfile') THEN
       fluxnet_output_status = 1
       ! check whether simulation length covers at least one complete fluxnet forcing period (i.e. fluxnet_output_length)
       fluxnet_output_length = NINT(base_config%fluxnet_output_length * one_year * one_day / base_config%dt)
@@ -174,10 +174,10 @@ CONTAINS
     !! 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land')
-        CALL init_slm_land(model, tile)
+        ! currently same as plant -> calling simply 'init_slm_plant'!
+        CALL init_slm_plant(model, tile)
       CASE('plant')
-        ! currently same as land -> calling simply 'init_slm_land'!
-        CALL init_slm_land(model, tile)
+        CALL init_slm_plant(model, tile)
       CASE('soil')
         CALL finish('land_model_driver-init_routine','Nice try, but the soil model does not exist yet :) ')
       CASE('canopy')
@@ -192,11 +192,20 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> init routine specific to the land model
+  ! init routine specific to the land model
+  ! 
+  ! tbc ...
+  !-----------------------------------------------------------------------------------------------------
+
+
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> init routine specific to the plant model
   !!
   !! called from init_slm
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm_land(model, tile) !(model_id, model_name)
+  SUBROUTINE init_slm_plant(model, tile) !(model_id, model_name)
 
     USE mo_shared_memory, ONLY: t_element
 
@@ -270,7 +279,7 @@ CONTAINS
          tile%plant%pool%reserve  = init_pool 
       ENDIF
  
-  END SUBROUTINE init_slm_land
+  END SUBROUTINE init_slm_plant
 
 
   !-----------------------------------------------------------------------------------------------------

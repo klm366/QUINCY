@@ -1,1 +1,0 @@
-./../../r_script/run_land.R

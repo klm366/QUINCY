@@ -106,7 +106,7 @@ PROGRAM land_model_driver
 
     !! 3.5 special case: fluxnet output
     !! 
-    IF(base_config%fluxnet_output == 'yes') THEN
+    IF(base_config%fluxnet_output) THEN
       IF (itimestep == fluxnet_output_start) THEN         ! start of fluxnet output (at each timestep)
           fluxnet_output_status = 2                       ! status update: currently writing output data
           CALL close_output_files(1)                      ! 1 == itile

@@ -31,7 +31,7 @@ MODULE mo_base_config_class
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
-    CHARACTER(3)      :: fluxnet_output
+    LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
   CONTAINS
     PROCEDURE :: Init => Init_base_config
@@ -61,7 +61,7 @@ CONTAINS
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
-    CHARACTER(3)      :: fluxnet_output
+    LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
 
     NAMELIST /base_ctl/            &  
@@ -81,10 +81,10 @@ CONTAINS
 
     ! Set defaults
     dt_time_step_length_sec       = 1800.0_wp
-    simulation_length_unit        = 'y'        ! y (years), w (weeks), d (days)
+    simulation_length_unit        = 'y'         ! y (years), w (weeks), d (days)
     simulation_length_number      = 20 
     slm_model_name                = 'land'
-    fluxnet_output                = 'not'        ! yes, not
+    fluxnet_output                = .FALSE.     ! .TRUE. .FALSE.
     fluxnet_output_length         = 2
 
 

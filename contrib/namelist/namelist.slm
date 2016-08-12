@@ -38,9 +38,9 @@
   ! integer values
   simulation_length_number=30
   ! SLM model: land plant soil canopy test_canopy
-  slm_model_name="canopy"
-  ! if fluxnet sites: output per timestep for last forcing period [yes/not]
-  fluxnet_output="not"
+  slm_model_name="land"
+  ! if fluxnet sites: output per timestep for last forcing period [FALSE TRUE]
+  fluxnet_output=.FALSE.
   ! length of forcing period [years] provided by data file
   fluxnet_output_length=2
 /

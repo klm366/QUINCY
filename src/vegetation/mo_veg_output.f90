@@ -128,27 +128,27 @@ CONTAINS
     !!
     !! lun of pools starts at a multiple of 100
     lun = 100 * itile
-    WRITE(lun,'(2a)'), 'Time Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
+    WRITE(lun,'(2a)') 'Time Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
                      'Fruit_C Labile_C Reserve_C SeedBank_C'
     lun=lun+1
-    WRITE(lun,'(4a)'), 'Time Leaf_dC13 FineRoot_dC13 SapWood_dC13 HeartWood_dC13 CoarseRoot_dC13 ', & 
+    WRITE(lun,'(4a)') 'Time Leaf_dC13 FineRoot_dC13 SapWood_dC13 HeartWood_dC13 CoarseRoot_dC13 ', & 
                      'Fruit_dC13 Labile_dC13 Reserve_dC13 SeedBank_dC13 Leaf_DC14 FineRoot_DC14 ', &
                      'SapWood_DC14 HeartWood_DC14 CoarseRoot_DC14 Fruit_DC14 Labile_DC14 ', &
                      'Reserve_DC14 SeedBank_DC14'
     lun=lun+1
-    WRITE(lun,'(2a)'), 'Time Leaf_N FineRoot_N SapWood_N HeartWood_N CoarseRoot_N ', & 
+    WRITE(lun,'(2a)') 'Time Leaf_N FineRoot_N SapWood_N HeartWood_N CoarseRoot_N ', & 
                      'Fruit_N Labile_N Reserve_N SeedBank_N'
     lun=lun+1
-    WRITE(lun,'(2a)'), 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
+    WRITE(lun,'(2a)') 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
                      'Fruit_P Labile_P Reserve_P SeedBank_P'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time SoilMoisture'
+    WRITE(lun,'(a)') 'Time SoilMoisture'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time LitterN MineralN'
+    WRITE(lun,'(a)') 'Time LitterN MineralN'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth'
+    WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season'
+    WRITE(lun,'(a)') 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season'
 
   END SUBROUTINE init_output_writing_pool
 
@@ -169,16 +169,16 @@ CONTAINS
     !!
     !! lun of fluxes starts at a multiple of 100, plus 50
     lun = (100 * itile) + 50
-    WRITE(lun,'(a)'), 'Time GPP GrowthResp MaintResp NPP ReserveUse'
+    WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NPP ReserveUse'
     lun=lun+1   
-    WRITE(lun,'(2a)'), 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
+    WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
                       'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time NUP Resorption_N ReserveUse'
+    WRITE(lun,'(a)') 'Time NUP Resorption_N ReserveUse'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time PUP Resorption_P ReserveUse'
+    WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
     lun=lun+1
-    WRITE(lun,'(a)'), 'Time Transpiration GC'
+    WRITE(lun,'(a)') 'Time Transpiration GC'
   END SUBROUTINE init_output_writing_flux
 
   !-----------------------------------------------------------------------------------------------------

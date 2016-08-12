@@ -69,9 +69,9 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting atmland configuration')
 
     ! Set defaults
-    option_forcing        = 'generate'
-    latitude              = 50.91   ! about the MPI-BGC Jena
-    longitude             = 11.56   ! about the MPI-BGC Jena
+    option_forcing        = 'generate'  ! constant generate readfile
+    latitude              = 50.91       ! about the MPI-BGC Jena
+    longitude             = 11.56       ! about the MPI-BGC Jena
 
 
     ! read the namelist

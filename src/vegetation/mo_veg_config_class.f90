@@ -98,8 +98,8 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
-    output_interval_pool           = 'monthly' 
-    output_interval_flux           = 'monthly' 
+    output_interval_pool           = 'monthly' ! timestep daily weekly monthly yearly
+    output_interval_flux           = 'monthly' ! timestep daily weekly monthly yearly
     output_start_first_day_year    = 1
     output_end_last_day_year       = 10
     flag_calc_soil_uptake          = .FALSE.  ! .TRUE. .FALSE.

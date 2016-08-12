@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## 20160726
+## 20160811
 ##
 ## > prepare and start run_slm.sh script to run SLM simulations across multiple sites
 ## > the prep_run_slm.sh & run_slm-sh should be located in trunk/contrib/site_level/ (same for any branch)
@@ -15,18 +15,46 @@
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
 experimentalID=""         # set something useful for you (allowed only: alphanumeric '_' '-'); if empty ( experimentalID="" ) current date is used
 # select sites: FLUXNET or CRUNCEPv5
-siteCompilation="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
+siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
 customSiteList="no"          # set either to yes or no (small caps)
 customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
-singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteCompilation
+singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet
 # run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
 specialFluxnetOutput="no"    # set either to yes or no (small caps)
 
-# details about the HPC, if unsure stick with these default values
+## namelist.slm options ##
+# flags: T (True) or F (False) [large caps]
+# plant-soil model options
+flag_calc_soil_uptake="T"
+flag_calc_soil_moisture="F"
+flag_base_soil_model="T"
+# canopy model options
+flag_t_jmax_acclimation="F"
+flag_optimal_Nfraction="F"
+# plant growth model options
+flag_optimal_Nleaf="F"
+flag_optimal_allocation="F"
+# vegetation dynamics options
+flag_tile_veg_dynamics="F"
+flag_start_bareground="F"
+
+# simulation length & output
+simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+output_interval_pool="weekly"   # timestep daily weekly monthly yearly
+output_interval_flux="weekly"   # timestep daily weekly monthly yearly
+output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
+output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
+
+# forcing input
+option_forcing="readfile"       # constant generate readfile
+soil_awc_prescribe=300.0        # float !
+soil_theta_prescribe=100.0      # float !
+
+## details about the HPC, if unsure stick with these default values ##
 queue="BTM"                  # available queues: all io BTM mpi_large
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000000               # memory per job you may need; provided in Kb (1 Gb == 1000000 Kb)
@@ -60,12 +88,16 @@ fi
 return 0
 }
 # lists to validate against
-validateSiteCompilation="f c"
+validatesiteDataSet="f c"
 validateCustomSiteList="yes no"
 validateSlmModel="land plant"  # soil canopy
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
 validateSpecialFluxnetOutput="yes no"
+validateFlags="F T"
+validateOutputInterval="timestep daily weekly monthly yearly"
+validateOptionForcing="constant generate readfile"
+
 
 ## set and create basic folders and files ##
 username=$(whoami)
@@ -122,15 +154,27 @@ simFoldErr="$simFold""error""/"
 mkdir -p "$simFoldErr"
 
 ## validate user-defined model-options ##
-validateUserConfigValues "$siteCompilation" "$validateSiteCompilation" "siteCompilation"
+validateUserConfigValues "$siteDataSet" "$validatesiteDataSet" "siteDataSet"
 validateUserConfigValues "$customSiteList" "$validateCustomSiteList" "customSiteList"
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$queue" "$validateQueue" "queue"
 validateUserConfigValues "$emailNotification" "$validateEmailNotification" "emailNotification"
 validateUserConfigValues "$specialFluxnetOutput" "$validateSpecialFluxnetOutput" "specialFluxnetOutput"
+validateUserConfigValues "$flag_calc_soil_uptake" "$validateFlags" "flag_calc_soil_uptake"
+validateUserConfigValues "$flag_calc_soil_moisture" "$validateFlags" "flag_calc_soil_moisture"
+validateUserConfigValues "$flag_base_soil_model" "$validateFlags" "flag_base_soil_model"
+validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
+validateUserConfigValues "$flag_start_bareground" "$validateFlags" "flag_start_bareground"
+validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
+validateUserConfigValues "$flag_optimal_Nleaf" "$validateFlags" "flag_optimal_Nleaf"
+validateUserConfigValues "$flag_optimal_allocation" "$validateFlags" "flag_optimal_allocation"
+validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
+validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
+validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
+validateUserConfigValues "$option_forcing" "$validateOptionForcing" "option_forcing"
 
-## site compilation: FLUXNET or CRUNCEPv5 ##
-if [ $siteCompilation == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
+## site data-set: FLUXNET or CRUNCEPv5 ##
+if [ $siteDataSet == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
  then
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET/"
  else 
@@ -166,7 +210,7 @@ if [ $customSiteList == "yes" ]
       siteName=$(sed -n "$a"p "$siteListFileName" | awk '{print $1}')  # -n  == quiet/silent
       if ! ls -la $siteDataFold | grep $siteName > /dev/null  # if forcing file not found
         then
-          echo "EXIT! The site ""$siteName"" from your custom site_list.dat does not exist in the siteCompilation folder (f [FLUXNET], c [CRUNCEPv5]): ""$siteCompilation"" !"
+          echo "EXIT! The site ""$siteName"" from your custom site_list.dat does not exist in the siteDataSet folder (f [FLUXNET], c [CRUNCEPv5]): ""$siteDataSet"" !"
           rm -r "$simFold"  # deleting the already created simulation folder
           exit
       fi
@@ -189,7 +233,7 @@ fi
 ## validate options linked with specialFluxnetOutput ##
 if [ $specialFluxnetOutput == "yes" ]
  then
-    if [ $siteCompilation != "f" ] 
+    if [ $siteDataSet != "f" ] 
       then
         echo "EXIT! You may use a FLUXNET site when you enable special fluxnet-simulation output."
         exit
@@ -316,6 +360,7 @@ function changeNamelistValue {
 oldValue=$(grep -w $1 "$simFoldDefaultFiles""$slmNamelistFilename" | awk -F "=" '{print $2}' | tr -d '"') # get the old value that should be replaced
 lineNum=$(grep -wn $1 "$simFoldDefaultFiles""$slmNamelistFilename" | cut -d : -f 1)          # get line number of variable $1
 sed -i "$lineNum"s/$oldValue/$2/ "$simFoldDefaultFiles""$slmNamelistFilename"                # replace the old value in line $lineNum with $2
+sync
 return 0                                                         # get return value with: return_value=$?
 }
  # examples:
@@ -327,11 +372,73 @@ return 0                                                         # get return va
 changeNamelistValue slm_model_name "$slmModel"
 if [ "$specialFluxnetOutput" == "yes" ]
   then
-    changeNamelistValue fluxnet_output yes
+    changeNamelistValue fluxnet_output .TRUE.
   else
-    changeNamelistValue fluxnet_output not
+    changeNamelistValue fluxnet_output .FALSE.
 fi
-sync
+if [ $flag_calc_soil_uptake == T ]
+  then
+    changeNamelistValue flag_calc_soil_uptake ".TRUE."
+  else
+    changeNamelistValue flag_calc_soil_uptake ".FALSE."
+fi
+if [ $flag_calc_soil_moisture == T ]
+  then
+    changeNamelistValue flag_calc_soil_moisture ".TRUE."
+  else
+    changeNamelistValue flag_calc_soil_moisture ".FALSE."
+fi
+if [ $flag_base_soil_model == T ]
+  then
+    changeNamelistValue flag_base_soil_model ".TRUE."
+  else
+    changeNamelistValue flag_base_soil_model ".FALSE."
+fi
+if [ $flag_tile_veg_dynamics == T ]
+  then
+    changeNamelistValue flag_tile_veg_dynamics ".TRUE."
+  else
+    changeNamelistValue flag_tile_veg_dynamics ".FALSE."
+fi
+if [ $flag_start_bareground == T ]
+  then
+    changeNamelistValue flag_start_bareground ".TRUE."
+  else
+    changeNamelistValue flag_start_bareground ".FALSE."
+fi
+if [ $flag_t_jmax_acclimation == T ]
+  then
+    changeNamelistValue flag_t_jmax_acclimation ".TRUE."
+  else
+    changeNamelistValue flag_t_jmax_acclimation ".FALSE."
+fi
+if [ $flag_optimal_Nleaf == T ]
+  then
+    changeNamelistValue flag_optimal_Nleaf ".TRUE."
+  else
+    changeNamelistValue flag_optimal_Nleaf ".FALSE."
+fi
+if [ $flag_optimal_allocation == T ]
+  then
+    changeNamelistValue flag_optimal_allocation ".TRUE."
+  else
+    changeNamelistValue flag_optimal_allocation ".FALSE."
+fi
+if [ $flag_optimal_Nfraction == T ]
+  then
+    changeNamelistValue flag_optimal_Nfraction ".TRUE."
+  else
+    changeNamelistValue flag_optimal_Nfraction ".FALSE."
+fi
+changeNamelistValue simulation_length_number "$simulation_length_number"
+changeNamelistValue output_interval_pool "$output_interval_pool"
+changeNamelistValue output_interval_flux "$output_interval_flux"
+changeNamelistValue output_start_first_day_year "$output_start_first_day_year"
+changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
+changeNamelistValue option_forcing "$option_forcing"
+changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
+changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
+
 
 ## start job with simulations by starting the job(array) -> run_slm.sh ##
 if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
