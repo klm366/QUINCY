@@ -90,8 +90,9 @@ CONTAINS
       t_freeze(options%nc), &
       zero(options%nc)
     LOGICAL :: &
-      l_ice_formation(options%nc), &
-      l_ice_melting(options%nc)
+      & l_ice(options%nc),           & ! Indicator for ice cover
+      & l_ice_formation(options%nc), &
+      & l_ice_melting(options%nc)
 
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime
@@ -162,6 +163,7 @@ CONTAINS
     hcap_ice        (:) = 0._wp
     l_ice_formation (:) = .FALSE.
     l_ice_melting   (:) = .FALSE.
+    l_ice           (:) = fract_lice(:) > 0.5_wp
 
     ! Calculate new water temperature and residual heat flux for ice formation over open water!
     CALL calc_lake_wtr_temp( &
@@ -172,7 +174,7 @@ CONTAINS
       & hcap_wtr(:),                                    & !< inout; Heat capacity of lake over open water
       & l_ice_formation(:),                             & !< out;   Indicator for ice formation
       & l_ice_melting(:),                               & !< inout; Indicator for ice melting = .FALSE.
-      & fract_lice(:) > 0.5_wp,                         & !< in;    Indicator for ice cover
+      & l_ice(:),                                       & !< in;    Indicator for ice cover
       & dtime,                                          & !< in;    Time step
       & ml_depth,                                       & !< in;    Mixed-layer depth
       & min_ice_depth)                                    !< in;    Minimum ice thickness
@@ -205,7 +207,7 @@ CONTAINS
       & hcap_wtr(:),                                    & !< inout; Heat capacity of lake over open water (not changed)
       & l_ice_formation(:),                             & !< inout; Indicator for ice formation (not changed)
       & l_ice_melting(:),                               & !< in;    Indicator for ice melting = .TRUE.
-      & fract_lice(:) > 0.5_wp,                         & !< in;    Indicator for ice cover
+      & l_ice(:),                                       & !< in;    Indicator for ice cover
       & dtime,                                          & !< in;    Time step
       & ml_depth,                                       & !< in;    Mixed-layer depth
       & min_ice_depth)                                    !< in;    Minimum ice thickness
@@ -303,7 +305,7 @@ CONTAINS
 
   END SUBROUTINE calc_lake_wtr_temp
 
-  ! Calculate new surface water temperature
+  ! Calculate new ice temperature, snow depth and heat fluxes
   ELEMENTAL PURE SUBROUTINE calc_lake_ice_temp(t_lice, hcap_ice, hflx_cond_ice, hflx_melt_snow, hflx_melt_lice, &
     &                                          hflx, lhflx, snowfall, hi, hs, fs, hi_min, dtime)
 
@@ -440,80 +442,6 @@ CONTAINS
     END IF
 
   END SUBROUTINE calc_lice_thickness
-
-  ELEMENTAL PURE SUBROUTINE calc_lake_ice(t_lice, hflx_resid, l_ice_formation, ice_depth, ice_fract, snow_depth, t_lwtr, &
-    & dtime, min_ice_depth)
-
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoi, rhos, alf, ki, ks
-
-    REAL(wp), INTENT(in)    :: t_lice
-    REAL(wp), INTENT(inout) :: hflx_resid       !< heat flux for ice formation (<0; in) or from ice melting (>0; out)
-    LOGICAL,  INTENT(inout) :: l_ice_formation
-    REAL(wp), INTENT(inout) :: ice_depth
-    REAL(wp), INTENT(inout) :: ice_fract
-    REAL(wp), INTENT(in)    :: snow_depth
-    REAL(wp), INTENT(inout) :: t_lwtr
-    REAL(wp), INTENT(in)    :: dtime
-    REAL(wp), INTENT(in)    :: min_ice_depth
-
-    REAL(wp) :: zhflx_cond  !< Conductive heat flux
-    REAL(wp) :: zice_depth_eff !< Effective ice thickness which takes into account snow layer on ice
-
-    IF (l_ice_formation) THEN                              ! Formation of a new slab of ice
-      ice_depth = - hflx_resid * dtime / (rhoi * alf)
-      ice_fract = 1._wp
-      hflx_resid = 0._wp
-    ELSE IF (ice_depth >= min_ice_depth) THEN              ! Ice already present
-      zice_depth_eff = ice_depth + (ki / ks) * (rhoi / rhos) * snow_depth
-      zhflx_cond = ki * (t_lice - tmelt) / zice_depth_eff
-    END IF
-
-  END SUBROUTINE calc_lake_ice
-  !
-  ! ================================================================================================================================
-  !
-!!$  SUBROUTINE update_asselin_lake(tile, config, options)
-!!$
-!!$    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-!!$    CLASS(t_jsb_config_p),      INTENT(in)    :: config(:)
-!!$    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-!!$
-!!$    ! Local variables
-!!$    !
-!!$    dsl4jsb_Def_memory(SEB)
-!!$
-!!$    ! Pointers to variables in memory
-!!$    dsl4jsb_Real2D_onChunk :: t
-!!$    dsl4jsb_Real2D_onChunk :: t_old
-!!$    dsl4jsb_Real2D_onChunk :: t_unfilt
-!!$    dsl4jsb_Real2D_onChunk :: t_unfilt_old
-!!$
-!!$    ! Locally allocated variables
-!!$    !
-!!$    INTEGER :: iblk, ics, ice
-!!$    REAL(wp) :: eps
-!!$
-!!$    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_asselin_lake'
-!!$
-!!$    iblk = options%iblk
-!!$    ics  = options%ics
-!!$    ice  = options%ice
-!!$
-!!$    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-!!$
-!!$    ! Get reference to variables for current block
-!!$    !
-!!$    dsl4jsb_Get_memory(SEB)
-!!$
-!!$    dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! OUT
-!!$    dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt)       ! IN
-!!$
-!!$    ! Do not apply Asselin time filter
-!!$    t(:) = t_unfilt(:)
-!!$
-!!$    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
-!!$
-!!$  END SUBROUTINE update_asselin_lake
 
   SUBROUTINE update_surface_fluxes_lake(tile, options)
 
