@@ -26,24 +26,21 @@ MODULE mo_veg_memory
   TYPE :: t_daily_average
     ! the 1st index of an array can be addressed with 1 (i.e. not 0 !)
     ! averages
-    REAL(wp), DIMENSION(ncanop)     :: avrg_prev_par_sunlit_day      !<  average of the previous day
-    REAL(wp), DIMENSION(ncanop)     :: avrg_prev_par_shaded_day      !<  average of the previous day
-    REAL(wp), DIMENSION(ncanop)     :: avrg_prev_fleaf_sunlit_day    !<  average of the previous day
-    REAL(wp)                        :: avrg_prev_t_jmax_opt_day      !<  average of the previous day
+    REAL(wp), DIMENSION(ncanop)     :: par_sunlit                   !<  average of the previous day
+    REAL(wp), DIMENSION(ncanop)     :: par_shaded                   !<  average of the previous day
+    REAL(wp), DIMENSION(ncanop)     :: fleaf_sunlit                 !<  average of the previous day
+    REAL(wp)                        :: t_jmax_opt                   !<  average of the previous day
     ! accumulated value of the current day & number of values accumulated
-    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_sunlit_day        !<  value accumulated over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_shaded_day        !<  value accumulated over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_val_fleaf_sunlit_day      !<  value accumulated over current day
-    REAL(wp)                        :: curr_val_t_jmax_opt_day        !<  value accumulated over current day 
-    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_sunlit_day      !<  counter of acc values over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_shaded_day      !<  counter of acc values over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_count_fleaf_sunlit_day    !<  counter of acc values over current day
-    REAL(wp)                        :: curr_count_t_jmax_opt_day      !<  counter of acc values over current day
-    ! condition per variable and timestep
-    LOGICAL                         :: l_par_sunlit_day              !< whether sunlight is available at canopy top
-    LOGICAL                         :: l_par_shaded_day              !< whether sunlight is available at canopy top
-    LOGICAL                         :: l_fleaf_sunlit_day            !< whether sunlight is available at canopy top
-    LOGICAL                         :: l_t_jmax_opt_day              !< whether sunlight is available at canopy top
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_sunlit        !<  value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_shaded        !<  value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_fleaf_sunlit      !<  value accumulated over current day
+    REAL(wp)                        :: curr_val_t_jmax_opt        !<  value accumulated over current day 
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_sunlit      !<  counter of acc values over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_shaded      !<  counter of acc values over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_fleaf_sunlit    !<  counter of acc values over current day
+    REAL(wp)                        :: curr_count_t_jmax_opt      !<  counter of acc values over current day
+    ! conditions (updated per timestep)
+    LOGICAL                         :: l_daylight                    !< whether sunlight is available at canopy top
   CONTAINS
     PROCEDURE :: init              => init_daily_avrg_variables
     PROCEDURE :: update_conditions => update_conditions_current_timestep
@@ -585,24 +582,21 @@ CONTAINS
     IMPLICIT NONE 
     CLASS(t_daily_average), INTENT(inout) :: this
 
-    this%avrg_prev_par_sunlit_day    = 0.0_wp    ! this sets the complete array to 0.0_wp
-    this%avrg_prev_par_shaded_day    = 0.0_wp
-    this%avrg_prev_fleaf_sunlit_day  = 0.0_wp
-    this%avrg_prev_t_jmax_opt_day    = 17.0_wp   ! set here to avoid referencing assim_constants
+    this%par_sunlit    = 0.0_wp    ! this sets the complete array to 0.0_wp
+    this%par_shaded    = 0.0_wp
+    this%fleaf_sunlit  = 0.0_wp
+    this%t_jmax_opt    = 17.0_wp   ! set here to avoid referencing assim_constants
 
-    this%curr_val_par_sunlit_day      = 0.0_wp
-    this%curr_val_par_shaded_day      = 0.0_wp
-    this%curr_val_fleaf_sunlit_day    = 0.0_wp
-    this%curr_val_t_jmax_opt_day      = 0.0_wp
-    this%curr_count_par_sunlit_day    = 0.0_wp
-    this%curr_count_par_shaded_day    = 0.0_wp
-    this%curr_count_fleaf_sunlit_day  = 0.0_wp
-    this%curr_count_t_jmax_opt_day    = 0.0_wp
+    this%curr_val_par_sunlit      = 0.0_wp
+    this%curr_val_par_shaded      = 0.0_wp
+    this%curr_val_fleaf_sunlit    = 0.0_wp
+    this%curr_val_t_jmax_opt      = 0.0_wp
+    this%curr_count_par_sunlit    = 0.0_wp
+    this%curr_count_par_shaded    = 0.0_wp
+    this%curr_count_fleaf_sunlit  = 0.0_wp
+    this%curr_count_t_jmax_opt    = 0.0_wp
 
-    this%l_par_sunlit_day    = .FALSE.
-    this%l_par_shaded_day    = .FALSE.
-    this%l_fleaf_sunlit_day  = .FALSE.
-    this%l_t_jmax_opt_day    = .FALSE.
+    this%l_daylight                   = .FALSE.
   END SUBROUTINE init_daily_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------
@@ -620,18 +614,13 @@ CONTAINS
     TYPE(t_slm_plant), INTENT(in) :: plant          !< mo_veg_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
     CLASS(t_daily_average), INTENT(inout) :: this   !< TYPE t_daily_average
 
-    ! condition type 1: light > zero
+    ! condition type 1: daylight (light > zero)
     IF(atm2land%swpar_srf_down > eps8) THEN
-      this%l_par_sunlit_day    = .TRUE.
-      this%l_par_shaded_day    = .TRUE.
-      this%l_fleaf_sunlit_day  = .TRUE.
-      this%l_t_jmax_opt_day    = .TRUE.
+      this%l_daylight         = .TRUE.
     ELSE
-      this%l_par_sunlit_day    = .FALSE.
-      this%l_par_shaded_day    = .FALSE.
-      this%l_fleaf_sunlit_day  = .FALSE.      
-      this%l_t_jmax_opt_day    = .FALSE.
+      this%l_daylight         = .FALSE.
     END IF
+
     ! condition type 2:
         ! ... currently none
   END SUBROUTINE update_conditions_current_timestep
@@ -651,30 +640,22 @@ CONTAINS
 
     CALL this%update_conditions(plant)
 
-    IF(this%l_par_sunlit_day) THEN
+    ! condition type 1: daylight (light > zero)
+    IF(this%l_daylight) THEN
       DO i=1,ncanop
-        this%curr_val_par_sunlit_day(i) = this%curr_val_par_sunlit_day(i) + plant%canopy_layer%par_sunlit(i)
-        this%curr_count_par_sunlit_day(i) = this%curr_count_par_sunlit_day(i) + 1.0_wp
+        ! 
+        this%curr_val_par_sunlit(i) = this%curr_val_par_sunlit(i) + plant%canopy_layer%par_sunlit(i)
+        this%curr_count_par_sunlit(i) = this%curr_count_par_sunlit(i) + 1.0_wp
+        ! 
+        this%curr_val_par_shaded(i) = this%curr_val_par_shaded(i) + plant%canopy_layer%par_shaded(i)
+        this%curr_count_par_shaded(i) = this%curr_count_par_shaded(i) + 1.0_wp
+        ! 
+        this%curr_val_fleaf_sunlit(i) = this%curr_val_fleaf_sunlit(i) + plant%canopy_layer%fleaf_sunlit(i)
+        this%curr_count_fleaf_sunlit(i) = this%curr_count_fleaf_sunlit(i) + 1.0_wp
+        ! 
+        this%curr_val_t_jmax_opt = this%curr_val_t_jmax_opt + plant%t_jmax_opt
+        this%curr_count_t_jmax_opt = this%curr_count_t_jmax_opt + 1.0_wp
       END DO
-    END IF
-
-    IF(this%l_par_shaded_day) THEN
-      DO i=1,ncanop
-        this%curr_val_par_shaded_day(i) = this%curr_val_par_shaded_day(i) + plant%canopy_layer%par_shaded(i)
-        this%curr_count_par_shaded_day(i) = this%curr_count_par_shaded_day(i) + 1.0_wp
-      END DO
-    END IF
-
-    IF(this%l_fleaf_sunlit_day) THEN
-      DO i=1,ncanop
-        this%curr_val_fleaf_sunlit_day(i) = this%curr_val_fleaf_sunlit_day(i) + plant%canopy_layer%fleaf_sunlit(i)
-        this%curr_count_fleaf_sunlit_day(i) = this%curr_count_fleaf_sunlit_day(i) + 1.0_wp
-      END DO
-    END IF
-
-    IF(this%l_t_jmax_opt_day) THEN
-       this%curr_val_t_jmax_opt_day = this%curr_val_t_jmax_opt_day + plant%t_jmax_opt
-       this%curr_count_t_jmax_opt_day = this%curr_count_t_jmax_opt_day + 1.0_wp
     END IF
 
   END SUBROUTINE accumulate_values_over_current_day
@@ -706,44 +687,46 @@ CONTAINS
       ! calculate the average of the current day and pass it to the according avrg_prev_* variable; 
       ! check if at least one value had been assigned at the current day, avoiding division by zero 
       DO i=1,ncanop
-        ! avrg_prev_par_sunlit_day
-        IF( this%curr_count_par_sunlit_day(i) < eps8 ) THEN
-          this%avrg_prev_par_sunlit_day(i)    = 0.0_wp
+        ! par_sunlit
+        IF( this%curr_count_par_sunlit(i) < eps8 ) THEN
+          this%par_sunlit(i)    = 0.0_wp
           ELSE
-          this%avrg_prev_par_sunlit_day(i)    = this%curr_val_par_sunlit_day(i) / this%curr_count_par_sunlit_day(i)
+          this%par_sunlit(i)    = this%curr_val_par_sunlit(i) / this%curr_count_par_sunlit(i)
         END IF
-        ! avrg_prev_par_shaded_day
-        IF( this%curr_count_par_shaded_day(i) < eps8 ) THEN
-          this%avrg_prev_par_shaded_day(i)    = 0.0_wp
+        ! par_shaded
+        IF( this%curr_count_par_shaded(i) < eps8 ) THEN
+          this%par_shaded(i)    = 0.0_wp
           ELSE
-          this%avrg_prev_par_shaded_day(i)    = this%curr_val_par_shaded_day(i)   / this%curr_count_par_shaded_day(i)
+          this%par_shaded(i)    = this%curr_val_par_shaded(i)   / this%curr_count_par_shaded(i)
         END IF
-        ! avrg_prev_fleaf_sunlit_day
-        IF( this%curr_count_fleaf_sunlit_day(i) < eps8 ) THEN
-          this%avrg_prev_fleaf_sunlit_day(i)  = 0.0_wp
+        ! fleaf_sunlit
+        IF( this%curr_count_fleaf_sunlit(i) < eps8 ) THEN
+          this%fleaf_sunlit(i)  = 0.0_wp
           ELSE
-          this%avrg_prev_fleaf_sunlit_day(i)  = this%curr_val_fleaf_sunlit_day(i) / this%curr_count_fleaf_sunlit_day(i)
+          this%fleaf_sunlit(i)  = this%curr_val_fleaf_sunlit(i) / this%curr_count_fleaf_sunlit(i)
         END IF
       END DO
-
-      IF( this%curr_count_t_jmax_opt_day < eps8 ) THEN
-        this%avrg_prev_t_jmax_opt_day  = 0.0_wp
-      ELSE
-        this%avrg_prev_t_jmax_opt_day  = this%curr_val_t_jmax_opt_day / this%curr_count_t_jmax_opt_day
+      ! t_jmax_opt
+      IF( this%curr_count_t_jmax_opt < eps8 ) THEN
+          this%t_jmax_opt  = 0.0_wp
+        ELSE
+          this%t_jmax_opt  = this%curr_val_t_jmax_opt / this%curr_count_t_jmax_opt
       END IF
       
       !write(*,*) time_day, &   ! may enable for testing
-      !           NINT(this%curr_count_par_sunlit_day(1)), this%avrg_prev_par_sunlit_day(1), &
-      !           NINT(this%curr_count_par_shaded_day(1)), this%avrg_prev_par_shaded_day(1), &
-      !           NINT(this%curr_count_fleaf_sunlit_day(1)), this%avrg_prev_fleaf_sunlit_day(1)
+      !           NINT(this%curr_count_par_sunlit(1)), this%par_sunlit(1), &
+      !           NINT(this%curr_count_par_shaded(1)), this%par_shaded(1), &
+      !           NINT(this%curr_count_fleaf_sunlit(1)), this%fleaf_sunlit(1)
 
       ! set all values of the current day to zero (code can be copied from initialization_of_variables above)
-      this%curr_val_par_sunlit_day      = 0.0_wp
-      this%curr_val_par_shaded_day      = 0.0_wp
-      this%curr_val_fleaf_sunlit_day    = 0.0_wp
-      this%curr_count_par_sunlit_day    = 0.0_wp
-      this%curr_count_par_shaded_day    = 0.0_wp
-      this%curr_count_fleaf_sunlit_day  = 0.0_wp
+      this%curr_val_par_sunlit      = 0.0_wp
+      this%curr_val_par_shaded      = 0.0_wp
+      this%curr_val_fleaf_sunlit    = 0.0_wp
+      this%curr_val_t_jmax_opt      = 0.0_wp
+      this%curr_count_par_sunlit    = 0.0_wp
+      this%curr_count_par_shaded    = 0.0_wp
+      this%curr_count_fleaf_sunlit  = 0.0_wp
+      this%curr_count_t_jmax_opt    = 0.0_wp
     END IF
 
   END SUBROUTINE calculate_avrg_previous_day
@@ -874,11 +857,11 @@ CONTAINS
     !                 use function TRUE FALSE [OPTIONAL argument] )
     ! returns: new current average
 
-    this%par_sunlit(:)    = this%calc_moving_avrg(this%par_sunlit(:), plant%daily_average%avrg_prev_par_sunlit_day(:), &
+    this%par_sunlit(:)    = this%calc_moving_avrg(this%par_sunlit(:), plant%daily_average%par_sunlit(:), &
                                                1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%par_shaded(:)    = this%calc_moving_avrg(this%par_shaded(:), plant%daily_average%avrg_prev_par_shaded_day(:), &
+    this%par_shaded(:)    = this%calc_moving_avrg(this%par_shaded(:), plant%daily_average%par_shaded(:), &
                                                1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%fleaf_sunlit(:)  = this%calc_moving_avrg(this%fleaf_sunlit(:), plant%daily_average%avrg_prev_fleaf_sunlit_day(:), &
+    this%fleaf_sunlit(:)  = this%calc_moving_avrg(this%fleaf_sunlit(:), plant%daily_average%fleaf_sunlit(:), &
                                                1.0_wp / (this%p_optNfrac * one_day/ dt))
     this%beta_soil_gs     = this%calc_moving_avrg(this%beta_soil_gs, plant%beta_soil_gs, &
                                                1._wp / ( this%p_optNfrac * one_day/dt))
@@ -886,7 +869,7 @@ CONTAINS
                                                1._wp / ( this%p_optNfrac * one_day/dt))
     this%beta_air         = this%calc_moving_avrg(this%beta_air, plant%beta_air, &
                                                1._wp / ( this%p_optNfrac * one_day/dt))
-    this%t_jmax_opt       = this%calc_moving_avrg(this%t_jmax_opt, plant%daily_average%avrg_prev_t_jmax_opt_day, &
+    this%t_jmax_opt       = this%calc_moving_avrg(this%t_jmax_opt, plant%daily_average%t_jmax_opt, &
                                                1._wp / ( this%p_weekly * one_day/dt))
     this%gpp_week                = this%calc_moving_avrg(this%gpp_week, plant%flux%gpp, &
                                                1.0_wp / (this%p_weekly * one_day/ dt))
