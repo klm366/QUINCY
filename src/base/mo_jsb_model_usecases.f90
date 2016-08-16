@@ -87,20 +87,21 @@ CONTAINS
       ! Create sub-tiles
       lake_tile => t_jsb_tile('lake', 'Lake tile', &
         & processes=(/SEB/), process_actions=(/ON_TILE_/), &
-        & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile, fract_filename='bc_land_frac.nc')
+        & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile, fract_filename='bc_land_frac.nc', fract_varname='fract_lake')
 
       land_tile => t_jsb_tile('land', 'Land tile', &
         & processes=(/SEB/), process_actions=(/ON_TILE_/), &
         & lct=t_jsb_lct(LAND_TYPE), &
         & parent=box_tile, &
-        & fract_filename='bc_land_frac.nc')
+        & fract_filename='bc_land_frac.nc', fract_varname='fract_land')
 
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL/), &
-          & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile, fract_filename='bc_land_frac.nc')
+          & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile, &
+          & fract_filename='bc_land_frac.nc', fract_varname='fract_glac')
 
         veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SOIL, VEG, PHENO/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-          & fract_filename='bc_land_frac.nc', fract_varname='fract_veg')
+          & fract_filename='bc_land_frac.nc', fract_varname='landnoglacier')
 
     NULLIFY(box_tile)
 
