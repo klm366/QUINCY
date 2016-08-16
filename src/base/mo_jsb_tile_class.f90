@@ -12,6 +12,7 @@ MODULE mo_jsb_tile_class
 
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_kind,                ONLY: wp, dp
+  USE mo_util,                ONLY: real2string
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_io_units,            ONLY: filename_max
 
@@ -562,7 +563,7 @@ CONTAINS
 
     INTEGER :: no_children, i
     CLASS(t_State), POINTER :: current
-    REAL(wp), ALLOCATABLE :: fract(:)
+    REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_fractions_aggregator'
 
@@ -580,11 +581,16 @@ CONTAINS
       END DO
 
       ALLOCATE(fract(ice-ics+1))
+      ALLOCATE(fract_sum(ice-ics+1))
       fract(:) = tile%fract(ics:ice,iblk)
-      IF (ASSOCIATED(tile%parent) &
-        & .AND. ANY(SUM(this%fractions(ics:ice,iblk,:), DIM=2) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) &
-        & CALL finish(TRIM(routine), 'Sum of tile fractions is not 1')
-      DEALLOCATE(fract)
+      fract_sum(:) = SUM(this%fractions(ics:ice,iblk,:), DIM=2)
+      IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) THEN
+        CALL message(TRIM(routine), 'Sum of child tile fractions on tile '//TRIM(tile%name)//': '//&
+          &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
+          &          all_print=.TRUE.)
+        CALL finish(TRIM(routine), 'Sum of tile fractions is not 1 on tile')
+      END IF
+      DEALLOCATE(fract, fract_sum)
 
       tile%l_fract_children_changed(ics:ice,iblk) = .FALSE.
     END IF
@@ -656,7 +662,10 @@ CONTAINS
     IF (j == 0) CALL finish(TRIM(routine), 'Variable '//TRIM(var%name)//' not found in any of children of tile '//&
       &                                    TRIM(tile%name)//' - this should not happen!')
 
-    IF (ANY(fract_sum(:) > 1._wp)) CALL finish(TRIM(routine), 'fract_sum > 1 - this should not happen')
+    IF (ANY(fract_sum(:) > 1._wp)) THEN
+      print*,'AAA ',MINVAL(fract_sum(:)),MAXVAL(fract_sum(:))
+      CALL finish(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - this should not happen')
+    END IF
 
     data_sum(:) = SUM(fractions(:,:) * data(:,:), DIM=2)
     WHERE (fract_sum(:) > EPSILON(1._wp))
@@ -739,7 +748,9 @@ CONTAINS
     IF (j == 0) CALL finish(TRIM(routine), 'Variable '//TRIM(var%name)//' not found in any of children of tile '//&
       &                                    TRIM(tile%name)//' - this should not happen!')
 
-    IF (ANY(fract_sum(:) > 1._wp)) CALL finish(TRIM(routine), 'fract_sum > 1 - this should not happen')
+    IF (ANY(fract_sum(:) > 1._wp)) THEN
+      CALL finish(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - this should not happen')
+    END IF
 
     DO ilev=1,SIZE(data,2)
       data_sum(:) = SUM(fractions(:,:) * data(:,ilev,:), DIM=2)

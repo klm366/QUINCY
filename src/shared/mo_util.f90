@@ -10,10 +10,12 @@
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
+  USE mo_kind, ONLY: wp
+
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: one_of, toupper, int2string, logical2string
+  PUBLIC :: one_of, toupper, int2string, real2string, logical2string
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -100,6 +102,23 @@ CONTAINS
     int2string = ADJUSTL(int2string)
     !
   END FUNCTION int2string
+
+  FUNCTION real2string(x, opt_fmt)
+    CHARACTER(len=10) :: real2string ! result
+    REAL(wp), INTENT(in) :: x
+    CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
+    !
+    CHARACTER(len=10) :: fmt
+
+    IF (PRESENT(opt_fmt)) THEN
+      fmt = opt_fmt
+    ELSE
+      fmt = '(E10.4)'
+    END IF
+    WRITE(real2string,fmt) x
+    real2string = ADJUSTL(real2string)
+    !
+  END FUNCTION real2string
 
   FUNCTION logical2string(value)
     CHARACTER(len=7) :: logical2string ! result
