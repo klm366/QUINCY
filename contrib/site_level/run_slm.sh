@@ -34,12 +34,14 @@ siteList=$(sed -n 1p "$simFoldDefaultFiles""config.txt")    # -n  == quiet/silen
 siteDataFold=$(sed -n 2p "$simFoldDefaultFiles""config.txt")
 slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
 specialFluxnetOutput=$(sed -n 4p "$simFoldDefaultFiles""config.txt")
-
+siteDataObsFold=$(sed -n 5p "$simFoldDefaultFiles""config.txt")
 
 ## further variables ##
 slmNamelist="namelist.slm"
 slmBinary="land.x"
-slmRscript="postprocessing_""$slmModel"".R"       ## just the R-Script for postprocessing output data
+slmRscript="postprocessing_""$slmModel"".R"           ## just the R-Script for postprocessing output data
+slmRscript4fluxfile="convert_slm2FLUXNET.R"           ## just the R-Script for converting output for FLUXNET 
+slmRscript4fluxdiag="generate_FLUXNET_diagnostics.R"  ## just the R-Script for FLUXNET diagnostics 
 
 
 ##############################################################################
@@ -70,6 +72,11 @@ mkdir -p "$jobErrFold"  # folder for error files and out files of this job
 cp "$simFoldDefaultFiles""$slmNamelist" ./
 cp "$simFoldDefaultFiles""$slmBinary"   ./
 cp "$simFoldDefaultFiles""$slmRscript"  ./
+if [ $specialFluxnetOutput == "yes" ];then
+   cp "$simFoldDefaultFiles""$slmRscript4fluxfile" ./
+   cp "$simFoldDefaultFiles""$slmRscript4fluxdiag"  ./
+   cp "$siteDataObsFold""$(awk '{print $1}' <<< "$siteData")"*.nc ./obs.nc
+fi
 cp "$siteDataFold""$(awk '{print $1}' <<< "$siteData")"*.dat ./climate.dat
 
 ## convert PFT name into ID ##
@@ -118,7 +125,7 @@ return 0                                                         # get return va
  # examples:
  #changeNamelistValue simulation_length_number 300
  #changeNamelistValue output_interval_flux monthly    # quotation marks not needed
- #changeNamelistValue flag_calc_soil_moisture .FALSE.
+ #changeNamelistValue flag_calc_soil_moistslm2ncdf.R
  #changeNamelistValue soil_theta_prescribe 122.7
 
 changeNamelistValue longitude "$(awk '{print $2}' <<< "$siteData")"
@@ -145,16 +152,28 @@ sync
 Rscript ./"$slmRscript"
 sync
 
+if [ $specialFluxnetOutput == "yes" ]; then 
+   Rscript ./"$slmRscript4fluxfile" $(awk '{print $2}' <<< "$siteData") $(awk '{print $3}' <<< "$siteData") $(awk '{print $5}' <<< "$siteData")
+   Rscript ./"$slmRscript4fluxdiag" $(awk '{print $5}' <<< "$siteData") $(awk '{print $6}' <<< "$siteData")
+fi
+
 ## cleanup some job specific files ##
 rm ./climate.dat
 rm ./"$slmRscript"
 rm ./"$slmBinary"
+[ $specialFluxnetOutput == "yes" ] && rm ./"$slmRscript4fluxfile" ./"$slmRscript4fluxdiag"
 
 ## sort job specific files ##
 mkdir -p ./input
 mkdir -p ./output
 mkdir -p ./postprocessing
 mv ./"$slmNamelist"  ./input
+if [ $specialFluxnetOutput == "yes" ]; then 
+  mv ./summary*      ./postprocessing
+  mv ./statistics*   ./postprocessing
+  rm ./obs.nc
+  mv ./*.nc ./output 
+fi
 mv ./*.txt           ./output 
 mv ./*.pdf           ./postprocessing
 

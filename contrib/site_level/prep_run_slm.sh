@@ -107,6 +107,8 @@ slmBinary="../../x86_64-intel/bin/land.x"                  ## just one binary fo
 slmNamelistFilename="namelist.slm"
 slmNamelist="../namelist/""$slmNamelistFilename"           ## just one namelist for all models
 slmRscript="../r_script/postprocessing_""$slmModel"".R"    ## just the R-Script for postprocessing output data
+slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"    ## just the R-Script for converting output for FLUXNET 
+slmRscript4fluxdiag="../r_script/generate_FLUXNET_diagnostics.R"    ## just the R-Script for FLUXNET diagnostics 
 
 ## experimental ID & simulation specific folders at scratch ##
 # if experimental ID is empty, use date as: YYYYMMDD_HHMMSS
@@ -117,11 +119,15 @@ fi
 # define job name
 jobName="exp_""$experimentalID"  # name of the job(array) -> must start with a character make work (see below): bsub -w "ended($jobName)"
 simFold="$bgiScratchUserFold""$jobName""/"
+simDefaultFiles="default_files/"
+simFoldDefaultFiles="$simFold""$simDefaultFiles"
+simFoldOut="$simFold""out""/"
+simFoldErr="$simFold""error""/"
 # check if folder with this experimentalID already exists
 if [ -d "$simFold" ]
  then
-  echo "Note: you already used this experimentalID! Should previous data be deleted?"
-  echo " Type either y (yes delete) or n (no, stop this script), and hit Enter."
+  echo "Note: you already used th experimentalID "$jobName"! Should previous data be deleted?"
+  echo " Type either y (yes delete), a (to add to this data), or n (no, stop this script), and hit Enter."
   echo " Default is n."
   read proceed
    if [ -z "$proceed" ] # if $proceed is empty -> default
@@ -137,6 +143,12 @@ if [ -d "$simFold" ]
       echo "Ok, all previous data within the folder with this experimentalID will be deleted, and the script processes as normal."
       rm -r "$simFold"
       ;;
+    a)
+      echo "Ok, run settings within the folder with this experimentalID will be deleted, and the script processes as normal."
+      rm -r "$simFoldDefaultFiles"
+      rm -r "$simFoldOut"
+      rm -r "$simFoldErr"
+      ;;
     *)
       echo "You entered any string other than y or n, so the script has stopped anyway."
       exit
@@ -145,12 +157,8 @@ fi
 
 ## set and create additional basic folders ##
 mkdir -p "$simFold"
-simDefaultFiles="default_files/"
-simFoldDefaultFiles="$simFold""$simDefaultFiles"
 mkdir -p "$simFoldDefaultFiles"
-simFoldOut="$simFold""out""/"
 mkdir -p "$simFoldOut"
-simFoldErr="$simFold""error""/"
 mkdir -p "$simFoldErr"
 
 ## validate user-defined model-options ##
@@ -177,8 +185,10 @@ validateUserConfigValues "$option_forcing" "$validateOptionForcing" "option_forc
 if [ $siteDataSet == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
  then
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET/"
+  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET/"
  else 
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CRUNCEPv5/"  # 64 sites, direct copy of 'sv_sites' but symlinks removed 
+  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/CRUNCEPv5/"
 fi
 
 ## site list: default or custom ##
@@ -337,6 +347,7 @@ echo "$siteList"              >  "$simFoldDefaultFiles""config.txt"
 echo "$siteDataFold"          >> "$simFoldDefaultFiles""config.txt"
 echo "$slmModel"              >> "$simFoldDefaultFiles""config.txt"
 echo "$specialFluxnetOutput"  >> "$simFoldDefaultFiles""config.txt"
+echo "$siteDataObsFold"       >> "$simFoldDefaultFiles""config.txt"
 #echo "$"    >> "$simFoldDefaultFiles""config.txt"
 #echo "$"    >> "$simFoldDefaultFiles""config.txt"
 #echo "$"    >> "$simFoldDefaultFiles""config.txt"
@@ -345,6 +356,10 @@ echo "$specialFluxnetOutput"  >> "$simFoldDefaultFiles""config.txt"
 cp "$slmBinary"     "$simFoldDefaultFiles"
 cp "$slmNamelist"   "$simFoldDefaultFiles"
 cp "$slmRscript"    "$simFoldDefaultFiles"
+if [ $specialFluxnetOutput == "yes" ]; then 
+  cp "$slmRscript4fluxfile" "$simFoldDefaultFiles"
+  cp "$slmRscript4fluxdiag" "$simFoldDefaultFiles"
+fi
 
 ## syncronize all data with file system ##
 sync
@@ -438,7 +453,6 @@ changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
 changeNamelistValue option_forcing "$option_forcing"
 changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
 changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
-
 
 ## start job with simulations by starting the job(array) -> run_slm.sh ##
 if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used

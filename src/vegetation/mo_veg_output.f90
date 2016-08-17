@@ -43,7 +43,14 @@ MODULE mo_veg_output
   REAL(wp), DIMENSION(ntile), SAVE :: res_use_p_acc        
   REAL(wp), DIMENSION(ntile), SAVE :: transpiration_acc    
   REAL(wp), DIMENSION(ntile), SAVE :: gc_acc               
-
+  REAL(wp), DIMENSION(ntile), SAVE :: ga_acc               
+  REAL(wp), DIMENSION(ntile), SAVE :: ppfd_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: rnet_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: qh_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: qle_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: albedo_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: lai_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: fapar_acc 
 
 CONTAINS
 
@@ -78,6 +85,14 @@ CONTAINS
     res_use_p_acc     = 0._wp   
     transpiration_acc = 0._wp 
     gc_acc            = 0._wp
+    ga_acc            = 0._wp
+    ppfd_acc          = 0._wp
+    rnet_acc          = 0._wp
+    qh_acc            = 0._wp
+    qle_acc           = 0._wp
+    albedo_acc        = 0._wp
+    fapar_acc         = 0._wp
+    lai_acc           = 0._wp
   END SUBROUTINE init_veg_output_variables
 
 
@@ -178,7 +193,9 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time Transpiration GC'
+    WRITE(lun,'(a)') 'Time Transpiration GC GA'
+    lun=lun+1
+    WRITE(lun,'(a)') 'Time PPFD Rnet Qh Qle Albedo FAPAR LAI' 
   END SUBROUTINE init_output_writing_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -327,6 +344,9 @@ CONTAINS
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
     fname = 'fluxH2O_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
+    fname = 'fluxEnergy_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
     !> 3.0 write column headers into output files
@@ -548,6 +568,7 @@ CONTAINS
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + plant%flux%reserve_use%phosphorus  * dt_one *1000000._wp/dt
       transpiration_acc(itile)= transpiration_acc(itile) + plant%flux%transpiration           * dt_one 
       gc_acc(itile)           = plant%gc                                                      * dt_one 
+      ga_acc(itile)           = plant%gc                                                      * dt_one 
 
       !> 1.2 write fluxes and set to zero
       !!
@@ -571,7 +592,10 @@ CONTAINS
         lun=lun+1
         write(lun,'(4F12.6)') time_d, uptake_p_acc(itile), recycling_p_acc(itile), res_use_p_acc(itile)
         lun=lun+1
-        write(lun,'(12F16.8)') time_d, transpiration_acc(itile), gc_acc(itile)
+        write(lun,'(12F16.8)') time_d, transpiration_acc(itile), gc_acc(itile), ga_acc(itile)
+        lun=lun+1
+        write(lun,'(12F16.8)') time_d, ppfd_acc(itile), rnet_acc(itile), qh_acc(itile), qle_acc(itile), & 
+                               albedo_acc(itile), fapar_acc(itile), lai_acc(itile)
         ! set zero
         gpp_acc(itile)           = 0.0_wp
         growth_resp_acc(itile)   = 0.0_wp
@@ -592,6 +616,14 @@ CONTAINS
         res_use_p_acc(itile)     = 0.0_wp
         transpiration_acc(itile) = 0.0_wp
         gc_acc(itile)            = 0.0_wp
+        ga_acc(itile)            = 0.0_wp
+        ppfd_acc(itile)          = 0.0_wp
+        rnet_acc(itile)          = 0.0_wp
+        qh_acc(itile)            = 0.0_wp
+        qle_acc(itile)           = 0.0_wp
+        albedo_acc(itile)        = 0.0_wp
+        fapar_acc(itile)         = 0.0_wp
+        lai_acc(itile)           = 0.0_wp
       END IF
     END IF
     END IF  ! on/off switch specific to 'special case: fluxnet output'
