@@ -35,6 +35,7 @@ siteDataFold=$(sed -n 2p "$simFoldDefaultFiles""config.txt")
 slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
 specialFluxnetOutput=$(sed -n 4p "$simFoldDefaultFiles""config.txt")
 siteDataObsFold=$(sed -n 5p "$simFoldDefaultFiles""config.txt")
+useSiteSpecificAWC=$(sed -n 6p "$simFoldDefaultFiles""config.txt")
 
 ## further variables ##
 slmNamelist="namelist.slm"
@@ -125,12 +126,14 @@ return 0                                                         # get return va
  # examples:
  #changeNamelistValue simulation_length_number 300
  #changeNamelistValue output_interval_flux monthly    # quotation marks not needed
- #changeNamelistValue flag_calc_soil_moistslm2ncdf.R
+ #changeNamelistValue flag_calc_soil_moist ".FALSE."
  #changeNamelistValue soil_theta_prescribe 122.7
 
 changeNamelistValue longitude "$(awk '{print $2}' <<< "$siteData")"
 changeNamelistValue latitude  "$(awk '{print $3}' <<< "$siteData")"
 changeNamelistValue plant_functional_type_id "$pftID"
+[ $useSiteSpecificAWC == "yes" ] && \
+   changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")"
 # special fluxnet output #
 if [ $specialFluxnetOutput == "yes" ]
   then

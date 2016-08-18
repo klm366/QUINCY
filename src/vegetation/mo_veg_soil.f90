@@ -217,7 +217,8 @@ CONTAINS
        ENDIF
        ! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil = ga / 10)
        evaporation = atm2land%press_srf / ( r_gas_dryair * atm2land%t_air ) * & 
-                     (q_sat - atm2land%q_air) * soil%theta / 100.0_wp / ( 10._wp / atm2land%ga)
+                     (q_sat - atm2land%q_air) * soil%theta / 100.0_wp / ( 100._wp / atm2land%ga)
+       IF(land2atm%net_radiation<eps8) evaporation = 0.0_wp
 
        ! update soil moisture dS = rain - transpiration - evaporation 
        soil%moisture = soil%moisture + (atm2land%rain + atm2land%snow & 

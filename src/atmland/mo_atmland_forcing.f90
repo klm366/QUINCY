@@ -81,7 +81,7 @@ CONTAINS
     atm2land%q_bcoef              = 0.0_wp
     atm2land%pch                  = 0.0_wp
     atm2land%cos_zenith_angle     = def_cos_angle
-    atm2land%ga                   = 0.1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
+    atm2land%ga                   = 0.04_wp /  atm2land%drag_srf * atm2land%wind_10m 
 
     !> Initialization of of grid\% lon and lat
     !! 
@@ -180,7 +180,7 @@ CONTAINS
     atm2land%rain      = atm2land%rain / 86400._wp
     atm2land%snow      = atm2land%snow / 86400._wp
     atm2land%wind_10m  = atm2land%wind_air
-    atm2land%ga        = 0.1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
+    atm2land%ga        = 0.04_wp / atm2land%drag_srf * atm2land%wind_10m
     hlp1 = calc_mixing_ratio_C13C12(def_co2_deltaC13)
     atm2land%co2_mixing_ratio_c13 = atm2land%co2_mixing_ratio / (1._wp + 1._wp/hlp1)
     hlp1 = calc_mixing_ratio_C14C(def_co2_deltaC13,def_co2_deltaC14)
