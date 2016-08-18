@@ -353,7 +353,7 @@ CONTAINS
     REAL(wp),SAVE :: ref_vpd = 1000._wp           ! vpd in Pa
     REAL(wp),SAVE :: ref_swdown = 652.173913_wp   ! PAR in W m-2
     REAL(wp),SAVE :: ref_fdiffuse = 0.2_wp        ! diffuse fraction
-    REAL(wp),SAVE :: ref_cos_angle = 1.0_wp       ! cosine of zenith angle
+    REAL(wp),SAVE :: ref_cos_angle = 0.8_wp       ! cosine of zenith angle
     REAL(wp),SAVE :: ref_co2 = 380.0_wp           ! co2 in ppm
     REAL(wp),SAVE :: ref_wind = 1.0_wp            ! wind in m/s
     REAL(wp),SAVE :: ref_theta = 100._wp          ! soil water availability in %

@@ -62,6 +62,10 @@ MODULE mo_atmland_memory
       alb_nir_dif ,   &
       alb_vis_dir ,   &
       alb_nir_dir ,   &
+      albedo      ,   &
+      sensible_heat_flx , &
+      latent_heat_flx , &
+      net_radiation , &
       vpd
 
   END TYPE t_land2atm

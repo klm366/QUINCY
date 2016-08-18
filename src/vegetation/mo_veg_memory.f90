@@ -271,6 +271,7 @@ MODULE mo_veg_memory
     REAL(wp) :: t_jmax_opt                        !y current optimum temperature for eletron transport of photosynthesis
     REAL(wp) :: boc_an                            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     REAL(wp) :: leaf_cn_direction                 !< indicates direction of change in leaf CN ratio to maximise NPP
+    REAL(wp) :: apar 
   CONTAINS
     PRIVATE
     PROCEDURE, PUBLIC :: init => init_plant
@@ -1045,6 +1046,7 @@ CONTAINS
     this%nd_dormance        = plant_var_init_one
     this%boc_an             = plant_var_init_one
     this%leaf_cn_direction  = plant_var_init_one
+    this%apar             = plant_var_init_zero
   END SUBROUTINE init_plant 
 
   !-----------------------------------------------------------------------------------------------------

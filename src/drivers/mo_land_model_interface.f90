@@ -39,7 +39,7 @@ CONTAINS
     USE mo_veg_config_class,        ONLY: veg_config  ! used to switch on/off the update_soil_pool via flag_base_soil_model
 
     ! used only for the canopy model:
-    USE mo_atmland_constants,       ONLY: sw2par
+    USE mo_atmland_constants,       ONLY: rad2par
     USE mo_base_constants,          ONLY: one_year
 
     ! Process interfaces:
@@ -170,7 +170,7 @@ CONTAINS
     !! output fluxes -> filename: fort.20
     !! output also some atm2land variables
     !! 
-      WRITE(20,'(6F16.7)') time_day+time_year*one_year, atm2land%t_air, atm2land%swpar_srf_down * sw2par, & 
+      WRITE(20,'(6F16.7)') time_day+time_year*one_year, atm2land%t_air, atm2land%swpar_srf_down * rad2par, & 
                            tile%plant%flux%gpp, tile%plant%gc, tile%plant%flux%ci
 
     CASE('test_canopy')
@@ -194,7 +194,7 @@ CONTAINS
     USE mo_base_constants,                  ONLY: npft
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_atmland_memory,                  ONLY: atm2land
-    USE mo_atmland_constants,               ONLY: sw2par, eps_vpd
+    USE mo_atmland_constants,               ONLY: rad2par, frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd
     USE mo_atmland_util,                    ONLY: calc_spec_humidity_sat
     USE mo_shared_constants,                ONLY: molar_mass_N, Tzero 
     ! Process interfaces:
@@ -243,25 +243,25 @@ CONTAINS
   atm2land%swvis_srf_down = 0.0_wp 
   DO i = 1,16
 
-     atm2land%swvis_srf_down = atm2land%swvis_srf_down + 100.0_wp / 2.3_wp
-     atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
-     atm2land%swpar_srf_down = atm2land%swvis_srf_down
+     atm2land%swpar_srf_down = atm2land%swpar_srf_down + 100.0_wp / rad2par 
+     atm2land%swvis_srf_down = atm2land%swpar_srf_down / frac_par_swvis_srf 
+     atm2land%swnir_srf_down = atm2land%swvis_srf_down * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
      CALL update_radiation(tile)                       !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') atm2land%swpar_srf_down * sw2par, & 
+     WRITE(lun,'(4F16.7)') atm2land%swpar_srf_down * rad2par, & 
            tile%plant%flux%an,tile%plant%gc*1000._wp,tile%plant%flux%ci !,&
 !           tile%plant%flux%an,
 !           tile%plant%flux%ci/atm2land%co2_mixing_ratio,tile%plant%pool%leaf%nitrogen*molar_mass_N,&
 !           tile%plant%flux%an/(tile%plant%pool%leaf%nitrogen*molar_mass_N)
 
   END DO
-  atm2land%swvis_srf_down = ref_swdown
-  atm2land%swnir_srf_down = atm2land%swvis_srf_down * 0.1_wp
-  atm2land%swpar_srf_down = atm2land%swvis_srf_down 
+  atm2land%swpar_srf_down = ref_swdown 
+  atm2land%swvis_srf_down = atm2land%swpar_srf_down / frac_par_swvis_srf 
+  atm2land%swnir_srf_down = atm2land%swvis_srf_down * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
 
   !> 2.2 Temperature (-5,60 °C)
   !! 

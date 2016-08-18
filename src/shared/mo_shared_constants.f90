@@ -21,7 +21,8 @@ MODULE mo_shared_constants
     r_gas_dryair ,  &           !< specific gas constant for dry air (J / kg / K) 
     Dwv          ,  &           !< diffusion coefficient for water vapour in air (m2 s-1) 
     Dco2         ,  &           !< diffusion coefficient for CO2 in air (m2 s-1) 
-    Tzero                       !< melting point in K -> conversion factor for °C
+    Tzero        ,  &           !< melting point in K -> conversion factor for °C
+    LatentHeatVaporization      !< Latent heat for vapourisation (J/kg) 
   ! molar masses
   REAL(wp), SAVE :: &
     molar_mass_C    ,  &        !< g C / mol C
@@ -56,6 +57,7 @@ CONTAINS
     Dwv          = 0.0000242_wp 
     Dco2         = 0.0000151_wp 
     Tzero        = 273.15_wp 
+    LatentHeatVaporization = 2.5008e6_wp
     ! molar masses
     molar_mass_C   = 12.0112_wp 
     molar_mass_C12 = 12.0_wp    

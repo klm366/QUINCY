@@ -184,9 +184,9 @@ CONTAINS
     USE mo_base_memory,       ONLY: t_slm_soil, t_slm_tile
     USE mo_veg_memory,        ONLY: t_slm_plant
     USE mo_base_constants,    ONLY: dt
-    USE mo_atmland_memory,    ONLY: atm2land
+    USE mo_atmland_memory
     USE mo_atmland_util,      ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants,  ONLY: r_gas_dryair
+    USE mo_shared_constants,  ONLY: r_gas_dryair,LatentHeatVaporization
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -226,6 +226,11 @@ CONTAINS
        soil%moisture = MAX(MIN(soil%moisture,veg_config%soil_awc_prescribe),0.0_wp)
        ! scale to relative water availability (%)
        soil%theta = soil%moisture / veg_config%soil_awc_prescribe * 100._wp
+
+       ! calculate latent heat flux (W m-2) 
+       land2atm%latent_heat_flx = LatentHeatVaporization * (evaporation + plant%flux%transpiration)
+       ! diagnose sensible heat flux (shortwave compontent only)
+       land2atm%sensible_heat_flx = land2atm%net_radiation - land2atm%latent_heat_flx 
 
    ELSE 
        ! use prescribed value of theta from namelist

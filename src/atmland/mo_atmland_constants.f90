@@ -22,6 +22,8 @@ MODULE mo_atmland_constants
   LOGICAL,SAVE  :: angle_at_GMT                !< logical to simulate solar angle according to local time or GMT 
   REAL(wp),SAVE :: reference_longitude_GMT     !< reference longitude for GMT correction 
   REAL(wp),SAVE :: solar_constant              !< solar shortwave radiation (W m-2) 
+  REAL(wp),SAVE :: frac_vis_swtot_srf          !< fraction of solar shortwave radiation in the VIS band (here: 320-700nm for albedo) 
+  REAL(wp),SAVE :: frac_par_swvis_srf          !< fraction of visible solar shortwave radiation in the PAR band (400-700nm)
   REAL(wp),SAVE :: k1_fdiff                    !< constants for calculation of diffuse radiation
   REAL(wp),SAVE :: k2_fdiff                    !< calculation from transmission as in 
   REAL(wp),SAVE :: k3_fdiff                    !< calc_diffuse_radiation_fraction
@@ -34,7 +36,7 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: min_cos_zenith_angle        !< minimum zenith angle for which PAR is calculated, see atm2land%cos_zenith_angle
 
   ! conversion factors
-  REAL(wp),SAVE :: sw2par                      !< W / µmol / s
+  REAL(wp),SAVE :: rad2par                     !< µmol /J
   REAL(wp),SAVE :: standard_press_srf          !< standard pressure in Pa
   REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
 
@@ -84,6 +86,8 @@ CONTAINS
     ! initialise solar constant
     ! 
     solar_constant = 1370.0_wp
+    frac_vis_swtot_srf = 0.54_wp    ! UV-A+PAR / UV-A+PAR+NIR; Monteith & Unsworth 1995
+    frac_par_swvis_srf = 0.9_wp     ! PAR/PAR+UV-A
     ! 
     ! initalise diffuse fraction calculation
     k1_fdiff = 1.0045_wp
@@ -99,7 +103,7 @@ CONTAINS
     dusk_time = 1.0_wp / hourday
     ! 
     ! conversion factors
-    sw2par              = 2.3_wp  
+    rad2par             = 4.6_wp      ! Monteith & Unsworth 1995 
     standard_press_srf  = 101300.0_wp  
     eps_vpd             = 0.622_wp  
     ! 

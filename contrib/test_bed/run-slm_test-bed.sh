@@ -144,6 +144,8 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
           exit
       fi
   fi  # ["$siteDataSet" == "n"]
+else 
+  setPFTAutomatically="no"
 fi    # [$slmModel != "test_canopy"]
 
 

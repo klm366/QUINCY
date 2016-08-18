@@ -84,7 +84,7 @@ for (v in 1:nvar) {
   if(variable_name[v]=='Ga') {
      outlongname[v]<-"Aerodynamic Conductance"
      outunit[v]<-"m/s"
-     outvar[v,]<-fluxH2Ofile$GC
+     outvar[v,]<-fluxH2Ofile$GA
   }
   if(variable_name[v]=='Gc') {
      outlongname[v]<-"Canopy Conductance"
@@ -116,11 +116,12 @@ for (v in 1:nvar) {
   if(variable_name[v]=='FAPAR') {
      outlongname[v]<-"Fraction of Absorbed Photosynthetically Active Radiation"
      outunit[v]<-"-"
-     outvar[v,]<-fluxEfile$FAPAR
+     outvar[v,]<-fluxEfile$APAR/fluxEfile$PPFD
+     outvar[v,is.na(outvar[v,])]<-0
   }
 
 }
 
-create_cdf(1996,lon,lat,timeaxis,,outvar,miss_val,nvar,outname,outlongname,outunit,outprec,fname)
+create_cdf(year,lon,lat,timeaxis,,outvar,miss_val,nvar,outname,outlongname,outunit,outprec,fname)
 
 

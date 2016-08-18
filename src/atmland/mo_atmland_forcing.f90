@@ -67,9 +67,9 @@ CONTAINS
     atm2land%co2_mixing_ratio_c14 = C14C_mixing_ratio * atm2land%co2_mixing_ratio 
     atm2land%rain                 = 0.0_wp
     atm2land%snow                 = 0.0_wp
-    atm2land%swvis_srf_down       = def_swdown
-    atm2land%swnir_srf_down       = atm2land%swvis_srf_down * 0.1_wp
-    atm2land%swpar_srf_down       = atm2land%swvis_srf_down
+    atm2land%swvis_srf_down       = def_swdown * frac_vis_swtot_srf
+    atm2land%swnir_srf_down       = def_swdown * (1._wp - frac_vis_swtot_srf)
+    atm2land%swpar_srf_down       = atm2land%swvis_srf_down * frac_par_swvis_srf
     atm2land%swpar_fdiffuse       = def_fdiffuse
     atm2land%wind_air             = def_wind
     atm2land%wind_10m             = atm2land%wind_air
@@ -114,18 +114,21 @@ CONTAINS
        CALL update_orbital_parameters(time,declination,sw_toa_down)
        CALL read_forcing
        atm2land%cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)
-       atm2land%swnir_srf_down   = atm2land%swvis_srf_down * 0.1_wp
-       atm2land%swpar_srf_down   = atm2land%swvis_srf_down
-       atm2land%swpar_fdiffuse   = calc_sw_fdiffuse(atm2land%swvis_srf_down, sw_toa_down, atm2land%cos_zenith_angle)
+       atm2land%swnir_srf_down   = (1._wp - frac_vis_swtot_srf ) * atm2land%swvis_srf_down 
+       atm2land%swvis_srf_down   = frac_vis_swtot_srf * atm2land%swvis_srf_down 
+       atm2land%swpar_srf_down   = frac_par_swvis_srf * atm2land%swvis_srf_down
+       atm2land%swpar_fdiffuse   = calc_sw_fdiffuse(atm2land%swvis_srf_down+atm2land%swnir_srf_down, & 
+                                      sw_toa_down, atm2land%cos_zenith_angle)
      CASE('generate')
        CALL update_orbital_parameters(time,declination,sw_toa_down)
        atm2land%t_air            = generate_inst_temperature(grid%lat,time,declination,annual_t_air_min, &
                                    annual_t_air_max,diurnal_temp_range)
        atm2land%cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)
-       atm2land%swvis_srf_down   = MAX(0.0_wp, def_swdown * atm2land%cos_zenith_angle)
-       atm2land%swnir_srf_down   = atm2land%swvis_srf_down * 0.1_wp
-       atm2land%swpar_srf_down   = atm2land%swvis_srf_down
-       atm2land%swpar_fdiffuse   = calc_sw_fdiffuse(atm2land%swvis_srf_down, sw_toa_down, atm2land%cos_zenith_angle)
+       atm2land%swvis_srf_down   = frac_vis_swtot_srf * MAX(0.0_wp, def_swdown * atm2land%cos_zenith_angle)
+       atm2land%swnir_srf_down   = (1._wp - frac_vis_swtot_srf ) * MAX(0.0_wp, def_swdown * atm2land%cos_zenith_angle) 
+       atm2land%swpar_srf_down   = frac_par_swvis_srf * atm2land%swvis_srf_down
+       atm2land%swpar_fdiffuse   = calc_sw_fdiffuse(atm2land%swvis_srf_down+atm2land%swnir_srf_down, & 
+                                      sw_toa_down, atm2land%cos_zenith_angle)
        atm2land%q_air            = def_rh * calc_spec_humidity_sat(atm2land%t_air, atm2land%press_srf)
    END SELECT
   END SUBROUTINE update_forcing

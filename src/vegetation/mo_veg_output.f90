@@ -49,8 +49,7 @@ MODULE mo_veg_output
   REAL(wp), DIMENSION(ntile), SAVE :: qh_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: qle_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: albedo_acc 
-  REAL(wp), DIMENSION(ntile), SAVE :: lai_acc 
-  REAL(wp), DIMENSION(ntile), SAVE :: fapar_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: apar_acc 
 
 CONTAINS
 
@@ -91,8 +90,7 @@ CONTAINS
     qh_acc            = 0._wp
     qle_acc           = 0._wp
     albedo_acc        = 0._wp
-    fapar_acc         = 0._wp
-    lai_acc           = 0._wp
+    apar_acc         = 0._wp
   END SUBROUTINE init_veg_output_variables
 
 
@@ -195,7 +193,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)') 'Time Transpiration GC GA'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time PPFD Rnet Qh Qle Albedo FAPAR LAI' 
+    WRITE(lun,'(a)') 'Time PPFD Rnet Qh Qle Albedo APAR' 
   END SUBROUTINE init_output_writing_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -508,8 +506,10 @@ CONTAINS
   SUBROUTINE write_output_flux(tile, time_d, time_y, itile)
 
     USE mo_base_memory,    ONLY: t_slm_tile
+    USE mo_atmland_memory 
     USE mo_veg_memory,     ONLY: t_slm_plant
     USE mo_base_constants, ONLY: dt
+    USE mo_atmland_constants, ONLY: rad2par
     USE mo_shared_isotope, ONLY: calc_delta_C13,calc_delta_C14
 
     IMPLICIT NONE
@@ -567,8 +567,14 @@ CONTAINS
                                 plant%flux%recycling_fine_root_p + plant%flux%recycling_sap_wood_p ) * dt_one *1000000._wp/dt
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + plant%flux%reserve_use%phosphorus  * dt_one *1000000._wp/dt
       transpiration_acc(itile)= transpiration_acc(itile) + plant%flux%transpiration           * dt_one 
-      gc_acc(itile)           = plant%gc                                                      * dt_one 
-      ga_acc(itile)           = plant%gc                                                      * dt_one 
+      gc_acc(itile)           = plant%gc                                                      
+      ga_acc(itile)           = atm2land%ga                                                   
+      albedo_acc(itile)       = land2atm%albedo
+      ppfd_acc(itile)         = ppfd_acc(itile)          + atm2land%swpar_srf_down*rad2par    * dt_one               
+      rnet_acc(itile)         = rnet_acc(itile)          + land2atm%net_radiation             * dt_one               
+      qh_acc(itile)           = qh_acc(itile)            + land2atm%sensible_heat_flx         * dt_one               
+      qle_acc(itile)          = qle_acc(itile)           + land2atm%latent_heat_flx           * dt_one               
+      apar_acc(itile)         = apar_acc(itile)          + plant%apar                         * dt_one               
 
       !> 1.2 write fluxes and set to zero
       !!
@@ -595,7 +601,7 @@ CONTAINS
         write(lun,'(12F16.8)') time_d, transpiration_acc(itile), gc_acc(itile), ga_acc(itile)
         lun=lun+1
         write(lun,'(12F16.8)') time_d, ppfd_acc(itile), rnet_acc(itile), qh_acc(itile), qle_acc(itile), & 
-                               albedo_acc(itile), fapar_acc(itile), lai_acc(itile)
+                               albedo_acc(itile), apar_acc(itile)
         ! set zero
         gpp_acc(itile)           = 0.0_wp
         growth_resp_acc(itile)   = 0.0_wp
@@ -622,8 +628,7 @@ CONTAINS
         qh_acc(itile)            = 0.0_wp
         qle_acc(itile)           = 0.0_wp
         albedo_acc(itile)        = 0.0_wp
-        fapar_acc(itile)         = 0.0_wp
-        lai_acc(itile)           = 0.0_wp
+        apar_acc(itile)          = 0.0_wp
       END IF
     END IF
     END IF  ! on/off switch specific to 'special case: fluxnet output'
