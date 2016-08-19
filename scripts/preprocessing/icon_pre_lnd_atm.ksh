@@ -27,15 +27,19 @@ module load cdo/1.6.0
 
 # get the script jsbach_init_file.ksh and the program jsbach_init_file.f90
 #svn checkout -r 6285 https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg/contrib/initial_tarfiles
-svn checkout https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg/contrib/initial_tarfiles
-mv ./initial_tarfiles/jsbach_init_file.ksh .
-mv ./initial_tarfiles/jsbach_init_file.f90 .
+if [ ! -d initial_tarfiles ]; then
+	svn checkout https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg/contrib/initial_tarfiles
+	mv ./initial_tarfiles/jsbach_init_file.ksh .
+	mv ./initial_tarfiles/jsbach_init_file.f90 .
+fi
 
 # switch off interactive mode in the script jsbach_init_file.ksh
 export interactive_ctrl=1
 
 # Switch for terraplanet
-export terraplanet=true
+export terraplanet=false
+
+export icon_dev=true
 
 # component model resolutions
 export res_atm=T63         # atmosphere horizontal resolution
@@ -58,7 +62,10 @@ export pool_land=/pool/data/JSBACH/prepare/${res_atm} # pool with srf input data
 [[ ${terraplanet} = true ]] && grid=${grid}_tpe
 
 # Script name
-[[ ${terraplanet} = 'false' ]] && script=gauss_to_icon.ksh || script=gauss_to_icon_tpe.ksh
+suffix=""
+[[ ${terraplanet} = 'true' ]] && suffix="_tpe"
+[[ ${icon_dev} = 'true' ]] && suffix="-dev"
+script=gauss_to_icon${suffix}.ksh
 
 # script directory
 startdir=$(pwd)
@@ -73,7 +80,7 @@ export c3c4crop=true
 export cmip5_pasture=true
 export l5_soil_layers=true
 export lroot_depth=${l5_soil_layers}
-export echam_fractional=false
+export echam_fractional=true
 export srcdir=${startdir}
 export wrkdir=${startdir}
 
