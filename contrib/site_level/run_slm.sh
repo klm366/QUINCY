@@ -126,7 +126,7 @@ return 0                                                         # get return va
  # examples:
  #changeNamelistValue simulation_length_number 300
  #changeNamelistValue output_interval_flux monthly    # quotation marks not needed
- #changeNamelistValue flag_calc_soil_moist ".FALSE."
+ #changeNamelistValue flag_calc_soil_moisture .FALSE.
  #changeNamelistValue soil_theta_prescribe 122.7
 
 changeNamelistValue longitude "$(awk '{print $2}' <<< "$siteData")"

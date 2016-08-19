@@ -16,6 +16,8 @@ MODULE mo_jsb_model_init
     USE mo_base_memory,                     ONLY: t_slm_tile, t_model, grid   ! 'grid ' is needed by init_slm_test_canopy
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, init_lctlib
+    USE mo_jsb_memory_class,                ONLY: t_jsb_memory
+    USE mo_jsb_process_factory,             ONLY: Create_process_memory, max_no_of_processes
     ! shared
     USE mo_shared_isotope,                  ONLY: calc_fractionation 
     USE mo_shared_constants,                ONLY: init_shared_constants, molar_mass_N, Dwv, Dco2, Tzero
@@ -63,6 +65,8 @@ MODULE mo_jsb_model_init
   END INTERFACE init_model
 
 
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_init'
+
 CONTAINS
 
 
@@ -83,11 +87,17 @@ CONTAINS
     TYPE(t_model),INTENT(inout)                 :: model      !< data structure for dynamic vegetation and soil variables
     TYPE(t_slm_tile),INTENT(inout)              :: tile       !< data structure for dynamic vegetation and soil variables
     ! 0.2 Local
+    CLASS(t_jsb_memory), POINTER                :: tmp_ptr        !! for Memory init and alloc
+    CHARACTER(LEN=15)                           :: process_name   !! for Memory init and alloc
+    INTEGER                                     :: iproc          !! for Memory init and alloc
+    CHARACTER(LEN=15)                           :: prefix         !! for Memory init and alloc
+    CHARACTER(LEN=15)                           :: suffix         !! for Memory init and alloc
 
 
     ! check number of tiles, exit if more than output routines can handle
     IF(ntile > 1) CALL finish('land_model_driver-init_routine','Number of tiles is too large, i.e. larger than 1')
     ! 
+
 
 
     !! 1 Read config paramters from namelist.plant section
@@ -109,9 +119,15 @@ CONTAINS
     !! 
     model%id = 0                                    ! this is just an arbitrary value consistent with tile%owner_model_id
     model%shortname = "slm"                         ! arbitrary name
+    model%options%dtime   = base_config%dt  ! length of one time step
+    model%options%steplen = base_config%dt  ! .. 
+    model%options%iblk    = 1               ! Number of current block (chunk)
+    model%options%ics     = 1               ! Index of chunk start
+    model%options%ice     = 1               ! Index of chunk end
+    model%options%nc      = model%options%ice - model%options%ics + 1   ! Length of chunk
 
 
-    !! 3 Initialise: tile, parameters (constants), plant, time
+    !! 3 Tile init
     !! 
     !! 
     !! @todo land model driver: update Intel compiler to enable: init lcts of the tile via PROCEDURE Construct_jsb_lct
@@ -120,8 +136,49 @@ CONTAINS
     tile%lcts%name      = "veg"              ! Short name for lct
     tile%lcts%long_name = "slm vegetation"   ! Long name for lct
     tile%lcts%lib_id    = veg_config%pft_id  ! pftID == column number in model%lctlib == ID of lct in lctlib (JSBACH4)
+    tile%ics            = model%options%ics  ! simple (temporary) solution to make it available across Tasks
+    tile%ice            = model%options%ice  ! simple (temporary) solution to make it available across Tasks
+    tile%iblk           = model%options%iblk ! simple (temporary) solution to make it available across Tasks
 
-    ! init constants across processes and model structures
+
+    !! 4 Memory init and alloc
+    !! 
+    !! >> this is work in progress ! and, thus, not very nice code, but it works for now (Jan 20160819) <<
+    !! 
+    !! process memory allocation - borrowed from JSBACH4 git 20160818 mo_jsb_tile 
+    ALLOCATE(tile%mem(12))
+        prefix = 'none'
+        suffix = 'unknown'
+        process_name = 'assimi' ! originally it is called: Get_process_name(iproc)
+        iproc = 10 ! 10 == assimi => in JSBACH4 a loop 1,max processes is used
+        ! for multiple processes - use loop
+        tmp_ptr => Create_process_memory(iproc)
+        SELECT TYPE (tmp_ptr)
+        CLASS IS (t_jsb_memory)
+          tile%mem(iproc)%p => tmp_ptr
+          tile%mem(iproc)%p%id = iproc
+          !tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
+          !tile%mem(iproc)%p%grid_id = tile%grid_id
+          tile%mem(iproc)%p%owner_model_id = tile%owner_model_id
+          tile%mem(iproc)%p%owner_proc_id = iproc
+          !ALLOCATE(tile%mem(iproc)%p%owner_tile_path(SIZE(tile%path)))
+          !tile%mem(iproc)%p%owner_tile_path(:) = tile%path(:)
+          !tile%mem(iproc)%p%owner_tile_name = TRIM(tile%name)
+!!          IF (prefix /= '') THEN
+!!            CALL tile%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), tile%lcts(:)%id, tile%owner_model_id)
+!!          ELSE
+!!            CALL tile%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), tile%lcts(:)%id, tile%owner_model_id)
+!!          END IF
+          ! call init routine of memory here & added model%options -> changed for SLM compatibility
+          CALL tile%mem(iproc)%p%Init( TRIM(process_name), TRIM(suffix), tile%lcts%id, tile%owner_model_id, &
+                                        model%options%ics, model%options%ice, model%options%iblk) ! model%options -> for SLM compatibility
+        END SELECT
+        NULLIFY(tmp_ptr)    
+
+
+    !! 5 Constants init
+    !! 
+    !! 
     CALL init_base_constants          ! may be 1st of the 'init constants'
     CALL init_shared_constants        ! may be 2nd of the 'init constants'
     CALL init_rad_constants           ! may be 3rd of the 'init constants'
@@ -130,12 +187,18 @@ CONTAINS
     CALL init_veg_constants           ! uses Tzero                    defined in mo_shared_constants
       ! CALL init_soil_constants
 
-    ! plant
+
+    !! 6 Plant init
+    !! 
+    !! 
     CALL tile%plant%init                  ! mo_veg_memory  ==> may move to veg init (or model init ?)
     CALL tile%plant%flux%set_zero         ! mo_veg_memory  ==> may move to veg init (or model init ?)
     model%lctlib => init_lctlib()         ! initialize the lctlib with parameters values across PFT's
 
-    ! init time
+
+    !! 7 Time init
+    !! 
+    !! 
     time_day          = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
     time_year         = 1                           ! the 1st year of a simulation == 1 (not zero)
     dt                = base_config%dt              ! time step length in seconds, default: 1800.0 == 30 minutes
@@ -143,7 +206,7 @@ CONTAINS
     timestep_prop_day = dt/one_day                  ! proportion of one day that is simulated with one timestep
 
 
-    !! 4 Initialise: Fluxnet specific simulation output
+    !! 8 Initialise: Fluxnet specific simulation output
     !! 
     !! the last full "forcing period" is written into extra output files with half-hourly write-out of values
     fluxnet_output_status = 0
@@ -169,7 +232,8 @@ CONTAINS
       END IF
     END IF
 
-    !! 5 run model-specific init routine  (land plant soil canopy test_canopy)
+
+    !! 9 run model-specific init routine  (land plant soil canopy test_canopy)
     !! 
     !! 
     SELECT CASE(TRIM(base_config%slm_model_name))

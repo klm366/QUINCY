@@ -27,19 +27,20 @@ MODULE mo_jsb_config_class
   !> abstract TYPE for configuration that cannot be initialized
   !! 
   !! is used by other process configurations, e.g. veg and base \n
-  !! based on the idea of how the configuration is done in JSBACH4 
+  !! copied from JSBACH4 git 20160815
   !-----------------------------------------------------------------------------------------------------
   TYPE, ABSTRACT :: t_jsb_config
     LOGICAL :: active
+    CHARACTER(len=filename_max) :: ic_filename
+    CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename
   CONTAINS
-    ! DEFERRED: not defined in the abstract type but must be defined in all of its non-abstract type extensions
-    PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init 
+    PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init
   END TYPE t_jsb_config
 
-!  TYPE t_jsb_config_p
-!    CLASS(t_jsb_config), POINTER :: p
-!  END TYPE t_jsb_config_p
+  TYPE t_jsb_config_p
+    CLASS(t_jsb_config), POINTER :: p
+  END TYPE t_jsb_config_p
 
   ! https://de.wikibooks.org/wiki/Fortran:_Fortran_2003:_Zeiger#Abstraktes_Interface
   ! defines that the TYPE itself is passed to the procedure (i.e. t_*_config -> init_config subroutine) 

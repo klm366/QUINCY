@@ -128,7 +128,7 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
           exit
       fi
       setPFTAutomatically="no"
-      echo -n "Info: setPFTAutomatically was set to no because you use the local test_bed/climate.dat.  "
+      echo -n "Info: the option setPFTAutomatically is used with 'no', because you are using the test_bed/climate.dat, which does not provide information about PFT.  "
     else  # fluxnet forcing file
       if [ $siteDataSet == "f" ]
         then
@@ -144,7 +144,7 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
           exit
       fi
   fi  # ["$siteDataSet" == "n"]
-else 
+else  # in case: $slmModel == "test_canopy"
   setPFTAutomatically="no"
 fi    # [$slmModel != "test_canopy"]
 

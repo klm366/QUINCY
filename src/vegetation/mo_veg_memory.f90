@@ -268,7 +268,7 @@ MODULE mo_veg_memory
     REAL(wp) :: growth_req_p                      !< moles P required for a unit of N growth under current allocation fractions 
     REAL(wp) :: gdd                               !< growing degree days above 5°C
     REAL(wp) :: nd_dormance                       !< number of days since last growing season 
-    REAL(wp) :: t_jmax_opt                        !y current optimum temperature for eletron transport of photosynthesis
+    REAL(wp) :: t_jmax_opt                        !< current optimum temperature for eletron transport of photosynthesis
     REAL(wp) :: boc_an                            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     REAL(wp) :: leaf_cn_direction                 !< indicates direction of change in leaf CN ratio to maximise NPP
     REAL(wp) :: apar 

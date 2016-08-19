@@ -15,12 +15,14 @@ MODULE mo_assimi_update_canopy_fluxes
   USE mo_base_constants,        ONLY: ncanop, dt
   USE mo_base_memory,           ONLY: t_slm_soil
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+  USE mo_jsb_var_class,         ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
 
   USE mo_atmland_memory,        ONLY: atm2land, land2atm
   USE mo_atmland_forcing
 
   USE mo_assimi_constants
   USE mo_assimi_config_class,   ONLY: assimi_config
+  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
 
   USE mo_rad_update_radiation,  ONLY: calc_canopy_layer_depth
   USE mo_rad_constants,         ONLY: ka
@@ -66,6 +68,39 @@ CONTAINS
    INTEGER                          :: icanop                 ! for looping across ncanopy layers
    REAL(wp)                         :: hlp1                   ! dummy variable 
 
+!! 
+!! <<< temporary test code - non-functional to slm >>> !!
+  integer :: num
+  TYPE(t_assimi_memory), POINTER :: assimi__mem
+  !! 2D
+  !REAL(wp), POINTER, DIMENSION(:) :: gpp
+  !REAL(wp), POINTER, DIMENSION(:) :: gpp_c13
+  ! 1D
+  REAL(wp), POINTER :: gpp
+  REAL(wp), POINTER :: gpp_c13
+  
+  SELECT TYPE (mm => tile%mem(10)%p)  ! 10 == mo_jsb_process_class:ASSIMI enumeration
+    TYPE IS(t_assimi_memory)
+      assimi__mem => mm
+  END SELECT
+  
+  !! 2D
+  !gpp     => assimi__mem%gpp%ptr(tile%ics:tile%ice,tile%iblk) 
+  !gpp_c13 => assimi__mem%gpp_c13%ptr(tile%ics:tile%ice,tile%iblk) 
+  ! 1D
+  gpp     => assimi__mem%gpp%ptr
+  gpp_c13 => assimi__mem%gpp_c13%ptr
+  num = assimi__mem%no_of_vars
+  
+  !! 2D
+  !call test_routine(gpp(:))
+  !write(999,*) gpp(:)
+  ! 1D
+  call test_routine(gpp)
+  !write(999,*) gpp
+!! <<< temporary test code - non-functional to slm >>> !!
+!! 
+
    !  bi-directional pointer
    plant => tile%plant
    soil  => tile%soil
@@ -76,7 +111,6 @@ CONTAINS
    rl(:)  = 0.0_wp
    gsl(:) = 0.0_wp
    cil(:) = 0.0_wp     
-
 
    ! calculate the moisture scaling factor for photosynthesis
    plant%beta_air = calc_atm_moisture_stress(atm2land%t_air,atm2land%q_air,atm2land%press_srf) 
@@ -1071,5 +1105,16 @@ CONTAINS
     END SELECT
 
   END FUNCTION discrimination_ps
+
+!! <<< temporary test code - non-functional to slm >>> !!
+  elemental subroutine test_routine(gpp)
+
+    REAL(wp), INTENT(inout) :: gpp
+
+    gpp = gpp + 0.01_wp
+
+
+  end subroutine test_routine
+!! <<< temporary test code - non-functional to slm >>> !!
 
 END MODULE mo_assimi_update_canopy_fluxes

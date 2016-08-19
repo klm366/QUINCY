@@ -12,6 +12,8 @@ MODULE mo_base_memory
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_lct_class
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
+  USE mo_jsb_memory_class,        ONLY: t_jsb_memory_p, t_jsb_memory
+  USE mo_jsb_process_class,       ONLY: t_jsb_process_p
   USE mo_veg_memory,              ONLY: t_slm_plant
   USE mo_shared_memory,           ONLY: t_element
 
@@ -57,12 +59,36 @@ MODULE mo_base_memory
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_tile
-     TYPE(t_slm_plant)   :: plant     !< plant construct of tile
-     TYPE(t_slm_soil)    :: soil      !< soil construct of tile
+    TYPE(t_slm_plant)                 :: plant     !< plant construct of tile
+    TYPE(t_slm_soil)                  :: soil      !< soil construct of tile
 
-     TYPE(t_jsb_lct)     :: lcts      !< data on land cover type of the tile
-     INTEGER             :: owner_model_id = 0   ! necessary for using lctlib
+    TYPE(t_jsb_lct)                   :: lcts      !< data on land cover type of the tile
+    CLASS(t_jsb_memory_p), POINTER    :: mem(:)
+    INTEGER                           :: owner_model_id = 0   ! necessary for using lctlib
+    INTEGER                           :: ics       !< model\%options -> for SLM compatibility; init in mo_jsb_model_init
+    INTEGER                           :: ice       !< model\%options -> for SLM compatibility; init in mo_jsb_model_init
+    INTEGER                           :: iblk      !< model\%options -> for SLM compatibility; init in mo_jsb_model_init
   END TYPE t_slm_tile  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> type definition of model\%options needed in t_model
+  !!
+  !! this is borrowed from JSBACH4 git mo_jsb_task_class [20160818 Jan Engel] \n
+  !! enabling the use of ics ice iblk in the 2D and 3D variables
+  !!
+  !! initialization in JSBACH4 is done in the interface with CALL model%Set_options (... ), which is a type-bound procedure 
+  !! from t_jsb_model
+  !!
+  !! initilization in SLM is (temporary) done in mo_jsb_model_init
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_jsb_task_options
+    REAL(wp) :: dtime   = -1._wp  !< length of one time step
+    REAL(wp) :: steplen = -1._wp  !< .. 
+    INTEGER  :: iblk    = -1      !< Number of current block (chunk)
+    INTEGER  :: ics     = -1      !< Index of chunk start
+    INTEGER  :: ice     = -1      !< Index of chunk end
+    INTEGER  :: nc      = -1      !< Length of chunk; nc = ice - ics + 1
+  END TYPE t_jsb_task_options
 
   !-----------------------------------------------------------------------------------------------------
   !> very basic version of the JSBACH4: TYPE, EXTENDS(t_Hsm) :: t_jsb_model in mo_jsb_model_class
@@ -77,9 +103,9 @@ MODULE mo_base_memory
     !CHARACTER(len=132)                 :: description       !< Model description
     !CHARACTER(len=filename_max)        :: namelist_filename !< Model namelist file
     !TYPE(t_jsb_model_config),  POINTER :: config            !< Configuration
-    !TYPE(t_jsb_task_options)           :: options           !< Options needed by tasks
+    TYPE(t_jsb_task_options)           :: options           !< Options needed by tasks
     !INTEGER                            :: grid_id
-    !TYPE(t_jsb_process_p),     POINTER :: processes(:)
+    TYPE(t_jsb_process_p),POINTER      :: processes(:)
     !TYPE(t_Task_queue),        POINTER :: queue        => NULL()
     !CLASS(t_jsb_process_task), POINTER :: current_task => NULL()
     TYPE(t_lctlib_element),POINTER     :: lctlib(:)         !< each lctlib(pft_id) contains all parameter values of pft_id \n
