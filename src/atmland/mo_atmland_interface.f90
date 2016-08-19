@@ -151,7 +151,7 @@ CONTAINS
 
   SUBROUTINE update_land2atm(tile, options,                                          &
     & t_srf, t_eff_srf, qsat_srf, s_srf,                                             &
-    & fact_q_air, fact_qsat_srf,                                                     &
+    & fact_q_air, fact_qsat_srf, evapopot,                                           &
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,                  &
     & rough_h_srf, rough_m_srf, tte_corr,                                            &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
@@ -165,7 +165,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     REAL(wp), OPTIONAL, INTENT(out) ::                                               &
       & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                               &
-      & fact_q_air(:), fact_qsat_srf(:),                                             &
+      & fact_q_air(:), fact_qsat_srf(:), evapopot(:),                                &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
       & rough_h_srf(:), rough_m_srf(:), tte_corr(:),                                 &
       & t_lwtr(:), t_lice(:),                                                        &
@@ -206,6 +206,7 @@ CONTAINS
     IF (PRESENT(s_srf))           s_srf(:)            = dsl4jsb_var2D_onChunk(SEB,   s_star)
     IF (PRESENT(fact_q_air))      fact_q_air(:)       = dsl4jsb_var2D_onChunk(TURB,  fact_q_air)
     IF (PRESENT(fact_qsat_srf))   fact_qsat_srf(:)    = dsl4jsb_var2D_onChunk(TURB,  fact_qsat_srf)
+    IF (PRESENT(evapopot))        evapopot(:)         = dsl4jsb_var2D_onChunk(HYDRO, evapopot)
     IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(HYDRO, evapo_lnd)
     IF (PRESENT(latent_hflx))     latent_hflx(:)      = dsl4jsb_var2D_onChunk(SEB,   latent_hflx)
     IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = dsl4jsb_var2D_onChunk(SEB,   sensible_hflx)

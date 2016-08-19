@@ -5,7 +5,8 @@
 !!  Reiner Schnur, MPI-M Hamburg
 !!
 !! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
+!! First version                          by Reiner Schnur (2013-04-04)
+!! Some adaptations for jsb4 standalone   by Julia Nabel (2016-02-20)
 !!
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
@@ -30,24 +31,30 @@ MODULE mo_jsb_model_init
 
 CONTAINS
 
-  SUBROUTINE init_model_standalone(model_id, model_name)
+  SUBROUTINE init_model_standalone(nproca, nprocb, npedim, model_id, model_name)
+#ifndef __ICON__
+    !>>> TODO: echam
+    USE mo_gaussgrid,     ONLY : inigau
+    USE mo_echam_convect_tables, ONLY : init_convect_tables
+    USE mo_netCDF,      ONLY: add_dim
+    !<<<
+#endif
+    USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, get_lons_and_lats_from_file, jsbalone_init_decomp, pe_decomposed
+    USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
+    USE mo_jsb_grid,         ONLY: Register_grid
+    USE mo_jsb_model_class,  ONLY: print_model
 
-    USE mo_jsb_grid_class,  ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_grid,        ONLY: Register_grid
-    USE mo_jsb_model_class, ONLY: print_model
 
-    INTEGER,                    INTENT(in) :: model_id
+    INTEGER,                    INTENT(in) :: model_id, nproca, nprocb, npedim
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: model_name
-!!$#ifdef HAVE_F2003
-!!$    TYPE(t_jsb_model), POINTER, INTENT(inout) :: self
-!!$#else
-!!$    TYPE(t_jsb_model), POINTER                :: self
-!!$#endif
 
-    TYPE(t_jsb_model), POINTER  :: model
-    TYPE(t_jsb_grid),  POINTER  :: grid
+    TYPE(t_jsb_model),  POINTER  :: model
+    TYPE(t_jsb_grid),   POINTER  :: grid
+    TYPE(pe_decomposed) :: decomposition
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_standalone'
+
+    INTEGER :: nlon, nlat
 
     model => jsbach%models(model_id)%m
     IF (PRESENT(model_name)) THEN
@@ -55,12 +62,31 @@ CONTAINS
         CALL finish(TRIM(routine), 'Model ID and name are inconsistent with namelist config.')
     END IF
 
-    ! TBD: loop through already existing grids and use it if already exists with same name
-    grid => new_grid(model%config%grid_filename, model%config%grid_name)
+    CALL get_nlon_nlat_from_file(jsbach%models(model_id)%m%config%grid_filename, nlon, nlat)
+    CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
+
+#ifndef __ICON__
+    CALL inigau               ! beside others required for get_area, i.e. required before new_grid
+    CALL init_convect_tables
+
+    CALL add_dim("lon", nlon, "longitude", "degrees_east" ) !required to write restart files
+    CALL add_dim("lat", nlat, "latitude", "degrees_north")
+
+#endif
+
+    !needs to be done after the decomposition is initialised; required for get_lon and get_lat, especially for site-level sims
+#ifndef __ICON__
+    CALL get_lons_and_lats_from_file(jsbach%models(model_id)%m%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
+#else
+    CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
+#endif
+
+    grid => new_grid(decomp=decomposition)
+
     CALL register_grid(grid)
     model%grid_id = grid%id
 
-    CALL print_model(model)
+    CALL init_model_common(model)
 
     NULLIFY(model)
 

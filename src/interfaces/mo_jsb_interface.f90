@@ -90,8 +90,11 @@ CONTAINS
     & t_lwtr, evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,  & !< out
     & t_lice, evapo_ice, latent_hflx_ice, sensible_hflx_ice,  & !< out
     & albedo_lice,                                            & !< out
-    & ice_fract_lake                                          & !< out
+    & ice_fract_lake,                                         & !< out
+    & evapopot                                                & !< out; optional
     & )
+
+    USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
 
     INTEGER :: p_pe
 
@@ -169,6 +172,8 @@ CONTAINS
       & albedo_lice       (:), &
       & ice_fract_lake    (:)
 
+    REAL(wp), INTENT(out), OPTIONAL :: evapopot(:)
+
     ! Local variables
     CLASS(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
@@ -177,7 +182,13 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-    
+
+    IF (write_interface_vars) THEN
+      CALL write_interface_variables(ics, ice, iblk, t_air, q_air, rain, snow, wind_air, wind_10m, &
+        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf,    &
+        & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
+    END IF
+
     CALL timer_start(timer_jsbach)
 
     nc = ice - ics + 1
@@ -240,6 +251,7 @@ CONTAINS
     CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
 
     ! Finally, give the required variables back to the atmosphere
+    ! Note: evapopot is an optional parameter, so it has to be passed without the colon!
     tile => model%Get_top_tile()
     CALL update_land2atm(                     &
       & tile,                                 &
@@ -250,6 +262,7 @@ CONTAINS
       & s_srf           = s_srf(:),           &
       & fact_q_air      = fact_q_air(:),      &
       & fact_qsat_srf   = fact_qsat_srf(:),   &
+      & evapopot        = evapopot,           &
       & evapotrans      = evapotrans(:),      &
       & latent_hflx     = latent_hflx(:),     &
       & sensible_hflx   = sensible_hflx(:),   &

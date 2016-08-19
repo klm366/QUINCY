@@ -10,7 +10,7 @@ MODULE mo_jsb_io
     GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL,                 &
     TSTEP_CONSTANT,                                                    &
     zaxisCreate, zaxisInqName, zaxisInqSize, zaxisDestroy,             &
-    cdiDefMissval
+    cdiDefMissval, read_io_namelist
 
   USE mo_exception, ONLY: finish
 
@@ -92,6 +92,17 @@ CONTAINS
     END IF
 
   END FUNCTION Construct_cf
+
+  !>
+  !! @brief Initialize io control for JSBACH
+  !!
+  SUBROUTINE init_io(namelist_filename)
+
+    CHARACTER(len=*), INTENT(in) :: namelist_filename
+    
+    CALL read_io_namelist(TRIM(namelist_filename))
+  
+  END SUBROUTINE init_io
 
 #endif
 END MODULE mo_jsb_io
