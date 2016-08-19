@@ -17,6 +17,7 @@ MODULE mo_jsb_model_init
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, init_lctlib
     USE mo_jsb_memory_class,                ONLY: t_jsb_memory
+    USE mo_jsb_process_class,               ONLY: ATM2LAND_P, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO ! changed for compatibility with SLM
     USE mo_jsb_process_factory,             ONLY: Create_process_memory, max_no_of_processes
     ! shared
     USE mo_shared_isotope,                  ONLY: calc_fractionation 
@@ -146,34 +147,51 @@ CONTAINS
     !! >> this is work in progress ! and, thus, not very nice code, but it works for now (Jan 20160819) <<
     !! 
     !! process memory allocation - borrowed from JSBACH4 git 20160818 mo_jsb_tile 
-    ALLOCATE(tile%mem(12))
-        prefix = 'none'
-        suffix = 'unknown'
-        process_name = 'assimi' ! originally it is called: Get_process_name(iproc)
-        iproc = 10 ! 10 == assimi => in JSBACH4 a loop 1,max processes is used
-        ! for multiple processes - use loop
-        tmp_ptr => Create_process_memory(iproc)
-        SELECT TYPE (tmp_ptr)
-        CLASS IS (t_jsb_memory)
-          tile%mem(iproc)%p => tmp_ptr
-          tile%mem(iproc)%p%id = iproc
-          !tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
-          !tile%mem(iproc)%p%grid_id = tile%grid_id
-          tile%mem(iproc)%p%owner_model_id = tile%owner_model_id
-          tile%mem(iproc)%p%owner_proc_id = iproc
-          !ALLOCATE(tile%mem(iproc)%p%owner_tile_path(SIZE(tile%path)))
-          !tile%mem(iproc)%p%owner_tile_path(:) = tile%path(:)
-          !tile%mem(iproc)%p%owner_tile_name = TRIM(tile%name)
-!!          IF (prefix /= '') THEN
-!!            CALL tile%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), tile%lcts(:)%id, tile%owner_model_id)
-!!          ELSE
-!!            CALL tile%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), tile%lcts(:)%id, tile%owner_model_id)
-!!          END IF
-          ! call init routine of memory here & added model%options -> changed for SLM compatibility
-          CALL tile%mem(iproc)%p%Init( TRIM(process_name), TRIM(suffix), tile%lcts%id, tile%owner_model_id, &
+
+    ! Loop over all processes and initialize memory for this tile
+    ALLOCATE(tile%mem(max_no_of_processes))
+    DO iproc=1,max_no_of_processes
+      tile%mem(iproc)%p => NULL()
+      SELECT CASE(iproc)
+        ! SLM: extend this CASE to all SLM processes that accept the JSBACH4 memory structure; see mo_jsb_process_class for enumeration
+        CASE (RAD, ASSIMI)    
+
+          ! get the process name; in jsbach4 it is called: Get_process_name(iproc)  
+          SELECT CASE(iproc)
+            CASE (RAD)
+              process_name = 'rad' 
+            CASE (ASSIMI)
+              process_name = 'assimi' 
+            !CASE (X)
+            !  process_name = 'x' 
+          END SELECT
+
+          prefix = 'none'
+          suffix = 'unknown'
+          tmp_ptr => Create_process_memory(iproc) ! see mo_jsb_process_factory ==> uncomment lines here for new process memory !!
+          SELECT TYPE (tmp_ptr)
+          CLASS IS (t_jsb_memory)
+            tile%mem(iproc)%p => tmp_ptr
+            tile%mem(iproc)%p%id = iproc
+            !tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
+            !tile%mem(iproc)%p%grid_id = tile%grid_id
+            tile%mem(iproc)%p%owner_model_id = tile%owner_model_id
+            tile%mem(iproc)%p%owner_proc_id = iproc
+            !ALLOCATE(tile%mem(iproc)%p%owner_tile_path(SIZE(tile%path)))
+            !tile%mem(iproc)%p%owner_tile_path(:) = tile%path(:)
+            !tile%mem(iproc)%p%owner_tile_name = TRIM(tile%name)
+!!            IF (prefix /= '') THEN
+!!              CALL tile%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), tile%lcts(:)%id, tile%owner_model_id)
+!!            ELSE
+!!              CALL tile%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), tile%lcts(:)%id, tile%owner_model_id)
+!!            END IF
+            ! call init routine of memory here & added model%options -> changed for SLM compatibility
+            CALL tile%mem(iproc)%p%Init( TRIM(process_name), TRIM(suffix), tile%lcts%id, tile%owner_model_id, &
                                         model%options%ics, model%options%ice, model%options%iblk) ! model%options -> for SLM compatibility
-        END SELECT
+        END SELECT  ! processes with memory (ATM2LAND_P, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO)
         NULLIFY(tmp_ptr)    
+      END SELECT    ! iproc
+    END DO          ! iproc
 
 
     !! 5 Constants init

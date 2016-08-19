@@ -7,11 +7,19 @@ mo_rad_update_radiation.o: \
   mo_kind.o \
   mo_base_memory.o \
   mo_base_constants.o \
+  mo_jsb_var_class.o \
+  mo_jsb_process_class.o \
   mo_atmland_memory.o \
   mo_atmland_constants.o \
   mo_veg_memory.o \
+  mo_rad_memory_class.o \
   mo_rad_constants.o
 
 mo_rad_constants.o: \
   mo_kind.o
 
+mo_rad_memory_class.o: \
+  mo_kind.o \
+  mo_jsb_memory_class.o \
+  mo_jsb_var_class.o \
+  mo_slm_varlist.o

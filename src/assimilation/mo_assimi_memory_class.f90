@@ -34,7 +34,7 @@ MODULE mo_assimi_memory_class
 !                                gpp, &      ! plant%flux%gpp
 !                                gpp_c13     ! plant%flux%gpp_c13
 
-    TYPE(t_jsb_var_real1d)    :: &
+    TYPE(t_jsb_var_real1d)    :: &      ! REAL(wp) 1D ; implemented for SLM use only, see mo_jsb_var_class 
                                 gpp, &
                                 gpp_c13
 

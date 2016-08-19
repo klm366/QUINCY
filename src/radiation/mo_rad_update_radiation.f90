@@ -11,8 +11,9 @@
 !!
 MODULE mo_rad_update_radiation
 
-  USE mo_kind,          ONLY: wp, eps8
+  USE mo_kind,                  ONLY: wp, eps8
   USE mo_rad_constants
+
 
   IMPLICIT NONE
 
@@ -31,12 +32,19 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_radiation(tile)
 
-    USE mo_base_memory,      ONLY: t_slm_tile
-    USE mo_base_constants,   ONLY: ncanop 
-    USE mo_veg_memory,       ONLY: t_slm_plant
+    USE mo_base_memory,           ONLY: t_slm_tile
+    USE mo_base_constants,        ONLY: ncanop 
+    USE mo_jsb_var_class,         ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
+    USE mo_jsb_process_class,     ONLY: ATM2LAND_P, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO ! changed for compatibility with SLM
+
+    USE mo_rad_memory_class,      ONLY: t_rad_memory
+
+    USE mo_veg_memory,            ONLY: t_slm_plant
+
     USE mo_atmland_memory
-    USE mo_atmland_constants,ONLY: rad2par
+    USE mo_atmland_constants,     ONLY: rad2par
    
+
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout), TARGET :: tile    !< one tile
@@ -44,6 +52,24 @@ CONTAINS
     TYPE(t_slm_plant),POINTER              :: plant   ! plant of one tile
     REAL(wp),DIMENSION(ncanop)             :: hlp1_cl
     REAL(wp)                               :: hlp1
+
+    ! 0.3 Memory allocation
+    TYPE(t_rad_memory), POINTER :: rad__mem
+    REAL(wp), POINTER           :: alb_nir_dif
+    REAL(wp), POINTER           :: alb_nir_dir
+    REAL(wp), POINTER           :: alb_vis_dif
+    REAL(wp), POINTER           :: alb_vis_dir
+
+    SELECT TYPE (mm => tile%mem(RAD)%p)
+      TYPE IS(t_rad_memory)
+        rad__mem => mm
+    END SELECT
+
+    alb_nir_dif   => rad__mem%alb_nir_dif%ptr
+    alb_nir_dir   => rad__mem%alb_nir_dir%ptr
+    alb_vis_dif   => rad__mem%alb_vis_dif%ptr
+    alb_vis_dir   => rad__mem%alb_vis_dir%ptr
+  !!! the above memory allocation is currently not used; land2atm%... is still used  (Jan 20160819)
 
     !  bi-directional pointer
     plant => tile%plant

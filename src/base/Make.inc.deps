@@ -54,6 +54,7 @@ mo_jsb_process_factory.o: \
   mo_jsb_process_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_config_class.o \
+  mo_rad_memory_class.o \
   mo_assimi_memory_class.o
 
 mo_jsb_model_init.o: \

@@ -24,7 +24,7 @@ slmModel="land"             # land, plant are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
 singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet
 # run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
-specialFluxnetOutput="yes"    # set either to yes or no (small caps)
+specialFluxnetOutput="no"    # set either to yes or no (small caps)
 
 ## namelist.slm options ##
 # flags: T (True) or F (False) [large caps]
@@ -52,7 +52,7 @@ output_end_last_day_year=30     # equal with or larger than output_start_first_d
 # forcing input
 option_forcing="readfile"       # constant generate readfile
 soil_awc_prescribe=300.0        # float !
-useSiteSpecificAWC="yes"      # yes/no to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
+useSiteSpecificAWC="no"      # yes/no to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=100.0      # float !
 
 ## details about the HPC, if unsure stick with these default values ##
@@ -98,7 +98,7 @@ validateSpecialFluxnetOutput="yes no"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
 validateOptionForcing="constant generate readfile"
-
+validateUseSiteSpecificAWC="yes no"
 
 ## set and create basic folders and files ##
 username=$(whoami)
@@ -181,7 +181,7 @@ validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optima
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
 validateUserConfigValues "$option_forcing" "$validateOptionForcing" "option_forcing"
-validateUserConfigValues "$useSiteSpecificAWC" "$validateCustomSiteList" "useSiteSpecificAWC"
+validateUserConfigValues "$useSiteSpecificAWC" "$validateUseSiteSpecificAWC" "useSiteSpecificAWC"
 
 ## site data-set: FLUXNET or CRUNCEPv5 ##
 if [ $siteDataSet == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
@@ -350,7 +350,7 @@ echo "$siteDataFold"          >> "$simFoldDefaultFiles""config.txt"
 echo "$slmModel"              >> "$simFoldDefaultFiles""config.txt"
 echo "$specialFluxnetOutput"  >> "$simFoldDefaultFiles""config.txt"
 echo "$siteDataObsFold"       >> "$simFoldDefaultFiles""config.txt"
-echo "$useSiteSpecificAWC"       >> "$simFoldDefaultFiles""config.txt"
+echo "$useSiteSpecificAWC"    >> "$simFoldDefaultFiles""config.txt"
 #echo "$"    >> "$simFoldDefaultFiles""config.txt"
 #echo "$"    >> "$simFoldDefaultFiles""config.txt"
 #echo "$"    >> "$simFoldDefaultFiles""config.txt"

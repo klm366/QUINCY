@@ -16,6 +16,7 @@ MODULE mo_assimi_update_canopy_fluxes
   USE mo_base_memory,           ONLY: t_slm_soil
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_var_class,         ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
+  USE mo_jsb_process_class,     ONLY: ATM2LAND_P, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO ! changed for compatibility with SLM
 
   USE mo_atmland_memory,        ONLY: atm2land, land2atm
   USE mo_atmland_forcing
@@ -79,7 +80,7 @@ CONTAINS
   REAL(wp), POINTER :: gpp
   REAL(wp), POINTER :: gpp_c13
   
-  SELECT TYPE (mm => tile%mem(10)%p)  ! 10 == mo_jsb_process_class:ASSIMI enumeration
+  SELECT TYPE (mm => tile%mem(ASSIMI)%p)
     TYPE IS(t_assimi_memory)
       assimi__mem => mm
   END SELECT

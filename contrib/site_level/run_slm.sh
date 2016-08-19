@@ -133,7 +133,7 @@ changeNamelistValue longitude "$(awk '{print $2}' <<< "$siteData")"
 changeNamelistValue latitude  "$(awk '{print $3}' <<< "$siteData")"
 changeNamelistValue plant_functional_type_id "$pftID"
 [ $useSiteSpecificAWC == "yes" ] && \
-   changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")"
+   changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")"   # this is equal to: if [ ... ]; then ...; fi
 # special fluxnet output #
 if [ $specialFluxnetOutput == "yes" ]
   then
@@ -164,7 +164,7 @@ fi
 rm ./climate.dat
 rm ./"$slmRscript"
 rm ./"$slmBinary"
-[ $specialFluxnetOutput == "yes" ] && rm ./"$slmRscript4fluxfile" ./"$slmRscript4fluxdiag"
+[ $specialFluxnetOutput == "yes" ] && rm ./"$slmRscript4fluxfile" ./"$slmRscript4fluxdiag"  # equal to: if [ ... ]; then ...; fi
 
 ## sort job specific files ##
 mkdir -p ./input
