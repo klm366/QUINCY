@@ -26,18 +26,18 @@ MODULE mo_veg_memory
   TYPE :: t_daily_average
     ! the 1st index of an array can be addressed with 1 (i.e. not 0 !)
     ! averages
-    REAL(wp), DIMENSION(ncanop)     :: par_sunlit                   !<  average of the previous day
-    REAL(wp), DIMENSION(ncanop)     :: par_shaded                   !<  average of the previous day
-    REAL(wp), DIMENSION(ncanop)     :: fleaf_sunlit                 !<  average of the previous day
+    REAL(wp), DIMENSION(ncanop)     :: par_sunlit_cl                   !<  average of the previous day
+    REAL(wp), DIMENSION(ncanop)     :: par_shaded_cl                   !<  average of the previous day
+    REAL(wp), DIMENSION(ncanop)     :: fleaf_sunlit_cl                 !<  average of the previous day
     REAL(wp)                        :: t_jmax_opt                   !<  average of the previous day
     ! accumulated value of the current day & number of values accumulated
-    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_sunlit        !<  value accumulated over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_shaded        !<  value accumulated over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_val_fleaf_sunlit      !<  value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_sunlit_cl        !<  value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_par_shaded_cl        !<  value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_val_fleaf_sunlit_cl      !<  value accumulated over current day
     REAL(wp)                        :: curr_val_t_jmax_opt        !<  value accumulated over current day 
-    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_sunlit      !<  counter of acc values over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_shaded      !<  counter of acc values over current day
-    REAL(wp), DIMENSION(ncanop)     :: curr_count_fleaf_sunlit    !<  counter of acc values over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_sunlit_cl      !<  counter of acc values over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_par_shaded_cl      !<  counter of acc values over current day
+    REAL(wp), DIMENSION(ncanop)     :: curr_count_fleaf_sunlit_cl    !<  counter of acc values over current day
     REAL(wp)                        :: curr_count_t_jmax_opt      !<  counter of acc values over current day
     ! conditions (updated per timestep)
     LOGICAL                         :: l_daylight                    !< whether sunlight is available at canopy top
@@ -62,9 +62,9 @@ MODULE mo_veg_memory
     !< 1.0 variables that store averages
     !! 
     ! 1.1 light in the canopy
-    REAL(wp),DIMENSION(ncanop) :: par_sunlit
-    REAL(wp),DIMENSION(ncanop) :: par_shaded
-    REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit
+    REAL(wp),DIMENSION(ncanop) :: par_sunlit_cl
+    REAL(wp),DIMENSION(ncanop) :: par_shaded_cl
+    REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit_cl
     ! 1.2 soil moisture (currently in mo_assimi_update_canopy_fluxes)
     REAL(wp) :: beta_air                     !< not used (scaling factor to account for air humidity effects on conductance)
     REAL(wp) :: beta_soil_ps                 !< not used (scaling factor to account for soil moisture constraints on conductance)
@@ -221,22 +221,6 @@ MODULE mo_veg_memory
     PROCEDURE, PUBLIC :: set_zero => set_zero_veg_flux
   END TYPE t_slm_veg_flux
 
-  !-----------------------------------------------------------------------------------------------------
-  !> vegetation canopy structure 
-  !! 
-  !! each variable has the information about the layer; layers go from 1 to ncanop
-  !-----------------------------------------------------------------------------------------------------
-  TYPE t_slm_canopy_layer
-     REAL(wp),DIMENSION(ncanop) :: nl_tot                !< N in canopy layer (mmol / m2 (LAI))
-     REAL(wp),DIMENSION(ncanop) :: fnl_chl               !< fraction of N in chlorophyll (pigments only!)
-     REAL(wp),DIMENSION(ncanop) :: fnl_et                !< fraction of N in electron transport 
-     REAL(wp),DIMENSION(ncanop) :: fnl_rub               !< fraction of N in Rubisco 
-     REAL(wp),DIMENSION(ncanop) :: fnl_pepc              !< fraction of N in PEP carboylase (C4 plants only)
-     REAL(wp),DIMENSION(ncanop) :: fnl_oth               !< fraction of N not associated with photosynthesis 
-     REAL(wp),DIMENSION(ncanop) :: par_sunlit            !< PAR on sunlit leaves (µmol m-2 s-1)
-     REAL(wp),DIMENSION(ncanop) :: par_shaded            !< PAR on shaded leaves (µmol m-2 s-1)
-     REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit          !< fraction of layer which is sunlit
-  END TYPE t_slm_canopy_layer
 
   !-----------------------------------------------------------------------------------------------------
   !> all variables of vegetation per tile
@@ -246,7 +230,6 @@ MODULE mo_veg_memory
   TYPE t_slm_plant 
     TYPE(t_slm_veg_pool)      :: pool             !< the actual vegetation pools
     TYPE(t_slm_veg_flux)      :: flux             !< contains growth and litter fall fluxes per timestep for each pool
-    TYPE(t_slm_canopy_layer)  :: canopy_layer     !< vegetation variables per canopy layer
     TYPE(t_daily_average)     :: daily_average    !< structure to calculate and store all moving average values
     TYPE(t_moving_average)    :: moving_average   !< structure to calculate and store all moving average values
     INTEGER  :: pftid                             !< ID of the plant functional type; namelist parameter
@@ -272,6 +255,16 @@ MODULE mo_veg_memory
     REAL(wp) :: boc_an                            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     REAL(wp) :: leaf_cn_direction                 !< indicates direction of change in leaf CN ratio to maximise NPP
     REAL(wp) :: apar 
+    ! prior (to r239) the variables ..._cl were stored in t_slm_canopy_layer (without the trailing _cl), which is deleted now
+    REAL(wp),DIMENSION(ncanop) :: nl_tot_cl                !< N in canopy layer (mmol / m2 (LAI))
+    REAL(wp),DIMENSION(ncanop) :: fnl_chl_cl               !< fraction of N in chlorophyll (pigments only!)
+    REAL(wp),DIMENSION(ncanop) :: fnl_et_cl                !< fraction of N in electron transport 
+    REAL(wp),DIMENSION(ncanop) :: fnl_rub_cl               !< fraction of N in Rubisco 
+    REAL(wp),DIMENSION(ncanop) :: fnl_pepc_cl              !< fraction of N in PEP carboylase (C4 plants only)
+    REAL(wp),DIMENSION(ncanop) :: fnl_oth_cl               !< fraction of N not associated with photosynthesis 
+    REAL(wp),DIMENSION(ncanop) :: par_sunlit_cl            !< PAR on sunlit leaves (µmol m-2 s-1)
+    REAL(wp),DIMENSION(ncanop) :: par_shaded_cl            !< PAR on shaded leaves (µmol m-2 s-1)
+    REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit_cl          !< fraction of layer which is sunlit
   CONTAINS
     PRIVATE
     PROCEDURE, PUBLIC :: init => init_plant
@@ -583,18 +576,18 @@ CONTAINS
     IMPLICIT NONE 
     CLASS(t_daily_average), INTENT(inout) :: this
 
-    this%par_sunlit    = 0.0_wp    ! this sets the complete array to 0.0_wp
-    this%par_shaded    = 0.0_wp
-    this%fleaf_sunlit  = 0.0_wp
+    this%par_sunlit_cl    = 0.0_wp    ! this sets the complete array to 0.0_wp
+    this%par_shaded_cl    = 0.0_wp
+    this%fleaf_sunlit_cl  = 0.0_wp
     this%t_jmax_opt    = 17.0_wp   ! set here to avoid referencing assim_constants
 
-    this%curr_val_par_sunlit      = 0.0_wp
-    this%curr_val_par_shaded      = 0.0_wp
-    this%curr_val_fleaf_sunlit    = 0.0_wp
+    this%curr_val_par_sunlit_cl      = 0.0_wp
+    this%curr_val_par_shaded_cl      = 0.0_wp
+    this%curr_val_fleaf_sunlit_cl    = 0.0_wp
     this%curr_val_t_jmax_opt      = 0.0_wp
-    this%curr_count_par_sunlit    = 0.0_wp
-    this%curr_count_par_shaded    = 0.0_wp
-    this%curr_count_fleaf_sunlit  = 0.0_wp
+    this%curr_count_par_sunlit_cl    = 0.0_wp
+    this%curr_count_par_shaded_cl    = 0.0_wp
+    this%curr_count_fleaf_sunlit_cl  = 0.0_wp
     this%curr_count_t_jmax_opt    = 0.0_wp
 
     this%l_daylight                   = .FALSE.
@@ -645,14 +638,14 @@ CONTAINS
     IF(this%l_daylight) THEN
       DO i=1,ncanop
         ! 
-        this%curr_val_par_sunlit(i) = this%curr_val_par_sunlit(i) + plant%canopy_layer%par_sunlit(i)
-        this%curr_count_par_sunlit(i) = this%curr_count_par_sunlit(i) + 1.0_wp
+        this%curr_val_par_sunlit_cl(i) = this%curr_val_par_sunlit_cl(i) + plant%par_sunlit_cl(i)
+        this%curr_count_par_sunlit_cl(i) = this%curr_count_par_sunlit_cl(i) + 1.0_wp
         ! 
-        this%curr_val_par_shaded(i) = this%curr_val_par_shaded(i) + plant%canopy_layer%par_shaded(i)
-        this%curr_count_par_shaded(i) = this%curr_count_par_shaded(i) + 1.0_wp
+        this%curr_val_par_shaded_cl(i) = this%curr_val_par_shaded_cl(i) + plant%par_shaded_cl(i)
+        this%curr_count_par_shaded_cl(i) = this%curr_count_par_shaded_cl(i) + 1.0_wp
         ! 
-        this%curr_val_fleaf_sunlit(i) = this%curr_val_fleaf_sunlit(i) + plant%canopy_layer%fleaf_sunlit(i)
-        this%curr_count_fleaf_sunlit(i) = this%curr_count_fleaf_sunlit(i) + 1.0_wp
+        this%curr_val_fleaf_sunlit_cl(i) = this%curr_val_fleaf_sunlit_cl(i) + plant%fleaf_sunlit_cl(i)
+        this%curr_count_fleaf_sunlit_cl(i) = this%curr_count_fleaf_sunlit_cl(i) + 1.0_wp
         ! 
         this%curr_val_t_jmax_opt = this%curr_val_t_jmax_opt + plant%t_jmax_opt
         this%curr_count_t_jmax_opt = this%curr_count_t_jmax_opt + 1.0_wp
@@ -688,23 +681,23 @@ CONTAINS
       ! calculate the average of the current day and pass it to the according avrg_prev_* variable; 
       ! check if at least one value had been assigned at the current day, avoiding division by zero 
       DO i=1,ncanop
-        ! par_sunlit
-        IF( this%curr_count_par_sunlit(i) < eps8 ) THEN
-          this%par_sunlit(i)    = 0.0_wp
+        ! par_sunlit_cl
+        IF( this%curr_count_par_sunlit_cl(i) < eps8 ) THEN
+          this%par_sunlit_cl(i)    = 0.0_wp
           ELSE
-          this%par_sunlit(i)    = this%curr_val_par_sunlit(i) / this%curr_count_par_sunlit(i)
+          this%par_sunlit_cl(i)    = this%curr_val_par_sunlit_cl(i) / this%curr_count_par_sunlit_cl(i)
         END IF
-        ! par_shaded
-        IF( this%curr_count_par_shaded(i) < eps8 ) THEN
-          this%par_shaded(i)    = 0.0_wp
+        ! par_shaded_cl
+        IF( this%curr_count_par_shaded_cl(i) < eps8 ) THEN
+          this%par_shaded_cl(i)    = 0.0_wp
           ELSE
-          this%par_shaded(i)    = this%curr_val_par_shaded(i)   / this%curr_count_par_shaded(i)
+          this%par_shaded_cl(i)    = this%curr_val_par_shaded_cl(i)   / this%curr_count_par_shaded_cl(i)
         END IF
-        ! fleaf_sunlit
-        IF( this%curr_count_fleaf_sunlit(i) < eps8 ) THEN
-          this%fleaf_sunlit(i)  = 0.0_wp
+        ! fleaf_sunlit_cl
+        IF( this%curr_count_fleaf_sunlit_cl(i) < eps8 ) THEN
+          this%fleaf_sunlit_cl(i)  = 0.0_wp
           ELSE
-          this%fleaf_sunlit(i)  = this%curr_val_fleaf_sunlit(i) / this%curr_count_fleaf_sunlit(i)
+          this%fleaf_sunlit_cl(i)  = this%curr_val_fleaf_sunlit_cl(i) / this%curr_count_fleaf_sunlit_cl(i)
         END IF
       END DO
       ! t_jmax_opt
@@ -715,18 +708,18 @@ CONTAINS
       END IF
       
       !write(*,*) time_day, &   ! may enable for testing
-      !           NINT(this%curr_count_par_sunlit(1)), this%par_sunlit(1), &
-      !           NINT(this%curr_count_par_shaded(1)), this%par_shaded(1), &
-      !           NINT(this%curr_count_fleaf_sunlit(1)), this%fleaf_sunlit(1)
+      !           NINT(this%curr_count_par_sunlit_cl(1)), this%par_sunlit_cl(1), &
+      !           NINT(this%curr_count_par_shaded_cl(1)), this%par_shaded_cl(1), &
+      !           NINT(this%curr_count_fleaf_sunlit_cl(1)), this%fleaf_sunlit_cl(1)
 
       ! set all values of the current day to zero (code can be copied from initialization_of_variables above)
-      this%curr_val_par_sunlit      = 0.0_wp
-      this%curr_val_par_shaded      = 0.0_wp
-      this%curr_val_fleaf_sunlit    = 0.0_wp
+      this%curr_val_par_sunlit_cl      = 0.0_wp
+      this%curr_val_par_shaded_cl      = 0.0_wp
+      this%curr_val_fleaf_sunlit_cl    = 0.0_wp
       this%curr_val_t_jmax_opt      = 0.0_wp
-      this%curr_count_par_sunlit    = 0.0_wp
-      this%curr_count_par_shaded    = 0.0_wp
-      this%curr_count_fleaf_sunlit  = 0.0_wp
+      this%curr_count_par_sunlit_cl    = 0.0_wp
+      this%curr_count_par_shaded_cl    = 0.0_wp
+      this%curr_count_fleaf_sunlit_cl  = 0.0_wp
       this%curr_count_t_jmax_opt    = 0.0_wp
     END IF
 
@@ -744,9 +737,9 @@ CONTAINS
     !< 1.0 init/set reasonable default values
     !!
     ! 1.1 light in the canopy
-    this%par_sunlit                    = 1.0_wp
-    this%par_shaded                    = 1.0_wp
-    this%fleaf_sunlit                  = 1.0_wp
+    this%par_sunlit_cl                    = 1.0_wp
+    this%par_shaded_cl                    = 1.0_wp
+    this%fleaf_sunlit_cl                  = 1.0_wp
     ! 1.2 soil moisture
     this%beta_air                      = 1.0_wp
     this%beta_soil_ps                  = 1.0_wp
@@ -858,11 +851,11 @@ CONTAINS
     !                 use function TRUE FALSE [OPTIONAL argument] )
     ! returns: new current average
 
-    this%par_sunlit(:)    = this%calc_moving_avrg(this%par_sunlit(:), plant%daily_average%par_sunlit(:), &
+    this%par_sunlit_cl(:)    = this%calc_moving_avrg(this%par_sunlit_cl(:), plant%daily_average%par_sunlit_cl(:), &
                                                1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%par_shaded(:)    = this%calc_moving_avrg(this%par_shaded(:), plant%daily_average%par_shaded(:), &
+    this%par_shaded_cl(:)    = this%calc_moving_avrg(this%par_shaded_cl(:), plant%daily_average%par_shaded_cl(:), &
                                                1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%fleaf_sunlit(:)  = this%calc_moving_avrg(this%fleaf_sunlit(:), plant%daily_average%fleaf_sunlit(:), &
+    this%fleaf_sunlit_cl(:)  = this%calc_moving_avrg(this%fleaf_sunlit_cl(:), plant%daily_average%fleaf_sunlit_cl(:), &
                                                1.0_wp / (this%p_optNfrac * one_day/ dt))
     this%beta_soil_gs     = this%calc_moving_avrg(this%beta_soil_gs, plant%beta_soil_gs, &
                                                1._wp / ( this%p_optNfrac * one_day/dt))
@@ -1017,13 +1010,15 @@ CONTAINS
     CALL this%pool%fruit%init(pool_init)
     CALL this%pool%seed_bed%init(pool_init)
     ! canopy layers
-    this%canopy_layer%nl_tot(:)       = canopy_layer_init
-    this%canopy_layer%fnl_chl(:)      = canopy_layer_init
-    this%canopy_layer%fnl_et(:)       = canopy_layer_init
-    this%canopy_layer%fnl_rub(:)      = canopy_layer_init
-    this%canopy_layer%par_sunlit(:)   = canopy_layer_init
-    this%canopy_layer%par_shaded(:)   = canopy_layer_init
-    this%canopy_layer%fleaf_sunlit(:) = canopy_layer_init
+    this%nl_tot_cl(:)       = canopy_layer_init
+    this%fnl_chl_cl(:)      = canopy_layer_init
+    this%fnl_et_cl(:)       = canopy_layer_init
+    this%fnl_rub_cl(:)      = canopy_layer_init
+    this%fnl_pepc_cl(:)      = canopy_layer_init
+    this%fnl_oth_cl(:)      = canopy_layer_init
+    this%par_sunlit_cl(:)   = canopy_layer_init
+    this%par_shaded_cl(:)   = canopy_layer_init
+    this%fleaf_sunlit_cl(:) = canopy_layer_init
     ! plant variables
     this%pftid            = 1          ! INTEGER
     this%growing_season   = .TRUE.     ! LOGICAL

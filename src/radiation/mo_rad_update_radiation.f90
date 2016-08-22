@@ -91,9 +91,9 @@ CONTAINS
     CALL calc_canopy_sw_radiation_budget(atm2land%swpar_srf_down*rad2par, & 
                      atm2land%swpar_fdiffuse, atm2land%cos_zenith_angle, & 
                      plant%lai, sigma_par, kbl0_par, kdf0_par, &
-                     plant%canopy_layer%par_sunlit(:), & 
-                     plant%canopy_layer%par_shaded(:), &
-                     plant%canopy_layer%fleaf_sunlit(:), &
+                     plant%par_sunlit_cl(:), & 
+                     plant%par_shaded_cl(:), &
+                     plant%fleaf_sunlit_cl(:), &
                      plant%apar, &
                      land2atm%alb_vis_dir,land2atm%alb_vis_dif)
 
