@@ -9,7 +9,7 @@
 !!
 MODULE mo_hsm_class
 
-  USE mo_exception, ONLY: message, message_text, warning, finish
+  USE mo_exception, ONLY: message, message_text, finish, em_warn
   USE mo_util,      ONLY: int2string
 
   IMPLICIT NONE
@@ -641,7 +641,7 @@ CONTAINS
 !!$      &                                                  ' to '//TRIM(that%name))
 
     IF (ASSOCIATED(this%next)) &
-      & CALL warning(TRIM(routine), 'Transition to '//TRIM(this%next%name)//' already in progress')
+      & CALL message(TRIM(routine), 'Transition to '//TRIM(this%next%name)//' already in progress', level=em_warn)
 
     this%next => that
 

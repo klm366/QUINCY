@@ -55,6 +55,7 @@ MODULE mo_soil_memory_class
       shc                 ,    & !< Saturated hydraulic conductivity [m/s]
       vhcap               ,    & !< Volumetric heat capacity of dry soil [J m-3 K-1]
       hdiff               ,    & !< Thermal diffusivity of soil [m2 s-1]
+      elevation           ,    & !< Elevation
       oro_stddev                 !< Standard deviation of orography
     !
     ! Energy state
@@ -175,6 +176,13 @@ CONTAINS
       & hgrid, surface,                                                                    &
       & t_cf('heat_diffusivity_soil', 'm2 s-1', ''),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL jsb_add_var( mem, 'elevation', mem%elevation,                         &
+      & hgrid, surface,                                                           &
+      & t_cf('elevation', '', ''),                                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 

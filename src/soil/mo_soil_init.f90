@@ -83,9 +83,14 @@ CONTAINS
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SOIL)%bc_sso_filename), model%grid_id)
 
-    ! Orography
+    ! Orography ...
     return_pointer => input_file%Read_2d(         &
-!!$      & input_file,                               &
+      & variable_name='elevation',                &
+      & fill_array = dsl4jsb_var2D_ptr(SOIL,elevation))
+    dsl4jsb_var2D_onDomain(SOIL,elevation) = &
+      MERGE(dsl4jsb_var2D_onDomain(SOIL,elevation), 0._wp, dsl4jsb_var2D_onDomain(SOIL,elevation) >= 0._wp)
+
+    return_pointer => input_file%Read_2d(         &
       & variable_name='orostd',                   &
       & fill_array = dsl4jsb_var2D_ptr(SOIL,oro_stddev))
     dsl4jsb_var2D_onDomain(SOIL,oro_stddev) = &

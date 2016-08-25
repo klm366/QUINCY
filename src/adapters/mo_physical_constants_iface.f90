@@ -39,18 +39,36 @@ MODULE mo_physical_constants_iface
     clw => cpliq,    & !< Specific heat of liquid water          [J/(K kg)]
     ci => cpice,     & !< Specific heat of ice                   [J/(K kg)]
     cs => cpsno,     & !< Specific heat of snow                  [J/(K kg)]
-    rhoi => rhoice   & !< Density of (sea) ice                   [kg/m3]
-    rhos => rhosno   & !< Density of snow                        [kg/m3]
+    rhoi => rhoice,  & !< Density of (sea) ice                   [kg/m3]
+    rhos => rhosno,  & !< Density of snow                        [kg/m3]
     ki => alice,     & !< Heat conductivity of ice               [J/(m s K)]
     ks => alsno,     & !< Heat conductivity of snow              [J/(m s K)]
 #endif
     ! Auxiliary constants
     rvd1  => vtmpc1, & !< = rv/rd-1                              []
-    cpvd1 => vtmpc2, & !< = cpv/cpd-1                            []
-    clw                !< Specific heat capacity of liquid water [J/(K kg)]
+    cpvd1 => vtmpc2    !< = cpv/cpd-1                            []
+
+! cvdifts in echam is not a PARAMETER, therefore it can't be USEd from modules here
+! TBD: Use cvdifts=1 for standalone model?
+!#ifndef STANDALONE
+!#ifdef __ICON__
+!  USE mo_echam_vdiff_params, ONLY: cvdifts
+!#else
+!  USE mo_physc2, ONLY: cvdifts
+!#endif
+!#endif
 
   IMPLICIT NONE
   PUBLIC
+
+!#ifdef STANDALONE
+!  REAL(wp), PARAMETER :: cvdifts = 1._wp
+!#else
+  REAL(wp), PARAMETER :: cvdifts = 1.5_wp
+!#endif
+  REAL(wp), PARAMETER :: tpfac1 = cvdifts
+  REAL(wp), PARAMETER :: tpfac2 = 1._wp / tpfac1
+  REAL(wp), PARAMETER :: tpfac3 = 1._wp - tpfac2 
 
 #endif
 END MODULE mo_physical_constants_iface

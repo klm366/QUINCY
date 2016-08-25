@@ -103,24 +103,11 @@ CONTAINS
 
   REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
 
-    USE mo_jsb_physical_constants, ONLY: grav
-
-#ifndef STANDALONE
-#ifdef __ICON__
-    USE mo_echam_vdiff_params, ONLY: cvdifts
-#else
-    USE mo_physc2, ONLY: cvdifts
-#endif
-#endif
+    USE mo_jsb_physical_constants, ONLY: grav, cvdifts
 
     REAL(wp), INTENT(in) :: &
       & drag,      &
       & steplen
-
-#ifdef STANDALONE
-    REAL(wp) :: cvdifts
-    cvdifts = 1.5_wp 
-#endif
 
     heat_transfer_coef = drag / (cvdifts * grav * steplen)
 

@@ -20,11 +20,13 @@ PROGRAM jsb4_driver
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
   USE mo_jsb_time,           ONLY: is_newday
   USE mo_jsb_class,          ONLY: get_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
 
-  dsl4jsb_Use_processes SRF
-  dsl4jsb_Use_memory(SRF)
+  dsl4jsb_Use_processes SEB, TURB, HYDRO
+  dsl4jsb_Use_memory(SEB)
+  dsl4jsb_Use_memory(TURB)
+  dsl4jsb_Use_memory(HYDRO)
 
   USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
 
@@ -87,9 +89,11 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: daylght_frc(:,:)
 
   TYPE(t_jsb_model), POINTER :: model
-  TYPE(t_jsb_tile),  POINTER :: tile
+  CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
-  dsl4jsb_Def_memory(SRF)
+  dsl4jsb_Def_memory(SEB)
+  dsl4jsb_Def_memory(TURB)
+  dsl4jsb_Def_memory(HYDRO)
 
   !! JSB4 interface variables - input
   REAL(wp), ALLOCATABLE :: t_air_K(:,:)
@@ -292,17 +296,18 @@ PROGRAM jsb4_driver
 
     CALL IO_read_streams
 
+    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(TURB)
+    dsl4jsb_Get_memory(HYDRO)
     DO iblk = 1, nblks
-      dsl4jsb_Get_memory(SRF)
-
-      t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, t_srf)
-      fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, fact_q_air)
-      fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, fact_qsat_srf)
-      rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SRF, rough_h_srf)
+      t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SEB, t)
+      fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB, fact_q_air)
+      fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB, fact_qsat_srf)
+      rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB, rough_h)
 
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
-      evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(SRF, evapotrans),-EPSILON(1._wp)) &
-        & / MIN(dsl4jsb_var2D_onChunk(SRF, evapopot),  -EPSILON(1._wp))
+      evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO, evapotranspiration),-EPSILON(1._wp)) &
+        & / MIN(dsl4jsb_var2D_onChunk(HYDRO, evapopot),  -EPSILON(1._wp))
     ENDDO
 
   ENDIF
@@ -363,8 +368,10 @@ PROGRAM jsb4_driver
 
       CALL jsbach_interface ( 1, iblk, 1, nproma, delta_time, time_step_len, t_air_K(:,iblk), &
         & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
-        & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), press_srf(:,iblk), drag_srf(:,iblk), &
+        & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), frac_par_diffuse(:,iblk), &
+        & press_srf(:,iblk), drag_srf(:,iblk), &
         & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk), &
+        & CO2_concentration(:,iblk), &
         & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
         & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
         & rough_h_srf_proc(:,iblk), rough_m_srf(:), tte_corr(:), alb_vis_dir(:), alb_nir_dir(:), &

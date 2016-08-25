@@ -57,12 +57,13 @@ CONTAINS
     INTEGER :: nlon, nlat
 
     model => jsbach%models(model_id)%m
+
     IF (PRESENT(model_name)) THEN
       IF (ADJUSTL(TRIM(model_name)) /= ADJUSTL(TRIM(model%name))) &
         CALL finish(TRIM(routine), 'Model ID and name are inconsistent with namelist config.')
     END IF
 
-    CALL get_nlon_nlat_from_file(jsbach%models(model_id)%m%config%grid_filename, nlon, nlat)
+    CALL get_nlon_nlat_from_file(model%config%grid_filename, nlon, nlat)
     CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
 
 #ifndef __ICON__
@@ -76,7 +77,7 @@ CONTAINS
 
     !needs to be done after the decomposition is initialised; required for get_lon and get_lat, especially for site-level sims
 #ifndef __ICON__
-    CALL get_lons_and_lats_from_file(jsbach%models(model_id)%m%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
+    CALL get_lons_and_lats_from_file(model%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
 #else
     CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
 #endif

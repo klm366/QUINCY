@@ -51,8 +51,7 @@ CONTAINS
 
     !USE mo_seb_process,            ONLY: calc_previous_day_variables, calc_pseudo_soil_temp
     USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_echam_vdiff_params,     ONLY: tpfac2, tpfac3
-    USE mo_jsb_physical_constants, ONLY: tmelt
+    USE mo_jsb_physical_constants, ONLY: tmelt, tpfac2, tpfac3
     USE mo_jsb_time,               ONLY: get_asselin_coef, is_newday, timeStep_in_days, time_steps_per_day
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -308,14 +307,14 @@ CONTAINS
     &            pcfh, pcair, pcsat, pfracsu, pgrdcap,        &
     &            psnew)
 
-    USE mo_echam_vdiff_params,     ONLY: cvdifts   ! TBD: change to 1. for standalone JSBACH
     USE mo_jsb_physical_constants, ONLY: &
       & cpd, &
       & cpvd1, &
       & zemiss_def, &
       & stbo, &
       & alv,  &
-      & als
+      & als,  &
+      & cvdifts
 
 
     INTEGER,  INTENT(in)    :: klon
