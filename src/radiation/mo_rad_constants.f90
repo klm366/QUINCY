@@ -21,13 +21,16 @@ MODULE mo_rad_constants
 
   ! Parameters required for albedo and fapar calculation
       ka        ,     &   !< Extinction coefficient for PAR on chlorophyll
-      sigma_par ,     &   !< single leaf scattering albedo in VIS/PAR range 
-      kbl0_par  ,     &   !< extinction coefficient over black leaves 
-      kdf0_par  ,     &   !< extinction coefficient for diffuse PAR (Spitters eq. 7) 
-      sigma_nir ,     &   !< single leaf scattering albedo in NIR range 
+      kbl0_vis  ,     &   !< extinction coefficient over black leaves 
+      kdf0_vis  ,     &   !< extinction coefficient for diffuse PAR (Spitters eq. 7) 
       kbl0_nir  ,     &   !< extinction coefficient over black leaves in NIR range 
       kdf0_nir  ,     &   !< extinction coefficient for diffuse NIR (Spitters eq. 7) 
-      rho2sbeta           !< scaling factor of solar angle in reflection calculation 
+      rho2sbeta ,     &   !< scaling factor of solar angle in reflection calculation 
+      min_cos_zenith_angle_rad  !< minimum coszine zenith angle for radiation calculation
+
+  REAL(wp), SAVE :: & 
+      def_alb_vis_soil, & !< default VIS albedo for soil
+      def_alb_nir_soil    !< default NIR albedo for soil
 
 CONTAINS
 
@@ -38,13 +41,15 @@ CONTAINS
   SUBROUTINE init_rad_constants
 
       ka         = 0.005_wp 
-      sigma_par  = 0.2_wp    ! Spitters 1986 
-      kbl0_par   = 0.5_wp    ! Spitters 1986 
-      kdf0_par   = 0.8_wp    ! Spitters 1986
-      sigma_nir  = 0.8_wp    ! Spitters 1986
-      kbl0_nir   = 0.05_wp   ! following Montheith 1995 in that NIR absorbance is close to none 
-      kdf0_nir   = 0.05_wp   ! following Montheith 1995 in that NIR absorbance is close to none 
+      kbl0_vis   = 0.5_wp    ! Spitters 1986 
+      kdf0_vis   = 0.8_wp    ! Spitters 1986
+      kbl0_nir   = 0.5_wp    ! Spitters 1986 
+      kdf0_nir   = 0.8_wp    ! Spitters 1986
       rho2sbeta  = 1.6_wp    ! Spitters 1986 
+      min_cos_zenith_angle_rad = 0.1736482_wp ! corresponding to 10° solar elevation, below which the 
+                                              ! radiation equations are no longer valid
+      def_alb_vis_soil = 0.15_wp ! detault from Bonan 2008
+      def_alb_nir_soil = 0.30_wp ! default from Bonan 2008
 
   END SUBROUTINE init_rad_constants
 END MODULE mo_rad_constants

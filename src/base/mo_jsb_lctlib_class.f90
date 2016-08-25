@@ -35,6 +35,8 @@ MODULE mo_jsb_lctlib_class
      INTEGER :: phenology_type
      REAL(wp) :: tau_leaf
      REAL(wp) :: sla
+     REAL(wp) :: sigma_vis 
+     REAL(wp) :: sigma_nir 
      REAL(wp) :: cn_leaf
      REAL(wp) :: np_leaf
      REAL(wp) :: k0_fnl_struc
@@ -122,6 +124,14 @@ CONTAINS
       ! From Kattge et al. 2011, Table 5, including conversion from mm/mgDW to m2/mol
       lctlib(1:npft)%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * &
       (/9.46_wp,8.99_wp,15.4_wp,15.4_wp,5.0_wp,10.09_wp,20.12_wp,19.23_wp/) 
+      ! single leaf scattering albedo in the visible range
+      !  extrapolated from Otto, 2014, BG for trees and Spitter et al. 1986 for grasses
+      lctlib(1:npft)%sigma_vis = & 
+      (/0.17_wp,0.17_wp,0.17_wp,0.17_wp,0.15_wp,0.15_wp,0.2_wp,0.2_wp/)
+      ! single leaf scattering albedo in the near infrared range
+      !  extrapolated from Otto, 2014, BG for trees and Spitter et al. 1986 for grasses
+      lctlib(1:npft)%sigma_nir = & 
+      (/0.76_wp,0.76_wp,0.76_wp,0.76_wp,0.73_wp,0.73_wp,0.8_wp,0.8_wp/)
       ! default leaf C:N (molC/molN) if not calculated dynamically 
       ! From Kattge et al. 2011, Table 5, including conversion from mg/g to mol/mol
       lctlib(1:npft)%cn_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / & 

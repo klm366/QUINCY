@@ -174,7 +174,6 @@ mv ./"$slmNamelist"  ./input
 if [ $specialFluxnetOutput == "yes" ]; then 
   mv ./summary*      ./postprocessing
   mv ./statistics*   ./postprocessing
-  rm ./obs.nc
   mv ./*.nc ./output 
 fi
 mv ./*.txt           ./output 

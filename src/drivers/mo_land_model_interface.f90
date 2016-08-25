@@ -72,7 +72,7 @@ CONTAINS
 
     !! run Tasks
     !!
-      CALL update_radiation       (tile)
+      CALL update_radiation       (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_vegsoil_bgc     (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_phenology       (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_canopy_fluxes   (tile, model%lctlib(tile%lcts%lib_id))
@@ -113,7 +113,7 @@ CONTAINS
 
     !! run Tasks
     !!
-      CALL update_radiation       (tile)
+      CALL update_radiation       (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_vegsoil_bgc     (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_phenology       (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_canopy_fluxes   (tile, model%lctlib(tile%lcts%lib_id))
@@ -156,7 +156,7 @@ CONTAINS
 
     !! run Tasks
     !!
-      CALL update_radiation       (tile)
+      CALL update_radiation       (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_canopy_fluxes   (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_vegsoil_physics (tile)
 
@@ -240,7 +240,7 @@ CONTAINS
   !! 
   lun = 10
   WRITE(lun,*) 'PAR A GC CI' 
-  atm2land%swvis_srf_down = 0.0_wp 
+  atm2land%swpar_srf_down = 0.0_wp 
   DO i = 1,16
 
      atm2land%swpar_srf_down = atm2land%swpar_srf_down + 100.0_wp / rad2par 
@@ -249,11 +249,12 @@ CONTAINS
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
-     CALL update_radiation(tile)                       !< mo_rad_update_radiation
+     CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') atm2land%swpar_srf_down * rad2par, & 
-           tile%plant%flux%an,tile%plant%gc*1000._wp,tile%plant%flux%ci !,&
+           tile%plant%flux%an,tile%plant%gc*1000._wp, & 
+           tile%plant%flux%ci/atm2land%co2_mixing_ratio !,&
 !           tile%plant%flux%an,
 !           tile%plant%flux%ci/atm2land%co2_mixing_ratio,tile%plant%pool%leaf%nitrogen*molar_mass_N,&
 !           tile%plant%flux%an/(tile%plant%pool%leaf%nitrogen*molar_mass_N)
@@ -278,11 +279,12 @@ CONTAINS
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
-     CALL update_radiation(tile)                       !< mo_rad_update_radiation
+     CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') atm2land%t_air, &  
-           tile%plant%flux%an,tile%plant%gc*1000._wp,tile%plant%flux%ci
+           tile%plant%flux%an,tile%plant%gc*1000._wp, &
+           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
 
   END DO
   atm2land%t_air    = ref_t_air + Tzero
@@ -301,11 +303,12 @@ CONTAINS
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
-     CALL update_radiation(tile)                       !< mo_rad_update_radiation
+     CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') atm2land%co2_mixing_ratio, &
-           tile%plant%flux%an,tile%plant%gc*1000._wp,tile%plant%flux%ci
+           tile%plant%flux%an,tile%plant%gc*1000._wp, &
+           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
 
   END DO
   atm2land%co2_mixing_ratio = ref_co2 
@@ -320,13 +323,14 @@ CONTAINS
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
-     CALL update_radiation(tile)                       !< mo_rad_update_radiation
+     CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
      vpd = ( calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - atm2land%q_air ) / eps_vpd * atm2land%press_srf / 1000.0_wp
 
      WRITE(lun,'(4F16.7)') vpd, &
-           tile%plant%flux%an,tile%plant%gc*1000._wp,tile%plant%flux%ci
+           tile%plant%flux%an,tile%plant%gc*1000._wp, &
+           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
 
   END DO
   atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - ref_vpd / atm2land%press_srf * eps_vpd
@@ -344,11 +348,12 @@ CONTAINS
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
-     CALL update_radiation(tile)                       !< mo_rad_update_radiation
+     CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') tile%soil%theta, &
-           tile%plant%flux%an,tile%plant%gc*1000._wp,tile%plant%flux%ci
+           tile%plant%flux%an,tile%plant%gc*1000._wp, &
+           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
 
   END DO
   tile%soil%theta = ref_theta
@@ -366,11 +371,12 @@ CONTAINS
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
-     CALL update_radiation(tile)                       !< mo_rad_update_radiation
+     CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') tile%plant%lai, &
-           tile%plant%flux%an,tile%plant%gc*1000._wp,tile%plant%flux%ci
+           tile%plant%flux%an,tile%plant%gc*1000._wp, &
+           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
 
   END DO
   tile%plant%lai = ref_lai 
@@ -386,11 +392,12 @@ CONTAINS
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
-     CALL update_radiation(tile)                       !< mo_rad_update_radiation
+     CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') tile%plant%pool%leaf%nitrogen/tile%plant%lai*molar_mass_N, & 
-           tile%plant%flux%an,tile%plant%gc*1000._wp,tile%plant%flux%ci
+           tile%plant%flux%an,tile%plant%gc*1000._wp, &
+           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
 
   END DO
   tile%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile%plant%lai
@@ -407,11 +414,12 @@ CONTAINS
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
-     CALL update_radiation(tile)                             !< mo_rad_update_radiation
+     CALL update_radiation(tile, model%lctlib(i))            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, model%lctlib(i))        !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(I1,3F16.7)') tile%plant%pftid, &
-           tile%plant%flux%an,tile%plant%gc*1000._wp,tile%plant%flux%ci
+           tile%plant%flux%an,tile%plant%gc*1000._wp, &
+           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
 
   END DO 
   !STOP
