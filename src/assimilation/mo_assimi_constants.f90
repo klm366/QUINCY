@@ -128,7 +128,7 @@ CONTAINS
       pepc2n        = 98777.97_wp 
       chl2n         = 1000._wp/39.8_wp 
       k1_fnl_struc  = 71.4_wp * molar_mass_N / 1000000._wp 
-      jmax2vcmax_C3 = 1.92_wp 
+      jmax2vcmax_C3 = 1.92_wp / 4._wp
       jmax2vcmax_C4 = 1.4_wp  
       ! moved to mo_veg_constants tau_canopy_acclimation = 10._wp  ,     & !< time scale of acclimation of canopy processes (N, P, T) (days)
 

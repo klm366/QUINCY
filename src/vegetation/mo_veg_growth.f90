@@ -80,7 +80,7 @@ CONTAINS
          lctlib%k_latosa,lctlib%k_rtos,lctlib%growthform, & 
          plant%moving_average%growth_cn_plant,plant%moving_average%growth_cp_plant, plant%moving_average%unit_npp,&
          plant%moving_average%unit_uptake_n,plant%moving_average%unit_uptake_p, &
-         plant%moving_average%allometry_npp,diameter,height,dheight,leaf2sapwood_mass_ratio, & 
+         plant%moving_average%allometry_npp,tau_labile_pot,diameter,height,dheight,leaf2sapwood_mass_ratio, & 
          leaf2root_mass_ratio,target_lai,k1_opt, k2_opt)  
 
     !> 4.0 calculate net flux between reserve and labile pool 
@@ -622,7 +622,7 @@ CONTAINS
   !! calculates maximum LAI given current root and sapwood mass
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE calc_allometry(sap_wood_carbon,heart_wood_carbon,dens_ind, labile_carbon, labile_nitrogen, labile_phosphorus,&
-       wood_density,sla,allom_k1, allom_k2,k_latosa,k_rtos,growthform,cn_plant, cp_plant,  dnpp, dN_up, dP_up, npp, &
+       wood_density,sla,allom_k1, allom_k2,k_latosa,k_rtos,growthform,cn_plant, cp_plant,  dnpp, dN_up, dP_up, npp, tau_labile_pot,&
        diameter,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio,target_lai, k1_opt, k2_opt)
     
     USE mo_base_constants, ONLY: pi
@@ -648,6 +648,7 @@ CONTAINS
     REAl(wp), INTENT(in) :: dN_up                   !< unit N uptake per unit root mass
     REAl(wp), INTENT(in) :: dP_up                   !< unit P uptake per unit root mass
     REAl(wp), INTENT(in) :: npp                     !< net primary productivity
+    REAL(wp), INTENT(in) :: tau_labile_pot          !< labile pool turnover rate
     REAL(wp),INTENT(out) :: diameter                !< diameter (m)
     REAL(wp),INTENT(out) :: height                  !< height (m)
     REAL(wp),INTENT(out) :: dheight                 !< change in height (m) resulting from a small change in woody biomass
@@ -697,15 +698,16 @@ CONTAINS
            !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
            !! NPP = gN * R * cn_plant
            !! Or similar relationships for P
-           IF ( (npp + labile_carbon - labile_nitrogen * cn_plant)/(dN_up * cn_plant) >= &
-                 (npp + labile_carbon - labile_phosphorus * cp_plant)/(dP_up * cp_plant)) THEN
+           IF ( (npp+(labile_carbon - labile_nitrogen*cn_plant)*1.e6*tau_labile_pot/one_day)/(dN_up * cn_plant) >= &
+                 (npp+(labile_carbon - labile_phosphorus*cp_plant)*1.e6*tau_labile_pot/one_day)/(dP_up * cp_plant)) THEN
               ! if N is more limiting than P
-              k1_opt = (npp + labile_carbon - labile_nitrogen * cn_plant)/(dN_up * cn_plant)
+              k1_opt = (npp+(labile_carbon - labile_nitrogen*cn_plant)*1.e6*tau_labile_pot/one_day)/(dN_up * cn_plant)
               k2_opt = dnpp/(dN_up * cn_plant)
            ELSE
-              k1_opt = (npp + labile_carbon - labile_phosphorus * cp_plant)/(dP_up * cp_plant)
+              k1_opt = (npp+(labile_carbon - labile_phosphorus*cp_plant)*1.e6*tau_labile_pot/one_day)/(dP_up * cp_plant)
               k2_opt = dnpp/(dP_up * cp_plant)
            ENDIF
+
         ELSE             
            ! scaling factor for root to leaf mass
            ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
@@ -728,15 +730,16 @@ CONTAINS
             !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
             !! NPP = gN * R * cn_plant
             !! Or similar relationships for P
-            IF ( (npp + labile_carbon - labile_nitrogen * cn_plant)/(dN_up * cn_plant) >= &
-                 (npp + labile_carbon - labile_phosphorus * cp_plant)/(dP_up * cp_plant)) THEN
-               ! if N is more limiting than P
-               k1_opt = (npp + labile_carbon - labile_nitrogen * cn_plant)/(dN_up * cn_plant)
-               k2_opt = dnpp/(dN_up * cn_plant)
-            ELSE
-               k1_opt = (npp + labile_carbon - labile_phosphorus * cp_plant)/(dP_up * cp_plant)
-               k2_opt = dnpp/(dP_up * cp_plant)
-            ENDIF
+           IF ( (npp+(labile_carbon - labile_nitrogen*cn_plant)*1.e6*tau_labile_pot/one_day)/(dN_up * cn_plant) >= &
+                 (npp+(labile_carbon - labile_phosphorus*cp_plant)*1.e6*tau_labile_pot/one_day)/(dP_up * cp_plant)) THEN
+              ! if N is more limiting than P
+              k1_opt = (npp+(labile_carbon - labile_nitrogen*cn_plant)*1.e6*tau_labile_pot/one_day)/(dN_up * cn_plant)
+              k2_opt = dnpp/(dN_up * cn_plant)
+           ELSE
+              k1_opt = (npp+(labile_carbon - labile_phosphorus*cp_plant)*1.e6*tau_labile_pot/one_day)/(dP_up * cp_plant)
+              k2_opt = dnpp/(dP_up * cp_plant)
+           ENDIF
+
          ELSE      
             leaf2root_mass_ratio = sm2lm_grass * k_rtos 
          ENDIF

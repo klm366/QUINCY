@@ -127,7 +127,7 @@ CONTAINS
          lctlib%k_latosa,lctlib%k_rtos,lctlib%growthform, & 
          plant%moving_average%growth_cn_plant,plant%moving_average%growth_cp_plant,plant%moving_average%unit_npp,&
          plant%moving_average%unit_uptake_n, &
-         plant%moving_average%unit_uptake_p, plant%moving_average%allometry_npp,plant%diameter,plant%height,hlp1,hlp1, &
+         plant%moving_average%unit_uptake_p, plant%moving_average%allometry_npp,hlp1, plant%diameter,plant%height,hlp1,hlp1, &
          hlp1,hlp1,hlp1, hlp1)  
 
     IF(plant%pool%leaf%carbon .GT. eps8) THEN 

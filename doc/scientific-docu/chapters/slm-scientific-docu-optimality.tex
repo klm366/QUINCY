@@ -45,6 +45,10 @@ To be able to determine growth at each timestep, we need to calculate the C incr
 
 Solving equations \ref{eqn:l2r}-\ref{eqn:growth_inc} gives growth increments at each model timestep, resulting in a dynamic allocation to leaves and roots. Given the potential small model timestep we compute averages of the variables needed ($NPP, dNPP, g_N and r_{cn-p}$) over a time scale of $\tau_{allocation}$ to avoid diurnal and other short-term variation in leaf to root ratios.
 
+In addition to nutrient constraint, we introduce a water limitation based allocation. Somewhat similarly to the standard allocation shme in the model, which is based on the pipe model, the water absed allocation introduces a hydraulic constraint and an additional optimality constraint. The hydraulic constraint states that the leaf wtaer potential must be higher than the soil potential by a graviational potentail given by the plants' height plus teh additional potential given by transpiration:
+\begin{equation}
+ \Phi_{leaf}=\Phi_{soil} - Hg\rho_w - 
+\end{equation}
 
 
 

@@ -961,11 +961,11 @@ CONTAINS
    fnl_pepc_cl = plant%fnl_pepc_cl(:)
 
    ! increase LAI by small increment
-   lai = plant%lai + 0.3_wp * lctlib%sla
+   lai = plant%lai + 1.0_wp * lctlib%sla
    ! recalculate number of canopy layers with new LAI
    canopy_layer_depth_act = calc_canopy_layer_depth(lai)
    ! equivalent leaf N assuming any new leaf growth will have target CN
-   nitrogen = plant%pool%leaf%nitrogen + 0.3_wp * plant%target_cn_leaf
+   nitrogen = plant%pool%leaf%nitrogen + 1.0_wp / plant%target_cn_leaf
 
    ! re-calculate N distribution in the canopy, needed because of new LAI and leaf nitrogen
    ! photosynthetic N fractions should NOT be recalculated to allow interaction with optimal fractions

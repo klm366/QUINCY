@@ -159,7 +159,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)') 'Time LitterN MineralN'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth'
+    WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth nl_tot'
     lun=lun+1
     WRITE(lun,'(a)') 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season'
 
@@ -445,9 +445,9 @@ CONTAINS
        write(lun,'(3F12.6)') time_d, soil%pool%litter%nitrogen, soil%ammonium
        lun=lun+1
        DO icanop=1, ncanop
-         write(lun,'(7F12.6)') time_d, REAL(icanop), plant%fnl_et_cl(icanop), &
+         write(lun,'(8F12.6)') time_d, REAL(icanop), plant%fnl_et_cl(icanop), &
                                plant%fnl_rub_cl(icanop), plant%fnl_chl_cl(icanop),&
-                               plant%fnl_pepc_cl(icanop), plant%fnl_oth_cl(icanop)
+                               plant%fnl_pepc_cl(icanop), plant%fnl_oth_cl(icanop),plant%nl_tot_cl(icanop)
        END DO
 
        IF(lctlib%growthform == itree) THEN 
@@ -488,11 +488,11 @@ CONTAINS
          growing_season_float = 0.0_wp
        END IF 
        lun=lun+1
-       write(lun,'(16F20.6)') time_d, plant%height, plant%diameter, plant%lai, plant%dens_ind, &
+       write(lun,'(17F20.6)') time_d, plant%height, plant%diameter, plant%lai, plant%dens_ind, &
          hlp1,l2r,s2c, bcf, &
          plant%target_cn_leaf, plant%moving_average%unit_npp, plant%moving_average%unit_uptake_n,&
          plant%moving_average%growth_cn_plant, plant%moving_average%allometry_npp, &
-         growing_season_float
+         growing_season_float, plant%moving_average%beta_soil_gs
       END IF
     END IF
     END IF  ! on/off switch specific to 'special case: fluxnet output'
