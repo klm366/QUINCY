@@ -13,20 +13,17 @@ MODULE mo_jsb_model_init
     USE mo_exception,                       ONLY: finish, message, message_text
     ! base
     USE mo_base_constants
-    USE mo_base_memory,                     ONLY: t_slm_tile, t_model, grid   ! 'grid ' is needed by init_slm_test_canopy
+    USE mo_base_memory,                     ONLY: t_slm_tile, t_model, grid 
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, init_lctlib
     USE mo_jsb_memory_class,                ONLY: t_jsb_memory
-    USE mo_jsb_process_class,               ONLY: ATM2LAND_P, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO ! changed for compatibility with SLM
+    USE mo_jsb_process_class,               ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
     USE mo_jsb_process_factory,             ONLY: Create_process_memory, max_no_of_processes
     ! shared
     USE mo_shared_isotope,                  ONLY: calc_fractionation 
     USE mo_shared_constants,                ONLY: init_shared_constants, molar_mass_N, Dwv, Dco2, Tzero
     ! atmland
     USE mo_atmland_constants
-    USE mo_atmland_memory
-    USE mo_atmland_forcing,                 ONLY: init_forcing 
-    USE mo_atmland_config_class,            ONLY: atmland_config
     ! radiation
     USE mo_rad_constants,                   ONLY: init_rad_constants
     ! assimilation (photosynthesis)
@@ -79,7 +76,7 @@ CONTAINS
   !! @todo mo_jsb_model_init: move to default JSBACH4 init style
   !!  
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm(model, tile) !(model_id, model_name)
+  SUBROUTINE init_slm(model, tile, l_forcing) !(model_id, model_name)
 
 
     IMPLICIT NONE
@@ -87,6 +84,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_model),INTENT(inout)                 :: model      !< data structure for dynamic vegetation and soil variables
     TYPE(t_slm_tile),INTENT(inout)              :: tile       !< data structure for dynamic vegetation and soil variables
+    LOGICAL,INTENT(out)                         :: l_forcing  !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
     ! 0.2 Local
     CLASS(t_jsb_memory), POINTER                :: tmp_ptr        !! for Memory init and alloc
     CHARACTER(LEN=15)                           :: process_name   !! for Memory init and alloc
@@ -107,11 +105,9 @@ CONTAINS
     base_config%namelist_filename       = 'namelist.slm'
     assimi_config%namelist_filename     = 'namelist.slm'
     veg_config%namelist_filename        = 'namelist.slm'
-    atmland_config%namelist_filename    = 'namelist.slm'
     CALL base_config%Init              ! includes base_config%slm_model_name => land plant soil canopy test_canopy
     CALL assimi_config%Init
     CALL veg_config%Init
-    CALL atmland_config%Init
 
 
     !! 2 Model init
@@ -141,8 +137,14 @@ CONTAINS
     tile%ice            = model%options%ice  ! simple (temporary) solution to make it available across Tasks
     tile%iblk           = model%options%iblk ! simple (temporary) solution to make it available across Tasks
 
+    !! 4 Grid init
+    !! 
+    !! 
+    grid%lat            = base_config%lat
+    grid%lon            = base_config%lon
 
-    !! 4 Memory init and alloc
+
+    !! 5 Memory init and alloc
     !! 
     !! >> this is work in progress ! and, thus, not very nice code, but it works for now (Jan 20160819) <<
     !! 
@@ -154,14 +156,20 @@ CONTAINS
       tile%mem(iproc)%p => NULL()
       SELECT CASE(iproc)
         ! SLM: extend this CASE to all SLM processes that accept the JSBACH4 memory structure; see mo_jsb_process_class for enumeration
-        CASE (RAD, ASSIMI)    
+        CASE (RAD, ASSIMI, ATM2LAND, LAND2ATM)    
 
           ! get the process name; in jsbach4 it is called: Get_process_name(iproc)  
+!! 2do
+!!! use Get_process_name from mo_jsb_process_class <<<<<<<<<<
           SELECT CASE(iproc)
             CASE (RAD)
               process_name = 'rad' 
             CASE (ASSIMI)
               process_name = 'assimi' 
+            CASE (ATM2LAND)
+              process_name = 'atm2land' 
+            CASE (LAND2ATM)
+              process_name = 'land2atm' 
             !CASE (X)
             !  process_name = 'x' 
           END SELECT
@@ -188,13 +196,13 @@ CONTAINS
             ! call init routine of memory here & added model%options -> changed for SLM compatibility
             CALL tile%mem(iproc)%p%Init( TRIM(process_name), TRIM(suffix), tile%lcts%id, tile%owner_model_id, &
                                         model%options%ics, model%options%ice, model%options%iblk) ! model%options -> for SLM compatibility
-        END SELECT  ! processes with memory (ATM2LAND_P, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO)
+        END SELECT  ! processes with memory (ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO)
         NULLIFY(tmp_ptr)    
       END SELECT    ! iproc
     END DO          ! iproc
 
 
-    !! 5 Constants init
+    !! 6 Constants init
     !! 
     !! 
     CALL init_base_constants          ! may be 1st of the 'init constants'
@@ -206,7 +214,7 @@ CONTAINS
       ! CALL init_soil_constants
 
 
-    !! 6 Plant init
+    !! 7 Plant init
     !! 
     !! 
     CALL tile%plant%init                  ! mo_veg_memory  ==> may move to veg init (or model init ?)
@@ -214,7 +222,7 @@ CONTAINS
     model%lctlib => init_lctlib()         ! initialize the lctlib with parameters values across PFT's
 
 
-    !! 7 Time init
+    !! 8 Time init
     !! 
     !! 
     time_day          = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
@@ -224,11 +232,11 @@ CONTAINS
     timestep_prop_day = dt/one_day                  ! proportion of one day that is simulated with one timestep
 
 
-    !! 8 Initialise: Fluxnet specific simulation output
+    !! 9 Initialise: Fluxnet specific simulation output
     !! 
     !! the last full "forcing period" is written into extra output files with half-hourly write-out of values
     fluxnet_output_status = 0
-    IF (base_config%fluxnet_output .AND. atmland_config%option_forcing == 'readfile') THEN
+    IF (base_config%fluxnet_output) THEN
       fluxnet_output_status = 1
       ! check whether simulation length covers at least one complete fluxnet forcing period (i.e. fluxnet_output_length)
       fluxnet_output_length = NINT(base_config%fluxnet_output_length * one_year * one_day / base_config%dt)
@@ -251,9 +259,17 @@ CONTAINS
     END IF
 
 
-    !! 9 run model-specific init routine  (land plant soil canopy test_canopy)
+    !! 10 run model-specific init routine  (land plant soil canopy test_canopy)
     !! 
     !! 
+    ! enable/ disable forcing
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant','canopy') ! ,'soil'
+        l_forcing = .TRUE.
+      CASE DEFAULT
+        l_forcing = .FALSE.
+    END SELECT
+    ! run model init
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land')
         ! currently same as plant -> calling simply 'init_slm_plant'!
@@ -264,8 +280,8 @@ CONTAINS
         CALL finish('land_model_driver-init_routine','Nice try, but the soil model does not exist yet :) ')
       CASE('canopy')
         CALL init_slm_canopy(model, tile)
-      CASE('test_canopy')
-        CALL init_slm_test_canopy(model, tile)
+!      CASE('test_canopy')
+!         init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
       CASE DEFAULT
         CALL finish('land_model_driver-init_routine','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
      END SELECT
@@ -304,8 +320,6 @@ CONTAINS
     !  bi-directional pointer
     lctlib => model%lctlib(tile%lcts%lib_id)
 
-    ! forcing
-    CALL init_forcing                       !< needs atmland_config%Init to run before
     ! accumulation
     CALL tile%plant%daily_average%init      !< initially sets all variables to zero or .FALSE.
     CALL tile%plant%moving_average%init     !< init variables with reasonable default values and sets accumulation periods
@@ -333,28 +347,24 @@ CONTAINS
       init_pool%phosphorus = init_pool%nitrogen / &
                             lctlib%np_leaf
 
+      ! init_pool%carbon13
       IF(lctlib%ps_pathway == ic3phot)THEN
-         hlp1 = discrimination_ps(CiCa_default_C3*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
-                                  'C13',lctlib%ps_pathway)
+         hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
       ELSE
-         hlp1 = discrimination_ps(CiCa_default_C4*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
-                                  'C13',lctlib%ps_pathway)
+         hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
       ENDIF
-      init_pool%carbon13 = calc_fractionation(atm2land%co2_mixing_ratio, & 
-                                              atm2land%co2_mixing_ratio_C13,hlp1) & 
-                                            * init_pool%carbon 
+      init_pool%carbon13 = calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13,hlp1) * init_pool%carbon 
 
+
+      ! init_pool%carbon14
       IF(lctlib%ps_pathway == ic3phot)THEN
-         hlp1 = discrimination_ps(CiCa_default_C3*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
-                                  'C14',lctlib%ps_pathway)
+         hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
       ELSE
-         hlp1 = discrimination_ps(CiCa_default_C4*atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio, & 
-                                  'C14',lctlib%ps_pathway)
+         hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
       ENDIF
-      init_pool%carbon14 = calc_fractionation(atm2land%co2_mixing_ratio, & 
-                                              atm2land%co2_mixing_ratio_C14,hlp1) & 
-                                            * init_pool%carbon
+      init_pool%carbon14 = calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C14,hlp1) * init_pool%carbon
 
+      ! start bareground ?
       IF(veg_config%flag_start_bareground)THEN
          tile%plant%pool%seed_bed = init_pool 
       ELSE
@@ -387,8 +397,6 @@ CONTAINS
     ref_lai   = 3._wp
     ref_nleaf = 2.0_wp
 
-    ! forcing
-    CALL init_forcing                                !< needs atmland_config%Init to run before
     ! accumulation
     CALL tile%plant%daily_average%init      !< initially sets all variables to zero or .FALSE.
     CALL tile%plant%moving_average%init     !< init variables with reasonable default values and sets accumulation periods
@@ -411,82 +419,5 @@ CONTAINS
 
   END SUBROUTINE init_slm_canopy
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> init routine specific to the test_canopy model
-  !!
-  !! called from init_slm
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm_test_canopy(model, tile) !(model_id, model_name)
-
-    USE mo_atmland_util,     ONLY: calc_spec_humidity_sat
-
-    IMPLICIT NONE
-
-    TYPE(t_model),INTENT(inout),TARGET           :: model      !< data structure for dynamic vegetation and soil variables
-    TYPE(t_slm_tile),INTENT(inout)               :: tile       !< data structure for dynamic vegetation and soil variables
-    ! 0.2 Local
-    TYPE(t_lctlib_element),POINTER               :: lctlib     !< land-cover-type library - parameter across pft's
-
-
-    ! parameters (specific to the test_canopy model)
-    ! these parameters were also defined in mo_land_model_interface:run_test_canopy_model !!
-    REAL(wp),SAVE :: ref_t_air = 25.0_wp          ! temperature in deg C 
-    REAL(wp),SAVE :: ref_vpd = 1000._wp           ! vpd in Pa
-    REAL(wp),SAVE :: ref_swdown = 652.173913_wp   ! PAR in W m-2
-    REAL(wp),SAVE :: ref_fdiffuse = 0.2_wp        ! diffuse fraction
-    REAL(wp),SAVE :: ref_cos_angle = 0.8_wp       ! cosine of zenith angle
-    REAL(wp),SAVE :: ref_co2 = 380.0_wp           ! co2 in ppm
-    REAL(wp),SAVE :: ref_wind = 1.0_wp            ! wind in m/s
-    REAL(wp),SAVE :: ref_theta = 100._wp          ! soil water availability in %
-    REAL(wp),SAVE :: ref_lai = 3._wp              ! LAI
-    REAL(wp),SAVE :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
-    INTEGER ,SAVE :: ref_pft = 1                  ! PFT identifier
-
-    !  bi-directional pointer
-    lctlib => model%lctlib(ref_pft)
-
-
-    !> 1.1 Initalisation of met-forcing which is assumed constant 
-    !! 
-    !!  
-    atm2land%t_air            = ref_t_air + TZero 
-    atm2land%press_srf        = standard_press_srf
-    atm2land%q_air            = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - def_vpd / atm2land%press_srf * eps_vpd
-    atm2land%co2_mixing_ratio = def_co2
-    atm2land%rain             = 0.0_wp
-    atm2land%snow             = 0.0_wp
-    atm2land%swvis_srf_down   = ref_swdown
-    atm2land%swnir_srf_down   = atm2land%swvis_srf_down * 0.1_wp
-    atm2land%swpar_srf_down   = atm2land%swvis_srf_down
-    atm2land%swpar_fdiffuse   = ref_fdiffuse
-    atm2land%wind_air         = ref_wind
-    atm2land%wind_10m         = atm2land%wind_air
-    atm2land%lw_srf_down      = 0.0_wp
-    atm2land%drag_srf         = 1.0_wp
-    atm2land%t_acoef          = 0.0_wp
-    atm2land%t_bcoef          = 0.0_wp
-    atm2land%q_acoef          = 0.0_wp
-    atm2land%q_bcoef          = 0.0_wp
-    atm2land%pch              = 0.0_wp
-    atm2land%cos_zenith_angle = ref_cos_angle
-    atm2land%ga               = 0.1_wp / ( atm2land%drag_srf * atm2land%wind_10m )
-    grid%lat                  = 50.0_wp
-    grid%lon                  = 0.0_wp
-
-    !> 1.2 Initialisation of soil and vegetation (so far relevant) 
-    !!
-    !!  
-    tile%soil%theta  = ref_theta
-    tile%plant%lai   = ref_lai 
-    IF(ref_pft==0) THEN
-      tile%plant%pool%leaf%nitrogen     = ref_nleaf / molar_mass_N * tile%plant%lai
-    ELSE
-      tile%plant%pool%leaf%nitrogen     = tile%plant%lai / lctlib%sla / lctlib%cn_leaf
-      tile%plant%pool%leaf%phosphorus   = tile%plant%pool%leaf%nitrogen / lctlib%np_leaf
-      tile%plant%pftid                  = ref_pft
-    ENDIF
-
-  END SUBROUTINE init_slm_test_canopy
 
 END MODULE mo_jsb_model_init

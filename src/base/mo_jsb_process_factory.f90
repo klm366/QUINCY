@@ -13,13 +13,13 @@ MODULE mo_jsb_process_factory
 
   USE mo_exception,            ONLY: finish
 
-  !
+  ! 
   USE mo_jsb_process_class,    ONLY: t_jsb_process, Get_process_name
   USE mo_jsb_memory_class,     ONLY: t_jsb_memory, t_jsb_memory_p
   USE mo_jsb_config_class,     ONLY: t_jsb_config
-  !
-!!  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-!!  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+  ! 
+  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
 !!  USE mo_seb_memory_class,     ONLY: t_seb_memory
 !!  USE mo_turb_memory_class,    ONLY: t_turb_memory
 !!  USE mo_soil_memory_class,    ONLY: t_soil_memory
@@ -52,8 +52,7 @@ MODULE mo_jsb_process_factory
 !!  USE mo_hd_config_class,      ONLY: t_hd_config
 !!#endif
 
-!!  USE mo_jsb_process_class, ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
-  USE mo_jsb_process_class,    ONLY: ATM2LAND_P, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO ! changed for compatibility with SLM
+  USE mo_jsb_process_class, ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
 
   IMPLICIT NONE
   PRIVATE
@@ -123,8 +122,8 @@ CONTAINS
 
   FUNCTION Create_process_memory(iproc) RESULT(return_ptr)
 
-!!    USE mo_atm2land_memory_class, ONLY: max_no_of_atm2land_vars => max_no_of_vars
-!!    USE mo_land2atm_memory_class, ONLY: max_no_of_land2atm_vars => max_no_of_vars
+    USE mo_atm2land_memory_class, ONLY: max_no_of_atm2land_vars => max_no_of_vars
+    USE mo_land2atm_memory_class, ONLY: max_no_of_land2atm_vars => max_no_of_vars
 !!    USE mo_seb_memory_class,     ONLY: max_no_of_seb_vars => max_no_of_vars
 !!    USE mo_turb_memory_class,    ONLY: max_no_of_turb_vars => max_no_of_vars
 !!    USE mo_soil_memory_class,    ONLY: max_no_of_soil_vars => max_no_of_vars
@@ -141,12 +140,12 @@ CONTAINS
     CLASS(t_jsb_memory), POINTER   :: return_ptr
 
     SELECT CASE(iproc)
-!!    CASE (ATM2LAND)
-!!      ALLOCATE(t_atm2land_memory::return_ptr)
-!!      return_ptr%max_no_of_vars = max_no_of_atm2land_vars
-!!    CASE (LAND2ATM)
-!!      ALLOCATE(t_land2atm_memory::return_ptr)
-!!      return_ptr%max_no_of_vars = max_no_of_land2atm_vars
+    CASE (ATM2LAND)
+      ALLOCATE(t_atm2land_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_atm2land_vars
+    CASE (LAND2ATM)
+      ALLOCATE(t_land2atm_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_land2atm_vars
 !!    CASE (SEB)
 !!      ALLOCATE(t_seb_memory::return_ptr)
 !!      return_ptr%max_no_of_vars = max_no_of_seb_vars

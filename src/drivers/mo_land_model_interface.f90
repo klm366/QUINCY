@@ -28,13 +28,74 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE land_model_interface(tile, &                ! one specific tile
                                   model, &               ! mode & model%lctlib
-                                  time_day, time_year, timestep_prop_day &
-                                 )
+                                  l_forcing, &           ! forcing on/off
+                                  time_day, time_year, timestep_prop_day, &
+                                  !! atm2land memory - INTENT(in) - start
+                                  t_air              , &
+                                  q_air              , &
+                                  rain               , &
+                                  snow               , &
+                                  wind_air           , &
+                                  wind_10m           , &
+                                  lw_srf_down        , &
+                                  swvis_srf_down     , &
+                                  swnir_srf_down     , &
+                                  swpar_srf_down     , &
+                                  swpar_fdiffuse     , &
+                                  press_srf          , &
+                                  drag_srf           , &
+                                  t_acoef            , &
+                                  t_bcoef            , &
+                                  q_acoef            , &
+                                  q_bcoef            , &
+                                  pch                , &
+                                  cos_zenith_angle   , &
+                                  co2_mixing_ratio     , &
+                                  co2_mixing_ratio_C13 , &
+                                  co2_mixing_ratio_C14 , &
+                                  ga                   , &
+                                  ! For lakes:
+                                  albedo_lwtr        , &
+                                  drag_wtr           , &
+                                  drag_ice           , &
+                                  t_acoef_wtr        , &
+                                  t_bcoef_wtr        , &
+                                  q_acoef_wtr        , &
+                                  q_bcoef_wtr        , &
+                                  t_acoef_ice        , &
+                                  t_bcoef_ice        , &
+                                  q_acoef_ice        , &
+                                  q_bcoef_ice        , &
+                                 !! atm2land memory - end
+                                 !! land2atm memory - INTENT(out) - start
+                                  t_srf             ,   &
+                                  t_eff_srf         ,   &
+                                  qsat_srf          ,   &
+                                  fact_q_air        ,   &
+                                  fact_qsat_srf     ,   &
+                                  zh_srf            ,   &
+                                  zm_srf            ,   &
+                                  alb_vis_dif       ,   &
+                                  alb_nir_dif       ,   &
+                                  alb_vis_dir       ,   &
+                                  alb_nir_dir       ,   &
+                                  albedo            ,   &
+                                  sensible_heat_flx ,   &
+                                  latent_heat_flx   ,   &
+                                  net_radiation     ,   &
+                                  vpd               ,   &
+                                  ! For lakes:
+                                  latent_hflx_wtr   ,   &
+                                  sensible_hflx_wtr ,   &
+                                  latent_hflx_ice   ,   &
+                                  sensible_hflx_ice     &
+                                  !! land2atm memory - end
+                                  )
 
     USE mo_kind
     USE mo_base_memory,             ONLY: t_slm_tile, t_model
     USE mo_base_config_class,       ONLY: base_config
-    USE mo_atmland_memory
+    USE mo_atmland_interface,       ONLY: update_atm2land, update_land2atm
     USE mo_veg_output,              ONLY: write_output_pool, write_output_flux
     USE mo_veg_config_class,        ONLY: veg_config  ! used to switch on/off the update_soil_pool via flag_base_soil_model
 
@@ -53,11 +114,116 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)      :: tile              !< data structure for dynamic vegetation and soil variables
     TYPE(t_model),INTENT(inout)         :: model             !< model structure
+    LOGICAL,INTENT(in)                  :: l_forcing         !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
     REAL(wp),INTENT(in)                 :: time_day          !< displays the 'real time' in days; time_day == 1.0 after one day has passed
     INTEGER,INTENT(in)                  :: time_year         !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
     REAL(wp),INTENT(in)                 :: timestep_prop_day !< proportion of one day that is simulated with one timestep (dt/one_day)
+    REAL(wp),INTENT(in)           :: &               !! atm2land memory - INTENT(in) - start
+                                  t_air              , &
+                                  q_air              , &
+                                  rain               , &
+                                  snow               , &
+                                  wind_air           , &
+                                  wind_10m           , &
+                                  lw_srf_down        , &
+                                  swvis_srf_down     , &
+                                  swnir_srf_down     , &
+                                  swpar_srf_down     , &
+                                  swpar_fdiffuse     , &
+                                  press_srf          , &
+                                  drag_srf           , &
+                                  t_acoef            , &
+                                  t_bcoef            , &
+                                  q_acoef            , &
+                                  q_bcoef            , &
+                                  pch                , &
+                                  cos_zenith_angle   , &
+                                  co2_mixing_ratio     , &
+                                  co2_mixing_ratio_C13 , &
+                                  co2_mixing_ratio_C14 , &
+                                  ga                   , &
+                                  ! For lakes:
+                                  albedo_lwtr        , &
+                                  drag_wtr           , &
+                                  drag_ice           , &
+                                  t_acoef_wtr        , &
+                                  t_bcoef_wtr        , &
+                                  q_acoef_wtr        , &
+                                  q_bcoef_wtr        , &
+                                  t_acoef_ice        , &
+                                  t_bcoef_ice        , &
+                                  q_acoef_ice        , &
+                                  q_bcoef_ice        
+                                                     !! atm2land memory - end
+    REAL(wp),INTENT(out)          :: &              !! land2atm memory - INTENT(out) - start
+                                  t_srf             ,   &
+                                  t_eff_srf         ,   &
+                                  qsat_srf          ,   &
+                                  fact_q_air        ,   &
+                                  fact_qsat_srf     ,   &
+                                  zh_srf            ,   &
+                                  zm_srf            ,   &
+                                  alb_vis_dif       ,   &
+                                  alb_nir_dif       ,   &
+                                  alb_vis_dir       ,   &
+                                  alb_nir_dir       ,   &
+                                  albedo            ,   &
+                                  sensible_heat_flx ,   &
+                                  latent_heat_flx   ,   &
+                                  net_radiation     ,   &
+                                  vpd               ,   &
+                                  ! For lakes:
+                                  latent_hflx_wtr   ,   &
+                                  sensible_hflx_wtr ,   &
+                                  latent_hflx_ice   ,   &
+                                  sensible_hflx_ice !! land2atm memory - end
     ! 0.2 Local
     ! ...
+
+
+    !> pass atmland variables from forcing input (driver) to atm2land
+    !! 
+    IF (l_forcing) THEN       ! l_forcing is true
+      CALL update_atm2land( &
+      ! the sequence of input variables is consistent with the sequence of var in t_atm2land_memory & atmland_interface
+      tile                                         , &
+      t_air                   = t_air              , &
+      q_air                   = q_air              , &
+      rain                    = rain               , &
+      snow                    = snow               , &
+      wind_air                = wind_air           , &
+      wind_10m                = wind_10m           , &
+      lw_srf_down             = lw_srf_down        , &
+      swvis_srf_down          = swvis_srf_down     , &
+      swnir_srf_down          = swnir_srf_down     , &
+      swpar_srf_down          = swpar_srf_down     , &
+      swpar_fdiffuse          = swpar_fdiffuse     , &
+      press_srf               = press_srf          , &
+      drag_srf                = drag_srf           , &
+      t_acoef                 = t_acoef            , &
+      t_bcoef                 = t_bcoef            , &
+      q_acoef                 = q_acoef            , &
+      q_bcoef                 = q_bcoef            , &
+      pch                     = pch                , &
+      cos_zenith_angle        = cos_zenith_angle   , &
+      co2_mixing_ratio        = co2_mixing_ratio     , &
+      co2_mixing_ratio_C13    = co2_mixing_ratio_C13 , &
+      co2_mixing_ratio_C14    = co2_mixing_ratio_C14 , &
+      ga                      = ga                   , &
+      ! For lakes:
+      albedo_lwtr             = albedo_lwtr        , &
+      drag_wtr                = drag_wtr           , &
+      drag_ice                = drag_ice           , &
+      t_acoef_wtr             = t_acoef_wtr        , &
+      t_bcoef_wtr             = t_bcoef_wtr        , &
+      q_acoef_wtr             = q_acoef_wtr        , &
+      q_bcoef_wtr             = q_bcoef_wtr        , &
+      t_acoef_ice             = t_acoef_ice        , &
+      t_bcoef_ice             = t_bcoef_ice        , &
+      q_acoef_ice             = q_acoef_ice        , &
+      q_bcoef_ice             = q_bcoef_ice          &
+      & )
+    END IF
 
 
     !> @todo mo_land_model_interface:land_model_interface put all Tasks into a Queue accordingly to the model selection
@@ -87,10 +253,11 @@ CONTAINS
 
     !! accumulation - daily & moving average
     !! 
-      CALL tile%plant%daily_average%calc_avrg(tile%plant, time_day, timestep_prop_day) !< daily avrg of the prev day
+      CALL tile%plant%daily_average%calc_avrg(tile%plant, time_day, timestep_prop_day, &!) !< daily avrg of the prev day
+                                                                    swpar_srf_down)  ! a temporal fix this is !!!
       CALL tile%plant%moving_average%update_veg(tile%plant)               !< moving averages - vegetation
       !CALL tile%plant%moving_average%update_soil(tile%plant)             !< moving averages - soil -> plant N & P uptake
-      CALL tile%plant%moving_average%update_tile(atm2land%t_air, atm2land%press_srf, atm2land%q_air) !< moving averages - atmland
+      CALL tile%plant%moving_average%update_tile(t_air, press_srf, q_air) !< moving averages - atmland
 
     !! output pool: write output in certain intervals, see mo_veg_output
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
@@ -128,10 +295,11 @@ CONTAINS
 
     !! accumulation - daily & moving average
     !! 
-      CALL tile%plant%daily_average%calc_avrg(tile%plant, time_day, timestep_prop_day) !< daily avrg of the prev day
+      CALL tile%plant%daily_average%calc_avrg(tile%plant, time_day, timestep_prop_day, &!) !< daily avrg of the prev day
+                                                                    swpar_srf_down)  ! a temporal fix this is !!!
       CALL tile%plant%moving_average%update_veg(tile%plant)               !< moving averages - vegetation
       !CALL tile%plant%moving_average%update_soil(tile%plant)             !< moving averages - soil -> plant N & P uptake
-      CALL tile%plant%moving_average%update_tile(atm2land%t_air, atm2land%press_srf, atm2land%q_air) !< moving averages - atmland
+      CALL tile%plant%moving_average%update_tile(t_air, press_srf, q_air) !< moving averages - atmland
 
     !! output pool: write output in certain intervals, see mo_veg_output
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
@@ -162,15 +330,16 @@ CONTAINS
 
     !! accumulation - daily & moving average
     !! 
-      CALL tile%plant%daily_average%calc_avrg(tile%plant, time_day, timestep_prop_day) !< daily avrg of the prev day
+      CALL tile%plant%daily_average%calc_avrg(tile%plant, time_day, timestep_prop_day, &!) !< daily avrg of the prev day
+                                                                    swpar_srf_down)  ! a temporal fix this is !!!
       CALL tile%plant%moving_average%update_veg(tile%plant)               !< moving averages - vegetation
       !CALL tile%plant%moving_average%update_soil(tile%plant)             !< moving averages - soil -> plant N & P uptake
-      CALL tile%plant%moving_average%update_tile(atm2land%t_air, atm2land%press_srf, atm2land%q_air) !< moving averages - atmland
+      CALL tile%plant%moving_average%update_tile(t_air, press_srf, q_air) !< moving averages - atmland
 
     !! output fluxes -> filename: fort.20
     !! output also some atm2land variables
     !! 
-      WRITE(20,'(6F16.7)') time_day+time_year*one_year, atm2land%t_air, atm2land%swpar_srf_down * rad2par, & 
+      WRITE(20,'(6F16.7)') time_day+time_year*one_year, t_air, swpar_srf_down * rad2par, & 
                            tile%plant%flux%gpp, tile%plant%gc, tile%plant%flux%ci
 
     CASE('test_canopy')
@@ -179,7 +348,37 @@ CONTAINS
 
     CASE DEFAULT
         CALL finish('land_model_interface','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
-   END SELECT
+    END SELECT
+
+    !> pass atmland variables from land2atm memory back to the driver
+    !! 
+    IF (l_forcing) THEN       ! l_forcing is true if update_atm2land() is called (depends on the SLM model selected)
+      CALL update_land2atm( &
+      ! the sequence of input variables is consistent with the sequence of var in t_land2atm_memory !
+      tile                                        ,   &
+      t_srf                   = t_srf             ,   &
+      t_eff_srf               = t_eff_srf         ,   &
+      qsat_srf                = qsat_srf          ,   &
+      fact_q_air              = fact_q_air        ,   &
+      fact_qsat_srf           = fact_qsat_srf     ,   &
+      zh_srf                  = zh_srf            ,   &
+      zm_srf                  = zm_srf            ,   &
+      alb_vis_dif             = alb_vis_dif       ,   &
+      alb_nir_dif             = alb_nir_dif       ,   &
+      alb_vis_dir             = alb_vis_dir       ,   &
+      alb_nir_dir             = alb_nir_dir       ,   &
+      albedo                  = albedo            ,   &
+      sensible_heat_flx       = sensible_heat_flx ,   &
+      latent_heat_flx         = latent_heat_flx   ,   &
+      net_radiation           = net_radiation     ,   &
+      vpd                     = vpd               ,   &
+      ! For lakes:
+      latent_hflx_wtr         = latent_hflx_wtr   ,   &
+      sensible_hflx_wtr       = sensible_hflx_wtr ,   &
+      latent_hflx_ice         = latent_hflx_ice   ,   &
+      sensible_hflx_ice       = sensible_hflx_ice     &
+      & )
+    END IF
   END SUBROUTINE land_model_interface
 
 
@@ -193,8 +392,8 @@ CONTAINS
     USE mo_base_memory,                     ONLY: t_slm_tile, t_model
     USE mo_base_constants,                  ONLY: npft
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
-    USE mo_atmland_memory,                  ONLY: atm2land
-    USE mo_atmland_constants,               ONLY: rad2par, frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd
+    USE mo_atmland_constants,               ONLY: rad2par, frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, &
+                                                  def_co2_mixing_ratio
     USE mo_atmland_util,                    ONLY: calc_spec_humidity_sat
     USE mo_shared_constants,                ONLY: molar_mass_N, Tzero 
     ! Process interfaces:
@@ -212,24 +411,92 @@ CONTAINS
     REAL(wp) :: vpd
     REAL(wp) :: hlp1
     INTEGER :: i,lun
+    REAL(wp) ::   t_air , &
+                  press_srf , &
+                  q_air      , &
+                  co2_mixing_ratio , &
+                  rain          , &
+                  snow           , &
+                  swvis_srf_down , &
+                  swnir_srf_down , &
+                  swpar_srf_down , &
+                  swpar_fdiffuse , &
+                  wind_air       , &
+                  wind_10m       , &
+                  lw_srf_down    , &
+                  drag_srf       , &
+                  t_acoef        , &
+                  t_bcoef        , &
+                  q_acoef        , &
+                  q_bcoef        , &
+                  pch            , &
+                  cos_zenith_angle , &
+                  ga             !, &
+                  !latitude      , &
+                  !longitude     , &
 
     ! parameters (specific to the test_canopy model)
-    ! these parameters were also defined in mo_jsb_model_init:init_slm_test_canopy !!
-    REAL(wp),SAVE :: ref_t_air = 25.0_wp          ! temperature in deg C 
-    REAL(wp),SAVE :: ref_vpd = 1000._wp           ! vpd in Pa
-    REAL(wp),SAVE :: ref_swdown = 652.173913_wp   ! PAR in W m-2
-    REAL(wp),SAVE :: ref_fdiffuse = 0.2_wp        ! diffuse fraction
-    REAL(wp),SAVE :: ref_cos_angle = 1.0_wp       ! cosine of zenith angle
-    REAL(wp),SAVE :: ref_co2 = 380.0_wp           ! co2 in ppm
-    REAL(wp),SAVE :: ref_wind = 1.0_wp            ! wind in m/s
-    REAL(wp),SAVE :: ref_theta = 100._wp          ! soil water availability in %
-    REAL(wp),SAVE :: ref_lai = 3._wp              ! LAI
-    REAL(wp),SAVE :: ref_nleaf = 2.0_wp           ! N leaf per unit leaf area in gN/m2
-    INTEGER ,SAVE :: ref_pft = 1                  ! PFT identifier
+    REAL(wp),SAVE :: ref_t_air = 25.0_wp              ! temperature in deg C 
+    REAL(wp),SAVE :: ref_vpd = 1000._wp               ! vpd in Pa
+    REAL(wp),SAVE :: ref_swdown = 652.173913_wp       ! PAR in W m-2
+    REAL(wp),SAVE :: ref_fdiffuse = 0.2_wp            ! diffuse fraction
+    REAL(wp),SAVE :: ref_cos_angle = 0.8_wp           ! cosine of zenith angle
+    REAL(wp),SAVE :: ref_co2_mixing_ratio = 380.0_wp  ! co2 in ppm
+    REAL(wp),SAVE :: ref_wind = 1.0_wp                ! wind in m/s
+    REAL(wp),SAVE :: ref_theta = 100._wp              ! soil water availability in %
+    REAL(wp),SAVE :: ref_lai = 3._wp                  ! LAI
+    REAL(wp),SAVE :: ref_nleaf = 2.0_wp               ! N leaf per unit leaf area in gN/m2
+    INTEGER ,SAVE :: ref_pft = 1                      ! PFT identifier
 
     !  bi-directional pointer
     lctlib => model%lctlib(ref_pft)
-    tile%plant%moving_average%t_jmax_opt = 20._wp+0.35_wp*(atm2land%t_air - Tzero)
+    tile%plant%moving_average%t_jmax_opt = 20._wp+0.35_wp*(t_air - Tzero)
+
+
+    !> 1.0 Init
+    !! 
+    !!  
+
+    !> 1.1 Initalisation of met-forcing which is assumed constant 
+    !! 
+    !!  
+    t_air            = ref_t_air + TZero 
+    press_srf        = standard_press_srf
+    q_air            = calc_spec_humidity_sat(t_air,press_srf) - ref_vpd / press_srf * eps_vpd
+    co2_mixing_ratio = def_co2_mixing_ratio   ! def_co2_mixing_ratio is used instead of ref_co2_mixing_ratio 
+    rain             = 0.0_wp
+    snow             = 0.0_wp
+    swvis_srf_down   = ref_swdown
+    swnir_srf_down   = swvis_srf_down * 0.1_wp
+    swpar_srf_down   = swvis_srf_down
+    swpar_fdiffuse   = ref_fdiffuse
+    wind_air         = ref_wind
+    wind_10m         = wind_air
+    lw_srf_down      = 0.0_wp
+    drag_srf         = 1.0_wp
+    t_acoef          = 0.0_wp
+    t_bcoef          = 0.0_wp
+    q_acoef          = 0.0_wp
+    q_bcoef          = 0.0_wp
+    pch              = 0.0_wp
+    cos_zenith_angle = ref_cos_angle
+    ga               = 0.1_wp / ( drag_srf * wind_10m )
+    !latitude                  = 50.0_wp
+    !longitude                 = 0.0_wp
+
+    !> 1.2 Initialisation of soil and vegetation (so far relevant) 
+    !!
+    !!  
+    tile%soil%theta  = ref_theta
+    tile%plant%lai   = ref_lai 
+    IF(ref_pft==0) THEN
+      tile%plant%pool%leaf%nitrogen     = ref_nleaf / molar_mass_N * tile%plant%lai
+    ELSE
+      tile%plant%pool%leaf%nitrogen     = tile%plant%lai / lctlib%sla / lctlib%cn_leaf
+      tile%plant%pool%leaf%phosphorus   = tile%plant%pool%leaf%nitrogen / lctlib%np_leaf
+      tile%plant%pftid                  = ref_pft
+    ENDIF
+
 
   !> 2.0 Sensitivity plots
   !!
@@ -240,55 +507,56 @@ CONTAINS
   !! 
   lun = 10
   WRITE(lun,*) 'PAR A GC CI' 
-  atm2land%swpar_srf_down = 0.0_wp 
+
+  swpar_srf_down = 0.0_wp 
   DO i = 1,16
 
-     atm2land%swpar_srf_down = atm2land%swpar_srf_down + 100.0_wp / rad2par 
-     atm2land%swvis_srf_down = atm2land%swpar_srf_down / frac_par_swvis_srf 
-     atm2land%swnir_srf_down = atm2land%swvis_srf_down * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
+     swpar_srf_down = swpar_srf_down + 100.0_wp / rad2par 
+     swvis_srf_down = swpar_srf_down / frac_par_swvis_srf 
+     swnir_srf_down = swvis_srf_down * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
      CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') atm2land%swpar_srf_down * rad2par, & 
+     WRITE(lun,'(4F16.7)') swpar_srf_down * rad2par, & 
            tile%plant%flux%an,tile%plant%gc*1000._wp, & 
-           tile%plant%flux%ci/atm2land%co2_mixing_ratio !,&
+           tile%plant%flux%ci/co2_mixing_ratio !,&
 !           tile%plant%flux%an,
-!           tile%plant%flux%ci/atm2land%co2_mixing_ratio,tile%plant%pool%leaf%nitrogen*molar_mass_N,&
+!           tile%plant%flux%ci/co2_mixing_ratio,tile%plant%pool%leaf%nitrogen*molar_mass_N,&
 !           tile%plant%flux%an/(tile%plant%pool%leaf%nitrogen*molar_mass_N)
 
   END DO
-  atm2land%swpar_srf_down = ref_swdown 
-  atm2land%swvis_srf_down = atm2land%swpar_srf_down / frac_par_swvis_srf 
-  atm2land%swnir_srf_down = atm2land%swvis_srf_down * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
+  swpar_srf_down = ref_swdown 
+  swvis_srf_down = swpar_srf_down / frac_par_swvis_srf 
+  swnir_srf_down = swvis_srf_down * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
 
   !> 2.2 Temperature (-5,60 °C)
   !! 
   !! 
   lun = lun + 1
   WRITE(lun,*) 'T A GC CI' 
-  atm2land%t_air = - 5.0_wp + Tzero
+  t_air = - 5.0_wp + Tzero
   hlp1 = tile%plant%moving_average%t_jmax_opt
   DO i = 1,70
 
-     atm2land%t_air = atm2land%t_air + 1.0_wp 
-     atm2land%q_air = 0.8_wp * calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf)
-     tile%plant%moving_average%t_jmax_opt = 20._wp+0.35_wp*(atm2land%t_air - Tzero)
+     t_air = t_air + 1.0_wp 
+     q_air = 0.8_wp * calc_spec_humidity_sat(t_air,press_srf)
+     tile%plant%moving_average%t_jmax_opt = 20._wp+0.35_wp*(t_air - Tzero)
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
      CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') atm2land%t_air, &  
+     WRITE(lun,'(4F16.7)') t_air, &  
            tile%plant%flux%an,tile%plant%gc*1000._wp, &
-           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
+           tile%plant%flux%ci/co2_mixing_ratio 
 
   END DO
-  atm2land%t_air    = ref_t_air + Tzero
-  atm2land%q_air    = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - ref_vpd / atm2land%press_srf * eps_vpd
+  t_air    = ref_t_air + Tzero
+  q_air    = calc_spec_humidity_sat(t_air,press_srf) - ref_vpd / press_srf * eps_vpd
   tile%plant%moving_average%t_jmax_opt = hlp1 
 
   !> 2.3 atmospheric CO2 (175 - 1000 ppm) 
@@ -296,22 +564,22 @@ CONTAINS
   !! 
   lun = lun + 1 
   WRITE(lun,*) 'CO2 A GC CI' 
-  atm2land%co2_mixing_ratio = 150._wp
+  co2_mixing_ratio = 150._wp
   DO i = 1,34
 
-     atm2land%co2_mixing_ratio = atm2land%co2_mixing_ratio + 25._wp
+     co2_mixing_ratio = co2_mixing_ratio + 25._wp
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
      CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') atm2land%co2_mixing_ratio, &
+     WRITE(lun,'(4F16.7)') co2_mixing_ratio, &
            tile%plant%flux%an,tile%plant%gc*1000._wp, &
-           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
+           tile%plant%flux%ci/co2_mixing_ratio 
 
   END DO
-  atm2land%co2_mixing_ratio = ref_co2 
+  co2_mixing_ratio = ref_co2_mixing_ratio 
 
   !> 2.4 VPD (0-3.3 kPa) 
   !! 
@@ -319,22 +587,22 @@ CONTAINS
   lun = lun + 1
   WRITE(lun,*) 'VPD A GC CI' 
   DO i = 1,30
-     atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - i * 100.0_wp / atm2land%press_srf * eps_vpd
+     q_air = calc_spec_humidity_sat(t_air,press_srf) - i * 100.0_wp / press_srf * eps_vpd
 
      !! canopy calculation fluxes
      CALL tile%plant%flux%set_zero
      CALL update_radiation(tile, lctlib)            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, lctlib)        !< mo_assimi_update_canopy_fluxes
 
-     vpd = ( calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - atm2land%q_air ) / eps_vpd * atm2land%press_srf / 1000.0_wp
+     vpd = ( calc_spec_humidity_sat(t_air,press_srf) - q_air ) / eps_vpd * press_srf / 1000.0_wp
 
      WRITE(lun,'(4F16.7)') vpd, &
            tile%plant%flux%an,tile%plant%gc*1000._wp, &
-           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
+           tile%plant%flux%ci/co2_mixing_ratio 
 
   END DO
-  atm2land%q_air = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - ref_vpd / atm2land%press_srf * eps_vpd
-  vpd = ( calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf) - atm2land%q_air ) / eps_vpd * atm2land%press_srf / 1000.0_wp
+  q_air = calc_spec_humidity_sat(t_air,press_srf) - ref_vpd / press_srf * eps_vpd
+  vpd = ( calc_spec_humidity_sat(t_air,press_srf) - q_air ) / eps_vpd * press_srf / 1000.0_wp
 
   !> 2.5 Theta (0-100 %)
   !! 
@@ -353,7 +621,7 @@ CONTAINS
 
      WRITE(lun,'(4F16.7)') tile%soil%theta, &
            tile%plant%flux%an,tile%plant%gc*1000._wp, &
-           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
+           tile%plant%flux%ci/co2_mixing_ratio 
 
   END DO
   tile%soil%theta = ref_theta
@@ -376,7 +644,7 @@ CONTAINS
 
      WRITE(lun,'(4F16.7)') tile%plant%lai, &
            tile%plant%flux%an,tile%plant%gc*1000._wp, &
-           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
+           tile%plant%flux%ci/co2_mixing_ratio 
 
   END DO
   tile%plant%lai = ref_lai 
@@ -397,7 +665,7 @@ CONTAINS
 
      WRITE(lun,'(4F16.7)') tile%plant%pool%leaf%nitrogen/tile%plant%lai*molar_mass_N, & 
            tile%plant%flux%an,tile%plant%gc*1000._wp, &
-           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
+           tile%plant%flux%ci/co2_mixing_ratio 
 
   END DO
   tile%plant%pool%leaf%nitrogen=ref_nleaf/molar_mass_N*tile%plant%lai
@@ -419,7 +687,7 @@ CONTAINS
 
      WRITE(lun,'(I1,3F16.7)') tile%plant%pftid, &
            tile%plant%flux%an,tile%plant%gc*1000._wp, &
-           tile%plant%flux%ci/atm2land%co2_mixing_ratio 
+           tile%plant%flux%ci/co2_mixing_ratio 
 
   END DO 
   !STOP

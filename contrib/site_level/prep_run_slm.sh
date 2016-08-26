@@ -13,18 +13,18 @@
 ########################################################################################################
 
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
-experimentalID="flux_base"         # set something useful for you (allowed only: alphanumeric '_' '-'); if empty ( experimentalID="" ) current date is used
+experimentalID=""         # set something useful for you (allowed only: alphanumeric '_' '-'); if empty ( experimentalID="" ) current date is used
 # select sites: FLUXNET or CRUNCEPv5
 siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="yes"          # set either to yes or no (small caps)
-customSiteListFileName="sites4fluxnet_sims.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
+customSiteList="no"          # set either to yes or no (small caps)
+customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
 singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet
 # run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
-specialFluxnetOutput="yes"    # set either to yes or no (small caps)
+specialFluxnetOutput="no"    # set either to yes or no (small caps)
 
 ## namelist.slm options ##
 # flags: T (True) or F (False) [large caps]
@@ -39,18 +39,17 @@ flag_optimal_Nfraction="F"
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
 # vegetation dynamics options
-flag_tile_veg_dynamics="T"
+flag_tile_veg_dynamics="F"
 flag_start_bareground="F"
 
 # simulation length & output
-simulation_length_number=100     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=100     # equal with or larger than output_start_first_day_year
+output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
 
 # forcing input
-option_forcing="readfile"       # constant generate readfile
 soil_awc_prescribe=300.0        # float !
 useSiteSpecificAWC="no"      # yes/no to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=100.0      # float !
@@ -180,7 +179,6 @@ validateUserConfigValues "$flag_optimal_allocation" "$validateFlags" "flag_optim
 validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
-validateUserConfigValues "$option_forcing" "$validateOptionForcing" "option_forcing"
 validateUserConfigValues "$useSiteSpecificAWC" "$validateUseSiteSpecificAWC" "useSiteSpecificAWC"
 
 ## site data-set: FLUXNET or CRUNCEPv5 ##
@@ -453,7 +451,6 @@ changeNamelistValue output_interval_pool "$output_interval_pool"
 changeNamelistValue output_interval_flux "$output_interval_flux"
 changeNamelistValue output_start_first_day_year "$output_start_first_day_year"
 changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
-changeNamelistValue option_forcing "$option_forcing"
 changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
 changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
 

@@ -35,16 +35,17 @@ CONTAINS
 
     USE mo_base_memory,           ONLY: t_slm_tile
     USE mo_base_constants,        ONLY: ncanop 
+    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_var_class,         ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_P, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO ! changed for compatibility with SLM
-
-    USE mo_rad_memory_class,      ONLY: t_rad_memory
-    USE mo_rad_constants 
 
     USE mo_veg_memory,            ONLY: t_slm_plant
+    USE mo_rad_memory_class,      ONLY: t_rad_memory
+    USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+    USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
 
-    USE mo_atmland_memory
+    USE mo_rad_constants 
     USE mo_atmland_constants,     ONLY: rad2par
    
 
@@ -62,7 +63,20 @@ CONTAINS
                                               fleaf_sunlit_nir_cl
 
     ! 0.3 Memory allocation
+    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+    TYPE(t_land2atm_memory), POINTER :: land2atm__mem
     TYPE(t_rad_memory), POINTER :: rad__mem
+    REAL(wp), POINTER           :: swpar_srf_down     , &
+                                   swpar_fdiffuse     , &
+                                   cos_zenith_angle   , &
+                                   swnir_srf_down     , &
+                                   swvis_srf_down
+    REAL(wp), POINTER           :: albedo             , &
+                                   net_radiation      , &
+                                   alb_vis_dir        , &
+                                   alb_vis_dif        , &
+                                   alb_nir_dir        , &
+                                   alb_nir_dif
     REAL(wp), POINTER           :: alb_vis, & 
                                    alb_nir, &
                                    alb_vis_can, & 
@@ -78,34 +92,48 @@ CONTAINS
                                    swnir_srf_net, & 
                                    rad_srf_net
 
+    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+      TYPE IS(t_atm2land_memory)
+        atm2land__mem => mm
+    END SELECT
+    SELECT TYPE (mm => tile%mem(LAND2ATM)%p)
+      TYPE IS(t_land2atm_memory)
+        land2atm__mem => mm
+    END SELECT
     SELECT TYPE (mm => tile%mem(RAD)%p)
       TYPE IS(t_rad_memory)
         rad__mem => mm
     END SELECT
 
-    sw_srf_net   => rad__mem%sw_srf_net%ptr
+    swpar_srf_down   => atm2land__mem%swpar_srf_down%ptr
+    swpar_fdiffuse   => atm2land__mem%swpar_fdiffuse%ptr
+    cos_zenith_angle => atm2land__mem%cos_zenith_angle%ptr
+    swnir_srf_down   => atm2land__mem%swnir_srf_down%ptr
+    swvis_srf_down   => atm2land__mem%swvis_srf_down%ptr
+    albedo            => land2atm__mem%albedo%ptr
+    net_radiation     => land2atm__mem%net_radiation%ptr
+    alb_vis_dir       => land2atm__mem%alb_vis_dir%ptr
+    alb_vis_dif       => land2atm__mem%alb_vis_dif%ptr
+    alb_nir_dir       => land2atm__mem%alb_nir_dir%ptr
+    alb_nir_dif       => land2atm__mem%alb_nir_dif%ptr
+    sw_srf_net      => rad__mem%sw_srf_net%ptr
     swvis_srf_net   => rad__mem%swvis_srf_net%ptr
     swnir_srf_net   => rad__mem%swnir_srf_net%ptr
-    rad_srf_net   => rad__mem%rad_srf_net%ptr
-    alb_vis   => rad__mem%alb_vis%ptr
-    alb_nir   => rad__mem%alb_nir%ptr
-    alb_vis_soil   => rad__mem%alb_vis_soil%ptr
-    alb_nir_soil   => rad__mem%alb_nir_soil%ptr
-    alb_vis_can   => rad__mem%alb_vis_can%ptr
-    alb_nir_can   => rad__mem%alb_nir_can%ptr
+    rad_srf_net     => rad__mem%rad_srf_net%ptr
+    alb_vis         => rad__mem%alb_vis%ptr
+    alb_nir         => rad__mem%alb_nir%ptr
+    alb_vis_soil    => rad__mem%alb_vis_soil%ptr
+    alb_nir_soil    => rad__mem%alb_nir_soil%ptr
+    alb_vis_can     => rad__mem%alb_vis_can%ptr
+    alb_nir_can     => rad__mem%alb_nir_can%ptr
     arad_vis_soil   => rad__mem%arad_vis_soil%ptr
     arad_nir_soil   => rad__mem%arad_nir_soil%ptr
-    arad_vis_can   => rad__mem%arad_vis_can%ptr
-    arad_nir_can   => rad__mem%arad_nir_can%ptr
+    arad_vis_can    => rad__mem%arad_vis_can%ptr
+    arad_nir_can    => rad__mem%arad_nir_can%ptr
 
     !  bi-directional pointer
     plant => tile%plant
 
-    !> 1.0 initalise output
-    !!
-    !! atm2land land2atm are global TYPES, see mo_atmland_memory
-    land2atm%albedo = 0.0_wp
-    land2atm%net_radiation = 0.0_wp
 
     !> 2.0 Snow and soil albedo 
     !! for now, prescribed, should be based on JSBACH 4 routines, and include the effect of snow on the
@@ -115,19 +143,18 @@ CONTAINS
 
     !> 3.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !! 
-    CALL calc_sw_srf_net(atm2land%swvis_srf_down, & 
-                     atm2land%swpar_fdiffuse, atm2land%cos_zenith_angle, & 
+    CALL calc_sw_srf_net(swvis_srf_down, & 
+                     swpar_fdiffuse, cos_zenith_angle, & 
                      plant%lai, lctlib%sigma_vis, kbl0_vis, kdf0_vis, alb_vis_soil, &
                      arad_sunlit_vis_cl,arad_shaded_vis_cl,fleaf_sunlit_vis_cl, &
                      arad_vis_can,arad_vis_soil, &
                      alb_vis_can,alb_vis,swvis_srf_net) 
 
-
     !> 4.0 calculate NIR radiation budget (absorbed radiation on canopy layers and soil + albedo).
     !! Following Weiss & Norman, Agri. For. Met. 1985, the fraction of VIS and NIR 
     !! diffuse radiation are very similar 
-    CALL calc_sw_srf_net(atm2land%swnir_srf_down, & 
-                     atm2land%swpar_fdiffuse, atm2land%cos_zenith_angle, & 
+    CALL calc_sw_srf_net(swnir_srf_down, & 
+                     swpar_fdiffuse, cos_zenith_angle, & 
                      plant%lai, lctlib%sigma_nir, kbl0_nir, kdf0_nir, alb_nir_soil, &
                      arad_sunlit_nir_cl,arad_shaded_nir_cl,fleaf_sunlit_nir_cl, &
                      arad_nir_can,arad_nir_soil, &
@@ -135,10 +162,10 @@ CONTAINS
 
     !> 5.0 calculate albedo and net radiation for total shortwave radiation
     !!
-    IF(atm2land%swvis_srf_down + atm2land%swnir_srf_down>eps8)THEN 
-       land2atm%albedo = ( alb_vis * atm2land%swvis_srf_down + & 
-                           alb_nir * atm2land%swnir_srf_down ) / & 
-                         (atm2land%swvis_srf_down + atm2land%swnir_srf_down) 
+    IF(swvis_srf_down + swnir_srf_down>eps8)THEN 
+       albedo = ( alb_vis * swvis_srf_down + & 
+                           alb_nir * swnir_srf_down ) / & 
+                         (swvis_srf_down + swnir_srf_down) 
     ENDIF 
     sw_srf_net = swvis_srf_net + swnir_srf_net
 
@@ -146,15 +173,15 @@ CONTAINS
     !!
     !! Only for now longwave balance is zero
     rad_srf_net = sw_srf_net
-    land2atm%net_radiation = rad_srf_net
+    net_radiation = rad_srf_net
 
     !> 7.0 communitcate APAR to plant type
     !!
     plant%fleaf_sunlit_cl(:) = fleaf_sunlit_vis_cl(:) 
-    IF(atm2land%swvis_srf_down > eps8) THEN 
-       plant%par_sunlit_cl(:) = arad_sunlit_vis_cl(:) * atm2land%swpar_srf_down/atm2land%swvis_srf_down * rad2par
-       plant%par_shaded_cl(:) = arad_shaded_vis_cl(:) * atm2land%swpar_srf_down/atm2land%swvis_srf_down * rad2par
-       plant%apar = arad_vis_can * atm2land%swpar_srf_down/atm2land%swvis_srf_down * rad2par 
+    IF(swvis_srf_down > eps8) THEN 
+       plant%par_sunlit_cl(:) = arad_sunlit_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
+       plant%par_shaded_cl(:) = arad_shaded_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
+       plant%apar = arad_vis_can * swpar_srf_down/swvis_srf_down * rad2par 
     ELSE 
        plant%par_sunlit_cl(:) = 0.0_wp
        plant%par_shaded_cl(:) = 0.0_wp

@@ -33,6 +33,7 @@ MODULE mo_base_config_class
     CHARACTER(len=20) :: slm_model_name
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
+    REAL(wp)          :: lat, lon  !< latitude longitude currently stored in mo_base_memory:t_slm_grid
   CONTAINS
     PROCEDURE :: Init => Init_base_config
     PROCEDURE :: Timesteps => Get_timstep_number
@@ -63,6 +64,8 @@ CONTAINS
     CHARACTER(len=20) :: slm_model_name
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
+    REAL(wp)          :: latitude, longitude
+
 
     NAMELIST /base_ctl/            &  
         dt_time_step_length_sec,   &
@@ -71,6 +74,11 @@ CONTAINS
         slm_model_name,            &
         fluxnet_output,            &
         fluxnet_output_length
+
+    NAMELIST /grid_ctl/            &  
+        latitude,                  &
+        longitude
+
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -86,6 +94,8 @@ CONTAINS
     slm_model_name                = 'land'
     fluxnet_output                = .FALSE.     ! .TRUE. .FALSE.
     fluxnet_output_length         = 2
+    latitude                      = 50.91       ! about the MPI-BGC Jena
+    longitude                     = 11.56       ! about the MPI-BGC Jena
 
 
     ! read the namelist
@@ -95,6 +105,11 @@ CONTAINS
     nml_unit = position_nml('BASE_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, base_ctl)
     CALL close_nml(nml_handler)
+    ! &GRID_CTL
+    nml_handler = open_nml(TRIM(config%namelist_filename))
+    nml_unit = position_nml('GRID_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, grid_ctl)
+    CALL close_nml(nml_handler)
 
     ! pass values as read from file
     config%dt                         = dt_time_step_length_sec
@@ -103,6 +118,8 @@ CONTAINS
     config%slm_model_name             = slm_model_name
     config%fluxnet_output             = fluxnet_output
     config%fluxnet_output_length      = fluxnet_output_length
+    config%lat                        = latitude
+    config%lon                        = longitude
   END SUBROUTINE Init_base_config
 
   !-----------------------------------------------------------------------------------------------------

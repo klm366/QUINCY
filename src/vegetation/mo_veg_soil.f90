@@ -181,12 +181,17 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_vegsoil_physics(tile)
 
-    USE mo_base_memory,       ONLY: t_slm_soil, t_slm_tile
-    USE mo_veg_memory,        ONLY: t_slm_plant
-    USE mo_base_constants,    ONLY: dt
-    USE mo_atmland_memory
-    USE mo_atmland_util,      ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants,  ONLY: r_gas_dryair,LatentHeatVaporization
+    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+!    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO --> soil creates conflict
+
+    USE mo_base_memory,           ONLY: t_slm_soil, t_slm_tile
+    USE mo_veg_memory,            ONLY: t_slm_plant
+    USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+    USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+
+    USE mo_base_constants,        ONLY: dt
+    USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
+    USE mo_shared_constants,      ONLY: r_gas_dryair,LatentHeatVaporization
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -197,6 +202,36 @@ CONTAINS
     INTEGER  :: t
     REAL(wp) :: q_sat
     REAL(wp) :: evaporation
+    ! 0.3 Memory allocation
+    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+    TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    REAL(wp), POINTER                :: t_air
+    REAL(wp), POINTER                :: press_srf
+    REAL(wp), POINTER                :: q_air
+    REAL(wp), POINTER                :: ga
+    REAL(wp), POINTER                :: rain
+    REAL(wp), POINTER                :: snow
+    REAL(wp), POINTER                :: net_radiation
+    REAL(wp), POINTER                :: latent_heat_flx
+    REAL(wp), POINTER                :: sensible_heat_flx
+    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+      TYPE IS(t_atm2land_memory)
+        atm2land__mem => mm
+    END SELECT
+    SELECT TYPE (mm => tile%mem(LAND2ATM)%p)
+      TYPE IS(t_land2atm_memory)
+        land2atm__mem => mm
+    END SELECT
+    t_air       => atm2land__mem%t_air%ptr
+    press_srf   => atm2land__mem%press_srf%ptr
+    q_air       => atm2land__mem%q_air%ptr
+    ga          => atm2land__mem%ga%ptr
+    rain        => atm2land__mem%rain%ptr
+    snow        => atm2land__mem%snow%ptr
+    net_radiation      => land2atm__mem%net_radiation%ptr
+    latent_heat_flx    => land2atm__mem%latent_heat_flx%ptr
+    sensible_heat_flx  => land2atm__mem%sensible_heat_flx%ptr
+
 
     !  bi-directional pointer
     plant => tile%plant
@@ -206,22 +241,22 @@ CONTAINS
 
        ! saturating specific humidity 
 
-       q_sat = calc_spec_humidity_sat(atm2land%t_air,atm2land%press_srf)
+       q_sat = calc_spec_humidity_sat(t_air,press_srf)
 
        IF(plant%gc > eps8)THEN
           ! T = rho * (qsat - qair ) * Gtot in mm/s 
-          plant%flux%transpiration = atm2land%press_srf / ( r_gas_dryair * atm2land%t_air ) * & 
-                     (q_sat - atm2land%q_air) / (1._wp / plant%gc + 1._wp / atm2land%ga )  
+          plant%flux%transpiration = press_srf / ( r_gas_dryair * t_air ) * & 
+                     (q_sat - q_air) / (1._wp / plant%gc + 1._wp / ga )  
        ELSE 
           plant%flux%transpiration = 0.0_wp 
        ENDIF
        ! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil = ga / 10)
-       evaporation = atm2land%press_srf / ( r_gas_dryair * atm2land%t_air ) * & 
-                     (q_sat - atm2land%q_air) * soil%theta / 100.0_wp / ( 100._wp / atm2land%ga)
-       IF(land2atm%net_radiation<eps8) evaporation = 0.0_wp
+       evaporation = press_srf / ( r_gas_dryair * t_air ) * & 
+                     (q_sat - q_air) * soil%theta / 100.0_wp / ( 100._wp / ga)
+       IF(net_radiation < eps8) evaporation = 0.0_wp
 
        ! update soil moisture dS = rain - transpiration - evaporation 
-       soil%moisture = soil%moisture + (atm2land%rain + atm2land%snow & 
+       soil%moisture = soil%moisture + (rain + snow & 
             - plant%flux%transpiration - evaporation) * dt
        ! constrain to possible solutions
        soil%moisture = MAX(MIN(soil%moisture,veg_config%soil_awc_prescribe),0.0_wp)
@@ -229,9 +264,9 @@ CONTAINS
        soil%theta = soil%moisture / veg_config%soil_awc_prescribe * 100._wp
 
        ! calculate latent heat flux (W m-2) 
-       land2atm%latent_heat_flx = LatentHeatVaporization * (evaporation + plant%flux%transpiration)
+       latent_heat_flx = LatentHeatVaporization * (evaporation + plant%flux%transpiration)
        ! diagnose sensible heat flux (shortwave compontent only)
-       land2atm%sensible_heat_flx = land2atm%net_radiation - land2atm%latent_heat_flx 
+       sensible_heat_flx = net_radiation - latent_heat_flx 
 
    ELSE 
        ! use prescribed value of theta from namelist

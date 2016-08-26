@@ -33,7 +33,7 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: min_daylength               !< ?
   REAL(wp),SAVE :: dusk_time                   !< ?
   REAL(wp),SAVE :: tmp_peak_time               !< ?
-  REAL(wp),SAVE :: min_cos_zenith_angle        !< minimum zenith angle for which PAR is calculated, see atm2land%cos_zenith_angle
+  REAL(wp),SAVE :: min_cos_zenith_angle        !< minimum zenith angle for which PAR is calculated, see cos_zenith_angle
 
   ! conversion factors
   REAL(wp),SAVE :: rad2par                     !< µmol /J
@@ -47,7 +47,9 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: def_swdown                  !< PAR in W m-2
   REAL(wp),SAVE :: def_fdiffuse                !< diffuse fraction
   REAL(wp),SAVE :: def_cos_angle               !< cosine of zenith angle
-  REAL(wp),SAVE :: def_co2                     !< atmospheric CO2 in ppm
+  REAL(wp),SAVE :: def_co2_mixing_ratio        !< atmospheric CO2 in ppm
+  REAL(wp),SAVE :: def_co2_mixing_ratio_C13    !< atmospheric 13CO2 in ppm
+  REAL(wp),SAVE :: def_co2_mixing_ratio_C14    !< atmospheric 14CO2 in pp?
   REAL(wp),SAVE :: def_co2_deltaC13            !< molar mixing ratio of 13C / 12C of atmospheric CO2
   REAL(wp),SAVE :: def_co2_deltaC14            !< molar mixing ratio of 14C / 12C of atmospheric CO2 
   REAL(wp),SAVE :: def_wind                    !< wind in m/s
@@ -66,6 +68,7 @@ CONTAINS
   SUBROUTINE init_atmland_constants
 
     USE mo_base_constants,  ONLY: hourday
+    USE mo_shared_isotope,  ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
 
     IMPLICIT NONE
 
@@ -114,9 +117,11 @@ CONTAINS
     def_swdown = 652.173913_wp
     def_fdiffuse = 0.2_wp     
     def_cos_angle = 1.0_wp    
-    def_co2 = 380.0_wp        
+    def_co2_mixing_ratio = 380.0_wp
     def_co2_deltaC13 = -7.5_wp 
+    def_co2_mixing_ratio_C13 = def_co2_mixing_ratio / (1._wp + 1._wp/calc_mixing_ratio_C13C12(def_co2_deltaC13))
     def_co2_deltaC14 = -14.9_wp
+    def_co2_mixing_ratio_C14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) * def_co2_mixing_ratio 
     def_wind = 1.0_wp         
 
   END SUBROUTINE init_atmland_constants

@@ -32,11 +32,14 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_phenology(tile, lctlib)
 
-    USE mo_base_constants,     ONLY: dt, one_day
-    USE mo_base_memory,        ONLY: t_slm_tile
-    USE mo_jsb_lctlib_class,   ONLY: t_lctlib_element
-    USE mo_shared_constants,   ONLY: Tzero
-    USE mo_atmland_memory,     ONLY: atm2land
+    USE mo_base_constants,          ONLY: dt, one_day
+    USE mo_base_memory,             ONLY: t_slm_tile
+    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
+    USE mo_shared_constants,        ONLY: Tzero
+
+    USE mo_jsb_process_class,       ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+    USE mo_atm2land_memory_class,   ONLY: t_atm2land_memory
+
     USE mo_veg_memory
     USE mo_veg_constants,      ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
                                  gdd_req_max,gdd_t_air_threshold,k_gdd_dormance,t_air_senescence, & 
@@ -49,6 +52,15 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_slm_plant),POINTER               :: plant     ! plant variables per tile
     REAL(wp) :: hlp1                                     ! helper variable for tmp values
+    ! 0.3 Memory allocation
+    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+    REAL(wp), POINTER                :: t_air
+    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+      TYPE IS(t_atm2land_memory)
+        atm2land__mem => mm
+    END SELECT
+    t_air   => atm2land__mem%t_air%ptr
+
 
     ! bi-directional pointer
     plant => tile%plant
@@ -97,8 +109,8 @@ CONTAINS
 
     !> 2.1 gdd counter
     !! 
-    IF(atm2land%t_air > gdd_t_air_threshold) THEN
-       plant%gdd = plant%gdd + ((atm2land%t_air - gdd_t_air_threshold) * dt/one_day)
+    IF(t_air > gdd_t_air_threshold) THEN
+       plant%gdd = plant%gdd + ((t_air - gdd_t_air_threshold) * dt/one_day)
     ENDIF
     IF(plant%moving_average%t_air_week < Tzero) plant%gdd = 0.0_wp
 

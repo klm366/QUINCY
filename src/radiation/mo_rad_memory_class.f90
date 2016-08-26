@@ -162,7 +162,6 @@ CONTAINS
             ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
-
     END IF
 
   END SUBROUTINE Init_rad_memory

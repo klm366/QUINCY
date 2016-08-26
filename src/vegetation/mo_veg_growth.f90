@@ -13,7 +13,6 @@ MODULE mo_veg_growth
   USE mo_exception,             ONLY: message_text, finish
   USE mo_base_constants
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-  USE mo_atmland_memory,        ONLY: atm2land, land2atm
   USE mo_veg_memory
   USE mo_veg_constants
   USE mo_veg_config_class,      ONLY: veg_config
@@ -31,9 +30,11 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_growth (tile, lctlib)
 
-    USE mo_base_memory,         ONLY: t_slm_tile
+    USE mo_base_memory,             ONLY: t_slm_tile
     USE mo_veg_memory
-    USE mo_shared_memory,       ONLY: t_element
+    USE mo_shared_memory,           ONLY: t_element
+    USE mo_jsb_process_class,       ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+    USE mo_atm2land_memory_class,   ONLY: t_atm2land_memory
 
     IMPLICIT NONE
 
@@ -53,6 +54,14 @@ CONTAINS
                               target_np_sap_wood,target_np_fruit
     REAL(wp) :: diameter,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio
     REAl(wp) :: k1_opt, k2_opt
+    ! 0.3 Memory allocation
+    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+    REAL(wp), POINTER                :: t_air
+    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+      TYPE IS(t_atm2land_memory)
+        atm2land__mem => mm
+    END SELECT
+    t_air   => atm2land__mem%t_air%ptr
 
     ! bi-directional pointer
     plant => tile%plant
@@ -61,7 +70,7 @@ CONTAINS
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    tau_labile_pot = meristem_activity(atm2land%t_air,tile%soil%theta,plant%growing_season)
+    tau_labile_pot = meristem_activity(t_air,tile%soil%theta,plant%growing_season)
   
     !> 2.0 update target C:N:P for each tissue type
     !! 
@@ -114,7 +123,7 @@ CONTAINS
 
     !> 6.0 partition labile carbon into growth, growth_respiration, and maintenance 
     !! 
-    CALL calc_partitioning(tau_labile_pot, falloc, plant)
+    CALL calc_partitioning(tau_labile_pot, falloc, plant, t_air)
 
   END SUBROUTINE calc_growth 
 
@@ -133,7 +142,7 @@ CONTAINS
   !! 
   !! Output: growth of tissue types, maintenance respiration and growth respiration 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_partitioning(tau_labile_pot,falloc,plant) 
+  SUBROUTINE calc_partitioning(tau_labile_pot, falloc, plant, t_air) 
 
     USE mo_shared_memory,    ONLY: t_element
     USE mo_veg_respiration,  ONLY: calc_maintenance_respiration
@@ -141,12 +150,13 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp),INTENT(in)                     :: tau_labile_pot       !< potential labile pool turnover (1/day) 
+    REAL(wp),INTENT(in)                     :: t_air 
     TYPE(t_slm_veg_pool), INTENT(in)        :: falloc               !< allocation coefficients 
     TYPE(t_slm_plant),INTENT(inout),TARGET  :: plant                !< plant structure
     ! 0.2 Local
     REAL(wp)                  :: tau_labile                ! actual turnover time of labile pool (1/day)
-    TYPE(t_element),POINTER :: growth
-    TYPE(t_element),POINTER :: labile_pool
+    TYPE(t_element),POINTER   :: growth
+    TYPE(t_element),POINTER   :: labile_pool
 
     labile_pool => plant%pool%labile
     growth => plant%flux%growth%labile
@@ -158,7 +168,7 @@ CONTAINS
 
     ! potential rate of maintenance respiration (µmol C / m2 / s)
     plant%flux%maint_respiration_pot = & 
-          calc_maintenance_respiration(atm2land%t_air,atm2land%t_air,plant%pool%sap_wood%nitrogen, & 
+          calc_maintenance_respiration(t_air,t_air,plant%pool%sap_wood%nitrogen, & 
                                        plant%pool%fine_root%nitrogen,plant%pool%coarse_root%nitrogen) + & 
           plant%flux%maint_respiration_leaf
     ! actual rate of maintentance respiration (µmol C / m2 / s), constrained to 

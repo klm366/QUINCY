@@ -18,7 +18,7 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
 flag_calc_soil_uptake="T"
-flag_calc_soil_moisture="F"
+flag_calc_soil_moisture="T"
 flag_base_soil_model="T"
 # canopy model options
 flag_t_jmax_acclimation="F"
@@ -45,7 +45,6 @@ plant_functional_type_id=5      # 1 - 8
 siteDataSet="f"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
 siteName="CA-Man_1999-2003"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
                                 # examples: CA-Man_1999-2003 & THO_D15_1984-2013 & CAL_1984-2013
-option_forcing="readfile"       # constant generate readfile
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=100.0      # float !
 longitude=0.0                   # float !
@@ -113,7 +112,6 @@ validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "outp
 validateUserConfigValues "$setPFTAutomatically" "$validateSetPFTAutomatically" "setPFTAutomatically"
 validateUserConfigValues "$plant_functional_type_id" "$validatePlantFunctionalTypeID" "plant_functional_type_id"
 validateUserConfigValues "$siteDataSet" "$validateSiteDataSet" "siteDataSet"
-validateUserConfigValues "$option_forcing" "$validateOptionForcing" "option_forcing"
 # not validated: simulation_length_number, output_start_first_day_year, output_end_last_day_year, soil_awc_prescribe, soil_theta_prescribe, latitude, longitude 
 
 
@@ -244,7 +242,6 @@ changeNamelistValue output_interval_pool "$output_interval_pool"
 changeNamelistValue output_interval_flux "$output_interval_flux"
 changeNamelistValue output_start_first_day_year "$output_start_first_day_year"
 changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
-changeNamelistValue option_forcing "$option_forcing"
 changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
 changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
 # get the PFT & lon & lat according to the site selected (reading the all_site_list.dat)

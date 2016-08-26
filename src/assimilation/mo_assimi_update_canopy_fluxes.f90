@@ -15,11 +15,10 @@ MODULE mo_assimi_update_canopy_fluxes
   USE mo_base_constants,        ONLY: ncanop, dt
   USE mo_base_memory,           ONLY: t_slm_soil
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-  USE mo_jsb_var_class,         ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-  USE mo_jsb_process_class,     ONLY: ATM2LAND_P, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO ! changed for compatibility with SLM
+  USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
 
-  USE mo_atmland_memory,        ONLY: atm2land, land2atm
   USE mo_atmland_forcing
+  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
 
   USE mo_assimi_constants
   USE mo_assimi_config_class,   ONLY: assimi_config
@@ -54,53 +53,52 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_canopy_fluxes(tile, lctlib)
 
-   USE mo_shared_constants
-   USE mo_shared_isotope
+    USE mo_shared_constants
+    USE mo_shared_isotope
+ 
+    IMPLICIT NONE
+    ! 0.1 InOut
+    TYPE(t_lctlib_element),INTENT(in)        :: lctlib         !< land-cover-type library - parameters for one pft
+    TYPE(t_slm_tile),INTENT(inout), TARGET   :: tile           !< one tile
+    ! 0.2 Local
+    TYPE(t_slm_soil),POINTER         :: soil                   ! soil variables per tile
+    TYPE(t_slm_plant),POINTER        :: plant                  ! plant variables per tile
+    REAL(wp),DIMENSION(ncanop)       :: agl,anl,rl,gsl,cil
+    REAL(wp),DIMENSION(ncanop)       :: canopy_layer_depth_act
+    INTEGER                          :: icanop                 ! for looping across ncanopy layers
+    REAL(wp)                         :: hlp1                   ! dummy variable 
+    ! 0.3 Memory allocation
+    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+    TYPE(t_assimi_memory), POINTER   :: assimi__mem
+    REAL(wp), POINTER :: t_air
+    REAL(wp), POINTER :: q_air
+    REAL(wp), POINTER :: press_srf
+    REAL(wp), POINTER :: ga
+    REAL(wp), POINTER :: co2_mixing_ratio
+    REAL(wp), POINTER :: co2_mixing_ratio_C13
+    REAL(wp), POINTER :: co2_mixing_ratio_C14
+    !REAL(wp), POINTER :: gpp        ! REAL(wp), POINTER, DIMENSION(:) :: gpp
+    !REAL(wp), POINTER :: gpp_c13    ! REAL(wp), POINTER, DIMENSION(:) :: gpp_c13
 
-   IMPLICIT NONE
-   ! 0.1 InOut
-   TYPE(t_lctlib_element),INTENT(in)        :: lctlib         !< land-cover-type library - parameters for one pft
-   TYPE(t_slm_tile),INTENT(inout), TARGET   :: tile           !< one tile
-   ! 0.2 Local
-   TYPE(t_slm_soil),POINTER         :: soil                   ! soil variables per tile
-   TYPE(t_slm_plant),POINTER        :: plant                  ! plant variables per tile
-   REAL(wp),DIMENSION(ncanop)       :: agl,anl,rl,gsl,cil
-   REAL(wp),DIMENSION(ncanop)       :: canopy_layer_depth_act
-   INTEGER                          :: icanop                 ! for looping across ncanopy layers
-   REAL(wp)                         :: hlp1                   ! dummy variable 
+    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+      TYPE IS(t_atm2land_memory)
+        atm2land__mem => mm
+    END SELECT
+    SELECT TYPE (mm => tile%mem(ASSIMI)%p)
+      TYPE IS(t_assimi_memory)
+        assimi__mem => mm
+    END SELECT
 
-!! 
-!! <<< temporary test code - non-functional to slm >>> !!
-  integer :: num
-  TYPE(t_assimi_memory), POINTER :: assimi__mem
-  !! 2D
-  !REAL(wp), POINTER, DIMENSION(:) :: gpp
-  !REAL(wp), POINTER, DIMENSION(:) :: gpp_c13
-  ! 1D
-  REAL(wp), POINTER :: gpp
-  REAL(wp), POINTER :: gpp_c13
-  
-  SELECT TYPE (mm => tile%mem(ASSIMI)%p)
-    TYPE IS(t_assimi_memory)
-      assimi__mem => mm
-  END SELECT
-  
-  !! 2D
-  !gpp     => assimi__mem%gpp%ptr(tile%ics:tile%ice,tile%iblk) 
-  !gpp_c13 => assimi__mem%gpp_c13%ptr(tile%ics:tile%ice,tile%iblk) 
-  ! 1D
-  gpp     => assimi__mem%gpp%ptr
-  gpp_c13 => assimi__mem%gpp_c13%ptr
-  num = assimi__mem%no_of_vars
-  
-  !! 2D
-  !call test_routine(gpp(:))
-  !write(999,*) gpp(:)
-  ! 1D
-  call test_routine(gpp)
-  !write(999,*) gpp
-!! <<< temporary test code - non-functional to slm >>> !!
-!! 
+    t_air                => atm2land__mem%t_air%ptr
+    q_air                => atm2land__mem%q_air%ptr
+    press_srf            => atm2land__mem%press_srf%ptr
+    ga                   => atm2land__mem%ga%ptr
+    co2_mixing_ratio     => atm2land__mem%co2_mixing_ratio%ptr
+    co2_mixing_ratio_C13 => atm2land__mem%co2_mixing_ratio_C13%ptr
+    co2_mixing_ratio_C14 => atm2land__mem%co2_mixing_ratio_C14%ptr
+    !gpp     => assimi__mem%gpp%ptr       ! gpp     => assimi__mem%gpp%ptr(tile%ics:tile%ice,tile%iblk)
+    !gpp_c13 => assimi__mem%gpp_c13%ptr   ! gpp_c13 => assimi__mem%gpp_c13%ptr(tile%ics:tile%ice,tile%iblk)
+
 
    !  bi-directional pointer
    plant => tile%plant
@@ -114,7 +112,7 @@ CONTAINS
    cil(:) = 0.0_wp     
 
    ! calculate the moisture scaling factor for photosynthesis
-   plant%beta_air = calc_atm_moisture_stress(atm2land%t_air,atm2land%q_air,atm2land%press_srf) 
+   plant%beta_air = calc_atm_moisture_stress(t_air,q_air,press_srf) 
    plant%beta_soil_ps = calc_soil_moisture_stress(soil%theta, & 
                        lctlib%lambda_soil_ps,lctlib%weibull_k_soil_ps)
    plant%beta_soil_gs = calc_soil_moisture_stress(soil%theta, &
@@ -157,10 +155,10 @@ CONTAINS
                          plant%moving_average%beta_air,&
                          plant%moving_average%beta_soil_ps,&
                          plant%moving_average%beta_soil_gs,&
-                         plant%moving_average%t_jmax_opt, lctlib)
+                         plant%moving_average%t_jmax_opt, co2_mixing_ratio, ga, lctlib)
           ENDIF
 
-          CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+          CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
                                  plant%par_sunlit_cl(icanop), &
                                  plant%par_shaded_cl(icanop), & 
                                  plant%fleaf_sunlit_cl(icanop), &
@@ -188,12 +186,12 @@ CONTAINS
   DO icanop = 1,ncanop
      plant%flux%gpp = plant%flux%gpp + agl(icanop) * canopy_layer_depth_act(icanop) 
      IF(agl(icanop) > eps8) THEN
-        hlp1 = discrimination_ps(cil(icanop),atm2land%co2_mixing_ratio,'C13',lctlib%ps_pathway)
+        hlp1 = discrimination_ps(cil(icanop),co2_mixing_ratio,'C13',lctlib%ps_pathway)
         plant%flux%gpp_C13 = plant%flux%gpp_C13 + agl(icanop) * canopy_layer_depth_act(icanop) * & 
-                             calc_fractionation(atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio_C13,hlp1)
-        hlp1 = discrimination_ps(cil(icanop),atm2land%co2_mixing_ratio,'C14',lctlib%ps_pathway)
+                             calc_fractionation(co2_mixing_ratio,co2_mixing_ratio_C13,hlp1)
+        hlp1 = discrimination_ps(cil(icanop),co2_mixing_ratio,'C14',lctlib%ps_pathway)
         plant%flux%gpp_C14 = plant%flux%gpp_C14 + agl(icanop) * canopy_layer_depth_act(icanop) * & 
-                             calc_fractionation(atm2land%co2_mixing_ratio,atm2land%co2_mixing_ratio_C14, & 
+                             calc_fractionation(co2_mixing_ratio,co2_mixing_ratio_C14, & 
                              hlp1,scale_correction_C14)
      ENDIF
      plant%flux%an = plant%flux%an + anl(icanop) * canopy_layer_depth_act(icanop) 
@@ -208,7 +206,7 @@ CONTAINS
   plant%flux%ci = plant%flux%ci / sum(canopy_layer_depth_act)
 
   IF(assimi_config%flag_t_jmax_acclimation) THEN 
-     plant%t_jmax_opt = t_jmax_offset + t_jmax_slope * ( atm2land%t_air - TZero ) 
+     plant%t_jmax_opt = t_jmax_offset + t_jmax_slope * ( t_air - TZero ) 
      plant%t_jmax_opt = MIN(MAX(plant%t_jmax_opt,t_jmax_opt_min),t_jmax_opt_max)
   ELSE 
      plant%t_jmax_opt = lctlib%t_jmax_opt
@@ -218,11 +216,11 @@ CONTAINS
   IF (veg_config%flag_optimal_Nleaf) &
           CALL  optimize_Nleaf(plant, canopy_layer_depth_act, lctlib,&
           plant%moving_average%t_air, plant%moving_average%press_surf, plant%moving_average%beta_air,&
-          plant%moving_average%beta_soil_ps,plant%moving_average%beta_soil_gs)
+          plant%moving_average%beta_soil_ps,plant%moving_average%beta_soil_gs, co2_mixing_ratio, ga)
 
      ! calculate NPP increment, needed for optimal allocation scheme
      !IF (veg_config%flag_optimal_allocation) 
-    CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
+    CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp, t_air, press_srf, co2_mixing_ratio, ga)
 
   END SUBROUTINE update_canopy_fluxes
 
@@ -607,7 +605,7 @@ CONTAINS
   !! fractions that give maximum assimilation
   !-------------------------------------------------------------------------------------------------------
   SUBROUTINE optimize_fractions(fnl_chl_cl, fnl_rub_cl, fnl_et_cl,fnl_pepc_cl,fnl_oth_cl,nl_tot_cl, dnf, par_sunlit_cl, par_shaded_cl, fleaf_sunlit_cl,&
-       t_air,press_srf,  beta_air,beta_soil_ps,beta_soil_gs,t_jmax_opt, lctlib)
+       t_air,press_srf,  beta_air,beta_soil_ps,beta_soil_gs,t_jmax_opt, co2_mixing_ratio, ga, lctlib)
 
 
     IMPLICIT NONE
@@ -615,7 +613,7 @@ CONTAINS
     REAl(wp), INTENT(in) :: nl_tot_cl
     REAL(wp), INTENT(in) :: dnf                           ! maximum fraction by which fractions can be modified
     REAL(wp), INTENT(in) :: par_sunlit_cl, par_shaded_cl, fleaf_sunlit_cl ! light for layer
-    REAl(wp), INTENT(in) :: t_air, press_Srf
+    REAl(wp), INTENT(in) :: t_air, press_srf, co2_mixing_ratio, ga
     REAL(wp), INTENT(in) :: beta_air,beta_soil_ps,beta_soil_gs   ! soil moisture
     REAL(wp), INTENT(in) :: t_jmax_opt 
     TYPE(t_lctlib_element),INTENT(in)        :: lctlib         !< land-cover-type library - parameters for one pft
@@ -643,7 +641,7 @@ CONTAINS
     fnl_pepc_cl = fnl_pepc0
 
     ! calculate photosynthesis with previous fractions
-    CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+    CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
          par_sunlit_cl,par_shaded_cl, fleaf_sunlit_cl,beta_air,beta_soil_ps,beta_soil_gs, &
          fnl_chl0*(1._wp-fnl_oth_cl), fnl_et0*(1._wp-fnl_oth_cl), fnl_rub0*(1._wp-fnl_oth_cl), & 
          fnl_pepc0*(1._wp-fnl_oth_cl),nl_tot_cl, lctlib%ps_pathway, & 
@@ -699,7 +697,7 @@ CONTAINS
                    
        
     ! re-calculate photosynthesis
-    CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+    CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
          par_sunlit_cl,par_shaded_cl, fleaf_sunlit_cl,beta_air,beta_soil_ps,beta_soil_gs, &
          fnl_chl_cl*(1._wp-fnl_oth_cl), fnl_et_cl*(1._wp-fnl_oth_cl), fnl_rub_cl*(1._wp-fnl_oth_cl), & 
          fnl_pepc_cl*(1._wp-fnl_oth_cl),nl_tot_cl, lctlib%ps_pathway, & 
@@ -759,7 +757,7 @@ CONTAINS
        ENDIF
        
        ! re-calculate photosynthesis
-       CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+       CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
             par_sunlit_cl,par_shaded_cl, fleaf_sunlit_cl,beta_air,beta_soil_ps,beta_soil_gs, &
             fnl_chl_cl*(1._wp-fnl_oth_cl), fnl_et_cl*(1._wp-fnl_oth_cl), fnl_rub_cl*(1._wp-fnl_oth_cl), & 
             fnl_pepc_cl*(1._wp-fnl_oth_cl),nl_tot_cl, lctlib%ps_pathway, & 
@@ -833,8 +831,8 @@ CONTAINS
   !! 
   !! Parameter leaf_cn_direction
   !----------------------------------------------------------------------------------------------------
-  SUBROUTINE optimize_Nleaf(plant, canopy_layer_depth_act,lctlib, t_air, press_Srf,beta_air,beta_soil_ps, & 
-                          beta_soil_gs)
+  SUBROUTINE optimize_Nleaf(plant, canopy_layer_depth_act,lctlib, t_air, press_srf,beta_air,beta_soil_ps, & 
+                          beta_soil_gs, co2_mixing_ratio, ga)
     
     USE mo_veg_respiration
     USE mo_veg_memory, ONLY: t_slm_plant, t_slm_veg_pool
@@ -845,7 +843,7 @@ CONTAINS
     TYPE(t_slm_plant), INTENT(inout)        :: plant                  ! plant variables per tile
     TYPE(t_lctlib_element),INTENT(in)        :: lctlib         !< land-cover-type library - parameters for one pft
     REAL(wp), DIMENSION(ncanop), INTENT(in) :: canopy_layer_depth_act
-    REAL(wp) :: t_air, press_Srf
+    REAL(wp) :: t_air, press_srf, co2_mixing_ratio, ga
     REAL(wp) ::  beta_air,beta_soil_ps,beta_soil_gs
     ! 0.2 Local
     INTEGER :: icanop, dd, t
@@ -881,7 +879,7 @@ CONTAINS
 
        DO icanop =1, ncanop
           IF(canopy_layer_depth_act(icanop).GT.0.0)THEN
-             CALL calc_photosynthesis(t_air,press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+             CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
                   plant%moving_average%par_sunlit_cl(icanop),plant%moving_average%par_shaded_cl(icanop),& 
                   plant%moving_average%fleaf_sunlit_cl(icanop), &
                   beta_air,beta_soil_ps,beta_soil_gs, &
@@ -939,12 +937,13 @@ CONTAINS
   !> Subroutine to calculate change in NPP with very small change in LAI
   !! Needed for calculation of optimal leaf and root allocation fraction. See mo_veg_growth
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_npp_increment(plant, lctlib, dNPP)
+  SUBROUTINE calc_npp_increment(plant, lctlib, dNPP, t_air, press_srf, co2_mixing_ratio, ga)
 
    IMPLICIT NONE
    ! 0.1 InOut
    TYPE(t_slm_plant), INTENT(in)          :: plant
    TYPE(t_lctlib_element),INTENT(in)      :: lctlib         !< land-cover-type library - parameters for one pft
+   REAL(wp), INTENT(in)                   :: t_air, press_srf, co2_mixing_ratio, ga
    REAL(wp), INTENT(out)                  :: dNPP
    ! 0.2 Local
    REAL(wp) :: lai, nitrogen
@@ -981,7 +980,7 @@ CONTAINS
         ! only calculate phosynthesis if leaves present in layer
         IF (canopy_layer_depth_act(icanop).GT.eps8)THEN   
            
-           CALL calc_photosynthesis(atm2land%t_air,atm2land%press_srf,atm2land%co2_mixing_ratio,atm2land%ga, & 
+           CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
                 plant%par_sunlit_cl(icanop), plant%par_shaded_cl(icanop),& 
                 plant%fleaf_sunlit_cl(icanop), &
                 plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &

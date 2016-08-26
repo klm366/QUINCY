@@ -20,8 +20,7 @@ MODULE mo_jsb_process_class
   PRIVATE
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name
-!  PUBLIC :: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
-  PUBLIC :: ATM2LAND_P, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO   ! changed for compatibility with SLM
+  PUBLIC :: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -43,9 +42,8 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-!    ENUMERATOR :: ATM2LAND=1, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
-    ! ATM2LAND_P=1, LAND2ATM_P=2, SOIL=5, VEG=7, RAD=9, ASSIMI=10
-    ENUMERATOR :: ATM2LAND_P=1, LAND2ATM_P, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO ! changed for compatibility with SLM
+    ! ATM2LAND=1, LAND2ATM=2, SOIL=5, VEG=7, RAD=9, ASSIMI=10
+    ENUMERATOR :: ATM2LAND=1, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
   END ENUM
 
   ! Process actions
@@ -64,10 +62,10 @@ CONTAINS
     CHARACTER(len=:), ALLOCATABLE :: return_value
 
     SELECT CASE(iproc)
-!!    CASE (ATM2LAND)
-!!      return_value = 'atm2land'
-!!    CASE (LAND2ATM)
-!!      return_value = 'land2atm'
+    CASE (ATM2LAND)
+      return_value = 'atm2land'
+    CASE (LAND2ATM)
+      return_value = 'land2atm'
 !!    CASE (SEB)
 !!      return_value = 'seb'
 !!    CASE (TURB)
@@ -78,8 +76,8 @@ CONTAINS
 !!      return_value = 'hydro'
 !!    CASE (VEG)
 !!      return_value = 'veg'
-!!    CASE (RAD)
-!!      return_value = 'rad'
+    CASE (RAD)
+      return_value = 'rad'
     CASE (ASSIMI)
       return_value = 'assimi'
 !!    CASE (PHENO)

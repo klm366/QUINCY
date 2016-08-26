@@ -601,15 +601,29 @@ CONTAINS
   !! during model-runtime this subroutine is used to check the condition and set the particular
   !! variable TRUE or FALSE, valid for one timestep
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_conditions_current_timestep (this, plant)
-    USE mo_atmland_memory, ONLY: atm2land
+  SUBROUTINE update_conditions_current_timestep (this, plant, swpar_srf_down)
+
+!    USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+!    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
 
     IMPLICIT NONE 
+    ! 0.1 InOut
     TYPE(t_slm_plant), INTENT(in) :: plant          !< mo_veg_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
     CLASS(t_daily_average), INTENT(inout) :: this   !< TYPE t_daily_average
+    REAL(wp), INTENT(in) :: swpar_srf_down    ! temporal fix -> memory allocation -> USE statements
+    ! 0.2 Local
+!    ! 0.3 Memory allocation
+!    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+!    REAL(wp), POINTER           :: swpar_srf_down
+!    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+!      TYPE IS(t_atm2land_memory)
+!        atm2land__mem => mm
+!    END SELECT
+!    swpar_srf_down   => atm2land__mem%swpar_srf_down%ptr
+
 
     ! condition type 1: daylight (light > zero)
-    IF(atm2land%swpar_srf_down > eps8) THEN
+    IF(swpar_srf_down > eps8) THEN
       this%l_daylight         = .TRUE.
     ELSE
       this%l_daylight         = .FALSE.
@@ -624,15 +638,16 @@ CONTAINS
   !! 
   !! per variable the values are summed up and the number of summed values is stored
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE accumulate_values_over_current_day (this, plant)
+  SUBROUTINE accumulate_values_over_current_day (this, plant, swpar_srf_down)
     IMPLICIT NONE 
     ! 0.1 InOut
     TYPE(t_slm_plant), INTENT(in) :: plant         !< mo_veg_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
     CLASS(t_daily_average), INTENT(inout) :: this  !< TYPE t_daily_average
+    REAL(wp), INTENT(in) :: swpar_srf_down    ! temporal fix
     ! 0.2 Local
     INTEGER  :: i                                  ! loop over canopy layers
 
-    CALL this%update_conditions(plant)
+    CALL this%update_conditions(plant, swpar_srf_down)
 
     ! condition type 1: daylight (light > zero)
     IF(this%l_daylight) THEN
@@ -662,18 +677,19 @@ CONTAINS
   !! 
   !! is called in the driver with: CALL tile(itile)\%plant\%daily_average\%calc_avrg
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calculate_avrg_previous_day (this, plant, time_day, timestep_prop_day)
+  SUBROUTINE calculate_avrg_previous_day (this, plant, time_day, timestep_prop_day, swpar_srf_down)
     IMPLICIT NONE 
     ! 0.1 InOut
     TYPE(t_slm_plant), INTENT(in) :: plant        !< mo_veg_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
     REAL(wp), INTENT(in)          :: time_day           !< time in days
     REAL(wp), INTENT(in)          :: timestep_prop_day  !< length of one time step (proportion of one day)
     CLASS(t_daily_average), INTENT(inout) :: this       !< TYPE t_daily_average
+    REAL(wp), INTENT(in) :: swpar_srf_down    ! temporal fix
     ! 0.2 Local
     INTEGER  :: i                                   ! loop over canopy layers
 
     ! the accumulation over the current day
-    CALL this%accumulate(plant)   ! calls this%update_conditions(plant)
+    CALL this%accumulate(plant, swpar_srf_down)   ! calls this%update_conditions(plant)
 
     ! if this is the last timestep of the current day (i.e. next timestep belongs to the next day):
     ! actually it is tested if the next timestep would be midnight: next_step(time_day) - round_to_int(time_day) < eps8

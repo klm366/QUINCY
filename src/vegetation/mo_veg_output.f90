@@ -161,7 +161,8 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth nl_tot'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season'
+    WRITE(lun,'(a)') &
+    & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season b_soil_gs'
 
   END SUBROUTINE init_output_writing_pool
 
@@ -505,12 +506,15 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE write_output_flux(tile, time_d, time_y, itile)
 
-    USE mo_base_memory,    ONLY: t_slm_tile
-    USE mo_atmland_memory 
-    USE mo_veg_memory,     ONLY: t_slm_plant
-    USE mo_base_constants, ONLY: dt
-    USE mo_atmland_constants, ONLY: rad2par
-    USE mo_shared_isotope, ONLY: calc_delta_C13,calc_delta_C14
+    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+    USE mo_base_memory,           ONLY: t_slm_tile
+    USE mo_veg_memory,            ONLY: t_slm_plant
+    USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+    USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+
+    USE mo_base_constants,        ONLY: dt
+    USE mo_atmland_constants,     ONLY: rad2par
+    USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -523,6 +527,29 @@ CONTAINS
     INTEGER                      :: lun             ! locical unit number
     REAL(wp), SAVE               :: dt_one = 1.0_wp ! just 1.0
     REAL(wp)                     :: dC13gpp,dC13rg,dC13rm
+    ! 0.3 Memory allocation
+    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+    TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    REAL(wp), POINTER                :: ga
+    REAL(wp), POINTER                :: swpar_srf_down
+    REAL(wp), POINTER                :: albedo
+    REAL(wp), POINTER                :: net_radiation
+    REAL(wp), POINTER                :: sensible_heat_flx
+    REAL(wp), POINTER                :: latent_heat_flx
+    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+      TYPE IS(t_atm2land_memory)
+        atm2land__mem => mm
+    END SELECT
+    SELECT TYPE (mm => tile%mem(LAND2ATM)%p)
+      TYPE IS(t_land2atm_memory)
+        land2atm__mem => mm
+    END SELECT
+    ga              => atm2land__mem%ga%ptr
+    swpar_srf_down  => atm2land__mem%swpar_srf_down%ptr
+    albedo            => land2atm__mem%albedo%ptr
+    net_radiation     => land2atm__mem%net_radiation%ptr
+    sensible_heat_flx => land2atm__mem%sensible_heat_flx%ptr
+    latent_heat_flx   => land2atm__mem%latent_heat_flx%ptr
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
     plant => tile%plant
@@ -568,13 +595,13 @@ CONTAINS
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + plant%flux%reserve_use%phosphorus  * dt_one *1000000._wp/dt
       transpiration_acc(itile)= transpiration_acc(itile) + plant%flux%transpiration           * dt_one 
       gc_acc(itile)           = plant%gc                                                      
-      ga_acc(itile)           = atm2land%ga                                                   
-      albedo_acc(itile)       = land2atm%albedo
-      ppfd_acc(itile)         = ppfd_acc(itile)          + atm2land%swpar_srf_down*rad2par    * dt_one               
-      rnet_acc(itile)         = rnet_acc(itile)          + land2atm%net_radiation             * dt_one               
-      qh_acc(itile)           = qh_acc(itile)            + land2atm%sensible_heat_flx         * dt_one               
-      qle_acc(itile)          = qle_acc(itile)           + land2atm%latent_heat_flx           * dt_one               
-      apar_acc(itile)         = apar_acc(itile)          + plant%apar                         * dt_one               
+      ga_acc(itile)           = ga                                                   
+      albedo_acc(itile)       = albedo
+      ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2par   * dt_one               
+      rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dt_one               
+      qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dt_one               
+      qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dt_one               
+      apar_acc(itile)         = apar_acc(itile)          + plant%apar                 * dt_one               
 
       !> 1.2 write fluxes and set to zero
       !!

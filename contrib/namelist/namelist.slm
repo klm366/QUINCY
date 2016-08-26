@@ -21,11 +21,6 @@
   flag_optimal_Nfraction=.FALSE.
   flag_t_jmax_acclimation=.FALSE.
 /
-&FORCING_CTL
-  ! options for plant model forcing
-  ! create forcing: constant readfile generate
-  option_forcing="readfile"
-/
 &GRID_CTL
   latitude=50.0
   longitude=0.0
