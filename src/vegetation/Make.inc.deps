@@ -26,6 +26,7 @@ mo_veg_growth.o: \
   mo_veg_config_class.o \
   mo_veg_memory.o \
   mo_veg_constants.o \
+  mo_veg_canopy.o \
   mo_veg_respiration.o
 
 mo_veg_respiration.o: \
@@ -110,6 +111,19 @@ mo_veg_update_veg_pools.o: \
   mo_shared_constants.o \
   mo_veg_memory.o \
   mo_veg_growth.o
+
+mo_veg_canopy.o: \
+  mo_kind.o \
+  mo_base_memory.o \
+  mo_base_constants.o \
+  mo_base_config_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_shared_constants.o \
+  mo_assimi_config_class.o \
+  mo_assimi_constants.o \
+  mo_veg_constants.o \
+  mo_veg_memory.o \
+  mo_veg_respiration.o
 
 mo_veg_constants.o: \
   mo_kind.o \

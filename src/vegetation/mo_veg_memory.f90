@@ -79,8 +79,10 @@ MODULE mo_veg_memory
     REAL(wp) :: growth_req_p_week            !< moles P required for a unit of N growth under current allocation fractions
     ! 1.5 environmental forcing
     REAL(wp) :: t_air             !< air temp
-    REAL(wp) :: q_air             !< air q ?
-    REAL(wp) :: press_surf        !< ? air pressure at surface
+    REAL(wp) :: q_air             !< specific humidity of the air 
+    REAL(wp) :: ga                !< aerodynamic resistance
+    REAL(wp) :: co2_mixing_ratio  !< co2 mixing ratio of the air
+    REAL(wp) :: press_srf        !< ? air pressure at surface
     ! 1.6 memory of certain variables, temperature, ...
     REAL(wp) :: t_air_week        !< avrg air temperaure across 7 days
     REAL(wp) :: t_air_month       !< avrg air temperaure across 30 days
@@ -265,6 +267,8 @@ MODULE mo_veg_memory
     REAL(wp),DIMENSION(ncanop) :: par_sunlit_cl            !< PAR on sunlit leaves (µmol m-2 s-1)
     REAL(wp),DIMENSION(ncanop) :: par_shaded_cl            !< PAR on shaded leaves (µmol m-2 s-1)
     REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit_cl          !< fraction of layer which is sunlit
+    REAL(wp),DIMENSION(ncanop) :: lai_cl                   !< leaf area in the canopy layer 
+    REAL(wp),DIMENSION(ncanop) :: cumm_lai_cl              !< cummulative leaf area above the mid-point of the canopy layer 
   CONTAINS
     PRIVATE
     PROCEDURE, PUBLIC :: init => init_plant
@@ -747,15 +751,19 @@ CONTAINS
   !! just set to zero or FALSE, called in the driver
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_moving_avrg_variables (this)
-    IMPLICIT NONE 
+    USE mo_atmland_constants
+
+    IMPLICIT NONE
+
+  
     CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
 
     !< 1.0 init/set reasonable default values
     !!
     ! 1.1 light in the canopy
-    this%par_sunlit_cl                    = 1.0_wp
-    this%par_shaded_cl                    = 1.0_wp
-    this%fleaf_sunlit_cl                  = 1.0_wp
+    this%par_sunlit_cl                    = 150.0_wp
+    this%par_shaded_cl                    = 10.0_wp
+    this%fleaf_sunlit_cl                  = 0.5_wp
     ! 1.2 soil moisture
     this%beta_air                      = 1.0_wp
     this%beta_soil_ps                  = 1.0_wp
@@ -771,7 +779,9 @@ CONTAINS
     ! 1.5 environmental forcing
     this%t_air                         = 283.15_wp   ! 10°C; temperature in K
     this%q_air                         = 0.001_wp    ! air specific humidity
-    this%press_surf                    = 1._wp
+    this%press_srf                     = standard_press_srf  
+    this%co2_mixing_ratio              = def_co2_mixing_ratio  
+    this%ga                            = 0.2
     ! 1.6 memory of certain variables, temperature [K], ...
     this%t_air_week                    = 283.15_wp   ! 10°C; 7  days
     this%t_air_month                   = 283.15_wp   ! 10°C; 30 days
@@ -963,15 +973,17 @@ CONTAINS
   !!
   !! called in the driver at the end of each timestep
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_tile_moving_avrg_variables (this, t_air, press_surf, q_air)
+  SUBROUTINE update_tile_moving_avrg_variables (this, t_air, press_srf, q_air, co2_mixing_ratio, ga)
 
     USE mo_base_constants,    ONLY: dt, one_day
 
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp), INTENT(in)                   :: t_air       !< current air temperature 
-    REAL(wp), INTENT(in)                   :: press_surf  !< current air pressure  
+    REAL(wp), INTENT(in)                   :: press_srf   !< current air pressure  
     REAl(wp), INTENT(in)                   :: q_air       !< current air specific humidity
+    REAl(wp), INTENT(in)                   :: co2_mixing_ratio  !< current air CO2 mixing ratio 
+    REAl(wp), INTENT(in)                   :: ga          !< current air specific humidity
     CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
 
     ! moving_avrg( 
@@ -981,9 +993,15 @@ CONTAINS
 
     this%t_air            = this%calc_moving_avrg(this%t_air, t_air, &
                                                   1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%press_surf       = this%calc_moving_avrg(this%press_surf, press_surf, &
+    this%ga               = this%calc_moving_avrg(this%ga, ga, &
                                                   1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%q_air       = this%calc_moving_avrg(this%q_air, q_air, &
+    this%co2_mixing_ratio = this%calc_moving_avrg(this%co2_mixing_ratio, co2_mixing_ratio, &
+                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
+    this%t_air            = this%calc_moving_avrg(this%t_air, t_air, &
+                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
+    this%press_srf        = this%calc_moving_avrg(this%press_srf, press_srf, &
+                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
+    this%q_air            = this%calc_moving_avrg(this%q_air, q_air, &
                                                   1.0_wp / (this%p_optNfrac * one_day/ dt))
     this%t_air_week       = this%calc_moving_avrg(this%t_air_week, t_air, &
                                                   1.0_wp / (this%p_weekly * one_day/ dt))

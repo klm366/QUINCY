@@ -9,7 +9,6 @@ mo_assimi_update_canopy_fluxes.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_atm2land_memory_class.o \
-  mo_atmland_forcing.o \
   mo_atmland_constants.o \
   mo_atmland_util.o \
   mo_shared_constants.o \
@@ -17,8 +16,6 @@ mo_assimi_update_canopy_fluxes.o: \
   mo_veg_memory.o \
   mo_veg_constants.o \
   mo_veg_respiration.o \
-  mo_veg_config_class.o \
-  mo_rad_update_radiation.o \
   mo_assimi_config_class.o \
   mo_assimi_constants.o \
   mo_assimi_memory_class.o

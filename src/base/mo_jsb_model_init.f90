@@ -280,7 +280,7 @@ CONTAINS
         CALL finish('land_model_driver-init_routine','Nice try, but the soil model does not exist yet :) ')
       CASE('canopy')
         CALL init_slm_canopy(model, tile)
-!      CASE('test_canopy')
+      CASE('test_canopy')
 !         init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
       CASE DEFAULT
         CALL finish('land_model_driver-init_routine','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')

@@ -20,7 +20,6 @@ MODULE mo_rad_constants
   REAL(wp), SAVE :: &      ! In Fortran 2003 and Fortran 2008, a maximum of 255 continuation lines are allowed
 
   ! Parameters required for albedo and fapar calculation
-      ka        ,     &   !< Extinction coefficient for PAR on chlorophyll
       kbl0_vis  ,     &   !< extinction coefficient over black leaves 
       kdf0_vis  ,     &   !< extinction coefficient for diffuse PAR (Spitters eq. 7) 
       kbl0_nir  ,     &   !< extinction coefficient over black leaves in NIR range 
@@ -40,7 +39,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_rad_constants
 
-      ka         = 0.005_wp 
       kbl0_vis   = 0.5_wp    ! Spitters 1986 
       kdf0_vis   = 0.8_wp    ! Spitters 1986
       kbl0_nir   = 0.5_wp    ! Spitters 1986 

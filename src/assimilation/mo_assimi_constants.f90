@@ -90,7 +90,8 @@ MODULE mo_assimi_constants
 
   ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
   REAL(wp), SAVE :: &     
-      kn             ,   & !< extinction coefficient to describe decline of N within the canopy
+      ka             ,   &  !< Extinction coefficient for PAR on chlorophyll
+      kn             ,   &  !< extinction coefficient to describe decline of N within the canopy
       ! parameters to describe the varying fraction of N in chlorophyll through the canopy
       k0_fnl_chl_C3  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
       k0_fnl_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
@@ -166,6 +167,7 @@ CONTAINS
       discr_ps_phi   = 0.16_wp 
 
   ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
+      ka            = 0.005_wp 
       kn            = 0.11_wp
       k0_fnl_chl_C3 = 6.0_wp
       k0_fnl_chl_C4 = 15.0_wp

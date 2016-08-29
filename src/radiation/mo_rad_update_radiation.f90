@@ -19,7 +19,7 @@ MODULE mo_rad_update_radiation
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_radiation, calc_canopy_layer_depth
+  PUBLIC :: update_radiation
 
 CONTAINS
 
@@ -148,7 +148,7 @@ CONTAINS
                      plant%lai, lctlib%sigma_vis, kbl0_vis, kdf0_vis, alb_vis_soil, &
                      arad_sunlit_vis_cl,arad_shaded_vis_cl,fleaf_sunlit_vis_cl, &
                      arad_vis_can,arad_vis_soil, &
-                     alb_vis_can,alb_vis,swvis_srf_net) 
+                     alb_vis_can,alb_vis,swvis_srf_net,plant%lai_cl,plant%cumm_lai_cl) 
 
     !> 4.0 calculate NIR radiation budget (absorbed radiation on canopy layers and soil + albedo).
     !! Following Weiss & Norman, Agri. For. Met. 1985, the fraction of VIS and NIR 
@@ -158,7 +158,7 @@ CONTAINS
                      plant%lai, lctlib%sigma_nir, kbl0_nir, kdf0_nir, alb_nir_soil, &
                      arad_sunlit_nir_cl,arad_shaded_nir_cl,fleaf_sunlit_nir_cl, &
                      arad_nir_can,arad_nir_soil, &
-                     alb_nir_can,alb_nir,swnir_srf_net) 
+                     alb_nir_can,alb_nir,swnir_srf_net,plant%lai_cl,plant%cumm_lai_cl) 
 
     !> 5.0 calculate albedo and net radiation for total shortwave radiation
     !!
@@ -212,7 +212,7 @@ CONTAINS
   SUBROUTINE calc_sw_srf_net(sw_srf_down,sw_fdiffuse,cos_zenith_angle,& 
                         lai,sigma,kbl0,kdf0,alb_soil,arad_sunlit_cl,arad_shaded_cl,fleaf_sunlit_cl, & 
                         arad_can,arad_soil,& 
-                        alb_can,alb,sw_srf_net)
+                        alb_can,alb,sw_srf_net,lai_cl,cumm_lai_cl)
 
     USE mo_base_constants,     ONLY: ncanop,canopy_layer_depth
 
@@ -234,6 +234,8 @@ CONTAINS
     REAL(wp), INTENT(out) ::   alb_can                 !< albedo of the canopy 
     REAL(wp), INTENT(out) ::   alb                     !< albedo of the tile 
     REAL(wp), INTENT(out) ::   sw_srf_net              !< net shortwave radiation of the tile 
+    REAL(wp), DIMENSION(:),INTENT(in) ::    lai_cl                !< soil albedo 
+    REAL(wp), DIMENSION(:),INTENT(in) ::    cumm_lai_cl                !< soil albedo 
     ! 0.2 Local
     REAL(wp) :: irad_dir_down,irad_dif_down            ! downward direct and diffuse radiation 
     REAL(wp) :: irad_dir_down_bc,irad_dif_down_bc      ! light intensity at the bottom of the canopy
@@ -261,8 +263,6 @@ CONTAINS
     arad_shaded_cl(:) = 0.0_wp
     arad_shaded_up_cl(:) = 0.0_wp
     fleaf_sunlit_cl(:) = 0.0_wp
-
-    canopy_layer_depth_act = calc_canopy_layer_depth(lai)
 
     tmp_cos_zenith_angle = cos_zenith_angle
     IF(cos_zenith_angle < min_cos_zenith_angle_rad) & 
@@ -312,30 +312,29 @@ CONTAINS
           irad_dif_up = (1.0_wp - rho) * irad_dif_up * exp(-kdf*lai)
 
           ! loop over canopy layers. All fluxes are evaluated at the centre of the canopy layer
-          lc = canopy_layer_depth(1)/2.0_wp
           DO icanop = 1,ncanop
      
              IF (radf2 <= eps8) THEN ! case of only diffuse radiation
                 ! Eq.10 Mean radiation penetrating foliage at lc 
-                arad_shaded_cl(icanop) = radf1 * exp(-kdf * lc) + &    ! eq 10
-                       radf5 * exp(-kdf * (max(lai-lc,0.0_wp)))
-                ! radiation penetrating foliage from below for albedo calculation
-                arad_shaded_up_cl(icanop) = radf5 * exp(-kdf * (max(lai-lc,0.0_wp)))
+                arad_shaded_cl(icanop) = radf1 * exp(-kdf * cumm_lai_cl(icanop)) + &    ! eq 10
+                       radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanop),0.0_wp)))
+                ! radiation penetrating foliage from below for albedo cacumm_lai_cl(icanop)ulation
+                arad_shaded_up_cl(icanop) = radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanop),0.0_wp)))
              ELSE ! Case of direct and diffuse radiation
-                ! Sunlit foliage at lc (fraction)
+                ! Sunlit foliage at cumm_lai_cl(icanop) (fraction)
                 ! kbl: Extinction coefficient for radiation over black leaves in canopy
-                fleaf_sunlit_cl(icanop) = exp(-kbl * lc)
-                ! Eq.10 Diffuse radiation penetrating foliage at lc 
-                idfa = radf1 * exp(-kdf * lc) + & 
-                       radf5 * exp(-kdf * (max(lai-lc,0.0_wp)))
-                ! radiation penetrating foliage from below for albedo calculation
-                arad_shaded_up_cl(icanop) = radf5 * exp(-kdf * (max(lai-lc,0.0_wp)))
-                ! Direct radiation penetrating sunlit foliage at lc 
-                idra = radf2 * exp(radf4 * lc)
-                ! Eq.12 Mean direct radiation remaining direct at lc 
+                fleaf_sunlit_cl(icanop) = exp(-kbl * cumm_lai_cl(icanop))
+                ! Eq.10 Diffuse radiation penetrating foliage at cumm_lai_cl(icanop) 
+                idfa = radf1 * exp(-kdf * cumm_lai_cl(icanop)) + & 
+                       radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanop),0.0_wp)))
+                ! radiation penetrating foliage from below for albedo cacumm_lai_cl(icanop)ulation
+                arad_shaded_up_cl(icanop) = radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanop),0.0_wp)))
+                ! Direct radiation penetrating sunlit foliage at cumm_lai_cl(icanop) 
+                idra = radf2 * exp(radf4 * cumm_lai_cl(icanop))
+                ! Eq.12 Mean direct radiation remaining direct at cumm_lai_cl(icanop) 
                 ! radf4 replaced by -kbl according to Wang2003 (error in Spitters 1986 Eqn.12)
-                idrdra = radf3 * exp(-kbl * lc)  
-                ! Radiation penetrating shaded foliage at lc (umol/m2/s)
+                idrdra = radf3 * exp(-kbl * cumm_lai_cl(icanop))  
+                ! Radiation penetrating shaded foliage at cumm_lai_cl(icanop) (umol/m2/s)
                 ! Eq.13 Sum of diffuse radiation and diffuse component of direct flux
                 arad_shaded_cl(icanop) = idfa + max((idra - idrdra), 0.0_wp)
                 ! Radiation penetrating sunlit foliage at lc (umol/m2/s)
@@ -344,7 +343,7 @@ CONTAINS
              ENDIF 
    
              ! Integrate absorbed radiation over actually existing canopy layers
-             IF(canopy_layer_depth_act(icanop)>eps8)THEN
+             IF(lai_cl(icanop)>eps8)THEN
                 ! total absorbed radiation
                 arad_can = arad_can + ( arad_shaded_cl(icanop) * (1._wp-fleaf_sunlit_cl(icanop)) +  & 
                                        arad_sunlit_cl(icanop) * fleaf_sunlit_cl(icanop) ) * & 
@@ -353,10 +352,6 @@ CONTAINS
                 arad_can_up = arad_can_up + arad_shaded_up_cl(icanop) * canopy_layer_depth_act(icanop)
              ENDIF
   
-             ! cummulative leaf area of the following layer at the mid-point of that layer 
-             IF(icanop < ncanop) & 
-               lc = lc + canopy_layer_depth(icanop)/2.0_wp + canopy_layer_depth(icanop+1)/2.0_wp
-   
           ENDDO
    
           ! albedo of the canopy, as seen from the top of the canopy
@@ -382,42 +377,5 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE calc_sw_srf_net
-
-  !-----------------------------------------------------------------------------------------------------
-  !> calculate number of actual canopy layers present
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_canopy_layer_depth(lai) RESULT(canopy_layer_depth_act)
-
-    USE mo_base_constants,      ONLY: ncanop, canopy_layer_depth
-
-    IMPLICIT NONE
-    ! 0.1 InOut
-    REAL(wp),INTENT(in)        :: lai
-    REAL(wp),DIMENSION(ncanop) :: canopy_layer_depth_act
-    ! 0.2 Local
-    REAL(wp)  :: lc 
-    INTEGER   :: icanop
-
-    ! initialise output
-    canopy_layer_depth_act(:) = 0._wp
-
-    ! calculate number of actual canopy layers present
-    IF(lai .GT. eps8) THEN ! avoid any calculation is there are no leaves 
-       lc = 0._wp
-       DO icanop = 1,ncanop
-          IF(lc+canopy_layer_depth(icanop).LT.lai) THEN 
-             canopy_layer_depth_act(icanop) = canopy_layer_depth(icanop)
-          ELSE IF(lc.LT.lai.AND.lc+canopy_layer_depth(icanop).GE.lai) THEN
-             ! lai = lc + canopy_layer_depth_act
-             canopy_layer_depth_act(icanop) = lai - lc 
-         ENDIF
-         lc = lc + canopy_layer_depth_act(icanop)
-       ENDDO
-       ! make sure all LAI is represented by letting last layer go to the end of the canopy
-       IF(lc < lai ) canopy_layer_depth_act(ncanop) = canopy_layer_depth_act(ncanop) + lai - lc
-    ENDIF
-  END FUNCTION calc_canopy_layer_depth
 
 END MODULE mo_rad_update_radiation

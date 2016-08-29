@@ -32,6 +32,7 @@ CONTAINS
 
     USE mo_base_memory,             ONLY: t_slm_tile
     USE mo_veg_memory
+    USE mo_veg_canopy
     USE mo_shared_memory,           ONLY: t_element
     USE mo_jsb_process_class,       ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
     USE mo_atm2land_memory_class,   ONLY: t_atm2land_memory
@@ -75,6 +76,12 @@ CONTAINS
     !> 2.0 update target C:N:P for each tissue type
     !! 
     !! 
+  ! optimize total N allocated to leaf pool
+  IF (veg_config%flag_optimal_Nleaf) &
+          CALL  optimize_Nleaf(plant, plant%lai_cl, lctlib,&
+          plant%moving_average%t_air, plant%moving_average%press_srf, plant%moving_average%co2_mixing_ratio, plant%moving_average%ga, plant%moving_average%beta_air,&
+          plant%moving_average%beta_soil_ps,plant%moving_average%beta_soil_gs)
+
     CALL update_stoichiometry(plant,lctlib%growthform, & 
                               target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, & 
                               target_cn_fruit,target_np_fine_root,target_np_coarse_root, & 
@@ -83,6 +90,9 @@ CONTAINS
     !> 3.0 calculate current allometry 
     !! 
     !! 
+     ! calculate NPP increment, needed for optimal allocation scheme
+     !IF (veg_config%flag_optimal_allocation)
+    CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
     CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind,plant%moving_average%allometry_labile%carbon,&
          plant%moving_average%allometry_labile%nitrogen, plant%moving_average%allometry_labile%phosphorus,&
          lctlib%wood_density, lctlib%sla,lctlib%allom_k1,lctlib%allom_k2, & 

@@ -23,5 +23,6 @@ mo_land_model_interface.o: \
   mo_veg_config_class.o \
   mo_rad_interface.o \
   mo_veg_interface.o \
+  mo_veg_canopy.o \
   mo_assimi_interface.o
 
