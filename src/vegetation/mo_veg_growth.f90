@@ -54,7 +54,7 @@ CONTAINS
                               target_cn_fruit,target_np_fine_root,target_np_coarse_root, &
                               target_np_sap_wood,target_np_fruit
     REAL(wp) :: diameter,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio
-    REAl(wp) :: k1_opt, k2_opt
+    REAL(wp) :: k1_opt, k2_opt
     ! 0.3 Memory allocation
     TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
     REAL(wp), POINTER                :: t_air
@@ -66,7 +66,6 @@ CONTAINS
 
     ! bi-directional pointer
     plant => tile%plant
-
 
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
@@ -543,7 +542,7 @@ CONTAINS
                               target_cn_sap_wood,target_cn_fruit,target_np_fine_root, & 
                               target_np_coarse_root,target_np_sap_wood,target_np_fruit)
 
-    USE mo_assimi_constants,     ONLY: delta_n_leaf
+    USE mo_veg_constants,     ONLY: delta_n_leaf
 
     IMPLICIT NONE
     ! 0.1 InOut

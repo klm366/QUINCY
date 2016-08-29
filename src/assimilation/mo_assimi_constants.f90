@@ -99,13 +99,6 @@ MODULE mo_assimi_constants
       k1_fnl_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
       kfnl_chl              !< parameter to describe the varying fraction of N in chlorophyll through the canopy
 
-  ! parameters for changes in canopy N fractions
-  REAL(wp), SAVE :: &     
-      ! maximum change in photosynthetic N fractions
-      delta_n_fraction  ,     & !< maximum fractional change for optimal adjustment of photosynthetic N fraction
-      ! maximum change in CN ratio of canopy
-      delta_n_leaf      !< maximum fractional change for optimal adjsutment of canopy N allocation
-
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -174,10 +167,6 @@ CONTAINS
       k1_fnl_chl_C3 = 3.6_wp
       k1_fnl_chl_C4 = 4.4_wp
       kfnl_chl      = 0.7_wp
-
-  ! parameters for changes in canopy N fractions
-      delta_n_fraction  = 0.001_wp 
-      delta_n_leaf      = 0.0001_wp    
 
   END SUBROUTINE init_assimi_constants
 

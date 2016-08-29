@@ -11,7 +11,6 @@ MODULE mo_veg_constants
 
   USE mo_kind,                ONLY: wp
 
-
   IMPLICIT NONE
 
   PUBLIC
@@ -132,6 +131,13 @@ MODULE mo_veg_constants
       ! soil litter turnover pool, s equivalent to 1 year
       tau_litter      !< soil litter pool turnover time
 
+  ! parameters for changes in canopy N fractions
+  REAL(wp), SAVE :: &     
+      ! maximum change in photosynthetic N fractions
+      delta_n_fraction  ,     & !< maximum fractional change for optimal adjustment of photosynthetic N fraction
+      ! maximum change in CN ratio of canopy
+      delta_n_leaf      !< maximum fractional change for optimal adjsutment of canopy N allocation
+
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   ! need to be parameters (i.e. constant across model runtime)
@@ -225,6 +231,11 @@ CONTAINS
 
   ! soil pools (may move to mo_soil_constants later) !
       tau_litter                  = 1.0_wp * 3600.0_wp * 24.0_wp * 365.0_wp  
+
+  ! parameters for changes in canopy N fractions
+!@todo:should this be 1/20days
+      delta_n_fraction  = 0.048 ! 0.001_wp (changed to account for multiplication with dt/one_day in the code)
+      delta_n_leaf      = 0.0001_wp    
 
   END SUBROUTINE init_veg_constants
 
