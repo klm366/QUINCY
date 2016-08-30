@@ -18,7 +18,7 @@ MODULE mo_veg_canopy
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calc_canopy_layers,calc_npp_increment,optimize_Nleaf
+  PUBLIC :: calc_canopy_layers,calc_marginal_npp_increment,calc_dir_optimal_cn_leaf
 
 CONTAINS
 
@@ -496,232 +496,227 @@ CONTAINS
   END SUBROUTINE calc_update_n_fractions                   
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to update_canopy_fluxes
+  ! Sub Task to calc_growth (currently in mo_veg_canopy to get rid of circular dependencies)
   ! 
   !------------------------------------------------------------------------------------------------------
   !> Subroutine to calculate change in NPP with very small change in LAI
   !! Needed for calculation of optimal leaf and root allocation fraction. See mo_veg_growth
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_npp_increment(plant, lctlib, dNPP)
+  SUBROUTINE calc_marginal_npp_increment(lctlib, plant, dNPP)
 
-    USE mo_base_memory
-    USE mo_base_config_class,       ONLY: base_config
-    USE mo_base_constants
-    USE mo_shared_constants        ! only lambda_C14 ?
-    USE mo_veg_memory              ! only t_slm_plant ?
-   ! USE mo_veg_growth,          ONLY: calc_allometry
-   !USE mo_rad_update_radiation, ONLY: calc_canopy_layer_depth
+    USE mo_base_constants, ONLY: ncanop
+    USE mo_veg_memory,     ONLY: t_slm_plant
 
-   IMPLICIT NONE
-   ! 0.1 InOut
-   TYPE(t_slm_plant), INTENT(in)          :: plant
-   TYPE(t_lctlib_element),INTENT(in)      :: lctlib         !< land-cover-type library - parameters for one pft
-   REAL(wp), INTENT(out)                  :: dNPP
-   ! 0.2 Local
-   REAL(wp) :: lai, nitrogen
-   REAL(wp), DIMENSION(ncanop) :: canopy_layer_depth_act
-   REAL(wp), DIMENSION(ncanop) :: lai_cl
-   REAL(wp), DIMENSION(ncanop) :: cumm_lai_cl 
-   REAL(wp), DIMENSION(ncanop) :: par_sunlit_mavg_cl,par_shaded_mavg_cl,fleaf_sunlit_mavg_cl 
-   REAl(wp), DIMENSION(ncanop) :: fnl_oth_cl, nl_tot_cl, fnl_chl_cl, fnl_et_cl, fnl_rub_cl, fnl_pepc_cl
-   REAL(wp) :: gpp, maint_respiration_leaf
-   REAL(wp), DIMENSION(ncanop) :: agl, anl, rl, gsl, cil
-   REAL(wp) :: hlp1 
-   INTEGER :: icanop
+    IMPLICIT NONE
+    ! 0.1 InOut
+    TYPE(t_lctlib_element),INTENT(in) :: lctlib  !< land-cover-type library - parameters for one pft
+    TYPE(t_slm_plant),     INTENT(in) :: plant   !< plant-type
+    REAL(wp),              INTENT(out) :: dNPP   !<- unit change of NPP per ??
+    ! 0.2 Local
+    REAL(wp) :: lai, leaf_nitrogen
+    REAL(wp) :: gpp, maint_respiration_leaf
+    REAL(wp),DIMENSION(ncanop) :: lai_cl
+    REAL(wp),DIMENSION(ncanop) :: cumm_lai_cl 
+    REAL(wp),DIMENSION(ncanop) :: par_sunlit_mavg_cl,par_shaded_mavg_cl,fleaf_sunlit_mavg_cl 
+    REAl(wp),DIMENSION(ncanop) :: fn_oth_cl, nl_tot_cl, fn_chl_cl, fn_et_cl, fn_rub_cl, fn_pepc_cl
+    REAL(wp) :: ag_cl, r_cl
+    REAL(wp) :: hlp1 
+    INTEGER :: icanop
+ 
+    !> 1.0 copy current plant state into dummy variables
+    !!
+    fn_chl_cl = plant%fnl_chl_cl(:)
+    fn_et_cl = plant%fnl_et_cl(:)
+    fn_rub_cl = plant%fnl_rub_cl(:)
+    fn_pepc_cl = plant%fnl_pepc_cl(:)
+    par_sunlit_mavg_cl = plant%moving_average%par_sunlit_cl
+    par_shaded_mavg_cl = plant%moving_average%par_shaded_cl
+    fleaf_sunlit_mavg_cl = plant%moving_average%fleaf_sunlit_cl
+ 
+ !@todo: calc_npp_increment: I think this is wrong currently, as increaseing leaf area require an
+ ! increase in roots and sapwood mass and thus respiration... Also, should be based on current mass
+ ! ratios, not a fixed constant. ie
+ ! f_increment = f_alloc_leaf/f_alloc_root+sapwood
+ ! maint_resp = maint_resp * (1 + f_alloc_root+sapwood*1/totalmassofpools)
+ ! probably only relevant for BNF and uptake calculation?
+    !> 2.0 Estimate effect of a small increase in leaf C on LAI and leaf N
+    !!
+    ! increase LAI by small increment
+    lai = plant%lai + 0.3_wp * lctlib%sla
+    ! equivalent leaf N assuming any new leaf growth will have target CN
+    leaf_nitrogen = plant%pool%leaf%nitrogen + 0.3_wp * plant%target_cn_leaf
+    ! recompute canopy layer LAI and foliar N with new numbers
+    CALL calc_canopy_layers(lctlib = lctlib, & 
+                            leaf_nitrogen = leaf_nitrogen, &
+                            lai = lai,&
+                            par_sunlit_mavg_cl = par_sunlit_mavg_cl, &
+                            par_shaded_mavg_cl = par_shaded_mavg_cl, &
+                            fleaf_sunlit_mavg_cl = fleaf_sunlit_mavg_cl, &
+                            lai_cl = lai_cl, &
+                            cumm_lai_cl = cumm_lai_cl, &
+                            n_tot_cl = nl_tot_cl, &
+                            fn_rub_cl = fn_rub_cl, &
+                            fn_et_cl = fn_et_cl, &
+                            fn_pepc_cl = fn_pepc_cl, &
+                            fn_chl_cl = fn_chl_cl, &
+                            fn_oth_cl = fn_oth_cl, &
+                            inquire_n_fractions=.TRUE.)
+ 
+    ! calculate photosynthesis by integration over canopy layers containing leaves 
+    gpp = 0._wp
+    maint_respiration_leaf = 0._wp
+    DO icanop = 1,ncanop
+       IF(lai_cl(icanop).GT.eps8)THEN   
+            
+          CALL calc_photosynthesis(plant%moving_average%t_air,plant%moving_average%press_srf,& 
+                    plant%moving_average%co2_mixing_ratio,plant%moving_average%ga, & 
+                    plant%par_sunlit_cl(icanop), plant%par_shaded_cl(icanop),& 
+                    plant%fleaf_sunlit_cl(icanop), &
+                    plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
+                    fn_chl_cl(icanop),fn_et_cl(icanop),fn_rub_cl(icanop),fn_pepc_cl(icanop), nl_tot_cl(icanop),& 
+                    lctlib%ps_pathway, &
+                    plant%moving_average%t_jmax_opt, &                  
+                    lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
+                    ag_cl,hlp1,r_cl,hlp1,hlp1,&
+                    hlp1,hlp1,hlp1)
+    
+            gpp = gpp + ag_cl * lai_cl(icanop)  
+            maint_respiration_leaf = maint_respiration_leaf + r_cl * lai_cl(icanop) 
+ 
+       ENDIF
+    ENDDO
+      
+    !> 3.0 Calculate increment in net carbon gain from increased LAI
+    !!
+    dNPP = (gpp - plant%flux%gpp) - (maint_respiration_leaf - plant%flux%maint_respiration_leaf)
+ 
+   END SUBROUTINE calc_marginal_npp_increment
 
-   fnl_chl_cl = plant%fnl_chl_cl(:)
-   fnl_et_cl = plant%fnl_et_cl(:)
-   fnl_rub_cl = plant%fnl_rub_cl(:)
-   fnl_pepc_cl = plant%fnl_pepc_cl(:)
-   par_sunlit_mavg_cl = plant%moving_average%par_sunlit_cl
-   par_shaded_mavg_cl = plant%moving_average%par_shaded_cl
-   fleaf_sunlit_mavg_cl = plant%moving_average%fleaf_sunlit_cl
-
-   ! increase LAI by small increment
-   lai = plant%lai + 0.3_wp * lctlib%sla
-   ! equivalent leaf N assuming any new leaf growth will have target CN
-   nitrogen = plant%pool%leaf%nitrogen + 0.3_wp * plant%target_cn_leaf
-   ! recompute LAI and foliar N with new numbers
-   CALL calc_canopy_layers(lctlib = lctlib, & 
-                          leaf_nitrogen = nitrogen, &
-                          lai = lai,&
-                          par_sunlit_mavg_cl = par_sunlit_mavg_cl, &
-                          par_shaded_mavg_cl = par_shaded_mavg_cl, &
-                          fleaf_sunlit_mavg_cl = fleaf_sunlit_mavg_cl, &
-                          lai_cl = lai_cl, &
-                          cumm_lai_cl = cumm_lai_cl, &
-                          n_tot_cl = nl_tot_cl, &
-                          fn_rub_cl = fnl_rub_cl, &
-                          fn_et_cl = fnl_et_cl, &
-                          fn_pepc_cl = fnl_pepc_cl, &
-                          fn_chl_cl = fnl_chl_cl, &
-                          fn_oth_cl = fnl_oth_cl, &
-                          inquire_n_fractions=.TRUE.)
-!   ! recalculate number of canopy layers with new LAI
-!   canopy_layer_depth_act = calc_canopy_layer_depth(lai)
-!
-!   ! re-calculate N distribution in the canopy, needed because of new LAI and leaf nitrogen
-!   ! photosynthetic N fractions should NOT be recalculated to allow interaction with optimal fractions
-!    CALL calc_canopy_n_distribution(nitrogen,lai, & 
-!            canopy_layer_depth_act, lctlib%ps_pathway, & 
-!            lctlib%k0_fnl_struc, nl_tot_cl, fnl_chl_cl, fnl_et_cl, fnl_rub_cl, fnl_pepc_cl, fnl_oth_cl)    
-
-
-   ! Loop over canopy layers
-   ! calculate photosynthesis per layer
-   DO icanop = 1,ncanop
-     
-        ! only calculate phosynthesis if leaves present in layer
-        !IF (canopy_layer_depth_act(icanop).GT.eps8)THEN   
-        IF (plant%lai_cl(icanop).GT.eps8)THEN   
-           
-           CALL calc_photosynthesis(plant%moving_average%t_air,plant%moving_average%press_srf,& 
-                plant%moving_average%co2_mixing_ratio,plant%moving_average%ga, & 
-                plant%par_sunlit_cl(icanop), plant%par_shaded_cl(icanop),& 
-                plant%fleaf_sunlit_cl(icanop), &
-                plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
-                fnl_chl_cl(icanop),fnl_et_cl(icanop),fnl_rub_cl(icanop),fnl_pepc_cl(icanop), nl_tot_cl(icanop),& 
-                lctlib%ps_pathway, &
-                plant%moving_average%t_jmax_opt, &                  
-                lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
-                agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop),&
-                hlp1,hlp1,hlp1)
-        END IF
-        
-     END DO ! icanop = 1,ncanop
-     
-     ! integrate fluxes over the canopy
-     gpp = 0._wp
-     maint_respiration_leaf = 0._wp
-     DO icanop = 1,ncanop
-        !gpp = gpp + agl(icanop) * canopy_layer_depth_act(icanop)  
-        gpp = gpp + agl(icanop) * plant%lai_cl(icanop)  
-        maint_respiration_leaf = maint_respiration_leaf + & 
-            !rl(icanop) * canopy_layer_depth_act(icanop) 
-            rl(icanop) * plant%lai_cl(icanop) 
-     ENDDO
-
-     ! increment in NPP
-     dNPP = (gpp - plant%flux%gpp) - (maint_respiration_leaf - plant%flux%maint_respiration_leaf)
-
-  END SUBROUTINE calc_npp_increment
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task to calc_growth (currently in mo_veg_canopy to get rid of circular dependencies)
+  ! 
+  !------------------------------------------------------------------------------------------------------
   !> Subroutine to determine direction in which total leaf N should change in order to increase NPP
   !! 
   !! Parameter leaf_cn_direction
   !----------------------------------------------------------------------------------------------------
-  SUBROUTINE optimize_Nleaf(plant, canopy_layer_depth_act,lctlib, t_air, press_srf,co2_mixing_ratio,ga,beta_air,beta_soil_ps, & 
-                          beta_soil_gs)
+  SUBROUTINE calc_dir_optimal_cn_leaf(lctlib, plant)
 
-    USE mo_base_constants    
-    USE mo_veg_respiration
-    USE mo_veg_memory, ONLY: t_slm_plant, t_slm_veg_pool
-    USE mo_veg_constants, ONLY: delta_n_leaf
-    
+    USE mo_base_constants,  ONLY: ncanop, dt, one_day    
+    USE mo_veg_memory,      ONLY: t_slm_plant
+    USE mo_veg_constants,   ONLY: delta_n_leaf,root2leaf_cn,wood2leaf_cn 
+    USE mo_veg_respiration, ONLY: calc_maintenance_respiration
+
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_plant), INTENT(inout)        :: plant                  ! plant variables per tile
-    TYPE(t_lctlib_element),INTENT(in)        :: lctlib         !< land-cover-type library - parameters for one pft
-    REAL(wp), DIMENSION(ncanop), INTENT(in) :: canopy_layer_depth_act
-    REAL(wp) :: t_air, press_Srf,co2_mixing_ratio,ga
-    REAL(wp) ::  beta_air,beta_soil_ps,beta_soil_gs
+    TYPE(t_lctlib_element),INTENT(in) :: lctlib         !< land-cover-type library - parameters for one pft
+    TYPE(t_slm_plant),     INTENT(inout) :: plant       !< plant variables per tile
     ! 0.2 Local
-    INTEGER :: icanop, dd, t
-    TYPE(t_slm_veg_pool) :: new
-    REAL(wp),DIMENSION(ncanop, 3) :: agl,anl,rl,gsl,cil
-    REAL(wp) :: m_rub, m_et, m_pepc
-   REAL(wp), DIMENSION(ncanop) :: par_sunlit_mavg_cl,par_shaded_mavg_cl,fleaf_sunlit_mavg_cl 
-    REAL(wp), DIMENSION(3) :: npp_direction, gpp_direction, rl_direction
-    REAL(wp), DIMENSION(ncanop) :: nl_tot_cl, fnl_oth_cl, fnl_chl_cl, fnl_et_cl, fnl_rub_cl, fnl_pepc_cl,lai_cl,cumm_lai_cl
-    REAL(wp), DIMENSION(3) :: maint_respiration
-    REAL(Wp) :: maint_respiration_c13,maint_respiration_c14
+    REAL(wp) :: leaf_nitrogen,fine_root_nitrogen,coarse_root_nitrogen,sap_wood_nitrogen
+    REAL(wp), DIMENSION(ncanop) :: par_sunlit_mavg_cl,par_shaded_mavg_cl,fleaf_sunlit_mavg_cl 
+    REAL(wp), DIMENSION(ncanop) :: n_tot_cl, fn_oth_cl, fn_chl_cl, fn_et_cl, fn_rub_cl, fn_pepc_cl,lai_cl,cumm_lai_cl
+    REAL(wp), DIMENSION(3) :: npp_direction, maint_respiration,anl
+    REAL(wp) :: hlp1
+    REAL(wp) :: direction
+    INTEGER :: icanop, dd
 
-    fnl_chl_cl = plant%fnl_chl_cl(:)
-    fnl_et_cl = plant%fnl_et_cl(:)
-    fnl_rub_cl = plant%fnl_rub_cl(:)
-   par_sunlit_mavg_cl = plant%moving_average%par_sunlit_cl
-   par_shaded_mavg_cl = plant%moving_average%par_shaded_cl
-   fleaf_sunlit_mavg_cl = plant%moving_average%fleaf_sunlit_cl
-    ! initialse output
-    agl(:, :) = 0.0_wp 
-    anl(:, :) = 0.0_wp 
-    rl(:, :) = 0.0_wp
-    gsl(:, :) = 0.0_wp
-    cil(:, :) = 0.0_wp 
+    IF(plant%pool%leaf%nitrogen>eps4)THEN
+
+    fn_chl_cl = plant%fnl_chl_cl(:)
+    fn_et_cl = plant%fnl_et_cl(:)
+    fn_rub_cl = plant%fnl_rub_cl(:)
+    par_sunlit_mavg_cl = plant%moving_average%par_sunlit_cl
+    par_shaded_mavg_cl = plant%moving_average%par_shaded_cl
+    fleaf_sunlit_mavg_cl = plant%moving_average%fleaf_sunlit_cl
+
     ! Calculate photosynthesis with lower, current and higher leaf N to determine optimal canopy N
-    DO dd = -1, 1
+    npp_direction(:) = 0.0_wp
+    DO dd = 1,3 
         
-       new%leaf%nitrogen = plant%pool%leaf%nitrogen * (1.0_wp + REAL(dd) * delta_n_leaf)
+       direction = REAL(dd,KIND=wp) - 2.0_wp
+
+       leaf_nitrogen = plant%pool%leaf%nitrogen * (1.0_wp + direction * delta_n_leaf * dt/one_day)
        
        ! update N distribution in the canopy
        CALL calc_canopy_layers(lctlib = lctlib, & 
-                          leaf_nitrogen = new%leaf%nitrogen, &
+                          leaf_nitrogen = leaf_nitrogen, &
                           lai = plant%lai,&
                           par_sunlit_mavg_cl = par_sunlit_mavg_cl, &
                           par_shaded_mavg_cl = par_shaded_mavg_cl, &
                           fleaf_sunlit_mavg_cl = fleaf_sunlit_mavg_cl, &
                           lai_cl = lai_cl, &
                           cumm_lai_cl = cumm_lai_cl, &
-                          n_tot_cl = nl_tot_cl, &
-                          fn_rub_cl = fnl_rub_cl, &
-                          fn_et_cl = fnl_et_cl, &
-                          fn_pepc_cl = fnl_pepc_cl, &
-                          fn_chl_cl = fnl_chl_cl, &
-                          fn_oth_cl = fnl_oth_cl, &
+                          n_tot_cl = n_tot_cl, &
+                          fn_rub_cl = fn_rub_cl, &
+                          fn_et_cl = fn_et_cl, &
+                          fn_pepc_cl = fn_pepc_cl, &
+                          fn_chl_cl = fn_chl_cl, &
+                          fn_oth_cl = fn_oth_cl, &
                           inquire_n_fractions=.TRUE.)
 
-        ! calculate photosynthesis for each layer
-
+       ! calculate photosynthesis for each layer
        DO icanop =1, ncanop
-          IF(canopy_layer_depth_act(icanop).GT.0.0)THEN
-             CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
-                  plant%moving_average%par_sunlit_cl(icanop),plant%moving_average%par_shaded_cl(icanop),& 
-                  plant%moving_average%fleaf_sunlit_cl(icanop), &
-                  beta_air,beta_soil_ps,beta_soil_gs, &
-                  plant%fnl_chl_cl(icanop),&
-                  plant%fnl_et_cl(icanop),& 
-                  plant%fnl_rub_cl(icanop),&
-                  plant%fnl_pepc_cl(icanop),&
-                  nl_tot_cl(icanop),&
-                  lctlib%ps_pathway, & 
-                  plant%moving_average%t_jmax_opt, &                  
-                  lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
-                  agl(icanop, dd+2),anl(icanop, dd+2),rl(icanop, dd+2),gsl(icanop, dd+2),cil(icanop, dd+2),&
-                  m_rub, m_et, m_pepc)
-          
+          IF(lai_cl(icanop) > eps8)THEN
+
+             CALL calc_photosynthesis(plant%moving_average%t_air,& 
+                       plant%moving_average%press_srf,plant%moving_average%co2_mixing_ratio,&
+                       plant%moving_average%ga, & 
+                       plant%moving_average%par_sunlit_cl(icanop),&
+                       plant%moving_average%par_shaded_cl(icanop),& 
+                       plant%moving_average%fleaf_sunlit_cl(icanop), &
+                       plant%moving_average%beta_air,&
+                       plant%moving_average%beta_soil_ps,&
+                       plant%moving_average%beta_soil_gs, &
+                       fn_chl_cl(icanop),&
+                       fn_et_cl(icanop),& 
+                       fn_rub_cl(icanop),&
+                       fn_pepc_cl(icanop),&
+                       n_tot_cl(icanop),&
+                       lctlib%ps_pathway, & 
+                       plant%moving_average%t_jmax_opt, &                  
+                       lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
+                       hlp1,anl(dd),hlp1,hlp1,hlp1,&
+                       hlp1,hlp1,hlp1)
+               
+             npp_direction(dd) = npp_direction(dd) + anl(dd) * lai_cl(icanop)
                  
           ENDIF
        ENDDO
-    ENDDO
 
-       ! calculate NPP for each leaf N value (lower, equal, higher)
-       gpp_direction(:) = 0.0_wp
-       rl_direction(:)=0.0_wp
-       DO t=1, 3
-          DO icanop=1, ncanop
-             gpp_direction(t) = gpp_direction(t) + agl(icanop, t)
-             rl_direction(t) = rl_direction(t) + rl(icanop,t)
-          ENDDO
-       ENDDO
-
-
-       DO dd=-1, 1
        ! Calculate nitrogen in all other pools assuming lower leaf nitrogen
        ! OBS: currently assuming N is atken from fine root pool since respiration 
        ! fucntion is linear with sum of pools. Should be changed if adding stem and root temperature
-       new%fine_root%nitrogen = plant%pool%fine_root%nitrogen * (1 - REAL(dd) * delta_n_leaf)
-       new%coarse_root%nitrogen = plant%pool%coarse_root%nitrogen
-       new%sap_wood%nitrogen = plant%pool%sap_wood%nitrogen
-        !Calculate whole plant respiration
- 
-        maint_respiration(dd+2) = calc_maintenance_respiration(t_air,t_air,new%sap_wood%nitrogen,&
-             new%fine_root%nitrogen, new%coarse_root%nitrogen) + rl_direction(dd+2)
-        ! calculate NPP
-          npp_direction(dd+2) = gpp_direction(dd+2)-maint_respiration(dd+2)
+!@todoveg_canopy:calc_dir_optimal_cn_leaf. This neither conserves mass, not does this make sense
+! physiologically - the additional N should be taken from the labile or reserve pool
+!       fine_root_nitrogen = plant%pool%fine_root%nitrogen * & 
+!            (1.0_wp - direction * delta_n_leaf * dt/one_day)
+!       coarse_root_nitrogen = plant%pool%coarse_root%nitrogen
+!       sap_wood_nitrogen = plant%pool%sap_wood%nitrogen
+       fine_root_nitrogen = plant%pool%fine_root%nitrogen * & 
+            (1.0_wp + direction * delta_n_leaf/root2leaf_cn * dt/one_day)
+       coarse_root_nitrogen = plant%pool%coarse_root%nitrogen * & 
+            (1.0_wp + direction * delta_n_leaf/wood2leaf_cn * dt/one_day)
+       sap_wood_nitrogen = plant%pool%sap_wood%nitrogen * & 
+            (1.0_wp + direction * delta_n_leaf/wood2leaf_cn * dt/one_day)
+
+       ! Calculate whole plant respiration
+       maint_respiration(dd) = calc_maintenance_respiration(plant%moving_average%t_air,&
+             plant%moving_average%t_air,sap_wood_nitrogen,&
+             fine_root_nitrogen, coarse_root_nitrogen) 
+
+       ! calculate NPP
+       npp_direction(dd) = npp_direction(dd)-maint_respiration(dd)
+
      ENDDO
         
-       ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
-       plant%leaf_cn_direction = REAL(MAXLOC(npp_direction, 1)) - 2.0_wp
+     ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
+!@todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functiong in 4D
+!@todo:plant%leaf_cn_direction rename to plant%opt_leaf_cn_direction
+     plant%leaf_cn_direction = REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp
 
-  END SUBROUTINE optimize_Nleaf
+  ELSE
+     plant%leaf_cn_direction = 0.0_wp
+  ENDIF
 
+  END SUBROUTINE calc_dir_optimal_cn_leaf
 END MODULE mo_veg_canopy

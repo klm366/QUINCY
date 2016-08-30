@@ -75,11 +75,8 @@ CONTAINS
     !> 2.0 update target C:N:P for each tissue type
     !! 
     !! 
-  ! optimize total N allocated to leaf pool
-  IF (veg_config%flag_optimal_Nleaf) &
-          CALL  optimize_Nleaf(plant, plant%lai_cl, lctlib,&
-          plant%moving_average%t_air, plant%moving_average%press_srf, plant%moving_average%co2_mixing_ratio, plant%moving_average%ga, plant%moving_average%beta_air,&
-          plant%moving_average%beta_soil_ps,plant%moving_average%beta_soil_gs)
+    IF (veg_config%flag_optimal_Nleaf.AND.plant%growing_season) & 
+       CALL calc_dir_optimal_cn_leaf(lctlib, plant)
 
     CALL update_stoichiometry(plant,lctlib%growthform, & 
                               target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, & 
@@ -89,9 +86,12 @@ CONTAINS
     !> 3.0 calculate current allometry 
     !! 
     !! 
-     ! calculate NPP increment, needed for optimal allocation scheme
-     !IF (veg_config%flag_optimal_allocation)
-    CALL calc_npp_increment(plant, lctlib, plant%flux%unit_npp)
+    !> 3.1 calculate marginal NPP increment per unit C growth, needed for optimal allocation scheme
+    !!
+    CALL calc_marginal_npp_increment(lctlib, plant, plant%flux%unit_npp)
+    
+    !> 3.2 calculate allometry    
+    !!
     CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind,plant%moving_average%allometry_labile%carbon,&
          plant%moving_average%allometry_labile%nitrogen, plant%moving_average%allometry_labile%phosphorus,&
          lctlib%wood_density, lctlib%sla,lctlib%allom_k1,lctlib%allom_k2, & 
@@ -538,10 +538,11 @@ CONTAINS
   !! Includes optimal CN ratio calculation \n
   !! Output: target stoichiometries
   ! --------------------------------------------------------------------------------------------
-  SUBROUTINE update_stoichiometry(plant,growthform,target_cn_fine_root,target_cn_coarse_root, & 
+  ELEMENTAL SUBROUTINE update_stoichiometry(plant,growthform,target_cn_fine_root,target_cn_coarse_root, & 
                               target_cn_sap_wood,target_cn_fruit,target_np_fine_root, & 
                               target_np_coarse_root,target_np_sap_wood,target_np_fruit)
 
+    USE mo_base_constants,    ONLY: dt, one_day
     USE mo_veg_constants,     ONLY: delta_n_leaf
 
     IMPLICIT NONE
@@ -562,7 +563,7 @@ CONTAINS
     !! 
     IF (veg_config%flag_optimal_Nleaf.AND.plant%growing_season) THEN
        ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
-       plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - plant%leaf_cn_direction * delta_n_leaf)
+       plant%target_cn_leaf = plant%target_cn_leaf * (1.0_wp - plant%leaf_cn_direction * delta_n_leaf * dt/one_day)
     ENDIF
 
     !> 2.0 determine C:N of other plant tissues
