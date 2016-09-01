@@ -14,16 +14,18 @@ MODULE mo_jsb_var_class
   USE mo_exception, ONLY: finish
 
 !>  @todo currently commented out and defined locally VARNAME_LEN \n
-!!  USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN
+!!  USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN   ! @slmtemp
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var, t_jsb_var_p
-  PUBLIC :: t_jsb_var_real1d  !! for SLM compatbility
+  PUBLIC :: t_jsb_struct, t_jsb_struct_p, t_jsb_n_struct_p, t_jsb_n_struct    ! @slmjsb4
+  PUBLIC :: t_jsb_var_real1d  !! for SLM compatbility @slmtemp
 
 !> @todo in JSBACH4 this parameter is defined in mo_jsb_varlist_iface (USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN), 
-!! thus, delete here and inser the USE statement instead
+!! thus, delete here and insert the USE statement instead later
+!! @slmtemp
   INTEGER, PARAMETER :: VARNAME_LEN = 64
 
   ENUM, BIND(C)
@@ -41,15 +43,9 @@ MODULE mo_jsb_var_class
   END TYPE t_jsb_var
 
 !! added for temporary implementation of 1D REAL into SLM -> they will be changed to 2D later
+! @slmtemp
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real1d
     REAL(wp), POINTER :: ptr => NULL()
-!!  CONTAINS
-!!    PROCEDURE :: Add_real2d                       ! Add two variables of type t_jsb_var_real2d
-!!    PROCEDURE :: Add_real2d_and_scalar            ! Add varialbe of type t_jsb_var_real2d with REAL scalar
-!!    PROCEDURE :: Add_real2d_and_field             ! Add varialbe of type t_jsb_var_real2d with REAL 2-d field
-!!    GENERIC   :: OPERATOR(+) => Add_real2d, Add_real2d_and_scalar, Add_real2d_and_field
-!!    PROCEDURE :: Multiply_real2d_with_field       ! Multiply varialbe of type t_jsb_var_real2d with REAL 2-d field
-!!    GENERIC   :: OPERATOR(*) => Multiply_real2d_with_field
   END TYPE t_jsb_var_real1d
 
 
@@ -78,6 +74,42 @@ MODULE mo_jsb_var_class
   TYPE t_jsb_var_p
     CLASS(t_jsb_var), POINTER :: p
   END TYPE t_jsb_var_p
+
+! @slmjsb4
+  TYPE, ABSTRACT :: t_jsb_struct
+    TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
+    CHARACTER(len=VARNAME_LEN) :: name            ! Name of variable
+    CHARACTER(len=VARNAME_LEN) :: full_name       ! Full name of variable in varlist, including prefix and suffix
+    INTEGER                    :: owner_proc_id = -1
+    INTEGER, ALLOCATABLE       :: owner_tile_path(:)
+    INTEGER                    :: no_of_vars = 0
+    INTEGER                    :: max_no_of_vars = 100 !!! hard coded limit - may change later !!!
+    CHARACTER(LEN=50)          :: varlist_name
+  CONTAINS
+  END TYPE t_jsb_struct
+
+! @slmjsb4
+  TYPE t_jsb_struct_p
+    CLASS(t_jsb_struct), POINTER :: p
+  END TYPE t_jsb_struct_p
+
+! @slmjsb4
+  TYPE, ABSTRACT :: t_jsb_n_struct
+    TYPE(t_jsb_struct_p), ALLOCATABLE :: l2_structs(:)
+    CHARACTER(len=VARNAME_LEN) :: name            ! Name of variable
+    CHARACTER(len=VARNAME_LEN) :: full_name       ! Full name of variable in varlist, including prefix and suffix
+    INTEGER                    :: owner_proc_id = -1
+    INTEGER, ALLOCATABLE       :: owner_tile_path(:)
+    INTEGER                    :: no_of_l2_structs = 0
+    INTEGER                    :: max_no_of_l2_structs = 10 !!! hard coded limit - may change later !!!
+    CHARACTER(LEN=50)          :: l2_structlist_name
+  CONTAINS
+  END TYPE t_jsb_n_struct
+
+! @slmjsb4
+  TYPE t_jsb_n_struct_p
+    CLASS(t_jsb_n_struct), POINTER :: p
+  END TYPE t_jsb_n_struct_p
 
 !!$  INTERFACE t_jsb_var
 !!$    PROCEDURE :: Create_jsb_var

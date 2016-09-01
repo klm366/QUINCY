@@ -17,7 +17,8 @@ MODULE mo_jsb_model_init
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, init_lctlib
     USE mo_jsb_memory_class,                ONLY: t_jsb_memory
-    USE mo_jsb_process_class,               ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+    USE mo_jsb_process_class,               ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO, &
+                                                  Get_process_name
     USE mo_jsb_process_factory,             ONLY: Create_process_memory, max_no_of_processes
     ! shared
     USE mo_shared_isotope,                  ONLY: calc_fractionation 
@@ -155,27 +156,11 @@ CONTAINS
     DO iproc=1,max_no_of_processes
       tile%mem(iproc)%p => NULL()
       SELECT CASE(iproc)
-        ! SLM: extend this CASE to all SLM processes that accept the JSBACH4 memory structure; see mo_jsb_process_class for enumeration
-        CASE (RAD, ASSIMI, ATM2LAND, LAND2ATM)    
-
-          ! get the process name; in jsbach4 it is called: Get_process_name(iproc)  
-!! 2do
-!!! use Get_process_name from mo_jsb_process_class <<<<<<<<<<
-          SELECT CASE(iproc)
-            CASE (RAD)
-              process_name = 'rad' 
-            CASE (ASSIMI)
-              process_name = 'assimi' 
-            CASE (ATM2LAND)
-              process_name = 'atm2land' 
-            CASE (LAND2ATM)
-              process_name = 'land2atm' 
-            !CASE (X)
-            !  process_name = 'x' 
-          END SELECT
-
-          prefix = 'none'
-          suffix = 'unknown'
+        ! SLM: extend this CASE to all SLM processes that work with JSBACH4 memory structure; see mo_jsb_process_class for enumeration
+        CASE (RAD, ASSIMI, VEG, ATM2LAND, LAND2ATM)    
+          prefix = 'no-need'
+          suffix = 'no-need'
+          process_name = Get_process_name(iproc)
           tmp_ptr => Create_process_memory(iproc) ! see mo_jsb_process_factory ==> uncomment lines here for new process memory !!
           SELECT TYPE (tmp_ptr)
           CLASS IS (t_jsb_memory)

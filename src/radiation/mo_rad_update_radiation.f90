@@ -105,17 +105,20 @@ CONTAINS
         rad__mem => mm
     END SELECT
 
+    ! atm2land
     swpar_srf_down   => atm2land__mem%swpar_srf_down%ptr
     swpar_fdiffuse   => atm2land__mem%swpar_fdiffuse%ptr
     cos_zenith_angle => atm2land__mem%cos_zenith_angle%ptr
     swnir_srf_down   => atm2land__mem%swnir_srf_down%ptr
     swvis_srf_down   => atm2land__mem%swvis_srf_down%ptr
+    ! land2atm
     albedo            => land2atm__mem%albedo%ptr
     net_radiation     => land2atm__mem%net_radiation%ptr
     alb_vis_dir       => land2atm__mem%alb_vis_dir%ptr
     alb_vis_dif       => land2atm__mem%alb_vis_dif%ptr
     alb_nir_dir       => land2atm__mem%alb_nir_dir%ptr
     alb_nir_dif       => land2atm__mem%alb_nir_dif%ptr
+    ! rad
     sw_srf_net      => rad__mem%sw_srf_net%ptr
     swvis_srf_net   => rad__mem%swvis_srf_net%ptr
     swnir_srf_net   => rad__mem%swnir_srf_net%ptr

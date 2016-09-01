@@ -37,11 +37,14 @@ CONTAINS
     USE mo_veg_constants
     USE mo_veg_memory
 
+    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+    USE mo_veg_memory_class,      ONLY: t_veg_memory
+
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in)         :: lctlib         !< land-cover-type library - parameters for one pft
-    TYPE(t_slm_tile),INTENT(inout)            :: tile                 !< current tile 
+    TYPE(t_slm_tile),INTENT(inout)            :: tile           !< current tile 
     ! 0.2 Local
     TYPE(t_slm_veg_pool)                      :: mortality
     TYPE(t_slm_veg_pool)                      :: litter_flux_mortality
@@ -52,6 +55,41 @@ CONTAINS
     REAL(wp)                                  :: rfr_ratio
     REAL(wp)                                  :: flim_light,flim_moist,flim_temp
     INTEGER :: icanop
+! --------------------------------
+! @slmdev @ slmtemp see ticket #79
+    ! 0.3 Memory allocation
+    TYPE(t_veg_memory), POINTER         :: veg__mem   ! dsl4jsb_Def_memory(VEG)
+    TYPE(t_veg_memory), POINTER         :: plant1     ! local pointer to veg__mem for SLM usability
+    REAL(wp), POINTER :: height
+    REAL(wp), POINTER :: diameter
+
+    SELECT TYPE (mm => tile%mem(VEG)%p)       ! dsl4jsb_Get_memory(VEG)
+      TYPE IS(t_veg_memory)
+        veg__mem => mm
+    END SELECT
+    plant1 => veg__mem          ! @slmdev  -> plant, vegetation, vegm, ... ?
+
+
+  ! using the memory of the veg process exemplary
+    plant1%height%ptr    = plant1%height%ptr + 0.001_wp
+    plant1%diameter%ptr  = plant1%diameter%ptr + 0.001_wp
+
+    plant1%pool%leaf%carbon%ptr    = plant1%pool%leaf%carbon%ptr    + 0.001_wp
+    plant1%pool%leaf%nitrogen%ptr  = plant1%pool%leaf%nitrogen%ptr  + 0.001_wp
+    plant1%growth%leaf%carbon%ptr     = plant1%growth%leaf%carbon%ptr     + 0.001_wp
+
+    CALL test_routine(plant1%litterfall, &                ! adds 0.001_wp to litterfall%labile%carbon%ptr
+                      plant1%litterfall%leaf%carbon%ptr)  ! adds 0.001_wp to litterfall%leaf%carbon%ptr
+
+    ! just for testing purposes   @slmtemp
+!    write(999,*) plant1%height%ptr, plant1%diameter%ptr, &
+!                 plant1%pool%leaf%carbon%ptr, plant1%pool%leaf%nitrogen%ptr, &
+!                 plant1%growth%leaf%carbon%ptr, &
+!                 plant1%litterfall%labile%carbon%ptr, plant1%litterfall%leaf%carbon%ptr, ' |-| '
+! @slmdev @ slmtemp see ticket #79
+! --------------------------------
+
+
 
     !> 1.0 background mortality 
     !! select rate and convert from 1/year to 1/timestep
@@ -115,5 +153,23 @@ CONTAINS
     tile%plant%flux%litterfall = tile%plant%flux%litterfall + litter_flux_mortality
    
   END SUBROUTINE update_veg_dynamics
+
+
+
+!! <<< temporary test code - non-functional to slm - see ticket #79 - Jan Engel 20160901 >>> !!
+  subroutine test_routine(litterfall, test_var)
+
+    use mo_veg_memory_class,  only: t_slm_struct_veg_pool
+
+    type(t_slm_struct_veg_pool), INTENT(inout) :: litterfall
+    REAL(wp), INTENT(inout) :: test_var
+
+    test_var = test_var + 0.001_wp
+    litterfall%labile%carbon%ptr =litterfall%labile%carbon%ptr + 0.001_wp
+
+  end subroutine test_routine
+!! <<< temporary test code - non-functional to slm - see ticket #79 - Jan Engel 20160901 >>> !!
+
+
 
 END MODULE mo_veg_dynamics

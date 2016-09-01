@@ -12,6 +12,12 @@ mo_veg_memory.o: \
   mo_base_constants.o \
   mo_shared_memory.o
 
+mo_assimi_memory_class.o: \
+  mo_kind.o \
+  mo_jsb_memory_class.o \
+  mo_jsb_var_class.o \
+  mo_slm_varlist.o
+
 mo_veg_growth.o: \
   mo_kind.o \
   mo_exception.o \
@@ -96,6 +102,8 @@ mo_veg_dynamics.o: \
   mo_base_memory.o \
   mo_base_constants.o \
   mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_veg_memory_class.o \
   mo_shared_constants.o \
   mo_veg_memory.o \
   mo_veg_config_class.o \

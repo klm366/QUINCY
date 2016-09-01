@@ -74,8 +74,8 @@ CONTAINS
 !!      return_value = 'soil'
 !!    CASE (HYDRO)
 !!      return_value = 'hydro'
-!!    CASE (VEG)
-!!      return_value = 'veg'
+    CASE (VEG)
+      return_value = 'veg'
     CASE (RAD)
       return_value = 'rad'
     CASE (ASSIMI)

@@ -62,7 +62,7 @@ CONTAINS
     REAL(wp)                         :: hlp1                   ! dummy variable 
     ! 0.3 Memory allocation
     TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
-    TYPE(t_assimi_memory), POINTER   :: assimi__mem
+!    TYPE(t_assimi_memory), POINTER   :: assimi__mem
     REAL(wp), POINTER :: t_air
     REAL(wp), POINTER :: q_air
     REAL(wp), POINTER :: press_srf
@@ -70,18 +70,17 @@ CONTAINS
     REAL(wp), POINTER :: co2_mixing_ratio
     REAL(wp), POINTER :: co2_mixing_ratio_C13
     REAL(wp), POINTER :: co2_mixing_ratio_C14
-    !REAL(wp), POINTER :: gpp        ! REAL(wp), POINTER, DIMENSION(:) :: gpp
-    !REAL(wp), POINTER :: gpp_c13    ! REAL(wp), POINTER, DIMENSION(:) :: gpp_c13
 
     SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
       TYPE IS(t_atm2land_memory)
         atm2land__mem => mm
     END SELECT
-    SELECT TYPE (mm => tile%mem(ASSIMI)%p)
-      TYPE IS(t_assimi_memory)
-        assimi__mem => mm
-    END SELECT
+!    SELECT TYPE (mm => tile%mem(ASSIMI)%p)
+!      TYPE IS(t_assimi_memory)
+!        assimi__mem => mm
+!    END SELECT
 
+    ! atm2land
     t_air                => atm2land__mem%t_air%ptr
     q_air                => atm2land__mem%q_air%ptr
     press_srf            => atm2land__mem%press_srf%ptr
@@ -89,8 +88,7 @@ CONTAINS
     co2_mixing_ratio     => atm2land__mem%co2_mixing_ratio%ptr
     co2_mixing_ratio_C13 => atm2land__mem%co2_mixing_ratio_C13%ptr
     co2_mixing_ratio_C14 => atm2land__mem%co2_mixing_ratio_C14%ptr
-    !gpp     => assimi__mem%gpp%ptr       ! gpp     => assimi__mem%gpp%ptr(tile%ics:tile%ice,tile%iblk)
-    !gpp_c13 => assimi__mem%gpp_c13%ptr   ! gpp_c13 => assimi__mem%gpp_c13%ptr(tile%ics:tile%ice,tile%iblk)
+
 
 
    !  bi-directional pointer
@@ -523,16 +521,5 @@ CONTAINS
     END SELECT
 
   END FUNCTION discrimination_ps
-
-!! <<< temporary test code - non-functional to slm >>> !!
-  elemental subroutine test_routine(gpp)
-
-    REAL(wp), INTENT(inout) :: gpp
-
-    gpp = gpp + 0.01_wp
-
-
-  end subroutine test_routine
-!! <<< temporary test code - non-functional to slm >>> !!
 
 END MODULE mo_assimi_update_canopy_fluxes

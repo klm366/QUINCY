@@ -14,7 +14,7 @@ MODULE mo_assimi_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
 
-  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later
+  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later  @slmtemp
 
 
 
@@ -24,24 +24,17 @@ MODULE mo_assimi_memory_class
 
   INTEGER, PARAMETER :: max_no_of_vars = 40   ! default JSBACH4
 
+
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for assimi memory
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
 
-!    TYPE(t_jsb_var_real2d)  :: &
-!                                gpp, &      ! plant%flux%gpp
-!                                gpp_c13     ! plant%flux%gpp_c13
-
-    TYPE(t_jsb_var_real1d)    :: &      ! REAL(wp) 1D ; implemented for SLM use only, see mo_jsb_var_class 
+  ! @slmtemp  --> 2D
+    TYPE(t_jsb_var_real1d)    :: &          ! REAL(wp) 1D ; implemented for SLM use only, see mo_jsb_var_class 
                                 gpp, &
                                 gpp_c13
-
-
-
-
-
 
 
 
@@ -52,8 +45,6 @@ MODULE mo_assimi_memory_class
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_memory_class'
-
-
 
 
 CONTAINS
@@ -97,23 +88,13 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(mem%gpp%ptr)) THEN
 
-      CALL slm_add_var(mem, 'gross_assimilation', mem%gpp, &   ! i.e. gross photosynthesis
+      CALL slm_add_var(mem, 'gross_assimilation', mem%gpp, &          ! i.e. gross photosynthesis
             ics, ice, iblk, &    ! model%options -> for SLM compatibility
-!        & hgrid, surface,                                                                              &
-!        & t_cf('gross_assimilation', 'µmol CO2 m-2 s-1', 'Gross photosynthesis'),    &
-!        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-!        & prefix, suffix,                                                                                &
-!        & lrestart=.FALSE., 
-          initval_r=0.0_wp) ! initval taken from JSBACH3
+            initval_r=0.0_wp) ! initval taken from JSBACH3
 
-      CALL slm_add_var(mem, 'gross_assimilation_c13', mem%gpp_c13, &   ! i.e. gross photosynthesis
+      CALL slm_add_var(mem, 'gross_assimilation_c13', mem%gpp_c13, &  ! i.e. gross photosynthesis
             ics, ice, iblk, &    ! model%options -> for SLM compatibility
-!        & hgrid, surface,                                                                              &
-!        & t_cf('gross_assimilation', 'µmol CO2 m-2 s-1', 'Gross photosynthesis'),    &
-!        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-!        & prefix, suffix,                                                                                &
-!        & lrestart=.FALSE., 
-          initval_r=0.0_wp) ! initval taken from JSBACH3
+            initval_r=0.0_wp) ! initval taken from JSBACH3
 
     END IF
 
