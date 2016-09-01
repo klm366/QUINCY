@@ -22,13 +22,13 @@ MODULE mo_seb_lake
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_control,        ONLY: debug_on
 
-  dsl4jsb_Use_processes SEB, RAD, HYDRO, ATM2LAND
-  dsl4jsb_Use_config(SEB)
+  dsl4jsb_Use_processes SEB_, RAD_, HYDRO_, ATM2LAND_
+  dsl4jsb_Use_config(SEB_)
 
-  dsl4jsb_Use_memory(ATM2LAND)
-  dsl4jsb_Use_memory(SEB)
-  dsl4jsb_Use_memory(RAD)
-  dsl4jsb_Use_memory(HYDRO)
+  dsl4jsb_Use_memory(ATM2LAND_)
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(RAD_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   IMPLICIT NONE
   PRIVATE
@@ -48,11 +48,11 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_config(SEB)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(ATM2LAND)
-    dsl4jsb_Def_memory(RAD)
-    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(ATM2LAND_)
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -111,52 +111,52 @@ CONTAINS
     nc    = options%nc
     dtime = options%dtime
 
-    IF (.NOT. tile%Is_process_active(SEB) .OR. .NOT. Contains_lct(tile%lcts, LAKE_TYPE)) RETURN
+    IF (.NOT. tile%Is_process_active(SEB_) .OR. .NOT. Contains_lct(tile%lcts, LAKE_TYPE)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(SEB)
+    dsl4jsb_Get_config(SEB_)
 
-    ml_depth      = dsl4jsb_Config(SEB)%lake_mixed_layer_depth
-    min_ice_depth = dsl4jsb_Config(SEB)%lake_min_ice_depth
+    ml_depth      = dsl4jsb_Config(SEB_)%lake_mixed_layer_depth
+    min_ice_depth = dsl4jsb_Config(SEB_)%lake_min_ice_depth
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(ATM2LAND)
-    dsl4jsb_Get_memory(RAD)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(HYDRO_)
 
-    dsl4jsb_Get_var2D_onChunk(SEB, t)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, t_lwtr)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, t_lice)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, qsat_lwtr)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, qsat_lice)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, s_wtr)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, s_ice)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, heat_cap)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, hflx_form_ice) ! inout
-    dsl4jsb_Get_var2D_onChunk(SEB, hflx_cond_ice)
-    dsl4jsb_Get_var2D_onChunk(SEB, hflx_melt_lice)
-    dsl4jsb_Get_var2D_onChunk(SEB, hflx_melt_snow)
+    dsl4jsb_Get_var2D_onChunk(SEB_, t)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, t_lwtr)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, t_lice)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lwtr)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lice)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, s_wtr)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, s_ice)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, heat_cap)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, hflx_form_ice) ! inout
+    dsl4jsb_Get_var2D_onChunk(SEB_, hflx_cond_ice)
+    dsl4jsb_Get_var2D_onChunk(SEB_, hflx_melt_lice)
+    dsl4jsb_Get_var2D_onChunk(SEB_, hflx_melt_snow)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)     ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, snow)          ! in
-    dsl4jsb_Get_var2D_onChunk(SEB, latent_hflx_wtr)    ! in
-    dsl4jsb_Get_var2D_onChunk(SEB, sensible_hflx_wtr)  ! in
-    dsl4jsb_Get_var2D_onChunk(SEB, latent_hflx_ice)    ! in
-    dsl4jsb_Get_var2D_onChunk(SEB, sensible_hflx_ice)  ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)     ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, snow)          ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)    ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr)  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)    ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice)  ! in
 
-    dsl4jsb_Get_var2D_onChunk(SEB, fract_lice) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB, depth_lice) ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_lice)    ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO, w_snow_lice) ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO, w_snow)      ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, depth_lice) ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice)    ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice) ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)      ! out
 
-    dsl4jsb_Get_var2D_onChunk(RAD, rad_net_lwtr)         ! in
-    dsl4jsb_Get_var2D_onChunk(RAD, rad_net_lice)         ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr)         ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice)         ! in
 
     zero            (:) = 0._wp
     hcap_wtr        (:) = 0._wp
@@ -452,9 +452,9 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(HYDRO)
-    dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(ATM2LAND_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -502,7 +502,7 @@ CONTAINS
     nc      = options%nc
     steplen = options%steplen
 
-    IF (.NOT. tile%Is_process_active(SEB)) RETURN
+    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     
@@ -511,34 +511,34 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(HYDRO)
-    dsl4jsb_Get_memory(ATM2LAND)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(ATM2LAND_)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef_wtr)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef_wtr)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef_wtr)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef_wtr)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef_ice)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef_ice)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef_ice)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef_ice)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_wtr)          ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_ice)          ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_acoef_wtr)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_bcoef_wtr)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_acoef_wtr)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_bcoef_wtr)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_acoef_ice)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_bcoef_ice)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_acoef_ice)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_bcoef_ice)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_wtr)          ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_ice)          ! IN
 
-    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_lwtr)         ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      s_wtr)             ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_lice)         ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      s_ice)             ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      fract_lice)        ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      sensible_hflx_wtr) ! out
-    dsl4jsb_Get_var2D_onChunk(SEB,      latent_hflx_wtr)   ! out
-    dsl4jsb_Get_var2D_onChunk(SEB,      sensible_hflx_ice) ! out
-    dsl4jsb_Get_var2D_onChunk(SEB,      latent_hflx_ice)   ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapo_wtr)         ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapo_ice)         ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapopot)          ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapotranspiration) ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_lwtr)         ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      s_wtr)             ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_lice)         ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      s_ice)             ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      fract_lice)        ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx_wtr) ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx_wtr)   ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx_ice) ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx_ice)   ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_wtr)         ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_ice)         ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot)          ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotranspiration) ! out
     
     ! ---------------------------
     ! Go

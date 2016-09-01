@@ -174,7 +174,7 @@ CONTAINS
 
   SUBROUTINE init_model_common(model)
 
-    USE mo_jsb_process_class,   ONLY: SEB, TURB, SOIL, HYDRO, VEG, RAD, HD, ASSIMI, PHENO
+    USE mo_jsb_process_class,   ONLY: SEB_, TURB_, SOIL_, HYDRO_, VEG_, RAD_, HD_, ASSIMI_, PHENO_
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_model_class,     ONLY: print_model
@@ -229,43 +229,43 @@ CONTAINS
     END IF
 
     ! Temporary for testing ... should be in separate subroutine
-    CALL model%Queue_task(RAD,    "surface_radiation")
-    !CALL model%Queue_task(HYDRO,  "snow_and_skin_fraction")
-    CALL model%Queue_task(SEB,    "surface_energy")
-    CALL model%Queue_task(SEB,    "surface_fluxes")
-    IF (model%processes(ASSIMI)%p%config%active) THEN
-      CALL model%Queue_task(RAD,    "radiation_par")
+    CALL model%Queue_task(RAD_,    "surface_radiation")
+    !CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+    CALL model%Queue_task(SEB_,    "surface_energy")
+    CALL model%Queue_task(SEB_,    "surface_fluxes")
+    IF (model%processes(ASSIMI_)%p%config%active) THEN
+      CALL model%Queue_task(RAD_,    "radiation_par")
     END IF
-    CALL model%Queue_task(RAD,    "albedo")
-    CALL model%Queue_task(TURB,   "surface_roughness")
-    CALL model%Queue_task(SOIL,   "soil_temp_and_hydro")
+    CALL model%Queue_task(RAD_,    "albedo")
+    CALL model%Queue_task(TURB_,   "surface_roughness")
+    CALL model%Queue_task(SOIL_,   "soil_temp_and_hydro")
 #ifndef __NO_JSBACH_HD__
-    CALL model%Queue_task(HD,     "hd_local_outflow")
+    CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
-    CALL model%Queue_task(SEB,    "snowmelt_correction")
-    !IF (model%processes(ASSIMI)%p%config%active) THEN
-      CALL model%Queue_task(ASSIMI, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
+    CALL model%Queue_task(SEB_,    "snowmelt_correction")
+    !IF (model%processes(ASSIMI_)%p%config%active) THEN
+      CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
                                                                     ! and assimilation_waterunlimited
     !END IF
-    IF (model%processes(ASSIMI)%p%config%active) THEN
-      CALL model%Queue_task(ASSIMI, "canopy_cond_unstressed")  ! first call without water limitation (waterLimitationFlag =.FALSE.)
+    IF (model%processes(ASSIMI_)%p%config%active) THEN
+      CALL model%Queue_task(ASSIMI_, "canopy_cond_unstressed")  ! first call without water limitation (waterLimitationFlag =.FALSE.)
     ELSE
-      CALL model%Queue_task(VEG,    "canopy_cond_unstressed")
+      CALL model%Queue_task(VEG_,    "canopy_cond_unstressed")
     END IF
-    CALL model%Queue_task(VEG,    "canopy_cond_stressed")
-    !CALL model%Queue_task(HYDRO,  "snow_and_skin_fraction")
-    !IF (model%processes(ASSIMI)%p%config%active) THEN
-      CALL model%Queue_task(ASSIMI, "assimilation")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
+    CALL model%Queue_task(VEG_,    "canopy_cond_stressed")
+    !CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+    !IF (model%processes(ASSIMI_)%p%config%active) THEN
+      CALL model%Queue_task(ASSIMI_, "assimilation")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
                                                      ! should be called after the soil hydrology is calculated
                                                      ! (former update_soil_1) and after the vegetation conductance is calculated
                                                      ! (former update_vegetation_conductanc)
     !END IF
-    CALL model%Queue_task(TURB,   "humidity_scaling")
-    CALL model%Queue_task(VEG,    "foliage_projected_cover")
-    CALL model%Queue_task(PHENO,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
+    CALL model%Queue_task(TURB_,   "humidity_scaling")
+    CALL model%Queue_task(VEG_,    "foliage_projected_cover")
+    CALL model%Queue_task(PHENO_,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
                                                            ! but in JSBACH3 it was here at the end...
     
-    CALL model%Queue_task(SEB,    "asselin_filter")      ! Should always be the last task
+    CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
     CALL print_model(model)
     CALL model%Print_actions()
 
@@ -294,43 +294,43 @@ CONTAINS
 !!$      END IF
 
       ! TBD: Loop over processes instead of explicit
-      IF (one_of(tile%process_action(RAD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL rad_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(SEB), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      IF (one_of(tile%process_action(SEB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL seb_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(TURB), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      IF (one_of(tile%process_action(TURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL turb_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(SOIL), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      IF (one_of(tile%process_action(SOIL_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL soil_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(HYDRO), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      IF (one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL hydro_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(PHENO), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL pheno_init(tile)
       END IF
 
       ! Vegetation must be initialized after soil and after pheno!
-      IF (one_of(tile%process_action(VEG), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      IF (one_of(tile%process_action(VEG_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL veg_init_bc(tile)
         CALL veg_init_ic(tile)
       END IF
 
-      ! IF (one_of(tile%process_action(ASSIMI), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      ! IF (one_of(tile%process_action(ASSIMI_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
       !   CALL assimi_init_bc(tile)
       !   CALL assimi_init_ic(tile)
       ! END IF
 
 #ifndef __NO_JSBACH_HD__
-      IF (one_of(tile%process_action(HD), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      IF (one_of(tile%process_action(HD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         CALL hd_init_bc(tile)
         CALL hd_init_ic(tile)
       END IF

@@ -20,9 +20,9 @@ MODULE mo_seb_init
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
-  dsl4jsb_Use_processes SEB
-  dsl4jsb_Use_config(SEB)
-  dsl4jsb_Use_memory(SEB)
+  dsl4jsb_Use_processes SEB_
+  dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_memory(SEB_)
 
   IMPLICIT NONE
   PRIVATE
@@ -49,18 +49,18 @@ CONTAINS
       & F_pseudo_soil_temp,    &
       & N_pseudo_soil_temp
 
-    dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_memory(SEB_)
     
     CALL seb_init_bc(tile)
     CALL seb_init_ic(tile)
     
     ! Initial values for the calculation of pseudo_soil_temp in SUBROUTINE calc_pseudo_soil_temp
-    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(SEB_)
 
     model => get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_var2D_onDomain(SEB, N_pseudo_soil_temp) ! OUT
-    dsl4jsb_Get_var2D_onDomain(SEB, F_pseudo_soil_temp) ! OUT
+    dsl4jsb_Get_var2D_onDomain(SEB_, N_pseudo_soil_temp) ! OUT
+    dsl4jsb_Get_var2D_onDomain(SEB_, F_pseudo_soil_temp) ! OUT
 
     F_pseudo_soil_temp = EXP(-timeStep_in_days()/PhenoParam%EG_SG%tau_pseudo_soil)
     N_pseudo_soil_temp = 1._wp / (1._wp - F_pseudo_soil_temp)
@@ -85,8 +85,8 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    dsl4jsb_Def_config(SEB)
-    dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_memory(SEB_)
 
     REAL(wp), POINTER :: t(:,:), t_mon(:,:,:)
     REAL(wp), POINTER :: &
@@ -105,19 +105,19 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get seb config
-    dsl4jsb_Get_config(SEB)
+    dsl4jsb_Get_config(SEB_)
 
-    IF (.NOT. dsl4jsb_Config(SEB)%active) RETURN
+    IF (.NOT. dsl4jsb_Config(SEB_)%active) RETURN
 
     ! Get seb memory of the tile
-    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(SEB_)
 
     ! Initialize parameters
     !
     CALL message(TRIM(routine), 'Setting initial state of seb memory for tile '// &
-      &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(SEB)%ic_filename))
+      &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(SEB_)%ic_filename))
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SEB)%ic_filename), model%grid_id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SEB_)%ic_filename), model%grid_id)
 
     ! Initial surface temperature
 !!$    return_pointer => input_file%Read_2d(         &
@@ -143,7 +143,7 @@ CONTAINS
     ELSE
       n2 = nmw2
     END IF
-    dsl4jsb_var2D_onDomain(SEB,t) = wgt1 * t_mon(:,:,n1) + wgt2 * t_mon(:,:,n2)
+    dsl4jsb_var2D_onDomain(SEB_,t) = wgt1 * t_mon(:,:,n1) + wgt2 * t_mon(:,:,n2)
 
     DEALLOCATE(t_mon)
 

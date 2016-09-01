@@ -23,9 +23,9 @@ MODULE mo_pheno_init
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
 
 
-  dsl4jsb_Use_processes PHENO
-  dsl4jsb_Use_config(PHENO)
-  dsl4jsb_Use_memory(PHENO)
+  dsl4jsb_Use_processes PHENO_
+  dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_memory(PHENO_)
     
   IMPLICIT NONE
   PRIVATE
@@ -66,8 +66,8 @@ CONTAINS
 
     TYPE(t_jsb_model),       POINTER :: model
 
-    dsl4jsb_Def_config(PHENO)
-    dsl4jsb_Def_memory(PHENO)
+    dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_memory(PHENO_)
 
     REAL(wp), POINTER ::        &
       & lai_mon(:,:,:)
@@ -78,13 +78,13 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(PHENO)
-    dsl4jsb_Get_memory(PHENO)
+    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_memory(PHENO_)
 
     CALL message(TRIM(routine), 'Setting boundary conditions of pheno memory for tile '// &
-      &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO)%bc_filename))
+      &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(PHENO)%bc_filename), model%grid_id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(PHENO_)%bc_filename), model%grid_id)
 
     ! Leaf area index
     ! Get monthly LAI climatology
@@ -108,8 +108,8 @@ CONTAINS
 
     TYPE(t_jsb_model),       POINTER :: model
 
-    dsl4jsb_Def_config(PHENO)
-    dsl4jsb_Def_memory(PHENO)
+    dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_memory(PHENO_)
 
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
@@ -118,21 +118,21 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(PHENO)
-    dsl4jsb_Get_memory(PHENO)
+    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_memory(PHENO_)
 
     CALL message(TRIM(routine), 'Setting initial conditions of pheno memory (lai) for tile '// &
-      &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO)%bc_filename))
+      &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
 
     ! Set initial leaf area index from climatology (read in pheno_init_bc)
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    dsl4jsb_var2D_onDomain(PHENO, lai) = wgt1 * pheno__mem%lai_mon(:,:,nmw1) + wgt2 * pheno__mem%lai_mon(:,:,nmw2)
+    dsl4jsb_var2D_onDomain(PHENO_, lai) = wgt1 * pheno__mem%lai_mon(:,:,nmw1) + wgt2 * pheno__mem%lai_mon(:,:,nmw2)
 
-    !dsl4jsb_var2D_onDomain(HYDRO, w_skin_can) = dsl4jsb_Config(VEG)%wsr_capacity * dsl4jsb_var2D_onDomain(PHENO, lai) 
+    !dsl4jsb_var2D_onDomain(HYDRO_, w_skin_can) = dsl4jsb_Config(VEG_)%wsr_capacity * dsl4jsb_var2D_onDomain(PHENO_, lai) 
 
 
     !CALL message(TRIM(routine), 'Setting initial conditions of pheno memory for tile '// &
-    !  &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO)%ic_filename))
+    !  &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO_)%ic_filename))
 
   END SUBROUTINE pheno_init_ic
   

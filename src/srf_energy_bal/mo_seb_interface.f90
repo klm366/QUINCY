@@ -27,12 +27,12 @@ MODULE mo_seb_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SEB, HYDRO, SOIL
-  dsl4jsb_Use_config(SEB)
+  dsl4jsb_Use_processes SEB_, HYDRO_, SOIL_
+  dsl4jsb_Use_config(SEB_)
 
-  dsl4jsb_Use_memory(SEB)
-  dsl4jsb_Use_memory(HYDRO)
-  dsl4jsb_Use_memory(SOIL)
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(SOIL_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -103,7 +103,7 @@ CONTAINS
     ALLOCATE(tsk_surface_energy::return_ptr)
 
     return_ptr%name = 'surface_energy'
-    return_ptr%process_id = SEB
+    return_ptr%process_id = SEB_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_surface_energy
@@ -122,7 +122,7 @@ CONTAINS
     ALLOCATE(tsk_snowmelt_correction::return_ptr)
 
     return_ptr%name = 'snowmelt_correction'
-    return_ptr%process_id = SEB
+    return_ptr%process_id = SEB_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_snowmelt_correction
@@ -141,7 +141,7 @@ CONTAINS
     ALLOCATE(tsk_asselin_filter::return_ptr)
 
     return_ptr%name = 'asselin_filter'
-    return_ptr%process_id = SEB
+    return_ptr%process_id = SEB_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_asselin_filter
@@ -160,7 +160,7 @@ CONTAINS
     ALLOCATE(tsk_surface_fluxes::return_ptr)
 
     return_ptr%name = 'surface_fluxes'
-    return_ptr%process_id = SEB
+    return_ptr%process_id = SEB_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_surface_fluxes
@@ -206,7 +206,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
 
-    IF (.NOT. tile%Is_process_active(SEB)) RETURN
+    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     model => Get_model(tile%owner_model_id)
 
@@ -231,7 +231,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_memory(SEB_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -249,25 +249,25 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(SEB, t_unfilt,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, t_eff,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, qsat_star,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, t_unfilt,      weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SEB, lw_srf_net,     weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SEB, sw_srf_net,     weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SEB, swvis_srf_net,  weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SEB, swnir_srf_net,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_eff,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, qsat_star,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,      weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB_, lw_srf_net,     weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB_, sw_srf_net,     weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB_, swvis_srf_net,  weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SEB_, swnir_srf_net,  weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(SEB, t_lwtr,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, t_lice,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, s_wtr,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, s_ice,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, qsat_lwtr, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, qsat_lice, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_lice,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, s_wtr,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, s_ice,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lwtr, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -289,9 +289,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(SOIL)
-    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(SOIL_)
+    dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
@@ -305,7 +305,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snowmelt_correction'
 
-    IF (.NOT. tile%Is_process_active(SEB)) RETURN
+    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     iblk  = options%iblk
     ics   = options%ics
@@ -316,18 +316,18 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HYDRO_)
     IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
-      dsl4jsb_Get_memory(SOIL)
+      dsl4jsb_Get_memory(SOIL_)
     END IF
 
     IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
       ! No correction for lake tile
     ELSE IF (Contains_lct(tile%lcts, LAND_TYPE)) THEN
-      dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt)      ! inout
-      dsl4jsb_Get_var2D_onChunk(HYDRO,    snowmelt)      ! in
-      dsl4jsb_Get_var2D_onChunk(SOIL,     hcap_grnd_old) ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)      ! inout
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)      ! in
+      dsl4jsb_Get_var2D_onChunk(SOIL_,     hcap_grnd_old) ! in
 
       IF (ALL(hcap_grnd_old(:) > EPSILON(1._wp))) &  ! .NOT. lstart
         & t_unfilt(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd_old(:) 
@@ -350,7 +350,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_memory(SEB_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -368,11 +368,11 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(SEB, t_unfilt, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -400,7 +400,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_asselin'
 
-    IF (.NOT. tile%Is_process_active(SEB)) RETURN
+    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     iblk = options%iblk
     ics  = options%ics
@@ -429,7 +429,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_memory(SEB_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -447,12 +447,12 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(SEB, t,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB, t_filt, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_filt, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -477,7 +477,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes'
 
-    IF (.NOT. tile%Is_process_active(SEB)) RETURN
+    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     model => Get_model(tile%owner_model_id)
 
@@ -502,8 +502,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(HYDRO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -521,24 +521,24 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO, evapotranspiration, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, evapopot,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, trans,              weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB,   latent_hflx,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB,   sensible_hflx,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapotranspiration, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapopot,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, trans,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx,      weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(HYDRO, evapo_lnd,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, evapo_wtr,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB,   latent_hflx_wtr,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB,   sensible_hflx_wtr,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, evapo_ice,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB,   latent_hflx_ice,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB,   sensible_hflx_ice,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_lnd,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_wtr,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_wtr,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_wtr,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_ice,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

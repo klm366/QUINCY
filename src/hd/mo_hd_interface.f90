@@ -29,12 +29,12 @@ MODULE mo_hd_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes HD, SEB, SOIL, HYDRO
-  dsl4jsb_Use_config(HD)
-  dsl4jsb_Use_memory(HD)
-  dsl4jsb_Use_memory(SEB)
-  dsl4jsb_Use_memory(SOIL)
-  dsl4jsb_Use_memory(HYDRO)
+  dsl4jsb_Use_processes HD_, SEB_, SOIL_, HYDRO_
+  dsl4jsb_Use_config(HD_)
+  dsl4jsb_Use_memory(HD_)
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(SOIL_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade
   USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -77,7 +77,7 @@ CONTAINS
     ALLOCATE(tsk_hd_local_outflow::return_ptr)
 
     return_ptr%name = 'hd_local_outflow'
-    return_ptr%process_id = HD
+    return_ptr%process_id = HD_
     return_ptr%owner_model_id = model_id
     ! !!$    return_ptr%Integrate => update_radiation_surface
     ! !!$    return_ptr%Aggregate => aggregate_radiation_surface
@@ -99,11 +99,11 @@ CONTAINS
     !
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    dsl4jsb_Def_config(HD)
-    dsl4jsb_Def_memory(HD)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(SOIL)
-    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_config(HD_)
+    dsl4jsb_Def_memory(HD_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(SOIL_)
+    dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: runoff
@@ -148,46 +148,46 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    IF (.NOT. tile%Is_process_active(HD)) RETURN
+    IF (.NOT. tile%Is_process_active(HD_)) RETURN
 
-    dsl4jsb_Get_config(HD)
+    dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
+    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
     grid => Get_grid(model%grid_id)
 
     ! Configuration parameters from the namelist
-    routing_scheme    = dsl4jsb_Config(HD)%routing_scheme
+    routing_scheme    = dsl4jsb_Config(HD_)%routing_scheme
 
     ! Get reference to variables in memory
     !
-    dsl4jsb_Get_memory(HD)
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(SOIL)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(HD_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     area => grid %area (ics:ice, iblk)
 
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO, runoff)      ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO, drainage)    ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO, discharge)   ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)      ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)    ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, discharge)   ! in
 
-    dsl4jsb_Get_var2D_onChunk(HD, ret_overlflow)    ! in
-    dsl4jsb_Get_var2D_onChunk(HD, nres_overlflow)   ! in
-    dsl4jsb_Get_var2D_onChunk(HD, ret_baseflow)     ! in
-    dsl4jsb_Get_var2D_onChunk(HD, nres_baseflow)    ! in
-    dsl4jsb_Get_var2D_onChunk(HD, ret_riverflow)    ! in
-    dsl4jsb_Get_var2D_onChunk(HD, nres_riverflow)   ! in
-    dsl4jsb_Get_var3D_onChunk(HD, overlflow_res)    ! inout
-    dsl4jsb_Get_var3D_onChunk(HD, baseflow_res)     ! inout
-    dsl4jsb_Get_var3D_onChunk(HD, riverflow_res)    ! inout
-    dsl4jsb_Get_var2D_onChunk(HD, outflow_runoff)   ! out
-    dsl4jsb_Get_var2D_onChunk(HD, outflow_drainage) ! out
-    dsl4jsb_Get_var2D_onChunk(HD, outflow_rivers)   ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, ret_overlflow)    ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, nres_overlflow)   ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, ret_baseflow)     ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, nres_baseflow)    ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, ret_riverflow)    ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, nres_riverflow)   ! in
+    dsl4jsb_Get_var3D_onChunk(HD_, overlflow_res)    ! inout
+    dsl4jsb_Get_var3D_onChunk(HD_, baseflow_res)     ! inout
+    dsl4jsb_Get_var3D_onChunk(HD_, riverflow_res)    ! inout
+    dsl4jsb_Get_var2D_onChunk(HD_, outflow_runoff)   ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, outflow_drainage) ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, outflow_rivers)   ! out
 
     SELECT CASE (TRIM(routing_scheme))
     CASE ('full')
@@ -237,11 +237,11 @@ CONTAINS
     !
     TYPE(t_jsb_grid),  POINTER    :: grid
 
-    dsl4jsb_Def_config(HD)
-    dsl4jsb_Def_memory(HD)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(SOIL)
-    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_config(HD_)
+    dsl4jsb_Def_memory(HD_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(SOIL_)
+    dsl4jsb_Def_memory(HYDRO_)
 
     INTEGER                       :: jc, blk, n
     INTEGER                       :: jc_us, blk_us
@@ -295,9 +295,9 @@ CONTAINS
 
     grid => Get_grid(model%grid_id)
 
-    dsl4jsb_Get_config(HD)
+    dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
+    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
@@ -306,31 +306,31 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(HD)
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(SOIL)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(HD_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     area   => grid%area(:,:)
     nproma =  grid%nproma
     nblks  =  grid%nblks
 
-    dsl4jsb_Get_var2D_onDomain(HD, hd_mask)          ! IN
-    dsl4jsb_Get_var2D_onDomain(HD, outflow_runoff)   ! OUT
-    dsl4jsb_Get_var2D_onDomain(HD, outflow_drainage) ! OUT
-    dsl4jsb_Get_var2D_onDomain(HD, outflow_rivers)   ! OUT
-    dsl4jsb_Get_var3D_onDomain(HD, nidx_upstream)    ! IN
-    dsl4jsb_Get_var3D_onDomain(HD, bidx_upstream)    ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, hd_mask)          ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! OUT
+    dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
+    dsl4jsb_Get_var3D_onDomain(HD_, bidx_upstream)    ! IN
 
-    dsl4jsb_Get_var2D_onDomain(HYDRO, discharge)       ! OUT
-    dsl4jsb_Get_var2D_onDomain(HYDRO, discharge_ocean) ! OUT
-    dsl4jsb_Get_var2D_onDomain(HYDRO, internal_drain)  ! OUT
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! OUT
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! OUT
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, internal_drain)  ! OUT
 
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
 
     ! Configuration parameters from the namelist
-    routing_scheme = dsl4jsb_Config(HD)%routing_scheme
-    debug_hd       = dsl4jsb_Config(HD)%debug_hd
+    routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
+    debug_hd       = dsl4jsb_Config(HD_)%debug_hd
 
 
     ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
@@ -450,10 +450,10 @@ CONTAINS
     !
     TYPE(t_jsb_grid),  POINTER    :: grid
 
-    dsl4jsb_Def_config(HD)
-    dsl4jsb_Def_memory(HD)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_config(HD_)
+    dsl4jsb_Def_memory(HD_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(HYDRO_)
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -497,9 +497,9 @@ CONTAINS
 
     grid => Get_grid(model%grid_id)
 
-    dsl4jsb_Get_config(HD)
+    dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. dsl4jsb_Config(HD)%active) RETURN
+    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
@@ -508,9 +508,9 @@ CONTAINS
 
     steplen = options%steplen
 
-    dsl4jsb_Get_memory(HD)
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(HD_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     ! Get reference to variables in memory
 
@@ -524,20 +524,20 @@ CONTAINS
     area            => grid%area                                (:,:)
     is_in_domain    => grid%patch%cells%decomp_info%owner_mask  (:,:)
 
-    dsl4jsb_Get_var3D_onDomain(HD, overlflow_res) ! IN
-    dsl4jsb_Get_var3D_onDomain(HD, baseflow_res) ! IN
-    dsl4jsb_Get_var3D_onDomain(HD, riverflow_res) ! IN
+    dsl4jsb_Get_var3D_onDomain(HD_, overlflow_res) ! IN
+    dsl4jsb_Get_var3D_onDomain(HD_, baseflow_res) ! IN
+    dsl4jsb_Get_var3D_onDomain(HD_, riverflow_res) ! IN
 
-    dsl4jsb_Get_var2D_onDomain(HYDRO, runoff)          ! IN
-    dsl4jsb_Get_var2D_onDomain(HYDRO, drainage)        ! IN
-    dsl4jsb_Get_var2D_onDomain(HYDRO, discharge)       ! IN
-    dsl4jsb_Get_var2D_onDomain(HYDRO, discharge_ocean) ! IN
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, runoff)          ! IN
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, drainage)        ! IN
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! IN
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! IN
 
-    water_budget   =  dsl4jsb_var2D_ptr(HD,water_budget)  (1,1)
+    water_budget   =  dsl4jsb_var2D_ptr(HD_,water_budget)  (1,1)
 
     ! Configuration parameters from the namelist
-    debug_hd          = dsl4jsb_Config(HD)%debug_hd
-    diag_water_budget = dsl4jsb_Config(HD)%diag_water_budget
+    debug_hd          = dsl4jsb_Config(HD_)%debug_hd
+    diag_water_budget = dsl4jsb_Config(HD_)%diag_water_budget
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma, nblks))
@@ -618,7 +618,7 @@ CONTAINS
       CALL message (TRIM(routine),message_text)
     END IF
 
-    dsl4jsb_var2D_ptr(HD,water_budget) = water_budget
+    dsl4jsb_var2D_ptr(HD_,water_budget) = water_budget
 
     DEALLOCATE (in_domain)
 

@@ -91,7 +91,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'hd_mask', mem%hd_mask,     &
       & hgrid, surface,                                                                    &
-      & t_cf('hd_mask', '', 'HD mask: -1 ocean, 0 ocean inflow, 1 land, 2 internal drainage'),                  &
+      & t_cf('hd_mask', '', 'HD_ mask: -1 ocean, 0 ocean inflow, 1 land, 2 internal drainage'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )

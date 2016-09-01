@@ -23,10 +23,10 @@ PROGRAM jsb4_driver
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
 
-  dsl4jsb_Use_processes SEB, TURB, HYDRO
-  dsl4jsb_Use_memory(SEB)
-  dsl4jsb_Use_memory(TURB)
-  dsl4jsb_Use_memory(HYDRO)
+  dsl4jsb_Use_processes SEB_, TURB_, HYDRO_
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(TURB_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
 
@@ -91,9 +91,9 @@ PROGRAM jsb4_driver
   TYPE(t_jsb_model), POINTER :: model
   CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
-  dsl4jsb_Def_memory(SEB)
-  dsl4jsb_Def_memory(TURB)
-  dsl4jsb_Def_memory(HYDRO)
+  dsl4jsb_Def_memory(SEB_)
+  dsl4jsb_Def_memory(TURB_)
+  dsl4jsb_Def_memory(HYDRO_)
 
   !! JSB4 interface variables - input
   REAL(wp), ALLOCATABLE :: t_air_K(:,:)
@@ -296,18 +296,18 @@ PROGRAM jsb4_driver
 
     CALL IO_read_streams
 
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(TURB)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(HYDRO_)
     DO iblk = 1, nblks
-      t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SEB, t)
-      fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB, fact_q_air)
-      fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB, fact_qsat_srf)
-      rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB, rough_h)
+      t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SEB_, t)
+      fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
+      fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
+      rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_h)
 
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
-      evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO, evapotranspiration),-EPSILON(1._wp)) &
-        & / MIN(dsl4jsb_var2D_onChunk(HYDRO, evapopot),  -EPSILON(1._wp))
+      evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotranspiration),-EPSILON(1._wp)) &
+        & / MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapopot),  -EPSILON(1._wp))
     ENDDO
 
   ENDIF

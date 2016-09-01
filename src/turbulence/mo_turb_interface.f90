@@ -28,17 +28,17 @@ MODULE mo_turb_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes TURB, SEB, HYDRO, SOIL, VEG, ATM2LAND
+  dsl4jsb_Use_processes TURB_, SEB_, HYDRO_, SOIL_, VEG_, ATM2LAND_
 
   ! Use process configurations
-  dsl4jsb_Use_config(TURB)
+  dsl4jsb_Use_config(TURB_)
 
   ! Use process memories
-  dsl4jsb_Use_memory(ATM2LAND)
-  dsl4jsb_Use_memory(TURB)
-  dsl4jsb_Use_memory(SEB)
-  dsl4jsb_Use_memory(VEG)
-  dsl4jsb_Use_memory(HYDRO)
+  dsl4jsb_Use_memory(ATM2LAND_)
+  dsl4jsb_Use_memory(TURB_)
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -93,7 +93,7 @@ CONTAINS
     ALLOCATE(tsk_surface_roughness::return_ptr)
 
     return_ptr%name = 'surface_roughness'
-    return_ptr%process_id = TURB
+    return_ptr%process_id = TURB_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_surface_roughness
@@ -112,7 +112,7 @@ CONTAINS
     ALLOCATE(tsk_humidity_scaling::return_ptr)
 
     return_ptr%name = 'humidity_scaling'
-    return_ptr%process_id = TURB
+    return_ptr%process_id = TURB_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_humidity_scaling
@@ -149,8 +149,8 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Declare process memories
-    dsl4jsb_Def_memory(TURB)
-    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(TURB_)
+    dsl4jsb_Def_memory(HYDRO_)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: rough_m
@@ -172,27 +172,27 @@ CONTAINS
     nc      = options%nc
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(TURB)) RETURN
+    IF (.NOT. tile%Is_process_active(TURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
     ! Get process memories
-    dsl4jsb_Get_memory(TURB)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(TURB,  rough_m)         ! IN
-    dsl4jsb_Get_var2D_onChunk(TURB,  rough_h)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! IN
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)         ! OUT
 
     ! RMS TBD: This has to be revised!
-    IF (tile%Is_process_active(SOIL)) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_soil) ! IN
+    IF (tile%Is_process_active(SOIL_)) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil) ! IN
       rough_h(:) =          fract_snow_soil(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
         &        + (1._wp - fract_snow_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
     ELSE IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_lice) ! IN
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! IN
       rough_h(:) =          fract_snow_lice(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
         &        + (1._wp - fract_snow_lice(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
     ELSE
@@ -218,7 +218,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(TURB)
+    dsl4jsb_Def_memory(TURB_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -239,11 +239,11 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(TURB)
+    dsl4jsb_Get_memory(TURB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(TURB, rough_h,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, rough_h,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -267,11 +267,11 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Declare pointers to process configs and memory
-    dsl4jsb_Def_memory(TURB)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(HYDRO)
-    dsl4jsb_Def_memory(VEG)
-    dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_memory(TURB_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(ATM2LAND_)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -314,37 +314,37 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(TURB) .OR. Contains_lct(tile%lcts, LAKE_TYPE)) RETURN
+    IF (.NOT. tile%Is_process_active(TURB_) .OR. Contains_lct(tile%lcts, LAKE_TYPE)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
     ! Get pointers to process configs and memory
-    dsl4jsb_Get_memory(ATM2LAND)
-    dsl4jsb_Get_memory(TURB)
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HYDRO_)
     IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
-      dsl4jsb_Get_memory(VEG)
+      dsl4jsb_Get_memory(VEG_)
     END IF
 
     ! Set pointers to variables in memory
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, pch)                 ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, wind_air)            ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)               ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, pch)                 ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, wind_air)            ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_air)               ! in
 
-    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_star)           ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)          ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_water)         ! in
-    dsl4jsb_Get_var2D_onChunk(TURB,     fact_q_air)          ! OUT
-    dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_srf)       ! OUT
-    dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_trans_srf) ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_star)           ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)          ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)         ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_q_air)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_qsat_srf)       ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_qsat_trans_srf) ! OUT
 
     IF (Contains_lct(tile%lcts, BARE_TYPE) .OR. Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
-      dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_sl)           ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_fc_sl)        ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl)       ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pwp_sl)       ! in
     END IF
   
     ! ---------------------------
@@ -352,8 +352,8 @@ CONTAINS
     
     IF (Contains_lct(tile%lcts, VEG_TYPE) .OR. Contains_lct(tile%lcts, LAND_TYPE)) THEN
 
-      dsl4jsb_Get_var2D_onChunk(VEG,      fract_fpc)           ! in
-      dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)         ! in
+      dsl4jsb_Get_var2D_onChunk(VEG_,      fract_fpc)           ! in
+      dsl4jsb_Get_var2D_onChunk(VEG_,      canopy_cond)         ! in
 
       WHERE (w_soil_sl(:,1) > w_soil_pwp_sl(:,1))
         fact_qsat_veg(:) = fract_snow(:) + (1._wp - fract_snow(:)) *   &
@@ -426,7 +426,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(TURB)
+    dsl4jsb_Def_memory(TURB_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -447,13 +447,13 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(TURB)
+    dsl4jsb_Get_memory(TURB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(TURB, fact_q_air,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TURB, fact_qsat_srf,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TURB, fact_qsat_trans_srf, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, fact_q_air,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_srf,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_trans_srf, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

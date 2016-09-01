@@ -30,22 +30,22 @@ MODULE mo_rad_interface
   !USE mo_jsb_aggregate_class, ONLY: t_jsb_aggregator
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB, SOIL, VEG, PHENO, ATM2LAND, RAD, HYDRO, ASSIMI
+  dsl4jsb_Use_processes SEB_, SOIL_, VEG_, PHENO_, ATM2LAND_, RAD_, HYDRO_, ASSIMI_
 
   ! Use process configurations
-  dsl4jsb_Use_config(SEB)
-  dsl4jsb_Use_config(SOIL)
-  dsl4jsb_Use_config(RAD)
-  dsl4jsb_Use_config(ASSIMI)
+  dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(SOIL_)
+  dsl4jsb_Use_config(RAD_)
+  dsl4jsb_Use_config(ASSIMI_)
 
   ! Use of process memories
-  dsl4jsb_Use_memory(ATM2LAND)
-  dsl4jsb_Use_memory(SOIL)
-  dsl4jsb_Use_memory(SEB)
-  dsl4jsb_Use_memory(VEG)
-  dsl4jsb_Use_memory(PHENO)
-  dsl4jsb_Use_memory(RAD)
-  dsl4jsb_Use_memory(HYDRO)
+  dsl4jsb_Use_memory(ATM2LAND_)
+  dsl4jsb_Use_memory(SOIL_)
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(RAD_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -111,7 +111,7 @@ CONTAINS
     ALLOCATE(tsk_surface_radiation::return_ptr)
 
     return_ptr%name = 'surface_radiation'
-    return_ptr%process_id = RAD
+    return_ptr%process_id = RAD_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_surface_radiation
@@ -130,7 +130,7 @@ CONTAINS
     ALLOCATE(tsk_radiation_par::return_ptr)
 
     return_ptr%name = 'radiation_par'
-    return_ptr%process_id = RAD
+    return_ptr%process_id = RAD_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_radiation_par
@@ -149,7 +149,7 @@ CONTAINS
     ALLOCATE(tsk_albedo::return_ptr)
 
     return_ptr%name = 'albedo'
-    return_ptr%process_id = RAD
+    return_ptr%process_id = RAD_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_albedo
@@ -187,11 +187,11 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in) :: options
 
     ! Declare pointers to process configs and memory
-    dsl4jsb_Def_config(RAD)
-    dsl4jsb_Def_memory(ATM2LAND)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(RAD)
-    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_memory(ATM2LAND_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(VEG_)
 
     ! Declare pointers for variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -233,23 +233,23 @@ CONTAINS
     nc   = options%nc
     
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(RAD)) RETURN
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
     
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(ATM2LAND)
-    dsl4jsb_Get_memory(RAD)
-    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(SEB_)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swvis_srf_down) ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swnir_srf_down) ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, lw_srf_down)    ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swvis_srf_down) ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swnir_srf_down) ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, lw_srf_down)    ! in
 
-    dsl4jsb_Get_var2D_onChunk(RAD,      sw_srf_net)     ! out
-    dsl4jsb_Get_var2D_onChunk(RAD,      lw_srf_net)     ! out
-    dsl4jsb_Get_var2D_onChunk(RAD,      rad_srf_net)    ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_,      sw_srf_net)     ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_,      lw_srf_net)     ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_,      rad_srf_net)    ! out
 
     ! ---------------------------
     ! Go
@@ -257,9 +257,9 @@ CONTAINS
     IF (tile%lcts(1)%id == LAKE_TYPE) THEN
 
       ! Water
-      dsl4jsb_Get_var2D_onChunk(SEB,      t_lwtr)       ! in
-      dsl4jsb_Get_var2D_onChunk(ATM2LAND, albedo_lwtr)  ! in
-      dsl4jsb_Get_var2D_onChunk(RAD,      rad_net_lwtr) ! out
+      dsl4jsb_Get_var2D_onChunk(SEB_,      t_lwtr)       ! in
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, albedo_lwtr)  ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_,      rad_net_lwtr) ! out
 
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),        & ! in
@@ -276,10 +276,10 @@ CONTAINS
         & )
 
       ! Ice on lake
-      dsl4jsb_Get_var2D_onChunk(SEB, t_lice)       ! in
-      dsl4jsb_Get_var2D_onChunk(SEB, fract_lice)   ! in
-      dsl4jsb_Get_var2D_onChunk(RAD, albedo_lice)  ! in
-      dsl4jsb_Get_var2D_onChunk(RAD, rad_net_lice) ! out
+      dsl4jsb_Get_var2D_onChunk(SEB_, t_lice)       ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)   ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
 
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),        & ! in
@@ -301,11 +301,11 @@ CONTAINS
 
     ELSE
 
-      dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! in
-      dsl4jsb_Get_var2D_onChunk(RAD,      alb_vis)        ! in
-      dsl4jsb_Get_var2D_onChunk(RAD,      alb_nir)        ! in
-      dsl4jsb_Get_var2D_onChunk(RAD,      swvis_srf_net)  ! out
-      dsl4jsb_Get_var2D_onChunk(RAD,      swnir_srf_net)  ! out
+      dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis)        ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir)        ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_,      swvis_srf_net)  ! out
+      dsl4jsb_Get_var2D_onChunk(RAD_,      swnir_srf_net)  ! out
 
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),    & ! in
@@ -338,7 +338,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(RAD)
+    dsl4jsb_Def_memory(RAD_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -356,18 +356,18 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(RAD)
+    dsl4jsb_Get_memory(RAD_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(RAD, rad_srf_net,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD, lw_srf_net,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD, sw_srf_net,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD, swvis_srf_net,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD, swnir_srf_net,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, rad_srf_net,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, lw_srf_net,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, sw_srf_net,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, swvis_srf_net,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, swnir_srf_net,  weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(RAD, rad_net_lwtr,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD, rad_net_lice,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lwtr,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -404,13 +404,13 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
 
     ! Declare pointers for process configuration and memory
-    dsl4jsb_Def_config(RAD)
-    dsl4jsb_Def_config(ASSIMI)
-    dsl4jsb_Def_config(SEB)
-    dsl4jsb_Def_memory(RAD)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(PHENO)
-    dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(ATM2LAND_)
 
     INTEGER :: ncanopy               ! number of canopy layers
     !INTEGER, POINTER       :: acc_counter           ! counter for each delta_time step since the last variable output
@@ -453,41 +453,41 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     
     ! Get pointers to process configs and memory
-    dsl4jsb_Get_config(RAD)
-    dsl4jsb_Get_config(ASSIMI)
-    dsl4jsb_Get_memory(RAD)
-    dsl4jsb_Get_memory(PHENO)
-    dsl4jsb_Get_memory(ATM2LAND)
+    dsl4jsb_Get_config(RAD_)
+    dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(ATM2LAND_)
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(RAD)) RETURN
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
-    ncanopy                     =  dsl4jsb_Config(ASSIMI)%ncanopy
-    use_alb_veg_simple          =  dsl4jsb_Config(RAD)%use_alb_veg_simple
-    canopy_bound_lai(0:ncanopy) => dsl4jsb_Config(ASSIMI)% canopy_bound_lai(0:ncanopy)
+    ncanopy                     =  dsl4jsb_Config(ASSIMI_)%ncanopy
+    use_alb_veg_simple          =  dsl4jsb_Config(RAD_)%use_alb_veg_simple
+    canopy_bound_lai(0:ncanopy) => dsl4jsb_Config(ASSIMI_)% canopy_bound_lai(0:ncanopy)
     
     ! Set pointers to variables in memory
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, cos_zenith_angle)      ! in (received from the atmosphere)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, frac_par_diffuse)      ! in (received from the atmosphere)
-    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)                   ! in    
-    dsl4jsb_Get_var2D_onChunk(RAD,      frac_par_direct)       ! in R: should be received from the atmosphere but it is NOT in the moment!
-    dsl4jsb_Get_var2D_onChunk(RAD,      alb_vis_soil)          ! in (initialized from input file)
-    !dsl4jsb_Get_var2D_onChunk(RAD,      alb_background)        ! in (initialized from input file)
-    dsl4jsb_Get_var2D_onChunk(RAD,      par)                   ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD,      par_down_mol)          ! inout
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, cos_zenith_angle)      ! in (received from the atmosphere)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, frac_par_diffuse)      ! in (received from the atmosphere)
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! in    
+    dsl4jsb_Get_var2D_onChunk(RAD_,      frac_par_direct)       ! in R: should be received from the atmosphere but it is NOT in the moment!
+    dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_soil)          ! in (initialized from input file)
+    !dsl4jsb_Get_var2D_onChunk(RAD_,      alb_background)        ! in (initialized from input file)
+    dsl4jsb_Get_var2D_onChunk(RAD_,      par)                   ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)          ! inout
 
     ! R: These variables could also be local as they are not used outside this procedure in the moment.
     !    However I want it in the std model output and thus it has to be in the memory
-    dsl4jsb_Get_var2D_onChunk(RAD,      par_down_mol_nacc)     ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD,      par_down_mol_tavg)     ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD,      soil_reflectivity_par) ! inout
-    dsl4jsb_Get_var3D_onChunk(RAD,      lai_cl)                ! inout
-    dsl4jsb_Get_var3D_onChunk(RAD,      faPAR_cl)              ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol_nacc)     ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol_tavg)     ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,      soil_reflectivity_par) ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_,      faPAR_cl)              ! inout
     ! used outside for assimilation:
-    dsl4jsb_Get_var3D_onChunk(RAD,      apar_per_lai_cl)       ! inout
-    dsl4jsb_Get_var3D_onChunk(RAD,      apar_per_lai_cl_nacc)  ! inout
-    dsl4jsb_Get_var3D_onChunk(RAD,      apar_per_lai_cl_tavg)  ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD,      apar_nacc)             ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl_nacc)  ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl_tavg)  ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,      apar_nacc)             ! inout
     
     ! ---------------------------
     ! Go
@@ -632,14 +632,14 @@ CONTAINS
     CHARACTER(len=*), PARAMETER    :: routine = TRIM(modname)//':update_albedo'
 
     ! Declare pointers to process configuration and memory
-    dsl4jsb_Def_config(RAD)
-    dsl4jsb_Def_memory(RAD)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(ATM2LAND_)
     !RMS dsl4jsb_Def_memory(CARBON)
-    dsl4jsb_Def_memory(HYDRO)
-    dsl4jsb_Def_memory(VEG)
-    dsl4jsb_Def_memory(PHENO)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(PHENO_)
 
     ! Declare configuration variables
     CHARACTER(len=10) :: use_alb_soil_organic_C
@@ -703,43 +703,43 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     ! Set pointers to process configs and memory
-    dsl4jsb_Get_config(RAD)
-    dsl4jsb_Get_memory(RAD)
-    dsl4jsb_Get_memory(ATM2LAND)
-    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_config(RAD_)
+    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(SEB_)
     !RMS dsl4jsb_Get_memory(CARBON)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(HYDRO_)
     IF (Contains_lct(tile%lcts, VEG_TYPE)) THEN
-      dsl4jsb_Get_memory(VEG)
-      dsl4jsb_Get_memory(PHENO)
+      dsl4jsb_Get_memory(VEG_)
+      dsl4jsb_Get_memory(PHENO_)
     END IF
     
     ! Set pointers to variables in config
-    use_alb_veg_simple        = dsl4jsb_Config(RAD) %use_alb_veg_simple
-    use_alb_soil_scheme       = dsl4jsb_Config(RAD) %use_alb_soil_scheme
-    use_alb_mineralsoil_const = dsl4jsb_Config(RAD) %use_alb_mineralsoil_const
-    use_alb_soil_litter       = dsl4jsb_Config(RAD) %use_alb_soil_litter
-    use_alb_soil_organic_C    = dsl4jsb_Config(RAD) %use_alb_soil_organic_C
-    use_alb_canopy            = dsl4jsb_Config(RAD) %use_alb_canopy
-    albedo_age_weight         = dsl4jsb_Config(RAD) %albedo_age_weight
-    AlbedoCanopySnow          = dsl4jsb_Config(RAD) %AlbedoCanopySnow
+    use_alb_veg_simple        = dsl4jsb_Config(RAD_) %use_alb_veg_simple
+    use_alb_soil_scheme       = dsl4jsb_Config(RAD_) %use_alb_soil_scheme
+    use_alb_mineralsoil_const = dsl4jsb_Config(RAD_) %use_alb_mineralsoil_const
+    use_alb_soil_litter       = dsl4jsb_Config(RAD_) %use_alb_soil_litter
+    use_alb_soil_organic_C    = dsl4jsb_Config(RAD_) %use_alb_soil_organic_C
+    use_alb_canopy            = dsl4jsb_Config(RAD_) %use_alb_canopy
+    albedo_age_weight         = dsl4jsb_Config(RAD_) %albedo_age_weight
+    AlbedoCanopySnow          = dsl4jsb_Config(RAD_) %AlbedoCanopySnow
 
     ! Set pointers to variables in memory
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, cos_zenith_angle)      ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swvis_srf_down)        ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swnir_srf_down)        ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      t)                     ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, cos_zenith_angle)      ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swvis_srf_down)        ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swnir_srf_down)        ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t)                     ! in
 
     !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   Cpool_litter_green_ag) ! in
     !RMS dsl4jsb_Get_var2D_onChunk(CARBON,   Cpool_slow)            ! in
 
-    dsl4jsb_Get_var2D_onChunk(RAD,  swvis_srf_net)         ! in
-    dsl4jsb_Get_var2D_onChunk(RAD,  swnir_srf_net)         ! in
-    dsl4jsb_Get_var2D_onChunk(RAD,  alb_background)        ! in
-    dsl4jsb_Get_var2D_onChunk(RAD,  alb_vis)               ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD,  alb_nir)               ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD,  alb_vis_snow)          ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD,  alb_nir_snow)          ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,  swvis_srf_net)         ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,  swnir_srf_net)         ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,  alb_background)        ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,  alb_vis)               ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,  alb_nir)               ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,  alb_vis_snow)          ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_,  alb_nir_snow)          ! inout
 
     ! ---------------------------
     ! Go
@@ -751,8 +751,8 @@ CONTAINS
     ! Note, for vegetation tiles this snow albedos are used only for snow on soil
     IF ( (tile%lcts(1)%id == BARE_TYPE) .OR. (tile%lcts(1)%id == VEG_TYPE) ) THEN
 
-      dsl4jsb_Get_var2D_onChunk(HYDRO, fract_snow_soil)  ! in
-      dsl4jsb_Get_var2D_onChunk(RAD,   snow_age)         ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)  ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
 
       CALL calc_snow_albedo(   &
         & l_day(:),            & ! in
@@ -768,11 +768,11 @@ CONTAINS
 
 
     IF (tile%lcts(1)%id == LAKE_TYPE) THEN
-      dsl4jsb_Get_var2D_onChunk(SEB,      t_lice)       ! in
-      dsl4jsb_Get_var2D_onChunk(SEB,      fract_lice)   ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow_lice)  ! in
-      dsl4jsb_Get_var2D_onChunk(ATM2LAND, albedo_lwtr)  ! in
-      dsl4jsb_Get_var2D_onChunk(RAD,      albedo_lice)  ! inout
+      dsl4jsb_Get_var2D_onChunk(SEB_,      t_lice)       ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,      fract_lice)   ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_lice)  ! in
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, albedo_lwtr)  ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_,      albedo_lice)  ! inout
 
       CALL calc_alb_lice( &
         & l_day(:),       & ! in
@@ -796,10 +796,10 @@ CONTAINS
 
 
     ELSE IF (tile%lcts(1)%id == BARE_TYPE) THEN
-      dsl4jsb_Get_var2D_onChunk(RAD, alb_vis_mineralsoil)   ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD, alb_nir_mineralsoil)   ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD, alb_vis_soil)          ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD, alb_nir_soil)          ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_mineralsoil)   ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_mineralsoil)   ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)          ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)          ! inout
 
       IF (use_alb_soil_scheme) THEN
         CALL calc_soil_albedo(                        &
@@ -832,16 +832,16 @@ CONTAINS
 
     ELSE IF (tile%lcts(1)%id == VEG_TYPE) THEN
 
-      dsl4jsb_Get_var2D_onChunk(PHENO,    lai)                   ! in
-      dsl4jsb_Get_var2D_onChunk(VEG,      fract_forest)          ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_can)        ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow_soil)       ! in
-      dsl4jsb_Get_var2D_onChunk(RAD,      alb_vis_mineralsoil)   ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD,      alb_nir_mineralsoil)   ! inout      
-      dsl4jsb_Get_var2D_onChunk(RAD,      alb_vis_can)           ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD,      alb_nir_can)           ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD,      alb_vis_soil)          ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD,      alb_nir_soil)          ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! in
+      dsl4jsb_Get_var2D_onChunk(VEG_,      fract_forest)          ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)        ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)       ! in
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_mineralsoil)   ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_mineralsoil)   ! inout      
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_can)           ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_can)           ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_soil)          ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_soil)          ! inout
 
       IF (use_alb_veg_simple) THEN
         alb_vis(:) = get_surface_albedo_simple( &
@@ -891,8 +891,8 @@ CONTAINS
 
         ! Get the fractions of the vegetation tile that is bare soil from the sky point of view
         ! Needed later for merging the contributing snow-, bare soil- and canopy-albedos for this vegetation tile
-        dsl4jsb_Get_var2D_onChunk(RAD, sky_view_fract)       ! inout
-        dsl4jsb_Get_var2D_onChunk(RAD, sky_view_fract_stem)  ! inout
+        dsl4jsb_Get_var2D_onChunk(RAD_, sky_view_fract)       ! inout
+        dsl4jsb_Get_var2D_onChunk(RAD_, sky_view_fract_stem)  ! inout
 
         CALL calc_sky_view_fractions(       &
           & l_day(:),                       & ! in

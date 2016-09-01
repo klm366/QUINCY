@@ -23,10 +23,10 @@ MODULE mo_rad_memory_class
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, LAKE_TYPE
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes RAD
+  dsl4jsb_Use_processes RAD_
 
   ! Use process configurations
-  dsl4jsb_Use_config(RAD)
+  dsl4jsb_Use_config(RAD_)
 
   IMPLICIT NONE
   PRIVATE
@@ -136,7 +136,7 @@ CONTAINS
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
-    dsl4jsb_Def_config(RAD)
+    dsl4jsb_Def_config(RAD_)
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
@@ -153,7 +153,7 @@ CONTAINS
     surface      => Get_vgrid('surface')
     canopy_layer => Get_vgrid('canopy_layer')
 
-    dsl4jsb_Get_config(RAD)
+    dsl4jsb_Get_config(RAD_)
 
     IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
 

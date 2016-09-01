@@ -57,7 +57,7 @@ CONTAINS
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_util,                ONLY: one_of
     USE mo_jsb_lct_class,       ONLY: t_jsb_lct, LAND_TYPE, LAKE_TYPE, Contains_lct
-    USE mo_jsb_process_class,   ONLY: SEB, ATM2LAND, LAND2ATM, Get_process_name
+    USE mo_jsb_process_class,   ONLY: SEB_, ATM2LAND_, LAND2ATM_, Get_process_name
 
     CHARACTER(len=*),  INTENT(in)           :: name
     CHARACTER(len=*),  INTENT(in)           :: description
@@ -167,18 +167,18 @@ CONTAINS
       IF (j > 0) THEN
         iproc = processes(j)
 
-        IF (iproc == SEB .AND. ALLOCATED(return_ptr%lcts)) THEN
+        IF (iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
           IF (return_ptr%lcts(1)%id /= LAND_TYPE .AND. return_ptr%lcts(1)%id /= LAKE_TYPE) THEN
-            CALL finish(TRIM(routine), 'SEB process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
+            CALL finish(TRIM(routine), 'SEB_ process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
           END IF
         END IF
 
         IF (PRESENT(process_actions)) THEN
           return_ptr%process_action(iproc) = process_actions(j)
         ELSE
-          IF (iproc == ATM2LAND) THEN
+          IF (iproc == ATM2LAND_) THEN
             return_ptr%process_action(iproc) = ON_TILE_
-          ELSE IF (iproc == LAND2ATM) THEN
+          ELSE IF (iproc == LAND2ATM_) THEN
             return_ptr%process_action(iproc) = ON_TILE_
           ELSE
             return_ptr%process_action(iproc) = ON_LEAFS_
@@ -207,7 +207,7 @@ CONTAINS
             return_ptr%process_action(iproc) = ON_LEAFS_
             !return_ptr%parent_tile%process_action(iproc) = AGGREGATE_
           CASE (ON_TILE_)
-            IF (iproc == LAND2ATM) THEN
+            IF (iproc == LAND2ATM_) THEN
               return_ptr%process_action(iproc) = SKIP_
             ELSE
               return_ptr%process_action(iproc) = INHERIT_
@@ -229,7 +229,7 @@ CONTAINS
   SUBROUTINE Init_tile(this, varlist_name, prefix, suffix)
 
     USE mo_jsb_process_factory, ONLY: Create_process_memory
-    USE mo_jsb_process_class,   ONLY: SEB, ATM2LAND, LAND2ATM, Get_process_name
+    USE mo_jsb_process_class,   ONLY: SEB_, ATM2LAND_, LAND2ATM_, Get_process_name
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_varlist,         ONLY: t_jsb_varlist, Get_varlist, jsb_add_var

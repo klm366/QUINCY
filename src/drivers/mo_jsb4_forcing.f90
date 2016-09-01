@@ -56,8 +56,8 @@ MODULE mo_jsb4_forcing
 
   USE mo_jsb_physical_constants, ONLY: cvdifts
 
-  dsl4jsb_Use_processes SOIL
-  dsl4jsb_Use_memory(SOIL)
+  dsl4jsb_Use_processes SOIL_
+  dsl4jsb_Use_memory(SOIL_)
 
   IMPLICIT NONE
   PRIVATE
@@ -269,7 +269,7 @@ CONTAINS
     TYPE(t_jsb_model),  POINTER  :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
 
-    dsl4jsb_Def_memory(SOIL)
+    dsl4jsb_Def_memory(SOIL_)
     dsl4jsb_Real2D_onChunk :: elevation
 
     REAL(wp) :: hlp_r
@@ -327,10 +327,10 @@ CONTAINS
     ! --- compute bottom pressure
     model => get_model(model_id)
     tile => model%Get_top_tile()
-    dsl4jsb_Get_memory(SOIL)
+    dsl4jsb_Get_memory(SOIL_)
     DO iblk = 1, nblks
       ! get elevation
-      dsl4jsb_Get_var2D_onChunk(SOIL, elevation)  ! in
+      dsl4jsb_Get_var2D_onChunk(SOIL_, elevation)  ! in
 
       press_srf(:,iblk) = bottom_pressure(elevation(:), t_air(:,iblk))
     ENDDO

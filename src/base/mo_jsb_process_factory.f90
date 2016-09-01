@@ -51,7 +51,7 @@ MODULE mo_jsb_process_factory
   USE mo_hd_config_class,      ONLY: t_hd_config
 #endif
 
-  USE mo_jsb_process_class, ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+  USE mo_jsb_process_class, ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
   IMPLICIT NONE
   PRIVATE
@@ -79,32 +79,32 @@ CONTAINS
     return_ptr%owner_model_id = model_id
 
     SELECT CASE (iproc)
-    CASE (RAD)
+    CASE (RAD_)
       CALL Register_rad_tasks(return_ptr, model_id)
       ALLOCATE(t_rad_config::return_ptr%config)
-    CASE (SEB)
+    CASE (SEB_)
       CALL Register_seb_tasks(return_ptr, model_id)
       ALLOCATE(t_seb_config::return_ptr%config)
-    CASE (TURB)
+    CASE (TURB_)
       CALL Register_turb_tasks(return_ptr, model_id)
       ALLOCATE(t_turb_config::return_ptr%config)
-    CASE (SOIL)
+    CASE (SOIL_)
       CALL Register_soil_tasks(return_ptr, model_id)
       ALLOCATE(t_soil_config::return_ptr%config)
-    CASE (HYDRO)
+    CASE (HYDRO_)
       CALL Register_hydro_tasks(return_ptr, model_id)
       ALLOCATE(t_hydro_config::return_ptr%config)
-    CASE (VEG)
+    CASE (VEG_)
       CALL Register_veg_tasks(return_ptr, model_id)
       ALLOCATE(t_veg_config::return_ptr%config)
-    CASE (ASSIMI)
+    CASE (ASSIMI_)
       CALL Register_assimi_tasks(return_ptr, model_id)
       ALLOCATE(t_assimi_config::return_ptr%config)
-    CASE (PHENO)
+    CASE (PHENO_)
       CALL Register_pheno_tasks(return_ptr, model_id)
       ALLOCATE(t_pheno_config::return_ptr%config)
 #ifndef __NO_JSBACH_HD__
-    CASE (HD)
+    CASE (HD_)
       CALL Register_hd_tasks(return_ptr, model_id)
       ALLOCATE(t_hd_config::return_ptr%config)
 #endif
@@ -138,38 +138,38 @@ CONTAINS
     CLASS(t_jsb_memory), POINTER   :: return_ptr
 
     SELECT CASE(iproc)
-    CASE (ATM2LAND)
+    CASE (ATM2LAND_)
       ALLOCATE(t_atm2land_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_atm2land_vars
-    CASE (LAND2ATM)
+    CASE (LAND2ATM_)
       ALLOCATE(t_land2atm_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_land2atm_vars
-    CASE (SEB)
+    CASE (SEB_)
       ALLOCATE(t_seb_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_seb_vars
-    CASE (TURB)
+    CASE (TURB_)
       ALLOCATE(t_turb_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_turb_vars
-    CASE (SOIL)
+    CASE (SOIL_)
       ALLOCATE(t_soil_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_soil_vars
-    CASE (HYDRO)
+    CASE (HYDRO_)
       ALLOCATE(t_hydro_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_hydro_vars
-    CASE (VEG)
+    CASE (VEG_)
       ALLOCATE(t_veg_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_veg_vars
-    CASE (ASSIMI)
+    CASE (ASSIMI_)
       ALLOCATE(t_assimi_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_assimi_vars
-    CASE (PHENO)
+    CASE (PHENO_)
       ALLOCATE(t_pheno_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_pheno_vars
-    CASE (RAD)
+    CASE (RAD_)
       ALLOCATE(t_rad_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_rad_vars
 #ifndef __NO_JSBACH_HD__
-    CASE (HD)
+    CASE (HD_)
       ALLOCATE(t_hd_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_hd_vars
 #endif

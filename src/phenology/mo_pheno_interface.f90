@@ -28,25 +28,25 @@ MODULE mo_pheno_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  dsl4jsb_Use_processes SEB, SOIL, VEG, ATM2LAND, RAD, HYDRO, ASSIMI, PHENO
+  dsl4jsb_Use_processes SEB_, SOIL_, VEG_, ATM2LAND_, RAD_, HYDRO_, ASSIMI_, PHENO_
 
   ! Use of process configurations (t_<process>_config)
-  dsl4jsb_Use_config(SEB)
-  dsl4jsb_Use_config(SOIL)
-  dsl4jsb_Use_config(RAD)
-  dsl4jsb_Use_config(ASSIMI)
-  dsl4jsb_Use_config(HYDRO)
-  dsl4jsb_Use_config(PHENO)
+  dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(SOIL_)
+  dsl4jsb_Use_config(RAD_)
+  dsl4jsb_Use_config(ASSIMI_)
+  dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_<process>_memory)
-  dsl4jsb_Use_memory(ATM2LAND)  
-  dsl4jsb_Use_memory(SOIL)
-  dsl4jsb_Use_memory(SEB)
-  dsl4jsb_Use_memory(VEG)
-  dsl4jsb_Use_memory(RAD)
-  dsl4jsb_Use_memory(HYDRO)
-  dsl4jsb_Use_memory(PHENO)
-  dsl4jsb_Use_memory(ASSIMI)
+  dsl4jsb_Use_memory(ATM2LAND_)  
+  dsl4jsb_Use_memory(SOIL_)
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(RAD_)
+  dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(ASSIMI_)
   
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -86,7 +86,7 @@ CONTAINS
     ALLOCATE(tsk_phenology::return_ptr)
 
     return_ptr%name = 'phenology'
-    return_ptr%process_id = PHENO
+    return_ptr%process_id = PHENO_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_phenology
@@ -119,19 +119,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_config(PHENO)
+    dsl4jsb_Def_config(PHENO_)
 
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_phenology'
 
-    IF (.NOT. tile%Is_process_active(PHENO)) RETURN
+    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(PHENO)
+    dsl4jsb_Get_config(PHENO_)
 
-    SELECT CASE (TRIM(dsl4jsb_Config(PHENO)%scheme))
+    SELECT CASE (TRIM(dsl4jsb_Config(PHENO_)%scheme))
     CASE ('logrop')
       CALL update_phenology_logrop(tile, options)
     CASE ('climatology')
@@ -183,14 +183,14 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER             :: grid
     
     ! Declare pointers for process configuration and memory
-    dsl4jsb_Def_config(ASSIMI)
-    dsl4jsb_Def_config(PHENO)   
-    dsl4jsb_Def_memory(RAD)
-    dsl4jsb_Def_memory(PHENO)
-    dsl4jsb_Def_memory(ATM2LAND)
-    dsl4jsb_Def_memory(HYDRO)
-    dsl4jsb_Def_memory(ASSIMI)
-    dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(PHENO_)   
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(ATM2LAND_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(SEB_)
 
     ! Declare pointers for variables in memory
     INTEGER                :: ncanopy     ! number of canopy layers
@@ -232,7 +232,7 @@ CONTAINS
     dtime   = options%dtime
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PHENO)) RETURN
+    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -240,51 +240,51 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     ! Set pointers to process configs and memory
-    dsl4jsb_Get_config(PHENO)
-    dsl4jsb_Get_config(ASSIMI)
-    dsl4jsb_Get_memory(ATM2LAND)    
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(PHENO)
-    dsl4jsb_Get_memory(PHENO)
-    dsl4jsb_Get_memory(ASSIMI)
+    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_memory(ATM2LAND_)    
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(ASSIMI_)
 
-    ncanopy =  dsl4jsb_Config(ASSIMI)%ncanopy
+    ncanopy =  dsl4jsb_Config(ASSIMI_)%ncanopy
 
     grid    => Get_grid(model%grid_id)
     lat     => grid%lat(ics:ice, iblk)
 
-    !first_call_phenology_this_day  => model%processes(PHENO)%config%first_call_phenology_this_day(ics:ice,iblk)
+    !first_call_phenology_this_day  => model%processes(PHENO_)%config%first_call_phenology_this_day(ics:ice,iblk)
     
     ! Set pointers to variables in memory
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_air)                  ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI,   NPP_rate)               ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO,    w_soil_rel)             ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)                  ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_rate)               ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    w_soil_rel)             ! in
     
-    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_mean) ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_min)  ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_max)  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_mean) ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_min)  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_max)  ! in
         
-    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)                    ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_SG)            ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_EG)            ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_CRP)           ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    heat_sum_winter)        ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                    ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_SG)            ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_EG)            ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_CRP)           ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_winter)        ! inout
     
-    dsl4jsb_Get_var2D_onChunk(PHENO,    days_since_growth_begin_SG) ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    days_since_growth_begin_EG) ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    days_since_growth_begin_SG) ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    days_since_growth_begin_EG) ! inout
     
-    dsl4jsb_Get_var2D_onChunk(SEB,      pseudo_soil_temp)       ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    growth_phase_SG)        ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    growth_phase_EG)        ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    growth_phase_CRP)       ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    chill_days_SG)          ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    chill_days_EG)          ! inout
+    dsl4jsb_Get_var2D_onChunk(SEB_,      pseudo_soil_temp)       ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    growth_phase_SG)        ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    growth_phase_EG)        ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    growth_phase_CRP)       ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    chill_days_SG)          ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    chill_days_EG)          ! inout
 
-    dsl4jsb_Get_var2D_onChunk(PHENO,    day_NPP_sum)            ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO,    previous_day_NPP_rate)  ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)            ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_rate)  ! out
     
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PHENO)) RETURN
+    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -374,7 +374,7 @@ CONTAINS
        LaiMax_corrected = dsl4jsb_Lctlib_param(MaxLAI)
     END IF    
 
-    ! R: The following PHENO process shall be calculated only on the lowest child tiles (=ON_LEAFS).
+    ! R: The following PHENO_ process shall be calculated only on the lowest child tiles (=ON_LEAFS).
     !    This is set within the FUNCTION Construct_tile and makes further statements here unnecessary.
 
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  2) THEN  ! ... none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
@@ -486,7 +486,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
 
-    dsl4jsb_Def_memory(PHENO)
+    dsl4jsb_Def_memory(PHENO_)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: lai
@@ -500,15 +500,15 @@ CONTAINS
     ice     = options%ice
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PHENO)) RETURN
+    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(PHENO)
+    dsl4jsb_Get_memory(PHENO_)
 
-    dsl4jsb_Get_var2D_onChunk(PHENO, lai)            ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)            ! out
     lai_mon(1:,0:) => pheno__mem%lai_mon (ics:ice, iblk, :) ! in
 
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
@@ -532,8 +532,8 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    dsl4jsb_Def_config(PHENO)
-    dsl4jsb_Def_memory(PHENO)
+    dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_memory(PHENO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -555,18 +555,18 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(PHENO)
+    dsl4jsb_Get_config(PHENO_)
 
-    dsl4jsb_Get_memory(PHENO)
+    dsl4jsb_Get_memory(PHENO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(PHENO, lai,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(PHENO_, lai,    weighted_by_fract)
 
     !X Implementation: Start your process scheme here...
     !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen pheno Tasks aggregiert werden sollen.
 
-    IF (TRIM(dsl4jsb_Config(PHENO)%scheme) == 'logrop') THEN
+    IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
     END IF
 

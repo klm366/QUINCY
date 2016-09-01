@@ -27,19 +27,19 @@ MODULE mo_veg_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes VEG, PHENO, SOIL, SEB, ATM2LAND, RAD, HYDRO !, ASSIMI
-  dsl4jsb_Use_config(VEG)
-  dsl4jsb_Use_config(SOIL)
-  dsl4jsb_Use_config(RAD)
+  dsl4jsb_Use_processes VEG_, PHENO_, SOIL_, SEB_, ATM2LAND_, RAD_, HYDRO_ !, ASSIMI_
+  dsl4jsb_Use_config(VEG_)
+  dsl4jsb_Use_config(SOIL_)
+  dsl4jsb_Use_config(RAD_)
 
-  dsl4jsb_Use_memory(atm2land)
-  dsl4jsb_Use_memory(SOIL)
-  dsl4jsb_Use_memory(SEB)
-  dsl4jsb_Use_memory(VEG)
-  dsl4jsb_Use_memory(PHENO)
-  dsl4jsb_Use_memory(RAD)
-  dsl4jsb_Use_memory(HYDRO)
-  !dsl4jsb_Use_memory(ASSIMI)
+  dsl4jsb_Use_memory(ATM2LAND_)
+  dsl4jsb_Use_memory(SOIL_)
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(RAD_)
+  dsl4jsb_Use_memory(HYDRO_)
+  !dsl4jsb_Use_memory(ASSIMI_)
 
   IMPLICIT NONE
   PRIVATE
@@ -103,7 +103,7 @@ CONTAINS
     ALLOCATE(tsk_canopy_cond_unstressed::return_ptr)
 
     return_ptr%name = 'canopy_cond_unstressed'
-    return_ptr%process_id = VEG
+    return_ptr%process_id = VEG_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_canopy_cond_unstressed
@@ -122,7 +122,7 @@ CONTAINS
     ALLOCATE(tsk_canopy_cond_stressed::return_ptr)
 
     return_ptr%name = 'canopy_cond_stressed'
-    return_ptr%process_id = VEG
+    return_ptr%process_id = VEG_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_canopy_cond_stressed
@@ -141,7 +141,7 @@ CONTAINS
     ALLOCATE(tsk_foliage_projected_cover::return_ptr)
 
     return_ptr%name = 'foliage_projected_cover'
-    return_ptr%process_id = VEG
+    return_ptr%process_id = VEG_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_foliage_projected_cover
@@ -168,9 +168,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(VEG)
-    dsl4jsb_Def_memory(PHENO)
-    dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(ATM2LAND_)
 
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
@@ -190,7 +190,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(VEG)) RETURN
+    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -198,13 +198,13 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(VEG)
-    dsl4jsb_Get_memory(PHENO)
-    dsl4jsb_Get_memory(ATM2LAND)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(ATM2LAND_)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, swpar_srf_down) ! IN
-    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)            ! IN
-    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swpar_srf_down) ! IN
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)            ! IN
+    dsl4jsb_Get_var2D_onChunk(VEG_,      canopy_cond)    ! OUT
 
     ! Compute (max) canopy (stomatal) conductance with no water stress
     canopy_cond(:) = get_canopy_conductance( lai(:), swpar_srf_down(:) )
@@ -216,7 +216,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(VEG_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -235,11 +235,11 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(VEG_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(VEG,    canopy_cond,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_,    canopy_cond,    weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -258,16 +258,16 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_config(VEG)
-    dsl4jsb_Def_config(SOIL)
+    dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(SOIL_)
 
-    dsl4jsb_Def_memory(SOIL)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(VEG)
-    dsl4jsb_Def_memory(PHENO)
-    dsl4jsb_Def_memory(ATM2LAND)
-    dsl4jsb_Def_memory(HYDRO)
-    !dsl4jsb_Def_memory(ASSIMI)
+    dsl4jsb_Def_memory(SOIL_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(ATM2LAND_)
+    dsl4jsb_Def_memory(HYDRO_)
+    !dsl4jsb_Def_memory(ASSIMI_)
 
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
@@ -301,42 +301,42 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(VEG)) RETURN
+    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(VEG)
-    dsl4jsb_Get_config(SOIL)
+    dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(SOIL_)
 
-    nsoil = dsl4jsb_Config(SOIL)%nsoil_water
+    nsoil = dsl4jsb_Config(SOIL_)%nsoil_water
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(VEG)
-    dsl4jsb_Get_memory(PHENO)
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(SOIL)
-    dsl4jsb_Get_memory(ATM2LAND)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(HYDRO_)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)               ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)           ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      t)                   ! in
-    dsl4jsb_Get_var3D_onChunk(SOIL,     soil_depth_l)        ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_sl)           ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_fc_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO,    w_soil_pwp_sl)       ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO,    lai)                 ! in
-    dsl4jsb_Get_var3D_onChunk(VEG,      root_depth_l)        ! in
-    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)         ! in
-    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond_limited) ! out
-    dsl4jsb_Get_var3D_onChunk(VEG,      root_depth_l)        ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root)         ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root_fc)      ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_soil_root_pwp)     ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    water_stress)        ! out
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_air)               ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)           ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_l)        ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pwp_sl)       ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                 ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_,      root_depth_l)        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,      canopy_cond)         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,      canopy_cond_limited) ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_,      root_depth_l)        ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root)         ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
 
     ! Get water stress
 
@@ -366,8 +366,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(VEG)
-    dsl4jsb_Def_memory(HYDRO)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(HYDRO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -386,16 +386,16 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(VEG)
-    dsl4jsb_Get_memory(HYDRO)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(VEG,   canopy_cond_limited, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, w_soil_root,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, w_soil_root_fc,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, w_soil_root_pwp,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO, water_stress,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_,   canopy_cond_limited, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -425,8 +425,8 @@ CONTAINS
     INTEGER :: p_pe
 
     ! Declare pointers of type process __conf and __mem
-    dsl4jsb_Def_memory(VEG)
-    dsl4jsb_Def_memory(PHENO)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(PHENO_)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: lai
@@ -448,7 +448,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(VEG)) RETURN
+    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
 
     p_pe = get_my_global_mpi_id()
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -457,12 +457,12 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(VEG)
-    dsl4jsb_Get_memory(PHENO)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(PHENO_)
 
-    dsl4jsb_Get_var2D_onChunk(PHENO, lai)            ! in
-    dsl4jsb_Get_var2D_onChunk(VEG,   fract_fpc_max)  ! in
-    dsl4jsb_Get_var2D_onChunk(VEG,   fract_fpc)      ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)            ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,   fract_fpc_max)  ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,   fract_fpc)      ! out
 
     ! Update foliage projected cover
     !
@@ -480,7 +480,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(VEG_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -497,11 +497,11 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(VEG_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(VEG, fract_fpc, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fract_fpc, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

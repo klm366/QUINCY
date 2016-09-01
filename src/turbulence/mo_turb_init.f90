@@ -22,9 +22,9 @@ MODULE mo_turb_init
   USE mo_impl_constants,    ONLY: LAND_BOUNDARY, SEA_BOUNDARY, SEA
 #endif
 
-  dsl4jsb_Use_processes TURB
-  dsl4jsb_Use_config(TURB)
-  dsl4jsb_Use_memory(TURB)
+  dsl4jsb_Use_processes TURB_
+  dsl4jsb_Use_config(TURB_)
+  dsl4jsb_Use_memory(TURB_)
 
   IMPLICIT NONE
   PRIVATE
@@ -66,8 +66,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),        POINTER :: model
-    dsl4jsb_Def_config(TURB)
-    dsl4jsb_Def_memory(TURB)
+    dsl4jsb_Def_config(TURB_)
+    dsl4jsb_Def_memory(TURB_)
 
     REAL(wp), POINTER :: &
       & return_pointer (:,  :)       !< temporary pointer
@@ -79,26 +79,26 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get turb config
-    dsl4jsb_Get_config(TURB)
+    dsl4jsb_Get_config(TURB_)
 
-    IF (.NOT. dsl4jsb_Config(TURB)%active) RETURN
+    IF (.NOT. dsl4jsb_Config(TURB_)%active) RETURN
 
     ! Get turb memory of the tile
-    dsl4jsb_Get_memory(TURB)
+    dsl4jsb_Get_memory(TURB_)
 
     ! Initialize parameters
     !
     CALL message(TRIM(routine), &
-         'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB)%bc_filename))
+         'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB)%bc_filename), model%grid_id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
 
     ! Surface roughness length
     return_pointer => input_file%Read_2d(         &
       & variable_name='roughness_length',         &
-      & fill_array = dsl4jsb_var2D_ptr(TURB,rough_m))
-    dsl4jsb_var2D_onDomain(TURB,rough_m) = &
-      MERGE(dsl4jsb_var2D_onDomain(TURB,rough_m), 1._wp, dsl4jsb_var2D_onDomain(TURB,rough_m) > 0._wp)
+      & fill_array = dsl4jsb_var2D_ptr(TURB_,rough_m))
+    dsl4jsb_var2D_onDomain(TURB_,rough_m) = &
+      MERGE(dsl4jsb_var2D_onDomain(TURB_,rough_m), 1._wp, dsl4jsb_var2D_onDomain(TURB_,rough_m) > 0._wp)
 
     CALL input_file%Close()
 

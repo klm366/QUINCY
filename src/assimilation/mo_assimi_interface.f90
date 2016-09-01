@@ -28,17 +28,17 @@ MODULE mo_assimi_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_assimi_memory and Get_assimi_config)
-  dsl4jsb_Use_processes ASSIMI, VEG, PHENO, RAD, ATM2LAND
+  dsl4jsb_Use_processes ASSIMI_, VEG_, PHENO_, RAD_, ATM2LAND_
 
   ! Use of process configurations (t_assimi_config)
-  dsl4jsb_Use_config(ASSIMI)
+  dsl4jsb_Use_config(ASSIMI_)
 
   ! Use of process memories (t_assimi_memory)
-  dsl4jsb_Use_memory(ATM2LAND)
-  dsl4jsb_Use_memory(ASSIMI)
-  dsl4jsb_Use_memory(VEG)
-  dsl4jsb_Use_memory(PHENO)
-  dsl4jsb_Use_memory(RAD)
+  dsl4jsb_Use_memory(ATM2LAND_)
+  dsl4jsb_Use_memory(ASSIMI_)
+  dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(RAD_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -105,7 +105,7 @@ CONTAINS
     ALLOCATE(tsk_assimilation_scaling_factors::return_ptr)
 
     return_ptr%name = 'assimilation_scaling_factors'
-    return_ptr%process_id = ASSIMI
+    return_ptr%process_id = ASSIMI_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_assimilation_scaling_factors
@@ -124,7 +124,7 @@ CONTAINS
     ALLOCATE(tsk_canopy_cond_unstressed::return_ptr)
 
     return_ptr%name = 'canopy_cond_unstressed'
-    return_ptr%process_id = ASSIMI
+    return_ptr%process_id = ASSIMI_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_canopy_cond_unstressed
@@ -143,7 +143,7 @@ CONTAINS
     ALLOCATE(tsk_assimilation::return_ptr)
 
     return_ptr%name = 'assimilation'
-    return_ptr%process_id = ASSIMI
+    return_ptr%process_id = ASSIMI_
     return_ptr%owner_model_id = model_id
 
   END FUNCTION Create_task_assimilation
@@ -212,9 +212,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':assimilation_scaling_factors'
 
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(ASSIMI)
-    dsl4jsb_Def_memory(ASSIMI)
-    dsl4jsb_Def_memory(PHENO)
+    dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(PHENO_)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl
@@ -227,28 +227,28 @@ CONTAINS
     nc      = options%nc
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI)) RETURN
+    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
     ! Get process config
-    dsl4jsb_Get_config(ASSIMI)
+    dsl4jsb_Get_config(ASSIMI_)
 
     ! Get process memories
-    dsl4jsb_Get_memory(ASSIMI)
-    dsl4jsb_Get_memory(PHENO)
+    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(PHENO_)
 
     ! Get process variables
-    ncanopy          =  dsl4jsb_Config(ASSIMI)%ncanopy
-    canopy_bound_lai(0:ncanopy) => dsl4jsb_Config(ASSIMI)%canopy_bound_lai(0:ncanopy)
+    ncanopy          =  dsl4jsb_Config(ASSIMI_)%ncanopy
+    canopy_bound_lai(0:ncanopy) => dsl4jsb_Config(ASSIMI_)%canopy_bound_lai(0:ncanopy)
 
     grid => Get_grid(model%grid_id)
     lat(:)  = grid%lat(ics:ice, iblk)
 
-    dsl4jsb_Get_var2D_onChunk(PHENO, lai)                     ! in
-    dsl4jsb_Get_var3D_onChunk(ASSIMI, assimi_scaling_fact_cl) ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                     ! in
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, assimi_scaling_fact_cl) ! out
 
     ! ---------------------------
     ! Go
@@ -287,7 +287,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(ASSIMI)
+    dsl4jsb_Def_memory(ASSIMI_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -307,11 +307,11 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(ASSIMI)
+    dsl4jsb_Get_memory(ASSIMI_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(ASSIMI, assimi_scaling_fact_cl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, assimi_scaling_fact_cl, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -342,12 +342,12 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_cond_unstressed'
 
     ! Declare process memories
-    dsl4jsb_Def_memory(ASSIMI)
-    dsl4jsb_Def_memory(VEG)
-    dsl4jsb_Def_memory(RAD)
-    dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(ATM2LAND_)
 
-    dsl4jsb_Def_config(ASSIMI)
+    dsl4jsb_Def_config(ASSIMI_)
 
     ! Declare pointers to variables in memory
     INTEGER :: ncanopy                 ! number of canopy layers
@@ -377,34 +377,34 @@ CONTAINS
     nc      = options%nc
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI)) RETURN
+    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Get model
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(ASSIMI)
+    dsl4jsb_Get_config(ASSIMI_)
 
     ! Get process memories
-    dsl4jsb_Get_memory(ASSIMI)
-    dsl4jsb_Get_memory(VEG)
-    dsl4jsb_Get_memory(RAD)
-    dsl4jsb_Get_memory(ATM2LAND)
+    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(ATM2LAND_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_air)                   ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)               ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, CO2_air_mol)             ! in
-    dsl4jsb_Get_var2D_onChunk(RAD,      par_down_mol)            ! in
-    dsl4jsb_Get_var3D_onChunk(RAD,      apar_per_lai_cl)         ! in
-    dsl4jsb_Get_var3D_onChunk(RAD,      lai_cl)                  ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)                   ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)               ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, CO2_air_mol)             ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
 
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   assimi_scaling_fact_cl)  ! in
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   canopy_cond_cl)          ! out
-    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)             ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_,      canopy_cond)             ! out
 
-    ncanopy = dsl4jsb_Config(ASSIMI)%ncanopy
+    ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
 
     DO icanopy=1,ncanopy
       CALL calc_assimilation_waterunlimited( &
@@ -439,8 +439,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(ASSIMI)
-    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(VEG_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -460,13 +460,13 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(ASSIMI)
-    dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(VEG_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(ASSIMI, canopy_cond_cl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG,    canopy_cond,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_,    canopy_cond,    weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -497,11 +497,11 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_assimilation'
 
     ! Declare pointers to process configuration and memory
-    dsl4jsb_Def_memory(ASSIMI)
-    dsl4jsb_Def_memory(VEG)
-    dsl4jsb_Def_memory(RAD)
-    dsl4jsb_Def_memory(ATM2LAND)
-    dsl4jsb_Def_config(ASSIMI)
+    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(ATM2LAND_)
+    dsl4jsb_Def_config(ASSIMI_)
 
     INTEGER :: ncanopy                 ! number of canopy layers
 
@@ -542,7 +542,7 @@ CONTAINS
     nc      = options%nc
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI)) RETURN
+    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -550,40 +550,40 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     ! Set process config and memories
-    dsl4jsb_Get_config(ASSIMI)
+    dsl4jsb_Get_config(ASSIMI_)
 
-    ncanopy = dsl4jsb_Config(ASSIMI)%ncanopy
+    ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
 
     ! Get process memories
-    dsl4jsb_Get_memory(ASSIMI)
-    dsl4jsb_Get_memory(VEG)
-    dsl4jsb_Get_memory(RAD)
-    dsl4jsb_Get_memory(ATM2LAND)
+    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(ATM2LAND_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_air)                   ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, CO2_air_mol)             ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)               ! in
-    dsl4jsb_Get_var2D_onChunk(RAD,      par_down_mol)            ! in
-    dsl4jsb_Get_var3D_onChunk(RAD,      apar_per_lai_cl)         ! in
-    dsl4jsb_Get_var3D_onChunk(RAD,      lai_cl)                  ! in
-    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond)             ! in
-    dsl4jsb_Get_var2D_onChunk(VEG,      canopy_cond_limited)     ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)                   ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, CO2_air_mol)             ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)               ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,      canopy_cond)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_,      canopy_cond_limited)     ! in
 
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   assimi_scaling_fact_cl)  ! in
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   canopy_cond_cl)          ! inout
-    dsl4jsb_Get_var2D_onChunk(ASSIMI,   canopy_cond_over_time)   ! inout
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! inout
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_over_time)   ! inout
 
-    dsl4jsb_Get_var2D_onChunk(ASSIMI,   gross_assimilation)      ! out
-    dsl4jsb_Get_var2D_onChunk(ASSIMI,   dark_respiration)        ! out
-    dsl4jsb_Get_var2D_onChunk(ASSIMI,   NPP_rate)                ! out
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   gross_assimilation_cl)   ! out
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   dark_respiration_cl)     ! out
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   carbox_rate_max_cl)      ! out
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   e_transport_rate_max_cl) ! out
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   e_transport_rate_cl)     ! out
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   carbox_rate_cl)          ! out
-    dsl4jsb_Get_var3D_onChunk(ASSIMI,   CO2_conc_leaf_cl)        ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   gross_assimilation)      ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   dark_respiration)        ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_rate)                ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   gross_assimilation_cl)   ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   dark_respiration_cl)     ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   carbox_rate_max_cl)      ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   e_transport_rate_max_cl) ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   e_transport_rate_cl)     ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   carbox_rate_cl)          ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   CO2_conc_leaf_cl)        ! out
 
     ! ---------------------------
     ! Go
@@ -667,7 +667,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     TYPE(t_jsb_model), POINTER                :: model
 
-    dsl4jsb_Def_memory(ASSIMI)
+    dsl4jsb_Def_memory(ASSIMI_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -686,22 +686,22 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_memory(ASSIMI)
+    dsl4jsb_Get_memory(ASSIMI_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(ASSIMI, canopy_cond_cl,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, canopy_cond_over_time,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, gross_assimilation,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, gross_assimilation_cl,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, dark_respiration,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, dark_respiration_cl,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, NPP_rate,                weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, CO2_conc_leaf_cl,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, carbox_rate_cl,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, carbox_rate_max_cl,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, e_transport_rate_cl,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI, e_transport_rate_max_cl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_over_time,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_cl,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration_cl,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, NPP_rate,                weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, CO2_conc_leaf_cl,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, carbox_rate_cl,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, carbox_rate_max_cl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, e_transport_rate_cl,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, e_transport_rate_max_cl, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

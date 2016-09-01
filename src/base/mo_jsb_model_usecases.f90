@@ -14,7 +14,7 @@ MODULE mo_jsb_model_usecases
   USE mo_kind,                ONLY: wp
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_process_class,   ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, RAD, HD, ASSIMI, PHENO
+  USE mo_jsb_process_class,   ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, RAD_, HD_, ASSIMI_, PHENO_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
   USE mo_jsb_grid,            ONLY: Get_Grid
@@ -79,27 +79,27 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/ATM2LAND, LAND2ATM, RAD,       HYDRO,     TURB     /), &
+      & processes      =(/ATM2LAND_, LAND2ATM_, RAD_,       HYDRO_,     TURB_     /), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, grid_id=model%grid_id, fract_filename='bc_land_frac.nc', fract_varname='notsea')
     model%top => box_tile
 
       ! Create sub-tiles
       lake_tile => t_jsb_tile('lake', 'Lake tile', &
-        & processes=(/SEB/), process_actions=(/ON_TILE_/), &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
         & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile, fract_filename='bc_land_frac.nc', fract_varname='fract_lake')
 
       land_tile => t_jsb_tile('land', 'Land tile', &
-        & processes=(/SEB/), process_actions=(/ON_TILE_/), &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
         & lct=t_jsb_lct(LAND_TYPE), &
         & parent=box_tile, &
         & fract_filename='bc_land_frac.nc', fract_varname='fract_land')
 
-        glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL/), &
+        glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL_/), &
           & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile, &
           & fract_filename='bc_land_frac.nc', fract_varname='fract_glac')
 
-        veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SOIL, VEG, PHENO/), &
+        veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SOIL_, VEG_, PHENO_/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
           & fract_filename='bc_land_frac.nc', fract_varname='landnoglacier')
 
@@ -120,7 +120,7 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/ATM2LAND, LAND2ATM, RAD,       HYDRO,     TURB,      SEB,      HD/), &
+      & processes      =(/ATM2LAND_, LAND2ATM_, RAD_,       HYDRO_,     TURB_,      SEB_,      HD_/), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_, ON_TILE_/), &
       & lct=t_jsb_lct(LAND_TYPE), &
       & model_id=model%id, grid_id=model%grid_id, fract_filename='bc_land_frac.nc', fract_varname='notsea')
@@ -128,22 +128,22 @@ CONTAINS
     CALL box_tile%Print()
 
       lake_tile => t_jsb_tile('lake', 'Lake tile', &
-        & processes=(/SEB/), process_actions=(/ON_TILE_/), &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
         & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile, fract_filename='bc_land_frac.nc')
       CALL lake_tile%Print()
 
-      glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL/), &
+      glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL_/), &
         & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=box_tile, fract_filename='bc_land_frac.nc')
       CALL glacier_tile%Print()
 
-      veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SOIL, VEG, PHENO/), &
+      veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SOIL_, VEG_, PHENO_/), &
         & lct=t_jsb_lct(VEG_TYPE), parent=box_tile,  &
         & fract_filename='bc_land_frac.nc', fract_varname='fract_land')
       CALL veg_tile%Print()
 
 
     ! box_tile => t_jsb_tile('box', 'Top tile',            &
-    !   & processes=(/ATM2LAND,LAND2ATM,RAD,SEB,TURB,SOIL,HYDRO,PHENO,VEG,HD/), &
+    !   & processes=(/ATM2LAND_,LAND2ATM_,RAD_,SEB_,TURB_,SOIL_,HYDRO_,PHENO_,VEG_,HD_/), &
     !   & lct=t_jsb_lct(LAND_TYPE), &
     !   & model_id=model%id, grid_id=model%grid_id, fract_filename='bc_land_frac.nc', fract_varname='notsea')
 
@@ -192,20 +192,20 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile',            &
-      & processes      =(/ATM2LAND, LAND2ATM, RAD,       HYDRO,     TURB,      HD      /), &
+      & processes      =(/ATM2LAND_, LAND2ATM_, RAD_,       HYDRO_,     TURB_,      HD_      /), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
       & model_id=model%id, grid_id=model%grid_id)
     model%top => box_tile
 
     land_tile => t_jsb_tile('land', 'Land tile', &
-        & processes      =(/SEB,      SOIL,      VEG/), &
+        & processes      =(/SEB_,      SOIL_,      VEG_/), &
         & process_actions=(/ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
         ! & lcts=(/t_jsb_lct(LAND_TYPE),t_jsb_lct(BARE_TYPE),t_jsb_lct(VEG_TYPE),t_jsb_lct(GLACIER_TYPE)/), &
         & lct=t_jsb_lct(LAND_TYPE), &
         & parent=box_tile)
 
       lake_tile => t_jsb_tile('lake', 'Lake tile', &
-        & processes=(/SEB/), process_actions=(/ON_TILE_/), &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
         & lct=t_jsb_lct(LAKE_TYPE), &
         & parent=box_tile)
 
@@ -230,14 +230,14 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/ATM2LAND, LAND2ATM, RAD,       HYDRO,     TURB,      HD      /), &
+      & processes      =(/ATM2LAND_, LAND2ATM_, RAD_,       HYDRO_,     TURB_,      HD_      /), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
       & model_id=model%id, grid_id=model%grid_id, fract_filename='bc_land_frac.nc', fract_varname='notsea')
     model%top => box_tile
 
       land_tile => t_jsb_tile('land', 'Land tile', &
-        & processes=(/SEB, SOIL/), process_actions=(/ON_TILE_, ON_LEAFS_/), &
-!!$        & processes=(/SRF,RAD/), process_actions=(/ON_TILE_,ON_LEAFS_/), &
+        & processes=(/SEB_, SOIL_/), process_actions=(/ON_TILE_, ON_LEAFS_/), &
+!!$        & processes=(/SRF,RAD_/), process_actions=(/ON_TILE_,ON_LEAFS_/), &
 !!$                            & processes=(/SRF/), process_actions=(/ON_SUBTREE_/), &
         & lct=t_jsb_lct(LAND_TYPE), &
         & parent=box_tile, &
@@ -246,7 +246,7 @@ CONTAINS
         glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
           & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile, fract_filename='bc_land_frac.nc')
 
-        veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/VEG, ASSIMI, PHENO/), &
+        veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/VEG_, ASSIMI_, PHENO_/), &
           & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
           & fract_filename='bc_land_frac.nc', fract_varname='fract_land')
 
@@ -257,7 +257,7 @@ CONTAINS
             & lct=t_jsb_lct(VEG_TYPE, lib_id=3), parent=veg_tile, fract_filename='')
 
       lake_tile => t_jsb_tile('lake', 'Lake tile', &
-        & processes=(/SEB/), process_actions=(/ON_TILE_/), &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
         & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile, fract_filename='bc_land_frac.nc')
 
     NULLIFY(box_tile)

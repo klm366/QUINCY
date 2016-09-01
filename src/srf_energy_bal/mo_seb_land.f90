@@ -24,17 +24,17 @@ MODULE mo_seb_land
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
   USE mo_jsb_control,        ONLY: debug_on
 
-  dsl4jsb_Use_processes SEB, RAD, TURB, ATM2LAND, LAND2ATM, SOIL, HYDRO
-  dsl4jsb_Use_config(SEB)
-  dsl4jsb_Use_config(HYDRO)
+  dsl4jsb_Use_processes SEB_, RAD_, TURB_, ATM2LAND_, LAND2ATM_, SOIL_, HYDRO_
+  dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(HYDRO_)
 
-  dsl4jsb_Use_memory(ATM2LAND)
-  ! dsl4jsb_Use_memory(LAND2ATM)
-  dsl4jsb_Use_memory(SEB)
-  dsl4jsb_Use_memory(RAD)
-  dsl4jsb_Use_memory(TURB)
-  dsl4jsb_Use_memory(SOIL)
-  dsl4jsb_Use_memory(HYDRO)
+  dsl4jsb_Use_memory(ATM2LAND_)
+  ! dsl4jsb_Use_memory(LAND2ATM_)
+  dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(RAD_)
+  dsl4jsb_Use_memory(TURB_)
+  dsl4jsb_Use_memory(SOIL_)
+  dsl4jsb_Use_memory(HYDRO_)
 
   IMPLICIT NONE
   PRIVATE
@@ -59,15 +59,15 @@ CONTAINS
 
     ! Local variables
     !
-    dsl4jsb_Def_config(SEB)
-    dsl4jsb_Def_config(HYDRO)
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(RAD)
-    dsl4jsb_Def_memory(TURB)
-    dsl4jsb_Def_memory(SOIL)
-    dsl4jsb_Def_memory(HYDRO)
-    dsl4jsb_Def_memory(ATM2LAND)
-    ! dsl4jsb_Def_memory(LAND2ATM)
+    dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(TURB_)
+    dsl4jsb_Def_memory(SOIL_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(ATM2LAND_)
+    ! dsl4jsb_Def_memory(LAND2ATM_)
 
     LOGICAL                :: lstart
 
@@ -141,56 +141,56 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(SEB)
-    dsl4jsb_Get_config(HYDRO)
+    dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_config(HYDRO_)
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(RAD)
-    dsl4jsb_Get_memory(TURB)
-    dsl4jsb_Get_memory(SOIL)
-    dsl4jsb_Get_memory(HYDRO)
-    dsl4jsb_Get_memory(ATM2LAND)
-    ! dsl4jsb_Get_memory(LAND2ATM)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(ATM2LAND_)
+    ! dsl4jsb_Get_memory(LAND2ATM_)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_air)          ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef)        ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef)        ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef)        ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef)        ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, press_srf)      ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_air)          ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)       ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)          ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_acoef)        ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_bcoef)        ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_acoef)        ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_bcoef)        ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)      ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_air)          ! IN
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_srf)       ! IN
     
-    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_mean) ! IN
-    dsl4jsb_Get_var2D_onChunk(SEB,      day_temp_sum)           ! INOUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      day_temp_min)           ! INOUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      day_temp_max)           ! INOUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_min)  ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      previous_day_temp_max)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_mean) ! IN
+    dsl4jsb_Get_var2D_onChunk(SEB_,      day_temp_sum)           ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      day_temp_min)           ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      day_temp_max)           ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_min)  ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_max)  ! OUT
     
-    dsl4jsb_Get_var2D_onChunk(SEB,      N_pseudo_soil_temp)     ! IN
-    dsl4jsb_Get_var2D_onChunk(SEB,      F_pseudo_soil_temp)     ! IN
-    dsl4jsb_Get_var2D_onChunk(SEB,      pseudo_soil_temp)       ! INOUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      N_pseudo_soil_temp)     ! IN
+    dsl4jsb_Get_var2D_onChunk(SEB_,      F_pseudo_soil_temp)     ! IN
+    dsl4jsb_Get_var2D_onChunk(SEB_,      pseudo_soil_temp)       ! INOUT
 
-    dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_old)          ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt)       ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt_old)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_eff)          ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_star)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      s_star)         ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      heat_cap)       ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB,      forc_hflx)      ! OUT
-    dsl4jsb_Get_var2D_onChunk(TURB,     fact_q_air)     ! in
-    dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_srf)  ! in
-    dsl4jsb_Get_var2D_onChunk(RAD,      rad_srf_net)    ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    w_snow)         ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)     ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_old)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)       ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt_old)   ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_eff)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_star)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      s_star)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      heat_cap)       ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,      forc_hflx)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_q_air)     ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_qsat_srf)  ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_,      rad_srf_net)    ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow)         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)     ! in
 
-    dsl4jsb_Get_var2D_onChunk(SOIL,     grnd_hflx)      ! IN
-    dsl4jsb_Get_var2D_onChunk(SOIL,     hcap_grnd)      ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL_,     grnd_hflx)      ! IN
+    dsl4jsb_Get_var2D_onChunk(SOIL_,     hcap_grnd)      ! IN
 
     IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
       is_glacier(:) = .TRUE.
@@ -281,7 +281,7 @@ CONTAINS
     t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
 
     ! Correct new dry static energy for snowmelt
-    WHERE (w_snow(:) > dsl4jsb_Config(HYDRO)%wsn_critical .OR. is_glacier(:))
+    WHERE (w_snow(:) > dsl4jsb_Config(HYDRO_)%wsn_critical .OR. is_glacier(:))
       s_star(:) = MIN(s_star(:) / t2s_conv(:), tmelt) * t2s_conv(:)
     END WHERE
 
@@ -364,8 +364,8 @@ CONTAINS
 
     ! Local variables
     !
-    dsl4jsb_Def_config(SEB)
-    dsl4jsb_Def_memory(SEB)
+    dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_memory(SEB_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -393,17 +393,17 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(SEB)
+    dsl4jsb_Get_config(SEB_)
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(SEB)
+    dsl4jsb_Get_memory(SEB_)
 
-    dsl4jsb_Get_var2D_onChunk(SEB,      t)              ! out
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_filt)         ! out
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_old)          ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt)       ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      t_unfilt_old)   ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_filt)         ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_old)          ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)       ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt_old)   ! in
 
     ! Asselin time filter, if applicable
     eps = get_asselin_coef()
@@ -428,10 +428,10 @@ CONTAINS
 
     ! Local variables
     !
-    dsl4jsb_Def_memory(SEB)
-    dsl4jsb_Def_memory(TURB)
-    dsl4jsb_Def_memory(HYDRO)
-    dsl4jsb_Def_memory(ATM2LAND)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(TURB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(ATM2LAND_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: qsat_star
@@ -474,7 +474,7 @@ CONTAINS
     nc      = options%nc
     steplen = options%steplen
 
-    IF (.NOT. tile%Is_process_active(SEB)) RETURN
+    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     
@@ -482,29 +482,29 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(SEB)
-    dsl4jsb_Get_memory(TURB)
-    dsl4jsb_Get_memory(HYDRO)
-    dsl4jsb_Get_memory(ATM2LAND)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(ATM2LAND_)
 
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_acoef)             ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, t_bcoef)             ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_acoef)             ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, q_bcoef)             ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND, drag_srf)            ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_acoef)             ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_bcoef)             ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_acoef)             ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_bcoef)             ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_srf)            ! in
 
-    dsl4jsb_Get_var2D_onChunk(SEB,      qsat_star)           ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      s_star)              ! in
-    dsl4jsb_Get_var2D_onChunk(TURB,     fact_q_air)          ! in
-    dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_srf)       ! in
-    dsl4jsb_Get_var2D_onChunk(TURB,     fact_qsat_trans_srf) ! in
-    dsl4jsb_Get_var2D_onChunk(SEB,      sensible_hflx)       ! out
-    dsl4jsb_Get_var2D_onChunk(SEB,      latent_hflx)         ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapo_lnd)           ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapotranspiration)  ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    trans)               ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    evapopot)            ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO,    fract_snow)          ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_star)           ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      s_star)              ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_q_air)          ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_qsat_srf)       ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_qsat_trans_srf) ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx)       ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx)         ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_lnd)           ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotranspiration)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    trans)               ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot)            ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)          ! in
 
     ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
     !

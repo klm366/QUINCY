@@ -888,7 +888,7 @@ CONTAINS
   !     *** redevap  = Diagnostic desired reduction of evapotranspiration
   !     ***            due to limited storage in soil layers [kg/m**2/s]
   !     *** wsi(I) = Soil moisture content in I. soil layer [m]
-  !     ***          Is updated with the fluxes calculated in SOILHYD
+  !     ***          Is updated with the fluxes calculated in SOIL_HYD
   !     *** wsim1m(i) = Soil Moisture of previous time step in i. Soil layer [m]
   !     *** ZDRAIN = Drainage: Volumen in time step: unit [m]
   !
@@ -978,13 +978,13 @@ CONTAINS
     REAL(wp), INTENT(in)   , optional :: bclapp(kbdim)
     REAL(wp), INTENT(in)   , optional :: vpor(kbdim)
     REAL(wp), INTENT(in)   , optional :: etrans(kbdim)
-    REAL(wp), INTENT(out)  , optional :: redevap(kbdim) ! reduction of evapotranspiration from SOILCHANGE
+    REAL(wp), INTENT(out)  , optional :: redevap(kbdim) ! reduction of evapotranspiration from SOIL_CHANGE
   !!$  REAL(wp), INTENT(in)   , optional :: vfc(kbdim)
   !!$  REAL(wp), INTENT(in)   , optional :: vpwp(kbdim)
     REAL(wp), INTENT(in)   , optional :: spsi(kbdim)
     REAL(wp), INTENT(inout), optional :: w_soil_overflow(kbdim) ! excess of water in the terraplanet setup (l_tpe_closed = true)
 
-    INTEGER,  INTENT(inout), optional :: jllog      ! gridbox number for logoutput in SOILHYD
+    INTEGER,  INTENT(inout), optional :: jllog      ! gridbox number for logoutput in SOIL_HYD
     LOGICAL,  INTENT(in),    OPTIONAL :: l_tpe_open   ! Switch for terraplanet setup, open water cycle
     LOGICAL,  INTENT(in),    OPTIONAL :: l_tpe_closed ! Switch for terraplanet setup, closed water cycle
   !
@@ -1008,9 +1008,9 @@ CONTAINS
     ! Variables necessary for evaporation fluxes and 5 soil layers
     REAL(wp), PARAMETER :: cvinter = 0.25  !!$ TR for JSBACH testing
     REAL(wp), PARAMETER :: zeps  = 1.e-10_wp
-    REAL(wp), PARAMETER :: zfak1 = 1._wp           ! =1., Dummy for SOILCHANGE (not used)
+    REAL(wp), PARAMETER :: zfak1 = 1._wp           ! =1., Dummy for SOIL_CHANGE (not used)
     INTEGER,  PARAMETER :: kb1   = 1               ! = 1, Digit for 1st field value for transfer to subroutine
-    INTEGER,  PARAMETER :: ilog  = 0               ! Switch for logoutput in SOILHYD
+    INTEGER,  PARAMETER :: ilog  = 0               ! Switch for logoutput in SOIL_HYD
   !!!!  PARAMETER (jllog=918, ilog=3)        ! No logoutput for ilog=0
 
     REAL(wp) ::                                                         &
@@ -1019,8 +1019,8 @@ CONTAINS
   !!$       zwpwp(kbdim,nsoil),                                            &
          wsim1m(kbdim, nsoil), aebsoil(kbdim), aetrans(kbdim)
 
-    REAL(wp) :: zinfil(kbdim)    ! Infiltration for transfer to SOILCHANGE - was previously a local scalar
-    INTEGER  :: isch             ! Switch to control SOILCHANGE
+    REAL(wp) :: zinfil(kbdim)    ! Infiltration for transfer to SOIL_CHANGE - was previously a local scalar
+    INTEGER  :: isch             ! Switch to control SOIL_CHANGE
 
   !
   !      Parameters
@@ -1131,7 +1131,7 @@ CONTAINS
           ! Positive Enoskin_nosnow is added to throughfall if the old bucket is used
 
   !         ******* Positive EBSoil and Etrans are added to throughfall separately
-  !         ******* Negative fluxes change soil moisture in SOILCHANGE.
+  !         ******* Negative fluxes change soil moisture in SOIL_CHANGE.
             zprfl = pmlres(jl)+zraind(jl)                           !vg  water reaching the soil = meltwater + rain reaching the soil
             IF (aebsoil(jl) >= 0.0_wp) zprfl = zprfl + aebsoil(jl)  !vg  add bare soil evaporation
             IF (aetrans(jl) >= 0.0_wp) zprfl = zprfl + aetrans(jl)  !vg  add transpiration
@@ -1173,7 +1173,7 @@ CONTAINS
         ! Soil moisture of previous time step: wsim1m
         wsim1m(:,:) = wsi(:,:)
 
-        ! Zero initialization for drainage field before SOILCHANGE
+        ! Zero initialization for drainage field before SOIL_CHANGE
         zdrain(1:kbdim) = 0._wp
 
         ! Soilchange expects aetrans and aebsoil in [m]
@@ -1188,7 +1188,7 @@ CONTAINS
               redevap)
         ! Unit of zinfil is [m] but soilchange expects m/s
         ! For numerical reasons, half of the water is infiltrated
-        ! before SOILHYD, half if it after
+        ! before SOIL_HYD, half if it after
         zinfil(1:kbdim) = zinfil(1:kbdim) / zdtime / 2._wp
 
         isch = 2     ! Changes by infiltration
@@ -1208,7 +1208,7 @@ CONTAINS
              zdrain, spsi, zwpwp, zdel,             &
              w_soil_overflow, ltpe_closed)
 
-        ! Second half of the water is infiltrated after SOILHYD
+        ! Second half of the water is infiltrated after SOIL_HYD
         isch = 2     ! Changes by infiltration
         CALL SoilChange(kb1, kbdim, kbdim, nsoil,     &
               isch, zdtime, zfak1,                    &
@@ -1250,7 +1250,7 @@ CONTAINS
           ENDDO
         ENDDO
 
-        ! WS must be re-derived from wsi after SOILHYD
+        ! WS must be re-derived from wsi after SOIL_HYD
         pws(1:kbdim) = 0.0_wp
         DO jk=1, nsoil
           DO jl=kb1, kbdim
@@ -1345,7 +1345,7 @@ CONTAINS
   !     ***            Code converted using TO_F90 by Alan Miller
   !     ***            plus REAL --> REAL(wp) and fine tuning afterwards
   !
-  !     SOILHYD
+  !     SOIL_HYD
   !     ***  FKSAT = Saturated hydraulic conductivity: unit [m/s] -> Must be checked in ECMGBDT.F
   !     ***  FMPOT = Matrix potential [m]
   !     *** BCLAPP = Exponent B in Clapp and Hornberger
@@ -1371,10 +1371,10 @@ CONTAINS
   !     ***
   !     ***  NSOIL - Number of soil layers
   !     *** WSI(I) = Soil moisture content in I. soil layer [m]
-  !     ***          Updated through the fluxes calculated in SOILHYD
-  !     ***  ILOG =  1 --> Log output to StdOut with keword SOILFLUX for grid cell JLLOG
+  !     ***          Updated through the fluxes calculated in SOIL_HYD
+  !     ***  ILOG =  1 --> Log output to StdOut with keword SOIL_FLUX for grid cell JLLOG
   !     ***                5 * DIFF. FLUXES, 5 PERC. FLUXES, ZDRAIN
-  !     ***          2 --> Log output to StdOut with keyword SOILHYD1 for grid cell JLLOG
+  !     ***          2 --> Log output to StdOut with keyword SOIL_HYD1 for grid cell JLLOG
 
   !     ***  IPERC = Type of percolation
   !     ***          1  ECHAM4 drainage (removed, not available)
@@ -1778,7 +1778,7 @@ CONTAINS
 
     IF (ilog == 2 .OR. ilog == 3) THEN
       WRITE(*,'(A10,1X, 11(E16.9E2, 1X) )')  &
-          "SOILHYD1: ", fksat(jllog)*1000._wp, wsi(jllog,1:kdeep)*1000._wp,  &
+          "SOIL_HYD1: ", fksat(jllog)*1000._wp, wsi(jllog,1:kdeep)*1000._wp,  &
           zwsfc(jllog,1:kdeep)*1000._wp
     END IF
 
@@ -1874,13 +1874,13 @@ CONTAINS
         zdiflog(kdeep+i) = zperc(jllog,i)
       END DO
       WRITE(*, '(A10,1X,11(E15.6E3,1X) )') &
-         "SOILFLUX",zdiflog(1:10)*1000._wp, zdrain(jllog)*1000._wp
+         "SOIL_FLUX",zdiflog(1:10)*1000._wp, zdrain(jllog)*1000._wp
     END IF
 
   ! *** Log output of WSI!
     IF (ilog == 2 .OR. ilog == 3) THEN
       WRITE(*,'(A10,1X,10(E16.9E2,1X) )' ) &
-         "SOILHYD2: ", wsi(jllog,1:kdeep)*1000._wp, dzsi(jllog,1:kdeep)*1000._wp
+         "SOIL_HYD2: ", wsi(jllog,1:kdeep)*1000._wp, dzsi(jllog,1:kdeep)*1000._wp
     END IF
 
   END SUBROUTINE soilhyd
@@ -2049,11 +2049,11 @@ CONTAINS
   !     ***   ZEPS = 1e-15 << against a small flux.
   !     *** If WSI < WWILT for one layer, transpiration amount will be reduced
   !     ***   instead of re-distribution to other layers.
-  !     ***   Thus, AETRANS is changed in SOILCHANGE, but also EVAP and EVAPL
+  !     ***   Thus, AETRANS is changed in SOIL_CHANGE, but also EVAP and EVAPL
   !     ***   must be changed.
   !     *** Bare soil evaporation will only be taken from the most upper layer.
   !     ***   overshooting amounts will be disregarded and AEBSOIL will be reduced.
-  !     ***   thus, AEBSOIL is changed in SOILCHANGE, but also EVAP and EVAPL
+  !     ***   thus, AEBSOIL is changed in SOIL_CHANGE, but also EVAP and EVAPL
   !     ***   must be changed.
   !     ***  --> New array submitted to routine: REDEVAP
   !     ***

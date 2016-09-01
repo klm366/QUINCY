@@ -24,10 +24,10 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes PHENO
+  dsl4jsb_Use_processes PHENO_
 
   ! Use process configurations
-  dsl4jsb_Use_config(PHENO)
+  dsl4jsb_Use_config(PHENO_)
 
   IMPLICIT NONE
   PRIVATE
@@ -105,7 +105,7 @@ CONTAINS
     INTEGER,               INTENT(in)            :: model_id
 
     ! Local variables
-    dsl4jsb_Def_config(PHENO)
+    dsl4jsb_Def_config(PHENO_)
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
@@ -126,7 +126,7 @@ CONTAINS
     surface      => Get_vgrid('surface')
     canopy_layer => Get_vgrid('canopy_layer')
 
-    dsl4jsb_Get_config(PHENO)
+    dsl4jsb_Get_config(PHENO_)
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
@@ -142,7 +142,7 @@ CONTAINS
 
       ALLOCATE(mem%lai_mon(hgrid%nproma, hgrid%nblks, 0:13))
 
-      IF (TRIM(dsl4jsb_Config(PHENO)%scheme) == 'logrop') THEN
+      IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
         CALL jsb_add_var( mem,'w_soil_rel', mem%w_soil_rel,                     &
           &  hgrid, surface,                                                    &
