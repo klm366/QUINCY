@@ -148,15 +148,19 @@ CONTAINS
       element => find_list_element(this_list, TRIM(name))
       element%field%info%cdiZaxisID = vgrid
 #else
-      CALL add_stream_element(this_list, TRIM(name), ptr, &
-        ldims=ldims, gdims=gdims, leveltype=levelindx, &
-        longname=cf%long_name, units=cf%units, &
-        code=code, table=table, &
-        lmiss=lmiss, missval=missval_r, verbose=.TRUE. &
-        )
+    CALL add_stream_element(this_list, TRIM(name), ptr, &
+      ldims=ldims, gdims=gdims, leveltype=levelindx, &
+      longname=cf%long_name, units=cf%units, &
+      code=code, table=table, &
+      lmiss=lmiss, missval=missval_r, verbose=.TRUE. &
+      )
 
-      element => find_list_element(this_list, TRIM(name))
-      element%field%info%zaxisID = vgrid
+    element => find_list_element(this_list, TRIM(name))
+    element%field%info%zaxisID = vgrid
+
+    IF (PRESENT(initval_r)) THEN
+      ptr(:,:) = initval_r
+    END IF
 #endif
 
   END SUBROUTINE add_var_list_element_r2d
@@ -236,6 +240,10 @@ CONTAINS
 
     element => find_list_element(this_list, TRIM(name))
     element%field%info%zaxisID = vgrid
+
+    IF (PRESENT(initval_r)) THEN
+      ptr(:,:,:) = initval_r
+    END IF
 #endif
 
   END SUBROUTINE add_var_list_element_r3d
