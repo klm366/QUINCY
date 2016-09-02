@@ -11,3 +11,12 @@ mo_shared_isotope.o: \
   mo_kind.o \
   mo_shared_constants.o
 
+mo_shared_time_averages.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_jsb_process_class.o \
+  mo_base_constants.o \
+  mo_base_memory.o \
+  mo_veg_memory.o \
+  mo_atm2land_memory_class.o
+

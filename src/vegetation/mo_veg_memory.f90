@@ -43,9 +43,9 @@ MODULE mo_veg_memory
     LOGICAL                         :: l_daylight                    !< whether sunlight is available at canopy top
   CONTAINS
     PROCEDURE :: init              => init_daily_avrg_variables
-    PROCEDURE :: update_conditions => update_conditions_current_timestep
-    PROCEDURE :: accumulate        => accumulate_values_over_current_day
-    PROCEDURE :: calc_avrg         => calculate_avrg_previous_day  ! at the end of calculations of the last timestep per day
+!    PROCEDURE :: update_conditions => update_conditions_current_timestep
+!    PROCEDURE :: accumulate        => accumulate_values_over_current_day
+!    PROCEDURE :: calc_avrg         => calculate_avrg_previous_day  ! at the end of calculations of the last timestep per day
   END TYPE t_daily_average
 
   !-----------------------------------------------------------------------------------------------------
@@ -126,10 +126,10 @@ MODULE mo_veg_memory
     !< 4.0 procedures
     !! 
     PROCEDURE :: init                => init_moving_avrg_variables
-    PROCEDURE :: calc_moving_avrg    => calculate_moving_average_of_variable
-    PROCEDURE :: update_veg          => update_veg_moving_avrg_variables
-    !PROCEDURE :: update_soil         => update_soil_moving_avrg_variables
-    PROCEDURE :: update_tile         => update_tile_moving_avrg_variables
+!    PROCEDURE :: calc_moving_avrg    => calculate_moving_average_of_variable
+!    PROCEDURE :: update_veg          => update_veg_moving_avrg_variables
+!    !PROCEDURE :: update_soil         => update_soil_moving_avrg_variables
+!    PROCEDURE :: update_tile         => update_tile_moving_avrg_variables
   END TYPE t_moving_average
 
   !-----------------------------------------------------------------------------------------------------
@@ -257,6 +257,8 @@ MODULE mo_veg_memory
     REAL(wp) :: boc_an                            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     REAL(wp) :: leaf_cn_direction                 !< indicates direction of change in leaf CN ratio to maximise NPP
     REAL(wp) :: apar 
+    !> @todo t_slm_plant:daytime_counter we may move this counter to a different place, as it is used for multiple processes  @slmdev
+    REAL(wp) :: daytime_counter                   !< number of timesteps of current day with light available & daytime_avrg variables were added up
     ! prior (to r239) the variables ..._cl were stored in t_slm_canopy_layer (without the trailing _cl), which is deleted now
     REAL(wp),DIMENSION(ncanop) :: nl_tot_cl                !< N in canopy layer (mmol / m2 (LAI))
     REAL(wp),DIMENSION(ncanop) :: fnl_chl_cl               !< fraction of N in chlorophyll (pigments only!)
@@ -597,153 +599,156 @@ CONTAINS
     this%l_daylight                   = .FALSE.
   END SUBROUTINE init_daily_avrg_variables
 
-  !-----------------------------------------------------------------------------------------------------
-  !> definition and check of conditions for each variable (TYPE t_daily_average)
-  !! 
-  !! for each variable a condition is defined whether the value of the current time step is used for
-  !! average calculation or not;
-  !! during model-runtime this subroutine is used to check the condition and set the particular
-  !! variable TRUE or FALSE, valid for one timestep
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_conditions_current_timestep (this, plant, swpar_srf_down)
+!!  !-----------------------------------------------------------------------------------------------------
+!!  !> definition and check of conditions for each variable (TYPE t_daily_average)
+!!  !! 
+!!  !! for each variable a condition is defined whether the value of the current time step is used for
+!!  !! average calculation or not;
+!!  !! during model-runtime this subroutine is used to check the condition and set the particular
+!!  !! variable TRUE or FALSE, valid for one timestep
+!!  !-----------------------------------------------------------------------------------------------------
+!!  SUBROUTINE update_conditions_current_timestep (this, plant, swpar_srf_down)
 
-!    USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-!    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+!!!    USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+!!!    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
 
-    IMPLICIT NONE 
-    ! 0.1 InOut
-    TYPE(t_slm_plant), INTENT(in) :: plant          !< mo_veg_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
-    CLASS(t_daily_average), INTENT(inout) :: this   !< TYPE t_daily_average
-    REAL(wp), INTENT(in) :: swpar_srf_down    ! temporal fix -> memory allocation -> USE statements
-    ! 0.2 Local
-!    ! 0.3 Memory allocation
-!    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
-!    REAL(wp), POINTER           :: swpar_srf_down
-!    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
-!      TYPE IS(t_atm2land_memory)
-!        atm2land__mem => mm
-!    END SELECT
-!    swpar_srf_down   => atm2land__mem%swpar_srf_down%ptr
+!!    IMPLICIT NONE 
+!!    ! 0.1 InOut
+!!    TYPE(t_slm_plant), INTENT(in) :: plant          !< mo_veg_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
+!!    CLASS(t_daily_average), INTENT(inout) :: this   !< TYPE t_daily_average
+!!    REAL(wp), INTENT(in) :: swpar_srf_down    ! temporal fix -> memory allocation -> USE statements
+!!    ! 0.2 Local
+!!!    ! 0.3 Memory allocation
+!!!    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+!!!    REAL(wp), POINTER           :: swpar_srf_down
+!!!    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+!!!      TYPE IS(t_atm2land_memory)
+!!!        atm2land__mem => mm
+!!!    END SELECT
+!!!    swpar_srf_down   => atm2land__mem%swpar_srf_down%ptr
 
 
-    ! condition type 1: daylight (light > zero)
-    IF(swpar_srf_down > eps8) THEN
-      this%l_daylight         = .TRUE.
-    ELSE
-      this%l_daylight         = .FALSE.
-    END IF
+!!    ! condition type 1: daylight (light > zero)
+!!    IF(swpar_srf_down > eps8) THEN
+!!      this%l_daylight         = .TRUE.
+!!    ELSE
+!!      this%l_daylight         = .FALSE.
+!!    END IF
 
-    ! condition type 2:
-        ! ... currently none
-  END SUBROUTINE update_conditions_current_timestep
+!!    ! condition type 2:
+!!        ! ... currently none
+!!  END SUBROUTINE update_conditions_current_timestep
 
-  !-----------------------------------------------------------------------------------------------------
-  !> accumulation of values over one day (TYPE t_daily_average)
-  !! 
-  !! per variable the values are summed up and the number of summed values is stored
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE accumulate_values_over_current_day (this, plant, swpar_srf_down)
-    IMPLICIT NONE 
-    ! 0.1 InOut
-    TYPE(t_slm_plant), INTENT(in) :: plant         !< mo_veg_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
-    CLASS(t_daily_average), INTENT(inout) :: this  !< TYPE t_daily_average
-    REAL(wp), INTENT(in) :: swpar_srf_down    ! temporal fix
-    ! 0.2 Local
-    INTEGER  :: i                                  ! loop over canopy layers
+!!  !-----------------------------------------------------------------------------------------------------
+!!  !> accumulation of values over one day (TYPE t_daily_average)
+!!  !! 
+!!  !! per variable the values are summed up and the number of summed values is stored
+!!  !-----------------------------------------------------------------------------------------------------
+!!  SUBROUTINE accumulate_values_over_current_day (this, plant, swpar_srf_down)
+!!    IMPLICIT NONE 
+!!    ! 0.1 InOut
+!!    TYPE(t_slm_plant), INTENT(in) :: plant         !< mo_veg_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
+!!    CLASS(t_daily_average), INTENT(inout) :: this  !< TYPE t_daily_average
+!!    REAL(wp), INTENT(in) :: swpar_srf_down    ! temporal fix
+!!    ! 0.2 Local
+!!    INTEGER  :: i                                  ! loop over canopy layers
 
-    CALL this%update_conditions(plant, swpar_srf_down)
+!!    CALL this%update_conditions(plant, swpar_srf_down)
 
-    ! condition type 1: daylight (light > zero)
-    IF(this%l_daylight) THEN
-      DO i=1,ncanop
-        ! 
-        this%curr_val_par_sunlit_cl(i) = this%curr_val_par_sunlit_cl(i) + plant%par_sunlit_cl(i)
-        this%curr_count_par_sunlit_cl(i) = this%curr_count_par_sunlit_cl(i) + 1.0_wp
-        ! 
-        this%curr_val_par_shaded_cl(i) = this%curr_val_par_shaded_cl(i) + plant%par_shaded_cl(i)
-        this%curr_count_par_shaded_cl(i) = this%curr_count_par_shaded_cl(i) + 1.0_wp
-        ! 
-        this%curr_val_fleaf_sunlit_cl(i) = this%curr_val_fleaf_sunlit_cl(i) + plant%fleaf_sunlit_cl(i)
-        this%curr_count_fleaf_sunlit_cl(i) = this%curr_count_fleaf_sunlit_cl(i) + 1.0_wp
-        ! 
-        this%curr_val_t_jmax_opt = this%curr_val_t_jmax_opt + plant%t_jmax_opt
-        this%curr_count_t_jmax_opt = this%curr_count_t_jmax_opt + 1.0_wp
-      END DO
-    END IF
+!!    ! condition type 1: daylight (light > zero)
+!!    IF(this%l_daylight) THEN
+!!      DO i=1,ncanop
+!!        ! 
+!!        this%curr_val_par_sunlit_cl(i) = this%curr_val_par_sunlit_cl(i) + plant%par_sunlit_cl(i)
+!!        this%curr_count_par_sunlit_cl(i) = this%curr_count_par_sunlit_cl(i) + 1.0_wp
+!!        ! 
+!!        this%curr_val_par_shaded_cl(i) = this%curr_val_par_shaded_cl(i) + plant%par_shaded_cl(i)
+!!        this%curr_count_par_shaded_cl(i) = this%curr_count_par_shaded_cl(i) + 1.0_wp
+!!        ! 
+!!        this%curr_val_fleaf_sunlit_cl(i) = this%curr_val_fleaf_sunlit_cl(i) + plant%fleaf_sunlit_cl(i)
+!!        this%curr_count_fleaf_sunlit_cl(i) = this%curr_count_fleaf_sunlit_cl(i) + 1.0_wp
+!!        ! 
+!!        this%curr_val_t_jmax_opt = this%curr_val_t_jmax_opt + plant%t_jmax_opt
+!!        this%curr_count_t_jmax_opt = this%curr_count_t_jmax_opt + 1.0_wp
+!!      END DO
+!!    END IF
 
-  END SUBROUTINE accumulate_values_over_current_day
+!!  END SUBROUTINE accumulate_values_over_current_day
 
-  !-----------------------------------------------------------------------------------------------------
-  !> calc the average of variables for the previous day (TYPE t_daily_average)
-  !! 
-  !! calculates the average at the end of the day (end of last time step of day), and sets all other
-  !! variables to zero then
-  !! 
-  !! is called in the driver with: CALL tile(itile)\%plant\%daily_average\%calc_avrg
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calculate_avrg_previous_day (this, plant, time_day, timestep_prop_day, swpar_srf_down)
-    IMPLICIT NONE 
-    ! 0.1 InOut
-    TYPE(t_slm_plant), INTENT(in) :: plant        !< mo_veg_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
-    REAL(wp), INTENT(in)          :: time_day           !< time in days
-    REAL(wp), INTENT(in)          :: timestep_prop_day  !< length of one time step (proportion of one day)
-    CLASS(t_daily_average), INTENT(inout) :: this       !< TYPE t_daily_average
-    REAL(wp), INTENT(in) :: swpar_srf_down    ! temporal fix
-    ! 0.2 Local
-    INTEGER  :: i                                   ! loop over canopy layers
+!!  !-----------------------------------------------------------------------------------------------------
+!!  !> calc the average of variables for the previous day (TYPE t_daily_average)
+!!  !! 
+!!  !! calculates the average at the end of the day (end of last time step of day), and sets all other
+!!  !! variables to zero then
+!!  !! 
+!!  !! is called in the driver with: CALL tile(itile)\%plant\%daily_average\%calc_avrg
+!!  !-----------------------------------------------------------------------------------------------------
+!!  SUBROUTINE calculate_avrg_previous_day (this, plant, time_day, timestep_prop_day, swpar_srf_down)
+!!    IMPLICIT NONE 
+!!    ! 0.1 InOut
+!!    TYPE(t_slm_plant), INTENT(in) :: plant        !< mo_veg_memory: TYPE(t_slm_plant) :: plant; initialized in TYPE t_slm_tile
+!!    REAL(wp), INTENT(in)          :: time_day           !< time in days
+!!    REAL(wp), INTENT(in)          :: timestep_prop_day  !< length of one time step (proportion of one day)
+!!    CLASS(t_daily_average), INTENT(inout) :: this       !< TYPE t_daily_average
+!!    REAL(wp), INTENT(in) :: swpar_srf_down    ! temporal fix
+!!    ! 0.2 Local
+!!    INTEGER  :: i                                   ! loop over canopy layers
 
-    ! the accumulation over the current day
-    CALL this%accumulate(plant, swpar_srf_down)   ! calls this%update_conditions(plant)
+!!    ! the accumulation over the current day
+!!    CALL this%accumulate(plant, swpar_srf_down)   ! calls this%update_conditions(plant)
 
-    ! if this is the last timestep of the current day (i.e. next timestep belongs to the next day):
-    ! actually it is tested if the next timestep would be midnight: next_step(time_day) - round_to_int(time_day) < eps8
-    IF( ABS(((time_day + timestep_prop_day) - REAL(NINT(time_day)))) < eps8 ) THEN
-      ! calculate the average of the current day and pass it to the according avrg_prev_* variable; 
-      ! check if at least one value had been assigned at the current day, avoiding division by zero 
-      DO i=1,ncanop
-        ! par_sunlit_cl
-        IF( this%curr_count_par_sunlit_cl(i) < eps8 ) THEN
-          this%par_sunlit_cl(i)    = 0.0_wp
-          ELSE
-          this%par_sunlit_cl(i)    = this%curr_val_par_sunlit_cl(i) / this%curr_count_par_sunlit_cl(i)
-        END IF
-        ! par_shaded_cl
-        IF( this%curr_count_par_shaded_cl(i) < eps8 ) THEN
-          this%par_shaded_cl(i)    = 0.0_wp
-          ELSE
-          this%par_shaded_cl(i)    = this%curr_val_par_shaded_cl(i)   / this%curr_count_par_shaded_cl(i)
-        END IF
-        ! fleaf_sunlit_cl
-        IF( this%curr_count_fleaf_sunlit_cl(i) < eps8 ) THEN
-          this%fleaf_sunlit_cl(i)  = 0.0_wp
-          ELSE
-          this%fleaf_sunlit_cl(i)  = this%curr_val_fleaf_sunlit_cl(i) / this%curr_count_fleaf_sunlit_cl(i)
-        END IF
-      END DO
-      ! t_jmax_opt
-      IF( this%curr_count_t_jmax_opt < eps8 ) THEN
-          this%t_jmax_opt  = 0.0_wp
-        ELSE
-          this%t_jmax_opt  = this%curr_val_t_jmax_opt / this%curr_count_t_jmax_opt
-      END IF
-      
-      !write(*,*) time_day, &   ! may enable for testing
-      !           NINT(this%curr_count_par_sunlit_cl(1)), this%par_sunlit_cl(1), &
-      !           NINT(this%curr_count_par_shaded_cl(1)), this%par_shaded_cl(1), &
-      !           NINT(this%curr_count_fleaf_sunlit_cl(1)), this%fleaf_sunlit_cl(1)
+!!    ! if this is the last timestep of the current day (i.e. next timestep belongs to the next day):
+!!    ! actually it is tested if the next timestep would be midnight: next_step(time_day) - round_to_int(time_day) < eps8
+!!    IF( ABS(((time_day + timestep_prop_day) - REAL(NINT(time_day)))) < eps8 ) THEN
+!!      ! calculate the average of the current day and pass it to the according avrg_prev_* variable; 
+!!      ! check if at least one value had been assigned at the current day, avoiding division by zero 
+!!      DO i=1,ncanop
+!!        ! par_sunlit_cl
+!!        IF( this%curr_count_par_sunlit_cl(i) < eps8 ) THEN
+!!          this%par_sunlit_cl(i)    = 0.0_wp
+!!          ELSE
+!!          this%par_sunlit_cl(i)    = this%curr_val_par_sunlit_cl(i) / this%curr_count_par_sunlit_cl(i)
+!!        END IF
+!!        ! par_shaded_cl
+!!        IF( this%curr_count_par_shaded_cl(i) < eps8 ) THEN
+!!          this%par_shaded_cl(i)    = 0.0_wp
+!!          ELSE
+!!          this%par_shaded_cl(i)    = this%curr_val_par_shaded_cl(i)   / this%curr_count_par_shaded_cl(i)
+!!        END IF
+!!        ! fleaf_sunlit_cl
+!!        IF( this%curr_count_fleaf_sunlit_cl(i) < eps8 ) THEN
+!!          this%fleaf_sunlit_cl(i)  = 0.0_wp
+!!          ELSE
+!!          this%fleaf_sunlit_cl(i)  = this%curr_val_fleaf_sunlit_cl(i) / this%curr_count_fleaf_sunlit_cl(i)
+!!        END IF
+!!      END DO
+!!      ! t_jmax_opt
+!!      IF( this%curr_count_t_jmax_opt < eps8 ) THEN
+!!          this%t_jmax_opt  = 0.0_wp
+!!        ELSE
+!!          this%t_jmax_opt  = this%curr_val_t_jmax_opt / this%curr_count_t_jmax_opt
+!!      END IF
+!!      
+!!!      write(999,*) time_day, &   ! may enable for testing
+!!!                  this%curr_count_par_sunlit_cl(1), &
+!!!                  this%par_sunlit_cl(1), &
+!!!                  this%par_shaded_cl(1), &
+!!!                  this%fleaf_sunlit_cl(1), &
+!!!                  this%t_jmax_opt
+!!                  
 
-      ! set all values of the current day to zero (code can be copied from initialization_of_variables above)
-      this%curr_val_par_sunlit_cl      = 0.0_wp
-      this%curr_val_par_shaded_cl      = 0.0_wp
-      this%curr_val_fleaf_sunlit_cl    = 0.0_wp
-      this%curr_val_t_jmax_opt      = 0.0_wp
-      this%curr_count_par_sunlit_cl    = 0.0_wp
-      this%curr_count_par_shaded_cl    = 0.0_wp
-      this%curr_count_fleaf_sunlit_cl  = 0.0_wp
-      this%curr_count_t_jmax_opt    = 0.0_wp
-    END IF
+!!      ! set all values of the current day to zero (code can be copied from initialization_of_variables above)
+!!      this%curr_val_par_sunlit_cl      = 0.0_wp
+!!      this%curr_val_par_shaded_cl      = 0.0_wp
+!!      this%curr_val_fleaf_sunlit_cl    = 0.0_wp
+!!      this%curr_val_t_jmax_opt      = 0.0_wp
+!!      this%curr_count_par_sunlit_cl    = 0.0_wp
+!!      this%curr_count_par_shaded_cl    = 0.0_wp
+!!      this%curr_count_fleaf_sunlit_cl  = 0.0_wp
+!!      this%curr_count_t_jmax_opt    = 0.0_wp
+!!    END IF
 
-  END SUBROUTINE calculate_avrg_previous_day
+!!  END SUBROUTINE calculate_avrg_previous_day
 
   !-----------------------------------------------------------------------------------------------------
   !> intialize all variables (TYPE t_daily_average)
@@ -823,194 +828,194 @@ CONTAINS
 
   END SUBROUTINE init_moving_avrg_variables
 
-  !-----------------------------------------------------------------------------------------------------
-  !> calculate and return the moving average of a single variable or an array
-  !!
-  !! calculates the average across a certain period preceding to the current value; 
-  !! actually, the average gets rather estimated than exactly calculated using the weighted arithmetic mean \n
-  !! if optional parameter 'mask' is present: the moving average is calculated if mask = TRUE !
-  !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calculate_moving_average_of_variable(this, cav,nv,w,mask) RESULT(nav)
+!!  !-----------------------------------------------------------------------------------------------------
+!!  !> calculate and return the moving average of a single variable or an array
+!!  !!
+!!  !! calculates the average across a certain period preceding to the current value; 
+!!  !! actually, the average gets rather estimated than exactly calculated using the weighted arithmetic mean \n
+!!  !! if optional parameter 'mask' is present: the moving average is calculated if mask = TRUE !
+!!  !-----------------------------------------------------------------------------------------------------
+!!  PURE ELEMENTAL FUNCTION calculate_moving_average_of_variable(this, cav,nv,w,mask) RESULT(nav)
 
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_moving_average), INTENT(in) :: this  !< calculates and stores all moving average values
-    REAL(wp), INTENT(in)                :: cav   !< current average value
-    REAL(wp), INTENT(in)                :: nv    !< new value
-    REAL(wp), INTENT(in)                :: w     !< weight of the new value
-    LOGICAL, OPTIONAL, INTENT(in)       :: mask  !< bool, whether the new average is calculated from the nv, or av is used as nav
-    REAL(wp)                            :: nav   !< function output: the new average
-    ! 0.2 Local
-    LOGICAL                             :: l_mask ! True/ False of the Optional variable mask present
+!!    IMPLICIT NONE
+!!    ! 0.1 InOut
+!!    CLASS(t_moving_average), INTENT(in) :: this  !< calculates and stores all moving average values
+!!    REAL(wp), INTENT(in)                :: cav   !< current average value
+!!    REAL(wp), INTENT(in)                :: nv    !< new value
+!!    REAL(wp), INTENT(in)                :: w     !< weight of the new value
+!!    LOGICAL, OPTIONAL, INTENT(in)       :: mask  !< bool, whether the new average is calculated from the nv, or av is used as nav
+!!    REAL(wp)                            :: nav   !< function output: the new average
+!!    ! 0.2 Local
+!!    LOGICAL                             :: l_mask ! True/ False of the Optional variable mask present
 
-    ! set TRUE per default, i.e. can only be FALSE if 'mask' is is present
-    l_mask = .TRUE.
+!!    ! set TRUE per default, i.e. can only be FALSE if 'mask' is is present
+!!    l_mask = .TRUE.
 
-    ! check whether the optional statement is provided
-    IF(PRESENT(mask))  l_mask = mask
+!!    ! check whether the optional statement is provided
+!!    IF(PRESENT(mask))  l_mask = mask
 
-    ! calc average as weighted mean
-    IF(l_mask) THEN
-      nav = cav * (1.0_wp - w) + nv * w
-    ELSE
-      nav = cav
-    END IF
-  END FUNCTION calculate_moving_average_of_variable
+!!    ! calc average as weighted mean
+!!    IF(l_mask) THEN
+!!      nav = cav * (1.0_wp - w) + nv * w
+!!    ELSE
+!!      nav = cav
+!!    END IF
+!!  END FUNCTION calculate_moving_average_of_variable
 
-  !-----------------------------------------------------------------------------------------------------
-  !> calculate moving average of vegetation variables
-  !!
-  !! called in the driver at the end of each timestep
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_veg_moving_avrg_variables (this, plant)
+!!  !-----------------------------------------------------------------------------------------------------
+!!  !> calculate moving average of vegetation variables
+!!  !!
+!!  !! called in the driver at the end of each timestep
+!!  !-----------------------------------------------------------------------------------------------------
+!!  SUBROUTINE update_veg_moving_avrg_variables (this, plant)
 
-    USE mo_base_constants,    ONLY: dt, one_day
+!!    USE mo_base_constants,    ONLY: dt, one_day
 
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
-    TYPE(t_slm_plant), INTENT(inout)       :: plant       !< plant variables and data
-    ! 0.2 Local
-    REAl(wp)                               :: hlp
-    ! moving_avrg( 
-    !             current average, new value, weight of new value, 
-    !                 use function TRUE FALSE [OPTIONAL argument] )
-    ! returns: new current average
+!!    IMPLICIT NONE
+!!    ! 0.1 InOut
+!!    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
+!!    TYPE(t_slm_plant), INTENT(inout)       :: plant       !< plant variables and data
+!!    ! 0.2 Local
+!!    REAl(wp)                               :: hlp
+!!    ! moving_avrg( 
+!!    !             current average, new value, weight of new value, 
+!!    !                 use function TRUE FALSE [OPTIONAL argument] )
+!!    ! returns: new current average
 
-    this%par_sunlit_cl(:)    = this%calc_moving_avrg(this%par_sunlit_cl(:), plant%daily_average%par_sunlit_cl(:), &
-                                               1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%par_shaded_cl(:)    = this%calc_moving_avrg(this%par_shaded_cl(:), plant%daily_average%par_shaded_cl(:), &
-                                               1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%fleaf_sunlit_cl(:)  = this%calc_moving_avrg(this%fleaf_sunlit_cl(:), plant%daily_average%fleaf_sunlit_cl(:), &
-                                               1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%beta_soil_gs     = this%calc_moving_avrg(this%beta_soil_gs, plant%beta_soil_gs, &
-                                               1._wp / ( this%p_optNfrac * one_day/dt))
-    this%beta_soil_ps     = this%calc_moving_avrg(this%beta_soil_ps, plant%beta_soil_ps, &
-                                               1._wp / ( this%p_optNfrac * one_day/dt))
-    this%beta_air         = this%calc_moving_avrg(this%beta_air, plant%beta_air, &
-                                               1._wp / ( this%p_optNfrac * one_day/dt))
-    this%t_jmax_opt       = this%calc_moving_avrg(this%t_jmax_opt, plant%daily_average%t_jmax_opt, &
-                                               1._wp / ( this%p_weekly * one_day/dt))
-    this%gpp_week                = this%calc_moving_avrg(this%gpp_week, plant%flux%gpp, &
-                                               1.0_wp / (this%p_weekly * one_day/ dt))
-    this%maint_respiration_week  = this%calc_moving_avrg(this%maint_respiration_week, plant%flux%maint_respiration_pot, &
-                                               1.0_wp / (this%p_weekly * one_day/ dt))
-    this%growth_req_n_week       = this%calc_moving_avrg(this%growth_req_n_week, plant%growth_req_n, &
-                                               1.0_wp / (this%p_weekly * one_day/ dt), &
-                                               plant%growth_req_n > eps8)
-    this%growth_req_p_week       = this%calc_moving_avrg(this%growth_req_p_week, plant%growth_req_p, &
-                                               1.0_wp / (this%p_weekly * one_day/ dt), & 
-                                               plant%growth_req_p > eps8)
-    this%boc_an                  = this%calc_moving_avrg(this%boc_an, plant%boc_an, &
-                                               1.0_wp / (this%p_boc_an * one_day/ dt), & 
-                                               plant%pool%leaf%carbon > eps8)
-    this%unit_npp                = this%calc_moving_avrg(this%unit_npp, plant%flux%unit_npp, & 
-                                               1.0_wp/(this%p_opt_alloc * one_day/dt), plant%growing_season)
-    IF (plant%growth_req_n > 0._wp)THEN
-       hlp = 1._wp/plant%growth_req_n
-    ELSE
-       hlp=0._wp
-    ENDIF
-    this%growth_cn_plant = this%calc_moving_avrg(this%growth_cn_plant, hlp, 1.0_wp/(this%p_opt_alloc * one_day/dt), plant%growing_season)
-    
-    IF (plant%growth_req_n > 0._wp .AND. plant%growth_req_p > 0._wp)THEN
-       hlp = 1._wp/(plant%growth_req_n * plant%growth_req_p)
-    ELSE
-       hlp=0._wp
-    ENDIF
-    this%growth_cp_plant = this%calc_moving_avrg(this%growth_cp_plant, hlp, 1.0_wp/(this%p_opt_alloc * one_day/dt), plant%growing_season)
+!!    this%par_sunlit_cl(:)    = this%calc_moving_avrg(this%par_sunlit_cl(:), plant%daily_average%par_sunlit_cl(:), &
+!!                                               1.0_wp / (this%p_optNfrac * one_day/ dt))
+!!    this%par_shaded_cl(:)    = this%calc_moving_avrg(this%par_shaded_cl(:), plant%daily_average%par_shaded_cl(:), &
+!!                                               1.0_wp / (this%p_optNfrac * one_day/ dt))
+!!    this%fleaf_sunlit_cl(:)  = this%calc_moving_avrg(this%fleaf_sunlit_cl(:), plant%daily_average%fleaf_sunlit_cl(:), &
+!!                                               1.0_wp / (this%p_optNfrac * one_day/ dt))
+!!    this%beta_soil_gs     = this%calc_moving_avrg(this%beta_soil_gs, plant%beta_soil_gs, &
+!!                                               1._wp / ( this%p_optNfrac * one_day/dt))
+!!    this%beta_soil_ps     = this%calc_moving_avrg(this%beta_soil_ps, plant%beta_soil_ps, &
+!!                                               1._wp / ( this%p_optNfrac * one_day/dt))
+!!    this%beta_air         = this%calc_moving_avrg(this%beta_air, plant%beta_air, &
+!!                                               1._wp / ( this%p_optNfrac * one_day/dt))
+!!    this%t_jmax_opt       = this%calc_moving_avrg(this%t_jmax_opt, plant%daily_average%t_jmax_opt, &
+!!                                               1._wp / ( this%p_weekly * one_day/dt))
+!!    this%gpp_week                = this%calc_moving_avrg(this%gpp_week, plant%flux%gpp, &
+!!                                               1.0_wp / (this%p_weekly * one_day/ dt))
+!!    this%maint_respiration_week  = this%calc_moving_avrg(this%maint_respiration_week, plant%flux%maint_respiration_pot, &
+!!                                               1.0_wp / (this%p_weekly * one_day/ dt))
+!!    this%growth_req_n_week       = this%calc_moving_avrg(this%growth_req_n_week, plant%growth_req_n, &
+!!                                               1.0_wp / (this%p_weekly * one_day/ dt), &
+!!                                               plant%growth_req_n > eps8)
+!!    this%growth_req_p_week       = this%calc_moving_avrg(this%growth_req_p_week, plant%growth_req_p, &
+!!                                               1.0_wp / (this%p_weekly * one_day/ dt), & 
+!!                                               plant%growth_req_p > eps8)
+!!    this%boc_an                  = this%calc_moving_avrg(this%boc_an, plant%boc_an, &
+!!                                               1.0_wp / (this%p_boc_an * one_day/ dt), & 
+!!                                               plant%pool%leaf%carbon > eps8)
+!!    this%unit_npp                = this%calc_moving_avrg(this%unit_npp, plant%flux%unit_npp, & 
+!!                                               1.0_wp/(this%p_opt_alloc * one_day/dt), plant%growing_season)
+!!    IF (plant%growth_req_n > 0._wp)THEN
+!!       hlp = 1._wp/plant%growth_req_n
+!!    ELSE
+!!       hlp=0._wp
+!!    ENDIF
+!!    this%growth_cn_plant = this%calc_moving_avrg(this%growth_cn_plant, hlp, 1.0_wp/(this%p_opt_alloc * one_day/dt), plant%growing_season)
+!!    
+!!    IF (plant%growth_req_n > 0._wp .AND. plant%growth_req_p > 0._wp)THEN
+!!       hlp = 1._wp/(plant%growth_req_n * plant%growth_req_p)
+!!    ELSE
+!!       hlp=0._wp
+!!    ENDIF
+!!    this%growth_cp_plant = this%calc_moving_avrg(this%growth_cp_plant, hlp, 1.0_wp/(this%p_opt_alloc * one_day/dt), plant%growing_season)
 
-    this%allometry_npp = this%calc_moving_avrg(this%allometry_npp, plant%flux%npp, &
-         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
-    this%allometry_labile%nitrogen = this%calc_moving_avrg(this%allometry_labile%nitrogen, plant%pool%labile%nitrogen, &
-         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
-    this%allometry_labile%phosphorus = this%calc_moving_avrg(this%allometry_labile%phosphorus, plant%pool%labile%phosphorus, &
-         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
-    this%allometry_labile%carbon = this%calc_moving_avrg(this%allometry_labile%carbon, plant%pool%labile%carbon, &
-         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
- 
- this%demand_uptake_n = this%calc_moving_avrg(this%demand_uptake_n, plant%f_n_demand, &
-                                                 1.0_wp / (this%p_demand_uptake_n * one_day/ dt), &
-                                                 plant%pool%fine_root%carbon > eps8)
-    this%demand_uptake_p = this%calc_moving_avrg(this%demand_uptake_p, plant%f_p_demand, &
-                                                 1.0_wp / (this%p_demand_uptake_p * one_day/ dt), &
-                                                 plant%pool%fine_root%carbon > eps8)
-    this%unit_uptake_n = this%calc_moving_avrg(this%unit_uptake_n, plant%flux%unit_uptake_n, 1.0_wp / (this%p_opt_alloc * one_day/dt),&
-         plant%growing_season)
-    this%unit_uptake_p = this%calc_moving_avrg(this%unit_uptake_p, plant%flux%unit_uptake_p, 1.0_wp / (this%p_opt_alloc * one_day/dt),&
-         plant%growing_season)
+!!    this%allometry_npp = this%calc_moving_avrg(this%allometry_npp, plant%flux%npp, &
+!!         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
+!!    this%allometry_labile%nitrogen = this%calc_moving_avrg(this%allometry_labile%nitrogen, plant%pool%labile%nitrogen, &
+!!         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
+!!    this%allometry_labile%phosphorus = this%calc_moving_avrg(this%allometry_labile%phosphorus, plant%pool%labile%phosphorus, &
+!!         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
+!!    this%allometry_labile%carbon = this%calc_moving_avrg(this%allometry_labile%carbon, plant%pool%labile%carbon, &
+!!         1.0_wp / (this%p_opt_alloc * one_day/dt), plant%growing_season)
+!! 
+!! this%demand_uptake_n = this%calc_moving_avrg(this%demand_uptake_n, plant%f_n_demand, &
+!!                                                 1.0_wp / (this%p_demand_uptake_n * one_day/ dt), &
+!!                                                 plant%pool%fine_root%carbon > eps8)
+!!    this%demand_uptake_p = this%calc_moving_avrg(this%demand_uptake_p, plant%f_p_demand, &
+!!                                                 1.0_wp / (this%p_demand_uptake_p * one_day/ dt), &
+!!                                                 plant%pool%fine_root%carbon > eps8)
+!!    this%unit_uptake_n = this%calc_moving_avrg(this%unit_uptake_n, plant%flux%unit_uptake_n, 1.0_wp / (this%p_opt_alloc * one_day/dt),&
+!!         plant%growing_season)
+!!    this%unit_uptake_p = this%calc_moving_avrg(this%unit_uptake_p, plant%flux%unit_uptake_p, 1.0_wp / (this%p_opt_alloc * one_day/dt),&
+!!         plant%growing_season)
 
-     this%leaf2root_mass_ratio = this%calc_moving_avrg(this%leaf2root_mass_ratio, plant%pool%leaf%carbon/plant%pool%fine_root%carbon,&
-          1.0_wp/(this%p_yearly * one_day/dt), plant%pool%leaf%carbon>eps8)
+!!     this%leaf2root_mass_ratio = this%calc_moving_avrg(this%leaf2root_mass_ratio, plant%pool%leaf%carbon/plant%pool%fine_root%carbon,&
+!!          1.0_wp/(this%p_yearly * one_day/dt), plant%pool%leaf%carbon>eps8)
 
-  END SUBROUTINE update_veg_moving_avrg_variables
+!!  END SUBROUTINE update_veg_moving_avrg_variables
 
-!  !-----------------------------------------------------------------------------------------------------
-!  !> calculate moving average of soil variables
-!  !!
-!  !! called in the driver at the end of each timestep
-!  !-----------------------------------------------------------------------------------------------------
-!  SUBROUTINE update_soil_moving_avrg_variables (this, plant)
+!!!  !-----------------------------------------------------------------------------------------------------
+!!!  !> calculate moving average of soil variables
+!!!  !!
+!!!  !! called in the driver at the end of each timestep
+!!!  !-----------------------------------------------------------------------------------------------------
+!!!  SUBROUTINE update_soil_moving_avrg_variables (this, plant)
 
-!    USE mo_base_constants,    ONLY: dt, one_day
+!!!    USE mo_base_constants,    ONLY: dt, one_day
 
-!    IMPLICIT NONE
-!    ! 0.1 InOut
-!    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
-!    TYPE(t_slm_plant), INTENT(inout)       :: plant       !< plant variables and data
+!!!    IMPLICIT NONE
+!!!    ! 0.1 InOut
+!!!    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
+!!!    TYPE(t_slm_plant), INTENT(inout)       :: plant       !< plant variables and data
 
-!    ! moving_avrg( 
-!    !             current average, new value, weight of new value, 
-!    !                 use function TRUE FALSE [OPTIONAL argument] )
-!    ! returns: new current average
+!!!    ! moving_avrg( 
+!!!    !             current average, new value, weight of new value, 
+!!!    !                 use function TRUE FALSE [OPTIONAL argument] )
+!!!    ! returns: new current average
 
-   
-   
-! END SUBROUTINE update_soil_moving_avrg_variables
+!!   
+!!   
+!!! END SUBROUTINE update_soil_moving_avrg_variables
 
-  !-----------------------------------------------------------------------------------------------------
-  !> calculate moving average of tile variables
-  !!
-  !! called in the driver at the end of each timestep
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_tile_moving_avrg_variables (this, t_air, press_srf, q_air, co2_mixing_ratio, ga)
+!!  !-----------------------------------------------------------------------------------------------------
+!!  !> calculate moving average of tile variables
+!!  !!
+!!  !! called in the driver at the end of each timestep
+!!  !-----------------------------------------------------------------------------------------------------
+!!  SUBROUTINE update_tile_moving_avrg_variables (this, t_air, press_srf, q_air, co2_mixing_ratio, ga)
 
-    USE mo_base_constants,    ONLY: dt, one_day
+!!    USE mo_base_constants,    ONLY: dt, one_day
 
-    IMPLICIT NONE
-    ! 0.1 InOut
-    REAL(wp), INTENT(in)                   :: t_air       !< current air temperature 
-    REAL(wp), INTENT(in)                   :: press_srf   !< current air pressure  
-    REAl(wp), INTENT(in)                   :: q_air       !< current air specific humidity
-    REAl(wp), INTENT(in)                   :: co2_mixing_ratio  !< current air CO2 mixing ratio 
-    REAl(wp), INTENT(in)                   :: ga          !< current air specific humidity
-    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
+!!    IMPLICIT NONE
+!!    ! 0.1 InOut
+!!    REAL(wp), INTENT(in)                   :: t_air       !< current air temperature 
+!!    REAL(wp), INTENT(in)                   :: press_srf   !< current air pressure  
+!!    REAl(wp), INTENT(in)                   :: q_air       !< current air specific humidity
+!!    REAl(wp), INTENT(in)                   :: co2_mixing_ratio  !< current air CO2 mixing ratio 
+!!    REAl(wp), INTENT(in)                   :: ga          !< current air specific humidity
+!!    CLASS(t_moving_average), INTENT(inout) :: this        !< calculates and stores all moving average values
 
-    ! moving_avrg( 
-    !             current average, new value, weight of new value, 
-    !                 use function TRUE FALSE [OPTIONAL argument] )
-    ! returns: new current average
+!!    ! moving_avrg( 
+!!    !             current average, new value, weight of new value, 
+!!    !                 use function TRUE FALSE [OPTIONAL argument] )
+!!    ! returns: new current average
 
-    this%t_air            = this%calc_moving_avrg(this%t_air, t_air, &
-                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%ga               = this%calc_moving_avrg(this%ga, ga, &
-                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%co2_mixing_ratio = this%calc_moving_avrg(this%co2_mixing_ratio, co2_mixing_ratio, &
-                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%t_air            = this%calc_moving_avrg(this%t_air, t_air, &
-                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%press_srf        = this%calc_moving_avrg(this%press_srf, press_srf, &
-                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%q_air            = this%calc_moving_avrg(this%q_air, q_air, &
-                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
-    this%t_air_week       = this%calc_moving_avrg(this%t_air_week, t_air, &
-                                                  1.0_wp / (this%p_weekly * one_day/ dt))
-    this%t_air_month      = this%calc_moving_avrg(this%t_air_month, t_air, &
-                                                  1.0_wp / (this%p_monthly * one_day/ dt))
-    this%t_air_longterm   = this%calc_moving_avrg(this%t_air_longterm, t_air, &
-                                                  1.0_wp / (this%p_longterm * one_day/ dt))
+!!    this%t_air            = this%calc_moving_avrg(this%t_air, t_air, &
+!!                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
+!!    this%ga               = this%calc_moving_avrg(this%ga, ga, &
+!!                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
+!!    this%co2_mixing_ratio = this%calc_moving_avrg(this%co2_mixing_ratio, co2_mixing_ratio, &
+!!                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
+!!!    this%t_air            = this%calc_moving_avrg(this%t_air, t_air, &
+!!!                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
+!!    this%press_srf        = this%calc_moving_avrg(this%press_srf, press_srf, &
+!!                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
+!!    this%q_air            = this%calc_moving_avrg(this%q_air, q_air, &
+!!                                                  1.0_wp / (this%p_optNfrac * one_day/ dt))
+!!    this%t_air_week       = this%calc_moving_avrg(this%t_air_week, t_air, &
+!!                                                  1.0_wp / (this%p_weekly * one_day/ dt))
+!!    this%t_air_month      = this%calc_moving_avrg(this%t_air_month, t_air, &
+!!                                                  1.0_wp / (this%p_monthly * one_day/ dt))
+!!    this%t_air_longterm   = this%calc_moving_avrg(this%t_air_longterm, t_air, &
+!!                                                  1.0_wp / (this%p_longterm * one_day/ dt))
 
-  END SUBROUTINE update_tile_moving_avrg_variables
+!!  END SUBROUTINE update_tile_moving_avrg_variables
 
   !-----------------------------------------------------------------------------------------------------
   !> 5.0 Initialisation all plant variables including pools and canopy layer attributes
@@ -1076,6 +1081,7 @@ CONTAINS
     this%boc_an             = plant_var_init_one
     this%leaf_cn_direction  = plant_var_init_one
     this%apar             = plant_var_init_zero
+    this%daytime_counter  = plant_var_init_zero
   END SUBROUTINE init_plant 
 
   !-----------------------------------------------------------------------------------------------------

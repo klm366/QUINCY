@@ -25,7 +25,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task (used by update vegetation pools, and some routines inquiring the effect of 
   !           changes in leaf C or leaf N)
-  !
+  ! 
   !-----------------------------------------------------------------------------------------------------
   !> calc canopy layers 
   !! updates the canopy layer content (LAI, cummulative LAI above layer-mid-point, foliar N, fractional

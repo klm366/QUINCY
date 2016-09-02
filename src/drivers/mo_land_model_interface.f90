@@ -93,15 +93,16 @@ CONTAINS
                                   )
 
     USE mo_kind
-    USE mo_base_memory,             ONLY: t_slm_tile, t_model
-    USE mo_base_config_class,       ONLY: base_config
-    USE mo_atmland_interface,       ONLY: update_atm2land, update_land2atm
-    USE mo_veg_output,              ONLY: write_output_pool, write_output_flux
-    USE mo_veg_config_class,        ONLY: veg_config  ! used to switch on/off the update_soil_pool via flag_base_soil_model
+    USE mo_base_memory,                   ONLY: t_slm_tile, t_model
+    USE mo_base_config_class,             ONLY: base_config
+    USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
+    USE mo_atmland_interface,             ONLY: update_atm2land, update_land2atm
+    USE mo_veg_output,                    ONLY: write_output_pool, write_output_flux
+    USE mo_veg_config_class,              ONLY: veg_config  ! used to switch on/off the update_soil_pool via flag_base_soil_model
 
     ! used only for the canopy model:
-    USE mo_atmland_constants,       ONLY: rad2par
-    USE mo_base_constants,          ONLY: one_year
+    USE mo_atmland_constants,             ONLY: rad2par
+    USE mo_base_constants,                ONLY: one_year
 
     ! Process interfaces:
     USE mo_rad_interface
@@ -251,13 +252,9 @@ CONTAINS
       CALL update_vegsoil_physics (tile)
       CALL update_veg_pools       (tile, model%lctlib(tile%lcts%lib_id))
 
-    !! accumulation - daily & moving average
+    !! accumulation over time - daytime & moving average
     !! 
-      CALL tile%plant%daily_average%calc_avrg(tile%plant, time_day, timestep_prop_day, &!) !< daily avrg of the prev day
-                                                                    swpar_srf_down)  ! a temporal fix this is !!!
-      CALL tile%plant%moving_average%update_veg(tile%plant)               !< moving averages - vegetation
-      !CALL tile%plant%moving_average%update_soil(tile%plant)             !< moving averages - soil -> plant N & P uptake
-      CALL tile%plant%moving_average%update_tile(t_air, press_srf, q_air, co2_mixing_ratio, ga) !< moving averages - atmland
+      CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
 
     !! output pool: write output in certain intervals, see mo_veg_output
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
@@ -292,13 +289,9 @@ CONTAINS
       CALL update_vegsoil_physics (tile)
       CALL update_veg_pools       (tile, model%lctlib(tile%lcts%lib_id))
 
-    !! accumulation - daily & moving average
+    !! accumulation over time - daytime & moving average
     !! 
-      CALL tile%plant%daily_average%calc_avrg(tile%plant, time_day, timestep_prop_day, &!) !< daily avrg of the prev day
-                                                                    swpar_srf_down)  ! a temporal fix this is !!!
-      CALL tile%plant%moving_average%update_veg(tile%plant)               !< moving averages - vegetation
-      !CALL tile%plant%moving_average%update_soil(tile%plant)             !< moving averages - soil -> plant N & P uptake
-      CALL tile%plant%moving_average%update_tile(t_air, press_srf, q_air, co2_mixing_ratio, ga) !< moving averages - atmland
+      CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
 
     !! output pool: write output in certain intervals, see mo_veg_output
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
@@ -328,13 +321,9 @@ CONTAINS
       CALL update_canopy_fluxes   (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_vegsoil_physics (tile)
 
-    !! accumulation - daily & moving average
+    !! accumulation over time - daytime & moving average
     !! 
-      CALL tile%plant%daily_average%calc_avrg(tile%plant, time_day, timestep_prop_day, &!) !< daily avrg of the prev day
-                                                                    swpar_srf_down)  ! a temporal fix this is !!!
-      CALL tile%plant%moving_average%update_veg(tile%plant)               !< moving averages - vegetation
-      !CALL tile%plant%moving_average%update_soil(tile%plant)             !< moving averages - soil -> plant N & P uptake
-      CALL tile%plant%moving_average%update_tile(t_air, press_srf, q_air, co2_mixing_ratio, ga) !< moving averages - atmland
+      CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
 
     !! output fluxes -> filename: fort.20
     !! output also some atm2land variables
@@ -354,7 +343,7 @@ CONTAINS
 
     CASE DEFAULT
       CALL finish('land_model_interface','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
-    END SELECT
+    END SELECT  ! select SLM model !
 
     !> pass atmland variables from land2atm memory back to the driver
     !! 
