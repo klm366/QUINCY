@@ -57,7 +57,6 @@ CONTAINS
     TYPE(t_slm_soil),POINTER         :: soil                   ! soil variables per tile
     TYPE(t_slm_plant),POINTER        :: plant                  ! plant variables per tile
     REAL(wp),DIMENSION(ncanop)       :: agl,anl,rl,gsl,cil
-    REAL(wp),DIMENSION(ncanop)       :: canopy_layer_depth_act
     INTEGER                          :: icanop                 ! for looping across ncanopy layers
     REAL(wp)                         :: hlp1                   ! dummy variable 
     ! 0.3 Memory allocation

@@ -216,7 +216,6 @@ CONTAINS
   !! 
   !! @par Spitters Eq. 12 is wrong
   !!  accordingly to Wang2003, "radf4" was replaced by "-kbl" when calculating "idrdra"
-  !! @par: APAR is calculated for all canopy layers irrespective of whether or not there are leaves 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_sw_srf_net(sw_srf_down,sw_fdiffuse,cos_zenith_angle,& 
                         lai,lai_cl,cumm_lai_cl,& 

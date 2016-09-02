@@ -32,7 +32,7 @@ CONTAINS
   !!                                   allocation to photosynthetic functioning)
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_canopy_layers(lctlib,leaf_nitrogen,lai,growing_season,par_sunlit_mavg_cl,par_shaded_mavg_cl, & 
+  SUBROUTINE calc_canopy_layers(lctlib,leaf_nitrogen,lai,par_sunlit_mavg_cl,par_shaded_mavg_cl, & 
                          fleaf_sunlit_mavg_cl,t_air_mavg,press_srf_mavg,co2_mixing_ratio_mavg,ga_mavg,& 
                          beta_air_mavg,beta_soil_ps_mavg,beta_soil_gs_mavg,t_jmax_opt_mavg,& 
                          lai_cl,cumm_lai_cl,n_tot_cl,fn_rub_cl,fn_et_cl,fn_pepc_cl,fn_chl_cl,fn_oth_cl,&
@@ -48,7 +48,6 @@ CONTAINS
     TYPE(t_lctlib_element),INTENT(in)            :: lctlib                !< land-cover-type library
     REAL(wp),INTENT(in)                          :: leaf_nitrogen         !< total canopy N (mol/m2)
     REAL(wp),INTENT(in)                          :: lai                   !< total leaf area index
-    LOGICAL,OPTIONAL                             :: growing_season        !< is plant in growing season?
     REAL(wp),INTENT(in),OPTIONAL                 :: t_air_mavg            !< air temperature (avg)
     REAL(wp),INTENT(in),OPTIONAL                 :: press_srf_mavg        !< air pressure (avg) 
     REAL(wp),INTENT(in),OPTIONAL                 :: co2_mixing_ratio_mavg !< CO2 concentration (avg)
@@ -100,7 +99,6 @@ CONTAINS
     ! configure options for fractions optimisation 
     optimise_n_fractions = assimi_config%flag_optimal_Nfraction
     IF (PRESENT(inquire_n_fractions)) optimise_n_fractions = .NOT.inquire_n_fractions
-    IF (PRESENT(growing_season)) optimise_n_fractions = optimise_n_fractions.AND.growing_season
 
     ! check if all input is available to run optimal fractions
     IF(assimi_config%flag_optimal_Nfraction)THEN
@@ -129,8 +127,8 @@ CONTAINS
     !!
     IF(lai > canopy_layer_depth(1)) THEN
        n_tot_tc = leaf_nitrogen * 1000._wp * kn / (1._wp - exp(-kn * lai))
-    ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
-       n_tot_tc = leaf_nitrogen * 1000._wp
+    ELSEIF(lai > eps8) THEN ! if LAI does not fill the first canopy layer, top canopy N = leaf N
+       n_tot_tc = leaf_nitrogen * 1000._wp /lai 
     ENDIF
 
     !> 2. calculate LAI and N content of canopy layers 
@@ -163,7 +161,11 @@ CONTAINS
 
           !> 2.3 N content of canopy layer
           IF(cumm_lai_cl(icanop) > eps8) THEN
-             n_tot_cl(icanop) = n_tot_tc * exp(-kn * cumm_lai_cl(icanop))
+             IF(lai > canopy_layer_depth(1)) THEN
+                n_tot_cl(icanop) = n_tot_tc * exp(-kn * cumm_lai_cl(icanop))
+             ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
+                n_tot_cl(icanop) = n_tot_tc
+             ENDIF
          ENDIF
        ENDDO
     ENDIF
@@ -544,7 +546,8 @@ CONTAINS
     ! increase LAI by small increment
     lai = plant%lai + 0.3_wp * lctlib%sla
     ! equivalent leaf N assuming any new leaf growth will have target CN
-    leaf_nitrogen = plant%pool%leaf%nitrogen + 0.3_wp * plant%target_cn_leaf
+    leaf_nitrogen = plant%pool%leaf%nitrogen + 0.3_wp / plant%target_cn_leaf
+
     ! recompute canopy layer LAI and foliar N with new numbers
     CALL calc_canopy_layers(lctlib = lctlib, & 
                             leaf_nitrogen = leaf_nitrogen, &

@@ -147,7 +147,7 @@ CONTAINS
     !> 3.0 Given current vegetation pools, update canopy layers 
     !!
     !!
-    CALL calc_canopy_layers(lctlib,plant%pool%leaf%nitrogen,plant%lai,plant%growing_season, &
+    CALL calc_canopy_layers(lctlib,plant%pool%leaf%nitrogen,plant%lai, &
                              plant%moving_average%par_sunlit_cl,&
                              plant%moving_average%par_shaded_cl, & 
                              plant%moving_average%fleaf_sunlit_cl,&
