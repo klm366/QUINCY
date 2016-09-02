@@ -379,7 +379,7 @@ CONTAINS
     !  bi-directional pointer
     lctlib => model%lctlib(tile%lcts%lib_id)
 
-    ref_lai   = 3._wp
+    ref_lai   = 6._wp
     ref_nleaf = 2.0_wp
 
     ! accumulation

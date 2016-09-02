@@ -37,6 +37,8 @@ MODULE mo_jsb_lctlib_class
      REAL(wp) :: sla
      REAL(wp) :: sigma_vis 
      REAL(wp) :: sigma_nir 
+     REAL(wp) :: omega_clumping 
+     REAL(wp) :: crown_shape_factor 
      REAL(wp) :: cn_leaf
      REAL(wp) :: np_leaf
      REAL(wp) :: k0_fnl_struc
@@ -91,6 +93,7 @@ CONTAINS
     USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2 
     USE mo_atmland_constants
     USE mo_veg_constants
+    USE mo_assimi_config_class,     ONLY: assimi_config
 
     IMPLICIT NONE
 
@@ -132,6 +135,16 @@ CONTAINS
       !  extrapolated from Otto, 2014, BG for trees and Spitter et al. 1986 for grasses
       lctlib(1:npft)%sigma_nir = & 
       (/0.76_wp,0.76_wp,0.76_wp,0.76_wp,0.73_wp,0.73_wp,0.8_wp,0.8_wp/)
+      ! canopy clumping factor
+      !  based on Campell and Norman 1999
+      lctlib(1:npft)%omega_clumping = & 
+      (/0.9_wp,0.9_wp,0.9_wp,0.9_wp,0.5_wp,0.7_wp,1.0_wp,1.0_wp/)
+      IF(.NOT.assimi_config%flag_heterogeneous_canopy) lctlib(1:npft)%omega_clumping = 1.0_wp
+    
+      ! crown shape factor = 3.8 - 0.46 * crown depth / crown diameter, limited to range 1-3.34 
+      !  based on Campell and Norman 1998, eq. 15.35
+      lctlib(1:npft)%crown_shape_factor = & 
+      (/3.34_wp,3.34_wp,3.34_wp,3.34_wp,2.19_wp,2.88_wp,3.34_wp,3.34_wp/)
       ! default leaf C:N (molC/molN) if not calculated dynamically 
       ! From Kattge et al. 2011, Table 5, including conversion from mg/g to mol/mol
       lctlib(1:npft)%cn_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / & 

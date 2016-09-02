@@ -9,6 +9,7 @@
 !!
 !! 18-08-2016: update to include VIS And NIR albedo calculation for the canopy
 !! 24-08-2016: update to include two-stream approximation and soil albedo 
+!! 02-09-2016: update to include clumping 
 !!
 MODULE mo_rad_update_radiation
 
@@ -149,7 +150,8 @@ CONTAINS
     CALL calc_sw_srf_net(swvis_srf_down, & 
                      swpar_fdiffuse, cos_zenith_angle, & 
                      plant%lai, plant%lai_cl, plant%cumm_lai_cl,& 
-                     lctlib%sigma_vis, kbl0_vis, kdf0_vis, alb_vis_soil, &
+                     lctlib%sigma_vis, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
+                     kbl0_vis, kdf0_vis, alb_vis_soil, &
                      arad_sunlit_vis_cl,arad_shaded_vis_cl,fleaf_sunlit_vis_cl, &
                      arad_vis_can,arad_vis_soil, &
                      alb_vis_can,alb_vis,swvis_srf_net) 
@@ -160,7 +162,8 @@ CONTAINS
     CALL calc_sw_srf_net(swnir_srf_down, & 
                      swpar_fdiffuse, cos_zenith_angle, & 
                      plant%lai, plant%lai_cl, plant%cumm_lai_cl, &
-                     lctlib%sigma_nir, kbl0_nir, kdf0_nir, alb_nir_soil, &
+                     lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
+                     kbl0_nir, kdf0_nir, alb_nir_soil, &
                      arad_sunlit_nir_cl,arad_shaded_nir_cl,fleaf_sunlit_nir_cl, &
                      arad_nir_can,arad_nir_soil, &
                      alb_nir_can,alb_nir,swnir_srf_net) 
@@ -208,14 +211,16 @@ CONTAINS
   !!  is made that albedo in the PAR and VIS range are identical\n
   !!  - The routine has been adjusted to a two-stream approximation scheme by adding the upward flux 
   !!  from soil reflection\n
-  !! @todo: calc_sw_srf_net does not account for clumping and non-leaf surfaces
+  !!  - The routine has been adjusted to account for canopy clumping (Campbell & Norman 1998)\n
+  !! @todo: calc_sw_srf_net does not account non-leaf surfaces
   !! 
   !! @par Spitters Eq. 12 is wrong
   !!  accordingly to Wang2003, "radf4" was replaced by "-kbl" when calculating "idrdra"
   !! @par: APAR is calculated for all canopy layers irrespective of whether or not there are leaves 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_sw_srf_net(sw_srf_down,sw_fdiffuse,cos_zenith_angle,& 
-                        lai,lai_cl,cumm_lai_cl,sigma,kbl0,kdf0,alb_soil,&
+                        lai,lai_cl,cumm_lai_cl,& 
+                        sigma,omega_clumping,crown_shape_factor,kbl0,kdf0,alb_soil,&
                         arad_sunlit_cl,arad_shaded_cl,fleaf_sunlit_cl, & 
                         arad_can,arad_soil,alb_can,alb,sw_srf_net)
 
@@ -230,6 +235,8 @@ CONTAINS
     REAL(wp), DIMENSION(:),INTENT(in) :: lai_cl        !< leaf area index of canopy layer (m-2 m-2) 
     REAL(wp), DIMENSION(:),INTENT(in) :: cumm_lai_cl   !< cummulative leaf area index above centre of canopy layer
     REAL(wp), INTENT(in) ::    sigma                   !< single leaf scattering coefficient 
+    REAL(wp), INTENT(in) ::    omega_clumping          !< clumping factor 
+    REAL(wp), INTENT(in) ::    crown_shape_factor      !< crown-shape factor 
     REAL(wp), INTENT(in) ::    kbl0                    !< extinction coefficient over black leaves 
     REAL(wp), INTENT(in) ::    kdf0                    !< extinction coefficient for diffuse radiation 
     REAL(wp), INTENT(in) ::    alb_soil                !< soil albedo 
@@ -255,6 +262,7 @@ CONTAINS
     REAL(wp), DIMENSION(ncanop) :: arad_shaded_up_cl   ! idem for canopy layers
     REAL(wp) :: temp1,temp2,radf1,radf2,radf3,radf3b,radf4,radf5 ! dummy variables
     REAL(wp) :: tmp_cos_zenith_angle                   ! local variable of solar angle (radians)
+    REAL(wp) :: k4_csf,omega
     INTEGER  :: icanop
 
     ! Initialise output 
@@ -289,11 +297,15 @@ CONTAINS
    
           !> Eq.1  Fraction of radiation reflected by green closed canopy (fraction)
           rho = temp2/(1.0_wp + rho2sbeta * tmp_cos_zenith_angle)
-   
+  
+          !> clumping factor (eq 15.35) Campbell & Norman (1998) as a function of sun-angle
+          omega = omega_clumping / (omega_clumping + (1._wp - omega_clumping) * & 
+                  exp(-k_csf * ACOS(tmp_cos_zenith_angle)**crown_shape_factor)) 
+ 
           ! Extinction coefficient for radiation over black leaves in canopy
-          kdf = kdf0 * temp1  ! temp1 == SQRT(1.0_wp - sigma)
-          kbl = kbl0 * kdf/(0.8_wp * temp1 * tmp_cos_zenith_angle)
-   
+          kdf = kdf0 * temp1 * omega ! temp1 == SQRT(1.0_wp - sigma)
+          kbl = kbl0 * kdf/(0.8_wp * temp1 * tmp_cos_zenith_angle) 
+
           !> Eq.10 & 11 Some factors for radiation calculations that change with time
           radf1 = (1.0_wp - rho) * irad_dif_down * kdf            ! eq 10
           radf2 = (1.0_wp - rho) * temp1 * irad_dir_down * kbl    ! eq 11

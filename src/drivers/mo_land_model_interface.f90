@@ -339,8 +339,14 @@ CONTAINS
     !! output fluxes -> filename: fort.20
     !! output also some atm2land variables
     !! 
-      WRITE(20,'(6F16.7)') time_day+time_year*one_year, t_air, swpar_srf_down * rad2par, & 
-                           tile%plant%flux%gpp, tile%plant%gc, tile%plant%flux%ci
+      WRITE(20,'(7F16.7)') time_day+time_year*one_year, t_air, swpar_srf_down * rad2par, & 
+                           tile%plant%flux%gpp, tile%plant%apar, tile%plant%gc, tile%plant%flux%ci
+      WRITE(21,'(20F16.7)') tile%plant%par_sunlit_cl
+      WRITE(22,'(20F16.7)') tile%plant%par_shaded_cl
+      WRITE(23,'(20F16.7)') tile%plant%fleaf_sunlit_cl
+      WRITE(24,'(20F16.7)') tile%plant%par_sunlit_cl*tile%plant%fleaf_sunlit_cl+&
+                                tile%plant%par_shaded_cl+(1._wp-tile%plant%fleaf_sunlit_cl)
+                           
 
     CASE('test_canopy')
     !! test_canopy --------------------------------------------------------------------------------

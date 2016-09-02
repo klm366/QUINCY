@@ -35,6 +35,7 @@ flag_base_soil_model="T"
 # canopy model options
 flag_t_jmax_acclimation="F"
 flag_optimal_Nfraction="F"
+flag_heterogeneous_canopy="F"
 # plant growth model options
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
@@ -177,6 +178,7 @@ validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jma
 validateUserConfigValues "$flag_optimal_Nleaf" "$validateFlags" "flag_optimal_Nleaf"
 validateUserConfigValues "$flag_optimal_allocation" "$validateFlags" "flag_optimal_allocation"
 validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
+validateUserConfigValues "$flag_heterogeneous_canopy" "$validateFlags" "flag_heterogeneous_canopy"
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
 validateUserConfigValues "$useSiteSpecificAWC" "$validateUseSiteSpecificAWC" "useSiteSpecificAWC"
@@ -445,6 +447,12 @@ if [ $flag_optimal_Nfraction == T ]
     changeNamelistValue flag_optimal_Nfraction ".TRUE."
   else
     changeNamelistValue flag_optimal_Nfraction ".FALSE."
+fi
+if [ $flag_heterogeneous_canopy == T ]
+  then
+    changeNamelistValue flag_heterogeneous_canopy ".TRUE."
+  else
+    changeNamelistValue flag_heterogeneous_canopy ".FALSE."
 fi
 changeNamelistValue simulation_length_number "$simulation_length_number"
 changeNamelistValue output_interval_pool "$output_interval_pool"

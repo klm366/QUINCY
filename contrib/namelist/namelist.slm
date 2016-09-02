@@ -19,6 +19,7 @@
   ! options for the assimilation and vegetation-growth
   ! FALSE TRUE
   flag_optimal_Nfraction=.FALSE.
+  flag_heterogeneous_canopy=.FALSE.
   flag_t_jmax_acclimation=.FALSE.
 /
 &GRID_CTL
