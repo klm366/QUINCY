@@ -37,7 +37,7 @@ CONTAINS
     USE mo_veg_constants
     USE mo_veg_memory
 
-    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_veg_memory_class,      ONLY: t_veg_memory
 
 
@@ -58,12 +58,12 @@ CONTAINS
 ! --------------------------------
 ! @slmdev @ slmtemp see ticket #79
     ! 0.3 Memory allocation
-    TYPE(t_veg_memory), POINTER         :: veg__mem   ! dsl4jsb_Def_memory(VEG)
+    TYPE(t_veg_memory), POINTER         :: veg__mem   ! dsl4jsb_Def_memory(VEG_)
     TYPE(t_veg_memory), POINTER         :: plant1     ! local pointer to veg__mem for SLM usability
     REAL(wp), POINTER :: height
     REAL(wp), POINTER :: diameter
 
-    SELECT TYPE (mm => tile%mem(VEG)%p)       ! dsl4jsb_Get_memory(VEG)
+    SELECT TYPE (mm => tile%mem(VEG_)%p)       ! dsl4jsb_Get_memory(VEG_)
       TYPE IS(t_veg_memory)
         veg__mem => mm
     END SELECT

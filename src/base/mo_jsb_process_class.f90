@@ -20,7 +20,7 @@ MODULE mo_jsb_process_class
   PRIVATE
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name
-  PUBLIC :: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+  PUBLIC :: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -42,8 +42,8 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-    ! ATM2LAND=1, LAND2ATM=2, SOIL=5, VEG=7, RAD=9, ASSIMI=10
-    ENUMERATOR :: ATM2LAND=1, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    ENUMERATOR :: ATM2LAND_=1, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
   END ENUM
 
   ! Process actions
@@ -62,28 +62,28 @@ CONTAINS
     CHARACTER(len=:), ALLOCATABLE :: return_value
 
     SELECT CASE(iproc)
-    CASE (ATM2LAND)
+    CASE (ATM2LAND_)
       return_value = 'atm2land'
-    CASE (LAND2ATM)
+    CASE (LAND2ATM_)
       return_value = 'land2atm'
-!!    CASE (SEB)
+!!    CASE (SEB_)
 !!      return_value = 'seb'
-!!    CASE (TURB)
+!!    CASE (TURB_)
 !!      return_value = 'turb'
-!!    CASE (SOIL)
+!!    CASE (SOIL_)
 !!      return_value = 'soil'
-!!    CASE (HYDRO)
+!!    CASE (HYDRO_)
 !!      return_value = 'hydro'
-    CASE (VEG)
+    CASE (VEG_)
       return_value = 'veg'
-    CASE (RAD)
+    CASE (RAD_)
       return_value = 'rad'
-    CASE (ASSIMI)
+    CASE (ASSIMI_)
       return_value = 'assimi'
-!!    CASE (PHENO)
+!!    CASE (PHENO_)
 !!      return_value = 'pheno'      
 !!#ifndef __NO_JSBACH_HD__
-!!    CASE (HD)
+!!    CASE (HD_)
 !!      return_value = 'hd'
 !!#endif
     CASE DEFAULT

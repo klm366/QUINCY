@@ -17,7 +17,7 @@ MODULE mo_jsb_model_init
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, init_lctlib
     USE mo_jsb_memory_class,                ONLY: t_jsb_memory
-    USE mo_jsb_process_class,               ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO, &
+    USE mo_jsb_process_class,               ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, &
                                                   Get_process_name
     USE mo_jsb_process_factory,             ONLY: Create_process_memory, max_no_of_processes
     ! shared
@@ -157,7 +157,7 @@ CONTAINS
       tile%mem(iproc)%p => NULL()
       SELECT CASE(iproc)
         ! SLM: extend this CASE to all SLM processes that work with JSBACH4 memory structure; see mo_jsb_process_class for enumeration
-        CASE (RAD, ASSIMI, VEG, ATM2LAND, LAND2ATM)    
+        CASE (RAD_, ASSIMI_, VEG_, ATM2LAND_, LAND2ATM_)    
           prefix = 'no-need'
           suffix = 'no-need'
           process_name = Get_process_name(iproc)
@@ -181,7 +181,7 @@ CONTAINS
             ! call init routine of memory here & added model%options -> changed for SLM compatibility
             CALL tile%mem(iproc)%p%Init( TRIM(process_name), TRIM(suffix), tile%lcts%id, tile%owner_model_id, &
                                         model%options%ics, model%options%ice, model%options%iblk) ! model%options -> for SLM compatibility
-        END SELECT  ! processes with memory (ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO)
+        END SELECT  ! processes with memory (ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_)
         NULLIFY(tmp_ptr)    
       END SELECT    ! iproc
     END DO          ! iproc

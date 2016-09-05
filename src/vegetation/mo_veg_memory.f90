@@ -610,7 +610,7 @@ CONTAINS
 !!  SUBROUTINE update_conditions_current_timestep (this, plant, swpar_srf_down)
 
 !!!    USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-!!!    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+!!!    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
 !!    IMPLICIT NONE 
 !!    ! 0.1 InOut
@@ -619,9 +619,9 @@ CONTAINS
 !!    REAL(wp), INTENT(in) :: swpar_srf_down    ! temporal fix -> memory allocation -> USE statements
 !!    ! 0.2 Local
 !!!    ! 0.3 Memory allocation
-!!!    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+!!!    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
 !!!    REAL(wp), POINTER           :: swpar_srf_down
-!!!    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+!!!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
 !!!      TYPE IS(t_atm2land_memory)
 !!!        atm2land__mem => mm
 !!!    END SELECT

@@ -37,7 +37,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_shared_constants,        ONLY: Tzero
 
-    USE mo_jsb_process_class,       ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+    USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_atm2land_memory_class,   ONLY: t_atm2land_memory
 
     USE mo_veg_memory
@@ -53,9 +53,9 @@ CONTAINS
     TYPE(t_slm_plant),POINTER               :: plant     ! plant variables per tile
     REAL(wp) :: hlp1                                     ! helper variable for tmp values
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
     REAL(wp), POINTER                :: t_air
-    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
       TYPE IS(t_atm2land_memory)
         atm2land__mem => mm
     END SELECT

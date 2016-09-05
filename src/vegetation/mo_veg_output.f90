@@ -506,7 +506,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE write_output_flux(tile, time_d, time_y, itile)
 
-    USE mo_jsb_process_class,     ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_base_memory,           ONLY: t_slm_tile
     USE mo_veg_memory,            ONLY: t_slm_plant
     USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
@@ -528,7 +528,7 @@ CONTAINS
     REAL(wp), SAVE               :: dt_one = 1.0_wp ! just 1.0
     REAL(wp)                     :: dC13gpp,dC13rg,dC13rm
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
     REAL(wp), POINTER                :: ga
     REAL(wp), POINTER                :: swpar_srf_down
@@ -536,11 +536,11 @@ CONTAINS
     REAL(wp), POINTER                :: net_radiation
     REAL(wp), POINTER                :: sensible_heat_flx
     REAL(wp), POINTER                :: latent_heat_flx
-    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
       TYPE IS(t_atm2land_memory)
         atm2land__mem => mm
     END SELECT
-    SELECT TYPE (mm => tile%mem(LAND2ATM)%p)
+    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)
       TYPE IS(t_land2atm_memory)
         land2atm__mem => mm
     END SELECT

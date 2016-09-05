@@ -12,7 +12,7 @@ MODULE mo_shared_update_time_averages
 
   USE mo_kind,                    ONLY: wp, eps8
   USE mo_exception,               ONLY: message, finish
-  USE mo_jsb_process_class,       ONLY: ATM2LAND, LAND2ATM, SEB, TURB, SOIL, HYDRO, VEG, HD, RAD, ASSIMI, PHENO
+  USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
 
   IMPLICIT NONE
@@ -51,7 +51,7 @@ CONTAINS
     REAL(wp), INTENT(in)                  :: timestep_prop_day  !< length of one time step (proportion of one day)
     ! 0.2 Local
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND)
+    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
     REAL(wp), POINTER                :: swpar_srf_down  ! light at surface level
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: q_air
@@ -59,7 +59,7 @@ CONTAINS
     REAL(wp), POINTER                :: co2_mixing_ratio
     REAL(wp), POINTER                :: ga
 
-    SELECT TYPE (mm => tile%mem(ATM2LAND)%p)            ! dsl4jsb_Get_memory(ATM2LAND)
+    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
       TYPE IS(t_atm2land_memory)
         atm2land__mem => mm
     END SELECT
