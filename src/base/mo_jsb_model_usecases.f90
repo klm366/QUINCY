@@ -44,6 +44,9 @@ CONTAINS
     CASE ('jsbach_lite')
       CALL init_usecase_lite(model)
 
+    CASE ('jsbach_lite_nolake')
+      CALL init_usecase_lite_nolake(model)
+
     CASE ('jsbach_lite_with_hd')
       CALL init_usecase_lite_with_hd(model)
 
@@ -52,9 +55,6 @@ CONTAINS
 
     CASE ('jsbach_lite_tpe_closed')
       CALL init_usecase_lite_tpe_closed(model)
-
-    CASE ('jsbach_lite_with_lake')
-      CALL init_usecase_lite_with_lake(model)
 
     CASE ('jsbach_tiles')
       CALL init_usecase_tiles(model)
@@ -106,6 +106,43 @@ CONTAINS
     NULLIFY(box_tile)
 
   END SUBROUTINE init_usecase_lite
+
+  SUBROUTINE init_usecase_lite_nolake(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_jsb_tile), POINTER :: box_tile, land_tile, glacier_tile, veg_tile
+    TYPE(t_jsb_grid),  POINTER :: grid
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_nolake'
+
+    grid => Get_grid(model%grid_id)
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      & processes      =(/ATM2LAND_, LAND2ATM_, RAD_,      HYDRO_,    TURB_     /), &
+      & process_actions=(/ON_TILE_,  ON_TILE_,  ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & model_id=model%id, grid_id=model%grid_id, fract_filename='bc_land_frac.nc', fract_varname='notsea')
+    model%top => box_tile
+
+      ! Create sub-tiles
+      land_tile => t_jsb_tile('land', 'Land tile', &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+        & lct=t_jsb_lct(LAND_TYPE), &
+        & parent=box_tile, &
+        & fract_filename='bc_land_frac.nc', fract_varname='fract_land')
+
+        glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SOIL_/), &
+          & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile, &
+          & fract_filename='bc_land_frac.nc', fract_varname='fract_glac')
+
+        veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SOIL_, VEG_, PHENO_/), &
+          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          & fract_filename='bc_land_frac.nc', fract_varname='landnoglacier')
+
+    NULLIFY(box_tile)
+
+  END SUBROUTINE init_usecase_lite_nolake
 
   SUBROUTINE init_usecase_lite_with_hd(model)
 
@@ -178,44 +215,6 @@ CONTAINS
     CALL init_usecase_lite(model)
 
   END SUBROUTINE init_usecase_lite_tpe_closed
-
-  SUBROUTINE init_usecase_lite_with_lake(model)
-
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-
-    CLASS(t_jsb_tile),  POINTER :: box_tile, lake_tile, land_tile
-    TYPE(t_jsb_grid),   POINTER :: grid
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_usecase_lite_with_lake'
-
-    grid => Get_grid(model%grid_id)
-
-    ! Create root of the tile structure representing the whole grid box
-    box_tile => t_jsb_tile('box', 'Top tile',            &
-      & processes      =(/ATM2LAND_, LAND2ATM_, RAD_,       HYDRO_,     TURB_,      HD_      /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_TILE_/), &
-      & model_id=model%id, grid_id=model%grid_id)
-    model%top => box_tile
-
-    land_tile => t_jsb_tile('land', 'Land tile', &
-        & processes      =(/SEB_,      SOIL_,      VEG_/), &
-        & process_actions=(/ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
-        ! & lcts=(/t_jsb_lct(LAND_TYPE),t_jsb_lct(BARE_TYPE),t_jsb_lct(VEG_TYPE),t_jsb_lct(GLACIER_TYPE)/), &
-        & lct=t_jsb_lct(LAND_TYPE), &
-        & parent=box_tile)
-
-      lake_tile => t_jsb_tile('lake', 'Lake tile', &
-        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-        & lct=t_jsb_lct(LAKE_TYPE), &
-        & parent=box_tile)
-
-    CALL box_tile%Print()
-      CALL land_tile%Print()
-      CALL lake_tile%Print()
-
-    NULLIFY(box_tile)
-
-  END SUBROUTINE init_usecase_lite_with_lake
 
   SUBROUTINE init_usecase_tiles(model)
 
