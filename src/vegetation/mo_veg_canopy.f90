@@ -531,16 +531,17 @@ CONTAINS
     fn_et_cl = plant%fnl_et_cl(:)
     fn_rub_cl = plant%fnl_rub_cl(:)
     fn_pepc_cl = plant%fnl_pepc_cl(:)
-    par_sunlit_mavg_cl = plant%moving_average%par_sunlit_cl
-    par_shaded_mavg_cl = plant%moving_average%par_shaded_cl
-    fleaf_sunlit_mavg_cl = plant%moving_average%fleaf_sunlit_cl
+    par_sunlit_mavg_cl = plant%par_sunlit_mavg_cl
+    par_shaded_mavg_cl = plant%par_shaded_mavg_cl
+    fleaf_sunlit_mavg_cl = plant%fleaf_sunlit_mavg_cl
  
- !@todo: calc_npp_increment: I think this is wrong currently, as increaseing leaf area require an
- ! increase in roots and sapwood mass and thus respiration... Also, should be based on current mass
- ! ratios, not a fixed constant. ie
- ! f_increment = f_alloc_leaf/f_alloc_root+sapwood
- ! maint_resp = maint_resp * (1 + f_alloc_root+sapwood*1/totalmassofpools)
- ! probably only relevant for BNF and uptake calculation?
+ !> @todo: mo_veg_canopy calc_npp_increment: I think this is wrong currently, as increaseing leaf area require an
+ !! increase in roots and sapwood mass and thus respiration... Also, should be based on current mass
+ !! ratios, not a fixed constant. ie
+ !! f_increment = f_alloc_leaf/f_alloc_root+sapwood
+ !! maint_resp = maint_resp * (1 + f_alloc_root+sapwood*1/totalmassofpools)
+ !! probably only relevant for BNF and uptake calculation?
+
     !> 2.0 Estimate effect of a small increase in leaf C on LAI and leaf N
     !!
     ! increase LAI by small increment
@@ -571,14 +572,14 @@ CONTAINS
     DO icanop = 1,ncanop
        IF(lai_cl(icanop).GT.eps8)THEN   
             
-          CALL calc_photosynthesis(plant%moving_average%t_air,plant%moving_average%press_srf,& 
-                    plant%moving_average%co2_mixing_ratio,plant%moving_average%ga, & 
+          CALL calc_photosynthesis(plant%t_air_mavg,plant%press_srf_mavg,& 
+                    plant%co2_mixing_ratio_mavg,plant%ga_mavg, & 
                     plant%par_sunlit_cl(icanop), plant%par_shaded_cl(icanop),& 
                     plant%fleaf_sunlit_cl(icanop), &
                     plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
                     fn_chl_cl(icanop),fn_et_cl(icanop),fn_rub_cl(icanop),fn_pepc_cl(icanop), nl_tot_cl(icanop),& 
                     lctlib%ps_pathway, &
-                    plant%moving_average%t_jmax_opt, &                  
+                    plant%t_jmax_opt_mavg, &                  
                     lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
                     ag_cl,hlp1,r_cl,hlp1,hlp1,&
                     hlp1,hlp1,hlp1)
@@ -628,9 +629,9 @@ CONTAINS
     fn_chl_cl = plant%fnl_chl_cl(:)
     fn_et_cl = plant%fnl_et_cl(:)
     fn_rub_cl = plant%fnl_rub_cl(:)
-    par_sunlit_mavg_cl = plant%moving_average%par_sunlit_cl
-    par_shaded_mavg_cl = plant%moving_average%par_shaded_cl
-    fleaf_sunlit_mavg_cl = plant%moving_average%fleaf_sunlit_cl
+    par_sunlit_mavg_cl = plant%par_sunlit_mavg_cl
+    par_shaded_mavg_cl = plant%par_shaded_mavg_cl
+    fleaf_sunlit_mavg_cl = plant%fleaf_sunlit_mavg_cl
 
     ! Calculate photosynthesis with lower, current and higher leaf N to determine optimal canopy N
     npp_direction(:) = 0.0_wp
@@ -661,22 +662,22 @@ CONTAINS
        DO icanop =1, ncanop
           IF(lai_cl(icanop) > eps8)THEN
 
-             CALL calc_photosynthesis(plant%moving_average%t_air,& 
-                       plant%moving_average%press_srf,plant%moving_average%co2_mixing_ratio,&
-                       plant%moving_average%ga, & 
-                       plant%moving_average%par_sunlit_cl(icanop),&
-                       plant%moving_average%par_shaded_cl(icanop),& 
-                       plant%moving_average%fleaf_sunlit_cl(icanop), &
-                       plant%moving_average%beta_air,&
-                       plant%moving_average%beta_soil_ps,&
-                       plant%moving_average%beta_soil_gs, &
+             CALL calc_photosynthesis(plant%t_air_mavg,& 
+                       plant%press_srf_mavg,plant%co2_mixing_ratio_mavg,&
+                       plant%ga_mavg, & 
+                       plant%par_sunlit_mavg_cl(icanop),&
+                       plant%par_shaded_mavg_cl(icanop),& 
+                       plant%fleaf_sunlit_mavg_cl(icanop), &
+                       plant%beta_air_mavg,&
+                       plant%beta_soil_ps_mavg,&
+                       plant%beta_soil_gs_mavg, &
                        fn_chl_cl(icanop),&
                        fn_et_cl(icanop),& 
                        fn_rub_cl(icanop),&
                        fn_pepc_cl(icanop),&
                        n_tot_cl(icanop),&
                        lctlib%ps_pathway, & 
-                       plant%moving_average%t_jmax_opt, &                  
+                       plant%t_jmax_opt_mavg, &                  
                        lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
                        hlp1,anl(dd),hlp1,hlp1,hlp1,&
                        hlp1,hlp1,hlp1)
@@ -703,8 +704,8 @@ CONTAINS
             (1.0_wp + direction * delta_n_leaf/wood2leaf_cn * dt/one_day)
 
        ! Calculate whole plant respiration
-       maint_respiration(dd) = calc_maintenance_respiration(plant%moving_average%t_air,&
-             plant%moving_average%t_air,sap_wood_nitrogen,&
+       maint_respiration(dd) = calc_maintenance_respiration(plant%t_air_mavg,&
+             plant%t_air_mavg,sap_wood_nitrogen,&
              fine_root_nitrogen, coarse_root_nitrogen) 
 
        ! calculate NPP

@@ -106,7 +106,7 @@ CONTAINS
        !! depends on the carbon balance of lowest canopy layer, i.e. net photosynthesis minus average construction cost
        !! in mol / m2 LAI / year
        !! transformed to a mortality estimate using a Weibull function
-       boc_cbalance = tile%plant%moving_average%boc_an * one_day * one_year / 1.e6 & 
+       boc_cbalance = tile%plant%boc_an_mavg * one_day * one_year / 1.e6 & 
                     - ( 1._wp + fresp_growth ) * lctlib%tau_leaf/lctlib%sla
        IF(boc_cbalance < -eps4 )THEN
           mortality_rate = mortality_rate & 
@@ -126,7 +126,7 @@ CONTAINS
    
        !> 3.2 temperature and soil moisture limitation 
        !! OBS: should be top soil moisture!
-       flim_temp = 1._wp-exp(-(lambda_est_temp * (tile%plant%moving_average%t_air_week - Tzero))**k_est_temp)
+       flim_temp = 1._wp-exp(-(lambda_est_temp * (tile%plant%t_air_week_mavg - Tzero))**k_est_temp)
        flim_moist = 1.0_wp - exp(-(lambda_est_moist * tile%soil%theta)**k_est_moist) 
    
        !> 3.3 actual establishment rate and associated matter flux from seed bed to reserve pool

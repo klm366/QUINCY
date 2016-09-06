@@ -19,4 +19,9 @@ comp=gsub(" $","",gsub("^ ","",make[gsub(" $","",make[,1])=="COMP",2]))
 system(paste("../../../",comp,"/bin/land.x",sep=''))
 
 # call postprocessing_canopy.R 
-system("Rscript ./postprocessing_canopy.R")
+postprocessing<-"no"  # no/yes
+if (postprocessing == "yes")
+{
+  system("Rscript ./postprocessing_canopy.R")
+} else print(" => postprocessing_canopy.R is off by default; you can switch it on in contrib/r_script/run_canopy.R")
+

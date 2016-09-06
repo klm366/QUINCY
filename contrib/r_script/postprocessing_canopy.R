@@ -9,6 +9,7 @@ print(" postprocessing SLM output")
 flist = list.files(path= ".",patter="fort*")
 nplot=length(flist)
 
+
 pdf("canopy_plots.pdf", paper="a4", height=10, width=8, pointsize=12, bg="white", family="Helvetica", version="1.6")
 mat=matrix(seq(1,3*nplot,1),nrow=nplot,ncol=3,byrow=T)
 layout(mat)
@@ -20,6 +21,7 @@ for (i in 1:nplot) {
   plot(dat[,1],dat[,4],xlab=colnames(dat)[1],ylab=colnames(dat)[4],type='l')
 }
 garbage <- dev.off()  # run dev.off() but suppress the notification it usually provides
+
 
 # message
 print(" finished postprocessing SLM output !")

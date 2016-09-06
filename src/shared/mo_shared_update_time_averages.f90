@@ -123,11 +123,11 @@ CONTAINS
       veg%daytime_counter = veg%daytime_counter + 1.0_wp
       ! 1.2 add values and count number of values
       DO i=1,ncanop
-        veg%daily_average%curr_val_par_sunlit_cl(i) = veg%daily_average%curr_val_par_sunlit_cl(i)     + veg%par_sunlit_cl(i)
-        veg%daily_average%curr_val_par_shaded_cl(i) = veg%daily_average%curr_val_par_shaded_cl(i)     + veg%par_shaded_cl(i)
-        veg%daily_average%curr_val_fleaf_sunlit_cl(i) = veg%daily_average%curr_val_fleaf_sunlit_cl(i) + veg%fleaf_sunlit_cl(i)
+        veg%par_sunlit_daytime_dacc_cl(i)   = veg%par_sunlit_daytime_dacc_cl(i)     + veg%par_sunlit_cl(i)
+        veg%par_shaded_daytime_dacc_cl(i)   = veg%par_shaded_daytime_dacc_cl(i)     + veg%par_shaded_cl(i)
+        veg%fleaf_sunlit_daytime_dacc_cl(i) = veg%fleaf_sunlit_daytime_dacc_cl(i)   + veg%fleaf_sunlit_cl(i)
       END DO
-      veg%daily_average%curr_val_t_jmax_opt         = veg%daily_average%curr_val_t_jmax_opt           + veg%t_jmax_opt
+      veg%t_jmax_opt_daytime_dacc           = veg%t_jmax_opt_daytime_dacc           + veg%t_jmax_opt
     END IF
 
 
@@ -139,30 +139,30 @@ CONTAINS
       ! calculate the average of the current day and pass it to the according avg_prev_* variable; 
       IF(veg%daytime_counter > eps8) THEN
         DO i=1,ncanop
-          veg%daily_average%par_sunlit_cl(i)    = veg%daily_average%curr_val_par_sunlit_cl(i)   / veg%daytime_counter
-          veg%daily_average%par_shaded_cl(i)    = veg%daily_average%curr_val_par_shaded_cl(i)   / veg%daytime_counter
-          veg%daily_average%fleaf_sunlit_cl(i)  = veg%daily_average%curr_val_fleaf_sunlit_cl(i) / veg%daytime_counter
+          veg%par_sunlit_daytime_cl(i)    = veg%par_sunlit_daytime_dacc_cl(i)   / veg%daytime_counter
+          veg%par_shaded_daytime_cl(i)    = veg%par_shaded_daytime_dacc_cl(i)   / veg%daytime_counter
+          veg%fleaf_sunlit_daytime_cl(i)  = veg%fleaf_sunlit_daytime_dacc_cl(i) / veg%daytime_counter
         END DO
-        veg%daily_average%t_jmax_opt            = veg%daily_average%curr_val_t_jmax_opt         / veg%daytime_counter
+        veg%t_jmax_opt_daytime            = veg%t_jmax_opt_daytime_dacc         / veg%daytime_counter
       ELSE  ! if veg%daytime_counter is zero
-        veg%daily_average%par_sunlit_cl(:)    = 0.0_wp
-        veg%daily_average%par_shaded_cl(:)    = 0.0_wp
-        veg%daily_average%fleaf_sunlit_cl(:)  = 0.0_wp
-        veg%daily_average%t_jmax_opt          = 0.0_wp
+        veg%par_sunlit_daytime_cl(:)    = 0.0_wp
+        veg%par_shaded_daytime_cl(:)    = 0.0_wp
+        veg%fleaf_sunlit_daytime_cl(:)  = 0.0_wp
+        veg%t_jmax_opt_daytime          = 0.0_wp
       END IF
 
 !      write(999,*) time_day, veg%daytime_counter, &   ! might be used for testing
-!                  veg%daily_average%par_sunlit_cl(1), &
-!                  veg%daily_average%par_shaded_cl(1), &
-!                  veg%daily_average%fleaf_sunlit_cl(1), &
-!                  veg%daily_average%t_jmax_opt, ' |-| '
+!                  veg%par_sunlit_daytime_cl(1), &
+!                  veg%par_shaded_daytime_cl(1), &
+!                  veg%fleaf_sunlit_daytime_cl(1), &
+!                  veg%t_jmax_opt_daytime, ' |-| '
 
       ! set all values of the current day to zero
-      veg%daily_average%curr_val_par_sunlit_cl(:)      = 0.0_wp
-      veg%daily_average%curr_val_par_shaded_cl(:)      = 0.0_wp
-      veg%daily_average%curr_val_fleaf_sunlit_cl(:)    = 0.0_wp
-      veg%daily_average%curr_val_t_jmax_opt            = 0.0_wp
-      veg%daytime_counter                              = 0.0_wp
+      veg%par_sunlit_daytime_dacc_cl(:)      = 0.0_wp
+      veg%par_shaded_daytime_dacc_cl(:)      = 0.0_wp
+      veg%fleaf_sunlit_daytime_dacc_cl(:)    = 0.0_wp
+      veg%t_jmax_opt_daytime_dacc            = 0.0_wp
+      veg%daytime_counter                    = 0.0_wp
     END IF
 
   END SUBROUTINE calc_daytime_averages
@@ -243,48 +243,43 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_moving_averages(veg, t_air, q_air, press_srf, co2_mixing_ratio, ga)
 
-    USE mo_veg_memory,          ONLY: t_slm_plant, t_moving_average
+    USE mo_shared_constants     ! moving average period lengths are defined there as REAL(wp),PARAMETER :: mavg_period_...
+    USE mo_veg_memory,          ONLY: t_slm_plant
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_plant), INTENT(inout), TARGET  :: veg    ! @slmtemp - remove TARGET and mvarg pointer later
+    TYPE(t_slm_plant), INTENT(inout)    :: veg
     REAL(wp), INTENT(in)                :: t_air
     REAL(wp), INTENT(in)                :: q_air
     REAL(wp), INTENT(in)                :: press_srf
     REAL(wp), INTENT(in)                :: co2_mixing_ratio
     REAL(wp), INTENT(in)                :: ga
     ! 0.2 Local
-    TYPE(t_moving_average), POINTER           :: mavg  ! @slmtemp
-    REAl(wp)                                  :: hlp
-
-
-
-    ! bi-directional pointer  @slmtemp
-    mavg => veg%moving_average
+    REAl(wp)                            :: hlp
 
 
     ! moving_avg(current average, new value, length of avg_period, do_calc=.FALSE., avg_period_unit='day')
     !           returns: new current average
 
-    mavg%par_sunlit_cl(:)       = calc_mavg(mavg%par_sunlit_cl(:), veg%daily_average%par_sunlit_cl(:), mavg%p_optNfrac)
-    mavg%par_shaded_cl(:)       = calc_mavg(mavg%par_shaded_cl(:), veg%daily_average%par_shaded_cl(:), mavg%p_optNfrac)
+    veg%par_sunlit_mavg_cl(:)       = calc_mavg(veg%par_sunlit_mavg_cl(:), veg%par_sunlit_daytime_cl(:), mavg_period_opt_Nfrac)
+    veg%par_shaded_mavg_cl(:)       = calc_mavg(veg%par_shaded_mavg_cl(:), veg%par_shaded_daytime_cl(:), mavg_period_opt_Nfrac)
 
-    mavg%fleaf_sunlit_cl(:)     = calc_mavg(mavg%fleaf_sunlit_cl(:), veg%daily_average%fleaf_sunlit_cl(:), mavg%p_optNfrac)
-    mavg%beta_soil_gs           = calc_mavg(mavg%beta_soil_gs, veg%beta_soil_gs, mavg%p_optNfrac)
-    mavg%beta_soil_ps           = calc_mavg(mavg%beta_soil_ps, veg%beta_soil_ps, mavg%p_optNfrac)
-    mavg%beta_air               = calc_mavg(mavg%beta_air, veg%beta_air, mavg%p_optNfrac)
+    veg%fleaf_sunlit_mavg_cl(:)     = calc_mavg(veg%fleaf_sunlit_mavg_cl(:), veg%fleaf_sunlit_daytime_cl(:), mavg_period_opt_Nfrac)
+    veg%beta_soil_gs_mavg           = calc_mavg(veg%beta_soil_gs_mavg, veg%beta_soil_gs, mavg_period_opt_Nfrac)
+    veg%beta_soil_ps_mavg           = calc_mavg(veg%beta_soil_ps_mavg, veg%beta_soil_ps, mavg_period_opt_Nfrac)
+    veg%beta_air_mavg               = calc_mavg(veg%beta_air_mavg, veg%beta_air, mavg_period_opt_Nfrac)
 
-    mavg%t_jmax_opt             = calc_mavg(mavg%t_jmax_opt, veg%daily_average%t_jmax_opt, mavg%p_weekly)
-    mavg%gpp_week               = calc_mavg(mavg%gpp_week, veg%flux%gpp, mavg%p_weekly)
-    mavg%maint_respiration_week = calc_mavg(mavg%maint_respiration_week, veg%flux%maint_respiration_pot, mavg%p_weekly)
+    veg%t_jmax_opt_mavg             = calc_mavg(veg%t_jmax_opt_mavg, veg%t_jmax_opt_daytime, mavg_period_weekly)
+    veg%gpp_mavg                    = calc_mavg(veg%gpp_mavg, veg%flux%gpp, mavg_period_weekly)
+    veg%maint_respiration_mavg      = calc_mavg(veg%maint_respiration_mavg, veg%flux%maint_respiration_pot, mavg_period_weekly)
 
-    mavg%growth_req_n_week      = calc_mavg(mavg%growth_req_n_week, veg%growth_req_n, mavg%p_weekly, &
+    veg%growth_req_n_mavg           = calc_mavg(veg%growth_req_n_mavg, veg%growth_req_n, mavg_period_weekly, &
                                             do_calc=(veg%growth_req_n > eps8))
-    mavg%growth_req_p_week      = calc_mavg(mavg%growth_req_p_week, veg%growth_req_p, mavg%p_weekly, &
+    veg%growth_req_p_mavg           = calc_mavg(veg%growth_req_p_mavg, veg%growth_req_p, mavg_period_weekly, &
                                             do_calc=(veg%growth_req_p > eps8))
-    mavg%boc_an                 = calc_mavg(mavg%boc_an, veg%boc_an, mavg%p_boc_an, &
+    veg%boc_an_mavg                 = calc_mavg(veg%boc_an_mavg, veg%boc_an, mavg_period_boc_an, &
                                             do_calc=(veg%pool%leaf%carbon > eps8))
-    mavg%unit_npp               = calc_mavg(mavg%unit_npp, veg%flux%unit_npp, mavg%p_opt_alloc, & 
+    veg%unit_npp_mavg               = calc_mavg(veg%unit_npp_mavg, veg%flux%unit_npp, mavg_period_opt_alloc, & 
                                             do_calc=veg%growing_season)
 
     IF (veg%growth_req_n > 0._wp)THEN
@@ -292,47 +287,48 @@ CONTAINS
     ELSE
        hlp=0._wp
     ENDIF
-    mavg%growth_cn_plant  = calc_mavg(mavg%growth_cn_plant, hlp, mavg%p_opt_alloc, do_calc=veg%growing_season)
+    veg%growth_cn_plant_mavg  = calc_mavg(veg%growth_cn_plant_mavg, hlp, mavg_period_opt_alloc, do_calc=veg%growing_season)
     
     IF (veg%growth_req_n > 0._wp .AND. veg%growth_req_p > 0._wp)THEN
        hlp = 1._wp/(veg%growth_req_n * veg%growth_req_p)
     ELSE
        hlp=0._wp
     ENDIF
-    mavg%growth_cp_plant  = calc_mavg(mavg%growth_cp_plant, hlp, mavg%p_opt_alloc, do_calc=veg%growing_season)
+    veg%growth_cp_plant_mavg  = calc_mavg(veg%growth_cp_plant_mavg, hlp, mavg_period_opt_alloc, do_calc=veg%growing_season)
 
-    mavg%allometry_npp                = calc_mavg(mavg%allometry_npp, veg%flux%npp, mavg%p_opt_alloc, &
+    veg%allometry_npp_mavg                = calc_mavg(veg%allometry_npp_mavg, veg%flux%npp, mavg_period_opt_alloc, &
                                                   do_calc=veg%growing_season)
-    mavg%allometry_labile%nitrogen    = calc_mavg(mavg%allometry_labile%nitrogen, veg%pool%labile%nitrogen, mavg%p_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    mavg%allometry_labile%phosphorus  = calc_mavg(mavg%allometry_labile%phosphorus, veg%pool%labile%phosphorus, mavg%p_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    mavg%allometry_labile%carbon      = calc_mavg(mavg%allometry_labile%carbon, veg%pool%labile%carbon, mavg%p_opt_alloc, &
-                                                  do_calc=veg%growing_season)
+    veg%allometry_labile_mavg%nitrogen    = calc_mavg(veg%allometry_labile_mavg%nitrogen, veg%pool%labile%nitrogen, & 
+                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
+    veg%allometry_labile_mavg%phosphorus  = calc_mavg(veg%allometry_labile_mavg%phosphorus, veg%pool%labile%phosphorus, & 
+                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
+    veg%allometry_labile_mavg%carbon      = calc_mavg(veg%allometry_labile_mavg%carbon, veg%pool%labile%carbon, & 
+                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
  
-    mavg%demand_uptake_n              = calc_mavg(mavg%demand_uptake_n, veg%f_n_demand, mavg%p_demand_uptake_n, &
+    veg%demand_uptake_n_mavg              = calc_mavg(veg%demand_uptake_n_mavg, veg%f_n_demand, mavg_period_demand_uptake_n, &
                                                   do_calc=(veg%pool%fine_root%carbon > eps8))
-    mavg%demand_uptake_p              = calc_mavg(mavg%demand_uptake_p, veg%f_p_demand, mavg%p_demand_uptake_p, &
+    veg%demand_uptake_p_mavg              = calc_mavg(veg%demand_uptake_p_mavg, veg%f_p_demand, mavg_period_demand_uptake_p, &
                                                   do_calc=(veg%pool%fine_root%carbon > eps8))
-    mavg%unit_uptake_n                = calc_mavg(mavg%unit_uptake_n, veg%flux%unit_uptake_n, mavg%p_opt_alloc, &
+    veg%unit_uptake_n_mavg                = calc_mavg(veg%unit_uptake_n_mavg, veg%flux%unit_uptake_n, mavg_period_opt_alloc, &
                                                   do_calc=veg%growing_season)
-    mavg%unit_uptake_p                = calc_mavg(mavg%unit_uptake_p, veg%flux%unit_uptake_p, mavg%p_opt_alloc, &
+    veg%unit_uptake_p_mavg                = calc_mavg(veg%unit_uptake_p_mavg, veg%flux%unit_uptake_p, mavg_period_opt_alloc, &
                                                   do_calc=veg%growing_season)
 
-    mavg%leaf2root_mass_ratio         = calc_mavg(mavg%leaf2root_mass_ratio, veg%pool%leaf%carbon/veg%pool%fine_root%carbon, &
-                                                  mavg%p_yearly, do_calc=(veg%pool%leaf%carbon > eps8))
+    veg%leaf2root_mass_ratio_mavg         = calc_mavg(veg%leaf2root_mass_ratio_mavg, &
+                                                  veg%pool%leaf%carbon/veg%pool%fine_root%carbon, &
+                                                  mavg_period_yearly, do_calc=(veg%pool%leaf%carbon > eps8))
 
 
 
-    mavg%t_air            = calc_mavg(mavg%t_air,             t_air,            mavg%p_optNfrac)
-    mavg%ga               = calc_mavg(mavg%ga,                ga,               mavg%p_optNfrac)
-    mavg%co2_mixing_ratio = calc_mavg(mavg%co2_mixing_ratio,  co2_mixing_ratio, mavg%p_optNfrac)
-    mavg%press_srf        = calc_mavg(mavg%press_srf,         press_srf,        mavg%p_optNfrac)
-    mavg%q_air            = calc_mavg(mavg%q_air,             q_air,            mavg%p_optNfrac)
+    veg%t_air_mavg            = calc_mavg(veg%t_air_mavg,             t_air,            mavg_period_opt_Nfrac)
+    veg%ga_mavg               = calc_mavg(veg%ga_mavg,                ga,               mavg_period_opt_Nfrac)
+    veg%co2_mixing_ratio_mavg = calc_mavg(veg%co2_mixing_ratio_mavg,  co2_mixing_ratio, mavg_period_opt_Nfrac)
+    veg%press_srf_mavg        = calc_mavg(veg%press_srf_mavg,         press_srf,        mavg_period_opt_Nfrac)
+    veg%q_air_mavg            = calc_mavg(veg%q_air_mavg,             q_air,            mavg_period_opt_Nfrac)
 
-    mavg%t_air_week       = calc_mavg(mavg%t_air_week,        t_air, mavg%p_weekly)
-    mavg%t_air_month      = calc_mavg(mavg%t_air_month,       t_air, mavg%p_monthly)
-    mavg%t_air_longterm   = calc_mavg(mavg%t_air_longterm,    t_air, mavg%p_longterm)
+    veg%t_air_week_mavg       = calc_mavg(veg%t_air_week_mavg,        t_air, mavg_period_weekly)
+    veg%t_air_month_mavg      = calc_mavg(veg%t_air_month_mavg,       t_air, mavg_period_monthly)
+    veg%t_air_longterm_mavg   = calc_mavg(veg%t_air_longterm_mavg,    t_air, mavg_period_longterm)
 
   END SUBROUTINE calc_moving_averages
 

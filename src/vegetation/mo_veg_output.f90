@@ -491,9 +491,9 @@ CONTAINS
        lun=lun+1
        write(lun,'(17F20.6)') time_d, plant%height, plant%diameter, plant%lai, plant%dens_ind, &
          hlp1,l2r,s2c, bcf, &
-         plant%target_cn_leaf, plant%moving_average%unit_npp, plant%moving_average%unit_uptake_n,&
-         plant%moving_average%growth_cn_plant, plant%moving_average%allometry_npp, &
-         growing_season_float, plant%moving_average%beta_soil_gs
+         plant%target_cn_leaf, plant%unit_npp_mavg, plant%unit_uptake_n_mavg,&
+         plant%growth_cn_plant_mavg, plant%allometry_npp_mavg, &
+         growing_season_float, plant%beta_soil_gs_mavg
       END IF
     END IF
     END IF  ! on/off switch specific to 'special case: fluxnet output'

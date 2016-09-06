@@ -43,6 +43,26 @@ MODULE mo_shared_constants
     scale_correction_c14        !< conversion from mol to pico-mol for C14 (for numerical precision) 
 
 
+  !!----------------------------------------------------------------------------------------------------
+  !! needed in mo_shared_update_time_averages
+  !! moving average period lengths (you can add new parameters here)
+  !! the period may be defined in days per default (but different units are possible, see calc_mavg() below)
+    REAL(wp),PARAMETER :: mavg_period_weekly            = 7.0_wp        !< 7 days; constant across the model
+    REAL(wp),PARAMETER :: mavg_period_monthly           = 30.0_wp       !< 30 days; constant across the model
+    REAL(wp),PARAMETER :: mavg_period_yearly            = 365.0_wp      !< 365 days
+    REAL(wp),PARAMETER :: mavg_period_longterm          = 10950.0_wp    !< 10950 days (30 years); constant across the model
+    REAL(wp),PARAMETER :: mavg_period_tau_veg_dynamics  = 90.0_wp       !< about three months
+    REAL(wp),PARAMETER :: mavg_period_demand_uptake_n   = 3.0_wp        !< three days
+    REAL(wp),PARAMETER :: mavg_period_demand_uptake_p   = 3.0_wp        !< three days
+    REAL(wp),PARAMETER :: mavg_period_boc_an            = 90.0_wp       !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
+    REAL(wp),PARAMETER :: mavg_period_opt_Nfrac         = 10.0_wp       !< interval for optimal N fractions
+    REAL(wp),PARAMETER :: mavg_period_opt_alloc         = 20.0_wp       !< interval for optimal biomass allocation
+!    REAL(wp),PARAMETER :: mavg_period_xxx         = xxx.0_wp       !< xxx
+!    REAL(wp),PARAMETER :: mavg_period_xxx         = xxx.0_wp       !< xxx
+!    REAL(wp),PARAMETER :: mavg_period_xxx         = xxx.0_wp       !< xxx
+  !!----------------------------------------------------------------------------------------------------
+
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------

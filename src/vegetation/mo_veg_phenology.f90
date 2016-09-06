@@ -72,14 +72,14 @@ CONTAINS
        SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is above specified threshold
-            IF(plant%moving_average%beta_soil_gs > beta_soil_flush_tree) plant%growing_season = .TRUE.
+            IF(plant%beta_soil_gs_mavg > beta_soil_flush_tree) plant%growing_season = .TRUE.
          CASE (isummergreen)     ! if GDD requirement is exceeded. The latter depends on the length of the 
                                  ! dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
             hlp1 = gdd_req_max / exp ( k_gdd_dormance * plant%nd_dormance ) 
             IF(plant%gdd > hlp1 ) plant%growing_season = .TRUE.
          CASE (iperennial)       ! if temperature and soil moisture are not limiting growth
-            IF(plant%moving_average%t_air_week > gdd_t_air_threshold .AND. &
-               plant%moving_average%beta_soil_gs > beta_soil_flush_grass) plant%growing_season = .TRUE.
+            IF(plant%t_air_week_mavg > gdd_t_air_threshold .AND. &
+               plant%beta_soil_gs_mavg > beta_soil_flush_grass) plant%growing_season = .TRUE.
          CASE DEFAULT            ! abord if here
             WRITE(message_text,'(a,i4)') 'invalid phenology type ',lctlib%phenology_type
             CALL finish("mo_veg_phenology:update_phenology",message_text) 
@@ -88,17 +88,17 @@ CONTAINS
        SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is below given threshold AND leaves have been out a given number of days
-            IF(plant%moving_average%beta_soil_gs < beta_soil_senescence_tree .AND. plant%mean_leaf_age > min_leaf_age ) & 
+            IF(plant%beta_soil_gs_mavg < beta_soil_senescence_tree .AND. plant%mean_leaf_age > min_leaf_age ) & 
                plant%growing_season = .FALSE.
          CASE (isummergreen)     ! if temperature are declining below a certain threshold AND 
                                  ! leaves have been out a given number of days
-            IF(plant%moving_average%t_air_week < plant%moving_average%t_air_month .AND. &
-                                plant%moving_average%t_air_week < t_air_senescence .AND. & 
+            IF(plant%t_air_week_mavg < plant%t_air_month_mavg .AND. &
+                                plant%t_air_week_mavg < t_air_senescence .AND. & 
                                 plant%mean_leaf_age > min_leaf_age) plant%growing_season = .FALSE.
          CASE (iperennial)       ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND 
                                  ! leaves have been out a given number of days
-            IF((plant%moving_average%t_air_week < Tzero .OR. plant%moving_average%beta_soil_gs < eps4 .OR. &
-                plant%moving_average%gpp_week < plant%moving_average%maint_respiration_week).AND. &
+            IF((plant%t_air_week_mavg < Tzero .OR. plant%beta_soil_gs_mavg < eps4 .OR. &
+                plant%gpp_mavg < plant%maint_respiration_mavg).AND. &
                 plant%mean_leaf_age > min_leaf_age) &
                 plant%growing_season = .FALSE.
          CASE DEFAULT            ! abord if here
@@ -112,7 +112,7 @@ CONTAINS
     IF(t_air > gdd_t_air_threshold) THEN
        plant%gdd = plant%gdd + ((t_air - gdd_t_air_threshold) * dt/one_day)
     ENDIF
-    IF(plant%moving_average%t_air_week < Tzero) plant%gdd = 0.0_wp
+    IF(plant%t_air_week_mavg < Tzero) plant%gdd = 0.0_wp
 
     !> 2.2 nd_dormance counter
     !! 

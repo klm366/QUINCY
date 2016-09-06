@@ -202,7 +202,7 @@ CONTAINS
     !! 7 Plant init
     !! 
     !! 
-    CALL tile%plant%init                  ! mo_veg_memory  ==> may move to veg init (or model init ?)
+    CALL tile%plant%init                  ! mo_veg_memory  ! includes daytime_avg & moving_avg init
     CALL tile%plant%flux%set_zero         ! mo_veg_memory  ==> may move to veg init (or model init ?)
     model%lctlib => init_lctlib()         ! initialize the lctlib with parameters values across PFT's
 
@@ -305,10 +305,6 @@ CONTAINS
     !  bi-directional pointer
     lctlib => model%lctlib(tile%lcts%lib_id)
 
-    ! accumulation
-    CALL tile%plant%daily_average%init      !< initially sets all variables to zero or .FALSE.
-    CALL tile%plant%moving_average%init     !< init variables with reasonable default values and sets accumulation periods
-
 
       tile%soil%moisture                 = veg_config%soil_awc_prescribe
       tile%soil%theta                    = veg_config%soil_theta_prescribe 
@@ -381,10 +377,6 @@ CONTAINS
 
     ref_lai   = 6._wp
     ref_nleaf = 2.0_wp
-
-    ! accumulation
-    CALL tile%plant%daily_average%init      !< initially sets all variables to zero or .FALSE.
-    CALL tile%plant%moving_average%init     !< init variables with reasonable default values and sets accumulation periods
 
     !! 1.3 Initialise tile
     !! 

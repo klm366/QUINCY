@@ -10,6 +10,7 @@ mo_veg_interface.o: \
 mo_veg_memory.o: \
   mo_kind.o \
   mo_base_constants.o \
+  mo_atmland_constants.o \
   mo_shared_memory.o
 
 mo_assimi_memory_class.o: \

@@ -518,7 +518,7 @@ CONTAINS
                           fn_chl_cl = tile%plant%fnl_chl_cl, &
                           fn_oth_cl = tile%plant%fnl_oth_cl, &
                           inquire_n_fractions=.TRUE.)
-    tile%plant%moving_average%t_jmax_opt = 20._wp+0.35_wp*(t_air - Tzero)
+    tile%plant%t_jmax_opt_mavg = 20._wp+0.35_wp*(t_air - Tzero)
   !> 2.0 Sensitivity plots
   !!
   !!  
@@ -567,12 +567,12 @@ CONTAINS
   lun = lun + 1
   WRITE(lun,*) 'T A GC CI' 
   t_air = - 5.0_wp + Tzero
-  hlp1 = tile%plant%moving_average%t_jmax_opt
+  hlp1 = tile%plant%t_jmax_opt_mavg
   DO i = 1,70
 
      t_air = t_air + 1.0_wp 
      q_air = 0.8_wp * calc_spec_humidity_sat(t_air,press_srf)
-     tile%plant%moving_average%t_jmax_opt = 20._wp+0.35_wp*(t_air - Tzero)
+     tile%plant%t_jmax_opt_mavg = 20._wp+0.35_wp*(t_air - Tzero)
      CALL update_atm2land(tile, &
            t_air = t_air, &
            q_air = q_air)
@@ -592,7 +592,7 @@ CONTAINS
   CALL update_atm2land(tile, &
         t_air = t_air, &
         q_air = q_air)
-  tile%plant%moving_average%t_jmax_opt = hlp1 
+  tile%plant%t_jmax_opt_mavg = hlp1 
 
   !> 2.3 atmospheric CO2 (175 - 1000 ppm) 
   !! 

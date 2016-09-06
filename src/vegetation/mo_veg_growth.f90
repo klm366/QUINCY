@@ -92,27 +92,27 @@ CONTAINS
     
     !> 3.2 calculate allometry    
     !!
-    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind,plant%moving_average%allometry_labile%carbon,&
-         plant%moving_average%allometry_labile%nitrogen, plant%moving_average%allometry_labile%phosphorus,&
+    CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind,plant%allometry_labile_mavg%carbon,&
+         plant%allometry_labile_mavg%nitrogen, plant%allometry_labile_mavg%phosphorus,&
          lctlib%wood_density, lctlib%sla,lctlib%allom_k1,lctlib%allom_k2, & 
          lctlib%k_latosa,lctlib%k_rtos,lctlib%growthform, & 
-         plant%moving_average%growth_cn_plant,plant%moving_average%growth_cp_plant, plant%moving_average%unit_npp,&
-         plant%moving_average%unit_uptake_n,plant%moving_average%unit_uptake_p, &
-         plant%moving_average%allometry_npp,tau_labile_pot,diameter,height,dheight,leaf2sapwood_mass_ratio, & 
+         plant%growth_cn_plant_mavg,plant%growth_cp_plant_mavg, plant%unit_npp_mavg,&
+         plant%unit_uptake_n_mavg,plant%unit_uptake_p_mavg, &
+         plant%allometry_npp_mavg,tau_labile_pot,diameter,height,dheight,leaf2sapwood_mass_ratio, & 
          leaf2root_mass_ratio,target_lai,k1_opt, k2_opt)  
 
     !> 4.0 calculate net flux between reserve and labile pool 
     !! 
     !! 
     plant%flux%reserve_use = calc_reserve_useage(tau_labile_pot,plant%growing_season, &
-                              plant%moving_average%gpp_week, &
-                              plant%moving_average%maint_respiration_week, &
-                              plant%moving_average%growth_req_n_week, &
-                              plant%moving_average%growth_req_p_week, &
+                              plant%gpp_mavg, &
+                              plant%maint_respiration_mavg, &
+                              plant%growth_req_n_mavg, &
+                              plant%growth_req_p_mavg, &
                               lctlib%sla, &
                               lctlib%tau_leaf,lctlib%tau_fine_root, & 
                               plant%target_cn_leaf, target_cn_fine_root, & 
-                              plant%target_np_leaf, target_np_fine_root, plant%moving_average%leaf2root_mass_ratio, &
+                              plant%target_np_leaf, target_np_fine_root, plant%leaf2root_mass_ratio_mavg, &
                               plant%lai,target_lai, &
                               plant%pool%labile,plant%pool%reserve)
     !CALL calc_nutrient_recycling(plant, target_cn_fine_root, target_np_fine_root)

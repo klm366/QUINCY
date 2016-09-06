@@ -13,7 +13,7 @@
 ########################################################################################################
 
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
-experimentalID=""         # set something useful for you (allowed only: alphanumeric '_' '-'); if empty ( experimentalID="" ) current date is used
+experimentalID="trunk_r261pluslocal_fluxnet"      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
 # select sites: FLUXNET or CRUNCEPv5
 siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
@@ -236,7 +236,7 @@ if [ $customSiteList == "yes" ]
 fi
 
 ## validate experimental ID for alphanumeric only ##
-if [ ! -z $(echo $jobName | tr -d "[:alnum:]" | tr -d "_" | tr -d "-") ]  # if "removing alphanum '_' '-' from jobName returns an non-empty string" then exit
+if [ ! -z $(echo $jobName | tr -d "[:alnum:]" | tr -d "_" | tr -d "-") ]  # if removing alphanum _ - from jobName returns an non-empty string" then exit
  then
   echo "EXIT! Please use an experimental ID that is alphanumeric, i.e. without any special characters."
   exit

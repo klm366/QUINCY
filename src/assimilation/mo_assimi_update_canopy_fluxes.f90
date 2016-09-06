@@ -126,7 +126,7 @@ CONTAINS
                                  plant%fnl_pepc_cl(icanop), & 
                                  plant%nl_tot_cl(icanop), & 
                                  lctlib%ps_pathway, &
-                                 plant%moving_average%t_jmax_opt, &
+                                 plant%t_jmax_opt_mavg, &
                                  lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
                                  agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop), &
                                  hlp1,hlp1,hlp1)

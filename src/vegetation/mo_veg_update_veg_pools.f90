@@ -130,9 +130,9 @@ CONTAINS
             plant%pool%labile%nitrogen, plant%pool%labile%phosphorus, lctlib%wood_density, & 
             lctlib%sla,lctlib%allom_k1,lctlib%allom_k2, & 
             lctlib%k_latosa,lctlib%k_rtos,lctlib%growthform, & 
-            plant%moving_average%growth_cn_plant,plant%moving_average%growth_cp_plant,plant%moving_average%unit_npp,&
-            plant%moving_average%unit_uptake_n, &
-            plant%moving_average%unit_uptake_p, plant%moving_average%allometry_npp,hlp1, plant%diameter,plant%height,hlp1,hlp1, &
+            plant%growth_cn_plant_mavg,plant%growth_cp_plant_mavg,plant%unit_npp_mavg,&
+            plant%unit_uptake_n_mavg, &
+            plant%unit_uptake_p_mavg, plant%allometry_npp_mavg,hlp1, plant%diameter,plant%height,hlp1,hlp1, &
             hlp1,hlp1,hlp1, hlp1)  
    
        IF(plant%pool%leaf%carbon .GT. eps8) THEN 
@@ -148,17 +148,17 @@ CONTAINS
     !!
     !!
     CALL calc_canopy_layers(lctlib,plant%pool%leaf%nitrogen,plant%lai, &
-                             plant%moving_average%par_sunlit_cl,&
-                             plant%moving_average%par_shaded_cl, & 
-                             plant%moving_average%fleaf_sunlit_cl,&
-                             plant%moving_average%t_air, &
-                             plant%moving_average%press_srf, &
-                             plant%moving_average%co2_mixing_ratio, &
-                             plant%moving_average%ga, &
-                             plant%moving_average%beta_air, &
-                             plant%moving_average%beta_soil_ps, &
-                             plant%moving_average%beta_soil_gs,& 
-                             plant%moving_average%t_jmax_opt, &
+                             plant%par_sunlit_mavg_cl,&
+                             plant%par_shaded_mavg_cl, & 
+                             plant%fleaf_sunlit_mavg_cl,&
+                             plant%t_air_mavg, &
+                             plant%press_srf_mavg, &
+                             plant%co2_mixing_ratio_mavg, &
+                             plant%ga_mavg, &
+                             plant%beta_air_mavg, &
+                             plant%beta_soil_ps_mavg, &
+                             plant%beta_soil_gs_mavg,& 
+                             plant%t_jmax_opt_mavg, &
                              plant%lai_cl, &
                              plant%cumm_lai_cl, &
                              plant%nl_tot_cl, &

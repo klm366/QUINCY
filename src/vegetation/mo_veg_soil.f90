@@ -68,12 +68,12 @@ CONTAINS
       !!     taken as the weekly growth requirement of the nutrient
       !! 
       IF(clab > eps8) THEN
-         plant%f_n_demand = MAX(plant%moving_average%growth_req_n_week - nlab / clab, 0.0_wp) 
+         plant%f_n_demand = MAX(plant%growth_req_n_mavg - nlab / clab, 0.0_wp) 
       ELSE
          plant%f_n_demand = 1.0_wp
       ENDIF
       IF(nlab > eps8) THEN
-         plant%f_p_demand = MAX(plant%moving_average%growth_req_p_week - plab / nlab, 0.0_wp)
+         plant%f_p_demand = MAX(plant%growth_req_p_mavg - plab / nlab, 0.0_wp)
       ELSE
          plant%f_p_demand = 1.0_wp
       ENDIF
@@ -82,12 +82,12 @@ CONTAINS
       !! 
       !!
       plant%flux%uptake_n = lctlib%vmax_uptake_n * &
-              plant%moving_average%demand_uptake_n * & 
+              plant%demand_uptake_n_mavg * & 
               soil%ammonium * ( lctlib%soil_n_aff1 + & 
                 1._wp / ( lctlib%soil_n_aff2 + soil%ammonium )) * & 
               plant%pool%fine_root%carbon
       plant%flux%uptake_p = lctlib%vmax_uptake_p * & 
-              plant%moving_average%demand_uptake_p * & 
+              plant%demand_uptake_p_mavg * & 
               soil%phosphate * ( lctlib%soil_p_aff1 + & 
                 1._wp / ( lctlib%soil_p_aff2 + soil%phosphate )) * & 
               plant%pool%fine_root%carbon
@@ -108,11 +108,11 @@ CONTAINS
     !> 3.0 Calculate potential N uptake per unit root
     !!
     plant%flux%unit_uptake_n = lctlib%vmax_uptake_n * &
-                               plant%moving_average%demand_uptake_n * & 
+                               plant%demand_uptake_n_mavg * & 
                                soil%ammonium * ( lctlib%soil_n_aff1 + & 
                                1._wp / ( lctlib%soil_n_aff2 + soil%ammonium ))
     plant%flux%unit_uptake_p = lctlib%vmax_uptake_p * &
-                               plant%moving_average%demand_uptake_p * & 
+                               plant%demand_uptake_p_mavg * & 
                                soil%phosphate * ( lctlib%soil_p_aff1 + & 
                                1._wp / ( lctlib%soil_p_aff2 + soil%phosphate ))
 
