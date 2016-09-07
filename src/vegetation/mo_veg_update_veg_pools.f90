@@ -58,56 +58,56 @@ CONTAINS
        !> 1.1 Add carbon from photosynthesis to the labile pool
        !! 
        !! 
-       plant%flux%npp = plant%flux%gpp - plant%flux%growth_respiration - plant%flux%maint_respiration 
-       plant%flux%npp_c13 = plant%flux%gpp_c13 - plant%flux%growth_respiration_c13 - plant%flux%maint_respiration_c13 
-       plant%flux%npp_c14 = plant%flux%gpp_c14 - plant%flux%growth_respiration_c14 - plant%flux%maint_respiration_c14 
-       plant%flux%growth%labile%carbon = plant%flux%growth%labile%carbon + plant%flux%npp * dt / 1000000.0_wp
-       plant%flux%growth%labile%carbon13 = plant%flux%growth%labile%carbon13 + & 
-          plant%flux%npp_c13 * dt / 1000000.0_wp
-       plant%flux%growth%labile%carbon14 = plant%flux%growth%labile%carbon14 + & 
-          plant%flux%npp_c14 * dt / 1000000.0_wp
+       plant%npp = plant%gpp - plant%growth_respiration - plant%maint_respiration 
+       plant%npp_c13 = plant%gpp_c13 - plant%growth_respiration_c13 - plant%maint_respiration_c13 
+       plant%npp_c14 = plant%gpp_c14 - plant%growth_respiration_c14 - plant%maint_respiration_c14 
+       plant%growth%labile%carbon = plant%growth%labile%carbon + plant%npp * dt / 1000000.0_wp
+       plant%growth%labile%carbon13 = plant%growth%labile%carbon13 + & 
+          plant%npp_c13 * dt / 1000000.0_wp
+       plant%growth%labile%carbon14 = plant%growth%labile%carbon14 + & 
+          plant%npp_c14 * dt / 1000000.0_wp
    
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
-       plant%flux%growth%labile%nitrogen = plant%flux%growth%labile%nitrogen + &
-          plant%flux%uptake_n * dt / 1000000.0_wp
-       plant%flux%growth%labile%nitrogen15 = plant%flux%growth%labile%nitrogen15 + & 
-          plant%flux%uptake_n15 * dt / 1000000.0_wp
-       plant%flux%growth%labile%phosphorus = plant%flux%growth%labile%phosphorus + &
-          plant%flux%uptake_p * dt / 1000000.0_wp
+       plant%growth%labile%nitrogen = plant%growth%labile%nitrogen + &
+          plant%uptake_n * dt / 1000000.0_wp
+       plant%growth%labile%nitrogen15 = plant%growth%labile%nitrogen15 + & 
+          plant%uptake_n15 * dt / 1000000.0_wp
+       plant%growth%labile%phosphorus = plant%growth%labile%phosphorus + &
+          plant%uptake_p * dt / 1000000.0_wp
    
        !> 1.3 update labile pool and reserve 
        !! 
-       plant%pool%labile  = plant%pool%labile  + plant%flux%reserve_use
-       plant%pool%reserve = plant%pool%reserve - plant%flux%reserve_use
+       plant%pool%labile  = plant%pool%labile  + plant%reserve_use
+       plant%pool%reserve = plant%pool%reserve - plant%reserve_use
    
        !> 1.4 update fluxes from continuous nutrient turnover and resorption 
        !!
-       plant%pool%labile%nitrogen = plant%pool%labile%nitrogen + plant%flux%recycling_leaf_n & 
-            + plant%flux%recycling_fine_root_n + plant%flux%recycling_sap_wood_n
-       plant%pool%leaf%nitrogen = plant%pool%leaf%nitrogen - plant%flux%recycling_leaf_n
-       plant%pool%fine_root%nitrogen = plant%pool%fine_root%nitrogen - plant%flux%recycling_fine_root_n
-       plant%pool%sap_wood%nitrogen = plant%pool%sap_wood%nitrogen - plant%flux%recycling_sap_wood_n
+       plant%pool%labile%nitrogen = plant%pool%labile%nitrogen + plant%recycling_leaf_n & 
+            + plant%recycling_fine_root_n + plant%recycling_sap_wood_n
+       plant%pool%leaf%nitrogen = plant%pool%leaf%nitrogen - plant%recycling_leaf_n
+       plant%pool%fine_root%nitrogen = plant%pool%fine_root%nitrogen - plant%recycling_fine_root_n
+       plant%pool%sap_wood%nitrogen = plant%pool%sap_wood%nitrogen - plant%recycling_sap_wood_n
    
-       plant%pool%labile%phosphorus = plant%pool%labile%phosphorus + plant%flux%recycling_leaf_p & 
-           + plant%flux%recycling_fine_root_p + plant%flux%recycling_sap_wood_p
-       plant%pool%leaf%phosphorus = plant%pool%leaf%phosphorus - plant%flux%recycling_leaf_p
-       plant%pool%fine_root%phosphorus = plant%pool%fine_root%phosphorus - plant%flux%recycling_fine_root_p
-       plant%pool%sap_wood%phosphorus = plant%pool%sap_wood%phosphorus - plant%flux%recycling_sap_wood_p
+       plant%pool%labile%phosphorus = plant%pool%labile%phosphorus + plant%recycling_leaf_p & 
+           + plant%recycling_fine_root_p + plant%recycling_sap_wood_p
+       plant%pool%leaf%phosphorus = plant%pool%leaf%phosphorus - plant%recycling_leaf_p
+       plant%pool%fine_root%phosphorus = plant%pool%fine_root%phosphorus - plant%recycling_fine_root_p
+       plant%pool%sap_wood%phosphorus = plant%pool%sap_wood%phosphorus - plant%recycling_sap_wood_p
    
-       plant%pool%labile%nitrogen15 = plant%pool%labile%nitrogen15 + plant%flux%recycling_leaf_n15 & 
-           + plant%flux%recycling_fine_root_n15 + plant%flux%recycling_sap_wood_n15
-       plant%pool%leaf%nitrogen15 = plant%pool%leaf%nitrogen15 - plant%flux%recycling_leaf_n15
-       plant%pool%fine_root%nitrogen15 = plant%pool%fine_root%nitrogen15 - plant%flux%recycling_fine_root_n15
-       plant%pool%sap_wood%nitrogen15 = plant%pool%sap_wood%nitrogen15 - plant%flux%recycling_sap_wood_n15
+       plant%pool%labile%nitrogen15 = plant%pool%labile%nitrogen15 + plant%recycling_leaf_n15 & 
+           + plant%recycling_fine_root_n15 + plant%recycling_sap_wood_n15
+       plant%pool%leaf%nitrogen15 = plant%pool%leaf%nitrogen15 - plant%recycling_leaf_n15
+       plant%pool%fine_root%nitrogen15 = plant%pool%fine_root%nitrogen15 - plant%recycling_fine_root_n15
+       plant%pool%sap_wood%nitrogen15 = plant%pool%sap_wood%nitrogen15 - plant%recycling_sap_wood_n15
    
        !> 1.5 Update plant biogeochemical pools with growth, litterfall and establishment
        !! 
-       plant%pool = plant%pool - plant%flux%litterfall
-       plant%pool = plant%pool + plant%flux%growth
-       plant%pool%labile  = plant%pool%labile  + plant%flux%establishment
-       plant%pool%seed_bed = plant%pool%seed_bed - plant%flux%establishment
+       plant%pool = plant%pool - plant%litterfall
+       plant%pool = plant%pool + plant%growth
+       plant%pool%labile  = plant%pool%labile  + plant%establishment
+       plant%pool%seed_bed = plant%pool%seed_bed - plant%establishment
    
        !> 1.6 Radioactive decay of C14 in living plant tissue
        !!
@@ -125,7 +125,7 @@ CONTAINS
        !!
        !! 
        plant%lai = plant%pool%leaf%carbon * lctlib%sla
-       plant%dens_ind = plant%dens_ind + plant%flux%delta_dens_ind
+       plant%dens_ind = plant%dens_ind + plant%delta_dens_ind
        CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind,plant%pool%labile%carbon,&
             plant%pool%labile%nitrogen, plant%pool%labile%phosphorus, lctlib%wood_density, & 
             lctlib%sla,lctlib%allom_k1,lctlib%allom_k2, & 
@@ -137,7 +137,7 @@ CONTAINS
    
        IF(plant%pool%leaf%carbon .GT. eps8) THEN 
            plant%mean_leaf_age = & 
-             (plant%mean_leaf_age + dt/one_day) * (1._wp - plant%flux%growth%leaf%carbon/plant%pool%leaf%carbon)
+             (plant%mean_leaf_age + dt/one_day) * (1._wp - plant%growth%leaf%carbon/plant%pool%leaf%carbon)
          ELSE 
            plant%mean_leaf_age = 0.0_wp
        END IF

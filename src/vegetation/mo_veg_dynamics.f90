@@ -133,13 +133,13 @@ CONTAINS
        !!
        establishment_rate = flim_light * flim_temp * flim_moist * & 
                             lctlib%tau_seed_est / one_year / one_day * dt
-       tile%plant%flux%establishment = establishment_rate * tile%plant%pool%seed_bed 
+       tile%plant%establishment = establishment_rate * tile%plant%pool%seed_bed 
 
        !> 4.0 diagnose change in the number of individuals (#/m2)
        !!
        IF(lctlib%growthform==itree) &
-       tile%plant%flux%delta_dens_ind = & 
-              tile%plant%flux%establishment%carbon/lctlib%seed_size & 
+       tile%plant%delta_dens_ind = & 
+              tile%plant%establishment%carbon/lctlib%seed_size & 
               - mortality_rate * tile%plant%dens_ind 
 
     ENDIF
@@ -150,7 +150,7 @@ CONTAINS
 !@todo: veg_dynamics: it would probably make things easier if the seed bed was part of the plant, but not the pool structure?
     CALL mortality%seed_bed%init(0.0_wp)  ! set seed_bed to zero
     litter_flux_mortality = mortality * tile%plant%pool
-    tile%plant%flux%litterfall = tile%plant%flux%litterfall + litter_flux_mortality
+    tile%plant%litterfall = tile%plant%litterfall + litter_flux_mortality
    
   END SUBROUTINE update_veg_dynamics
 

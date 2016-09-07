@@ -270,8 +270,8 @@ CONTAINS
     veg%beta_air_mavg               = calc_mavg(veg%beta_air_mavg, veg%beta_air, mavg_period_opt_Nfrac)
 
     veg%t_jmax_opt_mavg             = calc_mavg(veg%t_jmax_opt_mavg, veg%t_jmax_opt_daytime, mavg_period_weekly)
-    veg%gpp_mavg                    = calc_mavg(veg%gpp_mavg, veg%flux%gpp, mavg_period_weekly)
-    veg%maint_respiration_mavg      = calc_mavg(veg%maint_respiration_mavg, veg%flux%maint_respiration_pot, mavg_period_weekly)
+    veg%gpp_mavg                    = calc_mavg(veg%gpp_mavg, veg%gpp, mavg_period_weekly)
+    veg%maint_respiration_mavg      = calc_mavg(veg%maint_respiration_mavg, veg%maint_respiration_pot, mavg_period_weekly)
 
     veg%growth_req_n_mavg           = calc_mavg(veg%growth_req_n_mavg, veg%growth_req_n, mavg_period_weekly, &
                                             do_calc=(veg%growth_req_n > eps8))
@@ -279,7 +279,7 @@ CONTAINS
                                             do_calc=(veg%growth_req_p > eps8))
     veg%boc_an_mavg                 = calc_mavg(veg%boc_an_mavg, veg%boc_an, mavg_period_boc_an, &
                                             do_calc=(veg%pool%leaf%carbon > eps8))
-    veg%unit_npp_mavg               = calc_mavg(veg%unit_npp_mavg, veg%flux%unit_npp, mavg_period_opt_alloc, & 
+    veg%unit_npp_mavg               = calc_mavg(veg%unit_npp_mavg, veg%unit_npp, mavg_period_opt_alloc, & 
                                             do_calc=veg%growing_season)
 
     IF (veg%growth_req_n > 0._wp)THEN
@@ -296,7 +296,7 @@ CONTAINS
     ENDIF
     veg%growth_cp_plant_mavg  = calc_mavg(veg%growth_cp_plant_mavg, hlp, mavg_period_opt_alloc, do_calc=veg%growing_season)
 
-    veg%allometry_npp_mavg                = calc_mavg(veg%allometry_npp_mavg, veg%flux%npp, mavg_period_opt_alloc, &
+    veg%allometry_npp_mavg                = calc_mavg(veg%allometry_npp_mavg, veg%npp, mavg_period_opt_alloc, &
                                                   do_calc=veg%growing_season)
     veg%allometry_labile_mavg%nitrogen    = calc_mavg(veg%allometry_labile_mavg%nitrogen, veg%pool%labile%nitrogen, & 
                                                   mavg_period_opt_alloc, do_calc=veg%growing_season)
@@ -309,9 +309,9 @@ CONTAINS
                                                   do_calc=(veg%pool%fine_root%carbon > eps8))
     veg%demand_uptake_p_mavg              = calc_mavg(veg%demand_uptake_p_mavg, veg%f_p_demand, mavg_period_demand_uptake_p, &
                                                   do_calc=(veg%pool%fine_root%carbon > eps8))
-    veg%unit_uptake_n_mavg                = calc_mavg(veg%unit_uptake_n_mavg, veg%flux%unit_uptake_n, mavg_period_opt_alloc, &
+    veg%unit_uptake_n_mavg                = calc_mavg(veg%unit_uptake_n_mavg, veg%unit_uptake_n, mavg_period_opt_alloc, &
                                                   do_calc=veg%growing_season)
-    veg%unit_uptake_p_mavg                = calc_mavg(veg%unit_uptake_p_mavg, veg%flux%unit_uptake_p, mavg_period_opt_alloc, &
+    veg%unit_uptake_p_mavg                = calc_mavg(veg%unit_uptake_p_mavg, veg%unit_uptake_p, mavg_period_opt_alloc, &
                                                   do_calc=veg%growing_season)
 
     veg%leaf2root_mass_ratio_mavg         = calc_mavg(veg%leaf2root_mass_ratio_mavg, &

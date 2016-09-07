@@ -28,13 +28,13 @@ MODULE mo_base_memory
      TYPE(t_element)  :: som            !< soil organic mater
   END TYPE t_slm_soil_pool
 
-  !-----------------------------------------------------------------------------------------------------
-  !> soil flux
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  TYPE t_slm_soil_flux
-     TYPE(t_slm_soil_pool) :: loss      !< decomposition flux from each pool
-  END TYPE t_slm_soil_flux
+!  !-----------------------------------------------------------------------------------------------------
+!  !> soil flux
+!  !! 
+!  !-----------------------------------------------------------------------------------------------------
+!  TYPE t_slm_soil_flux
+!    TYPE(t_slm_soil_pool) :: loss      !< decomposition flux from each pool
+!  END TYPE t_slm_soil_flux
 
   !-----------------------------------------------------------------------------------------------------
   !> all (or most ?) variables of soil per tile
@@ -44,7 +44,8 @@ MODULE mo_base_memory
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_soil
     TYPE(t_slm_soil_pool) :: pool     !< soil pool
-    TYPE(t_slm_soil_flux) :: flux     !< soil flux
+    TYPE(t_slm_soil_pool) :: loss      !< decomposition flux from each pool
+    !TYPE(t_slm_soil_flux) :: flux     !< soil flux
     REAL(wp) :: theta                 !< fractional water holding capacity
     REAL(wp) :: moisture              !< actual plant available water content (mm)
     REAL(wp) :: ammonium              !< soil ammonium concentration (mmol/L)

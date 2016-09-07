@@ -148,14 +148,14 @@ CONTAINS
 
     !> 8.0 update litter, growth and recycling of the plant class
     !!
-    plant%flux%litterfall     = plant%flux%litterfall     + litterfall
-    plant%flux%growth         = plant%flux%growth         + growth
-    plant%flux%recycling_leaf_n       = plant%flux%recycling_leaf_n       + recycling_leaf_n
-    plant%flux%recycling_leaf_n15     = plant%flux%recycling_leaf_n15     + recycling_leaf_n15
-    plant%flux%recycling_leaf_p       = plant%flux%recycling_leaf_p       + recycling_leaf_p
-    plant%flux%recycling_sap_wood_n   = plant%flux%recycling_sap_wood_n   + recycling_sap_wood_n
-    plant%flux%recycling_sap_wood_n15 = plant%flux%recycling_sap_wood_n15 + recycling_sap_wood_n15
-    plant%flux%recycling_sap_wood_p   = plant%flux%recycling_sap_wood_p   + recycling_sap_wood_p
+    plant%litterfall             = plant%litterfall             + litterfall
+    plant%growth                 = plant%growth                 + growth
+    plant%recycling_leaf_n       = plant%recycling_leaf_n       + recycling_leaf_n
+    plant%recycling_leaf_n15     = plant%recycling_leaf_n15     + recycling_leaf_n15
+    plant%recycling_leaf_p       = plant%recycling_leaf_p       + recycling_leaf_p
+    plant%recycling_sap_wood_n   = plant%recycling_sap_wood_n   + recycling_sap_wood_n
+    plant%recycling_sap_wood_n15 = plant%recycling_sap_wood_n15 + recycling_sap_wood_n15
+    plant%recycling_sap_wood_p   = plant%recycling_sap_wood_p   + recycling_sap_wood_p
 
   END SUBROUTINE calc_turnover
 

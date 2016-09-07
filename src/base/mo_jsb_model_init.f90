@@ -203,7 +203,7 @@ CONTAINS
     !! 
     !! 
     CALL tile%plant%init                  ! mo_veg_memory  ! includes daytime_avg & moving_avg init
-    CALL tile%plant%flux%set_zero         ! mo_veg_memory  ==> may move to veg init (or model init ?)
+    CALL tile%plant%set_zero_fluxes       ! mo_veg_memory  ==> may move to veg init (or model init ?)
     model%lctlib => init_lctlib()         ! initialize the lctlib with parameters values across PFT's
 
 

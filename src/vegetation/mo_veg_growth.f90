@@ -88,7 +88,7 @@ CONTAINS
     !! 
     !> 3.1 calculate marginal NPP increment per unit C growth, needed for optimal allocation scheme
     !!
-    CALL calc_marginal_npp_increment(lctlib, plant, plant%flux%unit_npp)
+    CALL calc_marginal_npp_increment(lctlib, plant, plant%unit_npp)
     
     !> 3.2 calculate allometry    
     !!
@@ -104,7 +104,7 @@ CONTAINS
     !> 4.0 calculate net flux between reserve and labile pool 
     !! 
     !! 
-    plant%flux%reserve_use = calc_reserve_useage(tau_labile_pot,plant%growing_season, &
+    plant%reserve_use = calc_reserve_useage(tau_labile_pot,plant%growing_season, &
                               plant%gpp_mavg, &
                               plant%maint_respiration_mavg, &
                               plant%growth_req_n_mavg, &
@@ -127,7 +127,7 @@ CONTAINS
          lctlib%k_crtos,k1_opt,k2_opt,lctlib%k_max_falloc_fruit,& 
          plant%target_cn_leaf,target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, &
          target_cn_fruit,plant%target_np_leaf,target_np_fine_root,target_np_coarse_root, &
-         target_np_sap_wood,target_np_fruit,plant%flux%reserve_use%carbon, & 
+         target_np_sap_wood,target_np_fruit,plant%reserve_use%carbon, & 
          falloc,plant%growth_req_n,plant%growth_req_p)
 
     !> 6.0 partition labile carbon into growth, growth_respiration, and maintenance 
@@ -168,7 +168,7 @@ CONTAINS
     TYPE(t_element),POINTER   :: labile_pool
 
     labile_pool => plant%pool%labile
-    growth => plant%flux%growth%labile
+    growth => plant%growth%labile
 
     !> 1.0 Determine C use for maintenance 
     !! 
@@ -176,15 +176,15 @@ CONTAINS
     !! to avoid that maitenance respiration consumes all C in times of low GPP 
 
     ! potential rate of maintenance respiration (µmol C / m2 / s)
-    plant%flux%maint_respiration_pot = & 
+    plant%maint_respiration_pot = & 
           calc_maintenance_respiration(t_air,t_air,plant%pool%sap_wood%nitrogen, & 
                                        plant%pool%fine_root%nitrogen,plant%pool%coarse_root%nitrogen) + & 
-          plant%flux%maint_respiration_leaf
+          plant%maint_respiration_leaf
     ! actual rate of maintentance respiration (µmol C / m2 / s), constrained to 
     ! support leaf respiration, but not more than the current labile pool turnover
-    plant%flux%maint_respiration = MAX(plant%flux%maint_respiration_leaf, & 
+    plant%maint_respiration = MAX(plant%maint_respiration_leaf, & 
                                    MIN(tau_labile_default / one_day * labile_pool%carbon * 1.e6, &
-                                   plant%flux%maint_respiration_pot))
+                                   plant%maint_respiration_pot))
 
     !> 2.0 Determine C, N, P use for growth
     !!
@@ -192,7 +192,7 @@ CONTAINS
     !! is determined from the labile turnover minus the carbon used for maintenance, i
     !! accounting for the fraction of growth respiration required to achieve this growth, to ensure that
     !! growth does not empty the labile pool
-    growth%carbon = (labile_pool%carbon * tau_labile_pot * dt/one_day -  plant%flux%maint_respiration * dt / 1.e6 ) * & 
+    growth%carbon = (labile_pool%carbon * tau_labile_pot * dt/one_day -  plant%maint_respiration * dt / 1.e6 ) * & 
                     1._wp /  (1._wp + fresp_growth) 
     IF(growth%carbon < eps8) growth%carbon = 0.0_wp
 
@@ -211,7 +211,7 @@ CONTAINS
         growth%carbon = growth%nitrogen / plant%growth_req_n
  
     ! Diagnose growth respiration (µmol C / m2 / s)
-    plant%flux%growth_respiration = fresp_growth * growth%carbon * 1.e6 / dt
+    plant%growth_respiration = fresp_growth * growth%carbon * 1.e6 / dt
 
     !> 3.0 Calculate isotopic signature of respiration fluxes, and growth
     !!
@@ -220,10 +220,10 @@ CONTAINS
        growth%carbon13 = growth%carbon * labile_pool%carbon13/labile_pool%carbon
        growth%carbon14 = growth%carbon * labile_pool%carbon14/labile_pool%carbon
        ! respiration (in µmol C / m2 / s)
-       plant%flux%maint_respiration_c13 = plant%flux%maint_respiration * labile_pool%carbon13/labile_pool%carbon
-       plant%flux%maint_respiration_c14 = plant%flux%maint_respiration * labile_pool%carbon14/labile_pool%carbon
-       plant%flux%growth_respiration_c13 = plant%flux%growth_respiration * labile_pool%carbon13/labile_pool%carbon
-       plant%flux%growth_respiration_c14 = plant%flux%growth_respiration * labile_pool%carbon14/labile_pool%carbon
+       plant%maint_respiration_c13 = plant%maint_respiration * labile_pool%carbon13/labile_pool%carbon
+       plant%maint_respiration_c14 = plant%maint_respiration * labile_pool%carbon14/labile_pool%carbon
+       plant%growth_respiration_c13 = plant%growth_respiration * labile_pool%carbon13/labile_pool%carbon
+       plant%growth_respiration_c14 = plant%growth_respiration * labile_pool%carbon14/labile_pool%carbon
     ENDIF
     IF(labile_pool%nitrogen > eps8) THEN
        ! growth (in mol  / m2 / timestep)
@@ -232,20 +232,20 @@ CONTAINS
 
     !> 4.0 partition growth to tissue types
     !! 
-    plant%flux%growth%leaf        = falloc%leaf        * growth
-    plant%flux%growth%fine_root   = falloc%fine_root   * growth 
-    plant%flux%growth%coarse_root = falloc%coarse_root * growth
-    plant%flux%growth%sap_wood    = falloc%sap_wood    * growth
-    plant%flux%growth%fruit       = falloc%fruit       * growth
+    plant%growth%leaf        = falloc%leaf        * growth
+    plant%growth%fine_root   = falloc%fine_root   * growth 
+    plant%growth%coarse_root = falloc%coarse_root * growth
+    plant%growth%sap_wood    = falloc%sap_wood    * growth
+    plant%growth%fruit       = falloc%fruit       * growth
 
     !> 4.1 invert flux of labile to be out of the labile pool
     !! 
-    plant%flux%growth%labile%carbon     = -1.0_wp * growth%carbon 
-    plant%flux%growth%labile%nitrogen   = -1.0_wp * growth%nitrogen
-    plant%flux%growth%labile%phosphorus = -1.0_wp * growth%phosphorus
-    plant%flux%growth%labile%carbon13   = -1.0_wp * growth%carbon13
-    plant%flux%growth%labile%carbon14   = -1.0_wp * growth%carbon14
-    plant%flux%growth%labile%nitrogen15 = -1.0_wp * growth%nitrogen15
+    plant%growth%labile%carbon     = -1.0_wp * growth%carbon 
+    plant%growth%labile%nitrogen   = -1.0_wp * growth%nitrogen
+    plant%growth%labile%phosphorus = -1.0_wp * growth%phosphorus
+    plant%growth%labile%carbon13   = -1.0_wp * growth%carbon13
+    plant%growth%labile%carbon14   = -1.0_wp * growth%carbon14
+    plant%growth%labile%nitrogen15 = -1.0_wp * growth%nitrogen15
 
   END SUBROUTINE calc_partitioning 
 
@@ -968,8 +968,8 @@ CONTAINS
              recycling_fine_root = recycling_fine_root * scal
           ENDIF
        ENDIF
-       plant%flux%recycling_leaf_n      = plant%flux%recycling_leaf_n      + recycling_leaf
-       plant%flux%recycling_fine_root_n = plant%flux%recycling_fine_root_n + recycling_fine_root
+       plant%recycling_leaf_n      = plant%recycling_leaf_n      + recycling_leaf
+       plant%recycling_fine_root_n = plant%recycling_fine_root_n + recycling_fine_root
    
        !> 2.0 replace overturning P from leaves and roots by new N from the labile pool using the target N:P
        !!
@@ -987,8 +987,8 @@ CONTAINS
              recycling_fine_root = recycling_fine_root * scal
           ENDIF
        ENDIF
-       plant%flux%recycling_leaf_p        = plant%flux%recycling_leaf_p        + recycling_leaf
-       plant%flux%recycling_fine_root_p   = plant%flux%recycling_fine_root_p   + recycling_fine_root
+       plant%recycling_leaf_p        = plant%recycling_leaf_p        + recycling_leaf
+       plant%recycling_fine_root_p   = plant%recycling_fine_root_p   + recycling_fine_root
    
        !> 3.0 replace overturning 15N from leaves and roots by new 15N from the labile pool using the target C:N
        !! and the labile pool's 15N molar mixing ratio
@@ -1012,8 +1012,8 @@ CONTAINS
              recycling_fine_root = recycling_fine_root * scal
           ENDIF
        ENDIF
-       plant%flux%recycling_leaf_n15      = plant%flux%recycling_leaf_n15      + recycling_leaf
-       plant%flux%recycling_fine_root_n15 = plant%flux%recycling_fine_root_n15 + recycling_fine_root
+       plant%recycling_leaf_n15      = plant%recycling_leaf_n15      + recycling_leaf
+       plant%recycling_fine_root_n15 = plant%recycling_fine_root_n15 + recycling_fine_root
     ENDIF
 
   END SUBROUTINE calc_nutrient_recycling

@@ -81,12 +81,12 @@ CONTAINS
       !> 1.3 calculate N, P uptake according to OCN 
       !! 
       !!
-      plant%flux%uptake_n = lctlib%vmax_uptake_n * &
+      plant%uptake_n = lctlib%vmax_uptake_n * &
               plant%demand_uptake_n_mavg * & 
               soil%ammonium * ( lctlib%soil_n_aff1 + & 
                 1._wp / ( lctlib%soil_n_aff2 + soil%ammonium )) * & 
               plant%pool%fine_root%carbon
-      plant%flux%uptake_p = lctlib%vmax_uptake_p * & 
+      plant%uptake_p = lctlib%vmax_uptake_p * & 
               plant%demand_uptake_p_mavg * & 
               soil%phosphate * ( lctlib%soil_p_aff1 + & 
                 1._wp / ( lctlib%soil_p_aff2 + soil%phosphate )) * & 
@@ -96,22 +96,22 @@ CONTAINS
     !! 
     ELSE
       ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
-      plant%flux%uptake_n = MAX(plant%pool%labile%carbon / lctlib%cn_leaf - & 
+      plant%uptake_n = MAX(plant%pool%labile%carbon / lctlib%cn_leaf - & 
                                         plant%pool%labile%nitrogen, 0.0_wp) * 1.e6 / dt
       ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
-      plant%flux%uptake_p = MAX(plant%pool%labile%nitrogen / lctlib%np_leaf + & 
-                                           plant%flux%uptake_n * dt / 1.e6 - &
+      plant%uptake_p = MAX(plant%pool%labile%nitrogen / lctlib%np_leaf + & 
+                                           plant%uptake_n * dt / 1.e6 - &
                                            plant%pool%labile%phosphorus, 0.0_wp) * 1.e6 / dt
 
     ENDIF     
 
     !> 3.0 Calculate potential N uptake per unit root
     !!
-    plant%flux%unit_uptake_n = lctlib%vmax_uptake_n * &
+    plant%unit_uptake_n = lctlib%vmax_uptake_n * &
                                plant%demand_uptake_n_mavg * & 
                                soil%ammonium * ( lctlib%soil_n_aff1 + & 
                                1._wp / ( lctlib%soil_n_aff2 + soil%ammonium ))
-    plant%flux%unit_uptake_p = lctlib%vmax_uptake_p * &
+    plant%unit_uptake_p = lctlib%vmax_uptake_p * &
                                plant%demand_uptake_p_mavg * & 
                                soil%phosphate * ( lctlib%soil_p_aff1 + & 
                                1._wp / ( lctlib%soil_p_aff2 + soil%phosphate ))
@@ -149,25 +149,25 @@ CONTAINS
     !> 1 Calculate soil litter pool decomposition. Currently only for N
     !!    
     !! Needs temperature and moisture correction
-    soil%flux%loss%litter = 1.0_wp/tau_litter * soil%pool%litter
+    soil%loss%litter = 1.0_wp/tau_litter * soil%pool%litter
     
     !> 2 Update soil litter pool. Probably needs splitting into structural and non-structural litter
     !!
-    soil%pool%litter = soil%pool%litter + plant%flux%litterfall%leaf
-    soil%pool%litter = soil%pool%litter + plant%flux%litterfall%fine_root
-    soil%pool%litter = soil%pool%litter + plant%flux%litterfall%coarse_root
-    soil%pool%litter = soil%pool%litter + plant%flux%litterfall%heart_wood
+    soil%pool%litter = soil%pool%litter + plant%litterfall%leaf
+    soil%pool%litter = soil%pool%litter + plant%litterfall%fine_root
+    soil%pool%litter = soil%pool%litter + plant%litterfall%coarse_root
+    soil%pool%litter = soil%pool%litter + plant%litterfall%heart_wood
 
-    soil%pool%litter = soil%pool%litter - soil%flux%loss%litter * dt
+    soil%pool%litter = soil%pool%litter - soil%loss%litter * dt
     
     !> 3 Update mineral pool
     !! 
 !SZ BLARPP. check units
-    soil%ammonium = soil%ammonium   + soil%flux%loss%litter%nitrogen*dt*  1.e3 / soil_depth * 1.e-3
-    soil%ammonium = soil%ammonium   - plant%flux%uptake_n * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
+    soil%ammonium = soil%ammonium   + soil%loss%litter%nitrogen*dt*  1.e3 / soil_depth * 1.e-3
+    soil%ammonium = soil%ammonium   - plant%uptake_n * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
     soil%ammonium = soil%ammonium   + lctlib%bnf_base * dt * 1.e3 / soil_depth * 1.e-3
-    !soil%phosphate = soil%phosphate + soil%flux%loss%litter%phosphorus*dt*  1.e3 / soil_depth * 1.e-3
-    !soil%phosphate = soil%phosphate - plant%flux%uptake_p * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
+    !soil%phosphate = soil%phosphate + soil%loss%litter%phosphorus*dt*  1.e3 / soil_depth * 1.e-3
+    !soil%phosphate = soil%phosphate - plant%uptake_p * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
 
     END SUBROUTINE update_soil_pool
 
@@ -245,10 +245,10 @@ CONTAINS
 
        IF(plant%gc > eps8)THEN
           ! T = rho * (qsat - qair ) * Gtot in mm/s 
-          plant%flux%transpiration = press_srf / ( r_gas_dryair * t_air ) * & 
+          plant%transpiration = press_srf / ( r_gas_dryair * t_air ) * & 
                      (q_sat - q_air) / (1._wp / plant%gc + 1._wp / ga )  
        ELSE 
-          plant%flux%transpiration = 0.0_wp 
+          plant%transpiration = 0.0_wp 
        ENDIF
        ! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil = ga / 10)
        evaporation = press_srf / ( r_gas_dryair * t_air ) * & 
@@ -257,14 +257,14 @@ CONTAINS
 
        ! update soil moisture dS = rain - transpiration - evaporation 
        soil%moisture = soil%moisture + (rain + snow & 
-            - plant%flux%transpiration - evaporation) * dt
+            - plant%transpiration - evaporation) * dt
        ! constrain to possible solutions
        soil%moisture = MAX(MIN(soil%moisture,veg_config%soil_awc_prescribe),0.0_wp)
        ! scale to relative water availability (%)
        soil%theta = soil%moisture / veg_config%soil_awc_prescribe * 100._wp
 
        ! calculate latent heat flux (W m-2) 
-       latent_heat_flx = LatentHeatVaporization * (evaporation + plant%flux%transpiration)
+       latent_heat_flx = LatentHeatVaporization * (evaporation + plant%transpiration)
        ! diagnose sensible heat flux (shortwave compontent only)
        sensible_heat_flx = net_radiation - latent_heat_flx 
 

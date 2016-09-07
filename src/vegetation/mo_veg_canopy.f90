@@ -592,7 +592,7 @@ CONTAINS
       
     !> 3.0 Calculate increment in net carbon gain from increased LAI
     !!
-    dNPP = (gpp - plant%flux%gpp) - (maint_respiration_leaf - plant%flux%maint_respiration_leaf)
+    dNPP = (gpp - plant%gpp) - (maint_respiration_leaf - plant%maint_respiration_leaf)
  
    END SUBROUTINE calc_marginal_npp_increment
 

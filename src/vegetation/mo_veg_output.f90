@@ -574,26 +574,26 @@ CONTAINS
         ELSE
           dt_one = dt / 1000000.0_wp      ! interval > timestep
       END IF
-      gpp_acc(itile)          = gpp_acc(itile)           + plant%flux%gpp                     * dt_one
-      growth_resp_acc(itile)  = growth_resp_acc(itile)   + plant%flux%growth_respiration      * dt_one
-      maint_resp_acc(itile)   = maint_resp_acc(itile)    + plant%flux%maint_respiration       * dt_one
-      npp_acc(itile)          = npp_acc(itile)           + plant%flux%npp                     * dt_one
-      res_use_c_acc(itile)    = res_use_c_acc(itile)     + plant%flux%reserve_use%carbon      * dt_one *1000000._wp/dt
-      gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + plant%flux%gpp_c13                * dt_one
-      growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + plant%flux%growth_respiration_c13 * dt_one
-      maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + plant%flux%maint_respiration_c13  * dt_one
-      gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + plant%flux%gpp_c14                * dt_one
-      growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + plant%flux%growth_respiration_c14 * dt_one
-      maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + plant%flux%maint_respiration_c14  * dt_one
-      uptake_n_acc(itile)     = uptake_n_acc(itile)      + plant%flux%uptake_n                * dt_one
-      recycling_n_acc(itile) = recycling_n_acc(itile)  + ( plant%flux%recycling_leaf_n + &
-                                plant%flux%recycling_fine_root_n + plant%flux%recycling_sap_wood_n )  * dt_one *1000000._wp/dt
-      res_use_n_acc(itile)    = res_use_n_acc(itile)     + plant%flux%reserve_use%nitrogen    * dt_one *1000000._wp/dt
-      uptake_p_acc(itile)     = uptake_p_acc(itile)      + plant%flux%uptake_p                * dt_one
-      recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( plant%flux%recycling_leaf_p + & 
-                                plant%flux%recycling_fine_root_p + plant%flux%recycling_sap_wood_p ) * dt_one *1000000._wp/dt
-      res_use_p_acc(itile)    = res_use_p_acc(itile)     + plant%flux%reserve_use%phosphorus  * dt_one *1000000._wp/dt
-      transpiration_acc(itile)= transpiration_acc(itile) + plant%flux%transpiration           * dt_one 
+      gpp_acc(itile)          = gpp_acc(itile)           + plant%gpp                     * dt_one
+      growth_resp_acc(itile)  = growth_resp_acc(itile)   + plant%growth_respiration      * dt_one
+      maint_resp_acc(itile)   = maint_resp_acc(itile)    + plant%maint_respiration       * dt_one
+      npp_acc(itile)          = npp_acc(itile)           + plant%npp                     * dt_one
+      res_use_c_acc(itile)    = res_use_c_acc(itile)     + plant%reserve_use%carbon      * dt_one *1000000._wp/dt
+      gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + plant%gpp_c13                * dt_one
+      growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + plant%growth_respiration_c13 * dt_one
+      maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + plant%maint_respiration_c13  * dt_one
+      gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + plant%gpp_c14                * dt_one
+      growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + plant%growth_respiration_c14 * dt_one
+      maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + plant%maint_respiration_c14  * dt_one
+      uptake_n_acc(itile)     = uptake_n_acc(itile)      + plant%uptake_n                * dt_one
+      recycling_n_acc(itile) = recycling_n_acc(itile)  + ( plant%recycling_leaf_n + &
+                                plant%recycling_fine_root_n + plant%recycling_sap_wood_n )  * dt_one *1000000._wp/dt
+      res_use_n_acc(itile)    = res_use_n_acc(itile)     + plant%reserve_use%nitrogen    * dt_one *1000000._wp/dt
+      uptake_p_acc(itile)     = uptake_p_acc(itile)      + plant%uptake_p                * dt_one
+      recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( plant%recycling_leaf_p + & 
+                                plant%recycling_fine_root_p + plant%recycling_sap_wood_p ) * dt_one *1000000._wp/dt
+      res_use_p_acc(itile)    = res_use_p_acc(itile)     + plant%reserve_use%phosphorus  * dt_one *1000000._wp/dt
+      transpiration_acc(itile)= transpiration_acc(itile) + plant%transpiration           * dt_one 
       gc_acc(itile)           = plant%gc                                                      
       ga_acc(itile)           = ga                                                   
       albedo_acc(itile)       = albedo

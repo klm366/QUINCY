@@ -131,27 +131,27 @@ CONTAINS
                                  agl(icanop),anl(icanop),rl(icanop),gsl(icanop),cil(icanop), &
                                  hlp1,hlp1,hlp1)
 
-        plant%flux%gpp = plant%flux%gpp + agl(icanop) * plant%lai_cl(icanop) 
+        plant%gpp = plant%gpp + agl(icanop) * plant%lai_cl(icanop) 
         IF(agl(icanop) > eps8) THEN
            hlp1 = discrimination_ps(cil(icanop),co2_mixing_ratio,'C13',lctlib%ps_pathway)
-           plant%flux%gpp_C13 = plant%flux%gpp_C13 + agl(icanop) * plant%lai_cl(icanop) * & 
+           plant%gpp_C13 = plant%gpp_C13 + agl(icanop) * plant%lai_cl(icanop) * & 
                                 calc_fractionation(co2_mixing_ratio,co2_mixing_ratio_C13,hlp1)
            hlp1 = discrimination_ps(cil(icanop),co2_mixing_ratio,'C14',lctlib%ps_pathway)
-           plant%flux%gpp_C14 = plant%flux%gpp_C14 + agl(icanop) * plant%lai_cl(icanop) * & 
+           plant%gpp_C14 = plant%gpp_C14 + agl(icanop) * plant%lai_cl(icanop) * & 
                                 calc_fractionation(co2_mixing_ratio,co2_mixing_ratio_C14, & 
                                 hlp1,scale_correction_C14)
         ENDIF
-        plant%flux%an = plant%flux%an + anl(icanop) * plant%lai_cl(icanop) 
-        plant%flux%maint_respiration_leaf = plant%flux%maint_respiration_leaf + & 
+        plant%an = plant%an + anl(icanop) * plant%lai_cl(icanop) 
+        plant%maint_respiration_leaf = plant%maint_respiration_leaf + & 
                rl(icanop) * plant%lai_cl(icanop) 
         plant%gc = plant%gc + gsl(icanop) * plant%lai_cl(icanop)
-        plant%flux%ci = plant%flux%ci + cil(icanop) * plant%lai_cl(icanop)
+        plant%ci = plant%ci + cil(icanop) * plant%lai_cl(icanop)
         ! get the net photosynthesis of the lowest canopy layer at this timestep
         IF(plant%lai_cl(icanop) > 0.0_wp) plant%boc_an = anl(icanop)
      ENDIF
   ENDDO
 
-  IF(plant%lai>eps8) plant%flux%ci = plant%flux%ci / plant%lai
+  IF(plant%lai>eps8) plant%ci = plant%ci / plant%lai
 
   IF(assimi_config%flag_t_jmax_acclimation) THEN 
      plant%t_jmax_opt = t_jmax_offset + t_jmax_slope * ( t_air - TZero ) 
