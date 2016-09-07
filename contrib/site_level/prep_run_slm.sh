@@ -13,7 +13,7 @@
 ########################################################################################################
 
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
-experimentalID="trunk_r263pluslocal_fluxnet"      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
+experimentalID=""      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
 # select sites: FLUXNET or CRUNCEPv5
 siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")

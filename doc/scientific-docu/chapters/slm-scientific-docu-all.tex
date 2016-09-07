@@ -27,43 +27,90 @@ echam text
 
 \newpage
 \section{Land Model Driver}
+\label{sec:land_model_driver}
+
+\textbf{Basic structure and functionality:}
+\begin{itemize}
+\item definition of atm2land and land2atm memory (as local variables)
+\item declaration of \texttt{model} (t{\_}model) and \texttt{tile} (t{\_}slm{\_}tile)
+\item call model init (mo{\_}jsb{\_}model{\_}init)
+\item allocation of atm2land and land2atm memory
+\item open forcing input file IF \texttt{l\_forcing} == TRUE (set in the model init and depends on the SLM model base{\_}config\%slm{\_}model{\_}name)
+\item init model output: only for SLM models land and plant
+\item set ntimestep = 1 for test{\_}canopy model
+\item time loop:
+\begin{itemize}
+\item call update forcing (drivers/mo{\_}atmland{\_}forcing)
+\item call land model interface (section \ref{sec:land_model_interface})
+\item check timer and adjust year counter (periodically increase time{\_}year by 1)
+\item write special fluxnet output (flag: base{\_}config\%fluxnet{\_}output)
+\end{itemize}
+\item close output and forcing files
+\end{itemize}
 
 
-land model driver text
-
-
-
+\newpage
 \section{Land Model Interface}
+\label{sec:land_model_interface}
 
-
-The interface (interfaces/mo{\_}slm{\_}interface.f90) runs SLM (land, plant, canopy, soil, test{\_}canopy) for one time step.
+The interface (interfaces/mo{\_}land{\_}model{\_}interface.f90) runs SLM (land, plant, canopy, soil, test{\_}canopy) for one time step.
 ~\\
 
-\textbf{Processes are:}
+
+\textbf{Basic structure and functionality:}
 \begin{itemize}
-\item radiation (1 RAD)
-\item assimilation (2 ASSIMI) (prev. named photosynthesis)
-\item vegetation (3 VEG)
-\item soil (4 SOIL)
+\item \texttt{CALL update\_atm2land}
+\item select the SLM model (base{\_}config\%slm{\_}model{\_}name) and run the tasks according to the Call-Tree
+\begin{itemize}
+\item land
+\item plant
+\item soil
+\item canopy
+\item test{\_}canopy: \texttt{CALL run\_test\_canopy\_model  (tile, model)} (this routine is defined within mo{\_}land{\_}model{\_}interface)
+\end{itemize}
+\item \texttt{CALL update\_land2atm}
 \end{itemize}
 ~\\
-Note, the names (short and long) and process numbers (currently 1-4) may be changed in the future to be consistent with jsbach4.
-~\\
 
-\textbf{Call-Tree a.k.a. Queue:}
-\\
+\textbf{Call-Tree a.k.a. Queue (for the plant model):}
 \begin{enumerate}
-\item update{\_}radiation() RAD
+\item update{\_}radiation RAD
 \item update{\_}vegsoil{\_}bgc VEG
 \item update{\_}phenology VEG
 \item update{\_}canopy{\_}fluxes ASSIMI
 \item calc{\_}growth VEG
 \item calc{\_}turnover VEG
 \item update{\_}veg{\_}dynamics VEG
-\item update{\_}soil{\_}pool VEG (move to SOIL later ?)
+\item IF flag{\_}base{\_}soil{\_}model THEN update{\_}soil{\_}pool VEG
 \item update{\_}vegsoil{\_}physics VEG
 \item update{\_}veg{\_}pools VEG
+\item update{\_}time{\_}averages
+\item write data: write{\_}output{\_}pool and write{\_}output{\_}flux
 \end{enumerate}
 
 
+\newpage
+\section{Model Init}
+\label{sec:model_init}
+
+\textbf{Basic structure and functionality:}
+\begin{itemize}
+\item process config (read namelist parameters)
+\item model init (set values for model\%... )
+\item tile init
+\item grid init (get lon lat from namelist)
+\item process memory init and allocation (\texttt{tile\%mem(PROCESS)\%p})
+\item process constants init
+\item time init (e.g. \texttt{dt = base\_config\%dt})
+\item IF base{\_}config\%fluxnet{\_}output THEN init fluxnet specific simulation output (half-hourly write-out of values for the last full forcing period)
+\item enable/ disable forcing (depends on the SLM model base{\_}config\%slm{\_}model{\_}name)
+\item run SLM model specific init routine (\texttt{init\_slm\_MODEL(model,tile)})
+\begin{itemize}
+\item land: no individual routine - simply uses the plant routine
+\item plant
+\item canopy
+\item soil: no routine (and no model) yet
+\end{itemize}
+\end{itemize}
+~\\
 
