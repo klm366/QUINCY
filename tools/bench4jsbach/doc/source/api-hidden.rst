@@ -13,3 +13,9 @@
    Experiment.remotehost_fetching
 
 
+
+
+.. automodule:: experiment
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -48,11 +48,13 @@ Diagnostic Fields
 * is mapped to one section in the report
 
 
-**Listing:** main.cfg, example::
+::
 
   [fields]
       [[albedo]]
           config_filename=albedo.cfg
+
+**Listing:** main.cfg, example
 
 	  
 **Its configuration file defines ...**
@@ -66,12 +68,10 @@ Configuration
 -------------				   
 
 
-
-**Listing:** albedo.cfg, example
-
 .. figure:: ./graphic/diagfield-conf.jpg
    :target: {{ workdir }}/graphic/diagfield-conf-overlay.jpg
 
+**Listing:** albedo.cfg, example
 
 
 I/O Dependencies
@@ -82,3 +82,23 @@ Following the link from the listing shown above leads to an illustration of the 
 
 Processing
 ----------
+
+**Scripts**
+
+* each either for preprocessing, diagnostic or plotting
+* work on local data, interpolated as indicated by user and modeltype
+* layed out for one candidate and one reference experiment
+* run by |b4j| in loops over multiple experiments
+* interface has to be provided by the respective and the main
+  configuration file concerning
+  
+  * input and output filenames and format
+  * grid, spatial resolution, tiling and global fragmentation
+  * time resolution and period
+  * other
+    
+* called in order of I/O dependencies
+* written in any programming language
+
+
+

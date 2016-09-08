@@ -11,8 +11,10 @@ from util import (
     print_none,
     subprocessing )
 
-
+#: a test documentation for the archive prefix constant
 ARCHIVE_PREFIX = "/hpss/arch/"
+"""Property docstring."""
+
 STREAM_SUFFIX  = "_stream"
 CODES_SUFFIX   = "_codes"
 
@@ -36,12 +38,13 @@ def find_files ( pattern, path, single = True, raise_e = False ):
     :param path: path string.
     :param single: boolean.
     :param raise_e: boolean.
-    :rtype string, list
     """
     
     assert os.path.isdir ( path ) and isinstance ( pattern, str )
     
+    #: a test documentation for the paths variable
     paths = []
+
     for root, dirnames, filenames in os.walk ( path ):
         files   = fnmatch.filter ( filenames, pattern )
         for f in files:
@@ -126,6 +129,7 @@ and observational datasets.
         self.B4J_name        = kwargs.get ( "B4J_name" )
         self.B4J_name_orig   = kwargs.get ( "B4J_name_orig" )
         self.B4J_etype       = kwargs.get ( "B4J_etype", None )
+        #: this is a comment on B4J_path
         self.B4J_path        = kwargs.get ( "B4J_path", None )
         self.B4J_host        = kwargs.get ( "B4J_host", None )
         self.B4J_isref       = kwargs.get ( "B4J_isref", False )

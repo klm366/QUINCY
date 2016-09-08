@@ -374,14 +374,19 @@ latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
 #'papersize': 'letterpaper',
 
+  'classoptions': ',openany,oneside',
+    'babel': '\\usepackage[english]{babel}',
+    #'fncychap': '\\usepackage[Conny]{fncychap}',
+    
 # The font size ('10pt', '11pt' or '12pt').
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-#'preamble': '',
+ 'preamble': '',
 
 # Latex figure (float) alignment
 #'figure_align': 'htbp',
+ 'figure_align': 'H',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
@@ -389,7 +394,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   (master_doc, 'bench4JSBACH.tex', u'bench4JSBACH Documentation',
-   u'Deike Kleberg', 'manual'),
+   u'Deike Kleberg', 'howto'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

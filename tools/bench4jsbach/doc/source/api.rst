@@ -35,9 +35,6 @@ Experiment methods
 Example character
 -----------------
 
-
-.. automodule:: experiment
-
 .. autosummary::
    :toctree: generated/
 

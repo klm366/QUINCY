@@ -13,15 +13,16 @@ Getting Started
 
 * check out branch from git repository
 * install python, pycmbs, ...
-* set up passwordless ssh
 * update path variable or change directory
+* set up passwordless ssh
 * run bench4jsbach.py
 
 
-**Directory Structure**
+**directory structure**
 
 :bin:     source files
 :configs: specification and templates for configuration files
+:doc:     Sphinx documentation source files and Makefile
 :prod:    scripts and configurations for diagnostic fields
 :scripts: essential parts of |b4j|
 :tests:   different testing environments
@@ -30,6 +31,7 @@ Getting Started
 
 .. figure::  ./graphic/b4j-basedir.jpg
    :width: 35 %
+   :align: center
 
    **Figure:** \<mypath\>/jsbach/tools/bench4jsbach
 
@@ -55,7 +57,7 @@ Running
 	    * interpolates the data according to requirements
 	    * runs preprocessing, diagnostics, plotting in loops over experiments
 	    * writes report
-:study:     report, if required check other |b4j| output, rethink, enjoy :D
+:study:     report, if required check other |b4j| output, rethink, enjoy :)
 :keep:      |b4j| report, delete working directory
 
 
@@ -69,12 +71,18 @@ Experiments
 * define them by a subsection key
 
     * you are done for references from wikipage |wiki|
-    * provide type, path, and host/archive inside the dkrz/zmaw domain
+    * otherwise provide type, path, and host/archive inside the dkrz/zmaw domain
 
 * multiple experiments possible
 * experiments could serve both in one run
 
-**Listing:** Experiment definition in main configuration file main.cfg::
+ 
+.. raw:: html
+
+    <font color=#D8D8D8>Todo: Find a method to grey the now commented lines ('@') in the listing.</font>
+
+
+::
   
     [experiments]
         [[tra0163]]
@@ -84,11 +92,9 @@ Experiments
             candidate=True
             reference=False
             report=...analyse XXX albedo scheme...
-
- 
-.. raw:: html
-
-    <font color=#D8D8D8>Todo: Find a method to grey the now commented lines ('@') in the listing.</font>   
+	    
+**Listing:** experiment definition in main configuration file  :math:`\mathtt{main.cfg}`
+    
 
 References
 ----------
@@ -97,6 +103,7 @@ You can find reference experiments on the wikipage |wiki|.
 
 .. figure::  ./graphic/b4j-wiki-ref.jpg
    :width: 90 %
+   :align: center
 
-   **Figure:** Detail from |wiki|
+   **Figure:** wikipage |wiki|, detail
    

@@ -26,29 +26,32 @@ Whole department knowhow for your model evaluation
 
 **From the guiding vision ...**
 
-* enable the groups to contribute their diagnostic
 * make the most significant diagnostic usable for the whole department
 * solve technical issues once, in particular concerning data retrieval and preparation
-* develop a library for diagnostic, benchmark and plotting
+
+
+**... some steps ...**
+
+* enable the groups to contribute their diagnostic
+* develop/use a library for diagnostic, benchmark and plotting
   
 **... to the usable potential**
 
-* support your model development
-* benchmark model output
+* support model development
+* make model benchmarking output easy to use
 
 
 Status
 ------
 
-The basic functionality of |b4j| is available. The 
+The basic functionality of |b4j| is available. Placed at the disposal:
 
-**Experiment Type:**
+**experiment type:**
 
 * MPIESM1
 
-**Diagnostic Field:**
+**diagnostic field:**
 
-* Albedo
-* Hydrology
+* albedo
+* hydrology
 
-are placed at your disposal.
