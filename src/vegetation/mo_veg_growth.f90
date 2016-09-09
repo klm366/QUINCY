@@ -32,6 +32,7 @@ CONTAINS
 
     USE mo_base_memory,             ONLY: t_slm_tile
     USE mo_veg_memory
+    USE mo_veg_respiration,         ONLY: temperature_response_respiration
     USE mo_veg_canopy
     USE mo_shared_memory,           ONLY: t_element
     USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
@@ -71,6 +72,14 @@ CONTAINS
     !! 
     !! 
     tau_labile_pot = meristem_activity(t_air,tile%soil%theta,plant%growing_season)
+
+    !> 1.1 calculate costs of N uptake and fixation
+    plant%fmaint_rate = fmaint_rate_base * temperature_response_respiration(t_air)
+    CALL calc_nitrogen_uptake_costs(lctlib%tau_fine_root,plant%t_air_week_mavg,& 
+                             plant%pool%fine_root%carbon,plant%pool%fine_root%nitrogen,& 
+                             plant%fmaint_rate_mavg,plant%unit_npp_mavg, &
+                             plant%unit_uptake_n_troot_mavg, &
+                             plant%cost_n_uptake_root,plant%cost_n_fixation)
   
     !> 2.0 update target C:N:P for each tissue type
     !! 
@@ -97,7 +106,7 @@ CONTAINS
          lctlib%wood_density, lctlib%sla,lctlib%allom_k1,lctlib%allom_k2, & 
          lctlib%k_latosa,lctlib%k_rtos,lctlib%growthform, & 
          plant%growth_cn_plant_mavg,plant%growth_cp_plant_mavg, plant%unit_npp_mavg,&
-         plant%unit_uptake_n_mavg,plant%unit_uptake_p_mavg, &
+         plant%unit_uptake_n_talloc_mavg,plant%unit_uptake_p_talloc_mavg, &
          plant%allometry_npp_mavg,tau_labile_pot,diameter,height,dheight,leaf2sapwood_mass_ratio, & 
          leaf2root_mass_ratio,target_lai,k1_opt, k2_opt)  
 
@@ -166,7 +175,8 @@ CONTAINS
     REAL(wp)                  :: tau_labile                ! actual turnover time of labile pool (1/day)
     TYPE(t_element),POINTER   :: growth
     TYPE(t_element),POINTER   :: labile_pool
-
+    REAL(wp) :: n_processing_respiration_pot,n_processing_respiration_act
+ 
     labile_pool => plant%pool%labile
     growth => plant%growth%labile
 
@@ -185,6 +195,23 @@ CONTAINS
     plant%maint_respiration = MAX(plant%maint_respiration_leaf, & 
                                    MIN(tau_labile_default / one_day * labile_pool%carbon * 1.e6, &
                                    plant%maint_respiration_pot))
+
+    !> 1.5 Determine C use for N uptake
+    IF(veg_config%n_uptake_scheme=='optimal'.OR.veg_config%n_uptake_scheme=='resistance')THEN
+       n_processing_respiration_pot = plant%uptake_n * (transform_cost_nh4+transform_cost_no3)/2.0_wp + & 
+                                      plant%n_fixation * plant%cost_n_fixation 
+       n_processing_respiration_act = MIN(tau_labile_default / one_day * labile_pool%carbon * 1.e6_wp, & 
+                                          n_processing_respiration_pot)
+       ! adjust N uptake to C expenditure
+       IF(n_processing_respiration_pot>eps8.AND.&
+             n_processing_respiration_pot>n_processing_respiration_act)THEN 
+          plant%uptake_n = plant%uptake_n * n_processing_respiration_act / n_processing_respiration_pot
+          plant%n_fixation = plant%n_fixation * n_processing_respiration_act / n_processing_respiration_pot
+       ENDIF
+       plant%n_transform_respiration = plant%uptake_n * (transform_cost_nh4+transform_cost_no3)/2.0_wp 
+       plant%n_fixation_respiration = plant%n_fixation * plant%cost_n_fixation
+       plant%n_processing_respiration = plant%n_fixation_respiration + plant%n_transform_respiration
+    ENDIF
 
     !> 2.0 Determine C, N, P use for growth
     !!
@@ -224,6 +251,10 @@ CONTAINS
        plant%maint_respiration_c14 = plant%maint_respiration * labile_pool%carbon14/labile_pool%carbon
        plant%growth_respiration_c13 = plant%growth_respiration * labile_pool%carbon13/labile_pool%carbon
        plant%growth_respiration_c14 = plant%growth_respiration * labile_pool%carbon14/labile_pool%carbon
+       plant%n_processing_respiration_c13 = plant%n_processing_respiration * & 
+                                            plant%pool%labile%carbon13 / plant%pool%labile%carbon 
+       plant%n_processing_respiration_c14 = plant%n_processing_respiration * & 
+                                            plant%pool%labile%carbon14 / plant%pool%labile%carbon 
     ENDIF
     IF(labile_pool%nitrogen > eps8) THEN
        ! growth (in mol  / m2 / timestep)
@@ -1017,5 +1048,75 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE calc_nutrient_recycling
+
+  ! ------------------------------------------------------------------------------------------
+  !> Routine to calculate the C costs for (inorganic) N uptake and BNF in order to optimalize N acquisition
+  !! Output: C costs of root uptake and N fixation
+  !@todo: reconsider the time scale of these arguments. Since cost_n_fixation is used for respiration
+  !! calculation, it should be based on actual temperature, not its average
+  ! --------------------------------------------------------------------------------------------
+  ELEMENTAL SUBROUTINE calc_nitrogen_uptake_costs(tau_fine_root,t_air_week_mavg,fine_root_carbon,fine_root_nitrogen,& 
+                             fmaint_rate_mavg,unit_npp_mavg,unit_uptake_n_troot_mavg, &
+                             cost_n_uptake_root,cost_n_fixation)
+    
+    USE mo_shared_constants, ONLY: Tzero
+    USE mo_veg_constants,    ONLY: transform_cost_nh4,transform_cost_no3,fresp_growth, & 
+                                   cost_n_fixation_max,cost_n_fixation_min, & 
+                                   k1_temp_bnf,k2_temp_bnf,k3_temp_bnf,k4_temp_bnf
+    
+    IMPLICIT NONE
+    
+    ! 0.1 InOut
+    REAL(wp), INTENT(in) :: tau_fine_root                 !< fine root turnover rate (yrs)
+    REAL(wp), INTENT(in) :: t_air_week_mavg               !< air temperature (K) !! should be soil temperature!
+    REAL(wp), INTENT(in) :: fine_root_carbon              !< fine root carbon mass (mol C / m2)
+    REAL(wp), INTENT(in) :: fine_root_nitrogen            !< fine root nitrogen mass (mol N / m2) 
+    REAL(wp), INTENT(in) :: fmaint_rate_mavg              !< N-speficic root maintentance respiration rate (µmol C/mol N / s)
+    REAL(wp), INTENT(in) :: unit_npp_mavg                 !< increase of NPP with increased leaf C investment (??)
+    REAL(wp), INTENT(in) :: unit_uptake_n_troot_mavg      !< increase of root N uptake with increased root C inventment (??)
+    REAL(wp), INTENT(out) :: cost_n_uptake_root           !< cost of root N uptake (mol C / mol N)
+    REAL(wp), INTENT(out) :: cost_n_fixation              !< cost of N fixation (mol C / mol N)
+    ! 0.2 Local 
+    REAL(wp) :: fresp_maint
+    REAL(wp) :: gc
+    REAL(wp) :: gn
+    REAL(wp) :: tf                                !!BNF-temperature-fct after Houlton
+
+    !---------------------------------------------------------------------------------------------------
+    !> 1.0 C costs for N acquisition
+    !!
+    ! maintenance respiration cost of a unit fine root carbon
+    IF(fine_root_carbon > eps8)THEN
+        fresp_maint = fmaint_rate_mavg * fine_root_nitrogen / fine_root_carbon  * &
+                      tau_fine_root * one_day * one_year / 1.e6_wp
+    ELSE
+        fresp_maint = 0.0_wp
+    ENDIF
+
+    !> 1.1 C costs for (inorganic) N uptake
+    !! based on Rastetter (2001) and Meyerholt (2016, OPT)
+
+    ! photosynthesis gain relative to carbon investment into leafs
+    gc = MAX(unit_npp_mavg,0.0_wp) !*0.3_wp
+        
+    ! n-uptake gain relative to carbon investment into roots
+    ! multiplier is Croot / Croot * (1 + fresp_growth + fresp_maint
+    gn = unit_uptake_n_troot_mavg /(1._wp+fresp_growth+fresp_maint)
+    
+    IF(gn > eps8)THEN
+        cost_n_uptake_root = gc / gn + (transform_cost_nh4+transform_cost_no3)/2.0_wp
+    ELSE
+        cost_n_uptake_root = 1000._wp ! an arbitrarily large value !
+    ENDIF
+                       
+    !> 1.2 C costs for BNF
+    !! Temperaturefunction based on Houlton (2008)
+    !!
+    tf = k1_temp_bnf * exp(k2_temp_bnf + k3_temp_bnf * (t_air_week_mavg - Tzero) * &
+                           (1.0_wp-(t_air_week_mavg-Tzero)/k4_temp_bnf))
+       
+    cost_n_fixation = (cost_n_fixation_max-(cost_n_fixation_max-cost_n_fixation_min)*tf) 
+
+    END SUBROUTINE calc_nitrogen_uptake_costs 
 
 END MODULE mo_veg_growth

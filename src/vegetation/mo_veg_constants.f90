@@ -69,6 +69,28 @@ MODULE mo_veg_constants
       ! ratio of root N:P to leaf N:P
       wood2leaf_np           !< relative N:P of woody biomass compared to leaves
 
+  ! Parameters concerning N uptake calculations
+  REAL(wp), SAVE :: &
+      ! maximum cost of N fixation at low / high temperatures (mol C / mol N) 
+      cost_n_fixation_max  , &
+      ! mimumum cost of N fixation at 25°C (mol C / mol N)
+      cost_n_fixation_min  , &
+      ! factors in temperature response function of nitrogenase activity
+      k1_temp_bnf          , &
+      k2_temp_bnf          , &
+      k3_temp_bnf          , &
+      k4_temp_bnf          , &
+      ! N transformation costs of converting NH4 to organic N  (mol C / mol N)
+      transform_cost_nh4   , &
+      ! N transformation costs of converting NO3 to organic N (mol C / mol N)
+      transform_cost_no3   , &
+      ! N transformation costs of converting organic N to organic N (mol C / mol N)
+      transform_cost_org   , &
+      ! maximum rate of N fixation (µmol N / mol C fine root / s )
+      vmax_bnf             , & 
+      ! half_saturating cost of the response of N fixation (mol C / mol N) 
+      k_bnf   
+
   ! parameters used for phenology calculations
   REAL(wp), SAVE :: & 
       ! minimum LAI for phenology calculations
@@ -160,7 +182,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_veg_constants
 
-    USE mo_shared_constants,    ONLY: Tzero
+    USE mo_base_constants,      ONLY: one_day, one_year
+    USE mo_shared_constants,    ONLY: Tzero, molar_mass_C, molar_mass_N
 
     IMPLICIT NONE
 
@@ -192,6 +215,19 @@ CONTAINS
       wood2leaf_cn          = 0.145_wp 
       root2leaf_np          = 1.0_wp 
       wood2leaf_np          = 1.0_wp 
+
+  ! N uptake parameters
+      cost_n_fixation_max = 17.5_wp   / (molar_mass_C/molar_mass_N) 
+      cost_n_fixation_min = 8.0_wp    / (molar_mass_C/molar_mass_N) 
+      k1_temp_bnf         = 1.25_wp
+      k2_temp_bnf         = -3.62_wp
+      k3_temp_bnf         = 0.27_wp
+      k4_temp_bnf         = 50.3_wp
+      transform_cost_nh4  = 1.7_wp    / (molar_mass_C/molar_mass_N)
+      transform_cost_no3  = 2.3_wp    / (molar_mass_C/molar_mass_N)
+      transform_cost_org  = 1.0_wp    / (molar_mass_C/molar_mass_N)
+      vmax_bnf            = 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) *1.e6_wp
+      k_bnf               = 50.0_wp   / (molar_mass_C/molar_Mass_N)
 
   ! parameters used for phenology calculations
       min_lai                     = 0.1_wp

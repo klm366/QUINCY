@@ -13,6 +13,7 @@ MODULE mo_shared_update_time_averages
   USE mo_kind,                    ONLY: wp, eps8
   USE mo_exception,               ONLY: message, finish
   USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
+  USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
 
 
   IMPLICIT NONE
@@ -38,7 +39,7 @@ CONTAINS
   !! 3.0 ...
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_time_averages(tile, time_day, timestep_prop_day)
+  SUBROUTINE update_time_averages(tile, lctlib, time_day, timestep_prop_day)
 
     USE mo_base_memory,             ONLY: t_slm_tile
     USE mo_atm2land_memory_class,   ONLY: t_atm2land_memory
@@ -47,6 +48,7 @@ CONTAINS
 
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)        :: tile      !< one tile
+    TYPE(t_lctlib_element),INTENT(in)     :: lctlib    !< land-cover-type library - parameters for one pft
     REAL(wp), INTENT(in)                  :: time_day           !< time in days
     REAL(wp), INTENT(in)                  :: timestep_prop_day  !< length of one time step (proportion of one day)
     ! 0.2 Local
@@ -81,7 +83,7 @@ CONTAINS
 
     !> 2.0 moving averages
     !! 
-    CALL calc_moving_averages(tile%plant, t_air, q_air, press_srf, co2_mixing_ratio, ga)
+    CALL calc_moving_averages(lctlib, tile%plant, t_air, q_air, press_srf, co2_mixing_ratio, ga)
 
 
 
@@ -241,13 +243,14 @@ CONTAINS
   !! 
   !! variable-specific averaging period, previous to the current timestep
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_moving_averages(veg, t_air, q_air, press_srf, co2_mixing_ratio, ga)
+  SUBROUTINE calc_moving_averages(lctlib, veg, t_air, q_air, press_srf, co2_mixing_ratio, ga)
 
     USE mo_shared_constants     ! moving average period lengths are defined there as REAL(wp),PARAMETER :: mavg_period_...
     USE mo_veg_memory,          ONLY: t_slm_plant
 
     IMPLICIT NONE
     ! 0.1 InOut
+    TYPE(t_lctlib_element),INTENT(in)   :: lctlib    !< land-cover-type library - parameters for one pft
     TYPE(t_slm_plant), INTENT(inout)    :: veg
     REAL(wp), INTENT(in)                :: t_air
     REAL(wp), INTENT(in)                :: q_air
@@ -271,7 +274,10 @@ CONTAINS
 
     veg%t_jmax_opt_mavg             = calc_mavg(veg%t_jmax_opt_mavg, veg%t_jmax_opt_daytime, mavg_period_weekly)
     veg%gpp_mavg                    = calc_mavg(veg%gpp_mavg, veg%gpp, mavg_period_weekly)
+    veg%an_mavg                     = calc_mavg(veg%an_mavg, veg%an, mavg_period_weekly)
+    veg%npp_mavg                    = calc_mavg(veg%npp_mavg, veg%npp, mavg_period_weekly)
     veg%maint_respiration_mavg      = calc_mavg(veg%maint_respiration_mavg, veg%maint_respiration_pot, mavg_period_weekly)
+    veg%fmaint_rate_mavg            = calc_mavg(veg%fmaint_rate_mavg, veg%fmaint_rate, mavg_period_weekly)
 
     veg%growth_req_n_mavg           = calc_mavg(veg%growth_req_n_mavg, veg%growth_req_n, mavg_period_weekly, &
                                             do_calc=(veg%growth_req_n > eps8))
@@ -309,10 +315,21 @@ CONTAINS
                                                   do_calc=(veg%pool%fine_root%carbon > eps8))
     veg%demand_uptake_p_mavg              = calc_mavg(veg%demand_uptake_p_mavg, veg%f_p_demand, mavg_period_demand_uptake_p, &
                                                   do_calc=(veg%pool%fine_root%carbon > eps8))
-    veg%unit_uptake_n_mavg                = calc_mavg(veg%unit_uptake_n_mavg, veg%unit_uptake_n, mavg_period_opt_alloc, &
+    veg%unit_uptake_n_talloc_mavg         = calc_mavg(veg%unit_uptake_n_talloc_mavg, veg%unit_uptake_n, mavg_period_opt_alloc, &
                                                   do_calc=veg%growing_season)
-    veg%unit_uptake_p_mavg                = calc_mavg(veg%unit_uptake_p_mavg, veg%unit_uptake_p, mavg_period_opt_alloc, &
+    veg%unit_uptake_p_talloc_mavg         = calc_mavg(veg%unit_uptake_p_talloc_mavg, veg%unit_uptake_p, mavg_period_opt_alloc, &
                                                   do_calc=veg%growing_season)
+    veg%unit_uptake_n_troot_mavg          = calc_mavg(veg%unit_uptake_n_troot_mavg, veg%unit_uptake_n, lctlib%tau_fine_root, &
+                                                  do_calc=veg%growing_season, avg_period_unit='year')
+    veg%unit_uptake_p_troot_mavg          = calc_mavg(veg%unit_uptake_p_troot_mavg, veg%unit_uptake_p, lctlib%tau_fine_root, &
+                                                  do_calc=veg%growing_season, avg_period_unit='year')
+!@todo should the average period be tau_root?
+    veg%cost_n_uptake_root_mavg           = veg%cost_n_uptake_root
+    veg%cost_n_fixation_mavg              = veg%cost_n_fixation
+!    veg%cost_n_uptake_root_mavg           = calc_mavg(veg%cost_n_uptake_root_mavg, veg%cost_n_uptake_root, mavg_period_yearly, &
+!                                                  do_calc=veg%growing_season) 
+!    veg%cost_n_fixation_mavg              = calc_mavg(veg%cost_n_fixation_mavg, veg%cost_n_fixation, mavg_period_yearly, &
+!                                                  do_calc=veg%growing_season) 
 
     veg%leaf2root_mass_ratio_mavg         = calc_mavg(veg%leaf2root_mass_ratio_mavg, &
                                                   veg%pool%leaf%carbon/veg%pool%fine_root%carbon, &

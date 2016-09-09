@@ -98,7 +98,6 @@ CONTAINS
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_atm2land, update_land2atm
     USE mo_veg_output,                    ONLY: write_output_pool, write_output_flux
-    USE mo_veg_config_class,              ONLY: veg_config  ! used to switch on/off the update_soil_pool via flag_base_soil_model
 
     ! used only for the canopy model:
     USE mo_atmland_constants,             ONLY: rad2par
@@ -246,15 +245,13 @@ CONTAINS
       CALL calc_growth            (tile, model%lctlib(tile%lcts%lib_id))
       CALL calc_turnover          (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_veg_dynamics    (tile, model%lctlib(tile%lcts%lib_id))
-      IF (veg_config%flag_base_soil_model) THEN   ! switch: soil model 
-        CALL update_soil_pool       (tile, model%lctlib(tile%lcts%lib_id))
-      END IF
+      CALL update_vegsoil_pool    (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_vegsoil_physics (tile)
       CALL update_veg_pools       (tile, model%lctlib(tile%lcts%lib_id))
 
     !! accumulation over time - daytime & moving average
     !! 
-      CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
+      CALL update_time_averages(tile, model%lctlib(tile%lcts%lib_id), time_day, timestep_prop_day)    ! see shared
 
     !! output pool: write output in certain intervals, see mo_veg_output
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
@@ -283,15 +280,13 @@ CONTAINS
       CALL calc_growth            (tile, model%lctlib(tile%lcts%lib_id))
       CALL calc_turnover          (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_veg_dynamics    (tile, model%lctlib(tile%lcts%lib_id))
-      IF (veg_config%flag_base_soil_model) THEN   ! switch: soil model 
-        CALL update_soil_pool       (tile, model%lctlib(tile%lcts%lib_id))
-      END IF
+      CALL update_vegsoil_pool    (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_vegsoil_physics (tile)
       CALL update_veg_pools       (tile, model%lctlib(tile%lcts%lib_id))
 
     !! accumulation over time - daytime & moving average
     !! 
-      CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
+      CALL update_time_averages(tile,  model%lctlib(tile%lcts%lib_id), time_day, timestep_prop_day)    ! see shared
 
     !! output pool: write output in certain intervals, see mo_veg_output
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
@@ -323,7 +318,7 @@ CONTAINS
 
     !! accumulation over time - daytime & moving average
     !! 
-      CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
+      CALL update_time_averages(tile, model%lctlib(tile%lcts%lib_id), time_day, timestep_prop_day)    ! see shared
 
     !! output fluxes -> filename: fort.20
     !! output also some atm2land variables

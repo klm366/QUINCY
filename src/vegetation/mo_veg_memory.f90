@@ -176,12 +176,18 @@ MODULE mo_veg_memory
     REAL(wp) :: beta_soil_gs_mavg                 !< scaling factor to account for soil moisture constraints on conductance
     ! 1.3 memory of fluxes
     REAL(wp) :: gpp_mavg                     !< gpp of the last week (µmol m-2 s-1)
+    REAL(wp) :: an_mavg                      !< net assimilation of the last week (µmol m-2 s-1)
+    REAL(wp) :: npp_mavg                     !< npp of the last week (µmol m-2 s-1)
     REAL(wp) :: maint_respiration_mavg       !< maintenance respiration of the last week (µmol m-2 s-1)
     ! 1.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
     REAL(wp) :: demand_uptake_n_mavg              !< scalar of Vmax for root N uptake 
     REAL(wp) :: demand_uptake_p_mavg              !< scalar of Vmax for root P uptake
     REAL(wp) :: growth_req_n_mavg            !< moles N required for a unit of C growth under current allocation fractions
     REAL(wp) :: growth_req_p_mavg            !< moles P required for a unit of N growth under current allocation fractions
+    REAL(wp) :: cost_n_uptake_root_mavg      !< moving average of root N uptake cost (mol C / mol N)
+    REAL(wp) :: cost_n_fixation_mavg         !< moving average of N fixation cost (mol C / mol N)
+    REAL(wp) :: fmaint_rate_mavg             !< moving average of N-specific maintentance respiration (~µmol C/mol N / s ) 
+
     ! 1.5 environmental forcing
     REAL(wp) :: t_air_mavg             !< air temp
     REAL(wp) :: q_air_mavg             !< specific humidity of the air 
@@ -198,8 +204,10 @@ MODULE mo_veg_memory
     REAL(wp) :: boc_an_mavg            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 optimal allocation
     REAL(wp) :: unit_npp_mavg                   !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
-    REAL(wp) :: unit_uptake_n_mavg              !< rate of N uptkae per unit root, mumol N mol-1
-    REAL(wp) :: unit_uptake_p_mavg              !< rate of P uptake per unit root, mumol P mol-1
+    REAL(wp) :: unit_uptake_n_talloc_mavg       !< rate of N uptkae per unit root, mumol N mol-1 (time-scale of accumutation: tau_allocation)
+    REAL(wp) :: unit_uptake_p_talloc_mavg       !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_allocation)
+    REAL(wp) :: unit_uptake_n_troot_mavg        !< rate of N uptkae per unit root, mumol N mol-1 (time-scale of accumulation: tau_root)
+    REAL(wp) :: unit_uptake_p_troot_mavg        !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_root)
     REAl(wp) :: allometry_npp_mavg              !< average NPP
     REAL(wp) :: growth_cn_plant_mavg            !< plant growth cn ratio, equivalent to 1/growth_req_n
     REAL(wp) :: growth_cp_plant_mavg            !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)
@@ -224,12 +232,19 @@ MODULE mo_veg_memory
      REAL(wp) :: growth_respiration       !< growth respiration (µmol CO2 m-2 s-1)
      REAL(wp) :: growth_respiration_c13   !< growth respiration (µmol 13CO2 m-2 s-1)
      REAL(wp) :: growth_respiration_c14   !< growth respiration (µmol 14CO2 m-2 s-1)
+     REAL(wp) :: n_transform_respiration  !< respiration associated with N transformation (µmol CO2 m-2 s-1)
+     REAL(wp) :: n_fixation_respiration   !< respiration associated with N fixation (µmol CO2 m-2 s-1)
+     REAL(wp) :: n_processing_respiration       !< respiration associated with N processing (µmol CO2 m-2 s-1)
+     REAL(wp) :: n_processing_respiration_c13   !< respiration associated with N processing (µmol 13CO2 m-2 s-1)
+     REAL(wp) :: n_processing_respiration_c14   !< respiration associated with N processing (µmol 14CO2 m-2 s-1)
      REAL(wp) :: npp                      !< net primary production (µmol CO2 m-2 s-1)
      REAL(wp) :: npp_c13                  !< net primary production (µmol 13CO2 m-2 s-1)
      REAL(wp) :: npp_c14                  !< net primary production (µmol 14CO2 m-2 s-1)
      REAL(wp) :: uptake_n                 !< N uptake from soil ( is that correct? )
      REAL(wp) :: uptake_n15               !< 15N uptake from soil ( is that correct? ) 
      REAL(wp) :: uptake_p                 !< P uptake from soil ( is that correct? )
+     REAL(wp) :: n_fixation               !< symbiontic N fixation (µmol N m-2 s-1)
+     REAL(wp) :: n_fixation_n15           !< symbiontic N fixation (µmol 15N m-2 s-1)
      REAL(wp) :: recycling_leaf_n         !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
      REAL(wp) :: recycling_leaf_n15       !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 
      REAL(wp) :: recycling_leaf_p         !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
@@ -240,11 +255,17 @@ MODULE mo_veg_memory
      REAL(wp) :: recycling_sap_wood_n15   !< net flux of 15N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1) 
      REAL(wp) :: recycling_sap_wood_p     !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
      REAL(wp) :: transpiration            !< transpiration in kg m-2 s-1
+     !! 
+     !! everything else...
+     REAL(wp) :: fmaint_rate              !< current N-specific maintentance respiration (~µmol C/mol N / s ) 
      REAL(wp) :: ci                       !< leaf internal co2 concentration
      REAL(wp) :: unit_npp                 !< incremental change in NPP. Needed for optimal allocation
      REAL(wp) :: unit_uptake_n            !< incremental change in N-based growth, needed for optimal allocation
      REAL(wp) :: unit_uptake_p            !< incremental change in P-based growth, needed for optimal allocation
      REAL(wp) :: delta_dens_ind           !< change in density of individuals (#/m2/timestep)
+     REAL(wp) :: cost_n_uptake_root       !< actual cost for N uptake by roots (mol C/mol N)
+     REAL(wp) :: cost_n_fixation          !< actual cost for N uptake through fixation (mol C/mol N)
+
   CONTAINS
     PRIVATE
     PROCEDURE, PUBLIC :: init => init_plant
@@ -637,12 +658,17 @@ CONTAINS
     this%beta_soil_gs_mavg                  = 1.0_wp
     ! 1.3 memory of fluxes
     this%gpp_mavg                           = 1.0_wp
+    this%an_mavg                            = 1.0_wp
+    this%npp_mavg                           = 1.0_wp
     this%maint_respiration_mavg             = 1.0_wp
+    this%fmaint_rate_mavg                   = 1.0_wp
     ! 1.4 nutrient demand for plant uptake
     this%demand_uptake_n_mavg               = 0.1_wp
     this%demand_uptake_p_mavg               = 0.1_wp
     this%growth_req_n_mavg                  = 1._wp / 25._wp 
     this%growth_req_p_mavg                  = 1._wp / 14._wp
+    this%cost_n_uptake_root_mavg            = 2._wp
+    this%cost_n_fixation_mavg               = 10._wp
     ! 1.5 environmental forcing
     this%t_air_mavg                         = 283.15_wp   ! 10°C; temperature in K
     this%q_air_mavg                         = 0.001_wp    ! air specific humidity
@@ -659,8 +685,10 @@ CONTAINS
     this%boc_an_mavg                        = 5.0_wp      ! net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 optimal allocation
     this%unit_npp_mavg                      = 0._wp
-    this%unit_uptake_n_mavg                 = 0._wp
-    this%unit_uptake_p_mavg                 = 0._wp
+    this%unit_uptake_n_talloc_mavg          = 0._wp
+    this%unit_uptake_p_talloc_mavg          = 0._wp
+    this%unit_uptake_n_troot_mavg           = 0._wp
+    this%unit_uptake_p_troot_mavg           = 0._wp
     this%allometry_npp_mavg                 = 1._wp
     this%growth_cn_plant_mavg               = 1._wp
     this%growth_cp_plant_mavg               = 1._wp
@@ -701,11 +729,18 @@ CONTAINS
     this%growth_respiration      = flux_zero  !< growth respiration (µmol CO2 m-2 s-1)
     this%growth_respiration_c13  = flux_zero  !< growth respiration (µmol 13CO2 m-2 s-1)
     this%growth_respiration_c14  = flux_zero  !< growth respiration (µmol 14CO2 m-2 s-1)
+    this%n_transform_respiration = flux_zero  !< respiration associated with N transformation (µmol CO2 m-2 s-1)
+    this%n_fixation_respiration  = flux_zero  !< respiration associated with N fixation (µmol CO2 m-2 s-1)
+    this%n_processing_respiration  = flux_zero  !< respiration associated with N fixation (µmol CO2 m-2 s-1)
+    this%n_processing_respiration_c13  = flux_zero  !< respiration associated with N fixation (µmol 13CO2 m-2 s-1)
+    this%n_processing_respiration_c14  = flux_zero  !< respiration associated with N fixation (µmol 14CO2 m-2 s-1)
     this%npp                     = flux_zero  !< net primary production (µmol CO2 m-2 s-1)
     this%npp_c13                 = flux_zero  !< net primary production (µmol 13CO2 m-2 s-1)
     this%npp_c14                 = flux_zero  !< net primary production (µmol 14CO2 m-2 s-1)
     this%uptake_n                = flux_zero  !< ??
     this%uptake_n15              = flux_zero  !< ??
+    this%n_fixation              = flux_zero  !< ??
+    this%n_fixation_n15          = flux_zero  !< ??
     this%uptake_p                = flux_zero  !< ??
     this%recycling_leaf_n        = flux_zero  !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
     this%recycling_leaf_n15      = flux_zero  !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 

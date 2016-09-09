@@ -18,7 +18,7 @@ MODULE mo_veg_soil
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_vegsoil_bgc, update_vegsoil_physics, update_soil_pool
+  PUBLIC :: update_vegsoil_bgc, update_vegsoil_physics, update_vegsoil_pool
 
 
 CONTAINS
@@ -46,73 +46,108 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER      :: soil               ! soil variables per tile
     TYPE(t_slm_plant),POINTER     :: plant              ! plant variables per tile
-    REAL(wp) :: clab, nlab, plab                        ! plant labile pools of carbon, nitrogen and phosphorus
+    REAL(wp) :: dcost                                   ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
+    REAL(wp) :: cost_nacq                               ! total C cost of N acquisition (mol C / mol N)
+    REAL(wp) :: f_nacq_bnf,f_nacq_nup                   ! fraction of N uptake as BFN or Nuptake
 
     !  bi-directional pointer
     plant => tile%plant
     soil  => tile%soil
 
-
-    !> 1.0 IF: root and demand based N/P uptake   
-    !! 
+    !> 1.0 Calculate an instantaneous scalar of nutrient demand
+    !!     taken as difference of the the weekly growth requirement of the nutrient to the stoichiometry of the labile pool
     !!
-    IF(veg_config%flag_calc_soil_uptake) THEN ! case of root and demand based N/P uptake
-
-      !> 1.1 calculate current "labile" C:N:P   
-      !! 
-      clab = plant%pool%labile%carbon
-      nlab = plant%pool%labile%nitrogen
-      plab = plant%pool%labile%phosphorus
-
-      !> 1.2 convert this into an instantaneous scalar of nutrient demand
-      !!     taken as the weekly growth requirement of the nutrient
-      !! 
-      IF(clab > eps8) THEN
-         plant%f_n_demand = MAX(plant%growth_req_n_mavg - nlab / clab, 0.0_wp) 
-      ELSE
-         plant%f_n_demand = 1.0_wp
-      ENDIF
-      IF(nlab > eps8) THEN
-         plant%f_p_demand = MAX(plant%growth_req_p_mavg - plab / nlab, 0.0_wp)
-      ELSE
-         plant%f_p_demand = 1.0_wp
-      ENDIF
-
-      !> 1.3 calculate N, P uptake according to OCN 
-      !! 
-      !!
-      plant%uptake_n = lctlib%vmax_uptake_n * &
-              plant%demand_uptake_n_mavg * & 
-              soil%ammonium * ( lctlib%soil_n_aff1 + & 
-                1._wp / ( lctlib%soil_n_aff2 + soil%ammonium )) * & 
-              plant%pool%fine_root%carbon
-      plant%uptake_p = lctlib%vmax_uptake_p * & 
-              plant%demand_uptake_p_mavg * & 
-              soil%phosphate * ( lctlib%soil_p_aff1 + & 
-                1._wp / ( lctlib%soil_p_aff2 + soil%phosphate )) * & 
-              plant%pool%fine_root%carbon
-
-    !> 2.0 ELSE: maintain prescribed C:N:P irrespective of nutrient uptake capacity == no nutrient limitation case 
-    !! 
+    !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P 
+    IF(plant%pool%labile%carbon > eps8) THEN
+       plant%f_n_demand = MAX(plant%growth_req_n_mavg - plant%pool%labile%nitrogen / plant%pool%labile%carbon, 0.0_wp) 
     ELSE
-      ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
-      plant%uptake_n = MAX(plant%pool%labile%carbon / lctlib%cn_leaf - & 
-                                        plant%pool%labile%nitrogen, 0.0_wp) * 1.e6 / dt
-      ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
-      plant%uptake_p = MAX(plant%pool%labile%nitrogen / lctlib%np_leaf + & 
-                                           plant%uptake_n * dt / 1.e6 - &
-                                           plant%pool%labile%phosphorus, 0.0_wp) * 1.e6 / dt
+       plant%f_n_demand = 1.0_wp
+    ENDIF
+    IF(plant%pool%labile%nitrogen > eps8) THEN
+       plant%f_p_demand = MAX(plant%growth_req_p_mavg - plant%pool%labile%phosphorus / plant%pool%labile%nitrogen, 0.0_wp)
+    ELSE
+       plant%f_p_demand = 1.0_wp
+    ENDIF
 
-    ENDIF     
+    !> 2.0 inorganic N uptake (first guess)
+    !!
+    !!
+    SELECT CASE (veg_config%n_uptake_scheme)
+      !> 2.1 Case 1  maintain prescribed C:N:P irrespective of nutrient uptake capacity == no nutrient limitation case 
+      !!
+      CASE ("prescribed")
+         ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
+         plant%uptake_n = MAX(plant%pool%labile%carbon / lctlib%cn_leaf - & 
+                                           plant%pool%labile%nitrogen, 0.0_wp) * 1.e6_wp / dt
+         ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
+         plant%uptake_p = MAX(plant%pool%labile%nitrogen / lctlib%np_leaf + & 
+                                              plant%uptake_n * dt / 1.e6 - &
+                                              plant%pool%labile%phosphorus, 0.0_wp) * 1.e6_wp / dt
+
+      !> 2.2 Case 2. Calculate inorganic N uptake according to Michaelis-Mnten Kinetics  
+      !!
+      CASE ("standard","optimal","resistance")
+         ! OCN's MM Kinetics
+         plant%uptake_n = lctlib%vmax_uptake_n * &
+                 plant%demand_uptake_n_mavg * & 
+                 soil%ammonium * ( lctlib%soil_n_aff1 + & 
+                   1._wp / ( lctlib%soil_n_aff2 + soil%ammonium )) * & 
+                 plant%pool%fine_root%carbon
+         plant%uptake_p = lctlib%vmax_uptake_p * & 
+                 plant%demand_uptake_p_mavg * & 
+                 soil%phosphate * ( lctlib%soil_p_aff1 + & 
+                   1._wp / ( lctlib%soil_p_aff2 + soil%phosphate )) * & 
+                 plant%pool%fine_root%carbon
+
+    ENDSELECT
+
+    !> 3.0 N fixation
+    !!
+    !!
+    SELECT CASE (veg_config%n_uptake_scheme)
+      !> 3.1 Case 1: no N fixation
+      !!
+      CASE ("prescribed") 
+        plant%n_fixation = 0.0_wp
+      CASE("standard")
+        IF(soil%ammonium < 0.5_wp) plant%n_fixation = lctlib%bnf_base 
+      !> 3.2 Case 2: optimal N fixation
+      !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
+      CASE ("optimal")
+        IF (plant%cost_n_fixation_mavg <= plant%cost_n_uptake_root_mavg) THEN 
+           dcost  = plant%cost_n_uptake_root_mavg - plant%cost_n_fixation_mavg
+           !@BLARPP!! Don'T understand the term plant%growth_req_n_mavg*plant%npp_mavg here
+           !plant%n_fixation = c_root * vmax_bnf * dcost / (k_bnf + dcost) * plant%growth_req_n_mavg*plant%npp_mavg
+           plant%n_fixation = plant%pool%fine_root%carbon * & 
+                              vmax_bnf * dcost / (k_bnf + dcost)
+        ELSE
+           plant%n_fixation = 0.0_wp
+        ENDIF
+      !> 3.3 Case 3: Ohm's law analogy 
+      !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
+      CASE ("resistance")
+         ! total cost according to Ohm's law: parallel resistors
+         cost_nacq = 1._wp / (1._wp/plant%cost_n_uptake_root_mavg + 1._wp/plant%cost_n_fixation_mavg) 
+         IF (plant%cost_n_fixation_mavg > 5._wp * plant%cost_n_uptake_root_mavg) THEN
+            f_nacq_bnf = 0.0_wp
+            f_nacq_nup = 1.0_wp
+         ELSE 
+            f_nacq_bnf = plant%cost_n_uptake_root_mavg/(plant%cost_n_uptake_root_mavg+plant%cost_n_fixation_mavg)
+            f_nacq_nup = plant%cost_n_fixation_mavg/(plant%cost_n_uptake_root_mavg+plant%cost_n_fixation_mavg)
+         ENDIF
+         plant%n_fixation = f_nacq_bnf * plant%growth_req_n_mavg*plant%npp_mavg 
+         plant%uptake_n   = MIN(f_nacq_nup * plant%growth_req_n_mavg*plant%npp_mavg, & 
+                                plant%uptake_n)
+    ENDSELECT 
 
     !> 3.0 Calculate potential N uptake per unit root
     !!
     plant%unit_uptake_n = lctlib%vmax_uptake_n * &
-                               plant%demand_uptake_n_mavg * & 
+!                               plant%demand_uptake_n_mavg * & 
                                soil%ammonium * ( lctlib%soil_n_aff1 + & 
                                1._wp / ( lctlib%soil_n_aff2 + soil%ammonium ))
     plant%unit_uptake_p = lctlib%vmax_uptake_p * &
-                               plant%demand_uptake_p_mavg * & 
+!                               plant%demand_uptake_p_mavg * & 
                                soil%phosphate * ( lctlib%soil_p_aff1 + & 
                                1._wp / ( lctlib%soil_p_aff2 + soil%phosphate ))
 
@@ -124,9 +159,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> routine to update soil litter and mineral pools
   !! 
-  !! @todo add C and P pools, add proper decomposition: mo_veg_soil:update_soil_pool
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_soil_pool(tile, lctlib)
+  SUBROUTINE update_vegsoil_pool(tile, lctlib)
 
     USE mo_base_memory,      ONLY: t_slm_soil, t_slm_tile
     USE mo_base_constants,   ONLY: dt
@@ -163,13 +197,17 @@ CONTAINS
     !> 3 Update mineral pool
     !! 
 !SZ BLARPP. check units
-    soil%ammonium = soil%ammonium   + soil%loss%litter%nitrogen*dt*  1.e3 / soil_depth * 1.e-3
-    soil%ammonium = soil%ammonium   - plant%uptake_n * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
-    soil%ammonium = soil%ammonium   + lctlib%bnf_base * dt * 1.e3 / soil_depth * 1.e-3
+    IF(veg_config%n_uptake_scheme=='prescribed') THEN 
+       soil%ammonium = 0.2_wp
+    ELSE
+       soil%ammonium = soil%ammonium   + soil%loss%litter%nitrogen*dt*  1.e3 / soil_depth * 1.e-3
+       soil%ammonium = soil%ammonium   - plant%uptake_n * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
+    ENDIF
+
     !soil%phosphate = soil%phosphate + soil%loss%litter%phosphorus*dt*  1.e3 / soil_depth * 1.e-3
     !soil%phosphate = soil%phosphate - plant%uptake_p * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
 
-    END SUBROUTINE update_soil_pool
+    END SUBROUTINE update_vegsoil_pool
 
   !-----------------------------------------------------------------------------------------------------
   ! Main Task

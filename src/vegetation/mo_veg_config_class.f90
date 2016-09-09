@@ -13,7 +13,7 @@ MODULE mo_veg_config_class
 !#ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message, finish
+  USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -34,13 +34,13 @@ MODULE mo_veg_config_class
     INTEGER          :: output_start_first_day_year, &  !< output start at the 1st  day of this year
                         output_end_last_day_year        !< output stop  at the last day of this year
     INTEGER          :: pft_id
-    LOGICAL          :: flag_calc_soil_uptake      !< calculate N:P uptake from roots
     LOGICAL          :: flag_calc_soil_moisture    !< calcualte water bucket 
-    LOGICAL          :: flag_base_soil_model       !< calculate soil N:P budget
     LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics
     LOGICAL          :: flag_start_bareground      !< start from bareground?
     LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
     LOGICAL          :: flag_optimal_allocation    !< optimise plant allocation
+    CHARACTER(15)    :: n_uptake_scheme            !< select scheme to simulate N uptake
+                                                   ! "standard|resistance|optimal"           
     REAL(wp)         :: soil_awc_prescribe, &
                         soil_theta_prescribe
     CONTAINS
@@ -69,9 +69,10 @@ CONTAINS
     !LOGICAL      :: active
     CHARACTER(8) :: output_interval_pool, output_interval_flux
     INTEGER      :: output_start_first_day_year, output_end_last_day_year, plant_functional_type_id
-    LOGICAL      :: flag_calc_soil_uptake, flag_calc_soil_moisture
-    LOGICAL      :: flag_base_soil_model, flag_tile_veg_dynamics, flag_start_bareground
+    LOGICAL      :: flag_calc_soil_moisture
+    LOGICAL      :: flag_tile_veg_dynamics, flag_start_bareground
     LOGICAL      :: flag_optimal_Nleaf, flag_optimal_allocation
+    CHARACTER(15) :: n_uptake_scheme
     REAL(wp)     :: soil_awc_prescribe, soil_theta_prescribe
 
     NAMELIST /vegetation_ctl/       & 
@@ -79,13 +80,12 @@ CONTAINS
       output_interval_flux,         &
       output_start_first_day_year,  &
       output_end_last_day_year,     &
-      flag_calc_soil_uptake,        &
       flag_calc_soil_moisture,      &
-      flag_base_soil_model,         &
       flag_tile_veg_dynamics,       &
       flag_start_bareground,        &
       flag_optimal_Nleaf,           &
-      flag_optimal_allocation,      & 
+      flag_optimal_allocation,      &
+      n_uptake_scheme,              & 
       soil_awc_prescribe,           &
       soil_theta_prescribe,         &
       plant_functional_type_id
@@ -102,13 +102,12 @@ CONTAINS
     output_interval_flux           = 'monthly' ! timestep daily weekly monthly yearly
     output_start_first_day_year    = 1
     output_end_last_day_year       = 10
-    flag_calc_soil_uptake          = .FALSE.  ! .TRUE. .FALSE.
-    flag_base_soil_model           = .FALSE.  ! .TRUE. .FALSE.
     flag_calc_soil_moisture        = .FALSE.  ! .TRUE. .FALSE.
     flag_tile_veg_dynamics         = .FALSE.  ! .TRUE. .FALSE.
     flag_start_bareground          = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_allocation        = .FALSE.  ! .TRUE. .FALSE.
+    n_uptake_scheme                = "standard"  ! prescribed standard resistance optimal
     soil_awc_prescribe             = 300.0_wp
     soil_theta_prescribe           = 100.0_wp 
     plant_functional_type_id       = 1
@@ -121,18 +120,25 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, vegetation_ctl)
     CALL close_nml(nml_handler)
 
+    ! check input for n_uptake scheme
+    SELECT CASE (TRIM(n_uptake_scheme))
+     CASE ("prescribed","standard","resistance","optimal")
+     CASE DEFAULT
+       WRITE(message_text,'(2a)') 'invalid n_uptake_scheme',n_uptake_scheme
+       CALL finish("mo_veg_config_class:init_veg_config",message_text) 
+    ENDSELECT
+
     ! pass values as read from file
     config%output_interval_pool          = output_interval_pool
     config%output_interval_flux          = output_interval_flux
     config%output_start_first_day_year   = output_start_first_day_year
     config%output_end_last_day_year      = output_end_last_day_year
-    config%flag_calc_soil_uptake         = flag_calc_soil_uptake
-    config%flag_base_soil_model          = flag_base_soil_model
     config%flag_calc_soil_moisture       = flag_calc_soil_moisture
     config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  
     config%flag_start_bareground         = flag_start_bareground
     config%flag_optimal_Nleaf            = flag_optimal_Nleaf
     config%flag_optimal_allocation       = flag_optimal_allocation
+    config%n_uptake_scheme               = TRIM(n_uptake_scheme)
     config%soil_awc_prescribe            = soil_awc_prescribe 
     config%soil_theta_prescribe          = soil_theta_prescribe 
     config%pft_id                        = plant_functional_type_id

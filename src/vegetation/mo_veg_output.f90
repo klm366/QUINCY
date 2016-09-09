@@ -27,6 +27,8 @@ MODULE mo_veg_output
   REAL(wp), DIMENSION(ntile), SAVE :: gpp_acc             
   REAL(wp), DIMENSION(ntile), SAVE :: growth_resp_acc      
   REAL(wp), DIMENSION(ntile), SAVE :: maint_resp_acc       
+  REAL(wp), DIMENSION(ntile), SAVE :: n_transform_resp_acc
+  REAL(wp), DIMENSION(ntile), SAVE :: n_fixation_resp_acc
   REAL(wp), DIMENSION(ntile), SAVE :: npp_acc              
   REAL(wp), DIMENSION(ntile), SAVE :: res_use_c_acc        
   REAL(wp), DIMENSION(ntile), SAVE :: gpp_C13_acc             
@@ -36,6 +38,7 @@ MODULE mo_veg_output
   REAL(wp), DIMENSION(ntile), SAVE :: growth_resp_C14_acc      
   REAL(wp), DIMENSION(ntile), SAVE :: maint_resp_C14_acc       
   REAL(wp), DIMENSION(ntile), SAVE :: uptake_n_acc         
+  REAL(wp), DIMENSION(ntile), SAVE :: n_fixation_acc         
   REAL(wp), DIMENSION(ntile), SAVE :: recycling_n_acc     
   REAL(wp), DIMENSION(ntile), SAVE :: res_use_n_acc        
   REAL(wp), DIMENSION(ntile), SAVE :: uptake_p_acc         
@@ -68,6 +71,8 @@ CONTAINS
     gpp_acc           = 0._wp
     growth_resp_acc   = 0._wp
     maint_resp_acc    = 0._wp   
+    n_transform_resp_acc    = 0._wp   
+    n_fixation_resp_acc    = 0._wp   
     npp_acc           = 0._wp   
     res_use_c_acc     = 0._wp   
     gpp_C13_acc       = 0.0_wp
@@ -79,6 +84,7 @@ CONTAINS
     uptake_n_acc      = 0._wp   
     recycling_n_acc  = 0._wp  
     res_use_n_acc     = 0._wp  
+    n_fixation_acc      = 0._wp   
     uptake_p_acc      = 0._wp
     recycling_p_acc  = 0._wp  
     res_use_p_acc     = 0._wp   
@@ -162,7 +168,7 @@ CONTAINS
     WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth nl_tot'
     lun=lun+1
     WRITE(lun,'(a)') &
-    & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season b_soil_gs'
+    & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season b_soil_gs cost_nup cost_bnf'
 
   END SUBROUTINE init_output_writing_pool
 
@@ -183,12 +189,12 @@ CONTAINS
     !!
     !! lun of fluxes starts at a multiple of 100, plus 50
     lun = (100 * itile) + 50
-    WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NPP ReserveUse'
+    WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse'
     lun=lun+1   
     WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
                       'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time NUP Resorption_N ReserveUse'
+    WRITE(lun,'(a)') 'Time NUP Resorption_N ReserveUse NFixation'
     lun=lun+1
     WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
     lun=lun+1
@@ -489,11 +495,12 @@ CONTAINS
          growing_season_float = 0.0_wp
        END IF 
        lun=lun+1
-       write(lun,'(17F20.6)') time_d, plant%height, plant%diameter, plant%lai, plant%dens_ind, &
+       write(lun,'(20F20.6)') time_d, plant%height, plant%diameter, plant%lai, plant%dens_ind, &
          hlp1,l2r,s2c, bcf, &
-         plant%target_cn_leaf, plant%unit_npp_mavg, plant%unit_uptake_n_mavg,&
+         plant%target_cn_leaf, plant%unit_npp_mavg, plant%unit_uptake_n_talloc_mavg,&
          plant%growth_cn_plant_mavg, plant%allometry_npp_mavg, &
-         growing_season_float, plant%beta_soil_gs_mavg
+         growing_season_float, plant%beta_soil_gs_mavg, &
+         plant%cost_n_uptake_root_mavg, plant%cost_n_fixation_mavg
       END IF
     END IF
     END IF  ! on/off switch specific to 'special case: fluxnet output'
@@ -577,6 +584,8 @@ CONTAINS
       gpp_acc(itile)          = gpp_acc(itile)           + plant%gpp                     * dt_one
       growth_resp_acc(itile)  = growth_resp_acc(itile)   + plant%growth_respiration      * dt_one
       maint_resp_acc(itile)   = maint_resp_acc(itile)    + plant%maint_respiration       * dt_one
+      n_transform_resp_acc(itile) = n_transform_resp_acc(itile) + plant%n_transform_respiration       * dt_one
+      n_fixation_resp_acc(itile) = n_fixation_resp_acc(itile) + plant%n_fixation_respiration       * dt_one
       npp_acc(itile)          = npp_acc(itile)           + plant%npp                     * dt_one
       res_use_c_acc(itile)    = res_use_c_acc(itile)     + plant%reserve_use%carbon      * dt_one *1000000._wp/dt
       gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + plant%gpp_c13                * dt_one
@@ -589,6 +598,7 @@ CONTAINS
       recycling_n_acc(itile) = recycling_n_acc(itile)  + ( plant%recycling_leaf_n + &
                                 plant%recycling_fine_root_n + plant%recycling_sap_wood_n )  * dt_one *1000000._wp/dt
       res_use_n_acc(itile)    = res_use_n_acc(itile)     + plant%reserve_use%nitrogen    * dt_one *1000000._wp/dt
+      n_fixation_acc(itile)   = n_fixation_acc(itile)    + plant%n_fixation              * dt_one 
       uptake_p_acc(itile)     = uptake_p_acc(itile)      + plant%uptake_p                * dt_one
       recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( plant%recycling_leaf_p + & 
                                 plant%recycling_fine_root_p + plant%recycling_sap_wood_p ) * dt_one *1000000._wp/dt
@@ -610,7 +620,8 @@ CONTAINS
          & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps8) THEN
         ! write
         lun = (100 * itile) + 50
-        write(lun,'(6F12.6)') time_d, gpp_acc(itile), growth_resp_acc(itile), maint_resp_acc(itile), &
+        write(lun,'(8F12.6)') time_d, gpp_acc(itile), growth_resp_acc(itile), maint_resp_acc(itile), &
+                              n_transform_resp_acc(itile),n_fixation_resp_acc(itile), & 
                               npp_acc(itile), res_use_c_acc(itile)
         lun=lun+1
         dC13gpp = calc_delta_C13(gpp_acc(itile),gpp_C13_acc(itile))
@@ -621,7 +632,8 @@ CONTAINS
                               calc_delta_C14(growth_resp_acc(itile),growth_resp_C14_acc(itile),dC13rg), & 
                               calc_delta_C14(maint_resp_acc(itile),maint_resp_C14_acc(itile),dC13rm)
         lun=lun+1
-        write(lun,'(4F12.6)') time_d, uptake_n_acc(itile), recycling_n_acc(itile), res_use_n_acc(itile)
+        write(lun,'(5F12.6)') time_d, uptake_n_acc(itile), recycling_n_acc(itile), res_use_n_acc(itile), &
+                              n_fixation_acc(itile)
         lun=lun+1
         write(lun,'(4F12.6)') time_d, uptake_p_acc(itile), recycling_p_acc(itile), res_use_p_acc(itile)
         lun=lun+1
@@ -633,6 +645,8 @@ CONTAINS
         gpp_acc(itile)           = 0.0_wp
         growth_resp_acc(itile)   = 0.0_wp
         maint_resp_acc(itile)    = 0.0_wp
+        n_transform_resp_acc(itile) = 0.0_wp
+        n_fixation_resp_acc(itile) = 0.0_wp
         npp_acc(itile)           = 0.0_wp
         res_use_c_acc(itile)     = 0.0_wp
         gpp_C13_acc(itile)       = 0.0_wp
@@ -644,6 +658,7 @@ CONTAINS
         uptake_n_acc(itile)      = 0.0_wp
         recycling_n_acc(itile)   = 0.0_wp
         res_use_n_acc(itile)     = 0.0_wp
+        n_fixation_acc(itile)    = 0.0_wp
         uptake_p_acc(itile)      = 0.0_wp
         recycling_p_acc(itile)   = 0.0_wp
         res_use_p_acc(itile)     = 0.0_wp

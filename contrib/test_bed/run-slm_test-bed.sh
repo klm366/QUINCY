@@ -17,9 +17,8 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-flag_calc_soil_uptake="T"
+n_uptake_scheme="standard"      # prescribed standard optimal resistance
 flag_calc_soil_moisture="T"
-flag_base_soil_model="T"
 # canopy model options
 flag_t_jmax_acclimation="F"
 flag_optimal_Nfraction="F"
@@ -90,6 +89,7 @@ return 0
 }
 # lists to validate against
 validateSlmModel="land plant canopy test_canopy"  # soil 
+validateNUptakeScheme="prescribed standard optimal resistance"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
@@ -99,9 +99,8 @@ validateSiteDataSet="f c n"
 
 ## validate user-defined model-options ##
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
-validateUserConfigValues "$flag_calc_soil_uptake" "$validateFlags" "flag_calc_soil_uptake"
+validateUserConfigValues "$n_uptake_scheme" "$validateNUptakeScheme" "n_uptake_scheme"
 validateUserConfigValues "$flag_calc_soil_moisture" "$validateFlags" "flag_calc_soil_moisture"
-validateUserConfigValues "$flag_base_soil_model" "$validateFlags" "flag_base_soil_model"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_start_bareground" "$validateFlags" "flag_start_bareground"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
@@ -185,23 +184,12 @@ return 0                                                                        
  #changeNamelistValue soil_theta_prescribe 122.7
 
 changeNamelistValue slm_model_name "$slmModel"
-if [ $flag_calc_soil_uptake == T ]
-  then
-    changeNamelistValue flag_calc_soil_uptake ".TRUE."
-  else
-    changeNamelistValue flag_calc_soil_uptake ".FALSE."
-fi
+changeNamelistValue n_uptake_scheme "$n_uptake_scheme" 
 if [ $flag_calc_soil_moisture == T ]
   then
     changeNamelistValue flag_calc_soil_moisture ".TRUE."
   else
     changeNamelistValue flag_calc_soil_moisture ".FALSE."
-fi
-if [ $flag_base_soil_model == T ]
-  then
-    changeNamelistValue flag_base_soil_model ".TRUE."
-  else
-    changeNamelistValue flag_base_soil_model ".FALSE."
 fi
 if [ $flag_tile_veg_dynamics == T ]
   then

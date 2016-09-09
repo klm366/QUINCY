@@ -4,9 +4,8 @@
   output_interval_flux="weekly"
   output_start_first_day_year=1
   output_end_last_day_year=30
-  flag_calc_soil_uptake=.TRUE.
+  n_uptake_scheme="standard"
   flag_calc_soil_moisture=.FALSE.
-  flag_base_soil_model=.TRUE.
   flag_tile_veg_dynamics=.FALSE.
   flag_start_bareground=.FALSE.
   flag_optimal_Nleaf=.FALSE.

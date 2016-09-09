@@ -58,9 +58,12 @@ CONTAINS
        !> 1.1 Add carbon from photosynthesis to the labile pool
        !! 
        !! 
-       plant%npp = plant%gpp - plant%growth_respiration - plant%maint_respiration 
-       plant%npp_c13 = plant%gpp_c13 - plant%growth_respiration_c13 - plant%maint_respiration_c13 
-       plant%npp_c14 = plant%gpp_c14 - plant%growth_respiration_c14 - plant%maint_respiration_c14 
+       plant%npp = plant%gpp - plant%growth_respiration - plant%maint_respiration - & 
+                   plant%n_processing_respiration
+       plant%npp_c13 = plant%gpp_c13 - plant%growth_respiration_c13 - plant%maint_respiration_c13 - & 
+                   plant%n_processing_respiration_c13
+       plant%npp_c14 = plant%gpp_c14 - plant%growth_respiration_c14 - plant%maint_respiration_c14 - &
+                   plant%n_processing_respiration_c14
        plant%growth%labile%carbon = plant%growth%labile%carbon + plant%npp * dt / 1000000.0_wp
        plant%growth%labile%carbon13 = plant%growth%labile%carbon13 + & 
           plant%npp_c13 * dt / 1000000.0_wp
@@ -71,9 +74,9 @@ CONTAINS
        !! 
        !! 
        plant%growth%labile%nitrogen = plant%growth%labile%nitrogen + &
-          plant%uptake_n * dt / 1000000.0_wp
+          ( plant%uptake_n + plant%n_fixation ) * dt / 1000000.0_wp
        plant%growth%labile%nitrogen15 = plant%growth%labile%nitrogen15 + & 
-          plant%uptake_n15 * dt / 1000000.0_wp
+          ( plant%uptake_n15 + plant%n_fixation_n15) * dt / 1000000.0_wp
        plant%growth%labile%phosphorus = plant%growth%labile%phosphorus + &
           plant%uptake_p * dt / 1000000.0_wp
    
@@ -126,13 +129,14 @@ CONTAINS
        !! 
        plant%lai = plant%pool%leaf%carbon * lctlib%sla
        plant%dens_ind = plant%dens_ind + plant%delta_dens_ind
+!@todo: check for consistency with Silvia's branch
        CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind,plant%pool%labile%carbon,&
             plant%pool%labile%nitrogen, plant%pool%labile%phosphorus, lctlib%wood_density, & 
             lctlib%sla,lctlib%allom_k1,lctlib%allom_k2, & 
             lctlib%k_latosa,lctlib%k_rtos,lctlib%growthform, & 
             plant%growth_cn_plant_mavg,plant%growth_cp_plant_mavg,plant%unit_npp_mavg,&
-            plant%unit_uptake_n_mavg, &
-            plant%unit_uptake_p_mavg, plant%allometry_npp_mavg,hlp1, plant%diameter,plant%height,hlp1,hlp1, &
+            plant%unit_uptake_n_talloc_mavg, &
+            plant%unit_uptake_p_talloc_mavg, plant%allometry_npp_mavg,hlp1, plant%diameter,plant%height,hlp1,hlp1, &
             hlp1,hlp1,hlp1, hlp1)  
    
        IF(plant%pool%leaf%carbon .GT. eps8) THEN 
