@@ -24,10 +24,10 @@ MODULE mo_slm_varlist
   PUBLIC :: slm_add_var
 
   INTERFACE slm_add_var
-    MODULE PROCEDURE slm_add_struct               ! @slmjsb4  a TYPE with only variables included
-    MODULE PROCEDURE slm_add_n_struct             ! @slmjsb4  a TYPE with nested TYPEs
-    MODULE PROCEDURE slm_add_l2_struct            ! @slmjsb4  a TYPE with only variables included within a TYPE
-    MODULE PROCEDURE slm_add_struct_element_r1d   ! @slmjsb4 @slmtemp | works with struct & l2_struct !!
+    MODULE PROCEDURE slm_add_struct               ! *slmjsb4  a TYPE with only variables included
+    MODULE PROCEDURE slm_add_n_struct             ! *slmjsb4  a TYPE with nested TYPEs
+    MODULE PROCEDURE slm_add_l2_struct            ! *slmjsb4  a TYPE with only variables included within a TYPE
+    MODULE PROCEDURE slm_add_struct_element_r1d   ! *slmjsb4 *slmtemp | works with struct & l2_struct !!
     MODULE PROCEDURE slm_add_var_list_element_r1d
     MODULE PROCEDURE slm_add_var_list_element_r2d
 !    MODULE PROCEDURE slm_add_var_list_element_r3d
@@ -38,8 +38,14 @@ MODULE mo_slm_varlist
 
 CONTAINS
 
-! @slmtemp -> 1D to 2D
-! @slmjsb4
+! *slmtemp -> 1D to 2D
+! *slmjsb4
+  !-----------------------------------------------------------------------------------------------------
+  !> add 1D variable to struct or l2_struct
+  !!
+  !!  t_jsb_struct:struct <- t_jsb_var_real1d:var
+  !!    
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_struct_element_r1d( &
     struct, name, var, &
     ics, ice, iblk, &
@@ -69,14 +75,20 @@ CONTAINS
       struct%no_of_vars = pos_of_var
     END IF
 
-    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   @slmtemp
+    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
     ALLOCATE(var%ptr)
     var%ptr = initval_r
 
   END SUBROUTINE slm_add_struct_element_r1d
 
 
-! @slmjsb4
+! *slmjsb4
+  !-----------------------------------------------------------------------------------------------------
+  !> add structure to process memory
+  !!
+  !!  t_jsb_memory:mem <- t_jsb_struct:struct
+  !!    
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_struct( &
     mem, name, struct) 
 
@@ -97,12 +109,18 @@ CONTAINS
       mem%no_of_structs = pos_of_struct
     END IF
 
-    ALLOCATE(struct%vars(struct%max_no_of_vars))  !!! hardcoded in   TYPE, ABSTRACT :: t_jsb_struct  ! @slmtemp
+    ALLOCATE(struct%vars(struct%max_no_of_vars))  !!! hardcoded in   TYPE, ABSTRACT :: t_jsb_struct  ! *slmtemp
 
   END SUBROUTINE slm_add_struct
 
 
-! @slmjsb4
+! *slmjsb4
+  !-----------------------------------------------------------------------------------------------------
+  !> add nested structure to process memory
+  !!
+  !!  t_jsb_memory:mem <- t_jsb_n_struct:n_struct
+  !!    
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_n_struct( &
     mem, name, n_struct) 
 
@@ -123,12 +141,18 @@ CONTAINS
       mem%no_of_n_structs = pos_of_n_struct
     END IF
 
-    ALLOCATE(n_struct%l2_structs(n_struct%max_no_of_l2_structs))  !!! hardcoded in   TYPE, ABSTRACT :: t_jsb_n_struct  ! @slmtemp
+    ALLOCATE(n_struct%l2_structs(n_struct%max_no_of_l2_structs))  !!! hardcoded in   TYPE, ABSTRACT :: t_jsb_n_struct  ! *slmtemp
 
   END SUBROUTINE slm_add_n_struct
 
 
-! @slmjsb4
+! *slmjsb4
+  !-----------------------------------------------------------------------------------------------------
+  !> add structure to a nested structure that is located directly in the process memory
+  !!
+  !!  t_jsb_n_struct:n_struct <- t_jsb_struct:l2_struct
+  !!    
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_l2_struct( &
     n_struct, name, l2_struct) 
 
@@ -149,12 +173,18 @@ CONTAINS
       n_struct%no_of_l2_structs = pos_of_l2_struct
     END IF
 
-    ALLOCATE(l2_struct%vars(l2_struct%max_no_of_vars))  !!! hardcoded in   TYPE, ABSTRACT :: t_jsb_struct  ! @slmtemp
+    ALLOCATE(l2_struct%vars(l2_struct%max_no_of_vars))  !!! hardcoded in   TYPE, ABSTRACT :: t_jsb_struct  ! *slmtemp
 
   END SUBROUTINE slm_add_l2_struct
 
 
-! @slmtemp
+! *slmtemp
+  !-----------------------------------------------------------------------------------------------------
+  !> add 1D variable to process memory
+  !!
+  !!  t_jsb_memory:mem <- t_jsb_var_real1d:var
+  !!    
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_r1d( &
     mem, name, var, &
     ics, ice, iblk, &
@@ -188,10 +218,15 @@ CONTAINS
     ALLOCATE(var%ptr)
     var%ptr = initval_r
 
-
   END SUBROUTINE slm_add_var_list_element_r1d
 
-
+! *slmtemp
+  !-----------------------------------------------------------------------------------------------------
+  !> add 2D variable to process memory
+  !!
+  !!  t_jsb_memory:mem <- t_jsb_var_real2d:var
+  !!    
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_r2d( &
     mem, name, var, &
     ics, ice, iblk, &

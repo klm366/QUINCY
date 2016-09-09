@@ -281,9 +281,9 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in) :: lctlib         !< land-cover-type library - parameters for one pft
     REAL(wp),              INTENT(in) :: n_tot_cl, &    !< total canopy N content
-      & par_sunlit_mavg_cl,    &    !< PAR on sunlit leaves (day-time running mean, µmol/ms/s) 
-      & par_shaded_mavg_cl,    &    !< PAR on shaded leaves (day-time running mean, µmol/ms/s) 
-      & fleaf_sunlit_mavg_cl,  &    !< fraction of sunlit leaves (day-time running mean, µmol/ms/s)
+      & par_sunlit_mavg_cl,    &    !< PAR on sunlit leaves (day-time running mean, muemol/ms/s) 
+      & par_shaded_mavg_cl,    &    !< PAR on shaded leaves (day-time running mean, muemol/ms/s) 
+      & fleaf_sunlit_mavg_cl,  &    !< fraction of sunlit leaves (day-time running mean, muemol/ms/s) 
       & t_air_mavg,            &    !< temperature (day-time running mean, K)
       & press_srf_mavg,        &    !< air pressure (day-time running mean, Pa)
       & co2_mixing_ratio_mavg, &    !< CO2 mixing ratio (day-time running mean, ppm)
@@ -291,7 +291,7 @@ CONTAINS
       & beta_air_mavg,         &    !< beta air (day-time running mean, --)
       & beta_soil_ps_mavg,     &    !< beta soil for PS (day-time running mean, --)
       & beta_soil_gs_mavg,     &    !< beta soil for GC (day-time running mean, --) 
-      & t_jmax_opt_mavg             !< optimum temperature for Jmax (day-time running mean, °C)
+      & t_jmax_opt_mavg             !< optimum temperature for Jmax (day-time running mean, degreeC)
     REAL(wp),              INTENT(in) :: fn_oth_cl      !< fraction of leaf N not associated with PS
     REAL(wp),              INTENT(inout) :: & 
        & fn_chl_cl,            &    !< fraction of leaf N in chlorophyll

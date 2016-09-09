@@ -21,8 +21,8 @@ MODULE mo_shared_constants
     r_gas_dryair ,  &           !< specific gas constant for dry air (J / kg / K) 
     Dwv          ,  &           !< diffusion coefficient for water vapour in air (m2 s-1) 
     Dco2         ,  &           !< diffusion coefficient for CO2 in air (m2 s-1) 
-    Tzero        ,  &           !< melting point in K -> conversion factor for °C
-    LatentHeatVaporization      !< Latent heat for vapourisation (J/kg) 
+    Tzero        ,  &           !< melting point in K -> conversion factor for degreeC
+    LatentHeatVaporization      !< Latent heat for vapourisation (J/kg)
   ! molar masses
   REAL(wp), SAVE :: &
     molar_mass_C    ,  &        !< g C / mol C
@@ -36,7 +36,7 @@ MODULE mo_shared_constants
   ! isotope standards
   REAL(wp), SAVE :: &
     PDB_STANDARD_C13   ,  &     !< 13C/12C PDB standard
-    AAB_STANDARD_C14   ,  &     !< 0.95·0.238 Bq/gC is the absolute specific activity of 
+    AAB_STANDARD_C14   ,  &     !< 0.95 x 0.238 Bq/gC is the absolute specific activity of 
                                  !! the radiocarbon standard (i.e. 95% of the activity of the OxA-I standard)
     AvogadroC          ,  &     !< Avogadro Number
     lambda_C14         ,  &     !< decay constant of C14 (1/s)

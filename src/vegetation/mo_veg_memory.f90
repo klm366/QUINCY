@@ -162,7 +162,7 @@ MODULE mo_veg_memory
     REAL(wp), DIMENSION(ncanop)     :: par_shaded_daytime_dacc_cl     !<  value accumulated over current day
     REAL(wp), DIMENSION(ncanop)     :: fleaf_sunlit_daytime_dacc_cl   !<  value accumulated over current day
     REAL(wp)                        :: t_jmax_opt_daytime_dacc        !<  value accumulated over current day 
-    !> @todo t_slm_plant:daytime_counter we may move this counter to a different place, as it is used for multiple processes  @slmdev
+    !> @todo t_slm_plant:daytime_counter we may move this counter to a different place, as it is used for multiple processes  *slmdev
     REAL(wp) :: daytime_counter         !< number of timesteps of current day with light available & daytime_avrg variables were added up
     !! moving averages
     !! 
@@ -697,10 +697,10 @@ CONTAINS
   END SUBROUTINE init_plant 
 
   !-----------------------------------------------------------------------------------------------------
-  !> initalize or just set zero all fluxes vegetation memory (plant\%flux)
+  !> initalize or just set zero all fluxes vegetation memory (plant)
   !!
   !! is initially called in the driver, 
-  !! and then called every timestep in beginning of mo_veg_interface --> move to 1st Task of veg called
+  !! and then called every timestep in beginning of mo_veg_interface -> move to 1st Task of veg called
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE set_zero_veg_flux(this)
 

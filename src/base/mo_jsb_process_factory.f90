@@ -58,8 +58,8 @@ MODULE mo_jsb_process_factory
   PRIVATE
 
   PUBLIC :: Create_process_memory
-!  PUBLIC :: Create_process, max_no_of_processes                                           @slmtemp
-  PUBLIC :: max_no_of_processes     ! not using Create_process for compatibility with SLM  @slmtemp
+!  PUBLIC :: Create_process, max_no_of_processes                                           *slmtemp
+  PUBLIC :: max_no_of_processes     ! not using Create_process for compatibility with SLM  *slmtemp
 
   INTEGER, PARAMETER :: max_no_of_processes = 20
 
@@ -129,8 +129,8 @@ CONTAINS
 !!    USE mo_soil_memory_class,    ONLY: max_no_of_soil_vars => max_no_of_vars
 !!    USE mo_hydro_memory_class,   ONLY: max_no_of_hydro_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars      => max_no_of_vars, &
-                                       max_no_of_veg_structs   => max_no_of_structs, &    ! @slmjsb4
-                                       max_no_of_veg_n_structs => max_no_of_n_structs     ! @slmjsb4
+                                       max_no_of_veg_structs   => max_no_of_structs, &    ! *slmjsb4
+                                       max_no_of_veg_n_structs => max_no_of_n_structs     ! *slmjsb4
     USE mo_assimi_memory_class,  ONLY: max_no_of_assimi_vars => max_no_of_vars
 !!    USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
@@ -163,8 +163,8 @@ CONTAINS
     CASE (VEG_)
       ALLOCATE(t_veg_memory::return_ptr)
       return_ptr%max_no_of_vars      = max_no_of_veg_vars
-      return_ptr%max_no_of_structs   = max_no_of_veg_structs        ! @slmjsb4
-      return_ptr%max_no_of_n_structs = max_no_of_veg_n_structs      ! @slmjsb4
+      return_ptr%max_no_of_structs   = max_no_of_veg_structs        ! *slmjsb4
+      return_ptr%max_no_of_n_structs = max_no_of_veg_n_structs      ! *slmjsb4
     CASE (ASSIMI_)
       ALLOCATE(t_assimi_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_assimi_vars
@@ -182,11 +182,11 @@ CONTAINS
     END SELECT
 
     ALLOCATE(return_ptr%vars(return_ptr%max_no_of_vars))
-    ! allocate TYPEs and nested TYPEs only for certain processes   ! @slmjsb4
+    ! allocate TYPEs and nested TYPEs only for certain processes   ! *slmjsb4
     SELECT CASE(iproc)
     CASE (VEG_)
-      ALLOCATE(return_ptr%structs(return_ptr%max_no_of_structs))      ! @slmjsb4
-      ALLOCATE(return_ptr%n_structs(return_ptr%max_no_of_n_structs))  ! @slmjsb4
+      ALLOCATE(return_ptr%structs(return_ptr%max_no_of_structs))      ! *slmjsb4
+      ALLOCATE(return_ptr%n_structs(return_ptr%max_no_of_n_structs))  ! *slmjsb4
     END SELECT
 
   END FUNCTION Create_process_memory

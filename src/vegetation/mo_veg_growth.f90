@@ -629,9 +629,9 @@ CONTAINS
   !> calculates the activity of the meristem for growth 
   !!
   !! As this is proportional to the size of the labile pool, there is no need for a direct temperature 
-  !! function of the turnover, as this will result from the dynamics of the labile pool. \nThis function
+  !! function of the turnover, as this will result from the dynamics of the labile pool. \n This function
   !!  therefore only takes account of the impact of low temperatures (<5°C) and low moisture 
-  !! (<20\% saturation). \nAdditionally, phenological dormancy is accounted for.
+  !! (<20\% saturation). \n Additionally, phenological dormancy is accounted for.
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION meristem_activity(t_air,theta,growing_season) RESULT(tau_labile_pot)
 
@@ -682,7 +682,7 @@ CONTAINS
     ! 0.1 InOut
     REAL(wp),INTENT(in)  :: sap_wood_carbon         !< woody biomass of an individual tree (mol C)
     REAL(wp),INTENT(in)  :: heart_wood_carbon       !< woody biomass of an individual tree (mol C)
-    REAL(wp),INTENT(in)  :: dens_ind                !< density of populations (#indivuduals /m2) 
+    REAL(wp),INTENT(in)  :: dens_ind                !< density of populations (number of individuals /m2) 
     REAL(wp),INTENT(in)  :: wood_density            !< wood density (mol C / m3)
     REAl(wp),INTENT(in)  :: labile_carbon           !< labile carbon 
     REAL(wp),INTENT(in)  :: labile_nitrogen         !< labile nitrogen

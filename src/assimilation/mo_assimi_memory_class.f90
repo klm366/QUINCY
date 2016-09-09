@@ -14,7 +14,7 @@ MODULE mo_assimi_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
 
-  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later  @slmtemp
+  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later  *slmtemp
 
 
 
@@ -31,7 +31,7 @@ MODULE mo_assimi_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
 
-  ! @slmtemp  --> 2D
+  ! *slmtemp  --> 2D
     TYPE(t_jsb_var_real1d)    :: &          ! REAL(wp) 1D ; implemented for SLM use only, see mo_jsb_var_class 
                                 gpp, &
                                 gpp_c13
