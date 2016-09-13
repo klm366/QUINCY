@@ -55,7 +55,7 @@ useSiteSpecificAWC="no"      # yes/no to use AWC as in site-list file (soil_awc_
 soil_theta_prescribe=100.0      # float !
 
 ## details about the HPC, if unsure stick with these default values ##
-queue="BTM"                  # available queues: all io BTM mpi_large
+queue="all"                  # available queues: all io BTM mpi_large
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000000               # memory per job you may need; provided in Kb (1 Gb == 1000000 Kb)
 numberCpuMax=80              # maximum number of simulations started in parallel

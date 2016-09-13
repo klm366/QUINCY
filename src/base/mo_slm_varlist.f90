@@ -30,7 +30,7 @@ MODULE mo_slm_varlist
     MODULE PROCEDURE slm_add_struct_element_r1d   ! *slmjsb4 *slmtemp | works with struct & l2_struct !!
     MODULE PROCEDURE slm_add_var_list_element_r1d
     MODULE PROCEDURE slm_add_var_list_element_r2d
-!    MODULE PROCEDURE slm_add_var_list_element_r3d
+    MODULE PROCEDURE slm_add_var_list_element_r3d
 !    MODULE PROCEDURE slm_add_var_list_element_r2d_tile
   END INTERFACE slm_add_var
 
@@ -271,6 +271,60 @@ CONTAINS
 
 
   END SUBROUTINE slm_add_var_list_element_r2d
+
+
+! *slmtemp
+  !-----------------------------------------------------------------------------------------------------
+  !> add 3D variable to process memory
+  !!
+  !!  t_jsb_memory:mem <- t_jsb_var_real3d:var
+  !!    
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE slm_add_var_list_element_r3d( &
+    mem, name, var, &
+    ics, ice, iblk, &
+!    hgrid, vgrid, &
+!    cf, &
+!    grib1, grib2, &
+!    prefix, suffix, &
+!    !loutput, lcontainer, &
+!    !lrestart, lrestart_cont, initval_r, isteptype,              &
+!    lrestart, initval_r
+!    !resetval_r, lmiss, missval_r, tlev_source, info,            &
+!    !verbose, new_element, cdiTimeID                             &
+    initval_r) 
+
+    ! 0.1 InOut
+    CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
+    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
+    TYPE(t_jsb_var_real3d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var
+    INTEGER,             INTENT(in)               :: ics   ! model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)               :: ice   ! model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)               :: iblk  ! model%options -> for SLM compatibility
+    REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+    ! 0.2 Local
+    INTEGER           :: pos_of_var
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r3d'
+
+    var%name = TRIM(name)
+    !var%owner_proc_id = mem%owner_proc_id
+
+    pos_of_var = mem%no_of_vars + 1
+    IF (pos_of_var > mem%max_no_of_vars) THEN
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
+    ELSE
+      mem%vars(pos_of_var)%p => var
+      mem%no_of_vars = pos_of_var
+    END IF
+
+    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)
+    ALLOCATE(var%ptr(ics:ice,1:1,iblk))     ! *slmtemp added 1:1 to make allocation work
+    var%ptr(ics:ice,1:1,iblk) = initval_r   ! *slmtemp added 1:1 to make allocation work
+
+
+  END SUBROUTINE slm_add_var_list_element_r3d
+
 
 
 END MODULE mo_slm_varlist

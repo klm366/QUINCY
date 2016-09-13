@@ -22,7 +22,7 @@ MODULE mo_jsb_process_factory
   USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
 !!  USE mo_seb_memory_class,     ONLY: t_seb_memory
 !!  USE mo_turb_memory_class,    ONLY: t_turb_memory
-!!  USE mo_soil_memory_class,    ONLY: t_soil_memory
+  USE mo_soil_memory_class,    ONLY: t_soil_memory
 !!  USE mo_hydro_memory_class,   ONLY: t_hydro_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_assimi_memory_class,  ONLY: t_assimi_memory
@@ -126,7 +126,9 @@ CONTAINS
     USE mo_land2atm_memory_class, ONLY: max_no_of_land2atm_vars => max_no_of_vars
 !!    USE mo_seb_memory_class,     ONLY: max_no_of_seb_vars => max_no_of_vars
 !!    USE mo_turb_memory_class,    ONLY: max_no_of_turb_vars => max_no_of_vars
-!!    USE mo_soil_memory_class,    ONLY: max_no_of_soil_vars => max_no_of_vars
+    USE mo_soil_memory_class,    ONLY: max_no_of_soil_vars      => max_no_of_vars, &
+                                       max_no_of_soil_structs   => max_no_of_structs, &    ! *slmjsb4
+                                       max_no_of_soil_n_structs => max_no_of_n_structs     ! *slmjsb4
 !!    USE mo_hydro_memory_class,   ONLY: max_no_of_hydro_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars      => max_no_of_vars, &
                                        max_no_of_veg_structs   => max_no_of_structs, &    ! *slmjsb4
@@ -154,9 +156,11 @@ CONTAINS
 !!    CASE (TURB_)
 !!      ALLOCATE(t_turb_memory::return_ptr)
 !!      return_ptr%max_no_of_vars = max_no_of_turb_vars
-!!    CASE (SOIL_)
-!!      ALLOCATE(t_soil_memory::return_ptr)
-!!      return_ptr%max_no_of_vars = max_no_of_soil_vars
+    CASE (SOIL_)
+      ALLOCATE(t_soil_memory::return_ptr)
+      return_ptr%max_no_of_vars      = max_no_of_soil_vars
+      return_ptr%max_no_of_structs   = max_no_of_soil_structs        ! *slmjsb4
+      return_ptr%max_no_of_n_structs = max_no_of_soil_n_structs      ! *slmjsb4
 !!    CASE (HYDRO_)
 !!      ALLOCATE(t_hydro_memory::return_ptr)
 !!      return_ptr%max_no_of_vars = max_no_of_hydro_vars
@@ -182,9 +186,9 @@ CONTAINS
     END SELECT
 
     ALLOCATE(return_ptr%vars(return_ptr%max_no_of_vars))
-    ! allocate TYPEs and nested TYPEs only for certain processes   ! *slmjsb4
+    ! allocate TYPEs and nested TYPEs only for certain processes   ! *slmjsb4 (VEG_ & SOIL_)
     SELECT CASE(iproc)
-    CASE (VEG_)
+    CASE (VEG_, SOIL_)
       ALLOCATE(return_ptr%structs(return_ptr%max_no_of_structs))      ! *slmjsb4
       ALLOCATE(return_ptr%n_structs(return_ptr%max_no_of_n_structs))  ! *slmjsb4
     END SELECT
