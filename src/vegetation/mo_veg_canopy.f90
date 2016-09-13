@@ -18,7 +18,7 @@ MODULE mo_veg_canopy
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calc_canopy_layers,calc_marginal_npp_increment,calc_dir_optimal_cn_leaf
+  PUBLIC :: calc_canopy_layers,calc_marginal_canopy_flux_increment,calc_dir_optimal_cn_leaf
 
 CONTAINS
 
@@ -501,27 +501,37 @@ CONTAINS
   ! Sub Task to calc_growth (currently in mo_veg_canopy to get rid of circular dependencies)
   ! 
   !------------------------------------------------------------------------------------------------------
-  !> Subroutine to calculate change in NPP with very small change in LAI
+  !> Subroutine to calculate change in net photosynthesis and transpiration with small change in LAI
   !! Needed for calculation of optimal leaf and root allocation fraction. See mo_veg_growth
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_marginal_npp_increment(lctlib, plant, dNPP)
+  SUBROUTINE calc_marginal_canopy_flux_increment(lctlib, t_air, press_srf, q_air, co2_mixing_ratio, & 
+                                                 ga, plant, unit_npp, unit_transpiration)
 
-    USE mo_base_constants, ONLY: ncanop
-    USE mo_veg_memory,     ONLY: t_slm_plant
+    USE mo_base_constants,   ONLY: ncanop
+    USE mo_atmland_util,     ONLY: calc_spec_humidity_sat
+    USE mo_shared_constants, ONLY: r_gas_dryair
+    USE mo_veg_memory,       ONLY: t_slm_plant
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_lctlib_element),INTENT(in) :: lctlib  !< land-cover-type library - parameters for one pft
-    TYPE(t_slm_plant),     INTENT(in) :: plant   !< plant-type
-    REAL(wp),              INTENT(out) :: dNPP   !<- unit change of NPP per ??
+    TYPE(t_lctlib_element),INTENT(in) :: lctlib              !< land-cover-type library - parameters for one pft
+    TYPE(t_slm_plant),     INTENT(in) :: plant               !< plant-type
+    REAL(wp),              INTENT(in) :: t_air               !< air temperature (K) 
+    REAL(wp),              INTENT(in) :: press_srf           !< air pressure (Pa) 
+    REAL(wp),              INTENT(in) :: q_air               !< air specific humidity (--) 
+    REAL(wp),              INTENT(in) :: co2_mixing_ratio    !< co2 mixing ratio (ppm) 
+    REAL(wp),              INTENT(in) :: ga                  !< air temperature (K) 
+    REAL(wp),              INTENT(out) :: unit_npp           !<- unit change of NPP per ??
+    REAL(wp),              INTENT(out) :: unit_transpiration !<- unit change of NPP per ??
     ! 0.2 Local
     REAL(wp) :: lai, leaf_nitrogen
-    REAL(wp) :: gpp, maint_respiration_leaf
+    REAL(wp) :: gpp, maint_respiration_leaf,gc
     REAL(wp),DIMENSION(ncanop) :: lai_cl
     REAL(wp),DIMENSION(ncanop) :: cumm_lai_cl 
     REAL(wp),DIMENSION(ncanop) :: par_sunlit_mavg_cl,par_shaded_mavg_cl,fleaf_sunlit_mavg_cl 
     REAl(wp),DIMENSION(ncanop) :: fn_oth_cl, nl_tot_cl, fn_chl_cl, fn_et_cl, fn_rub_cl, fn_pepc_cl
-    REAL(wp) :: ag_cl, r_cl
+    REAL(wp) :: ag_cl, r_cl, gs_cl
+    REAL(wp) :: q_sat 
     REAL(wp) :: hlp1 
     INTEGER :: icanop
  
@@ -544,10 +554,14 @@ CONTAINS
 
     !> 2.0 Estimate effect of a small increase in leaf C on LAI and leaf N
     !!
-    ! increase LAI by small increment
-    lai = plant%lai + 0.3_wp * lctlib%sla
+    ! increase LAI by 1 mol of C 
+    lai = plant%lai + lctlib%sla
     ! equivalent leaf N assuming any new leaf growth will have target CN
-    leaf_nitrogen = plant%pool%leaf%nitrogen + 0.3_wp / plant%target_cn_leaf
+    IF(plant%pool%leaf%carbon>eps8)THEN
+       leaf_nitrogen = plant%pool%leaf%nitrogen + plant%pool%leaf%nitrogen/plant%pool%leaf%carbon
+    ELSE
+       leaf_nitrogen = 1._wp / lctlib%cn_leaf
+    ENDIF
 
     ! recompute canopy layer LAI and foliar N with new numbers
     CALL calc_canopy_layers(lctlib = lctlib, & 
@@ -569,32 +583,51 @@ CONTAINS
     ! calculate photosynthesis by integration over canopy layers containing leaves 
     gpp = 0._wp
     maint_respiration_leaf = 0._wp
+    gc = 0.0_wp
     DO icanop = 1,ncanop
        IF(lai_cl(icanop).GT.eps8)THEN   
-            
-          CALL calc_photosynthesis(plant%t_air_mavg,plant%press_srf_mavg,& 
-                    plant%co2_mixing_ratio_mavg,plant%ga_mavg, & 
-                    plant%par_sunlit_cl(icanop), plant%par_shaded_cl(icanop),& 
-                    plant%fleaf_sunlit_cl(icanop), &
-                    plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
-                    fn_chl_cl(icanop),fn_et_cl(icanop),fn_rub_cl(icanop),fn_pepc_cl(icanop), nl_tot_cl(icanop),& 
-                    lctlib%ps_pathway, &
-                    plant%t_jmax_opt_mavg, &                  
-                    lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
-                    ag_cl,hlp1,r_cl,hlp1,hlp1,&
-                    hlp1,hlp1,hlp1)
+          CALL calc_photosynthesis(t_air,press_srf,& 
+                                   co2_mixing_ratio,ga, & 
+                                   plant%par_sunlit_cl(icanop),& 
+                                   plant%par_shaded_cl(icanop),& 
+                                   plant%fleaf_sunlit_cl(icanop), &
+                                   plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
+                                   fn_chl_cl(icanop),fn_et_cl(icanop),fn_rub_cl(icanop), & 
+                                   fn_pepc_cl(icanop), nl_tot_cl(icanop),lctlib%ps_pathway, &
+                                   plant%t_jmax_opt_mavg, &                  
+                                   lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
+                                   ag_cl,hlp1,r_cl,gs_cl,hlp1,&
+                                   hlp1,hlp1,hlp1)
     
             gpp = gpp + ag_cl * lai_cl(icanop)  
             maint_respiration_leaf = maint_respiration_leaf + r_cl * lai_cl(icanop) 
- 
+            gc = gc + gs_cl * lai_cl(icanop) 
+
        ENDIF
     ENDDO
       
-    !> 3.0 Calculate increment in net carbon gain from increased LAI
+    !> 3.0 Calculate change in canopy fluxes from altered LAI 
+
+    !> 3.1 net carbon gain from increased LAI
     !!
-    dNPP = (gpp - plant%gpp) - (maint_respiration_leaf - plant%maint_respiration_leaf)
- 
-   END SUBROUTINE calc_marginal_npp_increment
+    unit_npp = (gpp - plant%gpp) - (maint_respiration_leaf - plant%maint_respiration_leaf)
+
+    !> 3.2 Calculate increment in net water loss from increased LAI
+    !!
+    q_sat = calc_spec_humidity_sat(t_air,press_srf) 
+    IF(plant%gc > eps8 .AND. gc > eps8)THEN 
+       unit_transpiration = press_srf / ( r_gas_dryair * t_air ) * &  
+                        (q_sat - q_air) / (1._wp / gc + 1._wp / ga ) - & 
+                        press_srf / ( r_gas_dryair * t_air ) * &  
+                        (q_sat - q_air) / (1._wp / plant%gc + 1._wp / ga )  
+    ELSEIF (gc > eps8) THEN 
+       unit_transpiration =  press_srf / ( r_gas_dryair * t_air ) * &  
+                         (q_sat - q_air) / (1._wp / gc + 1._wp / ga ) 
+    ELSE 
+      unit_transpiration = 0.0_wp  
+    ENDIF 
+
+   END SUBROUTINE calc_marginal_canopy_flux_increment
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task to calc_growth (currently in mo_veg_canopy to get rid of circular dependencies)

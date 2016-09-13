@@ -56,11 +56,15 @@ MODULE mo_jsb_lctlib_class
      REAL(wp) :: k_latosa 
      REAL(wp) :: k_rtos 
      REAL(wp) :: k_crtos 
+     REAL(wp) :: phi_leaf_min 
+     REAL(wp) :: k_root 
+     REAL(wp) :: k_sapwood 
      REAL(wp) :: k_max_falloc_fruit
      REAL(wp) :: tau_fine_root
      REAL(wp) :: tau_coarse_root
      REAL(wp) :: allom_k1
      REAL(wp) :: allom_k2
+     REAL(wp) :: c0_allom
      REAL(wp) :: tau_fruit
      REAL(wp) :: tau_seed_litter
      REAL(wp) :: tau_seed_est
@@ -215,6 +219,15 @@ CONTAINS
       ! paramter in height diameter relationship
       lctlib(1:npft)%allom_k2 = & 
       (/0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.5_wp,0.5_wp/) 
+      ! minimum leaf water potential, MPa 
+      lctlib(1:npft)%phi_leaf_min =  & 
+      (/-2.0_wp,-2.0_wp,-2.0_wp,-2.0_wp,-2.0_wp,-2.0_wp,-1.5_wp,-1.5_wp/) 
+      ! fine root hydraulic conductance, m3 mol-1 s-1 MPa-1 
+      lctlib(1:npft)%k_root = 2.3_wp * molar_mass_C * 1.e-10 
+      ! sapwood hydraulic conductance, m2 s-1 MPa-1 
+      ! @todo check tropics check grasses 
+      lctlib(1:npft)%k_sapwood = 1.e-3 * & 
+      (/3.0_wp,3.0_wp,3.0_wp,3.0_wp,1.3_wp,1.3_wp,0._wp,0._wp/) 
       ! turnover time of the fruit pool (1/years)
       lctlib(1:npft)%tau_fruit = 1.0_wp
       ! turnover time of the seed bed to litter (1/years)
@@ -242,6 +255,10 @@ CONTAINS
       lctlib(1:npft)%k_est_light = 4.0_wp
       ! seed size (mol C)
       lctlib(1:npft)%seed_size = 2.0_wp 
+      ! hydraulic trade-off parameter for fine root growth
+      lctlib(:)%c0_allom = SQRT(lctlib(:)%k_root/lctlib(:)%k_sapwood * & 
+                                lctlib(:)%tau_fine_root/lctlib(:)%tau_sap_wood * lctlib(:)%wood_density) * & 
+                           lctlib(:)%tau_sap_wood/lctlib(:)%tau_fine_root
 
     END FUNCTION init_lctlib 
 

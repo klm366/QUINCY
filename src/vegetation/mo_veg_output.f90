@@ -161,14 +161,15 @@ CONTAINS
     WRITE(lun,'(2a)') 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
                      'Fruit_P Labile_P Reserve_P SeedBank_P'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time SoilMoisture'
+    WRITE(lun,'(a)') 'Time SoilMoisture SoilWaterPotential'
     lun=lun+1
     WRITE(lun,'(a)') 'Time LitterN MineralN'
     lun=lun+1
     WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth nl_tot'
     lun=lun+1
-    WRITE(lun,'(a)') &
-    & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp growing_season b_soil_gs cost_nup cost_bnf'
+    WRITE(lun,'(2a)') &
+    & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp ', & 
+    & 'growing_season b_soil_gs cost_nup cost_bnf unit_transp transp'
 
   END SUBROUTINE init_output_writing_pool
 
@@ -447,7 +448,7 @@ CONTAINS
          plant%pool%fruit%phosphorus,plant%pool%labile%phosphorus,&
          plant%pool%reserve%phosphorus,plant%pool%seed_bed%phosphorus
        lun=lun+1
-       write(lun,'(9F12.6)') time_d, soil%moisture
+       write(lun,'(9F12.6)') time_d, soil%moisture, soil%water_potential
        lun=lun+1
        write(lun,'(3F12.6)') time_d, soil%pool%litter%nitrogen, soil%ammonium
        lun=lun+1
@@ -495,12 +496,13 @@ CONTAINS
          growing_season_float = 0.0_wp
        END IF 
        lun=lun+1
-       write(lun,'(20F20.6)') time_d, plant%height, plant%diameter, plant%lai, plant%dens_ind, &
+       write(lun,'(22F20.6)') time_d, plant%height, plant%diameter, plant%lai, plant%dens_ind, &
          hlp1,l2r,s2c, bcf, &
-         plant%target_cn_leaf, plant%unit_npp_mavg, plant%unit_uptake_n_talloc_mavg,&
-         plant%growth_cn_plant_mavg, plant%allometry_npp_mavg, &
+         plant%target_cn_leaf, plant%unit_npp_talloc_mavg, plant%unit_uptake_n_talloc_mavg,&
+         plant%growth_cn_talloc_mavg, plant%npp_talloc_mavg, &
          growing_season_float, plant%beta_soil_gs_mavg, &
-         plant%cost_n_uptake_root_mavg, plant%cost_n_fixation_mavg
+         plant%cost_n_uptake_root_mavg, plant%cost_n_fixation_mavg, &
+         plant%unit_transpiration_talloc_mavg*1.e10_wp,plant%transpiration_talloc_mavg 
       END IF
     END IF
     END IF  ! on/off switch specific to 'special case: fluxnet output'

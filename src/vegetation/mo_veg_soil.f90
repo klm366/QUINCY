@@ -217,7 +217,7 @@ CONTAINS
   !! 
   !! two cases considered: \n a) dynamic water uptake calculation, \n b) prescribed values from namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_vegsoil_physics(tile)
+  SUBROUTINE update_vegsoil_physics(tile, lctlib)
 
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 !    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_ --> soil creates conflict
@@ -229,11 +229,12 @@ CONTAINS
 
     USE mo_base_constants,        ONLY: dt
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants,      ONLY: r_gas_dryair,LatentHeatVaporization
+    USE mo_shared_constants,      ONLY: r_gas_dryair,LatentHeatVaporization,rhoh2o,grav
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile     !< one tile
+    TYPE(t_lctlib_element),INTENT(in)       :: lctlib   !< land-cover-type library - parameters for one pft
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER                :: soil     ! soil variables per tile
     TYPE(t_slm_plant),POINTER               :: plant    ! plant variables per tile
@@ -275,23 +276,28 @@ CONTAINS
     plant => tile%plant
     soil  => tile%soil
 
+
+    ! saturating specific humidity 
+    q_sat = calc_spec_humidity_sat(t_air,press_srf)
+
+    IF(plant%gc > eps8)THEN
+       ! T = rho * (qsat - qair ) * Gtot in mm/s 
+       plant%transpiration = press_srf / ( r_gas_dryair * t_air ) * & 
+                  (q_sat - q_air) / (1._wp / plant%gc + 1._wp / ga )  
+    ELSE 
+       plant%transpiration = 0.0_wp 
+    ENDIF
+    ! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil = ga / 10)
+    evaporation = press_srf / ( r_gas_dryair * t_air ) * & 
+                  (q_sat - q_air) * soil%theta / 100.0_wp / ( 100._wp / ga)
+    IF(net_radiation < eps8) evaporation = 0.0_wp
+
+    ! calculate latent heat flux (W m-2) 
+    latent_heat_flx = LatentHeatVaporization * (evaporation + plant%transpiration)
+    ! diagnose sensible heat flux (shortwave compontent only)
+    sensible_heat_flx = net_radiation - latent_heat_flx 
+
     IF(veg_config%flag_calc_soil_moisture) THEN ! case of dynamic water uptake calculation 
-
-       ! saturating specific humidity 
-
-       q_sat = calc_spec_humidity_sat(t_air,press_srf)
-
-       IF(plant%gc > eps8)THEN
-          ! T = rho * (qsat - qair ) * Gtot in mm/s 
-          plant%transpiration = press_srf / ( r_gas_dryair * t_air ) * & 
-                     (q_sat - q_air) / (1._wp / plant%gc + 1._wp / ga )  
-       ELSE 
-          plant%transpiration = 0.0_wp 
-       ENDIF
-       ! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil = ga / 10)
-       evaporation = press_srf / ( r_gas_dryair * t_air ) * & 
-                     (q_sat - q_air) * soil%theta / 100.0_wp / ( 100._wp / ga)
-       IF(net_radiation < eps8) evaporation = 0.0_wp
 
        ! update soil moisture dS = rain - transpiration - evaporation 
        soil%moisture = soil%moisture + (rain + snow & 
@@ -301,11 +307,6 @@ CONTAINS
        ! scale to relative water availability (%)
        soil%theta = soil%moisture / veg_config%soil_awc_prescribe * 100._wp
 
-       ! calculate latent heat flux (W m-2) 
-       latent_heat_flx = LatentHeatVaporization * (evaporation + plant%transpiration)
-       ! diagnose sensible heat flux (shortwave compontent only)
-       sensible_heat_flx = net_radiation - latent_heat_flx 
-
    ELSE 
        ! use prescribed value of theta from namelist
        soil%theta = veg_config%soil_theta_prescribe 
@@ -314,6 +315,12 @@ CONTAINS
        soil%moisture = veg_config%soil_awc_prescribe * soil%theta / 100.0_wp
 
    ENDIF 
+
+   ! calculate soil wtaer potential according to Campbell et al 1974 
+   soil%water_potential = k_soil_phi1 * & 
+         (( theta_wilt + 0.01_wp * soil%theta * (theta_sat - theta_wilt))/theta_sat)**k_soil_phi2
+   plant%dphi = soil%water_potential - lctlib%phi_leaf_min - grav * rhoh2o * plant%height*1.e-6 
+
   END SUBROUTINE update_vegsoil_physics
 
 END MODULE mo_veg_soil

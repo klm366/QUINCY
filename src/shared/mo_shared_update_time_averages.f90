@@ -283,40 +283,44 @@ CONTAINS
                                             do_calc=(veg%growth_req_p > eps8))
     veg%boc_an_mavg                 = calc_mavg(veg%boc_an_mavg, veg%boc_an, mavg_period_boc_an, &
                                             do_calc=(veg%pool%leaf%carbon > eps8))
-    veg%unit_npp_mavg               = calc_mavg(veg%unit_npp_mavg, veg%unit_npp, mavg_period_opt_alloc, & 
-                                            do_calc=veg%growing_season)
 
+    ! averages for allocation calculation
+    veg%npp_talloc_mavg                   = calc_mavg(veg%npp_talloc_mavg, veg%npp, mavg_period_opt_alloc, &
+                                                  do_calc=veg%growing_season)
+    veg%unit_npp_talloc_mavg              = calc_mavg(veg%unit_npp_talloc_mavg, veg%unit_npp, mavg_period_opt_alloc, &
+                                                  do_calc=veg%growing_season)
+    veg%transpiration_talloc_mavg         = calc_mavg(veg%transpiration_talloc_mavg, veg%transpiration, mavg_period_opt_alloc, &
+                                                  do_calc=veg%growing_season)
+    veg%unit_transpiration_talloc_mavg    = calc_mavg(veg%unit_transpiration_talloc_mavg, veg%unit_transpiration, mavg_period_opt_alloc, &
+                                                  do_calc=veg%growing_season)
+    veg%dphi_talloc_mavg                  = calc_mavg(veg%dphi_talloc_mavg, veg%dphi, mavg_period_opt_alloc, &
+                                                  do_calc=veg%growing_season)
+    veg%unit_uptake_n_talloc_mavg         = calc_mavg(veg%unit_uptake_n_talloc_mavg, veg%unit_uptake_n, mavg_period_opt_alloc, &
+                                                  do_calc=veg%growing_season)
+    veg%unit_uptake_p_talloc_mavg         = calc_mavg(veg%unit_uptake_p_talloc_mavg, veg%unit_uptake_p, mavg_period_opt_alloc, &
+                                                  do_calc=veg%growing_season)
+    veg%labile_carbon_talloc_mavg         = calc_mavg(veg%labile_carbon_talloc_mavg, veg%pool%labile%carbon, & 
+                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
+    veg%labile_nitrogen_talloc_mavg       = calc_mavg(veg%labile_nitrogen_talloc_mavg, veg%pool%labile%nitrogen, & 
+                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
+    veg%labile_phosphorus_talloc_mavg     = calc_mavg(veg%labile_phosphorus_talloc_mavg, veg%pool%labile%phosphorus, & 
+                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
     IF (veg%growth_req_n > 0._wp)THEN
        hlp = 1._wp/veg%growth_req_n
     ELSE
        hlp=0._wp
     ENDIF
-    veg%growth_cn_plant_mavg  = calc_mavg(veg%growth_cn_plant_mavg, hlp, mavg_period_opt_alloc, do_calc=veg%growing_season)
+    veg%growth_cn_talloc_mavg  = calc_mavg(veg%growth_cn_talloc_mavg, hlp, mavg_period_opt_alloc, do_calc=veg%growing_season)
     
     IF (veg%growth_req_n > 0._wp .AND. veg%growth_req_p > 0._wp)THEN
        hlp = 1._wp/(veg%growth_req_n * veg%growth_req_p)
     ELSE
        hlp=0._wp
     ENDIF
-    veg%growth_cp_plant_mavg  = calc_mavg(veg%growth_cp_plant_mavg, hlp, mavg_period_opt_alloc, do_calc=veg%growing_season)
+    veg%growth_cp_talloc_mavg  = calc_mavg(veg%growth_cp_talloc_mavg, hlp, mavg_period_opt_alloc, do_calc=veg%growing_season)
 
-    veg%allometry_npp_mavg                = calc_mavg(veg%allometry_npp_mavg, veg%npp, mavg_period_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    veg%allometry_labile_mavg%nitrogen    = calc_mavg(veg%allometry_labile_mavg%nitrogen, veg%pool%labile%nitrogen, & 
-                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
-    veg%allometry_labile_mavg%phosphorus  = calc_mavg(veg%allometry_labile_mavg%phosphorus, veg%pool%labile%phosphorus, & 
-                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
-    veg%allometry_labile_mavg%carbon      = calc_mavg(veg%allometry_labile_mavg%carbon, veg%pool%labile%carbon, & 
-                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
- 
-    veg%demand_uptake_n_mavg              = calc_mavg(veg%demand_uptake_n_mavg, veg%f_n_demand, mavg_period_demand_uptake_n, &
-                                                  do_calc=(veg%pool%fine_root%carbon > eps8))
-    veg%demand_uptake_p_mavg              = calc_mavg(veg%demand_uptake_p_mavg, veg%f_p_demand, mavg_period_demand_uptake_p, &
-                                                  do_calc=(veg%pool%fine_root%carbon > eps8))
-    veg%unit_uptake_n_talloc_mavg         = calc_mavg(veg%unit_uptake_n_talloc_mavg, veg%unit_uptake_n, mavg_period_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    veg%unit_uptake_p_talloc_mavg         = calc_mavg(veg%unit_uptake_p_talloc_mavg, veg%unit_uptake_p, mavg_period_opt_alloc, &
-                                                  do_calc=veg%growing_season)
+
+
     veg%unit_uptake_n_troot_mavg          = calc_mavg(veg%unit_uptake_n_troot_mavg, veg%unit_uptake_n, lctlib%tau_fine_root, &
                                                   do_calc=veg%growing_season, avg_period_unit='year')
     veg%unit_uptake_p_troot_mavg          = calc_mavg(veg%unit_uptake_p_troot_mavg, veg%unit_uptake_p, lctlib%tau_fine_root, &
@@ -329,6 +333,10 @@ CONTAINS
 !    veg%cost_n_fixation_mavg              = calc_mavg(veg%cost_n_fixation_mavg, veg%cost_n_fixation, mavg_period_yearly, &
 !                                                  do_calc=veg%growing_season) 
 
+    veg%demand_uptake_n_mavg              = calc_mavg(veg%demand_uptake_n_mavg, veg%f_n_demand, mavg_period_demand_uptake_n, &
+                                                  do_calc=(veg%pool%fine_root%carbon > eps8))
+    veg%demand_uptake_p_mavg              = calc_mavg(veg%demand_uptake_p_mavg, veg%f_p_demand, mavg_period_demand_uptake_p, &
+                                                  do_calc=(veg%pool%fine_root%carbon > eps8))
     veg%leaf2root_mass_ratio_mavg         = calc_mavg(veg%leaf2root_mass_ratio_mavg, &
                                                   veg%pool%leaf%carbon/veg%pool%fine_root%carbon, &
                                                   mavg_period_yearly, do_calc=(veg%pool%leaf%carbon > eps8))

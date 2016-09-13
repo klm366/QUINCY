@@ -153,6 +153,12 @@ MODULE mo_veg_constants
       ! soil litter turnover pool, s equivalent to 1 year
       tau_litter      !< soil litter pool turnover time
 
+  REAL(wp), SAVE :: & 
+      theta_sat,    &     !< satuarted soil moisture 
+      theta_wilt,   &     !< wilting point 
+      k_soil_phi1,  &     !< coefficient for calculating soil water potential 
+      k_soil_phi2         !< coefficient for calculating soil water potential 
+
   ! parameters for changes in canopy N fractions
   REAL(wp), SAVE :: &     
       ! maximum change in photosynthetic N fractions
@@ -261,6 +267,13 @@ CONTAINS
       weibull_k_fruit_alloc       = 2.0_wp 
       offset_fruit_alloc          = 0.1_wp  
       min_falloc_fruit            = 0.01_wp 
+
+  ! soil stuff
+  ! constants used to calculate soil water potential, based on Rawls et al 1982 for loam 
+      theta_sat   = 0.49_wp 
+      theta_wilt  = 0.1_wp 
+      k_soil_phi1 = -0.0011_wp 
+      k_soil_phi2 =  -4.55_wp
 
   ! moved here from mo_assimi_constants
       tau_canopy_acclimation      = 10._wp 

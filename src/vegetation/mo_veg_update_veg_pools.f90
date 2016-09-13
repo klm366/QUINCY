@@ -36,7 +36,8 @@ CONTAINS
     USE mo_shared_constants        ! only lambda_C14 ?
     USE mo_veg_memory              ! only t_slm_plant ?
     USE mo_veg_canopy,          ONLY: calc_canopy_layers
-    USE mo_veg_growth,          ONLY: calc_allometry
+    USE mo_veg_growth,          ONLY: calc_diameter_from_woody_biomass,calc_height_from_diameter
+    USE mo_veg_constants,       ONLY: itree
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -129,16 +130,11 @@ CONTAINS
        !! 
        plant%lai = plant%pool%leaf%carbon * lctlib%sla
        plant%dens_ind = plant%dens_ind + plant%delta_dens_ind
-!@todo: check for consistency with Silvia's branch
-       CALL calc_allometry(plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind,plant%pool%labile%carbon,&
-            plant%pool%labile%nitrogen, plant%pool%labile%phosphorus, lctlib%wood_density, & 
-            lctlib%sla,lctlib%allom_k1,lctlib%allom_k2, & 
-            lctlib%k_latosa,lctlib%k_rtos,lctlib%growthform, & 
-            plant%growth_cn_plant_mavg,plant%growth_cp_plant_mavg,plant%unit_npp_mavg,&
-            plant%unit_uptake_n_talloc_mavg, &
-            plant%unit_uptake_p_talloc_mavg, plant%allometry_npp_mavg,hlp1, plant%diameter,plant%height,hlp1,hlp1, &
-            hlp1,hlp1,hlp1, hlp1)  
-   
+       IF(lctlib%growthform==itree)THEN
+          plant%diameter = calc_diameter_from_woody_biomass(lctlib,plant%pool%sap_wood%carbon,plant%pool%heart_wood%carbon,plant%dens_ind)
+          plant%height = calc_height_from_diameter(lctlib,plant%diameter) 
+       ENDIF 
+
        IF(plant%pool%leaf%carbon .GT. eps8) THEN 
            plant%mean_leaf_age = & 
              (plant%mean_leaf_age + dt/one_day) * (1._wp - plant%growth%leaf%carbon/plant%pool%leaf%carbon)

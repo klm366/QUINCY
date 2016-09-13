@@ -246,7 +246,7 @@ CONTAINS
       CALL calc_turnover          (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_veg_dynamics    (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_vegsoil_pool    (tile, model%lctlib(tile%lcts%lib_id))
-      CALL update_vegsoil_physics (tile)
+      CALL update_vegsoil_physics (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_veg_pools       (tile, model%lctlib(tile%lcts%lib_id))
 
     !! accumulation over time - daytime & moving average
@@ -281,7 +281,7 @@ CONTAINS
       CALL calc_turnover          (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_veg_dynamics    (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_vegsoil_pool    (tile, model%lctlib(tile%lcts%lib_id))
-      CALL update_vegsoil_physics (tile)
+      CALL update_vegsoil_physics (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_veg_pools       (tile, model%lctlib(tile%lcts%lib_id))
 
     !! accumulation over time - daytime & moving average
@@ -314,7 +314,7 @@ CONTAINS
       CALL update_veg_pools       (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_radiation       (tile, model%lctlib(tile%lcts%lib_id))
       CALL update_canopy_fluxes   (tile, model%lctlib(tile%lcts%lib_id))
-      CALL update_vegsoil_physics (tile)
+      CALL update_vegsoil_physics (tile, model%lctlib(tile%lcts%lib_id))
 
     !! accumulation over time - daytime & moving average
     !! 

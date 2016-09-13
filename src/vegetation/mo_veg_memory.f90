@@ -130,6 +130,7 @@ MODULE mo_veg_memory
     REAL(wp) :: f_p_demand                        !< relative plant demand for P; see update_vegsoil_bgc
     REAL(wp) :: beta_air                          !< scaling factor to account for air humidity effects on conductance
     REAL(wp) :: beta_soil_ps                      !< scaling factor to account for soil moisture constraints on conductance
+    REAL(wp) :: dphi                              !< plant-soil water potential gradient (MPa)
     REAL(wp) :: beta_soil_gs                      !< scaling factor to account for soil moisture constraints on conductance
     REAL(wp) :: growth_req_n                      !< moles N required for a unit of C growth under current allocation fractions 
     REAL(wp) :: growth_req_p                      !< moles P required for a unit of N growth under current allocation fractions 
@@ -203,16 +204,21 @@ MODULE mo_veg_memory
     ! 1.7 plant status parameter
     REAL(wp) :: boc_an_mavg            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 optimal allocation
-    REAL(wp) :: unit_npp_mavg                   !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
-    REAL(wp) :: unit_uptake_n_talloc_mavg       !< rate of N uptkae per unit root, mumol N mol-1 (time-scale of accumutation: tau_allocation)
+    REAl(wp) :: npp_talloc_mavg                 !< NPP (µmol m-2 s-1) (averaging time-scale: tau_allocation)
+    REAL(wp) :: unit_npp_talloc_mavg            !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
+    REAL(wp) :: transpiration_talloc_mavg       !< average transpiration at allocation time-scale
+    REAL(wp) :: unit_transpiration_talloc_mavg  !< rate of tranpiration change per unit LAI change?
+    REAL(wp) :: unit_uptake_n_talloc_mavg       !< rate of N uptkae per unit root, mumol N mol-1 (averaging time-scale: tau_allocation)
     REAL(wp) :: unit_uptake_p_talloc_mavg       !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_allocation)
     REAL(wp) :: unit_uptake_n_troot_mavg        !< rate of N uptkae per unit root, mumol N mol-1 (time-scale of accumulation: tau_root)
     REAL(wp) :: unit_uptake_p_troot_mavg        !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_root)
-    REAl(wp) :: allometry_npp_mavg              !< average NPP
-    REAL(wp) :: growth_cn_plant_mavg            !< plant growth cn ratio, equivalent to 1/growth_req_n
-    REAL(wp) :: growth_cp_plant_mavg            !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)
+    REAL(wp) :: dphi_talloc_mavg                !< leaf-soil water potential gradient (MPa)  (averaging time-scale: tau_allocation)
+    REAL(wp) :: growth_cn_talloc_mavg           !< plant growth cn ratio, equivalent to 1/growth_req_n
+    REAL(wp) :: growth_cp_talloc_mavg           !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)
     REAL(Wp) :: leaf2root_mass_ratio_mavg       !< leaf to root mass ratio
-    TYPE(t_element) :: allometry_labile_mavg    !< moving average of labile pools neeeded for allometry calculations
+    REAL(wp) :: labile_carbon_talloc_mavg       !< moving average of labile carbon pool neeeded for allometry calculations
+    REAL(wp) :: labile_nitrogen_talloc_mavg     !< moving average of labile nitrogen pool neeeded for allometry calculations
+    REAL(wp) :: labile_phosphorus_talloc_mavg   !< moving average of labile phosphorus pool neeeded for allometry calculations
     !! fluxes 
     !!
      TYPE(t_element)      :: establishment !< flux between seed bed and reserve (mol m-2 timestep-1)
@@ -260,6 +266,7 @@ MODULE mo_veg_memory
      REAL(wp) :: fmaint_rate              !< current N-specific maintentance respiration (~µmol C/mol N / s ) 
      REAL(wp) :: ci                       !< leaf internal co2 concentration
      REAL(wp) :: unit_npp                 !< incremental change in NPP. Needed for optimal allocation
+     REAL(wp) :: unit_transpiration       !< incremental change in transpiration. Needed for optimal allocation
      REAL(wp) :: unit_uptake_n            !< incremental change in N-based growth, needed for optimal allocation
      REAL(wp) :: unit_uptake_p            !< incremental change in P-based growth, needed for optimal allocation
      REAL(wp) :: delta_dens_ind           !< change in density of individuals (#/m2/timestep)
@@ -629,6 +636,7 @@ CONTAINS
     this%beta_air         = plant_var_init_one
     this%beta_soil_ps     = plant_var_init_one
     this%beta_soil_gs     = plant_var_init_one
+    this%dphi             = plant_var_init_zero
     this%t_jmax_opt       = plant_var_init_zero
     this%growth_req_n     = plant_var_init_zero
     this%growth_req_p     = plant_var_init_zero
@@ -662,6 +670,7 @@ CONTAINS
     this%npp_mavg                           = 1.0_wp
     this%maint_respiration_mavg             = 1.0_wp
     this%fmaint_rate_mavg                   = 1.0_wp
+    this%transpiration_talloc_mavg          = 0._wp
     ! 1.4 nutrient demand for plant uptake
     this%demand_uptake_n_mavg               = 0.1_wp
     this%demand_uptake_p_mavg               = 0.1_wp
@@ -684,16 +693,22 @@ CONTAINS
     ! 1.7 plant status parameter
     this%boc_an_mavg                        = 5.0_wp      ! net photosynthesis at bottom of canopy (lowest canopy layer existing)
     ! 1.8 optimal allocation
-    this%unit_npp_mavg                      = 0._wp
+    this%npp_talloc_mavg                    = 1._wp
+    this%unit_npp_talloc_mavg               = 0._wp
+    this%transpiration_talloc_mavg          = 0._wp
+    this%unit_transpiration_talloc_mavg     = 0._wp
+    this%dphi_talloc_mavg                   = -2._wp
     this%unit_uptake_n_talloc_mavg          = 0._wp
     this%unit_uptake_p_talloc_mavg          = 0._wp
     this%unit_uptake_n_troot_mavg           = 0._wp
     this%unit_uptake_p_troot_mavg           = 0._wp
-    this%allometry_npp_mavg                 = 1._wp
-    this%growth_cn_plant_mavg               = 1._wp
-    this%growth_cp_plant_mavg               = 1._wp
+    this%growth_cn_talloc_mavg              = 1._wp
+    this%growth_cp_talloc_mavg              = 1._wp
     this%leaf2root_mass_ratio_mavg          = 1._wp
-    CALL this%allometry_labile_mavg%init(1.0_wp)
+    this%labile_carbon_talloc_mavg          = 0._wp
+    this%labile_nitrogen_talloc_mavg        = 0._wp
+    this%labile_phosphorus_talloc_mavg      = 0._wp
+
   END SUBROUTINE init_plant 
 
   !-----------------------------------------------------------------------------------------------------
@@ -754,6 +769,7 @@ CONTAINS
     this%transpiration           = flux_zero  !< transpiration in kg m-2 s-1
     this%ci                      = flux_zero  !< ??
     this%delta_dens_ind          = flux_zero  !< ??
+    this%unit_transpiration      = flux_zero
   END SUBROUTINE set_zero_veg_flux
 
 
