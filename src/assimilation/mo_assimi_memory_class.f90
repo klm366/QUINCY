@@ -62,14 +62,14 @@ CONTAINS
 !    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
-    CLASS(t_assimi_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),    INTENT(in)    :: prefix
-    CHARACTER(len=*),    INTENT(in)    :: suffix
-    INTEGER,             INTENT(in)    :: lct_ids !(:)
-    INTEGER,             INTENT(in)    :: model_id
-    INTEGER,             INTENT(in)    :: ics   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: ice   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: iblk  ! model%options -> for SLM compatibility
+    CLASS(t_assimi_memory), INTENT(inout), TARGET :: mem  !> assimi memory
+    CHARACTER(len=*),    INTENT(in)    :: prefix          !> ?
+    CHARACTER(len=*),    INTENT(in)    :: suffix          !> ?
+    INTEGER,             INTENT(in)    :: lct_ids!(:)     !> in jsbach4: vector of land cover type IDs
+    INTEGER,             INTENT(in)    :: model_id        !> model ID
+    INTEGER,             INTENT(in)    :: ics             !> model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)    :: ice             !> model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)    :: iblk            !> model%options -> for SLM compatibility
 
 !    TYPE(t_jsb_model), POINTER :: model
 !    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid

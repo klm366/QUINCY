@@ -36,94 +36,94 @@ CONTAINS
   !! the two header-lines may be neglected \n
   !! write column headers of output files for fluxes \n
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_forcing(time, &
-                                  t_air              , &
-                                  q_air              , &
-                                  rain               , &
-                                  snow               , &
-                                  wind_air           , &
-                                  wind_10m           , &
-                                  lw_srf_down        , &
-                                  swvis_srf_down     , &
-                                  swnir_srf_down     , &
-                                  swpar_srf_down     , &
-                                  swpar_fdiffuse     , &
-                                  press_srf          , &
-                                  drag_srf           , &
-                                  t_acoef            , &
-                                  t_bcoef            , &
-                                  q_acoef            , &
-                                  q_bcoef            , &
-                                  pch                , &
-                                  cos_zenith_angle   , &
-                                  co2_mixing_ratio     , &
-                                  co2_mixing_ratio_C13 , &
-                                  co2_mixing_ratio_C14 , &
-                                  ga                   , &
+  SUBROUTINE update_forcing(      time               , &  ! in
+                                  t_air              , &  ! out
+                                  q_air              , &  ! out
+                                  rain               , &  ! out
+                                  snow               , &  ! out
+                                  wind_air           , &  ! out
+                                  wind_10m           , &  ! out
+                                  lw_srf_down        , &  ! out
+                                  swvis_srf_down     , &  ! out
+                                  swnir_srf_down     , &  ! out
+                                  swpar_srf_down     , &  ! out
+                                  swpar_fdiffuse     , &  ! out
+                                  press_srf          , &  ! out
+                                  drag_srf           , &  ! out
+                                  t_acoef            , &  ! out
+                                  t_bcoef            , &  ! out
+                                  q_acoef            , &  ! out
+                                  q_bcoef            , &  ! out
+                                  pch                , &  ! out
+                                  cos_zenith_angle   , &  ! out
+                                  co2_mixing_ratio     , &! out
+                                  co2_mixing_ratio_C13 , &! out
+                                  co2_mixing_ratio_C14 , &! out
+                                  ga                   , &! out
                                   ! For lakes:
-                                  albedo_lwtr        , &
-                                  drag_wtr           , &
-                                  drag_ice           , &
-                                  t_acoef_wtr        , &
-                                  t_bcoef_wtr        , &
-                                  q_acoef_wtr        , &
-                                  q_bcoef_wtr        , &
-                                  t_acoef_ice        , &
-                                  t_bcoef_ice        , &
-                                  q_acoef_ice        , &
-                                  q_bcoef_ice          &
+                                  albedo_lwtr        , &  ! out
+                                  drag_wtr           , &  ! out
+                                  drag_ice           , &  ! out
+                                  t_acoef_wtr        , &  ! out
+                                  t_bcoef_wtr        , &  ! out
+                                  q_acoef_wtr        , &  ! out
+                                  q_bcoef_wtr        , &  ! out
+                                  t_acoef_ice        , &  ! out
+                                  t_bcoef_ice        , &  ! out
+                                  q_acoef_ice        , &  ! out
+                                  q_bcoef_ice          &  ! out
                                   &  )
 
     USE mo_base_memory,   ONLY: grid  ! used for calc_solar_angle()
     IMPLICIT NONE
     ! 0.1 InOut
-    REAL(wp),INTENT(in) :: time     !< current time (not timestep !)
+    REAL(wp)          , INTENT(in)  :: time     !< current time (not timestep !)
     REAL(wp), OPTIONAL, INTENT(out) :: &  !! these are all variables from atm2land memory
-                                      t_air              , &
-                                      q_air              , &
-                                      rain               , &
-                                      snow               , &
-                                      wind_air           , &
-                                      wind_10m           , &
-                                      lw_srf_down        , &
-                                      swvis_srf_down     , &
-                                      swnir_srf_down     , &
-                                      swpar_srf_down     , &
-                                      swpar_fdiffuse     , &
-                                      press_srf          , &
-                                      drag_srf           , &
-                                      t_acoef            , &
-                                      t_bcoef            , &
-                                      q_acoef            , &
-                                      q_bcoef            , &
-                                      pch                , &
-                                      cos_zenith_angle   , &
-                                      co2_mixing_ratio     , &
-                                      co2_mixing_ratio_C13 , &
-                                      co2_mixing_ratio_C14 , &
-                                      ga                   , &
+                                      t_air              , &    !< ..
+                                      q_air              , &    !< ..
+                                      rain               , &    !< ..
+                                      snow               , &    !< ..
+                                      wind_air           , &    !< ..
+                                      wind_10m           , &    !< ..
+                                      lw_srf_down        , &    !< ..
+                                      swvis_srf_down     , &    !< ..
+                                      swnir_srf_down     , &    !< ..
+                                      swpar_srf_down     , &    !< ..
+                                      swpar_fdiffuse     , &    !< ..
+                                      press_srf          , &    !< ..
+                                      drag_srf           , &    !< ..
+                                      t_acoef            , &    !< ..
+                                      t_bcoef            , &    !< ..
+                                      q_acoef            , &    !< ..
+                                      q_bcoef            , &    !< ..
+                                      pch                , &    !< ..
+                                      cos_zenith_angle   , &    !< ..
+                                      co2_mixing_ratio     , &  !< ..
+                                      co2_mixing_ratio_C13 , &  !< ..
+                                      co2_mixing_ratio_C14 , &  !< ..
+                                      ga                   , &  !< ..
                                       ! For lakes:
-                                      albedo_lwtr        , &
-                                      drag_wtr           , &
-                                      drag_ice           , &
-                                      t_acoef_wtr        , &
-                                      t_bcoef_wtr        , &
-                                      q_acoef_wtr        , &
-                                      q_bcoef_wtr        , &
-                                      t_acoef_ice        , &
-                                      t_bcoef_ice        , &
-                                      q_acoef_ice        , &
-                                      q_bcoef_ice
+                                      albedo_lwtr        , &    !< ..
+                                      drag_wtr           , &    !< ..
+                                      drag_ice           , &    !< ..
+                                      t_acoef_wtr        , &    !< ..
+                                      t_bcoef_wtr        , &    !< ..
+                                      q_acoef_wtr        , &    !< ..
+                                      q_bcoef_wtr        , &    !< ..
+                                      t_acoef_ice        , &    !< ..
+                                      t_bcoef_ice        , &    !< ..
+                                      q_acoef_ice        , &    !< ..
+                                      q_bcoef_ice               !< ..
     ! 0.2 Local
-    INTEGER  :: stat 
-    INTEGER  :: lun  
+    INTEGER  :: stat          ! ..
+    INTEGER  :: lun           ! logical unit number for file input stream, see '2.0 read data'
     REAL(wp) :: sw_toa_down   ! potential radiation at the top of the atmosphere
-    REAL(wp) :: year      ! dummy variable
-    REAL(wp) :: day       ! dummy variable
-    REAL(wp) :: hour      ! dummy variable
-    REAL(wp) :: nhx       ! dummy variable for nhx_srf_down
-    REAL(wp) :: nox       ! dummy variable for noy_srf_down
-    REAL(wp) :: hlp1      ! dummy variable 
+    REAL(wp) :: year          ! dummy variable
+    REAL(wp) :: day           ! dummy variable
+    REAL(wp) :: hour          ! dummy variable
+    REAL(wp) :: nhx           ! dummy variable for nhx_srf_down
+    REAL(wp) :: nox           ! dummy variable for noy_srf_down
+    REAL(wp) :: hlp1          ! dummy variable 
 
     ! give atm2land variables a value to avoid compiler warning #6843: A dummy argument with an explicit INTENT(OUT) declaration is not given an explicit value
     t_air           = 0.0_wp
@@ -138,7 +138,7 @@ CONTAINS
     swpar_srf_down  = 0.0_wp
     swpar_fdiffuse  = 0.0_wp
     press_srf       = 0.0_wp
-    drag_srf        = 1.0_wp
+    drag_srf        = 1.0_wp    ! 1.0_wp
     t_acoef         = 0.0_wp
     t_bcoef         = 0.0_wp
     q_acoef         = 0.0_wp
@@ -199,16 +199,16 @@ CONTAINS
     !!
     wind_10m             = wind_air
     ga                   = 0.04_wp / drag_srf * wind_10m
-    hlp1                 = calc_mixing_ratio_C13C12(def_co2_deltaC13)
+    hlp1                 = calc_mixing_ratio_C13C12(def_co2_deltaC13)                 ! function: calc_mixing_ratio_C13C12
     co2_mixing_ratio_C13 = co2_mixing_ratio / (1._wp + 1._wp/hlp1)
-    hlp1                 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14)
+    hlp1                 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) ! function: calc_mixing_ratio_C14C
     co2_mixing_ratio_C14 = hlp1 * co2_mixing_ratio 
 
-    cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)
+    cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)                       ! function: calc_solar_angle
     swnir_srf_down   = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down 
     swvis_srf_down   = frac_vis_swtot_srf * swvis_srf_down 
     swpar_srf_down   = frac_par_swvis_srf * swvis_srf_down
-    swpar_fdiffuse   = calc_sw_fdiffuse(swvis_srf_down + swnir_srf_down, sw_toa_down, cos_zenith_angle)
+    swpar_fdiffuse   = calc_sw_fdiffuse(swvis_srf_down + swnir_srf_down, sw_toa_down, cos_zenith_angle) ! function: calc_sw_fdiffuse
 
   END SUBROUTINE update_forcing
 

@@ -14,7 +14,7 @@ MODULE mo_rad_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
 
-  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later
+  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later   *slmtemp
 
 
 
@@ -30,6 +30,7 @@ MODULE mo_rad_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_rad_memory
 
+! *slmtemp 1D -> 2D
     TYPE(t_jsb_var_real1d)  :: &
       & sw_srf_net,            & !< net shortwave radiation at surface
       & swvis_srf_net,         & !< net shortwave radiation at surface in visible range
@@ -46,7 +47,7 @@ MODULE mo_rad_memory_class
     ! Additional variables for soil
     TYPE(t_jsb_var_real1d) :: &
       & alb_vis_soil,         & !< Albedo in VIS range of soil
-                                ! Initialized from default 
+                                ! Initialized from default:
       & alb_nir_soil,         & !< Albedo in VIS range of soil
       & arad_vis_soil,        & !< radiation in VIS range absorbed by the soil
       & arad_nir_soil           !< radiation in NIR range absorbed by the soil
@@ -82,14 +83,14 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id, ics, ice, iblk)
 
-    CLASS(t_rad_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),    INTENT(in)    :: prefix
-    CHARACTER(len=*),    INTENT(in)    :: suffix
-    INTEGER,             INTENT(in)    :: lct_ids !(:)
-    INTEGER,             INTENT(in)    :: model_id
-    INTEGER,             INTENT(in)    :: ics   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: ice   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: iblk  ! model%options -> for SLM compatibility
+    CLASS(t_rad_memory), INTENT(inout), TARGET :: mem   !> radiation memory
+    CHARACTER(len=*),    INTENT(in)    :: prefix        !> ?
+    CHARACTER(len=*),    INTENT(in)    :: suffix        !> ?
+    INTEGER,             INTENT(in)    :: lct_ids!(:)   !> in jsbach4: vector of land cover type IDs
+    INTEGER,             INTENT(in)    :: model_id      !> model ID
+    INTEGER,             INTENT(in)    :: ics           !> model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)    :: ice           !> model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)    :: iblk          !> model%options -> for SLM compatibility
 
 
     IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN

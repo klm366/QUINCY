@@ -60,20 +60,16 @@ CONTAINS
     REAL(wp), POINTER                :: press_srf
     REAL(wp), POINTER                :: co2_mixing_ratio
     REAL(wp), POINTER                :: ga
-
     SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
       TYPE IS(t_atm2land_memory)
         atm2land__mem => mm
     END SELECT
-
-    ! atm2land
     swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
     t_air             => atm2land__mem%t_air%ptr
     q_air             => atm2land__mem%q_air%ptr
     press_srf         => atm2land__mem%press_srf%ptr
     co2_mixing_ratio  => atm2land__mem%co2_mixing_ratio%ptr
     ga                => atm2land__mem%ga%ptr
-
 
 
     !> 1.0 daytime averages
@@ -180,6 +176,8 @@ CONTAINS
   !! calculates the average across a certain period preceding to the current time step; \n 
   !! actually, the average gets rather estimated than exactly calculated using the weighted arithmetic mean, \n
   !! if the optional parameter 'do_calc' is present: the moving average is calculated if do_calc = TRUE !
+  !!
+  !! avg_period_unit can be either day (which is the default anyway), week or year
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mavg(current_avg, new_value, avg_period_length, do_calc, avg_period_unit) RESULT(new_avg)
 
@@ -195,7 +193,7 @@ CONTAINS
     REAL(wp)                                  :: new_avg            !< function output: the new average
     ! 0.2 Local
     REAL(wp)                                  :: new_value_weight   ! weight of the new value
-    REAL(wp)                                  :: avg_period2seconds
+    REAL(wp)                                  :: avg_period2seconds ! for converting the period length (day, week, year) into seconds
     LOGICAL                                   :: l_do_calc          ! True/ False of the Optional variable do_calc present
 
 
@@ -250,13 +248,13 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_lctlib_element),INTENT(in)   :: lctlib    !< land-cover-type library - parameters for one pft
-    TYPE(t_slm_plant), INTENT(inout)    :: veg
-    REAL(wp), INTENT(in)                :: t_air
-    REAL(wp), INTENT(in)                :: q_air
-    REAL(wp), INTENT(in)                :: press_srf
-    REAL(wp), INTENT(in)                :: co2_mixing_ratio
-    REAL(wp), INTENT(in)                :: ga
+    TYPE(t_lctlib_element),INTENT(in)   :: lctlib             !< land-cover-type library - parameters for one pft
+    TYPE(t_slm_plant), INTENT(inout)    :: veg                !< vegetation memory
+    REAL(wp), INTENT(in)                :: t_air              !< air temperature ?
+    REAL(wp), INTENT(in)                :: q_air              !< air .. ?
+    REAL(wp), INTENT(in)                :: press_srf          !< air pressure at surface level ?
+    REAL(wp), INTENT(in)                :: co2_mixing_ratio   !< .. ?
+    REAL(wp), INTENT(in)                :: ga                 !< aerodynamic resistance
     ! 0.2 Local
     REAl(wp)                            :: hlp
 

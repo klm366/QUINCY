@@ -16,21 +16,19 @@ MODULE mo_rad_constants
 
   PUBLIC
 
-
-  REAL(wp), SAVE :: &      ! In Fortran 2003 and Fortran 2008, a maximum of 255 continuation lines are allowed
-
   ! Parameters required for albedo and fapar calculation
-      kbl0_vis  ,     &   !< extinction coefficient over black leaves 
-      kdf0_vis  ,     &   !< extinction coefficient for diffuse PAR (Spitters eq. 7) 
-      kbl0_nir  ,     &   !< extinction coefficient over black leaves in NIR range 
-      kdf0_nir  ,     &   !< extinction coefficient for diffuse NIR (Spitters eq. 7) 
-      rho2sbeta ,     &   !< scaling factor of solar angle in reflection calculation 
-      k_csf    ,     &    !< scaling factor in the crown-shape effect on clumping (Campbell & Norman, 1998, eq 15.35)
+  REAL(wp), SAVE ::   & 
+      kbl0_vis  ,     &     !< extinction coefficient over black leaves 
+      kdf0_vis  ,     &     !< extinction coefficient for diffuse PAR (Spitters eq. 7) 
+      kbl0_nir  ,     &     !< extinction coefficient over black leaves in NIR range 
+      kdf0_nir  ,     &     !< extinction coefficient for diffuse NIR (Spitters eq. 7) 
+      rho2sbeta ,     &     !< scaling factor of solar angle in reflection calculation 
+      k_csf     ,     &     !< scaling factor in the crown-shape effect on clumping (Campbell & Norman, 1998, eq 15.35)
       min_cos_zenith_angle_rad  !< minimum coszine zenith angle for radiation calculation
 
-  REAL(wp), SAVE :: & 
-      def_alb_vis_soil, & !< default VIS albedo for soil
-      def_alb_nir_soil    !< default NIR albedo for soil
+  REAL(wp), SAVE ::     & 
+      def_alb_vis_soil, &   !< default VIS albedo for soil
+      def_alb_nir_soil      !< default NIR albedo for soil
 
 CONTAINS
 

@@ -118,24 +118,23 @@ MODULE mo_shared_isotope
   !! Output: fraction of the transfer flux that will be the isotope
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_fractionation(source_element,source_isotope,discrimination,scale_correction) RESULT(fractionation)
-  !FUNCTION calc_fractionation(source_element,source_isotope,discrimination,scale_correction) RESULT(fractionation)
 
      IMPLICIT NONE
      ! 0.1 InOut
-     REAL(wp), INTENT(in) :: source_element     !< mol of element (sum of all isotopes) in source material
-     REAL(wp), INTENT(in) :: source_isotope     !< mol of the discriminated isotope in source material
-     REAL(wp), INTENT(in) :: discrimination     !< discrimination of transfer process (per mill)
-     REAL(wp), INTENT(in),OPTIONAL :: scale_correction             !< scalar for the concentration difference between isotope and element 
-     REAL(wp) :: fractionation                  !< fraction of the total flux that is isotope
+     REAL(wp), INTENT(in) :: source_element             !< mol of element (sum of all isotopes) in source material
+     REAL(wp), INTENT(in) :: source_isotope             !< mol of the discriminated isotope in source material
+     REAL(wp), INTENT(in) :: discrimination             !< discrimination of transfer process (per mill)
+     REAL(wp), INTENT(in),OPTIONAL :: scale_correction  !< scalar for the concentration difference between isotope and element 
+     REAL(wp) :: fractionation                          !< fraction of the total flux that is isotope
      ! 0.2 Local
      REAL(wp) :: Rsource,Rsink
      REAL(wp) :: correction_factor
 
      IF(.NOT.PRESENT(scale_correction)) THEN 
-correction_factor = 1.0_wp
+        correction_factor = 1.0_wp
      ELSE 
-correction_factor = scale_correction
- ENDIF 
+        correction_factor = scale_correction
+     ENDIF 
 
      ! molar miximg ratio of the source pool
      IF(source_element - source_isotope / correction_factor > eps8) THEN

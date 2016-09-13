@@ -110,7 +110,7 @@ CONTAINS
     USE mo_shared_constants,    ONLY: molar_mass_N, &   !< parameter from mo_shared_constants
                                       Dwv, &            !< parameter from mo_shared_constants - diffusion coefficient for water vapour in air
                                       Dco2, &           !< parameter from mo_shared_constants - diffusion coefficient for CO2 in air
-                                      Tzero
+                                      Tzero             !< melting point in K
 
     IMPLICIT NONE
 
