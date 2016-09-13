@@ -135,8 +135,8 @@ CONTAINS
             f_nacq_bnf = plant%cost_n_uptake_root_mavg/(plant%cost_n_uptake_root_mavg+plant%cost_n_fixation_mavg)
             f_nacq_nup = plant%cost_n_fixation_mavg/(plant%cost_n_uptake_root_mavg+plant%cost_n_fixation_mavg)
          ENDIF
-         plant%n_fixation = f_nacq_bnf * plant%growth_req_n_mavg*plant%npp_mavg 
-         plant%uptake_n   = MIN(f_nacq_nup * plant%growth_req_n_mavg*plant%npp_mavg, & 
+         plant%n_fixation = f_nacq_bnf * MAX(plant%growth_req_n_mavg*plant%npp_mavg,0.0_wp) 
+         plant%uptake_n   = MIN(f_nacq_nup * MAX(plant%growth_req_n_mavg*plant%npp_mavg,0.0_wp), & 
                                 plant%uptake_n)
     ENDSELECT 
 

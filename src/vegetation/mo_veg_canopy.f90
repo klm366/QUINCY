@@ -666,13 +666,13 @@ CONTAINS
     par_shaded_mavg_cl = plant%par_shaded_mavg_cl
     fleaf_sunlit_mavg_cl = plant%fleaf_sunlit_mavg_cl
 
-    ! Calculate photosynthesis with lower, current and higher leaf N to determine optimal canopy N
+    ! Calculate photosynthesis with lower, current and higher target leaf N to determine optimal canopy N
     npp_direction(:) = 0.0_wp
     DO dd = 1,3 
         
        direction = REAL(dd,KIND=wp) - 2.0_wp
 
-       leaf_nitrogen = plant%pool%leaf%nitrogen * (1.0_wp + direction * delta_n_leaf * dt/one_day)
+       leaf_nitrogen = plant%pool%leaf%carbon / plant%target_cn_leaf * (1.0_wp + direction * delta_n_leaf * dt/one_day)
        
        ! update N distribution in the canopy
        CALL calc_canopy_layers(lctlib = lctlib, & 

@@ -135,7 +135,7 @@ CONTAINS
                               plant%target_np_leaf, target_np_fine_root, plant%leaf2root_mass_ratio_mavg, &
                               plant%lai,target_lai, &
                               plant%pool%labile,plant%pool%reserve)
-    !CALL calc_nutrient_recycling(plant, target_cn_fine_root, target_np_fine_root)
+    CALL calc_nutrient_recycling(plant, target_cn_fine_root, target_np_fine_root)
 
     !> 5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)
     !! 
