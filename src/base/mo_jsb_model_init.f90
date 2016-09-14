@@ -310,15 +310,16 @@ CONTAINS
       tile%soil%theta                    = veg_config%soil_theta_prescribe 
       tile%soil%ammonium                 = 0.1_wp
       tile%soil%phosphate                = 0.01_wp
-      tile%soil%pool%litter%nitrogen     = 5.0_wp
       tile%plant%pftid                   = veg_config%pft_id
       tile%plant%target_cn_leaf          = lctlib%cn_leaf
       tile%plant%target_np_leaf          = lctlib%np_leaf
 
       IF(veg_config%flag_start_bareground)THEN
+         tile%soil%pool%litter%nitrogen     = 0.0_wp
          init_pool%carbon        = lctlib%seed_size * 10.0_wp
          tile%plant%dens_ind     = 0.0_wp 
       ELSE
+         tile%soil%pool%litter%nitrogen     = 5.0_wp
          init_pool%carbon        = 50.0_wp 
          tile%plant%dens_ind     = 1.0_wp 
       ENDIF

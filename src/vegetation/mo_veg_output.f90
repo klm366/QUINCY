@@ -390,7 +390,7 @@ CONTAINS
     REAL(wp)                         :: l2r, s2c, bcf  !helper ratio variables
     REAl(wp)                         :: growing_season_float !output variable for growing season
     REAL(wp)                         :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
-                                        dC13fruit,dC13labile,dC13reserve,dC13seedbank
+                                        dC13fruit,dC13labile,dC13reserve,dC13seed_bed
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
     plant         => tile%plant
@@ -423,9 +423,9 @@ CONTAINS
        dC13fruit       = calc_delta_C13(plant%pool%fruit%carbon,plant%pool%fruit%carbon13)
        dC13labile      = calc_delta_C13(plant%pool%labile%carbon,plant%pool%labile%carbon13)
        dC13reserve     = calc_delta_C13(plant%pool%reserve%carbon,plant%pool%reserve%carbon13)
-       dC13seedbank    = calc_delta_C13(plant%pool%seed_bed%carbon,plant%pool%seed_bed%carbon13)
+       dC13seed_bed    = calc_delta_C13(plant%pool%seed_bed%carbon,plant%pool%seed_bed%carbon13)
        write(lun,'(19F18.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
-         dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seedbank, & 
+         dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seed_bed, & 
          calc_delta_C14(plant%pool%leaf%carbon,plant%pool%leaf%carbon14,dC13leaf),&
          calc_delta_C14(plant%pool%fine_root%carbon,plant%pool%fine_root%carbon14,dC13fine_root),&
          calc_delta_C14(plant%pool%sap_wood%carbon,plant%pool%sap_wood%carbon14,dC13sap_wood),&
@@ -434,7 +434,7 @@ CONTAINS
          calc_delta_C14(plant%pool%fruit%carbon,plant%pool%fruit%carbon14,dC13fruit),&
          calc_delta_C14(plant%pool%labile%carbon,plant%pool%labile%carbon14,dC13labile),&
          calc_delta_C14(plant%pool%reserve%carbon,plant%pool%reserve%carbon14,dC13reserve),&
-         calc_delta_C14(plant%pool%seed_bed%carbon,plant%pool%seed_bed%carbon14,dC13seedbank)
+         calc_delta_C14(plant%pool%seed_bed%carbon,plant%pool%seed_bed%carbon14,dC13seed_bed)
        lun=lun+1
        write(lun,'(10F12.6)') time_d,plant%pool%leaf%nitrogen,&
          plant%pool%fine_root%nitrogen,plant%pool%sap_wood%nitrogen,&

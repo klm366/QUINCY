@@ -154,7 +154,11 @@ CONTAINS
    
        !> 3.2 temperature and soil moisture limitation 
        !! OBS: should be top soil moisture!
-       flim_temp = 1._wp-exp(-(lambda_est_temp * (tile%plant%t_air_week_mavg - Tzero))**k_est_temp)
+       IF(tile%plant%t_air_week_mavg - Tzero < 0.0_wp) THEN 
+          flim_temp=0.0_wp
+       ELSE
+          flim_temp = 1.0_wp - exp(-(lambda_est_temp * (tile%plant%t_air_week_mavg - Tzero))**k_est_temp)
+       ENDIF
        flim_moist = 1.0_wp - exp(-(lambda_est_moist * tile%soil%theta)**k_est_moist) 
    
        !> 3.3 actual establishment rate and associated matter flux from seed bed to reserve pool
@@ -166,7 +170,7 @@ CONTAINS
        !> 4.0 diagnose change in the number of individuals (#/m2)
        !!
        IF(lctlib%growthform==itree) &
-       tile%plant%delta_dens_ind = & 
+          tile%plant%delta_dens_ind = & 
               tile%plant%establishment%carbon/lctlib%seed_size & 
               - mortality_rate * tile%plant%dens_ind 
 
@@ -175,8 +179,7 @@ CONTAINS
     !> 5.0 calculate litter fall from mortality
     !!
     CALL mortality%init(mortality_rate)   ! set mortality to mortality_rate
-!@todo: veg_dynamics: it would probably make things easier if the seed bed was part of the plant, but not the pool structure?
-    CALL mortality%seed_bed%init(0.0_wp)  ! set seed_bed to zero
+    CALL mortality%seed_bed%init(0.0_wp)  ! set seed_bed mortality to zero as its unaffected by actual plant death
     litter_flux_mortality = mortality * tile%plant%pool
     tile%plant%litterfall = tile%plant%litterfall + litter_flux_mortality
    
