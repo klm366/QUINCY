@@ -40,8 +40,6 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_veg_memory_class,      ONLY: t_veg_memory
 
-!! test -> also in make.inc.deps
-    USE mo_jsb_var_class      ! e.g. t_jsb_var_real1d
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -57,65 +55,14 @@ CONTAINS
     REAL(wp)                                  :: rfr_ratio
     REAL(wp)                                  :: flim_light,flim_moist,flim_temp
     INTEGER :: icanop
-! -------------------------------------------------------------------
-! *slmdev @ slmtemp see ticket #79
     ! 0.3 Memory allocation
     TYPE(t_veg_memory), POINTER         :: veg__mem   ! dsl4jsb_Def_memory(VEG_)
-    TYPE(t_veg_memory), POINTER         :: veg     ! local pointer to veg__mem for SLM usability
-!    REAL(wp), POINTER :: height
-!    REAL(wp), POINTER :: diameter
-
-    SELECT TYPE (mm => tile%mem(VEG_)%p)       ! dsl4jsb_Get_memory(VEG_)
+    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    SELECT TYPE (mm => tile%mem(VEG_)%p)              ! dsl4jsb_Get_memory(VEG_)
       TYPE IS(t_veg_memory)
         veg__mem => mm
     END SELECT
     veg => veg__mem 
-
-
-  ! using the memory of the veg process exemplary
-    veg%height%ptr    = veg%height%ptr + 0.001_wp
-    veg%diameter%ptr  = veg%diameter%ptr + 0.001_wp
-    veg%pool%leaf%carbon%ptr     = veg%pool%leaf%carbon%ptr     + 0.001_wp
-    veg%pool%leaf%nitrogen%ptr   = veg%pool%leaf%nitrogen%ptr   + 0.001_wp
-    !veg%pool%labile%carbon%ptr   = veg%pool%labile%carbon%ptr   + 0.001_wp
-    !veg%pool%labile%nitrogen%ptr = veg%pool%labile%nitrogen%ptr + 0.001_wp
-    veg%growth%leaf%carbon%ptr   = veg%growth%leaf%carbon%ptr   + 0.001_wp
-
-    CALL test_routine(veg%litterfall, &                ! adds 0.001_wp to litterfall%labile%carbon%ptr
-                      veg%litterfall%leaf%carbon%ptr)  ! adds 0.001_wp to litterfall%leaf%carbon%ptr
-
-    ! write(*,*) is just for testing purposes   *slmtemp
-!    write(999,*) veg%height%ptr, veg%diameter%ptr, &
-!                 veg%pool%leaf%carbon%ptr, veg%pool%leaf%nitrogen%ptr, &
-!                 veg%growth%leaf%carbon%ptr, &
-!                 veg%litterfall%labile%carbon%ptr, &
-!                 veg%litterfall%leaf%carbon%ptr, ' |-| '
-
-
-!! test operator overload !!
-!    veg%pool%leaf%carbon    = veg%pool%leaf%carbon    + 0.001_wp
-!    veg%pool%leaf%nitrogen  = veg%pool%leaf%nitrogen  + 0.001_wp
-!    veg%growth%leaf%carbon  = veg%growth%leaf%carbon  + 0.001_wp
-
-!    veg%pool%leaf = veg%pool%leaf + veg%pool%labile
-
-!    write(999,*) veg%pool%leaf%carbon%ptr, veg%pool%leaf%nitrogen%ptr, &
-!                 veg%pool%labile%carbon%ptr, veg%pool%labile%nitrogen%ptr
-
-
-!    veg%height   = veg%height + 0.001_wp
-!    veg%diameter = veg%diameter + 0.001_wp
-!    veg%height = veg%height + veg%diameter
-
-    ! using enumeration of vars(:)
-!    SELECT TYPE (mm => veg%vars(1)%p)       ! dsl4jsb_Get_memory(VEG_)
-!      TYPE IS(t_jsb_var_real1d)
-!        height => mm
-!    END SELECT
-!    write(*,*) height%ptr
-
-! *slmdev @ slmtemp see ticket #79
-! -------------------------------------------------------------------
 
 
 
@@ -184,23 +131,5 @@ CONTAINS
     tile%plant%litterfall = tile%plant%litterfall + litter_flux_mortality
    
   END SUBROUTINE update_veg_dynamics
-
-
-
-!! <<< temporary test code - non-functional to slm - see ticket #79 - Jan Engel 20160901 >>> !!
-  subroutine test_routine(litterfall, test_var)
-
-    use mo_veg_memory_class,  only: t_slm_struct_veg_pool
-
-    type(t_slm_struct_veg_pool), INTENT(inout) :: litterfall
-    REAL(wp), INTENT(inout) :: test_var
-
-    test_var = test_var + 0.001_wp
-    litterfall%labile%carbon%ptr =litterfall%labile%carbon%ptr + 0.001_wp
-
-  end subroutine test_routine
-!! <<< temporary test code - non-functional to slm - see ticket #79 - Jan Engel 20160901 >>> !!
-
-
 
 END MODULE mo_veg_dynamics

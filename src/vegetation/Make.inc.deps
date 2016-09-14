@@ -108,7 +108,6 @@ mo_veg_dynamics.o: \
   mo_shared_constants.o \
   mo_veg_memory.o \
   mo_veg_config_class.o \
-mo_jsb_var_class.o \
   mo_veg_constants.o
 
 mo_veg_util.o: \

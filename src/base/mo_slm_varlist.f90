@@ -15,8 +15,9 @@ MODULE mo_slm_varlist
   USE mo_exception,         ONLY: finish
 
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, &
-                                  t_jsb_var_real1d, &
-                                  t_jsb_struct, t_jsb_n_struct
+                                  t_jsb_var_integer2d, t_jsb_var_logical2d   , &                 ! *slmjsb4
+                                  t_jsb_struct, t_jsb_n_struct               , &                 ! *slmjsb4
+                                  t_jsb_var_real1d, t_jsb_var_integer1d, t_jsb_var_logical1d     ! *slmtemp
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
 
   IMPLICIT NONE
@@ -29,6 +30,8 @@ MODULE mo_slm_varlist
     MODULE PROCEDURE slm_add_l2_struct            ! *slmjsb4  a TYPE with only variables included within a TYPE
     MODULE PROCEDURE slm_add_struct_element_r1d   ! *slmjsb4 *slmtemp | works with struct & l2_struct !!
     MODULE PROCEDURE slm_add_var_list_element_r1d
+    MODULE PROCEDURE slm_add_var_list_element_i1d ! *slmjsb4 *slmtemp | INTEGER
+    MODULE PROCEDURE slm_add_var_list_element_l1d ! *slmjsb4 *slmtemp | LOGICAL
     MODULE PROCEDURE slm_add_var_list_element_r2d
     MODULE PROCEDURE slm_add_var_list_element_r3d
 !    MODULE PROCEDURE slm_add_var_list_element_r2d_tile
@@ -180,7 +183,7 @@ CONTAINS
 
 ! *slmtemp
   !-----------------------------------------------------------------------------------------------------
-  !> add 1D variable to process memory
+  !> add 1D REAL variable to process memory
   !!
   !!  t_jsb_memory:mem <- t_jsb_var_real1d:var
   !!    
@@ -219,6 +222,90 @@ CONTAINS
     var%ptr = initval_r
 
   END SUBROUTINE slm_add_var_list_element_r1d
+
+! *slmtemp
+  !-----------------------------------------------------------------------------------------------------
+  !> add 1D INTEGER variable to process memory
+  !!
+  !!  t_jsb_memory:mem <- t_jsb_var_integer1d:var
+  !!    
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE slm_add_var_list_element_i1d( &
+    mem, name, var, &
+    ics, ice, iblk, &
+    initval_r) 
+
+    ! 0.1 InOut
+    CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
+    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
+    TYPE(t_jsb_var_integer1d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var -> newly created plain scalar REAL
+    INTEGER,             INTENT(in)               :: ics   ! model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)               :: ice   ! model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)               :: iblk  ! model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)               :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+    ! 0.2 Local
+    INTEGER           :: pos_of_var
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_integer1d'
+
+    var%name = TRIM(name)
+    !var%owner_proc_id = mem%owner_proc_id
+
+    pos_of_var = mem%no_of_vars + 1
+    IF (pos_of_var > mem%max_no_of_vars) THEN
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
+    ELSE
+      mem%vars(pos_of_var)%p => var
+      mem%no_of_vars = pos_of_var
+    END IF
+
+    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)
+    ALLOCATE(var%ptr)
+    var%ptr = initval_r
+
+  END SUBROUTINE slm_add_var_list_element_i1d
+
+! *slmtemp
+  !-----------------------------------------------------------------------------------------------------
+  !> add 1D LOGICAL variable to process memory
+  !!
+  !!  t_jsb_memory:mem <- t_jsb_var_logical1d:var
+  !!    
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE slm_add_var_list_element_l1d( &
+    mem, name, var, &
+    ics, ice, iblk, &
+    initval_r) 
+
+    ! 0.1 InOut
+    CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
+    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
+    TYPE(t_jsb_var_logical1d), TARGET, INTENT(inout) :: var              ! reference to jsbach var -> newly created plain scalar REAL
+    INTEGER,             INTENT(in)               :: ics   ! model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)               :: ice   ! model%options -> for SLM compatibility
+    INTEGER,             INTENT(in)               :: iblk  ! model%options -> for SLM compatibility
+    LOGICAL,             INTENT(in)               :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+    ! 0.2 Local
+    INTEGER           :: pos_of_var
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_logical1d'
+
+    var%name = TRIM(name)
+    !var%owner_proc_id = mem%owner_proc_id
+
+    pos_of_var = mem%no_of_vars + 1
+    IF (pos_of_var > mem%max_no_of_vars) THEN
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
+    ELSE
+      mem%vars(pos_of_var)%p => var
+      mem%no_of_vars = pos_of_var
+    END IF
+
+    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)
+    ALLOCATE(var%ptr)
+    var%ptr = initval_r
+
+  END SUBROUTINE slm_add_var_list_element_l1d
 
 ! *slmtemp
   !-----------------------------------------------------------------------------------------------------

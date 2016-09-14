@@ -169,7 +169,7 @@ MODULE mo_veg_constants
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   ! need to be parameters (i.e. constant across model runtime)
-	  INTEGER, PARAMETER ::      &
+      INTEGER, PARAMETER ::    &
       itree         = 1  ,     &
       igrass        = 2  ,     &
       ic3phot       = 1  ,     &
