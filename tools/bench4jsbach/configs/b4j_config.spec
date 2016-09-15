@@ -1,7 +1,7 @@
 bench_name=string()                         # AUTO: name of b4j run
-author=string()				    # AUTO: username
+author=string()                             # AUTO: username
 git_repository=string_list(default=None)    # AUTO: b4j repository
-git_branch=string(default=None)		    # AUTO: 
+git_branch=string(default=None)             # AUTO: 
 git_sha=string(default=None)		    # AUTO: 
 git_status=option('clean','modified',None)  # AUTO: 
 redmine_url=string()			    # AUTO: b4j redmine site 

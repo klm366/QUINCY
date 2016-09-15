@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""The module contains redmine related classes, functionality and data."""
 
 from redmine import Redmine
 import re, os, sys

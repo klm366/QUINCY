@@ -12,7 +12,7 @@ Participate
 
 
 Introducing Features
--------------------
+--------------------
 
 
 **Effort**

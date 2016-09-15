@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""The module contains bench related functionality and data."""
 
 import os, sys, subprocess, shutil, getpass, datetime
 import configobj
@@ -35,10 +36,10 @@ ISREF_IDX                = 2
 ISCAN_IDX                = 3
 VARNAME_4_CMIP5_METADATA = 'rsds'
 
-bench4jsbach_base          =  os.environ [ 'BENCH4JSBACH_BASE' ]
+bench4jsbach_base          = os.environ [ 'BENCH4JSBACH_BASE' ]
 if not bench4jsbach_base: raise Exception ( "Environment variable not set." )
-bench4jsbach_configs       =  os.path.join ( bench4jsbach_base, "configs" )
-bench4jsbach_scripts       =  os.path.join ( bench4jsbach_base, "scripts" )
+bench4jsbach_configs       = os.path.join ( bench4jsbach_base, "configs" )
+bench4jsbach_scripts       = os.path.join ( bench4jsbach_base, "scripts" )
 config_template            = os.path.join ( bench4jsbach_configs, "b4j_template.cfg" )
 b4j_configspec_fn          = os.path.join ( bench4jsbach_configs, "b4j_config.spec" )
 b4j_field_configspec_fn    = os.path.join ( bench4jsbach_configs, "b4j_field_config.spec" )
@@ -103,6 +104,8 @@ def get_ip_address ():
 
 
 class Bench_Object ( Diagnostics, Report ):
+    """This object coordinates the bench4jsbach run. """
+    
     bench_name         = None
     bench_path         = None
     bench_configs_path = None
@@ -126,6 +129,15 @@ class Bench_Object ( Diagnostics, Report ):
     
     
     def __init__ ( self, config_arg, **kwargs ):
+        """This object coordinates the bench4jsbach run. 
+
+        Args:
+           config_arg ( str ): If config_arg is a local path to an existing 
+                               bench4jsbach configuration file a run is started.
+                               Else config_arg is taken as the name for a new 
+                               bench4jsbach environment, this is initialized 
+                               and the configuration file is generated."""
+
         super ( Bench_Object, self ).__init__ ()
         
         dkl_logger.debug ( "Starting." )
@@ -266,6 +278,10 @@ class Bench_Object ( Diagnostics, Report ):
 
         
     def init_diagnostics ( self ):
+        """This method is used to initialize the diagnostic fields. The field 
+           configuration files are read and validated. It is called by the Bench 
+           Object automatically in the init process of a bench4jsbach run."""
+        
         self.logger.debug ( "Starting." )
         
         # read configspec object
@@ -343,6 +359,10 @@ configuration file '%s' have to accord with the corresponding section name
 
 
     def _writeconfig__init__ ( self, config_arg ):
+        """This method is used to generate a new bench4jsbach environment. It 
+           makes the directories and generates the configuration file from a 
+           template."""
+        
         dkl_logger.debug ( "Starting." )
 
         self.bench_name = config_arg

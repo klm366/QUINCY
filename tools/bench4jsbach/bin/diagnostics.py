@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 # -*- coding:  utf-8 -*-
+"""The module contains diagnostic related classes, functionality and data."""
+
 from __future__ import division
 
 import os, sys
@@ -110,7 +112,6 @@ def find_files ( pattern, path, single = True, raise_e = False ):
 
     
 def get_largest_common_yearlist ( filelist ):
-    """Get largest common period for list of datafiles <filelist> given as argument."""
     assert filelist, "No filelist given."
     assert all ( map ( lambda c: os.path.isfile ( c ), filelist )),\
            "Not all files found." 

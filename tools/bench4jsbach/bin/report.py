@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""The module contains report related classes, functionality and data."""
 
 import sys, os, subprocess, shutil, re
 from collections import OrderedDict

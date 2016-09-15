@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""Module contains functions and constants of general nature."""
 
 import os, sys, logging, subprocess, textwrap
 
@@ -82,8 +83,8 @@ def print_item_or_list_rec ( something, indent ):
 
 
 def pprint_class_member_methods ( modulename, classname ):
-    """python -c "import sys;sys.path.append ( '/scratch/mpi/mpiles/m300050/bench4jsbach/bin' );import util; util.pprint_class_member_methods ( 'bench', 'Bench_Object' )"
-"""
+#     """python -c "import sys;sys.path.append ( '/scratch/mpi/mpiles/m300050/bench4jsbach/bin' );import util; util.pprint_class_member_methods ( 'bench', 'Bench_Object' )"
+# """
     import inspect
     import pprint
     try:

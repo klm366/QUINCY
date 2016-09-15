@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-"""The module contains experiment related functionality and data."""
+"""Module contains experiment related classes, methods and metadata."""
 
 import os, sys, subprocess
 from netCDF4 import Dataset
@@ -32,12 +32,7 @@ HOST_AVAIL = { "thunder" : { "login_name" : "thunder4",
               
 
 def find_files ( pattern, path, single = True, raise_e = False ):
-    """This is the find_files function.
-    
-    :param pattern: pattern string.
-    :param path: path string.
-    :param single: boolean.
-    :param raise_e: boolean.
+    """Function to find files with a name containing a given infix.
     """
     
     assert os.path.isdir ( path ) and isinstance ( pattern, str )
@@ -75,8 +70,10 @@ def find_files ( pattern, path, single = True, raise_e = False ):
 
 
 class Experiment ( object ):
-    """A superclass representing the metadata for climate model simulation output
-and observational datasets.
+    """Base class representing methods and metadata of an experiment.
+
+Specialized classes for model simulations and observational datasets
+are derived from it.
     """
     
     B4J_obj         = None
@@ -100,30 +97,9 @@ and observational datasets.
     B4J_refno       = None
                     
     def __init__ (   self, b4j_obj, **kwargs ):
-        """The Experiment objects are initialized by the runscript, reading 
-        the attributes from a configuration file.
-        
-        Parameters
-        ----------
-        B4J_obj         :
-        B4J_id          :
-        B4J_name        :
-        B4J_name_orig   :
-        B4J_etype       :
-        B4J_atmres      :
-        B4J_oceres      :
-        B4J_startyear   :
-        B4J_endyear     :
-        B4J_initialyear :
-        B4J_finalyear   :
-        B4J_host        :
-        B4J_path        :
-        B4J_landseamask :
-        B4J_isref       :
-        B4J_iscan       :
-        B4J_index       :
-        B4J_canno       :
-        B4J_refno       :        
+        """Objects are initialized giving their attributes.
+
+In a bench4jsbach run this is done by the runskript reading a configuration file.      
         """
         self.B4J_obj         = b4j_obj
         self.B4J_name        = kwargs.get ( "B4J_name" )
@@ -532,6 +508,8 @@ and observational datasets.
 
 
 class CMIP5_Experiment ( Experiment ):
+    """Derived class specialized on simulations done for CMIP5.
+"""
     suffix = 'nc'
     
     def __init__ ( self,  b4j_obj, **kwargs ):
@@ -549,6 +527,8 @@ class CMIP5_Experiment ( Experiment ):
 
 # status: only for archived experiment
 class MPIESM1_Experiment ( Experiment ):
+    """Derived class specialized on simulations with MPIESM1.
+    """
     
     codesfiles_dict = { "suffix"        : "codes",
                         "dirname"       : "log",

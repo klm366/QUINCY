@@ -1,4 +1,4 @@
-import bin
+import bench
 import diagnostics
 import experiment
 import report
