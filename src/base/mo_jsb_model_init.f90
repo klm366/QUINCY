@@ -310,7 +310,6 @@ CONTAINS
       tile%soil%theta                    = veg_config%soil_theta_prescribe 
       tile%soil%ammonium                 = 0.1_wp
       tile%soil%phosphate                = 0.01_wp
-      tile%plant%pftid                   = veg_config%pft_id
       tile%plant%target_cn_leaf          = lctlib%cn_leaf
       tile%plant%target_np_leaf          = lctlib%np_leaf
 
@@ -392,7 +391,6 @@ CONTAINS
                                                 lctlib%sla / lctlib%cn_leaf
       tile%plant%pool%leaf%phosphorus = tile%plant%pool%leaf%nitrogen / & 
                                                 lctlib%np_leaf
-      tile%plant%pftid                = veg_config%pft_id
     ENDIF
 
   END SUBROUTINE init_slm_canopy

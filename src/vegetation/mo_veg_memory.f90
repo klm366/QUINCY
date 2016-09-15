@@ -116,7 +116,6 @@ MODULE mo_veg_memory
   TYPE t_slm_plant 
     TYPE(t_slm_veg_pool)      :: pool             !< the actual vegetation pools
     !TYPE(t_slm_veg_flux)      :: flux             !< contains growth and litter fall fluxes per timestep for each pool
-    INTEGER  :: pftid                             !< ID of the plant functional type; namelist parameter
     LOGICAL  :: growing_season                    !< logical to identify whether the plant is in the growing season or not
     REAL(wp) :: height                            !< plant height in m
     REAL(wp) :: diameter                          !< plant diameter in m
@@ -618,7 +617,7 @@ CONTAINS
     ! 0.2 Local
      REAL(wp) :: pool_init, &                ! pools
                  canopy_layer_init, &        ! canopy layers
-                 plant_var_init_zero, &      ! plant variables -> pftid & growing_season are extra
+                 plant_var_init_zero, &      ! plant variables -> growing_season is extra
                  plant_var_init_one          ! plant variables
 
      pool_init           = 0.0_wp
@@ -647,7 +646,6 @@ CONTAINS
     this%par_shaded_cl(:)   = canopy_layer_init
     this%fleaf_sunlit_cl(:) = canopy_layer_init
     ! plant variables
-    this%pftid            = 1          ! INTEGER
     this%growing_season   = .TRUE.     ! LOGICAL
     this%height           = plant_var_init_zero
     this%diameter         = plant_var_init_zero

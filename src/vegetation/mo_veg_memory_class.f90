@@ -13,9 +13,9 @@ MODULE mo_veg_memory_class
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d         , &
-                                       t_jsb_var_integer2d, t_jsb_var_logical2d   , &                 ! *slmjsb4
+                                       t_jsb_var_logical2d                        , &                 ! *slmjsb4
                                        t_jsb_struct, t_jsb_n_struct               , &                 ! *slmjsb4
-                                       t_jsb_var_real1d, t_jsb_var_integer1d, t_jsb_var_logical1d     ! *slmtemp
+                                       t_jsb_var_real1d, t_jsb_var_logical1d                          ! *slmtemp
 
   USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later    *slmtemp
 
@@ -89,7 +89,6 @@ MODULE mo_veg_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_veg_memory
 
 
-    TYPE(t_jsb_var_integer1d)      :: pftid             !< ID of the plant functional type; namelist parameter -> lctlib
     TYPE(t_jsb_var_logical1d)      :: growing_season    !< logical to identify whether the plant is in the growing season or not
 
   ! *slmtemp  --> 2D
@@ -214,7 +213,7 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ASSOCIATED(mem%pftid%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%growing_season%ptr)) THEN
 
       !> add variables to veg memory veg\%VAR
       !! 
@@ -222,9 +221,6 @@ CONTAINS
       !!                slm_add_var_list_element_i1d
       !!                slm_add_var_list_element_l1d
       !!  
-      CALL slm_add_var(mem, 'veg_pftid', mem%pftid, &
-            ics, ice, iblk, &     ! model%options -> for SLM compatibility
-            initval_r=0)          ! initvalue 
       CALL slm_add_var(mem, 'veg_growing_season', mem%growing_season, &
             ics, ice, iblk, &     ! model%options -> for SLM compatibility
             initval_r=.FALSE.)    ! initvalue 

@@ -400,9 +400,6 @@ CONTAINS
     TYPE(t_slm_tile),INTENT(inout)               :: tile       !< data structure for dynamic vegetation and soil variables
     ! 0.2 Local
     TYPE(t_lctlib_element),POINTER               :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp) :: vpd
-    REAL(wp) :: hlp1
-    INTEGER :: i,lun
     REAL(wp) ::   t_air , &
                   press_srf , &
                   q_air      , &
@@ -426,6 +423,10 @@ CONTAINS
                   ga             !, &
                   !latitude      , &
                   !longitude     , &
+    REAL(wp)      :: vpd
+    REAL(wp)      :: hlp1
+    INTEGER       :: i,lun
+    INTEGER       :: ref_pft                          ! PFT identifier
 
     ! parameters (specific to the test_canopy model)
     REAL(wp),SAVE :: ref_t_air = 25.0_wp              ! temperature in deg C 
@@ -438,11 +439,16 @@ CONTAINS
     REAL(wp),SAVE :: ref_theta = 100._wp              ! soil water availability in %
     REAL(wp),SAVE :: ref_lai = 3._wp                  ! LAI
     REAL(wp),SAVE :: ref_nleaf = 2.0_wp               ! N leaf per unit leaf area in gN/m2
-    INTEGER ,SAVE :: ref_pft = 1                      ! PFT identifier
 
-    !  bi-directional pointer
-    lctlib => model%lctlib(ref_pft)
-
+    ! if pftid is set in the namelist use this pftid
+    IF(tile%lcts%lib_id>0)THEN
+      ref_pft = tile%lcts%lib_id
+      lctlib  => model%lctlib(tile%lcts%lib_id)  !  bi-directional pointer
+    ! else use pftid 1
+    ELSE
+      ref_pft = 0
+      lctlib  => model%lctlib(1)
+    ENDIF
     !> 1.0 Init
     !! 
     !!  
@@ -499,7 +505,6 @@ CONTAINS
     ELSE
       tile%plant%pool%leaf%nitrogen     = tile%plant%lai / lctlib%sla / lctlib%cn_leaf
       tile%plant%pool%leaf%phosphorus   = tile%plant%pool%leaf%nitrogen / lctlib%np_leaf
-      tile%plant%pftid                  = ref_pft
     ENDIF
     CALL calc_canopy_layers(lctlib = lctlib, & 
                           leaf_nitrogen = tile%plant%pool%leaf%nitrogen, &
@@ -736,7 +741,6 @@ CONTAINS
   DO i = 1,npft
      tile%plant%pool%leaf%nitrogen  =tile%plant%lai /model%lctlib(i)%sla /model%lctlib(i)%cn_leaf
      tile%plant%pool%leaf%phosphorus=tile%plant%pool%leaf%nitrogen /model%lctlib(i)%np_leaf
-     tile%plant%pftid=i
      CALL calc_canopy_layers(lctlib = model%lctlib(i), & 
                           leaf_nitrogen = tile%plant%pool%leaf%nitrogen, &
                           lai = tile%plant%lai,&
@@ -755,7 +759,7 @@ CONTAINS
      CALL update_radiation(tile, model%lctlib(i))            !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile, model%lctlib(i))        !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(I1,3F16.7)') tile%plant%pftid, &
+     WRITE(lun,'(I1,3F16.7)') i, &
            tile%plant%an,tile%plant%gc*1000._wp, &
            tile%plant%ci/co2_mixing_ratio 
 

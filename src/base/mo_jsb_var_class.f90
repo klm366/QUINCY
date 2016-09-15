@@ -21,8 +21,8 @@ MODULE mo_jsb_var_class
 
   PUBLIC :: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var, t_jsb_var_p
   PUBLIC :: t_jsb_struct, t_jsb_struct_p, t_jsb_n_struct, t_jsb_n_struct_p    ! *slmjsb4
-  PUBLIC :: t_jsb_var_integer2d, t_jsb_var_logical2d                          ! *slmjsb4
-  PUBLIC :: t_jsb_var_real1d, t_jsb_var_integer1d, t_jsb_var_logical1d  !! for SLM compatbility -> used in veg_mem_class  *slmtemp
+  PUBLIC :: t_jsb_var_logical2d                                               ! *slmjsb4
+  PUBLIC :: t_jsb_var_real1d, t_jsb_var_logical1d                             !! for SLM compatbility -> used in veg_mem_class  *slmtemp
 
 !> @todo in JSBACH4 this parameter is defined in mo_jsb_varlist_iface (USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN), 
 !! thus, delete here and insert the USE statement instead later
@@ -65,17 +65,6 @@ MODULE mo_jsb_var_class
 
 ! *slmtemp
   !-----------------------------------------------------------------------------------------------------
-  !> 1D INTEGER Variable TYPE - t_jsb_var_integer1d
-  !! 
-  !! added for temporary implementation of 1D REAL into SLM -> they will be changed to 2D later
-  !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_integer1d
-    INTEGER, POINTER :: ptr => NULL()
-  CONTAINS
-  END TYPE t_jsb_var_integer1d
-
-! *slmtemp
-  !-----------------------------------------------------------------------------------------------------
   !> 1D REAL Variable TYPE - t_jsb_var_real1d
   !! 
   !! added for temporary implementation of 1D REAL into SLM -> they will be changed to 2D later
@@ -102,17 +91,6 @@ MODULE mo_jsb_var_class
     LOGICAL, POINTER :: ptr(:,:) => NULL()
   CONTAINS
   END TYPE t_jsb_var_logical2d
-
-! *slmjsb4
-  !-----------------------------------------------------------------------------------------------------
-  !> 2D INTEGER Variable TYPE - t_jsb_var_integer2d
-  !! 
-  !! added for temporary implementation of 1D REAL into SLM -> they will be changed to 2D later
-  !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_integer2d
-    INTEGER, POINTER :: ptr(:,:) => NULL()
-  CONTAINS
-  END TYPE t_jsb_var_integer2d
 
   !-----------------------------------------------------------------------------------------------------
   !> 2D REAL Variable TYPE
