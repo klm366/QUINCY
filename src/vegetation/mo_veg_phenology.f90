@@ -10,7 +10,6 @@
 MODULE mo_veg_phenology
 
   USE mo_kind,          ONLY: wp, eps4
-  USE mo_exception,     ONLY: message_text, finish
 
 
   IMPLICIT NONE
@@ -49,7 +48,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile      !< one tile
     TYPE(t_lctlib_element),INTENT(in)       :: lctlib    !< land-cover-type library - parameters for one pft
-    ! 0.2 Local
+      ! 0.2 Local
     TYPE(t_slm_plant),POINTER               :: plant     ! plant variables per tile
     REAL(wp) :: hlp1                                     ! helper variable for tmp values
     ! 0.3 Memory allocation
@@ -72,38 +71,32 @@ CONTAINS
        SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is above specified threshold
-            IF(plant%beta_soil_gs_mavg > beta_soil_flush_tree) plant%growing_season = .TRUE.
+            IF(plant%beta_soil_gs_tphen_mavg > beta_soil_flush_tree) plant%growing_season = .TRUE.
          CASE (isummergreen)     ! if GDD requirement is exceeded. The latter depends on the length of the 
                                  ! dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
             hlp1 = gdd_req_max / exp ( k_gdd_dormance * plant%nd_dormance ) 
             IF(plant%gdd > hlp1 ) plant%growing_season = .TRUE.
          CASE (iperennial)       ! if temperature and soil moisture are not limiting growth
-            IF(plant%t_air_week_mavg > gdd_t_air_threshold .AND. &
-               plant%beta_soil_gs_mavg > beta_soil_flush_grass) plant%growing_season = .TRUE.
-         CASE DEFAULT            ! abord if here
-            WRITE(message_text,'(a,i4)') 'invalid phenology type ',lctlib%phenology_type
-            CALL finish("mo_veg_phenology:update_phenology",message_text) 
+            IF(plant%t_air_tphen_mavg > gdd_t_air_threshold .AND. &
+               plant%beta_soil_gs_tphen_mavg > beta_soil_flush_grass) plant%growing_season = .TRUE.
        END SELECT
     ELSE                         ! If in the growing season, check whether growing season has ended
        SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is below given threshold AND leaves have been out a given number of days
-            IF(plant%beta_soil_gs_mavg < beta_soil_senescence_tree .AND. plant%mean_leaf_age > min_leaf_age ) & 
+            IF(plant%beta_soil_gs_tphen_mavg < beta_soil_senescence_tree .AND. plant%mean_leaf_age > min_leaf_age ) & 
                plant%growing_season = .FALSE.
          CASE (isummergreen)     ! if temperature are declining below a certain threshold AND 
                                  ! leaves have been out a given number of days
             IF(plant%t_air_week_mavg < plant%t_air_month_mavg .AND. &
-                                plant%t_air_week_mavg < t_air_senescence .AND. & 
+                                plant%t_air_tphen_mavg < t_air_senescence .AND. & 
                                 plant%mean_leaf_age > min_leaf_age) plant%growing_season = .FALSE.
          CASE (iperennial)       ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND 
                                  ! leaves have been out a given number of days
-            IF((plant%t_air_week_mavg < Tzero .OR. plant%beta_soil_gs_mavg < eps4 .OR. &
-                plant%gpp_mavg < plant%maint_respiration_mavg).AND. &
+            IF((plant%t_air_tphen_mavg < Tzero .OR. plant%beta_soil_gs_tphen_mavg < eps4 .OR. &
+                plant%gpp_tlabile_mavg < plant%maint_respiration_tlabile_mavg).AND. &
                 plant%mean_leaf_age > min_leaf_age) &
                 plant%growing_season = .FALSE.
-         CASE DEFAULT            ! abord if here
-            WRITE(message_text,'(a,i4)') 'invalid phenology type ',lctlib%phenology_type
-            CALL finish("mo_veg_phenology:update_phenology",message_text) 
        END SELECT
     ENDIF   
 

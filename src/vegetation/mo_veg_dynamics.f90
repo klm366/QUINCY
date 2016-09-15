@@ -81,7 +81,7 @@ CONTAINS
        !! depends on the carbon balance of lowest canopy layer, i.e. net photosynthesis minus average construction cost
        !! in mol / m2 LAI / year
        !! transformed to a mortality estimate using a Weibull function
-       boc_cbalance = tile%plant%boc_an_mavg * one_day * one_year / 1.e6 & 
+       boc_cbalance = tile%plant%an_boc_tvegdyn_mavg * one_day * one_year / 1.e6 & 
                     - ( 1._wp + fresp_growth ) * lctlib%tau_leaf/lctlib%sla
        IF(boc_cbalance < -eps4 )THEN
           mortality_rate = mortality_rate & 

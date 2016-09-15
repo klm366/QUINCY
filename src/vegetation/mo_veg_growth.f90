@@ -83,9 +83,9 @@ CONTAINS
 
     !> 1.1 calculate costs of N uptake and fixation
     plant%fmaint_rate = fmaint_rate_base * temperature_response_respiration(t_air)
-    CALL calc_nitrogen_uptake_costs(lctlib%tau_fine_root,plant%t_air_week_mavg,& 
+    CALL calc_nitrogen_uptake_costs(lctlib%tau_fine_root,t_air,& 
                              plant%pool%fine_root%carbon,plant%pool%fine_root%nitrogen,& 
-                             plant%fmaint_rate_mavg,plant%unit_npp_talloc_mavg, &
+                             plant%fmaint_rate_troot_mavg,plant%unit_npp_troot_mavg, &
                              plant%unit_uptake_n_troot_mavg, &
                              plant%cost_n_uptake_root,plant%cost_n_fixation)
   
@@ -125,14 +125,14 @@ CONTAINS
     !! 
     !! 
     plant%reserve_use = calc_reserve_useage(tau_labile_pot,plant%growing_season, &
-                              plant%gpp_mavg, &
-                              plant%maint_respiration_mavg, &
-                              plant%growth_req_n_mavg, &
-                              plant%growth_req_p_mavg, &
+                              plant%gpp_tlabile_mavg, &
+                              plant%maint_respiration_tlabile_mavg, &
+                              plant%growth_req_n_tlabile_mavg, &
+                              plant%growth_req_p_tlabile_mavg, &
                               lctlib%sla, &
                               lctlib%tau_leaf,lctlib%tau_fine_root, & 
                               plant%target_cn_leaf, target_cn_fine_root, & 
-                              plant%target_np_leaf, target_np_fine_root, plant%leaf2root_mass_ratio_mavg, &
+                              plant%target_np_leaf, target_np_fine_root, plant%leaf2root_troot_mavg, &
                               plant%lai,target_lai, &
                               plant%pool%labile,plant%pool%reserve)
     CALL calc_nutrient_recycling(plant, target_cn_fine_root, target_np_fine_root)
@@ -1096,8 +1096,8 @@ CONTAINS
   !@todo: reconsider the time scale of these arguments. Since cost_n_fixation is used for respiration
   !! calculation, it should be based on actual temperature, not its average
   ! --------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_nitrogen_uptake_costs(tau_fine_root,t_air_week_mavg,fine_root_carbon,fine_root_nitrogen,& 
-                             fmaint_rate_mavg,unit_npp_mavg,unit_uptake_n_troot_mavg, &
+  ELEMENTAL SUBROUTINE calc_nitrogen_uptake_costs(tau_fine_root,t_air,fine_root_carbon,fine_root_nitrogen,& 
+                             fmaint_rate,unit_npp,unit_uptake_n, &
                              cost_n_uptake_root,cost_n_fixation)
     
     USE mo_shared_constants, ONLY: Tzero
@@ -1109,12 +1109,12 @@ CONTAINS
     
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: tau_fine_root                 !< fine root turnover rate (yrs)
-    REAL(wp), INTENT(in) :: t_air_week_mavg               !< air temperature (K) !! should be soil temperature!
+    REAL(wp), INTENT(in) :: t_air                         !< air temperature (K) !! should be soil temperature!
     REAL(wp), INTENT(in) :: fine_root_carbon              !< fine root carbon mass (mol C / m2)
     REAL(wp), INTENT(in) :: fine_root_nitrogen            !< fine root nitrogen mass (mol N / m2) 
-    REAL(wp), INTENT(in) :: fmaint_rate_mavg              !< N-speficic root maintentance respiration rate (µmol C/mol N / s)
-    REAL(wp), INTENT(in) :: unit_npp_mavg                 !< increase of NPP with increased leaf C investment (??)
-    REAL(wp), INTENT(in) :: unit_uptake_n_troot_mavg      !< increase of root N uptake with increased root C inventment (??)
+    REAL(wp), INTENT(in) :: fmaint_rate              !< N-speficic root maintentance respiration rate (µmol C/mol N / s)
+    REAL(wp), INTENT(in) :: unit_npp                 !< increase of NPP with increased leaf C investment (??)
+    REAL(wp), INTENT(in) :: unit_uptake_n      !< increase of root N uptake with increased root C inventment (??)
     REAL(wp), INTENT(out) :: cost_n_uptake_root           !< cost of root N uptake (mol C / mol N)
     REAL(wp), INTENT(out) :: cost_n_fixation              !< cost of N fixation (mol C / mol N)
     ! 0.2 Local 
@@ -1128,7 +1128,7 @@ CONTAINS
     !!
     ! maintenance respiration cost of a unit fine root carbon
     IF(fine_root_carbon > eps8)THEN
-        fresp_maint = fmaint_rate_mavg * fine_root_nitrogen / fine_root_carbon  * &
+        fresp_maint = fmaint_rate * fine_root_nitrogen / fine_root_carbon  * &
                       tau_fine_root * one_day * one_year / 1.e6_wp
     ELSE
         fresp_maint = 0.0_wp
@@ -1138,11 +1138,11 @@ CONTAINS
     !! based on Rastetter (2001) and Meyerholt (2016, OPT)
 
     ! photosynthesis gain relative to carbon investment into leafs
-    gc = MAX(unit_npp_mavg,0.0_wp) !*0.3_wp
+    gc = MAX(unit_npp,0.0_wp) !*0.3_wp
         
     ! n-uptake gain relative to carbon investment into roots
     ! multiplier is Croot / Croot * (1 + fresp_growth + fresp_maint
-    gn = unit_uptake_n_troot_mavg /(1._wp+fresp_growth+fresp_maint)
+    gn = unit_uptake_n /(1._wp+fresp_growth+fresp_maint)
     
     IF(gn > eps8)THEN
         cost_n_uptake_root = gc / gn + (transform_cost_nh4+transform_cost_no3)/2.0_wp
@@ -1153,8 +1153,8 @@ CONTAINS
     !> 1.2 C costs for BNF
     !! Temperaturefunction based on Houlton (2008)
     !!
-    tf = k1_temp_bnf * exp(k2_temp_bnf + k3_temp_bnf * (t_air_week_mavg - Tzero) * &
-                           (1.0_wp-(t_air_week_mavg-Tzero)/k4_temp_bnf))
+    tf = k1_temp_bnf * exp(k2_temp_bnf + k3_temp_bnf * (t_air - Tzero) * &
+                           (1.0_wp-(t_air-Tzero)/k4_temp_bnf))
        
     cost_n_fixation = (cost_n_fixation_max-(cost_n_fixation_max-cost_n_fixation_min)*tf) 
 

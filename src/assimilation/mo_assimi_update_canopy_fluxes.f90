@@ -173,7 +173,7 @@ CONTAINS
         plant%ci                      = plant%ci + cil(icanop) * plant%lai_cl(icanop)
 
         ! get the net photosynthesis of the lowest canopy layer at this timestep
-        IF(plant%lai_cl(icanop) > 0.0_wp) plant%boc_an = anl(icanop)
+        IF(plant%lai_cl(icanop) > 0.0_wp) plant%an_boc = anl(icanop)
      ENDIF
   ENDDO
 

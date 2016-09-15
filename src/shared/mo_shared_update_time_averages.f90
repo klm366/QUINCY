@@ -74,12 +74,13 @@ CONTAINS
 
     !> 1.0 daytime averages
     !! 
-    CALL calc_daytime_averages(tile%plant, time_day, timestep_prop_day, swpar_srf_down)
+    CALL calc_daytime_averages(tile%plant, time_day, timestep_prop_day, swpar_srf_down, & 
+                               t_air, press_srf, co2_mixing_ratio, ga)
 
 
     !> 2.0 moving averages
     !! 
-    CALL calc_moving_averages(lctlib, tile%plant, t_air, q_air, press_srf, co2_mixing_ratio, ga)
+    CALL calc_moving_averages(lctlib, tile%plant, t_air, press_srf, co2_mixing_ratio, ga)
 
 
 
@@ -98,7 +99,8 @@ CONTAINS
   !!
   !! daytime: the time of the day over which light is available
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_daytime_averages(veg, time_day, timestep_prop_day, swpar_srf_down)
+  SUBROUTINE calc_daytime_averages(veg, time_day, timestep_prop_day, swpar_srf_down, t_air, & 
+                                   press_srf, co2_mixing_ratio, ga)
 
     USE mo_base_constants,      ONLY: ncanop
     USE mo_veg_memory,          ONLY: t_slm_plant
@@ -108,7 +110,11 @@ CONTAINS
     TYPE(t_slm_plant), INTENT(inout)      :: veg                !< veg variables per tile
     REAL(wp), INTENT(in)                  :: time_day           !< time in days
     REAL(wp), INTENT(in)                  :: timestep_prop_day  !< length of one time step (proportion of one day)
-    REAL(wp), INTENT(in)                  :: swpar_srf_down     !< light at surface level
+    REAL(wp), INTENT(in)                  :: swpar_srf_down     !< shortwave downward flux in PAR band 
+    REAL(wp), INTENT(in)                  :: t_air              !< air temperature (K)
+    REAL(wp), INTENT(in)                  :: press_srf          !< surface pressure (Pa)
+    REAL(wp), INTENT(in)                  :: co2_mixing_ratio   !< atmospheric CO2 concentration (ppm)
+    REAL(wp), INTENT(in)                  :: ga                 !< aerodynamic conductance 
     ! 0.2 Local
     INTEGER                               :: i
     ! 0.3 Memory allocation
@@ -125,7 +131,14 @@ CONTAINS
         veg%par_shaded_daytime_dacc_cl(i)   = veg%par_shaded_daytime_dacc_cl(i)     + veg%par_shaded_cl(i)
         veg%fleaf_sunlit_daytime_dacc_cl(i) = veg%fleaf_sunlit_daytime_dacc_cl(i)   + veg%fleaf_sunlit_cl(i)
       END DO
-      veg%t_jmax_opt_daytime_dacc           = veg%t_jmax_opt_daytime_dacc           + veg%t_jmax_opt
+      veg%t_air_daytime_dacc            = veg%t_air_daytime_dacc            + t_air
+      veg%press_srf_daytime_dacc        = veg%press_srf_daytime_dacc        + press_srf
+      veg%co2_mixing_ratio_daytime_dacc = veg%co2_mixing_ratio_daytime_dacc + co2_mixing_ratio
+      veg%ga_daytime_dacc               = veg%ga_daytime_dacc               + ga
+      veg%beta_air_daytime_dacc         = veg%beta_air_daytime_dacc         + veg%beta_air
+      veg%beta_soil_ps_daytime_dacc     = veg%beta_soil_ps_daytime_dacc     + veg%beta_soil_ps
+      veg%beta_soil_gs_daytime_dacc     = veg%beta_soil_gs_daytime_dacc     + veg%beta_soil_gs
+      veg%t_jmax_opt_daytime_dacc       = veg%t_jmax_opt_daytime_dacc       + veg%t_jmax_opt
     END IF
 
 
@@ -141,12 +154,18 @@ CONTAINS
           veg%par_shaded_daytime_cl(i)    = veg%par_shaded_daytime_dacc_cl(i)   / veg%daytime_counter
           veg%fleaf_sunlit_daytime_cl(i)  = veg%fleaf_sunlit_daytime_dacc_cl(i) / veg%daytime_counter
         END DO
-        veg%t_jmax_opt_daytime            = veg%t_jmax_opt_daytime_dacc         / veg%daytime_counter
+        veg%t_air_daytime            = veg%t_air_daytime_dacc              / veg%daytime_counter
+        veg%press_srf_daytime        = veg%press_srf_daytime_dacc          / veg%daytime_counter
+        veg%co2_mixing_ratio_daytime = veg%co2_mixing_ratio_daytime_dacc   / veg%daytime_counter
+        veg%ga_daytime               = veg%ga_daytime_dacc                 / veg%daytime_counter
+        veg%beta_air_daytime         = veg%beta_air_daytime_dacc           / veg%daytime_counter
+        veg%beta_soil_ps_daytime     = veg%beta_soil_ps_daytime_dacc       / veg%daytime_counter
+        veg%beta_soil_gs_daytime     = veg%beta_soil_gs_daytime_dacc       / veg%daytime_counter
+        veg%t_jmax_opt_daytime       = veg%t_jmax_opt_daytime_dacc         / veg%daytime_counter
       ELSE  ! if veg%daytime_counter is zero
         veg%par_sunlit_daytime_cl(:)    = 0.0_wp
         veg%par_shaded_daytime_cl(:)    = 0.0_wp
         veg%fleaf_sunlit_daytime_cl(:)  = 0.0_wp
-        veg%t_jmax_opt_daytime          = 0.0_wp
       END IF
 
 !      write(999,*) time_day, veg%daytime_counter, &   ! might be used for testing
@@ -159,6 +178,13 @@ CONTAINS
       veg%par_sunlit_daytime_dacc_cl(:)      = 0.0_wp
       veg%par_shaded_daytime_dacc_cl(:)      = 0.0_wp
       veg%fleaf_sunlit_daytime_dacc_cl(:)    = 0.0_wp
+      veg%t_air_daytime_dacc                 = 0.0_wp
+      veg%press_srf_daytime_dacc             = 0.0_wp
+      veg%co2_mixing_ratio_daytime_dacc      = 0.0_wp
+      veg%ga_daytime_dacc                    = 0.0_wp
+      veg%beta_air_daytime_dacc              = 0.0_wp
+      veg%beta_soil_ps_daytime_dacc          = 0.0_wp
+      veg%beta_soil_gs_daytime_dacc          = 0.0_wp
       veg%t_jmax_opt_daytime_dacc            = 0.0_wp
       veg%daytime_counter                    = 0.0_wp
     END IF
@@ -241,7 +267,7 @@ CONTAINS
   !! 
   !! variable-specific averaging period, previous to the current timestep
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_moving_averages(lctlib, veg, t_air, q_air, press_srf, co2_mixing_ratio, ga)
+  SUBROUTINE calc_moving_averages(lctlib, veg, t_air, press_srf, co2_mixing_ratio, ga)
 
     USE mo_shared_constants     ! moving average period lengths are defined there as REAL(wp),PARAMETER :: mavg_period_...
     USE mo_veg_memory,          ONLY: t_slm_plant
@@ -251,7 +277,6 @@ CONTAINS
     TYPE(t_lctlib_element),INTENT(in)   :: lctlib             !< land-cover-type library - parameters for one pft
     TYPE(t_slm_plant), INTENT(inout)    :: veg                !< vegetation memory
     REAL(wp), INTENT(in)                :: t_air              !< air temperature ?
-    REAL(wp), INTENT(in)                :: q_air              !< air .. ?
     REAL(wp), INTENT(in)                :: press_srf          !< air pressure at surface level ?
     REAL(wp), INTENT(in)                :: co2_mixing_ratio   !< .. ?
     REAL(wp), INTENT(in)                :: ga                 !< aerodynamic resistance
@@ -259,99 +284,128 @@ CONTAINS
     REAl(wp)                            :: hlp
 
 
-    ! moving_avg(current average, new value, length of avg_period, do_calc=.FALSE., avg_period_unit='day')
-    !           returns: new current average
+    !> 1.0
+    !! moving_avg(current average, new value, length of avg_period, do_calc=.FALSE., avg_period_unit='day')
+    !!           returns: new current average
 
-    veg%par_sunlit_mavg_cl(:)       = calc_mavg(veg%par_sunlit_mavg_cl(:), veg%par_sunlit_daytime_cl(:), mavg_period_opt_Nfrac)
-    veg%par_shaded_mavg_cl(:)       = calc_mavg(veg%par_shaded_mavg_cl(:), veg%par_shaded_daytime_cl(:), mavg_period_opt_Nfrac)
+    !> 1.1 averages at the timescale of the labile pool
+    veg%gpp_tlabile_mavg                = calc_mavg(veg%gpp_tlabile_mavg, veg%gpp, mavg_period_tlabile)
+    veg%maint_respiration_tlabile_mavg  = calc_mavg(veg%maint_respiration_tlabile_mavg, veg%maint_respiration_pot, mavg_period_tlabile)
+    veg%growth_req_n_tlabile_mavg       = calc_mavg(veg%growth_req_n_tlabile_mavg, veg%growth_req_n, mavg_period_tlabile, &
+                                                    do_calc=(veg%growth_req_n > eps8))
+    veg%growth_req_p_tlabile_mavg       = calc_mavg(veg%growth_req_p_tlabile_mavg, veg%growth_req_p, mavg_period_tlabile, &
+                                                    do_calc=(veg%growth_req_p > eps8))
+    
+    !> 1.2 averages at the time-scale of phenology
+    veg%t_air_tphen_mavg                 = calc_mavg(veg%t_air_tphen_mavg, t_air, mavg_period_tphen)
+    veg%beta_soil_gs_tphen_mavg          = calc_mavg(veg%beta_soil_gs_tphen_mavg, veg%beta_soil_gs, mavg_period_tphen)
 
-    veg%fleaf_sunlit_mavg_cl(:)     = calc_mavg(veg%fleaf_sunlit_mavg_cl(:), veg%fleaf_sunlit_daytime_cl(:), mavg_period_opt_Nfrac)
-    veg%beta_soil_gs_mavg           = calc_mavg(veg%beta_soil_gs_mavg, veg%beta_soil_gs, mavg_period_opt_Nfrac)
-    veg%beta_soil_ps_mavg           = calc_mavg(veg%beta_soil_ps_mavg, veg%beta_soil_ps, mavg_period_opt_Nfrac)
-    veg%beta_air_mavg               = calc_mavg(veg%beta_air_mavg, veg%beta_air, mavg_period_opt_Nfrac)
+    !> 1.3 averages at the nutrient-uptake demand time-scale
+    veg%npp_tuptake_mavg                 = calc_mavg(veg%npp_tuptake_mavg, veg%npp, mavg_period_tuptake, &
+                                                     do_calc=(veg%pool%fine_root%carbon > eps8))
+    veg%demand_uptake_n_tuptake_mavg     = calc_mavg(veg%demand_uptake_n_tuptake_mavg, veg%f_n_demand, mavg_period_tuptake, &
+                                                     do_calc=(veg%pool%fine_root%carbon > eps8))
+    veg%demand_uptake_p_tuptake_mavg     = calc_mavg(veg%demand_uptake_p_tuptake_mavg, veg%f_p_demand, mavg_period_tuptake, &
+                                                     do_calc=(veg%pool%fine_root%carbon > eps8))
+    veg%cost_n_fixation_tuptake_mavg     = calc_mavg(veg%cost_n_fixation_tuptake_mavg, veg%cost_n_fixation, mavg_period_tuptake, & 
+                                                     do_calc=veg%growing_season) 
+    veg%growth_req_n_tuptake_mavg        = calc_mavg(veg%growth_req_n_tuptake_mavg, veg%growth_req_n, mavg_period_tuptake, &
+                                                     do_calc=(veg%growth_req_n > eps8))
+    veg%growth_req_p_tuptake_mavg        = calc_mavg(veg%growth_req_p_tuptake_mavg, veg%growth_req_p, mavg_period_tuptake, &
+                                                     do_calc=(veg%growth_req_p > eps8))
 
-    veg%t_jmax_opt_mavg             = calc_mavg(veg%t_jmax_opt_mavg, veg%t_jmax_opt_daytime, mavg_period_weekly)
-    veg%gpp_mavg                    = calc_mavg(veg%gpp_mavg, veg%gpp, mavg_period_weekly)
-    veg%an_mavg                     = calc_mavg(veg%an_mavg, veg%an, mavg_period_weekly)
-    veg%npp_mavg                    = calc_mavg(veg%npp_mavg, veg%npp, mavg_period_weekly)
-    veg%maint_respiration_mavg      = calc_mavg(veg%maint_respiration_mavg, veg%maint_respiration_pot, mavg_period_weekly)
-    veg%fmaint_rate_mavg            = calc_mavg(veg%fmaint_rate_mavg, veg%fmaint_rate, mavg_period_weekly)
+    !> 1.4 averages at the time-scale of within-leaf N allocation fractions 
+    !!
+    veg%par_sunlit_tfrac_mavg_cl(:)       = calc_mavg(veg%par_sunlit_tfrac_mavg_cl(:), veg%par_sunlit_daytime_cl(:), mavg_period_tfrac)
+    veg%par_shaded_tfrac_mavg_cl(:)       = calc_mavg(veg%par_shaded_tfrac_mavg_cl(:), veg%par_shaded_daytime_cl(:), mavg_period_tfrac)
+    veg%fleaf_sunlit_tfrac_mavg_cl(:)     = calc_mavg(veg%fleaf_sunlit_tfrac_mavg_cl(:), veg%fleaf_sunlit_daytime_cl(:), mavg_period_tfrac)
+    veg%t_air_tfrac_mavg                  = calc_mavg(veg%t_air_tfrac_mavg, veg%t_air_daytime, mavg_period_tfrac)
+    veg%press_srf_tfrac_mavg              = calc_mavg(veg%press_srf_tfrac_mavg, veg%press_srf_daytime, mavg_period_tfrac)
+    veg%co2_mixing_ratio_tfrac_mavg       = calc_mavg(veg%co2_mixing_ratio_tfrac_mavg, veg%co2_mixing_ratio_daytime, mavg_period_tfrac)
+    veg%ga_tfrac_mavg                     = calc_mavg(veg%ga_tfrac_mavg, veg%ga_daytime, mavg_period_tfrac)
+    veg%beta_soil_gs_tfrac_mavg           = calc_mavg(veg%beta_soil_gs_tfrac_mavg, veg%beta_soil_gs_daytime, mavg_period_tfrac)
+    veg%beta_soil_ps_tfrac_mavg           = calc_mavg(veg%beta_soil_ps_tfrac_mavg, veg%beta_soil_ps_daytime, mavg_period_tfrac)
+    veg%beta_air_tfrac_mavg               = calc_mavg(veg%beta_air_tfrac_mavg, veg%beta_air_daytime, mavg_period_tfrac)
 
-    veg%growth_req_n_mavg           = calc_mavg(veg%growth_req_n_mavg, veg%growth_req_n, mavg_period_weekly, &
-                                            do_calc=(veg%growth_req_n > eps8))
-    veg%growth_req_p_mavg           = calc_mavg(veg%growth_req_p_mavg, veg%growth_req_p, mavg_period_weekly, &
-                                            do_calc=(veg%growth_req_p > eps8))
-    veg%boc_an_mavg                 = calc_mavg(veg%boc_an_mavg, veg%boc_an, mavg_period_boc_an, &
-                                            do_calc=(veg%pool%leaf%carbon > eps8))
+    !> 1.5 averages at the time-scale of leaf N allocation fractions 
+    !!
+    veg%par_sunlit_tcnl_mavg_cl(:)       = calc_mavg(veg%par_sunlit_tcnl_mavg_cl(:), veg%par_sunlit_daytime_cl(:), mavg_period_tcnl)
+    veg%par_shaded_tcnl_mavg_cl(:)       = calc_mavg(veg%par_shaded_tcnl_mavg_cl(:), veg%par_shaded_daytime_cl(:), mavg_period_tcnl)
+    veg%fleaf_sunlit_tcnl_mavg_cl(:)     = calc_mavg(veg%fleaf_sunlit_tcnl_mavg_cl(:), veg%fleaf_sunlit_daytime_cl(:), mavg_period_tcnl)
+    veg%t_air_tcnl_mavg                  = calc_mavg(veg%t_air_tcnl_mavg, veg%t_air_daytime, mavg_period_tcnl)
+    veg%press_srf_tcnl_mavg              = calc_mavg(veg%press_srf_tcnl_mavg, veg%press_srf_daytime, mavg_period_tcnl)
+    veg%co2_mixing_ratio_tcnl_mavg       = calc_mavg(veg%co2_mixing_ratio_tcnl_mavg, veg%co2_mixing_ratio_daytime, mavg_period_tcnl)
+    veg%ga_tcnl_mavg                     = calc_mavg(veg%ga_tcnl_mavg, veg%ga_daytime, mavg_period_tcnl)
+    veg%beta_soil_gs_tcnl_mavg           = calc_mavg(veg%beta_soil_gs_tcnl_mavg, veg%beta_soil_gs_daytime, mavg_period_tcnl)
+    veg%beta_soil_ps_tcnl_mavg           = calc_mavg(veg%beta_soil_ps_tcnl_mavg, veg%beta_soil_ps_daytime, mavg_period_tcnl)
+    veg%beta_air_tcnl_mavg               = calc_mavg(veg%beta_air_tcnl_mavg, veg%beta_air_daytime, mavg_period_tcnl)
 
-    ! averages for allocation calculation
-    veg%npp_talloc_mavg                   = calc_mavg(veg%npp_talloc_mavg, veg%npp, mavg_period_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    veg%unit_npp_talloc_mavg              = calc_mavg(veg%unit_npp_talloc_mavg, veg%unit_npp, mavg_period_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    veg%transpiration_talloc_mavg         = calc_mavg(veg%transpiration_talloc_mavg, veg%transpiration, mavg_period_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    veg%unit_transpiration_talloc_mavg    = calc_mavg(veg%unit_transpiration_talloc_mavg, veg%unit_transpiration, mavg_period_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    veg%dphi_talloc_mavg                  = calc_mavg(veg%dphi_talloc_mavg, veg%dphi, mavg_period_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    veg%unit_uptake_n_talloc_mavg         = calc_mavg(veg%unit_uptake_n_talloc_mavg, veg%unit_uptake_n, mavg_period_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    veg%unit_uptake_p_talloc_mavg         = calc_mavg(veg%unit_uptake_p_talloc_mavg, veg%unit_uptake_p, mavg_period_opt_alloc, &
-                                                  do_calc=veg%growing_season)
-    veg%labile_carbon_talloc_mavg         = calc_mavg(veg%labile_carbon_talloc_mavg, veg%pool%labile%carbon, & 
-                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
-    veg%labile_nitrogen_talloc_mavg       = calc_mavg(veg%labile_nitrogen_talloc_mavg, veg%pool%labile%nitrogen, & 
-                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
-    veg%labile_phosphorus_talloc_mavg     = calc_mavg(veg%labile_phosphorus_talloc_mavg, veg%pool%labile%phosphorus, & 
-                                                  mavg_period_opt_alloc, do_calc=veg%growing_season)
+    !> 1.6 time-scale of plant allocation calculation
+    !!
+    veg%npp_talloc_mavg                  = calc_mavg(veg%npp_talloc_mavg, veg%npp, mavg_period_talloc, &
+                                                     do_calc=veg%growing_season)
+    veg%unit_npp_talloc_mavg             = calc_mavg(veg%unit_npp_talloc_mavg, veg%unit_npp, mavg_period_talloc, &
+                                                     do_calc=veg%growing_season)
+    veg%transpiration_talloc_mavg        = calc_mavg(veg%transpiration_talloc_mavg, veg%transpiration, mavg_period_talloc, &
+                                                     do_calc=veg%growing_season)
+    veg%unit_transpiration_talloc_mavg   = calc_mavg(veg%unit_transpiration_talloc_mavg, veg%unit_transpiration, mavg_period_talloc, &
+                                                     do_calc=veg%growing_season)
+    veg%dphi_talloc_mavg                 = calc_mavg(veg%dphi_talloc_mavg, veg%dphi, mavg_period_talloc, &
+                                                     do_calc=veg%growing_season)
+    veg%unit_uptake_n_talloc_mavg        = calc_mavg(veg%unit_uptake_n_talloc_mavg, veg%unit_uptake_n, mavg_period_talloc, &
+                                                     do_calc=veg%growing_season)
+    veg%unit_uptake_p_talloc_mavg        = calc_mavg(veg%unit_uptake_p_talloc_mavg, veg%unit_uptake_p, mavg_period_talloc, &
+                                                     do_calc=veg%growing_season)
+    veg%labile_carbon_talloc_mavg        = calc_mavg(veg%labile_carbon_talloc_mavg, veg%pool%labile%carbon, & 
+                                                     mavg_period_talloc, do_calc=veg%growing_season)
+    veg%labile_nitrogen_talloc_mavg      = calc_mavg(veg%labile_nitrogen_talloc_mavg, veg%pool%labile%nitrogen, & 
+                                                     mavg_period_talloc, do_calc=veg%growing_season)
+    veg%labile_phosphorus_talloc_mavg    = calc_mavg(veg%labile_phosphorus_talloc_mavg, veg%pool%labile%phosphorus, & 
+                                                     mavg_period_talloc, do_calc=veg%growing_season)
     IF (veg%growth_req_n > 0._wp)THEN
        hlp = 1._wp/veg%growth_req_n
     ELSE
        hlp=0._wp
     ENDIF
-    veg%growth_cn_talloc_mavg  = calc_mavg(veg%growth_cn_talloc_mavg, hlp, mavg_period_opt_alloc, do_calc=veg%growing_season)
+    veg%growth_cn_talloc_mavg  = calc_mavg(veg%growth_cn_talloc_mavg, hlp, mavg_period_talloc, do_calc=veg%growing_season)
     
     IF (veg%growth_req_n > 0._wp .AND. veg%growth_req_p > 0._wp)THEN
        hlp = 1._wp/(veg%growth_req_n * veg%growth_req_p)
     ELSE
        hlp=0._wp
     ENDIF
-    veg%growth_cp_talloc_mavg  = calc_mavg(veg%growth_cp_talloc_mavg, hlp, mavg_period_opt_alloc, do_calc=veg%growing_season)
+    veg%growth_cp_talloc_mavg  = calc_mavg(veg%growth_cp_talloc_mavg, hlp, mavg_period_talloc, do_calc=veg%growing_season)
+
+    !> 1.7 averages at the time-scale of root life-time
+    !!
+    IF (veg%pool%fine_root%carbon > eps8)THEN
+       hlp = veg%pool%leaf%carbon/veg%pool%fine_root%carbon
+    ELSE
+       hlp=0._wp
+    ENDIF
+    veg%leaf2root_troot_mavg       = calc_mavg(veg%leaf2root_troot_mavg, hlp, lctlib%tau_fine_root, &
+                                               do_calc=(veg%pool%leaf%carbon > eps8) .AND. (veg%pool%fine_root%carbon > eps8), & 
+                                               avg_period_unit='year')
+    veg%unit_npp_troot_mavg        = calc_mavg(veg%unit_npp_troot_mavg, veg%unit_npp, lctlib%tau_fine_root, &
+                                               do_calc=veg%growing_season, avg_period_unit='year') 
+    veg%unit_uptake_n_troot_mavg   = calc_mavg(veg%unit_uptake_n_troot_mavg, veg%unit_uptake_n, lctlib%tau_fine_root, &
+                                               do_calc=veg%growing_season, avg_period_unit='year')
+    veg%unit_uptake_p_troot_mavg   = calc_mavg(veg%unit_uptake_p_troot_mavg, veg%unit_uptake_p, lctlib%tau_fine_root, &
+                                               do_calc=veg%growing_season, avg_period_unit='year')
+    veg%fmaint_rate_troot_mavg     = calc_mavg(veg%fmaint_rate_troot_mavg, veg%fmaint_rate, lctlib%tau_fine_root, &
+                                               do_calc=veg%growing_season, avg_period_unit='year') 
+
+    !> 1.8 averages at the vegetation dynamics time-scale 
+    veg%an_boc_tvegdyn_mavg   = calc_mavg(veg%an_boc_tvegdyn_mavg, veg%an_boc, mavg_period_tvegdyn, &
+                                          do_calc=(veg%pool%leaf%carbon > eps8))
+    !> 1.9 averages with a weekly, monthly timescale 
+    !!
+    veg%t_air_week_mavg       = calc_mavg(veg%t_air_week_mavg, t_air, mavg_period_weekly)
+    veg%t_air_month_mavg      = calc_mavg(veg%t_air_month_mavg, t_air, mavg_period_monthly)
+    veg%t_jmax_opt_mavg       = calc_mavg(veg%t_jmax_opt_mavg, veg%t_jmax_opt_daytime, mavg_period_weekly)
 
 
 
-    veg%unit_uptake_n_troot_mavg          = calc_mavg(veg%unit_uptake_n_troot_mavg, veg%unit_uptake_n, lctlib%tau_fine_root, &
-                                                  do_calc=veg%growing_season, avg_period_unit='year')
-    veg%unit_uptake_p_troot_mavg          = calc_mavg(veg%unit_uptake_p_troot_mavg, veg%unit_uptake_p, lctlib%tau_fine_root, &
-                                                  do_calc=veg%growing_season, avg_period_unit='year')
-!@todo should the average period be tau_root?
-    veg%cost_n_uptake_root_mavg           = veg%cost_n_uptake_root
-    veg%cost_n_fixation_mavg              = veg%cost_n_fixation
-!    veg%cost_n_uptake_root_mavg           = calc_mavg(veg%cost_n_uptake_root_mavg, veg%cost_n_uptake_root, mavg_period_yearly, &
-!                                                  do_calc=veg%growing_season) 
-!    veg%cost_n_fixation_mavg              = calc_mavg(veg%cost_n_fixation_mavg, veg%cost_n_fixation, mavg_period_yearly, &
-!                                                  do_calc=veg%growing_season) 
-
-    veg%demand_uptake_n_mavg              = calc_mavg(veg%demand_uptake_n_mavg, veg%f_n_demand, mavg_period_demand_uptake_n, &
-                                                  do_calc=(veg%pool%fine_root%carbon > eps8))
-    veg%demand_uptake_p_mavg              = calc_mavg(veg%demand_uptake_p_mavg, veg%f_p_demand, mavg_period_demand_uptake_p, &
-                                                  do_calc=(veg%pool%fine_root%carbon > eps8))
-    veg%leaf2root_mass_ratio_mavg         = calc_mavg(veg%leaf2root_mass_ratio_mavg, &
-                                                  veg%pool%leaf%carbon/veg%pool%fine_root%carbon, &
-                                                  mavg_period_yearly, do_calc=(veg%pool%leaf%carbon > eps8))
-
-
-
-    veg%t_air_mavg            = calc_mavg(veg%t_air_mavg,             t_air,            mavg_period_opt_Nfrac)
-    veg%ga_mavg               = calc_mavg(veg%ga_mavg,                ga,               mavg_period_opt_Nfrac)
-    veg%co2_mixing_ratio_mavg = calc_mavg(veg%co2_mixing_ratio_mavg,  co2_mixing_ratio, mavg_period_opt_Nfrac)
-    veg%press_srf_mavg        = calc_mavg(veg%press_srf_mavg,         press_srf,        mavg_period_opt_Nfrac)
-    veg%q_air_mavg            = calc_mavg(veg%q_air_mavg,             q_air,            mavg_period_opt_Nfrac)
-
-    veg%t_air_week_mavg       = calc_mavg(veg%t_air_week_mavg,        t_air, mavg_period_weekly)
-    veg%t_air_month_mavg      = calc_mavg(veg%t_air_month_mavg,       t_air, mavg_period_monthly)
-    veg%t_air_longterm_mavg   = calc_mavg(veg%t_air_longterm_mavg,    t_air, mavg_period_longterm)
 
   END SUBROUTINE calc_moving_averages
 

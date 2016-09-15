@@ -137,7 +137,7 @@ MODULE mo_veg_memory
     REAL(wp) :: gdd                               !< growing degree days above 5°C
     REAL(wp) :: nd_dormance                       !< number of days since last growing season 
     REAL(wp) :: t_jmax_opt                        !< current optimum temperature for eletron transport of photosynthesis
-    REAL(wp) :: boc_an                            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
+    REAL(wp) :: an_boc                            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
     REAL(wp) :: leaf_cn_direction                 !< indicates direction of change in leaf CN ratio to maximise NPP
     REAL(wp) :: apar 
     !! prior (to r239) the variables ..._cl were stored in t_slm_canopy_layer (without the trailing _cl), which is deleted now
@@ -158,67 +158,92 @@ MODULE mo_veg_memory
     REAL(wp), DIMENSION(ncanop)     :: par_sunlit_daytime_cl             !<  average of the previous day
     REAL(wp), DIMENSION(ncanop)     :: par_shaded_daytime_cl             !<  average of the previous day
     REAL(wp), DIMENSION(ncanop)     :: fleaf_sunlit_daytime_cl           !<  average of the previous day
+    REAL(wp)                        :: t_air_daytime                     !<  average of the previous day
+    REAL(wp)                        :: press_srf_daytime                 !<  average of the previous day
+    REAL(wp)                        :: co2_mixing_ratio_daytime          !<  average of the previous day
+    REAL(wp)                        :: ga_daytime                        !<  average of the previous day
+    REAL(wp)                        :: beta_air_daytime                  !<  average of the previous day
+    REAL(wp)                        :: beta_soil_ps_daytime              !<  average of the previous day
+    REAL(wp)                        :: beta_soil_gs_daytime              !<  average of the previous day
     REAL(wp)                        :: t_jmax_opt_daytime                !<  average of the previous day
-    REAL(wp), DIMENSION(ncanop)     :: par_sunlit_daytime_dacc_cl     !<  value accumulated over current day
-    REAL(wp), DIMENSION(ncanop)     :: par_shaded_daytime_dacc_cl     !<  value accumulated over current day
-    REAL(wp), DIMENSION(ncanop)     :: fleaf_sunlit_daytime_dacc_cl   !<  value accumulated over current day
-    REAL(wp)                        :: t_jmax_opt_daytime_dacc        !<  value accumulated over current day 
+    REAL(wp), DIMENSION(ncanop)     :: par_sunlit_daytime_dacc_cl        !<  value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: par_shaded_daytime_dacc_cl        !<  value accumulated over current day
+    REAL(wp), DIMENSION(ncanop)     :: fleaf_sunlit_daytime_dacc_cl      !<  value accumulated over current day
+    REAL(wp)                        :: t_air_daytime_dacc                !<  average of the previous day
+    REAL(wp)                        :: press_srf_daytime_dacc            !<  average of the previous day
+    REAL(wp)                        :: co2_mixing_ratio_daytime_dacc     !<  average of the previous day
+    REAL(wp)                        :: ga_daytime_dacc                   !<  average of the previous day
+    REAL(wp)                        :: beta_air_daytime_dacc             !<  average of the previous day
+    REAL(wp)                        :: beta_soil_ps_daytime_dacc         !<  average of the previous day
+    REAL(wp)                        :: beta_soil_gs_daytime_dacc         !<  average of the previous day
+    REAL(wp)                        :: t_jmax_opt_daytime_dacc           !<  value accumulated over current day 
     !> @todo t_slm_plant:daytime_counter we may move this counter to a different place, as it is used for multiple processes  *slmdev
     REAL(wp) :: daytime_counter         !< number of timesteps of current day with light available & daytime_avrg variables were added up
     !! moving averages
     !! 
-    ! 1.1 light in the canopy
-    REAL(wp),DIMENSION(ncanop) :: par_sunlit_mavg_cl
-    REAL(wp),DIMENSION(ncanop) :: par_shaded_mavg_cl
-    REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit_mavg_cl
-    ! 1.2 soil moisture
-    REAL(wp) :: beta_air_mavg                     !< not used (scaling factor to account for air humidity effects on conductance)
-    REAL(wp) :: beta_soil_ps_mavg                 !< not used (scaling factor to account for soil moisture constraints on conductance)
-    REAL(wp) :: beta_soil_gs_mavg                 !< scaling factor to account for soil moisture constraints on conductance
-    ! 1.3 memory of fluxes
-    REAL(wp) :: gpp_mavg                     !< gpp of the last week (µmol m-2 s-1)
-    REAL(wp) :: an_mavg                      !< net assimilation of the last week (µmol m-2 s-1)
-    REAL(wp) :: npp_mavg                     !< npp of the last week (µmol m-2 s-1)
-    REAL(wp) :: maint_respiration_mavg       !< maintenance respiration of the last week (µmol m-2 s-1)
-    ! 1.4 nutrient demand for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
-    REAL(wp) :: demand_uptake_n_mavg              !< scalar of Vmax for root N uptake 
-    REAL(wp) :: demand_uptake_p_mavg              !< scalar of Vmax for root P uptake
-    REAL(wp) :: growth_req_n_mavg            !< moles N required for a unit of C growth under current allocation fractions
-    REAL(wp) :: growth_req_p_mavg            !< moles P required for a unit of N growth under current allocation fractions
-    REAL(wp) :: cost_n_uptake_root_mavg      !< moving average of root N uptake cost (mol C / mol N)
-    REAL(wp) :: cost_n_fixation_mavg         !< moving average of N fixation cost (mol C / mol N)
-    REAL(wp) :: fmaint_rate_mavg             !< moving average of N-specific maintentance respiration (~µmol C/mol N / s ) 
-
-    ! 1.5 environmental forcing
-    REAL(wp) :: t_air_mavg             !< air temp
-    REAL(wp) :: q_air_mavg             !< specific humidity of the air 
-    REAL(wp) :: press_srf_mavg         !< ? air pressure at surface
-    REAL(wp) :: co2_mixing_ratio_mavg  !< co2 mixing ratio of the air
-    REAL(wp) :: ga_mavg                !< aerodynamic resistance
-    ! 1.6 memory of certain variables, temperature, ...
-    REAL(wp) :: t_air_week_mavg        !< avrg air temperaure across 7 days
-    REAL(wp) :: t_air_month_mavg       !< avrg air temperaure across 30 days
-    REAL(wp) :: t_air_longterm_mavg    !< avrg air temperaure across 30 years == 10950 days
-    ! 1.6.1 electron transport optimum temperature [°C], ...
-    REAL(wp) :: t_jmax_opt_mavg        !< optimim temperature for electron transport of photosynthesis
-    ! 1.7 plant status parameter
-    REAL(wp) :: boc_an_mavg            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
-    ! 1.8 optimal allocation
-    REAl(wp) :: npp_talloc_mavg                 !< NPP (µmol m-2 s-1) (averaging time-scale: tau_allocation)
-    REAL(wp) :: unit_npp_talloc_mavg            !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
+    ! 1.1 memory of conditions for the labile pool dynamics
+    REAL(wp) :: gpp_tlabile_mavg                     !< gpp  (µmol m-2 s-1)
+    REAL(wp) :: maint_respiration_tlabile_mavg       !< maintenance respiration (µmol m-2 s-1)
+    REAL(wp) :: growth_req_n_tlabile_mavg            !< moles N required for a unit of C growth under current allocation fractions
+    REAL(wp) :: growth_req_p_tlabile_mavg            !< moles P required for a unit of N growth under current allocation fractions
+    ! 1.2 memory of conditions for phenology calculations
+    REAL(wp) :: t_air_tphen_mavg                              !< air temp
+    REAL(wp) :: beta_soil_gs_tphen_mavg                 !< scaling factor to account for soil moisture constraints on conductance
+    ! 1.3 memory for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
+    REAL(wp) :: npp_tuptake_mavg                     !< npp of the last week (µmol m-2 s-1)
+    REAL(wp) :: demand_uptake_n_tuptake_mavg         !< scalar of Vmax for root N uptake 
+    REAL(wp) :: demand_uptake_p_tuptake_mavg         !< scalar of Vmax for root P uptake
+    REAL(wp) :: growth_req_n_tuptake_mavg            !< moles N required for a unit of C growth under current allocation fractions
+    REAL(wp) :: growth_req_p_tuptake_mavg            !< moles P required for a unit of N growth under current allocation fractions
+    REAL(wp) :: cost_n_fixation_tuptake_mavg         !< moving average of N fixation cost (mol C / mol N)
+    ! 1.4 memory of conditions for photosynthesis for the optimisation of foliar N fractions 
+    REAL(wp),DIMENSION(ncanop) :: par_sunlit_tfrac_mavg_cl    !< PAR on sunlit leaves
+    REAL(wp),DIMENSION(ncanop) :: par_shaded_tfrac_mavg_cl    !< PAR on shaded leaves
+    REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit_tfrac_mavg_cl  !< fraction of sunlit leaves
+    REAL(wp) :: t_air_tfrac_mavg                              !< air temp
+    REAL(wp) :: press_srf_tfrac_mavg                          !< air pressure at surface
+    REAL(wp) :: co2_mixing_ratio_tfrac_mavg                   !< co2 mixing ratio of the air
+    REAL(wp) :: ga_tfrac_mavg                                 !< aerodynamic resistance
+    REAL(wp) :: beta_air_tfrac_mavg                           !< scaling factor to account for air humidity effects on conductance
+    REAL(wp) :: beta_soil_ps_tfrac_mavg                       !< scaling factor to account for soil moisture constraints on photosynthesis 
+    REAL(wp) :: beta_soil_gs_tfrac_mavg                       !< scaling factor to account for soil moisture constraints on conductance
+    ! 1.5 memory of conditions for photosynthesis for the optimisation of foliar N  
+    REAL(wp),DIMENSION(ncanop) :: par_sunlit_tcnl_mavg_cl     !< PAR on sunlit leaves
+    REAL(wp),DIMENSION(ncanop) :: par_shaded_tcnl_mavg_cl     !< PAR on shaded leaves
+    REAL(wp),DIMENSION(ncanop) :: fleaf_sunlit_tcnl_mavg_cl   !< fraction of sunlit leaves
+    REAL(wp) :: t_air_tcnl_mavg                               !< air temp
+    REAL(wp) :: press_srf_tcnl_mavg                           !< air pressure at surface
+    REAL(wp) :: co2_mixing_ratio_tcnl_mavg                    !< co2 mixing ratio of the air
+    REAL(wp) :: ga_tcnl_mavg                                  !< aerodynamic resistance
+    REAL(wp) :: beta_air_tcnl_mavg                            !< scaling factor to account for air humidity effects on conductance
+    REAL(wp) :: beta_soil_ps_tcnl_mavg                        !< scaling factor to account for soil moisture constraints on conductance
+    REAL(wp) :: beta_soil_gs_tcnl_mavg                        !< scaling factor to account for soil moisture constraints on conductance
+    ! 1.6 memory of conditions for photosynthesis for the optimisation of biomass allocation fractions
+    REAL(wp) :: npp_talloc_mavg                 !< NPP (µmol m-2 s-1) (averaging time-scale: tau_allocation)
     REAL(wp) :: transpiration_talloc_mavg       !< average transpiration at allocation time-scale
+    REAL(wp) :: unit_npp_talloc_mavg            !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
     REAL(wp) :: unit_transpiration_talloc_mavg  !< rate of tranpiration change per unit LAI change?
     REAL(wp) :: unit_uptake_n_talloc_mavg       !< rate of N uptkae per unit root, mumol N mol-1 (averaging time-scale: tau_allocation)
     REAL(wp) :: unit_uptake_p_talloc_mavg       !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_allocation)
-    REAL(wp) :: unit_uptake_n_troot_mavg        !< rate of N uptkae per unit root, mumol N mol-1 (time-scale of accumulation: tau_root)
-    REAL(wp) :: unit_uptake_p_troot_mavg        !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_root)
     REAL(wp) :: dphi_talloc_mavg                !< leaf-soil water potential gradient (MPa)  (averaging time-scale: tau_allocation)
     REAL(wp) :: growth_cn_talloc_mavg           !< plant growth cn ratio, equivalent to 1/growth_req_n
     REAL(wp) :: growth_cp_talloc_mavg           !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)
-    REAL(Wp) :: leaf2root_mass_ratio_mavg       !< leaf to root mass ratio
     REAL(wp) :: labile_carbon_talloc_mavg       !< moving average of labile carbon pool neeeded for allometry calculations
     REAL(wp) :: labile_nitrogen_talloc_mavg     !< moving average of labile nitrogen pool neeeded for allometry calculations
     REAL(wp) :: labile_phosphorus_talloc_mavg   !< moving average of labile phosphorus pool neeeded for allometry calculations
+    ! 1.7 memory over root life time 
+    REAL(wp) :: leaf2root_troot_mavg            !< leaf to root mass ratio
+    REAL(wp) :: unit_npp_troot_mavg            !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
+    REAL(wp) :: unit_uptake_n_troot_mavg        !< rate of N uptkae per unit root, mumol N mol-1 (time-scale of accumulation: tau_root)
+    REAL(wp) :: unit_uptake_p_troot_mavg        !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_root)
+    REAL(wp) :: fmaint_rate_troot_mavg             !< moving average of N-specific maintentance respiration (~µmol C/mol N / s ) 
+    ! 1.8 memory over timescale of vegetation dynamics 
+    REAL(wp) :: an_boc_tvegdyn_mavg            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
+    ! 1.6 memory of certain variables, temperature, ...
+    REAL(wp) :: t_air_week_mavg        !< avrg air temperaure across 7 days
+    REAL(wp) :: t_air_month_mavg       !< avrg air temperaure across 30 days
+    REAL(wp) :: t_jmax_opt_mavg        !< optimim temperature for electron transport of photosynthesis
+
     !! fluxes 
     !!
      TYPE(t_element)      :: establishment !< flux between seed bed and reserve (mol m-2 timestep-1)
@@ -642,72 +667,96 @@ CONTAINS
     this%growth_req_p     = plant_var_init_zero
     this%gdd                = plant_var_init_one
     this%nd_dormance        = plant_var_init_one
-    this%boc_an             = plant_var_init_one
+    this%an_boc             = plant_var_init_one
     this%leaf_cn_direction  = plant_var_init_one
     this%apar             = plant_var_init_zero
     !! daytime averages
     this%par_sunlit_daytime_cl    = 0.0_wp    ! this sets the complete array to 0.0_wp
     this%par_shaded_daytime_cl    = 0.0_wp
     this%fleaf_sunlit_daytime_cl  = 0.0_wp
+    this%t_air_daytime            = 283.15_wp
+    this%press_srf_daytime        = standard_press_srf 
+    this%co2_mixing_ratio_daytime = def_co2_mixing_ratio 
+    this%ga_daytime               = 0.2_wp
+    this%beta_air_daytime         = 1.0_wp
+    this%beta_soil_ps_daytime     = 1.0_wp
+    this%beta_soil_gs_daytime     = 1.0_wp 
     this%t_jmax_opt_daytime       = 17.0_wp   ! set here to avoid referencing assim_constants
     this%par_sunlit_daytime_dacc_cl     = 0.0_wp
     this%par_shaded_daytime_dacc_cl     = 0.0_wp
     this%fleaf_sunlit_daytime_dacc_cl   = 0.0_wp
+    this%t_air_daytime_dacc             = 283.15_wp
+    this%press_srf_daytime_dacc         = standard_press_srf 
+    this%co2_mixing_ratio_daytime_dacc  = def_co2_mixing_ratio 
+    this%ga_daytime_dacc                = 0.2_wp
+    this%beta_air_daytime_dacc          = 1.0_wp
+    this%beta_soil_ps_daytime_dacc      = 1.0_wp
+    this%beta_soil_gs_daytime_dacc      = 1.0_wp 
     this%t_jmax_opt_daytime_dacc        = 0.0_wp
     this%daytime_counter  = plant_var_init_zero
     !! moving averages
-    ! 1.1 light in the canopy
-    this%par_sunlit_mavg_cl                 = 150.0_wp
-    this%par_shaded_mavg_cl                 = 10.0_wp
-    this%fleaf_sunlit_mavg_cl               = 0.5_wp
-    ! 1.2 soil moisture
-    this%beta_air_mavg                      = 1.0_wp
-    this%beta_soil_ps_mavg                  = 1.0_wp
-    this%beta_soil_gs_mavg                  = 1.0_wp
-    ! 1.3 memory of fluxes
-    this%gpp_mavg                           = 1.0_wp
-    this%an_mavg                            = 1.0_wp
-    this%npp_mavg                           = 1.0_wp
-    this%maint_respiration_mavg             = 1.0_wp
-    this%fmaint_rate_mavg                   = 1.0_wp
-    this%transpiration_talloc_mavg          = 0._wp
-    ! 1.4 nutrient demand for plant uptake
-    this%demand_uptake_n_mavg               = 0.1_wp
-    this%demand_uptake_p_mavg               = 0.1_wp
-    this%growth_req_n_mavg                  = 1._wp / 25._wp 
-    this%growth_req_p_mavg                  = 1._wp / 14._wp
-    this%cost_n_uptake_root_mavg            = 2._wp
-    this%cost_n_fixation_mavg               = 10._wp
-    ! 1.5 environmental forcing
-    this%t_air_mavg                         = 283.15_wp   ! 10°C; temperature in K
-    this%q_air_mavg                         = 0.001_wp    ! air specific humidity
-    this%press_srf_mavg                     = standard_press_srf      ! mo_atmland_constants
-    this%co2_mixing_ratio_mavg              = def_co2_mixing_ratio    ! mo_atmland_constants
-    this%ga_mavg                            = 0.2_wp
-    ! 1.6 memory of certain variables, temperature [K], ...
-    this%t_air_week_mavg                    = 283.15_wp   ! 10°C; 7  days
-    this%t_air_month_mavg                   = 283.15_wp   ! 10°C; 30 days
-    this%t_air_longterm_mavg                = 283.15_wp   ! 10°C; 30 years == 10950 days
-    ! 1.6.1 electron transport optimum temperature [°C], ...
-    this%t_jmax_opt_mavg                    = 17._wp   ! 17°C
-    ! 1.7 plant status parameter
-    this%boc_an_mavg                        = 5.0_wp      ! net photosynthesis at bottom of canopy (lowest canopy layer existing)
-    ! 1.8 optimal allocation
+    ! 1.1. labile pool 
+    this%gpp_tlabile_mavg                   = 0.0_wp
+    this%maint_respiration_tlabile_mavg     = 0.0_wp
+    this%growth_req_n_tlabile_mavg          = 1._wp / 25._wp 
+    this%growth_req_p_tlabile_mavg          = 1._wp / 14._wp
+    ! 1.2 phenology
+    this%t_air_tphen_mavg                   = 283.15_wp
+    this%beta_soil_gs_tphen_mavg            = 1.0_wp
+    ! 1.3 nutrient demand for plant uptake
+    this%npp_tuptake_mavg                   = 1.0_wp
+    this%demand_uptake_n_tuptake_mavg       = 0.1_wp
+    this%demand_uptake_p_tuptake_mavg       = 0.1_wp
+    this%growth_req_n_tuptake_mavg          = 1._wp / 25._wp 
+    this%growth_req_p_tuptake_mavg          = 1._wp / 14._wp
+    this%cost_n_fixation_tuptake_mavg       = 10._wp
+    ! 1.4 input for optimal fraction calculation 
+    this%par_sunlit_tfrac_mavg_cl           = 150.0_wp
+    this%par_shaded_tfrac_mavg_cl           = 10.0_wp
+    this%fleaf_sunlit_tfrac_mavg_cl         = 0.5_wp
+    this%t_air_tfrac_mavg                   = 283.15_wp   ! 10°C; temperature in K
+    this%press_srf_tfrac_mavg               = standard_press_srf      ! mo_atmland_constants
+    this%co2_mixing_ratio_tfrac_mavg        = def_co2_mixing_ratio    ! mo_atmland_constants
+    this%ga_tfrac_mavg                      = 0.2_wp
+    this%beta_air_tfrac_mavg                = 1.0_wp
+    this%beta_soil_ps_tfrac_mavg            = 1.0_wp
+    this%beta_soil_gs_tfrac_mavg            = 1.0_wp
+    ! 1.5 input for optimal N calculation  
+    this%par_sunlit_tcnl_mavg_cl            = 150.0_wp
+    this%par_shaded_tcnl_mavg_cl            = 10.0_wp
+    this%fleaf_sunlit_tcnl_mavg_cl          = 0.5_wp
+    this%t_air_tcnl_mavg                    = 283.15_wp   ! 10°C; temperature in K
+    this%press_srf_tcnl_mavg                = standard_press_srf      ! mo_atmland_constants
+    this%co2_mixing_ratio_tcnl_mavg         = def_co2_mixing_ratio    ! mo_atmland_constants
+    this%ga_tcnl_mavg                       = 0.2_wp
+    this%beta_air_tcnl_mavg                 = 1.0_wp
+    this%beta_soil_ps_tcnl_mavg             = 1.0_wp
+    this%beta_soil_gs_tcnl_mavg             = 1.0_wp
+    ! 1.6 input for optimal allocation
     this%npp_talloc_mavg                    = 1._wp
-    this%unit_npp_talloc_mavg               = 0._wp
     this%transpiration_talloc_mavg          = 0._wp
+    this%unit_npp_talloc_mavg               = 0._wp
     this%unit_transpiration_talloc_mavg     = 0._wp
-    this%dphi_talloc_mavg                   = -2._wp
     this%unit_uptake_n_talloc_mavg          = 0._wp
     this%unit_uptake_p_talloc_mavg          = 0._wp
-    this%unit_uptake_n_troot_mavg           = 0._wp
-    this%unit_uptake_p_troot_mavg           = 0._wp
+    this%dphi_talloc_mavg                   = -2._wp
     this%growth_cn_talloc_mavg              = 1._wp
     this%growth_cp_talloc_mavg              = 1._wp
-    this%leaf2root_mass_ratio_mavg          = 1._wp
     this%labile_carbon_talloc_mavg          = 0._wp
     this%labile_nitrogen_talloc_mavg        = 0._wp
     this%labile_phosphorus_talloc_mavg      = 0._wp
+    ! 1.7 root life time avearges
+    this%leaf2root_troot_mavg               = 1._wp
+    this%unit_npp_troot_mavg                = 0._wp
+    this%unit_uptake_n_troot_mavg           = 0._wp
+    this%unit_uptake_p_troot_mavg           = 0._wp
+    this%fmaint_rate_troot_mavg             = 0._wp
+    ! 1.8 memory of vegetation dynamics 
+    this%an_boc_tvegdyn_mavg                = 5.0_wp     
+    ! 1.9 memory of certain variables, temperature [K], ...
+    this%t_air_week_mavg                    = 283.15_wp   ! 10°C; 7  days
+    this%t_air_month_mavg                   = 283.15_wp   ! 10°C; 30 days
+    this%t_jmax_opt_mavg                    = 17._wp   ! 17°C
 
   END SUBROUTINE init_plant 
 

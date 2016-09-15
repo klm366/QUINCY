@@ -56,7 +56,6 @@ mo_veg_soil.o: \
 
 mo_veg_phenology.o: \
   mo_kind.o \
-  mo_exception.o \
   mo_base_constants.o \
   mo_base_memory.o \
   mo_jsb_lctlib_class.o \

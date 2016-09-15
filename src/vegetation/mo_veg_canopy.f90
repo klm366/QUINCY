@@ -32,9 +32,9 @@ CONTAINS
   !!                                   allocation to photosynthetic functioning)
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_canopy_layers(lctlib,leaf_nitrogen,lai,par_sunlit_mavg_cl,par_shaded_mavg_cl, & 
-                         fleaf_sunlit_mavg_cl,t_air_mavg,press_srf_mavg,co2_mixing_ratio_mavg,ga_mavg,& 
-                         beta_air_mavg,beta_soil_ps_mavg,beta_soil_gs_mavg,t_jmax_opt_mavg,& 
+  SUBROUTINE calc_canopy_layers(lctlib,leaf_nitrogen,lai,par_sunlit_cl,par_shaded_cl, & 
+                         fleaf_sunlit_cl,t_air,press_srf,co2_mixing_ratio,ga,& 
+                         beta_air,beta_soil_ps,beta_soil_gs,t_jmax_opt,& 
                          lai_cl,cumm_lai_cl,n_tot_cl,fn_rub_cl,fn_et_cl,fn_pepc_cl,fn_chl_cl,fn_oth_cl,&
                          inquire_n_fractions)
 
@@ -48,19 +48,19 @@ CONTAINS
     TYPE(t_lctlib_element),INTENT(in)            :: lctlib                !< land-cover-type library
     REAL(wp),INTENT(in)                          :: leaf_nitrogen         !< total canopy N (mol/m2)
     REAL(wp),INTENT(in)                          :: lai                   !< total leaf area index
-    REAL(wp),INTENT(in),OPTIONAL                 :: t_air_mavg            !< air temperature (avg)
-    REAL(wp),INTENT(in),OPTIONAL                 :: press_srf_mavg        !< air pressure (avg) 
-    REAL(wp),INTENT(in),OPTIONAL                 :: co2_mixing_ratio_mavg !< CO2 concentration (avg)
-    REAL(wp),INTENT(in),OPTIONAL                 :: ga_mavg               !< aerodynamic conductance (avg)
-    REAL(wp),INTENT(in),OPTIONAL                 :: beta_air_mavg         !< beta air (avg)
-    REAL(wp),INTENT(in),OPTIONAL                 :: beta_soil_ps_mavg     !< beta soil ps (avg)
-    REAL(wp),INTENT(in),OPTIONAL                 :: beta_soil_gs_mavg     !< beta soil gs (avg)
-    REAL(wp),INTENT(in),OPTIONAL                 :: t_jmax_opt_mavg       !< Jmax optimum temperature (avg)
-    REAL(wp),DIMENSION(:),INTENT(inout),OPTIONAL :: par_sunlit_mavg_cl    !< absorbed PAR on sunlit
+    REAL(wp),INTENT(in),OPTIONAL                 :: t_air                 !< air temperature (avg)
+    REAL(wp),INTENT(in),OPTIONAL                 :: press_srf             !< air pressure (avg) 
+    REAL(wp),INTENT(in),OPTIONAL                 :: co2_mixing_ratio      !< CO2 concentration (avg)
+    REAL(wp),INTENT(in),OPTIONAL                 :: ga                    !< aerodynamic conductance (avg)
+    REAL(wp),INTENT(in),OPTIONAL                 :: beta_air              !< beta air (avg)
+    REAL(wp),INTENT(in),OPTIONAL                 :: beta_soil_ps          !< beta soil ps (avg)
+    REAL(wp),INTENT(in),OPTIONAL                 :: beta_soil_gs          !< beta soil gs (avg)
+    REAL(wp),INTENT(in),OPTIONAL                 :: t_jmax_opt            !< Jmax optimum temperature (avg)
+    REAL(wp),DIMENSION(:),INTENT(inout),OPTIONAL :: par_sunlit_cl         !< absorbed PAR on sunlit
                                                                           !  leafes (average over time)
-    REAL(wp),DIMENSION(:),INTENT(inout),OPTIONAL :: par_shaded_mavg_cl    !< absorbed PAR on shaded
+    REAL(wp),DIMENSION(:),INTENT(inout),OPTIONAL :: par_shaded_cl         !< absorbed PAR on shaded
                                                                           !  leafes (average over time)
-    REAL(wp),DIMENSION(:),INTENT(inout),OPTIONAL :: fleaf_sunlit_mavg_cl  !< fraction of sunlit leaves
+    REAL(wp),DIMENSION(:),INTENT(inout),OPTIONAL :: fleaf_sunlit_cl       !< fraction of sunlit leaves
                                                                           !  (average over time)
     REAL(wp),DIMENSION(:),INTENT(OUT)            :: lai_cl                !< LAI of canopy layer
     REAL(wp),DIMENSION(:),INTENT(OUT)            :: cumm_lai_cl           !< cummlative LAI above canopy layer
@@ -102,18 +102,18 @@ CONTAINS
 
     ! check if all input is available to run optimal fractions
     IF(assimi_config%flag_optimal_Nfraction)THEN
-       IF(.NOT.PRESENT(par_sunlit_mavg_cl).OR..NOT.PRESENT(par_shaded_mavg_cl).OR..NOT.PRESENT(fleaf_sunlit_mavg_cl)) THEN
-          WRITE(message_text,'(a)') 'called with fractional optimisation flag, but without par[sunlit|shaded]_mavg_cl'
+       IF(.NOT.PRESENT(par_sunlit_cl).OR..NOT.PRESENT(par_shaded_cl).OR..NOT.PRESENT(fleaf_sunlit_cl)) THEN
+          WRITE(message_text,'(a)') 'called with fractional optimisation flag, but without par[sunlit|shaded]_cl'
           CALL finish("mo_veg_canopy:calc_canopy_layer",message_text)
        ENDIF
     ENDIF
     IF(optimise_n_fractions)THEN
-       IF(.NOT.PRESENT(t_air_mavg).OR..NOT.PRESENT(press_srf_mavg).OR.& 
-          .NOT.PRESENT(co2_mixing_ratio_mavg).OR..NOT.PRESENT(ga_mavg).OR.&
-          .NOT.PRESENT(beta_soil_ps_mavg).OR..NOT.PRESENT(beta_soil_gs_mavg).OR.&
-          .NOT.PRESENT(beta_air_mavg).OR..NOT.PRESENT(t_jmax_opt_mavg)) THEN
+       IF(.NOT.PRESENT(t_air).OR..NOT.PRESENT(press_srf).OR.& 
+          .NOT.PRESENT(co2_mixing_ratio).OR..NOT.PRESENT(ga).OR.&
+          .NOT.PRESENT(beta_soil_ps).OR..NOT.PRESENT(beta_soil_gs).OR.&
+          .NOT.PRESENT(beta_air).OR..NOT.PRESENT(t_jmax_opt)) THEN
 
-          WRITE(message_text,'(a)') 'called to optimise N fractions, but without [climate]_mavg'
+          WRITE(message_text,'(a)') 'called to optimise N fractions, but without [climate] variables'
           CALL finish("mo_veg_canopy:calc_canopy_layer",message_text)
        ENDIF
     ENDIF
@@ -221,26 +221,26 @@ CONTAINS
                     fn_et_cl(icanop)   = fn_et_cl(icanop-1)
                     fn_rub_cl(icanop)  = fn_rub_cl(icanop-1)
                     fn_pepc_cl(icanop) = fn_pepc_cl(icanop-1)
-                    par_sunlit_mavg_cl(icanop) = par_sunlit_mavg_cl(icanop-1)
-                    par_shaded_mavg_cl(icanop) = par_shaded_mavg_cl(icanop-1) 
-                    fleaf_sunlit_mavg_cl(icanop) = fleaf_sunlit_mavg_cl(icanop-1)
+                    par_sunlit_cl(icanop) = par_sunlit_cl(icanop-1)
+                    par_shaded_cl(icanop) = par_shaded_cl(icanop-1) 
+                    fleaf_sunlit_cl(icanop) = fleaf_sunlit_cl(icanop-1)
                  ENDIF
               ENDIF
               IF(optimise_n_fractions)THEN
 
                  CALL optimise_canopy_n_fractions(lctlib, &
                             n_tot_cl(icanop), &
-                            par_sunlit_mavg_cl(icanop),&
-                            par_shaded_mavg_cl(icanop), &
-                            fleaf_sunlit_mavg_cl(icanop),&
-                            t_air_mavg, &
-                            press_srf_mavg,&
-                            co2_mixing_ratio_mavg,&
-                            ga_mavg,&
-                            beta_air_mavg,&
-                            beta_soil_ps_mavg,&
-                            beta_soil_gs_mavg,&
-                            t_jmax_opt_mavg,&
+                            par_sunlit_cl(icanop),&
+                            par_shaded_cl(icanop), &
+                            fleaf_sunlit_cl(icanop),&
+                            t_air, &
+                            press_srf,&
+                            co2_mixing_ratio,&
+                            ga,&
+                            beta_air,&
+                            beta_soil_ps,&
+                            beta_soil_gs,&
+                            t_jmax_opt,&
                             fn_oth_cl(icanop),&
                             fn_chl_cl(icanop),&
                             fn_rub_cl(icanop),&
@@ -269,9 +269,9 @@ CONTAINS
   !! Calculates carbon assimilation (an_cl) by varying fractions in either directions and determines
   !! fractions that give maximum assimilation
   !-------------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE optimise_canopy_n_fractions(lctlib,n_tot_cl,par_sunlit_mavg_cl,par_shaded_mavg_cl,&
-                                 fleaf_sunlit_mavg_cl,t_air_mavg,press_srf_mavg,co2_mixing_ratio_mavg,ga_mavg,& 
-                                 beta_air_mavg,beta_soil_ps_mavg,beta_soil_gs_mavg,t_jmax_opt_mavg,&
+  ELEMENTAL SUBROUTINE optimise_canopy_n_fractions(lctlib,n_tot_cl,par_sunlit_cl,par_shaded_cl,&
+                                 fleaf_sunlit_cl,t_air,press_srf,co2_mixing_ratio,ga,& 
+                                 beta_air,beta_soil_ps,beta_soil_gs,t_jmax_opt,&
                                  fn_oth_cl,fn_chl_cl,fn_rub_cl,fn_et_cl,fn_pepc_cl)
 
     USE mo_base_constants, ONLY: dt,one_day
@@ -281,17 +281,17 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in) :: lctlib         !< land-cover-type library - parameters for one pft
     REAL(wp),              INTENT(in) :: n_tot_cl, &    !< total canopy N content
-      & par_sunlit_mavg_cl,    &    !< PAR on sunlit leaves (day-time running mean, muemol/ms/s) 
-      & par_shaded_mavg_cl,    &    !< PAR on shaded leaves (day-time running mean, muemol/ms/s) 
-      & fleaf_sunlit_mavg_cl,  &    !< fraction of sunlit leaves (day-time running mean, muemol/ms/s) 
-      & t_air_mavg,            &    !< temperature (day-time running mean, K)
-      & press_srf_mavg,        &    !< air pressure (day-time running mean, Pa)
-      & co2_mixing_ratio_mavg, &    !< CO2 mixing ratio (day-time running mean, ppm)
-      & ga_mavg,               &    !< aerodynamic conductance (day-time running mean, m/s)
-      & beta_air_mavg,         &    !< beta air (day-time running mean, --)
-      & beta_soil_ps_mavg,     &    !< beta soil for PS (day-time running mean, --)
-      & beta_soil_gs_mavg,     &    !< beta soil for GC (day-time running mean, --) 
-      & t_jmax_opt_mavg             !< optimum temperature for Jmax (day-time running mean, degreeC)
+      & par_sunlit_cl,    &    !< PAR on sunlit leaves (day-time running mean, muemol/ms/s) 
+      & par_shaded_cl,    &    !< PAR on shaded leaves (day-time running mean, muemol/ms/s) 
+      & fleaf_sunlit_cl,  &    !< fraction of sunlit leaves (day-time running mean, muemol/ms/s) 
+      & t_air,            &    !< temperature (day-time running mean, K)
+      & press_srf,        &    !< air pressure (day-time running mean, Pa)
+      & co2_mixing_ratio, &    !< CO2 mixing ratio (day-time running mean, ppm)
+      & ga,               &    !< aerodynamic conductance (day-time running mean, m/s)
+      & beta_air,         &    !< beta air (day-time running mean, --)
+      & beta_soil_ps,     &    !< beta soil for PS (day-time running mean, --)
+      & beta_soil_gs,     &    !< beta soil for GC (day-time running mean, --) 
+      & t_jmax_opt             !< optimum temperature for Jmax (day-time running mean, degreeC)
     REAL(wp),              INTENT(in) :: fn_oth_cl      !< fraction of leaf N not associated with PS
     REAL(wp),              INTENT(inout) :: & 
        & fn_chl_cl,            &    !< fraction of leaf N in chlorophyll
@@ -322,12 +322,12 @@ CONTAINS
     fn_pepc_cl = fn_pepc0_cl
 
     ! calculate photosynthesis with previous fractions
-    CALL calc_photosynthesis(t_air_mavg,press_srf_mavg,co2_mixing_ratio_mavg,ga_mavg, & 
-              par_sunlit_mavg_cl,par_shaded_mavg_cl,fleaf_sunlit_mavg_cl, & 
-              beta_air_mavg,beta_soil_ps_mavg,beta_soil_gs_mavg, &
+    CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
+              par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl, & 
+              beta_air,beta_soil_ps,beta_soil_gs, &
               fn_chl0_cl*(1._wp-fn_oth_cl),fn_et0_cl*(1._wp-fn_oth_cl),fn_rub0_cl*(1._wp-fn_oth_cl), & 
               fn_pepc0_cl*(1._wp-fn_oth_cl),n_tot_cl,lctlib%ps_pathway, & 
-              t_jmax_opt_mavg,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
+              t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
               ag0_cl,an0_cl,r0_cl,gs0_cl,ci0_cl,m_rub,m_et,m_pepc)
    
     !> 2.0 Attempt to increase PS by increasing the N fraction in chlorophyll 
@@ -343,12 +343,12 @@ CONTAINS
                                   fn_rub_cl,fn_et_cl,fn_pepc_cl) 
                    
     ! re-calculate photosynthesis
-    CALL calc_photosynthesis(t_air_mavg,press_srf_mavg,co2_mixing_ratio_mavg,ga_mavg, & 
-              par_sunlit_mavg_cl,par_shaded_mavg_cl,fleaf_sunlit_mavg_cl, & 
-              beta_air_mavg,beta_soil_ps_mavg,beta_soil_gs_mavg, &
+    CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
+              par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl, & 
+              beta_air,beta_soil_ps,beta_soil_gs, &
               fn_chl_cl*(1._wp-fn_oth_cl),fn_et_cl*(1._wp-fn_oth_cl),fn_rub_cl*(1._wp-fn_oth_cl), & 
               fn_pepc_cl*(1._wp-fn_oth_cl),n_tot_cl,lctlib%ps_pathway, & 
-              t_jmax_opt_mavg,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
+              t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
               ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp,hlp,hlp)
     
     !> 3.0 check if increased chlorophyll has increased photosynthesis. If not, try decreasing it
@@ -369,12 +369,12 @@ CONTAINS
                                      fn_rub_cl,fn_et_cl,fn_pepc_cl) 
      
        ! re-calculate photosynthesis
-       CALL calc_photosynthesis(t_air_mavg,press_srf_mavg,co2_mixing_ratio_mavg,ga_mavg, & 
-            par_sunlit_mavg_cl,par_shaded_mavg_cl,fleaf_sunlit_mavg_cl,& 
-            beta_air_mavg,beta_soil_ps_mavg,beta_soil_gs_mavg, &
+       CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
+            par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl,& 
+            beta_air,beta_soil_ps,beta_soil_gs, &
             fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), & 
             fn_pepc_cl*(1._wp-fn_oth_cl),n_tot_cl, lctlib%ps_pathway, & 
-            t_jmax_opt_mavg,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
+            t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
             ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp, hlp,hlp)
 
        ! if photosyntheis has still not increased, do not change fn_chl_cl
@@ -528,7 +528,7 @@ CONTAINS
     REAL(wp) :: gpp, maint_respiration_leaf,gc
     REAL(wp),DIMENSION(ncanop) :: lai_cl
     REAL(wp),DIMENSION(ncanop) :: cumm_lai_cl 
-    REAL(wp),DIMENSION(ncanop) :: par_sunlit_mavg_cl,par_shaded_mavg_cl,fleaf_sunlit_mavg_cl 
+    REAL(wp),DIMENSION(ncanop) :: par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl 
     REAl(wp),DIMENSION(ncanop) :: fn_oth_cl, nl_tot_cl, fn_chl_cl, fn_et_cl, fn_rub_cl, fn_pepc_cl
     REAL(wp) :: ag_cl, r_cl, gs_cl
     REAL(wp) :: q_sat 
@@ -541,9 +541,9 @@ CONTAINS
     fn_et_cl = plant%fnl_et_cl(:)
     fn_rub_cl = plant%fnl_rub_cl(:)
     fn_pepc_cl = plant%fnl_pepc_cl(:)
-    par_sunlit_mavg_cl = plant%par_sunlit_mavg_cl
-    par_shaded_mavg_cl = plant%par_shaded_mavg_cl
-    fleaf_sunlit_mavg_cl = plant%fleaf_sunlit_mavg_cl
+    par_sunlit_cl = plant%par_sunlit_cl
+    par_shaded_cl = plant%par_shaded_cl
+    fleaf_sunlit_cl = plant%fleaf_sunlit_cl
  
  !> @todo: mo_veg_canopy calc_npp_increment: I think this is wrong currently, as increaseing leaf area require an
  !! increase in roots and sapwood mass and thus respiration... Also, should be based on current mass
@@ -567,9 +567,9 @@ CONTAINS
     CALL calc_canopy_layers(lctlib = lctlib, & 
                             leaf_nitrogen = leaf_nitrogen, &
                             lai = lai,&
-                            par_sunlit_mavg_cl = par_sunlit_mavg_cl, &
-                            par_shaded_mavg_cl = par_shaded_mavg_cl, &
-                            fleaf_sunlit_mavg_cl = fleaf_sunlit_mavg_cl, &
+                            par_sunlit_cl = par_sunlit_cl, &
+                            par_shaded_cl = par_shaded_cl, &
+                            fleaf_sunlit_cl = fleaf_sunlit_cl, &
                             lai_cl = lai_cl, &
                             cumm_lai_cl = cumm_lai_cl, &
                             n_tot_cl = nl_tot_cl, &
@@ -650,7 +650,7 @@ CONTAINS
     TYPE(t_slm_plant),     INTENT(inout) :: plant       !< plant variables per tile
     ! 0.2 Local
     REAL(wp) :: leaf_nitrogen,fine_root_nitrogen,coarse_root_nitrogen,sap_wood_nitrogen
-    REAL(wp), DIMENSION(ncanop) :: par_sunlit_mavg_cl,par_shaded_mavg_cl,fleaf_sunlit_mavg_cl 
+    REAL(wp), DIMENSION(ncanop) :: par_sunlit_tcnl_mavg_cl,par_shaded_tcnl_mavg_cl,fleaf_sunlit_tcnl_mavg_cl 
     REAL(wp), DIMENSION(ncanop) :: n_tot_cl, fn_oth_cl, fn_chl_cl, fn_et_cl, fn_rub_cl, fn_pepc_cl,lai_cl,cumm_lai_cl
     REAL(wp), DIMENSION(3) :: npp_direction, maint_respiration,anl
     REAL(wp) :: hlp1
@@ -662,9 +662,9 @@ CONTAINS
     fn_chl_cl = plant%fnl_chl_cl(:)
     fn_et_cl = plant%fnl_et_cl(:)
     fn_rub_cl = plant%fnl_rub_cl(:)
-    par_sunlit_mavg_cl = plant%par_sunlit_mavg_cl
-    par_shaded_mavg_cl = plant%par_shaded_mavg_cl
-    fleaf_sunlit_mavg_cl = plant%fleaf_sunlit_mavg_cl
+    par_sunlit_tcnl_mavg_cl = plant%par_sunlit_tcnl_mavg_cl
+    par_shaded_tcnl_mavg_cl = plant%par_shaded_tcnl_mavg_cl
+    fleaf_sunlit_tcnl_mavg_cl = plant%fleaf_sunlit_tcnl_mavg_cl
 
     ! Calculate photosynthesis with lower, current and higher target leaf N to determine optimal canopy N
     npp_direction(:) = 0.0_wp
@@ -678,9 +678,9 @@ CONTAINS
        CALL calc_canopy_layers(lctlib = lctlib, & 
                           leaf_nitrogen = leaf_nitrogen, &
                           lai = plant%lai,&
-                          par_sunlit_mavg_cl = par_sunlit_mavg_cl, &
-                          par_shaded_mavg_cl = par_shaded_mavg_cl, &
-                          fleaf_sunlit_mavg_cl = fleaf_sunlit_mavg_cl, &
+                          par_sunlit_cl = par_sunlit_tcnl_mavg_cl, &
+                          par_shaded_cl = par_shaded_tcnl_mavg_cl, &
+                          fleaf_sunlit_cl = fleaf_sunlit_tcnl_mavg_cl, &
                           lai_cl = lai_cl, &
                           cumm_lai_cl = cumm_lai_cl, &
                           n_tot_cl = n_tot_cl, &
@@ -695,15 +695,15 @@ CONTAINS
        DO icanop =1, ncanop
           IF(lai_cl(icanop) > eps8)THEN
 
-             CALL calc_photosynthesis(plant%t_air_mavg,& 
-                       plant%press_srf_mavg,plant%co2_mixing_ratio_mavg,&
-                       plant%ga_mavg, & 
-                       plant%par_sunlit_mavg_cl(icanop),&
-                       plant%par_shaded_mavg_cl(icanop),& 
-                       plant%fleaf_sunlit_mavg_cl(icanop), &
-                       plant%beta_air_mavg,&
-                       plant%beta_soil_ps_mavg,&
-                       plant%beta_soil_gs_mavg, &
+             CALL calc_photosynthesis(plant%t_air_tcnl_mavg,& 
+                       plant%press_srf_tcnl_mavg,plant%co2_mixing_ratio_tcnl_mavg,&
+                       plant%ga_tcnl_mavg, & 
+                       plant%par_sunlit_tcnl_mavg_cl(icanop),&
+                       plant%par_shaded_tcnl_mavg_cl(icanop),& 
+                       plant%fleaf_sunlit_tcnl_mavg_cl(icanop), &
+                       plant%beta_air_tcnl_mavg,&
+                       plant%beta_soil_ps_tcnl_mavg,&
+                       plant%beta_soil_gs_tcnl_mavg, &
                        fn_chl_cl(icanop),&
                        fn_et_cl(icanop),& 
                        fn_rub_cl(icanop),&
@@ -737,8 +737,8 @@ CONTAINS
             (1.0_wp + direction * delta_n_leaf/wood2leaf_cn * dt/one_day)
 
        ! Calculate whole plant respiration
-       maint_respiration(dd) = calc_maintenance_respiration(plant%t_air_mavg,&
-             plant%t_air_mavg,sap_wood_nitrogen,&
+       maint_respiration(dd) = calc_maintenance_respiration(plant%t_air_tcnl_mavg,&
+             plant%t_air_tcnl_mavg,sap_wood_nitrogen,&
              fine_root_nitrogen, coarse_root_nitrogen) 
 
        ! calculate NPP

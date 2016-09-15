@@ -148,16 +148,16 @@ CONTAINS
     !!
     !!
     CALL calc_canopy_layers(lctlib,plant%pool%leaf%nitrogen,plant%lai, &
-                             plant%par_sunlit_mavg_cl,&
-                             plant%par_shaded_mavg_cl, & 
-                             plant%fleaf_sunlit_mavg_cl,&
-                             plant%t_air_mavg, &
-                             plant%press_srf_mavg, &
-                             plant%co2_mixing_ratio_mavg, &
-                             plant%ga_mavg, &
-                             plant%beta_air_mavg, &
-                             plant%beta_soil_ps_mavg, &
-                             plant%beta_soil_gs_mavg,& 
+                             plant%par_sunlit_tfrac_mavg_cl,&
+                             plant%par_shaded_tfrac_mavg_cl, & 
+                             plant%fleaf_sunlit_tfrac_mavg_cl,&
+                             plant%t_air_tfrac_mavg, &
+                             plant%press_srf_tfrac_mavg, &
+                             plant%co2_mixing_ratio_tfrac_mavg, &
+                             plant%ga_tfrac_mavg, &
+                             plant%beta_air_tfrac_mavg, &
+                             plant%beta_soil_ps_tfrac_mavg, &
+                             plant%beta_soil_gs_tfrac_mavg,& 
                              plant%t_jmax_opt_mavg, &
                              plant%lai_cl, &
                              plant%cumm_lai_cl, &

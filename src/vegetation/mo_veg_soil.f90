@@ -59,12 +59,12 @@ CONTAINS
     !!
     !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P 
     IF(plant%pool%labile%carbon > eps8) THEN
-       plant%f_n_demand = MAX(plant%growth_req_n_mavg - plant%pool%labile%nitrogen / plant%pool%labile%carbon, 0.0_wp) 
+       plant%f_n_demand = MAX(plant%growth_req_n_tuptake_mavg - plant%pool%labile%nitrogen / plant%pool%labile%carbon, 0.0_wp) 
     ELSE
        plant%f_n_demand = 1.0_wp
     ENDIF
     IF(plant%pool%labile%nitrogen > eps8) THEN
-       plant%f_p_demand = MAX(plant%growth_req_p_mavg - plant%pool%labile%phosphorus / plant%pool%labile%nitrogen, 0.0_wp)
+       plant%f_p_demand = MAX(plant%growth_req_p_tuptake_mavg - plant%pool%labile%phosphorus / plant%pool%labile%nitrogen, 0.0_wp)
     ELSE
        plant%f_p_demand = 1.0_wp
     ENDIF
@@ -89,12 +89,12 @@ CONTAINS
       CASE ("standard","optimal","resistance")
          ! OCN's MM Kinetics
          plant%uptake_n = lctlib%vmax_uptake_n * &
-                 plant%demand_uptake_n_mavg * & 
+                 plant%demand_uptake_n_tuptake_mavg * & 
                  soil%ammonium * ( lctlib%soil_n_aff1 + & 
                    1._wp / ( lctlib%soil_n_aff2 + soil%ammonium )) * & 
                  plant%pool%fine_root%carbon
          plant%uptake_p = lctlib%vmax_uptake_p * & 
-                 plant%demand_uptake_p_mavg * & 
+                 plant%demand_uptake_p_tuptake_mavg * & 
                  soil%phosphate * ( lctlib%soil_p_aff1 + & 
                    1._wp / ( lctlib%soil_p_aff2 + soil%phosphate )) * & 
                  plant%pool%fine_root%carbon
@@ -114,10 +114,10 @@ CONTAINS
       !> 3.2 Case 2: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
       CASE ("optimal")
-        IF (plant%cost_n_fixation_mavg <= plant%cost_n_uptake_root_mavg) THEN 
-           dcost  = plant%cost_n_uptake_root_mavg - plant%cost_n_fixation_mavg
-           !@BLARPP!! Don'T understand the term plant%growth_req_n_mavg*plant%npp_mavg here
-           !plant%n_fixation = c_root * vmax_bnf * dcost / (k_bnf + dcost) * plant%growth_req_n_mavg*plant%npp_mavg
+        IF (plant%cost_n_fixation_tuptake_mavg <= plant%cost_n_uptake_root) THEN 
+           dcost  = plant%cost_n_uptake_root - plant%cost_n_fixation_tuptake_mavg
+           !@BLARPP!! Don'T understand the term plant%growth_req_n_tuptake_mavg*plant%npp_tuptake_mavg here
+           !plant%n_fixation = c_root * vmax_bnf * dcost / (k_bnf + dcost) * plant%growth_req_n_tuptake_mavg*plant%npp_tuptake_mavg
            plant%n_fixation = plant%pool%fine_root%carbon * & 
                               vmax_bnf * dcost / (k_bnf + dcost)
         ELSE
@@ -127,27 +127,25 @@ CONTAINS
       !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
       CASE ("resistance")
          ! total cost according to Ohm's law: parallel resistors
-         cost_nacq = 1._wp / (1._wp/plant%cost_n_uptake_root_mavg + 1._wp/plant%cost_n_fixation_mavg) 
-         IF (plant%cost_n_fixation_mavg > 5._wp * plant%cost_n_uptake_root_mavg) THEN
+         cost_nacq = 1._wp / (1._wp/plant%cost_n_uptake_root + 1._wp/plant%cost_n_fixation_tuptake_mavg) 
+         IF (plant%cost_n_fixation_tuptake_mavg > 5._wp * plant%cost_n_uptake_root) THEN
             f_nacq_bnf = 0.0_wp
             f_nacq_nup = 1.0_wp
          ELSE 
-            f_nacq_bnf = plant%cost_n_uptake_root_mavg/(plant%cost_n_uptake_root_mavg+plant%cost_n_fixation_mavg)
-            f_nacq_nup = plant%cost_n_fixation_mavg/(plant%cost_n_uptake_root_mavg+plant%cost_n_fixation_mavg)
+            f_nacq_bnf = plant%cost_n_uptake_root/(plant%cost_n_uptake_root+plant%cost_n_fixation_tuptake_mavg)
+            f_nacq_nup = plant%cost_n_fixation_tuptake_mavg/(plant%cost_n_uptake_root+plant%cost_n_fixation_tuptake_mavg)
          ENDIF
-         plant%n_fixation = f_nacq_bnf * MAX(plant%growth_req_n_mavg*plant%npp_mavg,0.0_wp) 
-         plant%uptake_n   = MIN(f_nacq_nup * MAX(plant%growth_req_n_mavg*plant%npp_mavg,0.0_wp), & 
+         plant%n_fixation = f_nacq_bnf * MAX(plant%growth_req_n_tuptake_mavg*plant%npp_tuptake_mavg,0.0_wp) 
+         plant%uptake_n   = MIN(f_nacq_nup * MAX(plant%growth_req_n_tuptake_mavg*plant%npp_tuptake_mavg,0.0_wp), & 
                                 plant%uptake_n)
     ENDSELECT 
 
     !> 3.0 Calculate potential N uptake per unit root
     !!
     plant%unit_uptake_n = lctlib%vmax_uptake_n * &
-!                               plant%demand_uptake_n_mavg * & 
                                soil%ammonium * ( lctlib%soil_n_aff1 + & 
                                1._wp / ( lctlib%soil_n_aff2 + soil%ammonium ))
     plant%unit_uptake_p = lctlib%vmax_uptake_p * &
-!                               plant%demand_uptake_p_mavg * & 
                                soil%phosphate * ( lctlib%soil_p_aff1 + & 
                                1._wp / ( lctlib%soil_p_aff2 + soil%phosphate ))
 
