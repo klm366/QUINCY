@@ -10,7 +10,7 @@
 MODULE mo_veg_output
   !! this module may be not necessary anymore when QUINCY is linked with JSBACH !!
 
-  USE mo_kind,                  ONLY: wp, eps8
+  USE mo_kind,                  ONLY: wp, eps4, eps8
   USE mo_base_constants,        ONLY: ntile
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_model_init,        ONLY: fluxnet_output_status   ! used for 'special case: fluxnet output'
@@ -406,8 +406,8 @@ CONTAINS
     !! 
     !! 
     IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
-      IF( MODULO(time_d, output_interval_pool) < eps8 .OR. &
-         & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps8) THEN
+      IF( MODULO(time_d, output_interval_pool) < eps4 .OR. &
+         & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
        lun = 100 * itile
        write(lun,'(10F12.6)') time_d,plant%pool%leaf%carbon,&
          plant%pool%fine_root%carbon,plant%pool%sap_wood%carbon,&
@@ -618,8 +618,8 @@ CONTAINS
       !> 1.2 write fluxes and set to zero
       !!
       !!  
-      IF( MODULO(time_d, output_interval_flux) < eps8 .OR. &
-         & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps8) THEN
+      IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
+         & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
         ! write
         lun = (100 * itile) + 50
         write(lun,'(8F12.6)') time_d, gpp_acc(itile), growth_resp_acc(itile), maint_resp_acc(itile), &
