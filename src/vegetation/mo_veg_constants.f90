@@ -34,25 +34,25 @@ MODULE mo_veg_constants
 
   ! Labile pool parameters 
   REAL(wp), SAVE :: &
-      ! default turnover time of the labile carbo-hydrates (in days)
-      tau_labile_default   ,     &  !< default turnover time of the labile carbo-hydrates (in days)
+      ! default turnover rate of the labile carbo-hydrates (in 1/days)
+      k0_labile,           &  !< default turnover rate of the labile carbo-hydrates (in 1/days)
       ! temperature scalar on turnover time of labile pool (1-exp(-(lambda * T)^k))
       ! tuned to reduce growth between 5°C to zero at 0°C
-      lambda_tau_labile_temp  ,     & !< lambda in temperature response function of labile pool 
-      weibull_k_tau_labile_temp  ,     & !< k in temperature response function of labile pool 
+      lambda_labile_temp,   & !< lambda in temperature response function of labile pool 
+      k_labile_temp,        & !< k in temperature response function of labile pool 
       ! moisture scalar on turnover time of labile pool (1-exp(-(lambda * theta)^k))
       ! tuned to reduce growth from 20% saturation to zero at 0% saturation
-      lambda_tau_labile_theta  ,     & !< lambda in moisture response function of labile pool 
-      weibull_k_tau_labile_theta  ,     & !< k in moisture response function of labile pool 
+      lambda_labile_theta,  & !< lambda in moisture response function of labile pool 
+      k_labile_theta,       & !< k in moisture response function of labile pool 
       ! pull from reserve to labile pool due to phenology (1-exp(-(lambda * lai/target_lai)^k))
-      lambda_phiphen  ,     & !< lambda in storage response function to phenology 
-      weibull_k_phiphen  ,     & !< k in in storage response function to phenology 
+      lambda_phiphen,       & !< lambda in storage response function to phenology 
+      k_phiphen,            & !< k in storage response function to phenology 
       ! pull from reserve to labile pool due to maintenance of labile pool (1-exp(-(lambda * labile/target_labile)^k))
-      lambda_phimaint  ,     & !< lambda in storage response function to maintenance needs 
-      weibull_k_phimaint  ,     & !< k in in storage response function to maintenance needs
+      lambda_phimaint,      & !< lambda in storage response function to maintenance needs 
+      k_phimaint,           & !< k in storage response function to maintenance needs
       ! pull from reserve to labile pool due to maintenance of labile pool (1-exp(-(lambda * labile/target_labile)^k))
-      lambda_phistore  ,     & !< lambda in storage response function to storage size
-      weibull_k_phistore        !< k in in storage response function to storage size 
+      lambda_phistore,      & !< lambda in labile response function to storage size
+      k_phistore              !< k in labile response function to storage size 
 
   ! Resporption parameters
   REAL(wp), SAVE :: & 
@@ -139,10 +139,10 @@ MODULE mo_veg_constants
       sm2lm_grass  ,     & !< stem mass to leaf mass ratio of grasses
       ! Parameters controlling fruit allocation in: exp(-(lambda * reserve_use+offset)^k) 
       lambda_fruit_alloc  ,     & !< parameter in the Weibull function controlling fruit growth
-      weibull_k_fruit_alloc  ,     & !< parameter in the Weibull function controlling fruit growth
-      offset_fruit_alloc   ,     &  !< parameter in the Weibull function controlling fruit growth; ~µmol C / m2 / s
+      k4_fruit_alloc  ,     & !< parameter in the Weibull function controlling fruit growth
+      k3_fruit_alloc   ,     &  !< parameter in the Weibull function controlling fruit growth; ~µmol C / m2 / s
       ! minimum fraction of allocation going to fruit (flowers etc.)
-      min_falloc_fruit            !< minimum fraction of allocation going to fruit (flowers etc.)
+      k1_fruit_alloc            !< minimum fraction of allocation going to fruit (flowers etc.)
 
   ! moved here from mo_assimi_constants at about r204
   REAL(wp), SAVE :: & 
@@ -202,17 +202,17 @@ CONTAINS
       t_maint_k3        = 227.13_wp 
 
   ! Labile pool parameters 
-      tau_labile_default          = 0.2_wp  
-      lambda_tau_labile_temp      = 0.5_wp 
-      weibull_k_tau_labile_temp   = 2.0_wp 
-      lambda_tau_labile_theta     = 0.1_wp
-      weibull_k_tau_labile_theta  = 2.0_wp 
-      lambda_phiphen              = 1.8_wp 
-      weibull_k_phiphen           = 4.0_wp 
-      lambda_phimaint             = 4.0_wp 
-      weibull_k_phimaint          = 1.2_wp 
-      lambda_phistore             = 2._wp
-      weibull_k_phistore          = 3._wp 
+      k0_labile               = 0.2_wp  
+      lambda_labile_temp      = 0.5_wp 
+      k_labile_temp           = 2.0_wp 
+      lambda_labile_theta     = 0.1_wp
+      k_labile_theta          = 2.0_wp 
+      lambda_phiphen          = 1.8_wp 
+      k_phiphen               = 4.0_wp 
+      lambda_phimaint         = 4.0_wp 
+      k_phimaint              = 1.2_wp 
+      lambda_phistore         = 2._wp
+      k_phistore              = 3._wp 
 
   ! Resporption parameters
       resorption_default    = 0.5_wp  
@@ -264,9 +264,9 @@ CONTAINS
       min_height                  = 0.1_wp 
       sm2lm_grass                 = 0.05_wp 
       lambda_fruit_alloc          = 10.0_wp 
-      weibull_k_fruit_alloc       = 2.0_wp 
-      offset_fruit_alloc          = 0.1_wp  
-      min_falloc_fruit            = 0.01_wp 
+      k1_fruit_alloc              = 0.01_wp 
+      k3_fruit_alloc              = 0.1_wp  
+      k4_fruit_alloc              = 2.0_wp 
 
   ! soil stuff
   ! constants used to calculate soil water potential, based on Rawls et al 1982 for loam 

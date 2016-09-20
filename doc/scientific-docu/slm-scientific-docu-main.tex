@@ -1,14 +1,16 @@
-\documentclass[11pt,oneside,openright,a4paper]{book}  % twoside,
+\documentclass[11pt,oneside,openright,a4paper,fleqn]{book}  % twoside,
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[margin=2cm]{geometry}    % bindingoffset=1.0cm, --> use only if 'twoside'
 \usepackage{mathtools}
+\usepackage{amsmath}
+%\setlength{\mathindent}{\parindent}
 \usepackage{tabularx}
 %\usepackage{pdflscape}    % enabling single pages to be landscape oriented
 \usepackage{rotating}      % rotates figures tables etc
 %\usepackage{graphicx}
 %\usepackage{tabu}
-%\usepackage{cite}        % eventually necessary later
+\usepackage{cite}        % eventually necessary later
 %\usepackage{showframe}   % enable to get margins, header and footer visualized
 % not available at taiga: \usepackage[ampersand]{easylist}   % create lists the easy way
 \usepackage{fancyhdr}
@@ -18,6 +20,21 @@
 %\lhead{ \fancyplain{}{Author Name} }
 \rhead{ \fancyplain{}{\leftmark} }
 \cfoot{ \fancyplain{}{\thepage} }
+
+% inserts from copernicus
+\DeclareRobustCommand*\degree{\ensuremath{^{\circ}}}
+\DeclareRobustCommand*\permil{\ifmmode\text{\textperthousand}\else\textperthousand\fi}
+\DeclareRobustCommand*\chem[1]
+ {\ensuremath{%
+   {\mathcode`\-="0200\mathcode`\=="003D% no space around "-" and "="
+    \ifx\f@series\testbx\mathbf{#1}\else\mathrm{#1}\fi}}}
+\DeclareRobustCommand*\unit[1]
+ {\ensuremath{%
+   {\thinmuskip3mu\relax
+    \def\mu{\text{\textmu}}\def~{\,}%
+    \ifx\f@series\testbx\mathbf{#1}\else\mathrm{#1}\fi}}}
+
+
 
 \renewcommand{\chaptermark}[1]{ \markboth{#1}{} }  % print the actual name of the chapter without converting it to uppercase
 \renewcommand{\sectionmark}[1]{ \markright{#1} }   % print the actual name of the section without converting it to uppercase
@@ -60,6 +77,10 @@
 
 % All
 \input{chapters/slm-scientific-docu-all.tex}
+% Radiation
+\input{chapters/slm-scientific-docu-rad.tex}
+% Assimilation
+\input{chapters/slm-scientific-docu-assimi.tex}
 % Vegetation
 \input{chapters/slm-scientific-docu-veg.tex}
 % Optimality concepts

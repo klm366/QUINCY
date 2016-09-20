@@ -59,7 +59,7 @@ MODULE mo_jsb_lctlib_class
      REAL(wp) :: phi_leaf_min 
      REAL(wp) :: k_root 
      REAL(wp) :: k_sapwood 
-     REAL(wp) :: k_max_falloc_fruit
+     REAL(wp) :: k2_fruit_alloc
      REAL(wp) :: tau_fine_root
      REAL(wp) :: tau_coarse_root
      REAL(wp) :: allom_k1
@@ -204,9 +204,9 @@ CONTAINS
       END WHERE
       ! maximum fraction of biomass growth going to fruits 
       WHERE(lctlib(1:npft)%growthform /= igrass)
-          lctlib(1:npft)%k_max_falloc_fruit = 0.1_wp 
+          lctlib(1:npft)%k2_fruit_alloc = 0.1_wp 
         ELSEWHERE
-          lctlib(1:npft)%k_max_falloc_fruit = 0.2_wp 
+          lctlib(1:npft)%k2_fruit_alloc = 0.2_wp 
       END WHERE
       ! average turnover (1/lifetime) of a fine root (1/years) 
       lctlib(1:npft)%tau_fine_root = & 
