@@ -89,6 +89,7 @@ mo_jsb_model_init.o: \
   mo_slm_varlist.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_base_constants.o \
   mo_jsb_var_class.o \
   mo_jsb_memory_class.o
 
