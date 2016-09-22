@@ -640,8 +640,8 @@ CONTAINS
     this%fnl_chl_cl(:)      = canopy_layer_init
     this%fnl_et_cl(:)       = canopy_layer_init
     this%fnl_rub_cl(:)      = canopy_layer_init
-    this%fnl_pepc_cl(:)      = canopy_layer_init
-    this%fnl_oth_cl(:)      = canopy_layer_init
+    this%fnl_pepc_cl(:)     = canopy_layer_init
+    this%fnl_oth_cl(:)      = plant_var_init_one
     this%par_sunlit_cl(:)   = canopy_layer_init
     this%par_shaded_cl(:)   = canopy_layer_init
     this%fleaf_sunlit_cl(:) = canopy_layer_init

@@ -118,7 +118,7 @@ CONTAINS
    !> 2.0 calculate photosynthesis per layer
    !! 
    DO icanop = 1,ncanop
-      IF(plant%lai_cl(icanop) > 0.0_wp)THEN
+      IF(plant%lai_cl(icanop) > eps8)THEN
 
         CALL calc_photosynthesis(t_air                        , &
                                  press_srf                    , &

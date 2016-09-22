@@ -335,7 +335,7 @@ CONTAINS
                                       growth_req_p)
 
     USE mo_veg_memory,     ONLY: t_slm_veg_pool
-    USE mo_veg_constants,  ONLY: itree, igrass, lambda_fruit_alloc, k1_fruit_alloc, k2_fruit_alloc, k3_fruit_alloc
+    USE mo_veg_constants,  ONLY: itree, igrass, lambda_fruit_alloc, k1_fruit_alloc, k3_fruit_alloc, k4_fruit_alloc
 
     IMPLICIT NONE
     ! 0.1 InOut

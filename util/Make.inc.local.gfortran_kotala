@@ -2,7 +2,7 @@
 COMP = x86_64-gfortran
 C_N = gfortran
 M_K = make --no-print-directory
-F_C = $(C_N) -g -c -cpp -ffree-line-length-0
+F_C = $(C_N) -g -c -cpp -ffpe-trap=invalid,zero,overflow -ffree-line-length-0
 F_O = -Og -I../include -I$(MODDIR) -J${MODDIR}
 F_L = $(C_N)
 A_C = ar -r

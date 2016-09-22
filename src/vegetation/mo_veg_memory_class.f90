@@ -1433,7 +1433,7 @@ CONTAINS
   
       CALL slm_add_var(mem, 'fnl_oth_cl', mem%fnl_oth_cl, &
             ics, ice, iblk, &    ! model%options -> for SLM compatibility
-            initval_r=0.0_wp) ! initvalue
+            initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'par_sunlit_cl', mem%par_sunlit_cl, &
             ics, ice, iblk, &    ! model%options -> for SLM compatibility

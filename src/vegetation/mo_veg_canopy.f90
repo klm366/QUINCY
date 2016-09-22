@@ -133,7 +133,7 @@ CONTAINS
 
     !> 2. calculate LAI and N content of canopy layers 
     !!
-    IF(lai > eps8) THEN ! avoid any calculation if there are no leaves 
+    IF(lai > eps8) THEN ! avoid any calculation if there are no leaves
        lc = 0._wp
        DO icanop = 1,ncanop
           !> 2.1 LAI of canopy layer 
@@ -160,15 +160,14 @@ CONTAINS
           ENDIF
 
           !> 2.3 N content of canopy layer
-          IF(cumm_lai_cl(icanop) > eps8) THEN
-             IF(lai > canopy_layer_depth(1)) THEN
-                n_tot_cl(icanop) = n_tot_tc * exp(-kn * cumm_lai_cl(icanop))
-             ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
-                n_tot_cl(icanop) = n_tot_tc
-             ENDIF
-         ENDIF
+          IF(lai > canopy_layer_depth(1)) THEN
+             n_tot_cl(icanop) = n_tot_tc * exp(-kn * cumm_lai_cl(icanop))
+          ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
+             n_tot_cl(icanop) = n_tot_tc
+          ENDIF
        ENDDO
     ENDIF
+
 
     !> 3.0 fractionation of N within canopy laer
     !!
@@ -184,7 +183,7 @@ CONTAINS
     !! prescribed, or dynamically calculated if assimi_config%flag_optimal_Nfraction = .TRUE.
     IF (.NOT.assimi_config%flag_optimal_Nfraction) THEN
         !> 3.2.1 case of presribed fractions
-        WHERE(n_tot_cl > 0.0_wp) ! canopy layers with leaves
+        WHERE(lai_cl > eps8) ! canopy layers with leaves
            ! fraction in chlorophyll 
            fn_chl_cl = (k0_fnl_chl - k1_fnl_chl * exp(-kfnl_chl * cumm_lai_cl)) / chl2n
            ! fraction in PepC
@@ -205,7 +204,7 @@ CONTAINS
      ELSE
         !> 3.2.1 optimal case 
         DO icanop = 1,ncanop
-           IF(lai_cl(icanop) > 0.0_wp)THEN
+           IF(lai_cl(icanop) > eps8)THEN
               IF(fn_chl_cl(icanop) < eps8)THEN ! new layer with new leaves
                  IF(icanop == 1)THEN ! first layers: use static allocation as first guess
                     fn_chl_cl(icanop) = (k0_fnl_chl - k1_fnl_chl * exp(-kfnl_chl * lc)) / chl2n
@@ -216,6 +215,7 @@ CONTAINS
                     fn_pepc_cl(icanop)=f_pepc
                     ! fraction of Rubisco is determined as the remainder
                     fn_rub_cl(icanop) = 1._wp - fn_oth_cl(icanop) - fn_chl_cl(icanop) - fn_et_cl(icanop) - fn_pepc_cl(icanop)
+
                  ELSE ! other layers: copy from above layer
                     fn_chl_cl(icanop)  = fn_chl_cl(icanop-1)
                     fn_et_cl(icanop)   = fn_et_cl(icanop-1)
@@ -226,6 +226,7 @@ CONTAINS
                     fleaf_sunlit_cl(icanop) = fleaf_sunlit_cl(icanop-1)
                  ENDIF
               ENDIF
+
               IF(optimise_n_fractions)THEN
 
                  CALL optimise_canopy_n_fractions(lctlib, &
@@ -310,12 +311,15 @@ CONTAINS
     !> 1.0 Set N fractions to previous values and calculate photosynthesis for avererage conditions 
     ! set fractions to previous values. In current code chl + et+ rub=1
     ! all other routines chl +et +rub +oth = 1
+
     IF(fn_oth_cl > eps8) THEN
        fn_chl0_cl = fn_chl_cl/(1._wp-fn_oth_cl)
        fn_rub0_cl = fn_rub_cl/(1._wp-fn_oth_cl)
        fn_et0_cl = fn_et_cl/(1._wp-fn_oth_cl)
        fn_pepc0_cl = fn_pepc_cl/(1._wp-fn_oth_cl)
     ENDIF
+
+
     fn_chl_cl = fn_chl0_cl
     fn_et_cl = fn_et0_cl
     fn_rub_cl = fn_rub0_cl
@@ -329,14 +333,15 @@ CONTAINS
               fn_pepc0_cl*(1._wp-fn_oth_cl),n_tot_cl,lctlib%ps_pathway, & 
               t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
               ag0_cl,an0_cl,r0_cl,gs0_cl,ci0_cl,m_rub,m_et,m_pepc)
-   
+
     !> 2.0 Attempt to increase PS by increasing the N fraction in chlorophyll 
     !! 
     fn_chl_cl = MIN(fn_chl0_cl * (1.0_wp + delta_n_fraction*dt/one_day), 1.0_wp)
-    
+
     ! optimal N fraction assuming Aj=Av=Apepc
     CALL calc_coordination_n_fractions(fn_chl_cl,m_rub,m_et,m_pepc, & 
                                        fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl)
+
     ! check if changing fraction to optimal values is possible in one timestep
     CALL calc_update_n_fractions(delta_n_fraction*dt/one_day,fn_chl_cl,& 
                                   fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, & 
@@ -418,14 +423,19 @@ CONTAINS
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: fn_chl_cl, &       !< fraction of N in chlorophyll
      &     m_rub, &                            !< N-specific rate constant for Rubisco
-     &     m_et,  &                            !< N-specific rate constant for ET
+!     &     m_et,  &                            !< N-specific rate constant for ET
      &     m_pepc                              !< N-speficic rate constant for PepC (C4-only)
+    REAL(wp), INTENT(inout) :: m_et
     REAL(wp), INTENT(out) :: fn_rub_opt_cl, &  !< optimal fraction of N in Rubisco 
      &     fn_et_opt_cl, &                     !< optimal fraction of N in ET 
      &     fn_pepc_opt_cl                      !< optimal fraction of N in PepC (C4-only)
 
     ! optimal N fraction assuming Aj=Av=Apepc
 !@todo: veg_canopy:optimise_n_fractions: should this not replaced by lctlib%ps_pathway==ic4phot?
+    ! ensure m_et is > zero
+    IF (m_et < eps8) THEN 
+      m_et = eps8
+    END IF
     IF (m_pepc > 0._wp) THEN
        ! fraction in Rubisco
        fn_rub_opt_cl = (1._wp - fn_chl_cl)/(1._wp + m_rub/m_et + m_rub/m_pepc)
@@ -586,18 +596,31 @@ CONTAINS
     gc = 0.0_wp
     DO icanop = 1,ncanop
        IF(lai_cl(icanop).GT.eps8)THEN   
-          CALL calc_photosynthesis(t_air,press_srf,& 
-                                   co2_mixing_ratio,ga, & 
-                                   plant%par_sunlit_cl(icanop),& 
-                                   plant%par_shaded_cl(icanop),& 
-                                   plant%fleaf_sunlit_cl(icanop), &
-                                   plant%beta_air,plant%beta_soil_ps,plant%beta_soil_gs, &
-                                   fn_chl_cl(icanop),fn_et_cl(icanop),fn_rub_cl(icanop), & 
-                                   fn_pepc_cl(icanop), nl_tot_cl(icanop),lctlib%ps_pathway, &
-                                   plant%t_jmax_opt_mavg, &                  
-                                   lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
-                                   ag_cl,hlp1,r_cl,gs_cl,hlp1,&
-                                   hlp1,hlp1,hlp1)
+          CALL calc_photosynthesis( t_air                         , &   ! in
+                                    press_srf                     , &   ! in
+                                    co2_mixing_ratio              , &   ! in
+                                    ga                            , &   ! in 
+                                    plant%par_sunlit_cl(icanop)   , &   ! in 
+                                    plant%par_shaded_cl(icanop)   , &   ! in 
+                                    plant%fleaf_sunlit_cl(icanop) , &   ! in
+                                    plant%beta_air                , &   ! in
+                                    plant%beta_soil_ps            , &   ! in
+                                    plant%beta_soil_gs            , &   ! in
+                                    fn_chl_cl(icanop)             , &   ! in
+                                    fn_et_cl(icanop)              , &   ! in
+                                    fn_rub_cl(icanop)             , &   ! in 
+                                    fn_pepc_cl(icanop)            , &   ! in 
+                                    nl_tot_cl(icanop)             , &   ! in
+                                    lctlib%ps_pathway             , &   ! in
+                                    plant%t_jmax_opt_mavg         , &   ! in                  
+                                    lctlib%t_jmax_omega           , &   ! in
+                                    lctlib%g0                     , &   ! in
+                                    lctlib%g1                     , &   ! in
+                                    ag_cl                         , &   ! out
+                                    hlp1                          , &   ! out
+                                    r_cl                          , &   ! out
+                                    gs_cl                         , &   ! out
+                                    hlp1,hlp1,hlp1,hlp1)                ! out
     
             gpp = gpp + ag_cl * lai_cl(icanop)  
             maint_respiration_leaf = maint_respiration_leaf + r_cl * lai_cl(icanop) 
