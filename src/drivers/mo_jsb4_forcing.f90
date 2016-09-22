@@ -918,6 +918,7 @@ CONTAINS
     forcing_input_variable%ocean_value = forcing_ocean_value
     forcing_input_variable%expectedUnit = expected_unit
     forcing_input_variable%constantValue = constantValue
+    IF (ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
     NULLIFY(forcing_input_variable%timevalues)
 
   END SUBROUTINE init_forcing_input_variable

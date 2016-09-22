@@ -663,7 +663,6 @@ CONTAINS
       &                                    TRIM(tile%name)//' - this should not happen!')
 
     IF (ANY(fract_sum(:) > 1._wp)) THEN
-      print*,'AAA ',MINVAL(fract_sum(:)),MAXVAL(fract_sum(:))
       CALL finish(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - this should not happen')
     END IF
 
@@ -674,6 +673,8 @@ CONTAINS
       ! var%ptr(ics:ice,iblk) = SPREAD(var%missval, DIM=1, NCOPIES=nc) 
       var%ptr(ics:ice,iblk) = missval
     END WHERE
+
+    DEALLOCATE(data, fractions, data_sum, fract_sum)
 
     IF (this%l_all_tiles) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
@@ -760,6 +761,8 @@ CONTAINS
         var%ptr(ics:ice,ilev,iblk) = missval
       END WHERE
     END DO
+
+    DEALLOCATE(data, fractions, data_sum, fract_sum)
 
     IF (this%l_all_tiles) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')

@@ -218,7 +218,8 @@ CONTAINS
     l_debug = .FALSE.
     IF (PRESENT(debug)) l_debug = debug
 
-    ALLOCATE(t_jsb_task_msg::msg)
+    !ALLOCATE(t_jsb_task_msg::msg)
+    msg => t_Message('', this%Get_action('INTEGRATE'))
 
     current_queue_element => this%queue
     DO WHILE (ASSOCIATED(current_queue_element))
@@ -227,7 +228,8 @@ CONTAINS
         IF (this%processes(task%process_id)%p%config%active) THEN  ! Only if process this task belongs to is active
           this%current_task => task
           CALL this%Start() ! Start state machine
-          msg%action => this%Get_action('INTEGRATE')
+          !IF (ASSOCIATED(msg%action)) DEALLOCATE(msg%action)
+          !msg%action = this%Get_action('INTEGRATE')
           CALL this%Process_message(msg, l_debug)
         END IF
       END ASSOCIATE
@@ -235,6 +237,9 @@ CONTAINS
       current_queue_element => current_queue_element%next
 
     END DO
+
+    !DEALLOCATE(msg%action)
+    DEALLOCATE(msg)
 
   END SUBROUTINE Run_tasks
 

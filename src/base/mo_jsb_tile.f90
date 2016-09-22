@@ -481,7 +481,8 @@ CONTAINS
     CLASS(t_Message),   INTENT(in)    :: msg_in
     CLASS(t_Message),   POINTER       :: return_ptr
 
-    CLASS(t_jsb_task_msg), POINTER :: msg
+    !CLASS(t_jsb_task_msg), POINTER :: msg
+    TYPE(t_Message), POINTER :: msg
     INTEGER :: iproc
     LOGICAL :: l_debug
 
@@ -490,7 +491,15 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_task_on_tile'
 
-    ALLOCATE(msg, source=msg_in)
+    !ALLOCATE(msg, source=msg_in)
+    !ALLOCATE(t_Message::msg)
+    ALLOCATE(msg)
+    SELECT TYPE (msg_in)
+    TYPE IS (t_Message)
+      !ALLOCATE(msg, source=msg_in)
+      !msg = msg_in
+      msg%action%name = TRIM(msg_in%action%name)
+    END SELECT
     !return_ptr => NULL()
 
     SELECT TYPE(model=>hsm)
@@ -537,7 +546,9 @@ CONTAINS
             & this%process_action(task%process_id) /= ON_TILE_) THEN
             CALL model%Goto(this%first_child, l_debug)
           ELSE
-            task%msg => msg
+            IF (ASSOCIATED(task%msg)) DEALLOCATE(task%msg)
+            ALLOCATE(task%msg, source=msg)
+            !task%msg => msg
             CALL task%Do_it(this, model%options)
             IF (ASSOCIATED(this%next_sibling)) THEN
               !IF (this%next_sibling%Has_children()) THEN
@@ -546,10 +557,12 @@ CONTAINS
                 CALL model%Goto(this%next_sibling, l_debug)
               !END IF
             ELSE IF (ASSOCIATED(this%parent)) THEN
-              msg%action => model%Get_action('AGGREGATE')
+              !IF (ASSOCIATED(msg%action)) DEALLOCATE(msg%action)
+              msg%action = model%Get_action('AGGREGATE')
               CALL model%Goto(this%parent, l_debug)
             ELSE
               this%visited = .FALSE.
+              IF (ASSOCIATED(msg)) DEALLOCATE(msg)
               msg => NULL()
             END IF
           END IF
@@ -561,26 +574,31 @@ CONTAINS
               CALL model%Goto(this%next_sibling, l_debug)
             END IF
           ELSE IF (ASSOCIATED(this%parent)) THEN
-            msg%action => model%Get_action('AGGREGATE')
+            !IF (ASSOCIATED(msg%action)) DEALLOCATE(msg%action)
+            msg%action = model%Get_action('AGGREGATE')
             CALL model%Goto(this%parent, l_debug)
           ELSE
             this%visited = .FALSE.
+            IF (ASSOCIATED(msg)) DEALLOCATE(msg)
             msg => NULL()
           END IF
         END IF
       CASE ('AGGREGATE')
         IF (this%process_action(task%process_id) >= AGGREGATE_ .AND. this%visited) THEN
-          task%msg => msg
+          IF (ASSOCIATED(task%msg)) DEALLOCATE(task%msg)
+          ALLOCATE(task%msg, source=msg)
+          !task%msg => msg
           CALL task%Do_it(this, model%options)
         END IF
         IF (ASSOCIATED(this%next_sibling)) THEN
-          msg%action => model%Get_action('INTEGRATE')
+          msg%action = model%Get_action('INTEGRATE')
           CALL model%Goto(this%next_sibling, l_debug)
         ELSE IF (this == model%top) THEN
           this%visited = .FALSE.
+          IF (ASSOCIATED(msg)) DEALLOCATE(msg)
           msg => NULL()
         ELSE
-          msg%action => model%Get_action('AGGREGATE')
+          msg%action = model%Get_action('AGGREGATE')
           CALL model%Goto(this%parent, l_debug)
         END IF
       END SELECT
@@ -588,7 +606,12 @@ CONTAINS
       CALL finish(TRIM(routine), 'Error running task')
     END SELECT
 
-    return_ptr => msg
+    !return_ptr => msg
+    IF (ASSOCIATED(msg)) THEN
+      ALLOCATE(return_ptr, source=msg)
+    ELSE
+      return_ptr => NULL()
+    END IF
 
     SELECT TYPE(model=>hsm)
     CLASS IS (t_jsb_model)
@@ -606,6 +629,10 @@ CONTAINS
         END IF
       END IF
     END SELECT
+
+    IF (ASSOCIATED(msg)) DEALLOCATE(msg)
+    !IF (ASSOCIATED(msg_in%action)) DEALLOCATE(msg_in%action)
+    !IF (ASSOCIATED(msg_in)) DEALLOCATE(msg_in)
 
   END FUNCTION Process_task_on_tile
 

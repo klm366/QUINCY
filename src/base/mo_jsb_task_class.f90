@@ -94,7 +94,8 @@ CONTAINS
     SELECT TYPE (this)
     CLASS IS (t_jsb_process_task)
 
-      IF (.NOT. ASSOCIATED(this%msg%action)) &
+      !IF (.NOT. ASSOCIATED(this%msg%action)) &
+      IF (this%msg%action%name == '') &
         & CALL finish(TRIM(routine), 'Action not set for task '//TRIM(this%name))
 
 !!$      IF (.NOT. ASSOCIATED(task%Integrate)) &

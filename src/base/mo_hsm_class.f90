@@ -34,10 +34,13 @@ MODULE mo_hsm_class
   END INTERFACE t_Action
 
   TYPE t_Message
-    CHARACTER(len=50)       :: name = ''
-    TYPE(t_Action), POINTER :: action => NULL()
+    CHARACTER(len=50)      :: name = ''
+    TYPE(t_Action)         :: action
   END TYPE t_Message
 
+  INTERFACE t_Message
+    PROCEDURE Construct_message
+  END INTERFACE t_Message
   !>
   !! Type for States of the State Machine
   !!
@@ -97,7 +100,7 @@ MODULE mo_hsm_class
     CLASS(t_State), POINTER     :: current => NULL()    !< Current state
     CLASS(t_State), POINTER     :: next    => NULL()    !< Next state (non_null if transition taken)
     CLASS(t_State), POINTER     :: source  => NULL()    !< Source state during last transition
-    TYPE(t_Action), POINTER     :: actions(:) => NULL() !< List of possible actions (events)
+    TYPE(t_Action), ALLOCATABLE :: actions(:)           !< List of possible actions (events)
     INTEGER                     :: levels_to_lca = -1   !< Temporary storage
   CONTAINS
     PROCEDURE :: Init_hsm
@@ -423,7 +426,6 @@ CONTAINS
     CLASS(t_State),   INTENT(inout) :: this
     CLASS(t_Hsm),     INTENT(inout) :: hsm
     CLASS(t_Message), INTENT(in),   POINTER :: msg
-!!$    CLASS(t_Message), POINTER       :: msg
     CLASS(t_Message), POINTER       :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_message_state'
@@ -454,17 +456,17 @@ CONTAINS
     CLASS(t_Hsm), INTENT(inout) :: self
     CHARACTER(len=*), INTENT(in)         :: name
 
-    TYPE(t_Action), POINTER :: action
+    !TYPE(t_Action), POINTER :: action
     INTEGER :: i
 
     ALLOCATE(self%actions(MAX_ACTIONS))
-    NULLIFY(action)
-    DO i=1,MAX_ACTIONS
+    !NULLIFY(action)
+    !DO i=1,MAX_ACTIONS
       !self%actions(i) = t_Action("")     ! This generates an internal compiler error with gfortran
-      action => t_Action("")
-      self%actions(i) = action
-      DEALLOCATE(action)
-    END DO
+      !action => t_Action("")
+      !self%actions(i) = t_Action("")
+      !DEALLOCATE(action)
+    !END DO
     CALL self%Register_action(t_Action("ENTER"))
     CALL self%Register_action(t_Action("EXIT"))
     CALL self%Register_action(t_Action("START"))
@@ -658,22 +660,32 @@ CONTAINS
 
 !!$    CALL message(TRIM(routine), 'Starting hsm ...')
 
-    ALLOCATE(t_Message::start_msg)
-    ALLOCATE(t_Message::entry_msg)
-    start_msg%action => this%Get_action('START')
-    entry_msg%action => this%Get_action('ENTER')
+    !ALLOCATE(t_Message::start_msg)
+    !ALLOCATE(t_Message::entry_msg)
+    !start_msg%action = this%Get_action('START')
+    !entry_msg%action = this%Get_action('ENTER')
+    !entry_msg%action = t_action('ENTER')
+
+    start_msg => t_Message('', this%Get_action('START'))
+    entry_msg => t_Message('', this%Get_action('ENTER'))
 
     this%current => this%top
     !this%next    => NULL()
     tmp_msg => this%current%Process_message(this, entry_msg)
+    IF(ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
 
     tmp_msg => this%current%Process_message(this, start_msg)
+    ! IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
     DO WHILE (ASSOCIATED(this%next))
       CALL this%Process_entry_to_next()
       this%current => this%next
       NULLIFY(this%next)
       tmp_msg => this%current%Process_message(this, start_msg)
+      IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
     END DO
+
+    !DEALLOCATE(start_msg%action, entry_msg%action)
+    DEALLOCATE(start_msg, entry_msg)
 
 !!$    CALL message(TRIM(routine), 'Hsm started.')
 
@@ -705,7 +717,7 @@ CONTAINS
 
     !hsm => this
     ALLOCATE(t_Message::start_msg)
-    start_msg%action => this%Get_action('START')
+    start_msg%action = this%Get_action('START')
 
 !!$    CALL this%Process_exit_to_LCA()
 
@@ -715,7 +727,12 @@ CONTAINS
     DO WHILE (ASSOCIATED(state))
       IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
       this%source => state
-      new_msg => state%Process_message(this, new_msg)
+      tmp_msg => state%Process_message(this, new_msg)
+      IF (ASSOCIATED(new_msg)) THEN
+      !  IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
+        DEALLOCATE(new_msg)
+      END IF
+      new_msg => tmp_msg
       CALL this%Process_exit_to_LCA()
       IF (ASSOCIATED(this%next)) THEN      ! State transition taken (i.e. already exited to LCA)
         ! Execute entry and start messages to target
@@ -723,11 +740,19 @@ CONTAINS
         this%current => this%next
         NULLIFY(this%next)
         tmp_msg => this%current%Process_message(this, start_msg)
+        IF (ASSOCIATED(tmp_msg)) THEN
+          !IF (ASSOCIATED(tmp_msg%action)) DEALLOCATE(tmp_msg%action)
+          DEALLOCATE(tmp_msg)
+        END IF
         DO WHILE (ASSOCIATED(this%next))
           CALL this%Process_entry_to_next()
           this%current => this%next
           NULLIFY(this%next)
           tmp_msg => this%current%Process_message(this, start_msg)
+          IF (ASSOCIATED(tmp_msg)) THEN
+            !IF (ASSOCIATED(tmp_msg%action)) DEALLOCATE(tmp_msg%action)
+            DEALLOCATE(tmp_msg)
+          END IF
         END DO
         IF (.NOT. ASSOCIATED(new_msg)) THEN ! Message processed
           EXIT
@@ -743,6 +768,13 @@ CONTAINS
       END IF
     END DO
 
+    !DEALLOCATE(start_msg%action)
+    DEALLOCATE(start_msg)
+    IF (ASSOCIATED(new_msg)) THEN
+      !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
+      DEALLOCATE(new_msg)
+    END IF
+
     IF (l_debug) THEN
       IF (ASSOCIATED(new_msg)) THEN
         CALL message(TRIM(routine), 'Exited loop, new message action is '//TRIM(new_msg%action%name))
@@ -750,8 +782,6 @@ CONTAINS
         CALL message(TRIM(routine), 'Exited loop, new message action is NULL')
       END IF
     END IF
-
-    DEALLOCATE(start_msg)
 
 !!$    CALL message(TRIM(routine), 'Processing finished.')
 
@@ -773,7 +803,7 @@ CONTAINS
 !!$    CALL message(TRIM(routine), 'Processing entry messages to next ...')
 
     ALLOCATE(t_Message::entry_msg)
-    entry_msg%action => this%Get_action('ENTER')
+    entry_msg%action = this%Get_action('ENTER')
 
     i = 0
     state => this%next
@@ -787,8 +817,10 @@ CONTAINS
     DO j=i,1,-1
       state => entrypath(j)%p
       tmp_msg => state%Process_message(this, entry_msg)
+      IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
     END DO
 
+    !DEALLOCATE(entry_msg%action)
     DEALLOCATE(entry_msg)
 
 !!$    CALL message(TRIM(routine), 'Processing of entry messages finished.')
@@ -815,13 +847,14 @@ CONTAINS
 !!$    CALL message(TRIM(routine), 'Processing exit messages to lca ...'//int2string(this%levels_to_lca))
 
     ALLOCATE(t_Message::exit_msg)
-    exit_msg%action => this%Get_action('EXIT')
+    exit_msg%action = this%Get_action('EXIT')
 
     state => this%current
 
     IF (ASSOCIATED(this%source)) THEN
       DO WHILE (state /= this%source)
         tmp_msg => state%Process_message(this, exit_msg)
+        !IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg%action, tmp_msg)
         state => state%parent
         IF (.NOT. ASSOCIATED(state)) EXIT
       END DO
@@ -830,6 +863,7 @@ CONTAINS
 !    DO i=this%Get_levels_to_LCA(that),1,-1
     DO i=this%levels_to_lca,1,-1
       tmp_msg => state%Process_message(this, exit_msg)
+      ! IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg%action, tmp_msg)
       state => state%parent
       IF (.NOT. ASSOCIATED(state)) EXIT
     END DO
@@ -837,16 +871,17 @@ CONTAINS
     this%current => state
     this%levels_to_lca = -1
 
+    !DEALLOCATE(exit_msg%action)
     DEALLOCATE(exit_msg)
 
 !!$    CALL message(TRIM(routine), 'Processing of exit messages finished.')
 
   END SUBROUTINE Process_exit_to_lca
 
-    SUBROUTINE Register_action_hsm(this, action)
+  SUBROUTINE Register_action_hsm(this, action)
 
     CLASS(t_Hsm),   INTENT(inout) :: this
-    CLASS(t_Action), INTENT(in)    :: action
+    TYPE(t_Action), INTENT(in)    :: action
 
     INTEGER :: i
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Register_action_hsm'
@@ -864,26 +899,28 @@ CONTAINS
 
   END SUBROUTINE Register_action_hsm
 
-  FUNCTION Get_action_hsm(this, name) RESULT(return_ptr)
+  FUNCTION Get_action_hsm(this, name) RESULT(return_value)
 
     CLASS(t_Hsm),     TARGET, INTENT(in) :: this
     CHARACTER(len=*),         INTENT(in) :: name
-    CLASS(t_Action),  POINTER            :: return_ptr
+    TYPE(t_Action)                       :: return_value
 
     INTEGER :: i
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_action_hsm'
 
-    return_ptr => NULL()
+    !return_ptr => NULL()
 
     DO i=1,MAX_ACTIONS
       IF (TRIM(this%actions(i)%name) == TRIM(name)) THEN
-        ALLOCATE(return_ptr, source=this%actions(i))
+        !ALLOCATE(return_ptr, source=this%actions(i))
+        return_value = this%actions(i)
         EXIT
       END IF
     END DO
 
-    IF (.NOT. ASSOCIATED(return_ptr)) &
+    !IF (.NOT. ASSOCIATED(return_ptr)) &
+    IF (return_value%name == '') &
       & CALL finish(TRIM(routine), 'Action '//TRIM(name)//' not found')
 
   END FUNCTION Get_action_hsm
@@ -906,14 +943,31 @@ CONTAINS
   END SUBROUTINE Print_actions_hsm
 
   ! ===============================================================================
+  ! Methods for t_Message class
+  ! ===============================================================================
+  FUNCTION Construct_message(name, action) RESULT(return_ptr)
+
+    CHARACTER(len=*), INTENT(in) :: name
+    TYPE(t_Action),   INTENT(in) :: action
+    TYPE(t_Message),  POINTER    :: return_ptr
+
+    ALLOCATE(return_ptr)
+    !ALLOCATE(t_Action::return_ptr)
+    return_ptr%name = TRIM(name)
+    return_ptr%action%name = TRIM(action%name)
+
+  END FUNCTION Construct_message
+
+  ! ===============================================================================
   ! Methods for t_Action class
   ! ===============================================================================
   FUNCTION Construct_action(name) RESULT(return_ptr)
 
     CHARACTER(len=*), INTENT(in) :: name
-    CLASS(t_Action), POINTER :: return_ptr
+    TYPE(t_Action), POINTER :: return_ptr
 
-    ALLOCATE(t_Action::return_ptr)
+    ALLOCATE(return_ptr)
+    !ALLOCATE(t_Action::return_ptr)
     return_ptr%name = TRIM(name)
 
   END FUNCTION Construct_action
