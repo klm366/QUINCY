@@ -783,9 +783,9 @@ CONTAINS
       zdz1(:,jk) = zd1(jk) * zkappa(:,jk)
     END DO
   !
-      z1(:) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
-      pgrndc(:,nsoil-1) = zdz2(:,nsoil) * ptsoil(:,nsoil) / z1(:)
-      pgrndd(:,nsoil-1) = zdz1(:,nsoil-1) / z1(:)
+    z1(:) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
+    pgrndc(:,nsoil-1) = zdz2(:,nsoil) * ptsoil(:,nsoil) / z1(:)
+    pgrndd(:,nsoil-1) = zdz1(:,nsoil-1) / z1(:)
   !
     DO jk=nsoil-1,2,-1
         z1(:) = 1._wp / (zdz2(:,jk) + zdz1(:,jk-1) + zdz1(:,jk) * (1._wp - pgrndd(:,jk)))
@@ -798,8 +798,8 @@ CONTAINS
   !   CALORIFIC CAPACITY OF THE GROUND:
   !   ---------------------------------------------------------
   !
-      pgrndhflx(:) = zdz1(:,1) * (pgrndc(:,1) + (pgrndd(:,1) - 1._wp) * ptsoil(:,1))
-      pgrndcapc(:) = (zdz2(:,1) * delta_time + delta_time * (1._wp - pgrndd(:,1)) * zdz1(:,1))
+    pgrndhflx(:) = zdz1(:,1) * (pgrndc(:,1) + (pgrndd(:,1) - 1._wp) * ptsoil(:,1))
+    pgrndcapc(:) = (zdz2(:,1) * delta_time + delta_time * (1._wp - pgrndd(:,1)) * zdz1(:,1))
 
   END SUBROUTINE update_soiltemp
 

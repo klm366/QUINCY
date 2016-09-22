@@ -123,7 +123,7 @@ CONTAINS
       & return_pointer3d(:,:,:)
 
     TYPE(t_input_file) :: input_file
-    INTEGER :: i, n1, n2
+    INTEGER :: iblk, n1, n2
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init_ic'
 
@@ -204,8 +204,8 @@ CONTAINS
     fao(:,:) = MERGE(fao(:,:), 0._wp, fao(:,:) >= 0._wp)
     fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), MIN(REAL(UBOUND(fao_thermal_diff,1),wp), fao(:,:)))
 
-    DO i=1,SIZE(fao,2)
-      dsl4jsb_var2D_ptr(SOIL_,hdiff)(:,i) = fao_thermal_diff(NINT(fao(:,i)))
+    DO iblk=1,SIZE(fao,2)
+      dsl4jsb_var2D_ptr(SOIL_,hdiff)(:,iblk) = fao_thermal_diff(NINT(fao(:,iblk)))
     END DO
 !!$    soil_mem%hdiff%ptr(:,:) = RESHAPE(fao_thermal_diff(PACK(NINT(fao(:,:)), fao(:,:) > -1._wp)), /( SIZE(fao(:,:),1),SIZE(fao(:,:),2) )/ )
 
@@ -245,10 +245,10 @@ CONTAINS
       & variable_name='surf_temp')
     t_srf_mon(:,:,:) = MERGE(t_srf_mon(:,:,:), 280._wp, t_srf_mon(:,:,:) > 0._wp)
 
-    DO i=1,SIZE(dsl4jsb_var2D_ptr(SOIL_,soil_depth), DIM=2)
-      CALL init_soil_temperature( t_srf_mon(:,i,1:12), &
-        & dsl4jsb_var2D_ptr(SOIL_,t_soil)(:,1:dsl4jsb_Config(SOIL_)%nsoil_energy,i), &
-        & dsl4jsb_var2D_ptr(SEB_,t)(:,i))
+    DO iblk=1,SIZE(dsl4jsb_var2D_ptr(SOIL_,soil_depth), DIM=2)
+      CALL init_soil_temperature( t_srf_mon(:,iblk,1:12), &
+        & dsl4jsb_var2D_ptr(SOIL_,t_soil)(:,1:dsl4jsb_Config(SOIL_)%nsoil_energy,iblk), &
+        & dsl4jsb_var2D_ptr(SEB_,t)(:,iblk))
     END DO
 ! R    dsl4jsb_var3D_onDomain(SOIL_, t_soil_acoef) = 0._wp
 ! R    dsl4jsb_var3D_onDomain(SOIL_, t_soil_bcoef) = 1._wp
