@@ -150,13 +150,15 @@ C_{coarse\_root} = k_{ctos} \times C_{sap\_wood}
 
 This scheme does account for the seasonal shifts in allocation linked to green-up and brown-down of deciduous vegetation. It does not account for time-varying changes in the allocation fractions due to water and nutrient constraints. See Chapt. \ref{ch:optimality} for an extension of the allocation scheme to account for changes in the allocation patters due to nutrient or water constraints. 
 
+\subsection{CanopyNAllocation}\label{sec:veg:foliar_N_fractions}\label{sec:veg:canopy}
+
 \subsection{Stoichiometry}\label{sec:Stoichem}
 
 Stoichiometry of leaves is currently prescribed to a PFT-specific value (subroutine \texttt{mo\_veg\_growth:update\_stoichiometry}). The C:N:P ratios of the other pools are calculated based on their relative distance to leaves. See Chapt. \ref{ch:optimality} for an extension of the stoichiometry scheme to account for changes in the stoichiometry patters due to nutrient or water constraints. 
 
 Note: For comparison purposes, it would be desirable to mimick OCN-style flexibility? I thought I had already corrected for this, but fruits should have a lower C:N than roots?
 
-\subsection{Maintenance Respiration}\label{sec:MaintResp}
+\subsection{Maintenance Respiration}\label{sec:veg:MaintResp}
 
 \section{Phenology}\label{sec:Phen}
 
@@ -222,7 +224,7 @@ ind_{est} = flux_{est} / seed\_size
 
 
 % PARAMETER LIST - Start %
-Parameter List and Information according to mo\_veg\_parameters from SLM r169 (20160616). \\
+Parameter List and Information according to mo\_assimi\_constants from SLM r281. \\
 
 %\resizebox{\textwidth}{!}{  % to resize table to fit the page, needs \usepackage{graphicx}
 \begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
@@ -278,58 +280,6 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 \end{tabularx}
 \end{sidewaystable}
 
-
-\begin{sidewaystable}
-\begin{tabularx}{\linewidth}{|c|X|l|l|c|X|c|} % textwidth  
-\hline 
-Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
-\hline 
-
-\multicolumn{6}{l}{\bf Photosynthetic activity}\\
-\hline
-• & electron-transport limited carboxylation rate & \texttt{jmax2n} & per $\mu$mol CO2/ mmol N in ET & • & $17.6/4.0$ & • \\ 
-• & Rubisco limited carboxylation rate & \texttt{vcmax2n} & per $\mu$mol CO2/ mmol N in RUB & • & 1.8 & • \\ 
-• & fraction of N in PEP and PPKD (C4 plants only) & \texttt{k0\_fnl\_pepc} & • & • & 0.045 & • \\ 
-• & PEP C limited carboxylation rate & \texttt{pepc2n} & per $\mu$mol CO2/ mmol N in PEP C & • & 98777.97 & • \\ 
-• & moles chlorophyll per mol of N & \texttt{chl2n} & • & • & $1000.0/39.8$ & • \\ 
-• & slope of the fraction of leaf N not associated with PS against leaf N & \texttt{k1\_fnl\_struc} & --/mmolN & • & $\frac{71.4 * molar\_mass\_N}{1000000.0}$ & • \\ 
-• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants) & \texttt{jmax2vcmax\_C3} & • & • & 1.92 & • \\ 
-• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants) & \texttt{jmax2vcmax\_C4} & • & • & 1.4 & • \\
-• & time scale of acclimation of canopy processes (N, P, T) & \texttt{tau\_canopy\_acclimation} & days & • & 10.0 & • \\ 
-\hline 
-\end{tabularx}
-\end{sidewaystable}
-
-\begin{sidewaystable}
-\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
-\hline 
-Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
-\hline 
-
-\multicolumn{6}{l}{\bf Temperature sensitivies of PS processes}\\
-\hline
-• & Baseline of Michaelis-Menten constant of Rubisco for CO2 & \texttt{E0kc} & • & • & 38.05 & • \\
-• & Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 & \texttt{E1kc} & • & • & 79430.0& • \\  
-• & Baseline of Michealis-Menten Kintetics for Rubisco-oxigination & \texttt{E0ko} & • & • & 20.3 & • \\  
-• & Temperature sensitivity of Michealis-Menten Kintetics for Rubisco-oxigination & \texttt{E1ko} & • & • & 36380.0 & • \\  
-• & Baseline of photosynthetic compensation point & \texttt{E0pcp} & • & • & 19.02 & • \\  
-• & Temperature sensitivity of photosynthetic compensation point & \texttt{E1pcp} & • & • & 37830.0 & • \\  
-• & Baseline of Rubisco & \texttt{E0v} & • & • & 26.35 & • \\  
-• & Temperature sensitivity of Rubisco & \texttt{E1v} & • & • & 65330.0 & • \\  
-• & Temperature sensitivity of PeP C4 photosynthesis ?? & \texttt{Tref\_pepc} & • & • & 25.0 & • \\  
-• & Temperature sensitivity of PeP C4 photosynthesis ?? & \texttt{Tbase\_pepc} & • & • & 10.0 & • \\  
-• & intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I)) & \texttt{alpha\_i} & $\mu$mol CO2/ mol quanta & • & $0.85 * 0.066$ & • \\  
-• & Partial Pressure of O2 & \texttt{pO2} & kPa & • & 20.9 & • \\  
-• & default Ci:Ca for C3 plants & \texttt{CiCa\_default\_C3} & • & • & 0.7 & • \\  
-• & default Ci:Ca for C4 plants & \texttt{CiCa\_default\_C4} & • & • & 0.4 & • \\  
-• & maximum iteration of PS calculation & \texttt{ps\_it\_max} & • & • & 10.0 & • \\  
-• & saturating Ci in Pa C4 plants & \texttt{ci\_max} & • & • & 7800.0 & • \\  
-• & ratio of diffusion coefficient for H2O and CO2 in air & \texttt{Dwv2co2\_air} & • & • & $Dwv / Dco2$ & • \\  
-• & ratio of diffusion coefficient for H2O and CO2 in turbulent air & \texttt{Dwv2co2\_turb} & • & • & $(Dwv/Dco2)^{(2.0/3.0)}$ & • \\  
-\hline 
-\end{tabularx}
-\end{sidewaystable}
-
 \begin{sidewaystable}
 \begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
 \hline 
@@ -354,11 +304,16 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 • & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fnl\_chl\_C3} & • & • & 3.6 & • \\  
 • & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fnl\_chl\_C4} & • & • & 4.4 & • \\    
 • & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{kfnl\_chl} & • & • & 0.7 & • \\  
+• & fraction of N in PEP and PPKD (C4 plants only) & \texttt{k0\_fnl\_pepc} & • & • & 0.045 & • \\ 
+• & slope of the fraction of leaf N not associated with PS against leaf N & \texttt{k1\_fnl\_struc} & --/mmolN & • & $\frac{71.4 * molar\_mass\_N}{1000000.0}$ & • \\ 
+• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants) & \texttt{jmax2vcmax\_C3} & • & • & 1.92 & • \\ 
+• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants) & \texttt{jmax2vcmax\_C4} & • & • & 1.4 & • \\
 \hline 
 \multicolumn{6}{l}{\bf Changes in canopy N fractions}\\
 \hline
  • & maximum change in CN ratio of canopy & \texttt{dn} & • & • & 0.001 & • \\ 
  • & maximum change in photosynthetic N fractions & \texttt{dnf} & • & • & 0.01 & • \\ 
+ • & time scale of acclimation of canopy processes (N, P, T) & \texttt{tau\_canopy\_acclimation} & days & • & 10.0 & • \\ 
 \hline 
 \end{tabularx}
 \end{sidewaystable}
@@ -394,7 +349,7 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 
 \multicolumn{6}{l}{\bf Albedo and fapar calculation}\\
 \hline
-• & Extinction coefficient for PAR on chlorophyll & \texttt{ka} & • & • & 0.005 & • \\  
+
 • & single leaf scattering albedo & \texttt{sigma} & • & • & 0.2 & • \\        
 • & extinction coefficient over black leaves & \texttt{kbl0} & • & • & 0.5 & • \\    
 • & extinction coefficient for diffuse PAR & \texttt{kdf0} & • & • & 0.8 & Spitters eq. 7 \\  

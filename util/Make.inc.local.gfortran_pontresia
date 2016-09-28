@@ -1,6 +1,6 @@
 # site specific compiler settings
 COMP = x86_64-gfortran
-C_N = gfortran-mp-5
+C_N = gfortran-mp-6
 M_K = make --no-print-directory
 F_C = $(C_N) -c -cpp -ffree-line-length-0
 F_O = -O -I../include -I$(MODDIR) -J${MODDIR}
