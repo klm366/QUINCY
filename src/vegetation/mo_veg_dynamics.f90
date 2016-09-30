@@ -38,7 +38,7 @@ CONTAINS
     USE mo_veg_memory
 
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
-    USE mo_veg_memory_class,      ONLY: t_veg_memory
+!    USE mo_veg_memory_class,      ONLY: t_veg_memory
 
 
     IMPLICIT NONE
@@ -55,14 +55,14 @@ CONTAINS
     REAL(wp)                                  :: rfr_ratio
     REAL(wp)                                  :: flim_light,flim_moist,flim_temp
     INTEGER :: icanop
-    ! 0.3 Memory allocation
-    TYPE(t_veg_memory), POINTER         :: veg__mem   ! dsl4jsb_Def_memory(VEG_)
-    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
-    SELECT TYPE (mm => tile%mem(VEG_)%p)              ! dsl4jsb_Get_memory(VEG_)
-      TYPE IS(t_veg_memory)
-        veg__mem => mm
-    END SELECT
-    veg => veg__mem 
+!    ! 0.3 Memory allocation
+!    TYPE(t_veg_memory), POINTER         :: veg__mem   ! dsl4jsb_Def_memory(VEG_)
+!    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+!    SELECT TYPE (mm => tile%mem(VEG_)%p)              ! dsl4jsb_Get_memory(VEG_)
+!      TYPE IS(t_veg_memory)
+!        veg__mem => mm
+!    END SELECT
+!    veg => veg__mem 
 
 
 

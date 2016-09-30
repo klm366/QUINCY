@@ -157,7 +157,7 @@ CONTAINS
       tile%mem(iproc)%p => NULL()
       SELECT CASE(iproc)
         ! SLM: extend this CASE to all SLM processes that work with JSBACH4 memory structure; see mo_jsb_process_class for enumeration
-        CASE (RAD_, ASSIMI_, VEG_, SOIL_, ATM2LAND_, LAND2ATM_)    
+        CASE (RAD_, ASSIMI_, SOIL_, ATM2LAND_, LAND2ATM_) ! VEG_,  *slmdev
           prefix = 'no-need'
           suffix = 'no-need'
           process_name = Get_process_name(iproc)
