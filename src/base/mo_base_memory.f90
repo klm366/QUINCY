@@ -61,7 +61,7 @@ MODULE mo_base_memory
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_tile
-    TYPE(t_slm_plant)                 :: plant     !< plant construct of tile
+    TYPE(t_slm_plant)                 :: veg       !< veg static memory
     TYPE(t_slm_soil)                  :: soil      !< soil construct of tile
 
     TYPE(t_jsb_lct)                   :: lcts      !< data on land cover type of the tile

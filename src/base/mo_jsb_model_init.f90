@@ -202,8 +202,8 @@ CONTAINS
     !! 7 Plant init
     !! 
     !! 
-    CALL tile%plant%init                  ! mo_veg_memory  ! includes daytime_avg & moving_avg init
-    CALL tile%plant%set_zero_fluxes       ! mo_veg_memory  ==> may move to veg init (or model init ?)
+    CALL tile%veg%init                  ! mo_veg_memory  ! includes daytime_avg & moving_avg init
+    CALL tile%veg%set_zero_fluxes       ! mo_veg_memory  ==> may move to veg init (or model init ?)
     model%lctlib => init_lctlib()         ! initialize the lctlib with parameters values across PFT's
 
 
@@ -310,17 +310,17 @@ CONTAINS
       tile%soil%theta                    = veg_config%soil_theta_prescribe 
       tile%soil%ammonium                 = 0.1_wp
       tile%soil%phosphate                = 0.01_wp
-      tile%plant%target_cn_leaf          = lctlib%cn_leaf
-      tile%plant%target_np_leaf          = lctlib%np_leaf
+      tile%veg%target_cn_leaf          = lctlib%cn_leaf
+      tile%veg%target_np_leaf          = lctlib%np_leaf
 
       IF(veg_config%flag_start_bareground)THEN
          tile%soil%pool%litter%nitrogen     = 0.0_wp
          init_pool%carbon        = lctlib%seed_size * 10.0_wp
-         tile%plant%dens_ind     = 0.0_wp 
+         tile%veg%dens_ind     = 0.0_wp 
       ELSE
          tile%soil%pool%litter%nitrogen     = 5.0_wp
          init_pool%carbon        = 50.0_wp 
-         tile%plant%dens_ind     = 1.0_wp 
+         tile%veg%dens_ind     = 1.0_wp 
       ENDIF
 
       init_pool%nitrogen  = init_pool%carbon / &
@@ -347,9 +347,9 @@ CONTAINS
 
       ! start bareground ?
       IF(veg_config%flag_start_bareground)THEN
-         tile%plant%pool%seed_bed = init_pool 
+         tile%veg%pool%seed_bed = init_pool 
       ELSE
-         tile%plant%pool%reserve  = init_pool 
+         tile%veg%pool%reserve  = init_pool 
       ENDIF
        tile%soil%pool%litter%nitrogen      = 5._wp
   END SUBROUTINE init_slm_plant
@@ -383,13 +383,13 @@ CONTAINS
     !! Initialisation of soil and vegetation, so far relevant
     tile%soil%moisture   = veg_config%soil_awc_prescribe
     tile%soil%theta      = veg_config%soil_theta_prescribe
-    tile%plant%lai       = ref_lai 
+    tile%veg%lai       = ref_lai 
     IF(veg_config%pft_id==0) THEN
-      tile%plant%pool%leaf%nitrogen   = ref_nleaf / molar_mass_N * tile%plant%lai
+      tile%veg%pool%leaf%nitrogen   = ref_nleaf / molar_mass_N * tile%veg%lai
     ELSE
-      tile%plant%pool%leaf%nitrogen   = tile%plant%lai / & 
+      tile%veg%pool%leaf%nitrogen   = tile%veg%lai / & 
                                                 lctlib%sla / lctlib%cn_leaf
-      tile%plant%pool%leaf%phosphorus = tile%plant%pool%leaf%nitrogen / & 
+      tile%veg%pool%leaf%phosphorus = tile%veg%pool%leaf%nitrogen / & 
                                                 lctlib%np_leaf
     ENDIF
 

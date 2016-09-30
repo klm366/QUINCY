@@ -299,7 +299,7 @@ MODULE mo_veg_memory
 
   CONTAINS
     PRIVATE
-    PROCEDURE, PUBLIC :: init => init_plant
+    PROCEDURE, PUBLIC :: init => init_veg
     PROCEDURE, PUBLIC :: set_zero_fluxes => set_zero_veg_flux
    END TYPE t_slm_plant
 
@@ -607,7 +607,7 @@ CONTAINS
   !! currently called in the driver \n
   !! for fluxes see mo_veg_memory:set_zero_veg_flux
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE init_plant(this)
+  PURE ELEMENTAL SUBROUTINE init_veg(this)
 
     USE mo_atmland_constants,   ONLY: standard_press_srf, def_co2_mixing_ratio
 
@@ -756,10 +756,10 @@ CONTAINS
     this%t_air_month_mavg                   = 283.15_wp   ! 10°C; 30 days
     this%t_jmax_opt_mavg                    = 17._wp   ! 17°C
 
-  END SUBROUTINE init_plant 
+  END SUBROUTINE init_veg 
 
   !-----------------------------------------------------------------------------------------------------
-  !> initalize or just set zero all fluxes vegetation memory (plant)
+  !> initalize or just set zero all fluxes vegetation memory (veg)
   !!
   !! is initially called in the driver, 
   !! and then called every timestep in beginning of mo_veg_interface -> move to 1st Task of veg called
@@ -768,7 +768,7 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_slm_plant),INTENT(inout)  :: this    !< plant
+    CLASS(t_slm_plant),INTENT(inout)  :: this    !< veg
     ! 0.2 Local
     REAL(wp) :: flux_zero
 

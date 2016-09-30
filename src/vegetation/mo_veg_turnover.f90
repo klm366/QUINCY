@@ -39,7 +39,7 @@ CONTAINS
     TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile      !< one tile
     TYPE(t_lctlib_element),INTENT(in)       :: lctlib    !< land-cover-type library - parameters for one pft
     ! 0.2 Local 
-    TYPE(t_slm_plant),POINTER         :: plant     ! plant variables per tile
+    TYPE(t_slm_plant),POINTER         :: veg     ! veg variables per tile
     TYPE(t_slm_veg_pool)              :: litterfall,growth
     REAL(wp)                          :: recycling_leaf_n,recycling_leaf_n15,recycling_leaf_p
     REAL(wp)                          :: recycling_sap_wood_n,recycling_sap_wood_n15,recycling_sap_wood_p
@@ -47,7 +47,7 @@ CONTAINS
     REAL(wp)                          :: nitrogen_recycling_fract, phosphorus_recycling_fract
 
     ! bi-directional pointer
-    plant => tile%plant
+    veg => tile%veg
 
 
     !> 1.0 initialise output variables
@@ -68,28 +68,28 @@ CONTAINS
       CASE (ievergreen)
          fturn_leaf = lctlib%tau_leaf * dt/one_day/one_year 
       CASE (iraingreen, isummergreen)
-         IF(plant%growing_season)THEN
+         IF(veg%growing_season)THEN
             fturn_leaf = 0.0_wp              ! herbivory
          ELSE
             fturn_leaf = 0.2_wp * dt/one_day ! senescence
             ! if LAI drops below minimum threshold, dump all leaves
-            IF(plant%lai < min_lai) fturn_leaf = 1.0_wp
+            IF(veg%lai < min_lai) fturn_leaf = 1.0_wp
          ENDIF
       CASE (iperennial)
-         IF(plant%growing_season)THEN
+         IF(veg%growing_season)THEN
             fturn_leaf = lctlib%tau_leaf * dt/one_day/one_year
          ELSE
             ! if LAI drops below minimum threshold, dump all leaves
             fturn_leaf = 0.2_wp * dt/one_day
-            IF(plant%lai < min_lai) fturn_leaf = 1.0_wp
+            IF(veg%lai < min_lai) fturn_leaf = 1.0_wp
        ENDIF
     END SELECT
-    litterfall%leaf = fturn_leaf * plant%pool%leaf
+    litterfall%leaf = fturn_leaf * veg%pool%leaf
 
     !> 2.1 Nutrient recycling from foliage turnover
     !! 
-    nitrogen_recycling_fract = update_nitrogen_recycling_fract(plant)
-    phosphorus_recycling_fract = update_phosphorus_recycling_fract(plant)
+    nitrogen_recycling_fract = update_nitrogen_recycling_fract(veg)
+    phosphorus_recycling_fract = update_phosphorus_recycling_fract(veg)
     recycling_leaf_n = nitrogen_recycling_fract * litterfall%leaf%nitrogen
     litterfall%leaf%nitrogen = litterfall%leaf%nitrogen - recycling_leaf_n 
     recycling_leaf_n15 = nitrogen_recycling_fract * litterfall%leaf%nitrogen15
@@ -100,12 +100,12 @@ CONTAINS
     !> 3.0 fine root turnover to litter
     !! 
     fturn = lctlib%tau_fine_root * dt/one_day/one_year
-    litterfall%fine_root = fturn * plant%pool%fine_root
+    litterfall%fine_root = fturn * veg%pool%fine_root
 
     !> 4.0 coarse root turnover to litter 
     !! 
     fturn = lctlib%tau_coarse_root * dt/one_day/one_year 
-    litterfall%coarse_root = fturn * plant%pool%coarse_root
+    litterfall%coarse_root = fturn * veg%pool%coarse_root
 
     !> 5.0 sapwood turnover 
     !! 
@@ -116,17 +116,17 @@ CONTAINS
       CASE (igrass) ! for grases follows leaf phenology
         fturn = fturn_leaf
     ENDSELECT 
-    litterfall%sap_wood = fturn * plant%pool%sap_wood
+    litterfall%sap_wood = fturn * veg%pool%sap_wood
 
     !> 5.2 heart wood formation, including nutrient recycling
     !! 
     IF(lctlib%growthform == itree)THEN
         fturn = lctlib%tau_sap_wood * dt/one_day/one_year 
-        growth%heart_wood = fturn * plant%pool%sap_wood
+        growth%heart_wood = fturn * veg%pool%sap_wood
         growth%sap_wood = growth%sap_wood - growth%heart_wood 
         ! Nutrient recycling
-        nitrogen_recycling_fract = update_nitrogen_recycling_fract(plant)
-        phosphorus_recycling_fract = update_phosphorus_recycling_fract(plant)
+        nitrogen_recycling_fract = update_nitrogen_recycling_fract(veg)
+        phosphorus_recycling_fract = update_phosphorus_recycling_fract(veg)
         recycling_sap_wood_n = nitrogen_recycling_fract * growth%heart_wood%nitrogen 
         growth%heart_wood%nitrogen = (1._wp - nitrogen_recycling_fract) * growth%heart_wood%nitrogen
         recycling_sap_wood_n15 = nitrogen_recycling_fract * growth%heart_wood%nitrogen15 
@@ -138,24 +138,24 @@ CONTAINS
     !> 6.0 fruit turnover to seed_bed
     !! 
     fturn = lctlib%tau_fruit * dt/one_day/one_year 
-    growth%seed_bed = fturn * plant%pool%fruit
+    growth%seed_bed = fturn * veg%pool%fruit
     growth%fruit = growth%fruit - growth%seed_bed
 
     !> 7.0 seed-bed turnover to litter 
     !! 
     fturn = lctlib%tau_seed_litter * dt/one_day/one_year 
-    litterfall%seed_bed = fturn * plant%pool%seed_bed
+    litterfall%seed_bed = fturn * veg%pool%seed_bed
 
-    !> 8.0 update litter, growth and recycling of the plant class
+    !> 8.0 update litter, growth and recycling of the veg class
     !!
-    plant%litterfall             = plant%litterfall             + litterfall
-    plant%growth                 = plant%growth                 + growth
-    plant%recycling_leaf_n       = plant%recycling_leaf_n       + recycling_leaf_n
-    plant%recycling_leaf_n15     = plant%recycling_leaf_n15     + recycling_leaf_n15
-    plant%recycling_leaf_p       = plant%recycling_leaf_p       + recycling_leaf_p
-    plant%recycling_sap_wood_n   = plant%recycling_sap_wood_n   + recycling_sap_wood_n
-    plant%recycling_sap_wood_n15 = plant%recycling_sap_wood_n15 + recycling_sap_wood_n15
-    plant%recycling_sap_wood_p   = plant%recycling_sap_wood_p   + recycling_sap_wood_p
+    veg%litterfall             = veg%litterfall             + litterfall
+    veg%growth                 = veg%growth                 + growth
+    veg%recycling_leaf_n       = veg%recycling_leaf_n       + recycling_leaf_n
+    veg%recycling_leaf_n15     = veg%recycling_leaf_n15     + recycling_leaf_n15
+    veg%recycling_leaf_p       = veg%recycling_leaf_p       + recycling_leaf_p
+    veg%recycling_sap_wood_n   = veg%recycling_sap_wood_n   + recycling_sap_wood_n
+    veg%recycling_sap_wood_n15 = veg%recycling_sap_wood_n15 + recycling_sap_wood_n15
+    veg%recycling_sap_wood_p   = veg%recycling_sap_wood_p   + recycling_sap_wood_p
 
   END SUBROUTINE calc_turnover
 
@@ -165,11 +165,11 @@ CONTAINS
   !! should be made dynamically dependended on N stress later 
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION update_nitrogen_recycling_fract(plant) RESULT (recycling)
+  FUNCTION update_nitrogen_recycling_fract(veg) RESULT (recycling)
 
     IMPLICIT NONE
 
-    TYPE(t_slm_plant) :: plant
+    TYPE(t_slm_plant) :: veg
     REAL(wp) :: recycling
 
     recycling = resorption_default
@@ -182,11 +182,11 @@ CONTAINS
   !! should be made dynamically dependended on P stress later
   !!
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION update_phosphorus_recycling_fract(plant) RESULT (recycling)
+  FUNCTION update_phosphorus_recycling_fract(veg) RESULT (recycling)
 
     IMPLICIT NONE
 
-    TYPE(t_slm_plant) :: plant
+    TYPE(t_slm_plant) :: veg
     REAL(wp) :: recycling 
 
     recycling = resorption_default

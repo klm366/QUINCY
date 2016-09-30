@@ -55,7 +55,7 @@ CONTAINS
     TYPE(t_slm_tile),      INTENT(inout), TARGET  :: tile           !< one tile
     ! 0.2 Local
     TYPE(t_slm_soil), POINTER        :: soil                   ! soil variables per tile
-    TYPE(t_slm_plant),POINTER        :: plant                  ! plant variables per tile
+    TYPE(t_slm_plant),POINTER        :: veg                    ! plant variables per tile
     INTEGER                          :: icanop                 ! for looping across ncanopy layers
     REAL(wp)                         :: hlp1                   ! dummy variable 
     ! 0.3 Memory allocation
@@ -88,47 +88,47 @@ CONTAINS
 
 
    !  bi-directional pointer
-   plant => tile%plant
-   soil  => tile%soil
+   veg  => tile%veg
+   soil => tile%soil
 
    ! initialise output
-   plant%gc = 0.0_wp 
+   veg%gc = 0.0_wp 
 
 
    !> 1.0 calculate the moisture scaling factor for photosynthesis
    !! 
-   plant%beta_air     = calc_atm_moisture_stress(t_air, &
+   veg%beta_air     = calc_atm_moisture_stress(t_air, &
                                                  q_air, &
                                                  press_srf) 
-   plant%beta_soil_ps = calc_soil_moisture_stress(soil%theta, & 
+   veg%beta_soil_ps = calc_soil_moisture_stress(soil%theta, & 
                                                   lctlib%lambda_soil_ps, &
                                                   lctlib%weibull_k_soil_ps)
-   plant%beta_soil_gs = calc_soil_moisture_stress(soil%theta, &
+   veg%beta_soil_gs = calc_soil_moisture_stress(soil%theta, &
                                                   lctlib%lambda_soil_gs, &
                                                   lctlib%weibull_k_soil_gs)
 
    !> 2.0 calculate photosynthesis per layer
    !! 
    DO icanop = 1,ncanop
-      IF(plant%lai_cl(icanop) > eps8)THEN
+      IF(veg%lai_cl(icanop) > eps8)THEN
 
         CALL calc_photosynthesis(t_air                        , &
                                  press_srf                    , &
                                  co2_mixing_ratio             , &
                                  ga                           , & 
-                                 plant%par_sunlit_cl(icanop)  , &
-                                 plant%par_shaded_cl(icanop)  , & 
-                                 plant%fleaf_sunlit_cl(icanop), &
-                                 plant%beta_air               , &
-                                 plant%beta_soil_ps           , &
-                                 plant%beta_soil_gs           , &
-                                 plant%fnl_chl_cl(icanop)     , & 
-                                 plant%fnl_et_cl(icanop)      , & 
-                                 plant%fnl_rub_cl(icanop)     , & 
-                                 plant%fnl_pepc_cl(icanop)    , & 
-                                 plant%nl_tot_cl(icanop)      , & 
+                                 veg%par_sunlit_cl(icanop)  , &
+                                 veg%par_shaded_cl(icanop)  , & 
+                                 veg%fleaf_sunlit_cl(icanop), &
+                                 veg%beta_air               , &
+                                 veg%beta_soil_ps           , &
+                                 veg%beta_soil_gs           , &
+                                 veg%fnl_chl_cl(icanop)     , & 
+                                 veg%fnl_et_cl(icanop)      , & 
+                                 veg%fnl_rub_cl(icanop)     , & 
+                                 veg%fnl_pepc_cl(icanop)    , & 
+                                 veg%nl_tot_cl(icanop)      , & 
                                  lctlib%ps_pathway            , &
-                                 plant%t_jmax_opt_mavg        , &
+                                 veg%t_jmax_opt_mavg        , &
                                  lctlib%t_jmax_omega          , &
                                  lctlib%g0                    , &
                                  lctlib%g1                    , &
@@ -139,45 +139,45 @@ CONTAINS
                                  assimi%cil%ptr                   , &   ! out
                                  hlp1,hlp1,hlp1)
 
-        plant%gpp = plant%gpp + assimi%agl%ptr * plant%lai_cl(icanop) 
+        veg%gpp = veg%gpp + assimi%agl%ptr * veg%lai_cl(icanop) 
 
         IF(assimi%agl%ptr > eps8) THEN
            hlp1          = discrimination_ps(assimi%cil%ptr     , &
                                              co2_mixing_ratio   , &
                                              'C13'              , &
                                              lctlib%ps_pathway)
-           plant%gpp_C13 = plant%gpp_C13 + assimi%agl%ptr * plant%lai_cl(icanop) * calc_fractionation(co2_mixing_ratio  , &
+           veg%gpp_C13 = veg%gpp_C13 + assimi%agl%ptr * veg%lai_cl(icanop) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C13 , &
                                                                                                    hlp1)
            hlp1          = discrimination_ps(assimi%cil%ptr     , &
                                              co2_mixing_ratio   , &
                                              'C14'              , &
                                              lctlib%ps_pathway)
-           plant%gpp_C14 = plant%gpp_C14 + assimi%agl%ptr * plant%lai_cl(icanop) * calc_fractionation(co2_mixing_ratio  , &
+           veg%gpp_C14 = veg%gpp_C14 + assimi%agl%ptr * veg%lai_cl(icanop) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C14 , & 
                                                                                                    hlp1                 , &
                                                                                                    scale_correction_C14)
         ENDIF
 
-        plant%an                      = plant%an + assimi%anl%ptr * plant%lai_cl(icanop) 
-        plant%maint_respiration_leaf  = plant%maint_respiration_leaf + assimi%rl%ptr * plant%lai_cl(icanop) 
-        plant%gc                      = plant%gc + assimi%gsl%ptr * plant%lai_cl(icanop)
-        plant%ci                      = plant%ci + assimi%cil%ptr * plant%lai_cl(icanop)
+        veg%an                      = veg%an + assimi%anl%ptr * veg%lai_cl(icanop) 
+        veg%maint_respiration_leaf  = veg%maint_respiration_leaf + assimi%rl%ptr * veg%lai_cl(icanop) 
+        veg%gc                      = veg%gc + assimi%gsl%ptr * veg%lai_cl(icanop)
+        veg%ci                      = veg%ci + assimi%cil%ptr * veg%lai_cl(icanop)
 
         ! get the net photosynthesis of the lowest canopy layer at this timestep
-        IF(plant%lai_cl(icanop) > 0.0_wp) plant%an_boc = assimi%anl%ptr
+        IF(veg%lai_cl(icanop) > 0.0_wp) veg%an_boc = assimi%anl%ptr
      ENDIF
   ENDDO
 
   ! ci
-  IF(plant%lai>eps8) plant%ci = plant%ci / plant%lai
+  IF(veg%lai>eps8) veg%ci = veg%ci / veg%lai
 
   ! t_jmax_opt
   IF(assimi_config%flag_t_jmax_acclimation) THEN 
-     plant%t_jmax_opt = t_jmax_offset + t_jmax_slope * ( t_air - TZero ) 
-     plant%t_jmax_opt = MIN(MAX(plant%t_jmax_opt,t_jmax_opt_min),t_jmax_opt_max)
+     veg%t_jmax_opt = t_jmax_offset + t_jmax_slope * ( t_air - TZero ) 
+     veg%t_jmax_opt = MIN(MAX(veg%t_jmax_opt,t_jmax_opt_min),t_jmax_opt_max)
   ELSE 
-     plant%t_jmax_opt = lctlib%t_jmax_opt
+     veg%t_jmax_opt = lctlib%t_jmax_opt
   ENDIF
 
   END SUBROUTINE update_canopy_fluxes

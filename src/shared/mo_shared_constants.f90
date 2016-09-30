@@ -46,7 +46,8 @@ MODULE mo_shared_constants
 
 
   !!----------------------------------------------------------------------------------------------------
-  !! needed in mo_shared_update_time_averages
+  !! needed for mo_shared_update_time_averages:update_time_averages()
+  !! 
   !! moving average period lengths (you can add new parameters here)
   !! the period may be defined in days per default (but different units are possible, see calc_mavg() below)
     REAL(wp),PARAMETER :: mavg_period_weekly            = 7.0_wp        !< 7 days; constant across the model

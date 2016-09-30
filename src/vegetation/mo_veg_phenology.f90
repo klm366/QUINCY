@@ -49,7 +49,7 @@ CONTAINS
     TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile      !< one tile
     TYPE(t_lctlib_element),INTENT(in)       :: lctlib    !< land-cover-type library - parameters for one pft
       ! 0.2 Local
-    TYPE(t_slm_plant),POINTER               :: plant     ! plant variables per tile
+    TYPE(t_slm_plant),POINTER               :: veg     ! plant variables per tile
     REAL(wp) :: hlp1                                     ! helper variable for tmp values
     ! 0.3 Memory allocation
     TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
@@ -62,58 +62,58 @@ CONTAINS
 
 
     ! bi-directional pointer
-    plant => tile%plant
+    veg => tile%veg
 
 
     !> 1.0 check growing season has started or ended
     !! 
-    IF(.NOT.plant%growing_season) THEN ! If not in growing season, check whether growing season has started
+    IF(.NOT.veg%growing_season) THEN ! If not in growing season, check whether growing season has started
        SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is above specified threshold
-            IF(plant%beta_soil_gs_tphen_mavg > beta_soil_flush_tree) plant%growing_season = .TRUE.
+            IF(veg%beta_soil_gs_tphen_mavg > beta_soil_flush_tree) veg%growing_season = .TRUE.
          CASE (isummergreen)     ! if GDD requirement is exceeded. The latter depends on the length of the 
                                  ! dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
-            hlp1 = gdd_req_max / exp ( k_gdd_dormance * plant%nd_dormance ) 
-            IF(plant%gdd > hlp1) plant%growing_season = .TRUE.
+            hlp1 = gdd_req_max / exp ( k_gdd_dormance * veg%nd_dormance ) 
+            IF(veg%gdd > hlp1) veg%growing_season = .TRUE.
          CASE (iperennial)       ! if temperature and soil moisture are not limiting growth
-            IF(plant%t_air_tphen_mavg > gdd_t_air_threshold .AND. &
-               plant%beta_soil_gs_tphen_mavg > beta_soil_flush_grass) plant%growing_season = .TRUE.
+            IF(veg%t_air_tphen_mavg > gdd_t_air_threshold .AND. &
+               veg%beta_soil_gs_tphen_mavg > beta_soil_flush_grass) veg%growing_season = .TRUE.
        END SELECT
     ELSE                         ! If in the growing season, check whether growing season has ended
        SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is below given threshold AND leaves have been out a given number of days
-            IF(plant%beta_soil_gs_tphen_mavg < beta_soil_senescence_tree .AND. plant%mean_leaf_age > min_leaf_age ) & 
-               plant%growing_season = .FALSE.
+            IF(veg%beta_soil_gs_tphen_mavg < beta_soil_senescence_tree .AND. veg%mean_leaf_age > min_leaf_age ) & 
+               veg%growing_season = .FALSE.
          CASE (isummergreen)     ! if temperature are declining below a certain threshold AND 
                                  ! leaves have been out a given number of days
-            IF(plant%t_air_week_mavg < plant%t_air_month_mavg .AND. &
-                                plant%t_air_tphen_mavg < t_air_senescence .AND. & 
-                                plant%mean_leaf_age > min_leaf_age) plant%growing_season = .FALSE.
+            IF(veg%t_air_week_mavg < veg%t_air_month_mavg .AND. &
+                                veg%t_air_tphen_mavg < t_air_senescence .AND. & 
+                                veg%mean_leaf_age > min_leaf_age) veg%growing_season = .FALSE.
          CASE (iperennial)       ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND 
                                  ! leaves have been out a given number of days
-            IF((plant%t_air_tphen_mavg < Tzero .OR. plant%beta_soil_gs_tphen_mavg < eps4 .OR. &
-                plant%gpp_tlabile_mavg < plant%maint_respiration_tlabile_mavg).AND. &
-                plant%mean_leaf_age > min_leaf_age) &
-                plant%growing_season = .FALSE.
+            IF((veg%t_air_tphen_mavg < Tzero .OR. veg%beta_soil_gs_tphen_mavg < eps4 .OR. &
+                veg%gpp_tlabile_mavg < veg%maint_respiration_tlabile_mavg).AND. &
+                veg%mean_leaf_age > min_leaf_age) &
+                veg%growing_season = .FALSE.
        END SELECT
     ENDIF   
 
     !> 2.1 gdd counter
     !! 
     IF(t_air > gdd_t_air_threshold) THEN
-       plant%gdd = plant%gdd + ((t_air - gdd_t_air_threshold) * dt/one_day)
+       veg%gdd = veg%gdd + ((t_air - gdd_t_air_threshold) * dt/one_day)
     ENDIF
-    IF(plant%t_air_week_mavg < Tzero) plant%gdd = 0.0_wp
+    IF(veg%t_air_week_mavg < Tzero) veg%gdd = 0.0_wp
 
     !> 2.2 nd_dormance counter
     !! 
-    IF (plant%growing_season) THEN 
-      plant%gdd         = 0.0_wp
-      plant%nd_dormance = 0.0_wp
+    IF (veg%growing_season) THEN 
+      veg%gdd         = 0.0_wp
+      veg%nd_dormance = 0.0_wp
     ELSE
-      plant%nd_dormance = plant%nd_dormance + dt/one_day 
+      veg%nd_dormance = veg%nd_dormance + dt/one_day 
     ENDIF
 
   END SUBROUTINE update_phenology 

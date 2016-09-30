@@ -45,28 +45,28 @@ CONTAINS
     TYPE(t_slm_tile),INTENT(inout), TARGET   :: tile          !< one tile
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER      :: soil               ! soil variables per tile
-    TYPE(t_slm_plant),POINTER     :: plant              ! plant variables per tile
+    TYPE(t_slm_plant),POINTER     :: veg                ! plant variables per tile
     REAL(wp) :: dcost                                   ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
     REAL(wp) :: cost_nacq                               ! total C cost of N acquisition (mol C / mol N)
     REAL(wp) :: f_nacq_bnf,f_nacq_nup                   ! fraction of N uptake as BFN or Nuptake
 
     !  bi-directional pointer
-    plant => tile%plant
+    veg   => tile%veg
     soil  => tile%soil
 
     !> 1.0 Calculate an instantaneous scalar of nutrient demand
     !!     taken as difference of the the weekly growth requirement of the nutrient to the stoichiometry of the labile pool
     !!
     !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P 
-    IF(plant%pool%labile%carbon > eps8) THEN
-       plant%f_n_demand = MAX(plant%growth_req_n_tuptake_mavg - plant%pool%labile%nitrogen / plant%pool%labile%carbon, 0.0_wp) 
+    IF(veg%pool%labile%carbon > eps8) THEN
+       veg%f_n_demand = MAX(veg%growth_req_n_tuptake_mavg - veg%pool%labile%nitrogen / veg%pool%labile%carbon, 0.0_wp) 
     ELSE
-       plant%f_n_demand = 1.0_wp
+       veg%f_n_demand = 1.0_wp
     ENDIF
-    IF(plant%pool%labile%nitrogen > eps8) THEN
-       plant%f_p_demand = MAX(plant%growth_req_p_tuptake_mavg - plant%pool%labile%phosphorus / plant%pool%labile%nitrogen, 0.0_wp)
+    IF(veg%pool%labile%nitrogen > eps8) THEN
+       veg%f_p_demand = MAX(veg%growth_req_p_tuptake_mavg - veg%pool%labile%phosphorus / veg%pool%labile%nitrogen, 0.0_wp)
     ELSE
-       plant%f_p_demand = 1.0_wp
+       veg%f_p_demand = 1.0_wp
     ENDIF
 
     !> 2.0 inorganic N uptake (first guess)
@@ -77,27 +77,27 @@ CONTAINS
       !!
       CASE ("prescribed")
          ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
-         plant%uptake_n = MAX(plant%pool%labile%carbon / lctlib%cn_leaf - & 
-                                           plant%pool%labile%nitrogen, 0.0_wp) * 1.e6_wp / dt
+         veg%uptake_n = MAX(veg%pool%labile%carbon / lctlib%cn_leaf - & 
+                                           veg%pool%labile%nitrogen, 0.0_wp) * 1.e6_wp / dt
          ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
-         plant%uptake_p = MAX(plant%pool%labile%nitrogen / lctlib%np_leaf + & 
-                                              plant%uptake_n * dt / 1.e6 - &
-                                              plant%pool%labile%phosphorus, 0.0_wp) * 1.e6_wp / dt
+         veg%uptake_p = MAX(veg%pool%labile%nitrogen / lctlib%np_leaf + & 
+                                              veg%uptake_n * dt / 1.e6 - &
+                                              veg%pool%labile%phosphorus, 0.0_wp) * 1.e6_wp / dt
 
       !> 2.2 Case 2. Calculate inorganic N uptake according to Michaelis-Mnten Kinetics  
       !!
       CASE ("standard","optimal","resistance")
          ! OCN's MM Kinetics
-         plant%uptake_n = lctlib%vmax_uptake_n * &
-                 plant%demand_uptake_n_tuptake_mavg * & 
+         veg%uptake_n = lctlib%vmax_uptake_n * &
+                 veg%demand_uptake_n_tuptake_mavg * & 
                  soil%ammonium * ( lctlib%soil_n_aff1 + & 
                    1._wp / ( lctlib%soil_n_aff2 + soil%ammonium )) * & 
-                 plant%pool%fine_root%carbon
-         plant%uptake_p = lctlib%vmax_uptake_p * & 
-                 plant%demand_uptake_p_tuptake_mavg * & 
+                 veg%pool%fine_root%carbon
+         veg%uptake_p = lctlib%vmax_uptake_p * & 
+                 veg%demand_uptake_p_tuptake_mavg * & 
                  soil%phosphate * ( lctlib%soil_p_aff1 + & 
                    1._wp / ( lctlib%soil_p_aff2 + soil%phosphate )) * & 
-                 plant%pool%fine_root%carbon
+                 veg%pool%fine_root%carbon
 
     ENDSELECT
 
@@ -108,44 +108,44 @@ CONTAINS
       !> 3.1 Case 1: no N fixation
       !!
       CASE ("prescribed") 
-        plant%n_fixation = 0.0_wp
+        veg%n_fixation = 0.0_wp
       CASE("standard")
-        IF(soil%ammonium < 0.5_wp) plant%n_fixation = lctlib%bnf_base 
+        IF(soil%ammonium < 0.5_wp) veg%n_fixation = lctlib%bnf_base 
       !> 3.2 Case 2: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
       CASE ("optimal")
-        IF (plant%cost_n_fixation_tuptake_mavg <= plant%cost_n_uptake_root) THEN 
-           dcost  = plant%cost_n_uptake_root - plant%cost_n_fixation_tuptake_mavg
-           !@BLARPP!! Don'T understand the term plant%growth_req_n_tuptake_mavg*plant%npp_tuptake_mavg here
-           !plant%n_fixation = c_root * vmax_bnf * dcost / (k_bnf + dcost) * plant%growth_req_n_tuptake_mavg*plant%npp_tuptake_mavg
-           plant%n_fixation = plant%pool%fine_root%carbon * & 
+        IF (veg%cost_n_fixation_tuptake_mavg <= veg%cost_n_uptake_root) THEN 
+           dcost  = veg%cost_n_uptake_root - veg%cost_n_fixation_tuptake_mavg
+           !@BLARPP!! Don'T understand the term veg%growth_req_n_tuptake_mavg*veg%npp_tuptake_mavg here
+           !veg%n_fixation = c_root * vmax_bnf * dcost / (k_bnf + dcost) * veg%growth_req_n_tuptake_mavg*veg%npp_tuptake_mavg
+           veg%n_fixation = veg%pool%fine_root%carbon * & 
                               vmax_bnf * dcost / (k_bnf + dcost)
         ELSE
-           plant%n_fixation = 0.0_wp
+           veg%n_fixation = 0.0_wp
         ENDIF
       !> 3.3 Case 3: Ohm's law analogy 
       !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
       CASE ("resistance")
          ! total cost according to Ohm's law: parallel resistors
-         cost_nacq = 1._wp / (1._wp/plant%cost_n_uptake_root + 1._wp/plant%cost_n_fixation_tuptake_mavg) 
-         IF (plant%cost_n_fixation_tuptake_mavg > 5._wp * plant%cost_n_uptake_root) THEN
+         cost_nacq = 1._wp / (1._wp/veg%cost_n_uptake_root + 1._wp/veg%cost_n_fixation_tuptake_mavg) 
+         IF (veg%cost_n_fixation_tuptake_mavg > 5._wp * veg%cost_n_uptake_root) THEN
             f_nacq_bnf = 0.0_wp
             f_nacq_nup = 1.0_wp
          ELSE 
-            f_nacq_bnf = plant%cost_n_uptake_root/(plant%cost_n_uptake_root+plant%cost_n_fixation_tuptake_mavg)
-            f_nacq_nup = plant%cost_n_fixation_tuptake_mavg/(plant%cost_n_uptake_root+plant%cost_n_fixation_tuptake_mavg)
+            f_nacq_bnf = veg%cost_n_uptake_root/(veg%cost_n_uptake_root+veg%cost_n_fixation_tuptake_mavg)
+            f_nacq_nup = veg%cost_n_fixation_tuptake_mavg/(veg%cost_n_uptake_root+veg%cost_n_fixation_tuptake_mavg)
          ENDIF
-         plant%n_fixation = f_nacq_bnf * MAX(plant%growth_req_n_tuptake_mavg*plant%npp_tuptake_mavg,0.0_wp) 
-         plant%uptake_n   = MIN(f_nacq_nup * MAX(plant%growth_req_n_tuptake_mavg*plant%npp_tuptake_mavg,0.0_wp), & 
-                                plant%uptake_n)
+         veg%n_fixation = f_nacq_bnf * MAX(veg%growth_req_n_tuptake_mavg*veg%npp_tuptake_mavg,0.0_wp) 
+         veg%uptake_n   = MIN(f_nacq_nup * MAX(veg%growth_req_n_tuptake_mavg*veg%npp_tuptake_mavg,0.0_wp), & 
+                                veg%uptake_n)
     ENDSELECT 
 
     !> 3.0 Calculate potential N uptake per unit root
     !!
-    plant%unit_uptake_n = lctlib%vmax_uptake_n * &
+    veg%unit_uptake_n = lctlib%vmax_uptake_n * &
                                soil%ammonium * ( lctlib%soil_n_aff1 + & 
                                1._wp / ( lctlib%soil_n_aff2 + soil%ammonium ))
-    plant%unit_uptake_p = lctlib%vmax_uptake_p * &
+    veg%unit_uptake_p = lctlib%vmax_uptake_p * &
                                soil%phosphate * ( lctlib%soil_p_aff1 + & 
                                1._wp / ( lctlib%soil_p_aff2 + soil%phosphate ))
 
@@ -170,11 +170,11 @@ CONTAINS
     TYPE(t_slm_tile),INTENT(inout), TARGET    :: tile          !< one tile
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER      :: soil               ! soil variables per tile
-    TYPE(t_slm_plant),POINTER     :: plant              ! plant variables per tile
+    TYPE(t_slm_plant),POINTER     :: veg              ! plant variables per tile
     REAl(wp) :: soil_depth = 1.0 ! soil depth, m
 
     !  bi-directional pointer
-    plant => tile%plant
+    veg   => tile%veg
     soil  => tile%soil
 
 
@@ -185,10 +185,10 @@ CONTAINS
     
     !> 2 Update soil litter pool. Probably needs splitting into structural and non-structural litter
     !!
-    soil%pool%litter = soil%pool%litter + plant%litterfall%leaf
-    soil%pool%litter = soil%pool%litter + plant%litterfall%fine_root
-    soil%pool%litter = soil%pool%litter + plant%litterfall%coarse_root
-    soil%pool%litter = soil%pool%litter + plant%litterfall%heart_wood
+    soil%pool%litter = soil%pool%litter + veg%litterfall%leaf
+    soil%pool%litter = soil%pool%litter + veg%litterfall%fine_root
+    soil%pool%litter = soil%pool%litter + veg%litterfall%coarse_root
+    soil%pool%litter = soil%pool%litter + veg%litterfall%heart_wood
 
     soil%pool%litter = soil%pool%litter - soil%loss%litter * dt
     
@@ -199,11 +199,11 @@ CONTAINS
        soil%ammonium = 0.2_wp
     ELSE
        soil%ammonium = soil%ammonium   + soil%loss%litter%nitrogen*dt*  1.e3 / soil_depth * 1.e-3
-       soil%ammonium = soil%ammonium   - plant%uptake_n * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
+       soil%ammonium = soil%ammonium   - veg%uptake_n * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
     ENDIF
 
     !soil%phosphate = soil%phosphate + soil%loss%litter%phosphorus*dt*  1.e3 / soil_depth * 1.e-3
-    !soil%phosphate = soil%phosphate - plant%uptake_p * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
+    !soil%phosphate = soil%phosphate - veg%uptake_p * dt/1.e6 * 1.e3 / soil_depth * 1.e-3 
 
     END SUBROUTINE update_vegsoil_pool
 
@@ -235,7 +235,7 @@ CONTAINS
     TYPE(t_lctlib_element),INTENT(in)       :: lctlib   !< land-cover-type library - parameters for one pft
     ! 0.2 Local
     TYPE(t_slm_soil),POINTER                :: soil     ! soil variables per tile
-    TYPE(t_slm_plant),POINTER               :: plant    ! plant variables per tile
+    TYPE(t_slm_plant),POINTER               :: veg    ! plant variables per tile
     INTEGER  :: t
     REAL(wp) :: q_sat
     REAL(wp) :: evaporation
@@ -271,19 +271,19 @@ CONTAINS
 
 
     !  bi-directional pointer
-    plant => tile%plant
+    veg   => tile%veg
     soil  => tile%soil
 
 
     ! saturating specific humidity 
     q_sat = calc_spec_humidity_sat(t_air,press_srf)
 
-    IF(plant%gc > eps8)THEN
+    IF(veg%gc > eps8)THEN
        ! T = rho * (qsat - qair ) * Gtot in mm/s 
-       plant%transpiration = press_srf / ( r_gas_dryair * t_air ) * & 
-                  (q_sat - q_air) / (1._wp / plant%gc + 1._wp / ga )  
+       veg%transpiration = press_srf / ( r_gas_dryair * t_air ) * & 
+                  (q_sat - q_air) / (1._wp / veg%gc + 1._wp / ga )  
     ELSE 
-       plant%transpiration = 0.0_wp 
+       veg%transpiration = 0.0_wp 
     ENDIF
     ! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil = ga / 10)
     evaporation = press_srf / ( r_gas_dryair * t_air ) * & 
@@ -291,7 +291,7 @@ CONTAINS
     IF(net_radiation < eps8) evaporation = 0.0_wp
 
     ! calculate latent heat flux (W m-2) 
-    latent_heat_flx = LatentHeatVaporization * (evaporation + plant%transpiration)
+    latent_heat_flx = LatentHeatVaporization * (evaporation + veg%transpiration)
     ! diagnose sensible heat flux (shortwave compontent only)
     sensible_heat_flx = net_radiation - latent_heat_flx 
 
@@ -299,7 +299,7 @@ CONTAINS
 
        ! update soil moisture dS = rain - transpiration - evaporation 
        soil%moisture = soil%moisture + (rain + snow & 
-            - plant%transpiration - evaporation) * dt
+            - veg%transpiration - evaporation) * dt
        ! constrain to possible solutions
        soil%moisture = MAX(MIN(soil%moisture,veg_config%soil_awc_prescribe),0.0_wp)
        ! scale to relative water availability (%)
@@ -317,7 +317,7 @@ CONTAINS
    ! calculate soil wtaer potential according to Campbell et al 1974 
    soil%water_potential = k_soil_phi1 * & 
          (( theta_wilt + 0.01_wp * soil%theta * (theta_sat - theta_wilt))/theta_sat)**k_soil_phi2
-   plant%dphi = soil%water_potential - lctlib%phi_leaf_min - grav * rhoh2o * plant%height*1.e-6 
+   veg%dphi = soil%water_potential - lctlib%phi_leaf_min - grav * rhoh2o * veg%height*1.e-6 
 
   END SUBROUTINE update_vegsoil_physics
 

@@ -55,7 +55,7 @@ CONTAINS
     TYPE(t_slm_tile),INTENT(inout), TARGET :: tile    !< one tile
     TYPE(t_lctlib_element),INTENT(in)      :: lctlib  !< land-cover-type library - parameters for one pft
     ! 0.2 Local
-    TYPE(t_slm_plant),POINTER              :: plant   ! plant of one tile
+    TYPE(t_slm_plant),POINTER              :: veg     ! veg static memory
     !> @todo (update_radiation) these local variables need to be added to RADIATION memory once 3D variables are allowed for
     REAL(wp),DIMENSION(ncanop)             :: arad_sunlit_vis_cl, &
                                               arad_shaded_vis_cl, &
@@ -132,7 +132,7 @@ CONTAINS
 
 
     !  bi-directional pointer
-    plant => tile%plant
+    veg => tile%veg
 
 
     !> 1.0 Snow and soil albedo 
@@ -146,7 +146,7 @@ CONTAINS
     !! 
     CALL calc_sw_srf_net(swvis_srf_down, & 
                      swpar_fdiffuse, cos_zenith_angle, & 
-                     plant%lai, plant%lai_cl, plant%cumm_lai_cl,& 
+                     veg%lai, veg%lai_cl, veg%cumm_lai_cl,& 
                      lctlib%sigma_vis, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
                      kbl0_vis, kdf0_vis, alb_vis_soil, &
                      arad_sunlit_vis_cl,arad_shaded_vis_cl,fleaf_sunlit_vis_cl, &
@@ -159,7 +159,7 @@ CONTAINS
     !! diffuse radiation are very similar 
     CALL calc_sw_srf_net(swnir_srf_down, & 
                      swpar_fdiffuse, cos_zenith_angle, & 
-                     plant%lai, plant%lai_cl, plant%cumm_lai_cl, &
+                     veg%lai, veg%lai_cl, veg%cumm_lai_cl, &
                      lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
                      kbl0_nir, kdf0_nir, alb_nir_soil, &
                      arad_sunlit_nir_cl,arad_shaded_nir_cl,fleaf_sunlit_nir_cl, &
@@ -183,15 +183,15 @@ CONTAINS
 
     !> 6.0 communitcate APAR to plant type
     !!
-    plant%fleaf_sunlit_cl(:) = fleaf_sunlit_vis_cl(:) 
+    veg%fleaf_sunlit_cl(:) = fleaf_sunlit_vis_cl(:) 
     IF(swvis_srf_down > eps8) THEN 
-       plant%par_sunlit_cl(:) = arad_sunlit_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
-       plant%par_shaded_cl(:) = arad_shaded_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
-       plant%apar             = arad_vis_can          * swpar_srf_down/swvis_srf_down * rad2par 
+       veg%par_sunlit_cl(:) = arad_sunlit_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
+       veg%par_shaded_cl(:) = arad_shaded_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
+       veg%apar             = arad_vis_can          * swpar_srf_down/swvis_srf_down * rad2par 
     ELSE 
-       plant%par_sunlit_cl(:) = 0.0_wp
-       plant%par_shaded_cl(:) = 0.0_wp
-       plant%apar = 0.0_wp
+       veg%par_sunlit_cl(:) = 0.0_wp
+       veg%par_shaded_cl(:) = 0.0_wp
+       veg%apar = 0.0_wp
     ENDIF
 
   END SUBROUTINE update_radiation

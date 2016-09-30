@@ -382,7 +382,7 @@ CONTAINS
     INTEGER,  INTENT(in)                 :: time_y      !< time in years; the 1st year of a simulation == year 1 (not zero)
     INTEGER,  INTENT(in)                 :: itile       !< number of current tile
     ! 0.2 Local
-    TYPE(t_slm_plant),POINTER        :: plant          ! plant variables per tile
+    TYPE(t_slm_plant),POINTER        :: veg            ! veg static mem per tile
     TYPE(t_slm_soil),POINTER         :: soil           ! soil variables per tile
     INTEGER                          :: lun            ! locical unit number
     INTEGER                          :: icanop         ! loop over ncanop
@@ -393,8 +393,8 @@ CONTAINS
                                         dC13fruit,dC13labile,dC13reserve,dC13seed_bed
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
-    plant         => tile%plant
-    soil          => tile%soil
+    veg     => tile%veg
+    soil    => tile%soil
 
 
     !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
@@ -409,100 +409,100 @@ CONTAINS
       IF( MODULO(time_d, output_interval_pool) < eps4 .OR. &
          & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
        lun = 100 * itile
-       write(lun,'(10F12.6)') time_d,plant%pool%leaf%carbon,&
-         plant%pool%fine_root%carbon,plant%pool%sap_wood%carbon,&
-         plant%pool%heart_wood%carbon,plant%pool%coarse_root%carbon,&
-         plant%pool%fruit%carbon,plant%pool%labile%carbon,&
-         plant%pool%reserve%carbon,plant%pool%seed_bed%carbon
+       write(lun,'(10F12.6)') time_d,veg%pool%leaf%carbon,&
+         veg%pool%fine_root%carbon,veg%pool%sap_wood%carbon,&
+         veg%pool%heart_wood%carbon,veg%pool%coarse_root%carbon,&
+         veg%pool%fruit%carbon,veg%pool%labile%carbon,&
+         veg%pool%reserve%carbon,veg%pool%seed_bed%carbon
        lun=lun+1
-       dC13leaf        = calc_delta_C13(plant%pool%leaf%carbon,plant%pool%leaf%carbon13)
-       dC13fine_root   = calc_delta_C13(plant%pool%fine_root%carbon,plant%pool%fine_root%carbon13)
-       dC13sap_wood    = calc_delta_C13(plant%pool%sap_wood%carbon,plant%pool%sap_wood%carbon13)
-       dC13heart_wood  = calc_delta_C13(plant%pool%heart_wood%carbon,plant%pool%heart_wood%carbon13)
-       dC13coarse_root = calc_delta_C13(plant%pool%coarse_root%carbon,plant%pool%coarse_root%carbon13)
-       dC13fruit       = calc_delta_C13(plant%pool%fruit%carbon,plant%pool%fruit%carbon13)
-       dC13labile      = calc_delta_C13(plant%pool%labile%carbon,plant%pool%labile%carbon13)
-       dC13reserve     = calc_delta_C13(plant%pool%reserve%carbon,plant%pool%reserve%carbon13)
-       dC13seed_bed    = calc_delta_C13(plant%pool%seed_bed%carbon,plant%pool%seed_bed%carbon13)
+       dC13leaf        = calc_delta_C13(veg%pool%leaf%carbon,veg%pool%leaf%carbon13)
+       dC13fine_root   = calc_delta_C13(veg%pool%fine_root%carbon,veg%pool%fine_root%carbon13)
+       dC13sap_wood    = calc_delta_C13(veg%pool%sap_wood%carbon,veg%pool%sap_wood%carbon13)
+       dC13heart_wood  = calc_delta_C13(veg%pool%heart_wood%carbon,veg%pool%heart_wood%carbon13)
+       dC13coarse_root = calc_delta_C13(veg%pool%coarse_root%carbon,veg%pool%coarse_root%carbon13)
+       dC13fruit       = calc_delta_C13(veg%pool%fruit%carbon,veg%pool%fruit%carbon13)
+       dC13labile      = calc_delta_C13(veg%pool%labile%carbon,veg%pool%labile%carbon13)
+       dC13reserve     = calc_delta_C13(veg%pool%reserve%carbon,veg%pool%reserve%carbon13)
+       dC13seed_bed    = calc_delta_C13(veg%pool%seed_bed%carbon,veg%pool%seed_bed%carbon13)
        write(lun,'(19F18.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
          dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seed_bed, & 
-         calc_delta_C14(plant%pool%leaf%carbon,plant%pool%leaf%carbon14,dC13leaf),&
-         calc_delta_C14(plant%pool%fine_root%carbon,plant%pool%fine_root%carbon14,dC13fine_root),&
-         calc_delta_C14(plant%pool%sap_wood%carbon,plant%pool%sap_wood%carbon14,dC13sap_wood),&
-         calc_delta_C14(plant%pool%heart_wood%carbon,plant%pool%heart_wood%carbon14,dC13heart_wood),&
-         calc_delta_C14(plant%pool%coarse_root%carbon,plant%pool%coarse_root%carbon14,dC13coarse_root),&
-         calc_delta_C14(plant%pool%fruit%carbon,plant%pool%fruit%carbon14,dC13fruit),&
-         calc_delta_C14(plant%pool%labile%carbon,plant%pool%labile%carbon14,dC13labile),&
-         calc_delta_C14(plant%pool%reserve%carbon,plant%pool%reserve%carbon14,dC13reserve),&
-         calc_delta_C14(plant%pool%seed_bed%carbon,plant%pool%seed_bed%carbon14,dC13seed_bed)
+         calc_delta_C14(veg%pool%leaf%carbon,veg%pool%leaf%carbon14,dC13leaf),&
+         calc_delta_C14(veg%pool%fine_root%carbon,veg%pool%fine_root%carbon14,dC13fine_root),&
+         calc_delta_C14(veg%pool%sap_wood%carbon,veg%pool%sap_wood%carbon14,dC13sap_wood),&
+         calc_delta_C14(veg%pool%heart_wood%carbon,veg%pool%heart_wood%carbon14,dC13heart_wood),&
+         calc_delta_C14(veg%pool%coarse_root%carbon,veg%pool%coarse_root%carbon14,dC13coarse_root),&
+         calc_delta_C14(veg%pool%fruit%carbon,veg%pool%fruit%carbon14,dC13fruit),&
+         calc_delta_C14(veg%pool%labile%carbon,veg%pool%labile%carbon14,dC13labile),&
+         calc_delta_C14(veg%pool%reserve%carbon,veg%pool%reserve%carbon14,dC13reserve),&
+         calc_delta_C14(veg%pool%seed_bed%carbon,veg%pool%seed_bed%carbon14,dC13seed_bed)
        lun=lun+1
-       write(lun,'(10F12.6)') time_d,plant%pool%leaf%nitrogen,&
-         plant%pool%fine_root%nitrogen,plant%pool%sap_wood%nitrogen,&
-         plant%pool%heart_wood%nitrogen,plant%pool%coarse_root%nitrogen,&
-         plant%pool%fruit%nitrogen,plant%pool%labile%nitrogen,&
-         plant%pool%reserve%nitrogen,plant%pool%seed_bed%nitrogen
+       write(lun,'(10F12.6)') time_d,veg%pool%leaf%nitrogen,&
+         veg%pool%fine_root%nitrogen,veg%pool%sap_wood%nitrogen,&
+         veg%pool%heart_wood%nitrogen,veg%pool%coarse_root%nitrogen,&
+         veg%pool%fruit%nitrogen,veg%pool%labile%nitrogen,&
+         veg%pool%reserve%nitrogen,veg%pool%seed_bed%nitrogen
        lun=lun+1
-       write(lun,'(10F12.6)') time_d,plant%pool%leaf%phosphorus,&
-         plant%pool%fine_root%phosphorus,plant%pool%sap_wood%phosphorus,&
-         plant%pool%heart_wood%phosphorus,plant%pool%coarse_root%phosphorus,&
-         plant%pool%fruit%phosphorus,plant%pool%labile%phosphorus,&
-         plant%pool%reserve%phosphorus,plant%pool%seed_bed%phosphorus
+       write(lun,'(10F12.6)') time_d,veg%pool%leaf%phosphorus,&
+         veg%pool%fine_root%phosphorus,veg%pool%sap_wood%phosphorus,&
+         veg%pool%heart_wood%phosphorus,veg%pool%coarse_root%phosphorus,&
+         veg%pool%fruit%phosphorus,veg%pool%labile%phosphorus,&
+         veg%pool%reserve%phosphorus,veg%pool%seed_bed%phosphorus
        lun=lun+1
-       write(lun,'(9F12.6)') time_d, soil%moisture, soil%water_potential,plant%beta_soil_gs,plant%beta_soil_ps
+       write(lun,'(9F12.6)') time_d, soil%moisture, soil%water_potential,veg%beta_soil_gs,veg%beta_soil_ps
        lun=lun+1
        write(lun,'(3F12.6)') time_d, soil%pool%litter%nitrogen, soil%ammonium
        lun=lun+1
        DO icanop=1, ncanop
-         write(lun,'(8F12.6)') time_d, REAL(icanop), plant%fnl_et_cl(icanop), &
-                               plant%fnl_rub_cl(icanop), plant%fnl_chl_cl(icanop),&
-                               plant%fnl_pepc_cl(icanop), plant%fnl_oth_cl(icanop),plant%nl_tot_cl(icanop)
+         write(lun,'(8F12.6)') time_d, REAL(icanop), veg%fnl_et_cl(icanop), &
+                               veg%fnl_rub_cl(icanop), veg%fnl_chl_cl(icanop),&
+                               veg%fnl_pepc_cl(icanop), veg%fnl_oth_cl(icanop),veg%nl_tot_cl(icanop)
        END DO
 
        IF(lctlib%growthform == itree) THEN 
-          IF (plant%pool%sap_wood%carbon > eps8) THEN
-             hlp1 = plant%lai/(plant%pool%sap_wood%carbon / plant%height / lctlib%wood_density)
+          IF (veg%pool%sap_wood%carbon > eps8) THEN
+             hlp1 = veg%lai/(veg%pool%sap_wood%carbon / veg%height / lctlib%wood_density)
           ELSE
              hlp1 = 0._wp
           ENDIF
        ELSE
-          IF (plant%pool%leaf%carbon>eps8) THEN
-             hlp1 = plant%pool%sap_wood%carbon/plant%pool%leaf%carbon
+          IF (veg%pool%leaf%carbon>eps8) THEN
+             hlp1 = veg%pool%sap_wood%carbon/veg%pool%leaf%carbon
           ELSE
              hlp1 = 0._wp
           ENDIF
        ENDIF
-       IF (plant%pool%fine_root%carbon > eps8) THEN
-          l2r = plant%pool%leaf%carbon/plant%pool%fine_root%carbon
+       IF (veg%pool%fine_root%carbon > eps8) THEN
+          l2r = veg%pool%leaf%carbon/veg%pool%fine_root%carbon
        ELSE
           l2r = 0._wp
        ENDIF
-       IF (plant%pool%sap_wood%carbon>eps8) THEN
-          s2c =  plant%pool%coarse_root%carbon/plant%pool%sap_wood%carbon
+       IF (veg%pool%sap_wood%carbon>eps8) THEN
+          s2c =  veg%pool%coarse_root%carbon/veg%pool%sap_wood%carbon
        ELSE
           s2c = 0._wp
        ENDIF
-       IF ((plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon+&
-            plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)>eps8) THEN
-          bcf =  (plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)/ & 
-         (plant%pool%leaf%carbon+plant%pool%sap_wood%carbon+plant%pool%heart_wood%carbon+&
-            plant%pool%fine_root%carbon+plant%pool%coarse_root%carbon)
+       IF ((veg%pool%leaf%carbon+veg%pool%sap_wood%carbon+veg%pool%heart_wood%carbon+&
+            veg%pool%fine_root%carbon+veg%pool%coarse_root%carbon)>eps8) THEN
+          bcf =  (veg%pool%fine_root%carbon+veg%pool%coarse_root%carbon)/ & 
+         (veg%pool%leaf%carbon+veg%pool%sap_wood%carbon+veg%pool%heart_wood%carbon+&
+            veg%pool%fine_root%carbon+veg%pool%coarse_root%carbon)
        ELSE
           bcf = 0._wp
        ENDIF
        ! transition from bool to 0/1 for growing season
-       IF (plant%growing_season) THEN
+       IF (veg%growing_season) THEN
          growing_season_float = 1.0_wp
          ELSE
          growing_season_float = 0.0_wp
        END IF 
        lun=lun+1
-       write(lun,'(22F20.6)') time_d, plant%height, plant%diameter, plant%lai, plant%dens_ind, &
+       write(lun,'(22F20.6)') time_d, veg%height, veg%diameter, veg%lai, veg%dens_ind, &
          hlp1,l2r,s2c, bcf, &
-         plant%target_cn_leaf, plant%unit_npp_talloc_mavg, plant%unit_uptake_n_talloc_mavg,&
-         plant%growth_cn_talloc_mavg, plant%npp_talloc_mavg, &
+         veg%target_cn_leaf, veg%unit_npp_talloc_mavg, veg%unit_uptake_n_talloc_mavg,&
+         veg%growth_cn_talloc_mavg, veg%npp_talloc_mavg, &
          growing_season_float, & 
-         plant%cost_n_uptake_root, plant%cost_n_fixation_tuptake_mavg, &
-         plant%unit_transpiration_talloc_mavg*1.e10_wp,plant%transpiration_talloc_mavg 
+         veg%cost_n_uptake_root, veg%cost_n_fixation_tuptake_mavg, &
+         veg%unit_transpiration_talloc_mavg*1.e10_wp,veg%transpiration_talloc_mavg 
       END IF
     END IF
     END IF  ! on/off switch specific to 'special case: fluxnet output'
@@ -532,7 +532,7 @@ CONTAINS
     INTEGER,  INTENT(in)                 :: time_y  !< time in years; the 1st year of a simulation == year 1 (not zero)
     INTEGER,  INTENT(in)                 :: itile   !< number of current tile
     ! 0.2 Local
-    TYPE(t_slm_plant),POINTER    :: plant           ! plant variables per tile
+    TYPE(t_slm_plant),POINTER    :: veg           ! plant variables per tile
     INTEGER                      :: lun             ! locical unit number
     REAL(wp), SAVE               :: dt_one = 1.0_wp ! just 1.0
     REAL(wp)                     :: dC13gpp,dC13rg,dC13rm
@@ -561,7 +561,7 @@ CONTAINS
     latent_heat_flx   => land2atm__mem%latent_heat_flx%ptr
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
-    plant => tile%plant
+    veg => tile%veg
 
 
     !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
@@ -583,37 +583,37 @@ CONTAINS
         ELSE
           dt_one = dt / 1000000.0_wp      ! interval > timestep
       END IF
-      gpp_acc(itile)          = gpp_acc(itile)           + plant%gpp                     * dt_one
-      growth_resp_acc(itile)  = growth_resp_acc(itile)   + plant%growth_respiration      * dt_one
-      maint_resp_acc(itile)   = maint_resp_acc(itile)    + plant%maint_respiration       * dt_one
-      n_transform_resp_acc(itile) = n_transform_resp_acc(itile) + plant%n_transform_respiration       * dt_one
-      n_fixation_resp_acc(itile) = n_fixation_resp_acc(itile) + plant%n_fixation_respiration       * dt_one
-      npp_acc(itile)          = npp_acc(itile)           + plant%npp                     * dt_one
-      res_use_c_acc(itile)    = res_use_c_acc(itile)     + plant%reserve_use%carbon      * dt_one *1000000._wp/dt
-      gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + plant%gpp_c13                * dt_one
-      growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + plant%growth_respiration_c13 * dt_one
-      maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + plant%maint_respiration_c13  * dt_one
-      gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + plant%gpp_c14                * dt_one
-      growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + plant%growth_respiration_c14 * dt_one
-      maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + plant%maint_respiration_c14  * dt_one
-      uptake_n_acc(itile)     = uptake_n_acc(itile)      + plant%uptake_n                * dt_one
-      recycling_n_acc(itile) = recycling_n_acc(itile)  + ( plant%recycling_leaf_n + &
-                                plant%recycling_fine_root_n + plant%recycling_sap_wood_n )  * dt_one *1000000._wp/dt
-      res_use_n_acc(itile)    = res_use_n_acc(itile)     + plant%reserve_use%nitrogen    * dt_one *1000000._wp/dt
-      n_fixation_acc(itile)   = n_fixation_acc(itile)    + plant%n_fixation              * dt_one 
-      uptake_p_acc(itile)     = uptake_p_acc(itile)      + plant%uptake_p                * dt_one
-      recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( plant%recycling_leaf_p + & 
-                                plant%recycling_fine_root_p + plant%recycling_sap_wood_p ) * dt_one *1000000._wp/dt
-      res_use_p_acc(itile)    = res_use_p_acc(itile)     + plant%reserve_use%phosphorus  * dt_one *1000000._wp/dt
-      transpiration_acc(itile)= transpiration_acc(itile) + plant%transpiration           * dt_one 
-      gc_acc(itile)           = plant%gc                                                      
+      gpp_acc(itile)          = gpp_acc(itile)           + veg%gpp                     * dt_one
+      growth_resp_acc(itile)  = growth_resp_acc(itile)   + veg%growth_respiration      * dt_one
+      maint_resp_acc(itile)   = maint_resp_acc(itile)    + veg%maint_respiration       * dt_one
+      n_transform_resp_acc(itile) = n_transform_resp_acc(itile) + veg%n_transform_respiration       * dt_one
+      n_fixation_resp_acc(itile) = n_fixation_resp_acc(itile) + veg%n_fixation_respiration       * dt_one
+      npp_acc(itile)          = npp_acc(itile)           + veg%npp                     * dt_one
+      res_use_c_acc(itile)    = res_use_c_acc(itile)     + veg%reserve_use%carbon      * dt_one *1000000._wp/dt
+      gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + veg%gpp_c13                * dt_one
+      growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + veg%growth_respiration_c13 * dt_one
+      maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + veg%maint_respiration_c13  * dt_one
+      gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + veg%gpp_c14                * dt_one
+      growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + veg%growth_respiration_c14 * dt_one
+      maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + veg%maint_respiration_c14  * dt_one
+      uptake_n_acc(itile)     = uptake_n_acc(itile)      + veg%uptake_n                * dt_one
+      recycling_n_acc(itile) = recycling_n_acc(itile)  + ( veg%recycling_leaf_n + &
+                                veg%recycling_fine_root_n + veg%recycling_sap_wood_n )  * dt_one *1000000._wp/dt
+      res_use_n_acc(itile)    = res_use_n_acc(itile)     + veg%reserve_use%nitrogen    * dt_one *1000000._wp/dt
+      n_fixation_acc(itile)   = n_fixation_acc(itile)    + veg%n_fixation              * dt_one 
+      uptake_p_acc(itile)     = uptake_p_acc(itile)      + veg%uptake_p                * dt_one
+      recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( veg%recycling_leaf_p + & 
+                                veg%recycling_fine_root_p + veg%recycling_sap_wood_p ) * dt_one *1000000._wp/dt
+      res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus  * dt_one *1000000._wp/dt
+      transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration           * dt_one 
+      gc_acc(itile)           = veg%gc                                                      
       ga_acc(itile)           = ga                                                   
       albedo_acc(itile)       = albedo
       ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2par   * dt_one               
       rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dt_one               
       qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dt_one               
       qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dt_one               
-      apar_acc(itile)         = apar_acc(itile)          + plant%apar                 * dt_one               
+      apar_acc(itile)         = apar_acc(itile)          + veg%apar                 * dt_one               
 
       !> 1.2 write fluxes and set to zero
       !!

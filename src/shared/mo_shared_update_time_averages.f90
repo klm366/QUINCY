@@ -74,13 +74,13 @@ CONTAINS
 
     !> 1.0 daytime averages
     !! 
-    CALL calc_daytime_averages(tile%plant, time_day, timestep_prop_day, swpar_srf_down, & 
+    CALL calc_daytime_averages(tile%veg, time_day, timestep_prop_day, swpar_srf_down, & 
                                t_air, press_srf, co2_mixing_ratio, ga)
 
 
     !> 2.0 moving averages
     !! 
-    CALL calc_moving_averages(lctlib, tile%plant, t_air, press_srf, co2_mixing_ratio, ga)
+    CALL calc_moving_averages(lctlib, tile%veg, t_air, press_srf, co2_mixing_ratio, ga)
 
 
 
@@ -107,7 +107,7 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_plant), INTENT(inout)      :: veg                !< veg variables per tile
+    TYPE(t_slm_plant), INTENT(inout)      :: veg                !< veg static memory per tile
     REAL(wp), INTENT(in)                  :: time_day           !< time in days
     REAL(wp), INTENT(in)                  :: timestep_prop_day  !< length of one time step (proportion of one day)
     REAL(wp), INTENT(in)                  :: swpar_srf_down     !< shortwave downward flux in PAR band 
