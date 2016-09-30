@@ -351,7 +351,7 @@ CONTAINS
       ELSE
          tile%plant%pool%reserve  = init_pool 
       ENDIF
- 
+       tile%soil%pool%litter%nitrogen      = 5._wp
   END SUBROUTINE init_slm_plant
 
 

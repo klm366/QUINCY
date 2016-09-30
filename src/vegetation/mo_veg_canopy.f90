@@ -765,14 +765,19 @@ CONTAINS
              fine_root_nitrogen, coarse_root_nitrogen) 
 
        ! calculate NPP
-       npp_direction(dd) = npp_direction(dd)-maint_respiration(dd)
+       !npp_direction(dd) = npp_direction(dd)-maint_respiration(dd)
 
      ENDDO
         
      ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
 !@todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functiong in 4D
 !@todo:plant%leaf_cn_direction rename to plant%opt_leaf_cn_direction
-     plant%leaf_cn_direction = REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp
+
+     !IF (plant%labile_carbon_talloc_mavg/plant%labile_nitrogen_talloc_mavg > plant%growth_cn_talloc_mavg) THEN
+     !   plant%leaf_cn_direction = -1._wp
+     !ELSE
+        plant%leaf_cn_direction = REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp
+     !ENDIF
 
   ELSE
      plant%leaf_cn_direction = 0.0_wp

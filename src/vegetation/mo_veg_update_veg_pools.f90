@@ -75,7 +75,7 @@ CONTAINS
        !! 
        !! 
        plant%growth%labile%nitrogen = plant%growth%labile%nitrogen + &
-          ( plant%uptake_n + plant%n_fixation ) * dt / 1000000.0_wp
+          ( plant%uptake_n + plant%n_fixation) * dt / 1000000.0_wp
        plant%growth%labile%nitrogen15 = plant%growth%labile%nitrogen15 + & 
           ( plant%uptake_n15 + plant%n_fixation_n15) * dt / 1000000.0_wp
        plant%growth%labile%phosphorus = plant%growth%labile%phosphorus + &

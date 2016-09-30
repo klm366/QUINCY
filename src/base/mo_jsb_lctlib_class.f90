@@ -248,7 +248,7 @@ CONTAINS
       lctlib(1:npft)%soil_p_aff2 = 0.4_wp        ! tuned from OCN's 0.84 gN/m2 assuming 150 L per m2
       ! placeholder constant BNf rate, required to keep soil NH4 at constant levels mumol N s-1 
       lctlib(1:npft)%bnf_base = & 
-      (/2.6_wp, 2.6_wp, 2.6_wp, 5.0_wp, 2.6_wp, 2.6_wp, 2.6_wp, 2.6_wp/) * 1.e-3_wp 
+      (/2.6_wp, 2.6_wp, 2.6_wp, 5.0_wp, 2.6_wp, 2.6_wp, 2.6_wp, 2.6_wp/) * 1.e-2 *0.5_wp
       ! parameter in the Weibull function controlling light-limited establishment 
       lctlib(1:npft)%lambda_est_light = 1.1_wp        
       ! parameter in the Weibull function controlling light-limited establishment

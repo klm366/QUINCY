@@ -95,7 +95,7 @@ CONTAINS
     IF (veg_config%flag_optimal_Nleaf.AND.plant%growing_season) & 
        CALL calc_dir_optimal_cn_leaf(lctlib, plant)
 
-    CALL update_stoichiometry(plant,lctlib%growthform, & 
+    CALL update_stoichiometry(plant,lctlib%growthform, lctlib%cn_leaf, & 
                               target_cn_fine_root,target_cn_coarse_root,target_cn_sap_wood, & 
                               target_cn_fruit,target_np_fine_root,target_np_coarse_root, & 
                               target_np_sap_wood,target_np_fruit)
@@ -580,7 +580,7 @@ CONTAINS
   !! Includes optimal CN ratio calculation \n
   !! Output: target stoichiometries
   ! --------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE update_stoichiometry(plant,growthform,target_cn_fine_root,target_cn_coarse_root, & 
+  ELEMENTAL SUBROUTINE update_stoichiometry(plant,growthform,cn_leaf,target_cn_fine_root,target_cn_coarse_root, & 
                               target_cn_sap_wood,target_cn_fruit,target_np_fine_root, & 
                               target_np_coarse_root,target_np_sap_wood,target_np_fruit)
 
@@ -591,6 +591,7 @@ CONTAINS
     ! 0.1 InOut
     INTEGER, INTENT(in)              :: growthform             !< plant growth form
     TYPE(t_slm_plant), INTENT(inout) :: plant                  !< plant structure
+    REAL(wp), INTENT(in)             :: cn_leaf                !< fixed PFT specific leaf CN ratio
     REAL(wp), INTENT(out)            :: target_cn_fine_root    !< fine root target C:N
     REAL(wp), INTENT(out)            :: target_cn_coarse_root  !< coarse root target C:N
     REAL(wp), INTENT(out)            :: target_cn_sap_wood     !< sap wood target C:N
@@ -610,16 +611,16 @@ CONTAINS
 
     !> 2.0 determine C:N of other plant tissues
     !!
-    target_cn_fine_root = plant%target_cn_leaf / root2leaf_cn
+    target_cn_fine_root = cn_leaf / root2leaf_cn
     SELECT CASE(growthform)
       CASE (itree) ! trees
-         target_cn_coarse_root = plant%target_cn_leaf / wood2leaf_cn
-         target_cn_sap_wood = plant%target_cn_leaf / wood2leaf_cn 
+         target_cn_coarse_root = cn_leaf / wood2leaf_cn
+         target_cn_sap_wood = cn_leaf / wood2leaf_cn 
       CASE (igrass) ! grasses 
-         target_cn_coarse_root = plant%target_cn_leaf / root2leaf_cn
-         target_cn_sap_wood = plant%target_cn_leaf / root2leaf_cn 
+         target_cn_coarse_root = cn_leaf / root2leaf_cn
+         target_cn_sap_wood = cn_leaf / root2leaf_cn 
     END SELECT
-    target_cn_fruit = plant%target_cn_leaf / root2leaf_cn
+    target_cn_fruit = cn_leaf / root2leaf_cn
 
     !> 3.0 determine N:P of other plant tissues
     !!

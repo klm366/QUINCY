@@ -75,7 +75,7 @@ CONTAINS
          CASE (isummergreen)     ! if GDD requirement is exceeded. The latter depends on the length of the 
                                  ! dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
             hlp1 = gdd_req_max / exp ( k_gdd_dormance * plant%nd_dormance ) 
-            IF(plant%gdd > hlp1 ) plant%growing_season = .TRUE.
+            IF(plant%gdd > hlp1) plant%growing_season = .TRUE.
          CASE (iperennial)       ! if temperature and soil moisture are not limiting growth
             IF(plant%t_air_tphen_mavg > gdd_t_air_threshold .AND. &
                plant%beta_soil_gs_tphen_mavg > beta_soil_flush_grass) plant%growing_season = .TRUE.
