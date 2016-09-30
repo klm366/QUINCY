@@ -22,7 +22,7 @@ MODULE mo_assimi_memory_class
   PRIVATE
   PUBLIC :: t_assimi_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40   ! default JSBACH4
+  INTEGER, PARAMETER :: max_no_of_vars = 20   ! default JSBACH4
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -32,11 +32,12 @@ MODULE mo_assimi_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
 
   ! *slmtemp  --> 2D
-    TYPE(t_jsb_var_real1d)    :: &          ! REAL(wp) 1D ; implemented for SLM use only, see mo_jsb_var_class 
-                                gpp, &
-                                gpp_c13
-
-
+    TYPE(t_jsb_var_real1d)    :: &
+                              agl           , &      !< ..
+                              anl           , &      !< ..
+                              rl            , &      !< ..
+                              gsl           , &      !< ..
+                              cil                    !< ..
 
 
   CONTAINS
@@ -86,15 +87,31 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ASSOCIATED(mem%gpp%ptr)) THEN
+    IF (.NOT. ASSOCIATED(mem%agl%ptr)) THEN
 
-      CALL slm_add_var(mem, 'gross_assimilation', mem%gpp, &          ! i.e. gross photosynthesis
-            ics, ice, iblk, &    ! model%options -> for SLM compatibility
-            initval_r=0.0_wp) ! initval taken from JSBACH3
+      !> add variables to assimi memory assimi\%VAR
+      !! 
+      !! slm_add_var -> slm_add_var_list_element_r1d    *slmtemp 1D -> 2D
+      !!  
+      CALL slm_add_var(mem, 'assimi_agl', mem%agl, &
+            ics, ice, iblk, &     ! model%options -> for SLM compatibility
+            initval_r=0.0_wp)     ! initvalue 
 
-      CALL slm_add_var(mem, 'gross_assimilation_c13', mem%gpp_c13, &  ! i.e. gross photosynthesis
-            ics, ice, iblk, &    ! model%options -> for SLM compatibility
-            initval_r=0.0_wp) ! initval taken from JSBACH3
+      CALL slm_add_var(mem, 'assimi_anl', mem%anl, &
+            ics, ice, iblk, &     ! model%options -> for SLM compatibility
+            initval_r=0.0_wp)     ! initvalue 
+
+      CALL slm_add_var(mem, 'assimi_rl', mem%rl, &
+            ics, ice, iblk, &     ! model%options -> for SLM compatibility
+            initval_r=0.0_wp)     ! initvalue 
+
+      CALL slm_add_var(mem, 'assimi_gsl', mem%gsl, &
+            ics, ice, iblk, &     ! model%options -> for SLM compatibility
+            initval_r=0.0_wp)     ! initvalue 
+
+      CALL slm_add_var(mem, 'assimi_cil', mem%cil, &
+            ics, ice, iblk, &     ! model%options -> for SLM compatibility
+            initval_r=0.0_wp)     ! initvalue 
 
     END IF
 

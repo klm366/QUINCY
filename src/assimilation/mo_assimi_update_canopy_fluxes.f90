@@ -51,21 +51,17 @@ CONTAINS
  
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_lctlib_element),INTENT(in)        :: lctlib         !< land-cover-type library - parameters for one pft
-    TYPE(t_slm_tile),INTENT(inout), TARGET   :: tile           !< one tile
+    TYPE(t_lctlib_element),INTENT(in)             :: lctlib         !< land-cover-type library - parameters for one pft
+    TYPE(t_slm_tile),      INTENT(inout), TARGET  :: tile           !< one tile
     ! 0.2 Local
-    TYPE(t_slm_soil),POINTER         :: soil                   ! soil variables per tile
+    TYPE(t_slm_soil), POINTER        :: soil                   ! soil variables per tile
     TYPE(t_slm_plant),POINTER        :: plant                  ! plant variables per tile
-    REAL(wp),DIMENSION(ncanop)       :: agl , &                ! ..
-                                        anl , &                ! ..
-                                        rl  , &                ! ..
-                                        gsl , &                ! ..
-                                        cil                    ! ..
     INTEGER                          :: icanop                 ! for looping across ncanopy layers
     REAL(wp)                         :: hlp1                   ! dummy variable 
     ! 0.3 Memory allocation
     TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
-!    TYPE(t_assimi_memory), POINTER   :: assimi__mem
+    TYPE(t_assimi_memory),   POINTER :: assimi__mem
+    TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to assimi__mem for SLM usability
     REAL(wp), POINTER :: t_air
     REAL(wp), POINTER :: q_air
     REAL(wp), POINTER :: press_srf
@@ -77,10 +73,11 @@ CONTAINS
       TYPE IS(t_atm2land_memory)
         atm2land__mem => mm
     END SELECT
-!    SELECT TYPE (mm => tile%mem(ASSIMI_)%p)
-!      TYPE IS(t_assimi_memory)
-!        assimi__mem => mm
-!    END SELECT
+    SELECT TYPE (mm => tile%mem(ASSIMI_)%p)
+      TYPE IS(t_assimi_memory)
+        assimi__mem => mm
+    END SELECT
+    assimi  => assimi__mem
     t_air                => atm2land__mem%t_air%ptr
     q_air                => atm2land__mem%q_air%ptr
     press_srf            => atm2land__mem%press_srf%ptr
@@ -95,11 +92,6 @@ CONTAINS
    soil  => tile%soil
 
    ! initialise output
-   agl(:)   = 0.0_wp 
-   anl(:)   = 0.0_wp 
-   rl(:)    = 0.0_wp
-   gsl(:)   = 0.0_wp
-   cil(:)   = 0.0_wp     
    plant%gc = 0.0_wp 
 
 
@@ -140,40 +132,40 @@ CONTAINS
                                  lctlib%t_jmax_omega          , &
                                  lctlib%g0                    , &
                                  lctlib%g1                    , &
-                                 agl(icanop)                  , &
-                                 anl(icanop)                  , &
-                                 rl(icanop)                   , &
-                                 gsl(icanop)                  , &
-                                 cil(icanop)                  , &
+                                 assimi%agl%ptr                   , &   ! out
+                                 assimi%anl%ptr                   , &   ! out
+                                 assimi%rl%ptr                    , &   ! out
+                                 assimi%gsl%ptr                   , &   ! out
+                                 assimi%cil%ptr                   , &   ! out
                                  hlp1,hlp1,hlp1)
 
-        plant%gpp = plant%gpp + agl(icanop) * plant%lai_cl(icanop) 
+        plant%gpp = plant%gpp + assimi%agl%ptr * plant%lai_cl(icanop) 
 
-        IF(agl(icanop) > eps8) THEN
-           hlp1          = discrimination_ps(cil(icanop)        , &
+        IF(assimi%agl%ptr > eps8) THEN
+           hlp1          = discrimination_ps(assimi%cil%ptr     , &
                                              co2_mixing_ratio   , &
                                              'C13'              , &
                                              lctlib%ps_pathway)
-           plant%gpp_C13 = plant%gpp_C13 + agl(icanop) * plant%lai_cl(icanop) * calc_fractionation(co2_mixing_ratio     , &
+           plant%gpp_C13 = plant%gpp_C13 + assimi%agl%ptr * plant%lai_cl(icanop) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C13 , &
                                                                                                    hlp1)
-           hlp1          = discrimination_ps(cil(icanop)        , &
+           hlp1          = discrimination_ps(assimi%cil%ptr     , &
                                              co2_mixing_ratio   , &
                                              'C14'              , &
                                              lctlib%ps_pathway)
-           plant%gpp_C14 = plant%gpp_C14 + agl(icanop) * plant%lai_cl(icanop) * calc_fractionation(co2_mixing_ratio     , &
+           plant%gpp_C14 = plant%gpp_C14 + assimi%agl%ptr * plant%lai_cl(icanop) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C14 , & 
                                                                                                    hlp1                 , &
                                                                                                    scale_correction_C14)
         ENDIF
 
-        plant%an                      = plant%an + anl(icanop) * plant%lai_cl(icanop) 
-        plant%maint_respiration_leaf  = plant%maint_respiration_leaf + rl(icanop) * plant%lai_cl(icanop) 
-        plant%gc                      = plant%gc + gsl(icanop) * plant%lai_cl(icanop)
-        plant%ci                      = plant%ci + cil(icanop) * plant%lai_cl(icanop)
+        plant%an                      = plant%an + assimi%anl%ptr * plant%lai_cl(icanop) 
+        plant%maint_respiration_leaf  = plant%maint_respiration_leaf + assimi%rl%ptr * plant%lai_cl(icanop) 
+        plant%gc                      = plant%gc + assimi%gsl%ptr * plant%lai_cl(icanop)
+        plant%ci                      = plant%ci + assimi%cil%ptr * plant%lai_cl(icanop)
 
         ! get the net photosynthesis of the lowest canopy layer at this timestep
-        IF(plant%lai_cl(icanop) > 0.0_wp) plant%an_boc = anl(icanop)
+        IF(plant%lai_cl(icanop) > 0.0_wp) plant%an_boc = assimi%anl%ptr
      ENDIF
   ENDDO
 

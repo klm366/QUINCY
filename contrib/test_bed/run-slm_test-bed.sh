@@ -127,7 +127,7 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
           exit
       fi
       setPFTAutomatically="no"
-      echo -n "Info: the option setPFTAutomatically is used with 'no', because you are using the test_bed/climate.dat, which does not provide information about PFT.  "
+      echo -e '\n' "Info: the option setPFTAutomatically is used with 'no', as you are using the test_bed/climate.dat, which does not provide PFT information. "
     else  # fluxnet forcing file
       if [ $siteDataSet == "f" ]
         then
@@ -293,7 +293,7 @@ changeNamelistValue latitude "$latitude"
 
 
 ## confirmation of starting the R script ##
-echo "OK"
+echo " OK"
 echo " Starting the R scripts for running SLM: ""$slmModel"
 
 
