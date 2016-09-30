@@ -13,6 +13,10 @@ Contents:
 	      
    intro
    report
+
+   userguide-com
+   userguide-dev
+
    running
    development
    runtime

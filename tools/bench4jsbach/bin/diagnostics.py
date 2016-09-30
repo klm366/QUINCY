@@ -228,6 +228,11 @@ class Diagnostics ( object ):
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
 
+                    print
+                    print can.B4J_name
+                    print print_item_or_list_rec ( can.B4J_index, 3 )
+                    print
+
                     for ref in self.experiments:
                         if not ref.B4J_isref:            continue
                         if ref.B4J_name == can.B4J_name: continue

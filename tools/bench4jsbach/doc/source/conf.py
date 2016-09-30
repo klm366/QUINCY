@@ -301,7 +301,7 @@ latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
 #'papersize': 'letterpaper',
 
-  'classoptions': ',openany,oneside',
+    'classoptions': ',openany,oneside',
     'babel': '\\usepackage[english]{babel}',
     #'fncychap': '\\usepackage[Conny]{fncychap}',
     
@@ -309,11 +309,16 @@ latex_elements = {
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
- 'preamble': '',
-
+ #'preamble': '',
+ 'preamble': """
+\\usepackage{float}
+\\pagestyle{plain}
+\\pagenumbering{arabic}
+ """,
+    
 # Latex figure (float) alignment
 #'figure_align': 'htbp',
- 'figure_align': 'h',
+ 'figure_align': 'H',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples

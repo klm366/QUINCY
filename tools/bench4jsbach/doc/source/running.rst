@@ -13,12 +13,13 @@ Getting Started
 
 * check out branch from git repository
 * install python, pycmbs, ...
-* update path variable or change directory
 * set up passwordless ssh
+* update path variable or change directory
 * run bench4jsbach.py
 
 
 **directory structure**
+
 
 :bin:     source files
 :configs: specification and templates for configuration files

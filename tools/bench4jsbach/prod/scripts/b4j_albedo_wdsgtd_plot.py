@@ -16,7 +16,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 from pycmbs.mapping import map_plot
 
-# print "Starting %s" % os.path.realpath(__file__)
+print "Starting %s" % os.path.realpath(__file__)
 
 try:
     b4j_base = os.environ [ 'BENCH4JSBACH_BASE' ]
@@ -33,13 +33,13 @@ from util import print_item_or_list_rec
 from diagnostics import get_seasonal_period_2d_coords
 
 
-# print 'Number of arguments:', len(sys.argv), 'arguments.'
-# print 'Argument List:', str(sys.argv)
+print 'Number of arguments:', len(sys.argv), 'arguments.'
+print 'Argument List:', str(sys.argv)
 
 kwargs        =  dict ( token.split ( ':' ) for token in sys.argv [ 1: ])
-# print kwargs
-# print "subprocess '%s', kwargs = " % __file__
-# print print_item_or_list_rec ( kwargs, 3 )
+print kwargs
+print "subprocess '%s', kwargs = " % __file__
+print print_item_or_list_rec ( kwargs, 3 )
 
 
 fieldname      = "albedo"
@@ -125,4 +125,4 @@ plt.savefig ( kwargs [ 'albedo_wdsgtd_plot' ],
               bbox_inches = 'tight' )
 plt.close ()
 
-# print "Starting %s" % os.path.realpath(__file__)
+print "Exiting %s" % os.path.realpath(__file__)

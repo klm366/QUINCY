@@ -21,8 +21,8 @@ requirements. It is written in object oriented Python and uses
 specialized classes for the tasks enumerated above.
 
 
-Whole department knowhow for your model evaluation
---------------------------------------------------
+Complete department knowhow for your model evaluation
+-----------------------------------------------------
 
 **From the guiding vision ...**
 

@@ -1,6 +1,10 @@
 .. |b4j| replace:: **bench4jsbach**
 .. |jsbach| replace:: **JSBACH**
 .. |cdo| replace:: **CDO**
+.. |py| replace:: **Python**
+.. |pycmbs| replace:: **pyCMBS**
+
+.. |diag-f| replace:: :math:`\mathtt{diagnostic  \  field}`
 
 .. |wiki| replace:: `Bench4JSBACH simulations`_
 

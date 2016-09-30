@@ -16,7 +16,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 from pycmbs.mapping import map_plot
 
-# print "Starting %s" % os.path.realpath(__file__)
+print "Starting %s" % os.path.realpath(__file__)
 
 try:
     b4j_base = os.environ [ 'BENCH4JSBACH_BASE' ]
@@ -33,12 +33,12 @@ from util import print_item_or_list_rec
 
 
 
-# print 'Number of arguments:', len(sys.argv), 'arguments.'
-# print 'Argument List:', str(sys.argv)
+print 'Number of arguments:', len(sys.argv), 'arguments.'
+print 'Argument List:', str(sys.argv)
 
 kwargs        =  dict ( token.split ( ':', 1 ) for token in sys.argv [ 1: ])
-# print "\nsubprocess '%s', kwargs = " % __file__
-# print print_item_or_list_rec ( kwargs, 3 )
+print "\nsubprocess '%s', kwargs = " % __file__
+print print_item_or_list_rec ( kwargs, 3 )
 
 
 fieldname      = "albedo"
@@ -135,4 +135,4 @@ plt.close ()
 # delta_can [ 'plots' ].append ( can.B4J_index [ plot_delta_str ])
 
 
-# print "Exiting %s" % os.path.realpath(__file__)
+print "Exiting %s" % os.path.realpath(__file__)
