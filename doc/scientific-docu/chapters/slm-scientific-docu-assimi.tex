@@ -1,6 +1,6 @@
 \chapter{Assimilation}\label{ch:assimi}
 
-Photosynthesis is calculated according to the photosynthesis scheme by \cite{Kull:1998cr}, extended for C4 photosynthesis by \cite{Friend:2009tf}, and with the temperature sensitivities as described in \cite{Friend:2010je}. Photosynthesis and stomatal conductance are calculated for the mid-points of each canopy layer and light-quality class (sunlit and shaded; as defined in Sect. \ref{sec:rad:ppfd}). A notable difference to the implementation of \cite{Friend:2010je} is the use of a standard Ball-Berry formulation to simulate the response of stomates to drought \cite{Ball:1987uv, Knauer:2015dh}. 
+Photosynthesis is calculated according to the photosynthesis scheme by \cite{Kull:1998cr}, extended for C4 photosynthesis by \cite{Friend:2009tf}, and with the temperature sensitivities as described in \cite{Friend:2010je}. Photosynthesis and stomatal conductance are calculated for the mid-points of each canopy layer and light-quality class (sunlit and shaded; as defined in Sect. \ref{sec:rad:vegetation}). A notable difference to the implementation of \cite{Friend:2010je} is the use of a standard Ball-Berry formulation to simulate the response of stomates to drought \cite{Ball:1987uv, Knauer:2015dh}. 
 
 Temperature acclimation of photosynthesis is taken account as in \cite{Friend:2010je} by letting the optimum temperature of electron transport adjust to the day-time temperature of the last few days (\texttt{flag\_t\_jmax\_acclimation}). Soil moisture deficit is likewise affecting photosynthetic activity under extremely low levels of soil moisture (Rogers:forthcoming). N cycle interactions with photosynthesis occur on the level of acclimating foliar N (\texttt{flag\_optimal\_leafN}) and the fractional allocation of N to photosynthetic processes in each canopy layer (\texttt{flag\_optimal\_n\_fractions}), as described in Sect. \ref{sec:veg:canopy}. Isotopic fractionation of photosynthesis with respect to \chem{^{13}C} and \chem{^{14}C} is calculated according to \cite{Farquhar:1982ks,Drake:2014dl}. 
 
@@ -104,7 +104,7 @@ A_h =&  m_1 \times \alpha_i \times I_a,\\
 \end{align} 
 \end{subequations} 
 
-where $\alpha_i$ is the intrinsic quantum efficiency for \chem{CO_2} uptake, $I_0$ is the  incident photosynthetic photon flux density (PPFD) penetrating sunlit or diffuse foliage (Sect. \ref{sec:rad:ppfd}), and $k_a$ as well as $a_{chl}^n$ are parameters specified in Table \ref{tab:assimi:param}.
+where $\alpha_i$ is the intrinsic quantum efficiency for \chem{CO_2} uptake, $I_0$ is the  incident photosynthetic photon flux density (PPFD) penetrating sunlit or diffuse foliage (Sect. \ref{sec:rad:vegetation}), and $k_a$ as well as $a_{chl}^n$ are parameters specified in Table \ref{tab:assimi:param}.
 
 Note that currently $I_{0}$ is not calculated based on the chlorophyll extinction, but on the parameters in the radiation routine. This may need fixing, but this there is not an evident solution.
 

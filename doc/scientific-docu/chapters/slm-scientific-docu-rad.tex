@@ -1,4 +1,141 @@
-\chapter{Radiation}\label{ch:rad}\label{sec:rad:ppfd}
+\chapter{Radiation}\label{ch:rad}
+
+Radiation deals with the shortwave radiation budget at the surface. It calculates canopy and soil absorbed radiation, as well as backscattered radiation through albedo. Soil and snow albedo calculations follow JSBACH. To the contrary, vegetation canopy and radiation interception is consistently solved based on an extended version of the two-stream approximation by \cite{Spitters:1986tv}, see Sect. \ref{sec:rad:vegetation}.
+
+SOME TEXT DESCRIBING JSBACH REQUIRED HERE. Copy from JSBACH doc.
+
+\section{Net surface shortwave radiation budget}\label{sec:rad:vegetation}
+
+The Spitters scheme is applied here as a multi-layer scheme for several canopy layers (as defined in Sect. \ref{sec:veg:canopy}, with radiation levels calculated at the mid-point of each canopy layer. The scheme has been extended to diagnose canopy albedo and to account for clumping (\texttt{flag\_heterogeneous\_canopy}). Furthermore, the scheme has been adapted to approximate the attenuation of the shortwave radiation back-scatter from the soil to allow for a smooth transition of surface albedo from soil to vegetation values with increasing leaf coverage. Attenuation on stem surface and interaction with snow albedo are currently not implemented.
+
+The scheme is applied separately to the visible and near-infrared radiation band, where the parameterisation of the visible stream is based on the assumption that the radiation interception and reflection is similar to that of the photosynthetically active range. In the following, the subscripts for visible and near-infrared are neglected for readability.
+
+The reflection coefficient ($\rho$) of the (green) canopy is given by
+
+\begin{equation}\label{eq:rad:leaf_albedo}
+\rho = \frac{1-\sqrt{1-\sigma}}{1+\sqrt{1-\sigma}}\times \frac{2}{1+ \rho^{sbeta} \times cos(\gamma^{*})}, 
+\end{equation}
+  
+where the first term is the reflection of a horizontally oriented canopy, and the second terms empirically adjusts the reflection to a spherical distribution. $\sigma$ is the single leaf scattering coefficient (see lctlib), $\rho^{sbeta}$ is a conversion constant (see Tab. \ref{tab:rad:param}), and $\gamma^{*}$ is the corrected zenith angle (note that that \cite{Spitters:1986tv} use the sine of the solar elevation angle). Because all equations for leaf reflection and absorption coefficients are only valid for high solar elevation, the true zenith angle ($\gamma$) is constrained to values larger than 10\degree. 
+
+For a spherical leaf angle distribution with leaves distributed randomly within the canopy volume, the extinction coefficients of the diffuse flux and that of the direct component of the direct flux are approximated, respectively, by 
+
+\begin{subequations}\label{eq:rad:extinction_coef}
+\begin{align}
+k_{df} &=  k_{df,0} \sqrt{1-\sigma} \times \Omega\\
+k_{bl} &= \frac{k_{bl,0} \times \Omega}{cos(\gamma^{*})}
+\end{align} 
+\end{subequations} 
+
+where $\Omega$ is the clumping index according to \cite{Campbell:1998vb}, which is calculated as 
+
+\begin{equation}\label{eq:rad:omega}
+\Omega = \Omega_{0} / (\Omega_{0} + (1 - \Omega_{0}) \times e^{-k_{csf} \times acos(\gamma^{*})^{\phi_{crown}}}),
+\end{equation}
+
+where $\Omega_{0}$ and $\phi_{crown}$ are the PFT-specific clumping factor at NADIR and crown shape factor, respectively (see lctlib), and $k_{csf}$ is a correction factor (see Tab. \ref{tab:rad:param}).
+
+Light levels decrease exponentially in the canopy, such that the attenuation of direct and diffuse top-of-the-canopy irradiance ($I_{dr\downarrow,0}$ and $I_{df\downarrow,0}$, respectively) at any cumulative leaf area index ($LAI_c$; from the top) is given by 
+
+\begin{subequations}\label{eq:rad:light_profile}
+\begin{align}
+&I_{df \downarrow} = (1-\rho) \times I_{df \downarrow,0} \times e^{-k_{df}\times LAI_{c}}\\
+&I_{dr \downarrow} = (1-\rho) \times I_{dr \downarrow,0} \times e^{-\sqrt{1-\sigma} \times k_{bl}\times LAI_{c}}\\
+&I_{dr,dr \downarrow} = I_{dr \downarrow,0} \times e^{- k_{bl}\times LAI_{c}}\label{eq:rad:idrdr}\\
+&I_{dr,df \downarrow} = I_{dr \downarrow} - I_{dr,dr \downarrow}\\
+\end{align} 
+\end{subequations} 
+ 
+where $I_{dr,df}$ is the diffused part of the direct beam resulting from scattering of the direct beam and $I_{dr,dr}$ is the direct beam remaining direct at the canopy depth $LAI_{c}$. 
+
+At the soil surface, the remaining energy flux according to Eq. \ref{eq:rad:light_profile} ($I_{bc \downarrow}$) is divided into a fraction that is absorbed by the soil ($I_{a,soil}$) and part that is backscattered as diffuse radiation ($I_{bc \uparrow}$):
+
+\begin{subequations}\label{eq:rad:soil_netbalance}
+\begin{align}
+&I_{bc \downarrow} = (1-\rho) \times ( I_{df \downarrow,0} \times e^{-k_{df}\times LAI} + I_{dr \downarrow,0} \times e^{-\sqrt{1-\sigma} \times k_{bl}\times LAI})\\
+&I_{a,soil} = (1-alb_{soil}) \times I_{bc \downarrow} \\
+&I_{bc \uparrow} = alb_{soil} \times I_{bc \downarrow}
+\end{align} 
+\end{subequations} 
+ 
+To first-order, the diffuse light profile of the canopy accounting for the backscatter of diffuse radiation from the soil can be approximated as 
+
+\begin{equation}\label{eq:rad:omega}
+I_{df \downarrow \uparrow} = (1-\rho) \times (I_{df \downarrow,0} \times e^{-k_{df}\times LAI_{c}} + \times I_{bc \uparrow} \times e^{-k_{df}*(LAI-LAI_{c}))} 
+\end{equation}
+
+Absorption is taken to be complementary to transmission, therefore the absorbed diffuse and direct energy flux at a cumulative leaf area $LAI_c$ can be written as 
+
+\begin{subequations}\label{eq:rad:canopy_absorbed_radiation_components}
+\begin{align}
+&A_{df} = k_{df} \times I_{df \downarrow \uparrow}\\
+&A_{dr} = (1-\sigma) \times k_{bl} \times I_{dr}\\
+&A_{dr,dr} = (1-\sigma) \times k_{bl} \times I_{dr \downarrow,0} \times e^{-k_{bl}\times LAI_c}\label{eq:rad:idrdra}\\
+&A_{dr,df} = A_{dr} - A_{dr,dr}
+\end{align} 
+\end{subequations} 
+
+(note the error in \cite{Spitters:1986tv} (his eq.12, here \ref{eq:rad:idrdra}) due to the incorrect accounting of the fraction of sunlit leaves).
+
+The canopy is then split into a sunlit and a shaded part, with the sunlit fraction defined as 
+
+\begin{equation}
+f_{sunlit} = e^{-k_{bl}\times LAI_c}
+\end{equation}
+
+following eq. \ref{eq:rad:idrdr}. Shaded and sunlit parts receive diffuse radiation, but only the sunlit part receives direct radiation. Thus
+\begin{subequations}\label{eq:rad:a_shadesunlit}
+\begin{align}
+&A_{shaded} = A_{df} + A_{dr,df}\\
+&A_{sunlit} = A_{shaded} + (1-\sigma) \times k_{bl} \times I_{dr \downarrow,0} 
+\end{align} 
+\end{subequations} 
+
+To allow future code flexibility with respect to leaf albedo, the canopy albedo is diagnosed (rather than simply taken as $\rho$) as 
+
+\begin{equation}\label{eq:rad:canopy_albedo}
+alb_{can} = 1 - \frac{I_{bc \downarrow} + A_{shaded} \times (1-f_{sunlit})+A_{sunlit}\times f_{sunlit}}{I_{df\downarrow,0}+I_{dr \downarrow, 0}}
+\end{equation}
+
+The total shortwave upward flux is diffuse and calculated as the backscattered flux of the canopy plus the backscattered flux from the soil, which is transmitted diffusely through the canopy
+
+\begin{equation}\label{eq:rad:idfup}
+I_{df \uparrow} = alb_{can} \times (I_{df\downarrow,0}+I_{dr \downarrow, 0} - I_{bc \downarrow}) + (1 - \rho) \times I_{bc \uparrow} \times e^{-k_{df}\times LAI}
+\end{equation}
+
+Based on this, the total surface albedo and net shortwave flux can be calculated as 
+
+\begin{subequations}\label{eq:rad:canopy_absorbed_radiation_components}
+\begin{align}
+&alb_{surf} =  \frac{I_{df \uparrow}}{I_{df\downarrow,0}+I_{dr \downarrow, 0}} \\
+&I_{net} = (1-alb_{surf}) * (I_{df\downarrow,0}+I_{dr \downarrow, 0})
+\end{align} 
+\end{subequations} 
+
+%\newpage
+\begin{sidewaystable}
+\section{Parameters}\label{tab:rad:param}
+
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Albedo and fapar calculation}\\
+\hline
+
+$k_{bl,0,vis}$ & extinction coefficient over black leaves in the VIS range & \texttt{kbl0\_vis} & -- & \ref{eq:rad:extinction_coef} & 0.5 & \cite{Spitters:1986tv} \\    
+$k_{df,0,vis}$ & extinction coefficient for diffuse radiation in the VIS range & \texttt{kdf0\_vis} & -- & \ref{eq:rad:extinction_coef} & 0.8 & \cite{Spitters:1986tv} \\  
+$k_{bl,0,nir}$ & extinction coefficient over black leaves in the NIR range & \texttt{kbl0\_vis} & -- & \ref{eq:rad:extinction_coef} & 0.5 & \cite{Spitters:1986tv} \\    
+$k_{df,0,nir}$ & extinction coefficient for diffuse radiation in the NIR range & \texttt{kdf0\_vis} & -- & \ref{eq:rad:extinction_coef} & 0.8 & \cite{Spitters:1986tv} \\  
+$k_{csf}$ & coefficient in crown-shape correction & \texttt{k\_csf} & -- & \ref{eq:rad:omega} & 0.8 & \cite{Campbell:1998vb}\\  
+$\rho^{sbeta}$ & scaling factor of solar angle in reflection calculation& \texttt{rho2sbeta} & -- & \ref{eq:rad:leaf_albedo}  & 1.6 & \cite{Spitters:1986tv} \\        
+\hline 
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
 
 \pagebreak
 
