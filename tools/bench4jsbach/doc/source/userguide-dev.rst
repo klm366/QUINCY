@@ -1,15 +1,15 @@
 .. include:: defs.hrst
 
 
-User Guide: Developing |diag-f| s
-=================================
+User guide for developing |diag-f| s
+====================================
 
 It is intended that |b4j| can be used out-of-the-box for experiment
-comparison of the most crucial or influential parameters of |jsbach|.
-But new scientific questions may bring other values into focus and thus
-suitable diagnostic and benchmarking strategies are required. To get
+comparison with the most crucial or influential parameters of |jsbach|.
+But future scientific questions may bring other values into focus and thus
+suitable diagnostic and benchmarking strategies are required. To have
 a living, dynamical tool, the possibility for individual extension
-always ought to be provided to the user and for the time being the
+is provided to the user and for the time being the
 participation of the different research groups is worthwhile.
 
 A diagnostic for experiment comparison from external sources can be
@@ -20,7 +20,7 @@ written in any programming language that is supported by your platform.
 It has to be layed out for one candidate and one reference
 so that it can be called in loops over multiple experiments. The scripts work
 on local data which have been selected and interpolated from the experiment output as
-indicated by the user and the experiment type. The
+indicated by the user and the experiment type. They
 interface of each script has to be declared in a respective section of the
 |diag-f| s' configuration file. The
 information to provide include input and output filenames and possibly hints
@@ -66,11 +66,10 @@ Fetch section
 Each variable that has to be read from the experiment's dataset is represented by a 
 subsection labeled with a run internal unique name. The data fetched and
 selected from the experiment output will be written to the subdirectory
-:math:`{interpolated\_selected}` in :math:`{work}`, f.e.
-:math:`{work/myb4jrun/interpolated\_selected}` with a filename containing this name as infix.
-The single variable
-subsection level has subsubsections for each experiment type holding specialized
-configuration.
+:math:`\mathtt{interpolated\_selected}` in :math:`\mathtt{work}`, f.e.
+:math:`\mathtt{work/myb4jrun/interpolated\_selected}` with a filename containing
+this name as infix. The single variable subsection level has subsubsections for
+each experiment type holding specialized configuration.
 
 Single variable subsection:
 

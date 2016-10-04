@@ -10,17 +10,11 @@ Contents:
 
 .. toctree::
    :maxdepth: 1
+   :numbered:
 	      
    intro
-   report
-
    userguide-com
    userguide-dev
-
-   running
-   development
-   runtime
-   configuration
    code
 
 

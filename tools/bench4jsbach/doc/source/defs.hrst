@@ -3,8 +3,10 @@
 .. |cdo| replace:: **CDO**
 .. |py| replace:: **Python**
 .. |pycmbs| replace:: **pyCMBS**
+.. |mpi| replace:: **Max Planck Institute for Meteorology**
 
-.. |diag-f| replace:: :math:`\mathtt{diagnostic  \  field}`
+.. |diag-f| replace:: :math:`\mathtt{diagnostic\ field}`
+.. |exp| replace:: :math:`\mathtt{experiment}`
 
 .. |wiki| replace:: `Bench4JSBACH simulations`_
 

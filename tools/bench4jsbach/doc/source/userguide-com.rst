@@ -2,8 +2,10 @@
 
 .. _userguide-c:
 
-User Guide: Comparing Experiments
-=================================
+User guide for benchmarking
+===========================
+
+This chapter shall enable you to use |b4j| for the comparison of |exp| s.
 
 Prerequisites
 -------------
@@ -97,7 +99,7 @@ Initial run
 A |b4j| run needs a name as it writes data to your local machine that has to be
 addressed. There are two run modes, the initial startup run which is done once to set up
 the environment and create the directory structure and the main run, fetching
-expriment data, analysing, making plots and writing a report. Both are controled
+expriment data, analysing, making plots and writing a report. Both run modes are controled
 by the run script :math:`\mathtt{bench4jsbach/scripts/bench4jsbach.py}`.
 
 
@@ -110,6 +112,14 @@ call the run script :math:`\mathtt{bench4jsbach.py}` with your chosen run name (
    >>> cd git/jsbach/tools/bench4jsbach
    >>> ./scripts/bench4jsbach.py myb4jrun
 
+The tool writes a welcome and a final success/error message to the display. In
+addition the internal debugger prints to standard output in the default setting.
+
+
+.. literalinclude::  ./graphic/initial-run-output.txt
+
+**Listing:** Standard output after the initial run with argument :math:`\mathtt{myb4jrun}`
+		     
 When the startup run has finished successfully, the directory structure for
 :math:`\mathtt{myb4jrun}` is created (as shown in the figure below) and an
 editable, default configuration file :math:`\mathtt{myb4jrun.cfg}` is written
@@ -119,7 +129,7 @@ in :math:`\mathtt{myb4jrun/configs}`, also shown further down.
    :width: 30 %
    :align: center
 
-   **Figure:**  initial structure of :math:`\mathtt{bench4jsbach/work/myb4jrun}`
+   **Figure:**  Initial structure of :math:`\mathtt{bench4jsbach/work/myb4jrun}`
 
 Configuration file
 ++++++++++++++++++
@@ -129,7 +139,7 @@ adapted to the planned experiment comparison. It is formatted to be read by a |p
 file parser after your accomplishment. A config file
 consists of key value pairs and sections nested to any depth. For the sections
 square brackets are used, indentation clearifies the nesting level. You can write
-comments inline, prepending a hash symbol \"#\" to them.
+comments inline prepended by a hash symbol \"#\".
 
 ::
    
@@ -151,7 +161,7 @@ Institute for Meteorology Earth System Model, [GiESM1]_) can be compared. An exp
 have the role of a reference or a candidate, which will be compared against
 eachother. For a candidate experiment diagnostic methods comparing it with multiple
 references are possible. The report will be written having
-the candidate experiments in focus. A diagnostic field
+the focus on the candidate experiments. A diagnostic field
 features a specific scientific question for the comparison of the experiments. It has
 to be defined in detail in a separate configuration file.
 
@@ -307,4 +317,4 @@ intermediate, preprocessed and downloaded data in the directories
 .. rubric:: References
 
 .. [GiESM1] Giorgetta, M., et al.: Climate and carbon cycle changes from 1850 to 2100 in MPI-ESM simulations for the coupled model intercomparison project phase 5. Journal of Advances in Modeling Earth Systems, 5, 572-597 , 2013, doi:10.1002/jame.20038
-
+.. [ReJSBA] Reick, C., et al.: Representation of natural and anthropogenic land cover change in MPI-ESM. Journal of Advances in Modeling Earth Systems, 5, 459-482 , 2013, doi:10.1002/jame.20022
