@@ -675,7 +675,7 @@ CONTAINS
     IF(ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
 
     tmp_msg => this%current%Process_message(this, start_msg)
-    ! IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
+    IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
     DO WHILE (ASSOCIATED(this%next))
       CALL this%Process_entry_to_next()
       this%current => this%next
@@ -854,7 +854,7 @@ CONTAINS
     IF (ASSOCIATED(this%source)) THEN
       DO WHILE (state /= this%source)
         tmp_msg => state%Process_message(this, exit_msg)
-        !IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg%action, tmp_msg)
+        IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
         state => state%parent
         IF (.NOT. ASSOCIATED(state)) EXIT
       END DO
@@ -863,7 +863,7 @@ CONTAINS
 !    DO i=this%Get_levels_to_LCA(that),1,-1
     DO i=this%levels_to_lca,1,-1
       tmp_msg => state%Process_message(this, exit_msg)
-      ! IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg%action, tmp_msg)
+      IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
       state => state%parent
       IF (.NOT. ASSOCIATED(state)) EXIT
     END DO

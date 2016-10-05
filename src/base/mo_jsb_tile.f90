@@ -261,6 +261,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_tile'
 
+    CALL message(TRIM(routine), 'Initializing tile '//TRIM(this%name))
+
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
 

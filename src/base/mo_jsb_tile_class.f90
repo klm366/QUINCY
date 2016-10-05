@@ -153,6 +153,7 @@ MODULE mo_jsb_tile_class
     PROCEDURE :: Aggregate_2d                  => Aggregate_weighted_by_fract_2d
     PROCEDURE :: Aggregate_3d                  => Aggregate_weighted_by_fract_3d
     PROCEDURE :: Set_aggregator_option_logical => Aggregate_weighted_by_fract_set_option_logical
+    FINAL     :: Finalize_aggregator_weighted_by_fract
   END TYPE t_jsb_aggregator_weighted_by_fract
 
   INTERFACE t_jsb_aggregator_weighted_by_fract
@@ -553,7 +554,21 @@ CONTAINS
     no_children = tile%Get_no_of_children()
     ALLOCATE(aggregator%fractions(grid%nproma, grid%nblks, no_children))
 
+    CALL message(TRIM(routine), 'Created aggregator '//TRIM(aggregator%name)//' on tile '//TRIM(tile%name))
+
   END FUNCTION Create_aggregator_weighted_by_fract
+
+  SUBROUTINE Finalize_aggregator_weighted_by_fract(aggregator)
+
+    TYPE(t_jsb_aggregator_weighted_by_fract) :: aggregator
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Finalize_aggregator_weighted_by_fract'
+
+    !CALL message(TRIM(routine), 'Finalizing aggregator '//TRIM(aggregator%name))
+
+    IF (ALLOCATED(aggregator%fractions)) DEALLOCATE(aggregator%fractions)
+
+  END SUBROUTINE Finalize_aggregator_weighted_by_fract
 
   SUBROUTINE Set_fractions_aggregator(this, tile, ics, ice, iblk)
 

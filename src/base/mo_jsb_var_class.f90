@@ -2,7 +2,7 @@ MODULE mo_jsb_var_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp, dp
-  USE mo_exception, ONLY: finish
+  USE mo_exception, ONLY: finish, message
 
   USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN
 
@@ -22,7 +22,6 @@ MODULE mo_jsb_var_class
     INTEGER                    :: owner_proc_id = -1
     INTEGER, ALLOCATABLE       :: owner_tile_path(:)
     REAL(dp)                   :: missval
-  CONTAINS
   END TYPE t_jsb_var
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
@@ -34,6 +33,7 @@ MODULE mo_jsb_var_class
     GENERIC   :: OPERATOR(+) => Add_real2d, Add_real2d_and_scalar, Add_real2d_and_field
     PROCEDURE :: Multiply_real2d_with_field       ! Multiply varialbe of type t_jsb_var_real2d with REAL 2-d field
     GENERIC   :: OPERATOR(*) => Multiply_real2d_with_field
+    FINAL     :: finalize_jsb_var_real2d
   END TYPE t_jsb_var_real2d
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real3d
@@ -45,6 +45,7 @@ MODULE mo_jsb_var_class
     GENERIC   :: OPERATOR(+) => Add_real3d, Add_real3d_and_scalar, Add_real3d_and_field
     PROCEDURE :: Multiply_real3d_with_field       ! Multiply varialbe of type t_jsb_var_real3d with REAL 3-d field
     GENERIC   :: OPERATOR(*) => Multiply_real3d_with_field
+    FINAL     :: finalize_jsb_var_real3d
   END TYPE t_jsb_var_real3d
 
   TYPE t_jsb_var_p
@@ -58,6 +59,34 @@ MODULE mo_jsb_var_class
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_var_class'
 
 CONTAINS
+
+  SUBROUTINE finalize_jsb_var_real2d(this)
+
+    TYPE(t_jsb_var_real2d) :: this
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':finalize_jsb_var_real2d'
+
+    !CALL message(routine, 'Finalizing '//TRIM(this%name))
+
+    IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
+
+    IF (ASSOCIATED(this%ptr)) DEALLOCATE(this%ptr)
+
+  END SUBROUTINE finalize_jsb_var_real2d
+
+  SUBROUTINE finalize_jsb_var_real3d(this)
+
+    TYPE(t_jsb_var_real3d) :: this
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':finalize_jsb_var_real3d'
+
+    !CALL message(routine, 'Finalizing '//TRIM(this%name))
+
+    IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
+
+    IF (ASSOCIATED(this%ptr)) DEALLOCATE(this%ptr)
+
+  END SUBROUTINE finalize_jsb_var_real3d
 
 !!$  FUNCTION Create_jsb_var(i_shape, i_type) RESULT(return_ptr)
 !!$
