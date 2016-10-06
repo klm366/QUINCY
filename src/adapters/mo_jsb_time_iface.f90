@@ -27,8 +27,7 @@ MODULE mo_jsb_time_iface
   USE mo_impl_constants,         ONLY: ihs_atm_temp, ihs_atm_theta, ishallow_water, &
     &                                  leapfrog_expl, leapfrog_si
   USE mo_ha_dyn_config,          ONLY: ha_dyn_config
-  USE mo_bcs_time_interpolation, ONLY: tiw => current_time_interpolation_weights, &
-    &                                  t_time_interpolation_weights,              &
+  USE mo_bcs_time_interpolation, ONLY: t_time_interpolation_weights,              &
     &                                  calculate_time_interpolation_weights
 #else
   USE mo_time_conversion,        ONLY: t_datetime => time_days, &
@@ -361,22 +360,14 @@ CONTAINS
 #ifdef __ICON__
     TYPE(t_time_interpolation_weights) :: current_time_interpolation_weights
 
-    ! LK: I think, you need to check for the 'reference date' of the interpolation weights
-    IF (tiw%initialized) THEN    
-      w1 = tiw%weight1
-      w2 = tiw%weight2
-      n1 = tiw%month1
-      n2 = tiw%month2
-    ELSE
-      CALL message('', '')
-      CALL message(routine, 'time interpolation weights not configured yet - generate new once.')
-      CALL message('', '')
-      current_time_interpolation_weights = calculate_time_interpolation_weights(time_config%tc_current_date)
-      w1 = current_time_interpolation_weights%weight1
-      w2 = current_time_interpolation_weights%weight2
-      n1 = current_time_interpolation_weights%month1
-      n2 = current_time_interpolation_weights%month2
-    ENDIF
+!    CALL message('', '')
+!    CALL message(routine, 'generate time interpolation weights.')
+!    CALL message('', '')
+    current_time_interpolation_weights = calculate_time_interpolation_weights(time_config%tc_current_date)
+    w1 = current_time_interpolation_weights%weight1
+    w2 = current_time_interpolation_weights%weight2
+    n1 = current_time_interpolation_weights%month1_index
+    n2 = current_time_interpolation_weights%month2_index
 #else
     w1 = wgt1
     w2 = wgt2
