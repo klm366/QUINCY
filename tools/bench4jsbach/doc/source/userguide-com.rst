@@ -5,13 +5,14 @@
 User guide for benchmarking
 ===========================
 
-This chapter shall enable you to use |b4j| for the comparison of |exp| s.
+This chapter shall enable you to use |b4j| for the comparison of |exp| s with
+predefined |diag-f| s.
 
 Prerequisites
 -------------
 
-The tool |b4j| is developed for UNIX and LINUX operating systems. It is written in
-object-oriented |py|. The packages NumPy and NetCDF4 and the
+|b4j| is developed for UNIX and LINUX operating systems. It is written in
+object-oriented |py| and works with version 2.7. The packages NumPy and NetCDF4 and the
 2D plotting library matplotlib are used which are contained in most scientific
 |py| distributions like Anaconda, Miniconda or Canopy. Furthermore |b4j| makes
 use of the benchmarking tool |pycmbs| and the climate data command line
@@ -20,14 +21,15 @@ Meteorology.
 
 We use Anaconda and can highly recommand it, as it simplifies
 package management and deployment, see 
-http://conda.pydata.org/docs/_downloads/conda-cheatsheet.pdf.
+http://conda.pydata.org/docs/_downloads/conda-cheatsheet.pdf. From here on
+it is refered to in the installation process.
 
 Make sure that your system uses |py| from :math:`\mathtt{opt/anaconda/bin}`
 with :math:`\mathtt{opt}` being your Anaconda base directory.
 If necessary, download and install Anaconda, you can get it from 
 http://docs.continuum.io/anaconda/install#linux-install, and put
 :math:`\mathtt{opt/anaconda/bin}` to your system PATH.
-Then update and install the necessary packages:
+Then update and install the necessary |py| packages,  ..
 
 ::
    
@@ -37,8 +39,16 @@ Then update and install the necessary packages:
    >>> conda install -c https://conda.binstar.org/scitools cartopy
    >>> conda install geos basemap
    >>> conda install gdal
+   
+\.. |cdo| \..
 
+::
+   
    >>> pip install cdo
+
+\.. and |pycmbs|
+
+::
 
    >>> cd opt
    >>> git clone https://github.com/pygeo/pycmbs
@@ -93,26 +103,26 @@ The following list describes the individual directories in :math:`\mathtt{bench4
 Prepare a run
 -------------
 
+A |b4j| run consists of two parts, the initial startup run which is done once to set up
+the environment and create the directory structure and the main run, fetching
+expriment data, analysing, making plots and writing a report. Both parts are controled
+by the run script :math:`\mathtt{bench4jsbach/scripts/bench4jsbach.py}`.
+
 Initial run
 +++++++++++
 
 A |b4j| run needs a name as it writes data to your local machine that has to be
-addressed. There are two run modes, the initial startup run which is done once to set up
-the environment and create the directory structure and the main run, fetching
-expriment data, analysing, making plots and writing a report. Both run modes are controled
-by the run script :math:`\mathtt{bench4jsbach/scripts/bench4jsbach.py}`.
-
-
-To make a startup run change to the base directory :math:`\mathtt{bench4jsbach}` and
-call the run script :math:`\mathtt{bench4jsbach.py}` with your chosen run name (e.g.
-:math:`\mathtt{myb4jrun}`)  as command line argument.
+addressed. First choose this run name (e.g. :math:`\mathtt{myb4jrun}`) and  change to the
+base directory :math:`\mathtt{bench4jsbach}`.
+Call the run script :math:`\mathtt{bench4jsbach.py}` with your run name
+as command line argument.
 
 ::
    
    >>> cd git/jsbach/tools/bench4jsbach
    >>> ./scripts/bench4jsbach.py myb4jrun
 
-The tool writes a welcome and a final success/error message to the display. In
+While running, the tool writes a welcome and a final success/error message to your display. In
 addition the internal debugger prints to standard output in the default setting.
 
 
@@ -154,17 +164,7 @@ comments inline prepended by a hash symbol \"#\".
 
 After generation the file :math:`\mathtt{myb4jrun.cfg}` contains the
 structure of information that the configuration for a minimum |b4j| run with two
-experiments and one diagnostic field has to provide. An experiment is thought of
-as simulated or observed
-climate data, for the time being only data simulated with MPIESM1 (Max Planck
-Institute for Meteorology Earth System Model, [GiESM1]_) can be compared. An experiment can
-have the role of a reference or a candidate, which will be compared against
-eachother. For a candidate experiment diagnostic methods comparing it with multiple
-references are possible. The report will be written having
-the focus on the candidate experiments. A diagnostic field
-features a specific scientific question for the comparison of the experiments. It has
-to be defined in detail in a separate configuration file.
-
+|exp| s (see :ref:`exps`) and one |diag-f| (see :ref:`diag-fs`) has to provide.
 
 In the file :math:`\mathtt{myb4jrun.cfg}`, which is displayed below, the mandatory
 fields to be filled in are
@@ -172,7 +172,6 @@ marked with angle brackets (<,>) and located in the second part of the file,
 below the comment line \"# PLEASE EDIT ...\".  The capital text within is
 meant to be explanatory and the whole string including the brackets has to be
 exchanged against your value for the respective item.
-
 
 .. literalinclude::  ./graphic/myb4jrun.cfg
 	   
@@ -184,7 +183,7 @@ In the following the values to fill in are summarized.
 Top level config
 ++++++++++++++++
 
-The redmine access is necessary if the |b4j| run has to read reference experiment
+The redmine access is necessary if the |b4j| run has to read reference |exp|
 metadata from the wikipage.
 
 +------------------------------------------------+-----------------------------------+
@@ -203,13 +202,13 @@ metadata from the wikipage.
 | reporting       | reporting switch             | booolean        | True            |
 +-----------------+------------------------------+-----------------+-----------------+
 
-Experiment section
-++++++++++++++++++
+|exp| section
++++++++++++++
 
-For each experiment in the run there has to be a subsection that is labeled with a
+For each |exp| in the run there has to be a subsection that is labeled with a
 run internal unique name.
 
-Single experiment subsection level:
+Single |exp| subsection level:
 
 +------------------------------------------------+-----------------------------------+
 | key                                            | value                             |
@@ -219,7 +218,7 @@ Single experiment subsection level:
 | name_orig       | | original identifying infix | string          | \-              |
 |                 | | e.g. \"vga0187\"           |                 |                 |
 +-----------------+------------------------------+-----------------+-----------------+
-| type            | experiment type              | option          | MPIESM1         |
+| type            | |exp| type                   | option          | MPIESM1         |
 |                 |                              | (CMIP5,MPIESM1) |                 |
 +-----------------+------------------------------+-----------------+-----------------+
 | path            | - path of the data           | string          | None            |
@@ -236,15 +235,14 @@ Single experiment subsection level:
 +-----------------+------------------------------+-----------------+-----------------+
 | endyear         | endyear in |b4j| run         | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| initialyear     | initial year of experiment   | string          | None            |
+| initialyear     | initial year of |exp|        | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
-| finalyear       | final year of experiment     | string          | None            |
+| finalyear       | final year of |exp|          | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
 
-.. _diag-f:
 
-Diagnostic field section
-++++++++++++++++++++++++
+|diag-f| section
+++++++++++++++++
 
 For each diagnostic field in the run has to be a subsection that is labeled with a
 run internal unique name.

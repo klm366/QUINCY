@@ -1,16 +1,29 @@
 .. |b4j| replace:: **bench4jsbach**
-.. |jsbach| replace:: **JSBACH**
-.. |cdo| replace:: **CDO**
-.. |py| replace:: **Python**
-.. |pycmbs| replace:: **pyCMBS**
-.. |mpi| replace:: **Max Planck Institute for Meteorology**
 
 .. |diag-f| replace:: :math:`\mathtt{diagnostic\ field}`
+
+
 .. |exp| replace:: :math:`\mathtt{experiment}`
 
-.. |wiki| replace:: `Bench4JSBACH simulations`_
 
+
+.. |jsbach| replace:: `JSBACH`_
+.. _JSBACH: http://www.mpimet.mpg.de/en/science/models/jsbach/
+
+.. |mpi| replace:: `Max Planck Institute for Meteorology`_
+.. _Max Planck Institute for Meteorology: http://www.mpimet.mpg.de/en/mpimet-homepage/
+
+.. |pycmbs| replace:: `pyCMBS`_
+.. _pyCMBS: https://code.zmaw.de/projects/pycmbs/wiki
+
+.. |py| replace:: `Python`_
+.. _Python: https://docs.python.org/2/
+
+.. |wiki| replace:: `Bench4JSBACH simulations`_
 .. _Bench4JSBACH simulations: https://code.zmaw.de/projects/jsbach-bench/wiki/Bench4jsbach_simulations
+
+.. |cdo| replace:: `CDO`_
+.. _CDO: https://code.zmaw.de/projects/cdo/embedded/index.html
 
 .. |br| raw:: html
 

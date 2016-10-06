@@ -4,13 +4,9 @@
 User guide for developing |diag-f| s
 ====================================
 
-It is intended that |b4j| can be used out-of-the-box for experiment
-comparison with the most crucial or influential parameters of |jsbach|.
-But future scientific questions may bring other values into focus and thus
-suitable diagnostic and benchmarking strategies are required. To have
-a living, dynamical tool, the possibility for individual extension
-is provided to the user and for the time being the
-participation of the different research groups is worthwhile.
+In the following you learn how to develop a |diag-f| and to integrate it
+in a |b4j| run. 
+
 
 A diagnostic for experiment comparison from external sources can be
 included as |diag-f| into a |b4j| run. Therefore it needs

@@ -1,0 +1,29 @@
+******************************************
+* BENCH4JSBACH: 
+* Creating environment and configfile for new bench4jsbach object 'myb4jrun'.
+******************************************
+
+### DKL_LOGGER - DEBUG -  2016/10/04 - 18:12:08 - MODULE bench - FUNCTION __init__ - LINE 143 :
+  # Starting.
+###
+
+### DKL_LOGGER - DEBUG -  2016/10/04 - 18:12:08 - MODULE bench - FUNCTION _writeconfig__init__ - LINE 366 :
+  # Starting.
+###
+
+### DKL_LOGGER - DEBUG -  2016/10/04 - 18:12:08 - MODULE bench - FUNCTION _writeconfig__init__ - LINE 397 :
+  # Exiting.
+###
+
+### DKL_LOGGER - DEBUG -  2016/10/04 - 18:12:08 - MODULE bench - FUNCTION __init__ - LINE 147 :
+  # Exiting.
+###
+
+******************************************
+* BENCH4JSBACH: 
+* Created environment 
+*	'/home/git/jsbach/tools/bench4jsbach/work/myb4jrun' 
+* and the configuration file 
+*	'/home/git/jsbach/tools/bench4jsbach/work/myb4jrun/configs/myb4jrun.cfg'.
+* Please edit this file.
+******************************************
