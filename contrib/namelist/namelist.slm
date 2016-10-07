@@ -38,5 +38,7 @@
   fluxnet_output=.FALSE.
   ! length of forcing period [years] provided by data file
   fluxnet_output_length=2
+  ! set parameter values from file [FALSE TRUE]
+  set_parameter_values_from_file=.FALSE.
 /
 

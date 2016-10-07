@@ -27,12 +27,15 @@ MODULE mo_base_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_base_config
+    ! BASE_CTL
     REAL(wp)          :: dt        !< length of one time step in seconds; base_ctl namelist: read_dt_time_step_length_sec
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
+    LOGICAL           :: set_parameter_values_from_file
+    ! GRID_CTL
     REAL(wp)          :: lat, lon  !< latitude longitude currently stored in mo_base_memory:t_slm_grid
   CONTAINS
     PROCEDURE :: Init => Init_base_config
@@ -56,27 +59,32 @@ CONTAINS
     ! 0.1 InOut
     CLASS(t_base_config), INTENT(inout) :: config    !< config type for base
     ! 0.2 Local
-    ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL          :: active
+    ! variables for reading from namlist, identical to variable-name in namelist
+    ! BASE_CTL
     REAL(wp)          :: dt_time_step_length_sec   ! model-variable: dt 
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
-    REAL(wp)          :: latitude, longitude
+    LOGICAL           :: set_parameter_values_from_file
+    ! GRID_CTL
+    REAL(wp)          :: latitude
+    REAL(wp)          :: longitude
 
 
-    NAMELIST /base_ctl/            &  
-        dt_time_step_length_sec,   &
-        simulation_length_unit,    &
-        simulation_length_number,  &
-        slm_model_name,            &
-        fluxnet_output,            &
-        fluxnet_output_length
+    NAMELIST /base_ctl/                       &  
+        dt_time_step_length_sec               , &
+        simulation_length_unit                , &
+        simulation_length_number              , &
+        slm_model_name                        , &
+        fluxnet_output                        , &
+        fluxnet_output_length                 , &
+        set_parameter_values_from_file
 
-    NAMELIST /grid_ctl/            &  
-        latitude,                  &
+    NAMELIST /grid_ctl/                       &  
+        latitude                              , &
         longitude
 
 
@@ -88,14 +96,18 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting base configuration')
 
     ! Set defaults
-    dt_time_step_length_sec       = 1800.0_wp
-    simulation_length_unit        = 'y'         ! y (years), w (weeks), d (days)
-    simulation_length_number      = 20 
-    slm_model_name                = 'land'
-    fluxnet_output                = .FALSE.     ! .TRUE. .FALSE.
-    fluxnet_output_length         = 2
-    latitude                      = 50.91       ! about the MPI-BGC Jena
-    longitude                     = 11.56       ! about the MPI-BGC Jena
+    ! 
+    ! BASE_CTL
+    dt_time_step_length_sec           = 1800.0_wp
+    simulation_length_unit            = 'y'         ! y (years), w (weeks), d (days)
+    simulation_length_number          = 20 
+    slm_model_name                    = 'land'
+    fluxnet_output                    = .FALSE.     ! .TRUE. .FALSE.
+    fluxnet_output_length             = 2
+    set_parameter_values_from_file    = .FALSE.     ! .TRUE. .FALSE.
+    ! GRID_CTL
+    latitude                          = 50.91       ! about the MPI-BGC Jena
+    longitude                         = 11.56       ! about the MPI-BGC Jena
 
 
     ! read the namelist
@@ -112,14 +124,18 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
-    config%dt                         = dt_time_step_length_sec
-    config%simulation_length_unit     = simulation_length_unit
-    config%simulation_length_number   = simulation_length_number
-    config%slm_model_name             = slm_model_name
-    config%fluxnet_output             = fluxnet_output
-    config%fluxnet_output_length      = fluxnet_output_length
-    config%lat                        = latitude
-    config%lon                        = longitude
+    ! 
+    ! BASE_CTL
+    config%dt                                 = dt_time_step_length_sec
+    config%simulation_length_unit             = simulation_length_unit
+    config%simulation_length_number           = simulation_length_number
+    config%slm_model_name                     = slm_model_name
+    config%fluxnet_output                     = fluxnet_output
+    config%fluxnet_output_length              = fluxnet_output_length
+    config%set_parameter_values_from_file     = set_parameter_values_from_file
+    ! GRID_CTL
+    config%lat                                = latitude
+    config%lon                                = longitude
   END SUBROUTINE Init_base_config
 
   !-----------------------------------------------------------------------------------------------------

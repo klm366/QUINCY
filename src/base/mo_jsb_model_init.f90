@@ -23,6 +23,7 @@ MODULE mo_jsb_model_init
     ! shared
     USE mo_shared_isotope,                  ONLY: calc_fractionation 
     USE mo_shared_constants,                ONLY: init_shared_constants, molar_mass_N, Dwv, Dco2, Tzero
+    USE mo_shared_set_parameters,           ONLY: parameters_from_file    !< TYPE t_parameters_from_file
     ! atmland
     USE mo_atmland_constants
     ! radiation
@@ -187,7 +188,7 @@ CONTAINS
     END DO          ! iproc
 
 
-    !! 6 Constants init
+    !! 6.1 Constants init
     !! 
     !! 
     CALL init_base_constants          ! may be 1st of the 'init constants'
@@ -196,7 +197,12 @@ CONTAINS
     CALL init_atmland_constants       ! uses hourday                  defined in mo_base_constants
     CALL init_assimi_constants        ! uses molar_mass_N, Dwv, Dco2  defined in mo_shared_constants
     CALL init_veg_constants           ! uses Tzero                    defined in mo_shared_constants
-      ! CALL init_soil_constants
+    !CALL init_soil_constants
+
+    !! 6.2 Constants set (using param.list file)
+    !! 
+    !! 
+    IF (base_config%set_parameter_values_from_file)  CALL parameters_from_file%set_param
 
 
     !! 7 Plant init

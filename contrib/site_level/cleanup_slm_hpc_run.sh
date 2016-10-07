@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## 20160601
+## 20161006
 ##
 ## script to cleanup temporary files and folders after a whole job-array of slm simulations was completed
 ## called from the prep_run_slm.sh
@@ -14,32 +14,50 @@
 ## arguments passed to cleanup_slm_hpc_run.sh ##
 jobName=$1                        # a user specific alphanumeric string
 array=$2                          # was an job array or just one job simulated
+# $3 == singleSiteName provided only if just one single site was run
 
 
 ## basic folders ##
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 simFold="$bgiScratchUserFold""$jobName""/"
+paramSensitivitySim=$(sed -n 7p "$simFold""default_files/config.txt" | awk '{print $1}')  # T/F
 
 
 ## move job specific error file into the particular job folder ##
 if [ "$array" == "yes" ]
+ # $array == yes
  then
-  # check whether normal or custom site-list was used
-  if [ -e "$simFold""default_files/my_site_list.dat" ] # custom site-list exists
-   then
-    siteList="$simFold""default_files/my_site_list.dat"
-   else
-    siteList=$(sed -n 1p "$simFold""default_files/config.txt")
+  # parameter sensitivity simulations
+  if [ $paramSensitivitySim == T ]
+    then
+      simNumber=$(ls -l "$simFold"error | grep err | wc -l) # number of simulations and number of error files
+      # folders start with 1001 for err.2.txt
+      for ((i = 0 ; i < $simNumber ; i++))
+        do
+          errFileCount=$(($i +2))
+          simCount=$((1000 + $i + 1))
+          mv "$simFold""error/err.""$errFileCount"".txt"  "$simFold""$simCount"_*/error
+      done
+  # normal simulations
+  else
+    # check whether normal or custom site-list was used
+    if [ -e "$simFold""default_files/my_site_list.dat" ] # custom site-list exists
+     then
+      siteList="$simFold""default_files/my_site_list.dat"
+     else
+      siteList=$(sed -n 1p "$simFold""default_files/config.txt")
+    fi
+    # move error files
+    for i in "$simFold"error/*
+     do
+      siteNumber=$(awk -F "." '{print $2}' <<< $i)
+      siteName=$(sed -n "$siteNumber"p "$siteList" | awk '{print $1}')
+      mv "$simFold""error/err.""$siteNumber"".txt" "$simFold""$siteName""/error/"
+    done
   fi
-  # move error files
-  for i in "$simFold"error/*
-   do
-    siteNumber=$(awk -F "." '{print $2}' <<< $i)
-    siteName=$(sed -n "$siteNumber"p "$siteList" | awk '{print $1}')
-    mv "$simFold""error/err.""$siteNumber"".txt" "$simFold""$siteName""/error/"
-  done
- else # i.e. $array == no
+ # $array == no
+ else
   singleSiteName=$3               # name of the site
   mv "$simFold""error/err.txt" "$simFold""$singleSiteName""/error/"
 fi
@@ -47,11 +65,20 @@ fi
 ## create an md5sum file for all output files, i.e. files in the folder "output"
 md5sum "$simFold"*/output/* > "$simFold"md5sum-output-files.txt
 
+## save the binary and the parameter table
+mkdir -p "$simFold"x_binary
+mv "$simFold"default_files/*.x "$simFold"x_binary
+if [ $paramSensitivitySim == T ]; then
+  mkdir -p "$simFold"parameter_list
+  mv "$simFold"parameter_sensitivity_files/param_table.txt "$simFold"parameter_list
+fi
 
 ## remove some folders not needed anymore ##
 rm -r "$simFold"default_files
 rm -r "$simFold"error
 rm -r "$simFold"out
+if [ $paramSensitivitySim == T ]; then
+  rm -r "$simFold"parameter_sensitivity_files
+fi
 
-
-
+# end cleanup #

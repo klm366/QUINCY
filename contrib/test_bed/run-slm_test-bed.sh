@@ -6,6 +6,7 @@
 ## HowTo: specify the below options as suitable for you
 ## Tip:   you can pass the model name as argument to this script [i.e. run-slm_test-bed.sh modelName], which overwrites the below defined value of slmModel
 ## 
+## Note:  the namelist option update_parameter_values_from_file is set to .FALSE. by this script - please use the pre_run.sh @ HPC (Cluster) if you need .TRUE.
 
 
 ########################################################################################################
@@ -148,11 +149,12 @@ else  # in case: $slmModel == "test_canopy"
 fi    # [$slmModel != "test_canopy"]
 
 
-## create folder, and copy R scripts, namelist and climate.dat file there ##
+## create folder, and copy R scripts, namelist, parameter-list and climate.dat file there ##
 mkdir -p ./"$slmModel"
 cp ../r_script/run_"$slmModel".R ./"$slmModel"
 cp ../r_script/postprocessing_"$slmModel".R ./"$slmModel"
 cp ../namelist/namelist.slm ./"$slmModel"
+#cp ../parameter_list/param.list ./"$slmModel"  # works only with the prep_run.sh at the HPC
 if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but test_canopy
   then
     if [ "$siteDataSet" == "n" ]
@@ -240,6 +242,7 @@ changeNamelistValue output_start_first_day_year "$output_start_first_day_year"
 changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
 changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
 changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
+changeNamelistValue set_parameter_values_from_file ".FALSE."   # set to default FALSE because parameter update is not applicable here in test_bed
 # get the PFT & lon & lat according to the site selected (reading the all_site_list.dat)
 if [ "$setPFTAutomatically" == "yes" ]
   then

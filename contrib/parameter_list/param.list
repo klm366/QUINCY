@@ -1,0 +1,27 @@
+&ASSIMILATION_CTL
+  ! tba
+/
+&ATMLAND_CTL
+  ! tba
+/
+&RADIATION_CTL
+  ! tba
+/
+&SHARED_CTL
+  mavg_period_tlabile=NAN
+  mavg_period_tphen=NAN
+  mavg_period_tuptake=NAN
+  mavg_period_tfrac=NAN
+  mavg_period_tcnl=NAN
+  mavg_period_talloc=NAN
+  mavg_period_tvegdyn=NAN
+/
+&SOIL_CTL
+  ! tba
+/
+&VEGETATION_CTL
+  delta_n_fraction=NAN
+  delta_n_leaf=NAN
+  cost_n_fixation_max=NAN
+  cost_n_fixation_min=NAN
+/

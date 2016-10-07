@@ -50,19 +50,19 @@ MODULE mo_shared_constants
   !! 
   !! moving average period lengths (you can add new parameters here)
   !! the period may be defined in days per default (but different units are possible, see calc_mavg() below)
-    REAL(wp),PARAMETER :: mavg_period_weekly            = 7.0_wp        !< 7 days; constant across the model
-    REAL(wp),PARAMETER :: mavg_period_monthly           = 30.0_wp       !< 30 days; constant across the model
-    REAL(wp),PARAMETER :: mavg_period_yearly            = 365.0_wp      !< 365 days
-    REAL(wp),PARAMETER :: mavg_period_tlabile           = 7.0_wp        !< memory time-scale of labile pool 
-    REAL(wp),PARAMETER :: mavg_period_tphen             = 7.0_wp        !< memory time-scale of phenological processes 
-    REAL(wp),PARAMETER :: mavg_period_tuptake           = 3.0_wp        !< memory time-scale of nutrient uptake processes (demand, BNF) 
-    REAL(wp),PARAMETER :: mavg_period_tfrac             = 10.0_wp       !< memory time-scale of leaf N fractions
-    REAL(wp),PARAMETER :: mavg_period_tcnl              = 10.0_wp       !< memory time-scale for leaf stoichiometry 
-    REAL(wp),PARAMETER :: mavg_period_talloc            = 20.0_wp       !< memory time-scale for biomass allocation
-    REAL(wp),PARAMETER :: mavg_period_tvegdyn           = 90.0_wp       !< memory time-scale of vegetation dynamics processes 
-!    REAL(wp),PARAMETER :: mavg_period_xxx         = xxx.0_wp       !< xxx
-!    REAL(wp),PARAMETER :: mavg_period_xxx         = xxx.0_wp       !< xxx
-!    REAL(wp),PARAMETER :: mavg_period_xxx         = xxx.0_wp       !< xxx
+    REAL(wp),SAVE :: mavg_period_weekly            = 7.0_wp        !< 7 days; constant across the model
+    REAL(wp),SAVE :: mavg_period_monthly           = 30.0_wp       !< 30 days; constant across the model
+    REAL(wp),SAVE :: mavg_period_yearly            = 365.0_wp      !< 365 days
+    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp        !< memory time-scale of labile pool 
+    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp        !< memory time-scale of phenological processes 
+    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp        !< memory time-scale of nutrient uptake processes (demand, BNF) 
+    REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp       !< memory time-scale of leaf N fractions
+    REAL(wp),SAVE :: mavg_period_tcnl              = 10.0_wp       !< memory time-scale for leaf stoichiometry 
+    REAL(wp),SAVE :: mavg_period_talloc            = 20.0_wp       !< memory time-scale for biomass allocation
+    REAL(wp),SAVE :: mavg_period_tvegdyn           = 90.0_wp       !< memory time-scale of vegetation dynamics processes 
+!    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
+!    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
+!    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
   !!----------------------------------------------------------------------------------------------------
 
 

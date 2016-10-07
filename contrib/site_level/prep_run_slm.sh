@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## 20160811
+## 20161006
 ##
 ## > prepare and start run_slm.sh script to run SLM simulations across multiple sites
 ## > the prep_run_slm.sh & run_slm-sh should be located in trunk/contrib/site_level/ (same for any branch)
@@ -13,18 +13,24 @@
 ########################################################################################################
 
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
-experimentalID="test_Nleaf"      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
+experimentalID=""      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
 # select sites: FLUXNET or CRUNCEPv5
 siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="yes"          # set either to yes or no (small caps)
-customSiteListFileName="sites4fluxnet_sims.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
+customSiteList="yes"          # set either to yes or no (small caps) - the sites in your file must be constistent with the option siteDataSet f/c
+customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
-singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet
+singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet f/c; overwrites customSiteList="yes"
 # run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
-specialFluxnetOutput="yes"    # set either to yes or no (small caps)
+specialFluxnetOutput="no"    # set either to yes or no (small caps)
+
+## parameter sensitivity simulations
+# you can run one site from your customSiteList (customSiteList is set to "yes" automatically if paramSensitivitySim="T")
+# please provide the line number of the site you want to use in your "customSiteListFileName"
+paramSensitivitySim="F"         # T (True) or F (False) [large caps]
+paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
 
 ## namelist.slm options ##
 # flags: T (True) or F (False) [large caps]
@@ -36,26 +42,26 @@ flag_t_jmax_acclimation="F"
 flag_optimal_Nfraction="F"
 flag_heterogeneous_canopy="F"
 # plant growth model options
-flag_optimal_Nleaf="T"
-flag_optimal_allocation="T"
+flag_optimal_Nleaf="F"
+flag_optimal_allocation="F"
 # vegetation dynamics options
-flag_tile_veg_dynamics="T"
+flag_tile_veg_dynamics="F"
 flag_start_bareground="F"
 
 # simulation length & output
-simulation_length_number=100     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
-output_start_first_day_year=90   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=100     # equal with or larger than output_start_first_day_year
+output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
+output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
 
 # forcing input
 soil_awc_prescribe=300.0        # float !
-useSiteSpecificAWC="no"      # yes/no to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
+useSiteSpecificAWC="no"         # yes/no to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=100.0      # float !
 
 ## details about the HPC, if unsure stick with these default values ##
-queue="all"                  # available queues: all io BTM mpi_large
+queue="BTM"                  # available queues: all io BTM mpi_large
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000000               # memory per job you may need; provided in Kb (1 Gb == 1000000 Kb)
 numberCpuMax=80              # maximum number of simulations started in parallel
@@ -105,11 +111,17 @@ username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 mkdir -p "$bgiScratchUserFold"
 slmBinary="../../x86_64-intel/bin/land.x"                  ## just one binary for all models
+slmNamelistFolder="../namelist/"
 slmNamelistFilename="namelist.slm"
-slmNamelist="../namelist/""$slmNamelistFilename"           ## just one namelist for all models
-slmRscript="../r_script/postprocessing_""$slmModel"".R"    ## just the R-Script for postprocessing output data
-slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"    ## just the R-Script for converting output for FLUXNET 
-slmRscript4fluxdiag="../r_script/generate_FLUXNET_diagnostics.R"    ## just the R-Script for FLUXNET diagnostics 
+slmParamSensiFolder="../parameter_list/"
+slmParamListDefaultFilename="param.listD"
+slmParamTableFilename="param_table.txt"
+slmParamListDefault="$slmParamSensiFolder""param.listD"
+slmParamTable="$slmParamSensiFolder""param_table.txt"
+slmNamelist="$slmNamelistFolder""$slmNamelistFilename"            ## just one namelist for all models
+slmRscript="../r_script/postprocessing_""$slmModel"".R"           ## just the R-Script for postprocessing output data
+slmRscript4fluxfile="../r_script/convert_slm2FLUXNET.R"           ## just the R-Script for converting output for FLUXNET 
+slmRscript4fluxdiag="../r_script/generate_FLUXNET_diagnostics.R"  ## just the R-Script for FLUXNET diagnostics 
 
 ## experimental ID & simulation specific folders at scratch ##
 # if experimental ID is empty, use date as: YYYYMMDD_HHMMSS
@@ -121,7 +133,9 @@ fi
 jobName="exp_""$experimentalID"  # name of the job(array) -> must start with a character make work (see below): bsub -w "ended($jobName)"
 simFold="$bgiScratchUserFold""$jobName""/"
 simDefaultFiles="default_files/"
+simParamSensiFiles="parameter_sensitivity_files/"
 simFoldDefaultFiles="$simFold""$simDefaultFiles"
+simFoldParamSensiFiles="$simFold""$simParamSensiFiles"
 simFoldOut="$simFold""out""/"
 simFoldErr="$simFold""error""/"
 # check if folder with this experimentalID already exists
@@ -156,11 +170,15 @@ if [ -d "$simFold" ]
   esac
 fi
 
-## set and create additional basic folders ##
+## set and create additional basic folders (within the basic simulation folder) ##
 mkdir -p "$simFold"
 mkdir -p "$simFoldDefaultFiles"
 mkdir -p "$simFoldOut"
 mkdir -p "$simFoldErr"
+if [ $paramSensitivitySim == "T" ]; then
+  mkdir -p "$simFoldParamSensiFiles"
+fi
+
 
 ## validate user-defined model-options ##
 validateUserConfigValues "$siteDataSet" "$validatesiteDataSet" "siteDataSet"
@@ -181,6 +199,7 @@ validateUserConfigValues "$flag_heterogeneous_canopy" "$validateFlags" "flag_het
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
 validateUserConfigValues "$useSiteSpecificAWC" "$validateUseSiteSpecificAWC" "useSiteSpecificAWC"
+validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
 
 ## site data-set: FLUXNET or CRUNCEPv5 ##
 if [ $siteDataSet == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
@@ -192,7 +211,13 @@ if [ $siteDataSet == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
   siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/CRUNCEPv5/"
 fi
 
-## site list: default or custom ##
+## test site list: default or custom ##
+# parameter sensitivity: set customSiteList to "yes" and delete any name in singleSiteName (see the IF[] for starting the job very below)
+if [ $paramSensitivitySim == "T" ]; then
+  customSiteList="yes"
+  singleSiteName=""
+fi
+# test default and custom site list
 if [ $customSiteList == "yes" ]
  then
   # if $customSiteListFileName is NOT empty use the 
@@ -216,7 +241,7 @@ if [ $customSiteList == "yes" ]
   fi
   # test if forcing data exist in the site-list-folder specified, for all sites specified in the custom site list
   siteList_lineNumber=$(wc -l "$siteListFileName" | awk '{print $1}')
-  for (( a=2; a<=$siteList_lineNumber; a++ ))
+  for (( a=2; a<=$siteList_lineNumber; a++ )) # line number 2 to ... excluding the header at line 1
     do
       siteName=$(sed -n "$a"p "$siteListFileName" | awk '{print $1}')  # -n  == quiet/silent
       if ! ls -la $siteDataFold | grep $siteName > /dev/null  # if forcing file not found
@@ -313,7 +338,7 @@ if [ "$emailNotification" == "yes" ]
     emailSwitch="-N"
 fi
 
-## test if namelist binary siteList R-Script exists ##
+## test if namelist binary siteList R-Script (and param.listD + param_table.txt) exists ##
 if [ ! -e "$slmBinary" ]     # exit if non-existing
   then
 	echo "EXIT! binary is missing"
@@ -333,7 +358,25 @@ if [ ! -e "$slmRscript" ]    # exit if non-existing
   then
 	echo "EXIT! the R Script is missing"
 	exit
-fi	
+fi
+# in case of parameter sensitivity
+if [ $paramSensitivitySim == "T" ]
+  then
+    # param.listD
+    if [ ! -e "$slmParamListDefault" ]    # exit if non-existing
+      then
+    	echo "EXIT! the default parameter List (param.listD) is missing though needed for Parameter Sensitivity Simulations."
+      echo " You may run the contrib/parameter_list/generate_parameter_table.sh to create this file."
+    	exit
+    fi
+    # param_table.txt
+    if [ ! -e "$slmParamTable" ]    # exit if non-existing
+      then
+    	echo "EXIT! the parameter Table (param_table.txt) is missing though needed for Parameter Sensitivity Simulations."
+      echo " You may run the contrib/parameter_list/generate_parameter_table.sh to create the table."
+    	exit
+    fi	
+fi
 
 ## validate $singleSiteName if user wants to run SLM only at one specific site ##
 # validate if $singleSiteName is not empty
@@ -343,16 +386,40 @@ if [ ! -z "$singleSiteName" ]
   validateUserConfigValues "$singleSiteName" "$allSites" "singleSiteName"
 fi
 
+## parameter sensitivity: get the number of different parameter combinations ##
+if [ $paramSensitivitySim == "T" ]
+  then
+    paramSensi_NumberCombinations=$(wc -l "$slmParamTable" | awk '{print $1}')
+    paramSensi_NumberCombinations=$(($paramSensi_NumberCombinations -1))  # not counting the header of the table
+    # validate number of parameter combinations
+    if [ $paramSensi_NumberCombinations -gt 994 ]
+      then
+        echo "EXIT !  You want to do ""$paramSensi_NumberCombinations"" simulations. That is too much. A number lower than 995 is necessary."
+        exit
+      else
+        echo "The number of combinations of parameter values (i.e. simulations) is: ""$paramSensi_NumberCombinations"
+    fi
+fi
+
 ## pass info about files to run_slm.sh via an extra file ("$simFoldDefaultFiles""config.txt") ##
-echo "$siteList"              >  "$simFoldDefaultFiles""config.txt"
-echo "$siteDataFold"          >> "$simFoldDefaultFiles""config.txt"
-echo "$slmModel"              >> "$simFoldDefaultFiles""config.txt"
-echo "$specialFluxnetOutput"  >> "$simFoldDefaultFiles""config.txt"
-echo "$siteDataObsFold"       >> "$simFoldDefaultFiles""config.txt"
-echo "$useSiteSpecificAWC"    >> "$simFoldDefaultFiles""config.txt"
-#echo "$"    >> "$simFoldDefaultFiles""config.txt"
-#echo "$"    >> "$simFoldDefaultFiles""config.txt"
-#echo "$"    >> "$simFoldDefaultFiles""config.txt"
+echo "$siteList"                                    >  "$simFoldDefaultFiles""config.txt"
+echo "$siteDataFold"                                >> "$simFoldDefaultFiles""config.txt"
+echo "$slmModel"                                    >> "$simFoldDefaultFiles""config.txt"
+echo "$specialFluxnetOutput"                        >> "$simFoldDefaultFiles""config.txt"
+echo "$siteDataObsFold"                             >> "$simFoldDefaultFiles""config.txt"
+echo "$useSiteSpecificAWC"                          >> "$simFoldDefaultFiles""config.txt"
+echo "$paramSensitivitySim"" ""$simParamSensiFiles" >> "$simFoldDefaultFiles""config.txt"
+#echo "$"                          >> "$simFoldDefaultFiles""config.txt"
+#echo "$"                          >> "$simFoldDefaultFiles""config.txt"
+
+# pass extra info about parameter sensitivity simulations to folder
+if [ $paramSensitivitySim == "T" ]; then
+  echo "$paramSensitivitySiteNumber"                  >  "$simFoldParamSensiFiles""param_config.txt"
+  echo "$slmParamListDefaultFilename"                 >>  "$simFoldParamSensiFiles""param_config.txt"
+  echo "$slmParamTableFilename"                       >>  "$simFoldParamSensiFiles""param_config.txt"
+  #echo "$"                  >>  "$simFoldParamSensiFiles""param_config.txt"
+  #echo "$"                  >>  "$simFoldParamSensiFiles""param_config.txt"
+fi
 
 ## copy namelist binary R-Script to simulation folder ##
 cp "$slmBinary"     "$simFoldDefaultFiles"
@@ -362,8 +429,12 @@ if [ $specialFluxnetOutput == "yes" ]; then
   cp "$slmRscript4fluxfile" "$simFoldDefaultFiles"
   cp "$slmRscript4fluxdiag" "$simFoldDefaultFiles"
 fi
+if [ $paramSensitivitySim == "T" ]; then
+  cp "$slmParamListDefault" "$simFoldParamSensiFiles"
+  cp "$slmParamTable"       "$simFoldParamSensiFiles"
+fi
 
-## syncronize all data with file system ##
+## syncronize all data with the file system ##
 sync
 
 ## define a function that manipulates the namelist && change namelist according to options ##
@@ -393,6 +464,12 @@ if [ "$specialFluxnetOutput" == "yes" ]
     changeNamelistValue fluxnet_output .TRUE.
   else
     changeNamelistValue fluxnet_output .FALSE.
+fi
+if [ $paramSensitivitySim == T ]
+  then
+    changeNamelistValue set_parameter_values_from_file ".TRUE."
+  else
+    changeNamelistValue set_parameter_values_from_file ".FALSE."
 fi
 if [ $flag_calc_soil_moisture == T ]
   then
@@ -457,6 +534,10 @@ if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
   array="yes"   # needed by cleanup_slm_hpc_run.sh
   # get number of lines in the file (number of sites stored in the $siteList = $siteNumber -1)
   siteNumber=$(wc -l "$siteList" | awk '{print $1}')
+  # overwrite siteNumber with number of parameter combinations for parameter sensitivity
+  if [ $paramSensitivitySim == "T" ]; then
+    siteNumber=$(($paramSensi_NumberCombinations +1)) # 2 to number+1
+  fi
   # compile job array argument 
   jobArray=$(echo "$jobName"[2-"$siteNumber"]%"$numberCpuMax")
   # submit job array starting at 2 because first line is the header
@@ -468,7 +549,7 @@ fi
 
 
 ## cleanup temporary files and folders via cleanup_slm_hpc_run.sh ##
-# this job is pending until teh above started $jobName has ended
+# this job is pending until the above started $jobName has ended
 sleep 2s  # just some waiting time to avoid any interference with the above started job
 cleanupJobName="$jobName""Cleanup"
 bsub -w "ended($jobName)" -q "$queue" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" ./cleanup_slm_hpc_run.sh "$jobName" "$array" "$singleSiteName"

@@ -31,6 +31,9 @@ MODULE mo_base_constants
   REAL(wp), DIMENSION(ncanop), SAVE :: canopy_layer_depth 
   REAL(wp) :: k_canopy_layer = 0.5_wp           !< extinction coefficient to calculate canopy layer depth
 
+  ! missing value from JSBACH4 - defined in JSBACH4 in /base/mo_jsb_io.f90
+  REAL(wp), PARAMETER :: missval = -9.E+15_wp   !< missing value
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------

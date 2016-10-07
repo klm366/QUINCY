@@ -72,6 +72,7 @@ mo_jsb_model_init.o: \
   mo_jsb_process_factory.o \
   mo_shared_isotope.o \
   mo_shared_constants.o \
+  mo_shared_set_parameters.o \
   mo_atmland_constants.o \
   mo_atmland_util.o \
   mo_rad_constants.o \

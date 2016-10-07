@@ -89,6 +89,7 @@ MODULE mo_jsb_var_class
     PROCEDURE               :: Divide_real1d_and_scalar         ! Divide variable of type t_jsb_var_real1d by REAL scalar
     PROCEDURE, PASS(this2)  :: Divide_scalar_and_real1d         ! Divide variable of type REAL scalar by t_jsb_var_real1d
     GENERIC, PUBLIC         :: OPERATOR(/) => Divide_real1d, Divide_real1d_and_scalar, Divide_scalar_and_real1d
+!!    FINAL                   :: finish => finish_jsb_var_real1d
   END TYPE t_jsb_var_real1d
 
   !-----------------------------------------------------------------------------------------------------!
@@ -264,6 +265,13 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------!
   ! 1D : operator overload Functions      *slmtemp                                                      !
   !-----------------------------------------------------------------------------------------------------!
+
+!!  SUBROUTINE finish_jsb_var_real1d(this)
+!!    TYPE(t_jsb_var_real1d) :: this      !< The TYPE object that will be finalized
+!!!    if (allocated(this.buff)) deallocate(this.buff)
+!!    IF (ALLOCATED(this%ptr)) DEALLOCATE(this%ptr)
+!!!    IF (ASSOCIATED(this%ptr)) nullify(this%ptr)
+!!  END SUBROUTINE finish_jsb_var_real1d
 
   !-----------------------------------------------------------------------------------------------------
   !> 1D + 1D operator overload

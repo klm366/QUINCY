@@ -12,16 +12,16 @@
 
 
 ## arguments passed to run_slm.sh ##
-jobName=$1                        # a user specific alphanumeric string
-simDefaultFiles=$2                # name of folder with binary namelist R-Script in $bgiScratchUserFold/$jobName
-singleSiteName=$3                 # only provided if a single site should be simulated, else a job array will be run
+jobName=$1                # a user specific alphanumeric string
+simDefaultFiles=$2        # name of folder with binary namelist R-Script in $bgiScratchUserFold/$jobName
+singleSiteName=$3         # only provided if a single site should be simulated (not for param sensitivity), else a job array will be run
 
 
 ## basic folders ##
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 simFold="$bgiScratchUserFold""$jobName""/"
-simFoldDefaultFiles="$simFold""$simDefaultFiles"   # namelist binary R-Script
+simFoldDefaultFiles="$simFold""$simDefaultFiles"   # namelist binary R-Script config-file (provided by prep_run_slm.sh)
 
 
 ## job array ID & job index number ##
@@ -36,6 +36,18 @@ slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
 specialFluxnetOutput=$(sed -n 4p "$simFoldDefaultFiles""config.txt")
 siteDataObsFold=$(sed -n 5p "$simFoldDefaultFiles""config.txt")
 useSiteSpecificAWC=$(sed -n 6p "$simFoldDefaultFiles""config.txt")
+doParamSensitivitySim=$(sed -n 7p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')  # T/F
+
+
+# read extra config-file for parameter sensitivity simulations created by prep_run_slm.sh if applicable ##
+if [ $doParamSensitivitySim == "T" ]
+  then
+    simParamSensiFiles=$(sed -n 7p "$simFoldDefaultFiles""config.txt" | awk '{print $2}') # name of folder containing files
+    lineNumberOfSite=$(sed -n 1p "$simFold""$simParamSensiFiles""param_config.txt")
+    slmParameterListDefault=$(sed -n 2p "$simFold""$simParamSensiFiles""param_config.txt")
+    slmParameterSensiTable=$(sed -n 3p "$simFold""$simParamSensiFiles""param_config.txt")
+fi
+
 
 ## further variables ##
 slmNamelist="namelist.slm"
@@ -52,10 +64,15 @@ siteData=0             # containing all data of the site as presented in the "$s
 # 1:Site-ID 2:lon 3:lat 4:PFT 5:start 6:end 7:lon_gmt 8:clay 9:silt 10:sand 11:awc 12:pH 13:LAI 14:Nleaf 15:SLA 16:Height 17:PlantYear
 # access via: "$(awk '{print $1}' <<< "$siteData")"
 if [ -z "$singleSiteName" ]  # if unset (i.e. if $3 is not provided because a job array should be run)
-  then  # one site of a job array
-	siteData=$(sed -n "$jobIndex"p "$siteList")       # get all data of the specific site (using line number)
+  then  # normal or parameter-sensitivity simulations
+    if [ $doParamSensitivitySim == T ]
+      then # parameter sensitivity - a site from customSiteList
+	      siteData=$(sed -n "$lineNumberOfSite"p "$siteList") # get all data of the specific site (using line number)
+      else # "normal" simulations - a site from the all_site_list.dat
+	      siteData=$(sed -n "$jobIndex"p "$siteList")         # get all data of the specific site (using line number)
+    fi
   else  # a single site
-	siteData=$(grep "$singleSiteName" "$siteList")          # get all data of the specific site (using site name, e.g. DE-Bay)
+	siteData=$(grep "$singleSiteName" "$siteList")            # get all data of the specific site (using site name, e.g. DE-Bay)
 fi
 
 
@@ -63,8 +80,13 @@ fi
 ## job specific actions start here ###########################################
 ##############################################################################
 jobFold="$simFold""$(awk '{print $1}' <<< "$siteData")""/"
+# for parameter sensitivity simulations prepend a number: 1001 == 1st set of parameter value combinations in param_table.txt
+if [ $doParamSensitivitySim == "T" ]; then
+  paramSimNumber=$((1000 + $jobIndex - 1))
+  jobFold="$simFold""$paramSimNumber""_""$(awk '{print $1}' <<< "$siteData")""/"
+fi
 mkdir -p "$jobFold"
-cd "$jobFold"
+cd "$jobFold"           ## cd into job specific folder ##
 jobErrFold="./error/"
 mkdir -p "$jobErrFold"  # folder for error files and out files of this job
 
@@ -74,11 +96,15 @@ cp "$simFoldDefaultFiles""$slmNamelist" ./
 cp "$simFoldDefaultFiles""$slmBinary"   ./
 cp "$simFoldDefaultFiles""$slmRscript"  ./
 if [ $specialFluxnetOutput == "yes" ];then
-   cp "$simFoldDefaultFiles""$slmRscript4fluxfile" ./
+   cp "$simFoldDefaultFiles""$slmRscript4fluxfile"  ./
    cp "$simFoldDefaultFiles""$slmRscript4fluxdiag"  ./
    cp "$siteDataObsFold""$(awk '{print $1}' <<< "$siteData")"*.nc ./obs.nc
 fi
-cp "$siteDataFold""$(awk '{print $1}' <<< "$siteData")"*.dat ./climate.dat
+cp "$siteDataFold""$(awk '{print $1}' <<< "$siteData")"*.dat      ./climate.dat
+if [ $doParamSensitivitySim == "T" ]; then
+  slmParameterList="param.list"
+  cp ../"$simParamSensiFiles""$slmParameterListDefault"           ./"$slmParameterList"
+fi
 
 ## convert PFT name into ID ##
 pftName="$(awk '{print $4}' <<< "$siteData")"
@@ -142,6 +168,28 @@ if [ $specialFluxnetOutput == "yes" ]
     forcingPeriodLength=$(($year2-$year1+1))
     changeNamelistValue fluxnet_output_length "$forcingPeriodLength"
 fi
+
+## manipulate the param.list if parameter sensitivity simulations should be done ##
+if [ $doParamSensitivitySim == "T" ]; then
+
+  # define function that sets the actual values per parameter in ./param.list
+  function changeParamListValue {
+    sed -i /"$1"/s/ACTIVE/"$2"/ ./"$slmParameterList"   # replace the placeholder "ACTIVE" for parameter $1 with value $2
+  return 0                                            # get return value with: return_value=$?
+  }
+  # number of parameters
+  paraNumber=$(sed -n 1p ../"$simParamSensiFiles""$slmParameterSensiTable" | grep -o " " | wc -l) # count the number of separators between columns
+
+  for ((i = 0 ; i < $paraNumber ; i++))
+    do
+      paraCount=$(($i +2))
+      paraName=$(sed -n 1p ../"$simParamSensiFiles""$slmParameterSensiTable" | awk -v c="$paraCount" '{print $c}' )
+      paraValue=$(sed -n "$jobIndex"p ../"$simParamSensiFiles""$slmParameterSensiTable" | awk -v c="$paraCount" '{print $c}' ) 
+      changeParamListValue $paraName $paraValue
+  done
+fi
+
+
 sync
 
 
@@ -170,14 +218,17 @@ rm ./"$slmBinary"
 mkdir -p ./input
 mkdir -p ./output
 mkdir -p ./postprocessing
-mv ./"$slmNamelist"  ./input
-if [ $specialFluxnetOutput == "yes" ]; then 
-  mv ./summary*      ./postprocessing
-  mv ./statistics*   ./postprocessing
-  mv ./*.nc ./output 
+mv ./"$slmNamelist"         ./input
+if [ $doParamSensitivitySim == "T" ]; then
+  mv ./"$slmParameterList"  ./input
 fi
-mv ./*.txt           ./output 
-mv ./*.pdf           ./postprocessing
+if [ $specialFluxnetOutput == "yes" ]; then 
+  mv ./summary*             ./postprocessing
+  mv ./statistics*          ./postprocessing
+  mv ./*.nc                 ./output 
+fi
+mv ./*.txt                  ./output 
+mv ./*.pdf                  ./postprocessing
 
 ## sync all written data with file system ##
 sync
