@@ -40,7 +40,7 @@ MODULE mo_jsb_task_class
     CHARACTER(len=50)              :: name
     INTEGER                        :: process_id     = 0
     INTEGER                        :: owner_model_id = 0
-    CLASS(t_jsb_task_msg), POINTER :: msg
+    CLASS(t_jsb_task_msg), POINTER :: msg => NULL()
 !!$    PROCEDURE(Integrate_task), POINTER, NOPASS :: Integrate
 !!$    PROCEDURE(Aggregate_task), POINTER, NOPASS :: Aggregate
   CONTAINS
