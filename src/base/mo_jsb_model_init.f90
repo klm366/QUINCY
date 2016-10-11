@@ -356,8 +356,9 @@ CONTAINS
          tile%veg%pool%seed_bed = init_pool 
       ELSE
          tile%veg%pool%reserve  = init_pool 
-      ENDIF
+      END IF
        tile%soil%pool%litter%nitrogen      = 5._wp
+
   END SUBROUTINE init_slm_plant
 
 

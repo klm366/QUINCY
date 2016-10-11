@@ -95,8 +95,8 @@ CONTAINS
     ! isotope standards
     PDB_STANDARD_C13     = 0.0112372_wp   
     AAB_STANDARD_C14     = 0.2261_wp      
-    AvogadroC            = 6.022_wp*1.e23     
-    lambda_C14           = 3.8332_wp*1.e-12     
+    AvogadroC            = 6.022_wp*1.e23_wp     
+    lambda_C14           = 3.8332_wp*1.e-12     ! 12 decimal places -> _wp NOT possible (_wp = usually precision of 8 decimal) !     
     scale_correction_c14 = 1000000000000._wp   
 
   END SUBROUTINE init_shared_constants

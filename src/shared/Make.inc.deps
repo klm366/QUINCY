@@ -26,7 +26,7 @@ mo_shared_set_parameters.o: \
   mo_kind.o \
   mo_namelist.o \
   mo_exception.o \
-  mo_base_constants.o \
+  mo_jsb_io.o \
   mo_shared_constants.o \
   mo_veg_constants.o
 

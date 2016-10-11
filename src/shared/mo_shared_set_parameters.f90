@@ -11,7 +11,7 @@ MODULE mo_shared_set_parameters
 
   USE mo_kind,                ONLY: wp, eps8
   USE mo_exception,           ONLY: message_text, message, finish
-  USE mo_base_constants,      ONLY: missval  ! = -9.E+15_wp
+  USE mo_jsb_io,              ONLY: missval  ! = -9.E+15_wp
 
   IMPLICIT NONE
 

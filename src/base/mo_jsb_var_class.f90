@@ -89,6 +89,7 @@ MODULE mo_jsb_var_class
     PROCEDURE               :: Divide_real1d_and_scalar         ! Divide variable of type t_jsb_var_real1d by REAL scalar
     PROCEDURE, PASS(this2)  :: Divide_scalar_and_real1d         ! Divide variable of type REAL scalar by t_jsb_var_real1d
     GENERIC, PUBLIC         :: OPERATOR(/) => Divide_real1d, Divide_real1d_and_scalar, Divide_scalar_and_real1d
+    PROCEDURE, PUBLIC       :: Init => init_t_jsb_var_real1d
 !!    FINAL                   :: finish => finish_jsb_var_real1d
   END TYPE t_jsb_var_real1d
 
@@ -472,6 +473,18 @@ CONTAINS
 
     var3%ptr = scalar / this2%ptr
   END FUNCTION Divide_scalar_and_real1d
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Initialisation of var_real1d with a scalar 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL SUBROUTINE init_t_jsb_var_real1d(this,s)
+    IMPLICIT NONE
+    CLASS(t_jsb_var_real1d), INTENT(inout) :: this
+    REAL(wp),                INTENT(in)    :: s
+
+    this%ptr     = s 
+  END SUBROUTINE init_t_jsb_var_real1d 
 
 
   !-----------------------------------------------------------------------------------------------------!

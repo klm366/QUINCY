@@ -6,7 +6,7 @@
 ## HowTo: specify the below options as suitable for you
 ## Tip:   you can pass the model name as argument to this script [i.e. run-slm_test-bed.sh modelName], which overwrites the below defined value of slmModel
 ## 
-## Note:  the namelist option update_parameter_values_from_file is set to .FALSE. by this script - please use the pre_run.sh @ HPC (Cluster) if you need .TRUE.
+## Note:  the namelist option set_parameter_values_from_file is set to .FALSE. by this script - please use the pre_run.sh @ HPC (Cluster) if you need .TRUE.
 
 
 ########################################################################################################

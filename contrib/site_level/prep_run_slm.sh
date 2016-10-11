@@ -17,7 +17,7 @@ experimentalID=""      # set something useful for you (allowed only: alphanumeri
 # select sites: FLUXNET or CRUNCEPv5
 siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="yes"          # set either to yes or no (small caps) - the sites in your file must be constistent with the option siteDataSet f/c
+customSiteList="no"          # set either to yes or no (small caps) - the sites in your file must be constistent with the option siteDataSet f/c
 customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant are currently available
@@ -49,11 +49,11 @@ flag_tile_veg_dynamics="F"
 flag_start_bareground="F"
 
 # simulation length & output
-simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=50     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
-output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
+output_start_first_day_year=20   # 1 to ... [lower than or equal with output_end_last_day_year ]
+output_end_last_day_year=50     # equal with or larger than output_start_first_day_year
 
 # forcing input
 soil_awc_prescribe=300.0        # float !
