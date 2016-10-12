@@ -1,6 +1,6 @@
 .. include:: defs.hrst
 
-.. _userguide-c:
+.. _userguide-com:
 
 User guide for benchmarking
 ===========================
@@ -109,9 +109,9 @@ expriment data, analysing, making plots and writing a report. Both parts are con
 by the run script :math:`\mathtt{bench4jsbach/scripts/bench4jsbach.py}`.
 
 Initial run
-+++++++++++
+-----------
 
-A |b4j| run needs a name as it writes data to your local machine that has to be
+A |b4j| run needs a name as it writes data to your local filesystem that has to be
 addressed. First choose this run name (e.g. :math:`\mathtt{myb4jrun}`) and  change to the
 base directory :math:`\mathtt{bench4jsbach}`.
 Call the run script :math:`\mathtt{bench4jsbach.py}` with your run name
@@ -141,15 +141,18 @@ in :math:`\mathtt{myb4jrun/configs}`, also shown further down.
 
    **Figure:**  Initial structure of :math:`\mathtt{bench4jsbach/work/myb4jrun}`
 
-Configuration file
-++++++++++++++++++
+
+.. _main-config:
+
+Main configuration file
+-----------------------
 
 The generated file is a form for the main configuration of your |b4j| run and has to be
 adapted to the planned experiment comparison. It is formatted to be read by a |py| config
 file parser after your accomplishment. A config file
 consists of key value pairs and sections nested to any depth. For the sections
 square brackets are used, indentation clearifies the nesting level. You can write
-comments inline prepended by a hash symbol \"#\".
+comments inline prepended by the hash symbol \"#\".
 
 ::
    
@@ -199,7 +202,7 @@ metadata from the wikipage.
 +-----------------+------------------------------+-----------------+-----------------+
 | department      | users' department            | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
-| reporting       | reporting switch             | booolean        | True            |
+| reporting       | reporting switch             | boolean         | True            |
 +-----------------+------------------------------+-----------------+-----------------+
 
 |exp| section
@@ -240,6 +243,8 @@ Single |exp| subsection level:
 | finalyear       | final year of |exp|          | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
 
+
+.. _diag-f-section:
 
 |diag-f| section
 ++++++++++++++++

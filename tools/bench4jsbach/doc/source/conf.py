@@ -191,11 +191,22 @@ todo_include_todos = False
 # a list of builtin themes.
 #html_theme = 'alabaster'
 #html_theme = 'sphinx_rtd_theme'
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-if not on_rtd:  # only import and set the theme if we're building docs locally
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
+# on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+# if not on_rtd:  # only import and set the theme if we're building docs locally
+#     import sphinx_rtd_theme
+#     html_theme = 'sphinx_rtd_theme'
+#     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
+
+html_theme = 'alabaster'
+html_logo = 'logo/earth-html.jpg'
+html_favicon = 'logo/earth-html.ico'
+#html_favicon = 'logo/earth-round-corners-html.ico'
+html_theme_options = {
+    'show_related': 'True',
+    'fixed_sidebar': 'True',
+    }
 
 
 workdir = os.getcwd ()
@@ -331,7 +342,7 @@ latex_documents = [
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
-#latex_logo = None
+latex_logo = 'logo/earth-latex.jpg'
 
 # For "manual" documents, if this is true, then toplevel headings are parts,
 # not chapters.
@@ -388,9 +399,9 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 #intersphinx_mapping = {'https://docs.python.org/': None}
-intersphinx_mapping = {
-    'python': ('https://docs.python.org/2.7/', None),
-    'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None),
-    'iris': ('http://scitools.org.uk/iris/docs/latest/', None),
-    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
-    }
+# intersphinx_mapping = {
+#     'python': ('https://docs.python.org/2.7/', None),
+#     'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None),
+#     'iris': ('http://scitools.org.uk/iris/docs/latest/', None),
+#     'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+#     }

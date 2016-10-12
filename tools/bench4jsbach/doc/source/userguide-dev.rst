@@ -4,19 +4,18 @@
 User guide for developing |diag-f| s
 ====================================
 
-In the following you learn how to develop a |diag-f| and to integrate it
-in a |b4j| run. 
-
-
-A diagnostic for experiment comparison from external sources can be
-included as |diag-f| into a |b4j| run. Therefore it needs
-scripts for the processing chain (preprocessing, analysing, plotting), a
-configuration file and descriptive textblocks for the report. A script may be
+In the following we show how a diagnostic for |exp| comparison from
+external sources can be prepared to serve as |diag-f| that may be triggered by
+a |b4j| run. A |diag-f| consists of 
+scripts for the processing chain (preprocessing, analysing, plotting), declarations
+also for data retrieval and interpolation, descriptive textblocks for generating reports
+and a configuration file to bring everything together. The scripts may be
 written in any programming language that is supported by your platform.
-It has to be layed out for one candidate and one reference
-so that it can be called in loops over multiple experiments. The scripts work
-on local data which have been selected and interpolated from the experiment output as
-indicated by the user and the experiment type. They
+A script has to be layed out for one candidate and one reference
+so that it is scalable, i.e. it can be called in loops over multiple |exp| s. It
+will work on local data which the tool has selected and interpolated
+from the |exp| output beforehand as
+it had been indicated by the user and the |exp| type. The
 interface of each script has to be declared in a respective section of the
 |diag-f| s' configuration file. The
 information to provide include input and output filenames and possibly hints
@@ -25,12 +24,86 @@ spatial resolution, tiling and global fragmentation and time resolution and
 period. 
 
 
-Configuration
--------------
-The
-configuration for a |diag-f| defines a processing chain that is
-interconnected by I/O dependencies. For the time being the processes
-have a binding order: 1. :math:`\mathtt{fetch}`,
+We use the example :math:`\mathtt{myb4jrun}` from the
+last section :ref:`userguide-com` again.
+In the run we want to include some
+diagnostic and benchmarking for a clear cut out example scientific issue called
+:math:`\mathtt{myfield}`.
+
+Declaration in main configuration
+---------------------------------
+      
+The central entry point for a
+|diag-f| into the run is the :math:`\mathtt{fields}` :ref:`diag-f-section` in the main
+configuration file, in this example :math:`\mathtt{myb4jrun.cfg}`. We declare a subsection
+called :math:`\mathtt{myfield}` and fill in the path to a new field configuration file
+as value for the key :math:`\mathtt{config\_filename}`, here
+:math:`\mathtt{mypath/myfield.cfg}`.
+
+.. literalinclude::  ./graphic/mydiagfield.cfg
+	   
+**Listing:** Declaration of :math:`\mathtt{myfield}` in main configuration file :math:`\mathtt{myb4jrun.cfg}`
+
+Configuration file :math:`\mathtt{myfield.cfg}`
+-----------------------------------------------
+
+Now we want to develop this field configuration file. It has to contain all the settings and
+communication parameters that are needed for a |diag-f| from the |exp| output data to the
+benchmark results in a final report.
+
+Top level config
+++++++++++++++++
+
+For verification it will be checked if the value for the key
+:math:`\mathtt{field\_name}` is consistent with the name given for the
+:math:`\mathtt{field}` in the main configuration.
+      
++------------------------------------------------+-----------------------------------+
+| key                                            | value                             |
++-----------------+------------------------------+-----------------+-----------------+
+| name            | description                  | datatype        | default         |
++=================+==============================+=================+=================+
+| field_name      | |long-string-4|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| suffix          | |long-string-5|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| frequency       | |long-string-6|              | |long-string-7| | 'monthly'       |
++-----------------+------------------------------+-----------------+-----------------+
+| documentation   | |long-string-8|              | string          | None            |
++-----------------+------------------------------+-----------------+-----------------+
+
+.. |long-string-4| replace:: field id conform to id/name of diagnostic field in main configuration
+.. |long-string-5| replace:: output format suffix for processed data of the run
+.. |long-string-6| replace:: output frequence to use in the run
+.. |long-string-7| replace:: option('yearly','monthly','6-hourly')
+.. |long-string-8| replace:: self documentation
+
+In our example we fill in the respective values.
+
+::
+
+   field_name=myfield
+   suffix=nc
+   frequence=monthly
+   documentation="""
+   NAME 
+	   myfield_diagnostic
+
+   DESCRIPTION
+	   This configuration ...
+
+   DETAILS
+	   For all experiments ...
+	   """
+	   
+**Listing:** Example top level configuration
+
+Processing chain
+++++++++++++++++
+
+The processes involved in the |diag-f| are
+interconnected by I/O dependencies. For the time being they have a binding
+order: 1. :math:`\mathtt{fetch}`,
 2. :math:`\mathtt{interpolate}`, 3. :math:`\mathtt{preprocess}`,
 4. :math:`\mathtt{diagnose}`, 5. :math:`\mathtt{plot}`. |b4j| works internally
 with an indexing system in which files are addressed by unique infixes,
@@ -41,107 +114,118 @@ will also be used as substring for the respective filename. If the file
 has to be read by a subsequent process the infix is used in the respective
 configuration as value for its
 :math:`\mathtt{input}` item. For illustration  
-the listing below shows a detail from the configuration file for the
-|diag-f| :math:`\mathtt{Albedo}`. Clicking on the graphic opens another picture,
+the listing at the bottom of the page :ref:`io-dependencies-html` shows a detail from the configuration file for the
+|diag-f| :math:`\mathtt{myfield}`. In HTML clicking on the graphic opens another picture,
 showing how the I/O dependencies are taken into account.
-
-.. figure:: ./graphic/diagfield-conf.jpg
-   :target: {{ workdir }}/graphic/diagfield-conf-overlay.jpg
-
-**Listing:** albedo.cfg, example
-
-As can be seen in detail in the :ref:`userguide-c` a  |diag-f| has to be introduced
-by a labeled subsection in the :ref:`diag-f` of the main
-configuration file providing in particular the filename respectively
-the whole local path for the specialized configuration.
 
 
 Fetch section
 +++++++++++++
 
-Each variable that has to be read from the experiment's dataset is represented by a 
-subsection labeled with a run internal unique name. The data fetched and
-selected from the experiment output will be written to the subdirectory
-:math:`\mathtt{interpolated\_selected}` in :math:`\mathtt{work}`, f.e.
-:math:`\mathtt{work/myb4jrun/interpolated\_selected}` with a filename containing
-this name as infix. The single variable subsection level has subsubsections for
-each experiment type holding specialized configuration.
+For each variable that the |diag-f| requires from the |exp| output the |b4j| run will
+write a file containing the selected data field. You have to define a subsection f.e.
+:math:`\mathtt{FILE-INFIX}` for it.
 
-Single variable subsection:
+
+Single subsection in section  :math:`\mathtt{fetch}`:
 
 +------------------------------------------------+-----------------------------------+
 | key                                            | value                             |
 +-----------------+------------------------------+-----------------+-----------------+
 | name            | description                  | datatype        | default         |
 +=================+==============================+=================+=================+
-| longname        | long descriptive name        | string          | None            |
+| longname        | complete name                | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
 | unit            | physical unit                | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
 
+Underneath there has to be one subsubsection for each :math:`\mathtt{type}` given
+for any item in the |exp| section of the main configuration. It must be labeled with
+the name of the :math:`\mathtt{experiment\ type}`.
 
-:math:`\mathtt{MPIESM1}` subsubsection:
+Subsubsection for the :math:`\mathtt{MPIESM1}` :math:`\mathtt{experiment\ type}`:
+
 
 +------------------------------------------------+-----------------------------------+
 | key                                            | value                             |
 +-----------------+------------------------------+-----------------+-----------------+
 | name            | description                  | datatype        | default         |
 +=================+==============================+=================+=================+
-| name            | variable name in datafile    | string          | \-              |
+| name            | |long-string-9a|             | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| code            | variable code number in file | string          | \-              |
+| code            | |long-string-9b|             | option          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| submodel        | hosting submodel in coupled  | string          | None            |
-|                 | model                        |                 |                 |
+| submodel        | |long-string-9c|             | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
-| stream          | stream, hosting datafile     | string          | None            |
+| stream          | |long-string-10|             | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
 
+.. |long-string-9a| replace:: name of variable to select
+.. |long-string-9b| replace:: code number of variable to select 
+.. |long-string-9c| replace:: submodel identifier in the original context
+.. |long-string-10| replace:: stream identifier in the original context
 
-Processing sections, :math:`\mathtt{preprocessing, diagnose, plotting}`:
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			      
+For clarification we show  one variable subsection labeled
+‘:math:`\mathtt{D\_selcode}`’  of the :math:`\mathtt{fetch}` section from
+our example :math:`\mathtt{mypath/myfield.cfg}`.
+
+::
+
+   [fetch]
+       [[D_selcode]]
+	   longname=Surface Downwelling Solar Radiation [W m-2]
+	   unit=Wm**(-2)
+	   [[[MPIESM1]]]
+	       name=swdown_acc
+	       code=21
+	       submodel=jsbach
+	       stream=jsbach
+	       
+**Listing:** Example :math:`\mathtt{fetch}` section configuration
+
+
+Preprocessing and diagnostic sections
++++++++++++++++++++++++++++++++++++++
+
+To do preprocessing, diagnostic and plotting |b4j| calls executable scripts. In order to
+run a new diagnostic The name of the script is sufficient if it
+is located in :math:`\mathtt{bench4jsbach/prod/scripts}`.
+
+Top level in this sections:
 
 +------------------------------------------------+-----------------------------------+
 | key                                            | value                             |
 +-----------------+------------------------------+-----------------+-----------------+
 | name            | description                  | datatype        | default         |
 +=================+==============================+=================+=================+
-| suffix          | format for output files      | option ( nc )   | nc              |
+| exec            | |long-string-11|             | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
-| exec            | executable script            | string          | \-              |
-+-----------------+------------------------------+-----------------+-----------------+
-| input           | data needed from precursor   | string          | \-              |
+| input           | |long-string-12|             | stringlist      | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
 
-
-Specialized configuration for the processing section :math:`\mathtt{plotting}`:
-
-+------------------------------------------------+-----------------------------------+
-| key                                            | value                             |
-+-----------------+------------------------------+-----------------+-----------------+
-| name            | description                  | datatype        | default         |
-+=================+==============================+=================+=================+
-| suffix          | format for output files      | option ( png )  | png             |
-+-----------------+------------------------------+-----------------+-----------------+
-| nref            | members in comparison        | |long_string-2| | single          |
-+-----------------+------------------------------+-----------------+-----------------+
-| plot_title      | title for the plot           | string          | None            |
-+-----------------+------------------------------+-----------------+-----------------+
-
-.. |long_string-2| replace:: option (single, multiple)
+.. |long-string-11| replace:: executable script to call in b4j run
+.. |long-string-12| replace:: input files needed by script
 
 
-Processing scripts
-------------------
-
-For integrated |diag-f| s the processing scripts can be found under
-:math:`\mathtt{prod/scripts}`.  If you want to use your own |diag-f| you can
-provide the paths for the executable scripts under the item :math:`\mathtt{exec}` in
-the respective process' subsection of the configuration file.
-
-
-
-As this is work in progress it has to be reckoned with major changes while
-more |diag-f| s and other experiment types are integrated. 
+In the example below the executable script :math:`\mathtt{myfield\_prep.py}`
+shall run for :math:`\mathtt{preprocessing}`.  It has to read a data file 
+::
+   
+   [preprocessing]
+       exec=mypath/myfield_prep.py
+       input=D_selcode,
+       [[D_seasmean]]
+	       
+**Listing:** Example :math:`\mathtt{preprocessing}` section configuration
 
 
+.. _io-dependencies-html:
+
+I/O dependencies
+++++++++++++++++
+
+.. figure:: ./graphic/diagfield-conf.jpg
+   :target: {{ workdir }}/graphic/diagfield-conf-overlay.jpg
+
+**Listing:** myfield.cfg, example

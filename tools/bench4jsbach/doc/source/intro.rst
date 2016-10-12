@@ -21,9 +21,9 @@ In order to have a living, dynamical tool, the possibility for individual
 extension is provided to the user from the beginning. This will help the
 benchmarking process to
 retain its validity but also help the scientists to handle future questions
-bringing new values into focus. It may foster the communication between
+bringing new values into focus. It may also foster the communication between
 the groups as individual developments can easily be made usable for the
-whole department and thus serve as a basis for a fruitfuly discussion on the most
+whole department and thus serve as a basis for a fruitful discussion on the most
 significant diagnostic for the generally applicable benchmarking in the
 department.
 
@@ -33,7 +33,7 @@ Concepts
 --------
 
 A guiding idea for |b4j| is the separation of issues that strongly depend on the
-origin of the climate data from issues directly related with their
+origin of the climate data from issues directly related to their
 comparison. It is intended to solve the origin dependend tasks
 'under the hood' of the tool so that a scientist can
 focus on the diagnostic and benchmarking methods.
@@ -45,8 +45,8 @@ Experiments
 +++++++++++
 
 We use the generic term :math:`\mathtt{experiment}` independent from the
-data origin being an earth system model simulation or an
-observation. Origin dependend processing like locating and extracting
+data origin holding earth system model simulation output or 
+observational data. Origin dependend processing like locating and extracting
 necessary raw data from different host, filesystem and out of
 datafile but also data interpolation are gathered under the name.
 
@@ -55,7 +55,7 @@ at least one instance of each is needed. It is possible to have multiple |exp| s
 also a single instance can take both roles in one |b4j| run. The main difference
 of the roles is the comparison being made and the  report being written from
 the perspective of the candidate |exp| s.
-Depending on the evalution method each candidate can be compared with single
+Depending on the evaluation method each candidate can be compared with single
 references or with all references at once.
 
 .. _diag-fs:
@@ -69,7 +69,7 @@ featuring a particular scientific question.
 It should contain at least one diagnostic and one benchmarking method.  In this
 context the term
 benchmarking refers to a method that condenses the deviation of two
-experiments to one number, i.e. yields a global and time average value.
+experiments to one number, i.e. yields a global and time average value for it.
 
 Context
 -------
