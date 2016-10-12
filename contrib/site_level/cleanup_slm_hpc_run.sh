@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## 20161006
+## 20161012
 ##
 ## script to cleanup temporary files and folders after a whole job-array of slm simulations was completed
 ## called from the prep_run_slm.sh
@@ -13,7 +13,7 @@
 
 ## arguments passed to cleanup_slm_hpc_run.sh ##
 jobName=$1                        # a user specific alphanumeric string
-array=$2                          # was an job array or just one job simulated
+array=$2                          # was an job array or just one job simulated  T/F
 # $3 == singleSiteName provided only if just one single site was run
 
 
@@ -21,12 +21,13 @@ array=$2                          # was an job array or just one job simulated
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 simFold="$bgiScratchUserFold""$jobName""/"
-paramSensitivitySim=$(sed -n 7p "$simFold""default_files/config.txt" | awk '{print $1}')  # T/F
+paramSensitivitySim=$(sed -n 7p "$simFold""default_files/config.txt" | awk '{print $1}')      # T/F  -> parameter sensitivity
+compareSimCRUNCEPvsGFDB=$(sed -n 8p "$simFold""default_files/config.txt" | awk '{print $1}')  # T/F  -> compare with global forest data base
 
 
 ## move job specific error file into the particular job folder ##
-if [ "$array" == "yes" ]
- # $array == yes
+if [ "$array" == "T" ]
+ # $array == T
  then
   # parameter sensitivity simulations
   if [ $paramSensitivitySim == T ]
@@ -71,6 +72,15 @@ mv "$simFold"default_files/*.x "$simFold"x_binary
 if [ $paramSensitivitySim == T ]; then
   mkdir -p "$simFold"parameter_list
   mv "$simFold"parameter_sensitivity_files/param_table.txt "$simFold"parameter_list
+fi
+
+## run two R Scripts for comparing simulated CRUNCEP data with global forest data base data at daily basis
+if [ $compareSimCRUNCEPvsGFDB == T ]; then
+  Rscript "$simFold"default_files/sim_cruncep_vs_gfdb-process_daily.R $simFold  # creates two .csv files
+  sync
+  Rscript "$simFold"default_files/sim_cruncep_vs_gfdb-create_figs.R $simFold    # creates a .pdf with multiple figures
+  rm "$simFold"obs_site.csv
+  sync
 fi
 
 ## remove some folders not needed anymore ##

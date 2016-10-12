@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## 20160601
+## 20161012
 ##
 ## script to run simulations of SLM; i.e. one specific job (of an array, or a specific site)
 ##
@@ -33,10 +33,12 @@ jobIndex=$LSB_JOBINDEX            # index number of the job (in the job array: 2
 siteList=$(sed -n 1p "$simFoldDefaultFiles""config.txt")    # -n  == quiet/silent
 siteDataFold=$(sed -n 2p "$simFoldDefaultFiles""config.txt")
 slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
-specialFluxnetOutput=$(sed -n 4p "$simFoldDefaultFiles""config.txt")
+specialFluxnetOutput=$(sed -n 4p "$simFoldDefaultFiles""config.txt")  # T/F
 siteDataObsFold=$(sed -n 5p "$simFoldDefaultFiles""config.txt")
-useSiteSpecificAWC=$(sed -n 6p "$simFoldDefaultFiles""config.txt")
+useSiteSpecificAWC=$(sed -n 6p "$simFoldDefaultFiles""config.txt")    # T/F
 doParamSensitivitySim=$(sed -n 7p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')  # T/F
+ # info: $compareSimCRUNCEPvsGFDB T/F is saved at line 8 but necessary only for the cleanup_slm_hpc_run.sh
+
 
 
 # read extra config-file for parameter sensitivity simulations created by prep_run_slm.sh if applicable ##
@@ -95,7 +97,7 @@ mkdir -p "$jobErrFold"  # folder for error files and out files of this job
 cp "$simFoldDefaultFiles""$slmNamelist" ./
 cp "$simFoldDefaultFiles""$slmBinary"   ./
 cp "$simFoldDefaultFiles""$slmRscript"  ./
-if [ $specialFluxnetOutput == "yes" ];then
+if [ $specialFluxnetOutput == "T" ];then
    cp "$simFoldDefaultFiles""$slmRscript4fluxfile"  ./
    cp "$simFoldDefaultFiles""$slmRscript4fluxdiag"  ./
    cp "$siteDataObsFold""$(awk '{print $1}' <<< "$siteData")"*.nc ./obs.nc
@@ -158,10 +160,10 @@ return 0                                                         # get return va
 changeNamelistValue longitude "$(awk '{print $2}' <<< "$siteData")"
 changeNamelistValue latitude  "$(awk '{print $3}' <<< "$siteData")"
 changeNamelistValue plant_functional_type_id "$pftID"
-[ $useSiteSpecificAWC == "yes" ] && \
+[ $useSiteSpecificAWC == "T" ] && \
    changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")"   # this is equal to: if [ ... ]; then ...; fi
 # special fluxnet output #
-if [ $specialFluxnetOutput == "yes" ]
+if [ $specialFluxnetOutput == "T" ]
   then
     year1=$(awk '{print $5}' <<< "$siteData")
     year2=$(awk '{print $6}' <<< "$siteData")
@@ -203,7 +205,7 @@ sync
 Rscript ./"$slmRscript"
 sync
 
-if [ $specialFluxnetOutput == "yes" ]; then 
+if [ $specialFluxnetOutput == "T" ]; then 
    Rscript ./"$slmRscript4fluxfile" $(awk '{print $2}' <<< "$siteData") $(awk '{print $3}' <<< "$siteData") $(awk '{print $5}' <<< "$siteData")
    Rscript ./"$slmRscript4fluxdiag" $(awk '{print $5}' <<< "$siteData") $(awk '{print $6}' <<< "$siteData")
 fi
@@ -212,7 +214,7 @@ fi
 rm ./climate.dat
 rm ./"$slmRscript"
 rm ./"$slmBinary"
-[ $specialFluxnetOutput == "yes" ] && rm ./"$slmRscript4fluxfile" ./"$slmRscript4fluxdiag"  # equal to: if [ ... ]; then ...; fi
+[ $specialFluxnetOutput == "T" ] && rm ./"$slmRscript4fluxfile" ./"$slmRscript4fluxdiag"  # equal to: if [ ... ]; then ...; fi
 
 ## sort job specific files ##
 mkdir -p ./input
@@ -222,7 +224,7 @@ mv ./"$slmNamelist"         ./input
 if [ $doParamSensitivitySim == "T" ]; then
   mv ./"$slmParameterList"  ./input
 fi
-if [ $specialFluxnetOutput == "yes" ]; then 
+if [ $specialFluxnetOutput == "T" ]; then 
   mv ./summary*             ./postprocessing
   mv ./statistics*          ./postprocessing
   mv ./*.nc                 ./output 
