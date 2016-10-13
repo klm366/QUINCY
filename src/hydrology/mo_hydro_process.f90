@@ -53,9 +53,9 @@ CONTAINS
     & fract_snow_can, & ! inout
     & fract_water_can,    & ! out
     & fract_water_soil,   & ! out
-    & fract_water_veg,    & ! out
+    & fract_water    ,    & ! out
     & fract_snow_soil,    & ! out
-    & fract_snow_veg      & ! out
+    & fract_snow          & ! out
     & )
 
     USE mo_soil_process,           ONLY: Get_snow_fract_noforest
@@ -83,9 +83,9 @@ CONTAINS
       REAL(wp),  INTENT(out)   ::                  &
                                  fract_water_can,  &
                                  fract_water_soil, &
-                                 fract_water_veg,  &
+                                 fract_water    ,  &
                                  fract_snow_soil,  &
-                                 fract_snow_veg
+                                 fract_snow
 
      REAL(wp) ::               &
                  t_srf_old,    &
@@ -133,8 +133,8 @@ CONTAINS
     END IF
 
     ! Merge water on and below canopy
-    fract_water_veg = fract_water_soil + fract_water_can ! <---- dadurch lookup table overflow
-    fract_snow_veg  = fract_snow_soil ! + fract_snow_can    TBD
+    fract_water = fract_water_soil + fract_water_can ! <---- dadurch lookup table overflow
+    fract_snow  = fract_snow_soil ! + fract_snow_can    TBD
 
    END SUBROUTINE calc_wskin_fractions_veg
 
@@ -144,9 +144,7 @@ CONTAINS
     & dtime,          & ! in
     & steplen,        & ! in
     & wsr_capacity,   & ! in
-    & lai,            & ! in
     & oro_stddev,     & ! in
-    & fract_fpc_max,  & ! in
     & t_srf,          & ! in
     & press_srf,      & ! in
     & drag_srf,       & ! in
@@ -164,9 +162,7 @@ CONTAINS
       REAL(wp),  INTENT(in)    ::                &
                                   dtime,         &
                                   steplen,       &
-                                  lai,           &
                                   oro_stddev,    &
-                                  fract_fpc_max, &
                                   t_srf,         &
                                   press_srf,     &
                                   drag_srf,      &
@@ -193,7 +189,7 @@ CONTAINS
     !         with JSBACH3. BUT: in JSBACH3 it was very unlikely that the canopy of the tile gets to zero and in the following line
     !         this unrealistic case is taken as standard for all bare soil surface types.
     !         fract_fpc_max = Maximum fraction of tile that can be covered by leaves (assuming infinite lai)   
-    wsr_max = wsr_capacity * (1._wp + lai * fract_fpc_max)
+    wsr_max = wsr_capacity
 
     ! Wet skin reservoir area fraction on soil (between 0 and 1)
     ! R: Deleted the contribution of w_skin_can for bare soil. Consistent to JSBACH3 (see comment above) and in this line it seems
@@ -203,11 +199,6 @@ CONTAINS
 
     ! Snow fraction on soil
     fract_snow_soil = Get_snow_fract_noforest(w_snow_soil, oro_stddev) ! snow on soil below forest
-    ! R: The following lines of JSBACH3 was to guarantee that when the soil is without snow, at least the snow from the canopy
-    !    that falls on the soil is represented...
-    !fract_snow_soil = MERGE(fract_snow_can, fract_snow_soil, 
-    !                           fract_snow_soil < EPSILON(1._wp) .AND. fract_snow_can > EPSILON(1._wp))
-
 
     ! Potential evaporation using old values of air and surface humidity
     t_srf_old = t_srf

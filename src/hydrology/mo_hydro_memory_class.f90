@@ -73,7 +73,6 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for PFT lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & fract_snow_veg,  &
       & fract_water_can,  & !< Wet (skin reservoir) fraction of canopy                                  []
       & fract_snow_can,   & !< Snow fraction on canopy                                                  []
       & w_snow_can,       & !< Water content of snow reservoir on canopy                                [m water equivalent]

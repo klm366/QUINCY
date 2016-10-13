@@ -230,7 +230,7 @@ CONTAINS
 
     ! Temporary for testing ... should be in separate subroutine
     CALL model%Queue_task(RAD_,    "surface_radiation")
-    !CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+    CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     CALL model%Queue_task(SEB_,    "surface_energy")
     CALL model%Queue_task(SEB_,    "surface_fluxes")
     IF (model%processes(ASSIMI_)%p%config%active) THEN

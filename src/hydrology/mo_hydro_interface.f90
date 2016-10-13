@@ -286,37 +286,9 @@ CONTAINS
     
     wsr_capacity = dsl4jsb_Config(SOIL_)%wsr_capacity
 
-    dsl4jsb_Get_memory(ATM2LAND_)
-    dsl4jsb_Get_memory(SEB_)
-    dsl4jsb_Get_memory(SOIL_)
-    dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(SOIL_) 
 
-    ! Set pointers
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_srf)         ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_air)            ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)        ! in
-
-    dsl4jsb_Get_var2D_onChunk(SOIL_,     oro_stddev)       ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,      t)                ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)              ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_,      fract_fpc_max)    ! in
-
-    IF (tile%lcts(1)%id == VEG_TYPE .OR. tile%lcts(1)%id == LAND_TYPE) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_soil)      ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_skin_soil)      ! in
-    END IF
-
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)  ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water_soil) ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water_can)  ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)       ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)  ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_veg)   ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)   ! out
-
+    ! First handle LAKE_TYPE lct
     IF (tile%lcts(1)%id == LAKE_TYPE) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_lice)      ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_lice)  ! out
@@ -324,7 +296,45 @@ CONTAINS
         & w_snow_lice(:),             & ! in
         & fract_snow_lice(:)          & ! out
         & )
+      RETURN
     END IF
+
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(SEB_)
+    IF (tile%lcts(1)%id == BARE_TYPE .OR. tile%lcts(1)%id == VEG_TYPE .OR. tile%lcts(1)%id == LAND_TYPE) THEN
+      dsl4jsb_Get_memory(SOIL_)
+    END IF
+    IF (tile%lcts(1)%id == VEG_TYPE .OR. tile%lcts(1)%id == LAND_TYPE) THEN
+      dsl4jsb_Get_memory(VEG_)
+      dsl4jsb_Get_memory(PHENO_)
+    END IF
+
+    ! Set pointers
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_srf)         ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_air)            ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)        ! in
+
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t)                ! in
+
+    IF (tile%lcts(1)%id == BARE_TYPE .OR. tile%lcts(1)%id == VEG_TYPE .OR. tile%lcts(1)%id == LAND_TYPE) THEN
+      dsl4jsb_Get_var2D_onChunk(SOIL_,     oro_stddev)       ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water_soil) ! out
+    END IF
+    IF (tile%lcts(1)%id == VEG_TYPE .OR. tile%lcts(1)%id == LAND_TYPE) THEN
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)              ! in
+      dsl4jsb_Get_var2D_onChunk(VEG_,      fract_fpc_max)    ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water_can)  ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)   ! out
+    END IF
+
+    IF (tile%lcts(1)%id == VEG_TYPE .OR. tile%lcts(1)%id == LAND_TYPE) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_skin_soil)      ! in
+    END IF
+
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_soil)      ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)  ! out
 
     IF (tile%lcts(1)%id == GLACIER_TYPE) THEN
       ! TBD: On glacier: Wet skin fraction = 0, snow fraction =1, snow depth = 0
@@ -355,7 +365,7 @@ CONTAINS
         & fract_water_soil(:),       & ! out
         & fract_water(:),            & ! out
         & fract_snow_soil(:),        & ! out
-        & fract_snow_veg(:)          & ! out
+        & fract_snow(:)              & ! out
         & )
    END IF
 
@@ -365,9 +375,7 @@ CONTAINS
         & dtime,                      & ! in
         & steplen,                    & ! in
         & wsr_capacity,               & ! in
-        & lai(:),                     & ! in
         & oro_stddev(:),              & ! in
-        & fract_fpc_max(:),           & ! in
         & t(:),                       & ! in
         & press_srf(:),               & ! in
         & drag_srf(:),                & ! in
@@ -377,12 +385,10 @@ CONTAINS
         & fract_water_soil(:),        & ! out
         & fract_snow_soil(:)          & ! out
         & )
+      fract_water(:) = fract_water_soil(:)
+      fract_snow(:)  = fract_snow_soil(:)
    END IF
 
-
-
-
-      
   END SUBROUTINE update_snow_and_skin_fraction
 
   ! -------------------------------------------------------------------------------------------------------
