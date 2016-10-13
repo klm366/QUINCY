@@ -1,8 +1,8 @@
 .. include:: defs.hrst
 
 
-User guide for developing |diag-f| s
-====================================
+User guide for developing diagnostic fields
+===========================================
 
 In the following we show how a diagnostic for |exp| comparison from
 external sources can be prepared to serve as |diag-f| that may be triggered by
@@ -44,15 +44,15 @@ as value for the key :math:`\mathtt{config\_filename}`, here
 	   
 **Listing:** Declaration of :math:`\mathtt{myfield}` in main configuration file :math:`\mathtt{myb4jrun.cfg}`
 
-Configuration file :math:`\mathtt{myfield.cfg}`
------------------------------------------------
+Configuration file myfield.cfg
+------------------------------
 
 Now we want to develop this field configuration file. It has to contain all the settings and
-communication parameters that are needed for a |diag-f| from the |exp| output data to the
+communication parameters that are needed for a |diag-f|, from the |exp| output data to the
 benchmark results in a final report.
 
-Top level config
-++++++++++++++++
+Top level configuration
++++++++++++++++++++++++
 
 For verification it will be checked if the value for the key
 :math:`\mathtt{field\_name}` is consistent with the name given for the
@@ -63,20 +63,20 @@ For verification it will be checked if the value for the key
 +-----------------+------------------------------+-----------------+-----------------+
 | name            | description                  | datatype        | default         |
 +=================+==============================+=================+=================+
-| field_name      | |long-string-4|              | string          | \-              |
+| field_name      | |longstring-4|               | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| suffix          | |long-string-5|              | string          | \-              |
+| suffix          | |longstring-5|               | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| frequency       | |long-string-6|              | |long-string-7| | 'monthly'       |
+| frequency       | |longstring-6|               | |longstring-7|  | 'monthly'       |
 +-----------------+------------------------------+-----------------+-----------------+
-| documentation   | |long-string-8|              | string          | None            |
+| documentation   | |longstring-8|               | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
 
-.. |long-string-4| replace:: field id conform to id/name of diagnostic field in main configuration
-.. |long-string-5| replace:: output format suffix for processed data of the run
-.. |long-string-6| replace:: output frequence to use in the run
-.. |long-string-7| replace:: option('yearly','monthly','6-hourly')
-.. |long-string-8| replace:: self documentation
+.. |longstring-4| replace:: field id conform to id/name of diagnostic field in main configuration
+.. |longstring-5| replace:: output format suffix for processed data of the run
+.. |longstring-6| replace:: output frequence to use in the run
+.. |longstring-7| replace:: option('yearly','monthly','6-hourly')
+.. |longstring-8| replace:: self documentation
 
 In our example we fill in the respective values.
 
@@ -101,21 +101,20 @@ In our example we fill in the respective values.
 Processing chain
 ++++++++++++++++
 
-The processes involved in the |diag-f| are
+The processes involved in a |diag-f| are
 interconnected by I/O dependencies. For the time being they have a binding
 order: 1. :math:`\mathtt{fetch}`,
 2. :math:`\mathtt{interpolate}`, 3. :math:`\mathtt{preprocess}`,
 4. :math:`\mathtt{diagnose}`, 5. :math:`\mathtt{plot}`. |b4j| works internally
 with an indexing system in which files are addressed by unique infixes,
 f.e. :math:`\mathtt{FILE-INFIX}`.  For each
-file that shall be written by a process the appropriate section has to hold a subsection :math:`\mathtt{[[FILE-INFIX]]}`
-wich contains the detailed configuration. This infix
-will also be used as substring for the respective filename. If the file
-has to be read by a subsequent process the infix is used in the respective
-configuration as value for its
-:math:`\mathtt{input}` item. For illustration  
-the listing at the bottom of the page :ref:`io-dependencies-html` shows a detail from the configuration file for the
-|diag-f| :math:`\mathtt{myfield}`. In HTML clicking on the graphic opens another picture,
+file that shall be written by a process, the appropriate section has to hold a subsection :math:`\mathtt{[[FILE-INFIX]]}`
+which contains the detailed configuration. This infix
+will also be used as substring for the corresponding filename. If the file
+shall be read by a subsequent process, it has to be appended to the respective 
+:math:`\mathtt{input}` list. For illustration  
+the listing :ref:`io-dependencies-html` at the bottom of the page shows a detail from the configuration file for the
+|diag-f| :math:`\mathtt{myfield}`. In HTML the graphic serves also as a link to another picture,
 showing how the I/O dependencies are taken into account.
 
 
@@ -139,11 +138,11 @@ Single subsection in section  :math:`\mathtt{fetch}`:
 | unit            | physical unit                | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
 
-Underneath there has to be one subsubsection for each :math:`\mathtt{type}` given
-for any item in the |exp| section of the main configuration. It must be labeled with
-the name of the :math:`\mathtt{experiment\ type}`.
+Underneath there has to be one subsubsection for each :math:`\mathtt{experiment\_type}` given
+for any item in the |exp| section of the main configuration. This subsubsection must be
+labelled with the respective  :math:`\mathtt{type}` name.
 
-Subsubsection for the :math:`\mathtt{MPIESM1}` :math:`\mathtt{experiment\ type}`:
+Subsubsection for the  :math:`\mathtt{experiment\ type}` :math:`\mathtt{MPIESM1}`:
 
 
 +------------------------------------------------+-----------------------------------+
@@ -151,23 +150,23 @@ Subsubsection for the :math:`\mathtt{MPIESM1}` :math:`\mathtt{experiment\ type}`
 +-----------------+------------------------------+-----------------+-----------------+
 | name            | description                  | datatype        | default         |
 +=================+==============================+=================+=================+
-| name            | |long-string-9a|             | string          | \-              |
+| name            | |longstring-9a|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| code            | |long-string-9b|             | option          | \-              |
+| code            | |longstring-9b|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| submodel        | |long-string-9c|             | string          | None            |
+| submodel        | |longstring-9c|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| stream          | |long-string-10|             | string          | None            |
+| stream          | |longstring-10|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
 
-.. |long-string-9a| replace:: name of variable to select
-.. |long-string-9b| replace:: code number of variable to select 
-.. |long-string-9c| replace:: submodel identifier in the original context
-.. |long-string-10| replace:: stream identifier in the original context
+.. |longstring-9a| replace:: name of variable to select
+.. |longstring-9b| replace:: code number of variable to select 
+.. |longstring-9c| replace:: submodel identifier in the original context
+.. |longstring-10| replace:: stream identifier in the original context
 
 			      
-For clarification we show  one variable subsection labeled
-‘:math:`\mathtt{D\_selcode}`’  of the :math:`\mathtt{fetch}` section from
+For clarification we show  one variable subsection labelled
+:math:`\mathtt{D\_selcode}`  of the :math:`\mathtt{fetch}` section from
 our example :math:`\mathtt{mypath/myfield.cfg}`.
 
 ::
@@ -188,9 +187,12 @@ our example :math:`\mathtt{mypath/myfield.cfg}`.
 Preprocessing and diagnostic sections
 +++++++++++++++++++++++++++++++++++++
 
-To do preprocessing, diagnostic and plotting |b4j| calls executable scripts. In order to
-run a new diagnostic The name of the script is sufficient if it
-is located in :math:`\mathtt{bench4jsbach/prod/scripts}`.
+In order to do the preprocessing, diagnostic and plotting |b4j| calls the
+executable script given for the key :math:`\mathtt{exec}` in the respective
+section. In the standard case the tool would look in
+:math:`\mathtt{bench4jsbach/prod/scripts}` for it but you may just as well provide
+another path. We choose :math:`\mathtt{mypath}` as path for the executable scripts
+in the example below.
 
 Top level in this sections:
 
@@ -199,17 +201,23 @@ Top level in this sections:
 +-----------------+------------------------------+-----------------+-----------------+
 | name            | description                  | datatype        | default         |
 +=================+==============================+=================+=================+
-| exec            | |long-string-11|             | string          | None            |
+| exec            | |longstring-11|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| input           | |long-string-12|             | stringlist      | \-              |
+| input           | |longstring-12|              | stringlist      | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
 
-.. |long-string-11| replace:: executable script to call in b4j run
-.. |long-string-12| replace:: input files needed by script
+.. |longstring-11| replace:: executable script to call in b4j run
+.. |longstring-12| replace:: input files needed by script
 
 
-In the example below the executable script :math:`\mathtt{myfield\_prep.py}`
-shall run for :math:`\mathtt{preprocessing}`.  It has to read a data file 
+In this example the script :math:`\mathtt{myfield\_prep.py}`
+shall do the :math:`\mathtt{preprocessing}`.  It has to read a data file
+that ought to be found during the |b4j| run by the identifier :math:`\mathtt{D\_selcode}`
+as it is given in the value list of the key :math:`\mathtt{input}`. It shall store intermediate
+results in an output file that can be indexed by
+:math:`\mathtt{D\_seasmean}` . This is indicated by the appropriatly labelled subsection.
+
+
 ::
    
    [preprocessing]
@@ -220,12 +228,168 @@ shall run for :math:`\mathtt{preprocessing}`.  It has to read a data file
 **Listing:** Example :math:`\mathtt{preprocessing}` section configuration
 
 
+Plotting section
+++++++++++++++++
+
+As for the plotting several scripts the section was adjusted to the requirements.
+
+On the top level of this section:
+
++------------------------------------------------+-----------------------------------+
+| key                                            | value                             |
++-----------------+------------------------------+-----------------+-----------------+
+| name            | description                  | datatype        | default         |
++=================+==============================+=================+=================+
+| suffix          | output format string         | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+
+There are subsections for one or more plotting scripts labelled with a unique identifier
+for the particular script.
+
+Single plotting script subsection:
+
+
++------------------------------------------------+-----------------------------------+
+| key                                            | value                             |
++-----------------+------------------------------+-----------------+-----------------+
+| name            | description                  | datatype        | default         |
++=================+==============================+=================+=================+
+| exec            | |longstring-11|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| input           | |longstring-12|              | stringlist      | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| nref            | |longstring-13|              | |longstring-14| | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| plot\_title     | |longstring-15|              | stringlist      | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+
+.. |longstring-13| replace:: as indicated by plot: comparison with single or all reference experiment
+.. |longstring-14| replace:: option('single','multiple')
+.. |longstring-15| replace:: title string for plot
+
+As in the other processing sections output files are introduced by labelled subsections beneath. In
+the example below the subsection :math:`\mathtt{wds\_plot}` indicates plotting with the script
+:math:`\mathtt{myfield\_wds\_plot.py}`. According to the value :math:`\mathtt{single}` for the
+key :math:`\mathtt{nref}` the script will run seperatly for each candidate/reference |exp| pair.
+It shall read a file indexed by :math:`\mathtt{myfield\_wds}` which has to be written
+by a predecessor process. And it is supposed to store a plot output file for each pair
+with the format :math:`\mathtt{png}` and a title generated from the output infix
+:math:`\mathtt{myfield\_wds\_plot}`. For the plots the :math:`\mathtt{plot\_title}` has to be
+used, here consisting of a template and parameters, which should be understood by the script.
+
+::
+   
+   [plotting]
+       suffix=png	
+       [[wds_plot]]
+	   exec=myfield_wds_plot.py
+	   input=myfield_wds,
+	   nref=single
+	   plot_title='$\Delta_{C_{\%d}R_{\%d}}$',can_no,ref_no,
+    	   [[[myfield_wds_plot]]]
+	       
+**Listing:** Example :math:`\mathtt{plotting}` section configuration
+
 .. _io-dependencies-html:
 
 I/O dependencies
 ++++++++++++++++
 
+The listing below shows an extract of the example |diag-f| configuration file
+:math:`\mathtt{myfield.cfg}`. In HTML the listing is also a link to an illustration
+of the processing chain formed by I/O dependencies. In the example the file
+:math:`\mathtt{wds\_plot}` being output of the plotting process is the end of
+a chain, started with the file :math:`\mathtt{D\_select}` which shall contain
+|exp| output data selected by the |b4j| run.
+
 .. figure:: ./graphic/diagfield-conf.jpg
    :target: {{ workdir }}/graphic/diagfield-conf-overlay.jpg
 
-**Listing:** myfield.cfg, example
+**Listing:** Example :math:`\mathtt{myfield.cfg}` (HTML link)
+
+Report section
+++++++++++++++
+
+The report section is arranged at the end of the configuration file to improve
+readabiliy.
+
+Top level configuration:
+
+
++------------------------------------------------+-----------------------------------+
+| key                                            | value                             |
++-----------------+------------------------------+-----------------+-----------------+
+| name            | description                  | datatype        | default         |
++=================+==============================+=================+=================+
+| title           | |longstring-16|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| abstract        | |longstring-17|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| technical_TeXed | |longstring-18|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+
+.. |longstring-16| replace:: title for the |diag-f| 's section in the report
+.. |longstring-17| replace:: scientific description of the |diag-f|
+.. |longstring-18| replace:: technical description of the |diag-f|
+
+
+Then there are subsections for each diagnostic result to appear in the report. For the
+time being the mapping is based on the conformity with the output file infixes of
+the :math:`\mathtt{diagnostic}` section.
+
+Subsections for  :math:`\mathtt{diagnostic}` output:
+
+
++------------------------------------------------+-----------------------------------+
+| key                                            | value                             |
++-----------------+------------------------------+-----------------+-----------------+
+| name            | description                  | datatype        | default         |
++=================+==============================+=================+=================+
+| title           | |longstring-19|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| abstract        | |longstring-20|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| technical_TeXed | |longstring-21|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| name            | |longstring-22|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| isbench         | |longstring-23|              | boolean         | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| benchvar        | |longstring-24|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| benchunit       | |longstring-25|              | string          | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+| type            | |longstring-26|              | |longstring-27| | \-              |
++-----------------+------------------------------+-----------------+-----------------+
+
+.. |longstring-19| replace:: title of report subsection
+.. |longstring-20| replace:: scientific description of diagnostic method
+.. |longstring-21| replace:: technical description of diagnostic method 
+.. |longstring-22| replace:: name of diagnostic method
+.. |longstring-23| replace:: switch: Is diagnostic method used as benchmark?
+.. |longstring-24| replace:: name of displayed variable in plotfile
+.. |longstring-25| replace:: physical unit of displayed variable
+.. |longstring-26| replace:: type of plot
+.. |longstring-27| replace:: option('map','metric','barchart')
+
+Processing scripts
+------------------
+
+The processing scripts ( for preprocessing, diagnostic and plotting ) are run as |py|
+subprocesses. They get a string list as argument where each element has the form
+
+::
+
+   "XXX:YYYY"
+
+So the processes have to parse the list at runtime to a list of keyword arguments.
+The keywords are taken from  the main and the |diag-f| configuration, inter alia:
+
+  
+* information on candidate |exp|
+  
+* information on reference |exp|
+  
+* paths to input files
+  
+* paths to output files

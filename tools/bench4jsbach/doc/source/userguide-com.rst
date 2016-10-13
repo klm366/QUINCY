@@ -163,7 +163,7 @@ comments inline prepended by the hash symbol \"#\".
       [[subsection-1]]
          key-1=value-1
 	   
-**Listing:** Example configuration
+**Listing:** Prototype configuration file suitable for |py| configparser
 
 After generation the file :math:`\mathtt{myb4jrun.cfg}` contains the
 structure of information that the configuration for a minimum |b4j| run with two
@@ -178,16 +178,16 @@ exchanged against your value for the respective item.
 
 .. literalinclude::  ./graphic/myb4jrun.cfg
 	   
-**Listing:** Main configuration file :math:`\mathtt{myb4jrun.cfg}`
+**Listing:** File :math:`\mathtt{myb4jrun.cfg}` after generation, a form for the
+main configuration
 
 
 In the following the values to fill in are summarized.
 
-Top level config
-++++++++++++++++
+Top level configuration
++++++++++++++++++++++++
 
-The redmine access is necessary if the |b4j| run has to read reference |exp|
-metadata from the wikipage.
+Top level in main configuration file:
 
 +------------------------------------------------+-----------------------------------+
 | key                                            | value                             |
@@ -205,8 +205,19 @@ metadata from the wikipage.
 | reporting       | reporting switch             | boolean         | True            |
 +-----------------+------------------------------+-----------------+-----------------+
 
-|exp| section
-+++++++++++++
+The redmine access is necessary if the |b4j| run has to read reference |exp|
+metadata from the wikipage. You can get the key on the redmine wikipage from
+the right menu on top of the page:
+
+::
+
+   > My account > Show
+
+If it does not exist yet, it is easily created within the same menu.
+
+
+Experiment section
+++++++++++++++++++
 
 For each |exp| in the run there has to be a subsection that is labeled with a
 run internal unique name.
@@ -218,36 +229,42 @@ Single |exp| subsection level:
 +-----------------+------------------------------+-----------------+-----------------+
 | name            | description                  | datatype        | default         |
 +=================+==============================+=================+=================+
-| name_orig       | | original identifying infix | string          | \-              |
-|                 | | e.g. \"vga0187\"           |                 |                 |
+| name_orig       | |longstring-01|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| type            | |exp| type                   | option          | MPIESM1         |
-|                 |                              | (CMIP5,MPIESM1) |                 |
+| type            | |exp| type                   | |longstring-02| | MPIESM1         |
 +-----------------+------------------------------+-----------------+-----------------+
-| path            | - path of the data           | string          | None            |
-|                 | - if reference from wikipage |                 |                 |
+| path            | |longstring-03|              |                 |                 |
+|                 +------------------------------+-----------------+-----------------+
+|                 | path of |exp| on host        | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
-| host            | - server hosting the data    | string          | None            |
-|                 | - if reference from wikipage |                 |                 |
+| host            | |longstring-03|              |                 |                 |
+|                 +------------------------------+-----------------+-----------------+
+|                 | host of |exp|                | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
 | iscan           | candidate role               | boolean         | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
 | isref           | reference role               | boolean         | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| startyear       | startyear in |b4j| run       | string          | \-              |
+| startyear       | |longstring-04|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| endyear         | endyear in |b4j| run         | string          | \-              |
+| endyear         | |longstring-05|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
 | initialyear     | initial year of |exp|        | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
 | finalyear       | final year of |exp|          | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
 
+.. |longstring-01| replace:: original identifying infix, e.g. \"vga0187\"
+.. |longstring-02| replace:: option (CMPI5, MPIESM1)
+.. |longstring-03| replace:: None if item in database
+.. |longstring-04| replace:: startyear for |exp| in |b4j| run  
+.. |longstring-05| replace:: endyear for |exp| in |b4j| run  
+
 
 .. _diag-f-section:
 
-|diag-f| section
-++++++++++++++++
+Diagnostic field section
+++++++++++++++++++++++++
 
 For each diagnostic field in the run has to be a subsection that is labeled with a
 run internal unique name.
@@ -259,23 +276,18 @@ Single diagnostic field subsection level in the main configuration file for a |b
 +-----------------+------------------------------+-----------------+-----------------+
 | name            | description                  | datatype        | default         |
 +=================+==============================+=================+=================+
-| config_filename | one of two options:          | string          | \-              |
-|                 |                              |                 |                 |
-|                 | - |long_string-1|            |                 |                 |
-|                 |                              |                 |                 |
-|                 | - |long_string-3|            |                 |                 |
+| config_filename |  |long_string-1|             | string          | \-              |
+|                 +------------------------------+                 |                 |
+|                 |  |long_string-3|             |                 |                 |
 +-----------------+------------------------------+-----------------+-----------------+
 
-.. |long_string-1| replace:: field config filename in :math:`\mathtt{bench4jsbach/prod/configs}`
-.. |long_string-3| replace:: path to field config file on local machine
+.. |long_string-1| replace:: |diag-f| configuration filename in :math:`\mathtt{bench4jsbach/prod/configs}`
+.. |long_string-3| replace:: path to |diag-f| configuration file in local filesystem
 
 Files in context with the available diagnostic fields are stored in
 :math:`\mathtt{bench4jsbach/prod}`, the configuration files beneath in
 the directory :math:`\mathtt{configs}`. A list of available diagnostic fields can be
-found below (<LINK>).
-
-Run example :math:`\mathtt{myb4jrun}`
--------------------------------------
+found under :ref:`diag-f-avail`.
 
 When you have replaced all placeholders \"<XXX>\" with the appropriate values the
 bottom part of your configuration file should look in principle like the example
@@ -285,6 +297,9 @@ below.
 .. literalinclude::  ./graphic/myb4jrun-filled.cfg
 	   
 **Listing:** Extract of example configuration file :math:`\mathtt{myb4jrun.cfg}`
+
+Run example myb4jrun
+--------------------
 
 The run can now be started.
 

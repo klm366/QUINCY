@@ -86,7 +86,8 @@ The following diagram shows |b4j| in context with other actors ( users, software
 :Benchmarking user:     * scientist managing many models
                         * model developer making  still-in-line-check  
 :Diagnostic developer:  dedicated scientist integrating a |diag-f|
-:Database:              database for reference |exp| s
+:Database:              database for reference |exp| s, for the time being a table
+			on the redmine project wikipage
 :Redmine wiki:          communication platform for |b4j|
 			
 
@@ -99,3 +100,46 @@ operating concept, the program structure and the workflow is implemented. The
 tool handles |exp| s of type  MPIESM1 (Max Planck
 Institute for Meteorology Earth System Model, [GiESM1]_) and a |diag-f| analysing
 albedo.
+
+.. _diag-f-avail:
+			    
+Experiment types and diagnostic fields available
+++++++++++++++++++++++++++++++++++++++++++++++++
+
++----------------------------------+----------------+
+| |longstring-2|, |longstring-0|   | |longstring-1| |
++==================================+================+
+| |longstring-3|                   | +              |
++----------------------------------+----------------+
+| |longstring-4|                   | +              |
++----------------------------------+----------------+
+
+.. |longstring-0| replace:: experiment type
+.. |longstring-1| replace:: MPIESM1
+.. |longstring-2| replace:: diagnostic field			   
+.. |longstring-3| replace:: **albedo** 
+.. |longstring-4| replace:: **hydrology**
+
+
+Diagnostics and benchmarks in field albedo
+++++++++++++++++++++++++++++++++++++++++++
+
+
++------------------------------+-----------------+-----------------+
+| diagnostic                   | name            | type            |
++==============================+=================+=================+
+| |longstring-5|               | delta           | map             |
++------------------------------+-----------------+-----------------+
+| |longstring-6|               | delta\_gtd      | metric          |
++------------------------------+-----------------+-----------------+
+| |longstring-7|               | delta\_gtm      | metric          |
++------------------------------+-----------------+-----------------+
+
+
+.. |longstring-5| replace::  Seasonal mean difference
+.. |longstring-6| replace::  Global and time deviation
+.. |longstring-7| replace::  Global and time mean
+
+
+Diagnostics and benchmarks in field hydrology
++++++++++++++++++++++++++++++++++++++++++++++
