@@ -251,7 +251,7 @@ CONTAINS
     ! Additional variables for LAND lct
     IF (One_of(LAND_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%s_star%ptr)) THEN
 
-      CALL jsb_add_var( mem, 's_sfc', mem%s_star,                                            &
+      CALL jsb_add_var( mem, 's_star', mem%s_star,                                           &
         & hgrid, surface,                                                                    &
         & t_cf('sfc_dry_static_energy', 'm2 s-2', 'surface dry static energy'),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
@@ -286,7 +286,7 @@ CONTAINS
         & prefix, suffix,                                                                    &
         & initval_r=280.0_wp )
 
-      CALL jsb_add_var( mem, 't_sfc_eff', mem%t_eff,                                         &
+      CALL jsb_add_var( mem, 't_eff', mem%t_eff,                                             &
         & hgrid, surface,                                                                    &
         & t_cf('surface_temperature_eff', 'K', 'effective surface temperature'),             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
