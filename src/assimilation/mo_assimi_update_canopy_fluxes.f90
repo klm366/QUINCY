@@ -10,23 +10,23 @@
 !!
 MODULE mo_assimi_update_canopy_fluxes
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind,                  ONLY: wp, eps4, eps8
   USE mo_base_memory,           ONLY: t_slm_tile
   USE mo_base_constants,        ONLY: ncanop, dt
   USE mo_base_memory,           ONLY: t_slm_soil
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
-
-  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-
   USE mo_assimi_constants
   USE mo_assimi_config_class,   ONLY: assimi_config
-  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
-
-  USE mo_veg_memory
   USE mo_veg_constants,         ONLY: itree, igrass, ic3phot, ic4phot, ievergreen, iraingreen, isummergreen, iperennial, &
                                       fmaint_rate_base 
 
+  ! Use of process memories
+  dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+  dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
+  USE mo_veg_memory
 
   IMPLICIT NONE
 
@@ -59,8 +59,9 @@ CONTAINS
     INTEGER                          :: icanop                 ! for looping across ncanopy layers
     REAL(wp)                         :: hlp1                   ! dummy variable 
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
-    TYPE(t_assimi_memory),   POINTER :: assimi__mem
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ATM2LAND_)     !   TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(ASSIMI_)       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem
     TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to assimi__mem for SLM usability
     REAL(wp), POINTER :: t_air
     REAL(wp), POINTER :: q_air
@@ -69,14 +70,16 @@ CONTAINS
     REAL(wp), POINTER :: co2_mixing_ratio
     REAL(wp), POINTER :: co2_mixing_ratio_C13
     REAL(wp), POINTER :: co2_mixing_ratio_C14
-    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
-      TYPE IS(t_atm2land_memory)
-        atm2land__mem => mm
-    END SELECT
-    SELECT TYPE (mm => tile%mem(ASSIMI_)%p)
-      TYPE IS(t_assimi_memory)
-        assimi__mem => mm
-    END SELECT
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(ASSIMI_)
+!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p) 
+!      TYPE IS(t_atm2land_memory)
+!        atm2land__mem => mm
+!    END SELECT
+!    SELECT TYPE (mm => tile%mem(ASSIMI_)%p)
+!      TYPE IS(t_assimi_memory)
+!        assimi__mem => mm
+!    END SELECT
     assimi  => assimi__mem
     t_air                => atm2land__mem%t_air%ptr
     q_air                => atm2land__mem%q_air%ptr

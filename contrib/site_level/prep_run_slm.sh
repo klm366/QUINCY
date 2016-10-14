@@ -23,9 +23,11 @@ customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a differe
 slmModel="land"             # land, plant are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
 singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet f/c; overwrites customSiteList
-# run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
+
+## run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
 specialFluxnetOutput="F"    # T (True) or F (False) [large caps]
-# compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
+
+## compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # started by the cleanup_slm_hpc_run.sh using two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
 compareSimCRUNCEPvsGFDB="F"  # T (True) or F (False) [large caps] -> when "T" default go: siteDataSet="c", output_interval_..="daily", paramSensitivitySim="F"
 

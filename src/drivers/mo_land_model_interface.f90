@@ -12,6 +12,8 @@
 !!
 MODULE mo_land_model_interface
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind
 
   IMPLICIT NONE
@@ -373,7 +375,9 @@ CONTAINS
     USE mo_base_constants,        ONLY: one_year
     USE mo_base_memory,           ONLY: t_slm_tile
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
-!    USE mo_veg_memory_class,      ONLY: t_veg_memory
+
+    ! Use of process memories
+    !dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
 
@@ -386,12 +390,14 @@ CONTAINS
     ! 0.2 Local
     ! ..
 !    ! 0.3 Memory allocation
-!    TYPE(t_veg_memory), POINTER         :: veg__mem   ! dsl4jsb_Def_memory(VEG_)
+!    ! Declare process configuration and memory Pointers
+!    dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
 !    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
-!    SELECT TYPE (mm => tile%mem(VEG_)%p)              ! dsl4jsb_Get_memory(VEG_)
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
+!    dsl4jsb_Get_memory(VEG_)
+!!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
+!!      TYPE IS(t_veg_memory)
+!!        veg__mem => mm
+!!    END SELECT
 !    veg => veg__mem 
 
 

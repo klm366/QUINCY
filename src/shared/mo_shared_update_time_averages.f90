@@ -10,6 +10,8 @@
 !!
 MODULE mo_shared_update_time_averages
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind,                    ONLY: wp, eps8
   USE mo_exception,               ONLY: message, finish
   USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
@@ -42,7 +44,9 @@ CONTAINS
   SUBROUTINE update_time_averages(tile, lctlib, time_day, timestep_prop_day)
 
     USE mo_base_memory,             ONLY: t_slm_tile
-    USE mo_atm2land_memory_class,   ONLY: t_atm2land_memory
+
+    ! Use of process memories
+    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
 
     IMPLICIT NONE
 
@@ -53,17 +57,19 @@ CONTAINS
     REAL(wp), INTENT(in)                  :: timestep_prop_day  !< length of one time step (proportion of one day)
     ! 0.2 Local
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     REAL(wp), POINTER                :: swpar_srf_down  ! light at surface level
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: q_air
     REAL(wp), POINTER                :: press_srf
     REAL(wp), POINTER                :: co2_mixing_ratio
     REAL(wp), POINTER                :: ga
-    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
-      TYPE IS(t_atm2land_memory)
-        atm2land__mem => mm
-    END SELECT
+    dsl4jsb_Get_memory(ATM2LAND_)
+!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p) 
+!      TYPE IS(t_atm2land_memory)
+!        atm2land__mem => mm
+!    END SELECT
     swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
     t_air             => atm2land__mem%t_air%ptr
     q_air             => atm2land__mem%q_air%ptr

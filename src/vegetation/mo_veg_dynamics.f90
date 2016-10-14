@@ -56,6 +56,7 @@ CONTAINS
     REAL(wp)                                  :: flim_light,flim_moist,flim_temp
     INTEGER :: icanop
 !    ! 0.3 Memory allocation
+!    ! Declare process configuration and memory Pointers
 !    TYPE(t_veg_memory), POINTER         :: veg__mem   ! dsl4jsb_Def_memory(VEG_)
 !    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
 !    SELECT TYPE (mm => tile%mem(VEG_)%p)              ! dsl4jsb_Get_memory(VEG_)

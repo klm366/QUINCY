@@ -9,6 +9,8 @@
 !!
 MODULE mo_veg_soil
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind,               ONLY: wp, eps8
   USE mo_jsb_lctlib_class,   ONLY: t_lctlib_element
   USE mo_veg_config_class,   ONLY: veg_config
@@ -36,8 +38,10 @@ CONTAINS
   SUBROUTINE update_vegsoil_bgc(tile, lctlib)
 
     USE mo_base_memory,      ONLY: t_slm_soil, t_slm_tile
-    USE mo_veg_memory,       ONLY: t_slm_plant
     USE mo_base_constants,   ONLY: dt
+
+    ! Use of process memories
+    USE mo_veg_memory,       ONLY: t_slm_plant
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -162,6 +166,8 @@ CONTAINS
 
     USE mo_base_memory,      ONLY: t_slm_soil, t_slm_tile
     USE mo_base_constants,   ONLY: dt
+
+    ! Use of process memories
     USE mo_veg_memory,       ONLY: t_slm_plant
 
     IMPLICIT NONE
@@ -217,17 +223,16 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_vegsoil_physics(tile, lctlib)
 
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
-!    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_ --> soil creates conflict
-
+    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_base_memory,           ONLY: t_slm_soil, t_slm_tile
-    USE mo_veg_memory,            ONLY: t_slm_plant
-    USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-    USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
-
     USE mo_base_constants,        ONLY: dt
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants,      ONLY: r_gas_dryair,LatentHeatVaporization,rhoh2o,grav
+    USE mo_shared_constants,      ONLY: r_gas_dryair, LatentHeatVaporization, rhoh2o, grav
+
+    ! Use of process memories
+    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+    dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+    USE mo_veg_memory,            ONLY: t_slm_plant
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -240,8 +245,9 @@ CONTAINS
     REAL(wp) :: q_sat
     REAL(wp) :: evaporation
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
-    TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: press_srf
     REAL(wp), POINTER                :: q_air
@@ -251,14 +257,16 @@ CONTAINS
     REAL(wp), POINTER                :: net_radiation
     REAL(wp), POINTER                :: latent_heat_flx
     REAL(wp), POINTER                :: sensible_heat_flx
-    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
-      TYPE IS(t_atm2land_memory)
-        atm2land__mem => mm
-    END SELECT
-    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)
-      TYPE IS(t_land2atm_memory)
-        land2atm__mem => mm
-    END SELECT
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(LAND2ATM_)
+!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
+!      TYPE IS(t_atm2land_memory)
+!        atm2land__mem => mm
+!    END SELECT
+!    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)
+!      TYPE IS(t_land2atm_memory)
+!        land2atm__mem => mm
+!    END SELECT
     t_air       => atm2land__mem%t_air%ptr
     press_srf   => atm2land__mem%press_srf%ptr
     q_air       => atm2land__mem%q_air%ptr

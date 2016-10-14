@@ -32,12 +32,16 @@ CONTAINS
   SUBROUTINE update_veg_pools(tile, lctlib)
 
     USE mo_base_memory,         ONLY: t_slm_tile
+    USE mo_base_constants,      ONLY: dt, one_day
     USE mo_base_config_class,   ONLY: base_config
+    USE mo_jsb_process_class,   ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_shared_constants        ! only lambda_C14 ?
-    USE mo_veg_memory              ! only t_slm_plant ?
     USE mo_veg_canopy,          ONLY: calc_canopy_layers
-    USE mo_veg_growth,          ONLY: calc_diameter_from_woody_biomass,calc_height_from_diameter
+    USE mo_veg_growth,          ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
     USE mo_veg_constants,       ONLY: itree
+
+    ! Use of process memories
+    USE mo_veg_memory,          ONLY: t_slm_plant
 
     IMPLICIT NONE
     ! 0.1 InOut

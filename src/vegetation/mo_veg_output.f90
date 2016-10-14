@@ -10,6 +10,8 @@
 MODULE mo_veg_output
   !! this module may be not necessary anymore when QUINCY is linked with JSBACH !!
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind,                  ONLY: wp, eps4, eps8
   USE mo_base_constants,        ONLY: ntile
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -368,11 +370,15 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE write_output_pool(tile, lctlib, time_d, time_y, itile)
 
-    USE mo_base_constants,   ONLY: ncanop
-    USE mo_base_memory,      ONLY: t_slm_tile, t_slm_soil
+    USE mo_base_constants,    ONLY: ncanop
+    USE mo_base_memory,       ONLY: t_slm_tile, t_slm_soil
+    USE mo_veg_constants,     ONLY: itree
+    USE mo_shared_isotope,    ONLY: calc_delta_C13,calc_delta_C14
+    USE mo_jsb_process_class, ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
+
+    ! Use of process memories
     USE mo_veg_memory,       ONLY: t_slm_plant
-    USE mo_veg_constants,    ONLY: itree
-    USE mo_shared_isotope,   ONLY: calc_delta_C13,calc_delta_C14
+
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -517,13 +523,15 @@ CONTAINS
 
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_base_memory,           ONLY: t_slm_tile
-    USE mo_veg_memory,            ONLY: t_slm_plant
-    USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-    USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
-
     USE mo_base_constants,        ONLY: dt
     USE mo_atmland_constants,     ONLY: rad2par
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
+
+    ! Use of process memories
+    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+    dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+    USE mo_veg_memory,            ONLY: t_slm_plant
+
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -537,22 +545,25 @@ CONTAINS
     REAL(wp), SAVE               :: dt_one = 1.0_wp ! just 1.0
     REAL(wp)                     :: dC13gpp,dC13rg,dC13rm
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
-    TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
     REAL(wp), POINTER                :: ga
     REAL(wp), POINTER                :: swpar_srf_down
     REAL(wp), POINTER                :: albedo
     REAL(wp), POINTER                :: net_radiation
     REAL(wp), POINTER                :: sensible_heat_flx
     REAL(wp), POINTER                :: latent_heat_flx
-    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
-      TYPE IS(t_atm2land_memory)
-        atm2land__mem => mm
-    END SELECT
-    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)
-      TYPE IS(t_land2atm_memory)
-        land2atm__mem => mm
-    END SELECT
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(LAND2ATM_)
+!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
+!      TYPE IS(t_atm2land_memory)
+!        atm2land__mem => mm
+!    END SELECT
+!    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)
+!      TYPE IS(t_land2atm_memory)
+!        land2atm__mem => mm
+!    END SELECT
     ga              => atm2land__mem%ga%ptr
     swpar_srf_down  => atm2land__mem%swpar_srf_down%ptr
     albedo            => land2atm__mem%albedo%ptr

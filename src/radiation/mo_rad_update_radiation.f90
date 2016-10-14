@@ -13,6 +13,8 @@
 !!
 MODULE mo_rad_update_radiation
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind,                  ONLY: wp, eps8
   USE mo_rad_constants
 
@@ -37,18 +39,16 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile
     USE mo_base_constants,        ONLY: ncanop 
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
-
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_var_class,         ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-
-    USE mo_veg_memory,            ONLY: t_slm_plant
-    USE mo_rad_memory_class,      ONLY: t_rad_memory
-    USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-    USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
-
     USE mo_rad_constants 
     USE mo_atmland_constants,     ONLY: rad2par
-   
+
+    ! Use of process memories
+    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+    dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+    USE mo_veg_memory,            ONLY: t_slm_plant
+
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -64,9 +64,10 @@ CONTAINS
                                               arad_shaded_nir_cl, &
                                               fleaf_sunlit_nir_cl
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
-    TYPE(t_land2atm_memory), POINTER :: land2atm__mem
-    TYPE(t_rad_memory), POINTER :: rad__mem
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     REAL(wp), POINTER           :: swpar_srf_down     , &
                                    swpar_fdiffuse     , &
                                    cos_zenith_angle   , &
@@ -92,18 +93,21 @@ CONTAINS
                                    swvis_srf_net      , & 
                                    swnir_srf_net      , & 
                                    rad_srf_net
-    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
-      TYPE IS(t_atm2land_memory)
-        atm2land__mem => mm
-    END SELECT
-    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)
-      TYPE IS(t_land2atm_memory)
-        land2atm__mem => mm
-    END SELECT
-    SELECT TYPE (mm => tile%mem(RAD_)%p)
-      TYPE IS(t_rad_memory)
-        rad__mem => mm
-    END SELECT
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(LAND2ATM_)
+    dsl4jsb_Get_memory(RAD_)
+!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
+!      TYPE IS(t_atm2land_memory)
+!        atm2land__mem => mm
+!    END SELECT
+!    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)
+!      TYPE IS(t_land2atm_memory)
+!        land2atm__mem => mm
+!    END SELECT
+!    SELECT TYPE (mm => tile%mem(RAD_)%p)
+!      TYPE IS(t_rad_memory)
+!        rad__mem => mm
+!    END SELECT
     swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
     swpar_fdiffuse    => atm2land__mem%swpar_fdiffuse%ptr
     cos_zenith_angle  => atm2land__mem%cos_zenith_angle%ptr

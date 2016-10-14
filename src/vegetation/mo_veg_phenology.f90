@@ -9,6 +9,8 @@
 !!
 MODULE mo_veg_phenology
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind,          ONLY: wp, eps4
 
 
@@ -35,15 +37,16 @@ CONTAINS
     USE mo_base_memory,             ONLY: t_slm_tile
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_shared_constants,        ONLY: Tzero
-
     USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
-    USE mo_atm2land_memory_class,   ONLY: t_atm2land_memory
+    USE mo_veg_constants,           ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
+                                      gdd_req_max,gdd_t_air_threshold,k_gdd_dormance,t_air_senescence, & 
+                                      beta_soil_flush_grass,beta_soil_flush_tree,beta_soil_senescence_tree, & 
+                                      min_leaf_age
 
+    ! Use of process memories
+    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
     USE mo_veg_memory
-    USE mo_veg_constants,      ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
-                                 gdd_req_max,gdd_t_air_threshold,k_gdd_dormance,t_air_senescence, & 
-                                 beta_soil_flush_grass,beta_soil_flush_tree,beta_soil_senescence_tree, & 
-                                 min_leaf_age
+
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile      !< one tile
@@ -52,12 +55,14 @@ CONTAINS
     TYPE(t_slm_plant),POINTER               :: veg     ! plant variables per tile
     REAL(wp) :: hlp1                                     ! helper variable for tmp values
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     REAL(wp), POINTER                :: t_air
-    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
-      TYPE IS(t_atm2land_memory)
-        atm2land__mem => mm
-    END SELECT
+    dsl4jsb_Get_memory(ATM2LAND_)
+!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
+!      TYPE IS(t_atm2land_memory)
+!        atm2land__mem => mm
+!    END SELECT
     t_air   => atm2land__mem%t_air%ptr
 
 

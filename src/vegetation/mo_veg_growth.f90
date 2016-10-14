@@ -9,14 +9,16 @@
 !!
 MODULE mo_veg_growth
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind
   USE mo_exception,             ONLY: message_text, finish
   USE mo_base_constants
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-  USE mo_veg_memory
   USE mo_veg_constants
   USE mo_veg_config_class,      ONLY: veg_config
 
+  USE mo_veg_memory
 
   PRIVATE
 
@@ -31,12 +33,13 @@ CONTAINS
   SUBROUTINE calc_growth (tile, lctlib)
 
     USE mo_base_memory,             ONLY: t_slm_tile
-    USE mo_veg_memory
+    USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_veg_respiration,         ONLY: temperature_response_respiration
     USE mo_veg_canopy
-    USE mo_shared_memory,           ONLY: t_element
-    USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
-    USE mo_atm2land_memory_class,   ONLY: t_atm2land_memory
+
+    ! Use of process memories
+    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+
 
     IMPLICIT NONE
 
@@ -57,16 +60,18 @@ CONTAINS
     REAL(wp) :: diameter,height,dheight,leaf2sapwood_mass_ratio,leaf2root_mass_ratio
     REAL(wp) :: k1_opt, k2_opt
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: press_srf
     REAL(wp), POINTER                :: q_air
     REAL(wp), POINTER                :: co2_mixing_ratio
     REAL(wp), POINTER                :: ga
-    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
-      TYPE IS(t_atm2land_memory)
-        atm2land__mem => mm
-    END SELECT
+    dsl4jsb_Get_memory(ATM2LAND_)
+!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
+!      TYPE IS(t_atm2land_memory)
+!        atm2land__mem => mm
+!    END SELECT
     t_air            => atm2land__mem%t_air%ptr
     press_srf        => atm2land__mem%press_srf%ptr
     q_air            => atm2land__mem%q_air%ptr

@@ -11,17 +11,17 @@
 MODULE mo_atmland_interface
 #ifndef __NO_JSBACH__
 
-!#include "dsl_jsbach.inc"
+#include "dsl_jsbach.inc"
 
-  USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: finish
-
+  USE mo_kind,                    ONLY: wp
+  USE mo_exception,               ONLY: finish
   USE mo_base_memory,             ONLY: t_slm_tile
   USE mo_jsb_var_class,           ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
   USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
-  USE mo_atm2land_memory_class,   ONLY: t_atm2land_memory
-  USE mo_land2atm_memory_class,   ONLY: t_land2atm_memory
 
+  ! Use of process memories
+  dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+  dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
 
 !!! jsbach4
 !!  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -145,11 +145,13 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_atm2land'
 
     ! 0.3 Memory allocation
-    TYPE(t_atm2land_memory), POINTER :: atm2land__mem   ! dsl4jsb_Def_memory(ATM2LAND_)
-    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)            ! dsl4jsb_Get_memory(ATM2LAND_)
-      TYPE IS(t_atm2land_memory)
-        atm2land__mem => mm
-    END SELECT
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ATM2LAND_)   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Get_memory(ATM2LAND_)
+!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p) 
+!      TYPE IS(t_atm2land_memory)
+!        atm2land__mem => mm
+!    END SELECT
 
 
     ! 1.0 pass variables values to memory
@@ -365,12 +367,13 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_land2atm'
 
     ! 0.3 Memory allocation
-    TYPE(t_land2atm_memory), POINTER :: land2atm__mem   ! dsl4jsb_Def_memory(LAND2ATM_)
-    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)            ! dsl4jsb_Get_memory(LAND2ATM_)
-      TYPE IS(t_land2atm_memory)
-        land2atm__mem => mm
-    END SELECT
-
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(LAND2ATM_)   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    dsl4jsb_Get_memory(LAND2ATM_)
+!    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p) 
+!      TYPE IS(t_land2atm_memory)
+!        land2atm__mem => mm
+!    END SELECT
 
 
     ! 1.0 pass variables values from memory to output variables
