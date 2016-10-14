@@ -94,7 +94,7 @@ The following list describes the individual directories in :math:`\mathtt{bench4
 :bin:     core source files
 :configs: specification and template files for the run configuration
 :doc:     Sphinx documentation source files and Makefile
-:prod:    scripts and configurations for particular diagnostic fields
+:prod:    scripts and configurations for particular |diag-f| s
 :scripts: essential parts of |b4j| e.g. run scripts
 :tests:   different testing environments
 :work:    currently hardcoded working directory
@@ -163,7 +163,7 @@ comments inline prepended by the hash symbol \"#\".
       [[subsection-1]]
          key-1=value-1
 	   
-**Listing:** Prototype configuration file suitable for |py| configparser
+**Listing:** Basic configuration file supported by a |py| parser
 
 After generation the file :math:`\mathtt{myb4jrun.cfg}` contains the
 structure of information that the configuration for a minimum |b4j| run with two
@@ -187,7 +187,7 @@ In the following the values to fill in are summarized.
 Top level configuration
 +++++++++++++++++++++++
 
-Top level in main configuration file:
+Top level in the main configuration file:
 
 +------------------------------------------------+-----------------------------------+
 | key                                            | value                             |
@@ -205,39 +205,40 @@ Top level in main configuration file:
 | reporting       | reporting switch             | boolean         | True            |
 +-----------------+------------------------------+-----------------+-----------------+
 
-The redmine access is necessary if the |b4j| run has to read reference |exp|
-metadata from the wikipage. You can get the key on the redmine wikipage from
-the right menu on top of the page:
+The redmine access is necessary if reference |exp| metadata shall be retrieved from
+the table on the wikipage. When you are logged in you can get your redmine "Api access key"
+from the right menu on top of the page:
 
 ::
 
-   > My account > Show
+   > My account > API access key > Show
 
-If it does not exist yet, it is easily created within the same menu.
+If it does not exist yet, it can easily be created within the same menu.
 
 
 Experiment section
 ++++++++++++++++++
 
-For each |exp| in the run there has to be a subsection that is labeled with a
-run internal unique name.
+The beginning of the section is marked by the header :math:`\mathtt{[experiments]}`. For
+each |exp| for comparison in the run there has to be a subsection within, that is
+labeled with a run internal unique name.
 
-Single |exp| subsection level:
+Single |exp| subsection:
 
 +------------------------------------------------+-----------------------------------+
 | key                                            | value                             |
 +-----------------+------------------------------+-----------------+-----------------+
 | name            | description                  | datatype        | default         |
 +=================+==============================+=================+=================+
-| name_orig       | |longstring-01|              | string          | \-              |
+| name_orig       | |longstring-11|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| type            | |exp| type                   | |longstring-02| | MPIESM1         |
+| type            | |exp| type                   | |longstring-12| | MPIESM1         |
 +-----------------+------------------------------+-----------------+-----------------+
-| path            | |longstring-03|              |                 |                 |
+| path            | |longstring-13|              |                 |                 |
 |                 +------------------------------+-----------------+-----------------+
-|                 | path of |exp| on host        | string          | None            |
+|                 | |longstring-14|              | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
-| host            | |longstring-03|              |                 |                 |
+| host            | |longstring-13|              |                 |                 |
 |                 +------------------------------+-----------------+-----------------+
 |                 | host of |exp|                | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
@@ -245,20 +246,21 @@ Single |exp| subsection level:
 +-----------------+------------------------------+-----------------+-----------------+
 | isref           | reference role               | boolean         | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| startyear       | |longstring-04|              | string          | \-              |
+| startyear       | |longstring-15|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
-| endyear         | |longstring-05|              | string          | \-              |
+| endyear         | |longstring-16|              | string          | \-              |
 +-----------------+------------------------------+-----------------+-----------------+
 | initialyear     | initial year of |exp|        | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
 | finalyear       | final year of |exp|          | string          | None            |
 +-----------------+------------------------------+-----------------+-----------------+
 
-.. |longstring-01| replace:: original identifying infix, e.g. \"vga0187\"
-.. |longstring-02| replace:: option (CMPI5, MPIESM1)
-.. |longstring-03| replace:: None if item in database
-.. |longstring-04| replace:: startyear for |exp| in |b4j| run  
-.. |longstring-05| replace:: endyear for |exp| in |b4j| run  
+.. |longstring-11| replace:: original identifying infix, e.g. \"vga0187\"
+.. |longstring-12| replace:: option (CMPI5, MPIESM1)
+.. |longstring-13| replace:: None if item in database
+.. |longstring-14| replace:: path of |exp| in filesystem on host  
+.. |longstring-15| replace:: startyear for |exp| in |b4j| run  
+.. |longstring-16| replace:: endyear for |exp| in |b4j| run  
 
 
 .. _diag-f-section:
@@ -266,27 +268,28 @@ Single |exp| subsection level:
 Diagnostic field section
 ++++++++++++++++++++++++
 
-For each diagnostic field in the run has to be a subsection that is labeled with a
+The beginning of the section is marked by the header :math:`\mathtt{[fields]}`.
+For each |diag-f| in the run has to be a subsection inside, that is labeled with a
 run internal unique name.
 
-Single diagnostic field subsection level in the main configuration file for a |b4j| run:
+Single |diag-f| subsection:
 
 +------------------------------------------------+-----------------------------------+
 | key                                            | value                             |
 +-----------------+------------------------------+-----------------+-----------------+
 | name            | description                  | datatype        | default         |
 +=================+==============================+=================+=================+
-| config_filename |  |long_string-1|             | string          | \-              |
+| config_filename |  |longstring-17|             | string          | \-              |
 |                 +------------------------------+                 |                 |
-|                 |  |long_string-3|             |                 |                 |
+|                 |  |longstring-18|             |                 |                 |
 +-----------------+------------------------------+-----------------+-----------------+
 
-.. |long_string-1| replace:: |diag-f| configuration filename in :math:`\mathtt{bench4jsbach/prod/configs}`
-.. |long_string-3| replace:: path to |diag-f| configuration file in local filesystem
+.. |longstring-17| replace:: |diag-f| configuration filename in :math:`\mathtt{bench4jsbach/prod/configs}`
+.. |longstring-18| replace:: path to |diag-f| configuration file in local filesystem
 
-Files in context with the available diagnostic fields are stored in
+Files in context with the available |diag-f| s are stored in
 :math:`\mathtt{bench4jsbach/prod}`, the configuration files beneath in
-the directory :math:`\mathtt{configs}`. A list of available diagnostic fields can be
+the directory :math:`\mathtt{configs}`. A list of available |diag-f| s can be
 found under :ref:`diag-f-avail`.
 
 When you have replaced all placeholders \"<XXX>\" with the appropriate values the

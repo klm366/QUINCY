@@ -13,7 +13,7 @@ products straight forward and user friendly. In the first instance the tool
 shall serve for the benchmarking of land models, it has to be able to quantify
 the deviation of a simulation from reference experiments in the most crucial and/or
 influential parameters out-of-the-box. This will help developing models
-as well as managing a large number of them. It is desirable to cover most
+as well as managing a larger number of them. It is desirable to cover most
 research areas of the land department and to keep the tool well adapted
 to the local technical conditions at the |mpi|.
 
@@ -106,19 +106,19 @@ albedo.
 Experiment types and diagnostic fields available
 ++++++++++++++++++++++++++++++++++++++++++++++++
 
-+----------------------------------+----------------+
-| |longstring-2|, |longstring-0|   | |longstring-1| |
-+==================================+================+
-| |longstring-3|                   | +              |
-+----------------------------------+----------------+
-| |longstring-4|                   | +              |
-+----------------------------------+----------------+
++----------------------------------+-----------------+
+| |longstring-01|, |longstring-02| | |longstring-03| |
++==================================+=================+
+| |longstring-04|                  | +               |
++----------------------------------+-----------------+
+| |longstring-05|                  |                 |
++----------------------------------+-----------------+
 
-.. |longstring-0| replace:: experiment type
-.. |longstring-1| replace:: MPIESM1
-.. |longstring-2| replace:: diagnostic field			   
-.. |longstring-3| replace:: **albedo** 
-.. |longstring-4| replace:: **hydrology**
+.. |longstring-01| replace:: diagnostic field
+.. |longstring-02| replace:: experiment type
+.. |longstring-03| replace:: MPIESM1			   
+.. |longstring-04| replace:: **albedo** 
+.. |longstring-05| replace:: **hydrology**
 
 
 Diagnostics and benchmarks in field albedo
@@ -128,17 +128,17 @@ Diagnostics and benchmarks in field albedo
 +------------------------------+-----------------+-----------------+
 | diagnostic                   | name            | type            |
 +==============================+=================+=================+
-| |longstring-5|               | delta           | map             |
+| |longstring-06|              | delta           | map             |
 +------------------------------+-----------------+-----------------+
-| |longstring-6|               | delta\_gtd      | metric          |
+| |longstring-07|              | delta\_gtd      | metric          |
 +------------------------------+-----------------+-----------------+
-| |longstring-7|               | delta\_gtm      | metric          |
+| |longstring-08|              | delta\_gtm      | metric          |
 +------------------------------+-----------------+-----------------+
 
 
-.. |longstring-5| replace::  Seasonal mean difference
-.. |longstring-6| replace::  Global and time deviation
-.. |longstring-7| replace::  Global and time mean
+.. |longstring-06| replace::  Seasonal mean difference
+.. |longstring-07| replace::  Global and time deviation
+.. |longstring-08| replace::  Global and time mean
 
 
 Diagnostics and benchmarks in field hydrology
