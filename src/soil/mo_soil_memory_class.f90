@@ -323,19 +323,19 @@ CONTAINS
 
       CALL jsb_add_var( mem, prefix//'discharge'//suffix, mem%discharge,             &
         & hgrid, surface,                                                                    &
-        & t_cf('discharge', 'kg m-2 s-1', 'local discharge'),                                &
+        & t_cf('discharge', 'm3 s-1', 'local discharge'),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'discharge_ocean'//suffix, mem%discharge_ocean, &
         & hgrid, surface,                                                                    &
-        & t_cf('discharge_ocean', 'kg m-2 s-1', 'discharge to the ocean'),                   &
+        & t_cf('discharge_ocean', 'm3 s-1', 'discharge to the ocean'),                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, prefix//'internal_drain'//suffix, mem%internal_drain,           &
         & hgrid, surface,                                                                    &
-        & t_cf('internal_drain', 'kg m-2 s-1', 'internal drainage'),                         &
+        & t_cf('internal_drain', 'm3 s-1', 'internal drainage'),                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & initval_r=0.0_wp )
 
