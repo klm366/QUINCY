@@ -200,15 +200,15 @@ CONTAINS
   END FUNCTION is_newyear
 
 
-  INTEGER FUNCTION get_year(datetime)
+  INTEGER FUNCTION get_year(this_datetime)
 
-    TYPE(t_datetime), OPTIONAL, INTENT(in) :: datetime
+    TYPE(t_datetime), OPTIONAL, INTENT(in) :: this_datetime
 
     TYPE(t_datetime) :: datetime_tmp
     INTEGER :: year
 
-    IF (PRESENT(datetime)) THEN
-      datetime_tmp = datetime
+    IF (PRESENT(this_datetime)) THEN
+      datetime_tmp = this_datetime
     ELSE
       datetime_tmp  = get_time_current()
     END IF
@@ -218,15 +218,15 @@ CONTAINS
 
   END FUNCTION get_year
 
-  INTEGER FUNCTION get_month(datetime)
+  INTEGER FUNCTION get_month(this_datetime)
 
-    TYPE(t_datetime), OPTIONAL, INTENT(in) :: datetime
+    TYPE(t_datetime), OPTIONAL, INTENT(in) :: this_datetime
 
     TYPE(t_datetime) :: datetime_tmp
     INTEGER :: month
 
-    IF (PRESENT(datetime)) THEN
-      datetime_tmp = datetime
+    IF (PRESENT(this_datetime)) THEN
+      datetime_tmp = this_datetime
     ELSE
       datetime_tmp  = get_time_current()
     END IF
@@ -237,15 +237,15 @@ CONTAINS
 
   END FUNCTION get_month
 
-  INTEGER FUNCTION get_day(datetime)
+  INTEGER FUNCTION get_day(this_datetime)
 
-    TYPE(t_datetime), OPTIONAL, INTENT(in) :: datetime
+    TYPE(t_datetime), OPTIONAL, INTENT(in) :: this_datetime
 
     TYPE(t_datetime) :: datetime_tmp
     INTEGER :: day
 
-    IF (PRESENT(datetime)) THEN
-      datetime_tmp = datetime
+    IF (PRESENT(this_datetime)) THEN
+      datetime_tmp = this_datetime
     ELSE
       datetime_tmp  = get_time_current()
     END IF
@@ -256,15 +256,15 @@ CONTAINS
 
   END FUNCTION get_day
 
-  INTEGER FUNCTION get_secs_of_day(datetime)
+  INTEGER FUNCTION get_secs_of_day(this_datetime)
 
-    TYPE(t_datetime), OPTIONAL, INTENT(in) :: datetime
+    TYPE(t_datetime), OPTIONAL, INTENT(in) :: this_datetime
 
     TYPE(t_datetime) :: datetime_tmp
     INTEGER :: hour, minute, second
 
-    IF (PRESENT(datetime)) THEN
-      datetime_tmp = datetime
+    IF (PRESENT(this_datetime)) THEN
+      datetime_tmp = this_datetime
     ELSE
       datetime_tmp  = get_time_current()
     END IF

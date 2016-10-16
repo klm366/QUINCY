@@ -35,7 +35,8 @@ MODULE mo_hd_memory_class
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
-      water_budget
+      water_budget    , &
+      outflow_resid        !< residual outflow that's not routed to discharge - only used for debugging (see mo_hd_interface.f90)
 
     TYPE(t_jsb_var_real3d) :: &
       nidx_upstream,          &  !< 1st dim. of local index of grid cell upstream (nproma)
@@ -159,7 +160,14 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'overlflow_res', mem%overlflow_res,   &
+    CALL jsb_add_var( mem, 'outflow_resid', mem%outflow_resid,                          &
+      & hgrid, surface,                                                                       &
+      & t_cf('outflow_resid', 'm3/s', 'grid cell outflow residual'),                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+      & prefix, suffix,                                                                 &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'overlflow_res', mem%overlflow_res,                           &
       & hgrid, hd_o,                                                                     &
       & t_cf('overlflow_res', '', 'content of the overland flow reservoir'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &

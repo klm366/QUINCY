@@ -141,7 +141,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
-    dsl4jsb_Real2D_onChunk :: pme_glacier
     dsl4jsb_Real2D_onChunk :: w_soil_column
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl

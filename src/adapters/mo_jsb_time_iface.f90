@@ -16,13 +16,21 @@ MODULE mo_jsb_time_iface
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
 
 #ifdef __ICON__
-  USE mo_datetime,        ONLY: t_datetime, print_datetime, add_time, rdaylen
-  USE mo_time_config,     ONLY: time_config !configure_time
-  USE mo_time_nml,        ONLY: read_time_namelist
-  USE mo_time_interpolation_weights, ONLY: wi_limm
-  USE mo_dynamics_config, ONLY: iequations
-  USE mo_impl_constants,  ONLY: ihs_atm_temp, ihs_atm_theta, ishallow_water, leapfrog_expl, leapfrog_si
-  USE mo_ha_dyn_config,   ONLY: ha_dyn_config
+  USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime, &
+    &                                  OPERATOR(+), OPERATOR(*),                                &
+    &                                  divisionquotienttimespan, getDayOfYearFromDateTime,      &   
+    &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,   & 
+    &                                  getTotalMilliSecondsTimeDelta, no_of_sec_in_a_day,       &
+    &                                  getNoOfSecondsElapsedInDayDateTime,                      &
+    &                                  divideDatetimeDifferenceInSeconds
+  USE mo_time_config,            ONLY: time_config !configure_time
+  USE mo_time_nml,               ONLY: read_time_namelist
+  USE mo_dynamics_config,        ONLY: iequations
+  USE mo_impl_constants,         ONLY: ihs_atm_temp, ihs_atm_theta, ishallow_water, &
+    &                                  leapfrog_expl, leapfrog_si
+  USE mo_ha_dyn_config,          ONLY: ha_dyn_config
+  USE mo_bcs_time_interpolation, ONLY: t_time_interpolation_weights,              &
+    &                                  calculate_time_interpolation_weights
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
                                 get_day_length => day_len
@@ -186,18 +194,17 @@ CONTAINS
   !!
   REAL(wp) FUNCTION get_time_dt()
 
-#ifdef __ICON__
-    USE mo_run_config, ONLY: dtime
-#else
+#ifndef __ICON__
     USE mo_time_control, ONLY: delta_time
 #endif
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_dt'
-
     REAL(wp) :: ztime
 
 #ifdef __ICON__
-    ztime = dtime
+    TYPE(t_datetime), POINTER :: reference_dt
+    reference_dt => newDatetime("1980-06-01T00:00:00.000")
+    ztime = 0.001_wp*getTotalMilliSecondsTimeDelta(time_config%tc_dt_model, reference_dt)
+    CALL deallocateDatetime(reference_dt)
 #else
     ztime = delta_time
 #endif
@@ -216,9 +223,7 @@ CONTAINS
   !!
   INTEGER FUNCTION get_time_nsteps()
 
-#ifdef __ICON__
-    USE mo_run_config,   ONLY: nsteps
-#else
+#ifndef __ICON__
     USE mo_time_control, ONLY: start_date, stop_date
     USE mo_time_base,    ONLY: IDAYLEN
     USE mo_time_conversion, ONLY: TC_get
@@ -226,11 +231,18 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_nsteps'
 
+#ifndef __ICON__
     INTEGER :: start_day, start_second, stop_day, stop_second
+#endif
     INTEGER :: isteps
 
 #ifdef __ICON__
-    isteps = nsteps
+    TYPE(divisionquotienttimespan) :: tq
+    
+    CALL divideDatetimeDifferenceInSeconds(time_config%tc_stopdate,    &
+         &                                 time_config%tc_startdate,   &
+         &                                 time_config%tc_dt_model, tq)
+    isteps = INT(tq%quotient)
 #else
     CALL TC_get(start_date, start_day, start_second)
     CALL TC_get(stop_date, stop_day, stop_second)
@@ -252,7 +264,7 @@ CONTAINS
   TYPE(t_datetime) FUNCTION get_time_start()
 
 #ifdef __ICON__
-    get_time_start = time_config%ini_datetime
+    get_time_start = time_config%tc_startdate
 #else
     get_time_start = start_date
 #endif
@@ -262,7 +274,7 @@ CONTAINS
   TYPE(t_datetime) FUNCTION get_time_stop()
 
 #ifdef __ICON__
-    get_time_stop = time_config%end_datetime
+    get_time_stop = time_config%tc_stopdate
 #else
     get_time_stop = stop_date
 #endif
@@ -275,7 +287,7 @@ CONTAINS
   TYPE(t_datetime) FUNCTION get_time_current()
 
 #ifdef __ICON__
-    get_time_current = time_config%cur_datetime
+    get_time_current = time_config%tc_current_date
 #else
     get_time_current = current_date
 #endif
@@ -285,27 +297,20 @@ CONTAINS
   !>
   !! @brief Get time at previous time step
   !!
-  TYPE(t_datetime) FUNCTION get_time_previous()
-
+  FUNCTION get_time_previous() RESULT(previous)
+    TYPE(t_datetime), POINTER :: previous 
 #ifdef __ICON__
-    USE mo_run_config, ONLY: dtime
-
-    TYPE(t_datetime) :: datetime
-
-    datetime = time_config%cur_datetime
-    CALL add_time(-dtime, 0, 0, 0, datetime)
-    get_time_previous = datetime
+    IF (.NOT. ASSOCIATED(previous)) previous => newDatetime("1980-06-01T00:00:00.000") 
+    previous = time_config%tc_current_date + (-1) * time_config%tc_dt_model 
 #else
-    get_time_previous = previous_date
+    previous = previous_date
 #endif
 
   END FUNCTION get_time_previous
 
   SUBROUTINE start_timestep(istep)
 
-#ifdef __ICON__
-    USE mo_run_config, ONLY: dtime
-#else
+#ifndef __ICON__
     USE mo_time_control, ONLY: time_set
 #endif
 
@@ -314,9 +319,16 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':start_timestep'
 
 #ifdef __ICON__
-    CALL add_time(dtime, 0, 0, 0, time_config%cur_datetime)
-
-    WRITE(message_text,'(a,i10)') 'TIME STEP n: ', istep
+    !
+    ! Luis:
+    !
+    ! The following commented region is not allowed as time_config is
+    ! a protected varaible. Reiner told me that this is meant for
+    ! later use in JSBACH standalone.
+    ! time_config%tc_current_date = time_config%tc_current_date &
+    !      &                       +time_config%tc_dt_model
+    !
+    WRITE(message_text,'(a,i10)') 'JSBACH: Start TIME STEP n: ', istep
     CALL message(TRIM(routine),message_text)
 #else
     CALL time_set
@@ -332,32 +344,29 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
 
-#ifndef __ICON__
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':finish_timestep'
+    
+#ifdef __ICON__
+    WRITE(message_text,'(a,i10)') 'JSBACH: Finish TIME STEP n: ', istep
+    CALL message(TRIM(routine),message_text)
+#else
     CALL time_reset
 #endif
 
   END SUBROUTINE finish_timestep
 
 #ifdef __ICON__
-  SUBROUTINE get_date_components(datetime, year, month, day, hour, minute, second)
+  SUBROUTINE get_date_components(this_datetime, year, month, day, hour, minute, second)
 
-    USE mo_datetime, ONLY: time_to_date, check_date
-
-    TYPE(t_datetime),  INTENT(in)  :: datetime
+    TYPE(t_datetime),  INTENT(in)  :: this_datetime
     INTEGER, OPTIONAL, INTENT(out) :: year, month, day, hour, minute, second
 
-    TYPE(t_datetime) :: datetime_tmp
-
-    datetime_tmp = datetime
-    CALL time_to_date(datetime_tmp)
-    CALL check_date(datetime_tmp)
-
-    IF (PRESENT(year))   year   = datetime_tmp%year
-    IF (PRESENT(month))  month  = datetime_tmp%month
-    IF (PRESENT(day))    day    = datetime_tmp%day
-    IF (PRESENT(hour))   hour   = datetime_tmp%hour
-    IF (PRESENT(minute)) minute = datetime_tmp%minute
-    IF (PRESENT(second)) second = INT(datetime_tmp%second)
+    IF (PRESENT(year))   year   = this_datetime%date%year
+    IF (PRESENT(month))  month  = this_datetime%date%month
+    IF (PRESENT(day))    day    = this_datetime%date%day
+    IF (PRESENT(hour))   hour   = this_datetime%time%hour
+    IF (PRESENT(minute)) minute = this_datetime%time%minute
+    IF (PRESENT(second)) second = this_datetime%time%second
 
   END SUBROUTINE get_date_components
 #endif
@@ -369,26 +378,15 @@ CONTAINS
   !!
 #ifdef __ICON__
   INTEGER FUNCTION get_year_length(yr)
-
-    USE mo_datetime, ONLY: date_to_time
-
     INTEGER, INTENT(in) :: yr
 
-    TYPE(t_datetime) :: date, inidate
+    TYPE(t_datetime), POINTER :: datetime_tmp
 
-    inidate = get_time_start()
+    datetime_tmp => newDatetime(yr, 1, 1, 0, 0, 0, 0)
 
-    date%calendar = inidate%calendar
-    date%year     = yr
-    date%month    = 1
-    date%day      = 1
-    date%hour     = 0
-    date%minute   = 0
-    date%second   = 0._wp
+    get_year_length = getNoOfDaysInYearDateTime(datetime_tmp)
 
-    CALL date_to_time(date)
-
-    get_year_length = date%yealen
+    CALL deallocateDatetime(datetime_tmp)
 
   END FUNCTION get_year_length
 #endif
@@ -400,26 +398,15 @@ CONTAINS
   !!
 #ifdef __ICON__
   INTEGER FUNCTION get_month_length(yr, mo)
-
-    USE mo_datetime, ONLY: date_to_time
-
     INTEGER, INTENT(in) :: yr, mo
 
-    TYPE(t_datetime) :: date, inidate
+    TYPE(t_datetime), POINTER :: datetime_tmp
 
-    inidate = get_time_start()
+    datetime_tmp => newDatetime(yr, mo, 1, 0, 0, 0, 0)
 
-    date%calendar = inidate%calendar
-    date%year     = yr
-    date%month    = mo
-    date%day      = 1
-    date%hour     = 0
-    date%minute   = 0
-    date%second   = 0
+    get_month_length = getNoOfDaysInMonthDateTime(datetime_tmp)
 
-    CALL date_to_time(date)
-
-    get_month_length = date%monlen
+    CALL deallocateDatetime(datetime_tmp)
 
   END FUNCTION get_month_length
 #endif
@@ -432,7 +419,7 @@ CONTAINS
 #ifdef __ICON__
   REAL(wp) FUNCTION get_day_length()
 
-    get_day_length = rdaylen
+    get_day_length = REAL(no_of_sec_in_a_day,wp)
 
   END FUNCTION get_day_length
 #endif
@@ -446,17 +433,12 @@ CONTAINS
 #ifdef __ICON__
   REAL(wp) FUNCTION get_year_day(date)
 
-    USE mo_datetime, ONLY: aux_datetime
-
+    ! t_datetime points to mtimes datetime
     TYPE(t_datetime),  INTENT(in)  :: date
 
-    TYPE(t_datetime) :: datetime_tmp
-
-    datetime_tmp = date
-
-    CALL aux_datetime(datetime_tmp)
-
-    get_year_day = REAL(datetime_tmp%yeaday, wp) + datetime_tmp%daytim
+    get_year_day = REAL(getDayOfYearFromDateTime(date), wp) &
+         &        +REAL(getNoOfSecondsElapsedInDayDateTime(date),wp) &
+         &        /REAL(no_of_sec_in_a_day,wp)
 
   END FUNCTION get_year_day
 #endif
@@ -466,11 +448,19 @@ CONTAINS
     REAL(wp), INTENT(out) :: w1, w2
     INTEGER, INTENT(out)  :: n1, n2
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_time_interpolation_weights'
+    
 #ifdef __ICON__
-    w1 = wi_limm%wgt1
-    w2 = wi_limm%wgt2
-    n1 = wi_limm%inm1
-    n2 = wi_limm%inm2
+    TYPE(t_time_interpolation_weights) :: current_time_interpolation_weights
+
+!    CALL message('', '')
+!    CALL message(routine, 'generate time interpolation weights.')
+!    CALL message('', '')
+    current_time_interpolation_weights = calculate_time_interpolation_weights(time_config%tc_current_date)
+    w1 = current_time_interpolation_weights%weight1
+    w2 = current_time_interpolation_weights%weight2
+    n1 = current_time_interpolation_weights%month1_index
+    n2 = current_time_interpolation_weights%month2_index
 #else
     w1 = wgt1
     w2 = wgt2
