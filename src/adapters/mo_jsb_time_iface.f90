@@ -298,9 +298,8 @@ CONTAINS
   !! @brief Get time at previous time step
   !!
   FUNCTION get_time_previous() RESULT(previous)
-    TYPE(t_datetime), POINTER :: previous 
+    TYPE(t_datetime) :: previous 
 #ifdef __ICON__
-    IF (.NOT. ASSOCIATED(previous)) previous => newDatetime("1980-06-01T00:00:00.000") 
     previous = time_config%tc_current_date + (-1) * time_config%tc_dt_model 
 #else
     previous = previous_date
