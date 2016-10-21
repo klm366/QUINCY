@@ -46,7 +46,7 @@ Then update and install the necessary |py| packages,  ..
    
    >>> pip install cdo
 
-\.. and |pycmbs|
+\.. |pycmbs| \..
 
 ::
 
@@ -54,6 +54,14 @@ Then update and install the necessary |py| packages,  ..
    >>> git clone https://github.com/pygeo/pycmbs
    >>> cd pycmbs
    >>> env OMP_NUM_THREADS=1 python setup.py install
+
+\.. and :math:`\mathtt{python-redmine}` \..
+       
+   >>> cd opt
+   >>> git clone git://github.com/maxtepkeev/python-redmine.git
+   >>> cd python-redmine/
+   >>> python setup.py install
+
 
 Get |b4j|
 ---------

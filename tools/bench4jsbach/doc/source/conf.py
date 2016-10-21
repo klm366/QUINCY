@@ -82,6 +82,8 @@ if os.path.isdir ( bin_dir ):
 else:
     raise Exception ( "Directory %s with source files not found." % bin_dir )
 
+sys.path.insert(0, os.path.abspath('./extensions'))
+
 print "sys PATH:"
 print sys.path
 print "python exec:", sys.executable
@@ -104,6 +106,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'IPython.sphinxext.ipython_directive',
     'IPython.sphinxext.ipython_console_highlighting',
+    'globalindex',
 ]
 
 

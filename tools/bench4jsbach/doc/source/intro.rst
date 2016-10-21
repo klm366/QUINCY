@@ -82,15 +82,27 @@ The following diagram shows |b4j| in context with other actors ( users, software
 
    **Figure:** Context diagram of |b4j|
 
+   
+.. glossary::
+   
+   Benchmarking_user
+      * scientist managing many models
+      * model developer making  still-in-line-check
 
-:Benchmarking user:     * scientist managing many models
-                        * model developer making  still-in-line-check  
-:Diagnostic developer:  dedicated scientist integrating a |diag-f|
-:Database:              database for reference |exp| s, for the time being a table
-			on the redmine project wikipage
-:Redmine wiki:          communication platform for |b4j|
-			
 
+   Diagnostic developer
+      dedicated scientist integrating a |diag-f|
+
+
+   Database
+      database for reference |exp| s, for the time being a table on the redmine project wikipage
+
+
+   Redmine wiki
+      communication platform for |b4j|
+
+
+  
 Status
 ------
 
