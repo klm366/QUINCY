@@ -457,37 +457,26 @@ CONTAINS
     dsl4jsb_Def_memory(ATM2LAND_)
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: &
-      & evapopot,       &
-      & evapotranspiration
-    dsl4jsb_Real2D_onChunk :: qsat_lwtr
     dsl4jsb_Real2D_onChunk :: s_wtr
     dsl4jsb_Real2D_onChunk :: t_acoef_wtr
     dsl4jsb_Real2D_onChunk :: t_bcoef_wtr
-    dsl4jsb_Real2D_onChunk :: q_acoef_wtr
-    dsl4jsb_Real2D_onChunk :: q_bcoef_wtr
     dsl4jsb_Real2D_onChunk :: drag_wtr
     dsl4jsb_Real2D_onChunk :: latent_hflx_wtr
     dsl4jsb_Real2D_onChunk :: sensible_hflx_wtr
     dsl4jsb_Real2D_onChunk :: evapo_wtr
-    dsl4jsb_Real2D_onChunk :: qsat_lice
     dsl4jsb_Real2D_onChunk :: s_ice
     dsl4jsb_Real2D_onChunk :: t_acoef_ice
     dsl4jsb_Real2D_onChunk :: t_bcoef_ice
-    dsl4jsb_Real2D_onChunk :: q_acoef_ice
-    dsl4jsb_Real2D_onChunk :: q_bcoef_ice
     dsl4jsb_Real2D_onChunk :: drag_ice
     dsl4jsb_Real2D_onChunk :: latent_hflx_ice
     dsl4jsb_Real2D_onChunk :: sensible_hflx_ice
     dsl4jsb_Real2D_onChunk :: evapo_ice
-    dsl4jsb_Real2D_onChunk :: fract_lice
 
     ! Locally allocated vectors
     !
-    REAL(wp) ::                &
-      & s_air          (options%nc),   &  !< Dry static energy at lowest atmospheric level
-      & q_air          (options%nc),   &  !< Humidity at lowest atmospheric level
-      heat_tcoef       (options%nc)       !< Heat transfer coefficient (rho*C_h*|v|)
+    REAL(wp) :: &
+      & s_air      (options%nc), &  !< Dry static energy at lowest atmospheric level
+      & heat_tcoef (options%nc)     !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: steplen
@@ -517,28 +506,19 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_acoef_wtr)       ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_bcoef_wtr)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_acoef_wtr)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_bcoef_wtr)       ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_acoef_ice)       ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_bcoef_ice)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_acoef_ice)       ! IN
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_bcoef_ice)       ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_wtr)          ! IN
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_ice)          ! IN
 
-    dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_lwtr)         ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      s_wtr)             ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_lice)         ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      s_ice)             ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,      fract_lice)        ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx_wtr) ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx_wtr)   ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx_ice) ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx_ice)   ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_wtr)         ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_ice)         ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot)          ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotranspiration) ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_wtr)         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_ice)         ! in
     
     ! ---------------------------
     ! Go
@@ -546,17 +526,12 @@ CONTAINS
     ! ================================================================================================================================
     ! Surface fluxes for lake water
 
-    ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
+    ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
     s_air(:) = t_acoef_wtr(:) * s_wtr   (:) + t_bcoef_wtr(:)
-    q_air(:) = q_acoef_wtr(:) * qsat_lwtr(:) + q_bcoef_wtr(:)
 
     ! Transfer coefficient
     heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)
-
-    ! Compute moisture fluxes
-    !
-    evapo_wtr (:) = heat_tcoef(:) * (q_air(:) - qsat_lwtr(:))       ! Potential evaporation
 
     ! Compute sensible heat flux
     !
@@ -569,17 +544,12 @@ CONTAINS
     ! ================================================================================================================================
     ! Surface fluxes for lake ice
 
-    ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
+    ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
     s_air(:) = t_acoef_ice(:) * s_ice   (:) + t_bcoef_ice(:)
-    q_air(:) = q_acoef_ice(:) * qsat_lice(:) + q_bcoef_ice(:)
 
     ! Transfer coefficient
     heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)
-
-    ! Compute moisture fluxes
-    !
-    evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_lice(:))       ! Potential evaporation
 
     ! Compute sensible heat flux
     !
@@ -588,9 +558,6 @@ CONTAINS
     ! Compute latent heat flux
     !
     latent_hflx_ice(:) = als * evapo_ice(:)
-
-    evapopot          (:) = (1._wp - fract_lice(:)) * evapo_wtr   (:) + fract_lice(:) * evapo_ice   (:)
-    evapotranspiration(:) = evapopot(:)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

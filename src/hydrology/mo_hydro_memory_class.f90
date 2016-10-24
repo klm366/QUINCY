@@ -235,21 +235,13 @@ CONTAINS
       & initval_r=0.0_wp )
 
     ! Additional variables for land type
-    IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-      &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
-      &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
-      &  )                                       &
-      &  .AND. .NOT. ASSOCIATED(mem%evapo_lnd%ptr) ) THEN
+    ! IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
+    !   &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
+    !   &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+    !   &  )                                       &
+    !   &  .AND. .NOT. ASSOCIATED(mem%evapo_lnd%ptr) ) THEN
 
-      ! Total evapotranspiration, including sublimation
-      CALL jsb_add_var( mem, 'evapo_lnd', mem%evapo_lnd,                                 &
-        & hgrid, surface,                                                                  &
-        & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp )
-
-    END IF
+    ! END IF
 
     ! Additional variables for soil
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
@@ -270,6 +262,14 @@ CONTAINS
         & hgrid, surface,                                                    &
         & t_cf('Water content of snow reservoir on soil', 'm', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                              &
+        & initval_r=0.0_wp )
+
+      ! Total evapotranspiration, including sublimation
+      CALL jsb_add_var( mem, 'evapo_lnd', mem%evapo_lnd,                                 &
+        & hgrid, surface,                                                                  &
+        & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )
 
@@ -403,7 +403,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'trans', mem%trans,                                           &
         & hgrid, surface,                                                                  &
-        & t_cf('surface_transpiration', '', 'Transpiration from surface'),                 &
+        & t_cf('surface_transpiration', 'kg m-2 s-1', 'Transpiration from surface'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp )

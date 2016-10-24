@@ -32,7 +32,7 @@ MODULE mo_hydro_interface
 !  USE mo_util,               ONLY: one_of, int2string
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SOIL_, VEG_, PHENO_, ATM2LAND_, RAD_, HYDRO_
+  dsl4jsb_Use_processes SEB_, TURB_, SOIL_, VEG_, PHENO_, ATM2LAND_, RAD_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -44,6 +44,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(SOIL_)
   dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
@@ -56,6 +57,18 @@ MODULE mo_hydro_interface
   PUBLIC :: Register_hydro_tasks !,t_hydro_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_interface'
+
+  !> Type definition for evaporation task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_evaporation
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_evaporation
+    PROCEDURE, NOPASS :: Aggregate => aggregate_evaporation
+  END TYPE tsk_evaporation
+
+  !> Constructor interface for evaporation task
+  INTERFACE tsk_evaporation
+    PROCEDURE Create_task_evaporation
+  END INTERFACE tsk_evaporation
 
   !> Type definition for snow_hydrology task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_snow_and_ice_hydrology
@@ -86,6 +99,25 @@ CONTAINS
   ! ================================================================================================================================
   !! Constructors for tasks
 
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for evaporation task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "evaporation"
+  !!
+  FUNCTION Create_task_evaporation(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_evaporation::return_ptr)
+
+    return_ptr%name = 'evaporation'
+    return_ptr%process_id = HYDRO_
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_evaporation
+  
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for snow hydrology task
   !!
@@ -135,12 +167,219 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
 
+    CALL process%Register_task(tsk_evaporation (model_id))
     !CALL process%Register_task(tsk_snow_and_ice_hydrology (model_id))
     CALL process%Register_task(tsk_snow_and_skin_fraction (model_id))
 
   END SUBROUTINE Register_hydro_tasks
   
   ! ================================================================================================================================
+  !>
+  !! @brief Implementation of "update" for task "evaporation"
+  !! Task "update_evaporation" calculates evapo(transpi)ration
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_evaporation(tile, options)
+
+    USE mo_phy_schemes,            ONLY: q_effective, heat_transfer_coef
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Local variables
+    dsl4jsb_Def_memory(ATM2LAND_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(TURB_)
+
+    ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: &
+      & q_acoef, &
+      & q_bcoef, &
+      & q_acoef_wtr, &
+      & q_bcoef_wtr, &
+      & q_acoef_ice, &
+      & q_bcoef_ice, &
+      & drag_srf, &
+      & drag_wtr, &
+      & drag_ice, &
+      & qsat_star, &
+      & qsat_lwtr, &
+      & qsat_lice, &
+      & fact_qsat_srf, &
+      & fact_qsat_trans_srf, &
+      & fact_q_air, &
+      & fract_lice, &
+      & evapo_lnd, &
+      & evapo_wtr, &
+      & evapo_ice, &
+      & evapopot,       &
+      & evapotranspiration, &
+      & trans
+
+    ! Locally allocated vectors
+    !
+    REAL(wp) ::                  &
+      & q_air        (options%nc), &  !< Humidity at lowest atmospheric level
+      & q_air_eff    (options%nc), &  !< Effective humidity at lowest atmospheric level
+      & qsat_srf_eff (options%nc), &  !< Effective surface saturation specific humidity
+      & heat_tcoef   (options%nc)     !< Heat transfer coefficient (rho*C_h*|v|)
+
+    INTEGER  :: iblk, ics, ice, nc
+    REAL(wp) :: steplen
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_evaporation'
+
+    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    steplen = options%steplen
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(TURB_)
+
+    ! Pointers to variables in memory
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot)           ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotranspiration) ! out
+
+    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
+
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_acoef_wtr)       ! in
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_bcoef_wtr)       ! in
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_acoef_ice)       ! in
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_bcoef_ice)       ! in
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_wtr)          ! in
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_ice)          ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_lwtr)         ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_lice)         ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,      fract_lice)        ! in
+
+
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_wtr)          ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_ice)          ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapopot)           ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapotranspiration) ! out
+
+      q_air(:) = q_acoef_wtr(:) * qsat_lwtr(:) + q_bcoef_wtr(:) ! New moisture at lowest atmospheric level by back-substitution
+
+      heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)  ! Transfer coefficient
+
+      evapo_wtr (:) = heat_tcoef(:) * (q_air(:) - qsat_lwtr(:)) ! Potential evaporation
+
+      q_air(:) = q_acoef_ice(:) * qsat_lice(:) + q_bcoef_ice(:) ! New moisture at lowest atmospheric level by back-substitution
+
+      heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)  ! Transfer coefficient
+
+      evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_lice(:)) ! Potential evaporation
+
+      evapopot          (:) = (1._wp - fract_lice(:)) * evapo_wtr   (:) + fract_lice(:) * evapo_ice   (:)
+      evapotranspiration(:) = evapopot(:)
+
+    ELSE IF (Contains_lct(tile%lcts, LAND_TYPE) .OR. Contains_lct(tile%lcts, VEG_TYPE) &
+      & .OR. Contains_lct(tile%lcts, BARE_TYPE) .OR. Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
+
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_acoef)             ! in
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_bcoef)             ! in
+      dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_srf)            ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_star)           ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_,     fact_q_air)          ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_,     fact_qsat_srf)       ! in
+      dsl4jsb_Get_var2D_onChunk(TURB_,     fact_qsat_trans_srf) ! in
+
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_lnd)           ! out
+      IF (.NOT. Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    trans)               ! out
+      END IF
+
+      q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
+
+      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)  ! Transfer coefficient
+
+      ! Compute effective air moisture and surface saturation humidity
+      q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
+                              & SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
+      qsat_srf_eff(:) = q_effective(qsat_star(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
+
+      evapo_lnd(:)          = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:)) ! Evapotranspiration
+      evapotranspiration(:) = evapo_lnd(:)
+      evapopot(:)           = heat_tcoef(:) * (q_air    (:) - qsat_star   (:)) ! Potential evaporation
+      IF (.NOT. Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
+        trans(:)              = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
+      END IF
+
+    ELSE
+      CALL finish(TRIM(routine), 'Called for invalid lct_type')
+    END IF
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_evaporation
+  !
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "evaporation"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!  
+  SUBROUTINE aggregate_evaporation(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Local variables
+    dsl4jsb_Def_memory(HYDRO_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_evaporation'
+
+    INTEGER :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(HYDRO_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract", copy=.TRUE.)
+    CALL weighted_by_fract%Set_option('l_all_tiles', .TRUE.)
+
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapotranspiration, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapopot,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, trans,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_lnd,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_wtr,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_ice,          weighted_by_fract)
+
+    DEALLOCATE(weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_evaporation
+  !
   !>
   !! @brief Implementation of "update" for task "snow_and_ice_hydrology"
   !! Task "update_snow_hydrology" calculates the new snow depth and fraction
@@ -170,7 +409,7 @@ CONTAINS
     END IF
 
   END SUBROUTINE update_snow_and_ice_hydrology
-
+  !
   ! -------------------------------------------------------------------------------------------------------
   !>
   !! Implementation of "aggregate" for task "snow_and_ice_hydrology"

@@ -125,6 +125,7 @@ CONTAINS
     INTEGER :: iblk, ics, ice, nc
     REAL(wp) :: steplen !, dtime
     REAL(wp) :: eps
+    INTEGER  :: ilct
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -192,8 +193,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL_,     grnd_hflx)      ! IN
     dsl4jsb_Get_var2D_onChunk(SOIL_,     hcap_grnd)      ! IN
 
+    ! TBD: currently, fraction of glacier has to be either zero or one!
     IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
-      is_glacier(:) = .TRUE.
+      DO ilct=1,SIZE(tile%lcts)
+        IF (tile%lcts(ilct)%id == GLACIER_TYPE) THEN
+          is_glacier(:) = tile%lcts(ilct)%fract(ics:ice,iblk) > 0._wp
+          EXIT
+        END IF
+      END DO
     ELSE
       is_glacier(:) = .FALSE.
     END IF
@@ -250,8 +257,9 @@ CONTAINS
     dQdT(:) = ( qsat(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
 
     ! 2. Old dry static energy
-    s_old(:) = surface_dry_static_energy( t_old(:), &
-                                            & q_effective(qsat_srf_old(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
+    s_old(:) = surface_dry_static_energy( &
+      & t_old(:), &
+      & q_effective(qsat_srf_old(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
 
     t2s_conv(:) = s_old(:) / t_old(:)  !
 
@@ -429,37 +437,25 @@ CONTAINS
     ! Local variables
     !
     dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(ATM2LAND_)
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: qsat_star
     dsl4jsb_Real2D_onChunk :: s_star
     dsl4jsb_Real2D_onChunk :: t_acoef
     dsl4jsb_Real2D_onChunk :: t_bcoef
-    dsl4jsb_Real2D_onChunk :: q_acoef
-    dsl4jsb_Real2D_onChunk :: q_bcoef
-    dsl4jsb_Real2D_onChunk :: fact_qsat_srf
-    dsl4jsb_Real2D_onChunk :: fact_qsat_trans_srf
-    dsl4jsb_Real2D_onChunk :: fact_q_air
     dsl4jsb_Real2D_onChunk :: drag_srf
     dsl4jsb_Real2D_onChunk :: latent_hflx
     dsl4jsb_Real2D_onChunk :: sensible_hflx
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapotranspiration
-    dsl4jsb_Real2D_onChunk :: evapo_lnd
-    dsl4jsb_Real2D_onChunk :: trans
     dsl4jsb_Real2D_onChunk :: fract_snow
 
     ! Locally allocated vectors
     !
     REAL(wp) ::                &
       & s_air          (options%nc),   &  !< Dry static energy at lowest atmospheric level
-      & q_air          (options%nc),   &  !< Humidity at lowest atmospheric level
-      & q_air_eff      (options%nc),   &  !< Effective humidity at lowest atmospheric level
-      & qsat_srf_eff   (options%nc),   &  !< Effective surface saturation specific humidity
-      heat_tcoef       (options%nc)       !< Heat transfer coefficient (rho*C_h*|v|)
+      & heat_tcoef     (options%nc)       !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: steplen
@@ -483,48 +479,27 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(SEB_)
-    dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(ATM2LAND_)
 
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_acoef)             ! in
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_bcoef)             ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_acoef)             ! in
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_bcoef)             ! in
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_srf)            ! in
 
-    dsl4jsb_Get_var2D_onChunk(SEB_,      qsat_star)           ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      s_star)              ! in
-    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_q_air)          ! in
-    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_qsat_srf)       ! in
-    dsl4jsb_Get_var2D_onChunk(TURB_,     fact_qsat_trans_srf) ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx)       ! out
-    dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx)         ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_lnd)           ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotranspiration)  ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    trans)               ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot)            ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotranspiration)  ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)          ! in
 
-    ! Compute new dry static energy and moisture at lowest atmospheric level by back-substitution
+    dsl4jsb_Get_var2D_onChunk(SEB_,      sensible_hflx)       ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_,      latent_hflx)         ! out
+
+    ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
     s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
-    q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:)
 
     ! Transfer coefficient
     heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
-
-    ! Compute effective air moisture and surface saturation humidity
-    q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
-                              & SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
-    qsat_srf_eff(:) = q_effective(qsat_star(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
-
-    ! Compute moisture fluxes
-    !
-    evapo_lnd (:) = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:))        ! Evapotranspiratin
-    evapotranspiration(:) = evapo_lnd(:)
-    evapopot  (:) = heat_tcoef(:) * (q_air    (:) - qsat_star    (:))       ! Potential evaporation
-    trans     (:) = fact_qsat_trans_srf(:) * evapopot(:)                    ! Transpiration
 
     ! Compute sensible heat flux
     !

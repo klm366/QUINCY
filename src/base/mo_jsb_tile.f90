@@ -246,6 +246,7 @@ CONTAINS
     INTEGER                               :: iproc
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
     CLASS(t_jsb_tile_abstract),   POINTER :: tmp_tile
+    CLASS(t_State), POINTER               :: tmp_child
     CHARACTER(LEN=15)                     :: process_name
 
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
@@ -387,6 +388,20 @@ CONTAINS
     CALL this%Set_fract_max_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
+    ! Loop over lcts of this tile and add fractions for each lct
+    ! Note: this has to be done before the calls to %Set_fraction below because Set_fraction updates also the lct fractions
+    DO ilct=1,SIZE(this%lcts)
+
+      CALL jsb_add_var(TRIM(varlist_name), 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,           &
+        & hgrid, surface,                                                                                         &
+        & t_cf('lct_fraction', '',                                                                                &
+        &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+        & prefix, suffix,                                                                                         &
+        & initval_r=0.0_wp)
+
+    END DO
+
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
     this%l_fract_children_changed(:,:) = .TRUE.
 
@@ -437,7 +452,6 @@ CONTAINS
       CALL input_file%Close()
 
     END IF
-    DEALLOCATE(tmp_fract)
 
     ! If tile has children, create and register aggregator
     IF (this%Has_children()) THEN
@@ -460,16 +474,7 @@ CONTAINS
       END SELECT
     END IF
 
-    ! Loop over lcts of this tile and add fractions for each lct
-    DO ilct=1,SIZE(this%lcts)
-      CALL jsb_add_var(TRIM(varlist_name), 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,           &
-        & hgrid, surface,                                                                                         &
-        & t_cf('lct_fraction', '',                                                                                &
-        &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-        & prefix, suffix,                                                                                         &
-        & initval_r=0.0_wp)
-    END DO
+    DEALLOCATE(tmp_fract)
 
   END SUBROUTINE Init_tile
 

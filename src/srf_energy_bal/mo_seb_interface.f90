@@ -503,7 +503,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(HYDRO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -522,21 +521,14 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(SEB_)
-    dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapotranspiration, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapopot,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, trans,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx,      weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_lnd,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_wtr,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_wtr,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_wtr,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_ice,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
 
