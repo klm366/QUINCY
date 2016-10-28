@@ -45,7 +45,7 @@ plant_functional_type_id=5      # 1 - 8
 # forcing input
 siteDataSet="f"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
 siteName="CA-Man_1999-2003"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
-                                # examples: CA-Man_1999-2003 & THO_D15_1984-2013 & CAL_1984-2013 & CH-Oe1_2002-2006
+                                # examples: AT-Neu_2002-2005, CA-Man_1999-2003 & THO_D15_1984-2013 & CAL_1984-2013 & CH-Oe1_2002-2006
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=100.0      # float !
 longitude=0.0                   # float !

@@ -443,7 +443,7 @@ CONTAINS
                      - coarse_root_carbon, 0.0_wp)
                 root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
              ELSE
-                leaf_carbon_inc = MAX((b_inc - k1_opt + root_carbon)/(1+k2_opt), 0.0_wp)
+                leaf_carbon_inc = MAX((b_inc - k1_opt + root_carbon)/(1._wp+k2_opt), 0.0_wp)
                 root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
                 sap_wood_carbon_inc = 0.0_wp
                 coarse_root_carbon_inc = 0.0_wp
@@ -480,7 +480,7 @@ CONTAINS
       CASE(igrass)
          IF (veg_config%flag_optimal_allocation) THEN
             leaf_carbon_inc = MAX((b_inc - k1_opt - leaf_carbon/leaf2sapwood_mass_ratio + root_carbon + &
-                 sap_wood_carbon) / (1 + k2_opt + 1/leaf2sapwood_mass_ratio), 0.0_wp)
+                 sap_wood_carbon) / (1._wp + k2_opt + 1._wp/leaf2sapwood_mass_ratio), 0.0_wp)
             root_carbon_inc = MAX(k1_opt + k2_opt * leaf_carbon_inc - root_carbon, 0.0_wp)
             sap_wood_carbon_inc = ( leaf_carbon_inc + leaf_carbon ) / leaf2sapwood_mass_ratio - sap_wood_carbon
             coarse_root_carbon_inc = 0.0_wp
@@ -689,7 +689,7 @@ CONTAINS
   !!
   !! calculates maximum LAI given current root and sapwood mass
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE calc_allometry(lctlib,sap_wood_carbon,heart_wood_carbon,dens_ind, & 
+  PURE ELEMENTAL SUBROUTINE calc_allometry(lctlib,sap_wood_carbon,heart_wood_carbon,dens_ind, &
        labile_carbon,labile_nitrogen,labile_phosphorus,&
        growth_cn, growth_cp, npp, unit_npp, transpiration, unit_transpiration, &
        unit_uptake_n, unit_uptake_p, dphi, kstar_labile,&
@@ -782,8 +782,8 @@ CONTAINS
            !> water based optimality, following Magnani 2000 
            !! R = k1 + k2*dL +k3*dS 
            k1_opt_w = transpiration / rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
-           k2_opt_w = unit_transpiration/ rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
-
+           k2_opt_w = unit_transpiration / rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
+    
            !! Compare root increments for a hypothetical unit of leaf growth 
            IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
               ! water is limiting 
@@ -809,7 +809,7 @@ CONTAINS
          ! leaf:root ratio
          IF (veg_config%flag_optimal_allocation) THEN
             !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
-            !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
+            !! potential carbon growth rate = potential nitrogen growth rate * plant cn ratio
             !! NPP = gN * R * growth_cn
             !! Or similar relationships for P
 !BLARPP: would be good to give these variables real names
@@ -826,17 +826,19 @@ CONTAINS
               k2_opt = unit_npp/(unit_uptake_p * growth_cp)
            ENDIF
 
+        !! @todo mo_veg_growth need proper implementation of water based optimality and transpiration in grasses, i.e. PFT 7 & 8
+        !! 
            !> water based optimality, following Magnani 2000 
            !! R = k1 + k2*dL +k3*dS 
-           k1_opt_w = transpiration / rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
-           k2_opt_w = unit_transpiration/ rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
+           !k1_opt_w = transpiration / rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
+           !k2_opt_w = unit_transpiration / rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
 
            !! Compare root increments for a hypothetical unit of leaf growth 
-           IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
-              ! water is limiting 
-              k1_opt = k1_opt_w 
-              k2_opt = k2_opt_w 
-           ENDIF 
+           !IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
+           !   ! water is limiting 
+           !   k1_opt = k1_opt_w 
+           !   k2_opt = k2_opt_w 
+           !ENDIF 
 
          ELSE      
             leaf2root_mass_ratio = sm2lm_grass * lctlib%k_rtos 

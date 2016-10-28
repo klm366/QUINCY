@@ -146,7 +146,27 @@ CONTAINS
     grid%lon            = base_config%lon
 
 
-    !! 5 Memory init and alloc
+    !! 5 Constants
+    !! 
+
+    !! 5.1 Constants init
+    !! 
+    !! 
+    CALL init_base_constants          ! may be 1st of the 'init constants'
+    CALL init_shared_constants        ! may be 2nd of the 'init constants'
+    CALL init_rad_constants           ! may be 3rd of the 'init constants'
+    CALL init_atmland_constants       ! uses hourday                  defined in mo_base_constants
+    CALL init_assimi_constants        ! uses molar_mass_N, Dwv, Dco2  defined in mo_shared_constants
+    CALL init_veg_constants           ! uses Tzero                    defined in mo_shared_constants
+    !CALL init_soil_constants
+
+    !! 5.2 Constants set (using param.list file)
+    !! 
+    !! 
+    IF (base_config%set_parameter_values_from_file)  CALL parameters_from_file%set_param
+
+
+    !! 6 Memory init and alloc
     !! 
     !! >> this is work in progress ! and, thus, not very nice code, but it works for now (Jan 20160819) <<
     !! 
@@ -186,23 +206,6 @@ CONTAINS
         NULLIFY(tmp_ptr)    
       END SELECT    ! iproc
     END DO          ! iproc
-
-
-    !! 6.1 Constants init
-    !! 
-    !! 
-    CALL init_base_constants          ! may be 1st of the 'init constants'
-    CALL init_shared_constants        ! may be 2nd of the 'init constants'
-    CALL init_rad_constants           ! may be 3rd of the 'init constants'
-    CALL init_atmland_constants       ! uses hourday                  defined in mo_base_constants
-    CALL init_assimi_constants        ! uses molar_mass_N, Dwv, Dco2  defined in mo_shared_constants
-    CALL init_veg_constants           ! uses Tzero                    defined in mo_shared_constants
-    !CALL init_soil_constants
-
-    !! 6.2 Constants set (using param.list file)
-    !! 
-    !! 
-    IF (base_config%set_parameter_values_from_file)  CALL parameters_from_file%set_param
 
 
     !! 7 Plant init

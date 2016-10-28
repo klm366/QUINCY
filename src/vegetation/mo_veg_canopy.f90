@@ -431,7 +431,7 @@ CONTAINS
      &     fn_pepc_opt_cl                      !< optimal fraction of N in PepC (C4-only)
 
     ! optimal N fraction assuming Aj=Av=Apepc
-!@todo: veg_canopy:optimise_n_fractions: should this not replaced by lctlib%ps_pathway==ic4phot?
+!! @todo: veg_canopy:optimise_n_fractions: should this not replaced by lctlib%ps_pathway==ic4phot?
     ! ensure m_et is > zero
     IF (m_et < eps8) THEN 
       m_et = eps8
@@ -645,7 +645,7 @@ CONTAINS
                         (q_sat - q_air) / (1._wp / veg%gc + 1._wp / ga )  
     ELSEIF (gc > eps8) THEN 
        unit_transpiration =  press_srf / ( r_gas_dryair * t_air ) * &  
-                         (q_sat - q_air) / (1._wp / gc + 1._wp / ga ) 
+                         (q_sat - q_air) / (1._wp / gc + 1._wp / ga )
     ELSE 
       unit_transpiration = 0.0_wp  
     ENDIF 

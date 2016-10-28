@@ -2,8 +2,8 @@
 COMP = x86_64-intel 
 C_N = ifort 
 M_K = gmake --no-print-directory 
-F_C = $(C_N) -c -cpp
-F_O = -O -I../include -I$(MODDIR) -module ${MODDIR}
+F_C = $(C_N) -c -cpp -fp-model strict -fp-speculation=off 
+F_O = -O2 -I../include -I$(MODDIR) -module ${MODDIR}
 F_L = $(C_N)
 A_C = ar -r
 A_G = ar -x
