@@ -13,6 +13,8 @@ MODULE mo_slm_varlist
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: finish
+  USE mo_jsb_class,         ONLY: Get_model   ! *slmtemp 
+  USE mo_base_memory,       ONLY: t_model     ! *slmtemp  -> making available ice ics iblk, which is not needed in jsbach4
 
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, &
                                   t_jsb_var_logical2d                        , &                 ! *slmjsb4
@@ -52,21 +54,23 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_struct_element_r1d( &
     struct, name, var, &
-    ics, ice, iblk, &
     initval_r) 
 
     ! 0.1 InOut
     CLASS(t_jsb_struct),  INTENT(inout)           :: struct              ! struct & l2_struct
     CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
     TYPE(t_jsb_var_real1d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    INTEGER,             INTENT(in)               :: ics   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: ice   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: iblk  ! model%options -> for SLM compatibility
     REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
     INTEGER           :: pos_of_var
+    TYPE(t_model), POINTER :: model     ! *slmtemp
+    INTEGER           :: ice, ics, iblk ! *slmtemp
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real1d'
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice  = model%options%ice    ! *slmtemp
+    ics  = model%options%ics    ! *slmtemp
+    iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
     !var%owner_proc_id = struct%owner_proc_id
@@ -95,21 +99,23 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_struct_element_r2d( &
     struct, name, var, &
-    ics, ice, iblk, &
     initval_r) 
 
     ! 0.1 InOut
     CLASS(t_jsb_struct),  INTENT(inout)           :: struct              ! struct & l2_struct
     CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
     TYPE(t_jsb_var_real2d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    INTEGER,             INTENT(in)               :: ics   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: ice   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: iblk  ! model%options -> for SLM compatibility
     REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
     INTEGER           :: pos_of_var
+    TYPE(t_model), POINTER :: model     ! *slmtemp
+    INTEGER           :: ice, ics, iblk ! *slmtemp
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real2d'
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice  = model%options%ice    ! *slmtemp
+    ics  = model%options%ics    ! *slmtemp
+    iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
     !var%owner_proc_id = struct%owner_proc_id
@@ -234,21 +240,23 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_r1d( &
     mem, name, var, &
-    ics, ice, iblk, &
     initval_r) 
 
     ! 0.1 InOut
     CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
     CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
     TYPE(t_jsb_var_real1d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    INTEGER,             INTENT(in)               :: ics   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: ice   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: iblk  ! model%options -> for SLM compatibility
     REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
     INTEGER           :: pos_of_var
+    TYPE(t_model), POINTER :: model     ! *slmtemp
+    INTEGER           :: ice, ics, iblk ! *slmtemp
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_real'
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice  = model%options%ice    ! *slmtemp
+    ics  = model%options%ics    ! *slmtemp
+    iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
     !var%owner_proc_id = mem%owner_proc_id
@@ -276,21 +284,23 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_l1d( &
     mem, name, var, &
-    ics, ice, iblk, &
     initval_r) 
 
     ! 0.1 InOut
     CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
     CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
     TYPE(t_jsb_var_logical1d), TARGET, INTENT(inout) :: var              ! reference to jsbach var -> newly created plain scalar REAL
-    INTEGER,             INTENT(in)               :: ics   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: ice   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: iblk  ! model%options -> for SLM compatibility
     LOGICAL,             INTENT(in)               :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
     INTEGER           :: pos_of_var
+    TYPE(t_model), POINTER :: model     ! *slmtemp
+    INTEGER           :: ice, ics, iblk ! *slmtemp
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_logical1d'
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice  = model%options%ice    ! *slmtemp
+    ics  = model%options%ics    ! *slmtemp
+    iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
     !var%owner_proc_id = mem%owner_proc_id
@@ -318,7 +328,6 @@ CONTAINS
 !  !-----------------------------------------------------------------------------------------------------
 !  SUBROUTINE slm_add_var_list_element_r2d( &
 !    mem, name, var, &
-!    ics, ice, iblk, &
 !!    hgrid, vgrid, &
 !!    cf, &
 !!    grib1, grib2, &
@@ -334,14 +343,17 @@ CONTAINS
 !    CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
 !    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
 !    TYPE(t_jsb_var_real2d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var
-!    INTEGER,             INTENT(in)               :: ics   ! model%options -> for SLM compatibility
-!    INTEGER,             INTENT(in)               :: ice   ! model%options -> for SLM compatibility
-!    INTEGER,             INTENT(in)               :: iblk  ! model%options -> for SLM compatibility
 !    REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
 !    ! 0.2 Local
 !    INTEGER           :: pos_of_var
+!    TYPE(t_model), POINTER :: model     ! *slmtemp
+!    INTEGER           :: ice, ics, iblk ! *slmtemp
 
 !    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r2d'
+!    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+!    ice  = model%options%ice    ! *slmtemp
+!    ics  = model%options%ics    ! *slmtemp
+!    iblk = model%options%iblk   ! *slmtemp
 
 !    var%name = TRIM(name)
 !    !var%owner_proc_id = mem%owner_proc_id
@@ -371,7 +383,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_r2d_canopy( &
     mem, name, var, &
-    ics, ice, iblk, &
 !    hgrid, vgrid, &
 !    cf, &
 !    grib1, grib2, &
@@ -389,14 +400,17 @@ CONTAINS
     CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
     CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
     TYPE(t_jsb_var_real2d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var
-    INTEGER,             INTENT(in)               :: ics   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: ice   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: iblk  ! model%options -> for SLM compatibility
     REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
     INTEGER           :: pos_of_var
+    TYPE(t_model), POINTER :: model     ! *slmtemp
+    INTEGER           :: ice, ics, iblk ! *slmtemp
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r2d_canopy'
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice  = model%options%ice    ! *slmtemp
+    ics  = model%options%ics    ! *slmtemp
+    iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
     !var%owner_proc_id = mem%owner_proc_id
@@ -428,7 +442,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_r3d( &
     mem, name, var, &
-    ics, ice, iblk, &
 !    hgrid, vgrid, &
 !    cf, &
 !    grib1, grib2, &
@@ -444,14 +457,17 @@ CONTAINS
     CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
     CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
     TYPE(t_jsb_var_real3d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var
-    INTEGER,             INTENT(in)               :: ics   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: ice   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)               :: iblk  ! model%options -> for SLM compatibility
     REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
     INTEGER           :: pos_of_var
+    TYPE(t_model), POINTER :: model     ! *slmtemp
+    INTEGER           :: ice, ics, iblk ! *slmtemp
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r3d'
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice  = model%options%ice    ! *slmtemp
+    ics  = model%options%ics    ! *slmtemp
+    iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
     !var%owner_proc_id = mem%owner_proc_id

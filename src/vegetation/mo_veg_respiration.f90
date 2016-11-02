@@ -51,9 +51,12 @@ CONTAINS
   !!
   !! Output: maintenance respiration 
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_maintenance_respiration(t_stem,t_root,sap_wood_nitrogen, & 
-                               fine_root_nitrogen,coarse_root_nitrogen) & 
-                               RESULT(maint_respiration)
+  PURE ELEMENTAL FUNCTION calc_maintenance_respiration( t_stem                , &
+                                                        t_root                , &
+                                                        sap_wood_nitrogen     , & 
+                                                        fine_root_nitrogen    , &
+                                                        coarse_root_nitrogen)   & 
+                                                        RESULT(maint_respiration)
 
     USE mo_veg_constants, ONLY: fmaint_rate_base
 

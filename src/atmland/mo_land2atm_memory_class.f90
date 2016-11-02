@@ -11,8 +11,9 @@
 MODULE mo_land2atm_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
+  USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: message
+  USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
@@ -71,27 +72,27 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory (variables) for: land2atm
   !!
-  !! this is a radically simplified version of the init routine when compared to JSBACH4 (20160823)
+  !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_land2atm_memory(mem, prefix, suffix, lct_ids, model_id, ics, ice, iblk)
-!  SUBROUTINE Init_land2atm_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
+  SUBROUTINE Init_land2atm_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
 
 ! jsbach4
 !    USE mo_jsb_varlist,       ONLY: jsb_add_var
 !    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
 !    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_base_memory,         ONLY: t_model
 
+    ! 0.1 InOut
     CLASS(t_land2atm_memory),   INTENT(inout), TARGET :: mem
     CHARACTER(len=*),           INTENT(in)    :: prefix
     CHARACTER(len=*),           INTENT(in)    :: suffix
     INTEGER,                    INTENT(in)    :: lct_ids
 !    INTEGER,                    INTENT(in)    :: lct_ids(:)  ! jsbach4
     INTEGER,                   INTENT(in)    :: model_id
-    INTEGER,             INTENT(in)    :: ics   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: ice   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: iblk  ! model%options -> for SLM compatibility
+    ! 0.2 Local
+    TYPE(t_model), POINTER :: model
 
 ! jsbach4
 !    TYPE(t_jsb_model),       POINTER :: model 
@@ -99,10 +100,10 @@ CONTAINS
 !    TYPE(t_jsb_vgrid),       POINTER :: surface  
 !    INTEGER :: table 
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_land2atm_memory'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_land2atm_memory'
 
 ! jsbach4
-!    model => Get_model(model_id) 
+    model => Get_model(model_id) 
 !    table = tables(1)  
 !    hgrid => Get_grid(mem%grid_id) 
 !    surface => Get_vgrid('surface') 
@@ -114,7 +115,6 @@ CONTAINS
 !      & t_cf('surface_temperature', 'K', ''),                                   &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 't_eff_srf', mem%t_eff_srf,              &
@@ -122,7 +122,6 @@ CONTAINS
 !      & t_cf('effective_surface_temperature', 'K', ''),                         &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'qsat_srf', mem%qsat_srf,                &
@@ -130,7 +129,6 @@ CONTAINS
 !      & t_cf('saturated_surface_specific_humidity', '', ''),                    &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'fact_q_air', mem%fact_q_air,            &
@@ -138,7 +136,6 @@ CONTAINS
 !      & t_cf('factor_air_moisture', '', ''),                                    &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf,      &
@@ -146,7 +143,6 @@ CONTAINS
 !      & t_cf('factor_qsat_srf', '', ''),                                        &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'zh_srf', mem%zh_srf,                    &
@@ -154,7 +150,6 @@ CONTAINS
 !      & t_cf('surface_roughness_humidity', '', ''),                             &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'zm_srf', mem%zm_srf,                    &
@@ -162,7 +157,6 @@ CONTAINS
 !      & t_cf('surface_roughness_momentum', '', ''),                             &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'alb_vis_dif', mem%alb_vis_dif,          &
@@ -170,7 +164,6 @@ CONTAINS
 !      & t_cf('albedo_visible_diffuse', '', ''),                                 &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'alb_nir_dif', mem%alb_nir_dif,          &
@@ -178,7 +171,6 @@ CONTAINS
 !      & t_cf('albedo_near_infrared_diffuse', '', ''),                           &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'alb_vis_dir', mem%alb_vis_dir,          &
@@ -186,7 +178,6 @@ CONTAINS
 !      & t_cf('albedo_visible_direct', '', ''),                                  &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'alb_nir_dir', mem%alb_nir_dir,          &
@@ -194,27 +185,21 @@ CONTAINS
 !      & t_cf('albedo_near_infrared_dir', '', ''),                               &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'albedo', mem%albedo,          &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'sensible_heat_flx', mem%sensible_heat_flx,          &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'latent_heat_flx', mem%latent_heat_flx,          &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'net_radiation', mem%net_radiation,          &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'vpd', mem%vpd,          &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             & initval_r=0.0_wp )
 
 
@@ -226,7 +211,6 @@ CONTAINS
 !        & t_cf('latent_hflx_wtr', '', 'Latent heat flux over lake water'),     &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 'sensible_hflx_wtr', mem%sensible_hflx_wtr,       &
@@ -234,7 +218,6 @@ CONTAINS
 !        & t_cf('sensible_hflx_wtr', '', 'Sensible heat flux over lake water'), &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 'latent_hflx_ice', mem%latent_hflx_ice,           &
@@ -242,7 +225,6 @@ CONTAINS
 !        & t_cf('latent_hflx_ice', '', 'Latent heat flux over lake ice'),       &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 'sensible_hflx_ice', mem%sensible_hflx_ice,       &
@@ -250,7 +232,6 @@ CONTAINS
 !        & t_cf('sensible_hflx_ice', '', 'Sensible heat flux over lake ice'),   &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
 !    END IF

@@ -9,7 +9,9 @@
 !!
 MODULE mo_soil_memory_class
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: message
+  USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, &
@@ -107,30 +109,30 @@ CONTAINS
   !!
   !!  
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_soil_memory(mem, prefix, suffix, lct_ids, model_id, ics, ice, iblk)
+  SUBROUTINE Init_soil_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
 !    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
 !    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_base_memory,         ONLY: t_model
 
+    ! 0.1.InOut
     CLASS(t_soil_memory), INTENT(inout), TARGET :: mem    !> soil memory
     CHARACTER(len=*),    INTENT(in)    :: prefix          !> ?
     CHARACTER(len=*),    INTENT(in)    :: suffix          !> ?
-    INTEGER,             INTENT(in)    :: lct_ids!(:)     !> in jsbach4: vector of land cover type IDs
-    INTEGER,             INTENT(in)    :: model_id        !> model ID
-    INTEGER,             INTENT(in)    :: ics             !> model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: ice             !> model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: iblk            !> model%options -> for SLM compatibility
-
+    INTEGER,             INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
+    INTEGER,             INTENT(in)    :: model_id        !> model ID model\%id
+    ! 0.2 Local
+    TYPE(t_model), POINTER :: model
 !    TYPE(t_jsb_model), POINTER :: model
 !    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
 !    TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
 !    INTEGER :: table
 
-!    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_memory'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_memory'
 
-!    model => Get_model(model_id)
+    model => Get_model(model_id)
 
 !    table = tables(1)
 
@@ -138,13 +140,13 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ASSOCIATED(mem%test%ptr)) THEN
+
+    IF (.NOT. ALLOCATED(mem%test%ptr)) THEN
 
       !> add variables to soil memory soil\%VAR
       !! 
       !! 
       CALL slm_add_var(mem, 'test', mem%test, &
-            ics, ice, iblk, &    ! model%options -> for SLM compatibility
             initval_r=0.0_wp)
 
 

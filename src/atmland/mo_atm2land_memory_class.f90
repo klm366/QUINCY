@@ -11,8 +11,9 @@
 MODULE mo_atm2land_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
+  USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: message
+  USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
@@ -86,17 +87,17 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory (variables) for: atm2land
   !!
-  !! this is a radically simplified version of the init routine when compared to JSBACH4 (20160823)
+  !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_atm2land_memory(mem, prefix, suffix, lct_ids, model_id, ics, ice, iblk)
-!  SUBROUTINE Init_atm2land_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
+  SUBROUTINE Init_atm2land_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
 
 ! jsbach4
 !    USE mo_jsb_varlist,       ONLY: jsb_add_var
 !    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
 !    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_base_memory,         ONLY: t_model
 
     ! needed to calc SLM init values:
     USE mo_atmland_constants, ONLY: def_wind, def_co2_deltaC13, def_co2_deltaC14, def_t_air, standard_press_srf, def_vpd, &
@@ -112,11 +113,8 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: lct_ids
 !    INTEGER,                    INTENT(in)    :: lct_ids(:)  ! jsbach4
     INTEGER,                   INTENT(in)    :: model_id
-    INTEGER,             INTENT(in)    :: ics   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: ice   ! model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: iblk  ! model%options -> for SLM compatibility
-
     ! 0.2 Local
+    TYPE(t_model), POINTER :: model
     ! needed to calc SLM init values:
     REAL(wp) :: C13C12_mixing_ratio, &
                 C14C_mixing_ratio
@@ -143,10 +141,10 @@ CONTAINS
 !    TYPE(t_jsb_vgrid),       POINTER :: surface  
 !    INTEGER :: table 
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_atm2land_memory'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_atm2land_memory'
 
 ! jsbach4
-!    model => Get_model(model_id) 
+    model => Get_model(model_id) 
 !    table = tables(1)  
 !    hgrid => Get_grid(mem%grid_id) 
 !    surface => Get_vgrid('surface') 
@@ -188,7 +186,6 @@ CONTAINS
 !      & t_cf('air_temperature', 'K', ''),                                    &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= t_air_init )
 
     CALL slm_add_var( mem, 'q_air', mem%q_air,                      &
@@ -196,7 +193,6 @@ CONTAINS
 !      & t_cf('air_specific_humidity', '', ''),                               &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= q_air_init )
 
     CALL slm_add_var( mem, 'rain', mem%rain,                        &
@@ -204,7 +200,6 @@ CONTAINS
 !      & t_cf('rain_fall', 'kg/m2/s', ''),                                    &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'snow', mem%snow,                        &
@@ -212,7 +207,6 @@ CONTAINS
 !      & t_cf('snow_fall', 'kg/m2/s', ''),                                    &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'wind_air', mem%wind_air,                &
@@ -220,7 +214,6 @@ CONTAINS
 !      & t_cf('air_wind_speed', 'm/s', ''),                                   &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= wind_air_init )
 
     CALL slm_add_var( mem, 'wind_10m', mem%wind_10m,                &
@@ -228,7 +221,6 @@ CONTAINS
 !      & t_cf('10m_wind_speed', 'm/s', ''),                                   &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= wind_10m_init )
 
     CALL slm_add_var( mem, 'lw_srf_down', mem%lw_srf_down,          &
@@ -236,7 +228,6 @@ CONTAINS
 !      & t_cf('downward_longwave_radiation', 'W/m2', ''),                     &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'swvis_srf_down', mem%swvis_srf_down,    &
@@ -244,7 +235,6 @@ CONTAINS
 !      & t_cf('downward_visible_shortwave_radiation', 'W/m2', ''),            &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= swvis_srf_down_init )
 
     CALL slm_add_var( mem, 'swnir_srf_down', mem%swnir_srf_down,    &
@@ -252,7 +242,6 @@ CONTAINS
 !      & t_cf('downward_nir_shortwave_radiation', 'W/m2', ''),                &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= swnir_srf_down_init )
 
     CALL slm_add_var( mem, 'swpar_srf_down', mem%swpar_srf_down,    &
@@ -260,7 +249,6 @@ CONTAINS
 !      & t_cf('downward_par_shortwave_radiation', 'W/m2', ''),                &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= swpar_srf_down_init )
 
     CALL slm_add_var( mem, 'swpar_fdiffuse', mem%swpar_fdiffuse,&
@@ -269,7 +257,6 @@ CONTAINS
 !      & t_cf('frac_par_diffuse', '', ''),                                    &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= swpar_fdiffuse_init )
 
     CALL slm_add_var( mem, 'press_srf', mem%press_srf,              &
@@ -277,7 +264,6 @@ CONTAINS
 !      & t_cf('surface_pressure', '', ''),                                    &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= press_srf_init )
 
     CALL slm_add_var( mem, 'drag_srf', mem%drag_srf,                &
@@ -285,7 +271,6 @@ CONTAINS
 !      & t_cf('surface_drag', '', ''),                                        &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= drag_srf_init )
 
     CALL slm_add_var( mem, 't_acoef', mem%t_acoef,                  &
@@ -293,7 +278,6 @@ CONTAINS
 !      & t_cf('temperature_acoef', '', ''),                                   &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 't_bcoef', mem%t_bcoef,                  &
@@ -301,7 +285,6 @@ CONTAINS
 !      & t_cf('temperature_acoef', '', ''),                                   &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'q_acoef', mem%q_acoef,                  &
@@ -309,7 +292,6 @@ CONTAINS
 !      & t_cf('specific_humidity_acoef', '', ''),                             &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'q_bcoef', mem%q_bcoef,                  &
@@ -317,7 +299,6 @@ CONTAINS
 !      & t_cf('specific_humidity_bcoef', '', ''),                             &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'pch', mem%pch,                          &
@@ -325,7 +306,6 @@ CONTAINS
 !      & t_cf('pch', '', ''),                                                 &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'cos_zenith_angle', mem%cos_zenith_angle,&
@@ -333,7 +313,6 @@ CONTAINS
 !      & t_cf('cosine_zenith_angle', '', ''),                                 &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !      & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
       & initval_r= cos_zenith_angle_init )
 
 !!    CALL slm_add_var( mem, 'CO2_air', mem%CO2_air, &
@@ -342,7 +321,6 @@ CONTAINS
 !!!      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
 !!!      & prefix, suffix,                                                                                &
 !!!      & lrestart=.FALSE., &
-!!            ics, ice, iblk, &   ! model%options -> for SLM compatibility
 !!      & initval_r=0.0_wp )
 
 !!    CALL slm_add_var( mem, 'CO2_air_mol', mem%CO2_air_mol, &
@@ -351,23 +329,18 @@ CONTAINS
 !!!      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
 !!!      & prefix, suffix,                                                                                &
 !!!      & lrestart=.FALSE., &
-!!            ics, ice, iblk, &   ! model%options -> for SLM compatibility
 !!      & initval_r=0.0_wp )
 
     CALL slm_add_var( mem, 'co2_mixing_ratio', mem%co2_mixing_ratio,&
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             & initval_r= co2_mixing_ratio_init )
 
     CALL slm_add_var( mem, 'co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13,&
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             & initval_r= co2_mixing_ratio_c13_init )
 
     CALL slm_add_var( mem, 'co2_mixing_ratio_c14', mem%co2_mixing_ratio_c14,&
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             & initval_r= co2_mixing_ratio_c14_init )
 
     CALL slm_add_var( mem, 'ga', mem%ga,&
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             & initval_r= ga_init )
 
 !    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
@@ -377,7 +350,6 @@ CONTAINS
 !        & t_cf('surface_drag_wtr', '', ''),                                    &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL  slm_add_var( mem, 'drag_ice', mem%drag_ice,                &
@@ -385,7 +357,6 @@ CONTAINS
 !        & t_cf('surface_drag_ice', '', ''),                                    &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 't_acoef_wtr', mem%t_acoef_wtr,                   &
@@ -393,7 +364,6 @@ CONTAINS
 !        & t_cf('temperature_acoef_wtr', '', ''),                               &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 't_bcoef_wtr', mem%t_bcoef_wtr,                   &
@@ -401,7 +371,6 @@ CONTAINS
 !        & t_cf('temperature_acoef_wtr', '', ''),                               &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 'q_acoef_wtr', mem%q_acoef_wtr,                   &
@@ -409,7 +378,6 @@ CONTAINS
 !        & t_cf('specific_humidity_acoef_wtr', '', ''),                         &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 'q_bcoef_wtr', mem%q_bcoef_wtr,                   &
@@ -417,7 +385,6 @@ CONTAINS
 !        & t_cf('specific_humidity_bcoef_wtr', '', ''),                         &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 't_acoef_ice', mem%t_acoef_ice,                   &
@@ -425,7 +392,6 @@ CONTAINS
 !        & t_cf('temperature_acoef_ice', '', ''),                               &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 't_bcoef_ice', mem%t_bcoef_ice,                   &
@@ -433,7 +399,6 @@ CONTAINS
 !        & t_cf('temperature_acoef_ice', '', ''),                               &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 'q_acoef_ice', mem%q_acoef_ice,                   &
@@ -441,7 +406,6 @@ CONTAINS
 !        & t_cf('specific_humidity_acoef_ice', '', ''),                         &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 'q_bcoef_ice', mem%q_bcoef_ice,                   &
@@ -449,7 +413,6 @@ CONTAINS
 !        & t_cf('specific_humidity_bcoef_ice', '', ''),                         &
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.0_wp )
 
       CALL slm_add_var( mem, 'albedo_lwtr', mem%albedo_lwtr,                   &
@@ -458,7 +421,6 @@ CONTAINS
 !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
 !        & prefix, suffix,                                                      &
 !        & loutput=.TRUE., lrestart=.TRUE., &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
         & initval_r=0.07_wp )
 
 !    END IF

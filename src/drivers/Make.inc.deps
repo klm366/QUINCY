@@ -14,6 +14,7 @@ mo_land_model_interface.o: \
   mo_base_memory.o \
   mo_base_config_class.o \
   mo_base_constants.o \
+  mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_shared_update_time_averages.o \
@@ -22,7 +23,7 @@ mo_land_model_interface.o: \
   mo_atmland_constants.o \
   mo_atmland_util.o \
   mo_veg_output.o \
-  mo_veg_memory.o \
+  mo_veg_memory_class.o \
   mo_rad_interface.o \
   mo_veg_interface.o \
   mo_veg_canopy.o \

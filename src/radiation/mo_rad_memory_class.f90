@@ -9,7 +9,9 @@
 !!
 MODULE mo_rad_memory_class
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: message
+  USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
@@ -78,89 +80,91 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory (variables) for the process: radiation
   !!
-  !! this is a radically simplified version of the init routine when compared to JSBACH4 (20160819) \n
-  !! please see Init_assimi_memory where the missign code is just commeted out (i.e. not deleted)
+  !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id, ics, ice, iblk)
+  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    CLASS(t_rad_memory), INTENT(inout), TARGET :: mem   !> radiation memory
-    CHARACTER(len=*),    INTENT(in)    :: prefix        !> ?
-    CHARACTER(len=*),    INTENT(in)    :: suffix        !> ?
-    INTEGER,             INTENT(in)    :: lct_ids!(:)   !> in jsbach4: vector of land cover type IDs
-    INTEGER,             INTENT(in)    :: model_id      !> model ID
-    INTEGER,             INTENT(in)    :: ics           !> model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: ice           !> model%options -> for SLM compatibility
-    INTEGER,             INTENT(in)    :: iblk          !> model%options -> for SLM compatibility
+!    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
+!    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
+!    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+!    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_base_memory,         ONLY: t_model
+
+    ! 0.1.InOut
+    CLASS(t_rad_memory), INTENT(inout), TARGET :: mem     !> radiation memory
+    CHARACTER(len=*),    INTENT(in)    :: prefix          !> ?
+    CHARACTER(len=*),    INTENT(in)    :: suffix          !> ?
+    INTEGER,             INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
+    INTEGER,             INTENT(in)    :: model_id        !> model ID model\%id
+    ! 0.2 Local
+    TYPE(t_model), POINTER :: model
+!    TYPE(t_jsb_model), POINTER :: model
+!    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+!    TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
+!    INTEGER :: table
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_memory'
+
+    model => Get_model(model_id)
+
+!    table = tables(1)
+
+!    hgrid   => Get_grid(mem%grid_id)
+!    surface => Get_vgrid('surface')
+!    canopy_layer => Get_vgrid('canopy_layer')
 
 
-    IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
+    IF (.NOT. ALLOCATED(mem%sw_srf_net%ptr)) THEN
 
       CALL slm_add_var( mem, 'sw_srf_net', mem%sw_srf_net, &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var( mem, 'swvis_srf_net', mem%swvis_srf_net, &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var( mem, 'swnir_srf_net', mem%swnir_srf_net, &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var( mem, 'lw_srf_net', mem%lw_srf_net, &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var( mem, 'rad_srf_net', mem%rad_srf_net, &
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'alb_vis', mem%alb_vis, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'alb_nir', mem%alb_nir, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'alb_vis_snow', mem%alb_vis_snow, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'alb_nir_snow', mem%alb_nir_snow, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'alb_vis_soil', mem%alb_vis_soil, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'alb_nir_soil', mem%alb_nir_soil, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'arad_vis_soil', mem%arad_vis_soil, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'arad_nir_soil', mem%arad_nir_soil, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'alb_vis_can', mem%alb_vis_can, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'alb_nir_can', mem%alb_nir_can, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'arad_vis_can', mem%arad_vis_can, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
       CALL slm_add_var(mem, 'arad_nir_can', mem%arad_nir_can, &   
-            ics, ice, iblk, &   ! model%options -> for SLM compatibility
             initval_r=0.0_wp)   ! initval taken from JSBACH3
 
     END IF

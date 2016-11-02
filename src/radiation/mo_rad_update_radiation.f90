@@ -34,9 +34,10 @@ CONTAINS
   !! 
   !! @todo currently no soil and snow albedo calculation in the update_radiation routine
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_radiation(tile, lctlib)
+  SUBROUTINE update_radiation(tile)
 
-    USE mo_base_memory,           ONLY: t_slm_tile
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model
     USE mo_base_constants,        ONLY: ncanop 
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -47,15 +48,15 @@ CONTAINS
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
     dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    USE mo_veg_memory,            ONLY: t_slm_plant
-
+    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(inout), TARGET :: tile    !< one tile
-    TYPE(t_lctlib_element),INTENT(in)      :: lctlib  !< land-cover-type library - parameters for one pft
+    TYPE(t_slm_tile),       INTENT(inout)  :: tile    !< one tile
     ! 0.2 Local
-    TYPE(t_slm_plant),POINTER              :: veg     ! veg static memory
+    TYPE(t_model),          POINTER        :: model
+    TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
     !> @todo (update_radiation) these local variables need to be added to RADIATION memory once 3D variables are allowed for
     REAL(wp),DIMENSION(ncanop)             :: arad_sunlit_vis_cl, &
                                               arad_shaded_vis_cl, &
@@ -68,6 +69,8 @@ CONTAINS
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
+    dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     REAL(wp), POINTER           :: swpar_srf_down     , &
                                    swpar_fdiffuse     , &
                                    cos_zenith_angle   , &
@@ -96,6 +99,7 @@ CONTAINS
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(LAND2ATM_)
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(VEG_)
 !    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
 !      TYPE IS(t_atm2land_memory)
 !        atm2land__mem => mm
@@ -108,6 +112,11 @@ CONTAINS
 !      TYPE IS(t_rad_memory)
 !        rad__mem => mm
 !    END SELECT
+!    SELECT TYPE (mm => tile%mem(VEG_)%p)
+!      TYPE IS(t_veg_memory)
+!        veg__mem => mm
+!    END SELECT
+    veg => veg__mem 
     swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
     swpar_fdiffuse    => atm2land__mem%swpar_fdiffuse%ptr
     cos_zenith_angle  => atm2land__mem%cos_zenith_angle%ptr
@@ -134,10 +143,8 @@ CONTAINS
     arad_vis_can      => rad__mem%arad_vis_can%ptr
     arad_nir_can      => rad__mem%arad_nir_can%ptr
 
-
-    !  bi-directional pointer
-    veg => tile%veg
-
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
 
     !> 1.0 Snow and soil albedo 
     !! 
@@ -150,7 +157,7 @@ CONTAINS
     !! 
     CALL calc_sw_srf_net(swvis_srf_down, & 
                      swpar_fdiffuse, cos_zenith_angle, & 
-                     veg%lai, veg%lai_cl, veg%cumm_lai_cl,& 
+                     veg%lai%ptr, veg%lai_cl%ptr(:,1), veg%cumm_lai_cl%ptr(:,1),& 
                      lctlib%sigma_vis, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
                      kbl0_vis, kdf0_vis, alb_vis_soil, &
                      arad_sunlit_vis_cl,arad_shaded_vis_cl,fleaf_sunlit_vis_cl, &
@@ -163,7 +170,7 @@ CONTAINS
     !! diffuse radiation are very similar 
     CALL calc_sw_srf_net(swnir_srf_down, & 
                      swpar_fdiffuse, cos_zenith_angle, & 
-                     veg%lai, veg%lai_cl, veg%cumm_lai_cl, &
+                     veg%lai%ptr, veg%lai_cl%ptr(:,1), veg%cumm_lai_cl%ptr(:,1), &
                      lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
                      kbl0_nir, kdf0_nir, alb_nir_soil, &
                      arad_sunlit_nir_cl,arad_shaded_nir_cl,fleaf_sunlit_nir_cl, &
@@ -187,15 +194,15 @@ CONTAINS
 
     !> 6.0 communitcate APAR to plant type
     !!
-    veg%fleaf_sunlit_cl(:) = fleaf_sunlit_vis_cl(:) 
+    veg%fleaf_sunlit_cl%ptr(:,1) = fleaf_sunlit_vis_cl(:) 
     IF(swvis_srf_down > eps8) THEN 
-       veg%par_sunlit_cl(:) = arad_sunlit_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
-       veg%par_shaded_cl(:) = arad_shaded_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
-       veg%apar             = arad_vis_can          * swpar_srf_down/swvis_srf_down * rad2par 
+       veg%par_sunlit_cl%ptr(:,1) = arad_sunlit_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
+       veg%par_shaded_cl%ptr(:,1) = arad_shaded_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
+       veg%apar%ptr               = arad_vis_can          * swpar_srf_down/swvis_srf_down * rad2par 
     ELSE 
-       veg%par_sunlit_cl(:) = 0.0_wp
-       veg%par_shaded_cl(:) = 0.0_wp
-       veg%apar = 0.0_wp
+       veg%par_sunlit_cl%ptr = 0.0_wp
+       veg%par_shaded_cl%ptr = 0.0_wp
+       veg%apar%ptr          = 0.0_wp
     ENDIF
 
   END SUBROUTINE update_radiation

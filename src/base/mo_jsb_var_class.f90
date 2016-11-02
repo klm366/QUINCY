@@ -45,7 +45,7 @@ MODULE mo_jsb_var_class
     INTEGER                    :: owner_proc_id = -1
     INTEGER, ALLOCATABLE       :: owner_tile_path(:)
     REAL(dp)                   :: missval
-  CONTAINS
+  !CONTAINS
   END TYPE t_jsb_var
 
   !-----------------------------------------------------------------------------------------------------!
@@ -59,8 +59,8 @@ MODULE mo_jsb_var_class
   !! added for temporary implementation of 1D REAL into SLM -> they will be changed to 2D later
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_logical1d
-    LOGICAL, POINTER :: ptr => NULL()
-  CONTAINS
+    LOGICAL, ALLOCATABLE :: ptr
+  !CONTAINS
   END TYPE t_jsb_var_logical1d
 
 ! *slmtemp
@@ -70,7 +70,7 @@ MODULE mo_jsb_var_class
   !! added for temporary implementation of 1D REAL into SLM -> they will be changed to 2D later
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real1d
-    REAL(wp), POINTER :: ptr => NULL()
+    REAL(wp), ALLOCATABLE :: ptr
   CONTAINS
     PRIVATE
     PROCEDURE               :: Add_real1d                       ! Add two variables of type t_jsb_var_real1d
@@ -90,7 +90,7 @@ MODULE mo_jsb_var_class
     PROCEDURE, PASS(this2)  :: Divide_scalar_and_real1d         ! Divide variable of type REAL scalar by t_jsb_var_real1d
     GENERIC, PUBLIC         :: OPERATOR(/) => Divide_real1d, Divide_real1d_and_scalar, Divide_scalar_and_real1d
     PROCEDURE, PUBLIC       :: Init => init_t_jsb_var_real1d
-!!    FINAL                   :: finish => finish_jsb_var_real1d
+    !FINAL                   :: finish_jsb_var_real1d
   END TYPE t_jsb_var_real1d
 
   !-----------------------------------------------------------------------------------------------------!
@@ -104,7 +104,7 @@ MODULE mo_jsb_var_class
   !! added for temporary implementation of 1D REAL into SLM -> they will be changed to 2D later
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_logical2d
-    LOGICAL, POINTER :: ptr(:,:) => NULL()
+    LOGICAL, ALLOCATABLE :: ptr(:,:)
   CONTAINS
   END TYPE t_jsb_var_logical2d
 
@@ -114,7 +114,7 @@ MODULE mo_jsb_var_class
   !! ics:ice,iblk
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
-    REAL(wp), POINTER :: ptr(:,:) => NULL()
+    REAL(wp), ALLOCATABLE :: ptr(:,:)
   CONTAINS
     PRIVATE
     PROCEDURE               :: Add_real2d                       ! Add two variables of type t_jsb_var_real2d
@@ -144,6 +144,7 @@ MODULE mo_jsb_var_class
     PROCEDURE, PASS(this2)  :: Divide_field_and_real2d          ! Divide variable of REAL 2-d field by type t_jsb_var_real2d
     GENERIC, PUBLIC         :: OPERATOR(/) => Divide_real2d, Divide_real2d_and_scalar, &
                                               Divide_real2d_and_field, Divide_field_and_real2d
+    !FINAL ...
   END TYPE t_jsb_var_real2d
 
   !-----------------------------------------------------------------------------------------------------!
@@ -156,7 +157,7 @@ MODULE mo_jsb_var_class
   !! ics:ice,:,iblk
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real3d
-    REAL(wp), POINTER :: ptr(:,:,:) => NULL()
+    REAL(wp), ALLOCATABLE :: ptr(:,:,:)
   CONTAINS
     PRIVATE
     PROCEDURE               :: Add_real3d                       ! Add two variables of type t_jsb_var_real3d
@@ -186,6 +187,7 @@ MODULE mo_jsb_var_class
     PROCEDURE, PASS(this2)  :: Divide_field_and_real3d          ! Divide variable of REAL 2-d field by type t_jsb_var_real3d
     GENERIC, PUBLIC         :: OPERATOR(/) => Divide_real3d, Divide_real3d_and_scalar, &
                                               Divide_real3d_and_field, Divide_field_and_real3d
+    !FINAL ...
   END TYPE t_jsb_var_real3d
 
   !-----------------------------------------------------------------------------------------------------
@@ -215,7 +217,7 @@ MODULE mo_jsb_var_class
     INTEGER                    :: no_of_vars = 0      !< number of variables the TYPE contains in vars(:)
     INTEGER                    :: max_no_of_vars = 20 !< ! hard coded limit of max var number - may change later !
     CHARACTER(LEN=50)          :: varlist_name        !< name of variable list
-  CONTAINS
+  !CONTAINS
   END TYPE t_jsb_struct
 
 ! *slmjsb4
@@ -243,7 +245,7 @@ MODULE mo_jsb_var_class
     INTEGER                    :: no_of_l2_structs = 0
     INTEGER                    :: max_no_of_l2_structs = 20 !!! hard coded limit - may change later !!!
     CHARACTER(LEN=50)          :: l2_structlist_name
-  CONTAINS
+  !CONTAINS
   END TYPE t_jsb_n_struct
 
 ! *slmjsb4
@@ -283,9 +285,7 @@ CONTAINS
     CLASS(t_jsb_var_real1d), INTENT(in) :: this, var2
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)   ! *slmdev  this feature is available with gfortran 6.x and a recent ifort
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
+    ALLOCATE(var3, source=this)
 
     var3%ptr = this%ptr + var2%ptr
   END FUNCTION Add_real1d
@@ -300,9 +300,7 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
+    ALLOCATE(var3, source=this)
 
     var3%ptr = this%ptr + scalar
   END FUNCTION Add_real1d_and_scalar
@@ -317,9 +315,7 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
+    ALLOCATE(var3, source=this2)
 
     var3%ptr = scalar + this2%ptr
   END FUNCTION Add_scalar_and_real1d
@@ -333,9 +329,7 @@ CONTAINS
     CLASS(t_jsb_var_real1d), INTENT(in) :: this, var2
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
+    ALLOCATE(var3, source=this)
 
     var3%ptr = this%ptr - var2%ptr
   END FUNCTION Subtract_real1d
@@ -350,9 +344,7 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
+    ALLOCATE(var3, source=this)
 
     var3%ptr = this%ptr - scalar
   END FUNCTION Subtract_real1d_and_scalar
@@ -368,8 +360,6 @@ CONTAINS
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
 
     var3%ptr = scalar - this2%ptr
   END FUNCTION Subtract_scalar_and_real1d
@@ -383,9 +373,7 @@ CONTAINS
     CLASS(t_jsb_var_real1d), INTENT(in) :: this, var2
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
+    ALLOCATE(var3, source=this)
 
     var3%ptr = this%ptr * var2%ptr
   END FUNCTION Multiply_real1d
@@ -400,9 +388,7 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
+    ALLOCATE(var3, source=this)
 
     var3%ptr = this%ptr * scalar
   END FUNCTION Multiply_real1d_and_scalar
@@ -418,8 +404,6 @@ CONTAINS
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
 
     var3%ptr = scalar * this2%ptr
   END FUNCTION Multiply_scalar_and_real1d
@@ -433,9 +417,7 @@ CONTAINS
     CLASS(t_jsb_var_real1d), INTENT(in) :: this, var2
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
+    ALLOCATE(var3, source=this)
 
     var3%ptr = this%ptr / var2%ptr
   END FUNCTION Divide_real1d
@@ -450,9 +432,7 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
+    ALLOCATE(var3, source=this)
 
     var3%ptr = this%ptr / scalar
   END FUNCTION Divide_real1d_and_scalar
@@ -468,8 +448,6 @@ CONTAINS
     TYPE(t_jsb_var_real1d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr)
 
     var3%ptr = scalar / this2%ptr
   END FUNCTION Divide_scalar_and_real1d
@@ -500,9 +478,9 @@ CONTAINS
     CLASS(t_jsb_var_real2d), INTENT(in) :: this, var2
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) + var2%ptr(:,:)
   END FUNCTION Add_real2d
@@ -517,9 +495,7 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
 
     var3%ptr(:,:) = this%ptr(:,:) + scalar
   END FUNCTION Add_real2d_and_scalar
@@ -535,8 +511,6 @@ CONTAINS
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
 
     var3%ptr(:,:) = scalar + this2%ptr(:,:)
   END FUNCTION Add_scalar_and_real2d
@@ -553,12 +527,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_real2d_and_field'
 
-    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) + field(:,:)
   END FUNCTION Add_real2d_and_field
@@ -575,12 +549,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_field_and_real2d'
 
-    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
 
     var3%ptr(:,:) = field(:,:) + this2%ptr(:,:)
   END FUNCTION Add_field_and_real2d
@@ -594,9 +568,9 @@ CONTAINS
     CLASS(t_jsb_var_real2d), INTENT(in) :: this, var2
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) - var2%ptr(:,:)
   END FUNCTION Subtract_real2d
@@ -611,9 +585,9 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) - scalar
   END FUNCTION Subtract_real2d_and_scalar
@@ -629,8 +603,8 @@ CONTAINS
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
 
     var3%ptr(:,:) = scalar - this2%ptr(:,:)
   END FUNCTION Subtract_scalar_and_real2d
@@ -647,12 +621,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Subtract_real2d_and_field'
 
-    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) - field(:,:)
   END FUNCTION Subtract_real2d_and_field
@@ -669,12 +643,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Subtract_field_and_real2d'
 
-    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
 
     var3%ptr(:,:) = field(:,:) - this2%ptr(:,:)
   END FUNCTION Subtract_field_and_real2d
@@ -688,9 +662,9 @@ CONTAINS
     CLASS(t_jsb_var_real2d), INTENT(in) :: this, var2
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) * var2%ptr(:,:)
   END FUNCTION Multiply_real2d
@@ -705,9 +679,9 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) * scalar
   END FUNCTION Multiply_real2d_and_scalar
@@ -723,8 +697,8 @@ CONTAINS
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
 
     var3%ptr(:,:) = scalar * this2%ptr(:,:)
   END FUNCTION Multiply_scalar_and_real2d
@@ -741,12 +715,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_real2d_and_field'
 
-    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) * field(:,:)
   END FUNCTION Multiply_real2d_and_field
@@ -763,12 +737,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_field_and_real2d'
 
-    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
 
     var3%ptr(:,:) = field(:,:) * this2%ptr(:,:)
   END FUNCTION Multiply_field_and_real2d
@@ -782,9 +756,9 @@ CONTAINS
     CLASS(t_jsb_var_real2d), INTENT(in) :: this, var2
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) / var2%ptr(:,:)
   END FUNCTION Divide_real2d
@@ -799,9 +773,9 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real2d), ALLOCATABLE :: var3
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) / scalar
   END FUNCTION Divide_real2d_and_scalar
@@ -818,12 +792,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Divide_real2d_by_field'
 
-    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    ALLOCATE(var3)!, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
+    ALLOCATE(var3, source=this)
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2)))
 
     var3%ptr(:,:) = this%ptr(:,:) / field(:,:)
   END FUNCTION Divide_real2d_and_field
@@ -840,12 +814,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Divide_field_by_real2d'
 
-    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2)))
 
     var3%ptr(:,:) = field(:,:) / this2%ptr(:,:)
   END FUNCTION Divide_field_and_real2d
@@ -864,9 +838,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) + var2%ptr(:,:,:)
   END FUNCTION Add_real3d
@@ -882,9 +856,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) + scalar
   END FUNCTION Add_real3d_and_scalar
@@ -900,9 +874,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
-             lbound(this2%ptr,3):ubound(this2%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
+!             lbound(this2%ptr,3):ubound(this2%ptr,3)))
 
     var3%ptr(:,:,:) = scalar + this2%ptr(:,:,:)
   END FUNCTION Add_scalar_and_real3d
@@ -919,13 +893,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_real3d_and_field'
 
-    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2) .OR. SIZE(field,3) /= SIZE(this%ptr,3)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2) .OR. SIZE(field,3) /= SIZE(this%ptr,3)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) + field(:,:,:)
   END FUNCTION Add_real3d_and_field
@@ -942,13 +916,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_field_and_real3d'
 
-    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2) .OR. SIZE(field,3) /= SIZE(this2%ptr,3)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2) .OR. SIZE(field,3) /= SIZE(this2%ptr,3)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
-             lbound(this2%ptr,3):ubound(this2%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
+!             lbound(this2%ptr,3):ubound(this2%ptr,3)))
 
     var3%ptr(:,:,:) = field(:,:,:) + this2%ptr(:,:,:)
   END FUNCTION Add_field_and_real3d
@@ -963,9 +937,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) - var2%ptr(:,:,:)
   END FUNCTION Subtract_real3d
@@ -981,9 +955,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) - scalar
   END FUNCTION Subtract_real3d_and_scalar
@@ -999,9 +973,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
-             lbound(this2%ptr,3):ubound(this2%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
+!             lbound(this2%ptr,3):ubound(this2%ptr,3)))
 
     var3%ptr(:,:,:) = scalar - this2%ptr(:,:,:)
   END FUNCTION Subtract_scalar_and_real3d
@@ -1018,13 +992,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Subtract_real3d_and_field'
 
-    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2) .OR. SIZE(field,3) /= SIZE(this%ptr,3)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2) .OR. SIZE(field,3) /= SIZE(this%ptr,3)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) - field(:,:,:)
   END FUNCTION Subtract_real3d_and_field
@@ -1041,13 +1015,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Subtract_field_and_real3d'
 
-    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2) .OR. SIZE(field,3) /= SIZE(this2%ptr,3)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2) .OR. SIZE(field,3) /= SIZE(this2%ptr,3)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
-             lbound(this2%ptr,3):ubound(this2%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
+!             lbound(this2%ptr,3):ubound(this2%ptr,3)))
 
     var3%ptr(:,:,:) = field(:,:,:) - this2%ptr(:,:,:)
   END FUNCTION Subtract_field_and_real3d
@@ -1062,9 +1036,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) * var2%ptr(:,:,:)
   END FUNCTION Multiply_real3d
@@ -1080,9 +1054,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) * scalar
   END FUNCTION Multiply_real3d_and_scalar
@@ -1098,9 +1072,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
-             lbound(this2%ptr,3):ubound(this2%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
+!             lbound(this2%ptr,3):ubound(this2%ptr,3)))
 
     var3%ptr(:,:,:) = scalar * this2%ptr(:,:,:)
   END FUNCTION Multiply_scalar_and_real3d
@@ -1117,13 +1091,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_real3d_and_field'
 
-    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2) .OR. SIZE(field,3) /= SIZE(this%ptr,3)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2) .OR. SIZE(field,3) /= SIZE(this%ptr,3)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) * field(:,:,:)
   END FUNCTION Multiply_real3d_and_field
@@ -1140,13 +1114,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_field_and_real3d'
 
-    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2) .OR. SIZE(field,3) /= SIZE(this2%ptr,3)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2) .OR. SIZE(field,3) /= SIZE(this2%ptr,3)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
-             lbound(this2%ptr,3):ubound(this2%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
+!             lbound(this2%ptr,3):ubound(this2%ptr,3)))
 
     var3%ptr(:,:,:) = field(:,:,:) * this2%ptr(:,:,:)
   END FUNCTION Multiply_field_and_real3d
@@ -1161,9 +1135,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) / var2%ptr(:,:,:)
   END FUNCTION Divide_real3d
@@ -1179,9 +1153,9 @@ CONTAINS
     TYPE(t_jsb_var_real3d), ALLOCATABLE :: var3
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) / scalar
   END FUNCTION Divide_real3d_and_scalar
@@ -1198,13 +1172,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Divide_real3d_by_field'
 
-    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2) .OR. SIZE(field,3) /= SIZE(this%ptr,3)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this%ptr,1) .OR. SIZE(field,2) /= SIZE(this%ptr,2) .OR. SIZE(field,3) /= SIZE(this%ptr,3)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
-             lbound(this%ptr,3):ubound(this%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this%ptr,1):ubound(this%ptr,1), lbound(this%ptr,2):ubound(this%ptr,2), &
+!             lbound(this%ptr,3):ubound(this%ptr,3)))
 
     var3%ptr(:,:,:) = this%ptr(:,:,:) / field(:,:,:)
   END FUNCTION Divide_real3d_and_field
@@ -1221,13 +1195,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Divide_field_by_real3d'
 
-    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2) .OR. SIZE(field,3) /= SIZE(this2%ptr,3)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+!    IF (SIZE(field,1) /= SIZE(this2%ptr,1) .OR. SIZE(field,2) /= SIZE(this2%ptr,2) .OR. SIZE(field,3) /= SIZE(this2%ptr,3)) &
+!      & CALL finish(TRIM(routine), 'Dimension mismatch')
 
     ALLOCATE(var3, source=this2)
-    NULLIFY(var3%ptr)
-    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
-             lbound(this2%ptr,3):ubound(this2%ptr,3)))
+!    NULLIFY(var3%ptr)
+!    ALLOCATE(var3%ptr(lbound(this2%ptr,1):ubound(this2%ptr,1), lbound(this2%ptr,2):ubound(this2%ptr,2), &
+!             lbound(this2%ptr,3):ubound(this2%ptr,3)))
 
     var3%ptr(:,:,:) = field(:,:,:) / this2%ptr(:,:,:)
   END FUNCTION Divide_field_and_real3d

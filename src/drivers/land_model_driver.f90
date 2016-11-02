@@ -18,7 +18,7 @@ PROGRAM land_model_driver
   USE mo_land_model_interface,    ONLY: land_model_interface 
   ! base
   USE mo_base_constants,          ONLY: ntile, one_year
-  USE mo_base_memory,             ONLY: t_slm_tile, t_model
+  USE mo_base_memory,             ONLY: t_slm_tile !, t_model
   USE mo_base_config_class,       ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
   USE mo_jsb_model_init,          ONLY: init_model, &          ! 'init_model' is an interface
                                         time_day, time_year, ntimestep, itimestep, timestep_prop_day, &
@@ -105,12 +105,11 @@ PROGRAM land_model_driver
 
   !! 1.0 -----------------------------------------------------------------------------------------------
   !! 
-  !! Model init
+  !! Create Tile & Model init
   !! 
-  TYPE(t_model), SAVE                      :: model         !< very basic version of one JSBACH4 model
   TYPE(t_slm_tile),DIMENSION(ntile), SAVE  :: tile          !< data structure for dynamic vegetation and soil variables
-
-  CALL init_model(model, tile(1), l_forcing)                !< model init : mo_jsb_model_init 
+                                                            !! in jsbach4 tile is created in mo_jsb_model_usecases
+  CALL init_model(tile(1), l_forcing)                       !< model init : mo_jsb_model_init 
 
 
   !! 2.0 -----------------------------------------------------------------------------------------------
@@ -264,7 +263,6 @@ PROGRAM land_model_driver
     !! 3.3 land model interface
     !! 
     CALL land_model_interface(tile(1), &
-                              model, &
                               l_forcing, &
                               time_day, time_year, timestep_prop_day, &
                                   !! atm2land memory - INTENT(in) - start

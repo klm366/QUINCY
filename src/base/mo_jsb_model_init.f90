@@ -9,11 +9,14 @@
 !!
 MODULE mo_jsb_model_init
 
+#include "dsl_jsbach.inc"
+
     USE mo_kind
     USE mo_exception,                       ONLY: finish, message, message_text
     ! base
     USE mo_base_constants
-    USE mo_base_memory,                     ONLY: t_slm_tile, t_model, grid 
+    USE mo_jsb_class,                       ONLY: Get_model, jsbach
+    USE mo_base_memory,                     ONLY: t_slm_tile, t_model, grid, new_model
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, init_lctlib
     USE mo_jsb_memory_class,                ONLY: t_jsb_memory
@@ -35,6 +38,9 @@ MODULE mo_jsb_model_init
     ! vegetation
     USE mo_veg_constants
     USE mo_veg_config_class,                ONLY: veg_config
+
+    ! Use of process memories
+    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
 
   IMPLICIT NONE
@@ -78,13 +84,12 @@ CONTAINS
   !! @todo mo_jsb_model_init: move to default JSBACH4 init style
   !!  
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm(model, tile, l_forcing) !(model_id, model_name)
+  SUBROUTINE init_slm(tile, l_forcing) !(model_id, model_name)
 
 
     IMPLICIT NONE
 
     ! 0.1 InOut
-    TYPE(t_model),INTENT(inout)                 :: model      !< data structure for dynamic vegetation and soil variables
     TYPE(t_slm_tile),INTENT(inout)              :: tile       !< data structure for dynamic vegetation and soil variables
     LOGICAL,INTENT(out)                         :: l_forcing  !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
     ! 0.2 Local
@@ -93,7 +98,9 @@ CONTAINS
     INTEGER                                     :: iproc          !! for Memory init and alloc
     CHARACTER(LEN=15)                           :: prefix         !! for Memory init and alloc
     CHARACTER(LEN=15)                           :: suffix         !! for Memory init and alloc
-
+    INTEGER                                     :: no_of_models
+    TYPE(t_model), POINTER                      :: current => NULL() ! model allocation to jsbach struct - in jsbach4 this is looped over x models
+    TYPE(t_model), POINTER                      :: model
 
     ! check number of tiles, exit if more than output routines can handle
     IF(ntile > 1) CALL finish('land_model_driver-init_routine','Number of tiles is too large, i.e. larger than 1')
@@ -112,32 +119,37 @@ CONTAINS
     CALL veg_config%Init
 
 
-    !! 2 Model init
+    !! 2 Model init including lctlib init
     !!
-    !!  
+    !! see jsbach4 mo_jsb_base
     !! 
-    model%id = 0                                    ! this is just an arbitrary value consistent with tile%owner_model_id
-    model%shortname = "slm"                         ! arbitrary name
-    model%options%dtime   = base_config%dt  ! length of one time step
-    model%options%steplen = base_config%dt  ! .. 
-    model%options%iblk    = 1               ! Number of current block (chunk)
-    model%options%ics     = 1               ! Index of chunk start
-    model%options%ice     = 1               ! Index of chunk end
-    model%options%nc      = model%options%ice - model%options%ics + 1   ! Length of chunk
+    no_of_models = 1
+    ALLOCATE(jsbach%models(no_of_models))
+    jsbach%no_of_models = no_of_models
+    current => new_model(1, "slm", "slm", "slm_veg_model", "not_available.txt") ! id, name, shortname, description, namelist_filename
+    current%options%dtime   = base_config%dt  ! length of one time step
+    current%options%steplen = base_config%dt  ! .. 
+    current%options%iblk    = 1               ! Number of current block (chunk)
+    current%options%ics     = 1               ! Index of chunk start
+    current%options%ice     = 1               ! Index of chunk end
+    current%options%nc      = current%options%ice - current%options%ics + 1   ! Length of chunk
+    !current%lctlib => init_lctlib()           ! not possible here - need init constants init !!
+    jsbach%models(1)%m => current
+    ! point model to jsbach%models(1)%m
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
 
 
     !! 3 Tile init
     !! 
     !! 
-    !! @todo land model driver: update Intel compiler to enable: init lcts of the tile via PROCEDURE Construct_jsb_lct
+    !! @todo model_init -> init lcts of the tile via PROCEDURE Construct_jsb_lct  *slmtemp
+    tile%owner_model_id = current%id         ! *slmtemp
     ! lcts
     tile%lcts%id        = 2                  ! VEG_TYPE     2 == Vegetated
     tile%lcts%name      = "veg"              ! Short name for lct
     tile%lcts%long_name = "slm vegetation"   ! Long name for lct
     tile%lcts%lib_id    = veg_config%pft_id  ! pftID == column number in model%lctlib == ID of lct in lctlib (JSBACH4)
-    tile%ics            = model%options%ics  ! simple (temporary) solution to make it available across Tasks
-    tile%ice            = model%options%ice  ! simple (temporary) solution to make it available across Tasks
-    tile%iblk           = model%options%iblk ! simple (temporary) solution to make it available across Tasks
+
 
     !! 4 Grid init
     !! 
@@ -178,7 +190,7 @@ CONTAINS
       tile%mem(iproc)%p => NULL()
       SELECT CASE(iproc)
         ! SLM: extend this CASE to all SLM processes that work with JSBACH4 memory structure; see mo_jsb_process_class for enumeration
-        CASE (RAD_, ASSIMI_, SOIL_, ATM2LAND_, LAND2ATM_) ! VEG_,  *slmdev
+        CASE (RAD_, ASSIMI_, VEG_, SOIL_, ATM2LAND_, LAND2ATM_)    
           prefix = 'no-need'
           suffix = 'no-need'
           process_name = Get_process_name(iproc)
@@ -199,20 +211,18 @@ CONTAINS
 !!            ELSE
 !!              CALL tile%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), tile%lcts(:)%id, tile%owner_model_id)
 !!            END IF
-            ! call init routine of memory here & added model%options -> changed for SLM compatibility
-            CALL tile%mem(iproc)%p%Init( TRIM(process_name), TRIM(suffix), tile%lcts%id, tile%owner_model_id, &
-                                        model%options%ics, model%options%ice, model%options%iblk) ! model%options -> for SLM compatibility
+            ! call init routine of memory
+            CALL tile%mem(iproc)%p%Init( TRIM(process_name), TRIM(suffix), tile%lcts%id, tile%owner_model_id)
         END SELECT  ! processes with memory (ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_)
         NULLIFY(tmp_ptr)    
       END SELECT    ! iproc
     END DO          ! iproc
 
 
-    !! 7 Plant init
+    !! 7 lctlib init
+    !!
+    !! Important! init_lctlib() needs config and constants init to be finished !
     !! 
-    !! 
-    CALL tile%veg%init                  ! mo_veg_memory  ! includes daytime_avg & moving_avg init
-    CALL tile%veg%set_zero_fluxes       ! mo_veg_memory  ==> may move to veg init (or model init ?)
     model%lctlib => init_lctlib()         ! initialize the lctlib with parameters values across PFT's
 
 
@@ -267,13 +277,13 @@ CONTAINS
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land')
         ! currently same as plant -> calling simply 'init_slm_plant'!
-        CALL init_slm_plant(model, tile)
+        CALL init_slm_plant(tile)
       CASE('plant')
-        CALL init_slm_plant(model, tile)
+        CALL init_slm_plant(tile)
       CASE('soil')
         CALL finish('land_model_driver-init_routine','Nice try, but the soil model does not exist yet :) ')
       CASE('canopy')
-        CALL init_slm_canopy(model, tile)
+        CALL init_slm_canopy(tile)
       CASE('test_canopy')
 !         init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
       CASE DEFAULT
@@ -297,21 +307,30 @@ CONTAINS
   !!
   !! called from init_slm
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm_plant(model, tile) !(model_id, model_name)
+  SUBROUTINE init_slm_plant(tile) !(model_id, model_name)
 
     USE mo_shared_memory, ONLY: t_element
 
     IMPLICIT NONE
 
     ! 0.1 InOut
-    TYPE(t_model),INTENT(inout),TARGET           :: model      !< data structure for dynamic vegetation and soil variables
-    TYPE(t_slm_tile),INTENT(inout)               :: tile       !< data structure for dynamic vegetation and soil variables
+    TYPE(t_slm_tile),       INTENT(inout)        :: tile       !< data structure for dynamic vegetation and soil variables
     ! 0.2 Local
-    TYPE(t_lctlib_element),POINTER               :: lctlib     !< land-cover-type library - parameter across pft's
-    TYPE(t_element)                              :: init_pool  !< land-cover-type library - parameter across pft's
+    TYPE(t_model),          POINTER              :: model
+    TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
+    !TYPE(t_element)                              :: init_pool  !< land-cover-type library - parameter across pft's
     REAL(wp)                                     :: hlp1
-
-    !  bi-directional pointer
+    ! 0.3 Memory allocation
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
+    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Get_memory(VEG_)
+!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
+!      TYPE IS(t_veg_memory)
+!        veg__mem => mm
+!    END SELECT
+    veg    => veg__mem 
+    model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
 
 
@@ -319,23 +338,21 @@ CONTAINS
       tile%soil%theta                    = veg_config%soil_theta_prescribe 
       tile%soil%ammonium                 = 0.1_wp
       tile%soil%phosphate                = 0.01_wp
-      tile%veg%target_cn_leaf          = lctlib%cn_leaf
-      tile%veg%target_np_leaf          = lctlib%np_leaf
+      veg%target_cn_leaf%ptr             = lctlib%cn_leaf
+      veg%target_np_leaf%ptr             = lctlib%np_leaf
 
       IF(veg_config%flag_start_bareground)THEN
-         tile%soil%pool%litter%nitrogen     = 0.0_wp
-         init_pool%carbon        = lctlib%seed_size * 10.0_wp
-         tile%veg%dens_ind     = 0.0_wp 
+         tile%soil%pool%litter%nitrogen   = 0.0_wp
+         veg%init_pool%carbon%ptr         = lctlib%seed_size * 10.0_wp
+         veg%dens_ind%ptr                 = 0.0_wp 
       ELSE
-         tile%soil%pool%litter%nitrogen     = 5.0_wp
-         init_pool%carbon        = 50.0_wp 
-         tile%veg%dens_ind     = 1.0_wp 
+         tile%soil%pool%litter%nitrogen   = 5.0_wp
+         veg%init_pool%carbon%ptr         = 50.0_wp 
+         veg%dens_ind%ptr                 = 1.0_wp 
       ENDIF
 
-      init_pool%nitrogen  = init_pool%carbon / &
-                            (1._wp + fresp_growth) / lctlib%cn_leaf
-      init_pool%phosphorus = init_pool%nitrogen / &
-                            lctlib%np_leaf
+      veg%init_pool%nitrogen    = veg%init_pool%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
+      veg%init_pool%phosphorus  = veg%init_pool%nitrogen  / lctlib%np_leaf
 
       ! init_pool%carbon13
       IF(lctlib%ps_pathway == ic3phot)THEN
@@ -343,7 +360,7 @@ CONTAINS
       ELSE
          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
       ENDIF
-      init_pool%carbon13 = calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13,hlp1) * init_pool%carbon 
+      veg%init_pool%carbon13 = veg%init_pool%carbon * calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
 
 
       ! init_pool%carbon14
@@ -352,13 +369,13 @@ CONTAINS
       ELSE
          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
       ENDIF
-      init_pool%carbon14 = calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C14,hlp1) * init_pool%carbon
+      veg%init_pool%carbon14 = veg%init_pool%carbon * calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C14,hlp1)
 
       ! start bareground ?
       IF(veg_config%flag_start_bareground)THEN
-         tile%veg%pool%seed_bed = init_pool 
+         veg%pool%seed_bed = veg%init_pool 
       ELSE
-         tile%veg%pool%reserve  = init_pool 
+         veg%pool%reserve  = veg%init_pool 
       END IF
        tile%soil%pool%litter%nitrogen      = 5._wp
 
@@ -370,19 +387,28 @@ CONTAINS
   !!
   !! called from init_slm
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm_canopy(model, tile) !(model_id, model_name)
+  SUBROUTINE init_slm_canopy( tile) !(model_id, model_name)
 
     IMPLICIT NONE
 
     ! 0.1 InOut
-    TYPE(t_model),INTENT(inout),TARGET           :: model      !< data structure for dynamic vegetation and soil variables
     TYPE(t_slm_tile),INTENT(inout)               :: tile       !< data structure for dynamic vegetation and soil variables
     ! 0.2 Local
-    TYPE(t_lctlib_element),POINTER               :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_model),          POINTER              :: model
+    TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp)                                     :: ref_lai    !< LAI
     REAL(wp)                                     :: ref_nleaf  !< N leaf per unit leaf area in gN/m2
-
-    !  bi-directional pointer
+    ! 0.3 Memory allocation
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
+    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Get_memory(VEG_)
+!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
+!      TYPE IS(t_veg_memory)
+!        veg__mem => mm
+!    END SELECT
+    veg    => veg__mem 
+    model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
 
     ref_lai   = 6._wp
@@ -393,14 +419,12 @@ CONTAINS
     !! Initialisation of soil and vegetation, so far relevant
     tile%soil%moisture   = veg_config%soil_awc_prescribe
     tile%soil%theta      = veg_config%soil_theta_prescribe
-    tile%veg%lai       = ref_lai 
+    veg%lai%ptr          = ref_lai 
     IF(veg_config%pft_id==0) THEN
-      tile%veg%pool%leaf%nitrogen   = ref_nleaf / molar_mass_N * tile%veg%lai
+      veg%pool%leaf%nitrogen%ptr   = ref_nleaf / molar_mass_N * veg%lai%ptr
     ELSE
-      tile%veg%pool%leaf%nitrogen   = tile%veg%lai / & 
-                                                lctlib%sla / lctlib%cn_leaf
-      tile%veg%pool%leaf%phosphorus = tile%veg%pool%leaf%nitrogen / & 
-                                                lctlib%np_leaf
+      veg%pool%leaf%nitrogen   = veg%lai / (lctlib%sla /  lctlib%cn_leaf)
+      veg%pool%leaf%phosphorus = veg%pool%leaf%nitrogen / lctlib%np_leaf
     ENDIF
 
   END SUBROUTINE init_slm_canopy

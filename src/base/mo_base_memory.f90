@@ -14,7 +14,6 @@ MODULE mo_base_memory
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
   USE mo_jsb_memory_class,        ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_process_class,       ONLY: t_jsb_process_p
-  USE mo_veg_memory,              ONLY: t_slm_plant
   USE mo_shared_memory,           ONLY: t_element
 
   IMPLICIT NONE
@@ -56,20 +55,16 @@ MODULE mo_base_memory
   !-----------------------------------------------------------------------------------------------------
   !> integrates all variables of one tile
   !!
-  !! including plant and soil \n
+  !! including soil memory \n
   !! TYPE(t_slm_tile) :: tile --> declaration of tile in the driver \n
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_tile
-    TYPE(t_slm_plant)                 :: veg       !< veg static memory
-    TYPE(t_slm_soil)                  :: soil      !< soil construct of tile
+    TYPE(t_slm_soil)                  :: soil      !< soil construct of tile  *slmdev
 
     TYPE(t_jsb_lct)                   :: lcts      !< data on land cover type of the tile
     CLASS(t_jsb_memory_p), POINTER    :: mem(:)
     INTEGER                           :: owner_model_id = 0   ! necessary for using lctlib
-    INTEGER                           :: ics       !< model\%options -> for SLM compatibility; init in mo_jsb_model_init
-    INTEGER                           :: ice       !< model\%options -> for SLM compatibility; init in mo_jsb_model_init
-    INTEGER                           :: iblk      !< model\%options -> for SLM compatibility; init in mo_jsb_model_init
   END TYPE t_slm_tile  
 
   !-----------------------------------------------------------------------------------------------------
@@ -117,6 +112,22 @@ MODULE mo_base_memory
   END TYPE t_model
 
   !-----------------------------------------------------------------------------------------------------
+  !> Container CLASS for JSBACH model
+  !! 
+  !! Contains pointer to an instance of type t_jsb_model in order to allow arrays
+  !! of pointers to models.
+  !!
+  !! This code is borrowed from jsbach4 mo_jsb_model_class
+  !-----------------------------------------------------------------------------------------------------
+!  TYPE t_jsb_model_m       ! jsbach4 code
+!    TYPE(t_jsb_model), POINTER :: m
+!  END TYPE t_jsb_model_m
+  TYPE t_model_m            ! *slmtemp
+    TYPE(t_model), POINTER :: m
+  END TYPE t_model_m
+
+
+  !-----------------------------------------------------------------------------------------------------
   !> longitude and latitude of a tile
   !!
   !! note: this TYPE is just a temporary solution \n
@@ -130,7 +141,53 @@ MODULE mo_base_memory
   TYPE(t_slm_grid)  :: grid           !< currently initialized with namelist parameter values
 
  
-!CONTAINS
+CONTAINS
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Constructor method for model instance
+  !! 
+  !!
+  !! borrowed from jsbach4 mo_jsb_model_class and modified to fit SLM needs
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION new_model(id, name, shortname, description, namelist_filename) RESULT(return_ptr)
+
+    IMPLICIT NONE
+
+    ! 0.1 InOut
+    INTEGER,                    INTENT(in) :: id
+    CHARACTER(len=*),           INTENT(in) :: name
+    CHARACTER(len=*),           INTENT(in) :: shortname
+    CHARACTER(len=*),           INTENT(in) :: description
+    CHARACTER(len=*),           INTENT(in) :: namelist_filename !< Model namelist file
+    TYPE(t_model), POINTER                 :: return_ptr
+    ! 0.2 Local
+    !INTEGER :: iproc
+
+    ALLOCATE(return_ptr)
+
+!    CALL return_ptr%Init_hsm(name)
+!    CALL return_ptr%Register_action(t_Action("INTEGRATE"))
+!    CALL return_ptr%Register_action(t_Action("AGGREGATE"))
+
+    return_ptr%id                = id
+    return_ptr%shortname         = TRIM(shortname)
+!    return_ptr%description       = TRIM(description)
+!    return_ptr%namelist_filename = TRIM(namelist_filename)
+!    return_ptr%config => NULL()
+
+!!$    return_ptr%Hsm => return_ptr%t_Hsm
+
+!!$    ALLOCATE(return_ptr%processes(max_no_of_processes))
+!!$    DO iproc=1,max_no_of_processes
+!!$      return_ptr%processes(iproc)%p => Create_process(iproc, return_ptr%id, TRIM(namelist_filename))
+!!$    END DO
+
+!    ALLOCATE(return_ptr%queue)
+
+!    CALL message(TRIM(routine), 'construction of JSBACH model completed.')
+
+  END FUNCTION new_model
 
 
 

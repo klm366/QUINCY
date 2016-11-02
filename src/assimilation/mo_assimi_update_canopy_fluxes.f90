@@ -13,7 +13,7 @@ MODULE mo_assimi_update_canopy_fluxes
 #include "dsl_jsbach.inc"
 
   USE mo_kind,                  ONLY: wp, eps4, eps8
-  USE mo_base_memory,           ONLY: t_slm_tile
+  USE mo_base_memory,           ONLY: t_slm_tile, t_model
   USE mo_base_constants,        ONLY: ncanop, dt
   USE mo_base_memory,           ONLY: t_slm_soil
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -26,12 +26,14 @@ MODULE mo_assimi_update_canopy_fluxes
   ! Use of process memories
   dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
   dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
-  USE mo_veg_memory
+  dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: update_canopy_fluxes, discrimination_ps, calc_photosynthesis
+  PUBLIC :: set_zero_vegetation_fluxes    ! called in the land model interface prior to all Tasks
 
 CONTAINS
 
@@ -44,25 +46,28 @@ CONTAINS
   !! integrates: \n
   !! CALL calc_photosynthesis \n
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_canopy_fluxes(tile, lctlib)
+  SUBROUTINE update_canopy_fluxes(tile)
 
+    USE mo_jsb_class,             ONLY: Get_model
     USE mo_shared_constants
     USE mo_shared_isotope
  
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_lctlib_element),INTENT(in)             :: lctlib         !< land-cover-type library - parameters for one pft
-    TYPE(t_slm_tile),      INTENT(inout), TARGET  :: tile           !< one tile
+    TYPE(t_slm_tile),       INTENT(inout), TARGET :: tile      !< one tile  =>  *slmdev may remove the TARGET argument when soil  => tile%soil is not needed anymore 
     ! 0.2 Local
-    TYPE(t_slm_soil), POINTER        :: soil                   ! soil variables per tile
-    TYPE(t_slm_plant),POINTER        :: veg                    ! plant variables per tile
-    INTEGER                          :: icanop                 ! for looping across ncanopy layers
-    REAL(wp)                         :: hlp1                   ! dummy variable 
+    TYPE(t_model),          POINTER        :: model
+    TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_slm_soil),       POINTER        :: soil       ! soil variables per tile
+    INTEGER                                :: icanop     ! for looping across ncanopy layers
+    REAL(wp)                               :: hlp1       ! dummy variable 
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)     !   TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(ASSIMI_)       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem
-    TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to assimi__mem for SLM usability
+    dsl4jsb_Def_memory(VEG_)          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
+    TYPE(t_assimi_memory), POINTER   :: assimi                 ! local pointer to assimi__mem for SLM usability
+    TYPE(t_veg_memory), POINTER      :: veg                    ! local pointer to veg__mem for SLM usability
     REAL(wp), POINTER :: t_air
     REAL(wp), POINTER :: q_air
     REAL(wp), POINTER :: press_srf
@@ -72,6 +77,7 @@ CONTAINS
     REAL(wp), POINTER :: co2_mixing_ratio_C14
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(VEG_)
 !    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p) 
 !      TYPE IS(t_atm2land_memory)
 !        atm2land__mem => mm
@@ -80,7 +86,12 @@ CONTAINS
 !      TYPE IS(t_assimi_memory)
 !        assimi__mem => mm
 !    END SELECT
+!    SELECT TYPE (mm => tile%mem(VEG_)%p)     
+!      TYPE IS(t_veg_memory)
+!        veg__mem => mm
+!    END SELECT
     assimi  => assimi__mem
+    veg     => veg__mem 
     t_air                => atm2land__mem%t_air%ptr
     q_air                => atm2land__mem%q_air%ptr
     press_srf            => atm2land__mem%press_srf%ptr
@@ -89,98 +100,105 @@ CONTAINS
     co2_mixing_ratio_C13 => atm2land__mem%co2_mixing_ratio_C13%ptr
     co2_mixing_ratio_C14 => atm2land__mem%co2_mixing_ratio_C14%ptr
 
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
 
-   !  bi-directional pointer
-   veg  => tile%veg
-   soil => tile%soil
+   !  bi-directional pointer  *slmdev
+   soil  => tile%soil
 
-   ! initialise output
-   veg%gc = 0.0_wp 
+   ! set output to zero  
+   ! *slmdev  necessary ? 
+!   assimi%agl%ptr = 0.0_wp 
+!   assimi%anl%ptr = 0.0_wp 
+!   assimi%rl%ptr  = 0.0_wp
+!   assimi%gsl%ptr = 0.0_wp
+!   assimi%cil%ptr = 0.0_wp     
+   veg%gc%ptr     = 0.0_wp 
 
 
    !> 1.0 calculate the moisture scaling factor for photosynthesis
    !! 
-   veg%beta_air     = calc_atm_moisture_stress(t_air, &
-                                                 q_air, &
-                                                 press_srf) 
-   veg%beta_soil_ps = calc_soil_moisture_stress(soil%theta, & 
-                                                  lctlib%lambda_soil_ps, &
-                                                  lctlib%weibull_k_soil_ps)
-   veg%beta_soil_gs = calc_soil_moisture_stress(soil%theta, &
-                                                  lctlib%lambda_soil_gs, &
-                                                  lctlib%weibull_k_soil_gs)
+   veg%beta_air%ptr     = calc_atm_moisture_stress( t_air                   , &
+                                                    q_air                   , &
+                                                    press_srf) 
+   veg%beta_soil_ps%ptr = calc_soil_moisture_stress(soil%theta              , & 
+                                                    lctlib%lambda_soil_ps   , &
+                                                    lctlib%weibull_k_soil_ps)
+   veg%beta_soil_gs%ptr = calc_soil_moisture_stress(soil%theta              , &
+                                                    lctlib%lambda_soil_gs   , &
+                                                    lctlib%weibull_k_soil_gs)
 
    !> 2.0 calculate photosynthesis per layer
    !! 
    DO icanop = 1,ncanop
-      IF(veg%lai_cl(icanop) > eps8)THEN
+      IF(veg%lai_cl%ptr(icanop,1) > eps8)THEN
 
-        CALL calc_photosynthesis(t_air                        , &
-                                 press_srf                    , &
-                                 co2_mixing_ratio             , &
-                                 ga                           , & 
-                                 veg%par_sunlit_cl(icanop)  , &
-                                 veg%par_shaded_cl(icanop)  , & 
-                                 veg%fleaf_sunlit_cl(icanop), &
-                                 veg%beta_air               , &
-                                 veg%beta_soil_ps           , &
-                                 veg%beta_soil_gs           , &
-                                 veg%fnl_chl_cl(icanop)     , & 
-                                 veg%fnl_et_cl(icanop)      , & 
-                                 veg%fnl_rub_cl(icanop)     , & 
-                                 veg%fnl_pepc_cl(icanop)    , & 
-                                 veg%nl_tot_cl(icanop)      , & 
-                                 lctlib%ps_pathway            , &
-                                 veg%t_jmax_opt_mavg        , &
-                                 lctlib%t_jmax_omega          , &
-                                 lctlib%g0                    , &
-                                 lctlib%g1                    , &
+        CALL calc_photosynthesis(t_air                            , &   ! in
+                                 press_srf                        , &   ! in
+                                 co2_mixing_ratio                 , &   ! in
+                                 ga                               , &   ! in
+                                 veg%par_sunlit_cl%ptr(icanop,1)  , &   ! in
+                                 veg%par_shaded_cl%ptr(icanop,1)  , &   ! in
+                                 veg%fleaf_sunlit_cl%ptr(icanop,1), &   ! in
+                                 veg%beta_air%ptr                 , &   ! in
+                                 veg%beta_soil_ps%ptr             , &   ! in
+                                 veg%beta_soil_gs%ptr             , &   ! in
+                                 veg%fnl_chl_cl%ptr(icanop,1)     , &   ! in
+                                 veg%fnl_et_cl%ptr(icanop,1)      , &   ! in
+                                 veg%fnl_rub_cl%ptr(icanop,1)     , &   ! in
+                                 veg%fnl_pepc_cl%ptr(icanop,1)    , &   ! in
+                                 veg%nl_tot_cl%ptr(icanop,1)      , &   ! in
+                                 lctlib%ps_pathway                , &   ! in
+                                 veg%t_jmax_opt_mavg%ptr          , &   ! in
+                                 lctlib%t_jmax_omega              , &   ! in
+                                 lctlib%g0                        , &   ! in
+                                 lctlib%g1                        , &   ! in
                                  assimi%agl%ptr                   , &   ! out
                                  assimi%anl%ptr                   , &   ! out
                                  assimi%rl%ptr                    , &   ! out
                                  assimi%gsl%ptr                   , &   ! out
                                  assimi%cil%ptr                   , &   ! out
-                                 hlp1,hlp1,hlp1)
+                                 hlp1, hlp1, hlp1)                      ! out
 
-        veg%gpp = veg%gpp + assimi%agl%ptr * veg%lai_cl(icanop) 
+        veg%gpp = veg%gpp + assimi%agl%ptr * veg%lai_cl%ptr(icanop,1)
 
         IF(assimi%agl%ptr > eps8) THEN
            hlp1          = discrimination_ps(assimi%cil%ptr     , &
                                              co2_mixing_ratio   , &
                                              'C13'              , &
                                              lctlib%ps_pathway)
-           veg%gpp_C13 = veg%gpp_C13 + assimi%agl%ptr * veg%lai_cl(icanop) * calc_fractionation(co2_mixing_ratio  , &
+           veg%gpp_C13 = veg%gpp_C13 + assimi%agl%ptr * veg%lai_cl%ptr(icanop,1) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C13 , &
                                                                                                    hlp1)
            hlp1          = discrimination_ps(assimi%cil%ptr     , &
                                              co2_mixing_ratio   , &
                                              'C14'              , &
                                              lctlib%ps_pathway)
-           veg%gpp_C14 = veg%gpp_C14 + assimi%agl%ptr * veg%lai_cl(icanop) * calc_fractionation(co2_mixing_ratio  , &
+           veg%gpp_C14 = veg%gpp_C14 + assimi%agl%ptr * veg%lai_cl%ptr(icanop,1) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C14 , & 
                                                                                                    hlp1                 , &
                                                                                                    scale_correction_C14)
         ENDIF
 
-        veg%an                      = veg%an + assimi%anl%ptr * veg%lai_cl(icanop) 
-        veg%maint_respiration_leaf  = veg%maint_respiration_leaf + assimi%rl%ptr * veg%lai_cl(icanop) 
-        veg%gc                      = veg%gc + assimi%gsl%ptr * veg%lai_cl(icanop)
-        veg%ci                      = veg%ci + assimi%cil%ptr * veg%lai_cl(icanop)
+        veg%an                      = veg%an + assimi%anl%ptr * veg%lai_cl%ptr(icanop,1) 
+        veg%maint_respiration_leaf  = veg%maint_respiration_leaf + assimi%rl%ptr * veg%lai_cl%ptr(icanop,1) 
+        veg%gc                      = veg%gc + assimi%gsl%ptr * veg%lai_cl%ptr(icanop,1)
+        veg%ci                      = veg%ci + assimi%cil%ptr * veg%lai_cl%ptr(icanop,1)
 
         ! get the net photosynthesis of the lowest canopy layer at this timestep
-        IF(veg%lai_cl(icanop) > 0.0_wp) veg%an_boc = assimi%anl%ptr
+        IF(veg%lai_cl%ptr(icanop,1) > 0.0_wp) veg%an_boc%ptr = assimi%anl%ptr
      ENDIF
   ENDDO
 
   ! ci
-  IF(veg%lai>eps8) veg%ci = veg%ci / veg%lai
+  IF(veg%lai%ptr > eps8) veg%ci = veg%ci / veg%lai
 
   ! t_jmax_opt
   IF(assimi_config%flag_t_jmax_acclimation) THEN 
-     veg%t_jmax_opt = t_jmax_offset + t_jmax_slope * ( t_air - TZero ) 
-     veg%t_jmax_opt = MIN(MAX(veg%t_jmax_opt,t_jmax_opt_min),t_jmax_opt_max)
+     veg%t_jmax_opt%ptr = t_jmax_offset + t_jmax_slope * ( t_air - TZero ) 
+     veg%t_jmax_opt%ptr = MIN(MAX(veg%t_jmax_opt%ptr,t_jmax_opt_min),t_jmax_opt_max)
   ELSE 
-     veg%t_jmax_opt = lctlib%t_jmax_opt
+     veg%t_jmax_opt%ptr = lctlib%t_jmax_opt
   ENDIF
 
   END SUBROUTINE update_canopy_fluxes
@@ -524,7 +542,7 @@ CONTAINS
     REAL(wp),INTENT(in) :: theta       !< soil plant available water (%)
     REAL(wp),INTENT(in) :: lambda      !< slope parameter of Weibull function
     REAL(wp),INTENT(in) :: weibull_k   !< shape parameter of Weibull function
-    REAL(wp) :: beta                   !< plant\%beta_soil_ps / plant\%beta_soil_gs
+    REAL(wp) :: beta                   !< veg\%beta_soil_ps / veg\%beta_soil_gs
 
     !> 1.0 Moisture stress now as a Weibull function to avoid MIN/MAX statements
     !!
@@ -577,5 +595,78 @@ CONTAINS
     END SELECT
 
   END FUNCTION discrimination_ps
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> set all vegetation fluxes to zero
+  !! 
+  !! called in the land model interface prior to all Tasks
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE set_zero_vegetation_fluxes(tile)
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    TYPE(t_slm_tile),INTENT(inout)      :: tile           !< one tile
+    ! 0.2 Local
+    REAL(wp) :: flux_zero
+    ! 0.3 Memory allocation
+    TYPE(t_veg_memory), POINTER         :: veg__mem   ! dsl4jsb_Def_memory(VEG_)
+    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    SELECT TYPE (mm => tile%mem(VEG_)%p)              ! dsl4jsb_Get_memory(VEG_)
+      TYPE IS(t_veg_memory)
+        veg__mem => mm
+    END SELECT
+    veg => veg__mem 
+
+    flux_zero = 0.0_wp
+
+
+    ! t_slm_struct_veg_element
+    CALL veg%reserve_use%init(flux_zero)
+    CALL veg%establishment%init(flux_zero)
+    ! t_slm_struct_veg_pool
+    CALL veg%growth%init(flux_zero)
+    CALL veg%litterfall%init(flux_zero)
+    ! variables
+    CALL veg%gpp%init(flux_zero)                           !< gross photosynthesis (µmol CO2 m-2 s-1)
+    CALL veg%an%init(flux_zero)                            !< net photosynthesis (µmol CO2 m-2 s-1)
+    CALL veg%gpp_c13%init(flux_zero)                       !< gross photosynthesis (µmol 13CO2 m-2 s-1)
+    CALL veg%gpp_c14%init(flux_zero)                       !< gross photosynthesis (µmol 14CO2 m-2 s-1)
+    CALL veg%maint_respiration_leaf%init(flux_zero)        !< foliar maintenance respiration (µmol CO2 m-2 s-1)
+    CALL veg%maint_respiration_pot%init(flux_zero)         !< maintenance respiration (µmol CO2 m-2 s-1)
+    CALL veg%maint_respiration%init(flux_zero)             !< maintenance respiration (µmol CO2 m-2 s-1)
+    CALL veg%maint_respiration_c13%init(flux_zero)         !< maintenance respiration (µmol 13CO2 m-2 s-1)
+    CALL veg%maint_respiration_c14%init(flux_zero)         !< maintenance respiration (µmol 14CO2 m-2 s-1)
+    CALL veg%growth_respiration%init(flux_zero)            !< growth respiration (µmol CO2 m-2 s-1)
+    CALL veg%growth_respiration_c13%init(flux_zero)        !< growth respiration (µmol 13CO2 m-2 s-1)
+    CALL veg%growth_respiration_c14%init(flux_zero)        !< growth respiration (µmol 14CO2 m-2 s-1)
+    CALL veg%n_transform_respiration%init(flux_zero)       !< respiration associated with N transformation (µmol CO2 m-2 s-1)
+    CALL veg%n_fixation_respiration%init(flux_zero)        !< respiration associated with N fixation (µmol CO2 m-2 s-1)
+    CALL veg%n_processing_respiration%init(flux_zero)      !< respiration associated with N fixation (µmol CO2 m-2 s-1)
+    CALL veg%n_processing_respiration_c13%init(flux_zero)  !< respiration associated with N fixation (µmol 13CO2 m-2 s-1)
+    CALL veg%n_processing_respiration_c14%init(flux_zero)  !< respiration associated with N fixation (µmol 14CO2 m-2 s-1)
+    CALL veg%npp%init(flux_zero)                           !< net primary production (µmol CO2 m-2 s-1)
+    CALL veg%npp_c13%init(flux_zero)                       !< net primary production (µmol 13CO2 m-2 s-1)
+    CALL veg%npp_c14%init(flux_zero)                       !< net primary production (µmol 14CO2 m-2 s-1)
+    CALL veg%uptake_n%init(flux_zero)                      !< ??
+    CALL veg%uptake_n15%init(flux_zero)                    !< ??
+    CALL veg%n_fixation%init(flux_zero)                    !< ??
+    CALL veg%n_fixation_n15%init(flux_zero)                !< ??
+    CALL veg%uptake_p%init(flux_zero)                      !< ??
+    CALL veg%recycling_leaf_n%init(flux_zero)              !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
+    CALL veg%recycling_leaf_n15%init(flux_zero)            !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    CALL veg%recycling_leaf_p%init(flux_zero)              !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
+    CALL veg%recycling_fine_root_n%init(flux_zero)         !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
+    CALL veg%recycling_fine_root_n15%init(flux_zero)       !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    CALL veg%recycling_fine_root_p%init(flux_zero)         !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
+    CALL veg%recycling_sap_wood_n%init(flux_zero)          !< net flux of N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
+    CALL veg%recycling_sap_wood_n15%init(flux_zero)        !< net flux of 15N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    CALL veg%recycling_sap_wood_p%init(flux_zero)          !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
+    CALL veg%transpiration%init(flux_zero)                 !< transpiration in kg m-2 s-1
+    CALL veg%ci%init(flux_zero)                            !< ??
+    CALL veg%delta_dens_ind%init(flux_zero)                !< ??
+    CALL veg%unit_transpiration%init(flux_zero)            !< ??
+
+  END SUBROUTINE set_zero_vegetation_fluxes
 
 END MODULE mo_assimi_update_canopy_fluxes

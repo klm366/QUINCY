@@ -1,3 +1,6 @@
+mo_jsb_class.o: \
+  mo_base_memory.o  
+
 mo_base_constants.o: \
   mo_kind.o
 
@@ -7,8 +10,7 @@ mo_base_memory.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_process_class.o \
-  mo_shared_memory.o \
-  mo_veg_memory.o
+  mo_shared_memory.o
 
 mo_base_util.o: \
   mo_kind.o
@@ -57,6 +59,7 @@ mo_jsb_process_factory.o: \
   mo_jsb_config_class.o \
   mo_atm2land_memory_class.o \
   mo_land2atm_memory_class.o \
+  mo_veg_memory_class.o \
   mo_soil_memory_class.o \
   mo_rad_memory_class.o \
   mo_assimi_memory_class.o
@@ -65,6 +68,7 @@ mo_jsb_model_init.o: \
   mo_kind.o \
   mo_exception.o \
   mo_base_constants.o \
+  mo_jsb_class.o \
   mo_base_memory.o \
   mo_base_config_class.o \
   mo_jsb_lctlib_class.o \
@@ -80,7 +84,8 @@ mo_jsb_model_init.o: \
   mo_assimi_constants.o \
   mo_assimi_update_canopy_fluxes.o \
   mo_veg_constants.o \
-  mo_veg_config_class.o
+  mo_veg_config_class.o \
+  mo_veg_memory_class.o
 
   mo_jsb_io.o: \
   mo_kind.o \
@@ -90,6 +95,8 @@ mo_jsb_model_init.o: \
   mo_kind.o \
   mo_exception.o \
   mo_base_constants.o \
+  mo_base_memory.o \
+  mo_jsb_class.o \
   mo_jsb_var_class.o \
   mo_jsb_memory_class.o
 

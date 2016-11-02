@@ -20,6 +20,8 @@ mo_atmland_interface.o: \
 mo_land2atm_memory_class.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_base_memory.o \
+  mo_jsb_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_var_class.o \
   mo_slm_varlist.o

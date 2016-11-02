@@ -1,5 +1,6 @@
 mo_veg_interface.o: \
   mo_kind.o \
+  mo_veg_memory_class.o \
   mo_veg_phenology.o \
   mo_veg_growth.o \
   mo_veg_turnover.o \
@@ -7,17 +8,22 @@ mo_veg_interface.o: \
   mo_veg_update_veg_pools.o \
   mo_veg_soil.o
 
-mo_veg_memory.o: \
+mo_veg_memory_class.o: \
   mo_kind.o \
-  mo_base_constants.o \
+  mo_exception.o \
   mo_atmland_constants.o \
-  mo_shared_memory.o
+  mo_base_memory.o \
+  mo_jsb_class.o \
+  mo_jsb_memory_class.o \
+  mo_jsb_var_class.o \
+  mo_slm_varlist.o
 
 mo_veg_growth.o: \
   mo_kind.o \
   mo_exception.o \
   mo_base_constants.o \
   mo_base_memory.o \
+  mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_atm2land_memory_class.o \
@@ -25,7 +31,7 @@ mo_veg_growth.o: \
   mo_shared_constants.o \
   mo_assimi_constants.o \
   mo_veg_config_class.o \
-  mo_veg_memory.o \
+  mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_canopy.o \
   mo_veg_respiration.o
@@ -38,13 +44,14 @@ mo_veg_soil.o: \
   mo_kind.o \
   mo_base_memory.o \
   mo_base_constants.o \
+  mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_atm2land_memory_class.o \
   mo_land2atm_memory_class.o \
   mo_atmland_util.o \
   mo_shared_constants.o \
-  mo_veg_memory.o \
+  mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_config_class.o
 
@@ -52,11 +59,12 @@ mo_veg_phenology.o: \
   mo_kind.o \
   mo_base_constants.o \
   mo_base_memory.o \
+  mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_shared_constants.o \
   mo_jsb_process_class.o \
   mo_atm2land_memory_class.o \
-  mo_veg_memory.o \
+  mo_veg_memory_class.o \
   mo_veg_constants.o 
 
 mo_veg_turnover.o: \
@@ -64,15 +72,18 @@ mo_veg_turnover.o: \
   mo_exception.o \
   mo_base_memory.o \
   mo_base_constants.o \
+  mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
   mo_shared_constants.o \
   mo_veg_constants.o \
-  mo_veg_memory.o
+  mo_veg_memory_class.o
 
 mo_veg_output.o: \
   mo_kind.o \
   mo_base_memory.o \
   mo_base_constants.o \
+  mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_model_init.o \
   mo_jsb_process_class.o \
@@ -80,7 +91,7 @@ mo_veg_output.o: \
   mo_land2atm_memory_class.o \
   mo_shared_isotope.o \
   mo_assimi_config_class.o \
-  mo_veg_memory.o \
+  mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_config_class.o
 
@@ -95,10 +106,11 @@ mo_veg_dynamics.o: \
   mo_kind.o \
   mo_base_memory.o \
   mo_base_constants.o \
+  mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_shared_constants.o \
-  mo_veg_memory.o \
+  mo_veg_memory_class.o \
   mo_veg_config_class.o \
   mo_veg_constants.o
 
@@ -110,28 +122,29 @@ mo_veg_update_veg_pools.o: \
   mo_base_memory.o \
   mo_base_constants.o \
   mo_base_config_class.o \
+  mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_shared_constants.o \
   mo_veg_canopy.o \
-  mo_veg_memory.o \
+  mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_growth.o
 
 mo_veg_canopy.o: \
   mo_kind.o \
   mo_exception.o \
-  mo_base_memory.o \
   mo_base_constants.o \
   mo_base_config_class.o \
   mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
   mo_atmland_util.o \
   mo_shared_constants.o \
   mo_assimi_config_class.o \
   mo_assimi_constants.o \
   mo_assimi_update_canopy_fluxes.o \
   mo_veg_constants.o \
-  mo_veg_memory.o \
+  mo_veg_memory_class.o \
   mo_veg_respiration.o
 
 mo_veg_constants.o: \

@@ -14,12 +14,13 @@ mo_shared_isotope.o: \
 mo_shared_time_averages.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_jsb_class.o \
   mo_jsb_process_class.o \
   mo_jsb_lctlib_class.o \
   mo_shared_constants.o \
   mo_base_constants.o \
   mo_base_memory.o \
-  mo_veg_memory.o \
+  mo_veg_memory_class.o \
   mo_atm2land_memory_class.o
 
 mo_shared_set_parameters.o: \

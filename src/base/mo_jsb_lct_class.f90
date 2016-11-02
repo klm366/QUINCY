@@ -26,7 +26,7 @@ MODULE mo_jsb_lct_class
 
   ENUM, BIND(C)
     ENUMERATOR ::      &
-      & LAND_TYPE,     & !< Land lct to specify tile that computes the implicit surface energy balance
+      & LAND_TYPE = 1, & !< Land lct to specify tile that computes the implicit surface energy balance
       & VEG_TYPE,      & !< Vegetated
       & BARE_TYPE,     & !< Bare soil
       & GLACIER_TYPE,  & !< Glacier
@@ -45,11 +45,9 @@ MODULE mo_jsb_lct_class
 !!$    PROCEDURE :: Contains
   END TYPE t_jsb_lct
 
-!+ note (Jan 20160615): currently not compatible with our Intel compiler, but works with gfortran 5.3.1 20160528
-!+ 
-!+  INTERFACE t_jsb_lct
-!+    PROCEDURE Construct_jsb_lct
-!+  END INTERFACE
+  INTERFACE t_jsb_lct
+    PROCEDURE Construct_jsb_lct
+  END INTERFACE
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_lct_class'
 

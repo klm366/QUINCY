@@ -12,9 +12,6 @@ MODULE mo_veg_interface
 
   USE mo_kind
 
-! necessary ?
-!  USE mo_base_memory,           ONLY: t_slm_soil, t_slm_tile
-!  USE mo_veg_parameters,        ONLY: t_slm_veg_param
 
 ! Tasks 
   USE mo_veg_phenology,         ONLY: update_phenology
