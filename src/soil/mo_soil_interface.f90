@@ -17,6 +17,8 @@ MODULE mo_soil_interface
 
   USE mo_jsb_model_class, ONLY: t_jsb_model
   USE mo_jsb_class,       ONLY: Get_model
+  USE mo_jsb_grid_class,  ONLY: t_jsb_grid
+  USE mo_jsb_grid,        ONLY: Get_grid
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile
   USE mo_jsb_control,     ONLY: debug_on
 
@@ -31,7 +33,7 @@ MODULE mo_soil_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: update_soil_1, update_soil_2
+  PUBLIC :: update_soil_1, update_soil_2, check_water_balance
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_interface'
 
@@ -319,6 +321,98 @@ CONTAINS
 
 
   END SUBROUTINE update_soil_2
+
+  SUBROUTINE check_water_balance( tile, iblk, ics, ice, nc, steplen)
+
+    USE mo_srf_constants, ONLY: rhoh2o
+
+    TYPE(t_jsb_tile),  POINTER    :: tile
+    INTEGER,           INTENT(in) :: iblk, ics, ice, nc
+    REAL(wp),          INTENT(in) :: steplen
+
+    ! Local variables
+    !
+    TYPE(t_jsb_model), POINTER    :: model
+    TYPE(t_jsb_grid),  POINTER    :: grid
+
+    dsl4jsb_Def_memory(SOIL)
+    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(VEG)
+    dsl4jsb_Def_memory(ATM2LAND)
+
+    ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: &
+      & land, &
+      & glacier, &
+      & rain, &
+      & snow, &
+      & runoff, &
+      & drainage, &
+      & evapotrans, &
+      & pme_glacier, &
+      & ws, &
+      & wsr_srf, &
+      & wsn_srf, &
+      & wsn_glacier, &
+      & fract, &
+      & water_flux, &    ! [m3 s-1]
+      & water_content, & ! [m3]
+      & water_budget     ! [m3]
+
+    REAL(wp), POINTER :: &
+      & area(:)
+
+    ! Locally allocated vectors
+    !
+    REAL(wp) :: &
+      water_content_new(nc)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':check_water_balance'
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    area => grid%area (ics:ice, iblk)
+
+    dsl4jsb_Get_memory(SOIL)
+    dsl4jsb_Get_memory(SRF)
+    dsl4jsb_Get_memory(VEG)
+    dsl4jsb_Get_memory(ATM2LAND)
+
+    dsl4jsb_Get_var2D_onChunk(SRF,      land,          IN)
+    dsl4jsb_Get_var2D_onChunk(SRF,      glacier,       IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, rain,          IN)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND, snow,          IN)
+    dsl4jsb_Get_var2D_onChunk(SOIL,     runoff,        IN)
+    dsl4jsb_Get_var2D_onChunk(SOIL,     drainage,      IN)
+    dsl4jsb_Get_var2D_onChunk(SOIL,     pme_glacier,   IN)
+    dsl4jsb_Get_var2D_onChunk(SOIL,     ws,            IN)
+    dsl4jsb_Get_var2D_onChunk(SRF,      evapotrans,    IN)
+    dsl4jsb_Get_var2D_onChunk(SRF,      wsr_srf,       IN)
+    dsl4jsb_Get_var2D_onChunk(SRF,      wsn_srf,       IN)
+    dsl4jsb_Get_var2D_onChunk(SRF,      wsn_glacier,   IN)
+    dsl4jsb_Get_var2D_onChunk(SOIL,     water_flux,    OUT)
+    dsl4jsb_Get_var2D_onChunk(SOIL,     water_content, INOUT)
+    dsl4jsb_Get_var2D_onChunk(SOIL,     water_budget,  OUT)
+
+    water_content_new(:) = 0._wp
+
+    WHERE (glacier > 0.5_wp)
+      water_flux(:) = rain(:) + snow(:) + evapotrans(:) - pme_glacier(:)  ! should be P-E = R => P-E-R = 0
+      water_content_new(:) = 0._wp                                        ! water content on glaciers only diagnostic
+    ELSE WHERE
+      water_flux(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
+      water_content_new(:) = (wsr_srf(:) + wsn_srf(:) + ws(:)) * land(:) * area(:)  ! m -> m^3
+    END WHERE
+    water_flux(:) = water_flux(:) * land(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
+
+    water_budget(:) = (water_content_new(:) - water_content(:)) - water_flux(:) * steplen
+
+    water_content(:) = water_content_new(:)
+
+  END SUBROUTINE check_water_balance
 
 #endif
 END MODULE mo_soil_interface

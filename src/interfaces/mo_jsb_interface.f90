@@ -63,7 +63,7 @@ CONTAINS
     USE mo_srf_interface,     ONLY: update_surface_radiation, update_snow_and_skin_fraction, &
                                     update_surface_energy, update_surface_fluxes, update_t_srf_asselin, &
                                     update_humidity_scaling, update_roughness
-    USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2
+    USE mo_soil_interface,    ONLY: update_soil_1, update_soil_2, check_water_balance
 
     USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
 
@@ -231,6 +231,9 @@ CONTAINS
 
     ! Apply Asselin time filter for surface temperature (t_srf)
     CALL update_t_srf_asselin(tile, iblk, ics, ice, nc)
+
+    ! Water balance check
+    CALL check_water_balance(tile, iblk, ics, ice, nc, steplen)
 
     ! Finally, give the required variables back to the atmosphere
     ! Note: evapopot is an optional parameter, so it has to be passed without the colon!

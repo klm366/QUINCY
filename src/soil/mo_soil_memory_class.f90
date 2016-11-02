@@ -90,7 +90,10 @@ MODULE mo_soil_memory_class
       & pme_glacier    , & !< P-E on glaciers
       & discharge      , & !< discharge (local)
       & discharge_ocean, & !< discharge to the ocean
-      & internal_drain     !< internal drain
+      & internal_drain,  & !< internal drain
+      & water_flux,      & !< total water flux
+      & water_content,   & !< total water content
+      & water_budget       !< Water budget error
   CONTAINS
     PROCEDURE :: Init => Init_soil_memory
   END TYPE t_soil_memory
@@ -336,6 +339,24 @@ CONTAINS
       CALL jsb_add_var( mem, prefix//'internal_drain'//suffix, mem%internal_drain,           &
         & hgrid, surface,                                                                    &
         & t_cf('internal_drain', 'm3 s-1', 'internal drainage'),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, prefix//'water_flux'//suffix, mem%water_flux,                   &
+        & hgrid, surface,                                                                    &
+        & t_cf('water_flux', 'm3 s-1', 'total water flux'),                                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, prefix//'water_content'//suffix, mem%water_content,             &
+        & hgrid, surface,                                                                    &
+        & t_cf('water_content', 'm3', 'total water content'),                                &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, prefix//'water_budget'//suffix, mem%water_budget,               &
+        & hgrid, surface,                                                                    &
+        & t_cf('water_budget', 'm3', 'water budget error'),                                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & initval_r=0.0_wp )
 

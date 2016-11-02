@@ -171,9 +171,9 @@ CONTAINS
       & initval_r=0.0_wp )
 
     ! It would be sufficient to store just one grid point
-    CALL jsb_add_var( mem, prefix//'water_budget'//suffix, mem%water_budget,             &
+    CALL jsb_add_var( mem, prefix//'water_budget_hd'//suffix, mem%water_budget,          &
       & hgrid, surface,                                                                  &
-      & t_cf('water_budget', 'm3', 'global water budget'),                               &
+      & t_cf('water_budget_hd', 'm3', 'global water budget'),                            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & initval_r=0.0_wp )
 
