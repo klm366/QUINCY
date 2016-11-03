@@ -265,7 +265,7 @@ CONTAINS
     CALL model%Queue_task(VEG_,    "foliage_projected_cover")
     CALL model%Queue_task(PHENO_,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
                                                            ! but in JSBACH3 it was here at the end...
-    
+    CALL model%Queue_task(HYDRO_,  "water_balance")
     CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
     CALL print_model(model)
     CALL model%Print_actions()

@@ -37,9 +37,12 @@ MODULE mo_hydro_memory_class
       & w_snow              !< Water content of snow reservoir                                         [m water equivalent]
 
     TYPE(t_jsb_var_real2d) :: &
-      & snowmelt,         & !< Snow melt                                                               [kg m-2 s-1]
-      & evapopot,         & !< Potential evaporation                                                   [kg m-2 s-1]
-      & evapotranspiration  !< Evapotranspiration                                                      [kg m-2 s-1]
+      & snowmelt,            & !< Snow melt                                                            [kg m-2 s-1]
+      & evapopot,            & !< Potential evaporation                                                [kg m-2 s-1]
+      & evapotranspiration,  &!< Evapotranspiration                                                    [kg m-2 s-1]
+      & water_flux,          & ! Total water flux                                                      [m3/s]
+      & water_content,       & ! Total water content                                                   [m3]
+      & water_budget           ! Water budget error                                                    [m3]
 
     TYPE(t_jsb_var_real2d) :: &
       & runoff,           & !< surface runoff
@@ -231,6 +234,27 @@ CONTAINS
       & hgrid, surface,                                                                  &
       & t_cf('tte_correction_snowmelt', 'K s-1', ''),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+      & prefix, suffix,                                                              &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'water_flux', mem%water_flux,                             &
+      & hgrid, surface,                                                              &
+      & t_cf('water_flux', 'm3 s-1', 'total water flux'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'water_content', mem%water_content,                       &
+      & hgrid, surface,                                                              &
+      & t_cf('water_content', 'm3', 'total water content'),                          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'water_budget', mem%water_budget,                         &
+      & hgrid, surface,                                                              &
+      & t_cf('water_budget', 'm3', 'water budget error'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 

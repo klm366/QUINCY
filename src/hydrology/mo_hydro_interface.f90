@@ -23,6 +23,8 @@ MODULE mo_hydro_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
+  USE mo_jsb_grid,           ONLY: Get_grid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_lct_class,      ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE, BARE_TYPE, VEG_TYPE, Contains_lct
   USE mo_jsb_config_class,   ONLY: t_jsb_config
@@ -94,6 +96,18 @@ MODULE mo_hydro_interface
     PROCEDURE Create_task_snow_and_skin_fraction                       !< Constructor function for task
   END INTERFACE tsk_snow_and_skin_fraction
 
+  !> Type definition for water_balance task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_water_balance
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_water_balance
+    PROCEDURE, NOPASS :: Aggregate => aggregate_water_balance
+  END TYPE tsk_water_balance
+
+  !> Constructor interface for water balance task
+  INTERFACE tsk_water_balance
+    PROCEDURE Create_task_water_balance
+  END INTERFACE tsk_water_balance
+
 CONTAINS
 
   ! ================================================================================================================================
@@ -157,6 +171,25 @@ CONTAINS
   END FUNCTION Create_task_snow_and_skin_fraction
 
   ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for water_balance task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "water_balance"
+  !!
+  FUNCTION Create_task_water_balance(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_water_balance::return_ptr)
+
+    return_ptr%name = 'water_balance'
+    return_ptr%process_id = HYDRO_
+    return_ptr%owner_model_id = model_id
+
+  END FUNCTION Create_task_water_balance
+  
+  ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for hydrology process
   !!
   !! @param[in]     model_id  Model id
@@ -170,6 +203,7 @@ CONTAINS
     CALL process%Register_task(tsk_evaporation (model_id))
     !CALL process%Register_task(tsk_snow_and_ice_hydrology (model_id))
     CALL process%Register_task(tsk_snow_and_skin_fraction (model_id))
+    CALL process%Register_task(tsk_water_balance (model_id))
 
   END SUBROUTINE Register_hydro_tasks
   
@@ -675,6 +709,137 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_snow_and_skin_fraction
+
+  SUBROUTINE update_water_balance( tile, options)
+
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Local variables
+    !
+    TYPE(t_jsb_model), POINTER    :: model
+    TYPE(t_jsb_grid),  POINTER    :: grid
+
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(ATM2LAND_)
+
+    ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: &
+      & rain, &
+      & snow, &
+      & runoff, &
+      & drainage, &
+      & evapotranspiration, &
+      & w_soil_column, &
+      & w_skin, &
+      & w_snow, &
+      & water_flux, &    ! [m3 s-1]
+      & water_content, & ! [m3]
+      & water_budget     ! [m3]
+
+    REAL(wp), POINTER :: &
+      & area(:)
+
+    ! Locally allocated vectors
+    !
+    REAL(wp) :: &
+      & tile_fract (options%nc), &
+      & water_content_new(options%nc)
+
+    INTEGER  :: iblk, ics, ice, nc
+    REAL(wp) :: dtime
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_water_balance'
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
+    dtime = options%dtime
+
+    ! IF (tile%lcts() RETURN   ! Check water balance only on root tile
+    IF (tile%lcts(1)%id == LAKE_TYPE) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    area => grid%area (ics:ice, iblk)
+
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(ATM2LAND_)
+
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, rain)                ! in
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, snow)                ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff)              ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    drainage)            ! in
+    IF (tile%lcts(1)%id /= GLACIER_TYPE) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column)       ! in
+    END IF
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotranspiration)  ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_skin)              ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow)              ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_flux)          ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_content)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_budget)        ! out
+
+    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
+
+    water_flux(:) = rain(:) + snow(:) + evapotranspiration(:) - runoff(:) - drainage(:)
+    water_flux(:) = water_flux(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
+
+    IF (tile%lcts(1)%id /= GLACIER_TYPE) THEN
+      water_content_new(:) = (w_skin(:) + w_snow(:) + w_soil_column(:)) * tile_fract(:) * area(:)  ! m -> m^3
+    ELSE
+      water_content_new(:) = 0._wp
+    END IF
+
+    water_budget(:) = (water_content_new(:) - water_content(:)) - water_flux(:) * dtime
+
+    water_content(:) = water_content_new(:)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_water_balance
+
+  SUBROUTINE aggregate_water_balance(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    dsl4jsb_Def_memory(HYDRO_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_water_balance'
+
+    INTEGER :: iblk, ics, ice, nc
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+    nc   = options%nc
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(HYDRO_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_flux,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_content,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_budget,     weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_water_balance
 
 #endif
 END MODULE mo_hydro_interface

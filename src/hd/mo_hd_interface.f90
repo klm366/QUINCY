@@ -630,7 +630,7 @@ CONTAINS
       IF (ABS(water_budget_change/water_budget) > 10._wp*EPSILON(1._wp)) THEN
         WRITE (message_text,*) 'Water conservation problem: budget change: ', &
              water_budget_change,' m3'
-        CALL finish (routine, message_text)
+        CALL finish (TRIM(routine), message_text)
       END IF
     END IF
     IF (diag_water_budget) THEN
