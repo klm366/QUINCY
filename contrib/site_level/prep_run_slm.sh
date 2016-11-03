@@ -18,7 +18,7 @@ experimentalID=""      # set something useful for you (allowed only: alphanumeri
 siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
 customSiteList="F"          # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
-customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
+customSiteListFileName="my_cruncep_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
@@ -370,7 +370,7 @@ if [ $fastNodes == "T" ]
   then
     if [ $queue == "BTM" ] || [ $queue == "io" ]  # BTM or io
       then
-        fN='-m "iof iog ioh ioi ioj"'
+        fN="iof iog ioh ioi ioj"
       else
         echo "Note: the fast nodes [iof iog ioh ioi ioj] are available only for the BTM and io queue. I switch to fastNodes = F."
         fastNodes="F"
@@ -585,17 +585,17 @@ if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
   # compile job array argument 
   jobArray=$(echo "$jobName"[2-"$siteNumber"]%"$numberCpuMax")
   # submit job array starting at 2 because first line is the header
-  if [ fastNodes == "T" ]
+  if [ $fastNodes == "T" ]
     then
-      bsub -q "$queue" "$fN" -M "$memory" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
+      bsub -q "$queue" -m "$fN" -M "$memory" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
     else
       bsub -q "$queue" -M "$memory" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
   fi
  else # job with individual site #
   array="F"   # needed by cleanup_slm_hpc_run.sh
-  if [ fastNodes == "T" ]
+  if [ $fastNodes == "T" ]
     then
-      bsub -q "$queue" "$fN" -M "$memory" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
+      bsub -q "$queue" -m "$fN" -M "$memory" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
     else
       bsub -q "$queue" -M "$memory" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
   fi
