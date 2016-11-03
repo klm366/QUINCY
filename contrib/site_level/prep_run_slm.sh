@@ -67,6 +67,7 @@ soil_theta_prescribe=100.0      # float !
 
 ## details about the HPC, if unsure stick with these default values ##
 queue="BTM"                  # available queues: all io BTM mpi_large
+fastNodes="T"                # if T only the nodes iof iog ioh ioi ioj are used (works only with queue BTM and io) | T (True) or F (False) [large caps]
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000000               # memory per job you may need; provided in Kb (1 Gb == 1000000 Kb)
 numberCpuMax=80              # maximum number of simulations started in parallel
@@ -196,6 +197,7 @@ validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "outp
 validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecificAWC"
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
 validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSimCRUNCEPvsGFDB"
+validateUserConfigValues "$fastNodes" "$validateFlags" "fastNodes"
 
 
 ## apply setting for comparison simulated model results of CRUNCEP sites with Global Forest Data Base ##
@@ -361,6 +363,18 @@ emailSwitch=""
 if [ "$emailNotification" == "yes" ]
   then
     emailSwitch="-N"
+fi
+
+## set fastNodes option for BTM queue ##
+if [ $fastNodes == "T" ]
+  then
+    if [ $queue == "BTM" ] || [ $queue == "io" ]  # BTM or io
+      then
+        fN='-m "iof iog ioh ioi ioj"'
+      else
+        echo "Note: the fast nodes [iof iog ioh ioi ioj] are available only for the BTM and io queue. I switch to fastNodes = F."
+        fastNodes="F"
+    fi
 fi
 
 ## test if namelist binary siteList R-Script (and param.listD + param_table.txt) exists ##
@@ -571,10 +585,20 @@ if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
   # compile job array argument 
   jobArray=$(echo "$jobName"[2-"$siteNumber"]%"$numberCpuMax")
   # submit job array starting at 2 because first line is the header
-  bsub -q "$queue" -M "$memory" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
+  if [ fastNodes == "T" ]
+    then
+      bsub -q "$queue" "$fN" -M "$memory" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
+    else
+      bsub -q "$queue" -M "$memory" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
+  fi
  else # job with individual site #
   array="F"   # needed by cleanup_slm_hpc_run.sh
-  bsub -q "$queue" -M "$memory" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
+  if [ fastNodes == "T" ]
+    then
+      bsub -q "$queue" "$fN" -M "$memory" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
+    else
+      bsub -q "$queue" -M "$memory" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
+  fi
 fi
 
 

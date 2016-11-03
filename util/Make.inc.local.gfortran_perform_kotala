@@ -1,0 +1,9 @@
+# site specific compiler settings
+COMP = x86_64-gfortran
+C_N = gfortran
+M_K = make --no-print-directory
+F_C = $(C_N) -c -cpp -ffree-line-length-0 -march=native
+F_O = -O3 -ffast-math -mpc64 -I../include -I$(MODDIR) -J${MODDIR}
+F_L = $(C_N)
+A_C = ar -r
+A_G = ar -x
