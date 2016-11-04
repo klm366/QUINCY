@@ -16,7 +16,7 @@ MODULE mo_veg_interface
 ! Tasks 
   USE mo_veg_phenology,         ONLY: update_phenology
   USE mo_veg_growth,            ONLY: calc_growth
-  USE mo_veg_turnover,          ONLY: calc_turnover
+  USE mo_veg_turnover,          ONLY: update_veg_turnover
   USE mo_veg_dynamics,          ONLY: update_veg_dynamics
   USE mo_veg_update_veg_pools,  ONLY: update_veg_pools
   USE mo_veg_soil,              ONLY: update_vegsoil_bgc, update_vegsoil_physics, update_vegsoil_pool
@@ -45,7 +45,7 @@ CONTAINS
 
     !> Calculate turnover from tissue aging and senescence
     !! 
-    !CALL calc_turnover(tile%plant,model%lctlib(tile%lcts%lib_id))
+    !CALL update_veg_turnover(tile%plant,model%lctlib(tile%lcts%lib_id))
 
     !> Calculate vegetation dynamics
     !! 

@@ -201,6 +201,7 @@ CONTAINS
                                           veg%pool%reserve                          , &
                                           veg%reserve_use)
 
+    !! @todo veg_growth:calc_nutrient_recycling move to veg_turnover
     CALL calc_nutrient_recycling(veg, target_cn_fine_root, target_np_fine_root)
 
     !> 5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)

@@ -1366,9 +1366,9 @@ CONTAINS
       !! slm_add_var -> slm_add_var_list_element_r1d    *slmtemp 1D -> 2D
       !!                slm_add_var_list_element_l1d
       !!  
-      CALL slm_add_var(mem, 'veg_growing_season', mem%growing_season, &
-            initval_r=.TRUE.)     ! initvalue 
-
+      CALL slm_add_var(mem, 'growing_season', mem%growing_season, &
+            initval_r=.TRUE.) ! initvalue
+  
       CALL slm_add_var(mem, 'height', mem%height, &
             initval_r=0.0_wp) ! initvalue
   
@@ -1827,6 +1827,7 @@ CONTAINS
   
       CALL slm_add_var(mem, 't_jmax_opt_mavg', mem%t_jmax_opt_mavg, &
             initval_r=17.0_wp) ! initvalue
+
       !> simple TYPE (t_jsb_struct)
       !! 
       !! slm_add_var -> slm_add_struct()
