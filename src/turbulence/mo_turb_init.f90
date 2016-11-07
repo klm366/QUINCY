@@ -18,9 +18,6 @@ MODULE mo_turb_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
-#ifndef __NO_JSBACH_HD__
-  USE mo_impl_constants,    ONLY: LAND_BOUNDARY, SEA_BOUNDARY, SEA
-#endif
 
   dsl4jsb_Use_processes TURB_
   dsl4jsb_Use_config(TURB_)
