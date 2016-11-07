@@ -153,12 +153,6 @@ CONTAINS
 
       DEALLOCATE (inflow)
 
-    CASE ('weighted_to_coast', 'weighted_to_ocean', 'equally_to_coast', 'equally_to_ocean')
-      !
-      ! dummy version of HD model
-      !
-      discharge(:) = land(:) * (runoff(:) + drainage(:) + pme_glacier(:))
-
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
       CALL finish(TRIM(routine), message_text)
@@ -198,7 +192,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: &
       & land,                  &
       & hd_mask,               &
-      & coast_ocean,           &
       & outflow_runoff,        &
       & outflow_drainage,      &
       & outflow_rivers,        &
@@ -264,7 +257,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HD, bidx_upstream,    IN)
 
     dsl4jsb_Get_var2D_onDomain(SRF, land,        IN)
-    dsl4jsb_Get_var2D_onDomain(SRF, coast_ocean, IN)
 
     dsl4jsb_Get_var2D_onDomain(SOIL, discharge,       OUT)
     dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean, OUT)
@@ -387,22 +379,6 @@ CONTAINS
         WRITE (message_text,*) 'discharge to ocean now : ', global_discharge_ocean, ' m3/s'
         CALL message (routine, message_text)
       END IF
-
-    CASE ('weighted_to_coast')
-
-      ! Dummy discharge: the discharge is equally distributed to all coastal ocean cells
-
-      global_discharge = global_sum_array(discharge(:,:)*land(:,:)*area(:,:)*in_domain(:,:))
-
-      ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
-      cos_lat(:,:) = MERGE(COS(grid%lat(:,:)), 0._wp, coast_ocean(:,:) == 1._wp)
-      sum_weights = global_sum_array(coast_ocean(:,:)*cos_lat(:,:)*area(:,:)*in_domain(:,:))
-      WHERE (coast_ocean(:,:) == 1._wp)
-        discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
-      ELSEWHERE
-        discharge_ocean(:,:) = 0._wp
-      END WHERE
-      discharge(:,:) = 0._wp
 
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
