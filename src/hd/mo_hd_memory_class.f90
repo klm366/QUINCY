@@ -35,7 +35,8 @@ MODULE mo_hd_memory_class
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
-      water_budget
+      water_budget    , &
+      outflow_resid        !< residual outflow that's not routed to discharge - only used for debugging (see mo_hd_interface.f90)
 
     TYPE(t_jsb_var_real3d) :: &
       nidx_upstream,          &  !< 1st dim. of local index of grid cell upstream (nproma)
@@ -145,6 +146,12 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
       & initval_r=0.0_wp )
 
+    CALL jsb_add_var( mem, prefix//'outflow_resid'//suffix, mem%outflow_resid,              &
+      & hgrid, surface,                                                                       &
+      & t_cf('outflow_resid', 'm3/s', 'grid cell outflow residual'),                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+      & initval_r=0.0_wp )
+
     CALL jsb_add_var( mem, prefix//'overlflow_res'//suffix, mem%overlflow_res,   &
       & hgrid, hd_o,                                                                     &
       & t_cf('overlflow_res', '', 'content of the overland flow reservoir'),             &
@@ -164,9 +171,9 @@ CONTAINS
       & initval_r=0.0_wp )
 
     ! It would be sufficient to store just one grid point
-    CALL jsb_add_var( mem, prefix//'water_budget'//suffix, mem%water_budget,             &
+    CALL jsb_add_var( mem, prefix//'water_budget_hd'//suffix, mem%water_budget,          &
       & hgrid, surface,                                                                  &
-      & t_cf('water_budget', 'm3', 'global water budget'),                               &
+      & t_cf('water_budget_hd', 'm3', 'global water budget'),                            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & initval_r=0.0_wp )
 
