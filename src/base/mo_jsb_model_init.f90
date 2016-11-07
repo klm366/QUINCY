@@ -386,8 +386,6 @@ CONTAINS
         END IF
       END DO
 
-      CALL tile%Print()
-
       tile => model%Goto_next_tile()
 
     END DO
