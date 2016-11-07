@@ -25,7 +25,7 @@ MODULE mo_hydro_memory_class
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40
+  INTEGER, PARAMETER :: max_no_of_vars = 60
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
