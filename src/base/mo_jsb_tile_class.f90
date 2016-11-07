@@ -85,6 +85,8 @@ MODULE mo_jsb_tile_class
     PROCEDURE                              :: Set_fract_max_ptr
     PROCEDURE                              :: Set_fract_max_old_ptr
     !PROCEDURE                              :: Get_fractions_max
+    PROCEDURE                              :: Get_first_child_tile
+    PROCEDURE                              :: Get_next_sibling_tile
     PROCEDURE(Init_interface),    DEFERRED :: Init
     PROCEDURE(Print_interface),   DEFERRED :: Print
     PROCEDURE(Handler_interface), DEFERRED :: Handler
@@ -267,6 +269,27 @@ CONTAINS
 
   END SUBROUTINE Add_lct_to_parents
 
+  SUBROUTINE Set_lct_fractions(this, iproc, action)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: this
+    INTEGER,                    INTENT(in)            :: iproc
+    INTEGER,                    INTENT(in)            :: action
+
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_lct_fractions'
+
+    tile => this
+    DO WHILE (ASSOCIATED(tile%parent))
+      SELECT TYPE (parent=>tile%parent)
+      CLASS IS (t_jsb_tile_abstract)
+        parent%process_action(iproc) = action
+        tile => parent
+      END SELECT
+    END DO
+
+  END SUBROUTINE Set_lct_fractions
+
   SUBROUTINE Set_fraction_1d(this, ics, ice, iblk, fract, fract_max, fract_old, fract_max_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
@@ -337,24 +360,27 @@ CONTAINS
       IF (SIZE(fract,1) /= SIZE(this%fract,1) .OR. SIZE(fract,2) /= SIZE(this%fract,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-      this%fract_old(:,:) = this%fract(:,:)
-      this%fract    (:,:) = fract(:,:)
+      IF (ANY(fract(:,:) /= this%fract(:,:))) THEN
 
-      IF (ASSOCIATED(this%parent)) THEN
-        SELECT TYPE (parent=>this%parent)
-        CLASS IS (t_jsb_tile_abstract)
-          WHERE (this%fract(:,:) /= this%fract_old(:,:))
-            parent%l_fract_children_changed(:,:) = .TRUE.
-          END WHERE
-          IF (ANY(parent%l_fract_children_changed(:,:))) THEN
-            DO ilct=1,SIZE(parent%lcts)
-              IF (this%lcts(1)%id == parent%lcts(ilct)%id) THEN
-                parent%lcts(ilct)%fract(:,:) = parent%lcts(ilct)%fract(:,:) - this%fract_old(:,:) + this%fract(:,:)
-                EXIT
-              END IF
-            END DO
-          END IF
-        END SELECT
+        this%fract_old(:,:) = this%fract(:,:)
+        this%fract    (:,:) = fract(:,:)
+
+        ! IF (ASSOCIATED(this%parent)) THEN
+        !   SELECT TYPE (parent=>this%parent)
+        !   CLASS IS (t_jsb_tile_abstract)
+        !     WHERE (this%fract(:,:) /= this%fract_old(:,:))
+        !       parent%l_fract_children_changed(:,:) = .TRUE.
+        !     END WHERE
+        !     IF (ANY(parent%l_fract_children_changed(:,:))) THEN
+        !       DO ilct=1,SIZE(parent%lcts)
+        !         IF (this%lcts(1)%id == parent%lcts(ilct)%id) THEN
+        !           parent%lcts(ilct)%fract(:,:) = parent%lcts(ilct)%fract(:,:) - this%fract_old(:,:) + this%fract(:,:)
+        !           EXIT
+        !         END IF
+        !       END DO
+        !     END IF
+        !   END SELECT
+        ! END IF
       END IF
     END IF
 
@@ -362,22 +388,31 @@ CONTAINS
       IF (SIZE(fract_max,1) /= SIZE(this%fract_max,1) .OR. SIZE(fract_max,2) /= SIZE(this%fract_max,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-      this%fract_max_old(:,:) = this%fract_max(:,:)
-      this%fract_max    (:,:) = fract_max(:,:)
+      IF (ANY(fract_max(:,:) /= this%fract_max(:,:))) THEN
+        this%fract_max_old(:,:) = this%fract_max(:,:)
+        this%fract_max    (:,:) = fract_max(:,:)
+      END IF
+
     END IF
 
     IF (PRESENT(fract_old)) THEN
       IF (SIZE(fract_old,1) /= SIZE(this%fract_old,1) .OR. SIZE(fract_old,2) /= SIZE(this%fract_old,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-      this%fract_old(:,:) = fract_old(:,:)
+      IF (ANY(fract_old(:,:) /= this%fract_old(:,:))) THEN
+        this%fract_old(:,:) = fract_old(:,:)
+      END IF
+
     END IF
 
     IF (PRESENT(fract_max_old)) THEN
       IF (SIZE(fract_max_old,1) /= SIZE(this%fract_max_old,1) .OR. SIZE(fract_max_old,2) /= SIZE(this%fract_max_old,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-      this%fract_max_old(:,:) = fract_max_old(:,:)
+      IF (ANY(fract_max_old(:,:) /= this%fract_max_old(:,:))) THEN
+        this%fract_max_old(:,:) = fract_max_old(:,:)
+      END IF
+
     END IF
 
   END SUBROUTINE Set_fraction_2d
@@ -809,6 +844,68 @@ CONTAINS
     END SELECT
 
   END SUBROUTINE Aggregate_weighted_by_fract_set_option_logical
+
+  FUNCTION Get_first_child_tile(this) RESULT(return_ptr)
+
+    CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
+    CLASS(t_jsb_tile_abstract), POINTER     :: return_ptr
+
+    CLASS(t_State), POINTER :: next
+
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_first_child_tile'
+
+    next => this%first_child
+    IF (.NOT. ASSOCIATED(next)) THEN
+      return_ptr => NULL()
+      RETURN
+    END IF
+
+    SELECT TYPE (next)
+    CLASS IS (t_jsb_tile_abstract)
+      return_ptr => next
+    CLASS IS (t_State)
+      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
+    CLASS DEFAULT
+      CALL finish(TRIM(routine), 'Unkown type for tile')
+    END SELECT
+
+    NULLIFY(next)
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      & CALL finish(TRIM(routine), 'Could not find first child tile')
+
+  END FUNCTION Get_first_child_tile
+
+  FUNCTION Get_next_sibling_tile(this) RESULT(return_ptr)
+
+    CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
+    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
+
+    CLASS(t_State), POINTER :: next
+
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_next_sibling_tile'
+
+    next => this%next_sibling
+    IF (.NOT. ASSOCIATED(next)) THEN
+      return_ptr => NULL()
+      RETURN
+    END IF
+
+    SELECT TYPE (next)
+    CLASS IS (t_jsb_tile_abstract)
+      return_ptr => next
+    CLASS IS (t_State)
+      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
+    CLASS DEFAULT
+      CALL finish(TRIM(routine), 'Unkown type for tile')
+    END SELECT
+
+    NULLIFY(next)
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      & CALL finish(TRIM(routine), 'Could not find next sibling tile')
+
+  END FUNCTION Get_next_sibling_tile
 
 #endif
 END MODULE mo_jsb_tile_class

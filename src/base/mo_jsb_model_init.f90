@@ -179,6 +179,7 @@ CONTAINS
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_model_class,     ONLY: print_model
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+    USE mo_jsb_lct_class,       ONLY: Contains_lct
     USE mo_jsb_lctlib_class,    ONLY: Read_lctlib
     USE mo_jsb_model_usecases,  ONLY: init_usecase
     USE mo_seb_init,            ONLY: seb_init
@@ -199,9 +200,10 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    CLASS(t_jsb_tile_abstract), POINTER :: tile, child
     TYPE(t_jsb_vgrid),          POINTER :: surface                      ! Vertical grid
-    INTEGER                             :: iproc
+    INTEGER                             :: iproc, ilct, jlct, i, no_children
+    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_common'
 
@@ -270,9 +272,9 @@ CONTAINS
     CALL print_model(model)
     CALL model%Print_actions()
 
-    ! At this point, the model configuration, tile and memory structure is set up.
+    ! At this point, the model configuration and tile structure is set up.
 
-    ! We continue with initializing the different model processes.
+    ! We continue with initializing the memory structure and different model processes.
 
     ! Iterate over tiles and call initialization if necessary
     CALL model%Reset_tiles()
@@ -342,6 +344,56 @@ CONTAINS
     END DO
 
 
+    ! Iterate over tiles again and set lct fractions (after ALL tile fractions have been set above)
+    CALL model%Reset_tiles()
+    tile => model%Get_top_tile()
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    ALLOCATE(fract_tmp(SIZE(tile%lcts(1)%fract,1), SIZE(tile%lcts(1)%fract,2)))
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (.NOT. tile%visited .AND. tile%Has_children()) THEN
+        tile => model%Goto_next_tile()
+        CYCLE
+      END IF
+
+      ! tile is a leaf or it has children and we're on the way up
+      DO ilct=1,SIZE(tile%lcts)
+        IF (ilct==1 .AND. ASSOCIATED(tile%parent_tile)) THEN
+          tile%lcts(1)%fract(:,:) = 1._wp
+        ELSE IF (tile%Has_children()) THEN
+          tile%lcts(ilct)%fract(:,:) = 0._wp
+          no_children = tile%Get_no_of_children()
+          child => tile%Get_first_child_tile()
+          DO i=1,no_children
+            IF (Contains_lct(child%lcts, tile%lcts(ilct)%id)) THEN
+              DO jlct=1,SIZE(child%lcts)
+                IF (child%lcts(jlct)%id == tile%lcts(ilct)%id) THEN
+                  IF (jlct == 1) THEN
+                    CALL child%Get_fraction(fract=fract_tmp(:,:))
+                  ELSE
+                    fract_tmp(:,:) = child%lcts(jlct)%fract(:,:)
+                  END IF
+                  tile%lcts(ilct)%fract(:,:) = tile%lcts(ilct)%fract(:,:) + fract_tmp(:,:)
+                  EXIT
+                END IF
+              END DO
+            END IF
+            child => child%Get_next_sibling_tile()
+          END DO
+        END IF
+      END DO
+
+      CALL tile%Print()
+
+      tile => model%Goto_next_tile()
+
+    END DO
+
+    DEALLOCATE(fract_tmp)
+
     ! Iterate over tiles again and print tile information (after ALL tiles have been initialized above)
     CALL model%Reset_tiles()
     tile => model%Get_top_tile()
@@ -354,6 +406,7 @@ CONTAINS
         tile => model%Goto_next_tile()
         CYCLE
       END IF
+
       CALL tile%Print()
 
       tile => model%Goto_next_tile()

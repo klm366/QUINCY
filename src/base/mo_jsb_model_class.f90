@@ -310,7 +310,7 @@ CONTAINS
     CLASS IS (t_jsb_tile_abstract)
       return_ptr => next
     CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile')
+      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
     CLASS DEFAULT
       CALL finish(TRIM(routine), 'Unkown type for tile')
     END SELECT
@@ -335,11 +335,11 @@ CONTAINS
     END IF
 
     SELECT TYPE (next)
-      CLASS IS (t_jsb_tile_abstract)
+    CLASS IS (t_jsb_tile_abstract)
       return_ptr => next
-      CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile')
-      CLASS DEFAULT
+    CLASS IS (t_State)
+      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
+    CLASS DEFAULT
       CALL finish(TRIM(routine), 'Unkown type for tile')
     END SELECT
 

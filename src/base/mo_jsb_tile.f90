@@ -388,20 +388,6 @@ CONTAINS
     CALL this%Set_fract_max_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
-    ! Loop over lcts of this tile and add fractions for each lct
-    ! Note: this has to be done before the calls to %Set_fraction below because Set_fraction updates also the lct fractions
-    DO ilct=1,SIZE(this%lcts)
-
-      CALL jsb_add_var(TRIM(varlist_name), 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,           &
-        & hgrid, surface,                                                                                         &
-        & t_cf('lct_fraction', '',                                                                                &
-        &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-        & prefix, suffix,                                                                                         &
-        & initval_r=0.0_wp)
-
-    END DO
-
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
     this%l_fract_children_changed(:,:) = .TRUE.
 
@@ -473,6 +459,24 @@ CONTAINS
         END IF
       END SELECT
     END IF
+
+    ! Loop over lcts of this tile and add fractions for each lct
+    ! Note: this has to be done before the calls to %Set_fraction below because Set_fraction updates also the lct fractions
+    DO ilct=1,SIZE(this%lcts)
+
+      CALL jsb_add_var(TRIM(varlist_name), 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,           &
+        & hgrid, surface,                                                                                         &
+        & t_cf('lct_fraction', '',                                                                                &
+        &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+        & prefix, suffix,                                                                                         &
+        & initval_r=0.0_wp)
+
+    END DO
+
+    ! IF (.NOT. this%Has_children()) THEN
+    !   this%Get_fraction(fract=this%lcts(1)%fract(:,:))
+    ! END IF
 
     DEALLOCATE(tmp_fract)
 
