@@ -388,7 +388,7 @@ CONTAINS
          & lrestart=.FALSE., initval_r=0.0_wp )
 
        CALL jsb_add_var( mem, 'apar_nacc', mem%apar_nacc, &
-         & hgrid, canopy_layer,                                                                             &
+         & hgrid, surface,                                                                             &
          & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''),     &
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
          & prefix, suffix,                                                           &
