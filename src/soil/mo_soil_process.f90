@@ -302,7 +302,7 @@ CONTAINS
          zraind ,       zsnowd,         zevttd        &
          , zevsnd,        zevwld        &
          , zrogl         &
-         , zsnmel,        zsn                                 &
+         , zsnmel, zsnmel_soil,       zsn                                 &
          ,        zsncmelt
   !!$       , zdp,
     REAL(wp) :: zlfdcp
@@ -326,10 +326,11 @@ CONTAINS
     zc3=1.56E5_wp
     zsncfac=rhoh2o*g/zdtime
 
-    zrogl    = 0._wp
-    pmlres   = 0._wp
-    zsnmel   = 0._wp
-    zsncmelt = 0._wp
+    zrogl       = 0._wp
+    pmlres      = 0._wp
+    zsnmel      = 0._wp
+    zsnmel_soil = 0._wp
+    zsncmelt    = 0._wp
 
     ! Convert water fluxes to [m water equivalent * timestep]
     zraind=prain             *zdtime/rhoh2o                   !rain     [kg m-2 s-1] -> [m]
@@ -384,8 +385,8 @@ CONTAINS
       IF (ptsl.GT.tmelt) THEN               !vg  temperature > 0 degC
         IF (psn.GT.0._wp) THEN                         !vg  snow cover at non glacier land:
           zsmelt=pgrndcapc*(ptsl-tmelt)/(alf*rhoh2o)      !vg  potential snow and ice melt [m]
-          zsnmel=MIN(psn,zsmelt)                          !vg  actual snow and ice melt [m]
-          psn=MAX(psn-zsnmel,0._wp)                   !vg  re-calculation of snow depth
+          zsnmel_soil=MIN(psn,zsmelt)                          !vg  actual snow and ice melt [m]
+          psn=MAX(psn-zsnmel_soil,0._wp)                   !vg  re-calculation of snow depth
         END IF
       END IF
     END IF
@@ -396,7 +397,7 @@ CONTAINS
     zsnmlt=zsnmel+MAX(0._wp,pwl-pwlmx)   ! Excess water on canopy drips to ground and
     pwl=MIN(pwlmx,pwl)                ! skin reservoir on canopy is set to maximum
     pmlres=zsnmlt
-    zsnmel=zsnmel+zsncmelt
+    zsnmel=zsnmel_soil+zsncmelt
     zsn=zsn-zsnmel
     !
     ! Accumulate water fluxes
@@ -406,7 +407,7 @@ CONTAINS
 !!$            psnmel = psnmel  +zsnmel * rhoh2o
 !!$            IF (lpglac) progl  = progl   +zrogl  *rhoh2o
 
-    psmelt = zsnmel * rhoh2o / zdtime
+    psmelt = zsnmel_soil * rhoh2o / zdtime
 
   END SUBROUTINE update_surf_down_soil
 

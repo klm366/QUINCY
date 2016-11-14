@@ -144,6 +144,7 @@ CONTAINS
       n2 = nmw2
     END IF
     dsl4jsb_var2D_onDomain(SEB_,t) = wgt1 * t_mon(:,:,n1) + wgt2 * t_mon(:,:,n2)
+    dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
     DEALLOCATE(t_mon)
 

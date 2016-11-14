@@ -478,7 +478,6 @@ CONTAINS
 
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract", copy=.TRUE.)
 

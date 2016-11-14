@@ -610,9 +610,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)  ! out
 
     IF (tile%lcts(1)%id == GLACIER_TYPE) THEN
-      ! TBD: On glacier: Wet skin fraction = 0, snow fraction =1, snow depth = 0
-      !fract_skin_glacier(:) = 0._wp
-      !fract_snow(:)     = 1._wp
+      fract_snow(:)      = 1._wp
+      fract_snow_soil(:) = 1._wp
+      fract_water(:)     = 0._wp
     END IF
 
     IF (tile%lcts(1)%id == VEG_TYPE .OR. tile%lcts(1)%id == LAND_TYPE) THEN
