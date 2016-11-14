@@ -159,8 +159,6 @@ PROGRAM jsb4_driver
   ! Start MPI
   CALL p_start
 
-  CALL jsbach_init_version
-
   ! Initialize wallclock timer
 !$OMP PARALLEL
 !$OMP MASTER
@@ -197,6 +195,8 @@ PROGRAM jsb4_driver
   CALL init_timer
 
   ! - jsbach_init
+  CALL jsbach_init_version
+
   CALL init_base('namelist.jsbach')
   CALL init_model(nproca, nprocb, npedim, model_id)
 
