@@ -205,12 +205,6 @@ CONTAINS
       is_glacier(:) = .FALSE.
     END IF
 
-    IF (ALL(heat_cap(:) < EPSILON(1._wp))) THEN            ! Start of experiment
-      lstart = .TRUE.
-    ELSE
-      lstart = .FALSE.
-    END IF
-
     ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
     ! necessary for the phenology process
     t_air_in_Celcius = t_air - tmelt  ! convert Kelvin in Celcius
@@ -249,7 +243,11 @@ CONTAINS
     ! The last term of the rhs of the energy balance equation is the conductive heat flux from the ground below
     forc_hflx(:) = grnd_hflx(:)
 
-    ! Calculate surface saturation specific humidity
+    IF (ALL(heat_cap(:) < EPSILON(1._wp))) THEN            ! Start of experiment
+      lstart = .TRUE.
+    ELSE
+      lstart = .FALSE.
+    END IF
 
     ! Update surface temperature
     !
