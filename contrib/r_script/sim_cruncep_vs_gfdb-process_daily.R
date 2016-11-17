@@ -158,7 +158,7 @@ for (s in 1:nsite) {
    }
    var_idx<-which(colnames(diags)=='LAI'|colnames(diags)=='Height'|colnames(diags)=='ind_density')
    for (var in var_idx) {
-     if(colnames(diags)[var]=='LAI') {hlp1<-aggregate(diags[,var],list(yearidx),mean)} 
+     if(colnames(diags)[var]=='LAI') {hlp1<-aggregate(diags[,var],list(yearidx),max)} 
      else {hlp1<-aggregate(diags[,var],list(yearidx),mean)} 
      diag_mean[s,which(colnames(diag_mean)==colnames(diags)[var])]<-mean(hlp1$x,na.rm=TRUE)
      diag_std[s,which(colnames(diag_mean)==colnames(diags)[var])]<-sd(hlp1$x,na.rm=TRUE)

@@ -188,10 +188,10 @@ CONTAINS
       ! turnover time of the fraction of sapwood that is in branches (10%) (1/years)
       lctlib(1:npft)%tau_branches = 0.01_wp
       ! turnover time of the sapwood pool (1/years)
-      lctlib(1:npft)%tau_sap_wood = 0.05_wp
+      lctlib(1:npft)%tau_sap_wood = 0.025_wp
       ! wood density (mol C / m3)
       lctlib(1:npft)%wood_density = & 
-      (/30000.0_wp,30000.0_wp,30000.0_wp,30000.0_wp,30000.0_wp,30000.0_wp,22000._wp,22000._wp/) / molar_mass_C
+      (/0.3_wp,0.3_wp,0.3_wp,0.3_wp,0.3_wp,0.3_wp,0.22_wp,0.22_wp/) * 1000000._wp/ molar_mass_C
       ! leaf area to sapwood area ratio 
       lctlib(1:npft)%k_latosa = 4000.0_wp 
       ! coarse root to sapwood mass ratio 
@@ -231,9 +231,9 @@ CONTAINS
       ! turnover time of the fruit pool (1/years)
       lctlib(1:npft)%tau_fruit = 1.0_wp
       ! turnover time of the seed bed to litter (1/years)
-      lctlib(1:npft)%tau_seed_litter = 0.1_wp
+      lctlib(1:npft)%tau_seed_litter = 0.5_wp
       ! turnover time of the seed bed to establishment (1/years)
-      lctlib(1:npft)%tau_seed_est = 0.3_wp
+      lctlib(1:npft)%tau_seed_est = 0.1_wp
       ! vmax of N uptake (~µmol N / mol C / s)
       lctlib(1:npft)%vmax_uptake_n = 14._wp !714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
       ! low-affinity uptake (L/mmol) 
@@ -252,9 +252,9 @@ CONTAINS
       ! parameter in the Weibull function controlling light-limited establishment 
       lctlib(1:npft)%lambda_est_light = 1.1_wp        
       ! parameter in the Weibull function controlling light-limited establishment
-      lctlib(1:npft)%k_est_light = 4.0_wp
+      lctlib(1:npft)%k_est_light = 8.0_wp
       ! seed size (mol C)
-      lctlib(1:npft)%seed_size = 2.0_wp 
+      lctlib(1:npft)%seed_size = 0.5_wp 
       ! hydraulic trade-off parameter for fine root growth
       lctlib(:)%c0_allom = SQRT(lctlib(:)%k_root/lctlib(:)%k_sapwood * & 
                                 lctlib(:)%tau_fine_root/lctlib(:)%tau_sap_wood * lctlib(:)%wood_density) * & 

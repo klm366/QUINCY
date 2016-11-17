@@ -101,14 +101,15 @@ CONTAINS
        !! depending on the red to far-red ratio of the light at the bottom of the canopy
        tc = 0.0_wp
        DO icanop=1,ncanop
-         tc = tc + veg%nl_tot_cl%ptr(icanop,1) * veg%fnl_chl_cl%ptr(icanop,1)
+         tc = tc + veg%nl_tot_cl%ptr(icanop,1) * veg%fnl_chl_cl%ptr(icanop,1) * & 
+                   veg%lai_cl%ptr(icanop,1)
        ENDDO
        rfr_ratio = toc_rfr_ratio * exp( k_r2fr_chl * tc) 
        flim_light = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio)**lctlib%k_est_light)
-   
+
        !> 3.2 temperature and soil moisture limitation 
        !! OBS: should be top soil moisture!
-       IF(veg%t_air_week_mavg%ptr - Tzero < 0.0_wp) THEN 
+       IF(veg%t_air_week_mavg%ptr - Tzero < 0.0_wp.OR..NOT.veg%growing_season%ptr) THEN 
           flim_temp=0.0_wp
        ELSE
           flim_temp = 1.0_wp - exp(-(lambda_est_temp * (veg%t_air_week_mavg%ptr - Tzero))**k_est_temp)
@@ -124,7 +125,8 @@ CONTAINS
        !> 4.0 diagnose change in the number of individuals (#/m2)
        !!
        IF(lctlib%growthform == itree) THEN
-          veg%delta_dens_ind%ptr = veg%establishment%carbon%ptr / lctlib%seed_size - mortality_rate * veg%dens_ind%ptr 
+          veg%delta_dens_ind%ptr = veg%establishment%carbon%ptr / lctlib%seed_size - & 
+                                   mortality_rate * veg%dens_ind%ptr 
        END IF
 
     ENDIF
