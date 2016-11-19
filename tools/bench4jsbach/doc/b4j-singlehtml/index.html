@@ -1,0 +1,1538 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>bench4JSBACH 0.0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_images-b4j-singlehtml/earth-html.ico"/>
+    <link rel="top" title="None" href="index.html#document-index" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document" link="#2e8f82" vlink="#2e8f82" alink="#2e8f82">
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html#document-index">
+              <img class="logo" src="_images-b4j-singlehtml/earth-html.jpg" alt="Logo" style="width: 5%;"/>
+            </a></p>
+  <h3><a href="index.html#document-index">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-intro">1. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-userguide-com">2. User guide for benchmarking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-userguide-dev">3. User guide for developing diagnostic fields</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-code">4. Code documentation</a></li>
+</ul>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+   <h3>In Detail</h3>            
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-intro">1. Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="index.html#main-idea">1.1. Main idea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#concepts">1.2. Concepts</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="index.html#experiments">1.2.1. Experiments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#diagnostic-fields">1.2.2. Diagnostic fields</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#context">1.3. Context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#status">1.4. Status</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="index.html#experiment-types-and-diagnostic-fields-available">1.4.1. Experiment types and diagnostic fields available</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#diagnostics-and-benchmarks-in-field-albedo">1.4.2. Diagnostics and benchmarks in field albedo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#diagnostics-and-benchmarks-in-field-hydrology">1.4.3. Diagnostics and benchmarks in field hydrology</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-userguide-com">2. User guide for benchmarking</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="index.html#prerequisites">2.1. Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#get-b4j">2.2. Get <strong>bench4jsbach</strong></a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#prepare-a-run">2.3. Prepare a run</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#initial-run">2.4. Initial run</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#main-configuration-file">2.5. Main configuration file</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="index.html#top-level-configuration">2.5.1. Top level configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#experiment-section">2.5.2. Experiment section</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#diagnostic-field-section">2.5.3. Diagnostic field section</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#run-example-myb4jrun">2.6. Run example myb4jrun</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-userguide-dev">3. User guide for developing diagnostic fields</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="index.html#declaration-in-main-configuration">3.1. Declaration in main configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#configuration-file-myfield-cfg">3.2. Configuration file myfield.cfg</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="index.html#top-level-configuration">3.2.1. Top level configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#processing-chain">3.2.2. Processing chain</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#fetch-section">3.2.3. Fetch section</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#processing-sections">3.2.4. Processing sections</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#preprocessing-and-diagnostic-sections">3.2.5. Preprocessing and diagnostic sections</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#plotting-section">3.2.6. Plotting section</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#i-o-dependencies">3.2.7. I/O dependencies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#report-section">3.2.8. Report section</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#processing-scripts">3.3. Processing scripts</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-code">4. Code documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="index.html#bench">4.1. Bench</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="index.html#functions">4.1.1. Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#creating-a-bench-object">4.1.2. Creating a bench object</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#diagnostics">4.2. Diagnostics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="index.html#document-generated/diagnostics">4.2.1. diagnostics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#creating-a-diagnostics">4.2.2. Creating a diagnostics</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#experiment">4.3. Experiment</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="index.html#document-generated/experiment">4.3.1. experiment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#id1">4.3.2. Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#creating-an-experiment">4.3.3. Creating an experiment</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#report">4.4. Report</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="index.html#document-generated/report">4.4.1. report</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#creating-a-report">4.4.2. Creating a report</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#wikipage">4.5. Wikipage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="index.html#document-generated/wikipage">4.5.1. wikipage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#creating-a-wikipage">4.5.2. Creating a wikipage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#util">4.6. Util</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="index.html#document-generated/util">4.6.1. util</a></li>
+</ul>
+</li>
+</ul>
+</li>
+  </ul>
+           
+	    <div class="section" id="bench4jsbach-documentation">
+
+<h1>bench4JSBACH documentation<a class="headerlink" href="#bench4jsbach-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<span id="document-intro"></span><div class="section" id="introduction">
+<h2>1. Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="main-idea">
+<h3>1.1. Main idea<a class="headerlink" href="#main-idea" title="Permalink to this headline">¶</a></h3>
+<p>With <strong>bench4jsbach</strong> we started developing a tool for the scientists of
+the land department in the <a class="reference external" href="http://www.mpimet.mpg.de/en/mpimet-homepage/">Max Planck Institute for Meteorology</a> to make the
+comparison of <a class="reference external" href="http://www.mpimet.mpg.de/en/science/models/jsbach/">JSBACH</a> model simulation output data <a class="reference internal" href="index.html#rejsba" id="id1">[ReJSBA]</a> with one another and with data
+products straight forward and user friendly. In the first instance the tool
+shall serve for the benchmarking of land models, it has to be able to quantify
+the deviation of a simulation from reference experiments in the most crucial and/or
+influential parameters out-of-the-box. This will help developing models
+as well as managing a larger number of them. It is desirable to cover most
+research areas of the land department and to keep the tool well adapted
+to the local technical conditions at the <a class="reference external" href="http://www.mpimet.mpg.de/en/mpimet-homepage/">Max Planck Institute for Meteorology</a>.</p>
+<p>In order to have a living, dynamical tool, the possibility for individual
+extension is provided to the user from the beginning. This will help the
+benchmarking process to
+retain its validity but also help the scientists to handle future questions
+bringing new values into focus. It may also foster the communication between
+the groups as individual developments can easily be made usable for the
+whole department and thus serve as a basis for a fruitful discussion on the most
+significant diagnostic for the generally applicable benchmarking in the
+department.</p>
+</div>
+<div class="section" id="concepts">
+<span id="id2"></span><h3>1.2. Concepts<a class="headerlink" href="#concepts" title="Permalink to this headline">¶</a></h3>
+<p>A guiding idea for <strong>bench4jsbach</strong> is the separation of issues that strongly depend on the
+origin of the climate data from issues directly related to their
+comparison. It is intended to solve the origin dependend tasks
+&#8216;under the hood&#8217; of the tool so that a scientist can
+focus on the diagnostic and benchmarking methods.</p>
+<div class="section" id="experiments">
+<span id="exps"></span><h4>1.2.1. Experiments<a class="headerlink" href="#experiments" title="Permalink to this headline">¶</a></h4>
+<p>We use the generic term <i>experiment</i> independent from the
+data origin holding earth system model simulation output or
+observational data. Origin dependend processing like locating and extracting
+necessary raw data from different host, filesystem and out of
+datafile but also data interpolation are gathered under the name.</p>
+<p>You may assign the role of a reference or that of a candidate to an <i>experiment</i>, in a comparison
+at least one instance of each is needed. It is possible to have multiple <i>experiment</i>s and
+also a single instance can take both roles in one <strong>bench4jsbach</strong> run. The main difference
+of the roles is the comparison being made and the  report being written from
+the perspective of the candidate <i>experiment</i>s.
+Depending on the evaluation method each candidate can be compared with single
+references or with all references at once.</p>
+</div>
+<div class="section" id="diagnostic-fields">
+<span id="diag-fs"></span><h4>1.2.2. Diagnostic fields<a class="headerlink" href="#diagnostic-fields" title="Permalink to this headline">¶</a></h4>
+<p>The term <i>diagnostic field</i> clusters
+processing  for the comparison of <i>experiment</i>s with a defined set of variables
+featuring a particular scientific question.
+It should contain at least one diagnostic and one benchmarking method.  In this
+context the term
+benchmarking refers to a method that condenses the deviation of two
+experiments to one number, i.e. yields a global and time average value for it.</p>
+</div>
+</div>
+<div class="section" id="context">
+<h3>1.3. Context<a class="headerlink" href="#context" title="Permalink to this headline">¶</a></h3>
+<p>The following diagram shows <strong>bench4jsbach</strong> in context with other actors ( users, software, ... ).</p>
+<div class="figure align-center" id="id4">
+<a class="reference internal image-reference" href="_images-b4j-singlehtml/context-diagram.jpg"><img alt="_images-b4j-singlehtml/context-diagram.jpg" src="_images-b4j-singlehtml/context-diagram.jpg" style="width: 17%;" /></a>
+<p class="caption"><span class="caption-text"><strong>Figure:</strong> Context diagram of <strong>bench4jsbach</strong></span></p>
+</div>
+<dl class="glossary docutils">
+<dt id="term-benchmarking-user"><strong>Benchmarking_user</strong></dt>
+<dd><ul class="first last simple">
+<li>scientist managing many models</li>
+<li>model developer making  still-in-line-check</li>
+</ul>
+</dd>
+<dt id="term-diagnostic-developer"><strong>Diagnostic developer</strong></dt>
+<dd>dedicated scientist integrating a <i>diagnostic field</i></dd>
+<dt id="term-database"><strong>Database</strong></dt>
+<dd>database for reference <i>experiment</i> s, for the time being a table on the redmine project wikipage</dd>
+<dt id="term-redmine-wiki"><strong>Redmine wiki</strong></dt>
+<dd>communication platform for <strong>bench4jsbach</strong></dd>
+</dl>
+</div>
+<div class="section" id="status">
+<h3>1.4. Status<a class="headerlink" href="#status" title="Permalink to this headline">¶</a></h3>
+<p>This documentation is based on a not yet tagged
+version ( <cite>0.0.1</cite> ) of <strong>bench4jsbach</strong>, a vertical prototype. The basic
+operating concept, the program structure and the workflow is implemented. The
+tool handles <i>experiment</i>s of type  MPIESM1 (Max Planck
+Institute for Meteorology Earth System Model, <a class="reference internal" href="index.html#giesm1" id="id3">[GiESM1]</a>) and a <i>diagnostic field</i> analysing
+albedo.</p>
+<div class="section" id="experiment-types-and-diagnostic-fields-available">
+<span id="diag-f-avail"></span><h4>1.4.1. Experiment types and diagnostic fields available<a class="headerlink" href="#experiment-types-and-diagnostic-fields-available" title="Permalink to this headline">¶</a></h4>
+<table border="1" class="docutils">
+<colgroup>
+<col width="67%" />
+<col width="33%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">diagnostic field, experiment type</th>
+<th class="head">MPIESM1</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><strong>albedo</strong></td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+</tr>
+<tr class="row-odd"><td><strong>hydrology</strong></td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="diagnostics-and-benchmarks-in-field-albedo">
+<h4>1.4.2. Diagnostics and benchmarks in field albedo<a class="headerlink" href="#diagnostics-and-benchmarks-in-field-albedo" title="Permalink to this headline">¶</a></h4>
+<table border="1" class="docutils">
+<colgroup>
+<col width="47%" />
+<col width="27%" />
+<col width="27%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">diagnostic</th>
+<th class="head">name</th>
+<th class="head">type</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Seasonal mean difference</td>
+<td>delta</td>
+<td>map</td>
+</tr>
+<tr class="row-odd"><td>Global and time deviation</td>
+<td>delta_gtd</td>
+<td>metric</td>
+</tr>
+<tr class="row-even"><td>Global and time mean</td>
+<td>delta_gtm</td>
+<td>metric</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="diagnostics-and-benchmarks-in-field-hydrology">
+<h4>1.4.3. Diagnostics and benchmarks in field hydrology<a class="headerlink" href="#diagnostics-and-benchmarks-in-field-hydrology" title="Permalink to this headline">¶</a></h4>
+</div>
+</div>
+</div>
+<span id="document-userguide-com"></span><div class="section" id="user-guide-for-benchmarking">
+<span id="userguide-com"></span><h2>2. User guide for benchmarking<a class="headerlink" href="#user-guide-for-benchmarking" title="Permalink to this headline">¶</a></h2>
+<p>This chapter shall enable you to use <strong>bench4jsbach</strong> for the comparison of <i>experiment</i>s with
+predefined <i>diagnostic field</i>s.</p>
+<div class="section" id="prerequisites">
+<h3>2.1. Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h3>
+<p><strong>bench4jsbach</strong> is developed for UNIX and LINUX operating systems. It is written in
+object-oriented <a class="reference external" href="https://docs.python.org/2/">Python</a> and works with version 2.7. The packages NumPy and NetCDF4 and the
+2D plotting library matplotlib are used which are contained in most scientific
+<a class="reference external" href="https://docs.python.org/2/">Python</a> distributions like Anaconda, Miniconda or Canopy. Furthermore <strong>bench4jsbach</strong> makes
+use of the benchmarking tool <a class="reference external" href="https://code.zmaw.de/projects/pycmbs/wiki">pyCMBS</a> and the climate data command line
+operators <a class="reference external" href="https://code.zmaw.de/projects/cdo/embedded/index.html">CDO</a>, both inhouse-developments of the Max-Planck-Institute for
+Meteorology.</p>
+<p>We use Anaconda and can highly recommand it, as it simplifies
+package management and deployment, see
+<a class="reference external" href="http://conda.pydata.org/docs/_downloads/conda-cheatsheet.pdf">http://conda.pydata.org/docs/_downloads/conda-cheatsheet.pdf</a>. From here on
+it is refered to in the installation process.</p>
+<p>Make sure that your system uses <a class="reference external" href="https://docs.python.org/2/">Python</a> from <i>opt/anaconda/bin</i>
+with <i>opt</i> being your Anaconda base directory.
+If necessary, download and install Anaconda, you can get it from
+<a class="reference external" href="http://docs.continuum.io/anaconda/install#linux-install">http://docs.continuum.io/anaconda/install#linux-install</a>, and put
+<i>opt/anaconda/bin</i> to your system PATH.
+Then update and install the necessary <a class="reference external" href="https://docs.python.org/2/">Python</a> packages,  ..</p>
+<div class="highlight-default" style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">conda</span> <span class="n">update</span> <span class="n">conda</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">conda</span> <span class="n">update</span> <span class="n">anaconda</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">conda</span> <span class="n">install</span> <span class="n">netcdf4</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">conda</span> <span class="n">install</span> <span class="o">-</span><span class="n">c</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">conda</span><span class="o">.</span><span class="n">binstar</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">scitools</span> <span class="n">cartopy</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">conda</span> <span class="n">install</span> <span class="n">geos</span> <span class="n">basemap</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">conda</span> <span class="n">install</span> <span class="n">gdal</span>
+</pre></div>
+</div>
+<p>.. <a class="reference external" href="https://code.zmaw.de/projects/cdo/embedded/index.html">CDO</a> ..</p>
+<div class="highlight-default" style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pip</span> <span class="n">install</span> <span class="n">cdo</span>
+</pre></div>
+</div>
+<p>.. <a class="reference external" href="https://code.zmaw.de/projects/pycmbs/wiki">pyCMBS</a> ..</p>
+<div class="highlight-default" style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span> <span class="n">opt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pygeo</span><span class="o">/</span><span class="n">pycmbs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span> <span class="n">pycmbs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">env</span> <span class="n">OMP_NUM_THREADS</span><span class="o">=</span><span class="mi">1</span> <span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+</pre></div>
+</div>
+<p>.. and <i>python-redmine</i> ..</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span> <span class="n">opt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">git</span> <span class="n">clone</span> <span class="n">git</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">maxtepkeev</span><span class="o">/</span><span class="n">python</span><span class="o">-</span><span class="n">redmine</span><span class="o">.</span><span class="n">git</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span> <span class="n">python</span><span class="o">-</span><span class="n">redmine</span><span class="o">/</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="get-b4j">
+<h3>2.2. Get <strong>bench4jsbach</strong><a class="headerlink" href="#get-b4j" title="Permalink to this headline">¶</a></h3>
+<p>Change to the root directory of your local <a class="reference external" href="http://www.mpimet.mpg.de/en/science/models/jsbach/">JSBACH</a>
+repository <a class="reference external" href="mailto:git&#37;&#52;&#48;git&#46;mpimet&#46;mpg&#46;de">git<span>&#64;</span>git<span>&#46;</span>mpimet<span>&#46;</span>mpg<span>&#46;</span>de</a>:jsbach.git, that is the one
+containing the <i>.git</i>
+directory. If you do not have the repository get it with</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">git</span> <span class="n">clone</span> <span class="n">git</span><span class="nd">@git</span><span class="o">.</span><span class="n">mpimet</span><span class="o">.</span><span class="n">mpg</span><span class="o">.</span><span class="n">de</span><span class="p">:</span><span class="n">jsbach</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+<p>Therefore you need passwordless ssh and the access permission for the git server
+(contact <a class="reference external" href="mailto:reiner&#46;schnur&#37;&#52;&#48;mpimet&#46;mpg&#46;de">reiner<span>&#46;</span>schnur<span>&#64;</span>mpimet<span>&#46;</span>mpg<span>&#46;</span>de</a>). Switch to the git branch <i>jsbach-dkl</i></p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">git</span> <span class="n">checkout</span> <span class="n">jsbach</span><span class="o">-</span><span class="n">dkl</span>
+</pre></div>
+</div>
+<p>You will also need passwordless ssh for the servers from which you want to
+read experiment data.</p>
+<p>Being in the git branch <i>jsbach-dkl</i> you find the files for the
+tool  under <i>git/jsbach/tools/bench4jsbach</i> with <i>git/jsbach</i>
+as your git root directory. The structure of the <strong>bench4jsbach</strong> base directory
+<i>bench4jsbach</i> you find initially is shown below.</p>
+<div class="figure align-center" id="id1">
+<a class="reference internal image-reference" href="_images-b4j-singlehtml/b4j-basedir.jpg"><img alt="_images-b4j-singlehtml/b4j-basedir.jpg" src="_images-b4j-singlehtml/b4j-basedir.jpg" style="width: 15%;" /></a>
+<p class="caption"><span class="caption-text"><strong>Figure:</strong>  initial structure of <i>git/jsbach/tools/bench4jsbach</i></span></p>
+</div>
+<p>The following list describes the individual directories in <i>bench4jsbach</i>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">bin:</th><td class="field-body">core source files</td>
+</tr>
+<tr class="field-even field"><th class="field-name">configs:</th><td class="field-body">specification and template files for the run configuration</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">doc:</th><td class="field-body">Sphinx documentation source files and Makefile</td>
+</tr>
+<tr class="field-even field"><th class="field-name">prod:</th><td class="field-body">scripts and configurations for particular <i>diagnostic field</i> s</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">scripts:</th><td class="field-body">essential parts of <strong>bench4jsbach</strong> e.g. run scripts</td>
+</tr>
+<tr class="field-even field"><th class="field-name">tests:</th><td class="field-body">different testing environments</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">work:</th><td class="field-body">currently hardcoded working directory</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="prepare-a-run">
+<h3>2.3. Prepare a run<a class="headerlink" href="#prepare-a-run" title="Permalink to this headline">¶</a></h3>
+<p>A <strong>bench4jsbach</strong> run consists of two parts, the initial startup run which is done once to set up
+the environment and create the directory structure and the main run, fetching
+expriment data, analysing, making plots and writing a report. Both parts are controled
+by the run script <i>bench4jsbach/scripts/bench4jsbach.py</i>.</p>
+</div>
+<div class="section" id="initial-run">
+<h3>2.4. Initial run<a class="headerlink" href="#initial-run" title="Permalink to this headline">¶</a></h3>
+<p>A <strong>bench4jsbach</strong> run needs a name as it writes data to your local filesystem that has to be
+addressed. First choose this run name (e.g. <i>myb4jrun</i>) and  change to the
+base directory <i>bench4jsbach</i>.
+Call the run script <i>bench4jsbach.py</i> with your run name
+as command line argument.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">cd</span> <span class="n">git</span><span class="o">/</span><span class="n">jsbach</span><span class="o">/</span><span class="n">tools</span><span class="o">/</span><span class="n">bench4jsbach</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="o">./</span><span class="n">scripts</span><span class="o">/</span><span class="n">bench4jsbach</span><span class="o">.</span><span class="n">py</span> <span class="n">myb4jrun</span>
+</pre></div>
+</div>
+<p>While running, the tool writes a welcome and a final success/error message to your display. In
+addition the internal debugger prints to standard output in the default setting.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="o">******************************************</span>
+<span class="o">*</span> <span class="n">BENCH4JSBACH</span><span class="p">:</span> 
+<span class="o">*</span> <span class="n">Creating</span> <span class="n">environment</span> <span class="ow">and</span> <span class="n">configfile</span> <span class="k">for</span> <span class="n">new</span> <span class="n">bench4jsbach</span> <span class="nb">object</span> <span class="s1">&#39;myb4jrun&#39;</span><span class="o">.</span>
+<span class="o">******************************************</span>
+
+<span class="c1">### DKL_LOGGER - DEBUG -  2016/10/04 - 18:12:08 - MODULE bench - FUNCTION __init__ - LINE 143 :</span>
+  <span class="c1"># Starting.</span>
+<span class="c1">###</span>
+
+<span class="c1">### DKL_LOGGER - DEBUG -  2016/10/04 - 18:12:08 - MODULE bench - FUNCTION _writeconfig__init__ - LINE 366 :</span>
+  <span class="c1"># Starting.</span>
+<span class="c1">###</span>
+
+<span class="c1">### DKL_LOGGER - DEBUG -  2016/10/04 - 18:12:08 - MODULE bench - FUNCTION _writeconfig__init__ - LINE 397 :</span>
+  <span class="c1"># Exiting.</span>
+<span class="c1">###</span>
+
+<span class="c1">### DKL_LOGGER - DEBUG -  2016/10/04 - 18:12:08 - MODULE bench - FUNCTION __init__ - LINE 147 :</span>
+  <span class="c1"># Exiting.</span>
+<span class="c1">###</span>
+
+<span class="o">******************************************</span>
+<span class="o">*</span> <span class="n">BENCH4JSBACH</span><span class="p">:</span> 
+<span class="o">*</span> <span class="n">Created</span> <span class="n">environment</span> 
+<span class="o">*</span>	<span class="s1">&#39;/home/git/jsbach/tools/bench4jsbach/work/myb4jrun&#39;</span> 
+<span class="o">*</span> <span class="ow">and</span> <span class="n">the</span> <span class="n">configuration</span> <span class="n">file</span> 
+<span class="o">*</span>	<span class="s1">&#39;/home/git/jsbach/tools/bench4jsbach/work/myb4jrun/configs/myb4jrun.cfg&#39;</span><span class="o">.</span>
+<span class="o">*</span> <span class="n">Please</span> <span class="n">edit</span> <span class="n">this</span> <span class="n">file</span><span class="o">.</span>
+<span class="o">******************************************</span>
+</pre></div>
+</div>
+<p><strong>Listing:</strong> Standard output after the initial run with argument <i>myb4jrun</i></p>
+<p>When the startup run has finished successfully, the directory structure for
+<i>myb4jrun</i> is created (as shown in the figure below) and an
+editable, default configuration file <i>myb4jrun.cfg</i> is written
+in <i>myb4jrun/configs</i>, also shown further down.</p>
+<div class="figure align-center" id="id2">
+<a class="reference internal image-reference" href="_images-b4j-singlehtml/myb4jrun_workingdir.jpg"><img alt="_images-b4j-singlehtml/myb4jrun_workingdir.jpg" src="_images-b4j-singlehtml/myb4jrun_workingdir.jpg" style="width: 12%;" /></a>
+<p class="caption"><span class="caption-text"><strong>Figure:</strong>  Initial structure of <i>bench4jsbach/work/myb4jrun</i></span></p>
+</div>
+</div>
+<div class="section" id="main-configuration-file">
+<span id="main-config"></span><h3>2.5. Main configuration file<a class="headerlink" href="#main-configuration-file" title="Permalink to this headline">¶</a></h3>
+<p>The generated file is a form for the main configuration of your <strong>bench4jsbach</strong> run and has to be
+adapted to the planned experiment comparison. It is formatted to be read by a <a class="reference external" href="https://docs.python.org/2/">Python</a> config
+file parser after your accomplishment. A config file
+consists of key value pairs and sections nested to any depth. For the sections
+square brackets are used, indentation clearifies the nesting level. You can write
+comments inline prepended by the hash symbol &#8220;#&#8221;.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="n">key</span><span class="o">-</span><span class="mi">1</span><span class="o">=</span><span class="n">value</span><span class="o">-</span><span class="mi">1</span>
+<span class="n">key</span><span class="o">-</span><span class="mi">2</span><span class="o">=</span><span class="n">value</span><span class="o">-</span><span class="mi">2</span>
+<span class="p">[</span><span class="n">section</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+   <span class="n">key</span><span class="o">-</span><span class="mi">1</span><span class="o">=</span><span class="n">value</span><span class="o">-</span><span class="mi">1</span>
+   <span class="p">[[</span><span class="n">subsection</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+      <span class="n">key</span><span class="o">-</span><span class="mi">1</span><span class="o">=</span><span class="n">value</span><span class="o">-</span><span class="mi">1</span>
+</pre></div>
+</div>
+<p><strong>Listing:</strong> Basic configuration file supported by a <a class="reference external" href="https://docs.python.org/2/">Python</a> parser</p>
+<p>After generation the file <i>myb4jrun.cfg</i> contains the
+structure of information that the configuration for a minimum <strong>bench4jsbach</strong> run with two
+<i>experiment</i>s (see <a class="reference internal" href="index.html#exps"><span class="std std-ref">Experiments</span></a>) and one <i>diagnostic field</i> (see <a class="reference internal" href="index.html#diag-fs"><span class="std std-ref">Diagnostic fields</span></a>) has to provide.</p>
+<p>In the file <i>myb4jrun.cfg</i>, which is displayed below, the mandatory
+fields to be filled in are
+marked with angle brackets (&lt;,&gt;) and located in the second part of the file,
+below the comment line &#8220;# PLEASE EDIT ...&#8221;.  The capital text within is
+meant to be explanatory and the whole string including the brackets has to be
+exchanged against your value for the respective item.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="c1">###############################################################</span>
+<span class="c1">#</span>
+<span class="c1"># configuration file for bench4jsbach object &#39;myb4jrun&#39;</span>
+<span class="c1">#</span>
+<span class="c1"># automatically generated on 2016-09-22</span>
+<span class="c1">#</span>
+<span class="c1">###############################################################</span>
+
+<span class="c1">### stamp like meta data, do not edit</span>
+
+<span class="n">bench_name</span><span class="o">=</span><span class="n">myb4jrun</span>		
+<span class="n">author</span><span class="o">=</span><span class="n">deike</span>
+<span class="n">git_repository</span><span class="o">=</span><span class="n">origin</span><span class="p">(</span><span class="n">fetch</span><span class="p">):</span><span class="n">git</span><span class="nd">@git</span><span class="o">.</span><span class="n">mpimet</span><span class="o">.</span><span class="n">mpg</span><span class="o">.</span><span class="n">de</span><span class="p">:</span><span class="n">jsbach</span><span class="o">.</span><span class="n">git</span><span class="p">,</span><span class="n">origin</span><span class="p">(</span><span class="n">push</span><span class="p">):</span><span class="n">git</span><span class="nd">@git</span><span class="o">.</span><span class="n">mpimet</span><span class="o">.</span><span class="n">mpg</span><span class="o">.</span><span class="n">de</span><span class="p">:</span><span class="n">jsbach</span><span class="o">.</span><span class="n">git</span><span class="p">,</span>
+<span class="n">git_branch</span><span class="o">=</span><span class="n">jsbach</span><span class="o">-</span><span class="n">dkl</span>
+<span class="n">git_sha</span><span class="o">=</span><span class="mi">167</span><span class="n">c9e4d3h5df92c0e8e8234878698b5956b35d1</span>
+<span class="n">git_status</span><span class="o">=</span><span class="n">modified</span>
+<span class="n">redmine_url</span><span class="o">=</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">code</span><span class="o">.</span><span class="n">zmaw</span><span class="o">.</span><span class="n">de</span>
+<span class="n">redmine_project</span><span class="o">=</span><span class="n">jsbach</span><span class="o">-</span><span class="n">bench</span>
+<span class="n">redmine_wikipage</span><span class="o">=</span><span class="n">Bench4jsbach_simulations</span>
+<span class="n">host_name</span><span class="o">=</span><span class="n">scalar</span>
+<span class="n">host_ipaddress</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">1.1</span>
+<span class="n">b4j_base</span><span class="o">=/</span><span class="n">home</span><span class="o">/</span><span class="n">deike</span><span class="o">/</span><span class="n">git</span><span class="o">/</span><span class="n">jsbach</span><span class="o">/</span><span class="n">tools</span><span class="o">/</span><span class="n">bench4jsbach</span>
+<span class="n">timestamp</span><span class="o">=</span><span class="mi">2016</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">22</span> <span class="mi">11</span><span class="p">:</span><span class="mi">26</span><span class="p">:</span><span class="mf">48.446387</span>
+
+<span class="c1">###############################################################</span>
+<span class="c1">#</span>
+<span class="c1"># PLEASE EDIT FROM HERE ON DOWNWARD</span>
+<span class="c1">#</span>
+<span class="c1">###############################################################</span>
+
+<span class="c1">### global meta data</span>
+
+<span class="n">redmine_user</span><span class="o">=&lt;</span><span class="n">REDMINE_USER</span><span class="o">&gt;</span>
+<span class="n">redmine_key</span><span class="o">=&lt;</span><span class="n">REDMINE_KEY</span><span class="o">&gt;</span>
+<span class="n">institute</span><span class="o">=</span><span class="s2">&quot;Max-Planck-Institute for Meteorology&quot;</span>
+<span class="n">department</span><span class="o">=</span><span class="s2">&quot;Land Department&quot;</span>
+<span class="n">reporting</span><span class="o">=&lt;</span><span class="n">BENCH_IS_REPORTING</span><span class="o">&gt;</span>
+
+<span class="c1">### experiments in diagnostic run, candidates and references</span>
+
+<span class="p">[</span><span class="n">experiments</span><span class="p">]</span>
+    <span class="p">[[</span><span class="o">&lt;</span><span class="n">MODEL_1_ID</span><span class="o">&gt;</span><span class="p">]]</span>
+        <span class="n">name_orig</span><span class="o">=&lt;</span><span class="n">MODEL_1_NAME_ORIGINAL</span><span class="o">&gt;</span>
+	<span class="nb">type</span><span class="o">=&lt;</span><span class="n">MODEL_1_TYPE</span><span class="o">&gt;</span>
+	<span class="n">path</span><span class="o">=&lt;</span><span class="n">MODEL_1_PATH</span><span class="o">&gt;</span>
+	<span class="n">host</span><span class="o">=&lt;</span><span class="n">MODEL_1_HOST</span><span class="o">&gt;</span>
+	<span class="n">iscan</span><span class="o">=&lt;</span><span class="n">MODEL_1_IS_CANDIDATE</span><span class="o">&gt;</span>
+	<span class="n">isref</span><span class="o">=&lt;</span><span class="n">MODEL_1_IS_REFERENCE</span><span class="o">&gt;</span>
+        <span class="n">startyear</span><span class="o">=&lt;</span><span class="n">MODEL_1_STARTYEAR_FOR_THIS_RUN</span><span class="o">&gt;</span>	
+        <span class="n">endyear</span><span class="o">=&lt;</span><span class="n">MODEL_1_ENDYEAR_FOR_THIS_RUN</span><span class="o">&gt;</span>
+        <span class="n">intitalyear</span><span class="o">=&lt;</span><span class="n">MODEL_1_INITIALYEAR_OVERALL</span><span class="o">&gt;</span>
+        <span class="n">finalyear</span><span class="o">=&lt;</span><span class="n">MODEL_1_FINALYEAR_OVERALL</span><span class="o">&gt;</span>
+    <span class="p">[[</span><span class="o">&lt;</span><span class="n">MODEL_2_ID</span><span class="o">&gt;</span><span class="p">]]</span>
+        <span class="n">name_orig</span><span class="o">=&lt;</span><span class="n">MODEL_2_NAME</span><span class="o">&gt;</span>
+	<span class="nb">type</span><span class="o">=&lt;</span><span class="n">MODEL_2_TYPE</span><span class="o">&gt;</span>
+	<span class="n">path</span><span class="o">=&lt;</span><span class="n">MODEL_2_PATH</span><span class="o">&gt;</span>
+	<span class="n">host</span><span class="o">=&lt;</span><span class="n">MODEL_2_HOST</span><span class="o">&gt;</span>
+	<span class="n">iscan</span><span class="o">=&lt;</span><span class="n">MODEL_2_IS_CANDIDATE</span><span class="o">&gt;</span>
+	<span class="n">isref</span><span class="o">=&lt;</span><span class="n">MODEL_2_IS_REFERENCE</span><span class="o">&gt;</span>
+        <span class="n">startyear</span><span class="o">=&lt;</span><span class="n">MODEL_2_STARTYEAR_FOR_THIS_RUN</span><span class="o">&gt;</span>	
+        <span class="n">endyear</span><span class="o">=&lt;</span><span class="n">MODEL_2_ENDYEAR_FOR_THIS_RUN</span><span class="o">&gt;</span>
+        <span class="n">intitalyear</span><span class="o">=&lt;</span><span class="n">MODEL_2_INITIALYEAR_OVERALL</span><span class="o">&gt;</span>
+        <span class="n">finalyear</span><span class="o">=&lt;</span><span class="n">MODEL_2_FINALYEAR_OVERALL</span><span class="o">&gt;</span>
+
+<span class="c1">### diagnostic fields</span>
+
+<span class="p">[</span><span class="n">fields</span><span class="p">]</span>
+    <span class="p">[[</span><span class="o">&lt;</span><span class="n">FIELD_1_NAME</span><span class="o">&gt;</span><span class="p">]]</span>
+        <span class="n">config_filename</span><span class="o">=&lt;</span><span class="n">FIELD_1_CONFIGURATION_FILENAME</span><span class="o">&gt;</span>
+
+</pre></div>
+</div>
+<p><strong>Listing:</strong> File <i>myb4jrun.cfg</i> after generation, a form for the
+main configuration</p>
+<p>In the following the values to fill in are summarized.</p>
+<div class="section" id="top-level-configuration">
+<h4>2.5.1. Top level configuration<a class="headerlink" href="#top-level-configuration" title="Permalink to this headline">¶</a></h4>
+<p>Top level in the main configuration file:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>redmine_user</td>
+<td>redmine user login name</td>
+<td>string</td>
+<td>None</td>
+</tr>
+<tr class="row-even"><td>redmine_key</td>
+<td>redmine &#8220;Api access key&#8221;</td>
+<td>string</td>
+<td>None</td>
+</tr>
+<tr class="row-odd"><td>institute</td>
+<td>users&#8217; institute</td>
+<td>string</td>
+<td>None</td>
+</tr>
+<tr class="row-even"><td>department</td>
+<td>users&#8217; department</td>
+<td>string</td>
+<td>None</td>
+</tr>
+<tr class="row-odd"><td>reporting</td>
+<td>reporting switch</td>
+<td>boolean</td>
+<td>True</td>
+</tr>
+</tbody>
+</table>
+<p>The redmine access is necessary if reference <i>experiment</i> metadata shall be retrieved from
+the table on the wikipage. When you are logged in you can get your redmine &#8220;Api access key&#8221;
+from the right menu on top of the page:</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="o">&gt;</span> <span class="n">My</span> <span class="n">account</span> <span class="o">&gt;</span> <span class="n">API</span> <span class="n">access</span> <span class="n">key</span> <span class="o">&gt;</span> <span class="n">Show</span>
+</pre></div>
+</div>
+<p>If it does not exist yet, it can easily be created within the same menu.</p>
+</div>
+<div class="section" id="experiment-section">
+<h4>2.5.2. Experiment section<a class="headerlink" href="#experiment-section" title="Permalink to this headline">¶</a></h4>
+<p>The beginning of the section is marked by the header <i>[experiments]</i>. For
+each <i>experiment</i> for comparison in the run there has to be a subsection within, that is
+labeled with a run internal unique name.</p>
+<p>Single <i>experiment</i> subsection:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>name_orig</td>
+<td>original identifying infix, e.g. &#8220;vga0187&#8221;</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>type</td>
+<td><i>experiment</i> type</td>
+<td>option (CMPI5, MPIESM1)</td>
+<td>MPIESM1</td>
+</tr>
+<tr class="row-odd"><td rowspan="2">path</td>
+<td>None if item in database</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>path of <i>experiment</i> in filesystem on host</td>
+<td>string</td>
+<td>None</td>
+</tr>
+<tr class="row-odd"><td rowspan="2">host</td>
+<td>None if item in database</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>host of <i>experiment</i></td>
+<td>string</td>
+<td>None</td>
+</tr>
+<tr class="row-odd"><td>iscan</td>
+<td>candidate role</td>
+<td>boolean</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>isref</td>
+<td>reference role</td>
+<td>boolean</td>
+<td>-</td>
+</tr>
+<tr class="row-odd"><td>startyear</td>
+<td>startyear for <i>experiment</i> in <strong>bench4jsbach</strong> run</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>endyear</td>
+<td>endyear for <i>experiment</i> in <strong>bench4jsbach</strong> run</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-odd"><td>initialyear</td>
+<td>initial year of <i>experiment</i></td>
+<td>string</td>
+<td>None</td>
+</tr>
+<tr class="row-even"><td>finalyear</td>
+<td>final year of <i>experiment</i></td>
+<td>string</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="diagnostic-field-section">
+<span id="diag-f-section"></span><h4>2.5.3. Diagnostic field section<a class="headerlink" href="#diagnostic-field-section" title="Permalink to this headline">¶</a></h4>
+<p>The beginning of the section is marked by the header <i>[fields]</i>.
+For each <i>diagnostic field</i> in the run has to be a subsection inside, that is labeled with a
+run internal unique name.</p>
+<p>Single <i>diagnostic field</i> subsection:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td rowspan="2">config_filename</td>
+<td><i>diagnostic field</i> configuration filename in <i>bench4jsbach/prod/configs</i></td>
+<td rowspan="2">string</td>
+<td rowspan="2">-</td>
+</tr>
+<tr class="row-even"><td>path to <i>diagnostic field</i> configuration file in local filesystem</td>
+</tr>
+</tbody>
+</table>
+<p>Files in context with the available <i>diagnostic field</i>s are stored in
+<i>bench4jsbach/prod</i>, the configuration files beneath in
+the directory <i>configs</i>. A list of available <i>diagnostic field</i>s can be
+found under <a class="reference internal" href="index.html#diag-f-avail"><span class="std std-ref">Experiment types and diagnostic fields available</span></a>.</p>
+<p>When you have replaced all placeholders &#8220;&lt;XXX&gt;&#8221; with the appropriate values the
+bottom part of your configuration file should look in principle like the example
+below.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="c1">### global meta data</span>
+                                                     
+<span class="n">redmine_user</span><span class="o">=</span><span class="s1">&#39;deike.kleberg&#39;</span>
+<span class="n">redmine_key</span><span class="o">=</span><span class="s1">&#39;XXX&#39;</span>
+<span class="n">institute</span><span class="o">=</span><span class="s2">&quot;Max-Planck-Institute for Meteorology&quot;</span>
+<span class="n">department</span><span class="o">=</span><span class="s2">&quot;Land Department&quot;</span>
+<span class="n">reporting</span><span class="o">=</span><span class="kc">True</span>
+
+<span class="c1">### experiments in diagnostic run, candidates and references</span>
+
+<span class="p">[</span><span class="n">experiments</span><span class="p">]</span>
+    <span class="p">[[</span><span class="n">tra0163</span><span class="o">-</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">name_orig</span><span class="o">=</span><span class="n">tra0163</span>
+        <span class="nb">type</span><span class="o">=</span><span class="n">MPIESM1</span>
+        <span class="n">iscan</span><span class="o">=</span><span class="kc">False</span>
+        <span class="n">isref</span><span class="o">=</span><span class="kc">True</span>
+        <span class="n">startyear</span><span class="o">=</span><span class="mi">3300</span>	
+        <span class="n">endyear</span><span class="o">=</span><span class="mi">3329</span>
+    <span class="p">[[</span><span class="n">tra0163</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="n">name_orig</span><span class="o">=</span><span class="n">tra0163</span>
+        <span class="nb">type</span><span class="o">=</span><span class="n">MPIESM1</span>
+        <span class="n">iscan</span><span class="o">=</span><span class="kc">True</span>
+        <span class="n">isref</span><span class="o">=</span><span class="kc">False</span>
+        <span class="n">startyear</span><span class="o">=</span><span class="mi">3970</span>	
+        <span class="n">endyear</span><span class="o">=</span><span class="mi">3999</span>
+
+<span class="c1">### diagnostic fields</span>
+
+<span class="p">[</span><span class="n">fields</span><span class="p">]</span>
+    <span class="p">[[</span><span class="n">albedo</span><span class="p">]]</span>
+        <span class="n">config_filename</span><span class="o">=</span><span class="n">b4j_albedo</span><span class="o">.</span><span class="n">cfg</span>
+</pre></div>
+</div>
+<p><strong>Listing:</strong> Extract of example configuration file <i>myb4jrun.cfg</i></p>
+</div>
+</div>
+<div class="section" id="run-example-myb4jrun">
+<h3>2.6. Run example myb4jrun<a class="headerlink" href="#run-example-myb4jrun" title="Permalink to this headline">¶</a></h3>
+<p>The run can now be started.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="o">./</span><span class="n">scripts</span><span class="o">/</span><span class="n">bench4jsbach</span><span class="o">.</span><span class="n">py</span> <span class="n">work</span><span class="o">/</span><span class="n">myb4jrun</span><span class="o">/</span><span class="n">myb4jrun</span><span class="o">.</span><span class="n">cfg</span>
+</pre></div>
+</div>
+<p>The CPU time maybe about one minute but, as it depends on the duration of the
+data fetching process, also more.</p>
+<div class="figure align-center" id="id3">
+<a class="reference internal image-reference" href="_images-b4j-singlehtml/myb4jrun_workingdir-post.jpg"><img alt="_images-b4j-singlehtml/myb4jrun_workingdir-post.jpg" src="_images-b4j-singlehtml/myb4jrun_workingdir-post.jpg" style="width: 25%;" /></a>
+<p class="caption"><span class="caption-text"><strong>Figure:</strong>  After the run, structure of <i>bench4jsbach/work/myb4jrun</i></span></p>
+</div>
+<p>The generated report <i>myb4jrun.pdf</i> can be found in
+<i>myb4jrun/report</i>, LaTeX source
+and temporary files are kept in subdirectories, the graphics included in the report
+are in a parallel
+directory <i>myb4jrun/graphics</i>. If you want to have a closer look on
+the diagnostics made, you find the results of the calculations and also the
+intermediate, preprocessed and downloaded data in the directories
+<i>downloads</i>,  <i>interpolated_selected</i> respectively
+<i>processed</i>.</p>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="giesm1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[GiESM1]</td><td>Giorgetta, M., et al.: Climate and carbon cycle changes from 1850 to 2100 in MPI-ESM simulations for the coupled model intercomparison project phase 5. Journal of Advances in Modeling Earth Systems, 5, 572-597 , 2013, doi:10.1002/jame.20038</td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="rejsba" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[ReJSBA]</td><td>Reick, C., et al.: Representation of natural and anthropogenic land cover change in MPI-ESM. Journal of Advances in Modeling Earth Systems, 5, 459-482 , 2013, doi:10.1002/jame.20022</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<span id="document-userguide-dev"></span><div class="section" id="user-guide-for-developing-diagnostic-fields">
+<h2>3. User guide for developing diagnostic fields<a class="headerlink" href="#user-guide-for-developing-diagnostic-fields" title="Permalink to this headline">¶</a></h2>
+<p>In the following we show how a diagnostic for <i>experiment</i> comparison from
+external sources can be prepared to serve as <i>diagnostic field</i> that may be triggered by
+a <strong>bench4jsbach</strong> run. A <i>diagnostic field</i> consists of
+scripts for the processing chain (preprocessing, analysing, plotting), declarations
+also for data retrieval and interpolation, descriptive textblocks for generating reports
+and a configuration file to concentrate the setup. The scripts may be
+written in any programming language that is supported by your platform.
+A script has to be layed out for one candidate and one reference
+so that it is scalable, i.e. it can be called in loops over multiple <i>experiment</i>s. It
+will work on local data which the tool has selected and interpolated
+from the <i>experiment</i> output beforehand as
+it had been indicated by the user and the <i>experiment</i> type. The
+interface of each script has to be declared in a respective section of the
+<i>diagnostic field</i> s&#8217; configuration file. The
+information to provide include input and output filenames and possibly hints
+on format, grid,
+spatial resolution, tiling and global fragmentation and time resolution and
+period.</p>
+<p>We use the example <i>myb4jrun</i> from the
+last section <a class="reference internal" href="index.html#userguide-com"><span class="std std-ref">User guide for benchmarking</span></a> again.
+In the run we want to include some
+diagnostic and benchmarking for a clear cut out example scientific issue called
+<i>myfield</i>.</p>
+<div class="section" id="declaration-in-main-configuration">
+<h3>3.1. Declaration in main configuration<a class="headerlink" href="#declaration-in-main-configuration" title="Permalink to this headline">¶</a></h3>
+<p>The central entry point for a
+<i>diagnostic field</i> into the run is its <a class="reference internal" href="index.html#diag-f-section"><span class="std std-ref">Diagnostic field section</span></a> in the main
+configuration file, in this example <i>myb4jrun.cfg</i>. We declare a subsection
+called <i>myfield</i> and fill in the path to a new field configuration file
+as value for the key <i>config_filename</i>, here
+<i>mypath/myfield.cfg</i>.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="c1">### diagnostic fields</span>
+
+<span class="p">[</span><span class="n">fields</span><span class="p">]</span>
+    <span class="p">[[</span><span class="n">myfield</span><span class="p">]]</span>
+        <span class="n">config_filename</span><span class="o">=</span><span class="n">mypath</span><span class="o">/</span><span class="n">myfield</span><span class="o">.</span><span class="n">cfg</span>
+</pre></div>
+</div>
+<p><strong>Listing:</strong> Declaration of <i>myfield</i> in main configuration file <i>myb4jrun.cfg</i></p>
+</div>
+<div class="section" id="configuration-file-myfield-cfg">
+<h3>3.2. Configuration file myfield.cfg<a class="headerlink" href="#configuration-file-myfield-cfg" title="Permalink to this headline">¶</a></h3>
+<p>In this chapter we explain in detail how to develop the field configuration
+file. The file has to contain all the settings and
+communication parameters that are needed for a <i>diagnostic field</i>, from fetching <i>experiment</i> output
+data until writing the benchmark results in a final report.</p>
+<div class="section" id="top-level-configuration">
+<h4>3.2.1. Top level configuration<a class="headerlink" href="#top-level-configuration" title="Permalink to this headline">¶</a></h4>
+<p>Top level in the <i>diagnostic field</i> configuration file:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>field_name</td>
+<td>field id conform to id/name of diagnostic field in main configuration</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>suffix</td>
+<td>output format suffix for processed data of the run</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-odd"><td>frequency</td>
+<td>output frequence to use in the run</td>
+<td>option (yearly, monthly, 6-hourly)</td>
+<td>monthly</td>
+</tr>
+<tr class="row-even"><td>documentation</td>
+<td>self documentation</td>
+<td>string</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<p>For verification it will be checked if the value for the key
+<i>field_name</i> is consistent with the name given for the
+<i>field</i> in the main configuration.</p>
+<p>In our example we fill in the respective values.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="n">field_name</span><span class="o">=</span><span class="n">myfield</span>
+<span class="n">suffix</span><span class="o">=</span><span class="n">nc</span>
+<span class="n">frequence</span><span class="o">=</span><span class="n">monthly</span>
+<span class="n">documentation</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">NAME</span>
+<span class="s2">        myfield_diagnostic</span>
+
+<span class="s2">DESCRIPTION</span>
+<span class="s2">        This configuration ...</span>
+
+<span class="s2">DETAILS</span>
+<span class="s2">        For all experiments ...</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<p><strong>Listing:</strong> Example <i>myfield.cfg</i>, top level configuration</p>
+</div>
+<div class="section" id="processing-chain">
+<h4>3.2.2. Processing chain<a class="headerlink" href="#processing-chain" title="Permalink to this headline">¶</a></h4>
+<p>The processes involved in a <i>diagnostic field</i> are
+interconnected by I/O dependencies. For the time being they have a binding
+order: 1. <i>fetch</i>,
+2. <i>interpolate</i>, 3. <i>preprocess</i>,
+4. <i>diagnose</i>, 5. <i>plot</i>. <strong>bench4jsbach</strong> works internally
+with an indexing system in which files are addressed by unique infixes,
+f.e. <i>VARNAME-INFIX</i>.  For each
+file that shall be written by a process, the appropriate section has to hold a
+subsection <i>[[VARNAME-INFIX]]</i>
+which contains the detailed configuration. The infix
+will also be used as substring for the corresponding filename. If the file
+shall be read by a subsequent process, it has to be appended to the respective
+<i>input</i> list. For illustration
+the listing <a class="reference internal" href="#io-dependencies-html"><span class="std std-ref">I/O dependencies</span></a> at the bottom of the page shows a detail
+from the configuration file for the
+<i>diagnostic field</i> <i>myfield</i>. In HTML the graphic serves also as a link to
+another picture,
+showing how the I/O dependencies are taken into account.</p>
+</div>
+<div class="section" id="fetch-section">
+<h4>3.2.3. Fetch section<a class="headerlink" href="#fetch-section" title="Permalink to this headline">¶</a></h4>
+<p>The beginning of the section is marked by the header <i>[fetch]</i>.
+For each variable that the <i>diagnostic field</i> requires from the <i>experiment</i> output the <strong>bench4jsbach</strong> run will
+write a file containing the selected data field. You have to define a subsection f.e.
+<i>[[VARNAME-INFIX]]</i> for it.</p>
+<p>A single subsection in section  <i>fetch</i> contains the following key:value
+entries:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>longname</td>
+<td>complete name</td>
+<td>string</td>
+<td>None</td>
+</tr>
+<tr class="row-even"><td>unit</td>
+<td>physical unit</td>
+<td>string</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>Inside there has to be one subsubsection for each
+<i>experiment_type</i> given
+for any item in the <i>experiment</i> section of the main configuration. This subsubsection must be
+labeled with the respective  <i>type</i> name.</p>
+<p>Subsubsection for the  <i>experiment\ type</i> <i>MPIESM1</i>:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>name</td>
+<td>name of variable to select</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>code</td>
+<td>code number of variable to select</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-odd"><td>submodel</td>
+<td>submodel identifier in the original context</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>stream</td>
+<td>stream identifier in the original context</td>
+<td>string</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>For clarification we show  one variable subsection labeled
+<i>D_selcode</i>  of the <i>fetch</i> section from
+our example <i>mypath/myfield.cfg</i>.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="p">[</span><span class="n">fetch</span><span class="p">]</span>
+    <span class="p">[[</span><span class="n">D_selcode</span><span class="p">]]</span>
+        <span class="n">longname</span><span class="o">=</span><span class="n">Surface</span> <span class="n">Downwelling</span> <span class="n">Solar</span> <span class="n">Radiation</span> <span class="p">[</span><span class="n">W</span> <span class="n">m</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">unit</span><span class="o">=</span><span class="n">Wm</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+        <span class="p">[[[</span><span class="n">MPIESM1</span><span class="p">]]]</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">swdown_acc</span>
+            <span class="n">code</span><span class="o">=</span><span class="mi">21</span>
+            <span class="n">submodel</span><span class="o">=</span><span class="n">jsbach</span>
+            <span class="n">stream</span><span class="o">=</span><span class="n">jsbach</span>
+</pre></div>
+</div>
+<p><strong>Listing:</strong> Example <i>fetch</i> section configuration</p>
+</div>
+<div class="section" id="processing-sections">
+<h4>3.2.4. Processing sections<a class="headerlink" href="#processing-sections" title="Permalink to this headline">¶</a></h4>
+<p>In order to do the preprocessing, diagnostic and plotting <strong>bench4jsbach</strong> calls the
+executable script given for the key <i>exec</i> in the respective
+section. In the standard case the tool would look in
+<i>bench4jsbach/prod/scripts</i> for it but you may just as well
+provide
+another path. We choose again <i>mypath</i> as path for the executable
+scripts in the example below, without limiting the generality.</p>
+</div>
+<div class="section" id="preprocessing-and-diagnostic-sections">
+<h4>3.2.5. Preprocessing and diagnostic sections<a class="headerlink" href="#preprocessing-and-diagnostic-sections" title="Permalink to this headline">¶</a></h4>
+<p>Top level in the <i>preprocessing</i> and  the
+<i>diagnostic</i> sections:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>exec</td>
+<td>executable script to call in <strong>bench4jsbach</strong> run</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>input</td>
+<td>input files needed by script</td>
+<td>stringlist</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>In the example below the script <i>myfield_prep.py</i>
+shall do the <i>preprocessing</i>.  It has to read a data file
+that ought to be found during the <strong>bench4jsbach</strong> run by the identifier <i>D_selcode</i>
+as it is given in the value list of the key <i>input</i>. It shall store
+intermediate
+results in an output file that can be indexed by
+<i>D_seasmean</i> . This is indicated by the appropriatly labeled subsection.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="p">[</span><span class="n">preprocessing</span><span class="p">]</span>
+    <span class="n">exec</span><span class="o">=</span><span class="n">mypath</span><span class="o">/</span><span class="n">myfield_prep</span><span class="o">.</span><span class="n">py</span>
+    <span class="nb">input</span><span class="o">=</span><span class="n">D_selcode</span><span class="p">,</span>
+    <span class="p">[[</span><span class="n">D_seasmean</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p><strong>Listing:</strong> Example <i>preprocessing</i> section configuration</p>
+</div>
+<div class="section" id="plotting-section">
+<h4>3.2.6. Plotting section<a class="headerlink" href="#plotting-section" title="Permalink to this headline">¶</a></h4>
+<p>For the plotting we allow several scripts, the section was adjusted to this requirement.</p>
+<p>Top level of the <i>plotting</i> section:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>suffix</td>
+<td>output format string</td>
+<td>string</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>There are subsections for one or more plotting scripts labeled with a unique identifier
+for the particular script.</p>
+<p>Single plotting script subsection:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>exec</td>
+<td>executable script to call in <strong>bench4jsbach</strong> run</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>input</td>
+<td>input files needed by script</td>
+<td>stringlist</td>
+<td>-</td>
+</tr>
+<tr class="row-odd"><td>nref</td>
+<td>as indicated by plot: comparison with single or all reference experiment</td>
+<td>option (single, multiple)</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>plot_title</td>
+<td>title string for plot</td>
+<td>stringlist</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>As in the other processing sections output files are introduced by labeled subsections beneath. In
+the example below the subsection <i>wds_plot</i> indicates plotting with the script
+<i>myfield_wds_plot.py</i>. According to the value <i>single</i> for the
+key <i>nref</i> the script will run seperatly for each candidate, reference <i>experiment</i> pair.
+It shall read a file indexed by <i>myfield_wds</i> which has to be written
+by a predecessor process. For each pair it is supposed to store a plot output file
+with the format <i>png</i> and a title generated from the output infix
+<i>myfield_wds_plot</i>. For the plots the <i>plot_title</i> has to be
+used, here consisting of a template and parameters, which should be expanded by the script.</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="p">[</span><span class="n">plotting</span><span class="p">]</span>
+    <span class="n">suffix</span><span class="o">=</span><span class="n">png</span>
+    <span class="p">[[</span><span class="n">wds_plot</span><span class="p">]]</span>
+        <span class="n">exec</span><span class="o">=</span><span class="n">myfield_wds_plot</span><span class="o">.</span><span class="n">py</span>
+        <span class="nb">input</span><span class="o">=</span><span class="n">myfield_wds</span><span class="p">,</span>
+        <span class="n">nref</span><span class="o">=</span><span class="n">single</span>
+        <span class="n">plot_title</span><span class="o">=</span><span class="s1">&#39;$\Delta_{C_{\</span><span class="si">%d</span><span class="s1">}R_{\</span><span class="si">%d</span><span class="s1">}}$&#39;</span><span class="p">,</span><span class="n">can_no</span><span class="p">,</span><span class="n">ref_no</span><span class="p">,</span>
+        <span class="p">[[[</span><span class="n">myfield_wds_plot</span><span class="p">]]]</span>
+</pre></div>
+</div>
+<p><strong>Listing:</strong> Example <i>plotting</i> section configuration</p>
+</div>
+<div class="section" id="i-o-dependencies">
+<span id="io-dependencies-html"></span><h4>3.2.7. I/O dependencies<a class="headerlink" href="#i-o-dependencies" title="Permalink to this headline">¶</a></h4>
+<p>The listing below shows an extract of the example <i>diagnostic field</i> configuration file
+<i>myfield.cfg</i>. In HTML the listing is also a link to an illustration
+of the processing chain formed by I/O dependencies. In the example the file
+indexed <i>wds_plot</i> being output of the plotting process is the end of
+a chain, started with the file <i>D_select</i> which shall contain
+<i>experiment</i> output data selected by the <strong>bench4jsbach</strong> run.</p>
+<div class="figure align-center">
+<a class="reference external image-reference" href="_images-b4j-singlehtml/diagfield-conf-overlay.jpg"><img alt="_images-b4j-singlehtml/diagfield-conf.jpg" src="_images-b4j-singlehtml/diagfield-conf.jpg" /></a>
+</div>
+<p><strong>Figure:</strong> Example <i>myfield.cfg</i> (HTML link)</p>
+</div>
+<div class="section" id="report-section">
+<h4>3.2.8. Report section<a class="headerlink" href="#report-section" title="Permalink to this headline">¶</a></h4>
+<p>The report section is arranged at the end of the configuration file to improve
+readabiliy.</p>
+<p>Top level in the <i>report</i> section:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>title</td>
+<td>title for the <i>diagnostic field</i> &#8216;s section in the report</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>abstract</td>
+<td>scientific description of the <i>diagnostic field</i></td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-odd"><td>technical_TeXed</td>
+<td>technical description of the <i>diagnostic field</i></td>
+<td>string</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>There have to be subsections for each diagnostic result to appear in the report. For the
+time being the mapping is based on the conformity with the output file infixes of
+the <i>diagnostic</i> section.</p>
+<p>Subsections refering to  <i>diagnostic</i> output:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="37%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" colspan="2">key</th>
+<th class="head" colspan="2">value</th>
+</tr>
+<tr class="row-even"><th class="head">name</th>
+<th class="head">description</th>
+<th class="head">datatype</th>
+<th class="head">default</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>title</td>
+<td>title of report subsection</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>abstract</td>
+<td>scientific description of diagnostic method</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-odd"><td>technical_TeXed</td>
+<td>technical description of diagnostic method</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>name</td>
+<td>name of diagnostic method</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-odd"><td>isbench</td>
+<td>switch: Is diagnostic method used as benchmark?</td>
+<td>boolean</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>benchvar</td>
+<td>name of displayed variable in plotfile</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-odd"><td>benchunit</td>
+<td>physical unit of displayed variable</td>
+<td>string</td>
+<td>-</td>
+</tr>
+<tr class="row-even"><td>type</td>
+<td>type of plot</td>
+<td>option (map, metric, barchart)</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="processing-scripts">
+<h3>3.3. Processing scripts<a class="headerlink" href="#processing-scripts" title="Permalink to this headline">¶</a></h3>
+<p>The processing scripts ( for preprocessing, diagnostic and plotting ) are run as <a class="reference external" href="https://docs.python.org/2/">Python</a>
+subprocesses. A string list is passed as argument. Each element has the format</p>
+<div class="highlight-default"  style="background-color:#ffffdd"><div class="highlight-default"><pre><span></span><span class="s2">&quot;XXX:YYYY&quot;</span>
+</pre></div>
+</div>
+<p>with &#8220;XXX&#8221; being a key out of the main or the <i>diagnostic field</i> configuration and &#8220;YYY&#8221; the
+corresponding value. The information that should be provided include</p>
+<ul class="simple">
+<li>attributes of the candidate <i>experiment</i></li>
+<li>attributes of the reference <i>experiment</i></li>
+<li>paths to input files</li>
+<li>paths to output files</li>
+</ul>
+<p>The processes have to parse this string list at runtime to get the keyword arguments.</p>
+</div>
+</div>
+<span id="document-code"></span><div class="section" id="code-documentation">
+<h2>4. Code documentation<a class="headerlink" href="#code-documentation" title="Permalink to this headline">¶</a></h2>
+<p>This page provides an auto-generated summary of bench4jsbach&#8217;s code documentation.</p>
+<div class="section" id="bench">
+<h3>4.1. Bench<a class="headerlink" href="#bench" title="Permalink to this headline">¶</a></h3>
+<p>The module contains bench related functionality and data.</p>
+<div class="section" id="functions">
+<h4>4.1.1. Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h4>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#bench.get_git_origin" title="bench.get_git_origin"><code class="xref py py-obj docutils literal"><span class="pre">bench.get_git_origin</span></code></a>()</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="index.html#bench.get_git_branch" title="bench.get_git_branch"><code class="xref py py-obj docutils literal"><span class="pre">bench.get_git_branch</span></code></a>()</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="index.html#bench.get_git_sha" title="bench.get_git_sha"><code class="xref py py-obj docutils literal"><span class="pre">bench.get_git_sha</span></code></a>()</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="index.html#bench.get_git_status" title="bench.get_git_status"><code class="xref py py-obj docutils literal"><span class="pre">bench.get_git_status</span></code></a>()</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="index.html#bench.get_ip_address" title="bench.get_ip_address"><code class="xref py py-obj docutils literal"><span class="pre">bench.get_ip_address</span></code></a>()</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="creating-a-bench-object">
+<h4>4.1.2. Creating a bench object<a class="headerlink" href="#creating-a-bench-object" title="Permalink to this headline">¶</a></h4>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#bench.Bench_Object" title="bench.Bench_Object"><code class="xref py py-obj docutils literal"><span class="pre">bench.Bench_Object</span></code></a>(config_arg,&nbsp;**kwargs)</td>
+<td>This object coordinates the bench4jsbach run.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="diagnostics">
+<h3>4.2. Diagnostics<a class="headerlink" href="#diagnostics" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#module-diagnostics" title="diagnostics"><code class="xref py py-obj docutils literal"><span class="pre">diagnostics</span></code></a></td>
+<td>The module contains diagnostic related classes, functionality and data.</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="creating-a-diagnostics">
+<h4>4.2.2. Creating a diagnostics<a class="headerlink" href="#creating-a-diagnostics" title="Permalink to this headline">¶</a></h4>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#diagnostics.Diagnostics" title="diagnostics.Diagnostics"><code class="xref py py-obj docutils literal"><span class="pre">diagnostics.Diagnostics</span></code></a>(**kwargs)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="experiment">
+<h3>4.3. Experiment<a class="headerlink" href="#experiment" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#module-experiment" title="experiment"><code class="xref py py-obj docutils literal"><span class="pre">experiment</span></code></a></td>
+<td>Module contains experiment related classes, methods and metadata.</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="id1">
+<h4>4.3.2. Functions<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#experiment.find_files" title="experiment.find_files"><code class="xref py py-obj docutils literal"><span class="pre">experiment.find_files</span></code></a>(pattern,&nbsp;path[,&nbsp;...])</td>
+<td>Function to find files with a name containing a given infix.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="creating-an-experiment">
+<h4>4.3.3. Creating an experiment<a class="headerlink" href="#creating-an-experiment" title="Permalink to this headline">¶</a></h4>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#experiment.Experiment" title="experiment.Experiment"><code class="xref py py-obj docutils literal"><span class="pre">experiment.Experiment</span></code></a>(b4j_obj,&nbsp;**kwargs)</td>
+<td>Base class representing methods and metadata of an experiment.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="index.html#experiment.CMIP5_Experiment" title="experiment.CMIP5_Experiment"><code class="xref py py-obj docutils literal"><span class="pre">experiment.CMIP5_Experiment</span></code></a>(b4j_obj,&nbsp;**kwargs)</td>
+<td>Derived class specialized on simulations done for CMIP5.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="index.html#experiment.MPIESM1_Experiment" title="experiment.MPIESM1_Experiment"><code class="xref py py-obj docutils literal"><span class="pre">experiment.MPIESM1_Experiment</span></code></a>(b4j_obj,&nbsp;**kwargs)</td>
+<td>Derived class specialized on simulations with MPIESM1.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="report">
+<h3>4.4. Report<a class="headerlink" href="#report" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#module-report" title="report"><code class="xref py py-obj docutils literal"><span class="pre">report</span></code></a></td>
+<td>The module contains report related classes, functionality and data.</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="creating-a-report">
+<h4>4.4.2. Creating a report<a class="headerlink" href="#creating-a-report" title="Permalink to this headline">¶</a></h4>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#report.Report" title="report.Report"><code class="xref py py-obj docutils literal"><span class="pre">report.Report</span></code></a>()</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="wikipage">
+<h3>4.5. Wikipage<a class="headerlink" href="#wikipage" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#module-wikipage" title="wikipage"><code class="xref py py-obj docutils literal"><span class="pre">wikipage</span></code></a></td>
+<td>The module contains redmine related classes, functionality and data.</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="creating-a-wikipage">
+<h4>4.5.2. Creating a wikipage<a class="headerlink" href="#creating-a-wikipage" title="Permalink to this headline">¶</a></h4>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#wikipage.Bench4JSBach_Wikipage" title="wikipage.Bench4JSBach_Wikipage"><code class="xref py py-obj docutils literal"><span class="pre">wikipage.Bench4JSBach_Wikipage</span></code></a>(redmine_user,&nbsp;...)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="util">
+<h3>4.6. Util<a class="headerlink" href="#util" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="index.html#module-util" title="util"><code class="xref py py-obj docutils literal"><span class="pre">util</span></code></a></td>
+<td>Module contains functions and constants of general nature.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &copy;2016, Deike Kleberg.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
