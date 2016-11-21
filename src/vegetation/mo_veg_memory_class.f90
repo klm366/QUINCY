@@ -238,7 +238,8 @@ MODULE mo_veg_memory_class
                                     unit_uptake_p             , & !< incremental change in P-based growth, needed for optimal allocation
                                     delta_dens_ind            , & !< change in density of individuals (#/m2/timestep)
                                     cost_n_uptake_root        , & !< actual cost for N uptake by roots (mol C/mol N)
-                                    cost_n_fixation               !< actual cost for N uptake through fixation (mol C/mol N)
+                                    cost_n_fixation           , & !< actual cost for N uptake through fixation (mol C/mol N)
+                                    mortality_rate                !< background_mort_rate_tree / grass converted to 1/timestep
 
     ! daytime averages
     TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanop)
@@ -1598,6 +1599,9 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'cost_n_fixation', mem%cost_n_fixation, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'mortality_rate', mem%mortality_rate, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'par_sunlit_daytime_cl', mem%par_sunlit_daytime_cl, &
