@@ -13,12 +13,12 @@
 ########################################################################################################
 
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
-experimentalID="ST_rev309d"      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
+experimentalID=""      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
 # select sites: FLUXNET or CRUNCEPv5
-siteDataSet="c"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
+siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
 customSiteList="F"          # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
-customSiteListFileName="my_cruncep_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
+customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant are currently available
 # run only a single site? then provide a site name, else write: singleSiteName=""
@@ -29,7 +29,7 @@ specialFluxnetOutput="F"    # T (True) or F (False) [large caps]
 
 ## compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # started by the cleanup_slm_hpc_run.sh using two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
-compareSimCRUNCEPvsGFDB="T"  # T (True) or F (False) [large caps] -> when "T" default go: siteDataSet="c", output_interval_..="daily", paramSensitivitySim="F"
+compareSimCRUNCEPvsGFDB="F"  # T (True) or F (False) [large caps] -> when "T" default go: siteDataSet="c", output_interval_..="daily", paramSensitivitySim="F"
 spinupLengthGFDB=300         # years of spin-up before output is saved
 ## parameter sensitivity simulations
 # you can run one site from your customSiteList (customSiteList is set to "T" automatically if paramSensitivitySim="T")
@@ -40,7 +40,7 @@ paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
 ## namelist.slm options ##
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-n_uptake_scheme="prescribed"      # prescribed standard optimal resistance
+n_uptake_scheme="standard"      # prescribed standard optimal resistance
 flag_calc_soil_moisture="T"
 # canopy model options
 flag_t_jmax_acclimation="F"
@@ -54,11 +54,11 @@ flag_tile_veg_dynamics="T"
 flag_start_bareground="T"
 
 # simulation length & output
-simulation_length_number=10     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=10     # equal with or larger than output_start_first_day_year
+output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
 
 # forcing input
 soil_awc_prescribe=300.0        # float !

@@ -24,4 +24,6 @@
   delta_n_leaf=NAN
   cost_n_fixation_max=NAN
   cost_n_fixation_min=NAN
+  vmax_bnf=NAN
+  k_bnf=NAN
 /

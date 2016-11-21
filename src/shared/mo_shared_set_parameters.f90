@@ -36,6 +36,8 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: delta_n_leaf
     REAL(wp)           :: cost_n_fixation_max
     REAL(wp)           :: cost_n_fixation_min
+    REAL(wp)           :: vmax_bnf                        !< maximum rate of N fixation
+    REAL(wp)           :: k_bnf                           !< half_saturating cost of the response of N fixation
 
   CONTAINS
     PROCEDURE :: read_param => read_parameter_list
@@ -79,6 +81,8 @@ CONTAINS
     REAL(wp)           :: delta_n_leaf
     REAL(wp)           :: cost_n_fixation_max
     REAL(wp)           :: cost_n_fixation_min
+    REAL(wp)           :: vmax_bnf
+    REAL(wp)           :: k_bnf
 
     ! Namelist definition of section parameters
     ! 
@@ -95,7 +99,9 @@ CONTAINS
         delta_n_fraction          , &
         delta_n_leaf              , &
         cost_n_fixation_max       , &
-        cost_n_fixation_min
+        cost_n_fixation_min       , &
+        vmax_bnf                  , &
+        k_bnf
 
     ! variables for reading model-options from namelist
     ! 
@@ -118,6 +124,8 @@ CONTAINS
     delta_n_leaf                = missval
     cost_n_fixation_max         = missval
     cost_n_fixation_min         = missval
+    vmax_bnf                    = missval
+    k_bnf                       = missval
 
     ! read the namelist
     ! 
@@ -147,6 +155,8 @@ CONTAINS
     this%delta_n_leaf                = delta_n_leaf
     this%cost_n_fixation_max         = cost_n_fixation_max
     this%cost_n_fixation_min         = cost_n_fixation_min
+    this%vmax_bnf                    = vmax_bnf
+    this%k_bnf                       = k_bnf
   END SUBROUTINE Read_parameter_list
 
 
@@ -157,6 +167,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE set_parameter_values_with_list_values(this)
 
+    USE mo_base_constants,                  ONLY: one_day, one_year
     !USE mo_assimi_constants
     !USE mo_atmland_constants
     !USE mo_rad_constants
@@ -192,7 +203,11 @@ CONTAINS
                                                                                     (molar_mass_C/molar_mass_N)
     IF (ABS(this%cost_n_fixation_min  - missval) > eps8)  cost_n_fixation_min   = this%cost_n_fixation_min / &
                                                                                     (molar_mass_C/molar_mass_N)
-
+    IF (ABS(this%vmax_bnf             - missval) > eps8)  vmax_bnf              = this%vmax_bnf / &
+                                                                                    (molar_mass_N/molar_mass_C) / &
+                                                                                    (one_day*one_year) *1.e6_wp
+    IF (ABS(this%k_bnf                - missval) > eps8)  k_bnf                 = this%k_bnf / &
+                                                                                    (molar_mass_C/molar_Mass_N)
 
   END SUBROUTINE set_parameter_values_with_list_values
 

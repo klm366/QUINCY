@@ -28,8 +28,8 @@ flag_heterogeneous_canopy="F"
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
 # vegetation dynamics options
-flag_tile_veg_dynamics="F"
-flag_start_bareground="F"
+flag_tile_veg_dynamics="T"
+flag_start_bareground="T"
 
 # simulation length & output
 simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]

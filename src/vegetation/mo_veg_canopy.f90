@@ -106,6 +106,8 @@ CONTAINS
 
     !> 0.4 some initialisation and input checks
     !!
+
+    !! @todo use lctlib for pathway specific constants in calc_canopy_layers
     ! set pathway specific constants (BLARRP!! this should not be here -> lctlib)
     IF(lctlib%ps_pathway == ic4phot) THEN
         jmax2vcmax = jmax2vcmax_C4
