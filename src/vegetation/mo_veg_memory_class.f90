@@ -29,7 +29,7 @@ MODULE mo_veg_memory_class
   PUBLIC :: t_slm_struct_veg_pool, t_slm_struct_veg_element   ! *slmjsb4 
   PUBLIC :: max_no_of_structs, max_no_of_n_structs            ! *slmjsb4
 
-  INTEGER, PARAMETER :: max_no_of_vars      = 180  !> TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_vars      = 220  !> TYPE t_jsb_var
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
   INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
 
@@ -151,7 +151,7 @@ MODULE mo_veg_memory_class
     !> variables
     !! 
     ! logical
-    TYPE(t_jsb_var_logical1d)      :: growing_season    !< logical to identify whether the plant is in the growing season or not
+    TYPE(t_jsb_var_logical1d)       :: growing_season     !< logical to identify whether the plant is in the growing season or not
     ! basic plant
     TYPE(t_jsb_var_real1d)          :: &   
                                     height            , &            !< plant height in m
@@ -175,7 +175,21 @@ MODULE mo_veg_memory_class
                                     t_jmax_opt        , &            !< current optimum temperature for eletron transport of photosynthesis
                                     an_boc            , &            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
                                     leaf_cn_direction , &            !< indicates direction of change in leaf CN ratio to maximise NPP
-                                    apar                             !< ..
+                                    apar              , &            !< ..
+                                    target_lai        , &            !< LAI implied from sap wood area
+                                    kstar_labile                     !< labile pool turnover rate assuming only temperature and moisture constraints (no stoichiometry)
+
+    ! target C:N and N:P ratios for various non-leaf tissues (mol/mol)
+    TYPE(t_jsb_var_real1d)          :: &
+                                    target_cn_fine_root       , &
+                                    target_cn_coarse_root     , &
+                                    target_cn_sap_wood        , &
+                                    target_cn_fruit           , &
+                                    target_np_fine_root       , &
+                                    target_np_coarse_root     , &
+                                    target_np_sap_wood        , &
+                                    target_np_fruit
+
     ! canopy layers -> levels, lbounds, ubounds
     TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanop)
                                     nl_tot_cl         , &       !< N in canopy layer (mmol / m2 (LAI))
@@ -239,7 +253,11 @@ MODULE mo_veg_memory_class
                                     delta_dens_ind            , & !< change in density of individuals (#/m2/timestep)
                                     cost_n_uptake_root        , & !< actual cost for N uptake by roots (mol C/mol N)
                                     cost_n_fixation           , & !< actual cost for N uptake through fixation (mol C/mol N)
-                                    mortality_rate                !< background_mort_rate_tree / grass converted to 1/timestep
+                                    mortality_rate            , & !< background_mort_rate_tree / grass converted to 1/timestep
+                                    k1_opt                    , & !< coefficient for optimal leaf:root ratio
+                                    k2_opt                    , & !< coefficient for optimal leaf:root ratio
+                                    leaf2sapwood_mass_ratio   , & !< leaf to shoot mass ratio
+                                    leaf2root_mass_ratio          !< leaf to root mass ratio
 
     ! daytime averages
     TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanop)
@@ -1436,6 +1454,36 @@ CONTAINS
       CALL slm_add_var(mem, 'apar', mem%apar, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL slm_add_var(mem, 'target_lai', mem%target_lai, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'kstar_labile', mem%kstar_labile, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'target_cn_fine_root', mem%target_cn_fine_root, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'target_cn_coarse_root', mem%target_cn_coarse_root, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'target_cn_sap_wood', mem%target_cn_sap_wood, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'target_cn_fruit', mem%target_cn_fruit, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'target_np_fine_root', mem%target_np_fine_root, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'target_np_coarse_root', mem%target_np_coarse_root, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'target_np_sap_wood', mem%target_np_sap_wood, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'target_np_fruit', mem%target_np_fruit, &
+            initval_r=0.0_wp) ! initvalue
+  
       CALL slm_add_var(mem, 'nl_tot_cl', mem%nl_tot_cl, &
             initval_r=0.0_wp) ! initvalue
   
@@ -1600,8 +1648,20 @@ CONTAINS
   
       CALL slm_add_var(mem, 'cost_n_fixation', mem%cost_n_fixation, &
             initval_r=0.0_wp) ! initvalue
-
+  
       CALL slm_add_var(mem, 'mortality_rate', mem%mortality_rate, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'k1_opt', mem%k1_opt, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'k2_opt', mem%k2_opt, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'leaf2sapwood_mass_ratio', mem%leaf2sapwood_mass_ratio, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'leaf2root_mass_ratio', mem%leaf2root_mass_ratio, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'par_sunlit_daytime_cl', mem%par_sunlit_daytime_cl, &

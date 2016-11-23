@@ -49,26 +49,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp) :: growth_req_n, &                                    ! N reqiurement of growth (mol N / P per mol C)
-                growth_req_p                                       ! P reqiurement of growth (mol N / P per mol C)
-    REAL(wp) :: target_lai                                         ! LAI implied from sap wood area 
-    REAL(wp) :: kstar_labile                                       ! labile pool turnover rate assuming only temperature and moisture constraints (no stoichiometry)
-    ! target C:N and N:P ratios for various non-leaf tissues (mol/mol)
-    REAL(wp) :: target_cn_fine_root   , &
-                target_cn_coarse_root , &
-                target_cn_sap_wood    , &
-                target_cn_fruit       , &
-                target_np_fine_root   , &
-                target_np_coarse_root , &
-                target_np_sap_wood    , &
-                target_np_fruit
-    REAL(wp) :: diameter                , &
-                height                  , &
-                dheight                 , &
-                leaf2sapwood_mass_ratio , &
-                leaf2root_mass_ratio 
-    REAL(wp) :: k1_opt, &
-                k2_opt
+    REAL(wp)                               :: dheight    !< delta height
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
@@ -81,14 +62,6 @@ CONTAINS
     REAL(wp), POINTER                :: ga
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
-!      TYPE IS(t_atm2land_memory)
-!        atm2land__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(VEG_)%p)
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
     veg => veg__mem 
     t_air            => atm2land__mem%t_air%ptr
     press_srf        => atm2land__mem%press_srf%ptr
@@ -102,7 +75,7 @@ CONTAINS
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    kstar_labile = meristem_activity(t_air, tile%soil%theta, veg%growing_season%ptr)
+    veg%kstar_labile%ptr = meristem_activity(t_air, tile%soil%theta, veg%growing_season%ptr)
 
     !> 1.1 calculate costs of N uptake and fixation
     veg%fmaint_rate%ptr = fmaint_rate_base * temperature_response_respiration(t_air)
@@ -123,17 +96,17 @@ CONTAINS
       CALL calc_dir_optimal_cn_leaf(lctlib, veg)
     END IF
 
-    CALL update_stoichiometry(veg                   , &
-                              lctlib%growthform     , &
-                              lctlib%cn_leaf        , & 
-                              target_cn_fine_root   , &
-                              target_cn_coarse_root , &
-                              target_cn_sap_wood    , & 
-                              target_cn_fruit       , &
-                              target_np_fine_root   , &
-                              target_np_coarse_root , & 
-                              target_np_sap_wood    , &
-                              target_np_fruit)
+    CALL update_stoichiometry(veg                           , &
+                              lctlib%growthform             , &
+                              lctlib%cn_leaf                , & 
+                              veg%target_cn_fine_root%ptr   , &
+                              veg%target_cn_coarse_root%ptr , &
+                              veg%target_cn_sap_wood%ptr    , & 
+                              veg%target_cn_fruit%ptr       , &
+                              veg%target_np_fine_root%ptr   , &
+                              veg%target_np_coarse_root%ptr , & 
+                              veg%target_np_sap_wood%ptr    , &
+                              veg%target_np_fruit%ptr )
 
     !> 3.0 calculate current allometry 
     !! 
@@ -153,6 +126,7 @@ CONTAINS
     !> 3.2 calculate allometry    
     !!
     CALL calc_allometry(lctlib                                , &
+                        veg%height%ptr                        , &
                         veg%pool%sap_wood%carbon%ptr          , &
                         veg%pool%heart_wood%carbon%ptr        , &
                         veg%dens_ind%ptr                      , & 
@@ -168,20 +142,18 @@ CONTAINS
                         veg%unit_uptake_n_talloc_mavg%ptr     , &
                         veg%unit_uptake_p_talloc_mavg%ptr     , &
                         veg%dphi_talloc_mavg%ptr              , &
-                        kstar_labile                          , &
-                        diameter                              , &
-                        height                                , &
+                        veg%kstar_labile%ptr                  , &
                         dheight                               , &
-                        leaf2sapwood_mass_ratio               , & 
-                        leaf2root_mass_ratio                  , &
-                        target_lai                            , &
-                        k1_opt                                , &
-                        k2_opt)  
+                        veg%leaf2sapwood_mass_ratio%ptr       , & 
+                        veg%leaf2root_mass_ratio%ptr          , &
+                        veg%target_lai%ptr                    , &
+                        veg%k1_opt%ptr                        , &
+                        veg%k2_opt%ptr)  
 
     !> 4.0 calculate net flux between reserve and labile pool 
     !! 
     !! Info: veg%reserve_use is of TYPE(t_slm_struct_veg_element)
-    call calc_reserve_useage(kstar_labile                                           , &
+    call calc_reserve_useage(veg%kstar_labile%ptr                                   , &
                                           veg%growing_season%ptr                    , &
                                           veg%gpp_tlabile_mavg%ptr                  , &
                                           veg%maint_respiration_tlabile_mavg%ptr    , &
@@ -191,47 +163,47 @@ CONTAINS
                                           lctlib%tau_leaf                           , &
                                           lctlib%tau_fine_root                      , & 
                                           veg%target_cn_leaf%ptr                    , &
-                                          target_cn_fine_root                       , & 
+                                          veg%target_cn_fine_root%ptr               , & 
                                           veg%target_np_leaf%ptr                    , &
-                                          target_np_fine_root                       , &
+                                          veg%target_np_fine_root%ptr               , &
                                           veg%leaf2root_troot_mavg%ptr              , &
                                           veg%lai%ptr                               , &
-                                          target_lai                                , &
+                                          veg%target_lai%ptr                        , &
                                           veg%pool%labile                           , &
                                           veg%pool%reserve                          , &
                                           veg%reserve_use)
 
     !! @todo veg_growth:calc_nutrient_recycling move to veg_turnover
-    CALL calc_nutrient_recycling(veg, target_cn_fine_root, target_np_fine_root)
+    CALL calc_nutrient_recycling(veg, veg%target_cn_fine_root%ptr, veg%target_np_fine_root%ptr)
 
     !> 5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)
     !! 
     !! 
-    CALL calc_allocation_fraction(kstar_labile                    , &
+    CALL calc_allocation_fraction(veg%kstar_labile%ptr            , &
                                   veg%pool%leaf%carbon%ptr        , &
                                   veg%pool%sap_wood%carbon%ptr    , &
                                   veg%pool%coarse_root%carbon%ptr , &
                                   veg%pool%fine_root%carbon%ptr   , &
                                   veg%pool%labile%carbon%ptr      , &
                                   lctlib%growthform               , &
-                                  height                          , &
+                                  veg%height%ptr                  , &
                                   dheight                         , &
-                                  leaf2sapwood_mass_ratio         , &
-                                  leaf2root_mass_ratio            , & 
+                                  veg%leaf2sapwood_mass_ratio%ptr , &
+                                  veg%leaf2root_mass_ratio%ptr    , & 
                                   lctlib%k_crtos                  , &
-                                  k1_opt                          , &
-                                  k2_opt                          , &
+                                  veg%k1_opt%ptr                  , &
+                                  veg%k2_opt%ptr                  , &
                                   lctlib%k2_fruit_alloc           , & 
                                   veg%target_cn_leaf%ptr          , &
-                                  target_cn_fine_root             , &
-                                  target_cn_coarse_root           , &
-                                  target_cn_sap_wood              , &
-                                  target_cn_fruit                 , &
+                                  veg%target_cn_fine_root%ptr     , &
+                                  veg%target_cn_coarse_root%ptr   , &
+                                  veg%target_cn_sap_wood%ptr      , &
+                                  veg%target_cn_fruit%ptr         , &
                                   veg%target_np_leaf%ptr          , &
-                                  target_np_fine_root             , &
-                                  target_np_coarse_root           , &
-                                  target_np_sap_wood              , &
-                                  target_np_fruit                 , &
+                                  veg%target_np_fine_root%ptr     , &
+                                  veg%target_np_coarse_root%ptr   , &
+                                  veg%target_np_sap_wood%ptr      , &
+                                  veg%target_np_fruit%ptr         , &
                                   veg%reserve_use%carbon%ptr      , & 
                                   veg%falloc                      , &   ! TYPE(t_slm_struct_veg_pool) !
                                   veg%growth_req_n%ptr            , &
@@ -239,7 +211,7 @@ CONTAINS
 
     !> 6.0 partition labile carbon into growth, growth_respiration, and maintenance 
     !! 
-    CALL calc_partitioning(veg, t_air, kstar_labile)
+    CALL calc_partitioning(veg, t_air, veg%kstar_labile%ptr)
 
   END SUBROUTINE calc_growth 
 
@@ -788,6 +760,7 @@ CONTAINS
   !! calculates maximum LAI given current root and sapwood mass
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE calc_allometry( lctlib                  , &   ! in
+                                            height                  , &   ! in
                                             sap_wood_carbon         , &   ! in
                                             heart_wood_carbon       , &   ! in
                                             dens_ind                , &   ! in
@@ -804,8 +777,6 @@ CONTAINS
                                             unit_uptake_p           , &   ! in
                                             dphi                    , &   ! in
                                             kstar_labile            , &   ! in
-                                            diameter                , &   ! out
-                                            height                  , &   ! out
                                             dheight                 , &   ! out
                                             leaf2sapwood_mass_ratio , &   ! out
                                             leaf2root_mass_ratio    , &   ! out
@@ -820,6 +791,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in) :: lctlib      !< land-cover-type library - parameters for one pft
+    REAL(wp), INTENT(in)  :: height                  !< height (m)
     REAL(wp), INTENT(in)  :: sap_wood_carbon         !< woody biomass of an individual tree (mol C/m2)
     REAL(wp), INTENT(in)  :: heart_wood_carbon       !< woody biomass of an individual tree (mol C/m2)
     REAL(wp), INTENT(in)  :: dens_ind                !< density of populations (number of indivuduals /m2) 
@@ -836,8 +808,6 @@ CONTAINS
     REAL(wp), INTENT(in)  :: unit_uptake_p           !< P uptake per unit root mass (unit?)
     REAL(wp), INTENT(in)  :: dphi                    !< leaf-soil water potential gradient (MPa) 
     REAL(wp), INTENT(in)  :: kstar_labile            !< labile pool turnover rate
-    REAL(wp), INTENT(out) :: diameter                !< diameter (m)
-    REAL(wp), INTENT(out) :: height                  !< height (m)
     REAL(wp), INTENT(out) :: dheight                 !< change in height (m) resulting from a small change in woody biomass
     REAL(wp), INTENT(out) :: leaf2sapwood_mass_ratio !< leaf to sapwood mass ratio 
     REAL(wp), INTENT(out) :: leaf2root_mass_ratio    !< leaf to root mass ratio
@@ -861,15 +831,11 @@ CONTAINS
         !   all woody biomass forms a cylinder: diameter = SQRT(4 * wood volume / height / pi)
         !   height = allom_k1 * diameter ^ allom_k2
         IF(dens_ind > eps8) THEN
-           diameter = calc_diameter_from_woody_biomass(lctlib,sap_wood_carbon,heart_wood_carbon,dens_ind)
-           height   = calc_height_from_diameter(lctlib,diameter)
            ! Calculate change of height given a small change in woody biomass
            diameter2 = calc_diameter_from_woody_biomass(lctlib,sap_wood_carbon+eps4,heart_wood_carbon,dens_ind)
-           dheight = calc_height_from_diameter(lctlib,diameter2) - height
+           dheight   = calc_height_from_diameter(lctlib,diameter2) - height
         ELSE 
-           diameter = 0.0_wp
-           height = 0.0_wp
-           dheight = 0.0_wp
+           dheight   = 0.0_wp
         ENDIF
  
         ! scaling factor for leaf to wood mass, derived from pipe-model (Shinozaki et al. 1964, J J Ecol)
@@ -1008,24 +974,24 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    LOGICAL,                       INTENT(in)  :: growing_season            !< does the plant intend to grow?
-    REAL(wp),                      INTENT(in)  :: kstar_labile              !< potential labile pool turnover (1/day) 
-    REAL(wp),                      INTENT(in)  :: gpp_mavg                  !< last week's GPP (µmol CO2/m2/s) 
-    REAL(wp),                      INTENT(in)  :: rm_mavg                   !< last week's Rm (µmol CO2/m2/s)
-    REAL(wp),                      INTENT(in)  :: growth_req_n_mavg         !< last week's requirement for unit growth in C and N
-    REAL(wp),                      INTENT(in)  :: growth_req_p_mavg         !< last week's rP requirement for unit growth in C and N
-    REAL(wp),                      INTENT(in)  :: sla                       !< specific leaf area
-    REAL(wp),                      INTENT(in)  :: tau_leaf                  !< default turnover time of leaves (1/year) 
-    REAL(wp),                      INTENT(in)  :: tau_fine_root             !< default turnover time of fine roots (1/year)
-    REAL(wp),                      INTENT(in)  :: target_cn_leaf            !< target C:N and N:P rations for tissue type 
-    REAL(wp),                      INTENT(in)  :: target_cn_fine_root       !< target C:N and N:P rations for tissue type 
-    REAL(wp),                      INTENT(in)  :: target_np_leaf            !< target C:N and N:P rations for tissue type 
-    REAL(wp),                      INTENT(in)  :: target_np_fine_root       !< target C:N and N:P rations for tissue type 
-    REAL(wp),                      INTENT(in)  :: leaf2root_mass_ratio      !< leaf to root mass ratio
-    REAL(wp),                      INTENT(in)  :: lai                       !< current LAI 
-    REAL(wp),                      INTENT(in)  :: target_lai                !< target LAI 
-    TYPE(t_slm_struct_veg_element),INTENT(in)  :: labile_pool               !< the plant's labile pool size
-    TYPE(t_slm_struct_veg_element),INTENT(in)  :: reserve_pool              !< the plant's reserve pool size
+    LOGICAL,                       INTENT(in)     :: growing_season            !< does the plant intend to grow?
+    REAL(wp),                      INTENT(in)     :: kstar_labile              !< potential labile pool turnover (1/day) 
+    REAL(wp),                      INTENT(in)     :: gpp_mavg                  !< last week's GPP (µmol CO2/m2/s) 
+    REAL(wp),                      INTENT(in)     :: rm_mavg                   !< last week's Rm (µmol CO2/m2/s)
+    REAL(wp),                      INTENT(in)     :: growth_req_n_mavg         !< last week's requirement for unit growth in C and N
+    REAL(wp),                      INTENT(in)     :: growth_req_p_mavg         !< last week's rP requirement for unit growth in C and N
+    REAL(wp),                      INTENT(in)     :: sla                       !< specific leaf area
+    REAL(wp),                      INTENT(in)     :: tau_leaf                  !< default turnover time of leaves (1/year) 
+    REAL(wp),                      INTENT(in)     :: tau_fine_root             !< default turnover time of fine roots (1/year)
+    REAL(wp),                      INTENT(in)     :: target_cn_leaf            !< target C:N and N:P rations for tissue type 
+    REAL(wp),                      INTENT(in)     :: target_cn_fine_root       !< target C:N and N:P rations for tissue type 
+    REAL(wp),                      INTENT(in)     :: target_np_leaf            !< target C:N and N:P rations for tissue type 
+    REAL(wp),                      INTENT(in)     :: target_np_fine_root       !< target C:N and N:P rations for tissue type 
+    REAL(wp),                      INTENT(in)     :: leaf2root_mass_ratio      !< leaf to root mass ratio
+    REAL(wp),                      INTENT(in)     :: lai                       !< current LAI 
+    REAL(wp),                      INTENT(in)     :: target_lai                !< target LAI 
+    TYPE(t_slm_struct_veg_element),INTENT(in)     :: labile_pool               !< the plant's labile pool size
+    TYPE(t_slm_struct_veg_element),INTENT(in)     :: reserve_pool              !< the plant's reserve pool size
     TYPE(t_slm_struct_veg_element),INTENT(inout)  :: reserve_use               !< current resource use rate (mol/time step)
                                                                             !!  (+ve: net flux to labile / -ve: net flux to reserve)
     ! 0.2 Local

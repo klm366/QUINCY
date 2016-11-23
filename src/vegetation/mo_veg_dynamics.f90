@@ -79,8 +79,7 @@ CONTAINS
                                  veg%establishment )
     !> Sub-Task 3
     !! 
-    CALL calc_delta_density_individuals(lctlib%seed_size              , &
-                                        lctlib%growthform             , &
+    CALL calc_delta_density_individuals(lctlib                        , &
                                         veg%dens_ind%ptr              , &
                                         veg%mortality_rate%ptr        , &
                                         veg%establishment%carbon%ptr  , &
@@ -257,23 +256,22 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_delta_density_individuals(lctlib_seed_size          , &
-                                            lctlib_growthform         , &
+  SUBROUTINE calc_delta_density_individuals(lctlib                    , &
                                             dens_ind                  , &
                                             mortality_rate            , &
                                             veg_establishment_carbon  , &
                                             delta_dens_ind )
 
+    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_veg_constants,           ONLY: itree
 
     IMPLICIT NONE
 
     ! 0.1 InOut
-    REAL(wp),                       INTENT(in)    :: lctlib_seed_size         , & !< seed size
-                                                     dens_ind                 , & !< soil moisture 
+    TYPE(t_lctlib_element),         INTENT(in)    :: lctlib             !< land-cover-type library - parameter across pft's
+    REAL(wp),                       INTENT(in)    :: dens_ind                 , & !< soil moisture 
                                                      mortality_rate           , & !< mortality per timestep
                                                      veg_establishment_carbon     !< egetation establishment measured in C
-    INTEGER,                        INTENT(in)    :: lctlib_growthform            !< tree / grass / .. 
     REAL(wp),                       INTENT(out)   :: delta_dens_ind               !< diff in individual density
 
 
@@ -282,8 +280,8 @@ CONTAINS
 
     !> 1.1 trees
     !!
-    IF(lctlib_growthform == itree) THEN
-	    delta_dens_ind = (veg_establishment_carbon / lctlib_seed_size) - (mortality_rate * dens_ind)
+    IF(lctlib%growthform == itree) THEN
+	    delta_dens_ind = (veg_establishment_carbon / lctlib%seed_size) - (mortality_rate * dens_ind)
     END IF
 
   END SUBROUTINE calc_delta_density_individuals
