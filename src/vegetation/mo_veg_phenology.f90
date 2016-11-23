@@ -64,7 +64,8 @@ CONTAINS
     model   => Get_model(tile%owner_model_id)
     lctlib  => model%lctlib(tile%lcts%lib_id)
 
-    !> Sub-Task
+
+    !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
     !! 
     CALL calc_phenology(lctlib                                  , &
                         atm2land__mem%t_air%ptr                 , &

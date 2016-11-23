@@ -59,14 +59,15 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
 
 
-    !> Sub-Task 1
+    !> 1.0 Calculate mortality rate and veg\%litterfall
     !! 
     CALL calc_veg_mortality(lctlib                      , &
                             veg%an_boc_tvegdyn_mavg%ptr , &
                             veg%pool                    , &
                             veg%litterfall              , &
                             veg%mortality_rate%ptr )
-    !> Sub-Task 2
+
+    !> 2.0 Calculate establishment_rate and veg\%establishment
     !! 
     CALL calc_veg_establishment(lctlib                        , &
                                  tile%soil%theta              , &
@@ -77,7 +78,8 @@ CONTAINS
                                  veg%lai_cl%ptr(:,1)          , &
                                  veg%pool%seed_bed            , &
                                  veg%establishment )
-    !> Sub-Task 3
+
+    !> 3.0 Calculate change in individual density from mortality and establishment
     !! 
     CALL calc_delta_density_individuals(lctlib                        , &
                                         veg%dens_ind%ptr              , &

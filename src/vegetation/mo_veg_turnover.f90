@@ -55,8 +55,13 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
 
-    !> Sub-Task
-    !! 
+
+    !> 1.0 Calculate nutrient flux from enzyme and other turnover in leaves and roots at the time scale of tau_canopy_acclimation
+    !!
+    CALL calc_nutrient_recycling(veg, veg%target_cn_fine_root%ptr, veg%target_np_fine_root%ptr)
+
+    !> 2.0 Calculate recycling and retranslocation
+    !!  
     CALL calc_turnover(lctlib, &
                         veg%pool, veg%growth, veg%litterfall, &
                         veg%growth_t, veg%litterfall_t, &
@@ -64,8 +69,106 @@ CONTAINS
                         veg%recycling_leaf_n%ptr, veg%recycling_leaf_n15%ptr, veg%recycling_leaf_p%ptr, &
                         veg%recycling_sap_wood_n%ptr, veg%recycling_sap_wood_n15%ptr, veg%recycling_sap_wood_p%ptr)
 
-
   END SUBROUTINE update_veg_turnover
+
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task of update_veg_turnover
+  ! 
+  !----------------------------------------------------------------------------------------------------------
+  !> Calculate nutrient flux from enzyme turnover and other biochemical turnover in leaves and roots
+  !! at the time scale of tau_canopy_acclimation
+  !!
+  !! Calculations only during growing season \n
+  !! Input: plant status and leaf and root C:N:P target ratios \n
+  !! Output: net flux between labile and leaves/roots (+ve: flux to labile, -ve: flux from labile)
+  !----------------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL SUBROUTINE calc_nutrient_recycling(veg, target_cn_fine_root, target_np_fine_root)
+
+    USE mo_base_constants,        ONLY: dt, one_day
+    USE mo_veg_constants,         ONLY: tau_canopy_acclimation, k0_labile
+
+    ! Use of process memories
+    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    TYPE(t_veg_memory), INTENT(inout) :: veg                      !< veg process memory
+    REAL(wp),           INTENT(in)    :: target_cn_fine_root      !< target C:N of fine_roots
+    REAL(wp),           INTENT(in)    :: target_np_fine_root      !< target N:P of fine_roots 
+    ! 0.2 Local
+    REAL(wp)                          :: labile_dn15              ! labile pools 15N to N molar mixing ratio
+    REAL(wp)                          :: scal                     ! helper variable
+    REAL(wp)                          :: recycling_leaf, &        ! more helpers1
+                                         recycling_fine_root      ! more helpers2
+
+    IF(veg%growing_season%ptr)THEN 
+       !> 1.0 replace overturning N from leaves and roots by new N from the labile pool using the target C:N
+       !!
+       recycling_leaf      = ( veg%pool%leaf%nitrogen%ptr - & 
+                               veg%pool%leaf%carbon%ptr / veg%target_cn_leaf%ptr ) * tau_canopy_acclimation * dt / one_day
+       recycling_fine_root = ( veg%pool%fine_root%nitrogen%ptr - &
+                               veg%pool%fine_root%carbon%ptr / target_cn_fine_root ) * tau_canopy_acclimation * dt / one_day
+       !> 1.1 if N is addded to leaves or fine root (negative flux), make sure there is enough labile N to support this
+       !! 
+       IF( -1.0_wp * (recycling_leaf + recycling_fine_root) > eps8) THEN
+          scal = -1.0_wp * ( k0_labile * dt / one_day * veg%pool%labile%nitrogen%ptr ) / & 
+                           ( recycling_leaf + recycling_fine_root ) 
+          IF(scal < 1.0_wp) THEN
+             recycling_leaf       = recycling_leaf * scal
+             recycling_fine_root  = recycling_fine_root * scal
+          ENDIF
+       ENDIF
+       veg%recycling_leaf_n%ptr      = veg%recycling_leaf_n%ptr      + recycling_leaf
+       veg%recycling_fine_root_n%ptr = veg%recycling_fine_root_n%ptr + recycling_fine_root
+   
+       !> 2.0 replace overturning P from leaves and roots by new N from the labile pool using the target N:P
+       !!
+       recycling_leaf      = ( veg%pool%leaf%phosphorus%ptr - & 
+                               veg%pool%leaf%nitrogen%ptr / veg%target_np_leaf%ptr ) * tau_canopy_acclimation * dt / one_day
+       recycling_fine_root = ( veg%pool%fine_root%phosphorus%ptr - &
+                               veg%pool%fine_root%nitrogen%ptr / target_np_fine_root ) * tau_canopy_acclimation * dt / one_day
+       !> 2.1 if P is addded to leaves or fine root, make sure there is enough labile P to support this
+       !! 
+       IF( -1.0_wp * ( recycling_leaf + recycling_fine_root ) > eps8) THEN
+          scal = -1.0_wp * ( k0_labile * dt / one_day * veg%pool%labile%phosphorus%ptr ) / & 
+                           ( recycling_leaf + recycling_fine_root ) 
+          IF(scal < 1.0_wp) THEN
+             recycling_leaf       = recycling_leaf * scal
+             recycling_fine_root  = recycling_fine_root * scal
+          ENDIF
+       ENDIF
+       veg%recycling_leaf_p%ptr        = veg%recycling_leaf_p%ptr        + recycling_leaf
+       veg%recycling_fine_root_p%ptr   = veg%recycling_fine_root_p%ptr   + recycling_fine_root
+   
+       !> 3.0 replace overturning 15N from leaves and roots by new 15N from the labile pool using the target C:N
+       !! and the labile pool's 15N molar mixing ratio
+       !!
+       IF(veg%pool%labile%nitrogen%ptr > eps8) THEN
+          labile_dn15 = veg%pool%labile%nitrogen15%ptr /veg%pool%labile%nitrogen%ptr
+       ELSE 
+          labile_dn15 = 0.0_wp
+       ENDIF
+       recycling_leaf      = ( labile_dn15 * veg%pool%leaf%carbon%ptr / veg%target_cn_leaf%ptr - & 
+                               labile_dn15 * veg%pool%leaf%carbon%ptr ) * tau_canopy_acclimation * dt / one_day
+       recycling_fine_root = ( veg%pool%fine_root%nitrogen15%ptr - & 
+                               labile_dn15 * veg%pool%fine_root%carbon%ptr / target_cn_fine_root ) * &
+                               tau_canopy_acclimation * dt / one_day
+       !> 3.1 if N is addded to leaves or fine root, make sure there is enough labile N to support this
+       !! 
+       IF( -1.0_wp * ( recycling_leaf + recycling_fine_root ) > eps8) THEN
+          scal = -1.0_wp * ( k0_labile * dt / one_day * veg%pool%labile%nitrogen15%ptr ) / & 
+                           ( recycling_leaf + recycling_fine_root ) 
+          IF(scal < 1.0_wp) THEN
+             recycling_leaf       = recycling_leaf * scal
+             recycling_fine_root  = recycling_fine_root * scal
+          ENDIF
+       ENDIF
+       veg%recycling_leaf_n15%ptr      = veg%recycling_leaf_n15%ptr      + recycling_leaf
+       veg%recycling_fine_root_n15%ptr = veg%recycling_fine_root_n15%ptr + recycling_fine_root
+    ENDIF
+
+  END SUBROUTINE calc_nutrient_recycling
 
 
   !-----------------------------------------------------------------------------------------------------
