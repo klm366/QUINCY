@@ -15,7 +15,7 @@ MODULE mo_veg_interface
 
 ! Tasks 
   USE mo_veg_phenology,         ONLY: update_phenology
-  USE mo_veg_growth,            ONLY: calc_growth
+  USE mo_veg_growth,            ONLY: update_growth
   USE mo_veg_turnover,          ONLY: update_veg_turnover
   USE mo_veg_dynamics,          ONLY: update_veg_dynamics
   USE mo_veg_update_veg_pools,  ONLY: update_veg_pools
@@ -27,42 +27,7 @@ MODULE mo_veg_interface
 !  PRIVATE
 !  PUBLIC :: 
 
-CONTAINS
-
-  !! Tasks as called in the land_model_interface !!
-
-    !> Update soil biogeochemistry
-    !! 
-    !CALL update_vegsoil_bgc(tile, model%lctlib(tile%lcts%lib_id))
-
-    !> update phenological state
-    !! 
-    !CALL update_phenology(tile, model%lctlib(tile%lcts%lib_id)%phenology_type)
-
-    !> Calculate growth and maintenance
-    !! 
-    !CALL calc_growth(tile%plant,model%lctlib(tile%lcts%lib_id),tile%soil%theta)
-
-    !> Calculate turnover from tissue aging and senescence
-    !! 
-    !CALL update_veg_turnover(tile%plant,model%lctlib(tile%lcts%lib_id))
-
-    !> Calculate vegetation dynamics
-    !! 
-    !CALL update_veg_dynamics(tile,model%lctlib(tile%lcts%lib_id))
-
-    !> Update soil pools
-    !! 
-    !CALL update_soil_pool(tile, model%lctlib(tile%lcts%lib_id))
-
-    !> Update soil properties influenced by vegetation ?
-    !! 
-    !CALL update_vegsoil_physics(tile)
-
-    !> Update Plant pools
-    !! 
-    !CALL update_veg_pools(tile,model%lctlib(tile%lcts%lib_id))
-
+!CONTAINS
 
 
 END MODULE mo_veg_interface

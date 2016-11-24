@@ -575,8 +575,15 @@ CONTAINS
   !> Subroutine to calculate change in net photosynthesis and transpiration with small change in LAI
   !! Needed for calculation of optimal leaf and root allocation fraction. See mo_veg_growth
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_marginal_canopy_flux_increment(lctlib, t_air, press_srf, q_air, co2_mixing_ratio, & 
-                                                 ga, veg, unit_npp, unit_transpiration)
+  SUBROUTINE calc_marginal_canopy_flux_increment(lctlib             , &
+                                                  t_air             , &
+                                                  press_srf         , & 
+                                                  q_air             , & 
+                                                  co2_mixing_ratio  , & 
+                                                  ga                , &
+                                                  veg               , &
+                                                  unit_npp          , &
+                                                  unit_transpiration )
 
     USE mo_base_constants,   ONLY: ncanop
     USE mo_atmland_util,     ONLY: calc_spec_humidity_sat
