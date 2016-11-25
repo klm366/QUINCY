@@ -14,7 +14,7 @@ MODULE mo_assimi_update_canopy_fluxes
 
   USE mo_kind,                  ONLY: wp, eps4, eps8
   USE mo_base_memory,           ONLY: t_slm_tile, t_model
-  USE mo_base_constants,        ONLY: ncanop
+  USE mo_base_constants,        ONLY: ncanopy
   USE mo_base_memory,           ONLY: t_slm_soil
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
@@ -59,7 +59,7 @@ CONTAINS
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
     TYPE(t_slm_soil),       POINTER        :: soil       ! soil variables per tile
-    INTEGER                                :: icanop     ! for looping across ncanopy layers
+    INTEGER                                :: icanopy     ! for looping across ncanopy layers
     REAL(wp)                               :: hlp1       ! dummy variable 
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
@@ -130,24 +130,24 @@ CONTAINS
 
    !> 2.0 calculate photosynthesis per layer
    !! 
-   DO icanop = 1,ncanop
-      IF(veg%lai_cl%ptr(icanop,1) > eps8)THEN
+   DO icanopy = 1,ncanopy
+      IF(veg%lai_cl%ptr(icanopy,1) > eps8)THEN
 
         CALL calc_photosynthesis(t_air                            , &   ! in
                                  press_srf                        , &   ! in
                                  co2_mixing_ratio                 , &   ! in
                                  ga                               , &   ! in
-                                 veg%par_sunlit_cl%ptr(icanop,1)  , &   ! in
-                                 veg%par_shaded_cl%ptr(icanop,1)  , &   ! in
-                                 veg%fleaf_sunlit_cl%ptr(icanop,1), &   ! in
+                                 veg%par_sunlit_cl%ptr(icanopy,1)  , &   ! in
+                                 veg%par_shaded_cl%ptr(icanopy,1)  , &   ! in
+                                 veg%fleaf_sunlit_cl%ptr(icanopy,1), &   ! in
                                  veg%beta_air%ptr                 , &   ! in
                                  veg%beta_soil_ps%ptr             , &   ! in
                                  veg%beta_soil_gs%ptr             , &   ! in
-                                 veg%fnl_chl_cl%ptr(icanop,1)     , &   ! in
-                                 veg%fnl_et_cl%ptr(icanop,1)      , &   ! in
-                                 veg%fnl_rub_cl%ptr(icanop,1)     , &   ! in
-                                 veg%fnl_pepc_cl%ptr(icanop,1)    , &   ! in
-                                 veg%nl_tot_cl%ptr(icanop,1)      , &   ! in
+                                 veg%fnl_chl_cl%ptr(icanopy,1)     , &   ! in
+                                 veg%fnl_et_cl%ptr(icanopy,1)      , &   ! in
+                                 veg%fnl_rub_cl%ptr(icanopy,1)     , &   ! in
+                                 veg%fnl_pepc_cl%ptr(icanopy,1)    , &   ! in
+                                 veg%nl_tot_cl%ptr(icanopy,1)      , &   ! in
                                  lctlib%ps_pathway                , &   ! in
                                  veg%t_jmax_opt_mavg%ptr          , &   ! in
                                  lctlib%t_jmax_omega              , &   ! in
@@ -160,33 +160,33 @@ CONTAINS
                                  assimi%cil%ptr                   , &   ! out
                                  hlp1, hlp1, hlp1)                      ! out
 
-        veg%gpp = veg%gpp + assimi%agl%ptr * veg%lai_cl%ptr(icanop,1)
+        veg%gpp = veg%gpp + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1)
 
         IF(assimi%agl%ptr > eps8) THEN
            hlp1          = discrimination_ps(assimi%cil%ptr     , &
                                              co2_mixing_ratio   , &
                                              'C13'              , &
                                              lctlib%ps_pathway)
-           veg%gpp_C13 = veg%gpp_C13 + assimi%agl%ptr * veg%lai_cl%ptr(icanop,1) * calc_fractionation(co2_mixing_ratio  , &
+           veg%gpp_C13 = veg%gpp_C13 + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C13 , &
                                                                                                    hlp1)
            hlp1          = discrimination_ps(assimi%cil%ptr     , &
                                              co2_mixing_ratio   , &
                                              'C14'              , &
                                              lctlib%ps_pathway)
-           veg%gpp_C14 = veg%gpp_C14 + assimi%agl%ptr * veg%lai_cl%ptr(icanop,1) * calc_fractionation(co2_mixing_ratio  , &
+           veg%gpp_C14 = veg%gpp_C14 + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C14 , & 
                                                                                                    hlp1                 , &
                                                                                                    scale_correction_C14)
         ENDIF
 
-        veg%an                      = veg%an + assimi%anl%ptr * veg%lai_cl%ptr(icanop,1) 
-        veg%maint_respiration_leaf  = veg%maint_respiration_leaf + assimi%rl%ptr * veg%lai_cl%ptr(icanop,1) 
-        veg%gc                      = veg%gc + assimi%gsl%ptr * veg%lai_cl%ptr(icanop,1)
-        veg%ci                      = veg%ci + assimi%cil%ptr * veg%lai_cl%ptr(icanop,1)
+        veg%an                      = veg%an + assimi%anl%ptr * veg%lai_cl%ptr(icanopy,1) 
+        veg%maint_respiration_leaf  = veg%maint_respiration_leaf + assimi%rl%ptr * veg%lai_cl%ptr(icanopy,1) 
+        veg%gc                      = veg%gc + assimi%gsl%ptr * veg%lai_cl%ptr(icanopy,1)
+        veg%ci                      = veg%ci + assimi%cil%ptr * veg%lai_cl%ptr(icanopy,1)
 
         ! get the net photosynthesis of the lowest canopy layer at this timestep
-        IF(veg%lai_cl%ptr(icanop,1) > 0.0_wp) veg%an_boc%ptr = assimi%anl%ptr
+        IF(veg%lai_cl%ptr(icanopy,1) > 0.0_wp) veg%an_boc%ptr = assimi%anl%ptr
      ENDIF
   ENDDO
 

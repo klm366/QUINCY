@@ -371,7 +371,7 @@ CONTAINS
   SUBROUTINE write_output_pool(tile, time_d, time_y, itile)
 
     USE mo_jsb_class,         ONLY: Get_model
-    USE mo_base_constants,    ONLY: ncanop
+    USE mo_base_constants,    ONLY: ncanopy
     USE mo_base_memory,       ONLY: t_slm_tile, t_slm_soil, t_model
     USE mo_veg_constants,     ONLY: itree
     USE mo_shared_isotope,    ONLY: calc_delta_C13,calc_delta_C14
@@ -391,7 +391,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER      :: lctlib     !< land-cover-type library - parameter across pft's
     TYPE(t_slm_soil),       POINTER      :: soil           ! soil variables per tile
     INTEGER                          :: lun            ! locical unit number
-    INTEGER                          :: icanop         ! loop over ncanop
+    INTEGER                          :: icanopy         ! loop over ncanopy
     REAL(wp)                         :: hlp1           ! helper variable
     REAL(wp)                         :: l2r, s2c, bcf  !helper ratio variables
     REAl(wp)                         :: growing_season_float !output variable for growing season
@@ -470,10 +470,10 @@ CONTAINS
        lun=lun+1
        write(lun,'(3F12.6)') time_d, soil%pool%litter%nitrogen, soil%ammonium
        lun=lun+1
-       DO icanop=1, ncanop
-         write(lun,'(8F12.6)') time_d, REAL(icanop), veg%fnl_et_cl%ptr(icanop,1), &
-                               veg%fnl_rub_cl%ptr(icanop,1), veg%fnl_chl_cl%ptr(icanop,1),&
-                               veg%fnl_pepc_cl%ptr(icanop,1), veg%fnl_oth_cl%ptr(icanop,1),veg%nl_tot_cl%ptr(icanop,1)
+       DO icanopy=1, ncanopy
+         write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fnl_et_cl%ptr(icanopy,1), &
+                               veg%fnl_rub_cl%ptr(icanopy,1), veg%fnl_chl_cl%ptr(icanopy,1),&
+                               veg%fnl_pepc_cl%ptr(icanopy,1), veg%fnl_oth_cl%ptr(icanopy,1),veg%nl_tot_cl%ptr(icanopy,1)
        END DO
 
        IF(lctlib%growthform == itree) THEN 

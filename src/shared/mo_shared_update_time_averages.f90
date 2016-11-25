@@ -122,7 +122,7 @@ CONTAINS
   SUBROUTINE calc_daytime_averages(veg, time_day, timestep_prop_day, swpar_srf_down, t_air, & 
                                    press_srf, co2_mixing_ratio, ga)
 
-    USE mo_base_constants,      ONLY: ncanop
+    USE mo_base_constants,      ONLY: ncanopy
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -138,7 +138,7 @@ CONTAINS
     REAL(wp), INTENT(in)                  :: co2_mixing_ratio   !< atmospheric CO2 concentration (ppm)
     REAL(wp), INTENT(in)                  :: ga                 !< aerodynamic conductance 
     ! 0.2 Local
-    INTEGER                               :: i
+    INTEGER                               :: icanopy
 
 
     !> 1.0 if light is available (i.e. daytime)
@@ -147,10 +147,13 @@ CONTAINS
       ! 1.1 count number of values added to var_daytime
       veg%daytime_counter = veg%daytime_counter + 1.0_wp
       ! 1.2 add values and count number of values
-      DO i=1,ncanop
-        veg%par_sunlit_daytime_dacc_cl%ptr(i,1)   = veg%par_sunlit_daytime_dacc_cl%ptr(i,1)     + veg%par_sunlit_cl%ptr(i,1)
-        veg%par_shaded_daytime_dacc_cl%ptr(i,1)   = veg%par_shaded_daytime_dacc_cl%ptr(i,1)     + veg%par_shaded_cl%ptr(i,1)
-        veg%fleaf_sunlit_daytime_dacc_cl%ptr(i,1) = veg%fleaf_sunlit_daytime_dacc_cl%ptr(i,1)   + veg%fleaf_sunlit_cl%ptr(i,1)
+      DO icanopy=1,ncanopy
+        veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   = veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   + &
+                                                           veg%par_sunlit_cl%ptr(icanopy,1)
+        veg%par_shaded_daytime_dacc_cl%ptr(icanopy,1)   = veg%par_shaded_daytime_dacc_cl%ptr(icanopy,1)   + & 
+                                                           veg%par_shaded_cl%ptr(icanopy,1)
+        veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) + & 
+                                                           veg%fleaf_sunlit_cl%ptr(icanopy,1)
       END DO
       veg%t_air_daytime_dacc            = veg%t_air_daytime_dacc            + t_air
       veg%press_srf_daytime_dacc        = veg%press_srf_daytime_dacc        + press_srf
@@ -170,10 +173,10 @@ CONTAINS
       ! check if at least one value had been assigned at the current day, avoiding division by zero 
       ! calculate the average of the current day and pass it to the according avg_prev_* variable; 
       IF(veg%daytime_counter%ptr > eps8) THEN
-        DO i=1,ncanop
-          veg%par_sunlit_daytime_cl%ptr(i,1)    = veg%par_sunlit_daytime_dacc_cl%ptr(i,1)   / veg%daytime_counter%ptr
-          veg%par_shaded_daytime_cl%ptr(i,1)    = veg%par_shaded_daytime_dacc_cl%ptr(i,1)   / veg%daytime_counter%ptr
-          veg%fleaf_sunlit_daytime_cl%ptr(i,1)  = veg%fleaf_sunlit_daytime_dacc_cl%ptr(i,1) / veg%daytime_counter%ptr
+        DO icanopy=1,ncanopy
+          veg%par_sunlit_daytime_cl%ptr(icanopy,1)    = veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
+          veg%par_shaded_daytime_cl%ptr(icanopy,1)    = veg%par_shaded_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
+          veg%fleaf_sunlit_daytime_cl%ptr(icanopy,1)  = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) / veg%daytime_counter%ptr
         END DO
         veg%t_air_daytime            = veg%t_air_daytime_dacc              / veg%daytime_counter
         veg%press_srf_daytime        = veg%press_srf_daytime_dacc          / veg%daytime_counter

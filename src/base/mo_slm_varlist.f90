@@ -394,7 +394,7 @@ CONTAINS
 !    !verbose, new_element, cdiTimeID                             &
     initval_r) 
 
-    USE mo_base_constants,    ONLY: ncanop
+    USE mo_base_constants,    ONLY: ncanopy
 
     ! 0.1 InOut
     CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
@@ -424,8 +424,8 @@ CONTAINS
     END IF
 
     ! added for SLM compatibility (in JSBACH4 the allocation is done differently)
-    ALLOCATE(var%ptr(1:ncanop,iblk))
-    var%ptr(1:ncanop,iblk) = initval_r
+    ALLOCATE(var%ptr(1:ncanopy,iblk))
+    var%ptr(1:ncanopy,iblk) = initval_r
 !    ALLOCATE(var%ptr(ics:ice,iblk))
 !    var%ptr(ics:ice,iblk) = initval_r
 

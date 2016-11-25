@@ -191,7 +191,7 @@ MODULE mo_veg_memory_class
                                     target_np_fruit
 
     ! canopy layers -> levels, lbounds, ubounds
-    TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanop)
+    TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
                                     nl_tot_cl         , &       !< N in canopy layer (mmol / m2 (LAI))
                                     fnl_chl_cl        , &       !< fraction of N in chlorophyll (pigments only!)
                                     fnl_et_cl         , &       !< fraction of N in electron transport 
@@ -260,7 +260,7 @@ MODULE mo_veg_memory_class
                                     leaf2root_mass_ratio          !< leaf to root mass ratio
 
     ! daytime averages
-    TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanop)
+    TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
                                     par_sunlit_daytime_cl     , &    !<  average of the previous day
                                     par_shaded_daytime_cl     , &    !<  average of the previous day
                                     fleaf_sunlit_daytime_cl          !<  average of the previous day
@@ -273,7 +273,7 @@ MODULE mo_veg_memory_class
                                     beta_soil_ps_daytime      , &    !<  average of the previous day
                                     beta_soil_gs_daytime      , &    !<  average of the previous day
                                     t_jmax_opt_daytime               !<  average of the previous day
-    TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanop)
+    TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
                                     par_sunlit_daytime_dacc_cl   , & !<  value accumulated over current day
                                     par_shaded_daytime_dacc_cl   , & !<  value accumulated over current day
                                     fleaf_sunlit_daytime_dacc_cl     !<  value accumulated over current day
@@ -309,7 +309,7 @@ MODULE mo_veg_memory_class
                                     growth_req_p_tuptake_mavg      , &  !< moles P required for a unit of N growth under current allocation fractions
                                     cost_n_fixation_tuptake_mavg        !< moving average of N fixation cost (mol C / mol N)
     ! 1.4 memory of conditions for photosynthesis for the optimisation of foliar N fractions 
-    TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanop)
+    TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
                                     par_sunlit_tfrac_mavg_cl       , &  !< PAR on sunlit leaves
                                     par_shaded_tfrac_mavg_cl       , &  !< PAR on shaded leaves
                                     fleaf_sunlit_tfrac_mavg_cl          !< fraction of sunlit leaves
@@ -322,7 +322,7 @@ MODULE mo_veg_memory_class
                                     beta_soil_ps_tfrac_mavg        , &  !< scaling factor to account for soil moisture constraints on photosynthesis 
                                     beta_soil_gs_tfrac_mavg             !< scaling factor to account for soil moisture constraints on conductance
     ! 1.5 memory of conditions for photosynthesis for the optimisation of foliar N  
-    TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanop)
+    TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
                                     par_sunlit_tcnl_mavg_cl        , &  !< PAR on sunlit leaves
                                     par_shaded_tcnl_mavg_cl        , &  !< PAR on shaded leaves
                                     fleaf_sunlit_tcnl_mavg_cl           !< fraction of sunlit leaves

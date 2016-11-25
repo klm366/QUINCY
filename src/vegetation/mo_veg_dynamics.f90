@@ -185,7 +185,7 @@ CONTAINS
                                     veg_establishment )
 
 
-    USE mo_base_constants,        ONLY: dtime, one_day, one_year, ncanop
+    USE mo_base_constants,        ONLY: dtime, one_day, one_year, ncanopy
     USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_config_class,      ONLY: veg_config
@@ -212,7 +212,7 @@ CONTAINS
     REAL(wp)                                      :: flim_light   , &
                                                      flim_moist   , &
                                                      flim_temp
-    INTEGER                                       :: icanop
+    INTEGER                                       :: icanopy
 
 
     IF(veg_config%flag_tile_veg_dynamics) THEN 
@@ -223,8 +223,8 @@ CONTAINS
        !> 1.1 light limitation
        !! depending on the red to far-red ratio of the light at the bottom of the canopy
        tc = 0.0_wp
-       DO icanop=1,ncanop
-         tc = tc + nl_tot_cl(icanop) * fnl_chl_cl(icanop) * lai_cl(icanop)
+       DO icanopy=1,ncanopy
+         tc = tc + nl_tot_cl(icanopy) * fnl_chl_cl(icanopy) * lai_cl(icanopy)
        ENDDO
        rfr_ratio = toc_rfr_ratio * exp( k_r2fr_chl * tc) 
        flim_light = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio)**lctlib%k_est_light)

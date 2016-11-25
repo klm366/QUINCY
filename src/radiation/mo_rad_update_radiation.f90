@@ -38,7 +38,7 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_model
-    USE mo_base_constants,        ONLY: ncanop 
+    USE mo_base_constants,        ONLY: ncanopy 
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_rad_constants 
@@ -58,7 +58,7 @@ CONTAINS
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
     !> @todo (update_radiation) these local variables need to be added to RADIATION memory once 3D variables are allowed for
-    REAL(wp),DIMENSION(ncanop)             :: arad_sunlit_vis_cl, &
+    REAL(wp),DIMENSION(ncanopy)             :: arad_sunlit_vis_cl, &
                                               arad_shaded_vis_cl, &
                                               fleaf_sunlit_vis_cl, & 
                                               arad_sunlit_nir_cl, &
@@ -248,7 +248,7 @@ CONTAINS
                               alb                 , &   ! out
                               sw_srf_net)
 
-    USE mo_base_constants,     ONLY: ncanop,canopy_layer_depth
+    USE mo_base_constants,     ONLY: ncanopy, canopy_layer_depth
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -264,14 +264,14 @@ CONTAINS
     REAL(wp)              , INTENT(in) :: kbl0                    !< extinction coefficient over black leaves 
     REAL(wp)              , INTENT(in) :: kdf0                    !< extinction coefficient for diffuse radiation 
     REAL(wp)              , INTENT(in) :: alb_soil                !< soil albedo 
-    REAL(wp), DIMENSION(ncanop), INTENT(out) :: arad_sunlit_cl    !< absorbed radiation on sunlit leaves (W m-2) 
-    REAL(wp), DIMENSION(ncanop), INTENT(out) :: arad_shaded_cl    !< absorbed radiation of shaded leaves (W m-2) 
-    REAL(wp), DIMENSION(ncanop), INTENT(out) :: fleaf_sunlit_cl   !< fraction of leaves that is sunlit (--)
-    REAL(wp)                   , INTENT(out) :: arad_can          !< absorbed radiation by the canopy (W m-2) 
-    REAL(wp)                   , INTENT(out) :: arad_soil         !< absorbed radiation by the soil (W m-2)
-    REAL(wp)                   , INTENT(out) :: alb_can           !< albedo of the canopy 
-    REAL(wp)                   , INTENT(out) :: alb               !< albedo of the tile 
-    REAL(wp)                   , INTENT(out) :: sw_srf_net        !< net shortwave radiation of the tile 
+    REAL(wp), DIMENSION(ncanopy), INTENT(out) :: arad_sunlit_cl    !< absorbed radiation on sunlit leaves (W m-2) 
+    REAL(wp), DIMENSION(ncanopy), INTENT(out) :: arad_shaded_cl    !< absorbed radiation of shaded leaves (W m-2) 
+    REAL(wp), DIMENSION(ncanopy), INTENT(out) :: fleaf_sunlit_cl   !< fraction of leaves that is sunlit (--)
+    REAL(wp)                    , INTENT(out) :: arad_can          !< absorbed radiation by the canopy (W m-2) 
+    REAL(wp)                    , INTENT(out) :: arad_soil         !< absorbed radiation by the soil (W m-2)
+    REAL(wp)                    , INTENT(out) :: alb_can           !< albedo of the canopy 
+    REAL(wp)                    , INTENT(out) :: alb               !< albedo of the tile 
+    REAL(wp)                    , INTENT(out) :: sw_srf_net        !< net shortwave radiation of the tile 
     ! 0.2 Local
     REAL(wp) :: irad_dir_down,irad_dif_down            ! downward direct and diffuse radiation 
     REAL(wp) :: irad_dir_down_bc,irad_dif_down_bc      ! light intensity at the bottom of the canopy
@@ -283,11 +283,11 @@ CONTAINS
     REAL(wp) :: idra                                   ! direct radiation penetrating sunlit foliage at lc 
     REAL(wp) :: idrdra                                 ! direct radiation remaining direct at lc 
     REAL(wp) :: arad_can_up                            ! absorbed radiation from the upward stream
-    REAL(wp), DIMENSION(ncanop) :: arad_shaded_up_cl   ! idem for canopy layers
+    REAL(wp), DIMENSION(ncanopy) :: arad_shaded_up_cl   ! idem for canopy layers
     REAL(wp) :: tmp_cos_zenith_angle                   ! local variable of solar angle (radians)
     REAL(wp) :: k4_csf                                 ! ..
     REAL(wp) :: omega                                  ! .. 
-    INTEGER  :: icanop                                 ! iteration over canopy layers
+    INTEGER  :: icanopy                                 ! iteration over canopy layers
     REAL(wp) :: temp1,temp2,radf1,radf2,radf3,radf3b,radf4,radf5 ! dummy variables
 
 
@@ -355,47 +355,47 @@ CONTAINS
           irad_dif_up = (1.0_wp - rho) * irad_dif_up * exp(-kdf*lai)
 
           !> @par loop over canopy layers. All fluxes are evaluated at the centre of the canopy layer
-          DO icanop = 1,ncanop
+          DO icanopy = 1,ncanopy
              !> @par IF leaf area index of canopy layer > eps8: Integrate absorbed radiation over actually existing canopy layers
-             IF(lai_cl(icanop)>eps8)THEN
+             IF(lai_cl(icanopy)>eps8)THEN
      
                 !> @par IF radf2 <= eps8
                 IF (radf2 <= eps8) THEN ! case of only diffuse radiation
                    !> Eq.10 Mean radiation penetrating foliage at lc 
-                   arad_shaded_cl(icanop) = radf1 * exp(-kdf * cumm_lai_cl(icanop)) + &    ! eq 10
-                          radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanop),0.0_wp)))
-                   !> radiation penetrating foliage from below for albedo cacumm_lai_cl(icanop)ulation
-                   arad_shaded_up_cl(icanop) = radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanop),0.0_wp)))
+                   arad_shaded_cl(icanopy) = radf1 * exp(-kdf * cumm_lai_cl(icanopy)) + &    ! eq 10
+                          radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanopy),0.0_wp)))
+                   !> radiation penetrating foliage from below for albedo cacumm_lai_cl(icanopy)ulation
+                   arad_shaded_up_cl(icanopy) = radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanopy),0.0_wp)))
                 !> @par ELSE Case of direct and diffuse radiation
                 ELSE 
-                   !> Sunlit foliage at cumm_lai_cl(icanop) (fraction)
+                   !> Sunlit foliage at cumm_lai_cl(icanopy) (fraction)
                    !! kbl: Extinction coefficient for radiation over black leaves in canopy
-                   fleaf_sunlit_cl(icanop) = exp(-kbl * cumm_lai_cl(icanop))
-                   !> Eq.10 Diffuse radiation penetrating foliage at cumm_lai_cl(icanop) 
-                   idfa = radf1 * exp(-kdf * cumm_lai_cl(icanop)) + & 
-                          radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanop),0.0_wp)))
-                   !> radiation penetrating foliage from below for albedo cacumm_lai_cl(icanop)ulation
-                   arad_shaded_up_cl(icanop) = radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanop),0.0_wp)))
-                   !> Direct radiation penetrating sunlit foliage at cumm_lai_cl(icanop) 
-                   idra = radf2 * exp(radf4 * cumm_lai_cl(icanop))
-                   !> Eq.12 Mean direct radiation remaining direct at cumm_lai_cl(icanop) 
+                   fleaf_sunlit_cl(icanopy) = exp(-kbl * cumm_lai_cl(icanopy))
+                   !> Eq.10 Diffuse radiation penetrating foliage at cumm_lai_cl(icanopy) 
+                   idfa = radf1 * exp(-kdf * cumm_lai_cl(icanopy)) + & 
+                          radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanopy),0.0_wp)))
+                   !> radiation penetrating foliage from below for albedo accumulation ?
+                   arad_shaded_up_cl(icanopy) = radf5 * exp(-kdf * (max(lai-cumm_lai_cl(icanopy),0.0_wp)))
+                   !> Direct radiation penetrating sunlit foliage at cumm_lai_cl(icanopy) 
+                   idra = radf2 * exp(radf4 * cumm_lai_cl(icanopy))
+                   !> Eq.12 Mean direct radiation remaining direct at cumm_lai_cl(icanopy) 
                    !! radf4 replaced by -kbl according to Wang2003 (error in Spitters 1986 Eqn.12)
-                   idrdra = radf3 * exp(-kbl * cumm_lai_cl(icanop))  
-                   !> Radiation penetrating shaded foliage at cumm_lai_cl(icanop) (umol/m2/s)
+                   idrdra = radf3 * exp(-kbl * cumm_lai_cl(icanopy))  
+                   !> Radiation penetrating shaded foliage at cumm_lai_cl(icanopy) (umol/m2/s)
                    !! Eq.13 Sum of diffuse radiation and diffuse component of direct flux
-                   arad_shaded_cl(icanop) = idfa + max((idra - idrdra), 0.0_wp)
+                   arad_shaded_cl(icanopy) = idfa + max((idra - idrdra), 0.0_wp)
                    !> Radiation penetrating sunlit foliage at lc (umol/m2/s)
                    !! sum of diffuse and direct radiation
-                   arad_sunlit_cl(icanop) = arad_shaded_cl(icanop) + radf3
+                   arad_sunlit_cl(icanopy) = arad_shaded_cl(icanopy) + radf3
                 ENDIF
                 !> ENDIF
 
                 !> total absorbed radiation
-                arad_can = arad_can + ( arad_shaded_cl(icanop) * (1._wp-fleaf_sunlit_cl(icanop)) + & 
-                                        arad_sunlit_cl(icanop) * fleaf_sunlit_cl(icanop) )       * & 
-                                        lai_cl(icanop)
+                arad_can = arad_can + ( arad_shaded_cl(icanopy) * (1._wp-fleaf_sunlit_cl(icanopy)) + & 
+                                        arad_sunlit_cl(icanopy) * fleaf_sunlit_cl(icanopy) )       * & 
+                                        lai_cl(icanopy)
                 !> for albedo calculation: radiation absorbed from the upward stream
-                arad_can_up = arad_can_up + arad_shaded_up_cl(icanop) * lai_cl(icanop)
+                arad_can_up = arad_can_up + arad_shaded_up_cl(icanopy) * lai_cl(icanopy)
              ENDIF
              !> ENDIF
           ENDDO
