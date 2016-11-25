@@ -91,8 +91,7 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_phenology(lctlib                     , &
-!  ELEMENTAL SUBROUTINE calc_phenology(lctlib                        , &
+  ELEMENTAL SUBROUTINE calc_phenology(lctlib                        , &
                                     t_air                           , &
                                     beta_soil_gs_tphen_mavg         , &
                                     t_air_tphen_mavg                , &
@@ -106,7 +105,7 @@ CONTAINS
                                     gdd )
 
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_base_constants,          ONLY: dt, one_day
+    USE mo_base_constants,          ONLY: dtime, one_day
     USE mo_shared_constants,        ONLY: Tzero
     USE mo_veg_constants,           ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
                                       gdd_req_max,gdd_t_air_threshold,k_gdd_dormance,t_air_senescence, & 
@@ -169,7 +168,7 @@ CONTAINS
     !> 2.1 gdd counter
     !! 
     IF(t_air > gdd_t_air_threshold) THEN
-       gdd = gdd + ((t_air - gdd_t_air_threshold) * dt/one_day)
+       gdd = gdd + ((t_air - gdd_t_air_threshold) * dtime/one_day)
     ENDIF
     IF(t_air_week_mavg < Tzero) gdd = 0.0_wp
 
@@ -179,7 +178,7 @@ CONTAINS
       gdd         = 0.0_wp
       nd_dormance = 0.0_wp
     ELSE
-      nd_dormance = nd_dormance + dt/one_day 
+      nd_dormance = nd_dormance + dtime/one_day 
     ENDIF
 
   END SUBROUTINE calc_phenology 

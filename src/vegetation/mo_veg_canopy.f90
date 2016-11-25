@@ -314,7 +314,7 @@ CONTAINS
                                     fn_et_cl                  , &
                                     fn_pepc_cl)                       
 
-    USE mo_base_constants,      ONLY: dt,one_day
+    USE mo_base_constants,      ONLY: dtime,one_day
     USE mo_veg_constants,       ONLY: delta_n_fraction
 
     IMPLICIT NONE
@@ -398,14 +398,14 @@ CONTAINS
 
     !> 2.0 Attempt to increase PS by increasing the N fraction in chlorophyll 
     !! 
-    fn_chl_cl = MIN(fn_chl0_cl * (1.0_wp + delta_n_fraction*dt/one_day), 1.0_wp)
+    fn_chl_cl = MIN(fn_chl0_cl * (1.0_wp + delta_n_fraction*dtime/one_day), 1.0_wp)
 
     ! optimal N fraction assuming Aj=Av=Apepc
     CALL calc_coordination_n_fractions(fn_chl_cl,m_rub,m_et,m_pepc, & 
                                        fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl)
 
     ! check if changing fraction to optimal values is possible in one timestep
-    CALL calc_update_n_fractions(delta_n_fraction*dt/one_day,fn_chl_cl,& 
+    CALL calc_update_n_fractions(delta_n_fraction*dtime/one_day,fn_chl_cl,& 
                                   fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, & 
                                   fn_rub_cl,fn_et_cl,fn_pepc_cl) 
                    
@@ -422,7 +422,7 @@ CONTAINS
     IF (an_cl < an0_cl) THEN
        
        ! decrease N fraction in chlorophyll
-       fn_chl_cl = MAX(fn_chl0_cl * (1._wp - delta_n_fraction*dt/one_day), eps8)
+       fn_chl_cl = MAX(fn_chl0_cl * (1._wp - delta_n_fraction*dtime/one_day), eps8)
        fn_et_cl = fn_et0_cl
        fn_rub_cl = fn_rub0_cl
        fn_pepc_cl = fn_pepc0_cl
@@ -431,7 +431,7 @@ CONTAINS
        CALL calc_coordination_n_fractions(fn_chl_cl,m_rub,m_et,m_pepc, & 
                                           fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl)
        ! check if changing fraction to optimal values is possible in one timestep
-       CALL calc_update_n_fractions(delta_n_fraction*dt/one_day,fn_chl_cl,& 
+       CALL calc_update_n_fractions(delta_n_fraction*dtime/one_day,fn_chl_cl,& 
                                      fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, & 
                                      fn_rub_cl,fn_et_cl,fn_pepc_cl) 
      
@@ -455,7 +455,7 @@ CONTAINS
           CALL calc_coordination_n_fractions(fn_chl_cl,m_rub,m_et,m_pepc, & 
                                              fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl)
           ! check if changing fraction to optimal values is possible in one timestep
-          CALL calc_update_n_fractions(delta_n_fraction*dt/one_day,fn_chl_cl,& 
+          CALL calc_update_n_fractions(delta_n_fraction*dtime/one_day,fn_chl_cl,& 
                                         fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, & 
                                         fn_rub_cl,fn_et_cl,fn_pepc_cl) 
 
@@ -732,7 +732,7 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_dir_optimal_cn_leaf(lctlib, veg)
 
-    USE mo_base_constants,    ONLY: ncanop, dt, one_day    
+    USE mo_base_constants,    ONLY: ncanop, dtime, one_day    
     USE mo_veg_constants,     ONLY: delta_n_leaf,root2leaf_cn,wood2leaf_cn 
     USE mo_veg_respiration,   ONLY: calc_maintenance_respiration
 
@@ -767,7 +767,7 @@ CONTAINS
         
        direction = REAL(dd,KIND=wp) - 2.0_wp
 
-       leaf_nitrogen = veg%pool%leaf%carbon%ptr / veg%target_cn_leaf%ptr * (1.0_wp + direction * delta_n_leaf * dt/one_day)
+       leaf_nitrogen = veg%pool%leaf%carbon%ptr / veg%target_cn_leaf%ptr * (1.0_wp + direction * delta_n_leaf * dtime/one_day)
        
        ! update N distribution in the canopy
        CALL calc_canopy_layers(lctlib = lctlib, & 
@@ -821,15 +821,15 @@ CONTAINS
 !@todoveg_canopy:calc_dir_optimal_cn_leaf. This neither conserves mass, not does this make sense
 ! physiologically - the additional N should be taken from the labile or reserve pool
 !       fine_root_nitrogen = veg%pool%fine_root%nitrogen%ptr * & 
-!            (1.0_wp - direction * delta_n_leaf * dt/one_day)
+!            (1.0_wp - direction * delta_n_leaf * dtime/one_day)
 !       coarse_root_nitrogen = veg%pool%coarse_root%nitrogen%ptr
 !       sap_wood_nitrogen = veg%pool%sap_wood%nitrogen%ptr
        fine_root_nitrogen = veg%pool%fine_root%nitrogen%ptr * & 
-            (1.0_wp + direction * delta_n_leaf/root2leaf_cn * dt/one_day)
+            (1.0_wp + direction * delta_n_leaf/root2leaf_cn * dtime/one_day)
        coarse_root_nitrogen = veg%pool%coarse_root%nitrogen%ptr * & 
-            (1.0_wp + direction * delta_n_leaf/wood2leaf_cn * dt/one_day)
+            (1.0_wp + direction * delta_n_leaf/wood2leaf_cn * dtime/one_day)
        sap_wood_nitrogen = veg%pool%sap_wood%nitrogen%ptr * & 
-            (1.0_wp + direction * delta_n_leaf/wood2leaf_cn * dt/one_day)
+            (1.0_wp + direction * delta_n_leaf/wood2leaf_cn * dtime/one_day)
 
        ! Calculate whole plant respiration
        maint_respiration(dd) = calc_maintenance_respiration(veg%t_air_tcnl_mavg%ptr,&

@@ -115,7 +115,7 @@ CONTAINS
     LOGICAL,INTENT(in)                  :: l_forcing         !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
     REAL(wp),INTENT(in)                 :: time_day          !< displays the 'real time' in days; time_day == 1.0 after one day has passed
     INTEGER,INTENT(in)                  :: time_year         !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
-    REAL(wp),INTENT(in)                 :: timestep_prop_day !< proportion of one day that is simulated with one timestep (dt/one_day)
+    REAL(wp),INTENT(in)                 :: timestep_prop_day !< proportion of one day that is simulated with one timestep (dtime/one_day)
     REAL(wp),INTENT(in)           :: &               !! atm2land memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &

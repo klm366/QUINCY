@@ -228,7 +228,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mavg(current_avg, new_value, avg_period_length, do_calc, avg_period_unit) RESULT(new_avg)
 
-    USE mo_base_constants,      ONLY: dt, one_day, one_year
+    USE mo_base_constants,      ONLY: dtime, one_day, one_year
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -272,7 +272,7 @@ CONTAINS
     !> 2.0 calc weight of the new_value and the average
     !! calc the new average as weighted mean of the current_avg and the new_value weighted by new_value_weight
     IF(l_do_calc) THEN
-      new_value_weight = 1.0_wp / (avg_period_length * avg_period2seconds / dt )  ! dt: length of one time step in seconds
+      new_value_weight = 1.0_wp / (avg_period_length * avg_period2seconds / dtime )  ! dtime: length of one time step in seconds
       new_avg = (current_avg * (1.0_wp - new_value_weight)) + (new_value * new_value_weight)
     ELSE
       new_avg = current_avg

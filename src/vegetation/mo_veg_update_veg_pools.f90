@@ -35,7 +35,7 @@ CONTAINS
 
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_base_memory,         ONLY: t_slm_tile, t_model
-    USE mo_base_constants,      ONLY: dt, one_day
+    USE mo_base_constants,      ONLY: dtime, one_day
     USE mo_base_config_class,   ONLY: base_config
     USE mo_jsb_process_class,   ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_shared_constants        ! only lambda_C14 ?
@@ -79,16 +79,16 @@ CONTAINS
        veg%npp      = veg%gpp     - veg%growth_respiration     - veg%maint_respiration     - veg%n_processing_respiration
        veg%npp_c13  = veg%gpp_c13 - veg%growth_respiration_c13 - veg%maint_respiration_c13 - veg%n_processing_respiration_c13
        veg%npp_c14  = veg%gpp_c14 - veg%growth_respiration_c14 - veg%maint_respiration_c14 - veg%n_processing_respiration_c14
-       veg%growth%labile%carbon   = veg%growth%labile%carbon    + veg%npp     * dt / 1000000.0_wp
-       veg%growth%labile%carbon13 = veg%growth%labile%carbon13  + veg%npp_c13 * dt / 1000000.0_wp
-       veg%growth%labile%carbon14 = veg%growth%labile%carbon14  + veg%npp_c14 * dt / 1000000.0_wp
+       veg%growth%labile%carbon   = veg%growth%labile%carbon    + veg%npp     * dtime / 1000000.0_wp
+       veg%growth%labile%carbon13 = veg%growth%labile%carbon13  + veg%npp_c13 * dtime / 1000000.0_wp
+       veg%growth%labile%carbon14 = veg%growth%labile%carbon14  + veg%npp_c14 * dtime / 1000000.0_wp
    
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
-       veg%growth%labile%nitrogen   = veg%growth%labile%nitrogen   + ( veg%uptake_n + veg%n_fixation)       * dt / 1000000.0_wp
-       veg%growth%labile%nitrogen15 = veg%growth%labile%nitrogen15 + ( veg%uptake_n15 + veg%n_fixation_n15) * dt / 1000000.0_wp
-       veg%growth%labile%phosphorus = veg%growth%labile%phosphorus +   veg%uptake_p                         * dt / 1000000.0_wp
+       veg%growth%labile%nitrogen   = veg%growth%labile%nitrogen   + ( veg%uptake_n + veg%n_fixation)       * dtime / 1000000.0_wp
+       veg%growth%labile%nitrogen15 = veg%growth%labile%nitrogen15 + ( veg%uptake_n15 + veg%n_fixation_n15) * dtime / 1000000.0_wp
+       veg%growth%labile%phosphorus = veg%growth%labile%phosphorus +   veg%uptake_p                         * dtime / 1000000.0_wp
    
        !> 1.3 update labile pool and reserve 
        !! 
@@ -124,15 +124,15 @@ CONTAINS
    
        !> 1.6 Radioactive decay of C14 in living plant tissue
        !!
-       veg%pool%leaf%carbon14         = veg%pool%leaf%carbon14        * (1._wp - lambda_C14 * dt )
-       veg%pool%fine_root%carbon14    = veg%pool%fine_root%carbon14   * (1._wp - lambda_C14 * dt )
-       veg%pool%sap_wood%carbon14     = veg%pool%sap_wood%carbon14    * (1._wp - lambda_C14 * dt )
-       veg%pool%heart_wood%carbon14   = veg%pool%heart_wood%carbon14  * (1._wp - lambda_C14 * dt )
-       veg%pool%coarse_root%carbon14  = veg%pool%coarse_root%carbon14 * (1._wp - lambda_C14 * dt )
-       veg%pool%fruit%carbon14        = veg%pool%fruit%carbon14       * (1._wp - lambda_C14 * dt )
-       veg%pool%labile%carbon14       = veg%pool%labile%carbon14      * (1._wp - lambda_C14 * dt )
-       veg%pool%reserve%carbon14      = veg%pool%reserve%carbon14     * (1._wp - lambda_C14 * dt )
-       veg%pool%seed_bed%carbon14     = veg%pool%seed_bed%carbon14    * (1._wp - lambda_C14 * dt )
+       veg%pool%leaf%carbon14         = veg%pool%leaf%carbon14        * (1._wp - lambda_C14 * dtime )
+       veg%pool%fine_root%carbon14    = veg%pool%fine_root%carbon14   * (1._wp - lambda_C14 * dtime )
+       veg%pool%sap_wood%carbon14     = veg%pool%sap_wood%carbon14    * (1._wp - lambda_C14 * dtime )
+       veg%pool%heart_wood%carbon14   = veg%pool%heart_wood%carbon14  * (1._wp - lambda_C14 * dtime )
+       veg%pool%coarse_root%carbon14  = veg%pool%coarse_root%carbon14 * (1._wp - lambda_C14 * dtime )
+       veg%pool%fruit%carbon14        = veg%pool%fruit%carbon14       * (1._wp - lambda_C14 * dtime )
+       veg%pool%labile%carbon14       = veg%pool%labile%carbon14      * (1._wp - lambda_C14 * dtime )
+       veg%pool%reserve%carbon14      = veg%pool%reserve%carbon14     * (1._wp - lambda_C14 * dtime )
+       veg%pool%seed_bed%carbon14     = veg%pool%seed_bed%carbon14    * (1._wp - lambda_C14 * dtime )
    
        !> 2.0 Update plant diagnostics given the above fluxes
        !!
@@ -149,7 +149,7 @@ CONTAINS
 
        IF(veg%pool%leaf%carbon%ptr > eps8) THEN 
            veg%mean_leaf_age%ptr = & 
-             (veg%mean_leaf_age%ptr + dt/one_day) * (1._wp - veg%growth%leaf%carbon%ptr / veg%pool%leaf%carbon%ptr)
+             (veg%mean_leaf_age%ptr + dtime/one_day) * (1._wp - veg%growth%leaf%carbon%ptr / veg%pool%leaf%carbon%ptr)
          ELSE 
            veg%mean_leaf_age%ptr = 0.0_wp
        END IF

@@ -129,9 +129,9 @@ CONTAINS
     !! select rate and convert from 1/year to 1/timestep
     SELECT CASE (lctlib%growthform)
       CASE (itree)
-         mortality_rate = ((background_mort_rate_tree /  one_year) / one_day) * dt
+         mortality_rate = ((background_mort_rate_tree /  one_year) / one_day) * dtime
       CASE (igrass)
-         mortality_rate = ((background_mort_rate_grass / one_year) / one_day) * dt
+         mortality_rate = ((background_mort_rate_grass / one_year) / one_day) * dtime
     ENDSELECT 
 
     IF(veg_config%flag_tile_veg_dynamics) THEN 
@@ -146,7 +146,7 @@ CONTAINS
        IF(boc_cbalance < -eps4 )THEN
           mortality_rate = mortality_rate & 
                            + ( 1._wp - exp ( - ( - lambda_mort_light * boc_cbalance ) ** k_mort_light)) & 
-                           / one_year / one_day * dt
+                           / one_year / one_day * dtime
        ENDIF
 
     ENDIF
@@ -185,7 +185,7 @@ CONTAINS
                                     veg_establishment )
 
 
-    USE mo_base_constants,        ONLY: dt, one_day, one_year, ncanop
+    USE mo_base_constants,        ONLY: dtime, one_day, one_year, ncanop
     USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_config_class,      ONLY: veg_config
@@ -242,7 +242,7 @@ CONTAINS
        !> 1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
        !!
        establishment_rate = flim_light * flim_temp * flim_moist * & 
-                            lctlib%tau_seed_est / one_year / one_day * dt
+                            lctlib%tau_seed_est / one_year / one_day * dtime
        veg_establishment  = veg_pool_seed_bed * establishment_rate
 
     ENDIF
@@ -258,7 +258,7 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_delta_density_individuals(lctlib                    , &
+  ELEMENTAL SUBROUTINE calc_delta_density_individuals(lctlib                    , &
                                             dens_ind                  , &
                                             mortality_rate            , &
                                             veg_establishment_carbon  , &

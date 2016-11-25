@@ -85,7 +85,7 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE calc_nutrient_recycling(veg, target_cn_fine_root, target_np_fine_root)
 
-    USE mo_base_constants,        ONLY: dt, one_day
+    USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_veg_constants,         ONLY: tau_canopy_acclimation, k0_labile
 
     ! Use of process memories
@@ -106,13 +106,13 @@ CONTAINS
        !> 1.0 replace overturning N from leaves and roots by new N from the labile pool using the target C:N
        !!
        recycling_leaf      = ( veg%pool%leaf%nitrogen%ptr - & 
-                               veg%pool%leaf%carbon%ptr / veg%target_cn_leaf%ptr ) * tau_canopy_acclimation * dt / one_day
+                               veg%pool%leaf%carbon%ptr / veg%target_cn_leaf%ptr ) * tau_canopy_acclimation * dtime / one_day
        recycling_fine_root = ( veg%pool%fine_root%nitrogen%ptr - &
-                               veg%pool%fine_root%carbon%ptr / target_cn_fine_root ) * tau_canopy_acclimation * dt / one_day
+                               veg%pool%fine_root%carbon%ptr / target_cn_fine_root ) * tau_canopy_acclimation * dtime / one_day
        !> 1.1 if N is addded to leaves or fine root (negative flux), make sure there is enough labile N to support this
        !! 
        IF( -1.0_wp * (recycling_leaf + recycling_fine_root) > eps8) THEN
-          scal = -1.0_wp * ( k0_labile * dt / one_day * veg%pool%labile%nitrogen%ptr ) / & 
+          scal = -1.0_wp * ( k0_labile * dtime / one_day * veg%pool%labile%nitrogen%ptr ) / & 
                            ( recycling_leaf + recycling_fine_root ) 
           IF(scal < 1.0_wp) THEN
              recycling_leaf       = recycling_leaf * scal
@@ -125,13 +125,13 @@ CONTAINS
        !> 2.0 replace overturning P from leaves and roots by new N from the labile pool using the target N:P
        !!
        recycling_leaf      = ( veg%pool%leaf%phosphorus%ptr - & 
-                               veg%pool%leaf%nitrogen%ptr / veg%target_np_leaf%ptr ) * tau_canopy_acclimation * dt / one_day
+                               veg%pool%leaf%nitrogen%ptr / veg%target_np_leaf%ptr ) * tau_canopy_acclimation * dtime / one_day
        recycling_fine_root = ( veg%pool%fine_root%phosphorus%ptr - &
-                               veg%pool%fine_root%nitrogen%ptr / target_np_fine_root ) * tau_canopy_acclimation * dt / one_day
+                               veg%pool%fine_root%nitrogen%ptr / target_np_fine_root ) * tau_canopy_acclimation * dtime / one_day
        !> 2.1 if P is addded to leaves or fine root, make sure there is enough labile P to support this
        !! 
        IF( -1.0_wp * ( recycling_leaf + recycling_fine_root ) > eps8) THEN
-          scal = -1.0_wp * ( k0_labile * dt / one_day * veg%pool%labile%phosphorus%ptr ) / & 
+          scal = -1.0_wp * ( k0_labile * dtime / one_day * veg%pool%labile%phosphorus%ptr ) / & 
                            ( recycling_leaf + recycling_fine_root ) 
           IF(scal < 1.0_wp) THEN
              recycling_leaf       = recycling_leaf * scal
@@ -150,14 +150,14 @@ CONTAINS
           labile_dn15 = 0.0_wp
        ENDIF
        recycling_leaf      = ( labile_dn15 * veg%pool%leaf%carbon%ptr / veg%target_cn_leaf%ptr - & 
-                               labile_dn15 * veg%pool%leaf%carbon%ptr ) * tau_canopy_acclimation * dt / one_day
+                               labile_dn15 * veg%pool%leaf%carbon%ptr ) * tau_canopy_acclimation * dtime / one_day
        recycling_fine_root = ( veg%pool%fine_root%nitrogen15%ptr - & 
                                labile_dn15 * veg%pool%fine_root%carbon%ptr / target_cn_fine_root ) * &
-                               tau_canopy_acclimation * dt / one_day
+                               tau_canopy_acclimation * dtime / one_day
        !> 3.1 if N is addded to leaves or fine root, make sure there is enough labile N to support this
        !! 
        IF( -1.0_wp * ( recycling_leaf + recycling_fine_root ) > eps8) THEN
-          scal = -1.0_wp * ( k0_labile * dt / one_day * veg%pool%labile%nitrogen15%ptr ) / & 
+          scal = -1.0_wp * ( k0_labile * dtime / one_day * veg%pool%labile%nitrogen15%ptr ) / & 
                            ( recycling_leaf + recycling_fine_root ) 
           IF(scal < 1.0_wp) THEN
              recycling_leaf       = recycling_leaf * scal
@@ -197,7 +197,7 @@ CONTAINS
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_pool
-    USE mo_base_constants,        ONLY: dt, one_day, one_year
+    USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_shared_constants
     USE mo_veg_constants
 
@@ -247,21 +247,21 @@ CONTAINS
     !! flat rate for evergreens, dual rates for deciduous (senescence after the growing season)
     SELECT CASE (lctlib%phenology_type)
       CASE (ievergreen)
-         fturn_leaf = lctlib%tau_leaf * dt/one_day/one_year 
+         fturn_leaf = lctlib%tau_leaf * dtime/one_day/one_year 
       CASE (iraingreen, isummergreen)
          IF(growing_season)THEN
             fturn_leaf = 0.0_wp              ! herbivory
          ELSE
-            fturn_leaf = 0.2_wp * dt/one_day ! senescence
+            fturn_leaf = 0.2_wp * dtime/one_day ! senescence
             ! if LAI drops below minimum threshold, dump all leaves
             IF(lai < min_lai) fturn_leaf = 1.0_wp
          ENDIF
       CASE (iperennial)
          IF(growing_season)THEN
-            fturn_leaf = lctlib%tau_leaf * dt/one_day/one_year
+            fturn_leaf = lctlib%tau_leaf * dtime/one_day/one_year
          ELSE
             ! if LAI drops below minimum threshold, dump all leaves
-            fturn_leaf = 0.2_wp * dt/one_day
+            fturn_leaf = 0.2_wp * dtime/one_day
             IF(lai < min_lai) fturn_leaf = 1.0_wp
        ENDIF
     END SELECT
@@ -281,12 +281,12 @@ CONTAINS
 
     !> 3.0 fine root turnover to litter
     !! 
-    fturn = lctlib%tau_fine_root * dt/one_day/one_year
+    fturn = lctlib%tau_fine_root * dtime/one_day/one_year
     veg_litterfall_t%fine_root = veg_pool%fine_root * fturn
 
     !> 4.0 coarse root turnover to litter 
     !! 
-    fturn = lctlib%tau_coarse_root * dt/one_day/one_year 
+    fturn = lctlib%tau_coarse_root * dtime/one_day/one_year 
     veg_litterfall_t%coarse_root = veg_pool%coarse_root * fturn
 
     !> 5.0 sapwood turnover 
@@ -296,7 +296,7 @@ CONTAINS
     !! 
     SELECT CASE (lctlib%growthform)
       CASE (itree)
-        fturn = lctlib%tau_branches * dt/one_day/one_year 
+        fturn = lctlib%tau_branches * dtime/one_day/one_year 
       CASE (igrass) ! for grases follows leaf phenology
         fturn = fturn_leaf
     ENDSELECT 
@@ -305,7 +305,7 @@ CONTAINS
     !> 5.2 heart wood formation, including nutrient recycling
     !! 
     IF(lctlib%growthform == itree)THEN
-        fturn = lctlib%tau_sap_wood * dt/one_day/one_year 
+        fturn = lctlib%tau_sap_wood * dtime/one_day/one_year 
         veg_growth_t%heart_wood = veg_pool%sap_wood     * fturn
         veg_growth_t%sap_wood   = veg_growth_t%sap_wood - veg_growth_t%heart_wood 
 
@@ -322,13 +322,13 @@ CONTAINS
 
     !> 6.0 fruit turnover to seed_bed
     !! 
-    fturn                 = lctlib%tau_fruit   * dt/one_day/one_year 
+    fturn                 = lctlib%tau_fruit   * dtime/one_day/one_year 
     veg_growth_t%seed_bed = veg_pool%fruit     * fturn
     veg_growth_t%fruit    = veg_growth_t%fruit - veg_growth_t%seed_bed
 
     !> 7.0 seed-bed turnover to litter 
     !! 
-    fturn                     = lctlib%tau_seed_litter * dt/one_day/one_year 
+    fturn                     = lctlib%tau_seed_litter * dtime/one_day/one_year 
     veg_litterfall_t%seed_bed = veg_pool%seed_bed      * fturn
 
     !> 8.0 update litter, growth and recycling of the plant class

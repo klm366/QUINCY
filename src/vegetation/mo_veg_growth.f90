@@ -394,7 +394,7 @@ CONTAINS
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_config_class,      ONLY: veg_config
-    USE mo_base_constants,        ONLY: dt, one_day
+    USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_veg_constants,         ONLY: delta_n_leaf
 
     ! Use of process memories
@@ -421,7 +421,7 @@ CONTAINS
     !! 
     IF (veg_config%flag_optimal_Nleaf .AND. growing_season) THEN
        ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
-       target_cn_leaf = target_cn_leaf * (1.0_wp - leaf_cn_direction * delta_n_leaf * dt/one_day)
+       target_cn_leaf = target_cn_leaf * (1.0_wp - leaf_cn_direction * delta_n_leaf * dtime/one_day)
     ENDIF
 
     !> 2.0 determine C:N of other plant tissues
@@ -774,9 +774,9 @@ CONTAINS
     !> 2.2 convert phi to turnover times (1/timestep)
     !! 
     !! taking account that flushing can only happen if the meristem is active
-    phi_phenology = phi_phenology * kstar_labile * dt/one_day   
-    phi_maintenance = phi_maintenance * k0_labile * dt/one_day
-    phi_storage = phi_storage * k0_labile * dt/one_day
+    phi_phenology = phi_phenology * kstar_labile * dtime/one_day   
+    phi_maintenance = phi_maintenance * k0_labile * dtime/one_day
+    phi_storage = phi_storage * k0_labile * dtime/one_day
 
     veg_reserve_use%carbon%ptr   = ((phi_phenology + phi_maintenance) * veg_pool_reserve%carbon%ptr   - & 
                                  phi_storage   * veg_pool_labile%carbon%ptr) 
@@ -799,9 +799,9 @@ CONTAINS
                        - exp(-(lambda_phistore)**k_phistore)
        
     veg_reserve_use%nitrogen%ptr    = (phi_maintenance * veg_pool_reserve%nitrogen%ptr - & 
-                                    phi_storage * veg_pool_labile%nitrogen%ptr) * k0_labile * dt/one_day
+                                    phi_storage * veg_pool_labile%nitrogen%ptr) * k0_labile * dtime/one_day
     veg_reserve_use%nitrogen15%ptr  = (phi_maintenance * veg_pool_reserve%nitrogen15%ptr - & 
-                                    phi_storage * veg_pool_labile%nitrogen15%ptr) * k0_labile * dt/one_day
+                                    phi_storage * veg_pool_labile%nitrogen15%ptr) * k0_labile * dtime/one_day
 
     !> 4.0 net transfer of P from labile to reserve
     !! 
@@ -817,7 +817,7 @@ CONTAINS
                        - exp(-(lambda_phistore)**k_phistore)
 
     veg_reserve_use%phosphorus%ptr = (phi_maintenance * veg_pool_reserve%phosphorus%ptr - & 
-                                  phi_storage * veg_pool_labile%phosphorus%ptr) * k0_labile * dt/one_day
+                                  phi_storage * veg_pool_labile%phosphorus%ptr) * k0_labile * dtime/one_day
 
   END SUBROUTINE calc_reserve_useage
 
@@ -900,7 +900,7 @@ CONTAINS
     REAL(wp),                     INTENT(out)   :: growth_req_n               !< N requirement for unit growth in C and N
     REAL(wp),                     INTENT(out)   :: growth_req_p               !< P requirement for unit growth in C and N
     ! 0.2 Local
-    REAL(wp) :: b_inc,                   &             ! total and compartment-wise carbon increment (mol/dt)
+    REAL(wp) :: b_inc,                   &             ! total and compartment-wise carbon increment (mol/dtime)
                 all_inc,                 &
                 leaf_carbon_inc,         &
                 root_carbon_inc,         &
@@ -924,12 +924,12 @@ CONTAINS
     ! 
     ! seed for allocation coefficients is the potential growth rate per time step.
     ! given by the average turnover of the labile pool 
-    b_inc = kstar_labile * labile_carbon * dt/one_day
+    b_inc = kstar_labile * labile_carbon * dtime/one_day
 
     !> 1.1 Calculate allocation fraction to reproduction
     !!  Fruit allocation depends on whether or not the plant is able to build reserves
     !!  as soon as the carbon balance exceeds a PFT specific offset, the maximal fruit growth rate is achieved
-    hlp1                    = MAX(0.0_wp, veg_reserve_use_carbon / dt * 1000000.0_wp + k3_fruit_alloc)
+    hlp1                    = MAX(0.0_wp, veg_reserve_use_carbon / dtime * 1000000.0_wp + k3_fruit_alloc)
     veg_falloc%fruit%carbon%ptr = k1_fruit_alloc + ( lctlib%k2_fruit_alloc - k1_fruit_alloc ) * & 
                               exp(-(lambda_fruit_alloc * hlp1)**k4_fruit_alloc)
 
@@ -945,7 +945,7 @@ CONTAINS
 
           !! needed for stability - to be checked BLARPP! 
           !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> check stability issues with b_inc
-          b_inc = 0.2_wp * dt / one_day 
+          b_inc = 0.2_wp * dtime / one_day 
 
           leaf2wood_mass_ratio = leaf2sapwood_mass_ratio / (1._wp + lctlib%k_crtos)
           wood_carbon = sap_wood_carbon + coarse_root_carbon
@@ -1227,16 +1227,16 @@ CONTAINS
     !! growth does not empty the labile pool
     veg_growth%labile%carbon%ptr = (veg_pool%labile%carbon%ptr * kstar_labile / one_day - &
                                     &  (maint_respiration + n_processing_respiration) / 1.e6_wp ) * & 
-                                    &   dt /  (1._wp + fresp_growth) 
+                                    &   dtime /  (1._wp + fresp_growth) 
     IF(veg_growth%labile%carbon%ptr < eps8) veg_growth%labile%carbon%ptr = 0.0_wp
 
     !> 2.2 Elemental limitation of growth by N & P (mol [N|P] / m2 / timestep)
     !! is determined by the minimum turnover of the labile N and P pools and the stoichiometric growth requirement
     !! given the potential growth rate of C
     veg_growth%labile%nitrogen%ptr   = MIN(growth_req_n * veg_growth%labile%carbon%ptr, & 
-                                            veg_pool%labile%nitrogen%ptr * kstar_labile * dt/one_day) 
+                                            veg_pool%labile%nitrogen%ptr * kstar_labile * dtime/one_day) 
     veg_growth%labile%phosphorus%ptr = MIN(growth_req_p * veg_growth%labile%nitrogen%ptr, & 
-                                            veg_pool%labile%phosphorus%ptr * kstar_labile * dt/one_day) 
+                                            veg_pool%labile%phosphorus%ptr * kstar_labile * dtime/one_day) 
     ! adjust N growth rate to P growth rate if P is limiting 
     IF(veg_growth%labile%nitrogen%ptr > veg_growth%labile%phosphorus%ptr / growth_req_p) & 
         veg_growth%labile%nitrogen%ptr = veg_growth%labile%phosphorus%ptr / growth_req_p
@@ -1245,7 +1245,7 @@ CONTAINS
         veg_growth%labile%carbon%ptr = veg_growth%labile%nitrogen%ptr / growth_req_n
  
     ! Diagnose growth respiration (µmol C / m2 / s)
-    growth_respiration = fresp_growth * veg_growth%labile%carbon%ptr * 1.e6_wp / dt
+    growth_respiration = fresp_growth * veg_growth%labile%carbon%ptr * 1.e6_wp / dtime
 
     !> 3.0 Calculate isotopic signature of respiration fluxes, and growth
     !!

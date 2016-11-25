@@ -39,7 +39,7 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_soil, t_slm_tile, t_model
-    USE mo_base_constants,        ONLY: dt
+    USE mo_base_constants,        ONLY: dtime
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
     ! Use of process memories
@@ -96,11 +96,11 @@ CONTAINS
       CASE ("prescribed")
          ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
          veg%uptake_n%ptr = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf - & 
-                                           veg%pool%labile%nitrogen%ptr, 0.0_wp) * 1.e6_wp / dt
+                                           veg%pool%labile%nitrogen%ptr, 0.0_wp) * 1.e6_wp / dtime
          ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
          veg%uptake_p%ptr = MAX(veg%pool%labile%nitrogen%ptr / lctlib%np_leaf + & 
-                                              veg%uptake_n%ptr * dt / 1.e6 - &
-                                              veg%pool%labile%phosphorus%ptr, 0.0_wp) * 1.e6_wp / dt
+                                              veg%uptake_n%ptr * dtime / 1.e6 - &
+                                              veg%pool%labile%phosphorus%ptr, 0.0_wp) * 1.e6_wp / dtime
 
       !> 2.2 Case 2. Calculate inorganic N uptake according to Michaelis-Mnten Kinetics  
       !!
@@ -180,7 +180,7 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_soil, t_slm_tile, t_model
-    USE mo_base_constants,        ONLY: dt
+    USE mo_base_constants,        ONLY: dtime
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
     ! Use of process memories
@@ -254,7 +254,7 @@ CONTAINS
     soil%pool%litter%carbon14 = soil%pool%litter%carbon14 + veg%litterfall%heart_wood%carbon14%ptr
     soil%pool%litter%nitrogen15 = soil%pool%litter%nitrogen15 + veg%litterfall%heart_wood%nitrogen15%ptr
 
-    soil%pool%litter = soil%pool%litter - soil%loss%litter * dt
+    soil%pool%litter = soil%pool%litter - soil%loss%litter * dtime
     
     !> 3 Update mineral pool
     !! 
@@ -262,12 +262,12 @@ CONTAINS
     IF(veg_config%n_uptake_scheme=='prescribed') THEN 
        soil%ammonium = 0.2_wp
     ELSE
-       soil%ammonium = soil%ammonium   + soil%loss%litter%nitrogen*dt*  1.e3_wp / soil_depth * 1.e-3_wp
-       soil%ammonium = soil%ammonium   - veg%uptake_n%ptr * dt/1.e6_wp * 1.e3_wp / soil_depth * 1.e-3_wp 
+       soil%ammonium = soil%ammonium   + soil%loss%litter%nitrogen*dtime*  1.e3_wp / soil_depth * 1.e-3_wp
+       soil%ammonium = soil%ammonium   - veg%uptake_n%ptr * dtime/1.e6_wp * 1.e3_wp / soil_depth * 1.e-3_wp 
     ENDIF
 
-    !soil%phosphate = soil%phosphate + soil%loss%litter%phosphorus*dt*  1.e3_wp / soil_depth * 1.e-3_wp
-    !soil%phosphate = soil%phosphate - veg%uptake_p%ptr * dt/1.e6_wp * 1.e3_wp / soil_depth * 1.e-3_wp 
+    !soil%phosphate = soil%phosphate + soil%loss%litter%phosphorus*dtime*  1.e3_wp / soil_depth * 1.e-3_wp
+    !soil%phosphate = soil%phosphate - veg%uptake_p%ptr * dtime/1.e6_wp * 1.e3_wp / soil_depth * 1.e-3_wp 
 
     END SUBROUTINE update_vegsoil_pool
 
@@ -284,7 +284,7 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_base_memory,           ONLY: t_slm_soil, t_slm_tile, t_model
-    USE mo_base_constants,        ONLY: dt
+    USE mo_base_constants,        ONLY: dtime
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_shared_constants,      ONLY: r_gas_dryair, LatentHeatVaporization, rhoh2o, grav
 
@@ -375,7 +375,7 @@ CONTAINS
 
        ! update soil moisture dS = rain - transpiration - evaporation 
        soil%moisture = soil%moisture + (rain + snow & 
-            - veg%transpiration%ptr - evaporation) * dt
+            - veg%transpiration%ptr - evaporation) * dtime
        ! constrain to possible solutions
        soil%moisture = MAX(MIN(soil%moisture,veg_config%soil_awc_prescribe),0.0_wp)
        ! scale to relative water availability (%)

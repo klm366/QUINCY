@@ -14,7 +14,7 @@ MODULE mo_jsb_model_init
     USE mo_kind
     USE mo_exception,                       ONLY: finish, message, message_text
     ! base
-    USE mo_base_constants
+    USE mo_base_constants                     ! e.g. dtime
     USE mo_jsb_class,                       ONLY: Get_model, jsbach
     USE mo_base_memory,                     ONLY: t_slm_tile, t_model, grid, new_model
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
@@ -56,7 +56,7 @@ MODULE mo_jsb_model_init
     INTEGER  :: time_year                    !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
     INTEGER  :: ntimestep                    !< number of timesteps the model runs
     INTEGER  :: itimestep                    !< current timestep i, looping over timesteps ntimestep
-    REAL(wp) :: timestep_prop_day            !< proportion of one day that is simulated with one timestep (dt/one_day)
+    REAL(wp) :: timestep_prop_day            !< proportion of one day that is simulated with one timestep (dtime/one_day)
 
     ! special case: fluxnet output
     INTEGER  :: fluxnet_output_length        !< number of timesteps data may be written out to file, only for fluxnet sites
@@ -127,8 +127,8 @@ CONTAINS
     ALLOCATE(jsbach%models(no_of_models))
     jsbach%no_of_models = no_of_models
     current => new_model(1, "slm", "slm", "slm_veg_model", "not_available.txt") ! id, name, shortname, description, namelist_filename
-    current%options%dtime   = base_config%dt  ! length of one time step
-    current%options%steplen = base_config%dt  ! .. 
+    current%options%dtime   = base_config%dtime  ! length of one time step
+    current%options%steplen = base_config%dtime  ! .. 
     current%options%iblk    = 1               ! Number of current block (chunk)
     current%options%ics     = 1               ! Index of chunk start
     current%options%ice     = 1               ! Index of chunk end
@@ -231,9 +231,9 @@ CONTAINS
     !! 
     time_day          = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
     time_year         = 1                           ! the 1st year of a simulation == 1 (not zero)
-    dt                = base_config%dt              ! time step length in seconds, default: 1800.0 == 30 minutes
+    dtime             = base_config%dtime              ! time step length in seconds, default: 1800.0 == 30 minutes, mo_base_constants
     ntimestep         = base_config%Timesteps()     ! number of time steps
-    timestep_prop_day = dt/one_day                  ! proportion of one day that is simulated with one timestep
+    timestep_prop_day = dtime/one_day                  ! proportion of one day that is simulated with one timestep
 
 
     !! 9 Initialise: Fluxnet specific simulation output
@@ -243,7 +243,7 @@ CONTAINS
     IF (base_config%fluxnet_output) THEN
       fluxnet_output_status = 1
       ! check whether simulation length covers at least one complete fluxnet forcing period (i.e. fluxnet_output_length)
-      fluxnet_output_length = NINT(base_config%fluxnet_output_length * one_year * one_day / base_config%dt)
+      fluxnet_output_length = NINT(base_config%fluxnet_output_length * one_year * one_day / base_config%dtime)
       IF (fluxnet_output_length > ntimestep) THEN
         CALL finish('land_model_driver-init_routine','Simulation is too short for fluxnet output of one full forcing period')
       END IF
@@ -254,10 +254,10 @@ CONTAINS
       fluxnet_output_stop   = fluxnet_output_start + fluxnet_output_length
 
       ! check whether genral output start and stop covers the 'Fluxnet specific simulation output'
-      IF ( (veg_config%output_end_last_day_year * one_year * one_day / base_config%dt) < fluxnet_output_stop) THEN
+      IF ( (veg_config%output_end_last_day_year * one_year * one_day / base_config%dtime) < fluxnet_output_stop) THEN
         CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
       END IF
-      IF ( (((veg_config%output_start_first_day_year - 1) * one_year * one_day + 1) / base_config%dt) > fluxnet_output_start) THEN
+      IF ( (((veg_config%output_start_first_day_year - 1) * one_year * one_day + 1) / base_config%dtime) > fluxnet_output_start) THEN
         CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
       END IF
     END IF

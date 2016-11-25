@@ -22,8 +22,8 @@ MODULE mo_veg_output
 
   IMPLICIT NONE
 
-  REAL(wp), SAVE                   :: output_interval_pool   ! equals 'dt/one_day' or is a mulitple of it
-  REAL(wp), SAVE                   :: output_interval_flux   ! equals 'dt/one_day' or is a mulitple of it
+  REAL(wp), SAVE                   :: output_interval_pool   ! equals 'dtime/one_day' or is a mulitple of it
+  REAL(wp), SAVE                   :: output_interval_flux   ! equals 'dtime/one_day' or is a mulitple of it
   ! flux accumulation, see write_output_flux
   ! these are set to zero frequently in section 1.2 of write_output_flux()
   REAL(wp), DIMENSION(ntile), SAVE :: gpp_acc             
@@ -66,8 +66,8 @@ CONTAINS
   SUBROUTINE init_veg_output_variables
     IMPLICIT NONE
     ! interval variables
-    output_interval_pool = 0._wp  ! equals 'dt/one_day' or is a mulitple of it
-    output_interval_flux = 0._wp  ! equals 'dt/one_day' or is a mulitple of it
+    output_interval_pool = 0._wp  ! equals 'dtime/one_day' or is a mulitple of it
+    output_interval_flux = 0._wp  ! equals 'dtime/one_day' or is a mulitple of it
     ! flux accumulation per tile [DIMENSION(ntile)], see write_output_flux
     ! these are set to zero frequently in section 1.2 of write_output_flux()
     gpp_acc           = 0._wp
@@ -109,7 +109,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_output_time_interval(interval_string) RESULT(interval_number)
 
-    USE mo_base_constants,     ONLY: one_day, dt
+    USE mo_base_constants,     ONLY: one_day, dtime
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -120,7 +120,7 @@ CONTAINS
     !!
     SELECT CASE( TRIM(interval_string) )
       CASE('timestep')
-        interval_number = dt/one_day  ! length of one time step as advanced in 'time' 
+        interval_number = dtime/one_day  ! length of one time step as advanced in 'time' 
       CASE('daily')
         interval_number = 1.0_wp
       CASE('weekly')
@@ -535,7 +535,7 @@ CONTAINS
 
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_base_memory,           ONLY: t_slm_tile
-    USE mo_base_constants,        ONLY: dt
+    USE mo_base_constants,        ONLY: dtime
     USE mo_atmland_constants,     ONLY: rad2par
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
 
@@ -552,7 +552,7 @@ CONTAINS
     INTEGER,  INTENT(in)                 :: itile   !< number of current tile
     ! 0.2 Local
     INTEGER                      :: lun             ! locical unit number
-    REAL(wp), SAVE               :: dt_one = 1.0_wp ! just 1.0
+    REAL(wp), SAVE               :: dtime_one = 1.0_wp ! just 1.0
     REAL(wp)                     :: dC13gpp,dC13rg,dC13rm
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
@@ -603,43 +603,43 @@ CONTAINS
       !> 1.1 accumulate fluxes across the timesteps of one interval
       !! 
       !! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
-      !! for any interval larger timestep multiply by dt
+      !! for any interval larger timestep multiply by dtime
       IF(output_interval_flux < 1.0_wp) THEN
-          dt_one = 1.0_wp                 ! interval = timestep
+          dtime_one = 1.0_wp                 ! interval = timestep
         ELSE
-          dt_one = dt / 1000000.0_wp      ! interval > timestep
+          dtime_one = dtime / 1000000.0_wp      ! interval > timestep
       END IF
-      gpp_acc(itile)          = gpp_acc(itile)           + veg%gpp%ptr                     * dt_one
-      growth_resp_acc(itile)  = growth_resp_acc(itile)   + veg%growth_respiration%ptr      * dt_one
-      maint_resp_acc(itile)   = maint_resp_acc(itile)    + veg%maint_respiration%ptr       * dt_one
-      n_transform_resp_acc(itile) = n_transform_resp_acc(itile) + veg%n_transform_respiration%ptr * dt_one
-      n_fixation_resp_acc(itile) = n_fixation_resp_acc(itile) + veg%n_fixation_respiration%ptr    * dt_one
-      npp_acc(itile)          = npp_acc(itile)           + veg%npp%ptr                 * dt_one
-      res_use_c_acc(itile)    = res_use_c_acc(itile)     + veg%reserve_use%carbon%ptr  * dt_one *1000000._wp/dt
-      gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + veg%gpp_c13%ptr                * dt_one
-      growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + veg%growth_respiration_c13%ptr * dt_one
-      maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + veg%maint_respiration_c13%ptr  * dt_one
-      gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + veg%gpp_c14%ptr                * dt_one
-      growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + veg%growth_respiration_c14%ptr * dt_one
-      maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + veg%maint_respiration_c14%ptr  * dt_one
-      uptake_n_acc(itile)     = uptake_n_acc(itile)      + veg%uptake_n%ptr                * dt_one
+      gpp_acc(itile)          = gpp_acc(itile)           + veg%gpp%ptr                     * dtime_one
+      growth_resp_acc(itile)  = growth_resp_acc(itile)   + veg%growth_respiration%ptr      * dtime_one
+      maint_resp_acc(itile)   = maint_resp_acc(itile)    + veg%maint_respiration%ptr       * dtime_one
+      n_transform_resp_acc(itile) = n_transform_resp_acc(itile) + veg%n_transform_respiration%ptr * dtime_one
+      n_fixation_resp_acc(itile) = n_fixation_resp_acc(itile) + veg%n_fixation_respiration%ptr    * dtime_one
+      npp_acc(itile)          = npp_acc(itile)           + veg%npp%ptr                 * dtime_one
+      res_use_c_acc(itile)    = res_use_c_acc(itile)     + veg%reserve_use%carbon%ptr  * dtime_one *1000000._wp/dtime
+      gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + veg%gpp_c13%ptr                * dtime_one
+      growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + veg%growth_respiration_c13%ptr * dtime_one
+      maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + veg%maint_respiration_c13%ptr  * dtime_one
+      gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + veg%gpp_c14%ptr                * dtime_one
+      growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + veg%growth_respiration_c14%ptr * dtime_one
+      maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + veg%maint_respiration_c14%ptr  * dtime_one
+      uptake_n_acc(itile)     = uptake_n_acc(itile)      + veg%uptake_n%ptr                * dtime_one
       recycling_n_acc(itile) = recycling_n_acc(itile)  + ( veg%recycling_leaf_n%ptr + &
-                                veg%recycling_fine_root_n%ptr + veg%recycling_sap_wood_n%ptr ) * dt_one *1000000._wp/dt
-      res_use_n_acc(itile)    = res_use_n_acc(itile)     + veg%reserve_use%nitrogen%ptr    * dt_one *1000000._wp/dt
-      n_fixation_acc(itile)   = n_fixation_acc(itile)    + veg%n_fixation%ptr              * dt_one 
-      uptake_p_acc(itile)     = uptake_p_acc(itile)      + veg%uptake_p%ptr                * dt_one
+                                veg%recycling_fine_root_n%ptr + veg%recycling_sap_wood_n%ptr ) * dtime_one *1000000._wp/dtime
+      res_use_n_acc(itile)    = res_use_n_acc(itile)     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
+      n_fixation_acc(itile)   = n_fixation_acc(itile)    + veg%n_fixation%ptr              * dtime_one 
+      uptake_p_acc(itile)     = uptake_p_acc(itile)      + veg%uptake_p%ptr                * dtime_one
       recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( veg%recycling_leaf_p%ptr + & 
-                                veg%recycling_fine_root_p%ptr + veg%recycling_sap_wood_p%ptr ) * dt_one *1000000._wp/dt
-      res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus%ptr  * dt_one *1000000._wp/dt
-      transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dt_one 
+                                veg%recycling_fine_root_p%ptr + veg%recycling_sap_wood_p%ptr ) * dtime_one *1000000._wp/dtime
+      res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
+      transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dtime_one 
       gc_acc(itile)           = veg%gc%ptr                                                      
       ga_acc(itile)           = ga                                                   
       albedo_acc(itile)       = albedo
-      ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2par   * dt_one               
-      rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dt_one               
-      qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dt_one               
-      qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dt_one               
-      apar_acc(itile)         = apar_acc(itile)          + veg%apar%ptr               * dt_one               
+      ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2par   * dtime_one               
+      rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dtime_one               
+      qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dtime_one               
+      qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dtime_one               
+      apar_acc(itile)         = apar_acc(itile)          + veg%apar%ptr               * dtime_one               
 
       !> 1.2 write fluxes and set to zero
       !!

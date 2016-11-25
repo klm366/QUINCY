@@ -27,7 +27,7 @@
 /
 &BASE_CTL
   ! basic model config
-  dt_time_step_length_sec=1800.0
+  dtime_step_length_sec=1800.0
   ! units: y years, w weeks, d days
   simulation_length_unit="y"
   ! integer values

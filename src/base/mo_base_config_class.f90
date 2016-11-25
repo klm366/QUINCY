@@ -28,7 +28,7 @@ MODULE mo_base_config_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_base_config
     ! BASE_CTL
-    REAL(wp)          :: dt        !< length of one time step in seconds; base_ctl namelist: read_dt_time_step_length_sec
+    REAL(wp)          :: dtime                            !< length of one time step in seconds; base_ctl namelist: dtime_step_length_sec
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
@@ -36,7 +36,7 @@ MODULE mo_base_config_class
     INTEGER           :: fluxnet_output_length
     LOGICAL           :: set_parameter_values_from_file
     ! GRID_CTL
-    REAL(wp)          :: lat, lon  !< latitude longitude currently stored in mo_base_memory:t_slm_grid
+    REAL(wp)          :: lat, lon                         !< latitude longitude currently stored in mo_base_memory:t_slm_grid
   CONTAINS
     PROCEDURE :: Init => Init_base_config
     PROCEDURE :: Timesteps => Get_timstep_number
@@ -62,7 +62,7 @@ CONTAINS
     !LOGICAL          :: active
     ! variables for reading from namlist, identical to variable-name in namelist
     ! BASE_CTL
-    REAL(wp)          :: dt_time_step_length_sec   ! model-variable: dt 
+    REAL(wp)          :: dtime_step_length_sec   ! model-variable: dtime 
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
@@ -75,7 +75,7 @@ CONTAINS
 
 
     NAMELIST /base_ctl/                       &  
-        dt_time_step_length_sec               , &
+        dtime_step_length_sec                 , &
         simulation_length_unit                , &
         simulation_length_number              , &
         slm_model_name                        , &
@@ -98,7 +98,7 @@ CONTAINS
     ! Set defaults
     ! 
     ! BASE_CTL
-    dt_time_step_length_sec           = 1800.0_wp
+    dtime_step_length_sec             = 1800.0_wp
     simulation_length_unit            = 'y'         ! y (years), w (weeks), d (days)
     simulation_length_number          = 20 
     slm_model_name                    = 'land'
@@ -126,7 +126,7 @@ CONTAINS
     ! pass values as read from file
     ! 
     ! BASE_CTL
-    config%dt                                 = dt_time_step_length_sec
+    config%dtime                              = dtime_step_length_sec
     config%simulation_length_unit             = simulation_length_unit
     config%simulation_length_number           = simulation_length_number
     config%slm_model_name                     = slm_model_name
@@ -155,11 +155,11 @@ CONTAINS
 
     SELECT CASE(this%simulation_length_unit)
       CASE('y') ! years
-        timesteps = NINT(this%simulation_length_number * one_year   * one_day / this%dt)
+        timesteps = NINT(this%simulation_length_number * one_year   * one_day / this%dtime)
       CASE('w') ! weeks
-        timesteps = NINT(this%simulation_length_number * 7.0_wp     * one_day / this%dt)
+        timesteps = NINT(this%simulation_length_number * 7.0_wp     * one_day / this%dtime)
       CASE('d') ! days
-        timesteps = NINT(this%simulation_length_number              * one_day / this%dt)
+        timesteps = NINT(this%simulation_length_number              * one_day / this%dtime)
       CASE DEFAULT
         timesteps = 1
     END SELECT 
