@@ -179,6 +179,8 @@ class Diagnostics ( object ):
             subprocessing ( cmd, shell_arg = False, stderr_arg = None )
         self.logger.debug ( "Finished preprocessing with %s for field %s and all experiments successfully." %  \
                             ( executable, fieldname ))
+
+        ########### DIAGNOSTIC ############################
         
         executable = self.get_b4j_path (  fielddict [ 'diagnose' ][ 'exec' ], "scripts" )
         input_list = fielddict [ 'diagnose' ][ 'input' ]
@@ -227,11 +229,6 @@ class Diagnostics ( object ):
             if p_dict [ 'nref' ] == "single":
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
-
-                    print
-                    print can.B4J_name
-                    print print_item_or_list_rec ( can.B4J_index, 3 )
-                    print
 
                     for ref in self.experiments:
                         if not ref.B4J_isref:            continue

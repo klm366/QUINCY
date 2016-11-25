@@ -291,7 +291,7 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         self.B4J_obj.logger.debug ( """Prepare fetching%s%s output data%s.""" %
                                     (( " remote" if self.from_remote else "local" ),
                                      ( " accumulated" if self.accumulated else " not self.accumulated" ),
-                                     ( " from %s" % self.B4J_host if self.from_remote else "" )))   
+                                     ( " from %s" % self.B4J_host if self.from_remote else "" )))
   
         if self.from_archive: fetchfile_list = []
         
@@ -319,6 +319,8 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
                     'startdate'      : self.B4J_startyear,
                     'enddate'      : self.B4J_endyear,
                     'suffix'         : fielddict [ 'suffix' ]}
+
+                if not self.B4J_obj.fetchremote: continue
                 
                 orig_dirpath = os.path.join ( self.outdata_dirpath, filedict [ self.modeltype ][ "submodel" ])
 
@@ -378,6 +380,17 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
                     else:
                         self.B4J_index [ fileid + STREAM_SUFFIX ] = os.path.join ( orig_dirpath, orig_filename )
 
+
+        self.land_sea_mask  = self.B4J_obj.path_template % { 
+            'path'           : self.B4J_obj.interpolated_selected_path,
+            'classification' : "land_sea_mask",
+            'expname'        : self.B4J_name,
+            'startdate'      : self.B4J_startyear,
+            'enddate'        : self.B4J_endyear,
+            'suffix'         : fielddict [ 'suffix' ]}
+        
+        if not self.B4J_obj.fetchremote: return
+        
         # TODO : CHECK/IMPLEMENT CASE FOR ACCUMULATED AND NOT FROM_ARCHIVE
         if self.from_archive and fetchfile_list:
             self.fetch_archived_streams ( fetchfile_list )
@@ -415,14 +428,6 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
                                                           "oce_res" : self.B4J_oceres }
         slf_varname = "slf"
         self.B4J_obj.logger.debug ( "Fetching land_sea_mask '%s' from %s." % ( slf_varname, lsm_path ))
-        self.land_sea_mask  = self.B4J_obj.path_template % { 
-            'path'           : self.B4J_obj.interpolated_selected_path,
-            'classification' : "land_sea_mask",
-            'expname'        : self.B4J_name,
-            'startdate'      : self.B4J_startyear,
-            'enddate'        : self.B4J_endyear,
-            'suffix'         : fielddict [ 'suffix' ]}
-        
         b4j_domain = getdomain ()
 
         if b4j_domain in self.pool_dict [ 'domains' ]:

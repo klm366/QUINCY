@@ -2,6 +2,7 @@
 """ BENCH4JSBACH benchmarking script """
 
 import os,sys,shutil,timeit
+from optparse import OptionParser
 
 ### Set environment
 script_dir = os.path.dirname ( os.path.realpath ( __file__ ))
@@ -17,23 +18,34 @@ import bench
 
 start = timeit.default_timer ()
 
+parser = OptionParser()
+parser.add_option("-f", "--fetchremote",
+                  action="store_true", dest="fetchremote", default=False,
+                  help="fetch input files to b4j run environment")
+(options, args) = parser.parse_args()
+
+
 ### Start action:
-### Three cases ( say hello / create configuration file and environment / run benchmarking from configuration file ) 
-nargs = len ( sys.argv )
-if nargs == 1:
+### Three cases ( say hello / create configuration file and environment / run benchmarking from configuration file )
+### Options:
+###    -f, --fetchremote: (active in third case) triggers fetching of experiment output files
+###           in the default setting experiment.fetch_files() is bypassed (for development phase)
+###
+nargs = len ( args )
+if nargs != 1:
     print "******************************************"
     print "* BENCH4JSBACH: "
     print "* Usage:" + __doc__
     print "******************************************"
-elif not os.path.isfile ( sys.argv [ 1 ]):
+elif not os.path.isfile ( args [ 0 ]):
     # todo: if bench-environment exists exit on error, overwrite only with extra force configuration
     print "******************************************"
     print "* BENCH4JSBACH: "
     print "* Creating environment and configfile for new bench4jsbach object '%s'." % \
-          sys.argv [ 1 ]
+          args [ 0 ]
     print "******************************************\n"
 
-    b4j_obj = bench.Bench_Object ( sys.argv [ 1 ])
+    b4j_obj = bench.Bench_Object ( args [ 0 ])
         
     print "\n******************************************"
     print "* BENCH4JSBACH: "
@@ -44,16 +56,19 @@ elif not os.path.isfile ( sys.argv [ 1 ]):
 else:
     print "******************************************"
     print "* BENCH4JSBACH: "
-    print "* Reading configuration file '%s'." %  sys.argv [ 1 ]
+    print "* Reading configuration file '%s'." %  args [ 0 ]
     print "******************************************"
 
-    b4j_obj = bench.Bench_Object ( sys.argv [ 1 ])
+    b4j_obj = bench.Bench_Object ( args [ 0 ])
     
     print "******************************************"
     print "* BENCH4JSBACH: "
     print "* Initialized Bench_Object. Defining Diagnostics."
-    print "* Reading configuration file '%s'." %  sys.argv [ 1 ]
+    print "* Reading configuration file '%s'." %  args [ 0 ]
     print "******************************************"
+
+    
+    b4j_obj.fetchremote = options.fetchremote
 
 
     # fetch outdata

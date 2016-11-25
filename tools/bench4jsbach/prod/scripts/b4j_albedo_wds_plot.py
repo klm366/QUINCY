@@ -18,6 +18,10 @@ from pycmbs.mapping import map_plot
 
 print "Starting %s" % os.path.realpath(__file__)
 
+
+#####
+##### bench4jsbach library to environment path
+#####
 try:
     b4j_base = os.environ [ 'BENCH4JSBACH_BASE' ]
 except KeyError: 
@@ -32,7 +36,9 @@ else:
 from util import print_item_or_list_rec
 
 
-
+#####
+##### check input parameter
+#####
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
@@ -41,6 +47,9 @@ print "\nsubprocess '%s', kwargs = " % __file__
 print print_item_or_list_rec ( kwargs, 3 )
 
 
+#####
+##### constants definition
+#####
 fieldname      = "albedo"
 varname        = "delta"
 yearliststring = ','.join ( repr ( y ) for y in range ( int ( kwargs [ 'startyear' ]),
@@ -49,6 +58,9 @@ yearliststring = ','.join ( repr ( y ) for y in range ( int ( kwargs [ 'startyea
 seasons =  ['DJF','MAM','JJA','SON']
 
 
+#####
+##### plotting
+#####
 nc_fid = Dataset ( kwargs [ 'albedo_wds' ], 'r')
 albedo_delta = nc_fid.variables [ varname ][ : ] 
 nc_fid.close ()
@@ -135,4 +147,7 @@ plt.close ()
 # delta_can [ 'plots' ].append ( can.B4J_index [ plot_delta_str ])
 
 
+#####
+##### finishing
+#####
 print "Exiting %s" % os.path.realpath(__file__)

@@ -126,6 +126,7 @@ class Bench_Object ( Diagnostics, Report ):
     logger             = None
     logger_name        = 'B4J_LOGGER'
     reporting          = False
+    fetchremote         = False
     
     
     def __init__ ( self, config_arg, **kwargs ):
