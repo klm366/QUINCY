@@ -48,10 +48,17 @@ doc_template = """
 \\usepackage{hyperref}
 \\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
 
-\\usepackage{draftwatermark}
-\\SetWatermarkText{TESTRUN}
-\\SetWatermarkScale{7}
-\\SetWatermarkLightness{0.9} 
+\\usepackage[printwatermark]{xwatermark}
+\\newsavebox\\mybox
+\\savebox\\mybox{\\tikz[color=gray,font=\\sffamily,opacity=0.3]\\node{\\textbf{TESTRUN}};}
+\\newwatermark*[
+  allpages,
+  angle=55,
+  scale=16,
+  xpos=-65,
+  ypos=40
+]{\\usebox\\mybox}
+
 
 
 \\begin{document}

@@ -46,15 +46,13 @@ kwargs        =  dict ( token.split ( ':', 1 ) for token in sys.argv [ 1: ])
 print "\nsubprocess '%s', kwargs = " % __file__
 print print_item_or_list_rec ( kwargs, 3 )
 
+fieldname      = kwargs [ "fieldname" ] 
+
 
 #####
 ##### constants definition
 #####
-fieldname      = "albedo"
 varname        = "delta"
-yearliststring = ','.join ( repr ( y ) for y in range ( int ( kwargs [ 'startyear' ]),
-                                                        int ( kwargs [ 'finalyear' ]) + 1 ))
-
 seasons =  ['DJF','MAM','JJA','SON']
 
 

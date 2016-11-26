@@ -77,21 +77,24 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
     cmap.set_over ( color = 'r', alpha = 1.0 )
     cmap.set_under ( color = 'g', alpha = 1.0 )
     
-    f = plt.figure ( figsize = ( 16, 10 ))   
+    f = plt.figure ( figsize = ( 16, 8 ))   
     ax = f.add_subplot ( 111, projection = ccrs.PlateCarree ())
-    ax.set_title ( 'Panel titel' )   
     ax.pcolormesh ( lons, lats, vardata, cmap=cmap, norm=norm,
                     edgecolors='face', transform=ccrs.PlateCarree(), 
                     rasterized=True, zorder=0 )
     ax.coastlines ( linewidth=0.5 )
-        
-    #cax = f.add_axes ([ 0.17, 0.07, 0.7, 0.03 ]) # left, bottom, width, height 
-    cax = f.add_axes ([ 0.13, 0.07, 0.77, 0.03 ]) # left, bottom, width, height           
+   
+    cax = f.add_axes ([ 0.125, 0.04, 0.775, 0.03 ]) # left, bottom, width, height           
     cb = mpl.colorbar.ColorbarBase ( cax, cmap = cmap, norm = norm,
-                orientation = 'horizontal', extend = 'neither', 
-                ticks = ticks_interleave, format = '%.2e' )
+                                     orientation = 'horizontal', extend = 'neither', 
+                                     ticks = ticks_interleave, format = '%.2e' )
+    for t in cb.ax.get_xticklabels ():
+        t.set_fontsize ( 14 )    
+    cb.ax.text ( 0.89, 1.5, "[%s]" % unit_TeX, size = 16 )
+    plt.text ( 0.5, 1.04, title_TeX,
+               horizontalalignment = 'center',
+               fontsize = 20,
+               transform = ax.transAxes )
     
-    cb.ax.text ( 0.97, 2.5, unit_TeX, size = 32 )
-    plt.suptitle ( title_TeX, fontsize = 24 )
     plt.savefig ( outpath ) 
     plt.close ()

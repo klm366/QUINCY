@@ -25,20 +25,6 @@ else:
 from util import print_item_or_list_rec
 
 #####
-##### constants definition
-#####
-fieldname = "hydrology"
-arglist = []
-
-# arglist   = [ 'startyear',
-#               'finalyear',
-#               'can.P_hydrology',
-#               'P_yseasmean',
-#               'P_yearsum_gm' ]
-# varname   = "var83"
-# varname_2 = "precip_acc"
-
-#####
 ##### check input parameter
 #####
 print 'Number of arguments:', len(sys.argv), 'arguments.'
@@ -47,15 +33,14 @@ print 'Argument List:', str(sys.argv)
 kwargs        =  dict ( token.split ( ':' ) for token in sys.argv [ 1: ])
 
 print "subprocess '%s', kwargs = " % __file__
-print arglist
 print print_item_or_list_rec ( kwargs, 3 )
 
-#assert set ( arglist ).issubset ( set ( kwargs.keys ()))
+fieldname      = kwargs [ "fieldname" ]
+
 
 #####
 ##### calculation
 #####
-
 cdo = Cdo ()
 
 cdo.sub ( input  = "%s %s" % ( kwargs [ "can.E_yearsummean" ], kwargs [ "ref.E_yearsummean" ]),
@@ -63,8 +48,6 @@ cdo.sub ( input  = "%s %s" % ( kwargs [ "can.E_yearsummean" ], kwargs [ "ref.E_y
 
 cdo.sub ( input  = "%s %s" % ( kwargs [ "can.P_yearsummean" ], kwargs [ "ref.P_yearsummean" ]),
           output = kwargs ["P_yearsumdiff"  ])
-
-
 
 #####
 ##### finishing

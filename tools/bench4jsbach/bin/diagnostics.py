@@ -190,9 +190,9 @@ class Diagnostics ( object ):
                                    
             for ref in self.experiments:
                 if not ref.B4J_isref:            continue
-                if ref.B4J_name == can.B4J_name: continue
-                
-                arglist = [ "startyear:" + ref.B4J_startyear,  "finalyear:" + ref.B4J_endyear,
+                if ref.B4J_name == can.B4J_name: continue   
+             
+                arglist = [ "fieldname:" + fieldname,
                             "suffix:" +  fielddict [ 'suffix' ],
                             "land_sea_mask:" + ref.land_sea_mask ]
                             
@@ -234,7 +234,7 @@ class Diagnostics ( object ):
                         if not ref.B4J_isref:            continue
                         if ref.B4J_name == can.B4J_name: continue
 
-                        arglist = [ "startyear:" + can.B4J_startyear,  "finalyear:" + can.B4J_endyear,
+                        arglist = [ "fieldname:" + fieldname,
                                     "suffix:" +  fielddict [ 'suffix' ],
                                     "land_sea_mask:" + can.land_sea_mask ]
 

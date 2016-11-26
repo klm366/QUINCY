@@ -45,7 +45,7 @@ yearliststring = ','.join ( repr ( y ) for y in range ( int ( kwargs [ 'startyea
                                                         int ( kwargs [ 'finalyear' ]) + 1 ))
 
 #####
-##### set unit
+##### set unit to mm/day
 ##### 
 cdo = Cdo ()
 

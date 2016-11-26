@@ -37,12 +37,7 @@ kwargs        =  dict ( token.split ( ':', 1 ) for token in sys.argv [ 1: ])
 print "subprocess '%s', kwargs = " % __file__
 print print_item_or_list_rec ( kwargs, 3 )
 
-#####
-##### constants definition
-#####
-fieldname      = "hydrology"
-yearliststring = ','.join ( repr ( y ) for y in range ( int ( kwargs [ 'startyear' ]),
-                                                        int ( kwargs [ 'finalyear' ]) + 1 ))
+fieldname      = kwargs [ "fieldname" ]
 
 #####
 ##### plotting
@@ -53,7 +48,8 @@ varname    = 'evapotranspiration'
 outpath    = kwargs [ 'E_yearsumdiff_plot' ]
 unit          = 'mm/year'
 unit_TeX   = unit
-title_TeX  = 'Evapotranspiration diff $can - ref$'
+#title_TeX  = 'Evapotranspiration diff $can - ref$'
+title_TeX  = kwargs [ 'plot_title' ]
 
 mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = 0 )
 
@@ -62,7 +58,8 @@ varname    = 'precip_acc'
 outpath    = kwargs [ 'P_yearsumdiff_plot' ]
 unit       = 'mm/year'
 unit_TeX   = unit
-title_TeX  = 'Precipitation diff $can - ref$'
+#title_TeX  = 'Precipitation diff $can - ref$'
+title_TeX  = kwargs [ 'plot_title' ]
 
 mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = 0 )
 
