@@ -347,7 +347,7 @@ table below. You may find detailed information on each method following the appr
                        "\\label{%s}\\hypertarget{%s}{}" % ( ss_dict [ 'name' ], ss_dict [ 'name' ] )
                 dss += subsection_template % { 'subsection' : ss_dict [ 'title' ].capitalize ()}
                 dss += ss_dict [ 'technical_teXed' ]
-                dss += teXify ( ss_dict [ 'abstract' ]) 
+                dss += teXify ( ss_dict [ 'abstract' ])
                 
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
@@ -355,7 +355,15 @@ table below. You may find detailed information on each method following the appr
                     title = "Candidate experiment {\\tt %s} ($\mathbf{C_{%d}}$)" %\
                             ( can_name, can.B4J_canno ) 
                     dss += subsubsection_template % { 'subsubsection': title }
+
                     if ss_dict [ 'ismatrix' ] == True:
+                        
+                        if "canplot" in ss_dict:
+                            plot = can.B4J_index [ ss_dict [ "canplot" ]]
+                            dss += includegraphics_template (  plot,
+                                                               width      = '1.5',
+                                                               hspace     = '-3.3' )
+                        
                         for ref in self.experiments:
                             if not ref.B4J_isref:            continue
                             if ref.B4J_name == can.B4J_name: continue

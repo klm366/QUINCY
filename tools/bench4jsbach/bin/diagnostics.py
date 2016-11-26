@@ -237,7 +237,7 @@ class Diagnostics ( object ):
                         arglist = [ "fieldname:" + fieldname,
                                     "suffix:" +  fielddict [ 'suffix' ],
                                     "land_sea_mask:" + can.land_sea_mask ]
-
+                            
                         for key in input_list:
                             classification_str =  "%s_ref%d" % ( key,  ref.B4J_refno )
                             arglist.append ( key + ':' + can.B4J_index [ classification_str ])
@@ -253,7 +253,7 @@ class Diagnostics ( object ):
                                 'enddate'        : can.B4J_endyear,
                                 'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
                             arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
-                            
+                        
                         if 'plot_title' in p_dict:
                             try:
                                 formats = [ f[0] for f in p_dict [ 'plot_title' ][ 0 ].split ( '%' )[1:]]
@@ -280,6 +280,53 @@ class Diagnostics ( object ):
                         cmd = ["python", executable ] +  arglist
                         subprocessing ( cmd, shell_arg = False, stderr_arg = None )
                         
+
+            elif p_dict [ 'nref' ] == "None":
+                for can in self.experiments:
+                    if not can.B4J_iscan: continue
+
+                    arglist = [ "fieldname:" + fieldname,
+                                "suffix:" +  fielddict [ 'suffix' ],
+                                "land_sea_mask:" + can.land_sea_mask ]
+                    
+                    for key in input_list:
+                        arglist.append ( key + ':' + can.B4J_index [ key ])
+                        
+                    for output_item, output_dict in p_dict.iteritems ():
+                        if not isinstance ( output_dict, configobj.Section ): continue
+                        classification_str = output_item
+                        can.B4J_index [ classification_str ] = self.path_template % { 
+                            'path'           : fielddict [ "graphics_path" ],
+                            'classification' : classification_str,
+                            'expname'        : can.B4J_name,
+                            'startdate'      : can.B4J_startyear,
+                            'enddate'        : can.B4J_endyear,
+                            'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
+                        arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
+                    if 'plot_title' in p_dict:
+                        try:
+                            formats = [ f[0] for f in p_dict [ 'plot_title' ][ 0 ].split ( '%' )[1:]]
+                            args = p_dict [ 'plot_title' ][ 1:]
+                            if len ( formats ) != len ( args ):
+                                print "ERROR reading plot title"
+                            title_args = []
+                            for a in args:
+                                exp, mem = a.split ( '_' )
+                                if exp=='can' and mem=='no':
+                                    title_args.append ( can.B4J_canno )
+                                elif exp=='can' and mem=='name':
+                                    title_args.append ( can.B4J_name )
+                                else:
+                                    print "ERROR listing title args"
+
+                            arglist.append ( "plot_title:%s" % p_dict [ 'plot_title' ][ 0 ] % tuple ( title_args ))
+                        except:
+                            print "ERROR in plotting title."
+
+                    cmd = ["python", executable ] +  arglist
+                    subprocessing ( cmd, shell_arg = False, stderr_arg = None )
+
+                    
             elif p_dict [ 'nref' ] == "multiple":
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
