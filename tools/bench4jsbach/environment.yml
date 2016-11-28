@@ -1,0 +1,30 @@
+name: bench4jsbach-env
+channels:
+- conda-forge
+- terradue                          # needed for python-redmine package
+- file:///data/reiner/conda/channel
+dependencies:
+- python=2
+- pip
+- numpy
+- scipy
+- netcdf4
+- matplotlib
+- basemap
+- gdal
+- cartopy
+- freetype
+- libpng
+- yaml
+- cdo
+- python-cdo
+- cython
+- jupyter
+- cookiecutter
+- sphinx
+- sphinx_rtd_theme
+- python-redmine
+- pytest-cov
+- python-coveralls
+- six
+- pycmbs
