@@ -24,6 +24,8 @@ flag_calc_soil_moisture="T"
 flag_t_jmax_acclimation="F"
 flag_optimal_Nfraction="F"
 flag_heterogeneous_canopy="F"
+ncanopy=20                          # number of canopy layers
+canopy_layer_scheme="standard"      # canopy layer depth calculation: standard[0.5] fapar
 # plant growth model options
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
@@ -32,11 +34,11 @@ flag_tile_veg_dynamics="T"
 flag_start_bareground="T"
 
 # simulation length & output
-simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=3     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
+output_end_last_day_year=3     # equal with or larger than output_start_first_day_year
 
 # PFT 
 setPFTAutomatically="yes"       # yes / no (in case of 'yes', the value of option plant_functional_type_id is ignored)
@@ -91,6 +93,7 @@ return 0
 # lists to validate against
 validateSlmModel="land plant canopy test_canopy"  # soil 
 validateNUptakeScheme="prescribed standard optimal resistance"
+validateCanopyLayerScheme="standard fapar"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
@@ -101,6 +104,7 @@ validateSiteDataSet="f c n"
 ## validate user-defined model-options ##
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$n_uptake_scheme" "$validateNUptakeScheme" "n_uptake_scheme"
+validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$flag_calc_soil_moisture" "$validateFlags" "flag_calc_soil_moisture"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_start_bareground" "$validateFlags" "flag_start_bareground"
@@ -187,6 +191,8 @@ return 0                                                                        
 
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue n_uptake_scheme "$n_uptake_scheme" 
+changeNamelistValue ncanopy "$ncanopy"
+changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 if [ $flag_calc_soil_moisture == T ]
   then
     changeNamelistValue flag_calc_soil_moisture ".TRUE."

@@ -11,8 +11,8 @@
 MODULE mo_assimi_config_class
 !#ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message, finish
+  USE mo_kind,              ONLY: wp, eps4
+  USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -28,11 +28,15 @@ MODULE mo_assimi_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
-    LOGICAL          :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
-    LOGICAL          :: flag_heterogeneous_canopy  !< whether or not to simulate leaf clumping and stems
-    LOGICAL          :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
-    CONTAINS
-      PROCEDURE :: Init => Init_assimi_config
+    LOGICAL                 :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
+    LOGICAL                 :: flag_heterogeneous_canopy  !< whether or not to simulate leaf clumping and stems
+    LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
+    INTEGER                 :: ncanopy                    !< number of canopy layer simulated by the model
+    CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate depth of each single canopy layer
+                                                          ! "standard|fapar"           
+    REAL(wp), ALLOCATABLE   :: canopy_layer_depth(:)      !< depth of each single canopy layer (assimi_config\%ncanopy)
+  CONTAINS
+    PROCEDURE :: Init => Init_assimi_config
   END Type t_assimi_config
 
   TYPE(t_assimi_config), SAVE :: assimi_config
@@ -54,25 +58,41 @@ CONTAINS
     CLASS(t_assimi_config), INTENT(inout) :: config    !< config type for assimi
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
-    !LOGICAL      :: active
-    LOGICAL      :: flag_optimal_Nfraction, flag_heterogeneous_canopy, flag_t_jmax_acclimation
+    !LOGICAL         :: active
+    LOGICAL         :: flag_optimal_Nfraction     , &
+                       flag_heterogeneous_canopy  , &
+                       flag_t_jmax_acclimation
+    CHARACTER(15)   :: canopy_layer_scheme
+    INTEGER         :: ncanopy    , &
+                       icanopy
+    REAL(wp)        :: dAPAR
+    REAL(wp)        :: k_canopy_layer                !< extinction coefficient to calculate canopy layer depth
 
-    NAMELIST /assimilation_ctl/     & 
-      flag_optimal_Nfraction,       &
-      flag_heterogeneous_canopy,    &
-      flag_t_jmax_acclimation
+    NAMELIST /assimilation_ctl/       & 
+        flag_optimal_Nfraction          , &
+        flag_heterogeneous_canopy       , &
+        flag_t_jmax_acclimation         , &
+        ncanopy                         , &
+        canopy_layer_scheme
+
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_config'
 
+    ! extinction coefficient for canopy layer depth calculation
+    k_canopy_layer = 0.5_wp
+
+
     CALL message(TRIM(routine), 'Starting assimi configuration')
 
     ! Set defaults
-    flag_optimal_Nfraction         = .FALSE.  ! .TRUE. .FALSE.
-    flag_heterogeneous_canopy      = .FALSE.  ! .TRUE. .FALSE.
-    flag_t_jmax_acclimation        = .FALSE.  ! .TRUE. .FALSE.
+    flag_optimal_Nfraction         = .FALSE.      ! .TRUE. .FALSE.
+    flag_heterogeneous_canopy      = .FALSE.      ! .TRUE. .FALSE.
+    flag_t_jmax_acclimation        = .FALSE.      ! .TRUE. .FALSE.
+    ncanopy                        = 20           ! (default for FAPAR based canopy layers would be 10)
+    canopy_layer_scheme            = "standard"   ! 
 
     ! read the namelist
     ! 
@@ -86,6 +106,31 @@ CONTAINS
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction
     config%flag_heterogeneous_canopy     = flag_heterogeneous_canopy
     config%flag_t_jmax_acclimation       = flag_t_jmax_acclimation
+    config%ncanopy                       = ncanopy
+    config%canopy_layer_scheme           = TRIM(canopy_layer_scheme)
+
+
+    !< canopy layer depth calculation
+    !! 
+    ALLOCATE(config%canopy_layer_depth(ncanopy))
+
+    SELECT CASE(config%canopy_layer_scheme)
+      CASE ("standard")
+        config%canopy_layer_depth(:) = 0.5_wp
+
+      CASE ("fapar")
+        ! alternative canopy layer depth calculation, approximately proportional to FAPAR to  
+        ! reduce impact of actual canopy layering on PS calculation
+        dAPAR = 1._wp/REAL(ncanopy,KIND=wp)
+        DO icanopy=1,ncanopy
+          config%canopy_layer_depth(icanopy) = -1.0_wp/k_canopy_layer * LOG(1._wp-(dAPAR*icanopy)+eps4)
+        END DO
+
+      CASE DEFAULT
+        WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme',canopy_layer_scheme
+        CALL finish("mo_assimi_config_class:Init_assimi_config",message_text) 
+      
+    END SELECT
 
   END SUBROUTINE Init_assimi_config
 

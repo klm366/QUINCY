@@ -16,10 +16,14 @@
 /
 &ASSIMILATION_CTL
   ! options for the assimilation and vegetation-growth
-  ! FALSE TRUE
+  ! [FALSE TRUE]
   flag_optimal_Nfraction=.FALSE.
   flag_heterogeneous_canopy=.FALSE.
   flag_t_jmax_acclimation=.FALSE.
+  ! number of canopy layers [int value, may default to 20]
+  ncanopy=20
+  ! canopy layer depth calculation [standard = 0.5, fapar]
+  canopy_layer_scheme="standard"
 /
 &GRID_CTL
   latitude=50.0

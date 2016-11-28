@@ -13,7 +13,6 @@ MODULE mo_base_constants
 
   INTEGER, PARAMETER    :: npft       = 8         !< number of PFTs simulated by the model
   INTEGER, PARAMETER    :: ntile      = 1         !< number of tiles simulated by the model; see also itile in the driver
-  INTEGER, PARAMETER    :: ncanopy    = 20        !< number of canopy layer simulated by the model (default for FAPAR based canopy layers would be 10)
   INTEGER, PARAMETER    :: nsoil      = 15        !< number of soil layer simulated by the model
   ! convenience 
   REAL(wp), PARAMETER   :: zero       = 0.0_wp    !< just zero
@@ -26,9 +25,6 @@ MODULE mo_base_constants
   REAL(wp), SAVE        :: deg2rad                !< conversion of degree to radians
   REAL(wp), PARAMETER   :: degcircle  = 360._wp   !< degrees per circle
   REAL(wp), PARAMETER   :: hourday    = 24.0_wp   !< hours in a day
-  ! Canopy layering
-  REAL(wp), DIMENSION(ncanopy), SAVE :: canopy_layer_depth            !< ...
-  REAL(wp)                          :: k_canopy_layer = 0.5_wp       !< extinction coefficient to calculate canopy layer depth
 
 CONTAINS
 
@@ -41,23 +37,20 @@ CONTAINS
 
   IMPLICIT NONE
 
-    REAL(wp) :: dAPAR
-    INTEGER  :: icanopy
+    ! 0.1 InOut
+    ! 0.2 Local
 
+
+    !< 1.0 degree/radians conversion
+    !! 
     pi      = 4.0_wp * ATAN(1.0_wp)
     deg2rad = pi / 180.0_wp
 
-    ! alternative canopy layer depth calculation, approximately proportional to FAPAR to  
-    ! reduce impact of actual canopy layering on PS calculation
-    dAPAR = 1._wp/REAL(ncanopy,KIND=wp)
-    DO icanopy=1,ncanopy
-      canopy_layer_depth(icanopy) = -1.0_wp/k_canopy_layer * LOG(1._wp-(dAPAR*icanopy)+eps4)
-    ENDDO
-    ! standard canopy layer calculation
-    canopy_layer_depth(:) = 0.5_wp
-
+    !< 2.0 time parameters
+    !! 
     one_day   = 86400._wp
     one_year  = 365._wp
+
   END SUBROUTINE init_base_constants
 
 END MODULE mo_base_constants

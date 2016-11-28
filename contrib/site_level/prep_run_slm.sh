@@ -17,7 +17,7 @@ experimentalID=""      # set something useful for you (allowed only: alphanumeri
 # select sites: FLUXNET or CRUNCEPv5
 siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="F"          # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
+customSiteList="T"          # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
 customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant are currently available
@@ -46,6 +46,8 @@ flag_calc_soil_moisture="T"
 flag_t_jmax_acclimation="F"
 flag_optimal_Nfraction="F"
 flag_heterogeneous_canopy="F"
+ncanopy=20                          # number of canopy layers
+canopy_layer_scheme="standard"      # canopy layer depth calculation: standard[0.5] fapar
 # plant growth model options
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
@@ -103,6 +105,7 @@ return 0
 validatesiteDataSet="f c"
 validateSlmModel="land plant"  # soil canopy
 validateNUptakeScheme="prescribed standard optimal resistance"
+validateCanopyLayerScheme="standard fapar"
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
 validateFlags="F T"
@@ -184,6 +187,7 @@ validateUserConfigValues "$queue" "$validateQueue" "queue"
 validateUserConfigValues "$emailNotification" "$validateEmailNotification" "emailNotification"
 validateUserConfigValues "$specialFluxnetOutput" "$validateFlags" "specialFluxnetOutput"
 validateUserConfigValues "$n_uptake_scheme" "$validateNUptakeScheme" "n_uptake_scheme"
+validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$flag_calc_soil_moisture" "$validateFlags" "flag_calc_soil_moisture"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_start_bareground" "$validateFlags" "flag_start_bareground"
@@ -505,7 +509,9 @@ return 0                                                         # get return va
  #changeNamelistValue soil_theta_prescribe 122.7
 
 changeNamelistValue slm_model_name "$slmModel"
-changeNamelistValue n_uptake_scheme "$n_uptake_scheme" 
+changeNamelistValue n_uptake_scheme "$n_uptake_scheme"
+changeNamelistValue ncanopy "$ncanopy"
+changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 if [ "$specialFluxnetOutput" == "T" ]
   then
     changeNamelistValue fluxnet_output .TRUE.
@@ -573,6 +579,7 @@ changeNamelistValue output_start_first_day_year "$output_start_first_day_year"
 changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
 changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
 changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
+
 
 
 ## start job with simulations by starting the job(array) -> run_slm.sh ##

@@ -122,7 +122,7 @@ CONTAINS
   SUBROUTINE calc_daytime_averages(veg, time_day, timestep_prop_day, swpar_srf_down, t_air, & 
                                    press_srf, co2_mixing_ratio, ga)
 
-    USE mo_base_constants,      ONLY: ncanopy
+    USE mo_assimi_config_class,   ONLY: assimi_config
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -147,7 +147,7 @@ CONTAINS
       ! 1.1 count number of values added to var_daytime
       veg%daytime_counter = veg%daytime_counter + 1.0_wp
       ! 1.2 add values and count number of values
-      DO icanopy=1,ncanopy
+      DO icanopy=1,assimi_config%ncanopy
         veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   = veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   + &
                                                            veg%par_sunlit_cl%ptr(icanopy,1)
         veg%par_shaded_daytime_dacc_cl%ptr(icanopy,1)   = veg%par_shaded_daytime_dacc_cl%ptr(icanopy,1)   + & 
@@ -173,7 +173,7 @@ CONTAINS
       ! check if at least one value had been assigned at the current day, avoiding division by zero 
       ! calculate the average of the current day and pass it to the according avg_prev_* variable; 
       IF(veg%daytime_counter%ptr > eps8) THEN
-        DO icanopy=1,ncanopy
+        DO icanopy=1,assimi_config%ncanopy
           veg%par_sunlit_daytime_cl%ptr(icanopy,1)    = veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
           veg%par_shaded_daytime_cl%ptr(icanopy,1)    = veg%par_shaded_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
           veg%fleaf_sunlit_daytime_cl%ptr(icanopy,1)  = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) / veg%daytime_counter%ptr

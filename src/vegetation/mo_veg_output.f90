@@ -370,12 +370,12 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE write_output_pool(tile, time_d, time_y, itile)
 
-    USE mo_jsb_class,         ONLY: Get_model
-    USE mo_base_constants,    ONLY: ncanopy
-    USE mo_base_memory,       ONLY: t_slm_tile, t_slm_soil, t_model
-    USE mo_veg_constants,     ONLY: itree
-    USE mo_shared_isotope,    ONLY: calc_delta_C13,calc_delta_C14
-    USE mo_jsb_process_class, ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_slm_soil, t_model
+    USE mo_veg_constants,         ONLY: itree
+    USE mo_assimi_config_class,   ONLY: assimi_config
+    USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
+    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -470,7 +470,7 @@ CONTAINS
        lun=lun+1
        write(lun,'(3F12.6)') time_d, soil%pool%litter%nitrogen, soil%ammonium
        lun=lun+1
-       DO icanopy=1, ncanopy
+       DO icanopy=1, assimi_config%ncanopy
          write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fnl_et_cl%ptr(icanopy,1), &
                                veg%fnl_rub_cl%ptr(icanopy,1), veg%fnl_chl_cl%ptr(icanopy,1),&
                                veg%fnl_pepc_cl%ptr(icanopy,1), veg%fnl_oth_cl%ptr(icanopy,1),veg%nl_tot_cl%ptr(icanopy,1)

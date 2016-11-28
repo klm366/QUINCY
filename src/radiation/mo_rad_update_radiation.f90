@@ -38,7 +38,7 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_model
-    USE mo_base_constants,        ONLY: ncanopy 
+    USE mo_assimi_config_class,   ONLY: assimi_config   ! e.g. ncanopy
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_rad_constants 
@@ -58,12 +58,12 @@ CONTAINS
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
     !> @todo (update_radiation) these local variables need to be added to RADIATION memory once 3D variables are allowed for
-    REAL(wp),DIMENSION(ncanopy)             :: arad_sunlit_vis_cl, &
-                                              arad_shaded_vis_cl, &
-                                              fleaf_sunlit_vis_cl, & 
-                                              arad_sunlit_nir_cl, &
-                                              arad_shaded_nir_cl, &
-                                              fleaf_sunlit_nir_cl
+    REAL(wp),DIMENSION(assimi_config%ncanopy) :: arad_sunlit_vis_cl   , &
+                                                 arad_shaded_vis_cl   , &
+                                                 fleaf_sunlit_vis_cl  , & 
+                                                 arad_sunlit_nir_cl   , &
+                                                 arad_shaded_nir_cl   , &
+                                                 fleaf_sunlit_nir_cl
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
@@ -248,7 +248,7 @@ CONTAINS
                               alb                 , &   ! out
                               sw_srf_net)
 
-    USE mo_base_constants,     ONLY: ncanopy, canopy_layer_depth
+    USE mo_assimi_config_class,   ONLY: assimi_config   ! e.g. ncanopy
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -264,14 +264,14 @@ CONTAINS
     REAL(wp)              , INTENT(in) :: kbl0                    !< extinction coefficient over black leaves 
     REAL(wp)              , INTENT(in) :: kdf0                    !< extinction coefficient for diffuse radiation 
     REAL(wp)              , INTENT(in) :: alb_soil                !< soil albedo 
-    REAL(wp), DIMENSION(ncanopy), INTENT(out) :: arad_sunlit_cl    !< absorbed radiation on sunlit leaves (W m-2) 
-    REAL(wp), DIMENSION(ncanopy), INTENT(out) :: arad_shaded_cl    !< absorbed radiation of shaded leaves (W m-2) 
-    REAL(wp), DIMENSION(ncanopy), INTENT(out) :: fleaf_sunlit_cl   !< fraction of leaves that is sunlit (--)
-    REAL(wp)                    , INTENT(out) :: arad_can          !< absorbed radiation by the canopy (W m-2) 
-    REAL(wp)                    , INTENT(out) :: arad_soil         !< absorbed radiation by the soil (W m-2)
-    REAL(wp)                    , INTENT(out) :: alb_can           !< albedo of the canopy 
-    REAL(wp)                    , INTENT(out) :: alb               !< albedo of the tile 
-    REAL(wp)                    , INTENT(out) :: sw_srf_net        !< net shortwave radiation of the tile 
+    REAL(wp), DIMENSION(assimi_config%ncanopy), INTENT(out) :: arad_sunlit_cl    !< absorbed radiation on sunlit leaves (W m-2) 
+    REAL(wp), DIMENSION(assimi_config%ncanopy), INTENT(out) :: arad_shaded_cl    !< absorbed radiation of shaded leaves (W m-2) 
+    REAL(wp), DIMENSION(assimi_config%ncanopy), INTENT(out) :: fleaf_sunlit_cl   !< fraction of leaves that is sunlit (--)
+    REAL(wp)                                  , INTENT(out) :: arad_can          !< absorbed radiation by the canopy (W m-2) 
+    REAL(wp)                                  , INTENT(out) :: arad_soil         !< absorbed radiation by the soil (W m-2)
+    REAL(wp)                                  , INTENT(out) :: alb_can           !< albedo of the canopy 
+    REAL(wp)                                  , INTENT(out) :: alb               !< albedo of the tile 
+    REAL(wp)                                  , INTENT(out) :: sw_srf_net        !< net shortwave radiation of the tile 
     ! 0.2 Local
     REAL(wp) :: irad_dir_down,irad_dif_down            ! downward direct and diffuse radiation 
     REAL(wp) :: irad_dir_down_bc,irad_dif_down_bc      ! light intensity at the bottom of the canopy
@@ -283,7 +283,7 @@ CONTAINS
     REAL(wp) :: idra                                   ! direct radiation penetrating sunlit foliage at lc 
     REAL(wp) :: idrdra                                 ! direct radiation remaining direct at lc 
     REAL(wp) :: arad_can_up                            ! absorbed radiation from the upward stream
-    REAL(wp), DIMENSION(ncanopy) :: arad_shaded_up_cl   ! idem for canopy layers
+    REAL(wp), DIMENSION(assimi_config%ncanopy) :: arad_shaded_up_cl   ! idem for canopy layers
     REAL(wp) :: tmp_cos_zenith_angle                   ! local variable of solar angle (radians)
     REAL(wp) :: k4_csf                                 ! ..
     REAL(wp) :: omega                                  ! .. 
@@ -355,7 +355,7 @@ CONTAINS
           irad_dif_up = (1.0_wp - rho) * irad_dif_up * exp(-kdf*lai)
 
           !> @par loop over canopy layers. All fluxes are evaluated at the centre of the canopy layer
-          DO icanopy = 1,ncanopy
+          DO icanopy = 1,assimi_config%ncanopy
              !> @par IF leaf area index of canopy layer > eps8: Integrate absorbed radiation over actually existing canopy layers
              IF(lai_cl(icanopy)>eps8)THEN
      

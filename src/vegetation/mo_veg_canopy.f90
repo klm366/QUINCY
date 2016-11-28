@@ -20,7 +20,7 @@ MODULE mo_veg_canopy
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calc_canopy_layers,calc_marginal_canopy_flux_increment,calc_dir_optimal_cn_leaf
+  PUBLIC :: calc_canopy_layers, calc_marginal_canopy_flux_increment, calc_dir_optimal_cn_leaf
 
 CONTAINS
 
@@ -58,10 +58,9 @@ CONTAINS
                                 fn_oth_cl         , &
                                 inquire_n_fractions)
 
-    USE mo_base_constants,      ONLY: ncanopy, canopy_layer_depth
     USE mo_assimi_constants
     USE mo_veg_constants
-    USE mo_assimi_config_class
+    USE mo_assimi_config_class,     ONLY: assimi_config     ! e.g. ncanopy, canopy_layer_depth, flag_optimal_Nfraction
 
 
     IMPLICIT NONE
@@ -151,7 +150,7 @@ CONTAINS
 
     !> 1.0 calculate top of the canopy N
     !!
-    IF(lai > canopy_layer_depth(1)) THEN
+    IF(lai > assimi_config%canopy_layer_depth(1)) THEN
        n_tot_tc = leaf_nitrogen * 1000._wp * kn / (1._wp - exp(-kn * lai))
     ELSEIF(lai > eps8) THEN ! if LAI does not fill the first canopy layer, top canopy N = leaf N
        n_tot_tc = leaf_nitrogen * 1000._wp /lai 
@@ -161,19 +160,21 @@ CONTAINS
     !!
     IF(lai > eps8) THEN ! avoid any calculation if there are no leaves
        lc = 0._wp
-       DO icanopy = 1,ncanopy
+       DO icanopy = 1,assimi_config%ncanopy
           !> 2.1 LAI of canopy layer 
           !!
-          IF(lc+canopy_layer_depth(icanopy) < lai) THEN 
+          IF(lc+assimi_config%canopy_layer_depth(icanopy) < lai) THEN 
              ! if canopy layer is fully developed 
-             lai_cl(icanopy) = canopy_layer_depth(icanopy)
-          ELSE IF(lc < lai.AND.lc+canopy_layer_depth(icanopy) >= lai) THEN 
+             lai_cl(icanopy) = assimi_config%canopy_layer_depth(icanopy)
+          ELSE IF(lc < lai.AND.lc+assimi_config%canopy_layer_depth(icanopy) >= lai) THEN 
              ! if canopy layer is only partially filled assign difference between full LAI and lc to canopy layer
              lai_cl(icanopy) = lai - lc 
           ENDIF
           lc = lc + lai_cl(icanopy)
           ! make sure all LAI is represented by letting last layer go to the end of the canopy
-          IF(icanopy==ncanopy .AND. lc < lai ) lai_cl(ncanopy) = lai_cl(ncanopy) + lai - lc 
+          IF(icanopy==assimi_config%ncanopy .AND. lc < lai ) THEN
+            lai_cl(assimi_config%ncanopy) = lai_cl(assimi_config%ncanopy) + lai - lc 
+          END IF
 
           !> 2.2 cummulative LAI above mid-point of canopy layer
           !!
@@ -186,7 +187,7 @@ CONTAINS
           ENDIF
 
           !> 2.3 N content of canopy layer
-          IF(lai > canopy_layer_depth(1)) THEN
+          IF(lai > assimi_config%canopy_layer_depth(1)) THEN
              n_tot_cl(icanopy) = n_tot_tc * exp(-kn * cumm_lai_cl(icanopy))
           ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
              n_tot_cl(icanopy) = n_tot_tc
@@ -229,7 +230,7 @@ CONTAINS
         ENDWHERE
      ELSE
         !> 3.2.1 optimal case 
-        DO icanopy = 1,ncanopy
+        DO icanopy = 1,assimi_config%ncanopy
            IF(lai_cl(icanopy) > eps8)THEN
               IF(fn_chl_cl(icanopy) < eps8)THEN ! new layer with new leaves
                  IF(icanopy == 1)THEN ! first layers: use static allocation as first guess
@@ -585,9 +586,9 @@ CONTAINS
                                                   unit_npp          , &
                                                   unit_transpiration )
 
-    USE mo_base_constants,   ONLY: ncanopy
-    USE mo_atmland_util,     ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants, ONLY: r_gas_dryair
+    USE mo_assimi_config_class,   ONLY: assimi_config
+    USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
+    USE mo_shared_constants,      ONLY: r_gas_dryair
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -606,10 +607,10 @@ CONTAINS
     ! 0.2 Local
     REAL(wp) :: lai, leaf_nitrogen
     REAL(wp) :: gpp, maint_respiration_leaf,gc
-    REAL(wp),DIMENSION(ncanopy) :: lai_cl
-    REAL(wp),DIMENSION(ncanopy) :: cumm_lai_cl 
-    REAL(wp),DIMENSION(ncanopy) :: par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl 
-    REAl(wp),DIMENSION(ncanopy) :: fn_oth_cl, nl_tot_cl, fn_chl_cl, fn_et_cl, fn_rub_cl, fn_pepc_cl
+    REAL(wp),DIMENSION(assimi_config%ncanopy) :: lai_cl
+    REAL(wp),DIMENSION(assimi_config%ncanopy) :: cumm_lai_cl 
+    REAL(wp),DIMENSION(assimi_config%ncanopy) :: par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl 
+    REAl(wp),DIMENSION(assimi_config%ncanopy) :: fn_oth_cl, nl_tot_cl, fn_chl_cl, fn_et_cl, fn_rub_cl, fn_pepc_cl
     REAL(wp) :: ag_cl, r_cl, gs_cl
     REAL(wp) :: q_sat 
     REAL(wp) :: hlp1 
@@ -664,7 +665,7 @@ CONTAINS
     gpp = 0._wp
     maint_respiration_leaf = 0._wp
     gc = 0.0_wp
-    DO icanopy = 1,ncanopy
+    DO icanopy = 1,assimi_config%ncanopy
        IF(lai_cl(icanopy).GT.eps8)THEN   
           CALL calc_photosynthesis( t_air                         , &   ! in
                                     press_srf                     , &   ! in
@@ -732,9 +733,10 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_dir_optimal_cn_leaf(lctlib, veg)
 
-    USE mo_base_constants,    ONLY: ncanopy, dtime, one_day    
-    USE mo_veg_constants,     ONLY: delta_n_leaf,root2leaf_cn,wood2leaf_cn 
-    USE mo_veg_respiration,   ONLY: calc_maintenance_respiration
+    USE mo_base_constants,        ONLY: dtime, one_day 
+    USE mo_veg_constants,         ONLY: delta_n_leaf,root2leaf_cn,wood2leaf_cn 
+    USE mo_veg_respiration,       ONLY: calc_maintenance_respiration
+    USE mo_assimi_config_class,   ONLY: assimi_config
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -744,10 +746,10 @@ CONTAINS
     TYPE(t_lctlib_element),INTENT(in)    :: lctlib       !< land-cover-type library - parameters for one pft
     TYPE(t_veg_memory),    INTENT(inout) :: veg          !< veg process memory 
     ! 0.2 Local
-    REAL(wp)                    :: leaf_nitrogen,fine_root_nitrogen,coarse_root_nitrogen,sap_wood_nitrogen
-    REAL(wp), DIMENSION(ncanopy) :: par_sunlit_tcnl_mavg_cl,par_shaded_tcnl_mavg_cl,fleaf_sunlit_tcnl_mavg_cl 
-    REAL(wp), DIMENSION(ncanopy) :: n_tot_cl, fn_oth_cl, fn_chl_cl, fn_et_cl, fn_rub_cl, fn_pepc_cl,lai_cl,cumm_lai_cl
-    REAL(wp), DIMENSION(3)      :: npp_direction, maint_respiration,anl
+    REAL(wp)                                   :: leaf_nitrogen,fine_root_nitrogen,coarse_root_nitrogen,sap_wood_nitrogen
+    REAL(wp), DIMENSION(assimi_config%ncanopy) :: par_sunlit_tcnl_mavg_cl,par_shaded_tcnl_mavg_cl,fleaf_sunlit_tcnl_mavg_cl 
+    REAL(wp), DIMENSION(assimi_config%ncanopy) :: n_tot_cl,fn_oth_cl,fn_chl_cl,fn_et_cl, fn_rub_cl, fn_pepc_cl,lai_cl,cumm_lai_cl
+    REAL(wp), DIMENSION(3)                     :: npp_direction, maint_respiration,anl
     REAL(wp)  :: hlp1
     REAL(wp)  :: direction
     INTEGER   :: icanopy, dd
@@ -787,7 +789,7 @@ CONTAINS
                           inquire_n_fractions=.TRUE.)
 
        ! calculate photosynthesis for each layer
-       DO icanopy =1, ncanopy
+       DO icanopy =1, assimi_config%ncanopy
           IF(lai_cl(icanopy) > eps8)THEN
 
              CALL calc_photosynthesis(veg%t_air_tcnl_mavg%ptr,& 

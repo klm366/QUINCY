@@ -185,7 +185,8 @@ CONTAINS
                                     veg_establishment )
 
 
-    USE mo_base_constants,        ONLY: dtime, one_day, one_year, ncanopy
+    USE mo_base_constants,        ONLY: dtime, one_day, one_year
+    USE mo_assimi_config_class,   ONLY: assimi_config         ! ncanopy
     USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_config_class,      ONLY: veg_config
@@ -223,7 +224,7 @@ CONTAINS
        !> 1.1 light limitation
        !! depending on the red to far-red ratio of the light at the bottom of the canopy
        tc = 0.0_wp
-       DO icanopy=1,ncanopy
+       DO icanopy=1,assimi_config%ncanopy
          tc = tc + nl_tot_cl(icanopy) * fnl_chl_cl(icanopy) * lai_cl(icanopy)
        ENDDO
        rfr_ratio = toc_rfr_ratio * exp( k_r2fr_chl * tc) 

@@ -14,7 +14,6 @@ MODULE mo_assimi_update_canopy_fluxes
 
   USE mo_kind,                  ONLY: wp, eps4, eps8
   USE mo_base_memory,           ONLY: t_slm_tile, t_model
-  USE mo_base_constants,        ONLY: ncanopy
   USE mo_base_memory,           ONLY: t_slm_soil
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
@@ -130,7 +129,7 @@ CONTAINS
 
    !> 2.0 calculate photosynthesis per layer
    !! 
-   DO icanopy = 1,ncanopy
+   DO icanopy = 1,assimi_config%ncanopy
       IF(veg%lai_cl%ptr(icanopy,1) > eps8)THEN
 
         CALL calc_photosynthesis(t_air                            , &   ! in
