@@ -91,7 +91,7 @@ CONTAINS
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
     INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
 
-!!$    REAL(wp), POINTER :: ptr(:,:,:,:,:)
+    REAL(wp), POINTER :: p5(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
@@ -121,13 +121,17 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%patch%id)
 
+    ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
+    var%ptr => var%field(:,:,1,1,1)
+    p5 => var%field
+
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
-      lmiss=lmiss_loc, missval_r=missval_r_loc)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5)
 
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
@@ -152,7 +156,7 @@ CONTAINS
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,              &
     extra_dim_n, loutput, lcontainer,                            &
     lrestart, lrestart_cont, initval_r, isteptype,               &
-    resetval_r, lmiss, missval_r, tlev_source, info, p5,         &
+    resetval_r, lmiss, missval_r, tlev_source, info,             &
     verbose, new_element, cdiTimeID                              &
     )
 
@@ -178,11 +182,11 @@ CONTAINS
     REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
-    REAL(wp),             POINTER,    OPTIONAL :: p5(:,:,:,:,:)       ! provided pointer
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
-    TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
+    TYPE(t_list_element), POINTER,   OPTIONAL  :: new_element           ! pointer to new var list element
     INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
 
+    REAL(wp), POINTER :: p5(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
@@ -228,7 +232,11 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%patch%id)
 
-    CALL add_var_list_element_r3d( &
+    ALLOCATE(var%field(ldims(1),ldims(2),ldims(3),1,1))
+    var%ptr => var%field(:,:,:,1,1)
+    p5 => var%field
+
+   CALL add_var_list_element_r3d( &
       this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &

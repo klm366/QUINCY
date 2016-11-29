@@ -127,7 +127,9 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
 
+#ifndef __ICON__
     REAL(wp), POINTER :: p4(:,:,:,:)
+#endif
 
     TYPE (t_list_element), POINTER :: element
 
@@ -136,7 +138,9 @@ CONTAINS
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &
         CALL finish(TRIM(routine), 'p5: only four dimensions allowed currently because of ECHAM compatibility')
+#ifndef __ICON__
       p4 => p5(:,:,:,:,1)
+#endif
     END IF
 
 #ifdef __ICON__
@@ -148,13 +152,21 @@ CONTAINS
       element => find_list_element(this_list, TRIM(name))
       element%field%info%cdiZaxisID = vgrid
 #else
-    CALL add_stream_element(this_list, TRIM(name), ptr, &
-      ldims=ldims, gdims=gdims, leveltype=levelindx, &
-      longname=cf%long_name, units=cf%units, &
-      code=code, table=table, &
-      lmiss=lmiss, missval=missval_r, verbose=.TRUE. &
-      )
-
+    IF (PRESENT(p5)) THEN
+      CALL add_stream_element(this_list, TRIM(name), ptr, &
+        ldims=ldims, gdims=gdims, leveltype=levelindx, &
+        longname=cf%long_name, units=cf%units, &
+        code=code, table=table, &
+        lmiss=lmiss, missval=missval_r, p4=p4, verbose=verbose &
+        )
+    ELSE
+      CALL add_stream_element(this_list, TRIM(name), ptr, &
+        ldims=ldims, gdims=gdims, leveltype=levelindx, &
+        longname=cf%long_name, units=cf%units, &
+        code=code, table=table, &
+        lmiss=lmiss, missval=missval_r, verbose=verbose &
+        )
+    END IF
     element => find_list_element(this_list, TRIM(name))
     element%field%info%zaxisID = vgrid
 
@@ -199,7 +211,9 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
 
+#ifndef __ICON__
     REAL(wp), POINTER :: p4(:,:,:,:)
+#endif
 
     TYPE (t_list_element), POINTER :: element
 
@@ -208,7 +222,9 @@ CONTAINS
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &
         CALL finish(TRIM(routine), 'p5: only four dimensions allowed currently because of ECHAM compatibility')
+#ifndef __ICON__
       p4 => p5(:,:,:,:,1)
+#endif
     END IF
 
 #ifdef __ICON__

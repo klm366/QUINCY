@@ -17,6 +17,7 @@ MODULE mo_jsb_var_class
 
   TYPE, ABSTRACT :: t_jsb_var
 !!$    INTEGER           :: type = REAL2D
+    REAL(wp), ALLOCATABLE      :: field(:,:,:,:,:)
     CHARACTER(len=VARNAME_LEN) :: name            ! Name of variable
     CHARACTER(len=VARNAME_LEN) :: full_name       ! Full name of variable in varlist, including prefix and suffix
     INTEGER                    :: owner_proc_id = -1
@@ -70,7 +71,8 @@ CONTAINS
 
     IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
 
-    IF (ASSOCIATED(this%ptr)) DEALLOCATE(this%ptr)
+    IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
+    IF (ALLOCATED(this%field)) DEALLOCATE(this%field)
 
   END SUBROUTINE finalize_jsb_var_real2d
 
@@ -84,7 +86,8 @@ CONTAINS
 
     IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
 
-    IF (ASSOCIATED(this%ptr)) DEALLOCATE(this%ptr)
+    IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
+    IF (ALLOCATED(this%field)) DEALLOCATE(this%field)
 
   END SUBROUTINE finalize_jsb_var_real3d
 
@@ -117,7 +120,8 @@ CONTAINS
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
     TYPE(t_jsb_var_real2d)              :: var3
 
-    var3%ptr(:,:) = var1%ptr(:,:) + var2%ptr(:,:)
+    var3 = var1
+    var3%field(:,:,1,1,1) = var1%field(:,:,1,1,1) + var2%field(:,:,1,1,1)
 
   END FUNCTION Add_real2d
 
@@ -127,7 +131,8 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real2d)              :: var3
 
-    var3%ptr(:,:) = var1%ptr(:,:) + scalar
+    var3 = var1
+    var3%field(:,:,1,1,1) = var1%field(:,:,1,1,1) + scalar
 
   END FUNCTION Add_real2d_and_scalar
 
@@ -142,7 +147,8 @@ CONTAINS
     IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
       & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    var3%ptr(:,:) = var1%ptr(:,:) + field(:,:)
+    var3 = var1
+    var3%field(:,:,1,1,1) = var1%field(:,:,1,1,1) + field(:,:)
 
   END FUNCTION Add_real2d_and_field
 
@@ -151,7 +157,8 @@ CONTAINS
     CLASS(t_jsb_var_real3d), INTENT(in) :: var1, var2
     TYPE(t_jsb_var_real3d)              :: var3
 
-    var3%ptr(:,:,:) = var1%ptr(:,:,:) + var2%ptr(:,:,:)
+    var3 = var1
+    var3%field(:,:,:,1,1) = var1%field(:,:,:,1,1) + var2%field(:,:,:,1,1)
 
   END FUNCTION Add_real3d
 
@@ -161,7 +168,8 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real3d)              :: var3
 
-    var3%ptr(:,:,:) = var1%ptr(:,:,:) + scalar
+    var3 = var1
+    var3%field(:,:,:,1,1) = var1%field(:,:,:,1,1) + scalar
 
   END FUNCTION Add_real3d_and_scalar
 
@@ -176,7 +184,8 @@ CONTAINS
     IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
       & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    var3%ptr(:,:,:) = var1%ptr(:,:,:) + field(:,:,:)
+    var3 = var1
+    var3%field(:,:,:,1,1) = var1%field(:,:,:,1,1) + field(:,:,:)
 
   END FUNCTION Add_real3d_and_field
 
@@ -191,7 +200,8 @@ CONTAINS
     IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
       & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    var3%ptr(:,:) = var1%ptr(:,:) * field(:,:)
+    var3 = var1
+    var3%field(:,:,1,1,1) = var1%field(:,:,1,1,1) * field(:,:)
 
   END FUNCTION Multiply_real2d_with_field
 
@@ -206,7 +216,8 @@ CONTAINS
     IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
       & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    var3%ptr(:,:,:) = var1%ptr(:,:,:) + field(:,:,:)
+    var3 = var1
+    var3%field(:,:,:,1,1) = var1%field(:,:,:,1,1) + field(:,:,:)
 
   END FUNCTION Multiply_real3d_with_field
 

@@ -3,3 +3,5 @@
 *.mod
 /.projectile
 *.mod
+.env
+.idea/
