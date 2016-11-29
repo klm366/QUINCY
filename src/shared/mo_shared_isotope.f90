@@ -69,7 +69,7 @@ MODULE mo_shared_isotope
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_C14(element, isotope, delta_C13) RESULT(delta)
 
-    USE mo_shared_constants, ONLY: AvogadroC, lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14 
+    USE mo_shared_constants, ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14 
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: element             !< base element (including the isotope) (mol)
@@ -78,7 +78,7 @@ MODULE mo_shared_isotope
     REAL(wp) :: delta                           !< isotope ratio against standard (per mill)
 
     IF(element > eps8) THEN
-       delta = lambda_C14 * AvogadroC / ( AAB_STANDARD_C14 * molar_mass_C ) * isotope / scale_correction_C14 / element * & 
+       delta = AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) * isotope / scale_correction_C14 / element * & 
                (1._wp - (2._wp* (25._wp + delta_C13) /1000._wp) - 1._wp) * 1000._wp  
     ELSE
        delta = 0.0_wp
@@ -97,14 +97,14 @@ MODULE mo_shared_isotope
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_C14C(delta_C13,delta_C14) RESULT(mixing_ratio)
 
-    USE mo_shared_constants, ONLY: AvogadroC, lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14 
+    USE mo_shared_constants, ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14 
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux
     REAL(wp), INTENT(in) :: delta_C14           !< Delta C14 of the pool/flux
     REAL(wp) :: mixing_ratio                    !< isotope molar mixing ratio 14C / C 
 
-    mixing_ratio = delta_C14 / 1000._wp * ( AAB_STANDARD_C14 * molar_mass_C ) / ( lambda_C14 * AvogadroC ) / & 
+    mixing_ratio = delta_C14 / 1000._wp * ( AAB_STANDARD_C14 * molar_mass_C ) / AvogadroC_times_lambda_C14 / & 
                    (1._wp - (2._wp* (25._wp + delta_C13) /1000._wp) -1._wp) * scale_correction_C14 
 
   END FUNCTION calc_mixing_ratio_C14C

@@ -36,13 +36,14 @@ MODULE mo_shared_constants
     molar_mass_N15  ,  &        !< g N / mol N
     molar_mass_P                !< g P / mol P
   ! isotope standards
-  REAL(wp), SAVE :: &
-    PDB_STANDARD_C13   ,  &     !< 13C/12C PDB standard
-    AAB_STANDARD_C14   ,  &     !< 0.95·0.238 Bq/gC is the absolute specific activity of 
-                                 !! the radiocarbon standard (i.e. 95% of the activity of the OxA-I standard)
-    AvogadroC          ,  &     !< Avogadro Number
-    lambda_C14         ,  &     !< decay constant of C14 (1/s)
-    scale_correction_c14        !< conversion from mol to pico-mol for C14 (for numerical precision) 
+  REAL(wp), SAVE ::            &
+    PDB_STANDARD_C13           , &  !< 13C/12C PDB standard
+    AAB_STANDARD_C14           , &  !< 0.95·0.238 Bq/gC is the absolute specific activity of 
+                                    !! the radiocarbon standard (i.e. 95% of the activity of the OxA-I standard)
+    AvogadroC                  , &  !< Avogadro Number
+    lambda_C14                 , &  !< decay constant of C14 (1/s)
+    AvogadroC_times_lambda_C14 , &  !< Avogadro Number * decay constant of C14 to reduce the use of the very large/small AvogadroC/lambda_C14 
+    scale_correction_c14            !< conversion from mol to pico-mol for C14 (for numerical precision) 
 
 
   !!----------------------------------------------------------------------------------------------------
@@ -93,11 +94,12 @@ CONTAINS
     molar_mass_N15 = 15.0_wp    
     molar_mass_P   = 30.997_wp  
     ! isotope standards
-    PDB_STANDARD_C13     = 0.0112372_wp   
-    AAB_STANDARD_C14     = 0.2261_wp      
-    AvogadroC            = 6.022_wp*1.e23_wp     
-    lambda_C14           = 3.8332_wp*1.e-12     ! 12 decimal places -> _wp NOT possible (_wp = usually precision of 8 decimal) !     
-    scale_correction_c14 = 1000000000000._wp   
+    PDB_STANDARD_C13            = 0.0112372_wp   
+    AAB_STANDARD_C14            = 0.2261_wp      
+    AvogadroC                   = 6.022_wp*1.e23_wp     
+    lambda_C14                  = 3.8332_wp*1.e-12_wp    
+    AvogadroC_times_lambda_C14  = 6.022_wp * 3.8332_wp * 1.e11_wp  ! used in e.g. calc_delta_C14() & calc_mixing_ratio_C14C()
+    scale_correction_c14        = 1.e12_wp                         !1000000000000._wp   
 
   END SUBROUTINE init_shared_constants
 

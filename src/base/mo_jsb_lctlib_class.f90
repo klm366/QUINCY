@@ -101,7 +101,11 @@ CONTAINS
 
     IMPLICIT NONE
 
+      ! 0.1 InOut
       TYPE(t_lctlib_element),POINTER      :: lctlib(:)
+      ! Local
+      INTEGER                             :: ipft         ! loop over pft
+
       ALLOCATE(lctlib(npft))    !    jsbach4: ALLOCATE(lctlib(nlct))
 
       !> plant functional types are: \n
@@ -256,9 +260,17 @@ CONTAINS
       ! seed size (mol C)
       lctlib(1:npft)%seed_size = 0.5_wp 
       ! hydraulic trade-off parameter for fine root growth
-      lctlib(:)%c0_allom = SQRT(lctlib(:)%k_root/lctlib(:)%k_sapwood * & 
-                                lctlib(:)%tau_fine_root/lctlib(:)%tau_sap_wood * lctlib(:)%wood_density) * & 
-                           lctlib(:)%tau_sap_wood/lctlib(:)%tau_fine_root
+      !! c0_allom: differentiate between trees & grasses
+      DO ipft=1,npft
+        IF(lctlib(ipft)%growthform == itree) THEN
+          lctlib(ipft)%c0_allom = SQRT(lctlib(ipft)%k_root/lctlib(ipft)%k_sapwood * & 
+                                lctlib(ipft)%tau_fine_root/lctlib(ipft)%tau_sap_wood * lctlib(ipft)%wood_density) * & 
+                                lctlib(ipft)%tau_sap_wood/lctlib(ipft)%tau_fine_root
+        ELSE
+          lctlib(ipft)%c0_allom = 0.0_wp
+        END IF
+      END DO
+
 
     END FUNCTION init_lctlib 
 

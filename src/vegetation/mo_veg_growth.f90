@@ -554,7 +554,11 @@ CONTAINS
         leaf2sapwood_mass_ratio = lctlib%k_latosa / lctlib%sla / lctlib%wood_density
 
         ! full leaf area implied by current sapwood area
-        target_lai = veg_pool_sap_wood_carbon * lctlib%k_latosa / lctlib%wood_density / height
+        IF (height > eps8) THEN
+          target_lai = veg_pool_sap_wood_carbon * lctlib%k_latosa / lctlib%wood_density / height
+        ELSE
+          target_lai = 0.0_wp
+        END IF
 
         IF (veg_config%flag_optimal_allocation) THEN
            !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
@@ -1238,11 +1242,16 @@ CONTAINS
     veg_growth%labile%phosphorus%ptr = MIN(growth_req_p * veg_growth%labile%nitrogen%ptr, & 
                                             veg_pool%labile%phosphorus%ptr * kstar_labile * dtime/one_day) 
     ! adjust N growth rate to P growth rate if P is limiting 
-    IF(veg_growth%labile%nitrogen%ptr > veg_growth%labile%phosphorus%ptr / growth_req_p) & 
+    IF(growth_req_p > eps8) THEN
+      IF(veg_growth%labile%nitrogen%ptr > veg_growth%labile%phosphorus%ptr / growth_req_p) & 
         veg_growth%labile%nitrogen%ptr = veg_growth%labile%phosphorus%ptr / growth_req_p
+    END IF
+
     ! adjust C growth rate to N growth rate if N is limiting 
-    IF(veg_growth%labile%carbon%ptr > veg_growth%labile%nitrogen%ptr / growth_req_n) & 
+    IF(growth_req_n > eps8) THEN
+      IF(veg_growth%labile%carbon%ptr > veg_growth%labile%nitrogen%ptr / growth_req_n) & 
         veg_growth%labile%carbon%ptr = veg_growth%labile%nitrogen%ptr / growth_req_n
+    END IF
  
     ! Diagnose growth respiration (µmol C / m2 / s)
     growth_respiration = fresp_growth * veg_growth%labile%carbon%ptr * 1.e6_wp / dtime
