@@ -43,15 +43,31 @@ fieldname      = kwargs [ "fieldname" ]
 #####
 cdo = Cdo ()
 
+##### differences of yearsums
 cdo.sub ( input  = "%s %s" % ( kwargs [ "can.E_yearsummean" ], kwargs [ "ref.E_yearsummean" ]),
           output = kwargs ["E_yearsumdiff"  ])
 
 cdo.sub ( input  = "%s %s" % ( kwargs [ "can.P_yearsummean" ], kwargs [ "ref.P_yearsummean" ]),
           output = kwargs ["P_yearsumdiff"  ])
 
+##### zonal mean of differences
+cdo.zonmean ( input  = "%s" % ( kwargs [ "E_yearsumdiff" ]),
+              output = kwargs [ "E_ysd-zonmean" ])
+
+cdo.zonmean ( input  = "%s" % ( kwargs [ "P_yearsumdiff" ]),
+              output = kwargs [ "P_ysd-zonmean" ])
+
+##### global mean of differences
+cdo.fldmean ( input  = "%s" % ( kwargs [ "E_yearsumdiff" ]),
+              output = kwargs [ "E_ysdgm" ])
+
+cdo.fldmean ( input  = "%s" % ( kwargs [ "P_yearsumdiff" ]),
+              output = kwargs [ "P_ysdgm" ])
+
+
 #####
 ##### finishing
 #####
-print "Preprocessing for field %s with '%s' run successfully." % ( fieldname, __file__ )
+print "Diagnostic for field %s with '%s' run successfully." % ( fieldname, __file__ )
 
 print "Exiting %s" % os.path.realpath(__file__)

@@ -98,3 +98,51 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
     
     plt.savefig ( outpath ) 
     plt.close ()
+
+
+def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath ):
+
+    print "start zon_plot"
+    print title
+    print varname
+
+    colorlist = [ 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w' ]
+    print inpathlist
+    print type ( inpathlist )
+    nrefargs = len ( inpathlist )
+    print legendlist
+    print outpath
+    
+    assert len ( legendlist ) == nrefargs and \
+        len ( colorlist ) >= nrefargs
+
+    fig = plt.figure ()
+    ax = fig.gca()
+
+    for refarg_no in range ( nrefargs ):
+        nc_fid = Dataset ( inpathlist [ refarg_no ])  
+        lat = nc_fid.variables [ 'lat'][:]
+        vardat_ref = nc_fid.variables [ varname ][ : ] 
+        nc_fid.close ()
+        plt.plot ( lat, vardat_ref [ 0,:, 0 ],
+                   colorlist [ refarg_no ],
+                   label = legendlist [ refarg_no ])
+        plt.axhline ( vardat_ref [ 0,:, 0 ].mean(), color = colorlist [ refarg_no ])
+
+    
+    ax.set_xticks ( np.arange ( -90, 90, 15 ))
+    ax.yaxis.set_label_coords ( -0.2, 1 ) 
+    plt.ylabel ( "[ %s ]" % unit, rotation = 0 )
+    ax.xaxis.set_label_coords ( 1.05, - 0.1 ) 
+    plt.xlabel ( "latitude [ deg ]")
+    plt.title ( title, y = 1.08 )
+    plt.grid ( 'on' )
+    lgd = plt.legend ( numpoints = 1,  
+                       loc = 2,                  
+                       bbox_to_anchor = ( 1.05, 1 ))
+    plt.savefig ( outpath,
+                  dpi = 100, 
+                  bbox_extra_artists = ( lgd, ), 
+                  bbox_inches = 'tight' ) 
+    plt.close ()
+    

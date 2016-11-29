@@ -44,8 +44,6 @@ print print_item_or_list_rec ( kwargs, 3 )
 
 fieldname      = "albedo"
 varname        = "delta"
-yearliststring = ','.join ( repr ( y ) for y in range ( int ( kwargs [ 'startyear' ]),
-                                                        int ( kwargs [ 'finalyear' ]) + 1 ))
 
 seasons =  ['DJF','MAM','JJA','SON']
 

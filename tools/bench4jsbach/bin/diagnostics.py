@@ -331,8 +331,7 @@ class Diagnostics ( object ):
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
 
-                    arglist = [ "can_name:" + can.B4J_name, "canno:%d" % can.B4J_canno,
-                                "startyear:" + can.B4J_startyear,  "finalyear:" + can.B4J_endyear ]
+                    arglist = [ "can_name:" + can.B4J_name, "canno:%d" % can.B4J_canno ]
 
                     for ref in self.experiments:
                         if not ref.B4J_isref:            continue

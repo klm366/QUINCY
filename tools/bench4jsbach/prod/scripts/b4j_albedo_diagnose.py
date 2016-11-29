@@ -68,4 +68,9 @@ cdo.timmean ( input=kwargs [ "albedo_wdsgd" ],
               output=kwargs [ "albedo_wdsgtd" ],
               options='-f %s' % kwargs [ "suffix" ] )
 
+#####
+##### finishing
+#####
+print "Diagnostic for field %s with '%s' run successfully." % ( fieldname, __file__ )
+
 print "Exiting %s" % os.path.realpath(__file__)
