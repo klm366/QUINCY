@@ -41,7 +41,7 @@ print print_item_or_list_rec ( kwargs, 3 )
 ##### argument definition and plot method calls
 #####
 varname    = "evapotranspiration"
-unit       = "mm/day"
+unit       = "mm/year"
 title      = "$ysdzm_{C_{%s}R}$ and $ysdgm_{C_{%s}R}$" % \
              ( kwargs [ "canno" ], kwargs [ "canno" ])
 
@@ -72,7 +72,7 @@ keylist    =  [ k for k in kwargs.keys () if k.startswith ( token )]
 for k in keylist:
     refno = k.split ( token, 1 )[1][0]
     inpathlist.append ( kwargs [ k ])
-    legend = "$ysdzm_{C_{%s}R_{%s}}, ysdzm_{C_{%s}R_{%s}}$\n$R_{%s}$: %s" % \
+    legend = "$ysdzm_{C_{%s}R_{%s}}, ysdtm_{C_{%s}R_{%s}}$\n$R_{%s}$: %s" % \
              ( kwargs [ "canno" ], refno, kwargs [ "canno" ], refno,
                refno, kwargs [ "ref%s"  % refno ])
     legendlist.append ( legend )

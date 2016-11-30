@@ -12,6 +12,7 @@ import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
 import cartopy.crs as ccrs
 import numpy as np
+from pandas import DataFrame
     
 def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan ):
     #from datetime import datetime
@@ -102,16 +103,8 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
 
 def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath ):
 
-    print "start zon_plot"
-    print title
-    print varname
-
     colorlist = [ 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w' ]
-    print inpathlist
-    print type ( inpathlist )
     nrefargs = len ( inpathlist )
-    print legendlist
-    print outpath
     
     assert len ( legendlist ) == nrefargs and \
         len ( colorlist ) >= nrefargs
@@ -131,11 +124,14 @@ def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath ):
 
     
     ax.set_xticks ( np.arange ( -90, 90, 15 ))
-    ax.yaxis.set_label_coords ( -0.2, 1 ) 
-    plt.ylabel ( "[ %s ]" % unit, rotation = 0 )
-    ax.xaxis.set_label_coords ( 1.05, - 0.1 ) 
-    plt.xlabel ( "latitude [ deg ]")
-    plt.title ( title, y = 1.08 )
+    ax.yaxis.set_label_coords ( -.15, .96 ) 
+    plt.ylabel ( "[ %s ]" % unit,
+                 rotation = 0,
+                 fontsize = 12 )
+    plt.xlabel ( "latitude [ deg ]",
+                 position = ( 0.9, 0 ),
+                 fontsize = 12 )
+    plt.title ( title, y = 1.04 )
     plt.grid ( 'on' )
     lgd = plt.legend ( numpoints = 1,  
                        loc = 2,                  
@@ -145,4 +141,50 @@ def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath ):
                   bbox_extra_artists = ( lgd, ), 
                   bbox_inches = 'tight' ) 
     plt.close ()
+
+
     
+    
+
+def hist_plot ( alldat, index, title ):
+    
+    #darkbrown  = '#603605' #'#c6903f' 
+    #lightbrown = '#c6903f' #'#36cd92'
+    #lightgreen = '#6fc1b6' #'#ceece8'
+    #darkgreen  = '#00473c' #'#6fc1b6'
+    
+    
+    darkbrown  = '#c6903f' 
+    lightbrown = '#e6cd92'
+    lightgreen = '#ceece8'
+    darkgreen  = '#6fc1b6'
+    
+    colorlist  = [ darkbrown, lightgreen, lightbrown, darkgreen ]
+    
+    df = DataFrame ( alldat, 
+                    columns = [ varname_E + " $E$", 
+                                varname_P + " $P$", 
+                                varname_RD  + " $RD$", 
+                                "$\\sum P-E-RD$" ], 
+                      index = index )
+
+    ax = df.plot ( kind = 'bar', color = colorlist, rot = 0 )
+    plt.title ( title, y = 1.08 )
+    ax.xaxis.set_label_coords ( 1, -0.1 ) 
+    ax.yaxis.set_label_coords ( -0.2, 1 ) 
+    plt.ylabel ( "[ %s ]" % unit, rotation = 0 )
+    plt.grid ( 'on')
+    plt.axhline ( 0, color = 'k' )
+    lgd = plt.legend (numpoints = 1,  
+                         loc = 2,                  
+                         bbox_to_anchor=(1.05,1))
+    plt.show ()
+    plt.close ()
+
+
+def get_globalmean ( filepath, varname ):
+    nc_fid = Dataset ( filepath )  
+    lat = nc_fid.variables [ 'lat'][:]
+    vardat = nc_fid.variables [ varname ][ : ] 
+    nc_fid.close ()
+    return vardat [ 0,:, 0 ].mean()
