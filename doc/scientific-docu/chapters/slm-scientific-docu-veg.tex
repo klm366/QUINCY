@@ -36,7 +36,7 @@ Meristem control is represented by a reduction of the maximum turnover rate at l
 k^{*}_{labile} = k^{0}_{labile} \times e^{-(\lambda^{labile}_{temp}*T)^{k^{labile}_{temp}}} \times e^{-(\lambda^{labile}_{\Theta}*\Theta)^{k^{labile}_{\Theta}}}\label{eq:veg:k0_lab}
 \end{equation}
 
-where T is air temperature in degrees Celsius, $\Theta$ is the fractional soil moisture content, and the $\lambda$ and $k$ are parameters (see Table \ref{TabVegParam}). $k^{*}_{labile}$ is set to zero outside the growing season (see Sect. \ref{sec:Phen}).
+where T is air temperature in degrees Celsius, $\Theta$ is the fractional soil moisture content, and the $\lambda$ and $k$ are parameters (see Table \ref{TabVegParam}). $k^{*}_{labile}$ is set to zero outside the growing season (see Sect. \ref{sec:phen}).
 
 Respiration is assumed to have priority over growth (subroutine \texttt{mo\_veg\_growth:calc\_partitioning}). However, under severe C deficit, the meristem activity also down-regulates maintenance and resource uptake respiration (see Sect. \ref{sec:MaintResp}). To ensure that carbon growth ($G_C$) does not exceed the size of the labile carbon pool, the turnover rate of the labile pool to growth is corrected by the current respiration rate, and constrained to positive solutions:
 
@@ -52,7 +52,7 @@ req^{growth}_{XY} = \sum^{pools}_{i}{f^{i}_{alloc} \times \frac{X_i}{Y_i}}
 
 where $f^{i}_{alloc}$ are the allocation fractions (Sect. \ref{sec:Allocation}), and $\frac{X_i}{Y_i}$ are the target stoichiometries of C:N:P (Sect. \ref{sec:Stoichem}) of the leaf, fine root, coarse root, sapwood, and fruits pools, respectively, the actual growth rate can be calculated as
 
-\begin{subequations}
+\begin{subequations}\label{eq:growth_rate}
 \begin{align}
 G_P &= req^{growth}_{NP} \times G_N = req^{growth}_{PN} \times req^{growth}_{NC} \times G_C \label{eq:growth_rate_x} \\
 &G_C \le G^{*}_C \\
@@ -160,12 +160,79 @@ Note: For comparison purposes, it would be desirable to mimick OCN-style flexibi
 
 \subsection{Maintenance Respiration}\label{sec:veg:MaintResp}
 
-\section{Phenology}\label{sec:Phen}
-
 \section{Nutrient Uptake}\label{sec:ResUptake}
 
 
-\section{Turnover}
+
+
+\section{Phenology (\texttt{mo\_veg\_phenology})}\label{veg:sec:phen}
+
+The phenology of vegetation, describing the time-development of biomass, is primarily determined by the ability of the plant to grow new tissues, which depends on the size and turnover of the meristems (Eq. \ref{eq:growth_rate}), as well as the fractional allocation of growth to plant organs (see Sect. \ref{sec:Allocation}). Outside of the growing season, which is determined by meteorological and pedographic triggers marking its beginning and ending, plant growth is assumed to be zero. The variables determining these phenological triggers are averaged over a period of a couple of days (\texttt{mavg\_period\_tphen}), loosely referred to as `weekly' in the following, to smooth out the effect of day-to-day climate variability. While the beginning and ending mark the start and end of tissue production, only the turnover of the leaves is directly affected by phenological triggers. The turnover of all other tissues is assumed to be constant (see Sect. \ref{veg:sec:turnover}).
+
+As described in the following, the model differentiates evergreen, cold deciduous, rain deciduous tree and shrub phenological strategies, as well as herbaceous perennial phenological strategies.
+
+
+\begin{itemize}
+
+\item \texttt{evergreen} 
+\begin{description}
+\item[] no triggers apply
+\end{description}
+
+\item \texttt{rain deciduous}
+\begin{description}
+\item[start] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) larger than a PFT-specific threshold ($\beta_{soil}^{flush\_tree}$) 
+\item[end] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) lower than a PFT-specific threshold ($\beta_{soil}^{sen\_tree}$)
+\end{description}
+
+\item \texttt{cold deciduous}
+\begin{description}
+\item[start] growing degree days ($GDD_{act}$) relative to a PFT-specific temperature threshold ($t_{air}^{GDD}$) 
+\begin{equation}\label{eq:gdd}
+\frac{GDD_{act}}{dt} = GDD_{act} + MAX(t_{air} - t_{tair}^{GDD},0.0)
+\end{equation}
+larger than a threshold calculated by 
+\begin{equation}\label{eq:gdd_req}
+GDD_{req} = exp^{k_{dormance}*NDD},
+\end{equation}
+where $NDD$ is the number of days since the last growing season, and $k_{dormance}$ is a PFT-specific parameter relating dormance to GDD requirement to account for the chilling requirements of the buds.
+\item[end] decreasing weekly temperatures below a PFT-specific temperature threshold ($t_{air}^{sen}$).
+\end{description}
+
+\item \texttt{perennial}
+\begin{description}
+\item[start] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) larger than a PFT specific threshold ($\beta_{soil}^{flush\_grass}$), and weekly temperatures above a PFT-specific temperature threshold ($t_{air}^{GDD}$).
+\item[end] weekly temperatures below freezing, maximum soil water stress (minimum weekly soil moisture stress factor) or negative carbon balance ($GPP - R_m$).
+\end{description}
+
+\end{itemize}
+
+Senescence is generally only introduced once the leaf age has become larger than a PFT-specific threshold ($leaf\_age_{min}$). Currently, no within pheno-type PFT differences are implemented. Therefore, the model parametrisation is currently still as global parameters - this should be updated once more vegetation types are allowed for. 
+
+\section{Turnover (\texttt{mo\_veg\_turnover})}\label{veg:sec:turnover}
+
+Turnover is considered at two levels: i) the breakdown of enzymes (nitrogen) and associated RNA (phosphorous) from tissue, and their ensuing replacement from the labile pool (recycling); and ii) the senescence of entire tissues and their conversion to litter, including the resorption of nutrients from foliage. 
+
+The breakdown of leaf and fine-root nutrients occurs at the time-scale of canopy acclimation (\texttt{tau\_canopy\_acclimation}). The freed nutrients enter the labile pool and are replaced by new nutrients of the labile pool according to the current target C:N:P of the respective pool. 
+
+\begin{equation}
+\frac{X_{pool}}{dt} = (Y_{pool} \frac{X_{pool}^{target}}{Y_{pool}^{target}} - X_{pool}) \times 1/\tau_{{canopy}\_{acclimation}},
+\end{equation}
+
+where $X$ is either nitrogen or phosphorus, and $Y$ carbon or nitrogen, respectively. The flux from the labile pool is limited by the turnover rate and size of the labile pool to ascertain that the latter cannot be exhausted.  
+
+The turnover time of most tissue types (fine and coarse roots, sap wood, and fruits) is assumed constant for each PFT ($\tau_{fine\_root}$, $\tau_{coarse\_root}$, $\tau_{sap\_wood}$, and $\tau_{fruit}$, respectively). While roots and fruits turn directly into litter, only a small fraction of sap wood is turned to litter, assuming it is lost as branches ($\tau_{branches}$), whereas the predominant fraction of sap-wood turns into non-respiring hardwood at the timescale of $\tau_{sap\_wood}$. In evergreen trees, foliar turnover to litter is assumed to be constant ($\tau_{leaves}$). The turnover of leaves in deciduous species (and grasses) is determined by the phenology. During the growing season, only minor turnover happens ($\tau_{leaves}$), but once the growing season has ended, foliar turnover is set to a high constant value ($\tau_{leaves}^{shed}$), until the LAI reaches a minimum value ($LAI_{min}$), beyond which all leaves are shed. 
+
+Only nutrients of tissues prepared for senescence are assumed to retranslocate nutrients. Therefore, only foliage turnover and heartwood formation in the canopy are assumed to be resorbed at a constant rate of $k_{resorb}^{X}$, which are returned to the labile pool.
+
+\begin{subequations}
+\begin{align}
+&fLitter_{pool} = (1-k_{resorb}^{X}) \times X_{pool} \times dt/\tau_{pool}, and \\
+&fRetrans_{pool} = k_{resorb}^{X} \times X_{pool} \times dt/\tau_{pool},
+\end{align}
+\end{subequations}
+
+where $fLitter_{pool}$ is the litter fall from any one pool, and $fRetrans_{pool}$ the retranslocated flux into the labile pool.
 
 \section{Vegetation Dynamics}
 
@@ -329,14 +396,14 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 \hline
 • & minimum LAI beyond which all leaves are shed & \texttt{min\_lai} & • & • & 0.1 & • \\    
 • & maximum LAI target for reserve use calculations & \texttt{target\_lai\_max} & • & • & 5.0 & • \\  
-• & minimum leaf age before senescence is permitted & \texttt{min\_leaf\_age} & days & • & 10.0 & • \\        
-• & temperature threshold for growing degree days & \texttt{gdd\_t\_air\_threshold} & • & • & 5.0 + \texttt{Tzero} & • \\    
-• & maximum GDD requirement & \texttt{gdd\_req\_max} & • & • & 800.0 & • \\  
-• & exponent factor in GDD - nd\_dormance equation & \texttt{k\_gdd\_dormance} & • & • & 0.0098 & • \\        
-• & weekly air temperature initiating leaf senescence & \texttt{t\_air\_senescence} & • & • & 5.0 + \texttt{Tzero} & • \\    
-• & value of beta\_soil at leaf flushing for grass & \texttt{beta\_soil\_flush\_grass} & • & • & 0.9 & • \\  
-• & value of beta\_soil at leaf flushing for trees & \texttt{beta\_soil\_flush\_tree} & • & • & 0.98 & • \\        
-• & value of beta\_soil at leaf shedding for trees & \texttt{beta\_soil\_senescence\_tree} & • & • & 0.5 & • \\    
+$leaf\_age_{min}$ & minimum leaf age before senescence is permitted & \texttt{min\_leaf\_age} & days & n.a. & 10.0 & n.a. \\        
+$t_{air}^{GDD}$ & temperature threshold for growing degree days & \texttt{gdd\_t\_air\_threshold} & $^{\circ}C$ & \ref{eq:gdd} & 5.0 & n.a. \\    
+$t_{air}^{GDD_{max}}$ & maximum GDD requirement & \texttt{gdd\_req\_max} & days & n.a. & 800.0 & n.a. \\  
+$k_{dormance} $ & exponent factor in GDD - nd\_dormance equation & \texttt{k\_gdd\_dormance} & days$^{-1}$ & \ref{eq:gdd_req} & 0.0098 & n.a. \\        
+$t_{air}^{sen} $ & weekly air temperature initiating leaf senescence & \texttt{t\_air\_senescence} & $^{\circ}C$ & n.a. & 5.0 & n.a. \\    
+$\beta_{soil}^{flush\_grass}$ & value of beta\_soil at leaf flushing for grass & \texttt{beta\_soil\_flush\_grass} & -- & n.a. & 0.9 & n.a. \\  
+$\beta_{soil}^{flush\_tree}$ & value of beta\_soil at leaf flushing for trees & \texttt{beta\_soil\_flush\_tree} & -- & n.a. & 0.98 & n.a. \\        
+$\beta_{soil}^{sen\_tree}$ & value of beta\_soil at leaf shedding for trees & \texttt{beta\_soil\_senescence\_tree} & -- & n.a. & 0.5 & n.a. \\    
 \hline 
 \end{tabularx}
 \end{sidewaystable}
@@ -384,83 +451,6 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 \multicolumn{6}{l}{\bf Soil pools}\\
 \hline
 • & soil litter pool turnover time & \texttt{tau\_litter} & • & • & $1.0 * 3600.0 * 24.0 * 365.0$ & • \\
-\hline 
-\end{tabularx}
-\end{sidewaystable}
-
-
-\begin{sidewaystable}
-\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|X|} % textwidth  
-\hline 
-Symbol & Parameter long name & Name in code & Unit & Equation & Value (8 PFT) & Citation \\ 
-\hline 
-
-\multicolumn{6}{l}{\bf Parameters from t\_slm\_veg\_param 1/2}\\
-\hline
-• & vegetation growth form & \texttt{growthform} & • & • & • & • \\
-• & photosynthetic path way  & \texttt{ps\_pathway} & • & • & • & • \\
-• & phenological type & \texttt{phenology\_type} & • & • & • & • \\
-• & average turnover (1/lifetime) of a leaf (1/years) & \texttt{tau\_leaf} & • & • & • & • \\
-• & turnover time of the fraction of sapwood that is in branches (10\%) & \texttt{tau\_branches} & 1/years & • & 0.01 & • \\
-• & turnover time of the sapwood pool & \texttt{tau\_sap\_wood} & 1/years & • & 0.05 & • \\
-• & average turnover (1/lifetime) of a fine root (1/years) & \texttt{tau\_fine\_root} & • & • & • & • \\
-• & average turnover (1/lifetime) of a coarse root (1/years) & \texttt{tau\_coarse\_root} & • & • & 0.1 & • \\
-• & turnover time of the fruit pool & \texttt{tau\_fruit} & 1/years & • & 1.0 & • \\
-• & turnover time of the seed bed to litter & \texttt{tau\_seed\_litter} & 1/years & • & 0.1 & • \\
-• & turnover time of the seed bed to establishment & \texttt{tau\_seed\_est} & 1/years & • & 0.3 & • \\
-• & specific leaf area of a plant & \texttt{sla} & $m^{2}$ / mol C & • & • & • \\
-• & default leaf C:N, if not calculated dynamically & \texttt{cn\_leaf} & molC/molN & • & • & Kattge et al. 2011, Table 5 \\
-• & default leaf N:P, if not calculated dynamically & \texttt{np\_leaf} & molN/molP & • & • & Kattge et al. 2011, Table 5 \\
-• & fraction of leaf N not used for photosynthesis & \texttt{k0\_fnl\_struc} & • & • & • & Friend 1997; tuned to match $A_{max}$/N in Kattge etal. 2012 \\
-• & initial value of the temperature optimum of electron transport and its shape parameter & \texttt{tjmax\_opt} & deg C & • & • & • \\              
-• & • & \texttt{tjmax\_omega} & • & • & • & • \\
-• & intercept of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g0} & • & • & • & • \\
-• & slope of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g1} & • & • & • & Ball and Berry rel., tuned to $A_{max}$/N in Lin et al. \\
-
-\hline 
-\end{tabularx}
-\end{sidewaystable}
-
-
-\begin{sidewaystable}
-\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
-\hline 
-Symbol & Parameter long name & Name in code & Unit & Equation & Value (8 PFT) & Citation \\ 
-\hline 
-
-\multicolumn{6}{l}{\bf Parameters from t\_slm\_veg\_param 2/2}\\
-\hline
-• & response of leaf-level photosynthesis to fractional water availability & \texttt{lambda\_soil\_ps} & • & • & 3.0 & • \\
-• & response of leaf-level photosynthesis to fractional water availability & \texttt{weibull\_k\_soil\_ps} & • & • & 3.0 & • \\
-• & response of stomatal conductance to fractional water availability & \texttt{lambda\_soil\_gs} & • & • & 3.0 & • \\
-• & response of stomatal conductance to fractional water availability & \texttt{weibull\_k\_soil\_gs} & • & • & 3.0 & • \\
-• & wood density & \texttt{wood\_density} & mol C / $m^{3}$ & • & • & • \\
-• & leaf area to sapwood area ratio & \texttt{k\_latosa} & • & • & 4000.0 & • \\
-• & coarse root to sapwood mass ratio & \texttt{k\_rtos} & • & • & • & • \\
-• & trade-off parametr for hydraulic investment into sapwood or fine roots & \texttt{k\_crtos} & • & • & 0.2 & • \\
-• & maximum fraction of biomass growth going to fruits & \texttt{k2\_fruit\_alloc} & • & • & 0.1 (grass), 0.2 (other)  & • \\
-• & paramter in height diameter relationship & \texttt{allom\_k1} & • & • & • & • \\
-• & paramter in height diameter relationship & \texttt{allom\_k2} & • & • & • & • \\
-• & $v_{max}$ of N uptake & \texttt{vmax\_uptake\_n} & $\sim$$\mu$mol N/ mol C/ s & • & 14.0 & tuned from OCN \\
-• & $v_{max}$ of P uptake & \texttt{vmax\_uptake\_p} & $\sim$$\mu$mol P/ mol C/ s & • & 14.28 & tuned from OCN \\
-• & low-affinity uptake & \texttt{soil\_n\_aff1} & L/mmol & • & 0.105 & tuned from OCN \\              
-• & half saturation of high-affinity uptake & \texttt{soil\_n\_aff2} & mmol/L & • & 0.4 & tuned from OCN \\
-• & low-affinity uptake & \texttt{soil\_p\_aff1} & L/mmol & • & 0.105 & tuned from OCN \\
-• & half saturation of high-affinity uptake & \texttt{soil\_p\_aff2} & mmol/L & • & 0.4 & tuned from OCN \\
-• & placeholder constant BNf rate & \texttt{bnf\_base} & $\mu$mol N/ s & • & • & • \\
-• & controlling light-limited establishment & \texttt{lambda\_est\_light} & • & • & • & • \\
-• & controlling light-limited establishment & \texttt{k\_est\_light} & • & • & • & • \\
-• & seed size & \texttt{seed\_size} & mol C & • & • & • \\
- 
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\
-% • & • & \texttt{} & • & • & • & • \\              
 \hline 
 \end{tabularx}
 \end{sidewaystable}

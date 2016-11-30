@@ -1,0 +1,79 @@
+\chapter{Land-cover specific parameters (Lctlib)}\label{ch:lctlib}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|X|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value (8 PFT) & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters from t\_slm\_veg\_param 1/2}\\
+\hline
+• & vegetation growth form & \texttt{growthform} & • & • & • & • \\
+• & photosynthetic path way  & \texttt{ps\_pathway} & • & • & • & • \\
+• & phenological type & \texttt{phenology\_type} & • & • & • & • \\
+• & average turnover (1/lifetime) of a leaf (1/years) & \texttt{tau\_leaf} & • & • & • & • \\
+• & turnover time of the fraction of sapwood that is in branches (10\%) & \texttt{tau\_branches} & 1/years & • & 0.01 & • \\
+• & turnover time of the sapwood pool & \texttt{tau\_sap\_wood} & 1/years & • & 0.05 & • \\
+• & average turnover (1/lifetime) of a fine root (1/years) & \texttt{tau\_fine\_root} & • & • & • & • \\
+• & average turnover (1/lifetime) of a coarse root (1/years) & \texttt{tau\_coarse\_root} & • & • & 0.1 & • \\
+• & turnover time of the fruit pool & \texttt{tau\_fruit} & 1/years & • & 1.0 & • \\
+• & turnover time of the seed bed to litter & \texttt{tau\_seed\_litter} & 1/years & • & 0.1 & • \\
+• & turnover time of the seed bed to establishment & \texttt{tau\_seed\_est} & 1/years & • & 0.3 & • \\
+• & specific leaf area of a plant & \texttt{sla} & $m^{2}$ / mol C & • & • & • \\
+• & default leaf C:N, if not calculated dynamically & \texttt{cn\_leaf} & molC/molN & • & • & Kattge et al. 2011, Table 5 \\
+• & default leaf N:P, if not calculated dynamically & \texttt{np\_leaf} & molN/molP & • & • & Kattge et al. 2011, Table 5 \\
+• & fraction of leaf N not used for photosynthesis & \texttt{k0\_fnl\_struc} & • & • & • & Friend 1997; tuned to match $A_{max}$/N in Kattge etal. 2012 \\
+• & initial value of the temperature optimum of electron transport and its shape parameter & \texttt{tjmax\_opt} & deg C & • & • & • \\              
+• & • & \texttt{tjmax\_omega} & • & • & • & • \\
+• & intercept of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g0} & • & • & • & • \\
+• & slope of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g1} & • & • & • & Ball and Berry rel., tuned to $A_{max}$/N in Lin et al. \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value (8 PFT) & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters from t\_slm\_veg\_param 2/2}\\
+\hline
+• & response of leaf-level photosynthesis to fractional water availability & \texttt{lambda\_soil\_ps} & • & • & 3.0 & • \\
+• & response of leaf-level photosynthesis to fractional water availability & \texttt{weibull\_k\_soil\_ps} & • & • & 3.0 & • \\
+• & response of stomatal conductance to fractional water availability & \texttt{lambda\_soil\_gs} & • & • & 3.0 & • \\
+• & response of stomatal conductance to fractional water availability & \texttt{weibull\_k\_soil\_gs} & • & • & 3.0 & • \\
+• & wood density & \texttt{wood\_density} & mol C / $m^{3}$ & • & • & • \\
+• & leaf area to sapwood area ratio & \texttt{k\_latosa} & • & • & 4000.0 & • \\
+• & coarse root to sapwood mass ratio & \texttt{k\_rtos} & • & • & • & • \\
+• & trade-off parametr for hydraulic investment into sapwood or fine roots & \texttt{k\_crtos} & • & • & 0.2 & • \\
+• & maximum fraction of biomass growth going to fruits & \texttt{k2\_fruit\_alloc} & • & • & 0.1 (grass), 0.2 (other)  & • \\
+• & paramter in height diameter relationship & \texttt{allom\_k1} & • & • & • & • \\
+• & paramter in height diameter relationship & \texttt{allom\_k2} & • & • & • & • \\
+• & $v_{max}$ of N uptake & \texttt{vmax\_uptake\_n} & $\sim$$\mu$mol N/ mol C/ s & • & 14.0 & tuned from OCN \\
+• & $v_{max}$ of P uptake & \texttt{vmax\_uptake\_p} & $\sim$$\mu$mol P/ mol C/ s & • & 14.28 & tuned from OCN \\
+• & low-affinity uptake & \texttt{soil\_n\_aff1} & L/mmol & • & 0.105 & tuned from OCN \\              
+• & half saturation of high-affinity uptake & \texttt{soil\_n\_aff2} & mmol/L & • & 0.4 & tuned from OCN \\
+• & low-affinity uptake & \texttt{soil\_p\_aff1} & L/mmol & • & 0.105 & tuned from OCN \\
+• & half saturation of high-affinity uptake & \texttt{soil\_p\_aff2} & mmol/L & • & 0.4 & tuned from OCN \\
+• & placeholder constant BNf rate & \texttt{bnf\_base} & $\mu$mol N/ s & • & • & • \\
+• & controlling light-limited establishment & \texttt{lambda\_est\_light} & • & • & • & • \\
+• & controlling light-limited establishment & \texttt{k\_est\_light} & • & • & • & • \\
+• & seed size & \texttt{seed\_size} & mol C & • & • & • \\
+ 
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\
+% • & • & \texttt{} & • & • & • & • \\              
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
