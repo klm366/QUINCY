@@ -118,10 +118,15 @@ CONTAINS
   FUNCTION Add_real2d(var1, var2) RESULT(var3)
 
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
-    TYPE(t_jsb_var_real2d)              :: var3
+    TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
-    var3 = var1
-    var3%field(:,:,1,1,1) = var1%field(:,:,1,1,1) + var2%field(:,:,1,1,1)
+    var3%name = var1%name
+    var3%full_name = var1%full_name
+    var3%owner_proc_id = var1%owner_proc_id
+    var3%owner_tile_path = var1%owner_tile_path
+    var3%missval = var1%missval
+    var3%field = var1%field + var2%field
+    var3%ptr => var3%field(:,:,1,1,1)
 
   END FUNCTION Add_real2d
 
@@ -129,10 +134,15 @@ CONTAINS
 
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1
     REAL(wp),                INTENT(in) :: scalar
-    TYPE(t_jsb_var_real2d)              :: var3
+    TYPE(t_jsb_var_real2d), TARGET              :: var3
 
-    var3 = var1
-    var3%field(:,:,1,1,1) = var1%field(:,:,1,1,1) + scalar
+    var3%name = var1%name
+    var3%full_name = var1%full_name
+    var3%owner_proc_id = var1%owner_proc_id
+    var3%owner_tile_path = var1%owner_tile_path
+    var3%missval = var1%missval
+    var3%field = var1%field + scalar
+    var3%ptr => var3%field(:,:,1,1,1)
 
   END FUNCTION Add_real2d_and_scalar
 
@@ -140,25 +150,35 @@ CONTAINS
 
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1
     REAL(wp),                INTENT(in) :: field(:,:)
-    TYPE(t_jsb_var_real2d)              :: var3
+    TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_real2d_and_field'
 
     IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
       & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    var3 = var1
-    var3%field(:,:,1,1,1) = var1%field(:,:,1,1,1) + field(:,:)
+    var3%name = var1%name
+    var3%full_name = var1%full_name
+    var3%owner_proc_id = var1%owner_proc_id
+    var3%owner_tile_path = var1%owner_tile_path
+    var3%missval = var1%missval
+    var3%field = var1%field + RESHAPE(field, (/SIZE(var1%ptr,1),SIZE(var1%ptr,2),1,1,1/))
+    var3%ptr => var3%field(:,:,1,1,1)
 
   END FUNCTION Add_real2d_and_field
 
   FUNCTION Add_real3d(var1, var2) RESULT(var3)
 
     CLASS(t_jsb_var_real3d), INTENT(in) :: var1, var2
-    TYPE(t_jsb_var_real3d)              :: var3
+    TYPE(t_jsb_var_real3d),  TARGET     :: var3
 
-    var3 = var1
-    var3%field(:,:,:,1,1) = var1%field(:,:,:,1,1) + var2%field(:,:,:,1,1)
+    var3%name = var1%name
+    var3%full_name = var1%full_name
+    var3%owner_proc_id = var1%owner_proc_id
+    var3%owner_tile_path = var1%owner_tile_path
+    var3%missval = var1%missval
+    var3%field = var1%field + var2%field
+    var3%ptr => var3%field(:,:,:,1,1)
 
   END FUNCTION Add_real3d
 
@@ -166,10 +186,15 @@ CONTAINS
 
     CLASS(t_jsb_var_real3d), INTENT(in) :: var1
     REAL(wp),                INTENT(in) :: scalar
-    TYPE(t_jsb_var_real3d)              :: var3
+    TYPE(t_jsb_var_real3d),  TARGET     :: var3
 
-    var3 = var1
-    var3%field(:,:,:,1,1) = var1%field(:,:,:,1,1) + scalar
+    var3%name = var1%name
+    var3%full_name = var1%full_name
+    var3%owner_proc_id = var1%owner_proc_id
+    var3%owner_tile_path = var1%owner_tile_path
+    var3%missval = var1%missval
+    var3%field = var1%field + scalar
+    var3%ptr => var3%field(:,:,:,1,1)
 
   END FUNCTION Add_real3d_and_scalar
 
@@ -177,15 +202,20 @@ CONTAINS
 
     CLASS(t_jsb_var_real3d), INTENT(in) :: var1
     REAL(wp),                INTENT(in) :: field(:,:,:)
-    TYPE(t_jsb_var_real3d)              :: var3
+    TYPE(t_jsb_var_real3d),  TARGET     :: var3
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_real3d_and_field'
 
     IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
       & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    var3 = var1
-    var3%field(:,:,:,1,1) = var1%field(:,:,:,1,1) + field(:,:,:)
+    var3%name = var1%name
+    var3%full_name = var1%full_name
+    var3%owner_proc_id = var1%owner_proc_id
+    var3%owner_tile_path = var1%owner_tile_path
+    var3%missval = var1%missval
+    var3%field = var1%field + RESHAPE(field, (/SIZE(var1%ptr,1),SIZE(var1%ptr,2),SIZE(var1%ptr,3),1,1/))
+    var3%ptr => var3%field(:,:,:,1,1)
 
   END FUNCTION Add_real3d_and_field
 
@@ -193,15 +223,20 @@ CONTAINS
 
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1
     REAL(wp),                INTENT(in) :: field(:,:)
-    TYPE(t_jsb_var_real2d)              :: var3
+    TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_real2d_with_field'
 
     IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
       & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    var3 = var1
-    var3%field(:,:,1,1,1) = var1%field(:,:,1,1,1) * field(:,:)
+    var3%name = var1%name
+    var3%full_name = var1%full_name
+    var3%owner_proc_id = var1%owner_proc_id
+    var3%owner_tile_path = var1%owner_tile_path
+    var3%missval = var1%missval
+    var3%field = var1%field * RESHAPE(field, (/SIZE(var1%ptr,1),SIZE(var1%ptr,2),1,1,1/))
+    var3%ptr => var3%field(:,:,1,1,1)
 
   END FUNCTION Multiply_real2d_with_field
 
@@ -209,15 +244,20 @@ CONTAINS
 
     CLASS(t_jsb_var_real3d), INTENT(in) :: var1
     REAL(wp),                INTENT(in) :: field(:,:,:)
-    TYPE(t_jsb_var_real3d)              :: var3
+    TYPE(t_jsb_var_real3d),  TARGET     :: var3
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_real3d_with_field'
 
     IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
       & CALL finish(TRIM(routine), 'Dimension mismatch')
 
-    var3 = var1
-    var3%field(:,:,:,1,1) = var1%field(:,:,:,1,1) + field(:,:,:)
+    var3%name = var1%name
+    var3%full_name = var1%full_name
+    var3%owner_proc_id = var1%owner_proc_id
+    var3%owner_tile_path = var1%owner_tile_path
+    var3%missval = var1%missval
+    var3%field = var1%field + RESHAPE(field, (/SIZE(var1%ptr,1),SIZE(var1%ptr,2),SIZE(var1%ptr,3),1,1/))
+    var3%ptr => var3%field(:,:,:,1,1)
 
   END FUNCTION Multiply_real3d_with_field
 
