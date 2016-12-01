@@ -247,12 +247,47 @@ CONTAINS
     soil%pool%litter%carbon14 = soil%pool%litter%carbon14 + veg%litterfall%coarse_root%carbon14%ptr
     soil%pool%litter%nitrogen15 = soil%pool%litter%nitrogen15 + veg%litterfall%coarse_root%nitrogen15%ptr
  
+    soil%pool%litter%carbon = soil%pool%litter%carbon + veg%litterfall%sap_wood%carbon%ptr
+    soil%pool%litter%nitrogen = soil%pool%litter%nitrogen + veg%litterfall%sap_wood%nitrogen%ptr
+    soil%pool%litter%phosphorus = soil%pool%litter%phosphorus + veg%litterfall%sap_wood%phosphorus%ptr
+    soil%pool%litter%carbon13 = soil%pool%litter%carbon13 + veg%litterfall%sap_wood%carbon13%ptr
+    soil%pool%litter%carbon14 = soil%pool%litter%carbon14 + veg%litterfall%sap_wood%carbon14%ptr
+    soil%pool%litter%nitrogen15 = soil%pool%litter%nitrogen15 + veg%litterfall%sap_wood%nitrogen15%ptr
+
     soil%pool%litter%carbon = soil%pool%litter%carbon + veg%litterfall%heart_wood%carbon%ptr
     soil%pool%litter%nitrogen = soil%pool%litter%nitrogen + veg%litterfall%heart_wood%nitrogen%ptr
     soil%pool%litter%phosphorus = soil%pool%litter%phosphorus + veg%litterfall%heart_wood%phosphorus%ptr
     soil%pool%litter%carbon13 = soil%pool%litter%carbon13 + veg%litterfall%heart_wood%carbon13%ptr
     soil%pool%litter%carbon14 = soil%pool%litter%carbon14 + veg%litterfall%heart_wood%carbon14%ptr
     soil%pool%litter%nitrogen15 = soil%pool%litter%nitrogen15 + veg%litterfall%heart_wood%nitrogen15%ptr
+
+    soil%pool%litter%carbon = soil%pool%litter%carbon + veg%litterfall%fruit%carbon%ptr
+    soil%pool%litter%nitrogen = soil%pool%litter%nitrogen + veg%litterfall%fruit%nitrogen%ptr
+    soil%pool%litter%phosphorus = soil%pool%litter%phosphorus + veg%litterfall%fruit%phosphorus%ptr
+    soil%pool%litter%carbon13 = soil%pool%litter%carbon13 + veg%litterfall%fruit%carbon13%ptr
+    soil%pool%litter%carbon14 = soil%pool%litter%carbon14 + veg%litterfall%fruit%carbon14%ptr
+    soil%pool%litter%nitrogen15 = soil%pool%litter%nitrogen15 + veg%litterfall%fruit%nitrogen15%ptr
+
+    soil%pool%litter%carbon = soil%pool%litter%carbon + veg%litterfall%seed_bed%carbon%ptr
+    soil%pool%litter%nitrogen = soil%pool%litter%nitrogen + veg%litterfall%seed_bed%nitrogen%ptr
+    soil%pool%litter%phosphorus = soil%pool%litter%phosphorus + veg%litterfall%seed_bed%phosphorus%ptr
+    soil%pool%litter%carbon13 = soil%pool%litter%carbon13 + veg%litterfall%seed_bed%carbon13%ptr
+    soil%pool%litter%carbon14 = soil%pool%litter%carbon14 + veg%litterfall%seed_bed%carbon14%ptr
+    soil%pool%litter%nitrogen15 = soil%pool%litter%nitrogen15 + veg%litterfall%seed_bed%nitrogen15%ptr
+
+    soil%pool%litter%carbon = soil%pool%litter%carbon + veg%litterfall%labile%carbon%ptr
+    soil%pool%litter%nitrogen = soil%pool%litter%nitrogen + veg%litterfall%labile%nitrogen%ptr
+    soil%pool%litter%phosphorus = soil%pool%litter%phosphorus + veg%litterfall%labile%phosphorus%ptr
+    soil%pool%litter%carbon13 = soil%pool%litter%carbon13 + veg%litterfall%labile%carbon13%ptr
+    soil%pool%litter%carbon14 = soil%pool%litter%carbon14 + veg%litterfall%labile%carbon14%ptr
+    soil%pool%litter%nitrogen15 = soil%pool%litter%nitrogen15 + veg%litterfall%labile%nitrogen15%ptr
+
+    soil%pool%litter%carbon = soil%pool%litter%carbon + veg%litterfall%reserve%carbon%ptr
+    soil%pool%litter%nitrogen = soil%pool%litter%nitrogen + veg%litterfall%reserve%nitrogen%ptr
+    soil%pool%litter%phosphorus = soil%pool%litter%phosphorus + veg%litterfall%reserve%phosphorus%ptr
+    soil%pool%litter%carbon13 = soil%pool%litter%carbon13 + veg%litterfall%reserve%carbon13%ptr
+    soil%pool%litter%carbon14 = soil%pool%litter%carbon14 + veg%litterfall%reserve%carbon14%ptr
+    soil%pool%litter%nitrogen15 = soil%pool%litter%nitrogen15 + veg%litterfall%reserve%nitrogen15%ptr
 
     soil%pool%litter = soil%pool%litter - soil%loss%litter * dtime
     
