@@ -161,6 +161,7 @@ CONTAINS
       veg%ga_daytime_dacc               = veg%ga_daytime_dacc               + ga
       veg%beta_air_daytime_dacc         = veg%beta_air_daytime_dacc         + veg%beta_air
       veg%beta_soil_ps_daytime_dacc     = veg%beta_soil_ps_daytime_dacc     + veg%beta_soil_ps
+      veg%beta_sinklim_ps_daytime_dacc  = veg%beta_sinklim_ps_daytime_dacc  + veg%beta_sinklim_ps
       veg%beta_soil_gs_daytime_dacc     = veg%beta_soil_gs_daytime_dacc     + veg%beta_soil_gs
       veg%t_jmax_opt_daytime_dacc       = veg%t_jmax_opt_daytime_dacc       + veg%t_jmax_opt
     END IF
@@ -184,6 +185,7 @@ CONTAINS
         veg%ga_daytime               = veg%ga_daytime_dacc                 / veg%daytime_counter
         veg%beta_air_daytime         = veg%beta_air_daytime_dacc           / veg%daytime_counter
         veg%beta_soil_ps_daytime     = veg%beta_soil_ps_daytime_dacc       / veg%daytime_counter
+        veg%beta_sinklim_ps_daytime  = veg%beta_sinklim_ps_daytime_dacc    / veg%daytime_counter
         veg%beta_soil_gs_daytime     = veg%beta_soil_gs_daytime_dacc       / veg%daytime_counter
         veg%t_jmax_opt_daytime       = veg%t_jmax_opt_daytime_dacc         / veg%daytime_counter
       ELSE  ! if veg%daytime_counter is zero
@@ -208,6 +210,7 @@ CONTAINS
       veg%ga_daytime_dacc%ptr                    = 0.0_wp
       veg%beta_air_daytime_dacc%ptr              = 0.0_wp
       veg%beta_soil_ps_daytime_dacc%ptr          = 0.0_wp
+      veg%beta_sinklim_ps_daytime_dacc%ptr       = 0.0_wp
       veg%beta_soil_gs_daytime_dacc%ptr          = 0.0_wp
       veg%t_jmax_opt_daytime_dacc%ptr            = 0.0_wp
       veg%daytime_counter%ptr                    = 0.0_wp
@@ -358,9 +361,11 @@ CONTAINS
                                                   mavg_period_tfrac)
     veg%ga_tfrac_mavg%ptr                 = calc_mavg(veg%ga_tfrac_mavg%ptr, veg%ga_daytime%ptr, &
                                                   mavg_period_tfrac)
-    veg%beta_soil_gs_tfrac_mavg%ptr       = calc_mavg(veg%beta_soil_gs_tfrac_mavg%ptr, veg%beta_soil_gs_daytime%ptr, &
-                                                  mavg_period_tfrac)
     veg%beta_soil_ps_tfrac_mavg%ptr       = calc_mavg(veg%beta_soil_ps_tfrac_mavg%ptr, veg%beta_soil_ps_daytime%ptr, &
+                                                  mavg_period_tfrac)
+    veg%beta_sinklim_ps_tfrac_mavg%ptr    = calc_mavg(veg%beta_sinklim_ps_tfrac_mavg%ptr, veg%beta_sinklim_ps_daytime%ptr, &
+                                                  mavg_period_tfrac)
+    veg%beta_soil_gs_tfrac_mavg%ptr       = calc_mavg(veg%beta_soil_gs_tfrac_mavg%ptr, veg%beta_soil_gs_daytime%ptr, &
                                                   mavg_period_tfrac)
     veg%beta_air_tfrac_mavg%ptr           = calc_mavg(veg%beta_air_tfrac_mavg%ptr, veg%beta_air_daytime%ptr, &
                                                   mavg_period_tfrac)
@@ -381,9 +386,11 @@ CONTAINS
                                                   mavg_period_tcnl)
     veg%ga_tcnl_mavg%ptr                  = calc_mavg(veg%ga_tcnl_mavg%ptr, veg%ga_daytime%ptr, &
                                                   mavg_period_tcnl)
-    veg%beta_soil_gs_tcnl_mavg%ptr        = calc_mavg(veg%beta_soil_gs_tcnl_mavg%ptr, veg%beta_soil_gs_daytime%ptr, &
-                                                  mavg_period_tcnl)
     veg%beta_soil_ps_tcnl_mavg%ptr        = calc_mavg(veg%beta_soil_ps_tcnl_mavg%ptr, veg%beta_soil_ps_daytime%ptr, &
+                                                  mavg_period_tcnl)
+    veg%beta_sinklim_ps_tcnl_mavg%ptr     = calc_mavg(veg%beta_sinklim_ps_tcnl_mavg%ptr, veg%beta_sinklim_ps_daytime%ptr, &
+                                                  mavg_period_tcnl)
+    veg%beta_soil_gs_tcnl_mavg%ptr        = calc_mavg(veg%beta_soil_gs_tcnl_mavg%ptr, veg%beta_soil_gs_daytime%ptr, &
                                                   mavg_period_tcnl)
     veg%beta_air_tcnl_mavg%ptr            = calc_mavg(veg%beta_air_tcnl_mavg%ptr, veg%beta_air_daytime%ptr, &
                                                   mavg_period_tcnl)

@@ -177,7 +177,8 @@ CONTAINS
                               veg%target_lai%ptr                        , &
                               veg%pool%labile                           , &
                               veg%pool%reserve                          , &
-                              veg%reserve_use)
+                              veg%reserve_use                           , &
+                              veg%beta_sinklim_ps%ptr)
 
     !> 5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)
     !! 
@@ -683,7 +684,8 @@ CONTAINS
                                                   target_lai            , &
                                                   veg_pool_labile       , &
                                                   veg_pool_reserve      , &
-                                                  veg_reserve_use )              
+                                                  veg_reserve_use       , & 
+                                                  beta_sinklim_ps )              
 
     USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_element    ! *slmdev -> dsl4jsb macro [like dsl4jsb_Use_memory(VEG_)]
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -708,6 +710,7 @@ CONTAINS
     TYPE(t_slm_struct_veg_element),INTENT(in)     :: veg_pool_reserve          !< the plant's reserve pool size
     TYPE(t_slm_struct_veg_element),INTENT(inout)  :: veg_reserve_use           !< current resource use rate (mol/time step)
                                                                                !!  (+ve: net flux to labile / -ve: net flux to reserve)
+    REAL(wp),                      INTENT(out)    :: beta_sinklim_ps           !< sink limitation factor for photosynthesis 
     ! 0.2 Local
     REAL(wp)             :: phi_phenology                    ! relative pull from reserve due to phenology
     REAL(wp)             :: phi_maintenance                  ! relative pull from reserve due to maintenance resp. 
@@ -822,6 +825,17 @@ CONTAINS
 
     veg_reserve_use%phosphorus%ptr = (phi_maintenance * veg_pool_reserve%phosphorus%ptr - & 
                                   phi_storage * veg_pool_labile%phosphorus%ptr) * k0_labile * dtime/one_day
+
+    !> 5.0 signal of carbon saturation to photosynthesis
+    !!
+    !!
+    IF(target_labile_pool_carbon>eps8 .AND. veg_pool_labile%carbon%ptr>target_labile_pool_carbon)THEN
+        hlp1=(veg_pool_labile%carbon%ptr-target_labile_pool_carbon)/target_labile_pool_carbon
+        beta_sinklim_ps=exp(-(lambda_sinklim_ps*hlp1)**k_sinklim_ps)
+    ELSE 
+        beta_sinklim_ps=1.0_wp
+    ENDIF
+
 
   END SUBROUTINE calc_reserve_useage
 

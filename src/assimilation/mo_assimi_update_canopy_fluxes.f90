@@ -141,6 +141,7 @@ CONTAINS
                                  veg%fleaf_sunlit_cl%ptr(icanopy,1), &   ! in
                                  veg%beta_air%ptr                 , &   ! in
                                  veg%beta_soil_ps%ptr             , &   ! in
+                                 veg%beta_sinklim_ps%ptr          , &   ! in
                                  veg%beta_soil_gs%ptr             , &   ! in
                                  veg%fnl_chl_cl%ptr(icanopy,1)     , &   ! in
                                  veg%fnl_et_cl%ptr(icanopy,1)      , &   ! in
@@ -220,6 +221,7 @@ CONTAINS
                                             fleaf_sunlit_cl     , &   ! in
                                             beta_air            , &   ! in
                                             beta_soil_ps        , &   ! in
+                                            beta_sinklim_ps     , &   ! in
                                             beta_soil_gs        , &   ! in
                                             fnl_chl_cl          , &   ! in
                                             fnl_et_cl           , &   ! in
@@ -255,7 +257,8 @@ CONTAINS
   REAL(wp),INTENT(IN) :: fleaf_sunlit_cl            !< fraction of canopy layer that is sunlit 
   REAL(wp),INTENT(IN) :: co2_mixing_ratio        !< CO2 concentration of the free air (ppm)
   REAL(wp),INTENT(IN) :: beta_air                !< scaling factor to account for air humidity effects on conductance
-  REAL(wp),INTENT(IN) :: beta_soil_ps            !< scaling factor to account for soil moisture constraints on conductance
+  REAL(wp),INTENT(IN) :: beta_soil_ps            !< scaling factor to account for soil moisture constraints on photosynthesis
+  REAL(wp),INTENT(IN) :: beta_sinklim_ps         !< scaling factor to account for sink limitation constraints on photosynthesis 
   REAL(wp),INTENT(IN) :: beta_soil_gs            !< scaling factor to account for soil moisture constraints on conductance
   REAL(wp),INTENT(IN) :: fnl_et_cl                  !< fraction of foliar N allocated to electron transport 
   REAL(wp),INTENT(IN) :: fnl_rub_cl                 !< fraction of foliar N allocated to Rubisco
@@ -323,10 +326,12 @@ CONTAINS
      pcp = exp(E0pcp - E1pcp/rtck) * ppm2Pa 
 
      !> N specific rate of electron transport rate
-     n1 = jmax2n * fnl_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/t_jmax_omega)**2)) * beta_soil_ps
+     n1 = jmax2n * fnl_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/t_jmax_omega)**2)) & 
+          * beta_soil_ps * beta_sinklim_ps
 
      !> N specific rate of Rubisco turnover 
-     n2 = vcmax2n * fnl_rub_cl * exp(E0v - E1v/rtck) * beta_soil_ps
+     n2 = vcmax2n * fnl_rub_cl * exp(E0v - E1v/rtck) & 
+          * beta_soil_ps * beta_sinklim_ps
 
      !> Initial guess of leaf internal CO2 concentration
      SELECT CASE (ps_pathway)

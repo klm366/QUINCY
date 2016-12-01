@@ -52,7 +52,10 @@ MODULE mo_veg_constants
       k_phimaint,           & !< k in storage response function to maintenance needs
       ! pull from reserve to labile pool due to maintenance of labile pool (1-exp(-(lambda * labile/target_labile)^k))
       lambda_phistore,      & !< lambda in labile response function to storage size
-      k_phistore              !< k in labile response function to storage size 
+      k_phistore,           & !< k in labile response function to storage size 
+      ! sink limitation signal strength to photosynthesis (exp(-(lambda * labile/target_labile)^k))
+      lambda_sinklim_ps,    & !< lambda in photosynthesis response function to labile pool size 
+      k_sinklim_ps            !< k in photosynthesis response function to labile pool size 
 
   ! Resporption parameters
   REAL(wp), SAVE :: & 
@@ -213,8 +216,10 @@ CONTAINS
       k_phimaint              = 1.2_wp 
       lambda_phistore         = 2._wp
       k_phistore              = 3._wp 
+      lambda_sinklim_ps       = 0.05_wp
+      k_sinklim_ps            = 2.0_wp 
 
-  ! Resporption parameters
+  ! Resorption parameters
       resorption_default    = 0.5_wp  
       resorption_wood       = 0.2_wp 
       root2leaf_cn          = 0.85_wp 

@@ -46,6 +46,7 @@ CONTAINS
                                 ga                , & 
                                 beta_air          , &
                                 beta_soil_ps      , &
+                                beta_sinklim_ps   , &
                                 beta_soil_gs      , &
                                 t_jmax_opt        , & 
                                 lai_cl            , &
@@ -74,6 +75,7 @@ CONTAINS
     REAL(wp),INTENT(in),OPTIONAL                 :: ga                    !< aerodynamic conductance (avg)
     REAL(wp),INTENT(in),OPTIONAL                 :: beta_air              !< beta air (avg)
     REAL(wp),INTENT(in),OPTIONAL                 :: beta_soil_ps          !< beta soil ps (avg)
+    REAL(wp),INTENT(in),OPTIONAL                 :: beta_sinklim_ps       !< beta sinklim ps (avg)
     REAL(wp),INTENT(in),OPTIONAL                 :: beta_soil_gs          !< beta soil gs (avg)
     REAL(wp),INTENT(in),OPTIONAL                 :: t_jmax_opt            !< Jmax optimum temperature (avg)
     REAL(wp),DIMENSION(:),INTENT(inout),OPTIONAL :: par_sunlit_cl         !< absorbed PAR on sunlit
@@ -134,7 +136,7 @@ CONTAINS
     IF(optimise_n_fractions)THEN
        IF(.NOT.PRESENT(t_air).OR..NOT.PRESENT(press_srf).OR.& 
           .NOT.PRESENT(co2_mixing_ratio).OR..NOT.PRESENT(ga).OR.&
-          .NOT.PRESENT(beta_soil_ps).OR..NOT.PRESENT(beta_soil_gs).OR.&
+          .NOT.PRESENT(beta_soil_ps).OR..NOT.PRESENT(beta_sinklim_ps).OR..NOT.PRESENT(beta_soil_gs).OR.&
           .NOT.PRESENT(beta_air).OR..NOT.PRESENT(t_jmax_opt)) THEN
 
           WRITE(message_text,'(a)') 'called to optimise N fractions, but without [climate] variables'
@@ -267,6 +269,7 @@ CONTAINS
                                                   ga                      , &
                                                   beta_air                , &
                                                   beta_soil_ps            , &
+                                                  beta_sinklim_ps         , &
                                                   beta_soil_gs            , &
                                                   t_jmax_opt              , &
                                                   fn_oth_cl(icanopy)      , &
@@ -307,6 +310,7 @@ CONTAINS
                                     ga                        , & 
                                     beta_air                  , &
                                     beta_soil_ps              , &
+                                    beta_sinklim_ps           , &
                                     beta_soil_gs              , &
                                     t_jmax_opt                , &
                                     fn_oth_cl                 , &
@@ -331,6 +335,7 @@ CONTAINS
                                        & ga,               &    !< aerodynamic conductance (day-time running mean, m/s)
                                        & beta_air,         &    !< beta air (day-time running mean, --)
                                        & beta_soil_ps,     &    !< beta soil for PS (day-time running mean, --)
+                                       & beta_sinklim_ps,  &    !< beta sinklim for PS (day-time running mean, --)
                                        & beta_soil_gs,     &    !< beta soil for GC (day-time running mean, --) 
                                        & t_jmax_opt             !< optimum temperature for Jmax (day-time running mean, degreeC)
     REAL(wp),              INTENT(in) :: fn_oth_cl              !< fraction of leaf N not associated with PS
@@ -377,6 +382,7 @@ CONTAINS
                               fleaf_sunlit_cl               , & 
                               beta_air                      , &
                               beta_soil_ps                  , &
+                              beta_sinklim_ps               , &
                               beta_soil_gs                  , &
                               fn_chl0_cl*(1._wp-fn_oth_cl)  , &
                               fn_et0_cl*(1._wp-fn_oth_cl)   , &
@@ -413,7 +419,7 @@ CONTAINS
     ! re-calculate photosynthesis
     CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
               par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl, & 
-              beta_air,beta_soil_ps,beta_soil_gs, &
+              beta_air,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
               fn_chl_cl*(1._wp-fn_oth_cl),fn_et_cl*(1._wp-fn_oth_cl),fn_rub_cl*(1._wp-fn_oth_cl), & 
               fn_pepc_cl*(1._wp-fn_oth_cl),n_tot_cl,lctlib%ps_pathway, & 
               t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
@@ -439,7 +445,7 @@ CONTAINS
        ! re-calculate photosynthesis
        CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga, & 
             par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl,& 
-            beta_air,beta_soil_ps,beta_soil_gs, &
+            beta_air,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
             fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), & 
             fn_pepc_cl*(1._wp-fn_oth_cl),n_tot_cl, lctlib%ps_pathway, & 
             t_jmax_opt,lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
@@ -676,6 +682,7 @@ CONTAINS
                                     veg%fleaf_sunlit_cl%ptr(icanopy,1) , &   ! in
                                     veg%beta_air%ptr                , &   ! in
                                     veg%beta_soil_ps%ptr            , &   ! in
+                                    veg%beta_sinklim_ps%ptr         , &   ! in
                                     veg%beta_soil_gs%ptr            , &   ! in
                                     fn_chl_cl(icanopy)             , &   ! in
                                     fn_et_cl(icanopy)              , &   ! in
@@ -800,6 +807,7 @@ CONTAINS
                        veg%fleaf_sunlit_tcnl_mavg_cl%ptr(icanopy,1), &
                        veg%beta_air_tcnl_mavg%ptr,&
                        veg%beta_soil_ps_tcnl_mavg%ptr,&
+                       veg%beta_sinklim_ps_tcnl_mavg%ptr,&
                        veg%beta_soil_gs_tcnl_mavg%ptr, &
                        fn_chl_cl(icanopy),&
                        fn_et_cl(icanopy),& 
