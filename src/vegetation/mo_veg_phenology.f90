@@ -108,8 +108,6 @@ CONTAINS
     USE mo_base_constants,          ONLY: dtime, one_day
     USE mo_shared_constants,        ONLY: Tzero
     USE mo_veg_constants,           ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
-                                      gdd_req_max,gdd_t_air_threshold,k_gdd_dormance,t_air_senescence, & 
-                                      beta_soil_flush_grass,beta_soil_flush_tree,beta_soil_senescence_tree, & 
                                       min_leaf_age
 
     IMPLICIT NONE
@@ -136,41 +134,48 @@ CONTAINS
        SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is above specified threshold
-            IF(beta_soil_gs_tphen_mavg > beta_soil_flush_tree) growing_season = .TRUE.
+            IF(beta_soil_gs_tphen_mavg > lctlib%beta_soil_flush) & 
+                  growing_season = .TRUE.
          CASE (isummergreen)     ! if GDD requirement is exceeded. The latter depends on the length of the 
                                  ! dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
-            hlp1 = gdd_req_max / exp ( k_gdd_dormance * nd_dormance ) 
-            IF(gdd > hlp1) growing_season = .TRUE.
+            hlp1 = lctlib%gdd_req_max * exp ( - lctlib%k_gdd_dormance * nd_dormance ) 
+            IF(gdd > hlp1) & 
+                  growing_season = .TRUE.
          CASE (iperennial)       ! if temperature and soil moisture are not limiting growth
-            IF(t_air_tphen_mavg > gdd_t_air_threshold .AND. &
-               beta_soil_gs_tphen_mavg > beta_soil_flush_grass) growing_season = .TRUE.
+            hlp1 = lctlib%gdd_req_max * exp ( - lctlib%k_gdd_dormance * nd_dormance ) 
+            IF(gdd > hlp1 .AND. &
+               beta_soil_gs_tphen_mavg > lctlib%beta_soil_flush) & 
+                  growing_season = .TRUE.
        END SELECT
     ELSE                         ! If in the growing season, check whether growing season has ended
        SELECT CASE (lctlib%phenology_type)
          CASE (ievergreen)       ! nothing to do here
          CASE (iraingreen)       ! if soil moisture is below given threshold AND leaves have been out a given number of days
-            IF(beta_soil_gs_tphen_mavg < beta_soil_senescence_tree .AND. mean_leaf_age > min_leaf_age ) & 
-               growing_season = .FALSE.
+            IF(beta_soil_gs_tphen_mavg < lctlib%beta_soil_senescence .AND. & 
+               mean_leaf_age > min_leaf_age ) & 
+                  growing_season = .FALSE.
          CASE (isummergreen)     ! if temperature are declining below a certain threshold AND 
                                  ! leaves have been out a given number of days
             IF(t_air_week_mavg < t_air_month_mavg .AND. &
-                                t_air_tphen_mavg < t_air_senescence .AND. & 
-                                mean_leaf_age > min_leaf_age) growing_season = .FALSE.
+               t_air_tphen_mavg < lctlib%t_air_senescence .AND. & 
+               mean_leaf_age > min_leaf_age) & 
+                  growing_season = .FALSE.
          CASE (iperennial)       ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND 
                                  ! leaves have been out a given number of days
-            IF((t_air_tphen_mavg < Tzero .OR. beta_soil_gs_tphen_mavg < eps4 .OR. &
+            IF((t_air_tphen_mavg < lctlib%t_air_senescence .OR. & 
+                beta_soil_gs_tphen_mavg < lctlib%beta_soil_senescence .OR. &
                 gpp_tlabile_mavg < maint_respiration_tlabile_mavg).AND. &
-                mean_leaf_age > min_leaf_age) &
-                growing_season = .FALSE.
+               mean_leaf_age > min_leaf_age) &
+                  growing_season = .FALSE.
        END SELECT
     ENDIF   
 
     !> 2.1 gdd counter
     !! 
-    IF(t_air > gdd_t_air_threshold) THEN
-       gdd = gdd + ((t_air - gdd_t_air_threshold) * dtime/one_day)
+    IF(t_air > lctlib%gdd_t_air_threshold) THEN
+       gdd = gdd + ((t_air - lctlib%gdd_t_air_threshold) * dtime/one_day)
     ENDIF
-    IF(t_air_week_mavg < Tzero) gdd = 0.0_wp
+    IF(t_air_tphen_mavg < Tzero) gdd = 0.0_wp
 
     !> 2.2 nd_dormance counter
     !! 

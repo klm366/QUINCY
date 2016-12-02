@@ -95,13 +95,6 @@ MODULE mo_veg_constants
       min_lai  ,                 & !< minimum LAI beyond which all leaves are shed
       target_lai_max  ,          & !< maximum LAI target for reserve use calculations 
       min_leaf_age  ,            & !< minimum leaf age before senescence is permitted (days) 
-      gdd_t_air_threshold  ,     & !< temperature threshold for growing degree days 
-      gdd_req_max  ,             & !< maximum GDD requirement
-      k_gdd_dormance  ,          & !< exponent factor in GDD - nd_dormance equation 
-      t_air_senescence  ,        & !< weekly air temperature initiating leaf senescence
-      beta_soil_flush_grass  ,   & !< value of beta_soil at leaf flushing for grass
-      beta_soil_flush_tree  ,    & !< value of beta_soil at leaf flushing for trees 
-      beta_soil_senescence_tree, & !< value of beta_soil at leaf shedding for trees
       max_leaf_shedding_rate       !< maximum rate of leaf shedding (1/days) 
 
   ! vegetation dynamics
@@ -172,8 +165,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_veg_constants
 
-    USE mo_base_constants,      ONLY: one_day, one_year
-    USE mo_shared_constants,    ONLY: Tzero, molar_mass_C, molar_mass_N
+    USE mo_base_constants,      ONLY: one_day, one_year 
+    USE mo_shared_constants,    ONLY: molar_mass_C, molar_mass_N
 
     IMPLICIT NONE
 
@@ -225,13 +218,6 @@ CONTAINS
       min_lai                     = 0.1_wp
       target_lai_max              = 5.0_wp 
       min_leaf_age                = 10.0_wp 
-      gdd_t_air_threshold         = 5.0_wp + Tzero 
-      gdd_req_max                 = 800._wp 
-      k_gdd_dormance              = 0.0098_wp 
-      t_air_senescence            = 5.0_wp + Tzero 
-      beta_soil_flush_grass       = 0.9_wp 
-      beta_soil_flush_tree        = 0.98_wp 
-      beta_soil_senescence_tree   = 0.5_wp
       max_leaf_shedding_rate      = 0.2_wp
 
   ! vegetation dynamics

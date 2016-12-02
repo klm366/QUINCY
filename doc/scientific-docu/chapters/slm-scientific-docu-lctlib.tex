@@ -28,6 +28,12 @@ $\chi_{leaf}^{C:N}$ & default leaf N:P, if not calculated dynamically & \texttt{
 • & • & \texttt{tjmax\_omega} & • & • \\
 $g0$ & intercept of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g0} & & \cite{Lin:2015er} \\
 $g1$ & slope of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g1} & &  \cite{Lin:2015er} \\
+$t_{air}^{GDD}$ & temperature threshold for growing degree days & \texttt{gdd\_t\_air\_threshold} & $K$ & n.a. \\    
+$GDD_{req}^{max}$ & maximum GDD requirement & \texttt{gdd\_req\_max} & days & n.a. \\  
+$k_{dormance} $ & exponent factor in GDD - nd\_dormance equation & \texttt{k\_gdd\_dormance} & days$^{-1}$ & n.a. \\        
+$t_{air}^{sen} $ & average air temperature initiating leaf senescence & \texttt{t\_air\_senescence} & $K$ & n.a. \\    
+$\beta_{soil}^{flush}$ & value of beta\_soil at leaf flushing & \texttt{beta\_soil\_flush} & -- & n.a. \\        
+$\beta_{soil}^{sen}$ & value of beta\_soil at leaf shedding  & \texttt{beta\_soil\_senescence} & -- & n.a. \\   
 
 \hline 
 \end{tabularx}

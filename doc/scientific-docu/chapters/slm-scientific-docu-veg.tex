@@ -188,33 +188,31 @@ As described in the following, the model differentiates evergreen, cold deciduou
 
 \item \texttt{rain deciduous}
 \begin{description}
-\item[start] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) larger than a PFT-specific threshold ($\beta_{soil}^{flush\_tree}$) 
-\item[end] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) lower than a PFT-specific threshold ($\beta_{soil}^{sen\_tree}$)
+\item[start] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) larger than a PFT-specific threshold ($\beta_{soil}^{flush}$) 
+\item[end] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) lower than a PFT-specific threshold ($\beta_{soil}^{sen}$)
 \end{description}
 
 \item \texttt{cold deciduous}
 \begin{description}
-\item[start] growing degree days ($GDD_{act}$) relative to a PFT-specific temperature threshold ($t_{air}^{GDD}$) 
-\begin{equation}\label{eq:gdd}
-\frac{GDD_{act}}{dt} = GDD_{act} + MAX(t_{air} - t_{tair}^{GDD},0.0)
-\end{equation}
-larger than a threshold calculated by 
-\begin{equation}\label{eq:gdd_req}
-GDD_{req} = exp^{k_{dormance}*NDD},
-\end{equation}
-where $NDD$ is the number of days since the last growing season, and $k_{dormance}$ is a PFT-specific parameter relating dormance to GDD requirement to account for the chilling requirements of the buds.
+\item[start] $GDD_{act} > GDD_{req}^{max} \times exp^{- k_{dormance}*NDD}$, where $GDD_{act}$ is the current growing degree days (as calculated by Eq. \ref{eq:gdd}), $NDD$ is the number of days since the last growing season, and $k_{dormance}$ is a PFT-specific parameter relating dormance to the PFT-specific maximum growing degree days requirement ($GDD_{req}^{max}$) to account for the chilling requirements of the buds.
+
 \item[end] decreasing weekly temperatures below a PFT-specific temperature threshold ($t_{air}^{sen}$).
 \end{description}
 
 \item \texttt{perennial}
 \begin{description}
-\item[start] weekly soil moisture stress factor ($\beta_{soil}^{gs}$) larger than a PFT specific threshold ($\beta_{soil}^{flush\_grass}$), and weekly temperatures above a PFT-specific temperature threshold ($t_{air}^{GDD}$).
-\item[end] weekly temperatures below freezing, maximum soil water stress (minimum weekly soil moisture stress factor) or negative carbon balance ($GPP - R_m$).
+\item[start] $GDD_{act} > GDD_{req}^{max} \times exp^{- k_{dormance}*NDD}$, where $GDD_{act}$ is the current growing degree days (as calculated by Eq. \ref{eq:gdd}), $NDD$ is the number of days since the last growing season, and $k_{dormance}$ is a PFT-specific parameter relating dormance to the PFT-specific maximum growing degree days requirement ($GDD_{req}^{max}$) to account for the chilling requirements of the buds, as well as weekly soil moisture stress factor ($\beta_{soil}^{gs}$) larger than a PFT specific threshold ($\beta_{soil}^{flush\_grass}$).
+\item[end] weekly temperatures below a PFT-specific temperature threshold ($t_{air}^{sen}$), maximum soil water stress (minimum weekly soil moisture stress factor) or negative carbon balance ($GPP - R_m$).
 \end{description}
 
 \end{itemize}
 
-Senescence is generally only introduced once the leaf age has become larger than a PFT-specific threshold ($leaf\_age_{min}$). Currently, no within pheno-type PFT differences are implemented. Therefore, the model parametrisation is currently still as global parameters - this should be updated once more vegetation types are allowed for. 
+Growing degree days ($GDD_{act}$) are accumulated relative to a PFT-specific temperature threshold ($t_{air}^{GDD}$) 
+\begin{equation}\label{eq:gdd}
+\frac{GDD_{act}}{dt} = GDD_{act} + MAX(t_{air} - t_{tair}^{GDD},0.0)
+\end{equation}
+
+Senescence is generally only introduced once the leaf age has become larger than a PFT-specific threshold ($leaf\_age_{min}$). 
 
 \section{Turnover (\texttt{mo\_veg\_turnover})}\label{veg:sec:turnover}
 
@@ -404,14 +402,7 @@ Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation
 • & minimum LAI beyond which all leaves are shed & \texttt{min\_lai} & • & • & 0.1 & • \\    
 • & maximum LAI target for reserve use calculations & \texttt{target\_lai\_max} & • & • & 5.0 & • \\  
 • & maximum rate of leaf shedding & \texttt{max\_leaf\_shedding\_rate} & days & • & 0.2 & • \\  
-$leaf\_age_{min}$ & minimum leaf age before senescence is permitted & \texttt{min\_leaf\_age} & days & n.a. & 10.0 & n.a. \\        
-$t_{air}^{GDD}$ & temperature threshold for growing degree days & \texttt{gdd\_t\_air\_threshold} & $^{\circ}C$ & \ref{eq:gdd} & 5.0 & n.a. \\    
-$t_{air}^{GDD_{max}}$ & maximum GDD requirement & \texttt{gdd\_req\_max} & days & n.a. & 800.0 & n.a. \\  
-$k_{dormance} $ & exponent factor in GDD - nd\_dormance equation & \texttt{k\_gdd\_dormance} & days$^{-1}$ & \ref{eq:gdd_req} & 0.0098 & n.a. \\        
-$t_{air}^{sen} $ & weekly air temperature initiating leaf senescence & \texttt{t\_air\_senescence} & $^{\circ}C$ & n.a. & 5.0 & n.a. \\    
-$\beta_{soil}^{flush\_grass}$ & value of beta\_soil at leaf flushing for grass & \texttt{beta\_soil\_flush\_grass} & -- & n.a. & 0.9 & n.a. \\  
-$\beta_{soil}^{flush\_tree}$ & value of beta\_soil at leaf flushing for trees & \texttt{beta\_soil\_flush\_tree} & -- & n.a. & 0.98 & n.a. \\        
-$\beta_{soil}^{sen\_tree}$ & value of beta\_soil at leaf shedding for trees & \texttt{beta\_soil\_senescence\_tree} & -- & n.a. & 0.5 & n.a. \\    
+$leaf\_age_{min}$ & minimum leaf age before senescence is permitted & \texttt{min\_leaf\_age} & days & n.a. & 10.0 & n.a. \\         
 \hline 
 \end{tabularx}
 \end{sidewaystable}
