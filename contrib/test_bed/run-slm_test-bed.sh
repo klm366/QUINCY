@@ -8,7 +8,6 @@
 ## 
 ## Note:  the namelist option set_parameter_values_from_file is set to .FALSE. by this script - please use the pre_run.sh @ HPC (Cluster) if you need .TRUE.
 
-
 ########################################################################################################
 ####### namelist options you might want to change ######################################################
 ########################################################################################################
@@ -179,7 +178,11 @@ cd ./"$slmModel"
 function changeNamelistValue {
 oldValue=$(grep -w $1 ./namelist.slm | awk -F "=" '{print $2}' | tr -d '"') # get the old value that should be replaced
 lineNum=$(grep -wn $1 ./namelist.slm | cut -d : -f 1)                       # get line number of variable $1
-sed -i "$lineNum"s/$oldValue/$2/ ./namelist.slm                             # replace the old value in line $lineNum with $2
+if [[ $(uname -s) == "Darwin" ]]; then 
+  gsed -i "$lineNum"s/$oldValue/$2/ ./namelist.slm                             # replace the old value in line $lineNum with $2
+else 
+  sed -i "$lineNum"s/$oldValue/$2/ ./namelist.slm
+fi
 sync
 return 0                                                                              # get return value with: return_value=$?
 }
