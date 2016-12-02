@@ -142,7 +142,7 @@ CONTAINS
        !! in mol / m2 LAI / year \n
        !! transformed to a mortality estimate using a Weibull function
        boc_cbalance = an_boc_tvegdyn_mavg * one_day * one_year / 1.e6_wp &  
-                    - ( 1._wp + fresp_growth ) * lctlib%tau_leaf/lctlib%sla
+                      - ( 1._wp + fresp_growth ) * MIN(1.0_wp,1.0_wp/lctlib%tau_leaf)/lctlib%sla
        IF(boc_cbalance < -eps4 )THEN
           mortality_rate = mortality_rate & 
                            + ( 1._wp - exp ( - ( - lambda_mort_light * boc_cbalance ) ** k_mort_light)) & 
@@ -243,7 +243,7 @@ CONTAINS
        !> 1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
        !!
        establishment_rate = flim_light * flim_temp * flim_moist * & 
-                            lctlib%tau_seed_est / one_year / one_day * dtime
+                            1.0_wp/lctlib%tau_seed_est/one_day/one_year * dtime
        veg_establishment  = veg_pool_seed_bed * establishment_rate
 
     ENDIF

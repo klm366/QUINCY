@@ -24,7 +24,7 @@ In light-saturated conditions, gross photosynthesis ($A_g$) in C3 plants is calc
 \begin{align}
 A_j=& J_{max} \times m_1, where \\
 &J_{max} = n_1 \times N_{leaf},  \\
-&n_1 = g_{jmax}(T) \times \beta_{soil}^{ps} \times j_{max}^n \times fn_{et}, \\ 
+&n_1 = g_{jmax}(T) \times \beta_{soil}^{ps} \times \beta_{sinklim}^{ps} \times j_{max}^n \times fn_{et}, \\ 
 &m_1=\frac{c_i}{c_i+2\times \Gamma^{*}},  
 \end{align} 
 \end{subequations} 
@@ -35,7 +35,7 @@ where $c_i$ is the intercellular partial pressure of \chem{CO_2} (\unit{Pa}), se
 \beta_{soil}^{ps} = e^{-(\lambda^{soil}_{ps}*\Theta)^{k^{soil}_{ps}}},
 \end{equation}
 
-where $\lambda^{soil}_{gs}$ and $k^{soil}_{gs}$ are PFT-specific parameters (see lctlib), and $\Theta$ is the relative available soil moisture.
+where $\lambda^{soil}_{gs}$ and $k^{soil}_{gs}$ are PFT-specific parameters (see lctlib), and $\Theta$ is the relative available soil moisture, and $\beta_{sinklim}^{ps}$ is a signal for sink limitation as calculated in Eq. \ref{eq:beta_sinklim_ps}
 
 The temperature sensitivity of electron transport is assumed to follow the bell-shaped form described by \cite{June:2004kj}, where $T_{jmax}^{opt}$ is the optimum temperature for $J_{max}$ according to \cite{Friend:2010je}  
 
@@ -54,12 +54,12 @@ The Rubisco limited rate of photosynthesis ($A_v$) is given by
 \begin{align}
 A_c=& V_{cmax} \times m_2, where \\
 &V_{cmax} = n_2 \times N_{leaf} \\
-&n_2 =  f_{vcmax}(T) \times \beta_{soil}^{ps} \times v_{cmax}^n \times fn_{rub}, \\
+&n_2 =  f_{vcmax}(T) \times \beta_{soil}^{ps} \times \beta_{sinklim}^{ps} \times v_{cmax}^n \times fn_{rub}, \\
 &m_2 = \frac{c_i}{c_i + k_c (1+O_i/k_o)},
 \end{align} 
 \end{subequations} 
 
-where $O_i$ is the intercellular partial pressure of \chem{O_2}, and $k_c$ and $k_o$ are the Michaelis-Menten constants for \chem{CO_2} and \chem{O_2} respectively, each with their own temperature sensitivity (see Table \ref{tab:assimi:param}).
+where $O_i$ is the intercellular partial pressure of \chem{O_2}, and $k_c$ and $k_o$ are the Michaelis-Menten constants for \chem{CO_2} and \chem{O_2} respectively, each with their own temperature sensitivity (see Table \ref{tab:assimi:param}). 
 
 The N-specific light-saturated rate of C3 photosynthesis can then be calculated as 
 

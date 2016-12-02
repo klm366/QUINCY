@@ -2,32 +2,32 @@
 
 
 \begin{sidewaystable}
-\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|X|} % textwidth  
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
 \hline 
-Symbol & Parameter long name & Name in code & Unit & Equation & Value (8 PFT) & Citation \\ 
+Symbol & Parameter long name & Name in code & Unit & Citation \\ 
 \hline 
 
-\multicolumn{6}{l}{\bf Parameters from t\_slm\_veg\_param 1/2}\\
+\multicolumn{5}{l}{\bf Parameters from t\_slm\_veg\_param 1/2}\\
 \hline
-• & vegetation growth form & \texttt{growthform} & • & • & • & • \\
-• & photosynthetic path way  & \texttt{ps\_pathway} & • & • & • & • \\
-• & phenological type & \texttt{phenology\_type} & • & • & • & • \\
-• & average turnover (1/lifetime) of a leaf (1/years) & \texttt{tau\_leaf} & • & • & • & • \\
-• & turnover time of the fraction of sapwood that is in branches (10\%) & \texttt{tau\_branches} & 1/years & • & 0.01 & • \\
-• & turnover time of the sapwood pool & \texttt{tau\_sap\_wood} & 1/years & • & 0.05 & • \\
-• & average turnover (1/lifetime) of a fine root (1/years) & \texttt{tau\_fine\_root} & • & • & • & • \\
-• & average turnover (1/lifetime) of a coarse root (1/years) & \texttt{tau\_coarse\_root} & • & • & 0.1 & • \\
-• & turnover time of the fruit pool & \texttt{tau\_fruit} & 1/years & • & 1.0 & • \\
-• & turnover time of the seed bed to litter & \texttt{tau\_seed\_litter} & 1/years & • & 0.1 & • \\
-• & turnover time of the seed bed to establishment & \texttt{tau\_seed\_est} & 1/years & • & 0.3 & • \\
-• & specific leaf area of a plant & \texttt{sla} & $m^{2}$ / mol C & • & • & • \\
-• & default leaf C:N, if not calculated dynamically & \texttt{cn\_leaf} & molC/molN & • & • & Kattge et al. 2011, Table 5 \\
-• & default leaf N:P, if not calculated dynamically & \texttt{np\_leaf} & molN/molP & • & • & Kattge et al. 2011, Table 5 \\
-• & fraction of leaf N not used for photosynthesis & \texttt{k0\_fnl\_struc} & • & • & • & Friend 1997; tuned to match $A_{max}$/N in Kattge etal. 2012 \\
-• & initial value of the temperature optimum of electron transport and its shape parameter & \texttt{tjmax\_opt} & deg C & • & • & • \\              
-• & • & \texttt{tjmax\_omega} & • & • & • & • \\
-• & intercept of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g0} & • & • & • & • \\
-• & slope of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g1} & • & • & • & Ball and Berry rel., tuned to $A_{max}$/N in Lin et al. \\
+• & vegetation growth form & \texttt{growthform} & • & • \\
+• & photosynthetic pathway  & \texttt{ps\_pathway} & • & • \\
+• & phenological type & \texttt{phenology\_type} & • & • \\
+$\tau_{leaf}$  & average turnover time of a leaf & \texttt{tau\_leaf} & years & \cite{Kattge:2011fc} \\
+$\tau_{branch}$ & turnover time of the fraction of sapwood that is in branches & \texttt{tau\_branches} & years & • \\
+$\tau_{{sap}\_{wood}}$ & turnover time of the sapwood pool & \texttt{tau\_sap\_wood} & years  & • \\
+$\tau_{{fine}\_{root}}$ & average turnover time of a fine root & \texttt{tau\_fine\_root} & years & \cite{Ahrens:2014gi} \\
+$\tau_{{coarse}\_{root}}$ & average turnover time of a coarse root & \texttt{tau\_coarse\_root} & years & \cite{Ahrens:2014gi} \\
+$\tau_{fruit}$ & turnover time of the fruit pool & \texttt{tau\_fruit} & years & • \\
+$\tau_{{litter}\_{seed}}$ & turnover time of the seed bed to litter & \texttt{tau\_seed\_litter} & years &  • \\
+$\tau_{{est}\_{seed}}$ & turnover time of the seed bed to establishment & \texttt{tau\_seed\_est} & years & • \\
+$sla$ & specific leaf area of a plant & \texttt{sla} & $m^{2}$ / mol C & \cite{Kattge:2011fc}\\
+$\chi_{leaf}^{C:N}$ & default leaf C:N, if not calculated dynamically & \texttt{cn\_leaf} & molC/molN & \cite{Kattge:2011fc}, Table 5 \\
+$\chi_{leaf}^{C:N}$ & default leaf N:P, if not calculated dynamically & \texttt{np\_leaf} & molN/molP & \cite{Kattge:2011fc}, Table 5 \\
+• & fraction of leaf N not used for photosynthesis & \texttt{k0\_fnl\_struc} &  & Friend 1997; \cite{Kattge:2011fc} \\
+• & initial value of the temperature optimum of electron transport and its shape parameter & \texttt{tjmax\_opt} & deg C & • \\              
+• & • & \texttt{tjmax\_omega} & • & • \\
+$g0$ & intercept of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g0} & & \cite{Lin:2015er} \\
+$g1$ & slope of the An $\sim$ gs relationship (mmol/$\mu$mol) & \texttt{g1} & &  \cite{Lin:2015er} \\
 
 \hline 
 \end{tabularx}

@@ -34,8 +34,8 @@ MODULE mo_veg_constants
 
   ! Labile pool parameters 
   REAL(wp), SAVE :: &
-      ! default turnover rate of the labile carbo-hydrates (in 1/days)
-      k0_labile,           &  !< default turnover rate of the labile carbo-hydrates (in 1/days)
+      ! default turnover time of the labile carbo-hydrates (in days)
+      tau_labile,           &  !< default turnover time of the labile carbo-hydrates (in days)
       ! temperature scalar on turnover time of labile pool (1-exp(-(lambda * T)^k))
       ! tuned to reduce growth between 5°C to zero at 0°C
       lambda_labile_temp,   & !< lambda in temperature response function of labile pool 
@@ -57,20 +57,16 @@ MODULE mo_veg_constants
       lambda_sinklim_ps,    & !< lambda in photosynthesis response function to labile pool size 
       k_sinklim_ps            !< k in photosynthesis response function to labile pool size 
 
-  ! Resporption parameters
+  ! Resorption parameters
   REAL(wp), SAVE :: & 
-      ! default fraction of nutrient resporption before leaf shedding
-      resorption_default   ,     & !< default fraction of nutrient resporption before leaf shedding
-      ! default fraction of nutrient resporption before wood death 
-      resorption_wood   ,     & !< default fraction of nutrient resporption before wood death
-      ! ratio of root C:N to leaf C:N
-      root2leaf_cn   ,     & !< relative C:N of fine roots compared to leaves
-      ! ratio of root C:N to leaf C:N
-      wood2leaf_cn   ,     & !< relative C:N of woody biomass compared to leaves
-      ! ratio of root N:P to leaf N:P
-      root2leaf_np   ,     & !< relative N of fine roots compared to leaves
-      ! ratio of root N:P to leaf N:P
-      wood2leaf_np           !< relative N:P of woody biomass compared to leaves
+      resorp_fract_leaf,    & !< default fraction of nutrient resporption before leaf shedding
+      resorp_fract_wood,    & !< default fraction of nutrient resporption before wood death
+      root2leaf_cn,         & !< relative C:N of fine roots compared to leaves (mol C / mol N)
+      wood2leaf_cn,         & !< relative C:N of sapwood biomass compared to leaves (mol C / mol N)
+      root2leaf_np,         & !< relative N:P of fine roots compared to leaves (mol N / mol P)
+      wood2leaf_np,         & !< relative N:P of sapwood biomass compared to leaves (mol N / mol P)
+      tau_nutrient_recycling  !< time scale of enzyme, RNA etc. turnover (as in return to labile pool!, days) 
+
 
   ! Parameters concerning N uptake calculations
   REAL(wp), SAVE :: &
@@ -96,25 +92,17 @@ MODULE mo_veg_constants
 
   ! parameters used for phenology calculations
   REAL(wp), SAVE :: & 
-      ! minimum LAI for phenology calculations
-      min_lai  ,     & !< minimum LAI beyond which all leaves are shed
-      target_lai_max  ,     & !< maximum LAI target for reserve use calculations 
-      ! minimum leaf age beyond which phenological senescence can set in (days) 
-      min_leaf_age  ,     & !< minimum leaf age before senescence is permitted (days) 
-      ! temperature threshold for growing degree days 
+      min_lai  ,                 & !< minimum LAI beyond which all leaves are shed
+      target_lai_max  ,          & !< maximum LAI target for reserve use calculations 
+      min_leaf_age  ,            & !< minimum leaf age before senescence is permitted (days) 
       gdd_t_air_threshold  ,     & !< temperature threshold for growing degree days 
-      ! maximal GDD requirement (assuming no dormance) 
-      gdd_req_max  ,     & !< maximum GDD requirement
-      ! temperature threshold for growing degree days 
-      k_gdd_dormance  ,     & !< exponent factor in GDD - nd_dormance equation 
-      ! weekly temperature initiating leaf senescence
-      t_air_senescence  ,     & !< weekly air temperature initiating leaf senescence
-      ! value of beta_soil for leaf flushing for trees
-      beta_soil_flush_grass  ,     & !< value of beta_soil at leaf flushing for grass
-      ! value of beta_soil for leaf flushing for trees
-      beta_soil_flush_tree  ,     & !< value of beta_soil at leaf flushing for trees 
-      ! value of beta_soil at shedding of leaves for trees
-      beta_soil_senescence_tree      !< value of beta_soil at leaf shedding for trees
+      gdd_req_max  ,             & !< maximum GDD requirement
+      k_gdd_dormance  ,          & !< exponent factor in GDD - nd_dormance equation 
+      t_air_senescence  ,        & !< weekly air temperature initiating leaf senescence
+      beta_soil_flush_grass  ,   & !< value of beta_soil at leaf flushing for grass
+      beta_soil_flush_tree  ,    & !< value of beta_soil at leaf flushing for trees 
+      beta_soil_senescence_tree, & !< value of beta_soil at leaf shedding for trees
+      max_leaf_shedding_rate       !< maximum rate of leaf shedding (1/days) 
 
   ! vegetation dynamics
   REAL(wp), SAVE :: & 
@@ -147,16 +135,9 @@ MODULE mo_veg_constants
       ! minimum fraction of allocation going to fruit (flowers etc.)
       k1_fruit_alloc            !< minimum fraction of allocation going to fruit (flowers etc.)
 
-  ! moved here from mo_assimi_constants at about r204
-  REAL(wp), SAVE :: & 
-      tau_canopy_acclimation      !< time scale of acclimation of canopy processes (N, P, T) (days)
-
   ! soil pools  (may be moved to mo_soil_constants later ?)
   REAL(wp), SAVE :: & 
-      ! soil litter turnover pool, s equivalent to 1 year
-      tau_litter      !< soil litter pool turnover time
-
-  REAL(wp), SAVE :: & 
+      tau_litter,   &     !< soil litter pool turnover time (years)
       theta_sat,    &     !< saturated soil moisture 
       theta_wilt,   &     !< wilting point 
       k_soil_phi1,  &     !< coefficient for calculating soil water potential 
@@ -205,7 +186,7 @@ CONTAINS
       t_maint_k3        = 227.13_wp 
 
   ! Labile pool parameters 
-      k0_labile               = 0.2_wp  
+      tau_labile              = 5.0_wp  
       lambda_labile_temp      = 0.5_wp 
       k_labile_temp           = 2.0_wp 
       lambda_labile_theta     = 0.1_wp
@@ -220,8 +201,8 @@ CONTAINS
       k_sinklim_ps            = 2.0_wp 
 
   ! Resorption parameters
-      resorption_default    = 0.5_wp  
-      resorption_wood       = 0.2_wp 
+      resorp_fract_leaf     = 0.5_wp  
+      resorp_fract_wood     = 0.2_wp 
       root2leaf_cn          = 0.85_wp 
       wood2leaf_cn          = 0.145_wp 
       root2leaf_np          = 1.0_wp 
@@ -251,6 +232,7 @@ CONTAINS
       beta_soil_flush_grass       = 0.9_wp 
       beta_soil_flush_tree        = 0.98_wp 
       beta_soil_senescence_tree   = 0.5_wp
+      max_leaf_shedding_rate      = 0.2_wp
 
   ! vegetation dynamics
       background_mort_rate_tree   = 0.01_wp 
@@ -281,10 +263,10 @@ CONTAINS
       k_soil_phi2 = -4.55_wp
 
   ! moved here from mo_assimi_constants
-      tau_canopy_acclimation      = 10._wp 
+      tau_nutrient_recycling      = 10._wp 
 
-  ! soil pools (may move to mo_soil_constants later) !
-      tau_litter                  = 1.0_wp * 3600.0_wp * 24.0_wp * 365.0_wp  
+  ! soil pools (may move to mo_soil_constants later, years) !
+      tau_litter                  = 1.0_wp 
 
   ! parameters for changes in canopy N fractions
 !@todo:should this be 1/20days?

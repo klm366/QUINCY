@@ -180,7 +180,7 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_soil, t_slm_tile, t_model
-    USE mo_base_constants,        ONLY: dtime
+    USE mo_base_constants,        ONLY: dtime,one_day,one_year
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
     ! Use of process memories
@@ -215,7 +215,7 @@ CONTAINS
     !> 1 Calculate soil litter pool decomposition. Currently only for N
     !!    
     !! Needs temperature and moisture correction
-    soil%loss%litter = 1.0_wp/tau_litter * soil%pool%litter
+    soil%loss%litter = 1.0_wp/tau_litter/one_day/one_year * soil%pool%litter * dtime
     
     !> 2 Update soil litter pool. Probably needs splitting into structural and non-structural litter
     !!
@@ -289,7 +289,7 @@ CONTAINS
     soil%pool%litter%carbon14 = soil%pool%litter%carbon14 + veg%litterfall%reserve%carbon14%ptr
     soil%pool%litter%nitrogen15 = soil%pool%litter%nitrogen15 + veg%litterfall%reserve%nitrogen15%ptr
 
-    soil%pool%litter = soil%pool%litter - soil%loss%litter * dtime
+    soil%pool%litter = soil%pool%litter - soil%loss%litter 
     
     !> 3 Update mineral pool
     !! 
@@ -297,7 +297,7 @@ CONTAINS
     IF(veg_config%n_uptake_scheme=='prescribed') THEN 
        soil%ammonium = 0.2_wp
     ELSE
-       soil%ammonium = soil%ammonium   + soil%loss%litter%nitrogen*dtime*  1.e3_wp / soil_depth * 1.e-3_wp
+       soil%ammonium = soil%ammonium   + soil%loss%litter%nitrogen *  1.e3_wp / soil_depth * 1.e-3_wp
        soil%ammonium = soil%ammonium   - veg%uptake_n%ptr * dtime/1.e6_wp * 1.e3_wp / soil_depth * 1.e-3_wp 
     ENDIF
 

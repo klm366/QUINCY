@@ -50,7 +50,8 @@ MODULE mo_jsb_lctlib_class
      REAL(wp) :: weibull_k_soil_ps
      REAL(wp) :: lambda_soil_gs
      REAL(wp) :: weibull_k_soil_gs
-     REAL(wp) :: tau_branches
+     REAL(wp) :: tau_branch
+     REAL(wp) :: frac_sapwood_branch
      REAL(wp) :: tau_sap_wood
      REAL(wp) :: wood_density 
      REAL(wp) :: k_latosa 
@@ -127,10 +128,10 @@ CONTAINS
       ! photosynthetic path way 
       lctlib(1:npft)%phenology_type = & 
       (/ievergreen,ievergreen,iraingreen,isummergreen,ievergreen,isummergreen,iperennial,iperennial/)
-      ! average turnover (1/lifetime) of a leaf (1/years) 
+      ! average turnover time of a leaf (years) 
       ! From Kattge et al. 2011, Table 5, including conversion from month lifetime to annual turnover
-      lctlib(1:npft)%tau_leaf = 12._wp / & 
-      (/16.83_wp,15.88_wp,5.83_wp,5.83_wp,39.7_wp,6.08_wp,3.85_wp,3.85_wp/)
+      lctlib(1:npft)%tau_leaf = & 
+      (/16.83_wp,15.88_wp,5.83_wp,5.83_wp,39.7_wp,6.08_wp,3.85_wp,3.85_wp/) / 12.0_wp
       ! specific leaf area of a plant (m2 / mol C) 
       ! From Kattge et al. 2011, Table 5, including conversion from mm/mgDW to m2/mol
       lctlib(1:npft)%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * &
@@ -189,10 +190,13 @@ CONTAINS
       ! fractional water availability
       lctlib(1:npft)%lambda_soil_gs = lctlib(1:npft)%lambda_soil_ps
       lctlib(1:npft)%weibull_k_soil_gs = lctlib(1:npft)%weibull_k_soil_ps
-      ! turnover time of the fraction of sapwood that is in branches (10%) (1/years)
-      lctlib(1:npft)%tau_branches = 0.01_wp
-      ! turnover time of the sapwood pool (1/years)
-      lctlib(1:npft)%tau_sap_wood = 0.025_wp
+      ! turnover time of the fraction of sapwood that is in branches (years)
+      lctlib(1:npft)%tau_branch = 10._wp
+      ! fraction of sapwood that is in branches 
+      lctlib(1:npft)%frac_sapwood_branch = & 
+      (/0.1_wp,0.1_wp,0.1_wp,0.1_wp,0.1_wp,0.1_wp,1.0_wp,1.0_wp/) 
+      ! turnover time of the sapwood pool (years)
+      lctlib(1:npft)%tau_sap_wood = 40.0_wp 
       ! wood density (mol C / m3)
       lctlib(1:npft)%wood_density = & 
       (/0.3_wp,0.3_wp,0.3_wp,0.3_wp,0.3_wp,0.3_wp,0.22_wp,0.22_wp/) * 1000000._wp/ molar_mass_C
@@ -212,11 +216,11 @@ CONTAINS
         ELSEWHERE
           lctlib(1:npft)%k2_fruit_alloc = 0.2_wp 
       END WHERE
-      ! average turnover (1/lifetime) of a fine root (1/years) 
+      ! average turnover time of a fine root (years), Ahrends et al. 2014, NP 
       lctlib(1:npft)%tau_fine_root = & 
-      (/0.7_wp,0.7_wp,0.7_wp,0.7_wp,0.7_wp,0.7_wp,1.2_wp,1.2_wp/) 
-      ! average turnover (1/lifetime) of a coarse root (1/years) 
-      lctlib(1:npft)%tau_coarse_root = 0.1_wp 
+      (/0.7_wp,0.7_wp,0.7_wp,0.7_wp,0.7_wp,0.7_wp,0.7_wp,0.7_wp/) 
+      ! average turnover time of a coarse root (years), Ahrends et al. 2014, NP 
+      lctlib(1:npft)%tau_coarse_root = 8.0_wp 
       ! paramter in height diameter relationship 
       lctlib(1:npft)%allom_k1 = & 
       (/55.0_wp,55.0_wp,55.0_wp,55.0_wp,55.0_wp,55.0_wp,20._wp,20._wp/) 
@@ -232,12 +236,12 @@ CONTAINS
       ! @todo check tropics check grasses 
       lctlib(1:npft)%k_sapwood = 1.e-3 * & 
       (/3.0_wp,3.0_wp,3.0_wp,3.0_wp,1.3_wp,1.3_wp,0._wp,0._wp/) 
-      ! turnover time of the fruit pool (1/years)
+      ! turnover time of the fruit pool (years)
       lctlib(1:npft)%tau_fruit = 1.0_wp
-      ! turnover time of the seed bed to litter (1/years)
-      lctlib(1:npft)%tau_seed_litter = 0.5_wp
-      ! turnover time of the seed bed to establishment (1/years)
-      lctlib(1:npft)%tau_seed_est = 0.1_wp
+      ! turnover time of the seed bed to litter (years)
+      lctlib(1:npft)%tau_seed_litter = 2.0_wp
+      ! turnover time of the seed bed to establishment (years)
+      lctlib(1:npft)%tau_seed_est = 10.0_wp
       ! vmax of N uptake (~µmol N / mol C / s)
       lctlib(1:npft)%vmax_uptake_n = 14._wp !714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
       ! low-affinity uptake (L/mmol) 
@@ -264,8 +268,8 @@ CONTAINS
       DO ipft=1,npft
         IF(lctlib(ipft)%growthform == itree) THEN
           lctlib(ipft)%c0_allom = SQRT(lctlib(ipft)%k_root/lctlib(ipft)%k_sapwood * & 
-                                lctlib(ipft)%tau_fine_root/lctlib(ipft)%tau_sap_wood * lctlib(ipft)%wood_density) * & 
-                                lctlib(ipft)%tau_sap_wood/lctlib(ipft)%tau_fine_root
+                                lctlib(ipft)%tau_sap_wood/lctlib(ipft)%tau_fine_root * lctlib(ipft)%wood_density) * & 
+                                lctlib(ipft)%tau_fine_root/lctlib(ipft)%tau_sap_wood
         ELSE
           lctlib(ipft)%c0_allom = 0.0_wp
         END IF

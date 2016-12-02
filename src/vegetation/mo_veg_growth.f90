@@ -259,7 +259,7 @@ CONTAINS
                                     lambda_labile_theta , &
                                     k_labile_temp       , & 
                                     k_labile_theta      , &
-                                    k0_labile
+                                    tau_labile
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp),   INTENT(in)    :: t_air                  !< air temperature (K) 
@@ -277,7 +277,7 @@ CONTAINS
     ENDIF
     fmoist = 1.0_wp - exp(-(lambda_labile_theta * theta)**k_labile_theta) 
     IF(growing_season)THEN
-        kstar_labile = ftemp * fmoist * k0_labile
+        kstar_labile = ftemp * fmoist / tau_labile
       ELSE 
         kstar_labile = 0.0_wp
     ENDIF
@@ -733,7 +733,7 @@ CONTAINS
     !!  scaled to the default turnover time of the labile pool
     !! 
     !! for N and P this corresponds to the current growth C:N:P  
-    target_labile_pool_carbon     = MAX( gpp_mavg , rm_mavg ) * one_day / 1.e6_wp / k0_labile
+    target_labile_pool_carbon     = MAX( gpp_mavg , rm_mavg ) * one_day / 1.e6_wp * tau_labile
     target_labile_pool_nitrogen   = veg_pool_labile%carbon%ptr    * growth_req_n_mavg
     target_labile_pool_phosphorus = veg_pool_labile%nitrogen%ptr  * growth_req_p_mavg
 
@@ -742,12 +742,12 @@ CONTAINS
     !! For the reserve pool, this is the C:N:P needed to regrow one year worth of folige and roots,
     !! accounting for losses to respiration and the nutrients currently required to grow these
     target_reserve_pool_carbon = target_lai / lctlib%sla * & 
-           ( MIN(1.0_wp,lctlib%tau_leaf) + lctlib%tau_fine_root / leaf2root_mass_ratio ) * (1._wp + fresp_growth)
+           ( MIN(1.0_wp,1.0_wp/lctlib%tau_leaf) + leaf2root_mass_ratio/lctlib%tau_fine_root ) * (1._wp + fresp_growth)
     target_reserve_pool_nitrogen = target_lai / lctlib%sla * & 
-           ( MIN(1.0_wp,lctlib%tau_leaf) / target_cn_leaf + lctlib%tau_fine_root / leaf2root_mass_ratio / target_cn_fine_root) 
+           ( MIN(1.0_wp,1.0_wp/lctlib%tau_leaf) / target_cn_leaf + leaf2root_mass_ratio/lctlib%tau_fine_root / target_cn_fine_root) 
     target_reserve_pool_phosphorus = target_lai / lctlib%sla * & 
-           ( MIN(1.0_wp,lctlib%tau_leaf) / target_cn_leaf / target_np_leaf & 
-             + lctlib%tau_fine_root / leaf2root_mass_ratio / target_cn_fine_root / target_np_fine_root)  
+           ( MIN(1.0_wp,1.0_wp/lctlib%tau_leaf) / target_cn_leaf / target_np_leaf & 
+             + leaf2root_mass_ratio/lctlib%tau_fine_root / target_cn_fine_root / target_np_fine_root)  
 
     !> 2.0 carbon reserve flow
     !! 
@@ -781,9 +781,9 @@ CONTAINS
     !> 2.2 convert phi to turnover times (1/timestep)
     !! 
     !! taking account that flushing can only happen if the meristem is active
-    phi_phenology = phi_phenology * kstar_labile * dtime/one_day   
-    phi_maintenance = phi_maintenance * k0_labile * dtime/one_day
-    phi_storage = phi_storage * k0_labile * dtime/one_day
+    phi_phenology = phi_phenology * kstar_labile/one_day * dtime
+    phi_maintenance = phi_maintenance / tau_labile/one_day * dtime
+    phi_storage = phi_storage / tau_labile/one_day * dtime
 
     veg_reserve_use%carbon%ptr   = ((phi_phenology + phi_maintenance) * veg_pool_reserve%carbon%ptr   - & 
                                  phi_storage   * veg_pool_labile%carbon%ptr) 
@@ -806,9 +806,9 @@ CONTAINS
                        - exp(-(lambda_phistore)**k_phistore)
        
     veg_reserve_use%nitrogen%ptr    = (phi_maintenance * veg_pool_reserve%nitrogen%ptr - & 
-                                    phi_storage * veg_pool_labile%nitrogen%ptr) * k0_labile * dtime/one_day
+                                    phi_storage * veg_pool_labile%nitrogen%ptr) / tau_labile/one_day * dtime
     veg_reserve_use%nitrogen15%ptr  = (phi_maintenance * veg_pool_reserve%nitrogen15%ptr - & 
-                                    phi_storage * veg_pool_labile%nitrogen15%ptr) * k0_labile * dtime/one_day
+                                    phi_storage * veg_pool_labile%nitrogen15%ptr) / tau_labile/one_day * dtime
 
     !> 4.0 net transfer of P from labile to reserve
     !! 
@@ -824,17 +824,17 @@ CONTAINS
                        - exp(-(lambda_phistore)**k_phistore)
 
     veg_reserve_use%phosphorus%ptr = (phi_maintenance * veg_pool_reserve%phosphorus%ptr - & 
-                                  phi_storage * veg_pool_labile%phosphorus%ptr) * k0_labile * dtime/one_day
+                                  phi_storage * veg_pool_labile%phosphorus%ptr) / tau_labile/one_day * dtime
 
     !> 5.0 signal of carbon saturation to photosynthesis
     !!
     !!
-    IF(target_labile_pool_carbon>eps8 .AND. veg_pool_labile%carbon%ptr>target_labile_pool_carbon)THEN
-        hlp1=(veg_pool_labile%carbon%ptr-target_labile_pool_carbon)/target_labile_pool_carbon
-        beta_sinklim_ps=exp(-(lambda_sinklim_ps*hlp1)**k_sinklim_ps)
-    ELSE 
+    !IF(target_labile_pool_carbon>eps8 .AND. veg_pool_labile%carbon%ptr>target_labile_pool_carbon)THEN
+    !    hlp1=(veg_pool_labile%carbon%ptr-target_labile_pool_carbon)/target_labile_pool_carbon
+    !    beta_sinklim_ps=exp(-(lambda_sinklim_ps*hlp1)**k_sinklim_ps)
+    !ELSE 
         beta_sinklim_ps=1.0_wp
-    ENDIF
+    !ENDIF
 
 
   END SUBROUTINE calc_reserve_useage
@@ -1217,7 +1217,7 @@ CONTAINS
     ! actual rate of maintentance respiration (µmol C / m2 / s), constrained to 
     ! support leaf respiration, but not more than the current labile pool turnover
     maint_respiration = MAX(maint_respiration_leaf                                      , & 
-                                      &   MIN(k0_labile / one_day * veg_pool%labile%carbon%ptr * 1.e6_wp, &
+                                      &   MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon%ptr * 1.e6_wp, &
                                       &       maint_respiration_pot)                              &
                                       &   )
 
@@ -1225,7 +1225,7 @@ CONTAINS
     IF(veg_config%n_uptake_scheme == 'optimal' .OR. veg_config%n_uptake_scheme == 'resistance') THEN
       n_processing_respiration_pot = uptake_n * (transform_cost_nh4 + transform_cost_no3)/2.0_wp + & 
                                      n_fixation * cost_n_fixation
-      n_processing_respiration_act = MIN(k0_labile / one_day * veg_pool%labile%carbon%ptr * 1.e6_wp, & 
+      n_processing_respiration_act = MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon%ptr * 1.e6_wp, & 
                                           n_processing_respiration_pot)
        ! adjust N uptake to C expenditure
        IF(n_processing_respiration_pot > eps8 .AND. n_processing_respiration_pot > n_processing_respiration_act) THEN 
