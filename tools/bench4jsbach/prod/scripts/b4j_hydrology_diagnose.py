@@ -50,6 +50,9 @@ cdo.sub ( input  = "%s %s" % ( kwargs [ "can.E_yearsummean" ], kwargs [ "ref.E_y
 cdo.sub ( input  = "%s %s" % ( kwargs [ "can.P_yearsummean" ], kwargs [ "ref.P_yearsummean" ]),
           output = kwargs ["P_yearsumdiff"  ])
 
+cdo.sub ( input  = "%s %s" % ( kwargs [ "can.RD_yearsummean" ], kwargs [ "ref.RD_yearsummean" ]),
+          output = kwargs ["RD_yearsumdiff"  ])
+
 ##### zonal mean of differences
 cdo.zonmean ( input  = "%s" % ( kwargs [ "E_yearsumdiff" ]),
               output = kwargs [ "E_ysd-zonmean" ])
@@ -57,12 +60,18 @@ cdo.zonmean ( input  = "%s" % ( kwargs [ "E_yearsumdiff" ]),
 cdo.zonmean ( input  = "%s" % ( kwargs [ "P_yearsumdiff" ]),
               output = kwargs [ "P_ysd-zonmean" ])
 
-##### global mean of differences
+cdo.zonmean ( input  = "%s" % ( kwargs [ "RD_yearsumdiff" ]),
+              output = kwargs [ "RD_ysd-zonmean" ])
+
+##### field mean of differences
 cdo.fldmean ( input  = "%s" % ( kwargs [ "E_yearsumdiff" ]),
-              output = kwargs [ "E_ysdgm" ])
+              output = kwargs [ "E_ysdfm" ])
 
 cdo.fldmean ( input  = "%s" % ( kwargs [ "P_yearsumdiff" ]),
-              output = kwargs [ "P_ysdgm" ])
+              output = kwargs [ "P_ysdfm" ])
+
+cdo.fldmean ( input  = "%s" % ( kwargs [ "RD_yearsumdiff" ]),
+              output = kwargs [ "RD_ysdfm" ])
 
 
 #####

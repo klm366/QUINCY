@@ -146,13 +146,7 @@ def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath ):
     
     
 
-def hist_plot ( alldat, index, title ):
-    
-    #darkbrown  = '#603605' #'#c6903f' 
-    #lightbrown = '#c6903f' #'#36cd92'
-    #lightgreen = '#6fc1b6' #'#ceece8'
-    #darkgreen  = '#00473c' #'#6fc1b6'
-    
+def hist_plot ( alldat, unit, index, title ):
     
     darkbrown  = '#c6903f' 
     lightbrown = '#e6cd92'
@@ -160,13 +154,22 @@ def hist_plot ( alldat, index, title ):
     darkgreen  = '#6fc1b6'
     
     colorlist  = [ darkbrown, lightgreen, lightbrown, darkgreen ]
+
+    varname_E  = "evapotranspiration"
+    varname_P  = "precip_all"
+    varname_RD = "disch"
+
+    print "hist_plot, args:"
+    print alldat
+    print index
+    print title
     
     df = DataFrame ( alldat, 
-                    columns = [ varname_E + " $E$", 
-                                varname_P + " $P$", 
-                                varname_RD  + " $RD$", 
-                                "$\\sum P-E-RD$" ], 
-                      index = index )
+                     columns = [ varname_E + " $E$", 
+                                 varname_P + " $P$", 
+                                 varname_RD  + " $RD$", 
+                                 "$\\sum P-E-RD$" ], 
+                     index = index )
 
     ax = df.plot ( kind = 'bar', color = colorlist, rot = 0 )
     plt.title ( title, y = 1.08 )
@@ -176,8 +179,8 @@ def hist_plot ( alldat, index, title ):
     plt.grid ( 'on')
     plt.axhline ( 0, color = 'k' )
     lgd = plt.legend (numpoints = 1,  
-                         loc = 2,                  
-                         bbox_to_anchor=(1.05,1))
+                      loc = 2,                  
+                      bbox_to_anchor=(1.05,1))
     plt.show ()
     plt.close ()
 

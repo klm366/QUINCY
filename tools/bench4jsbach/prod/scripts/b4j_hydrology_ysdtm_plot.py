@@ -42,7 +42,7 @@ print print_item_or_list_rec ( kwargs, 3 )
 #####
 varname    = "evapotranspiration"
 unit       = "mm/year"
-title      = "$ysdzm_{C_{%s}R}$ and $ysdgm_{C_{%s}R}$" % \
+title      = "$ysdzm_{C_{%s}R}$ and $ysdfm_{C_{%s}R}$" % \
              ( kwargs [ "canno" ], kwargs [ "canno" ])
 
 token      = "E_ysd-zonmean_ref"
@@ -62,7 +62,7 @@ zon_plot ( title, varname, inpathlist, unit, legendlist, kwargs [ "E_ysd-zonmean
 
 varname    = "precip_acc"
 unit       = "mm/day"
-title      = "$ysdzm_{C_{%s}R}$ and $ysdgm_{C_{%s}R}$" % \
+title      = "$ysdzm_{C_{%s}R}$ and $ysdfm_{C_{%s}R}$" % \
              ( kwargs [ "canno" ], kwargs [ "canno" ])
 
 token      = "P_ysd-zonmean_ref"
