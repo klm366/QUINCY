@@ -24,9 +24,8 @@ MODULE mo_srf_init
   USE mo_impl_constants,    ONLY: LAND_BOUNDARY, SEA_BOUNDARY, SEA
 #endif
 
-  dsl4jsb_Use_processes SRF, HD
+  dsl4jsb_Use_processes SRF
   dsl4jsb_Use_config(SRF)
-  dsl4jsb_Use_config(HD)
   dsl4jsb_Use_memory(SRF)
 
   IMPLICIT NONE
@@ -58,7 +57,6 @@ CONTAINS
 
     TYPE(t_jsb_model),        POINTER :: model
     dsl4jsb_Def_config(SRF)
-    dsl4jsb_Def_config(HD)
     dsl4jsb_Def_memory(SRF)
 
     REAL(wp), POINTER :: t_srf(:,:), t_srf_mon(:,:,:), cell_sea_land_mask(:,:)
@@ -80,7 +78,6 @@ CONTAINS
 
     ! Get srf config
     dsl4jsb_Get_config(SRF)
-    dsl4jsb_Get_config(HD)
 
     IF (.NOT. dsl4jsb_Config(SRF)%active) RETURN
 
@@ -129,25 +126,23 @@ CONTAINS
     CALL jsb_netcdf_close_file(input_file)
 
 #ifndef __NO_JSBACH_HD__
-    IF (dsl4jsb_Config(HD)%active) THEN
 
-      input_file = jsb_netcdf_open_input('r2b4_amip.nc', model%id)    !vg Name !!!
+    input_file = jsb_netcdf_open_input('r2b4_amip.nc', model%id)    !vg Name !!!
 
-      ! coastal cells of the land and ocean
-      cell_sea_land_mask => jsb_netcdf_read_2d( &
-        & input_file,                                &
-        & variable_name='cell_sea_land_mask')
-      dsl4jsb_var2D_onDomain(SRF,coast_land)  = &
-        MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == LAND_BOUNDARY)
-      dsl4jsb_var2D_onDomain(SRF,coast_ocean) = &
-        MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
-      dsl4jsb_var2D_onDomain(SRF,ocean)       = MERGE(1._wp, 0._wp, &
-        cell_sea_land_mask(:,:) == SEA .OR. cell_sea_land_mask(:,:) == SEA_BOUNDARY)
-      DEALLOCATE(cell_sea_land_mask)
+    ! coastal cells of the land and ocean
+    cell_sea_land_mask => jsb_netcdf_read_2d( &
+      & input_file,                                &
+      & variable_name='cell_sea_land_mask')
+    dsl4jsb_var2D_onDomain(SRF,coast_land)  = &
+      MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == LAND_BOUNDARY)
+    dsl4jsb_var2D_onDomain(SRF,coast_ocean) = &
+      MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+    dsl4jsb_var2D_onDomain(SRF,ocean)       = MERGE(1._wp, 0._wp, &
+      cell_sea_land_mask(:,:) == SEA .OR. cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+    DEALLOCATE(cell_sea_land_mask)
 
-      CALL jsb_netcdf_close_file(input_file)
+    CALL jsb_netcdf_close_file(input_file)
 
-    END IF
 #endif
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SRF)%bc_filename), model%id)
