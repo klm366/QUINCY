@@ -342,7 +342,7 @@ CONTAINS
       veg%target_np_leaf%ptr             = lctlib%np_leaf
 
       IF(veg_config%flag_start_bareground)THEN
-         tile%soil%pool%litter%nitrogen   = 0.0_wp
+         tile%soil%pool%litter%nitrogen   = 0.5_wp
          veg%init_pool%carbon%ptr         = lctlib%seed_size * 10.0_wp
          veg%dens_ind%ptr                 = 0.0_wp 
       ELSE
@@ -377,7 +377,6 @@ CONTAINS
       ELSE
          veg%pool%reserve  = veg%init_pool 
       END IF
-       tile%soil%pool%litter%nitrogen      = 5._wp
 
   END SUBROUTINE init_slm_plant
 

@@ -103,7 +103,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   FUNCTION init_lctlib() RESULT(lctlib)
 
-    USE mo_base_constants,          ONLY: npft
+    USE mo_base_constants,          ONLY: npft, one_day, one_year
     USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
     USE mo_atmland_constants
     USE mo_veg_constants
@@ -222,20 +222,20 @@ CONTAINS
 
 ! N uptake parameters
       ! vmax of N uptake (~µmol N / mol C / s)
-      lctlib(1:npft)%vmax_uptake_n = 14._wp !714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
+      lctlib(1:npft)%vmax_uptake_n = 0.14_wp !714.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
       ! low-affinity uptake (L/mmol) 
       lctlib(1:npft)%soil_n_aff1 = 0.105_wp      ! tuned from OCN's 0.05 m2/gN assuming 150 L per m2
       ! half saturation of high-affinity uptake (mmol/L) 
       lctlib(1:npft)%soil_n_aff2 = 0.4_wp        ! tuned from OCN's 0.84 gN/m2 assuming 150 L per m2
       ! vmax of P uptake (~µmol P / mol C / s)
-      lctlib(1:npft)%vmax_uptake_p = 14.28_wp   ! tuned from OCN's 1.5 gN/gC/1800s
+      lctlib(1:npft)%vmax_uptake_p = 0.1428_wp   ! tuned from OCN's 1.5 gN/gC/1800s
       ! low-affinity uptake (L/mmol) 
       lctlib(1:npft)%soil_p_aff1 = 0.105_wp      ! tuned from OCN's 0.05 m2/gN assuming 150 L per m2
       ! half saturation of high-affinity uptake (mmol/L) 
       lctlib(1:npft)%soil_p_aff2 = 0.4_wp        ! tuned from OCN's 0.84 gN/m2 assuming 150 L per m2
       ! placeholder constant BNf rate, required to keep soil NH4 at constant levels mumol N s-1 
-      lctlib(1:npft)%bnf_base = & 
-      (/2.6_wp, 2.6_wp, 2.6_wp, 5.0_wp, 2.6_wp, 2.6_wp, 2.6_wp, 2.6_wp/) * 1.e-2_wp *0.25_wp
+      lctlib(1:npft)%bnf_base = 2.0_wp / molar_mass_N / one_day / one_year * 1.e6
+      !(/2.6_wp, 2.6_wp, 2.6_wp, 5.0_wp, 2.6_wp, 2.6_wp, 2.6_wp, 2.6_wp/) * 1.e-2_wp *0.25_wp
 
 ! Vegetation dynamics parameters
       ! parameter in the Weibull function controlling light-limited establishment 

@@ -190,8 +190,7 @@ CONTAINS
     ! set zero
     CALL veg%total_biomass%init(0.0_wp)
 
-    veg%total_biomass = veg%total_biomass + &
-                          veg%pool%leaf        + &     !< elements of leaf
+    veg%total_biomass =   veg%pool%leaf        + &     !< elements of leaf
                           veg%pool%fine_root   + &     !< elements of fine_root
                           veg%pool%coarse_root + &     !< elements of coarse_root
                           veg%pool%sap_wood    + &     !< elements of sap_wood
