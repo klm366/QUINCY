@@ -621,9 +621,10 @@ CONTAINS
   !! 
   !! 
   lun = lun + 1
-  WRITE(lun,*) 'T A GC CI' 
+  WRITE(lun,*) 'T A R GC CI' 
   t_air = - 5.0_wp + Tzero
   hlp1 = veg%t_jmax_opt_mavg%ptr
+  veg%lai%ptr = 1._wp
   DO i = 1,70
 
      t_air = t_air + 1.0_wp 
@@ -638,8 +639,8 @@ CONTAINS
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') t_air, &  
-           veg%an%ptr,veg%gc%ptr*1000._wp, &
+     WRITE(lun,'(5F16.7)') t_air, &  
+           veg%an%ptr,veg%maint_respiration_leaf%ptr,veg%gc%ptr*1000._wp, &
            veg%ci%ptr/co2_mixing_ratio 
 
   END DO

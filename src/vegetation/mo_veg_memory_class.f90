@@ -363,7 +363,10 @@ MODULE mo_veg_memory_class
     ! 1.8 memory over timescale of vegetation dynamics 
     TYPE(t_jsb_var_real1d)          :: &   
                                     an_boc_tvegdyn_mavg                 !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
-    ! 1.6 memory of certain variables, temperature, ...
+    ! 1.9 memory of variables for respiration accclimation 
+    TYPE(t_jsb_var_real1d)          :: &   
+                                    t_air_tacclim_mavg                  !< average temperature for respiration acclimation
+    ! 1.10 memory of certain variables, temperature, ...
     TYPE(t_jsb_var_real1d)          :: &   
                                     t_air_week_mavg                , &  !< avrg air temperature across 7 days
                                     t_air_month_mavg               , &  !< avrg air temperature across 30 days
@@ -1902,6 +1905,9 @@ CONTAINS
   
       CALL slm_add_var(mem, 'an_boc_tvegdyn_mavg', mem%an_boc_tvegdyn_mavg, &
             initval_r=5.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 't_air_tacclim_mavg', mem%t_air_tacclim_mavg, &
+            initval_r=283.15_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_air_week_mavg', mem%t_air_week_mavg, &
             initval_r=283.15_wp) ! initvalue

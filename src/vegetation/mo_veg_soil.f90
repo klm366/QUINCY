@@ -161,6 +161,7 @@ CONTAINS
     !> 3.0 Calculate potential N uptake per unit root
     !!
     veg%unit_uptake_n%ptr = lctlib%vmax_uptake_n * &
+                               veg%demand_uptake_n_tuptake_mavg%ptr * & 
                                soil%ammonium * ( lctlib%soil_n_aff1 + & 
                                1._wp / ( lctlib%soil_n_aff2 + soil%ammonium ))
     veg%unit_uptake_p%ptr = lctlib%vmax_uptake_p * &
@@ -297,8 +298,8 @@ CONTAINS
     IF(veg_config%n_uptake_scheme=='prescribed') THEN 
        soil%ammonium = 0.2_wp
     ELSE
-       soil%ammonium = soil%ammonium   + soil%loss%litter%nitrogen *  1.e3_wp / soil_depth * 1.e-3_wp
-       soil%ammonium = soil%ammonium   - veg%uptake_n%ptr * dtime/1.e6_wp * 1.e3_wp / soil_depth * 1.e-3_wp 
+       soil%ammonium = soil%ammonium     + soil%loss%litter%nitrogen * 1.e3_wp / soil_depth * 1.e-3_wp
+       soil%ammonium = MAX(soil%ammonium - veg%uptake_n%ptr * dtime/1.e6_wp * 1.e3_wp / soil_depth * 1.e-3_wp, 0.0_wp) 
     ENDIF
 
     !soil%phosphate = soil%phosphate + soil%loss%litter%phosphorus*dtime*  1.e3_wp / soil_depth * 1.e-3_wp

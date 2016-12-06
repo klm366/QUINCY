@@ -166,6 +166,7 @@ CONTAINS
                              veg%par_shaded_tfrac_mavg_cl%ptr(:,1), & 
                              veg%fleaf_sunlit_tfrac_mavg_cl%ptr(:,1),&
                              veg%t_air_tfrac_mavg%ptr, &
+                             veg%t_air_tacclim_mavg%ptr, &
                              veg%press_srf_tfrac_mavg%ptr, &
                              veg%co2_mixing_ratio_tfrac_mavg%ptr, &
                              veg%ga_tfrac_mavg%ptr, &

@@ -132,33 +132,34 @@ CONTAINS
    DO icanopy = 1,assimi_config%ncanopy
       IF(veg%lai_cl%ptr(icanopy,1) > eps8)THEN
 
-        CALL calc_photosynthesis(t_air                            , &   ! in
-                                 press_srf                        , &   ! in
-                                 co2_mixing_ratio                 , &   ! in
-                                 ga                               , &   ! in
-                                 veg%par_sunlit_cl%ptr(icanopy,1)  , &   ! in
-                                 veg%par_shaded_cl%ptr(icanopy,1)  , &   ! in
-                                 veg%fleaf_sunlit_cl%ptr(icanopy,1), &   ! in
-                                 veg%beta_air%ptr                 , &   ! in
-                                 veg%beta_soil_ps%ptr             , &   ! in
-                                 veg%beta_sinklim_ps%ptr          , &   ! in
-                                 veg%beta_soil_gs%ptr             , &   ! in
-                                 veg%fnl_chl_cl%ptr(icanopy,1)     , &   ! in
-                                 veg%fnl_et_cl%ptr(icanopy,1)      , &   ! in
-                                 veg%fnl_rub_cl%ptr(icanopy,1)     , &   ! in
-                                 veg%fnl_pepc_cl%ptr(icanopy,1)    , &   ! in
-                                 veg%nl_tot_cl%ptr(icanopy,1)      , &   ! in
-                                 lctlib%ps_pathway                , &   ! in
-                                 veg%t_jmax_opt_mavg%ptr          , &   ! in
-                                 lctlib%t_jmax_omega              , &   ! in
-                                 lctlib%g0                        , &   ! in
-                                 lctlib%g1                        , &   ! in
-                                 assimi%agl%ptr                   , &   ! out
-                                 assimi%anl%ptr                   , &   ! out
-                                 assimi%rl%ptr                    , &   ! out
-                                 assimi%gsl%ptr                   , &   ! out
-                                 assimi%cil%ptr                   , &   ! out
-                                 hlp1, hlp1, hlp1)                      ! out
+        CALL calc_photosynthesis(t_air                            , & ! in
+                                 press_srf                        , &
+                                 co2_mixing_ratio                 , &
+                                 ga                               , &
+                                 veg%t_air_tacclim_mavg%ptr       , &
+                                 veg%par_sunlit_cl%ptr(icanopy,1)  , &
+                                 veg%par_shaded_cl%ptr(icanopy,1)  , &
+                                 veg%fleaf_sunlit_cl%ptr(icanopy,1), &
+                                 veg%beta_air%ptr                 , &
+                                 veg%beta_soil_ps%ptr             , &
+                                 veg%beta_sinklim_ps%ptr          , &
+                                 veg%beta_soil_gs%ptr             , &
+                                 veg%fnl_chl_cl%ptr(icanopy,1)     , &
+                                 veg%fnl_et_cl%ptr(icanopy,1)      , &
+                                 veg%fnl_rub_cl%ptr(icanopy,1)     , &
+                                 veg%fnl_pepc_cl%ptr(icanopy,1)    , &
+                                 veg%nl_tot_cl%ptr(icanopy,1)      , &
+                                 lctlib%ps_pathway                , &
+                                 veg%t_jmax_opt_mavg%ptr          , &
+                                 lctlib%t_jmax_omega              , &
+                                 lctlib%g0                        , &
+                                 lctlib%g1                        , &
+                                 assimi%agl%ptr                   , & ! out
+                                 assimi%anl%ptr                   , &
+                                 assimi%rl%ptr                    , &
+                                 assimi%gsl%ptr                   , &
+                                 assimi%cil%ptr                   , &
+                                 hlp1, hlp1, hlp1)                   
 
         veg%gpp = veg%gpp + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1)
 
@@ -213,34 +214,35 @@ CONTAINS
   !! accounts for temperature acclimation of JMAX according to Friend, 2010 J Exp Bot
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_photosynthesis( temp                , &   ! in
-                                            press_srf           , &   ! in
-                                            co2_mixing_ratio    , &   ! in
-                                            ga                  , &   ! in
-                                            par_sunlit_cl       , &   ! in
-                                            par_shaded_cl       , &   ! in
-                                            fleaf_sunlit_cl     , &   ! in
-                                            beta_air            , &   ! in
-                                            beta_soil_ps        , &   ! in
-                                            beta_sinklim_ps     , &   ! in
-                                            beta_soil_gs        , &   ! in
-                                            fnl_chl_cl          , &   ! in
-                                            fnl_et_cl           , &   ! in
-                                            fnl_rub_cl          , &   ! in
-                                            fnl_pepc_cl         , &   ! in
-                                            nfmol               , &   ! in
-                                            ps_pathway          , &   ! in
-                                            t_jmax_opt          , &   ! in
-                                            t_jmax_omega        , &   ! in
-                                            g0                  , &   ! in
-                                            g1                  , &   ! in
+                                            press_srf           , &
+                                            co2_mixing_ratio    , &
+                                            ga                  , &
+                                            temp_acclim         , &
+                                            par_sunlit_cl       , &
+                                            par_shaded_cl       , &
+                                            fleaf_sunlit_cl     , &
+                                            beta_air            , &
+                                            beta_soil_ps        , &
+                                            beta_sinklim_ps     , &
+                                            beta_soil_gs        , &
+                                            fnl_chl_cl          , &
+                                            fnl_et_cl           , &
+                                            fnl_rub_cl          , &
+                                            fnl_pepc_cl         , &
+                                            nfmol               , &
+                                            ps_pathway          , &
+                                            t_jmax_opt          , &
+                                            t_jmax_omega        , &
+                                            g0                  , &
+                                            g1                  , &
                                             agl                 , &   ! out
-                                            anl                 , &   ! out
-                                            rl                  , &   ! out
-                                            gsl                 , &   ! out
-                                            cil                 , &   ! out
-                                            m_rub               , &   ! out
-                                            m_et                , &   ! out
-                                            m_pepc)                   ! out
+                                            anl                 , &
+                                            rl                  , &
+                                            gsl                 , &
+                                            cil                 , &
+                                            m_rub               , &
+                                            m_et                , &
+                                            m_pepc)                
     
   USE mo_shared_constants,    ONLY: r_gas, Tzero
   USE mo_assimi_constants
@@ -252,6 +254,7 @@ CONTAINS
   REAL(wp),INTENT(IN) :: temp                    !< temperature used for photosynthesis calculation (K) 
   REAL(wp),INTENT(IN) :: press_srf               !< air pressure (Pa) 
   REAL(wp),INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1) 
+  REAL(wp),INTENT(IN) :: temp_acclim             !< veg\%t_air_tacclim_mavg  average temperature for respiration acclimation
   REAL(wp),INTENT(IN) :: par_sunlit_cl              !< PAR of sunlit foliage par per canopy layer (µmol m-2 s-1)
   REAL(wp),INTENT(IN) :: par_shaded_cl              !< PAR of shaded foliage par per canopy layer (µmol m-2 s-1)
   REAL(wp),INTENT(IN) :: fleaf_sunlit_cl            !< fraction of canopy layer that is sunlit 
@@ -302,7 +305,7 @@ CONTAINS
   !> conversion of ppm to Pa
   ppm2Pa = press_srf * 1.e-06
   !>  Net canopy layer respiration (umol[CO2]/m2/s)
-  rl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp) * nfmol
+  rl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * nfmol
 
 
   !> @par IF: initialise output for no-light condition

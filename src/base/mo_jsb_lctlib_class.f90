@@ -41,6 +41,7 @@ MODULE mo_jsb_lctlib_class
      REAL(wp) :: cn_leaf                    !< default C:N of leaves (mol C / mol N)
      REAL(wp) :: np_leaf                    !< default N:P of leaves (mol N / mol P)
      REAL(wp) :: k0_fnl_struc
+     REAL(wp) :: fnl_oth_min
      REAL(wp) :: t_jmax_opt
      REAL(wp) :: t_jmax_omega
      REAL(wp) :: g0
@@ -171,6 +172,9 @@ CONTAINS
       lctlib(1:npft)%k0_fnl_struc = & 
       !(/0.67_wp,0.67_wp,0.67_wp,0.67_wp,0.83_wp,0.83_wp,0.67_wp,0.67_wp/) 
       (/0.75_wp,0.70_wp,0.63_wp,0.63_wp,0.83_wp,0.79_wp,0.3_wp,0.3_wp/) 
+      ! minimum fraction of non-photosynthetic leaf N. Calculated using range of leaf N values from GLOPNET 
+      lctlib(1:npft)%fnl_oth_min= lctlib(1:npft)%k0_fnl_struc - 5._wp/molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
+                                  molar_mass_N / 1000000._wp
       !Le Maire et al. 2012 (derived from grasses, does not give plausble results for needles)
       !0.012_wp / 0.48_wp * molar_mass_C / molar_mass_N / lctlib(1:npft)%sla/&
       !(1._wp / lctlib(1:npft)%sla / lctlib(1:npft)%cn_leaf) 
@@ -231,7 +235,7 @@ CONTAINS
       lctlib(1:npft)%soil_p_aff2 = 0.4_wp        ! tuned from OCN's 0.84 gN/m2 assuming 150 L per m2
       ! placeholder constant BNf rate, required to keep soil NH4 at constant levels mumol N s-1 
       lctlib(1:npft)%bnf_base = & 
-      (/2.6_wp, 2.6_wp, 2.6_wp, 5.0_wp, 2.6_wp, 2.6_wp, 2.6_wp, 2.6_wp/) * 1.e-2 *0.5_wp
+      (/2.6_wp, 2.6_wp, 2.6_wp, 5.0_wp, 2.6_wp, 2.6_wp, 2.6_wp, 2.6_wp/) * 1.e-2_wp *0.25_wp
 
 ! Vegetation dynamics parameters
       ! parameter in the Weibull function controlling light-limited establishment 

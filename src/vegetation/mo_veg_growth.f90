@@ -84,7 +84,7 @@ CONTAINS
 
     !> 1.1 calculate costs of N uptake and fixation
     !!
-    veg%fmaint_rate%ptr = fmaint_rate_base * temperature_response_respiration(t_air)
+    veg%fmaint_rate%ptr = fmaint_rate_base * temperature_response_respiration(t_air, veg%t_air_tacclim_mavg%ptr)
     CALL calc_nitrogen_uptake_costs(lctlib                            , &
                                     t_air                             , &
                                     veg%pool%fine_root%carbon%ptr     , &
@@ -215,6 +215,7 @@ CONTAINS
     !! 
     !! 
     CALL calc_partitioning(t_air                                  , & ! in
+                            veg%t_air_tacclim_mavg%ptr            , &
                             veg%kstar_labile%ptr                  , &
                             veg%maint_respiration_leaf%ptr        , &
                             veg%cost_n_fixation%ptr               , &
@@ -583,9 +584,9 @@ CONTAINS
            !> water based optimality, following Magnani 2000 
            !! R = k1 + k2*dL +k3*dS 
            k1_opt_w = transpiration / rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
-           k2_opt_w = unit_transpiration / rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
+           k2_opt_w = unit_transpiration/ rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
 
-           !! Compare root increments for a hypothetical unit of leaf growth 
+           ! Compare root increments for a hypothetical unit of leaf growth 
            IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
               ! water is limiting 
               k1_opt = k1_opt_w 
@@ -632,15 +633,15 @@ CONTAINS
 
            !> water based optimality, following Magnani 2000 
            !! R = k1 + k2*dL +k3*dS 
-           !k1_opt_w = transpiration / rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
-           !k2_opt_w = unit_transpiration / rhoh2o * (1._wp + lctlib%c0_allom * height) / (lctlib%k_root * dphi) 
+           k1_opt_w = transpiration / (lctlib%k_root * dphi) 
+           k2_opt_w = unit_transpiration / (lctlib%k_root * dphi) 
 
-           !! Compare root increments for a hypothetical unit of leaf growth 
-           !IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
-           !   ! water is limiting 
-           !   k1_opt = k1_opt_w 
-           !   k2_opt = k2_opt_w 
-           !ENDIF 
+           ! Compare root increments for a hypothetical unit of leaf growth 
+           IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
+              ! water is limiting 
+              k1_opt = k1_opt_w 
+              k2_opt = k2_opt_w 
+           ENDIF 
 
          ELSE      
             leaf2root_mass_ratio = sm2lm_grass * lctlib%k_rtos 
@@ -1141,6 +1142,7 @@ CONTAINS
   !! Output: growth of tissue types, maintenance respiration and growth respiration 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_partitioning(t_air                          , &  
+                                t_air_tacclim_mavg            , &
                                 kstar_labile                  , &
                                 maint_respiration_leaf        , &
                                 cost_n_fixation               , &
@@ -1174,6 +1176,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp),                     INTENT(in)    :: t_air                        , & !< air temperature
+                                                   t_air_tacclim_mavg           , & !< .. 
                                                    kstar_labile                 , & !< potential labile pool turnover (1/day) 
                                                    maint_respiration_leaf       , & !< foliar maintenance respiration
                                                    cost_n_fixation              , & !< actual cost for N uptake through fixation
@@ -1210,6 +1213,7 @@ CONTAINS
     maint_respiration_pot = calc_maintenance_respiration(               &
                                      &      t_air                             , &  ! t_stem
                                      &      t_air                             , &  ! t_root
+                                     &      t_air_tacclim_mavg                , &  ! average temperature for acclimation (K) 
                                      &      veg_pool%sap_wood%nitrogen%ptr    , & 
                                      &      veg_pool%fine_root%nitrogen%ptr   , &
                                      &      veg_pool%coarse_root%nitrogen%ptr)  & 

@@ -30,7 +30,9 @@ MODULE mo_veg_constants
       ! parameters in the Lloyd and Taylor temperature response function (Lloyd & Taylor, 1996, Funct. Ecol.) 
       t_maint_k1    ,     & !< Coefficient in the equation for temperature sensitivity of foliar respiration
       t_maint_k2  ,     &  !< Coefficient in the equation for temperature sensitivity of foliar respiration
-      t_maint_k3           !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      t_maint_k3  , &      !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      f_resp_acclim ,   &    !< respiration temperature acclimation factor 
+      t_acclim_zero        !< base temperature for respiration acclimation 
 
   ! Labile pool parameters 
   REAL(wp), SAVE :: &
@@ -173,10 +175,12 @@ CONTAINS
 
   ! Respiration parameters
       fresp_growth      = 0.25_wp 
-      fmaint_rate_base  = 1._wp 
+      fmaint_rate_base  = 1.0_wp 
       t_maint_k1        = 308.56_wp  
       t_maint_k2        = 56.02_wp 
       t_maint_k3        = 227.13_wp 
+      f_resp_acclim     = -0.008_wp
+      t_acclim_zero     = 283.15_wp 
 
   ! Labile pool parameters 
       tau_labile              = 5.0_wp  
@@ -252,7 +256,7 @@ CONTAINS
       tau_nutrient_recycling      = 10._wp 
 
   ! soil pools (may move to mo_soil_constants later, years) !
-      tau_litter                  = 1.0_wp 
+      tau_litter                  = 0.5_wp 
 
   ! parameters for changes in canopy N fractions
 !@todo:should this be 1/20days?

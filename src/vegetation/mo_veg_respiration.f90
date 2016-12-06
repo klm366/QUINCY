@@ -27,17 +27,19 @@ CONTAINS
   !!
   !! Output: temperature rate modifier
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION temperature_response_respiration(temp) RESULT(temp_response)
+  PURE ELEMENTAL FUNCTION temperature_response_respiration(temp, temp_avg) RESULT(temp_response)
 
-    USE mo_veg_constants, ONLY: t_maint_k1, t_maint_k2, t_maint_k3
+    USE mo_veg_constants,       ONLY: t_maint_k1, t_maint_k2, t_maint_k3, f_resp_acclim, t_acclim_zero
 
     IMPLICIT NONE
 
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: temp          !< instantaneous temperature (K)
+    REAL(wp), INTENT(in) :: temp_avg      !< average temperature for acclimation (K) 
     REAL(wp) :: temp_response             !< temperature response of respiration (1 at 10°C)
 
-    temp_response = exp(t_maint_k1 * (1._wp/t_maint_k2 - 1._wp / (temp - t_maint_k3)))
+    temp_response = (10._wp**(f_resp_acclim * (temp_avg - t_acclim_zero))) * & 
+                    exp(t_maint_k1 * (1._wp/t_maint_k2 - 1._wp / (temp - t_maint_k3))) 
 
   END FUNCTION temperature_response_respiration
 
@@ -53,6 +55,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_maintenance_respiration( t_stem                , &
                                                         t_root                , &
+                                                        temp_avg              , &
                                                         sap_wood_nitrogen     , & 
                                                         fine_root_nitrogen    , &
                                                         coarse_root_nitrogen)   & 
@@ -65,15 +68,16 @@ CONTAINS
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: t_stem                   !< temperature of the stem (K) 
     REAL(wp), INTENT(in) :: t_root                   !< temperature of the roots (K)
+    REAL(wp), INTENT(in) :: temp_avg                 !< average temperature for acclimation (K) 
     REAL(wp), INTENT(in) :: sap_wood_nitrogen        !< nitrogen content of sapwood (mol N / m2)
     REAL(wp), INTENT(in) :: coarse_root_nitrogen     !< nitrogen content of sapwood (mol N / m2)
     REAL(wp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)
                                                      ! (calculated in photosynthesis; µmol C / m2 / s)
     REAL(wp)             :: maint_respiration        !< maintenance respiration (µmol C / m2 / s)
      
-    maint_respiration = temperature_response_respiration(t_stem) * & 
+    maint_respiration = temperature_response_respiration(t_stem, temp_avg) * & 
                         fmaint_rate_base * sap_wood_nitrogen + &
-                        temperature_response_respiration(t_root) * & 
+                        temperature_response_respiration(t_root, temp_avg) * & 
                         fmaint_rate_base * ( coarse_root_nitrogen + fine_root_nitrogen ) 
      
   END FUNCTION calc_maintenance_respiration

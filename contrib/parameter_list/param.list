@@ -15,6 +15,7 @@
   mavg_period_tcnl=NAN
   mavg_period_talloc=NAN
   mavg_period_tvegdyn=NAN
+  mavg_period_tacclim=NAN
 /
 &SOIL_CTL
   ! tba
@@ -26,4 +27,6 @@
   cost_n_fixation_min=NAN
   vmax_bnf=NAN
   k_bnf=NAN
+  f_resp_acclim=NAN 
+  fmaint_rate_base=NAN
 /

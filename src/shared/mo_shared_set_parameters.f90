@@ -31,6 +31,7 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: mavg_period_tcnl
     REAL(wp)           :: mavg_period_talloc
     REAL(wp)           :: mavg_period_tvegdyn
+    REAL(wp)           :: mavg_period_tacclim
     ! VEGETATION_CTL
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
@@ -38,6 +39,8 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: cost_n_fixation_min
     REAL(wp)           :: vmax_bnf                        !< maximum rate of N fixation
     REAL(wp)           :: k_bnf                           !< half_saturating cost of the response of N fixation
+    REAL(wp)           :: f_resp_acclim
+    REAL(wp)           :: fmaint_rate_base
 
   CONTAINS
     PROCEDURE :: read_param => read_parameter_list
@@ -76,6 +79,7 @@ CONTAINS
     REAL(wp)           :: mavg_period_tcnl
     REAL(wp)           :: mavg_period_talloc
     REAL(wp)           :: mavg_period_tvegdyn
+    REAL(wp)           :: mavg_period_tacclim
     ! VEGETATION_CTL
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
@@ -83,6 +87,8 @@ CONTAINS
     REAL(wp)           :: cost_n_fixation_min
     REAL(wp)           :: vmax_bnf
     REAL(wp)           :: k_bnf
+    REAL(wp)           :: f_resp_acclim
+    REAL(wp)           :: fmaint_rate_base
 
     ! Namelist definition of section parameters
     ! 
@@ -93,7 +99,8 @@ CONTAINS
         mavg_period_tfrac         , &
         mavg_period_tcnl          , &
         mavg_period_talloc        , &
-        mavg_period_tvegdyn
+        mavg_period_tvegdyn       , &
+        mavg_period_tacclim
 
     NAMELIST /vegetation_ctl/     &  
         delta_n_fraction          , &
@@ -101,7 +108,9 @@ CONTAINS
         cost_n_fixation_max       , &
         cost_n_fixation_min       , &
         vmax_bnf                  , &
-        k_bnf
+        k_bnf                     , &
+        f_resp_acclim             , &
+        fmaint_rate_base
 
     ! variables for reading model-options from namelist
     ! 
@@ -119,6 +128,7 @@ CONTAINS
     mavg_period_tcnl            = missval
     mavg_period_talloc          = missval
     mavg_period_tvegdyn         = missval
+    mavg_period_tacclim         = missval
     ! VEGETATION_CTL
     delta_n_fraction            = missval
     delta_n_leaf                = missval
@@ -126,6 +136,8 @@ CONTAINS
     cost_n_fixation_min         = missval
     vmax_bnf                    = missval
     k_bnf                       = missval
+    f_resp_acclim               = missval
+    fmaint_rate_base            = missval
 
     ! read the namelist
     ! 
@@ -150,6 +162,7 @@ CONTAINS
     this%mavg_period_tcnl            = mavg_period_tcnl
     this%mavg_period_talloc          = mavg_period_talloc
     this%mavg_period_tvegdyn         = mavg_period_tvegdyn
+    this%mavg_period_tacclim         = mavg_period_tacclim
     ! VEGETATION_CTL
     this%delta_n_fraction            = delta_n_fraction
     this%delta_n_leaf                = delta_n_leaf
@@ -157,6 +170,8 @@ CONTAINS
     this%cost_n_fixation_min         = cost_n_fixation_min
     this%vmax_bnf                    = vmax_bnf
     this%k_bnf                       = k_bnf
+    this%f_resp_acclim               = f_resp_acclim
+    this%fmaint_rate_base            = fmaint_rate_base
   END SUBROUTINE Read_parameter_list
 
 
@@ -196,6 +211,7 @@ CONTAINS
     IF (ABS(this%mavg_period_tcnl     - missval) > eps8)  mavg_period_tcnl      = this%mavg_period_tcnl
     IF (ABS(this%mavg_period_talloc   - missval) > eps8)  mavg_period_talloc    = this%mavg_period_talloc
     IF (ABS(this%mavg_period_tvegdyn  - missval) > eps8)  mavg_period_tvegdyn   = this%mavg_period_tvegdyn
+    IF (ABS(this%mavg_period_tacclim  - missval) > eps8)  mavg_period_tacclim   = this%mavg_period_tacclim
     ! VEGETATION_CTL
     IF (ABS(this%delta_n_fraction     - missval) > eps8)  delta_n_fraction      = this%delta_n_fraction
     IF (ABS(this%delta_n_leaf         - missval) > eps8)  delta_n_leaf          = this%delta_n_leaf
@@ -208,6 +224,8 @@ CONTAINS
                                                                                     (one_day*one_year) *1.e6_wp
     IF (ABS(this%k_bnf                - missval) > eps8)  k_bnf                 = this%k_bnf / &
                                                                                     (molar_mass_C/molar_Mass_N)
+    IF (ABS(this%f_resp_acclim        - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
+    IF (ABS(this%fmaint_rate_base     - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
 
   END SUBROUTINE set_parameter_values_with_list_values
 

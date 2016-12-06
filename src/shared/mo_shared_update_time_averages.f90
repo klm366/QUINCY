@@ -456,7 +456,9 @@ CONTAINS
     !> 1.8 averages at the vegetation dynamics time-scale 
     veg%an_boc_tvegdyn_mavg%ptr   = calc_mavg(veg%an_boc_tvegdyn_mavg%ptr, veg%an_boc%ptr, mavg_period_tvegdyn, &
                                           do_calc=(veg%pool%leaf%carbon%ptr > eps8))
-    !> 1.9 averages with a weekly, monthly timescale 
+    !> 1.9 averages at the respiration acclimation time-scale
+    veg%t_air_tacclim_mavg%ptr    = calc_mavg(veg%t_air_tacclim_mavg%ptr, t_air, mavg_period_tacclim)
+    !> 1.10 averages with a weekly, monthly timescale 
     !!
     veg%t_air_week_mavg%ptr       = calc_mavg(veg%t_air_week_mavg%ptr, t_air, mavg_period_weekly)
     veg%t_air_month_mavg%ptr      = calc_mavg(veg%t_air_month_mavg%ptr, t_air, mavg_period_monthly)
