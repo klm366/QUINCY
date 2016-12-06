@@ -73,6 +73,14 @@ cdo.fldmean ( input  = "%s" % ( kwargs [ "P_yearsumdiff" ]),
 cdo.fldmean ( input  = "%s" % ( kwargs [ "RD_yearsumdiff" ]),
               output = kwargs [ "RD_ysdfm" ])
 
+cdo.setname ( 'waterstorage_change',
+              input  = " -sub %s -add %s %s" %\
+                         ( kwargs [ "P_ysdfm" ], kwargs [ "E_ysdfm" ], kwargs [ "RD_ysdfm" ]),
+              output = kwargs [ "WSC_ysdfm" ])
+cdo.merge ( input  = " %s %s %s %s" % ( kwargs [ "P_ysdfm" ], kwargs [ "E_ysdfm" ], kwargs [ "RD_ysdfm" ],
+                                        kwargs [ "WSC_ysdfm" ]),
+            output =  kwargs [ "H_ysdfm" ])
+
 
 #####
 ##### finishing

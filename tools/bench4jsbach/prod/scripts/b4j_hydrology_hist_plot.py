@@ -52,52 +52,35 @@ print print_item_or_list_rec ( kwargs, 3 )
 #####
 ##### argument definition and plot method calls
 #####
+varnames = { 'E'   : 'evapotranspiration',
+             'P'   : 'precip_acc',
+             'RD'  : 'disch',
+             'WSC' : 'waterstorage_change' }
 
-vartoken = [ 'E', 'P', 'RD' ]
-varnames = { 'E': 'evapotranspiration',
-             'P': 'precip_acc',
-             'RD': 'disch' }
 filenametemplate = "%(varacronym)s_ysdfm_%(refacronym)s" 
-reftoken = "ref"
-nchar = 4
-reflist    =  [ k for k in kwargs.keys () if k.startswith ( reftoken ) and len ( k ) == nchar ]
+reftoken         = "ref"
+nchar            = 4
+reflist          =  [ k for k in kwargs.keys () if k.startswith ( reftoken ) and len ( k ) == nchar ]
 print reflist
+subtitles        = [ kwargs [ k ] for k in reflist ]
+title            = "Differences of meanyearsums to %s" % kwargs [ "can_name" ]
 
-# refmap = { k : np.array ([[ get_value ( kwargs [ filenametemplate % { 'varacronym' : 'E',
-#                                                                       'refacronym' : k }],
-#                                         varnames [ 'E' ])]]) \
-#            for k in reflist }
-# print refmap
-# print print_item_or_list_rec ( refmap, 3 )
-# for k,v in refmap:
-#     type ( v )
-#     print v
-
-acca = np.array ([[]])
+accum            = np.array ([[]])
 for k in reflist:
-    accb = np.array ([[]])
-    for v in vartoken:
-        b = get_value ( kwargs [ filenametemplate % { 'varacronym' : v,
-                                                      'refacronym' : k }],
-                           varnames [ v ])
-        print b
-        accb = np.concatenate (( accb, b ), axis = 1 ) 
-        print accb
-        
-    accb = np.concatenate (( accb, np.array ([[ accb [ 0 ][ 1 ] -\
-                                                accb [ 0 ][ 0 ] -\
-                                                accb [ 0 ][ 2 ]]])), axis = 1 )
-    print "accb"
-    print accb
-    print accb.shape
-    print "acca"
-    print acca
-    print acca.shape
-    acca = np.concatenate (( acca, accb ), axis = 0 ) if acca != [[]] else accb
-    print acca
-
-hist_plot ( acca, "mm/year", [ "schnick", "schnack", "schuck" ], "hallo" )
-
+    print k
+    filepath = kwargs [ filenametemplate % { 'varacronym' : 'H',
+                                             'refacronym' : k }]
+    nc_fid = Dataset ( filepath )
+    vardat = np.concatenate (( nc_fid.variables [ varnames [ 'E' ]] [ : ][ 0 ],
+                               nc_fid.variables [ varnames [ 'P' ]] [ : ][ 0 ],
+                               nc_fid.variables [ varnames [ 'RD' ]] [ : ][ 0 ],
+                               nc_fid.variables [ varnames [ 'WSC' ]] [ : ][ 0 ]),
+                             axis = 1 )
+    nc_fid.close ()
+    accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
+    
+hist_plot ( accum, "mm/year", subtitles, title, kwargs [ "H_ysdfm_plot" ])
+    
 #####
 ##### exiting
 #####

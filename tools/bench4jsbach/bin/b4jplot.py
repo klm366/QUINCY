@@ -146,7 +146,7 @@ def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath ):
     
     
 
-def hist_plot ( alldat, unit, index, title ):
+def hist_plot ( alldat, unit, index, title, outpath ):
     
     darkbrown  = '#c6903f' 
     lightbrown = '#e6cd92'
@@ -181,7 +181,10 @@ def hist_plot ( alldat, unit, index, title ):
     lgd = plt.legend (numpoints = 1,  
                       loc = 2,                  
                       bbox_to_anchor=(1.05,1))
-    plt.show ()
+    plt.savefig ( outpath,
+                  dpi = 100, 
+                  bbox_extra_artists = ( lgd, ), 
+                  bbox_inches = 'tight' )
     plt.close ()
 
 
