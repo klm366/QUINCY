@@ -382,10 +382,10 @@ CONTAINS
 
     ! calculate photosynthesis with previous fractions
     CALL calc_photosynthesis( t_air                         , &
-                              t_acclim                      , &
                               press_srf                     , &
                               co2_mixing_ratio              , &
                               ga                            , & 
+                              t_acclim                      , &
                               par_sunlit_cl                 , &
                               par_shaded_cl                 , &
                               fleaf_sunlit_cl               , & 
@@ -426,7 +426,7 @@ CONTAINS
                                   fn_rub_cl,fn_et_cl,fn_pepc_cl) 
                    
     ! re-calculate photosynthesis
-    CALL calc_photosynthesis(t_air,t_acclim,press_srf,co2_mixing_ratio,ga, & 
+    CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga,t_acclim, & 
               par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl, & 
               beta_air,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
               fn_chl_cl*(1._wp-fn_oth_cl),fn_et_cl*(1._wp-fn_oth_cl),fn_rub_cl*(1._wp-fn_oth_cl), & 
@@ -452,7 +452,7 @@ CONTAINS
                                      fn_rub_cl,fn_et_cl,fn_pepc_cl) 
      
        ! re-calculate photosynthesis
-       CALL calc_photosynthesis(t_air,t_acclim,press_srf,co2_mixing_ratio,ga, & 
+       CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga,t_acclim, & 
             par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl,& 
             beta_air,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
             fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), & 
@@ -683,10 +683,10 @@ CONTAINS
     DO icanopy = 1,assimi_config%ncanopy
        IF(lai_cl(icanopy).GT.eps8)THEN   
           CALL calc_photosynthesis( t_air                               , & ! in
-                                    veg%t_air_tacclim_mavg%ptr          , &
                                     press_srf                           , &
                                     co2_mixing_ratio                    , &
                                     ga                                  , &
+                                    veg%t_air_tacclim_mavg%ptr          , &
                                     veg%par_sunlit_cl%ptr(icanopy,1)    , &
                                     veg%par_shaded_cl%ptr(icanopy,1)    , &
                                     veg%fleaf_sunlit_cl%ptr(icanopy,1)  , &
@@ -810,10 +810,10 @@ CONTAINS
           IF(lai_cl(icanopy) > eps8)THEN
 
              CALL calc_photosynthesis(veg%t_air_tcnl_mavg%ptr,& 
-                       veg%t_air_tacclim_mavg%ptr, &
                        veg%press_srf_tcnl_mavg%ptr, &
                        veg%co2_mixing_ratio_tcnl_mavg%ptr,&
                        veg%ga_tcnl_mavg%ptr, & 
+                       veg%t_air_tacclim_mavg%ptr, &
                        veg%par_sunlit_tcnl_mavg_cl%ptr(icanopy,1),&
                        veg%par_shaded_tcnl_mavg_cl%ptr(icanopy,1),& 
                        veg%fleaf_sunlit_tcnl_mavg_cl%ptr(icanopy,1), &

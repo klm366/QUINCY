@@ -297,7 +297,8 @@ CONTAINS
   !! @todo: reconsider the time scale of these arguments. Since cost_n_fixation is used for respiration
   !! calculation, it should be based on actual temperature, not its average
   !----------------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_nitrogen_uptake_costs(lctlib                    , &
+  !ELEMENTAL SUBROUTINE calc_nitrogen_uptake_costs(lctlib                    , &
+  SUBROUTINE calc_nitrogen_uptake_costs(lctlib                    , &
                                                   t_air                     , &
                                                   fine_root_carbon          , &
                                                   fine_root_nitrogen        , &
@@ -352,7 +353,7 @@ CONTAINS
     ! n-uptake gain relative to carbon investment into roots
     ! multiplier is Croot / Croot * (1 + fresp_growth + fresp_maint
     gn = unit_uptake_n_troot_mavg /(1._wp+fresp_growth+fresp_maint)
-    
+write(900,'(20F12.6)') gc,gn,unit_uptake_n_troot_mavg,unit_npp_troot_mavg,gc/gn 
     IF(gn > eps8)THEN
         cost_n_uptake_root = gc / gn + (transform_cost_nh4+transform_cost_no3)/2.0_wp
     ELSE
@@ -830,12 +831,12 @@ CONTAINS
     !> 5.0 signal of carbon saturation to photosynthesis
     !!
     !!
-    !IF(target_labile_pool_carbon>eps8 .AND. veg_pool_labile%carbon%ptr>target_labile_pool_carbon)THEN
-    !    hlp1=(veg_pool_labile%carbon%ptr-target_labile_pool_carbon)/target_labile_pool_carbon
-    !    beta_sinklim_ps=exp(-(lambda_sinklim_ps*hlp1)**k_sinklim_ps)
-    !ELSE 
+    IF(target_labile_pool_carbon>eps8 .AND. veg_pool_labile%carbon%ptr>target_labile_pool_carbon)THEN
+        hlp1=(veg_pool_labile%carbon%ptr-target_labile_pool_carbon)/target_labile_pool_carbon
+        beta_sinklim_ps=exp(-(lambda_sinklim_ps*hlp1)**k_sinklim_ps)
+    ELSE 
         beta_sinklim_ps=1.0_wp
-    !ENDIF
+    ENDIF
 
 
   END SUBROUTINE calc_reserve_useage
