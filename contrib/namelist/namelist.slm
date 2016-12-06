@@ -19,6 +19,7 @@
   ! [FALSE TRUE]
   flag_optimal_Nfraction=.FALSE.
   flag_heterogeneous_canopy=.FALSE.
+  flag_t_resp_acclimation=.FALSE.
   flag_t_jmax_acclimation=.FALSE.
   ! number of canopy layers [int value, may default to 20]
   ncanopy=20

@@ -43,6 +43,7 @@ paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
 n_uptake_scheme="standard"      # prescribed standard optimal resistance
 flag_calc_soil_moisture="T"
 # canopy model options
+flag_t_resp_acclimation="F"
 flag_t_jmax_acclimation="F"
 flag_optimal_Nfraction="F"
 flag_heterogeneous_canopy="F"
@@ -191,6 +192,7 @@ validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "ca
 validateUserConfigValues "$flag_calc_soil_moisture" "$validateFlags" "flag_calc_soil_moisture"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_start_bareground" "$validateFlags" "flag_start_bareground"
+validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
 validateUserConfigValues "$flag_optimal_Nleaf" "$validateFlags" "flag_optimal_Nleaf"
 validateUserConfigValues "$flag_optimal_allocation" "$validateFlags" "flag_optimal_allocation"
@@ -541,6 +543,12 @@ if [ $flag_start_bareground == T ]
     changeNamelistValue flag_start_bareground ".TRUE."
   else
     changeNamelistValue flag_start_bareground ".FALSE."
+fi
+if [ $flag_t_resp_acclimation == T ]
+  then
+    changeNamelistValue flag_t_resp_acclimation ".TRUE."
+  else
+    changeNamelistValue flag_t_resp_acclimation ".FALSE."
 fi
 if [ $flag_t_jmax_acclimation == T ]
   then

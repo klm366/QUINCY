@@ -30,6 +30,7 @@ MODULE mo_assimi_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
     LOGICAL                 :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
     LOGICAL                 :: flag_heterogeneous_canopy  !< whether or not to simulate leaf clumping and stems
+    LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
     LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
     INTEGER                 :: ncanopy                    !< number of canopy layer simulated by the model
     CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate depth of each single canopy layer
@@ -61,6 +62,7 @@ CONTAINS
     !LOGICAL         :: active
     LOGICAL         :: flag_optimal_Nfraction     , &
                        flag_heterogeneous_canopy  , &
+                       flag_t_resp_acclimation    , &
                        flag_t_jmax_acclimation
     CHARACTER(15)   :: canopy_layer_scheme
     INTEGER         :: ncanopy    , &
@@ -71,6 +73,7 @@ CONTAINS
     NAMELIST /assimilation_ctl/       & 
         flag_optimal_Nfraction          , &
         flag_heterogeneous_canopy       , &
+        flag_t_resp_acclimation         , &
         flag_t_jmax_acclimation         , &
         ncanopy                         , &
         canopy_layer_scheme
@@ -90,6 +93,7 @@ CONTAINS
     ! Set defaults
     flag_optimal_Nfraction         = .FALSE.      ! .TRUE. .FALSE.
     flag_heterogeneous_canopy      = .FALSE.      ! .TRUE. .FALSE.
+    flag_t_resp_acclimation        = .FALSE.      ! .TRUE. .FALSE.
     flag_t_jmax_acclimation        = .FALSE.      ! .TRUE. .FALSE.
     ncanopy                        = 20           ! (default for FAPAR based canopy layers would be 10)
     canopy_layer_scheme            = "standard"   ! 
@@ -105,6 +109,7 @@ CONTAINS
     ! pass values as read from file
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction
     config%flag_heterogeneous_canopy     = flag_heterogeneous_canopy
+    config%flag_t_resp_acclimation       = flag_t_resp_acclimation
     config%flag_t_jmax_acclimation       = flag_t_jmax_acclimation
     config%ncanopy                       = ncanopy
     config%canopy_layer_scheme           = TRIM(canopy_layer_scheme)

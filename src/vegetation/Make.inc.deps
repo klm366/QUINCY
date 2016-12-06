@@ -38,7 +38,8 @@ mo_veg_growth.o: \
 
 mo_veg_respiration.o: \
   mo_kind.o \
-  mo_veg_constants.o 
+  mo_veg_constants.o \
+  mo_assimi_config_class.o
 
 mo_veg_soil.o: \
   mo_kind.o \
