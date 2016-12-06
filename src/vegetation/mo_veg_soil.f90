@@ -77,18 +77,18 @@ CONTAINS
     !!
     !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P 
     IF(veg%pool%labile%carbon%ptr > eps8) THEN
-       veg%f_n_demand%ptr = lctlib%cn_leaf * & 
+       veg%f_n_demand%ptr = & 
            MAX(veg%growth_req_n_tuptake_mavg%ptr - veg%pool%labile%nitrogen%ptr / veg%pool%labile%carbon%ptr, 0.0_wp) 
     ELSE
        veg%f_n_demand%ptr = 1.0_wp
     ENDIF
     IF(veg%pool%labile%nitrogen%ptr > eps8) THEN
-       veg%f_p_demand%ptr = lctlib%np_leaf * & 
+       veg%f_p_demand%ptr = & 
            MAX(veg%growth_req_p_tuptake_mavg%ptr - veg%pool%labile%phosphorus%ptr / veg%pool%labile%nitrogen%ptr, 0.0_wp)
     ELSE
        veg%f_p_demand%ptr = 1.0_wp
     ENDIF
-write(901,'(20F12.6)') veg%f_n_demand%ptr,1._wp/lctlib%cn_leaf,MAX(veg%growth_req_n_tuptake_mavg%ptr - veg%pool%labile%nitrogen%ptr / veg%pool%labile%carbon%ptr, 0.0_wp)
+
     !> 2.0 inorganic N uptake (first guess)
     !!
     !!
@@ -130,7 +130,7 @@ write(901,'(20F12.6)') veg%f_n_demand%ptr,1._wp/lctlib%cn_leaf,MAX(veg%growth_re
       CASE ("prescribed") 
         veg%n_fixation%ptr = 0.0_wp
       CASE("standard")
-        IF(soil%ammonium < soil_n_threshold_bnf) veg%n_fixation%ptr = lctlib%bnf_base 
+        IF(soil%ammonium < 0.5_wp ) veg%n_fixation%ptr = lctlib%bnf_base 
       !> 3.2 Case 2: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
       CASE ("optimal")

@@ -90,9 +90,7 @@ MODULE mo_veg_constants
       ! maximum rate of N fixation (µmol N / mol C fine root / s )
       vmax_bnf             , & 
       ! half_saturating cost of the response of N fixation (mol C / mol N) 
-      k_bnf                , &
-      ! maximum soil N at which BNF occurs in standard scheme (mol N / m2)
-      soil_n_threshold_bnf
+      k_bnf                
 
   ! parameters used for phenology calculations
   REAL(wp), SAVE :: & 
@@ -219,7 +217,6 @@ CONTAINS
       transform_cost_org  = 1.0_wp    / (molar_mass_C/molar_mass_N)
       vmax_bnf            = 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) *1.e6_wp
       k_bnf               = 50.0_wp   / (molar_mass_C/molar_Mass_N)
-      soil_n_threshold_bnf = 0.04 ! mol N == 0.56 g N /m2
 
   ! parameters used for phenology calculations
       min_lai                     = 0.1_wp
@@ -259,7 +256,7 @@ CONTAINS
       tau_nutrient_recycling      = 10._wp 
 
   ! soil pools (may move to mo_soil_constants later, years) !
-      tau_litter                  = 5.0_wp 
+      tau_litter                  = 0.5_wp 
 
   ! parameters for changes in canopy N fractions
 !@todo:should this be 1/20days?
