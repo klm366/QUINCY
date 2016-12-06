@@ -184,6 +184,23 @@ CONTAINS
                              veg%fnl_chl_cl%ptr(:,1), &
                              veg%fnl_oth_cl%ptr(:,1))
 
+    !> 4.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass
+    !!
+    !!
+    ! set zero
+    CALL veg%total_biomass%init(0.0_wp)
+
+    veg%total_biomass = veg%total_biomass + &
+                          veg%pool%leaf        + &     !< elements of leaf
+                          veg%pool%fine_root   + &     !< elements of fine_root
+                          veg%pool%coarse_root + &     !< elements of coarse_root
+                          veg%pool%sap_wood    + &     !< elements of sap_wood
+                          veg%pool%heart_wood  + &     !< elements of heart_wood
+                          veg%pool%labile      + &     !< elements of labile
+                          veg%pool%reserve     + &     !< elements of reserve
+                          veg%pool%fruit       + &     !< elements of fruit
+                          veg%pool%seed_bed            !< elements of seed_bed
+
   END SUBROUTINE update_veg_pools
 
 END MODULE mo_veg_update_veg_pools

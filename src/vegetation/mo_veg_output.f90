@@ -150,7 +150,7 @@ CONTAINS
     !! lun of pools starts at a multiple of 100
     lun = 100 * itile
     WRITE(lun,'(2a)') 'Time Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
-                     'Fruit_C Labile_C Reserve_C SeedBank_C'
+                     'Fruit_C Labile_C Reserve_C SeedBank_C Total_C Total_C13 Total_C14'
     lun=lun+1
     WRITE(lun,'(4a)') 'Time Leaf_dC13 FineRoot_dC13 SapWood_dC13 HeartWood_dC13 CoarseRoot_dC13 ', & 
                      'Fruit_dC13 Labile_dC13 Reserve_dC13 SeedBank_dC13 Leaf_DC14 FineRoot_DC14 ', &
@@ -158,10 +158,10 @@ CONTAINS
                      'Reserve_DC14 SeedBank_DC14'
     lun=lun+1
     WRITE(lun,'(2a)') 'Time Leaf_N FineRoot_N SapWood_N HeartWood_N CoarseRoot_N ', & 
-                     'Fruit_N Labile_N Reserve_N SeedBank_N'
+                     'Fruit_N Labile_N Reserve_N SeedBank_N Total_N Total_N15'
     lun=lun+1
     WRITE(lun,'(2a)') 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
-                     'Fruit_P Labile_P Reserve_P SeedBank_P'
+                     'Fruit_P Labile_P Reserve_P SeedBank_P Total_P'
     lun=lun+1
     WRITE(lun,'(a)') 'Time SoilMoisture SoilWaterPotential BetaSoilGS BetaSoilPS'
     lun=lun+1
@@ -427,12 +427,13 @@ CONTAINS
       IF( MODULO(time_d, output_interval_pool) < eps4 .OR. &
          & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
        lun = 100 * itile
-       write(lun,'(10F12.6)') time_d,veg%pool%leaf%carbon%ptr,&
+       write(lun,'(13F12.6)') time_d,veg%pool%leaf%carbon%ptr,&
          veg%pool%fine_root%carbon%ptr,veg%pool%sap_wood%carbon%ptr,&
          veg%pool%heart_wood%carbon%ptr,veg%pool%coarse_root%carbon%ptr,&
          veg%pool%fruit%carbon%ptr,veg%pool%labile%carbon%ptr,&
-         veg%pool%reserve%carbon%ptr,veg%pool%seed_bed%carbon%ptr
-       lun=lun+1
+         veg%pool%reserve%carbon%ptr,veg%pool%seed_bed%carbon%ptr,&
+         veg%total_biomass%carbon%ptr,veg%total_biomass%carbon13%ptr,veg%total_biomass%carbon14%ptr
+
        dC13leaf        = calc_delta_C13(veg%pool%leaf%carbon%ptr,veg%pool%leaf%carbon13%ptr)
        dC13fine_root   = calc_delta_C13(veg%pool%fine_root%carbon%ptr,veg%pool%fine_root%carbon13%ptr)
        dC13sap_wood    = calc_delta_C13(veg%pool%sap_wood%carbon%ptr,veg%pool%sap_wood%carbon13%ptr)
@@ -442,6 +443,7 @@ CONTAINS
        dC13labile      = calc_delta_C13(veg%pool%labile%carbon%ptr,veg%pool%labile%carbon13%ptr)
        dC13reserve     = calc_delta_C13(veg%pool%reserve%carbon%ptr,veg%pool%reserve%carbon13%ptr)
        dC13seed_bed    = calc_delta_C13(veg%pool%seed_bed%carbon%ptr,veg%pool%seed_bed%carbon13%ptr)
+       lun=lun+1
        write(lun,'(19F18.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
          dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seed_bed, & 
          calc_delta_C14(veg%pool%leaf%carbon%ptr,veg%pool%leaf%carbon14%ptr,dC13leaf),&
@@ -454,17 +456,18 @@ CONTAINS
          calc_delta_C14(veg%pool%reserve%carbon%ptr,veg%pool%reserve%carbon14%ptr,dC13reserve),&
          calc_delta_C14(veg%pool%seed_bed%carbon%ptr,veg%pool%seed_bed%carbon14%ptr,dC13seed_bed)
        lun=lun+1
-       write(lun,'(10F12.6)') time_d,veg%pool%leaf%nitrogen%ptr,&
+       write(lun,'(12F12.6)') time_d,veg%pool%leaf%nitrogen%ptr,&
          veg%pool%fine_root%nitrogen%ptr,veg%pool%sap_wood%nitrogen%ptr,&
          veg%pool%heart_wood%nitrogen%ptr,veg%pool%coarse_root%nitrogen%ptr,&
          veg%pool%fruit%nitrogen%ptr,veg%pool%labile%nitrogen%ptr,&
-         veg%pool%reserve%nitrogen%ptr,veg%pool%seed_bed%nitrogen%ptr
+         veg%pool%reserve%nitrogen%ptr,veg%pool%seed_bed%nitrogen%ptr,&
+         veg%total_biomass%nitrogen%ptr,veg%total_biomass%nitrogen15%ptr
        lun=lun+1
-       write(lun,'(10F12.6)') time_d,veg%pool%leaf%phosphorus%ptr,&
+       write(lun,'(11F12.6)') time_d,veg%pool%leaf%phosphorus%ptr,&
          veg%pool%fine_root%phosphorus%ptr,veg%pool%sap_wood%phosphorus%ptr,&
          veg%pool%heart_wood%phosphorus%ptr,veg%pool%coarse_root%phosphorus%ptr,&
          veg%pool%fruit%phosphorus%ptr,veg%pool%labile%phosphorus%ptr,&
-         veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr
+         veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,veg%total_biomass%phosphorus%ptr
        lun=lun+1
        write(lun,'(9F12.6)') time_d, soil%moisture, soil%water_potential,veg%beta_soil_gs%ptr,veg%beta_soil_ps%ptr
        lun=lun+1

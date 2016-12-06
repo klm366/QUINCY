@@ -377,7 +377,8 @@ MODULE mo_veg_memory_class
     TYPE(t_slm_struct_veg_element)  :: &
                                     establishment   , &   !< flux between seed bed and reserve (mol m-2 timestep-1)
                                     reserve_use     , &   !< net flux between reserve and labile pool (mol m-2 timestep-1)
-                                    init_pool             !< initialization of some plant variables, considering: a) PFT, and b) flag_start_bareground
+                                    init_pool       , &   !< initialization of some plant variables, considering: a) PFT, and b) flag_start_bareground
+                                    total_biomass         !< per time step sum over veg\%pool\%..
 
     TYPE(t_slm_struct_veg_pool)     :: &   ! nested pool TYPE t_jsb_n_struct
                                     pool            , &   !< pools of the plant
@@ -1925,6 +1926,7 @@ CONTAINS
       CALL slm_add_var(mem, 'veg_establishment',          mem%establishment)
       CALL slm_add_var(mem, 'veg_reserve_use',            mem%reserve_use)
       CALL slm_add_var(mem, 'veg_init_pool',              mem%init_pool)
+      CALL slm_add_var(mem, 'veg_total_biomass',          mem%total_biomass)
       !> nested TYPE (t_jsb_n_struct)
       !! 
       !! slm_add_var -> slm_add_n_struct()
@@ -2043,6 +2045,19 @@ CONTAINS
       CALL slm_add_var(mem%init_pool, 'veg_init_pool_carbon14', mem%init_pool%carbon14, &
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%init_pool, 'veg_init_pool_nitrogen15', mem%init_pool%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_carbon', mem%total_biomass%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_nitrogen', mem%total_biomass%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_phosphorus', mem%total_biomass%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_carbon13', mem%total_biomass%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_carbon14', mem%total_biomass%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_nitrogen15', mem%total_biomass%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
       !> add variables to the l2 structs (pool and flux variables, veg\%t_jsb_n_struct\%t_jsb_struct\%VAR)
       !! 
