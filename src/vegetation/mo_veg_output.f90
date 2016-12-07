@@ -627,12 +627,12 @@ CONTAINS
       maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + veg%maint_respiration_c14%ptr  * dtime_one
       uptake_n_acc(itile)     = uptake_n_acc(itile)      + veg%uptake_n%ptr                * dtime_one
       recycling_n_acc(itile) = recycling_n_acc(itile)  + ( veg%recycling_leaf_n%ptr + &
-                                veg%recycling_fine_root_n%ptr + veg%recycling_sap_wood_n%ptr ) * dtime_one *1000000._wp/dtime
+                                veg%recycling_fine_root_n%ptr + veg%recycling_heart_wood_n%ptr ) * dtime_one *1000000._wp/dtime
       res_use_n_acc(itile)    = res_use_n_acc(itile)     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
       n_fixation_acc(itile)   = n_fixation_acc(itile)    + veg%n_fixation%ptr              * dtime_one 
       uptake_p_acc(itile)     = uptake_p_acc(itile)      + veg%uptake_p%ptr                * dtime_one
       recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( veg%recycling_leaf_p%ptr + & 
-                                veg%recycling_fine_root_p%ptr + veg%recycling_sap_wood_p%ptr ) * dtime_one *1000000._wp/dtime
+                                veg%recycling_fine_root_p%ptr + veg%recycling_heart_wood_p%ptr ) * dtime_one *1000000._wp/dtime
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
       transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dtime_one 
       gc_acc(itile)           = veg%gc%ptr                                                      

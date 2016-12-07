@@ -666,9 +666,9 @@ CONTAINS
     CALL veg%recycling_fine_root_n%init(flux_zero)         !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
     CALL veg%recycling_fine_root_n15%init(flux_zero)       !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1) 
     CALL veg%recycling_fine_root_p%init(flux_zero)         !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-    CALL veg%recycling_sap_wood_n%init(flux_zero)          !< net flux of N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
-    CALL veg%recycling_sap_wood_n15%init(flux_zero)        !< net flux of 15N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1) 
-    CALL veg%recycling_sap_wood_p%init(flux_zero)          !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
+    CALL veg%recycling_heart_wood_n%init(flux_zero)        !< net flux of N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
+    CALL veg%recycling_heart_wood_n15%init(flux_zero)      !< net flux of 15N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    CALL veg%recycling_heart_wood_p%init(flux_zero)        !< net flux of P from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
     CALL veg%transpiration%init(flux_zero)                 !< transpiration in kg m-2 s-1
     CALL veg%ci%init(flux_zero)                            !< ??
     CALL veg%delta_dens_ind%init(flux_zero)                !< ??

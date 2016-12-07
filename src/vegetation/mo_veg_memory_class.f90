@@ -238,9 +238,9 @@ MODULE mo_veg_memory_class
                                     recycling_fine_root_n     , & !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
                                     recycling_fine_root_n15   , & !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1) 
                                     recycling_fine_root_p     , & !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-                                    recycling_sap_wood_n      , & !< net flux of N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
-                                    recycling_sap_wood_n15    , & !< net flux of 15N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1) 
-                                    recycling_sap_wood_p      , & !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
+                                    recycling_heart_wood_n      , & !< net flux of N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
+                                    recycling_heart_wood_n15    , & !< net flux of 15N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1) 
+                                    recycling_heart_wood_p      , & !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
                                     transpiration                 !< transpiration in kg m-2 s-1
 
     ! everything else...
@@ -1627,13 +1627,13 @@ CONTAINS
       CALL slm_add_var(mem, 'recycling_fine_root_p', mem%recycling_fine_root_p, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'recycling_sap_wood_n', mem%recycling_sap_wood_n, &
+      CALL slm_add_var(mem, 'recycling_heart_wood_n', mem%recycling_heart_wood_n, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'recycling_sap_wood_n15', mem%recycling_sap_wood_n15, &
+      CALL slm_add_var(mem, 'recycling_heart_wood_n15', mem%recycling_heart_wood_n15, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'recycling_sap_wood_p', mem%recycling_sap_wood_p, &
+      CALL slm_add_var(mem, 'recycling_heart_wood_p', mem%recycling_heart_wood_p, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'transpiration', mem%transpiration, &

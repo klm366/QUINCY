@@ -52,7 +52,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp)                              :: hlp1             ! helper variable
+    REAL(wp)                              :: hlp1,hlp2             ! helper variable
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
@@ -98,22 +98,22 @@ CONTAINS
        !> 1.4 update fluxes from continuous nutrient turnover and resorption 
        !!
        veg%pool%labile%nitrogen       = veg%pool%labile%nitrogen      + veg%recycling_leaf_n + & 
-                                                    veg%recycling_fine_root_n + veg%recycling_sap_wood_n
+                                                    veg%recycling_fine_root_n + veg%recycling_heart_wood_n
        veg%pool%leaf%nitrogen         = veg%pool%leaf%nitrogen        - veg%recycling_leaf_n
        veg%pool%fine_root%nitrogen    = veg%pool%fine_root%nitrogen   - veg%recycling_fine_root_n
-       veg%pool%sap_wood%nitrogen     = veg%pool%sap_wood%nitrogen    - veg%recycling_sap_wood_n
+       veg%pool%heart_wood%nitrogen   = veg%pool%heart_wood%nitrogen  - veg%recycling_heart_wood_n
    
        veg%pool%labile%phosphorus     = veg%pool%labile%phosphorus    + veg%recycling_leaf_p + & 
-                                                    veg%recycling_fine_root_p + veg%recycling_sap_wood_p
+                                                    veg%recycling_fine_root_p + veg%recycling_heart_wood_p
        veg%pool%leaf%phosphorus       = veg%pool%leaf%phosphorus      - veg%recycling_leaf_p
        veg%pool%fine_root%phosphorus  = veg%pool%fine_root%phosphorus - veg%recycling_fine_root_p
-       veg%pool%sap_wood%phosphorus   = veg%pool%sap_wood%phosphorus  - veg%recycling_sap_wood_p
+       veg%pool%heart_wood%phosphorus = veg%pool%heart_wood%phosphorus - veg%recycling_heart_wood_p
    
        veg%pool%labile%nitrogen15     = veg%pool%labile%nitrogen15    + veg%recycling_leaf_n15 + & 
-                                                    veg%recycling_fine_root_n15 + veg%recycling_sap_wood_n15
+                                                    veg%recycling_fine_root_n15 + veg%recycling_heart_wood_n15
        veg%pool%leaf%nitrogen15       = veg%pool%leaf%nitrogen15      - veg%recycling_leaf_n15
        veg%pool%fine_root%nitrogen15  = veg%pool%fine_root%nitrogen15 - veg%recycling_fine_root_n15
-       veg%pool%sap_wood%nitrogen15   = veg%pool%sap_wood%nitrogen15  - veg%recycling_sap_wood_n15
+       veg%pool%heart_wood%nitrogen15 = veg%pool%heart_wood%nitrogen15 - veg%recycling_heart_wood_n15
    
        !> 1.5 Update plant biogeochemical pools with growth, litterfall and establishment
        !! 
@@ -187,9 +187,6 @@ CONTAINS
     !> 4.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass
     !!
     !!
-    ! set zero
-    CALL veg%total_biomass%init(0.0_wp)
-
     veg%total_biomass =   veg%pool%leaf        + &     !< elements of leaf
                           veg%pool%fine_root   + &     !< elements of fine_root
                           veg%pool%coarse_root + &     !< elements of coarse_root

@@ -67,7 +67,7 @@ CONTAINS
                         veg%growth_t, veg%litterfall_t, &
                         veg%growing_season%ptr, veg%lai%ptr, &
                         veg%recycling_leaf_n%ptr, veg%recycling_leaf_n15%ptr, veg%recycling_leaf_p%ptr, &
-                        veg%recycling_sap_wood_n%ptr, veg%recycling_sap_wood_n15%ptr, veg%recycling_sap_wood_p%ptr)
+                        veg%recycling_heart_wood_n%ptr, veg%recycling_heart_wood_n15%ptr, veg%recycling_heart_wood_p%ptr)
 
   END SUBROUTINE update_veg_turnover
 
@@ -191,9 +191,9 @@ CONTAINS
                                       recycling_leaf_n          , &
                                       recycling_leaf_n15        , &
                                       recycling_leaf_p          , &
-                                      recycling_sap_wood_n      , &
-                                      recycling_sap_wood_n15    , &
-                                      recycling_sap_wood_p      )
+                                      recycling_heart_wood_n      , &
+                                      recycling_heart_wood_n15    , &
+                                      recycling_heart_wood_p      )
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_pool
@@ -215,16 +215,16 @@ CONTAINS
     REAL(wp),                     INTENT(inout) :: recycling_leaf_n          , & !< 
                                                    recycling_leaf_n15        , & !< 
                                                    recycling_leaf_p          , & !< 
-                                                   recycling_sap_wood_n      , & !< 
-                                                   recycling_sap_wood_n15    , & !< 
-                                                   recycling_sap_wood_p          !< 
+                                                   recycling_heart_wood_n    , & !< 
+                                                   recycling_heart_wood_n15  , & !< 
+                                                   recycling_heart_wood_p          !< 
     ! 0.2 Local
     REAL(wp)                          :: retranslocation_leaf_n       , & !< leaf
                                          retranslocation_leaf_n15     , &
                                          retranslocation_leaf_p
-    REAL(wp)                          :: retranslocation_sap_wood_n   , & !< sap_wood
-                                         retranslocation_sap_wood_n15 , &
-                                         retranslocation_sap_wood_p
+    REAL(wp)                          :: retranslocation_heart_wood_n   , & !< heart_wood
+                                         retranslocation_heart_wood_n15 , &
+                                         retranslocation_heart_wood_p
     REAL(wp)                          :: fturn_leaf                   , & !< fturn
                                          fturn
     REAL(wp)                          :: nitrogen_recycling_fract     , & !< recycling fraction
@@ -238,9 +238,9 @@ CONTAINS
     retranslocation_leaf_n        = 0.0_wp
     retranslocation_leaf_n15      = 0.0_wp
     retranslocation_leaf_p        = 0.0_wp
-    retranslocation_sap_wood_n    = 0.0_wp
-    retranslocation_sap_wood_n15  = 0.0_wp
-    retranslocation_sap_wood_p    = 0.0_wp
+    retranslocation_heart_wood_n    = 0.0_wp
+    retranslocation_heart_wood_n15  = 0.0_wp
+    retranslocation_heart_wood_p    = 0.0_wp
 
     !> 2.0 foliage turnover, including recycling of nutrients 
     !!
@@ -312,12 +312,9 @@ CONTAINS
         ! Nutrient recycling
         nitrogen_recycling_fract            = calc_nitrogen_recycling_fract("wood")
         phosphorus_recycling_fract          = calc_phosphorus_recycling_fract("wood")
-        retranslocation_sap_wood_n          = veg_growth_t%heart_wood%nitrogen%ptr   * nitrogen_recycling_fract
-        veg_growth_t%heart_wood%nitrogen    = veg_growth_t%heart_wood%nitrogen       * (1._wp - nitrogen_recycling_fract)
-        retranslocation_sap_wood_n15        = veg_growth_t%heart_wood%nitrogen15%ptr * nitrogen_recycling_fract
-        veg_growth_t%heart_wood%nitrogen15  = veg_growth_t%heart_wood%nitrogen15     * (1._wp - nitrogen_recycling_fract)
-        retranslocation_sap_wood_p          = veg_growth_t%heart_wood%phosphorus%ptr * phosphorus_recycling_fract
-        veg_growth_t%heart_wood%phosphorus  = veg_growth_t%heart_wood%phosphorus     * (1._wp - phosphorus_recycling_fract)
+        retranslocation_heart_wood_n        = veg_growth_t%heart_wood%nitrogen%ptr   * nitrogen_recycling_fract
+        retranslocation_heart_wood_n15      = veg_growth_t%heart_wood%nitrogen15%ptr * nitrogen_recycling_fract
+        retranslocation_heart_wood_p        = veg_growth_t%heart_wood%phosphorus%ptr * phosphorus_recycling_fract
     ENDIF 
 
     !> 6.0 fruit turnover to seed_bed
@@ -339,9 +336,9 @@ CONTAINS
     recycling_leaf_n       = recycling_leaf_n       + retranslocation_leaf_n
     recycling_leaf_n15     = recycling_leaf_n15     + retranslocation_leaf_n15
     recycling_leaf_p       = recycling_leaf_p       + retranslocation_leaf_p
-    recycling_sap_wood_n   = recycling_sap_wood_n   + retranslocation_sap_wood_n
-    recycling_sap_wood_n15 = recycling_sap_wood_n15 + retranslocation_sap_wood_n15
-    recycling_sap_wood_p   = recycling_sap_wood_p   + retranslocation_sap_wood_p
+    recycling_heart_wood_n   = recycling_heart_wood_n   + retranslocation_heart_wood_n
+    recycling_heart_wood_n15 = recycling_heart_wood_n15 + retranslocation_heart_wood_n15
+    recycling_heart_wood_p   = recycling_heart_wood_p   + retranslocation_heart_wood_p
 
   END SUBROUTINE calc_turnover
 
@@ -370,6 +367,7 @@ CONTAINS
       CASE("wood")
         recycling_fract = resorp_fract_wood
     ENDSELECT
+
 
   END FUNCTION calc_nitrogen_recycling_fract
 
