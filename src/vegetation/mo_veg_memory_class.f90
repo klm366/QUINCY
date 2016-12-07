@@ -377,7 +377,7 @@ MODULE mo_veg_memory_class
     TYPE(t_slm_struct_veg_element)  :: &
                                     establishment   , &   !< flux between seed bed and reserve (mol m-2 timestep-1)
                                     reserve_use     , &   !< net flux between reserve and labile pool (mol m-2 timestep-1)
-                                    init_pool       , &   !< initialization of some plant variables, considering: a) PFT, and b) flag_start_bareground
+                                    init_pool       , &   !< initialization of some plant variables, considering: a) PFT, and b) flag_tile_veg_dynamics
                                     total_biomass         !< per time step sum over veg\%pool\%..
 
     TYPE(t_slm_struct_veg_pool)     :: &   ! nested pool TYPE t_jsb_n_struct

@@ -89,7 +89,6 @@ CONTAINS
 !    config%output_end_last_day_year      = output_end_last_day_year
 !    config%flag_calc_soil_moisture       = flag_calc_soil_moisture
 !    config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  
-!    config%flag_start_bareground         = flag_start_bareground
 
 
   END SUBROUTINE Init_soil_config

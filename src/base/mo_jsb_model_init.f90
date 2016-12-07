@@ -341,7 +341,7 @@ CONTAINS
       veg%target_cn_leaf%ptr             = lctlib%cn_leaf
       veg%target_np_leaf%ptr             = lctlib%np_leaf
 
-      IF(veg_config%flag_start_bareground)THEN
+      IF(veg_config%flag_tile_veg_dynamics)THEN
          tile%soil%pool%litter%nitrogen   = 0.5_wp
          veg%init_pool%carbon%ptr         = lctlib%seed_size * 10.0_wp
          veg%dens_ind%ptr                 = 0.0_wp 
@@ -371,8 +371,8 @@ CONTAINS
       ENDIF
       veg%init_pool%carbon14 = veg%init_pool%carbon * calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C14,hlp1)
 
-      ! start bareground ?
-      IF(veg_config%flag_start_bareground)THEN
+      ! IF start bareground with vegetation dynamics switched on
+      IF(veg_config%flag_tile_veg_dynamics)THEN
          veg%pool%seed_bed = veg%init_pool 
       ELSE
          veg%pool%reserve  = veg%init_pool 

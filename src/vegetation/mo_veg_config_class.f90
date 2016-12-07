@@ -35,8 +35,7 @@ MODULE mo_veg_config_class
                         output_end_last_day_year        !< output stop  at the last day of this year
     INTEGER          :: pft_id
     LOGICAL          :: flag_calc_soil_moisture    !< calcualte water bucket 
-    LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics
-    LOGICAL          :: flag_start_bareground      !< start from bareground?
+    LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics + start from bareground
     LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
     LOGICAL          :: flag_optimal_allocation    !< optimise plant allocation
     CHARACTER(15)    :: n_uptake_scheme            !< select scheme to simulate N uptake
@@ -67,13 +66,18 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL      :: active
-    CHARACTER(8) :: output_interval_pool, output_interval_flux
-    INTEGER      :: output_start_first_day_year, output_end_last_day_year, plant_functional_type_id
-    LOGICAL      :: flag_calc_soil_moisture
-    LOGICAL      :: flag_tile_veg_dynamics, flag_start_bareground
-    LOGICAL      :: flag_optimal_Nleaf, flag_optimal_allocation
+    CHARACTER(8)  :: output_interval_pool          , &
+                     output_interval_flux
+    INTEGER       :: output_start_first_day_year   , &
+                     output_end_last_day_year      , &
+                     plant_functional_type_id
+    LOGICAL       :: flag_calc_soil_moisture
+    LOGICAL       :: flag_tile_veg_dynamics
+    LOGICAL       :: flag_optimal_Nleaf
+    LOGICAL       :: flag_optimal_allocation
     CHARACTER(15) :: n_uptake_scheme
-    REAL(wp)     :: soil_awc_prescribe, soil_theta_prescribe
+    REAL(wp)      :: soil_awc_prescribe             , &
+                     soil_theta_prescribe
 
     NAMELIST /vegetation_ctl/       & 
       output_interval_pool,         &
@@ -82,7 +86,6 @@ CONTAINS
       output_end_last_day_year,     &
       flag_calc_soil_moisture,      &
       flag_tile_veg_dynamics,       &
-      flag_start_bareground,        &
       flag_optimal_Nleaf,           &
       flag_optimal_allocation,      &
       n_uptake_scheme,              & 
@@ -104,7 +107,6 @@ CONTAINS
     output_end_last_day_year       = 10
     flag_calc_soil_moisture        = .FALSE.  ! .TRUE. .FALSE.
     flag_tile_veg_dynamics         = .FALSE.  ! .TRUE. .FALSE.
-    flag_start_bareground          = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_allocation        = .FALSE.  ! .TRUE. .FALSE.
     n_uptake_scheme                = "standard"  ! prescribed standard resistance optimal
@@ -135,7 +137,6 @@ CONTAINS
     config%output_end_last_day_year      = output_end_last_day_year
     config%flag_calc_soil_moisture       = flag_calc_soil_moisture
     config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  
-    config%flag_start_bareground         = flag_start_bareground
     config%flag_optimal_Nleaf            = flag_optimal_Nleaf
     config%flag_optimal_allocation       = flag_optimal_allocation
     config%n_uptake_scheme               = TRIM(n_uptake_scheme)

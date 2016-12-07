@@ -53,8 +53,7 @@ canopy_layer_scheme="standard"      # canopy layer depth calculation: standard[0
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
 # vegetation dynamics options
-flag_tile_veg_dynamics="T"
-flag_start_bareground="T"
+flag_tile_veg_dynamics="T"          # does also set "start_bareground"
 
 # simulation length & output
 simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
@@ -191,7 +190,6 @@ validateUserConfigValues "$n_uptake_scheme" "$validateNUptakeScheme" "n_uptake_s
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$flag_calc_soil_moisture" "$validateFlags" "flag_calc_soil_moisture"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
-validateUserConfigValues "$flag_start_bareground" "$validateFlags" "flag_start_bareground"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
 validateUserConfigValues "$flag_optimal_Nleaf" "$validateFlags" "flag_optimal_Nleaf"
@@ -537,12 +535,6 @@ if [ $flag_tile_veg_dynamics == T ]
     changeNamelistValue flag_tile_veg_dynamics ".TRUE."
   else
     changeNamelistValue flag_tile_veg_dynamics ".FALSE."
-fi
-if [ $flag_start_bareground == T ]
-  then
-    changeNamelistValue flag_start_bareground ".TRUE."
-  else
-    changeNamelistValue flag_start_bareground ".FALSE."
 fi
 if [ $flag_t_resp_acclimation == T ]
   then

@@ -7,7 +7,6 @@
   n_uptake_scheme="standard"
   flag_calc_soil_moisture=.FALSE.
   flag_tile_veg_dynamics=.FALSE.
-  flag_start_bareground=.FALSE.
   flag_optimal_Nleaf=.FALSE.
   flag_optimal_allocation=.FALSE.
   soil_awc_prescribe=300.0
