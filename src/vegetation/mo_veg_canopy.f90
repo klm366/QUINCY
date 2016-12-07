@@ -716,7 +716,7 @@ CONTAINS
 
        ENDIF
     ENDDO
-      
+    
     !> 3.0 Calculate change in canopy fluxes from altered LAI 
 
     !> 3.1 net carbon gain from increased LAI
@@ -766,7 +766,8 @@ CONTAINS
     REAL(wp)                                   :: leaf_nitrogen,fine_root_nitrogen,coarse_root_nitrogen,sap_wood_nitrogen
     REAL(wp), DIMENSION(assimi_config%ncanopy) :: par_sunlit_tcnl_mavg_cl,par_shaded_tcnl_mavg_cl,fleaf_sunlit_tcnl_mavg_cl 
     REAL(wp), DIMENSION(assimi_config%ncanopy) :: n_tot_cl,fn_oth_cl,fn_chl_cl,fn_et_cl, fn_rub_cl, fn_pepc_cl,lai_cl,cumm_lai_cl
-    REAL(wp), DIMENSION(3)                     :: npp_direction, maint_respiration,anl
+    REAL(wp), DIMENSION(3)                     :: npp_direction, maint_respiration
+    REAL(wp) :: anl, agl, rl
     REAL(wp)  :: hlp1
     REAL(wp)  :: direction
     INTEGER   :: icanopy, dd
@@ -829,24 +830,25 @@ CONTAINS
                        lctlib%ps_pathway, & 
                        veg%t_jmax_opt_mavg%ptr, &                  
                        lctlib%t_jmax_omega,lctlib%g0,lctlib%g1, &
-                       hlp1,anl(dd),hlp1,hlp1,hlp1,&
+                       agl,anl,rl,hlp1,hlp1,&
                        hlp1,hlp1,hlp1)
                
-             npp_direction(dd) = npp_direction(dd) + anl(dd) * lai_cl(icanopy)
-                 
+             npp_direction(dd) = npp_direction(dd) + anl * lai_cl(icanopy)
+          
           ENDIF
        ENDDO
+     
      ENDDO  ! dd = 1,3 
         
      ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
 !@todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functiong in 4D
 !@todo:veg%leaf_cn_direction%ptr rename to veg%opt_leaf_cn_direction%ptr
 
-     IF (veg%labile_carbon_talloc_mavg%ptr/veg%labile_nitrogen_talloc_mavg%ptr > veg%growth_cn_talloc_mavg%ptr) THEN
-        veg%leaf_cn_direction%ptr = -1._wp
-     ELSE
+     !IF (veg%labile_carbon_talloc_mavg%ptr/veg%labile_nitrogen_talloc_mavg%ptr > veg%growth_cn_talloc_mavg%ptr) THEN
+     !   veg%leaf_cn_direction%ptr = -1._wp
+     !ELSE
         veg%leaf_cn_direction%ptr = REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp
-     ENDIF
+     !ENDIF
 
   ELSE
      veg%leaf_cn_direction%ptr = 0.0_wp

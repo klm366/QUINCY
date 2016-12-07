@@ -20,10 +20,10 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 n_uptake_scheme="standard"      # prescribed standard optimal resistance
 flag_calc_soil_moisture="T"
 # canopy model options
-flag_t_resp_acclimation="F"
-flag_t_jmax_acclimation="F"
+flag_t_resp_acclimation="T"
+flag_t_jmax_acclimation="T"
 flag_optimal_Nfraction="F"
-flag_heterogeneous_canopy="F"
+flag_heterogeneous_canopy="T"
 ncanopy=20                          # number of canopy layers
 canopy_layer_scheme="standard"      # canopy layer depth calculation: standard[0.5] fapar
 # plant growth model options
@@ -33,11 +33,11 @@ flag_optimal_allocation="F"
 flag_tile_veg_dynamics="T"          # does also set "start_bareground"
 
 # simulation length & output
-simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=100     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
+output_end_last_day_year=100     # equal with or larger than output_start_first_day_year
 
 # PFT 
 setPFTAutomatically="yes"       # yes / no (in case of 'yes', the value of option plant_functional_type_id is ignored)
@@ -45,7 +45,7 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 siteDataSet="f"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
-siteName="CA-Man_1999-2003"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
+siteName="FI-Hyy_2001-2006"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
                                 # examples: AT-Neu_2002-2005, CA-Man_1999-2003 & THO_D15_1984-2013 & CAL_1984-2013 & CH-Oe1_2002-2006
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=100.0      # float !
