@@ -36,6 +36,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_model
+    USE mo_veg_config_class,      ONLY: veg_config
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
     ! Use of process memories
@@ -61,15 +62,21 @@ CONTAINS
 
     !> 1.0 Calculate mortality rate and veg\%litterfall
     !! 
+    !! retruns constant mortality_rate if flag_tile_veg_dynamics == false \n
+    !! but calcs mortality_rate dynamically if flag_tile_veg_dynamics == true
     CALL calc_veg_mortality(lctlib                      , &
                             veg%an_boc_tvegdyn_mavg%ptr , &
                             veg%pool                    , &
                             veg%litterfall              , &
                             veg%mortality_rate%ptr )
 
-    !> 2.0 Calculate establishment_rate and veg\%establishment
+    !> 2.0 with vegetation dynamics turned on (flag_tile_veg_dynamics == true)
     !! 
-    CALL calc_veg_establishment(lctlib                        , &
+    IF(veg_config%flag_tile_veg_dynamics) THEN 
+
+      !> 2.1 Calculate establishment_rate and veg\%establishment
+      !! 
+      CALL calc_veg_establishment(lctlib                        , & ! in
                                  tile%soil%theta              , &
                                  veg%growing_season%ptr       , &
                                  veg%t_air_week_mavg%ptr      , &
@@ -77,16 +84,17 @@ CONTAINS
                                  veg%fnl_chl_cl%ptr(:,1)      , &
                                  veg%lai_cl%ptr(:,1)          , &
                                  veg%pool%seed_bed            , &
-                                 veg%establishment )
+                                 veg%establishment )              ! out
 
-    !> 3.0 Calculate change in individual density from mortality and establishment
-    !! 
-    CALL calc_delta_density_individuals(lctlib                        , &
+      !> 2.2 Calculate change in individual density from mortality and establishment
+      !! 
+      CALL calc_delta_density_individuals(lctlib                        , &
                                         veg%dens_ind%ptr              , &
                                         veg%mortality_rate%ptr        , &
                                         veg%establishment%carbon%ptr  , &
                                         veg%delta_dens_ind%ptr )
 
+    END IF  ! veg_config%flag_tile_veg_dynamics
 
   END SUBROUTINE update_veg_dynamics
 
@@ -151,7 +159,7 @@ CONTAINS
 
     ENDIF
 
-    !> 4.0 calculate litter fall from mortality
+    !> 3.0 calculate litter fall from mortality
     !!
     !! for all tissues but seed_bed
     veg_litterfall%leaf         = veg_litterfall%leaf         + veg_pool%leaf         * mortality_rate
@@ -189,7 +197,6 @@ CONTAINS
     USE mo_assimi_config_class,   ONLY: assimi_config         ! ncanopy
     USE mo_veg_constants
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_veg_config_class,      ONLY: veg_config
     USE mo_shared_constants,      ONLY: Tzero
     ! veg memory
     USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_element
@@ -205,7 +212,7 @@ CONTAINS
                                                      fnl_chl_cl     , & !< ..
                                                      lai_cl             !< ..
     TYPE(t_slm_struct_veg_element), INTENT(in)    :: veg_pool_seed_bed    !< seed_bed in vegetation pool
-    TYPE(t_slm_struct_veg_element), INTENT(out)   :: veg_establishment    !< vegetation establishment
+    TYPE(t_slm_struct_veg_element), INTENT(inout) :: veg_establishment    !< vegetation establishment
     ! 0.2 Local
     REAL(wp)                                      :: establishment_rate
     REAL(wp)                                      :: tc
@@ -216,37 +223,33 @@ CONTAINS
     INTEGER                                       :: icanopy
 
 
-    IF(veg_config%flag_tile_veg_dynamics) THEN 
+    !> 1.0 establishment rate
+    !!
 
-       !> 1.0 establishment rate
-       !!
+    !> 1.1 light limitation
+    !! depending on the red to far-red ratio of the light at the bottom of the canopy
+    tc = 0.0_wp
+    DO icanopy=1,assimi_config%ncanopy
+       tc = tc + nl_tot_cl(icanopy) * fnl_chl_cl(icanopy) * lai_cl(icanopy)
+    ENDDO
+    rfr_ratio = toc_rfr_ratio * exp( k_r2fr_chl * tc) 
+    flim_light = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio)**lctlib%k_est_light)
 
-       !> 1.1 light limitation
-       !! depending on the red to far-red ratio of the light at the bottom of the canopy
-       tc = 0.0_wp
-       DO icanopy=1,assimi_config%ncanopy
-         tc = tc + nl_tot_cl(icanopy) * fnl_chl_cl(icanopy) * lai_cl(icanopy)
-       ENDDO
-       rfr_ratio = toc_rfr_ratio * exp( k_r2fr_chl * tc) 
-       flim_light = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio)**lctlib%k_est_light)
-
-       !> 1.2 temperature and soil moisture limitation 
-       !! 
-       !! OBS: should be top soil moisture!
-       IF(t_air_week_mavg - Tzero < 0.0_wp .OR..NOT. growing_season) THEN 
-          flim_temp = 0.0_wp
-       ELSE
-          flim_temp = 1.0_wp - exp(-(lambda_est_temp * (t_air_week_mavg - Tzero))**k_est_temp)
-       ENDIF
-       flim_moist   = 1.0_wp - exp(-(lambda_est_moist * soil_theta)**k_est_moist) 
-   
-       !> 1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
-       !!
-       establishment_rate = flim_light * flim_temp * flim_moist * & 
-                            1.0_wp/lctlib%tau_seed_est/one_day/one_year * dtime
-       veg_establishment  = veg_pool_seed_bed * establishment_rate
-
+    !> 1.2 temperature and soil moisture limitation 
+    !! 
+    !! OBS: should be top soil moisture!
+    IF(t_air_week_mavg - Tzero < 0.0_wp .OR..NOT. growing_season) THEN 
+      flim_temp = 0.0_wp
+    ELSE
+      flim_temp = 1.0_wp - exp(-(lambda_est_temp * (t_air_week_mavg - Tzero))**k_est_temp)
     ENDIF
+    flim_moist   = 1.0_wp - exp(-(lambda_est_moist * soil_theta)**k_est_moist) 
+   
+    !> 1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
+    !!
+    establishment_rate = flim_light * flim_temp * flim_moist * & 
+                         1.0_wp/lctlib%tau_seed_est/one_day/one_year * dtime
+    veg_establishment  = veg_pool_seed_bed * establishment_rate
 
   END SUBROUTINE calc_veg_establishment
 
@@ -259,7 +262,7 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_delta_density_individuals(lctlib                    , &
+  ELEMENTAL SUBROUTINE calc_delta_density_individuals(lctlib          , &
                                             dens_ind                  , &
                                             mortality_rate            , &
                                             veg_establishment_carbon  , &
@@ -271,7 +274,7 @@ CONTAINS
     IMPLICIT NONE
 
     ! 0.1 InOut
-    TYPE(t_lctlib_element),         INTENT(in)    :: lctlib             !< land-cover-type library - parameter across pft's
+    TYPE(t_lctlib_element),         INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
     REAL(wp),                       INTENT(in)    :: dens_ind                 , & !< soil moisture 
                                                      mortality_rate           , & !< mortality per timestep
                                                      veg_establishment_carbon     !< egetation establishment measured in C
