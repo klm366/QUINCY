@@ -380,6 +380,7 @@ MODULE mo_veg_memory_class
                                     establishment   , &   !< flux between seed bed and reserve (mol m-2 timestep-1)
                                     reserve_use     , &   !< net flux between reserve and labile pool (mol m-2 timestep-1)
                                     init_pool       , &   !< initialization of some plant variables, considering: a) PFT, and b) flag_tile_veg_dynamics
+                                                          !! used only in mo_jsb_model_init:init_slm_plant()
                                     total_biomass         !< per time step sum over veg\%pool\%..
 
     TYPE(t_slm_struct_veg_pool)     :: &   ! nested pool TYPE t_jsb_n_struct
@@ -388,7 +389,9 @@ MODULE mo_veg_memory_class
                                     litterfall      , &   !< fluxes: litterfall
                                     growth_t        , &   !< fluxes: growth     --> for veg_turnover      *slmdev
                                     litterfall_t    , &   !< fluxes: litterfall --> for veg_turnover      *slmdev
-                                    falloc                !< mo_veg_growth:calc_allocation_fraction -> fractional allocation to pools
+                                    falloc          , &   !< mo_veg_growth:calc_allocation_fraction -> fractional allocation to pools
+                                    change_pool     , &   !< for diagnoses of mass conservation: changes in pools per timestep
+                                    total_flux            !< for diagnoses of mass conservation: sum of fluxes
 
 
   CONTAINS
@@ -1939,23 +1942,17 @@ CONTAINS
       !! 
       !! slm_add_var -> slm_add_n_struct()
       !! 
-      CALL slm_add_var(mem, 'veg_pool'      , mem%pool)
-      CALL slm_add_var(mem, 'veg_growth'    , mem%growth)
-      CALL slm_add_var(mem, 'veg_litterfall', mem%litterfall)
+      CALL slm_add_var(mem, 'veg_pool'        , mem%pool)
+      CALL slm_add_var(mem, 'veg_growth'      , mem%growth)
+      CALL slm_add_var(mem, 'veg_litterfall'  , mem%litterfall)
       CALL slm_add_var(mem, 'veg_growth_t'    , mem%growth_t)       ! *slmdev
       CALL slm_add_var(mem, 'veg_litterfall_t', mem%litterfall_t)   ! *slmdev
-      CALL slm_add_var(mem, 'veg_falloc'    , mem%falloc)
+      CALL slm_add_var(mem, 'veg_falloc'      , mem%falloc)
+      CALL slm_add_var(mem, 'veg_change_pool' , mem%change_pool)    ! mass conservation diagnosis
+      CALL slm_add_var(mem, 'veg_total_flux'  , mem%total_flux)     ! mass conservation diagnosis
       !> level 2 TYPE (l2_struct) nested within the above nested TYPE structures (t_jsb_n_struct)
       !! 
       !! slm_add_var -> slm_add_l2_struct()
-      !! 
-      !! veg%pool \n
-      !! veg%growth : fluxes  \n
-      !! veg%litterfall : fluxes  \n
-      !! veg%falloc
-      !!
-      !! veg%growth_t
-      !! veg%litterfall_t
       !! 
       CALL slm_add_var(mem%pool, 'veg_pool_leaf',         mem%pool%leaf)       
       CALL slm_add_var(mem%pool, 'veg_pool_fine_root',    mem%pool%fine_root)
@@ -2011,65 +2008,30 @@ CONTAINS
       CALL slm_add_var(mem%litterfall_t, 'veg_litterfall_t_reserve',      mem%litterfall_t%reserve)
       CALL slm_add_var(mem%litterfall_t, 'veg_litterfall_t_fruit',        mem%litterfall_t%fruit)
       CALL slm_add_var(mem%litterfall_t, 'veg_litterfall_t_seed_bed',     mem%litterfall_t%seed_bed)
-      !> add variables to the structs (veg\%t_jsb_struct\%VAR)
+      CALL slm_add_var(mem%change_pool, 'veg_change_pool_leaf',         mem%change_pool%leaf)       
+      CALL slm_add_var(mem%change_pool, 'veg_change_pool_fine_root',    mem%change_pool%fine_root)
+      CALL slm_add_var(mem%change_pool, 'veg_change_pool_coarse_root',  mem%change_pool%coarse_root)
+      CALL slm_add_var(mem%change_pool, 'veg_change_pool_sap_wood',     mem%change_pool%sap_wood)
+      CALL slm_add_var(mem%change_pool, 'veg_change_pool_heart_wood',   mem%change_pool%heart_wood)
+      CALL slm_add_var(mem%change_pool, 'veg_change_pool_labile',       mem%change_pool%labile)
+      CALL slm_add_var(mem%change_pool, 'veg_change_pool_reserve',      mem%change_pool%reserve)
+      CALL slm_add_var(mem%change_pool, 'veg_change_pool_fruit',        mem%change_pool%fruit)
+      CALL slm_add_var(mem%change_pool, 'veg_change_pool_seed_bed',     mem%change_pool%seed_bed)
+      CALL slm_add_var(mem%total_flux, 'veg_total_flux_leaf',         mem%total_flux%leaf)       
+      CALL slm_add_var(mem%total_flux, 'veg_total_flux_fine_root',    mem%total_flux%fine_root)
+      CALL slm_add_var(mem%total_flux, 'veg_total_flux_coarse_root',  mem%total_flux%coarse_root)
+      CALL slm_add_var(mem%total_flux, 'veg_total_flux_sap_wood',     mem%total_flux%sap_wood)
+      CALL slm_add_var(mem%total_flux, 'veg_total_flux_heart_wood',   mem%total_flux%heart_wood)
+      CALL slm_add_var(mem%total_flux, 'veg_total_flux_labile',       mem%total_flux%labile)
+      CALL slm_add_var(mem%total_flux, 'veg_total_flux_reserve',      mem%total_flux%reserve)
+      CALL slm_add_var(mem%total_flux, 'veg_total_flux_fruit',        mem%total_flux%fruit)
+      CALL slm_add_var(mem%total_flux, 'veg_total_flux_seed_bed',     mem%total_flux%seed_bed)
+
+      !> add variables to the structs and the l2 structs
       !!
-      !! e.g. establishment
-      !! slm_add_var -> slm_add_struct_element_r1d    *slmtemp 1D -> 2D
+      !! veg\%t_jsb_struct\%VAR
       !! 
-      CALL slm_add_var(mem%establishment, 'veg_establishment_carbon', mem%establishment%carbon, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%establishment, 'veg_establishment_nitrogen', mem%establishment%nitrogen, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%establishment, 'veg_establishment_phosphorus', mem%establishment%phosphorus, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%establishment, 'veg_establishment_carbon13', mem%establishment%carbon13, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%establishment, 'veg_establishment_carbon14', mem%establishment%carbon14, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%establishment, 'veg_establishment_nitrogen15', mem%establishment%nitrogen15, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_carbon', mem%reserve_use%carbon, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_nitrogen', mem%reserve_use%nitrogen, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_phosphorus', mem%reserve_use%phosphorus, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_carbon13', mem%reserve_use%carbon13, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_carbon14', mem%reserve_use%carbon14, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_nitrogen15', mem%reserve_use%nitrogen15, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL slm_add_var(mem%init_pool, 'veg_init_pool_carbon', mem%init_pool%carbon, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%init_pool, 'veg_init_pool_nitrogen', mem%init_pool%nitrogen, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%init_pool, 'veg_init_pool_phosphorus', mem%init_pool%phosphorus, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%init_pool, 'veg_init_pool_carbon13', mem%init_pool%carbon13, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%init_pool, 'veg_init_pool_carbon14', mem%init_pool%carbon14, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%init_pool, 'veg_init_pool_nitrogen15', mem%init_pool%nitrogen15, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_carbon', mem%total_biomass%carbon, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_nitrogen', mem%total_biomass%nitrogen, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_phosphorus', mem%total_biomass%phosphorus, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_carbon13', mem%total_biomass%carbon13, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_carbon14', mem%total_biomass%carbon14, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_nitrogen15', mem%total_biomass%nitrogen15, &
-            initval_r=0.0_wp)     ! initvalue
-      !> add variables to the l2 structs (pool and flux variables, veg\%t_jsb_n_struct\%t_jsb_struct\%VAR)
-      !! 
-      !! slm_add_var -> slm_add_struct_element_r1d    *slmtemp 1D -> 2D
+      !! veg\%t_jsb_n_struct\%t_jsb_struct\%VAR
       !! 
       CALL slm_add_var(mem%pool%leaf, 'veg_pool_leaf_carbon', mem%pool%leaf%carbon, &
             initval_r=0.0_wp)     ! initvalue
@@ -2538,7 +2500,7 @@ CONTAINS
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%falloc%seed_bed, 'veg_falloc_seed_bed_nitrogen15', mem%falloc%seed_bed%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
-
+ 
       CALL slm_add_var(mem%growth_t%leaf, 'veg_growth_t_leaf_carbon', mem%growth_t%leaf%carbon, &
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%growth_t%leaf, 'veg_growth_t_leaf_nitrogen', mem%growth_t%leaf%nitrogen, &
@@ -2771,6 +2733,292 @@ CONTAINS
       CALL slm_add_var(mem%litterfall_t%seed_bed, 'veg_litterfall_t_seed_bed_carbon14', mem%litterfall_t%seed_bed%carbon14, &
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%litterfall_t%seed_bed, 'veg_litterfall_t_seed_bed_nitrogen15', mem%litterfall_t%seed_bed%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_carbon', mem%change_pool%leaf%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_nitrogen', mem%change_pool%leaf%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_phosphorus', mem%change_pool%leaf%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_carbon13', mem%change_pool%leaf%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_carbon14', mem%change_pool%leaf%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%leaf, 'veg_change_pool_leaf_nitrogen15', mem%change_pool%leaf%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_carbon', mem%change_pool%fine_root%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_nitrogen', mem%change_pool%fine_root%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_phosphorus', mem%change_pool%fine_root%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_carbon13', mem%change_pool%fine_root%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_carbon14', mem%change_pool%fine_root%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%fine_root, 'veg_change_pool_fine_root_nitrogen15', mem%change_pool%fine_root%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_carbon', mem%change_pool%coarse_root%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_nitrogen', mem%change_pool%coarse_root%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_phosphorus', mem%change_pool%coarse_root%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_carbon13', mem%change_pool%coarse_root%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_carbon14', mem%change_pool%coarse_root%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%coarse_root, 'veg_change_pool_coarse_root_nitrogen15', mem%change_pool%coarse_root%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_carbon', mem%change_pool%sap_wood%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_nitrogen', mem%change_pool%sap_wood%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_phosphorus', mem%change_pool%sap_wood%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_carbon13', mem%change_pool%sap_wood%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_carbon14', mem%change_pool%sap_wood%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%sap_wood, 'veg_change_pool_sap_wood_nitrogen15', mem%change_pool%sap_wood%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_carbon', mem%change_pool%heart_wood%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_nitrogen', mem%change_pool%heart_wood%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_phosphorus', mem%change_pool%heart_wood%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_carbon13', mem%change_pool%heart_wood%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_carbon14', mem%change_pool%heart_wood%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%heart_wood, 'veg_change_pool_heart_wood_nitrogen15', mem%change_pool%heart_wood%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%change_pool%labile, 'veg_change_pool_labile_carbon', mem%change_pool%labile%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%labile, 'veg_change_pool_labile_nitrogen', mem%change_pool%labile%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%labile, 'veg_change_pool_labile_phosphorus', mem%change_pool%labile%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%labile, 'veg_change_pool_labile_carbon13', mem%change_pool%labile%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%labile, 'veg_change_pool_labile_carbon14', mem%change_pool%labile%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%labile, 'veg_change_pool_labile_nitrogen15', mem%change_pool%labile%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_carbon', mem%change_pool%reserve%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_nitrogen', mem%change_pool%reserve%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_phosphorus', mem%change_pool%reserve%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_carbon13', mem%change_pool%reserve%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_carbon14', mem%change_pool%reserve%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%reserve, 'veg_change_pool_reserve_nitrogen15', mem%change_pool%reserve%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_carbon', mem%change_pool%fruit%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_nitrogen', mem%change_pool%fruit%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_phosphorus', mem%change_pool%fruit%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_carbon13', mem%change_pool%fruit%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_carbon14', mem%change_pool%fruit%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%fruit, 'veg_change_pool_fruit_nitrogen15', mem%change_pool%fruit%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_carbon', mem%change_pool%seed_bed%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_nitrogen', mem%change_pool%seed_bed%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_phosphorus', mem%change_pool%seed_bed%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_carbon13', mem%change_pool%seed_bed%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_carbon14', mem%change_pool%seed_bed%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%change_pool%seed_bed, 'veg_change_pool_seed_bed_nitrogen15', mem%change_pool%seed_bed%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_flux%leaf, 'veg_total_flux_leaf_carbon', mem%total_flux%leaf%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%leaf, 'veg_total_flux_leaf_nitrogen', mem%total_flux%leaf%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%leaf, 'veg_total_flux_leaf_phosphorus', mem%total_flux%leaf%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%leaf, 'veg_total_flux_leaf_carbon13', mem%total_flux%leaf%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%leaf, 'veg_total_flux_leaf_carbon14', mem%total_flux%leaf%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%leaf, 'veg_total_flux_leaf_nitrogen15', mem%total_flux%leaf%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_flux%fine_root, 'veg_total_flux_fine_root_carbon', mem%total_flux%fine_root%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%fine_root, 'veg_total_flux_fine_root_nitrogen', mem%total_flux%fine_root%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%fine_root, 'veg_total_flux_fine_root_phosphorus', mem%total_flux%fine_root%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%fine_root, 'veg_total_flux_fine_root_carbon13', mem%total_flux%fine_root%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%fine_root, 'veg_total_flux_fine_root_carbon14', mem%total_flux%fine_root%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%fine_root, 'veg_total_flux_fine_root_nitrogen15', mem%total_flux%fine_root%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_flux%coarse_root, 'veg_total_flux_coarse_root_carbon', mem%total_flux%coarse_root%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%coarse_root, 'veg_total_flux_coarse_root_nitrogen', mem%total_flux%coarse_root%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%coarse_root, 'veg_total_flux_coarse_root_phosphorus', mem%total_flux%coarse_root%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%coarse_root, 'veg_total_flux_coarse_root_carbon13', mem%total_flux%coarse_root%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%coarse_root, 'veg_total_flux_coarse_root_carbon14', mem%total_flux%coarse_root%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%coarse_root, 'veg_total_flux_coarse_root_nitrogen15', mem%total_flux%coarse_root%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_flux%sap_wood, 'veg_total_flux_sap_wood_carbon', mem%total_flux%sap_wood%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%sap_wood, 'veg_total_flux_sap_wood_nitrogen', mem%total_flux%sap_wood%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%sap_wood, 'veg_total_flux_sap_wood_phosphorus', mem%total_flux%sap_wood%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%sap_wood, 'veg_total_flux_sap_wood_carbon13', mem%total_flux%sap_wood%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%sap_wood, 'veg_total_flux_sap_wood_carbon14', mem%total_flux%sap_wood%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%sap_wood, 'veg_total_flux_sap_wood_nitrogen15', mem%total_flux%sap_wood%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_flux%heart_wood, 'veg_total_flux_heart_wood_carbon', mem%total_flux%heart_wood%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%heart_wood, 'veg_total_flux_heart_wood_nitrogen', mem%total_flux%heart_wood%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%heart_wood, 'veg_total_flux_heart_wood_phosphorus', mem%total_flux%heart_wood%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%heart_wood, 'veg_total_flux_heart_wood_carbon13', mem%total_flux%heart_wood%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%heart_wood, 'veg_total_flux_heart_wood_carbon14', mem%total_flux%heart_wood%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%heart_wood, 'veg_total_flux_heart_wood_nitrogen15', mem%total_flux%heart_wood%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_flux%labile, 'veg_total_flux_labile_carbon', mem%total_flux%labile%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%labile, 'veg_total_flux_labile_nitrogen', mem%total_flux%labile%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%labile, 'veg_total_flux_labile_phosphorus', mem%total_flux%labile%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%labile, 'veg_total_flux_labile_carbon13', mem%total_flux%labile%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%labile, 'veg_total_flux_labile_carbon14', mem%total_flux%labile%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%labile, 'veg_total_flux_labile_nitrogen15', mem%total_flux%labile%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_flux%reserve, 'veg_total_flux_reserve_carbon', mem%total_flux%reserve%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%reserve, 'veg_total_flux_reserve_nitrogen', mem%total_flux%reserve%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%reserve, 'veg_total_flux_reserve_phosphorus', mem%total_flux%reserve%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%reserve, 'veg_total_flux_reserve_carbon13', mem%total_flux%reserve%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%reserve, 'veg_total_flux_reserve_carbon14', mem%total_flux%reserve%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%reserve, 'veg_total_flux_reserve_nitrogen15', mem%total_flux%reserve%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_flux%fruit, 'veg_total_flux_fruit_carbon', mem%total_flux%fruit%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%fruit, 'veg_total_flux_fruit_nitrogen', mem%total_flux%fruit%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%fruit, 'veg_total_flux_fruit_phosphorus', mem%total_flux%fruit%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%fruit, 'veg_total_flux_fruit_carbon13', mem%total_flux%fruit%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%fruit, 'veg_total_flux_fruit_carbon14', mem%total_flux%fruit%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%fruit, 'veg_total_flux_fruit_nitrogen15', mem%total_flux%fruit%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_flux%seed_bed, 'veg_total_flux_seed_bed_carbon', mem%total_flux%seed_bed%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%seed_bed, 'veg_total_flux_seed_bed_nitrogen', mem%total_flux%seed_bed%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%seed_bed, 'veg_total_flux_seed_bed_phosphorus', mem%total_flux%seed_bed%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%seed_bed, 'veg_total_flux_seed_bed_carbon13', mem%total_flux%seed_bed%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%seed_bed, 'veg_total_flux_seed_bed_carbon14', mem%total_flux%seed_bed%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_flux%seed_bed, 'veg_total_flux_seed_bed_nitrogen15', mem%total_flux%seed_bed%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%establishment, 'veg_establishment_carbon', mem%establishment%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%establishment, 'veg_establishment_nitrogen', mem%establishment%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%establishment, 'veg_establishment_phosphorus', mem%establishment%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%establishment, 'veg_establishment_carbon13', mem%establishment%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%establishment, 'veg_establishment_carbon14', mem%establishment%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%establishment, 'veg_establishment_nitrogen15', mem%establishment%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_carbon', mem%reserve_use%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_nitrogen', mem%reserve_use%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_phosphorus', mem%reserve_use%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_carbon13', mem%reserve_use%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_carbon14', mem%reserve_use%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%reserve_use, 'veg_reserve_use_nitrogen15', mem%reserve_use%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%init_pool, 'veg_init_pool_carbon', mem%init_pool%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%init_pool, 'veg_init_pool_nitrogen', mem%init_pool%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%init_pool, 'veg_init_pool_phosphorus', mem%init_pool%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%init_pool, 'veg_init_pool_carbon13', mem%init_pool%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%init_pool, 'veg_init_pool_carbon14', mem%init_pool%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%init_pool, 'veg_init_pool_nitrogen15', mem%init_pool%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_carbon', mem%total_biomass%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_nitrogen', mem%total_biomass%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_phosphorus', mem%total_biomass%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_carbon13', mem%total_biomass%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_carbon14', mem%total_biomass%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%total_biomass, 'veg_total_biomass_nitrogen15', mem%total_biomass%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
 
     END IF
