@@ -39,7 +39,7 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_soil, t_slm_tile, t_model
-    USE mo_base_constants,        ONLY: dtime
+    USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
     ! Use of process memories
@@ -54,6 +54,7 @@ CONTAINS
     TYPE(t_slm_soil),       POINTER        :: soil        ! soil variables per tile
     REAL(wp) :: dcost                                     ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
     REAL(wp) :: cost_nacq                                 ! total C cost of N acquisition (mol C / mol N)
+    REAL(wp) :: hlp1 
     REAL(wp) :: f_nacq_bnf,f_nacq_nup                     ! fraction of N uptake as BFN or Nuptake
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
@@ -136,8 +137,6 @@ CONTAINS
       CASE ("optimal")
         IF (veg%cost_n_fixation_tuptake_mavg%ptr <= veg%cost_n_uptake_root%ptr) THEN 
            dcost  = veg%cost_n_uptake_root%ptr - veg%cost_n_fixation_tuptake_mavg%ptr
-           !@BLARPP!! Don'T understand the term veg%growth_req_n_tuptake_mavg%ptr*veg%npp_tuptake_mavg%ptr here
-           !veg%n_fixation%ptr = c_root * vmax_bnf * dcost / (k_bnf + dcost) * veg%growth_req_n_tuptake_mavg%ptr*veg%npp_tuptake_mavg%ptr
            veg%n_fixation%ptr = veg%pool%fine_root%carbon%ptr * & 
                               vmax_bnf * dcost / (k_bnf + dcost)
         ELSE
@@ -148,6 +147,8 @@ CONTAINS
       CASE ("resistance")
          ! total cost according to Ohm's law: parallel resistors
          cost_nacq = 1._wp / (1._wp/veg%cost_n_uptake_root%ptr + 1._wp/veg%cost_n_fixation_tuptake_mavg%ptr) 
+         ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
+         hlp1 = veg%demand_uptake_n_tuptake_mavg%ptr / lctlib%cn_leaf * veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
          IF (veg%cost_n_fixation_tuptake_mavg%ptr > 5._wp * veg%cost_n_uptake_root%ptr) THEN
             f_nacq_bnf = 0.0_wp
             f_nacq_nup = 1.0_wp
@@ -155,8 +156,8 @@ CONTAINS
             f_nacq_bnf = veg%cost_n_uptake_root%ptr/(veg%cost_n_uptake_root%ptr+veg%cost_n_fixation_tuptake_mavg%ptr)
             f_nacq_nup = veg%cost_n_fixation_tuptake_mavg%ptr/(veg%cost_n_uptake_root%ptr+veg%cost_n_fixation_tuptake_mavg%ptr)
          ENDIF
-         veg%n_fixation%ptr = f_nacq_bnf * MAX(veg%growth_req_n_tuptake_mavg%ptr*veg%npp_tuptake_mavg%ptr,0.0_wp) 
-         veg%uptake_n%ptr   = MIN(f_nacq_nup * MAX(veg%growth_req_n_tuptake_mavg%ptr*veg%npp_tuptake_mavg%ptr,0.0_wp), & 
+         veg%n_fixation%ptr = f_nacq_bnf * hlp1 
+         veg%uptake_n%ptr   = MIN(f_nacq_nup * hlp1, & 
                                 veg%uptake_n%ptr)
     ENDSELECT 
 
