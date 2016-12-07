@@ -53,8 +53,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER        :: lctlib      !< land-cover-type library - parameter across pft's
     TYPE(t_slm_soil),       POINTER        :: soil        ! soil variables per tile
     REAL(wp) :: dcost                                     ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
-    REAL(wp) :: cost_nacq                                 ! total C cost of N acquisition (mol C / mol N)
-    REAL(wp) :: hlp1 
+    REAL(wp) :: n_demand                                  ! N demand of plants (mu mol N /m2 / s) 
     REAL(wp) :: f_nacq_bnf,f_nacq_nup                     ! fraction of N uptake as BFN or Nuptake
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
@@ -145,20 +144,16 @@ CONTAINS
       !> 3.3 Case 3: Ohm's law analogy 
       !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
       CASE ("resistance")
-         ! total cost according to Ohm's law: parallel resistors
-         cost_nacq = 1._wp / (1._wp/veg%cost_n_uptake_root%ptr + 1._wp/veg%cost_n_fixation_tuptake_mavg%ptr) 
          ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
-         hlp1 = veg%demand_uptake_n_tuptake_mavg%ptr / lctlib%cn_leaf * veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
-         IF (veg%cost_n_fixation_tuptake_mavg%ptr > 5._wp * veg%cost_n_uptake_root%ptr) THEN
-            f_nacq_bnf = 0.0_wp
-            f_nacq_nup = 1.0_wp
-         ELSE 
-            f_nacq_bnf = veg%cost_n_uptake_root%ptr/(veg%cost_n_uptake_root%ptr+veg%cost_n_fixation_tuptake_mavg%ptr)
-            f_nacq_nup = veg%cost_n_fixation_tuptake_mavg%ptr/(veg%cost_n_uptake_root%ptr+veg%cost_n_fixation_tuptake_mavg%ptr)
-         ENDIF
-         veg%n_fixation%ptr = f_nacq_bnf * hlp1 
-         veg%uptake_n%ptr   = MIN(f_nacq_nup * hlp1, & 
-                                veg%uptake_n%ptr)
+         n_demand		 = veg%demand_uptake_n_tuptake_mavg%ptr / lctlib%cn_leaf * veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
+         f_nacq_bnf = (veg%cost_n_uptake_root%ptr - (transform_cost_nh4+transform_cost_no3)/2.0_wp) / &
+							(veg%cost_n_uptake_root%ptr+veg%cost_n_fixation_tuptake_mavg%ptr)
+         f_nacq_nup = 1.0_wp - f_nacq_bnf
+  
+         veg%n_fixation%ptr = f_nacq_bnf * n_demand 
+         veg%uptake_n%ptr   = MIN(f_nacq_nup * n_demand, veg%uptake_n%ptr)
+					
+								
     ENDSELECT 
 
     !> 3.0 Calculate potential N uptake per unit root
