@@ -249,8 +249,10 @@ MODULE mo_veg_memory_class
                                     ci                        , & !< leaf internal co2 concentration
                                     unit_npp                  , & !< incremental change in NPP. Needed for optimal allocation
                                     unit_transpiration        , & !< incremental change in transpiration. Needed for optimal allocation
-                                    unit_uptake_n             , & !< incremental change in N-based growth, needed for optimal allocation
-                                    unit_uptake_p             , & !< incremental change in P-based growth, needed for optimal allocation
+                                    unit_uptake_n_pot         , & !< incremental change in potential N uptake per unit root carbon, needed for N uptake calculation 
+                                    unit_uptake_p_pot         , & !< incremental change in potential P uptake per unit root carbon, currently unused 
+                                    unit_uptake_n_act         , & !< incremental change in actual N uptake oer unit root carbon, needed for optimal allocation
+                                    unit_uptake_p_act         , & !< incremental change in actual P uptake per unit root carbon, needed for optimal allocation
                                     delta_dens_ind            , & !< change in density of individuals (#/m2/timestep)
                                     cost_n_uptake_root        , & !< actual cost for N uptake by roots (mol C/mol N)
                                     cost_n_fixation           , & !< actual cost for N uptake through fixation (mol C/mol N)
@@ -345,8 +347,8 @@ MODULE mo_veg_memory_class
                                     transpiration_talloc_mavg      , &  !< average transpiration at allocation time-scale
                                     unit_npp_talloc_mavg           , &  !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
                                     unit_transpiration_talloc_mavg , &  !< rate of tranpiration change per unit LAI change?
-                                    unit_uptake_n_talloc_mavg      , &  !< rate of N uptkae per unit root, mumol N mol-1 (averaging time-scale: tau_allocation)
-                                    unit_uptake_p_talloc_mavg      , &  !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_allocation)
+                                    unit_uptake_n_act_talloc_mavg  , &  !< actual rate of N uptkae per unit root, mumol N mol-1 (averaging time-scale: tau_allocation)
+                                    unit_uptake_p_act_talloc_mavg  , &  !< actual rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_allocation)
                                     dphi_talloc_mavg               , &  !< leaf-soil water potential gradient (MPa)  (averaging time-scale: tau_allocation)
                                     growth_cn_talloc_mavg          , &  !< plant growth cn ratio, equivalent to 1/growth_req_n
                                     growth_cp_talloc_mavg          , &  !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)
@@ -357,8 +359,8 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real1d)          :: &   
                                     leaf2root_troot_mavg           , &  !< leaf to root mass ratio
                                     unit_npp_troot_mavg            , &  !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
-                                    unit_uptake_n_troot_mavg       , &  !< rate of N uptkae per unit root, mumol N mol-1 (time-scale of accumulation: tau_root)
-                                    unit_uptake_p_troot_mavg       , &  !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_root)
+                                    unit_uptake_n_pot_troot_mavg   , &  !< rate of N uptkae per unit root, mumol N mol-1 (time-scale of accumulation: tau_root)
+                                    unit_uptake_p_pot_troot_mavg   , &  !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_root)
                                     fmaint_rate_troot_mavg              !< moving average of N-specific maintentance respiration (~µmol C/mol N / s ) 
     ! 1.8 memory over timescale of vegetation dynamics 
     TYPE(t_jsb_var_real1d)          :: &   
@@ -1646,10 +1648,16 @@ CONTAINS
       CALL slm_add_var(mem, 'unit_transpiration', mem%unit_transpiration, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'unit_uptake_n', mem%unit_uptake_n, &
+      CALL slm_add_var(mem, 'unit_uptake_n_pot', mem%unit_uptake_n_pot, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'unit_uptake_p', mem%unit_uptake_p, &
+      CALL slm_add_var(mem, 'unit_uptake_p_pot', mem%unit_uptake_p_pot, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'unit_uptake_n_act', mem%unit_uptake_n_act, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'unit_uptake_p_act', mem%unit_uptake_p_act, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'delta_dens_ind', mem%delta_dens_ind, &
@@ -1865,10 +1873,10 @@ CONTAINS
       CALL slm_add_var(mem, 'unit_transpiration_talloc_mavg', mem%unit_transpiration_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'unit_uptake_n_talloc_mavg', mem%unit_uptake_n_talloc_mavg, &
+      CALL slm_add_var(mem, 'unit_uptake_n_act_talloc_mavg', mem%unit_uptake_n_act_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'unit_uptake_p_talloc_mavg', mem%unit_uptake_p_talloc_mavg, &
+      CALL slm_add_var(mem, 'unit_uptake_p_act_talloc_mavg', mem%unit_uptake_p_act_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'dphi_talloc_mavg', mem%dphi_talloc_mavg, &
@@ -1895,10 +1903,10 @@ CONTAINS
       CALL slm_add_var(mem, 'unit_npp_troot_mavg', mem%unit_npp_troot_mavg, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'unit_uptake_n_troot_mavg', mem%unit_uptake_n_troot_mavg, &
+      CALL slm_add_var(mem, 'unit_uptake_n_pot_troot_mavg', mem%unit_uptake_n_pot_troot_mavg, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'unit_uptake_p_troot_mavg', mem%unit_uptake_p_troot_mavg, &
+      CALL slm_add_var(mem, 'unit_uptake_p_pot_troot_mavg', mem%unit_uptake_p_pot_troot_mavg, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'fmaint_rate_troot_mavg', mem%fmaint_rate_troot_mavg, &

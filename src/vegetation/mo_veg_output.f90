@@ -519,7 +519,7 @@ CONTAINS
        lun=lun+1
        write(lun,'(22F20.6)') time_d, veg%height%ptr, veg%diameter%ptr, veg%lai%ptr, veg%dens_ind%ptr, &
          hlp1,l2r,s2c, bcf, &
-         veg%target_cn_leaf%ptr, veg%unit_npp_talloc_mavg%ptr, veg%unit_uptake_n_talloc_mavg%ptr,&
+         veg%target_cn_leaf%ptr, veg%unit_npp_talloc_mavg%ptr, veg%unit_uptake_n_act_talloc_mavg%ptr,&
          veg%growth_cn_talloc_mavg%ptr, veg%npp_talloc_mavg%ptr, &
          growing_season_float, & 
          veg%cost_n_uptake_root%ptr, veg%cost_n_fixation_tuptake_mavg%ptr, &

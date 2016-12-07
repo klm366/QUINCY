@@ -145,26 +145,31 @@ CONTAINS
       !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
       CASE ("resistance")
          ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
-         n_demand		 = veg%demand_uptake_n_tuptake_mavg%ptr / lctlib%cn_leaf * veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
+         n_demand = veg%demand_uptake_n_tuptake_mavg%ptr / lctlib%cn_leaf * veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
          f_nacq_bnf = (veg%cost_n_uptake_root%ptr - (transform_cost_nh4+transform_cost_no3)/2.0_wp) / &
-							(veg%cost_n_uptake_root%ptr+veg%cost_n_fixation_tuptake_mavg%ptr)
+                      (veg%cost_n_uptake_root%ptr+veg%cost_n_fixation_tuptake_mavg%ptr)
          f_nacq_nup = 1.0_wp - f_nacq_bnf
   
          veg%n_fixation%ptr = f_nacq_bnf * n_demand 
          veg%uptake_n%ptr   = MIN(f_nacq_nup * n_demand, veg%uptake_n%ptr)
-					
-								
+
     ENDSELECT 
 
-    !> 3.0 Calculate potential N uptake per unit root
+    !> 3.0 Calculate potential and actual N uptake per unit fine root carbon
     !!
-    veg%unit_uptake_n%ptr = lctlib%vmax_uptake_n * &
-                               veg%demand_uptake_n_tuptake_mavg%ptr * & 
-                               vegsoil%ammonium * ( lctlib%soil_n_aff1 + & 
-                               1._wp / ( lctlib%soil_n_aff2 + vegsoil%ammonium ))
-    veg%unit_uptake_p%ptr = lctlib%vmax_uptake_p * &
-                               vegsoil%phosphate * ( lctlib%soil_p_aff1 + & 
-                               1._wp / ( lctlib%soil_p_aff2 + vegsoil%phosphate ))
+    veg%unit_uptake_n_pot%ptr = lctlib%vmax_uptake_n * &
+                                vegsoil%ammonium * ( lctlib%soil_n_aff1 + &
+                                1._wp / ( lctlib%soil_n_aff2 + vegsoil%ammonium ))
+    veg%unit_uptake_p_pot%ptr = lctlib%vmax_uptake_p * &
+                                vegsoil%phosphate * ( lctlib%soil_p_aff1 + &
+                                1._wp / ( lctlib%soil_p_aff2 + vegsoil%phosphate ))
+    IF(veg%pool%fine_root%carbon%ptr > eps8) THEN
+      veg%unit_uptake_n_act%ptr = veg%uptake_n%ptr / veg%pool%fine_root%carbon%ptr
+      veg%unit_uptake_p_act%ptr = veg%uptake_p%ptr / veg%pool%fine_root%carbon%ptr
+    ELSE
+      veg%unit_uptake_n_act%ptr = veg%unit_uptake_n_pot%ptr * veg%demand_uptake_n_tuptake_mavg%ptr
+      veg%unit_uptake_p_act%ptr = veg%unit_uptake_p_pot%ptr * veg%demand_uptake_p_tuptake_mavg%ptr
+    ENDIF
 
   END SUBROUTINE update_vegsoil_bgc
 

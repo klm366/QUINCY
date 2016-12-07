@@ -407,9 +407,9 @@ CONTAINS
                                                       mavg_period_talloc, do_calc=veg%growing_season%ptr)
     veg%dphi_talloc_mavg%ptr                 = calc_mavg(veg%dphi_talloc_mavg%ptr, veg%dphi%ptr, &
                                                       mavg_period_talloc, do_calc=veg%growing_season%ptr)
-    veg%unit_uptake_n_talloc_mavg%ptr        = calc_mavg(veg%unit_uptake_n_talloc_mavg%ptr, veg%unit_uptake_n%ptr, &
+    veg%unit_uptake_n_act_talloc_mavg%ptr    = calc_mavg(veg%unit_uptake_n_act_talloc_mavg%ptr, veg%unit_uptake_n_act%ptr, &
                                                       mavg_period_talloc, do_calc=veg%growing_season%ptr)
-    veg%unit_uptake_p_talloc_mavg%ptr        = calc_mavg(veg%unit_uptake_p_talloc_mavg%ptr, veg%unit_uptake_p%ptr, &
+    veg%unit_uptake_p_act_talloc_mavg%ptr    = calc_mavg(veg%unit_uptake_p_act_talloc_mavg%ptr, veg%unit_uptake_p_act%ptr, &
                                                       mavg_period_talloc, do_calc=veg%growing_season%ptr)
     veg%labile_carbon_talloc_mavg%ptr        = calc_mavg(veg%labile_carbon_talloc_mavg%ptr, veg%pool%labile%carbon%ptr, & 
                                                       mavg_period_talloc, do_calc=veg%growing_season%ptr)
@@ -446,9 +446,9 @@ CONTAINS
                                                avg_period_unit='year')
     veg%unit_npp_troot_mavg%ptr       = calc_mavg(veg%unit_npp_troot_mavg%ptr, veg%unit_npp%ptr, lctlib%tau_fine_root, &
                                                do_calc=veg%growing_season%ptr, avg_period_unit='year') 
-    veg%unit_uptake_n_troot_mavg%ptr  = calc_mavg(veg%unit_uptake_n_troot_mavg%ptr, veg%unit_uptake_n%ptr, lctlib%tau_fine_root, &
+    veg%unit_uptake_n_pot_troot_mavg%ptr  = calc_mavg(veg%unit_uptake_n_pot_troot_mavg%ptr, veg%unit_uptake_n_pot%ptr, lctlib%tau_fine_root, &
                                                do_calc=veg%growing_season%ptr, avg_period_unit='year')
-    veg%unit_uptake_p_troot_mavg%ptr  = calc_mavg(veg%unit_uptake_p_troot_mavg%ptr, veg%unit_uptake_p%ptr, lctlib%tau_fine_root, &
+    veg%unit_uptake_p_pot_troot_mavg%ptr  = calc_mavg(veg%unit_uptake_p_pot_troot_mavg%ptr, veg%unit_uptake_p_pot%ptr, lctlib%tau_fine_root, &
                                                do_calc=veg%growing_season%ptr, avg_period_unit='year')
     veg%fmaint_rate_troot_mavg%ptr    = calc_mavg(veg%fmaint_rate_troot_mavg%ptr, veg%fmaint_rate%ptr, lctlib%tau_fine_root, &
                                                do_calc=veg%growing_season%ptr, avg_period_unit='year') 

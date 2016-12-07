@@ -85,14 +85,14 @@ CONTAINS
     !> 1.1 calculate costs of N uptake and fixation
     !!
     veg%fmaint_rate%ptr = fmaint_rate_base * temperature_response_respiration(t_air, veg%t_air_tacclim_mavg%ptr)
-    CALL calc_nitrogen_uptake_costs(lctlib                            , &
-                                    t_air                             , &
-                                    veg%pool%fine_root%carbon%ptr     , &
-                                    veg%pool%fine_root%nitrogen%ptr   , &
-                                    veg%fmaint_rate_troot_mavg%ptr    , &
-                                    veg%unit_npp_troot_mavg%ptr       , &
-                                    veg%unit_uptake_n_troot_mavg%ptr  , &
-                                    veg%cost_n_uptake_root%ptr        , &
+    CALL calc_nitrogen_uptake_costs(lctlib                               , &
+                                    t_air                                , &
+                                    veg%pool%fine_root%carbon%ptr        , &
+                                    veg%pool%fine_root%nitrogen%ptr      , &
+                                    veg%fmaint_rate_troot_mavg%ptr       , &
+                                    veg%unit_npp_troot_mavg%ptr          , &
+                                    veg%unit_uptake_n_pot_troot_mavg%ptr , &
+                                    veg%cost_n_uptake_root%ptr           , &
                                     veg%cost_n_fixation%ptr   )           
   
     !> 2.0 Calculate target C:N:P for each tissue type
@@ -147,8 +147,8 @@ CONTAINS
                         veg%unit_npp_talloc_mavg%ptr          , &
                         veg%transpiration_talloc_mavg%ptr     , &
                         veg%unit_transpiration_talloc_mavg%ptr, &
-                        veg%unit_uptake_n_talloc_mavg%ptr     , &
-                        veg%unit_uptake_p_talloc_mavg%ptr     , &
+                        veg%unit_uptake_n_act_talloc_mavg%ptr , &
+                        veg%unit_uptake_p_act_talloc_mavg%ptr , &
                         veg%dphi_talloc_mavg%ptr              , &
                         veg%kstar_labile%ptr                  , &
                         dheight                               , &
