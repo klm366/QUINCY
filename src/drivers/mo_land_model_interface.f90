@@ -554,7 +554,7 @@ CONTAINS
     !> 1.2 Initialisation of soil and vegetation (so far relevant) 
     !!
     !!  
-    tile%soil%theta  = ref_theta
+    tile%vegsoil%theta  = ref_theta
     veg%lai%ptr   = ref_lai 
     IF(ref_pft==0) THEN
       veg%pool%leaf%nitrogen%ptr     = ref_nleaf / molar_mass_N * veg%lai%ptr
@@ -705,22 +705,22 @@ CONTAINS
   !! 
   lun = lun + 1
   WRITE(lun,*) 'THETA A GC CI' 
-  tile%soil%theta = 0.0_wp
+  tile%vegsoil%theta = 0.0_wp
   DO i = 1,100
 
-     tile%soil%theta = tile%soil%theta + 1.0_wp 
+     tile%vegsoil%theta = tile%vegsoil%theta + 1.0_wp 
 
      !! canopy calculation fluxes
      CALL set_zero_vegetation_fluxes(tile)    ! mo_assimi_update_canopy_fluxes
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') tile%soil%theta, &
+     WRITE(lun,'(4F16.7)') tile%vegsoil%theta, &
            veg%an%ptr,veg%gc%ptr*1000._wp, &
            veg%ci%ptr/co2_mixing_ratio 
 
   END DO
-  tile%soil%theta = ref_theta
+  tile%vegsoil%theta = ref_theta
 
   !> 2.6 LAI (0-11)
   !! 

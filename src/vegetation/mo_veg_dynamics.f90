@@ -77,7 +77,7 @@ CONTAINS
       !> 2.1 Calculate establishment_rate and veg\%establishment
       !! 
       CALL calc_veg_establishment(lctlib                        , & ! in
-                                 tile%soil%theta              , &
+                                 tile%vegsoil%theta              , &
                                  veg%growing_season%ptr       , &
                                  veg%t_air_week_mavg%ptr      , &
                                  veg%nl_tot_cl%ptr(:,1)       , &

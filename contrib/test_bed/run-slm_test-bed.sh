@@ -33,11 +33,11 @@ flag_optimal_allocation="F"
 flag_tile_veg_dynamics="T"          # does also set "start_bareground"
 
 # simulation length & output
-simulation_length_number=3     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=3     # equal with or larger than output_start_first_day_year
+output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
 
 # PFT 
 setPFTAutomatically="yes"       # yes / no (in case of 'yes', the value of option plant_functional_type_id is ignored)

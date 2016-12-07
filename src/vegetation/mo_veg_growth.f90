@@ -80,7 +80,7 @@ CONTAINS
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    veg%kstar_labile%ptr = calc_meristem_activity(t_air, tile%soil%theta, veg%growing_season%ptr)
+    veg%kstar_labile%ptr = calc_meristem_activity(t_air, tile%vegsoil%theta, veg%growing_season%ptr)
 
     !> 1.1 calculate costs of N uptake and fixation
     !!

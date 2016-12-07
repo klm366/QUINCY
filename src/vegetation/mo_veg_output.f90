@@ -389,7 +389,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER      :: model
     TYPE(t_lctlib_element), POINTER      :: lctlib     !< land-cover-type library - parameter across pft's
-    TYPE(t_slm_soil),       POINTER      :: soil           ! soil variables per tile
+    TYPE(t_slm_soil),       POINTER      :: vegsoil     ! soil variables per tile
     INTEGER                          :: lun            ! locical unit number
     INTEGER                          :: icanopy         ! loop over ncanopy
     REAL(wp)                         :: hlp1           ! helper variable
@@ -412,7 +412,7 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
-    soil          => tile%soil
+    vegsoil  => tile%vegsoil
 
 
     !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
@@ -469,9 +469,9 @@ CONTAINS
          veg%pool%fruit%phosphorus%ptr,veg%pool%labile%phosphorus%ptr,&
          veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,veg%total_biomass%phosphorus%ptr
        lun=lun+1
-       write(lun,'(9F12.6)') time_d, soil%moisture, soil%water_potential,veg%beta_soil_gs%ptr,veg%beta_soil_ps%ptr
+       write(lun,'(9F12.6)') time_d, vegsoil%moisture, vegsoil%water_potential,veg%beta_soil_gs%ptr,veg%beta_soil_ps%ptr
        lun=lun+1
-       write(lun,'(3F12.6)') time_d, soil%pool%litter%nitrogen, soil%ammonium
+       write(lun,'(3F12.6)') time_d, vegsoil%pool%litter%nitrogen, vegsoil%ammonium
        lun=lun+1
        DO icanopy=1, assimi_config%ncanopy
          write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fnl_et_cl%ptr(icanopy,1), &

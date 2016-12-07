@@ -60,7 +60,7 @@ MODULE mo_base_memory
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_tile
-    TYPE(t_slm_soil)                  :: soil      !< soil construct of tile  *slmdev
+    TYPE(t_slm_soil)                  :: vegsoil      !< soil construct of tile  *slmdev
 
     TYPE(t_jsb_lct)                   :: lcts      !< data on land cover type of the tile
     CLASS(t_jsb_memory_p), POINTER    :: mem(:)

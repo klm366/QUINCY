@@ -334,19 +334,19 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
 
 
-      tile%soil%moisture                 = veg_config%soil_awc_prescribe
-      tile%soil%theta                    = veg_config%soil_theta_prescribe 
-      tile%soil%ammonium                 = 0.1_wp
-      tile%soil%phosphate                = 0.01_wp
+      tile%vegsoil%moisture                 = veg_config%soil_awc_prescribe
+      tile%vegsoil%theta                    = veg_config%soil_theta_prescribe 
+      tile%vegsoil%ammonium                 = 0.1_wp
+      tile%vegsoil%phosphate                = 0.01_wp
       veg%target_cn_leaf%ptr             = lctlib%cn_leaf
       veg%target_np_leaf%ptr             = lctlib%np_leaf
 
       IF(veg_config%flag_tile_veg_dynamics)THEN
-         tile%soil%pool%litter%nitrogen   = 0.5_wp
+         tile%vegsoil%pool%litter%nitrogen   = 0.5_wp
          veg%init_pool%carbon%ptr         = lctlib%seed_size * 10.0_wp
          veg%dens_ind%ptr                 = 0.0_wp 
       ELSE
-         tile%soil%pool%litter%nitrogen   = 5.0_wp
+         tile%vegsoil%pool%litter%nitrogen   = 5.0_wp
          veg%init_pool%carbon%ptr         = 50.0_wp 
          veg%dens_ind%ptr                 = 1.0_wp 
       ENDIF
@@ -416,8 +416,8 @@ CONTAINS
     !! 1.3 Initialise tile
     !! 
     !! Initialisation of soil and vegetation, so far relevant
-    tile%soil%moisture   = veg_config%soil_awc_prescribe
-    tile%soil%theta      = veg_config%soil_theta_prescribe
+    tile%vegsoil%moisture   = veg_config%soil_awc_prescribe
+    tile%vegsoil%theta      = veg_config%soil_theta_prescribe
     veg%lai%ptr          = ref_lai 
     IF(veg_config%pft_id==0) THEN
       veg%pool%leaf%nitrogen%ptr   = ref_nleaf / molar_mass_N * veg%lai%ptr

@@ -57,7 +57,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
-    TYPE(t_slm_soil),       POINTER        :: soil       ! soil variables per tile
+    TYPE(t_slm_soil),       POINTER        :: vegsoil       ! soil variables per tile
     INTEGER                                :: icanopy     ! for looping across ncanopy layers
     REAL(wp)                               :: hlp1       ! dummy variable 
     ! 0.3 Memory allocation
@@ -103,7 +103,7 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
 
    !  bi-directional pointer  *slmdev
-   soil  => tile%soil
+   vegsoil  => tile%vegsoil
 
    ! set output to zero  
    ! *slmdev  necessary ? 
@@ -120,10 +120,10 @@ CONTAINS
    veg%beta_air%ptr     = calc_atm_moisture_stress( t_air                   , &
                                                     q_air                   , &
                                                     press_srf) 
-   veg%beta_soil_ps%ptr = calc_soil_moisture_stress(soil%theta              , & 
+   veg%beta_soil_ps%ptr = calc_soil_moisture_stress(vegsoil%theta           , & 
                                                     lctlib%lambda_soil_ps   , &
                                                     lctlib%weibull_k_soil_ps)
-   veg%beta_soil_gs%ptr = calc_soil_moisture_stress(soil%theta              , &
+   veg%beta_soil_gs%ptr = calc_soil_moisture_stress(vegsoil%theta           , &
                                                     lctlib%lambda_soil_gs   , &
                                                     lctlib%weibull_k_soil_gs)
 
