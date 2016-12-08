@@ -287,7 +287,7 @@ CONTAINS
     !> 1.1 trees
     !!
     IF(lctlib%growthform == itree) THEN
-	    delta_dens_ind = (veg_establishment_carbon / lctlib%seed_size) - (mortality_rate * dens_ind)
+       delta_dens_ind = (veg_establishment_carbon / lctlib%seed_size) - (mortality_rate * dens_ind)
     END IF
 
   END SUBROUTINE calc_delta_density_individuals

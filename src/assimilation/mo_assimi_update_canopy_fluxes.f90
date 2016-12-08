@@ -161,30 +161,30 @@ CONTAINS
                                  assimi%cil%ptr                   , &
                                  hlp1, hlp1, hlp1)                   
 
-        veg%gpp = veg%gpp + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1)
+        veg%gpp%ptr = veg%gpp%ptr + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1)
 
         IF(assimi%agl%ptr > eps8) THEN
            hlp1          = discrimination_ps(assimi%cil%ptr     , &
                                              co2_mixing_ratio   , &
                                              'C13'              , &
                                              lctlib%ps_pathway)
-           veg%gpp_C13 = veg%gpp_C13 + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
+           veg%gpp_C13%ptr = veg%gpp_C13%ptr + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C13 , &
                                                                                                    hlp1)
            hlp1          = discrimination_ps(assimi%cil%ptr     , &
                                              co2_mixing_ratio   , &
                                              'C14'              , &
                                              lctlib%ps_pathway)
-           veg%gpp_C14 = veg%gpp_C14 + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
+           veg%gpp_C14%ptr = veg%gpp_C14%ptr + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C14 , & 
                                                                                                    hlp1                 , &
                                                                                                    scale_correction_C14)
         ENDIF
 
-        veg%an                      = veg%an + assimi%anl%ptr * veg%lai_cl%ptr(icanopy,1) 
-        veg%maint_respiration_leaf  = veg%maint_respiration_leaf + assimi%rl%ptr * veg%lai_cl%ptr(icanopy,1) 
-        veg%gc                      = veg%gc + assimi%gsl%ptr * veg%lai_cl%ptr(icanopy,1)
-        veg%ci                      = veg%ci + assimi%cil%ptr * veg%lai_cl%ptr(icanopy,1)
+        veg%an%ptr                      = veg%an%ptr + assimi%anl%ptr * veg%lai_cl%ptr(icanopy,1) 
+        veg%maint_respiration_leaf%ptr  = veg%maint_respiration_leaf%ptr + assimi%rl%ptr * veg%lai_cl%ptr(icanopy,1) 
+        veg%gc%ptr                      = veg%gc%ptr + assimi%gsl%ptr * veg%lai_cl%ptr(icanopy,1)
+        veg%ci%ptr                      = veg%ci%ptr + assimi%cil%ptr * veg%lai_cl%ptr(icanopy,1)
 
         ! get the net photosynthesis of the lowest canopy layer at this timestep
         IF(veg%lai_cl%ptr(icanopy,1) > 0.0_wp) veg%an_boc%ptr = assimi%anl%ptr
@@ -192,7 +192,7 @@ CONTAINS
   ENDDO
 
   ! ci
-  IF(veg%lai%ptr > eps8) veg%ci = veg%ci / veg%lai
+  IF(veg%lai%ptr > eps8) veg%ci%ptr = veg%ci%ptr / veg%lai%ptr
 
   ! t_jmax_opt
   IF(assimi_config%flag_t_jmax_acclimation) THEN 

@@ -273,11 +273,11 @@ CONTAINS
     phosphorus_recycling_fract  = calc_phosphorus_recycling_fract("leaf")
 
     retranslocation_leaf_n            = nitrogen_recycling_fract          * veg_litterfall_t%leaf%nitrogen%ptr
-    veg_litterfall_t%leaf%nitrogen    = veg_litterfall_t%leaf%nitrogen    - retranslocation_leaf_n 
+    veg_litterfall_t%leaf%nitrogen%ptr    = veg_litterfall_t%leaf%nitrogen%ptr    - retranslocation_leaf_n
     retranslocation_leaf_n15          = nitrogen_recycling_fract          * veg_litterfall_t%leaf%nitrogen15%ptr
-    veg_litterfall_t%leaf%nitrogen15  = veg_litterfall_t%leaf%nitrogen15  - retranslocation_leaf_n15 
+    veg_litterfall_t%leaf%nitrogen15%ptr  = veg_litterfall_t%leaf%nitrogen15%ptr  - retranslocation_leaf_n15 
     retranslocation_leaf_p            = phosphorus_recycling_fract        * veg_litterfall_t%leaf%phosphorus%ptr
-    veg_litterfall_t%leaf%phosphorus  = veg_litterfall_t%leaf%phosphorus  - retranslocation_leaf_p
+    veg_litterfall_t%leaf%phosphorus%ptr  = veg_litterfall_t%leaf%phosphorus%ptr  - retranslocation_leaf_p
 
     !> 3.0 fine root turnover to litter
     !! 

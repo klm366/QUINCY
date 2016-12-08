@@ -297,12 +297,12 @@ CONTAINS
     
     !> 3 Update mineral pool
     !! 
-!SZ BLARPP. check units
     IF(veg_config%n_uptake_scheme=='prescribed') THEN 
        vegsoil%ammonium = 0.2_wp
     ELSE
-       vegsoil%ammonium = vegsoil%ammonium     + vegsoil%loss%litter%nitrogen * 1.e3_wp / soil_depth * 1.e-3_wp
-       vegsoil%ammonium = MAX(vegsoil%ammonium - veg%uptake_n%ptr * dtime/1.e6_wp * 1.e3_wp / soil_depth * 1.e-3_wp, 0.0_wp) 
+       vegsoil%ammonium = vegsoil%ammonium     + vegsoil%loss%litter%nitrogen / soil_depth
+       !vegsoil%ammonium = MAX(vegsoil%ammonium - veg%uptake_n%ptr * dtime/1.e6_wp / soil_depth , 0.0_wp) 
+       vegsoil%ammonium = vegsoil%ammonium - veg%uptake_n%ptr * dtime/1.e6_wp / soil_depth 
     ENDIF
 
     !vegsoil%phosphate = vegsoil%phosphate + vegsoil%loss%litter%phosphorus*dtime*  1.e3_wp / soil_depth * 1.e-3_wp
