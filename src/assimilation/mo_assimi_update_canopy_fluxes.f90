@@ -152,11 +152,11 @@ CONTAINS
                                  veg%beta_soil_ps%ptr             , &
                                  veg%beta_sinklim_ps%ptr          , &
                                  veg%beta_soil_gs%ptr             , &
-                                 veg%fnl_chl_cl%ptr(icanopy,1)     , &
-                                 veg%fnl_et_cl%ptr(icanopy,1)      , &
-                                 veg%fnl_rub_cl%ptr(icanopy,1)     , &
-                                 veg%fnl_pepc_cl%ptr(icanopy,1)    , &
-                                 veg%nl_tot_cl%ptr(icanopy,1)      , &
+                                 veg%fn_chl_cl%ptr(icanopy,1)     , &
+                                 veg%fn_et_cl%ptr(icanopy,1)      , &
+                                 veg%fn_rub_cl%ptr(icanopy,1)     , &
+                                 veg%fn_pepc_cl%ptr(icanopy,1)    , &
+                                 veg%leaf_nitrogen_cl%ptr(icanopy,1)      , &
                                  lctlib%ps_pathway                , &
                                  veg%t_jmax_opt_mavg%ptr          , &
                                  lctlib%t_jmax_omega              , &
@@ -245,7 +245,7 @@ CONTAINS
                                             fn_et_cl           , &
                                             fn_rub_cl          , &
                                             fn_pepc_cl         , &
-                                            n_tot_cl               , &
+                                            leaf_nitrogen_cl               , &
                                             ps_pathway          , &
                                             t_jmax_opt          , &
                                             t_jmax_omega        , &
@@ -283,7 +283,7 @@ CONTAINS
   REAL(wp),INTENT(IN) :: fn_rub_cl               !< fraction of foliar N allocated to Rubisco
   REAL(wp),INTENT(IN) :: fn_pepc_cl              !< fraction of foliar N allocated to PEPC complex (C4 only)
   REAL(wp),INTENT(IN) :: fn_chl_cl               !< fraction of foliar N allocated to Chlorophyll
-  REAL(wp),INTENT(IN) :: n_tot_cl                !< total foliar N content
+  REAL(wp),INTENT(IN) :: leaf_nitrogen_cl                !< total foliar N content
   INTEGER,INTENT(IN)  :: ps_pathway              !< photosynthetic pathway 
   REAL(wp),INTENT(IN) :: t_jmax_opt              !< temperature optimum of electron transport
   REAL(wp),INTENT(IN) :: t_jmax_omega            !< shape-parameter of temperature sensitivity of electron transport
@@ -321,7 +321,7 @@ CONTAINS
   !> conversion of ppm to Pa
   ppm2Pa = press_srf * 1.e-06
   !>  Net canopy layer respiration (umol[CO2]/m2/s)
-  resp_maint_cl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * n_tot_cl
+  resp_maint_cl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * leaf_nitrogen_cl
 
 
   !> @par IF: initialise output for no-light condition
@@ -424,14 +424,14 @@ CONTAINS
         ENDIF
 
         !> fabsb: fraction of possible PAR absorption in present light conditions
-        fabsb = exp(-ka * chl2n * fn_chl_cl * n_tot_cl)
+        fabsb = exp(-ka * chl2n * fn_chl_cl * leaf_nitrogen_cl)
 
         !> @par IF: Case of no direct radiation
         IF (fleaf_sunlit_cl <= eps8) THEN
            !>  Theoretical cumulative N at co-limitation by Rubisco and
            !!  light absorption in sunlit foliage (mmol[N]/m2))
            nlim = -log(nco/(par_shaded_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
-           nsat = MAX(MIN(nlim, n_tot_cl), 0.0_wp)
+           nsat = MAX(MIN(nlim, leaf_nitrogen_cl), 0.0_wp)
 
            !> Relative PAR absorption in light-limited region (fraction)
            fabs = exp(-ka * chl2n * fn_chl_cl * nsat) - fabsb
@@ -446,7 +446,7 @@ CONTAINS
           !>  Theoretical cumulative N at co-limitation by Rubisco and
           !!  light absorption in sunlit foliage (mmol[N]/m2))
           nlim = -log(nco/(par_sunlit_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
-          nsat = MAX(MIN(nlim, n_tot_cl), 0.0_wp)
+          nsat = MAX(MIN(nlim, leaf_nitrogen_cl), 0.0_wp)
 
           !>  Relative PAR absorption in light-limited region of sunlit foliage (fraction)
           fabs = exp(-ka * chl2n * fn_chl_cl * nsat) - fabsb
@@ -457,7 +457,7 @@ CONTAINS
           !> Theoretical cumulative N at co-limitation by Rubisco and
           !!  light absorption in shaded foliage (mmol[N]/m2))
           nlim = -log(nco/(par_shaded_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
-          nsat = MAX(MIN(nlim, n_tot_cl), 0.0_wp)
+          nsat = MAX(MIN(nlim, leaf_nitrogen_cl), 0.0_wp)
 
           !> Relative PAR absorption in light-limited region of shaded foliage (fraction)
           fabs = exp(-ka * chl2n * fn_chl_cl * nsat) - fabsb

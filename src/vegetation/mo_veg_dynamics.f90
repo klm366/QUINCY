@@ -80,8 +80,8 @@ CONTAINS
                                  tile%vegsoil%theta              , &
                                  veg%growing_season%ptr       , &
                                  veg%t_air_week_mavg%ptr      , &
-                                 veg%nl_tot_cl%ptr(:,1)       , &
-                                 veg%fnl_chl_cl%ptr(:,1)      , &
+                                 veg%leaf_nitrogen_cl%ptr(:,1)       , &
+                                 veg%fn_chl_cl%ptr(:,1)      , &
                                  veg%lai_cl%ptr(:,1)          , &
                                  veg%pool%seed_bed            , &
                                  veg%establishment )              ! out
@@ -186,8 +186,8 @@ CONTAINS
                                     soil_theta          , &
                                     growing_season      , &
                                     t_air_week_mavg     , &
-                                    nl_tot_cl           , &
-                                    fnl_chl_cl          , &
+                                    leaf_nitrogen_cl           , &
+                                    fn_chl_cl          , &
                                     lai_cl              , &
                                     veg_pool_seed_bed   , &
                                     veg_establishment )
@@ -208,8 +208,8 @@ CONTAINS
     REAL(wp),                       INTENT(in)    :: soil_theta         !< soil moisture 
     LOGICAL,                        INTENT(in)    :: growing_season     !< growing season Yes/No
     REAL(wp),                       INTENT(in)    :: t_air_week_mavg    !< moving average ...
-    REAL(wp), DIMENSION(:),         INTENT(in)    :: nl_tot_cl      , & !< ..
-                                                     fnl_chl_cl     , & !< ..
+    REAL(wp), DIMENSION(:),         INTENT(in)    :: leaf_nitrogen_cl      , & !< ..
+                                                     fn_chl_cl     , & !< ..
                                                      lai_cl             !< ..
     TYPE(t_slm_struct_veg_element), INTENT(in)    :: veg_pool_seed_bed    !< seed_bed in vegetation pool
     TYPE(t_slm_struct_veg_element), INTENT(inout) :: veg_establishment    !< vegetation establishment
@@ -230,7 +230,7 @@ CONTAINS
     !! depending on the red to far-red ratio of the light at the bottom of the canopy
     tc = 0.0_wp
     DO icanopy=1,assimi_config%ncanopy
-       tc = tc + nl_tot_cl(icanopy) * fnl_chl_cl(icanopy) * lai_cl(icanopy)
+       tc = tc + leaf_nitrogen_cl(icanopy) * fn_chl_cl(icanopy) * lai_cl(icanopy)
     ENDDO
     rfr_ratio = toc_rfr_ratio * exp( k_r2fr_chl * tc) 
     flim_light = 1._wp-exp(-(lctlib%lambda_est_light*rfr_ratio)**lctlib%k_est_light)

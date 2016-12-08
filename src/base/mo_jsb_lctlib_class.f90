@@ -40,8 +40,8 @@ MODULE mo_jsb_lctlib_class
      REAL(wp) :: crown_shape_factor 
      REAL(wp) :: cn_leaf                    !< default C:N of leaves (mol C / mol N)
      REAL(wp) :: np_leaf                    !< default N:P of leaves (mol N / mol P)
-     REAL(wp) :: k0_fnl_struc
-     REAL(wp) :: fnl_oth_min
+     REAL(wp) :: k0_fn_struc
+     REAL(wp) :: fn_oth_min
      REAL(wp) :: t_jmax_opt
      REAL(wp) :: t_jmax_omega
      REAL(wp) :: g0
@@ -169,11 +169,11 @@ CONTAINS
       (/0.86_wp,0.84_wp,1.44_wp,1.44_wp,1.23_wp,1.83_wp,1.43_wp,1.36_wp/)
       ! fraction of leaf N not used for photosynthesis (Friend 1997) 
       ! temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5
-      lctlib(1:npft)%k0_fnl_struc = & 
+      lctlib(1:npft)%k0_fn_struc = & 
       !(/0.67_wp,0.67_wp,0.67_wp,0.67_wp,0.83_wp,0.83_wp,0.67_wp,0.67_wp/) 
       (/0.75_wp,0.70_wp,0.63_wp,0.63_wp,0.83_wp,0.79_wp,0.3_wp,0.3_wp/) 
       ! minimum fraction of non-photosynthetic leaf N. Calculated using range of leaf N values from GLOPNET 
-      lctlib(1:npft)%fnl_oth_min= lctlib(1:npft)%k0_fnl_struc - 5._wp/molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
+      lctlib(1:npft)%fn_oth_min= lctlib(1:npft)%k0_fn_struc - 5._wp/molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
                                   molar_mass_N / 1000000._wp
       !Le Maire et al. 2012 (derived from grasses, does not give plausble results for needles)
       !0.012_wp / 0.48_wp * molar_mass_C / molar_mass_N / lctlib(1:npft)%sla/&

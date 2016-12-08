@@ -177,12 +177,12 @@ CONTAINS
                              veg%t_jmax_opt_mavg%ptr, &
                              veg%lai_cl%ptr(:,1), &
                              veg%cumm_lai_cl%ptr(:,1), &
-                             veg%nl_tot_cl%ptr(:,1), &
-                             veg%fnl_rub_cl%ptr(:,1), &
-                             veg%fnl_et_cl%ptr(:,1), &
-                             veg%fnl_pepc_cl%ptr(:,1), &
-                             veg%fnl_chl_cl%ptr(:,1), &
-                             veg%fnl_oth_cl%ptr(:,1))
+                             veg%leaf_nitrogen_cl%ptr(:,1), &
+                             veg%fn_rub_cl%ptr(:,1), &
+                             veg%fn_et_cl%ptr(:,1), &
+                             veg%fn_pepc_cl%ptr(:,1), &
+                             veg%fn_chl_cl%ptr(:,1), &
+                             veg%fn_oth_cl%ptr(:,1))
 
     !> 4.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass
     !!

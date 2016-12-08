@@ -167,7 +167,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)') 'Time LitterN MineralN'
     lun=lun+1
-    WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth nl_tot'
+    WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen'
     lun=lun+1
     WRITE(lun,'(2a)') &
     & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp ', & 
@@ -474,9 +474,9 @@ CONTAINS
        write(lun,'(3F12.6)') time_d, vegsoil%pool%litter%nitrogen, vegsoil%ammonium
        lun=lun+1
        DO icanopy=1, assimi_config%ncanopy
-         write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fnl_et_cl%ptr(icanopy,1), &
-                               veg%fnl_rub_cl%ptr(icanopy,1), veg%fnl_chl_cl%ptr(icanopy,1),&
-                               veg%fnl_pepc_cl%ptr(icanopy,1), veg%fnl_oth_cl%ptr(icanopy,1),veg%nl_tot_cl%ptr(icanopy,1)
+         write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fn_et_cl%ptr(icanopy,1), &
+                               veg%fn_rub_cl%ptr(icanopy,1), veg%fn_chl_cl%ptr(icanopy,1),&
+                               veg%fn_pepc_cl%ptr(icanopy,1), veg%fn_oth_cl%ptr(icanopy,1),veg%leaf_nitrogen_cl%ptr(icanopy,1)
        END DO
 
        IF(lctlib%growthform == itree) THEN 

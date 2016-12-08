@@ -567,12 +567,12 @@ CONTAINS
                           lai = veg%lai%ptr,&
                           lai_cl = veg%lai_cl%ptr(:,1), &
                           cumm_lai_cl = veg%cumm_lai_cl%ptr(:,1), &
-                          n_tot_cl = veg%nl_tot_cl%ptr(:,1), &
-                          fn_rub_cl = veg%fnl_rub_cl%ptr(:,1), &
-                          fn_et_cl = veg%fnl_et_cl%ptr(:,1), &
-                          fn_pepc_cl = veg%fnl_pepc_cl%ptr(:,1), &
-                          fn_chl_cl = veg%fnl_chl_cl%ptr(:,1), &
-                          fn_oth_cl = veg%fnl_oth_cl%ptr(:,1), &
+                          leaf_nitrogen_cl = veg%leaf_nitrogen_cl%ptr(:,1), &
+                          fn_rub_cl = veg%fn_rub_cl%ptr(:,1), &
+                          fn_et_cl = veg%fn_et_cl%ptr(:,1), &
+                          fn_pepc_cl = veg%fn_pepc_cl%ptr(:,1), &
+                          fn_chl_cl = veg%fn_chl_cl%ptr(:,1), &
+                          fn_oth_cl = veg%fn_oth_cl%ptr(:,1), &
                           inquire_n_fractions=.TRUE.)
     veg%t_jmax_opt_mavg%ptr = 20._wp+0.35_wp*(t_air - Tzero)
   !> 2.0 Sensitivity plots
@@ -738,12 +738,12 @@ CONTAINS
                           lai = veg%lai%ptr,&
                           lai_cl = veg%lai_cl%ptr(:,1), &
                           cumm_lai_cl = veg%cumm_lai_cl%ptr(:,1), &
-                          n_tot_cl = veg%nl_tot_cl%ptr(:,1), &
-                          fn_rub_cl = veg%fnl_rub_cl%ptr(:,1), &
-                          fn_et_cl = veg%fnl_et_cl%ptr(:,1), &
-                          fn_pepc_cl = veg%fnl_pepc_cl%ptr(:,1), &
-                          fn_chl_cl = veg%fnl_chl_cl%ptr(:,1), &
-                          fn_oth_cl = veg%fnl_oth_cl%ptr(:,1), &
+                          leaf_nitrogen_cl = veg%leaf_nitrogen_cl%ptr(:,1), &
+                          fn_rub_cl = veg%fn_rub_cl%ptr(:,1), &
+                          fn_et_cl = veg%fn_et_cl%ptr(:,1), &
+                          fn_pepc_cl = veg%fn_pepc_cl%ptr(:,1), &
+                          fn_chl_cl = veg%fn_chl_cl%ptr(:,1), &
+                          fn_oth_cl = veg%fn_oth_cl%ptr(:,1), &
                           inquire_n_fractions=.TRUE.)
 
      !! canopy calculation fluxes
@@ -771,12 +771,12 @@ CONTAINS
                           lai = veg%lai%ptr,&
                           lai_cl = veg%lai_cl%ptr(:,1), &
                           cumm_lai_cl = veg%cumm_lai_cl%ptr(:,1), &
-                          n_tot_cl = veg%nl_tot_cl%ptr(:,1), &
-                          fn_rub_cl = veg%fnl_rub_cl%ptr(:,1), &
-                          fn_et_cl = veg%fnl_et_cl%ptr(:,1), &
-                          fn_pepc_cl = veg%fnl_pepc_cl%ptr(:,1), &
-                          fn_chl_cl = veg%fnl_chl_cl%ptr(:,1), &
-                          fn_oth_cl = veg%fnl_oth_cl%ptr(:,1), &
+                          leaf_nitrogen_cl = veg%leaf_nitrogen_cl%ptr(:,1), &
+                          fn_rub_cl = veg%fn_rub_cl%ptr(:,1), &
+                          fn_et_cl = veg%fn_et_cl%ptr(:,1), &
+                          fn_pepc_cl = veg%fn_pepc_cl%ptr(:,1), &
+                          fn_chl_cl = veg%fn_chl_cl%ptr(:,1), &
+                          fn_oth_cl = veg%fn_oth_cl%ptr(:,1), &
                           inquire_n_fractions=.TRUE.)
 
      !! canopy calculation fluxes
@@ -805,12 +805,12 @@ CONTAINS
                           lai = veg%lai%ptr,&
                           lai_cl = veg%lai_cl%ptr(:,1), &
                           cumm_lai_cl = veg%cumm_lai_cl%ptr(:,1), &
-                          n_tot_cl = veg%nl_tot_cl%ptr(:,1), &
-                          fn_rub_cl = veg%fnl_rub_cl%ptr(:,1), &
-                          fn_et_cl = veg%fnl_et_cl%ptr(:,1), &
-                          fn_pepc_cl = veg%fnl_pepc_cl%ptr(:,1), &
-                          fn_chl_cl = veg%fnl_chl_cl%ptr(:,1), &
-                          fn_oth_cl = veg%fnl_oth_cl%ptr(:,1), &
+                          leaf_nitrogen_cl = veg%leaf_nitrogen_cl%ptr(:,1), &
+                          fn_rub_cl = veg%fn_rub_cl%ptr(:,1), &
+                          fn_et_cl = veg%fn_et_cl%ptr(:,1), &
+                          fn_pepc_cl = veg%fn_pepc_cl%ptr(:,1), &
+                          fn_chl_cl = veg%fn_chl_cl%ptr(:,1), &
+                          fn_oth_cl = veg%fn_oth_cl%ptr(:,1), &
                           inquire_n_fractions=.TRUE.)
 
      !! canopy calculation fluxes

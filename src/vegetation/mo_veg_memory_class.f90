@@ -193,12 +193,12 @@ MODULE mo_veg_memory_class
 
     ! canopy layers -> levels, lbounds, ubounds
     TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
-                                    nl_tot_cl         , &       !< N in canopy layer (mmol / m2 (LAI))
-                                    fnl_chl_cl        , &       !< fraction of N in chlorophyll (pigments only!)
-                                    fnl_et_cl         , &       !< fraction of N in electron transport 
-                                    fnl_rub_cl        , &       !< fraction of N in Rubisco 
-                                    fnl_pepc_cl       , &       !< fraction of N in PEP carboylase (C4 plants only)
-                                    fnl_oth_cl        , &       !< fraction of N not associated with photosynthesis 
+                                    leaf_nitrogen_cl         , &       !< N in canopy layer (mmol / m2 (LAI))
+                                    fn_chl_cl        , &       !< fraction of N in chlorophyll (pigments only!)
+                                    fn_et_cl         , &       !< fraction of N in electron transport 
+                                    fn_rub_cl        , &       !< fraction of N in Rubisco 
+                                    fn_pepc_cl       , &       !< fraction of N in PEP carboylase (C4 plants only)
+                                    fn_oth_cl        , &       !< fraction of N not associated with photosynthesis 
                                     par_sunlit_cl     , &       !< PAR on sunlit leaves (µmol m-2 s-1)
                                     par_shaded_cl     , &       !< PAR on shaded leaves (µmol m-2 s-1)
                                     fleaf_sunlit_cl   , &       !< fraction of layer which is sunlit
@@ -1501,22 +1501,22 @@ CONTAINS
       CALL slm_add_var(mem, 'target_np_fruit', mem%target_np_fruit, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'nl_tot_cl', mem%nl_tot_cl, &
+      CALL slm_add_var(mem, 'leaf_nitrogen_cl', mem%leaf_nitrogen_cl, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'fnl_chl_cl', mem%fnl_chl_cl, &
+      CALL slm_add_var(mem, 'fn_chl_cl', mem%fn_chl_cl, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'fnl_et_cl', mem%fnl_et_cl, &
+      CALL slm_add_var(mem, 'fn_et_cl', mem%fn_et_cl, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'fnl_rub_cl', mem%fnl_rub_cl, &
+      CALL slm_add_var(mem, 'fn_rub_cl', mem%fn_rub_cl, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'fnl_pepc_cl', mem%fnl_pepc_cl, &
+      CALL slm_add_var(mem, 'fn_pepc_cl', mem%fn_pepc_cl, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'fnl_oth_cl', mem%fnl_oth_cl, &
+      CALL slm_add_var(mem, 'fn_oth_cl', mem%fn_oth_cl, &
             initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'par_sunlit_cl', mem%par_sunlit_cl, &
