@@ -74,22 +74,18 @@ CONTAINS
     REAL(wp), POINTER :: co2_mixing_ratio
     REAL(wp), POINTER :: co2_mixing_ratio_C13
     REAL(wp), POINTER :: co2_mixing_ratio_C14
+
+    REAL(wp), POINTER :: gross_assimilation, gross_assimilation_cl
+    REAL(wp), POINTER :: gross_assimilation_C13, gross_assimilation_C14
+    REAL(wp), POINTER :: net_assimilation, net_assimilation_cl
+    REAL(wp), POINTER :: resp_maint_leaf, resp_maint_leaf_cl
+    REAL(wp), POINTER :: canopy_cond, canopy_cond_cl
+    REAL(wp), POINTER :: co2_conc_leaf, co2_conc_leaf_cl
+
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p) 
-!      TYPE IS(t_atm2land_memory)
-!        atm2land__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(ASSIMI_)%p)
-!      TYPE IS(t_assimi_memory)
-!        assimi__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(VEG_)%p)     
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
-    assimi  => assimi__mem
+
     veg     => veg__mem 
     t_air                => atm2land__mem%t_air%ptr
     q_air                => atm2land__mem%q_air%ptr
@@ -99,6 +95,19 @@ CONTAINS
     co2_mixing_ratio_C13 => atm2land__mem%co2_mixing_ratio_C13%ptr
     co2_mixing_ratio_C14 => atm2land__mem%co2_mixing_ratio_C14%ptr
 
+    gross_assimilation => assimi__mem%gross_assimilation%ptr
+    gross_assimilation_C13 => assimi__mem%gross_assimilation_C13%ptr
+    gross_assimilation_C14 => assimi__mem%gross_assimilation_C14%ptr
+    gross_assimilation_cl => assimi__mem%gross_assimilation_cl%ptr
+    net_assimilation => assimi__mem%net_assimilation%ptr
+    net_assimilation_cl => assimi__mem%net_assimilation_cl%ptr
+    resp_maint_leaf => assimi__mem%resp_maint_leaf%ptr
+    resp_maint_leaf_cl => assimi__mem%resp_maint_leaf_cl%ptr
+    canopy_cond => assimi__mem%canopy_cond%ptr
+    canopy_cond_cl => assimi__mem%canopy_cond_cl%ptr
+    co2_conc_leaf => assimi__mem%co2_conc_leaf%ptr
+    co2_conc_leaf_cl => assimi__mem%co2_conc_leaf_cl%ptr
+
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
 
@@ -106,14 +115,13 @@ CONTAINS
    vegsoil  => tile%vegsoil
 
    ! set output to zero  
-   ! *slmdev  necessary ? 
-!   assimi%agl%ptr = 0.0_wp 
-!   assimi%anl%ptr = 0.0_wp 
-!   assimi%rl%ptr  = 0.0_wp
-!   assimi%gsl%ptr = 0.0_wp
-!   assimi%cil%ptr = 0.0_wp     
-   veg%gc%ptr     = 0.0_wp 
-
+   gross_assimilation     = 0.0_wp
+   gross_assimilation_C13 = 0.0_wp
+   gross_assimilation_C14 = 0.0_wp
+   net_assimilation       = 0.0_wp
+   resp_maint_leaf        = 0.0_wp
+   canopy_cond            = 0.0_wp
+   co2_conc_leaf          = 0.0_wp
 
    !> 1.0 calculate the moisture scaling factor for photosynthesis
    !! 
@@ -154,45 +162,44 @@ CONTAINS
                                  lctlib%t_jmax_omega              , &
                                  lctlib%g0                        , &
                                  lctlib%g1                        , &
-                                 assimi%agl%ptr                   , & ! out
-                                 assimi%anl%ptr                   , &
-                                 assimi%rl%ptr                    , &
-                                 assimi%gsl%ptr                   , &
-                                 assimi%cil%ptr                   , &
+                                 gross_assimilation_cl            , & ! out
+                                 net_assimilation_cl              , &
+                                 resp_maint_leaf_cl               , &
+                                 canopy_cond_cl                   , &
+                                 co2_conc_leaf_cl                 , &
                                  hlp1, hlp1, hlp1)                   
 
-        veg%gpp%ptr = veg%gpp%ptr + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1)
+        gross_assimilation = gross_assimilation + gross_assimilation_cl * veg%lai_cl%ptr(icanopy,1)
 
-        IF(assimi%agl%ptr > eps8) THEN
-           hlp1          = discrimination_ps(assimi%cil%ptr     , &
+        IF(gross_assimilation_cl > eps8) THEN
+           hlp1          = discrimination_ps(co2_conc_leaf_cl     , &
                                              co2_mixing_ratio   , &
                                              'C13'              , &
                                              lctlib%ps_pathway)
-           veg%gpp_C13%ptr = veg%gpp_C13%ptr + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
+           gross_assimilation_C13 = gross_assimilation_C13  + gross_assimilation_cl * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C13 , &
                                                                                                    hlp1)
-           hlp1          = discrimination_ps(assimi%cil%ptr     , &
+           hlp1          = discrimination_ps(co2_conc_leaf_cl     , &
                                              co2_mixing_ratio   , &
                                              'C14'              , &
                                              lctlib%ps_pathway)
-           veg%gpp_C14%ptr = veg%gpp_C14%ptr + assimi%agl%ptr * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
+           gross_assimilation_C14 = gross_assimilation_C14 + gross_assimilation_cl * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
                                                                                                    co2_mixing_ratio_C14 , & 
                                                                                                    hlp1                 , &
                                                                                                    scale_correction_C14)
         ENDIF
 
-        veg%an%ptr                      = veg%an%ptr + assimi%anl%ptr * veg%lai_cl%ptr(icanopy,1) 
-        veg%maint_respiration_leaf%ptr  = veg%maint_respiration_leaf%ptr + assimi%rl%ptr * veg%lai_cl%ptr(icanopy,1) 
-        veg%gc%ptr                      = veg%gc%ptr + assimi%gsl%ptr * veg%lai_cl%ptr(icanopy,1)
-        veg%ci%ptr                      = veg%ci%ptr + assimi%cil%ptr * veg%lai_cl%ptr(icanopy,1)
+        net_assimilation = net_assimilation + net_assimilation_cl * veg%lai_cl%ptr(icanopy,1) 
+        resp_maint_leaf  = resp_maint_leaf + resp_maint_leaf_cl * veg%lai_cl%ptr(icanopy,1) 
+        canopy_cond      = canopy_cond + canopy_cond_cl * veg%lai_cl%ptr(icanopy,1)
+        co2_conc_leaf    = co2_conc_leaf + co2_conc_leaf_cl * veg%lai_cl%ptr(icanopy,1)
 
         ! get the net photosynthesis of the lowest canopy layer at this timestep
-        IF(veg%lai_cl%ptr(icanopy,1) > 0.0_wp) veg%an_boc%ptr = assimi%anl%ptr
+        IF(veg%lai_cl%ptr(icanopy,1) > 0.0_wp) veg%an_boc%ptr = net_assimilation_cl 
+
      ENDIF
   ENDDO
 
-  ! ci
-  IF(veg%lai%ptr > eps8) veg%ci%ptr = veg%ci%ptr / veg%lai%ptr
 
   ! t_jmax_opt
   IF(assimi_config%flag_t_jmax_acclimation) THEN 
@@ -201,6 +208,15 @@ CONTAINS
   ELSE 
      veg%t_jmax_opt%ptr = lctlib%t_jmax_opt
   ENDIF
+
+  veg%gpp%ptr = gross_assimilation
+  veg%gpp_C13%ptr = gross_assimilation_C13
+  veg%gpp_C14%ptr = gross_assimilation_C14
+  veg%an%ptr = net_assimilation
+  veg%maint_respiration_leaf%ptr = resp_maint_leaf
+  veg%gc%ptr = canopy_cond
+  IF(veg%lai%ptr > eps8) co2_conc_leaf = co2_conc_leaf / veg%lai%ptr
+  veg%ci%ptr = co2_conc_leaf 
 
   END SUBROUTINE update_canopy_fluxes
 
@@ -225,21 +241,21 @@ CONTAINS
                                             beta_soil_ps        , &
                                             beta_sinklim_ps     , &
                                             beta_soil_gs        , &
-                                            fnl_chl_cl          , &
-                                            fnl_et_cl           , &
-                                            fnl_rub_cl          , &
-                                            fnl_pepc_cl         , &
-                                            nfmol               , &
+                                            fn_chl_cl          , &
+                                            fn_et_cl           , &
+                                            fn_rub_cl          , &
+                                            fn_pepc_cl         , &
+                                            n_tot_cl               , &
                                             ps_pathway          , &
                                             t_jmax_opt          , &
                                             t_jmax_omega        , &
                                             g0                  , &
                                             g1                  , &
-                                            agl                 , &   ! out
-                                            anl                 , &
-                                            rl                  , &
-                                            gsl                 , &
-                                            cil                 , &
+                                            ag_cl                 , &   ! out
+                                            an_cl                 , &
+                                            resp_maint_cl                  , &
+                                            gs_cl                 , &
+                                            ci_cl                 , &
                                             m_rub               , &
                                             m_et                , &
                                             m_pepc)                
@@ -255,29 +271,29 @@ CONTAINS
   REAL(wp),INTENT(IN) :: press_srf               !< air pressure (Pa) 
   REAL(wp),INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1) 
   REAL(wp),INTENT(IN) :: temp_acclim             !< veg\%t_air_tacclim_mavg  average temperature for respiration acclimation
-  REAL(wp),INTENT(IN) :: par_sunlit_cl              !< PAR of sunlit foliage par per canopy layer (µmol m-2 s-1)
-  REAL(wp),INTENT(IN) :: par_shaded_cl              !< PAR of shaded foliage par per canopy layer (µmol m-2 s-1)
-  REAL(wp),INTENT(IN) :: fleaf_sunlit_cl            !< fraction of canopy layer that is sunlit 
+  REAL(wp),INTENT(IN) :: par_sunlit_cl           !< PAR of sunlit foliage par per canopy layer (µmol m-2 s-1)
+  REAL(wp),INTENT(IN) :: par_shaded_cl           !< PAR of shaded foliage par per canopy layer (µmol m-2 s-1)
+  REAL(wp),INTENT(IN) :: fleaf_sunlit_cl         !< fraction of canopy layer that is sunlit 
   REAL(wp),INTENT(IN) :: co2_mixing_ratio        !< CO2 concentration of the free air (ppm)
   REAL(wp),INTENT(IN) :: beta_air                !< scaling factor to account for air humidity effects on conductance
   REAL(wp),INTENT(IN) :: beta_soil_ps            !< scaling factor to account for soil moisture constraints on photosynthesis
   REAL(wp),INTENT(IN) :: beta_sinklim_ps         !< scaling factor to account for sink limitation constraints on photosynthesis 
   REAL(wp),INTENT(IN) :: beta_soil_gs            !< scaling factor to account for soil moisture constraints on conductance
-  REAL(wp),INTENT(IN) :: fnl_et_cl                  !< fraction of foliar N allocated to electron transport 
-  REAL(wp),INTENT(IN) :: fnl_rub_cl                 !< fraction of foliar N allocated to Rubisco
-  REAL(wp),INTENT(IN) :: fnl_pepc_cl                !< fraction of foliar N allocated to PEPC complex (C4 only)
-  REAL(wp),INTENT(IN) :: fnl_chl_cl                 !< fraction of foliar N allocated to Chlorophyll
-  REAL(wp),INTENT(IN) :: nfmol                   !< total foliar N content
+  REAL(wp),INTENT(IN) :: fn_et_cl                !< fraction of foliar N allocated to electron transport 
+  REAL(wp),INTENT(IN) :: fn_rub_cl               !< fraction of foliar N allocated to Rubisco
+  REAL(wp),INTENT(IN) :: fn_pepc_cl              !< fraction of foliar N allocated to PEPC complex (C4 only)
+  REAL(wp),INTENT(IN) :: fn_chl_cl               !< fraction of foliar N allocated to Chlorophyll
+  REAL(wp),INTENT(IN) :: n_tot_cl                !< total foliar N content
   INTEGER,INTENT(IN)  :: ps_pathway              !< photosynthetic pathway 
   REAL(wp),INTENT(IN) :: t_jmax_opt              !< temperature optimum of electron transport
-  REAL(wp),INTENT(IN) :: t_jmax_omega             !< shape-parameter of temperature sensitivity of electron transport
+  REAL(wp),INTENT(IN) :: t_jmax_omega            !< shape-parameter of temperature sensitivity of electron transport
   REAL(wp),INTENT(IN) :: g0                      !< offset of the stomatal conductance ~ An relationship 
   REAL(wp),INTENT(IN) :: g1                      !< slope of the stomatal conductance ~ An relationship
-  REAL(wp),INTENT(OUT) :: agl                    !< gross photsynthesis of layer (µmol CO2 / m2 /s) 
-  REAL(wp),INTENT(OUT) :: anl                    !< net photsynthesis of layer (µmol CO2 / m2 /s)
-  REAL(wp),INTENT(OUT) :: rl                     !< net canopy layer respiration (µmol CO2 / m2 /s)
-  REAL(wp),INTENT(OUT) :: gsl                    !< canopy conductance of layer (m / s) 
-  REAL(wp),INTENT(OUT) :: cil                    !< leaf internal CO2 concentration of layer (ppm)
+  REAL(wp),INTENT(OUT) :: ag_cl                  !< gross photsynthesis of layer (µmol CO2 / m2 /s) 
+  REAL(wp),INTENT(OUT) :: an_cl                  !< net photsynthesis of layer (µmol CO2 / m2 /s)
+  REAL(wp),INTENT(OUT) :: resp_maint_cl          !< net canopy layer respiration (µmol CO2 / m2 /s)
+  REAL(wp),INTENT(OUT) :: gs_cl                  !< canopy conductance of layer (m / s) 
+  REAL(wp),INTENT(OUT) :: ci_cl                  !< leaf internal CO2 concentration of layer (ppm)
   REAL(wp),INTENT(OUT) :: m_rub                  !< CO2 limitation of Rubisco factor for calculating optimal N fraction
   REAL(wp),INTENT(OUT) :: m_et                   !< CO2 limitation of ET factor for calculating optimal N fraction
   REAL(wp),INTENT(OUT) :: m_pepc                 !< CO2 limitation for PEPC factor for calculating optimal N fraction
@@ -294,7 +310,7 @@ CONTAINS
   REAL(wp) :: fabs,fabsb              ! fractional light absorption on chloroplast
   REAL(wp) :: ppm2Pa                  ! factor to convert gas concentrations from ppm to Pa
   REAL(wp) :: rtck                    ! dry static energy
-  REAL(wp) :: anl_old,danl            ! dummy variables needed for iteration loop of CI
+  REAL(wp) :: an_cl_old,dan_cl        ! dummy variables needed for iteration loop of CI
   REAL(wp) :: agsf1,agsf2             ! dummy variables for PS calculation
   INTEGER :: it                       ! Iteration loop counter
   LOGICAL :: last_call                ! boolean to stop iteration at low conductance
@@ -305,15 +321,15 @@ CONTAINS
   !> conversion of ppm to Pa
   ppm2Pa = press_srf * 1.e-06
   !>  Net canopy layer respiration (umol[CO2]/m2/s)
-  rl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * nfmol
+  resp_maint_cl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * n_tot_cl
 
 
   !> @par IF: initialise output for no-light condition
   IF(par_sunlit_cl + par_shaded_cl <= eps8) THEN
-    agl    = 0.0_wp 
-    anl    = agl - rl
-    gsl    = MAX(g0,g0 + g1 * anl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf 
-    cil    = co2_mixing_ratio * ppm2Pa
+    ag_cl    = 0.0_wp 
+    an_cl    = ag_cl - resp_maint_cl
+    gs_cl    = MAX(g0,g0 + g1 * an_cl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf 
+    ci_cl    = co2_mixing_ratio * ppm2Pa
     m_et   = 0.0_wp
     m_rub  = 0.0_wp
     m_pepc = 0.0_wp
@@ -329,36 +345,36 @@ CONTAINS
      pcp = exp(E0pcp - E1pcp/rtck) * ppm2Pa 
 
      !> N specific rate of electron transport rate
-     n1 = jmax2n * fnl_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/t_jmax_omega)**2)) & 
+     n1 = jmax2n * fn_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/t_jmax_omega)**2)) & 
           * beta_soil_ps * beta_sinklim_ps
 
      !> N specific rate of Rubisco turnover 
-     n2 = vcmax2n * fnl_rub_cl * exp(E0v - E1v/rtck) & 
+     n2 = vcmax2n * fn_rub_cl * exp(E0v - E1v/rtck) & 
           * beta_soil_ps * beta_sinklim_ps
 
      !> Initial guess of leaf internal CO2 concentration
      SELECT CASE (ps_pathway)
      CASE (ic3phot)
-        cil = co2_mixing_ratio * CiCa_default_C3 * ppm2Pa
+        ci_cl = co2_mixing_ratio * CiCa_default_C3 * ppm2Pa
      CASE (ic4phot)
-        cil = co2_mixing_ratio * CiCa_default_C4 * ppm2Pa
+        ci_cl = co2_mixing_ratio * CiCa_default_C4 * ppm2Pa
      ENDSELECT
 
-     !> iteration to find correct combination of cil, Anl and gsl
-     anl_old = 1000.0_wp
-     danl = 1.0_wp
+     !> iteration to find correct combination of ci_cl, Anl and gs_cl
+     an_cl_old = 1000.0_wp
+     dan_cl = 1.0_wp
      it = 1
      last_call = .FALSE.
-     !> @par DO WHILE (it < ps_it_max .AND. danl > eps4 )
-     DO WHILE (it < ps_it_max .AND. danl > eps4 ) 
+     !> @par DO WHILE (it < ps_it_max .AND. dan_cl > eps4 )
+     DO WHILE (it < ps_it_max .AND. dan_cl > eps4 ) 
 
         SELECT CASE (ps_pathway)
         CASE (ic3phot)
            !> ci sensitivity of Electron-transport limited photosynthesis
-           m1 = cil/(cil + 2.0_wp * pcp)
+           m1 = ci_cl/(ci_cl + 2.0_wp * pcp)
 
            !> ci sensitivity of Rubisco-limited photosynthesis
-           m2 = cil/(cil + km)
+           m2 = ci_cl/(ci_cl + km)
  
            !> N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
            msat = MIN(m1 * n1, m2 * n2)
@@ -368,13 +384,13 @@ CONTAINS
 
            !> A couple of factors to calculate photosynthesis
            !!  parts of equations 14-16 of Kull and Kruijt 1998
-           agsf1 = MAX(1.0_wp - pcp / cil, 0.0_wp)
+           agsf1 = MAX(1.0_wp - pcp / ci_cl, 0.0_wp)
            agsf2 = agsf1 * alpha_i * m1
            agsf1 = agsf1 * msat
 
         CASE (ic4phot)
            !> N specific rate of PePc limited photosynthessis 
-           n3 = pepc2n * fnl_pepc_cl * 2**((temp - TZero - Tref_pepc )/ Tbase_pepc)
+           n3 = pepc2n * fn_pepc_cl * 2**((temp - TZero - Tref_pepc )/ Tbase_pepc)
 
            !> ci sensitivity of Electron-transport limited photosynthesis
            m1 = ci_max/(ci_max + 2.0_wp * pcp)
@@ -383,7 +399,7 @@ CONTAINS
            m2 = ci_max/(ci_max + km)
  
            !> ci sensitivity of PePc-limited photosynthesis
-           m3 = cil / press_srf
+           m3 = ci_cl / press_srf
 
            !> N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
            msat = MIN(MIN(m1 * n1, m2 * n2), m3 * n3)
@@ -399,91 +415,91 @@ CONTAINS
         END SELECT
 
         ! output factors for optimal fraction calculation
-        m_et = m1 * n1 / fnl_et_cl
-        m_rub = m2 * n2 / fnl_rub_cl
-        IF (fnl_pepc_cl>eps8) THEN
-           m_pepc = m3 * n3 / fnl_pepc_cl
+        m_et = m1 * n1 / fn_et_cl
+        m_rub = m2 * n2 / fn_rub_cl
+        IF (fn_pepc_cl>eps8) THEN
+           m_pepc = m3 * n3 / fn_pepc_cl
         ELSE
            m_pepc = 0._wp
         ENDIF
 
         !> fabsb: fraction of possible PAR absorption in present light conditions
-        fabsb = exp(-ka * chl2n * fnl_chl_cl * nfmol)
+        fabsb = exp(-ka * chl2n * fn_chl_cl * n_tot_cl)
 
         !> @par IF: Case of no direct radiation
         IF (fleaf_sunlit_cl <= eps8) THEN
            !>  Theoretical cumulative N at co-limitation by Rubisco and
            !!  light absorption in sunlit foliage (mmol[N]/m2))
-           nlim = -log(nco/(par_shaded_cl * chl2n * fnl_chl_cl + eps8))/(ka * chl2n * fnl_chl_cl)
-           nsat = MAX(MIN(nlim, nfmol), 0.0_wp)
+           nlim = -log(nco/(par_shaded_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
+           nsat = MAX(MIN(nlim, n_tot_cl), 0.0_wp)
 
            !> Relative PAR absorption in light-limited region (fraction)
-           fabs = exp(-ka * chl2n * fnl_chl_cl * nsat) - fabsb
+           fabs = exp(-ka * chl2n * fn_chl_cl * nsat) - fabsb
 
            !> Rate of gross photosynthesis (umol/m2/s)
            !!  sum of photosynthesis in colimited, light saturated PS and PS in the 
            !!  light-limited region (assumed to scale linearily with light) 
-           agl = agsf1 * nsat + agsf2 * par_shaded_cl * fabs
+           ag_cl = agsf1 * nsat + agsf2 * par_shaded_cl * fabs
 
         !> @par ELSE: Case of direct and diffuse radiation
         ELSE 
           !>  Theoretical cumulative N at co-limitation by Rubisco and
           !!  light absorption in sunlit foliage (mmol[N]/m2))
-          nlim = -log(nco/(par_sunlit_cl * chl2n * fnl_chl_cl + eps8))/(ka * chl2n * fnl_chl_cl)
-          nsat = MAX(MIN(nlim, nfmol), 0.0_wp)
+          nlim = -log(nco/(par_sunlit_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
+          nsat = MAX(MIN(nlim, n_tot_cl), 0.0_wp)
 
           !>  Relative PAR absorption in light-limited region of sunlit foliage (fraction)
-          fabs = exp(-ka * chl2n * fnl_chl_cl * nsat) - fabsb
+          fabs = exp(-ka * chl2n * fn_chl_cl * nsat) - fabsb
 
           !> Rate of gross photosynthesis in sunlit foliage (umol/m2/s)
           agsl = agsf1 * nsat + agsf2 * par_sunlit_cl * fabs
 
           !> Theoretical cumulative N at co-limitation by Rubisco and
           !!  light absorption in shaded foliage (mmol[N]/m2))
-          nlim = -log(nco/(par_shaded_cl * chl2n * fnl_chl_cl + eps8))/(ka * chl2n * fnl_chl_cl)
-          nsat = MAX(MIN(nlim, nfmol), 0.0_wp)
+          nlim = -log(nco/(par_shaded_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
+          nsat = MAX(MIN(nlim, n_tot_cl), 0.0_wp)
 
           !> Relative PAR absorption in light-limited region of shaded foliage (fraction)
-          fabs = exp(-ka * chl2n * fnl_chl_cl * nsat) - fabsb
+          fabs = exp(-ka * chl2n * fn_chl_cl * nsat) - fabsb
 
           !> Rate of gross photosynthesis in shaded foliage (umol/m2/s)
           agsh = agsf1 * nsat + agsf2 * par_shaded_cl* fabs
 
           !> Mean gross photosynthesis over sunlit and shaded fractions (umol/m2/s)
-          agl = fleaf_sunlit_cl * agsl + (1.0_wp - fleaf_sunlit_cl) * agsh
+          ag_cl = fleaf_sunlit_cl * agsl + (1.0_wp - fleaf_sunlit_cl) * agsh
         END IF
         !> END IF
 
         !> Net layer photosynthesis (umol[CO2]/m2/s)
-        anl = agl - rl
+        an_cl = ag_cl - resp_maint_cl
 
         !> calculate canopy conductance (m/s) following Ball & Berry
-        gsl = MAX(g0, g0 + g1 * anl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * & 
+        gs_cl = MAX(g0, g0 + g1 * an_cl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * & 
               rtck / press_srf
         !> calculate canopy conductance (m/s) following Medlyn et al. 2011
-        !! gsl = MAX(g0, 1.6_wp * ( 1._wp + g1 * beta_air * beta_soil_gs ) * anl / ( co2_mixing_ratio )) * rtck / press_srf
+        !! gs_cl = MAX(g0, 1.6_wp * ( 1._wp + g1 * beta_air * beta_soil_gs ) * an_cl / ( co2_mixing_ratio )) * rtck / press_srf
 
         !> New internal CO2 from balance of supply and demand
         !! 
         !! ci = cs - An * r_tot (Friend 2005 eq. 7)
-        !! Friend 2005 eq. 8: r_tot = ( Dh2oco2_air / gsl + Dh2oco2_turb / (speed * q_cdrag)) 
+        !! Friend 2005 eq. 8: r_tot = ( Dh2oco2_air / gs_cl + Dh2oco2_turb / (speed * q_cdrag)) 
         !! Corrected to Bonan et al. 2008, Ecol. Clim: accounting for the molecular diffusion differences
         !! at the stomatal interface (1.6) and in the boundary layer, where turbulence plays a role (1.37)
-        cil = co2_mixing_ratio * ppm2Pa - anl * rtck * 1e-06 * (Dwv2co2_air/gsl + Dwv2co2_turb/ga)
-        cil = MAX (cil, pcp) 
+        ci_cl = co2_mixing_ratio * ppm2Pa - an_cl * rtck * 1e-06 * (Dwv2co2_air/gs_cl + Dwv2co2_turb/ga)
+        ci_cl = MAX (ci_cl, pcp) 
 
-        !> change in An since last iteration and save new anl 
-        danl = abs(anl-anl_old)
-        anl_old = anl
+        !> change in An since last iteration and save new an_cl 
+        dan_cl = abs(an_cl-an_cl_old)
+        an_cl_old = an_cl
 
         !> break-off point for numerical stability at low conductance
         IF(last_call) THEN
            it = ps_it_max + 1
-           cil = pcp 
+           ci_cl = pcp 
         ENDIF
-!        IF( gsl <= g0 * rtck / press_srf .OR. cil <= pcp ) THEN 
+!        IF( gs_cl <= g0 * rtck / press_srf .OR. ci_cl <= pcp ) THEN 
 !           last_call = .TRUE.
-!           cil = pcp 
+!           ci_cl = pcp 
 !        ENDIF 
         it =  it + 1
      END DO
@@ -492,7 +508,7 @@ CONTAINS
   !> END IF
 
   !> for output purposes, convert ci to ppm
-  cil = cil / ppm2Pa
+  ci_cl = ci_cl / ppm2Pa
 
   END SUBROUTINE calc_photosynthesis
 

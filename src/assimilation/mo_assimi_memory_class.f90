@@ -16,7 +16,7 @@ MODULE mo_assimi_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
 
-  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later  *slmtemp
+  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varesp_maint_leafist later  *slmtemp
 
 
 
@@ -34,12 +34,22 @@ MODULE mo_assimi_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
 
   ! *slmtemp  --> 2D
+  ! canopy integrated variables
     TYPE(t_jsb_var_real1d)    :: &
-                              agl           , &      !< ..
-                              anl           , &      !< ..
-                              rl            , &      !< ..
-                              gsl           , &      !< ..
-                              cil                    !< ..
+                              gross_assimilation    , &      !< canopy-integrated gross assimilation rate (µmol CO2/m2/s) 
+                              gross_assimilation_C13, &      !< canopy-integrated gross assimilation rate (µmol 13CO2/m2/s) 
+                              gross_assimilation_C14, &      !< canopy-integrated gross assimilation rate (µmol 14CO2/m2/s) 
+                              net_assimilation      , &      !< canopy-integrated net assimilation rate (µmol CO2/m2/s) 
+                              resp_maint_leaf       , &      !< canopy-integrated foliar respiration rate (µmol CO2/m2/s)
+                              canopy_cond           , &      !< canopy-integrated conductance for water (m/s)
+                              co2_conc_leaf                  !< canopy-integrated internal leaf CO2 concentration (ppm) 
+  ! canopy level variables --> 3D
+    TYPE(t_jsb_var_real1d)    :: &
+                              gross_assimilation_cl, &   !< gross assimilation rate per canopy layer (µmol CO2/m2/s) 
+                              net_assimilation_cl  , &   !< net assimilation rate per canopy layer (µmol CO2/m2/s)
+                              resp_maint_leaf_cl   , &   !< foliar respiration rate per canopy layer (µmol CO2/m2/s)
+                              canopy_cond_cl       , &   !< conductance for water per canopy layer (m/s)
+                              co2_conc_leaf_cl           !< internal leaf CO2 concentration per canopy layer (ppm)
 
 
   CONTAINS
@@ -60,7 +70,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
 
-!    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
+!    USE mo_jsb_varesp_maint_leafist,       ONLY: t_jsb_varesp_maint_leafist, jsb_add_var
 !    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
 !    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -89,25 +99,48 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ALLOCATED(mem%agl%ptr)) THEN
+    IF (.NOT. ALLOCATED(mem%gross_assimilation%ptr)) THEN
 
       !> add variables to assimi memory assimi\%VAR
       !! 
       !! slm_add_var -> slm_add_var_list_element_r1d    *slmtemp 1D -> 2D
       !!  
-      CALL slm_add_var(mem, 'assimi_agl', mem%agl, &
+      CALL slm_add_var(mem, 'assimi_gross_assimilation', mem%gross_assimilation, &
             initval_r=0.0_wp)     ! initvalue 
 
-      CALL slm_add_var(mem, 'assimi_anl', mem%anl, &
+      CALL slm_add_var(mem, 'assimi_gross_assimilation_C13', mem%gross_assimilation_C13, &
             initval_r=0.0_wp)     ! initvalue 
 
-      CALL slm_add_var(mem, 'assimi_rl', mem%rl, &
+      CALL slm_add_var(mem, 'assimi_gross_assimilation_C14', mem%gross_assimilation_C14, &
             initval_r=0.0_wp)     ! initvalue 
 
-      CALL slm_add_var(mem, 'assimi_gsl', mem%gsl, &
+      CALL slm_add_var(mem, 'assimi_net_assimilation', mem%net_assimilation, &
             initval_r=0.0_wp)     ! initvalue 
 
-      CALL slm_add_var(mem, 'assimi_cil', mem%cil, &
+      CALL slm_add_var(mem, 'assimi_resp_maint_leaf', mem%resp_maint_leaf, &
+            initval_r=0.0_wp)     ! initvalue 
+
+      CALL slm_add_var(mem, 'assimi_canopy_cond', mem%canopy_cond, &
+            initval_r=0.0_wp)     ! initvalue 
+
+      CALL slm_add_var(mem, 'assimi_CO2_conc_leaf', mem%co2_conc_leaf, &
+            initval_r=0.0_wp)     ! initvalue 
+
+      !! slm_add_var -> slm_add_var_list_element_r1d    *slmtemp 1D -> 3D
+      !!  
+      CALL slm_add_var(mem, 'assimi_gross_assimilation_cl', mem%gross_assimilation_cl, &
+            initval_r=0.0_wp)     ! initvalue 
+
+      CALL slm_add_var(mem, 'assimi_net_assimilation_cl', mem%net_assimilation_cl, &
+            initval_r=0.0_wp)     ! initvalue 
+
+      CALL slm_add_var(mem, 'assimi_resp_maint_leaf_cl', mem%resp_maint_leaf_cl, &
+            initval_r=0.0_wp)     ! initvalue 
+
+      CALL slm_add_var(mem, 'assimi_canopy_cond_cl', mem%canopy_cond_cl, &
+            initval_r=0.0_wp)     ! initvalue 
+
+      CALL slm_add_var(mem, 'assimi_CO2_conc_leaf_cl', mem%co2_conc_leaf_cl, &
             initval_r=0.0_wp)     ! initvalue 
 
     END IF
