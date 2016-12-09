@@ -161,20 +161,14 @@ MODULE mo_veg_memory_class
                                     target_cn_leaf    , &            !< target foliar C:N ratio
                                     target_np_leaf    , &            !< target foliar N:P ratio 
                                     mean_leaf_age     , &            !< average foliage age in days 
-                                    gc                , &            !< some kind of stomatal conductance ?
                                     f_n_demand        , &            !< relative plant demand for N; see update_vegsoil_bgc
                                     f_p_demand        , &            !< relative plant demand for P; see update_vegsoil_bgc
-                                    beta_air          , &            !< scaling factor to account for air humidity effects on conductance
-                                    beta_soil_ps      , &            !< scaling factor to account for soil moisture constraints on photosynthesis
                                     beta_sinklim_ps   , &            !< scaling factor to account for a direct sink limitation contraint on photosynthesis
                                     dphi              , &            !< plant-soil water potential gradient (MPa)
-                                    beta_soil_gs      , &            !< scaling factor to account for soil moisture constraints on conductance
                                     growth_req_n      , &            !< moles N required for a unit of C growth under current allocation fractions 
                                     growth_req_p      , &            !< moles P required for a unit of N growth under current allocation fractions 
                                     gdd               , &            !< growing degree days above 5°C
                                     nd_dormance       , &            !< number of days since last growing season 
-                                    t_jmax_opt        , &            !< current optimum temperature for eletron transport of photosynthesis
-                                    an_boc            , &            !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
                                     leaf_cn_direction , &            !< indicates direction of change in leaf CN ratio to maximise NPP
                                     apar              , &            !< ..
                                     target_lai        , &            !< LAI implied from sap wood area
@@ -207,10 +201,6 @@ MODULE mo_veg_memory_class
 
     ! fluxes
     TYPE(t_jsb_var_real1d)          :: &   
-                                    gpp                       , & !< gross photosynthesis (µmol CO2 m-2 s-1)
-                                    an                        , & !< net photosynthesis (µmol CO2 m-2 s-1)
-                                    gpp_c13                   , & !< gross photosynthesis (µmol 13CO2 m-2 s-1)
-                                    gpp_c14                   , & !< gross photosynthesis (µmol 14CO2 m-2 s-1)
                                     maint_respiration_leaf    , & !< foliar maintenance respiration (µmol CO2 m-2 s-1)
                                     maint_respiration_pot     , & !< potential maintenance respiration (µmol CO2 m-2 s-1)
                                     maint_respiration         , & !< maintenance respiration (µmol CO2 m-2 s-1)
@@ -246,7 +236,6 @@ MODULE mo_veg_memory_class
     ! everything else...
     TYPE(t_jsb_var_real1d)          :: &   
                                     fmaint_rate               , & !< current N-specific maintentance respiration (~µmol C/mol N / s ) 
-                                    ci                        , & !< leaf internal co2 concentration
                                     unit_npp                  , & !< incremental change in NPP. Needed for optimal allocation
                                     unit_transpiration        , & !< incremental change in transpiration. Needed for optimal allocation
                                     unit_uptake_n_pot         , & !< incremental change in potential N uptake per unit root carbon, needed for N uptake calculation 
@@ -1423,29 +1412,17 @@ CONTAINS
       CALL slm_add_var(mem, 'mean_leaf_age', mem%mean_leaf_age, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'gc', mem%gc, &
-            initval_r=0.0_wp) ! initvalue
-  
       CALL slm_add_var(mem, 'f_n_demand', mem%f_n_demand, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'f_p_demand', mem%f_p_demand, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'beta_air', mem%beta_air, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_ps', mem%beta_soil_ps, &
-            initval_r=1.0_wp) ! initvalue
-  
       CALL slm_add_var(mem, 'beta_sinklim_ps', mem%beta_sinklim_ps, &
             initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'dphi', mem%dphi, &
             initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_gs', mem%beta_soil_gs, &
-            initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'growth_req_n', mem%growth_req_n, &
             initval_r=0.0_wp) ! initvalue
@@ -1457,12 +1434,6 @@ CONTAINS
             initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'nd_dormance', mem%nd_dormance, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 't_jmax_opt', mem%t_jmax_opt, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'an_boc', mem%an_boc, &
             initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'leaf_cn_direction', mem%leaf_cn_direction, &
@@ -1532,30 +1503,6 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'cumm_lai_cl', mem%cumm_lai_cl, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'gpp', mem%gpp, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'an', mem%an, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'gpp_c13', mem%gpp_c13, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'gpp_c14', mem%gpp_c14, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'maint_respiration_leaf', mem%maint_respiration_leaf, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'maint_respiration_pot', mem%maint_respiration_pot, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'maint_respiration', mem%maint_respiration, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'maint_respiration_c13', mem%maint_respiration_c13, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'maint_respiration_c14', mem%maint_respiration_c14, &
@@ -1640,9 +1587,6 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'fmaint_rate', mem%fmaint_rate, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'ci', mem%ci, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'unit_npp', mem%unit_npp, &

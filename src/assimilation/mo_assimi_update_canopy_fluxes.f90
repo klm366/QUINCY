@@ -77,10 +77,12 @@ CONTAINS
 
     REAL(wp), POINTER :: gross_assimilation, gross_assimilation_cl
     REAL(wp), POINTER :: gross_assimilation_C13, gross_assimilation_C14
-    REAL(wp), POINTER :: net_assimilation, net_assimilation_cl
+    REAL(wp), POINTER :: net_assimilation, net_assimilation_cl, net_assimilation_boc
     REAL(wp), POINTER :: resp_maint_leaf, resp_maint_leaf_cl
     REAL(wp), POINTER :: canopy_cond, canopy_cond_cl
     REAL(wp), POINTER :: co2_conc_leaf, co2_conc_leaf_cl
+    REAL(wp), POINTER :: beta_air, beta_soil_ps, beta_soil_gs
+    REAL(wp), POINTER :: t_jmax_opt 
 
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -101,12 +103,17 @@ CONTAINS
     gross_assimilation_cl => assimi__mem%gross_assimilation_cl%ptr
     net_assimilation => assimi__mem%net_assimilation%ptr
     net_assimilation_cl => assimi__mem%net_assimilation_cl%ptr
+    net_assimilation_boc => assimi__mem%net_assimilation_boc%ptr
     resp_maint_leaf => assimi__mem%resp_maint_leaf%ptr
     resp_maint_leaf_cl => assimi__mem%resp_maint_leaf_cl%ptr
     canopy_cond => assimi__mem%canopy_cond%ptr
     canopy_cond_cl => assimi__mem%canopy_cond_cl%ptr
     co2_conc_leaf => assimi__mem%co2_conc_leaf%ptr
     co2_conc_leaf_cl => assimi__mem%co2_conc_leaf_cl%ptr
+    beta_air => assimi__mem%beta_air%ptr
+    beta_soil_gs => assimi__mem%beta_soil_gs%ptr
+    beta_soil_ps => assimi__mem%beta_soil_ps%ptr
+    t_jmax_opt => assimi__mem%t_jmax_opt%ptr
 
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
@@ -125,15 +132,13 @@ CONTAINS
 
    !> 1.0 calculate the moisture scaling factor for photosynthesis
    !! 
-   veg%beta_air%ptr     = calc_atm_moisture_stress( t_air                   , &
-                                                    q_air                   , &
-                                                    press_srf) 
-   veg%beta_soil_ps%ptr = calc_soil_moisture_stress(vegsoil%theta           , & 
-                                                    lctlib%lambda_soil_ps   , &
-                                                    lctlib%weibull_k_soil_ps)
-   veg%beta_soil_gs%ptr = calc_soil_moisture_stress(vegsoil%theta           , &
-                                                    lctlib%lambda_soil_gs   , &
-                                                    lctlib%weibull_k_soil_gs)
+   beta_air = calc_atm_moisture_stress(t_air, q_air, press_srf) 
+   beta_soil_ps = calc_soil_moisture_stress(vegsoil%theta           , & 
+                                            lctlib%lambda_soil_ps   , &
+                                            lctlib%weibull_k_soil_ps)
+   beta_soil_gs = calc_soil_moisture_stress(vegsoil%theta           , &
+                                            lctlib%lambda_soil_gs   , &
+                                            lctlib%weibull_k_soil_gs)
 
    !> 2.0 calculate photosynthesis per layer
    !! 
@@ -148,10 +153,10 @@ CONTAINS
                                  veg%par_sunlit_cl%ptr(icanopy,1)  , &
                                  veg%par_shaded_cl%ptr(icanopy,1)  , &
                                  veg%fleaf_sunlit_cl%ptr(icanopy,1), &
-                                 veg%beta_air%ptr                 , &
-                                 veg%beta_soil_ps%ptr             , &
+                                 beta_air                 , &
+                                 beta_soil_ps             , &
                                  veg%beta_sinklim_ps%ptr          , &
-                                 veg%beta_soil_gs%ptr             , &
+                                 beta_soil_gs             , &
                                  veg%fn_chl_cl%ptr(icanopy,1)     , &
                                  veg%fn_et_cl%ptr(icanopy,1)      , &
                                  veg%fn_rub_cl%ptr(icanopy,1)     , &
@@ -195,28 +200,21 @@ CONTAINS
         co2_conc_leaf    = co2_conc_leaf + co2_conc_leaf_cl * veg%lai_cl%ptr(icanopy,1)
 
         ! get the net photosynthesis of the lowest canopy layer at this timestep
-        IF(veg%lai_cl%ptr(icanopy,1) > 0.0_wp) veg%an_boc%ptr = net_assimilation_cl 
+        IF(veg%lai_cl%ptr(icanopy,1) > 0.0_wp) net_assimilation_boc = net_assimilation_cl 
 
      ENDIF
   ENDDO
 
-
-  ! t_jmax_opt
-  IF(assimi_config%flag_t_jmax_acclimation) THEN 
-     veg%t_jmax_opt%ptr = t_jmax_offset + t_jmax_slope * ( t_air - TZero ) 
-     veg%t_jmax_opt%ptr = MIN(MAX(veg%t_jmax_opt%ptr,t_jmax_opt_min),t_jmax_opt_max)
-  ELSE 
-     veg%t_jmax_opt%ptr = lctlib%t_jmax_opt
-  ENDIF
-
-  veg%gpp%ptr = gross_assimilation
-  veg%gpp_C13%ptr = gross_assimilation_C13
-  veg%gpp_C14%ptr = gross_assimilation_C14
-  veg%an%ptr = net_assimilation
-  veg%maint_respiration_leaf%ptr = resp_maint_leaf
-  veg%gc%ptr = canopy_cond
+  ! get mean canopy CO2 concentration in the leaf
   IF(veg%lai%ptr > eps8) co2_conc_leaf = co2_conc_leaf / veg%lai%ptr
-  veg%ci%ptr = co2_conc_leaf 
+
+  ! uptake optimum temperature for electron transport 
+  IF(assimi_config%flag_t_jmax_acclimation) THEN 
+     t_jmax_opt = t_jmax_offset + t_jmax_slope * ( t_air - TZero ) 
+     t_jmax_opt = MIN(MAX(t_jmax_opt,t_jmax_opt_min),t_jmax_opt_max)
+  ELSE 
+     t_jmax_opt = lctlib%t_jmax_opt
+  ENDIF
 
   END SUBROUTINE update_canopy_fluxes
 
@@ -651,10 +649,6 @@ CONTAINS
     CALL veg%growth%init(flux_zero)
     CALL veg%litterfall%init(flux_zero)
     ! variables
-    CALL veg%gpp%init(flux_zero)                           !< gross photosynthesis (µmol CO2 m-2 s-1)
-    CALL veg%an%init(flux_zero)                            !< net photosynthesis (µmol CO2 m-2 s-1)
-    CALL veg%gpp_c13%init(flux_zero)                       !< gross photosynthesis (µmol 13CO2 m-2 s-1)
-    CALL veg%gpp_c14%init(flux_zero)                       !< gross photosynthesis (µmol 14CO2 m-2 s-1)
     CALL veg%maint_respiration_leaf%init(flux_zero)        !< foliar maintenance respiration (µmol CO2 m-2 s-1)
     CALL veg%maint_respiration_pot%init(flux_zero)         !< maintenance respiration (µmol CO2 m-2 s-1)
     CALL veg%maint_respiration%init(flux_zero)             !< maintenance respiration (µmol CO2 m-2 s-1)
@@ -686,7 +680,6 @@ CONTAINS
     CALL veg%recycling_heart_wood_n15%init(flux_zero)      !< net flux of 15N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1) 
     CALL veg%recycling_heart_wood_p%init(flux_zero)        !< net flux of P from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
     CALL veg%transpiration%init(flux_zero)                 !< transpiration in kg m-2 s-1
-    CALL veg%ci%init(flux_zero)                            !< ??
     CALL veg%delta_dens_ind%init(flux_zero)                !< ??
     CALL veg%unit_transpiration%init(flux_zero)            !< ??
 

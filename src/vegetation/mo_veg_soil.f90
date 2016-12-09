@@ -330,6 +330,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
     dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -346,7 +347,9 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg             ! local pointer to veg__mem for SLM usability
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: press_srf
@@ -359,6 +362,7 @@ CONTAINS
     REAL(wp), POINTER                :: sensible_heat_flx
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(LAND2ATM_)
+    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
 !    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
 !      TYPE IS(t_atm2land_memory)
@@ -372,6 +376,7 @@ CONTAINS
 !      TYPE IS(t_veg_memory)
 !        veg__mem => mm
 !    END SELECT
+    assimi => assimi__mem 
     veg => veg__mem 
     t_air       => atm2land__mem%t_air%ptr
     press_srf   => atm2land__mem%press_srf%ptr
@@ -393,10 +398,10 @@ CONTAINS
     ! saturating specific humidity 
     q_sat = calc_spec_humidity_sat(t_air,press_srf)
 
-    IF(veg%gc%ptr > eps8)THEN
+    IF(assimi%canopy_cond%ptr > eps8)THEN
        ! T = rho * (qsat - qair ) * Gtot in mm/s 
        veg%transpiration%ptr = press_srf / ( r_gas_dryair * t_air ) * & 
-                  (q_sat - q_air) / (1._wp / veg%gc%ptr + 1._wp / ga )  
+                  (q_sat - q_air) / (1._wp / assimi%canopy_cond%ptr + 1._wp / ga )  
     ELSE 
        veg%transpiration%ptr = 0.0_wp 
     ENDIF

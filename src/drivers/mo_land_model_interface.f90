@@ -374,6 +374,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
     ! Use of process memories
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -388,18 +389,20 @@ CONTAINS
     ! ..
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem  
     dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
+    TYPE(t_assimi_memory), POINTER      :: assimi     ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
+
+    assimi => assimi__mem 
     veg => veg__mem 
 
 
       WRITE(20,'(7F16.7)')  time_day+time_year*one_year, t_air, swpar_srf_down * rad2par, &
-                            veg%gpp%ptr, veg%apar%ptr, veg%gc%ptr, veg%ci%ptr
+                            assimi%gross_assimilation%ptr, veg%apar%ptr, & 
+                            assimi%canopy_cond%ptr, assimi%co2_conc_leaf%ptr 
       WRITE(21,'(20F16.7)') veg%par_sunlit_cl%ptr
       WRITE(22,'(20F16.7)') veg%par_shaded_cl%ptr
       WRITE(23,'(20F16.7)') veg%fleaf_sunlit_cl%ptr
@@ -427,6 +430,7 @@ CONTAINS
     USE mo_shared_constants,      ONLY: molar_mass_N, Tzero 
 
     ! Use of process memories
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     ! Process interfaces:
@@ -484,13 +488,17 @@ CONTAINS
     REAL(wp),SAVE :: ref_nleaf = 2.0_wp               ! N leaf per unit leaf area in gN/m2
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER      :: assimi__mem  
     dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
+    TYPE(t_assimi_memory), POINTER      :: assimi     ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
 !    SELECT TYPE (mm => tile%mem(VEG_)%p) 
 !      TYPE IS(t_veg_memory)
 !        veg__mem => mm
 !    END SELECT
+    assimi => assimi__mem 
     veg    => veg__mem 
     model  => Get_model(tile%owner_model_id)
 
@@ -602,11 +610,11 @@ CONTAINS
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') swpar_srf_down * rad2par, & 
-           veg%an%ptr,veg%gc%ptr*1000._wp, & 
-           veg%ci%ptr/co2_mixing_ratio !,&
-!           veg%an%ptr,
-!           veg%ci%ptr/co2_mixing_ratio,veg%pool%leaf%nitrogen%ptr*molar_mass_N,&
-!           veg%an%ptr/(veg%pool%leaf%nitrogen%ptr*molar_mass_N)
+           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, & 
+           assimi%co2_conc_leaf%ptr/co2_mixing_ratio !,&
+!           assimi%net_assimilation%ptr,
+!           assimi%co2_conc_leaf%ptr/co2_mixing_ratio,veg%pool%leaf%nitrogen%ptr*molar_mass_N,&
+!           assimi%net_assimilation%ptr/(veg%pool%leaf%nitrogen%ptr*molar_mass_N)
 
   END DO
   swpar_srf_down = ref_swdown 
@@ -621,7 +629,7 @@ CONTAINS
   !! 
   !! 
   lun = lun + 1
-  WRITE(lun,*) 'T A R GC CI' 
+  WRITE(lun,*) 'T A GC CI' 
   t_air = - 5.0_wp + Tzero
   hlp1 = veg%t_jmax_opt_mavg%ptr
   veg%lai%ptr = 1._wp
@@ -640,8 +648,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(5F16.7)') t_air, &  
-           veg%an%ptr,veg%maint_respiration_leaf%ptr,veg%gc%ptr*1000._wp, &
-           veg%ci%ptr/co2_mixing_ratio 
+           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
+           assimi%co2_conc_leaf%ptr/co2_mixing_ratio 
 
   END DO
   t_air    = ref_t_air + Tzero
@@ -668,8 +676,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') co2_mixing_ratio, &
-           veg%an%ptr,veg%gc%ptr*1000._wp, &
-           veg%ci%ptr/co2_mixing_ratio 
+           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
+           assimi%co2_conc_leaf%ptr/co2_mixing_ratio 
 
   END DO
   co2_mixing_ratio = ref_co2_mixing_ratio
@@ -692,8 +700,8 @@ CONTAINS
      vpd = ( calc_spec_humidity_sat(t_air,press_srf) - q_air ) / eps_vpd * press_srf / 1000.0_wp
 
      WRITE(lun,'(4F16.7)') vpd, &
-           veg%an%ptr,veg%gc%ptr*1000._wp, &
-           veg%ci%ptr/co2_mixing_ratio 
+           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
+           assimi%co2_conc_leaf%ptr/co2_mixing_ratio 
 
   END DO
   q_air = calc_spec_humidity_sat(t_air,press_srf) - ref_vpd / press_srf * eps_vpd
@@ -716,8 +724,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') tile%vegsoil%theta, &
-           veg%an%ptr,veg%gc%ptr*1000._wp, &
-           veg%ci%ptr/co2_mixing_ratio 
+           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
+           assimi%co2_conc_leaf%ptr/co2_mixing_ratio 
 
   END DO
   tile%vegsoil%theta = ref_theta
@@ -752,8 +760,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') veg%lai%ptr, &
-           veg%an%ptr,veg%gc%ptr*1000._wp, &
-           veg%ci%ptr/co2_mixing_ratio 
+           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
+           assimi%co2_conc_leaf%ptr/co2_mixing_ratio 
 
   END DO
   veg%lai%ptr = ref_lai 
@@ -785,8 +793,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') veg%pool%leaf%nitrogen%ptr/veg%lai%ptr*molar_mass_N, & 
-           veg%an%ptr,veg%gc%ptr*1000._wp, &
-           veg%ci%ptr/co2_mixing_ratio 
+           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
+           assimi%co2_conc_leaf%ptr/co2_mixing_ratio 
 
   END DO
   veg%pool%leaf%nitrogen%ptr=ref_nleaf/molar_mass_N*veg%lai%ptr
@@ -819,8 +827,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(I1,3F16.7)') i, &
-           veg%an%ptr,veg%gc%ptr*1000._wp, &
-           veg%ci%ptr/co2_mixing_ratio 
+           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
+           assimi%co2_conc_leaf%ptr/co2_mixing_ratio 
 
   END DO 
   !STOP

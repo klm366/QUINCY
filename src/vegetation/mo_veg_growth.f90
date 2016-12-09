@@ -44,6 +44,7 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -57,7 +58,9 @@ CONTAINS
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg             ! local pointer to veg__mem for SLM usability
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: press_srf
@@ -65,7 +68,9 @@ CONTAINS
     REAL(wp), POINTER                :: co2_mixing_ratio
     REAL(wp), POINTER                :: ga
     dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
+    assimi => assimi__mem 
     veg => veg__mem 
     t_air            => atm2land__mem%t_air%ptr
     press_srf        => atm2land__mem%press_srf%ptr
@@ -127,6 +132,11 @@ CONTAINS
                                               q_air                     , &
                                               co2_mixing_ratio          , &
                                               ga                        , & 
+                                              assimi%net_assimilation%ptr , & 
+                                              assimi%canopy_cond%ptr    , & 
+                                              assimi%beta_air%ptr       , & 
+                                              assimi%beta_soil_ps%ptr   , & 
+                                              assimi%beta_soil_gs%ptr   , & 
                                               veg                       , & ! *slmdev  --> CALL calc_photosynthesis()
                                               veg%unit_npp%ptr          , & 
                                               veg%unit_transpiration%ptr)   

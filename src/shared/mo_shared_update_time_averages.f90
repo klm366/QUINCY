@@ -48,6 +48,7 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -62,7 +63,9 @@ CONTAINS
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     REAL(wp), POINTER                :: swpar_srf_down  ! light at surface level
     REAL(wp), POINTER                :: t_air
@@ -71,6 +74,7 @@ CONTAINS
     REAL(wp), POINTER                :: co2_mixing_ratio
     REAL(wp), POINTER                :: ga
     dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
 !    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
 !      TYPE IS(t_atm2land_memory)
@@ -80,6 +84,7 @@ CONTAINS
 !      TYPE IS(t_veg_memory)
 !        veg__mem => mm
 !    END SELECT
+    assimi => assimi__mem 
     veg => veg__mem 
     swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
     t_air             => atm2land__mem%t_air%ptr
@@ -94,13 +99,13 @@ CONTAINS
 
     !> 1.0 daytime averages
     !! 
-    CALL calc_daytime_averages(veg, time_day, timestep_prop_day, swpar_srf_down, & 
+    CALL calc_daytime_averages(assimi, veg, time_day, timestep_prop_day, swpar_srf_down, & 
                                t_air, press_srf, co2_mixing_ratio, ga)
 
 
     !> 2.0 moving averages
     !! 
-    CALL calc_moving_averages(lctlib, veg, t_air, press_srf, co2_mixing_ratio, ga)
+    CALL calc_moving_averages(lctlib, assimi, veg, t_air, press_srf, co2_mixing_ratio, ga)
 
 
 
@@ -119,16 +124,18 @@ CONTAINS
   !!
   !! daytime: the time of the day over which light is available
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_daytime_averages(veg, time_day, timestep_prop_day, swpar_srf_down, t_air, & 
+  SUBROUTINE calc_daytime_averages(assimi, veg, time_day, timestep_prop_day, swpar_srf_down, t_air, & 
                                    press_srf, co2_mixing_ratio, ga)
 
     USE mo_assimi_config_class,   ONLY: assimi_config
 
     ! Use of process memories
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
+    TYPE(t_assimi_memory), INTENT(inout)  :: assimi             !< assimi memory
     TYPE(t_veg_memory), INTENT(inout)     :: veg                !< veg memory
     REAL(wp), INTENT(in)                  :: time_day           !< time in days
     REAL(wp), INTENT(in)                  :: timestep_prop_day  !< length of one time step (proportion of one day)
@@ -145,7 +152,7 @@ CONTAINS
     !! 
     IF(swpar_srf_down > eps8) THEN
       ! 1.1 count number of values added to var_daytime
-      veg%daytime_counter = veg%daytime_counter + 1.0_wp
+      veg%daytime_counter%ptr = veg%daytime_counter%ptr + 1.0_wp
       ! 1.2 add values and count number of values
       DO icanopy=1,assimi_config%ncanopy
         veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   = veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   + &
@@ -155,15 +162,15 @@ CONTAINS
         veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) + & 
                                                            veg%fleaf_sunlit_cl%ptr(icanopy,1)
       END DO
-      veg%t_air_daytime_dacc            = veg%t_air_daytime_dacc            + t_air
-      veg%press_srf_daytime_dacc        = veg%press_srf_daytime_dacc        + press_srf
-      veg%co2_mixing_ratio_daytime_dacc = veg%co2_mixing_ratio_daytime_dacc + co2_mixing_ratio
-      veg%ga_daytime_dacc               = veg%ga_daytime_dacc               + ga
-      veg%beta_air_daytime_dacc         = veg%beta_air_daytime_dacc         + veg%beta_air
-      veg%beta_soil_ps_daytime_dacc     = veg%beta_soil_ps_daytime_dacc     + veg%beta_soil_ps
-      veg%beta_sinklim_ps_daytime_dacc  = veg%beta_sinklim_ps_daytime_dacc  + veg%beta_sinklim_ps
-      veg%beta_soil_gs_daytime_dacc     = veg%beta_soil_gs_daytime_dacc     + veg%beta_soil_gs
-      veg%t_jmax_opt_daytime_dacc       = veg%t_jmax_opt_daytime_dacc       + veg%t_jmax_opt
+      veg%t_air_daytime_dacc%ptr            = veg%t_air_daytime_dacc%ptr            + t_air
+      veg%press_srf_daytime_dacc%ptr        = veg%press_srf_daytime_dacc%ptr        + press_srf
+      veg%co2_mixing_ratio_daytime_dacc%ptr = veg%co2_mixing_ratio_daytime_dacc%ptr + co2_mixing_ratio
+      veg%ga_daytime_dacc%ptr               = veg%ga_daytime_dacc%ptr               + ga
+      veg%beta_air_daytime_dacc%ptr         = veg%beta_air_daytime_dacc%ptr         + assimi%beta_air%ptr
+      veg%beta_soil_ps_daytime_dacc%ptr     = veg%beta_soil_ps_daytime_dacc%ptr     + assimi%beta_soil_ps%ptr
+      veg%beta_sinklim_ps_daytime_dacc%ptr  = veg%beta_sinklim_ps_daytime_dacc%ptr  + veg%beta_sinklim_ps%ptr
+      veg%beta_soil_gs_daytime_dacc%ptr     = veg%beta_soil_gs_daytime_dacc%ptr     + assimi%beta_soil_gs%ptr
+      veg%t_jmax_opt_daytime_dacc%ptr       = veg%t_jmax_opt_daytime_dacc%ptr       + assimi%t_jmax_opt%ptr
     END IF
 
 
@@ -179,15 +186,15 @@ CONTAINS
           veg%par_shaded_daytime_cl%ptr(icanopy,1)    = veg%par_shaded_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
           veg%fleaf_sunlit_daytime_cl%ptr(icanopy,1)  = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) / veg%daytime_counter%ptr
         END DO
-        veg%t_air_daytime            = veg%t_air_daytime_dacc              / veg%daytime_counter
-        veg%press_srf_daytime        = veg%press_srf_daytime_dacc          / veg%daytime_counter
-        veg%co2_mixing_ratio_daytime = veg%co2_mixing_ratio_daytime_dacc   / veg%daytime_counter
-        veg%ga_daytime               = veg%ga_daytime_dacc                 / veg%daytime_counter
-        veg%beta_air_daytime         = veg%beta_air_daytime_dacc           / veg%daytime_counter
-        veg%beta_soil_ps_daytime     = veg%beta_soil_ps_daytime_dacc       / veg%daytime_counter
-        veg%beta_sinklim_ps_daytime  = veg%beta_sinklim_ps_daytime_dacc    / veg%daytime_counter
-        veg%beta_soil_gs_daytime     = veg%beta_soil_gs_daytime_dacc       / veg%daytime_counter
-        veg%t_jmax_opt_daytime       = veg%t_jmax_opt_daytime_dacc         / veg%daytime_counter
+        veg%t_air_daytime%ptr            = veg%t_air_daytime_dacc%ptr              / veg%daytime_counter%ptr
+        veg%press_srf_daytime%ptr        = veg%press_srf_daytime_dacc%ptr          / veg%daytime_counter%ptr
+        veg%co2_mixing_ratio_daytime%ptr = veg%co2_mixing_ratio_daytime_dacc%ptr   / veg%daytime_counter%ptr
+        veg%ga_daytime%ptr               = veg%ga_daytime_dacc%ptr                 / veg%daytime_counter%ptr
+        veg%beta_air_daytime%ptr         = veg%beta_air_daytime_dacc%ptr           / veg%daytime_counter%ptr
+        veg%beta_soil_ps_daytime%ptr     = veg%beta_soil_ps_daytime_dacc%ptr       / veg%daytime_counter%ptr
+        veg%beta_sinklim_ps_daytime%ptr  = veg%beta_sinklim_ps_daytime_dacc%ptr    / veg%daytime_counter%ptr
+        veg%beta_soil_gs_daytime%ptr     = veg%beta_soil_gs_daytime_dacc%ptr       / veg%daytime_counter%ptr
+        veg%t_jmax_opt_daytime%ptr       = veg%t_jmax_opt_daytime_dacc%ptr         / veg%daytime_counter%ptr
       ELSE  ! if veg%daytime_counter is zero
         veg%par_sunlit_daytime_cl%ptr    = 0.0_wp
         veg%par_shaded_daytime_cl%ptr    = 0.0_wp
@@ -294,16 +301,18 @@ CONTAINS
   !! 
   !! variable-specific averaging period, previous to the current timestep
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_moving_averages(lctlib, veg, t_air, press_srf, co2_mixing_ratio, ga)
+  SUBROUTINE calc_moving_averages(lctlib, assimi, veg, t_air, press_srf, co2_mixing_ratio, ga)
 
     USE mo_shared_constants     ! moving average period lengths are defined there as REAL(wp),PARAMETER :: mavg_period_...
 
     ! Use of process memories
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in)   :: lctlib             !< land-cover-type library - parameters for one pft
+    TYPE(t_assimi_memory), INTENT(inout)  :: assimi           !< assimi memory
     TYPE(t_veg_memory), INTENT(inout)   :: veg                !< veg memory
     REAL(wp), INTENT(in)                :: t_air              !< air temperature ?
     REAL(wp), INTENT(in)                :: press_srf          !< air pressure at surface level ?
@@ -318,7 +327,7 @@ CONTAINS
     !!           returns: new current average
 
     !> 1.1 averages at the timescale of the labile pool
-    veg%gpp_tlabile_mavg%ptr                = calc_mavg(veg%gpp_tlabile_mavg%ptr, veg%gpp%ptr, &
+    veg%gpp_tlabile_mavg%ptr                = calc_mavg(veg%gpp_tlabile_mavg%ptr, assimi%gross_assimilation%ptr, &
                                                     mavg_period_tlabile)
     veg%maint_respiration_tlabile_mavg%ptr  = calc_mavg(veg%maint_respiration_tlabile_mavg%ptr, veg%maint_respiration_pot%ptr, &
                                                     mavg_period_tlabile)
@@ -329,7 +338,7 @@ CONTAINS
     
     !> 1.2 averages at the time-scale of phenology
     veg%t_air_tphen_mavg%ptr                 = calc_mavg(veg%t_air_tphen_mavg%ptr, t_air, mavg_period_tphen)
-    veg%beta_soil_gs_tphen_mavg%ptr          = calc_mavg(veg%beta_soil_gs_tphen_mavg%ptr, veg%beta_soil_gs%ptr, mavg_period_tphen)
+    veg%beta_soil_gs_tphen_mavg%ptr          = calc_mavg(veg%beta_soil_gs_tphen_mavg%ptr, assimi%beta_soil_gs%ptr, mavg_period_tphen)
 
     !> 1.3 averages at the nutrient-uptake demand time-scale
     veg%npp_tuptake_mavg%ptr                 = calc_mavg(veg%npp_tuptake_mavg%ptr, veg%npp%ptr, mavg_period_tuptake, &
@@ -454,7 +463,7 @@ CONTAINS
                                                do_calc=veg%growing_season%ptr, avg_period_unit='year') 
 
     !> 1.8 averages at the vegetation dynamics time-scale 
-    veg%an_boc_tvegdyn_mavg%ptr   = calc_mavg(veg%an_boc_tvegdyn_mavg%ptr, veg%an_boc%ptr, mavg_period_tvegdyn, &
+    veg%an_boc_tvegdyn_mavg%ptr   = calc_mavg(veg%an_boc_tvegdyn_mavg%ptr, assimi%net_assimilation_boc%ptr, mavg_period_tvegdyn, &
                                           do_calc=(veg%pool%leaf%carbon%ptr > eps8))
     !> 1.9 averages at the respiration acclimation time-scale
     veg%t_air_tacclim_mavg%ptr    = calc_mavg(veg%t_air_tacclim_mavg%ptr, t_air, mavg_period_tacclim)

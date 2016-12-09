@@ -597,6 +597,11 @@ CONTAINS
                                                   q_air             , & 
                                                   co2_mixing_ratio  , & 
                                                   ga                , &
+                                                  net_assimilation  , &
+                                                  canopy_cond       , &
+                                                  beta_air          , &
+                                                  beta_soil_ps      , &
+                                                  beta_soil_gs      , &
                                                   veg               , &
                                                   unit_npp          , &
                                                   unit_transpiration )
@@ -617,26 +622,32 @@ CONTAINS
     REAL(wp),              INTENT(in) :: q_air               !< air specific humidity (--) 
     REAL(wp),              INTENT(in) :: co2_mixing_ratio    !< co2 mixing ratio (ppm) 
     REAL(wp),              INTENT(in) :: ga                  !< air temperature (K) 
+    REAL(wp),              INTENT(in) :: net_assimilation    !< net assimilation rate (µmol CO2 / m2 / s) 
+    REAL(wp),              INTENT(in) :: canopy_cond         !< canopy conductance (m/s) 
+    REAL(wp),              INTENT(in) :: beta_air            !< air humidity limiting factor for photosynthesis
+    REAL(wp),              INTENT(in) :: beta_soil_ps        !< soil moisture limiting factor for photosynthesis
+    REAL(wp),              INTENT(in) :: beta_soil_gs        !< soil moisture limiting factor for canopy conductance 
     REAL(wp),              INTENT(out) :: unit_npp           !<- unit change of NPP per ??
     REAL(wp),              INTENT(out) :: unit_transpiration !<- unit change of NPP per ??
     ! 0.2 Local
-    REAL(wp) :: lai, leaf_nitrogen
-    REAL(wp) :: gpp, maint_respiration_leaf,gc
-    REAL(wp),DIMENSION(assimi_config%ncanopy) :: lai_cl
-    REAL(wp),DIMENSION(assimi_config%ncanopy) :: cumm_lai_cl 
+    REAL(wp) :: lai_new, leaf_nitrogen_new
+    REAL(wp) :: net_assimilation_new 
+    REAL(wp) :: canopy_cond_new
+    REAL(wp),DIMENSION(assimi_config%ncanopy) :: lai_new_cl
+    REAL(wp),DIMENSION(assimi_config%ncanopy) :: cumm_lai_new_cl 
     REAL(wp),DIMENSION(assimi_config%ncanopy) :: par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl 
-    REAl(wp),DIMENSION(assimi_config%ncanopy) :: fn_oth_cl, leaf_nitrogen_cl, fn_chl_cl, fn_et_cl, fn_rub_cl, fn_pepc_cl
-    REAL(wp) :: ag_cl, r_cl, gs_cl
+    REAl(wp),DIMENSION(assimi_config%ncanopy) :: fn_oth_new_cl, leaf_nitrogen_new_cl, fn_chl_new_cl, fn_et_new_cl, fn_rub_new_cl, fn_pepc_new_cl
+    REAL(wp) :: ag_cl, an_cl, r_cl, gs_cl
     REAL(wp) :: q_sat 
     REAL(wp) :: hlp1 
     INTEGER :: icanopy
  
     !> 1.0 copy current plant state into dummy variables
     !!
-    fn_chl_cl       = veg%fn_chl_cl%ptr(:,1)
-    fn_et_cl        = veg%fn_et_cl%ptr(:,1)
-    fn_rub_cl       = veg%fn_rub_cl%ptr(:,1)
-    fn_pepc_cl      = veg%fn_pepc_cl%ptr(:,1)
+    !fn_chl_cl       = veg%fn_chl_cl%ptr(:,1)
+    !fn_et_cl        = veg%fn_et_cl%ptr(:,1)
+    !fn_rub_cl       = veg%fn_rub_cl%ptr(:,1)
+    !fn_pepc_cl      = veg%fn_pepc_cl%ptr(:,1)
     par_sunlit_cl   = veg%par_sunlit_cl%ptr(:,1)
     par_shaded_cl   = veg%par_shaded_cl%ptr(:,1)
     fleaf_sunlit_cl = veg%fleaf_sunlit_cl%ptr(:,1)
@@ -651,37 +662,36 @@ CONTAINS
     !> 2.0 Estimate effect of a small increase in leaf C on LAI and leaf N
     !!
     ! increase LAI by 1 mol of C 
-    lai = veg%lai%ptr + lctlib%sla
+    lai_new = veg%lai%ptr + lctlib%sla
     ! equivalent leaf N assuming any new leaf growth will have target CN
     IF(veg%pool%leaf%carbon%ptr > eps8)THEN
-       leaf_nitrogen = veg%pool%leaf%nitrogen%ptr + veg%pool%leaf%nitrogen%ptr / veg%pool%leaf%carbon%ptr
+       leaf_nitrogen_new = veg%pool%leaf%nitrogen%ptr + veg%pool%leaf%nitrogen%ptr / veg%pool%leaf%carbon%ptr
     ELSE
-       leaf_nitrogen = 1._wp / lctlib%cn_leaf
+       leaf_nitrogen_new = 1._wp / lctlib%cn_leaf
     ENDIF
 
     ! recompute canopy layer LAI and foliar N with new numbers
     CALL calc_canopy_layers(lctlib = lctlib, & 
-                            leaf_nitrogen = leaf_nitrogen, &
-                            lai = lai,&
+                            leaf_nitrogen = leaf_nitrogen_new, &
+                            lai = lai_new,&
                             par_sunlit_cl = par_sunlit_cl, &
                             par_shaded_cl = par_shaded_cl, &
                             fleaf_sunlit_cl = fleaf_sunlit_cl, &
-                            lai_cl = lai_cl, &
-                            cumm_lai_cl = cumm_lai_cl, &
-                            leaf_nitrogen_cl = leaf_nitrogen_cl, &
-                            fn_rub_cl = fn_rub_cl, &
-                            fn_et_cl = fn_et_cl, &
-                            fn_pepc_cl = fn_pepc_cl, &
-                            fn_chl_cl = fn_chl_cl, &
-                            fn_oth_cl = fn_oth_cl, &
+                            lai_cl = lai_new_cl, &
+                            cumm_lai_cl = cumm_lai_new_cl, &
+                            leaf_nitrogen_cl = leaf_nitrogen_new_cl, &
+                            fn_rub_cl = fn_rub_new_cl, &
+                            fn_et_cl = fn_et_new_cl, &
+                            fn_pepc_cl = fn_pepc_new_cl, &
+                            fn_chl_cl = fn_chl_new_cl, &
+                            fn_oth_cl = fn_oth_new_cl, &
                             inquire_n_fractions=.TRUE.)
  
     ! calculate photosynthesis by integration over canopy layers containing leaves 
-    gpp = 0._wp
-    maint_respiration_leaf = 0._wp
-    gc = 0.0_wp
+    net_assimilation_new = 0._wp
+    canopy_cond_new = 0.0_wp
     DO icanopy = 1,assimi_config%ncanopy
-       IF(lai_cl(icanopy).GT.eps8)THEN   
+       IF(lai_new_cl(icanopy).GT.eps8)THEN   
           CALL calc_photosynthesis( t_air                               , & ! in
                                     press_srf                           , &
                                     co2_mixing_ratio                    , &
@@ -690,29 +700,28 @@ CONTAINS
                                     veg%par_sunlit_cl%ptr(icanopy,1)    , &
                                     veg%par_shaded_cl%ptr(icanopy,1)    , &
                                     veg%fleaf_sunlit_cl%ptr(icanopy,1)  , &
-                                    veg%beta_air%ptr                    , &
-                                    veg%beta_soil_ps%ptr                , &
+                                    beta_air                    , &
+                                    beta_soil_ps                , &
                                     veg%beta_sinklim_ps%ptr             , &
-                                    veg%beta_soil_gs%ptr                , &
+                                    beta_soil_gs                , &
                                     veg%fn_chl_cl%ptr(icanopy,1)       , &
                                     veg%fn_et_cl%ptr(icanopy,1)        , &
                                     veg%fn_rub_cl%ptr(icanopy,1)       , &
                                     veg%fn_pepc_cl%ptr(icanopy,1)      , &
-                                    leaf_nitrogen_cl(icanopy)                  , &
+                                    leaf_nitrogen_new_cl(icanopy)                  , &
                                     lctlib%ps_pathway                   , &
                                     veg%t_jmax_opt_mavg%ptr             , &
                                     lctlib%t_jmax_omega                 , &
                                     lctlib%g0                           , &
                                     lctlib%g1                           , &
                                     ag_cl                               , & ! out
-                                    hlp1                                , &
+                                    an_cl                               , &
                                     r_cl                                , &
                                     gs_cl                               , &
                                     hlp1,hlp1,hlp1,hlp1)             
     
-            gpp = gpp + ag_cl * lai_cl(icanopy)  
-            maint_respiration_leaf = maint_respiration_leaf + r_cl * lai_cl(icanopy) 
-            gc = gc + gs_cl * lai_cl(icanopy) 
+            net_assimilation_new = net_assimilation_new + an_cl * lai_new_cl(icanopy) 
+            canopy_cond_new = canopy_cond_new + gs_cl * lai_new_cl(icanopy) 
 
        ENDIF
     ENDDO
@@ -721,19 +730,19 @@ CONTAINS
 
     !> 3.1 net carbon gain from increased LAI
     !!
-    unit_npp = (gpp - veg%gpp%ptr) - (maint_respiration_leaf - veg%maint_respiration_leaf%ptr)
+    unit_npp = net_assimilation_new - net_assimilation 
 
     !> 3.2 Calculate increment in net water loss from increased LAI
     !!
     q_sat = calc_spec_humidity_sat(t_air,press_srf) 
-    IF(veg%gc%ptr > eps8 .AND. gc > eps8)THEN 
+    IF(canopy_cond > eps8 .AND. canopy_cond_new > eps8)THEN 
        unit_transpiration = press_srf / ( r_gas_dryair * t_air ) * &  
-                        (q_sat - q_air) / (1._wp / gc + 1._wp / ga ) - & 
+                        (q_sat - q_air) / (1._wp / canopy_cond_new + 1._wp / ga ) - & 
                         press_srf / ( r_gas_dryair * t_air ) * &  
-                        (q_sat - q_air) / (1._wp / veg%gc%ptr + 1._wp / ga )  
-    ELSEIF (gc > eps8) THEN 
+                        (q_sat - q_air) / (1._wp / canopy_cond + 1._wp / ga )  
+    ELSEIF (canopy_cond_new > eps8) THEN 
        unit_transpiration =  press_srf / ( r_gas_dryair * t_air ) * &  
-                         (q_sat - q_air) / (1._wp / gc + 1._wp / ga ) 
+                         (q_sat - q_air) / (1._wp / canopy_cond_new + 1._wp / ga ) 
     ELSE 
       unit_transpiration = 0.0_wp  
     ENDIF 

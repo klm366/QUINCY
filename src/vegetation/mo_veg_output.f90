@@ -378,6 +378,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
 
     ! Use of process memories
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -399,13 +400,17 @@ CONTAINS
                                         dC13fruit,dC13labile,dC13reserve,dC13seed_bed
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    TYPE(t_assimi_memory), POINTER      :: assimi     ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
 !    SELECT TYPE (mm => tile%mem(VEG_)%p) 
 !      TYPE IS(t_veg_memory)
 !        veg__mem => mm
 !    END SELECT
+    assimi => assimi__mem 
     veg => veg__mem 
 
     model  => Get_model(tile%owner_model_id)
@@ -469,7 +474,7 @@ CONTAINS
          veg%pool%fruit%phosphorus%ptr,veg%pool%labile%phosphorus%ptr,&
          veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,veg%total_biomass%phosphorus%ptr
        lun=lun+1
-       write(lun,'(9F12.6)') time_d, vegsoil%moisture, vegsoil%water_potential,veg%beta_soil_gs%ptr,veg%beta_soil_ps%ptr
+       write(lun,'(9F12.6)') time_d, vegsoil%moisture, vegsoil%water_potential,assimi%beta_soil_gs%ptr,assimi%beta_soil_ps%ptr
        lun=lun+1
        write(lun,'(3F12.6)') time_d, vegsoil%pool%litter%nitrogen, vegsoil%ammonium
        lun=lun+1
@@ -545,6 +550,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
     dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -561,9 +567,11 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
-    TYPE(t_veg_memory), POINTER      :: veg        ! local pointer to veg__mem for SLM usability
-    REAL(wp), POINTER                :: ga
+    TYPE(t_assimi_memory), POINTER   :: assimi      ! local pointer to assimi__mem for SLM usability
+    TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
+    REAL(wp), POINTER                :: ga 
     REAL(wp), POINTER                :: swpar_srf_down
     REAL(wp), POINTER                :: albedo
     REAL(wp), POINTER                :: net_radiation
@@ -571,6 +579,7 @@ CONTAINS
     REAL(wp), POINTER                :: latent_heat_flx
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(LAND2ATM_)
+    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
 !    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
 !      TYPE IS(t_atm2land_memory)
@@ -584,6 +593,7 @@ CONTAINS
 !      TYPE IS(t_veg_memory)
 !        veg__mem => mm
 !    END SELECT
+    assimi => assimi__mem 
     veg => veg__mem 
     ga                => atm2land__mem%ga%ptr
     swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
@@ -612,17 +622,17 @@ CONTAINS
         ELSE
           dtime_one = dtime / 1000000.0_wp      ! interval > timestep
       END IF
-      gpp_acc(itile)          = gpp_acc(itile)           + veg%gpp%ptr                     * dtime_one
+      gpp_acc(itile)          = gpp_acc(itile)           + assimi%gross_assimilation%ptr   * dtime_one
       growth_resp_acc(itile)  = growth_resp_acc(itile)   + veg%growth_respiration%ptr      * dtime_one
       maint_resp_acc(itile)   = maint_resp_acc(itile)    + veg%maint_respiration%ptr       * dtime_one
       n_transform_resp_acc(itile) = n_transform_resp_acc(itile) + veg%n_transform_respiration%ptr * dtime_one
       n_fixation_resp_acc(itile) = n_fixation_resp_acc(itile) + veg%n_fixation_respiration%ptr    * dtime_one
       npp_acc(itile)          = npp_acc(itile)           + veg%npp%ptr                 * dtime_one
       res_use_c_acc(itile)    = res_use_c_acc(itile)     + veg%reserve_use%carbon%ptr  * dtime_one *1000000._wp/dtime
-      gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + veg%gpp_c13%ptr                * dtime_one
+      gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + assimi%gross_assimilation_C13%ptr * dtime_one
       growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + veg%growth_respiration_c13%ptr * dtime_one
       maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + veg%maint_respiration_c13%ptr  * dtime_one
-      gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + veg%gpp_c14%ptr                * dtime_one
+      gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + assimi%gross_assimilation_C14%ptr * dtime_one
       growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + veg%growth_respiration_c14%ptr * dtime_one
       maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + veg%maint_respiration_c14%ptr  * dtime_one
       uptake_n_acc(itile)     = uptake_n_acc(itile)      + veg%uptake_n%ptr                * dtime_one
@@ -635,7 +645,7 @@ CONTAINS
                                 veg%recycling_fine_root_p%ptr + veg%recycling_heart_wood_p%ptr ) * dtime_one *1000000._wp/dtime
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
       transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dtime_one 
-      gc_acc(itile)           = veg%gc%ptr                                                      
+      gc_acc(itile)           = assimi%canopy_cond%ptr                                                      
       ga_acc(itile)           = ga                                                   
       albedo_acc(itile)       = albedo
       ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2par   * dtime_one               

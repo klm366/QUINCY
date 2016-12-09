@@ -44,6 +44,7 @@ CONTAINS
     USE mo_veg_constants,       ONLY: itree
 
     ! Use of process memories
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -55,13 +56,14 @@ CONTAINS
     REAL(wp)                              :: hlp1,hlp2             ! helper variable
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),      POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    TYPE(t_assimi_memory), POINTER      :: assimi     ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
+
+    assimi => assimi__mem 
     veg => veg__mem 
 
     model  => Get_model(tile%owner_model_id)
@@ -73,12 +75,15 @@ CONTAINS
     SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('plant','land')
    
-       !> 1.1 Add carbon from photosynthesis to the labile pool
+       !> 1.1 net balance of the labile carbon pool due to photosynthesis and respiration
        !! 
        !! 
-       veg%npp%ptr      = veg%gpp%ptr     - veg%growth_respiration%ptr     - veg%maint_respiration%ptr     - veg%n_processing_respiration%ptr
-       veg%npp_c13%ptr  = veg%gpp_c13%ptr - veg%growth_respiration_c13%ptr - veg%maint_respiration_c13%ptr - veg%n_processing_respiration_c13%ptr
-       veg%npp_c14%ptr  = veg%gpp_c14%ptr - veg%growth_respiration_c14%ptr - veg%maint_respiration_c14%ptr - veg%n_processing_respiration_c14%ptr
+       veg%npp%ptr      = assimi%gross_assimilation%ptr     - & 
+           veg%growth_respiration%ptr - veg%maint_respiration%ptr - veg%n_processing_respiration%ptr
+       veg%npp_c13%ptr  = assimi%gross_assimilation_C13%ptr - &
+           veg%growth_respiration_c13%ptr - veg%maint_respiration_c13%ptr - veg%n_processing_respiration_c13%ptr
+       veg%npp_c14%ptr  = assimi%gross_assimilation_C14%ptr - & 
+           veg%growth_respiration_c14%ptr - veg%maint_respiration_c14%ptr - veg%n_processing_respiration_c14%ptr
        veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr    + veg%npp%ptr     * dtime / 1000000.0_wp
        veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr  + veg%npp_c13%ptr * dtime / 1000000.0_wp
        veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr  + veg%npp_c14%ptr * dtime / 1000000.0_wp
