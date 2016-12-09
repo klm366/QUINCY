@@ -422,7 +422,7 @@ CONTAINS
     IF(veg_config%pft_id==0) THEN
       veg%pool%leaf%nitrogen%ptr   = ref_nleaf / molar_mass_N * veg%lai%ptr
     ELSE
-      veg%pool%leaf%nitrogen   = veg%lai / (lctlib%sla /  lctlib%cn_leaf)
+      veg%pool%leaf%nitrogen   = veg%lai / lctlib%sla / lctlib%cn_leaf 
       veg%pool%leaf%phosphorus = veg%pool%leaf%nitrogen / lctlib%np_leaf
     ENDIF
 

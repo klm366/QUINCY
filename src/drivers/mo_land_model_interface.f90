@@ -632,7 +632,7 @@ CONTAINS
   WRITE(lun,*) 'T A GC CI' 
   t_air = - 5.0_wp + Tzero
   hlp1 = veg%t_jmax_opt_mavg%ptr
-  veg%lai%ptr = 1._wp
+
   DO i = 1,70
 
      t_air = t_air + 1.0_wp 
