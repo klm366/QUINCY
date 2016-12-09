@@ -404,7 +404,7 @@ table below. You may find detailed information on each method following the appr
                                fieldrow == 0 else ""
                         ret += "\\cmidrule(r){2-%d}" % n_col if fieldrow > 0 and \
                                benchrow == 0 else ""
-                        ret += ( "&" if fieldrow > 0 else "%s & " % field )
+                        ret += ( "&" if fieldrow > 0 else " %s & " % field )
                         ret += ( "&&" if benchrow > 0 else "\\hyperlink{%s}{%s} & %s &" % (
                             _dict [ 'name' ], teXify ( _dict [ 'name' ]), _dict [ 'benchunit' ]))
                         ret += ( '\\hyperlink{%s}{$\mathbf{R_{%d}}$}' % ( ref.B4J_name, ref.B4J_refno ))
