@@ -16,7 +16,7 @@ MODULE mo_assimi_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
 
-  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varesp_maint_leafist later  *slmtemp
+  USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later  *slmtemp
 
 
 
@@ -41,7 +41,7 @@ MODULE mo_assimi_memory_class
                               gross_assimilation_C14, &      !< canopy-integrated gross assimilation rate (µmol 14CO2/m2/s) 
                               net_assimilation      , &      !< canopy-integrated net assimilation rate (µmol CO2/m2/s) 
                               net_assimilation_boc  , &      !< net assimilation rate at the bottom of the canopy (µmol CO2/m2/s) 
-                              resp_maint_leaf       , &      !< canopy-integrated foliar respiration rate (µmol CO2/m2/s)
+                              maint_respiration_leaf, &      !< canopy-integrated foliar respiration rate (µmol CO2/m2/s)
                               canopy_cond           , &      !< canopy-integrated conductance for water (m/s)
                               co2_conc_leaf         , &      !< canopy-integrated internal leaf CO2 concentration (ppm) 
                               beta_air              , &      !< scaling factor to account for air humidity effects on conductance
@@ -52,7 +52,7 @@ MODULE mo_assimi_memory_class
     TYPE(t_jsb_var_real1d)    :: &
                               gross_assimilation_cl, &   !< gross assimilation rate per canopy layer (µmol CO2/m2/s) 
                               net_assimilation_cl  , &   !< net assimilation rate per canopy layer (µmol CO2/m2/s)
-                              resp_maint_leaf_cl   , &   !< foliar respiration rate per canopy layer (µmol CO2/m2/s)
+                              maint_respiration_leaf_cl, &   !< foliar respiration rate per canopy layer (µmol CO2/m2/s)
                               canopy_cond_cl       , &   !< conductance for water per canopy layer (m/s)
                               co2_conc_leaf_cl           !< internal leaf CO2 concentration per canopy layer (ppm)
 
@@ -75,7 +75,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
 
-!    USE mo_jsb_varesp_maint_leafist,       ONLY: t_jsb_varesp_maint_leafist, jsb_add_var
+!    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
 !    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
 !    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -125,7 +125,7 @@ CONTAINS
       CALL slm_add_var(mem, 'net_assimilation_boc', mem%net_assimilation_boc, &
             initval_r=0.0_wp)     ! initvalue 
 
-      CALL slm_add_var(mem, 'resp_maint_leaf', mem%resp_maint_leaf, &
+      CALL slm_add_var(mem, 'maint_respiration_leaf', mem%maint_respiration_leaf, &
             initval_r=0.0_wp)     ! initvalue 
 
       CALL slm_add_var(mem, 'canopy_cond', mem%canopy_cond, &
@@ -154,7 +154,7 @@ CONTAINS
       CALL slm_add_var(mem, 'net_assimilation_cl', mem%net_assimilation_cl, &
             initval_r=0.0_wp)     ! initvalue 
 
-      CALL slm_add_var(mem, 'resp_maint_leaf_cl', mem%resp_maint_leaf_cl, &
+      CALL slm_add_var(mem, 'maint_respiration_leaf_cl', mem%maint_respiration_leaf_cl, &
             initval_r=0.0_wp)     ! initvalue 
 
       CALL slm_add_var(mem, 'canopy_cond_cl', mem%canopy_cond_cl, &

@@ -227,7 +227,7 @@ CONTAINS
     CALL calc_partitioning(t_air                                  , & ! in
                             veg%t_air_tacclim_mavg%ptr            , &
                             veg%kstar_labile%ptr                  , &
-                            veg%maint_respiration_leaf%ptr        , &
+                            assimi%maint_respiration_leaf%ptr     , &
                             veg%cost_n_fixation%ptr               , &
                             veg%growth_req_p%ptr                  , &
                             veg%growth_req_n%ptr                  , &

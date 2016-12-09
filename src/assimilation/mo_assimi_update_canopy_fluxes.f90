@@ -78,7 +78,7 @@ CONTAINS
     REAL(wp), POINTER :: gross_assimilation, gross_assimilation_cl
     REAL(wp), POINTER :: gross_assimilation_C13, gross_assimilation_C14
     REAL(wp), POINTER :: net_assimilation, net_assimilation_cl, net_assimilation_boc
-    REAL(wp), POINTER :: resp_maint_leaf, resp_maint_leaf_cl
+    REAL(wp), POINTER :: maint_respiration_leaf, maint_respiration_leaf_cl
     REAL(wp), POINTER :: canopy_cond, canopy_cond_cl
     REAL(wp), POINTER :: co2_conc_leaf, co2_conc_leaf_cl
     REAL(wp), POINTER :: beta_air, beta_soil_ps, beta_soil_gs
@@ -104,8 +104,8 @@ CONTAINS
     net_assimilation => assimi__mem%net_assimilation%ptr
     net_assimilation_cl => assimi__mem%net_assimilation_cl%ptr
     net_assimilation_boc => assimi__mem%net_assimilation_boc%ptr
-    resp_maint_leaf => assimi__mem%resp_maint_leaf%ptr
-    resp_maint_leaf_cl => assimi__mem%resp_maint_leaf_cl%ptr
+    maint_respiration_leaf => assimi__mem%maint_respiration_leaf%ptr
+    maint_respiration_leaf_cl => assimi__mem%maint_respiration_leaf_cl%ptr
     canopy_cond => assimi__mem%canopy_cond%ptr
     canopy_cond_cl => assimi__mem%canopy_cond_cl%ptr
     co2_conc_leaf => assimi__mem%co2_conc_leaf%ptr
@@ -126,7 +126,7 @@ CONTAINS
    gross_assimilation_C13 = 0.0_wp
    gross_assimilation_C14 = 0.0_wp
    net_assimilation       = 0.0_wp
-   resp_maint_leaf        = 0.0_wp
+   maint_respiration_leaf        = 0.0_wp
    canopy_cond            = 0.0_wp
    co2_conc_leaf          = 0.0_wp
 
@@ -169,7 +169,7 @@ CONTAINS
                                  lctlib%g1                        , &
                                  gross_assimilation_cl            , & ! out
                                  net_assimilation_cl              , &
-                                 resp_maint_leaf_cl               , &
+                                 maint_respiration_leaf_cl               , &
                                  canopy_cond_cl                   , &
                                  co2_conc_leaf_cl                 , &
                                  hlp1, hlp1, hlp1)                   
@@ -195,7 +195,7 @@ CONTAINS
         ENDIF
 
         net_assimilation = net_assimilation + net_assimilation_cl * veg%lai_cl%ptr(icanopy,1) 
-        resp_maint_leaf  = resp_maint_leaf + resp_maint_leaf_cl * veg%lai_cl%ptr(icanopy,1) 
+        maint_respiration_leaf  = maint_respiration_leaf + maint_respiration_leaf_cl * veg%lai_cl%ptr(icanopy,1) 
         canopy_cond      = canopy_cond + canopy_cond_cl * veg%lai_cl%ptr(icanopy,1)
         co2_conc_leaf    = co2_conc_leaf + co2_conc_leaf_cl * veg%lai_cl%ptr(icanopy,1)
 
@@ -251,7 +251,7 @@ CONTAINS
                                             g1                  , &
                                             ag_cl                 , &   ! out
                                             an_cl                 , &
-                                            resp_maint_cl                  , &
+                                            maint_resp_cl                  , &
                                             gs_cl                 , &
                                             ci_cl                 , &
                                             m_rub               , &
@@ -289,7 +289,7 @@ CONTAINS
   REAL(wp),INTENT(IN) :: g1                      !< slope of the stomatal conductance ~ An relationship
   REAL(wp),INTENT(OUT) :: ag_cl                  !< gross photsynthesis of layer (µmol CO2 / m2 /s) 
   REAL(wp),INTENT(OUT) :: an_cl                  !< net photsynthesis of layer (µmol CO2 / m2 /s)
-  REAL(wp),INTENT(OUT) :: resp_maint_cl          !< net canopy layer respiration (µmol CO2 / m2 /s)
+  REAL(wp),INTENT(OUT) :: maint_resp_cl          !< net canopy layer respiration (µmol CO2 / m2 /s)
   REAL(wp),INTENT(OUT) :: gs_cl                  !< canopy conductance of layer (m / s) 
   REAL(wp),INTENT(OUT) :: ci_cl                  !< leaf internal CO2 concentration of layer (ppm)
   REAL(wp),INTENT(OUT) :: m_rub                  !< CO2 limitation of Rubisco factor for calculating optimal N fraction
@@ -319,13 +319,13 @@ CONTAINS
   !> conversion of ppm to Pa
   ppm2Pa = press_srf * 1.e-06
   !>  Net canopy layer respiration (umol[CO2]/m2/s)
-  resp_maint_cl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * leaf_nitrogen_cl
+  maint_resp_cl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * leaf_nitrogen_cl
 
 
   !> @par IF: initialise output for no-light condition
   IF(par_sunlit_cl + par_shaded_cl <= eps8) THEN
     ag_cl    = 0.0_wp 
-    an_cl    = ag_cl - resp_maint_cl
+    an_cl    = ag_cl - maint_resp_cl
     gs_cl    = MAX(g0,g0 + g1 * an_cl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf 
     ci_cl    = co2_mixing_ratio * ppm2Pa
     m_et   = 0.0_wp
@@ -469,7 +469,7 @@ CONTAINS
         !> END IF
 
         !> Net layer photosynthesis (umol[CO2]/m2/s)
-        an_cl = ag_cl - resp_maint_cl
+        an_cl = ag_cl - maint_resp_cl
 
         !> calculate canopy conductance (m/s) following Ball & Berry
         gs_cl = MAX(g0, g0 + g1 * an_cl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * & 
@@ -649,7 +649,6 @@ CONTAINS
     CALL veg%growth%init(flux_zero)
     CALL veg%litterfall%init(flux_zero)
     ! variables
-    CALL veg%maint_respiration_leaf%init(flux_zero)        !< foliar maintenance respiration (µmol CO2 m-2 s-1)
     CALL veg%maint_respiration_pot%init(flux_zero)         !< maintenance respiration (µmol CO2 m-2 s-1)
     CALL veg%maint_respiration%init(flux_zero)             !< maintenance respiration (µmol CO2 m-2 s-1)
     CALL veg%maint_respiration_c13%init(flux_zero)         !< maintenance respiration (µmol 13CO2 m-2 s-1)

@@ -201,7 +201,6 @@ MODULE mo_veg_memory_class
 
     ! fluxes
     TYPE(t_jsb_var_real1d)          :: &   
-                                    maint_respiration_leaf    , & !< foliar maintenance respiration (µmol CO2 m-2 s-1)
                                     maint_respiration_pot     , & !< potential maintenance respiration (µmol CO2 m-2 s-1)
                                     maint_respiration         , & !< maintenance respiration (µmol CO2 m-2 s-1)
                                     maint_respiration_c13     , & !< maintenance respiration (µmol 13CO2 m-2 s-1)
@@ -1504,7 +1503,16 @@ CONTAINS
   
       CALL slm_add_var(mem, 'cumm_lai_cl', mem%cumm_lai_cl, &
             initval_r=0.0_wp) ! initvalue
-  
+ 
+      CALL slm_add_var(mem, 'maint_respiration_pot', mem%maint_respiration_pot, &
+            initval_r=0.0_wp) ! initvalue
+     
+      CALL slm_add_var(mem, 'maint_respiration', mem%maint_respiration, &
+            initval_r=0.0_wp) ! initvalue
+    
+      CALL slm_add_var(mem, 'maint_respiration_c13', mem%maint_respiration_c13, &
+            initval_r=0.0_wp) ! initvalue
+ 
       CALL slm_add_var(mem, 'maint_respiration_c14', mem%maint_respiration_c14, &
             initval_r=0.0_wp) ! initvalue
   
