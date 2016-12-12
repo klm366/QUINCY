@@ -29,6 +29,11 @@
   latitude=50.0
   longitude=0.0
 /
+&SOIL_CTL
+  ! number of soil layers [default is 5] [energy==water]
+  nsoil_energy=5
+  nsoil_water=5
+/
 &BASE_CTL
   ! basic model config
   dtime_step_length_sec=1800.0

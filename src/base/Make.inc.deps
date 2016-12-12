@@ -85,7 +85,9 @@ mo_jsb_model_init.o: \
   mo_assimi_update_canopy_fluxes.o \
   mo_veg_constants.o \
   mo_veg_config_class.o \
-  mo_veg_memory_class.o
+  mo_veg_memory_class.o \
+  mo_soil_config_class.o \
+  mo_soil_init.o
 
 mo_jsb_io.o: \
   mo_kind.o \
@@ -98,5 +100,6 @@ mo_slm_varlist.o: \
   mo_jsb_class.o \
   mo_jsb_var_class.o \
   mo_assimi_config_class.o \
+  mo_soil_config_class.o \
   mo_jsb_memory_class.o
 

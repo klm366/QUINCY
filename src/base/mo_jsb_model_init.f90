@@ -38,6 +38,9 @@ MODULE mo_jsb_model_init
     ! vegetation
     USE mo_veg_constants
     USE mo_veg_config_class,                ONLY: veg_config
+    ! soil
+    USE mo_soil_config_class,               ONLY: soil_config
+    USE mo_soil_init,                       ONLY: soil_init
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -114,9 +117,11 @@ CONTAINS
     base_config%namelist_filename       = 'namelist.slm'
     assimi_config%namelist_filename     = 'namelist.slm'
     veg_config%namelist_filename        = 'namelist.slm'
+    soil_config%namelist_filename       = 'namelist.slm'
     CALL base_config%Init              ! includes base_config%slm_model_name => land plant soil canopy test_canopy
     CALL assimi_config%Init
     CALL veg_config%Init
+    CALL soil_config%Init
 
 
     !! 2 Model init including lctlib init
@@ -202,7 +207,7 @@ CONTAINS
             !tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
             !tile%mem(iproc)%p%grid_id = tile%grid_id
             tile%mem(iproc)%p%owner_model_id = tile%owner_model_id
-            tile%mem(iproc)%p%owner_proc_id = iproc
+            tile%mem(iproc)%p%owner_proc_id = iproc     ! process ID: ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
             !ALLOCATE(tile%mem(iproc)%p%owner_tile_path(SIZE(tile%path)))
             !tile%mem(iproc)%p%owner_tile_path(:) = tile%path(:)
             !tile%mem(iproc)%p%owner_tile_name = TRIM(tile%name)
@@ -268,7 +273,7 @@ CONTAINS
     !! 
     ! enable/ disable forcing
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','plant','canopy') ! ,'soil'
+      CASE('land','plant','canopy') !,'soil')
         l_forcing = .TRUE.
       CASE DEFAULT
         l_forcing = .FALSE.
@@ -281,7 +286,7 @@ CONTAINS
       CASE('plant')
         CALL init_slm_plant(tile)
       CASE('soil')
-        CALL finish('land_model_driver-init_routine','Nice try, but the soil model does not exist yet :) ')
+        CALL soil_init(tile)  ! mo_soil_init
       CASE('canopy')
         CALL init_slm_canopy(tile)
       CASE('test_canopy')
@@ -379,6 +384,17 @@ CONTAINS
       END IF
 
   END SUBROUTINE init_slm_plant
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> init routine specific to the soil model
+  !!
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+
+  ! called above already !
+  ! see section 10 in init_slm() -> CALL soil_init(tile)  ! mo_soil_init
+  ! 
 
 
   !-----------------------------------------------------------------------------------------------------

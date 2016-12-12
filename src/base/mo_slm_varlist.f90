@@ -27,115 +27,40 @@ MODULE mo_slm_varlist
   PUBLIC :: slm_add_var
 
   INTERFACE slm_add_var
+  !! struct
+    ! mem%struct 
     MODULE PROCEDURE slm_add_struct               ! *slmjsb4  a TYPE with only variables included
+    ! mem%nested-struct
     MODULE PROCEDURE slm_add_n_struct             ! *slmjsb4  a TYPE with nested TYPEs
+    ! mem%nested-struct%level2-struct
     MODULE PROCEDURE slm_add_l2_struct            ! *slmjsb4  a TYPE with only variables included within a TYPE
-    MODULE PROCEDURE slm_add_struct_element_r1d   ! *slmjsb4 *slmtemp | works with struct & l2_struct !!
-    MODULE PROCEDURE slm_add_struct_element_r2d   ! *slmjsb4 *slmtemp | works with struct & l2_struct !!
-    MODULE PROCEDURE slm_add_var_list_element_r1d
-    MODULE PROCEDURE slm_add_var_list_element_l1d ! *slmjsb4 *slmtemp | LOGICAL
-!    MODULE PROCEDURE slm_add_var_list_element_r2d
-    MODULE PROCEDURE slm_add_var_list_element_r3d
-    MODULE PROCEDURE slm_add_var_list_element_r2d_canopy  ! _cl
-!    MODULE PROCEDURE slm_add_var_list_element_r2d_tile
+  !! variable -> struct (mem%struct or mem%nested-struct%level2-struct | works NOT for mem%nested-struct%VAR !)
+    ! REAL 1D = scalar!
+    MODULE PROCEDURE slm_add_struct_element_r1d   ! *slmjsb4 *slmtemp
+    ! REAL 2D
+    MODULE PROCEDURE slm_add_struct_element_r2d   ! *slmjsb4 *slmtemp
+    ! REAL 3D
+    MODULE PROCEDURE slm_add_struct_element_r3d   ! *slmjsb4 *slmtemp
+  !! variable -> mem (process memory)
+    ! REAL 1D = scalar!
+    MODULE PROCEDURE slm_add_var_list_element_r1d ! *slmtemp
+    ! LOGICAL 1D = scalar!
+    MODULE PROCEDURE slm_add_var_list_element_l1d ! *slmjsb4 *slmtemp
+    ! REAL 2D
+    MODULE PROCEDURE slm_add_var_list_element_r2d ! *slmtemp
+    ! REAL 3D
+    MODULE PROCEDURE slm_add_var_list_element_r3d ! *slmtemp
   END INTERFACE slm_add_var
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_slm_varlist'
 
 CONTAINS
 
-! *slmtemp -> 1D to 2D
-! *slmjsb4
-  !-----------------------------------------------------------------------------------------------------
-  !> add 1D variable to struct or l2_struct
-  !!
-  !!  t_jsb_struct:struct <- t_jsb_var_real1d:var
-  !!    
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE slm_add_struct_element_r1d( &
-    struct, name, var, &
-    initval_r) 
 
-    ! 0.1 InOut
-    CLASS(t_jsb_struct),  INTENT(inout)           :: struct              ! struct & l2_struct
-    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
-    TYPE(t_jsb_var_real1d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
-    ! 0.2 Local
-    INTEGER           :: pos_of_var
-    TYPE(t_model), POINTER :: model     ! *slmtemp
-    INTEGER           :: ice, ics, iblk ! *slmtemp
+  !-----------------------------------------------------------------------------------------------------!
+  ! add struct                                                                                          !
+  !-----------------------------------------------------------------------------------------------------!
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real1d'
-    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
-    ice  = model%options%ice    ! *slmtemp
-    ics  = model%options%ics    ! *slmtemp
-    iblk = model%options%iblk   ! *slmtemp
-
-    var%name = TRIM(name)
-    !var%owner_proc_id = struct%owner_proc_id
-
-    pos_of_var = struct%no_of_vars + 1
-    IF (pos_of_var > struct%max_no_of_vars) THEN
-      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(struct%varlist_name)//', '//TRIM(name))
-    ELSE
-      struct%vars(pos_of_var)%p => var
-      struct%no_of_vars = pos_of_var
-    END IF
-
-    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
-    ALLOCATE(var%ptr)
-    var%ptr = initval_r
-
-  END SUBROUTINE slm_add_struct_element_r1d
-
-
-! *slmjsb4
-  !-----------------------------------------------------------------------------------------------------
-  !> add 2D variable to struct or l2_struct
-  !!
-  !!  t_jsb_struct:struct <- t_jsb_var_real2d:var
-  !!    
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE slm_add_struct_element_r2d( &
-    struct, name, var, &
-    initval_r) 
-
-    ! 0.1 InOut
-    CLASS(t_jsb_struct),  INTENT(inout)           :: struct              ! struct & l2_struct
-    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
-    TYPE(t_jsb_var_real2d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
-    ! 0.2 Local
-    INTEGER           :: pos_of_var
-    TYPE(t_model), POINTER :: model     ! *slmtemp
-    INTEGER           :: ice, ics, iblk ! *slmtemp
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real2d'
-    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
-    ice  = model%options%ice    ! *slmtemp
-    ics  = model%options%ics    ! *slmtemp
-    iblk = model%options%iblk   ! *slmtemp
-
-    var%name = TRIM(name)
-    !var%owner_proc_id = struct%owner_proc_id
-
-    pos_of_var = struct%no_of_vars + 1
-    IF (pos_of_var > struct%max_no_of_vars) THEN
-      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(struct%varlist_name)//', '//TRIM(name))
-    ELSE
-      struct%vars(pos_of_var)%p => var
-      struct%no_of_vars = pos_of_var
-    END IF
-
-    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
-    ALLOCATE(var%ptr(ics:ice,iblk))
-    var%ptr(ics:ice,iblk) = initval_r
-
-  END SUBROUTINE slm_add_struct_element_r2d
-
-
-! *slmjsb4
   !-----------------------------------------------------------------------------------------------------
   !> add structure to process memory
   !!
@@ -154,6 +79,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct'
     struct%name = TRIM(name)
+    struct%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+
     pos_of_struct = mem%no_of_structs + 1
     IF (pos_of_struct > mem%max_no_of_structs) THEN
       CALL finish(TRIM(routine), 'Maximum number of structs exceeded: '//TRIM(mem%structlist_name)//', '//TRIM(name))
@@ -167,7 +94,6 @@ CONTAINS
   END SUBROUTINE slm_add_struct
 
 
-! *slmjsb4
   !-----------------------------------------------------------------------------------------------------
   !> add nested structure to process memory
   !!
@@ -186,6 +112,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_n_struct'
     n_struct%name = TRIM(name)
+    n_struct%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+
     pos_of_n_struct = mem%no_of_n_structs + 1
     IF (pos_of_n_struct > mem%max_no_of_n_structs) THEN
       CALL finish(TRIM(routine), 'Maximum number of n_structs exceeded: '//TRIM(mem%n_structlist_name)//', '//TRIM(name))
@@ -199,7 +127,6 @@ CONTAINS
   END SUBROUTINE slm_add_n_struct
 
 
-! *slmjsb4
   !-----------------------------------------------------------------------------------------------------
   !> add structure to a nested structure that is located directly in the process memory
   !!
@@ -218,6 +145,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_l2_struct'
     l2_struct%name = TRIM(name)
+    l2_struct%owner_proc_id = n_struct%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+
     pos_of_l2_struct = n_struct%no_of_l2_structs + 1
     IF (pos_of_l2_struct > n_struct%max_no_of_l2_structs) THEN
       CALL finish(TRIM(routine), 'Maximum number of l2_structs exceeded: '//TRIM(n_struct%l2_structlist_name)//', '//TRIM(name))
@@ -231,35 +160,216 @@ CONTAINS
   END SUBROUTINE slm_add_l2_struct
 
 
-! *slmtemp
+
+  !-----------------------------------------------------------------------------------------------------!
+  ! add variable to struct                                                                              !
+  !-----------------------------------------------------------------------------------------------------!
+
   !-----------------------------------------------------------------------------------------------------
-  !> add 1D REAL variable to process memory
+  !> add 1D variable to struct or l2_struct
   !!
-  !!  t_jsb_memory:mem <- t_jsb_var_real1d:var
-  !!    
+  !!  t_jsb_struct:struct <- t_jsb_var_real1d:var
+  !! 
+  !! SCALAR !
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE slm_add_var_list_element_r1d( &
-    mem, name, var, &
+  SUBROUTINE slm_add_struct_element_r1d( &
+    struct, name, var, &
     initval_r) 
 
     ! 0.1 InOut
-    CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
-    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
-    TYPE(t_jsb_var_real1d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var -> newly created plain scalar REAL
-    REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+    CLASS(t_jsb_struct),              INTENT(inout)   :: struct              ! struct & l2_struct
+    CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
+    TYPE(t_jsb_var_real1d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
+    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
-    INTEGER           :: pos_of_var
-    TYPE(t_model), POINTER :: model     ! *slmtemp
-    INTEGER           :: ice, ics, iblk ! *slmtemp
+    INTEGER                       :: pos_of_var
+    TYPE(t_model), POINTER        :: model            ! *slmtemp
+    INTEGER                       :: ice, ics, iblk   ! *slmtemp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_real'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real1d'
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
     iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
-    !var%owner_proc_id = mem%owner_proc_id
+    var%owner_proc_id = struct%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+
+    pos_of_var = struct%no_of_vars + 1
+    IF (pos_of_var > struct%max_no_of_vars) THEN
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(struct%varlist_name)//', '//TRIM(name))
+    ELSE
+      struct%vars(pos_of_var)%p => var
+      struct%no_of_vars = pos_of_var
+    END IF
+
+    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
+    ALLOCATE(var%ptr)
+    var%ptr = initval_r
+
+  END SUBROUTINE slm_add_struct_element_r1d
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> add 2D variable to struct or l2_struct
+  !!
+  !!  t_jsb_struct:struct <- t_jsb_var_real2d:var
+  !!  
+  !! ==> currectly used correctly for SOIL 2D
+  !!  AND
+  !! ==> fake/transitionally for VEG 3D variables
+  !! 
+  !!  see local variables levels:levele
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE slm_add_struct_element_r2d( &
+    struct, name, var, &
+    initval_r) 
+
+    USE mo_soil_config_class,               ONLY: soil_config
+    USE mo_assimi_config_class,             ONLY: assimi_config
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_jsb_struct),              INTENT(inout)   :: struct              ! struct & l2_struct
+    CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
+    TYPE(t_jsb_var_real2d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
+    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+    ! 0.2 Local
+    INTEGER                       :: pos_of_var
+    TYPE(t_model), POINTER        :: model            ! *slmtemp
+    INTEGER                       :: ice, ics, iblk   ! *slmtemp
+    INTEGER                       :: levels, levele   ! level_start & level_end | SOIL ics:ice && VEG 1:ncanopy
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real2d'
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice  = model%options%ice    ! *slmtemp
+    ics  = model%options%ics    ! *slmtemp
+    iblk = model%options%iblk   ! *slmtemp
+
+    ! select nlevel according to process id 
+    SELECT CASE(struct%owner_proc_id)
+      CASE(5) ! soil
+        levels = ics
+        levele = ice
+      CASE(7, 10) ! veg, assimi
+        levels = 1
+        levele = assimi_config%ncanopy
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'A variable that is not in memory of soil, veg or assimi aims beeing 2D, '//TRIM(name))
+    END SELECT
+
+    var%name = TRIM(name)
+    var%owner_proc_id = struct%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+
+    pos_of_var = struct%no_of_vars + 1
+    IF (pos_of_var > struct%max_no_of_vars) THEN
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(struct%varlist_name)//', '//TRIM(name))
+    ELSE
+      struct%vars(pos_of_var)%p => var
+      struct%no_of_vars = pos_of_var
+    END IF
+
+    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
+    ALLOCATE(var%ptr(levels:levele,iblk))
+    var%ptr(levels:levele,iblk) = initval_r
+
+  END SUBROUTINE slm_add_struct_element_r2d
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> add 3D variable to struct or l2_struct
+  !!
+  !!  t_jsb_struct:struct <- t_jsb_var_real2d:var
+  !!    
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE slm_add_struct_element_r3d( &
+    struct, name, var, &
+    initval_r) 
+
+    USE mo_soil_config_class,               ONLY: soil_config
+    USE mo_assimi_config_class,             ONLY: assimi_config
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_jsb_struct),              INTENT(inout)   :: struct              ! struct & l2_struct
+    CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
+    TYPE(t_jsb_var_real3d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
+    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+    ! 0.2 Local
+    INTEGER                       :: pos_of_var
+    TYPE(t_model), POINTER        :: model            ! *slmtemp
+    INTEGER                       :: ice, ics, iblk   ! *slmtemp
+    INTEGER                       :: nlevel           ! number of levels at Z-Axis (canopy & soil)
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real2d'
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice  = model%options%ice    ! *slmtemp
+    ics  = model%options%ics    ! *slmtemp
+    iblk = model%options%iblk   ! *slmtemp
+
+    ! select nlevel according to process id 
+    SELECT CASE(struct%owner_proc_id)
+      CASE(5) ! soil
+        nlevel = soil_config%nsoil_water
+      CASE(7, 10) ! veg, assimi
+        nlevel = assimi_config%ncanopy
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'A variable that is not in memory of soil, veg or assimi aims beeing 3D, '//TRIM(name))
+    END SELECT
+
+    var%name = TRIM(name)
+    var%owner_proc_id = struct%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+
+    pos_of_var = struct%no_of_vars + 1
+    IF (pos_of_var > struct%max_no_of_vars) THEN
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(struct%varlist_name)//', '//TRIM(name))
+    ELSE
+      struct%vars(pos_of_var)%p => var
+      struct%no_of_vars = pos_of_var
+    END IF
+
+    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
+    ALLOCATE(var%ptr(ics:ice,1:nlevel,iblk))
+    var%ptr(ics:ice,1:nlevel,iblk) = initval_r
+
+  END SUBROUTINE slm_add_struct_element_r3d
+
+
+
+  !-----------------------------------------------------------------------------------------------------!
+  ! add variable to process memory (mem%VAR)                                                            !
+  !-----------------------------------------------------------------------------------------------------!
+
+  !-----------------------------------------------------------------------------------------------------
+  !> add 1D variable to to process memory
+  !!
+  !!  t_jsb_memory:mem <- t_jsb_var_r1d:var
+  !! 
+  !! SCALAR !
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE slm_add_var_list_element_r1d( &
+    mem, name, var, &
+    initval_r) 
+
+    ! 0.1 InOut
+    CLASS(t_jsb_memory),              INTENT(inout)   :: mem                 ! memory structure
+    CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
+    TYPE(t_jsb_var_real1d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
+    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+    ! 0.2 Local
+    INTEGER                       :: pos_of_var
+    TYPE(t_model), POINTER        :: model            ! *slmtemp
+    INTEGER                       :: ice, ics, iblk   ! *slmtemp
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r1d'
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice  = model%options%ice    ! *slmtemp
+    ics  = model%options%ics    ! *slmtemp
+    iblk = model%options%iblk   ! *slmtemp
+
+    var%name = TRIM(name)
+    var%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
@@ -269,41 +379,42 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)
+    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
     ALLOCATE(var%ptr)
     var%ptr = initval_r
 
   END SUBROUTINE slm_add_var_list_element_r1d
 
-! *slmtemp
+
   !-----------------------------------------------------------------------------------------------------
   !> add 1D LOGICAL variable to process memory
   !!
   !!  t_jsb_memory:mem <- t_jsb_var_logical1d:var
   !!    
+  !! SCALAR !
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_l1d( &
     mem, name, var, &
     initval_r) 
 
     ! 0.1 InOut
-    CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
-    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
-    TYPE(t_jsb_var_logical1d), TARGET, INTENT(inout) :: var              ! reference to jsbach var -> newly created plain scalar REAL
-    LOGICAL,             INTENT(in)               :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+    CLASS(t_jsb_memory),                INTENT(inout)   :: mem              ! memory structure
+    CHARACTER(len=*),                   INTENT(in)      :: name             ! name of variable
+    TYPE(t_jsb_var_logical1d), TARGET,  INTENT(inout)   :: var              ! reference to jsbach var -> newly created plain scalar REAL
+    LOGICAL,                            INTENT(in)      :: initval_r        ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
-    INTEGER           :: pos_of_var
-    TYPE(t_model), POINTER :: model     ! *slmtemp
-    INTEGER           :: ice, ics, iblk ! *slmtemp
+    INTEGER                   :: pos_of_var
+    TYPE(t_model), POINTER    :: model            ! *slmtemp
+    INTEGER                   :: ice, ics, iblk   ! *slmtemp
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_logical1d'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_l1d'
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
     iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
-    !var%owner_proc_id = mem%owner_proc_id
+    var%owner_proc_id = mem%owner_proc_id
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
@@ -319,101 +430,59 @@ CONTAINS
 
   END SUBROUTINE slm_add_var_list_element_l1d
 
-! *slmtemp
-!  !-----------------------------------------------------------------------------------------------------
-!  !> add 2D variable to process memory
-!  !!
-!  !!  t_jsb_memory:mem <- t_jsb_var_real2d:var
-!  !!    
-!  !-----------------------------------------------------------------------------------------------------
-!  SUBROUTINE slm_add_var_list_element_r2d( &
-!    mem, name, var, &
-!!    hgrid, vgrid, &
-!!    cf, &
-!!    grib1, grib2, &
-!!    prefix, suffix, &
-!!    !loutput, lcontainer, &
-!!    !lrestart, lrestart_cont, initval_r, isteptype,              &
-!!    lrestart, initval_r
-!!    !resetval_r, lmiss, missval_r, tlev_source, info,            &
-!!    !verbose, new_element, cdiTimeID                             &
-!    initval_r) 
 
-!    ! 0.1 InOut
-!    CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
-!    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
-!    TYPE(t_jsb_var_real2d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var
-!    REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
-!    ! 0.2 Local
-!    INTEGER           :: pos_of_var
-!    TYPE(t_model), POINTER :: model     ! *slmtemp
-!    INTEGER           :: ice, ics, iblk ! *slmtemp
-
-!    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r2d'
-!    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
-!    ice  = model%options%ice    ! *slmtemp
-!    ics  = model%options%ics    ! *slmtemp
-!    iblk = model%options%iblk   ! *slmtemp
-
-!    var%name = TRIM(name)
-!    !var%owner_proc_id = mem%owner_proc_id
-
-!    pos_of_var = mem%no_of_vars + 1
-!    IF (pos_of_var > mem%max_no_of_vars) THEN
-!      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
-!    ELSE
-!      mem%vars(pos_of_var)%p => var
-!      mem%no_of_vars = pos_of_var
-!    END IF
-
-!    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)
-!    ALLOCATE(var%ptr(ics:ice,iblk))
-!    var%ptr(ics:ice,iblk) = initval_r
-
-
-!  END SUBROUTINE slm_add_var_list_element_r2d
-
-
-! *slmtemp
   !-----------------------------------------------------------------------------------------------------
-  !> add 2D canopy-layer variable to process memory 
+  !> add 2D variable to process memory
   !!
-  !!  t_jsb_memory:mem <- t_jsb_var_real2d:var
-  !!    
+  !!  t_jsb_memory:mem <- t_jsb_var_r2d:var
+  !! 
+  !!  
+  !! ==> currectly used correctly for SOIL 2D
+  !!  AND
+  !! ==> fake/transitionally for VEG 3D variables
+  !! 
+  !!  see local variables levels:levele
+  !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE slm_add_var_list_element_r2d_canopy( &
+  SUBROUTINE slm_add_var_list_element_r2d( &
     mem, name, var, &
-!    hgrid, vgrid, &
-!    cf, &
-!    grib1, grib2, &
-!    prefix, suffix, &
-!    !loutput, lcontainer, &
-!    !lrestart, lrestart_cont, initval_r, isteptype,              &
-!    lrestart, initval_r
-!    !resetval_r, lmiss, missval_r, tlev_source, info,            &
-!    !verbose, new_element, cdiTimeID                             &
     initval_r) 
 
-    USE mo_assimi_config_class,   ONLY: assimi_config
+    USE mo_soil_config_class,               ONLY: soil_config
+    USE mo_assimi_config_class,             ONLY: assimi_config
 
+    IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
-    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
-    TYPE(t_jsb_var_real2d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var
-    REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+    CLASS(t_jsb_memory),              INTENT(inout)   :: mem                 ! memory structure
+    CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
+    TYPE(t_jsb_var_real2d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
+    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
-    INTEGER           :: pos_of_var
-    TYPE(t_model), POINTER :: model     ! *slmtemp
-    INTEGER           :: ice, ics, iblk ! *slmtemp
+    INTEGER                       :: pos_of_var
+    TYPE(t_model), POINTER        :: model            ! *slmtemp
+    INTEGER                       :: ice, ics, iblk   ! *slmtemp
+    INTEGER                       :: levels, levele   ! level_start & level_end | SOIL ics:ice && VEG 1:ncanopy
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r2d_canopy'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r2d'
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
     iblk = model%options%iblk   ! *slmtemp
 
+    ! select nlevel according to process id 
+    SELECT CASE(mem%owner_proc_id)
+      CASE(5) ! soil
+        levels = ics
+        levele = ice
+      CASE(7, 10) ! veg, assimi
+        levels = 1
+        levele = assimi_config%ncanopy
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'A variable that is not in memory of soil, veg or assimi aims beeing 2D, '//TRIM(name))
+    END SELECT
+
     var%name = TRIM(name)
-    !var%owner_proc_id = mem%owner_proc_id
+    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
@@ -423,45 +492,38 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)
-    ALLOCATE(var%ptr(1:assimi_config%ncanopy,iblk))
-    var%ptr(1:assimi_config%ncanopy,iblk) = initval_r
-!    ALLOCATE(var%ptr(ics:ice,iblk))
-!    var%ptr(ics:ice,iblk) = initval_r
+    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
+    ALLOCATE(var%ptr(levels:levele,iblk))
+    var%ptr(levels:levele,iblk) = initval_r
+
+  END SUBROUTINE slm_add_var_list_element_r2d
 
 
-  END SUBROUTINE slm_add_var_list_element_r2d_canopy
-
-
-! *slmtemp
   !-----------------------------------------------------------------------------------------------------
   !> add 3D variable to process memory
   !!
-  !!  t_jsb_memory:mem <- t_jsb_var_real3d:var
+  !!  t_jsb_memory:mem <- t_jsb_var_r3d:var
+  !! 
   !!    
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_var_list_element_r3d( &
     mem, name, var, &
-!    hgrid, vgrid, &
-!    cf, &
-!    grib1, grib2, &
-!    prefix, suffix, &
-!    !loutput, lcontainer, &
-!    !lrestart, lrestart_cont, initval_r, isteptype,              &
-!    lrestart, initval_r
-!    !resetval_r, lmiss, missval_r, tlev_source, info,            &
-!    !verbose, new_element, cdiTimeID                             &
     initval_r) 
 
+    USE mo_soil_config_class,               ONLY: soil_config
+    USE mo_assimi_config_class,             ONLY: assimi_config
+
+    IMPLICIT NONE
     ! 0.1 InOut
-    CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
-    CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
-    TYPE(t_jsb_var_real3d), TARGET, INTENT(inout) :: var                 ! reference to jsbach var
-    REAL(wp),             INTENT(in)              :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
+    CLASS(t_jsb_memory),              INTENT(inout)   :: mem                 ! memory structure
+    CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
+    TYPE(t_jsb_var_real3d), TARGET,   INTENT(inout)   :: var                 ! reference to jsbach var -> newly created plain scalar REAL
+    REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
-    INTEGER           :: pos_of_var
-    TYPE(t_model), POINTER :: model     ! *slmtemp
-    INTEGER           :: ice, ics, iblk ! *slmtemp
+    INTEGER                       :: pos_of_var
+    TYPE(t_model), POINTER        :: model            ! *slmtemp
+    INTEGER                       :: ice, ics, iblk   ! *slmtemp
+    INTEGER                       :: nlevel           ! number of levels at Z-Axis (canopy & soil)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r3d'
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
@@ -469,8 +531,18 @@ CONTAINS
     ics  = model%options%ics    ! *slmtemp
     iblk = model%options%iblk   ! *slmtemp
 
+    ! select nlevel according to process id 
+    SELECT CASE(mem%owner_proc_id)
+      CASE(5) ! soil
+        nlevel = soil_config%nsoil_water
+      CASE(7, 10) ! veg, assimi
+        nlevel = assimi_config%ncanopy
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'A variable that is not in memory of soil, veg or assimi aims beeing 3D, '//TRIM(name))
+    END SELECT
+
     var%name = TRIM(name)
-    !var%owner_proc_id = mem%owner_proc_id
+    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
@@ -480,10 +552,9 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)
-    ALLOCATE(var%ptr(ics:ice,1:1,iblk))     ! *slmtemp added 1:1 to make allocation work
-    var%ptr(ics:ice,1:1,iblk) = initval_r   ! *slmtemp added 1:1 to make allocation work
-
+    ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
+    ALLOCATE(var%ptr(ics:ice,1:nlevel,iblk))
+    var%ptr(ics:ice,1:nlevel,iblk) = initval_r
 
   END SUBROUTINE slm_add_var_list_element_r3d
 

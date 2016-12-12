@@ -24,9 +24,10 @@ MODULE mo_soil_memory_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_soil_memory, max_no_of_vars
-  PUBLIC :: max_no_of_structs, max_no_of_n_structs  ! *slmjsb4
+  PUBLIC :: t_slm_struct_soil_element, t_slm_struct_soil_pool   ! *slmjsb4
+  PUBLIC :: max_no_of_structs, max_no_of_n_structs              ! *slmjsb4
 
-  INTEGER, PARAMETER :: max_no_of_vars      = 40   !> TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_vars      = 80   !> TYPE t_jsb_var
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
   INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
 
@@ -35,7 +36,7 @@ MODULE mo_soil_memory_class
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for elements in soil pool
   !! 
-  !! elements in soil are 3D and would be 2D in veg
+  !! elements in soil are 3D (and would be 2D in veg)
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_struct) :: t_slm_struct_soil_element
@@ -46,6 +47,30 @@ MODULE mo_soil_memory_class
     TYPE(t_jsb_var_real3d)    :: carbon14     !< 14carbon concentration of pool in pmol / m2
     TYPE(t_jsb_var_real3d)    :: nitrogen15   !< 15nitrogen concentration of pool in mol / m2
   CONTAINS
+    PRIVATE
+    !! operator overload
+    ! +
+    PROCEDURE               :: Add_struct                   ! Add two variables of type t_slm_struct_soil_element
+    PROCEDURE               :: Add_struct_and_scalar        ! Add variable of type t_slm_struct_soil_element with REAL scalar
+    PROCEDURE               :: Add_struct_and_field3d       ! Add variable of type t_slm_struct_soil_element with REAL 2-d field2d
+    GENERIC, PUBLIC         :: OPERATOR(+) => Add_struct, Add_struct_and_scalar, Add_struct_and_field3d
+    ! -
+    PROCEDURE               :: Subtract_struct              ! Subtract two variables of type t_slm_struct_soil_element
+    PROCEDURE               :: Subtract_struct_and_scalar   ! Subtract variable of type t_slm_struct_soil_element with REAL scalar
+    PROCEDURE               :: Subtract_struct_and_field3d  ! Subtract variable of type t_slm_struct_soil_element with REAL 2-d field2d
+    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_struct, Subtract_struct_and_scalar, Subtract_struct_and_field3d
+    ! *
+    PROCEDURE               :: Multiply_struct              ! Multiply two variables of type t_slm_struct_soil_element
+    PROCEDURE               :: Multiply_struct_and_scalar   ! Multiply variable of type t_slm_struct_soil_element with REAL scalar
+    PROCEDURE               :: Multiply_struct_and_field3d  ! Multiply variable of type t_slm_struct_soil_element with REAL 2-d field2d
+    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_struct, Multiply_struct_and_scalar, Multiply_struct_and_field3d
+    ! /
+    PROCEDURE               :: Divide_struct                ! Divide two variables of type t_slm_struct_soil_element
+    PROCEDURE               :: Divide_struct_and_scalar     ! Divide variable of type t_slm_struct_soil_element by REAL scalar
+    PROCEDURE               :: Divide_struct_and_field3d    ! Divide variable of type t_slm_struct_soil_element by REAL 2-d field2d
+    GENERIC, PUBLIC         :: OPERATOR(/) => Divide_struct, Divide_struct_and_scalar, Divide_struct_and_field3d
+    !! initialize with/ set to a certain REAL
+    PROCEDURE, PUBLIC       :: init => init_t_slm_struct_soil_element
   END TYPE t_slm_struct_soil_element
 
 
@@ -56,10 +81,35 @@ MODULE mo_soil_memory_class
   !!  
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_n_struct) :: t_slm_struct_soil_pool
-    TYPE(t_slm_struct_soil_element)  :: test1           !< elements of 
-    TYPE(t_slm_struct_soil_element)  :: test2           !< elements of 
-    TYPE(t_slm_struct_soil_element)  :: test3           !< elements of 
-    TYPE(t_slm_struct_soil_element)  :: test4           !< elements of 
+    TYPE(t_slm_struct_soil_element)  :: dom           !< dissolved organic matter
+!    TYPE(t_slm_struct_soil_element)  :: test2           !< elements of 
+!    TYPE(t_slm_struct_soil_element)  :: test3           !< elements of 
+!    TYPE(t_slm_struct_soil_element)  :: test4           !< elements of 
+  CONTAINS
+    PRIVATE
+    !! operator overload
+    ! +
+    PROCEDURE               :: Add_n_struct                   
+    PROCEDURE               :: Add_n_struct_and_scalar        
+    PROCEDURE               :: Add_n_struct_and_field3d       
+    GENERIC, PUBLIC         :: OPERATOR(+) => Add_n_struct, Add_n_struct_and_scalar, Add_n_struct_and_field3d
+    ! -
+    PROCEDURE               :: Subtract_n_struct              
+    PROCEDURE               :: Subtract_n_struct_and_scalar   
+    PROCEDURE               :: Subtract_n_struct_and_field3d  
+    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_n_struct, Subtract_n_struct_and_scalar, Subtract_n_struct_and_field3d
+    ! *
+    PROCEDURE               :: Multiply_n_struct              
+    PROCEDURE               :: Multiply_n_struct_and_scalar   
+    PROCEDURE               :: Multiply_n_struct_and_field3d  
+    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_n_struct, Multiply_n_struct_and_scalar, Multiply_n_struct_and_field3d
+    ! /
+    PROCEDURE               :: Divide_n_struct                
+    PROCEDURE               :: Divide_n_struct_and_scalar     
+    PROCEDURE               :: Divide_n_struct_and_field3d    
+    GENERIC, PUBLIC         :: OPERATOR(/) => Divide_n_struct, Divide_n_struct_and_scalar, Divide_n_struct_and_field3d
+    !! initialize with/ set to a certain REAL
+    PROCEDURE, PUBLIC       :: init => init_t_slm_struct_soil_pool
   END TYPE t_slm_struct_soil_pool
 
 
@@ -71,26 +121,32 @@ MODULE mo_soil_memory_class
   !!    pool  \n
   !!    ? flux \n
   !!    ? flux \n
-  !!    moving averagages of variables VAR_mavg   \n
-  !!    daytime averages of variables VAR_daytime \n
+  !!    ? moving averagages of variables VAR_mavg   \n
+  !!    ? daytime averages of variables VAR_daytime \n
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_soil_memory
 
 
+    TYPE(t_jsb_var_real2d)          :: &
+                                    soil_depth          !< Soil depth derived from textures (bedrock) (for hydrology) [m]
+
+
+
     TYPE(t_jsb_var_real3d)          :: &
-                                    test          !< test
+                                    soil_depth_l        !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
 
 
-!    TYPE(t_slm_struct_soil_element)  :: &
-!                                    allometry_labile_mavg   , &  !< moving average of labile pools neeeded for allometry calculations
-!                                    establishment           , &  !< flux between seed bed and reserve (mol m-2 timestep-1)
-!                                    reserve_use                  !< net flux between reserve and labile pool (mol m-2 timestep-1)
 
-!    TYPE(t_slm_struct_soil_pool)     :: &             ! nested pool TYPE t_jsb_n_struct
-!                                    pool       , &   !< pools of the plant
-!                                    growth     , &   !< fluxes: growth
-!                                    litterfall       !< fluxes: litterfall
+!    TYPE(t_slm_struct_soil_element) :: &   ! simple structure for elements: t_jsb_struct
+!                                    test_soil_element   !< test ...
+
+
+
+    TYPE(t_slm_struct_soil_pool)    :: &   ! nested pool TYPE t_jsb_n_struct
+                                    pool                !< pools of the soil and living fellows of it
+
+
 
 
   CONTAINS
@@ -102,6 +158,484 @@ MODULE mo_soil_memory_class
 
 
 CONTAINS
+
+  !-----------------------------------------------------------------------------------------------------!
+  ! t_slm_struct_soil_element operator overload                                                         !
+  !-----------------------------------------------------------------------------------------------------!
+
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_slm_struct_soil_element + t_slm_struct_soil_element)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_struct(this,struct2) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this, struct2  !< t_slm_struct_soil_element in
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3        !< t_slm_struct_soil_element out
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      + struct2%carbon
+    struct3%nitrogen     = this%nitrogen    + struct2%nitrogen
+    struct3%phosphorus   = this%phosphorus  + struct2%phosphorus
+    struct3%carbon13     = this%carbon13    + struct2%carbon13
+    struct3%carbon14     = this%carbon14    + struct2%carbon14
+    struct3%nitrogen15   = this%nitrogen15  + struct2%nitrogen15
+  END FUNCTION Add_struct
+
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_slm_struct_soil_element + scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_struct_and_scalar(this,scalar) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: scalar
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      + scalar
+    struct3%nitrogen     = this%nitrogen    + scalar
+    struct3%phosphorus   = this%phosphorus  + scalar
+    struct3%carbon13     = this%carbon13    + scalar
+    struct3%carbon14     = this%carbon14    + scalar
+    struct3%nitrogen15   = this%nitrogen15  + scalar
+  END FUNCTION Add_struct_and_scalar
+
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_slm_struct_soil_element + field3d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_struct_and_field3d(this,field3d) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      + field3d
+    struct3%nitrogen     = this%nitrogen    + field3d
+    struct3%phosphorus   = this%phosphorus  + field3d
+    struct3%carbon13     = this%carbon13    + field3d
+    struct3%carbon14     = this%carbon14    + field3d
+    struct3%nitrogen15   = this%nitrogen15  + field3d
+  END FUNCTION Add_struct_and_field3d
+
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_slm_struct_soil_element - t_slm_struct_soil_element)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_struct(this,struct2) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this, struct2  !< t_slm_struct_soil_element in
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3        !< t_slm_struct_soil_element out
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      - struct2%carbon
+    struct3%nitrogen     = this%nitrogen    - struct2%nitrogen
+    struct3%phosphorus   = this%phosphorus  - struct2%phosphorus
+    struct3%carbon13     = this%carbon13    - struct2%carbon13
+    struct3%carbon14     = this%carbon14    - struct2%carbon14
+    struct3%nitrogen15   = this%nitrogen15  - struct2%nitrogen15
+  END FUNCTION Subtract_struct
+
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_slm_struct_soil_element - scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_struct_and_scalar(this,scalar) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: scalar
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      - scalar
+    struct3%nitrogen     = this%nitrogen    - scalar
+    struct3%phosphorus   = this%phosphorus  - scalar
+    struct3%carbon13     = this%carbon13    - scalar
+    struct3%carbon14     = this%carbon14    - scalar
+    struct3%nitrogen15   = this%nitrogen15  - scalar
+  END FUNCTION Subtract_struct_and_scalar
+
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_slm_struct_soil_element - field3d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_struct_and_field3d(this,field3d) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      - field3d
+    struct3%nitrogen     = this%nitrogen    - field3d
+    struct3%phosphorus   = this%phosphorus  - field3d
+    struct3%carbon13     = this%carbon13    - field3d
+    struct3%carbon14     = this%carbon14    - field3d
+    struct3%nitrogen15   = this%nitrogen15  - field3d
+  END FUNCTION Subtract_struct_and_field3d
+
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_slm_struct_soil_element * t_slm_struct_soil_element)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_struct(this,struct2) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this, struct2  !< t_slm_struct_soil_element in
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3        !< t_slm_struct_soil_element out
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      * struct2%carbon
+    struct3%nitrogen     = this%nitrogen    * struct2%nitrogen
+    struct3%phosphorus   = this%phosphorus  * struct2%phosphorus
+    struct3%carbon13     = this%carbon13    * struct2%carbon13
+    struct3%carbon14     = this%carbon14    * struct2%carbon14
+    struct3%nitrogen15   = this%nitrogen15  * struct2%nitrogen15
+  END FUNCTION Multiply_struct
+
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_slm_struct_soil_element * scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_struct_and_scalar(this,scalar) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: scalar
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      * scalar
+    struct3%nitrogen     = this%nitrogen    * scalar
+    struct3%phosphorus   = this%phosphorus  * scalar
+    struct3%carbon13     = this%carbon13    * scalar
+    struct3%carbon14     = this%carbon14    * scalar
+    struct3%nitrogen15   = this%nitrogen15  * scalar
+  END FUNCTION Multiply_struct_and_scalar
+
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_slm_struct_soil_element * field3d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_struct_and_field3d(this,field3d) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      * field3d
+    struct3%nitrogen     = this%nitrogen    * field3d
+    struct3%phosphorus   = this%phosphorus  * field3d
+    struct3%carbon13     = this%carbon13    * field3d
+    struct3%carbon14     = this%carbon14    * field3d
+    struct3%nitrogen15   = this%nitrogen15  * field3d
+  END FUNCTION Multiply_struct_and_field3d
+
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_slm_struct_soil_element / t_slm_struct_soil_element)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Divide_struct(this,struct2) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this, struct2 
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3       
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      / struct2%carbon
+    struct3%nitrogen     = this%nitrogen    / struct2%nitrogen
+    struct3%phosphorus   = this%phosphorus  / struct2%phosphorus
+    struct3%carbon13     = this%carbon13    / struct2%carbon13
+    struct3%carbon14     = this%carbon14    / struct2%carbon14
+    struct3%nitrogen15   = this%nitrogen15  / struct2%nitrogen15
+  END FUNCTION Divide_struct
+
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_slm_struct_soil_element / scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Divide_struct_and_scalar(this,scalar) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: scalar
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      / scalar
+    struct3%nitrogen     = this%nitrogen    / scalar
+    struct3%phosphorus   = this%phosphorus  / scalar
+    struct3%carbon13     = this%carbon13    / scalar
+    struct3%carbon14     = this%carbon14    / scalar
+    struct3%nitrogen15   = this%nitrogen15  / scalar
+  END FUNCTION Divide_struct_and_scalar
+
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_slm_struct_soil_element / field3d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Divide_struct_and_field3d(this,field3d) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+    TYPE(t_slm_struct_soil_element), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%carbon       = this%carbon      / field3d
+    struct3%nitrogen     = this%nitrogen    / field3d
+    struct3%phosphorus   = this%phosphorus  / field3d
+    struct3%carbon13     = this%carbon13    / field3d
+    struct3%carbon14     = this%carbon14    / field3d
+    struct3%nitrogen15   = this%nitrogen15  / field3d
+  END FUNCTION Divide_struct_and_field3d
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Initialisation t_slm_struct_soil_element with a scalar
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL SUBROUTINE init_t_slm_struct_soil_element(this,s)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_element),INTENT(inout) :: this 
+    REAL(wp),                       INTENT(in)    :: s
+
+    CALL this%carbon%init(s) 
+    CALL this%nitrogen%init(s) 
+    CALL this%phosphorus%init(s) 
+    CALL this%carbon13%init(s) 
+    CALL this%carbon14%init(s) 
+    CALL this%nitrogen15%init(s) 
+  END SUBROUTINE init_t_slm_struct_soil_element 
+
+
+
+  !-----------------------------------------------------------------------------------------------------!
+  ! t_slm_struct_soil_pool operator overload                                                            !
+  !-----------------------------------------------------------------------------------------------------!
+
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_slm_struct_soil_pool + t_slm_struct_soil_pool)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_n_struct(this,struct2) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this, struct2  !< t_slm_struct_soil_pool in
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3        !< t_slm_struct_soil_pool out
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      + struct2%dom
+  END FUNCTION Add_n_struct
+
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_slm_struct_soil_pool + scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_n_struct_and_scalar(this,scalar) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: scalar
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      + scalar
+  END FUNCTION Add_n_struct_and_scalar
+
+  !-----------------------------------------------------------------------------------------------------
+  !> + (t_slm_struct_soil_pool + field3d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_n_struct_and_field3d(this,field3d) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      + field3d
+  END FUNCTION Add_n_struct_and_field3d
+
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_slm_struct_soil_pool - t_slm_struct_soil_pool)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_n_struct(this,struct2) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this, struct2  !< t_slm_struct_soil_pool in
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3        !< t_slm_struct_soil_pool out
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      - struct2%dom
+  END FUNCTION Subtract_n_struct
+
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_slm_struct_soil_pool - scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_n_struct_and_scalar(this,scalar) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: scalar
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      - scalar
+  END FUNCTION Subtract_n_struct_and_scalar
+
+  !-----------------------------------------------------------------------------------------------------
+  !> - (t_slm_struct_soil_pool - field3d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_n_struct_and_field3d(this,field3d) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      - field3d
+  END FUNCTION Subtract_n_struct_and_field3d
+
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_slm_struct_soil_pool * t_slm_struct_soil_pool)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_n_struct(this,struct2) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this, struct2  !< t_slm_struct_soil_pool in
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3        !< t_slm_struct_soil_pool out
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      * struct2%dom
+  END FUNCTION Multiply_n_struct
+
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_slm_struct_soil_pool * scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_n_struct_and_scalar(this,scalar) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: scalar
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      * scalar
+  END FUNCTION Multiply_n_struct_and_scalar
+
+  !-----------------------------------------------------------------------------------------------------
+  !> * (t_slm_struct_soil_pool * field3d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_n_struct_and_field3d(this,field3d) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      * field3d
+  END FUNCTION Multiply_n_struct_and_field3d
+
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_slm_struct_soil_pool / t_slm_struct_soil_pool)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Divide_n_struct(this,struct2) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this, struct2 
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3       
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      / struct2%dom
+  END FUNCTION Divide_n_struct
+
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_slm_struct_soil_pool / scalar)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Divide_n_struct_and_scalar(this,scalar) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: scalar
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      / scalar
+  END FUNCTION Divide_n_struct_and_scalar
+
+  !-----------------------------------------------------------------------------------------------------
+  !> / (t_slm_struct_soil_pool / field3d)
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Divide_n_struct_and_field3d(this,field3d) RESULT(struct3)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool), INTENT(in) :: this
+    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+    TYPE(t_slm_struct_soil_pool), ALLOCATABLE :: struct3
+
+    ALLOCATE(struct3, source=this)
+
+    struct3%dom       = this%dom      / field3d
+  END FUNCTION Divide_n_struct_and_field3d
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Initialisation t_slm_struct_soil_pool with a scalar
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL SUBROUTINE init_t_slm_struct_soil_pool(this,s)
+    IMPLICIT NONE
+    ! 0.1 InOut
+    CLASS(t_slm_struct_soil_pool),INTENT(inout) :: this 
+    REAL(wp),                       INTENT(in)    :: s
+
+    CALL this%dom%init(s) 
+  END SUBROUTINE init_t_slm_struct_soil_pool 
+
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -118,11 +652,11 @@ CONTAINS
     USE mo_base_memory,         ONLY: t_model
 
     ! 0.1.InOut
-    CLASS(t_soil_memory), INTENT(inout), TARGET :: mem    !> soil memory
-    CHARACTER(len=*),    INTENT(in)    :: prefix          !> ?
-    CHARACTER(len=*),    INTENT(in)    :: suffix          !> ?
-    INTEGER,             INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,             INTENT(in)    :: model_id        !> model ID model\%id
+    CLASS(t_soil_memory), INTENT(inout), TARGET :: mem             !> soil memory
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !> ?
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !> ?
+    INTEGER,              INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
+    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
     ! 0.2 Local
     TYPE(t_model), POINTER :: model
 !    TYPE(t_jsb_model), POINTER :: model
@@ -141,13 +675,58 @@ CONTAINS
 !    canopy_layer => Get_vgrid('canopy_layer')
 
 
-    IF (.NOT. ALLOCATED(mem%test%ptr)) THEN
+    IF (.NOT. ALLOCATED(mem%soil_depth%ptr)) THEN
 
       !> add variables to soil memory soil\%VAR
       !! 
-      !! 
-      CALL slm_add_var(mem, 'test', mem%test, &
+      !! soil\%VAR
+      !!  
+      CALL slm_add_var(mem, 'soil_depth', mem%soil_depth, &
+            initval_r=2.0_wp) ! 2m depth  *slmtemp
+
+      CALL slm_add_var(mem, 'soil_depth_l', mem%soil_depth_l, &
             initval_r=0.0_wp)
+
+
+      !> simple TYPE (t_jsb_struct)
+      !! 
+      !! slm_add_var -> slm_add_struct()
+      !! 
+!      CALL slm_add_var(mem, 'soil_test_soil_element',          mem%test_soil_element)
+
+
+      !> nested TYPE (t_jsb_n_struct)
+      !! 
+      !! slm_add_var -> slm_add_n_struct()
+      !! 
+      CALL slm_add_var(mem, 'soil_pool'        , mem%pool)
+
+
+      !> level 2 TYPE (l2_struct) nested within the above nested TYPE structures (t_jsb_n_struct)
+      !! 
+      !! slm_add_var -> slm_add_l2_struct()
+      !! 
+      CALL slm_add_var(mem%pool, 'soil_pool_dom',         mem%pool%dom)       
+
+
+      !> add variables to the structs and the l2 structs
+      !!
+      !! soil\%t_jsb_struct\%VAR
+      !! 
+      !! soil\%t_jsb_n_struct\%t_jsb_struct\%VAR
+      !! 
+      CALL slm_add_var(mem%pool%dom, 'soil_pool_dom_carbon', mem%pool%dom%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%dom, 'soil_pool_dom_nitrogen', mem%pool%dom%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%dom, 'soil_pool_dom_phosphorus', mem%pool%dom%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%dom, 'soil_pool_dom_carbon13', mem%pool%dom%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%dom, 'soil_pool_dom_carbon14', mem%pool%dom%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%dom, 'soil_pool_dom_nitrogen15', mem%pool%dom%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
 
 
 

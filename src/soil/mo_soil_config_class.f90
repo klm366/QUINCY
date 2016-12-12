@@ -27,14 +27,21 @@ MODULE mo_soil_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_soil_config
-! 
-! 
-
+    INTEGER               :: nsoil_energy         !< number of layers
+    INTEGER               :: nsoil_water
+    REAL(wp), ALLOCATABLE :: soil_depth_energy(:) !< soil depth of the layers (lower bound)
+    REAL(wp), ALLOCATABLE :: soil_depth_water(:)
+    REAL(wp), ALLOCATABLE :: dz_energy(:)         !< layer thicknesses
+    REAL(wp), ALLOCATABLE :: dz_water(:)
+    REAL(wp)              :: wsr_capacity         !< Water holding capacity of ground skin reservoir [m water equivalent]
+    REAL(wp)              :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
     CONTAINS
       PROCEDURE :: Init => Init_soil_config
   END Type t_soil_config
 
   TYPE(t_soil_config), SAVE :: soil_config
+
+  INTEGER, PARAMETER :: max_soil_layers = 20  ! consistent with JSBACH4
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_config_class'
 
@@ -53,13 +60,22 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL      :: active
-! 
-! 
+    INTEGER  :: nsoil_energy    , &
+                nsoil_water
+    REAL(wp) :: dz_energy(max_soil_layers)
+    REAL(wp) :: dz_water(max_soil_layers)
+    REAL(wp) :: wsr_capacity    , &
+                wsn_capacity
+    INTEGER  :: i   ! looping
 
-
-!    NAMELIST /soil_ctl/       & 
-!      ,         &
-!      
+    NAMELIST /soil_ctl/       & 
+                          nsoil_energy    , &
+                          nsoil_water     , &
+                          dz_energy       , &
+                          dz_water        , &
+                          wsr_capacity    , &
+                          wsn_capacity
+     
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -69,26 +85,54 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting soil configuration')
 
     ! Set defaults
-! 
-! 
-
+    nsoil_energy                  = 5
+    nsoil_water                   = 5
+    dz_energy(1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+    dz_energy(6:max_soil_layers)  = 0._wp
+    dz_water (1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+    dz_water (6:max_soil_layers)  = 0._wp 
+    wsr_capacity                  = 2.E-4_wp
+    wsn_capacity                  = 2.E-4_wp
 
     ! read the namelist
     ! 
     ! &SOIL_CTL
-!    nml_handler = open_nml(TRIM(config%namelist_filename))
-!    nml_unit = position_nml('SOIL_CTL', nml_handler, STATUS=istat)
-!    IF (istat == POSITIONED) READ(nml_unit, soil_ctl)
-!    CALL close_nml(nml_handler)
+    nml_handler = open_nml(TRIM(config%namelist_filename))
+    nml_unit = position_nml('SOIL_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, soil_ctl)
+    CALL close_nml(nml_handler)
 
+    ! allocate vectors
+    ALLOCATE(config%soil_depth_energy(nsoil_energy))
+    ALLOCATE(config%soil_depth_water (nsoil_water ))
+    ALLOCATE(config%dz_energy(nsoil_energy))
+    ALLOCATE(config%dz_water (nsoil_water ))
 
     ! pass values as read from file
-! veg examples: replace !   config%output_interval_pool          = output_interval_pool
-!    config%output_interval_flux          = output_interval_flux
-!    config%output_start_first_day_year   = output_start_first_day_year
-!    config%output_end_last_day_year      = output_end_last_day_year
-!    config%flag_calc_soil_moisture       = flag_calc_soil_moisture
-!    config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  
+    config%nsoil_energy              = nsoil_energy
+    config%nsoil_water               = nsoil_water
+
+    IF (nsoil_water .LE. 0) CALL finish('Init_soil_config','Initialization with non positive number of soil layers')
+
+    ! *slmdev
+    IF (nsoil_water .NE. 5) CALL finish('Init_soil_config','Initialization with other than 5 soil layers not possible for now in SLM')
+
+    config%soil_depth_energy(1)      = dz_energy(1)
+    DO i=2,nsoil_energy
+      config%soil_depth_energy(i) = config%soil_depth_energy(i-1) + dz_energy(i)
+    END DO
+    config%soil_depth_water(1)       = dz_water(1)
+    DO i=2,nsoil_water
+      config%soil_depth_water(i) = config%soil_depth_water(i-1) + dz_water(i)
+    END DO
+
+    config%dz_energy(1:nsoil_energy) = dz_energy(1:nsoil_energy)
+    config%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)
+    config%wsr_capacity              = wsr_capacity
+    config%wsn_capacity              = wsn_capacity
+
+
+
 
 
   END SUBROUTINE Init_soil_config

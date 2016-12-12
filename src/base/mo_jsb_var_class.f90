@@ -144,6 +144,7 @@ MODULE mo_jsb_var_class
     PROCEDURE, PASS(this2)  :: Divide_field_and_real2d          ! Divide variable of REAL 2-d field by type t_jsb_var_real2d
     GENERIC, PUBLIC         :: OPERATOR(/) => Divide_real2d, Divide_real2d_and_scalar, &
                                               Divide_real2d_and_field, Divide_field_and_real2d
+    !PROCEDURE, PUBLIC       :: Init => init_t_jsb_var_real2d
     !FINAL ...
   END TYPE t_jsb_var_real2d
 
@@ -187,6 +188,7 @@ MODULE mo_jsb_var_class
     PROCEDURE, PASS(this2)  :: Divide_field_and_real3d          ! Divide variable of REAL 2-d field by type t_jsb_var_real3d
     GENERIC, PUBLIC         :: OPERATOR(/) => Divide_real3d, Divide_real3d_and_scalar, &
                                               Divide_real3d_and_field, Divide_field_and_real3d
+    PROCEDURE, PUBLIC       :: Init => init_t_jsb_var_real3d
     !FINAL ...
   END TYPE t_jsb_var_real3d
 
@@ -1205,6 +1207,19 @@ CONTAINS
 
     var3%ptr(:,:,:) = field(:,:,:) / this2%ptr(:,:,:)
   END FUNCTION Divide_field_and_real3d
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Initialisation of var_real3d with a scalar 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL SUBROUTINE init_t_jsb_var_real3d(this,s)
+    IMPLICIT NONE
+    CLASS(t_jsb_var_real3d), INTENT(inout) :: this
+    REAL(wp),                INTENT(in)    :: s
+
+    this%ptr(:,:,:)     = s 
+  END SUBROUTINE init_t_jsb_var_real3d 
 
 
 

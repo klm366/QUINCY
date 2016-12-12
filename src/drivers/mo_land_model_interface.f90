@@ -106,7 +106,7 @@ CONTAINS
     USE mo_rad_interface
     USE mo_veg_interface
     USE mo_assimi_interface
-    !USE mo_soil_interface
+    USE mo_soil_interface
 
 
     IMPLICIT NONE
@@ -298,6 +298,9 @@ CONTAINS
 
     CASE('soil')
     !! soil ---------------------------------------------------------------------------------------
+
+      CALL soil_1st_test_routine(tile)  ! testing soil model infrastracture | 2 be removed if proper soil modules + routines are available
+
 
     CASE('canopy')
     !! canopy -------------------------------------------------------------------------------------
