@@ -22,7 +22,7 @@ if (length( grep(paste0(filenameWithAnyNumber,collapse = ""),list.files()) ) > 0
 }
 
 # message
-print(" postprocessing SLM output")
+#print(" postprocessing SLM output")
 
 # loop over each tiles:
 for(ti in 1:tileNum)
@@ -55,4 +55,4 @@ dev.off()
 } # end loop over tiles
 
 # message
-print(" finished postprocessing SLM output !")
+#print(" finished postprocessing SLM output !")

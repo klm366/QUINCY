@@ -201,7 +201,7 @@ sync
 ## sync all written data with file system ##
 sync
 
-## run the R Script ##
+## run the postprocessing R Script ##
 Rscript ./"$slmRscript"
 sync
 

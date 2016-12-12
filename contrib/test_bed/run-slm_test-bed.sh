@@ -1,8 +1,8 @@
 #!/bin/bash
 
-## 20160812
+## 20161212
 ## Where: you can start this script from anywhere (no need to cd into a specific directory), when logged into a cluster node such as pc028
-## What:  this script starts one of the run_xx.R scripts to run a specific SLM model, e.g. land plant canopy, and manipulates the namelist.slm
+## What:  this script starts the SLM binary land.x , the specific model may be specified via the "slmModel" option
 ## HowTo: specify the below options as suitable for you
 ## Tip:   you can pass the model name as argument to this script [i.e. run-slm_test-bed.sh modelName], which overwrites the below defined value of slmModel
 ## 
@@ -13,7 +13,7 @@
 ########################################################################################################
 
 # model
-slmModel="land"   # specific SLM model [default: "land"]; possible values: land plant canopy test_canopy
+slmModel="land"   # specific SLM model [default: "land"]; possible values: land plant soil canopy test_canopy
 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
@@ -25,7 +25,7 @@ flag_t_jmax_acclimation="T"
 flag_optimal_Nfraction="F"
 flag_heterogeneous_canopy="T"
 ncanopy=20                          # number of canopy layers
-canopy_layer_scheme="standard"      # canopy layer depth calculation: standard[0.5] fapar
+canopy_layer_scheme="standard"      # canopy layer depth calculation options: standard fapar
 # plant growth model options
 flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
@@ -45,8 +45,8 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 siteDataSet="f"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
-siteName="FI-Hyy_2001-2006"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
-                                # examples: AT-Neu_2002-2005, CA-Man_1999-2003 & THO_D15_1984-2013 & CAL_1984-2013 & CH-Oe1_2002-2006
+siteName="DE-Hai_2000-2006"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
+                                # e.g. FLUX: DE-Hai_2000-2006, AT-Neu_2002-2005, ES-ES1_1999-2004 & CRUN: THO_D15_1984-2013, CAL_1984-2013, UNI_1984-2013
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=100.0      # float !
 longitude=0.0                   # float !
@@ -90,7 +90,7 @@ fi
 return 0
 }
 # lists to validate against
-validateSlmModel="land plant canopy test_canopy"  # soil 
+validateSlmModel="land plant soil canopy test_canopy"
 validateNUptakeScheme="prescribed standard optimal resistance"
 validateCanopyLayerScheme="standard fapar"
 validateFlags="F T"
@@ -154,10 +154,8 @@ fi    # [$slmModel != "test_canopy"]
 
 ## create folder, and copy R scripts, namelist, parameter-list and climate.dat file there ##
 mkdir -p ./"$slmModel"
-cp ../r_script/run_"$slmModel".R ./"$slmModel"
 cp ../r_script/postprocessing_"$slmModel".R ./"$slmModel"
 cp ../namelist/namelist.slm ./"$slmModel"
-#cp ../parameter_list/param.list ./"$slmModel"  # works only with the prep_run.sh at the HPC
 if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but test_canopy
   then
     if [ "$siteDataSet" == "n" ]
@@ -304,14 +302,31 @@ changeNamelistValue longitude "$longitude"
 changeNamelistValue latitude "$latitude"
 
 
-## confirmation of starting the R script ##
+## confirmation of finishing this script & starting SLM ##
 echo " OK"
-echo " Starting the R scripts for running SLM: ""$slmModel"
+echo " Starting SLM Simulation: ""$slmModel"
 
+## run the SLM binary (always compiled as land.x) ##
+compiler=$(sed -n 2p ./../../../util/Make.inc.local | awk '{print $3}')
+./../../../"$compiler"/bin/land.x 
+echo "Simulation finished"
+sync
 
-## run the R script ##
-Rscript ./run_"$slmModel".R
-
-
+## R script for postprocessing ##
+postProcessCanopy=F
+echo "Starting postprocessing"
+if [ $slmModel == "canopy" ]
+ then
+  if [ $postProcessCanopy == F ]
+   then
+    echo " Oh snap, postprocessing was disabled for SLM CANOPY in the run-slm_test-bed.sh [postProcessCanopy=F]"
+  else
+    Rscript ./postprocessing_"$slmModel".R
+  fi
+else
+ Rscript ./postprocessing_"$slmModel".R
+fi
+sync
+echo " ... done !"
 
 ## end of this script, confirmation about successful simulation is provided by the R script itself ##

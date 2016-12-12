@@ -4,7 +4,7 @@
 # called from contrib/site_level/run_slm.sh (HPC simulations) or run_canopy.R (local SLM runs)
 
 # message
-print(" postprocessing SLM output")
+#print(" postprocessing SLM output")
 
 flist = list.files(path= ".",patter="fort*")
 nplot=length(flist)
@@ -24,4 +24,4 @@ garbage <- dev.off()  # run dev.off() but suppress the notification it usually p
 
 
 # message
-print(" finished postprocessing SLM output !")
+#print(" finished postprocessing SLM output !")
