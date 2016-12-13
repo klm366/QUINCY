@@ -82,6 +82,17 @@ cdo.sellonlatbox ( -180,180,-90,90,
 
 
 #####
+##### calculate zonal mean from yearly sum
+#####
+
+cdo.zonmean ( input  = "%s" % ( kwargs [ "E_yearsummean" ]),
+              output = kwargs [ "E_ys-zonmean" ])
+
+cdo.zonmean ( input  = "%s" % ( kwargs [ "P_yearsummean" ]),
+              output = kwargs [ "P_ys-zonmean" ])
+
+
+#####
 ##### finishing
 #####
 print "Preprocessing for field %s with '%s' run successfully." % ( fieldname, __file__ )

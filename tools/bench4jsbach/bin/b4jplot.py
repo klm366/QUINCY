@@ -101,17 +101,21 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
     plt.close ()
 
 
-def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath ):
+def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath, mono = False ):
 
     colorlist = [ 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w' ]
     nrefargs = len ( inpathlist )
-    
-    assert len ( legendlist ) == nrefargs and \
-        len ( colorlist ) >= nrefargs
+
+    # if legendlist:
+    #     assert len ( legendlist ) == nrefargs and \
+    #         len ( colorlist ) >= nrefargs
 
     fig = plt.figure ()
     ax = fig.gca()
 
+    if mono:
+        nrefargs = 1
+        
     for refarg_no in range ( nrefargs ):
         nc_fid = Dataset ( inpathlist [ refarg_no ])  
         lat = nc_fid.variables [ 'lat'][:]
@@ -119,14 +123,13 @@ def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath ):
         nc_fid.close ()
         plt.plot ( lat, vardat_ref [ 0,:, 0 ],
                    colorlist [ refarg_no ],
-                   label = legendlist [ refarg_no ])
+                   label = legendlist [ refarg_no ] if legendlist else None )
         plt.axhline ( vardat_ref [ 0,:, 0 ].mean(), color = colorlist [ refarg_no ])
-
     
     ax.set_xticks ( np.arange ( -90, 90, 15 ))
-    ax.yaxis.set_label_coords ( -.15, .96 ) 
+    ax.yaxis.set_label_coords ( -.09, .88 ) 
     plt.ylabel ( "[ %s ]" % unit,
-                 rotation = 0,
+                 rotation = 90,
                  fontsize = 12 )
     plt.xlabel ( "latitude [ deg ]",
                  position = ( 0.9, 0 ),
@@ -134,16 +137,18 @@ def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath ):
     plt.title ( title, y = 1.04 )
     plt.grid ( 'on' )
     lgd = plt.legend ( numpoints = 1,  
-                       loc = 2,                  
-                       bbox_to_anchor = ( 1.05, 1 ))
+                       loc = 2,
+                       prop = { 'size' : 10 },                
+                       bbox_to_anchor = ( 1.05, 1 ) if legendlist else None )
+                       
+                       #handlelength = 0.5,
+                       #borderpad = 0.8,
+                       #labelspacing = 0.8 ) 
     plt.savefig ( outpath,
-                  dpi = 100, 
-                  bbox_extra_artists = ( lgd, ), 
-                  bbox_inches = 'tight' ) 
-    plt.close ()
-
-
-    
+                  dpi = 100,
+                  bbox_extra_artists = ( lgd, ),
+                  bbox_inches = 'tight' if legendlist else None  )
+    plt.close ()   
     
 
 def hist_plot ( alldat, unit, index, title, outpath ):
@@ -158,11 +163,6 @@ def hist_plot ( alldat, unit, index, title, outpath ):
     varname_E  = "evapotranspiration"
     varname_P  = "precip_all"
     varname_RD = "disch"
-
-    print "hist_plot, args:"
-    print alldat
-    print index
-    print title
     
     df = DataFrame ( alldat, 
                      columns = [ varname_E + " $E$", 

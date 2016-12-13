@@ -78,7 +78,6 @@ doc_template = """
 
 \end{document}
 """
-
 section_template       = """\\section{%(section)s}"""
 subsection_template    = """\\subsection{%(subsection)s}"""
 subsubsection_template = """\\subsubsection{%(subsubsection)s}"""
@@ -120,9 +119,17 @@ report_dirname = "report"
 source_dirname = "sources"
 
 
-def includegraphics_template ( path, width = '1', hspace = '0' ):
+def includegraphics_template ( path, width = None, hspace = None, scale = None ):
     
-    ret = "\\includegraphics[width=%s\\textwidth]{%s}" % ( width, path )
+    if width:
+        param =  "width=%s\\textwidth" % width
+    elif scale:
+        param = "scale=%s" % scale
+    else:
+        param = ""
+        
+    ret = "\\includegraphics[%s]{%s}" % ( param, path )
+    
     if hspace:
         ret = """
 
@@ -372,10 +379,23 @@ table below. You may find detailed information on each method following the appr
                                                                width      = '1.5',
                                                                hspace     = '-3.3' )
                     elif ss_dict [ 'isvector' ] == True:
-                        plot = can.B4J_index [ '%s_plot' %  subsection ]
-                        dss += includegraphics_template ( plot,
-                                                                  width    = '1',
-                                                                  hspace   = '0' )               
+                        
+                        if "canplot" in ss_dict:
+                            plot = can.B4J_index [ ss_dict [ "canplot" ]]
+                            dss += "\\raggedright{%s}" % \
+                                   includegraphics_template (  plot,
+                                                               scale = .5,
+                                                               hspace = '-.5' )
+                            plot = can.B4J_index [ '%s_plot' %  subsection ]
+                            dss += "\\raggedright{%s}" % \
+                                   includegraphics_template (  plot,
+                                                               scale = .5,
+                                                               hspace = '-.5' )
+                        else:
+                            plot = can.B4J_index [ '%s_plot' %  subsection ]
+                            dss += includegraphics_template ( plot,
+                                                              scale = .65,
+                                                              hspace = '-.5' )              
                 
         self.logger.debug ( "Exiting." )
         return dss

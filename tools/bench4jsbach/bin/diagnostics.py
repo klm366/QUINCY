@@ -287,7 +287,9 @@ class Diagnostics ( object ):
 
                     arglist = [ "fieldname:" + fieldname,
                                 "suffix:" +  fielddict [ 'suffix' ],
-                                "land_sea_mask:" + can.land_sea_mask ]
+                                "land_sea_mask:" + can.land_sea_mask,
+                                "can_name:" + can.B4J_name,
+                                "canno:%d" % can.B4J_canno ]
                     
                     for key in input_list:
                         arglist.append ( key + ':' + can.B4J_index [ key ])
