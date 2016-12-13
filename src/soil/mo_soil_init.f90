@@ -23,9 +23,9 @@ MODULE mo_soil_init
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> soil init
+  !> Intialize soil process (after memory has been set up)
   !! 
-  !! called in model_init
+  !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE soil_init(tile)
 

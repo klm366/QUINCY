@@ -19,6 +19,11 @@ mo_rad_update_radiation.o: \
 mo_rad_constants.o: \
   mo_kind.o
 
+mo_rad_init.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_base_memory.o  
+
 mo_rad_memory_class.o: \
   mo_kind.o \
   mo_exception.o \
