@@ -13,9 +13,9 @@ tstep_flux=trim(namelist[trim(namelist[,1])=="output_interval_flux",2])
 
 # get number of tiles calculated -> needs "poolC_tilex_weekly.txt" as output files
 # list all files in folder, grep for "poolC_tile*", and check vector length
-tileNum<-length(grep("poolC_tile*",list.files()))
+tileNum<-length(grep("vegpoolC_tile*",list.files()))
 # if output files with "timestep" intervall exist, assume these are for "special case: fluxnet output" and do not consider for figure creation
-filenameWithAnyNumber<-c("poolC_tile","[0-9]+","_timestep.txt")
+filenameWithAnyNumber<-c("vegpoolC_tile","[0-9]+","_timestep.txt")
 if (length( grep(paste0(filenameWithAnyNumber,collapse = ""),list.files()) ) > 0)
 {
   tileNum <- tileNum - (tileNum/2)
@@ -29,10 +29,10 @@ for(ti in 1:tileNum)
 {
   # message
   print(paste0(" tile ",ti,"/",tileNum))
-  flist_pool = Sys.glob(paste0("pool*_tile",ti,"_",tstep_pool,"*.txt")) 
+  flist_pool = Sys.glob(paste0("vegpool*_tile",ti,"_",tstep_pool,"*.txt")) 
   flist_pool = c(flist_pool,Sys.glob(paste0("veg_diagnostics*_tile",ti,"_",tstep_pool,"*.txt"))) 
 
-  flist_flux = Sys.glob(paste0("flux*_tile",ti,"_",tstep_pool,"*.txt")) 
+  flist_flux = Sys.glob(paste0("vegflux*_tile",ti,"_",tstep_pool,"*.txt")) 
   #create overall file list
   flist=c(flist_pool,flist_flux)
   nplot=length(flist)
