@@ -32,7 +32,6 @@ MODULE mo_assimi_update_canopy_fluxes
 
   PRIVATE
   PUBLIC :: update_canopy_fluxes, discrimination_ps, calc_photosynthesis
-  PUBLIC :: set_zero_vegetation_fluxes    ! called in the land model interface prior to all Tasks
 
 CONTAINS
 
@@ -616,72 +615,5 @@ CONTAINS
     END SELECT
 
   END FUNCTION discrimination_ps
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> set all vegetation fluxes to zero
-  !! 
-  !! called in the land model interface prior to all Tasks
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE set_zero_vegetation_fluxes(tile)
-
-    IMPLICIT NONE
-    ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(inout)      :: tile           !< one tile
-    ! 0.2 Local
-    REAL(wp) :: flux_zero
-    ! 0.3 Memory allocation
-    TYPE(t_veg_memory), POINTER         :: veg__mem   ! dsl4jsb_Def_memory(VEG_)
-    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
-    SELECT TYPE (mm => tile%mem(VEG_)%p)              ! dsl4jsb_Get_memory(VEG_)
-      TYPE IS(t_veg_memory)
-        veg__mem => mm
-    END SELECT
-    veg => veg__mem 
-
-    flux_zero = 0.0_wp
-
-
-    ! t_slm_struct_veg_element
-    CALL veg%reserve_use%init(flux_zero)
-    CALL veg%establishment%init(flux_zero)
-    ! t_slm_struct_veg_pool
-    CALL veg%growth%init(flux_zero)
-    CALL veg%litterfall%init(flux_zero)
-    ! variables
-    CALL veg%maint_respiration_pot%init(flux_zero)         !< maintenance respiration (µmol CO2 m-2 s-1)
-    CALL veg%maint_respiration%init(flux_zero)             !< maintenance respiration (µmol CO2 m-2 s-1)
-    CALL veg%maint_respiration_c13%init(flux_zero)         !< maintenance respiration (µmol 13CO2 m-2 s-1)
-    CALL veg%maint_respiration_c14%init(flux_zero)         !< maintenance respiration (µmol 14CO2 m-2 s-1)
-    CALL veg%growth_respiration%init(flux_zero)            !< growth respiration (µmol CO2 m-2 s-1)
-    CALL veg%growth_respiration_c13%init(flux_zero)        !< growth respiration (µmol 13CO2 m-2 s-1)
-    CALL veg%growth_respiration_c14%init(flux_zero)        !< growth respiration (µmol 14CO2 m-2 s-1)
-    CALL veg%n_transform_respiration%init(flux_zero)       !< respiration associated with N transformation (µmol CO2 m-2 s-1)
-    CALL veg%n_fixation_respiration%init(flux_zero)        !< respiration associated with N fixation (µmol CO2 m-2 s-1)
-    CALL veg%n_processing_respiration%init(flux_zero)      !< respiration associated with N fixation (µmol CO2 m-2 s-1)
-    CALL veg%n_processing_respiration_c13%init(flux_zero)  !< respiration associated with N fixation (µmol 13CO2 m-2 s-1)
-    CALL veg%n_processing_respiration_c14%init(flux_zero)  !< respiration associated with N fixation (µmol 14CO2 m-2 s-1)
-    CALL veg%npp%init(flux_zero)                           !< net primary production (µmol CO2 m-2 s-1)
-    CALL veg%npp_c13%init(flux_zero)                       !< net primary production (µmol 13CO2 m-2 s-1)
-    CALL veg%npp_c14%init(flux_zero)                       !< net primary production (µmol 14CO2 m-2 s-1)
-    CALL veg%uptake_n%init(flux_zero)                      !< ??
-    CALL veg%uptake_n15%init(flux_zero)                    !< ??
-    CALL veg%n_fixation%init(flux_zero)                    !< ??
-    CALL veg%n_fixation_n15%init(flux_zero)                !< ??
-    CALL veg%uptake_p%init(flux_zero)                      !< ??
-    CALL veg%recycling_leaf_n%init(flux_zero)              !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
-    CALL veg%recycling_leaf_n15%init(flux_zero)            !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 
-    CALL veg%recycling_leaf_p%init(flux_zero)              !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
-    CALL veg%recycling_fine_root_n%init(flux_zero)         !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-    CALL veg%recycling_fine_root_n15%init(flux_zero)       !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1) 
-    CALL veg%recycling_fine_root_p%init(flux_zero)         !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-    CALL veg%recycling_heart_wood_n%init(flux_zero)        !< net flux of N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
-    CALL veg%recycling_heart_wood_n15%init(flux_zero)      !< net flux of 15N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1) 
-    CALL veg%recycling_heart_wood_p%init(flux_zero)        !< net flux of P from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
-    CALL veg%transpiration%init(flux_zero)                 !< transpiration in kg m-2 s-1
-    CALL veg%delta_dens_ind%init(flux_zero)                !< ??
-    CALL veg%unit_transpiration%init(flux_zero)            !< ??
-
-  END SUBROUTINE set_zero_vegetation_fluxes
 
 END MODULE mo_assimi_update_canopy_fluxes

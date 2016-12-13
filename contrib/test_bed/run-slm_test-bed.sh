@@ -303,8 +303,9 @@ changeNamelistValue latitude "$latitude"
 
 
 ## confirmation of finishing this script & starting SLM ##
-echo " OK"
-echo " Starting SLM Simulation: ""$slmModel"
+echo " Nice idea !" #OK"
+echo " Let's go with SLM ""$slmModel" #Starting SLM Simulation: ""$slmModel"
+echo -n "  ...  "
 
 ## run the SLM binary (always compiled as land.x) ##
 compiler=$(sed -n 2p ./../../../util/Make.inc.local | awk '{print $3}')
@@ -314,12 +315,12 @@ sync
 
 ## R script for postprocessing ##
 postProcessCanopy=F
-echo "Starting postprocessing"
+echo " Starting postprocessing"
 if [ $slmModel == "canopy" ]
  then
   if [ $postProcessCanopy == F ]
    then
-    echo " Oh snap, postprocessing was disabled for SLM CANOPY in the run-slm_test-bed.sh [postProcessCanopy=F]"
+    echo "  Oh snap, postprocessing was disabled for SLM CANOPY in the run-slm_test-bed.sh [postProcessCanopy=F]"
   else
     Rscript ./postprocessing_"$slmModel".R
   fi

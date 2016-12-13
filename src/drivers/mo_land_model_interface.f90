@@ -101,6 +101,7 @@ CONTAINS
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_atm2land, update_land2atm
     USE mo_veg_output,                    ONLY: write_output_pool, write_output_flux
+    USE mo_veg_util,                      ONLY: set_zero_vegetation_fluxes
 
     ! Process interfaces:
     USE mo_rad_interface
@@ -231,7 +232,7 @@ CONTAINS
     CASE('land')
     !! set vegetation fluxes to zero
     !! 
-      CALL set_zero_vegetation_fluxes(tile)   ! mo_assimi_update_canopy_fluxes
+      CALL set_zero_vegetation_fluxes(tile)   ! mo_veg_util
 
     !! run Tasks
     !!
@@ -266,7 +267,7 @@ CONTAINS
     ! currently same as land !
     !! set vegetation fluxes to zero
     !! 
-      CALL set_zero_vegetation_fluxes(tile)   ! mo_assimi_update_canopy_fluxes
+      CALL set_zero_vegetation_fluxes(tile)   ! mo_veg_util
 
     !! run Tasks
     !!
@@ -306,7 +307,7 @@ CONTAINS
     !! canopy -------------------------------------------------------------------------------------
     !! set vegetation fluxes to zero
     !! 
-      CALL set_zero_vegetation_fluxes(tile)   ! mo_assimi_update_canopy_fluxes
+      CALL set_zero_vegetation_fluxes(tile)   ! mo_veg_util
 
     !! run Tasks
     !!
@@ -430,6 +431,7 @@ CONTAINS
     USE mo_atmland_constants,     ONLY: rad2par, frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, &
                                         def_co2_mixing_ratio
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
+    USE mo_veg_util,              ONLY: set_zero_vegetation_fluxes
     USE mo_shared_constants,      ONLY: molar_mass_N, Tzero 
 
     ! Use of process memories
@@ -608,7 +610,7 @@ CONTAINS
            swpar_srf_down = swpar_srf_down)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    ! mo_assimi_update_canopy_fluxes
+     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
@@ -646,7 +648,7 @@ CONTAINS
            q_air = q_air)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    ! mo_assimi_update_canopy_fluxes
+     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
@@ -674,7 +676,7 @@ CONTAINS
      CALL update_atm2land(tile,co2_mixing_ratio = co2_mixing_ratio)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    ! mo_assimi_update_canopy_fluxes
+     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
@@ -696,7 +698,7 @@ CONTAINS
      CALL update_atm2land(tile, q_air = q_air) 
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    ! mo_assimi_update_canopy_fluxes
+     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
@@ -722,7 +724,7 @@ CONTAINS
      tile%vegsoil%theta = tile%vegsoil%theta + 1.0_wp 
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    ! mo_assimi_update_canopy_fluxes
+     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
@@ -758,7 +760,7 @@ CONTAINS
                           inquire_n_fractions=.TRUE.)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    ! mo_assimi_update_canopy_fluxes
+     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
@@ -791,7 +793,7 @@ CONTAINS
                           inquire_n_fractions=.TRUE.)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    ! mo_assimi_update_canopy_fluxes
+     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
@@ -825,7 +827,7 @@ CONTAINS
                           inquire_n_fractions=.TRUE.)
 
      !! canopy calculation fluxes
-     CALL set_zero_vegetation_fluxes(tile)    ! mo_assimi_update_canopy_fluxes
+     CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 

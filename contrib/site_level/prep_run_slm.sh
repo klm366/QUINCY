@@ -17,7 +17,7 @@ experimentalID=""      # set something useful for you (allowed only: alphanumeri
 # select sites: FLUXNET or CRUNCEPv5
 siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="F"          # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
+customSiteList="T"          # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
 customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant, soil are currently available

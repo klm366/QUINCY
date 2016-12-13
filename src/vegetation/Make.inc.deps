@@ -117,7 +117,10 @@ mo_veg_dynamics.o: \
   mo_veg_constants.o
 
 mo_veg_util.o: \
-  mo_kind.o
+  mo_kind.o \
+  mo_jsb_process_class.o \
+  mo_base_memory.o \
+  mo_veg_memory_class.o
 
 mo_veg_update_veg_pools.o: \
   mo_kind.o \
