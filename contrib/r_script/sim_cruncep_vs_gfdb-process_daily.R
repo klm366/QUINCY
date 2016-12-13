@@ -37,15 +37,15 @@ for (s in 1:nsite) {
    print(paste(s,dirnames[[s]]))
    site_str[s]<-tail(unlist(strsplit(dirnames[[s]],'/')),n=1)
 
-   cpool<-read.table(paste(dirnames[[s]],'output/','poolC_tile1_daily.txt',sep=''),header=T)
-   c1314pool<-read.table(paste(dirnames[[s]],'output/','pooldC13dC14_tile1_daily.txt',sep=''),header=T)
-   npool<-read.table(paste(dirnames[[s]],'output/','poolN_tile1_daily.txt',sep=''),header=T)
-   ppool<-read.table(paste(dirnames[[s]],'output/','poolP_tile1_daily.txt',sep=''),header=T)
-   h2opool<-read.table(paste(dirnames[[s]],'output/','poolH2O_tile1_daily.txt',sep=''),header=T)
+   cpool<-read.table(paste(dirnames[[s]],'output/','vegpoolC_tile1_daily.txt',sep=''),header=T)
+   c1314pool<-read.table(paste(dirnames[[s]],'output/','vegpooldC13dC14_tile1_daily.txt',sep=''),header=T)
+   npool<-read.table(paste(dirnames[[s]],'output/','vegpoolN_tile1_daily.txt',sep=''),header=T)
+   ppool<-read.table(paste(dirnames[[s]],'output/','vegpoolP_tile1_daily.txt',sep=''),header=T)
+   h2opool<-read.table(paste(dirnames[[s]],'output/','vegpoolH2O_tile1_daily.txt',sep=''),header=T)
    diags<-read.table(paste(dirnames[[s]],'output/','veg_diagnostics_tile1_daily.txt',sep=''),header=T)
-   cflux<-read.table(paste(dirnames[[s]],'output/','fluxC_tile1_daily.txt',sep=''),header=T)
-   nflux<-read.table(paste(dirnames[[s]],'output/','fluxN_tile1_daily.txt',sep=''),header=T)
-   pflux<-read.table(paste(dirnames[[s]],'output/','fluxP_tile1_daily.txt',sep=''),header=T)
+   cflux<-read.table(paste(dirnames[[s]],'output/','vegfluxC_tile1_daily.txt',sep=''),header=T)
+   nflux<-read.table(paste(dirnames[[s]],'output/','vegfluxN_tile1_daily.txt',sep=''),header=T)
+   pflux<-read.table(paste(dirnames[[s]],'output/','vegfluxP_tile1_daily.txt',sep=''),header=T)
    
    ntime<-dim(cpool)[1]
    ncpoolvar<-dim(cpool)[2]-1

@@ -42,9 +42,9 @@ create_cdf<-function(year,lon,lat,timeout,timeindex,fdata,miss_val,nvar,
 }
 
 
-fluxCfile<-read.table('fluxC_tile1_timestep.txt',header=T)
-fluxH2Ofile<-read.table('fluxH2O_tile1_timestep.txt',header=T)
-fluxEfile<-read.table('fluxEnergy_tile1_timestep.txt',header=T)
+fluxCfile<-read.table('vegfluxC_tile1_timestep.txt',header=T)
+fluxH2Ofile<-read.table('vegfluxH2O_tile1_timestep.txt',header=T)
+fluxEfile<-read.table('vegfluxEnergy_tile1_timestep.txt',header=T)
 
 miss_val<--9.33e30
 ntime<-length(fluxCfile[,1])
