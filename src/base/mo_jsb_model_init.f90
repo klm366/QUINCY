@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Jan Engel (2016-07-22); starting with custom SLM init, moving to default JSBACH4 init later
+!! Second version by Jan Engel (20161213): moving veg process init routines to mo_veg_init
 !!
 MODULE mo_jsb_model_init
 
@@ -14,7 +15,7 @@ MODULE mo_jsb_model_init
     USE mo_kind
     USE mo_exception,                       ONLY: finish, message, message_text
     ! base
-    USE mo_base_constants                     ! e.g. dtime
+    USE mo_base_constants                     ! e.g. dtime, init_base_constants
     USE mo_jsb_class,                       ONLY: Get_model, jsbach
     USE mo_base_memory,                     ONLY: t_slm_tile, t_model, grid, new_model
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
@@ -24,27 +25,22 @@ MODULE mo_jsb_model_init
                                                   PHENO_, Get_process_name
     USE mo_jsb_process_factory,             ONLY: Create_process_memory, max_no_of_processes
     ! shared
-    USE mo_shared_isotope,                  ONLY: calc_fractionation 
-    USE mo_shared_constants,                ONLY: init_shared_constants, molar_mass_N, Dwv, Dco2, Tzero
+    USE mo_shared_constants,                ONLY: init_shared_constants
     USE mo_shared_set_parameters,           ONLY: parameters_from_file    !< TYPE t_parameters_from_file
     ! atmland
-    USE mo_atmland_constants
+    USE mo_atmland_constants,               ONLY: init_atmland_constants
     ! radiation
     USE mo_rad_constants,                   ONLY: init_rad_constants
     ! assimilation (photosynthesis)
-    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps 
-    USE mo_assimi_constants
+    USE mo_assimi_constants,                ONLY: init_assimi_constants
     USE mo_assimi_config_class,             ONLY: assimi_config
     ! vegetation
-    USE mo_veg_constants
+    USE mo_veg_constants,                   ONLY: init_veg_constants
     USE mo_veg_config_class,                ONLY: veg_config
+    USE mo_veg_init,                        ONLY: veg_init
     ! soil
     USE mo_soil_config_class,               ONLY: soil_config
     USE mo_soil_init,                       ONLY: soil_init
-
-    ! Use of process memories
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-
 
   IMPLICIT NONE
 
@@ -104,6 +100,7 @@ CONTAINS
     INTEGER                                     :: no_of_models
     TYPE(t_model), POINTER                      :: current => NULL() ! model allocation to jsbach struct - in jsbach4 this is looped over x models
     TYPE(t_model), POINTER                      :: model
+    CHARACTER(len=*),       PARAMETER           :: routine = TRIM(modname)//':init_slm'
 
     ! check number of tiles, exit if more than output routines can handle
     IF(ntile > 1) CALL finish('land_model_driver-init_routine','Number of tiles is too large, i.e. larger than 1')
@@ -258,7 +255,7 @@ CONTAINS
       ! calc timestep when fluxnet output stops
       fluxnet_output_stop   = fluxnet_output_start + fluxnet_output_length
 
-      ! check whether genral output start and stop covers the 'Fluxnet specific simulation output'
+      ! check whether general output start and stop covers the 'Fluxnet specific simulation output'
       IF ( (veg_config%output_end_last_day_year * one_year * one_day / base_config%dtime) < fluxnet_output_stop) THEN
         CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
       END IF
@@ -279,170 +276,23 @@ CONTAINS
         l_forcing = .FALSE.
     END SELECT
     ! run model init
+    ! for land the same init routine as plant is run
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land')
-        ! currently same as plant -> calling simply 'init_slm_plant'!
-        CALL init_slm_plant(tile)
+        CALL veg_init(tile)       ! veg (init_slm_plant)
       CASE('plant')
-        CALL init_slm_plant(tile)
+        CALL veg_init(tile)       ! veg (init_slm_plant)
       CASE('soil')
-        CALL soil_init(tile)  ! mo_soil_init
+        CALL veg_init(tile)       ! veg (init_slm_plant)
+        CALL soil_init(tile)      ! soil
       CASE('canopy')
-        CALL init_slm_canopy(tile)
+        CALL veg_init(tile)       ! veg (init_slm_canopy)
       CASE('test_canopy')
-!         init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
+        ! init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
       CASE DEFAULT
         CALL finish('land_model_driver-init_routine','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
      END SELECT
 
   END SUBROUTINE init_slm
-
-
-  !-----------------------------------------------------------------------------------------------------
-  ! init routine specific to the land model
-  ! 
-  ! tbc ...
-  !-----------------------------------------------------------------------------------------------------
-
-
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> init routine specific to the plant model
-  !!
-  !! called from init_slm
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm_plant(tile) !(model_id, model_name)
-
-    USE mo_shared_memory, ONLY: t_element
-
-    IMPLICIT NONE
-
-    ! 0.1 InOut
-    TYPE(t_slm_tile),       INTENT(inout)        :: tile       !< data structure for dynamic vegetation and soil variables
-    ! 0.2 Local
-    TYPE(t_model),          POINTER              :: model
-    TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
-    !TYPE(t_element)                              :: init_pool  !< land-cover-type library - parameter across pft's
-    REAL(wp)                                     :: hlp1
-    ! 0.3 Memory allocation
-    ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
-    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
-    dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
-    veg    => veg__mem 
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-
-
-      tile%vegsoil%moisture                 = veg_config%soil_awc_prescribe
-      tile%vegsoil%theta                    = veg_config%soil_theta_prescribe 
-      tile%vegsoil%ammonium                 = 0.1_wp
-      tile%vegsoil%phosphate                = 0.01_wp
-      veg%target_cn_leaf%ptr             = lctlib%cn_leaf
-      veg%target_np_leaf%ptr             = lctlib%np_leaf
-
-      IF(veg_config%flag_tile_veg_dynamics)THEN
-         tile%vegsoil%pool%litter%nitrogen   = 0.5_wp
-         veg%init_pool%carbon%ptr         = lctlib%seed_size * 10.0_wp
-         veg%dens_ind%ptr                 = 0.0_wp 
-      ELSE
-         tile%vegsoil%pool%litter%nitrogen   = 5.0_wp
-         veg%init_pool%carbon%ptr         = 50.0_wp 
-         veg%dens_ind%ptr                 = 1.0_wp 
-      ENDIF
-
-      veg%init_pool%nitrogen    = veg%init_pool%carbon    / (1._wp + fresp_growth) / lctlib%cn_leaf
-      veg%init_pool%phosphorus  = veg%init_pool%nitrogen  / lctlib%np_leaf
-
-      ! init_pool%carbon13
-      IF(lctlib%ps_pathway == ic3phot)THEN
-         hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-      ELSE
-         hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
-      ENDIF
-      veg%init_pool%carbon13 = veg%init_pool%carbon * calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C13, hlp1)
-
-
-      ! init_pool%carbon14
-      IF(lctlib%ps_pathway == ic3phot)THEN
-         hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-      ELSE
-         hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
-      ENDIF
-      veg%init_pool%carbon14 = veg%init_pool%carbon * calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C14,hlp1)
-
-      ! IF start bareground with vegetation dynamics switched on
-      IF(veg_config%flag_tile_veg_dynamics)THEN
-         veg%pool%seed_bed = veg%init_pool 
-      ELSE
-         veg%pool%reserve  = veg%init_pool 
-      END IF
-
-  END SUBROUTINE init_slm_plant
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> init routine specific to the soil model
-  !!
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-
-  ! called above already !
-  ! see section 10 in init_slm() -> CALL soil_init(tile)  ! mo_soil_init
-  ! 
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> init routine specific to the canopy model
-  !!
-  !! called from init_slm
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm_canopy( tile) !(model_id, model_name)
-
-    IMPLICIT NONE
-
-    ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(inout)               :: tile       !< data structure for dynamic vegetation and soil variables
-    ! 0.2 Local
-    TYPE(t_model),          POINTER              :: model
-    TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp)                                     :: ref_lai    !< LAI
-    REAL(wp)                                     :: ref_nleaf  !< N leaf per unit leaf area in gN/m2
-    ! 0.3 Memory allocation
-    ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
-    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
-    dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
-    veg    => veg__mem 
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-
-    ref_lai   = 6._wp
-    ref_nleaf = 2.0_wp
-
-    !! 1.3 Initialise tile
-    !! 
-    !! Initialisation of soil and vegetation, so far relevant
-    tile%vegsoil%moisture   = veg_config%soil_awc_prescribe
-    tile%vegsoil%theta      = veg_config%soil_theta_prescribe
-    veg%lai%ptr          = ref_lai 
-    IF(veg_config%pft_id==0) THEN
-      veg%pool%leaf%nitrogen%ptr   = ref_nleaf / molar_mass_N * veg%lai%ptr
-    ELSE
-      veg%pool%leaf%nitrogen   = veg%lai / lctlib%sla / lctlib%cn_leaf 
-      veg%pool%leaf%phosphorus = veg%pool%leaf%nitrogen / lctlib%np_leaf
-    ENDIF
-
-  END SUBROUTINE init_slm_canopy
-
 
 END MODULE mo_jsb_model_init

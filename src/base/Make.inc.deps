@@ -74,7 +74,6 @@ mo_jsb_model_init.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_process_factory.o \
-  mo_shared_isotope.o \
   mo_shared_constants.o \
   mo_shared_set_parameters.o \
   mo_atmland_constants.o \
@@ -82,10 +81,9 @@ mo_jsb_model_init.o: \
   mo_rad_constants.o \
   mo_assimi_config_class.o \
   mo_assimi_constants.o \
-  mo_assimi_update_canopy_fluxes.o \
   mo_veg_constants.o \
+  mo_veg_init.o \
   mo_veg_config_class.o \
-  mo_veg_memory_class.o \
   mo_soil_config_class.o \
   mo_soil_init.o
 
