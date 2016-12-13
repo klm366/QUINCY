@@ -81,10 +81,14 @@ MODULE mo_soil_memory_class
   !!  
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_n_struct) :: t_slm_struct_soil_pool
-    TYPE(t_slm_struct_soil_element)  :: dom           !< dissolved organic matter
-!    TYPE(t_slm_struct_soil_element)  :: test2           !< elements of 
-!    TYPE(t_slm_struct_soil_element)  :: test3           !< elements of 
-!    TYPE(t_slm_struct_soil_element)  :: test4           !< elements of 
+    TYPE(t_slm_struct_soil_element)  :: dom                 !< dissolved organic matter
+    TYPE(t_slm_struct_soil_element)  :: dom_assoc           !< minerally associated disolved organic matter
+    TYPE(t_slm_struct_soil_element)  :: metabolic_litter    !< metabolic litter (sugars, cellulose etc.)
+    TYPE(t_slm_struct_soil_element)  :: structural_litter   !< structural litter (lignified litter)
+    TYPE(t_slm_struct_soil_element)  :: woody_litter        !< physically protected wood litter
+    TYPE(t_slm_struct_soil_element)  :: microbial           !< microbial biomass
+    TYPE(t_slm_struct_soil_element)  :: residue             !< microbial necromass
+    TYPE(t_slm_struct_soil_element)  :: residue_assoc       !< minerally associated microbial necromass 
   CONTAINS
     PRIVATE
     !! operator overload
@@ -134,7 +138,16 @@ MODULE mo_soil_memory_class
 
 
     TYPE(t_jsb_var_real3d)          :: &
-                                    soil_depth_l        !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
+                                    soil_depth_l       , &  !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
+                                    root_distribution  , &  !< fractions of root per layer
+                                    nh4_solute         , &  !< ammonium in soil solution
+                                    nh4_assoc          , &  !< minerally associated ammonium
+                                    no3_solute         , &  !< nitrate in soil solution
+                                    noy                , &  !< NO_y
+                                    n2o                , &  !< N2O
+                                    n2                 , &  !< N2
+                                    po4_assoc          , &  !< phosphate in soil solution
+                                    po4_solute              !< minerally associated phosphate 
 
 
 
@@ -682,11 +695,37 @@ CONTAINS
       !! soil\%VAR
       !!  
       CALL slm_add_var(mem, 'soil_depth', mem%soil_depth, &
-            initval_r=2.0_wp) ! 2m depth  *slmtemp
-
+            initval_r=0.0_wp) ! initvalue
+  
       CALL slm_add_var(mem, 'soil_depth_l', mem%soil_depth_l, &
-            initval_r=0.0_wp)
-
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'root_distribution', mem%root_distribution, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'nh4_solute', mem%nh4_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'nh4_assoc', mem%nh4_assoc, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'no3_solute', mem%no3_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'noy', mem%noy, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'n2o', mem%n2o, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'n2', mem%n2, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'po4_assoc', mem%po4_assoc, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'po4_solute', mem%po4_solute, &
+            initval_r=0.0_wp) ! initvalue
 
       !> simple TYPE (t_jsb_struct)
       !! 
@@ -701,13 +740,18 @@ CONTAINS
       !! 
       CALL slm_add_var(mem, 'soil_pool'        , mem%pool)
 
-
       !> level 2 TYPE (l2_struct) nested within the above nested TYPE structures (t_jsb_n_struct)
       !! 
       !! slm_add_var -> slm_add_l2_struct()
       !! 
-      CALL slm_add_var(mem%pool, 'soil_pool_dom',         mem%pool%dom)       
-
+      CALL slm_add_var(mem%pool,    'soil_pool_dom',                mem%pool%dom) 
+      CALL slm_add_var(mem%pool,    'soil_pool_dom_assoc',          mem%pool%dom_assoc)
+      CALL slm_add_var(mem%pool,    'soil_pool_metabolic_litter',   mem%pool%metabolic_litter) 
+      CALL slm_add_var(mem%pool,    'soil_pool_structural_litter',  mem%pool%structural_litter) 
+      CALL slm_add_var(mem%pool,    'soil_pool_woody_litter',       mem%pool%woody_litter) 
+      CALL slm_add_var(mem%pool,    'soil_pool_microbial',          mem%pool%microbial) 
+      CALL slm_add_var(mem%pool,    'soil_pool_residue',            mem%pool%residue) 
+      CALL slm_add_var(mem%pool,    'soil_pool_residue_assoc',      mem%pool%residue_assoc)  
 
       !> add variables to the structs and the l2 structs
       !!
@@ -727,8 +771,97 @@ CONTAINS
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%pool%dom, 'soil_pool_dom_nitrogen15', mem%pool%dom%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
-
-
+ 
+      CALL slm_add_var(mem%pool%dom_assoc, 'soil_pool_dom_assoc_carbon', mem%pool%dom_assoc%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%dom_assoc, 'soil_pool_dom_assoc_nitrogen', mem%pool%dom_assoc%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%dom_assoc, 'soil_pool_dom_assoc_phosphorus', mem%pool%dom_assoc%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%dom_assoc, 'soil_pool_dom_assoc_carbon13', mem%pool%dom_assoc%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%dom_assoc, 'soil_pool_dom_assoc_carbon14', mem%pool%dom_assoc%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%dom_assoc, 'soil_pool_dom_assoc_nitrogen15', mem%pool%dom_assoc%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%pool%metabolic_litter, 'soil_pool_metabolic_litter_carbon', mem%pool%metabolic_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%metabolic_litter, 'soil_pool_metabolic_litter_nitrogen', mem%pool%metabolic_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%metabolic_litter, 'soil_pool_metabolic_litter_phosphorus', mem%pool%metabolic_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%metabolic_litter, 'soil_pool_metabolic_litter_carbon13', mem%pool%metabolic_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%metabolic_litter, 'soil_pool_metabolic_litter_carbon14', mem%pool%metabolic_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%metabolic_litter, 'soil_pool_metabolic_litter_nitrogen15', mem%pool%metabolic_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%pool%structural_litter, 'soil_pool_structural_litter_carbon', mem%pool%structural_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%structural_litter, 'soil_pool_structural_litter_nitrogen', mem%pool%structural_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%structural_litter, 'soil_pool_structural_litter_phosphorus', mem%pool%structural_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%structural_litter, 'soil_pool_structural_litter_carbon13', mem%pool%structural_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%structural_litter, 'soil_pool_structural_litter_carbon14', mem%pool%structural_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%structural_litter, 'soil_pool_structural_litter_nitrogen15', mem%pool%structural_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%pool%woody_litter, 'soil_pool_woody_litter_carbon', mem%pool%woody_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%woody_litter, 'soil_pool_woody_litter_nitrogen', mem%pool%woody_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%woody_litter, 'soil_pool_woody_litter_phosphorus', mem%pool%woody_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%woody_litter, 'soil_pool_woody_litter_carbon13', mem%pool%woody_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%woody_litter, 'soil_pool_woody_litter_carbon14', mem%pool%woody_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%woody_litter, 'soil_pool_woody_litter_nitrogen15', mem%pool%woody_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%pool%microbial, 'soil_pool_microbial_carbon', mem%pool%microbial%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%microbial, 'soil_pool_microbial_nitrogen', mem%pool%microbial%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%microbial, 'soil_pool_microbial_phosphorus', mem%pool%microbial%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%microbial, 'soil_pool_microbial_carbon13', mem%pool%microbial%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%microbial, 'soil_pool_microbial_carbon14', mem%pool%microbial%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%microbial, 'soil_pool_microbial_nitrogen15', mem%pool%microbial%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%pool%residue, 'soil_pool_residue_carbon', mem%pool%residue%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%residue, 'soil_pool_residue_nitrogen', mem%pool%residue%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%residue, 'soil_pool_residue_phosphorus', mem%pool%residue%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%residue, 'soil_pool_residue_carbon13', mem%pool%residue%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%residue, 'soil_pool_residue_carbon14', mem%pool%residue%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%residue, 'soil_pool_residue_nitrogen15', mem%pool%residue%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%pool%residue_assoc, 'soil_pool_residue_assoc_carbon', mem%pool%residue_assoc%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%residue_assoc, 'soil_pool_residue_assoc_nitrogen', mem%pool%residue_assoc%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%residue_assoc, 'soil_pool_residue_assoc_phosphorus', mem%pool%residue_assoc%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%residue_assoc, 'soil_pool_residue_assoc_carbon13', mem%pool%residue_assoc%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%residue_assoc, 'soil_pool_residue_assoc_carbon14', mem%pool%residue_assoc%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%pool%residue_assoc, 'soil_pool_residue_assoc_nitrogen15', mem%pool%residue_assoc%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
 
     END IF
 
