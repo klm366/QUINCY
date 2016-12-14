@@ -19,7 +19,7 @@ STRIP   = strip
 SIZE    = size
 #---------------------------------------------------------------------
 #-
-VPATH = ../atmland:../echam:../base:../drivers:../shared:../assimilation:../radiation:../soil:../vegetation:$(OBJDIR)
+VPATH = ../atmland:../echam:../base:../drivers:../shared:../assimilation:../radiation:../soil:../phenology:../vegetation:$(OBJDIR)
 MODS = $(shell find ../atmland/ -name '*.f90' -print)
 MODS += $(shell find ../echam/ -name '*.f90' -print)
 MODS += $(shell find ../base/ -name '*.f90' -print)
@@ -28,6 +28,7 @@ MODS += $(shell find ../shared/ -name '*.f90' -print)
 MODS += $(shell find ../assimilation/ -name '*.f90' -print)
 MODS += $(shell find ../radiation/ -name '*.f90' -print)
 MODS += $(shell find ../soil/ -name '*.f90' -print)
+MODS += $(shell find ../phenology/ -name '*.f90' -print)
 MODS += $(shell find ../vegetation/ -name '*.f90' -print)
 
 OBJFILES = $(notdir $(MODS))
@@ -71,5 +72,6 @@ include ../shared/Make.inc.deps
 include ../assimilation/Make.inc.deps
 include ../radiation/Make.inc.deps
 include ../soil/Make.inc.deps
+include ../phenology/Make.inc.deps
 include ../vegetation/Make.inc.deps
 include ../drivers/Make.inc.deps

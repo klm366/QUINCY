@@ -42,7 +42,7 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11
     ENUMERATOR :: ATM2LAND_=1, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
   END ENUM
 
@@ -70,8 +70,8 @@ CONTAINS
 !!      return_value = 'seb'
 !!    CASE (TURB_)
 !!      return_value = 'turb'
-!!    CASE (SOIL_)
-!!      return_value = 'soil'
+    CASE (SOIL_)
+      return_value = 'soil'
 !!    CASE (HYDRO_)
 !!      return_value = 'hydro'
     CASE (VEG_)
@@ -80,8 +80,8 @@ CONTAINS
       return_value = 'rad'
     CASE (ASSIMI_)
       return_value = 'assimi'
-!!    CASE (PHENO_)
-!!      return_value = 'pheno'      
+    CASE (PHENO_)
+      return_value = 'pheno'      
 !!#ifndef __NO_JSBACH_HD__
 !!    CASE (HD_)
 !!      return_value = 'hd'

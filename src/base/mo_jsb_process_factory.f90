@@ -26,7 +26,7 @@ MODULE mo_jsb_process_factory
 !!  USE mo_hydro_memory_class,   ONLY: t_hydro_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_assimi_memory_class,  ONLY: t_assimi_memory
-!!  USE mo_pheno_memory_class,   ONLY: t_pheno_memory
+  USE mo_pheno_memory_class,   ONLY: t_pheno_memory
   USE mo_rad_memory_class,     ONLY: t_rad_memory
 !!#ifndef __NO_JSBACH_HD__
 !!  USE mo_hd_memory_class,      ONLY: t_hd_memory
@@ -134,7 +134,7 @@ CONTAINS
                                        max_no_of_veg_structs   => max_no_of_structs, &    ! *slmjsb4
                                        max_no_of_veg_n_structs => max_no_of_n_structs     ! *slmjsb4
     USE mo_assimi_memory_class,  ONLY: max_no_of_assimi_vars => max_no_of_vars
-!!    USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
+    USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
 !!#ifndef __NO_JSBACH_HD__
 !!    USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
@@ -172,9 +172,9 @@ CONTAINS
     CASE (ASSIMI_)
       ALLOCATE(t_assimi_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_assimi_vars
-!!    CASE (PHENO_)
-!!      ALLOCATE(t_pheno_memory::return_ptr)
-!!      return_ptr%max_no_of_vars = max_no_of_pheno_vars
+    CASE (PHENO_)
+      ALLOCATE(t_pheno_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_pheno_vars
     CASE (RAD_)
       ALLOCATE(t_rad_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_rad_vars

@@ -1,7 +1,6 @@
 mo_veg_interface.o: \
   mo_kind.o \
-  mo_veg_memory_class.o \
-  mo_veg_phenology.o \
+  mo_exception.o \
   mo_veg_growth.o \
   mo_veg_turnover.o \
   mo_veg_dynamics.o \
@@ -55,18 +54,6 @@ mo_veg_soil.o: \
   mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_config_class.o
-
-mo_veg_phenology.o: \
-  mo_kind.o \
-  mo_base_constants.o \
-  mo_base_memory.o \
-  mo_jsb_class.o \
-  mo_jsb_lctlib_class.o \
-  mo_shared_constants.o \
-  mo_jsb_process_class.o \
-  mo_atm2land_memory_class.o \
-  mo_veg_memory_class.o \
-  mo_veg_constants.o 
 
 mo_veg_turnover.o: \
   mo_kind.o \

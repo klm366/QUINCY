@@ -108,6 +108,7 @@ CONTAINS
     USE mo_veg_interface
     USE mo_assimi_interface
     USE mo_soil_interface
+    USE mo_pheno_interface
 
 
     IMPLICIT NONE

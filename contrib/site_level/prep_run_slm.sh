@@ -69,7 +69,7 @@ soil_theta_prescribe=100.0      # float !
 
 ## details about the HPC, if unsure stick with these default values ##
 queue="BTM"                  # available queues: all io BTM mpi_large
-fastNodes="T"                # if T only the nodes iof iog ioh ioi ioj are used (works only with queue BTM and io) | T (True) or F (False) [large caps]
+fastNodes="F"                # if T only the nodes iof iog ioh ioi ioj are used (works only with queue BTM and io) | T (True) or F (False) [large caps]
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000000               # memory per job you may need; provided in Kb (1 Gb == 1000000 Kb)
 numberCpuMax=80              # maximum number of simulations started in parallel

@@ -1,0 +1,44 @@
+mo_pheno_interface.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_update_phenology.o
+
+mo_update_phenology.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_base_memory.o \
+  mo_jsb_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_veg_constants.o \
+  mo_shared_constants.o \
+  mo_base_constants.o \
+  mo_atm2land_memory_class.o \
+  mo_veg_memory_class.o \
+  mo_pheno_memory_class.o
+
+mo_pheno_memory_class.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_base_memory.o \
+  mo_jsb_class.o \
+  mo_jsb_memory_class.o \
+  mo_jsb_var_class.o \
+  mo_slm_varlist.o
+
+mo_pheno_config_class.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_namelist.o \
+  mo_io_units.o \
+  mo_jsb_config_class.o
+
+mo_pheno_constants.o: \
+  mo_kind.o
+
+mo_pheno_init.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_base_memory.o 
+
+

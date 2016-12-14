@@ -25,6 +25,9 @@
   ! canopy layer depth calculation [standard = 0.5, fapar]
   canopy_layer_scheme="standard"
 /
+&PHENOLOGY_CTL
+  ! tba
+/
 &GRID_CTL
   latitude=50.0
   longitude=0.0

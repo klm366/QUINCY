@@ -6,8 +6,9 @@
 !!
 !! @par Revision History
 !! First version by Sönke Zaehle (2016-04-11)
+!! Second version by Jan Engel (20161214): just moved from vegetation to phenology making it an individual process
 !!
-MODULE mo_veg_phenology
+MODULE mo_update_phenology
 
 #include "dsl_jsbach.inc"
 
@@ -15,8 +16,10 @@ MODULE mo_veg_phenology
 
 
   IMPLICIT NONE
-
+  PRIVATE
   PUBLIC :: update_phenology
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_update_phenology'
 
 CONTAINS
 
@@ -44,23 +47,29 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)        :: tile         !< one tile
     ! 0.2 Local
-    TYPE(t_model),          POINTER        :: model
-    TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_model),          POINTER       :: model
+    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    CHARACTER(len=*),       PARAMETER     :: routine = TRIM(modname)//':update_phenology'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
+    TYPE(t_pheno_memory),    POINTER :: pheno       ! local pointer to pheno__mem for SLM usability
     REAL(wp),                POINTER :: t_air
     dsl4jsb_Get_memory(ATM2LAND_)       ! atm2land__mem => atm2land_memory
     dsl4jsb_Get_memory(VEG_)            ! veg__mem => veg_memory
+    dsl4jsb_Get_memory(PHENO_)          ! veg__mem => veg_memory
 
-    veg     => veg__mem 
+    veg     => veg__mem
+    pheno   => pheno__mem  
     model   => Get_model(tile%owner_model_id)
     lctlib  => model%lctlib(tile%lcts%lib_id)
 
@@ -127,6 +136,7 @@ CONTAINS
                                                    gdd                                 !< ..
     ! 0.2 Local
     REAL(wp) :: hlp1                                      ! helper variable for tmp values
+    CHARACTER(len=*),       PARAMETER     :: routine = TRIM(modname)//':calc_phenology'
 
     !> 1.0 check growing season has started or ended
     !! 
@@ -188,4 +198,4 @@ CONTAINS
 
   END SUBROUTINE calc_phenology 
 
-END MODULE mo_veg_phenology
+END MODULE mo_update_phenology

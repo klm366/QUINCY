@@ -29,7 +29,8 @@ mo_land_model_interface.o: \
   mo_veg_interface.o \
   mo_veg_canopy.o \
   mo_assimi_interface.o \
-  mo_soil_interface.o
+  mo_soil_interface.o \
+  mo_pheno_interface.o
 
 mo_atmland_forcing.o: \
   mo_kind.o \

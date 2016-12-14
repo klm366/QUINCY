@@ -34,11 +34,16 @@ MODULE mo_jsb_model_init
     ! assimilation (photosynthesis)
     USE mo_assimi_constants,                ONLY: init_assimi_constants
     USE mo_assimi_config_class,             ONLY: assimi_config
+    ! phenology
+    USE mo_pheno_constants,                 ONLY: init_pheno_constants
+    USE mo_pheno_config_class,              ONLY: pheno_config
+    USE mo_pheno_init,                      ONLY: pheno_init
     ! vegetation
     USE mo_veg_constants,                   ONLY: init_veg_constants
     USE mo_veg_config_class,                ONLY: veg_config
     USE mo_veg_init,                        ONLY: veg_init
     ! soil
+    !USE mo_soil_constants,                  ONLY: init_soil_constants
     USE mo_soil_config_class,               ONLY: soil_config
     USE mo_soil_init,                       ONLY: soil_init
 
@@ -115,10 +120,12 @@ CONTAINS
     assimi_config%namelist_filename     = 'namelist.slm'
     veg_config%namelist_filename        = 'namelist.slm'
     soil_config%namelist_filename       = 'namelist.slm'
+    pheno_config%namelist_filename      = 'namelist.slm'
     CALL base_config%Init              ! includes base_config%slm_model_name => land plant soil canopy test_canopy
     CALL assimi_config%Init
     CALL veg_config%Init
     CALL soil_config%Init
+    CALL pheno_config%Init
 
 
     !! 2 Model init including lctlib init
@@ -173,6 +180,7 @@ CONTAINS
     CALL init_assimi_constants        ! uses molar_mass_N, Dwv, Dco2  defined in mo_shared_constants
     CALL init_veg_constants           ! uses Tzero                    defined in mo_shared_constants
     !CALL init_soil_constants
+    CALL init_pheno_constants
 
     !! 5.2 Constants set (using param.list file)
     !! 
@@ -192,7 +200,7 @@ CONTAINS
       tile%mem(iproc)%p => NULL()
       SELECT CASE(iproc)
         ! SLM: extend this CASE to all SLM processes that work with JSBACH4 memory structure; see mo_jsb_process_class for enumeration
-        CASE (RAD_, ASSIMI_, VEG_, SOIL_, ATM2LAND_, LAND2ATM_)    
+        CASE (RAD_, ASSIMI_, VEG_, PHENO_, SOIL_, ATM2LAND_, LAND2ATM_)    
           prefix = 'no-need'
           suffix = 'no-need'
           process_name = Get_process_name(iproc)
@@ -204,7 +212,7 @@ CONTAINS
             !tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
             !tile%mem(iproc)%p%grid_id = tile%grid_id
             tile%mem(iproc)%p%owner_model_id = tile%owner_model_id
-            tile%mem(iproc)%p%owner_proc_id = iproc     ! process ID: ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+            tile%mem(iproc)%p%owner_proc_id = iproc  ! process ID: ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10 , PHENO_=11
             !ALLOCATE(tile%mem(iproc)%p%owner_tile_path(SIZE(tile%path)))
             !tile%mem(iproc)%p%owner_tile_path(:) = tile%path(:)
             !tile%mem(iproc)%p%owner_tile_name = TRIM(tile%name)
