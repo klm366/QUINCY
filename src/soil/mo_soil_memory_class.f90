@@ -146,6 +146,12 @@ MODULE mo_soil_memory_class
                                     noy                , &  !< NO_y
                                     n2o                , &  !< N2O
                                     n2                 , &  !< N2
+                                    nh4_n15_solute     , &  !< N15-ammonium in soil solution
+                                    nh4_n15_assoc      , &  !< minerally associated N15-ammonium
+                                    no3_n15_solute     , &  !< N15-nitrate in soil solution
+                                    noy_n15            , &  !< N15-NO_y
+                                    n2o_n15            , &  !< N15-N2O
+                                    n2_n15             , &  !< N15-N2
                                     po4_assoc          , &  !< phosphate in soil solution
                                     po4_solute              !< minerally associated phosphate 
 
@@ -719,6 +725,24 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'n2', mem%n2, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'nh4_n15_solute', mem%nh4_n15_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'nh4_n15_assoc', mem%nh4_n15_assoc, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'no3_n15_solute', mem%no3_n15_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'noy_n15', mem%noy_n15, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'n2o_n15', mem%n2o_n15, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'n2_n15', mem%n2_n15, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'po4_assoc', mem%po4_assoc, &
