@@ -82,6 +82,75 @@ numberCpuMax=80              # maximum number of simulations started in parallel
 ## change into the directory where this script is located; thus, you can start this script from anywhere (no need to cd into a specific directory) ##
 cd "$( dirname "$0" )"
 
+
+## deal with options and arguments passed to the script ##
+while getopts ":e:c:o:h" opt; do
+  case "$opt" in
+  "e")
+    echo "   experimentalID=""$OPTARG"
+    experimentalID="$OPTARG"
+    ;;
+  "c")
+    echo "   customSiteList=""$OPTARG"
+    customSiteList="$OPTARG"
+    ;;
+  "o")
+    case "$OPTARG" in
+    "no")
+      echo "   no optimization"
+      flag_optimal_Nfraction="F"
+      flag_optimal_Nleaf="F"
+      flag_optimal_allocation="F"
+      ;;
+    "nf")
+      echo "   using only optimal Nfraction"
+      flag_optimal_Nfraction="T"
+      flag_optimal_Nleaf="F"
+      flag_optimal_allocation="F"
+      ;;
+    "nl")
+      echo "   using only optimal Nleaf"
+      flag_optimal_Nfraction="F"
+      flag_optimal_Nleaf="T"
+      flag_optimal_allocation="F"
+      ;;
+    "al")
+      echo "   using only optimal allocation"
+      flag_optimal_Nfraction="F"
+      flag_optimal_Nleaf="F"
+      flag_optimal_allocation="T"
+      ;;
+    esac
+    ;;
+  \?)
+    echo "     Invalid option: -$OPTARG"
+    echo "     Use -h for help."
+    ;;
+  :)
+    echo "Option -$OPTARG requires an argument."
+    echo "EXIT !"
+    exit 1
+    ;;
+  "h")  # help #
+    echo "Valid options are:"
+    echo " -e set the experimentalID"
+    echo " -c set the customSiteList"
+    echo "    Arguments to -c:"
+    echo "       T: using the custom site list"
+    echo "       F: not using the custom site list"
+    echo " -o set the optimality scheme"
+    echo "    Arguments to -o:"
+    echo "       no: no optimality"
+    echo "       nf: using only optimal Nfraction"
+    echo "       nl: using only optimal Nleaf"
+    echo "       al: using only optimal allocation"
+    echo "EXIT !"
+    exit 1
+    ;;
+  esac
+done
+
+
 ## prepare Validation of user-defined model-options ##
 # Function to validate model-options provided by the user
 # $1 must be a part of $2 list, else the script is stopped
