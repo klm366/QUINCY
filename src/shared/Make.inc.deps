@@ -22,6 +22,7 @@ mo_shared_time_averages.o: \
   mo_base_constants.o \
   mo_base_memory.o \
   mo_veg_memory_class.o \
+  mo_pheno_memory_class.o \
   mo_atm2land_memory_class.o
 
 mo_shared_set_parameters.o: \

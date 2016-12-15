@@ -46,6 +46,7 @@ CONTAINS
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
 
     IMPLICIT NONE
 
@@ -60,8 +61,10 @@ CONTAINS
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg             ! local pointer to veg__mem for SLM usability
+    TYPE(t_pheno_memory),    POINTER :: pheno           ! local pointer to pheno__mem for SLM usability
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: press_srf
     REAL(wp), POINTER                :: q_air
@@ -70,8 +73,11 @@ CONTAINS
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-    assimi => assimi__mem 
-    veg => veg__mem 
+    dsl4jsb_Get_memory(PHENO_)          ! veg__mem => veg_memory
+
+    assimi  => assimi__mem 
+    veg     => veg__mem 
+    pheno   => pheno__mem  
     t_air            => atm2land__mem%t_air%ptr
     press_srf        => atm2land__mem%press_srf%ptr
     q_air            => atm2land__mem%q_air%ptr
@@ -85,7 +91,7 @@ CONTAINS
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    veg%kstar_labile%ptr = calc_meristem_activity(t_air, tile%vegsoil%theta, veg%growing_season%ptr)
+    veg%kstar_labile%ptr = calc_meristem_activity(t_air, tile%vegsoil%theta, pheno%growing_season%ptr)
 
     !> 1.1 calculate costs of N uptake and fixation
     !!
@@ -103,12 +109,12 @@ CONTAINS
     !> 2.0 Calculate target C:N:P for each tissue type
     !! 
     !! 
-    IF (veg_config%flag_optimal_Nleaf .AND. veg%growing_season%ptr) THEN
+    IF (veg_config%flag_optimal_Nleaf .AND. pheno%growing_season%ptr) THEN
       CALL calc_dir_optimal_cn_leaf(lctlib, veg)
     END IF
 
     CALL calc_stoichiometry_changes(lctlib                          , & ! in
-                                      veg%growing_season%ptr        , &
+                                      pheno%growing_season%ptr      , &
                                       veg%leaf_cn_direction%ptr     , &
                                       veg%target_np_leaf%ptr        , &
                                       veg%target_cn_leaf%ptr        , & ! inout
@@ -172,7 +178,7 @@ CONTAINS
     !! 
     !! Info: veg%reserve_use is of TYPE(t_slm_struct_veg_element)
     call calc_reserve_useage(lctlib                                     , &
-                              veg%growing_season%ptr                    , &
+                              pheno%growing_season%ptr                  , &
                               veg%kstar_labile%ptr                      , &
                               veg%gpp_tlabile_mavg%ptr                  , &
                               veg%maint_respiration_tlabile_mavg%ptr    , &

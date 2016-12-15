@@ -38,6 +38,7 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -48,24 +49,28 @@ CONTAINS
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
-    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Def_memory(PHENO_)                        ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
+    TYPE(t_veg_memory),       POINTER     :: veg      ! local pointer to veg__mem for SLM usability
+    TYPE(t_pheno_memory),     POINTER     :: pheno    ! local pointer to pheno__mem for SLM usability
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(PHENO_)                        ! veg__mem => veg_memory
 
-    veg    => veg__mem 
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    veg     => veg__mem 
+    pheno   => pheno__mem  
+    model   => Get_model(tile%owner_model_id)
+    lctlib  => model%lctlib(tile%lcts%lib_id)
 
 
     !> 1.0 Calculate nutrient flux from enzyme, RNA and other turnover in leaves and roots
     !!
-    CALL calc_nutrient_recycling(veg, veg%target_cn_fine_root%ptr, veg%target_np_fine_root%ptr)
+    CALL calc_nutrient_recycling(veg, veg%target_cn_fine_root%ptr, veg%target_np_fine_root%ptr, pheno%growing_season%ptr)
 
     !> 2.0 Calculate recycling and retranslocation
     !!  
     CALL calc_turnover(lctlib, &
                         veg%pool, veg%growth, veg%litterfall, &
                         veg%growth_t, veg%litterfall_t, &
-                        veg%growing_season%ptr, veg%lai%ptr, &
+                        pheno%growing_season%ptr, veg%lai%ptr, &
                         veg%recycling_leaf_n%ptr, veg%recycling_leaf_n15%ptr, veg%recycling_leaf_p%ptr, &
                         veg%recycling_heart_wood_n%ptr, veg%recycling_heart_wood_n15%ptr, veg%recycling_heart_wood_p%ptr)
 
@@ -83,7 +88,7 @@ CONTAINS
   !! Input: plant status and leaf and root C:N:P target ratios \n
   !! Output: net flux between labile and leaves/roots (+ve: flux to labile, -ve: flux from labile)
   !----------------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE calc_nutrient_recycling(veg, target_cn_fine_root, target_np_fine_root)
+  PURE ELEMENTAL SUBROUTINE calc_nutrient_recycling(veg, target_cn_fine_root, target_np_fine_root, growing_season)
 
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_veg_constants,         ONLY: tau_nutrient_recycling, tau_labile
@@ -96,13 +101,14 @@ CONTAINS
     TYPE(t_veg_memory), INTENT(inout) :: veg                      !< veg process memory
     REAL(wp),           INTENT(in)    :: target_cn_fine_root      !< target C:N of fine_roots
     REAL(wp),           INTENT(in)    :: target_np_fine_root      !< target N:P of fine_roots 
+    LOGICAL,            INTENT(in)    :: growing_season           !< 
     ! 0.2 Local
     REAL(wp)                          :: labile_dn15              ! labile pools 15N to N molar mixing ratio
     REAL(wp)                          :: scal                     ! helper variable
     REAL(wp)                          :: recycling_leaf, &        ! more helpers1
                                          recycling_fine_root      ! more helpers2
 
-    IF(veg%growing_season%ptr)THEN 
+    IF(growing_season)THEN 
        !> 1.0 replace overturning N from leaves and roots by new N from the labile pool using the target C:N
        !!
        recycling_leaf      = ( veg%pool%leaf%nitrogen%ptr - & 

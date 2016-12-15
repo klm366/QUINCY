@@ -85,9 +85,9 @@ CONTAINS
                         veg%mean_leaf_age%ptr                   , &
                         veg%gpp_tlabile_mavg%ptr                , &
                         veg%maint_respiration_tlabile_mavg%ptr  , &
-                        veg%growing_season%ptr                  , &
-                        veg%nd_dormance%ptr                     , &
-                        veg%gdd%ptr)
+                        pheno%growing_season%ptr                , &
+                        pheno%nd_dormance%ptr                   , &
+                        pheno%gdd%ptr)
 
   END SUBROUTINE update_phenology 
 

@@ -15,9 +15,8 @@ MODULE mo_veg_memory_class
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d         , &
-                                       t_jsb_var_logical2d                        , &                 ! *slmjsb4
                                        t_jsb_struct, t_jsb_n_struct               , &                 ! *slmjsb4
-                                       t_jsb_var_real1d, t_jsb_var_logical1d                          ! *slmtemp
+                                       t_jsb_var_real1d                                               ! *slmtemp
 
   USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later    *slmtemp
 
@@ -150,8 +149,7 @@ MODULE mo_veg_memory_class
 ! *slmtemp  --> 2D
     !> variables
     !! 
-    ! logical
-    TYPE(t_jsb_var_logical1d)       :: growing_season     !< logical to identify whether the plant is in the growing season or not
+
     ! basic plant
     TYPE(t_jsb_var_real1d)          :: &   
                                     height            , &            !< plant height in m
@@ -167,8 +165,6 @@ MODULE mo_veg_memory_class
                                     dphi              , &            !< plant-soil water potential gradient (MPa)
                                     growth_req_n      , &            !< moles N required for a unit of C growth under current allocation fractions 
                                     growth_req_p      , &            !< moles P required for a unit of N growth under current allocation fractions 
-                                    gdd               , &            !< growing degree days above 5°C
-                                    nd_dormance       , &            !< number of days since last growing season 
                                     leaf_cn_direction , &            !< indicates direction of change in leaf CN ratio to maximise NPP
                                     apar              , &            !< ..
                                     target_lai        , &            !< LAI implied from sap wood area
@@ -1379,17 +1375,14 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
 
-!    IF (.NOT. ASSOCIATED(mem%growing_season%ptr)) THEN
-    IF (.NOT. ALLOCATED(mem%growing_season%ptr)) THEN
+!    IF (.NOT. ASSOCIATED(mem%height%ptr)) THEN
+    IF (.NOT. ALLOCATED(mem%height%ptr)) THEN
 
       !> add variables to veg memory veg\%VAR
       !! 
       !! slm_add_var -> slm_add_var_list_element_r1d    *slmtemp 1D -> 2D
       !!                slm_add_var_list_element_l1d
       !!  
-      CALL slm_add_var(mem, 'growing_season', mem%growing_season, &
-            initval_r=.TRUE.) ! initvalue
-  
       CALL slm_add_var(mem, 'height', mem%height, &
             initval_r=0.0_wp) ! initvalue
   
@@ -1428,12 +1421,6 @@ CONTAINS
   
       CALL slm_add_var(mem, 'growth_req_p', mem%growth_req_p, &
             initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'gdd', mem%gdd, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'nd_dormance', mem%nd_dormance, &
-            initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'leaf_cn_direction', mem%leaf_cn_direction, &
             initval_r=1.0_wp) ! initvalue
@@ -1503,16 +1490,16 @@ CONTAINS
   
       CALL slm_add_var(mem, 'cumm_lai_cl', mem%cumm_lai_cl, &
             initval_r=0.0_wp) ! initvalue
- 
+  
       CALL slm_add_var(mem, 'maint_respiration_pot', mem%maint_respiration_pot, &
             initval_r=0.0_wp) ! initvalue
-     
+  
       CALL slm_add_var(mem, 'maint_respiration', mem%maint_respiration, &
             initval_r=0.0_wp) ! initvalue
-    
+  
       CALL slm_add_var(mem, 'maint_respiration_c13', mem%maint_respiration_c13, &
             initval_r=0.0_wp) ! initvalue
- 
+  
       CALL slm_add_var(mem, 'maint_respiration_c14', mem%maint_respiration_c14, &
             initval_r=0.0_wp) ! initvalue
   

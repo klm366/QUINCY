@@ -14,7 +14,9 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d         , &
+                                       t_jsb_var_logical2d                        , &                 ! *slmjsb4
+                                       t_jsb_var_real1d, t_jsb_var_logical1d                          ! *slmtemp
 
   USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later  *slmtemp
 
@@ -33,8 +35,15 @@ MODULE mo_pheno_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_pheno_memory
 
-    TYPE(t_jsb_var_real1d)    :: &
-                              test_pheno  !< test !
+
+    ! logical
+    TYPE(t_jsb_var_logical1d)       :: &
+                                    growing_season          !< logical to identify whether the plant is in the growing season or not
+
+
+    TYPE(t_jsb_var_real1d)          :: &
+                                    gdd                 , & !< growing degree days above 5°C
+                                    nd_dormance             !< number of days since last growing season 
 
 
   CONTAINS
@@ -84,14 +93,22 @@ CONTAINS
 !    surface => Get_vgrid('surface')
 !    canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ALLOCATED(mem%test_pheno%ptr)) THEN
+    IF (.NOT. ALLOCATED(mem%growing_season%ptr)) THEN
 
       !> add variables to pheno memory pheno\%VAR
       !! 
       !! slm_add_var -> slm_add_var_list_element_r1d    *slmtemp 1D -> 2D
       !!  
-      CALL slm_add_var(mem, 'test_pheno', mem%test_pheno, &
-            initval_r=0.0_wp)     ! initvalue 
+      CALL slm_add_var(mem, 'growing_season', mem%growing_season, &
+            initval_r=.TRUE.) ! initvalue
+
+      CALL slm_add_var(mem, 'gdd', mem%gdd, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'nd_dormance', mem%nd_dormance, &
+            initval_r=1.0_wp) ! initvalue
+
+
 
 
     END IF

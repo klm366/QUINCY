@@ -50,6 +50,7 @@ CONTAINS
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
 
     IMPLICIT NONE
 
@@ -65,8 +66,10 @@ CONTAINS
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
+    TYPE(t_pheno_memory),    POINTER :: pheno       ! local pointer to pheno__mem for SLM usability
     REAL(wp), POINTER                :: swpar_srf_down  ! light at surface level
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: q_air
@@ -76,16 +79,13 @@ CONTAINS
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
-!      TYPE IS(t_atm2land_memory)
-!        atm2land__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(VEG_)%p)
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
-    assimi => assimi__mem 
-    veg => veg__mem 
+    dsl4jsb_Get_memory(PHENO_)
+
+    assimi  => assimi__mem 
+    veg     => veg__mem 
+    pheno   => pheno__mem  
+
+    !< @todo shared_update_time_averages pass atm2land as argument to below subroutine calls
     swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
     t_air             => atm2land__mem%t_air%ptr
     q_air             => atm2land__mem%q_air%ptr
@@ -105,7 +105,7 @@ CONTAINS
 
     !> 2.0 moving averages
     !! 
-    CALL calc_moving_averages(lctlib, assimi, veg, t_air, press_srf, co2_mixing_ratio, ga)
+    CALL calc_moving_averages(lctlib, assimi, veg, pheno, t_air, press_srf, co2_mixing_ratio, ga)
 
 
 
@@ -301,25 +301,27 @@ CONTAINS
   !! 
   !! variable-specific averaging period, previous to the current timestep
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_moving_averages(lctlib, assimi, veg, t_air, press_srf, co2_mixing_ratio, ga)
+  SUBROUTINE calc_moving_averages(lctlib, assimi, veg, pheno, t_air, press_srf, co2_mixing_ratio, ga)
 
     USE mo_shared_constants     ! moving average period lengths are defined there as REAL(wp),PARAMETER :: mavg_period_...
 
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_lctlib_element),INTENT(in)   :: lctlib             !< land-cover-type library - parameters for one pft
-    TYPE(t_assimi_memory), INTENT(inout)  :: assimi           !< assimi memory
-    TYPE(t_veg_memory), INTENT(inout)   :: veg                !< veg memory
-    REAL(wp), INTENT(in)                :: t_air              !< air temperature ?
-    REAL(wp), INTENT(in)                :: press_srf          !< air pressure at surface level ?
-    REAL(wp), INTENT(in)                :: co2_mixing_ratio   !< .. ?
-    REAL(wp), INTENT(in)                :: ga                 !< aerodynamic resistance
+    TYPE(t_lctlib_element), INTENT(in)      :: lctlib             !< land-cover-type library - parameters for one pft
+    TYPE(t_assimi_memory),  INTENT(inout)   :: assimi             !< assimi memory
+    TYPE(t_veg_memory),     INTENT(inout)   :: veg                !< veg memory
+    TYPE(t_pheno_memory),   INTENT(inout)   :: pheno              !< pheno memory
+    REAL(wp), INTENT(in)                    :: t_air              !< air temperature ?
+    REAL(wp), INTENT(in)                    :: press_srf          !< air pressure at surface level ?
+    REAL(wp), INTENT(in)                    :: co2_mixing_ratio   !< .. ?
+    REAL(wp), INTENT(in)                    :: ga                 !< aerodynamic resistance
     ! 0.2 Local
-    REAl(wp)                            :: hlp
+    REAl(wp)                                :: hlp
 
 
     !> 1.0
@@ -348,7 +350,7 @@ CONTAINS
     veg%demand_uptake_p_tuptake_mavg%ptr     = calc_mavg(veg%demand_uptake_p_tuptake_mavg%ptr, veg%f_p_demand%ptr, &
                                                      mavg_period_tuptake, do_calc=(veg%pool%fine_root%carbon%ptr > eps8))
     veg%cost_n_fixation_tuptake_mavg%ptr     = calc_mavg(veg%cost_n_fixation_tuptake_mavg%ptr, veg%cost_n_fixation%ptr, &
-                                                     mavg_period_tuptake, do_calc=veg%growing_season%ptr) 
+                                                     mavg_period_tuptake, do_calc=pheno%growing_season%ptr) 
     veg%growth_req_n_tuptake_mavg%ptr        = calc_mavg(veg%growth_req_n_tuptake_mavg%ptr, veg%growth_req_n%ptr, &
                                                      mavg_period_tuptake, do_calc=(veg%growth_req_n%ptr > eps8))
     veg%growth_req_p_tuptake_mavg%ptr        = calc_mavg(veg%growth_req_p_tuptake_mavg%ptr, veg%growth_req_p%ptr, &
@@ -407,32 +409,32 @@ CONTAINS
     !> 1.6 time-scale of plant allocation calculation (veg process)
     !!
     veg%npp_talloc_mavg%ptr                  = calc_mavg(veg%npp_talloc_mavg%ptr, veg%npp%ptr, &
-                                                      mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%unit_npp_talloc_mavg%ptr             = calc_mavg(veg%unit_npp_talloc_mavg%ptr, veg%unit_npp%ptr, &
-                                                      mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%transpiration_talloc_mavg%ptr        = calc_mavg(veg%transpiration_talloc_mavg%ptr, veg%transpiration%ptr, &
-                                                      mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%unit_transpiration_talloc_mavg%ptr   = calc_mavg(veg%unit_transpiration_talloc_mavg%ptr, veg%unit_transpiration%ptr, &
-                                                      mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%dphi_talloc_mavg%ptr                 = calc_mavg(veg%dphi_talloc_mavg%ptr, veg%dphi%ptr, &
-                                                      mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%unit_uptake_n_act_talloc_mavg%ptr    = calc_mavg(veg%unit_uptake_n_act_talloc_mavg%ptr, veg%unit_uptake_n_act%ptr, &
-                                                      mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%unit_uptake_p_act_talloc_mavg%ptr    = calc_mavg(veg%unit_uptake_p_act_talloc_mavg%ptr, veg%unit_uptake_p_act%ptr, &
-                                                      mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%labile_carbon_talloc_mavg%ptr        = calc_mavg(veg%labile_carbon_talloc_mavg%ptr, veg%pool%labile%carbon%ptr, & 
-                                                      mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%labile_nitrogen_talloc_mavg%ptr      = calc_mavg(veg%labile_nitrogen_talloc_mavg%ptr, veg%pool%labile%nitrogen%ptr, & 
-                                                      mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%labile_phosphorus_talloc_mavg%ptr    = calc_mavg(veg%labile_phosphorus_talloc_mavg%ptr, veg%pool%labile%phosphorus%ptr, & 
-                                                      mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     IF (veg%growth_req_n%ptr > 0._wp)THEN
        hlp = 1._wp/veg%growth_req_n%ptr
     ELSE
        hlp=0._wp
     ENDIF
     veg%growth_cn_talloc_mavg%ptr  = calc_mavg(veg%growth_cn_talloc_mavg%ptr, hlp, &
-                                            mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                            mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     
     IF (veg%growth_req_n%ptr > 0._wp .AND. veg%growth_req_p%ptr > 0._wp)THEN
        hlp = 1._wp/(veg%growth_req_n%ptr * veg%growth_req_p%ptr)
@@ -440,7 +442,7 @@ CONTAINS
        hlp=0._wp
     ENDIF
     veg%growth_cp_talloc_mavg%ptr  = calc_mavg(veg%growth_cp_talloc_mavg%ptr, hlp, &
-                                            mavg_period_talloc, do_calc=veg%growing_season%ptr)
+                                            mavg_period_talloc, do_calc=pheno%growing_season%ptr)
 
     !> 1.7 averages at the time-scale of root life-time
     !!
@@ -454,13 +456,13 @@ CONTAINS
                                                        (veg%pool%fine_root%carbon%ptr > eps8), & 
                                                avg_period_unit='year')
     veg%unit_npp_troot_mavg%ptr       = calc_mavg(veg%unit_npp_troot_mavg%ptr, veg%unit_npp%ptr, lctlib%tau_fine_root, &
-                                               do_calc=veg%growing_season%ptr, avg_period_unit='year') 
+                                               do_calc=pheno%growing_season%ptr, avg_period_unit='year') 
     veg%unit_uptake_n_pot_troot_mavg%ptr  = calc_mavg(veg%unit_uptake_n_pot_troot_mavg%ptr, veg%unit_uptake_n_pot%ptr, lctlib%tau_fine_root, &
-                                               do_calc=veg%growing_season%ptr, avg_period_unit='year')
+                                               do_calc=pheno%growing_season%ptr, avg_period_unit='year')
     veg%unit_uptake_p_pot_troot_mavg%ptr  = calc_mavg(veg%unit_uptake_p_pot_troot_mavg%ptr, veg%unit_uptake_p_pot%ptr, lctlib%tau_fine_root, &
-                                               do_calc=veg%growing_season%ptr, avg_period_unit='year')
+                                               do_calc=pheno%growing_season%ptr, avg_period_unit='year')
     veg%fmaint_rate_troot_mavg%ptr    = calc_mavg(veg%fmaint_rate_troot_mavg%ptr, veg%fmaint_rate%ptr, lctlib%tau_fine_root, &
-                                               do_calc=veg%growing_season%ptr, avg_period_unit='year') 
+                                               do_calc=pheno%growing_season%ptr, avg_period_unit='year') 
 
     !> 1.8 averages at the vegetation dynamics time-scale 
     veg%an_boc_tvegdyn_mavg%ptr   = calc_mavg(veg%an_boc_tvegdyn_mavg%ptr, assimi%net_assimilation_boc%ptr, mavg_period_tvegdyn, &

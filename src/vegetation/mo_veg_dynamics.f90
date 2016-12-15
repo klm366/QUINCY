@@ -41,7 +41,7 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-
+    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -51,13 +51,17 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER           :: lctlib     !< land-cover-type library - parameter across pft's
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
-    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
-    dsl4jsb_Get_memory(VEG_)                          ! veg__mem => veg_memory
+    dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
+    TYPE(t_veg_memory),     POINTER           :: veg      ! local pointer to veg__mem for SLM usability
+    TYPE(t_pheno_memory),   POINTER           :: pheno    ! local pointer to pheno__mem for SLM usability
+    dsl4jsb_Get_memory(VEG_)                              ! veg__mem => veg_memory
+    dsl4jsb_Get_memory(PHENO_)                            ! veg__mem => veg_memory
 
-    veg => veg__mem 
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    veg     => veg__mem 
+    pheno   => pheno__mem  
+    model   => Get_model(tile%owner_model_id)
+    lctlib  => model%lctlib(tile%lcts%lib_id)
 
 
     !> 1.0 Calculate mortality rate and veg\%litterfall
@@ -76,15 +80,15 @@ CONTAINS
 
       !> 2.1 Calculate establishment_rate and veg\%establishment
       !! 
-      CALL calc_veg_establishment(lctlib                        , & ! in
-                                 tile%vegsoil%theta              , &
-                                 veg%growing_season%ptr       , &
-                                 veg%t_air_week_mavg%ptr      , &
-                                 veg%leaf_nitrogen_cl%ptr(:,1)       , &
-                                 veg%fn_chl_cl%ptr(:,1)      , &
-                                 veg%lai_cl%ptr(:,1)          , &
-                                 veg%pool%seed_bed            , &
-                                 veg%establishment )              ! out
+      CALL calc_veg_establishment(lctlib                          , & ! in
+                                 tile%vegsoil%theta               , &
+                                 pheno%growing_season%ptr         , &
+                                 veg%t_air_week_mavg%ptr          , &
+                                 veg%leaf_nitrogen_cl%ptr(:,1)    , &
+                                 veg%fn_chl_cl%ptr(:,1)           , &
+                                 veg%lai_cl%ptr(:,1)              , &
+                                 veg%pool%seed_bed                , &
+                                 veg%establishment )                  ! out
 
       !> 2.2 Calculate change in individual density from mortality and establishment
       !! 

@@ -380,6 +380,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -400,21 +401,21 @@ CONTAINS
                                         dC13fruit,dC13labile,dC13reserve,dC13seed_bed
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
-    dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
-    TYPE(t_assimi_memory), POINTER      :: assimi     ! local pointer to veg__mem for SLM usability
-    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Def_memory(ASSIMI_)                           ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
+    dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
+    TYPE(t_assimi_memory),        POINTER     :: assimi   ! local pointer to veg__mem for SLM usability
+    TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
+    TYPE(t_pheno_memory),         POINTER     :: pheno    ! local pointer to pheno__mem for SLM usability
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
-    assimi => assimi__mem 
-    veg => veg__mem 
+    dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
 
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    assimi  => assimi__mem 
+    veg     => veg__mem 
+    pheno   => pheno__mem  
+    model   => Get_model(tile%owner_model_id)
+    lctlib  => model%lctlib(tile%lcts%lib_id)
 
     !  bi-directional pointer, though, bi-directionality is not necessary here
     vegsoil  => tile%vegsoil
@@ -516,7 +517,7 @@ CONTAINS
           bcf = 0._wp
        ENDIF
        ! transition from bool to 0/1 for growing season
-       IF (veg%growing_season%ptr) THEN
+       IF (pheno%growing_season%ptr) THEN
          growing_season_float = 1.0_wp
          ELSE
          growing_season_float = 0.0_wp
