@@ -206,6 +206,7 @@ CONTAINS
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_shared_constants
     USE mo_veg_constants
+    USE mo_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
 

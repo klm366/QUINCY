@@ -10,7 +10,7 @@ mo_update_phenology.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
-  mo_veg_constants.o \
+  mo_pheno_constants.o \
   mo_shared_constants.o \
   mo_base_constants.o \
   mo_atm2land_memory_class.o \

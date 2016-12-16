@@ -98,7 +98,6 @@ MODULE mo_veg_constants
   REAL(wp), SAVE :: & 
       min_lai  ,                 & !< minimum LAI beyond which all leaves are shed
       target_lai_max  ,          & !< maximum LAI target for reserve use calculations 
-      min_leaf_age  ,            & !< minimum leaf age before senescence is permitted (days) 
       max_leaf_shedding_rate       !< maximum rate of leaf shedding (1/days) 
 
   ! vegetation dynamics
@@ -154,11 +153,7 @@ MODULE mo_veg_constants
       itree         = 1  ,     &
       igrass        = 2  ,     &
       ic3phot       = 1  ,     &
-      ic4phot       = 2  ,     &
-      ievergreen    = 1  ,     &
-      iraingreen    = 2  ,     &
-      isummergreen  = 3  ,     &
-      iperennial    = 4
+      ic4phot       = 2  
 
 
 CONTAINS
@@ -224,7 +219,6 @@ CONTAINS
   ! parameters used for phenology calculations
       min_lai                     = 0.1_wp
       target_lai_max              = 5.0_wp 
-      min_leaf_age                = 10.0_wp 
       max_leaf_shedding_rate      = 0.2_wp
 
   ! vegetation dynamics

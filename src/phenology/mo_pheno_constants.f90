@@ -19,8 +19,17 @@ MODULE mo_pheno_constants
 
   !< Phenology constants (parameter)
   !! 
-  REAL(wp), SAVE :: &
-      my_pheno_const  ! replace!
+  REAL(wp), SAVE ::               &
+      min_leaf_age                    !< minimum leaf age before senescence is permitted (days) 
+      
+
+  !< some useful numbers for easy identification of photosynthetic pathways and growth forms
+  !! need to be parameters (i.e. constant across model runtime)
+  INTEGER, PARAMETER ::           &
+      ievergreen    = 1         , &
+      iraingreen    = 2         , &
+      isummergreen  = 3         , &
+      iperennial    = 4
 
 
 CONTAINS
@@ -31,10 +40,10 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_pheno_constants
 
-
     IMPLICIT NONE
 
-    my_pheno_const = 0.1_wp   ! replace!
+
+    min_leaf_age                = 10.0_wp 
 
 
   END SUBROUTINE init_pheno_constants

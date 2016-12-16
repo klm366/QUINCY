@@ -116,8 +116,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_base_constants,          ONLY: dtime, one_day
     USE mo_shared_constants,        ONLY: Tzero
-    USE mo_veg_constants,           ONLY: ievergreen,iraingreen,isummergreen,iperennial, & 
-                                      min_leaf_age
+    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial, min_leaf_age
 
     IMPLICIT NONE
 

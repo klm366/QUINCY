@@ -67,6 +67,7 @@ mo_veg_turnover.o: \
   mo_shared_constants.o \
   mo_veg_constants.o \
   mo_veg_memory_class.o \
+  mo_pheno_constants.o \
   mo_pheno_memory_class.o
 
 mo_veg_output.o: \

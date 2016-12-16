@@ -19,8 +19,8 @@ MODULE mo_assimi_update_canopy_fluxes
   USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
   USE mo_assimi_constants
   USE mo_assimi_config_class,   ONLY: assimi_config
-  USE mo_veg_constants,         ONLY: itree, igrass, ic3phot, ic4phot, ievergreen, iraingreen, isummergreen, iperennial, &
-                                      fmaint_rate_base 
+  USE mo_veg_constants,         ONLY: itree, igrass, ic3phot, ic4phot, fmaint_rate_base 
+
 
   ! Use of process memories
   dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
