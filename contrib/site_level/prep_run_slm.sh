@@ -63,6 +63,7 @@ output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_
 output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
 
 # forcing input
+flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
 soil_awc_prescribe=300.0        # float !
 useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=100.0      # float !
@@ -267,6 +268,7 @@ validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optima
 validateUserConfigValues "$flag_heterogeneous_canopy" "$validateFlags" "flag_heterogeneous_canopy"
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
+validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
 validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecificAWC"
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
 validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSimCRUNCEPvsGFDB"
@@ -640,6 +642,12 @@ if [ $flag_heterogeneous_canopy == T ]
     changeNamelistValue flag_heterogeneous_canopy ".TRUE."
   else
     changeNamelistValue flag_heterogeneous_canopy ".FALSE."
+fi
+if [ $flag_oneYearForcing == T ]
+  then
+    changeNamelistValue flag_climate_forcing_one_year ".TRUE."
+  else
+    changeNamelistValue flag_climate_forcing_one_year ".FALSE."
 fi
 changeNamelistValue simulation_length_number "$simulation_length_number"
 changeNamelistValue output_interval_pool "$output_interval_pool"

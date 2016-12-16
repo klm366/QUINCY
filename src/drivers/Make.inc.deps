@@ -35,6 +35,7 @@ mo_land_model_interface.o: \
 mo_atmland_forcing.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_base_config_class.o \
   mo_base_memory.o \
   mo_shared_isotope.o \
   mo_atmland_util.o \

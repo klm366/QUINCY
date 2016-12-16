@@ -35,6 +35,7 @@ MODULE mo_base_config_class
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
     LOGICAL           :: set_parameter_values_from_file
+    LOGICAL           :: flag_climate_forcing_one_year
     ! GRID_CTL
     REAL(wp)          :: lat, lon                         !< latitude longitude currently stored in mo_base_memory:t_slm_grid
   CONTAINS
@@ -69,6 +70,7 @@ CONTAINS
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
     LOGICAL           :: set_parameter_values_from_file
+    LOGICAL           :: flag_climate_forcing_one_year
     ! GRID_CTL
     REAL(wp)          :: latitude
     REAL(wp)          :: longitude
@@ -81,7 +83,8 @@ CONTAINS
         slm_model_name                        , &
         fluxnet_output                        , &
         fluxnet_output_length                 , &
-        set_parameter_values_from_file
+        set_parameter_values_from_file        , &
+        flag_climate_forcing_one_year
 
     NAMELIST /grid_ctl/                       &  
         latitude                              , &
@@ -105,6 +108,7 @@ CONTAINS
     fluxnet_output                    = .FALSE.     ! .TRUE. .FALSE.
     fluxnet_output_length             = 2
     set_parameter_values_from_file    = .FALSE.     ! .TRUE. .FALSE.
+    flag_climate_forcing_one_year     = .FALSE.     ! .TRUE. .FALSE.
     ! GRID_CTL
     latitude                          = 50.91       ! about the MPI-BGC Jena
     longitude                         = 11.56       ! about the MPI-BGC Jena
@@ -133,6 +137,7 @@ CONTAINS
     config%fluxnet_output                     = fluxnet_output
     config%fluxnet_output_length              = fluxnet_output_length
     config%set_parameter_values_from_file     = set_parameter_values_from_file
+    config%flag_climate_forcing_one_year      = flag_climate_forcing_one_year
     ! GRID_CTL
     config%lat                                = latitude
     config%lon                                = longitude

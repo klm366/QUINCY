@@ -10,7 +10,7 @@
 !!
 MODULE mo_atmland_forcing
 
-  USE mo_kind
+  USE mo_kind,                  ONLY: wp, eps8
   USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
   USE mo_atmland_util,          ONLY: update_orbital_parameters, calc_solar_angle, calc_sw_fdiffuse, calc_spec_humidity_sat
   USE mo_atmland_constants
@@ -74,7 +74,9 @@ CONTAINS
                                   q_bcoef_ice          &  ! out
                                   &  )
 
-    USE mo_base_memory,   ONLY: grid  ! used for calc_solar_angle()
+    USE mo_base_memory,           ONLY: grid  ! used for calc_solar_angle()
+    USE mo_base_config_class,     ONLY: base_config
+
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp)          , INTENT(in)  :: time     !< current time (not timestep !)
@@ -115,15 +117,18 @@ CONTAINS
                                       q_acoef_ice        , &    !< ..
                                       q_bcoef_ice               !< ..
     ! 0.2 Local
-    INTEGER  :: stat          ! ..
+    INTEGER  :: stat          ! status of I/O (https://software.intel.com/en-us/node/691976)
     INTEGER  :: lun           ! logical unit number for file input stream, see '2.0 read data'
     REAL(wp) :: sw_toa_down   ! potential radiation at the top of the atmosphere
     REAL(wp) :: year          ! dummy variable
-    REAL(wp) :: day           ! dummy variable
     REAL(wp) :: hour          ! dummy variable
     REAL(wp) :: nhx           ! dummy variable for nhx_srf_down
     REAL(wp) :: nox           ! dummy variable for noy_srf_down
     REAL(wp) :: hlp1          ! dummy variable 
+    REAL(wp), SAVE :: day           ! read input dummy variable - save value
+    REAL(wp)       :: doy_old, &    ! check for new year (column 2 in input file would change from 365 -> 1)
+                      doy_new
+    doy_old = 0.0_wp
 
     ! give atm2land variables a value to avoid compiler warning #6843: A dummy argument with an explicit INTENT(OUT) declaration is not given an explicit value
     t_air           = 0.0_wp
@@ -168,16 +173,37 @@ CONTAINS
     !! 'declination' is calculated as output paramater, but not needed here
     CALL update_orbital_parameters(time,declination,sw_toa_down)  ! mo_atmland_util
 
+
     !> 2.0 read data
     !!
-    !! the read statement, by default, reads a list of values in a line and then advances to the beginning of the next line
+    !! read line by line from file until file end and start again at beginning of file \n
+    !! if base_config%flag_climate_forcing_one_year = TRUE then 
+    !!        read only the data of the 1st year of climate forcing and start again at beginning of file
+
+    ! day of the year: previous time step
+    doy_old = day 
+
+    ! the read statement, by default a list of values in a line is read and then advanced to the beginning of the next line
     lun=9
     READ(lun,*, IOSTAT=stat) year, day, hour, & 
                      swvis_srf_down,   lw_srf_down, t_air,    q_air,    &
                      press_srf,        rain,        snow,     wind_air, &
                      co2_mixing_ratio,                                                             &
                      nhx, nox
-    IF(IS_IOSTAT_END(stat)) THEN  ! if end of file (IS_IOSTAT_END(stat) == Test for end-of-file value)
+
+    ! day of the year: current time step
+    doy_new = day 
+    
+    ! if this flag is set TRUE, check whether the current time step is a new year, if so 
+    ! set stat = -1 to indicate "end of file" which invokes the re-reading of the climate forcing input file at line 1
+    IF(base_config%flag_climate_forcing_one_year) THEN
+      IF( ABS(doy_old - doy_new - 364.0_wp) < eps8 ) THEN
+        stat = -1
+      END IF
+    END IF
+
+    ! if end of file (IS_IOSTAT_END(stat) == Test for end-of-file value)
+    IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy
       REWIND(lun)
       CALL read_forcing_header

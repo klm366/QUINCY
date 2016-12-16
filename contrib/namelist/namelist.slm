@@ -52,5 +52,7 @@
   fluxnet_output_length=2
   ! set parameter values from file [FALSE TRUE]
   set_parameter_values_from_file=.FALSE.
+  ! use only the 1st year of climate input [FALSE TRUE]
+  flag_climate_forcing_one_year=.FALSE.
 /
 
