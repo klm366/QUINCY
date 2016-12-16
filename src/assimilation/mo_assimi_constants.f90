@@ -99,6 +99,13 @@ MODULE mo_assimi_constants
       k1_fn_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
       kfn_chl              !< parameter to describe the varying fraction of N in chlorophyll through the canopy
 
+
+  ! some useful numbers for easy identification of photosynthetic pathways and growth forms
+  ! need to be parameters (i.e. constant across model runtime)
+      INTEGER, PARAMETER ::    &
+      ic3phot       = 1  ,     &
+      ic4phot       = 2  
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------

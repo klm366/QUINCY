@@ -86,9 +86,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_slm_plant(tile)
 
-    USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4
+    USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14
-    USE mo_veg_constants,                   ONLY: ic3phot, fresp_growth
+    USE mo_veg_constants,                   ONLY: fresp_growth
     USE mo_shared_isotope,                  ONLY: calc_fractionation 
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps 
 

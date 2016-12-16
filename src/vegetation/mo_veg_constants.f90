@@ -151,9 +151,7 @@ MODULE mo_veg_constants
   ! need to be parameters (i.e. constant across model runtime)
       INTEGER, PARAMETER ::    &
       itree         = 1  ,     &
-      igrass        = 2  ,     &
-      ic3phot       = 1  ,     &
-      ic4phot       = 2  
+      igrass        = 2  
 
 
 CONTAINS

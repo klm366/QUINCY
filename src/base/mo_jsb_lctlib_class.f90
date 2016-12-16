@@ -107,6 +107,7 @@ CONTAINS
     USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
     USE mo_atmland_constants
     USE mo_veg_constants
+    USE mo_assimi_constants,        ONLY: ic3phot, ic4phot
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
     USE mo_assimi_config_class,     ONLY: assimi_config
 
