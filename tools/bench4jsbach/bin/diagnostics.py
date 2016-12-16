@@ -359,6 +359,41 @@ class Diagnostics ( object ):
                     cmd = ["python", executable ] +  arglist
                     subprocessing ( cmd, shell_arg = False, stderr_arg = None )
 
+                    
+            elif p_dict [ 'nref' ] == "combined":
+                for can in self.experiments:
+                    if not can.B4J_iscan: continue
+
+                    arglist = [ "can_name:" + can.B4J_name, "canno:%d" % can.B4J_canno ]
+
+                    for classification_str in p_dict [ 'input_can' ]:
+                        arglist.append ( classification_str + ':' + can.B4J_index [ classification_str ])
+
+                    for ref in self.experiments:
+                        if not ref.B4J_isref:            continue
+                        if ref.B4J_name == can.B4J_name: continue
+
+                        arglist.append ( "ref%s:" % ( ref.B4J_refno )  + ref.B4J_name  )
+                       
+                        for key in input_list:
+                            classification_str =  "%s_ref%d" % ( key,  ref.B4J_refno )
+                            arglist.append ( classification_str + ':' + can.B4J_index [ classification_str ])
+                        
+                    for output_item, output_dict in p_dict.iteritems ():
+                        if not isinstance ( output_dict, configobj.Section ): continue
+                        classification_str = output_item
+                        can.B4J_index [ classification_str ] = self.path_template % { 
+                            'path'           : fielddict [ "graphics_path" ],
+                            'classification' : classification_str,
+                            'expname'        : can.B4J_name,
+                            'startdate'      : can.B4J_startyear,
+                            'enddate'        : can.B4J_endyear,
+                            'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
+                        arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
+
+                    cmd = ["python", executable ] +  arglist
+                    subprocessing ( cmd, shell_arg = False, stderr_arg = None )
+
             else:
                 print ( "ERROR: case '%s' not implemented yet." % p_dict [ 'nref' ])
                 sys.exit ( 1 )

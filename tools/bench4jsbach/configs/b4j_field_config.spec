@@ -28,7 +28,7 @@ suffix=string()				    # USER: output format's suffix
 [[__many__]]				    # USER: subsection <O>, <O>:= id of plot script
 exec=string()				    # USER: <O>: executable script to call in b4j run
 input=string_list
-nref=option('single','multiple','None')	    # USER: <O>: as indicated by plot: comparison with single or all reference experiments 
+nref=option('combined','single','multiple','None')	    # USER: <O>: as indicated by plot: comparison with single or all reference experiments 
 plot_title=string_list(default=None)	    # USER: <O>: title string for plot
 [[[__many__]]]				    # USER: <O>: id/infix for output file written by the script	    
 

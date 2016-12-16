@@ -13,6 +13,10 @@ import matplotlib.gridspec as gridspec
 import cartopy.crs as ccrs
 import numpy as np
 from pandas import DataFrame
+
+
+colorlist = [ 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w' ]
+
     
 def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan ):
     #from datetime import datetime
@@ -99,57 +103,93 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
     
     plt.savefig ( outpath ) 
     plt.close ()
+  
 
 
-def zon_plot ( title, varname, inpathlist, unit, legendlist, outpath, mono = False ):
-
-    colorlist = [ 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w' ]
-    nrefargs = len ( inpathlist )
-
-    # if legendlist:
-    #     assert len ( legendlist ) == nrefargs and \
-    #         len ( colorlist ) >= nrefargs
-
-    fig = plt.figure ()
-    ax = fig.gca()
-
-    if mono:
-        nrefargs = 1
-        
+def zon_plot ( varname, unit, title, inpathlist, legendlist, 
+               outpath = None, 
+               ax = None,
+               art = None,
+               mono = False ):  
+  
+    nrefargs = len ( inpathlist )   
+    
     for refarg_no in range ( nrefargs ):
         nc_fid = Dataset ( inpathlist [ refarg_no ])  
         lat = nc_fid.variables [ 'lat'][:]
         vardat_ref = nc_fid.variables [ varname ][ : ] 
         nc_fid.close ()
-        plt.plot ( lat, vardat_ref [ 0,:, 0 ],
+        ax.plot ( lat, vardat_ref [ 0,:, 0 ],
                    colorlist [ refarg_no ],
-                   label = legendlist [ refarg_no ] if legendlist else None )
-        plt.axhline ( vardat_ref [ 0,:, 0 ].mean(), color = colorlist [ refarg_no ])
-    
-    ax.set_xticks ( np.arange ( -90, 90, 15 ))
+                   label = legendlist [ refarg_no ] if mono == False else None )
+        ax.axhline ( vardat_ref [ 0,:, 0 ].mean(), color = colorlist [ refarg_no ])   
+
+        
+    ax.set_xticks ( np.arange ( -90, 91, 15 ))
     ax.yaxis.set_label_coords ( -.09, .88 ) 
-    plt.ylabel ( "[ %s ]" % unit,
-                 rotation = 90,
-                 fontsize = 12 )
-    plt.xlabel ( "latitude [ deg ]",
-                 position = ( 0.9, 0 ),
-                 fontsize = 12 )
-    plt.title ( title, y = 1.04 )
-    plt.grid ( 'on' )
-    lgd = plt.legend ( numpoints = 1,  
-                       loc = 2,
-                       prop = { 'size' : 10 },                
-                       bbox_to_anchor = ( 1.05, 1 ) if legendlist else None )
-                       
-                       #handlelength = 0.5,
-                       #borderpad = 0.8,
-                       #labelspacing = 0.8 ) 
-    plt.savefig ( outpath,
-                  dpi = 100,
-                  bbox_extra_artists = ( lgd, ),
-                  bbox_inches = 'tight' if legendlist else None  )
-    plt.close ()   
+    ax.set_ylabel ( "[ %s ]" % unit,
+                    rotation = 90,
+                    fontsize = 12 )
+    ax.set_xlabel ( "latitude [ deg ]",
+                    position = ( 0.9, 0 ),
+                    fontsize = 12 )
+    ax.set_title ( title, y = 1.04, fontsize = 14 )
+    ax.grid ( 'on' )
+    lgd = ax.legend ( numpoints = 1,  
+                     loc = 2, 
+                     bbox_to_anchor = ( 1.05, 1 ) if mono == False else None,
+                     bbox_transform=ax.transAxes if mono == False else None )
+    if isinstance ( art, list ) and lgd: art.append ( lgd )
+
+
+def zon_plot_wrapper ( varname, unit, can_name, canno, suptitle,
+                       input_can, subtitle_can,
+                       input_delta, legend_delta, subtitle_delta,
+                       outpath ):
+
+    f = plt.figure ( figsize = ( 10, 15 ))
+    suptitle = f.suptitle ( suptitle, fontsize = 20, y = .96 )
+    show_can = True
+    supgrid = gridspec.GridSpec( 2 if show_can == True else 1, 1 ) 
+    art = []
+
+    ####### first subplot
+    subgrid = gridspec.GridSpecFromSubplotSpec ( 1, 1, subplot_spec = supgrid [ 0 ])
+    ax = plt.Subplot ( f, subgrid [ :, : ])
+    f.add_subplot ( ax )
     
+    # first subplot args
+    subtitle   = subtitle_can
+    inpathlist = [ input_can ]
+    legendlist = []
+
+    # first subplot call
+    zon_plot ( varname, unit, subtitle, inpathlist, legendlist, 
+               ax = ax,
+               art = art,
+               mono = True )
+    
+    ####### second subplot
+    subgrid = gridspec.GridSpecFromSubplotSpec (1, 1, subplot_spec = supgrid [ 1 ])
+    ax = plt.Subplot ( f, subgrid [ :, : ])
+    f.add_subplot ( ax ) 
+
+    # first subplot args
+    subtitle      = subtitle_delta
+    inpathlist = input_delta
+    legendlist = legend_delta
+
+    # first subplot call
+    zon_plot ( varname, unit, subtitle, inpathlist, legendlist, 
+               ax = ax,
+               art = art )
+
+    plt.savefig ( outpath,
+                  bbox_extra_artists = ( art [ 0 ], suptitle, ) if art else None,
+                  bbox_inches = 'tight' if art else None  )
+
+    plt.close () 
+
 
 def hist_plot ( alldat, unit, index, title, outpath ):
     
