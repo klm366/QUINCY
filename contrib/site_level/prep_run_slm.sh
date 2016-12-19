@@ -14,30 +14,37 @@
 
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
 experimentalID=""      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
-# select sites: FLUXNET or CRUNCEPv5
-siteDataSet="f"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
-# want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="F"          # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
-customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 slmModel="land"             # land, plant, soil are currently available
-# run only a single site? then provide a site name, else write: singleSiteName=""
-singleSiteName=""            # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet f/c; overwrites customSiteList
 
-## run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
+
+##>> sites <<###########################################################################################
+# select sites: FLUXNET or CRUNCEPv5
+siteDataSet="f"           # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
+# want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
+customSiteList="F"        # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
+customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
+# run only a single site? then provide a site name, else write: singleSiteName=""
+singleSiteName=""         # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet f/c; overwrites customSiteList
+
+
+##>> special runs <<####################################################################################
+# (1) run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
 specialFluxnetOutput="F"    # T (True) or F (False) [large caps]
 
-## compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
+# (2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # started by the cleanup_slm_hpc_run.sh using two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
 compareSimCRUNCEPvsGFDB="F"  # T (True) or F (False) [large caps] -> when "T" default go: siteDataSet="c", output_interval_..="daily", paramSensitivitySim="F"
 spinupLengthGFDB=300         # years of spin-up before output is saved
-## parameter sensitivity simulations
+
+# (3) parameter sensitivity simulations
 # you can run one site from your customSiteList (customSiteList is set to "T" automatically if paramSensitivitySim="T")
 # please provide the line number of the site you want to use in your "customSiteListFileName"
 paramSensitivitySim="F"         # T (True) or F (False) [large caps]
 paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
 
-## namelist.slm options ##
+
+##>> namelist.slm options <<############################################################################
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
 n_uptake_scheme="standard"      # prescribed standard optimal resistance
@@ -61,6 +68,7 @@ output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
 output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
+flag_litterfall_output="F"      # create additional output (veg%litterfall + some biophysics) used as input of the standalone soil model
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
@@ -68,7 +76,8 @@ soil_awc_prescribe=300.0        # float !
 useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=100.0      # float !
 
-## details about the HPC, if unsure stick with these default values ##
+
+##>> details about the HPC, if unsure stick with these default values <<################################
 queue="BTM"                  # available queues: all io BTM mpi_large
 fastNodes="F"                # if T only the nodes iof iog ioh ioi ioj are used (works only with queue BTM and io) | T (True) or F (False) [large caps]
 emailNotification="no"       # set either to yes or no (small caps)
@@ -268,6 +277,7 @@ validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optima
 validateUserConfigValues "$flag_heterogeneous_canopy" "$validateFlags" "flag_heterogeneous_canopy"
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
+validateUserConfigValues "$flag_litterfall_output" "$validateFlags" "flag_litterfall_output"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
 validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecificAWC"
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
@@ -648,6 +658,12 @@ if [ $flag_oneYearForcing == T ]
     changeNamelistValue flag_climate_forcing_one_year ".TRUE."
   else
     changeNamelistValue flag_climate_forcing_one_year ".FALSE."
+fi
+if [ $flag_litterfall_output == T ]
+  then
+    changeNamelistValue flag_litterfall_output ".TRUE."
+  else
+    changeNamelistValue flag_litterfall_output ".FALSE."
 fi
 changeNamelistValue simulation_length_number "$simulation_length_number"
 changeNamelistValue output_interval_pool "$output_interval_pool"

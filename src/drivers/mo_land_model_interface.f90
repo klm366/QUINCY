@@ -100,7 +100,7 @@ CONTAINS
     USE mo_base_config_class,             ONLY: base_config
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_atm2land, update_land2atm
-    USE mo_veg_output,                    ONLY: write_output_pool, write_output_flux
+    USE mo_veg_output,                    ONLY: write_output_pool, write_output_flux, write_output_litterfall_soilphysics
     USE mo_veg_util,                      ONLY: set_zero_vegetation_fluxes
 
     ! Process interfaces:
@@ -263,6 +263,13 @@ CONTAINS
     !! 
       CALL write_output_flux(tile, time_day, time_year, 1) ! 1 == itile 
 
+    !! output litterfall and biophysics: usually this would be output at each timstep
+    !! 
+    !! 
+      IF (base_config%flag_litterfall_output) THEN
+        CALL write_output_litterfall_soilphysics(tile, time_day, time_year, 1) ! 1 == itile 
+      END IF
+
     CASE('plant')
     !! plant --------------------------------------------------------------------------------------
     ! currently same as land !
@@ -297,6 +304,13 @@ CONTAINS
     !! 
     !! 
       CALL write_output_flux(tile, time_day, time_year, 1) ! 1 == itile 
+
+    !! output litterfall and biophysics: usually this would be output at each timstep
+    !! 
+    !! 
+      IF (base_config%flag_litterfall_output) THEN
+        CALL write_output_litterfall_soilphysics(tile, time_day, time_year, 1) ! 1 == itile 
+      END IF
 
     CASE('soil')
     !! soil ---------------------------------------------------------------------------------------

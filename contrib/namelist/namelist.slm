@@ -50,6 +50,8 @@
   fluxnet_output=.FALSE.
   ! length of forcing period [years] provided by data file
   fluxnet_output_length=2
+  ! output of the complete veg%litterfall pool plus some biophysic variables per timestep [FALSE TRUE]
+  flag_litterfall_output=.FALSE.
   ! set parameter values from file [FALSE TRUE]
   set_parameter_values_from_file=.FALSE.
   ! use only the 1st year of climate input [FALSE TRUE]

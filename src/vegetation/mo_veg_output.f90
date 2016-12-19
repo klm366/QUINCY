@@ -190,8 +190,8 @@ CONTAINS
 
     !> 1.0 write headers
     !!
-    !! lun of fluxes starts at a multiple of 100, plus 50
-    lun = (100 * itile) + 50
+    !! lun of fluxes starts at a multiple of 100, plus 30
+    lun = (100 * itile) + 30
     WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse'
     lun=lun+1   
     WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
@@ -207,11 +207,44 @@ CONTAINS
   END SUBROUTINE init_output_writing_flux
 
   !-----------------------------------------------------------------------------------------------------
+  !> Litterfall and Soilphysics: write column headers of output files
+  !! 
+  !! complete litterfall output (used as input for the soil model) \n
+  !! and some soilphysics variables
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_output_litterfall_soilphysics(itile)
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    INTEGER, INTENT(in) :: itile    !< number of current tile
+    ! 0.2 Local
+    INTEGER :: lun
+
+    !> 1.0 write headers
+    !!
+    !! lun of fluxes starts at a multiple of 100, plus 60
+    lun = (100 * itile) + 60
+    WRITE(lun,'(a)') 'Time t_air soil_moisture'
+    lun=lun+1   
+    WRITE(lun,'(10a)')  'Time ', &
+                        'leafC leafN leafP leafC13 leafC14 leafN15 ' , &
+                        'fine_rootC fine_rootN fine_rootP fine_rootC13 fine_rootC14 fine_rootN15 ' , &
+                        'coarse_rootC coarse_rootN coarse_rootP coarse_rootC13 coarse_rootC14 coarse_rootN15 ' , &
+                        'sap_woodC sap_woodN sap_woodP sap_woodC13 sap_woodC14 sap_woodN15 ' , &
+                        'heart_woodC heart_woodN heart_woodP heart_woodC13 heart_woodC14 heart_woodN15 ' , &
+                        'labileC labileN labileP labileC13 labileC14 labileN15 ' , &
+                        'reserveC reserveN reserveP reserveC13 reserveC14 reserveN15 ' , &
+                        'fruitC fruitN fruitP fruitC13 fruitC14 fruitN15 ' , &
+                        'seed_bedC seed_bedN seed_bedP seed_bedC13 seed_bedC14 seed_bedN15'
+  END SUBROUTINE init_output_litterfall_soilphysics
+
+
+  !-----------------------------------------------------------------------------------------------------
   !> Pools: open files and write column headers
   !! 
   !! open output files, define file names for pools, write column header names
   !! 
-  !! lun: start at 10, increase per tile by 10, and increase per file by 1
+  !! lun: start at 100 * itile
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE open_pool_output_files(itile)
 
@@ -286,6 +319,7 @@ CONTAINS
     !! 
     !! 
     CALL init_output_writing_pool(itile)
+
   END SUBROUTINE open_pool_output_files
 
   !-----------------------------------------------------------------------------------------------------
@@ -293,7 +327,7 @@ CONTAINS
   !! 
   !! open output files, define file names for pools, write column header names
   !! 
-  !! lun: start at 510, increase per tile by 10, and increase per file by 1
+  !! lun: start at 100 * itile + 30
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE open_flux_output_files(itile)
 
@@ -338,7 +372,7 @@ CONTAINS
     !> 2.2 define open() statements for file output
     !! 
     !! 
-    lun = (100 * itile) + 50
+    lun = (100 * itile) + 30
     fname = 'vegfluxC_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
@@ -361,7 +395,71 @@ CONTAINS
     !! 
     !! 
     CALL init_output_writing_flux(itile)
+
   END SUBROUTINE open_flux_output_files
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Litterfall and Soilphysics: open files and write column headers
+  !! 
+  !! open output files, define file names for pools, write column header names
+  !! 
+  !! lun: start at 100 * itile + 60
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE open_litterfall_soilphysics_output_files(itile)
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    INTEGER, INTENT(in) :: itile    !< number of current tile
+    ! 0.2 Local
+    INTEGER        :: lun           ! logical unit number
+    CHARACTER(100) :: fname         ! filename
+    CHARACTER(30)  :: opt           ! option according to namlist parameters
+    CHARACTER(5)   :: char_itile    ! itile transferred into a character -> 6 digits == max number of itile is 99999
+
+
+    !> 1.0 init
+    opt = " "
+
+!    !> 1.1 transform interval string to interval number 
+!    !! 
+!    !! output interval will be always timestep
+!    output_interval_litterfall_soilphysics = calc_output_time_interval('timestep')
+
+    !> 1.1 transform itile to char_itile
+    !! 
+    IF(itile < 10) THEN
+      WRITE(char_itile,'(I1)') itile   ! converting integer to string using a 'internal file', I1 == input is int with 2 digits
+    ELSE IF(itile > 9 .AND. itile < 100) THEN
+      WRITE(char_itile,'(I2)') itile   ! converting integer to string using a 'internal file', I2 == input is int with 2 digits
+    ELSE IF(itile > 99 .AND. itile < 1000) THEN
+      WRITE(char_itile,'(I3)') itile   ! converting integer to string using a 'internal file', I3 == input is int with 2 digits
+    ELSE
+      WRITE(char_itile,'(I4)') itile   ! converting integer to string using a 'internal file', I4 == input is int with 2 digits
+    END IF
+
+    !> 2.1 get options (opt) for filenames
+    !! 
+    !! 
+    IF (assimi_config%flag_optimal_Nfraction) opt = trim(opt) //  "_optNfrac"
+    IF (veg_config%flag_optimal_Nleaf) opt = trim(opt) // "_optNleaf"
+    IF (veg_config%flag_optimal_allocation) opt = trim(opt) // "_optAlloc"
+
+    !> 2.2 define open() statements for file output
+    !! 
+    !! 
+    lun = (100 * itile) + 60
+    fname = 'soilphysics_tile'//TRIM(char_itile)//'_timestep'//TRIM(opt)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    lun=lun+1
+    fname = 'veglitterfall_tile'//TRIM(char_itile)//'_timestep'//TRIM(opt)//'.txt'
+    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+
+    !> 3.0 write column headers into output files
+    !! 
+    !! 
+    CALL init_output_litterfall_soilphysics(itile)
+
+  END SUBROUTINE open_litterfall_soilphysics_output_files
 
   !-----------------------------------------------------------------------------------------------------
   !> Pools: write data to files in a certain interval
@@ -661,7 +759,7 @@ CONTAINS
       IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
          & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
         ! write
-        lun = (100 * itile) + 50
+        lun = (100 * itile) + 30
         write(lun,'(8F12.6)') time_d, gpp_acc(itile), growth_resp_acc(itile), maint_resp_acc(itile), &
                               n_transform_resp_acc(itile),n_fixation_resp_acc(itile), & 
                               npp_acc(itile), res_use_c_acc(itile)
@@ -719,6 +817,103 @@ CONTAINS
   END SUBROUTINE write_output_flux
 
   !-----------------------------------------------------------------------------------------------------
+  !> Litterfall and Soilphysics: write data to files at each timestep
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE write_output_litterfall_soilphysics(tile, time_d, time_y, itile)
+
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_slm_soil, t_model
+    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
+    USE mo_veg_config_class,      ONLY: veg_config
+
+    ! Use of process memories
+    !dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
+    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    !dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
+    dsl4jsb_Use_memory(ATM2LAND_)        !  USE mo_atm2land_memory_class,      ONLY: t_atm2land_memory
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    TYPE(t_slm_tile), INTENT(in), TARGET  :: tile         !< one tile
+    REAL(wp),         INTENT(in)          :: time_d       !< time in days
+    INTEGER,          INTENT(in)          :: time_y       !< time in years; the 1st year of a simulation == year 1 (not zero)
+    INTEGER,          INTENT(in)          :: itile        !< number of current tile
+    ! 0.2 Local
+    TYPE(t_model),                POINTER :: model        ! slm model
+    TYPE(t_lctlib_element),       POINTER :: lctlib       ! land-cover-type library - parameter across pft's
+    TYPE(t_slm_soil),             POINTER :: vegsoil      ! soil variables per tile
+    INTEGER                               :: lun          ! logical unit number
+    ! 0.3 Memory allocation
+    ! Declare process configuration and memory Pointers
+    !dsl4jsb_Def_memory(ASSIMI_)                           ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
+    dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    !dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
+    dsl4jsb_Def_memory(ATM2LAND_)                         ! TYPE(t_atm2land_memory),      POINTER :: atm2land__mem
+    !TYPE(t_assimi_memory),        POINTER     :: assimi   ! local pointer to veg__mem for SLM usability
+    TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
+    !TYPE(t_pheno_memory),         POINTER     :: pheno    ! local pointer to pheno__mem for SLM usability
+    TYPE(t_atm2land_memory),      POINTER     :: atm2land ! local pointer to atm2land__mem for SLM usability
+    !dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(VEG_)
+    !dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
+    dsl4jsb_Get_memory(ATM2LAND_)                         ! atm2land__mem => atm2land_memory
+
+    !assimi    => assimi__mem 
+    veg       => veg__mem 
+    !pheno     => pheno__mem  
+    atm2land  => atm2land__mem 
+    model     => Get_model(tile%owner_model_id)
+    lctlib    => model%lctlib(tile%lcts%lib_id)
+
+    !  bi-directional pointer, though, bi-directionality is not necessary here
+    vegsoil  => tile%vegsoil
+
+
+    !> 1.0 check output start & end, and write litterfall and soilphysics if appropriate
+    !! 
+    !! identical output period as pools & fluxes
+    IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
+
+      lun = 100 * itile + 60
+      write(lun,'(3F12.6)') time_d, &
+        atm2land%t_air%ptr, vegsoil%moisture
+
+      lun=lun+1
+      write(lun,'(55F12.6)') time_d, &
+        ! leaf
+        veg%litterfall%leaf%carbon%ptr, veg%litterfall%leaf%nitrogen%ptr, veg%litterfall%leaf%phosphorus%ptr    , &
+        veg%litterfall%leaf%carbon13%ptr, veg%litterfall%leaf%carbon14%ptr, veg%litterfall%leaf%nitrogen15%ptr  , &
+        ! fine_root
+        veg%litterfall%fine_root%carbon%ptr, veg%litterfall%fine_root%nitrogen%ptr, veg%litterfall%fine_root%phosphorus%ptr   , &
+        veg%litterfall%fine_root%carbon13%ptr, veg%litterfall%fine_root%carbon14%ptr, veg%litterfall%fine_root%nitrogen15%ptr , &
+        ! coarse_root
+        veg%litterfall%coarse_root%carbon%ptr, veg%litterfall%coarse_root%nitrogen%ptr, veg%litterfall%coarse_root%phosphorus%ptr   , &
+        veg%litterfall%coarse_root%carbon13%ptr, veg%litterfall%coarse_root%carbon14%ptr, veg%litterfall%coarse_root%nitrogen15%ptr , &
+        ! sap_wood
+        veg%litterfall%sap_wood%carbon%ptr, veg%litterfall%sap_wood%nitrogen%ptr, veg%litterfall%sap_wood%phosphorus%ptr    , &
+        veg%litterfall%sap_wood%carbon13%ptr, veg%litterfall%sap_wood%carbon14%ptr, veg%litterfall%sap_wood%nitrogen15%ptr  , &
+        ! heart_wood
+        veg%litterfall%heart_wood%carbon%ptr, veg%litterfall%heart_wood%nitrogen%ptr, veg%litterfall%heart_wood%phosphorus%ptr    , &
+        veg%litterfall%heart_wood%carbon13%ptr, veg%litterfall%heart_wood%carbon14%ptr, veg%litterfall%heart_wood%nitrogen15%ptr  , &
+        ! labile
+        veg%litterfall%labile%carbon%ptr, veg%litterfall%labile%nitrogen%ptr, veg%litterfall%labile%phosphorus%ptr    , &
+        veg%litterfall%labile%carbon13%ptr, veg%litterfall%labile%carbon14%ptr, veg%litterfall%labile%nitrogen15%ptr  , &
+        ! reserve
+        veg%litterfall%reserve%carbon%ptr, veg%litterfall%reserve%nitrogen%ptr, veg%litterfall%reserve%phosphorus%ptr   , &
+        veg%litterfall%reserve%carbon13%ptr, veg%litterfall%reserve%carbon14%ptr, veg%litterfall%reserve%nitrogen15%ptr , &
+        ! fruit
+        veg%litterfall%fruit%carbon%ptr, veg%litterfall%fruit%nitrogen%ptr, veg%litterfall%fruit%phosphorus%ptr   , &
+        veg%litterfall%fruit%carbon13%ptr, veg%litterfall%fruit%carbon14%ptr, veg%litterfall%fruit%nitrogen15%ptr , &
+        ! seed_bed
+        veg%litterfall%seed_bed%carbon%ptr, veg%litterfall%seed_bed%nitrogen%ptr, veg%litterfall%seed_bed%phosphorus%ptr  , &
+        veg%litterfall%seed_bed%carbon13%ptr, veg%litterfall%seed_bed%carbon14%ptr, veg%litterfall%seed_bed%nitrogen15%ptr
+
+    END IF 
+  END SUBROUTINE write_output_litterfall_soilphysics
+
+  !-----------------------------------------------------------------------------------------------------
   !> Pools and Fluxes: close files
   !! 
   !! at this point of the simulation all data has been written
@@ -744,9 +939,13 @@ CONTAINS
     CLOSE(lun) ! 4
     lun=lun+1
     CLOSE(lun) ! 5
+    lun=lun+1
+    CLOSE(lun) ! 5
+    lun=lun+1
+    CLOSE(lun) ! 5
 
     ! 2.0 fluxes
-    lun = (100 * itile) + 50
+    lun = (100 * itile) + 30
     CLOSE(lun) ! 0
     lun=lun+1
     CLOSE(lun) ! 1
@@ -756,6 +955,29 @@ CONTAINS
     CLOSE(lun) ! 3
     lun=lun+1
     CLOSE(lun) ! 4
+    lun=lun+1
+    CLOSE(lun) ! 5
   END SUBROUTINE close_output_files
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Litterfall and Soilphysics: close files
+  !! 
+  !! at this point of the simulation all data has been written
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE close_output_files_litterfall_soilphysics(itile)
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    INTEGER, INTENT(in)  :: itile   !< number of current tile 1-...
+    ! 0.2 Local
+    INTEGER :: lun
+
+    ! 1.0 close files
+    lun = 100 * itile + 60
+    CLOSE(lun) ! 0
+    lun=lun+1
+    CLOSE(lun) ! 1
+
+  END SUBROUTINE close_output_files_litterfall_soilphysics
 
 END MODULE mo_veg_output
