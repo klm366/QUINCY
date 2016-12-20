@@ -224,7 +224,7 @@ CONTAINS
       background_mort_rate_grass  = 0.01_wp 
       lambda_mort_light  = 0.15_wp 
       k_mort_light       = 4.0_wp  
-      lambda_est_temp    = 0.1_wp  
+      lambda_est_temp    = 0.075_wp  
       k_est_temp         = 4.0_wp  
       lambda_est_moist   = 0.1_wp  
       k_est_moist        = 2.0_wp  
