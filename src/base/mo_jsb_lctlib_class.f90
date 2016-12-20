@@ -261,7 +261,7 @@ CONTAINS
       (/0._wp,0._wp,0._wp,800._wp,0._wp,800._wp,10._wp,10._wp/)
       ! scaling coefficient in the decline of GDD requirements with increased length of the dormance period 
       lctlib(1:npft)%k_gdd_dormance = &
-      (/0._wp,0._wp,0._wp,0.0098_wp,0._wp,0.0098_wp,10._wp,10._wp/)
+      (/0._wp,0._wp,0._wp,0.0098_wp,0._wp,0.0098_wp,0.1_wp,0.1_wp/)
       ! Weekly air temperature threshold inducing senecence of leaves 
       lctlib(1:npft)%t_air_senescence = & 
       (/0._wp,0._wp,0._wp,5.0_wp,0._wp,5.0_wp,0._wp,0._wp/) + Tzero

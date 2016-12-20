@@ -57,7 +57,8 @@ MODULE mo_veg_constants
       k_phistore,           & !< k in labile response function to storage size 
       ! sink limitation signal strength to photosynthesis (exp(-(lambda * labile/target_labile)^k))
       lambda_sinklim_ps,    & !< lambda in photosynthesis response function to labile pool size 
-      k_sinklim_ps            !< k in photosynthesis response function to labile pool size 
+      k_sinklim_ps,         & !< k in photosynthesis response function to labile pool size 
+      beta_sinklim_ps_min     !< maximum downacclimation of photosynthetic capacity due to sink limitation 
 
   ! Resorption parameters
   REAL(wp), SAVE :: & 
@@ -191,6 +192,7 @@ CONTAINS
       k_phistore              = 3._wp 
       lambda_sinklim_ps       = 0.05_wp
       k_sinklim_ps            = 2.0_wp 
+      beta_sinklim_ps_min     = 0.25_wp 
 
   ! Resorption parameters
       resorp_fract_leaf     = 0.5_wp  

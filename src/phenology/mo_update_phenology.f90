@@ -32,7 +32,6 @@ CONTAINS
   !! PFT: evergreen, raingreen, cold-deciduous trees and perennial grasses \n
   !! 
   !! @todo OBS: currently uncalibrated, in particular rain green phenology \n
-  !!  Known Issues: strange interannual variability of grass senescences \n
   !!  Dev: Have more cost-benefit in decision to start/stop growing season \n
   !!      what about seasonality beyond off/on behaviour? -> implies some collaboration between
   !!      turnover rates and phenology -> should the two be linked? 

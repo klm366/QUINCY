@@ -848,7 +848,7 @@ CONTAINS
     !!
     IF(target_labile_pool_carbon>eps8 .AND. veg_pool_labile%carbon%ptr>target_labile_pool_carbon)THEN
         hlp1=(veg_pool_labile%carbon%ptr-target_labile_pool_carbon)/target_labile_pool_carbon
-        beta_sinklim_ps=exp(-(lambda_sinklim_ps*hlp1)**k_sinklim_ps)
+        beta_sinklim_ps=beta_sinklim_ps_min + (1._wp - beta_sinklim_ps_min) * exp(-(lambda_sinklim_ps*hlp1)**k_sinklim_ps)
     ELSE 
         beta_sinklim_ps=1.0_wp
     ENDIF
