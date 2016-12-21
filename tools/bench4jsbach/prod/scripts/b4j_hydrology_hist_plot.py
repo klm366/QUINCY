@@ -33,7 +33,7 @@ if os.path.isdir ( bin_dir ):
 else:
     raise Exception ( "Directory %s with source files not found." % bin_dir )
 from util import print_item_or_list_rec
-from b4jplot import hist_plot
+from b4jplot import hist_plot_wrapper
 
 
 #####
@@ -52,35 +52,43 @@ print print_item_or_list_rec ( kwargs, 3 )
 #####
 ##### argument definition and plot method calls
 #####
-varnames = { 'E'   : 'evapotranspiration',
-             'P'   : 'precip_acc',
-             'RD'  : 'disch',
-             'WSC' : 'waterstorage_change' }
 
-filenametemplate = "%(varacronym)s_ysdfm_%(refacronym)s" 
+# varnames = { 'E'   : 'evapotranspiration',
+#              'P'   : 'precip_acc',
+#              'RD'  : 'disch',
+#              'WSC' : 'waterstorage_change' }
+varnames = [  'evapotranspiration',
+              'precip_acc',
+              'disch',
+              'waterstorage_change' ]
+#unit = kwargs [ "unit" ]
+unit = "mm/year"
+can_name = kwargs [ "can_name" ]
+canno = kwargs [ "canno" ]
+suptitle            = "Differences of meanyearsums to %s" % kwargs [ "can_name" ]
+input_can = kwargs [ "H_ysfm" ]
+subtitle_can = can_name
+outpath = kwargs [ "H_ysdfm_plot" ]
+
+filenametemplate = "H_ysdfm_%(refacronym)s" 
 reftoken         = "ref"
 nchar            = 4
-reflist          =  [ k for k in kwargs.keys () if k.startswith ( reftoken ) and len ( k ) == nchar ]
-print reflist
+reflist          = [ k for k in kwargs.keys () if k.startswith ( reftoken ) and len ( k ) == nchar ]
 subtitles        = [ kwargs [ k ] for k in reflist ]
-title            = "Differences of meanyearsums to %s" % kwargs [ "can_name" ]
 
-accum            = np.array ([[]])
-for k in reflist:
-    print k
-    filepath = kwargs [ filenametemplate % { 'varacronym' : 'H',
-                                             'refacronym' : k }]
-    nc_fid = Dataset ( filepath )
-    vardat = np.concatenate (( nc_fid.variables [ varnames [ 'E' ]] [ : ][ 0 ],
-                               nc_fid.variables [ varnames [ 'P' ]] [ : ][ 0 ],
-                               nc_fid.variables [ varnames [ 'RD' ]] [ : ][ 0 ],
-                               nc_fid.variables [ varnames [ 'WSC' ]] [ : ][ 0 ]),
-                             axis = 1 )
-    nc_fid.close ()
-    accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
+input_delta    = []
+legend_delta   = []
+subtitle_delta = []
+for ref in reflist:
+    input_delta.append ( kwargs [ filenametemplate % { 'refacronym' : ref }])
+    legend_delta.append ( ref )
+    subtitle_delta.append ( ref )
     
-hist_plot ( accum, "mm/year", subtitles, title, kwargs [ "H_ysdfm_plot" ])
-    
+hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
+                    input_can, subtitle_can,
+                    input_delta, legend_delta, subtitle_delta,
+                    outpath )
+
 #####
 ##### exiting
 #####

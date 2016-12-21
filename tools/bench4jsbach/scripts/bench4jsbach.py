@@ -81,6 +81,10 @@ else:
         b4j_obj.logger.debug ( "Finished diagnostic for '%s' successfully." % f_n ) if not ret else \
                 b4j_obj.logger.debug ( "Diagnostic for '%s' failed." % f_n )
 
+
+    sys.exit ( 0 )
+
+    
     # reporting
     b4j_obj.write_report () if b4j_obj.reporting else None
     

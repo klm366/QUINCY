@@ -16,6 +16,13 @@ from pandas import DataFrame
 
 
 colorlist = [ 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w' ]
+    
+darkbrown  = '#c6903f' 
+lightbrown = '#e6cd92'
+lightgreen = '#ceece8'
+darkgreen  = '#6fc1b6'
+    
+colors_hydrology  = [ darkbrown, lightgreen, lightbrown, darkgreen ]
 
     
 def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan ):
@@ -191,7 +198,118 @@ def zon_plot_wrapper ( varname, unit, can_name, canno, suptitle,
     plt.close () 
 
 
-def hist_plot ( alldat, unit, index, title, outpath ):
+def hist_plot ( alldat, unit, index, title, 
+                outpath = None, 
+                ax = None,
+                art = None,
+                mono = False,
+                solitaire = False ):  
+    
+    df = DataFrame ( alldat, 
+                     columns = [ " $E$", 
+                                 " $P$", 
+                                 " $RD$", 
+                                 "$\\sum P-E-RD$" ], 
+                     index = index )
+
+    ax_loc = df.plot ( ax = ax, kind = 'bar', color = colors_hydrology, rot = 0 )
+    ax_loc.set_title ( title, y = 1.08 )
+    ax_loc.xaxis.set_label_coords ( 1, -0.1 ) 
+    ax_loc.yaxis.set_label_coords ( -0.2, 1 ) 
+    ax_loc.set_ylabel ( "[ %s ]" % unit, rotation = 90 )
+    ax_loc.grid ( 'on')
+    ax_loc.axhline ( 0, color = 'k' )
+    lgd = plt.legend ( numpoints = 1,  
+                       loc = 2,                  
+                       bbox_to_anchor = ( 1.05, 1 ))
+    if solitaire == True and outpath:
+        plt.savefig ( outpath,
+                      dpi = 100, 
+                      bbox_extra_artists = ( lgd, ), 
+                      bbox_inches = 'tight' )
+        plt.close ()
+
+
+#def hist_plot_wrapper ( varnames, reflist, filenametemplate, title ):
+def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
+                       input_can, subtitle_can,
+                       input_delta, legend_delta, subtitle_delta,
+                       outpath ):
+    print "in hist_plot_wrapper ()"
+    print varnames
+    print unit
+    print can_name
+    print canno
+    print suptitle
+    print input_can
+    print subtitle_can
+    print input_delta
+    print legend_delta
+    print subtitle_delta
+    print outpath
+
+    show_can = True
+
+    f        = plt.figure ( figsize = ( 10, 15 ))
+    suptitle = f.suptitle ( suptitle, fontsize = 20, y = .96 )
+    supgrid  = gridspec.GridSpec( 1, 2 if show_can == True else 1 ) 
+    art      = []
+
+    ####### first subplot
+    subgrid = gridspec.GridSpecFromSubplotSpec ( 1, 1, subplot_spec = supgrid [ 0 ])
+    ax = plt.Subplot ( f, subgrid [ :, : ])
+    f.add_subplot ( ax )
+
+    accum = np.array ([[]])
+    nc_fid = Dataset ( input_can )
+    vardat = np.concatenate (( nc_fid.variables [ varnames [ 0 ]] [ : ][ 0 ],
+                               nc_fid.variables [ varnames [ 1 ]] [ : ][ 0 ],
+                               nc_fid.variables [ varnames [ 2 ]] [ : ][ 0 ],
+                               nc_fid.variables [ varnames [ 3 ]] [ : ][ 0 ]),
+                               axis = 1 )
+    nc_fid.close ()
+    accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
+        
+    hist_plot ( accum, unit, [ subtitle_can ], None,
+                ax = ax,
+                art = art )
+    
+
+                      
+
+    ####### second subplot
+    subgrid = gridspec.GridSpecFromSubplotSpec ( 1, 1, subplot_spec = supgrid [ 1 ])
+    ax = plt.Subplot ( f, subgrid [ :, : ])
+    f.add_subplot ( ax )
+    
+ # second subplot args
+    nrefs = len ( input_delta )
+    accum = np.array ([[]])
+    for k in range ( nrefs ):
+        nc_fid = Dataset ( input_delta [ k ])
+        vardat = np.concatenate (( nc_fid.variables [ varnames [ 0 ]] [ : ][ 0 ],
+                                   nc_fid.variables [ varnames [ 1 ]] [ : ][ 0 ],
+                                   nc_fid.variables [ varnames [ 2 ]] [ : ][ 0 ],
+                                   nc_fid.variables [ varnames [ 3 ]] [ : ][ 0 ]),
+                                 axis = 1 )
+        nc_fid.close ()
+        accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
+
+    print "after loop"
+    hist_plot ( accum, unit, subtitle_delta, legend_delta,
+                ax = ax,
+                art = art )
+
+    plt.savefig ( "test.png",
+                  bbox_extra_artists = ( art [ 0 ], suptitle, ) if art else None,
+                  bbox_inches = 'tight' if art else None  )
+
+    plt.close ()
+    print "file should be written."
+
+def hist_plot_backup ( alldat, unit, index, title, outpath ):
+
+    print "what's up"
     
     darkbrown  = '#c6903f' 
     lightbrown = '#e6cd92'
@@ -204,6 +322,7 @@ def hist_plot ( alldat, unit, index, title, outpath ):
     varname_P  = "precip_all"
     varname_RD = "disch"
     
+    print "hello 0"
     df = DataFrame ( alldat, 
                      columns = [ varname_E + " $E$", 
                                  varname_P + " $P$", 
@@ -215,17 +334,20 @@ def hist_plot ( alldat, unit, index, title, outpath ):
     plt.title ( title, y = 1.08 )
     ax.xaxis.set_label_coords ( 1, -0.1 ) 
     ax.yaxis.set_label_coords ( -0.2, 1 ) 
-    plt.ylabel ( "[ %s ]" % unit, rotation = 0 )
+    plt.ylabel ( "[ %s ]" % unit, rotation = 90 )
     plt.grid ( 'on')
     plt.axhline ( 0, color = 'k' )
     lgd = plt.legend (numpoints = 1,  
                       loc = 2,                  
                       bbox_to_anchor=(1.05,1))
+    
+    print "hello 1"
     plt.savefig ( outpath,
                   dpi = 100, 
                   bbox_extra_artists = ( lgd, ), 
                   bbox_inches = 'tight' )
     plt.close ()
+    print "closing"
 
 
 def get_globalmean ( filepath, varname ):

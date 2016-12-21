@@ -402,6 +402,7 @@ class Diagnostics ( object ):
                             ( executable, fieldname ))
 
         self.logger.debug ( "Exiting." )
+        
         return 0
         
     def __repr__ ( self ):

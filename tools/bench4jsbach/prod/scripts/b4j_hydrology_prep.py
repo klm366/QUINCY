@@ -91,6 +91,24 @@ cdo.zonmean ( input  = "%s" % ( kwargs [ "E_yearsummean" ]),
 cdo.zonmean ( input  = "%s" % ( kwargs [ "P_yearsummean" ]),
               output = kwargs [ "P_ys-zonmean" ])
 
+##### field mean from yearly sum
+cdo.fldmean ( input  = "%s" % ( kwargs [ "E_yearsummean" ]),
+              output = kwargs [ "E_ysfm" ])
+
+cdo.fldmean ( input  = "%s" % ( kwargs [ "P_yearsummean" ]),
+              output = kwargs [ "P_ysfm" ])
+
+cdo.fldmean ( input  = "%s" % ( kwargs [ "RD_yearsummean" ]),
+              output = kwargs [ "RD_ysfm" ])
+
+cdo.setname ( 'waterstorage_change',
+              input  = " -sub %s -add %s %s" %\
+                         ( kwargs [ "P_ysfm" ], kwargs [ "E_ysfm" ], kwargs [ "RD_ysfm" ]),
+              output = kwargs [ "WSC_ysfm" ])
+cdo.merge ( input  = " %s %s %s %s" % ( kwargs [ "P_ysfm" ], kwargs [ "E_ysfm" ], kwargs [ "RD_ysfm" ],
+                                        kwargs [ "WSC_ysfm" ]),
+            output =  kwargs [ "H_ysfm" ])
+
 
 #####
 ##### finishing

@@ -394,8 +394,8 @@ table below. You may find detailed information on each method following the appr
                         else:
                             plot = can.B4J_index [ '%s_plot' %  subsection ]
                             dss += includegraphics_template ( plot,
-                                                              scale = .58,
-                                                              hspace = '-.5' )              
+                                                              scale = .56,
+                                                              hspace = '-1' )              
                 
         self.logger.debug ( "Exiting." )
         return dss
