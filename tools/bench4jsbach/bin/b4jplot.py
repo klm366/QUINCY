@@ -203,8 +203,13 @@ def hist_plot ( alldat, unit, index, title,
                 ax = None,
                 art = None,
                 mono = False,
-                solitaire = False ):  
-    
+                solitaire = False,
+                legend = True,
+                ylabel = True ):  
+
+    print ylabel
+    print "index"
+    print index
     df = DataFrame ( alldat, 
                      columns = [ " $E$", 
                                  " $P$", 
@@ -212,16 +217,23 @@ def hist_plot ( alldat, unit, index, title,
                                  "$\\sum P-E-RD$" ], 
                      index = index )
 
-    ax_loc = df.plot ( ax = ax, kind = 'bar', color = colors_hydrology, rot = 0 )
-    ax_loc.set_title ( title, y = 1.08 )
-    ax_loc.xaxis.set_label_coords ( 1, -0.1 ) 
-    ax_loc.yaxis.set_label_coords ( -0.2, 1 ) 
-    ax_loc.set_ylabel ( "[ %s ]" % unit, rotation = 90 )
+    ax_loc = df.plot ( ax = ax, kind = 'bar', color = colors_hydrology, rot = 0,
+                       legend = legend )
+    ax_loc.set_title ( title, y = 1.02 )
+    ax_loc.xaxis.set_label_coords ( 1, -0.1 )
+    if ylabel == True:
+        ax_loc.yaxis.set_label_coords ( -0.2, .92 ) 
+        ax_loc.set_ylabel ( "[ %s ]" % unit, rotation = 90 )
+    
     ax_loc.grid ( 'on')
     ax_loc.axhline ( 0, color = 'k' )
-    lgd = plt.legend ( numpoints = 1,  
-                       loc = 2,                  
-                       bbox_to_anchor = ( 1.05, 1 ))
+    if legend == True:
+        lgd = ax_loc.legend ( numpoints = 1,  
+                              loc = 2,                  
+                              bbox_to_anchor = ( 1.05, 1 ))
+        
+        if isinstance ( art, list ) and lgd: art.append ( lgd )
+        
     if solitaire == True and outpath:
         plt.savefig ( outpath,
                       dpi = 100, 
@@ -230,10 +242,9 @@ def hist_plot ( alldat, unit, index, title,
         plt.close ()
 
 
-#def hist_plot_wrapper ( varnames, reflist, filenametemplate, title ):
 def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
                        input_can, subtitle_can,
-                       input_delta, legend_delta, subtitle_delta,
+                       input_delta, subtitle_delta, xlabel_delta,
                        outpath ):
     print "in hist_plot_wrapper ()"
     print varnames
@@ -244,15 +255,17 @@ def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
     print input_can
     print subtitle_can
     print input_delta
-    print legend_delta
     print subtitle_delta
+    print xlabel_delta
     print outpath
 
     show_can = True
 
-    f        = plt.figure ( figsize = ( 10, 15 ))
-    suptitle = f.suptitle ( suptitle, fontsize = 20, y = .96 )
-    supgrid  = gridspec.GridSpec( 1, 2 if show_can == True else 1 ) 
+    ndeltas = len ( input_delta )
+
+    f        = plt.figure ( figsize = ( 10, 6 ))
+    suptitle = f.suptitle ( suptitle, fontsize = 18, y = 1.1 )
+    supgrid  = gridspec.GridSpec( 1, ndeltas if show_can == True else 1 ) 
     art      = []
 
     ####### first subplot
@@ -269,16 +282,18 @@ def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
                                axis = 1 )
     nc_fid.close ()
     accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
-        
-    hist_plot ( accum, unit, [ subtitle_can ], None,
+
+    print "subtitle can in hist_plot_wrapper"
+    print subtitle_can
+    hist_plot ( accum, unit, [ subtitle_can ], "Field values",
                 ax = ax,
-                art = art )
+                legend = False )
     
 
                       
 
     ####### second subplot
-    subgrid = gridspec.GridSpecFromSubplotSpec ( 1, 1, subplot_spec = supgrid [ 1 ])
+    subgrid = gridspec.GridSpecFromSubplotSpec ( 1, 1, subplot_spec = supgrid [ 1: ])
     ax = plt.Subplot ( f, subgrid [ :, : ])
     f.add_subplot ( ax )
     
@@ -294,13 +309,15 @@ def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
                                  axis = 1 )
         nc_fid.close ()
         accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
-
-    print "after loop"
-    hist_plot ( accum, unit, subtitle_delta, legend_delta,
+        
+    #hist_plot ( accum, unit, xlabel_delta, subtitle_delta,
+    hist_plot ( accum, unit, xlabel_delta, "schwuppdi",
                 ax = ax,
-                art = art )
-
-    plt.savefig ( "test.png",
+                art = art,
+                ylabel = not show_can )
+    
+    #plt.savefig ( "test.png",
+    plt.savefig ( outpath,
                   bbox_extra_artists = ( art [ 0 ], suptitle, ) if art else None,
                   bbox_inches = 'tight' if art else None  )
 

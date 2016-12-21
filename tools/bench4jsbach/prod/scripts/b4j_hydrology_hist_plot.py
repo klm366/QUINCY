@@ -61,32 +61,33 @@ varnames = [  'evapotranspiration',
               'precip_acc',
               'disch',
               'waterstorage_change' ]
-#unit = kwargs [ "unit" ]
 unit = "mm/year"
 can_name = kwargs [ "can_name" ]
 canno = kwargs [ "canno" ]
-suptitle            = "Differences of meanyearsums to %s" % kwargs [ "can_name" ]
+suptitle = "Hydrology mean year sums"
 input_can = kwargs [ "H_ysfm" ]
 subtitle_can = can_name
+print "can_name"
+print can_name
+print subtitle_can
+#subtitle_delta = "Differences of meanyearsums to %s" % kwargs [ "can_name" ]
 outpath = kwargs [ "H_ysdfm_plot" ]
 
 filenametemplate = "H_ysdfm_%(refacronym)s" 
 reftoken         = "ref"
 nchar            = 4
 reflist          = [ k for k in kwargs.keys () if k.startswith ( reftoken ) and len ( k ) == nchar ]
-subtitles        = [ kwargs [ k ] for k in reflist ]
-
-input_delta    = []
-legend_delta   = []
-subtitle_delta = []
+input_delta      = []
+xlabel_delta     = []
+subtitle_delta   = []
 for ref in reflist:
     input_delta.append ( kwargs [ filenametemplate % { 'refacronym' : ref }])
-    legend_delta.append ( ref )
-    subtitle_delta.append ( ref )
-    
+    subtitle_delta.append ( kwargs [ ref ])
+    xlabel_delta.append ( "$\Delta$ " + ref )
+
 hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
                     input_can, subtitle_can,
-                    input_delta, legend_delta, subtitle_delta,
+                    input_delta, subtitle_delta, xlabel_delta,
                     outpath )
 
 #####
