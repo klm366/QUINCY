@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## 20161212
+## 
 ##
 ## > prepare and start run_slm.sh script to run SLM simulations across multiple sites
 ## > the prep_run_slm.sh & run_slm-sh should be located in trunk/contrib/site_level/ (same for any branch)
@@ -9,7 +9,7 @@
 ## 
 
 ########################################################################################################
-####### simulation specific options you may want to change #############################################
+####### simulation specific options you might want to change ###########################################
 ########################################################################################################
 
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
@@ -68,7 +68,7 @@ output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
 output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
-flag_litterfall_output="F"      # create additional output (veg%litterfall + some biophysics) used as input of the standalone soil model
+flag_litterfall_output="F"      # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
@@ -77,7 +77,7 @@ useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" 
 soil_theta_prescribe=100.0      # float !
 
 
-##>> details about the HPC, if unsure stick with these default values <<################################
+##>> details about the HPC, if unsure stick with these defaults <<################################
 queue="BTM"                  # available queues: all io BTM mpi_large
 fastNodes="F"                # if T only the nodes iof iog ioh ioi ioj are used (works only with queue BTM and io) | T (True) or F (False) [large caps]
 emailNotification="no"       # set either to yes or no (small caps)
@@ -94,7 +94,7 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-while getopts ":e:c:o:h" opt; do
+while getopts ":e:c:m:y:o:h" opt; do
   case "$opt" in
   "e")
     echo "   experimentalID=""$OPTARG"
@@ -103,6 +103,17 @@ while getopts ":e:c:o:h" opt; do
   "c")
     echo "   customSiteList=""$OPTARG"
     customSiteList="$OPTARG"
+    ;;
+  "m")
+    echo "   slmModel=""$OPTARG"
+    slmModel="$OPTARG"
+    ;;
+  "y")
+    echo "   simulation_length_number=""$OPTARG"
+    echo "   output from 1 to ""$OPTARG"
+    simulation_length_number="$OPTARG"
+    output_start_first_day_year=1
+    output_end_last_day_year="$OPTARG"
     ;;
   "o")
     case "$OPTARG" in
@@ -148,6 +159,13 @@ while getopts ":e:c:o:h" opt; do
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
     echo "       F: not using the custom site list"
+    echo " -m set slmModel"
+    echo "    Arguments to -m:"
+    echo "       land plant soil"
+    echo " -y set simulation length"
+    echo "    Arguments to -y:"
+    echo "       any integer value"
+    echo "       note: this sets simulation output accordingly (1-x)"
     echo " -o set the optimality scheme"
     echo "    Arguments to -o:"
     echo "       no: no optimality"
@@ -326,23 +344,48 @@ if [ $siteDataSet == "f" ]  # if site is set to FLUXNET else CRUNCEPv5
   siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/CRUNCEPv5/"
 fi
 
+
+## SLM model forcing: land/plant/canopy/soil 
+case "$slmModel" in
+"land")
+  siteDataFoldForcing="$siteDataFold""met_forcing/"
+  ;;
+"plant")
+  siteDataFoldForcing="$siteDataFold""met_forcing/"
+  ;;
+"canopy")
+  siteDataFoldForcing="$siteDataFold""met_forcing/"
+  ;;
+"soil")
+  siteDataFoldForcing="$siteDataFold""soil_forcing/"
+  ;;
+esac
+
+
 ## test site list: default or custom ##
 # parameter sensitivity: set customSiteList to "T" and delete any name in singleSiteName (see the IF[] for starting the job very below)
 if [ $paramSensitivitySim == "T" ]; then
+  # check SLM model
+  if [ $slmModel == "soil" ]
+    then
+      echo "EXIT! parameter sensitivity simulations currently not working with SLM ""$slmModel"" model."
+      rm -r "$simFold"  # deleting the already created simulation folder
+      exit
+  fi
   customSiteList="T"
   singleSiteName=""
 fi
 # test default and custom site list
 if [ $customSiteList == "T" ]
  then
-  # if $customSiteListFileName is NOT empty use the 
+  # if option $customSiteListFileName is NOT empty use the 
   if [ ! -z $customSiteListFileName ]
    then
     siteListFileName="$customSiteListFileName"
    else
     siteListFileName="my_site_list.dat"
   fi
-  # test if file exists and has some content (no content-quality check!)
+  # test if custom-sitelist-file exists and has some content (no content-quality check!)
   if [ ! -e "$siteListFileName" ] # if file not exists
    then
     echo "EXIT! ""$siteListFileName"" does not exist! You set the option customSiteList to T."
@@ -355,11 +398,12 @@ if [ $customSiteList == "T" ]
     fi
   fi
   # test if forcing data exist in the site-list-folder specified, for all sites specified in the custom site list
-  siteList_lineNumber=$(wc -l "$siteListFileName" | awk '{print $1}')
+  # test custom-sitelist only
+  siteList_lineNumber=$(wc -l "$siteListFileName" | awk '{print $1}') # number of sites in the custom-sitelist
   for (( a=2; a<=$siteList_lineNumber; a++ )) # line number 2 to ... excluding the header at line 1
     do
       siteName=$(sed -n "$a"p "$siteListFileName" | awk '{print $1}')  # -n  == quiet/silent
-      if ! ls -la $siteDataFold | grep $siteName > /dev/null  # if forcing file not found
+      if ! ls -la $siteDataFoldForcing | grep $siteName > /dev/null  # if forcing file not found
         then
           echo "EXIT! The site ""$siteName"" from your custom site_list.dat does not exist in the siteDataSet folder (f [FLUXNET], c [CRUNCEPv5]): ""$siteDataSet"" !"
           rm -r "$simFold"  # deleting the already created simulation folder
@@ -371,22 +415,30 @@ if [ $customSiteList == "T" ]
   siteList="$simFoldDefaultFiles""$siteListFileName"
  else # the default case: use the fluxnet or cruncepv5 all_site_list.dat
   siteListFileName="all_site_list.dat"
-  siteList="$siteDataFold""$siteListFileName"   # 2do --> may be customized to my_sitelist... later
+  siteList="$siteDataFold""$siteListFileName"
 fi
 
 ## validate experimental ID for alphanumeric only ##
 if [ ! -z $(echo $jobName | tr -d "[:alnum:]" | tr -d "_" | tr -d "-") ]  # if removing alphanum _ - from jobName returns an non-empty string" then exit
  then
-  echo "EXIT! Please use an experimental ID that is alphanumeric, i.e. without any special characters."
+  echo "EXIT! Please use an experimental ID that is alphanumeric, i.e. without any special characters (_ and - are ok though)."
   exit
 fi
 
 ## validate options linked with specialFluxnetOutput ##
 if [ $specialFluxnetOutput == "T" ]
  then
+    # check SLM model
+    if [ $slmModel == "soil" ]
+      then
+        echo "EXIT! specialFluxnetOutput currently not working with SLM ""$slmModel"" model."
+        rm -r "$simFold"  # deleting the already created simulation folder
+        exit
+    fi
+    # check site data set
     if [ $siteDataSet != "f" ] 
       then
-        echo "EXIT! You may use a FLUXNET site when you enable special fluxnet-simulation output."
+        echo "EXIT! You may use a FLUXNET site when you enable special FLUXNET-Simulation output :) ."
         exit
     fi
 fi
@@ -397,7 +449,7 @@ largestMem=50000000   # 50 Gb
 # test memory empty or containing characters other then digits
 if [ -z $memory ]  # returns TRUE if unset or empty
  then
-  echo "EXIT! No memory defined. Please define the memory per job you think is useful."
+  echo "EXIT! No memory defined. Please define the memory per job you think is useful (and within a reasonable range)."
   exit  
  else
   if [ ! -z $(echo $memory | tr -d "[:digit:]") ] # if "removing all digits" is not empty, i.e. other characters are included
@@ -409,7 +461,7 @@ fi
 # test against useful min and max values
 if [ "$memory" -lt "$lowestMem" ]
  then
-  echo "EXIT! Please increase memory, you allocated less than 10Mb; units is in Kb."
+  echo "EXIT! Please increase memory, you allocated less than 10Mb. Note, memory is defined with unit Kilobyte [Kb]."
   exit
  else
   if [ "$memory" -gt "$largestMem" ]
@@ -437,11 +489,12 @@ fi
 # test against useful min and max values
 if [ "$numberCpuMax" -lt "$lowestCpu" ]
  then
-  echo "Note: This is a Cluster. You may consider running more than 4 simulations in parallel."
+  echo "Note: This is a High Performance Cluster. You may consider running more than 4 simulations in parallel."
  else
   if [ "$numberCpuMax" -gt "$largestCpu" ]
    then
     echo "EXIT! Please decrease the number of parallel jobs, you aim at using more than 100 CPUs in parallel."
+    echo "(Of course, technically you could use more than 100 CPUs. This limit is simply set to be nice with your colleagues.)"
     exit
   fi
 fi
@@ -530,7 +583,7 @@ fi
 
 ## pass info about files to run_slm.sh via an extra file ("$simFoldDefaultFiles""config.txt") ##
 echo "$siteList"                                    >  "$simFoldDefaultFiles""config.txt"
-echo "$siteDataFold"                                >> "$simFoldDefaultFiles""config.txt"
+echo "$siteDataFoldForcing"                         >> "$simFoldDefaultFiles""config.txt"
 echo "$slmModel"                                    >> "$simFoldDefaultFiles""config.txt"
 echo "$specialFluxnetOutput"                        >> "$simFoldDefaultFiles""config.txt"
 echo "$siteDataObsFold"                             >> "$simFoldDefaultFiles""config.txt"

@@ -277,8 +277,9 @@ CONTAINS
     !! 
     !! 
     ! enable/ disable forcing
+    ! note: the soil model gets a different forcing than land plant canopy, see mo_atmland_forcing
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','plant','canopy') !,'soil')
+      CASE('land','plant','canopy','soil')
         l_forcing = .TRUE.
       CASE DEFAULT
         l_forcing = .FALSE.

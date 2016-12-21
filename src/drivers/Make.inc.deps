@@ -35,9 +35,14 @@ mo_land_model_interface.o: \
 mo_atmland_forcing.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_process_class.o \
   mo_base_config_class.o \
   mo_base_memory.o \
   mo_shared_isotope.o \
   mo_atmland_util.o \
-  mo_atmland_constants.o
+  mo_atmland_constants.o \
+  mo_soil_config_class.o \
+  mo_soil_memory_class.o \
+  mo_veg_memory_class.o
 

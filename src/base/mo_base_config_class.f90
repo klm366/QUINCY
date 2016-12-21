@@ -34,7 +34,7 @@ MODULE mo_base_config_class
     CHARACTER(len=20) :: slm_model_name
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
-    LOGICAL           :: flag_litterfall_output             !< all litterfall pools + some biophysics 
+    LOGICAL           :: flag_litterfall_output             !< all litterfall pools + some soilphysics 
                                                             !! at period: veg_config%output_start_first_day_year .. output_end_last_day_year
     LOGICAL           :: set_parameter_values_from_file
     LOGICAL           :: flag_climate_forcing_one_year
@@ -71,7 +71,7 @@ CONTAINS
     CHARACTER(len=20) :: slm_model_name
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
-    LOGICAL           :: flag_litterfall_output                     !< all litterfall pools + some biophysics
+    LOGICAL           :: flag_litterfall_output                     !< all litterfall pools + some soilphysics
     LOGICAL           :: set_parameter_values_from_file
     LOGICAL           :: flag_climate_forcing_one_year
     ! GRID_CTL

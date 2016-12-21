@@ -155,6 +155,9 @@ MODULE mo_soil_memory_class
                                     po4_assoc          , &  !< phosphate in soil solution
                                     po4_solute              !< minerally associated phosphate 
 
+    ! soil energy 
+    TYPE(t_jsb_var_real3d)          :: &
+                                    t_soil                  !< soil temperature  *slmdev currently we use t_air to get values here
 
 
 !    TYPE(t_slm_struct_soil_element) :: &   ! simple structure for elements: t_jsb_struct
@@ -749,6 +752,9 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'po4_solute', mem%po4_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 't_soil', mem%t_soil, &
             initval_r=0.0_wp) ! initvalue
 
       !> simple TYPE (t_jsb_struct)

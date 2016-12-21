@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## 20161012
+## 
 ##
 ## script to run simulations of SLM; i.e. one specific job (of an array, or a specific site)
 ##
@@ -31,7 +31,7 @@ jobIndex=$LSB_JOBINDEX            # index number of the job (in the job array: 2
 
 ## read simulation config-file created by prep_run_slm.sh ##
 siteList=$(sed -n 1p "$simFoldDefaultFiles""config.txt")    # -n  == quiet/silent
-siteDataFold=$(sed -n 2p "$simFoldDefaultFiles""config.txt")
+siteDataFoldForcing=$(sed -n 2p "$simFoldDefaultFiles""config.txt")   # folder at the Server containing the forcing files
 slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
 specialFluxnetOutput=$(sed -n 4p "$simFoldDefaultFiles""config.txt")  # T/F
 siteDataObsFold=$(sed -n 5p "$simFoldDefaultFiles""config.txt")
@@ -39,6 +39,10 @@ useSiteSpecificAWC=$(sed -n 6p "$simFoldDefaultFiles""config.txt")    # T/F
 doParamSensitivitySim=$(sed -n 7p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')  # T/F
  # info: $compareSimCRUNCEPvsGFDB T/F is saved at line 8 but necessary only for the cleanup_slm_hpc_run.sh
 
+## model forcing - define input file-names as expected by the model (see mo_atmland_forcing.f90)
+forceSoilLitterFile="soil_forcing_litterfall.dat"
+forceSoilPhysicFile="soil_forcing_soilphysics.dat"
+forceLandMetFile="climate.dat"
 
 
 # read extra config-file for parameter sensitivity simulations created by prep_run_slm.sh if applicable ##
@@ -81,6 +85,7 @@ fi
 ##############################################################################
 ## job specific actions start here ###########################################
 ##############################################################################
+# define a site-specific job-folder within the simulation folder
 jobFold="$simFold""$(awk '{print $1}' <<< "$siteData")""/"
 # for parameter sensitivity simulations prepend a number: 1001 == 1st set of parameter value combinations in param_table.txt
 if [ $doParamSensitivitySim == "T" ]; then
@@ -93,16 +98,33 @@ jobErrFold="./error/"
 mkdir -p "$jobErrFold"  # folder for error files and out files of this job
 
 ## copy files specific to this job into the job folder ##
-# namelist binary R-Script all_site_list.dat
+# namelist, binary, R-Script
 cp "$simFoldDefaultFiles""$slmNamelist" ./
 cp "$simFoldDefaultFiles""$slmBinary"   ./
 cp "$simFoldDefaultFiles""$slmRscript"  ./
+# special fluxnet-output files
 if [ $specialFluxnetOutput == "T" ];then
    cp "$simFoldDefaultFiles""$slmRscript4fluxfile"  ./
    cp "$simFoldDefaultFiles""$slmRscript4fluxdiag"  ./
    cp "$siteDataObsFold""$(awk '{print $1}' <<< "$siteData")"*.nc ./obs.nc
 fi
-cp "$siteDataFold""$(awk '{print $1}' <<< "$siteData")"*.dat      ./climate.dat
+# forcing file(s)
+case "$slmModel" in
+"land")
+  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*.dat      ./"$forceLandMetFile"
+  ;;
+"plant")
+  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*.dat      ./"$forceLandMetFile"
+  ;;
+"canopy")
+  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*.dat      ./"$forceLandMetFile"
+  ;;
+"soil")
+  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*_lit.dat      ./"$forceSoilLitterFile"
+  cp "$siteDataFoldForcing""$(awk '{print $1}' <<< $siteData)"*_sph.dat      ./"$forceSoilPhysicFile"
+  ;;
+esac
+# parameter sensitivity files
 if [ $doParamSensitivitySim == "T" ]; then
   slmParameterList="param.list"
   cp ../"$simParamSensiFiles""$slmParameterListDefault"           ./"$slmParameterList"
@@ -211,7 +233,7 @@ if [ $specialFluxnetOutput == "T" ]; then
 fi
 
 ## cleanup some job specific files ##
-rm ./climate.dat
+rm ./*.dat  # forcing file(s)
 rm ./"$slmRscript"
 rm ./"$slmBinary"
 [ $specialFluxnetOutput == "T" ] && rm ./"$slmRscript4fluxfile" ./"$slmRscript4fluxdiag"  # equal to: if [ ... ]; then ...; fi

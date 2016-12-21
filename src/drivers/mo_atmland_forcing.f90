@@ -10,6 +10,8 @@
 !!
 MODULE mo_atmland_forcing
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind,                  ONLY: wp, eps8
   USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
   USE mo_atmland_util,          ONLY: update_orbital_parameters, calc_solar_angle, calc_sw_fdiffuse, calc_spec_humidity_sat
@@ -36,7 +38,8 @@ CONTAINS
   !! the two header-lines may be neglected \n
   !! write column headers of output files for fluxes \n
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_forcing(      time               , &  ! in
+  SUBROUTINE update_forcing(      tile               , &  ! inout
+                                  time               , &  ! in
                                   t_air              , &  ! out
                                   q_air              , &  ! out
                                   rain               , &  ! out
@@ -74,13 +77,21 @@ CONTAINS
                                   q_bcoef_ice          &  ! out
                                   &  )
 
-    USE mo_base_memory,           ONLY: grid  ! used for calc_solar_angle()
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model, grid  ! grid is used for calc_solar_angle()
     USE mo_base_config_class,     ONLY: base_config
+    USE mo_soil_config_class,     ONLY: soil_config
+
+    ! Use of process memories
+    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
-    REAL(wp)          , INTENT(in)  :: time     !< current time (not timestep !)
-    REAL(wp), OPTIONAL, INTENT(out) :: &  !! these are all variables from atm2land memory
+    TYPE(t_slm_tile),   INTENT(inout) :: tile     !< one tile
+    REAL(wp)          , INTENT(in)    :: time     !< current time (not timestep !)
+    REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from atm2land memory
                                       t_air              , &    !< ..
                                       q_air              , &    !< ..
                                       rain               , &    !< ..
@@ -125,10 +136,31 @@ CONTAINS
     REAL(wp) :: nhx           ! dummy variable for nhx_srf_down
     REAL(wp) :: nox           ! dummy variable for noy_srf_down
     REAL(wp) :: hlp1          ! dummy variable 
-    REAL(wp), SAVE :: day           ! read input dummy variable - save value
-    REAL(wp)       :: doy_old, &    ! check for new year (column 2 in input file would change from 365 -> 1)
-                      doy_new
-    doy_old = 0.0_wp
+    REAL(wp) :: time_hlp      ! dummy variable for soil forcing
+    REAL(wp),         SAVE        :: day                    ! read input dummy variable - save value
+    REAL(wp)                      :: doy_old, &             ! check for new year (column 2 in input file would change from 365 -> 1)
+                                     doy_new
+    TYPE(t_model),    POINTER     :: model                  ! the model structure
+    INTEGER                       :: iblk         = -1      ! Number of current block (chunk)
+    INTEGER                       :: ics          = -1      ! Index of chunk start
+    INTEGER                       :: ice          = -1      ! Index of chunk end
+    INTEGER                       :: nlevel_soil  = -1      ! number of levels at the Z-Axis (soil layer)
+    INTEGER                       :: nlevel_veg   = -1      ! number of levels at the Z-Axis (canopy layer)
+    ! 0.3 Memory allocation
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    TYPE(t_soil_memory),     POINTER :: soil        ! local pointer to soil__mem for SLM usability
+    TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(VEG_)
+
+    soil    => soil__mem 
+    veg     => veg__mem 
+    model   => Get_model(tile%owner_model_id)
+
+
+    doy_old = 0.0_wp  ! doy in the previous timestep, used for detecting a new year
 
     ! give atm2land variables a value to avoid compiler warning #6843: A dummy argument with an explicit INTENT(OUT) declaration is not given an explicit value
     t_air           = 0.0_wp
@@ -168,6 +200,10 @@ CONTAINS
     q_bcoef_ice     = 0.0_wp
 
 
+    !! LAND PLANT CANOPY
+    SELECT CASE(TRIM(base_config%slm_model_name))
+    CASE('land','plant','canopy')
+
     !> 1.0 orbital parameters
     !!
     !! 'declination' is calculated as output paramater, but not needed here
@@ -206,7 +242,7 @@ CONTAINS
     IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy
       REWIND(lun)
-      CALL read_forcing_header
+      CALL read_forcing_header(lun)
       READ(lun,*) year, day, hour, &
                      swvis_srf_down,   lw_srf_down, t_air,    q_air,    &
                      press_srf,        rain,        snow,     wind_air, &
@@ -236,6 +272,98 @@ CONTAINS
     swpar_srf_down   = frac_par_swvis_srf * swvis_srf_down
     swpar_fdiffuse   = calc_sw_fdiffuse(swvis_srf_down + swnir_srf_down, sw_toa_down, cos_zenith_angle) ! function: calc_sw_fdiffuse
 
+
+    !! SOIL
+    CASE('soil')
+
+    iblk        = model%options%iblk
+    ics         = model%options%ics
+    ice         = model%options%ice
+    nlevel_soil = soil_config%nsoil_water
+
+    ! the read statement, by default a list of values in a line is read and then advanced to the beginning of the next line
+    lun=9
+    READ(lun,*, IOSTAT=stat) time_hlp, & 
+        ! leaf
+        veg%litterfall%leaf%carbon%ptr, veg%litterfall%leaf%nitrogen%ptr, veg%litterfall%leaf%phosphorus%ptr    , &
+        veg%litterfall%leaf%carbon13%ptr, veg%litterfall%leaf%carbon14%ptr, veg%litterfall%leaf%nitrogen15%ptr  , &
+        ! fine_root
+        veg%litterfall%fine_root%carbon%ptr, veg%litterfall%fine_root%nitrogen%ptr, veg%litterfall%fine_root%phosphorus%ptr   , &
+        veg%litterfall%fine_root%carbon13%ptr, veg%litterfall%fine_root%carbon14%ptr, veg%litterfall%fine_root%nitrogen15%ptr , &
+        ! coarse_root
+        veg%litterfall%coarse_root%carbon%ptr, veg%litterfall%coarse_root%nitrogen%ptr, veg%litterfall%coarse_root%phosphorus%ptr   , &
+        veg%litterfall%coarse_root%carbon13%ptr, veg%litterfall%coarse_root%carbon14%ptr, veg%litterfall%coarse_root%nitrogen15%ptr , &
+        ! sap_wood
+        veg%litterfall%sap_wood%carbon%ptr, veg%litterfall%sap_wood%nitrogen%ptr, veg%litterfall%sap_wood%phosphorus%ptr    , &
+        veg%litterfall%sap_wood%carbon13%ptr, veg%litterfall%sap_wood%carbon14%ptr, veg%litterfall%sap_wood%nitrogen15%ptr  , &
+        ! heart_wood
+        veg%litterfall%heart_wood%carbon%ptr, veg%litterfall%heart_wood%nitrogen%ptr, veg%litterfall%heart_wood%phosphorus%ptr    , &
+        veg%litterfall%heart_wood%carbon13%ptr, veg%litterfall%heart_wood%carbon14%ptr, veg%litterfall%heart_wood%nitrogen15%ptr  , &
+        ! labile
+        veg%litterfall%labile%carbon%ptr, veg%litterfall%labile%nitrogen%ptr, veg%litterfall%labile%phosphorus%ptr    , &
+        veg%litterfall%labile%carbon13%ptr, veg%litterfall%labile%carbon14%ptr, veg%litterfall%labile%nitrogen15%ptr  , &
+        ! reserve
+        veg%litterfall%reserve%carbon%ptr, veg%litterfall%reserve%nitrogen%ptr, veg%litterfall%reserve%phosphorus%ptr   , &
+        veg%litterfall%reserve%carbon13%ptr, veg%litterfall%reserve%carbon14%ptr, veg%litterfall%reserve%nitrogen15%ptr , &
+        ! fruit
+        veg%litterfall%fruit%carbon%ptr, veg%litterfall%fruit%nitrogen%ptr, veg%litterfall%fruit%phosphorus%ptr   , &
+        veg%litterfall%fruit%carbon13%ptr, veg%litterfall%fruit%carbon14%ptr, veg%litterfall%fruit%nitrogen15%ptr , &
+        ! seed_bed
+        veg%litterfall%seed_bed%carbon%ptr, veg%litterfall%seed_bed%nitrogen%ptr, veg%litterfall%seed_bed%phosphorus%ptr  , &
+        veg%litterfall%seed_bed%carbon13%ptr, veg%litterfall%seed_bed%carbon14%ptr, veg%litterfall%seed_bed%nitrogen15%ptr
+
+
+    ! if this flag is set TRUE, check whether the current time step is a new year, if so 
+    ! set stat = -1 to indicate "end of file" which invokes the re-reading of the climate forcing input file at line 1
+    IF(IS_IOSTAT_END(stat)) THEN 
+      ! start reading from line one & read header into dummy
+      REWIND(lun)
+      CALL read_forcing_header(lun)
+      READ(lun,*) time_hlp, &
+        ! leaf
+        veg%litterfall%leaf%carbon%ptr, veg%litterfall%leaf%nitrogen%ptr, veg%litterfall%leaf%phosphorus%ptr    , &
+        veg%litterfall%leaf%carbon13%ptr, veg%litterfall%leaf%carbon14%ptr, veg%litterfall%leaf%nitrogen15%ptr  , &
+        ! fine_root
+        veg%litterfall%fine_root%carbon%ptr, veg%litterfall%fine_root%nitrogen%ptr, veg%litterfall%fine_root%phosphorus%ptr   , &
+        veg%litterfall%fine_root%carbon13%ptr, veg%litterfall%fine_root%carbon14%ptr, veg%litterfall%fine_root%nitrogen15%ptr , &
+        ! coarse_root
+        veg%litterfall%coarse_root%carbon%ptr, veg%litterfall%coarse_root%nitrogen%ptr, veg%litterfall%coarse_root%phosphorus%ptr   , &
+        veg%litterfall%coarse_root%carbon13%ptr, veg%litterfall%coarse_root%carbon14%ptr, veg%litterfall%coarse_root%nitrogen15%ptr , &
+        ! sap_wood
+        veg%litterfall%sap_wood%carbon%ptr, veg%litterfall%sap_wood%nitrogen%ptr, veg%litterfall%sap_wood%phosphorus%ptr    , &
+        veg%litterfall%sap_wood%carbon13%ptr, veg%litterfall%sap_wood%carbon14%ptr, veg%litterfall%sap_wood%nitrogen15%ptr  , &
+        ! heart_wood
+        veg%litterfall%heart_wood%carbon%ptr, veg%litterfall%heart_wood%nitrogen%ptr, veg%litterfall%heart_wood%phosphorus%ptr    , &
+        veg%litterfall%heart_wood%carbon13%ptr, veg%litterfall%heart_wood%carbon14%ptr, veg%litterfall%heart_wood%nitrogen15%ptr  , &
+        ! labile
+        veg%litterfall%labile%carbon%ptr, veg%litterfall%labile%nitrogen%ptr, veg%litterfall%labile%phosphorus%ptr    , &
+        veg%litterfall%labile%carbon13%ptr, veg%litterfall%labile%carbon14%ptr, veg%litterfall%labile%nitrogen15%ptr  , &
+        ! reserve
+        veg%litterfall%reserve%carbon%ptr, veg%litterfall%reserve%nitrogen%ptr, veg%litterfall%reserve%phosphorus%ptr   , &
+        veg%litterfall%reserve%carbon13%ptr, veg%litterfall%reserve%carbon14%ptr, veg%litterfall%reserve%nitrogen15%ptr , &
+        ! fruit
+        veg%litterfall%fruit%carbon%ptr, veg%litterfall%fruit%nitrogen%ptr, veg%litterfall%fruit%phosphorus%ptr   , &
+        veg%litterfall%fruit%carbon13%ptr, veg%litterfall%fruit%carbon14%ptr, veg%litterfall%fruit%nitrogen15%ptr , &
+        ! seed_bed
+        veg%litterfall%seed_bed%carbon%ptr, veg%litterfall%seed_bed%nitrogen%ptr, veg%litterfall%seed_bed%phosphorus%ptr  , &
+        veg%litterfall%seed_bed%carbon13%ptr, veg%litterfall%seed_bed%carbon14%ptr, veg%litterfall%seed_bed%nitrogen15%ptr
+    END IF
+
+    lun=10
+    READ(lun,*, IOSTAT=stat) time_hlp, & 
+        soil%t_soil%ptr(ics:ice,1:nlevel_soil,iblk), tile%vegsoil%moisture   ! *slmdev t_soil uses t_air
+
+    IF(IS_IOSTAT_END(stat)) THEN 
+      ! start reading from line one & read header into dummy
+      REWIND(lun)
+      CALL read_forcing_header(lun)
+      READ(lun,*) time_hlp, &
+        soil%t_soil%ptr(ics:ice,1:nlevel_soil,iblk), tile%vegsoil%moisture   ! *slmdev t_soil uses t_air
+    END IF
+
+    END SELECT  ! land plant canopy vs soil
+
+
   END SUBROUTINE update_forcing
 
 
@@ -248,28 +376,72 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE open_forcing_input_file
 
-    USE mo_exception, ONLY: finish
+    USE mo_exception,                       ONLY: finish
+    USE mo_base_config_class,               ONLY: base_config
 
     IMPLICIT NONE
-    ! 0.3 local
+    ! 0.2 Local
     LOGICAL :: file_exists
     INTEGER :: lun 
-    CHARACTER(100) :: fname 
+    CHARACTER(100) :: fname
     CHARACTER(len=*), PARAMETER :: routine = 'mo_atmland_forcing:open_forcing_input_file'
 
-    !> 1.0 open file for READ
-      lun=9
-      fname = 'climate.dat'
-      ! check if file exists
-      INQUIRE(FILE=fname, EXIST=file_exists)
-      ! open if fname == True
-      IF(file_exists) THEN
-        OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
-    !> 2.0 read the two header lines into dummy variables
-        CALL read_forcing_header
-      ELSE
-        CALL finish(TRIM(routine), 'climate forcing: climate.dat could not be opened, file does not exist')
-      END IF
+
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant','canopy')
+        !> 1.1 open file for READ
+        !! 
+        lun=9
+        fname = 'climate.dat'
+        ! check if file exists
+        INQUIRE(FILE=fname, EXIST=file_exists)
+        ! open if fname == True
+        IF(file_exists) THEN
+          OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
+        !> 1.2 read the two header lines into dummy variables
+        !! to advance to line 3
+          CALL read_forcing_header(lun)
+        ELSE
+          CALL finish(TRIM(routine), 'climate forcing: climate.dat could not be opened, file does not exist')
+        END IF
+
+      CASE('soil')
+        !> 2.1 open file for READ
+        !! 
+        lun=9
+        fname = 'soil_forcing_litterfall.dat'
+        ! check if file exists
+        INQUIRE(FILE=fname, EXIST=file_exists)
+        ! open if fname == True
+        IF(file_exists) THEN
+          OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
+        !> 2.2 read the header line into dummy variable
+        !! to advance to line 2
+          CALL read_forcing_header(lun)
+        ELSE
+          CALL finish(TRIM(routine), 'soil forcing: soil_forcing_litterfall.dat could not be opened, file does not exist')
+        END IF
+
+        !> 3.1 open file for READ
+        !! 
+        lun=10
+        fname = 'soil_forcing_soilphysics.dat'
+        ! check if file exists
+        INQUIRE(FILE=fname, EXIST=file_exists)
+        ! open if fname == True
+        IF(file_exists) THEN
+          OPEN (UNIT=lun, FILE=fname, ACTION="read", STATUS="old") ! status=old: file exists already
+        !> 3.2 read the header line into dummy variable
+        !! to advance to line 2
+          CALL read_forcing_header(lun)
+        ELSE
+          CALL finish(TRIM(routine), 'soil forcing: soil_forcing_soilphysics.dat could not be opened, file does not exist')
+        END IF
+
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'climate forcing: either land, plant, canopy or soil should lead you here, but others not')
+    END SELECT
+
   END SUBROUTINE open_forcing_input_file
 
 
@@ -280,9 +452,18 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE close_forcing_input_file
 
+    USE mo_base_config_class,               ONLY: base_config
+
     IMPLICIT NONE
 
-      CLOSE(9)
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant','canopy')
+        CLOSE(9)    ! climate
+
+      CASE('soil')
+        CLOSE(9)    ! litterfall
+        CLOSE(10)   ! soilphysics
+    END SELECT
 
   END SUBROUTINE close_forcing_input_file
 
@@ -292,18 +473,31 @@ CONTAINS
   !! 
   !! consider this a helper subroutine to the read_forcing subroutine
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE read_forcing_header
+  SUBROUTINE read_forcing_header(lun)
+
+    USE mo_base_config_class,               ONLY: base_config
 
     IMPLICIT NONE
+    ! 0.1 InOut
+    INTEGER,INTENT(in)  :: lun 
     ! 0.2 Local
-    CHARACTER(200) :: header_dummy1 = "header"
-    CHARACTER(200) :: header_dummy2 = "header"
-    INTEGER :: lun 
+    CHARACTER(200)      :: header_dummy1 = "header"
+    CHARACTER(500)      :: header_dummy2 = "header_long"
 
-    !> 1.0 read header
-    lun=9
-    READ(lun,'(a)') header_dummy1   ! header line 1
-    READ(lun,'(a)') header_dummy2   ! header line 2
+
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant','canopy')
+      !> 1.0 read 2 header lines of one file
+      !! lun = 9
+        READ(lun,'(a)') header_dummy1   ! header line 1
+        READ(lun,'(a)') header_dummy1   ! header line 2
+
+      CASE('soil')
+      !> 2.0 read 1 header line of two files
+      !! lun = 9 or 10
+        READ(lun,'(a)') header_dummy2   ! header line 1
+    END SELECT
+
   END SUBROUTINE read_forcing_header
 
 END MODULE mo_atmland_forcing

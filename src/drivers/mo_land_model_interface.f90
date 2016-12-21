@@ -263,7 +263,7 @@ CONTAINS
     !! 
       CALL write_output_flux(tile, time_day, time_year, 1) ! 1 == itile 
 
-    !! output litterfall and biophysics: usually this would be output at each timstep
+    !! output litterfall and soilphysics: usually this would be output at each timstep
     !! 
     !! 
       IF (base_config%flag_litterfall_output) THEN
@@ -305,7 +305,7 @@ CONTAINS
     !! 
       CALL write_output_flux(tile, time_day, time_year, 1) ! 1 == itile 
 
-    !! output litterfall and biophysics: usually this would be output at each timstep
+    !! output litterfall and soilphysics: usually this would be output at each timstep
     !! 
     !! 
       IF (base_config%flag_litterfall_output) THEN

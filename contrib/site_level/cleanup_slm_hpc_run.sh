@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## 20161012
+## 
 ##
 ## script to cleanup temporary files and folders after a whole job-array of slm simulations was completed
 ## called from the prep_run_slm.sh
@@ -21,6 +21,7 @@ array=$2                          # was an job array or just one job simulated  
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 simFold="$bgiScratchUserFold""$jobName""/"
+slmModel=$(sed -n 3p "$simFold""default_files/config.txt")                                    # SLM model: land plant canopy soil
 paramSensitivitySim=$(sed -n 7p "$simFold""default_files/config.txt" | awk '{print $1}')      # T/F  -> parameter sensitivity
 compareSimCRUNCEPvsGFDB=$(sed -n 8p "$simFold""default_files/config.txt" | awk '{print $1}')  # T/F  -> compare with global forest data base
 

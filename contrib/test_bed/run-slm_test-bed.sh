@@ -33,11 +33,11 @@ flag_optimal_allocation="F"
 flag_tile_veg_dynamics="T"          # does also set "start_bareground"
 
 # simulation length & output
-simulation_length_number=3     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=10     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=3     # equal with or larger than output_start_first_day_year
+output_end_last_day_year=10     # equal with or larger than output_start_first_day_year
 
 # PFT 
 setPFTAutomatically="yes"       # yes / no (in case of 'yes', the value of option plant_functional_type_id is ignored)
@@ -62,11 +62,87 @@ latitude=50.0                   # float !
 cd "$( dirname "$0" )"
 
 
-## if slmModel is passed as argument to this script, use this over the above defined value ##
-if [ ! -z "$1" ] # if $1 is not empty -> argument passed to this script
-  then
-    slmModel=$1
-fi
+## deal with options and arguments passed to the script ##
+while getopts ":p:m:y:o:h" opt; do
+  case "$opt" in
+  "p")
+    echo "   plant_functional_type_id=""$OPTARG"
+    echo "   setPFTAutomatically is set to: no"
+    plant_functional_type_id="$OPTARG"
+    setPFTAutomatically="no"
+    ;;
+  "m")
+    echo "   slmModel=""$OPTARG"
+    slmModel="$OPTARG"
+    ;;
+  "y")
+    echo "   simulation_length_number=""$OPTARG"
+    echo "   output from 1 to ""$OPTARG"
+    simulation_length_number="$OPTARG"
+    output_start_first_day_year=1
+    output_end_last_day_year="$OPTARG"
+    ;;
+  "o")
+    case "$OPTARG" in
+    "no")
+      echo "   no optimization"
+      flag_optimal_Nfraction="F"
+      flag_optimal_Nleaf="F"
+      flag_optimal_allocation="F"
+      ;;
+    "nf")
+      echo "   using only optimal Nfraction"
+      flag_optimal_Nfraction="T"
+      flag_optimal_Nleaf="F"
+      flag_optimal_allocation="F"
+      ;;
+    "nl")
+      echo "   using only optimal Nleaf"
+      flag_optimal_Nfraction="F"
+      flag_optimal_Nleaf="T"
+      flag_optimal_allocation="F"
+      ;;
+    "al")
+      echo "   using only optimal allocation"
+      flag_optimal_Nfraction="F"
+      flag_optimal_Nleaf="F"
+      flag_optimal_allocation="T"
+      ;;
+    esac
+    ;;
+  \?)
+    echo "     Invalid option: -$OPTARG"
+    echo "     Use -h for help."
+    ;;
+  :)
+    echo "Option -$OPTARG requires an argument."
+    echo "EXIT !"
+    exit 1
+    ;;
+  "h")  # help #
+    echo "Valid options are:"
+    echo " -p set the PFT (plant_functional_type_id)"
+    echo "    Arguments to -p:"
+    echo "       any integer value 1-8"
+    echo "       note: setPFTAutomatically is set to: no"
+    echo " -m set slmModel"
+    echo "    Arguments to -m:"
+    echo "       land plant soil"
+    echo " -y set simulation length"
+    echo "    Arguments to -y:"
+    echo "       any integer value"
+    echo "       note: this sets simulation output accordingly (1-x)"
+    echo " -o set the optimality scheme"
+    echo "    Arguments to -o:"
+    echo "       no: no optimality"
+    echo "       nf: using only optimal Nfraction"
+    echo "       nl: using only optimal Nleaf"
+    echo "       al: using only optimal allocation"
+    echo "EXIT !"
+    exit 1
+    ;;
+  esac
+done
 
 ## 
 echo -n " Processing your request, please hold ... "
@@ -122,28 +198,56 @@ validateUserConfigValues "$siteDataSet" "$validateSiteDataSet" "siteDataSet"
 # not validated: simulation_length_number, output_start_first_day_year, output_end_last_day_year, soil_awc_prescribe, soil_theta_prescribe, latitude, longitude 
 
 
+## definition of some basic variables
+# model forcing - input files for the model
+forceSoilLitterFile="soil_forcing_litterfall.dat"
+forceSoilPhysicFile="soil_forcing_soilphysics.dat"
+forceLandMetFile="climate.dat"
+
 ## test if forcing data exist in testbed/ or in the fluxnet/cruncep site-list-folder [if model is not test_canopy] ##
 if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for all models but test_canopy
   then
     if [ "$siteDataSet" == "n" ]  # if forcing data are neither Fluxnet nor Cruncep dataset
     then  # local forcing file
-      if [ ! -e ./climate.dat ] # if file not exists
+      if [ $slmModel == "soil" ]
         then
-          echo "EXIT!  the test_bed/climate.dat does not exist, but the option siteDataSet is set to n !"
-          exit
-      fi
+          if [ ! -e ./"$forceSoilLitterFile" ] # if file not exists
+            then
+              echo "EXIT!  the test_bed/""$forceSoilLitterFile"" does not exist, but the option siteDataSet is set to n !"
+              exit
+          fi
+          if [ ! -e ./"$forceSoilPhysicFile" ] # if file not exists
+            then
+              echo "EXIT!  the test_bed/""$forceSoilPhysicFile"" does not exist, but the option siteDataSet is set to n !"
+              exit
+          fi
+        else # land plant canopy
+          if [ ! -e ./"$forceLandMetFile" ] # if file not exists
+            then
+              echo "EXIT!  the test_bed/""$forceLandMetFile"" does not exist, but the option siteDataSet is set to n !"
+              exit
+          fi
+      fi 
       setPFTAutomatically="no"
       echo -e '\n' "Info: the option setPFTAutomatically is used with 'no', as you are using the test_bed/climate.dat, which does not provide PFT information. "
-    else  # fluxnet forcing file
+    else  # fluxnet/cruncep forcing file
       if [ $siteDataSet == "f" ]
         then
           siteDataSetFull="FLUXNET"
         else
           siteDataSetFull="CRUNCEPv5"
       fi 
+
+      if [ $slmModel == "soil" ]
+        then
+          forcing="soil_forcing"
+        else # land plant canopy
+          forcing="met_forcing"
+      fi 
       siteFolderBasic="/Net/Groups/BGI/data/Model/SLM1/input/point/"
       siteFolder="$siteFolderBasic""$siteDataSetFull"
-      if ! ls -la $siteFolder | grep $siteName > /dev/null  # if forcing file not found
+      siteFolderForcing="$siteFolder""/""$forcing"
+      if ! ls -la $siteFolderForcing | grep $siteName > /dev/null  # if forcing file not found
         then
           echo "EXIT! The site ""$siteName"" you selected for forcing input does not exist in the site data-set folder !"
           exit
@@ -162,9 +266,21 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but t
   then
     if [ "$siteDataSet" == "n" ]
       then
-        cp ./climate.dat ./"$slmModel"/climate.dat
+        if [ $slmModel == "soil" ]
+          then
+            cp ./"$forceSoilLitterFile" ./"$slmModel"/"$forceSoilLitterFile"
+            cp ./"$forceSoilLitterFile" ./"$slmModel"/"$forceSoilPhysicFile"
+          else # land plant canopy
+            cp ./"$forceLandMetFile" ./"$slmModel"/"$forceLandMetFile"
+        fi 
       else # $siteDataSet == f / c
-        cp /Net/Groups/BGI/data/Model/SLM1/input/point/"$siteDataSetFull"/"$siteName".dat ./"$slmModel"/climate.dat
+        if [ $slmModel == "soil" ]
+          then
+            cp "$siteFolderForcing"/"$siteName"_lit.dat ./"$slmModel"/"$forceSoilLitterFile"
+            cp "$siteFolderForcing"/"$siteName"_sph.dat ./"$slmModel"/"$forceSoilPhysicFile"
+          else # land plant canopy
+            cp "$siteFolderForcing"/"$siteName".dat     ./"$slmModel"/"$forceLandMetFile"
+        fi 
     fi
 fi
 
@@ -178,7 +294,7 @@ cd ./"$slmModel"
 function changeNamelistValue {
 oldValue=$(grep -w $1 ./namelist.slm | awk -F "=" '{print $2}' | tr -d '"') # get the old value that should be replaced
 lineNum=$(grep -wn $1 ./namelist.slm | cut -d : -f 1)                       # get line number of variable $1
-if [[ $(uname -s) == "Darwin" ]]; then 
+if [[ $(uname -s) == "Darwin" ]]; then                                      # make it work at Notebook "Darwin" -> Mac operating system
   gsed -i "$lineNum"s/$oldValue/$2/ ./namelist.slm                             # replace the old value in line $lineNum with $2
 else 
   sed -i "$lineNum"s/$oldValue/$2/ ./namelist.slm

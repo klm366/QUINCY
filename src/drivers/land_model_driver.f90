@@ -24,7 +24,8 @@ PROGRAM land_model_driver
                                         time_day, time_year, ntimestep, itimestep, timestep_prop_day, &
                                         fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
   ! atmland
-  USE mo_atmland_forcing,         ONLY: update_forcing, open_forcing_input_file, close_forcing_input_file
+  USE mo_atmland_forcing,         ONLY: update_forcing, open_forcing_input_file, close_forcing_input_file ! valid for land plant canopy and soil
+                                        
   ! vegetation
   USE mo_veg_config_class,        ONLY: veg_config  ! used for 'special case: fluxnet output'
   USE mo_veg_output,              ONLY: init_veg_output_variables, &
@@ -42,7 +43,7 @@ PROGRAM land_model_driver
   !! 
   !! Local variables
   !! 
-  LOGICAL                       :: l_forcing  ! IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
+  LOGICAL                       :: l_forcing  ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_atm2land(), update_land2atm())
   REAL(wp), ALLOCATABLE         :: &     !! atm2land memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
@@ -179,6 +180,7 @@ PROGRAM land_model_driver
   ALLOCATE(sensible_hflx_ice)
   ! open forcing input files (and read the header into dummy variables); see mo_atmland_forcing
   ! l_forcing is set in init_slm() depending on the specific SLM model
+  ! for SLM soil different input is used than for land plant canopy
   IF (l_forcing) THEN
     CALL open_forcing_input_file
   END IF
@@ -226,7 +228,8 @@ PROGRAM land_model_driver
     !! l_forcing is set in init_slm() depending on the specific SLM model
     !! 
     IF (l_forcing) THEN
-      CALL update_forcing(time_day, &     !< mo_atmland_forcing - may be moved to /drivers later
+      CALL update_forcing(  tile(1) , & ! necessary for soil: veg%litterfall vegsoil%moisture
+                            time_day, & 
                                   !! forcing (read from file and passed to atm2land memory via the land_model_interface)
                                   !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: 
                                   t_air                   = t_air              , &
@@ -368,7 +371,7 @@ PROGRAM land_model_driver
   !! Close output and forcing files
   !! 
   IF (fluxnet_output_status == 0) CALL close_output_files(1)     ! 1 == itile 
-  IF (l_forcing) CALL close_forcing_input_file ! only if forcing is enabled at all
+  IF (l_forcing) CALL close_forcing_input_file ! only if forcing is enabled at all (land plant canopy soil)
   IF (base_config%flag_litterfall_output) THEN
     CALL close_output_files_litterfall_soilphysics(1)
   END IF
