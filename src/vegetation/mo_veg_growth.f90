@@ -110,7 +110,11 @@ CONTAINS
     !! 
     !! 
     IF (veg_config%flag_optimal_Nleaf .AND. pheno%growing_season%ptr) THEN
-      CALL calc_dir_optimal_cn_leaf(lctlib, veg)
+      CALL calc_dir_optimal_cn_leaf(lctlib                              , &
+                                      veg                               , &
+                                      assimi%beta_air_tcnl_mavg%ptr     , &
+                                      assimi%beta_soil_ps_tcnl_mavg%ptr , &
+                                      assimi%beta_soil_gs_tcnl_mavg%ptr )
     END IF
 
     CALL calc_stoichiometry_changes(lctlib                          , & ! in

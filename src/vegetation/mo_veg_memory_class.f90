@@ -28,7 +28,7 @@ MODULE mo_veg_memory_class
   PUBLIC :: t_slm_struct_veg_pool, t_slm_struct_veg_element   ! *slmjsb4 
   PUBLIC :: max_no_of_structs, max_no_of_n_structs            ! *slmjsb4
 
-  INTEGER, PARAMETER :: max_no_of_vars      = 300  !> TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_vars      = 250  !> TYPE t_jsb_var
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
   INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
 
@@ -256,10 +256,7 @@ MODULE mo_veg_memory_class
                                     press_srf_daytime         , &    !<  average of the previous day
                                     co2_mixing_ratio_daytime  , &    !<  average of the previous day
                                     ga_daytime                , &    !<  average of the previous day
-                                    beta_air_daytime          , &    !<  average of the previous day
-                                    beta_soil_ps_daytime      , &    !<  average of the previous day
                                     beta_sinklim_ps_daytime   , &    !<  average of the previous day
-                                    beta_soil_gs_daytime      , &    !<  average of the previous day
                                     t_jmax_opt_daytime               !<  average of the previous day
     TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
                                     par_sunlit_daytime_dacc_cl   , & !<  value accumulated over current day
@@ -270,10 +267,7 @@ MODULE mo_veg_memory_class
                                     press_srf_daytime_dacc        , & !<  average of the previous day
                                     co2_mixing_ratio_daytime_dacc , & !<  average of the previous day
                                     ga_daytime_dacc               , & !<  average of the previous day
-                                    beta_air_daytime_dacc         , & !<  average of the previous day
-                                    beta_soil_ps_daytime_dacc     , & !<  average of the previous day
                                     beta_sinklim_ps_daytime_dacc  , & !<  average of the previous day
-                                    beta_soil_gs_daytime_dacc     , & !<  average of the previous day
                                     t_jmax_opt_daytime_dacc           !<  value accumulated over current day 
     TYPE(t_jsb_var_real1d)          :: &   
                                     daytime_counter  !< number of timesteps of current day with light available & daytime_avrg variables were added up
@@ -287,8 +281,7 @@ MODULE mo_veg_memory_class
                                     growth_req_p_tlabile_mavg           !< moles P required for a unit of N growth under current allocation fractions
     ! 1.2 memory of conditions for phenology calculations
     TYPE(t_jsb_var_real1d)          :: &   
-                                    t_air_tphen_mavg               , &  !< air temp mavg for phenology calc
-                                    beta_soil_gs_tphen_mavg             !< scaling factor to account for soil moisture constraints on conductance
+                                    t_air_tphen_mavg                    !< air temp mavg for phenology calc
     ! 1.3 memory for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
     TYPE(t_jsb_var_real1d)          :: &   
                                     npp_tuptake_mavg               , &  !< npp of the last week (µmol m-2 s-1)
@@ -307,10 +300,7 @@ MODULE mo_veg_memory_class
                                     press_srf_tfrac_mavg           , &  !< air pressure at surface
                                     co2_mixing_ratio_tfrac_mavg    , &  !< co2 mixing ratio of the air
                                     ga_tfrac_mavg                  , &  !< aerodynamic resistance
-                                    beta_air_tfrac_mavg            , &  !< scaling factor to account for air humidity effects on conductance
-                                    beta_soil_ps_tfrac_mavg        , &  !< scaling factor to account for soil moisture constraints on photosynthesis 
-                                    beta_sinklim_ps_tfrac_mavg     , &  !< scaling factor to account for soil moisture constraints on photosynthesis 
-                                    beta_soil_gs_tfrac_mavg             !< scaling factor to account for soil moisture constraints on conductance
+                                    beta_sinklim_ps_tfrac_mavg          !< scaling factor to account for soil moisture constraints on photosynthesis 
     ! 1.5 memory of conditions for photosynthesis for the optimisation of foliar N  
     TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
                                     par_sunlit_tcnl_mavg_cl        , &  !< PAR on sunlit leaves
@@ -321,10 +311,7 @@ MODULE mo_veg_memory_class
                                     press_srf_tcnl_mavg            , &  !< air pressure at surface
                                     co2_mixing_ratio_tcnl_mavg     , &  !< co2 mixing ratio of the air
                                     ga_tcnl_mavg                   , &  !< aerodynamic resistance
-                                    beta_air_tcnl_mavg             , &  !< scaling factor to account for air humidity effects on conductance
-                                    beta_soil_ps_tcnl_mavg         , &  !< scaling factor to account for soil moisture constraints on conductance
-                                    beta_sinklim_ps_tcnl_mavg      , &  !< scaling factor to account for soil moisture constraints on conductance
-                                    beta_soil_gs_tcnl_mavg              !< scaling factor to account for soil moisture constraints on conductance
+                                    beta_sinklim_ps_tcnl_mavg           !< scaling factor to account for soil moisture constraints on conductance
     ! 1.6 memory of conditions for photosynthesis for the optimisation of biomass allocation fractions
     TYPE(t_jsb_var_real1d)          :: &   
                                     npp_talloc_mavg                , &  !< NPP (µmol m-2 s-1) (averaging time-scale: tau_allocation)
@@ -1647,16 +1634,7 @@ CONTAINS
       CALL slm_add_var(mem, 'ga_daytime', mem%ga_daytime, &
             initval_r=0.2_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'beta_air_daytime', mem%beta_air_daytime, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_ps_daytime', mem%beta_soil_ps_daytime, &
-            initval_r=1.0_wp) ! initvalue
-  
       CALL slm_add_var(mem, 'beta_sinklim_ps_daytime', mem%beta_sinklim_ps_daytime, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_gs_daytime', mem%beta_soil_gs_daytime, &
             initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_jmax_opt_daytime', mem%t_jmax_opt_daytime, &
@@ -1683,16 +1661,7 @@ CONTAINS
       CALL slm_add_var(mem, 'ga_daytime_dacc', mem%ga_daytime_dacc, &
             initval_r=0.2_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'beta_air_daytime_dacc', mem%beta_air_daytime_dacc, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_ps_daytime_dacc', mem%beta_soil_ps_daytime_dacc, &
-            initval_r=1.0_wp) ! initvalue
-  
       CALL slm_add_var(mem, 'beta_sinklim_ps_daytime_dacc', mem%beta_sinklim_ps_daytime_dacc, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_gs_daytime_dacc', mem%beta_soil_gs_daytime_dacc, &
             initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_jmax_opt_daytime_dacc', mem%t_jmax_opt_daytime_dacc, &
@@ -1715,9 +1684,6 @@ CONTAINS
   
       CALL slm_add_var(mem, 't_air_tphen_mavg', mem%t_air_tphen_mavg, &
             initval_r=283.15_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_gs_tphen_mavg', mem%beta_soil_gs_tphen_mavg, &
-            initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'npp_tuptake_mavg', mem%npp_tuptake_mavg, &
             initval_r=1.0_wp) ! initvalue
@@ -1758,16 +1724,7 @@ CONTAINS
       CALL slm_add_var(mem, 'ga_tfrac_mavg', mem%ga_tfrac_mavg, &
             initval_r=0.2_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
-            initval_r=1.0_wp) ! initvalue
-  
       CALL slm_add_var(mem, 'beta_sinklim_ps_tfrac_mavg', mem%beta_sinklim_ps_tfrac_mavg, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
             initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'par_sunlit_tcnl_mavg_cl', mem%par_sunlit_tcnl_mavg_cl, &
@@ -1791,16 +1748,7 @@ CONTAINS
       CALL slm_add_var(mem, 'ga_tcnl_mavg', mem%ga_tcnl_mavg, &
             initval_r=0.2_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
-            initval_r=1.0_wp) ! initvalue
-  
       CALL slm_add_var(mem, 'beta_sinklim_ps_tcnl_mavg', mem%beta_sinklim_ps_tcnl_mavg, &
-            initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
             initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'npp_talloc_mavg', mem%npp_talloc_mavg, &

@@ -149,10 +149,10 @@ CONTAINS
       veg%press_srf_daytime_dacc%ptr        = veg%press_srf_daytime_dacc%ptr        + atm2land%press_srf%ptr
       veg%co2_mixing_ratio_daytime_dacc%ptr = veg%co2_mixing_ratio_daytime_dacc%ptr + atm2land%co2_mixing_ratio%ptr
       veg%ga_daytime_dacc%ptr               = veg%ga_daytime_dacc%ptr               + atm2land%ga%ptr
-      veg%beta_air_daytime_dacc%ptr         = veg%beta_air_daytime_dacc%ptr         + assimi%beta_air%ptr
-      veg%beta_soil_ps_daytime_dacc%ptr     = veg%beta_soil_ps_daytime_dacc%ptr     + assimi%beta_soil_ps%ptr
+      assimi%beta_air_daytime_dacc%ptr      = assimi%beta_air_daytime_dacc%ptr      + assimi%beta_air%ptr
+      assimi%beta_soil_ps_daytime_dacc%ptr  = assimi%beta_soil_ps_daytime_dacc%ptr  + assimi%beta_soil_ps%ptr
       veg%beta_sinklim_ps_daytime_dacc%ptr  = veg%beta_sinklim_ps_daytime_dacc%ptr  + veg%beta_sinklim_ps%ptr
-      veg%beta_soil_gs_daytime_dacc%ptr     = veg%beta_soil_gs_daytime_dacc%ptr     + assimi%beta_soil_gs%ptr
+      assimi%beta_soil_gs_daytime_dacc%ptr  = assimi%beta_soil_gs_daytime_dacc%ptr  + assimi%beta_soil_gs%ptr
       veg%t_jmax_opt_daytime_dacc%ptr       = veg%t_jmax_opt_daytime_dacc%ptr       + assimi%t_jmax_opt%ptr
     END IF
 
@@ -173,10 +173,10 @@ CONTAINS
         veg%press_srf_daytime%ptr        = veg%press_srf_daytime_dacc%ptr          / veg%daytime_counter%ptr
         veg%co2_mixing_ratio_daytime%ptr = veg%co2_mixing_ratio_daytime_dacc%ptr   / veg%daytime_counter%ptr
         veg%ga_daytime%ptr               = veg%ga_daytime_dacc%ptr                 / veg%daytime_counter%ptr
-        veg%beta_air_daytime%ptr         = veg%beta_air_daytime_dacc%ptr           / veg%daytime_counter%ptr
-        veg%beta_soil_ps_daytime%ptr     = veg%beta_soil_ps_daytime_dacc%ptr       / veg%daytime_counter%ptr
+        assimi%beta_air_daytime%ptr      = assimi%beta_air_daytime_dacc%ptr        / veg%daytime_counter%ptr
+        assimi%beta_soil_ps_daytime%ptr  = assimi%beta_soil_ps_daytime_dacc%ptr    / veg%daytime_counter%ptr
         veg%beta_sinklim_ps_daytime%ptr  = veg%beta_sinklim_ps_daytime_dacc%ptr    / veg%daytime_counter%ptr
-        veg%beta_soil_gs_daytime%ptr     = veg%beta_soil_gs_daytime_dacc%ptr       / veg%daytime_counter%ptr
+        assimi%beta_soil_gs_daytime%ptr  = assimi%beta_soil_gs_daytime_dacc%ptr    / veg%daytime_counter%ptr
         veg%t_jmax_opt_daytime%ptr       = veg%t_jmax_opt_daytime_dacc%ptr         / veg%daytime_counter%ptr
       ELSE  ! if veg%daytime_counter is zero
         veg%par_sunlit_daytime_cl%ptr    = 0.0_wp
@@ -198,10 +198,10 @@ CONTAINS
       veg%press_srf_daytime_dacc%ptr             = 0.0_wp
       veg%co2_mixing_ratio_daytime_dacc%ptr      = 0.0_wp
       veg%ga_daytime_dacc%ptr                    = 0.0_wp
-      veg%beta_air_daytime_dacc%ptr              = 0.0_wp
-      veg%beta_soil_ps_daytime_dacc%ptr          = 0.0_wp
+      assimi%beta_air_daytime_dacc%ptr           = 0.0_wp
+      assimi%beta_soil_ps_daytime_dacc%ptr       = 0.0_wp
       veg%beta_sinklim_ps_daytime_dacc%ptr       = 0.0_wp
-      veg%beta_soil_gs_daytime_dacc%ptr          = 0.0_wp
+      assimi%beta_soil_gs_daytime_dacc%ptr       = 0.0_wp
       veg%t_jmax_opt_daytime_dacc%ptr            = 0.0_wp
       veg%daytime_counter%ptr                    = 0.0_wp
     END IF
@@ -320,8 +320,8 @@ CONTAINS
                                                     mavg_period_tlabile, do_calc=(veg%growth_req_p%ptr > eps8))
     
     !> 1.2 averages at the time-scale of phenology
-    veg%t_air_tphen_mavg%ptr                 = calc_mavg(veg%t_air_tphen_mavg%ptr, atm2land%t_air%ptr, mavg_period_tphen)
-    veg%beta_soil_gs_tphen_mavg%ptr          = calc_mavg(veg%beta_soil_gs_tphen_mavg%ptr, assimi%beta_soil_gs%ptr, mavg_period_tphen)
+    veg%t_air_tphen_mavg%ptr           = calc_mavg(veg%t_air_tphen_mavg%ptr, atm2land%t_air%ptr, mavg_period_tphen)
+    assimi%beta_soil_gs_tphen_mavg%ptr = calc_mavg(assimi%beta_soil_gs_tphen_mavg%ptr, assimi%beta_soil_gs%ptr, mavg_period_tphen)
 
     !> 1.3 averages at the nutrient-uptake demand time-scale
     veg%npp_tuptake_mavg%ptr                 = calc_mavg(veg%npp_tuptake_mavg%ptr, veg%npp%ptr, mavg_period_tuptake, &
@@ -353,13 +353,13 @@ CONTAINS
                                                   mavg_period_tfrac)
     veg%ga_tfrac_mavg%ptr                 = calc_mavg(veg%ga_tfrac_mavg%ptr, veg%ga_daytime%ptr, &
                                                   mavg_period_tfrac)
-    veg%beta_soil_ps_tfrac_mavg%ptr       = calc_mavg(veg%beta_soil_ps_tfrac_mavg%ptr, veg%beta_soil_ps_daytime%ptr, &
+    assimi%beta_soil_ps_tfrac_mavg%ptr    = calc_mavg(assimi%beta_soil_ps_tfrac_mavg%ptr, assimi%beta_soil_ps_daytime%ptr, &
                                                   mavg_period_tfrac)
     veg%beta_sinklim_ps_tfrac_mavg%ptr    = calc_mavg(veg%beta_sinklim_ps_tfrac_mavg%ptr, veg%beta_sinklim_ps_daytime%ptr, &
                                                   mavg_period_tfrac)
-    veg%beta_soil_gs_tfrac_mavg%ptr       = calc_mavg(veg%beta_soil_gs_tfrac_mavg%ptr, veg%beta_soil_gs_daytime%ptr, &
+    assimi%beta_soil_gs_tfrac_mavg%ptr    = calc_mavg(assimi%beta_soil_gs_tfrac_mavg%ptr, assimi%beta_soil_gs_daytime%ptr, &
                                                   mavg_period_tfrac)
-    veg%beta_air_tfrac_mavg%ptr           = calc_mavg(veg%beta_air_tfrac_mavg%ptr, veg%beta_air_daytime%ptr, &
+    assimi%beta_air_tfrac_mavg%ptr        = calc_mavg(assimi%beta_air_tfrac_mavg%ptr, assimi%beta_air_daytime%ptr, &
                                                   mavg_period_tfrac)
 
     !> 1.5 averages at the time-scale of leaf N allocation fractions 
@@ -378,13 +378,13 @@ CONTAINS
                                                   mavg_period_tcnl)
     veg%ga_tcnl_mavg%ptr                  = calc_mavg(veg%ga_tcnl_mavg%ptr, veg%ga_daytime%ptr, &
                                                   mavg_period_tcnl)
-    veg%beta_soil_ps_tcnl_mavg%ptr        = calc_mavg(veg%beta_soil_ps_tcnl_mavg%ptr, veg%beta_soil_ps_daytime%ptr, &
+    assimi%beta_soil_ps_tcnl_mavg%ptr     = calc_mavg(assimi%beta_soil_ps_tcnl_mavg%ptr, assimi%beta_soil_ps_daytime%ptr, &
                                                   mavg_period_tcnl)
     veg%beta_sinklim_ps_tcnl_mavg%ptr     = calc_mavg(veg%beta_sinklim_ps_tcnl_mavg%ptr, veg%beta_sinklim_ps_daytime%ptr, &
                                                   mavg_period_tcnl)
-    veg%beta_soil_gs_tcnl_mavg%ptr        = calc_mavg(veg%beta_soil_gs_tcnl_mavg%ptr, veg%beta_soil_gs_daytime%ptr, &
+    assimi%beta_soil_gs_tcnl_mavg%ptr     = calc_mavg(assimi%beta_soil_gs_tcnl_mavg%ptr, assimi%beta_soil_gs_daytime%ptr, &
                                                   mavg_period_tcnl)
-    veg%beta_air_tcnl_mavg%ptr            = calc_mavg(veg%beta_air_tcnl_mavg%ptr, veg%beta_air_daytime%ptr, &
+    assimi%beta_air_tcnl_mavg%ptr         = calc_mavg(assimi%beta_air_tcnl_mavg%ptr, assimi%beta_air_daytime%ptr, &
                                                   mavg_period_tcnl)
 
     !> 1.6 time-scale of plant allocation calculation (veg process)

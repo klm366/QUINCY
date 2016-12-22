@@ -757,7 +757,11 @@ CONTAINS
   !! 
   !! Parameter leaf_cn_direction
   !----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_dir_optimal_cn_leaf(lctlib, veg)
+  SUBROUTINE calc_dir_optimal_cn_leaf(lctlib                    , &
+                                        veg                     , &
+                                        beta_air_tcnl_mavg      , &
+                                        beta_soil_ps_tcnl_mavg  , &
+                                        beta_soil_gs_tcnl_mavg  )
 
     USE mo_base_constants,        ONLY: dtime, one_day 
     USE mo_veg_constants,         ONLY: delta_n_leaf,root2leaf_cn,wood2leaf_cn 
@@ -771,6 +775,10 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in)    :: lctlib       !< land-cover-type library - parameters for one pft
     TYPE(t_veg_memory),    INTENT(inout) :: veg          !< veg process memory 
+    REAL(wp),              INTENT(in)    :: beta_air_tcnl_mavg
+    REAL(wp),              INTENT(in)    :: beta_soil_ps_tcnl_mavg
+    REAL(wp),              INTENT(in)    :: beta_soil_gs_tcnl_mavg
+
     ! 0.2 Local
     REAL(wp)                                   :: leaf_nitrogen,fine_root_nitrogen,coarse_root_nitrogen,sap_wood_nitrogen
     REAL(wp), DIMENSION(assimi_config%ncanopy) :: par_sunlit_tcnl_mavg_cl,par_shaded_tcnl_mavg_cl,fleaf_sunlit_tcnl_mavg_cl 
@@ -780,6 +788,7 @@ CONTAINS
     REAL(wp)  :: hlp1
     REAL(wp)  :: direction
     INTEGER   :: icanopy, dd
+
 
     IF(veg%pool%leaf%nitrogen%ptr > eps4)THEN
 
@@ -827,10 +836,10 @@ CONTAINS
                        veg%par_sunlit_tcnl_mavg_cl%ptr(icanopy,1),&
                        veg%par_shaded_tcnl_mavg_cl%ptr(icanopy,1),& 
                        veg%fleaf_sunlit_tcnl_mavg_cl%ptr(icanopy,1), &
-                       veg%beta_air_tcnl_mavg%ptr,&
-                       veg%beta_soil_ps_tcnl_mavg%ptr,&
+                       beta_air_tcnl_mavg,&
+                       beta_soil_ps_tcnl_mavg,&
                        veg%beta_sinklim_ps_tcnl_mavg%ptr,&
-                       veg%beta_soil_gs_tcnl_mavg%ptr, &
+                       beta_soil_gs_tcnl_mavg, &
                        veg%fn_chl_cl%ptr(icanopy,1)             , &
                        veg%fn_et_cl%ptr(icanopy,1)              , &
                        veg%fn_rub_cl%ptr(icanopy,1)             , &

@@ -47,6 +47,7 @@ CONTAINS
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
+    dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -60,15 +61,19 @@ CONTAINS
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
+    dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_pheno_memory),    POINTER :: pheno       ! local pointer to pheno__mem for SLM usability
+    TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to veg__mem for SLM usability
     REAL(wp),                POINTER :: t_air
     dsl4jsb_Get_memory(ATM2LAND_)       ! atm2land__mem => atm2land_memory
     dsl4jsb_Get_memory(VEG_)            ! veg__mem => veg_memory
     dsl4jsb_Get_memory(PHENO_)          ! veg__mem => veg_memory
+    dsl4jsb_Get_memory(ASSIMI_)
 
     veg     => veg__mem
     pheno   => pheno__mem  
+    assimi  => assimi__mem 
     model   => Get_model(tile%owner_model_id)
     lctlib  => model%lctlib(tile%lcts%lib_id)
 
@@ -77,7 +82,7 @@ CONTAINS
     !! 
     CALL calc_phenology(lctlib                                  , &
                         atm2land__mem%t_air%ptr                 , &
-                        veg%beta_soil_gs_tphen_mavg%ptr         , &
+                        assimi%beta_soil_gs_tphen_mavg%ptr      , &
                         veg%t_air_tphen_mavg%ptr                , &
                         veg%t_air_week_mavg%ptr                 , &
                         veg%t_air_month_mavg%ptr                , &

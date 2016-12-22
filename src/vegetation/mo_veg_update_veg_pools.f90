@@ -175,10 +175,10 @@ CONTAINS
                              veg%press_srf_tfrac_mavg%ptr, &
                              veg%co2_mixing_ratio_tfrac_mavg%ptr, &
                              veg%ga_tfrac_mavg%ptr, &
-                             veg%beta_air_tfrac_mavg%ptr, &
-                             veg%beta_soil_ps_tfrac_mavg%ptr, &
+                             assimi%beta_air_tfrac_mavg%ptr, &
+                             assimi%beta_soil_ps_tfrac_mavg%ptr, &
                              veg%beta_sinklim_ps_tfrac_mavg%ptr, &
-                             veg%beta_soil_gs_tfrac_mavg%ptr,& 
+                             assimi%beta_soil_gs_tfrac_mavg%ptr, & 
                              veg%t_jmax_opt_mavg%ptr, &
                              veg%lai_cl%ptr(:,1), &
                              veg%cumm_lai_cl%ptr(:,1), &

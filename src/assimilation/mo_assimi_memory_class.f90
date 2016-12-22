@@ -24,7 +24,7 @@ MODULE mo_assimi_memory_class
   PRIVATE
   PUBLIC :: t_assimi_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20   ! default JSBACH4
+  INTEGER, PARAMETER :: max_no_of_vars = 40   ! default JSBACH4
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -50,11 +50,30 @@ MODULE mo_assimi_memory_class
                               t_jmax_opt                     !< optimal temperature for electron transport 
   ! canopy level variables --> 3D
     TYPE(t_jsb_var_real1d)    :: &
-                              gross_assimilation_cl, &   !< gross assimilation rate per canopy layer (µmol CO2/m2/s) 
-                              net_assimilation_cl  , &   !< net assimilation rate per canopy layer (µmol CO2/m2/s)
-                              maint_respiration_leaf_cl, &   !< foliar respiration rate per canopy layer (µmol CO2/m2/s)
-                              canopy_cond_cl       , &   !< conductance for water per canopy layer (m/s)
-                              co2_conc_leaf_cl           !< internal leaf CO2 concentration per canopy layer (ppm)
+                              gross_assimilation_cl     , &   !< gross assimilation rate per canopy layer (µmol CO2/m2/s) 
+                              net_assimilation_cl       , &   !< net assimilation rate per canopy layer (µmol CO2/m2/s)
+                              maint_respiration_leaf_cl , &   !< foliar respiration rate per canopy layer (µmol CO2/m2/s)
+                              canopy_cond_cl            , &   !< conductance for water per canopy layer (m/s)
+                              co2_conc_leaf_cl                !< internal leaf CO2 concentration per canopy layer (ppm)
+
+    TYPE(t_jsb_var_real1d)    :: &
+                              beta_air_daytime          , &   !< average of the previous day
+                              beta_air_daytime_dacc     , &   !< average of the previous day
+                              beta_air_tfrac_mavg       , &   !< scaling factor to account for air humidity effects on conductance
+                              beta_air_tcnl_mavg              !< scaling factor to account for air humidity effects on conductance
+
+    TYPE(t_jsb_var_real1d)    :: &
+                              beta_soil_ps_daytime      , &   !< average of the previous day
+                              beta_soil_ps_daytime_dacc , &   !< average of the previous day
+                              beta_soil_ps_tfrac_mavg   , &   !< scaling factor to account for soil moisture constraints on photosynthesis 
+                              beta_soil_ps_tcnl_mavg    , &   !< scaling factor to account for soil moisture constraints on conductance
+                              beta_soil_gs_daytime      , &   !< average of the previous day
+                              beta_soil_gs_daytime_dacc , &   !< average of the previous day
+                              beta_soil_gs_tphen_mavg   , &   !< scaling factor to account for soil moisture constraints on conductance
+                              beta_soil_gs_tfrac_mavg   , &   !< scaling factor to account for soil moisture constraints on conductance
+                              beta_soil_gs_tcnl_mavg          !< scaling factor to account for soil moisture constraints on conductance
+
+
 
 
   CONTAINS
@@ -108,60 +127,99 @@ CONTAINS
 
       !> add variables to assimi memory assimi\%VAR
       !! 
-      !! slm_add_var -> slm_add_var_list_element_r1d    *slmtemp 1D -> 2D
-      !!  
-      CALL slm_add_var(mem, 'gross_assimilation', mem%gross_assimilation, &
-            initval_r=0.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'gross_assimilation_C13', mem%gross_assimilation_C13, &
-            initval_r=0.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'gross_assimilation_C14', mem%gross_assimilation_C14, &
-            initval_r=0.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'net_assimilation', mem%net_assimilation, &
-            initval_r=0.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'net_assimilation_boc', mem%net_assimilation_boc, &
-            initval_r=0.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'maint_respiration_leaf', mem%maint_respiration_leaf, &
-            initval_r=0.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'canopy_cond', mem%canopy_cond, &
-            initval_r=0.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'CO2_conc_leaf', mem%co2_conc_leaf, &
-            initval_r=0.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'beta_air', mem%beta_air, &
-            initval_r=1.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'beta_soil_ps', mem%beta_soil_ps, &
-            initval_r=1.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'beta_soil_gs', mem%beta_soil_gs, &
-            initval_r=1.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 't_jmax_opt', mem%t_jmax_opt, &
-            initval_r=1.0_wp)     ! initvalue 
-
+      !! slm_add_var -> slm_add_var_list_element_r1d    *slmtemp 1D -> 2D \n
+      !! and \n
       !! slm_add_var -> slm_add_var_list_element_r1d    *slmtemp 1D -> 3D
       !!  
+      CALL slm_add_var(mem, 'gross_assimilation', mem%gross_assimilation, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'gross_assimilation_C13', mem%gross_assimilation_C13, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'gross_assimilation_C14', mem%gross_assimilation_C14, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'net_assimilation', mem%net_assimilation, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'net_assimilation_boc', mem%net_assimilation_boc, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'maint_respiration_leaf', mem%maint_respiration_leaf, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'canopy_cond', mem%canopy_cond, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'co2_conc_leaf', mem%co2_conc_leaf, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_air', mem%beta_air, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_ps', mem%beta_soil_ps, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_gs', mem%beta_soil_gs, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 't_jmax_opt', mem%t_jmax_opt, &
+            initval_r=1.0_wp) ! initvalue
+  
       CALL slm_add_var(mem, 'gross_assimilation_cl', mem%gross_assimilation_cl, &
-            initval_r=0.0_wp)     ! initvalue 
-
+            initval_r=0.0_wp) ! initvalue
+  
       CALL slm_add_var(mem, 'net_assimilation_cl', mem%net_assimilation_cl, &
-            initval_r=0.0_wp)     ! initvalue 
-
+            initval_r=0.0_wp) ! initvalue
+  
       CALL slm_add_var(mem, 'maint_respiration_leaf_cl', mem%maint_respiration_leaf_cl, &
-            initval_r=0.0_wp)     ! initvalue 
-
+            initval_r=0.0_wp) ! initvalue
+  
       CALL slm_add_var(mem, 'canopy_cond_cl', mem%canopy_cond_cl, &
-            initval_r=0.0_wp)     ! initvalue 
-
-      CALL slm_add_var(mem, 'CO2_conc_leaf_cl', mem%co2_conc_leaf_cl, &
-            initval_r=0.0_wp)     ! initvalue 
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'co2_conc_leaf_cl', mem%co2_conc_leaf_cl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_air_daytime', mem%beta_air_daytime, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_air_daytime_dacc', mem%beta_air_daytime_dacc, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_ps_daytime', mem%beta_soil_ps_daytime, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_ps_daytime_dacc', mem%beta_soil_ps_daytime_dacc, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_gs_daytime', mem%beta_soil_gs_daytime, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_gs_daytime_dacc', mem%beta_soil_gs_daytime_dacc, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_gs_tphen_mavg', mem%beta_soil_gs_tphen_mavg, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
+            initval_r=1.0_wp) ! initvalue
 
     END IF
 
