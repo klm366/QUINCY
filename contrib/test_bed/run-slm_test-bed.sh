@@ -256,6 +256,7 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file with PFT "BNE" for a
 else  # in case: $slmModel == "test_canopy"
   setPFTAutomatically="no"
 fi    # [$slmModel != "test_canopy"]
+[ $slmModel == "canopy" ] && simulation_length_number=10
 
 
 ## create folder, and copy R scripts, namelist, parameter-list and climate.dat file there ##
