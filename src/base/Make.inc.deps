@@ -90,6 +90,7 @@ mo_jsb_model_init.o: \
   mo_pheno_constants.o \
   mo_pheno_init.o \
   mo_pheno_config_class.o \
+  mo_soil_constants.o \
   mo_soil_config_class.o \
   mo_soil_init.o
 

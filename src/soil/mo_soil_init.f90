@@ -34,6 +34,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_soil_config_class,     ONLY: soil_config
+    USE mo_soil_constants
     USE mo_soil_util,             ONLY: soil_depth_to_layers_2d
 
     ! USE PROC_memory
@@ -69,8 +70,14 @@ CONTAINS
 !    dsl4jsb_var3D_onDomain(SOIL_, soil_depth_l) = soil_depth_to_layers_2d( &
 !      & dsl4jsb_var2D_onDomain(SOIL_, soil_depth),                         & ! Total soil depth until bedrock (from textures)
 !      & dsl4jsb_Config(SOIL_)%dz_water(1:dsl4jsb_Config(SOIL_)%nsoil_water))    ! Soil layer thicknesses from namelist
+   
+
+    soil%soil_depth%ptr = soil_config%soil_depth 
     soil%soil_depth_l%ptr(:,:,:) = soil_depth_to_layers_2d(soil%soil_depth%ptr(:,:), soil_config%dz_water(1:soil_config%nsoil_water))
 
+    soil%bulk_dens_l%ptr  = rho_bulk_soil 
+    soil%heat_capa_l%ptr  = soil_heat_cap
+    soil%therm_cond_l%ptr = soil_therm_cond
 
 
 

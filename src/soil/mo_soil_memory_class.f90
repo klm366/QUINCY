@@ -159,6 +159,11 @@ MODULE mo_soil_memory_class
     TYPE(t_jsb_var_real3d)          :: &
                                     t_soil                  !< soil temperature  *slmdev currently we use t_air to get values here
 
+    ! soil physical properties (not sure where they should belong to, but they are needed in the long-term
+    TYPE(t_jsb_var_real3d)          :: & 
+                                    heat_capa_l,         &  !< soil heat capacity (J / kg )
+                                    bulk_dens_l,         &  !< soil bulk density (kg / m3)
+                                    therm_cond_l            !< soil thermal conductivity (W / m2 / K)
 
 !    TYPE(t_slm_struct_soil_element) :: &   ! simple structure for elements: t_jsb_struct
 !                                    test_soil_element   !< test ...
@@ -755,6 +760,15 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_soil', mem%t_soil, &
+            initval_r=273.15_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'heat_capa_l', mem%heat_capa_l, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'bulk_dens_l', mem%bulk_dens_l, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'therm_cond_l', mem%therm_cond_l, &
             initval_r=0.0_wp) ! initvalue
 
       !> simple TYPE (t_jsb_struct)

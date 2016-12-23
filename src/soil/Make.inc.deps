@@ -5,6 +5,7 @@ mo_soil_interface.o: \
   mo_base_memory.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
+  mo_soil_update_pools.o \
   mo_soil_memory_class.o  
 
 mo_soil_constants.o: \
@@ -30,10 +31,15 @@ mo_soil_init.o: \
   mo_kind.o \
   mo_exception.o \
   mo_soil_util.o \
+  mo_soil_constants.o \
   mo_soil_config_class.o \
   mo_soil_memory_class.o
 
 mo_soil_util.o: \
+  mo_kind.o \
+  mo_exception.o
+
+mo_soil_update_pools.o: \
   mo_kind.o \
   mo_exception.o
 

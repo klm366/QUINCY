@@ -29,6 +29,7 @@ MODULE mo_soil_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_soil_config
     INTEGER               :: nsoil_energy         !< number of layers
     INTEGER               :: nsoil_water
+    REAL(wp)              :: soil_depth           !< actual soil and rooting depth
     REAL(wp), ALLOCATABLE :: soil_depth_energy(:) !< soil depth of the layers (lower bound)
     REAL(wp), ALLOCATABLE :: soil_depth_water(:)
     REAL(wp), ALLOCATABLE :: dz_energy(:)         !< layer thicknesses
@@ -65,7 +66,8 @@ CONTAINS
     REAL(wp) :: dz_energy(max_soil_layers)
     REAL(wp) :: dz_water(max_soil_layers)
     REAL(wp) :: wsr_capacity    , &
-                wsn_capacity
+                wsn_capacity    , &
+                soil_depth   
     INTEGER  :: i   ! looping
 
     NAMELIST /soil_ctl/       & 
@@ -74,7 +76,8 @@ CONTAINS
                           dz_energy       , &
                           dz_water        , &
                           wsr_capacity    , &
-                          wsn_capacity
+                          wsn_capacity    , &
+                          soil_depth
      
 
     ! variables for reading model-options from namelist
@@ -93,6 +96,7 @@ CONTAINS
     dz_water (6:max_soil_layers)  = 0._wp 
     wsr_capacity                  = 2.E-4_wp
     wsn_capacity                  = 2.E-4_wp
+    soil_depth                    = 5.7_wp 
 
     ! read the namelist
     ! 
@@ -130,10 +134,8 @@ CONTAINS
     config%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)
     config%wsr_capacity              = wsr_capacity
     config%wsn_capacity              = wsn_capacity
-
-
-
-
+    IF (soil_depth .LE. 0.0_wp) CALL finish('Init_soil_config','Initialization with non positive soil depth')
+    config%soil_depth                = soil_depth 
 
   END SUBROUTINE Init_soil_config
 

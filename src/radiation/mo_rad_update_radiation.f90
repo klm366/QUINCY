@@ -412,6 +412,12 @@ CONTAINS
        !> albedo and net shortwave radiation of the tile
        alb        = irad_dif_up / (irad_dir_down + irad_dif_down)
        sw_srf_net = (1.0_wp - alb) * sw_srf_down
+ 
+    ELSE 
+
+       !> albedo and net shortwave radiation of the tile
+       alb        = 0.0_wp 
+       sw_srf_net = 0.0_wp 
 
     ENDIF
 

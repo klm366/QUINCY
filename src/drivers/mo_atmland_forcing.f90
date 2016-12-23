@@ -175,7 +175,7 @@ CONTAINS
     swpar_srf_down  = 0.0_wp
     swpar_fdiffuse  = 0.0_wp
     press_srf       = 0.0_wp
-    drag_srf        = 1.0_wp    ! 1.0_wp
+    drag_srf        = 1000.0_wp    ! 1.0_wp
     t_acoef         = 0.0_wp
     t_bcoef         = 0.0_wp
     q_acoef         = 0.0_wp
@@ -260,7 +260,7 @@ CONTAINS
     !> 4.0 update forcing variables based on 'read data'
     !!
     wind_10m             = wind_air
-    ga                   = 0.04_wp / drag_srf * wind_10m
+    ga                   = 40.0_wp / drag_srf * wind_10m
     hlp1                 = calc_mixing_ratio_C13C12(def_co2_deltaC13)                 ! function: calc_mixing_ratio_C13C12
     co2_mixing_ratio_C13 = co2_mixing_ratio / (1._wp + 1._wp/hlp1)
     hlp1                 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) ! function: calc_mixing_ratio_C14C

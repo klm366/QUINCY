@@ -43,7 +43,7 @@ MODULE mo_jsb_model_init
     USE mo_veg_config_class,                ONLY: veg_config
     USE mo_veg_init,                        ONLY: veg_init
     ! soil
-    !USE mo_soil_constants,                  ONLY: init_soil_constants
+    USE mo_soil_constants,                  ONLY: init_soil_constants
     USE mo_soil_config_class,               ONLY: soil_config
     USE mo_soil_init,                       ONLY: soil_init
 
@@ -179,7 +179,7 @@ CONTAINS
     CALL init_atmland_constants       ! uses hourday                  defined in mo_base_constants
     CALL init_assimi_constants        ! uses molar_mass_N, Dwv, Dco2  defined in mo_shared_constants
     CALL init_veg_constants           ! uses Tzero                    defined in mo_shared_constants
-    !CALL init_soil_constants
+    CALL init_soil_constants
     CALL init_pheno_constants
 
     !! 5.2 Constants set (using param.list file)
@@ -287,15 +287,9 @@ CONTAINS
     ! run model init
     ! for land the same init routine as plant is run
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land')
-        CALL veg_init(tile)       ! veg (init_slm_plant)
-      CASE('plant')
-        CALL veg_init(tile)       ! veg (init_slm_plant)
-      CASE('soil')
+      CASE('land','plant','soil','canopy')
         CALL veg_init(tile)       ! veg (init_slm_plant)
         CALL soil_init(tile)      ! soil
-      CASE('canopy')
-        CALL veg_init(tile)       ! veg (init_slm_canopy)
       CASE('test_canopy')
         ! init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
       CASE DEFAULT

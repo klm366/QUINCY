@@ -22,8 +22,15 @@ MODULE mo_shared_constants
     Dwv          ,  &           !< diffusion coefficient for water vapour in air (m2 s-1) 
     Dco2         ,  &           !< diffusion coefficient for CO2 in air (m2 s-1) 
     Tzero        ,  &           !< melting point in K -> conversion factor for degreeC
+!ECHAM
     grav         ,  &           !< gravitational acceleration ( m / s2 )
     rhoh2o       ,  &           !< density of liquid water (kg/m3)
+    stbo         ,  &           !< Stephan-Boltzmann constant             [W/(m2 K4)]
+    zemiss_def   ,  &           !< Long-wave surface emissivity factor    []
+    cpd          ,  &           !< dry air specific heat at constant pressure [J/K/kg] 
+    cpv          ,  &           !< water vapour specific heat at constant pressure  [J/K/kg] 
+    cpvd1        ,  &           !< auxiliary constants
+    cvdifts      ,  &           !< ???
     LatentHeatVaporization      !< Latent heat for vapourisation (J/kg) 
   ! molar masses
   REAL(wp), SAVE :: &
@@ -84,6 +91,12 @@ CONTAINS
     Tzero        = 273.15_wp
     grav         = 9.81_wp
     rhoh2o       = 1000._wp 
+    stbo         = 5.6704E-8_wp
+    zemiss_def   = 0.996_wp
+    cpd          = 1004.64_wp       
+    cpv          = 1869.46_wp   
+    cpvd1        = cpv/cpd-1.0_wp   
+    cvdifts      = 1.0_wp !1.5_wp
     LatentHeatVaporization = 2.5008e6_wp
     ! molar masses
     molar_mass_C   = 12.0112_wp 

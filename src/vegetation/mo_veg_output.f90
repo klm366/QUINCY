@@ -53,6 +53,7 @@ MODULE mo_veg_output
   REAL(wp), DIMENSION(ntile), SAVE :: rnet_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: qh_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: qle_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: qg_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: albedo_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: appfd_acc 
 
@@ -97,6 +98,7 @@ CONTAINS
     rnet_acc          = 0._wp
     qh_acc            = 0._wp
     qle_acc           = 0._wp
+    qg_acc           = 0._wp
     albedo_acc        = 0._wp
     appfd_acc         = 0._wp
   END SUBROUTINE init_veg_output_variables
@@ -203,7 +205,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)') 'Time Transpiration GC GA'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time PPFD Rnet Qh Qle Albedo APAR' 
+    WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
   END SUBROUTINE init_output_writing_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -663,7 +665,7 @@ CONTAINS
     ! 0.2 Local
     INTEGER                      :: lun             ! locical unit number
     REAL(wp), SAVE               :: dtime_one = 1.0_wp ! just 1.0
-    REAL(wp)                     :: dC13gpp,dC13rg,dC13rm
+    REAL(wp)                     :: dC13gpp,dC13rg,dC13rm,hlp1
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
@@ -680,6 +682,7 @@ CONTAINS
     REAL(wp), POINTER                :: net_radiation
     REAL(wp), POINTER                :: sensible_heat_flx
     REAL(wp), POINTER                :: latent_heat_flx
+    REAL(wp), POINTER                :: ground_heat_flx
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(LAND2ATM_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -695,6 +698,7 @@ CONTAINS
     net_radiation     => land2atm__mem%net_radiation%ptr
     sensible_heat_flx => land2atm__mem%sensible_heat_flx%ptr
     latent_heat_flx   => land2atm__mem%latent_heat_flx%ptr
+    ground_heat_flx   => land2atm__mem%ground_heat_flx%ptr
 
 
     !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
@@ -746,6 +750,7 @@ CONTAINS
       rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dtime_one               
       qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dtime_one               
       qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dtime_one               
+      qg_acc(itile)           = qg_acc(itile)            + ground_heat_flx            * dtime_one               
       appfd_acc(itile)        = appfd_acc(itile)         + rad%appfd%ptr              * dtime_one               
 
       !> 1.2 write fluxes and set to zero
@@ -774,8 +779,13 @@ CONTAINS
         lun=lun+1
         write(lun,'(12F16.8)') time_d, transpiration_acc(itile), gc_acc(itile), ga_acc(itile)
         lun=lun+1
-        write(lun,'(12F16.8)') time_d, ppfd_acc(itile), rnet_acc(itile), qh_acc(itile), qle_acc(itile), & 
-                               albedo_acc(itile), appfd_acc(itile)
+        IF(ppfd_acc(itile)>eps8) THEN
+           hlp1=appfd_acc(itile)/ppfd_acc(itile)
+        ELSE
+           hlp1=0.0_wp
+        ENDIF
+        write(lun,'(12F16.8)') time_d, rnet_acc(itile), qh_acc(itile), qle_acc(itile), -qg_acc(itile), & 
+                               albedo_acc(itile), ppfd_acc(itile), appfd_acc(itile), hlp1
         ! set zero
         gpp_acc(itile)           = 0.0_wp
         growth_resp_acc(itile)   = 0.0_wp
@@ -804,6 +814,7 @@ CONTAINS
         rnet_acc(itile)          = 0.0_wp
         qh_acc(itile)            = 0.0_wp
         qle_acc(itile)           = 0.0_wp
+        qg_acc(itile)            = 0.0_wp
         albedo_acc(itile)        = 0.0_wp
         appfd_acc(itile)          = 0.0_wp
       END IF

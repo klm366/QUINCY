@@ -52,6 +52,7 @@ mo_veg_soil.o: \
   mo_land2atm_memory_class.o \
   mo_atmland_util.o \
   mo_shared_constants.o \
+  mo_phy_schemes.o \
   mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_config_class.o

@@ -162,8 +162,8 @@ CONTAINS
 
     wind_air_init         = def_wind
     wind_10m_init         = wind_air_init
-    drag_srf_init         = 1.0_wp
-    ga_init               = 0.04_wp / drag_srf_init * wind_10m_init
+    drag_srf_init         = 1000.0_wp
+    ga_init               = 40._wp / drag_srf_init * wind_10m_init
 
     swvis_srf_down_init   = def_swdown * frac_vis_swtot_srf
     swnir_srf_down_init   = def_swdown * (1._wp - frac_vis_swtot_srf)

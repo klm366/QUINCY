@@ -14,8 +14,6 @@ MODULE mo_soil_interface
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish
 
-!  USE 
-
   IMPLICIT NONE
 
 !  PRIVATE
@@ -52,13 +50,13 @@ CONTAINS
     lctlib  => model%lctlib(tile%lcts%lib_id)
 
 
-    soil%pool = soil%pool + 0.001_wp
-    soil%pool = soil%pool + soil%pool / 2.0_wp
+    !soil%pool = soil%pool + 0.001_wp
+    !soil%pool = soil%pool + soil%pool / 2.0_wp
 
-    soil%soil_depth = soil%soil_depth + 0.001_wp
+    !soil%soil_depth = soil%soil_depth + 0.001_wp
 
-    write (999,*) " Hi, I am SOIL", soil%soil_depth%ptr(1,1), test_count
-    test_count = test_count + 1
+    !write (999,*) " Hi, I am SOIL", soil%soil_depth%ptr(1,1), test_count
+    !test_count = test_count + 1
 
   end subroutine soil_1st_test_routine
 

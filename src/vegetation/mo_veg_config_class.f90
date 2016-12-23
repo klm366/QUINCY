@@ -34,7 +34,8 @@ MODULE mo_veg_config_class
     INTEGER          :: output_start_first_day_year, &  !< output start at the 1st  day of this year
                         output_end_last_day_year        !< output stop  at the last day of this year
     INTEGER          :: pft_id
-    LOGICAL          :: flag_calc_soil_moisture    !< calcualte water bucket 
+    LOGICAL          :: flag_calc_soil_moisture    !< calculate simple water bucket model
+    LOGICAL          :: flag_calc_soil_energy      !< calculate simple soil energy model 
     LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics + start from bareground
     LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
     LOGICAL          :: flag_optimal_allocation    !< optimise plant allocation
@@ -72,6 +73,7 @@ CONTAINS
                      output_end_last_day_year      , &
                      plant_functional_type_id
     LOGICAL       :: flag_calc_soil_moisture
+    LOGICAL       :: flag_calc_soil_energy
     LOGICAL       :: flag_tile_veg_dynamics
     LOGICAL       :: flag_optimal_Nleaf
     LOGICAL       :: flag_optimal_allocation
@@ -85,6 +87,7 @@ CONTAINS
       output_start_first_day_year,  &
       output_end_last_day_year,     &
       flag_calc_soil_moisture,      &
+      flag_calc_soil_energy,        &
       flag_tile_veg_dynamics,       &
       flag_optimal_Nleaf,           &
       flag_optimal_allocation,      &
@@ -106,6 +109,7 @@ CONTAINS
     output_start_first_day_year    = 1
     output_end_last_day_year       = 10
     flag_calc_soil_moisture        = .FALSE.  ! .TRUE. .FALSE.
+    flag_calc_soil_energy          = .FALSE.  ! .TRUE. .FALSE.
     flag_tile_veg_dynamics         = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_allocation        = .FALSE.  ! .TRUE. .FALSE.
@@ -136,6 +140,7 @@ CONTAINS
     config%output_start_first_day_year   = output_start_first_day_year
     config%output_end_last_day_year      = output_end_last_day_year
     config%flag_calc_soil_moisture       = flag_calc_soil_moisture
+    config%flag_calc_soil_energy         = flag_calc_soil_energy
     config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  
     config%flag_optimal_Nleaf            = flag_optimal_Nleaf
     config%flag_optimal_allocation       = flag_optimal_allocation

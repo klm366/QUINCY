@@ -19,6 +19,7 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 # plant-soil model options
 n_uptake_scheme="standard"      # prescribed standard optimal resistance
 flag_calc_soil_moisture="T"
+flag_calc_soil_energy="F"
 # canopy model options
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
@@ -31,6 +32,8 @@ flag_optimal_Nleaf="F"
 flag_optimal_allocation="F"
 # vegetation dynamics options
 flag_tile_veg_dynamics="T"          # does also set "start_bareground"
+# soil model options
+soil_depth=5.7                  # meter
 
 # simulation length & output
 simulation_length_number=10     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
@@ -182,6 +185,7 @@ validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$n_uptake_scheme" "$validateNUptakeScheme" "n_uptake_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$flag_calc_soil_moisture" "$validateFlags" "flag_calc_soil_moisture"
+validateUserConfigValues "$flag_calc_soil_energy" "$validateFlags" "flag_calc_soil_energy"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
@@ -319,6 +323,12 @@ if [ $flag_calc_soil_moisture == T ]
   else
     changeNamelistValue flag_calc_soil_moisture ".FALSE."
 fi
+if [ $flag_calc_soil_energy == T ]
+  then
+    changeNamelistValue flag_calc_soil_energy ".TRUE."
+  else
+    changeNamelistValue flag_calc_soil_energy ".FALSE."
+fi
 if [ $flag_tile_veg_dynamics == T ]
   then
     changeNamelistValue flag_tile_veg_dynamics ".TRUE."
@@ -374,6 +384,7 @@ changeNamelistValue output_start_first_day_year "$output_start_first_day_year"
 changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
 changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"
 changeNamelistValue soil_theta_prescribe "$soil_theta_prescribe"
+changeNamelistValue soil_depth "$soil_depth"
 changeNamelistValue set_parameter_values_from_file ".FALSE."   # set to default FALSE because parameter update is not applicable here in test_bed
 # get the PFT & lon & lat according to the site selected (reading the all_site_list.dat)
 if [ "$setPFTAutomatically" == "yes" ]
