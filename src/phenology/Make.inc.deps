@@ -1,9 +1,9 @@
 mo_pheno_interface.o: \
   mo_kind.o \
   mo_exception.o \
-  mo_update_phenology.o
+  mo_pheno_update_phenology.o
 
-mo_update_phenology.o: \
+mo_pheno_update_phenology.o: \
   mo_kind.o \
   mo_exception.o \
   mo_base_memory.o \

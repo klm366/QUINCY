@@ -8,7 +8,7 @@
 !! First version by Sönke Zaehle (2015-12-04)
 !! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_assimi_update_canopy_fluxes.f90
 !!
-MODULE mo_veg_update_veg_pools
+MODULE mo_veg_update_pools
 
 #include "dsl_jsbach.inc"
 
@@ -210,4 +210,4 @@ CONTAINS
 
   END SUBROUTINE update_veg_pools
 
-END MODULE mo_veg_update_veg_pools
+END MODULE mo_veg_update_pools

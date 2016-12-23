@@ -8,7 +8,7 @@
 !! First version by Sönke Zaehle (2016-04-11)
 !! Second version by Jan Engel (20161214): just moved from vegetation to phenology making it an individual process
 !!
-MODULE mo_update_phenology
+MODULE mo_pheno_update_phenology
 
 #include "dsl_jsbach.inc"
 
@@ -19,7 +19,7 @@ MODULE mo_update_phenology
   PRIVATE
   PUBLIC :: update_phenology
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_update_phenology'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_update_phenology'
 
 CONTAINS
 
@@ -201,4 +201,4 @@ CONTAINS
 
   END SUBROUTINE calc_phenology 
 
-END MODULE mo_update_phenology
+END MODULE mo_pheno_update_phenology

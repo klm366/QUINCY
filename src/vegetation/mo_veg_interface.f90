@@ -17,7 +17,7 @@ MODULE mo_veg_interface
   USE mo_veg_growth,            ONLY: update_growth
   USE mo_veg_turnover,          ONLY: update_veg_turnover
   USE mo_veg_dynamics,          ONLY: update_veg_dynamics
-  USE mo_veg_update_veg_pools,  ONLY: update_veg_pools
+  USE mo_veg_update_pools,      ONLY: update_veg_pools
   USE mo_veg_soil,              ONLY: update_vegsoil_bgc, update_vegsoil_physics, update_vegsoil_pool
 
 

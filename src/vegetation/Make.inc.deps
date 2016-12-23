@@ -4,7 +4,7 @@ mo_veg_interface.o: \
   mo_veg_growth.o \
   mo_veg_turnover.o \
   mo_veg_dynamics.o \
-  mo_veg_update_veg_pools.o \
+  mo_veg_update_pools.o \
   mo_veg_soil.o
 
 mo_veg_memory_class.o: \
@@ -116,7 +116,7 @@ mo_veg_util.o: \
   mo_base_memory.o \
   mo_veg_memory_class.o
 
-mo_veg_update_veg_pools.o: \
+mo_veg_update_pools.o: \
   mo_kind.o \
   mo_base_memory.o \
   mo_base_constants.o \

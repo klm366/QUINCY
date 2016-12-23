@@ -11,10 +11,10 @@ MODULE mo_pheno_interface
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: message, finish
+  USE mo_kind,                    ONLY: wp
+  USE mo_exception,               ONLY: message, finish
 
-  USE mo_update_phenology
+  USE mo_pheno_update_phenology,  ONLY: update_phenology
 
   IMPLICIT NONE
 
