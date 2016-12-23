@@ -37,8 +37,8 @@ CONTAINS
   SUBROUTINE calc_canopy_layers(lctlib            , &
                                 leaf_nitrogen     , &
                                 lai               , &
-                                par_sunlit_cl     , &
-                                par_shaded_cl     , & 
+                                ppfd_sunlit_cl     , &
+                                ppfd_shaded_cl     , & 
                                 fleaf_sunlit_cl   , &
                                 t_air             , &
                                 t_acclim          , &
@@ -80,10 +80,10 @@ CONTAINS
     REAL(wp),INTENT(in),OPTIONAL                 :: beta_sinklim_ps       !< beta sinklim ps (avg)
     REAL(wp),INTENT(in),OPTIONAL                 :: beta_soil_gs          !< beta soil gs (avg)
     REAL(wp),INTENT(in),OPTIONAL                 :: t_jmax_opt            !< Jmax optimum temperature (avg)
-    REAL(wp),DIMENSION(:),INTENT(inout),OPTIONAL :: par_sunlit_cl         !< absorbed PAR on sunlit
-                                                                          !  leafes (average over time)
-    REAL(wp),DIMENSION(:),INTENT(inout),OPTIONAL :: par_shaded_cl         !< absorbed PAR on shaded
-                                                                          !  leafes (average over time)
+    REAL(wp),DIMENSION(assimi_config%ncanopy),INTENT(inout),OPTIONAL :: ppfd_sunlit_cl !< absorbed Photosynthetically Active Photon Flux Density
+                                                                          !!  on sunlit leafes (average over time)
+    REAL(wp),DIMENSION(assimi_config%ncanopy),INTENT(inout),OPTIONAL :: ppfd_shaded_cl !< absorbed Photosynthetically Active Photon Flux Density
+                                                                          !!  on shaded leafes (average over time)
     REAL(wp),DIMENSION(:),INTENT(inout),OPTIONAL :: fleaf_sunlit_cl       !< fraction of sunlit leaves
                                                                           !  (average over time)
     REAL(wp),DIMENSION(:),INTENT(OUT)            :: lai_cl                !< LAI of canopy layer
@@ -130,7 +130,7 @@ CONTAINS
 
     ! check if all input is available to run optimal fractions
     IF(assimi_config%flag_optimal_Nfraction)THEN
-       IF(.NOT.PRESENT(par_sunlit_cl).OR..NOT.PRESENT(par_shaded_cl).OR..NOT.PRESENT(fleaf_sunlit_cl)) THEN
+       IF(.NOT.PRESENT(ppfd_sunlit_cl).OR..NOT.PRESENT(ppfd_shaded_cl).OR..NOT.PRESENT(fleaf_sunlit_cl)) THEN
           WRITE(message_text,'(a)') 'called with fractional optimisation flag, but without par[sunlit|shaded]_cl'
           CALL finish("mo_veg_canopy:calc_canopy_layer",message_text)
        ENDIF
@@ -255,8 +255,8 @@ CONTAINS
                     fn_et_cl(icanopy)         = fn_et_cl(icanopy-1)
                     fn_rub_cl(icanopy)        = fn_rub_cl(icanopy-1)
                     fn_pepc_cl(icanopy)       = fn_pepc_cl(icanopy-1)
-                    par_sunlit_cl(icanopy)    = par_sunlit_cl(icanopy-1)
-                    par_shaded_cl(icanopy)    = par_shaded_cl(icanopy-1) 
+                    ppfd_sunlit_cl(icanopy)    = ppfd_sunlit_cl(icanopy-1)
+                    ppfd_shaded_cl(icanopy)    = ppfd_shaded_cl(icanopy-1) 
                     fleaf_sunlit_cl(icanopy)  = fleaf_sunlit_cl(icanopy-1)
                  ENDIF
               ENDIF
@@ -265,8 +265,8 @@ CONTAINS
 
                  CALL optimise_canopy_n_fractions(lctlib                  , & ! in
                                                   leaf_nitrogen_cl(icanopy)       , &
-                                                  par_sunlit_cl(icanopy)  , &
-                                                  par_shaded_cl(icanopy)  , &
+                                                  ppfd_sunlit_cl(icanopy)  , &
+                                                  ppfd_shaded_cl(icanopy)  , &
                                                   fleaf_sunlit_cl(icanopy), &
                                                   t_air                   , &
                                                   t_acclim                , &
@@ -307,8 +307,8 @@ CONTAINS
   !-------------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE optimise_canopy_n_fractions(lctlib     , &
                                     leaf_nitrogen_cl                  , &
-                                    par_sunlit_cl             , &
-                                    par_shaded_cl             , &
+                                    ppfd_sunlit_cl             , &
+                                    ppfd_shaded_cl             , &
                                     fleaf_sunlit_cl           , &
                                     t_air                     , &
                                     t_acclim                  , &
@@ -333,8 +333,10 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in) :: lctlib         !< land-cover-type library - parameters for one pft
     REAL(wp),              INTENT(in) :: leaf_nitrogen_cl, &    !< total canopy N content
-                                       & par_sunlit_cl,    &    !< PAR on sunlit leaves (day-time running mean, muemol/ms/s) 
-                                       & par_shaded_cl,    &    !< PAR on shaded leaves (day-time running mean, muemol/ms/s) 
+                                       & ppfd_sunlit_cl,   &    !< Photosynthetically Active Photon Flux Density 
+                                                                !!  on sunlit leaves (day-time running mean, muemol/ms/s) 
+                                       & ppfd_shaded_cl,   &    !< Photosynthetically Active Photon Flux Density
+                                                                !!  on shaded leaves (day-time running mean, muemol/ms/s) 
                                        & fleaf_sunlit_cl,  &    !< fraction of sunlit leaves (day-time running mean, muemol/ms/s) 
                                        & t_air,            &    !< temperature (day-time running mean, K)
                                        & t_acclim,         &    !< ..
@@ -386,8 +388,8 @@ CONTAINS
                               co2_mixing_ratio              , &
                               ga                            , & 
                               t_acclim                      , &
-                              par_sunlit_cl                 , &
-                              par_shaded_cl                 , &
+                              ppfd_sunlit_cl                 , &
+                              ppfd_shaded_cl                 , &
                               fleaf_sunlit_cl               , & 
                               beta_air                      , &
                               beta_soil_ps                  , &
@@ -427,7 +429,7 @@ CONTAINS
                    
     ! re-calculate photosynthesis
     CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga,t_acclim, & 
-              par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl, & 
+              ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl, & 
               beta_air,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
               fn_chl_cl*(1._wp-fn_oth_cl),fn_et_cl*(1._wp-fn_oth_cl),fn_rub_cl*(1._wp-fn_oth_cl), & 
               fn_pepc_cl*(1._wp-fn_oth_cl),leaf_nitrogen_cl,lctlib%ps_pathway, & 
@@ -453,7 +455,7 @@ CONTAINS
      
        ! re-calculate photosynthesis
        CALL calc_photosynthesis(t_air,press_srf,co2_mixing_ratio,ga,t_acclim, & 
-            par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl,& 
+            ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl,& 
             beta_air,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
             fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), & 
             fn_pepc_cl*(1._wp-fn_oth_cl),leaf_nitrogen_cl, lctlib%ps_pathway, & 
@@ -602,6 +604,8 @@ CONTAINS
                                                   beta_air          , &
                                                   beta_soil_ps      , &
                                                   beta_soil_gs      , &
+                                                  rad_ppfd_sunlit_cl, &
+                                                  rad_ppfd_shaded_cl, &
                                                   veg               , &
                                                   unit_npp          , &
                                                   unit_transpiration )
@@ -627,6 +631,8 @@ CONTAINS
     REAL(wp),              INTENT(in) :: beta_air            !< air humidity limiting factor for photosynthesis
     REAL(wp),              INTENT(in) :: beta_soil_ps        !< soil moisture limiting factor for photosynthesis
     REAL(wp),              INTENT(in) :: beta_soil_gs        !< soil moisture limiting factor for canopy conductance 
+    REAL(wp), DIMENSION(assimi_config%ncanopy), INTENT(in)    :: rad_ppfd_sunlit_cl , &
+                                                                 rad_ppfd_shaded_cl
     REAL(wp),              INTENT(out) :: unit_npp           !<- unit change of NPP per ??
     REAL(wp),              INTENT(out) :: unit_transpiration !<- unit change of NPP per ??
     ! 0.2 Local
@@ -635,7 +641,7 @@ CONTAINS
     REAL(wp) :: canopy_cond_new
     REAL(wp),DIMENSION(assimi_config%ncanopy) :: lai_new_cl
     REAL(wp),DIMENSION(assimi_config%ncanopy) :: cumm_lai_new_cl 
-    REAL(wp),DIMENSION(assimi_config%ncanopy) :: par_sunlit_cl,par_shaded_cl,fleaf_sunlit_cl 
+    REAL(wp),DIMENSION(assimi_config%ncanopy) :: ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl 
     REAl(wp),DIMENSION(assimi_config%ncanopy) :: fn_oth_new_cl, leaf_nitrogen_new_cl, fn_chl_new_cl, fn_et_new_cl, fn_rub_new_cl, fn_pepc_new_cl
     REAL(wp) :: ag_cl, an_cl, r_cl, gs_cl
     REAL(wp) :: q_sat 
@@ -648,8 +654,8 @@ CONTAINS
     !fn_et_cl        = veg%fn_et_cl%ptr(:,1)
     !fn_rub_cl       = veg%fn_rub_cl%ptr(:,1)
     !fn_pepc_cl      = veg%fn_pepc_cl%ptr(:,1)
-    par_sunlit_cl   = veg%par_sunlit_cl%ptr(:,1)
-    par_shaded_cl   = veg%par_shaded_cl%ptr(:,1)
+    ppfd_sunlit_cl   = rad_ppfd_sunlit_cl(:)
+    ppfd_shaded_cl   = rad_ppfd_shaded_cl(:)
     fleaf_sunlit_cl = veg%fleaf_sunlit_cl%ptr(:,1)
  
  !> @todo: mo_veg_canopy calc_npp_increment: I think this is wrong currently, as increaseing leaf area require an
@@ -674,8 +680,8 @@ CONTAINS
     CALL calc_canopy_layers(lctlib = lctlib, & 
                             leaf_nitrogen = leaf_nitrogen_new, &
                             lai = lai_new,&
-                            par_sunlit_cl = par_sunlit_cl, &
-                            par_shaded_cl = par_shaded_cl, &
+                            ppfd_sunlit_cl = ppfd_sunlit_cl, &
+                            ppfd_shaded_cl = ppfd_shaded_cl, &
                             fleaf_sunlit_cl = fleaf_sunlit_cl, &
                             lai_cl = lai_new_cl, &
                             cumm_lai_cl = cumm_lai_new_cl, &
@@ -697,8 +703,8 @@ CONTAINS
                                     co2_mixing_ratio                    , &
                                     ga                                  , &
                                     veg%t_air_tacclim_mavg%ptr          , &
-                                    veg%par_sunlit_cl%ptr(icanopy,1)    , &
-                                    veg%par_shaded_cl%ptr(icanopy,1)    , &
+                                    rad_ppfd_sunlit_cl(icanopy)    , &
+                                    rad_ppfd_shaded_cl(icanopy)    , &
                                     veg%fleaf_sunlit_cl%ptr(icanopy,1)  , &
                                     beta_air                    , &
                                     beta_soil_ps                , &
@@ -757,11 +763,13 @@ CONTAINS
   !! 
   !! Parameter leaf_cn_direction
   !----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_dir_optimal_cn_leaf(lctlib                    , &
-                                        veg                     , &
-                                        beta_air_tcnl_mavg      , &
-                                        beta_soil_ps_tcnl_mavg  , &
-                                        beta_soil_gs_tcnl_mavg  )
+  SUBROUTINE calc_dir_optimal_cn_leaf(lctlib                          , &
+                                        veg                           , &
+                                        beta_air_tcnl_mavg            , &
+                                        beta_soil_ps_tcnl_mavg        , &
+                                        beta_soil_gs_tcnl_mavg        , &
+                                        rad_ppfd_sunlit_tcnl_mavg_cl  , &
+                                        rad_ppfd_shaded_tcnl_mavg_cl )
 
     USE mo_base_constants,        ONLY: dtime, one_day 
     USE mo_veg_constants,         ONLY: delta_n_leaf,root2leaf_cn,wood2leaf_cn 
@@ -773,15 +781,16 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    TYPE(t_lctlib_element),INTENT(in)    :: lctlib       !< land-cover-type library - parameters for one pft
-    TYPE(t_veg_memory),    INTENT(inout) :: veg          !< veg process memory 
-    REAL(wp),              INTENT(in)    :: beta_air_tcnl_mavg
-    REAL(wp),              INTENT(in)    :: beta_soil_ps_tcnl_mavg
-    REAL(wp),              INTENT(in)    :: beta_soil_gs_tcnl_mavg
-
+    TYPE(t_lctlib_element),                     INTENT(in)    :: lctlib       !< land-cover-type library - parameters for one pft
+    TYPE(t_veg_memory),                         INTENT(inout) :: veg          !< veg process memory 
+    REAL(wp),                                   INTENT(in)    :: beta_air_tcnl_mavg
+    REAL(wp),                                   INTENT(in)    :: beta_soil_ps_tcnl_mavg
+    REAL(wp),                                   INTENT(in)    :: beta_soil_gs_tcnl_mavg
+    REAL(wp), DIMENSION(assimi_config%ncanopy), INTENT(in)    :: rad_ppfd_sunlit_tcnl_mavg_cl , &
+                                                                 rad_ppfd_shaded_tcnl_mavg_cl
     ! 0.2 Local
     REAL(wp)                                   :: leaf_nitrogen,fine_root_nitrogen,coarse_root_nitrogen,sap_wood_nitrogen
-    REAL(wp), DIMENSION(assimi_config%ncanopy) :: par_sunlit_tcnl_mavg_cl,par_shaded_tcnl_mavg_cl,fleaf_sunlit_tcnl_mavg_cl 
+    REAL(wp), DIMENSION(assimi_config%ncanopy) :: ppfd_sunlit_tcnl_mavg_cl,ppfd_shaded_tcnl_mavg_cl,fleaf_sunlit_tcnl_mavg_cl 
     REAL(wp), DIMENSION(assimi_config%ncanopy) :: leaf_nitrogen_cl,fn_oth_cl,fn_chl_cl,fn_et_cl, fn_rub_cl, fn_pepc_cl,lai_cl,cumm_lai_cl
     REAL(wp), DIMENSION(3)                     :: npp_direction, maint_respiration
     REAL(wp) :: anl, agl, rl
@@ -795,8 +804,8 @@ CONTAINS
     fn_chl_cl                 = veg%fn_chl_cl%ptr(:,1)
     fn_et_cl                  = veg%fn_et_cl%ptr(:,1)
     fn_rub_cl                 = veg%fn_rub_cl%ptr(:,1)
-    par_sunlit_tcnl_mavg_cl   = veg%par_sunlit_tcnl_mavg_cl%ptr(:,1)
-    par_shaded_tcnl_mavg_cl   = veg%par_shaded_tcnl_mavg_cl%ptr(:,1)
+    ppfd_sunlit_tcnl_mavg_cl   = rad_ppfd_sunlit_tcnl_mavg_cl(:)
+    ppfd_shaded_tcnl_mavg_cl   = rad_ppfd_shaded_tcnl_mavg_cl(:)
     fleaf_sunlit_tcnl_mavg_cl = veg%fleaf_sunlit_tcnl_mavg_cl%ptr(:,1)
 
     ! Calculate photosynthesis with lower, current and higher target leaf N to determine optimal canopy N
@@ -811,8 +820,8 @@ CONTAINS
        CALL calc_canopy_layers(lctlib = lctlib, & 
                           leaf_nitrogen = leaf_nitrogen, &
                           lai = veg%lai%ptr,&
-                          par_sunlit_cl = par_sunlit_tcnl_mavg_cl, &
-                          par_shaded_cl = par_shaded_tcnl_mavg_cl, &
+                          ppfd_sunlit_cl = ppfd_sunlit_tcnl_mavg_cl, &
+                          ppfd_shaded_cl = ppfd_shaded_tcnl_mavg_cl, &
                           fleaf_sunlit_cl = fleaf_sunlit_tcnl_mavg_cl, &
                           lai_cl = lai_cl, &
                           cumm_lai_cl = cumm_lai_cl, &
@@ -833,8 +842,8 @@ CONTAINS
                        veg%co2_mixing_ratio_tcnl_mavg%ptr,&
                        veg%ga_tcnl_mavg%ptr, & 
                        veg%t_air_tacclim_mavg%ptr, &
-                       veg%par_sunlit_tcnl_mavg_cl%ptr(icanopy,1),&
-                       veg%par_shaded_tcnl_mavg_cl%ptr(icanopy,1),& 
+                       rad_ppfd_sunlit_tcnl_mavg_cl(icanopy),&
+                       rad_ppfd_shaded_tcnl_mavg_cl(icanopy),& 
                        veg%fleaf_sunlit_tcnl_mavg_cl%ptr(icanopy,1), &
                        beta_air_tcnl_mavg,&
                        beta_soil_ps_tcnl_mavg,&

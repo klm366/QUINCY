@@ -47,22 +47,36 @@ MODULE mo_rad_memory_class
       & alb_nir_snow             !< Albedo of snow in the NIR range                               
 
     ! Additional variables for soil
-    TYPE(t_jsb_var_real1d) :: &
-      & alb_vis_soil,         & !< Albedo in VIS range of soil
-                                ! Initialized from default:
-      & alb_nir_soil,         & !< Albedo in VIS range of soil
-      & arad_vis_soil,        & !< radiation in VIS range absorbed by the soil
-      & arad_nir_soil           !< radiation in NIR range absorbed by the soil
+    TYPE(t_jsb_var_real1d)  :: &
+      & alb_vis_soil,          & !< Albedo in VIS range of soil
+                                 ! Initialized from default:
+      & alb_nir_soil,          & !< Albedo in VIS range of soil
+      & arad_vis_soil,         & !< radiation in VIS range absorbed by the soil
+      & arad_nir_soil            !< radiation in NIR range absorbed by the soil
 
     ! Additional variables for vegetation
-    TYPE(t_jsb_var_real1d) :: &
-      & alb_vis_can,          & !< Albedo of canopy (without snow cover) in VIS range.
-      & alb_nir_can,          & !< Albedo of canopy (without snow cover) in NIR range. 
-                                !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
-      & arad_vis_can,         & !< radiation in VIS range absorbed by the canopy      
-      & arad_nir_can            !< radiation in NIR range absorbed by the canopy
+    TYPE(t_jsb_var_real1d)  :: &
+      & alb_vis_can,           & !< Albedo of canopy (without snow cover) in VIS range.
+      & alb_nir_can,           & !< Albedo of canopy (without snow cover) in NIR range. 
+                                 !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
+      & arad_vis_can,          & !< radiation in VIS range absorbed by the canopy      
+      & arad_nir_can             !< radiation in NIR range absorbed by the canopy
 
-    ! misses par,arad by canopy layer
+    TYPE(t_jsb_var_real1d)  :: &
+                            appfd                           !< absorbed Photosynthetically Active Photon Flux Density
+
+    TYPE(t_jsb_var_real2d)  :: &   ! DIMENSION(ncanopy)
+                            ppfd_sunlit_cl              , & !< Photosynthetically Active Photon Flux Density on sunlit leaves (µmol m-2 s-1)
+                            ppfd_shaded_cl              , & !< Photosynthetically Active Photon Flux Density on shaded leaves (µmol m-2 s-1)
+                            ppfd_sunlit_daytime_cl      , & !<  average of the previous day
+                            ppfd_shaded_daytime_cl      , & !<  average of the previous day
+                            ppfd_sunlit_daytime_dacc_cl , & !<  value accumulated over current day
+                            ppfd_shaded_daytime_dacc_cl , & !<  value accumulated over current day
+                            ppfd_sunlit_tfrac_mavg_cl   , & !< Photosynthetically Active Photon Flux Density on sunlit leaves
+                            ppfd_shaded_tfrac_mavg_cl   , & !< Photosynthetically Active Photon Flux Density on shaded leaves
+                            ppfd_sunlit_tcnl_mavg_cl    , & !< Photosynthetically Active Photon Flux Density on sunlit leaves
+                            ppfd_shaded_tcnl_mavg_cl        !< Photosynthetically Active Photon Flux Density on shaded leaves
+
 
   CONTAINS
     PROCEDURE :: Init => Init_rad_memory
@@ -116,56 +130,89 @@ CONTAINS
 
     IF (.NOT. ALLOCATED(mem%sw_srf_net%ptr)) THEN
 
-      CALL slm_add_var( mem, 'sw_srf_net', mem%sw_srf_net, &
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var( mem, 'swvis_srf_net', mem%swvis_srf_net, &
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var( mem, 'swnir_srf_net', mem%swnir_srf_net, &
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var( mem, 'lw_srf_net', mem%lw_srf_net, &
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var( mem, 'rad_srf_net', mem%rad_srf_net, &
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'alb_vis', mem%alb_vis, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'alb_nir', mem%alb_nir, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'alb_vis_snow', mem%alb_vis_snow, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'alb_nir_snow', mem%alb_nir_snow, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'alb_vis_soil', mem%alb_vis_soil, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'alb_nir_soil', mem%alb_nir_soil, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'arad_vis_soil', mem%arad_vis_soil, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'arad_nir_soil', mem%arad_nir_soil, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'alb_vis_can', mem%alb_vis_can, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'alb_nir_can', mem%alb_nir_can, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'arad_vis_can', mem%arad_vis_can, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
-
-      CALL slm_add_var(mem, 'arad_nir_can', mem%arad_nir_can, &   
-            initval_r=0.0_wp)   ! initval taken from JSBACH3
+      CALL slm_add_var(mem, 'sw_srf_net', mem%sw_srf_net, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'swvis_srf_net', mem%swvis_srf_net, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'swnir_srf_net', mem%swnir_srf_net, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'lw_srf_net', mem%lw_srf_net, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rad_srf_net', mem%rad_srf_net, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'alb_vis', mem%alb_vis, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'alb_nir', mem%alb_nir, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'alb_vis_snow', mem%alb_vis_snow, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'alb_nir_snow', mem%alb_nir_snow, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'alb_vis_soil', mem%alb_vis_soil, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'alb_nir_soil', mem%alb_nir_soil, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'arad_vis_soil', mem%arad_vis_soil, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'arad_nir_soil', mem%arad_nir_soil, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'alb_vis_can', mem%alb_vis_can, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'alb_nir_can', mem%alb_nir_can, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'arad_vis_can', mem%arad_vis_can, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'arad_nir_can', mem%arad_nir_can, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'appfd', mem%appfd, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'ppfd_sunlit_cl', mem%ppfd_sunlit_cl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'ppfd_shaded_cl', mem%ppfd_shaded_cl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'ppfd_sunlit_daytime_cl', mem%ppfd_sunlit_daytime_cl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'ppfd_shaded_daytime_cl', mem%ppfd_shaded_daytime_cl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'ppfd_sunlit_daytime_dacc_cl', mem%ppfd_sunlit_daytime_dacc_cl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'ppfd_shaded_daytime_dacc_cl', mem%ppfd_shaded_daytime_dacc_cl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'ppfd_sunlit_tfrac_mavg_cl', mem%ppfd_sunlit_tfrac_mavg_cl, &
+            initval_r=150.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'ppfd_shaded_tfrac_mavg_cl', mem%ppfd_shaded_tfrac_mavg_cl, &
+            initval_r=10.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'ppfd_sunlit_tcnl_mavg_cl', mem%ppfd_sunlit_tcnl_mavg_cl, &
+            initval_r=150.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
+            initval_r=10.0_wp) ! initvalue
 
     END IF
 

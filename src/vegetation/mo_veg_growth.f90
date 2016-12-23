@@ -47,6 +47,7 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
 
     IMPLICIT NONE
 
@@ -62,9 +63,11 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
-    TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to veg__mem for SLM usability
-    TYPE(t_veg_memory),      POINTER :: veg             ! local pointer to veg__mem for SLM usability
-    TYPE(t_pheno_memory),    POINTER :: pheno           ! local pointer to pheno__mem for SLM usability
+    dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
+    TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to veg__mem for SLM usability
+    TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
+    TYPE(t_pheno_memory),    POINTER :: pheno       ! local pointer to pheno__mem for SLM usability
+    TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: press_srf
     REAL(wp), POINTER                :: q_air
@@ -74,10 +77,13 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)          ! veg__mem => veg_memory
+    dsl4jsb_Get_memory(RAD_)
 
     assimi  => assimi__mem 
     veg     => veg__mem 
     pheno   => pheno__mem  
+    rad     => rad__mem
+
     t_air            => atm2land__mem%t_air%ptr
     press_srf        => atm2land__mem%press_srf%ptr
     q_air            => atm2land__mem%q_air%ptr
@@ -110,11 +116,14 @@ CONTAINS
     !! 
     !! 
     IF (veg_config%flag_optimal_Nleaf .AND. pheno%growing_season%ptr) THEN
-      CALL calc_dir_optimal_cn_leaf(lctlib                              , &
-                                      veg                               , &
-                                      assimi%beta_air_tcnl_mavg%ptr     , &
-                                      assimi%beta_soil_ps_tcnl_mavg%ptr , &
-                                      assimi%beta_soil_gs_tcnl_mavg%ptr )
+      CALL calc_dir_optimal_cn_leaf(lctlib                                  , &
+                                      veg                                   , &
+                                      assimi%beta_air_tcnl_mavg%ptr         , &
+                                      assimi%beta_soil_ps_tcnl_mavg%ptr     , &
+                                      assimi%beta_soil_gs_tcnl_mavg%ptr     , &
+                                      rad%ppfd_sunlit_tcnl_mavg_cl%ptr(:,1) , &
+                                      rad%ppfd_shaded_tcnl_mavg_cl%ptr(:,1) )
+
     END IF
 
     CALL calc_stoichiometry_changes(lctlib                          , & ! in
@@ -136,19 +145,21 @@ CONTAINS
     !! 
     !> 3.1 calculate marginal NPP increment per unit C growth, needed for optimal allocation scheme
     !!
-    CALL calc_marginal_canopy_flux_increment(lctlib                     , &
-                                              t_air                     , &
-                                              press_srf                 , &
-                                              q_air                     , &
-                                              co2_mixing_ratio          , &
-                                              ga                        , & 
+    CALL calc_marginal_canopy_flux_increment(lctlib                       , &
+                                              t_air                       , &
+                                              press_srf                   , &
+                                              q_air                       , &
+                                              co2_mixing_ratio            , &
+                                              ga                          , & 
                                               assimi%net_assimilation%ptr , & 
-                                              assimi%canopy_cond%ptr    , & 
-                                              assimi%beta_air%ptr       , & 
-                                              assimi%beta_soil_ps%ptr   , & 
-                                              assimi%beta_soil_gs%ptr   , & 
-                                              veg                       , & ! *slmdev  --> CALL calc_photosynthesis()
-                                              veg%unit_npp%ptr          , & 
+                                              assimi%canopy_cond%ptr      , & 
+                                              assimi%beta_air%ptr         , & 
+                                              assimi%beta_soil_ps%ptr     , & 
+                                              assimi%beta_soil_gs%ptr     , & 
+                                              rad%ppfd_sunlit_cl%ptr(:,1) , &
+                                              rad%ppfd_shaded_cl%ptr(:,1) , &
+                                              veg                         , & ! *slmdev  --> CALL calc_photosynthesis()
+                                              veg%unit_npp%ptr            , & 
                                               veg%unit_transpiration%ptr)   
     
     !> 3.2 calculate allometry    

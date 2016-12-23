@@ -46,6 +46,8 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -58,13 +60,17 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),      POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
-    TYPE(t_assimi_memory), POINTER      :: assimi     ! local pointer to assimi__mem for SLM usability
-    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
+    TYPE(t_assimi_memory),   POINTER      :: assimi   ! local pointer to assimi__mem for SLM usability
+    TYPE(t_veg_memory),      POINTER      :: veg      ! local pointer to veg__mem for SLM usability
+    TYPE(t_rad_memory),      POINTER      :: rad      ! local pointer to rad__mem for SLM usability
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(RAD_)
 
-    assimi => assimi__mem 
-    veg => veg__mem 
+    assimi    => assimi__mem 
+    veg       => veg__mem 
+    rad       => rad__mem
 
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
@@ -167,8 +173,8 @@ CONTAINS
     CALL calc_canopy_layers( lctlib, &
                              veg%pool%leaf%nitrogen%ptr, &
                              veg%lai%ptr, &
-                             veg%par_sunlit_tfrac_mavg_cl%ptr(:,1),&
-                             veg%par_shaded_tfrac_mavg_cl%ptr(:,1), & 
+                             rad%ppfd_sunlit_tfrac_mavg_cl%ptr(:,1),&
+                             rad%ppfd_shaded_tfrac_mavg_cl%ptr(:,1), & 
                              veg%fleaf_sunlit_tfrac_mavg_cl%ptr(:,1),&
                              veg%t_air_tfrac_mavg%ptr, &
                              veg%t_air_tacclim_mavg%ptr, &

@@ -14,6 +14,7 @@ mo_assimi_update_canopy_fluxes.o: \
   mo_atmland_util.o \
   mo_shared_constants.o \
   mo_shared_isotope.o \
+  mo_rad_memory_class.o \
   mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_respiration.o \

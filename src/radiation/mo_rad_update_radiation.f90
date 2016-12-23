@@ -70,7 +70,10 @@ CONTAINS
     dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    TYPE(t_atm2land_memory), POINTER :: atm2land    ! local pointer to atm2land__mem for SLM usability
+    TYPE(t_land2atm_memory), POINTER :: land2atm    ! local pointer to land2atm__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
+    TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
     REAL(wp), POINTER           :: swpar_srf_down     , &
                                    swpar_fdiffuse     , &
                                    cos_zenith_angle   , &
@@ -100,48 +103,37 @@ CONTAINS
     dsl4jsb_Get_memory(LAND2ATM_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
-!      TYPE IS(t_atm2land_memory)
-!        atm2land__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)
-!      TYPE IS(t_land2atm_memory)
-!        land2atm__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(RAD_)%p)
-!      TYPE IS(t_rad_memory)
-!        rad__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(VEG_)%p)
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
-    veg => veg__mem 
-    swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
-    swpar_fdiffuse    => atm2land__mem%swpar_fdiffuse%ptr
-    cos_zenith_angle  => atm2land__mem%cos_zenith_angle%ptr
-    swnir_srf_down    => atm2land__mem%swnir_srf_down%ptr
-    swvis_srf_down    => atm2land__mem%swvis_srf_down%ptr
-    albedo            => land2atm__mem%albedo%ptr
-    net_radiation     => land2atm__mem%net_radiation%ptr
-    alb_vis_dir       => land2atm__mem%alb_vis_dir%ptr
-    alb_vis_dif       => land2atm__mem%alb_vis_dif%ptr
-    alb_nir_dir       => land2atm__mem%alb_nir_dir%ptr
-    alb_nir_dif       => land2atm__mem%alb_nir_dif%ptr
-    sw_srf_net        => rad__mem%sw_srf_net%ptr
-    swvis_srf_net     => rad__mem%swvis_srf_net%ptr
-    swnir_srf_net     => rad__mem%swnir_srf_net%ptr
-    rad_srf_net       => rad__mem%rad_srf_net%ptr
-    alb_vis           => rad__mem%alb_vis%ptr
-    alb_nir           => rad__mem%alb_nir%ptr
-    alb_vis_soil      => rad__mem%alb_vis_soil%ptr
-    alb_nir_soil      => rad__mem%alb_nir_soil%ptr
-    alb_vis_can       => rad__mem%alb_vis_can%ptr
-    alb_nir_can       => rad__mem%alb_nir_can%ptr
-    arad_vis_soil     => rad__mem%arad_vis_soil%ptr
-    arad_nir_soil     => rad__mem%arad_nir_soil%ptr
-    arad_vis_can      => rad__mem%arad_vis_can%ptr
-    arad_nir_can      => rad__mem%arad_nir_can%ptr
+
+    atm2land  => atm2land__mem
+    land2atm  => land2atm__mem
+    veg       => veg__mem 
+    rad       => rad__mem
+
+    swpar_srf_down    => atm2land%swpar_srf_down%ptr
+    swpar_fdiffuse    => atm2land%swpar_fdiffuse%ptr
+    cos_zenith_angle  => atm2land%cos_zenith_angle%ptr
+    swnir_srf_down    => atm2land%swnir_srf_down%ptr
+    swvis_srf_down    => atm2land%swvis_srf_down%ptr
+    albedo            => land2atm%albedo%ptr
+    net_radiation     => land2atm%net_radiation%ptr
+    alb_vis_dir       => land2atm%alb_vis_dir%ptr
+    alb_vis_dif       => land2atm%alb_vis_dif%ptr
+    alb_nir_dir       => land2atm%alb_nir_dir%ptr
+    alb_nir_dif       => land2atm%alb_nir_dif%ptr
+    sw_srf_net        => rad%sw_srf_net%ptr
+    swvis_srf_net     => rad%swvis_srf_net%ptr
+    swnir_srf_net     => rad%swnir_srf_net%ptr
+    rad_srf_net       => rad%rad_srf_net%ptr
+    alb_vis           => rad%alb_vis%ptr
+    alb_nir           => rad%alb_nir%ptr
+    alb_vis_soil      => rad%alb_vis_soil%ptr
+    alb_nir_soil      => rad%alb_nir_soil%ptr
+    alb_vis_can       => rad%alb_vis_can%ptr
+    alb_nir_can       => rad%alb_nir_can%ptr
+    arad_vis_soil     => rad%arad_vis_soil%ptr
+    arad_nir_soil     => rad%arad_nir_soil%ptr
+    arad_vis_can      => rad%arad_vis_can%ptr
+    arad_nir_can      => rad%arad_nir_can%ptr
 
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
@@ -192,17 +184,17 @@ CONTAINS
     rad_srf_net = sw_srf_net
     net_radiation = rad_srf_net
 
-    !> 6.0 communitcate APAR to plant type
+    !> 6.0 convert radiation to Photosynthetically Active Photon Flux Density (ppfd)
     !!
     veg%fleaf_sunlit_cl%ptr(:,1) = fleaf_sunlit_vis_cl(:) 
     IF(swvis_srf_down > eps8) THEN 
-       veg%par_sunlit_cl%ptr(:,1) = arad_sunlit_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
-       veg%par_shaded_cl%ptr(:,1) = arad_shaded_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
-       veg%apar%ptr               = arad_vis_can          * swpar_srf_down/swvis_srf_down * rad2par 
+       rad%ppfd_sunlit_cl%ptr(:,1) = arad_sunlit_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
+       rad%ppfd_shaded_cl%ptr(:,1) = arad_shaded_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
+       rad%appfd%ptr               = arad_vis_can          * swpar_srf_down/swvis_srf_down * rad2par 
     ELSE 
-       veg%par_sunlit_cl%ptr = 0.0_wp
-       veg%par_shaded_cl%ptr = 0.0_wp
-       veg%apar%ptr          = 0.0_wp
+       rad%ppfd_sunlit_cl%ptr = 0.0_wp
+       rad%ppfd_shaded_cl%ptr = 0.0_wp
+       rad%appfd%ptr          = 0.0_wp
     ENDIF
 
   END SUBROUTINE update_radiation

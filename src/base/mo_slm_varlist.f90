@@ -252,7 +252,7 @@ CONTAINS
       CASE(5) ! soil
         levels = ics
         levele = ice
-      CASE(7, 10) ! veg, assimi
+      CASE(7, 9, 10) ! veg, rad, assimi
         levels = 1
         levele = assimi_config%ncanopy
       CASE DEFAULT
@@ -312,7 +312,7 @@ CONTAINS
     SELECT CASE(struct%owner_proc_id)
       CASE(5) ! soil
         nlevel = soil_config%nsoil_water
-      CASE(7, 10) ! veg, assimi
+      CASE(7, 9, 10) ! veg, rad, assimi
         nlevel = assimi_config%ncanopy
       CASE DEFAULT
         CALL finish(TRIM(routine), 'A variable that is not in memory of soil, veg or assimi aims beeing 3D, '//TRIM(name))
@@ -474,7 +474,7 @@ CONTAINS
       CASE(5) ! soil
         levels = ics
         levele = ice
-      CASE(7, 10) ! veg, assimi
+      CASE(7, 9, 10) ! veg, rad, assimi
         levels = 1
         levele = assimi_config%ncanopy
       CASE DEFAULT
@@ -535,7 +535,7 @@ CONTAINS
     SELECT CASE(mem%owner_proc_id)
       CASE(5) ! soil
         nlevel = soil_config%nsoil_water
-      CASE(7, 10) ! veg, assimi
+      CASE(7, 9, 10) ! veg, rad, assimi
         nlevel = assimi_config%ncanopy
       CASE DEFAULT
         CALL finish(TRIM(routine), 'A variable that is not in memory of soil, veg or assimi aims beeing 3D, '//TRIM(name))

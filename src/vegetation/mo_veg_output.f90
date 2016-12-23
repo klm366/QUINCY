@@ -54,7 +54,7 @@ MODULE mo_veg_output
   REAL(wp), DIMENSION(ntile), SAVE :: qh_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: qle_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: albedo_acc 
-  REAL(wp), DIMENSION(ntile), SAVE :: apar_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: appfd_acc 
 
 CONTAINS
 
@@ -98,7 +98,7 @@ CONTAINS
     qh_acc            = 0._wp
     qle_acc           = 0._wp
     albedo_acc        = 0._wp
-    apar_acc         = 0._wp
+    appfd_acc         = 0._wp
   END SUBROUTINE init_veg_output_variables
 
 
@@ -651,6 +651,8 @@ CONTAINS
     dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -668,8 +670,10 @@ CONTAINS
     dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     TYPE(t_assimi_memory), POINTER   :: assimi      ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
+    TYPE(t_rad_memory), POINTER      :: rad         ! local pointer to rad__mem for SLM usability
     REAL(wp), POINTER                :: ga 
     REAL(wp), POINTER                :: swpar_srf_down
     REAL(wp), POINTER                :: albedo
@@ -680,20 +684,11 @@ CONTAINS
     dsl4jsb_Get_memory(LAND2ATM_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
-!      TYPE IS(t_atm2land_memory)
-!        atm2land__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)
-!      TYPE IS(t_land2atm_memory)
-!        land2atm__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(VEG_)%p)
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
-    assimi => assimi__mem 
-    veg => veg__mem 
+    dsl4jsb_Get_memory(RAD_)
+
+    assimi  => assimi__mem 
+    veg     => veg__mem 
+    rad     => rad__mem
     ga                => atm2land__mem%ga%ptr
     swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
     albedo            => land2atm__mem%albedo%ptr
@@ -751,7 +746,7 @@ CONTAINS
       rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dtime_one               
       qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dtime_one               
       qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dtime_one               
-      apar_acc(itile)         = apar_acc(itile)          + veg%apar%ptr               * dtime_one               
+      appfd_acc(itile)        = appfd_acc(itile)         + rad%appfd%ptr              * dtime_one               
 
       !> 1.2 write fluxes and set to zero
       !!
@@ -780,7 +775,7 @@ CONTAINS
         write(lun,'(12F16.8)') time_d, transpiration_acc(itile), gc_acc(itile), ga_acc(itile)
         lun=lun+1
         write(lun,'(12F16.8)') time_d, ppfd_acc(itile), rnet_acc(itile), qh_acc(itile), qle_acc(itile), & 
-                               albedo_acc(itile), apar_acc(itile)
+                               albedo_acc(itile), appfd_acc(itile)
         ! set zero
         gpp_acc(itile)           = 0.0_wp
         growth_resp_acc(itile)   = 0.0_wp
@@ -810,7 +805,7 @@ CONTAINS
         qh_acc(itile)            = 0.0_wp
         qle_acc(itile)           = 0.0_wp
         albedo_acc(itile)        = 0.0_wp
-        apar_acc(itile)          = 0.0_wp
+        appfd_acc(itile)          = 0.0_wp
       END IF
     END IF
     END IF  ! on/off switch specific to 'special case: fluxnet output'

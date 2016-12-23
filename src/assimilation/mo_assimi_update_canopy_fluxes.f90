@@ -49,7 +49,10 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_shared_constants
     USE mo_shared_isotope
- 
+
+    ! Use of process memories 
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_tile),       INTENT(inout), TARGET :: tile      !< one tile  =>  *slmdev may remove the TARGET argument when soil  => tile%soil is not needed anymore 
@@ -64,8 +67,10 @@ CONTAINS
     dsl4jsb_Def_memory(ATM2LAND_)     !   TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(ASSIMI_)       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem
     dsl4jsb_Def_memory(VEG_)          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
+    dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     TYPE(t_assimi_memory), POINTER   :: assimi                 ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER      :: veg                    ! local pointer to veg__mem for SLM usability
+    TYPE(t_rad_memory),       POINTER   :: rad        ! local pointer to rad__mem for SLM usability
     REAL(wp), POINTER :: t_air
     REAL(wp), POINTER :: q_air
     REAL(wp), POINTER :: press_srf
@@ -86,8 +91,11 @@ CONTAINS
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(RAD_)
 
     veg     => veg__mem 
+    rad     => rad__mem
+
     t_air                => atm2land__mem%t_air%ptr
     q_air                => atm2land__mem%q_air%ptr
     press_srf            => atm2land__mem%press_srf%ptr
@@ -149,8 +157,8 @@ CONTAINS
                                  co2_mixing_ratio                 , &
                                  ga                               , &
                                  veg%t_air_tacclim_mavg%ptr       , &
-                                 veg%par_sunlit_cl%ptr(icanopy,1)  , &
-                                 veg%par_shaded_cl%ptr(icanopy,1)  , &
+                                 rad%ppfd_sunlit_cl%ptr(icanopy,1), &
+                                 rad%ppfd_shaded_cl%ptr(icanopy,1), &
                                  veg%fleaf_sunlit_cl%ptr(icanopy,1), &
                                  beta_air                 , &
                                  beta_soil_ps             , &
@@ -231,8 +239,8 @@ CONTAINS
                                             co2_mixing_ratio    , &
                                             ga                  , &
                                             temp_acclim         , &
-                                            par_sunlit_cl       , &
-                                            par_shaded_cl       , &
+                                            ppfd_sunlit_cl       , &
+                                            ppfd_shaded_cl       , &
                                             fleaf_sunlit_cl     , &
                                             beta_air            , &
                                             beta_soil_ps        , &
@@ -268,8 +276,8 @@ CONTAINS
   REAL(wp),INTENT(IN) :: press_srf               !< air pressure (Pa) 
   REAL(wp),INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1) 
   REAL(wp),INTENT(IN) :: temp_acclim             !< veg\%t_air_tacclim_mavg  average temperature for respiration acclimation
-  REAL(wp),INTENT(IN) :: par_sunlit_cl           !< PAR of sunlit foliage par per canopy layer (µmol m-2 s-1)
-  REAL(wp),INTENT(IN) :: par_shaded_cl           !< PAR of shaded foliage par per canopy layer (µmol m-2 s-1)
+  REAL(wp),INTENT(IN) :: ppfd_sunlit_cl           !< PAR of sunlit foliage par per canopy layer (µmol m-2 s-1)
+  REAL(wp),INTENT(IN) :: ppfd_shaded_cl           !< PAR of shaded foliage par per canopy layer (µmol m-2 s-1)
   REAL(wp),INTENT(IN) :: fleaf_sunlit_cl         !< fraction of canopy layer that is sunlit 
   REAL(wp),INTENT(IN) :: co2_mixing_ratio        !< CO2 concentration of the free air (ppm)
   REAL(wp),INTENT(IN) :: beta_air                !< scaling factor to account for air humidity effects on conductance
@@ -322,7 +330,7 @@ CONTAINS
 
 
   !> @par IF: initialise output for no-light condition
-  IF(par_sunlit_cl + par_shaded_cl <= eps8) THEN
+  IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN
     ag_cl    = 0.0_wp 
     an_cl    = ag_cl - maint_resp_cl
     gs_cl    = MAX(g0,g0 + g1 * an_cl * beta_air * beta_soil_gs / co2_mixing_ratio) * rtck / press_srf 
@@ -427,7 +435,7 @@ CONTAINS
         IF (fleaf_sunlit_cl <= eps8) THEN
            !>  Theoretical cumulative N at co-limitation by Rubisco and
            !!  light absorption in sunlit foliage (mmol[N]/m2))
-           nlim = -log(nco/(par_shaded_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
+           nlim = -log(nco/(ppfd_shaded_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
            nsat = MAX(MIN(nlim, leaf_nitrogen_cl), 0.0_wp)
 
            !> Relative PAR absorption in light-limited region (fraction)
@@ -436,31 +444,31 @@ CONTAINS
            !> Rate of gross photosynthesis (umol/m2/s)
            !!  sum of photosynthesis in colimited, light saturated PS and PS in the 
            !!  light-limited region (assumed to scale linearily with light) 
-           ag_cl = agsf1 * nsat + agsf2 * par_shaded_cl * fabs
+           ag_cl = agsf1 * nsat + agsf2 * ppfd_shaded_cl * fabs
 
         !> @par ELSE: Case of direct and diffuse radiation
         ELSE 
           !>  Theoretical cumulative N at co-limitation by Rubisco and
           !!  light absorption in sunlit foliage (mmol[N]/m2))
-          nlim = -log(nco/(par_sunlit_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
+          nlim = -log(nco/(ppfd_sunlit_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
           nsat = MAX(MIN(nlim, leaf_nitrogen_cl), 0.0_wp)
 
           !>  Relative PAR absorption in light-limited region of sunlit foliage (fraction)
           fabs = exp(-ka * chl2n * fn_chl_cl * nsat) - fabsb
 
           !> Rate of gross photosynthesis in sunlit foliage (umol/m2/s)
-          agsl = agsf1 * nsat + agsf2 * par_sunlit_cl * fabs
+          agsl = agsf1 * nsat + agsf2 * ppfd_sunlit_cl * fabs
 
           !> Theoretical cumulative N at co-limitation by Rubisco and
           !!  light absorption in shaded foliage (mmol[N]/m2))
-          nlim = -log(nco/(par_shaded_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
+          nlim = -log(nco/(ppfd_shaded_cl * chl2n * fn_chl_cl + eps8))/(ka * chl2n * fn_chl_cl)
           nsat = MAX(MIN(nlim, leaf_nitrogen_cl), 0.0_wp)
 
           !> Relative PAR absorption in light-limited region of shaded foliage (fraction)
           fabs = exp(-ka * chl2n * fn_chl_cl * nsat) - fabsb
 
           !> Rate of gross photosynthesis in shaded foliage (umol/m2/s)
-          agsh = agsf1 * nsat + agsf2 * par_shaded_cl* fabs
+          agsh = agsf1 * nsat + agsf2 * ppfd_shaded_cl* fabs
 
           !> Mean gross photosynthesis over sunlit and shaded fractions (umol/m2/s)
           ag_cl = fleaf_sunlit_cl * agsl + (1.0_wp - fleaf_sunlit_cl) * agsh

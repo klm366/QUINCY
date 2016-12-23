@@ -51,6 +51,8 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+
 
     IMPLICIT NONE
 
@@ -67,19 +69,23 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
+    dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to assimi__mem for SLM usability
     TYPE(t_atm2land_memory), POINTER :: atm2land    ! local pointer to atm2land__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_pheno_memory),    POINTER :: pheno       ! local pointer to pheno__mem for SLM usability
+    TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(RAD_)
 
     assimi    => assimi__mem 
     atm2land  => atm2land__mem
     veg       => veg__mem 
     pheno     => pheno__mem  
+    rad       => rad__mem
 
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
@@ -87,12 +93,12 @@ CONTAINS
 
     !> 1.0 daytime averages
     !! 
-    CALL calc_daytime_averages(assimi, atm2land, veg, time_day, timestep_prop_day)
+    CALL calc_daytime_averages(assimi, rad, atm2land, veg, time_day, timestep_prop_day)
 
 
     !> 2.0 moving averages
     !! 
-    CALL calc_moving_averages(lctlib, assimi, atm2land, veg, pheno)
+    CALL calc_moving_averages(lctlib, assimi, rad, atm2land, veg, pheno)
 
 
 
@@ -111,7 +117,7 @@ CONTAINS
   !!
   !! daytime: the time of the day over which light is available
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_daytime_averages(assimi, atm2land, veg, time_day, timestep_prop_day)
+  SUBROUTINE calc_daytime_averages(assimi, rad, atm2land, veg, time_day, timestep_prop_day)
 
     USE mo_assimi_config_class,   ONLY: assimi_config
 
@@ -119,10 +125,12 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_assimi_memory),  INTENT(inout) :: assimi             !< assimi memory
+    TYPE(t_rad_memory),     INTENT(inout) :: rad                !< rad memory
     TYPE(t_atm2land_memory),INTENT(inout) :: atm2land           !< atm2land memory
     TYPE(t_veg_memory),     INTENT(inout) :: veg                !< veg memory
     REAL(wp), INTENT(in)                  :: time_day           !< time in days
@@ -138,10 +146,10 @@ CONTAINS
       veg%daytime_counter%ptr = veg%daytime_counter%ptr + 1.0_wp
       ! 1.2 add values and count number of values
       DO icanopy=1,assimi_config%ncanopy
-        veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   = veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   + &
-                                                           veg%par_sunlit_cl%ptr(icanopy,1)
-        veg%par_shaded_daytime_dacc_cl%ptr(icanopy,1)   = veg%par_shaded_daytime_dacc_cl%ptr(icanopy,1)   + & 
-                                                           veg%par_shaded_cl%ptr(icanopy,1)
+        rad%ppfd_sunlit_daytime_dacc_cl%ptr(icanopy,1)  = rad%ppfd_sunlit_daytime_dacc_cl%ptr(icanopy,1)   + &
+                                                           rad%ppfd_sunlit_cl%ptr(icanopy,1)
+        rad%ppfd_shaded_daytime_dacc_cl%ptr(icanopy,1)  = rad%ppfd_shaded_daytime_dacc_cl%ptr(icanopy,1)   + & 
+                                                           rad%ppfd_shaded_cl%ptr(icanopy,1)
         veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) + & 
                                                            veg%fleaf_sunlit_cl%ptr(icanopy,1)
       END DO
@@ -165,8 +173,8 @@ CONTAINS
       ! calculate the average of the current day and pass it to the according avg_prev_* variable; 
       IF(veg%daytime_counter%ptr > eps8) THEN
         DO icanopy=1,assimi_config%ncanopy
-          veg%par_sunlit_daytime_cl%ptr(icanopy,1)    = veg%par_sunlit_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
-          veg%par_shaded_daytime_cl%ptr(icanopy,1)    = veg%par_shaded_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
+          rad%ppfd_sunlit_daytime_cl%ptr(icanopy,1)   = rad%ppfd_sunlit_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
+          rad%ppfd_shaded_daytime_cl%ptr(icanopy,1)   = rad%ppfd_shaded_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
           veg%fleaf_sunlit_daytime_cl%ptr(icanopy,1)  = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) / veg%daytime_counter%ptr
         END DO
         veg%t_air_daytime%ptr            = veg%t_air_daytime_dacc%ptr              / veg%daytime_counter%ptr
@@ -179,21 +187,21 @@ CONTAINS
         assimi%beta_soil_gs_daytime%ptr  = assimi%beta_soil_gs_daytime_dacc%ptr    / veg%daytime_counter%ptr
         veg%t_jmax_opt_daytime%ptr       = veg%t_jmax_opt_daytime_dacc%ptr         / veg%daytime_counter%ptr
       ELSE  ! if veg%daytime_counter is zero
-        veg%par_sunlit_daytime_cl%ptr    = 0.0_wp
-        veg%par_shaded_daytime_cl%ptr    = 0.0_wp
+        rad%ppfd_sunlit_daytime_cl%ptr   = 0.0_wp
+        rad%ppfd_shaded_daytime_cl%ptr   = 0.0_wp
         veg%fleaf_sunlit_daytime_cl%ptr  = 0.0_wp
       END IF
 
 !      write(999,*) time_day, veg%daytime_counter%ptr, &   ! might be used for testing
-!                  veg%par_sunlit_daytime_cl%ptr(1,1), &
-!                  veg%par_shaded_daytime_cl%ptr(1,1), &
+!                  rad%ppfd_sunlit_daytime_cl%ptr(1,1), &
+!                  rad%ppfd_shaded_daytime_cl%ptr(1,1), &
 !                  veg%fleaf_sunlit_daytime_cl%ptr(1,1), &
 !                  veg%t_jmax_opt_daytime%ptr, ' |-| '
 
       ! set all values of the current day to zero
-      veg%par_sunlit_daytime_dacc_cl%ptr      = 0.0_wp
-      veg%par_shaded_daytime_dacc_cl%ptr      = 0.0_wp
-      veg%fleaf_sunlit_daytime_dacc_cl%ptr    = 0.0_wp
+      rad%ppfd_sunlit_daytime_dacc_cl%ptr        = 0.0_wp
+      rad%ppfd_shaded_daytime_dacc_cl%ptr        = 0.0_wp
+      veg%fleaf_sunlit_daytime_dacc_cl%ptr       = 0.0_wp
       veg%t_air_daytime_dacc%ptr                 = 0.0_wp
       veg%press_srf_daytime_dacc%ptr             = 0.0_wp
       veg%co2_mixing_ratio_daytime_dacc%ptr      = 0.0_wp
@@ -284,7 +292,7 @@ CONTAINS
   !! 
   !! variable-specific averaging period, previous to the current timestep
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_moving_averages(lctlib, assimi, atm2land, veg, pheno)
+  SUBROUTINE calc_moving_averages(lctlib, assimi, rad, atm2land, veg, pheno)
 
     USE mo_shared_constants     ! moving average period lengths are defined there as REAL(wp),PARAMETER :: mavg_period_...
 
@@ -293,11 +301,14 @@ CONTAINS
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+
 
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element), INTENT(in)      :: lctlib             !< land-cover-type library - parameters for one pft
     TYPE(t_assimi_memory),  INTENT(inout)   :: assimi             !< assimi memory
+    TYPE(t_rad_memory),     INTENT(inout)   :: rad                !< rad memory
     TYPE(t_atm2land_memory),INTENT(inout)   :: atm2land           !< atm2land memory
     TYPE(t_veg_memory),     INTENT(inout)   :: veg                !< veg memory
     TYPE(t_pheno_memory),   INTENT(inout)   :: pheno              !< pheno memory
@@ -339,9 +350,9 @@ CONTAINS
 
     !> 1.4 averages at the time-scale of within-leaf N allocation fractions 
     !!
-    veg%par_sunlit_tfrac_mavg_cl%ptr      = calc_mavg(veg%par_sunlit_tfrac_mavg_cl%ptr, veg%par_sunlit_daytime_cl%ptr, &
+    rad%ppfd_sunlit_tfrac_mavg_cl%ptr     = calc_mavg(rad%ppfd_sunlit_tfrac_mavg_cl%ptr, rad%ppfd_sunlit_daytime_cl%ptr, &
                                                   mavg_period_tfrac)
-    veg%par_shaded_tfrac_mavg_cl%ptr      = calc_mavg(veg%par_shaded_tfrac_mavg_cl%ptr, veg%par_shaded_daytime_cl%ptr, &
+    rad%ppfd_shaded_tfrac_mavg_cl%ptr     = calc_mavg(rad%ppfd_shaded_tfrac_mavg_cl%ptr, rad%ppfd_shaded_daytime_cl%ptr, &
                                                   mavg_period_tfrac)
     veg%fleaf_sunlit_tfrac_mavg_cl%ptr    = calc_mavg(veg%fleaf_sunlit_tfrac_mavg_cl%ptr, veg%fleaf_sunlit_daytime_cl%ptr, &
                                                   mavg_period_tfrac)
@@ -364,9 +375,9 @@ CONTAINS
 
     !> 1.5 averages at the time-scale of leaf N allocation fractions 
     !!
-    veg%par_sunlit_tcnl_mavg_cl%ptr       = calc_mavg(veg%par_sunlit_tcnl_mavg_cl%ptr, veg%par_sunlit_daytime_cl%ptr, &
+    rad%ppfd_sunlit_tcnl_mavg_cl%ptr      = calc_mavg(rad%ppfd_sunlit_tcnl_mavg_cl%ptr, rad%ppfd_sunlit_daytime_cl%ptr, &
                                                   mavg_period_tcnl)
-    veg%par_shaded_tcnl_mavg_cl%ptr       = calc_mavg(veg%par_shaded_tcnl_mavg_cl%ptr, veg%par_shaded_daytime_cl%ptr, &
+    rad%ppfd_shaded_tcnl_mavg_cl%ptr      = calc_mavg(rad%ppfd_shaded_tcnl_mavg_cl%ptr, rad%ppfd_shaded_daytime_cl%ptr, &
                                                   mavg_period_tcnl)
     veg%fleaf_sunlit_tcnl_mavg_cl%ptr     = calc_mavg(veg%fleaf_sunlit_tcnl_mavg_cl%ptr, veg%fleaf_sunlit_daytime_cl%ptr, &
                                                   mavg_period_tcnl)

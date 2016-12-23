@@ -395,6 +395,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
 
     IMPLICIT NONE
 
@@ -410,23 +411,27 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem  
     dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
-    TYPE(t_assimi_memory), POINTER      :: assimi     ! local pointer to assimi__mem for SLM usability
-    TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
+    TYPE(t_assimi_memory),    POINTER   :: assimi     ! local pointer to assimi__mem for SLM usability
+    TYPE(t_veg_memory),       POINTER   :: veg        ! local pointer to veg__mem for SLM usability
+    TYPE(t_rad_memory),       POINTER   :: rad        ! local pointer to rad__mem for SLM usability
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(RAD_)
 
-    assimi => assimi__mem 
-    veg => veg__mem 
+    assimi  => assimi__mem 
+    veg     => veg__mem 
+    rad     => rad__mem
 
 
       WRITE(20,'(7F16.7)')  time_day+time_year*one_year, t_air, swpar_srf_down * rad2par, &
-                            assimi%gross_assimilation%ptr, veg%apar%ptr, & 
+                            assimi%gross_assimilation%ptr, rad%appfd%ptr, & 
                             assimi%canopy_cond%ptr, assimi%co2_conc_leaf%ptr 
-      WRITE(21,'(20F16.7)') veg%par_sunlit_cl%ptr
-      WRITE(22,'(20F16.7)') veg%par_shaded_cl%ptr
+      WRITE(21,'(20F16.7)') rad%ppfd_sunlit_cl%ptr
+      WRITE(22,'(20F16.7)') rad%ppfd_shaded_cl%ptr
       WRITE(23,'(20F16.7)') veg%fleaf_sunlit_cl%ptr
-      WRITE(24,'(20F16.7)') veg%par_sunlit_cl%ptr(:,1) * veg%fleaf_sunlit_cl%ptr(:,1) + &
-                            & veg%par_shaded_cl%ptr(:,1) + (1._wp-veg%fleaf_sunlit_cl%ptr(:,1))
+      WRITE(24,'(20F16.7)') rad%ppfd_sunlit_cl%ptr(:,1) * veg%fleaf_sunlit_cl%ptr(:,1) + &
+                            & rad%ppfd_shaded_cl%ptr(:,1) + (1._wp-veg%fleaf_sunlit_cl%ptr(:,1))
 
   END SUBROUTINE canopy_model_write_data
 

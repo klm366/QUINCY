@@ -85,7 +85,8 @@ mo_veg_output.o: \
   mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_config_class.o \
-  mo_pheno_memory_class.o
+  mo_pheno_memory_class.o \
+  mo_rad_memory_class.o
 
 mo_veg_config_class.o: \
   mo_kind.o \
@@ -125,6 +126,8 @@ mo_veg_update_veg_pools.o: \
   mo_shared_constants.o \
   mo_veg_canopy.o \
   mo_veg_memory_class.o \
+  mo_rad_memory_class.o \
+  mo_assimi_memory_class.o \
   mo_veg_constants.o \
   mo_veg_growth.o
 

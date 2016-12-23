@@ -166,7 +166,6 @@ MODULE mo_veg_memory_class
                                     growth_req_n      , &            !< moles N required for a unit of C growth under current allocation fractions 
                                     growth_req_p      , &            !< moles P required for a unit of N growth under current allocation fractions 
                                     leaf_cn_direction , &            !< indicates direction of change in leaf CN ratio to maximise NPP
-                                    apar              , &            !< ..
                                     target_lai        , &            !< LAI implied from sap wood area
                                     kstar_labile                     !< labile pool turnover rate assuming only temperature and moisture constraints (no stoichiometry)
 
@@ -189,8 +188,6 @@ MODULE mo_veg_memory_class
                                     fn_rub_cl        , &       !< fraction of N in Rubisco 
                                     fn_pepc_cl       , &       !< fraction of N in PEP carboylase (C4 plants only)
                                     fn_oth_cl        , &       !< fraction of N not associated with photosynthesis 
-                                    par_sunlit_cl     , &       !< PAR on sunlit leaves (µmol m-2 s-1)
-                                    par_shaded_cl     , &       !< PAR on shaded leaves (µmol m-2 s-1)
                                     fleaf_sunlit_cl   , &       !< fraction of layer which is sunlit
                                     lai_cl            , &       !< leaf area in the canopy layer 
                                     cumm_lai_cl                 !< cummulative leaf area above the mid-point of the canopy layer 
@@ -248,8 +245,6 @@ MODULE mo_veg_memory_class
 
     ! daytime averages
     TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
-                                    par_sunlit_daytime_cl     , &    !<  average of the previous day
-                                    par_shaded_daytime_cl     , &    !<  average of the previous day
                                     fleaf_sunlit_daytime_cl          !<  average of the previous day
     TYPE(t_jsb_var_real1d)          :: &   
                                     t_air_daytime             , &    !<  average of the previous day
@@ -259,8 +254,6 @@ MODULE mo_veg_memory_class
                                     beta_sinklim_ps_daytime   , &    !<  average of the previous day
                                     t_jmax_opt_daytime               !<  average of the previous day
     TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
-                                    par_sunlit_daytime_dacc_cl   , & !<  value accumulated over current day
-                                    par_shaded_daytime_dacc_cl   , & !<  value accumulated over current day
                                     fleaf_sunlit_daytime_dacc_cl     !<  value accumulated over current day
     TYPE(t_jsb_var_real1d)          :: &   
                                     t_air_daytime_dacc            , & !<  average of the previous day
@@ -292,8 +285,6 @@ MODULE mo_veg_memory_class
                                     cost_n_fixation_tuptake_mavg        !< moving average of N fixation cost (mol C / mol N)
     ! 1.4 memory of conditions for photosynthesis for the optimisation of foliar N fractions 
     TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
-                                    par_sunlit_tfrac_mavg_cl       , &  !< PAR on sunlit leaves
-                                    par_shaded_tfrac_mavg_cl       , &  !< PAR on shaded leaves
                                     fleaf_sunlit_tfrac_mavg_cl          !< fraction of sunlit leaves
     TYPE(t_jsb_var_real1d)          :: &   
                                     t_air_tfrac_mavg               , &  !< air temp
@@ -303,8 +294,6 @@ MODULE mo_veg_memory_class
                                     beta_sinklim_ps_tfrac_mavg          !< scaling factor to account for soil moisture constraints on photosynthesis 
     ! 1.5 memory of conditions for photosynthesis for the optimisation of foliar N  
     TYPE(t_jsb_var_real2d)          :: &   ! DIMENSION(ncanopy)
-                                    par_sunlit_tcnl_mavg_cl        , &  !< PAR on sunlit leaves
-                                    par_shaded_tcnl_mavg_cl        , &  !< PAR on shaded leaves
                                     fleaf_sunlit_tcnl_mavg_cl           !< fraction of sunlit leaves
     TYPE(t_jsb_var_real1d)          :: &   
                                     t_air_tcnl_mavg                , &  !< air temp
@@ -1412,9 +1401,6 @@ CONTAINS
       CALL slm_add_var(mem, 'leaf_cn_direction', mem%leaf_cn_direction, &
             initval_r=1.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'apar', mem%apar, &
-            initval_r=0.0_wp) ! initvalue
-  
       CALL slm_add_var(mem, 'target_lai', mem%target_lai, &
             initval_r=0.0_wp) ! initvalue
   
@@ -1462,12 +1448,6 @@ CONTAINS
   
       CALL slm_add_var(mem, 'fn_oth_cl', mem%fn_oth_cl, &
             initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'par_sunlit_cl', mem%par_sunlit_cl, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'par_shaded_cl', mem%par_shaded_cl, &
-            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
             initval_r=0.0_wp) ! initvalue
@@ -1613,12 +1593,6 @@ CONTAINS
       CALL slm_add_var(mem, 'leaf2root_mass_ratio', mem%leaf2root_mass_ratio, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'par_sunlit_daytime_cl', mem%par_sunlit_daytime_cl, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'par_shaded_daytime_cl', mem%par_shaded_daytime_cl, &
-            initval_r=0.0_wp) ! initvalue
-  
       CALL slm_add_var(mem, 'fleaf_sunlit_daytime_cl', mem%fleaf_sunlit_daytime_cl, &
             initval_r=0.0_wp) ! initvalue
   
@@ -1639,12 +1613,6 @@ CONTAINS
   
       CALL slm_add_var(mem, 't_jmax_opt_daytime', mem%t_jmax_opt_daytime, &
             initval_r=17.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'par_sunlit_daytime_dacc_cl', mem%par_sunlit_daytime_dacc_cl, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'par_shaded_daytime_dacc_cl', mem%par_shaded_daytime_dacc_cl, &
-            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'fleaf_sunlit_daytime_dacc_cl', mem%fleaf_sunlit_daytime_dacc_cl, &
             initval_r=0.0_wp) ! initvalue
@@ -1703,12 +1671,6 @@ CONTAINS
       CALL slm_add_var(mem, 'cost_n_fixation_tuptake_mavg', mem%cost_n_fixation_tuptake_mavg, &
             initval_r=10.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'par_sunlit_tfrac_mavg_cl', mem%par_sunlit_tfrac_mavg_cl, &
-            initval_r=150.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'par_shaded_tfrac_mavg_cl', mem%par_shaded_tfrac_mavg_cl, &
-            initval_r=10.0_wp) ! initvalue
-  
       CALL slm_add_var(mem, 'fleaf_sunlit_tfrac_mavg_cl', mem%fleaf_sunlit_tfrac_mavg_cl, &
             initval_r=0.5_wp) ! initvalue
   
@@ -1726,12 +1688,6 @@ CONTAINS
   
       CALL slm_add_var(mem, 'beta_sinklim_ps_tfrac_mavg', mem%beta_sinklim_ps_tfrac_mavg, &
             initval_r=1.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'par_sunlit_tcnl_mavg_cl', mem%par_sunlit_tcnl_mavg_cl, &
-            initval_r=150.0_wp) ! initvalue
-  
-      CALL slm_add_var(mem, 'par_shaded_tcnl_mavg_cl', mem%par_shaded_tcnl_mavg_cl, &
-            initval_r=10.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'fleaf_sunlit_tcnl_mavg_cl', mem%fleaf_sunlit_tcnl_mavg_cl, &
             initval_r=0.5_wp) ! initvalue

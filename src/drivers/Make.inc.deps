@@ -25,6 +25,8 @@ mo_land_model_interface.o: \
   mo_veg_output.o \
   mo_veg_util.o \
   mo_veg_memory_class.o \
+  mo_rad_memory_class.o \
+  mo_assimi_memory_class.o \
   mo_rad_interface.o \
   mo_veg_interface.o \
   mo_veg_canopy.o \
