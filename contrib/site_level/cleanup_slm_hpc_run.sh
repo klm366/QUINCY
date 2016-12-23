@@ -92,4 +92,41 @@ if [ $paramSensitivitySim == T ]; then
   rm -r "$simFold"parameter_sensitivity_files
 fi
 
+## create one pdf file from the postprocessing pdf of all sites
+if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ] # || [ "$slmModel" == "soil" ]
+ then
+
+  cd "$simFold"
+  mkdir -p ./pdftmp
+  count=100
+
+  for site in $(ls -d ./*/)
+   do
+
+    siteBase=$(basename $site)  # just: HAR_01 SAS_04 TAP_67
+
+    if [ $siteBase != "x_binary" ] && [ $siteBase != "pdftmp" ]
+    then
+      ((count++))
+
+      cp ./"$siteBase"/postprocessing/*.pdf  ./pdftmp/"$count"b.pdf
+
+      echo "$jobName"        > ./pdftmp/temp.txt
+      echo " "              >> ./pdftmp/temp.txt
+      echo " "              >> ./pdftmp/temp.txt
+      echo " "              >> ./pdftmp/temp.txt
+      echo "~color{1 0 0}"  >> ./pdftmp/temp.txt     # https://stackoverflow.com/questions/18422738/how-to-change-text-color-in-output-from-enscript
+      echo $siteBase        >> ./pdftmp/temp.txt
+      sync
+      enscript -e~ -q -B -f Courier20 -p ./pdftmp/"$count"a.ps ./pdftmp/temp.txt
+      sync
+      ps2pdf ./pdftmp/"$count"a.ps ./pdftmp/"$count"a.pdf
+
+    fi
+  done
+
+  pdftk ./pdftmp/*.pdf output ./postprocessing_all_sites.pdf
+  rm -r ./pdftmp
+fi
+
 # end cleanup #
