@@ -36,7 +36,6 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: min_cos_zenith_angle        !< minimum zenith angle for which PAR is calculated, see cos_zenith_angle
 
   ! conversion factors
-  REAL(wp),SAVE :: rad2par                     !< µmol /J
   REAL(wp),SAVE :: standard_press_srf          !< standard pressure in Pa
   REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
 
@@ -106,7 +105,6 @@ CONTAINS
     dusk_time = 1.0_wp / hourday
     ! 
     ! conversion factors
-    rad2par             = 4.6_wp      ! Monteith & Unsworth 1995 
     standard_press_srf  = 101300.0_wp  
     eps_vpd             = 0.622_wp  
     ! 

@@ -30,6 +30,10 @@ MODULE mo_rad_constants
       def_alb_vis_soil, &   !< default VIS albedo for soil
       def_alb_nir_soil      !< default NIR albedo for soil
 
+  ! conversion factors
+  REAL(wp), SAVE ::   &
+      rad2ppfd              !< µmol /J
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -38,16 +42,21 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_rad_constants
 
-      kbl0_vis   = 0.5_wp    ! Spitters 1986 
-      kdf0_vis   = 0.8_wp    ! Spitters 1986
-      kbl0_nir   = 0.5_wp    ! Spitters 1986 
-      kdf0_nir   = 0.8_wp    ! Spitters 1986
-      rho2sbeta  = 1.6_wp    ! Spitters 1986 
-      k_csf      = 2.2_wp    ! Campbell & Norman 1998, eq 15.35
-      min_cos_zenith_angle_rad = 0.1736482_wp ! corresponding to 10° solar elevation, below which the 
-                                              ! radiation equations are no longer valid
-      def_alb_vis_soil = 0.15_wp ! detault from Bonan 2008
-      def_alb_nir_soil = 0.30_wp ! default from Bonan 2008
+  IMPLICIT NONE
+    kbl0_vis                  = 0.5_wp        !< Spitters 1986 
+    kdf0_vis                  = 0.8_wp        !< Spitters 1986 
+    kbl0_nir                  = 0.5_wp        !< Spitters 1986 
+    kdf0_nir                  = 0.8_wp        !< Spitters 1986 
+    rho2sbeta                 = 1.6_wp        !< Spitters 1986 
+    k_csf                     = 2.2_wp        !< Campbell & Norman 1998, eq 15.35
+    min_cos_zenith_angle_rad  = 0.1736482_wp  !< corresponding to 10° solar elevation, below which the 
+                                              !! radiation equations are no longer valid
+
+    def_alb_vis_soil          = 0.15_wp       !< default from Bonan 2008
+    def_alb_nir_soil          = 0.30_wp       !< default from Bonan 2008
+
+    rad2ppfd                  = 4.6_wp        !< Monteith & Unsworth 1995 
+
 
   END SUBROUTINE init_rad_constants
 END MODULE mo_rad_constants

@@ -643,7 +643,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_base_memory,           ONLY: t_slm_tile
     USE mo_base_constants,        ONLY: dtime
-    USE mo_atmland_constants,     ONLY: rad2par
+    USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
 
     ! Use of process memories
@@ -742,7 +742,7 @@ CONTAINS
       gc_acc(itile)           = assimi%canopy_cond%ptr                                                      
       ga_acc(itile)           = ga                                                   
       albedo_acc(itile)       = albedo
-      ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2par   * dtime_one               
+      ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2ppfd  * dtime_one               
       rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dtime_one               
       qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dtime_one               
       qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dtime_one               

@@ -387,7 +387,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE canopy_model_write_data(tile, time_day, time_year, t_air, swpar_srf_down)
 
-    USE mo_atmland_constants,     ONLY: rad2par
+    USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_base_constants,        ONLY: one_year
     USE mo_base_memory,           ONLY: t_slm_tile
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
@@ -424,7 +424,7 @@ CONTAINS
     rad     => rad__mem
 
 
-      WRITE(20,'(7F16.7)')  time_day+time_year*one_year, t_air, swpar_srf_down * rad2par, &
+      WRITE(20,'(7F16.7)')  time_day+time_year*one_year, t_air, swpar_srf_down * rad2ppfd, &
                             assimi%gross_assimilation%ptr, rad%appfd%ptr, & 
                             assimi%canopy_cond%ptr, assimi%co2_conc_leaf%ptr 
       WRITE(21,'(20F16.7)') rad%ppfd_sunlit_cl%ptr
@@ -448,8 +448,8 @@ CONTAINS
     USE mo_base_constants,        ONLY: npft
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
-    USE mo_atmland_constants,     ONLY: rad2par, frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, &
-                                        def_co2_mixing_ratio
+    USE mo_rad_constants,         ONLY: rad2ppfd
+    USE mo_atmland_constants,     ONLY: frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_veg_util,              ONLY: set_zero_vegetation_fluxes
     USE mo_shared_constants,      ONLY: molar_mass_N, Tzero 
@@ -621,7 +621,7 @@ CONTAINS
   swpar_srf_down = 0.0_wp 
   DO i = 1,16
 
-     swpar_srf_down = swpar_srf_down + 100.0_wp / rad2par 
+     swpar_srf_down = swpar_srf_down + 100.0_wp / rad2ppfd 
      swvis_srf_down = swpar_srf_down / frac_par_swvis_srf 
      swnir_srf_down = swvis_srf_down * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
      CALL update_atm2land(tile, &
@@ -634,7 +634,7 @@ CONTAINS
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') swpar_srf_down * rad2par, & 
+     WRITE(lun,'(4F16.7)') swpar_srf_down * rad2ppfd, & 
            assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, & 
            assimi%co2_conc_leaf%ptr/co2_mixing_ratio !,&
 !           assimi%net_assimilation%ptr,

@@ -41,8 +41,8 @@ CONTAINS
     USE mo_assimi_config_class,   ONLY: assimi_config   ! e.g. ncanopy
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_rad_constants 
-    USE mo_atmland_constants,     ONLY: rad2par
+    USE mo_rad_constants,         ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, kbl0_vis, kdf0_vis, kbl0_nir, kdf0_nir, &
+                                        rho2sbeta, k_csf, min_cos_zenith_angle_rad
 
     ! Use of process memories
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
@@ -188,9 +188,9 @@ CONTAINS
     !!
     veg%fleaf_sunlit_cl%ptr(:,1) = fleaf_sunlit_vis_cl(:) 
     IF(swvis_srf_down > eps8) THEN 
-       rad%ppfd_sunlit_cl%ptr(:,1) = arad_sunlit_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
-       rad%ppfd_shaded_cl%ptr(:,1) = arad_shaded_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2par
-       rad%appfd%ptr               = arad_vis_can          * swpar_srf_down/swvis_srf_down * rad2par 
+       rad%ppfd_sunlit_cl%ptr(:,1) = arad_sunlit_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2ppfd
+       rad%ppfd_shaded_cl%ptr(:,1) = arad_shaded_vis_cl(:) * swpar_srf_down/swvis_srf_down * rad2ppfd
+       rad%appfd%ptr               = arad_vis_can          * swpar_srf_down/swvis_srf_down * rad2ppfd 
     ELSE 
        rad%ppfd_sunlit_cl%ptr = 0.0_wp
        rad%ppfd_shaded_cl%ptr = 0.0_wp

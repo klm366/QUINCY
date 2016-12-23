@@ -83,6 +83,7 @@ mo_veg_output.o: \
   mo_shared_isotope.o \
   mo_assimi_config_class.o \
   mo_veg_memory_class.o \
+  mo_rad_constants.o \
   mo_veg_constants.o \
   mo_veg_config_class.o \
   mo_pheno_memory_class.o \

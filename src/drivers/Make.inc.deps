@@ -19,6 +19,7 @@ mo_land_model_interface.o: \
   mo_jsb_process_class.o \
   mo_shared_update_time_averages.o \
   mo_shared_constants.o \
+  mo_rad_constants.o \
   mo_atmland_interface.o \
   mo_atmland_constants.o \
   mo_atmland_util.o \
