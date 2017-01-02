@@ -18,7 +18,6 @@ MODULE mo_assimi_config_class
 
   IMPLICIT NONE
   PRIVATE
-
 !  PUBLIC :: t_assimi_config
   PUBLIC :: assimi_config
 
@@ -69,6 +68,7 @@ CONTAINS
                        icanopy
     REAL(wp)        :: dAPAR
     REAL(wp)        :: k_canopy_layer                !< extinction coefficient to calculate canopy layer depth
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_config'
 
     NAMELIST /assimilation_ctl/       & 
         flag_optimal_Nfraction          , &
@@ -81,8 +81,6 @@ CONTAINS
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_config'
 
     ! extinction coefficient for canopy layer depth calculation
     k_canopy_layer = 0.5_wp

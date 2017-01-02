@@ -106,6 +106,8 @@ MODULE mo_assimi_constants
       ic3phot       = 1  ,     &
       ic4phot       = 2  
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_assimi_constants'
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -121,6 +123,8 @@ CONTAINS
 
     IMPLICIT NONE
 
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_assimi_constants'
 
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
       jmax2n        = 17.6_wp/4.0_wp

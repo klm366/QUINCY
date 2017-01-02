@@ -63,6 +63,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_time_averages'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
@@ -137,6 +138,7 @@ CONTAINS
     REAL(wp), INTENT(in)                  :: timestep_prop_day  !< length of one time step (proportion of one day)
     ! 0.2 Local
     INTEGER                               :: icanopy
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_daytime_averages'
 
 
     !> 1.0 if light is available (i.e. daytime)
@@ -246,6 +248,7 @@ CONTAINS
     REAL(wp)                                  :: new_value_weight   ! weight of the new value
     REAL(wp)                                  :: avg_period2seconds ! for converting the period length (day, week, year) into seconds
     LOGICAL                                   :: l_do_calc          ! True/ False of the Optional variable do_calc present
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mavg'
 
 
     !> 1.0 optional arguments
@@ -314,6 +317,7 @@ CONTAINS
     TYPE(t_pheno_memory),   INTENT(inout)   :: pheno              !< pheno memory
     ! 0.2 Local
     REAl(wp)                                :: hlp
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_moving_averages'
 
 
     !> 1.0

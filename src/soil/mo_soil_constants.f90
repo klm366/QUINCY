@@ -12,7 +12,6 @@ MODULE mo_soil_constants
   USE mo_kind, ONLY: wp
 
   IMPLICIT NONE
-
   PUBLIC
 
 
@@ -24,12 +23,19 @@ MODULE mo_soil_constants
     soil_therm_cond             !< soil thermal conductivity (W m-2 K-1)
 
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_soil_constants'
+
 CONTAINS
+
   !-----------------------------------------------------------------------------------------------------
   !> initialize constants from soil 
   !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_soil_constants
+
+    IMPLICIT NONE
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_constants'
 
     soil_heat_cap   = 1400.0_wp   ! textbook for wet sandy soil
     rho_bulk_soil   = 1695.86_wp  ! Bernhard Ahrens for Hainich

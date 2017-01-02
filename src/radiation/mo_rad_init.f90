@@ -17,7 +17,6 @@ MODULE mo_rad_init
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: rad_init
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_init'
@@ -37,9 +36,9 @@ CONTAINS
 
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)              :: tile       !< data structure for dynamic vegetation and soil variables
-
-
+    ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rad_init'
+
 
     CALL message(TRIM(routine), 'Currently nothing to do for '//routine)
 

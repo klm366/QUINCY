@@ -57,6 +57,8 @@ MODULE mo_shared_output
   REAL(wp), DIMENSION(ntile), SAVE :: albedo_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: appfd_acc 
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------

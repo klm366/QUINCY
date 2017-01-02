@@ -22,6 +22,7 @@ MODULE mo_land_model_interface
   PRIVATE
   PUBLIC :: land_model_interface
 
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_land_model_interface'
 
 CONTAINS
 
@@ -178,7 +179,7 @@ CONTAINS
                                   latent_hflx_ice   ,   &
                                   sensible_hflx_ice !! land2atm memory - end
     ! 0.2 Local
-    ! ...
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':land_model_interface'
 
 
     !> pass atmland variables from forcing input (driver) to atm2land
@@ -406,7 +407,7 @@ CONTAINS
     REAL(wp),        INTENT(in)         :: t_air             !< air temp
     REAL(wp),        INTENT(in)         :: swpar_srf_down    !< short wave light at surface level ?
     ! 0.2 Local
-    ! ..
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':canopy_model_write_data'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem  
@@ -499,7 +500,6 @@ CONTAINS
     REAL(wp)      :: hlp1
     INTEGER       :: i,lun
     INTEGER       :: ref_pft                          ! PFT identifier
-
     ! parameters (specific to the test_canopy model)
     REAL(wp),SAVE :: ref_t_air = 25.0_wp              ! temperature in deg C 
     REAL(wp),SAVE :: ref_vpd = 1000._wp               ! vpd in Pa
@@ -511,6 +511,7 @@ CONTAINS
     REAL(wp),SAVE :: ref_theta = 100._wp              ! soil water availability in %
     REAL(wp),SAVE :: ref_lai = 3._wp                  ! LAI
     REAL(wp),SAVE :: ref_nleaf = 2.0_wp               ! N leaf per unit leaf area in gN/m2
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':run_test_canopy_model'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER      :: assimi__mem  

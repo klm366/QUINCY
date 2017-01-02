@@ -41,7 +41,6 @@ MODULE mo_atmland_interface
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: update_atm2land, update_land2atm
 
 

@@ -12,7 +12,6 @@ MODULE mo_veg_constants
   USE mo_kind,                ONLY: wp
 
   IMPLICIT NONE
-
   PUBLIC
 
 
@@ -155,6 +154,8 @@ MODULE mo_veg_constants
       igrass        = 2  
 
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_veg_constants'
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -167,6 +168,8 @@ CONTAINS
     USE mo_shared_constants,    ONLY: molar_mass_C, molar_mass_N
 
     IMPLICIT NONE
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_veg_constants'
 
 
   ! Respiration parameters

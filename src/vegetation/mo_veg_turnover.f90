@@ -14,9 +14,10 @@ MODULE mo_veg_turnover
   USE mo_kind
 
   IMPLICIT NONE
-
   PRIVATE
   PUBLIC :: update_veg_turnover
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_turnover'
 
 CONTAINS
 
@@ -46,6 +47,7 @@ CONTAINS
     ! 0.2 Local 
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_turnover'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
@@ -107,6 +109,8 @@ CONTAINS
     REAL(wp)                          :: scal                     ! helper variable
     REAL(wp)                          :: recycling_leaf, &        ! more helpers1
                                          recycling_fine_root      ! more helpers2
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nutrient_recycling'
+
 
     IF(growing_season)THEN 
        !> 1.0 replace overturning N from leaves and roots by new N from the labile pool using the target C:N
@@ -236,6 +240,7 @@ CONTAINS
                                          fturn
     REAL(wp)                          :: nitrogen_recycling_fract     , & !< recycling fraction
                                          phosphorus_recycling_fract
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_turnover'
 
 
     !> 1.0 initialise variables
@@ -364,9 +369,9 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     CHARACTER(4), INTENT(in) :: pool_name
-
     ! 0.2 Local
     REAL(wp) :: recycling_fract 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nitrogen_recycling_fract'
 
     SELECT CASE(TRIM(pool_name))
       CASE("leaf")
@@ -393,9 +398,9 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     CHARACTER(4), INTENT(in) :: pool_name
-
     ! 0.2 Local
     REAL(wp) :: recycling_fract 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_phosphorus_recycling_fract'
 
     SELECT CASE(TRIM(pool_name))
       CASE("leaf")

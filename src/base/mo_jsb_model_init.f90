@@ -48,7 +48,6 @@ MODULE mo_jsb_model_init
     USE mo_soil_init,                       ONLY: soil_init
 
   IMPLICIT NONE
-
   PRIVATE
   PUBLIC :: init_model
   PUBLIC :: time_day, time_year, ntimestep, itimestep, timestep_prop_day
@@ -105,7 +104,7 @@ CONTAINS
     INTEGER                                     :: no_of_models
     TYPE(t_model), POINTER                      :: current => NULL() ! model allocation to jsbach struct - in jsbach4 this is looped over x models
     TYPE(t_model), POINTER                      :: model
-    CHARACTER(len=*),       PARAMETER           :: routine = TRIM(modname)//':init_slm'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_slm'
 
     ! check number of tiles, exit if more than output routines can handle
     IF(ntile > 1) CALL finish('land_model_driver-init_routine','Number of tiles is too large, i.e. larger than 1')

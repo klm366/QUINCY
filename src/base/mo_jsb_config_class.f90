@@ -16,7 +16,6 @@ MODULE mo_jsb_config_class
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: t_jsb_config!, t_jsb_config_p, t_jsb_model_config, new_model_config
 
 !  ! model config
@@ -52,7 +51,7 @@ MODULE mo_jsb_config_class
   END INTERFACE
 
 
-!  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_config_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_config_class'
 
 !CONTAINS
 

@@ -13,9 +13,10 @@ MODULE mo_veg_respiration
 
 
   IMPLICIT NONE
-
   PRIVATE
   PUBLIC :: calc_maintenance_respiration,temperature_response_respiration
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_respiration'
 
 CONTAINS
 
@@ -38,6 +39,9 @@ CONTAINS
     REAL(wp), INTENT(in) :: temp          !< instantaneous temperature (K)
     REAL(wp), INTENT(in) :: temp_mavg      !< average temperature for acclimation (K) 
     REAL(wp) :: temp_response             !< temperature response of respiration (1 at 10°C)
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':temperature_response_respiration'
+
 
     IF (assimi_config%flag_t_resp_acclimation) THEN
       temp_response = (10._wp**(f_resp_acclim * (temp_mavg - t_acclim_zero))) * & 
@@ -79,7 +83,10 @@ CONTAINS
     REAL(wp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)
                                                      ! (calculated in photosynthesis; µmol C / m2 / s)
     REAL(wp)             :: maint_respiration        !< maintenance respiration (µmol C / m2 / s)
-     
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_maintenance_respiration'
+
+
     maint_respiration = temperature_response_respiration(t_stem, temp_mavg) * & 
                         fmaint_rate_base * sap_wood_nitrogen + &
                         temperature_response_respiration(t_root, temp_mavg) * & 

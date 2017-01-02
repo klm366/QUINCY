@@ -15,9 +15,10 @@ MODULE mo_veg_dynamics
 
 
   IMPLICIT NONE
-
   PRIVATE
   PUBLIC :: update_veg_dynamics
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_dynamics'
 
 CONTAINS
 
@@ -49,6 +50,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER           :: model
     TYPE(t_lctlib_element), POINTER           :: lctlib     !< land-cover-type library - parameter across pft's
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
@@ -134,6 +136,7 @@ CONTAINS
     REAL(wp),                     INTENT(out)   :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
     ! 0.2 Local
     REAL(wp)                                    :: boc_cbalance
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
 
 
     !> 1.0 background mortality 
@@ -225,6 +228,7 @@ CONTAINS
                                                      flim_moist   , &
                                                      flim_temp
     INTEGER                                       :: icanopy
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_establishment'
 
 
     !> 1.0 establishment rate
@@ -283,6 +287,8 @@ CONTAINS
                                                      mortality_rate           , & !< mortality per timestep
                                                      veg_establishment_carbon     !< egetation establishment measured in C
     REAL(wp),                       INTENT(out)   :: delta_dens_ind               !< diff in individual density
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_density_individuals'
 
 
     !> 1.0 calc delta of individual density (#/m2)

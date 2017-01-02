@@ -55,7 +55,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    CHARACTER(len=*),       PARAMETER     :: routine = TRIM(modname)//':update_phenology'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_phenology'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
@@ -139,7 +139,7 @@ CONTAINS
                                                    gdd                                 !< ..
     ! 0.2 Local
     REAL(wp) :: hlp1                                      ! helper variable for tmp values
-    CHARACTER(len=*),       PARAMETER     :: routine = TRIM(modname)//':calc_phenology'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_phenology'
 
     !> 1.0 check growing season has started or ended
     !! 

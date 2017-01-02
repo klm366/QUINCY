@@ -55,6 +55,8 @@ MODULE mo_atmland_constants
 
 
   PUBLIC
+
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_atmland_constants'
  
 CONTAINS
 
@@ -70,6 +72,9 @@ CONTAINS
     USE mo_shared_isotope,  ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
 
     IMPLICIT NONE
+
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_atmland_constants'
 
     ! 
     ! initialise Earth's orbit

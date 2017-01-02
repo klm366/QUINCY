@@ -66,7 +66,7 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-while getopts ":p:m:y:o:h" opt; do
+while getopts ":p:m:y:o:n:h" opt; do
   case "$opt" in
   "p")
     echo "   plant_functional_type_id=""$OPTARG"
@@ -113,6 +113,26 @@ while getopts ":p:m:y:o:h" opt; do
       ;;
     esac
     ;;
+  "n")
+    case "$OPTARG" in
+    "pre")
+      echo "   n_uptake_scheme=prescribed"
+      n_uptake_scheme="prescribed"
+      ;;
+    "std")
+      echo "   n_uptake_scheme=standard"
+      n_uptake_scheme="standard"
+      ;;
+    "opt")
+      echo "   n_uptake_scheme=optimal"
+      n_uptake_scheme="optimal"
+      ;;
+    "res")
+      echo "   n_uptake_scheme=resistance"
+      n_uptake_scheme="resistance"
+      ;;
+    esac
+    ;;
   \?)
     echo "     Invalid option: -$OPTARG"
     echo "     Use -h for help."
@@ -141,7 +161,12 @@ while getopts ":p:m:y:o:h" opt; do
     echo "       nf: using only optimal Nfraction"
     echo "       nl: using only optimal Nleaf"
     echo "       al: using only optimal allocation"
-    echo "EXIT !"
+    echo " -n set the N uptake scheme"
+    echo "    Arguments to -n:"
+    echo "       pre: prescribed"
+    echo "       std: standard"
+    echo "       opt: optimal"
+    echo "       res: resistance"
     exit 1
     ;;
   esac

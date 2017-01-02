@@ -17,11 +17,12 @@ MODULE mo_veg_growth
   USE mo_veg_constants
 
 
+  IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: update_growth
   PUBLIC :: calc_diameter_from_woody_biomass, calc_height_from_diameter
 
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_growth'
 
 CONTAINS
 
@@ -57,6 +58,7 @@ CONTAINS
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp)                               :: dheight    !< delta height
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_growth'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
@@ -301,6 +303,7 @@ CONTAINS
     ! 0.2 Local
     REAL(wp)                :: ftemp                  ! temperature limit on cell construction rate
     REAL(wp)                :: fmoist                 ! moisture limit on cell construction rate
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_meristem_activity'
   
     IF(t_air > Tzero) THEN 
         ftemp = 1.0_wp - exp(-(lambda_labile_temp * (t_air - Tzero))**k_labile_temp)
@@ -361,6 +364,7 @@ CONTAINS
     REAL(wp) :: gc
     REAL(wp) :: gn
     REAL(wp) :: tf                                    !! BNF-temperature-function after Houlton (2008)
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nitrogen_uptake_costs'
 
 
     !> 1.0 C costs for N acquisition
@@ -448,6 +452,8 @@ CONTAINS
                                                target_np_coarse_root , & !< coarse root target N:P
                                                target_np_sap_wood    , & !< sap wood target N:P
                                                target_np_fruit           !< fruit target N:P
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_stoichiometry_changes'
 
 
     !> 1.0 calculate optimal allocation fractions
@@ -562,6 +568,8 @@ CONTAINS
                             k2_opt_w
     REAL(wp)             :: hlp1      , &
                             hlp2
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allometry'
+
 
     !> 1.0 case growthform
     !! 
@@ -754,6 +762,7 @@ CONTAINS
     REAL(wp)             :: target_reserve_pool_nitrogen     ! desirable size (mol N/m2) of the reserve pool
     REAL(wp)             :: target_reserve_pool_phosphorus   ! desirable size (mol P/m2) of the reserve pool
     REAL(wp)             :: hlp1                             ! helper variable
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_reserve_useage'
 
 
     !> 1.0 target size of the labile and reserve pools
@@ -959,6 +968,8 @@ CONTAINS
     REAL(wp) :: leaf2wood_mass_ratio,    &
                 wood_carbon
     REAL(wp) :: hlp1
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allocation_fraction'
+
 
     !> 1.0 Allocation factors for C (this should be calculated based on various principles of plant growth and allometry)
     !! 
@@ -1233,7 +1244,8 @@ CONTAINS
     ! 0.2 Local
     REAL(wp)                                    :: n_processing_respiration_pot , & ! ..
                                                    n_processing_respiration_act     ! ..
- 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning' 
+
 
     !> 1.0 Determine C use for maintenance 
     !! 
@@ -1370,13 +1382,15 @@ CONTAINS
     USE mo_base_constants,          ONLY: pi
 
     IMPLICIT NONE
-
     !0.1 InOut
     TYPE(t_lctlib_element), INTENT(in)  :: lctlib                  !< land-cover-type library - parameters for one pft
     REAL(wp),               INTENT(in)  :: sap_wood_carbon         !< woody biomass of an individual tree (mol C/m2)
     REAL(wp),               INTENT(in)  :: heart_wood_carbon       !< woody biomass of an individual tree (mol C/m2)
     REAL(wp),               INTENT(in)  :: dens_ind                !< density of populations (#indivuduals /m2) 
     REAL(wp)                            :: diameter                !< diameter of an individual (m2)
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_diameter_from_woody_biomass'
+
 
     diameter = ( ( sap_wood_carbon + heart_wood_carbon ) / dens_ind / & 
                (lctlib%wood_density * pi/4._wp * lctlib%allom_k1)) ** (1._wp/(2._wp + lctlib%allom_k2))
@@ -1400,11 +1414,13 @@ CONTAINS
     USE mo_veg_constants,           ONLY: min_height
 
     IMPLICIT NONE
-
     !0.1 InOut
     TYPE(t_lctlib_element), INTENT(in)  :: lctlib      !< land-cover-type library - parameters for one pft
     REAL(wp),               INTENT(in)  :: diameter    !< diameter of an individual (m2) 
     REAL(wp)                            :: height      !< height of an individual (m)
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_height_from_diameter'
+
 
     height = MAX(min_height,lctlib%allom_k1 * (diameter ** lctlib%allom_k2))
 

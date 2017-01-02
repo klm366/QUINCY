@@ -14,6 +14,8 @@ MODULE mo_shared_set_parameters
   USE mo_jsb_io,              ONLY: missval  ! = -9.E+15_wp
 
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: parameters_from_file
 
   !-----------------------------------------------------------------------------------------------------
   !> parameter values from file param.list - replacing the values from mo_PROC_constants
@@ -49,11 +51,8 @@ MODULE mo_shared_set_parameters
 
   TYPE(t_parameters_from_file), SAVE :: parameters_from_file
 
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_set_parameters'
-
-
-  PRIVATE
-  PUBLIC :: parameters_from_file
 
 CONTAINS
 
@@ -89,6 +88,7 @@ CONTAINS
     REAL(wp)           :: k_bnf
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
 
     ! Namelist definition of section parameters
     ! 
@@ -115,7 +115,7 @@ CONTAINS
     ! variables for reading model-options from namelist
     ! 
     INTEGER  :: nml_handler, nml_unit, istat
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
+
     CALL message(TRIM(routine), 'Starting to read parameter list')
 
     ! Set defaults
@@ -195,6 +195,7 @@ CONTAINS
     ! 0.1 InOut
     CLASS(t_parameters_from_file), INTENT(inout) :: this
     ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_parameter_values_with_list_values'
 
 
     !> 1.0 read parameter values from file

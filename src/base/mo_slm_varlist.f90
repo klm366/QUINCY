@@ -69,15 +69,15 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_struct( &
     mem, name, struct) 
-
+    IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
     CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
     CLASS(t_jsb_struct), TARGET, INTENT(inout)    :: struct              ! struct
     ! 0.2 Local
     INTEGER           :: pos_of_struct
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct'
+
     struct%name = TRIM(name)
     struct%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
 
@@ -102,15 +102,15 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_n_struct( &
     mem, name, n_struct) 
-
+    IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_jsb_memory),  INTENT(inout)           :: mem                 ! memory structure
     CHARACTER(len=*),     INTENT(in)              :: name                ! name of variable
     CLASS(t_jsb_n_struct), TARGET, INTENT(inout)  :: n_struct            ! n_struct
     ! 0.2 Local
     INTEGER           :: pos_of_n_struct
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_n_struct'
+
     n_struct%name = TRIM(name)
     n_struct%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
 
@@ -135,15 +135,15 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_l2_struct( &
     n_struct, name, l2_struct) 
-
+    IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_jsb_n_struct),  INTENT(inout)       :: n_struct            ! memory structure
     CHARACTER(len=*),     INTENT(in)            :: name                ! name of variable
     CLASS(t_jsb_struct), TARGET, INTENT(inout)  :: l2_struct           ! l2_struct
     ! 0.2 Local
     INTEGER           :: pos_of_l2_struct
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_l2_struct'
+
     l2_struct%name = TRIM(name)
     l2_struct%owner_proc_id = n_struct%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
 
@@ -175,7 +175,7 @@ CONTAINS
   SUBROUTINE slm_add_struct_element_r1d( &
     struct, name, var, &
     initval_r) 
-
+    IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_jsb_struct),              INTENT(inout)   :: struct              ! struct & l2_struct
     CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
@@ -185,8 +185,8 @@ CONTAINS
     INTEGER                       :: pos_of_var
     TYPE(t_model), POINTER        :: model            ! *slmtemp
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real1d'
+
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
@@ -240,8 +240,8 @@ CONTAINS
     TYPE(t_model), POINTER        :: model            ! *slmtemp
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
     INTEGER                       :: levels, levele   ! level_start & level_end | SOIL ics:ice && VEG 1:ncanopy
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real2d'
+
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
@@ -301,8 +301,8 @@ CONTAINS
     TYPE(t_model), POINTER        :: model            ! *slmtemp
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
     INTEGER                       :: nlevel           ! number of levels at Z-Axis (canopy & soil)
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real2d'
+
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
@@ -351,7 +351,7 @@ CONTAINS
   SUBROUTINE slm_add_var_list_element_r1d( &
     mem, name, var, &
     initval_r) 
-
+    IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_jsb_memory),              INTENT(inout)   :: mem                 ! memory structure
     CHARACTER(len=*),                 INTENT(in)      :: name                ! name of variable
@@ -361,8 +361,8 @@ CONTAINS
     INTEGER                       :: pos_of_var
     TYPE(t_model), POINTER        :: model            ! *slmtemp
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r1d'
+
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
@@ -396,7 +396,7 @@ CONTAINS
   SUBROUTINE slm_add_var_list_element_l1d( &
     mem, name, var, &
     initval_r) 
-
+    IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_jsb_memory),                INTENT(inout)   :: mem              ! memory structure
     CHARACTER(len=*),                   INTENT(in)      :: name             ! name of variable
@@ -406,8 +406,8 @@ CONTAINS
     INTEGER                   :: pos_of_var
     TYPE(t_model), POINTER    :: model            ! *slmtemp
     INTEGER                   :: ice, ics, iblk   ! *slmtemp
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_l1d'
+
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
@@ -462,8 +462,8 @@ CONTAINS
     TYPE(t_model), POINTER        :: model            ! *slmtemp
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
     INTEGER                       :: levels, levele   ! level_start & level_end | SOIL ics:ice && VEG 1:ncanopy
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r2d'
+
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp
@@ -524,8 +524,8 @@ CONTAINS
     TYPE(t_model), POINTER        :: model            ! *slmtemp
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
     INTEGER                       :: nlevel           ! number of levels at Z-Axis (canopy & soil)
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r3d'
+
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice  = model%options%ice    ! *slmtemp
     ics  = model%options%ics    ! *slmtemp

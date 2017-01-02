@@ -15,7 +15,6 @@ MODULE mo_phy_schemes
 
   IMPLICIT NONE
   PRIVATE
-
   !PUBLIC :: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, &
   PUBLIC :: q_effective, surface_dry_static_energy, heat_transfer_coef, &
     thermal_radiation, lwnet_from_lwdown

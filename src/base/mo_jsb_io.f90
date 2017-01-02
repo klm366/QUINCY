@@ -79,7 +79,7 @@ MODULE mo_jsb_io
   ! value cannot be represented as integer within 53 bits."
   REAL(dp), PARAMETER :: missval = -9.E+15_dp
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_jsb_io'
 
 CONTAINS
 

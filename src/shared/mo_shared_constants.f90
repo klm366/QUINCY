@@ -12,7 +12,6 @@ MODULE mo_shared_constants
   USE mo_kind,   ONLY: wp
 
   IMPLICIT NONE
-
   PUBLIC
 
   ! physical constants
@@ -74,6 +73,7 @@ MODULE mo_shared_constants
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
   !!----------------------------------------------------------------------------------------------------
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_constants'
 
 CONTAINS
 
@@ -82,6 +82,10 @@ CONTAINS
   !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_shared_constants
+
+    IMPLICIT NONE
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_shared_constants'
 
     ! physical constants
     r_gas        = 8.3144_wp    

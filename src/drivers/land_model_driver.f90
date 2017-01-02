@@ -104,6 +104,7 @@ PROGRAM land_model_driver
                                   latent_hflx_ice   ,   &
                                   sensible_hflx_ice
                                          !! land2atm memory - end
+  CHARACTER(len=*), PARAMETER :: modname = 'land_model_driver'
 
 
   !! 1.0 -----------------------------------------------------------------------------------------------

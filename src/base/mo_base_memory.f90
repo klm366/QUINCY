@@ -140,6 +140,7 @@ MODULE mo_base_memory
 
   TYPE(t_slm_grid)  :: grid           !< currently initialized with namelist parameter values
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_base_memory'
  
 CONTAINS
 
@@ -163,6 +164,7 @@ CONTAINS
     TYPE(t_model), POINTER                 :: return_ptr
     ! 0.2 Local
     !INTEGER :: iproc
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_model'
 
     ALLOCATE(return_ptr)
 

@@ -18,7 +18,6 @@ MODULE mo_jsb_lct_class
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
   PUBLIC :: max_no_of_lct, t_jsb_lct, Contains_lct
 

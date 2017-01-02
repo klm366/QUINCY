@@ -31,7 +31,6 @@ MODULE mo_atm2land_memory_class
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: t_atm2land_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 40

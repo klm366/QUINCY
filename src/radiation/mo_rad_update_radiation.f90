@@ -24,6 +24,8 @@ MODULE mo_rad_update_radiation
   PRIVATE
   PUBLIC :: update_radiation
 
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_update_radiation'
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -64,6 +66,7 @@ CONTAINS
                                                  arad_sunlit_nir_cl   , &
                                                  arad_shaded_nir_cl   , &
                                                  fleaf_sunlit_nir_cl
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
@@ -281,7 +284,7 @@ CONTAINS
     REAL(wp) :: omega                                  ! .. 
     INTEGER  :: icanopy                                 ! iteration over canopy layers
     REAL(wp) :: temp1,temp2,radf1,radf2,radf3,radf3b,radf4,radf5 ! dummy variables
-
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sw_srf_net'
 
     ! Initialise output 
     alb                   = 0.0_wp

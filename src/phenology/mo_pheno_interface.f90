@@ -17,11 +17,10 @@ MODULE mo_pheno_interface
   USE mo_pheno_update_phenology,  ONLY: update_phenology
 
   IMPLICIT NONE
-
 !  PRIVATE
 !  PUBLIC :: Register_assimi_tasks
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_interface'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_pheno_interface'
 
 !CONTAINS
 

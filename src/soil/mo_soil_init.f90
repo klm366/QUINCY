@@ -14,11 +14,11 @@ MODULE mo_soil_init
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: message
 
-
+  IMPLICIT NONE
+  PRIVATE
   PUBLIC :: soil_init
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_init'
-
 
 CONTAINS
 
@@ -49,6 +49,7 @@ CONTAINS
     TYPE(t_model),          POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                                      :: isoil
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SOIL_)

@@ -85,9 +85,6 @@ MODULE mo_rad_memory_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_memory_class'
 
-
-
-
 CONTAINS
 
 

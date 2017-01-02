@@ -23,6 +23,7 @@ MODULE mo_atmland_forcing
   PRIVATE
   PUBLIC :: update_forcing, open_forcing_input_file, close_forcing_input_file
 
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_forcing'
 
 CONTAINS
 
@@ -146,6 +147,7 @@ CONTAINS
     INTEGER                       :: ice          = -1      ! Index of chunk end
     INTEGER                       :: nlevel_soil  = -1      ! number of levels at the Z-Axis (soil layer)
     INTEGER                       :: nlevel_veg   = -1      ! number of levels at the Z-Axis (canopy layer)
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_forcing'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
@@ -384,7 +386,7 @@ CONTAINS
     LOGICAL :: file_exists
     INTEGER :: lun 
     CHARACTER(100) :: fname
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_atmland_forcing:open_forcing_input_file'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_forcing_input_file'
 
 
     SELECT CASE(TRIM(base_config%slm_model_name))
@@ -455,6 +457,8 @@ CONTAINS
     USE mo_base_config_class,               ONLY: base_config
 
     IMPLICIT NONE
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':close_forcing_input_file'
 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant','canopy')
@@ -483,7 +487,7 @@ CONTAINS
     ! 0.2 Local
     CHARACTER(200)      :: header_dummy1 = "header"
     CHARACTER(500)      :: header_dummy2 = "header_long"
-
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_forcing_header'
 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant','canopy')

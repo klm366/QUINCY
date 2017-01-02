@@ -44,7 +44,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)        :: tile         !< one tile
     ! 0.2 Local
-    CHARACTER(len=*),       PARAMETER     :: routine = TRIM(modname)//':veg_init'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
 
 
     !< 1.0 run vegetation init routine for an specific SLM model
@@ -99,7 +99,7 @@ CONTAINS
     TYPE(t_model),          POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp)                                     :: hlp1
-    CHARACTER(len=*),       PARAMETER            :: routine = TRIM(modname)//':init_slm_plant'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_slm_plant'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
@@ -175,7 +175,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp)                                     :: ref_lai    !< LAI
     REAL(wp)                                     :: ref_nleaf  !< N leaf per unit leaf area in gN/m2
-    CHARACTER(len=*),       PARAMETER            :: routine = TRIM(modname)//':init_slm_canopy'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_slm_canopy'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  

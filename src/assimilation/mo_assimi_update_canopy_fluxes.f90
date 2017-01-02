@@ -33,6 +33,9 @@ MODULE mo_assimi_update_canopy_fluxes
   PRIVATE
   PUBLIC :: update_canopy_fluxes, discrimination_ps, calc_photosynthesis
 
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_update_canopy_fluxes'
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -62,6 +65,7 @@ CONTAINS
     TYPE(t_slm_soil),       POINTER        :: vegsoil       ! soil variables per tile
     INTEGER                                :: icanopy     ! for looping across ncanopy layers
     REAL(wp)                               :: hlp1       ! dummy variable 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)     !   TYPE(t_atm2land_memory), POINTER :: atm2land__mem
@@ -319,7 +323,7 @@ CONTAINS
   REAL(wp) :: agsf1,agsf2             ! dummy variables for PS calculation
   INTEGER :: it                       ! Iteration loop counter
   LOGICAL :: last_call                ! boolean to stop iteration at low conductance
-
+  CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_photosynthesis'
 
   !> static energy (R_gas: J mol-1 K-1 -> rtck: J mol-1)
   rtck = r_gas * temp 
@@ -542,6 +546,7 @@ CONTAINS
      ! 0.2 Local
      REAL(wp) :: q_sat                         ! saturating specific humidity 
      REAL(wp) :: vpd                           ! vapour pressure deficit 
+     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_atm_moisture_stress'
 
      !> saturating specific humidity [kg kg-1]
      q_sat = calc_spec_humidity_sat(temp,press_srf) 
@@ -571,6 +576,8 @@ CONTAINS
     REAL(wp),INTENT(in) :: lambda      !< slope parameter of Weibull function
     REAL(wp),INTENT(in) :: weibull_k   !< shape parameter of Weibull function
     REAL(wp) :: beta                   !< veg\%beta_soil_ps / veg\%beta_soil_gs
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_soil_moisture_stress'
 
     !> 1.0 Moisture stress now as a Weibull function to avoid MIN/MAX statements
     !!
@@ -601,6 +608,8 @@ CONTAINS
     CHARACTER(3), INTENT(in) :: isotope_name           !< isotope C13 or C14
     INTEGER,      INTENT(in) :: ps_pathway             !< photosynthetic pathway (C3 or C4)
     REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps'
 
     !> SELECT PS pathway C3 C4
     SELECT CASE(ps_pathway)

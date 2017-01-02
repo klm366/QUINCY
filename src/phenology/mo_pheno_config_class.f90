@@ -54,6 +54,8 @@ CONTAINS
     ! variables for reading from namlist, identical to variable-name in namelist
     !LOGICAL         :: active
     REAL(wp)        :: test_pheno
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_config'
+
 
     NAMELIST /phenology_ctl/       & 
                 test_pheno      !    , &
@@ -61,9 +63,6 @@ CONTAINS
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_pheno_config'
-
 
     CALL message(TRIM(routine), 'Starting pheno configuration')
 

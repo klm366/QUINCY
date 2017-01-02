@@ -12,10 +12,10 @@ MODULE mo_atmland_util
   USE mo_kind
 
   IMPLICIT NONE
-
   PRIVATE
-
   PUBLIC :: calc_solar_angle, update_orbital_parameters, calc_sw_fdiffuse, calc_spec_humidity_sat
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_util'
 
 CONTAINS
 
@@ -41,6 +41,7 @@ CONTAINS
     REAL(wp) :: hour                        ! current hour 
     REAL(wp) :: hour_angle                  ! solar hour angle
     REAL(wp) :: angle_offset                ! offset for solar angle
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_solar_angle'
 
     !> 1.0 calculate the solar hour angle in radians
     !! 
@@ -80,6 +81,7 @@ CONTAINS
     REAL(wp) :: sw_fdiffuse           !< fraction of surface downward radiation flux that is diffuse
     ! 0.2 Local
     REAL(wp) :: transmission          ! fraction of radiation reaching surface
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sw_fdiffuse'
 
     IF(cos_zenith_angle >= min_cos_zenith_angle) THEN  ! only if zenith angle is larger then min_cos_zenith_angle
 
@@ -121,6 +123,7 @@ CONTAINS
      REAL(wp) :: a               ! Pa
      REAL(wp) :: b               ! einheitenlos
      REAL(wp) :: c               ! °C
+     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_spec_humidity_sat'
 
      a = 611.0_wp    
      b = 17.502_wp  
@@ -156,11 +159,11 @@ CONTAINS
     REAL(wp) :: xee,xse                      ! helper variables for eccentricity calculation
     REAL(wp) :: ranm,rlam,xlam,dlamm,ranv    ! helper variables for anomaly calculation of eath orbit
     REAL(wp) :: dist                         ! distance sun-Earth for potential radiation calculation 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_orbital_parameters'
 
 
-    ! 
-    ! 1.0 calculate orbital parameters
-    ! 
+    !> 1.0 calculate orbital parameters
+    !! 
     ! sinus of obliquity
     so = SIN(obliquity*deg2rad)
     !
@@ -188,16 +191,16 @@ CONTAINS
            + 13.0_wp/12.0_wp*xee*SIN(3.0_wp*ranm)
     ! rlam : true longitude (radians)
     rlam =  ranv + xllp
-    ! 
-    ! 2.0 calculate current solar declination 
-    ! 
+
+    !> 2.0 calculate current solar declination 
+    !! 
     sd = so*SIN(rlam)
     cd = SQRT(1.0_wp-sd*sd)
     ! delta : Solar Declination (radians; angle sun at equator)
     declination = ATAN(sd/cd)
-    !
-    ! 3.0 calculate potential radiation normal to the atmsphere
-    ! 
+
+    !> 3.0 calculate potential radiation normal to the atmsphere
+    !! 
     ! eccentricity effect: normalised Sun-Earth distance
     dist = 1.0_wp / (( 1.0_wp - eccentricity * eccentricity ) / & 
            ( 1.0_wp + eccentricity * cos(ranv)))

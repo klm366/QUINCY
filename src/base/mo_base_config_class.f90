@@ -18,7 +18,6 @@ MODULE mo_base_config_class
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: base_config
 
   !-----------------------------------------------------------------------------------------------------
@@ -77,7 +76,7 @@ CONTAINS
     ! GRID_CTL
     REAL(wp)          :: latitude
     REAL(wp)          :: longitude
-
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_base_config'
 
     NAMELIST /base_ctl/                       &  
         dtime_step_length_sec                 , &
@@ -97,8 +96,6 @@ CONTAINS
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_base_config'
 
     CALL message(TRIM(routine), 'Starting base configuration')
 
@@ -163,7 +160,8 @@ CONTAINS
     CLASS(t_base_config), INTENT(in) :: this        !< config type for base
     ! 0.2 Local
     INTEGER                          :: timesteps   
- 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_timstep_number' 
+
 
     SELECT CASE(this%simulation_length_unit)
       CASE('y') ! years

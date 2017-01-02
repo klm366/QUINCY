@@ -17,15 +17,12 @@ MODULE mo_rad_interface
 
 
   IMPLICIT NONE
-
 !  PRIVATE
 !  PUBLIC :: Register_rad_tasks
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_rad_interface'
 
-CONTAINS
-
-  ! Task
-!  CALL update_radiation(tile)
+!CONTAINS
 
 
 

@@ -18,10 +18,10 @@ MODULE mo_veg_soil
 
 
   IMPLICIT NONE
-
   PRIVATE
   PUBLIC :: update_vegsoil_bgc, update_vegsoil_physics, update_vegsoil_pool
 
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_soil'
 
 CONTAINS
 
@@ -55,6 +55,7 @@ CONTAINS
     REAL(wp) :: dcost                                     ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
     REAL(wp) :: n_demand                                  ! N demand of plants (mu mol N /m2 / s) 
     REAL(wp) :: f_nacq_bnf,f_nacq_nup                     ! fraction of N uptake as BFN or Nuptake
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegsoil_bgc'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
@@ -195,18 +196,16 @@ CONTAINS
     TYPE(t_slm_tile),INTENT(inout), TARGET    :: tile          !< one tile
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    TYPE(t_slm_soil),       POINTER       :: vegsoil       ! soil variables per tile
-    REAl(wp) :: soil_depth = 1.0 ! soil depth, m
+    TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
+    TYPE(t_slm_soil),       POINTER       :: vegsoil              ! soil variables per tile
+    REAl(wp)                              :: soil_depth = 1.0_wp  ! soil depth, m
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegsoil_pool'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     TYPE(t_veg_memory), POINTER             :: veg        ! local pointer to veg__mem for SLM usability
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
+
     veg => veg__mem 
 
     model  => Get_model(tile%owner_model_id)
@@ -345,10 +344,11 @@ CONTAINS
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     TYPE(t_slm_soil),       POINTER       :: vegsoil       ! soil variables per tile
-    INTEGER  :: t
-    REAL(wp) :: q_sat,q_sat_soil
-    REAL(wp) :: evaporation
-    INTEGER :: isoil
+    INTEGER                               :: t
+    REAL(wp)                              :: q_sat,q_sat_soil
+    REAL(wp)                              :: evaporation
+    INTEGER                               :: isoil
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegsoil_physics'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
@@ -379,18 +379,7 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(ATM2LAND_)%p)
-!      TYPE IS(t_atm2land_memory)
-!        atm2land__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(LAND2ATM_)%p)
-!      TYPE IS(t_land2atm_memory)
-!        land2atm__mem => mm
-!    END SELECT
-!    SELECT TYPE (mm => tile%mem(VEG_)%p)
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
+
     assimi => assimi__mem 
     soil => soil__mem 
     veg => veg__mem 

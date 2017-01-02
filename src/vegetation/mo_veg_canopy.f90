@@ -18,9 +18,10 @@ MODULE mo_veg_canopy
   USE mo_assimi_update_canopy_fluxes, ONLY: calc_photosynthesis
 
   IMPLICIT NONE
-
   PRIVATE
   PUBLIC :: calc_canopy_layers, calc_marginal_canopy_flux_increment, calc_dir_optimal_cn_leaf
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_canopy'
 
 CONTAINS
 
@@ -104,6 +105,7 @@ CONTAINS
     REAL(wp)  :: f_pepc                          ! fraction of N in PEP Carboxylase
     LOGICAL   :: optimise_n_fractions
     INTEGER   :: icanopy
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_canopy_layers'
     ! 0.3 Memory allocation
     ! ...
 
@@ -306,9 +308,9 @@ CONTAINS
   !! fractions that give maximum assimilation
   !-------------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE optimise_canopy_n_fractions(lctlib     , &
-                                    leaf_nitrogen_cl                  , &
-                                    ppfd_sunlit_cl             , &
-                                    ppfd_shaded_cl             , &
+                                    leaf_nitrogen_cl          , &
+                                    ppfd_sunlit_cl            , &
+                                    ppfd_shaded_cl            , &
                                     fleaf_sunlit_cl           , &
                                     t_air                     , &
                                     t_acclim                  , &
@@ -364,6 +366,8 @@ CONTAINS
     REAL(wp) :: ag_cl, an_cl, r_cl, ci_cl,  gs_cl              ! photosynthesis outputs of optimisation runs
     REAL(wp) :: fn_rub_opt_cl, fn_et_opt_cl, fn_pepc_opt_cl    ! optimal N fractions
     REAL(wp) :: m_rub, m_et, m_pepc                            ! specific PS rates
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':optimise_canopy_n_fractions'
+
 
     !> 1.0 Set N fractions to previous values and calculate photosynthesis for avererage conditions 
     ! set fractions to previous values. In current code chl + et+ rub=1
@@ -508,6 +512,9 @@ CONTAINS
     REAL(wp), INTENT(out)   :: fn_rub_opt_cl  , &  !< optimal fraction of N in Rubisco 
                                fn_et_opt_cl   , &  !< optimal fraction of N in ET 
                                fn_pepc_opt_cl      !< optimal fraction of N in PepC (C4-only)
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_coordination_n_fractions'
+
 
     ! optimal N fraction assuming Aj=Av=Apepc
 !@todo: veg_canopy:optimise_n_fractions: should this not replaced by lctlib%ps_pathway==ic4phot?
@@ -555,6 +562,9 @@ CONTAINS
     REAL(wp), INTENT(inout) :: fn_rub_cl, &      !< updated fraction of N in Rubisco 
      &     fn_et_cl,       &                     !< updated fraction of N in ET
      &     fn_pepc_cl                            !< updated fraction of N in PepC (C4-only)
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_update_n_fractions'
+
 
     ! check if changing fraction to optimal values is possible in one timestep
     IF (ABS(fn_rub_opt_cl-fn_rub_cl) / fn_rub_cl <= delta_n_fraction .AND. &
@@ -647,7 +657,9 @@ CONTAINS
     REAL(wp) :: q_sat 
     REAL(wp) :: hlp1 
     INTEGER :: icanopy
- 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_marginal_canopy_flux_increment'
+
+
     !> 1.0 copy current plant state into dummy variables
     !!
     !fn_chl_cl       = veg%fn_chl_cl%ptr(:,1)
@@ -797,6 +809,7 @@ CONTAINS
     REAL(wp)  :: hlp1
     REAL(wp)  :: direction
     INTEGER   :: icanopy, dd
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
 
 
     IF(veg%pool%leaf%nitrogen%ptr > eps4)THEN

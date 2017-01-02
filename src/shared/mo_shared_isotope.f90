@@ -12,8 +12,12 @@ MODULE mo_shared_isotope
   USE mo_kind
 
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: calc_delta_C13, calc_mixing_ratio_C13C12, calc_delta_C14, calc_mixing_ratio_C14C, calc_fractionation
 
-  CONTAINS 
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_isotope'
+
+CONTAINS 
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculates the isotopic enrichment of C13 in delta notation
@@ -30,6 +34,9 @@ MODULE mo_shared_isotope
     REAL(wp), INTENT(in) :: element             !< base element (including the isotope)
     REAL(wp), INTENT(in) :: isotope             !< isotope of element
     REAL(wp) :: delta                           !< isotope ratio against standard (per mill)
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C13'
+
 
     IF(element-isotope > eps8) THEN
        delta = ( isotope / (element-isotope) / PDB_STANDARD_C13 - 1.0_wp ) * 1000._wp
@@ -53,6 +60,8 @@ MODULE mo_shared_isotope
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
     REAL(wp) :: mixing_ratio                    !< isotopic mixing ratio 13C / 12C 
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_C13C12'
 
     mixing_ratio = ( delta / 1000._wp + 1.0_wp ) * PDB_STANDARD_C13
 
@@ -76,6 +85,8 @@ MODULE mo_shared_isotope
     REAL(wp), INTENT(in) :: isotope             !< isotope of element (µmol)
     REAL(wp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux (per mill)
     REAL(wp) :: delta                           !< isotope ratio against standard (per mill)
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C14'
 
     IF(element > eps8) THEN
        delta = AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) * isotope / scale_correction_C14 / element * & 
@@ -103,6 +114,8 @@ MODULE mo_shared_isotope
     REAL(wp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux
     REAL(wp), INTENT(in) :: delta_C14           !< Delta C14 of the pool/flux
     REAL(wp) :: mixing_ratio                    !< isotope molar mixing ratio 14C / C 
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_C14C'
 
     mixing_ratio = delta_C14 / 1000._wp * ( AAB_STANDARD_C14 * molar_mass_C ) / AvogadroC_times_lambda_C14 / & 
                    (1._wp - (2._wp* (25._wp + delta_C13) /1000._wp) -1._wp) * scale_correction_C14 
@@ -129,6 +142,8 @@ MODULE mo_shared_isotope
      ! 0.2 Local
      REAL(wp) :: Rsource,Rsink
      REAL(wp) :: correction_factor
+     ! 0.2 Local
+     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fractionation'
 
      IF(.NOT.PRESENT(scale_correction)) THEN 
         correction_factor = 1.0_wp

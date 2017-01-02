@@ -26,6 +26,8 @@ MODULE mo_base_constants
   REAL(wp), PARAMETER   :: degcircle  = 360._wp   !< degrees per circle
   REAL(wp), PARAMETER   :: hourday    = 24.0_wp   !< hours in a day
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_base_constants'
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -39,7 +41,7 @@ CONTAINS
 
     ! 0.1 InOut
     ! 0.2 Local
-
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_base_constants'
 
     !< 1.0 degree/radians conversion
     !! 

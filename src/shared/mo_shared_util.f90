@@ -13,9 +13,10 @@ MODULE mo_shared_util
   USE mo_kind,         ONLY: wp
 
   IMPLICIT NONE
+  PRIVATE
 
 
-
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_util'
 
 !CONTAINS
 

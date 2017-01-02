@@ -17,9 +17,10 @@ MODULE mo_veg_update_pools
 
 
   IMPLICIT NONE
-
   PRIVATE
   PUBLIC :: update_veg_pools
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_update_pools'
 
 CONTAINS
 
@@ -54,8 +55,9 @@ CONTAINS
     TYPE(t_slm_tile),       INTENT(inout) :: tile         !< one tile
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp)                              :: hlp1,hlp2             ! helper variable
+    TYPE(t_lctlib_element), POINTER       :: lctlib           !< land-cover-type library - parameter across pft's
+    REAL(wp)                              :: hlp1,hlp2        ! helper variable
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),      POINTER :: assimi__mem

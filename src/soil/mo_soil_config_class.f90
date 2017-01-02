@@ -18,7 +18,6 @@ MODULE mo_soil_config_class
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: soil_config
 
   !-----------------------------------------------------------------------------------------------------
@@ -69,6 +68,7 @@ CONTAINS
                 wsn_capacity    , &
                 soil_depth   
     INTEGER  :: i   ! looping
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
 
     NAMELIST /soil_ctl/       & 
                           nsoil_energy    , &
@@ -82,8 +82,6 @@ CONTAINS
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
 
     CALL message(TRIM(routine), 'Starting soil configuration')
 

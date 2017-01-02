@@ -16,7 +16,6 @@ MODULE mo_soil_util
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: soil_depth_to_layers_2d
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_soil_util'
@@ -25,13 +24,14 @@ CONTAINS
 
   FUNCTION soil_depth_to_layers_2d(soil_depth, dz) RESULT(soil_depth_l)
 
+    IMPLICIT NONE
+    ! 0.1 InOut
     REAL(wp), INTENT(in) :: soil_depth(:,:)
     REAL(wp), INTENT(in) :: dz(:)
     REAL(wp)             :: soil_depth_l(SIZE(soil_depth,1), SIZE(dz), SIZE(soil_depth,2))
-
+    ! 0.2 Local
     REAL(wp) :: dz_cumsum(SIZE(dz)), dz_cumsum_m1(SIZE(dz))
     INTEGER  :: nsoil, i
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_depth_to_layer_2d'
 
     nsoil = SIZE(dz)

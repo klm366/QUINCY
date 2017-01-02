@@ -15,13 +15,16 @@ MODULE mo_soil_interface
   USE mo_exception,           ONLY: message, finish
 
   IMPLICIT NONE
-
-!  PRIVATE
+  PRIVATE
+  PUBLIC :: soil_1st_test_routine
 !  PUBLIC :: Register_soil_tasks
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_soil_interface'
 
 CONTAINS
 
+  ! this is just a showcase routine that will be removed soon !
+  !  
   subroutine soil_1st_test_routine(tile)
 
     USE mo_jsb_class,               ONLY: Get_model
@@ -39,6 +42,7 @@ CONTAINS
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
     integer         :: test_count = 1
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_1st_test_routine'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SOIL_)                       ! TYPE(t_soil_memory),      POINTER :: soil__mem

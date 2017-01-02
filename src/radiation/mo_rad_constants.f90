@@ -13,7 +13,6 @@ MODULE mo_rad_constants
 
 
   IMPLICIT NONE
-
   PUBLIC
 
   ! Parameters required for albedo and fapar calculation
@@ -34,6 +33,8 @@ MODULE mo_rad_constants
   REAL(wp), SAVE ::   &
       rad2ppfd              !< µmol /J
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_rad_constants'
+
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
@@ -43,6 +44,9 @@ CONTAINS
   SUBROUTINE init_rad_constants
 
   IMPLICIT NONE
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_rad_constants'
+
     kbl0_vis                  = 0.5_wp        !< Spitters 1986 
     kdf0_vis                  = 0.8_wp        !< Spitters 1986 
     kbl0_nir                  = 0.5_wp        !< Spitters 1986 
@@ -56,7 +60,6 @@ CONTAINS
     def_alb_nir_soil          = 0.30_wp       !< default from Bonan 2008
 
     rad2ppfd                  = 4.6_wp        !< Monteith & Unsworth 1995 
-
 
   END SUBROUTINE init_rad_constants
 END MODULE mo_rad_constants

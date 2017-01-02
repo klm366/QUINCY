@@ -15,16 +15,13 @@ MODULE mo_assimi_interface
   USE mo_assimi_update_canopy_fluxes
 
   IMPLICIT NONE
-
 !  PRIVATE
 !  PUBLIC :: Register_assimi_tasks
 
 
-CONTAINS
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_assimi_interface'
 
-  ! Task
-!  CALL update_canopy_fluxes(tile, model%lctlib(tile%lcts%lib_id))
-
+!CONTAINS
 
 
 

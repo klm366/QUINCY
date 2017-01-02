@@ -16,7 +16,6 @@ MODULE mo_jsb_class
 
   IMPLICIT NONE
   PRIVATE
-
   ! t_jsb needs to be public for the NEC compiler
   PUBLIC :: t_jsb, jsbach, Get_model
 
@@ -33,6 +32,8 @@ MODULE mo_jsb_class
      !MODULE PROCEDURE get_model_by_name
   END INTERFACE Get_model
 
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_class'
+
 CONTAINS
 
 !!$  FUNCTION get_grid_by_id(id) RESULT(grid)
@@ -48,9 +49,13 @@ CONTAINS
 
   FUNCTION get_model_by_id(id) RESULT(model)
 
+    IMPLICIT NONE
+    ! 0.1 InOut
     INTEGER, INTENT(in)        :: id
     !TYPE(t_jsb_model), POINTER :: model
     TYPE(t_model), POINTER :: model
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_model_by_id'
 
     model => jsbach%models(id)%m
 

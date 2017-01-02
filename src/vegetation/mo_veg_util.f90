@@ -16,10 +16,10 @@ MODULE mo_veg_util
   USE mo_kind, ONLY: wp
 
   IMPLICIT NONE
-
   PRIVATE
   PUBLIC :: set_zero_vegetation_fluxes    ! called in the land model interface prior to all Tasks
 
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_util'
 
 CONTAINS
 
@@ -41,6 +41,7 @@ CONTAINS
     TYPE(t_slm_tile),INTENT(inout)      :: tile           !< one tile
     ! 0.2 Local
     REAL(wp) :: flux_zero
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_zero_vegetation_fluxes'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory), POINTER      :: veg__mem  

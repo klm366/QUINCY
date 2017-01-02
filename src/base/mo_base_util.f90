@@ -12,6 +12,8 @@ MODULE mo_base_util
   USE mo_kind,            ONLY: wp
 
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: test_for_NaN_Inf
 
   !-----------------------------------------------------------------------------------------------------
   !> returns TRUE if the passed variable is NaN or Infinity
@@ -23,7 +25,7 @@ MODULE mo_base_util
     MODULE PROCEDURE test_real_for_NaN_and_Infinity
   END INTERFACE test_for_NaN_Inf
 
-
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_base_util'
 
 CONTAINS
 
@@ -38,6 +40,9 @@ CONTAINS
     ! 0.1 InOut
     INTEGER, INTENT(in)       :: test_var    !< INT variable to be tested
     LOGICAL                   :: l_result
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_int_for_NaN_and_Infinity'
+
     l_result = .FALSE.
     IF(test_var /= test_var) l_result = .TRUE.
     IF(.NOT. l_result) THEN
@@ -56,6 +61,9 @@ CONTAINS
     ! 0.1 InOut
     REAL(wp), INTENT(in)      :: test_var    !< REAL variable to be tested
     LOGICAL                   :: l_result
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_real_for_NaN_and_Infinity'
+
     l_result = .FALSE.
     IF(test_var /= test_var) l_result = .TRUE.
     IF(.NOT. l_result) THEN

@@ -25,7 +25,7 @@ MODULE mo_veg_interface
 !  PRIVATE
 !  PUBLIC :: 
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_interface'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_veg_interface'
 
 !CONTAINS
 

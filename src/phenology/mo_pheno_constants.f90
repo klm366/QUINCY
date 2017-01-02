@@ -13,7 +13,6 @@ MODULE mo_pheno_constants
 
 
   IMPLICIT NONE
-
   PUBLIC
 
 
@@ -31,6 +30,7 @@ MODULE mo_pheno_constants
       isummergreen  = 3         , &
       iperennial    = 4
 
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_pheno_constants'
 
 CONTAINS
 
@@ -41,7 +41,8 @@ CONTAINS
   SUBROUTINE init_pheno_constants
 
     IMPLICIT NONE
-
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_pheno_constants'
 
     min_leaf_age                = 10.0_wp 
 

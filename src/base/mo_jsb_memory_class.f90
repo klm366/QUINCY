@@ -22,7 +22,6 @@ MODULE mo_jsb_memory_class
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: t_jsb_memory_p, t_jsb_memory, t_jsb_param
 
   TYPE, ABSTRACT :: t_jsb_param

@@ -19,7 +19,6 @@ MODULE mo_veg_config_class
 
   IMPLICIT NONE
   PRIVATE
-
 !  PUBLIC :: t_veg_config
   PUBLIC :: veg_config
 
@@ -80,6 +79,7 @@ CONTAINS
     CHARACTER(15) :: n_uptake_scheme
     REAL(wp)      :: soil_awc_prescribe             , &
                      soil_theta_prescribe
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
     NAMELIST /vegetation_ctl/       & 
       output_interval_pool,         &
@@ -98,8 +98,6 @@ CONTAINS
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
     CALL message(TRIM(routine), 'Starting veg configuration')
 

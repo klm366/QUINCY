@@ -56,7 +56,6 @@ MODULE mo_jsb_process_factory
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: Create_process_memory
 !  PUBLIC :: Create_process, max_no_of_processes                                           *slmtemp
   PUBLIC :: max_no_of_processes     ! not using Create_process for compatibility with SLM  *slmtemp
@@ -140,8 +139,13 @@ CONTAINS
 !!    USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 !!#endif
 
+    IMPLICIT NONE
+    ! 0.1 InOut
     INTEGER, INTENT(in) :: iproc
     CLASS(t_jsb_memory), POINTER   :: return_ptr
+    ! 0.2 local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Create_process_memory'
+
 
     SELECT CASE(iproc)
     CASE (ATM2LAND_)

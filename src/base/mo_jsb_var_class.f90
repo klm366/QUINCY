@@ -18,7 +18,6 @@ MODULE mo_jsb_var_class
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var, t_jsb_var_p
   PUBLIC :: t_jsb_struct, t_jsb_struct_p, t_jsb_n_struct, t_jsb_n_struct_p    ! *slmjsb4
   PUBLIC :: t_jsb_var_logical2d                                               ! *slmjsb4

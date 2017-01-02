@@ -18,7 +18,6 @@ MODULE mo_jsb_process_class
 
   IMPLICIT NONE
   PRIVATE
-
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name
   PUBLIC :: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
@@ -57,9 +56,12 @@ MODULE mo_jsb_process_class
 CONTAINS
 
   FUNCTION Get_process_name(iproc) RESULT(return_value)
-
+    IMPLICIT NONE
+    ! 0.1 InOut
     INTEGER, INTENT(in) :: iproc
     CHARACTER(len=:), ALLOCATABLE :: return_value
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_process_name'
 
     SELECT CASE(iproc)
     CASE (ATM2LAND_)
@@ -139,10 +141,11 @@ CONTAINS
 !!  END FUNCTION Get_task
 
   SUBROUTINE Configure_process(this, namelist_filename)
-
+    IMPLICIT NONE
+    ! 0.1 InOut
     CLASS(t_jsb_process), INTENT(inout) :: this
     CHARACTER(LEN=*),     INTENT(in)    :: namelist_filename
-
+    ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Configure_process'
 
     IF (.NOT. ASSOCIATED(this%config)) RETURN
@@ -152,10 +155,11 @@ CONTAINS
   END SUBROUTINE Configure_process
 
   FUNCTION Get_action_name(iact) RESULT(return_value)
-
+    IMPLICIT NONE
+    ! 0.1 InOut
     INTEGER, INTENT(in) :: iact
     CHARACTER(len=:), ALLOCATABLE :: return_value
-
+    ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_action_name'
 
     SELECT CASE(iact)

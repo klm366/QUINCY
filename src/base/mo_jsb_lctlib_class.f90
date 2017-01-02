@@ -16,7 +16,8 @@ MODULE mo_jsb_lctlib_class
 
 
   IMPLICIT NONE
-
+  PRIVATE
+  PUBLIC :: init_lctlib, t_lctlib_element
 
   !-----------------------------------------------------------------------------------------------------
   !> vector holding all parameters necessary for one pft
@@ -94,8 +95,7 @@ MODULE mo_jsb_lctlib_class
   END TYPE t_lctlib_element
 
 
-  PRIVATE
-  PUBLIC :: init_lctlib, t_lctlib_element
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_lctlib_class'
 
 CONTAINS 
 
@@ -118,8 +118,9 @@ CONTAINS
 
       ! 0.1 InOut
       TYPE(t_lctlib_element),POINTER      :: lctlib(:)
-      ! Local
+      ! 0.2 Local
       INTEGER                             :: ipft         ! loop over pft
+      CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_lctlib'
 
       ALLOCATE(lctlib(npft))    !    jsbach4: ALLOCATE(lctlib(nlct))
 
