@@ -48,6 +48,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
+    INTEGER                                      :: isoil
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SOIL_)
@@ -79,7 +80,19 @@ CONTAINS
     soil%heat_capa_l%ptr  = soil_heat_cap
     soil%therm_cond_l%ptr = soil_therm_cond
 
-
+    ! root fractions assuming an exponential distribution of roots
+    ! Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth)
+    ! integral to bottom of root zone: 1/lctlib%k_root_dist * (1 - exp(-lctlib%k_root_dist*depth) 
+    ! thus for each layer
+    soil%root_depth%ptr = soil_config%soil_depth 
+    soil%root_fraction_l%ptr(:,1,:) = &  
+          (1._wp - exp(-lctlib%k_root_dist * soil_config%dz_water(1))) / &
+          (1._wp - exp(-lctlib%k_root_dist * soil%root_depth%ptr))
+    DO isoil=2,soil_config%nsoil_water
+       soil%root_fraction_l%ptr(:,isoil,:) = & 
+          (exp(-lctlib%k_root_dist * soil_config%dz_water(isoil-1)) - exp(-lctlib%k_root_dist * soil_config%dz_water(isoil))) / & 
+          (1._wp - exp(-lctlib%k_root_dist * soil%root_depth%ptr))
+    ENDDO
 
   END SUBROUTINE soil_init
 

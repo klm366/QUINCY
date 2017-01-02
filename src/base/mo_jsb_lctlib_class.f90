@@ -88,6 +88,9 @@ MODULE mo_jsb_lctlib_class
      REAL(wp) :: gdd_req_max                 !< maximum growing degree days requirements without chilling (degree days)
      REAL(wp) :: k_gdd_dormance              !< scaling factor in the GDD to number of dormant days relationship (days -1)
      REAL(wp) :: t_air_senescence            !< air temperature inducing senescence (K)
+! Soil
+     REAL(wp) :: k_root_dist                 !< scaling factor describing root distribution 
+
   END TYPE t_lctlib_element
 
 
@@ -315,6 +318,11 @@ CONTAINS
           lctlib(ipft)%c0_allom = 0.0_wp
         END IF
       END DO
+  
+      ! tuned according to Jackson et al. 1996, Oecologia, to reproduce their cummulative root distribution profiles
+      ! only making use of the contrast sclerophyllic, tree, grass
+      lctlib(1:npft)%k_root_dist = &
+      (/3.5_wp,2.8_wp,2.5_wp,3.5_wp,3.5_wp,3.5_wp,5.5_wp,5.5_wp/)
 
 
     END FUNCTION init_lctlib 

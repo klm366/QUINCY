@@ -133,13 +133,20 @@ MODULE mo_soil_memory_class
 
 
     TYPE(t_jsb_var_real2d)          :: &
-                                    soil_depth          !< Soil depth derived from textures (bedrock) (for hydrology) [m]
+                                    soil_depth          , & !< Soil depth derived from textures (bedrock) (for hydrology) [m]
+                                    root_depth              !< actual rooting depth [m]
 
 
-
+! JSBACH SOIL
     TYPE(t_jsb_var_real3d)          :: &
-                                    soil_depth_l       , &  !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
-                                    root_distribution  , &  !< fractions of root per layer
+                                    soil_depth_l            !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
+
+! should go to SLM VEG after change to 2D/3D
+    TYPE(t_jsb_var_real3d)          :: &
+                                    root_fraction_l         !< fractions of root per layer
+
+! SLM SOILBGC
+    TYPE(t_jsb_var_real3d)          :: &
                                     nh4_solute         , &  !< ammonium in soil solution
                                     nh4_assoc          , &  !< minerally associated ammonium
                                     no3_solute         , &  !< nitrate in soil solution
@@ -714,7 +721,10 @@ CONTAINS
       CALL slm_add_var(mem, 'soil_depth_l', mem%soil_depth_l, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'root_distribution', mem%root_distribution, &
+      CALL slm_add_var(mem, 'root_depth', mem%root_depth, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'root_fraction_l', mem%root_fraction_l, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'nh4_solute', mem%nh4_solute, &
