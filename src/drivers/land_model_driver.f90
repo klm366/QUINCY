@@ -28,7 +28,7 @@ PROGRAM land_model_driver
                                         
   ! vegetation
   USE mo_veg_config_class,        ONLY: veg_config  ! used for 'special case: fluxnet output'
-  USE mo_veg_output,              ONLY: init_veg_output_variables, &
+  USE mo_shared_output,           ONLY: init_veg_output_variables, &
                                         open_pool_output_files, &
                                         open_flux_output_files, &
                                         open_litterfall_soilphysics_output_files, &
@@ -184,17 +184,17 @@ PROGRAM land_model_driver
   IF (l_forcing) THEN
     CALL open_forcing_input_file
   END IF
-  ! Initialise output and flux accumulation, and open output files; see mo_veg_output
+  ! Initialise output and flux accumulation, and open output files; see mo_shared_output
   SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('land')
-      CALL init_veg_output_variables     ! mo_veg_output : interval variables & flux accumulation per tile
+      CALL init_veg_output_variables     ! mo_shared_output : interval variables & flux accumulation per tile
       CALL open_pool_output_files(1)     ! 1 == itile 
       CALL open_flux_output_files(1)     ! 1 == itile 
       IF (base_config%flag_litterfall_output) THEN
         CALL open_litterfall_soilphysics_output_files(1)
       END IF
     CASE('plant')
-      CALL init_veg_output_variables     ! mo_veg_output : interval variables & flux accumulation per tile
+      CALL init_veg_output_variables     ! mo_shared_output : interval variables & flux accumulation per tile
       CALL open_pool_output_files(1)     ! 1 == itile 
       CALL open_flux_output_files(1)     ! 1 == itile 
       IF (base_config%flag_litterfall_output) THEN

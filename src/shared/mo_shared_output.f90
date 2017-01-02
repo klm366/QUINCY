@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Jan Engel (2016-03-14)
 !!
-MODULE mo_veg_output
+MODULE mo_shared_output
   !! this module may be not necessary anymore when QUINCY is linked with JSBACH !!
 
 #include "dsl_jsbach.inc"
@@ -986,4 +986,4 @@ CONTAINS
 
   END SUBROUTINE close_output_files_litterfall_soilphysics
 
-END MODULE mo_veg_output
+END MODULE mo_shared_output

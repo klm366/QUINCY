@@ -100,7 +100,7 @@ CONTAINS
     USE mo_base_config_class,             ONLY: base_config
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_atm2land, update_land2atm
-    USE mo_veg_output,                    ONLY: write_output_pool, write_output_flux, write_output_litterfall_soilphysics
+    USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_output_litterfall_soilphysics
     USE mo_veg_util,                      ONLY: set_zero_vegetation_fluxes
 
     ! Process interfaces:
@@ -252,13 +252,13 @@ CONTAINS
     !! 
       CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
 
-    !! output pool: write output in certain intervals, see mo_veg_output
+    !! output pool: write output in certain intervals, see mo_shared_output
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
     !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
     !! 
       CALL write_output_pool(tile, time_day, time_year, 1) ! 1 == itile
 
-    !! output flux: write output in certain intervals, see mo_veg_output
+    !! output flux: write output in certain intervals, see mo_shared_output
     !! 
     !! 
       CALL write_output_flux(tile, time_day, time_year, 1) ! 1 == itile 
@@ -294,13 +294,13 @@ CONTAINS
     !! 
       CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
 
-    !! output pool: write output in certain intervals, see mo_veg_output
+    !! output pool: write output in certain intervals, see mo_shared_output
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
     !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
     !! 
       CALL write_output_pool(tile, time_day, time_year, 1) ! 1 == itile
 
-    !! output flux: write output in certain intervals, see mo_veg_output
+    !! output flux: write output in certain intervals, see mo_shared_output
     !! 
     !! 
       CALL write_output_flux(tile, time_day, time_year, 1) ! 1 == itile 
