@@ -55,6 +55,7 @@ CONTAINS
 
     ! Use of process memories 
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -62,7 +63,6 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
-    TYPE(t_slm_soil),       POINTER        :: vegsoil       ! soil variables per tile
     INTEGER                                :: icanopy     ! for looping across ncanopy layers
     REAL(wp)                               :: hlp1       ! dummy variable 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
@@ -72,9 +72,11 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem
     dsl4jsb_Def_memory(VEG_)          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
+    dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),      POINTER :: soil__mem
     TYPE(t_assimi_memory), POINTER   :: assimi                 ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER      :: veg                    ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory),       POINTER   :: rad        ! local pointer to rad__mem for SLM usability
+    TYPE(t_soil_memory),      POINTER   :: soil       ! local pointer to soil__mem for SLM usability
     REAL(wp), POINTER :: t_air
     REAL(wp), POINTER :: q_air
     REAL(wp), POINTER :: press_srf
@@ -96,9 +98,11 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(SOIL_)
 
     veg     => veg__mem 
     rad     => rad__mem
+    soil    => soil__mem
 
     t_air                => atm2land__mem%t_air%ptr
     q_air                => atm2land__mem%q_air%ptr
@@ -129,9 +133,6 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
 
-   !  bi-directional pointer  *slmdev
-   vegsoil  => tile%vegsoil
-
    ! set output to zero  
    gross_assimilation     = 0.0_wp
    gross_assimilation_C13 = 0.0_wp
@@ -144,10 +145,10 @@ CONTAINS
    !> 1.0 calculate the moisture scaling factor for photosynthesis
    !! 
    beta_air = calc_atm_moisture_stress(t_air, q_air, press_srf) 
-   beta_soil_ps = calc_soil_moisture_stress(vegsoil%theta           , & 
+   beta_soil_ps = calc_soil_moisture_stress(soil%w_soil_root_theta%ptr(1,1), &
                                             lctlib%lambda_soil_ps   , &
                                             lctlib%weibull_k_soil_ps)
-   beta_soil_gs = calc_soil_moisture_stress(vegsoil%theta           , &
+   beta_soil_gs = calc_soil_moisture_stress(soil%w_soil_root_theta%ptr(1,1), &
                                             lctlib%lambda_soil_gs   , &
                                             lctlib%weibull_k_soil_gs)
 
@@ -572,7 +573,7 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 InOut
-    REAL(wp),INTENT(in) :: theta       !< soil plant available water (%)
+    REAL(wp),INTENT(in) :: theta       !< soil plant available water (fractions)
     REAL(wp),INTENT(in) :: lambda      !< slope parameter of Weibull function
     REAL(wp),INTENT(in) :: weibull_k   !< shape parameter of Weibull function
     REAL(wp) :: beta                   !< veg\%beta_soil_ps / veg\%beta_soil_gs
@@ -581,7 +582,7 @@ CONTAINS
 
     !> 1.0 Moisture stress now as a Weibull function to avoid MIN/MAX statements
     !!
-    beta = 1.0_wp - exp(-(lambda*theta/100._wp)**weibull_k)
+    beta = 1.0_wp - exp(-(lambda*theta)**weibull_k)
   END FUNCTION calc_soil_moisture_stress
 
 

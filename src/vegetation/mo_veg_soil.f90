@@ -416,7 +416,8 @@ CONTAINS
     ENDIF
     ! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil = ga / 10)
     evaporation = press_srf / ( r_gas_dryair * t_air ) * & 
-                  (q_sat - q_air) * vegsoil%theta / 100.0_wp / ( 100._wp / ga)
+                  (q_sat - q_air) / ( 100._wp / ga) * & 
+                  soil%w_soil_root_theta%ptr(1,1) 
     IF(sw_srf_net < eps8) evaporation = 0.0_wp
 
     ! calculate latent heat flux (W m-2) 
@@ -454,27 +455,31 @@ CONTAINS
 
    IF(veg_config%flag_calc_soil_moisture) THEN ! case of dynamic water uptake calculation 
 
-       ! update soil moisture dS = rain - transpiration - evaporation 
-       vegsoil%moisture = vegsoil%moisture + (rain + snow & 
-            - veg%transpiration%ptr - evaporation) * dtime
-       ! constrain to possible solutions
-       vegsoil%moisture = MAX(MIN(vegsoil%moisture,veg_config%soil_awc_prescribe),0.0_wp)
-       ! scale to relative water availability (%)
-       vegsoil%theta = vegsoil%moisture / veg_config%soil_awc_prescribe * 100._wp
+       ! update soil moisture dS = rain - transpiration - evaporation, incl. conversion to [m]
+       soil%w_soil_root%ptr(1,1) = soil%w_soil_root%ptr(1,1) + (rain + snow &
+            - veg%transpiration%ptr - evaporation) / 1000._wp * dtime
 
-   ELSE 
-       ! use prescribed value of theta from namelist
-       vegsoil%theta = veg_config%soil_theta_prescribe 
- 
-       ! calculate corresponding soil moisture value (mm)     
-       vegsoil%moisture = veg_config%soil_awc_prescribe * vegsoil%theta / 100.0_wp
+       ! calculate drainage if any [mm/s]
+       WHERE(soil%w_soil_root%ptr > soil%w_soil_root_fc%ptr)
+         soil%drainage%ptr = ( soil%w_soil_root%ptr - soil%w_soil_root_fc%ptr ) * 1000._wp/ dtime
+       ELSEWHERE
+         soil%drainage%ptr = 0.0_wp
+       ENDWHERE
+       soil%w_soil_root%ptr = soil%w_soil_root%ptr - soil%drainage%ptr / 1000.0_wp * dtime
+       soil%w_soil_root%ptr = MAX(soil%w_soil_root%ptr,0.0_wp)
 
+       ! scale to relative water availability (fraction of maximum)
+       soil%w_soil_root_theta%ptr = ( soil%w_soil_root%ptr - soil%w_soil_root_pwp%ptr ) / &
+                                    ( soil%w_soil_root_fc%ptr - soil%w_soil_root_pwp%ptr ) 
+       soil%w_soil_root_theta%ptr = MAX(soil%w_soil_root_theta%ptr,0.0_wp)
+  
    ENDIF 
 
    ! calculate soil wtaer potential according to Campbell et al 1974 
-   vegsoil%water_potential = k_soil_phi1 * & 
-         (( theta_wilt + 0.01_wp * vegsoil%theta * (theta_sat - theta_wilt))/theta_sat)**k_soil_phi2
-   veg%dphi%ptr = vegsoil%water_potential - lctlib%phi_leaf_min - grav * rhoh2o * veg%height%ptr * 1.e-6_wp
+   soil%w_soil_root_pot%ptr = k_soil_phi1 * & 
+         ( soil%w_soil_root%ptr / soil%w_soil_root_fc%ptr )**k_soil_phi2
+
+   veg%dphi%ptr = soil%w_soil_root_pot%ptr(1,1) - lctlib%phi_leaf_min - grav * rhoh2o * veg%height%ptr * 1.e-6_wp
 
   END SUBROUTINE update_vegsoil_physics
 

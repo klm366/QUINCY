@@ -20,8 +20,9 @@ MODULE mo_soil_constants
   REAL(wp), SAVE :: &
     soil_heat_cap,  &           !< soil heat capacity (temporarily for SLM offline) J/kg/K 
     rho_bulk_soil,  &           !< soil bulk denisty (kg / m3) 
-    soil_therm_cond             !< soil thermal conductivity (W m-2 K-1)
-
+    soil_therm_cond, &          !< soil thermal conductivity (W m-2 K-1)
+    theta_sat, &                !< soil volumetric water content at saturation (fraction)
+    theta_wilt                  !< soil volumetric water content at wilting (fraction)
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_soil_constants'
 
@@ -40,6 +41,8 @@ CONTAINS
     soil_heat_cap   = 1400.0_wp   ! textbook for wet sandy soil
     rho_bulk_soil   = 1695.86_wp  ! Bernhard Ahrens for Hainich
     soil_therm_cond = 0.3_wp      ! Text book for wet sandy soil
+    theta_sat   = 0.49_wp         ! based on Rawls et al 1982 for loam
+    theta_wilt  = 0.1_wp          ! based on Rawls et al 1982 for loam
 
   END SUBROUTINE init_soil_constants
 

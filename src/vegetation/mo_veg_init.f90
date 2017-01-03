@@ -110,9 +110,6 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
 
-
-      tile%vegsoil%moisture                 = veg_config%soil_awc_prescribe
-      tile%vegsoil%theta                    = veg_config%soil_theta_prescribe 
       tile%vegsoil%ammonium                 = 0.1_wp
       tile%vegsoil%phosphate                = 0.01_wp
       veg%target_cn_leaf%ptr             = lctlib%cn_leaf
@@ -195,8 +192,6 @@ CONTAINS
     !< 2.0 Initialise tile
     !! 
     !! Initialisation of soil and vegetation, so far relevant
-    tile%vegsoil%moisture   = veg_config%soil_awc_prescribe
-    tile%vegsoil%theta      = veg_config%soil_theta_prescribe
     veg%lai%ptr          = ref_lai 
     IF(veg_config%pft_id==0) THEN
       veg%pool%leaf%nitrogen%ptr   = ref_nleaf / molar_mass_N * veg%lai%ptr

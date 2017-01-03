@@ -44,10 +44,6 @@ MODULE mo_base_memory
   TYPE t_slm_soil
     TYPE(t_slm_soil_pool) :: pool     !< soil pool
     TYPE(t_slm_soil_pool) :: loss      !< decomposition flux from each pool
-    !TYPE(t_slm_soil_flux) :: flux     !< soil flux
-    REAL(wp) :: theta                 !< fractional water holding capacity
-    REAL(wp) :: moisture              !< actual plant available water content (mm)
-    REAL(wp) :: water_potential       !< actual soil water potential (MPa) 
     REAL(wp) :: ammonium              !< soil ammonium concentration (mmol/L)
     REAL(wp) :: phosphate             !< soil P concentration (mmol/L)
   END TYPE t_slm_soil

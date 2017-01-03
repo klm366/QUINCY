@@ -49,6 +49,7 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
 
@@ -66,10 +67,12 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
+    dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_pheno_memory),    POINTER :: pheno       ! local pointer to pheno__mem for SLM usability
     TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
+    TYPE(t_soil_memory),     POINTER :: soil        ! local pointer to soil__mem for SLM usability
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: press_srf
     REAL(wp), POINTER                :: q_air
@@ -80,11 +83,13 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)          ! veg__mem => veg_memory
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(SOIL_)
 
     assimi  => assimi__mem 
     veg     => veg__mem 
     pheno   => pheno__mem  
     rad     => rad__mem
+    soil     => soil__mem
 
     t_air            => atm2land__mem%t_air%ptr
     press_srf        => atm2land__mem%press_srf%ptr
@@ -99,7 +104,7 @@ CONTAINS
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    veg%kstar_labile%ptr = calc_meristem_activity(t_air, tile%vegsoil%theta, pheno%growing_season%ptr)
+    veg%kstar_labile%ptr = calc_meristem_activity(t_air, soil%w_soil_root_theta%ptr(1,1), pheno%growing_season%ptr)
 
     !> 1.1 calculate costs of N uptake and fixation
     !!
@@ -286,7 +291,7 @@ CONTAINS
   !!  therefore only takes account of the impact of low temperatures (<5°C) and low moisture 
   !! (<20\% saturation). \nAdditionally, phenological dormancy is accounted for.
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air,theta,growing_season) RESULT(kstar_labile)
+  PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air,w_soil_root_theta,growing_season) RESULT(kstar_labile)
 
     USE mo_shared_constants,  ONLY: Tzero
     USE mo_veg_constants,     ONLY: lambda_labile_temp  , &
@@ -297,7 +302,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp),   INTENT(in)    :: t_air                  !< air temperature (K) 
-    REAL(wp),   INTENT(in)    :: theta                  !< soil moisture scalar (%) 
+    REAL(wp),   INTENT(in)    :: w_soil_root_theta      !< soil moisture scalar (fraction of available water holding capacity) 
     LOGICAL,    INTENT(in)    :: growing_season         !< is the plant growing? 
     REAL(wp)                  :: kstar_labile           !< current potential labile pool turnover (1/day)
     ! 0.2 Local
@@ -310,7 +315,7 @@ CONTAINS
       ELSE 
         ftemp = 0.0_wp
     ENDIF
-    fmoist = 1.0_wp - exp(-(lambda_labile_theta * theta)**k_labile_theta) 
+    fmoist = 1.0_wp - exp(-(lambda_labile_theta * w_soil_root_theta)**k_labile_theta) 
     IF(growing_season)THEN
         kstar_labile = ftemp * fmoist / tau_labile
       ELSE 

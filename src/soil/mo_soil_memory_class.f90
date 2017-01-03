@@ -141,6 +141,33 @@ MODULE mo_soil_memory_class
     TYPE(t_jsb_var_real3d)          :: &
                                     soil_depth_l            !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
 
+! JSBACH HYDRO MEMORY (temporary here to get rid of vegsoil construct)
+    TYPE(t_jsb_var_real2d) :: &
+      & runoff,           & !< surface runoff
+      & drainage            !< drainage
+
+    ! Additional variables for soil
+    TYPE(t_jsb_var_real2d) :: &
+      & w_soil_root,      & !< Water content in root zone of the soil                                   [m]
+      & w_soil_root_fc,   & !< Water content at field capacity in root zone of the soil                 [m]
+      & w_soil_root_pwp     !< Water content at permanent wilting point in root zone of the soil        [m]
+
+    TYPE(t_jsb_var_real3d) :: &
+      & drainage_sl,      & !< drainage of soil layers                                                  [m]
+      & w_soil_sl,        & !< Water content in soil layers                                             [m]
+      & w_soil_fc_sl,     & !< Water content of soil layers at field capacity
+                            !! (derived from volumetric field capacity)                                 [m]
+      & w_soil_pwp_sl       !< Water content of soil layers at permanent wilting point
+                            !! (derived from vol. perm wilt point)                                      [m]
+
+!Soil Water addons for SLM in HYDRO
+    TYPE(t_jsb_var_real2d) :: &
+      & w_soil_root_theta, & !< root zone integrated plant available water (fraction of maximum) 
+      & w_soil_root_pot      !< soil water potential (MPa)
+
+    TYPE(t_jsb_var_real3d) :: &
+      & w_soil_pot_sl        !< soil water potential per layer (MPa)
+
 ! should go to SLM VEG after change to 2D/3D
     TYPE(t_jsb_var_real3d)          :: &
                                     root_fraction_l         !< fractions of root per layer
@@ -727,6 +754,42 @@ CONTAINS
       CALL slm_add_var(mem, 'root_fraction_l', mem%root_fraction_l, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL slm_add_var(mem, 'runoff', mem%runoff, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'drainage', mem%drainage, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'drainage_sl', mem%drainage_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'w_soil_root', mem%w_soil_root, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'w_soil_root_fc', mem%w_soil_root_fc, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'w_soil_root_pwp', mem%w_soil_root_pwp, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'w_soil_root_pot', mem%w_soil_root_pot, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'w_soil_root_theta', mem%w_soil_root_theta, &
+            initval_r=1.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'w_soil_sl', mem%w_soil_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'w_soil_fc_sl', mem%w_soil_fc_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'w_soil_pwp_sl', mem%w_soil_pwp_sl, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'w_soil_pot_sl', mem%w_soil_pot_sl, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL slm_add_var(mem, 'nh4_solute', mem%nh4_solute, &
             initval_r=0.0_wp) ! initvalue
   

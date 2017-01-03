@@ -43,6 +43,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
+    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -55,13 +56,17 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
+    dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     TYPE(t_veg_memory),     POINTER           :: veg      ! local pointer to veg__mem for SLM usability
     TYPE(t_pheno_memory),   POINTER           :: pheno    ! local pointer to pheno__mem for SLM usability
+    TYPE(t_soil_memory),    POINTER           :: soil     ! local pointer to soil__mem for SLM usability
     dsl4jsb_Get_memory(VEG_)                              ! veg__mem => veg_memory
-    dsl4jsb_Get_memory(PHENO_)                            ! veg__mem => veg_memory
+    dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
+    dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
 
     veg     => veg__mem 
     pheno   => pheno__mem  
+    soil    => soil__mem  
     model   => Get_model(tile%owner_model_id)
     lctlib  => model%lctlib(tile%lcts%lib_id)
 
@@ -83,7 +88,7 @@ CONTAINS
       !> 2.1 Calculate establishment_rate and veg\%establishment
       !! 
       CALL calc_veg_establishment(lctlib                          , & ! in
-                                 tile%vegsoil%theta               , &
+                                 soil%w_soil_root_theta%ptr(1,1)  , &
                                  pheno%growing_season%ptr         , &
                                  veg%t_air_week_mavg%ptr          , &
                                  veg%leaf_nitrogen_cl%ptr(:,1)    , &
@@ -190,11 +195,11 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_veg_establishment(lctlib              , &
-                                    soil_theta          , &
+                                    w_soil_root_theta   , &
                                     growing_season      , &
                                     t_air_week_mavg     , &
-                                    leaf_nitrogen_cl           , &
-                                    fn_chl_cl          , &
+                                    leaf_nitrogen_cl    , &
+                                    fn_chl_cl           , &
                                     lai_cl              , &
                                     veg_pool_seed_bed   , &
                                     veg_establishment )
@@ -212,14 +217,14 @@ CONTAINS
 
     ! 0.1 InOut
     TYPE(t_lctlib_element),         INTENT(in)    :: lctlib             !< land-cover-type library - parameter across pft's
-    REAL(wp),                       INTENT(in)    :: soil_theta         !< soil moisture 
-    LOGICAL,                        INTENT(in)    :: growing_season     !< growing season Yes/No
-    REAL(wp),                       INTENT(in)    :: t_air_week_mavg    !< moving average ...
-    REAL(wp), DIMENSION(:),         INTENT(in)    :: leaf_nitrogen_cl      , & !< ..
-                                                     fn_chl_cl     , & !< ..
-                                                     lai_cl             !< ..
-    TYPE(t_slm_struct_veg_element), INTENT(in)    :: veg_pool_seed_bed    !< seed_bed in vegetation pool
-    TYPE(t_slm_struct_veg_element), INTENT(inout) :: veg_establishment    !< vegetation establishment
+    REAL(wp),                       INTENT(in)    :: w_soil_root_theta  !< plant available water [fraction of maximum] 
+    LOGICAL,                        INTENT(in)    :: growing_season     !< growing season 
+    REAL(wp),                       INTENT(in)    :: t_air_week_mavg    !< weekly air temperature [K] 
+    REAL(wp), DIMENSION(:),         INTENT(in)    :: leaf_nitrogen_cl,& !< leaf nitrogen per canopy layer
+                                                     fn_chl_cl,       & !< fraction of leaf nitrogen that is chlorophyll
+                                                     lai_cl             !< leaf area index of canopy layer 
+    TYPE(t_slm_struct_veg_element), INTENT(in)    :: veg_pool_seed_bed  !< seed_bed in vegetation pool
+    TYPE(t_slm_struct_veg_element), INTENT(inout) :: veg_establishment  !< vegetation establishment
     ! 0.2 Local
     REAL(wp)                                      :: establishment_rate
     REAL(wp)                                      :: tc
@@ -251,7 +256,7 @@ CONTAINS
     ELSE
       flim_temp = 1.0_wp - exp(-(lambda_est_temp * (t_air_week_mavg - Tzero))**k_est_temp)
     ENDIF
-    flim_moist   = 1.0_wp - exp(-(lambda_est_moist * soil_theta)**k_est_moist) 
+    flim_moist   = 1.0_wp - exp(-(lambda_est_moist * w_soil_root_theta)**k_est_moist) 
    
     !> 1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
     !!

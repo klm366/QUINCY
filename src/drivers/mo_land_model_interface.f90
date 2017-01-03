@@ -458,6 +458,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     ! Process interfaces:
     USE mo_atmland_interface                ! update_atmland
@@ -508,7 +509,7 @@ CONTAINS
     REAL(wp),SAVE :: ref_cos_angle = 0.8_wp           ! cosine of zenith angle
     REAL(wp),SAVE :: ref_co2_mixing_ratio = 380.0_wp  ! co2 in ppm
     REAL(wp),SAVE :: ref_wind = 1.0_wp                ! wind in m/s
-    REAL(wp),SAVE :: ref_theta = 100._wp              ! soil water availability in %
+    REAL(wp),SAVE :: ref_theta = 1._wp                ! soil water availability in fraction of AWC 
     REAL(wp),SAVE :: ref_lai = 3._wp                  ! LAI
     REAL(wp),SAVE :: ref_nleaf = 2.0_wp               ! N leaf per unit leaf area in gN/m2
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':run_test_canopy_model'
@@ -516,16 +517,17 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER      :: assimi__mem  
     dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
+    dsl4jsb_Def_memory(SOIL_)                         !   TYPE(t_soil_memory), POINTER      :: soil__mem  
     TYPE(t_assimi_memory), POINTER      :: assimi     ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
+    TYPE(t_soil_memory), POINTER        :: soil       ! local pointer to soil__mem for SLM usability
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
+    dsl4jsb_Get_memory(SOIL_)
+
     assimi => assimi__mem 
     veg    => veg__mem 
+    soil   => soil__mem 
     model  => Get_model(tile%owner_model_id)
 
 
@@ -588,7 +590,7 @@ CONTAINS
     !> 1.2 Initialisation of soil and vegetation (so far relevant) 
     !!
     !!  
-    tile%vegsoil%theta  = ref_theta
+    soil%w_soil_root_theta%ptr = ref_theta
     veg%lai%ptr   = ref_lai 
     IF(ref_pft==0) THEN
       veg%pool%leaf%nitrogen%ptr     = ref_nleaf / molar_mass_N * veg%lai%ptr
@@ -739,22 +741,22 @@ CONTAINS
   !! 
   lun = lun + 1
   WRITE(lun,*) 'THETA A GC CI' 
-  tile%vegsoil%theta = 0.0_wp
+  soil%w_soil_root_theta%ptr = 0.0_wp
   DO i = 1,100
 
-     tile%vegsoil%theta = tile%vegsoil%theta + 1.0_wp 
+     soil%w_soil_root_theta%ptr = soil%w_soil_root_theta%ptr + 0.01_wp 
 
      !! canopy calculation fluxes
      CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile)              !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile)          !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') tile%vegsoil%theta, &
+     WRITE(lun,'(4F16.7)') soil%w_soil_root_theta%ptr*100._wp, &
            assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
            assimi%co2_conc_leaf%ptr/co2_mixing_ratio 
 
   END DO
-  tile%vegsoil%theta = ref_theta
+  soil%w_soil_root_theta%ptr = ref_theta
 
   !> 2.6 LAI (0-11)
   !! 

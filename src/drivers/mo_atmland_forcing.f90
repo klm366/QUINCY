@@ -353,14 +353,14 @@ CONTAINS
 
     lun=10
     READ(lun,*, IOSTAT=stat) time_hlp, & 
-        soil%t_soil%ptr(ics:ice,1:nlevel_soil,iblk), tile%vegsoil%moisture   ! *slmdev t_soil uses t_air
+        soil%t_soil%ptr(ics:ice,1:nlevel_soil,iblk), soil%w_soil_root%ptr(ics:ice,iblk)  
 
     IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy
       REWIND(lun)
       CALL read_forcing_header(lun)
       READ(lun,*) time_hlp, &
-        soil%t_soil%ptr(ics:ice,1:nlevel_soil,iblk), tile%vegsoil%moisture   ! *slmdev t_soil uses t_air
+        soil%t_soil%ptr(ics:ice,1:nlevel_soil,iblk), soil%w_soil_root%ptr(ics:ice,iblk)  
     END IF
 
     END SELECT  ! land plant canopy vs soil

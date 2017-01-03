@@ -37,6 +37,8 @@ CONTAINS
     USE mo_soil_constants
     USE mo_soil_util,             ONLY: soil_depth_to_layers_2d
 
+  USE mo_veg_config_class,   ONLY: veg_config
+
     ! USE PROC_memory
     dsl4jsb_Use_memory(SOIL_)
 
@@ -81,19 +83,48 @@ CONTAINS
     soil%heat_capa_l%ptr  = soil_heat_cap
     soil%therm_cond_l%ptr = soil_therm_cond
 
+    ! rooting depth given by prescribed AWC
+    soil%root_depth%ptr = MAX(soil_config%dz_water(1), & 
+                          ( veg_config%soil_awc_prescribe / 1000._wp )/ (theta_sat - theta_wilt)) 
+
+    ! soil water in the rooting zone [m]
+    soil%w_soil_root_pwp%ptr = theta_wilt * soil%root_depth%ptr 
+    soil%w_soil_root_fc%ptr  = veg_config%soil_awc_prescribe / 1000._wp + soil%w_soil_root_pwp%ptr
+    soil%w_soil_root%ptr     = soil%w_soil_root_fc%ptr
+
     ! root fractions assuming an exponential distribution of roots
     ! Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth)
     ! integral to bottom of root zone: 1/lctlib%k_root_dist * (1 - exp(-lctlib%k_root_dist*depth) 
     ! thus for each layer
-    soil%root_depth%ptr = soil_config%soil_depth 
     soil%root_fraction_l%ptr(:,1,:) = &  
           (1._wp - exp(-lctlib%k_root_dist * soil_config%dz_water(1))) / &
           (1._wp - exp(-lctlib%k_root_dist * soil%root_depth%ptr))
     DO isoil=2,soil_config%nsoil_water
-       soil%root_fraction_l%ptr(:,isoil,:) = & 
-          (exp(-lctlib%k_root_dist * soil_config%dz_water(isoil-1)) - exp(-lctlib%k_root_dist * soil_config%dz_water(isoil))) / & 
-          (1._wp - exp(-lctlib%k_root_dist * soil%root_depth%ptr))
+       WHERE(soil%root_depth%ptr > soil_config%dz_water(isoil-1))
+          WHERE(soil%root_depth%ptr > soil_config%dz_water(isoil))
+             soil%root_fraction_l%ptr(:,isoil,:) = & 
+                (exp(-lctlib%k_root_dist * soil_config%dz_water(isoil-1)) - &
+                 exp(-lctlib%k_root_dist * soil_config%dz_water(isoil))) / & 
+                (1._wp - exp(-lctlib%k_root_dist * soil%root_depth%ptr))
+          ELSEWHERE
+             soil%root_fraction_l%ptr(:,isoil,:) = & 
+                (exp(-lctlib%k_root_dist * soil_config%dz_water(isoil-1)) - &
+                 exp(-lctlib%k_root_dist * soil%root_depth%ptr)) / & 
+                (1._wp - exp(-lctlib%k_root_dist * soil%root_depth%ptr))
+          ENDWHERE
+       ELSEWHERE
+          soil%root_fraction_l%ptr(:,isoil,:) = 0.0_wp 
+       ENDWHERE
     ENDDO
+
+    ! soil water per layer depth
+    DO isoil=1,soil_config%nsoil_water
+       WHERE(soil%soil_depth_l%ptr(:,isoil,:) > 0.0_wp) 
+          soil%w_soil_pwp_sl%ptr(:,1,:) = theta_wilt / soil%soil_depth_l%ptr(:,isoil,:)
+          soil%w_soil_fc_sl%ptr(:,1,:)  = theta_sat / soil%soil_depth_l%ptr(:,isoil,:) 
+       ENDWHERE
+    ENDDO
+    soil%w_soil_sl%ptr = soil%w_soil_fc_sl%ptr
 
   END SUBROUTINE soil_init
 

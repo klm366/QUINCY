@@ -47,6 +47,7 @@ MODULE mo_shared_output
   REAL(wp), DIMENSION(ntile), SAVE :: recycling_p_acc     
   REAL(wp), DIMENSION(ntile), SAVE :: res_use_p_acc        
   REAL(wp), DIMENSION(ntile), SAVE :: transpiration_acc    
+  REAL(wp), DIMENSION(ntile), SAVE :: drainage_acc    
   REAL(wp), DIMENSION(ntile), SAVE :: gc_acc               
   REAL(wp), DIMENSION(ntile), SAVE :: ga_acc               
   REAL(wp), DIMENSION(ntile), SAVE :: ppfd_acc 
@@ -94,6 +95,7 @@ CONTAINS
     recycling_p_acc  = 0._wp  
     res_use_p_acc     = 0._wp   
     transpiration_acc = 0._wp 
+    drainage_acc      = 0._wp 
     gc_acc            = 0._wp
     ga_acc            = 0._wp
     ppfd_acc          = 0._wp
@@ -205,7 +207,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time Transpiration GC GA'
+    WRITE(lun,'(a)') 'Time Transpiration Drainage GC GA'
     lun=lun+1
     WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
   END SUBROUTINE init_output_writing_flux
@@ -483,6 +485,7 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
+    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -506,22 +509,25 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)                           ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
+    dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     TYPE(t_assimi_memory),        POINTER     :: assimi   ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
     TYPE(t_pheno_memory),         POINTER     :: pheno    ! local pointer to pheno__mem for SLM usability
+    TYPE(t_soil_memory),          POINTER     :: soil     ! local pointer to soil__mem for SLM usability
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
+    dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
 
     assimi  => assimi__mem 
     veg     => veg__mem 
     pheno   => pheno__mem  
+    soil    => soil__mem  
     model   => Get_model(tile%owner_model_id)
     lctlib  => model%lctlib(tile%lcts%lib_id)
-
+ 
     !  bi-directional pointer, though, bi-directionality is not necessary here
     vegsoil  => tile%vegsoil
-
 
     !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
     !! 
@@ -577,7 +583,7 @@ CONTAINS
          veg%pool%fruit%phosphorus%ptr,veg%pool%labile%phosphorus%ptr,&
          veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,veg%total_biomass%phosphorus%ptr
        lun=lun+1
-       write(lun,'(9F12.6)') time_d, vegsoil%moisture, vegsoil%water_potential,assimi%beta_soil_gs%ptr,assimi%beta_soil_ps%ptr
+       write(lun,'(9F12.6)') time_d, soil%w_soil_root%ptr(1,1), soil%w_soil_root_pot%ptr(1,1),assimi%beta_soil_gs%ptr,assimi%beta_soil_ps%ptr
        lun=lun+1
        write(lun,'(3F12.6)') time_d, vegsoil%pool%litter%nitrogen, vegsoil%ammonium
        lun=lun+1
@@ -656,6 +662,7 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
 
     IMPLICIT NONE
@@ -675,9 +682,11 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
+    dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     TYPE(t_assimi_memory), POINTER   :: assimi      ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory), POINTER      :: rad         ! local pointer to rad__mem for SLM usability
+    TYPE(t_soil_memory), POINTER     :: soil        ! local pointer to soil__mem for SLM usability
     REAL(wp), POINTER                :: ga 
     REAL(wp), POINTER                :: swpar_srf_down
     REAL(wp), POINTER                :: albedo
@@ -690,10 +699,12 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(SOIL_)
 
     assimi  => assimi__mem 
     veg     => veg__mem 
     rad     => rad__mem
+    soil    => soil__mem
     ga                => atm2land__mem%ga%ptr
     swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
     albedo            => land2atm__mem%albedo%ptr
@@ -745,6 +756,7 @@ CONTAINS
                                 veg%recycling_fine_root_p%ptr + veg%recycling_heart_wood_p%ptr ) * dtime_one *1000000._wp/dtime
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
       transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dtime_one 
+      drainage_acc(itile)     = drainage_acc(itile)      + soil%drainage%ptr(1,1)          * dtime_one 
       gc_acc(itile)           = assimi%canopy_cond%ptr                                                      
       ga_acc(itile)           = ga                                                   
       albedo_acc(itile)       = albedo
@@ -779,7 +791,7 @@ CONTAINS
         lun=lun+1
         write(lun,'(4F12.6)') time_d, uptake_p_acc(itile), recycling_p_acc(itile), res_use_p_acc(itile)
         lun=lun+1
-        write(lun,'(12F16.8)') time_d, transpiration_acc(itile), gc_acc(itile), ga_acc(itile)
+        write(lun,'(12F16.8)') time_d, transpiration_acc(itile), drainage_acc(itile), gc_acc(itile), ga_acc(itile)
         lun=lun+1
         IF(ppfd_acc(itile)>eps8) THEN
            hlp1=appfd_acc(itile)/ppfd_acc(itile)
@@ -810,6 +822,7 @@ CONTAINS
         recycling_p_acc(itile)   = 0.0_wp
         res_use_p_acc(itile)     = 0.0_wp
         transpiration_acc(itile) = 0.0_wp
+        drainage_acc(itile)      = 0.0_wp
         gc_acc(itile)            = 0.0_wp
         ga_acc(itile)            = 0.0_wp
         ppfd_acc(itile)          = 0.0_wp
@@ -840,7 +853,7 @@ CONTAINS
     !dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     !dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
-    dsl4jsb_Use_memory(ATM2LAND_)        !  USE mo_atm2land_memory_class,      ONLY: t_atm2land_memory
+    dsl4jsb_Use_memory(SOIL_)        !  USE mo_soil_memory_class,      ONLY: t_soil_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -851,33 +864,28 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),                POINTER :: model        ! slm model
     TYPE(t_lctlib_element),       POINTER :: lctlib       ! land-cover-type library - parameter across pft's
-    TYPE(t_slm_soil),             POINTER :: vegsoil      ! soil variables per tile
     INTEGER                               :: lun          ! logical unit number
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     !dsl4jsb_Def_memory(ASSIMI_)                           ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     !dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
-    dsl4jsb_Def_memory(ATM2LAND_)                         ! TYPE(t_atm2land_memory),      POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),      POINTER :: soil__mem
     !TYPE(t_assimi_memory),        POINTER     :: assimi   ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
     !TYPE(t_pheno_memory),         POINTER     :: pheno    ! local pointer to pheno__mem for SLM usability
-    TYPE(t_atm2land_memory),      POINTER     :: atm2land ! local pointer to atm2land__mem for SLM usability
+    TYPE(t_soil_memory),      POINTER     :: soil ! local pointer to soil__mem for SLM usability
     !dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     !dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
-    dsl4jsb_Get_memory(ATM2LAND_)                         ! atm2land__mem => atm2land_memory
+    dsl4jsb_Get_memory(SOIL_)                         ! soil__mem => soil_memory
 
     !assimi    => assimi__mem 
     veg       => veg__mem 
     !pheno     => pheno__mem  
-    atm2land  => atm2land__mem 
+    soil  => soil__mem 
     model     => Get_model(tile%owner_model_id)
     lctlib    => model%lctlib(tile%lcts%lib_id)
-
-    !  bi-directional pointer, though, bi-directionality is not necessary here
-    vegsoil  => tile%vegsoil
-
 
     !> 1.0 check output start & end, and write litterfall and soilphysics if appropriate
     !! 
@@ -885,8 +893,8 @@ CONTAINS
     IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
 
       lun = 100 * itile + 60
-      write(lun,'(3F12.6)') time_d, &
-        atm2land%t_air%ptr, vegsoil%moisture
+      write(lun,'(20F12.6)') time_d, &
+        soil%t_soil%ptr(1,:,1), soil%w_soil_root%ptr(1,1)
 
       lun=lun+1
       write(lun,'(55F12.6)') time_d, &

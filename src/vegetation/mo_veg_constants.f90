@@ -134,8 +134,6 @@ MODULE mo_veg_constants
   ! soil pools  (may be moved to mo_soil_constants later ?)
   REAL(wp), SAVE :: & 
       tau_litter,   &     !< soil litter pool turnover time (years)
-      theta_sat,    &     !< saturated soil moisture 
-      theta_wilt,   &     !< wilting point 
       k_soil_phi1,  &     !< coefficient for calculating soil water potential 
       k_soil_phi2         !< coefficient for calculating soil water potential 
 
@@ -185,7 +183,7 @@ CONTAINS
       tau_labile              = 5.0_wp  
       lambda_labile_temp      = 0.5_wp 
       k_labile_temp           = 2.0_wp 
-      lambda_labile_theta     = 0.1_wp
+      lambda_labile_theta     = 10.0_wp
       k_labile_theta          = 2.0_wp 
       lambda_phiphen          = 1.8_wp 
       k_phiphen               = 4.0_wp 
@@ -231,7 +229,7 @@ CONTAINS
       k_mort_light       = 4.0_wp  
       lambda_est_temp    = 0.075_wp  
       k_est_temp         = 4.0_wp  
-      lambda_est_moist   = 0.1_wp  
+      lambda_est_moist   = 10._wp  
       k_est_moist        = 2.0_wp  
       toc_rfr_ratio      = 1.2_wp  
       k_r2fr_chl         = 0.0012_wp - 0.012_wp  
@@ -247,8 +245,6 @@ CONTAINS
 
   ! soil stuff
   ! constants used to calculate soil water potential, based on Rawls et al 1982 for loam 
-      theta_sat   = 0.49_wp 
-      theta_wilt  = 0.1_wp 
       k_soil_phi1 = -0.0011_wp 
       k_soil_phi2 = -4.55_wp
 
