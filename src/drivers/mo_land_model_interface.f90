@@ -109,6 +109,7 @@ CONTAINS
     USE mo_veg_interface
     USE mo_assimi_interface
     USE mo_soil_interface
+    USE mo_sb_interface
     USE mo_pheno_interface
 
 
@@ -246,7 +247,7 @@ CONTAINS
       CALL update_veg_turnover    (tile)
       CALL update_veg_dynamics    (tile)
       CALL update_vegsoil_pool    (tile)
-      CALL update_vegsoil_physics (tile)
+      CALL update_soil_physics    (tile)
       CALL update_veg_pools       (tile)
 
     !! accumulation over time - daytime & moving average
@@ -288,7 +289,7 @@ CONTAINS
       CALL update_veg_turnover    (tile)
       CALL update_veg_dynamics    (tile)
       CALL update_vegsoil_pool    (tile)
-      CALL update_vegsoil_physics (tile)
+      CALL update_soil_physics    (tile)
       CALL update_veg_pools       (tile)
 
     !! accumulation over time - daytime & moving average
@@ -316,7 +317,7 @@ CONTAINS
     CASE('soil')
     !! soil ---------------------------------------------------------------------------------------
 
-      CALL soil_1st_test_routine(tile)  ! testing soil model infrastracture | 2 be removed if proper soil modules + routines are available
+      CALL update_soil_physics(tile)
 
 
     CASE('canopy')
@@ -330,7 +331,7 @@ CONTAINS
       CALL update_veg_pools       (tile)
       CALL update_radiation       (tile)
       CALL update_canopy_fluxes   (tile)
-      CALL update_vegsoil_physics (tile)
+      CALL update_soil_physics    (tile)
 
     !! accumulation over time - daytime & moving average
     !! 
