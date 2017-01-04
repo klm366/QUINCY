@@ -424,7 +424,7 @@ CONTAINS
     latent_heat_flx = LatentHeatVaporization * (evaporation + veg%transpiration%ptr)
 
     ! estimate surface temperature and sensible heat flux 
-    IF (veg_config%flag_calc_soil_energy) THEN ! case of a simple diagnostic soil energy calculation
+    IF (soil_config%flag_calc_soil_energy) THEN ! case of a simple diagnostic soil energy calculation
        ! simple estimate of sensible heat flux (ignoring instabilities and actual surface moisture...)
        sensible_heat_flx = heat_transfer_coef(drag_srf, model%options%steplen) * & 
                              (surface_dry_static_energy(soil%t_soil%ptr(1,1,1),q_sat_soil) - & 
@@ -453,7 +453,7 @@ CONTAINS
        soil%t_soil%ptr(:,:,1) = t_air
     ENDIF
 
-   IF(veg_config%flag_calc_soil_moisture) THEN ! case of dynamic water uptake calculation 
+   IF(soil_config%flag_calc_soil_moisture) THEN ! case of dynamic water uptake calculation 
 
        ! update soil moisture dS = rain - transpiration - evaporation, incl. conversion to [m]
        soil%w_soil_root%ptr(1,1) = soil%w_soil_root%ptr(1,1) + (rain + snow &

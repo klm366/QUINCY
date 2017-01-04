@@ -1,22 +1,19 @@
 &VEGETATION_CTL
+  ! flags for the veg process
+  flag_tile_veg_dynamics=.FALSE.
+  flag_optimal_Nleaf=.FALSE.
+  flag_optimal_allocation=.FALSE.
   ! options for the vegetation
   output_interval_pool="weekly"
   output_interval_flux="weekly"
   output_start_first_day_year=1
   output_end_last_day_year=30
   n_uptake_scheme="standard"
-  flag_calc_soil_moisture=.FALSE.
-  flag_calc_soil_energy=.FALSE.
-  flag_tile_veg_dynamics=.FALSE.
-  flag_optimal_Nleaf=.FALSE.
-  flag_optimal_allocation=.FALSE.
-  soil_awc_prescribe=300.0
-  soil_theta_prescribe=100.0
   plant_functional_type_id=5
 /
 &ASSIMILATION_CTL
   ! options for the assimilation and vegetation-growth
-  ! [FALSE TRUE]
+  ! flags
   flag_optimal_Nfraction=.FALSE.
   flag_heterogeneous_canopy=.FALSE.
   flag_t_resp_acclimation=.FALSE.
@@ -34,10 +31,19 @@
   longitude=0.0
 /
 &SOIL_CTL
+  ! flags for the soil process
+  flag_calc_soil_moisture=.FALSE.
+  flag_calc_soil_energy=.FALSE.
+  ! soil process options
   ! number of soil layers [default is 5] [energy==water]
   nsoil_energy=5
   nsoil_water=5
   soil_depth=5.7
+  soil_awc_prescribe=300.0
+  soil_theta_prescribe=100.0
+/
+&SOIL_BIOGEOCHEMISTRY_CTL
+  ! tba
 /
 &BASE_CTL
   ! basic model config

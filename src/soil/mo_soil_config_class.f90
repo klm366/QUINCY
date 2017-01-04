@@ -35,6 +35,10 @@ MODULE mo_soil_config_class
     REAL(wp), ALLOCATABLE :: dz_water(:)
     REAL(wp)              :: wsr_capacity         !< Water holding capacity of ground skin reservoir [m water equivalent]
     REAL(wp)              :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
+    REAL(wp)              :: soil_awc_prescribe, &
+                             soil_theta_prescribe
+    LOGICAL               :: flag_calc_soil_moisture    !< calculate simple water bucket model
+    LOGICAL               :: flag_calc_soil_energy      !< calculate simple soil energy model 
     CONTAINS
       PROCEDURE :: Init => Init_soil_config
   END Type t_soil_config
@@ -59,7 +63,7 @@ CONTAINS
     CLASS(t_soil_config), INTENT(inout) :: config    !< config type for soil
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
-    !LOGICAL      :: active
+    LOGICAL  :: active
     INTEGER  :: nsoil_energy    , &
                 nsoil_water
     REAL(wp) :: dz_energy(max_soil_layers)
@@ -67,6 +71,10 @@ CONTAINS
     REAL(wp) :: wsr_capacity    , &
                 wsn_capacity    , &
                 soil_depth   
+    REAL(wp) :: soil_awc_prescribe    , &
+                soil_theta_prescribe
+    LOGICAL  :: flag_calc_soil_moisture
+    LOGICAL  :: flag_calc_soil_energy
     INTEGER  :: i   ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
 
@@ -77,7 +85,11 @@ CONTAINS
                           dz_water        , &
                           wsr_capacity    , &
                           wsn_capacity    , &
-                          soil_depth
+                          soil_depth      , &
+                          soil_awc_prescribe        , &
+                          soil_theta_prescribe      , &
+                          flag_calc_soil_moisture   , &
+                          flag_calc_soil_energy
      
 
     ! variables for reading model-options from namelist
@@ -95,6 +107,10 @@ CONTAINS
     wsr_capacity                  = 2.E-4_wp
     wsn_capacity                  = 2.E-4_wp
     soil_depth                    = 5.7_wp 
+    soil_awc_prescribe            = 300.0_wp
+    soil_theta_prescribe          = 100.0_wp 
+    flag_calc_soil_moisture       = .FALSE.  ! .TRUE. .FALSE.
+    flag_calc_soil_energy         = .FALSE.  ! .TRUE. .FALSE.
 
     ! read the namelist
     ! 
@@ -113,6 +129,10 @@ CONTAINS
     ! pass values as read from file
     config%nsoil_energy              = nsoil_energy
     config%nsoil_water               = nsoil_water
+    config%soil_awc_prescribe        = soil_awc_prescribe 
+    config%soil_theta_prescribe      = soil_theta_prescribe 
+    config%flag_calc_soil_moisture   = flag_calc_soil_moisture
+    config%flag_calc_soil_energy     = flag_calc_soil_energy
 
     IF (nsoil_water .LE. 0) CALL finish('Init_soil_config','Initialization with non positive number of soil layers')
 

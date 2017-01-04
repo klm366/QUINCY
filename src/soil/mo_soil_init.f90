@@ -37,8 +37,6 @@ CONTAINS
     USE mo_soil_constants
     USE mo_soil_util,             ONLY: soil_depth_to_layers_2d
 
-  USE mo_veg_config_class,   ONLY: veg_config
-
     ! USE PROC_memory
     dsl4jsb_Use_memory(SOIL_)
 
@@ -85,11 +83,11 @@ CONTAINS
 
     ! rooting depth given by prescribed AWC
     soil%root_depth%ptr = MAX(soil_config%dz_water(1), & 
-                          ( veg_config%soil_awc_prescribe / 1000._wp )/ (theta_sat - theta_wilt)) 
+                          ( soil_config%soil_awc_prescribe / 1000._wp )/ (theta_sat - theta_wilt)) 
 
     ! soil water in the rooting zone [m]
     soil%w_soil_root_pwp%ptr = theta_wilt * soil%root_depth%ptr 
-    soil%w_soil_root_fc%ptr  = veg_config%soil_awc_prescribe / 1000._wp + soil%w_soil_root_pwp%ptr
+    soil%w_soil_root_fc%ptr  = soil_config%soil_awc_prescribe / 1000._wp + soil%w_soil_root_pwp%ptr
     soil%w_soil_root%ptr     = soil%w_soil_root_fc%ptr
 
     ! root fractions assuming an exponential distribution of roots
