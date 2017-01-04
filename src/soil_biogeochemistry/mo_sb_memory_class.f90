@@ -458,7 +458,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      + struct2%dom
+    struct3%dom               = this%dom                + struct2%dom
+    struct3%dom_assoc         = this%dom_assoc          + struct2%dom_assoc
+    struct3%metabolic_litter  = this%metabolic_litter   + struct2%metabolic_litter
+    struct3%structural_litter = this%structural_litter  + struct2%structural_litter
+    struct3%woody_litter      = this%woody_litter       + struct2%woody_litter
+    struct3%microbial         = this%microbial          + struct2%microbial
+    struct3%residue           = this%residue            + struct2%residue
+    struct3%residue_assoc     = this%residue_assoc      + struct2%residue_assoc
   END FUNCTION Add_n_struct
 
   !-----------------------------------------------------------------------------------------------------
@@ -474,7 +481,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      + scalar
+    struct3%dom               = this%dom                + scalar
+    struct3%dom_assoc         = this%dom_assoc          + scalar
+    struct3%metabolic_litter  = this%metabolic_litter   + scalar
+    struct3%structural_litter = this%structural_litter  + scalar
+    struct3%woody_litter      = this%woody_litter       + scalar
+    struct3%microbial         = this%microbial          + scalar
+    struct3%residue           = this%residue            + scalar
+    struct3%residue_assoc     = this%residue_assoc      + scalar
   END FUNCTION Add_n_struct_and_scalar
 
   !-----------------------------------------------------------------------------------------------------
@@ -490,7 +504,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      + field3d
+    struct3%dom               = this%dom                + field3d
+    struct3%dom_assoc         = this%dom_assoc          + field3d
+    struct3%metabolic_litter  = this%metabolic_litter   + field3d
+    struct3%structural_litter = this%structural_litter  + field3d
+    struct3%woody_litter      = this%woody_litter       + field3d
+    struct3%microbial         = this%microbial          + field3d
+    struct3%residue           = this%residue            + field3d
+    struct3%residue_assoc     = this%residue_assoc      + field3d
   END FUNCTION Add_n_struct_and_field3d
 
   !-----------------------------------------------------------------------------------------------------
@@ -505,7 +526,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      - struct2%dom
+    struct3%dom               = this%dom                - struct2%dom
+    struct3%dom_assoc         = this%dom_assoc          - struct2%dom_assoc
+    struct3%metabolic_litter  = this%metabolic_litter   - struct2%metabolic_litter
+    struct3%structural_litter = this%structural_litter  - struct2%structural_litter
+    struct3%woody_litter      = this%woody_litter       - struct2%woody_litter
+    struct3%microbial         = this%microbial          - struct2%microbial
+    struct3%residue           = this%residue            - struct2%residue
+    struct3%residue_assoc     = this%residue_assoc      - struct2%residue_assoc
   END FUNCTION Subtract_n_struct
 
   !-----------------------------------------------------------------------------------------------------
@@ -521,7 +549,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      - scalar
+    struct3%dom               = this%dom                - scalar
+    struct3%dom_assoc         = this%dom_assoc          - scalar
+    struct3%metabolic_litter  = this%metabolic_litter   - scalar
+    struct3%structural_litter = this%structural_litter  - scalar
+    struct3%woody_litter      = this%woody_litter       - scalar
+    struct3%microbial         = this%microbial          - scalar
+    struct3%residue           = this%residue            - scalar
+    struct3%residue_assoc     = this%residue_assoc      - scalar
   END FUNCTION Subtract_n_struct_and_scalar
 
   !-----------------------------------------------------------------------------------------------------
@@ -537,7 +572,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      - field3d
+    struct3%dom               = this%dom                - field3d
+    struct3%dom_assoc         = this%dom_assoc          - field3d
+    struct3%metabolic_litter  = this%metabolic_litter   - field3d
+    struct3%structural_litter = this%structural_litter  - field3d
+    struct3%woody_litter      = this%woody_litter       - field3d
+    struct3%microbial         = this%microbial          - field3d
+    struct3%residue           = this%residue            - field3d
+    struct3%residue_assoc     = this%residue_assoc      - field3d
   END FUNCTION Subtract_n_struct_and_field3d
 
   !-----------------------------------------------------------------------------------------------------
@@ -552,7 +594,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      * struct2%dom
+    struct3%dom               = this%dom                * struct2%dom
+    struct3%dom_assoc         = this%dom_assoc          * struct2%dom_assoc
+    struct3%metabolic_litter  = this%metabolic_litter   * struct2%metabolic_litter
+    struct3%structural_litter = this%structural_litter  * struct2%structural_litter
+    struct3%woody_litter      = this%woody_litter       * struct2%woody_litter
+    struct3%microbial         = this%microbial          * struct2%microbial
+    struct3%residue           = this%residue            * struct2%residue
+    struct3%residue_assoc     = this%residue_assoc      * struct2%residue_assoc
   END FUNCTION Multiply_n_struct
 
   !-----------------------------------------------------------------------------------------------------
@@ -568,7 +617,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      * scalar
+    struct3%dom               = this%dom                * scalar
+    struct3%dom_assoc         = this%dom_assoc          * scalar
+    struct3%metabolic_litter  = this%metabolic_litter   * scalar
+    struct3%structural_litter = this%structural_litter  * scalar
+    struct3%woody_litter      = this%woody_litter       * scalar
+    struct3%microbial         = this%microbial          * scalar
+    struct3%residue           = this%residue            * scalar
+    struct3%residue_assoc     = this%residue_assoc      * scalar
   END FUNCTION Multiply_n_struct_and_scalar
 
   !-----------------------------------------------------------------------------------------------------
@@ -584,7 +640,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      * field3d
+    struct3%dom               = this%dom                * field3d
+    struct3%dom_assoc         = this%dom_assoc          * field3d
+    struct3%metabolic_litter  = this%metabolic_litter   * field3d
+    struct3%structural_litter = this%structural_litter  * field3d
+    struct3%woody_litter      = this%woody_litter       * field3d
+    struct3%microbial         = this%microbial          * field3d
+    struct3%residue           = this%residue            * field3d
+    struct3%residue_assoc     = this%residue_assoc      * field3d
   END FUNCTION Multiply_n_struct_and_field3d
 
   !-----------------------------------------------------------------------------------------------------
@@ -599,7 +662,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      / struct2%dom
+    struct3%dom               = this%dom                / struct2%dom
+    struct3%dom_assoc         = this%dom_assoc          / struct2%dom_assoc
+    struct3%metabolic_litter  = this%metabolic_litter   / struct2%metabolic_litter
+    struct3%structural_litter = this%structural_litter  / struct2%structural_litter
+    struct3%woody_litter      = this%woody_litter       / struct2%woody_litter
+    struct3%microbial         = this%microbial          / struct2%microbial
+    struct3%residue           = this%residue            / struct2%residue
+    struct3%residue_assoc     = this%residue_assoc      / struct2%residue_assoc
   END FUNCTION Divide_n_struct
 
   !-----------------------------------------------------------------------------------------------------
@@ -615,7 +685,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      / scalar
+    struct3%dom               = this%dom                / scalar
+    struct3%dom_assoc         = this%dom_assoc          / scalar
+    struct3%metabolic_litter  = this%metabolic_litter   / scalar
+    struct3%structural_litter = this%structural_litter  / scalar
+    struct3%woody_litter      = this%woody_litter       / scalar
+    struct3%microbial         = this%microbial          / scalar
+    struct3%residue           = this%residue            / scalar
+    struct3%residue_assoc     = this%residue_assoc      / scalar
   END FUNCTION Divide_n_struct_and_scalar
 
   !-----------------------------------------------------------------------------------------------------
@@ -631,7 +708,14 @@ CONTAINS
 
     ALLOCATE(struct3, source=this)
 
-    struct3%dom       = this%dom      / field3d
+    struct3%dom               = this%dom                / field3d
+    struct3%dom_assoc         = this%dom_assoc          / field3d
+    struct3%metabolic_litter  = this%metabolic_litter   / field3d
+    struct3%structural_litter = this%structural_litter  / field3d
+    struct3%woody_litter      = this%woody_litter       / field3d
+    struct3%microbial         = this%microbial          / field3d
+    struct3%residue           = this%residue            / field3d
+    struct3%residue_assoc     = this%residue_assoc      / field3d
   END FUNCTION Divide_n_struct_and_field3d
 
   !-----------------------------------------------------------------------------------------------------
@@ -644,7 +728,14 @@ CONTAINS
     CLASS(t_slm_struct_sb_pool),INTENT(inout) :: this 
     REAL(wp),                       INTENT(in)    :: s
 
-    CALL this%dom%init(s) 
+    CALL this%dom%init(s)
+    CALL this%dom_assoc%init(s)
+    CALL this%metabolic_litter%init(s)
+    CALL this%structural_litter%init(s)
+    CALL this%woody_litter%init(s)
+    CALL this%microbial%init(s)
+    CALL this%residue%init(s)
+    CALL this%residue_assoc%init(s)
   END SUBROUTINE init_t_slm_struct_sb_pool 
 
 
