@@ -424,21 +424,28 @@ CONTAINS
                                                       mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%labile_phosphorus_talloc_mavg%ptr    = calc_mavg(veg%labile_phosphorus_talloc_mavg%ptr, veg%pool%labile%phosphorus%ptr, & 
                                                       mavg_period_talloc, do_calc=pheno%growing_season%ptr)
+    veg%reserve_carbon_talloc_mavg%ptr   = calc_mavg(veg%reserve_carbon_talloc_mavg%ptr, veg%pool%reserve%carbon%ptr, & 
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
+    veg%reserve_nitrogen_talloc_mavg%ptr      = calc_mavg(veg%reserve_nitrogen_talloc_mavg%ptr, veg%pool%reserve%nitrogen%ptr, & 
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
+    veg%reserve_phosphorus_talloc_mavg%ptr    = calc_mavg(veg%reserve_phosphorus_talloc_mavg%ptr, veg%pool%reserve%phosphorus%ptr, & 
+                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     IF (veg%growth_req_n%ptr > 0._wp)THEN
        hlp = 1._wp/veg%growth_req_n%ptr
     ELSE
        hlp=0._wp
     ENDIF
     veg%growth_cn_talloc_mavg%ptr  = calc_mavg(veg%growth_cn_talloc_mavg%ptr, hlp, &
-                                            mavg_period_talloc, do_calc=pheno%growing_season%ptr)
+                                            mavg_period_tgrowth, do_calc=pheno%growing_season%ptr)
     
     IF (veg%growth_req_n%ptr > 0._wp .AND. veg%growth_req_p%ptr > 0._wp)THEN
        hlp = 1._wp/(veg%growth_req_n%ptr * veg%growth_req_p%ptr)
     ELSE
        hlp=0._wp
     ENDIF
+    
     veg%growth_cp_talloc_mavg%ptr  = calc_mavg(veg%growth_cp_talloc_mavg%ptr, hlp, &
-                                            mavg_period_talloc, do_calc=pheno%growing_season%ptr)
+                                            mavg_period_tgrowth, do_calc=pheno%growing_season%ptr)
 
     !> 1.7 averages at the time-scale of root life-time
     !!

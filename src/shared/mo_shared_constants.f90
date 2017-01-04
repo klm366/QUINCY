@@ -66,6 +66,7 @@ MODULE mo_shared_constants
     REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp       !< memory time-scale of leaf N fractions
     REAL(wp),SAVE :: mavg_period_tcnl              = 10.0_wp       !< memory time-scale for leaf stoichiometry 
     REAL(wp),SAVE :: mavg_period_talloc            = 20.0_wp       !< memory time-scale for biomass allocation
+    REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp 
     REAL(wp),SAVE :: mavg_period_tvegdyn           = 90.0_wp       !< memory time-scale of vegetation dynamics processes 
     REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp       !< memory time-scale for respiration acclimation
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx

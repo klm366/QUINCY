@@ -19,6 +19,7 @@ MODULE mo_veg_growth
 
   IMPLICIT NONE
   PRIVATE
+
   PUBLIC :: update_growth
   PUBLIC :: calc_diameter_from_woody_biomass, calc_height_from_diameter
 
@@ -179,6 +180,9 @@ CONTAINS
                         veg%labile_carbon_talloc_mavg%ptr     , &
                         veg%labile_nitrogen_talloc_mavg%ptr   , & 
                         veg%labile_phosphorus_talloc_mavg%ptr , &
+                        veg%reserve_carbon_talloc_mavg%ptr    , &
+                        veg%reserve_nitrogen_talloc_mavg%ptr  , &
+                        veg%reserve_phosphorus_talloc_mavg%ptr, &
                         veg%growth_cn_talloc_mavg%ptr         , &
                         veg%growth_cp_talloc_mavg%ptr         , & 
                         veg%npp_talloc_mavg%ptr               , &
@@ -518,6 +522,9 @@ CONTAINS
                                             labile_carbon                 , &
                                             labile_nitrogen               , &
                                             labile_phosphorus             , &
+                                            reserve_carbon            , &
+                                            reserve_nitrogen          , &
+                                            reserve_phosphorus        , &
                                             growth_cn                     , &
                                             growth_cp                     , &
                                             npp                           , &
@@ -538,7 +545,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_veg_config_class,        ONLY: veg_config    
     USE mo_base_constants,          ONLY: pi
-    USE mo_shared_constants,        ONLY: rhoh2o 
+    USE mo_shared_constants,        ONLY: rhoh2o, mavg_period_tgrowth
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, target_lai_max
 
     IMPLICIT NONE
@@ -549,16 +556,19 @@ CONTAINS
     REAL(wp), INTENT(in)  :: veg_pool_heart_wood_carbon   !< woody biomass of an individual tree (mol C/m2)
     REAL(wp), INTENT(in)  :: dens_ind                     !< density of populations (number of indivuduals /m2) 
     REAl(wp), INTENT(in)  :: labile_carbon                !< labile carbon (mol C/m2) 
-    REAL(wp), INTENT(in)  :: labile_nitrogen              !< labile nitrogen (mol C/m2)
-    REAL(wp), INTENT(in)  :: labile_phosphorus            !< labile phosphorus (mol C/m2)
+    REAL(wp), INTENT(in)  :: labile_nitrogen              !< labile nitrogen (mol N/m2)
+    REAL(wp), INTENT(in)  :: labile_phosphorus            !< labile phosphorus (mol P/m2)
+    REAL(wp), INTENT(in)  :: reserve_carbon               !< reserve carbon (mol C)
+    REAL(wp), INTENT(in)  :: reserve_nitrogen             !< reserve nitrogen (mol N)
+    REAL(wp), INTENT(in)  :: reserve_phosphorus           !< reserve phosphorus (mol P)
     REAL(wp), INTENT(in)  :: growth_cn                    !< C:N of whole plant growth increment
     REAL(wp), INTENT(in)  :: growth_cp                    !< C:P of whole plant growth increment
     REAL(wp), INTENT(in)  :: npp                          !< current average NPP (µmol C m-2 s-1)
-    REAL(wp), INTENT(in)  :: unit_npp                     !< increase in NPP for unit increase in leaf mass (unit?)
-    REAL(wp), INTENT(in)  :: transpiration                !< average transpiration flux (unit?)
-    REAL(wp), INTENT(in)  :: unit_transpiration           !< increase in transpiration with unit increase in leaf mass (unit?) 
-    REAL(wp), INTENT(in)  :: unit_uptake_n                !< N uptake per unit root mass (unit?)
-    REAL(wp), INTENT(in)  :: unit_uptake_p                !< P uptake per unit root mass (unit?)
+    REAL(wp), INTENT(in)  :: unit_npp                     !< increase in NPP for unit increase in leaf mass (µmol C m-2 s-1 mol-1 leaf C)
+    REAL(wp), INTENT(in)  :: transpiration                !< average transpiration flux (kg m-2 s-1)
+    REAL(wp), INTENT(in)  :: unit_transpiration           !< increase in transpiration with unit increase in leaf mass (kg m-1 s-2 mol-1 leaf C) 
+    REAL(wp), INTENT(in)  :: unit_uptake_n                !< N uptake per unit root mass (µmol N m-2 s-1 mol-1 root C)
+    REAL(wp), INTENT(in)  :: unit_uptake_p                !< P uptake per unit root mass (µmol P m-2 s-1 mol-1 root C)
     REAL(wp), INTENT(in)  :: dphi                         !< leaf-soil water potential gradient (MPa) 
     REAL(wp), INTENT(in)  :: kstar_labile                 !< labile pool turnover rate
     REAL(wp), INTENT(out) :: dheight                      !< change in height (m) resulting from a small change in woody biomass
@@ -612,10 +622,15 @@ CONTAINS
            !! NPP = gN * R * growth_cn
            !! Or similar relationships for P
 !BLARPP: would be good to give these variables real names
-           hlp1 = (npp + (labile_carbon - labile_nitrogen * growth_cn) * 1.e6_wp * kstar_labile / one_day) / & 
-                  (unit_uptake_n * growth_cn)
-           hlp2 = (npp + (labile_carbon - labile_phosphorus * growth_cp) * 1.e6_wp * kstar_labile / one_day) / & 
-                  (unit_uptake_p * growth_cp)
+           hlp1 = (npp*mavg_period_tgrowth*one_day +&
+                (labile_carbon + reserve_carbon - &
+                (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                (unit_uptake_n * growth_cn *mavg_period_tgrowth*one_day)
+           hlp2 = (npp*mavg_period_tgrowth*one_day +&
+                (labile_carbon + reserve_carbon - &
+                (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                (unit_uptake_p * growth_cp * mavg_period_tgrowth*one_day)
+
            IF ( hlp1 >= hlp2) THEN 
               ! if N is more limiting than P
               k1_opt = hlp1 
@@ -658,25 +673,27 @@ CONTAINS
             !! potential carbon growth rate = potential nitrogen growth rate * plant cn ratio
             !! NPP = gN * R * growth_cn
             !! Or similar relationships for P
-!BLARPP: would be good to give these variables real names
-           hlp1 = (npp + (labile_carbon - labile_nitrogen * growth_cn) * 1.e6_wp * kstar_labile / one_day) / & 
-                  (unit_uptake_n * growth_cn)
-           hlp2 = (npp + (labile_carbon - labile_phosphorus * growth_cp) * 1.e6_wp * kstar_labile / one_day) / & 
-                  (unit_uptake_p * growth_cp)
-           IF ( hlp1 >= hlp2) THEN 
-              ! if N is more limiting than P
-              k1_opt = hlp1 
+            !BLARPP: would be good to give these variables real names
+            hlp1 = (npp*mavg_period_tgrowth*one_day +&
+                 (labile_carbon + reserve_carbon - &
+                 (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                 (unit_uptake_n * growth_cn *mavg_period_tgrowth*one_day)
+            hlp2 = (npp*mavg_period_tgrowth*one_day +&
+                 (labile_carbon + reserve_carbon - &
+                 (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                 (unit_uptake_p * growth_cp * mavg_period_tgrowth*one_day)
+            
+            IF ( hlp1 >= hlp2) THEN 
+               ! if N is more limiting than P
+               k1_opt = hlp1 
               k2_opt = unit_npp/(unit_uptake_n * growth_cn)
            ELSE
               k1_opt = hlp2 
               k2_opt = unit_npp/(unit_uptake_p * growth_cp)
            ENDIF
 
-        !! @todo mo_veg_growth need proper implementation of water based optimality and transpiration in grasses, i.e. PFT 7 & 8 
-        !! 
-
-           !> water based optimality, following Magnani 2000 
-           !! R = k1 + k2*dL +k3*dS 
+            !> water based optimality, following Magnani 2000 
+          
            k1_opt_w = transpiration / (lctlib%k_root * dphi) 
            k2_opt_w = unit_transpiration / (lctlib%k_root * dphi) 
 
@@ -973,8 +990,6 @@ CONTAINS
     REAL(wp) :: leaf2wood_mass_ratio,    &
                 wood_carbon
     REAL(wp) :: hlp1
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allocation_fraction'
-
 
     !> 1.0 Allocation factors for C (this should be calculated based on various principles of plant growth and allometry)
     !! 
@@ -1387,6 +1402,7 @@ CONTAINS
     USE mo_base_constants,          ONLY: pi
 
     IMPLICIT NONE
+
     !0.1 InOut
     TYPE(t_lctlib_element), INTENT(in)  :: lctlib                  !< land-cover-type library - parameters for one pft
     REAL(wp),               INTENT(in)  :: sap_wood_carbon         !< woody biomass of an individual tree (mol C/m2)
@@ -1419,6 +1435,7 @@ CONTAINS
     USE mo_veg_constants,           ONLY: min_height
 
     IMPLICIT NONE
+
     !0.1 InOut
     TYPE(t_lctlib_element), INTENT(in)  :: lctlib      !< land-cover-type library - parameters for one pft
     REAL(wp),               INTENT(in)  :: diameter    !< diameter of an individual (m2) 

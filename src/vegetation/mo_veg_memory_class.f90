@@ -314,7 +314,12 @@ MODULE mo_veg_memory_class
                                     growth_cp_talloc_mavg          , &  !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)
                                     labile_carbon_talloc_mavg      , &  !< moving average of labile carbon pool neeeded for allometry calculations
                                     labile_nitrogen_talloc_mavg    , &  !< moving average of labile nitrogen pool neeeded for allometry calculations
-                                    labile_phosphorus_talloc_mavg       !< moving average of labile phosphorus pool neeeded for allometry calculations
+                                    labile_phosphorus_talloc_mavg   ,&  !< moving average of labile phosphorus pool neeeded for allometry calculations
+                                    reserve_carbon_talloc_mavg  ,&  !< moving average of reserve carbon needed for optimal allocation
+                                    reserve_nitrogen_talloc_mavg,&  !< moving average of reserve nitrogen needed for optimal allocation
+                                    reserve_phosphorus_talloc_mavg  !< moving average of reserve phosphorus needed for optimal allocation
+                                    
+                                    
     ! 1.7 memory over root life time 
     TYPE(t_jsb_var_real1d)          :: &   
                                     leaf2root_troot_mavg           , &  !< leaf to root mass ratio
@@ -1708,7 +1713,7 @@ CONTAINS
             initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'npp_talloc_mavg', mem%npp_talloc_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'transpiration_talloc_mavg', mem%transpiration_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
@@ -1729,18 +1734,27 @@ CONTAINS
             initval_r=-2.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'growth_cn_talloc_mavg', mem%growth_cn_talloc_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=60.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'growth_cp_talloc_mavg', mem%growth_cp_talloc_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=1000.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'labile_carbon_talloc_mavg', mem%labile_carbon_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'labile_nitrogen_talloc_mavg', mem%labile_nitrogen_talloc_mavg, &
-            initval_r=0.0_wp) ! initvalue
-  
+           initval_r=0.0_wp) ! initvalue
+
       CALL slm_add_var(mem, 'labile_phosphorus_talloc_mavg', mem%labile_phosphorus_talloc_mavg, &
+           initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'reserve_carbon_talloc_mavg', mem%reserve_carbon_talloc_mavg, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'reserve_use_nitrogen_talloc_mavg', mem%reserve_nitrogen_talloc_mavg, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'reserve_use_phosphorus_talloc_mavg', mem%reserve_phosphorus_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'leaf2root_troot_mavg', mem%leaf2root_troot_mavg, &
