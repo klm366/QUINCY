@@ -43,7 +43,7 @@ CONTAINS
     USE mo_shared_constants,      ONLY: r_gas_dryair, LatentHeatVaporization, rhoh2o, grav, stbo, zemiss_def
     USE mo_phy_schemes
     USE mo_soil_config_class,     ONLY: soil_config
-    USE mo_veg_constants,         ONLY: k_soil_phi1, k_soil_phi2
+    USE mo_soil_constants,        ONLY: k_soil_phi1, k_soil_phi2
 
 
     ! Use of process memories

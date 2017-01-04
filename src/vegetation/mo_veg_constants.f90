@@ -133,9 +133,7 @@ MODULE mo_veg_constants
 
   ! soil pools  (may be moved to mo_soil_constants later ?)
   REAL(wp), SAVE :: & 
-      tau_litter,   &     !< soil litter pool turnover time (years)
-      k_soil_phi1,  &     !< coefficient for calculating soil water potential 
-      k_soil_phi2         !< coefficient for calculating soil water potential 
+      tau_litter        !< soil litter pool turnover time (years)
 
   ! parameters for changes in canopy N fractions
   REAL(wp), SAVE :: &     
@@ -242,11 +240,6 @@ CONTAINS
       k1_fruit_alloc              = 0.01_wp 
       k3_fruit_alloc              = 0.1_wp  
       k4_fruit_alloc              = 2.0_wp 
-
-  ! soil stuff
-  ! constants used to calculate soil water potential, based on Rawls et al 1982 for loam 
-      k_soil_phi1 = -0.0011_wp 
-      k_soil_phi2 = -4.55_wp
 
   ! moved here from mo_assimi_constants
       tau_nutrient_recycling      = 10._wp 
