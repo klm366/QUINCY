@@ -14,7 +14,6 @@ MODULE mo_assimi_update_canopy_fluxes
 
   USE mo_kind,                  ONLY: wp, eps4, eps8
   USE mo_base_memory,           ONLY: t_slm_tile, t_model
-  USE mo_base_memory,           ONLY: t_slm_soil
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   USE mo_assimi_constants,      ONLY: ic3phot, ic4phot, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max

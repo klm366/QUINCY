@@ -110,17 +110,13 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
 
-      tile%vegsoil%ammonium                 = 0.1_wp
-      tile%vegsoil%phosphate                = 0.01_wp
       veg%target_cn_leaf%ptr             = lctlib%cn_leaf
       veg%target_np_leaf%ptr             = lctlib%np_leaf
 
       IF(veg_config%flag_tile_veg_dynamics)THEN
-         tile%vegsoil%pool%litter%nitrogen   = 0.5_wp
          veg%init_pool%carbon%ptr         = lctlib%seed_size * 10.0_wp
          veg%dens_ind%ptr                 = 0.0_wp 
       ELSE
-         tile%vegsoil%pool%litter%nitrogen   = 5.0_wp
          veg%init_pool%carbon%ptr         = 50.0_wp 
          veg%dens_ind%ptr                 = 1.0_wp 
       ENDIF

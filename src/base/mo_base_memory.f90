@@ -14,50 +14,16 @@ MODULE mo_base_memory
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
   USE mo_jsb_memory_class,        ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_process_class,       ONLY: t_jsb_process_p
-  USE mo_shared_memory,           ONLY: t_element
 
   IMPLICIT NONE
 
   !-----------------------------------------------------------------------------------------------------
-  !> soil pool
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  TYPE t_slm_soil_pool
-     TYPE(t_element)  :: litter         !< soil litter
-     TYPE(t_element)  :: som            !< soil organic mater
-  END TYPE t_slm_soil_pool
-
-!  !-----------------------------------------------------------------------------------------------------
-!  !> soil flux
-!  !! 
-!  !-----------------------------------------------------------------------------------------------------
-!  TYPE t_slm_soil_flux
-!    TYPE(t_slm_soil_pool) :: loss      !< decomposition flux from each pool
-!  END TYPE t_slm_soil_flux
-
-  !-----------------------------------------------------------------------------------------------------
-  !> all (or most ?) variables of soil per tile
-  !! 
-  !! including all pools and all fluxes \n
-  !! @todo this will be extended by an extra soil model
-  !-----------------------------------------------------------------------------------------------------
-  TYPE t_slm_soil
-    TYPE(t_slm_soil_pool) :: pool     !< soil pool
-    TYPE(t_slm_soil_pool) :: loss      !< decomposition flux from each pool
-    REAL(wp) :: ammonium              !< soil ammonium concentration (mmol/L)
-    REAL(wp) :: phosphate             !< soil P concentration (mmol/L)
-  END TYPE t_slm_soil
-
-  !-----------------------------------------------------------------------------------------------------
   !> integrates all variables of one tile
   !!
-  !! including soil memory \n
   !! TYPE(t_slm_tile) :: tile --> declaration of tile in the driver \n
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE t_slm_tile
-    TYPE(t_slm_soil)                  :: vegsoil      !< soil construct of tile  *slmdev
-
     TYPE(t_jsb_lct)                   :: lcts      !< data on land cover type of the tile
     CLASS(t_jsb_memory_p), POINTER    :: mem(:)
     INTEGER                           :: owner_model_id = 0   ! necessary for using lctlib

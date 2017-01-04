@@ -9,8 +9,7 @@ mo_base_memory.o: \
   mo_jsb_lct_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_memory_class.o \
-  mo_jsb_process_class.o \
-  mo_shared_memory.o
+  mo_jsb_process_class.o
 
 mo_base_util.o: \
   mo_kind.o

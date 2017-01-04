@@ -38,12 +38,13 @@ CONTAINS
   SUBROUTINE update_vegsoil_bgc(tile)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_soil, t_slm_tile, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -51,7 +52,6 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib      !< land-cover-type library - parameter across pft's
-    TYPE(t_slm_soil),       POINTER        :: vegsoil        ! soil variables per tile
     REAL(wp) :: dcost                                     ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
     REAL(wp) :: n_demand                                  ! N demand of plants (mu mol N /m2 / s) 
     REAL(wp) :: f_nacq_bnf,f_nacq_nup                     ! fraction of N uptake as BFN or Nuptake
@@ -59,19 +59,17 @@ CONTAINS
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),      POINTER :: sb__mem
     TYPE(t_veg_memory), POINTER             :: veg        ! local pointer to veg__mem for SLM usability
+    TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     dsl4jsb_Get_memory(VEG_)
-!    SELECT TYPE (mm => tile%mem(VEG_)%p) 
-!      TYPE IS(t_veg_memory)
-!        veg__mem => mm
-!    END SELECT
+    dsl4jsb_Get_memory(SB_)
+
     veg => veg__mem 
+    sb  => sb__mem 
 
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
-
-    !  bi-directional pointer
-    vegsoil  => tile%vegsoil
 
     !> 1.0 Calculate an instantaneous scalar of nutrient demand
     !!     taken as difference of the the weekly growth requirement of the nutrient to the stoichiometry of the labile pool
@@ -111,13 +109,13 @@ CONTAINS
          ! OCN's MM Kinetics
          veg%uptake_n%ptr = lctlib%vmax_uptake_n * &
                  veg%demand_uptake_n_tuptake_mavg%ptr * & 
-                 vegsoil%ammonium * ( lctlib%soil_n_aff1 + & 
-                   1._wp / ( lctlib%soil_n_aff2 + vegsoil%ammonium )) * & 
+                 sb%nh4_solute%ptr(1,1,1) * ( lctlib%soil_n_aff1 + & 
+                   1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) )) * & 
                  veg%pool%fine_root%carbon%ptr
          veg%uptake_p%ptr = lctlib%vmax_uptake_p * & 
                  veg%demand_uptake_p_tuptake_mavg%ptr * & 
-                 vegsoil%phosphate * ( lctlib%soil_p_aff1 + & 
-                   1._wp / ( lctlib%soil_p_aff2 + vegsoil%phosphate )) * & 
+                 sb%po4_solute%ptr(1,1,1) * ( lctlib%soil_p_aff1 + & 
+                   1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) )) * & 
                  veg%pool%fine_root%carbon%ptr
 
     ENDSELECT
@@ -131,7 +129,7 @@ CONTAINS
       CASE ("prescribed") 
         veg%n_fixation%ptr = 0.0_wp
       CASE("standard")
-        IF(vegsoil%ammonium < soil_n_threshold_bnf) veg%n_fixation%ptr = lctlib%bnf_base 
+        IF(sb%nh4_solute%ptr(1,1,1) < soil_n_threshold_bnf) veg%n_fixation%ptr = lctlib%bnf_base 
       !> 3.2 Case 2: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
       CASE ("optimal")
@@ -159,11 +157,11 @@ CONTAINS
     !> 3.0 Calculate potential and actual N uptake per unit fine root carbon
     !!
     veg%unit_uptake_n_pot%ptr = lctlib%vmax_uptake_n * &
-                                vegsoil%ammonium * ( lctlib%soil_n_aff1 + &
-                                1._wp / ( lctlib%soil_n_aff2 + vegsoil%ammonium ))
+                                sb%nh4_solute%ptr(1,1,1) * ( lctlib%soil_n_aff1 + &
+                                1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) ))
     veg%unit_uptake_p_pot%ptr = lctlib%vmax_uptake_p * &
-                                vegsoil%phosphate * ( lctlib%soil_p_aff1 + &
-                                1._wp / ( lctlib%soil_p_aff2 + vegsoil%phosphate ))
+                                sb%po4_solute%ptr(1,1,1) * ( lctlib%soil_p_aff1 + &
+                                1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) ))
     IF(veg%pool%fine_root%carbon%ptr > eps8) THEN
       veg%unit_uptake_n_act%ptr = veg%uptake_n%ptr / veg%pool%fine_root%carbon%ptr
       veg%unit_uptake_p_act%ptr = veg%uptake_p%ptr / veg%pool%fine_root%carbon%ptr
@@ -184,12 +182,13 @@ CONTAINS
   SUBROUTINE update_vegsoil_pool(tile)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_soil, t_slm_tile, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model
     USE mo_base_constants,        ONLY: dtime,one_day,one_year
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -197,115 +196,117 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
-    TYPE(t_slm_soil),       POINTER       :: vegsoil              ! soil variables per tile
-    REAl(wp)                              :: soil_depth = 1.0_wp  ! soil depth, m
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegsoil_pool'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
     TYPE(t_veg_memory), POINTER             :: veg        ! local pointer to veg__mem for SLM usability
+    TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(SB_)
 
     veg => veg__mem 
+    sb  => sb__mem 
 
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
 
-    !  bi-directional pointer
-    vegsoil  => tile%vegsoil
-
-
-    !> 1 Calculate soil litter pool decomposition. Currently only for N
+    !> 1 Calculate soil litter pool decomposition. 
     !!    
     !! Needs temperature and moisture correction
-    vegsoil%loss%litter = 1.0_wp/tau_litter/one_day/one_year * vegsoil%pool%litter * dtime
-    
-    !> 2 Update soil litter pool. Probably needs splitting into structural and non-structural litter
+    sb%het_respiration%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%carbon%ptr * dtime
+    sb%net_mineralisation_n%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%nitrogen%ptr * dtime
+    sb%net_mineralisation_p%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%phosphorus%ptr * dtime
+    sb%het_respiration_c13%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%carbon13%ptr * dtime
+    sb%het_respiration_c14%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%carbon14%ptr * dtime
+    sb%net_mineralisation_n15%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%nitrogen15%ptr * dtime
+
+    ! > 1.1 subtract losses
     !!
-!! not working because TYPE(t_element)  :: litter has not implemented any operator overload for t_jsb_var_real1d
-! *slmdev
-!    vegsoil%pool%litter = vegsoil%pool%litter + veg%litterfall%leaf
-!    vegsoil%pool%litter = vegsoil%pool%litter + veg%litterfall%fine_root
-!    vegsoil%pool%litter = vegsoil%pool%litter + veg%litterfall%coarse_root
-!    vegsoil%pool%litter = vegsoil%pool%litter + veg%litterfall%heart_wood
-!! writing the code explicit instead and making it a operator overload with a scalar by using ...%ptr
-    vegsoil%pool%litter%carbon = vegsoil%pool%litter%carbon + veg%litterfall%leaf%carbon%ptr
-    vegsoil%pool%litter%nitrogen = vegsoil%pool%litter%nitrogen + veg%litterfall%leaf%nitrogen%ptr
-    vegsoil%pool%litter%phosphorus = vegsoil%pool%litter%phosphorus + veg%litterfall%leaf%phosphorus%ptr
-    vegsoil%pool%litter%carbon13 = vegsoil%pool%litter%carbon13 + veg%litterfall%leaf%carbon13%ptr
-    vegsoil%pool%litter%carbon14 = vegsoil%pool%litter%carbon14 + veg%litterfall%leaf%carbon14%ptr
-    vegsoil%pool%litter%nitrogen15 = vegsoil%pool%litter%nitrogen15 + veg%litterfall%leaf%nitrogen15%ptr
- 
-    vegsoil%pool%litter%carbon = vegsoil%pool%litter%carbon + veg%litterfall%fine_root%carbon%ptr
-    vegsoil%pool%litter%nitrogen = vegsoil%pool%litter%nitrogen + veg%litterfall%fine_root%nitrogen%ptr
-    vegsoil%pool%litter%phosphorus = vegsoil%pool%litter%phosphorus + veg%litterfall%fine_root%phosphorus%ptr
-    vegsoil%pool%litter%carbon13 = vegsoil%pool%litter%carbon13 + veg%litterfall%fine_root%carbon13%ptr
-    vegsoil%pool%litter%carbon14 = vegsoil%pool%litter%carbon14 + veg%litterfall%fine_root%carbon14%ptr
-    vegsoil%pool%litter%nitrogen15 = vegsoil%pool%litter%nitrogen15 + veg%litterfall%fine_root%nitrogen15%ptr
- 
-    vegsoil%pool%litter%carbon = vegsoil%pool%litter%carbon + veg%litterfall%coarse_root%carbon%ptr
-    vegsoil%pool%litter%nitrogen = vegsoil%pool%litter%nitrogen + veg%litterfall%coarse_root%nitrogen%ptr
-    vegsoil%pool%litter%phosphorus = vegsoil%pool%litter%phosphorus + veg%litterfall%coarse_root%phosphorus%ptr
-    vegsoil%pool%litter%carbon13 = vegsoil%pool%litter%carbon13 + veg%litterfall%coarse_root%carbon13%ptr
-    vegsoil%pool%litter%carbon14 = vegsoil%pool%litter%carbon14 + veg%litterfall%coarse_root%carbon14%ptr
-    vegsoil%pool%litter%nitrogen15 = vegsoil%pool%litter%nitrogen15 + veg%litterfall%coarse_root%nitrogen15%ptr
- 
-    vegsoil%pool%litter%carbon = vegsoil%pool%litter%carbon + veg%litterfall%sap_wood%carbon%ptr
-    vegsoil%pool%litter%nitrogen = vegsoil%pool%litter%nitrogen + veg%litterfall%sap_wood%nitrogen%ptr
-    vegsoil%pool%litter%phosphorus = vegsoil%pool%litter%phosphorus + veg%litterfall%sap_wood%phosphorus%ptr
-    vegsoil%pool%litter%carbon13 = vegsoil%pool%litter%carbon13 + veg%litterfall%sap_wood%carbon13%ptr
-    vegsoil%pool%litter%carbon14 = vegsoil%pool%litter%carbon14 + veg%litterfall%sap_wood%carbon14%ptr
-    vegsoil%pool%litter%nitrogen15 = vegsoil%pool%litter%nitrogen15 + veg%litterfall%sap_wood%nitrogen15%ptr
-
-    vegsoil%pool%litter%carbon = vegsoil%pool%litter%carbon + veg%litterfall%heart_wood%carbon%ptr
-    vegsoil%pool%litter%nitrogen = vegsoil%pool%litter%nitrogen + veg%litterfall%heart_wood%nitrogen%ptr
-    vegsoil%pool%litter%phosphorus = vegsoil%pool%litter%phosphorus + veg%litterfall%heart_wood%phosphorus%ptr
-    vegsoil%pool%litter%carbon13 = vegsoil%pool%litter%carbon13 + veg%litterfall%heart_wood%carbon13%ptr
-    vegsoil%pool%litter%carbon14 = vegsoil%pool%litter%carbon14 + veg%litterfall%heart_wood%carbon14%ptr
-    vegsoil%pool%litter%nitrogen15 = vegsoil%pool%litter%nitrogen15 + veg%litterfall%heart_wood%nitrogen15%ptr
-
-    vegsoil%pool%litter%carbon = vegsoil%pool%litter%carbon + veg%litterfall%fruit%carbon%ptr
-    vegsoil%pool%litter%nitrogen = vegsoil%pool%litter%nitrogen + veg%litterfall%fruit%nitrogen%ptr
-    vegsoil%pool%litter%phosphorus = vegsoil%pool%litter%phosphorus + veg%litterfall%fruit%phosphorus%ptr
-    vegsoil%pool%litter%carbon13 = vegsoil%pool%litter%carbon13 + veg%litterfall%fruit%carbon13%ptr
-    vegsoil%pool%litter%carbon14 = vegsoil%pool%litter%carbon14 + veg%litterfall%fruit%carbon14%ptr
-    vegsoil%pool%litter%nitrogen15 = vegsoil%pool%litter%nitrogen15 + veg%litterfall%fruit%nitrogen15%ptr
-
-    vegsoil%pool%litter%carbon = vegsoil%pool%litter%carbon + veg%litterfall%seed_bed%carbon%ptr
-    vegsoil%pool%litter%nitrogen = vegsoil%pool%litter%nitrogen + veg%litterfall%seed_bed%nitrogen%ptr
-    vegsoil%pool%litter%phosphorus = vegsoil%pool%litter%phosphorus + veg%litterfall%seed_bed%phosphorus%ptr
-    vegsoil%pool%litter%carbon13 = vegsoil%pool%litter%carbon13 + veg%litterfall%seed_bed%carbon13%ptr
-    vegsoil%pool%litter%carbon14 = vegsoil%pool%litter%carbon14 + veg%litterfall%seed_bed%carbon14%ptr
-    vegsoil%pool%litter%nitrogen15 = vegsoil%pool%litter%nitrogen15 + veg%litterfall%seed_bed%nitrogen15%ptr
-
-    vegsoil%pool%litter%carbon = vegsoil%pool%litter%carbon + veg%litterfall%labile%carbon%ptr
-    vegsoil%pool%litter%nitrogen = vegsoil%pool%litter%nitrogen + veg%litterfall%labile%nitrogen%ptr
-    vegsoil%pool%litter%phosphorus = vegsoil%pool%litter%phosphorus + veg%litterfall%labile%phosphorus%ptr
-    vegsoil%pool%litter%carbon13 = vegsoil%pool%litter%carbon13 + veg%litterfall%labile%carbon13%ptr
-    vegsoil%pool%litter%carbon14 = vegsoil%pool%litter%carbon14 + veg%litterfall%labile%carbon14%ptr
-    vegsoil%pool%litter%nitrogen15 = vegsoil%pool%litter%nitrogen15 + veg%litterfall%labile%nitrogen15%ptr
-
-    vegsoil%pool%litter%carbon = vegsoil%pool%litter%carbon + veg%litterfall%reserve%carbon%ptr
-    vegsoil%pool%litter%nitrogen = vegsoil%pool%litter%nitrogen + veg%litterfall%reserve%nitrogen%ptr
-    vegsoil%pool%litter%phosphorus = vegsoil%pool%litter%phosphorus + veg%litterfall%reserve%phosphorus%ptr
-    vegsoil%pool%litter%carbon13 = vegsoil%pool%litter%carbon13 + veg%litterfall%reserve%carbon13%ptr
-    vegsoil%pool%litter%carbon14 = vegsoil%pool%litter%carbon14 + veg%litterfall%reserve%carbon14%ptr
-    vegsoil%pool%litter%nitrogen15 = vegsoil%pool%litter%nitrogen15 + veg%litterfall%reserve%nitrogen15%ptr
-
-    vegsoil%pool%litter = vegsoil%pool%litter - vegsoil%loss%litter 
+    sb%pool%structural_litter%carbon%ptr = sb%pool%structural_litter%carbon%ptr - sb%het_respiration%ptr 
+    sb%pool%structural_litter%nitrogen%ptr = sb%pool%structural_litter%nitrogen%ptr - sb%net_mineralisation_n%ptr
+    sb%pool%structural_litter%phosphorus%ptr = sb%pool%structural_litter%phosphorus%ptr - sb%net_mineralisation_p%ptr
+    sb%pool%structural_litter%carbon13%ptr = sb%pool%structural_litter%carbon13%ptr - sb%het_respiration_c13%ptr
+    sb%pool%structural_litter%carbon14%ptr = sb%pool%structural_litter%carbon14%ptr - sb%het_respiration_c14%ptr
+    sb%pool%structural_litter%nitrogen15%ptr = sb%pool%structural_litter%nitrogen15%ptr - sb%net_mineralisation_n15%ptr
     
+    !> 2 Update soil litter pool with litter fall 
+    !!
+    sb%pool%structural_litter%carbon%ptr(:,1,:) = sb%pool%structural_litter%carbon%ptr(:,1,:) + veg%litterfall%leaf%carbon%ptr
+    sb%pool%structural_litter%nitrogen%ptr(:,1,:) = sb%pool%structural_litter%nitrogen%ptr(:,1,:) + veg%litterfall%leaf%nitrogen%ptr
+    sb%pool%structural_litter%phosphorus%ptr(:,1,:) = sb%pool%structural_litter%phosphorus%ptr(:,1,:) + veg%litterfall%leaf%phosphorus%ptr
+    sb%pool%structural_litter%carbon13%ptr(:,1,:) = sb%pool%structural_litter%carbon13%ptr(:,1,:) + veg%litterfall%leaf%carbon13%ptr
+    sb%pool%structural_litter%carbon14%ptr(:,1,:) = sb%pool%structural_litter%carbon14%ptr(:,1,:) + veg%litterfall%leaf%carbon14%ptr
+    sb%pool%structural_litter%nitrogen15%ptr(:,1,:) = sb%pool%structural_litter%nitrogen15%ptr(:,1,:) + veg%litterfall%leaf%nitrogen15%ptr
+ 
+    sb%pool%structural_litter%carbon%ptr(:,1,:) = sb%pool%structural_litter%carbon%ptr(:,1,:) + veg%litterfall%fine_root%carbon%ptr
+    sb%pool%structural_litter%nitrogen%ptr(:,1,:) = sb%pool%structural_litter%nitrogen%ptr(:,1,:) + veg%litterfall%fine_root%nitrogen%ptr
+    sb%pool%structural_litter%phosphorus%ptr(:,1,:) = sb%pool%structural_litter%phosphorus%ptr(:,1,:) + veg%litterfall%fine_root%phosphorus%ptr
+    sb%pool%structural_litter%carbon13%ptr(:,1,:) = sb%pool%structural_litter%carbon13%ptr(:,1,:) + veg%litterfall%fine_root%carbon13%ptr
+    sb%pool%structural_litter%carbon14%ptr(:,1,:) = sb%pool%structural_litter%carbon14%ptr(:,1,:) + veg%litterfall%fine_root%carbon14%ptr
+    sb%pool%structural_litter%nitrogen15%ptr(:,1,:) = sb%pool%structural_litter%nitrogen15%ptr(:,1,:) + veg%litterfall%fine_root%nitrogen15%ptr
+ 
+    sb%pool%structural_litter%carbon%ptr(:,1,:) = sb%pool%structural_litter%carbon%ptr(:,1,:) + veg%litterfall%coarse_root%carbon%ptr
+    sb%pool%structural_litter%nitrogen%ptr(:,1,:) = sb%pool%structural_litter%nitrogen%ptr(:,1,:) + veg%litterfall%coarse_root%nitrogen%ptr
+    sb%pool%structural_litter%phosphorus%ptr(:,1,:) = sb%pool%structural_litter%phosphorus%ptr(:,1,:) + veg%litterfall%coarse_root%phosphorus%ptr
+    sb%pool%structural_litter%carbon13%ptr(:,1,:) = sb%pool%structural_litter%carbon13%ptr(:,1,:) + veg%litterfall%coarse_root%carbon13%ptr
+    sb%pool%structural_litter%carbon14%ptr(:,1,:) = sb%pool%structural_litter%carbon14%ptr(:,1,:) + veg%litterfall%coarse_root%carbon14%ptr
+    sb%pool%structural_litter%nitrogen15%ptr(:,1,:) = sb%pool%structural_litter%nitrogen15%ptr(:,1,:) + veg%litterfall%coarse_root%nitrogen15%ptr
+ 
+    sb%pool%structural_litter%carbon%ptr(:,1,:) = sb%pool%structural_litter%carbon%ptr(:,1,:) + veg%litterfall%sap_wood%carbon%ptr
+    sb%pool%structural_litter%nitrogen%ptr(:,1,:) = sb%pool%structural_litter%nitrogen%ptr(:,1,:) + veg%litterfall%sap_wood%nitrogen%ptr
+    sb%pool%structural_litter%phosphorus%ptr(:,1,:) = sb%pool%structural_litter%phosphorus%ptr(:,1,:) + veg%litterfall%sap_wood%phosphorus%ptr
+    sb%pool%structural_litter%carbon13%ptr(:,1,:) = sb%pool%structural_litter%carbon13%ptr(:,1,:) + veg%litterfall%sap_wood%carbon13%ptr
+    sb%pool%structural_litter%carbon14%ptr(:,1,:) = sb%pool%structural_litter%carbon14%ptr(:,1,:) + veg%litterfall%sap_wood%carbon14%ptr
+    sb%pool%structural_litter%nitrogen15%ptr(:,1,:) = sb%pool%structural_litter%nitrogen15%ptr(:,1,:) + veg%litterfall%sap_wood%nitrogen15%ptr
+
+    sb%pool%structural_litter%carbon%ptr(:,1,:) = sb%pool%structural_litter%carbon%ptr(:,1,:) + veg%litterfall%heart_wood%carbon%ptr
+    sb%pool%structural_litter%nitrogen%ptr(:,1,:) = sb%pool%structural_litter%nitrogen%ptr(:,1,:) + veg%litterfall%heart_wood%nitrogen%ptr
+    sb%pool%structural_litter%phosphorus%ptr(:,1,:) = sb%pool%structural_litter%phosphorus%ptr(:,1,:) + veg%litterfall%heart_wood%phosphorus%ptr
+    sb%pool%structural_litter%carbon13%ptr(:,1,:) = sb%pool%structural_litter%carbon13%ptr(:,1,:) + veg%litterfall%heart_wood%carbon13%ptr
+    sb%pool%structural_litter%carbon14%ptr(:,1,:) = sb%pool%structural_litter%carbon14%ptr(:,1,:) + veg%litterfall%heart_wood%carbon14%ptr
+    sb%pool%structural_litter%nitrogen15%ptr(:,1,:) = sb%pool%structural_litter%nitrogen15%ptr(:,1,:) + veg%litterfall%heart_wood%nitrogen15%ptr
+
+    sb%pool%structural_litter%carbon%ptr(:,1,:) = sb%pool%structural_litter%carbon%ptr(:,1,:) + veg%litterfall%fruit%carbon%ptr
+    sb%pool%structural_litter%nitrogen%ptr(:,1,:) = sb%pool%structural_litter%nitrogen%ptr(:,1,:) + veg%litterfall%fruit%nitrogen%ptr
+    sb%pool%structural_litter%phosphorus%ptr(:,1,:) = sb%pool%structural_litter%phosphorus%ptr(:,1,:) + veg%litterfall%fruit%phosphorus%ptr
+    sb%pool%structural_litter%carbon13%ptr(:,1,:) = sb%pool%structural_litter%carbon13%ptr(:,1,:) + veg%litterfall%fruit%carbon13%ptr
+    sb%pool%structural_litter%carbon14%ptr(:,1,:) = sb%pool%structural_litter%carbon14%ptr(:,1,:) + veg%litterfall%fruit%carbon14%ptr
+    sb%pool%structural_litter%nitrogen15%ptr(:,1,:) = sb%pool%structural_litter%nitrogen15%ptr(:,1,:) + veg%litterfall%fruit%nitrogen15%ptr
+
+    sb%pool%structural_litter%carbon%ptr(:,1,:) = sb%pool%structural_litter%carbon%ptr(:,1,:) + veg%litterfall%seed_bed%carbon%ptr
+    sb%pool%structural_litter%nitrogen%ptr(:,1,:) = sb%pool%structural_litter%nitrogen%ptr(:,1,:) + veg%litterfall%seed_bed%nitrogen%ptr
+    sb%pool%structural_litter%phosphorus%ptr(:,1,:) = sb%pool%structural_litter%phosphorus%ptr(:,1,:) + veg%litterfall%seed_bed%phosphorus%ptr
+    sb%pool%structural_litter%carbon13%ptr(:,1,:) = sb%pool%structural_litter%carbon13%ptr(:,1,:) + veg%litterfall%seed_bed%carbon13%ptr
+    sb%pool%structural_litter%carbon14%ptr(:,1,:) = sb%pool%structural_litter%carbon14%ptr(:,1,:) + veg%litterfall%seed_bed%carbon14%ptr
+    sb%pool%structural_litter%nitrogen15%ptr(:,1,:) = sb%pool%structural_litter%nitrogen15%ptr(:,1,:) + veg%litterfall%seed_bed%nitrogen15%ptr
+
+    sb%pool%structural_litter%carbon%ptr(:,1,:) = sb%pool%structural_litter%carbon%ptr(:,1,:) + veg%litterfall%labile%carbon%ptr
+    sb%pool%structural_litter%nitrogen%ptr(:,1,:) = sb%pool%structural_litter%nitrogen%ptr(:,1,:) + veg%litterfall%labile%nitrogen%ptr
+    sb%pool%structural_litter%phosphorus%ptr(:,1,:) = sb%pool%structural_litter%phosphorus%ptr(:,1,:) + veg%litterfall%labile%phosphorus%ptr
+    sb%pool%structural_litter%carbon13%ptr(:,1,:) = sb%pool%structural_litter%carbon13%ptr(:,1,:) + veg%litterfall%labile%carbon13%ptr
+    sb%pool%structural_litter%carbon14%ptr(:,1,:) = sb%pool%structural_litter%carbon14%ptr(:,1,:) + veg%litterfall%labile%carbon14%ptr
+    sb%pool%structural_litter%nitrogen15%ptr(:,1,:) = sb%pool%structural_litter%nitrogen15%ptr(:,1,:) + veg%litterfall%labile%nitrogen15%ptr
+
+    sb%pool%structural_litter%carbon%ptr(:,1,:) = sb%pool%structural_litter%carbon%ptr(:,1,:) + veg%litterfall%reserve%carbon%ptr
+    sb%pool%structural_litter%nitrogen%ptr(:,1,:) = sb%pool%structural_litter%nitrogen%ptr(:,1,:) + veg%litterfall%reserve%nitrogen%ptr
+    sb%pool%structural_litter%phosphorus%ptr(:,1,:) = sb%pool%structural_litter%phosphorus%ptr(:,1,:) + veg%litterfall%reserve%phosphorus%ptr
+    sb%pool%structural_litter%carbon13%ptr(:,1,:) = sb%pool%structural_litter%carbon13%ptr(:,1,:) + veg%litterfall%reserve%carbon13%ptr
+    sb%pool%structural_litter%carbon14%ptr(:,1,:) = sb%pool%structural_litter%carbon14%ptr(:,1,:) + veg%litterfall%reserve%carbon14%ptr
+    sb%pool%structural_litter%nitrogen15%ptr(:,1,:) = sb%pool%structural_litter%nitrogen15%ptr(:,1,:) + veg%litterfall%reserve%nitrogen15%ptr
+
     !> 3 Update mineral pool
     !! 
     IF(veg_config%n_uptake_scheme=='prescribed') THEN 
-       vegsoil%ammonium = 0.2_wp
+       sb%nh4_solute%ptr(:,1,:) = 0.2_wp       
     ELSE
-       vegsoil%ammonium = vegsoil%ammonium     + vegsoil%loss%litter%nitrogen / soil_depth
-       !vegsoil%ammonium = MAX(vegsoil%ammonium - veg%uptake_n%ptr * dtime/1.e6_wp / soil_depth , 0.0_wp) 
-       vegsoil%ammonium = vegsoil%ammonium - veg%uptake_n%ptr * dtime/1.e6_wp / soil_depth 
+       sb%nh4_solute%ptr = sb%nh4_solute%ptr + sb%net_mineralisation_n%ptr 
+       sb%nh4_solute%ptr(:,1,:) = sb%nh4_solute%ptr(:,1,:) - veg%uptake_n%ptr * dtime/1.e6_wp 
     ENDIF
 
-    !vegsoil%phosphate = vegsoil%phosphate + vegsoil%loss%litter%phosphorus*dtime*  1.e3_wp / soil_depth * 1.e-3_wp
-    !vegsoil%phosphate = vegsoil%phosphate - veg%uptake_p%ptr * dtime/1.e6_wp * 1.e3_wp / soil_depth * 1.e-3_wp 
+    !sb%po4_solute%ptr = sb%po4_solute%ptr + sb%net_mineralisation_p%ptr 
+    !sb%po4_solute%ptr = sb%po4_solute%ptr - veg%uptake_p%ptr * dtime/1.e6_wp 
 
     END SUBROUTINE update_vegsoil_pool
 

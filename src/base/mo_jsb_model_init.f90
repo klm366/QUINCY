@@ -293,7 +293,11 @@ CONTAINS
     ! run model init
     ! for land the same init routine as plant is run
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','plant','soil','canopy')
+      CASE('land','plant','soil')
+        CALL veg_init(tile)       ! veg (init_slm_plant)
+        CALL sb_init(tile)        ! sb 
+        CALL soil_init(tile)      ! soil
+      CASE('canopy')
         CALL veg_init(tile)       ! veg (init_slm_plant)
         CALL soil_init(tile)      ! soil
       CASE('test_canopy')

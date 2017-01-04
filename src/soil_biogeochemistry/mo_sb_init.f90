@@ -63,7 +63,9 @@ CONTAINS
 ! 
 ! 
 
-
+   sb%pool%structural_litter%nitrogen%ptr(:,1,:) = 0.5_wp
+   sb%nh4_solute%ptr(:,1,:) = 0.1_wp
+   sb%po4_solute%ptr(:,1,:) = 0.01_wp
 
 
   END SUBROUTINE sb_init

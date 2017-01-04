@@ -148,6 +148,14 @@ MODULE mo_sb_memory_class
                                     po4_assoc          , &  !< phosphate in soil solution
                                     po4_solute              !< minerally associated phosphate 
 
+    TYPE(t_jsb_var_real3d)          :: &
+                                    het_respiration    ,    &  !< heterotrophic respiration
+                                    het_respiration_c13,    &  !< c13 heterotrophic respiration  
+                                    het_respiration_c14,    &  !< c14 heterotrophic respiration  
+                                    net_mineralisation_n,   &  !< net mineralisation of N   
+                                    net_mineralisation_n15, &  !< net mineralisation of N15 
+                                    net_mineralisation_p       !< net mineralisation of P 
+    
 
 !    TYPE(t_slm_struct_sb_element) :: &   ! simple structure for elements: t_jsb_struct
 !                                    test_sb_element   !< test ...
@@ -823,6 +831,24 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'po4_solute', mem%po4_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'het_respiration', mem%het_respiration, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'het_respiration_c13', mem%het_respiration_c13, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'het_respiration_c14', mem%het_respiration_c14, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'net_mineralisation_n', mem%net_mineralisation_n, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'net_mineralisation_n15', mem%net_mineralisation_n15, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'net_mineralisation_p', mem%net_mineralisation_p, &
             initval_r=0.0_wp) ! initvalue
   
       !> simple TYPE (t_jsb_struct)

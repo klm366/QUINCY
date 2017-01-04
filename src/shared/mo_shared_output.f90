@@ -475,7 +475,7 @@ CONTAINS
   SUBROUTINE write_output_pool(tile, time_d, time_y, itile)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_slm_soil, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model
     USE mo_veg_constants,         ONLY: itree
     USE mo_assimi_config_class,   ONLY: assimi_config
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
@@ -486,6 +486,7 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -496,7 +497,6 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER      :: model
     TYPE(t_lctlib_element), POINTER      :: lctlib     !< land-cover-type library - parameter across pft's
-    TYPE(t_slm_soil),       POINTER      :: vegsoil     ! soil variables per tile
     INTEGER                          :: lun            ! locical unit number
     INTEGER                          :: icanopy         ! loop over ncanopy
     REAL(wp)                         :: hlp1           ! helper variable
@@ -510,25 +510,26 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     TYPE(t_assimi_memory),        POINTER     :: assimi   ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
     TYPE(t_pheno_memory),         POINTER     :: pheno    ! local pointer to pheno__mem for SLM usability
     TYPE(t_soil_memory),          POINTER     :: soil     ! local pointer to soil__mem for SLM usability
+    TYPE(t_sb_memory),            POINTER     :: sb       ! local pointer to sb__mem for SLM usability
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
+    dsl4jsb_Get_memory(SB_)                               ! sb__mem => sb_memory
 
     assimi  => assimi__mem 
     veg     => veg__mem 
     pheno   => pheno__mem  
     soil    => soil__mem  
+    sb      => sb__mem  
     model   => Get_model(tile%owner_model_id)
     lctlib  => model%lctlib(tile%lcts%lib_id)
  
-    !  bi-directional pointer, though, bi-directionality is not necessary here
-    vegsoil  => tile%vegsoil
-
     !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
     !! 
     !! same for write_output_flux
@@ -585,7 +586,7 @@ CONTAINS
        lun=lun+1
        write(lun,'(9F12.6)') time_d, soil%w_soil_root%ptr(1,1), soil%w_soil_root_pot%ptr(1,1),assimi%beta_soil_gs%ptr,assimi%beta_soil_ps%ptr
        lun=lun+1
-       write(lun,'(3F12.6)') time_d, vegsoil%pool%litter%nitrogen, vegsoil%ammonium
+       write(lun,'(3F12.6)') time_d, sb%pool%structural_litter%nitrogen%ptr(1,1,1), sb%nh4_solute%ptr(1,1,1)
        lun=lun+1
        DO icanopy=1, assimi_config%ncanopy
          write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fn_et_cl%ptr(icanopy,1), &
@@ -845,7 +846,7 @@ CONTAINS
   SUBROUTINE write_output_litterfall_soilphysics(tile, time_d, time_y, itile)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_slm_soil, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_config_class,      ONLY: veg_config
 
