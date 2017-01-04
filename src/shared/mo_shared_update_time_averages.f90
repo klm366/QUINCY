@@ -14,7 +14,7 @@ MODULE mo_shared_update_time_averages
 
   USE mo_kind,                    ONLY: wp, eps8
   USE mo_exception,               ONLY: message, finish
-  USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
+  USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
 
 

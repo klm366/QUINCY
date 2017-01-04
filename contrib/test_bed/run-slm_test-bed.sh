@@ -23,28 +23,28 @@ flag_calc_soil_energy="F"
 # canopy model options
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
-flag_optimal_Nfraction="T"
+flag_optimal_Nfraction="F"
 flag_heterogeneous_canopy="T"
 ncanopy=20                          # number of canopy layers
 canopy_layer_scheme="standard"      # canopy layer depth calculation options: standard fapar
 # plant growth model options
-flag_optimal_Nleaf="T"
-flag_optimal_allocation="T"
+flag_optimal_Nleaf="F"
+flag_optimal_allocation="F"
 # vegetation dynamics options
 flag_tile_veg_dynamics="T"          # does also set "start_bareground"
 # soil model options
 soil_depth=5.7                  # meter
 
 # simulation length & output
-simulation_length_number=100     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=10     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=100     # equal with or larger than output_start_first_day_year
+output_end_last_day_year=10     # equal with or larger than output_start_first_day_year
 
 # PFT 
-setPFTAutomatically="no"       # yes / no (in case of 'yes', the value of option plant_functional_type_id is ignored)
-plant_functional_type_id=4      # 1 - 8
+setPFTAutomatically="yes"       # yes / no (in case of 'yes', the value of option plant_functional_type_id is ignored)
+plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file

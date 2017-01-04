@@ -17,7 +17,7 @@ MODULE mo_atmland_interface
   USE mo_exception,               ONLY: finish
   USE mo_base_memory,             ONLY: t_slm_tile
   USE mo_jsb_var_class,           ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-  USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
+  USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
   ! Use of process memories
   dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory

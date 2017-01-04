@@ -30,7 +30,7 @@ singleSiteName=""         # one site name, e.g. "DE-Bay"; must be consistent wit
 
 ##>> special runs <<####################################################################################
 # (1) run Fluxnet simulations with data output at each timestep for the last complete forcing period (see land_model_driver.f90)
-specialFluxnetOutput="T"    # T (True) or F (False) [large caps]
+specialFluxnetOutput="F"    # T (True) or F (False) [large caps]
 
 # (2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # started by the cleanup_slm_hpc_run.sh using two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
@@ -66,11 +66,11 @@ flag_tile_veg_dynamics="T"          # does also set "start_bareground"
 soil_depth=5.7                  # meters
 
 # simulation length & output
-simulation_length_number=200     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
-output_start_first_day_year=190   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=200     # equal with or larger than output_start_first_day_year
+output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
+output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
 flag_litterfall_output="F"      # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
 
 # forcing input

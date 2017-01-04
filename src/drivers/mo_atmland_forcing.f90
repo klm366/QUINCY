@@ -79,7 +79,7 @@ CONTAINS
                                   &  )
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
+    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, grid  ! grid is used for calc_solar_angle()
     USE mo_base_config_class,     ONLY: base_config
     USE mo_soil_config_class,     ONLY: soil_config

@@ -23,6 +23,7 @@ MODULE mo_jsb_process_factory
 !!  USE mo_seb_memory_class,     ONLY: t_seb_memory
 !!  USE mo_turb_memory_class,    ONLY: t_turb_memory
   USE mo_soil_memory_class,    ONLY: t_soil_memory
+  USE mo_sb_memory_class,      ONLY: t_sb_memory
 !!  USE mo_hydro_memory_class,   ONLY: t_hydro_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_assimi_memory_class,  ONLY: t_assimi_memory
@@ -52,7 +53,7 @@ MODULE mo_jsb_process_factory
 !!  USE mo_hd_config_class,      ONLY: t_hd_config
 !!#endif
 
-  USE mo_jsb_process_class, ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
+  USE mo_jsb_process_class, ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
   IMPLICIT NONE
   PRIVATE
@@ -125,9 +126,10 @@ CONTAINS
     USE mo_land2atm_memory_class, ONLY: max_no_of_land2atm_vars => max_no_of_vars
 !!    USE mo_seb_memory_class,     ONLY: max_no_of_seb_vars => max_no_of_vars
 !!    USE mo_turb_memory_class,    ONLY: max_no_of_turb_vars => max_no_of_vars
-    USE mo_soil_memory_class,    ONLY: max_no_of_soil_vars      => max_no_of_vars, &
-                                       max_no_of_soil_structs   => max_no_of_structs, &    ! *slmjsb4
-                                       max_no_of_soil_n_structs => max_no_of_n_structs     ! *slmjsb4
+    USE mo_soil_memory_class,    ONLY: max_no_of_soil_vars      => max_no_of_vars
+    USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars        => max_no_of_vars, &
+                                       max_no_of_sb_structs     => max_no_of_structs, &    ! *slmjsb4
+                                       max_no_of_sb_n_structs   => max_no_of_n_structs     ! *slmjsb4
 !!    USE mo_hydro_memory_class,   ONLY: max_no_of_hydro_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars      => max_no_of_vars, &
                                        max_no_of_veg_structs   => max_no_of_structs, &    ! *slmjsb4
@@ -163,8 +165,11 @@ CONTAINS
     CASE (SOIL_)
       ALLOCATE(t_soil_memory::return_ptr)
       return_ptr%max_no_of_vars      = max_no_of_soil_vars
-      return_ptr%max_no_of_structs   = max_no_of_soil_structs        ! *slmjsb4
-      return_ptr%max_no_of_n_structs = max_no_of_soil_n_structs      ! *slmjsb4
+    CASE (SB_)
+      ALLOCATE(t_sb_memory::return_ptr)
+      return_ptr%max_no_of_vars      = max_no_of_sb_vars
+      return_ptr%max_no_of_structs   = max_no_of_sb_structs        ! *slmjsb4
+      return_ptr%max_no_of_n_structs = max_no_of_sb_n_structs      ! *slmjsb4
 !!    CASE (HYDRO_)
 !!      ALLOCATE(t_hydro_memory::return_ptr)
 !!      return_ptr%max_no_of_vars = max_no_of_hydro_vars
@@ -190,9 +195,9 @@ CONTAINS
     END SELECT
 
     ALLOCATE(return_ptr%vars(return_ptr%max_no_of_vars))
-    ! allocate TYPEs and nested TYPEs only for certain processes   ! *slmjsb4 (VEG_ & SOIL_)
+    ! allocate TYPEs and nested TYPEs only for certain processes   ! *slmjsb4 (VEG_ & SB_)
     SELECT CASE(iproc)
-    CASE (VEG_, SOIL_)
+    CASE (VEG_, SB_)
       ALLOCATE(return_ptr%structs(return_ptr%max_no_of_structs))      ! *slmjsb4
       ALLOCATE(return_ptr%n_structs(return_ptr%max_no_of_n_structs))  ! *slmjsb4
     END SELECT

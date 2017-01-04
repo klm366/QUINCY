@@ -249,7 +249,7 @@ CONTAINS
 
     ! select nlevel according to process id 
     SELECT CASE(struct%owner_proc_id)
-      CASE(5) ! soil
+      CASE(5, 12) ! soil, sb
         levels = ics
         levele = ice
       CASE(7, 9, 10) ! veg, rad, assimi
@@ -310,7 +310,7 @@ CONTAINS
 
     ! select nlevel according to process id 
     SELECT CASE(struct%owner_proc_id)
-      CASE(5) ! soil
+      CASE(5, 12) ! soil, sb
         nlevel = soil_config%nsoil_water
       CASE(7, 9, 10) ! veg, rad, assimi
         nlevel = assimi_config%ncanopy
@@ -471,7 +471,7 @@ CONTAINS
 
     ! select nlevel according to process id 
     SELECT CASE(mem%owner_proc_id)
-      CASE(5) ! soil
+      CASE(5, 12) ! soil, sb
         levels = ics
         levele = ice
       CASE(7, 9, 10) ! veg, rad, assimi
@@ -533,7 +533,7 @@ CONTAINS
 
     ! select nlevel according to process id 
     SELECT CASE(mem%owner_proc_id)
-      CASE(5) ! soil
+      CASE(5, 12) ! soil, sb
         nlevel = soil_config%nsoil_water
       CASE(7, 9, 10) ! veg, rad, assimi
         nlevel = assimi_config%ncanopy

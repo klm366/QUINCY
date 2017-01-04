@@ -1,0 +1,39 @@
+mo_sb_interface.o: \
+  mo_kind.o \
+  mo_exception.o
+
+mo_sb_constants.o: \
+  mo_kind.o
+
+mo_sb_memory_class.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_base_memory.o \
+  mo_jsb_class.o \
+  mo_jsb_memory_class.o \
+  mo_jsb_var_class.o \
+  mo_slm_varlist.o
+
+mo_sb_config_class.o: \
+  mo_kind.o \
+  mo_namelist.o \
+  mo_exception.o \
+  mo_io_units.o \
+  mo_jsb_config_class.o
+
+mo_sb_init.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_base_memory.o \
+  mo_jsb_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_sb_constants.o \
+  mo_sb_config_class.o \
+  mo_sb_memory_class.o
+
+mo_sb_util.o: \
+  mo_kind.o \
+  mo_exception.o
+
+
