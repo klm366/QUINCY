@@ -60,23 +60,33 @@ doc_template = """
 ]{\\usebox\\mybox}
 
 
+\\usepackage[toc,section=section]{glossaries}
+\\makeglossaries
+\\newglossaryentry{ex}{name={sample},description={an example}}
 
 \\begin{document}
 
 \\title{%(title)s}
 \\author{%(author)s, %(institute)s, %(department)s}
-\maketitle
+
+\\maketitle
+
+\\tableofcontents
+
 \\thispagestyle{empty}
 
 \\section{Benchmark description}
 %(abstract)s
 
-%(body)s
+This \\gls{ex} is a glossary reference. 
 
+%(body)s
 \\section{Summary}
 %(epilog)s
 
-\end{document}
+\\addcontentsline{toc}{section}{Glossary}
+\\printglossaries
+\\end{document}
 """
 section_template       = """\\section{%(section)s}"""
 subsection_template    = """\\subsection{%(subsection)s}"""
@@ -353,8 +363,10 @@ table below. You may find detailed information on each method following the appr
                 dss += "" if not "name" in ss_dict else \
                        "\\label{%s}\\hypertarget{%s}{}" % ( ss_dict [ 'name' ], ss_dict [ 'name' ] )
                 dss += subsection_template % { 'subsection' : ss_dict [ 'title' ].capitalize ()}
-                dss += ss_dict [ 'technical_teXed' ]
                 dss += teXify ( ss_dict [ 'abstract' ])
+                dss += """\\phantom \\\\\\medskip
+"""
+                dss += ss_dict [ 'technical_teXed' ]
                 
                 for can in self.experiments:
                     if not can.B4J_iscan: continue
@@ -509,9 +521,11 @@ table below. You may find detailed information on each method following the appr
         filename = self.bench_name + ".tex"
         with open ( filename, "w" ) as text_file:
             text_file.write ( page )
+        # args = ['pdflatex',
+        #         '-output-directory',
+        #         '%s'%tmp_path,
+        #         '%s'%filename]
         args = ['pdflatex',
-                '-output-directory',
-                '%s'%tmp_path,
                 '%s'%filename]
         
         self.logger.debug (  "subprocess pdflatex, args =" + log_message_newline +\
@@ -524,9 +538,31 @@ table below. You may find detailed information on each method following the appr
             except:
                 raise Exception ( "Subprocess call 'pdflatex' failed" )
 
+           # makeindex -l -s xtimeperiod.ist -o xtimeperiod.gls xtimeperiod.glo
+        args_makeindex = [ 'makeindex',
+                           '-l',
+                           '-s',
+                           '%s.ist' % self.bench_name,
+                           '-o',
+                           '%s.gls' % self.bench_name,
+                           '%s.glo' % self.bench_name ]
+
+        print os.getcwd()
+        print args_makeindex
+
+        try:
+            subprocess.check_call ( args_makeindex )
+        except:
+            raise Exception ( "Subprocess call 'makeindex' failed" )
+
+        try:
+            subprocess.check_call ( args )
+        except:
+            raise Exception ( "Subprocess call 'pdflatex after' failed" )
+
         pdf_filename = self.bench_name + '.pdf'
         try:
-            shutil.move ( os.path.join ( tmp_path, pdf_filename ),
+            shutil.move ( pdf_filename,
                           os.path.join ( self.report_path, pdf_filename ))
         except:
             raise Exception ( "Moving of report-pdf failed." )
