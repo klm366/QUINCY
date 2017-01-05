@@ -185,8 +185,11 @@ CONTAINS
     !!
     IF(veg_config%n_uptake_scheme /= 'prescribed') THEN
        sb%volatilisation_n%ptr = sb%net_mineralisation_n%ptr * floss_nmin * 1.e6_wp 
-       sb%nh4_solute%ptr = sb%nh4_solute%ptr + sb%net_mineralisation_n%ptr * (1._wp - floss_nmin) * dtime
-       sb%nh4_solute%ptr(:,1,:) = sb%nh4_solute%ptr(:,1,:) - veg%uptake_n%ptr / soil%soil_depth_l%ptr(:,1,:) * dtime/1.e6_wp
+       sb%nitrification%ptr = sb%net_mineralisation_n%ptr * (1._wp - floss_nmin) * fnit_nmin * 1.e6_wp 
+       sb%nh4_solute%ptr = sb%nh4_solute%ptr + sb%net_mineralisation_n%ptr * (1._wp - floss_nmin) * (1._wp - fnit_nmin) * dtime
+       sb%no3_solute%ptr = sb%no3_solute%ptr + sb%net_mineralisation_n%ptr * (1._wp - floss_nmin) * fnit_nmin * dtime
+       sb%nh4_solute%ptr(:,1,:) = sb%nh4_solute%ptr(:,1,:) - veg%uptake_nh4%ptr / soil%soil_depth_l%ptr(:,1,:) * dtime/1.e6_wp
+       sb%no3_solute%ptr(:,1,:) = sb%no3_solute%ptr(:,1,:) - veg%uptake_no3%ptr / soil%soil_depth_l%ptr(:,1,:) * dtime/1.e6_wp
     ENDIF
 
     IF(veg_config%p_uptake_scheme /= 'prescribed') THEN

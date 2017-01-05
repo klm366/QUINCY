@@ -209,9 +209,11 @@ MODULE mo_veg_memory_class
                                     npp                       , & !< net primary production (µmol CO2 m-2 s-1)
                                     npp_c13                   , & !< net primary production (µmol 13CO2 m-2 s-1)
                                     npp_c14                   , & !< net primary production (µmol 14CO2 m-2 s-1)
-                                    uptake_n                  , & !< N uptake from soil ( is that correct? )
-                                    uptake_n15                , & !< 15N uptake from soil ( is that correct? ) 
-                                    uptake_p                  , & !< P uptake from soil ( is that correct? )
+                                    uptake_nh4                , & !< NH4 uptake from soil (µmol N m-2 s-1) 
+                                    uptake_nh4_n15            , & !< 15NH4 uptake from soil (µmol N m-2 s-1)
+                                    uptake_no3                , & !< NO3 uptake from soil (µmol N m-2 s-1)
+                                    uptake_no3_n15            , & !< 15NO3 uptake from soil (µmol N m-2 s-1)
+                                    uptake_p                  , & !< P uptake from soil (µmol P m-2 s-1) 
                                     n_fixation                , & !< symbiontic N fixation (µmol N m-2 s-1)
                                     n_fixation_n15            , & !< symbiontic N fixation (µmol 15N m-2 s-1)
                                     recycling_leaf_n          , & !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
@@ -1509,10 +1511,16 @@ CONTAINS
       CALL slm_add_var(mem, 'npp_c14', mem%npp_c14, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'uptake_n', mem%uptake_n, &
+      CALL slm_add_var(mem, 'uptake_nh4', mem%uptake_nh4, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'uptake_n15', mem%uptake_n15, &
+      CALL slm_add_var(mem, 'uptake_nh4_n15', mem%uptake_nh4_n15, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'uptake_no3', mem%uptake_no3, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'uptake_no3_n15', mem%uptake_no3_n15, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'uptake_p', mem%uptake_p, &

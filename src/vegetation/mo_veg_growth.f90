@@ -266,7 +266,8 @@ CONTAINS
                             veg%growth_req_n%ptr                  , &
                             veg%falloc                            , &
                             veg%pool                              , &
-                            veg%uptake_n%ptr                      , & ! inout
+                            veg%uptake_nh4%ptr                    , & ! inout
+                            veg%uptake_no3%ptr                    , & ! inout
                             veg%n_fixation%ptr                    , &
                             veg%n_transform_respiration%ptr       , &
                             veg%n_fixation_respiration%ptr        , &
@@ -399,6 +400,7 @@ CONTAINS
     gn = unit_uptake_n_troot_mavg /(1._wp+fresp_growth+fresp_maint)
 
     IF(gn > eps8)THEN
+!@todo veg_growth:calc_uptake_costs: how to adjust this equation for the separated uptake of NH4 and NO3
         cost_n_uptake_root = gc / gn + (transform_cost_nh4+transform_cost_no3)/2.0_wp
     ELSE
         cost_n_uptake_root = 1000._wp ! an arbitrarily large value !
@@ -1059,7 +1061,7 @@ CONTAINS
              ENDIF
           ELSE 
 
- 	         !> 1.2b solving the allometric rations between leaf and root, leaf and sapwood and sapwood and coarse roots 
+             !> 1.2b solving the allometric rations between leaf and root, leaf and sapwood and sapwood and coarse roots 
              !! simulataneously with the height-to-diameter relationship 
              leaf_carbon_inc = MAX(( b_inc + leaf_carbon * dheight / leaf2wood_mass_ratio * & 
                             ( leaf_carbon / leaf2root_mass_ratio - b_inc - root_carbon ) + wood_carbon + root_carbon - & 
@@ -1215,7 +1217,8 @@ CONTAINS
                                 growth_req_n                  , &
                                 veg_falloc                    , &
                                 veg_pool                      , &
-                                uptake_n                      , &
+                                uptake_nh4                    , &
+                                uptake_no3                    , &
                                 n_fixation                    , &
                                 n_transform_respiration       , &
                                 n_fixation_respiration        , &
@@ -1249,7 +1252,8 @@ CONTAINS
                                                    growth_req_n                     !< moles N required for a unit of C growth under current allocation fractions
     TYPE(t_slm_struct_veg_pool),  INTENT(in)    :: veg_falloc                   , & !< fractional allocation to pools
                                                    veg_pool                         !< pools of the plant
-    REAL(wp),                     INTENT(inout) :: uptake_n                     , & !< N uptake from soil
+    REAL(wp),                     INTENT(inout) :: uptake_nh4                   , & !< NH4 uptake from soil
+                                                   uptake_no3                   , & !< NO3 uptake from soil
                                                    n_fixation                   , & !< symbiontic N fixation
                                                    n_transform_respiration      , & !< respiration associated with N transformation
                                                    n_fixation_respiration       , & !< respiration associated with N fixation
@@ -1293,16 +1297,17 @@ CONTAINS
 
     !> 1.5 Determine C use for N uptake
     IF(veg_config%n_uptake_scheme == 'optimal' .OR. veg_config%n_uptake_scheme == 'resistance') THEN
-      n_processing_respiration_pot = uptake_n * (transform_cost_nh4 + transform_cost_no3)/2.0_wp + & 
+      n_processing_respiration_pot = uptake_nh4 * transform_cost_nh4 + uptake_no3 * transform_cost_no3 + & 
                                      n_fixation * cost_n_fixation
       n_processing_respiration_act = MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon%ptr * 1.e6_wp, & 
                                           n_processing_respiration_pot)
        ! adjust N uptake to C expenditure
        IF(n_processing_respiration_pot > eps8 .AND. n_processing_respiration_pot > n_processing_respiration_act) THEN 
-          uptake_n    = uptake_n   * n_processing_respiration_act / n_processing_respiration_pot
+          uptake_nh4    = uptake_nh4  * n_processing_respiration_act / n_processing_respiration_pot
+          uptake_no3    = uptake_no3  * n_processing_respiration_act / n_processing_respiration_pot
           n_fixation  = n_fixation * n_processing_respiration_act / n_processing_respiration_pot
        ENDIF
-       n_transform_respiration  = uptake_n   * (transform_cost_nh4 + transform_cost_no3)/2.0_wp 
+       n_transform_respiration  = uptake_nh4 * transform_cost_nh4 + uptake_no3 * transform_cost_no3
        n_fixation_respiration   = n_fixation * cost_n_fixation
        n_processing_respiration = n_fixation_respiration + n_transform_respiration
     ENDIF

@@ -39,7 +39,8 @@ MODULE mo_shared_output
   REAL(wp), DIMENSION(ntile), SAVE :: gpp_C14_acc             
   REAL(wp), DIMENSION(ntile), SAVE :: growth_resp_C14_acc      
   REAL(wp), DIMENSION(ntile), SAVE :: maint_resp_C14_acc       
-  REAL(wp), DIMENSION(ntile), SAVE :: uptake_n_acc         
+  REAL(wp), DIMENSION(ntile), SAVE :: uptake_nh4_acc         
+  REAL(wp), DIMENSION(ntile), SAVE :: uptake_no3_acc         
   REAL(wp), DIMENSION(ntile), SAVE :: n_fixation_acc         
   REAL(wp), DIMENSION(ntile), SAVE :: n_loss_acc         
   REAL(wp), DIMENSION(ntile), SAVE :: recycling_n_acc     
@@ -88,7 +89,8 @@ CONTAINS
     gpp_C14_acc       = 0.0_wp
     growth_resp_C14_acc = 0.0_wp
     maint_resp_C14_acc = 0.0_wp
-    uptake_n_acc      = 0._wp   
+    uptake_nh4_acc      = 0._wp   
+    uptake_no3_acc      = 0._wp   
     recycling_n_acc  = 0._wp  
     res_use_n_acc     = 0._wp  
     n_fixation_acc    = 0._wp   
@@ -173,7 +175,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)') 'Time SoilMoisture SoilWaterPotential BetaSoilGS BetaSoilPS'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time LitterN LitterP MineralN MineralP'
+    WRITE(lun,'(a)') 'Time LitterN LitterP MineralNH4 MineralNO3 MineralP'
     lun=lun+1
     WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen'
     lun=lun+1
@@ -205,7 +207,7 @@ CONTAINS
     WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
                       'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time NUP Resorption_N ReserveUse NFixation Nloss'
+    WRITE(lun,'(a)') 'Time NUP-NH4 NUP-NO3 Resorption_N ReserveUse NFixation Nloss'
     lun=lun+1
     WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
     lun=lun+1
@@ -589,7 +591,7 @@ CONTAINS
        write(lun,'(9F12.6)') time_d, soil%w_soil_root%ptr(1,1), soil%w_soil_root_pot%ptr(1,1),assimi%beta_soil_gs%ptr,assimi%beta_soil_ps%ptr
        lun=lun+1
        write(lun,'(20F12.6)') time_d, sb%pool%structural_litter%nitrogen%ptr(1,1,1), sb%pool%structural_litter%phosphorus%ptr(1,1,1), & 
-                                     sb%nh4_solute%ptr(1,1,1), sb%po4_solute%ptr(1,1,1)
+                                     sb%nh4_solute%ptr(1,1,1), sb%no3_solute%ptr(1,1,1), sb%po4_solute%ptr(1,1,1)
        lun=lun+1
        DO icanopy=1, assimi_config%ncanopy
          write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fn_et_cl%ptr(icanopy,1), &
@@ -755,7 +757,8 @@ CONTAINS
       gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + assimi%gross_assimilation_C14%ptr * dtime_one
       growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + veg%growth_respiration_c14%ptr * dtime_one
       maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + veg%maint_respiration_c14%ptr  * dtime_one
-      uptake_n_acc(itile)     = uptake_n_acc(itile)      + veg%uptake_n%ptr                * dtime_one
+      uptake_nh4_acc(itile)     = uptake_nh4_acc(itile)      + veg%uptake_nh4%ptr                * dtime_one
+      uptake_no3_acc(itile)     = uptake_no3_acc(itile)      + veg%uptake_no3%ptr                * dtime_one
       recycling_n_acc(itile) = recycling_n_acc(itile)  + ( veg%recycling_leaf_n%ptr + &
                                 veg%recycling_fine_root_n%ptr + veg%recycling_heart_wood_n%ptr ) * dtime_one *1000000._wp/dtime
       res_use_n_acc(itile)    = res_use_n_acc(itile)     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
@@ -796,8 +799,8 @@ CONTAINS
                               calc_delta_C14(growth_resp_acc(itile),growth_resp_C14_acc(itile),dC13rg), & 
                               calc_delta_C14(maint_resp_acc(itile),maint_resp_C14_acc(itile),dC13rm)
         lun=lun+1
-        write(lun,'(20F12.6)') time_d, uptake_n_acc(itile), recycling_n_acc(itile), res_use_n_acc(itile), &
-                              n_fixation_acc(itile), n_loss_acc(itile)
+        write(lun,'(20F12.6)') time_d, uptake_nh4_acc(itile), uptake_no3_acc(itile), recycling_n_acc(itile), & 
+                               res_use_n_acc(itile), n_fixation_acc(itile), n_loss_acc(itile)
         lun=lun+1
         write(lun,'(4F12.6)') time_d, uptake_p_acc(itile), recycling_p_acc(itile), res_use_p_acc(itile)
         lun=lun+1
@@ -824,7 +827,8 @@ CONTAINS
         gpp_C14_acc(itile)       = 0.0_wp
         growth_resp_C14_acc(itile) = 0.0_wp
         maint_resp_C14_acc(itile) = 0.0_wp
-        uptake_n_acc(itile)      = 0.0_wp
+        uptake_nh4_acc(itile)     = 0.0_wp
+        uptake_no3_acc(itile)     = 0.0_wp
         recycling_n_acc(itile)   = 0.0_wp
         res_use_n_acc(itile)     = 0.0_wp
         n_fixation_acc(itile)    = 0.0_wp

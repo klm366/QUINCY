@@ -56,6 +56,7 @@ CONTAINS
     REAL(wp) :: dcost                                     ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
     REAL(wp) :: n_demand                                  ! N demand of plants (mu mol N /m2 / s) 
     REAL(wp) :: f_nacq_bnf,f_nacq_nup                     ! fraction of N uptake as BFN or Nuptake
+    REAL(wp) :: scal
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegsoil_bgc'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
@@ -104,17 +105,22 @@ CONTAINS
       !!
       CASE ("prescribed")
          ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
-         veg%uptake_n%ptr = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf - & 
+         veg%uptake_nh4%ptr = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf - & 
                                            veg%pool%labile%nitrogen%ptr, 0.0_wp) * 1.e6_wp / dtime
 
       !> 2.1.2 Case 2. Calculate inorganic N uptake according to Michaelis-Mnten Kinetics  
       !!
       CASE ("standard","optimal","resistance")
          ! OCN's MM Kinetics
-         veg%uptake_n%ptr = lctlib%vmax_uptake_n * &
+         veg%uptake_nh4%ptr = lctlib%vmax_uptake_n * &
                  veg%demand_uptake_n_tuptake_mavg%ptr * & 
                  sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + & 
                    1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) )) * & 
+                 veg%pool%fine_root%carbon%ptr
+         veg%uptake_no3%ptr = lctlib%vmax_uptake_n * &
+                 veg%demand_uptake_n_tuptake_mavg%ptr * & 
+                 sb%no3_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + & 
+                   1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) )) * & 
                  veg%pool%fine_root%carbon%ptr
 
     ENDSELECT
@@ -127,7 +133,7 @@ CONTAINS
       CASE ("prescribed")
          ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
          veg%uptake_p%ptr = MAX(veg%pool%labile%nitrogen%ptr / lctlib%np_leaf + & 
-                                              veg%uptake_n%ptr * dtime / 1.e6 - &
+                                              veg%uptake_nh4%ptr * dtime / 1.e6 - &
                                               veg%pool%labile%phosphorus%ptr, 0.0_wp) * 1.e6_wp / dtime
 
       !> 2.2 Case 2. Calculate inorganic P uptake according to Michaelis-Mnten Kinetics  
@@ -166,26 +172,36 @@ CONTAINS
       !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
       CASE ("resistance")
          ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
+!SZ: why is n-demand defined on a static leaf C:N and not the actual growth requirement for N?
          n_demand = veg%demand_uptake_n_tuptake_mavg%ptr / lctlib%cn_leaf * veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
+!@todo veg_soil_bgc: adjust to current ratio of NH4/NO3 uptake
          f_nacq_bnf = (veg%cost_n_uptake_root%ptr - (transform_cost_nh4+transform_cost_no3)/2.0_wp) / &
                       (veg%cost_n_uptake_root%ptr+veg%cost_n_fixation_tuptake_mavg%ptr)
          f_nacq_nup = 1.0_wp - f_nacq_bnf
   
          veg%n_fixation%ptr = f_nacq_bnf * n_demand 
-         veg%uptake_n%ptr   = MIN(f_nacq_nup * n_demand, veg%uptake_n%ptr)
+!@todo veg_soil_bgc: should probably not be equal across NH4 and NO3?
+         IF(veg%uptake_nh4%ptr + veg%uptake_no3%ptr > eps8 .AND. & 
+            f_nacq_nup * n_demand < veg%uptake_nh4%ptr + veg%uptake_no3%ptr ) THEN
+               scal = (f_nacq_nup * n_demand) / (veg%uptake_nh4%ptr + veg%uptake_no3%ptr)
+               veg%uptake_nh4%ptr = veg%uptake_nh4%ptr * scal
+               veg%uptake_no3%ptr = veg%uptake_no3%ptr * scal 
+         ENDIF
 
     ENDSELECT 
 
     !> 3.0 Calculate potential and actual N uptake per unit fine root carbon
     !!
     veg%unit_uptake_n_pot%ptr = lctlib%vmax_uptake_n * &
-                                sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + &
-                                1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1)))
+                                (sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + &
+                                 1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1))) + &
+                                 sb%no3_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + &
+                                 1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1))))
     veg%unit_uptake_p_pot%ptr = lctlib%vmax_uptake_p * &
                                 sb%po4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_p_aff1 + &
                                 1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) ))
     IF(veg%pool%fine_root%carbon%ptr > eps8) THEN
-      veg%unit_uptake_n_act%ptr = veg%uptake_n%ptr / veg%pool%fine_root%carbon%ptr
+      veg%unit_uptake_n_act%ptr = (veg%uptake_nh4%ptr+veg%uptake_no3%ptr) / veg%pool%fine_root%carbon%ptr
       veg%unit_uptake_p_act%ptr = veg%uptake_p%ptr / veg%pool%fine_root%carbon%ptr
     ELSE
       veg%unit_uptake_n_act%ptr = veg%unit_uptake_n_pot%ptr * veg%demand_uptake_n_tuptake_mavg%ptr

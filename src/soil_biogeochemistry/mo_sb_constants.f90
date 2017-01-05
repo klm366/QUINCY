@@ -16,7 +16,8 @@ MODULE mo_sb_constants
 
   REAL(wp), SAVE :: & 
       tau_litter, &        !< soil litter pool turnover time (years)
-      floss_nmin           !< fractional loss of N per unit N mineralisation (1/year) 
+      floss_nmin, &        !< fractional loss of N per unit N mineralisation 
+      fnit_nmin            !< fractional nitrification per unit N mineralisation 
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_constants'
 
@@ -34,6 +35,7 @@ CONTAINS
 
       tau_litter                  = 5.0_wp  ! years
       floss_nmin                  = 0.05_wp
+      fnit_nmin                   = 0.1_wp
 
   END SUBROUTINE init_sb_constants
 

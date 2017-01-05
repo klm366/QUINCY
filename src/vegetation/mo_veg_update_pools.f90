@@ -99,9 +99,12 @@ CONTAINS
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
-       veg%growth%labile%nitrogen%ptr   = veg%growth%labile%nitrogen%ptr   + ( veg%uptake_n%ptr + veg%n_fixation%ptr)       * dtime / 1000000.0_wp
-       veg%growth%labile%nitrogen15%ptr = veg%growth%labile%nitrogen15%ptr + ( veg%uptake_n15%ptr + veg%n_fixation_n15%ptr) * dtime / 1000000.0_wp
-       veg%growth%labile%phosphorus%ptr = veg%growth%labile%phosphorus%ptr +   veg%uptake_p%ptr                         * dtime / 1000000.0_wp
+       veg%growth%labile%nitrogen%ptr   = veg%growth%labile%nitrogen%ptr + & 
+          ( veg%uptake_nh4%ptr + veg%uptake_no3%ptr + veg%n_fixation%ptr) * dtime / 1000000.0_wp
+       veg%growth%labile%nitrogen15%ptr = veg%growth%labile%nitrogen15%ptr + & 
+          ( veg%uptake_nh4_n15%ptr + veg%uptake_no3_n15%ptr + veg%n_fixation_n15%ptr) * dtime / 1000000.0_wp
+       veg%growth%labile%phosphorus%ptr = veg%growth%labile%phosphorus%ptr + & 
+          veg%uptake_p%ptr * dtime / 1000000.0_wp
    
        !> 1.3 update labile pool and reserve 
        !! 

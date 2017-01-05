@@ -75,8 +75,10 @@ CONTAINS
     CALL veg%npp%init(flux_zero)                           !< net primary production (µmol CO2 m-2 s-1)
     CALL veg%npp_c13%init(flux_zero)                       !< net primary production (µmol 13CO2 m-2 s-1)
     CALL veg%npp_c14%init(flux_zero)                       !< net primary production (µmol 14CO2 m-2 s-1)
-    CALL veg%uptake_n%init(flux_zero)                      !< ??
-    CALL veg%uptake_n15%init(flux_zero)                    !< ??
+    CALL veg%uptake_nh4%init(flux_zero)                    !< NH4 uptake (µmol N m-2 s-1) 
+    CALL veg%uptake_nh4_n15%init(flux_zero)                !< 15NH4 uptake (µmol N m-2 s-1)
+    CALL veg%uptake_no3%init(flux_zero)                    !< NO3 uptake (µmol N m-2 s-1)
+    CALL veg%uptake_no3_n15%init(flux_zero)                !< 15NO3 uptake (µmol N m-2 s-1)
     CALL veg%n_fixation%init(flux_zero)                    !< ??
     CALL veg%n_fixation_n15%init(flux_zero)                !< ??
     CALL veg%uptake_p%init(flux_zero)                      !< ??
