@@ -41,6 +41,7 @@ MODULE mo_shared_output
   REAL(wp), DIMENSION(ntile), SAVE :: maint_resp_C14_acc       
   REAL(wp), DIMENSION(ntile), SAVE :: uptake_n_acc         
   REAL(wp), DIMENSION(ntile), SAVE :: n_fixation_acc         
+  REAL(wp), DIMENSION(ntile), SAVE :: n_loss_acc         
   REAL(wp), DIMENSION(ntile), SAVE :: recycling_n_acc     
   REAL(wp), DIMENSION(ntile), SAVE :: res_use_n_acc        
   REAL(wp), DIMENSION(ntile), SAVE :: uptake_p_acc         
@@ -90,7 +91,8 @@ CONTAINS
     uptake_n_acc      = 0._wp   
     recycling_n_acc  = 0._wp  
     res_use_n_acc     = 0._wp  
-    n_fixation_acc      = 0._wp   
+    n_fixation_acc    = 0._wp   
+    n_loss_acc        = 0._wp   
     uptake_p_acc      = 0._wp
     recycling_p_acc  = 0._wp  
     res_use_p_acc     = 0._wp   
@@ -203,7 +205,7 @@ CONTAINS
     WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
                       'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time NUP Resorption_N ReserveUse NFixation'
+    WRITE(lun,'(a)') 'Time NUP Resorption_N ReserveUse NFixation Nloss'
     lun=lun+1
     WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
     lun=lun+1
@@ -665,6 +667,7 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
 
     IMPLICIT NONE
@@ -685,10 +688,12 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     TYPE(t_assimi_memory), POINTER   :: assimi      ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory), POINTER      :: rad         ! local pointer to rad__mem for SLM usability
     TYPE(t_soil_memory), POINTER     :: soil        ! local pointer to soil__mem for SLM usability
+    TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
     REAL(wp), POINTER                :: ga 
     REAL(wp), POINTER                :: swpar_srf_down
     REAL(wp), POINTER                :: albedo
@@ -702,11 +707,13 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SB_)
 
     assimi  => assimi__mem 
     veg     => veg__mem 
     rad     => rad__mem
     soil    => soil__mem
+    sb      => sb__mem
     ga                => atm2land__mem%ga%ptr
     swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
     albedo            => land2atm__mem%albedo%ptr
@@ -753,6 +760,7 @@ CONTAINS
                                 veg%recycling_fine_root_n%ptr + veg%recycling_heart_wood_n%ptr ) * dtime_one *1000000._wp/dtime
       res_use_n_acc(itile)    = res_use_n_acc(itile)     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
       n_fixation_acc(itile)   = n_fixation_acc(itile)    + veg%n_fixation%ptr              * dtime_one 
+      n_loss_acc(itile)       = n_loss_acc(itile)        + sb%volatilisation_n%ptr(1,1,1)  * dtime_one 
       uptake_p_acc(itile)     = uptake_p_acc(itile)      + veg%uptake_p%ptr                * dtime_one
       recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( veg%recycling_leaf_p%ptr + & 
                                 veg%recycling_fine_root_p%ptr + veg%recycling_heart_wood_p%ptr ) * dtime_one *1000000._wp/dtime
@@ -788,8 +796,8 @@ CONTAINS
                               calc_delta_C14(growth_resp_acc(itile),growth_resp_C14_acc(itile),dC13rg), & 
                               calc_delta_C14(maint_resp_acc(itile),maint_resp_C14_acc(itile),dC13rm)
         lun=lun+1
-        write(lun,'(5F12.6)') time_d, uptake_n_acc(itile), recycling_n_acc(itile), res_use_n_acc(itile), &
-                              n_fixation_acc(itile)
+        write(lun,'(20F12.6)') time_d, uptake_n_acc(itile), recycling_n_acc(itile), res_use_n_acc(itile), &
+                              n_fixation_acc(itile), n_loss_acc(itile)
         lun=lun+1
         write(lun,'(4F12.6)') time_d, uptake_p_acc(itile), recycling_p_acc(itile), res_use_p_acc(itile)
         lun=lun+1
@@ -820,6 +828,7 @@ CONTAINS
         recycling_n_acc(itile)   = 0.0_wp
         res_use_n_acc(itile)     = 0.0_wp
         n_fixation_acc(itile)    = 0.0_wp
+        n_loss_acc(itile)        = 0.0_wp
         uptake_p_acc(itile)      = 0.0_wp
         recycling_p_acc(itile)   = 0.0_wp
         res_use_p_acc(itile)     = 0.0_wp

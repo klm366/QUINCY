@@ -20,6 +20,9 @@
 &SOIL_CTL
   ! tba
 /
+&SB_CTL
+  floss_nmin=NAN
+/
 &VEGETATION_CTL
   delta_n_fraction=NAN
   delta_n_leaf=NAN

@@ -37,6 +37,7 @@ mo_shared_set_parameters.o: \
   mo_jsb_io.o \
   mo_base_constants.o \
   mo_shared_constants.o \
+  mo_sb_constants.o \
   mo_veg_constants.o
 
 mo_shared_output.o: \
@@ -56,6 +57,8 @@ mo_shared_output.o: \
   mo_veg_constants.o \
   mo_veg_config_class.o \
   mo_pheno_memory_class.o \
+  mo_soil_memory_class.o \
+  mo_sb_memory_class.o \
   mo_rad_memory_class.o
 
 

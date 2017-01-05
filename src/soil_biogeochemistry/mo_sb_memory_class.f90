@@ -154,7 +154,8 @@ MODULE mo_sb_memory_class
                                     het_respiration_c14,    &  !< c14 heterotrophic respiration   [mol m-3 s-1]
                                     net_mineralisation_n,   &  !< net mineralisation of N    [mol m-3 s-1]
                                     net_mineralisation_n15, &  !< net mineralisation of N15  [mol m-3 s-1] 
-                                    net_mineralisation_p       !< net mineralisation of P  [mol m-3 s-1]
+                                    net_mineralisation_p,   &  !< net mineralisation of P  [mol m-3 s-1]
+                                    volatilisation_n           !< volatilisation of N  [µmol m-3 s-1]
     
 
 !    TYPE(t_slm_struct_sb_element) :: &   ! simple structure for elements: t_jsb_struct

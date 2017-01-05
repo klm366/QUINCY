@@ -43,6 +43,8 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: k_bnf                           !< half_saturating cost of the response of N fixation
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
+    ! SB_CTL
+    REAL(wp)           :: floss_nmin
 
   CONTAINS
     PROCEDURE :: read_param => read_parameter_list
@@ -88,6 +90,9 @@ CONTAINS
     REAL(wp)           :: k_bnf
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
+    ! SB_CTL
+    REAL(wp)           :: floss_nmin
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
 
     ! Namelist definition of section parameters
@@ -111,6 +116,9 @@ CONTAINS
         k_bnf                     , &
         f_resp_acclim             , &
         fmaint_rate_base
+
+    NAMELIST /sb_ctl/             &
+        floss_nmin
 
     ! variables for reading model-options from namelist
     ! 
@@ -138,6 +146,8 @@ CONTAINS
     k_bnf                       = missval
     f_resp_acclim               = missval
     fmaint_rate_base            = missval
+    ! SB_CTL
+    floss_nmin                  = missval
 
     ! read the namelist
     ! 
@@ -150,6 +160,11 @@ CONTAINS
     nml_handler = open_nml(TRIM(this%filename))
     nml_unit = position_nml('VEGETATION_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, vegetation_ctl)
+    CALL close_nml(nml_handler)
+    ! &SB_CTL
+    nml_handler = open_nml(TRIM(this%filename))
+    nml_unit = position_nml('SB_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, sb_ctl)
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
@@ -171,7 +186,10 @@ CONTAINS
     this%vmax_bnf                    = vmax_bnf
     this%k_bnf                       = k_bnf
     this%f_resp_acclim               = f_resp_acclim
-    this%fmaint_rate_base            = fmaint_rate_base
+    this%fmaint_rate_base            = fmaint_rate_base 
+    ! SB_CTL
+    this%floss_nmin                  = floss_nmin
+
   END SUBROUTINE Read_parameter_list
 
 
@@ -188,6 +206,7 @@ CONTAINS
     !USE mo_rad_constants
     USE mo_shared_constants
     !USE mo_soil_constants
+    USE mo_sb_constants
     USE mo_veg_constants
 
 
@@ -227,6 +246,9 @@ CONTAINS
                                                                                     (molar_mass_C/molar_Mass_N)
     IF (ABS(this%f_resp_acclim        - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
     IF (ABS(this%fmaint_rate_base     - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
+
+    ! SB_CTL
+    IF (ABS(this%floss_nmin           - missval) > eps8)  floss_nmin            = this%floss_nmin
 
   END SUBROUTINE set_parameter_values_with_list_values
 
