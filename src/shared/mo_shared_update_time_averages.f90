@@ -405,6 +405,8 @@ CONTAINS
     !> 1.6 time-scale of plant allocation calculation (veg process)
     !!
     veg%npp_talloc_mavg%ptr                  = calc_mavg(veg%npp_talloc_mavg%ptr, veg%npp%ptr, &
+                                                     mavg_period_talloc, do_calc=pheno%growing_season%ptr)
+    veg%n_fixation_talloc_mavg%ptr           = calc_mavg(veg%n_fixation_talloc_mavg%ptr, veg%n_fixation%ptr, &
                                                       mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%unit_npp_talloc_mavg%ptr             = calc_mavg(veg%unit_npp_talloc_mavg%ptr, veg%unit_npp%ptr, &
                                                       mavg_period_talloc, do_calc=pheno%growing_season%ptr)

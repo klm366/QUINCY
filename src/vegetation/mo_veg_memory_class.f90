@@ -304,6 +304,7 @@ MODULE mo_veg_memory_class
     ! 1.6 memory of conditions for photosynthesis for the optimisation of biomass allocation fractions
     TYPE(t_jsb_var_real1d)          :: &   
                                     npp_talloc_mavg                , &  !< NPP (µmol m-2 s-1) (averaging time-scale: tau_allocation)
+                                    n_fixation_talloc_mavg         , &  !< N fixation averaged at the allocation timescale
                                     transpiration_talloc_mavg      , &  !< average transpiration at allocation time-scale
                                     unit_npp_talloc_mavg           , &  !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
                                     unit_transpiration_talloc_mavg , &  !< rate of tranpiration change per unit LAI change?
@@ -1713,7 +1714,10 @@ CONTAINS
             initval_r=1.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'npp_talloc_mavg', mem%npp_talloc_mavg, &
-            initval_r=0.0_wp) ! initvalue
+           initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'n_fixation_talloc_mavg', mem%n_fixation_talloc_mavg, &
+           initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'transpiration_talloc_mavg', mem%transpiration_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue

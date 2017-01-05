@@ -189,6 +189,7 @@ CONTAINS
                         veg%unit_npp_talloc_mavg%ptr          , &
                         veg%transpiration_talloc_mavg%ptr     , &
                         veg%unit_transpiration_talloc_mavg%ptr, &
+                        veg%n_fixation_talloc_mavg%ptr        , &
                         veg%unit_uptake_n_act_talloc_mavg%ptr , &
                         veg%unit_uptake_p_act_talloc_mavg%ptr , &
                         veg%dphi_talloc_mavg%ptr              , &
@@ -531,6 +532,7 @@ CONTAINS
                                             unit_npp                      , &
                                             transpiration                 , &
                                             unit_transpiration            , &
+                                            n_fixation                    , &
                                             unit_uptake_n                 , &
                                             unit_uptake_p                 , &
                                             dphi                          , &
@@ -566,7 +568,8 @@ CONTAINS
     REAL(wp), INTENT(in)  :: npp                          !< current average NPP (µmol C m-2 s-1)
     REAL(wp), INTENT(in)  :: unit_npp                     !< increase in NPP for unit increase in leaf mass (µmol C m-2 s-1 mol-1 leaf C)
     REAL(wp), INTENT(in)  :: transpiration                !< average transpiration flux (kg m-2 s-1)
-    REAL(wp), INTENT(in)  :: unit_transpiration           !< increase in transpiration with unit increase in leaf mass (kg m-1 s-2 mol-1 leaf C) 
+    REAL(wp), INTENT(in)  :: unit_transpiration           !< increase in transpiration with unit increase in leaf mass (kg m-1 s-2 mol-1 leaf C)
+    REAL(wp), INTENT(in)  :: n_fixation                   !< N fixation (µmol N m-2 s-1)
     REAL(wp), INTENT(in)  :: unit_uptake_n                !< N uptake per unit root mass (µmol N m-2 s-1 mol-1 root C)
     REAL(wp), INTENT(in)  :: unit_uptake_p                !< P uptake per unit root mass (µmol P m-2 s-1 mol-1 root C)
     REAL(wp), INTENT(in)  :: dphi                         !< leaf-soil water potential gradient (MPa) 
@@ -624,7 +627,7 @@ CONTAINS
 !BLARPP: would be good to give these variables real names
            hlp1 = (npp*mavg_period_tgrowth*one_day +&
                 (labile_carbon + reserve_carbon - &
-                (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp - n_fixation * growth_cn*mavg_period_tgrowth*one_day) / & 
                 (unit_uptake_n * growth_cn *mavg_period_tgrowth*one_day)
            hlp2 = (npp*mavg_period_tgrowth*one_day +&
                 (labile_carbon + reserve_carbon - &
@@ -676,7 +679,7 @@ CONTAINS
             !BLARPP: would be good to give these variables real names
             hlp1 = (npp*mavg_period_tgrowth*one_day +&
                  (labile_carbon + reserve_carbon - &
-                 (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                 (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp - n_fixation * growth_cn*mavg_period_tgrowth*one_day) / & 
                  (unit_uptake_n * growth_cn *mavg_period_tgrowth*one_day)
             hlp2 = (npp*mavg_period_tgrowth*one_day +&
                  (labile_carbon + reserve_carbon - &
