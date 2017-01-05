@@ -33,6 +33,7 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, t_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_soil_config_class,     ONLY: soil_config
     USE mo_sb_config_class,       ONLY: sb_config
     USE mo_sb_constants
 
@@ -52,7 +53,7 @@ CONTAINS
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SB_)
-    TYPE(t_sb_memory),    POINTER                :: sb         ! local pointer to soil__mem for SLM usability
+    TYPE(t_sb_memory),    POINTER                :: sb         ! local pointer to sb__mem for SLM usability
     dsl4jsb_Get_memory(SB_)
     sb      => sb__mem 
     model   => Get_model(tile%owner_model_id)
@@ -63,9 +64,9 @@ CONTAINS
 ! 
 ! 
 
-   sb%pool%structural_litter%nitrogen%ptr(:,1,:) = 0.5_wp
-   sb%nh4_solute%ptr(:,1,:) = 0.1_wp
-   sb%po4_solute%ptr(:,1,:) = 0.01_wp
+   sb%pool%structural_litter%nitrogen%ptr(:,1,:) = 0.5_wp / soil_config%dz_water(1)
+   sb%nh4_solute%ptr(:,1,:) = 0.1_wp / soil_config%dz_water(1)
+   sb%po4_solute%ptr(:,1,:) = 0.01_wp / soil_config%dz_water(1) 
 
 
   END SUBROUTINE sb_init

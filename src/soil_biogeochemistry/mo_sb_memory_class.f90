@@ -36,16 +36,16 @@ MODULE mo_sb_memory_class
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for elements in sb pool
   !! 
-  !! elements in soil are 3D (and would be 2D in veg)
+  !! elements in soil are 3D 
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_struct) :: t_slm_struct_sb_element
-    TYPE(t_jsb_var_real3d)    :: carbon       !< total carbon concentration of pool in mol / m2
-    TYPE(t_jsb_var_real3d)    :: nitrogen     !< totol nitrogen concentration of pool in mol / m2
-    TYPE(t_jsb_var_real3d)    :: phosphorus   !< phosphorus concentration of pool in mol / m2
-    TYPE(t_jsb_var_real3d)    :: carbon13     !< 13carbon concentration of pool in mol / m2
-    TYPE(t_jsb_var_real3d)    :: carbon14     !< 14carbon concentration of pool in pmol / m2
-    TYPE(t_jsb_var_real3d)    :: nitrogen15   !< 15nitrogen concentration of pool in mol / m2
+    TYPE(t_jsb_var_real3d)    :: carbon       !< total carbon concentration of pool [mol m-3]
+    TYPE(t_jsb_var_real3d)    :: nitrogen     !< totol nitrogen concentration of pool [mol m-3]
+    TYPE(t_jsb_var_real3d)    :: phosphorus   !< phosphorus concentration of pool [mol m-3]
+    TYPE(t_jsb_var_real3d)    :: carbon13     !< 13carbon concentration of pool [mol m-3]
+    TYPE(t_jsb_var_real3d)    :: carbon14     !< 14carbon concentration of pool [pmol m-3]
+    TYPE(t_jsb_var_real3d)    :: nitrogen15   !< 15nitrogen concentration of pool [mol m-3]
   CONTAINS
     PRIVATE
     !! operator overload
@@ -133,28 +133,28 @@ MODULE mo_sb_memory_class
 
 
     TYPE(t_jsb_var_real3d)          :: &
-                                    nh4_solute         , &  !< ammonium in soil solution
-                                    nh4_assoc          , &  !< minerally associated ammonium
-                                    no3_solute         , &  !< nitrate in soil solution
-                                    noy                , &  !< NO_y
-                                    n2o                , &  !< N2O
-                                    n2                 , &  !< N2
-                                    nh4_n15_solute     , &  !< N15-ammonium in soil solution
-                                    nh4_n15_assoc      , &  !< minerally associated N15-ammonium
-                                    no3_n15_solute     , &  !< N15-nitrate in soil solution
-                                    noy_n15            , &  !< N15-NO_y
-                                    n2o_n15            , &  !< N15-N2O
-                                    n2_n15             , &  !< N15-N2
-                                    po4_assoc          , &  !< phosphate in soil solution
-                                    po4_solute              !< minerally associated phosphate 
+                                    nh4_solute         , &  !< ammonium in soil solution [mol m-3]
+                                    nh4_assoc          , &  !< minerally associated ammonium [mol m-3]
+                                    no3_solute         , &  !< nitrate in soil solution [mol m-3]
+                                    noy                , &  !< NO_y [mol m-3]
+                                    n2o                , &  !< N2O [mol m-3]
+                                    n2                 , &  !< N2 [mol m-3]
+                                    nh4_n15_solute     , &  !< N15-ammonium in soil solution [mol m-3]
+                                    nh4_n15_assoc      , &  !< minerally associated N15-ammonium [mol m-3]
+                                    no3_n15_solute     , &  !< N15-nitrate in soil solution [mol m-3]
+                                    noy_n15            , &  !< N15-NO_y [mol m-3]
+                                    n2o_n15            , &  !< N15-N2O [mol m-3]
+                                    n2_n15             , &  !< N15-N2 [mol m-3]
+                                    po4_assoc          , &  !< phosphate in soil solution [mol m-3]
+                                    po4_solute              !< minerally associated phosphate  [mol m-3]
 
     TYPE(t_jsb_var_real3d)          :: &
-                                    het_respiration    ,    &  !< heterotrophic respiration
-                                    het_respiration_c13,    &  !< c13 heterotrophic respiration  
-                                    het_respiration_c14,    &  !< c14 heterotrophic respiration  
-                                    net_mineralisation_n,   &  !< net mineralisation of N   
-                                    net_mineralisation_n15, &  !< net mineralisation of N15 
-                                    net_mineralisation_p       !< net mineralisation of P 
+                                    het_respiration    ,    &  !< heterotrophic respiration  [mol m-3 s-1]
+                                    het_respiration_c13,    &  !< c13 heterotrophic respiration   [mol m-3 s-1]
+                                    het_respiration_c14,    &  !< c14 heterotrophic respiration   [mol m-3 s-1]
+                                    net_mineralisation_n,   &  !< net mineralisation of N    [mol m-3 s-1]
+                                    net_mineralisation_n15, &  !< net mineralisation of N15  [mol m-3 s-1] 
+                                    net_mineralisation_p       !< net mineralisation of P  [mol m-3 s-1]
     
 
 !    TYPE(t_slm_struct_sb_element) :: &   ! simple structure for elements: t_jsb_struct
