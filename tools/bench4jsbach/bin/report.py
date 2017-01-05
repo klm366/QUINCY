@@ -27,8 +27,14 @@ doc_template = """
 \
 \\usepackage{titling}
 \\usepackage{lipsum}
+
+
+\\usepackage{lmodern}
+
+
 \\renewcommand{\\familydefault}{\\sfdefault}
 \\newcommand{\graphicpath}[1]{%(graphicpath)s/#1}
+\\newcommand{\\ttbf}[1]{\\textnormal{\\ttfamily \\bfseries #1}}
 
 \\setlength{\parindent}{0pt}
 
@@ -60,9 +66,38 @@ doc_template = """
 ]{\\usebox\\mybox}
 
 
-\\usepackage[toc,section=section]{glossaries}
+\\usepackage[toc,section=section,style=super]{glossaries}
 \\makeglossaries
-\\newglossaryentry{ex}{name={sample},description={an example}}
+
+\\newglossaryentry{yearsummean}{name={\\ttbf{yearsummean}}, description={\\texttt{yearsummean}($V_{TX}$) is defined as
+\\begin{eqnarray*}
+  y_{X} & = & n_{y}^{-1}\\sum_{i=0}^{n_{d}-1} x_{iX},\\\\
+&& n_{d} \\textnormal{ number of days, }\\\\
+&& n_{y} \\textnormal{ number of years in period (consisting of whole years)}
+\\end{eqnarray*}}}
+
+\\newglossaryentry{ysm}{name={\\ttbf{ysm}}, description={\\emph{See} 
+\\gls{yearsummean}}}
+
+\\newglossaryentry{zonmean}{name={\\ttbf{zonmean}}, 
+description={\\texttt{zonmean}($V_{X}$) is defined as
+\\begin{eqnarray*}
+  y_{L} & = & n_{L}^{-1}\sum_{i=0}^{n_{L}-1} x_{iL},\\\\
+&& n_{L} \\textnormal{ number of points on latitude } L
+\\end{eqnarray*}}}
+
+\\newglossaryentry{zm}{name={\\ttbf{zm}}, description={\\emph{See} 
+\\gls{zonmean}}}
+
+\\newglossaryentry{fieldmean}{name={\\ttbf{fieldmean}}, description={\\texttt{fieldmean}($V_{TX}$) is defined as
+\\begin{eqnarray*}
+  y_{tX} & = & n_{X}^{-1}\sum_{i=0}^{n_{X}-1} x_{ti},\\\\
+&& n_{X} \\textnormal{ number of gridpoints of field } X
+\\end{eqnarray*}}}
+
+\\newglossaryentry{fm}{name={\\ttbf{fm}}, description={\\emph{See} 
+\\gls{fieldmean}}}
+
 
 \\begin{document}
 
@@ -78,14 +113,14 @@ doc_template = """
 \\section{Benchmark description}
 %(abstract)s
 
-This \\gls{ex} is a glossary reference. 
-
 %(body)s
+
 \\section{Summary}
 %(epilog)s
 
 \\addcontentsline{toc}{section}{Glossary}
 \\printglossaries
+
 \\end{document}
 """
 section_template       = """\\section{%(section)s}"""
