@@ -131,10 +131,6 @@ MODULE mo_veg_constants
       ! minimum fraction of allocation going to fruit (flowers etc.)
       k1_fruit_alloc            !< minimum fraction of allocation going to fruit (flowers etc.)
 
-  ! soil pools  (may be moved to mo_soil_constants later ?)
-  REAL(wp), SAVE :: & 
-      tau_litter        !< soil litter pool turnover time (years)
-
   ! parameters for changes in canopy N fractions
   REAL(wp), SAVE :: &     
       ! maximum change in photosynthetic N fractions
@@ -243,9 +239,6 @@ CONTAINS
 
   ! moved here from mo_assimi_constants
       tau_nutrient_recycling      = 10._wp 
-
-  ! soil pools (may move to mo_soil_constants later, years) !
-      tau_litter                  = 5.0_wp 
 
   ! parameters for changes in canopy N fractions
 !@todo:should this be 1/20days?

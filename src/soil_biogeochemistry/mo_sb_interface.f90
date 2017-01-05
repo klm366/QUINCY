@@ -14,11 +14,11 @@ MODULE mo_sb_interface
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish
 
+  USE mo_sb_update_pools,     ONLY: update_sb_pools
 
   IMPLICIT NONE
-!  PRIVATE
-!  PUBLIC
-!  PUBLIC :: Register_soil_tasks
+  PRIVATE
+  PUBLIC :: update_sb_pools 
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_interface'
 

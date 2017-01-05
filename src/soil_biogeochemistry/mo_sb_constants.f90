@@ -14,9 +14,8 @@ MODULE mo_sb_constants
   IMPLICIT NONE
   PUBLIC
 
-
-!  REAL(wp), SAVE :: &
-!    parameter-here
+  REAL(wp), SAVE :: & 
+      tau_litter        !< soil litter pool turnover time (years)
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_constants'
 
@@ -32,6 +31,7 @@ CONTAINS
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_sb_constants'
 
+      tau_litter                  = 5.0_wp  ! years
 
 
   END SUBROUTINE init_sb_constants

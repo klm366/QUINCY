@@ -246,7 +246,7 @@ CONTAINS
       CALL update_growth          (tile)
       CALL update_veg_turnover    (tile)
       CALL update_veg_dynamics    (tile)
-      CALL update_vegsoil_pool    (tile)
+      CALL update_sb_pools        (tile)
       CALL update_soil_physics    (tile)
       CALL update_veg_pools       (tile)
 
@@ -288,7 +288,7 @@ CONTAINS
       CALL update_growth          (tile)
       CALL update_veg_turnover    (tile)
       CALL update_veg_dynamics    (tile)
-      CALL update_vegsoil_pool    (tile)
+      CALL update_sb_pools        (tile)
       CALL update_soil_physics    (tile)
       CALL update_veg_pools       (tile)
 

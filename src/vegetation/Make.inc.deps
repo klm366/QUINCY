@@ -48,6 +48,7 @@ mo_veg_soil.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
+  mo_sb_memory_class.o \
   mo_veg_memory_class.o \
   mo_veg_constants.o \
   mo_veg_config_class.o
