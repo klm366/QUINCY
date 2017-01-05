@@ -559,8 +559,8 @@ class MPIESM1_Experiment ( Experiment ):
 
         self.codesfiles_dict [ "is_tared" ] = self.from_archive
         
-        print "MPIESM1_Experiment attributes:"
-        print self.__dict__       
+        #print "MPIESM1_Experiment attributes:"
+        #print self.__dict__       
 
                                                                                                                 
 if __name__ == "__main__":
