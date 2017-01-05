@@ -34,7 +34,9 @@ MODULE mo_veg_config_class
                         output_end_last_day_year        !< output stop  at the last day of this year
     INTEGER          :: pft_id
     CHARACTER(15)    :: n_uptake_scheme            !< select scheme to simulate N uptake
-                                                   ! "standard|resistance|optimal"           
+                                                   ! "prescribed|standard|resistance|optimal"           
+    CHARACTER(15)    :: p_uptake_scheme            !< select scheme to simulate P uptake
+                                                   ! "prescribed|standard"           
     LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics + start from bareground
     LOGICAL          :: flag_optimal_Nleaf         !< optimise leaf C:N 
     LOGICAL          :: flag_optimal_allocation    !< optimise plant allocation
@@ -67,7 +69,8 @@ CONTAINS
     INTEGER       :: output_start_first_day_year   , &
                      output_end_last_day_year      , &
                      plant_functional_type_id
-    CHARACTER(15) :: n_uptake_scheme
+    CHARACTER(15) :: n_uptake_scheme, & 
+                     p_uptake_scheme
     LOGICAL       :: flag_tile_veg_dynamics
     LOGICAL       :: flag_optimal_Nleaf
     LOGICAL       :: flag_optimal_allocation
@@ -79,6 +82,7 @@ CONTAINS
       output_start_first_day_year,  &
       output_end_last_day_year,     &
       n_uptake_scheme,              & 
+      p_uptake_scheme,              & 
       plant_functional_type_id,     &
       flag_tile_veg_dynamics,       &
       flag_optimal_Nleaf,           &
@@ -95,6 +99,7 @@ CONTAINS
     output_start_first_day_year    = 1
     output_end_last_day_year       = 10
     n_uptake_scheme                = "standard"  ! prescribed standard resistance optimal
+    p_uptake_scheme                = "standard"  ! prescribed standard
     plant_functional_type_id       = 1
     flag_tile_veg_dynamics         = .FALSE.  ! .TRUE. .FALSE.
     flag_optimal_Nleaf             = .FALSE.  ! .TRUE. .FALSE.
@@ -116,12 +121,21 @@ CONTAINS
        CALL finish("mo_veg_config_class:init_veg_config",message_text) 
     ENDSELECT
 
+    ! check input for n_uptake scheme
+    SELECT CASE (TRIM(p_uptake_scheme))
+     CASE ("prescribed","standard")
+     CASE DEFAULT
+       WRITE(message_text,'(2a)') 'invalid p_uptake_scheme',p_uptake_scheme
+       CALL finish("mo_veg_config_class:init_veg_config",message_text) 
+    ENDSELECT
+
     ! pass values as read from file
     config%output_interval_pool          = output_interval_pool
     config%output_interval_flux          = output_interval_flux
     config%output_start_first_day_year   = output_start_first_day_year
     config%output_end_last_day_year      = output_end_last_day_year
     config%n_uptake_scheme               = TRIM(n_uptake_scheme)
+    config%p_uptake_scheme               = TRIM(p_uptake_scheme)
     config%pft_id                        = plant_functional_type_id
     config%flag_tile_veg_dynamics        = flag_tile_veg_dynamics  
     config%flag_optimal_Nleaf            = flag_optimal_Nleaf

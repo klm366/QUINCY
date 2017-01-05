@@ -171,7 +171,7 @@ CONTAINS
     lun=lun+1
     WRITE(lun,'(a)') 'Time SoilMoisture SoilWaterPotential BetaSoilGS BetaSoilPS'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time LitterN MineralN'
+    WRITE(lun,'(a)') 'Time LitterN LitterP MineralN MineralP'
     lun=lun+1
     WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen'
     lun=lun+1
@@ -312,7 +312,7 @@ CONTAINS
     fname = 'vegpoolH2O_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'vegpoolsoilN_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    fname = 'soilpoolNP_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
     fname = 'veg_canopy_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
@@ -586,7 +586,8 @@ CONTAINS
        lun=lun+1
        write(lun,'(9F12.6)') time_d, soil%w_soil_root%ptr(1,1), soil%w_soil_root_pot%ptr(1,1),assimi%beta_soil_gs%ptr,assimi%beta_soil_ps%ptr
        lun=lun+1
-       write(lun,'(3F12.6)') time_d, sb%pool%structural_litter%nitrogen%ptr(1,1,1), sb%nh4_solute%ptr(1,1,1)
+       write(lun,'(20F12.6)') time_d, sb%pool%structural_litter%nitrogen%ptr(1,1,1), sb%pool%structural_litter%phosphorus%ptr(1,1,1), & 
+                                     sb%nh4_solute%ptr(1,1,1), sb%po4_solute%ptr(1,1,1)
        lun=lun+1
        DO icanopy=1, assimi_config%ncanopy
          write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fn_et_cl%ptr(icanopy,1), &

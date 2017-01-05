@@ -9,6 +9,7 @@
   output_start_first_day_year=1
   output_end_last_day_year=30
   n_uptake_scheme="standard"
+  p_uptake_scheme="prescribed"
   plant_functional_type_id=5
 /
 &ASSIMILATION_CTL

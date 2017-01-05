@@ -93,22 +93,21 @@ CONTAINS
        veg%f_p_demand%ptr = 1.0_wp
     ENDIF
 
-    !> 2.0 inorganic N uptake (first guess)
+    !> 2.0 inorganic uptake (first guess)
     !!
+    !!
+
+    !> 2.1 Nitrogen uptake
     !!
     SELECT CASE (veg_config%n_uptake_scheme)
-      !> 2.1 Case 1  maintain prescribed C:N:P irrespective of nutrient uptake capacity == no nutrient limitation case 
+      !> 2.1.1 Case 1  maintain prescribed C:N irrespective of nutrient uptake capacity == no nutrient limitation case 
       !!
       CASE ("prescribed")
          ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
          veg%uptake_n%ptr = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf - & 
                                            veg%pool%labile%nitrogen%ptr, 0.0_wp) * 1.e6_wp / dtime
-         ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
-         veg%uptake_p%ptr = MAX(veg%pool%labile%nitrogen%ptr / lctlib%np_leaf + & 
-                                              veg%uptake_n%ptr * dtime / 1.e6 - &
-                                              veg%pool%labile%phosphorus%ptr, 0.0_wp) * 1.e6_wp / dtime
 
-      !> 2.2 Case 2. Calculate inorganic N uptake according to Michaelis-Mnten Kinetics  
+      !> 2.1.2 Case 2. Calculate inorganic N uptake according to Michaelis-Mnten Kinetics  
       !!
       CASE ("standard","optimal","resistance")
          ! OCN's MM Kinetics
@@ -117,6 +116,24 @@ CONTAINS
                  sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + & 
                    1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) )) * & 
                  veg%pool%fine_root%carbon%ptr
+
+    ENDSELECT
+
+    !> 2.2 inorganic P uptake 
+    !!
+    SELECT CASE (veg_config%p_uptake_scheme)
+      !> 2.1 Case 1  maintain prescribed N:P irrespective of nutrient uptake capacity == no nutrient limitation case 
+      !!
+      CASE ("prescribed")
+         ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
+         veg%uptake_p%ptr = MAX(veg%pool%labile%nitrogen%ptr / lctlib%np_leaf + & 
+                                              veg%uptake_n%ptr * dtime / 1.e6 - &
+                                              veg%pool%labile%phosphorus%ptr, 0.0_wp) * 1.e6_wp / dtime
+
+      !> 2.2 Case 2. Calculate inorganic P uptake according to Michaelis-Mnten Kinetics  
+      !!
+      CASE ("standard")
+         ! OCN's MM Kinetics
          veg%uptake_p%ptr = lctlib%vmax_uptake_p * & 
                  veg%demand_uptake_p_tuptake_mavg%ptr * & 
                  sb%po4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_p_aff1 + & 

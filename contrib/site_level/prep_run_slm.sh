@@ -48,6 +48,7 @@ paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
 n_uptake_scheme="standard"      # prescribed standard optimal resistance
+p_uptake_scheme="prescribed"    # prescribed standard 
 flag_calc_soil_moisture="T"
 flag_calc_soil_energy="F"
 # canopy model options
@@ -230,6 +231,7 @@ return 0
 validatesiteDataSet="f c"
 validateSlmModel="land plant soil"  # canopy
 validateNUptakeScheme="prescribed standard optimal resistance"
+validatePUptakeScheme="prescribed standard"
 validateCanopyLayerScheme="standard fapar"
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
@@ -312,6 +314,7 @@ validateUserConfigValues "$queue" "$validateQueue" "queue"
 validateUserConfigValues "$emailNotification" "$validateEmailNotification" "emailNotification"
 validateUserConfigValues "$specialFluxnetOutput" "$validateFlags" "specialFluxnetOutput"
 validateUserConfigValues "$n_uptake_scheme" "$validateNUptakeScheme" "n_uptake_scheme"
+validateUserConfigValues "$p_uptake_scheme" "$validatePUptakeScheme" "p_uptake_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$flag_calc_soil_moisture" "$validateFlags" "flag_calc_soil_moisture"
 validateUserConfigValues "$flag_calc_soil_energy" "$validateFlags" "flag_calc_soil_energy"
@@ -673,6 +676,7 @@ return 0                                                         # get return va
 
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue n_uptake_scheme "$n_uptake_scheme"
+changeNamelistValue p_uptake_scheme "$p_uptake_scheme"
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 if [ "$specialFluxnetOutput" == "T" ]

@@ -65,6 +65,7 @@ CONTAINS
 ! 
 
    sb%pool%structural_litter%nitrogen%ptr(:,1,:) = 0.5_wp / soil_config%dz_water(1)
+   sb%pool%structural_litter%phosphorus%ptr(:,1,:) = sb%pool%structural_litter%nitrogen%ptr(:,1,:) 
    sb%nh4_solute%ptr(:,1,:) = 0.1_wp / soil_config%dz_water(1)
    sb%po4_solute%ptr(:,1,:) = 0.01_wp / soil_config%dz_water(1) 
 

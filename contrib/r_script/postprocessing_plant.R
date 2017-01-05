@@ -30,6 +30,7 @@ for(ti in 1:tileNum)
   # message
   print(paste0(" tile ",ti,"/",tileNum))
   flist_pool = Sys.glob(paste0("vegpool*_tile",ti,"_",tstep_pool,"*.txt")) 
+  flist_pool = c(flist_pool,Sys.glob(paste0("soilpool*_tile",ti,"_",tstep_pool,"*.txt"))) 
   flist_pool = c(flist_pool,Sys.glob(paste0("veg_diagnostics*_tile",ti,"_",tstep_pool,"*.txt"))) 
 
   flist_flux = Sys.glob(paste0("vegflux*_tile",ti,"_",tstep_pool,"*.txt")) 

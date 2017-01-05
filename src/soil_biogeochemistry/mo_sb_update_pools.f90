@@ -183,15 +183,15 @@ CONTAINS
 
     !> 3 Update mineral pool
     !!
-    IF(veg_config%n_uptake_scheme=='prescribed') THEN
-       sb%nh4_solute%ptr(:,1,:) = 0.2_wp
-    ELSE
-       sb%nh4_solute%ptr = sb%nh4_solute%ptr + sb%net_mineralisation_n%ptr
+    IF(veg_config%n_uptake_scheme /= 'prescribed') THEN
+       sb%nh4_solute%ptr = sb%nh4_solute%ptr + sb%net_mineralisation_n%ptr * dtime
        sb%nh4_solute%ptr(:,1,:) = sb%nh4_solute%ptr(:,1,:) - veg%uptake_n%ptr / soil%soil_depth_l%ptr(:,1,:) * dtime/1.e6_wp
     ENDIF
 
-    !sb%po4_solute%ptr = sb%po4_solute%ptr + sb%net_mineralisation_p%ptr
-    !sb%po4_solute%ptr = sb%po4_solute%ptr - veg%uptake_p%ptr * dtime/1.e6_wp
+    IF(veg_config%p_uptake_scheme /= 'prescribed') THEN
+       sb%po4_solute%ptr = sb%po4_solute%ptr + sb%net_mineralisation_p%ptr * dtime
+       sb%po4_solute%ptr(:,1,:) = sb%po4_solute%ptr(:,1,:) - veg%uptake_p%ptr / soil%soil_depth_l%ptr(:,1,:) * dtime/1.e6_wp
+    ENDIF
 
     END SUBROUTINE update_sb_pools_simple
 
