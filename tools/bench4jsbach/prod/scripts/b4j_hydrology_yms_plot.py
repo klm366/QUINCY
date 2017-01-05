@@ -47,7 +47,7 @@ varname    = 'evapotranspiration'
 outpath    = kwargs [ 'E_yearsummean_plot' ]
 unit       = 'mm/year'
 unit_TeX   = unit
-title_TeX  = kwargs [ 'plot_title' ]
+title_TeX  = kwargs [ 'plot_title_E_yearsummean_plot' ]
 
 mapplot ( inpath, varname, outpath, unit_TeX, title_TeX )
 
@@ -56,7 +56,7 @@ varname    ='precip_acc'
 outpath    = kwargs [ 'P_yearsummean_plot' ]
 unit       = 'mm/year'
 unit_TeX   = unit
-title_TeX  = kwargs [ 'plot_title' ]
+title_TeX  = kwargs [ 'plot_title_P_yearsummean_plot' ]
 
 mapplot ( inpath, varname, outpath, unit_TeX, title_TeX )
 

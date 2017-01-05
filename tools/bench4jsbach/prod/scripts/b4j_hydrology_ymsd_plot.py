@@ -49,7 +49,7 @@ outpath    = kwargs [ 'E_yearsumdiff_plot' ]
 unit          = 'mm/year'
 unit_TeX   = unit
 #title_TeX  = 'Evapotranspiration diff $can - ref$'
-title_TeX  = kwargs [ 'plot_title' ]
+title_TeX  = kwargs [ 'plot_title_E_yearsumdiff_plot' ]
 
 mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = 0 )
 
@@ -59,7 +59,7 @@ outpath    = kwargs [ 'P_yearsumdiff_plot' ]
 unit       = 'mm/year'
 unit_TeX   = unit
 #title_TeX  = 'Precipitation diff $can - ref$'
-title_TeX  = kwargs [ 'plot_title' ]
+title_TeX  = kwargs [ 'plot_title_P_yearsumdiff_plot' ]
 
 mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = 0 )
 

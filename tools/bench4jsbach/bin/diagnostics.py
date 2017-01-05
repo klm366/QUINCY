@@ -252,30 +252,34 @@ class Diagnostics ( object ):
                                 'startdate'      : can.B4J_startyear,
                                 'enddate'        : can.B4J_endyear,
                                 'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
-                            arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
                         
-                        if 'plot_title' in p_dict:
-                            try:
-                                formats = [ f[0] for f in p_dict [ 'plot_title' ][ 0 ].split ( '%' )[1:]]
-                                args = p_dict [ 'plot_title' ][ 1:]
-                                if len ( formats ) != len ( args ):
-                                    print "ERROR reading plot title"
-                                title_args = []
-                                for a in args:
-                                    exp, mem = a.split ( '_' )
-                                    if exp=='can' and mem=='no':
-                                        title_args.append ( can.B4J_canno )
-                                    elif exp=='can' and mem=='name':
-                                        title_args.append ( can.B4J_name )
-                                    elif exp=='ref' and mem=='no':
-                                        title_args.append ( ref.B4J_refno )
-                                    elif exp=='ref' and mem=='name':
-                                        title_args.append ( ref.B4J_name )
-                                    else:
-                                        print "ERROR listing title args"
-                                arglist.append ( "plot_title:%s" % p_dict [ 'plot_title' ][ 0 ] % tuple ( title_args ))
-                            except:
-                                print "ERROR in plotting title."
+                            if "plot_title" in output_dict:
+                                try:
+                                    formats = [ f[0] for f in output_dict [ 'plot_title' ][ 0 ].split ( '%' )[1:]]
+                                    args = output_dict [ 'plot_title' ][ 1:]
+                                    if len ( formats ) != len ( args ):
+                                        print "ERROR reading plot title"
+                                    title_args = []
+                                    for a in args:
+                                        exp, mem = a.split ( '_' )
+                                        if exp=='can' and mem=='no':
+                                            title_args.append ( can.B4J_canno )
+                                        elif exp=='can' and mem=='name':
+                                            title_args.append ( can.B4J_name )
+                                        elif exp=='ref' and mem=='no':
+                                            title_args.append ( ref.B4J_refno )
+                                        elif exp=='ref' and mem=='name':
+                                            title_args.append ( ref.B4J_name )
+                                        else:
+                                            print "ERROR listing title args"
+                                    arglist.append ( "plot_title_%s:%s" % ( output_item,
+                                                                            output_dict [ 'plot_title' ][ 0 ] % \
+                                                                            tuple ( title_args )))
+                                except:
+                                    print "ERROR in plotting title."
+
+
+                            arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
 
                         cmd = ["python", executable ] +  arglist
                         subprocessing ( cmd, shell_arg = False, stderr_arg = None )
@@ -304,27 +308,31 @@ class Diagnostics ( object ):
                             'startdate'      : can.B4J_startyear,
                             'enddate'        : can.B4J_endyear,
                             'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
+                        
+                        if "plot_title" in output_dict:                      
+                            try:
+                                formats = [ f[0] for f in output_dict [ 'plot_title' ][ 0 ].split ( '%' )[1:]]
+                                args = output_dict [ 'plot_title' ][ 1:]
+                                if len ( formats ) != len ( args ):
+                                    print "ERROR reading plot title"
+                                title_args = []
+                                for a in args:
+                                    exp, mem = a.split ( '_' )
+                                    if exp=='can' and mem=='no':
+                                        title_args.append ( can.B4J_canno )
+                                    elif exp=='can' and mem=='name':
+                                        title_args.append ( can.B4J_name )
+                                    else:
+                                        print "ERROR listing title args"
+
+                                arglist.append ( "plot_title_%s:%s" % ( classification_str,
+                                                                        output_dict [ 'plot_title' ][ 0 ] % \
+                                                                        tuple ( title_args )))
+                            except:
+                                print "ERROR in plotting title."
+
                         arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
-                    if 'plot_title' in p_dict:
-                        try:
-                            formats = [ f[0] for f in p_dict [ 'plot_title' ][ 0 ].split ( '%' )[1:]]
-                            args = p_dict [ 'plot_title' ][ 1:]
-                            if len ( formats ) != len ( args ):
-                                print "ERROR reading plot title"
-                            title_args = []
-                            for a in args:
-                                exp, mem = a.split ( '_' )
-                                if exp=='can' and mem=='no':
-                                    title_args.append ( can.B4J_canno )
-                                elif exp=='can' and mem=='name':
-                                    title_args.append ( can.B4J_name )
-                                else:
-                                    print "ERROR listing title args"
-
-                            arglist.append ( "plot_title:%s" % p_dict [ 'plot_title' ][ 0 ] % tuple ( title_args ))
-                        except:
-                            print "ERROR in plotting title."
-
+                        
                     cmd = ["python", executable ] +  arglist
                     subprocessing ( cmd, shell_arg = False, stderr_arg = None )
 
@@ -354,6 +362,12 @@ class Diagnostics ( object ):
                             'startdate'      : can.B4J_startyear,
                             'enddate'        : can.B4J_endyear,
                             'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
+                        
+                        print "############## 1 ##############"
+                        print output_item
+                        print output_dict
+                        print "#############################"
+
                         arglist.append ( output_item + ":" + can.B4J_index [ output_item ])
 
                     cmd = ["python", executable ] +  arglist
@@ -389,6 +403,13 @@ class Diagnostics ( object ):
                             'startdate'      : can.B4J_startyear,
                             'enddate'        : can.B4J_endyear,
                             'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
+                        
+                        print "############# 2 ###############"
+                        print output_item
+                        print output_dict
+                        print "#############################"
+
+
                         arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
 
                     cmd = ["python", executable ] +  arglist

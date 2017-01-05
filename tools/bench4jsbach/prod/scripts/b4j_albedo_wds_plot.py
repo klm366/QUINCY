@@ -134,8 +134,8 @@ cb = f.colorbar ( x.im, cax = cax, orientation = "horizontal",
                   ticks = ticks_interleave,
                   format = '%.2e' )#ticker.FuncFormatter ( '%.2e' ))#'%.3f' )
 cb.ax.text ( 0.97, 2.5, r'$\frac{W}{m^{2}}$', size = 32 )
-if 'plot_title' in kwargs:
-    plt.suptitle ( kwargs [ 'plot_title' ], fontsize = 24 )
+if 'plot_title_albedo_wds_plot' in kwargs:
+    plt.suptitle ( kwargs [ 'plot_title_albedo_wds_plot' ], fontsize = 24 )
 plt.savefig ( kwargs [ 'albedo_wds_plot' ])
 plt.close ()
 
