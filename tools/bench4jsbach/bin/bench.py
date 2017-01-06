@@ -163,6 +163,7 @@ class Bench_Object ( Diagnostics, Report ):
             
         try:
             config = configobj.ConfigObj ( bench_configs_path,
+                                           interpolation=False,
                                            configspec=configspec )
         except ( configobj.ConfigObjError, IOError), e:
             print '\nCould not read "%s": %s' % ( bench_configs_path, e)

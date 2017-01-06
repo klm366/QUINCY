@@ -408,9 +408,13 @@ class Diagnostics ( object ):
                         print output_item
                         print output_dict
                         print "#############################"
+                        output_dict.main.interpolation = False
+                        if 'plot_title' in output_dict:
+                            arglist.append ( "plot_title_%s:" % ( classification_str ) + \
+                                             output_dict [ 'plot_title' ])
 
 
-                        arglist.append ( output_item + ":" + can.B4J_index [ classification_str ])
+                        arglist.append ( classification_str + ":" + can.B4J_index [ classification_str ])
 
                     cmd = ["python", executable ] +  arglist
                     subprocessing ( cmd, shell_arg = False, stderr_arg = None )

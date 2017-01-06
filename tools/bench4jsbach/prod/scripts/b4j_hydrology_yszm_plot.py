@@ -43,9 +43,12 @@ can_name       = kwargs [ "can_name" ]
 canno          = kwargs [ "canno" ]
 varname        = "evapotranspiration"
 unit           = "mm/year"
-suptitle       = "%s, candidate ${C_{%s}}$: %s" % ( varname.capitalize (), canno, can_name )
-subtitle_can   = "$yszm_{C_{%s}}$ and $ysfm_{C_{%s}}$" % ( canno, canno )
-subtitle_delta = "$ysdzm_{C_{%s}R}$ and $ysdfm_{C_{%s}R}$" % ( canno, canno)
+subtitle_can   = kwargs [ "plot_title_E_ysd-zonmean_plot" ] % { 'deltastr' : "",
+                                                                'expabr'   : "C_%s" % canno,
+                                                                'expl'     : "" }
+subtitle_delta = kwargs [ "plot_title_E_ysd-zonmean_plot" ] % { 'deltastr' : "\Delta ",
+                                                                'expabr'   : "C_%sR" % canno,
+                                                                'expl'     : "" }
 
 token          = "E_ysd-zonmean_ref"
 keylist        = [ k for k in kwargs.keys () if k.startswith ( token )]
@@ -54,12 +57,13 @@ legendlist     = []
 for k in keylist:
     refno = k.split ( token, 1 )[1][0]
     inpathlist.append ( kwargs [ k ])
-    legend = "$ysdzm_{C_{%s}R_{%s}}, ysdzm_{C_{%s}R_{%s}}$\n$R_{%s}$: %s" % \
-             ( canno, refno, canno, refno,
-               refno, kwargs [ "ref%s"  % refno ])
+    legend =  kwargs [ "plot_title_E_ysd-zonmean_plot" ] % { 'deltastr' : "\Delta ",
+                                                             'expabr': "C_%sR_%s" % ( canno, refno ),
+                                                             'expl'     : "\n$R_{%s}$: %s" % \
+                                                             ( refno,  kwargs [ "ref%s"  % refno ])}
     legendlist.append ( legend )
 
-zon_plot_wrapper ( varname, unit, can_name, canno, suptitle,
+zon_plot_wrapper ( varname, unit, can_name, canno, 
                    kwargs [ "E_ys-zonmean" ], subtitle_can,
                    inpathlist, legendlist, subtitle_delta,
                    kwargs [ "E_ysd-zonmean_plot" ] )
@@ -67,9 +71,12 @@ zon_plot_wrapper ( varname, unit, can_name, canno, suptitle,
 
 varname        = "precip_acc"
 unit           = "mm/year"
-suptitle       = "%s, candidate ${C_{%s}}$: %s" % ( varname.capitalize (), canno, can_name )
-subtitle_can   = "$yszm_{C_{%s}}$ and $ysfm_{C_{%s}}$" % ( canno, canno )
-subtitle_delta = "$ysdzm_{C_{%s}R}$ and $ysdfm_{C_{%s}R}$" % ( canno, canno)
+subtitle_can   = kwargs [ "plot_title_P_ysd-zonmean_plot" ] % { 'deltastr' : "",
+                                                                'expabr'   : "C_%s" % canno,
+                                                                'expl'     : "" }
+subtitle_delta = kwargs [ "plot_title_P_ysd-zonmean_plot" ] % { 'deltastr' : "\Delta ",
+                                                                'expabr'   : "C_%sR" % canno,
+                                                                'expl'     : "" }
 
 token          = "P_ysd-zonmean_ref"
 keylist        = [ k for k in kwargs.keys () if k.startswith ( token )]
@@ -78,12 +85,13 @@ legendlist     = []
 for k in keylist:
     refno = k.split ( token, 1 )[1][0]
     inpathlist.append ( kwargs [ k ])
-    legend = "$ysdzm_{C_{%s}R_{%s}}, ysdzm_{C_{%s}R_{%s}}$\n$R_{%s}$: %s" % \
-             ( canno, refno, canno, refno,
-               refno, kwargs [ "ref%s"  % refno ])
+    legend =  kwargs [ "plot_title_P_ysd-zonmean_plot" ] % { 'deltastr' : "\Delta ",
+                                                             'expabr': "C_%sR_%s" % ( canno, refno ),
+                                                             'expl'     : "\n$R_{%s}$: %s" % \
+                                                             ( refno,  kwargs [ "ref%s"  % refno ])}
     legendlist.append ( legend )
 
-zon_plot_wrapper ( varname, unit, can_name, canno, suptitle,
+zon_plot_wrapper ( varname, unit, can_name, canno, 
                    kwargs [ "P_ys-zonmean" ], subtitle_can,
                    inpathlist, legendlist, subtitle_delta,
                    kwargs [ "P_ysd-zonmean_plot" ] )

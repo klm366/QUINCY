@@ -7,7 +7,6 @@ from cdo import Cdo
 print "Starting %s" % os.path.realpath(__file__)
 
 
-
 #####
 ##### bench4jsbach library to environment path
 #####

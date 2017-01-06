@@ -149,13 +149,12 @@ def zon_plot ( varname, unit, title, inpathlist, legendlist,
     if isinstance ( art, list ) and lgd: art.append ( lgd )
 
 
-def zon_plot_wrapper ( varname, unit, can_name, canno, suptitle,
+def zon_plot_wrapper ( varname, unit, can_name, canno, 
                        input_can, subtitle_can,
                        input_delta, legend_delta, subtitle_delta,
                        outpath ):
 
     f = plt.figure ( figsize = ( 10, 15 ))
-    suptitle = f.suptitle ( suptitle, fontsize = 20, y = .96 )
     show_can = True
     supgrid = gridspec.GridSpec( 2 if show_can == True else 1, 1 ) 
     art = []
@@ -192,7 +191,7 @@ def zon_plot_wrapper ( varname, unit, can_name, canno, suptitle,
                art = art )
 
     plt.savefig ( outpath,
-                  bbox_extra_artists = ( art [ 0 ], suptitle, ) if art else None,
+                  bbox_extra_artists = ( art [ 0 ], ) if art else None,
                   bbox_inches = 'tight' if art else None  )
 
     plt.close () 
@@ -246,18 +245,18 @@ def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
                        input_can, subtitle_can,
                        input_delta, subtitle_delta, xlabel_delta,
                        outpath ):
-    print "in hist_plot_wrapper ()"
-    print varnames
-    print unit
-    print can_name
-    print canno
-    print suptitle
-    print input_can
-    print subtitle_can
-    print input_delta
-    print subtitle_delta
-    print xlabel_delta
-    print outpath
+    # print "in hist_plot_wrapper ()"
+    # print varnames
+    # print unit
+    # print can_name
+    # print canno
+    # print suptitle
+    # print input_can
+    # print subtitle_can
+    # print input_delta
+    # print subtitle_delta
+    # print xlabel_delta
+    # print outpath
 
     show_can = True
 
@@ -283,8 +282,8 @@ def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
     nc_fid.close ()
     accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
 
-    print "subtitle can in hist_plot_wrapper"
-    print subtitle_can
+    #print "subtitle can in hist_plot_wrapper"
+    #print subtitle_can
     hist_plot ( accum, unit, [ subtitle_can ], "Field values",
                 ax = ax,
                 legend = False )
@@ -309,20 +308,18 @@ def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
                                  axis = 1 )
         nc_fid.close ()
         accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
-        
-    #hist_plot ( accum, unit, xlabel_delta, subtitle_delta,
-    hist_plot ( accum, unit, xlabel_delta, "schwuppdi",
+
+    hist_plot ( accum, unit, xlabel_delta, "Difference to references",
                 ax = ax,
                 art = art,
                 ylabel = not show_can )
     
-    #plt.savefig ( "test.png",
     plt.savefig ( outpath,
                   bbox_extra_artists = ( art [ 0 ], suptitle, ) if art else None,
                   bbox_inches = 'tight' if art else None  )
 
     plt.close ()
-    print "file should be written."
+    #print "file should be written."
 
 def hist_plot_backup ( alldat, unit, index, title, outpath ):
 
