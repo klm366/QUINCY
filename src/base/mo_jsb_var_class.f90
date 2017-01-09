@@ -15,9 +15,6 @@ MODULE mo_jsb_var_class
 
   TYPE, ABSTRACT :: t_jsb_var
 !!$    INTEGER           :: type = REAL2D
-    CHARACTER(len=5) :: inout = 'IN'
-  CONTAINS
-    PROCEDURE :: Set_inout => Set_var_inout
   END TYPE t_jsb_var
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
@@ -63,33 +60,6 @@ CONTAINS
 !!$    END SELECT
 !!$
 !!$  END FUNCTION Create_jsb_var
-
-  SUBROUTINE Set_var_inout(this, attr)
-
-    USE mo_util, ONLY: toupper
-
-    CLASS(t_jsb_var), INTENT(inout) :: this
-    CHARACTER(len=*), INTENT(in), OPTIONAL  :: attr
-
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_var_inout'
-
-    IF (.NOT. PRESENT(attr)) THEN
-      this%inout = "OUT"
-      RETURN
-    END IF
-
-    SELECT CASE (toupper(TRIM(ADJUSTL(attr))))
-    CASE("OUT")
-      this%inout = "OUT"
-    CASE("IN")
-      this%inout = "IN"
-    CASE("INOUT")
-      this%inout = "INOUT"
-    CASE DEFAULT
-      CALL finish(TRIM(routine), "Invalid intent specified for jsb_var")
-    END SELECT
-
-  END SUBROUTINE Set_var_inout
 
 #endif
 END MODULE mo_jsb_var_class
