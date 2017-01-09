@@ -10,8 +10,6 @@
 MODULE mo_srf_interface
 #ifndef __NO_JSBACH__
 
-#include "dsl_jsbach.inc"
-
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message

@@ -10,8 +10,6 @@
 MODULE mo_veg_init
 #ifndef __NO_JSBACH__
 
-#include "dsl_jsbach.inc"
-
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
 

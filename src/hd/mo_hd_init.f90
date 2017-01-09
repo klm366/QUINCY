@@ -11,8 +11,6 @@ MODULE mo_hd_init
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-#include "dsl_jsbach.inc"
-
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish, message_text
   USE mo_jsb_model_class,     ONLY: t_jsb_model

@@ -7,8 +7,6 @@
 !! @par Revision History
 !! First version by Veronika Gayler (2013-04-20)
 !!
-#include "dsl_jsbach.inc"
-
 MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)

@@ -10,8 +10,6 @@
 MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
-#include "dsl_jsbach.inc"
-
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message_text, message, finish
   USE mo_util_string,        ONLY: int2string

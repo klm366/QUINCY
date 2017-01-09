@@ -10,8 +10,6 @@
 MODULE mo_atmland_interface
 #ifndef __NO_JSBACH__
 
-#include "dsl_jsbach.inc"
-
   USE mo_exception,      ONLY: finish
   USE mo_kind,           ONLY: wp
   USE mo_jsb_tile_class, ONLY: t_jsb_tile
