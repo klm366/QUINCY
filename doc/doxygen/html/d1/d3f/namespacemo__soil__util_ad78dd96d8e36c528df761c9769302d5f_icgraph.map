@@ -1,7 +1,0 @@
-<map id="mo_soil_util::soil_depth_to_layers_2d" name="mo_soil_util::soil_depth_to_layers_2d">
-<area shape="rect" id="node2" href="$d8/d6e/namespacemo__soil__init.html#acd283c148fd4faca32050c04a10218a3" title="Intialize soil process (after memory has been set up) " alt="" coords="206,21,349,47"/>
-<area shape="rect" id="node6" href="$d2/db5/namespacemo__veg__init.html#a1f3c0830f53331836f61d9ed195747ae" title="mo_veg_init::veg_init_ic" alt="" coords="196,71,359,98"/>
-<area shape="rect" id="node3" href="$d8/d8e/namespacemo__jsb__model__init.html#adfe552aef42349bce64eb6bbd05e01e7" title="mo_jsb_model_init::\linit_model_common" alt="" coords="407,39,545,80"/>
-<area shape="rect" id="node4" href="$d8/d8e/namespacemo__jsb__model__init.html#adca97e8b4accd7231a2461e78399ee71" title="mo_jsb_model_init::\linit_model_decomposition" alt="" coords="593,5,765,47"/>
-<area shape="rect" id="node5" href="$d8/d8e/namespacemo__jsb__model__init.html#abde13ff24f002945132bb153233d61ea" title="mo_jsb_model_init::\linit_model_patch" alt="" coords="610,71,749,112"/>
-</map>
