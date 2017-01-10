@@ -28,9 +28,7 @@ doc_template = """
 \\usepackage{titling}
 \\usepackage{lipsum}
 
-
 \\usepackage{lmodern}
-
 
 \\renewcommand{\\familydefault}{\\sfdefault}
 \\newcommand{\graphicpath}[1]{%(graphicpath)s/#1}
@@ -65,6 +63,9 @@ doc_template = """
   ypos=40
 ]{\\usebox\\mybox}
 
+
+\\usepackage{xspace}
+\\def\\b4j{Bench4JSBACH\\xspace}
 
 \\usepackage[toc,section=section,style=super]{glossaries}
 \\makeglossaries

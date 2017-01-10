@@ -33,7 +33,7 @@ if os.path.isdir ( bin_dir ):
 else:
     raise Exception ( "Directory %s with source files not found." % bin_dir )
 from util import print_item_or_list_rec
-from b4jplot import hist_plot_wrapper
+from b4jplot import hist_plot_wrapper, colors_hydrology
 
 
 #####
@@ -64,13 +64,18 @@ varnames = [  'evapotranspiration',
 unit = "mm/year"
 can_name = kwargs [ "can_name" ]
 canno = kwargs [ "canno" ]
-suptitle = "Hydrology mean year sums"
 input_can = kwargs [ "H_ysfm" ]
-subtitle_can = can_name
+title_templ = kwargs [ "plot_title_H_ysdfm_plot" ]
+subtitle_can = title_templ % { 'deltastr' : '',
+                               'expabr'   : 'C_%s' % canno,
+                               'expl'     : 'field values' }
+subtitle_delta = title_templ % { 'deltastr' : '\Delta ',
+                                 'expabr'   : 'C_{%s}R' % canno,
+                                 'expl'     : 'differences' }
 print "can_name"
 print can_name
 print subtitle_can
-#subtitle_delta = "Differences of meanyearsums to %s" % kwargs [ "can_name" ]
+print subtitle_delta
 outpath = kwargs [ "H_ysdfm_plot" ]
 
 filenametemplate = "H_ysdfm_%(refacronym)s" 
@@ -79,13 +84,11 @@ nchar            = 4
 reflist          = [ k for k in kwargs.keys () if k.startswith ( reftoken ) and len ( k ) == nchar ]
 input_delta      = []
 xlabel_delta     = []
-subtitle_delta   = []
 for ref in reflist:
     input_delta.append ( kwargs [ filenametemplate % { 'refacronym' : ref }])
-    subtitle_delta.append ( kwargs [ ref ])
-    xlabel_delta.append ( "$\Delta$ " + ref )
-
-hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
+    xlabel_delta.append ( "$R_{%s}$: %s" % ( ref.partition ( reftoken )[ 2 ],
+                                             kwargs [ ref ]))
+hist_plot_wrapper ( varnames, unit, can_name, canno,
                     input_can, subtitle_can,
                     input_delta, subtitle_delta, xlabel_delta,
                     outpath )

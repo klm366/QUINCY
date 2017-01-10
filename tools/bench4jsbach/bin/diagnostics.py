@@ -404,12 +404,8 @@ class Diagnostics ( object ):
                             'enddate'        : can.B4J_endyear,
                             'suffix'         : fielddict [ 'plotting' ][ 'suffix' ]}
                         
-                        print "############# 2 ###############"
-                        print output_item
-                        print output_dict
-                        print "#############################"
-                        output_dict.main.interpolation = False
                         if 'plot_title' in output_dict:
+                            output_dict.main.interpolation = False
                             arglist.append ( "plot_title_%s:" % ( classification_str ) + \
                                              output_dict [ 'plot_title' ])
 

@@ -241,29 +241,29 @@ def hist_plot ( alldat, unit, index, title,
         plt.close ()
 
 
-def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
+def hist_plot_wrapper ( varnames, unit, can_name, canno,
                        input_can, subtitle_can,
                        input_delta, subtitle_delta, xlabel_delta,
                        outpath ):
-    # print "in hist_plot_wrapper ()"
-    # print varnames
-    # print unit
-    # print can_name
-    # print canno
-    # print suptitle
-    # print input_can
-    # print subtitle_can
-    # print input_delta
-    # print subtitle_delta
-    # print xlabel_delta
-    # print outpath
+    print "in hist_plot_wrapper ()"
+    print varnames
+    print unit
+    print can_name
+    print canno
+    print input_can
+    print subtitle_can
+    print input_delta
+    print subtitle_delta
+    print xlabel_delta
+    print outpath
+
+    
 
     show_can = True
 
     ndeltas = len ( input_delta )
 
     f        = plt.figure ( figsize = ( 10, 6 ))
-    suptitle = f.suptitle ( suptitle, fontsize = 18, y = 1.1 )
     supgrid  = gridspec.GridSpec( 1, ndeltas if show_can == True else 1 ) 
     art      = []
 
@@ -281,10 +281,7 @@ def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
                                axis = 1 )
     nc_fid.close ()
     accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
-
-    #print "subtitle can in hist_plot_wrapper"
-    #print subtitle_can
-    hist_plot ( accum, unit, [ subtitle_can ], "Field values",
+    hist_plot ( accum, unit, [ ""], subtitle_can,
                 ax = ax,
                 legend = False )
     
@@ -309,59 +306,16 @@ def hist_plot_wrapper ( varnames, unit, can_name, canno, suptitle,
         nc_fid.close ()
         accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
 
-    hist_plot ( accum, unit, xlabel_delta, "Difference to references",
+    hist_plot ( accum, unit, xlabel_delta, subtitle_delta,
                 ax = ax,
                 art = art,
                 ylabel = not show_can )
     
     plt.savefig ( outpath,
-                  bbox_extra_artists = ( art [ 0 ], suptitle, ) if art else None,
+                  bbox_extra_artists = ( art [ 0 ], ) if art else None,
                   bbox_inches = 'tight' if art else None  )
 
     plt.close ()
-    #print "file should be written."
-
-def hist_plot_backup ( alldat, unit, index, title, outpath ):
-
-    print "what's up"
-    
-    darkbrown  = '#c6903f' 
-    lightbrown = '#e6cd92'
-    lightgreen = '#ceece8'
-    darkgreen  = '#6fc1b6'
-    
-    colorlist  = [ darkbrown, lightgreen, lightbrown, darkgreen ]
-
-    varname_E  = "evapotranspiration"
-    varname_P  = "precip_all"
-    varname_RD = "disch"
-    
-    print "hello 0"
-    df = DataFrame ( alldat, 
-                     columns = [ varname_E + " $E$", 
-                                 varname_P + " $P$", 
-                                 varname_RD  + " $RD$", 
-                                 "$\\sum P-E-RD$" ], 
-                     index = index )
-
-    ax = df.plot ( kind = 'bar', color = colorlist, rot = 0 )
-    plt.title ( title, y = 1.08 )
-    ax.xaxis.set_label_coords ( 1, -0.1 ) 
-    ax.yaxis.set_label_coords ( -0.2, 1 ) 
-    plt.ylabel ( "[ %s ]" % unit, rotation = 90 )
-    plt.grid ( 'on')
-    plt.axhline ( 0, color = 'k' )
-    lgd = plt.legend (numpoints = 1,  
-                      loc = 2,                  
-                      bbox_to_anchor=(1.05,1))
-    
-    print "hello 1"
-    plt.savefig ( outpath,
-                  dpi = 100, 
-                  bbox_extra_artists = ( lgd, ), 
-                  bbox_inches = 'tight' )
-    plt.close ()
-    print "closing"
 
 
 def get_globalmean ( filepath, varname ):
