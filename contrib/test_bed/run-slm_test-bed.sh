@@ -19,8 +19,8 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 # plant-soil model options
 n_uptake_scheme="standard"      # prescribed standard optimal resistance
 p_uptake_scheme="prescribed"    # prescribed standard 
-flag_calc_soil_moisture="T"
-flag_calc_soil_energy="F"
+soil_moisture_scheme="bucket"   # prescribed bucket layer
+flag_calc_soil_energy="T"
 # canopy model options
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
@@ -53,7 +53,7 @@ siteDataSet="f"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of
 siteName="DE-Hai_2000-2006"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
                                 # e.g. FLUX: DE-Hai_2000-2006, AT-Neu_2002-2005, ES-ES1_1999-2004 & CRUN: THO_D15_1984-2013, CAL_1984-2013, UNI_1984-2013
 soil_awc_prescribe=300.0        # float !
-soil_theta_prescribe=100.0      # float !
+soil_theta_prescribe=1.0      # float !
 longitude=0.0                   # float !
 latitude=50.0                   # float !
 
@@ -200,6 +200,7 @@ validateSlmModel="land plant soil canopy test_canopy"
 validateNUptakeScheme="prescribed standard optimal resistance"
 validatePUptakeScheme="prescribed standard"
 validateCanopyLayerScheme="standard fapar"
+validateSoilMoistureScheme="prescribed bucket layer"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
@@ -212,7 +213,7 @@ validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$n_uptake_scheme" "$validateNUptakeScheme" "n_uptake_scheme"
 validateUserConfigValues "$p_uptake_scheme" "$validatePUptakeScheme" "p_uptake_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
-validateUserConfigValues "$flag_calc_soil_moisture" "$validateFlags" "flag_calc_soil_moisture"
+validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
 validateUserConfigValues "$flag_calc_soil_energy" "$validateFlags" "flag_calc_soil_energy"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
@@ -339,19 +340,14 @@ return 0                                                                        
  #changeNamelistValue simulation_length_number 300
  #changeNamelistValue output_interval_flux monthly    # quotation marks not needed
  #changeNamelistValue flag_calc_soil_moisture .FALSE.
- #changeNamelistValue soil_theta_prescribe 122.7
+ #changeNamelistValue soil_theta_prescribe 1.
 
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue n_uptake_scheme "$n_uptake_scheme" 
 changeNamelistValue p_uptake_scheme "$p_uptake_scheme" 
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
-if [ $flag_calc_soil_moisture == T ]
-  then
-    changeNamelistValue flag_calc_soil_moisture ".TRUE."
-  else
-    changeNamelistValue flag_calc_soil_moisture ".FALSE."
-fi
+changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme"
 if [ $flag_calc_soil_energy == T ]
   then
     changeNamelistValue flag_calc_soil_energy ".TRUE."

@@ -49,7 +49,7 @@ paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
 # plant-soil model options
 n_uptake_scheme="standard"      # prescribed standard optimal resistance
 p_uptake_scheme="prescribed"    # prescribed standard 
-flag_calc_soil_moisture="T"
+soil_moisture_scheme="bucket"   # prescribed bucket layer
 flag_calc_soil_energy="F"
 # canopy model options
 flag_t_resp_acclimation="T"
@@ -78,7 +78,7 @@ flag_litterfall_output="F"      # create additional output (veg%litterfall + som
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
 soil_awc_prescribe=300.0        # float !
 useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
-soil_theta_prescribe=100.0      # float !
+soil_theta_prescribe=1.0      # float !
 
 
 ##>> details about the HPC, if unsure stick with these defaults <<################################
@@ -233,6 +233,7 @@ validateSlmModel="land plant soil"  # canopy
 validateNUptakeScheme="prescribed standard optimal resistance"
 validatePUptakeScheme="prescribed standard"
 validateCanopyLayerScheme="standard fapar"
+validateSoilMoistureScheme="prescribed bucket layer"
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
 validateFlags="F T"
@@ -316,7 +317,7 @@ validateUserConfigValues "$specialFluxnetOutput" "$validateFlags" "specialFluxne
 validateUserConfigValues "$n_uptake_scheme" "$validateNUptakeScheme" "n_uptake_scheme"
 validateUserConfigValues "$p_uptake_scheme" "$validatePUptakeScheme" "p_uptake_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
-validateUserConfigValues "$flag_calc_soil_moisture" "$validateFlags" "flag_calc_soil_moisture"
+validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
 validateUserConfigValues "$flag_calc_soil_energy" "$validateFlags" "flag_calc_soil_energy"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
@@ -672,13 +673,14 @@ return 0                                                         # get return va
  #changeNamelistValue simulation_length_number 300
  #changeNamelistValue output_interval_flux monthly    # quotation marks not needed
  #changeNamelistValue flag_calc_soil_moisture .FALSE.
- #changeNamelistValue soil_theta_prescribe 122.7
+ #changeNamelistValue soil_theta_prescribe 1.
 
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue n_uptake_scheme "$n_uptake_scheme"
 changeNamelistValue p_uptake_scheme "$p_uptake_scheme"
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
+changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme" 
 if [ "$specialFluxnetOutput" == "T" ]
   then
     changeNamelistValue fluxnet_output .TRUE.
@@ -690,12 +692,6 @@ if [ $paramSensitivitySim == T ]
     changeNamelistValue set_parameter_values_from_file ".TRUE."
   else
     changeNamelistValue set_parameter_values_from_file ".FALSE."
-fi
-if [ $flag_calc_soil_moisture == T ]
-  then
-    changeNamelistValue flag_calc_soil_moisture ".TRUE."
-  else
-    changeNamelistValue flag_calc_soil_moisture ".FALSE."
 fi
 if [ $flag_calc_soil_energy == T ]
   then

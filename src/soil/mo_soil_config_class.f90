@@ -37,7 +37,7 @@ MODULE mo_soil_config_class
     REAL(wp)              :: wsn_capacity         !< Water holding capacity of ground snow reservoir (max snow depth) [m water equivalent]
     REAL(wp)              :: soil_awc_prescribe, &
                              soil_theta_prescribe
-    LOGICAL               :: flag_calc_soil_moisture    !< calculate simple water bucket model
+    CHARACTER(15)         :: soil_moisture_scheme       !< soil moisture "prescribed|bucke|layer"
     LOGICAL               :: flag_calc_soil_energy      !< calculate simple soil energy model 
     CONTAINS
       PROCEDURE :: Init => Init_soil_config
@@ -73,7 +73,7 @@ CONTAINS
                 soil_depth   
     REAL(wp) :: soil_awc_prescribe    , &
                 soil_theta_prescribe
-    LOGICAL  :: flag_calc_soil_moisture
+    CHARACTER(15)  :: soil_moisture_scheme
     LOGICAL  :: flag_calc_soil_energy
     INTEGER  :: i   ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_soil_config'
@@ -88,7 +88,7 @@ CONTAINS
                           soil_depth      , &
                           soil_awc_prescribe        , &
                           soil_theta_prescribe      , &
-                          flag_calc_soil_moisture   , &
+                          soil_moisture_scheme      , &
                           flag_calc_soil_energy
      
 
@@ -108,8 +108,8 @@ CONTAINS
     wsn_capacity                  = 2.E-4_wp
     soil_depth                    = 5.7_wp 
     soil_awc_prescribe            = 300.0_wp
-    soil_theta_prescribe          = 100.0_wp 
-    flag_calc_soil_moisture       = .FALSE.  ! .TRUE. .FALSE.
+    soil_theta_prescribe          = 1.0_wp 
+    soil_moisture_scheme          = "bucket" ! prescribed bucket layer 
     flag_calc_soil_energy         = .FALSE.  ! .TRUE. .FALSE.
 
     ! read the namelist
@@ -126,18 +126,31 @@ CONTAINS
     ALLOCATE(config%dz_energy(nsoil_energy))
     ALLOCATE(config%dz_water (nsoil_water ))
 
+    ! check initialisation of number of soil layers
+    IF (nsoil_water .LE. 0) CALL finish('Init_soil_config','Initialization with non positive number of soil layers')
+    ! *slmdev
+    IF (nsoil_water .NE. 5) CALL finish('Init_soil_config','Initialization with other than 5 soil layers not possible for now in SLM')
+
+    IF (soil_depth .LE. 0.0_wp) CALL finish('Init_soil_config','Initialization with non positive soil depth')
+
+    ! check input for soil_moisture_scheme 
+    SELECT CASE (TRIM(soil_moisture_scheme))
+     CASE ("prescribed","bucket")
+     CASE ("layer") 
+       WRITE(message_text,'(2a)') soil_moisture_scheme,'is not implemented yet, sorry....'
+       CALL finish("mo_soil_config_class:init_soil_config",message_text)
+     CASE DEFAULT
+       WRITE(message_text,'(2a)') 'invalid soil_moisture_scheme',soil_moisture_scheme
+       CALL finish("mo_soil_config_class:init_soil_config",message_text)
+    ENDSELECT
+
     ! pass values as read from file
     config%nsoil_energy              = nsoil_energy
     config%nsoil_water               = nsoil_water
     config%soil_awc_prescribe        = soil_awc_prescribe 
     config%soil_theta_prescribe      = soil_theta_prescribe 
-    config%flag_calc_soil_moisture   = flag_calc_soil_moisture
+    config%soil_moisture_scheme      = soil_moisture_scheme
     config%flag_calc_soil_energy     = flag_calc_soil_energy
-
-    IF (nsoil_water .LE. 0) CALL finish('Init_soil_config','Initialization with non positive number of soil layers')
-
-    ! *slmdev
-    IF (nsoil_water .NE. 5) CALL finish('Init_soil_config','Initialization with other than 5 soil layers not possible for now in SLM')
 
     config%soil_depth_energy(1)      = dz_energy(1)
     DO i=2,nsoil_energy
@@ -152,7 +165,6 @@ CONTAINS
     config%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)
     config%wsr_capacity              = wsr_capacity
     config%wsn_capacity              = wsn_capacity
-    IF (soil_depth .LE. 0.0_wp) CALL finish('Init_soil_config','Initialization with non positive soil depth')
     config%soil_depth                = soil_depth 
 
   END SUBROUTINE Init_soil_config

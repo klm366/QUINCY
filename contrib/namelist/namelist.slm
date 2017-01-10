@@ -33,7 +33,7 @@
 /
 &SOIL_CTL
   ! flags for the soil process
-  flag_calc_soil_moisture=.FALSE.
+  soil_moisture_scheme="bucket"
   flag_calc_soil_energy=.FALSE.
   ! soil process options
   ! number of soil layers [default is 5] [energy==water]
@@ -41,7 +41,7 @@
   nsoil_water=5
   soil_depth=5.7
   soil_awc_prescribe=300.0
-  soil_theta_prescribe=100.0
+  soil_theta_prescribe=1.0
 /
 &SOIL_BIOGEOCHEMISTRY_CTL
   ! tba

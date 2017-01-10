@@ -167,33 +167,46 @@ CONTAINS
        soil%t_soil%ptr(:,:,1) = t_air
     ENDIF
 
-   IF(soil_config%flag_calc_soil_moisture) THEN ! case of dynamic water uptake calculation 
+    SELECT CASE(soil_config%soil_moisture_scheme)
+       ! Case of bucket water scheme
+       CASE("bucket")
+          ! update soil moisture dS = rain - transpiration - evaporation, incl. conversion to [m]
+          soil%w_soil_root%ptr(1,1) = soil%w_soil_root%ptr(1,1) + (rain + snow &
+               - veg%transpiration%ptr - evaporation) / 1000._wp * dtime
+   
+          ! calculate drainage if any [mm/s]
+          WHERE(soil%w_soil_root%ptr > soil%w_soil_root_fc%ptr)
+            soil%drainage%ptr = ( soil%w_soil_root%ptr - soil%w_soil_root_fc%ptr ) * 1000._wp/ dtime
+          ELSEWHERE
+            soil%drainage%ptr = 0.0_wp
+          ENDWHERE
+          soil%w_soil_root%ptr = soil%w_soil_root%ptr - soil%drainage%ptr / 1000.0_wp * dtime
+          soil%w_soil_root%ptr = MAX(soil%w_soil_root%ptr,0.0_wp)
+   
+          ! scale to relative water availability (fraction of maximum)
+          soil%w_soil_root_theta%ptr = ( soil%w_soil_root%ptr - soil%w_soil_root_pwp%ptr ) / &
+                                       ( soil%w_soil_root_fc%ptr - soil%w_soil_root_pwp%ptr ) 
+          soil%w_soil_root_theta%ptr = MAX(soil%w_soil_root_theta%ptr,0.0_wp)
 
-       ! update soil moisture dS = rain - transpiration - evaporation, incl. conversion to [m]
-       soil%w_soil_root%ptr(1,1) = soil%w_soil_root%ptr(1,1) + (rain + snow &
-            - veg%transpiration%ptr - evaporation) / 1000._wp * dtime
+          ! now update soil moisture by layer using Theta for those layer that contain roots
+          ! note that for ease of computation this is not 100% mass conserving and not meant to be!
+          DO isoil = 1,soil_config%nsoil_water
+             WHERE(soil%root_fraction_l%ptr(:,isoil,:)>eps8)
+                soil%w_soil_sl%ptr(:,isoil,:) = soil%w_soil_pwp_sl%ptr(:,isoil,:) + & 
+                   soil%w_soil_root_theta%ptr * (soil%w_soil_fc_sl%ptr(:,isoil,:) - soil%w_soil_pwp_sl%ptr(:,isoil,:))
+             ENDWHERE
+          ENDDO
+    
+       ! Case of layered soil moisture scheme 
+       CASE("layer")
 
-       ! calculate drainage if any [mm/s]
-       WHERE(soil%w_soil_root%ptr > soil%w_soil_root_fc%ptr)
-         soil%drainage%ptr = ( soil%w_soil_root%ptr - soil%w_soil_root_fc%ptr ) * 1000._wp/ dtime
-       ELSEWHERE
-         soil%drainage%ptr = 0.0_wp
-       ENDWHERE
-       soil%w_soil_root%ptr = soil%w_soil_root%ptr - soil%drainage%ptr / 1000.0_wp * dtime
-       soil%w_soil_root%ptr = MAX(soil%w_soil_root%ptr,0.0_wp)
+    ENDSELECT
 
-       ! scale to relative water availability (fraction of maximum)
-       soil%w_soil_root_theta%ptr = ( soil%w_soil_root%ptr - soil%w_soil_root_pwp%ptr ) / &
-                                    ( soil%w_soil_root_fc%ptr - soil%w_soil_root_pwp%ptr ) 
-       soil%w_soil_root_theta%ptr = MAX(soil%w_soil_root_theta%ptr,0.0_wp)
-  
-   ENDIF 
+    ! calculate soil wtaer potential according to Campbell et al 1974 
+    soil%w_soil_root_pot%ptr = k_soil_phi1 * & 
+          ( soil%w_soil_root%ptr / soil%w_soil_root_fc%ptr )**k_soil_phi2
 
-   ! calculate soil wtaer potential according to Campbell et al 1974 
-   soil%w_soil_root_pot%ptr = k_soil_phi1 * & 
-         ( soil%w_soil_root%ptr / soil%w_soil_root_fc%ptr )**k_soil_phi2
-
-   veg%dphi%ptr = soil%w_soil_root_pot%ptr(1,1) - lctlib%phi_leaf_min - grav * rhoh2o * veg%height%ptr * 1.e-6_wp
+    veg%dphi%ptr = soil%w_soil_root_pot%ptr(1,1) - lctlib%phi_leaf_min - grav * rhoh2o * veg%height%ptr * 1.e-6_wp
 
   END SUBROUTINE update_soil_physics
 
