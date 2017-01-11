@@ -46,7 +46,8 @@ CONTAINS
 
   RECURSIVE SUBROUTINE srf_init_ic(tile)
 
-    USE mo_jsb_time, ONLY: get_time_interpolation_weights
+    USE mo_jsb_time,    ONLY: get_time_interpolation_weights
+    USE mo_jsb_control, ONLY: jsbach_runs_standalone
 
     TYPE(t_jsb_tile), INTENT(inout) :: tile
 
@@ -82,13 +83,17 @@ CONTAINS
          'Initializing srf memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(SRF)%bc_sso_filename))
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SRF)%bc_sso_filename), model%id)
 
-    ! Elevation ...
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='elevation',                &
-      & fill_array = dsl4jsb_var2D_ptr(SRF,elevation))
-    dsl4jsb_var2D_onDomain(SRF,elevation) = &
-      MERGE(dsl4jsb_var2D_onDomain(SRF,elevation), 0._wp, dsl4jsb_var2D_onDomain(SRF,elevation) >= 0._wp)
+    ! Elevation ... only needed for standalone JSBACH
+    IF (jsbach_runs_standalone()) THEN
+      ! TODO: elevation in bc_sso_filename only with ECHAM, need to implement this for ICON
+      ! But standalone model works only with ECHAM currently, anyway.
+      return_pointer => jsb_netcdf_read_2d(         &
+        & input_file,                               &
+        & variable_name='elevation',                &
+        & fill_array = dsl4jsb_var2D_ptr(SRF,elevation))
+      dsl4jsb_var2D_onDomain(SRF,elevation) = &
+        MERGE(dsl4jsb_var2D_onDomain(SRF,elevation), 0._wp, dsl4jsb_var2D_onDomain(SRF,elevation) >= 0._wp)
+    END IF
 
     ! Orography
     return_pointer => jsb_netcdf_read_2d(         &
