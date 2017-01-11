@@ -197,26 +197,21 @@ def zon_plot_wrapper ( varname, unit, can_name, canno,
     plt.close () 
 
 
-def hist_plot ( alldat, unit, index, title, 
-                outpath = None, 
-                ax = None,
-                art = None,
-                mono = False,
-                solitaire = False,
-                legend = True,
-                ylabel = True ):  
-
-    print ylabel
-    print "index"
-    print index
+def hist_plot (  colno, colcolors, colnames,
+                 alldat, unit, index, title, 
+                 outpath = None, 
+                 ax = None,
+                 art = None,
+                 mono = False,
+                 solitaire = False,
+                 legend = True,
+                 ylabel = True ):
+    
     df = DataFrame ( alldat, 
-                     columns = [ " $E$", 
-                                 " $P$", 
-                                 " $RD$", 
-                                 "$\\sum P-E-RD$" ], 
+                     columns = colnames, 
                      index = index )
 
-    ax_loc = df.plot ( ax = ax, kind = 'bar', color = colors_hydrology, rot = 0,
+    ax_loc = df.plot ( ax = ax, kind = 'bar', color = colcolors, rot = 0,
                        legend = legend )
     ax_loc.set_title ( title, y = 1.02 )
     ax_loc.xaxis.set_label_coords ( 1, -0.1 )
@@ -241,23 +236,12 @@ def hist_plot ( alldat, unit, index, title,
         plt.close ()
 
 
-def hist_plot_wrapper ( varnames, unit, can_name, canno,
+def hist_plot_wrapper ( colno, colcolors, colnames,
+                        varnames, unit, can_name, canno,
                        input_can, subtitle_can,
                        input_delta, subtitle_delta, xlabel_delta,
                        outpath ):
     print "in hist_plot_wrapper ()"
-    print varnames
-    print unit
-    print can_name
-    print canno
-    print input_can
-    print subtitle_can
-    print input_delta
-    print subtitle_delta
-    print xlabel_delta
-    print outpath
-
-    
 
     show_can = True
 
@@ -281,9 +265,10 @@ def hist_plot_wrapper ( varnames, unit, can_name, canno,
                                axis = 1 )
     nc_fid.close ()
     accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
-    hist_plot ( accum, unit, [ ""], subtitle_can,
-                ax = ax,
-                legend = False )
+    hist_plot (  colno, colcolors, colnames,
+                 accum, unit, [ ""], subtitle_can,
+                 ax = ax,
+                 legend = False )
     
 
                       
@@ -306,10 +291,11 @@ def hist_plot_wrapper ( varnames, unit, can_name, canno,
         nc_fid.close ()
         accum = np.concatenate (( accum, vardat ), axis = 0 ) if accum != [[]] else vardat
 
-    hist_plot ( accum, unit, xlabel_delta, subtitle_delta,
-                ax = ax,
-                art = art,
-                ylabel = not show_can )
+    hist_plot (  colno, colcolors, colnames,
+                 accum, unit, xlabel_delta, subtitle_delta,
+                 ax = ax,
+                 art = art,
+                 ylabel = not show_can )
     
     plt.savefig ( outpath,
                   bbox_extra_artists = ( art [ 0 ], ) if art else None,

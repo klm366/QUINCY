@@ -116,7 +116,7 @@ description={\\texttt{zonmean}($V_{X}$) is defined as
 
 %(body)s
 
-\\section{Summary}
+\\section{Results and Summary}
 %(epilog)s
 
 \\addcontentsline{toc}{section}{Glossary}
