@@ -80,7 +80,7 @@ filenametemplate = "H_ysdfm_%(refacronym)s"
 reftoken         = "ref"
 nchar            = 4
 reflist          = [ k for k in kwargs.keys () if k.startswith ( reftoken ) and len ( k ) == nchar ]
-reflist          = reflist.sort ()
+reflist.sort ()
 input_delta      = []
 xlabel_delta     = []
 for ref in reflist:
