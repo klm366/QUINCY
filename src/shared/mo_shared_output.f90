@@ -217,12 +217,12 @@ CONTAINS
   END SUBROUTINE init_output_writing_flux
 
   !-----------------------------------------------------------------------------------------------------
-  !> Litterfall and Soilphysics: write column headers of output files
+  !> Soil forcing files: write column headers of output files
   !! 
-  !! complete litterfall output (used as input for the soil model) \n
+  !! complete litterfall output (used as input for the stand alone soil model) \n
   !! and some soilphysics variables
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_output_litterfall_soilphysics(itile)
+  SUBROUTINE init_output_files_soil_forcing(itile)
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -234,7 +234,11 @@ CONTAINS
     !!
     !! lun of fluxes starts at a multiple of 100, plus 60
     lun = (100 * itile) + 60
-    WRITE(lun,'(a)') 'Time t_air soil_moisture'
+    WRITE(lun,'(4a)') 'Time stand alone RTM_decomposition*soil_layer RTM_mic_uptake*soil_layer RTM_sorption*soil_layer', &
+                      'RTM_desorption*soil_layer RTM_hsc*soil_layer', & 
+                      'RMM_decomposition*soil_layer RMM_mic_uptake*soil_layer RMM_sorption*soil_layer', &
+                      'RMM_desorption*soil_layer RMM_hsc*soil_layer' 
+
     lun=lun+1   
     WRITE(lun,'(10a)')  'Time ', &
                         'leafC leafN leafP leafC13 leafC14 leafN15 ' , &
@@ -246,7 +250,7 @@ CONTAINS
                         'reserveC reserveN reserveP reserveC13 reserveC14 reserveN15 ' , &
                         'fruitC fruitN fruitP fruitC13 fruitC14 fruitN15 ' , &
                         'seed_bedC seed_bedN seed_bedP seed_bedC13 seed_bedC14 seed_bedN15'
-  END SUBROUTINE init_output_litterfall_soilphysics
+  END SUBROUTINE init_output_files_soil_forcing
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -409,13 +413,13 @@ CONTAINS
   END SUBROUTINE open_flux_output_files
 
   !-----------------------------------------------------------------------------------------------------
-  !> Litterfall and Soilphysics: open files and write column headers
+  !> Soil forcing file: open files and write column headers
   !! 
   !! open output files, define file names for pools, write column header names
   !! 
   !! lun: start at 100 * itile + 60
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_litterfall_soilphysics_output_files(itile)
+  SUBROUTINE open_output_files_soil_forcing(itile)
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -467,9 +471,9 @@ CONTAINS
     !> 3.0 write column headers into output files
     !! 
     !! 
-    CALL init_output_litterfall_soilphysics(itile)
+    CALL init_output_files_soil_forcing(itile)
 
-  END SUBROUTINE open_litterfall_soilphysics_output_files
+  END SUBROUTINE open_output_files_soil_forcing
 
   !-----------------------------------------------------------------------------------------------------
   !> Pools: write data to files in a certain interval
@@ -853,11 +857,11 @@ CONTAINS
   END SUBROUTINE write_output_flux
 
   !-----------------------------------------------------------------------------------------------------
-  !> Litterfall and Soilphysics: write data to files at each timestep
-  !! 
+  !> Subroutine to generate the forcing file for the stand alone soil model from 
+  !!  litterfall data and SB rate modifiers 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_litterfall_soilphysics(tile, time_d, time_y, itile)
+  SUBROUTINE write_soil_forcing(tile, time_d, time_y, itile)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_model
@@ -865,10 +869,8 @@ CONTAINS
     USE mo_veg_config_class,      ONLY: veg_config
 
     ! Use of process memories
-    !dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-    !dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
-    dsl4jsb_Use_memory(SOIL_)        !  USE mo_soil_memory_class,      ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -882,23 +884,15 @@ CONTAINS
     INTEGER                               :: lun          ! logical unit number
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
-    !dsl4jsb_Def_memory(ASSIMI_)                           ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
-    dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
-    !dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
-    dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),      POINTER :: soil__mem
-    !TYPE(t_assimi_memory),        POINTER     :: assimi   ! local pointer to veg__mem for SLM usability
-    TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
-    !TYPE(t_pheno_memory),         POINTER     :: pheno    ! local pointer to pheno__mem for SLM usability
-    TYPE(t_soil_memory),      POINTER     :: soil ! local pointer to soil__mem for SLM usability
-    !dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Def_memory(VEG_)                        ! TYPE(t_veg_memory),     POINTER :: veg__mem
+    dsl4jsb_Def_memory(SB_)                         ! TYPE(t_sb_memory),      POINTER :: sb__mem
+    TYPE(t_veg_memory),           POINTER     :: veg   ! local pointer to veg__mem for SLM usability
+    TYPE(t_sb_memory),            POINTER     :: sb    ! local pointer to sb__mem for SLM usability
     dsl4jsb_Get_memory(VEG_)
-    !dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
-    dsl4jsb_Get_memory(SOIL_)                         ! soil__mem => soil_memory
+    dsl4jsb_Get_memory(SB_)                         
 
-    !assimi    => assimi__mem 
-    veg       => veg__mem 
-    !pheno     => pheno__mem  
-    soil  => soil__mem 
+    veg => veg__mem 
+    sb  => sb__mem 
     model     => Get_model(tile%owner_model_id)
     lctlib    => model%lctlib(tile%lcts%lib_id)
 
@@ -908,8 +902,9 @@ CONTAINS
     IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
 
       lun = 100 * itile + 60
-      write(lun,'(20F12.6)') time_d, &
-        soil%t_soil%ptr(1,:,1), soil%w_soil_root%ptr(1,1)
+      write(lun,'(50F12.6)') time_d, &
+        sb%rtm_depolymerisation%ptr(1,:,1),sb%rtm_mic_uptake%ptr(1,:,1),sb%rtm_sorption%ptr(1,:,1),sb%rtm_desorption%ptr(1,:,1),sb%rtm_hsc%ptr(1,:,1), &
+        sb%rmm_depolymerisation%ptr(1,:,1),sb%rmm_mic_uptake%ptr(1,:,1),sb%rmm_sorption%ptr(1,:,1),sb%rmm_desorption%ptr(1,:,1),sb%rmm_hsc%ptr(1,:,1)
 
       lun=lun+1
       write(lun,'(55F12.6)') time_d, &
@@ -942,7 +937,7 @@ CONTAINS
         veg%litterfall%seed_bed%carbon13%ptr, veg%litterfall%seed_bed%carbon14%ptr, veg%litterfall%seed_bed%nitrogen15%ptr
 
     END IF 
-  END SUBROUTINE write_output_litterfall_soilphysics
+  END SUBROUTINE write_soil_forcing 
 
   !-----------------------------------------------------------------------------------------------------
   !> Pools and Fluxes: close files
@@ -991,11 +986,11 @@ CONTAINS
   END SUBROUTINE close_output_files
 
   !-----------------------------------------------------------------------------------------------------
-  !> Litterfall and Soilphysics: close files
+  !> Soil forcing files: close files
   !! 
   !! at this point of the simulation all data has been written
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE close_output_files_litterfall_soilphysics(itile)
+  SUBROUTINE close_output_files_soil_forcing(itile)
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -1009,6 +1004,6 @@ CONTAINS
     lun=lun+1
     CLOSE(lun) ! 1
 
-  END SUBROUTINE close_output_files_litterfall_soilphysics
+  END SUBROUTINE close_output_files_soil_forcing
 
 END MODULE mo_shared_output

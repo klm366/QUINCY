@@ -85,7 +85,7 @@ CONTAINS
     USE mo_soil_config_class,     ONLY: soil_config
 
     ! Use of process memories
-    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
@@ -150,14 +150,14 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_forcing'
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
+    dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
-    TYPE(t_soil_memory),     POINTER :: soil        ! local pointer to soil__mem for SLM usability
+    TYPE(t_sb_memory),       POINTER :: sb          ! local pointer to sb__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
-    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(VEG_)
 
-    soil    => soil__mem 
+    sb    => sb__mem 
     veg     => veg__mem 
     model   => Get_model(tile%owner_model_id)
 
@@ -353,14 +353,22 @@ CONTAINS
 
     lun=10
     READ(lun,*, IOSTAT=stat) time_hlp, & 
-        soil%t_soil%ptr(ics:ice,1:nlevel_soil,iblk), soil%w_soil_root%ptr(ics:ice,iblk)  
+        sb%rtm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk),sb%rtm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk),& 
+        sb%rtm_sorption%ptr(ics:ice,1:nlevel_soil,iblk),sb%rtm_desorption%ptr(ics:ice,1:nlevel_soil,iblk), & 
+        sb%rtm_hsc%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk), & 
+        sb%rmm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_sorption%ptr(ics:ice,1:nlevel_soil,iblk), & 
+        sb%rmm_desorption%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_hsc%ptr(ics:ice,1:nlevel_soil,iblk)
 
     IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy
       REWIND(lun)
       CALL read_forcing_header(lun)
       READ(lun,*) time_hlp, &
-        soil%t_soil%ptr(ics:ice,1:nlevel_soil,iblk), soil%w_soil_root%ptr(ics:ice,iblk)  
+        sb%rtm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk),sb%rtm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk),& 
+        sb%rtm_sorption%ptr(ics:ice,1:nlevel_soil,iblk),sb%rtm_desorption%ptr(ics:ice,1:nlevel_soil,iblk), & 
+        sb%rtm_hsc%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk), & 
+        sb%rmm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_sorption%ptr(ics:ice,1:nlevel_soil,iblk), & 
+        sb%rmm_desorption%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_hsc%ptr(ics:ice,1:nlevel_soil,iblk)
     END IF
 
     END SELECT  ! land plant canopy vs soil

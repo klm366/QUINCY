@@ -33,7 +33,7 @@ MODULE mo_base_config_class
     CHARACTER(len=20) :: slm_model_name
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
-    LOGICAL           :: flag_litterfall_output             !< all litterfall pools + some soilphysics 
+    LOGICAL           :: flag_generate_soil_forcing    !< all litterfall pools + some soilphysics 
                                                             !! at period: veg_config%output_start_first_day_year .. output_end_last_day_year
     LOGICAL           :: set_parameter_values_from_file
     LOGICAL           :: flag_climate_forcing_one_year
@@ -70,7 +70,7 @@ CONTAINS
     CHARACTER(len=20) :: slm_model_name
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
-    LOGICAL           :: flag_litterfall_output                     !< all litterfall pools + some soilphysics
+    LOGICAL           :: flag_generate_soil_forcing                     !< all litterfall pools + some soilphysics
     LOGICAL           :: set_parameter_values_from_file
     LOGICAL           :: flag_climate_forcing_one_year
     ! GRID_CTL
@@ -85,7 +85,7 @@ CONTAINS
         slm_model_name                        , &
         fluxnet_output                        , &
         fluxnet_output_length                 , &
-        flag_litterfall_output                , &
+        flag_generate_soil_forcing            , &
         set_parameter_values_from_file        , &
         flag_climate_forcing_one_year
 
@@ -108,7 +108,7 @@ CONTAINS
     slm_model_name                          = 'land'
     fluxnet_output                          = .FALSE.     ! .TRUE. .FALSE.
     fluxnet_output_length                   = 2
-    flag_litterfall_output                  = .FALSE.     ! .TRUE. .FALSE.
+    flag_generate_soil_forcing              = .FALSE.     ! .TRUE. .FALSE.
     set_parameter_values_from_file          = .FALSE.     ! .TRUE. .FALSE.
     flag_climate_forcing_one_year           = .FALSE.     ! .TRUE. .FALSE.
     ! GRID_CTL
@@ -138,7 +138,7 @@ CONTAINS
     config%slm_model_name                         = slm_model_name
     config%fluxnet_output                         = fluxnet_output
     config%fluxnet_output_length                  = fluxnet_output_length
-    config%flag_litterfall_output                 = flag_litterfall_output
+    config%flag_generate_soil_forcing             = flag_generate_soil_forcing
     config%set_parameter_values_from_file         = set_parameter_values_from_file
     config%flag_climate_forcing_one_year          = flag_climate_forcing_one_year
     ! GRID_CTL

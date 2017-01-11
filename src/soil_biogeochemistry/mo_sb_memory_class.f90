@@ -148,6 +148,22 @@ MODULE mo_sb_memory_class
                                     po4_assoc          , &  !< phosphate in soil solution [mol m-3]
                                     po4_solute              !< minerally associated phosphate  [mol m-3]
 
+    ! temperature response functions
+    TYPE(t_jsb_var_real3d)          :: &
+                                    rtm_depolymerisation, & !< rate modifier for depolymerisation processes [--]
+                                    rtm_mic_uptake, &       !< rate modifier for microbial uptake [--] 
+                                    rtm_sorption, &         !< rate modifier for sorption [--]
+                                    rtm_desorption, &       !< rate modifier for desorption [--]
+                                    rtm_hsc                 !< rate modifier for half-saturation constants [--] 
+
+    ! moisture response functions
+    TYPE(t_jsb_var_real3d)          :: &
+                                    rmm_depolymerisation, & !< rate modifier for depolymerisation processes [--]
+                                    rmm_mic_uptake, &       !< rate modifier for microbial uptake [--] 
+                                    rmm_sorption, &         !< rate modifier for sorption [--]
+                                    rmm_desorption, &       !< rate modifier for desorption [--]
+                                    rmm_hsc                 !< rate modifier for half-saturation constants [--] 
+
     TYPE(t_jsb_var_real3d)          :: &
                                     het_respiration    ,    &  !< heterotrophic respiration  [mol m-3 s-1]
                                     het_respiration_c13,    &  !< c13 heterotrophic respiration   [mol m-3 s-1]
@@ -833,6 +849,36 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'po4_solute', mem%po4_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rtm_depolymerisation', mem%rtm_depolymerisation, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rtm_mic_uptake', mem%rtm_mic_uptake, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rtm_sorption', mem%rtm_sorption, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rtm_desorption', mem%rtm_desorption, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rtm_hsc', mem%rtm_hsc, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rmm_depolymerisation', mem%rmm_depolymerisation, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rmm_mic_uptake', mem%rmm_mic_uptake, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rmm_sorption', mem%rmm_sorption, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rmm_desorption', mem%rmm_desorption, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'rmm_hsc', mem%rmm_hsc, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'het_respiration', mem%het_respiration, &

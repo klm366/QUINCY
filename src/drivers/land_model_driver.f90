@@ -31,9 +31,9 @@ PROGRAM land_model_driver
   USE mo_shared_output,           ONLY: init_veg_output_variables, &
                                         open_pool_output_files, &
                                         open_flux_output_files, &
-                                        open_litterfall_soilphysics_output_files, &
+                                        open_output_files_soil_forcing, &
                                         close_output_files, &
-                                        close_output_files_litterfall_soilphysics
+                                        close_output_files_soil_forcing
 
 
 
@@ -191,15 +191,15 @@ PROGRAM land_model_driver
       CALL init_veg_output_variables     ! mo_shared_output : interval variables & flux accumulation per tile
       CALL open_pool_output_files(1)     ! 1 == itile 
       CALL open_flux_output_files(1)     ! 1 == itile 
-      IF (base_config%flag_litterfall_output) THEN
-        CALL open_litterfall_soilphysics_output_files(1)
+      IF (base_config%flag_generate_soil_forcing) THEN
+        CALL open_output_files_soil_forcing(1)
       END IF
     CASE('plant')
       CALL init_veg_output_variables     ! mo_shared_output : interval variables & flux accumulation per tile
       CALL open_pool_output_files(1)     ! 1 == itile 
       CALL open_flux_output_files(1)     ! 1 == itile 
-      IF (base_config%flag_litterfall_output) THEN
-        CALL open_litterfall_soilphysics_output_files(1)
+      IF (base_config%flag_generate_soil_forcing) THEN
+        CALL open_output_files_soil_forcing(1)
       END IF
 !    CASE('soil')
 ! 
@@ -373,8 +373,8 @@ PROGRAM land_model_driver
   !! 
   IF (fluxnet_output_status == 0) CALL close_output_files(1)     ! 1 == itile 
   IF (l_forcing) CALL close_forcing_input_file ! only if forcing is enabled at all (land plant canopy soil)
-  IF (base_config%flag_litterfall_output) THEN
-    CALL close_output_files_litterfall_soilphysics(1)
+  IF (base_config%flag_generate_soil_forcing) THEN
+    CALL close_output_files_soil_forcing(1)
   END IF
 
 

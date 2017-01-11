@@ -72,7 +72,7 @@ output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
 output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
-flag_litterfall_output="F"      # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
+flag_generate_soil_forcing="F"      # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
@@ -328,7 +328,7 @@ validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optima
 validateUserConfigValues "$flag_heterogeneous_canopy" "$validateFlags" "flag_heterogeneous_canopy"
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
-validateUserConfigValues "$flag_litterfall_output" "$validateFlags" "flag_litterfall_output"
+validateUserConfigValues "$flag_generate_soil_forcing" "$validateFlags" "flag_generate_soil_forcing"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
 validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecificAWC"
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
@@ -747,11 +747,11 @@ if [ $flag_oneYearForcing == T ]
   else
     changeNamelistValue flag_climate_forcing_one_year ".FALSE."
 fi
-if [ $flag_litterfall_output == T ]
+if [ $flag_generate_soil_forcing == T ]
   then
-    changeNamelistValue flag_litterfall_output ".TRUE."
+    changeNamelistValue flag_generate_soil_forcing ".TRUE."
   else
-    changeNamelistValue flag_litterfall_output ".FALSE."
+    changeNamelistValue flag_generate_soil_forcing ".FALSE."
 fi
 changeNamelistValue simulation_length_number "$simulation_length_number"
 changeNamelistValue output_interval_pool "$output_interval_pool"

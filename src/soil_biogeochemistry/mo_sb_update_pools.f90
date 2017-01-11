@@ -38,7 +38,13 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_base_memory,           ONLY: t_slm_tile, t_model
     USE mo_base_constants,        ONLY: dtime
+    USE mo_base_config_class,     ONLY: base_config
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
+    USE mo_sb_constants
+ 
+    ! Use of process memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -46,8 +52,45 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    ! 0.3 Memory allocation
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
+    dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
+    TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
+    TYPE(t_soil_memory), POINTER            :: soil       ! local pointer to soil__mem for SLM usability
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(SOIL_)
 
-    CALL update_sb_pools_simple(tile)
+    soil => soil__mem
+    sb   => sb__mem
+
+    !> 1.0 Calculate biophysical rate modifiers
+    !!
+    !! for the full and plant only model, update soil modifiers. In the soil model, these are read from a file 
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant')
+
+         sb%rtm_depolymerisation%ptr = calc_temperature_rate_modifier(soil%t_soil%ptr,ea_depolymerisation) 
+         sb%rtm_mic_uptake%ptr       = calc_temperature_rate_modifier(soil%t_soil%ptr,ea_mic_uptake)
+         sb%rtm_sorption%ptr         = calc_temperature_rate_modifier(soil%t_soil%ptr,ea_sorption) 
+         sb%rtm_desorption%ptr       = calc_temperature_rate_modifier(soil%t_soil%ptr,ea_desorption) 
+         sb%rtm_hsc%ptr              = calc_temperature_rate_modifier(soil%t_soil%ptr,ea_hsc) 
+     
+         sb%rmm_depolymerisation%ptr = calc_oxygen_rate_modifier(soil%w_soil_sl%ptr,soil%w_soil_fc_sl%ptr,kmr_depolymerisation) 
+         sb%rmm_mic_uptake%ptr       = calc_oxygen_rate_modifier(soil%w_soil_sl%ptr,soil%w_soil_fc_sl%ptr,kmr_mic_uptake)
+         sb%rmm_sorption%ptr         = calc_convert_bulk_to_liquid(soil%w_soil_sl%ptr,kmr_sorption) 
+         sb%rmm_desorption%ptr       = calc_convert_bulk_to_liquid(soil%w_soil_sl%ptr,kmr_desorption) 
+         sb%rmm_hsc%ptr              = calc_substrate_rate_modifier(soil%w_soil_sl%ptr,soil%w_soil_fc_sl%ptr,kmr_hsc) 
+     
+    ENDSELECT
+ 
+    !> 2.0 Calculate soil pools 
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant')
+
+         CALL update_sb_pools_simple(tile)
+
+    ENDSELECT
 
   END SUBROUTINE update_sb_pools
 
@@ -102,13 +145,12 @@ CONTAINS
 
     !> 1 Calculate soil litter pool decomposition.
     !!
-    !! Needs temperature and moisture correction
-    sb%het_respiration%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%carbon%ptr 
-    sb%net_mineralisation_n%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%nitrogen%ptr 
-    sb%net_mineralisation_p%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%phosphorus%ptr 
-    sb%het_respiration_c13%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%carbon13%ptr 
-    sb%het_respiration_c14%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%carbon14%ptr 
-    sb%net_mineralisation_n15%ptr = 1.0_wp/tau_litter/one_day/one_year * sb%pool%structural_litter%nitrogen15%ptr 
+    sb%het_respiration%ptr = sb%rtm_depolymerisation%ptr/tau_litter/one_day/one_year * sb%pool%structural_litter%carbon%ptr 
+    sb%net_mineralisation_n%ptr = sb%rtm_depolymerisation%ptr/tau_litter/one_day/one_year * sb%pool%structural_litter%nitrogen%ptr 
+    sb%net_mineralisation_p%ptr = sb%rtm_depolymerisation%ptr/tau_litter/one_day/one_year * sb%pool%structural_litter%phosphorus%ptr 
+    sb%het_respiration_c13%ptr = sb%rtm_depolymerisation%ptr/tau_litter/one_day/one_year * sb%pool%structural_litter%carbon13%ptr 
+    sb%het_respiration_c14%ptr = sb%rtm_depolymerisation%ptr/tau_litter/one_day/one_year * sb%pool%structural_litter%carbon14%ptr 
+    sb%net_mineralisation_n15%ptr = sb%rtm_depolymerisation%ptr/tau_litter/one_day/one_year * sb%pool%structural_litter%nitrogen15%ptr 
 
     ! > 1.1 subtract losses
     !!
@@ -198,5 +240,161 @@ CONTAINS
     ENDIF
 
     END SUBROUTINE update_sb_pools_simple
+
+
+!--------------------------------------------------------------------------------------------------------------------------------------
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Functionality used by the SB module, derived from JSM 
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Calculates temperature response factor for various soil biogeochemical reactions
+  !!  according to the Arrhenius equation as defined in
+  !!  Wang, G., Post, W.M., Mayes, M.A., Frerichs, J.T., Sindhu, J., 2012.
+  !!  Parameter estimation for models of ligninolytic and cellulolytic enzyme kinetics.
+  !!  Soil Biology and Biochemistry 48, 28-38.
+  !!  NB if sensitivity of zero is specified, 1 will be returned for all layers
+  !!
+  !! Input: soil temperature, activiation energy 
+  !!
+  !! Output: rate modifier (unitless) 
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL FUNCTION calc_temperature_rate_modifier(t_soil,Ea) RESULT(rate_modifier)
+
+    USE mo_shared_constants,    ONLY: r_gas
+    USE mo_sb_constants,        ONLY: t_ref_tresponse 
+
+    IMPLICIT NONE
+
+    !0.1 InOut
+    REAL(wp), INTENT(in)  :: t_soil        !< soil temperature [K]
+    REAL(wp), INTENT(in)  :: Ea            !< activation energy [J mol-1]
+    REAL(wp)              :: rate_modifier !< temperature rate modifier [unitless] 
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_temperature_rate_modifier'
+
+    IF(Ea>eps8)THEN
+       rate_modifier = exp(-Ea/r_gas*(1._wp/t_soil - 1._wp/t_ref_tresponse))
+    ELSE
+       rate_modifier = 1._wp
+    ENDIF   
+
+  END FUNCTION calc_temperature_rate_modifier
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Functionality used by the SB module, derived from JSM 
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Oxygen limitation of decomposition and uptake due to soil moisture response function 
+  !!  according to Davidson et al's DAMM model (2012)
+  !!  NB if sensitivity of zero is specified, 1 will be returned for all layers
+  !!
+  !! Input: soil moisture, sensitivity parameter 
+  !!
+  !! Output: rate modifier (unitless) 
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL FUNCTION calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
+
+    USE mo_sb_constants,        ONLY: k1_afps 
+
+    IMPLICIT NONE
+
+    !0.1 InOut
+    REAL(wp), INTENT(in)  :: w_soil_sl     !< soil moisture [m]
+    REAL(wp), INTENT(in)  :: w_soil_fc_sl  !< soil moisture at field capacity [m]
+    REAL(wp), INTENT(in)  :: param         !< 
+    REAL(wp)              :: rate_modifier !< oxygen availability rate modifier [unitless] 
+    ! 0.2 Local
+    REAL(wp)              :: air_filled_pore_space
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_oxygen_rate_modifier'
+
+    IF(param>eps8) THEN
+       IF(w_soil_fc_sl > eps8) THEN
+          air_filled_pore_space = (w_soil_fc_sl - w_soil_sl ) / w_soil_fc_sl
+          rate_modifier = (air_filled_pore_space**k1_afps) / param + (air_filled_pore_space**k1_afps)
+       ELSE
+          rate_modifier = 1._wp
+       ENDIF
+    ELSE 
+       rate_modifier = 1._wp
+    ENDIF
+
+  END FUNCTION calc_oxygen_rate_modifier
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Functionality used by the SB module, derived from JSM 
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Converts bulk density to liquid concentration 
+  !!  NB if sensitivity of zero is specified, 1 will be returned for all layers
+  !!
+  !! Input: soil moisture, sensitivity parameter 
+  !!
+  !! Output: conversion modifier (unitless) 
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL FUNCTION calc_convert_bulk_to_liquid(w_soil_sl,param) RESULT(factor)
+
+    USE mo_kind,  ONLY: eps4
+
+    IMPLICIT NONE
+
+    !0.1 InOut
+    REAL(wp), INTENT(in)  :: w_soil_sl           !< soil moisture [m]
+    REAL(wp), INTENT(in)  :: param               !< 
+    REAL(wp)              :: factor              !< conversion factor [unitless] 
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_convert_bulk_to_liquid'
+
+    IF(param>eps8) THEN
+       IF(w_soil_sl > eps4) THEN
+         factor = 1._wp / w_soil_sl 
+       ELSE
+          factor = 1._wp / eps4 
+       ENDIF
+    ELSE 
+       factor = 1._wp
+    ENDIF
+
+  END FUNCTION calc_convert_bulk_to_liquid
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Functionality used by the SB module, derived from JSM 
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Substrate limitation of decomposition and uptake due to soil moisture response function 
+  !!  according to Davidson et al's DAMM model (2012)
+  !!  NB if sensitivity of zero is specified, 1 will be returned for all layers
+  !!
+  !! Input: soil moisture, sensitivity parameter 
+  !!
+  !! Output: rate modifier (unitless) 
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL FUNCTION calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
+
+    USE mo_kind,  ONLY: eps4
+
+    IMPLICIT NONE
+
+    !0.1 InOut
+    REAL(wp), INTENT(in)  :: w_soil_sl           !< soil moisture [m]
+    REAL(wp), INTENT(in)  :: w_soil_fc_sl        !< soil moisture at field capacity [m]
+    REAL(wp), INTENT(in)  :: param               !< 
+    REAL(wp)              :: rate_modifier !< oxygen availability rate modifier [unitless] 
+    ! 0.2 Local
+    REAL(wp)              :: air_filled_pore_space
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_substrate_rate_modifier'
+    
+    IF(param>eps8.AND.w_soil_fc_sl > eps8) THEN
+       air_filled_pore_space = (w_soil_sl - w_soil_fc_sl ) / w_soil_fc_sl
+       IF(air_filled_pore_space > eps4) THEN
+          rate_modifier = 1._wp / air_filled_pore_space
+       ELSE 
+          rate_modifier = 1._wp / eps4
+       ENDIF
+    ELSE
+       rate_modifier = 1._wp
+    ENDIF
+
+  END FUNCTION calc_substrate_rate_modifier
 
 END MODULE mo_sb_update_pools
