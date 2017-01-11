@@ -485,6 +485,10 @@ CONTAINS
     dsl4jsb_Get_memory(SRF)
     dsl4jsb_Get_memory(SOIL)
 
+    ! Configuration parameters from the namelist
+    debug_hd          = dsl4jsb_Config(HD)%debug_hd
+    diag_water_budget = dsl4jsb_Config(HD)%diag_water_budget
+
     ! Get reference to variables in memory
 
     nres_o_max = hd__mem%nres_o_max
@@ -511,12 +515,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(SOIL, discharge,       IN)
     dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean, IN)
 
-    water_budget   =  dsl4jsb_var2D_ptr(HD,water_budget)  (1,1)
-
-    ! Configuration parameters from the namelist
-    debug_hd          = dsl4jsb_Config(HD)%debug_hd
-    diag_water_budget = dsl4jsb_Config(HD)%diag_water_budget
-
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma, nblks))
     WHERE (is_in_domain(:,:))
@@ -525,6 +523,15 @@ CONTAINS
       in_domain = 0._wp
     END WHERE
 
+    IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) /= 'full') THEN
+      IF (diag_water_budget) THEN
+        WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(discharge_ocean*in_domain), ' m3/s'
+        CALL message (TRIM(routine),message_text)
+      END IF
+      RETURN
+    END IF
+
+    water_budget   =  dsl4jsb_var2D_ptr(HD,water_budget)  (1,1)
     water_budget_old = water_budget
 
     ! re-calculate global land water budget
