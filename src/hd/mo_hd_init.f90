@@ -72,120 +72,121 @@ CONTAINS
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD)
 
-    IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) /= 'full') RETURN
+    SELECT CASE (TRIM(dsl4jsb_Config(HD)%routing_scheme))
+    CASE ('full')
 
-    CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//&
-                                ' from '//TRIM(dsl4jsb_Config(HD)%bc_filename))
+      CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//&
+        ' from '//TRIM(dsl4jsb_Config(HD)%bc_filename))
 
-    ! Initialize boundary conditions
-    !
-    ! Number of base flow reservoirs
-    dsl4jsb_var2D_onDomain(HD, nres_baseflow) = 1._wp
-    
-    ! Maximum number of reservoirs
-    hd__mem%nres_o_max = 1
-    hd__mem%nres_b_max = 1
-    hd__mem%nres_r_max = 5
+      ! Initialize boundary conditions
+      !
+      ! Number of base flow reservoirs
+      dsl4jsb_var2D_onDomain(HD, nres_baseflow) = 1._wp
 
-    ! Maximum number of inflow neighbor cells
-    hd__mem%nneigh = 6
+      ! Maximum number of reservoirs
+      hd__mem%nres_o_max = 1
+      hd__mem%nres_b_max = 1
+      hd__mem%nres_r_max = 5
+
+      ! Maximum number of inflow neighbor cells
+      hd__mem%nneigh = 6
 
 
-    ! Initialize data from input file
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD)%bc_filename), model%id)
+      ! Initialize data from input file
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD)%bc_filename), model%id)
 
-    ! HD model mask: -1 ocean, 0: ocean inflow cells, 1: land with outflow, 2: internal drainage
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='MASK',                     &
-      & fill_array = dsl4jsb_var2D_ptr(HD,hd_mask))
+      ! HD model mask: -1 ocean, 0: ocean inflow cells, 1: land with outflow, 2: internal drainage
+      return_pointer => jsb_netcdf_read_2d(         &
+        & input_file,                               &
+        & variable_name='MASK',                     &
+        & fill_array = dsl4jsb_var2D_ptr(HD,hd_mask))
 
-    ! Retention constant of overland flow [day]
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='ALF_K',                    &
-      & fill_array = dsl4jsb_var2D_ptr(HD,ret_overlflow))
+      ! Retention constant of overland flow [day]
+      return_pointer => jsb_netcdf_read_2d(         &
+        & input_file,                               &
+        & variable_name='ALF_K',                    &
+        & fill_array = dsl4jsb_var2D_ptr(HD,ret_overlflow))
 
-    ! Number of overland flow reservoirs
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='ALF_N',                    &
-      & fill_array = dsl4jsb_var2D_ptr(HD,nres_overlflow))
+      ! Number of overland flow reservoirs
+      return_pointer => jsb_netcdf_read_2d(         &
+        & input_file,                               &
+        & variable_name='ALF_N',                    &
+        & fill_array = dsl4jsb_var2D_ptr(HD,nres_overlflow))
 
-    ! Retention constant of river flow [day]
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='ARF_K',                    &
-      & fill_array = dsl4jsb_var2D_ptr(HD,ret_riverflow))
+      ! Retention constant of river flow [day]
+      return_pointer => jsb_netcdf_read_2d(         &
+        & input_file,                               &
+        & variable_name='ARF_K',                    &
+        & fill_array = dsl4jsb_var2D_ptr(HD,ret_riverflow))
 
-    ! Number of river flow reservoirs
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='ARF_N',                    &
-      & fill_array = dsl4jsb_var2D_ptr(HD,nres_riverflow))
+      ! Number of river flow reservoirs
+      return_pointer => jsb_netcdf_read_2d(         &
+        & input_file,                               &
+        & variable_name='ARF_N',                    &
+        & fill_array = dsl4jsb_var2D_ptr(HD,nres_riverflow))
 
-    ! Retention constant for base flow [day]
-    return_pointer => jsb_netcdf_read_2d(         &
-      & input_file,                               &
-      & variable_name='AGF_K',                    &
-      & fill_array = dsl4jsb_var2D_ptr(HD,ret_baseflow))
+      ! Retention constant for base flow [day]
+      return_pointer => jsb_netcdf_read_2d(         &
+        & input_file,                               &
+        & variable_name='AGF_K',                    &
+        & fill_array = dsl4jsb_var2D_ptr(HD,ret_baseflow))
 
-    ! Global index neighbouring grid cells upstream
-    return_pointer3d => jsb_netcdf_read_2d_extdim(  &
-      & input_file,                                 &
-      & variable_name='CELLS_UP',                   &
-      & start_extdim=1, end_extdim=hd__mem%nneigh,    &
-      & extdim_name='nneigh')
+      ! Global index neighbouring grid cells upstream
+      return_pointer3d => jsb_netcdf_read_2d_extdim(  &
+        & input_file,                                 &
+        & variable_name='CELLS_UP',                   &
+        & start_extdim=1, end_extdim=hd__mem%nneigh,    &
+        & extdim_name='nneigh')
 
-    ! find local idices of grid cells upstream
-    nproma = grid%nproma
-    nblks  = grid%nblks
-    ALLOCATE(dsl4jsb_var3D_ptr(HD,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
-    ALLOCATE(dsl4jsb_var3D_ptr(HD,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
-    dsl4jsb_var3D_ptr(HD,nidx_upstream) = -1
-    dsl4jsb_var3D_ptr(HD,bidx_upstream)  = -1
+      ! find local idices of grid cells upstream
+      nproma = grid%nproma
+      nblks  = grid%nblks
+      ALLOCATE(dsl4jsb_var3D_ptr(HD,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
+      ALLOCATE(dsl4jsb_var3D_ptr(HD,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
+      dsl4jsb_var3D_ptr(HD,nidx_upstream) = -1
+      dsl4jsb_var3D_ptr(HD,bidx_upstream)  = -1
 
-    blks = get_blk_start(grid)
-    blke = get_blk_end(grid)
-    DO blk = blks, blke
-      jcs = get_col_start(blk, grid)
-      jce = get_col_end  (blk, grid)
-      DO n = 1, hd__mem%nneigh
-        DO jc = jcs, jce
-          IF (NINT(return_pointer3d(jc,blk,n)) > 0) THEN
-            idx = get_local_index(grid%patch%cells%decomp_info%glb2loc_index, NINT(return_pointer3d(jc,blk,n)))
-            !print*, 'vg: p_pe: ', p_pe, ' n: ', n, ' blk: ', blk, ' FDIR: ', NINT(return_pointer(n,blk)), 'idx: ',idx
-            IF (idx ==  0) THEN
-              WRITE (message_text,*) "index of grid cell upstream (", NINT(return_pointer3d(jc,blk,n)), ") not in global domain"
-              CALL finish(routine, message_text)
-            ELSE IF (idx == -1) THEN
-              WRITE (message_text,*) "index of grid cell upstream (", NINT(return_pointer3d(jc,blk,n)), ") not in local domain"
-              CALL finish(routine, message_text)
+      blks = get_blk_start(grid)
+      blke = get_blk_end(grid)
+      DO blk = blks, blke
+        jcs = get_col_start(blk, grid)
+        jce = get_col_end  (blk, grid)
+        DO n = 1, hd__mem%nneigh
+          DO jc = jcs, jce
+            IF (NINT(return_pointer3d(jc,blk,n)) > 0) THEN
+              idx = get_local_index(grid%patch%cells%decomp_info%glb2loc_index, NINT(return_pointer3d(jc,blk,n)))
+              !print*, 'vg: p_pe: ', p_pe, ' n: ', n, ' blk: ', blk, ' FDIR: ', NINT(return_pointer(n,blk)), 'idx: ',idx
+              IF (idx ==  0) THEN
+                WRITE (message_text,*) "index of grid cell upstream (", NINT(return_pointer3d(jc,blk,n)), ") not in global domain"
+                CALL finish(routine, message_text)
+              ELSE IF (idx == -1) THEN
+                WRITE (message_text,*) "index of grid cell upstream (", NINT(return_pointer3d(jc,blk,n)), ") not in local domain"
+                CALL finish(routine, message_text)
+              END IF
+              hd__mem%bidx_upstream%ptr(jc,n,blk) = (idx-1)/nproma + 1
+              hd__mem%nidx_upstream%ptr(jc,n,blk) = idx - (hd__mem%bidx_upstream%ptr(jc,n,blk)-1)*nproma
             END IF
-            hd__mem%bidx_upstream%ptr(jc,n,blk) = (idx-1)/nproma + 1
-            hd__mem%nidx_upstream%ptr(jc,n,blk) = idx - (hd__mem%bidx_upstream%ptr(jc,n,blk)-1)*nproma
-          END IF
+          END DO
         END DO
       END DO
-    END DO
 
-    CALL jsb_netcdf_close_file(input_file)
+      CALL jsb_netcdf_close_file(input_file)
 
-    IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) == 'weighted_to_coast') THEN
+    CASE ('weighted_to_coast')
 
       input_file = jsb_netcdf_open_input(TRIM(grid%filename), model%id)
 
-    ! coastal ocean cells
+      ! coastal ocean cells
       cell_sea_land_mask => jsb_netcdf_read_2d( &
         & input_file,                                &
         & variable_name='cell_sea_land_mask')
       dsl4jsb_var2D_onDomain(HD, coast_ocean) = &
-        MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+      MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
       DEALLOCATE(cell_sea_land_mask)
 
       CALL jsb_netcdf_close_file(input_file)
 
-  END IF
+    END SELECT
 
   END SUBROUTINE hd_init_bc
 
