@@ -23,6 +23,7 @@ MODULE mo_hd_init
   USE mo_decomposition_tools, ONLY: get_local_index
   USE mo_sync,                ONLY: global_max
   USE mo_jsb_parallel_iface,  ONLY: get_my_global_mpi_id
+  USE mo_impl_constants,      ONLY: SEA_BOUNDARY
 
   dsl4jsb_Use_processes HD, SRF
   dsl4jsb_Use_config(HD)
@@ -49,6 +50,7 @@ CONTAINS
     dsl4jsb_Def_memory(HD)
 
     REAL(wp), POINTER ::         &
+      & cell_sea_land_mask(:,:), &
       & return_pointer   (:,:),  &   !< temporary pointer
       & return_pointer3d (:,:,:)     !< temporary pointer
 
@@ -169,10 +171,25 @@ CONTAINS
 
     CALL jsb_netcdf_close_file(input_file)
 
+    IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) == 'weighted_to_coast') THEN
+
+      input_file = jsb_netcdf_open_input(TRIM(grid%filename), model%id)
+
+    ! coastal ocean cells
+      cell_sea_land_mask => jsb_netcdf_read_2d( &
+        & input_file,                                &
+        & variable_name='cell_sea_land_mask')
+      dsl4jsb_var2D_onDomain(HD, coast_ocean) = &
+        MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+      DEALLOCATE(cell_sea_land_mask)
+
+      CALL jsb_netcdf_close_file(input_file)
+
+  END IF
+
   END SUBROUTINE hd_init_bc
 
   SUBROUTINE hd_init_ic(tile)
-
 
     TYPE(t_jsb_tile),  INTENT(inout) :: tile
 

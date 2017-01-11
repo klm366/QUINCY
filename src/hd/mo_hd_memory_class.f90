@@ -26,6 +26,7 @@ MODULE mo_hd_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       hd_mask         , &  !< HD mask
+      coast_ocean  ,    &  !< mask for coastal cells of the ocean
       ret_overlflow   , &  !< retention constant of overland flow
       ret_baseflow    , &  !< retention constant of baseflow
       ret_riverflow   , &  !< retention constant of riverflow
@@ -90,6 +91,12 @@ CONTAINS
       & hgrid, surface,                                                                    &
       & t_cf('hd_mask', '', 'HD mask: -1 ocean, 0 ocean inflow, 1 land, 2 internal drainage'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL jsb_add_var( mem, prefix//'coast_ocean'//suffix, mem%coast_ocean,   &
+      & hgrid, surface,                                                               &
+      & t_cf('coast_ocean', '', 'coastal grid cells of the ocean '),                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
     CALL jsb_add_var( mem, prefix//'ret_overlflow'//suffix, mem%ret_overlflow,     &

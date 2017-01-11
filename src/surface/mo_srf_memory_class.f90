@@ -27,9 +27,6 @@ MODULE mo_srf_memory_class
     ! Parameters
     TYPE(t_jsb_var_real2d) :: &
       land         ,    & !< Land fraction: 1: land/lake/glacier, 0: sea
-      coast_land   ,    & !< mask for coastal cells of the land
-      coast_ocean  ,    & !< mask for coastal cells of the ocean
-      ocean        ,    & !< mask for ocean cells, 1: ocean
       glacier      ,    & !< Glacier fraction
       lake         ,    & !< Lake fraction
       elevation    ,    & !< Elevation
@@ -131,27 +128,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL jsb_add_var( mem, prefix//'ocean_frac'//suffix, mem%ocean,                   &
-        & hgrid, surface,                                                               &
-        & t_cf('ocean_mask', '', 'ocean fraction'),                                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
-
       CALL jsb_add_var( mem, prefix//'lake_frac'//suffix, mem%lake,                     &
         & hgrid, surface,                                                               &
         & t_cf('lake_mask', '', 'lake fraction'),                                       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
-
-      CALL jsb_add_var( mem, prefix//'coast_land'//suffix, mem%coast_land,     &
-        & hgrid, surface,                                                               &
-        & t_cf('coast_land', '', 'coastal grid cells of the land'),                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
-
-      CALL jsb_add_var( mem, prefix//'coast_ocean'//suffix, mem%coast_ocean,   &
-        & hgrid, surface,                                                               &
-        & t_cf('coast_ocean', '', 'coastal grid cells of the ocean '),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 

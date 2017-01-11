@@ -140,10 +140,10 @@ CONTAINS
       ALLOCATE(inflow(nc))
 
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
-      inflow(:) = (runoff(:) + pme_glacier(:) * glacier) * land * area / rhoh2o
+      inflow(:) = (runoff(:) + pme_glacier(:) * glacier(:)) * land(:) * area(:) / rhoh2o
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
 
-      inflow(:) = drainage(:) * land * area / rhoh2o
+      inflow(:) = drainage(:) * land(:) * area(:) / rhoh2o
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_baseflow(:),  nres_baseflow(:),  baseflow_res(:,:),  outflow_drainage(:))
 
       inflow(:) = discharge(:)
@@ -151,11 +151,12 @@ CONTAINS
 
       DEALLOCATE (inflow)
 
-    CASE ('weighted_to_coast', 'weighted_to_ocean', 'equally_to_coast', 'equally_to_ocean')
+    CASE ('weighted_to_coast')
       !
       ! dummy version of HD model
       !
-      discharge(:) = land(:) * (runoff(:) + drainage(:) + pme_glacier(:))
+      ! unit conversion: [kg m-2 s-1] -> [m3/s]
+      discharge(:) = land(:) * (runoff(:) + pme_glacier(:) * glacier(:) + drainage(:)) * area(:) / rhoh2o
 
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
@@ -262,7 +263,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HD, bidx_upstream,    IN)
 
     dsl4jsb_Get_var2D_onDomain(SRF, land,        IN)
-    dsl4jsb_Get_var2D_onDomain(SRF, coast_ocean, IN)
+    dsl4jsb_Get_var2D_onDomain(HD,  coast_ocean, IN)
 
     dsl4jsb_Get_var2D_onDomain(SOIL, discharge,       OUT)
     dsl4jsb_Get_var2D_onDomain(SOIL, discharge_ocean, OUT)
@@ -388,13 +389,13 @@ CONTAINS
 
     CASE ('weighted_to_coast')
 
-      ! Dummy discharge: the discharge is equally distributed to all coastal ocean cells
+      ! Dummy discharge: the discharge is distributed to all coastal ocean cells, weighted by cosine of latitude
 
-      global_discharge = global_sum_array(discharge(:,:)*land(:,:)*area(:,:)*in_domain(:,:))
+      global_discharge = global_sum_array(discharge(:,:) * in_domain(:,:))
 
       ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
       cos_lat(:,:) = MERGE(COS(grid%lat(:,:)), 0._wp, coast_ocean(:,:) == 1._wp)
-      sum_weights = global_sum_array(coast_ocean(:,:)*cos_lat(:,:)*area(:,:)*in_domain(:,:))
+      sum_weights = global_sum_array(coast_ocean(:,:) * cos_lat(:,:) * in_domain(:,:))
       WHERE (coast_ocean(:,:) == 1._wp)
         discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
       ELSEWHERE
