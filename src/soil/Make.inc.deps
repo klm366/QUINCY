@@ -45,6 +45,7 @@ mo_soil_update_physics.o: \
   mo_land2atm_memory_class.o \
   mo_atmland_util.o \
   mo_shared_constants.o \
+  mo_assimi_update_canopy_fluxes.o \
   mo_phy_schemes.o \
   mo_veg_memory_class.o \
   mo_rad_memory_class.o \

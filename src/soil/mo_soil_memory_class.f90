@@ -49,8 +49,8 @@ MODULE mo_soil_memory_class
 
     ! JSBACH HYDRO MEMORY (temporary here to get rid of vegsoil construct)
     TYPE(t_jsb_var_real2d)          :: &
-                                    runoff,           & !< surface runoff
-                                    drainage            !< drainage
+                                    runoff,           & !< surface runoff  [kg / m2 / s]
+                                    drainage            !< drainage        [kg / m2 / s]
 
     ! Additional variables for soil
     TYPE(t_jsb_var_real2d)          :: &
@@ -59,7 +59,8 @@ MODULE mo_soil_memory_class
                                     w_soil_root_pwp     !< Water content at permanent wilting point in root zone of the soil        [m]
 
     TYPE(t_jsb_var_real3d)          :: &
-                                    drainage_sl,      & !< drainage of soil layers                                                  [m]
+                                    percolation_sl,   & !< fraction of mass transferred to below layer                              [fraction/s]
+                                    drainage_sl,      & !< drainage of soil layers                                                  [kg / m2 / s]
                                     w_soil_sl,        & !< Water content in soil layers                                             [m]
                                     w_soil_fc_sl,     & !< Water content of soil layers at field capacity
                                                         !! (derived from volumetric field capacity)                                 [m]
@@ -69,10 +70,10 @@ MODULE mo_soil_memory_class
     !Soil Water addons for SLM in HYDRO
     TYPE(t_jsb_var_real2d)          :: &
                                     w_soil_root_theta, & !< root zone integrated plant available water (fraction of maximum) 
-                                    w_soil_root_pot      !< soil water potential (MPa)
+                                    w_soil_root_pot      !< soil water potential [MPa]
 
     TYPE(t_jsb_var_real3d)          :: &
-                                    w_soil_pot_sl        !< soil water potential per layer (MPa)
+                                    w_soil_pot_sl        !< soil water potential per layer [MPa]
 
     ! should go to SLM VEG after change to 2D/3D  *slmdev
     TYPE(t_jsb_var_real3d)          :: &
@@ -80,7 +81,7 @@ MODULE mo_soil_memory_class
 
     ! soil energy 
     TYPE(t_jsb_var_real3d)          :: &
-                                    t_soil                  !< soil temperature  *slmdev currently we use t_air to get values here
+                                    t_soil                  !< soil temperature [K] 
 
     ! soil physical properties (not sure where they should belong to, but they are needed in the long-term
     TYPE(t_jsb_var_real3d)          :: & 
@@ -162,6 +163,9 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'drainage_sl', mem%drainage_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'percolation_sl', mem%percolation_sl, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'w_soil_root', mem%w_soil_root, &

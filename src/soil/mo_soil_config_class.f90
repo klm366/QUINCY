@@ -135,10 +135,11 @@ CONTAINS
 
     ! check input for soil_moisture_scheme 
     SELECT CASE (TRIM(soil_moisture_scheme))
-     CASE ("prescribed","bucket")
-     CASE ("layer") 
-       WRITE(message_text,'(2a)') soil_moisture_scheme,'is not implemented yet, sorry....'
-       CALL finish("mo_soil_config_class:init_soil_config",message_text)
+     CASE ("prescribed","bucket","layer")
+     !CASE ("prescribed","bucket")
+     !CASE ("layer") 
+     !  WRITE(message_text,'(2a)') soil_moisture_scheme,'is not implemented yet, sorry....'
+     !  CALL finish("mo_soil_config_class:init_soil_config",message_text)
      CASE DEFAULT
        WRITE(message_text,'(2a)') 'invalid soil_moisture_scheme',soil_moisture_scheme
        CALL finish("mo_soil_config_class:init_soil_config",message_text)

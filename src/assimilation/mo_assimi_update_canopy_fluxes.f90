@@ -30,7 +30,7 @@ MODULE mo_assimi_update_canopy_fluxes
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_canopy_fluxes, discrimination_ps, calc_photosynthesis
+  PUBLIC :: update_canopy_fluxes, discrimination_ps, calc_photosynthesis, calc_soil_moisture_stress
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_update_canopy_fluxes'

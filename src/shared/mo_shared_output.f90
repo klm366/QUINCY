@@ -173,7 +173,7 @@ CONTAINS
     WRITE(lun,'(2a)') 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
                      'Fruit_P Labile_P Reserve_P SeedBank_P Total_P'
     lun=lun+1
-    WRITE(lun,'(a)') 'Time SoilMoisture SoilWaterPotential BetaSoilGS BetaSoilPS'
+    WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS'
     lun=lun+1
     WRITE(lun,'(a)') 'Time LitterN LitterP MineralNH4 MineralNO3 MineralP'
     lun=lun+1
@@ -871,6 +871,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -886,13 +887,17 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                        ! TYPE(t_veg_memory),     POINTER :: veg__mem
     dsl4jsb_Def_memory(SB_)                         ! TYPE(t_sb_memory),      POINTER :: sb__mem
+    dsl4jsb_Def_memory(SOIL_)                       ! TYPE(t_soil_memory),    POINTER :: soil__mem
     TYPE(t_veg_memory),           POINTER     :: veg   ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory),            POINTER     :: sb    ! local pointer to sb__mem for SLM usability
+    TYPE(t_soil_memory),          POINTER     :: soil  ! local pointer to soil__mem for SLM usability
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SB_)                         
+    dsl4jsb_Get_memory(SOIL_)                         
 
     veg => veg__mem 
     sb  => sb__mem 
+    soil  => soil__mem 
     model     => Get_model(tile%owner_model_id)
     lctlib    => model%lctlib(tile%lcts%lib_id)
 
@@ -902,9 +907,10 @@ CONTAINS
     IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
 
       lun = 100 * itile + 60
-      write(lun,'(50F12.6)') time_d, &
+      write(lun,'(56F12.6)') time_d, &
         sb%rtm_depolymerisation%ptr(1,:,1),sb%rtm_mic_uptake%ptr(1,:,1),sb%rtm_sorption%ptr(1,:,1),sb%rtm_desorption%ptr(1,:,1),sb%rtm_hsc%ptr(1,:,1), &
-        sb%rmm_depolymerisation%ptr(1,:,1),sb%rmm_mic_uptake%ptr(1,:,1),sb%rmm_sorption%ptr(1,:,1),sb%rmm_desorption%ptr(1,:,1),sb%rmm_hsc%ptr(1,:,1)
+        sb%rmm_depolymerisation%ptr(1,:,1),sb%rmm_mic_uptake%ptr(1,:,1),sb%rmm_sorption%ptr(1,:,1),sb%rmm_desorption%ptr(1,:,1),sb%rmm_hsc%ptr(1,:,1), &
+        soil%percolation_sl%ptr(1,:,1)
 
       lun=lun+1
       write(lun,'(55F12.6)') time_d, &
