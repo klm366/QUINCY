@@ -71,7 +71,6 @@ CONTAINS
     !!  
     CALL calc_turnover(lctlib, &
                         veg%pool, veg%growth, veg%litterfall, &
-                        veg%growth_t, veg%litterfall_t, &
                         pheno%growing_season%ptr, veg%lai%ptr, &
                         veg%recycling_leaf_n%ptr, veg%recycling_leaf_n15%ptr, veg%recycling_leaf_p%ptr, &
                         veg%recycling_heart_wood_n%ptr, veg%recycling_heart_wood_n15%ptr, veg%recycling_heart_wood_p%ptr)
@@ -194,15 +193,13 @@ CONTAINS
                                       veg_pool                  , &
                                       veg_growth                , &
                                       veg_litterfall            , &
-                                      veg_growth_t              , &
-                                      veg_litterfall_t          , &
                                       growing_season            , &
                                       lai                       , &
                                       recycling_leaf_n          , &
                                       recycling_leaf_n15        , &
                                       recycling_leaf_p          , &
-                                      recycling_heart_wood_n      , &
-                                      recycling_heart_wood_n15    , &
+                                      recycling_heart_wood_n    , &
+                                      recycling_heart_wood_n15  , &
                                       recycling_heart_wood_p      )
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -216,45 +213,27 @@ CONTAINS
 
     ! 0.1 InOut
     TYPE(t_lctlib_element),       INTENT(in)    :: lctlib               !< land-cover-type library - parameter across pft's
-    TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_pool         , & !< 
-                                                   veg_growth       , & !< 
-                                                   veg_litterfall   , & !< 
-                                                   veg_growth_t     , & !< 
-                                                   veg_litterfall_t     !< 
-    LOGICAL,                      INTENT(in)    :: growing_season       !< 
-    REAL(wp),                     INTENT(in)    :: lai                  !< 
-    REAL(wp),                     INTENT(inout) :: recycling_leaf_n          , & !< 
-                                                   recycling_leaf_n15        , & !< 
-                                                   recycling_leaf_p          , & !< 
-                                                   recycling_heart_wood_n    , & !< 
-                                                   recycling_heart_wood_n15  , & !< 
-                                                   recycling_heart_wood_p          !< 
+    TYPE(t_slm_struct_veg_pool),  INTENT(inout) :: veg_pool         , & !< current state of vegetation pools 
+                                                   veg_growth       , & !< current growth rate of vegetation pools
+                                                   veg_litterfall       !< current litter fall from vegetation pools
+    LOGICAL,                      INTENT(in)    :: growing_season       !< whether the plant is in the growing season
+    REAL(wp),                     INTENT(in)    :: lai                  !< the plant's LAI
+    REAL(wp),                     INTENT(inout) :: recycling_leaf_n , & !< foliar N returning to labile pool 
+                                                   recycling_leaf_n15, & !< foliar N15 returning to labile pool 
+                                                   recycling_leaf_p , & !< foliar P returning to labile pool 
+                                                   recycling_heart_wood_n    , & !< woody N returning to labile pool 
+                                                   recycling_heart_wood_n15  , & !< woody N15 returning to labile pool
+                                                   recycling_heart_wood_p        !< woody P returning to labile pool
     ! 0.2 Local
-    REAL(wp)                          :: retranslocation_leaf_n       , & !< leaf
-                                         retranslocation_leaf_n15     , &
-                                         retranslocation_leaf_p
-    REAL(wp)                          :: retranslocation_heart_wood_n   , & !< heart_wood
-                                         retranslocation_heart_wood_n15 , &
-                                         retranslocation_heart_wood_p
-    REAL(wp)                          :: fturn_leaf                   , & !< fturn
-                                         fturn
-    REAL(wp)                          :: nitrogen_recycling_fract     , & !< recycling fraction
-                                         phosphorus_recycling_fract
+    REAL(wp)                          :: retranslocation              , & !< retranslocation before shedding 
+                                         fturn_leaf                   , & !< fraction of leaves turning over 
+                                         fturn                            !< other tissue turnover fraction
+    REAL(wp)                          :: nitrogen_recycling_fract     , & !< recycling fraction of N
+                                         phosphorus_recycling_fract       !< recycling fraction of P
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_turnover'
 
 
-    !> 1.0 initialise variables
-    !!
-    CALL veg_growth_t%init(0.0_wp) 
-    CALL veg_litterfall_t%init(0.0_wp)
-    retranslocation_leaf_n        = 0.0_wp
-    retranslocation_leaf_n15      = 0.0_wp
-    retranslocation_leaf_p        = 0.0_wp
-    retranslocation_heart_wood_n    = 0.0_wp
-    retranslocation_heart_wood_n15  = 0.0_wp
-    retranslocation_heart_wood_p    = 0.0_wp
-
-    !> 2.0 foliage turnover, including recycling of nutrients 
+    !> 1.0 foliage turnover, including recycling of nutrients 
     !!
     !! flat rate for evergreens, dual rates for deciduous (senescence after the growing season)
     SELECT CASE (lctlib%phenology_type)
@@ -277,34 +256,39 @@ CONTAINS
             IF(lai < min_lai) fturn_leaf = 1.0_wp
        ENDIF
     END SELECT
-    veg_litterfall_t%leaf = veg_pool%leaf * fturn_leaf
+    veg_litterfall%leaf = veg_litterfall%leaf + veg_pool%leaf * fturn_leaf
 
-    !> 2.1 Nutrient recycling from foliage turnover
+    !> 1.1 Nutrient recycling from foliage turnover
     !! 
     nitrogen_recycling_fract    = calc_nitrogen_recycling_fract("leaf")
     phosphorus_recycling_fract  = calc_phosphorus_recycling_fract("leaf")
 
-    retranslocation_leaf_n            = nitrogen_recycling_fract          * veg_litterfall_t%leaf%nitrogen%ptr
-    veg_litterfall_t%leaf%nitrogen%ptr    = veg_litterfall_t%leaf%nitrogen%ptr    - retranslocation_leaf_n
-    retranslocation_leaf_n15          = nitrogen_recycling_fract          * veg_litterfall_t%leaf%nitrogen15%ptr
-    veg_litterfall_t%leaf%nitrogen15%ptr  = veg_litterfall_t%leaf%nitrogen15%ptr  - retranslocation_leaf_n15 
-    retranslocation_leaf_p            = phosphorus_recycling_fract        * veg_litterfall_t%leaf%phosphorus%ptr
-    veg_litterfall_t%leaf%phosphorus%ptr  = veg_litterfall_t%leaf%phosphorus%ptr  - retranslocation_leaf_p
+    retranslocation = nitrogen_recycling_fract * veg_pool%leaf%nitrogen%ptr * fturn_leaf 
+    recycling_leaf_n = recycling_leaf_n + retranslocation
+    veg_litterfall%leaf%nitrogen%ptr = veg_litterfall%leaf%nitrogen%ptr - retranslocation
 
-    !> 3.0 fine root turnover to litter
+    retranslocation = nitrogen_recycling_fract * veg_pool%leaf%nitrogen15%ptr * fturn_leaf
+    recycling_leaf_n15 = recycling_leaf_n15 + retranslocation
+    veg_litterfall%leaf%nitrogen15%ptr = veg_litterfall%leaf%nitrogen15%ptr - retranslocation
+
+    retranslocation = phosphorus_recycling_fract * veg_pool%leaf%phosphorus%ptr * fturn_leaf 
+    recycling_leaf_p = recycling_leaf_p + retranslocation
+    veg_litterfall%leaf%phosphorus%ptr = veg_litterfall%leaf%phosphorus%ptr - retranslocation
+
+    !> 2.0 fine root turnover to litter
     !! 
     fturn = 1.0_wp/lctlib%tau_fine_root/one_day/one_year * dtime
-    veg_litterfall_t%fine_root = veg_pool%fine_root * fturn
+    veg_litterfall%fine_root = veg_litterfall%fine_root + veg_pool%fine_root * fturn
 
-    !> 4.0 coarse root turnover to litter 
+    !> 3.0 coarse root turnover to litter 
     !! 
     fturn = 1.0_wp/lctlib%tau_coarse_root/one_day/one_year * dtime
-    veg_litterfall_t%coarse_root = veg_pool%coarse_root * fturn
+    veg_litterfall%coarse_root = veg_litterfall%coarse_root + veg_pool%coarse_root * fturn
 
-    !> 5.0 sapwood turnover 
+    !> 4.0 sapwood turnover 
     !! 
 
-    !> 5.1 litter production from halms (grasses), or branches (trees)
+    !> 4.1 litter production from halms (grasses), or branches (trees)
     !! 
     SELECT CASE (lctlib%growthform)
       CASE (itree)
@@ -312,45 +296,36 @@ CONTAINS
       CASE (igrass) ! for grases follows leaf phenology
         fturn = fturn_leaf
     ENDSELECT 
-    veg_litterfall_t%sap_wood = lctlib%frac_sapwood_branch * veg_pool%sap_wood * fturn
+    veg_litterfall%sap_wood = veg_litterfall%sap_wood + lctlib%frac_sapwood_branch * veg_pool%sap_wood * fturn
 
-    !> 5.2 heart wood formation, including nutrient recycling
+    !> 4.2 heart wood formation, including nutrient recycling
     !! 
     IF(lctlib%growthform == itree)THEN
         fturn = 1.0_wp/lctlib%tau_sap_wood/one_day/one_year * dtime
-        veg_growth_t%heart_wood = veg_pool%sap_wood     * fturn
-        veg_growth_t%sap_wood   = veg_growth_t%sap_wood - veg_growth_t%heart_wood 
+        veg_growth%heart_wood = veg_growth%heart_wood + veg_pool%sap_wood * fturn
+        veg_growth%sap_wood   = veg_growth%sap_wood   - veg_pool%sap_wood * fturn 
 
         ! Nutrient recycling
         nitrogen_recycling_fract            = calc_nitrogen_recycling_fract("wood")
         phosphorus_recycling_fract          = calc_phosphorus_recycling_fract("wood")
-        retranslocation_heart_wood_n        = veg_growth_t%heart_wood%nitrogen%ptr   * nitrogen_recycling_fract
-        retranslocation_heart_wood_n15      = veg_growth_t%heart_wood%nitrogen15%ptr * nitrogen_recycling_fract
-        retranslocation_heart_wood_p        = veg_growth_t%heart_wood%phosphorus%ptr * phosphorus_recycling_fract
+        recycling_heart_wood_n   = recycling_heart_wood_n   + & 
+                                   veg_pool%sap_wood%nitrogen%ptr   * fturn * nitrogen_recycling_fract
+        recycling_heart_wood_n15 = recycling_heart_wood_n15 + &
+                                   veg_pool%sap_wood%nitrogen15%ptr * fturn * nitrogen_recycling_fract
+        recycling_heart_wood_p   = recycling_heart_wood_p   + & 
+                                   veg_pool%sap_wood%phosphorus%ptr * fturn * phosphorus_recycling_fract
     ENDIF 
 
-    !> 6.0 fruit turnover to seed_bed
+    !> 5.0 fruit turnover to seed_bed
     !! 
-    fturn                 = 1.0_wp/lctlib%tau_fruit/one_day/one_year * dtime
-    veg_growth_t%seed_bed = veg_pool%fruit     * fturn
-    veg_growth_t%fruit    = veg_growth_t%fruit - veg_growth_t%seed_bed
+    fturn               = 1.0_wp/lctlib%tau_fruit/one_day/one_year * dtime
+    veg_growth%seed_bed = veg_growth%seed_bed + veg_pool%fruit * fturn
+    veg_growth%fruit    = veg_growth%fruit    - veg_pool%fruit * fturn 
 
-    !> 7.0 seed-bed turnover to litter 
+    !> 6.0 seed-bed turnover to litter 
     !! 
-    fturn                     = 1.0_wp/lctlib%tau_seed_litter/one_day/one_year * dtime
-    veg_litterfall_t%seed_bed = veg_pool%seed_bed      * fturn
-
-    !> 8.0 update litter, growth and recycling of the plant class
-    !!
-    veg_litterfall             = veg_litterfall + veg_litterfall_t
-    veg_growth                 = veg_growth     + veg_growth_t
-
-    recycling_leaf_n       = recycling_leaf_n       + retranslocation_leaf_n
-    recycling_leaf_n15     = recycling_leaf_n15     + retranslocation_leaf_n15
-    recycling_leaf_p       = recycling_leaf_p       + retranslocation_leaf_p
-    recycling_heart_wood_n   = recycling_heart_wood_n   + retranslocation_heart_wood_n
-    recycling_heart_wood_n15 = recycling_heart_wood_n15 + retranslocation_heart_wood_n15
-    recycling_heart_wood_p   = recycling_heart_wood_p   + retranslocation_heart_wood_p
+    fturn                   = 1.0_wp/lctlib%tau_seed_litter/one_day/one_year * dtime
+    veg_litterfall%seed_bed = veg_litterfall%seed_bed + veg_pool%seed_bed    * fturn
 
   END SUBROUTINE calc_turnover
 
