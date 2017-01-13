@@ -59,6 +59,7 @@ MODULE mo_shared_output
   REAL(wp), DIMENSION(ntile), SAVE :: qg_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: albedo_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: appfd_acc 
+  INTEGER, DIMENSION(ntile), SAVE  :: ndat_acc ! number of accumulated data points
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
 
@@ -109,6 +110,7 @@ CONTAINS
     qg_acc           = 0._wp
     albedo_acc        = 0._wp
     appfd_acc         = 0._wp
+    ndat_acc          = 0
   END SUBROUTINE init_veg_output_variables
 
 
@@ -775,21 +777,29 @@ CONTAINS
       res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
       transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dtime_one 
       drainage_acc(itile)     = drainage_acc(itile)      + soil%drainage%ptr(1,1)          * dtime_one 
-      gc_acc(itile)           = assimi%canopy_cond%ptr                                                      
-      ga_acc(itile)           = ga                                                   
-      albedo_acc(itile)       = albedo
+      gc_acc(itile)           = gc_acc(itile)            + assimi%canopy_cond%ptr                                                      
+      ga_acc(itile)           = ga_acc(itile)            + ga                                                   
+      albedo_acc(itile)       = albedo_acc(itile)        + albedo
       ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2ppfd  * dtime_one               
       rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dtime_one               
       qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dtime_one               
       qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dtime_one               
       qg_acc(itile)           = qg_acc(itile)            + ground_heat_flx            * dtime_one               
       appfd_acc(itile)        = appfd_acc(itile)         + rad%appfd%ptr              * dtime_one               
+      ndat_acc(itile)         = ndat_acc(itile)          + 1 
 
       !> 1.2 write fluxes and set to zero
       !!
       !!  
       IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
          & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
+
+        IF(ndat_acc(itile) > 1) THEN
+          gc_acc(itile) = gc_acc(itile) / ndat_acc(itile)
+          ga_acc(itile) = ga_acc(itile) / ndat_acc(itile)
+          albedo_acc(itile) = albedo_acc(itile) / ndat_acc(itile)
+        ENDIF
+
         ! write
         lun = (100 * itile) + 30
         write(lun,'(8F12.6)') time_d, gpp_acc(itile), growth_resp_acc(itile), maint_resp_acc(itile), &
@@ -852,6 +862,7 @@ CONTAINS
         qg_acc(itile)            = 0.0_wp
         albedo_acc(itile)        = 0.0_wp
         appfd_acc(itile)          = 0.0_wp
+        ndat_acc(itile)          = 0
       END IF
     END IF
     END IF  ! on/off switch specific to 'special case: fluxnet output'
