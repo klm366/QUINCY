@@ -116,7 +116,7 @@ for (v in 1:nvar) {
   if(variable_name[v]=='FAPAR') {
      outlongname[v]<-"Fraction of Absorbed Photosynthetically Active Radiation"
      outunit[v]<-"-"
-     outvar[v,]<-fluxEfile$APAR/fluxEfile$PPFD
+     outvar[v,]<-fluxEfile$fAPPFD
      outvar[v,is.na(outvar[v,])]<-0
   }
 
