@@ -87,7 +87,7 @@ CONTAINS
   SUBROUTINE init_slm_plant(tile)
 
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot
-    USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14
+    USE mo_atmland_constants
     USE mo_veg_constants,                   ONLY: fresp_growth
     USE mo_shared_isotope,                  ONLY: calc_fractionation 
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps 
@@ -147,6 +147,43 @@ CONTAINS
       ELSE
          veg%pool%reserve  = veg%init_pool 
       END IF
+
+
+      ! initialising moving averages
+      ! allocation
+      veg%npp_talloc_mavg%ptr = 0.0_wp
+      veg%n_fixation_talloc_mavg%ptr = 0.0_wp
+      veg%transpiration_talloc_mavg%ptr = 0.0_wp
+      veg%unit_npp_talloc_mavg%ptr = 0.0_wp
+      veg%unit_transpiration_talloc_mavg%ptr = 0.0_wp
+      veg%unit_uptake_n_act_talloc_mavg%ptr = 0.0_wp
+      veg%unit_uptake_p_act_talloc_mavg%ptr = 0.0_wp
+      veg%dphi_talloc_mavg%ptr = -2.0_wp
+      veg%growth_cn_talloc_mavg%ptr = 60.0_wp
+      veg%growth_cp_talloc_mavg%ptr = 1000.0_wp
+      veg%labile_carbon_talloc_mavg%ptr = 0.0_wp
+      veg%labile_nitrogen_talloc_mavg%ptr = 0.0_wp
+      veg%labile_phosphorus_talloc_mavg%ptr = 0.0_wp
+      veg%reserve_carbon_talloc_mavg%ptr = 0.0_wp
+      veg%reserve_nitrogen_talloc_mavg%ptr = 0.0_wp
+      veg%reserve_phosphorus_talloc_mavg%ptr = 0.0_wp
+
+      ! N fraction optimisation
+      veg%fleaf_sunlit_tfrac_mavg_cl%ptr = 0.5_wp
+      veg%t_air_tfrac_mavg%ptr = 283.15_wp
+      veg%press_srf_tfrac_mavg%ptr = standard_press_srf
+      veg%co2_mixing_ratio_tfrac_mavg%ptr = def_co2_mixing_ratio
+      veg%ga_tfrac_mavg%ptr = 0.2_wp
+      veg%beta_sinklim_ps_tfrac_mavg%ptr = 1.0_wp
+      
+      ! leaf N optimisation
+      veg%fleaf_sunlit_tcnl_mavg_cl%ptr = 0.5_wp
+      veg%t_air_tcnl_mavg%ptr = 283.15_wp
+      veg%press_srf_tcnl_mavg%ptr = standard_press_srf
+      veg%co2_mixing_ratio_tcnl_mavg%ptr = def_co2_mixing_ratio
+      veg%ga_tfrac_mavg%ptr = 0.2_wp
+      veg%beta_sinklim_ps_tcnl_mavg%ptr = 1.0_wp
+
 
   END SUBROUTINE init_slm_plant
 

@@ -116,7 +116,8 @@ CONTAINS
                  veg%demand_uptake_n_tuptake_mavg%ptr * & 
                  sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + & 
                    1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) )) * & 
-                 veg%pool%fine_root%carbon%ptr
+                   veg%pool%fine_root%carbon%ptr
+         
          veg%uptake_no3%ptr = lctlib%vmax_uptake_n * &
                  veg%demand_uptake_n_tuptake_mavg%ptr * & 
                  sb%no3_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + & 

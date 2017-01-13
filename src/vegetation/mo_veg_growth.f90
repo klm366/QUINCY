@@ -635,7 +635,6 @@ CONTAINS
                 (labile_carbon + reserve_carbon - &
                 (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
                 (unit_uptake_p * growth_cp * mavg_period_tgrowth*one_day)
-
            IF ( hlp1 >= hlp2) THEN 
               ! if N is more limiting than P
               k1_opt = hlp1 

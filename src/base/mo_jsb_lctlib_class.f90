@@ -278,7 +278,8 @@ CONTAINS
       lctlib(1:npft)%wood_density = & 
       (/0.3_wp,0.3_wp,0.3_wp,0.3_wp,0.3_wp,0.3_wp,0.22_wp,0.22_wp/) * 1000000._wp/ molar_mass_C
       ! leaf area to sapwood area ratio 
-      lctlib(1:npft)%k_latosa = 4000.0_wp 
+      lctlib(1:npft)%k_latosa = &
+       (/4000.0_wp, 4000.0_wp, 4000.0_wp, 4000.0_wp, 4000.0_wp, 4000.0_wp, 0.0_wp, 0.0_wp/)  
       ! coarse root to sapwood mass ratio 
       lctlib(1:npft)%k_crtos = 0.2_wp
       ! trade-off parametr for hydraulic investment into sapwood or fine roots 

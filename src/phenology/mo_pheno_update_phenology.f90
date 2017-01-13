@@ -168,7 +168,7 @@ CONTAINS
                mean_leaf_age > min_leaf_age ) & 
                   growing_season = .FALSE.
          CASE (isummergreen)     ! if temperature are declining below a certain threshold AND 
-                                 ! leaves have been out a given number of days
+            ! leaves have been out a given number of days
             IF(t_air_week_mavg < t_air_month_mavg .AND. &
                t_air_tphen_mavg < lctlib%t_air_senescence .AND. & 
                mean_leaf_age > min_leaf_age) & 

@@ -164,6 +164,7 @@ CONTAINS
       veg%beta_sinklim_ps_daytime_dacc%ptr  = veg%beta_sinklim_ps_daytime_dacc%ptr  + veg%beta_sinklim_ps%ptr
       assimi%beta_soil_gs_daytime_dacc%ptr  = assimi%beta_soil_gs_daytime_dacc%ptr  + assimi%beta_soil_gs%ptr
       veg%t_jmax_opt_daytime_dacc%ptr       = veg%t_jmax_opt_daytime_dacc%ptr       + assimi%t_jmax_opt%ptr
+      
     END IF
 
 
@@ -392,7 +393,7 @@ CONTAINS
     veg%co2_mixing_ratio_tcnl_mavg%ptr    = calc_mavg(veg%co2_mixing_ratio_tcnl_mavg%ptr, veg%co2_mixing_ratio_daytime%ptr, &
                                                   mavg_period_tcnl)
     veg%ga_tcnl_mavg%ptr                  = calc_mavg(veg%ga_tcnl_mavg%ptr, veg%ga_daytime%ptr, &
-                                                  mavg_period_tcnl)
+         mavg_period_tcnl)
     assimi%beta_soil_ps_tcnl_mavg%ptr     = calc_mavg(assimi%beta_soil_ps_tcnl_mavg%ptr, assimi%beta_soil_ps_daytime%ptr, &
                                                   mavg_period_tcnl)
     veg%beta_sinklim_ps_tcnl_mavg%ptr     = calc_mavg(veg%beta_sinklim_ps_tcnl_mavg%ptr, veg%beta_sinklim_ps_daytime%ptr, &
@@ -421,7 +422,7 @@ CONTAINS
     veg%unit_uptake_p_act_talloc_mavg%ptr    = calc_mavg(veg%unit_uptake_p_act_talloc_mavg%ptr, veg%unit_uptake_p_act%ptr, &
                                                       mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%labile_carbon_talloc_mavg%ptr        = calc_mavg(veg%labile_carbon_talloc_mavg%ptr, veg%pool%labile%carbon%ptr, & 
-                                                      mavg_period_talloc, do_calc=pheno%growing_season%ptr)
+         mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%labile_nitrogen_talloc_mavg%ptr      = calc_mavg(veg%labile_nitrogen_talloc_mavg%ptr, veg%pool%labile%nitrogen%ptr, & 
                                                       mavg_period_talloc, do_calc=pheno%growing_season%ptr)
     veg%labile_phosphorus_talloc_mavg%ptr    = calc_mavg(veg%labile_phosphorus_talloc_mavg%ptr, veg%pool%labile%phosphorus%ptr, & 

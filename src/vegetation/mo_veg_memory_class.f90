@@ -1763,10 +1763,10 @@ CONTAINS
       CALL slm_add_var(mem, 'reserve_carbon_talloc_mavg', mem%reserve_carbon_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'reserve_use_nitrogen_talloc_mavg', mem%reserve_nitrogen_talloc_mavg, &
+      CALL slm_add_var(mem, 'reserve_nitrogen_talloc_mavg', mem%reserve_nitrogen_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'reserve_use_phosphorus_talloc_mavg', mem%reserve_phosphorus_talloc_mavg, &
+      CALL slm_add_var(mem, 'reserve_phosphorus_talloc_mavg', mem%reserve_phosphorus_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'leaf2root_troot_mavg', mem%leaf2root_troot_mavg, &
