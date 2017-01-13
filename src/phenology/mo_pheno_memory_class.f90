@@ -103,10 +103,10 @@ CONTAINS
             initval_r=.TRUE.) ! initvalue
 
       CALL slm_add_var(mem, 'gdd', mem%gdd, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'nd_dormance', mem%nd_dormance, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
 
 
 

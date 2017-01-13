@@ -293,12 +293,17 @@ CONTAINS
     ! run model init
     ! for land the same init routine as plant is run
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land','plant','soil')
-        CALL veg_init(tile)       ! veg (init_slm_plant)
+      CASE('land','plant')
+        CALL pheno_init(tile)     ! pheno 
+        CALL veg_init(tile)       ! veg 
         CALL sb_init(tile)        ! sb 
         CALL soil_init(tile)      ! soil
+      CASE('soil')
+        CALL veg_init(tile)       ! veg, strictly speaking not necessary, but to be safe
+        CALL sb_init(tile)        ! sb 
+        CALL soil_init(tile)      ! soil, strictly speaking not necessary, but to be safe
       CASE('canopy')
-        CALL veg_init(tile)       ! veg (init_slm_plant)
+        CALL veg_init(tile)       ! veg 
         CALL soil_init(tile)      ! soil
       CASE('test_canopy')
         ! init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
