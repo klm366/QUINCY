@@ -28,10 +28,6 @@ MODULE mo_veg_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
-    CHARACTER(8)     :: output_interval_pool, &
-                        output_interval_flux
-    INTEGER          :: output_start_first_day_year, &  !< output start at the 1st  day of this year
-                        output_end_last_day_year        !< output stop  at the last day of this year
     INTEGER          :: pft_id
     CHARACTER(15)    :: n_uptake_scheme            !< select scheme to simulate N uptake
                                                    ! "prescribed|standard|resistance|optimal"           
@@ -62,13 +58,9 @@ CONTAINS
     ! 0.1 InOut
     CLASS(t_veg_config), INTENT(inout) :: config    !< config type for veg
     ! 0.2 Local
-    ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL       :: active
-    CHARACTER(8)  :: output_interval_pool          , &
-                     output_interval_flux
-    INTEGER       :: output_start_first_day_year   , &
-                     output_end_last_day_year      , &
-                     plant_functional_type_id
+    ! variables for reading from namlist, identical to variable-name in namelist
+    INTEGER       :: plant_functional_type_id
     CHARACTER(15) :: n_uptake_scheme, & 
                      p_uptake_scheme
     LOGICAL       :: flag_tile_veg_dynamics
@@ -77,10 +69,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
     NAMELIST /vegetation_ctl/       & 
-      output_interval_pool,         &
-      output_interval_flux,         &
-      output_start_first_day_year,  &
-      output_end_last_day_year,     &
       n_uptake_scheme,              & 
       p_uptake_scheme,              & 
       plant_functional_type_id,     &
@@ -94,10 +82,6 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
-    output_interval_pool           = 'monthly' ! timestep daily weekly monthly yearly
-    output_interval_flux           = 'monthly' ! timestep daily weekly monthly yearly
-    output_start_first_day_year    = 1
-    output_end_last_day_year       = 10
     n_uptake_scheme                = "standard"  ! prescribed standard resistance optimal
     p_uptake_scheme                = "standard"  ! prescribed standard
     plant_functional_type_id       = 1
@@ -130,10 +114,6 @@ CONTAINS
     ENDSELECT
 
     ! pass values as read from file
-    config%output_interval_pool          = output_interval_pool
-    config%output_interval_flux          = output_interval_flux
-    config%output_start_first_day_year   = output_start_first_day_year
-    config%output_end_last_day_year      = output_end_last_day_year
     config%n_uptake_scheme               = TRIM(n_uptake_scheme)
     config%p_uptake_scheme               = TRIM(p_uptake_scheme)
     config%pft_id                        = plant_functional_type_id

@@ -31,10 +31,14 @@ MODULE mo_base_config_class
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
+    CHARACTER(8)      :: output_interval_pool, &
+                         output_interval_flux
+    INTEGER           :: output_start_first_day_year, &  !< output start at the 1st  day of this year
+                         output_end_last_day_year        !< output stop  at the last day of this year
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
-    LOGICAL           :: flag_generate_soil_forcing    !< all litterfall pools + some soilphysics 
-                                                            !! at period: veg_config%output_start_first_day_year .. output_end_last_day_year
+    LOGICAL           :: flag_generate_soil_forcing       !< all litterfall pools + some soilphysics 
+                                                          !! at period: base_config%output_start_first_day_year .. output_end_last_day_year
     LOGICAL           :: set_parameter_values_from_file
     LOGICAL           :: flag_climate_forcing_one_year
     ! GRID_CTL
@@ -61,13 +65,17 @@ CONTAINS
     ! 0.1 InOut
     CLASS(t_base_config), INTENT(inout) :: config    !< config type for base
     ! 0.2 Local
-    !LOGICAL          :: active
+    LOGICAL           :: active
     ! variables for reading from namlist, identical to variable-name in namelist
     ! BASE_CTL
     REAL(wp)          :: dtime_step_length_sec   ! model-variable: dtime 
     CHARACTER(1)      :: simulation_length_unit
     INTEGER           :: simulation_length_number
     CHARACTER(len=20) :: slm_model_name
+    CHARACTER(8)      :: output_interval_pool          , &
+                         output_interval_flux
+    INTEGER           :: output_start_first_day_year   , &
+                         output_end_last_day_year
     LOGICAL           :: fluxnet_output
     INTEGER           :: fluxnet_output_length
     LOGICAL           :: flag_generate_soil_forcing                     !< all litterfall pools + some soilphysics
@@ -83,6 +91,10 @@ CONTAINS
         simulation_length_unit                , &
         simulation_length_number              , &
         slm_model_name                        , &
+        output_interval_pool                  , &
+        output_interval_flux                  , &
+        output_start_first_day_year           , &
+        output_end_last_day_year              , &
         fluxnet_output                        , &
         fluxnet_output_length                 , &
         flag_generate_soil_forcing            , &
@@ -106,6 +118,10 @@ CONTAINS
     simulation_length_unit                  = 'y'         ! y (years), w (weeks), d (days)
     simulation_length_number                = 20 
     slm_model_name                          = 'land'
+    output_interval_pool                    = 'monthly' ! timestep daily weekly monthly yearly
+    output_interval_flux                    = 'monthly' ! timestep daily weekly monthly yearly
+    output_start_first_day_year             = 1
+    output_end_last_day_year                = 10
     fluxnet_output                          = .FALSE.     ! .TRUE. .FALSE.
     fluxnet_output_length                   = 2
     flag_generate_soil_forcing              = .FALSE.     ! .TRUE. .FALSE.
@@ -136,6 +152,10 @@ CONTAINS
     config%simulation_length_unit                 = simulation_length_unit
     config%simulation_length_number               = simulation_length_number
     config%slm_model_name                         = slm_model_name
+    config%output_interval_pool                   = output_interval_pool
+    config%output_interval_flux                   = output_interval_flux
+    config%output_start_first_day_year            = output_start_first_day_year
+    config%output_end_last_day_year               = output_end_last_day_year
     config%fluxnet_output                         = fluxnet_output
     config%fluxnet_output_length                  = fluxnet_output_length
     config%flag_generate_soil_forcing             = flag_generate_soil_forcing

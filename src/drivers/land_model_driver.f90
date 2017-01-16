@@ -27,7 +27,6 @@ PROGRAM land_model_driver
   USE mo_atmland_forcing,         ONLY: update_forcing, open_forcing_input_file, close_forcing_input_file ! valid for land plant canopy and soil
                                         
   ! vegetation
-  USE mo_veg_config_class,        ONLY: veg_config  ! used for 'special case: fluxnet output'
   USE mo_shared_output,           ONLY: init_veg_output_variables, &
                                         open_pool_output_files, &
                                         open_flux_output_files, &
@@ -352,8 +351,8 @@ PROGRAM land_model_driver
       IF (itimestep == fluxnet_output_start) THEN         ! start of fluxnet output (at each timestep)
           fluxnet_output_status = 2                       ! status update: currently writing output data
           CALL close_output_files(1)                      ! 1 == itile
-          veg_config%output_interval_pool   = 'timestep' 
-          veg_config%output_interval_flux   = 'timestep' 
+          base_config%output_interval_pool   = 'timestep' 
+          base_config%output_interval_flux   = 'timestep' 
           CALL open_pool_output_files(1)                  ! 1 == itile 
           CALL open_flux_output_files(1)                  ! 1 == itile 
 

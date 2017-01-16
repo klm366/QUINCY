@@ -270,10 +270,10 @@ CONTAINS
       fluxnet_output_stop   = fluxnet_output_start + fluxnet_output_length
 
       ! check whether general output start and stop covers the 'Fluxnet specific simulation output'
-      IF ( (veg_config%output_end_last_day_year * one_year * one_day / base_config%dtime) < fluxnet_output_stop) THEN
+      IF ( (base_config%output_end_last_day_year * one_year * one_day / base_config%dtime) < fluxnet_output_stop) THEN
         CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
       END IF
-      IF ( (((veg_config%output_start_first_day_year - 1) * one_year * one_day + 1) / base_config%dtime) > fluxnet_output_start) THEN
+      IF ( (((base_config%output_start_first_day_year - 1) * one_year * one_day + 1) / base_config%dtime) > fluxnet_output_start) THEN
         CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
       END IF
     END IF

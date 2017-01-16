@@ -4,10 +4,6 @@
   flag_optimal_Nleaf=.FALSE.
   flag_optimal_allocation=.FALSE.
   ! options for the vegetation
-  output_interval_pool="weekly"
-  output_interval_flux="weekly"
-  output_start_first_day_year=1
-  output_end_last_day_year=30
   n_uptake_scheme="standard"
   p_uptake_scheme="prescribed"
   plant_functional_type_id=5
@@ -55,6 +51,11 @@
   simulation_length_number=30
   ! SLM model: land plant soil canopy test_canopy
   slm_model_name="land"
+  ! model output
+  output_interval_pool="weekly"
+  output_interval_flux="weekly"
+  output_start_first_day_year=1
+  output_end_last_day_year=30
   ! if fluxnet sites: output per timestep for last forcing period [FALSE TRUE]
   fluxnet_output=.FALSE.
   ! length of forcing period [years] provided by data file

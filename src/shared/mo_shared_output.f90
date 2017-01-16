@@ -16,6 +16,7 @@ MODULE mo_shared_output
   USE mo_base_constants,        ONLY: ntile
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_model_init,        ONLY: fluxnet_output_status   ! used for 'special case: fluxnet output'
+  USE mo_base_config_class,     ONLY: base_config
   USE mo_veg_config_class,      ONLY: veg_config
   USE mo_assimi_config_class,   ONLY: assimi_config
 
@@ -279,9 +280,9 @@ CONTAINS
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
     !! 
-    !! it is not necessary to pass 'veg_config%output_interval_pool' as argument to open_pool_output_files
-    !! as 'veg_config' is global & defined with SAVE and initialized before this function is called
-    output_interval_pool = calc_output_time_interval(veg_config%output_interval_pool)
+    !! it is not necessary to pass 'base_config%output_interval_pool' as argument to open_pool_output_files
+    !! as 'base_config' is global & defined with SAVE and initialized before this function is called
+    output_interval_pool = calc_output_time_interval(base_config%output_interval_pool)
 
     !> 1.2 transform itile to char_itile
     !! 
@@ -307,28 +308,28 @@ CONTAINS
     !! 
     !! 
     lun = 100 * itile
-    fname = 'vegpoolC_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    fname = 'vegpoolC_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'vegpooldC13dC14_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    fname = 'vegpooldC13dC14_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'vegpoolN_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    fname = 'vegpoolN_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'vegpoolP_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    fname = 'vegpoolP_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'vegpoolH2O_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    fname = 'vegpoolH2O_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'soilpoolNP_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    fname = 'soilpoolNP_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'veg_canopy_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    fname = 'veg_canopy_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'veg_diagnostics_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_pool)//TRIM(opt)//'.txt'
+    fname = 'veg_diagnostics_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
     !> 3.0 write column headers into output files
@@ -362,9 +363,9 @@ CONTAINS
 
     !> 1.1 transform interval string to interval number (e.g. week -> 7)
     !! 
-    !! it is not necessary to pass 'veg_config%output_interval_pool' as argument to open_pool_output_files
-    !! as 'veg_config' is global & defined with SAVE and initialized before this function is called
-    output_interval_flux = calc_output_time_interval(veg_config%output_interval_flux)
+    !! it is not necessary to pass 'base_config%output_interval_pool' as argument to open_pool_output_files
+    !! as 'base_config' is global & defined with SAVE and initialized before this function is called
+    output_interval_flux = calc_output_time_interval(base_config%output_interval_flux)
 
     !> 1.2 transform itile to char_itile
     !! 
@@ -389,22 +390,22 @@ CONTAINS
     !! 
     !! 
     lun = (100 * itile) + 30
-    fname = 'vegfluxC_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
+    fname = 'vegfluxC_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'vegfluxdC13dC14_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
+    fname = 'vegfluxdC13dC14_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'vegfluxN_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
+    fname = 'vegfluxN_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'vegfluxP_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
+    fname = 'vegfluxP_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'vegfluxH2O_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
+    fname = 'vegfluxH2O_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
     lun=lun+1
-    fname = 'vegfluxEnergy_tile'//TRIM(char_itile)//'_'//TRIM(veg_config%output_interval_flux)//TRIM(opt)//'.txt'
+    fname = 'vegfluxEnergy_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
     OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
     !> 3.0 write column headers into output files
@@ -548,7 +549,7 @@ CONTAINS
     !> 1.0 check output start & end, and write pools if appropriate with output_interval
     !! 
     !! 
-    IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
+    IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
       IF( MODULO(time_d, output_interval_pool) < eps4 .OR. &
          & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
        lun = 100 * itile
@@ -740,7 +741,7 @@ CONTAINS
     !> 1.0 check output start & end, and write pools if appropriate with output_interval
     !! 
     !! 
-    IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
+    IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
 
       !> 1.1 accumulate fluxes across the timesteps of one interval
       !! 
@@ -916,7 +917,7 @@ CONTAINS
     !> 1.0 check output start & end, and write litterfall and soilphysics if appropriate
     !! 
     !! identical output period as pools & fluxes
-    IF( time_y >= veg_config%output_start_first_day_year .AND. time_y <= veg_config%output_end_last_day_year) THEN
+    IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
 
       lun = 100 * itile + 60
       write(lun,'(56F12.6)') time_d, &
