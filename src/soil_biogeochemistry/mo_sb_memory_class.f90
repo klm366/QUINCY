@@ -899,6 +899,12 @@ CONTAINS
       CALL slm_add_var(mem, 'net_mineralisation_p', mem%net_mineralisation_p, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL slm_add_var(mem, 'volatilisation_n', mem%volatilisation_n, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'nitrification', mem%nitrification, &
+            initval_r=0.0_wp) ! initvalue
+
       !> simple TYPE (t_jsb_struct)
       !! 
       !! slm_add_var -> slm_add_struct()
