@@ -6,8 +6,6 @@
 !! @par Revision History
 !! First version by Veronika Gayler (2013-06-29)
 
-#include "dsl_jsbach.inc"
-
 MODULE mo_interface_hd_ocean
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 

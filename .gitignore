@@ -2,6 +2,7 @@
 *~
 *.mod
 /.projectile
-*.mod
 .env
 .idea/
+/doc/html
+/doc/latex

@@ -55,10 +55,10 @@ macros = {
         r'REAL(wp), POINTER, DIMENSION(:,:)'],
     'get_var2d_onchunk' : [re.compile(
         r'dsl4jsb_Get_var2D_onChunk\((.*?), *(.*?), *(.*?)\)',           re.IGNORECASE),
-        r'\2 => \1__mem%\2%ptr(ics:ice,iblk); CALL \1__mem%\2%Set_inout("\3")'],
+        r'\2 => \1__mem%\2%ptr(ics:ice,iblk)'],
     'get_var3d_onchunk' : [re.compile(
         r'dsl4jsb_Get_var3D_onChunk\((.*?), *(.*?), *(.*?)\)',           re.IGNORECASE),
-        r'\2 => \1__mem%\2%ptr(ics:ice,:,iblk); CALL \1__mem%\2%Set_inout("\3")'],
+        r'\2 => \1__mem%\2%ptr(ics:ice,:,iblk)'],
     'var2d_onchunk' : [re.compile(
         r'dsl4jsb_var2D_onChunk\((.*?), *(.*?)\)',                       re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,iblk)'],
@@ -73,10 +73,10 @@ macros = {
         r'REAL(wp), POINTER, DIMENSION(:,:,:)'],
     'get_var2d_ondomain' : [re.compile(
         r'dsl4jsb_Get_var2D_onDomain\((.*?), *(.*?), *(.*?)\)',          re.IGNORECASE),
-        r'\2 => \1__mem%\2%ptr(:,:); CALL \1__mem%\2%Set_inout("\3")'],
+        r'\2 => \1__mem%\2%ptr(:,:)'],
     'get_var3d_ondomain' : [re.compile(
         r'dsl4jsb_Get_var3D_onDomain\((.*?), *(.*?), *(.*?)\)',          re.IGNORECASE),
-        r'\2 => \1__mem%\2%ptr(:,:,:); CALL \1__mem%\2%Set_inout("\3")'],
+        r'\2 => \1__mem%\2%ptr(:,:,:)'],
     'var2d_ondomain' : [re.compile(
         r'dsl4jsb_var2D_onDomain\((.*?), *(.*?)\)',                      re.IGNORECASE),
         r'\1__mem%\2%ptr(:,:)'],

@@ -27,8 +27,6 @@ MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
 #ifndef __ICON__
 
-#include "dsl_jsbach.inc"
-
   !>>> TODO: echam!
   USE mo_time_control,    ONLY: next_date, current_date, lstart, lresume, delta_time, time_step_len, get_year_day
   USE mo_netcdf,          ONLY: nf_check, nf_get_vara_double, nf_inq_dimid, nf_inq_dimlen, &

@@ -7,8 +7,6 @@
 !! @par Revision History
 !! First version by Veronika Gayler (2013-04-20)
 !!
-#include "dsl_jsbach.inc"
-
 MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
@@ -202,6 +200,15 @@ CONTAINS
       inflow(:) = discharge(:)
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_riverflow(:), nres_riverflow(:), riverflow_res(:,:), outflow_rivers(:))
 
+      DEALLOCATE (inflow)
+
+    CASE ('weighted_to_coast')
+      !
+      ! dummy version of HD model
+      !
+      ! unit conversion: [kg m-2 s-1] -> [m3/s]
+      discharge(:) = tile_fract(:) * (runoff(:) + drainage(:)) * area(:) / rhoh2o
+
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
       CALL finish(TRIM(routine), message_text)
@@ -252,6 +259,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain :: &
       & hd_mask,               &
+      & coast_ocean,           &
       & outflow_runoff,        &
       & outflow_drainage,      &
       & outflow_rivers,        &
@@ -321,6 +329,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, bidx_upstream)    ! IN
+
+    dsl4jsb_Get_var2D_onDomain(HD_, coast_ocean) ! IN
 
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! OUT
@@ -444,6 +454,22 @@ CONTAINS
         CALL message (routine, message_text)
       END IF
 
+    CASE ('weighted_to_coast')
+
+      ! Dummy discharge: the discharge is distributed to all coastal ocean cells, weighted by cosine of latitude
+
+      global_discharge = global_sum_array(discharge(:,:) * in_domain(:,:))
+
+      ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
+      cos_lat(:,:) = MERGE(COS(grid%lat(:,:)), 0._wp, coast_ocean(:,:) == 1._wp)
+      sum_weights = global_sum_array(coast_ocean(:,:) * cos_lat(:,:) * in_domain(:,:))
+      WHERE (coast_ocean(:,:) == 1._wp)
+        discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
+      ELSEWHERE
+        discharge_ocean(:,:) = 0._wp
+      END WHERE
+      discharge(:,:) = 0._wp
+
     CASE DEFAULT
       WRITE (message_text,*)  'no valid parameter for routing_scheme: ', TRIM(routing_scheme)
       CALL finish(TRIM(routine), message_text)
@@ -531,6 +557,10 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
 
+    ! Configuration parameters from the namelist
+    debug_hd          = dsl4jsb_Config(HD)%debug_hd
+    diag_water_budget = dsl4jsb_Config(HD)%diag_water_budget
+
     ! Get reference to variables in memory
 
     nres_o_max = hd__mem%nres_o_max
@@ -553,12 +583,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! IN
 
-    water_budget   =  dsl4jsb_var2D_ptr(HD_,water_budget)  (1,1)
-
-    ! Configuration parameters from the namelist
-    debug_hd          = dsl4jsb_Config(HD_)%debug_hd
-    diag_water_budget = dsl4jsb_Config(HD_)%diag_water_budget
-
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma, nblks))
     WHERE (is_in_domain(:,:))
@@ -567,6 +591,15 @@ CONTAINS
       in_domain = 0._wp
     END WHERE
 
+    IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) /= 'full') THEN
+      IF (diag_water_budget) THEN
+        WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(discharge_ocean*in_domain), ' m3/s'
+        CALL message (TRIM(routine),message_text)
+      END IF
+      RETURN
+    END IF
+
+    water_budget   =  dsl4jsb_var2D_ptr(HD,water_budget)  (1,1)
     water_budget_old = water_budget
 
     ! re-calculate global land water budget

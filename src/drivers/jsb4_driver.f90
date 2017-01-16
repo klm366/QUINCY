@@ -11,8 +11,6 @@
 PROGRAM jsb4_driver
 #ifndef __ICON__
 
-#include "dsl_jsbach.inc"
-
   USE mo_jsb_interface,      ONLY: jsbach_interface
   USE mo_jsb_base,           ONLY: init_base
   USE mo_jsb_model_init,     ONLY: init_model

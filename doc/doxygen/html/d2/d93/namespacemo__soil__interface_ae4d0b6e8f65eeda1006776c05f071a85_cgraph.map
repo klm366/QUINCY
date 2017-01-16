@@ -1,7 +1,0 @@
-<map id="mo_soil_interface::update_soil_1" name="mo_soil_interface::update_soil_1">
-<area shape="rect" id="node2" href="$d9/da0/namespacemo__jsb__control.html#a5712e1cd2e5736d1d7e6a59707af0200" title="mo_jsb_control::debug_on" alt="" coords="185,5,360,32"/>
-<area shape="rect" id="node3" href="$d1/d3e/namespacemo__soil__process.html#a9f2a04bdb962c1615ee419e1c62d6870" title="mo_soil_process::update\l_soiltemp" alt="" coords="189,57,356,98"/>
-<area shape="rect" id="node4" href="$d1/d3e/namespacemo__soil__process.html#a7dd6c425ac02aef924fb1fa3de6b373d" title="mo_soil_process::update\l_surf_down" alt="" coords="189,122,356,163"/>
-<area shape="rect" id="node5" href="$d1/d3e/namespacemo__soil__process.html#a6baae437b29f7d04d8bb10cb1d52249f" title="mo_soil_process::update\l_surf_up" alt="" coords="189,187,356,229"/>
-<area shape="rect" id="node6" href="$d1/d3e/namespacemo__soil__process.html#a4063fcd30b65b8bb38b532cfe884feb7" title="mo_soil_process::soilhyd" alt="" coords="408,195,577,221"/>
-</map>

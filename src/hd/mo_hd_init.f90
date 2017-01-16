@@ -11,8 +11,6 @@ MODULE mo_hd_init
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-#include "dsl_jsbach.inc"
-
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish, message_text
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -25,6 +23,7 @@ MODULE mo_hd_init
   USE mo_decomposition_tools, ONLY: get_local_index
   USE mo_sync,                ONLY: global_max
   USE mo_jsb_parallel_iface,  ONLY: get_my_global_mpi_id
+  USE mo_impl_constants,      ONLY: SEA_BOUNDARY
 
   dsl4jsb_Use_processes HD_
   dsl4jsb_Use_config(HD_)
@@ -50,6 +49,7 @@ CONTAINS
     dsl4jsb_Def_memory(HD_)
 
     REAL(wp), POINTER ::         &
+      & cell_sea_land_mask(:,:), &
       & return_pointer   (:,:),  &   !< temporary pointer
       & return_pointer3d (:,:,:)     !< temporary pointer
 
@@ -71,100 +71,116 @@ CONTAINS
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)
 
-    IF (TRIM(dsl4jsb_Config(HD_)%routing_scheme) /= 'full') RETURN
+    SELECT CASE (TRIM(dsl4jsb_Config(HD)%routing_scheme))
+    CASE ('full')
 
-    CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//&
-                                ' from '//TRIM(dsl4jsb_Config(HD_)%bc_filename))
+      CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//&
+                                  ' from '//TRIM(dsl4jsb_Config(HD_)%bc_filename))
 
-    ! Initialize boundary conditions
-    !
-    ! Number of base flow reservoirs
-    dsl4jsb_var2D_onDomain(HD_, nres_baseflow) = 1._wp
+      ! Initialize boundary conditions
+      !
+      ! Number of base flow reservoirs
+      dsl4jsb_var2D_onDomain(HD_, nres_baseflow) = 1._wp
 
-    ! Maximum number of reservoirs
-    hd__mem%nres_o_max = 1
-    hd__mem%nres_b_max = 1
-    hd__mem%nres_r_max = 5
+      ! Maximum number of reservoirs
+      hd__mem%nres_o_max = 1
+      hd__mem%nres_b_max = 1
+      hd__mem%nres_r_max = 5
 
-    ! Maximum number of inflow neighbor cells
-    hd__mem%nneigh = 6
+      ! Maximum number of inflow neighbor cells
+      hd__mem%nneigh = 6
 
-    !CALL message(TRIM(routine), 'Initializing HD fractions for tile '//TRIM(tile%name)//&
-    !  &                         ' from '//TRIM(dsl4jsb_Config(HD_)%fract_filneame))
-    !input_file = jsb_netcdf_open_input('TRIM(dsl4jsb_Config(HD_)%fract_filneame', model%id)
+      !CALL message(TRIM(routine), 'Initializing HD fractions for tile '//TRIM(tile%name)//&
+      !  &                         ' from '//TRIM(dsl4jsb_Config(HD_)%fract_filneame))
+      !input_file = jsb_netcdf_open_input('TRIM(dsl4jsb_Config(HD_)%fract_filneame', model%id)
 
-    ! Initialize data from input file
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD_)%bc_filename), model%grid_id)
+      ! Initialize data from input file
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD_)%bc_filename), model%grid_id)
 
-    ! HD model mask: -1 ocean, 0: ocean inflow cells, 1: land with outflow, 2: internal drainage
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='MASK',                     &
-      & fill_array = dsl4jsb_var2D_ptr(HD_,hd_mask))
+      ! HD model mask: -1 ocean, 0: ocean inflow cells, 1: land with outflow, 2: internal drainage
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='MASK',                     &
+        & fill_array = dsl4jsb_var2D_ptr(HD_,hd_mask))
 
-    ! Retention constant of overland flow [day]
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='ALF_K',                    &
-      & fill_array = dsl4jsb_var2D_ptr(HD_,ret_overlflow))
+      ! Retention constant of overland flow [day]
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='ALF_K',                    &
+        & fill_array = dsl4jsb_var2D_ptr(HD_,ret_overlflow))
 
-    ! Number of overland flow reservoirs
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='ALF_N',                    &
-      & fill_array = dsl4jsb_var2D_ptr(HD_,nres_overlflow))
+      ! Number of overland flow reservoirs
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='ALF_N',                    &
+        & fill_array = dsl4jsb_var2D_ptr(HD_,nres_overlflow))
 
-    ! Retention constant of river flow [day]
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='ARF_K',                    &
-      & fill_array = dsl4jsb_var2D_ptr(HD_,ret_riverflow))
+      ! Retention constant of river flow [day]
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='ARF_K',                    &
+        & fill_array = dsl4jsb_var2D_ptr(HD_,ret_riverflow))
 
-    ! Number of river flow reservoirs
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='ARF_N',                    &
-      & fill_array = dsl4jsb_var2D_ptr(HD_,nres_riverflow))
+      ! Number of river flow reservoirs
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='ARF_N',                    &
+        & fill_array = dsl4jsb_var2D_ptr(HD_,nres_riverflow))
 
-    ! Retention constant for base flow [day]
-    return_pointer => input_file%Read_2d(         &
-      & variable_name='AGF_K',                    &
-      & fill_array = dsl4jsb_var2D_ptr(HD_,ret_baseflow))
+      ! Retention constant for base flow [day]
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='AGF_K',                    &
+        & fill_array = dsl4jsb_var2D_ptr(HD_,ret_baseflow))
 
-    ! Global index neighbouring grid cells upstream
-    return_pointer3d => input_file%Read_2d_extdim(  &
-      & variable_name='CELLS_UP',                   &
-      & start_extdim=1, end_extdim=hd__mem%nneigh,    &
-      & extdim_name='nneigh')
+      ! Global index neighbouring grid cells upstream
+      return_pointer3d => input_file%Read_2d_extdim(  &
+        & variable_name='CELLS_UP',                   &
+        & start_extdim=1, end_extdim=hd__mem%nneigh,    &
+        & extdim_name='nneigh')
 
-    ! find local idices of grid cells upstream
-    nproma = grid%nproma
-    nblks  = grid%nblks
-    ALLOCATE(dsl4jsb_var3D_ptr(HD_,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
-    ALLOCATE(dsl4jsb_var3D_ptr(HD_,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
-    dsl4jsb_var3D_ptr(HD_,nidx_upstream) = -1
-    dsl4jsb_var3D_ptr(HD_,bidx_upstream)  = -1
+        ! find local idices of grid cells upstream
+        nproma = grid%nproma
+        nblks  = grid%nblks
+        ALLOCATE(dsl4jsb_var3D_ptr(HD,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
+        ALLOCATE(dsl4jsb_var3D_ptr(HD,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
+        dsl4jsb_var3D_ptr(HD,nidx_upstream) = -1
+        dsl4jsb_var3D_ptr(HD,bidx_upstream)  = -1
 
-    blks = get_blk_start(grid)
-    blke = get_blk_end(grid)
-    DO blk = blks, blke
-      jcs = get_col_start(blk, grid)
-      jce = get_col_end  (blk, grid)
-      DO n = 1, hd__mem%nneigh
-        DO jc = jcs, jce
-          IF (NINT(return_pointer3d(jc,blk,n)) > 0) THEN
-            idx = get_local_index(grid%patch%cells%decomp_info%glb2loc_index, NINT(return_pointer3d(jc,blk,n)))
-            !print*, 'vg: p_pe: ', p_pe, ' n: ', n, ' blk: ', blk, ' FDIR: ', NINT(return_pointer(n,blk)), 'idx: ',idx
-            IF (idx ==  0) THEN
-              WRITE (message_text,*) "index of grid cell upstream (", NINT(return_pointer3d(jc,blk,n)), ") not in global domain"
-              CALL finish(routine, message_text)
-            ELSE IF (idx == -1) THEN
-              WRITE (message_text,*) "index of grid cell upstream (", NINT(return_pointer3d(jc,blk,n)), ") not in local domain"
-              CALL finish(routine, message_text)
+      blks = get_blk_start(grid)
+      blke = get_blk_end(grid)
+      DO blk = blks, blke
+        jcs = get_col_start(blk, grid)
+        jce = get_col_end  (blk, grid)
+        DO n = 1, hd__mem%nneigh
+          DO jc = jcs, jce
+            IF (NINT(return_pointer3d(jc,blk,n)) > 0) THEN
+              idx = get_local_index(grid%patch%cells%decomp_info%glb2loc_index, NINT(return_pointer3d(jc,blk,n)))
+              !print*, 'vg: p_pe: ', p_pe, ' n: ', n, ' blk: ', blk, ' FDIR: ', NINT(return_pointer(n,blk)), 'idx: ',idx
+              IF (idx ==  0) THEN
+                WRITE (message_text,*) "index of grid cell upstream (", NINT(return_pointer3d(jc,blk,n)), ") not in global domain"
+                CALL finish(routine, message_text)
+              ELSE IF (idx == -1) THEN
+                WRITE (message_text,*) "index of grid cell upstream (", NINT(return_pointer3d(jc,blk,n)), ") not in local domain"
+                CALL finish(routine, message_text)
+              END IF
+              hd__mem%bidx_upstream%ptr(jc,n,blk) = (idx-1)/nproma + 1
+              hd__mem%nidx_upstream%ptr(jc,n,blk) = idx - (hd__mem%bidx_upstream%ptr(jc,n,blk)-1)*nproma
             END IF
-            hd__mem%bidx_upstream%ptr(jc,n,blk) = (idx-1)/nproma + 1
-            hd__mem%nidx_upstream%ptr(jc,n,blk) = idx - (hd__mem%bidx_upstream%ptr(jc,n,blk)-1)*nproma
-          END IF
+          END DO
         END DO
       END DO
-    END DO
 
-    CALL input_file%Close()
+      CALL input_file%Close()
+
+    CASE ('weighted_to_coast')
+
+      input_file = jsb_netcdf_open_input(TRIM(grid%filename), model%id)
+
+      ! coastal ocean cells
+      cell_sea_land_mask => input_file%Read_2d( &
+        & variable_name='cell_sea_land_mask')
+      dsl4jsb_var2D_onDomain(HD_, coast_ocean) = &
+        & MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+      DEALLOCATE(cell_sea_land_mask)
+
+      CALL input_file%Close()
+
+    END SELECT
 
   END SUBROUTINE hd_init_bc
 

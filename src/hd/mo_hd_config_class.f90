@@ -24,7 +24,7 @@ MODULE mo_hd_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_hd_config
      LOGICAL                     :: debug_hd              !< additional printing for debugging
      LOGICAL                     :: diag_water_budget     !< prints to diagnose global water budget
-     CHARACTER(len=32)           :: routing_scheme        !< river_routing_scheme: only 'full' currently 
+     CHARACTER(len=32)           :: routing_scheme        !< river_routing_scheme: full / weighted_to_coast
      CHARACTER(len=filename_max) :: fract_filename        !< file name with fractions (land, ocean, etc)
    CONTAINS
      PROCEDURE :: Init => Init_hd_config
@@ -49,7 +49,7 @@ CONTAINS
     CHARACTER(len=filename_max)   :: fract_filename        !< file with fractions
     LOGICAL                       :: debug_hd              !< additional printing for debugging
     LOGICAL                       :: diag_water_budget     !< prints to diagnose global water budget
-    CHARACTER(len=32)             :: routing_scheme        !< river_routing_scheme: only 'full' currently 
+    CHARACTER(len=32)             :: routing_scheme        !< river_routing_scheme: full / weighted_to_coast
 
     NAMELIST /jsb_hd_nml/          &
       active,                      &
