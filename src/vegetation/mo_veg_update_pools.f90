@@ -39,7 +39,7 @@ CONTAINS
     USE mo_base_constants,      ONLY: dtime, one_day
     USE mo_base_config_class,   ONLY: base_config
     USE mo_jsb_process_class,   ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_shared_constants        ! only lambda_C14 ?
+    USE mo_shared_constants,    ONLY: lambda_C14, rhoh2o, grav
     USE mo_veg_canopy,          ONLY: calc_canopy_layers
     USE mo_veg_growth,          ONLY: calc_diameter_from_woody_biomass,calc_height_from_diameter
     USE mo_veg_constants,       ONLY: itree
@@ -48,6 +48,7 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+    dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
 
     IMPLICIT NONE
@@ -63,16 +64,20 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),      POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
+    dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),     POINTER :: soil__mem
     TYPE(t_assimi_memory),   POINTER      :: assimi   ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory),      POINTER      :: veg      ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory),      POINTER      :: rad      ! local pointer to rad__mem for SLM usability
+    TYPE(t_soil_memory),     POINTER      :: soil     ! local pointer to soil__mem for SLM usability
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(SOIL_)
 
     assimi    => assimi__mem 
     veg       => veg__mem 
     rad       => rad__mem
+    soil      => soil__mem 
 
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
@@ -169,6 +174,8 @@ CONTAINS
          ELSE 
            veg%mean_leaf_age%ptr = 0.0_wp
        END IF
+
+       veg%dphi%ptr = soil%w_soil_root_pot%ptr(1,1) - lctlib%phi_leaf_min - grav * rhoh2o * veg%height%ptr * 1.e-6_wp
 
     END SELECT
 

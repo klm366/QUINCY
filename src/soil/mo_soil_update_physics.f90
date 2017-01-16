@@ -40,7 +40,7 @@ CONTAINS
     USE mo_base_constants,        ONLY: dtime
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants,      ONLY: r_gas_dryair, LatentHeatVaporization, rhoh2o, grav, stbo, zemiss_def
+    USE mo_shared_constants,      ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def
     USE mo_phy_schemes
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_soil_constants,        ONLY: k_soil_phi1, k_soil_phi2, drain_frac, fdrain_runoff, kdiff_theta, min_theta_wpot
@@ -365,7 +365,6 @@ CONTAINS
 
     ENDSELECT
 
-    veg%dphi%ptr = soil%w_soil_root_pot%ptr(1,1) - lctlib%phi_leaf_min - grav * rhoh2o * veg%height%ptr * 1.e-6_wp
 
   END SUBROUTINE update_soil_physics
 

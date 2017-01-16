@@ -148,6 +148,8 @@ CONTAINS
          veg%pool%reserve  = veg%init_pool 
       END IF
 
+      ! plant variables
+      veg%dphi%ptr = - lctlib%phi_leaf_min
 
       ! initialising moving averages
       ! allocation
