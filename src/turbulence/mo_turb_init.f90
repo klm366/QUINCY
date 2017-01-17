@@ -10,8 +10,6 @@
 MODULE mo_turb_init
 #ifndef __NO_JSBACH__
 
-#include "dsl_jsbach.inc"
-
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model

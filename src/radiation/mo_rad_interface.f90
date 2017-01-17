@@ -11,7 +11,6 @@
 MODULE mo_rad_interface
 #ifndef __NO_JSBACH__
 
-#include "dsl_jsbach.inc"
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 

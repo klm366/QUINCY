@@ -11,8 +11,6 @@
 MODULE mo_seb_land
 #ifndef __NO_JSBACH__
 
-#include "dsl_jsbach.inc"
-
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message
 

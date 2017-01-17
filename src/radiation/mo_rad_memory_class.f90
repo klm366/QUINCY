@@ -11,8 +11,6 @@
 MODULE mo_rad_memory_class
 #ifndef __NO_JSBACH__
 
-#include "dsl_jsbach.inc"
-
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 

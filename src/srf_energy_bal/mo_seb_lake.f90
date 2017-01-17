@@ -10,8 +10,6 @@
 MODULE mo_seb_lake
 #ifndef __NO_JSBACH__
 
-#include "dsl_jsbach.inc"
-
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
 

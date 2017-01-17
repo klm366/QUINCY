@@ -29,7 +29,6 @@
 MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
 #ifndef __NO_JSBACH__
 
-#include "dsl_jsbach.inc"
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
   
