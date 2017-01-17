@@ -200,8 +200,6 @@ CONTAINS
       inflow(:) = discharge(:)
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_riverflow(:), nres_riverflow(:), riverflow_res(:,:), outflow_rivers(:))
 
-      DEALLOCATE (inflow)
-
     CASE ('weighted_to_coast')
       !
       ! dummy version of HD model
