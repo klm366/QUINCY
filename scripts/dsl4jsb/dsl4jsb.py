@@ -24,79 +24,79 @@ re_function = re.compile(r'dsl4jsb_(.*?)( *$|,|\)| |\()', re.IGNORECASE)
 #
 macros = {
     'use_processes' : [re.compile(
-        r'dsl4jsb_Use_processes (.*)',                                   re.IGNORECASE),
+        r'dsl4jsb_Use_processes (.*)',                                       re.IGNORECASE),
         r'USE mo_jsb_process_class, ONLY: \1'],
     'use_memory' : [re.compile(
-        r'dsl4jsb_Use_memory\((.*)_\)',                                  re.IGNORECASE),
+        r'dsl4jsb_Use_memory\((.*)_ *\)',                                    re.IGNORECASE),
         r'USE mo_\1_memory_class, ONLY: t_\1_memory'],
     'def_memory' : [re.compile(
-        r'dsl4jsb_Def_memory\((.*)_\)',                                  re.IGNORECASE),
+        r'dsl4jsb_Def_memory\((.*)_ *\)',                                    re.IGNORECASE),
         r'TYPE(t_\1_memory), POINTER :: \1__mem'],
     'get_memory' : [re.compile(
-        r'dsl4jsb_Get_memory\((.*)_\)',                                  re.IGNORECASE),
+        r'dsl4jsb_Get_memory\((.*)_ *\)',                                    re.IGNORECASE),
         r'SELECT TYPE (mm => tile%mem(\1_)%p); TYPE IS (t_\1_memory); \1__mem => mm ; END SELECT'],
     'use_config' : [re.compile(
-        r'dsl4jsb_Use_config\((.*)_\)',                                  re.IGNORECASE),
+        r'dsl4jsb_Use_config\((.*)_ *\)',                                    re.IGNORECASE),
         r'USE mo_\1_config_class, ONLY: t_\1_config'],
     'def_config' : [re.compile(
-        r'dsl4jsb_Def_config\((.*)_\)',                                  re.IGNORECASE),
+        r'dsl4jsb_Def_config\((.*)_ *\)',                                    re.IGNORECASE),
         r'TYPE(t_\1_config), POINTER :: \1__conf'],
     'get_config' : [re.compile(
-        r'dsl4jsb_Get_config\((.*)_\)',                                  re.IGNORECASE),
+        r'dsl4jsb_Get_config\((.*)_ *\)',                                    re.IGNORECASE),
         r'SELECT TYPE (cc => model%processes(\1_)%p%config); TYPE IS (t_\1_config) ; \1__conf => cc ; END SELECT'],
     'config' : [re.compile(
-        r'dsl4jsb_Config\((.*?)_\)',                                     re.IGNORECASE),
+        r'dsl4jsb_Config\((.*?)_ *\)',                                       re.IGNORECASE),
         r'\1__conf'],
     'lctlib' : [re.compile(
-        r'dsl4jsb_Lctlib',                                               re.IGNORECASE),
+        r'dsl4jsb_Lctlib',                                                   re.IGNORECASE),
         r'model%lctlib(tile%lcts(1)%lib_id)'],
     'lctlib_param' : [re.compile(
-        r'dsl4jsb_Lctlib_param\((.*?)\)',                                re.IGNORECASE),
+        r'dsl4jsb_Lctlib_param\((.*?)\)',                                    re.IGNORECASE),
         r'model%lctlib(tile%lcts(1)%lib_id)%\1'],
     'real2d_onchunk' : [re.compile(
-        r'dsl4jsb_Real2D_onChunk',                                       re.IGNORECASE),
+        r'dsl4jsb_Real2D_onChunk',                                           re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:)'],
     'real3d_onchunk' : [re.compile(
-        r'dsl4jsb_Real3D_onChunk',                                       re.IGNORECASE),
+        r'dsl4jsb_Real3D_onChunk',                                           re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:,:)'],
     'get_var2d_onchunk' : [re.compile(
-        r'dsl4jsb_Get_var2D_onChunk\((.*?)_, *(.*?)\)',                  re.IGNORECASE),
+        r'dsl4jsb_Get_var2D_onChunk\((.*?)_ *, *(.*?)\)',                    re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,iblk)'],
     'get_var3d_onchunk' : [re.compile(
-        r'dsl4jsb_Get_var3D_onChunk\((.*?)_, *(.*?)\)',                  re.IGNORECASE),
+        r'dsl4jsb_Get_var3D_onChunk\((.*?)_ *, *(.*?)\)',                    re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,:,iblk)'],
     'var2d_onchunk' : [re.compile(
-        r'dsl4jsb_var2D_onChunk\((.*?)_, *(.*?)\)',                      re.IGNORECASE),
+        r'dsl4jsb_var2D_onChunk\((.*?)_ *, *(.*?)\)',                        re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,iblk)'],
     'var3d_onchunk' : [re.compile(
-        r'dsl4jsb_var3D_onChunk\((.*?)_, *(.*?)\)',                      re.IGNORECASE),
+        r'dsl4jsb_var3D_onChunk\((.*?)_ *, *(.*?)\)',                        re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,:,iblk)'],
     'real2d_ondomain' : [re.compile(
-        r'dsl4jsb_Real2D_onDomain',                                      re.IGNORECASE),
+        r'dsl4jsb_Real2D_onDomain',                                          re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:,:)'],
     'real3d_ondomain' : [re.compile(
-        r'dsl4jsb_Real3D_onDomain',                                      re.IGNORECASE),
+        r'dsl4jsb_Real3D_onDomain',                                          re.IGNORECASE),
         r'REAL(wp), POINTER, DIMENSION(:,:,:)'],
     'get_var2d_ondomain' : [re.compile(
-        r'dsl4jsb_Get_var2D_onDomain\((.*?)_, *(.*?)\)',                 re.IGNORECASE),
+        r'dsl4jsb_Get_var2D_onDomain\((.*?)_ *, *(.*?)\)',                   re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(:,:)'],
     'get_var3d_ondomain' : [re.compile(
-        r'dsl4jsb_Get_var3D_onDomain\((.*?)_, *(.*?)\)',                 re.IGNORECASE),
+        r'dsl4jsb_Get_var3D_onDomain\((.*?)_ *, *(.*?)\)',                   re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(:,:,:)'],
     'var2d_ondomain' : [re.compile(
-        r'dsl4jsb_var2D_onDomain\((.*?)_, *(.*?)\)',                     re.IGNORECASE),
+        r'dsl4jsb_var2D_onDomain\((.*?)_ *, *(.*?)\)',                       re.IGNORECASE),
         r'\1__mem%\2%ptr(:,:)'],
     'var3d_ondomain' : [re.compile(
-        r'dsl4jsb_var3D_onDomain\((.*?)_, *(.*?)\)',                     re.IGNORECASE),
+        r'dsl4jsb_var3D_onDomain\((.*?)_ *, *(.*?)\)',                       re.IGNORECASE),
         r'\1__mem%\2%ptr(:,:,:)'],
     'var2d_ptr' : [re.compile(
-        r'dsl4jsb_var2D_ptr\((.*?)_, *(.*?)\)',                          re.IGNORECASE),
+        r'dsl4jsb_var2D_ptr\((.*?)_ *, *(.*?)\)',                            re.IGNORECASE),
         r'\1__mem%\2%ptr'],
     'var3d_ptr' : [re.compile(
-        r'dsl4jsb_var3D_ptr\((.*?)_, *(.*?)\)',                          re.IGNORECASE),
+        r'dsl4jsb_var3D_ptr\((.*?)_ *, *(.*?)\)',                            re.IGNORECASE),
         r'\1__mem%\2%ptr'],
     'aggregate_onchunk' : [re.compile(
-        r'dsl4jsb_Aggregate_onChunk\((.*?)_, *(.*?), *(.*?)\)',          re.IGNORECASE),
+        r'dsl4jsb_Aggregate_onChunk\((.*?)_ *, *(.*?) *, *(.*?)\)',          re.IGNORECASE),
         r'CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine)']
     }
 
