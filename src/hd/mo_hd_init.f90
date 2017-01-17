@@ -71,7 +71,7 @@ CONTAINS
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)
 
-    SELECT CASE (TRIM(dsl4jsb_Config(HD)%routing_scheme))
+    SELECT CASE (TRIM(dsl4jsb_Config(HD_)%routing_scheme))
     CASE ('full')
 
       CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//&
@@ -136,10 +136,10 @@ CONTAINS
         ! find local idices of grid cells upstream
         nproma = grid%nproma
         nblks  = grid%nblks
-        ALLOCATE(dsl4jsb_var3D_ptr(HD,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
-        ALLOCATE(dsl4jsb_var3D_ptr(HD,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
-        dsl4jsb_var3D_ptr(HD,nidx_upstream) = -1
-        dsl4jsb_var3D_ptr(HD,bidx_upstream)  = -1
+        ALLOCATE(dsl4jsb_var3D_ptr(HD_,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
+        ALLOCATE(dsl4jsb_var3D_ptr(HD_,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
+        dsl4jsb_var3D_ptr(HD_,nidx_upstream) = -1
+        dsl4jsb_var3D_ptr(HD_,bidx_upstream)  = -1
 
       blks = get_blk_start(grid)
       blke = get_blk_end(grid)

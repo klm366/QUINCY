@@ -558,8 +558,8 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     ! Configuration parameters from the namelist
-    debug_hd          = dsl4jsb_Config(HD)%debug_hd
-    diag_water_budget = dsl4jsb_Config(HD)%diag_water_budget
+    debug_hd          = dsl4jsb_Config(HD_)%debug_hd
+    diag_water_budget = dsl4jsb_Config(HD_)%diag_water_budget
 
     ! Get reference to variables in memory
 
@@ -591,7 +591,7 @@ CONTAINS
       in_domain = 0._wp
     END WHERE
 
-    IF (TRIM(dsl4jsb_Config(HD)%routing_scheme) /= 'full') THEN
+    IF (TRIM(dsl4jsb_Config(HD_)%routing_scheme) /= 'full') THEN
       IF (diag_water_budget) THEN
         WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(discharge_ocean*in_domain), ' m3/s'
         CALL message (TRIM(routine),message_text)
@@ -599,7 +599,7 @@ CONTAINS
       RETURN
     END IF
 
-    water_budget   =  dsl4jsb_var2D_ptr(HD,water_budget)  (1,1)
+    water_budget   =  dsl4jsb_var2D_ptr(HD_,water_budget)  (1,1)
     water_budget_old = water_budget
 
     ! re-calculate global land water budget
