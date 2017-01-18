@@ -34,10 +34,10 @@ CONTAINS
   !> update plant growth (flux\%growth)
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_growth (tile)
+  SUBROUTINE update_growth (tile, options)
 
     USE mo_jsb_class,               ONLY: Get_model
-    USE mo_base_memory,             ONLY: t_slm_tile, t_model
+    USE mo_base_memory,             ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_veg_config_class,        ONLY: veg_config
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -53,15 +53,19 @@ CONTAINS
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),       INTENT(inout)  :: tile       !< one tile
+    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
+    TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
+    ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER        :: model
-    TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp)                               :: dheight    !< delta height
+    TYPE(t_model),          POINTER       :: model
+    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    REAL(wp)                              :: dheight    !< delta height
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_growth'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
@@ -69,43 +73,66 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
-    TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to veg__mem for SLM usability
-    TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
-    TYPE(t_pheno_memory),    POINTER :: pheno       ! local pointer to pheno__mem for SLM usability
-    TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
-    TYPE(t_soil_memory),     POINTER :: soil        ! local pointer to soil__mem for SLM usability
+    ! Declare pointers to variables in memory
+    dsl4jsb_Logical2D_onChunk                 :: growing_season
     REAL(wp), POINTER                :: t_air
     REAL(wp), POINTER                :: press_srf
     REAL(wp), POINTER                :: q_air
     REAL(wp), POINTER                :: co2_mixing_ratio
     REAL(wp), POINTER                :: ga
+!! *slmtemp    
+    TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to veg__mem for SLM usability
+    TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
+    TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
+    TYPE(t_soil_memory),     POINTER :: soil        ! local pointer to soil__mem for SLM usability
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(PHENO_)
+    ! Get process memories
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)          ! veg__mem => veg_memory
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SOIL_)
-
-    assimi  => assimi__mem 
-    veg     => veg__mem 
-    pheno   => pheno__mem  
-    rad     => rad__mem
-    soil     => soil__mem
-
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
+    ! ---------------------------
     t_air            => atm2land__mem%t_air%ptr
     press_srf        => atm2land__mem%press_srf%ptr
     q_air            => atm2land__mem%q_air%ptr
     co2_mixing_ratio => atm2land__mem%co2_mixing_ratio%ptr
     ga               => atm2land__mem%ga%ptr
 
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+!! *slmtemp
+    assimi  => assimi__mem 
+    veg     => veg__mem 
+    rad     => rad__mem
+    soil    => soil__mem
 
 
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    veg%kstar_labile%ptr = calc_meristem_activity(t_air, soil%w_soil_root_theta%ptr(1,1), pheno%growing_season%ptr)
+    veg%kstar_labile%ptr = calc_meristem_activity(t_air, soil%w_soil_root_theta%ptr(1,1), growing_season(1))
 
     !> 1.1 calculate costs of N uptake and fixation
     !!
@@ -123,7 +150,7 @@ CONTAINS
     !> 2.0 Calculate target C:N:P for each tissue type
     !! 
     !! 
-    IF (veg_config%flag_optimal_Nleaf .AND. pheno%growing_season%ptr) THEN
+    IF (veg_config%flag_optimal_Nleaf .AND. growing_season(1)) THEN
       CALL calc_dir_optimal_cn_leaf(lctlib                                  , &
                                       veg                                   , &
                                       assimi%beta_air_tcnl_mavg%ptr         , &
@@ -135,7 +162,7 @@ CONTAINS
     END IF
 
     CALL calc_stoichiometry_changes(lctlib                          , & ! in
-                                      pheno%growing_season%ptr      , &
+                                      growing_season(1)      , &
                                       veg%leaf_cn_direction%ptr     , &
                                       veg%target_np_leaf%ptr        , &
                                       veg%target_cn_leaf%ptr        , & ! inout
@@ -205,7 +232,7 @@ CONTAINS
     !! 
     !! Info: veg%reserve_use is of TYPE(t_slm_struct_veg_element)
     call calc_reserve_useage(lctlib                                     , &
-                              pheno%growing_season%ptr                  , &
+                              growing_season(1)                  , &
                               veg%kstar_labile%ptr                      , &
                               veg%gpp_tlabile_mavg%ptr                  , &
                               veg%maint_respiration_tlabile_mavg%ptr    , &

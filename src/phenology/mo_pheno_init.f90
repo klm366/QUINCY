@@ -35,34 +35,60 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE pheno_init(tile)
+  SUBROUTINE pheno_init(tile, options)
 
-    USE mo_base_memory,             ONLY: t_slm_tile
+    USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options    ! *slmtemp
     USE mo_pheno_constants
  
     IMPLICIT NONE
 
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),       INTENT(inout)       :: tile       !< data structure for dynamic phenoetation and soil variables
+    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< data structure for dynamic phenoetation and soil variables
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_model),          POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
+    INTEGER                                      :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(PHENO_)                          !   TYPE(t_pheno_memory), POINTER      :: pheno__mem
-    TYPE(t_pheno_memory), POINTER         :: pheno      ! local pointer to pheno__mem for SLM usability
+    ! Declare pointers to variables in memory
+    dsl4jsb_Logical2D_onChunk :: growing_season
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(PHENO_)
+    ! Get process memories
     dsl4jsb_Get_memory(PHENO_)
-
-    pheno  => pheno__mem
+    ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id) 
+    lctlib => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
 
     ! set growing season flag depending on whether this is a evergreen plant (TRUE) or not (FALSE)
     IF(lctlib%phenology_type == ievergreen) THEN
-      pheno%growing_season%ptr=.TRUE.
+      growing_season=.TRUE.
     ELSE
-      pheno%growing_season%ptr=.FALSE.
+      growing_season=.FALSE.
     ENDIF
 
   END SUBROUTINE pheno_init

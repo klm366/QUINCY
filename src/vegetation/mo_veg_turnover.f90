@@ -30,10 +30,10 @@ CONTAINS
   !!
   !! @todo: mo_veg_turnover:update_veg_turnover -> herbivory on leaves as turnover term? 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_veg_turnover(tile)
+  SUBROUTINE update_veg_turnover(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
 
@@ -42,36 +42,65 @@ CONTAINS
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),       INTENT(inout) :: tile      !< one tile
+    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
+    TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
+    ! ---------------------------
     ! 0.2 Local 
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_turnover'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                        ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
+    ! Declare pointers to variables in memory
+    dsl4jsb_Logical2D_onChunk                 :: growing_season
+!! *slmtemp
     TYPE(t_veg_memory),       POINTER     :: veg      ! local pointer to veg__mem for SLM usability
-    TYPE(t_pheno_memory),     POINTER     :: pheno    ! local pointer to pheno__mem for SLM usability
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(PHENO_)
+    ! Get process memories
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)                        ! veg__mem => veg_memory
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
 
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+!! *slmtemp
     veg     => veg__mem 
-    pheno   => pheno__mem  
-    model   => Get_model(tile%owner_model_id)
-    lctlib  => model%lctlib(tile%lcts%lib_id)
 
 
     !> 1.0 Calculate nutrient flux from enzyme, RNA and other turnover in leaves and roots
     !!
-    CALL calc_nutrient_recycling(veg, veg%target_cn_fine_root%ptr, veg%target_np_fine_root%ptr, pheno%growing_season%ptr)
+    CALL calc_nutrient_recycling(veg, veg%target_cn_fine_root%ptr, veg%target_np_fine_root%ptr, growing_season(1))
 
     !> 2.0 Calculate recycling and retranslocation
     !!  
     CALL calc_turnover(lctlib, &
                         veg%pool, veg%growth, veg%litterfall, &
-                        pheno%growing_season%ptr, veg%lai%ptr, &
+                        growing_season(1), veg%lai%ptr, &
                         veg%recycling_leaf_n%ptr, veg%recycling_leaf_n15%ptr, veg%recycling_leaf_p%ptr, &
                         veg%recycling_heart_wood_n%ptr, veg%recycling_heart_wood_n15%ptr, veg%recycling_heart_wood_p%ptr)
 
@@ -102,7 +131,7 @@ CONTAINS
     TYPE(t_veg_memory), INTENT(inout) :: veg                      !< veg process memory
     REAL(wp),           INTENT(in)    :: target_cn_fine_root      !< target C:N of fine_roots
     REAL(wp),           INTENT(in)    :: target_np_fine_root      !< target N:P of fine_roots 
-    LOGICAL,            INTENT(in)    :: growing_season           !< 
+    LOGICAL,            INTENT(in)    :: growing_season           !< whether the plant is in the growing season
     ! 0.2 Local
     REAL(wp)                          :: labile_dn15              ! labile pools 15N to N molar mixing ratio
     REAL(wp)                          :: scal                     ! helper variable

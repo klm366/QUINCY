@@ -294,7 +294,7 @@ CONTAINS
     ! for land the same init routine as plant is run
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
-        CALL pheno_init(tile)     ! pheno 
+        CALL pheno_init(tile, model%options)     ! pheno 
         CALL veg_init(tile)       ! veg 
         CALL sb_init(tile)        ! sb 
         CALL soil_init(tile)      ! soil

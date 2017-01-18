@@ -36,10 +36,10 @@ CONTAINS
   !!      what about seasonality beyond off/on behaviour? -> implies some collaboration between
   !!      turnover rates and phenology -> should the two be linked? 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_phenology(tile)
+  SUBROUTINE update_phenology(tile, options)
 
     USE mo_jsb_class,               ONLY: Get_model
-    USE mo_base_memory,             ONLY: t_slm_tile, t_model
+    USE mo_base_memory,             ONLY: t_slm_tile, t_model, t_jsb_task_options    ! *slmtemp
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
@@ -50,32 +50,65 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(inout)        :: tile         !< one tile
+    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< one tile
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_phenology'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
+    ! Declare pointers to variables in memory
+!    dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Logical2D_onChunk :: growing_season
+    dsl4jsb_Real2D_onChunk    :: gdd
+    dsl4jsb_Real2D_onChunk    :: nd_dormance
+! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
-    TYPE(t_pheno_memory),    POINTER :: pheno       ! local pointer to pheno__mem for SLM usability
     TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to veg__mem for SLM usability
-    REAL(wp),                POINTER :: t_air
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(PHENO_)
+    ! Get process memories
     dsl4jsb_Get_memory(ATM2LAND_)       ! atm2land__mem => atm2land_memory
     dsl4jsb_Get_memory(VEG_)            ! veg__mem => veg_memory
-    dsl4jsb_Get_memory(PHENO_)          ! veg__mem => veg_memory
+    dsl4jsb_Get_memory(PHENO_)          ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(ASSIMI_)
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id) 
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, gdd)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, nd_dormance)
 
+! 2 be removed  *slmtemp
     veg     => veg__mem
-    pheno   => pheno__mem  
     assimi  => assimi__mem 
-    model   => Get_model(tile%owner_model_id)
-    lctlib  => model%lctlib(tile%lcts%lib_id)
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
 
 
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
@@ -89,9 +122,9 @@ CONTAINS
                         veg%mean_leaf_age%ptr                   , &
                         veg%gpp_tlabile_mavg%ptr                , &
                         veg%maint_respiration_tlabile_mavg%ptr  , &
-                        pheno%growing_season%ptr                , &
-                        pheno%nd_dormance%ptr                   , &
-                        pheno%gdd%ptr)
+                        growing_season(:)                       , &
+                        nd_dormance(:)                          , &
+                        gdd(:)                                  )
 
   END SUBROUTINE update_phenology 
 

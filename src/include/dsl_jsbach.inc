@@ -28,6 +28,7 @@
 #define dsl4jsb_Lctlib_param(PARAM) CONCATENATE2(model%lctlib,(tile%lcts(1)%lib_id)%PARAM)
 #define dsl4jsb_Lctlib CONCATENATE2(model%lctlib,(tile%lcts(1)%lib_id))
 
+#define dsl4jsb_Logical2D_onChunk LOGICAL, POINTER, DIMENSION(:)
 #define dsl4jsb_Real2D_onChunk REAL(wp), POINTER, DIMENSION(:)
 #define dsl4jsb_Real3D_onChunk REAL(wp), POINTER, DIMENSION(:,:)
 

@@ -15,8 +15,7 @@ MODULE mo_pheno_memory_class
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d         , &
-                                       t_jsb_var_logical2d                        , &                 ! *slmjsb4
-                                       t_jsb_var_real1d, t_jsb_var_logical1d                          ! *slmtemp
+                                       t_jsb_var_logical2d                                       ! *slmjsb4
 
   USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later  *slmtemp
 
@@ -37,11 +36,11 @@ MODULE mo_pheno_memory_class
 
 
     ! logical
-    TYPE(t_jsb_var_logical1d)       :: &
+    TYPE(t_jsb_var_logical2d)       :: &
                                     growing_season          !< logical to identify whether the plant is in the growing season or not
 
 
-    TYPE(t_jsb_var_real1d)          :: &
+    TYPE(t_jsb_var_real2d)          :: &
                                     gdd                 , & !< growing degree days above 5°C
                                     nd_dormance             !< number of days since last growing season 
 

@@ -97,7 +97,8 @@ CONTAINS
                                   )
 
 
-    USE mo_base_memory,                   ONLY: t_slm_tile
+    USE mo_jsb_class,                     ONLY: Get_model
+    USE mo_base_memory,                   ONLY: t_slm_tile, t_model
     USE mo_base_config_class,             ONLY: base_config
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_atm2land, update_land2atm
@@ -180,8 +181,10 @@ CONTAINS
                                   latent_hflx_ice   ,   &
                                   sensible_hflx_ice !! land2atm memory - end
     ! 0.2 Local
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':land_model_interface'
+    TYPE(t_model),          POINTER     :: model
+    CHARACTER(len=*),       PARAMETER   :: routine = TRIM(modname)//':land_model_interface'
 
+    model  => Get_model(tile%owner_model_id)
 
     !> pass atmland variables from forcing input (driver) to atm2land
     !! 
@@ -241,24 +244,24 @@ CONTAINS
     !!
       CALL update_radiation       (tile)
       CALL update_vegsoil_bgc     (tile)
-      CALL update_phenology       (tile)
+      CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile)
-      CALL update_growth          (tile)
-      CALL update_veg_turnover    (tile)
-      CALL update_veg_dynamics    (tile)
+      CALL update_growth          (tile, model%options)
+      CALL update_veg_turnover    (tile, model%options)
+      CALL update_veg_dynamics    (tile, model%options)
       CALL update_sb_pools        (tile)
       CALL update_soil_physics    (tile)
       CALL update_veg_pools       (tile)
 
     !! accumulation over time - daytime & moving average
     !! 
-      CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
+      CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
     !! output pool: write output in certain intervals, see mo_shared_output
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
     !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
     !! 
-      CALL write_output_pool(tile, time_day, time_year, 1) ! 1 == itile
+      CALL write_output_pool(tile, model%options, time_day, time_year, 1) ! 1 == itile
 
     !! output flux: write output in certain intervals, see mo_shared_output
     !! 
@@ -283,24 +286,24 @@ CONTAINS
     !!
       CALL update_radiation       (tile)
       CALL update_vegsoil_bgc     (tile)
-      CALL update_phenology       (tile)
+      CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile)
-      CALL update_growth          (tile)
-      CALL update_veg_turnover    (tile)
-      CALL update_veg_dynamics    (tile)
+      CALL update_growth          (tile, model%options)
+      CALL update_veg_turnover    (tile, model%options)
+      CALL update_veg_dynamics    (tile, model%options)
       CALL update_sb_pools        (tile)
       CALL update_soil_physics    (tile)
       CALL update_veg_pools       (tile)
 
     !! accumulation over time - daytime & moving average
     !! 
-      CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
+      CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
     !! output pool: write output in certain intervals, see mo_shared_output
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
     !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
     !! 
-      CALL write_output_pool(tile, time_day, time_year, 1) ! 1 == itile
+      CALL write_output_pool(tile, model%options, time_day, time_year, 1) ! 1 == itile
 
     !! output flux: write output in certain intervals, see mo_shared_output
     !! 
@@ -335,7 +338,7 @@ CONTAINS
 
     !! accumulation over time - daytime & moving average
     !! 
-      CALL update_time_averages(tile, time_day, timestep_prop_day)    ! see shared
+      CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
     !! output fluxes -> filename: fort.20
     !! output also some atm2land variables

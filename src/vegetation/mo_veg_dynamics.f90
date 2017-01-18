@@ -32,11 +32,11 @@ CONTAINS
   !!
   !! fluxes are set to zero at each time step: set_zero_vegetation_fluxes:mo_assimi_update_canopy_fluxes
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_veg_dynamics(tile)
+  SUBROUTINE update_veg_dynamics(tile, options)
 
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_veg_config_class,      ONLY: veg_config
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
@@ -46,29 +46,58 @@ CONTAINS
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),       INTENT(inout)     :: tile           !< current tile 
-    ! 0.2 Local
-    TYPE(t_model),          POINTER           :: model
-    TYPE(t_lctlib_element), POINTER           :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
+    TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
+    ! ---------------------------
+    ! 0.2 Local 
+    TYPE(t_model),          POINTER       :: model
+    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
+    ! Declare pointers to variables in memory
+    dsl4jsb_Logical2D_onChunk                 :: growing_season
+!! *slmtemp
     TYPE(t_veg_memory),     POINTER           :: veg      ! local pointer to veg__mem for SLM usability
-    TYPE(t_pheno_memory),   POINTER           :: pheno    ! local pointer to pheno__mem for SLM usability
     TYPE(t_soil_memory),    POINTER           :: soil     ! local pointer to soil__mem for SLM usability
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(PHENO_)
+    ! Get process memories
     dsl4jsb_Get_memory(VEG_)                              ! veg__mem => veg_memory
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
 
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+!! *slmtemp
     veg     => veg__mem 
-    pheno   => pheno__mem  
     soil    => soil__mem  
-    model   => Get_model(tile%owner_model_id)
-    lctlib  => model%lctlib(tile%lcts%lib_id)
 
 
     !> 1.0 Calculate mortality rate and veg\%litterfall
@@ -89,7 +118,7 @@ CONTAINS
       !! 
       CALL calc_veg_establishment(lctlib                          , & ! in
                                  soil%w_soil_root_theta%ptr(1,1)  , &
-                                 pheno%growing_season%ptr         , &
+                                 growing_season(1)         , &
                                  veg%t_air_week_mavg%ptr          , &
                                  veg%leaf_nitrogen_cl%ptr(:,1)    , &
                                  veg%fn_chl_cl%ptr(:,1)           , &

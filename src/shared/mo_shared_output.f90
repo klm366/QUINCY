@@ -483,10 +483,10 @@ CONTAINS
   !! 
   !! write-interval accordingly to namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_pool(tile, time_d, time_y, itile)
+  SUBROUTINE write_output_pool(tile, options, time_d, time_y, itile)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_veg_constants,         ONLY: itree
     USE mo_assimi_config_class,   ONLY: assimi_config
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
@@ -500,11 +500,14 @@ CONTAINS
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(in), TARGET  :: tile        !< one tile
+    TYPE(t_slm_tile),         INTENT(in), TARGET  :: tile   !< one tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options         !< model options
     REAL(wp), INTENT(in)                 :: time_d      !< time in days
     INTEGER,  INTENT(in)                 :: time_y      !< time in years; the 1st year of a simulation == year 1 (not zero)
     INTEGER,  INTENT(in)                 :: itile       !< number of current tile
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_model),          POINTER      :: model
     TYPE(t_lctlib_element), POINTER      :: lctlib     !< land-cover-type library - parameter across pft's
@@ -515,31 +518,57 @@ CONTAINS
     REAl(wp)                         :: growing_season_float !output variable for growing season
     REAL(wp)                         :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
                                         dC13fruit,dC13labile,dC13reserve,dC13seed_bed
-    ! 0.3 Memory allocation
+    INTEGER                          :: iblk, ics, ice, nc
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ASSIMI_)                           ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
+    ! Declare pointers to variables in memory
+    dsl4jsb_Logical2D_onChunk                 :: growing_season
+!! *slmtemp
     TYPE(t_assimi_memory),        POINTER     :: assimi   ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
-    TYPE(t_pheno_memory),         POINTER     :: pheno    ! local pointer to pheno__mem for SLM usability
     TYPE(t_soil_memory),          POINTER     :: soil     ! local pointer to soil__mem for SLM usability
     TYPE(t_sb_memory),            POINTER     :: sb       ! local pointer to sb__mem for SLM usability
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(PHENO_)
+    ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(SOIL_)                             ! soil__mem => soil_memory
     dsl4jsb_Get_memory(SB_)                               ! sb__mem => sb_memory
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
 
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+!! *slmtemp
     assimi  => assimi__mem 
     veg     => veg__mem 
-    pheno   => pheno__mem  
     soil    => soil__mem  
     sb      => sb__mem  
-    model   => Get_model(tile%owner_model_id)
-    lctlib  => model%lctlib(tile%lcts%lib_id)
  
     !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
     !! 
@@ -639,7 +668,7 @@ CONTAINS
           bcf = 0._wp
        ENDIF
        ! transition from bool to 0/1 for growing season
-       IF (pheno%growing_season%ptr) THEN
+       IF (growing_season(1)) THEN
          growing_season_float = 1.0_wp
          ELSE
          growing_season_float = 0.0_wp
