@@ -268,10 +268,10 @@ CONTAINS
         & lw_srf_down(:),           & ! in
         & t_lwtr(:),                & ! in
         & rad_net_lwtr(:),          & ! out
-        !& swvis_srf_net(:),        & ! out
-        !& swnir_srf_net(:),        & ! out
-        & sw_net=sw_net_lwtr(:),    & ! out
-        & lw_net=lw_net_lwtr(:)     & ! out
+        !& swvis_srf_net(:),        & ! out (optional)
+        !& swnir_srf_net(:),        & ! out (optional)
+        & sw_net=sw_net_lwtr(:),    & ! out (optional)
+        & lw_net=lw_net_lwtr(:)     & ! out (optional)
         & )
 
       ! Ice on lake
@@ -288,10 +288,10 @@ CONTAINS
         & lw_srf_down(:),           & ! in
         & t_lice(:),                & ! in
         & rad_net_lice(:),          & ! out
-        !& swvis_srf_net(:),        & ! out
-        !& swnir_srf_net(:),        & ! out
-        & sw_net=sw_net_lice(:),    & ! out
-        & lw_net=lw_net_lice(:)     & ! out
+        !& swvis_srf_net(:),        & ! out (optional)
+        !& swnir_srf_net(:),        & ! out (optional)
+        & sw_net=sw_net_lice(:),    & ! out (optional)
+        & lw_net=lw_net_lice(:)     & ! out (optional)
         & )
 
       rad_srf_net(:) = (1._wp - fract_lice(:)) * rad_net_lwtr(:) + fract_lice(:) * rad_net_lice(:)
@@ -314,10 +314,10 @@ CONTAINS
         & lw_srf_down(:),       & ! in
         & t(:),                 & ! in
         & rad_srf_net(:),       & ! out
-        & swvis_srf_net(:),     & ! out
-        & swnir_srf_net(:),     & ! out
-        & sw_srf_net(:),        & ! out
-        & lw_srf_net(:)         & ! out
+        & swvis_srf_net(:),     & ! out (optional)
+        & swnir_srf_net(:),     & ! out (optional)
+        & sw_srf_net(:),        & ! out (optional)
+        & lw_srf_net(:)         & ! out (optional)
         & )
     END IF
 
@@ -362,11 +362,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, rad_srf_net,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, lw_srf_net,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, sw_srf_net,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, swvis_srf_net,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, swnir_srf_net,  weighted_by_fract)
-
-    dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lwtr,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, swvis_srf_net,  weighted_by_fract) !R: not calculated on Lake Type yet, TBD
+    dsl4jsb_Aggregate_onChunk(RAD_, swnir_srf_net,  weighted_by_fract) !R: not calculated on Lake Type yet, TBD
+    dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lwtr,   weighted_by_fract) !R: only calculated on Lake Type 
+    dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract) !R: only calculated on Lake Type
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -794,7 +793,8 @@ CONTAINS
         & )
 
 
-    ELSE IF (tile%lcts(1)%id == BARE_TYPE) THEN
+    ELSE IF (tile%lcts(1)%id == BARE_TYPE) THEN  ! Note, the parametrizations here define/understand BARE_TYPE as soil, which may include
+                                                 ! carbon in it and litter on it, but never living vegetation on it! 
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_mineralsoil)   ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_mineralsoil)   ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)          ! inout
@@ -810,6 +810,7 @@ CONTAINS
           & Cpool_slow(:),                            & ! in
           & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
           & dsl4jsb_Lctlib_param(AlbedoLitterVIS),    & ! in
+          & alb_background(:),                        & ! in
           & alb_vis_mineralsoil(:),                   & ! inout
           & alb_nir_mineralsoil(:),                   & ! inout
           & alb_vis_soil(:),                          & ! inout
@@ -829,7 +830,13 @@ CONTAINS
       alb_nir = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
 
 
-    ELSE IF (tile%lcts(1)%id == VEG_TYPE) THEN
+    ELSE IF (tile%lcts(1)%id == VEG_TYPE) THEN  ! R: Note, the parametrizations here define/understand VEG_TYPE as soil with vegetation on it!
+                                                ! This parametrizations should be used only for the main veg tile and not for a specific PFT
+                                                ! because if use_alb_canopy is TRUE there should be alb_vis_can from the bc_land_phys.nc file
+                                                ! for this tile! The same accounts for alb_vis_mineralsoil if use_alb_mineralsoil_const is FALSE
+                                                ! and to alb_vis_soil if use_alb_soil_scheme ist TRUE and to lai ... 
+                                                ! However, as parents and child tiles "inherit", this is only a problem if we want to avoid 
+                                                ! the same calculations on several PFTs...
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! in
       dsl4jsb_Get_var2D_onChunk(VEG_,      fract_forest)          ! in
@@ -857,7 +864,7 @@ CONTAINS
         ! Get canopy albedo
         IF (.NOT. use_alb_canopy) THEN                            ! TRUE:  nothing to do. The canopy albedo is already taken from
                                                                   !        the bc_land_phys.nc file during initialisation.
-          alb_vis_can(:) = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)  ! FALSE: The canopy albedo is taken from lctlib file.
+          alb_vis_can(:) = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)  ! FALSE: The canopy albedo is taken here from lctlib file.
           alb_nir_can(:) = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
         END IF
 
@@ -873,6 +880,7 @@ CONTAINS
             & Cpool_slow(:),                            & ! in
             & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
             & dsl4jsb_Lctlib_param(AlbedoLitterVIS),    & ! in
+            & alb_background(:),                        & ! in
             & alb_vis_mineralsoil(:),                   & ! inout
             & alb_nir_mineralsoil(:),                   & ! inout
             & alb_vis_soil(:),                          & ! inout
@@ -937,6 +945,10 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_memory(RAD_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_albedo'
@@ -951,6 +963,15 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(RAD_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,      weighted_by_fract) ! R: Nur diese beiden werden auf allen Tiles gerechnet!
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,      weighted_by_fract)
+    !dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow, weighted_by_fract)
+    !dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

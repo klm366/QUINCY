@@ -219,7 +219,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'pch', mem%pch,                          &
       & hgrid, surface,                                                      &
-      & t_cf('pch', '', ''),                                                 &
+      & t_cf('heat transfer coeff. without function factor', '', ''),                                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )

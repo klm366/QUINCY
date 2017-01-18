@@ -71,16 +71,23 @@ CONTAINS
     zswnir_net = swnir_down * (1._wp - alb_nir)
     zsw_net    = zswvis_net + zswnir_net
 
+    ! Provide optional SW radiation outputs
+    IF (PRESENT(swvis_net)) swvis_net = zswvis_net ! only present if tile is not LAKE_TYPE. 
+                                                   ! R: TBD: Probably because of lacking alb_vis and  alb_nir for LAKE.
+                                                   !         But it would be better to provid this in order to avoil missunderstanding
+                                                   !         swnir_srf_net and swvis_srf_net in the output of the parent tiles.
+    IF (PRESENT(swnir_net)) swnir_net = zswnir_net ! only used if tile is not LAKE_TYPE
+    IF (PRESENT(sw_net)) sw_net = zsw_net
+
+
     ! Compute LW net radiation from incoming and the thermal radiation from the surface
     zlw_net = lwnet_from_lwdown(lw_down, t)
 
+    ! Provide optional LW radiation outputs
+    IF (PRESENT(lw_net)) lw_net = zlw_net
+
     ! Compute net radiation
     rad_net = zsw_net + zlw_net
-
-    IF (PRESENT(swvis_net)) swvis_net = zswvis_net
-    IF (PRESENT(swnir_net)) swnir_net = zswnir_net
-    IF (PRESENT(sw_net)) sw_net = zsw_net
-    IF (PRESENT(lw_net)) lw_net = zlw_net
 
   END SUBROUTINE calc_radiation_surface_net
 
@@ -613,6 +620,7 @@ CONTAINS
     & Cpool_slow,                &
     & SpecificLeafArea_C,        &
     & AlbedoLitterVIS,           &
+    & alb_background,            &
     & alb_vis_mineralsoil,       & ! InOut
     & alb_nir_mineralsoil,       & ! InOut
     & alb_vis_soil,              & ! InOut
@@ -628,10 +636,12 @@ CONTAINS
     CHARACTER,    INTENT(in)    :: use_alb_soil_organic_C
     LOGICAL,      INTENT(in)    :: use_alb_soil_litter
 
-    REAL(wp),     INTENT(in)    :: Cpool_litter_green_ag, & !
-                                   Cpool_slow
-    REAL(wp),     INTENT(in)    :: SpecificLeafArea_C,    &
-                                   AlbedoLitterVIS                                   
+    REAL(wp),     INTENT(in)    :: Cpool_litter_green_ag, & 
+                                   Cpool_slow,            &
+                                   SpecificLeafArea_C,    &
+                                   AlbedoLitterVIS,       & 
+                                   alb_background
+   
     REAL(wp),     INTENT(inout) ::                        &
                                    alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
                                                                 ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
@@ -664,6 +674,15 @@ CONTAINS
     IF (use_alb_mineralsoil_const) THEN ! all background soil albedo values are set to the same value
        alb_vis_mineralsoil = AlbedoSoilConstVis
        alb_nir_mineralsoil = AlbedoSoilConstNir
+    ELSE 
+       alb_vis_mineralsoil = alb_background ! R: This is Rainers invention to mitigate the "error" in 
+                                            !    the JSBACH3 version. But still it should not be used.
+                                            !    In JSBACH3 it was filled with albedo_soil_vis_base,
+                                            !    which included soil and litter carbon. alb_background
+                                            !    is the albedo without snow or canopy, BUT it still
+       alb_nir_mineralsoil = alb_background !    includes carbon. However, this all is done to
+                                            !    implement the possibility to use mineral soil albedos 
+                                            !    which would then be consitent with the soil albedo parametrisations!
     END IF
 
     ! albedo of soil with carbon content but without litter
@@ -679,12 +698,13 @@ CONTAINS
       alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + Cpool_slow)),0.1_wp)
       alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + Cpool_slow)),0.2_wp)
     ELSE
-      alb_vis_soil_nolitter = (alb_vis_mineralsoil + alb_vis_soil) / 2._wp ! R: This is Rainers approximation, because in JSBACH3
-                                                                                     !    the result was set to albedo_desert_dry_vis,
-                                                                                     !    which could include different kinds of albedos
-                                                                                     !    (see comment above) but in each case not the
-                                                                                     !    correct one.
-      alb_nir_soil_nolitter =  (alb_nir_mineralsoil + alb_nir_soil) / 2._wp
+      alb_vis_soil_nolitter = alb_vis_mineralsoil ! R: This is Rainers approximation, because in JSBACH3
+                                                  !    the result was set to albedo_desert_dry_vis,
+                                                  !    which could include different kinds of albedos
+                                                  !    (see comment above) but in each case not the
+                                                  !    correct one.
+                                             
+      alb_nir_soil_nolitter = alb_nir_mineralsoil
     END IF ! use_alb_soil_organic_C
 
     ! calculate the dependence of albedo on soil moisture (to be implemented later); Note also not existent in JSBACH3
@@ -986,7 +1006,7 @@ CONTAINS
     !-----------------------------------------------------------------------
     ! Use declarations
     USE mo_jsb_physical_constants,  ONLY: tmelt
-    USE mo_rad_constants,     ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple
+    USE mo_rad_constants,           ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple
 
     ! Arguments
     REAL(wp), INTENT(in) ::                  &

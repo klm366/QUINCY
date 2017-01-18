@@ -31,10 +31,11 @@ MODULE mo_rad_config_class
                                       !   Use the complex calculations of the soil albedo from carbon in and
                                       !   on the soil (accounts for the soil under vegetation and for bare soil)
                                       !   if vegetation tile: only used if use_alb_veg_simple=.FALSE.
-      & use_alb_mineralsoil_const, &  !< For vegetation and bare soil tiles:
+      & use_alb_mineralsoil_const, &  !< For vegetation and bare soil tiles (as in both cases the procedure
+                                      !   calc_soil_albedo might be called):
                                       !   if TRUE constant parameter values are used for albedo of the mineral soil
                                       !   if FALSE values for albedo of the mineral soil are taken from
-                                      !   bc_land_phys.nc file.
+                                      !   bc_land_phys.nc file (albedo_background).
       & use_alb_soil_litter, &        !< For vegetation and bare soil tiles:
                                       !   TRUE: soil albedo includes the albedo of the litter cover above it
                                       !   FALSE soil albedo ignores the albedo of the litter cover above it

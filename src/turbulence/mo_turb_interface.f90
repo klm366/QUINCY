@@ -356,10 +356,10 @@ CONTAINS
 
       WHERE (w_soil_sl(:,1) > w_soil_pwp_sl(:,1))
         fact_qsat_veg(:) = fract_snow(:) + (1._wp - fract_snow(:)) *   &
-          & (fract_water(:) + ( 1._wp - fract_water(:)) /                &
+          & (fract_water(:) + ( 1._wp - fract_water(:)) /              &
           & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:))))
-        fact_qsat_trans(:) = (1._wp - fract_snow(:)) * &
-          & (1._wp - fract_water(:)) /                  &
+        fact_qsat_trans(:) = (1._wp - fract_snow(:)) * & ! fraction without snow ...
+          & (1._wp - fract_water(:)) /                 & !  ... and without water ...
           & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:)))
       ELSEWHERE
         fact_qsat_veg(:)   = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)

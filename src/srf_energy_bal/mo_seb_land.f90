@@ -191,17 +191,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL_,     grnd_hflx)      ! IN
     dsl4jsb_Get_var2D_onChunk(SOIL_,     hcap_grnd)      ! IN
 
-    ! TBD: currently, fraction of glacier has to be either zero or one!
-    IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
-      DO ilct=1,SIZE(tile%lcts)
-        IF (tile%lcts(ilct)%id == GLACIER_TYPE) THEN
-          is_glacier(:) = tile%lcts(ilct)%fract(ics:ice,iblk) > 0._wp
-          EXIT
-        END IF
-      END DO
-    ELSE
-      is_glacier(:) = .FALSE.
-    END IF
 
     ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
     ! necessary for the phenology process
@@ -272,7 +261,7 @@ CONTAINS
         rad_srf_net(:), forc_hflx(:), heat_tcoef(:), &
         fact_q_air(:), fact_qsat_srf(:), &
         fract_snow(:), heat_cap(:), &
-        & s_star(:))
+        & s_star(:)) ! < the only output
     END IF
 
     ! TBD - hack for oceans boxes
@@ -283,6 +272,19 @@ CONTAINS
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
+
+    ! TBD: currently, fraction of glacier has to be either zero or one!
+    ! This is because seb does not run on glacier tile but on land tile ...
+    IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN ! R: IF-Abfrage nicht unbedingt notwendig...
+      DO ilct=1,SIZE(tile%lcts)
+        IF (tile%lcts(ilct)%id == GLACIER_TYPE) THEN
+          is_glacier(:) = tile%lcts(ilct)%fract(ics:ice,iblk) > 0._wp
+          EXIT
+        END IF
+      END DO
+    ELSE
+      is_glacier(:) = .FALSE.
+    END IF
 
     ! Correct new dry static energy for snowmelt
     WHERE (w_snow(:) > dsl4jsb_Config(HYDRO_)%wsn_critical .OR. is_glacier(:))
@@ -303,13 +305,24 @@ CONTAINS
 
   END SUBROUTINE update_surface_energy_land
 
-  SUBROUTINE surface_temp_implicit(klon, steplen,             &
-    &            pcp,                                         &
-    &            pescoe, pfscoe, peqcoe, pfqcoe,              &
-    &            psold, pqsold, pdqsold,                      &
-    &            pnetrad, pgrdfl,                             &
-    &            pcfh, pcair, pcsat, pfracsu, pgrdcap,        &
-    &            psnew)
+  SUBROUTINE surface_temp_implicit(klon,      & ! nc
+                                   steplen,   & ! steplen
+                                   pcp,       & ! t2s_conv
+                                   pescoe,    & ! t_acoef
+                                   pfscoe,    & ! t_bcoef
+                                   peqcoe,    & ! q_acoef
+                                   pfqcoe,    & ! q_bcoef
+                                   psold,     & ! s_old
+                                   pqsold,    & ! qsat_srf_old
+                                   pdqsold,   & ! dQdT
+                                   pnetrad,   & ! rad_srf_net
+                                   pgrdfl,    & ! forc_hflx
+                                   pcfh,      & ! heat_tcoef
+                                   pcair,     & ! fact_q_air
+                                   pcsat,     & ! fact_qsat_srf
+                                   pfracsu,   & ! fract_snow
+                                   pgrdcap,   & ! heat_cap
+                                   psnew)       ! s_star. The only OUT.
 
     USE mo_jsb_physical_constants, ONLY: &
       & cpd, &

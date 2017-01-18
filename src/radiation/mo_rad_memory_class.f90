@@ -35,30 +35,33 @@ MODULE mo_rad_memory_class
 
   TYPE, EXTENDS(t_jsb_memory) :: t_rad_memory
 
+    ! net radiations existing on each tile
     TYPE(t_jsb_var_real2d)  :: &
       & sw_srf_net,            & !< net shortwave radiation at surface
       & swvis_srf_net,         & !< net shortwave radiation at surface in visible range
       & swnir_srf_net,         & !< net shortwave radiation at surface in NIR range
       & lw_srf_net,            & !< net longwave radiation at surface
-      & rad_srf_net              !< net radiation at surface
+      & rad_srf_net              !< net radiation at surface. Sum of sw_srf_net and lw_srf_net.
 
-    TYPE(t_jsb_var_real2d) :: &
+    ! Albedos that exist on each TYPE of tile:
+    TYPE(t_jsb_var_real2d) :: & !
       & alb_background,       & ! Background albedo (without snow or canopy) of tile
-                                ! Note, alb_background is ONLY used for FUNCTION get_surface_albedo_simple.
-      & alb_vis,              & ! Albedo of the whole tile in the VIS (visible) range
-      & alb_nir,              & ! Albedo of the whole tile in the NIR (near-infrared) range
-      & alb_vis_snow,         & ! Albedo of snow in the VIS range
-      & alb_nir_snow            ! Albedo of snow in the NIR range
+                                ! Note, alb_background is ONLY used for FUNCTION get_surface_albedo_simple
+                                ! and is NEVER CALCULATED.
+      & alb_vis,              & ! Albedo of the whole tile in the VIS (visible) range. ALWAYS CALCULATED!
+      & alb_nir                 ! Albedo of the whole tile in the NIR (near-infrared) range. ALWAYS CALCULATED!
 
-    !
-    ! Additional variables for soil
-    TYPE(t_jsb_var_real2d) :: &
+    
+    ! Additional variables for soil (LAND_TYPE, BARE_TYPE and VEG_TYPE)
+    TYPE(t_jsb_var_real2d) :: & ! 
+      & alb_vis_snow,         & ! Albedo of snow in the VIS range. CALCULATED ONLY FOR BARE AND VEG TYPES!
+      & alb_nir_snow,         & ! Albedo of snow in the NIR range. CALCULATED ONLY FOR BARE AND VEG TYPES!
       & alb_vis_soil,         & ! Albedo in VIS range of soil
                                 ! Initialized from bc_land_phys.nc file.
                                 ! If use_albedo_soil_scheme =
-                                !   .TRUE.:  then it is calculated and may incl. litter layer and carbon within soil dependent
+                                !   .TRUE.:  then it is CALCULATED and may incl. litter layer and carbon within soil dependent
                                 !            on the use_alb_soil_organic_C and use_alb_soil_litter switches.
-                                !   .FALSE.: it is not calculated but remains as taken from bc_land_phys.nc file during
+                                !   .FALSE.: it is NOT CALCULATED but remains as taken from bc_land_phys.nc file during
                                 !            initialization. alb_vis_soil of the bc_land_phys.nc file represents the soil albedo
                                 !            including carbon in the soil as well as litter on the soil, but without the canopy
                                 !            above. It was calculated from MODIS data (aboard the TERRA satellite) using linear
@@ -66,14 +69,14 @@ MODULE mo_rad_memory_class
                                 !            JSBACH3 documentation 4.1.1 or ask Thomas Raddatz).
       & alb_nir_soil,         & ! Same as alb_vis_soil but for NIR.
       ! R: Albedo of mineral soil is needed when Freya scheme is used. Not in the bc_lnd_phy.nc file yet!
-      & alb_vis_mineralsoil,  & !< Albedo of soil without carbon or litter.
-                                !! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE.
-                                !! for SOC-dependend albedo calculation
-      & alb_nir_mineralsoil     ! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE. for
-                                ! SOC dependend albedo calculation
+      & alb_vis_mineralsoil,  & ! Should be the albedo of soil without carbon or litter. It is not initialized from the 
+                                ! bc_land_phys.nc file! Instead it is set in SUBROUTINE calc_soil_albedo, where
+                                ! a lctlib constant or alb_background from bc_land_phys.nc file is used.
+                                ! However, it is always prescribed and NEVER CALCULATED!
+      & alb_nir_mineralsoil     ! see above.
 
     !
-    ! Additional variables for vegetation
+    ! Additional variables for vegetation (LAND_TYPE, VEG_TYPE)
     TYPE(t_jsb_var_real2d) :: &
       & alb_vis_can,          & ! Albedo of canopy (without snow cover) in VIS range.
                                 ! Never calculated. Initialized from bc_land_phys.nc file.
