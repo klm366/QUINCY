@@ -160,7 +160,7 @@ CONTAINS
        !! 
        veg%lai%ptr      = veg%pool%leaf%carbon%ptr * lctlib%sla
        veg%dens_ind%ptr = veg%dens_ind%ptr + veg%delta_dens_ind%ptr
-       IF(lctlib%growthform == itree)THEN
+       IF(lctlib%growthform == itree.AND.veg%dens_ind%ptr>0.0_wp)THEN
           veg%diameter%ptr  = calc_diameter_from_woody_biomass(lctlib                         , &
                                                                veg%pool%sap_wood%carbon%ptr   , &
                                                                veg%pool%heart_wood%carbon%ptr , &

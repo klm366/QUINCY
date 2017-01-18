@@ -680,7 +680,7 @@ CONTAINS
          veg%growth_cn_talloc_mavg%ptr, veg%npp_talloc_mavg%ptr, &
          growing_season_float, & 
          veg%cost_n_uptake_root%ptr, veg%cost_n_fixation_tuptake_mavg%ptr, &
-         veg%unit_transpiration_talloc_mavg%ptr * 1.e10_wp,veg%transpiration_talloc_mavg%ptr 
+         veg%unit_transpiration_talloc_mavg%ptr * 1.e10_wp, veg%growth_req_n_tuptake_mavg%ptr
       END IF
     END IF
     END IF  ! on/off switch specific to 'special case: fluxnet output'

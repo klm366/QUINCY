@@ -160,9 +160,9 @@ CONTAINS
       veg%unit_transpiration_talloc_mavg%ptr = 0.0_wp
       veg%unit_uptake_n_act_talloc_mavg%ptr = 0.0_wp
       veg%unit_uptake_p_act_talloc_mavg%ptr = 0.0_wp
-      veg%dphi_talloc_mavg%ptr = -2.0_wp
+      veg%dphi_talloc_mavg%ptr =  - lctlib%phi_leaf_min
       veg%growth_cn_talloc_mavg%ptr = 60.0_wp
-      veg%growth_cp_talloc_mavg%ptr = 1000.0_wp
+      veg%growth_cp_talloc_mavg%ptr = 2000.0_wp
       veg%labile_carbon_talloc_mavg%ptr = 0.0_wp
       veg%labile_nitrogen_talloc_mavg%ptr = 0.0_wp
       veg%labile_phosphorus_talloc_mavg%ptr = 0.0_wp

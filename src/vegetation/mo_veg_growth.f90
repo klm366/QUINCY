@@ -714,14 +714,14 @@ CONTAINS
                  (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
                  (unit_uptake_p * growth_cp * mavg_period_tgrowth*one_day)
             
-            IF ( hlp1 >= hlp2) THEN 
+            !IF ( hlp1 >= hlp2) THEN 
                ! if N is more limiting than P
                k1_opt = hlp1 
               k2_opt = unit_npp/(unit_uptake_n * growth_cn)
-           ELSE
-              k1_opt = hlp2 
-              k2_opt = unit_npp/(unit_uptake_p * growth_cp)
-           ENDIF
+           !ELSE
+           !   k1_opt = hlp2 
+           !   k2_opt = unit_npp/(unit_uptake_p * growth_cp)
+           !ENDIF
 
             !> water based optimality, following Magnani 2000 
           
@@ -729,11 +729,11 @@ CONTAINS
            k2_opt_w = unit_transpiration / (lctlib%k_root * dphi) 
 
            ! Compare root increments for a hypothetical unit of leaf growth 
-           IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
-              ! water is limiting 
-              k1_opt = k1_opt_w 
-              k2_opt = k2_opt_w 
-           ENDIF 
+           !IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
+           !   ! water is limiting 
+           !   k1_opt = k1_opt_w 
+           !   k2_opt = k2_opt_w 
+           !ENDIF 
 
          ELSE      
             leaf2root_mass_ratio = sm2lm_grass * lctlib%k_rtos 
