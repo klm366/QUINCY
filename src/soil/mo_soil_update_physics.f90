@@ -286,6 +286,13 @@ CONTAINS
           soil%w_soil_sl%ptr(:,1,:) = soil%w_soil_sl%ptr(:,1,:) + (infiltration - &
                evaporation * fevaporation(1) + veg%transpiration%ptr * ftranspiration(1)) / 1000._wp * dtime
 
+          WHERE(soil%w_soil_sl%ptr(:,1,:) > soil%w_soil_fc_sl%ptr(:,1,:))
+               soil%runoff%ptr(:,:) = soil%runoff%ptr(:,:) + & 
+                                      (soil%w_soil_sl%ptr(:,1,:) - soil%w_soil_fc_sl%ptr(:,1,:))*1000._wp / dtime
+               soil%w_soil_sl%ptr(:,1,:) = soil%w_soil_fc_sl%ptr(:,1,:) 
+          END WHERE 
+
+
           !> 3.2.4 update deeper soil layers given infiltration, transpiration and evaporation
           !!
           DO isoil = 2,soil_config%nsoil_water
@@ -304,7 +311,7 @@ CONTAINS
                   soil%drainage_sl%ptr(:,isoil,:) = soil%drainage_sl%ptr(:,isoil,:) + & 
                                                     (soil%w_soil_sl%ptr(:,isoil,:) - soil%w_soil_fc_sl%ptr(:,isoil,:))*1000._wp / dtime
                   soil%w_soil_sl%ptr(:,isoil,:) = soil%w_soil_fc_sl%ptr(:,isoil,:) 
-               ENDWHERE 
+               END WHERE 
 
           ENDDO
 
