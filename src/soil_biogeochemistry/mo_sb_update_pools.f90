@@ -81,7 +81,7 @@ CONTAINS
          sb%rmm_sorption%ptr         = calc_convert_bulk_to_liquid(soil%w_soil_sl%ptr,kmr_sorption) 
          sb%rmm_desorption%ptr       = calc_convert_bulk_to_liquid(soil%w_soil_sl%ptr,kmr_desorption) 
          sb%rmm_hsc%ptr              = calc_substrate_rate_modifier(soil%w_soil_sl%ptr,soil%w_soil_fc_sl%ptr,kmr_hsc) 
-     
+
     ENDSELECT
  
     !> 2.0 Calculate soil pools 
@@ -306,11 +306,16 @@ CONTAINS
     REAL(wp)              :: rate_modifier !< oxygen availability rate modifier [unitless] 
     ! 0.2 Local
     REAL(wp)              :: air_filled_pore_space
+    REAL(wp)              :: hlp
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_oxygen_rate_modifier'
 
     IF(param>eps8) THEN
        IF(w_soil_fc_sl > eps8) THEN
-          air_filled_pore_space = (w_soil_fc_sl - w_soil_sl ) / w_soil_fc_sl
+          hlp = w_soil_fc_sl - w_soil_sl
+          IF (hlp < 0.0_wp) THEN
+            hlp = 0.0_wp
+          END IF
+          air_filled_pore_space = hlp / w_soil_fc_sl
           rate_modifier = (air_filled_pore_space**k1_afps) / param + (air_filled_pore_space**k1_afps)
        ELSE
           rate_modifier = 1._wp

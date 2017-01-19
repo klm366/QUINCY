@@ -541,7 +541,7 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+!    IF (.NOT. tile%Is_process_active(????)) RETURN   ! ask for all processes considered here ?
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
@@ -950,8 +950,16 @@ CONTAINS
 
       lun = 100 * itile + 60
       write(lun,'(56F12.6)') time_d, &
-        sb%rtm_depolymerisation%ptr(1,:,1),sb%rtm_mic_uptake%ptr(1,:,1),sb%rtm_sorption%ptr(1,:,1),sb%rtm_desorption%ptr(1,:,1),sb%rtm_hsc%ptr(1,:,1), &
-        sb%rmm_depolymerisation%ptr(1,:,1),sb%rmm_mic_uptake%ptr(1,:,1),sb%rmm_sorption%ptr(1,:,1),sb%rmm_desorption%ptr(1,:,1),sb%rmm_hsc%ptr(1,:,1), &
+        sb%rtm_depolymerisation%ptr(1,:,1)  , & ! 1
+        sb%rtm_mic_uptake%ptr(1,:,1)        , &
+        sb%rtm_sorption%ptr(1,:,1)          , &
+        sb%rtm_desorption%ptr(1,:,1)        , &
+        sb%rtm_hsc%ptr(1,:,1)               , &
+        sb%rmm_depolymerisation%ptr(1,:,1)  , & 
+        sb%rmm_mic_uptake%ptr(1,:,1)        , & 
+        sb%rmm_sorption%ptr(1,:,1)          , &
+        sb%rmm_desorption%ptr(1,:,1)        , &
+        sb%rmm_hsc%ptr(1,:,1)               , & ! 10
         soil%percolation_sl%ptr(1,:,1)
 
       lun=lun+1
