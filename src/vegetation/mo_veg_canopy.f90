@@ -202,7 +202,7 @@ CONTAINS
     ENDIF
 
 
-    !> 3.0 fractionation of N within canopy layer
+    !> 3.0 fractionation of N within canopy laer
     !!
     !> 3.1 fraction not associated with photosynthesis 
     WHERE(leaf_nitrogen_cl > 0.0_wp) 

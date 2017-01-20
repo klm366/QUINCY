@@ -7,7 +7,6 @@
 ## Option in prep_run_slm.sh: compareSimCRUNCEPvsGFDB="T"
 ## 
 ## author Sönke Zaehle @ MPI-BGC Jena
-## edited by Melanie Kern (2016-12-12)
 #############################################################################################################
 
 
@@ -15,7 +14,6 @@
 args<-commandArgs(TRUE)
 ipath<-args[1]  # /Net/Groups/BGI/scratch/""$username""/slm/"exp_ID"/
 setwd(ipath)
-set_flag <- '_optAlloc'
 
 
 ## detect sites
@@ -39,15 +37,15 @@ for (s in 1:nsite) {
    print(paste(s,dirnames[[s]]))
    site_str[s]<-tail(unlist(strsplit(dirnames[[s]],'/')),n=1)
 
-   cpool<-read.table(paste(dirnames[[s]],'output/','vegpoolC_tile1_daily',set_flag,'.txt',sep=''),header=T)
-   c1314pool<-read.table(paste(dirnames[[s]],'output/','vegpooldC13dC14_tile1_daily',set_flag,'.txt',sep=''),header=T)
-   npool<-read.table(paste(dirnames[[s]],'output/','vegpoolN_tile1_daily',set_flag,'.txt',sep=''),header=T)
-   ppool<-read.table(paste(dirnames[[s]],'output/','vegpoolP_tile1_daily',set_flag,'.txt',sep=''),header=T)
-   h2opool<-read.table(paste(dirnames[[s]],'output/','vegpoolH2O_tile1_daily',set_flag,'.txt',sep=''),header=T)
-   diags<-read.table(paste(dirnames[[s]],'output/','veg_diagnostics_tile1_daily',set_flag,'.txt',sep=''),header=T)
-   cflux<-read.table(paste(dirnames[[s]],'output/','vegfluxC_tile1_daily',set_flag,'.txt',sep=''),header=T)
-   nflux<-read.table(paste(dirnames[[s]],'output/','vegfluxN_tile1_daily',set_flag,'.txt',sep=''),header=T)
-   pflux<-read.table(paste(dirnames[[s]],'output/','vegfluxP_tile1_daily',set_flag,'.txt',sep=''),header=T)
+   cpool<-read.table(paste(dirnames[[s]],'output/','vegpoolC_tile1_daily.txt',sep=''),header=T)
+   c1314pool<-read.table(paste(dirnames[[s]],'output/','vegpooldC13dC14_tile1_daily.txt',sep=''),header=T)
+   npool<-read.table(paste(dirnames[[s]],'output/','vegpoolN_tile1_daily.txt',sep=''),header=T)
+   ppool<-read.table(paste(dirnames[[s]],'output/','vegpoolP_tile1_daily.txt',sep=''),header=T)
+   h2opool<-read.table(paste(dirnames[[s]],'output/','vegpoolH2O_tile1_daily.txt',sep=''),header=T)
+   diags<-read.table(paste(dirnames[[s]],'output/','veg_diagnostics_tile1_daily.txt',sep=''),header=T)
+   cflux<-read.table(paste(dirnames[[s]],'output/','vegfluxC_tile1_daily.txt',sep=''),header=T)
+   nflux<-read.table(paste(dirnames[[s]],'output/','vegfluxN_tile1_daily.txt',sep=''),header=T)
+   pflux<-read.table(paste(dirnames[[s]],'output/','vegfluxP_tile1_daily.txt',sep=''),header=T)
    
    ntime<-dim(cpool)[1]
    ncpoolvar<-dim(cpool)[2]-1
@@ -154,12 +152,11 @@ for (s in 1:nsite) {
 
    #other diagnostics
    if(s==1) { 
-      diag_mean<-array(NA,c(nsite,5))
-      colnames(diag_mean)<-c('LAI','Height','ind_density','cost_nup','cost_bnf')
+      diag_mean<-array(NA,c(nsite,3))
+      colnames(diag_mean)<-c('LAI','Height','ind_density')
       diag_std<-diag_mean
    }
-   var_idx<-which(colnames(diags)=='LAI'|colnames(diags)=='Height'|colnames(diags)=='ind_density'|
-                    colnames(diags)=='cost_nup'|colnames(diags)=='cost_bnf')
+   var_idx<-which(colnames(diags)=='LAI'|colnames(diags)=='Height'|colnames(diags)=='ind_density')
    for (var in var_idx) {
      if(colnames(diags)[var]=='LAI') {hlp1<-aggregate(diags[,var],list(yearidx),max)} 
      else {hlp1<-aggregate(diags[,var],list(yearidx),mean)} 

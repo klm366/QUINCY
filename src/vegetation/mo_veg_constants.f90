@@ -91,8 +91,6 @@ MODULE mo_veg_constants
       vmax_bnf             , & 
       ! half_saturating cost of the response of N fixation (mol C / mol N) 
       k_bnf                , &
-	  ! factor for BNF response in resistance approach (mol C / mol N)
-	  offset_bnf           , &
       ! maximum soil N at which BNF occurs in standard scheme (mol N / m2)
       soil_n_threshold_bnf
 
@@ -209,9 +207,8 @@ CONTAINS
       transform_cost_nh4  = 1.7_wp    / (molar_mass_C/molar_mass_N)
       transform_cost_no3  = 2.3_wp    / (molar_mass_C/molar_mass_N)
       transform_cost_org  = 1.0_wp    / (molar_mass_C/molar_mass_N)
-      vmax_bnf            = 5.0_wp * 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) *1.e6_wp
+      vmax_bnf            = 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) *1.e6_wp
       k_bnf               = 50.0_wp   / (molar_mass_C/molar_Mass_N)
-	  offset_bnf          = 6.0_wp * 2.0_wp * (transform_cost_nh4*transform_cost_no3)/(transform_cost_nh4+transform_cost_no3)
       soil_n_threshold_bnf = 0.04 ! mol N == 0.56 g N /m2
 
   ! parameters used for phenology calculations
