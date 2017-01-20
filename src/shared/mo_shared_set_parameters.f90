@@ -41,6 +41,7 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: cost_n_fixation_min
     REAL(wp)           :: vmax_bnf                        !< maximum rate of N fixation
     REAL(wp)           :: k_bnf                           !< half_saturating cost of the response of N fixation
+	REAL(wp)           :: offset_bnf                      !< parameter used for bnf-scheme 'resistor'
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
     ! SB_CTL
@@ -88,6 +89,7 @@ CONTAINS
     REAL(wp)           :: cost_n_fixation_min
     REAL(wp)           :: vmax_bnf
     REAL(wp)           :: k_bnf
+	REAL(wp)           :: offset_bnf
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
     ! SB_CTL
@@ -114,6 +116,7 @@ CONTAINS
         cost_n_fixation_min       , &
         vmax_bnf                  , &
         k_bnf                     , &
+		offset_bnf                , &
         f_resp_acclim             , &
         fmaint_rate_base
 
@@ -144,6 +147,7 @@ CONTAINS
     cost_n_fixation_min         = missval
     vmax_bnf                    = missval
     k_bnf                       = missval
+	offset_bnf                  = missval
     f_resp_acclim               = missval
     fmaint_rate_base            = missval
     ! SB_CTL
@@ -185,6 +189,7 @@ CONTAINS
     this%cost_n_fixation_min         = cost_n_fixation_min
     this%vmax_bnf                    = vmax_bnf
     this%k_bnf                       = k_bnf
+	this%offset_bnf                  = offset_bnf
     this%f_resp_acclim               = f_resp_acclim
     this%fmaint_rate_base            = fmaint_rate_base 
     ! SB_CTL
@@ -200,7 +205,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE set_parameter_values_with_list_values(this)
 
-    USE mo_base_constants,                  ONLY: one_day, one_year
+    USE mo_base_constants,                  ONLY: one_day, one_year, dtime
     !USE mo_assimi_constants
     !USE mo_atmland_constants
     !USE mo_rad_constants
@@ -244,6 +249,9 @@ CONTAINS
                                                                                     (one_day*one_year) *1.e6_wp
     IF (ABS(this%k_bnf                - missval) > eps8)  k_bnf                 = this%k_bnf / &
                                                                                     (molar_mass_C/molar_Mass_N)
+    IF (ABS(this%offset_bnf           - missval) > eps8)  offset_bnf            = this%offset_bnf * &
+                                                                                    (transform_cost_nh4+transform_cost_no3) / &
+																					2.0_wp
     IF (ABS(this%f_resp_acclim        - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
     IF (ABS(this%fmaint_rate_base     - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
 
