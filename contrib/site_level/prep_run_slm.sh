@@ -13,19 +13,19 @@
 ########################################################################################################
 
 # folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
-experimentalID=""      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
+experimentalID="20170120_test"      # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
 # specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
-slmModel="land"             # land, plant, soil are currently available
+slmModel="land"          # land, plant, soil are currently available
 
 
 ##>> sites <<###########################################################################################
 # select sites: FLUXNET or CRUNCEPv5
-siteDataSet="f"           # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
+siteDataSet="c"          # f: FLUXNET or c: CRUNCEPv5  (use small caps!)
 # want a custom site list? -> default name is: "my_site_list.dat"; must be located in same folder as this script (usually "contrib/site_level/")
-customSiteList="F"        # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
-customSiteListFileName="my_fluxnet_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
+customSiteList="T"       # T (True) or F (False) [large caps] -> the sites in your file must be constistent with the option siteDataSet f/c
+customSiteListFileName="my_site_list.dat"    # you can specify a different file name other than my_site_list.dat; leave blank to use the default file name
 # run only a single site? then provide a site name, else write: singleSiteName=""
-singleSiteName=""         # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet f/c; overwrites customSiteList
+singleSiteName=""        # one site name, e.g. "DE-Bay"; must be consistent with the parameter value: siteDataSet f/c; overwrites customSiteList
 
 
 ##>> special runs <<####################################################################################
@@ -35,22 +35,22 @@ specialFluxnetOutput="F"    # T (True) or F (False) [large caps]
 # (2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # started by the cleanup_slm_hpc_run.sh using two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
 compareSimCRUNCEPvsGFDB="F"  # T (True) or F (False) [large caps] -> when "T" default go: siteDataSet="c", output_interval_..="daily", paramSensitivitySim="F"
-spinupLengthGFDB=300         # years of spin-up before output is saved
+spinupLengthGFDB=50          # years of spin-up before output is saved
 
 # (3) parameter sensitivity simulations
 # you can run one site from your customSiteList (customSiteList is set to "T" automatically if paramSensitivitySim="T")
 # please provide the line number of the site you want to use in your "customSiteListFileName"
 paramSensitivitySim="F"         # T (True) or F (False) [large caps]
-paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
+paramSensitivitySiteNumber=2    # line 2 to ...  (there is a header at line 1)
 
 
 ##>> namelist.slm options <<############################################################################
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-n_uptake_scheme="standard"      # prescribed standard optimal resistance
-p_uptake_scheme="prescribed"    # prescribed standard 
+n_uptake_scheme="resistance"      # prescribed standard optimal resistance
+p_uptake_scheme="prescribed"      # prescribed standard 
 soil_moisture_scheme="bucket"   # prescribed bucket layer
-flag_calc_soil_energy="F"
+flag_calc_soil_energy="T"
 # canopy model options
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
@@ -60,7 +60,7 @@ ncanopy=20                          # number of canopy layers
 canopy_layer_scheme="standard"      # canopy layer depth calculation options: standard fapar
 # plant growth model options
 flag_optimal_Nleaf="F"
-flag_optimal_allocation="F"
+flag_optimal_allocation="T"
 # vegetation dynamics options
 flag_tile_veg_dynamics="T"          # does also set "start_bareground"
 # soil model options
@@ -68,17 +68,18 @@ soil_depth=5.7                  # meters
 
 # simulation length & output
 simulation_length_number=30     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
-output_interval_pool="weekly"   # timestep daily weekly monthly yearly
-output_interval_flux="weekly"   # timestep daily weekly monthly yearly
-output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
+output_interval_pool="daily"    # timestep daily weekly monthly yearly
+output_interval_flux="daily"    # timestep daily weekly monthly yearly
+output_start_first_day_year=1    # 1 to ... [lower than or equal with output_end_last_day_year ]
 output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
-flag_generate_soil_forcing="F"      # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
+flag_litterfall_output="F"       # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
 
 # forcing input
-flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
+flag_oneYearForcing="T"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
 soil_awc_prescribe=300.0        # float !
 useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=1.0      # float !
+flag_generate_soil_forcing="F" #??? ACHTUNG EINFACH EINGEFÜHRT!
 
 
 ##>> details about the HPC, if unsure stick with these defaults <<################################

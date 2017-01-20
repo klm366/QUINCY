@@ -427,8 +427,8 @@ CONTAINS
     gn = unit_uptake_n_troot_mavg /(1._wp+fresp_growth+fresp_maint)
 
     IF(gn > eps8)THEN
-!@todo veg_growth:calc_uptake_costs: how to adjust this equation for the separated uptake of NH4 and NO3
-        cost_n_uptake_root = gc / gn + (transform_cost_nh4+transform_cost_no3)/2.0_wp
+        cost_n_uptake_root = gc / gn + &
+                             2.0_wp * (transform_cost_nh4*transform_cost_no3)/(transform_cost_nh4+transform_cost_no3)
     ELSE
         cost_n_uptake_root = 1000._wp ! an arbitrarily large value !
     ENDIF
@@ -656,20 +656,21 @@ CONTAINS
 !BLARPP: would be good to give these variables real names
            hlp1 = (npp*mavg_period_tgrowth*one_day +&
                 (labile_carbon + reserve_carbon - &
-                (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp - n_fixation * growth_cn*mavg_period_tgrowth*one_day) / & 
-                (unit_uptake_n * growth_cn *mavg_period_tgrowth*one_day)
+                (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp - &
+     				n_fixation * growth_cn*mavg_period_tgrowth*one_day) / & 
+                (unit_uptake_n * growth_cn*mavg_period_tgrowth*one_day)
            hlp2 = (npp*mavg_period_tgrowth*one_day +&
                 (labile_carbon + reserve_carbon - &
                 (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
                 (unit_uptake_p * growth_cp * mavg_period_tgrowth*one_day)
-           IF ( hlp1 >= hlp2) THEN 
+        !   IF ( hlp1 >= hlp2) THEN 
               ! if N is more limiting than P
               k1_opt = hlp1 
               k2_opt = unit_npp/(unit_uptake_n * growth_cn)
-           ELSE
-              k1_opt = hlp2 
-              k2_opt = unit_npp/(unit_uptake_p * growth_cp)
-           ENDIF
+        !   ELSE
+        !      k1_opt = hlp2 
+        !      k2_opt = unit_npp/(unit_uptake_p * growth_cp)
+        !   ENDIF
 
            !> water based optimality, following Magnani 2000 
            !! R = k1 + k2*dL +k3*dS 
