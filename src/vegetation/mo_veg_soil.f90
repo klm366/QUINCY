@@ -174,21 +174,23 @@ CONTAINS
       CASE ("resistance")
          ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
 !SZ: why is n-demand defined on a static leaf C:N and not the actual growth requirement for N?
-         n_demand = veg%demand_uptake_n_tuptake_mavg%ptr / lctlib%cn_leaf * veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
-!@todo veg_soil_bgc: adjust to current ratio of NH4/NO3 uptake
-         f_nacq_bnf = (veg%cost_n_uptake_root%ptr - (transform_cost_nh4+transform_cost_no3)/2.0_wp) / &
-                      (veg%cost_n_uptake_root%ptr+veg%cost_n_fixation_tuptake_mavg%ptr)
+         n_demand = veg%demand_uptake_n_tuptake_mavg%ptr / lctlib%cn_leaf * &
+                    veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
+
+         f_nacq_bnf = MAX((veg%cost_n_uptake_root%ptr - offset_bnf) / &
+                      (veg%cost_n_uptake_root%ptr+veg%cost_n_fixation_tuptake_mavg%ptr), 0.0_wp)
          f_nacq_nup = 1.0_wp - f_nacq_bnf
   
          veg%n_fixation%ptr = f_nacq_bnf * n_demand 
-!@todo veg_soil_bgc: should probably not be equal across NH4 and NO3?
          IF(veg%uptake_nh4%ptr + veg%uptake_no3%ptr > eps8 .AND. & 
             f_nacq_nup * n_demand < veg%uptake_nh4%ptr + veg%uptake_no3%ptr ) THEN
                scal = (f_nacq_nup * n_demand) / (veg%uptake_nh4%ptr + veg%uptake_no3%ptr)
+! this needs some thoughts...
                veg%uptake_nh4%ptr = veg%uptake_nh4%ptr * scal
-               veg%uptake_no3%ptr = veg%uptake_no3%ptr * scal 
+               veg%uptake_no3%ptr = veg%uptake_no3%ptr * scal
+								  
          ENDIF
-
+  
     ENDSELECT 
 
     !> 3.0 Calculate potential and actual N uptake per unit fine root carbon

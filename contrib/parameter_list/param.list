@@ -30,6 +30,7 @@
   cost_n_fixation_min=NAN
   vmax_bnf=NAN
   k_bnf=NAN
+  offset_bnf=NAN
   f_resp_acclim=NAN 
   fmaint_rate_base=NAN
 /
