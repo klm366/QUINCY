@@ -48,27 +48,27 @@ MODULE mo_sb_memory_class
     TYPE(t_jsb_var_real3d)    :: nitrogen15   !< 15nitrogen concentration of pool [mol m-3]
   CONTAINS
     PRIVATE
-    !! operator overload
-    ! +
-    PROCEDURE               :: Add_struct                   ! Add two variables of type t_slm_struct_sb_element
-    PROCEDURE               :: Add_struct_and_scalar        ! Add variable of type t_slm_struct_sb_element with REAL scalar
-    PROCEDURE               :: Add_struct_and_field3d       ! Add variable of type t_slm_struct_sb_element with REAL 2-d field2d
-    GENERIC, PUBLIC         :: OPERATOR(+) => Add_struct, Add_struct_and_scalar, Add_struct_and_field3d
-    ! -
-    PROCEDURE               :: Subtract_struct              ! Subtract two variables of type t_slm_struct_sb_element
-    PROCEDURE               :: Subtract_struct_and_scalar   ! Subtract variable of type t_slm_struct_sb_element with REAL scalar
-    PROCEDURE               :: Subtract_struct_and_field3d  ! Subtract variable of type t_slm_struct_sb_element with REAL 2-d field2d
-    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_struct, Subtract_struct_and_scalar, Subtract_struct_and_field3d
-    ! *
-    PROCEDURE               :: Multiply_struct              ! Multiply two variables of type t_slm_struct_sb_element
-    PROCEDURE               :: Multiply_struct_and_scalar   ! Multiply variable of type t_slm_struct_sb_element with REAL scalar
-    PROCEDURE               :: Multiply_struct_and_field3d  ! Multiply variable of type t_slm_struct_sb_element with REAL 2-d field2d
-    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_struct, Multiply_struct_and_scalar, Multiply_struct_and_field3d
-    ! /
-    PROCEDURE               :: Divide_struct                ! Divide two variables of type t_slm_struct_sb_element
-    PROCEDURE               :: Divide_struct_and_scalar     ! Divide variable of type t_slm_struct_sb_element by REAL scalar
-    PROCEDURE               :: Divide_struct_and_field3d    ! Divide variable of type t_slm_struct_sb_element by REAL 2-d field2d
-    GENERIC, PUBLIC         :: OPERATOR(/) => Divide_struct, Divide_struct_and_scalar, Divide_struct_and_field3d
+!!$    !! operator overload
+!!$    ! +
+!!$    PROCEDURE               :: Add_struct                   ! Add two variables of type t_slm_struct_sb_element
+!!$    PROCEDURE               :: Add_struct_and_scalar        ! Add variable of type t_slm_struct_sb_element with REAL scalar
+!!$    PROCEDURE               :: Add_struct_and_field3d       ! Add variable of type t_slm_struct_sb_element with REAL 2-d field2d
+!!$    GENERIC, PUBLIC         :: OPERATOR(+) => Add_struct, Add_struct_and_scalar, Add_struct_and_field3d
+!!$    ! -
+!!$    PROCEDURE               :: Subtract_struct              ! Subtract two variables of type t_slm_struct_sb_element
+!!$    PROCEDURE               :: Subtract_struct_and_scalar   ! Subtract variable of type t_slm_struct_sb_element with REAL scalar
+!!$    PROCEDURE               :: Subtract_struct_and_field3d  ! Subtract variable of type t_slm_struct_sb_element with REAL 2-d field2d
+!!$    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_struct, Subtract_struct_and_scalar, Subtract_struct_and_field3d
+!!$    ! *
+!!$    PROCEDURE               :: Multiply_struct              ! Multiply two variables of type t_slm_struct_sb_element
+!!$    PROCEDURE               :: Multiply_struct_and_scalar   ! Multiply variable of type t_slm_struct_sb_element with REAL scalar
+!!$    PROCEDURE               :: Multiply_struct_and_field3d  ! Multiply variable of type t_slm_struct_sb_element with REAL 2-d field2d
+!!$    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_struct, Multiply_struct_and_scalar, Multiply_struct_and_field3d
+!!$    ! /
+!!$    PROCEDURE               :: Divide_struct                ! Divide two variables of type t_slm_struct_sb_element
+!!$    PROCEDURE               :: Divide_struct_and_scalar     ! Divide variable of type t_slm_struct_sb_element by REAL scalar
+!!$    PROCEDURE               :: Divide_struct_and_field3d    ! Divide variable of type t_slm_struct_sb_element by REAL 2-d field2d
+!!$    GENERIC, PUBLIC         :: OPERATOR(/) => Divide_struct, Divide_struct_and_scalar, Divide_struct_and_field3d
     !! initialize with/ set to a certain REAL
     PROCEDURE, PUBLIC       :: init => init_t_slm_struct_sb_element
   END TYPE t_slm_struct_sb_element
@@ -83,35 +83,35 @@ MODULE mo_sb_memory_class
   TYPE, EXTENDS(t_jsb_n_struct) :: t_slm_struct_sb_pool
     TYPE(t_slm_struct_sb_element)  :: dom                 !< dissolved organic matter
     TYPE(t_slm_struct_sb_element)  :: dom_assoc           !< minerally associated disolved organic matter
-    TYPE(t_slm_struct_sb_element)  :: metabolic_litter    !< metabolic litter (sugars, cellulose etc.)
-    TYPE(t_slm_struct_sb_element)  :: structural_litter   !< structural litter (lignified litter)
+    TYPE(t_slm_struct_sb_element)  :: soluable_litter    !< metabolic litter (sugars, cellulose etc.)
+    TYPE(t_slm_struct_sb_element)  :: polymeric_litter   !< structural litter (lignified litter)
     TYPE(t_slm_struct_sb_element)  :: woody_litter        !< physically protected wood litter
     TYPE(t_slm_struct_sb_element)  :: microbial           !< microbial biomass
     TYPE(t_slm_struct_sb_element)  :: residue             !< microbial necromass
     TYPE(t_slm_struct_sb_element)  :: residue_assoc       !< minerally associated microbial necromass 
   CONTAINS
     PRIVATE
-    !! operator overload
-    ! +
-    PROCEDURE               :: Add_n_struct                   
-    PROCEDURE               :: Add_n_struct_and_scalar        
-    PROCEDURE               :: Add_n_struct_and_field3d       
-    GENERIC, PUBLIC         :: OPERATOR(+) => Add_n_struct, Add_n_struct_and_scalar, Add_n_struct_and_field3d
-    ! -
-    PROCEDURE               :: Subtract_n_struct              
-    PROCEDURE               :: Subtract_n_struct_and_scalar   
-    PROCEDURE               :: Subtract_n_struct_and_field3d  
-    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_n_struct, Subtract_n_struct_and_scalar, Subtract_n_struct_and_field3d
-    ! *
-    PROCEDURE               :: Multiply_n_struct              
-    PROCEDURE               :: Multiply_n_struct_and_scalar   
-    PROCEDURE               :: Multiply_n_struct_and_field3d  
-    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_n_struct, Multiply_n_struct_and_scalar, Multiply_n_struct_and_field3d
-    ! /
-    PROCEDURE               :: Divide_n_struct                
-    PROCEDURE               :: Divide_n_struct_and_scalar     
-    PROCEDURE               :: Divide_n_struct_and_field3d    
-    GENERIC, PUBLIC         :: OPERATOR(/) => Divide_n_struct, Divide_n_struct_and_scalar, Divide_n_struct_and_field3d
+!!$    !! operator overload
+!!$    ! +
+!!$    PROCEDURE               :: Add_n_struct                   
+!!$    PROCEDURE               :: Add_n_struct_and_scalar        
+!!$    PROCEDURE               :: Add_n_struct_and_field3d       
+!!$    GENERIC, PUBLIC         :: OPERATOR(+) => Add_n_struct, Add_n_struct_and_scalar, Add_n_struct_and_field3d
+!!$    ! -
+!!$    PROCEDURE               :: Subtract_n_struct              
+!!$    PROCEDURE               :: Subtract_n_struct_and_scalar   
+!!$    PROCEDURE               :: Subtract_n_struct_and_field3d  
+!!$    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_n_struct, Subtract_n_struct_and_scalar, Subtract_n_struct_and_field3d
+!!$    ! *
+!!$    PROCEDURE               :: Multiply_n_struct              
+!!$    PROCEDURE               :: Multiply_n_struct_and_scalar   
+!!$    PROCEDURE               :: Multiply_n_struct_and_field3d  
+!!$    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_n_struct, Multiply_n_struct_and_scalar, Multiply_n_struct_and_field3d
+!!$    ! /
+!!$    PROCEDURE               :: Divide_n_struct                
+!!$    PROCEDURE               :: Divide_n_struct_and_scalar     
+!!$    PROCEDURE               :: Divide_n_struct_and_field3d    
+!!$    GENERIC, PUBLIC         :: OPERATOR(/) => Divide_n_struct, Divide_n_struct_and_scalar, Divide_n_struct_and_field3d
     !! initialize with/ set to a certain REAL
     PROCEDURE, PUBLIC       :: init => init_t_slm_struct_sb_pool
   END TYPE t_slm_struct_sb_pool
@@ -174,15 +174,18 @@ MODULE mo_sb_memory_class
                                     volatilisation_n,       &  !< volatilisation of N  [µmol m-3 s-1]
                                     nitrification              !< nitrification  [µmol m-3 s-1]
     
+    TYPE(t_jsb_var_real3d)          :: &
+      qmax_mineral_org        !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
 
 !    TYPE(t_slm_struct_sb_element) :: &   ! simple structure for elements: t_jsb_struct
 !                                    test_sb_element   !< test ...
 
 
-
     TYPE(t_slm_struct_sb_pool)    :: &   ! nested pool TYPE t_jsb_n_struct
-                                    pool                !< pools of the sb
-
+                                    pool, &                !< pools of the sb
+                                    formation, & 
+                                    loss, & 
+                                    transport
 
 
 
@@ -196,258 +199,258 @@ MODULE mo_sb_memory_class
 
 CONTAINS
 
-  !-----------------------------------------------------------------------------------------------------!
-  ! t_slm_struct_sb_element operator overload                                                           !
-  !-----------------------------------------------------------------------------------------------------!
-
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_slm_struct_sb_element + t_slm_struct_sb_element)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_struct(this,struct2) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2  !< t_slm_struct_sb_element in
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3        !< t_slm_struct_sb_element out
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      + struct2%carbon
-    struct3%nitrogen     = this%nitrogen    + struct2%nitrogen
-    struct3%phosphorus   = this%phosphorus  + struct2%phosphorus
-    struct3%carbon13     = this%carbon13    + struct2%carbon13
-    struct3%carbon14     = this%carbon14    + struct2%carbon14
-    struct3%nitrogen15   = this%nitrogen15  + struct2%nitrogen15
-  END FUNCTION Add_struct
-
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_slm_struct_sb_element + scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_struct_and_scalar(this,scalar) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: scalar
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      + scalar
-    struct3%nitrogen     = this%nitrogen    + scalar
-    struct3%phosphorus   = this%phosphorus  + scalar
-    struct3%carbon13     = this%carbon13    + scalar
-    struct3%carbon14     = this%carbon14    + scalar
-    struct3%nitrogen15   = this%nitrogen15  + scalar
-  END FUNCTION Add_struct_and_scalar
-
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_slm_struct_sb_element + field3d)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_struct_and_field3d(this,field3d) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      + field3d
-    struct3%nitrogen     = this%nitrogen    + field3d
-    struct3%phosphorus   = this%phosphorus  + field3d
-    struct3%carbon13     = this%carbon13    + field3d
-    struct3%carbon14     = this%carbon14    + field3d
-    struct3%nitrogen15   = this%nitrogen15  + field3d
-  END FUNCTION Add_struct_and_field3d
-
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_slm_struct_sb_element - t_slm_struct_sb_element)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_struct(this,struct2) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2  !< t_slm_struct_sb_element in
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3        !< t_slm_struct_sb_element out
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      - struct2%carbon
-    struct3%nitrogen     = this%nitrogen    - struct2%nitrogen
-    struct3%phosphorus   = this%phosphorus  - struct2%phosphorus
-    struct3%carbon13     = this%carbon13    - struct2%carbon13
-    struct3%carbon14     = this%carbon14    - struct2%carbon14
-    struct3%nitrogen15   = this%nitrogen15  - struct2%nitrogen15
-  END FUNCTION Subtract_struct
-
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_slm_struct_sb_element - scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_struct_and_scalar(this,scalar) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: scalar
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      - scalar
-    struct3%nitrogen     = this%nitrogen    - scalar
-    struct3%phosphorus   = this%phosphorus  - scalar
-    struct3%carbon13     = this%carbon13    - scalar
-    struct3%carbon14     = this%carbon14    - scalar
-    struct3%nitrogen15   = this%nitrogen15  - scalar
-  END FUNCTION Subtract_struct_and_scalar
-
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_slm_struct_sb_element - field3d)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_struct_and_field3d(this,field3d) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      - field3d
-    struct3%nitrogen     = this%nitrogen    - field3d
-    struct3%phosphorus   = this%phosphorus  - field3d
-    struct3%carbon13     = this%carbon13    - field3d
-    struct3%carbon14     = this%carbon14    - field3d
-    struct3%nitrogen15   = this%nitrogen15  - field3d
-  END FUNCTION Subtract_struct_and_field3d
-
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_slm_struct_sb_element * t_slm_struct_sb_element)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_struct(this,struct2) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2  !< t_slm_struct_sb_element in
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3        !< t_slm_struct_sb_element out
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      * struct2%carbon
-    struct3%nitrogen     = this%nitrogen    * struct2%nitrogen
-    struct3%phosphorus   = this%phosphorus  * struct2%phosphorus
-    struct3%carbon13     = this%carbon13    * struct2%carbon13
-    struct3%carbon14     = this%carbon14    * struct2%carbon14
-    struct3%nitrogen15   = this%nitrogen15  * struct2%nitrogen15
-  END FUNCTION Multiply_struct
-
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_slm_struct_sb_element * scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_struct_and_scalar(this,scalar) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: scalar
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      * scalar
-    struct3%nitrogen     = this%nitrogen    * scalar
-    struct3%phosphorus   = this%phosphorus  * scalar
-    struct3%carbon13     = this%carbon13    * scalar
-    struct3%carbon14     = this%carbon14    * scalar
-    struct3%nitrogen15   = this%nitrogen15  * scalar
-  END FUNCTION Multiply_struct_and_scalar
-
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_slm_struct_sb_element * field3d)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_struct_and_field3d(this,field3d) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      * field3d
-    struct3%nitrogen     = this%nitrogen    * field3d
-    struct3%phosphorus   = this%phosphorus  * field3d
-    struct3%carbon13     = this%carbon13    * field3d
-    struct3%carbon14     = this%carbon14    * field3d
-    struct3%nitrogen15   = this%nitrogen15  * field3d
-  END FUNCTION Multiply_struct_and_field3d
-
-  !-----------------------------------------------------------------------------------------------------
-  !> / (t_slm_struct_sb_element / t_slm_struct_sb_element)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Divide_struct(this,struct2) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2 
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3       
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      / struct2%carbon
-    struct3%nitrogen     = this%nitrogen    / struct2%nitrogen
-    struct3%phosphorus   = this%phosphorus  / struct2%phosphorus
-    struct3%carbon13     = this%carbon13    / struct2%carbon13
-    struct3%carbon14     = this%carbon14    / struct2%carbon14
-    struct3%nitrogen15   = this%nitrogen15  / struct2%nitrogen15
-  END FUNCTION Divide_struct
-
-  !-----------------------------------------------------------------------------------------------------
-  !> / (t_slm_struct_sb_element / scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Divide_struct_and_scalar(this,scalar) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: scalar
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      / scalar
-    struct3%nitrogen     = this%nitrogen    / scalar
-    struct3%phosphorus   = this%phosphorus  / scalar
-    struct3%carbon13     = this%carbon13    / scalar
-    struct3%carbon14     = this%carbon14    / scalar
-    struct3%nitrogen15   = this%nitrogen15  / scalar
-  END FUNCTION Divide_struct_and_scalar
-
-  !-----------------------------------------------------------------------------------------------------
-  !> / (t_slm_struct_sb_element / field3d)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Divide_struct_and_field3d(this,field3d) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%carbon       = this%carbon      / field3d
-    struct3%nitrogen     = this%nitrogen    / field3d
-    struct3%phosphorus   = this%phosphorus  / field3d
-    struct3%carbon13     = this%carbon13    / field3d
-    struct3%carbon14     = this%carbon14    / field3d
-    struct3%nitrogen15   = this%nitrogen15  / field3d
-  END FUNCTION Divide_struct_and_field3d
-
+!!$  !-----------------------------------------------------------------------------------------------------!
+!!$  ! t_slm_struct_sb_element operator overload                                                           !
+!!$  !-----------------------------------------------------------------------------------------------------!
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> + (t_slm_struct_sb_element + t_slm_struct_sb_element)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Add_struct(this,struct2) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2  !< t_slm_struct_sb_element in
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3        !< t_slm_struct_sb_element out
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      + struct2%carbon
+!!$    struct3%nitrogen     = this%nitrogen    + struct2%nitrogen
+!!$    struct3%phosphorus   = this%phosphorus  + struct2%phosphorus
+!!$    struct3%carbon13     = this%carbon13    + struct2%carbon13
+!!$    struct3%carbon14     = this%carbon14    + struct2%carbon14
+!!$    struct3%nitrogen15   = this%nitrogen15  + struct2%nitrogen15
+!!$  END FUNCTION Add_struct
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> + (t_slm_struct_sb_element + scalar)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Add_struct_and_scalar(this,scalar) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: scalar
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      + scalar
+!!$    struct3%nitrogen     = this%nitrogen    + scalar
+!!$    struct3%phosphorus   = this%phosphorus  + scalar
+!!$    struct3%carbon13     = this%carbon13    + scalar
+!!$    struct3%carbon14     = this%carbon14    + scalar
+!!$    struct3%nitrogen15   = this%nitrogen15  + scalar
+!!$  END FUNCTION Add_struct_and_scalar
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> + (t_slm_struct_sb_element + field3d)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Add_struct_and_field3d(this,field3d) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      + field3d
+!!$    struct3%nitrogen     = this%nitrogen    + field3d
+!!$    struct3%phosphorus   = this%phosphorus  + field3d
+!!$    struct3%carbon13     = this%carbon13    + field3d
+!!$    struct3%carbon14     = this%carbon14    + field3d
+!!$    struct3%nitrogen15   = this%nitrogen15  + field3d
+!!$  END FUNCTION Add_struct_and_field3d
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> - (t_slm_struct_sb_element - t_slm_struct_sb_element)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Subtract_struct(this,struct2) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2  !< t_slm_struct_sb_element in
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3        !< t_slm_struct_sb_element out
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      - struct2%carbon
+!!$    struct3%nitrogen     = this%nitrogen    - struct2%nitrogen
+!!$    struct3%phosphorus   = this%phosphorus  - struct2%phosphorus
+!!$    struct3%carbon13     = this%carbon13    - struct2%carbon13
+!!$    struct3%carbon14     = this%carbon14    - struct2%carbon14
+!!$    struct3%nitrogen15   = this%nitrogen15  - struct2%nitrogen15
+!!$  END FUNCTION Subtract_struct
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> - (t_slm_struct_sb_element - scalar)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Subtract_struct_and_scalar(this,scalar) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: scalar
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      - scalar
+!!$    struct3%nitrogen     = this%nitrogen    - scalar
+!!$    struct3%phosphorus   = this%phosphorus  - scalar
+!!$    struct3%carbon13     = this%carbon13    - scalar
+!!$    struct3%carbon14     = this%carbon14    - scalar
+!!$    struct3%nitrogen15   = this%nitrogen15  - scalar
+!!$  END FUNCTION Subtract_struct_and_scalar
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> - (t_slm_struct_sb_element - field3d)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Subtract_struct_and_field3d(this,field3d) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      - field3d
+!!$    struct3%nitrogen     = this%nitrogen    - field3d
+!!$    struct3%phosphorus   = this%phosphorus  - field3d
+!!$    struct3%carbon13     = this%carbon13    - field3d
+!!$    struct3%carbon14     = this%carbon14    - field3d
+!!$    struct3%nitrogen15   = this%nitrogen15  - field3d
+!!$  END FUNCTION Subtract_struct_and_field3d
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> * (t_slm_struct_sb_element * t_slm_struct_sb_element)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Multiply_struct(this,struct2) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2  !< t_slm_struct_sb_element in
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3        !< t_slm_struct_sb_element out
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      * struct2%carbon
+!!$    struct3%nitrogen     = this%nitrogen    * struct2%nitrogen
+!!$    struct3%phosphorus   = this%phosphorus  * struct2%phosphorus
+!!$    struct3%carbon13     = this%carbon13    * struct2%carbon13
+!!$    struct3%carbon14     = this%carbon14    * struct2%carbon14
+!!$    struct3%nitrogen15   = this%nitrogen15  * struct2%nitrogen15
+!!$  END FUNCTION Multiply_struct
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> * (t_slm_struct_sb_element * scalar)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Multiply_struct_and_scalar(this,scalar) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: scalar
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      * scalar
+!!$    struct3%nitrogen     = this%nitrogen    * scalar
+!!$    struct3%phosphorus   = this%phosphorus  * scalar
+!!$    struct3%carbon13     = this%carbon13    * scalar
+!!$    struct3%carbon14     = this%carbon14    * scalar
+!!$    struct3%nitrogen15   = this%nitrogen15  * scalar
+!!$  END FUNCTION Multiply_struct_and_scalar
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> * (t_slm_struct_sb_element * field3d)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Multiply_struct_and_field3d(this,field3d) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      * field3d
+!!$    struct3%nitrogen     = this%nitrogen    * field3d
+!!$    struct3%phosphorus   = this%phosphorus  * field3d
+!!$    struct3%carbon13     = this%carbon13    * field3d
+!!$    struct3%carbon14     = this%carbon14    * field3d
+!!$    struct3%nitrogen15   = this%nitrogen15  * field3d
+!!$  END FUNCTION Multiply_struct_and_field3d
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> / (t_slm_struct_sb_element / t_slm_struct_sb_element)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Divide_struct(this,struct2) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this, struct2 
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3       
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      / struct2%carbon
+!!$    struct3%nitrogen     = this%nitrogen    / struct2%nitrogen
+!!$    struct3%phosphorus   = this%phosphorus  / struct2%phosphorus
+!!$    struct3%carbon13     = this%carbon13    / struct2%carbon13
+!!$    struct3%carbon14     = this%carbon14    / struct2%carbon14
+!!$    struct3%nitrogen15   = this%nitrogen15  / struct2%nitrogen15
+!!$  END FUNCTION Divide_struct
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> / (t_slm_struct_sb_element / scalar)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Divide_struct_and_scalar(this,scalar) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: scalar
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      / scalar
+!!$    struct3%nitrogen     = this%nitrogen    / scalar
+!!$    struct3%phosphorus   = this%phosphorus  / scalar
+!!$    struct3%carbon13     = this%carbon13    / scalar
+!!$    struct3%carbon14     = this%carbon14    / scalar
+!!$    struct3%nitrogen15   = this%nitrogen15  / scalar
+!!$  END FUNCTION Divide_struct_and_scalar
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> / (t_slm_struct_sb_element / field3d)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Divide_struct_and_field3d(this,field3d) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_element), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+!!$    TYPE(t_slm_struct_sb_element), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%carbon       = this%carbon      / field3d
+!!$    struct3%nitrogen     = this%nitrogen    / field3d
+!!$    struct3%phosphorus   = this%phosphorus  / field3d
+!!$    struct3%carbon13     = this%carbon13    / field3d
+!!$    struct3%carbon14     = this%carbon14    / field3d
+!!$    struct3%nitrogen15   = this%nitrogen15  / field3d
+!!$  END FUNCTION Divide_struct_and_field3d
+!!$
   !-----------------------------------------------------------------------------------------------------
   !> Initialisation t_slm_struct_sb_element with a scalar
   !!
@@ -468,282 +471,282 @@ CONTAINS
 
 
 
-  !-----------------------------------------------------------------------------------------------------!
-  ! t_slm_struct_sb_pool operator overload                                                              !
-  !-----------------------------------------------------------------------------------------------------!
-
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_slm_struct_sb_pool + t_slm_struct_sb_pool)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_n_struct(this,struct2) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2  !< t_slm_struct_sb_pool in
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3        !< t_slm_struct_sb_pool out
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                + struct2%dom
-    struct3%dom_assoc         = this%dom_assoc          + struct2%dom_assoc
-    struct3%metabolic_litter  = this%metabolic_litter   + struct2%metabolic_litter
-    struct3%structural_litter = this%structural_litter  + struct2%structural_litter
-    struct3%woody_litter      = this%woody_litter       + struct2%woody_litter
-    struct3%microbial         = this%microbial          + struct2%microbial
-    struct3%residue           = this%residue            + struct2%residue
-    struct3%residue_assoc     = this%residue_assoc      + struct2%residue_assoc
-  END FUNCTION Add_n_struct
-
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_slm_struct_sb_pool + scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_n_struct_and_scalar(this,scalar) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: scalar
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                + scalar
-    struct3%dom_assoc         = this%dom_assoc          + scalar
-    struct3%metabolic_litter  = this%metabolic_litter   + scalar
-    struct3%structural_litter = this%structural_litter  + scalar
-    struct3%woody_litter      = this%woody_litter       + scalar
-    struct3%microbial         = this%microbial          + scalar
-    struct3%residue           = this%residue            + scalar
-    struct3%residue_assoc     = this%residue_assoc      + scalar
-  END FUNCTION Add_n_struct_and_scalar
-
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_slm_struct_sb_pool + field3d)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_n_struct_and_field3d(this,field3d) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                + field3d
-    struct3%dom_assoc         = this%dom_assoc          + field3d
-    struct3%metabolic_litter  = this%metabolic_litter   + field3d
-    struct3%structural_litter = this%structural_litter  + field3d
-    struct3%woody_litter      = this%woody_litter       + field3d
-    struct3%microbial         = this%microbial          + field3d
-    struct3%residue           = this%residue            + field3d
-    struct3%residue_assoc     = this%residue_assoc      + field3d
-  END FUNCTION Add_n_struct_and_field3d
-
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_slm_struct_sb_pool - t_slm_struct_sb_pool)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_n_struct(this,struct2) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2  !< t_slm_struct_sb_pool in
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3        !< t_slm_struct_sb_pool out
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                - struct2%dom
-    struct3%dom_assoc         = this%dom_assoc          - struct2%dom_assoc
-    struct3%metabolic_litter  = this%metabolic_litter   - struct2%metabolic_litter
-    struct3%structural_litter = this%structural_litter  - struct2%structural_litter
-    struct3%woody_litter      = this%woody_litter       - struct2%woody_litter
-    struct3%microbial         = this%microbial          - struct2%microbial
-    struct3%residue           = this%residue            - struct2%residue
-    struct3%residue_assoc     = this%residue_assoc      - struct2%residue_assoc
-  END FUNCTION Subtract_n_struct
-
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_slm_struct_sb_pool - scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_n_struct_and_scalar(this,scalar) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: scalar
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                - scalar
-    struct3%dom_assoc         = this%dom_assoc          - scalar
-    struct3%metabolic_litter  = this%metabolic_litter   - scalar
-    struct3%structural_litter = this%structural_litter  - scalar
-    struct3%woody_litter      = this%woody_litter       - scalar
-    struct3%microbial         = this%microbial          - scalar
-    struct3%residue           = this%residue            - scalar
-    struct3%residue_assoc     = this%residue_assoc      - scalar
-  END FUNCTION Subtract_n_struct_and_scalar
-
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_slm_struct_sb_pool - field3d)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Subtract_n_struct_and_field3d(this,field3d) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                - field3d
-    struct3%dom_assoc         = this%dom_assoc          - field3d
-    struct3%metabolic_litter  = this%metabolic_litter   - field3d
-    struct3%structural_litter = this%structural_litter  - field3d
-    struct3%woody_litter      = this%woody_litter       - field3d
-    struct3%microbial         = this%microbial          - field3d
-    struct3%residue           = this%residue            - field3d
-    struct3%residue_assoc     = this%residue_assoc      - field3d
-  END FUNCTION Subtract_n_struct_and_field3d
-
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_slm_struct_sb_pool * t_slm_struct_sb_pool)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_n_struct(this,struct2) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2  !< t_slm_struct_sb_pool in
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3        !< t_slm_struct_sb_pool out
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                * struct2%dom
-    struct3%dom_assoc         = this%dom_assoc          * struct2%dom_assoc
-    struct3%metabolic_litter  = this%metabolic_litter   * struct2%metabolic_litter
-    struct3%structural_litter = this%structural_litter  * struct2%structural_litter
-    struct3%woody_litter      = this%woody_litter       * struct2%woody_litter
-    struct3%microbial         = this%microbial          * struct2%microbial
-    struct3%residue           = this%residue            * struct2%residue
-    struct3%residue_assoc     = this%residue_assoc      * struct2%residue_assoc
-  END FUNCTION Multiply_n_struct
-
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_slm_struct_sb_pool * scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_n_struct_and_scalar(this,scalar) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: scalar
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                * scalar
-    struct3%dom_assoc         = this%dom_assoc          * scalar
-    struct3%metabolic_litter  = this%metabolic_litter   * scalar
-    struct3%structural_litter = this%structural_litter  * scalar
-    struct3%woody_litter      = this%woody_litter       * scalar
-    struct3%microbial         = this%microbial          * scalar
-    struct3%residue           = this%residue            * scalar
-    struct3%residue_assoc     = this%residue_assoc      * scalar
-  END FUNCTION Multiply_n_struct_and_scalar
-
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_slm_struct_sb_pool * field3d)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_n_struct_and_field3d(this,field3d) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                * field3d
-    struct3%dom_assoc         = this%dom_assoc          * field3d
-    struct3%metabolic_litter  = this%metabolic_litter   * field3d
-    struct3%structural_litter = this%structural_litter  * field3d
-    struct3%woody_litter      = this%woody_litter       * field3d
-    struct3%microbial         = this%microbial          * field3d
-    struct3%residue           = this%residue            * field3d
-    struct3%residue_assoc     = this%residue_assoc      * field3d
-  END FUNCTION Multiply_n_struct_and_field3d
-
-  !-----------------------------------------------------------------------------------------------------
-  !> / (t_slm_struct_sb_pool / t_slm_struct_sb_pool)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Divide_n_struct(this,struct2) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2 
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3       
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                / struct2%dom
-    struct3%dom_assoc         = this%dom_assoc          / struct2%dom_assoc
-    struct3%metabolic_litter  = this%metabolic_litter   / struct2%metabolic_litter
-    struct3%structural_litter = this%structural_litter  / struct2%structural_litter
-    struct3%woody_litter      = this%woody_litter       / struct2%woody_litter
-    struct3%microbial         = this%microbial          / struct2%microbial
-    struct3%residue           = this%residue            / struct2%residue
-    struct3%residue_assoc     = this%residue_assoc      / struct2%residue_assoc
-  END FUNCTION Divide_n_struct
-
-  !-----------------------------------------------------------------------------------------------------
-  !> / (t_slm_struct_sb_pool / scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Divide_n_struct_and_scalar(this,scalar) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: scalar
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                / scalar
-    struct3%dom_assoc         = this%dom_assoc          / scalar
-    struct3%metabolic_litter  = this%metabolic_litter   / scalar
-    struct3%structural_litter = this%structural_litter  / scalar
-    struct3%woody_litter      = this%woody_litter       / scalar
-    struct3%microbial         = this%microbial          / scalar
-    struct3%residue           = this%residue            / scalar
-    struct3%residue_assoc     = this%residue_assoc      / scalar
-  END FUNCTION Divide_n_struct_and_scalar
-
-  !-----------------------------------------------------------------------------------------------------
-  !> / (t_slm_struct_sb_pool / field3d)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Divide_n_struct_and_field3d(this,field3d) RESULT(struct3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
-    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
-    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
-
-    ALLOCATE(struct3, source=this)
-
-    struct3%dom               = this%dom                / field3d
-    struct3%dom_assoc         = this%dom_assoc          / field3d
-    struct3%metabolic_litter  = this%metabolic_litter   / field3d
-    struct3%structural_litter = this%structural_litter  / field3d
-    struct3%woody_litter      = this%woody_litter       / field3d
-    struct3%microbial         = this%microbial          / field3d
-    struct3%residue           = this%residue            / field3d
-    struct3%residue_assoc     = this%residue_assoc      / field3d
-  END FUNCTION Divide_n_struct_and_field3d
-
+!!$  !-----------------------------------------------------------------------------------------------------!
+!!$  ! t_slm_struct_sb_pool operator overload                                                              !
+!!$  !-----------------------------------------------------------------------------------------------------!
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> + (t_slm_struct_sb_pool + t_slm_struct_sb_pool)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Add_n_struct(this,struct2) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2  !< t_slm_struct_sb_pool in
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3        !< t_slm_struct_sb_pool out
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                + struct2%dom
+!!$    struct3%dom_assoc         = this%dom_assoc          + struct2%dom_assoc
+!!$    struct3%soluable_litter  = this%soluable_litter   + struct2%soluable_litter
+!!$    struct3%polymeric_litter = this%polymeric_litter  + struct2%polymeric_litter
+!!$    struct3%woody_litter      = this%woody_litter       + struct2%woody_litter
+!!$    struct3%microbial         = this%microbial          + struct2%microbial
+!!$    struct3%residue           = this%residue            + struct2%residue
+!!$    struct3%residue_assoc     = this%residue_assoc      + struct2%residue_assoc
+!!$  END FUNCTION Add_n_struct
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> + (t_slm_struct_sb_pool + scalar)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Add_n_struct_and_scalar(this,scalar) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: scalar
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                + scalar
+!!$    struct3%dom_assoc         = this%dom_assoc          + scalar
+!!$    struct3%soluable_litter  = this%soluable_litter   + scalar
+!!$    struct3%polymeric_litter = this%polymeric_litter  + scalar
+!!$    struct3%woody_litter      = this%woody_litter       + scalar
+!!$    struct3%microbial         = this%microbial          + scalar
+!!$    struct3%residue           = this%residue            + scalar
+!!$    struct3%residue_assoc     = this%residue_assoc      + scalar
+!!$  END FUNCTION Add_n_struct_and_scalar
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> + (t_slm_struct_sb_pool + field3d)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Add_n_struct_and_field3d(this,field3d) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                + field3d
+!!$    struct3%dom_assoc         = this%dom_assoc          + field3d
+!!$    struct3%soluable_litter  = this%soluable_litter   + field3d
+!!$    struct3%polymeric_litter = this%polymeric_litter  + field3d
+!!$    struct3%woody_litter      = this%woody_litter       + field3d
+!!$    struct3%microbial         = this%microbial          + field3d
+!!$    struct3%residue           = this%residue            + field3d
+!!$    struct3%residue_assoc     = this%residue_assoc      + field3d
+!!$  END FUNCTION Add_n_struct_and_field3d
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> - (t_slm_struct_sb_pool - t_slm_struct_sb_pool)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Subtract_n_struct(this,struct2) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2  !< t_slm_struct_sb_pool in
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3        !< t_slm_struct_sb_pool out
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                - struct2%dom
+!!$    struct3%dom_assoc         = this%dom_assoc          - struct2%dom_assoc
+!!$    struct3%soluable_litter  = this%soluable_litter   - struct2%soluable_litter
+!!$    struct3%polymeric_litter = this%polymeric_litter  - struct2%polymeric_litter
+!!$    struct3%woody_litter      = this%woody_litter       - struct2%woody_litter
+!!$    struct3%microbial         = this%microbial          - struct2%microbial
+!!$    struct3%residue           = this%residue            - struct2%residue
+!!$    struct3%residue_assoc     = this%residue_assoc      - struct2%residue_assoc
+!!$  END FUNCTION Subtract_n_struct
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> - (t_slm_struct_sb_pool - scalar)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Subtract_n_struct_and_scalar(this,scalar) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: scalar
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                - scalar
+!!$    struct3%dom_assoc         = this%dom_assoc          - scalar
+!!$    struct3%soluable_litter  = this%soluable_litter   - scalar
+!!$    struct3%polymeric_litter = this%polymeric_litter  - scalar
+!!$    struct3%woody_litter      = this%woody_litter       - scalar
+!!$    struct3%microbial         = this%microbial          - scalar
+!!$    struct3%residue           = this%residue            - scalar
+!!$    struct3%residue_assoc     = this%residue_assoc      - scalar
+!!$  END FUNCTION Subtract_n_struct_and_scalar
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> - (t_slm_struct_sb_pool - field3d)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Subtract_n_struct_and_field3d(this,field3d) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                - field3d
+!!$    struct3%dom_assoc         = this%dom_assoc          - field3d
+!!$    struct3%soluable_litter  = this%soluable_litter   - field3d
+!!$    struct3%polymeric_litter = this%polymeric_litter  - field3d
+!!$    struct3%woody_litter      = this%woody_litter       - field3d
+!!$    struct3%microbial         = this%microbial          - field3d
+!!$    struct3%residue           = this%residue            - field3d
+!!$    struct3%residue_assoc     = this%residue_assoc      - field3d
+!!$  END FUNCTION Subtract_n_struct_and_field3d
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> * (t_slm_struct_sb_pool * t_slm_struct_sb_pool)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Multiply_n_struct(this,struct2) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2  !< t_slm_struct_sb_pool in
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3        !< t_slm_struct_sb_pool out
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                * struct2%dom
+!!$    struct3%dom_assoc         = this%dom_assoc          * struct2%dom_assoc
+!!$    struct3%soluable_litter  = this%soluable_litter   * struct2%soluable_litter
+!!$    struct3%polymeric_litter = this%polymeric_litter  * struct2%polymeric_litter
+!!$    struct3%woody_litter      = this%woody_litter       * struct2%woody_litter
+!!$    struct3%microbial         = this%microbial          * struct2%microbial
+!!$    struct3%residue           = this%residue            * struct2%residue
+!!$    struct3%residue_assoc     = this%residue_assoc      * struct2%residue_assoc
+!!$  END FUNCTION Multiply_n_struct
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> * (t_slm_struct_sb_pool * scalar)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Multiply_n_struct_and_scalar(this,scalar) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: scalar
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                * scalar
+!!$    struct3%dom_assoc         = this%dom_assoc          * scalar
+!!$    struct3%soluable_litter  = this%soluable_litter   * scalar
+!!$    struct3%polymeric_litter = this%polymeric_litter  * scalar
+!!$    struct3%woody_litter      = this%woody_litter       * scalar
+!!$    struct3%microbial         = this%microbial          * scalar
+!!$    struct3%residue           = this%residue            * scalar
+!!$    struct3%residue_assoc     = this%residue_assoc      * scalar
+!!$  END FUNCTION Multiply_n_struct_and_scalar
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> * (t_slm_struct_sb_pool * field3d)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Multiply_n_struct_and_field3d(this,field3d) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                * field3d
+!!$    struct3%dom_assoc         = this%dom_assoc          * field3d
+!!$    struct3%soluable_litter  = this%soluable_litter   * field3d
+!!$    struct3%polymeric_litter = this%polymeric_litter  * field3d
+!!$    struct3%woody_litter      = this%woody_litter       * field3d
+!!$    struct3%microbial         = this%microbial          * field3d
+!!$    struct3%residue           = this%residue            * field3d
+!!$    struct3%residue_assoc     = this%residue_assoc      * field3d
+!!$  END FUNCTION Multiply_n_struct_and_field3d
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> / (t_slm_struct_sb_pool / t_slm_struct_sb_pool)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Divide_n_struct(this,struct2) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this, struct2 
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3       
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                / struct2%dom
+!!$    struct3%dom_assoc         = this%dom_assoc          / struct2%dom_assoc
+!!$    struct3%soluable_litter  = this%soluable_litter   / struct2%soluable_litter
+!!$    struct3%polymeric_litter = this%polymeric_litter  / struct2%polymeric_litter
+!!$    struct3%woody_litter      = this%woody_litter       / struct2%woody_litter
+!!$    struct3%microbial         = this%microbial          / struct2%microbial
+!!$    struct3%residue           = this%residue            / struct2%residue
+!!$    struct3%residue_assoc     = this%residue_assoc      / struct2%residue_assoc
+!!$  END FUNCTION Divide_n_struct
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> / (t_slm_struct_sb_pool / scalar)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Divide_n_struct_and_scalar(this,scalar) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: scalar
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                / scalar
+!!$    struct3%dom_assoc         = this%dom_assoc          / scalar
+!!$    struct3%soluable_litter  = this%soluable_litter   / scalar
+!!$    struct3%polymeric_litter = this%polymeric_litter  / scalar
+!!$    struct3%woody_litter      = this%woody_litter       / scalar
+!!$    struct3%microbial         = this%microbial          / scalar
+!!$    struct3%residue           = this%residue            / scalar
+!!$    struct3%residue_assoc     = this%residue_assoc      / scalar
+!!$  END FUNCTION Divide_n_struct_and_scalar
+!!$
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  !> / (t_slm_struct_sb_pool / field3d)
+!!$  !!
+!!$  !-----------------------------------------------------------------------------------------------------
+!!$  FUNCTION Divide_n_struct_and_field3d(this,field3d) RESULT(struct3)
+!!$    IMPLICIT NONE
+!!$    ! 0.1 InOut
+!!$    CLASS(t_slm_struct_sb_pool), INTENT(in) :: this
+!!$    REAL(wp),                        INTENT(in) :: field3d(:,:,:)
+!!$    TYPE(t_slm_struct_sb_pool), ALLOCATABLE :: struct3
+!!$
+!!$    ALLOCATE(struct3, source=this)
+!!$
+!!$    struct3%dom               = this%dom                / field3d
+!!$    struct3%dom_assoc         = this%dom_assoc          / field3d
+!!$    struct3%soluable_litter  = this%soluable_litter   / field3d
+!!$    struct3%polymeric_litter = this%polymeric_litter  / field3d
+!!$    struct3%woody_litter      = this%woody_litter       / field3d
+!!$    struct3%microbial         = this%microbial          / field3d
+!!$    struct3%residue           = this%residue            / field3d
+!!$    struct3%residue_assoc     = this%residue_assoc      / field3d
+!!$  END FUNCTION Divide_n_struct_and_field3d
+!!$
   !-----------------------------------------------------------------------------------------------------
   !> Initialisation t_slm_struct_sb_pool with a scalar
   !!
@@ -756,8 +759,8 @@ CONTAINS
 
     CALL this%dom%init(s)
     CALL this%dom_assoc%init(s)
-    CALL this%metabolic_litter%init(s)
-    CALL this%structural_litter%init(s)
+    CALL this%soluable_litter%init(s)
+    CALL this%polymeric_litter%init(s)
     CALL this%woody_litter%init(s)
     CALL this%microbial%init(s)
     CALL this%residue%init(s)
@@ -905,6 +908,9 @@ CONTAINS
       CALL slm_add_var(mem, 'nitrification', mem%nitrification, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL slm_add_var(mem, 'qmax_mineral_org', mem%qmax_mineral_org, &
+            initval_r=0.0_wp) ! initvalue
+
       !> simple TYPE (t_jsb_struct)
       !! 
       !! slm_add_var -> slm_add_struct()
@@ -916,7 +922,10 @@ CONTAINS
       !! 
       !! slm_add_var -> slm_add_n_struct()
       !! 
-      CALL slm_add_var(mem, 'sb_pool'        , mem%pool)
+      CALL slm_add_var(mem, 'sb_pool'           , mem%pool)
+      CALL slm_add_var(mem, 'sb_formation'      , mem%formation)
+      CALL slm_add_var(mem, 'sb_loss'  , mem%loss)
+      CALL slm_add_var(mem, 'sb_transport'      , mem%transport)
 
       !> level 2 TYPE (l2_struct) nested within the above nested TYPE structures (t_jsb_n_struct)
       !! 
@@ -924,12 +933,39 @@ CONTAINS
       !! 
       CALL slm_add_var(mem%pool,    'sb_pool_dom',                mem%pool%dom) 
       CALL slm_add_var(mem%pool,    'sb_pool_dom_assoc',          mem%pool%dom_assoc)
-      CALL slm_add_var(mem%pool,    'sb_pool_metabolic_litter',   mem%pool%metabolic_litter) 
-      CALL slm_add_var(mem%pool,    'sb_pool_structural_litter',  mem%pool%structural_litter) 
+      CALL slm_add_var(mem%pool,    'sb_pool_soluable_litter',   mem%pool%soluable_litter) 
+      CALL slm_add_var(mem%pool,    'sb_pool_polymeric_litter',  mem%pool%polymeric_litter) 
       CALL slm_add_var(mem%pool,    'sb_pool_woody_litter',       mem%pool%woody_litter) 
       CALL slm_add_var(mem%pool,    'sb_pool_microbial',          mem%pool%microbial) 
       CALL slm_add_var(mem%pool,    'sb_pool_residue',            mem%pool%residue) 
       CALL slm_add_var(mem%pool,    'sb_pool_residue_assoc',      mem%pool%residue_assoc)  
+
+      CALL slm_add_var(mem%formation,    'sb_formation_dom',                mem%formation%dom) 
+      CALL slm_add_var(mem%formation,    'sb_formation_dom_assoc',          mem%formation%dom_assoc)
+      CALL slm_add_var(mem%formation,    'sb_formation_soluable_litter',   mem%formation%soluable_litter) 
+      CALL slm_add_var(mem%formation,    'sb_formation_polymeric_litter',  mem%formation%polymeric_litter) 
+      CALL slm_add_var(mem%formation,    'sb_formation_woody_litter',       mem%formation%woody_litter) 
+      CALL slm_add_var(mem%formation,    'sb_formation_microbial',          mem%formation%microbial) 
+      CALL slm_add_var(mem%formation,    'sb_formation_residue',            mem%formation%residue) 
+      CALL slm_add_var(mem%formation,    'sb_formation_residue_assoc',      mem%formation%residue_assoc)  
+
+      CALL slm_add_var(mem%loss,    'sb_loss_dom',                mem%loss%dom) 
+      CALL slm_add_var(mem%loss,    'sb_loss_dom_assoc',          mem%loss%dom_assoc)
+      CALL slm_add_var(mem%loss,    'sb_loss_soluable_litter',   mem%loss%soluable_litter) 
+      CALL slm_add_var(mem%loss,    'sb_loss_polymeric_litter',  mem%loss%polymeric_litter) 
+      CALL slm_add_var(mem%loss,    'sb_loss_woody_litter',       mem%loss%woody_litter) 
+      CALL slm_add_var(mem%loss,    'sb_loss_microbial',          mem%loss%microbial) 
+      CALL slm_add_var(mem%loss,    'sb_loss_residue',            mem%loss%residue) 
+      CALL slm_add_var(mem%loss,    'sb_loss_residue_assoc',      mem%loss%residue_assoc)  
+
+      CALL slm_add_var(mem%transport,    'sb_transport_dom',                mem%transport%dom) 
+      CALL slm_add_var(mem%transport,    'sb_transport_dom_assoc',          mem%transport%dom_assoc)
+      CALL slm_add_var(mem%transport,    'sb_transport_soluable_litter',   mem%transport%soluable_litter) 
+      CALL slm_add_var(mem%transport,    'sb_transport_polymeric_litter',  mem%transport%polymeric_litter) 
+      CALL slm_add_var(mem%transport,    'sb_transport_woody_litter',       mem%transport%woody_litter) 
+      CALL slm_add_var(mem%transport,    'sb_transport_microbial',          mem%transport%microbial) 
+      CALL slm_add_var(mem%transport,    'sb_transport_residue',            mem%transport%residue) 
+      CALL slm_add_var(mem%transport,    'sb_transport_residue_assoc',      mem%transport%residue_assoc)  
 
       !> add variables to the structs and the l2 structs
       !!
@@ -963,30 +999,30 @@ CONTAINS
       CALL slm_add_var(mem%pool%dom_assoc, 'sb_pool_dom_assoc_nitrogen15', mem%pool%dom_assoc%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
  
-      CALL slm_add_var(mem%pool%metabolic_litter, 'sb_pool_metabolic_litter_carbon', mem%pool%metabolic_litter%carbon, &
+      CALL slm_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_carbon', mem%pool%soluable_litter%carbon, &
             initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%pool%metabolic_litter, 'sb_pool_metabolic_litter_nitrogen', mem%pool%metabolic_litter%nitrogen, &
+      CALL slm_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_nitrogen', mem%pool%soluable_litter%nitrogen, &
             initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%pool%metabolic_litter, 'sb_pool_metabolic_litter_phosphorus', mem%pool%metabolic_litter%phosphorus, &
+      CALL slm_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_phosphorus', mem%pool%soluable_litter%phosphorus, &
             initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%pool%metabolic_litter, 'sb_pool_metabolic_litter_carbon13', mem%pool%metabolic_litter%carbon13, &
+      CALL slm_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_carbon13', mem%pool%soluable_litter%carbon13, &
             initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%pool%metabolic_litter, 'sb_pool_metabolic_litter_carbon14', mem%pool%metabolic_litter%carbon14, &
+      CALL slm_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_carbon14', mem%pool%soluable_litter%carbon14, &
             initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%pool%metabolic_litter, 'sb_pool_metabolic_litter_nitrogen15', mem%pool%metabolic_litter%nitrogen15, &
+      CALL slm_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_nitrogen15', mem%pool%soluable_litter%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
  
-      CALL slm_add_var(mem%pool%structural_litter, 'sb_pool_structural_litter_carbon', mem%pool%structural_litter%carbon, &
+      CALL slm_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_carbon', mem%pool%polymeric_litter%carbon, &
             initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%pool%structural_litter, 'sb_pool_structural_litter_nitrogen', mem%pool%structural_litter%nitrogen, &
+      CALL slm_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_nitrogen', mem%pool%polymeric_litter%nitrogen, &
             initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%pool%structural_litter, 'sb_pool_structural_litter_phosphorus', mem%pool%structural_litter%phosphorus, &
+      CALL slm_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_phosphorus', mem%pool%polymeric_litter%phosphorus, &
             initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%pool%structural_litter, 'sb_pool_structural_litter_carbon13', mem%pool%structural_litter%carbon13, &
+      CALL slm_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_carbon13', mem%pool%polymeric_litter%carbon13, &
             initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%pool%structural_litter, 'sb_pool_structural_litter_carbon14', mem%pool%structural_litter%carbon14, &
+      CALL slm_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_carbon14', mem%pool%polymeric_litter%carbon14, &
             initval_r=0.0_wp)     ! initvalue
-      CALL slm_add_var(mem%pool%structural_litter, 'sb_pool_structural_litter_nitrogen15', mem%pool%structural_litter%nitrogen15, &
+      CALL slm_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_nitrogen15', mem%pool%polymeric_litter%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
  
       CALL slm_add_var(mem%pool%woody_litter, 'sb_pool_woody_litter_carbon', mem%pool%woody_litter%carbon, &
@@ -1039,6 +1075,321 @@ CONTAINS
       CALL slm_add_var(mem%pool%residue_assoc, 'sb_pool_residue_assoc_carbon14', mem%pool%residue_assoc%carbon14, &
             initval_r=0.0_wp)     ! initvalue
       CALL slm_add_var(mem%pool%residue_assoc, 'sb_pool_residue_assoc_nitrogen15', mem%pool%residue_assoc%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+
+! formation
+      CALL slm_add_var(mem%formation%dom, 'sb_formation_dom_carbon', mem%formation%dom%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%dom, 'sb_formation_dom_nitrogen', mem%formation%dom%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%dom, 'sb_formation_dom_phosphorus', mem%formation%dom%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%dom, 'sb_formation_dom_carbon13', mem%formation%dom%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%dom, 'sb_formation_dom_carbon14', mem%formation%dom%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%dom, 'sb_formation_dom_nitrogen15', mem%formation%dom%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_carbon', mem%formation%dom_assoc%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_nitrogen', mem%formation%dom_assoc%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_phosphorus', mem%formation%dom_assoc%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_carbon13', mem%formation%dom_assoc%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_carbon14', mem%formation%dom_assoc%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_nitrogen15', mem%formation%dom_assoc%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_carbon', mem%formation%soluable_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_nitrogen', mem%formation%soluable_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_phosphorus', mem%formation%soluable_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_carbon13', mem%formation%soluable_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_carbon14', mem%formation%soluable_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_nitrogen15', mem%formation%soluable_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_carbon', mem%formation%polymeric_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_nitrogen', mem%formation%polymeric_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_phosphorus', mem%formation%polymeric_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_carbon13', mem%formation%polymeric_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_carbon14', mem%formation%polymeric_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_nitrogen15', mem%formation%polymeric_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_carbon', mem%formation%woody_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_nitrogen', mem%formation%woody_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_phosphorus', mem%formation%woody_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_carbon13', mem%formation%woody_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_carbon14', mem%formation%woody_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_nitrogen15', mem%formation%woody_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%formation%microbial, 'sb_formation_microbial_carbon', mem%formation%microbial%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%microbial, 'sb_formation_microbial_nitrogen', mem%formation%microbial%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%microbial, 'sb_formation_microbial_phosphorus', mem%formation%microbial%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%microbial, 'sb_formation_microbial_carbon13', mem%formation%microbial%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%microbial, 'sb_formation_microbial_carbon14', mem%formation%microbial%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%microbial, 'sb_formation_microbial_nitrogen15', mem%formation%microbial%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%formation%residue, 'sb_formation_residue_carbon', mem%formation%residue%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%residue, 'sb_formation_residue_nitrogen', mem%formation%residue%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%residue, 'sb_formation_residue_phosphorus', mem%formation%residue%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%residue, 'sb_formation_residue_carbon13', mem%formation%residue%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%residue, 'sb_formation_residue_carbon14', mem%formation%residue%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%residue, 'sb_formation_residue_nitrogen15', mem%formation%residue%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_carbon', mem%formation%residue_assoc%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_nitrogen', mem%formation%residue_assoc%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_phosphorus', mem%formation%residue_assoc%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_carbon13', mem%formation%residue_assoc%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_carbon14', mem%formation%residue_assoc%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_nitrogen15', mem%formation%residue_assoc%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+
+!loss
+      CALL slm_add_var(mem%loss%dom, 'sb_loss_dom_carbon', mem%loss%dom%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%dom, 'sb_loss_dom_nitrogen', mem%loss%dom%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%dom, 'sb_loss_dom_phosphorus', mem%loss%dom%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%dom, 'sb_loss_dom_carbon13', mem%loss%dom%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%dom, 'sb_loss_dom_carbon14', mem%loss%dom%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%dom, 'sb_loss_dom_nitrogen15', mem%loss%dom%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_carbon', mem%loss%dom_assoc%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_nitrogen', mem%loss%dom_assoc%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_phosphorus', mem%loss%dom_assoc%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_carbon13', mem%loss%dom_assoc%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_carbon14', mem%loss%dom_assoc%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_nitrogen15', mem%loss%dom_assoc%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_carbon', mem%loss%soluable_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_nitrogen', mem%loss%soluable_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_phosphorus', mem%loss%soluable_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_carbon13', mem%loss%soluable_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_carbon14', mem%loss%soluable_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_nitrogen15', mem%loss%soluable_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_carbon', mem%loss%polymeric_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_nitrogen', mem%loss%polymeric_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_phosphorus', mem%loss%polymeric_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_carbon13', mem%loss%polymeric_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_carbon14', mem%loss%polymeric_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_nitrogen15', mem%loss%polymeric_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_carbon', mem%loss%woody_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_nitrogen', mem%loss%woody_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_phosphorus', mem%loss%woody_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_carbon13', mem%loss%woody_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_carbon14', mem%loss%woody_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_nitrogen15', mem%loss%woody_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%loss%microbial, 'sb_loss_microbial_carbon', mem%loss%microbial%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%microbial, 'sb_loss_microbial_nitrogen', mem%loss%microbial%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%microbial, 'sb_loss_microbial_phosphorus', mem%loss%microbial%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%microbial, 'sb_loss_microbial_carbon13', mem%loss%microbial%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%microbial, 'sb_loss_microbial_carbon14', mem%loss%microbial%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%microbial, 'sb_loss_microbial_nitrogen15', mem%loss%microbial%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%loss%residue, 'sb_loss_residue_carbon', mem%loss%residue%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%residue, 'sb_loss_residue_nitrogen', mem%loss%residue%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%residue, 'sb_loss_residue_phosphorus', mem%loss%residue%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%residue, 'sb_loss_residue_carbon13', mem%loss%residue%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%residue, 'sb_loss_residue_carbon14', mem%loss%residue%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%residue, 'sb_loss_residue_nitrogen15', mem%loss%residue%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_carbon', mem%loss%residue_assoc%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_nitrogen', mem%loss%residue_assoc%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_phosphorus', mem%loss%residue_assoc%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_carbon13', mem%loss%residue_assoc%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_carbon14', mem%loss%residue_assoc%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_nitrogen15', mem%loss%residue_assoc%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+
+! Transport
+      CALL slm_add_var(mem%transport%dom, 'sb_transport_dom_carbon', mem%transport%dom%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%dom, 'sb_transport_dom_nitrogen', mem%transport%dom%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%dom, 'sb_transport_dom_phosphorus', mem%transport%dom%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%dom, 'sb_transport_dom_carbon13', mem%transport%dom%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%dom, 'sb_transport_dom_carbon14', mem%transport%dom%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%dom, 'sb_transport_dom_nitrogen15', mem%transport%dom%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_carbon', mem%transport%dom_assoc%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_nitrogen', mem%transport%dom_assoc%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_phosphorus', mem%transport%dom_assoc%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_carbon13', mem%transport%dom_assoc%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_carbon14', mem%transport%dom_assoc%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_nitrogen15', mem%transport%dom_assoc%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_carbon', mem%transport%soluable_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_nitrogen', mem%transport%soluable_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_phosphorus', mem%transport%soluable_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_carbon13', mem%transport%soluable_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_carbon14', mem%transport%soluable_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_nitrogen15', mem%transport%soluable_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_carbon', mem%transport%polymeric_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_nitrogen', mem%transport%polymeric_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_phosphorus', mem%transport%polymeric_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_carbon13', mem%transport%polymeric_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_carbon14', mem%transport%polymeric_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_nitrogen15', mem%transport%polymeric_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_carbon', mem%transport%woody_litter%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_nitrogen', mem%transport%woody_litter%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_phosphorus', mem%transport%woody_litter%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_carbon13', mem%transport%woody_litter%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_carbon14', mem%transport%woody_litter%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_nitrogen15', mem%transport%woody_litter%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%transport%microbial, 'sb_transport_microbial_carbon', mem%transport%microbial%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%microbial, 'sb_transport_microbial_nitrogen', mem%transport%microbial%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%microbial, 'sb_transport_microbial_phosphorus', mem%transport%microbial%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%microbial, 'sb_transport_microbial_carbon13', mem%transport%microbial%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%microbial, 'sb_transport_microbial_carbon14', mem%transport%microbial%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%microbial, 'sb_transport_microbial_nitrogen15', mem%transport%microbial%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%transport%residue, 'sb_transport_residue_carbon', mem%transport%residue%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%residue, 'sb_transport_residue_nitrogen', mem%transport%residue%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%residue, 'sb_transport_residue_phosphorus', mem%transport%residue%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%residue, 'sb_transport_residue_carbon13', mem%transport%residue%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%residue, 'sb_transport_residue_carbon14', mem%transport%residue%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%residue, 'sb_transport_residue_nitrogen15', mem%transport%residue%nitrogen15, &
+            initval_r=0.0_wp)     ! initvalue
+ 
+      CALL slm_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_carbon', mem%transport%residue_assoc%carbon, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_nitrogen', mem%transport%residue_assoc%nitrogen, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_phosphorus', mem%transport%residue_assoc%phosphorus, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_carbon13', mem%transport%residue_assoc%carbon13, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_carbon14', mem%transport%residue_assoc%carbon14, &
+            initval_r=0.0_wp)     ! initvalue
+      CALL slm_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_nitrogen15', mem%transport%residue_assoc%nitrogen15, &
             initval_r=0.0_wp)     ! initvalue
 
     END IF

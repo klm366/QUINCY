@@ -626,7 +626,7 @@ CONTAINS
        lun=lun+1
        write(lun,'(9F12.6)') time_d, soil%w_soil_root%ptr(1,1), soil%w_soil_root_pot%ptr(1,1),assimi%beta_soil_gs%ptr,assimi%beta_soil_ps%ptr
        lun=lun+1
-       write(lun,'(20F12.6)') time_d, sb%pool%structural_litter%nitrogen%ptr(1,1,1), sb%pool%structural_litter%phosphorus%ptr(1,1,1), & 
+       write(lun,'(20F12.6)') time_d, sb%pool%polymeric_litter%nitrogen%ptr(1,1,1), sb%pool%polymeric_litter%phosphorus%ptr(1,1,1), & 
             sb%nh4_solute%ptr(1,1,1), sb%no3_solute%ptr(1,1,1), sb%po4_solute%ptr(1,1,1)
        
        lun=lun+1

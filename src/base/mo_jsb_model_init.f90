@@ -296,12 +296,12 @@ CONTAINS
       CASE('land','plant')
         CALL pheno_init(tile, model%options)     ! pheno 
         CALL veg_init(tile)       ! veg 
-        CALL sb_init(tile)        ! sb 
         CALL soil_init(tile)      ! soil
+        CALL sb_init(tile, model%options)        ! sb 
       CASE('soil')
         CALL veg_init(tile)       ! veg, strictly speaking not necessary, but to be safe
-        CALL sb_init(tile)        ! sb 
-        CALL soil_init(tile)      ! soil, strictly speaking not necessary, but to be safe
+        CALL soil_init(tile)      ! soil
+        CALL sb_init(tile, model%options)        ! sb 
       CASE('canopy')
         CALL veg_init(tile)       ! veg 
         CALL soil_init(tile)      ! soil

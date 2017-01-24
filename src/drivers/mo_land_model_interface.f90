@@ -249,7 +249,7 @@ CONTAINS
       CALL update_growth          (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
       CALL update_veg_dynamics    (tile, model%options)
-      CALL update_sb_pools        (tile)
+      CALL update_sb_pools        (tile, model%options)
       CALL update_soil_physics    (tile)
       CALL update_veg_pools       (tile)
 
@@ -291,7 +291,7 @@ CONTAINS
       CALL update_growth          (tile, model%options)
       CALL update_veg_turnover    (tile, model%options)
       CALL update_veg_dynamics    (tile, model%options)
-      CALL update_sb_pools        (tile)
+      CALL update_sb_pools        (tile, model%options)
       CALL update_soil_physics    (tile)
       CALL update_veg_pools       (tile)
 
@@ -320,7 +320,7 @@ CONTAINS
     CASE('soil')
     !! soil ---------------------------------------------------------------------------------------
 
-      CALL update_soil_physics(tile)
+      CALL update_sb_pools        (tile, model%options)
 
 
     CASE('canopy')
