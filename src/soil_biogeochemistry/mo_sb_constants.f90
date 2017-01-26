@@ -39,7 +39,7 @@ MODULE mo_sb_constants
 
   ! transport and sorption parameters
   REAL(wp), SAVE :: &
-      k_diff_org, &         !< diffusion coefficient for organic material due to bioturbation? [m2 (kg m-3) yr-1]                       
+      k_diff_org, &         !< diffusion coefficient for organic material due to bioturbation? [m2 (kg m-3) s-1]                       
       rho_bulk_org, &       !< bulk density of organic material [kg m-3]
       sorp_cap_org, &       !< sorption capacity of organic matter [kg C kg-1 OM]
       sorp_cap_min_default, & !< sorption capacity of mineral soil [mol C kg-1 mineral soil]
@@ -127,9 +127,9 @@ CONTAINS
     vmax_mic_uptake     = 3495.18053_wp / one_year / one_day
     km_mic_uptake       = 1.02404788_wp / molar_mass_C * 1000_wp ! conversion to mol C / m3
     tau_soluable_litter = 10._wp * one_day ! 10 days 
-    tau_woody_litter    = 5._wp * one_year * one_day ! 5 years 
+    tau_woody_litter    = 20._wp * one_year * one_day ! 20 years 
     vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day
-    vmax_depolymerisation_litter = 0.05 / one_year / one_day !! COMISSION paper
+    vmax_depolymerisation_litter = 0.369800811690762_wp / one_year / one_day 
     km_depolymerisation = 0.08876_wp / molar_mass_C * 1000_wp ! conversion to mol C / m3
     microbial_cue       = 0.392_wp !! COMISSION paper
    

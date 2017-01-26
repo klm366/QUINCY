@@ -41,7 +41,7 @@ simulation_length_number=10     # 1 to ...500 ? [simulation_length_unit defaults
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=10     # equal with or larger than output_start_first_day_year
+output_end_last_day_year=1     # equal with or larger than output_start_first_day_year
 
 # PFT 
 setPFTAutomatically="yes"       # yes / no (in case of 'yes', the value of option plant_functional_type_id is ignored)
@@ -303,7 +303,7 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but t
         if [ $slmModel == "soil" ]
           then
             cp ./"$forceSoilLitterFile" ./"$slmModel"/"$forceSoilLitterFile"
-            cp ./"$forceSoilLitterFile" ./"$slmModel"/"$forceSoilPhysicFile"
+            cp ./"$forceSoilPhysicFile" ./"$slmModel"/"$forceSoilPhysicFile"
           else # land plant canopy
             cp ./"$forceLandMetFile" ./"$slmModel"/"$forceLandMetFile"
         fi 

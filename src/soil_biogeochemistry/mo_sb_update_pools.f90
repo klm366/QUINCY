@@ -89,6 +89,24 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: net_mineralisation_n
     dsl4jsb_Real3D_onChunk :: net_mineralisation_n15
     dsl4jsb_Real3D_onChunk :: net_mineralisation_p
+    dsl4jsb_Real3D_onChunk :: nh4_solute 
+    dsl4jsb_Real3D_onChunk :: nh4_assoc 
+    dsl4jsb_Real3D_onChunk :: no3_solute
+    dsl4jsb_Real3D_onChunk :: po4_solute 
+    dsl4jsb_Real3D_onChunk :: po4_assoc 
+    dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
+    dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
+    dsl4jsb_Real3D_onChunk :: no3_n15_solute 
+    dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
+    dsl4jsb_Real3D_onChunk :: transport_nh4_assoc 
+    dsl4jsb_Real3D_onChunk :: transport_no3_solute
+    dsl4jsb_Real3D_onChunk :: transport_po4_solute 
+    dsl4jsb_Real3D_onChunk :: transport_po4_assoc 
+    dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
+    dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
+    dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
+    dsl4jsb_Real3D_onChunk :: k_bioturb 
+    dsl4jsb_Real3D_onChunk :: qmax_mineral_org 
 ! 2 be removed?: pointers to veg assimi *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     TYPE(t_veg_memory), POINTER             :: veg       ! local pointer to soil__mem for SLM usability
@@ -132,6 +150,24 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_n)
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_n15)
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_p)
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_mineral_org) 
 ! 2 be removed  *slmtemp
     sb   => sb__mem
     veg   => veg__mem
@@ -170,10 +206,14 @@ CONTAINS
       CASE('soil')
 
 !BLARPP
+percolation_sl(:,soil_config%nsoil_water) = 0.0_wp
+
 rmm_mic_uptake = 1.0_wp
 rmm_depolymerisation = 1.0_wp
 rmm_hsc = 1.0_wp
-         !> X.X initialise fluxes
+rmm_sorption = 1.0_wp
+rmm_desorption = 1.0_wp
+         !> 1.0 initialise fluxes
          !!
          CALL sb%loss%init(0.0_wp)
          CALL sb%formation%init(0.0_wp)
@@ -184,12 +224,45 @@ rmm_hsc = 1.0_wp
          net_mineralisation_n(:,:) = 0.0_wp
          net_mineralisation_n15(:,:) = 0.0_wp
          net_mineralisation_p(:,:) = 0.0_wp
+         transport_nh4_solute(:,:) = 0.0_wp 
+         transport_nh4_assoc(:,:) = 0.0_wp 
+         transport_no3_solute(:,:) = 0.0_wp 
+         transport_po4_solute(:,:) = 0.0_wp 
+         transport_po4_assoc(:,:) = 0.0_wp 
+         transport_nh4_n15_solute(:,:) = 0.0_wp 
+         transport_nh4_n15_assoc(:,:) = 0.0_wp 
+         transport_no3_n15_solute(:,:) = 0.0_wp 
 
-         !> X.X microbial death
-         !! determine mortality rate, constrained by to avoiding a complete death of the community
-         CALL calc_microbial_turnover(options,soil_config%nsoil_water,sb%pool%microbial,sb%loss%microbial,& 
-                                      sb%formation%dom,sb%formation%residue)
-         !> X.X microbial growth
+         !> 2.0 Litter-related fluxes  
+         !!
+         !> 2.1 decay of soluable litter
+         !!
+         CALL calc_litter_turnover(options,soil_config%nsoil_water,tau_soluable_litter, &
+                                   rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
+                                   sb%pool%soluable_litter,sb%loss%soluable_litter,sb%formation%dom)
+
+         !> 2.1 decay of woody litter
+         !!
+         CALL calc_litter_turnover(options,soil_config%nsoil_water,tau_woody_litter, &
+                                   rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
+                                   sb%pool%woody_litter,sb%loss%woody_litter,sb%formation%polymeric_litter)
+
+         !> 2.3 co-metabolisation of polymeric litter 
+         !! 
+         CALL calc_depolymerisation(options,soil_config%nsoil_water,vmax_depolymerisation_litter, &
+                                    rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
+                                    rtm_hsc(:,:),rmm_hsc(:,:), &
+                                    sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), & 
+                                    sb%pool%polymeric_litter,sb%loss%polymeric_litter,sb%formation%dom)
+
+         !> 2.4 update litter pools with recent litter fall
+         CALL calc_transfer_litterfall_pools(options,soil_config%nsoil_water,soil_depth_l,root_fraction_l, & 
+                                             veg%litterfall,sb%formation%soluable_litter, & 
+                                             sb%formation%polymeric_litter,sb%formation%woody_litter)
+
+         !> 3.0 Microbial fluxes
+         !!
+         !> 3.1 microbial growth
          !! currently unconstrained by nutrients 
          CALL calc_microbial_growth(options,soil_config%nsoil_water,sb%pool%dom,sb%pool%microbial, & 
                                     rtm_mic_uptake(:,:),rmm_mic_uptake(:,:),rtm_hsc(:,:),rmm_hsc(:,:), &
@@ -197,59 +270,78 @@ rmm_hsc = 1.0_wp
                                     het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:), &
                                     net_mineralisation_n(:,:),net_mineralisation_n15(:,:),net_mineralisation_p(:,:))
 
-         !> X.X decay of soluable and woody litter
-         CALL calc_litter_turnover(options,soil_config%nsoil_water,tau_soluable_litter, &
-                                   rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
-                                   sb%pool%soluable_litter,sb%loss%soluable_litter,sb%formation%dom)
-         CALL calc_litter_turnover(options,soil_config%nsoil_water,tau_woody_litter, &
-                                   rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
-                                   sb%pool%woody_litter,sb%loss%woody_litter,sb%formation%polymeric_litter)
-                  
+         !> 3.2 microbial death
+         !! determine mortality rate, constrained by to avoiding a complete death of the community
+         CALL calc_microbial_turnover(options,soil_config%nsoil_water,sb%pool%microbial,sb%loss%microbial,& 
+                                      sb%formation%dom,sb%formation%residue)
 
-         !> X.X co-metabolisation of polymeric residues
+         !> 3.3 co-metabolisation of polymeric residues
+         !! 
          CALL calc_depolymerisation(options,soil_config%nsoil_water,vmax_depolymerisation_residue, &
                                     rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
                                     rtm_hsc(:,:),rmm_hsc(:,:), &
                                     sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), & 
                                     sb%pool%residue,sb%loss%residue,sb%formation%dom)
-         CALL calc_depolymerisation(options,soil_config%nsoil_water,vmax_depolymerisation_litter, &
-                                    rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
-                                    rtm_hsc(:,:),rmm_hsc(:,:), &
-                                    sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), & 
-                                    sb%pool%polymeric_litter,sb%loss%polymeric_litter,sb%formation%dom)
 
-         !> X.X update litter pools with recent litter fall
-         CALL calc_transfer_litterfall_pools(options,soil_config%nsoil_water,soil_depth_l,root_fraction_l, & 
-                                             veg%litterfall,sb%formation%soluable_litter, & 
-                                             sb%formation%polymeric_litter,sb%formation%woody_litter)
+         !> 4.0 mineral stabilisation
+         !!
+         !> 4.1 mineral stabilisation of organic matter
+         !!
+         CALL calc_om_sorption(options,soil_config%nsoil_water,qmax_mineral_org,rtm_sorption,rmm_sorption,rtm_desorption, &
+                              rmm_desorption,sb%pool%dom,sb%pool%dom_assoc,sb%pool%residue, & 
+                              sb%pool%residue_assoc,sb%formation%dom,sb%formation%dom_assoc,sb%formation%residue, &
+                              sb%formation%residue_assoc,sb%loss%dom,sb%loss%dom_assoc,sb%loss%residue,sb%loss%residue_assoc)
 
-                      
-         ! DOM mineral association
-!         avail_sorption_sites = sb%qmax_mineral_org%ptr(ics:ice,:,iblk) - & 
-!                                (sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk) + sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk))
-!         sorption_term = k_adsorpt_dom * rtm_sorption * avail_sorption_sites 
-!         desorption_term = k_desorpt_dom * rtm_desorption * rmm_desorption 
-!         sb%sorption_dom%carbon%ptr(ics:ice,:,iblk) = sorption_term * sb%pool%dom%carbon%ptr(ics:ice,:,iblk) - & 
-!                                                      desorption_term * sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk)
-         !sb%pool%dom = sb%pool%dom * k_adsorpt_dom * rtm_sorption + sb%pool%residue
-         !sb%sorption_residue = sorption_term * sb%pool%residue - desorption_term * sb%pool%residue_assoc
-         ! 1D transport
- 
-         !CALL calc_liquid_vertical_transport(model%options,soil_config%nsoil_water, & 
-         !                             percolation_sl, soil_depth_l, &
-         !                             sb%pool%dom%carbon%ptr(ics:ice,:,iblk), & 
-         !                             sb%vertical_transport_dom%carbon%ptr(ics:ice,:,iblk))
+         !> 5.0 vertical transport
+         !!
+         !> 5.1 liquid phase transport
+         !!
+         CALL calc_liquid_phase_transport(model%options,soil_config%nsoil_water, & 
+                                          percolation_sl(:,:), soil_depth_l(:,:), &
+                                          sb%pool%dom, nh4_solute(:,:), no3_solute(:,:), po4_solute(:,:), & 
+                                          nh4_n15_solute(:,:), no3_n15_solute(:,:), & 
+                                          sb%transport%dom, transport_nh4_solute(:,:), & 
+                                          transport_no3_solute(:,:),transport_po4_solute(:,:), & 
+                                          transport_nh4_n15_solute(:,:),transport_no3_n15_solute(:,:))
 
-         !sb%pool%dom%carbon%ptr(ics:ice,:,iblk) = sb%pool%dom%carbon%ptr(ics:ice,:,iblk) + sb%vertical_transport_dom%carbon%ptr(ics:ice,:,iblk) * & 
-         !   dtime/1000._wp
+         !> 5.2 transport due to bioturbation
+         !!
+         CALL calc_bioturbation_transport(model%options, soil_config%nsoil_water, k_bioturb(:,:), soil_depth_l(:,:), &
+                                          sb%pool%polymeric_litter, sb%pool%dom_assoc, & 
+                                          sb%pool%microbial, sb%pool%residue, sb%pool%residue_assoc, & 
+                                          nh4_assoc(:,:), po4_assoc(:,:), nh4_n15_assoc(:,:), & 
+                                          sb%transport%polymeric_litter, sb%transport%dom_assoc, & 
+                                          sb%transport%microbial, sb%transport%residue, & 
+                                          sb%transport%residue_assoc, transport_nh4_assoc(:,:), & 
+                                          transport_po4_assoc(:,:), transport_nh4_n15_assoc(:,:))
 
+         !> 6.0 update pools
+         !!
          CALL calc_jsm_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
+         nh4_solute(:,:) = nh4_solute(:,:) + net_mineralisation_n(:,:) + transport_nh4_solute(:,:)
+         nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)
+         no3_solute(:,:) = no3_solute(:,:) + transport_no3_solute(:,:)
+         po4_solute(:,:) = po4_solute(:,:) + net_mineralisation_p(:,:) + transport_po4_solute(:,:)
+         po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
+         nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_n15(:,:) + transport_nh4_n15_solute(:,:)
+         nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
+         no3_n15_solute(:,:) = no3_n15_solute(:,:) + transport_no3_n15_solute(:,:)
 
+!write(910,'(10F20.10)') sb%pool%dom%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%dom%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
+!write(911,'(10F20.10)') sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
+!write(912,'(10F20.10)') sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
+!write(913,'(10F20.10)') sb%pool%residue%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%residue%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
+!write(914,'(10F20.10)') sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
+!write(915,'(10F20.10)') sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
+!write(916,'(10F20.10)') sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
+!write(917,'(10F20.10)') sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
+   
 !write(900,'(10F20.10)') sb%het_respiration%ptr(ics:ice,1,iblk),sb%pool%dom%carbon%ptr(ics:ice,1,iblk),sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) ,&
 !                        sb%pool%residue%carbon%ptr(ics:ice,1,iblk),sb%pool%soluable_litter%carbon%ptr(ics:ice,1,iblk),sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk),&
 !                        sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk)
-                                                         
-
+!write(901,'(20F20.10)') SUM(sb%pool%dom%carbon%ptr(ics:ice,:,iblk)*soil_depth_l),sb%pool%dom%carbon%ptr(ics:ice,:,iblk)
+!write(902,'(20F20.10)') SUM(nh4_assoc(:,:)*soil_depth_l),nh4_assoc(:,:)
+!write(903,'(20F20.10)'), sb%pool%dom%carbon%ptr(:,1,:),sb%pool%dom_assoc%carbon%ptr(:,1,:)
       CASE('canopy','test_canopy')
 
          CALL message(TRIM(routine), 'invalid model-type: '//TRIM(base_config%slm_model_name))

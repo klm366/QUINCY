@@ -88,12 +88,15 @@ CONTAINS
  
          ! initialise organic sorption capacity
          sb%qmax_mineral_org%ptr(ics:ice,:,iblk) = sorp_cap_min_default * soil%bulk_dens_l%ptr(ics:ice,:,iblk) 
+         ! initialise diffusion by bioturbation
+         sb%k_bioturb%ptr(ics:ice,:,iblk) = k_diff_org
          ! set microbial biomass to minimum possible sensity (does this require adjustment with layer thickness, probably so...?
          sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) = min_mic_biomass
      
          ! some initial values for testing
          sb%pool%dom%carbon%ptr(ics:ice,1,iblk) = 1.0_wp
          sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = .1_wp
+         sb%nh4_assoc%ptr(ics:ice,1,iblk) = 1.0_wp 
  
        CASE DEFAULT
          CALL finish(routine,'Invalid SLM model name. SB_ must only be used with plant, land or soil')

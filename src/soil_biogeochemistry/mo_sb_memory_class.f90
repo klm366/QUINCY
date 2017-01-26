@@ -131,7 +131,7 @@ MODULE mo_sb_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_sb_memory
 
-
+    ! pools
     TYPE(t_jsb_var_real3d)          :: &
                                     nh4_solute         , &  !< ammonium in soil solution [mol m-3]
                                     nh4_assoc          , &  !< minerally associated ammonium [mol m-3]
@@ -147,6 +147,23 @@ MODULE mo_sb_memory_class
                                     n2_n15             , &  !< N15-N2 [mol m-3]
                                     po4_assoc          , &  !< phosphate in soil solution [mol m-3]
                                     po4_solute              !< minerally associated phosphate  [mol m-3]
+
+    ! transport fluxes 
+    TYPE(t_jsb_var_real3d)          :: &
+                                    transport_nh4_solute         , &  !< transport of ammonium in soil solution [mol m-3 timestep-1]
+                                    transport_nh4_assoc          , &  !< transport of minerally associated ammonium [mol m-3 timestep-1]
+                                    transport_no3_solute         , &  !< transport of nitrate in soil solution [mol m-3 timestep-1]
+                                    transport_noy                , &  !< transport of NO_y [mol m-3 timestep-1]
+                                    transport_n2o                , &  !< transport of N2O [mol m-3 timestep-1]
+                                    transport_n2                 , &  !< transport of N2 [mol m-3 timestep-1]
+                                    transport_nh4_n15_solute     , &  !< transport of N15-ammonium in soil solution [mol m-3 timestep-1]
+                                    transport_nh4_n15_assoc      , &  !< transport of minerally associated N15-ammonium [mol m-3 timestep-1]
+                                    transport_no3_n15_solute     , &  !< transport of N15-nitrate in soil solution [mol m-3 timestep-1]
+                                    transport_noy_n15            , &  !< transport of N15-NO_y [mol m-3 timestep-1]
+                                    transport_n2o_n15            , &  !< transport of N15-N2O [mol m-3 timestep-1]
+                                    transport_n2_n15             , &  !< transport of N15-N2 [mol m-3 timestep-1]
+                                    transport_po4_assoc          , &  !< transport of phosphate in soil solution [mol m-3 timestep-1]
+                                    transport_po4_solute              !< transport of minerally associated phosphate  [mol m-3 timestep-1]
 
     ! temperature response functions
     TYPE(t_jsb_var_real3d)          :: &
@@ -175,7 +192,8 @@ MODULE mo_sb_memory_class
                                     nitrification              !< nitrification  [µmol m-3 s-1]
     
     TYPE(t_jsb_var_real3d)          :: &
-      qmax_mineral_org        !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
+      qmax_mineral_org, &        !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
+      k_bioturb               !< diffusion rate resulting from bioturbation 
 
 !    TYPE(t_slm_struct_sb_element) :: &   ! simple structure for elements: t_jsb_struct
 !                                    test_sb_element   !< test ...
@@ -854,6 +872,48 @@ CONTAINS
       CALL slm_add_var(mem, 'po4_solute', mem%po4_solute, &
             initval_r=0.0_wp) ! initvalue
   
+      CALL slm_add_var(mem, 'transport_nh4_solute', mem%transport_nh4_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_nh4_assoc', mem%transport_nh4_assoc, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_no3_solute', mem%transport_no3_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_noy', mem%transport_noy, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_n2o', mem%transport_n2o, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_n2', mem%transport_n2, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_nh4_n15_solute', mem%transport_nh4_n15_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_nh4_n15_assoc', mem%transport_nh4_n15_assoc, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_no3_n15_solute', mem%transport_no3_n15_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_noy_n15', mem%transport_noy_n15, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_n2o_n15', mem%transport_n2o_n15, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_n2_n15', mem%transport_n2_n15, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_po4_assoc', mem%transport_po4_assoc, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'transport_po4_solute', mem%transport_po4_solute, &
+            initval_r=0.0_wp) ! initvalue
+  
       CALL slm_add_var(mem, 'rtm_depolymerisation', mem%rtm_depolymerisation, &
             initval_r=0.0_wp) ! initvalue
   
@@ -909,6 +969,9 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'qmax_mineral_org', mem%qmax_mineral_org, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'k_bioturb', mem%k_bioturb, &
             initval_r=0.0_wp) ! initvalue
 
       !> simple TYPE (t_jsb_struct)
