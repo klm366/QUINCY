@@ -58,12 +58,12 @@ MODULE mo_hd_interface
 
 CONTAINS
 
-  SUBROUTINE Register_hd_tasks(this, model_id)
+  SUBROUTINE Register_hd_tasks(process, model_id)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
+    CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_hd_local_outflow(model_id))
+    CALL process%Register_task(tsk_hd_local_outflow(model_id))
 
   END SUBROUTINE Register_hd_tasks
 

@@ -90,30 +90,30 @@ CONTAINS
 
   END FUNCTION Get_process_name
 
-  SUBROUTINE Register_task(this, task)
+  SUBROUTINE Register_task(process, task)
 
-    CLASS(t_jsb_process),     INTENT(inout) :: this
+    CLASS(t_jsb_process),     INTENT(inout) :: process
     CLASS(t_jsb_process_task), TARGET, INTENT(in)    :: task
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Register_task'
 
-    IF (this%id /= task%process_id) &
+    IF (process%id /= task%process_id) &
       CALL finish(TRIM(routine), 'Task is for another process')
 
-    IF (.NOT. ALLOCATED(this%task_list)) THEN
-      this%task_list = (/ t_jsb_process_task_p(task) /)
+    IF (.NOT. ALLOCATED(process%task_list)) THEN
+      process%task_list = (/ t_jsb_process_task_p(task) /)
     ELSE
-      this%task_list = (/ this%task_list, t_jsb_process_task_p(task) /)
+      process%task_list = (/ process%task_list, t_jsb_process_task_p(task) /)
     END IF
 
     CALL message(TRIM(routine), 'Registered task "'//TRIM(task%name)// &
-      &                         '" for process "'//TRIM(this%name)//'".')
+      &                         '" for process "'//TRIM(process%name)//'".')
 
   END SUBROUTINE Register_task
 
-  FUNCTION Get_task(this, name) RESULT(return_ptr)
+  FUNCTION Get_task(process, name) RESULT(return_ptr)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
+    CLASS(t_jsb_process), INTENT(inout) :: process
     CHARACTER(LEN=*),              INTENT(in)    :: name
     CLASS(t_jsb_process_task), POINTER           :: return_ptr
 
@@ -122,17 +122,17 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_task'
 
     return_ptr => NULL()
-    DO i=1,SIZE(this%task_list)
+    DO i=1,SIZE(process%task_list)
       !IF (.NOT. ASSOCIATED())
-      IF (TRIM(this%task_list(i)%p%name) == TRIM(name) ) THEN
-        return_ptr => this%task_list(i)%p
+      IF (TRIM(process%task_list(i)%p%name) == TRIM(name) ) THEN
+        return_ptr => process%task_list(i)%p
         EXIT
       END IF
     END DO
 
     IF (.NOT.(ASSOCIATED(return_ptr))) &
       & CALL finish(TRIM(routine), 'Task "'//TRIM(name)//'" not found for process "'// &
-      &                            TRIM(this%name)//'".')
+      &                            TRIM(process%name)//'".')
 
   END FUNCTION Get_task
 

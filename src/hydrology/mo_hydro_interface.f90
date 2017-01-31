@@ -304,8 +304,6 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_wtr)          ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_ice)          ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapopot)           ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapotranspiration) ! out
 
       q_air(:) = q_acoef_wtr(:) * qsat_lwtr(:) + q_bcoef_wtr(:) ! New moisture at lowest atmospheric level by back-substitution
 

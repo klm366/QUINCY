@@ -159,14 +159,14 @@ CONTAINS
   !! @param[in,out] this      Instance of <PROCESS_NAME_LOWER_CASE> process class
   !! @param[in]     model_id  Model id
   !!
-  SUBROUTINE Register_rad_tasks(this, model_id)
+  SUBROUTINE Register_rad_tasks(process, model_id)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
+    CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER, INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_surface_radiation(model_id))
-    CALL this%Register_task(tsk_radiation_par    (model_id))
-    CALL this%Register_task(tsk_albedo           (model_id))
+    CALL process%Register_task(tsk_surface_radiation(model_id))
+    CALL process%Register_task(tsk_radiation_par    (model_id))
+    CALL process%Register_task(tsk_albedo           (model_id))
 
   END SUBROUTINE Register_rad_tasks
 
@@ -745,7 +745,7 @@ CONTAINS
     ! Set day-or-night-switch
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
 
-    ! Calculate snow albedos. Used later only for bare and vegetation tile types
+    ! Calculate snow albedos. Used later only for BARE and VEG tile types
     ! Note, for vegetation tiles this snow albedos are used only for snow on soil
     IF ( (tile%lcts(1)%id == BARE_TYPE) .OR. (tile%lcts(1)%id == VEG_TYPE) ) THEN
 
@@ -764,7 +764,7 @@ CONTAINS
         & )
     END IF
 
-
+    ! LAKE
     IF (tile%lcts(1)%id == LAKE_TYPE) THEN
       dsl4jsb_Get_var2D_onChunk(SEB_,      t_lice)       ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,      fract_lice)   ! in
@@ -783,7 +783,7 @@ CONTAINS
         alb_nir(:) = alb_vis(:)
       END WHERE
 
-
+    ! GLACIER
     ELSE IF (tile%lcts(1)%id == GLACIER_TYPE) THEN
       CALL calc_glacier_albedo( &
         & l_day(:),             & ! in
@@ -792,7 +792,7 @@ CONTAINS
         & alb_nir(:)            & ! inout
         & )
 
-
+    ! BARE
     ELSE IF (tile%lcts(1)%id == BARE_TYPE) THEN  ! Note, the parametrizations here define/understand BARE_TYPE as soil, which may include
                                                  ! carbon in it and litter on it, but never living vegetation on it! 
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_mineralsoil)   ! inout
@@ -829,12 +829,12 @@ CONTAINS
       alb_vis = (fract_snow_soil(:) * alb_vis_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_vis_soil(:))
       alb_nir = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
 
-
-    ELSE IF (tile%lcts(1)%id == VEG_TYPE) THEN  ! R: Note, the parametrizations here define/understand VEG_TYPE as soil with vegetation on it!
-                                                ! This parametrizations should be used only for the main veg tile and not for a specific PFT
+    ! VEG
+    ELSE IF (tile%lcts(1)%id == VEG_TYPE) THEN  ! Note, the parametrizations here define/understand VEG_TYPE as soil with vegetation on it!
+                                                ! This parametrizations should be used only for the main veg Tile and not for a specific PFT
                                                 ! because if use_alb_canopy is TRUE there should be alb_vis_can from the bc_land_phys.nc file
                                                 ! for this tile! The same accounts for alb_vis_mineralsoil if use_alb_mineralsoil_const is FALSE
-                                                ! and to alb_vis_soil if use_alb_soil_scheme ist TRUE and to lai ... 
+                                                ! and to alb_vis_soil if use_alb_soil_scheme ist TRUE and to lai ...
                                                 ! However, as parents and child tiles "inherit", this is only a problem if we want to avoid 
                                                 ! the same calculations on several PFTs...
 

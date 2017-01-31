@@ -40,49 +40,49 @@ MODULE mo_jsb_interface
 CONTAINS
 
   SUBROUTINE interface_full( &
-    & model_id,         &
-    & iblk, ics, ice, dtime, steplen, &
-    & t_air,            &
-    & q_air,            &
-    & rain,             &  
-    & snow,             &
-    & wind_air,         &
-    & wind_10m,         &
-    & lw_srf_down,      &
-    & swvis_srf_down,   &
-    & swnir_srf_down,   &
-    & swpar_srf_down,   &
-    & frac_par_diffuse, &
-    & press_srf,        &
-    & drag_srf,         &
-    & t_acoef,          &
-    & t_bcoef,          &
-    & q_acoef,          &
-    & q_bcoef,          &
-    & pch,              &
-    & cos_zenith_angle, &
-    & CO2_air,          &
-    & t_srf,            &
-    & t_eff_srf,        &
-    & qsat_srf,         &
-    & s_srf,            &
-    & fact_q_air,       &
-    & fact_qsat_srf,    &
-    & evapotrans,       &
-    & latent_hflx,      &
-    & sensible_hflx,    &
-    & grnd_hflx,        &
-    & grnd_hcap,        &
-    & rough_h_srf,      &
-    & rough_m_srf,      &
-    & tte_corr,         &
-    & alb_vis_dir,      &
-    & alb_nir_dir,      &
-    & alb_vis_dif,      &
-    & alb_nir_dif,      &
+    & model_id,         & !< in
+    & iblk, ics, ice, dtime, steplen, & !< in
+    & t_air,            & !< in
+    & q_air,            & !< in
+    & rain,             & !< in
+    & snow,             & !< in
+    & wind_air,         & !< in
+    & wind_10m,         & !< in
+    & lw_srf_down,      & !< in
+    & swvis_srf_down,   & !< in
+    & swnir_srf_down,   & !< in
+    & swpar_srf_down,   & !< in
+    & frac_par_diffuse, & !< in
+    & press_srf,        & !< in
+    & drag_srf,         & !< in
+    & t_acoef,          & !< in
+    & t_bcoef,          & !< in
+    & q_acoef,          & !< in
+    & q_bcoef,          & !< in
+    & pch,              & !< in
+    & cos_zenith_angle, & !< in
+    & CO2_air,          & !< in
+    & t_srf,            & !< out
+    & t_eff_srf,        & !< out
+    & qsat_srf,         & !< out
+    & s_srf,            & !< out
+    & fact_q_air,       & !< out
+    & fact_qsat_srf,    & !< out
+    & evapotrans,       & !< out
+    & latent_hflx,      & !< out
+    & sensible_hflx,    & !< out
+    & grnd_hflx,        & !< out
+    & grnd_hcap,        & !< out
+    & rough_h_srf,      & !< out
+    & rough_m_srf,      & !< out
+    & tte_corr,         & !< out
+    & alb_vis_dir,      & !< out
+    & alb_nir_dir,      & !< out
+    & alb_vis_dif,      & !< out
+    & alb_nir_dif,      & !< out
     ! For lakes:
     & albedo_lwtr,      & !< in
-    & drag_wtr,         &
+    & drag_wtr,         & !< in
     & drag_ice,         & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,     & !< in
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,     & !< in

@@ -82,6 +82,10 @@ MODULE mo_veg_interface
     PROCEDURE Create_task_foliage_projected_cover
   END INTERFACE tsk_foliage_projected_cover
 
+
+! R: fract_forest ist momentan im veg memory und wird nur eingelesen, nirgendwo neu berechent wie bei dynveg. Daher fehlt Aggregation auf box wo im Moment fract_forest = 0 ist.
+! R: Grundsätzlich sollte man nachschauen welche Variablen in welchem usecase (unterschiedliche Prozesse sind aktiv) evtl. nicht aggregiert werden und dann falsch im Output stehen...
+ 
 CONTAINS
 
   ! ================================================================================================================================

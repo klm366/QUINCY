@@ -170,15 +170,15 @@ CONTAINS
   !! @param[in,out] this      Instance of surface energy process class
   !! @param[in]     model_id  Model id
   !!
-  SUBROUTINE Register_seb_tasks(this, model_id)
+  SUBROUTINE Register_seb_tasks(process, model_id)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
+    CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_surface_energy(model_id))
-    CALL this%Register_task(tsk_snowmelt_correction(model_id))
-    CALL this%Register_task(tsk_asselin_filter(model_id))
-    CALL this%Register_task(tsk_surface_fluxes(model_id))
+    CALL process%Register_task(tsk_surface_energy(model_id))
+    CALL process%Register_task(tsk_snowmelt_correction(model_id))
+    CALL process%Register_task(tsk_asselin_filter(model_id))
+    CALL process%Register_task(tsk_surface_fluxes(model_id))
 
   END SUBROUTINE Register_seb_tasks
 

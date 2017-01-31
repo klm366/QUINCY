@@ -72,9 +72,9 @@ CONTAINS
     zsw_net    = zswvis_net + zswnir_net
 
     ! Provide optional SW radiation outputs
-    IF (PRESENT(swvis_net)) swvis_net = zswvis_net ! only present if tile is not LAKE_TYPE. 
+    IF (PRESENT(swvis_net)) swvis_net = zswvis_net ! only used if tile is not LAKE_TYPE. 
                                                    ! R: TBD: Probably because of lacking alb_vis and  alb_nir for LAKE.
-                                                   !         But it would be better to provid this in order to avoil missunderstanding
+                                                   !         would be better to provid this in order to avoil missunderstanding
                                                    !         swnir_srf_net and swvis_srf_net in the output of the parent tiles.
     IF (PRESENT(swnir_net)) swnir_net = zswnir_net ! only used if tile is not LAKE_TYPE
     IF (PRESENT(sw_net)) sw_net = zsw_net
@@ -675,14 +675,13 @@ CONTAINS
        alb_vis_mineralsoil = AlbedoSoilConstVis
        alb_nir_mineralsoil = AlbedoSoilConstNir
     ELSE 
-       alb_vis_mineralsoil = alb_background ! R: This is Rainers invention to mitigate the "error" in 
-                                            !    the JSBACH3 version. But still it should not be used.
-                                            !    In JSBACH3 it was filled with albedo_soil_vis_base,
-                                            !    which included soil and litter carbon. alb_background
-                                            !    is the albedo without snow or canopy, BUT it still
-       alb_nir_mineralsoil = alb_background !    includes carbon. However, this all is done to
-                                            !    implement the possibility to use mineral soil albedos 
-                                            !    which would then be consitent with the soil albedo parametrisations!
+       alb_vis_mineralsoil = alb_background ! This is Rainers invention and should not be used. In JSBACH3 it
+                                            ! was filled with albedo_soil_vis_base, which included soil and 
+                                            ! litter carbon. alb_background is the albedo without snow or
+       alb_nir_mineralsoil = alb_background ! canopy, BUT it still includes carbon.
+                                            ! However, this all is done to implement the possibility of mineral
+                                            ! soil albedo which would be consitent with the soil albedo parametrisations
+                                            ! and thus to prevent us in the future from the JSBACH3 mess... 
     END IF
 
     ! albedo of soil with carbon content but without litter

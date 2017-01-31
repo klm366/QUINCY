@@ -429,7 +429,9 @@ CONTAINS
     ELSE
       t_filt(:) = t_unfilt(:)
     END IF
-    t(:) = t_filt(:)
+    t(:) = t_filt(:) ! R: extra t(:) only needed because (1) t_filt makes no sense over lakes 
+                     !    and  temperature needs to be aggregated and because (2) in the output
+                     !    there should not exist strange technical variable names.
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

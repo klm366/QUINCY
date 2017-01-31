@@ -96,12 +96,12 @@ CONTAINS
   !! @param[in,out] this      Instance of pheno process class
   !! @param[in]     model_id  Model id
   !!
-  SUBROUTINE Register_pheno_tasks(this, model_id)
+  SUBROUTINE Register_pheno_tasks(process, model_id)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
+    CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,                 INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_phenology(model_id))
+    CALL process%Register_task(tsk_phenology(model_id))
 
   END SUBROUTINE Register_pheno_tasks
 

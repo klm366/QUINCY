@@ -122,13 +122,13 @@ CONTAINS
   !! @param[in]     model_id  Model id
   !! @param[in,out] this      Instance of TURB process class
   !!
-  SUBROUTINE Register_turb_tasks(this, model_id)
+  SUBROUTINE Register_turb_tasks(process, model_id)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
+    CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_surface_roughness(model_id))
-    CALL this%Register_task(tsk_humidity_scaling(model_id))
+    CALL process%Register_task(tsk_surface_roughness(model_id))
+    CALL process%Register_task(tsk_humidity_scaling(model_id))
 
   END SUBROUTINE Register_Turb_Tasks
 
