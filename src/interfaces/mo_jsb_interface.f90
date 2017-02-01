@@ -56,7 +56,7 @@ CONTAINS
                            & fact_q_air, fact_qsat_srf,                                   &
                            & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,&
                            & rough_h_srf, rough_m_srf,                                    &
-                           & tte_corr,                                                    &
+                           & q_snocpymlt,                                                 &
                            & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
 
     USE mo_veg_interface,     ONLY: update_vegetation_1, update_vegetation_2
@@ -112,7 +112,7 @@ CONTAINS
       & grnd_hcap        (:), &
       & rough_h_srf      (:), &
       & rough_m_srf      (:), &
-      & tte_corr         (:), &
+      & q_snocpymlt      (:), &
       & alb_vis_dir      (:), &
       & alb_nir_dir      (:), &
       & alb_vis_dif      (:), &
@@ -232,7 +232,7 @@ CONTAINS
       & evapotrans=evapotrans(:), latent_hflx=latent_hflx(:), sensible_hflx=sensible_hflx(:),                                   &
       & grnd_hflx=grnd_hflx(:), grnd_hcap=grnd_hcap,                                                                            &
       & rough_h_srf=rough_h_srf(:), rough_m_srf=rough_m_srf(:),                                                                 &
-      & tte_corr=tte_corr(:),                                                                                                   &
+      & q_snocpymlt=q_snocpymlt(:),                                                                                             &
       & alb_vis_dir=alb_vis_dir(:), alb_nir_dir=alb_nir_dir(:), alb_vis_dif=alb_vis_dif(:), alb_nir_dif=alb_nir_dif(:))
 
 !!$    IF (iblk == 1) CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' on PE '//int2string(p_pe)//' completed.', &
