@@ -914,14 +914,13 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
        zmprcp, zwlp, zwptr, zwdtr, zwslim, zconw2, zconw3, zconw4,    &
        zroeff, zbws, zb1, zbm, zconw1, zlyeps, zvol, zprfl,           &
        zlysic, zwsup, zsncp, zexpt, zexpw, zsncmax, zsncwind
-  REAL(wp) :: zdtime, zrcp, zsncfac
+  REAL(wp) :: zdtime
   ! variables for terraplanet
   REAL(wp) :: remoist
   LOGICAL  :: ltpe_open, ltpe_closed
 
   ! Variables necessary for evaporation fluxes and 5 soil layers
   REAL(wp), PARAMETER :: cvinter = 0.25  !!$ TR for JSBACH testing
-  REAL(wp), PARAMETER :: zeps  = 1.e-10_wp
   REAL(wp), PARAMETER :: zfak1 = 1._wp           ! =1., Dummy for SOILCHANGE (not used)
   INTEGER,  PARAMETER :: kb1   = 1               ! = 1, Digit for 1st field value for transfer to subroutine
   INTEGER,  PARAMETER :: ilog  = 0               ! Switch for logoutput in SOILHYD
@@ -951,7 +950,6 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
   zdrmin  = 0.001_wp/(3600._wp*1000._wp)
   zdrmax  = 0.1_wp/(3600._wp*1000._wp)
   zdrexp  = 1.5_wp
-  zsncfac = rhoh2o*g/zdtime
 
   IF (PRESENT(l_tpe_open)) THEN
     ltpe_open = l_tpe_open
@@ -1909,8 +1907,6 @@ REAL(wp), INTENT(OUT)                    :: zwsat(klon,kdeep)
 !!$REAL(wp), INTENT(OUT)                    :: zwsfc(klon,kdeep)
 !!$REAL(wp), INTENT(OUT)                    :: zwpwp(klon,kdeep)
 
-
-REAL(wp), PARAMETER :: zeps = 1.e-15_wp
 
 LOGICAL  :: loflag1(klon), loflag2(klon)
 
