@@ -23,6 +23,7 @@ MODULE mo_sb_jsm_processes
   PUBLIC :: calc_transfer_litterfall_pools,calc_litter_turnover, calc_depolymerisation, & 
             calc_microbial_turnover,calc_microbial_growth, &
             calc_bioturbation_transport, calc_liquid_phase_transport, & 
+            calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax_org, &
             calc_om_sorption, & 
             calc_jsm_pool_change, & 
             calc_temperature_rate_modifier,calc_oxygen_rate_modifier, & 
@@ -609,6 +610,119 @@ CONTAINS
   ! Sub Task called from update_sb_pools 
   !
   !-----------------------------------------------------------------------------------------------------
+  !> calculates the bulk density of the soil corrected by its organic component 
+  !! derived from Federer et al. 1993, Can J. For. Res. 23 1026-1032 
+  !!
+  !! Input: carbon content by layer 
+  !!
+  !! Output: corrected bulk density of the soil 
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL FUNCTION calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_l) RESULT(bulk_dens_corr_sl)
+
+    USE mo_sb_constants,          ONLY: rho_bulk_org 
+    USE mo_shared_constants,      ONLY: molar_mass_C 
+
+    IMPLICIT NONE
+
+    ! 0.1 InOut
+    REAL(wp), INTENT(in) :: bulk_soil_carbon_sl     !< soil carbon contributing to density [mol C / m3] 
+    REAL(wp), INTENT(in) :: bulk_dens_l             !< bulk density of the mineral soil [kg / m3]
+    REAL(wp)             :: bulk_dens_corr_sl       !< combined bulk density of the mineral and organic soil [kg / m3]
+    ! 0.2 Local
+    REAL(wp) :: fract_org
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bulk_density_correction'
+ 
+    !> 1.0 calculate organic mass fraction per soil layer 
+    !!
+    IF(bulk_soil_carbon_sl * molar_mass_C + bulk_dens_l > eps8)THEN
+       fract_org = bulk_soil_carbon_sl * molar_mass_C/1000._wp / & 
+                   (bulk_soil_carbon_sl * molar_mass_C/1000._wp + bulk_dens_l)
+    ELSE 
+       fract_org = 0.0_wp
+    ENDIF
+
+    !> 2.0 actual bulk density of the soil 
+    !!
+    bulk_dens_corr_sl = bulk_dens_l * rho_bulk_org / & 
+                          (fract_org * bulk_dens_l + (1._wp - fract_org ) * rho_bulk_org)
+
+  END FUNCTION calc_bulk_density_correction 
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task called from update_sb_pools 
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> calculates the maximum sorption capacity for organic material of a soil layer
+  !! derived from COMISSION, the implict assumption here is that no association happens on organic material
+  !!
+  !! Input: bulk density of the soil (mineral and organic combined) 
+  !!
+  !! Output: sorption capacity for organic material 
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL FUNCTION calc_qmax_org(bulk_dens_corr_sl) RESULT(qmax_org)
+
+    USE mo_sb_constants,          ONLY: qmax_org_mineral_default 
+
+    IMPLICIT NONE
+
+    ! 0.1 InOut
+    REAL(wp), INTENT(in) :: bulk_dens_corr_sl     !< combined bulk density of the mineral and organic soil [kg / m3] 
+    REAL(wp)             :: qmax_org      !< maximum sorption capacity of the soil [kg C / m3]
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_qmax_org'
+   
+    qmax_org = qmax_org_mineral_default * bulk_dens_corr_sl
+
+  END FUNCTION calc_qmax_org
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task called from update_sb_pools 
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> calculates bulk soil carbon used for the calculation of soil bulk density and sorption capacity 
+  !!
+  !! Input: soil pools 
+  !!
+  !! Output: total_bulk_soil_carbon 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION calc_bulk_soil_carbon(options,nsoil,sb_pool) RESULT (bulk_soil_carbon_sl)
+
+    IMPLICIT NONE
+
+    ! 0.1 InOut
+    TYPE(t_jsb_task_options),              INTENT(in)    :: options
+    INTEGER,                               INTENT(in)    :: nsoil
+    TYPE(t_slm_struct_sb_pool),            INTENT(in)    :: sb_pool                 !< pools [mol/m3]
+    REAL(wp), DIMENSION(options%nc,nsoil)                :: bulk_soil_carbon_sl
+    ! 0.2 Local
+    INTEGER                     :: iblk, ics, ice, nc
+    INTEGER                     :: isoil
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bulk_soil_carbon'
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+
+    DO isoil = 1,nsoil
+       bulk_soil_carbon_sl(:,isoil) = &
+            sb_pool%microbial%carbon%ptr(ics:ice,isoil,iblk) + &
+            sb_pool%residue%carbon%ptr(ics:ice,isoil,iblk) + &
+            sb_pool%residue_assoc%carbon%ptr(ics:ice,isoil,iblk) + &
+            sb_pool%dom_assoc%carbon%ptr(ics:ice,isoil,iblk) + &
+            sb_pool%soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + &
+            sb_pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk)
+       IF(isoil > 1 ) THEN       
+          bulk_soil_carbon_sl(:,isoil) = bulk_soil_carbon_sl(:,isoil) + &
+               sb_pool%woody_litter%carbon%ptr(ics:ice,isoil,iblk) 
+       ENDIF
+    ENDDO
+
+  END FUNCTION calc_bulk_soil_carbon
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task called from update_sb_pools 
+  !
+  !-----------------------------------------------------------------------------------------------------
   !> calculates sorption and desorption of organic material 
   !! corresponds to the sorption and desorption terms in Ahrens et al. 2015, eq. 5 & 6 
   !!
@@ -616,7 +730,7 @@ CONTAINS
   !!
   !! Output: sorption and desorption rate (mol/m2/timestep) 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_om_sorption(options,nsoil,qmax_mineral_org,rtm_sorption,rmm_sorption,rtm_desorption, &
+  SUBROUTINE calc_om_sorption(options,nsoil,qmax_org,rtm_sorption,rmm_sorption,rtm_desorption, &
                               rmm_desorption,pool_dom,pool_dom_assoc,pool_residue, & 
                               pool_residue_assoc,formation_dom,formation_dom_assoc,formation_residue, &
                               formation_residue_assoc,loss_dom,loss_dom_assoc,loss_residue,loss_residue_assoc)
@@ -628,7 +742,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: qmax_mineral_org 
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: qmax_org 
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rtm_sorption            !< temperature rate modifier [-]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rmm_sorption            !< moisture rate modifier [-]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: rtm_desorption          !< temperature rate modifier [-]
@@ -657,7 +771,7 @@ CONTAINS
 
     !> 1.0 Determine available sorption sites [mol C m-3]
     !!
-    avail_sorption_sites(:,:) = qmax_mineral_org(:,:) - & 
+    avail_sorption_sites(:,:) = qmax_org(:,:) - & 
                                 (pool_dom_assoc%carbon%ptr(ics:ice,:,iblk) + pool_residue_assoc%carbon%ptr(ics:ice,:,iblk))
 
     !> 2.0 mineral association of DOM

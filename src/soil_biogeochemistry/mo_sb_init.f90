@@ -36,6 +36,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_sb_config_class,       ONLY: sb_config
+    USE mo_sb_jsm_processes
     USE mo_sb_constants
 
     ! USE PROC_memory
@@ -86,8 +87,6 @@ CONTAINS
  
        CASE('soil')
  
-         ! initialise organic sorption capacity
-         sb%qmax_mineral_org%ptr(ics:ice,:,iblk) = sorp_cap_min_default * soil%bulk_dens_l%ptr(ics:ice,:,iblk) 
          ! initialise diffusion by bioturbation
          sb%k_bioturb%ptr(ics:ice,:,iblk) = k_diff_org
          ! set microbial biomass to minimum possible sensity (does this require adjustment with layer thickness, probably so...?
@@ -97,6 +96,12 @@ CONTAINS
          sb%pool%dom%carbon%ptr(ics:ice,1,iblk) = 1.0_wp
          sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = .1_wp
          sb%nh4_assoc%ptr(ics:ice,1,iblk) = 1.0_wp 
+
+         ! inital Qmax based on current soil carbon content
+         sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk) = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
+         sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk) = calc_bulk_density_correction(sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk), & 
+                                                                         soil%bulk_dens_l%ptr(ics:ice,:,iblk))
+         sb%qmax_org%ptr(ics:ice,:,iblk) = calc_qmax_org(sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk))
  
        CASE DEFAULT
          CALL finish(routine,'Invalid SLM model name. SB_ must only be used with plant, land or soil')

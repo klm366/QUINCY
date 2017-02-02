@@ -192,9 +192,11 @@ MODULE mo_sb_memory_class
                                     nitrification              !< nitrification  [µmol m-3 s-1]
     
     TYPE(t_jsb_var_real3d)          :: &
-      qmax_mineral_org, &        !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
-      k_bioturb               !< diffusion rate resulting from bioturbation 
-
+      qmax_org, &        !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
+      k_bioturb, &                !< diffusion rate resulting from bioturbation 
+      bulk_dens_corr_sl, &         !< organic fraction corrected bulk-density of the soil [kg m-3]
+      bulk_soil_carbon_sl           !< carbon in the soil kg C m-3?
+ 
 !    TYPE(t_slm_struct_sb_element) :: &   ! simple structure for elements: t_jsb_struct
 !                                    test_sb_element   !< test ...
 
@@ -968,10 +970,16 @@ CONTAINS
       CALL slm_add_var(mem, 'nitrification', mem%nitrification, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'qmax_mineral_org', mem%qmax_mineral_org, &
+      CALL slm_add_var(mem, 'qmax_org', mem%qmax_org, &
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'k_bioturb', mem%k_bioturb, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'bulk_dens_corr_sl', mem%bulk_dens_corr_sl, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'bulk_soil_carbon_sl', mem%bulk_soil_carbon_sl, &
             initval_r=0.0_wp) ! initvalue
 
       !> simple TYPE (t_jsb_struct)
