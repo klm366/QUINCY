@@ -110,6 +110,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_org 
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
+    dsl4jsb_Real3D_onChunk :: omega_litterfall 
 ! 2 be removed?: pointers to veg assimi *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     TYPE(t_veg_memory), POINTER             :: veg       ! local pointer to soil__mem for SLM usability
@@ -174,6 +175,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org) 
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl) 
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       omega_litterfall) 
 ! 2 be removed  *slmtemp
     sb   => sb__mem
     veg   => veg__mem
@@ -262,9 +264,10 @@ rmm_desorption = 1.0_wp
                                     sb%pool%polymeric_litter,sb%loss%polymeric_litter,sb%formation%dom)
 
          !> 2.4 update litter pools with recent litter fall
-         CALL calc_transfer_litterfall_pools(options,soil_config%nsoil_water,soil_depth_l,root_fraction_l, & 
-                                             veg%litterfall,sb%formation%soluable_litter, & 
-                                             sb%formation%polymeric_litter,sb%formation%woody_litter)
+         CALL calc_transfer_litterfall_pools(options,soil_config%nsoil_water,soil_depth_l,bulk_dens_corr_sl, & 
+                                             root_fraction_l,veg%litterfall,sb%formation%soluable_litter, & 
+                                             sb%formation%polymeric_litter,sb%formation%woody_litter, & 
+                                             omega_litterfall)
 
          !> 3.0 Microbial fluxes
          !!
@@ -291,11 +294,6 @@ rmm_desorption = 1.0_wp
 
          !> 4.0 mineral stabilisation
          !!
-         !> 4.1 update Qmax based on current soil carbon content
-         bulk_soil_carbon_sl = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
-         bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_l)
-         qmax_org = calc_qmax_org(bulk_dens_corr_sl)
-
          !> 4.1 mineral stabilisation of organic matter
          !!
          CALL calc_om_sorption(options,soil_config%nsoil_water,qmax_org,rtm_sorption,rmm_sorption,rtm_desorption, &
@@ -337,6 +335,12 @@ rmm_desorption = 1.0_wp
          nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_n15(:,:) + transport_nh4_n15_solute(:,:)
          nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
          no3_n15_solute(:,:) = no3_n15_solute(:,:) + transport_no3_n15_solute(:,:)
+
+         !> 7.0 update diagnostics and other state variables 
+         !!
+         bulk_soil_carbon_sl = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
+         bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_l)
+         qmax_org = calc_qmax_org(bulk_dens_corr_sl)
 
 !write(910,'(10F20.10)') sb%pool%dom%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%dom%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
 !write(911,'(10F20.10)') sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))

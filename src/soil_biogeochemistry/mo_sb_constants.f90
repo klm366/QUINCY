@@ -72,6 +72,9 @@ MODULE mo_sb_constants
       f_soluable_fruit, &        !< fraction of fruit litter that becomes DOM
       f_soluable_seed_bed        !< fraction of seed bed litter that becomes DOM
 
+   REAL(wp), SAVE :: & 
+     carbon_per_dryweight_SOM    !< C per unit dryweight SOM [gC / gOM] 
+
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_constants'
 
 CONTAINS
@@ -137,6 +140,8 @@ CONTAINS
     f_soluable_fine_root    = 0.5_wp
     f_soluable_fruit    = 0.5_wp
     f_soluable_seed_bed    = 0.5_wp
+
+    carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
 
   END SUBROUTINE init_sb_constants
 

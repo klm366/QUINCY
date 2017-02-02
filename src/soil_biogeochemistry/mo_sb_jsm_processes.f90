@@ -45,10 +45,12 @@ CONTAINS
   !!
   !! Output: increase in soluable, polymeric, and woody litter
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_transfer_litterfall_pools(options,nsoil,soil_depth_l,root_fraction_l,litterfall, &
-                                  formation_soluable_litter,formation_polymeric_litter,formation_woody_litter) 
+  SUBROUTINE calc_transfer_litterfall_pools(options,nsoil,soil_depth_l,bulk_dens_corr_sl,root_fraction_l,litterfall, &
+                                  formation_soluable_litter,formation_polymeric_litter,formation_woody_litter, & 
+                                  omega_litterfall) 
 
     USE mo_sb_constants
+    USE mo_shared_constants,      ONLY: molar_mass_C
     USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_pool
 
     IMPLICIT NONE
@@ -57,11 +59,13 @@ CONTAINS
     TYPE(t_jsb_task_options),              INTENT(in)    :: options           !< model options
     INTEGER,                               INTENT(in)    :: nsoil             !< number of soil layers 
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_l      !< depth of soil layer [m]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: bulk_dens_corr_sl !< bulk density of the mineral+organic soil [kg m-3]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: root_fraction_l   !< fraction of roots per layer 
     TYPE(t_slm_struct_veg_pool),           INTENT(in)    :: litterfall        !< litter input from vegetation [mol/m2/time step] 
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_soluable_litter
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_polymeric_litter
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_woody_litter
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(out)   :: omega_litterfall  !< omega term resulting from litterfall 
     ! 0.2 Local 
     INTEGER                                                 :: iblk, ics, ice, nc
     INTEGER                                                 :: isoil
@@ -205,22 +209,7 @@ CONTAINS
        ENDWHERE
     ENDDO
 
-    !> 3.0 woody litter above ground 
-    !!
-    formation_woody_litter%carbon%ptr(ics:ice,1,iblk) = formation_woody_litter%carbon%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%carbon%ptr + litterfall%heart_wood%carbon%ptr) / soil_depth_l(:,1)
-    formation_woody_litter%nitrogen%ptr(ics:ice,1,iblk) = formation_woody_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%nitrogen%ptr + litterfall%heart_wood%nitrogen%ptr) / soil_depth_l(:,1)
-    formation_woody_litter%phosphorus%ptr(ics:ice,1,iblk) = formation_woody_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%phosphorus%ptr + litterfall%heart_wood%phosphorus%ptr) / soil_depth_l(:,1)
-    formation_woody_litter%carbon13%ptr(ics:ice,1,iblk) = formation_woody_litter%carbon13%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%carbon13%ptr + litterfall%heart_wood%carbon13%ptr) / soil_depth_l(:,1)
-    formation_woody_litter%carbon14%ptr(ics:ice,1,iblk) = formation_woody_litter%carbon14%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%carbon14%ptr + litterfall%heart_wood%carbon14%ptr) / soil_depth_l(:,1)
-    formation_woody_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_woody_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
-        (litterfall%sap_wood%nitrogen15%ptr + litterfall%heart_wood%nitrogen15%ptr) / soil_depth_l(:,1)
-
-    !> 4.0 woody litter below ground 
+    !> 3.0 woody litter below ground 
     !!
     DO isoil = 1,nsoil
        WHERE(soil_depth_l(:,isoil) > eps8)
@@ -238,7 +227,43 @@ CONTAINS
              root_fraction_l(:,isoil) * litterfall%coarse_root%nitrogen15%ptr / soil_depth_l(:,isoil)
        ENDWHERE
     ENDDO
+
+    !> 4.0 calculate omega term for particle flux based on the litter fall rate
+    !! note that this needs to be done before accounting for above ground woody biomass litter fall
+    !! as this is assumed to not be part of the profile!
+    omega_litterfall(:,1) = (formation_soluable_litter%carbon%ptr(ics:ice,1,iblk) + & 
+                             formation_polymeric_litter%carbon%ptr(ics:ice,1,iblk) + & 
+                             formation_woody_litter%carbon%ptr(ics:ice,1,iblk)) * & 
+                            soil_depth_l(:,1)
+    DO isoil = 2,nsoil
+       omega_litterfall(:,isoil) = omega_litterfall(:,isoil-1) + & 
+                                   (formation_soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
+                                    formation_polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
+                                    formation_woody_litter%carbon%ptr(ics:ice,isoil,iblk)) * &
+                                   soil_depth_l(:,isoil)
+   ENDDO  
    
+   ! bulk-density converted to mol C
+   WHERE(bulk_dens_corr_sl(:,:) > eps8)
+      omega_litterfall(:,:) = omega_litterfall(:,:) / & 
+            (bulk_dens_corr_sl(:,:) * carbon_per_dryweight_SOM * molar_mass_C * 1000._wp) 
+   ENDWHERE
+
+    !> 5.0 woody litter above ground 
+    !!
+    formation_woody_litter%carbon%ptr(ics:ice,1,iblk) = formation_woody_litter%carbon%ptr(ics:ice,1,iblk) + & 
+        (litterfall%sap_wood%carbon%ptr + litterfall%heart_wood%carbon%ptr) / soil_depth_l(:,1)
+    formation_woody_litter%nitrogen%ptr(ics:ice,1,iblk) = formation_woody_litter%nitrogen%ptr(ics:ice,1,iblk) + & 
+        (litterfall%sap_wood%nitrogen%ptr + litterfall%heart_wood%nitrogen%ptr) / soil_depth_l(:,1)
+    formation_woody_litter%phosphorus%ptr(ics:ice,1,iblk) = formation_woody_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
+        (litterfall%sap_wood%phosphorus%ptr + litterfall%heart_wood%phosphorus%ptr) / soil_depth_l(:,1)
+    formation_woody_litter%carbon13%ptr(ics:ice,1,iblk) = formation_woody_litter%carbon13%ptr(ics:ice,1,iblk) + & 
+        (litterfall%sap_wood%carbon13%ptr + litterfall%heart_wood%carbon13%ptr) / soil_depth_l(:,1)
+    formation_woody_litter%carbon14%ptr(ics:ice,1,iblk) = formation_woody_litter%carbon14%ptr(ics:ice,1,iblk) + & 
+        (litterfall%sap_wood%carbon14%ptr + litterfall%heart_wood%carbon14%ptr) / soil_depth_l(:,1)
+    formation_woody_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_woody_litter%nitrogen15%ptr(ics:ice,1,iblk) + & 
+        (litterfall%sap_wood%nitrogen15%ptr + litterfall%heart_wood%nitrogen15%ptr) / soil_depth_l(:,1)
+
   END SUBROUTINE calc_transfer_litterfall_pools 
 
   !-----------------------------------------------------------------------------------------------------
