@@ -117,7 +117,7 @@ CONTAINS
     qmax_org_mineral_default = 0.055_wp / molar_mass_C * 1000._wp 
     k_adsorpt_dom       = 843.391_wp / one_year / one_day * molar_mass_C / 1000._wp ! conversion to m3 / mol C / s
     k_desorpt_dom       = 4301.741_wp / one_year / one_day
-    k_adsorpt_det       = 6733.843_wp / one_year / one_day
+    k_adsorpt_det       = 6733.843_wp / one_year / one_day * molar_mass_C / 1000._wp ! conversion to m3 / mol C / s
     k_desorpt_det       = 2065.491_wp / one_year / one_day
     k_adsorpt_nh4       = 0.0_wp
     k_desorpt_nh4       = 0.0_wp

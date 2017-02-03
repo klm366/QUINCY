@@ -590,6 +590,8 @@ CONTAINS
     REAl(wp)                         :: growing_season_float !output variable for growing season
     REAL(wp)                         :: dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
                                         dC13fruit,dC13labile,dC13reserve,dC13seed_bed
+    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water)  :: dC13soluable_litter,dC13polymeric_litter,dC13woody_litter, & 
+                                                                dC13dom,dC13dom_assoc,dC13microbial,dC13residue,dC13residue_assoc
     INTEGER                          :: iblk, ics, ice, nc
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -770,7 +772,31 @@ CONTAINS
                                   sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon%ptr(ics:ice,:,iblk),&
                                   sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)
              lun=lun+1
+
+             dC13soluable_litter(:,:) = calc_delta_C13(sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%soluable_litter%carbon13%ptr(ics:ice,:,iblk))
+             dC13polymeric_litter(:,:) = calc_delta_C13(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk))
+             dC13woody_litter(:,:) = calc_delta_C13(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk))
+             dC13dom(:,:) = calc_delta_C13(sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom%carbon13%ptr(ics:ice,:,iblk))
+             dC13dom_assoc(:,:) = calc_delta_C13(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon13%ptr(ics:ice,:,iblk))
+             dC13microbial(:,:) = calc_delta_C13(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk))
+             dC13residue(:,:) = calc_delta_C13(sb%pool%residue%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon13%ptr(ics:ice,:,iblk))
+             dC13residue_assoc(:,:) = calc_delta_C13(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%residue_assoc%carbon13%ptr(ics:ice,:,iblk))
+             write(lun,'(100F12.6)') time_d,dC13soluable_litter(:,:),&
+                                     dC13polymeric_litter(:,:),dC13woody_litter(:,:),dC13dom(:,:),dC13dom_assoc(:,:),& 
+                                     dC13microbial(:,:),dC13residue(:,:),dC13residue_assoc(:,:)
              lun=lun+1
+
+             write(lun,'(100F12.6)') time_d,&
+                calc_delta_C14(sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk),dC13soluable_litter),&
+                calc_delta_C14(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk),dC13polymeric_litter),&
+                calc_delta_C14(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk),dC13woody_litter),&
+                calc_delta_C14(sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom%carbon14%ptr(ics:ice,:,iblk),dC13dom),&
+                calc_delta_C14(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk),dC13dom_assoc),&
+                calc_delta_C14(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk),dC13microbial),&
+                calc_delta_C14(sb%pool%residue%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon14%ptr(ics:ice,:,iblk),dC13residue),&
+                calc_delta_C14(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk),dC13residue_assoc)
+                
+
              lun=lun+1
              write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk),&
                                   sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk),&
