@@ -186,22 +186,16 @@ PROGRAM land_model_driver
   END IF
   ! Initialise output and flux accumulation, and open output files; see mo_shared_output
   SELECT CASE(TRIM(base_config%slm_model_name))
-    CASE('land')
+    CASE('land','plant')
       CALL init_veg_output_variables     ! mo_shared_output : interval variables & flux accumulation per tile
       CALL open_pool_output_files(1)     ! 1 == itile 
       CALL open_flux_output_files(1)     ! 1 == itile 
       IF (base_config%flag_generate_soil_forcing) THEN
         CALL open_output_files_soil_forcing(1)
       END IF
-    CASE('plant')
-      CALL init_veg_output_variables     ! mo_shared_output : interval variables & flux accumulation per tile
+    CASE('soil')
       CALL open_pool_output_files(1)     ! 1 == itile 
       CALL open_flux_output_files(1)     ! 1 == itile 
-      IF (base_config%flag_generate_soil_forcing) THEN
-        CALL open_output_files_soil_forcing(1)
-      END IF
-!    CASE('soil')
-! 
 !    CASE('canopy')
 ! 
     CASE('test_canopy')

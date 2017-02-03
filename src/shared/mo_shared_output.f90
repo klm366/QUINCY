@@ -18,6 +18,7 @@ MODULE mo_shared_output
   USE mo_jsb_model_init,        ONLY: fluxnet_output_status   ! used for 'special case: fluxnet output'
   USE mo_base_config_class,     ONLY: base_config
   USE mo_veg_config_class,      ONLY: veg_config
+  USE mo_soil_config_class,     ONLY: soil_config
   USE mo_assimi_config_class,   ONLY: assimi_config
 
 
@@ -156,36 +157,77 @@ CONTAINS
     ! 0.1 InOut
     INTEGER, INTENT(in) :: itile    !< number of current tile
     ! 0.2 Local
-    INTEGER :: lun
+    INTEGER :: lun,isoil
+    CHARACTER(2) :: layerstr
+    CHARACTER(100) :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str
 
     !> 1.0 write headers
     !!
     !! lun of pools starts at a multiple of 100
     lun = 100 * itile
-    WRITE(lun,'(2a)') 'Time Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
-                     'Fruit_C Labile_C Reserve_C SeedBank_C Total_C Total_C13 Total_C14'
-    lun=lun+1
-    WRITE(lun,'(4a)') 'Time Leaf_dC13 FineRoot_dC13 SapWood_dC13 HeartWood_dC13 CoarseRoot_dC13 ', & 
-                     'Fruit_dC13 Labile_dC13 Reserve_dC13 SeedBank_dC13 Leaf_DC14 FineRoot_DC14 ', &
-                     'SapWood_DC14 HeartWood_DC14 CoarseRoot_DC14 Fruit_DC14 Labile_DC14 ', &
-                     'Reserve_DC14 SeedBank_DC14'
-    lun=lun+1
-    WRITE(lun,'(2a)') 'Time Leaf_N FineRoot_N SapWood_N HeartWood_N CoarseRoot_N ', & 
-                     'Fruit_N Labile_N Reserve_N SeedBank_N Total_N Total_N15'
-    lun=lun+1
-    WRITE(lun,'(2a)') 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
-                     'Fruit_P Labile_P Reserve_P SeedBank_P Total_P'
-    lun=lun+1
-    WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS'
-    lun=lun+1
-    WRITE(lun,'(a)') 'Time LitterN LitterP MineralNH4 MineralNO3 MineralP'
-    lun=lun+1
-    WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen'
-    lun=lun+1
-    WRITE(lun,'(2a)') &
-    & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp ', & 
-    & 'growing_season cost_nup cost_bnf unit_transp transp'
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant')
 
+         WRITE(lun,'(2a)') 'Time Leaf_C FineRoot_C SapWood_C HeartWood_C CoarseRoot_C ', & 
+                          'Fruit_C Labile_C Reserve_C SeedBank_C Total_C Total_C13 Total_C14'
+         lun=lun+1
+         WRITE(lun,'(4a)') 'Time Leaf_dC13 FineRoot_dC13 SapWood_dC13 HeartWood_dC13 CoarseRoot_dC13 ', & 
+                          'Fruit_dC13 Labile_dC13 Reserve_dC13 SeedBank_dC13 Leaf_DC14 FineRoot_DC14 ', &
+                          'SapWood_DC14 HeartWood_DC14 CoarseRoot_DC14 Fruit_DC14 Labile_DC14 ', &
+                          'Reserve_DC14 SeedBank_DC14'
+         lun=lun+1
+         WRITE(lun,'(2a)') 'Time Leaf_N FineRoot_N SapWood_N HeartWood_N CoarseRoot_N ', & 
+                          'Fruit_N Labile_N Reserve_N SeedBank_N Total_N Total_N15'
+         lun=lun+1
+         WRITE(lun,'(2a)') 'Time Leaf_P FineRoot_P SapWood_P HeartWood_P CoarseRoot_P ', & 
+                          'Fruit_P Labile_P Reserve_P SeedBank_P Total_P'
+         lun=lun+1
+         WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS'
+         lun=lun+1
+         WRITE(lun,'(a)') 'Time LitterN LitterP MineralNH4 MineralNO3 MineralP'
+         lun=lun+1
+         WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen'
+         lun=lun+1
+         WRITE(lun,'(2a)') &
+         & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp ', & 
+         & 'growing_season cost_nup cost_bnf unit_transp transp'
+
+      CASE('soil')
+         p1str=''
+         p2str=''
+         p3str=''
+         p4str=''
+         p5str=''
+         p6str=''
+         p7str=''
+         p8str=''
+         DO isoil = 1,soil_config%nsoil_water
+            IF(isoil<10) THEN 
+              WRITE(layerstr,'(I1)') isoil
+            ELSE
+              WRITE(layerstr,'(I2)') isoil
+            ENDIF
+            WRITE(p1str,'(a)') TRIM(p1str)//' SoluLit_L'//TRIM(layerstr)
+            WRITE(p2str,'(a)') TRIM(p2str)//' PolyLit_L'//TRIM(layerstr)
+            WRITE(p3str,'(a)') TRIM(p3str)//' WodLit_L'//TRIM(layerstr)
+            WRITE(p4str,'(a)') TRIM(p4str)//' DOM_L'//TRIM(layerstr)
+            WRITE(p5str,'(a)') TRIM(p5str)//' aDOM_L'//TRIM(layerstr)
+            WRITE(p6str,'(a)') TRIM(p6str)//' Mic_L'//TRIM(layerstr)
+            WRITE(p7str,'(a)') TRIM(p7str)//' Res_L'//TRIM(layerstr)
+            WRITE(p8str,'(a)') TRIM(p8str)//' aRes_L'//TRIM(layerstr)
+         ENDDO
+         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         lun=lun+1                 
+         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         lun=lun+1                 
+         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         lun=lun+1                 
+         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         lun=lun+1                 
+         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         lun=lun+1                 
+    END SELECT
+     
   END SUBROUTINE init_output_writing_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -205,18 +247,23 @@ CONTAINS
     !!
     !! lun of fluxes starts at a multiple of 100, plus 30
     lun = (100 * itile) + 30
-    WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse'
-    lun=lun+1   
-    WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
-                      'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
-    lun=lun+1
-    WRITE(lun,'(a)') 'Time NUP-NH4 NUP-NO3 Resorption_N ReserveUse NFixation Nloss'
-    lun=lun+1
-    WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
-    lun=lun+1
-    WRITE(lun,'(a)') 'Time Transpiration Drainage GC GA'
-    lun=lun+1
-    WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant')
+        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransFResp NFixResp NPP ReserveUse'
+        lun=lun+1   
+        WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 ', &
+                          'GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
+        lun=lun+1
+        WRITE(lun,'(a)') 'Time NUP-NH4 NUP-NO3 Resorption_N ReserveUse NFixation Nloss'
+        lun=lun+1
+        WRITE(lun,'(a)') 'Time PUP Resorption_P ReserveUse'
+        lun=lun+1
+        WRITE(lun,'(a)') 'Time Transpiration Drainage GC GA'
+        lun=lun+1
+        WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
+
+      CASE('soil')
+    END SELECT
   END SUBROUTINE init_output_writing_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -308,29 +355,49 @@ CONTAINS
     !! 
     !! 
     lun = 100 * itile
-    fname = 'vegpoolC_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'vegpooldC13dC14_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'vegpoolN_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'vegpoolP_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'vegpoolH2O_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'soilpoolNP_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'veg_canopy_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'veg_diagnostics_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant')
+         fname = 'vegpoolC_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'vegpooldC13dC14_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'vegpoolN_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'vegpoolP_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'vegpoolH2O_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'soilpoolNP_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'veg_canopy_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'veg_diagnostics_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+
+      CASE('soil')
+         fname = 'soilpoolCorg_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'soilpooldC13org_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'soilpoolDC14org_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'soilpoolNorg_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'soilpoolPorg_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+    END SELECT
 
     !> 3.0 write column headers into output files
     !! 
@@ -390,23 +457,28 @@ CONTAINS
     !! 
     !! 
     lun = (100 * itile) + 30
-    fname = 'vegfluxC_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'vegfluxdC13dC14_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'vegfluxN_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'vegfluxP_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'vegfluxH2O_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-    lun=lun+1
-    fname = 'vegfluxEnergy_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
-    OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant')
+        fname = 'vegfluxC_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxdC13dC14_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxN_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxP_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxH2O_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'vegfluxEnergy_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+
+      CASE('soil')
+    END SELECT
 
     !> 3.0 write column headers into output files
     !! 
@@ -569,121 +641,152 @@ CONTAINS
     veg     => veg__mem 
     soil    => soil__mem  
     sb      => sb__mem  
+
+    lun = 100 * itile
  
-    !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
-    !! 
-    !! same for write_output_flux
-    IF (fluxnet_output_status < 3) THEN   ! this switch includes the rest of this routine
-
-    !> 1.0 check output start & end, and write pools if appropriate with output_interval
-    !! 
-    !! 
-    IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
-      IF( MODULO(time_d, output_interval_pool) < eps4 .OR. &
-         & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
-       lun = 100 * itile
-       write(lun,'(13F12.6)') time_d,veg%pool%leaf%carbon%ptr,&
-         veg%pool%fine_root%carbon%ptr,veg%pool%sap_wood%carbon%ptr,&
-         veg%pool%heart_wood%carbon%ptr,veg%pool%coarse_root%carbon%ptr,&
-         veg%pool%fruit%carbon%ptr,veg%pool%labile%carbon%ptr,&
-         veg%pool%reserve%carbon%ptr,veg%pool%seed_bed%carbon%ptr,&
-         veg%total_biomass%carbon%ptr,veg%total_biomass%carbon13%ptr,veg%total_biomass%carbon14%ptr
-
-       dC13leaf        = calc_delta_C13(veg%pool%leaf%carbon%ptr,veg%pool%leaf%carbon13%ptr)
-       dC13fine_root   = calc_delta_C13(veg%pool%fine_root%carbon%ptr,veg%pool%fine_root%carbon13%ptr)
-       dC13sap_wood    = calc_delta_C13(veg%pool%sap_wood%carbon%ptr,veg%pool%sap_wood%carbon13%ptr)
-       dC13heart_wood  = calc_delta_C13(veg%pool%heart_wood%carbon%ptr,veg%pool%heart_wood%carbon13%ptr)
-       dC13coarse_root = calc_delta_C13(veg%pool%coarse_root%carbon%ptr,veg%pool%coarse_root%carbon13%ptr)
-       dC13fruit       = calc_delta_C13(veg%pool%fruit%carbon%ptr,veg%pool%fruit%carbon13%ptr)
-       dC13labile      = calc_delta_C13(veg%pool%labile%carbon%ptr,veg%pool%labile%carbon13%ptr)
-       dC13reserve     = calc_delta_C13(veg%pool%reserve%carbon%ptr,veg%pool%reserve%carbon13%ptr)
-       dC13seed_bed    = calc_delta_C13(veg%pool%seed_bed%carbon%ptr,veg%pool%seed_bed%carbon13%ptr)
-       lun=lun+1
-       write(lun,'(19F18.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
-         dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seed_bed, & 
-         calc_delta_C14(veg%pool%leaf%carbon%ptr,veg%pool%leaf%carbon14%ptr,dC13leaf),&
-         calc_delta_C14(veg%pool%fine_root%carbon%ptr,veg%pool%fine_root%carbon14%ptr,dC13fine_root),&
-         calc_delta_C14(veg%pool%sap_wood%carbon%ptr,veg%pool%sap_wood%carbon14%ptr,dC13sap_wood),&
-         calc_delta_C14(veg%pool%heart_wood%carbon%ptr,veg%pool%heart_wood%carbon14%ptr,dC13heart_wood),&
-         calc_delta_C14(veg%pool%coarse_root%carbon%ptr,veg%pool%coarse_root%carbon14%ptr,dC13coarse_root),&
-         calc_delta_C14(veg%pool%fruit%carbon%ptr,veg%pool%fruit%carbon14%ptr,dC13fruit),&
-         calc_delta_C14(veg%pool%labile%carbon%ptr,veg%pool%labile%carbon14%ptr,dC13labile),&
-         calc_delta_C14(veg%pool%reserve%carbon%ptr,veg%pool%reserve%carbon14%ptr,dC13reserve),&
-         calc_delta_C14(veg%pool%seed_bed%carbon%ptr,veg%pool%seed_bed%carbon14%ptr,dC13seed_bed)
-       lun=lun+1
-       write(lun,'(12F12.6)') time_d,veg%pool%leaf%nitrogen%ptr,&
-         veg%pool%fine_root%nitrogen%ptr,veg%pool%sap_wood%nitrogen%ptr,&
-         veg%pool%heart_wood%nitrogen%ptr,veg%pool%coarse_root%nitrogen%ptr,&
-         veg%pool%fruit%nitrogen%ptr,veg%pool%labile%nitrogen%ptr,&
-         veg%pool%reserve%nitrogen%ptr,veg%pool%seed_bed%nitrogen%ptr,&
-         veg%total_biomass%nitrogen%ptr,veg%total_biomass%nitrogen15%ptr
-       lun=lun+1
-       write(lun,'(11F12.6)') time_d,veg%pool%leaf%phosphorus%ptr,&
-         veg%pool%fine_root%phosphorus%ptr,veg%pool%sap_wood%phosphorus%ptr,&
-         veg%pool%heart_wood%phosphorus%ptr,veg%pool%coarse_root%phosphorus%ptr,&
-         veg%pool%fruit%phosphorus%ptr,veg%pool%labile%phosphorus%ptr,&
-         veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,veg%total_biomass%phosphorus%ptr
-       lun=lun+1
-       write(lun,'(9F12.6)') time_d, soil%w_soil_root%ptr(1,1), soil%w_soil_root_pot%ptr(1,1),assimi%beta_soil_gs%ptr,assimi%beta_soil_ps%ptr
-       lun=lun+1
-       write(lun,'(20F12.6)') time_d, sb%pool%polymeric_litter%nitrogen%ptr(1,1,1), sb%pool%polymeric_litter%phosphorus%ptr(1,1,1), & 
-            sb%nh4_solute%ptr(1,1,1), sb%no3_solute%ptr(1,1,1), sb%po4_solute%ptr(1,1,1)
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant')
+        !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
+        !! 
+        !! same for write_output_flux
+        IF (fluxnet_output_status < 3) THEN   ! this switch includes the rest of this routine
        
-       lun=lun+1
-       DO icanopy=1, assimi_config%ncanopy
-         write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fn_et_cl%ptr(icanopy,1), &
-                               veg%fn_rub_cl%ptr(icanopy,1), veg%fn_chl_cl%ptr(icanopy,1),&
-                               veg%fn_pepc_cl%ptr(icanopy,1), veg%fn_oth_cl%ptr(icanopy,1),veg%leaf_nitrogen_cl%ptr(icanopy,1)
-       END DO
+           !> 1.0 check output start & end, and write pools if appropriate with output_interval
+           !! 
+           !! 
+           IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
+             IF( MODULO(time_d, output_interval_pool) < eps4 .OR. &
+                & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
+              write(lun,'(13F12.6)') time_d,veg%pool%leaf%carbon%ptr,&
+                veg%pool%fine_root%carbon%ptr,veg%pool%sap_wood%carbon%ptr,&
+                veg%pool%heart_wood%carbon%ptr,veg%pool%coarse_root%carbon%ptr,&
+                veg%pool%fruit%carbon%ptr,veg%pool%labile%carbon%ptr,&
+                veg%pool%reserve%carbon%ptr,veg%pool%seed_bed%carbon%ptr,&
+                veg%total_biomass%carbon%ptr,veg%total_biomass%carbon13%ptr,veg%total_biomass%carbon14%ptr
+       
+              dC13leaf        = calc_delta_C13(veg%pool%leaf%carbon%ptr,veg%pool%leaf%carbon13%ptr)
+              dC13fine_root   = calc_delta_C13(veg%pool%fine_root%carbon%ptr,veg%pool%fine_root%carbon13%ptr)
+              dC13sap_wood    = calc_delta_C13(veg%pool%sap_wood%carbon%ptr,veg%pool%sap_wood%carbon13%ptr)
+              dC13heart_wood  = calc_delta_C13(veg%pool%heart_wood%carbon%ptr,veg%pool%heart_wood%carbon13%ptr)
+              dC13coarse_root = calc_delta_C13(veg%pool%coarse_root%carbon%ptr,veg%pool%coarse_root%carbon13%ptr)
+              dC13fruit       = calc_delta_C13(veg%pool%fruit%carbon%ptr,veg%pool%fruit%carbon13%ptr)
+              dC13labile      = calc_delta_C13(veg%pool%labile%carbon%ptr,veg%pool%labile%carbon13%ptr)
+              dC13reserve     = calc_delta_C13(veg%pool%reserve%carbon%ptr,veg%pool%reserve%carbon13%ptr)
+              dC13seed_bed    = calc_delta_C13(veg%pool%seed_bed%carbon%ptr,veg%pool%seed_bed%carbon13%ptr)
+              lun=lun+1
+              write(lun,'(19F18.6)') time_d,dC13leaf,dC13fine_root,dC13sap_wood,dC13heart_wood,&
+                dC13coarse_root,dC13fruit,dC13labile,dC13reserve,dC13seed_bed, & 
+                calc_delta_C14(veg%pool%leaf%carbon%ptr,veg%pool%leaf%carbon14%ptr,dC13leaf),&
+                calc_delta_C14(veg%pool%fine_root%carbon%ptr,veg%pool%fine_root%carbon14%ptr,dC13fine_root),&
+                calc_delta_C14(veg%pool%sap_wood%carbon%ptr,veg%pool%sap_wood%carbon14%ptr,dC13sap_wood),&
+                calc_delta_C14(veg%pool%heart_wood%carbon%ptr,veg%pool%heart_wood%carbon14%ptr,dC13heart_wood),&
+                calc_delta_C14(veg%pool%coarse_root%carbon%ptr,veg%pool%coarse_root%carbon14%ptr,dC13coarse_root),&
+                calc_delta_C14(veg%pool%fruit%carbon%ptr,veg%pool%fruit%carbon14%ptr,dC13fruit),&
+                calc_delta_C14(veg%pool%labile%carbon%ptr,veg%pool%labile%carbon14%ptr,dC13labile),&
+                calc_delta_C14(veg%pool%reserve%carbon%ptr,veg%pool%reserve%carbon14%ptr,dC13reserve),&
+                calc_delta_C14(veg%pool%seed_bed%carbon%ptr,veg%pool%seed_bed%carbon14%ptr,dC13seed_bed)
+              lun=lun+1
+              write(lun,'(12F12.6)') time_d,veg%pool%leaf%nitrogen%ptr,&
+                veg%pool%fine_root%nitrogen%ptr,veg%pool%sap_wood%nitrogen%ptr,&
+                veg%pool%heart_wood%nitrogen%ptr,veg%pool%coarse_root%nitrogen%ptr,&
+                veg%pool%fruit%nitrogen%ptr,veg%pool%labile%nitrogen%ptr,&
+                veg%pool%reserve%nitrogen%ptr,veg%pool%seed_bed%nitrogen%ptr,&
+                veg%total_biomass%nitrogen%ptr,veg%total_biomass%nitrogen15%ptr
+              lun=lun+1
+              write(lun,'(11F12.6)') time_d,veg%pool%leaf%phosphorus%ptr,&
+                veg%pool%fine_root%phosphorus%ptr,veg%pool%sap_wood%phosphorus%ptr,&
+                veg%pool%heart_wood%phosphorus%ptr,veg%pool%coarse_root%phosphorus%ptr,&
+                veg%pool%fruit%phosphorus%ptr,veg%pool%labile%phosphorus%ptr,&
+                veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,veg%total_biomass%phosphorus%ptr
+              lun=lun+1
+              write(lun,'(9F12.6)') time_d, soil%w_soil_root%ptr(1,1), soil%w_soil_root_pot%ptr(1,1),assimi%beta_soil_gs%ptr,assimi%beta_soil_ps%ptr
+              lun=lun+1
+              write(lun,'(20F12.6)') time_d, sb%pool%polymeric_litter%nitrogen%ptr(1,1,1), sb%pool%polymeric_litter%phosphorus%ptr(1,1,1), & 
+                   sb%nh4_solute%ptr(1,1,1), sb%no3_solute%ptr(1,1,1), sb%po4_solute%ptr(1,1,1)
+              
+              lun=lun+1
+              DO icanopy=1, assimi_config%ncanopy
+                write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fn_et_cl%ptr(icanopy,1), &
+                                      veg%fn_rub_cl%ptr(icanopy,1), veg%fn_chl_cl%ptr(icanopy,1),&
+                                      veg%fn_pepc_cl%ptr(icanopy,1), veg%fn_oth_cl%ptr(icanopy,1),veg%leaf_nitrogen_cl%ptr(icanopy,1)
+              END DO
+       
+              IF(lctlib%growthform == itree) THEN 
+                 IF (veg%pool%sap_wood%carbon%ptr > eps8) THEN
+                    hlp1 = veg%lai%ptr/(veg%pool%sap_wood%carbon%ptr / veg%height%ptr / lctlib%wood_density)
+                 ELSE
+                    hlp1 = 0._wp
+                 ENDIF
+              ELSE
+                 IF (veg%pool%leaf%carbon%ptr>eps8) THEN
+                    hlp1 = veg%pool%sap_wood%carbon%ptr/veg%pool%leaf%carbon%ptr
+                 ELSE
+                    hlp1 = 0._wp
+                 ENDIF
+              ENDIF
+              IF (veg%pool%fine_root%carbon%ptr > eps8) THEN
+                 l2r = veg%pool%leaf%carbon%ptr/veg%pool%fine_root%carbon%ptr
+              ELSE
+                 l2r = 0._wp
+              ENDIF
+              IF (veg%pool%sap_wood%carbon%ptr>eps8) THEN
+                 s2c =  veg%pool%coarse_root%carbon%ptr/veg%pool%sap_wood%carbon%ptr
+              ELSE
+                 s2c = 0._wp
+              ENDIF
+              IF ((veg%pool%leaf%carbon%ptr+veg%pool%sap_wood%carbon%ptr+veg%pool%heart_wood%carbon%ptr+&
+                   veg%pool%fine_root%carbon%ptr+veg%pool%coarse_root%carbon%ptr)>eps8) THEN
+                 bcf =  (veg%pool%fine_root%carbon%ptr+veg%pool%coarse_root%carbon%ptr)/ & 
+                (veg%pool%leaf%carbon%ptr+veg%pool%sap_wood%carbon%ptr+veg%pool%heart_wood%carbon%ptr+&
+                   veg%pool%fine_root%carbon%ptr+veg%pool%coarse_root%carbon%ptr)
+              ELSE
+                 bcf = 0._wp
+              ENDIF
+              ! transition from bool to 0/1 for growing season
+              IF (growing_season(1)) THEN
+                growing_season_float = 1.0_wp
+                ELSE
+                growing_season_float = 0.0_wp
+              END IF 
+              lun=lun+1
+              write(lun,'(22F20.6)') time_d, veg%height%ptr, veg%diameter%ptr, veg%lai%ptr, veg%dens_ind%ptr, &
+                hlp1,l2r,s2c, bcf, &
+                veg%target_cn_leaf%ptr, veg%unit_npp_talloc_mavg%ptr, veg%unit_uptake_n_act_talloc_mavg%ptr,&
+                veg%growth_cn_talloc_mavg%ptr, veg%npp_talloc_mavg%ptr, &
+                growing_season_float, & 
+                veg%cost_n_uptake_root%ptr, veg%cost_n_fixation_tuptake_mavg%ptr, &
+                veg%unit_transpiration_talloc_mavg%ptr * 1.e10_wp, veg%growth_req_n_tuptake_mavg%ptr
+             END IF
+           END IF
+        END IF  ! on/off switch specific to 'special case: fluxnet output'
+      CASE('soil')
+        IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
+          IF( MODULO(time_d, output_interval_pool) < eps4 .OR. &
+             & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
 
-       IF(lctlib%growthform == itree) THEN 
-          IF (veg%pool%sap_wood%carbon%ptr > eps8) THEN
-             hlp1 = veg%lai%ptr/(veg%pool%sap_wood%carbon%ptr / veg%height%ptr / lctlib%wood_density)
-          ELSE
-             hlp1 = 0._wp
+             write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk),&
+                                  sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),&
+                                  sb%pool%dom%carbon%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),&
+                                  sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon%ptr(ics:ice,:,iblk),&
+                                  sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)
+             lun=lun+1
+             lun=lun+1
+             lun=lun+1
+             write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk),&
+                                  sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk),&
+                                  sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk),&
+                                  sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk),&
+                                  sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk)
+             lun=lun+1
+             write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk),&
+                                  sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk),sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk),&
+                                  sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk),&
+                                  sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk),sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk),&
+                                  sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk)
+             
           ENDIF
-       ELSE
-          IF (veg%pool%leaf%carbon%ptr>eps8) THEN
-             hlp1 = veg%pool%sap_wood%carbon%ptr/veg%pool%leaf%carbon%ptr
-          ELSE
-             hlp1 = 0._wp
-          ENDIF
-       ENDIF
-       IF (veg%pool%fine_root%carbon%ptr > eps8) THEN
-          l2r = veg%pool%leaf%carbon%ptr/veg%pool%fine_root%carbon%ptr
-       ELSE
-          l2r = 0._wp
-       ENDIF
-       IF (veg%pool%sap_wood%carbon%ptr>eps8) THEN
-          s2c =  veg%pool%coarse_root%carbon%ptr/veg%pool%sap_wood%carbon%ptr
-       ELSE
-          s2c = 0._wp
-       ENDIF
-       IF ((veg%pool%leaf%carbon%ptr+veg%pool%sap_wood%carbon%ptr+veg%pool%heart_wood%carbon%ptr+&
-            veg%pool%fine_root%carbon%ptr+veg%pool%coarse_root%carbon%ptr)>eps8) THEN
-          bcf =  (veg%pool%fine_root%carbon%ptr+veg%pool%coarse_root%carbon%ptr)/ & 
-         (veg%pool%leaf%carbon%ptr+veg%pool%sap_wood%carbon%ptr+veg%pool%heart_wood%carbon%ptr+&
-            veg%pool%fine_root%carbon%ptr+veg%pool%coarse_root%carbon%ptr)
-       ELSE
-          bcf = 0._wp
-       ENDIF
-       ! transition from bool to 0/1 for growing season
-       IF (growing_season(1)) THEN
-         growing_season_float = 1.0_wp
-         ELSE
-         growing_season_float = 0.0_wp
-       END IF 
-       lun=lun+1
-       write(lun,'(22F20.6)') time_d, veg%height%ptr, veg%diameter%ptr, veg%lai%ptr, veg%dens_ind%ptr, &
-         hlp1,l2r,s2c, bcf, &
-         veg%target_cn_leaf%ptr, veg%unit_npp_talloc_mavg%ptr, veg%unit_uptake_n_act_talloc_mavg%ptr,&
-         veg%growth_cn_talloc_mavg%ptr, veg%npp_talloc_mavg%ptr, &
-         growing_season_float, & 
-         veg%cost_n_uptake_root%ptr, veg%cost_n_fixation_tuptake_mavg%ptr, &
-         veg%unit_transpiration_talloc_mavg%ptr * 1.e10_wp, veg%growth_req_n_tuptake_mavg%ptr
-      END IF
-    END IF
-    END IF  ! on/off switch specific to 'special case: fluxnet output'
+       ENDIF 
+    END SELECT
   END SUBROUTINE write_output_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -761,141 +864,146 @@ CONTAINS
     latent_heat_flx   => land2atm__mem%latent_heat_flx%ptr
     ground_heat_flx   => land2atm__mem%ground_heat_flx%ptr
 
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('land','plant')
 
-    !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
-    !! 
-    !! same for write_output_pool
-    IF (fluxnet_output_status < 3) THEN   ! this switch includes the rest of this routine
+        !> 0.9 run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
+        !! 
+        !! same for write_output_pool
+        IF (fluxnet_output_status < 3) THEN   ! this switch includes the rest of this routine
+    
+           !> 1.0 check output start & end, and write pools if appropriate with output_interval
+           !! 
+           !! 
+           IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
+       
+             !> 1.1 accumulate fluxes across the timesteps of one interval
+             !! 
+             !! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
+             !! for any interval larger timestep multiply by dtime
+             IF(output_interval_flux < 1.0_wp) THEN
+                 dtime_one = 1.0_wp                 ! interval = timestep
+               ELSE
+                 dtime_one = dtime / 1000000.0_wp      ! interval > timestep
+             END IF
+             gpp_acc(itile)          = gpp_acc(itile)           + assimi%gross_assimilation%ptr   * dtime_one
+             growth_resp_acc(itile)  = growth_resp_acc(itile)   + veg%growth_respiration%ptr      * dtime_one
+             maint_resp_acc(itile)   = maint_resp_acc(itile)    + veg%maint_respiration%ptr       * dtime_one
+             n_transform_resp_acc(itile) = n_transform_resp_acc(itile) + veg%n_transform_respiration%ptr * dtime_one
+             n_fixation_resp_acc(itile) = n_fixation_resp_acc(itile) + veg%n_fixation_respiration%ptr    * dtime_one
+             npp_acc(itile)          = npp_acc(itile)           + veg%npp%ptr                 * dtime_one
+             res_use_c_acc(itile)    = res_use_c_acc(itile)     + veg%reserve_use%carbon%ptr  * dtime_one *1000000._wp/dtime
+             gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + assimi%gross_assimilation_C13%ptr * dtime_one
+             growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + veg%growth_respiration_c13%ptr * dtime_one
+             maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + veg%maint_respiration_c13%ptr  * dtime_one
+             gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + assimi%gross_assimilation_C14%ptr * dtime_one
+             growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + veg%growth_respiration_c14%ptr * dtime_one
+             maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + veg%maint_respiration_c14%ptr  * dtime_one
+             uptake_nh4_acc(itile)     = uptake_nh4_acc(itile)      + veg%uptake_nh4%ptr                * dtime_one
+             uptake_no3_acc(itile)     = uptake_no3_acc(itile)      + veg%uptake_no3%ptr                * dtime_one
+             recycling_n_acc(itile) = recycling_n_acc(itile)  + ( veg%recycling_leaf_n%ptr + &
+                                       veg%recycling_fine_root_n%ptr + veg%recycling_heart_wood_n%ptr ) * dtime_one *1000000._wp/dtime
+             res_use_n_acc(itile)    = res_use_n_acc(itile)     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
+             n_fixation_acc(itile)   = n_fixation_acc(itile)    + veg%n_fixation%ptr              * dtime_one 
+             n_loss_acc(itile)       = n_loss_acc(itile)        + sb%volatilisation_n%ptr(1,1,1)  * dtime_one 
+             uptake_p_acc(itile)     = uptake_p_acc(itile)      + veg%uptake_p%ptr                * dtime_one
+             recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( veg%recycling_leaf_p%ptr + & 
+                                       veg%recycling_fine_root_p%ptr + veg%recycling_heart_wood_p%ptr ) * dtime_one *1000000._wp/dtime
+             res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
+             transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dtime_one 
+             drainage_acc(itile)     = drainage_acc(itile)      + soil%drainage%ptr(1,1)          * dtime_one 
+             gc_acc(itile)           = gc_acc(itile)            + assimi%canopy_cond%ptr                                                      
+             ga_acc(itile)           = ga_acc(itile)            + ga                                                   
+             albedo_acc(itile)       = albedo_acc(itile)        + albedo
+             ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2ppfd  * dtime_one               
+             rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dtime_one               
+             qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dtime_one               
+             qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dtime_one               
+             qg_acc(itile)           = qg_acc(itile)            + ground_heat_flx            * dtime_one               
+             appfd_acc(itile)        = appfd_acc(itile)         + rad%appfd%ptr              * dtime_one               
+             ndat_acc(itile)         = ndat_acc(itile)          + 1 
+       
+             !> 1.2 write fluxes and set to zero
+             !!
+             !!  
+             IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
+                & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
+       
+               IF(ndat_acc(itile) > 1) THEN
+                 gc_acc(itile) = gc_acc(itile) / ndat_acc(itile)
+                 ga_acc(itile) = ga_acc(itile) / ndat_acc(itile)
+                 albedo_acc(itile) = albedo_acc(itile) / ndat_acc(itile)
+               ENDIF
+       
+               ! write
+               lun = (100 * itile) + 30
+               write(lun,'(8F12.6)') time_d, gpp_acc(itile), growth_resp_acc(itile), maint_resp_acc(itile), &
+                                     n_transform_resp_acc(itile),n_fixation_resp_acc(itile), & 
+                                     npp_acc(itile), res_use_c_acc(itile)
+               lun=lun+1
+               dC13gpp = calc_delta_C13(gpp_acc(itile),gpp_C13_acc(itile))
+               dC13rg = calc_delta_C13(growth_resp_acc(itile),growth_resp_C13_acc(itile))
+               dC13rm = calc_delta_C13(maint_resp_acc(itile),maint_resp_C13_acc(itile)) 
+               write(lun,'(7F18.6)') time_d,dC13gpp,dC13rg,dC13rm, & 
+                                     calc_delta_C14(gpp_acc(itile),gpp_C14_acc(itile),dC13gpp), & 
+                                     calc_delta_C14(growth_resp_acc(itile),growth_resp_C14_acc(itile),dC13rg), & 
+                                     calc_delta_C14(maint_resp_acc(itile),maint_resp_C14_acc(itile),dC13rm)
+               lun=lun+1
+               write(lun,'(20F12.6)') time_d, uptake_nh4_acc(itile), uptake_no3_acc(itile), recycling_n_acc(itile), & 
+                                      res_use_n_acc(itile), n_fixation_acc(itile), n_loss_acc(itile)
+               lun=lun+1
+               write(lun,'(4F12.6)') time_d, uptake_p_acc(itile), recycling_p_acc(itile), res_use_p_acc(itile)
+               lun=lun+1
+               write(lun,'(12F16.8)') time_d, transpiration_acc(itile), drainage_acc(itile), gc_acc(itile), ga_acc(itile)
+               lun=lun+1
+               IF(ppfd_acc(itile)>eps8) THEN
+                  hlp1=appfd_acc(itile)/ppfd_acc(itile)
+               ELSE
+                  hlp1=0.0_wp
+               ENDIF
+               write(lun,'(12F16.8)') time_d, rnet_acc(itile), qh_acc(itile), qle_acc(itile), -qg_acc(itile), & 
+                                      albedo_acc(itile), ppfd_acc(itile), appfd_acc(itile), hlp1
+               ! set zero
+               gpp_acc(itile)           = 0.0_wp
+               growth_resp_acc(itile)   = 0.0_wp
+               maint_resp_acc(itile)    = 0.0_wp
+               n_transform_resp_acc(itile) = 0.0_wp
+               n_fixation_resp_acc(itile) = 0.0_wp
+               npp_acc(itile)           = 0.0_wp
+               res_use_c_acc(itile)     = 0.0_wp
+               gpp_C13_acc(itile)       = 0.0_wp
+               growth_resp_C13_acc(itile) = 0.0_wp
+               maint_resp_C13_acc(itile) = 0.0_wp
+               gpp_C14_acc(itile)       = 0.0_wp
+               growth_resp_C14_acc(itile) = 0.0_wp
+               maint_resp_C14_acc(itile) = 0.0_wp
+               uptake_nh4_acc(itile)     = 0.0_wp
+               uptake_no3_acc(itile)     = 0.0_wp
+               recycling_n_acc(itile)   = 0.0_wp
+               res_use_n_acc(itile)     = 0.0_wp
+               n_fixation_acc(itile)    = 0.0_wp
+               n_loss_acc(itile)        = 0.0_wp
+               uptake_p_acc(itile)      = 0.0_wp
+               recycling_p_acc(itile)   = 0.0_wp
+               res_use_p_acc(itile)     = 0.0_wp
+               transpiration_acc(itile) = 0.0_wp
+               drainage_acc(itile)      = 0.0_wp
+               gc_acc(itile)            = 0.0_wp
+               ga_acc(itile)            = 0.0_wp
+               ppfd_acc(itile)          = 0.0_wp
+               rnet_acc(itile)          = 0.0_wp
+               qh_acc(itile)            = 0.0_wp
+               qle_acc(itile)           = 0.0_wp
+               qg_acc(itile)            = 0.0_wp
+               albedo_acc(itile)        = 0.0_wp
+               appfd_acc(itile)          = 0.0_wp
+               ndat_acc(itile)          = 0
+             END IF
+           END IF
+        END IF  ! on/off switch specific to 'special case: fluxnet output'
+      CASE('soil')
+    END SELECT
 
-    !> 1.0 check output start & end, and write pools if appropriate with output_interval
-    !! 
-    !! 
-    IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
-
-      !> 1.1 accumulate fluxes across the timesteps of one interval
-      !! 
-      !! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
-      !! for any interval larger timestep multiply by dtime
-      IF(output_interval_flux < 1.0_wp) THEN
-          dtime_one = 1.0_wp                 ! interval = timestep
-        ELSE
-          dtime_one = dtime / 1000000.0_wp      ! interval > timestep
-      END IF
-      gpp_acc(itile)          = gpp_acc(itile)           + assimi%gross_assimilation%ptr   * dtime_one
-      growth_resp_acc(itile)  = growth_resp_acc(itile)   + veg%growth_respiration%ptr      * dtime_one
-      maint_resp_acc(itile)   = maint_resp_acc(itile)    + veg%maint_respiration%ptr       * dtime_one
-      n_transform_resp_acc(itile) = n_transform_resp_acc(itile) + veg%n_transform_respiration%ptr * dtime_one
-      n_fixation_resp_acc(itile) = n_fixation_resp_acc(itile) + veg%n_fixation_respiration%ptr    * dtime_one
-      npp_acc(itile)          = npp_acc(itile)           + veg%npp%ptr                 * dtime_one
-      res_use_c_acc(itile)    = res_use_c_acc(itile)     + veg%reserve_use%carbon%ptr  * dtime_one *1000000._wp/dtime
-      gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + assimi%gross_assimilation_C13%ptr * dtime_one
-      growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + veg%growth_respiration_c13%ptr * dtime_one
-      maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + veg%maint_respiration_c13%ptr  * dtime_one
-      gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + assimi%gross_assimilation_C14%ptr * dtime_one
-      growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + veg%growth_respiration_c14%ptr * dtime_one
-      maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + veg%maint_respiration_c14%ptr  * dtime_one
-      uptake_nh4_acc(itile)     = uptake_nh4_acc(itile)      + veg%uptake_nh4%ptr                * dtime_one
-      uptake_no3_acc(itile)     = uptake_no3_acc(itile)      + veg%uptake_no3%ptr                * dtime_one
-      recycling_n_acc(itile) = recycling_n_acc(itile)  + ( veg%recycling_leaf_n%ptr + &
-                                veg%recycling_fine_root_n%ptr + veg%recycling_heart_wood_n%ptr ) * dtime_one *1000000._wp/dtime
-      res_use_n_acc(itile)    = res_use_n_acc(itile)     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
-      n_fixation_acc(itile)   = n_fixation_acc(itile)    + veg%n_fixation%ptr              * dtime_one 
-      n_loss_acc(itile)       = n_loss_acc(itile)        + sb%volatilisation_n%ptr(1,1,1)  * dtime_one 
-      uptake_p_acc(itile)     = uptake_p_acc(itile)      + veg%uptake_p%ptr                * dtime_one
-      recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( veg%recycling_leaf_p%ptr + & 
-                                veg%recycling_fine_root_p%ptr + veg%recycling_heart_wood_p%ptr ) * dtime_one *1000000._wp/dtime
-      res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
-      transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dtime_one 
-      drainage_acc(itile)     = drainage_acc(itile)      + soil%drainage%ptr(1,1)          * dtime_one 
-      gc_acc(itile)           = gc_acc(itile)            + assimi%canopy_cond%ptr                                                      
-      ga_acc(itile)           = ga_acc(itile)            + ga                                                   
-      albedo_acc(itile)       = albedo_acc(itile)        + albedo
-      ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2ppfd  * dtime_one               
-      rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dtime_one               
-      qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dtime_one               
-      qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dtime_one               
-      qg_acc(itile)           = qg_acc(itile)            + ground_heat_flx            * dtime_one               
-      appfd_acc(itile)        = appfd_acc(itile)         + rad%appfd%ptr              * dtime_one               
-      ndat_acc(itile)         = ndat_acc(itile)          + 1 
-
-      !> 1.2 write fluxes and set to zero
-      !!
-      !!  
-      IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
-         & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
-
-        IF(ndat_acc(itile) > 1) THEN
-          gc_acc(itile) = gc_acc(itile) / ndat_acc(itile)
-          ga_acc(itile) = ga_acc(itile) / ndat_acc(itile)
-          albedo_acc(itile) = albedo_acc(itile) / ndat_acc(itile)
-        ENDIF
-
-        ! write
-        lun = (100 * itile) + 30
-        write(lun,'(8F12.6)') time_d, gpp_acc(itile), growth_resp_acc(itile), maint_resp_acc(itile), &
-                              n_transform_resp_acc(itile),n_fixation_resp_acc(itile), & 
-                              npp_acc(itile), res_use_c_acc(itile)
-        lun=lun+1
-        dC13gpp = calc_delta_C13(gpp_acc(itile),gpp_C13_acc(itile))
-        dC13rg = calc_delta_C13(growth_resp_acc(itile),growth_resp_C13_acc(itile))
-        dC13rm = calc_delta_C13(maint_resp_acc(itile),maint_resp_C13_acc(itile)) 
-        write(lun,'(7F18.6)') time_d,dC13gpp,dC13rg,dC13rm, & 
-                              calc_delta_C14(gpp_acc(itile),gpp_C14_acc(itile),dC13gpp), & 
-                              calc_delta_C14(growth_resp_acc(itile),growth_resp_C14_acc(itile),dC13rg), & 
-                              calc_delta_C14(maint_resp_acc(itile),maint_resp_C14_acc(itile),dC13rm)
-        lun=lun+1
-        write(lun,'(20F12.6)') time_d, uptake_nh4_acc(itile), uptake_no3_acc(itile), recycling_n_acc(itile), & 
-                               res_use_n_acc(itile), n_fixation_acc(itile), n_loss_acc(itile)
-        lun=lun+1
-        write(lun,'(4F12.6)') time_d, uptake_p_acc(itile), recycling_p_acc(itile), res_use_p_acc(itile)
-        lun=lun+1
-        write(lun,'(12F16.8)') time_d, transpiration_acc(itile), drainage_acc(itile), gc_acc(itile), ga_acc(itile)
-        lun=lun+1
-        IF(ppfd_acc(itile)>eps8) THEN
-           hlp1=appfd_acc(itile)/ppfd_acc(itile)
-        ELSE
-           hlp1=0.0_wp
-        ENDIF
-        write(lun,'(12F16.8)') time_d, rnet_acc(itile), qh_acc(itile), qle_acc(itile), -qg_acc(itile), & 
-                               albedo_acc(itile), ppfd_acc(itile), appfd_acc(itile), hlp1
-        ! set zero
-        gpp_acc(itile)           = 0.0_wp
-        growth_resp_acc(itile)   = 0.0_wp
-        maint_resp_acc(itile)    = 0.0_wp
-        n_transform_resp_acc(itile) = 0.0_wp
-        n_fixation_resp_acc(itile) = 0.0_wp
-        npp_acc(itile)           = 0.0_wp
-        res_use_c_acc(itile)     = 0.0_wp
-        gpp_C13_acc(itile)       = 0.0_wp
-        growth_resp_C13_acc(itile) = 0.0_wp
-        maint_resp_C13_acc(itile) = 0.0_wp
-        gpp_C14_acc(itile)       = 0.0_wp
-        growth_resp_C14_acc(itile) = 0.0_wp
-        maint_resp_C14_acc(itile) = 0.0_wp
-        uptake_nh4_acc(itile)     = 0.0_wp
-        uptake_no3_acc(itile)     = 0.0_wp
-        recycling_n_acc(itile)   = 0.0_wp
-        res_use_n_acc(itile)     = 0.0_wp
-        n_fixation_acc(itile)    = 0.0_wp
-        n_loss_acc(itile)        = 0.0_wp
-        uptake_p_acc(itile)      = 0.0_wp
-        recycling_p_acc(itile)   = 0.0_wp
-        res_use_p_acc(itile)     = 0.0_wp
-        transpiration_acc(itile) = 0.0_wp
-        drainage_acc(itile)      = 0.0_wp
-        gc_acc(itile)            = 0.0_wp
-        ga_acc(itile)            = 0.0_wp
-        ppfd_acc(itile)          = 0.0_wp
-        rnet_acc(itile)          = 0.0_wp
-        qh_acc(itile)            = 0.0_wp
-        qle_acc(itile)           = 0.0_wp
-        qg_acc(itile)            = 0.0_wp
-        albedo_acc(itile)        = 0.0_wp
-        appfd_acc(itile)          = 0.0_wp
-        ndat_acc(itile)          = 0
-      END IF
-    END IF
-    END IF  ! on/off switch specific to 'special case: fluxnet output'
   END SUBROUTINE write_output_flux
 
   !-----------------------------------------------------------------------------------------------------
@@ -1006,39 +1114,25 @@ CONTAINS
     ! 0.1 InOut
     INTEGER, INTENT(in)  :: itile   !< number of current tile 1-...
     ! 0.2 Local
-    INTEGER :: lun
+    INTEGER :: lun, lun_start, lun_end
+    LOGICAL :: opened
 
     ! 1.0 pools
-    lun = 100 * itile
-    CLOSE(lun) ! 0
-    lun=lun+1
-    CLOSE(lun) ! 1
-    lun=lun+1
-    CLOSE(lun) ! 2
-    lun=lun+1
-    CLOSE(lun) ! 3
-    lun=lun+1
-    CLOSE(lun) ! 4
-    lun=lun+1
-    CLOSE(lun) ! 5
-    lun=lun+1
-    CLOSE(lun) ! 5
-    lun=lun+1
-    CLOSE(lun) ! 5
+    lun_start = 100 * itile
+    lun_end = lun_start + 29
+    DO lun = lun_start,lun_end
+       INQUIRE(lun,opened=opened)
+       IF(opened) CLOSE(lun) 
+    ENDDO
 
     ! 2.0 fluxes
-    lun = (100 * itile) + 30
-    CLOSE(lun) ! 0
-    lun=lun+1
-    CLOSE(lun) ! 1
-    lun=lun+1
-    CLOSE(lun) ! 2
-    lun=lun+1
-    CLOSE(lun) ! 3
-    lun=lun+1
-    CLOSE(lun) ! 4
-    lun=lun+1
-    CLOSE(lun) ! 5
+    lun_start = (100 * itile) + 30
+    lun_end = lun_start + 29
+    DO lun = lun_start,lun_end
+       INQUIRE(lun,opened=opened)
+       IF(opened) CLOSE(lun) 
+    ENDDO
+
   END SUBROUTINE close_output_files
 
   !-----------------------------------------------------------------------------------------------------

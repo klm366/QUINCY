@@ -321,7 +321,16 @@ CONTAINS
     !! soil ---------------------------------------------------------------------------------------
 
       CALL update_sb_pools        (tile, model%options)
-
+      !! output pool: write output in certain intervals, see mo_shared_output
+      !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
+      !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
+      !! 
+      CALL write_output_pool(tile, model%options, time_day, time_year, 1) ! 1 == itile
+  
+      !! output flux: write output in certain intervals, see mo_shared_output
+      !! 
+      !! 
+      CALL write_output_flux(tile, time_day, time_year, 1) ! 1 == itile 
 
     CASE('canopy')
     !! canopy -------------------------------------------------------------------------------------

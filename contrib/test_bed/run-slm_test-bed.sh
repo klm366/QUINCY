@@ -37,7 +37,7 @@ flag_tile_veg_dynamics="T"          # does also set "start_bareground"
 soil_depth=5.7                  # meter
 
 # simulation length & output
-simulation_length_number=10     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+simulation_length_number=1     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
 output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
@@ -49,7 +49,7 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-siteDataSet="f"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
+siteDataSet="n"                 # [f] FLUXNET [c] CRUNCEPv5 [n] none (in case of 'none' a test_bed/climate.dat is expected)
 siteName="DE-Hai_2000-2006"     # filename of any site from /Net/Groups/BGI/data/Model/SLM1/input/point/.. FLUXNET/ or CRUNCEPv5/ without the trailing '.dat'
                                 # e.g. FLUX: DE-Hai_2000-2006, AT-Neu_2002-2005, ES-ES1_1999-2004 & CRUN: THO_D15_1984-2013, CAL_1984-2013, UNI_1984-2013
 soil_awc_prescribe=300.0        # float !
