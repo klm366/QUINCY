@@ -45,6 +45,7 @@ mo_sb_update_pools.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_veg_config_class.o \
+  mo_shared_constants.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \
   mo_sb_jsm_processes.o \

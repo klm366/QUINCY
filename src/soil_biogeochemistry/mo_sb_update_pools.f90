@@ -43,6 +43,7 @@ CONTAINS
     USE mo_base_config_class,     ONLY: base_config
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
+    USE mo_shared_constants,      ONLY: lambda_C14
     USE mo_sb_constants
     USE mo_sb_jsm_processes
     USE mo_sb_jsm_transport
@@ -337,7 +338,26 @@ rmm_desorption = 1.0_wp
                                           transport_no3_solute(:,:), transport_po4_solute(:,:), transport_po4_assoc(:,:), & 
                                           transport_nh4_n15_solute(:,:), transport_nh4_n15_assoc(:,:), transport_no3_n15_solute(:,:))
 
-         !> 6.0 update pools
+         !> 6.0 radioactive decay
+         !!
+         sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  = sb%loss%soluable_litter%carbon14%ptr(ics:ice,:,iblk) + & 
+            sb%pool%soluable_litter%carbon14%ptr(ics:ice,:,iblk)  * lambda_C14 * dtime
+         sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = sb%loss%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) + &
+            sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) * lambda_C14 * dtime
+         sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk)     = sb%loss%woody_litter%carbon14%ptr(ics:ice,:,iblk) + &
+            sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk)     * lambda_C14 * dtime
+         sb%loss%dom%carbon14%ptr(ics:ice,:,iblk)              = sb%loss%dom%carbon14%ptr(ics:ice,:,iblk) + &
+            sb%pool%dom%carbon14%ptr(ics:ice,:,iblk)              * lambda_C14 * dtime
+         sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%dom_assoc%carbon14%ptr(ics:ice,:,iblk) + &
+            sb%pool%dom_assoc%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
+         sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk)        = sb%loss%microbial%carbon14%ptr(ics:ice,:,iblk) + & 
+            sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk)        * lambda_C14 * dtime
+         sb%loss%residue%carbon14%ptr(ics:ice,:,iblk)          = sb%loss%residue%carbon14%ptr(ics:ice,:,iblk) + &
+            sb%pool%residue%carbon14%ptr(ics:ice,:,iblk)          * lambda_C14 * dtime
+         sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    = sb%loss%residue_assoc%carbon14%ptr(ics:ice,:,iblk) + & 
+            sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk)    * lambda_C14 * dtime 
+
+         !> 7.0 update pools
          !!
          CALL calc_jsm_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
          nh4_solute(:,:) = nh4_solute(:,:) + net_mineralisation_n(:,:) + transport_nh4_solute(:,:)
@@ -349,7 +369,7 @@ rmm_desorption = 1.0_wp
          nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
          no3_n15_solute(:,:) = no3_n15_solute(:,:) + transport_no3_n15_solute(:,:)
 
-         !> 7.0 update diagnostics and other state variables 
+         !> 7.1 update diagnostics and other state variables 
          !!
          bulk_soil_carbon_sl = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
          bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_l)
