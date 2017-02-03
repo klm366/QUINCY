@@ -375,21 +375,6 @@ rmm_desorption = 1.0_wp
          bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_l)
          qmax_org = calc_qmax_org(bulk_dens_corr_sl)
 
-!write(910,'(10F20.10)') sb%pool%dom%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%dom%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
-!write(911,'(10F20.10)') sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%dom_assoc%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
-!write(912,'(10F20.10)') sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
-!write(913,'(10F20.10)') sb%pool%residue%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%residue%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
-!write(914,'(10F20.10)') sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
-!write(915,'(10F20.10)') sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%soluable_litter%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
-!write(916,'(10F20.10)') sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
-!write(917,'(10F20.10)') sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk),SUM(sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk)*soil_depth_l(:,:))
-   
-!write(900,'(10F20.10)') sb%het_respiration%ptr(ics:ice,1,iblk),sb%pool%dom%carbon%ptr(ics:ice,1,iblk),sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) ,&
-!                        sb%pool%residue%carbon%ptr(ics:ice,1,iblk),sb%pool%soluable_litter%carbon%ptr(ics:ice,1,iblk),sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk),&
-!                        sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk)
-!write(901,'(20F20.10)') SUM(sb%pool%dom%carbon%ptr(ics:ice,:,iblk)*soil_depth_l),sb%pool%dom%carbon%ptr(ics:ice,:,iblk)
-!write(902,'(20F20.10)') SUM(nh4_assoc(:,:)*soil_depth_l),nh4_assoc(:,:)
-!write(903,'(20F20.10)'), sb%pool%dom%carbon%ptr(:,1,:),sb%pool%dom_assoc%carbon%ptr(:,1,:)
       CASE('canopy','test_canopy')
 
          CALL message(TRIM(routine), 'invalid model-type: '//TRIM(base_config%slm_model_name))

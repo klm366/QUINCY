@@ -266,7 +266,7 @@ CONTAINS
     !! output flux: write output in certain intervals, see mo_shared_output
     !! 
     !! 
-      CALL write_output_flux(tile, time_day, time_year, 1) ! 1 == itile 
+      CALL write_output_flux(tile, model%options, time_day, time_year, 1) ! 1 == itile 
 
     !! output litterfall and soilphysics: usually this would be output at each timstep
     !! 
@@ -308,7 +308,7 @@ CONTAINS
     !! output flux: write output in certain intervals, see mo_shared_output
     !! 
     !! 
-      CALL write_output_flux(tile, time_day, time_year, 1) ! 1 == itile 
+      CALL write_output_flux(tile, model%options, time_day, time_year, 1) ! 1 == itile 
 
     !! output litterfall and soilphysics: usually this would be output at each timstep
     !! 
@@ -330,7 +330,7 @@ CONTAINS
       !! output flux: write output in certain intervals, see mo_shared_output
       !! 
       !! 
-      CALL write_output_flux(tile, time_day, time_year, 1) ! 1 == itile 
+      CALL write_output_flux(tile, model%options, time_day, time_year, 1) ! 1 == itile 
 
     CASE('canopy')
     !! canopy -------------------------------------------------------------------------------------

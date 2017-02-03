@@ -63,6 +63,24 @@ MODULE mo_shared_output
   REAL(wp), DIMENSION(ntile), SAVE :: appfd_acc 
   INTEGER, DIMENSION(ntile), SAVE  :: ndat_acc ! number of accumulated data points
 
+  ! soil stuff
+  REAL(wp), DIMENSION(ntile), SAVE :: litterfallC_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: het_respC_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: leachingCorg_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: litterfallC13_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: het_respC13_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: leachingC13org_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: litterfallC14_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: het_respC14_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: leachingC14org_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: litterfallN_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: net_min_n_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: leachingNorg_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: litterfallP_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: net_min_p_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: leachingPorg_acc 
+
+
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
 
 CONTAINS
@@ -113,6 +131,24 @@ CONTAINS
     albedo_acc        = 0._wp
     appfd_acc         = 0._wp
     ndat_acc          = 0
+
+    ! soil stuff
+    litterfallC_acc = 0.0_wp
+    het_respC_acc = 0.0_wp
+    leachingCorg_acc = 0.0_wp
+    litterfallC13_acc = 0.0_wp
+    het_respC13_acc = 0.0_wp
+    leachingC13org_acc = 0.0_wp
+    litterfallC14_acc = 0.0_wp
+    het_respC14_acc = 0.0_wp
+    leachingC14org_acc = 0.0_wp
+    litterfallN_acc = 0.0_wp
+    net_min_n_acc = 0.0_wp
+    leachingNorg_acc = 0.0_wp
+    litterfallP_acc = 0.0_wp
+    net_min_p_acc = 0.0_wp
+    leachingPorg_acc = 0.0_wp
+
   END SUBROUTINE init_veg_output_variables
 
 
@@ -263,6 +299,16 @@ CONTAINS
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
 
       CASE('soil')
+        WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
+        lun=lun+1   
+        WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
+        lun=lun+1   
+        WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
+        lun=lun+1   
+        WRITE(lun,'(a)') 'Time Litterfall NetMin LeachingOrg' 
+        lun=lun+1   
+        WRITE(lun,'(a)') 'Time Litterfall NetMin LeachingOrg' 
+        
     END SELECT
   END SUBROUTINE init_output_writing_flux
 
@@ -478,6 +524,21 @@ CONTAINS
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
       CASE('soil')
+        fname = 'soilfluxC_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'soilfluxdC13_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'soilfluxDC14_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'soilfluxN_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'soilfluxP_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        
     END SELECT
 
     !> 3.0 write column headers into output files
@@ -820,10 +881,10 @@ CONTAINS
   !! 
   !! write-interval accordingly to namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_flux(tile, time_d, time_y, itile)
+  SUBROUTINE write_output_flux(tile, options, time_d, time_y, itile)
 
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_memory,           ONLY: t_slm_tile
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_base_constants,        ONLY: dtime
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
@@ -841,13 +902,15 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(in), TARGET  :: tile    !< one tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options         !< model options
     REAL(wp), INTENT(in)                 :: time_d  !< time in days
     INTEGER,  INTENT(in)                 :: time_y  !< time in years; the 1st year of a simulation == year 1 (not zero)
     INTEGER,  INTENT(in)                 :: itile   !< number of current tile
     ! 0.2 Local
+    INTEGER                      :: iblk, ics, ice, nc
     INTEGER                      :: lun             ! locical unit number
     REAL(wp), SAVE               :: dtime_one = 1.0_wp ! just 1.0
-    REAL(wp)                     :: dC13gpp,dC13rg,dC13rm,hlp1
+    REAL(wp)                     :: dC13gpp,dC13rg,dC13rm,hlp1,dC13litterfall,dC13het_resp,dC13leaching
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
@@ -877,6 +940,11 @@ CONTAINS
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(SB_)
 
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+     
     assimi  => assimi__mem 
     veg     => veg__mem 
     rad     => rad__mem
@@ -1028,6 +1096,92 @@ CONTAINS
            END IF
         END IF  ! on/off switch specific to 'special case: fluxnet output'
       CASE('soil')
+           !> 1.0 check output start & end, and write pools if appropriate with output_interval
+           !! 
+           !! 
+           IF( time_y >= base_config%output_start_first_day_year .AND. time_y <= base_config%output_end_last_day_year) THEN
+       
+             !> 1.1 accumulate fluxes across the timesteps of one interval
+             !! 
+             !! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
+             !! for any interval larger timestep multiply by dtime
+             IF(output_interval_flux < 1.0_wp) THEN
+                 dtime_one = 1.0_wp                 ! interval = timestep
+               ELSE
+                 dtime_one = dtime / 1000000.0_wp      ! interval > timestep
+             END IF
+
+             litterfallC_acc(itile) = litterfallC_acc(itile) + (veg%litterfall%leaf%carbon%ptr + & 
+                                      veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr + &
+                                      veg%litterfall%sap_wood%carbon%ptr + veg%litterfall%heart_wood%carbon%ptr + &
+                                      veg%litterfall%labile%carbon%ptr + veg%litterfall%reserve%carbon%ptr + &
+                                      veg%litterfall%fruit%carbon%ptr + veg%litterfall%seed_bed%carbon%ptr) 
+             litterfallC13_acc(itile) = litterfallC13_acc(itile) + (veg%litterfall%leaf%carbon13%ptr + & 
+                                      veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr + &
+                                      veg%litterfall%sap_wood%carbon13%ptr + veg%litterfall%heart_wood%carbon13%ptr + &
+                                      veg%litterfall%labile%carbon13%ptr + veg%litterfall%reserve%carbon13%ptr + &
+                                      veg%litterfall%fruit%carbon13%ptr + veg%litterfall%seed_bed%carbon13%ptr) 
+             litterfallC14_acc(itile) = litterfallC14_acc(itile) + (veg%litterfall%leaf%carbon14%ptr + & 
+                                      veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr + &
+                                      veg%litterfall%sap_wood%carbon14%ptr + veg%litterfall%heart_wood%carbon14%ptr + &
+                                      veg%litterfall%labile%carbon14%ptr + veg%litterfall%reserve%carbon14%ptr + &
+                                      veg%litterfall%fruit%carbon14%ptr + veg%litterfall%seed_bed%carbon14%ptr) 
+             litterfallN_acc(itile) = litterfallN_acc(itile) + (veg%litterfall%leaf%nitrogen%ptr + & 
+                                      veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr + &
+                                      veg%litterfall%sap_wood%nitrogen%ptr + veg%litterfall%heart_wood%nitrogen%ptr + &
+                                      veg%litterfall%labile%nitrogen%ptr + veg%litterfall%reserve%nitrogen%ptr + &
+                                      veg%litterfall%fruit%nitrogen%ptr + veg%litterfall%seed_bed%nitrogen%ptr) 
+             litterfallP_acc(itile) = litterfallP_acc(itile) + (veg%litterfall%leaf%phosphorus%ptr + & 
+                                      veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr + &
+                                      veg%litterfall%sap_wood%phosphorus%ptr + veg%litterfall%heart_wood%phosphorus%ptr + &
+                                      veg%litterfall%labile%phosphorus%ptr + veg%litterfall%reserve%phosphorus%ptr + &
+                                      veg%litterfall%fruit%phosphorus%ptr + veg%litterfall%seed_bed%phosphorus%ptr) 
+             
+             het_respC_acc(itile)   = het_respC_acc(itile)   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
+             het_respC13_acc(itile) = het_respC13_acc(itile) + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
+             het_respC14_acc(itile) = het_respC14_acc(itile) + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
+             net_min_n_acc(itile)   = net_min_n_acc(itile) + SUM(sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
+             net_min_p_acc(itile)   = net_min_p_acc(itile) + SUM(sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
+
+             IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
+                & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
+
+               lun = (100 * itile) + 30
+               write(lun,'(8F12.6)') time_d, litterfallC_acc(itile), het_respC_acc(itile), leachingCorg_acc(itile)
+               lun = lun + 1
+               dC13litterfall = calc_delta_C13(litterfallC_acc(itile),litterfallC13_acc(itile))
+               dC13het_resp = calc_delta_C13(het_respC_acc(itile),het_respC13_acc(itile))
+               dC13leaching = calc_delta_C13(leachingCorg_acc(itile),leachingC13org_acc(itile))
+               write(lun,'(8F12.6)') time_d, dC13litterfall, dC13het_resp, dC13leaching 
+               lun = lun + 1
+               write(lun,'(8F12.6)') time_d, & 
+                   calc_delta_C14(litterfallC_acc(itile),litterfallC14_acc(itile),dC13litterfall), &
+                   calc_delta_C14(het_respC_acc(itile),het_respC14_acc(itile),dC13het_resp), &
+                   calc_delta_C14(leachingCorg_acc(itile),leachingC14org_acc(itile),dC13leaching)
+               lun = lun + 1
+               write(lun,'(8F12.6)') time_d, litterfallN_acc(itile), net_min_n_acc(itile), leachingNorg_acc(itile)
+               lun = lun + 1
+               write(lun,'(8F12.6)') time_d, litterfallP_acc(itile), net_min_p_acc(itile), leachingPorg_acc(itile)
+
+               litterfallC_acc(itile) = 0.0_wp
+               het_respC_acc(itile) = 0.0_wp
+               leachingCorg_acc(itile) = 0.0_wp
+               litterfallC13_acc(itile) = 0.0_wp
+               het_respC13_acc(itile) = 0.0_wp
+               leachingC13org_acc(itile) = 0.0_wp
+               litterfallC14_acc(itile) = 0.0_wp
+               het_respC14_acc(itile) = 0.0_wp
+               leachingC14org_acc(itile) = 0.0_wp
+               litterfallN_acc(itile) = 0.0_wp
+               net_min_n_acc(itile) = 0.0_wp
+               leachingNorg_acc(itile) = 0.0_wp
+               litterfallP_acc(itile) = 0.0_wp
+               net_min_p_acc(itile) = 0.0_wp
+               leachingPorg_acc(itile) = 0.0_wp
+
+             ENDIF
+          ENDIF
+
     END SELECT
 
   END SUBROUTINE write_output_flux
