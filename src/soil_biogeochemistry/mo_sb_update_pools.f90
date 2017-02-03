@@ -45,6 +45,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_sb_constants
     USE mo_sb_jsm_processes
+    USE mo_sb_jsm_transport
  
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -110,7 +111,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_org 
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
-    dsl4jsb_Real3D_onChunk :: omega_litterfall 
+    dsl4jsb_Real3D_onChunk :: particle_fluxrate 
 ! 2 be removed?: pointers to veg assimi *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     TYPE(t_veg_memory), POINTER             :: veg       ! local pointer to soil__mem for SLM usability
@@ -175,7 +176,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org) 
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl) 
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       omega_litterfall) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate) 
 ! 2 be removed  *slmtemp
     sb   => sb__mem
     veg   => veg__mem
@@ -264,10 +265,10 @@ rmm_desorption = 1.0_wp
                                     sb%pool%polymeric_litter,sb%loss%polymeric_litter,sb%formation%dom)
 
          !> 2.4 update litter pools with recent litter fall
-         CALL calc_transfer_litterfall_pools(options,soil_config%nsoil_water,soil_depth_l,bulk_dens_corr_sl, & 
+         CALL calc_transfer_litterfall_pools(options,soil_config%nsoil_water,soil_depth_l, & 
                                              root_fraction_l,veg%litterfall,sb%formation%soluable_litter, & 
-                                             sb%formation%polymeric_litter,sb%formation%woody_litter, & 
-                                             omega_litterfall)
+                                             sb%formation%polymeric_litter,sb%formation%woody_litter)
+                                             
 
          !> 3.0 Microbial fluxes
          !!
@@ -305,7 +306,7 @@ rmm_desorption = 1.0_wp
          !!
          !> 5.1 liquid phase transport
          !!
-         CALL calc_liquid_phase_transport(model%options,soil_config%nsoil_water, & 
+         CALL calc_liquid_phase_transport_wrapper(options,soil_config%nsoil_water, & 
                                           percolation_sl(:,:), soil_depth_l(:,:), &
                                           sb%pool%dom, nh4_solute(:,:), no3_solute(:,:), po4_solute(:,:), & 
                                           nh4_n15_solute(:,:), no3_n15_solute(:,:), & 
@@ -315,7 +316,7 @@ rmm_desorption = 1.0_wp
 
          !> 5.2 transport due to bioturbation
          !!
-         CALL calc_bioturbation_transport(model%options, soil_config%nsoil_water, k_bioturb(:,:), soil_depth_l(:,:), &
+         CALL calc_bioturbation_transport_wrapper(options, soil_config%nsoil_water, k_bioturb(:,:), soil_depth_l(:,:), &
                                           sb%pool%polymeric_litter, sb%pool%dom_assoc, & 
                                           sb%pool%microbial, sb%pool%residue, sb%pool%residue_assoc, & 
                                           nh4_assoc(:,:), po4_assoc(:,:), nh4_n15_assoc(:,:), & 
@@ -323,6 +324,18 @@ rmm_desorption = 1.0_wp
                                           sb%transport%microbial, sb%transport%residue, & 
                                           sb%transport%residue_assoc, transport_nh4_assoc(:,:), & 
                                           transport_po4_assoc(:,:), transport_nh4_n15_assoc(:,:))
+
+         !> 5.3 particle transport
+         !!
+         particle_fluxrate(:,:) = calc_particle_fluxrate(options,soil_config%nsoil_water, & 
+                                          soil_depth_l(:,:), bulk_dens_corr_sl(:,:), & 
+                                          sb%formation,sb%loss) 
+         CALL calc_particle_transport_wrapper(options, soil_config%nsoil_water, particle_fluxrate(:,:), soil_depth_l(:,:), &
+                                          sb%pool, nh4_solute(:,:), nh4_assoc(:,:), no3_solute(:,:), po4_solute(:,:), & 
+                                          po4_assoc(:,:), nh4_n15_solute(:,:), nh4_n15_assoc(:,:), no3_n15_solute(:,:), & 
+                                          sb%transport, transport_nh4_solute(:,:), transport_nh4_assoc(:,:), & 
+                                          transport_no3_solute(:,:), transport_po4_solute(:,:), transport_po4_assoc(:,:), & 
+                                          transport_nh4_n15_solute(:,:), transport_nh4_n15_assoc(:,:), transport_no3_n15_solute(:,:))
 
          !> 6.0 update pools
          !!

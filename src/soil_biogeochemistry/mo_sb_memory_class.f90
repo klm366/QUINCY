@@ -196,8 +196,7 @@ MODULE mo_sb_memory_class
       k_bioturb, &                !< diffusion rate resulting from bioturbation 
       bulk_dens_corr_sl, &         !< organic fraction corrected bulk-density of the soil [kg m-3]
       bulk_soil_carbon_sl, &            !< carbon in the soil kg C m-3?
-      omega_litterfall, & 
-      omega_turnover 
+      particle_fluxrate
 
 !    TYPE(t_slm_struct_sb_element) :: &   ! simple structure for elements: t_jsb_struct
 !                                    test_sb_element   !< test ...
@@ -984,10 +983,7 @@ CONTAINS
       CALL slm_add_var(mem, 'bulk_soil_carbon_sl', mem%bulk_soil_carbon_sl, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'omega_litterfall', mem%omega_litterfall, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL slm_add_var(mem, 'omega_turnover', mem%omega_turnover, &
+      CALL slm_add_var(mem, 'particle_fluxrate', mem%particle_fluxrate, &
             initval_r=0.0_wp) ! initvalue
 
       !> simple TYPE (t_jsb_struct)

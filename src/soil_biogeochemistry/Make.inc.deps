@@ -48,6 +48,7 @@ mo_sb_update_pools.o: \
   mo_sb_constants.o \
   mo_sb_config_class.o \
   mo_sb_jsm_processes.o \
+  mo_sb_jsm_transport.o \
   mo_sb_memory_class.o
 
 mo_sb_jsm_processes.o: \
@@ -57,6 +58,16 @@ mo_sb_jsm_processes.o: \
   mo_base_constants.o \
   mo_shared_constants.o \
   mo_veg_memory_class.o \
+  mo_sb_constants.o \
+  mo_sb_config_class.o \
+  mo_sb_memory_class.o
+
+mo_sb_jsm_transport.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_base_memory.o \
+  mo_base_constants.o \
+  mo_shared_constants.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \
   mo_sb_memory_class.o

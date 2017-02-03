@@ -22,7 +22,6 @@ MODULE mo_sb_jsm_processes
   PRIVATE
   PUBLIC :: calc_transfer_litterfall_pools,calc_litter_turnover, calc_depolymerisation, & 
             calc_microbial_turnover,calc_microbial_growth, &
-            calc_bioturbation_transport, calc_liquid_phase_transport, & 
             calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax_org, &
             calc_om_sorption, & 
             calc_jsm_pool_change, & 
@@ -45,12 +44,11 @@ CONTAINS
   !!
   !! Output: increase in soluable, polymeric, and woody litter
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_transfer_litterfall_pools(options,nsoil,soil_depth_l,bulk_dens_corr_sl,root_fraction_l,litterfall, &
-                                  formation_soluable_litter,formation_polymeric_litter,formation_woody_litter, & 
-                                  omega_litterfall) 
+  SUBROUTINE calc_transfer_litterfall_pools(options,nsoil,soil_depth_l,root_fraction_l,litterfall, &
+                                  formation_soluable_litter,formation_polymeric_litter,formation_woody_litter)
+                                 
 
     USE mo_sb_constants
-    USE mo_shared_constants,      ONLY: molar_mass_C
     USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_pool
 
     IMPLICIT NONE
@@ -59,13 +57,11 @@ CONTAINS
     TYPE(t_jsb_task_options),              INTENT(in)    :: options           !< model options
     INTEGER,                               INTENT(in)    :: nsoil             !< number of soil layers 
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_l      !< depth of soil layer [m]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: bulk_dens_corr_sl !< bulk density of the mineral+organic soil [kg m-3]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: root_fraction_l   !< fraction of roots per layer 
     TYPE(t_slm_struct_veg_pool),           INTENT(in)    :: litterfall        !< litter input from vegetation [mol/m2/time step] 
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_soluable_litter
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_polymeric_litter
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_woody_litter
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(out)   :: omega_litterfall  !< omega term resulting from litterfall 
     ! 0.2 Local 
     INTEGER                                                 :: iblk, ics, ice, nc
     INTEGER                                                 :: isoil
@@ -178,9 +174,12 @@ CONTAINS
     formation_polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) = formation_polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
         (1._wp - hlp1) * litterfall%seed_bed%nitrogen15%ptr / soil_depth_l(:,1)
 
-    !> 2.4 fine roots, still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
-    hlp1 = f_soluable_fine_root 
+    !> 3.0 roots
+    !!
     DO isoil = 1,nsoil
+       !> 3.1 fine roots
+       !! still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
+       hlp1 = f_soluable_fine_root 
        WHERE(soil_depth_l(:,isoil) > eps8)
           formation_soluable_litter%carbon%ptr(ics:ice,isoil,iblk) = formation_soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + &
               hlp1 * root_fraction_l(:,isoil) * litterfall%fine_root%carbon%ptr / soil_depth_l(:,isoil)
@@ -206,13 +205,9 @@ CONTAINS
               hlp1 * root_fraction_l(:,isoil) * litterfall%fine_root%nitrogen15%ptr / soil_depth_l(:,isoil)
           formation_polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = formation_polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + &
               (1._wp - hlp1) * root_fraction_l(:,isoil) * litterfall%fine_root%nitrogen15%ptr / soil_depth_l(:,isoil)
-       ENDWHERE
-    ENDDO
 
-    !> 3.0 woody litter below ground 
-    !!
-    DO isoil = 1,nsoil
-       WHERE(soil_depth_l(:,isoil) > eps8)
+          !> 3.2 woody litter below ground 
+          !!
           formation_woody_litter%carbon%ptr(ics:ice,isoil,iblk) = formation_woody_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
              root_fraction_l(:,isoil) * litterfall%coarse_root%carbon%ptr / soil_depth_l(:,isoil)
           formation_woody_litter%nitrogen%ptr(ics:ice,isoil,iblk) = formation_woody_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
@@ -228,28 +223,7 @@ CONTAINS
        ENDWHERE
     ENDDO
 
-    !> 4.0 calculate omega term for particle flux based on the litter fall rate
-    !! note that this needs to be done before accounting for above ground woody biomass litter fall
-    !! as this is assumed to not be part of the profile!
-    omega_litterfall(:,1) = (formation_soluable_litter%carbon%ptr(ics:ice,1,iblk) + & 
-                             formation_polymeric_litter%carbon%ptr(ics:ice,1,iblk) + & 
-                             formation_woody_litter%carbon%ptr(ics:ice,1,iblk)) * & 
-                            soil_depth_l(:,1)
-    DO isoil = 2,nsoil
-       omega_litterfall(:,isoil) = omega_litterfall(:,isoil-1) + & 
-                                   (formation_soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
-                                    formation_polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
-                                    formation_woody_litter%carbon%ptr(ics:ice,isoil,iblk)) * &
-                                   soil_depth_l(:,isoil)
-   ENDDO  
-   
-   ! bulk-density converted to mol C
-   WHERE(bulk_dens_corr_sl(:,:) > eps8)
-      omega_litterfall(:,:) = omega_litterfall(:,:) / & 
-            (bulk_dens_corr_sl(:,:) * carbon_per_dryweight_SOM * molar_mass_C * 1000._wp) 
-   ENDWHERE
-
-    !> 5.0 woody litter above ground 
+    !> 4.0 woody litter above ground 
     !!
     formation_woody_litter%carbon%ptr(ics:ice,1,iblk) = formation_woody_litter%carbon%ptr(ics:ice,1,iblk) + & 
         (litterfall%sap_wood%carbon%ptr + litterfall%heart_wood%carbon%ptr) / soil_depth_l(:,1)
@@ -733,6 +707,7 @@ CONTAINS
             sb_pool%microbial%carbon%ptr(ics:ice,isoil,iblk) + &
             sb_pool%residue%carbon%ptr(ics:ice,isoil,iblk) + &
             sb_pool%residue_assoc%carbon%ptr(ics:ice,isoil,iblk) + &
+            sb_pool%dom%carbon%ptr(ics:ice,isoil,iblk) + &
             sb_pool%dom_assoc%carbon%ptr(ics:ice,isoil,iblk) + &
             sb_pool%soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + &
             sb_pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk)
@@ -892,343 +867,6 @@ CONTAINS
     loss_residue_assoc%nitrogen15%ptr(ics:ice,:,iblk)      = loss_residue_assoc%nitrogen15%ptr(ics:ice,:,iblk) + hlp1 
 
   END SUBROUTINE calc_om_sorption 
-
-  !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools 
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> Interface to the liquid transport routine, owing to the lack of a suitable operator overload 
-  !!
-  !! Input: leachable pools percolation rate, and soil depth 
-  !!
-  !! Output: vertical transport rate (mol/m2/timestep) 
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_liquid_phase_transport(options,nsoil,percolation_sl,soil_depth_l, &
-                                         pool_dom, nh4_solute, no3_solute, po4_solute, nh4_n15_solute, no3_n15_solute, & 
-                                         transport_dom, transport_nh4_solute, transport_no3_solute, & 
-                                         transport_po4_solute, transport_nh4_n15_solute, transport_no3_n15_solute)
-    IMPLICIT NONE
-
-    ! 0.1 InOut
-    TYPE(t_jsb_task_options),              INTENT(in)    :: options
-    INTEGER,                               INTENT(in)    :: nsoil
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: percolation_sl         !< fraction of pool transported up or down per second
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_l           !< depth of each soil layer [m] 
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_dom               !< DOM pool [mol/m3]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: nh4_solute             !< NH4 pool [mol/m3]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: no3_solute             !< NO3 pool [mol/m3]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: po4_solute             !< PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: nh4_n15_solute         !< N15H4 pool [mol/m3]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: no3_n15_solute         !< N15O3 pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: transport_dom          !< rate of DOM transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_nh4_solute   !< rate of NH4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_no3_solute   !< rate of NO3 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_po4_solute   !< rate of PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_nh4_n15_solute !< rate of N15H4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_no3_n15_solute !< rate of N15O3 transport [mol/m3/timestep]
-    ! 0.2 Local
-    INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_phase_transport'
-
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
-
-    !> 1.0 transport of DOM
-    !!
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        pool_dom%carbon%ptr(ics:ice,:,iblk),transport_dom%carbon%ptr(ics:ice,:,iblk)) 
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        pool_dom%nitrogen%ptr(ics:ice,:,iblk),transport_dom%nitrogen%ptr(ics:ice,:,iblk)) 
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        pool_dom%phosphorus%ptr(ics:ice,:,iblk),transport_dom%phosphorus%ptr(ics:ice,:,iblk)) 
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        pool_dom%carbon13%ptr(ics:ice,:,iblk),transport_dom%carbon13%ptr(ics:ice,:,iblk)) 
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        pool_dom%carbon14%ptr(ics:ice,:,iblk),transport_dom%carbon14%ptr(ics:ice,:,iblk)) 
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        pool_dom%nitrogen15%ptr(ics:ice,:,iblk),transport_dom%nitrogen15%ptr(ics:ice,:,iblk)) 
-
-    !> 2.0 transport of other solutes (NH4, NO3, PO4, and their isotopes)
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        nh4_solute(:,:),transport_nh4_solute(:,:)) 
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        no3_solute(:,:),transport_no3_solute(:,:)) 
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        po4_solute(:,:),transport_po4_solute(:,:)) 
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        nh4_n15_solute(:,:),transport_nh4_n15_solute(:,:)) 
-    CALL calc_liquid_phase_transport_1D(options, nsoil, percolation_sl(:,:), soil_depth_l(:,:), &
-                                        no3_n15_solute(:,:),transport_no3_n15_solute(:,:)) 
-
-  END SUBROUTINE calc_liquid_phase_transport
-
-  !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from calc_liquid_phase_transport 
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> Advective Transport in the vertical dimension 
-  !! corresponds to the water flux transport term in Ahrens et al. 2015, eq 5 
-  !!
-  !! Input: pool to be transported, percolation rate, and soil depth 
-  !!
-  !! Output: vertical transport rate (mol/m2/s) 
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_liquid_phase_transport_1D(options,nsoil,percolation_sl,soil_depth_l,pool,transport)
-
-    IMPLICIT NONE
-
-    ! 0.1 InOut
-    TYPE(t_jsb_task_options),              INTENT(in)    :: options
-    INTEGER,                               INTENT(in)    :: nsoil
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: percolation_sl         !< fraction of pool transported up or down per second
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_l           !< depth of each soil layer [m] 
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: pool                   !< current state of pool to be transported
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport              !< transport between layers per timestep 
-    ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc) :: hlp1 
-    INTEGER                         :: isoil
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_vertical_transport_1D'
-
-    !> 1.0 advective transport in the vertical axis of the soil (i.e. down)
-    !! I can do 1,n-1 here, because by definition, there cannot be any upward transport from the uppermost layer
-    DO isoil = 1,nsoil-1
-       WHERE(percolation_sl(:,isoil)>0.0_wp)
-          hlp1 = percolation_sl(:,isoil) * dtime/1000._wp * pool(:,isoil) * soil_depth_l(:,isoil)
-!! BLARPP for now no upward transport - need to properly think about this in update_soil_physics
-       ELSEWHERE
-          hlp1 = 0.0_wp ! percolation_sl(:,isoil) * dtime/1000._wp * pool(:,isoil+1) * soil_depth_l(:,isoil+1)
-       ENDWHERE
-       transport(:,isoil)   = transport(:,isoil)   - hlp1 / soil_depth_l(:,isoil)
-       transport(:,isoil+1) = transport(:,isoil+1) + hlp1 / soil_depth_l(:,isoil+1)
-       
-   ENDDO
-
-   !> 2.0 lower boundary condition,
-   !!  based on the assumption that there is no upward flux, and that all other 
-   !!  material is lost
-   WHERE(percolation_sl(:,nsoil)>0.0_wp)
-      hlp1 = percolation_sl(:,nsoil) * dtime/1000._wp * pool(:,nsoil) * soil_depth_l(:,nsoil)
-   ELSEWHERE
-      hlp1 = 0.0_wp 
-   ENDWHERE
-   transport(:,nsoil) = transport(:,nsoil) - hlp1 / soil_depth_l(:,nsoil)
-
-  END SUBROUTINE calc_liquid_phase_transport_1D
-
-  !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools 
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> calculates matter transport by bioturbation, by calling calc_bioturbation_transport_1D
-  !! partly necessary because of a missing operator overload...
-  !!
-  !! Input:  pools subject to bioturbation, percolation rate, and soil depth 
-  !!
-  !! Output: vertical transport rate (mol/m2/timestep) 
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_bioturbation_transport(options, nsoil, k_bioturb, soil_depth_l, &
-                                          pool_polymeric_litter, pool_dom_assoc, & 
-                                          pool_microbial, pool_residue, pool_residue_assoc, & 
-                                          nh4_assoc, po4_assoc, nh4_n15_assoc, & 
-                                          transport_polymeric_litter, transport_dom_assoc, & 
-                                          transport_microbial, transport_residue, & 
-                                          transport_residue_assoc, transport_nh4_assoc, & 
-                                          transport_po4_assoc, transport_nh4_n15_assoc)
-
-    IMPLICIT NONE
-
-    ! 0.1 InOut
-    TYPE(t_jsb_task_options),              INTENT(in)    :: options
-    INTEGER,                               INTENT(in)    :: nsoil
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: k_bioturb              !< diffusion factor for bioturbation 
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_l           !< depth of each soil layer [m] 
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_polymeric_litter  !< polymeric litter pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_dom_assoc         !< minerally associated DOM pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_microbial         !< microbial pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_residue           !< microbial residue pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_residue_assoc     !< minerally associated microbial residue pool [mol/m3]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: nh4_assoc              !< NH4 pool [mol/m3]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: po4_assoc              !< PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: nh4_n15_assoc          !< N15H4 pool [mol/m3]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: transport_polymeric_litter !< rate of polymeric litter transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: transport_dom_assoc        !< rate of minerally associated DOM transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: transport_microbial        !< rate of microbial transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: transport_residue          !< rate of microbial residue transport [mol/m3/timestep]
-    TYPE(t_slm_struct_sb_element),         INTENT(inout) :: transport_residue_assoc    !< rate of minerally associated microbial residue transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_nh4_assoc        !< rate of NH4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_po4_assoc        !< rate of PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_nh4_n15_assoc    !< rate of N15H4 transport [mol/m3/timestep]
-    ! 0.2 Local
-    INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport'
-
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
-
-    !> 1.0 transport of organic pools
-    !! 
-    !> 1.1 polymeric litter
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_polymeric_litter%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%carbon%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_polymeric_litter%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%nitrogen%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_polymeric_litter%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%phosphorus%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_polymeric_litter%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%carbon13%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_polymeric_litter%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%carbon14%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk))
-
-    !> 1.2 minerally associated DOM 
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_dom_assoc%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%carbon%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_dom_assoc%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%nitrogen%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_dom_assoc%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%phosphorus%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_dom_assoc%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%carbon13%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_dom_assoc%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%carbon14%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_dom_assoc%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_dom_assoc%nitrogen15%ptr(ics:ice,:,iblk))
-
-    !> 1.3 microbial biomass 
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_microbial%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%carbon%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_microbial%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%nitrogen%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_microbial%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%phosphorus%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_microbial%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%carbon13%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_microbial%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%carbon14%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_microbial%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_microbial%nitrogen15%ptr(ics:ice,:,iblk))
-
-    !> 1.4 microbial residue 
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_residue%carbon%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_residue%nitrogen%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_residue%phosphorus%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_residue%carbon13%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_residue%carbon14%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_residue%nitrogen15%ptr(ics:ice,:,iblk))
-
-    !> 1.5 minerally associated microbial residue 
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue_assoc%carbon%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%carbon%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue_assoc%nitrogen%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%nitrogen%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue_assoc%phosphorus%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%phosphorus%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue_assoc%carbon13%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%carbon13%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue_assoc%carbon14%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%carbon14%ptr(ics:ice,:,iblk))
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        pool_residue_assoc%nitrogen15%ptr(ics:ice,:,iblk), &
-                                        transport_residue_assoc%nitrogen15%ptr(ics:ice,:,iblk))
-
-    !> 2.0 inorganic pools 
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        nh4_assoc,transport_nh4_assoc) 
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        po4_assoc,transport_po4_assoc) 
-    CALL calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l, & 
-                                        nh4_n15_assoc,transport_nh4_n15_assoc) 
-
-
-  END SUBROUTINE calc_bioturbation_transport
-
-  !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from calc_bioturbation_transport 
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> calculates matter transport by bioturbation, by calling calc_bioturbation_transport_1D
-  !! corresponds to the diffusion via bioturbation term in Ahrens et al. 2015, eq. 4, 6 and 7
-  !!
-  !! Input:  pools subject to bioturbation, percolation rate, and soil depth 
-  !!
-  !! Output: vertical transport rate (mol/m2/timestep) 
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_bioturbation_transport_1D(options,nsoil,k_bioturb,soil_depth_l,pool,transport)
-
-    IMPLICIT NONE
-
-    ! 0.1 InOut
-    TYPE(t_jsb_task_options),              INTENT(in)    :: options
-    INTEGER,                               INTENT(in)    :: nsoil
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: k_bioturb              !< diffusion factor for bioturbation 
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_l           !< depth of each soil layer [m] 
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: pool                   !< current state of pool to be transported
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport              !< transport between layers per timestep 
-    ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc) :: hlp1,hlp2 
-    INTEGER                         :: isoil
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport_1D'
-
-    !> 1.0 diffusion transport in the vertical axis of the soil (i.e. down)
-    !! I can do 1,n-1 here, because by definition, there cannot be any upward transport from the uppermost layer
-    !! I don't need nsoil here, because the assumption is made that the gradient at the bottom of the
-    !! soil column is zero
-    DO isoil = 1,nsoil-1
-
-       ! distance between the centres of the soil layers
-       hlp1 = (soil_depth_l(:,isoil)/2.0_wp + soil_depth_l(:,isoil+1)/2.0_wp)
-
-       WHERE(hlp1 > eps8)  
-          hlp2 = k_bioturb(:,isoil) * dtime * (pool(:,isoil) - pool(:,isoil+1)) / hlp1 
-       ELSEWHERE
-          hlp2 = 0.0_wp
-       ENDWHERE
-       transport(:,isoil)   = transport(:,isoil)   - hlp2 / soil_depth_l(:,isoil)
-       transport(:,isoil+1) = transport(:,isoil+1) + hlp2 / soil_depth_l(:,isoil+1)
-
-   ENDDO
-
-  END SUBROUTINE calc_bioturbation_transport_1D
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools
