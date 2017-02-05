@@ -101,6 +101,7 @@ help_text = """
         -d, --idir=DIR    directory with source files
         -t, --odir=DIR    target directory for output files (must exist)
         -k, --keep-dirs   keep directory tree structure of files in input directory (if -d and -t given)
+        -p, --pp-add=STR  add string STR before .suffix in processed files (pp = pre-processed)
     """
 
 def get_input_files(root):
@@ -111,14 +112,16 @@ def get_input_files(root):
             else:
                 yield os.path.join(dir.replace('./',''), file)
 
-def process_file(inputfile, outputfile, verbose=False):
+def process_file(inputfile, outputfile, verbose=False, cwd=None):
     with open(inputfile, 'r') as infile:
-        mtime=os.lstat(inputfile).st_mtime
         with (open(outputfile, 'w') if outputfile != '' else sys.stdout) as outfile:
             outfile.write("!\n! This file was automatically generated from:\n")
-            outfile.write("!         " + inputfile + "\n!\n")
+            outfile.write("!         " + os.path.realpath(os.path.abspath(inputfile)) + "\n!\n")
             if verbose:
-                print inputfile + ' => ' + outputfile
+                if cwd:
+                    print '   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd)
+                else:
+                    print '   Pre-processing: ' + os.path.realpath(inputfile) + ' => ' + outputfile
             for line in infile:
                 if outputfile == '':
                     outfile.write('! ' + line)
@@ -133,7 +136,6 @@ def process_file(inputfile, outputfile, verbose=False):
                             print 'ERROR in', inputfile, ': dsl4jsb macro not found:', match.group(1).lower()
                             sys.exit()
                 outfile.write(line)
-        os.utime(outputfile,(mtime,mtime))
 
 def main(argv):
     inputfile = ''
@@ -142,8 +144,9 @@ def main(argv):
     outputdir = ''
     verbose = False
     keep = False
+    pp_add = None
     try:
-        opts, args = getopt.getopt(argv,"hvki:o:d:t:",["ifile=","ofile=","idir=","odir="])
+        opts, args = getopt.getopt(argv,"hvki:o:d:t:p:",["ifile=","ofile=","idir=","odir=","pp-add="])
     except getopt.GetoptError:
         print help_text
         sys.exit(2)
@@ -155,6 +158,8 @@ def main(argv):
             verbose = True
         elif opt in ("-k", "--keep-dirs"):
             keep = True
+        elif opt in ("-p", "--pp-add"):
+            pp_add = arg
         elif opt in ("-i", "--ifile"):
             inputfile = arg
         elif opt in ("-o", "--ofile"):
@@ -176,25 +181,37 @@ def main(argv):
         inputfile = ''
         outputfile = ''
     if inputfile != '' and outputfile == '' and outputdir != '':
-        outputfile = os.path.join(outputdir, os.path.basename(inputfile))
+        if pp_add:
+            root,ext = os.path.splitext(os.path.basename(inputfile))
+            outputfile = os.path.join(outputdir, root + pp_add + ext)
+        else:
+            outputfile = os.path.join(outputdir, os.path.basename(inputfile))
     if inputfile == '' and inputdir == '':
         inputfile = 'test.f90'
 
+    cwd = os.getcwd()    # Save current directory
     if inputdir != '':
-        cwd = os.getcwd()    # Save current directory
         os.chdir(inputdir)   # Change to input directory in order to get relative directory names
         for ifile in get_input_files('.'):     # gets input files including (relative to inputdir) directory name
             if keep:
-                ofile = os.path.join(outputdir, ifile)
+                if pp_add:
+                    root,ext = os.path.splitext(ifile)
+                    ofile = os.path.join(outputdir, root + pp_add + ext)
+                else:
+                    ofile = os.path.join(outputdir, ifile)
                 dir = os.path.dirname(ofile)
                 if not os.path.exists(dir):
                     os.makedirs(dir)
             else:
-                ofile = os.path.join(outputdir, os.path.basename(ifile))
-            process_file(os.path.join(inputdir, ifile), ofile, verbose)
+                if pp_add:
+                    root,ext = os.path.splitext(os.path.basename(ifile))
+                    ofile = os.path.join(outputdir, root + pp_add + ext)
+                else:
+                    ofile = os.path.join(outputdir, os.path.basename(ifile))
+            process_file(os.path.join(inputdir, ifile), ofile, verbose, cwd)
         os.chdir(cwd)
     else:
-        process_file(inputfile, outputfile, verbose)
+        process_file(inputfile, outputfile, verbose, cwd)
 
     return 0
 
