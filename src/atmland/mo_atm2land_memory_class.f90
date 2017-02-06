@@ -16,7 +16,7 @@ MODULE mo_atm2land_memory_class
   USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later
 
@@ -36,45 +36,46 @@ MODULE mo_atm2land_memory_class
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
   TYPE, EXTENDS(t_jsb_memory) :: t_atm2land_memory
-    TYPE(t_jsb_var_real1d) :: &
-!    TYPE(t_jsb_var_real2d) :: &  ! jsbach4
-      t_air              , &
-      q_air              , &
-      rain               , &
-      snow               , &
-      wind_air           , &
-      wind_10m           , &
-      lw_srf_down        , &
-      swvis_srf_down     , &
-      swnir_srf_down     , &
-      swpar_srf_down     , &
-      swpar_fdiffuse     , &  ! jsbach4: frac_par_diffuse
-      press_srf          , &
-      drag_srf           , &
-      t_acoef            , &
-      t_bcoef            , &
-      q_acoef            , &
-      q_bcoef            , &
-      pch                , &
-      cos_zenith_angle   , &
-!      CO2_air            , &   ! jsbach4 variables, replaced by co2_mixing_ratio  _c13  _c14
-!      CO2_air_mol        , &   !
-      co2_mixing_ratio     , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-      co2_mixing_ratio_C13 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-      co2_mixing_ratio_C14 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-      ga                   , &  !> @todo ga in t_atm2land_memory: is a variable from SLM, which may be moved elsewhere
-      ! For lakes:
-      albedo_lwtr        , &
-      drag_wtr           , &
-      drag_ice           , &
-      t_acoef_wtr        , &
-      t_bcoef_wtr        , &
-      q_acoef_wtr        , &
-      q_bcoef_wtr        , &
-      t_acoef_ice        , &
-      t_bcoef_ice        , &
-      q_acoef_ice        , &
-      q_bcoef_ice
+
+    TYPE(t_jsb_var_real2d) :: &
+                              t_air              , &
+                              q_air              , &
+                              rain               , &
+                              snow               , &
+                              wind_air           , &
+                              wind_10m           , &
+                              lw_srf_down        , &
+                              swvis_srf_down     , &
+                              swnir_srf_down     , &
+                              swpar_srf_down     , &
+                              swpar_fdiffuse     , &  ! jsbach4: frac_par_diffuse
+                              press_srf          , &
+                              drag_srf           , &
+                              t_acoef            , &
+                              t_bcoef            , &
+                              q_acoef            , &
+                              q_bcoef            , &
+                              pch                , &
+                              cos_zenith_angle   , &
+!                              CO2_air            , &   ! jsbach4 variables, replaced by co2_mixing_ratio  _c13  _c14
+!                              CO2_air_mol        , &   !
+                              co2_mixing_ratio     , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
+                              co2_mixing_ratio_C13 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
+                              co2_mixing_ratio_C14 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
+                              ga                   , &  !> @todo ga in t_atm2land_memory: is a variable from SLM, which may be moved elsewhere
+                              ! For lakes:
+                              albedo_lwtr        , &
+                              drag_wtr           , &
+                              drag_ice           , &
+                              t_acoef_wtr        , &
+                              t_bcoef_wtr        , &
+                              q_acoef_wtr        , &
+                              q_bcoef_wtr        , &
+                              t_acoef_ice        , &
+                              t_bcoef_ice        , &
+                              q_acoef_ice        , &
+                              q_bcoef_ice
+
   CONTAINS
     PROCEDURE :: Init => Init_atm2land_memory
   END TYPE t_atm2land_memory

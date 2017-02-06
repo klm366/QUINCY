@@ -251,7 +251,7 @@ CONTAINS
 
     ! differentiation between processes that already have a proper 2/3D variable implementation or not
     SELECT CASE(struct%owner_proc_id)
-      CASE(5, 11, 12) ! soil, pheno, sb
+      CASE(1, 2, 5, 11, 12) ! atm2land land2atm soil, pheno, sb
         levels = ics
         levele = ice
       CASE(7, 9, 10) ! veg, rad, assimi
@@ -262,7 +262,7 @@ CONTAINS
     END SELECT
 
     var%name = TRIM(name)
-    var%owner_proc_id = struct%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    var%owner_proc_id = struct%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_var = struct%no_of_vars + 1
     IF (pos_of_var > struct%max_no_of_vars) THEN
@@ -428,7 +428,7 @@ CONTAINS
 
     ! differentiation between processes that already have a proper 2/3D variable implementation or not
     SELECT CASE(mem%owner_proc_id)
-      CASE(5, 11, 12) ! soil, pheno, sb
+      CASE(1, 2, 5, 11, 12) ! atm2land land2atm soil, pheno, sb
         levels = ics
         levele = ice
       CASE(7, 9, 10) ! veg, rad, assimi
@@ -439,7 +439,7 @@ CONTAINS
     END SELECT
 
     var%name = TRIM(name)
-    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN

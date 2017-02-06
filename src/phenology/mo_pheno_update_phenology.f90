@@ -68,7 +68,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     ! Declare pointers to variables in memory
-!    dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk    :: t_air
     dsl4jsb_Logical2D_onChunk :: growing_season
     dsl4jsb_Real2D_onChunk    :: gdd
     dsl4jsb_Real2D_onChunk    :: nd_dormance
@@ -100,6 +100,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
     dsl4jsb_Get_var2D_onChunk(PHENO_, gdd)
     dsl4jsb_Get_var2D_onChunk(PHENO_, nd_dormance)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
 
 ! 2 be removed  *slmtemp
     veg     => veg__mem
@@ -114,7 +116,7 @@ CONTAINS
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
     !! 
     CALL calc_phenology(lctlib                                  , &
-                        atm2land__mem%t_air%ptr                 , &
+                        t_air                                   , &
                         assimi%beta_soil_gs_tphen_mavg%ptr      , &
                         veg%t_air_tphen_mavg%ptr                , &
                         veg%t_air_week_mavg%ptr                 , &

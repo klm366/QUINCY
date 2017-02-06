@@ -30,11 +30,13 @@ CONTAINS
     USE mo_atmland_constants, ONLY: declination,angle_at_GMT,reference_longitude_GMT
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 Input
     REAL(wp), INTENT(in) :: latitude                    !< latitude in degree
     REAL(wp), INTENT(in) :: longitude                   !< longitude in degree
     REAL(wp), INTENT(in) :: time                        !< days since 1. January
     REAL(wp)             :: cos_zenith_angle            !< cosine of solar zenith angle 
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: sin_delta                   ! sine of declination 
     REAL(wp) :: cos_delta                   ! cosine of declination 
@@ -42,6 +44,12 @@ CONTAINS
     REAL(wp) :: hour_angle                  ! solar hour angle
     REAL(wp) :: angle_offset                ! offset for solar angle
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_solar_angle'
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 calculate the solar hour angle in radians
     !! 
@@ -74,14 +82,22 @@ CONTAINS
     USE mo_atmland_constants, ONLY : k1_fdiff,k2_fdiff,k3_fdiff,k4_fdiff,max_transmission_fdiff, & 
                                      min_sw_fdiffuse, min_cos_zenith_angle
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp) :: sw_srf_down           !< surface downward shortwave radiation flux
     REAL(wp) :: sw_toa_down           !< top-of-atmoshere downward shortwave radiation flux
     REAL(wp) :: cos_zenith_angle      !< cosine of solar zenith angle
     REAL(wp) :: sw_fdiffuse           !< fraction of surface downward radiation flux that is diffuse
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: transmission          ! fraction of radiation reaching surface
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sw_fdiffuse'
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     IF(cos_zenith_angle >= min_cos_zenith_angle) THEN  ! only if zenith angle is larger then min_cos_zenith_angle
 
@@ -114,24 +130,32 @@ CONTAINS
     USE mo_shared_constants,        ONLY: Tzero
 
     IMPLICIT NONE 
-     ! 0.1 InOut
-     REAL(wp), INTENT(in) :: temp            !< temperature (K)
-     REAL(wp), INTENT(in) :: press_srf       !< atmospheric pressure (Pa) 
-     REAL(wp)             :: q_sat           !< saturating specific humidity (g/g) 
-     ! 0.2 Local
-     REAL(wp) :: esat            ! saturating vapour pressure (Pa)
-     REAL(wp) :: a               ! Pa
-     REAL(wp) :: b               ! einheitenlos
-     REAL(wp) :: c               ! °C
-     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_spec_humidity_sat'
+    ! ---------------------------
+    ! 0.1 InOut
+    REAL(wp), INTENT(in) :: temp            !< temperature (K)
+    REAL(wp), INTENT(in) :: press_srf       !< atmospheric pressure (Pa) 
+    REAL(wp)             :: q_sat           !< saturating specific humidity (g/g) 
+    ! ---------------------------
+    ! 0.2 Local
+    REAL(wp) :: esat            ! saturating vapour pressure (Pa)
+    REAL(wp) :: a               ! Pa
+    REAL(wp) :: b               ! no unit / einheitenlos
+    REAL(wp) :: c               ! °C
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_spec_humidity_sat'
 
-     a = 611.0_wp    
-     b = 17.502_wp  
-     c = 240.97_wp    
-     ! calculating saturating vapour pressure [Pa] (Campbell & Norman)
-     esat = a * exp(b * (temp - Tzero)/(temp - Tzero + c))
-     ! conversion to saturating specific humidity [kg kg-1]
-     q_sat = eps_vpd * esat/(press_srf - (1.0_wp - eps_vpd) * esat)
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
+    a = 611.0_wp    
+    b = 17.502_wp  
+    c = 240.97_wp    
+    ! calculating saturating vapour pressure [Pa] (Campbell & Norman)
+    esat = a * exp(b * (temp - Tzero)/(temp - Tzero + c))
+    ! conversion to saturating specific humidity [kg kg-1]
+    q_sat = eps_vpd * esat/(press_srf - (1.0_wp - eps_vpd) * esat)
 
   END FUNCTION calc_spec_humidity_sat
 
@@ -148,10 +172,12 @@ CONTAINS
     USE mo_atmland_constants,     ONLY : obliquity, perihel, eccentricity, solar_constant
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp),INTENT(in) :: time              !< days since January 1st
     REAL(wp),INTENT(out) :: declination      !< solar declination 
     REAL(wp),INTENT(out) :: sw_toa_down      !< shortwave downward flux at the top of the atmosphere (W m-2) 
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: so                           ! sine of obliquity
     REAL(wp) :: sd,cd                        ! sine and cosine of declination
@@ -160,6 +186,11 @@ CONTAINS
     REAL(wp) :: ranm,rlam,xlam,dlamm,ranv    ! helper variables for anomaly calculation of eath orbit
     REAL(wp) :: dist                         ! distance sun-Earth for potential radiation calculation 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_orbital_parameters'
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
 
 
     !> 1.0 calculate orbital parameters

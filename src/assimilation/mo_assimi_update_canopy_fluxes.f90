@@ -13,7 +13,7 @@ MODULE mo_assimi_update_canopy_fluxes
 #include "dsl_jsbach.inc"
 
   USE mo_kind,                  ONLY: wp, eps4, eps8
-  USE mo_base_memory,           ONLY: t_slm_tile, t_model
+  USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   USE mo_assimi_constants,      ONLY: ic3phot, ic4phot, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
@@ -46,7 +46,7 @@ CONTAINS
   !! integrates: \n
   !! CALL calc_photosynthesis \n
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_canopy_fluxes(tile)
+  SUBROUTINE update_canopy_fluxes(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_shared_constants
@@ -57,32 +57,35 @@ CONTAINS
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),       INTENT(inout), TARGET :: tile      !< one tile  =>  *slmdev may remove the TARGET argument when soil  => tile%soil is not needed anymore 
+!    TYPE(t_slm_tile),       INTENT(inout), TARGET :: tile      !< one tile  =>  *slmdev may remove the TARGET argument when soil  => tile%soil is not needed anymore 
+    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< one tile
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER        :: model
-    TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                                :: icanopy     ! for looping across ncanopy layers
-    REAL(wp)                               :: hlp1       ! dummy variable 
+    TYPE(t_model),          POINTER       :: model
+    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    INTEGER                               :: icanopy     ! for looping across ncanopy layers
+    REAL(wp)                              :: hlp1       ! dummy variable 
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)     !   TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(ASSIMI_)       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem
     dsl4jsb_Def_memory(VEG_)          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),      POINTER :: soil__mem
-    TYPE(t_assimi_memory), POINTER   :: assimi                 ! local pointer to assimi__mem for SLM usability
-    TYPE(t_veg_memory), POINTER      :: veg                    ! local pointer to veg__mem for SLM usability
-    TYPE(t_rad_memory),       POINTER   :: rad        ! local pointer to rad__mem for SLM usability
-    TYPE(t_soil_memory),      POINTER   :: soil       ! local pointer to soil__mem for SLM usability
-    REAL(wp), POINTER :: t_air
-    REAL(wp), POINTER :: q_air
-    REAL(wp), POINTER :: press_srf
-    REAL(wp), POINTER :: ga
-    REAL(wp), POINTER :: co2_mixing_ratio
-    REAL(wp), POINTER :: co2_mixing_ratio_C13
-    REAL(wp), POINTER :: co2_mixing_ratio_C14
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: press_srf
+    dsl4jsb_Real2D_onChunk :: ga
+    dsl4jsb_Real2D_onChunk :: co2_mixing_ratio
+    dsl4jsb_Real2D_onChunk :: co2_mixing_ratio_C13
+    dsl4jsb_Real2D_onChunk :: co2_mixing_ratio_C14
 
     REAL(wp), POINTER :: gross_assimilation, gross_assimilation_cl
     REAL(wp), POINTER :: gross_assimilation_C13, gross_assimilation_C14
@@ -92,25 +95,43 @@ CONTAINS
     REAL(wp), POINTER :: co2_conc_leaf, co2_conc_leaf_cl
     REAL(wp), POINTER :: beta_air, beta_soil_ps, beta_soil_gs
     REAL(wp), POINTER :: t_jmax_opt 
-
+! 2 be removed: pointers to veg assimi *slmtemp
+    TYPE(t_assimi_memory), POINTER   :: assimi                 ! local pointer to assimi__mem for SLM usability
+    TYPE(t_veg_memory), POINTER      :: veg                    ! local pointer to veg__mem for SLM usability
+    TYPE(t_rad_memory),       POINTER   :: rad        ! local pointer to rad__mem for SLM usability
+    TYPE(t_soil_memory),      POINTER   :: soil       ! local pointer to soil__mem for SLM usability
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(PHENO_)
+    ! Get process memories
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SOIL_)
-
-    veg     => veg__mem 
-    rad     => rad__mem
-    soil    => soil__mem
-
-    t_air                => atm2land__mem%t_air%ptr
-    q_air                => atm2land__mem%q_air%ptr
-    press_srf            => atm2land__mem%press_srf%ptr
-    ga                   => atm2land__mem%ga%ptr
-    co2_mixing_ratio     => atm2land__mem%co2_mixing_ratio%ptr
-    co2_mixing_ratio_C13 => atm2land__mem%co2_mixing_ratio_C13%ptr
-    co2_mixing_ratio_C14 => atm2land__mem%co2_mixing_ratio_C14%ptr
-
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id) 
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_air)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, ga)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, co2_mixing_ratio)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, co2_mixing_ratio_C13)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, co2_mixing_ratio_C14)
+    ! ---------------------------
+    !! assimi memory
     gross_assimilation => assimi__mem%gross_assimilation%ptr
     gross_assimilation_C13 => assimi__mem%gross_assimilation_C13%ptr
     gross_assimilation_C14 => assimi__mem%gross_assimilation_C14%ptr
@@ -129,21 +150,29 @@ CONTAINS
     beta_soil_ps => assimi__mem%beta_soil_ps%ptr
     t_jmax_opt => assimi__mem%t_jmax_opt%ptr
 
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+! 2 be removed  *slmtemp
+    veg     => veg__mem 
+    rad     => rad__mem
+    soil    => soil__mem
 
-   ! set output to zero  
-   gross_assimilation     = 0.0_wp
-   gross_assimilation_C13 = 0.0_wp
-   gross_assimilation_C14 = 0.0_wp
-   net_assimilation       = 0.0_wp
-   maint_respiration_leaf        = 0.0_wp
-   canopy_cond            = 0.0_wp
-   co2_conc_leaf          = 0.0_wp
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
+    ! set output to zero  
+    gross_assimilation     = 0.0_wp
+    gross_assimilation_C13 = 0.0_wp
+    gross_assimilation_C14 = 0.0_wp
+    net_assimilation       = 0.0_wp
+    maint_respiration_leaf = 0.0_wp
+    canopy_cond            = 0.0_wp
+    co2_conc_leaf          = 0.0_wp
 
    !> 1.0 calculate the moisture scaling factor for photosynthesis
    !! 
-   beta_air = calc_atm_moisture_stress(t_air, q_air, press_srf) 
+   beta_air = calc_atm_moisture_stress(t_air(1), q_air(1), press_srf(1)) 
    beta_soil_ps = calc_soil_moisture_stress(soil%w_soil_root_theta%ptr(1,1), &
                                             lctlib%lambda_soil_ps   , &
                                             lctlib%weibull_k_soil_ps)
@@ -156,10 +185,10 @@ CONTAINS
    DO icanopy = 1,assimi_config%ncanopy
       IF(veg%lai_cl%ptr(icanopy,1) > eps8)THEN
 
-        CALL calc_photosynthesis(t_air                            , & ! in
-                                 press_srf                        , &
-                                 co2_mixing_ratio                 , &
-                                 ga                               , &
+        CALL calc_photosynthesis(t_air(1)                            , & ! in
+                                 press_srf(1)                        , &
+                                 co2_mixing_ratio(1)                 , &
+                                 ga(1)                               , &
                                  veg%t_air_tacclim_mavg%ptr       , &
                                  rad%ppfd_sunlit_cl%ptr(icanopy,1), &
                                  rad%ppfd_shaded_cl%ptr(icanopy,1), &
@@ -189,18 +218,18 @@ CONTAINS
 
         IF(gross_assimilation_cl > eps8) THEN
            hlp1          = discrimination_ps(co2_conc_leaf_cl     , &
-                                             co2_mixing_ratio   , &
+                                             co2_mixing_ratio(1)   , &
                                              'C13'              , &
                                              lctlib%ps_pathway)
-           gross_assimilation_C13 = gross_assimilation_C13  + gross_assimilation_cl * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
-                                                                                                   co2_mixing_ratio_C13 , &
+           gross_assimilation_C13 = gross_assimilation_C13  + gross_assimilation_cl * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio(1)  , &
+                                                                                                   co2_mixing_ratio_C13(1) , &
                                                                                                    hlp1)
            hlp1          = discrimination_ps(co2_conc_leaf_cl     , &
-                                             co2_mixing_ratio   , &
+                                             co2_mixing_ratio(1)   , &
                                              'C14'              , &
                                              lctlib%ps_pathway)
-           gross_assimilation_C14 = gross_assimilation_C14 + gross_assimilation_cl * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio  , &
-                                                                                                   co2_mixing_ratio_C14 , & 
+           gross_assimilation_C14 = gross_assimilation_C14 + gross_assimilation_cl * veg%lai_cl%ptr(icanopy,1) * calc_fractionation(co2_mixing_ratio(1)  , &
+                                                                                                   co2_mixing_ratio_C14(1) , & 
                                                                                                    hlp1                 , &
                                                                                                    scale_correction_C14)
         ENDIF
@@ -221,7 +250,7 @@ CONTAINS
 
   ! uptake optimum temperature for electron transport 
   IF(assimi_config%flag_t_jmax_acclimation) THEN 
-     t_jmax_opt = t_jmax_offset + t_jmax_slope * ( t_air - TZero ) 
+     t_jmax_opt = t_jmax_offset + t_jmax_slope * ( t_air(1) - TZero ) 
      t_jmax_opt = MIN(MAX(t_jmax_opt,t_jmax_opt_min),t_jmax_opt_max)
   ELSE 
      t_jmax_opt = lctlib%t_jmax_opt
@@ -568,7 +597,7 @@ CONTAINS
   !! 
   !! @todo (calc_soil_moisture_stress) this should account for rooting and soil moisture profile in the long-term
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_soil_moisture_stress(theta,lambda,weibull_k) RESULT(beta)
+  PURE ELEMENTAL FUNCTION calc_soil_moisture_stress(theta,lambda,weibull_k) RESULT(beta)
 
     IMPLICIT NONE
     ! 0.1 InOut

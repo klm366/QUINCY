@@ -32,11 +32,11 @@ CONTAINS
   !! 
   !! two cases considered: \n a) dynamic water uptake calculation, \n b) prescribed values from namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_soil_physics(tile)
+  SUBROUTINE update_soil_physics(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_base_constants,        ONLY: dtime
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
@@ -55,18 +55,27 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(inout), TARGET  :: tile     !< one tile
+    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
+    TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp)                              :: q_sat,q_sat_soil
-    REAL(wp)                              :: evaporation
-    REAL(wp)                              :: hlp1,infiltration
-    REAL(wp),DIMENSION(soil_config%nsoil_water) :: ftranspiration,fevaporation,theta_sl
+    REAL(wp), DIMENSION(options%nc)       :: q_sat        , &
+                                             q_sat_soil   , &
+                                             evaporation  , &
+                                             infiltration , &
+                                             hlp1
+    REAL(wp),DIMENSION(soil_config%nsoil_water) :: ftranspiration , &
+                                                   fevaporation   , &
+                                                   theta_sl
     INTEGER                               :: isoil
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_physics'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
@@ -74,48 +83,73 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk                :: t_air                  ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk                :: q_air
+    dsl4jsb_Real2D_onChunk                :: press_srf
+    dsl4jsb_Real2D_onChunk                :: ga
+    dsl4jsb_Real2D_onChunk                :: lw_srf_down
+    dsl4jsb_Real2D_onChunk                :: rain
+    dsl4jsb_Real2D_onChunk                :: snow
+    dsl4jsb_Real2D_onChunk                :: drag_srf
+    dsl4jsb_Real2D_onChunk                :: net_radiation          ! LAND2ATM_
+    dsl4jsb_Real2D_onChunk                :: ground_heat_flx
+    dsl4jsb_Real2D_onChunk                :: latent_heat_flx
+    dsl4jsb_Real2D_onChunk                :: sensible_heat_flx
+    REAL(wp), POINTER                     :: sw_srf_net             ! RAD_
+!! *slmtemp    
     TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to assimi__mem for SLM usability
     TYPE(t_soil_memory),     POINTER :: soil            ! local pointer to soil__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg             ! local pointer to veg__mem for SLM usability
-    REAL(wp), POINTER                :: t_air
-    REAL(wp), POINTER                :: lw_srf_down
-    REAL(wp), POINTER                :: press_srf
-    REAL(wp), POINTER                :: q_air
-    REAL(wp), POINTER                :: ga
-    REAL(wp), POINTER                :: rain
-    REAL(wp), POINTER                :: snow
-    REAL(wp), POINTER                :: net_radiation
-    REAL(wp), POINTER                :: ground_heat_flx
-    REAL(wp), POINTER                :: latent_heat_flx
-    REAL(wp), POINTER                :: sensible_heat_flx
-    REAL(wp), POINTER                :: sw_srf_net
-    REAL(wp), POINTER                :: drag_srf 
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(xx_)
+    ! Get process memories
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(LAND2ATM_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_air)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, ga)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, lw_srf_down)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, rain)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, snow)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_srf)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, net_radiation)
+    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, ground_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, latent_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, sensible_heat_flx)
 
+
+!! *slmtemp
     assimi  => assimi__mem 
     soil    => soil__mem 
     veg     => veg__mem 
-    t_air       => atm2land__mem%t_air%ptr
-    lw_srf_down => atm2land__mem%lw_srf_down%ptr
-    press_srf   => atm2land__mem%press_srf%ptr
-    q_air       => atm2land__mem%q_air%ptr
-    ga          => atm2land__mem%ga%ptr
-    rain        => atm2land__mem%rain%ptr
-    snow        => atm2land__mem%snow%ptr
-    drag_srf    => atm2land__mem%drag_srf%ptr
-    net_radiation      => land2atm__mem%net_radiation%ptr
-    ground_heat_flx    => land2atm__mem%ground_heat_flx%ptr
-    latent_heat_flx    => land2atm__mem%latent_heat_flx%ptr
-    sensible_heat_flx  => land2atm__mem%sensible_heat_flx%ptr
     sw_srf_net         => rad__mem%sw_srf_net%ptr
 
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
 
 
     !> 1.0 Latent heat flux
@@ -123,39 +157,39 @@ CONTAINS
 
     !> 1.1 calculate saturating specific humidity 
     !!
-    q_sat = calc_spec_humidity_sat(t_air,press_srf)
-    q_sat_soil = calc_spec_humidity_sat(soil%t_soil%ptr(1,1,1),press_srf)
+    q_sat(:) = calc_spec_humidity_sat(t_air(:),press_srf(:))
+    q_sat_soil(:) = calc_spec_humidity_sat(soil%t_soil%ptr(:,1,1),press_srf(:))
 
     !> 1.2. calulate transpiration (kg / m2 / s)
     !! T = rho * (qsat - qair ) * Gtot in mm/s 
     !!
     IF(assimi%canopy_cond%ptr > eps8)THEN
-       veg%transpiration%ptr = press_srf / ( r_gas_dryair * t_air ) * & 
-                  (q_sat - q_air) / (1._wp / assimi%canopy_cond%ptr + 1._wp / ga )  
+       veg%transpiration%ptr = press_srf(1) / ( r_gas_dryair * t_air(1) ) * & 
+                  (q_sat(1) - q_air(1)) / (1._wp / assimi%canopy_cond%ptr + 1._wp / ga(1) )  
     ELSE 
        veg%transpiration%ptr = 0.0_wp 
     ENDIF
 
     !> 1.3 soil evaporation (kg / m2 / s)
-    !! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil = ga / 10)
+    !! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil = ga(1) / 10)
     !!
     SELECT CASE(soil_config%soil_moisture_scheme)
        CASE("bucket") ! ! Case of bucket water scheme
-          evaporation = press_srf / ( r_gas_dryair * t_air ) * & 
-                        (q_sat - q_air) / ( 100._wp / ga) * & 
+          evaporation(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
+                        (q_sat(:) - q_air(:)) / ( 100._wp / ga(:)) * & 
                         soil%w_soil_root_theta%ptr(1,1) 
           IF(sw_srf_net < eps8) evaporation = 0.0_wp
        
        CASE("layer") ! Case of layer scheme
-          evaporation = press_srf / ( r_gas_dryair * t_air ) * & 
-                        (q_sat - q_air) / ( 10._wp / ga) * & 
+          evaporation = press_srf(1) / ( r_gas_dryair * t_air(1) ) * & 
+                        (q_sat - q_air(1)) / ( 10._wp / ga(1)) * & 
                         SUM(soil%w_soil_sl%ptr(1,1:2,1))/SUM(soil%w_soil_fc_sl%ptr(1,1:2,1)) 
-          IF(evaporation < eps8) evaporation = 0.0_wp
+          WHERE(evaporation(:) < eps8) evaporation(:) = 0.0_wp
     ENDSELECT
 
     !> 1.4 calculate latent heat flux (W m-2) 
     !!
-    latent_heat_flx = LatentHeatVaporization * (evaporation + veg%transpiration%ptr)
+    latent_heat_flx(:) = LatentHeatVaporization * (evaporation(:) + veg%transpiration%ptr)
 
     !> 2.0 Estimate surface temperature and sensible heat flux 
     !!
@@ -163,9 +197,9 @@ CONTAINS
        !> 2.1 simple estimate of sensible heat flux
        !! (ignoring instabilities and actual surface moisture...)
        !!
-       sensible_heat_flx = heat_transfer_coef(drag_srf, model%options%steplen) * & 
-                             (surface_dry_static_energy(soil%t_soil%ptr(1,1,1),q_sat_soil) - & 
-                              surface_dry_static_energy(t_air,q_air))
+       sensible_heat_flx(:) = heat_transfer_coef(drag_srf(:), model%options%steplen) * & 
+                             (surface_dry_static_energy(soil%t_soil%ptr(:,1,1),q_sat_soil(:)) - & 
+                              surface_dry_static_energy(t_air(:),q_air(:)))
 
        !> 2.2 Estimate ground flux and update deep soil temperature
        !! working upwards to estimate net transfer implied by previous temperature profile 
@@ -173,26 +207,26 @@ CONTAINS
        !!
        DO isoil = soil_config%nsoil_water,2,-1
           IF(soil%soil_depth_l%ptr(1,isoil,1)>eps8)THEN
-             ground_heat_flx = (soil%t_soil%ptr(1,isoil-1,1)-soil%t_soil%ptr(1,isoil,1)) * soil%therm_cond_l%ptr(1,isoil,1) / & 
-                        (soil%soil_depth_l%ptr(1,isoil,1)/2.0_wp+soil%soil_depth_l%ptr(1,isoil-1,1)/2.0_wp)
-             soil%t_soil%ptr(:,isoil,1) = soil%t_soil%ptr(:,isoil,1) + ground_heat_flx * dtime / & 
+             ground_heat_flx(:) = (soil%t_soil%ptr(:,isoil-1,1)-soil%t_soil%ptr(:,isoil,1)) * soil%therm_cond_l%ptr(:,isoil,1) / & 
+                        (soil%soil_depth_l%ptr(:,isoil,1)/2.0_wp+soil%soil_depth_l%ptr(:,isoil-1,1)/2.0_wp)
+             soil%t_soil%ptr(:,isoil,1) = soil%t_soil%ptr(:,isoil,1) + ground_heat_flx(:) * dtime / & 
                         (soil%heat_capa_l%ptr(:,isoil,1) * soil%bulk_dens_l%ptr(:,isoil,1) * soil%soil_depth_l%ptr(:,isoil,1)) 
           ENDIF 
        ENDDO 
   
        !> 2.3 update net radiation flux at the surface, and implied soil temperature
        !!
-       net_radiation = latent_heat_flx + sensible_heat_flx - ground_heat_flx 
-       soil%t_soil%ptr(:,1,1) = soil%t_soil%ptr(:,1,1) + ( sw_srf_net - net_radiation + & 
+       net_radiation(:) = latent_heat_flx(:) + sensible_heat_flx(:) - ground_heat_flx(:) 
+       soil%t_soil%ptr(:,1,1) = soil%t_soil%ptr(:,1,1) + ( sw_srf_net - net_radiation(:) + & 
                                 ! simple estimate of surface net longwave flux
-                                lw_srf_down - stbo * zemiss_def * soil%t_soil%ptr(:,1,1)**4 ) / & 
+                                lw_srf_down(:) - stbo * zemiss_def * soil%t_soil%ptr(:,1,1)**4 ) / & 
                                 (soil%heat_capa_l%ptr(:,1,1) * soil%bulk_dens_l%ptr(:,1,1) * soil%soil_depth_l%ptr(:,1,1)) * &
                                 dtime 
 
     ELSE ! diagnose sensible heat flux from net radiation and set soil temperature to air temperature 
-       ground_heat_flx = 0.0_wp 
-       sensible_heat_flx = net_radiation - latent_heat_flx 
-       soil%t_soil%ptr(:,:,1) = t_air
+       ground_heat_flx(:) = 0.0_wp 
+       sensible_heat_flx(:) = net_radiation(:) - latent_heat_flx(:) 
+       soil%t_soil%ptr(:,1,1) = t_air(:)
     ENDIF
 
     !> 3.0 update soil moisture
@@ -203,8 +237,8 @@ CONTAINS
        CASE("bucket")
           !> 3.1.1 update soil moisture
           !! dS/dt = rain - transpiration - evaporation
-          soil%w_soil_root%ptr(1,1) = soil%w_soil_root%ptr(1,1) + (rain + snow &
-               - veg%transpiration%ptr - evaporation) / 1000._wp * dtime
+          soil%w_soil_root%ptr(:,1) = soil%w_soil_root%ptr(:,1) + (rain(1) + snow(1) &
+               - veg%transpiration%ptr - evaporation(1)) / 1000._wp * dtime
    
           !> 3.1.2 calculate drainage if any [mm/s]
           !!
@@ -212,7 +246,7 @@ CONTAINS
             soil%drainage%ptr = ( soil%w_soil_root%ptr - soil%w_soil_root_fc%ptr ) * 1000._wp/ dtime
           ELSEWHERE
             soil%drainage%ptr = 0.0_wp
-          ENDWHERE
+          END WHERE
           soil%w_soil_root%ptr = soil%w_soil_root%ptr - soil%drainage%ptr / 1000.0_wp * dtime
           soil%w_soil_root%ptr = MAX(soil%w_soil_root%ptr,0.0_wp)
    
@@ -234,7 +268,7 @@ CONTAINS
              WHERE(soil%root_fraction_l%ptr(:,isoil,:)>eps8)
                 soil%w_soil_sl%ptr(:,isoil,:) = soil%w_soil_pwp_sl%ptr(:,isoil,:) + & 
                    soil%w_soil_root_theta%ptr * (soil%w_soil_fc_sl%ptr(:,isoil,:) - soil%w_soil_pwp_sl%ptr(:,isoil,:))
-             ENDWHERE
+             END WHERE
           ENDDO
     
        !> 3.2 multi-layer soil moisture scheme 
@@ -248,19 +282,18 @@ CONTAINS
           !!
           fevaporation(:) = 0.0_wp
           IF(soil%w_soil_sl%ptr(1,1,1) > eps8) THEN
-             fevaporation(1) = MAX(1.0_wp,evaporation/soil%w_soil_sl%ptr(1,1,1))
+             fevaporation(1) = MAX(1.0_wp,evaporation(1)/soil%w_soil_sl%ptr(1,1,1))
           ENDIF
-          fevaporation(2) = 1._wp - fevaporation(1) 
 
           !> 3.2.2 determine fraction of transpiration per layer
           !!
           ftranspiration(:) = 0.0_wp
           DO isoil = 1,soil_config%nsoil_water
              IF(soil%w_soil_fc_sl%ptr(1,isoil,1) - soil%w_soil_pwp_sl%ptr(1,isoil,1) > eps8)THEN
-                hlp1 = (soil%w_soil_sl%ptr(1,isoil,1) - soil%w_soil_pwp_sl%ptr(1,isoil,1)) / & 
+                hlp1(1) = (soil%w_soil_sl%ptr(1,isoil,1) - soil%w_soil_pwp_sl%ptr(1,isoil,1)) / & 
                        (soil%w_soil_fc_sl%ptr(1,isoil,1) - soil%w_soil_pwp_sl%ptr(1,isoil,1))
-                hlp1 = calc_soil_moisture_stress(hlp1,lctlib%lambda_soil_gs,lctlib%weibull_k_soil_gs)
-                ftranspiration(isoil) = soil%root_fraction_l%ptr(1,isoil,1) * hlp1 
+                hlp1(1) = calc_soil_moisture_stress(hlp1(1),lctlib%lambda_soil_gs,lctlib%weibull_k_soil_gs)
+                ftranspiration(isoil) = soil%root_fraction_l%ptr(1,isoil,1) * hlp1(1) 
              ENDIF
           ENDDO
           IF(sum(ftranspiration(:)) > eps8 ) THEN 
@@ -274,17 +307,17 @@ CONTAINS
           !! a fraction of runoff generation is leaked below the first layer
           !! a fraction of infiltration is leaked below the first layer (preferential flow) 
           ! first guess
-          infiltration = MAX(MIN(soil%w_soil_fc_sl%ptr(1,1,1) - soil%w_soil_sl%ptr(1,1,1), & 
-                         ( rain + snow ) / 1000._wp * dtime),0.0_wp)
-          soil%runoff%ptr(:,:) = rain + snow - infiltration * 1000._wp / dtime
+          infiltration(:) = MAX(MIN(soil%w_soil_fc_sl%ptr(1,1,1) - soil%w_soil_sl%ptr(1,1,1), & 
+                         ( rain(1) + snow(1) ) / 1000._wp * dtime),0.0_wp)
+          soil%runoff%ptr(:,:) = rain(1) + snow(1) - infiltration(1) * 1000._wp / dtime
 
           ! modify surface runoff and infiltration such that a constant fraction is actually leaked below the first layer
-          soil%drainage_sl%ptr(:,1,:) = drain_frac / soil%soil_depth_l%ptr(:,1,:) * infiltration + fdrain_runoff * soil%runoff%ptr(:,:)
+          soil%drainage_sl%ptr(:,1,:) = drain_frac / soil%soil_depth_l%ptr(:,1,:) * infiltration(1) + fdrain_runoff * soil%runoff%ptr(:,:)
           soil%runoff%ptr(:,:) = ( 1.0_wp - fdrain_runoff ) * soil%runoff%ptr(:,:)  
-          infiltration = ( 1.0_wp - drain_frac / soil%soil_depth_l%ptr(1,1,1) ) * infiltration
+          infiltration(:) = ( 1.0_wp - drain_frac / soil%soil_depth_l%ptr(1,1,1) ) * infiltration(:)
 
-          soil%w_soil_sl%ptr(:,1,:) = soil%w_soil_sl%ptr(:,1,:) + (infiltration - &
-               evaporation * fevaporation(1) + veg%transpiration%ptr * ftranspiration(1)) / 1000._wp * dtime
+          soil%w_soil_sl%ptr(:,1,:) = soil%w_soil_sl%ptr(:,1,:) + (infiltration(1) - &
+               evaporation(1) * fevaporation(1) + veg%transpiration%ptr * ftranspiration(1)) / 1000._wp * dtime
 
           WHERE(soil%w_soil_sl%ptr(:,1,:) > soil%w_soil_fc_sl%ptr(:,1,:))
                soil%runoff%ptr(:,:) = soil%runoff%ptr(:,:) + & 
@@ -304,7 +337,7 @@ CONTAINS
                ! water balance of soil layer
                soil%w_soil_sl%ptr(:,isoil,:) = soil%w_soil_sl%ptr(:,isoil,:) + & 
                     (( 1.0_wp - drain_frac / soil%soil_depth_l%ptr(:,isoil,:) ) * soil%drainage_sl%ptr(:,isoil-1,:) - & 
-                     evaporation * fevaporation(isoil) + veg%transpiration%ptr * ftranspiration(isoil)) / 1000._wp * dtime
+                     evaporation(1) * fevaporation(isoil) + veg%transpiration%ptr * ftranspiration(isoil)) / 1000._wp * dtime
 
                ! drain surplus water to lower layer to keep water storage below field capacity
                WHERE(soil%w_soil_sl%ptr(:,isoil,:) > soil%w_soil_fc_sl%ptr(:,isoil,:))
@@ -327,9 +360,9 @@ CONTAINS
                    (theta_sl(isoil-1) - theta_sl(isoil)) / &  
                    ((soil%soil_depth_l%ptr(1,isoil-1,1)+(soil%soil_depth_l%ptr(1,isoil,1)))/2.0_wp)
 
-             soil%w_soil_sl%ptr(:,isoil-1,:) = soil%w_soil_sl%ptr(:,isoil-1,:) - hlp1
-             soil%w_soil_sl%ptr(:,isoil,:) = soil%w_soil_sl%ptr(:,isoil,:) + hlp1 
-             soil%drainage_sl%ptr(:,isoil-1,:) = soil%drainage_sl%ptr(:,isoil-1,:) + hlp1 * 1000._wp / dtime 
+             soil%w_soil_sl%ptr(:,isoil-1,:) = soil%w_soil_sl%ptr(:,isoil-1,:) - hlp1(1)
+             soil%w_soil_sl%ptr(:,isoil,:) = soil%w_soil_sl%ptr(:,isoil,:) + hlp1(1) 
+             soil%drainage_sl%ptr(:,isoil-1,:) = soil%drainage_sl%ptr(:,isoil-1,:) + hlp1(1) * 1000._wp / dtime 
 
           ENDDO
 

@@ -16,7 +16,7 @@ MODULE mo_land2atm_memory_class
   USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later
 
@@ -36,30 +36,30 @@ MODULE mo_land2atm_memory_class
   INTEGER, PARAMETER :: max_no_of_vars = 30
 
   TYPE, EXTENDS(t_jsb_memory) :: t_land2atm_memory
-    TYPE(t_jsb_var_real1d) :: &
-!    TYPE(t_jsb_var_real2d) :: &  ! jsbach4
-      t_srf       ,   &
-      t_eff_srf   ,   &
-      qsat_srf    ,   &
-      fact_q_air  ,   &
-      fact_qsat_srf , &
-      zh_srf      ,   &
-      zm_srf      ,   &
-      alb_vis_dif ,   &
-      alb_nir_dif ,   &
-      alb_vis_dir ,   &
-      alb_nir_dir ,   &
-      albedo            , &   ! added from SLM, not existent in jsbach4 20160823
-      sensible_heat_flx , &   ! added from SLM, not existent in jsbach4 20160823
-      latent_heat_flx   , &   ! added from SLM, not existent in jsbach4 20160823
-      ground_heat_flx   , &   ! added from SLM, not existent in jsbach4 20160823
-      net_radiation     , &   ! added from SLM, not existent in jsbach4 20160823
-      vpd               , &   ! added from SLM, not existent in jsbach4 20160823
-      ! For lakes:
-      latent_hflx_wtr    , &
-      sensible_hflx_wtr  , &
-      latent_hflx_ice    , &
-      sensible_hflx_ice
+
+    TYPE(t_jsb_var_real2d) :: &
+                              t_srf       ,   &
+                              t_eff_srf   ,   &
+                              qsat_srf    ,   &
+                              fact_q_air  ,   &
+                              fact_qsat_srf , &
+                              zh_srf      ,   &
+                              zm_srf      ,   &
+                              alb_vis_dif ,   &
+                              alb_nir_dif ,   &
+                              alb_vis_dir ,   &
+                              alb_nir_dir ,   &
+                              albedo            , &   ! added from SLM, not existent in jsbach4 20160823
+                              sensible_heat_flx , &   ! added from SLM, not existent in jsbach4 20160823
+                              latent_heat_flx   , &   ! added from SLM, not existent in jsbach4 20160823
+                              ground_heat_flx   , &   ! added from SLM, not existent in jsbach4 20160823
+                              net_radiation     , &   ! added from SLM, not existent in jsbach4 20160823
+                              vpd               , &   ! added from SLM, not existent in jsbach4 20160823
+                              ! For lakes:
+                              latent_hflx_wtr    , &
+                              sensible_hflx_wtr  , &
+                              latent_hflx_ice    , &
+                              sensible_hflx_ice
 
   CONTAINS
     PROCEDURE :: Init => Init_land2atm_memory

@@ -40,6 +40,9 @@ CONTAINS
   !! write column headers of output files for fluxes \n
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_forcing(      tile               , &  ! inout
+                                  iblk               , &  ! in
+                                  ics                , &  ! in
+                                  ice                , &  ! in
                                   time               , &  ! in
                                   t_air              , &  ! out
                                   q_air              , &  ! out
@@ -89,125 +92,152 @@ CONTAINS
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
-    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),   INTENT(inout) :: tile     !< one tile
+    TYPE(t_slm_tile)  , INTENT(inout) :: tile     !< one tile
+    INTEGER           , INTENT(in)    :: iblk, ics, ice
     REAL(wp)          , INTENT(in)    :: time     !< current time (not timestep !)
     REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from atm2land memory
-                                      t_air              , &    !< ..
-                                      q_air              , &    !< ..
-                                      rain               , &    !< ..
-                                      snow               , &    !< ..
-                                      wind_air           , &    !< ..
-                                      wind_10m           , &    !< ..
-                                      lw_srf_down        , &    !< ..
-                                      swvis_srf_down     , &    !< ..
-                                      swnir_srf_down     , &    !< ..
-                                      swpar_srf_down     , &    !< ..
-                                      swpar_fdiffuse     , &    !< ..
-                                      press_srf          , &    !< ..
-                                      drag_srf           , &    !< ..
-                                      t_acoef            , &    !< ..
-                                      t_bcoef            , &    !< ..
-                                      q_acoef            , &    !< ..
-                                      q_bcoef            , &    !< ..
-                                      pch                , &    !< ..
-                                      cos_zenith_angle   , &    !< ..
-                                      co2_mixing_ratio     , &  !< ..
-                                      co2_mixing_ratio_C13 , &  !< ..
-                                      co2_mixing_ratio_C14 , &  !< ..
-                                      ga                   , &  !< ..
+                                      t_air(:)              , &    !< ..
+                                      q_air(:)              , &    !< ..
+                                      rain(:)               , &    !< ..
+                                      snow(:)               , &    !< ..
+                                      wind_air(:)           , &    !< ..
+                                      wind_10m(:)           , &    !< ..
+                                      lw_srf_down(:)        , &    !< ..
+                                      swvis_srf_down(:)     , &    !< ..
+                                      swnir_srf_down(:)     , &    !< ..
+                                      swpar_srf_down(:)     , &    !< ..
+                                      swpar_fdiffuse(:)     , &    !< ..
+                                      press_srf(:)          , &    !< ..
+                                      drag_srf(:)           , &    !< ..
+                                      t_acoef(:)            , &    !< ..
+                                      t_bcoef(:)            , &    !< ..
+                                      q_acoef(:)            , &    !< ..
+                                      q_bcoef(:)            , &    !< ..
+                                      pch(:)                , &    !< ..
+                                      cos_zenith_angle(:)   , &    !< ..
+                                      co2_mixing_ratio(:)     , &  !< ..
+                                      co2_mixing_ratio_C13(:) , &  !< ..
+                                      co2_mixing_ratio_C14(:) , &  !< ..
+                                      ga(:)                   , &  !< ..
                                       ! For lakes:
-                                      albedo_lwtr        , &    !< ..
-                                      drag_wtr           , &    !< ..
-                                      drag_ice           , &    !< ..
-                                      t_acoef_wtr        , &    !< ..
-                                      t_bcoef_wtr        , &    !< ..
-                                      q_acoef_wtr        , &    !< ..
-                                      q_bcoef_wtr        , &    !< ..
-                                      t_acoef_ice        , &    !< ..
-                                      t_bcoef_ice        , &    !< ..
-                                      q_acoef_ice        , &    !< ..
-                                      q_bcoef_ice               !< ..
+                                      albedo_lwtr(:)        , &    !< ..
+                                      drag_wtr(:)           , &    !< ..
+                                      drag_ice(:)           , &    !< ..
+                                      t_acoef_wtr(:)        , &    !< ..
+                                      t_bcoef_wtr(:)        , &    !< ..
+                                      q_acoef_wtr(:)        , &    !< ..
+                                      q_bcoef_wtr(:)        , &    !< ..
+                                      t_acoef_ice(:)        , &    !< ..
+                                      t_bcoef_ice(:)        , &    !< ..
+                                      q_acoef_ice(:)        , &    !< ..
+                                      q_bcoef_ice(:)               !< ..
+    ! ---------------------------
     ! 0.2 Local
+    TYPE(t_model),    POINTER     :: model                  ! the model structure
+    ! READ() input variables for: land plant canopy
+    REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
+                     press_srf_r,        rain_r,        snow_r,     wind_air_r, &
+                     co2_mixing_ratio_r,                                           &
+                     nhx_r, nox_r   ! dummy variable for nhx_srf_down & noy_srf_down
+    ! READ() input variables for: soil
+    ! ...
     INTEGER  :: stat          ! status of I/O (https://software.intel.com/en-us/node/691976)
     INTEGER  :: lun           ! logical unit number for file input stream, see '2.0 read data'
     REAL(wp) :: sw_toa_down   ! potential radiation at the top of the atmosphere
     REAL(wp) :: year          ! dummy variable
     REAL(wp) :: hour          ! dummy variable
-    REAL(wp) :: nhx           ! dummy variable for nhx_srf_down
-    REAL(wp) :: nox           ! dummy variable for noy_srf_down
     REAL(wp) :: hlp1          ! dummy variable 
     REAL(wp) :: time_hlp      ! dummy variable for soil forcing
     REAL(wp),         SAVE        :: day                    ! read input dummy variable - save value
     REAL(wp)                      :: doy_old, &             ! check for new year (column 2 in input file would change from 365 -> 1)
                                      doy_new
-    TYPE(t_model),    POINTER     :: model                  ! the model structure
-    INTEGER                       :: iblk         = -1      ! Number of current block (chunk)
-    INTEGER                       :: ics          = -1      ! Index of chunk start
-    INTEGER                       :: ice          = -1      ! Index of chunk end
     INTEGER                       :: nlevel_soil  = -1      ! number of levels at the Z-Axis (soil layer)
     INTEGER                       :: nlevel_veg   = -1      ! number of levels at the Z-Axis (canopy layer)
+    INTEGER                       :: nc                     ! number of chunks ice-ics+1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_forcing'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_sb_memory),       POINTER :: sb          ! local pointer to sb__mem for SLM usability
     TYPE(t_soil_memory),     POINTER :: soil        ! local pointer to soil__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(xx_)
+    ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(VEG_)
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
 
+! 2 be removed  *slmtemp
     sb      => sb__mem 
     soil    => soil__mem 
     veg     => veg__mem 
-    model   => Get_model(tile%owner_model_id)
 
 
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
+    nc      = ice - ics + 1
     doy_old = 0.0_wp  ! doy in the previous timestep, used for detecting a new year
 
     ! give atm2land variables a value to avoid compiler warning #6843: A dummy argument with an explicit INTENT(OUT) declaration is not given an explicit value
-    t_air           = 0.0_wp
-    q_air           = 0.0_wp
-    rain            = 0.0_wp
-    snow            = 0.0_wp
-    wind_air        = 0.0_wp
-    wind_10m        = 0.0_wp
-    lw_srf_down     = 0.0_wp
-    swvis_srf_down  = 0.0_wp
-    swnir_srf_down  = 0.0_wp
-    swpar_srf_down  = 0.0_wp
-    swpar_fdiffuse  = 0.0_wp
-    press_srf       = 0.0_wp
-    drag_srf        = 1000.0_wp    ! 1.0_wp
-    t_acoef         = 0.0_wp
-    t_bcoef         = 0.0_wp
-    q_acoef         = 0.0_wp
-    q_bcoef         = 0.0_wp
-    pch             = 0.0_wp
-    cos_zenith_angle      = 0.0_wp
-    co2_mixing_ratio      = 0.0_wp
-    co2_mixing_ratio_C13  = 0.0_wp
-    co2_mixing_ratio_C14  = 0.0_wp
-    ga                    = 0.0_wp
+    t_air(nc)           = 0.0_wp
+    q_air(nc)           = 0.0_wp
+    rain(nc)            = 0.0_wp
+    snow(nc)            = 0.0_wp
+    wind_air(nc)        = 0.0_wp
+    wind_10m(nc)        = 0.0_wp
+    lw_srf_down(nc)     = 0.0_wp
+    swvis_srf_down(nc)  = 0.0_wp
+    swnir_srf_down(nc)  = 0.0_wp
+    swpar_srf_down(nc)  = 0.0_wp
+    swpar_fdiffuse(nc)  = 0.0_wp
+    press_srf(nc)       = 0.0_wp
+    drag_srf(nc)        = 1000.0_wp    ! 1.0_wp
+    t_acoef(nc)         = 0.0_wp
+    t_bcoef(nc)         = 0.0_wp
+    q_acoef(nc)         = 0.0_wp
+    q_bcoef(nc)         = 0.0_wp
+    pch(nc)             = 0.0_wp
+    cos_zenith_angle(nc)      = 0.0_wp
+    co2_mixing_ratio(nc)      = 0.0_wp
+    co2_mixing_ratio_C13(nc)  = 0.0_wp
+    co2_mixing_ratio_C14(nc)  = 0.0_wp
+    ga(nc)                    = 0.0_wp
     ! For lakes:
-    albedo_lwtr     = 0.0_wp
-    drag_wtr        = 0.0_wp
-    drag_ice        = 0.0_wp
-    t_acoef_wtr     = 0.0_wp
-    t_bcoef_wtr     = 0.0_wp
-    q_acoef_wtr     = 0.0_wp
-    q_bcoef_wtr     = 0.0_wp
-    t_acoef_ice     = 0.0_wp
-    t_bcoef_ice     = 0.0_wp
-    q_acoef_ice     = 0.0_wp
-    q_bcoef_ice     = 0.0_wp
+    albedo_lwtr(nc)     = 0.0_wp
+    drag_wtr(nc)        = 0.0_wp
+    drag_ice(nc)        = 0.0_wp
+    t_acoef_wtr(nc)     = 0.0_wp
+    t_bcoef_wtr(nc)     = 0.0_wp
+    q_acoef_wtr(nc)     = 0.0_wp
+    q_bcoef_wtr(nc)     = 0.0_wp
+    t_acoef_ice(nc)     = 0.0_wp
+    t_bcoef_ice(nc)     = 0.0_wp
+    q_acoef_ice(nc)     = 0.0_wp
+    q_bcoef_ice(nc)     = 0.0_wp
 
 
+    !!#######################
     !! LAND PLANT CANOPY
+    !!#######################
     SELECT CASE(TRIM(base_config%slm_model_name))
     CASE('land','plant','canopy')
 
@@ -229,10 +259,10 @@ CONTAINS
     ! the read statement, by default a list of values in a line is read and then advanced to the beginning of the next line
     lun=9
     READ(lun,*, IOSTAT=stat) year, day, hour, & 
-                     swvis_srf_down,   lw_srf_down, t_air,    q_air,    &
-                     press_srf,        rain,        snow,     wind_air, &
-                     co2_mixing_ratio,                                                             &
-                     nhx, nox
+                     swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
+                     press_srf_r,        rain_r,        snow_r,     wind_air_r, &
+                     co2_mixing_ratio_r,                                        &
+                     nhx_r, nox_r 
 
     ! day of the year: current time step
     doy_new = day 
@@ -251,41 +281,79 @@ CONTAINS
       REWIND(lun)
       CALL read_forcing_header(lun)
       READ(lun,*) year, day, hour, &
-                     swvis_srf_down,   lw_srf_down, t_air,    q_air,    &
-                     press_srf,        rain,        snow,     wind_air, &
-                     co2_mixing_ratio,                                                             &
-                     nhx, nox
+                     swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
+                     press_srf_r,        rain_r,        snow_r,     wind_air_r, &
+                     co2_mixing_ratio_r,                                        &
+                     nhx_r, nox_r 
     END IF
 
     !> 3.0 parameter units are re-scaled
     !!
-    q_air     = q_air / 1000._wp
-    press_srf = press_srf * 100._wp
-    rain      = rain / 86400._wp
-    snow      = snow / 86400._wp
+    q_air_r     = q_air_r / 1000._wp
+    press_srf_r = press_srf_r * 100._wp
+    rain_r      = rain_r / 86400._wp
+    snow_r      = snow_r / 86400._wp
 
     !> 4.0 update forcing variables based on 'read data'
     !!
-    wind_10m             = wind_air
-    ga                   = 40.0_wp / drag_srf * wind_10m
-    hlp1                 = calc_mixing_ratio_C13C12(def_co2_deltaC13)                 ! function: calc_mixing_ratio_C13C12
-    co2_mixing_ratio_C13 = co2_mixing_ratio / (1._wp + 1._wp/hlp1)
-    hlp1                 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) ! function: calc_mixing_ratio_C14C
-    co2_mixing_ratio_C14 = hlp1 * co2_mixing_ratio 
+    wind_10m(1)             = wind_air_r
+    ga(1)                   = 40.0_wp / drag_srf(1) * wind_10m(1)
+    hlp1                    = calc_mixing_ratio_C13C12(def_co2_deltaC13)                 ! function: calc_mixing_ratio_C13C12
+    co2_mixing_ratio_C13(1) = co2_mixing_ratio_r / (1._wp + 1._wp/hlp1)
+    hlp1                    = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) ! function: calc_mixing_ratio_C14C
+    co2_mixing_ratio_C14(1) = hlp1 * co2_mixing_ratio_r
 
-    cos_zenith_angle = calc_solar_angle(grid%lat,grid%lon,time)                       ! function: calc_solar_angle
-    swnir_srf_down   = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down 
-    swvis_srf_down   = frac_vis_swtot_srf * swvis_srf_down 
-    swpar_srf_down   = frac_par_swvis_srf * swvis_srf_down
-    swpar_fdiffuse   = calc_sw_fdiffuse(swvis_srf_down + swnir_srf_down, sw_toa_down, cos_zenith_angle) ! function: calc_sw_fdiffuse
+    cos_zenith_angle(1) = calc_solar_angle(grid%lat,grid%lon,time)                       ! function: calc_solar_angle
+    swnir_srf_down(1)   = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
+    swvis_srf_down_r    = frac_vis_swtot_srf * swvis_srf_down_r 
+    swpar_srf_down(1)   = frac_par_swvis_srf * swvis_srf_down_r
+    swpar_fdiffuse(1)   = calc_sw_fdiffuse(swvis_srf_down_r + swnir_srf_down(1), sw_toa_down, cos_zenith_angle(1)) ! function: calc_sw_fdiffuse
+
+    !> 5.0 pass values read from file (i.e. scalar values) to ics-ice
+    !!
+    t_air(nc)           = 	    t_air_r
+    q_air(nc)           = 	    q_air_r
+    rain(nc)            = 	    rain_r
+    snow(nc)            = 	    snow_r
+    wind_air(nc)        = 	    wind_air_r
+    wind_10m(nc)        = 	    wind_10m(1)       
+    lw_srf_down(nc)     = 	    lw_srf_down_r
+    swvis_srf_down(nc)  = 	    swvis_srf_down_r
+    swnir_srf_down(nc)  = 	    swnir_srf_down(1) 
+    swpar_srf_down(nc)  = 	    swpar_srf_down(1) 
+    swpar_fdiffuse(nc)  = 	    swpar_fdiffuse(1) 
+    press_srf(nc)       = 	    press_srf_r
+    drag_srf(nc)        = 	    drag_srf(1)       
+    t_acoef(nc)         = 	    t_acoef(1)        
+    t_bcoef(nc)         = 	    t_bcoef(1)        
+    q_acoef(nc)         = 	    q_acoef(1)        
+    q_bcoef(nc)         = 	    q_bcoef(1)        
+    pch(nc)             = 	    pch(1)            
+    cos_zenith_angle(nc)      = 	    cos_zenith_angle(1)     
+    co2_mixing_ratio(nc)      = 	    co2_mixing_ratio_r
+    co2_mixing_ratio_C13(nc)  = 	    co2_mixing_ratio_C13(1) 
+    co2_mixing_ratio_C14(nc)  = 	    co2_mixing_ratio_C14(1) 
+    ga(nc)                    = 	    ga(1)                   
+    ! For lakes:	
+    albedo_lwtr(nc)     = 	    albedo_lwtr(1)    
+    drag_wtr(nc)        = 	    drag_wtr(1)       
+    drag_ice(nc)        = 	    drag_ice(1)       
+    t_acoef_wtr(nc)     = 	    t_acoef_wtr(1)    
+    t_bcoef_wtr(nc)     = 	    t_bcoef_wtr(1)    
+    q_acoef_wtr(nc)     = 	    q_acoef_wtr(1)    
+    q_bcoef_wtr(nc)     = 	    q_bcoef_wtr(1)    
+    t_acoef_ice(nc)     = 	    t_acoef_ice(1)    
+    t_bcoef_ice(nc)     = 	    t_bcoef_ice(1)    
+    q_acoef_ice(nc)     = 	    q_acoef_ice(1)    
+    q_bcoef_ice(nc)     = 	    q_bcoef_ice(1)    
 
 
+
+    !!#######################
     !! SOIL
+    !!#######################
     CASE('soil')
 
-    iblk        = model%options%iblk
-    ics         = model%options%ics
-    ice         = model%options%ice
     nlevel_soil = soil_config%nsoil_water
 
     ! the read statement, by default a list of values in a line is read and then advanced to the beginning of the next line

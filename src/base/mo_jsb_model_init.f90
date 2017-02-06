@@ -91,14 +91,15 @@ CONTAINS
   !! @todo mo_jsb_model_init: move to default JSBACH4 init style
   !!  
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_slm(tile, l_forcing) !(model_id, model_name)
+  SUBROUTINE init_slm(tile, l_forcing, iblk, ics, ice) !(model_id, model_name)
 
 
     IMPLICIT NONE
 
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(inout)              :: tile       !< data structure for dynamic vegetation and soil variables
-    LOGICAL,INTENT(out)                         :: l_forcing  !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
+    TYPE(t_slm_tile),INTENT(inout)              :: tile           !< data structure for dynamic vegetation and soil variables
+    LOGICAL,INTENT(out)                         :: l_forcing      !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
+    INTEGER,INTENT(in)                          :: iblk, ics, ice !< iBlock, iChunkStart, iChunkEnd
     ! 0.2 Local
     CLASS(t_jsb_memory), POINTER                :: tmp_ptr        !! for Memory init and alloc
     CHARACTER(LEN=15)                           :: process_name   !! for Memory init and alloc
@@ -143,10 +144,10 @@ CONTAINS
     current => new_model(1, "slm", "slm", "slm_veg_model", "not_available.txt") ! id, name, shortname, description, namelist_filename
     current%options%dtime   = base_config%dtime  ! length of one time step
     current%options%steplen = base_config%dtime  ! .. 
-    current%options%iblk    = 1               ! Number of current block (chunk)
-    current%options%ics     = 1               ! Index of chunk start
-    current%options%ice     = 1               ! Index of chunk end
-    current%options%nc      = current%options%ice - current%options%ics + 1   ! Length of chunk
+    current%options%iblk    = iblk               ! Number of current block (chunk)
+    current%options%ics     = ics                ! Index of chunk start
+    current%options%ice     = ice                ! Index of chunk end
+    current%options%nc      = ice - ics + 1      ! Length of chunk  (end-number - start-number + 1)
     !current%lctlib => init_lctlib()           ! not possible here - need init constants init !!
     jsbach%models(1)%m => current
     ! point model to jsbach%models(1)%m

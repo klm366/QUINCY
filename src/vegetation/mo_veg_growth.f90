@@ -74,12 +74,12 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk                 :: growing_season
-    REAL(wp), POINTER                :: t_air
-    REAL(wp), POINTER                :: press_srf
-    REAL(wp), POINTER                :: q_air
-    REAL(wp), POINTER                :: co2_mixing_ratio
-    REAL(wp), POINTER                :: ga
+    dsl4jsb_Logical2D_onChunk             :: growing_season
+    dsl4jsb_Real2D_onChunk                :: t_air
+    dsl4jsb_Real2D_onChunk                :: q_air
+    dsl4jsb_Real2D_onChunk                :: press_srf
+    dsl4jsb_Real2D_onChunk                :: co2_mixing_ratio
+    dsl4jsb_Real2D_onChunk                :: ga
 !! *slmtemp    
     TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
@@ -111,16 +111,11 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
     ! ---------------------------
-    t_air            => atm2land__mem%t_air%ptr
-    press_srf        => atm2land__mem%press_srf%ptr
-    q_air            => atm2land__mem%q_air%ptr
-    co2_mixing_ratio => atm2land__mem%co2_mixing_ratio%ptr
-    ga               => atm2land__mem%ga%ptr
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_air)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, co2_mixing_ratio)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, ga)
 
 !! *slmtemp
     assimi  => assimi__mem 
@@ -129,16 +124,22 @@ CONTAINS
     soil    => soil__mem
 
 
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    veg%kstar_labile%ptr = calc_meristem_activity(t_air, soil%w_soil_root_theta%ptr(1,1), growing_season(1))
+    veg%kstar_labile%ptr = calc_meristem_activity(t_air(1), soil%w_soil_root_theta%ptr(1,1), growing_season(1))
 
     !> 1.1 calculate costs of N uptake and fixation
     !!
-    veg%fmaint_rate%ptr = fmaint_rate_base * temperature_response_respiration(t_air, veg%t_air_tacclim_mavg%ptr)
+    veg%fmaint_rate%ptr = fmaint_rate_base * temperature_response_respiration(t_air(1), veg%t_air_tacclim_mavg%ptr)
     CALL calc_nitrogen_uptake_costs(lctlib                               , &
-                                    t_air                                , &
+                                    t_air(1)                             , &
                                     veg%pool%fine_root%carbon%ptr        , &
                                     veg%pool%fine_root%nitrogen%ptr      , &
                                     veg%fmaint_rate_troot_mavg%ptr       , &
@@ -181,11 +182,11 @@ CONTAINS
     !> 3.1 calculate marginal NPP increment per unit C growth, needed for optimal allocation scheme
     !!
     CALL calc_marginal_canopy_flux_increment(lctlib                       , &
-                                              t_air                       , &
-                                              press_srf                   , &
-                                              q_air                       , &
-                                              co2_mixing_ratio            , &
-                                              ga                          , & 
+                                              t_air(1)                    , &
+                                              press_srf(1)                , &
+                                              q_air(1)                    , &
+                                              co2_mixing_ratio(1)         , &
+                                              ga(1)                       , & 
                                               assimi%net_assimilation%ptr , & 
                                               assimi%canopy_cond%ptr      , & 
                                               assimi%beta_air%ptr         , & 
@@ -284,7 +285,7 @@ CONTAINS
     !> 6.0 partition labile carbon into growth, growth_respiration, and maintenance 
     !! 
     !! 
-    CALL calc_partitioning(t_air                                  , & ! in
+    CALL calc_partitioning(t_air(1)                               , & ! in
                             veg%t_air_tacclim_mavg%ptr            , &
                             veg%kstar_labile%ptr                  , &
                             assimi%maint_respiration_leaf%ptr     , &

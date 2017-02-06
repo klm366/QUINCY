@@ -43,7 +43,8 @@ PROGRAM land_model_driver
   !! Local variables
   !! 
   LOGICAL                       :: l_forcing  ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_atm2land(), update_land2atm())
-  REAL(wp), ALLOCATABLE         :: &     !! atm2land memory - INTENT(in) - start
+  INTEGER                       :: iblk, ics, ice, nc   !< *slmtmp may be an input from JSBACH4 later in SLM dev
+  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! atm2land memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
                                   rain               , &
@@ -80,7 +81,7 @@ PROGRAM land_model_driver
                                   q_acoef_ice        , &
                                   q_bcoef_ice
                                          !! atm2land memory - end
-  REAL(wp), ALLOCATABLE           :: &   !! land2atm memory - start
+  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &   !! land2atm memory - start
                                   t_srf             ,   &
                                   t_eff_srf         ,   &
                                   qsat_srf          ,   &
@@ -106,13 +107,18 @@ PROGRAM land_model_driver
   CHARACTER(len=*), PARAMETER :: modname = 'land_model_driver'
 
 
+
   !! 1.0 -----------------------------------------------------------------------------------------------
   !! 
-  !! Create Tile & Model init
+  !! Create Tile & Model init & Define iblk, ics, ice
   !! 
   TYPE(t_slm_tile),DIMENSION(ntile), SAVE  :: tile          !< data structure for dynamic vegetation and soil variables
                                                             !! in jsbach4 tile is created in mo_jsb_model_usecases
-  CALL init_model(tile(1), l_forcing)                       !< model init : mo_jsb_model_init 
+  iblk    = 1
+  ics     = 1
+  ice     = 1
+  nc      = ice - ics + 1                                   ! (end-number - start-number + 1)
+  CALL init_model(tile(1), l_forcing, iblk, ics, ice)       !< model init : mo_jsb_model_init 
 
 
   !! 2.0 -----------------------------------------------------------------------------------------------
@@ -121,63 +127,63 @@ PROGRAM land_model_driver
   !! 
   ! allocate forcing variables (atmland)
   !! atm2land memory
-  ALLOCATE(t_air)                                            
-  ALLOCATE(q_air)                                            
-  ALLOCATE(rain)                                             
-  ALLOCATE(snow)                                             
-  ALLOCATE(wind_air)                                         
-  ALLOCATE(wind_10m)                                         
-  ALLOCATE(lw_srf_down)                                      
-  ALLOCATE(swvis_srf_down)                                   
-  ALLOCATE(swnir_srf_down)                                   
-  ALLOCATE(swpar_srf_down)                                   
-  ALLOCATE(swpar_fdiffuse)                                   
-  ALLOCATE(press_srf)                                        
-  ALLOCATE(drag_srf)                                         
-  ALLOCATE(t_acoef)                                          
-  ALLOCATE(t_bcoef)                                          
-  ALLOCATE(q_acoef)                                          
-  ALLOCATE(q_bcoef)                                          
-  ALLOCATE(pch)                                              
-  ALLOCATE(cos_zenith_angle)                                 
-  ALLOCATE(co2_mixing_ratio)                                   
-  ALLOCATE(co2_mixing_ratio_C13)                              
-  ALLOCATE(co2_mixing_ratio_C14)                               
-  ALLOCATE(ga)                                                 
+  ALLOCATE(t_air(nc))                                           
+  ALLOCATE(q_air(nc))                                           
+  ALLOCATE(rain(nc))                                            
+  ALLOCATE(snow(nc))                                            
+  ALLOCATE(wind_air(nc))                                        
+  ALLOCATE(wind_10m(nc))                                        
+  ALLOCATE(lw_srf_down(nc))                                     
+  ALLOCATE(swvis_srf_down(nc))                                  
+  ALLOCATE(swnir_srf_down(nc))                                  
+  ALLOCATE(swpar_srf_down(nc))                                  
+  ALLOCATE(swpar_fdiffuse(nc))                                  
+  ALLOCATE(press_srf(nc))                                       
+  ALLOCATE(drag_srf(nc))                                        
+  ALLOCATE(t_acoef(nc))                                         
+  ALLOCATE(t_bcoef(nc))                                         
+  ALLOCATE(q_acoef(nc))                                         
+  ALLOCATE(q_bcoef(nc))                                         
+  ALLOCATE(pch(nc))                                             
+  ALLOCATE(cos_zenith_angle(nc))                                
+  ALLOCATE(co2_mixing_ratio(nc))                                  
+  ALLOCATE(co2_mixing_ratio_C13(nc))                             
+  ALLOCATE(co2_mixing_ratio_C14(nc))                              
+  ALLOCATE(ga(nc))                                                
   ! For lakes:
-  ALLOCATE(albedo_lwtr)                                      
-  ALLOCATE(drag_wtr)                                         
-  ALLOCATE(drag_ice)                                         
-  ALLOCATE(t_acoef_wtr)                                      
-  ALLOCATE(t_bcoef_wtr)                                      
-  ALLOCATE(q_acoef_wtr)                                      
-  ALLOCATE(q_bcoef_wtr)                                      
-  ALLOCATE(t_acoef_ice)                                      
-  ALLOCATE(t_bcoef_ice)                                      
-  ALLOCATE(q_acoef_ice)                                      
-  ALLOCATE(q_bcoef_ice)
+  ALLOCATE(albedo_lwtr(nc))                                     
+  ALLOCATE(drag_wtr(nc))                                        
+  ALLOCATE(drag_ice(nc))                                        
+  ALLOCATE(t_acoef_wtr(nc))                                     
+  ALLOCATE(t_bcoef_wtr(nc))                                     
+  ALLOCATE(q_acoef_wtr(nc))                                     
+  ALLOCATE(q_bcoef_wtr(nc))                                     
+  ALLOCATE(t_acoef_ice(nc))                                     
+  ALLOCATE(t_bcoef_ice(nc))                                     
+  ALLOCATE(q_acoef_ice(nc))                                     
+  ALLOCATE(q_bcoef_ice(nc))
   !! land2atm memory
-  ALLOCATE(t_srf)                                           
-  ALLOCATE(t_eff_srf)                                       
-  ALLOCATE(qsat_srf)                                        
-  ALLOCATE(fact_q_air)                                      
-  ALLOCATE(fact_qsat_srf)                                   
-  ALLOCATE(zh_srf)                                          
-  ALLOCATE(zm_srf)                                          
-  ALLOCATE(alb_vis_dif)                                     
-  ALLOCATE(alb_nir_dif)                                     
-  ALLOCATE(alb_vis_dir)                                     
-  ALLOCATE(alb_nir_dir)                                     
-  ALLOCATE(albedo)                                          
-  ALLOCATE(sensible_heat_flx)
-  ALLOCATE(latent_heat_flx)
-  ALLOCATE(net_radiation)                                   
-  ALLOCATE(vpd)                                             
+  ALLOCATE(t_srf(nc))                                          
+  ALLOCATE(t_eff_srf(nc))                                      
+  ALLOCATE(qsat_srf(nc))                                       
+  ALLOCATE(fact_q_air(nc))                                     
+  ALLOCATE(fact_qsat_srf(nc))                                  
+  ALLOCATE(zh_srf(nc))                                         
+  ALLOCATE(zm_srf(nc))                                         
+  ALLOCATE(alb_vis_dif(nc))                                    
+  ALLOCATE(alb_nir_dif(nc))                                    
+  ALLOCATE(alb_vis_dir(nc))                                    
+  ALLOCATE(alb_nir_dir(nc))                                    
+  ALLOCATE(albedo(nc))                                         
+  ALLOCATE(sensible_heat_flx(nc))
+  ALLOCATE(latent_heat_flx(nc))
+  ALLOCATE(net_radiation(nc))                                  
+  ALLOCATE(vpd(nc))                                            
   ! For lakes:
-  ALLOCATE(latent_hflx_wtr)                                 
-  ALLOCATE(sensible_hflx_wtr)                               
-  ALLOCATE(latent_hflx_ice)                                 
-  ALLOCATE(sensible_hflx_ice)
+  ALLOCATE(latent_hflx_wtr(nc))                                
+  ALLOCATE(sensible_hflx_wtr(nc))                              
+  ALLOCATE(latent_hflx_ice(nc))                                
+  ALLOCATE(sensible_hflx_ice(nc))
   ! open forcing input files (and read the header into dummy variables); see mo_atmland_forcing
   ! l_forcing is set in init_slm() depending on the specific SLM model
   ! for SLM soil different input is used than for land plant canopy
@@ -223,44 +229,47 @@ PROGRAM land_model_driver
     !! 
     IF (l_forcing) THEN
       CALL update_forcing(  tile(1) , & ! necessary for soil: veg%litterfall vegsoil%moisture
+                            iblk    , &
+                            ics     , &
+                            ice     , &
                             time_day, & 
                                   !! forcing (read from file and passed to atm2land memory via the land_model_interface)
                                   !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: 
-                                  t_air                   = t_air              , &
-                                  q_air                   = q_air              , &
-                                  rain                    = rain               , &
-                                  snow                    = snow               , &
-                                  wind_air                = wind_air           , &
-                                  wind_10m                = wind_10m           , &
-                                  lw_srf_down             = lw_srf_down        , &
-                                  swvis_srf_down          = swvis_srf_down     , &
-                                  swnir_srf_down          = swnir_srf_down     , &
-                                  swpar_srf_down          = swpar_srf_down     , &
-                                  swpar_fdiffuse          = swpar_fdiffuse     , &
-                                  press_srf               = press_srf          , &
-                                  drag_srf                = drag_srf           , &
-                                  t_acoef                 = t_acoef            , &
-                                  t_bcoef                 = t_bcoef            , &
-                                  q_acoef                 = q_acoef            , &
-                                  q_bcoef                 = q_bcoef            , &
-                                  pch                     = pch                , &
-                                  cos_zenith_angle        = cos_zenith_angle   , &
-                                  co2_mixing_ratio        = co2_mixing_ratio     , &
-                                  co2_mixing_ratio_C13    = co2_mixing_ratio_C13 , &
-                                  co2_mixing_ratio_C14    = co2_mixing_ratio_C14 , &
-                                  ga                      = ga                   , &
+                                  t_air                   = t_air(:)              , &
+                                  q_air                   = q_air(:)              , &
+                                  rain                    = rain(:)               , &
+                                  snow                    = snow(:)               , &
+                                  wind_air                = wind_air(:)           , &
+                                  wind_10m                = wind_10m(:)           , &
+                                  lw_srf_down             = lw_srf_down(:)        , &
+                                  swvis_srf_down          = swvis_srf_down(:)     , &
+                                  swnir_srf_down          = swnir_srf_down(:)     , &
+                                  swpar_srf_down          = swpar_srf_down(:)     , &
+                                  swpar_fdiffuse          = swpar_fdiffuse(:)     , &
+                                  press_srf               = press_srf(:)          , &
+                                  drag_srf                = drag_srf(:)           , &
+                                  t_acoef                 = t_acoef(:)            , &
+                                  t_bcoef                 = t_bcoef(:)            , &
+                                  q_acoef                 = q_acoef(:)            , &
+                                  q_bcoef                 = q_bcoef(:)            , &
+                                  pch                     = pch(:)                , &
+                                  cos_zenith_angle        = cos_zenith_angle(:)   , &
+                                  co2_mixing_ratio        = co2_mixing_ratio(:)     , &
+                                  co2_mixing_ratio_C13    = co2_mixing_ratio_C13(:) , &
+                                  co2_mixing_ratio_C14    = co2_mixing_ratio_C14(:) , &
+                                  ga                      = ga(:)                   , &
                                   ! For lakes:
-                                  albedo_lwtr             = albedo_lwtr        , &
-                                  drag_wtr                = drag_wtr           , &
-                                  drag_ice                = drag_ice           , &
-                                  t_acoef_wtr             = t_acoef_wtr        , &
-                                  t_bcoef_wtr             = t_bcoef_wtr        , &
-                                  q_acoef_wtr             = q_acoef_wtr        , &
-                                  q_bcoef_wtr             = q_bcoef_wtr        , &
-                                  t_acoef_ice             = t_acoef_ice        , &
-                                  t_bcoef_ice             = t_bcoef_ice        , &
-                                  q_acoef_ice             = q_acoef_ice        , &
-                                  q_bcoef_ice             = q_bcoef_ice          &
+                                  albedo_lwtr             = albedo_lwtr(:)        , &
+                                  drag_wtr                = drag_wtr(:)           , &
+                                  drag_ice                = drag_ice(:)           , &
+                                  t_acoef_wtr             = t_acoef_wtr(:)        , &
+                                  t_bcoef_wtr             = t_bcoef_wtr(:)        , &
+                                  q_acoef_wtr             = q_acoef_wtr(:)        , &
+                                  q_bcoef_wtr             = q_bcoef_wtr(:)        , &
+                                  t_acoef_ice             = t_acoef_ice(:)        , &
+                                  t_bcoef_ice             = t_bcoef_ice(:)        , &
+                                  q_acoef_ice             = q_acoef_ice(:)        , &
+                                  q_bcoef_ice             = q_bcoef_ice(:)          &
                                   &  )
     END IF
 
@@ -271,64 +280,64 @@ PROGRAM land_model_driver
                               l_forcing, &
                               time_day, time_year, timestep_prop_day, &
                                   !! atm2land memory - INTENT(in) - start
-                                  t_air              , &
-                                  q_air              , &
-                                  rain               , &
-                                  snow               , &
-                                  wind_air           , &
-                                  wind_10m           , &
-                                  lw_srf_down        , &
-                                  swvis_srf_down     , &
-                                  swnir_srf_down     , &
-                                  swpar_srf_down     , &
-                                  swpar_fdiffuse     , &
-                                  press_srf          , &
-                                  drag_srf           , &
-                                  t_acoef            , &
-                                  t_bcoef            , &
-                                  q_acoef            , &
-                                  q_bcoef            , &
-                                  pch                , &
-                                  cos_zenith_angle   , &
-                                  co2_mixing_ratio     , &
-                                  co2_mixing_ratio_C13 , &
-                                  co2_mixing_ratio_C14 , &
-                                  ga                   , &
+                                  t_air(:)              , &
+                                  q_air(:)              , &
+                                  rain(:)               , &
+                                  snow(:)               , &
+                                  wind_air(:)           , &
+                                  wind_10m(:)           , &
+                                  lw_srf_down(:)        , &
+                                  swvis_srf_down(:)     , &
+                                  swnir_srf_down(:)     , &
+                                  swpar_srf_down(:)     , &
+                                  swpar_fdiffuse(:)     , &
+                                  press_srf(:)          , &
+                                  drag_srf(:)           , &
+                                  t_acoef(:)            , &
+                                  t_bcoef(:)            , &
+                                  q_acoef(:)            , &
+                                  q_bcoef(:)            , &
+                                  pch(:)                , &
+                                  cos_zenith_angle(:)   , &
+                                  co2_mixing_ratio(:)     , &
+                                  co2_mixing_ratio_C13(:) , &
+                                  co2_mixing_ratio_C14(:) , &
+                                  ga(:)                   , &
                                   ! For lakes:
-                                  albedo_lwtr        , &
-                                  drag_wtr           , &
-                                  drag_ice           , &
-                                  t_acoef_wtr        , &
-                                  t_bcoef_wtr        , &
-                                  q_acoef_wtr        , &
-                                  q_bcoef_wtr        , &
-                                  t_acoef_ice        , &
-                                  t_bcoef_ice        , &
-                                  q_acoef_ice        , &
-                                  q_bcoef_ice        , &
+                                  albedo_lwtr(:)        , &
+                                  drag_wtr(:)           , &
+                                  drag_ice(:)           , &
+                                  t_acoef_wtr(:)        , &
+                                  t_bcoef_wtr(:)        , &
+                                  q_acoef_wtr(:)        , &
+                                  q_bcoef_wtr(:)        , &
+                                  t_acoef_ice(:)        , &
+                                  t_bcoef_ice(:)        , &
+                                  q_acoef_ice(:)        , &
+                                  q_bcoef_ice(:)        , &
                                  !! atm2land memory - end
                                  !! land2atm memory - INTENT(out) - start
-                                  t_srf             ,   &
-                                  t_eff_srf         ,   &
-                                  qsat_srf          ,   &
-                                  fact_q_air        ,   &
-                                  fact_qsat_srf     ,   &
-                                  zh_srf            ,   &
-                                  zm_srf            ,   &
-                                  alb_vis_dif       ,   &
-                                  alb_nir_dif       ,   &
-                                  alb_vis_dir       ,   &
-                                  alb_nir_dir       ,   &
-                                  albedo            ,   &
-                                  sensible_heat_flx ,   &
-                                  latent_heat_flx   ,   &
-                                  net_radiation     ,   &
-                                  vpd               ,   &
+                                  t_srf(:)             ,   &
+                                  t_eff_srf(:)         ,   &
+                                  qsat_srf(:)          ,   &
+                                  fact_q_air(:)        ,   &
+                                  fact_qsat_srf(:)     ,   &
+                                  zh_srf(:)            ,   &
+                                  zm_srf(:)            ,   &
+                                  alb_vis_dif(:)       ,   &
+                                  alb_nir_dif(:)       ,   &
+                                  alb_vis_dir(:)       ,   &
+                                  alb_nir_dir(:)       ,   &
+                                  albedo(:)            ,   &
+                                  sensible_heat_flx(:) ,   &
+                                  latent_heat_flx(:)   ,   &
+                                  net_radiation(:)     ,   &
+                                  vpd(:)               ,   &
                                   ! For lakes:
-                                  latent_hflx_wtr   ,   &
-                                  sensible_hflx_wtr ,   &
-                                  latent_hflx_ice   ,   &
-                                  sensible_hflx_ice     &
+                                  latent_hflx_wtr(:)   ,   &
+                                  sensible_hflx_wtr(:) ,   &
+                                  latent_hflx_ice(:)   ,   &
+                                  sensible_hflx_ice(:)     &
                                   !! land2atm memory - end
                                 &  ) ! land_model_interface()
 

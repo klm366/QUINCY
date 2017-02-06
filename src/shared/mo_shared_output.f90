@@ -883,8 +883,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE write_output_flux(tile, options, time_d, time_y, itile)
 
+    USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options 
     USE mo_base_constants,        ONLY: dtime
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
@@ -898,20 +899,25 @@ CONTAINS
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
-
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(in), TARGET  :: tile    !< one tile
+    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
     TYPE(t_jsb_task_options), INTENT(in) :: options         !< model options
     REAL(wp), INTENT(in)                 :: time_d  !< time in days
     INTEGER,  INTENT(in)                 :: time_y  !< time in years; the 1st year of a simulation == year 1 (not zero)
     INTEGER,  INTENT(in)                 :: itile   !< number of current tile
+    ! ---------------------------
     ! 0.2 Local
-    INTEGER                      :: iblk, ics, ice, nc
+    TYPE(t_model),          POINTER       :: model
+    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                      :: lun             ! locical unit number
     REAL(wp), SAVE               :: dtime_one = 1.0_wp ! just 1.0
     REAL(wp)                     :: dC13gpp,dC13rg,dC13rm,hlp1,dC13litterfall,dC13het_resp,dC13leaching
-    ! 0.3 Memory allocation
+    INTEGER                               :: iblk, ics, ice, nc
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_flux'
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
     dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
@@ -920,18 +926,34 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: ga
+    dsl4jsb_Real2D_onChunk :: swpar_srf_down
+    dsl4jsb_Real2D_onChunk :: albedo
+    dsl4jsb_Real2D_onChunk :: net_radiation
+    dsl4jsb_Real2D_onChunk :: sensible_heat_flx
+    dsl4jsb_Real2D_onChunk :: latent_heat_flx
+    dsl4jsb_Real2D_onChunk :: ground_heat_flx
+!! *slmtemp
     TYPE(t_assimi_memory), POINTER   :: assimi      ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory), POINTER      :: rad         ! local pointer to rad__mem for SLM usability
     TYPE(t_soil_memory), POINTER     :: soil        ! local pointer to soil__mem for SLM usability
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
-    REAL(wp), POINTER                :: ga 
-    REAL(wp), POINTER                :: swpar_srf_down
-    REAL(wp), POINTER                :: albedo
-    REAL(wp), POINTER                :: net_radiation
-    REAL(wp), POINTER                :: sensible_heat_flx
-    REAL(wp), POINTER                :: latent_heat_flx
-    REAL(wp), POINTER                :: ground_heat_flx
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(xx_)) RETURN   ! ask for all processes considered here ?
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(xx_)
+    ! Get process memories
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(LAND2ATM_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -939,24 +961,33 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(SB_)
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swpar_srf_down)
+    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, ga)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, albedo)
+    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, net_radiation)
+    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, sensible_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, latent_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, ground_heat_flx)
 
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
-     
+
+!! *slmtemp
     assimi  => assimi__mem 
     veg     => veg__mem 
     rad     => rad__mem
     soil    => soil__mem
     sb      => sb__mem
-    ga                => atm2land__mem%ga%ptr
-    swpar_srf_down    => atm2land__mem%swpar_srf_down%ptr
-    albedo            => land2atm__mem%albedo%ptr
-    net_radiation     => land2atm__mem%net_radiation%ptr
-    sensible_heat_flx => land2atm__mem%sensible_heat_flx%ptr
-    latent_heat_flx   => land2atm__mem%latent_heat_flx%ptr
-    ground_heat_flx   => land2atm__mem%ground_heat_flx%ptr
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
 
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
@@ -1007,14 +1038,14 @@ CONTAINS
              transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dtime_one 
              drainage_acc(itile)     = drainage_acc(itile)      + soil%drainage%ptr(1,1)          * dtime_one 
              gc_acc(itile)           = gc_acc(itile)            + assimi%canopy_cond%ptr                                                      
-             ga_acc(itile)           = ga_acc(itile)            + ga                                                   
-             albedo_acc(itile)       = albedo_acc(itile)        + albedo
-             ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down * rad2ppfd  * dtime_one               
-             rnet_acc(itile)         = rnet_acc(itile)          + net_radiation              * dtime_one               
-             qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx          * dtime_one               
-             qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx            * dtime_one               
-             qg_acc(itile)           = qg_acc(itile)            + ground_heat_flx            * dtime_one               
-             appfd_acc(itile)        = appfd_acc(itile)         + rad%appfd%ptr              * dtime_one               
+             ga_acc(itile)           = ga_acc(itile)            + ga(1)                                                   
+             albedo_acc(itile)       = albedo_acc(itile)        + albedo(1)
+             ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down(1) * rad2ppfd  * dtime_one               
+             rnet_acc(itile)         = rnet_acc(itile)          + net_radiation(1)              * dtime_one               
+             qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx(1)          * dtime_one               
+             qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx(1)            * dtime_one               
+             qg_acc(itile)           = qg_acc(itile)            + ground_heat_flx(1)            * dtime_one               
+             appfd_acc(itile)        = appfd_acc(itile)         + rad%appfd%ptr                 * dtime_one               
              ndat_acc(itile)         = ndat_acc(itile)          + 1 
        
              !> 1.2 write fluxes and set to zero
@@ -1142,6 +1173,7 @@ CONTAINS
              het_respC14_acc(itile) = het_respC14_acc(itile) + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
              net_min_n_acc(itile)   = net_min_n_acc(itile) + SUM(sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
              net_min_p_acc(itile)   = net_min_p_acc(itile) + SUM(sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
+
 
              IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
                 & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
