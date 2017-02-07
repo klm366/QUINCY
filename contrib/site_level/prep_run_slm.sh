@@ -88,6 +88,52 @@ emailNotification="no"       # set either to yes or no (small caps)
 memory=1000000               # memory per job you may need; provided in Kb (1 Gb == 1000000 Kb)
 numberCpuMax=80              # maximum number of simulations started in parallel
 
+
+##>> flag_generate_soil_forcing options <<############################################################################
+## these option-values apply specifically to the generation of soil forcing ##########################################
+if [ $flag_generate_soil_forcing == "T" ]
+ then
+  echo " flag_generate_soil_forcing == T, applying special settings to some options"
+  echo " please run the simulations (prep_run_slm.sh) for both FLUXNET and CRUNCEPv5"
+  echo " afterwards, please run additional_scripts/copy_soil_forcing.sh when all jobs have finished"
+  echo " "
+  experimentalID="create_soil_forc_""$siteDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
+  slmModel="plant"
+
+  customSiteList="F"
+  specialFluxnetOutput="F"
+  compareSimCRUNCEPvsGFDB="F"
+  paramSensitivitySim="F"
+
+  n_uptake_scheme="standard"
+  p_uptake_scheme="standard"
+  soil_moisture_scheme="layer"
+  flag_calc_soil_energy="T"
+
+  flag_t_resp_acclimation="T"
+  flag_t_jmax_acclimation="T"
+  flag_optimal_Nfraction="F"
+  flag_heterogeneous_canopy="T"
+  ncanopy=20 
+  canopy_layer_scheme="standard"
+  flag_optimal_Nleaf="F"
+  flag_optimal_allocation="F"
+  flag_tile_veg_dynamics="T" 
+  soil_depth=5.7  
+
+  simulation_length_number=200
+  output_interval_pool="weekly"  # write_soil_forcing() is called per timestep independent of the output_interval_.. settings
+  output_interval_flux="weekly"
+  output_start_first_day_year=200
+  output_end_last_day_year=200 
+
+  flag_oneYearForcing="F"
+  soil_awc_prescribe=300.0
+  useSiteSpecificAWC="F"
+  soil_theta_prescribe=1.0
+fi
+
+
 ########################################################################################################
 ####### do NOT change any below this line unless you know what you are doing! ##########################
 ########################################################################################################
