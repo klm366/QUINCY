@@ -72,7 +72,7 @@ CONTAINS
     & t_srf, t_eff_srf, qsat_srf, s_srf,                                &
     & fact_q_air, fact_qsat_srf, evapopot,                              &
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,     &
-    & rough_h_srf, rough_m_srf, tte_corr,                               &
+    & rough_h_srf, rough_m_srf, q_snocpymlt,                            &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif)
 
     TYPE(t_jsb_tile),   INTENT(in) :: tile
@@ -81,7 +81,7 @@ CONTAINS
       & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                               &
       & fact_q_air(:), fact_qsat_srf(:), evapopot(:),                                &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
-      & rough_h_srf(:), rough_m_srf(:), tte_corr(:),                                 &
+      & rough_h_srf(:), rough_m_srf(:), q_snocpymlt(:),                              &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:)
 
     dsl4jsb_Def_memory(SRF)
@@ -108,7 +108,7 @@ CONTAINS
     IF (PRESENT(grnd_hcap))       grnd_hcap(:)        = dsl4jsb_var2D_onChunk(SOIL,hcap_grnd_old)
     IF (PRESENT(rough_h_srf))     rough_h_srf(:)      = dsl4jsb_var2D_onChunk(SRF,rough_h_srf)
     IF (PRESENT(rough_m_srf))     rough_m_srf(:)      = dsl4jsb_var2D_onChunk(SRF,rough_m_srf)
-    IF (PRESENT(tte_corr))        tte_corr(:)         = dsl4jsb_var2D_onChunk(SRF,tte_corr)
+    IF (PRESENT(q_snocpymlt))     q_snocpymlt(:)      = dsl4jsb_var2D_onChunk(SRF,q_snocpymlt)
     IF (PRESENT(alb_vis_dir))     alb_vis_dir(:)      = dsl4jsb_var2D_onChunk(SRF,alb_vis_srf)  ! Temporary
     IF (PRESENT(alb_vis_dif))     alb_vis_dif(:)      = dsl4jsb_var2D_onChunk(SRF,alb_vis_srf)  ! Temporary
     IF (PRESENT(alb_nir_dir))     alb_nir_dir(:)      = dsl4jsb_var2D_onChunk(SRF,alb_nir_srf)  ! Temporary

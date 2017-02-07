@@ -59,7 +59,7 @@ CONTAINS
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: fract
     dsl4jsb_Real2D_onChunk :: t_srf_unfilt
-    dsl4jsb_Real2D_onChunk :: tte_corr
+    dsl4jsb_Real2D_onChunk :: q_snocpymlt
     dsl4jsb_Real2D_onChunk :: t_air
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: wind_10m
@@ -190,7 +190,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL, overflow,      OUT)
 
     dsl4jsb_Get_var2D_onChunk(SRF, t_srf_unfilt, OUT)
-    dsl4jsb_Get_var2D_onChunk(SRF, tte_corr,     OUT)
+    dsl4jsb_Get_var2D_onChunk(SRF, q_snocpymlt,  OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, wsr_srf,      OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, wfract_srf,   OUT)
     dsl4jsb_Get_var2D_onChunk(SRF, wsn_srf,      OUT)
@@ -228,18 +228,18 @@ CONTAINS
       snow_melt_acc(:) = 0._wp
       glacier_runoff_acc(:) = 0._wp
       melt_water_excess(:) = 0._wp
-      tte_corr(:) = 0._wp
+      q_snocpymlt(:) = 0._wp
       snow_melt(:) = 0._wp
     END IF
 
     CALL update_surf_down(nc, dtime, lstart, &
-      & q_air(:), t_srf_unfilt(:), wind_10m(:), t_air(:), wsr_soil(:), wfract_srf(:), &
+      & t_srf_unfilt(:), wind_10m(:), t_air(:), wsr_soil(:), wfract_srf(:), &
       & wsr_max(:), wsn_soil(:), sfract_srf(:), wsn_can(:), wsn_glacier(:), &
       & hcap_grnd(:), evapotrans(:), evapopot(:), evapotrans_no_snow_skin(:), rain(:),  snow(:), &
       & is_present(:), is_glacier(:), pme_glacier(:), &
 !!$      & snow_acc(:), snow_melt_acc(:), glacier_runoff_acc(:), &
       melt_water_excess(:), &
-      & tte_corr(:), snow_melt(:) &
+      & q_snocpymlt(:), snow_melt(:) &
       & )
 
     ! Save old ground heat flux and heat capacity before updating

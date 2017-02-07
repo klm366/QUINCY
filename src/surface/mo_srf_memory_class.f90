@@ -53,7 +53,7 @@ MODULE mo_srf_memory_class
 !!$      s_srf_old        , &  !< Dry static energy at surface (old timestep)
       qsat_srf         , &
 !!$      qsat_srf_old     , &
-      tte_corr         , &  !< Correction term of tte for snow melt
+      q_snocpymlt      , &  !< heating by snow on canopy melting
       fact_q_air       , &  !< cair in echam6
       fact_qsat_srf    , &  !< csat in echam6
       fact_qsat_trans_srf   !< csat_transpiration in echam6/jsbach
@@ -242,9 +242,9 @@ CONTAINS
 !!$        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
 !!$        & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, prefix//'tte_corr'//suffix, mem%tte_corr,                             &
+      CALL jsb_add_var( mem, prefix//'q_snocpymlt'//suffix, mem%q_snocpymlt,                       &
         & hgrid, surface,                                                           &
-        & t_cf('tte_correction_snowmelt', '', ''),                                           &
+        & t_cf('heating_snow_canopy_melt', 'W/m2', 'heating by snow melting on canopy'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & initval_r=0.0_wp )
 
@@ -372,7 +372,7 @@ CONTAINS
 !!$    !out%s_srf_old     (ics:ice,    iblk) = in%s_srf_old     (ics:ice,    iblk)
 !!$    out%qsat_srf      (ics:ice,    iblk) = in%qsat_srf      (ics:ice,    iblk)
 !!$    !out%qsat_srf_old  (ics:ice,    iblk) = in%qsat_srf_old  (ics:ice,    iblk)
-!!$    out%tte_corr      (ics:ice,    iblk) = in%tte_corr      (ics:ice,    iblk)
+!!$    out%q_snocpymlt   (ics:ice,    iblk) = in%q_snocpymlt   (ics:ice,    iblk)
 !!$    out%fact_q_air    (ics:ice,    iblk) = in%fact_q_air    (ics:ice,    iblk)
 !!$    out%fact_qsat_srf (ics:ice,    iblk) = in%fact_qsat_srf (ics:ice,    iblk)
 !!$    out%fact_qsat_trans_srf (ics:ice,    iblk) = in%fact_qsat_trans_srf (ics:ice,    iblk)
@@ -393,7 +393,7 @@ CONTAINS
 !!$    !out%s_srf_old     (ics:ice,    iblk) = in1%s_srf_old     (ics:ice,    iblk) + in2%s_srf_old     (ics:ice,    iblk)
 !!$    out%qsat_srf      (ics:ice,    iblk) = in1%qsat_srf      (ics:ice,    iblk) + in2%qsat_srf      (ics:ice,    iblk)
 !!$    !out%qsat_srf_old  (ics:ice,    iblk) = in1%qsat_srf_old  (ics:ice,    iblk) + in2%qsat_srf_old  (ics:ice,    iblk)
-!!$    out%tte_corr      (ics:ice,    iblk) = in1%tte_corr      (ics:ice,    iblk) + in2%tte_corr      (ics:ice,    iblk)
+!!$    out%q_snocpymlt   (ics:ice,    iblk) = in1%q_snocpymlt   (ics:ice,    iblk) + in2%q_snocpymlt   (ics:ice,    iblk)
 !!$    out%fact_q_air    (ics:ice,    iblk) = in1%fact_q_air    (ics:ice,    iblk) + in2%fact_q_air    (ics:ice,    iblk)
 !!$    out%fact_qsat_srf (ics:ice,    iblk) = in1%fact_qsat_srf (ics:ice,    iblk) + in2%fact_qsat_srf (ics:ice,    iblk)
 !!$    out%fact_qsat_trans_srf (ics:ice,  iblk) = in1%fact_qsat_trans_srf (ics:ice,  iblk) + in2%fact_qsat_trans_srf (ics:ice,  iblk)

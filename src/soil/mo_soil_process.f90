@@ -163,7 +163,7 @@ CONTAINS
   END SUBROUTINE init_soil_temperature
 
 SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
-     , pqm1, ptsl, pspeed10, ptm1  &
+     , ptsl, pspeed10, ptm1  &
      , pwl, pcvw, pwlmx &
      , psn, pcvs, psnc,       pgld             &
      , pgrndcapc &
@@ -173,14 +173,14 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      , lmask, lpglac       &
      , palac &
 !!$     , psnacl, psnmel, progl &
-     , pmlres, tte_corr &
+     , pmlres, q_snocpymlt &
 !++mgs : add instantaneous snow melt for drydep calculation
      , psmelt   &
 !--mgs
 
      )
 
-  USE mo_physical_constants, ONLY: alf, cpd, vtmpc2, tmelt, g=>grav
+  USE mo_physical_constants, ONLY: alf, tmelt
 
   !
   !     ------------------------------------------------------------------
@@ -224,7 +224,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   ! pmlres        Residual melt water available for infiltration into the
   !               non-frozen soil after being intercepted by the
   !               skin reservoir
-  ! tte_corr      Correction term for temperature tendencies accounting for snow melt
+  ! q_snocpymlt   Heating due to snow on canopy melting
   ! psmelt        instantaneous snow melt rate (for dry deposition)
   !
   !       Rest folgt spaeter ....
@@ -280,7 +280,6 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   LOGICAL,  INTENT(in) :: lstart
   LOGICAL,  INTENT(in) :: lmask(kbdim)
   LOGICAL,  INTENT(in) :: lpglac(kbdim)
-  REAL(wp), INTENT(in) :: pqm1(kbdim)
   REAL(wp), INTENT(in) :: pspeed10(kbdim)
   REAL(wp), INTENT(in) :: ptm1(kbdim)
   REAL(wp), INTENT(in) :: pcvw(kbdim)
@@ -303,7 +302,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
 
   REAL(wp), INTENT(out)   :: pevwsd(kbdim)
   REAL(wp), INTENT(out)   :: palac(kbdim)
-  REAL(wp), INTENT(out)   :: tte_corr(kbdim)
+  REAL(wp), INTENT(out)   :: q_snocpymlt(kbdim)
   REAL(wp), INTENT(out)   :: pmlres(kbdim)
   REAL(wp), INTENT(out)   :: psmelt(kbdim)   !++mgs
   !
@@ -317,7 +316,6 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
        , zsnmel(kbdim),        zsn(kbdim)                                 &
        ,        zsncmelt(kbdim)
 !!$       , zdp(kbdim),
-  REAL(wp) :: zlfdcp(kbdim)
   !
   !  local scalars
   !
@@ -325,7 +323,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
        zsmelt, zsnmlt,      &
        zmprcp,    &
        zc2, zc3, zsncp, zexpt, zexpw, zsncmax, zsncwind
-  REAL(wp) :: zdtime, zrcp, zsncfac
+  REAL(wp) :: zdtime, zsncfac
   !
   !      Parameters
   !
@@ -336,7 +334,7 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
   zdtime = delta_time
   zc2=1.87E5_wp
   zc3=1.56E5_wp
-  zsncfac=rhoh2o*g/zdtime
+  zsncfac=rhoh2o*alf/zdtime
   !
   !     ------------------------------------------------------------------
   !
@@ -352,8 +350,6 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
      zraind(jl)=prain(jl)             *zdtime/rhoh2o                   !rain     [kg m-2 s-1] -> [m]
      zsnowd(jl)=psnow(jl)             *zdtime/rhoh2o                   !snowfall [kg m-2 s-1] -> [m]
      IF(lmask(jl)) THEN
-        zrcp=1._wp/(cpd*(1._wp+vtmpc2*MAX(0.0_wp,pqm1(jl))))
-        zlfdcp(jl)=alf*zrcp
         zevttd(jl)=pevapl(jl)                        *zdtime/rhoh2o    !evapotransp. [kg m-2 s-1] -> [m]
         zevsnd(jl)=pcvs(jl)*pevapot(jl)              *zdtime/rhoh2o    !pot. sublimation from snow [m]
         zevwld(jl)=(1._wp-pcvs(jl))*pcvw(jl)*pevapot(jl)*zdtime/rhoh2o !pot. evaporation from skinreservoir [m]
@@ -388,13 +384,13 @@ SUBROUTINE update_surf_down ( kbdim, delta_time, lstart  &
            zsncwind=psnc(jl)*(1._wp-EXP(-zexpw))
            psnc(jl)=psnc(jl)-zsncwind
            zsnowd(jl)=zsnowd(jl)+zsncwind
-           tte_corr(jl)=zsncmelt(jl)*zsncfac*zlfdcp(jl)
+           q_snocpymlt(jl)=zsncmelt(jl)*zsncfac
            !
            !   pwl(jl)=pwl(jl)+zsncmelt(jl) see section 2.5
            !
         ELSE                         !vg  on glacier:
            psnc(jl)=0._wp            !vg    no snow on canopy
-           tte_corr(jl) = 0._wp      !vg    no snow melt correction
+           q_snocpymlt(jl) = 0._wp   !vg    no heating due to snow on canopy melting
         END IF
 210  END DO
      !
@@ -856,7 +852,7 @@ SUBROUTINE update_surf_up ( kbdim, delta_time, nsoil &
 !!$ TR  USE mo_jsbach_comm_to_echam5mods, ONLY: nlat
 !!$ TR#endif
 
-  USE mo_physical_constants, ONLY: tmelt, g=>grav
+  USE mo_physical_constants, ONLY: tmelt
 
   INTEGER,  INTENT(in)    :: kbdim
   REAL(wp), INTENT(in)    :: delta_time

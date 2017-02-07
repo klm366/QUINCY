@@ -206,7 +206,7 @@ CONTAINS
     dsl4jsb_var2D_onDomain(SRF,s_srf)                = 0._wp
     dsl4jsb_var2D_onDomain(SRF,qsat_srf)             = -1._wp  ! Negative values will be used to test for start of experiment
 !!$    srf_mem%qsat_srf_old%ptr     (:,:) = 0._wp
-    dsl4jsb_var2D_onDomain(SRF,tte_corr)             = 0._wp
+    dsl4jsb_var2D_onDomain(SRF,q_snocpymlt)          = 0._wp
     dsl4jsb_var2D_onDomain(SRF,fact_q_air)           = 0.5_wp
     dsl4jsb_var2D_onDomain(SRF,fact_qsat_srf)        = 0.5_wp
     dsl4jsb_var2D_onDomain(SRF,fact_qsat_trans_srf)  = 0.5_wp
