@@ -80,7 +80,7 @@ CONTAINS
  
          ! Initial values for Siliva's simple one-bucket soil biogeochemical scheme
          ! Initialise surface litter pool to 0.5 mol / m2 N and P, and provide some initial NH4 and PO4
-         sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = 0.5_wp / soil_config%dz_water(1)
+         sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = 8.45_wp / soil_config%dz_water(1)
          sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(:,1,iblk) 
          sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
          sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / soil_config%dz_water(1) 
