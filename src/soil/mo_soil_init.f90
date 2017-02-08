@@ -27,108 +27,161 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE soil_init(tile)
+  SUBROUTINE soil_init(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options     ! *slmtemp
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_soil_config_class,     ONLY: soil_config
-    USE mo_soil_constants
+    USE mo_soil_constants,        ONLY: theta_sat, theta_wilt, rho_bulk_soil, soil_heat_cap, soil_therm_cond
     USE mo_soil_util,             ONLY: soil_depth_to_layers_2d
 
     ! USE PROC_memory
     dsl4jsb_Use_memory(SOIL_)
 
 
-  IMPLICIT NONE
-
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),       INTENT(inout)        :: tile       !< data structure for dynamic vegetation and soil variables
+    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< data structure for dynamic phenoetation and soil variables
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_model),          POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                                      :: isoil
+    INTEGER                                      :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':soil_init'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SOIL_)
-    TYPE(t_soil_memory),    POINTER              :: soil       ! local pointer to soil__mem for SLM usability
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk    :: soil_depth
+    dsl4jsb_Real2D_onChunk    :: root_depth
+    dsl4jsb_Real2D_onChunk    :: w_soil_root
+    dsl4jsb_Real2D_onChunk    :: w_soil_root_pwp
+    dsl4jsb_Real2D_onChunk    :: w_soil_root_fc
+    dsl4jsb_Real2D_onChunk    :: w_soil_root_theta
+    dsl4jsb_Real3D_onChunk    :: soil_depth_l
+    dsl4jsb_Real3D_onChunk    :: bulk_dens_l
+    dsl4jsb_Real3D_onChunk    :: heat_capa_l
+    dsl4jsb_Real3D_onChunk    :: therm_cond_l
+    dsl4jsb_Real3D_onChunk    :: root_fraction_l
+    dsl4jsb_Real3D_onChunk    :: w_soil_pwp_sl
+    dsl4jsb_Real3D_onChunk    :: w_soil_fc_sl 
+    dsl4jsb_Real3D_onChunk    :: w_soil_sl
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(SOIL_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(SOIL_)
+    ! Get process memories
     dsl4jsb_Get_memory(SOIL_)
-    soil   => soil__mem 
+    ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SOIL_, soil_depth)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, root_depth)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pwp)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_fc)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pwp_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_fc_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
 
 
-!    ! Total soil depth until bedrock
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
+    ! JSBACH4 code 20170208 git:feature/tiles (modified with using soil_config%)
+    ! Total soil depth until bedrock
 !    return_pointer => input_file%Read_2d(         &
 !      & variable_name='soil_depth',               &
 !      & fill_array = dsl4jsb_var2D_ptr(SOIL_, soil_depth))
-!    dsl4jsb_var2D_onDomain(SOIL_, soil_depth) = &
-!      MAX(0.1_wp, MERGE(dsl4jsb_var2D_onDomain(SOIL_, soil_depth), 0._wp, dsl4jsb_var2D_onDomain(SOIL_, soil_depth) >= 0._wp))
+    soil_depth(:)     = soil_config%soil_depth ! SLM code *slmtemp
+    dsl4jsb_var2D_onDomain(SOIL_, soil_depth) = &
+      MAX(0.1_wp, MERGE(dsl4jsb_var2D_onDomain(SOIL_, soil_depth), 0._wp, dsl4jsb_var2D_onDomain(SOIL_, soil_depth) >= 0._wp))
 
     ! Compute actual soil layer depths based on the fixed layer thicknesses from namelist and
     ! the bedrock depth just read in.
-!    dsl4jsb_var3D_onDomain(SOIL_, soil_depth_l) = soil_depth_to_layers_2d( &
-!      & dsl4jsb_var2D_onDomain(SOIL_, soil_depth),                         & ! Total soil depth until bedrock (from textures)
-!      & dsl4jsb_Config(SOIL_)%dz_water(1:dsl4jsb_Config(SOIL_)%nsoil_water))    ! Soil layer thicknesses from namelist
-   
+    dsl4jsb_var3D_onDomain(SOIL_, soil_depth_l) = soil_depth_to_layers_2d( &
+      & dsl4jsb_var2D_onDomain(SOIL_, soil_depth),                         & ! Total soil depth until bedrock (from textures)
+      & soil_config%dz_water(1:soil_config%nsoil_water))    ! Soil layer thicknesses from namelist
 
-    soil%soil_depth%ptr = soil_config%soil_depth 
-    soil%soil_depth_l%ptr(:,:,:) = soil_depth_to_layers_2d(soil%soil_depth%ptr(:,:), soil_config%dz_water(1:soil_config%nsoil_water))
-
-    soil%bulk_dens_l%ptr  = rho_bulk_soil 
-    soil%heat_capa_l%ptr  = soil_heat_cap
-    soil%therm_cond_l%ptr = soil_therm_cond
+    bulk_dens_l(:,:)  = rho_bulk_soil 
+    heat_capa_l(:,:)  = soil_heat_cap
+    therm_cond_l(:,:) = soil_therm_cond
 
     ! rooting depth given by prescribed AWC
-    soil%root_depth%ptr = MAX(soil_config%soil_depth_water(1), & 
+    root_depth(:) = MAX(soil_config%soil_depth_water(1), & 
                           ( soil_config%soil_awc_prescribe / 1000._wp )/ (theta_sat - theta_wilt)) 
 
     ! soil water in the rooting zone [m]
-    soil%w_soil_root_pwp%ptr = theta_wilt * soil%root_depth%ptr 
-    soil%w_soil_root_fc%ptr  = soil_config%soil_awc_prescribe / 1000._wp + soil%w_soil_root_pwp%ptr
+    w_soil_root_pwp(:)    = theta_wilt * root_depth(:) 
+    w_soil_root_fc(:)     = soil_config%soil_awc_prescribe / 1000._wp + w_soil_root_pwp(:)
     ! adjust initial water amount to prescribed theta 
-    soil%w_soil_root%ptr     = soil%w_soil_root_pwp%ptr + & 
-       soil_config%soil_theta_prescribe * (soil%w_soil_root_fc%ptr - soil%w_soil_root_pwp%ptr) 
-    soil%w_soil_root_theta%ptr = soil_config%soil_theta_prescribe
+    w_soil_root(:)        = w_soil_root_pwp(:) + & 
+                            soil_config%soil_theta_prescribe * (w_soil_root_fc(:) - w_soil_root_pwp(:)) 
+    w_soil_root_theta(:)  = soil_config%soil_theta_prescribe
 
     ! root fractions assuming an exponential distribution of roots
     ! Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth)
     ! integral to bottom of root zone: 1/lctlib%k_root_dist * (1 - exp(-lctlib%k_root_dist*depth) 
     ! thus for each layer
-    soil%root_fraction_l%ptr(:,1,:) = &  
+    ! layer 1
+    root_fraction_l(:,1) = &  
           (1._wp - exp(-lctlib%k_root_dist * soil_config%soil_depth_water(1))) / &
-          (1._wp - exp(-lctlib%k_root_dist * soil%root_depth%ptr))
+          (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
+    ! layer 2 -> soil_config%nsoil_water
     DO isoil=2,soil_config%nsoil_water
-       WHERE(soil%root_depth%ptr > soil_config%soil_depth_water(isoil-1))
-          WHERE(soil%root_depth%ptr > soil_config%soil_depth_water(isoil))
-             soil%root_fraction_l%ptr(:,isoil,:) = & 
+       WHERE(root_depth(:) > soil_config%soil_depth_water(isoil-1))
+          WHERE(root_depth(:) > soil_config%soil_depth_water(isoil))
+             root_fraction_l(:,isoil) = & 
                 (exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1)) - &
                  exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil))) / & 
-                (1._wp - exp(-lctlib%k_root_dist * soil%root_depth%ptr))
+                (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
           ELSEWHERE
-             soil%root_fraction_l%ptr(:,isoil,:) = & 
+             root_fraction_l(:,isoil) = & 
                 (exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1)) - &
-                 exp(-lctlib%k_root_dist * soil%root_depth%ptr)) / & 
-                (1._wp - exp(-lctlib%k_root_dist * soil%root_depth%ptr))
+                 exp(-lctlib%k_root_dist * root_depth(:))) / & 
+                (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
           ENDWHERE
        ELSEWHERE
-          soil%root_fraction_l%ptr(:,isoil,:) = 0.0_wp 
+          root_fraction_l(:,isoil) = 0.0_wp 
        ENDWHERE
     ENDDO
 
 
     ! soil water per layer depth
     DO isoil=1,soil_config%nsoil_water
-       WHERE(soil%soil_depth_l%ptr(:,isoil,:) > 0.0_wp) 
-          soil%w_soil_pwp_sl%ptr(:,isoil,:) = theta_wilt * soil%soil_depth_l%ptr(:,isoil,:) 
-          soil%w_soil_fc_sl%ptr(:,isoil,:)  = theta_sat * soil%soil_depth_l%ptr(:,isoil,:) 
+       WHERE(soil_depth_l(:,isoil) > 0.0_wp) 
+          w_soil_pwp_sl(:,isoil) = theta_wilt * soil_depth_l(:,isoil) 
+          w_soil_fc_sl(:,isoil)  = theta_sat * soil_depth_l(:,isoil) 
        ENDWHERE
     ENDDO
     ! adjust initial water amount to prescribed theta
-    soil%w_soil_sl%ptr = soil%w_soil_pwp_sl%ptr + & 
-         soil_config%soil_theta_prescribe * (soil%w_soil_fc_sl%ptr - soil%w_soil_pwp_sl%ptr)
+    w_soil_sl(:,:) = w_soil_pwp_sl(:,:) + & 
+                     soil_config%soil_theta_prescribe * (w_soil_fc_sl(:,:) - w_soil_pwp_sl(:,:))
 
   END SUBROUTINE soil_init
 

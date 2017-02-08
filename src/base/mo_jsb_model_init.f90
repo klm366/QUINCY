@@ -297,15 +297,15 @@ CONTAINS
       CASE('land','plant')
         CALL pheno_init(tile, model%options)     ! pheno 
         CALL veg_init(tile)       ! veg 
-        CALL soil_init(tile)      ! soil
+        CALL soil_init(tile, model%options)      ! soil
         CALL sb_init(tile, model%options)        ! sb 
       CASE('soil')
         CALL veg_init(tile)       ! veg, strictly speaking not necessary, but to be safe
-        CALL soil_init(tile)      ! soil
+        CALL soil_init(tile, model%options)      ! soil
         CALL sb_init(tile, model%options)        ! sb 
       CASE('canopy')
         CALL veg_init(tile)       ! veg 
-        CALL soil_init(tile)      ! soil
+        CALL soil_init(tile, model%options)      ! soil
       CASE('test_canopy')
         ! init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
       CASE DEFAULT

@@ -14,14 +14,6 @@ MODULE mo_pheno_init
   USE mo_kind,                    ONLY: wp
   USE mo_exception,               ONLY: message
 
-  USE mo_jsb_class,               ONLY: Get_model
-  USE mo_base_memory,             ONLY: t_slm_tile, t_model
-  USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-  USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, PHENO_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-
-  ! Use of process memories
-  dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,      ONLY: t_pheno_memory
-
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: pheno_init
@@ -37,11 +29,16 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE pheno_init(tile, options)
 
-    USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options    ! *slmtemp
+    USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
+    USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, PHENO_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_base_memory,             ONLY: t_slm_tile, t_model, t_jsb_task_options    ! *slmtemp
     USE mo_pheno_constants
+
+    ! Use of process memories
+    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,      ONLY: t_pheno_memory
  
     IMPLICIT NONE
-
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< data structure for dynamic phenoetation and soil variables
