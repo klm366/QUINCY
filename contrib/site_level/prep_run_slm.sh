@@ -444,13 +444,6 @@ esac
 ## test site list: default or custom ##
 # parameter sensitivity: set customSiteList to "T" and delete any name in singleSiteName (see the IF[] for starting the job very below)
 if [ $paramSensitivitySim == "T" ]; then
-  # check SLM model
-  if [ $slmModel == "soil" ]
-    then
-      echo "EXIT! parameter sensitivity simulations currently not working with SLM ""$slmModel"" model."
-      rm -r "$simFold"  # deleting the already created simulation folder
-      exit
-  fi
   customSiteList="T"
   singleSiteName=""
 fi

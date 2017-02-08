@@ -41,10 +41,10 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: cost_n_fixation_min
     REAL(wp)           :: vmax_bnf                        !< maximum rate of N fixation
     REAL(wp)           :: k_bnf                           !< half_saturating cost of the response of N fixation
-	REAL(wp)           :: offset_bnf                      !< parameter used for bnf-scheme 'resistor'
+	  REAL(wp)           :: offset_bnf                      !< parameter used for bnf-scheme 'resistor'
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
-    ! SB_CTL
+    ! SOIL_BIOGEOCHEMISTRY_CTL
     REAL(wp)           :: floss_nmin
 
   CONTAINS
@@ -70,8 +70,10 @@ CONTAINS
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_parameters_from_file), INTENT(inout) :: this
+    ! ---------------------------
     ! 0.2 Local
     ! SHARED_CTL
     REAL(wp)           :: mavg_period_tlabile
@@ -89,10 +91,10 @@ CONTAINS
     REAL(wp)           :: cost_n_fixation_min
     REAL(wp)           :: vmax_bnf
     REAL(wp)           :: k_bnf
-	REAL(wp)           :: offset_bnf
+	  REAL(wp)           :: offset_bnf
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
-    ! SB_CTL
+    ! SOIL_BIOGEOCHEMISTRY_CTL
     REAL(wp)           :: floss_nmin
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
@@ -116,11 +118,11 @@ CONTAINS
         cost_n_fixation_min       , &
         vmax_bnf                  , &
         k_bnf                     , &
-		offset_bnf                , &
+		    offset_bnf                , &
         f_resp_acclim             , &
         fmaint_rate_base
 
-    NAMELIST /sb_ctl/             &
+    NAMELIST /soil_biogeochemistry_ctl/ &
         floss_nmin
 
     ! variables for reading model-options from namelist
@@ -147,10 +149,10 @@ CONTAINS
     cost_n_fixation_min         = missval
     vmax_bnf                    = missval
     k_bnf                       = missval
-	offset_bnf                  = missval
+	  offset_bnf                  = missval
     f_resp_acclim               = missval
     fmaint_rate_base            = missval
-    ! SB_CTL
+    ! SOIL_BIOGEOCHEMISTRY_CTL
     floss_nmin                  = missval
 
     ! read the namelist
@@ -165,10 +167,10 @@ CONTAINS
     nml_unit = position_nml('VEGETATION_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, vegetation_ctl)
     CALL close_nml(nml_handler)
-    ! &SB_CTL
+    ! &SOIL_BIOGEOCHEMISTRY_CTL
     nml_handler = open_nml(TRIM(this%filename))
-    nml_unit = position_nml('SB_CTL', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, sb_ctl)
+    nml_unit = position_nml('SOIL_BIOGEOCHEMISTRY_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, soil_biogeochemistry_ctl)
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
@@ -189,10 +191,10 @@ CONTAINS
     this%cost_n_fixation_min         = cost_n_fixation_min
     this%vmax_bnf                    = vmax_bnf
     this%k_bnf                       = k_bnf
-	this%offset_bnf                  = offset_bnf
+	  this%offset_bnf                  = offset_bnf
     this%f_resp_acclim               = f_resp_acclim
     this%fmaint_rate_base            = fmaint_rate_base 
-    ! SB_CTL
+    ! SOIL_BIOGEOCHEMISTRY_CTL
     this%floss_nmin                  = floss_nmin
 
   END SUBROUTINE Read_parameter_list
@@ -255,7 +257,7 @@ CONTAINS
     IF (ABS(this%f_resp_acclim        - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
     IF (ABS(this%fmaint_rate_base     - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
 
-    ! SB_CTL
+    ! SOIL_BIOGEOCHEMISTRY_CTL
     IF (ABS(this%floss_nmin           - missval) > eps8)  floss_nmin            = this%floss_nmin
 
   END SUBROUTINE set_parameter_values_with_list_values

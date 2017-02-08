@@ -4,6 +4,9 @@
 &ATMLAND_CTL
   ! tba
 /
+&PHENOLOGY_CTL
+  ! tba
+/
 &RADIATION_CTL
   ! tba
 /
@@ -20,7 +23,7 @@
 &SOIL_CTL
   ! tba
 /
-&SB_CTL
+&SOIL_BIOGEOCHEMISTRY_CTL
   floss_nmin=NAN
 /
 &VEGETATION_CTL

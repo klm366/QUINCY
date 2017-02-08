@@ -1,20 +1,26 @@
 #!/bin/bash
 
-## 20161006
 ##
-## creates a table with sets of parameter value combinations used as input for SLM parameter sensitivity simulations 
+## creates a table (param_table.txt) with sets of parameter value combinations used as input for SLM parameter sensitivity simulations 
 ## see prep_run_slm.sh option: paramSensitivitySim
-## input: 
-## output: param.listD & param_table.txt
+## 
+## input:   slm_parameter_sensitivity_input.txt (content must comply with the Main Task: https://projects.bgc-jena.mpg.de/QUINCY/wiki/SLMParameterSensitivitySimulations)
+## output:  param.listD
+##          param_table.txt
+##
+## 1st version: Jan Engel MPI-BGC Jena 20161006
+##
+##
 
 ########################################################################################################
-####### options you may want to change #################################################################
+####### options you might want to change ###############################################################
 ########################################################################################################
 
 # Main Tasks
 #   1: you provide parameters and specific values per parameter (up to 4 parameters, number of values can differ between parameters)
 #   2: you provide parameters, min and max values and number of values per parameter (same conditions as for 1)
 #   3: you provide parameters, min and max values and overall number of samples to be taken, the rest is done by LHS using R
+# Note: you can pass the mainTask number as argument to this script; for Main Task 2: ./path-to-script/generate_parameter_table.sh 2
 mainTask=1
 
 
@@ -96,9 +102,24 @@ sed -i '/^\s*$/d' "$paramInputFile"
 sync
 
 ## validate the parameter in the input file ##
+paramListLineNumbers=$(wc -l "$paramInputFile" | awk '{print $1}') # number of parameters in the input file ($paramInputFile)
+for (( a=1; a<=$paramListLineNumbers; a++ )) # each line number
+  do
+    parameterName=$(sed -n "$a"p "$paramInputFile" | awk '{print $1}')  # -n  == quiet/silent
+    if ! cat $paramList | grep $parameterName > /dev/null  # if forcing file not found
+      then
+        echo "EXIT!  The parameter >""$parameterName""< from your ""$paramInputFile"" does not exist in ""$paramList"" !"
+        echo " Please add it to both files: ""$paramList"" and mo_shared_set_parameters.f90."
+        echo " Ask Jan in case you have further questions or need help with this."
+        exit
+    fi
+done
 
-## !!!!!!!! loop over param and check whether grep returns positive !! -> see prep_run.. site check
-
+## remove previous versions of output files ##
+rm -f $paramListDefault
+rm -f $paramTable
+echo "Previous output files have been removed (param.listD & param_table.txt, if existent)."
+echo " "
 
 ## get the number of lines that is the number of parameters ##
 paramNumber=$(wc -l "$paramInputFile" | awk '{print $1}')
@@ -115,10 +136,6 @@ if [ $paramNumber -gt 4 ]
   else
     echo "The number of parameters you want to vary is: ""$paramNumber"
 fi
-
-## remove previous versions of output files ##
-rm -f $paramListDefault
-rm -f $paramTable
 
 ## create an array with parameter names used as header in $paramTable ##
 paramTableHead[0]=0
@@ -161,10 +178,10 @@ return 0
 }  # end function ####################################################
 
 
-#############################
-## Main Tasks 1 #############
-if [ $mainTask == 1 ]; then #
-#############################
+###################################################################################################
+## Main Tasks 1 ##                                                                               ##
+if [ $mainTask == 1 ]; then                                                                      ##
+###################################################################################################
 
 ## get numbers of values per parameter and cals number of different parameter value sets ##
 for ((i = 0 ; i < $paramNumber ; i++))	
@@ -270,10 +287,10 @@ fi                          #
 #############################
 
 
-#############################
-## Main Tasks 2 #############
-if [ $mainTask == 2 ]; then #
-#############################
+###################################################################################################
+## Main Tasks 2 ##                                                                               ##
+if [ $mainTask == 2 ]; then                                                                      ##
+###################################################################################################
 
 ## get numbers of values per parameter and cals number of different parameter value sets ##
 for ((i = 0 ; i < $paramNumber ; i++))	
@@ -382,15 +399,15 @@ fi                          #
 #############################
 
 
-#############################
-## Main Tasks 3 #############
-if [ $mainTask == 3 ]; then #
-#############################
+###################################################################################################
+## Main Tasks 3 ##                                                                               ##
+if [ $mainTask == 3 ]; then                                                                      ##
+###################################################################################################
 
 ## 2do !! line 100 -> check for variables validity
 
 echo "Sorry, the latin hypercube sampling (Main Tasks 3) has not been implemented yet."
-echo "Please wait for a future release of SLM implementing this feature."
+echo "Please wait for a future release of SLM implementing this feature, or send a reminder to Jan."
 echo "EXIT !"
 exit
 
@@ -401,6 +418,9 @@ fi                          #
 #############################
 
 
-echo " OK. The script generate_parameter_table.sh has finished. Two files have been created."
+echo " "
+echo "OK. The script has finished."
+echo "  Two new files have been created (param.listD & param_table.txt)."
+echo "  You could run the prep_run_slm.sh with paramSensitivitySim == T now."
 
 # end generate_parameter_table.sh # 
