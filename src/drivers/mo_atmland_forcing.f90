@@ -142,7 +142,30 @@ CONTAINS
                      co2_mixing_ratio_r,                                           &
                      nhx_r, nox_r   ! dummy variable for nhx_srf_down & noy_srf_down
     ! READ() input variables for: soil
-    ! ...
+    REAL(wp) ::      leaf_carbon_r, leaf_nitrogen_r, leaf_phosphorus_r    , &
+                     leaf_carbon13_r, leaf_carbon14_r, leaf_nitrogen15_r  , &
+                     fine_root_carbon_r, fine_root_nitrogen_r, fine_root_phosphorus_r   , &
+                     fine_root_carbon13_r, fine_root_carbon14_r, fine_root_nitrogen15_r , &
+                     coarse_root_carbon_r, coarse_root_nitrogen_r, coarse_root_phosphorus_r   , &
+                     coarse_root_carbon13_r, coarse_root_carbon14_r, coarse_root_nitrogen15_r , &
+                     sap_wood_carbon_r, sap_wood_nitrogen_r, sap_wood_phosphorus_r    , &
+                     sap_wood_carbon13_r, sap_wood_carbon14_r, sap_wood_nitrogen15_r  , &
+                     heart_wood_carbon_r, heart_wood_nitrogen_r, heart_wood_phosphorus_r    , &
+                     heart_wood_carbon13_r, heart_wood_carbon14_r, heart_wood_nitrogen15_r  , &
+                     labile_carbon_r, labile_nitrogen_r, labile_phosphorus_r    , &
+                     labile_carbon13_r, labile_carbon14_r, labile_nitrogen15_r  , &
+                     reserve_carbon_r, reserve_nitrogen_r, reserve_phosphorus_r   , &
+                     reserve_carbon13_r, reserve_carbon14_r, reserve_nitrogen15_r , &
+                     fruit_carbon_r, fruit_nitrogen_r, fruit_phosphorus_r   , &
+                     fruit_carbon13_r, fruit_carbon14_r, fruit_nitrogen15_r , &
+                     seed_bed_carbon_r, seed_bed_nitrogen_r, seed_bed_phosphorus_r  , &
+                     seed_bed_carbon13_r, seed_bed_carbon14_r, seed_bed_nitrogen15_r
+    REAL(wp) ::      rtm_depolymerisation_r, rtm_mic_uptake_r, &
+                     rtm_sorption_r, rtm_desorption_r, & 
+                     rtm_hsc_r, rmm_depolymerisation_r, & 
+                     rmm_mic_uptake_r, rmm_sorption_r, & 
+                     rmm_desorption_r, rmm_hsc_r, &
+                     percolation_sl_r
     INTEGER  :: stat          ! status of I/O (https://software.intel.com/en-us/node/691976)
     INTEGER  :: lun           ! logical unit number for file input stream, see '2.0 read data'
     REAL(wp) :: sw_toa_down   ! potential radiation at the top of the atmosphere
@@ -356,36 +379,29 @@ CONTAINS
 
     nlevel_soil = soil_config%nsoil_water
 
-    ! the read statement, by default a list of values in a line is read and then advanced to the beginning of the next line
+    !> 1.0 read data
+    !!
+    !! the read statement, by default a list of values in a line is read and then advanced to the beginning of the next line
     lun=9
     READ(lun,*, IOSTAT=stat) time_hlp, & 
-        ! leaf
-        veg%litterfall%leaf%carbon%ptr, veg%litterfall%leaf%nitrogen%ptr, veg%litterfall%leaf%phosphorus%ptr    , &
-        veg%litterfall%leaf%carbon13%ptr, veg%litterfall%leaf%carbon14%ptr, veg%litterfall%leaf%nitrogen15%ptr  , &
-        ! fine_root
-        veg%litterfall%fine_root%carbon%ptr, veg%litterfall%fine_root%nitrogen%ptr, veg%litterfall%fine_root%phosphorus%ptr   , &
-        veg%litterfall%fine_root%carbon13%ptr, veg%litterfall%fine_root%carbon14%ptr, veg%litterfall%fine_root%nitrogen15%ptr , &
-        ! coarse_root
-        veg%litterfall%coarse_root%carbon%ptr, veg%litterfall%coarse_root%nitrogen%ptr, veg%litterfall%coarse_root%phosphorus%ptr   , &
-        veg%litterfall%coarse_root%carbon13%ptr, veg%litterfall%coarse_root%carbon14%ptr, veg%litterfall%coarse_root%nitrogen15%ptr , &
-        ! sap_wood
-        veg%litterfall%sap_wood%carbon%ptr, veg%litterfall%sap_wood%nitrogen%ptr, veg%litterfall%sap_wood%phosphorus%ptr    , &
-        veg%litterfall%sap_wood%carbon13%ptr, veg%litterfall%sap_wood%carbon14%ptr, veg%litterfall%sap_wood%nitrogen15%ptr  , &
-        ! heart_wood
-        veg%litterfall%heart_wood%carbon%ptr, veg%litterfall%heart_wood%nitrogen%ptr, veg%litterfall%heart_wood%phosphorus%ptr    , &
-        veg%litterfall%heart_wood%carbon13%ptr, veg%litterfall%heart_wood%carbon14%ptr, veg%litterfall%heart_wood%nitrogen15%ptr  , &
-        ! labile
-        veg%litterfall%labile%carbon%ptr, veg%litterfall%labile%nitrogen%ptr, veg%litterfall%labile%phosphorus%ptr    , &
-        veg%litterfall%labile%carbon13%ptr, veg%litterfall%labile%carbon14%ptr, veg%litterfall%labile%nitrogen15%ptr  , &
-        ! reserve
-        veg%litterfall%reserve%carbon%ptr, veg%litterfall%reserve%nitrogen%ptr, veg%litterfall%reserve%phosphorus%ptr   , &
-        veg%litterfall%reserve%carbon13%ptr, veg%litterfall%reserve%carbon14%ptr, veg%litterfall%reserve%nitrogen15%ptr , &
-        ! fruit
-        veg%litterfall%fruit%carbon%ptr, veg%litterfall%fruit%nitrogen%ptr, veg%litterfall%fruit%phosphorus%ptr   , &
-        veg%litterfall%fruit%carbon13%ptr, veg%litterfall%fruit%carbon14%ptr, veg%litterfall%fruit%nitrogen15%ptr , &
-        ! seed_bed
-        veg%litterfall%seed_bed%carbon%ptr, veg%litterfall%seed_bed%nitrogen%ptr, veg%litterfall%seed_bed%phosphorus%ptr  , &
-        veg%litterfall%seed_bed%carbon13%ptr, veg%litterfall%seed_bed%carbon14%ptr, veg%litterfall%seed_bed%nitrogen15%ptr
+                     leaf_carbon_r, leaf_nitrogen_r, leaf_phosphorus_r    , &
+                     leaf_carbon13_r, leaf_carbon14_r, leaf_nitrogen15_r  , &
+                     fine_root_carbon_r, fine_root_nitrogen_r, fine_root_phosphorus_r   , &
+                     fine_root_carbon13_r, fine_root_carbon14_r, fine_root_nitrogen15_r , &
+                     coarse_root_carbon_r, coarse_root_nitrogen_r, coarse_root_phosphorus_r   , &
+                     coarse_root_carbon13_r, coarse_root_carbon14_r, coarse_root_nitrogen15_r , &
+                     sap_wood_carbon_r, sap_wood_nitrogen_r, sap_wood_phosphorus_r    , &
+                     sap_wood_carbon13_r, sap_wood_carbon14_r, sap_wood_nitrogen15_r  , &
+                     heart_wood_carbon_r, heart_wood_nitrogen_r, heart_wood_phosphorus_r    , &
+                     heart_wood_carbon13_r, heart_wood_carbon14_r, heart_wood_nitrogen15_r  , &
+                     labile_carbon_r, labile_nitrogen_r, labile_phosphorus_r    , &
+                     labile_carbon13_r, labile_carbon14_r, labile_nitrogen15_r  , &
+                     reserve_carbon_r, reserve_nitrogen_r, reserve_phosphorus_r   , &
+                     reserve_carbon13_r, reserve_carbon14_r, reserve_nitrogen15_r , &
+                     fruit_carbon_r, fruit_nitrogen_r, fruit_phosphorus_r   , &
+                     fruit_carbon13_r, fruit_carbon14_r, fruit_nitrogen15_r , &
+                     seed_bed_carbon_r, seed_bed_nitrogen_r, seed_bed_phosphorus_r  , &
+                     seed_bed_carbon13_r, seed_bed_carbon14_r, seed_bed_nitrogen15_r
 
 
     ! if this flag is set TRUE, check whether the current time step is a new year, if so 
@@ -395,56 +411,116 @@ CONTAINS
       REWIND(lun)
       CALL read_forcing_header(lun)
       READ(lun,*) time_hlp, &
-        ! leaf
-        veg%litterfall%leaf%carbon%ptr, veg%litterfall%leaf%nitrogen%ptr, veg%litterfall%leaf%phosphorus%ptr    , &
-        veg%litterfall%leaf%carbon13%ptr, veg%litterfall%leaf%carbon14%ptr, veg%litterfall%leaf%nitrogen15%ptr  , &
-        ! fine_root
-        veg%litterfall%fine_root%carbon%ptr, veg%litterfall%fine_root%nitrogen%ptr, veg%litterfall%fine_root%phosphorus%ptr   , &
-        veg%litterfall%fine_root%carbon13%ptr, veg%litterfall%fine_root%carbon14%ptr, veg%litterfall%fine_root%nitrogen15%ptr , &
-        ! coarse_root
-        veg%litterfall%coarse_root%carbon%ptr, veg%litterfall%coarse_root%nitrogen%ptr, veg%litterfall%coarse_root%phosphorus%ptr   , &
-        veg%litterfall%coarse_root%carbon13%ptr, veg%litterfall%coarse_root%carbon14%ptr, veg%litterfall%coarse_root%nitrogen15%ptr , &
-        ! sap_wood
-        veg%litterfall%sap_wood%carbon%ptr, veg%litterfall%sap_wood%nitrogen%ptr, veg%litterfall%sap_wood%phosphorus%ptr    , &
-        veg%litterfall%sap_wood%carbon13%ptr, veg%litterfall%sap_wood%carbon14%ptr, veg%litterfall%sap_wood%nitrogen15%ptr  , &
-        ! heart_wood
-        veg%litterfall%heart_wood%carbon%ptr, veg%litterfall%heart_wood%nitrogen%ptr, veg%litterfall%heart_wood%phosphorus%ptr    , &
-        veg%litterfall%heart_wood%carbon13%ptr, veg%litterfall%heart_wood%carbon14%ptr, veg%litterfall%heart_wood%nitrogen15%ptr  , &
-        ! labile
-        veg%litterfall%labile%carbon%ptr, veg%litterfall%labile%nitrogen%ptr, veg%litterfall%labile%phosphorus%ptr    , &
-        veg%litterfall%labile%carbon13%ptr, veg%litterfall%labile%carbon14%ptr, veg%litterfall%labile%nitrogen15%ptr  , &
-        ! reserve
-        veg%litterfall%reserve%carbon%ptr, veg%litterfall%reserve%nitrogen%ptr, veg%litterfall%reserve%phosphorus%ptr   , &
-        veg%litterfall%reserve%carbon13%ptr, veg%litterfall%reserve%carbon14%ptr, veg%litterfall%reserve%nitrogen15%ptr , &
-        ! fruit
-        veg%litterfall%fruit%carbon%ptr, veg%litterfall%fruit%nitrogen%ptr, veg%litterfall%fruit%phosphorus%ptr   , &
-        veg%litterfall%fruit%carbon13%ptr, veg%litterfall%fruit%carbon14%ptr, veg%litterfall%fruit%nitrogen15%ptr , &
-        ! seed_bed
-        veg%litterfall%seed_bed%carbon%ptr, veg%litterfall%seed_bed%nitrogen%ptr, veg%litterfall%seed_bed%phosphorus%ptr  , &
-        veg%litterfall%seed_bed%carbon13%ptr, veg%litterfall%seed_bed%carbon14%ptr, veg%litterfall%seed_bed%nitrogen15%ptr
+                     leaf_carbon_r, leaf_nitrogen_r, leaf_phosphorus_r    , &
+                     leaf_carbon13_r, leaf_carbon14_r, leaf_nitrogen15_r  , &
+                     fine_root_carbon_r, fine_root_nitrogen_r, fine_root_phosphorus_r   , &
+                     fine_root_carbon13_r, fine_root_carbon14_r, fine_root_nitrogen15_r , &
+                     coarse_root_carbon_r, coarse_root_nitrogen_r, coarse_root_phosphorus_r   , &
+                     coarse_root_carbon13_r, coarse_root_carbon14_r, coarse_root_nitrogen15_r , &
+                     sap_wood_carbon_r, sap_wood_nitrogen_r, sap_wood_phosphorus_r    , &
+                     sap_wood_carbon13_r, sap_wood_carbon14_r, sap_wood_nitrogen15_r  , &
+                     heart_wood_carbon_r, heart_wood_nitrogen_r, heart_wood_phosphorus_r    , &
+                     heart_wood_carbon13_r, heart_wood_carbon14_r, heart_wood_nitrogen15_r  , &
+                     labile_carbon_r, labile_nitrogen_r, labile_phosphorus_r    , &
+                     labile_carbon13_r, labile_carbon14_r, labile_nitrogen15_r  , &
+                     reserve_carbon_r, reserve_nitrogen_r, reserve_phosphorus_r   , &
+                     reserve_carbon13_r, reserve_carbon14_r, reserve_nitrogen15_r , &
+                     fruit_carbon_r, fruit_nitrogen_r, fruit_phosphorus_r   , &
+                     fruit_carbon13_r, fruit_carbon14_r, fruit_nitrogen15_r , &
+                     seed_bed_carbon_r, seed_bed_nitrogen_r, seed_bed_phosphorus_r  , &
+                     seed_bed_carbon13_r, seed_bed_carbon14_r, seed_bed_nitrogen15_r
     END IF
 
     lun=10
     READ(lun,*, IOSTAT=stat) time_hlp, & 
-        sb%rtm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk),sb%rtm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk),& 
-        sb%rtm_sorption%ptr(ics:ice,1:nlevel_soil,iblk),sb%rtm_desorption%ptr(ics:ice,1:nlevel_soil,iblk), & 
-        sb%rtm_hsc%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk), & 
-        sb%rmm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_sorption%ptr(ics:ice,1:nlevel_soil,iblk), & 
-        sb%rmm_desorption%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_hsc%ptr(ics:ice,1:nlevel_soil,iblk), & 
-        soil%percolation_sl%ptr(ics:ice,1:nlevel_soil,iblk)
+                     rtm_depolymerisation_r, rtm_mic_uptake_r, &
+                     rtm_sorption_r, rtm_desorption_r, & 
+                     rtm_hsc_r, rmm_depolymerisation_r, & 
+                     rmm_mic_uptake_r, rmm_sorption_r, & 
+                     rmm_desorption_r, rmm_hsc_r, &
+                     percolation_sl_r
 
     IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy
       REWIND(lun)
       CALL read_forcing_header(lun)
       READ(lun,*) time_hlp, &
-        sb%rtm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk),sb%rtm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk),& 
-        sb%rtm_sorption%ptr(ics:ice,1:nlevel_soil,iblk),sb%rtm_desorption%ptr(ics:ice,1:nlevel_soil,iblk), & 
-        sb%rtm_hsc%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk), & 
-        sb%rmm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_sorption%ptr(ics:ice,1:nlevel_soil,iblk), & 
-        sb%rmm_desorption%ptr(ics:ice,1:nlevel_soil,iblk),sb%rmm_hsc%ptr(ics:ice,1:nlevel_soil,iblk), &
-        soil%percolation_sl%ptr(ics:ice,1:nlevel_soil,iblk)
+                     rtm_depolymerisation_r, rtm_mic_uptake_r, &
+                     rtm_sorption_r, rtm_desorption_r, & 
+                     rtm_hsc_r, rmm_depolymerisation_r, & 
+                     rmm_mic_uptake_r, rmm_sorption_r, & 
+                     rmm_desorption_r, rmm_hsc_r, &
+                     percolation_sl_r
     END IF
+
+    !> 2.0 pass values read from file (i.e. scalar values) to ics-ice
+    !!
+    veg%litterfall%leaf%carbon%ptr	 =  leaf_carbon_r
+    veg%litterfall%leaf%nitrogen%ptr	 =  leaf_nitrogen_r
+    veg%litterfall%leaf%phosphorus%ptr    	 =  leaf_phosphorus_r    
+    veg%litterfall%leaf%carbon13%ptr	 =  leaf_carbon13_r
+    veg%litterfall%leaf%carbon14%ptr	 =  leaf_carbon14_r
+    veg%litterfall%leaf%nitrogen15%ptr  	 =  leaf_nitrogen15_r  
+    veg%litterfall%fine_root%carbon%ptr	 =  fine_root_carbon_r
+    veg%litterfall%fine_root%nitrogen%ptr	 =  fine_root_nitrogen_r
+    veg%litterfall%fine_root%phosphorus%ptr   	 =  fine_root_phosphorus_r
+    veg%litterfall%fine_root%carbon13%ptr	 =  fine_root_carbon13_r
+    veg%litterfall%fine_root%carbon14%ptr	 =  fine_root_carbon14_r
+    veg%litterfall%fine_root%nitrogen15%ptr 	 =  fine_root_nitrogen15_r 
+    veg%litterfall%coarse_root%carbon%ptr	 =  coarse_root_carbon_r
+    veg%litterfall%coarse_root%nitrogen%ptr	 =  coarse_root_nitrogen_r
+    veg%litterfall%coarse_root%phosphorus%ptr   	 =  coarse_root_phosphorus_r   
+    veg%litterfall%coarse_root%carbon13%ptr	 =  coarse_root_carbon13_r
+    veg%litterfall%coarse_root%carbon14%ptr	 =  coarse_root_carbon14_r
+    veg%litterfall%coarse_root%nitrogen15%ptr 	 =  coarse_root_nitrogen15_r 
+    veg%litterfall%sap_wood%carbon%ptr	 =  sap_wood_carbon_r
+    veg%litterfall%sap_wood%nitrogen%ptr	 =  sap_wood_nitrogen_r
+    veg%litterfall%sap_wood%phosphorus%ptr    	 =  sap_wood_phosphorus_r    
+    veg%litterfall%sap_wood%carbon13%ptr	 =  sap_wood_carbon13_r
+    veg%litterfall%sap_wood%carbon14%ptr	 =  sap_wood_carbon14_r
+    veg%litterfall%sap_wood%nitrogen15%ptr  	 =  sap_wood_nitrogen15_r  
+    veg%litterfall%heart_wood%carbon%ptr	 =  heart_wood_carbon_r
+    veg%litterfall%heart_wood%nitrogen%ptr	 =  heart_wood_nitrogen_r
+    veg%litterfall%heart_wood%phosphorus%ptr    	 =  heart_wood_phosphorus_r    
+    veg%litterfall%heart_wood%carbon13%ptr	 =  heart_wood_carbon13_r
+    veg%litterfall%heart_wood%carbon14%ptr	 =  heart_wood_carbon14_r
+    veg%litterfall%heart_wood%nitrogen15%ptr  	 =  heart_wood_nitrogen15_r  
+    veg%litterfall%labile%carbon%ptr	 =  labile_carbon_r
+    veg%litterfall%labile%nitrogen%ptr	 =  labile_nitrogen_r
+    veg%litterfall%labile%phosphorus%ptr    	 =  labile_phosphorus_r    
+    veg%litterfall%labile%carbon13%ptr	 =  labile_carbon13_r
+    veg%litterfall%labile%carbon14%ptr	 =  labile_carbon14_r
+    veg%litterfall%labile%nitrogen15%ptr  	 =  labile_nitrogen15_r  
+    veg%litterfall%reserve%carbon%ptr	 =  reserve_carbon_r
+    veg%litterfall%reserve%nitrogen%ptr	 =  reserve_nitrogen_r
+    veg%litterfall%reserve%phosphorus%ptr   	 =  reserve_phosphorus_r   
+    veg%litterfall%reserve%carbon13%ptr	 =  reserve_carbon13_r
+    veg%litterfall%reserve%carbon14%ptr	 =  reserve_carbon14_r
+    veg%litterfall%reserve%nitrogen15%ptr 	 =  reserve_nitrogen15_r 
+    veg%litterfall%fruit%carbon%ptr	 =  fruit_carbon_r
+    veg%litterfall%fruit%nitrogen%ptr	 =  fruit_nitrogen_r
+    veg%litterfall%fruit%phosphorus%ptr   	 =  fruit_phosphorus_r   
+    veg%litterfall%fruit%carbon13%ptr	 =  fruit_carbon13_r
+    veg%litterfall%fruit%carbon14%ptr	 =  fruit_carbon14_r
+    veg%litterfall%fruit%nitrogen15%ptr 	 =  fruit_nitrogen15_r 
+    veg%litterfall%seed_bed%carbon%ptr	 =  seed_bed_carbon_r
+    veg%litterfall%seed_bed%nitrogen%ptr	 =  seed_bed_nitrogen_r
+    veg%litterfall%seed_bed%phosphorus%ptr  	 =  seed_bed_phosphorus_r  
+    veg%litterfall%seed_bed%carbon13%ptr	 =  seed_bed_carbon13_r
+    veg%litterfall%seed_bed%carbon14%ptr	 =  seed_bed_carbon14_r
+    veg%litterfall%seed_bed%nitrogen15%ptr	 =  seed_bed_nitrogen15_r
+
+    sb%rtm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk) = rtm_depolymerisation_r
+    sb%rtm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk)       = rtm_mic_uptake_r
+    sb%rtm_sorption%ptr(ics:ice,1:nlevel_soil,iblk)         = rtm_sorption_r
+    sb%rtm_desorption%ptr(ics:ice,1:nlevel_soil,iblk)       = rtm_desorption_r
+    sb%rtm_hsc%ptr(ics:ice,1:nlevel_soil,iblk)              = rtm_hsc_r
+    sb%rmm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk) = rmm_depolymerisation_r
+    sb%rmm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk)       = rmm_mic_uptake_r
+    sb%rmm_sorption%ptr(ics:ice,1:nlevel_soil,iblk)         = rmm_sorption_r
+    sb%rmm_desorption%ptr(ics:ice,1:nlevel_soil,iblk)       = rmm_desorption_r
+    sb%rmm_hsc%ptr(ics:ice,1:nlevel_soil,iblk)              = rmm_hsc_r
+    soil%percolation_sl%ptr(ics:ice,1:nlevel_soil,iblk)     = percolation_sl_r
 
     END SELECT  ! land plant canopy vs soil
 
