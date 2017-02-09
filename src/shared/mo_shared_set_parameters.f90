@@ -44,7 +44,7 @@ MODULE mo_shared_set_parameters
 	  REAL(wp)           :: offset_bnf                      !< parameter used for bnf-scheme 'resistor'
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
-    ! SOIL_BIOGEOCHEMISTRY_CTL
+    ! SB_CTL
     REAL(wp)           :: floss_nmin
 
   CONTAINS
@@ -94,7 +94,7 @@ CONTAINS
 	  REAL(wp)           :: offset_bnf
     REAL(wp)           :: f_resp_acclim
     REAL(wp)           :: fmaint_rate_base
-    ! SOIL_BIOGEOCHEMISTRY_CTL
+    ! SB_CTL
     REAL(wp)           :: floss_nmin
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Read_parameter_list'
@@ -122,7 +122,7 @@ CONTAINS
         f_resp_acclim             , &
         fmaint_rate_base
 
-    NAMELIST /soil_biogeochemistry_ctl/ &
+    NAMELIST /sb_ctl/ &
         floss_nmin
 
     ! variables for reading model-options from namelist
@@ -152,7 +152,7 @@ CONTAINS
 	  offset_bnf                  = missval
     f_resp_acclim               = missval
     fmaint_rate_base            = missval
-    ! SOIL_BIOGEOCHEMISTRY_CTL
+    ! SB_CTL
     floss_nmin                  = missval
 
     ! read the namelist
@@ -167,10 +167,10 @@ CONTAINS
     nml_unit = position_nml('VEGETATION_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, vegetation_ctl)
     CALL close_nml(nml_handler)
-    ! &SOIL_BIOGEOCHEMISTRY_CTL
+    ! &SB_CTL
     nml_handler = open_nml(TRIM(this%filename))
-    nml_unit = position_nml('SOIL_BIOGEOCHEMISTRY_CTL', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, soil_biogeochemistry_ctl)
+    nml_unit = position_nml('SB_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, sb_ctl)
     CALL close_nml(nml_handler)
 
     ! pass values as read from file
@@ -194,7 +194,7 @@ CONTAINS
 	  this%offset_bnf                  = offset_bnf
     this%f_resp_acclim               = f_resp_acclim
     this%fmaint_rate_base            = fmaint_rate_base 
-    ! SOIL_BIOGEOCHEMISTRY_CTL
+    ! SB_CTL
     this%floss_nmin                  = floss_nmin
 
   END SUBROUTINE Read_parameter_list
@@ -257,7 +257,7 @@ CONTAINS
     IF (ABS(this%f_resp_acclim        - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
     IF (ABS(this%fmaint_rate_base     - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
 
-    ! SOIL_BIOGEOCHEMISTRY_CTL
+    ! SB_CTL
     IF (ABS(this%floss_nmin           - missval) > eps8)  floss_nmin            = this%floss_nmin
 
   END SUBROUTINE set_parameter_values_with_list_values

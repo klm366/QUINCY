@@ -23,7 +23,7 @@
 &SOIL_CTL
   ! tba
 /
-&SOIL_BIOGEOCHEMISTRY_CTL
+&SB_CTL
   floss_nmin=NAN
 /
 &VEGETATION_CTL
