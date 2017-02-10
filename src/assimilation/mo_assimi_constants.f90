@@ -122,11 +122,11 @@ CONTAINS
                                       Tzero             !< melting point in K
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_assimi_constants'
 
-  ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
+    ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
       jmax2n        = 17.6_wp/4.0_wp
       vcmax2n       = 1.8_wp       
       k0_fn_pepc   = 0.045_wp 
@@ -161,7 +161,7 @@ CONTAINS
       Dwv2co2_air     = Dwv / Dco2  
       Dwv2co2_turb    = ( Dwv / Dco2  ) ** (2._wp/3._wp) 
 
-  ! parameters describing the isotopic discrimination of PS (fractionation due to photosynthesis), derived from Drake 2014, Radiocarbon, 56, 29-38
+    ! parameters describing the isotopic discrimination of PS (fractionation due to photosynthesis), derived from Drake 2014, Radiocarbon, 56, 29-38
       discr_ps_a_C13 = 4.4_wp   
       discr_ps_b_C13 = 27.0_wp 
       discr_ps_c_C13 = 5.7_wp 
@@ -170,7 +170,7 @@ CONTAINS
       discr_ps_c_C14 = discr_ps_c_C13 * 1.89_wp 
       discr_ps_phi   = 0.16_wp 
 
-  ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
+    ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
       ka            = 0.005_wp 
       kn            = 0.11_wp
       k0_fn_chl_C3 = 6.0_wp

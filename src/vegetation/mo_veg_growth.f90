@@ -74,17 +74,25 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk             :: growing_season
-    dsl4jsb_Real2D_onChunk                :: t_air
+    dsl4jsb_Logical2D_onChunk             :: growing_season         ! PHENO_
+    dsl4jsb_Real2D_onChunk                :: t_air                  ! ATM2LAND_
     dsl4jsb_Real2D_onChunk                :: q_air
     dsl4jsb_Real2D_onChunk                :: press_srf
     dsl4jsb_Real2D_onChunk                :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk                :: ga
+    dsl4jsb_Real2D_onChunk                :: beta_air               ! ASSIMI_
+    dsl4jsb_Real2D_onChunk                :: beta_soil_ps
+    dsl4jsb_Real2D_onChunk                :: beta_soil_gs
+    dsl4jsb_Real2D_onChunk                :: maint_respiration_leaf
+    dsl4jsb_Real2D_onChunk                :: net_assimilation
+    dsl4jsb_Real2D_onChunk                :: canopy_cond
+    dsl4jsb_Real2D_onChunk                :: beta_air_tcnl_mavg
+    dsl4jsb_Real2D_onChunk                :: beta_soil_ps_tcnl_mavg
+    dsl4jsb_Real2D_onChunk                :: beta_soil_gs_tcnl_mavg
+    dsl4jsb_Real2D_onChunk                :: w_soil_root_theta      ! SOIL_
 !! *slmtemp    
-    TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
-    TYPE(t_soil_memory),     POINTER :: soil        ! local pointer to soil__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -97,7 +105,7 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config
-!    dsl4jsb_Get_config(PHENO_)
+!    dsl4jsb_Get_config(xx_)
     ! Get process memories
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -116,12 +124,23 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, co2_mixing_ratio)
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, ga)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, maint_respiration_leaf)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+
 
 !! *slmtemp
-    assimi  => assimi__mem 
     veg     => veg__mem 
     rad     => rad__mem
-    soil    => soil__mem
 
 
 
@@ -133,7 +152,7 @@ CONTAINS
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    veg%kstar_labile%ptr = calc_meristem_activity(t_air(1), soil%w_soil_root_theta%ptr(1,1), growing_season(1))
+    veg%kstar_labile%ptr = calc_meristem_activity(t_air(1), w_soil_root_theta(1), growing_season(1))
 
     !> 1.1 calculate costs of N uptake and fixation
     !!
@@ -154,9 +173,9 @@ CONTAINS
     IF (veg_config%flag_optimal_Nleaf .AND. growing_season(1)) THEN
       CALL calc_dir_optimal_cn_leaf(lctlib                                  , &
                                       veg                                   , &
-                                      assimi%beta_air_tcnl_mavg%ptr         , &
-                                      assimi%beta_soil_ps_tcnl_mavg%ptr     , &
-                                      assimi%beta_soil_gs_tcnl_mavg%ptr     , &
+                                      beta_air_tcnl_mavg(1)         , &
+                                      beta_soil_ps_tcnl_mavg(1)     , &
+                                      beta_soil_gs_tcnl_mavg(1)     , &
                                       rad%ppfd_sunlit_tcnl_mavg_cl%ptr(:,1) , &
                                       rad%ppfd_shaded_tcnl_mavg_cl%ptr(:,1) )
 
@@ -187,11 +206,11 @@ CONTAINS
                                               q_air(1)                    , &
                                               co2_mixing_ratio(1)         , &
                                               ga(1)                       , & 
-                                              assimi%net_assimilation%ptr , & 
-                                              assimi%canopy_cond%ptr      , & 
-                                              assimi%beta_air%ptr         , & 
-                                              assimi%beta_soil_ps%ptr     , & 
-                                              assimi%beta_soil_gs%ptr     , & 
+                                              net_assimilation(1) , & 
+                                              canopy_cond(1)      , & 
+                                              beta_air(1)         , & 
+                                              beta_soil_ps(1)     , & 
+                                              beta_soil_gs(1)     , & 
                                               rad%ppfd_sunlit_cl%ptr(:,1) , &
                                               rad%ppfd_shaded_cl%ptr(:,1) , &
                                               veg                         , & ! *slmdev  --> CALL calc_photosynthesis()
@@ -288,7 +307,7 @@ CONTAINS
     CALL calc_partitioning(t_air(1)                               , & ! in
                             veg%t_air_tacclim_mavg%ptr            , &
                             veg%kstar_labile%ptr                  , &
-                            assimi%maint_respiration_leaf%ptr     , &
+                            maint_respiration_leaf(1)     , &
                             veg%cost_n_fixation%ptr               , &
                             veg%growth_req_p%ptr                  , &
                             veg%growth_req_n%ptr                  , &

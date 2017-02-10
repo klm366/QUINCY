@@ -186,9 +186,10 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real3D_onChunk      :: percolation_sl       ! SOIL_
 ! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_sb_memory),       POINTER :: sb          ! local pointer to sb__mem for SLM usability
-    TYPE(t_soil_memory),     POINTER :: soil        ! local pointer to soil__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
@@ -204,12 +205,13 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
+!    lctlib => model%lctlib(tile%lcts%lib_id) 
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
 
 ! 2 be removed  *slmtemp
     sb      => sb__mem 
-    soil    => soil__mem 
     veg     => veg__mem 
-
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -520,7 +522,7 @@ CONTAINS
     sb%rmm_sorption%ptr(ics:ice,1:nlevel_soil,iblk)         = rmm_sorption_r
     sb%rmm_desorption%ptr(ics:ice,1:nlevel_soil,iblk)       = rmm_desorption_r
     sb%rmm_hsc%ptr(ics:ice,1:nlevel_soil,iblk)              = rmm_hsc_r
-    soil%percolation_sl%ptr(ics:ice,1:nlevel_soil,iblk)     = percolation_sl_r
+    percolation_sl(:,:)           = percolation_sl_r
 
     END SELECT  ! land plant canopy vs soil
 

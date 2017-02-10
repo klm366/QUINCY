@@ -663,11 +663,13 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk                 :: growing_season
+    dsl4jsb_Logical2D_onChunk         :: growing_season     ! PHENO_
+    dsl4jsb_Real2D_onChunk            :: beta_soil_gs       ! ASSIMI_
+    dsl4jsb_Real2D_onChunk            :: beta_soil_ps
+    dsl4jsb_Real2D_onChunk            :: w_soil_root        ! SOIL_
+    dsl4jsb_Real2D_onChunk            :: w_soil_root_pot
 !! *slmtemp
-    TYPE(t_assimi_memory),        POINTER     :: assimi   ! local pointer to veg__mem for SLM usability
     TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
-    TYPE(t_soil_memory),          POINTER     :: soil     ! local pointer to soil__mem for SLM usability
     TYPE(t_sb_memory),            POINTER     :: sb       ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -676,12 +678,12 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(????)) RETURN   ! ask for all processes considered here ?
+!    IF (.NOT. tile%Is_process_active(xx_)) RETURN   ! ask for all processes considered here ?
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config
-!    dsl4jsb_Get_config(PHENO_)
+!    dsl4jsb_Get_config(xx_)
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
@@ -693,17 +695,24 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
+
+
+!! *slmtemp
+    veg     => veg__mem 
+    sb      => sb__mem  
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-!! *slmtemp
-    assimi  => assimi__mem 
-    veg     => veg__mem 
-    soil    => soil__mem  
-    sb      => sb__mem  
+
 
     lun = 100 * itile
  
@@ -762,7 +771,7 @@ CONTAINS
                 veg%pool%fruit%phosphorus%ptr,veg%pool%labile%phosphorus%ptr,&
                 veg%pool%reserve%phosphorus%ptr,veg%pool%seed_bed%phosphorus%ptr,veg%total_biomass%phosphorus%ptr
               lun=lun+1
-              write(lun,'(9F12.6)') time_d, soil%w_soil_root%ptr(1,1), soil%w_soil_root_pot%ptr(1,1),assimi%beta_soil_gs%ptr,assimi%beta_soil_ps%ptr
+              write(lun,'(9F12.6)') time_d, w_soil_root(1), w_soil_root_pot(1),beta_soil_gs(1),beta_soil_ps(1)
               lun=lun+1
               write(lun,'(20F12.6)') time_d, sb%pool%polymeric_litter%nitrogen%ptr(1,1,1), sb%pool%polymeric_litter%phosphorus%ptr(1,1,1), & 
                    sb%nh4_solute%ptr(1,1,1), sb%no3_solute%ptr(1,1,1), sb%po4_solute%ptr(1,1,1)
@@ -927,18 +936,22 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: ga
+    dsl4jsb_Real2D_onChunk :: ga                        ! ATM2LAND_
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk :: albedo
+    dsl4jsb_Real2D_onChunk :: albedo                    ! LAND2ATM_
     dsl4jsb_Real2D_onChunk :: net_radiation
     dsl4jsb_Real2D_onChunk :: sensible_heat_flx
     dsl4jsb_Real2D_onChunk :: latent_heat_flx
     dsl4jsb_Real2D_onChunk :: ground_heat_flx
+    dsl4jsb_Real2D_onChunk :: gross_assimilation        ! ASSIMI_
+    dsl4jsb_Real2D_onChunk :: gross_assimilation_C13
+    dsl4jsb_Real2D_onChunk :: gross_assimilation_C14
+    dsl4jsb_Real2D_onChunk :: canopy_cond
+    dsl4jsb_Real2D_onChunk :: drainage                  ! SOIL_
+    dsl4jsb_Real3D_onChunk :: soil_depth_l
 !! *slmtemp
-    TYPE(t_assimi_memory), POINTER   :: assimi      ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory), POINTER      :: rad         ! local pointer to rad__mem for SLM usability
-    TYPE(t_soil_memory), POINTER     :: soil        ! local pointer to soil__mem for SLM usability
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -973,13 +986,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(LAND2ATM_, sensible_heat_flx)
     dsl4jsb_Get_var2D_onChunk(LAND2ATM_, latent_heat_flx)
     dsl4jsb_Get_var2D_onChunk(LAND2ATM_, ground_heat_flx)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_l)
+    ! ---------------------------
+
 
 
 !! *slmtemp
-    assimi  => assimi__mem 
     veg     => veg__mem 
     rad     => rad__mem
-    soil    => soil__mem
     sb      => sb__mem
 
 
@@ -1011,17 +1032,17 @@ CONTAINS
                ELSE
                  dtime_one = dtime / 1000000.0_wp      ! interval > timestep
              END IF
-             gpp_acc(itile)          = gpp_acc(itile)           + assimi%gross_assimilation%ptr   * dtime_one
+             gpp_acc(itile)          = gpp_acc(itile)           + gross_assimilation(1)   * dtime_one
              growth_resp_acc(itile)  = growth_resp_acc(itile)   + veg%growth_respiration%ptr      * dtime_one
              maint_resp_acc(itile)   = maint_resp_acc(itile)    + veg%maint_respiration%ptr       * dtime_one
              n_transform_resp_acc(itile) = n_transform_resp_acc(itile) + veg%n_transform_respiration%ptr * dtime_one
              n_fixation_resp_acc(itile) = n_fixation_resp_acc(itile) + veg%n_fixation_respiration%ptr    * dtime_one
              npp_acc(itile)          = npp_acc(itile)           + veg%npp%ptr                 * dtime_one
              res_use_c_acc(itile)    = res_use_c_acc(itile)     + veg%reserve_use%carbon%ptr  * dtime_one *1000000._wp/dtime
-             gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + assimi%gross_assimilation_C13%ptr * dtime_one
+             gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + gross_assimilation_C13(1) * dtime_one
              growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + veg%growth_respiration_c13%ptr * dtime_one
              maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + veg%maint_respiration_c13%ptr  * dtime_one
-             gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + assimi%gross_assimilation_C14%ptr * dtime_one
+             gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + gross_assimilation_C14(1) * dtime_one
              growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + veg%growth_respiration_c14%ptr * dtime_one
              maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + veg%maint_respiration_c14%ptr  * dtime_one
              uptake_nh4_acc(itile)     = uptake_nh4_acc(itile)      + veg%uptake_nh4%ptr                * dtime_one
@@ -1036,8 +1057,8 @@ CONTAINS
                                        veg%recycling_fine_root_p%ptr + veg%recycling_heart_wood_p%ptr ) * dtime_one *1000000._wp/dtime
              res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
              transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dtime_one 
-             drainage_acc(itile)     = drainage_acc(itile)      + soil%drainage%ptr(1,1)          * dtime_one 
-             gc_acc(itile)           = gc_acc(itile)            + assimi%canopy_cond%ptr                                                      
+             drainage_acc(itile)     = drainage_acc(itile)      + drainage(1)          * dtime_one 
+             gc_acc(itile)           = gc_acc(itile)            + canopy_cond(1)                                                      
              ga_acc(itile)           = ga_acc(itile)            + ga(1)                                                   
              albedo_acc(itile)       = albedo_acc(itile)        + albedo(1)
              ppfd_acc(itile)         = ppfd_acc(itile)          + swpar_srf_down(1) * rad2ppfd  * dtime_one               
@@ -1168,11 +1189,11 @@ CONTAINS
                                       veg%litterfall%labile%phosphorus%ptr + veg%litterfall%reserve%phosphorus%ptr + &
                                       veg%litterfall%fruit%phosphorus%ptr + veg%litterfall%seed_bed%phosphorus%ptr) 
              
-             het_respC_acc(itile)   = het_respC_acc(itile)   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
-             het_respC13_acc(itile) = het_respC13_acc(itile) + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
-             het_respC14_acc(itile) = het_respC14_acc(itile) + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
-             net_min_n_acc(itile)   = net_min_n_acc(itile) + SUM(sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
-             net_min_p_acc(itile)   = net_min_p_acc(itile) + SUM(sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * soil%soil_depth_l%ptr(ics:ice,:,iblk))
+             het_respC_acc(itile)   = het_respC_acc(itile)   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
+             het_respC13_acc(itile) = het_respC13_acc(itile) + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
+             het_respC14_acc(itile) = het_respC14_acc(itile) + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
+             net_min_n_acc(itile)   = net_min_n_acc(itile) + SUM(sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
+             net_min_p_acc(itile)   = net_min_p_acc(itile) + SUM(sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
 
 
              IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
@@ -1223,10 +1244,10 @@ CONTAINS
   !!  litterfall data and SB rate modifiers 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_soil_forcing(tile, time_d, time_y, itile)
+  SUBROUTINE write_soil_forcing(tile, options, time_d, time_y, itile)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_config_class,      ONLY: veg_config
 
@@ -1236,32 +1257,65 @@ CONTAINS
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile), INTENT(in), TARGET  :: tile         !< one tile
-    REAL(wp),         INTENT(in)          :: time_d       !< time in days
-    INTEGER,          INTENT(in)          :: time_y       !< time in years; the 1st year of a simulation == year 1 (not zero)
-    INTEGER,          INTENT(in)          :: itile        !< number of current tile
+    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< one tile
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    REAL(wp),         INTENT(in)                  :: time_d       !< time in days
+    INTEGER,          INTENT(in)                  :: time_y       !< time in years; the 1st year of a simulation == year 1 (not zero)
+    INTEGER,          INTENT(in)                  :: itile        !< number of current tile
+    ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),                POINTER :: model        ! slm model
-    TYPE(t_lctlib_element),       POINTER :: lctlib       ! land-cover-type library - parameter across pft's
+    TYPE(t_model),          POINTER       :: model
+    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: lun          ! logical unit number
-    ! 0.3 Memory allocation
+    INTEGER                               :: iblk, ics, ice, nc
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_soil_forcing'
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                        ! TYPE(t_veg_memory),     POINTER :: veg__mem
     dsl4jsb_Def_memory(SB_)                         ! TYPE(t_sb_memory),      POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                       ! TYPE(t_soil_memory),    POINTER :: soil__mem
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real3D_onChunk      :: percolation_sl     ! SOIL_
+! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_veg_memory),           POINTER     :: veg   ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory),            POINTER     :: sb    ! local pointer to sb__mem for SLM usability
-    TYPE(t_soil_memory),          POINTER     :: soil  ! local pointer to soil__mem for SLM usability
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(xx_)
+    ! Get process memories
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SB_)                         
     dsl4jsb_Get_memory(SOIL_)                         
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id) 
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
 
+
+! 2 be removed  *slmtemp
     veg => veg__mem 
     sb  => sb__mem 
-    soil  => soil__mem 
-    model     => Get_model(tile%owner_model_id)
-    lctlib    => model%lctlib(tile%lcts%lib_id)
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
 
     !> 1.0 check output start & end, and write litterfall and soilphysics if appropriate
     !! 
@@ -1280,7 +1334,7 @@ CONTAINS
         sb%rmm_sorption%ptr(1,:,1)          , &
         sb%rmm_desorption%ptr(1,:,1)        , &
         sb%rmm_hsc%ptr(1,:,1)               , & ! 10
-        soil%percolation_sl%ptr(1,:,1)
+        percolation_sl(1,:)
 
       lun=lun+1
       write(lun,'(55F12.6)') time_d, &

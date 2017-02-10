@@ -122,13 +122,22 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: t_air                     ! ATM2LAND_
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk :: ga
+    dsl4jsb_Real2D_onChunk :: beta_air                  ! ASSIMI_
+    dsl4jsb_Real2D_onChunk :: beta_soil_ps
+    dsl4jsb_Real2D_onChunk :: beta_soil_gs
+    dsl4jsb_Real2D_onChunk :: beta_air_daytime
+    dsl4jsb_Real2D_onChunk :: beta_soil_ps_daytime
+    dsl4jsb_Real2D_onChunk :: beta_soil_gs_daytime
+    dsl4jsb_Real2D_onChunk :: beta_air_daytime_dacc
+    dsl4jsb_Real2D_onChunk :: beta_soil_ps_daytime_dacc
+    dsl4jsb_Real2D_onChunk :: beta_soil_gs_daytime_dacc
+    dsl4jsb_Real2D_onChunk :: t_jmax_opt
 !! *slmtemp
-    TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
     ! Get local variables from options argument
@@ -159,11 +168,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, co2_mixing_ratio)
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, ga)
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)
+    ! ---------------------------
 !    dsl4jsb_Get_var2D_onChunk(xx_, xx)
 
 
 !! *slmtemp
-    assimi    => assimi__mem 
     veg       => veg__mem 
     rad       => rad__mem
 
@@ -192,11 +211,11 @@ CONTAINS
       veg%press_srf_daytime_dacc%ptr        = veg%press_srf_daytime_dacc%ptr        + press_srf(1)
       veg%co2_mixing_ratio_daytime_dacc%ptr = veg%co2_mixing_ratio_daytime_dacc%ptr + co2_mixing_ratio(1)
       veg%ga_daytime_dacc%ptr               = veg%ga_daytime_dacc%ptr               + ga(1)
-      assimi%beta_air_daytime_dacc%ptr      = assimi%beta_air_daytime_dacc%ptr      + assimi%beta_air%ptr
-      assimi%beta_soil_ps_daytime_dacc%ptr  = assimi%beta_soil_ps_daytime_dacc%ptr  + assimi%beta_soil_ps%ptr
+      beta_air_daytime_dacc(:)      = beta_air_daytime_dacc(:)      + beta_air(:)
+      beta_soil_ps_daytime_dacc(:)  = beta_soil_ps_daytime_dacc(:)  + beta_soil_ps(:)
       veg%beta_sinklim_ps_daytime_dacc%ptr  = veg%beta_sinklim_ps_daytime_dacc%ptr  + veg%beta_sinklim_ps%ptr
-      assimi%beta_soil_gs_daytime_dacc%ptr  = assimi%beta_soil_gs_daytime_dacc%ptr  + assimi%beta_soil_gs%ptr
-      veg%t_jmax_opt_daytime_dacc%ptr       = veg%t_jmax_opt_daytime_dacc%ptr       + assimi%t_jmax_opt%ptr
+      beta_soil_gs_daytime_dacc(:)  = beta_soil_gs_daytime_dacc(:)  + beta_soil_gs(:)
+      veg%t_jmax_opt_daytime_dacc%ptr       = veg%t_jmax_opt_daytime_dacc%ptr       + t_jmax_opt(1)
       
     END IF
 
@@ -217,10 +236,10 @@ CONTAINS
         veg%press_srf_daytime%ptr        = veg%press_srf_daytime_dacc%ptr          / veg%daytime_counter%ptr
         veg%co2_mixing_ratio_daytime%ptr = veg%co2_mixing_ratio_daytime_dacc%ptr   / veg%daytime_counter%ptr
         veg%ga_daytime%ptr               = veg%ga_daytime_dacc%ptr                 / veg%daytime_counter%ptr
-        assimi%beta_air_daytime%ptr      = assimi%beta_air_daytime_dacc%ptr        / veg%daytime_counter%ptr
-        assimi%beta_soil_ps_daytime%ptr  = assimi%beta_soil_ps_daytime_dacc%ptr    / veg%daytime_counter%ptr
+        beta_air_daytime(:)      = beta_air_daytime_dacc(:)        / veg%daytime_counter%ptr
+        beta_soil_ps_daytime(:)  = beta_soil_ps_daytime_dacc(:)    / veg%daytime_counter%ptr
         veg%beta_sinklim_ps_daytime%ptr  = veg%beta_sinklim_ps_daytime_dacc%ptr    / veg%daytime_counter%ptr
-        assimi%beta_soil_gs_daytime%ptr  = assimi%beta_soil_gs_daytime_dacc%ptr    / veg%daytime_counter%ptr
+        beta_soil_gs_daytime(:)  = beta_soil_gs_daytime_dacc(:)    / veg%daytime_counter%ptr
         veg%t_jmax_opt_daytime%ptr       = veg%t_jmax_opt_daytime_dacc%ptr         / veg%daytime_counter%ptr
       ELSE  ! if veg%daytime_counter is zero
         rad%ppfd_sunlit_daytime_cl%ptr   = 0.0_wp
@@ -242,10 +261,10 @@ CONTAINS
       veg%press_srf_daytime_dacc%ptr             = 0.0_wp
       veg%co2_mixing_ratio_daytime_dacc%ptr      = 0.0_wp
       veg%ga_daytime_dacc%ptr                    = 0.0_wp
-      assimi%beta_air_daytime_dacc%ptr           = 0.0_wp
-      assimi%beta_soil_ps_daytime_dacc%ptr       = 0.0_wp
+      beta_air_daytime_dacc(:)           = 0.0_wp
+      beta_soil_ps_daytime_dacc(:)       = 0.0_wp
       veg%beta_sinklim_ps_daytime_dacc%ptr       = 0.0_wp
-      assimi%beta_soil_gs_daytime_dacc%ptr       = 0.0_wp
+      beta_soil_gs_daytime_dacc(:)       = 0.0_wp
       veg%t_jmax_opt_daytime_dacc%ptr            = 0.0_wp
       veg%daytime_counter%ptr                    = 0.0_wp
     END IF
@@ -363,10 +382,22 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk       :: growing_season
-    dsl4jsb_Real2D_onChunk          :: t_air
+    dsl4jsb_Logical2D_onChunk       :: growing_season       ! PHENO_
+    dsl4jsb_Real2D_onChunk          :: t_air                ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk          :: gross_assimilation   ! ASSIMI_
+    dsl4jsb_Real2D_onChunk          :: net_assimilation_boc
+    dsl4jsb_Real2D_onChunk          :: beta_soil_gs
+    dsl4jsb_Real2D_onChunk          :: beta_soil_ps_daytime
+    dsl4jsb_Real2D_onChunk          :: beta_soil_gs_daytime
+    dsl4jsb_Real2D_onChunk          :: beta_air_daytime
+    dsl4jsb_Real2D_onChunk          :: beta_soil_gs_tphen_mavg
+    dsl4jsb_Real2D_onChunk          :: beta_soil_ps_tfrac_mavg
+    dsl4jsb_Real2D_onChunk          :: beta_soil_gs_tfrac_mavg
+    dsl4jsb_Real2D_onChunk          :: beta_soil_ps_tcnl_mavg
+    dsl4jsb_Real2D_onChunk          :: beta_soil_gs_tcnl_mavg
+    dsl4jsb_Real2D_onChunk          :: beta_air_tfrac_mavg
+    dsl4jsb_Real2D_onChunk          :: beta_air_tcnl_mavg
 !! *slmtemp
-    TYPE(t_assimi_memory),   POINTER :: assimi      ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
     ! Get local variables from options argument
@@ -395,6 +426,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)           ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)
+
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -402,7 +448,6 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 !! *slmtemp
-    assimi    => assimi__mem 
     veg       => veg__mem 
     rad       => rad__mem
 
@@ -413,7 +458,7 @@ CONTAINS
     !!           returns: new current average
 
     !> 1.1 averages at the timescale of the labile pool
-    veg%gpp_tlabile_mavg%ptr                = calc_mavg(veg%gpp_tlabile_mavg%ptr, assimi%gross_assimilation%ptr, &
+    veg%gpp_tlabile_mavg%ptr                = calc_mavg(veg%gpp_tlabile_mavg%ptr, gross_assimilation(1), &
                                                     mavg_period_tlabile)
     veg%maint_respiration_tlabile_mavg%ptr  = calc_mavg(veg%maint_respiration_tlabile_mavg%ptr, veg%maint_respiration_pot%ptr, &
                                                     mavg_period_tlabile)
@@ -424,7 +469,7 @@ CONTAINS
     
     !> 1.2 averages at the time-scale of phenology
     veg%t_air_tphen_mavg%ptr           = calc_mavg(veg%t_air_tphen_mavg%ptr, t_air(1), mavg_period_tphen)
-    assimi%beta_soil_gs_tphen_mavg%ptr = calc_mavg(assimi%beta_soil_gs_tphen_mavg%ptr, assimi%beta_soil_gs%ptr, mavg_period_tphen)
+    beta_soil_gs_tphen_mavg(:) = calc_mavg(beta_soil_gs_tphen_mavg(:), beta_soil_gs(:), mavg_period_tphen)
 
     !> 1.3 averages at the nutrient-uptake demand time-scale
     veg%npp_tuptake_mavg%ptr                 = calc_mavg(veg%npp_tuptake_mavg%ptr, veg%npp%ptr, mavg_period_tuptake, &
@@ -456,13 +501,13 @@ CONTAINS
                                                   mavg_period_tfrac)
     veg%ga_tfrac_mavg%ptr                 = calc_mavg(veg%ga_tfrac_mavg%ptr, veg%ga_daytime%ptr, &
                                                   mavg_period_tfrac)
-    assimi%beta_soil_ps_tfrac_mavg%ptr    = calc_mavg(assimi%beta_soil_ps_tfrac_mavg%ptr, assimi%beta_soil_ps_daytime%ptr, &
+    beta_soil_ps_tfrac_mavg(:)    = calc_mavg(beta_soil_ps_tfrac_mavg(:), beta_soil_ps_daytime(:), &
                                                   mavg_period_tfrac)
     veg%beta_sinklim_ps_tfrac_mavg%ptr    = calc_mavg(veg%beta_sinklim_ps_tfrac_mavg%ptr, veg%beta_sinklim_ps_daytime%ptr, &
                                                   mavg_period_tfrac)
-    assimi%beta_soil_gs_tfrac_mavg%ptr    = calc_mavg(assimi%beta_soil_gs_tfrac_mavg%ptr, assimi%beta_soil_gs_daytime%ptr, &
+    beta_soil_gs_tfrac_mavg(:)    = calc_mavg(beta_soil_gs_tfrac_mavg(:), beta_soil_gs_daytime(:), &
                                                   mavg_period_tfrac)
-    assimi%beta_air_tfrac_mavg%ptr        = calc_mavg(assimi%beta_air_tfrac_mavg%ptr, assimi%beta_air_daytime%ptr, &
+    beta_air_tfrac_mavg(:)        = calc_mavg(beta_air_tfrac_mavg(:), beta_air_daytime(:), &
                                                   mavg_period_tfrac)
 
     !> 1.5 averages at the time-scale of leaf N allocation fractions 
@@ -481,13 +526,13 @@ CONTAINS
                                                   mavg_period_tcnl)
     veg%ga_tcnl_mavg%ptr                  = calc_mavg(veg%ga_tcnl_mavg%ptr, veg%ga_daytime%ptr, &
          mavg_period_tcnl)
-    assimi%beta_soil_ps_tcnl_mavg%ptr     = calc_mavg(assimi%beta_soil_ps_tcnl_mavg%ptr, assimi%beta_soil_ps_daytime%ptr, &
+    beta_soil_ps_tcnl_mavg(:)     = calc_mavg(beta_soil_ps_tcnl_mavg(:), beta_soil_ps_daytime(:), &
                                                   mavg_period_tcnl)
     veg%beta_sinklim_ps_tcnl_mavg%ptr     = calc_mavg(veg%beta_sinklim_ps_tcnl_mavg%ptr, veg%beta_sinklim_ps_daytime%ptr, &
                                                   mavg_period_tcnl)
-    assimi%beta_soil_gs_tcnl_mavg%ptr     = calc_mavg(assimi%beta_soil_gs_tcnl_mavg%ptr, assimi%beta_soil_gs_daytime%ptr, &
+    beta_soil_gs_tcnl_mavg(:)     = calc_mavg(beta_soil_gs_tcnl_mavg(:), beta_soil_gs_daytime(:), &
                                                   mavg_period_tcnl)
-    assimi%beta_air_tcnl_mavg%ptr         = calc_mavg(assimi%beta_air_tcnl_mavg%ptr, assimi%beta_air_daytime%ptr, &
+    beta_air_tcnl_mavg(:)         = calc_mavg(beta_air_tcnl_mavg(:), beta_air_daytime(:), &
                                                   mavg_period_tcnl)
 
     !> 1.6 time-scale of plant allocation calculation (veg process)
@@ -558,7 +603,7 @@ CONTAINS
                                                do_calc=growing_season(1), avg_period_unit='year') 
 
     !> 1.8 averages at the vegetation dynamics time-scale 
-    veg%an_boc_tvegdyn_mavg%ptr   = calc_mavg(veg%an_boc_tvegdyn_mavg%ptr, assimi%net_assimilation_boc%ptr, mavg_period_tvegdyn, &
+    veg%an_boc_tvegdyn_mavg%ptr   = calc_mavg(veg%an_boc_tvegdyn_mavg%ptr, net_assimilation_boc(1), mavg_period_tvegdyn, &
                                           do_calc=(veg%pool%leaf%carbon%ptr > eps8))
     !> 1.9 averages at the respiration acclimation time-scale
     veg%t_air_tacclim_mavg%ptr    = calc_mavg(veg%t_air_tacclim_mavg%ptr, t_air(1), mavg_period_tacclim)

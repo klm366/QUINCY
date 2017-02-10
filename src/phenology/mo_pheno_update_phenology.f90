@@ -68,10 +68,11 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk    :: t_air
-    dsl4jsb_Logical2D_onChunk :: growing_season
-    dsl4jsb_Real2D_onChunk    :: gdd
-    dsl4jsb_Real2D_onChunk    :: nd_dormance
+    dsl4jsb_Real2D_onChunk          :: t_air                      ! ATM2LAND_
+    dsl4jsb_Logical2D_onChunk       :: growing_season             ! PHENO_
+    dsl4jsb_Real2D_onChunk          :: gdd
+    dsl4jsb_Real2D_onChunk          :: nd_dormance
+    dsl4jsb_Real2D_onChunk          :: beta_soil_gs_tphen_mavg    ! ASSIMI_
 ! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to veg__mem for SLM usability
@@ -102,10 +103,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_, nd_dormance)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)
 
 ! 2 be removed  *slmtemp
     veg     => veg__mem
-    assimi  => assimi__mem 
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -117,7 +119,7 @@ CONTAINS
     !! 
     CALL calc_phenology(lctlib                                  , &
                         t_air                                   , &
-                        assimi%beta_soil_gs_tphen_mavg%ptr      , &
+                        beta_soil_gs_tphen_mavg(1)      , &
                         veg%t_air_tphen_mavg%ptr                , &
                         veg%t_air_week_mavg%ptr                 , &
                         veg%t_air_month_mavg%ptr                , &

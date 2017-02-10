@@ -256,7 +256,7 @@ CONTAINS
     !! run Tasks
     !!
       CALL update_radiation       (tile, model%options)
-      CALL update_vegsoil_bgc     (tile)
+      CALL update_vegsoil_bgc     (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_growth          (tile, model%options)
@@ -264,7 +264,7 @@ CONTAINS
       CALL update_veg_dynamics    (tile, model%options)
       CALL update_sb_pools        (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
-      CALL update_veg_pools       (tile)
+      CALL update_veg_pools       (tile, model%options)
 
     !! accumulation over time - daytime & moving average
     !! 
@@ -285,7 +285,7 @@ CONTAINS
     !! 
     !! 
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL write_soil_forcing(tile, time_day, time_year, 1) ! 1 == itile 
+        CALL write_soil_forcing(tile, model%options, time_day, time_year, 1) ! 1 == itile 
       END IF
 
     CASE('plant')
@@ -298,7 +298,7 @@ CONTAINS
     !! run Tasks
     !!
       CALL update_radiation       (tile, model%options)
-      CALL update_vegsoil_bgc     (tile)
+      CALL update_vegsoil_bgc     (tile, model%options)
       CALL update_phenology       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_growth          (tile, model%options)
@@ -306,7 +306,7 @@ CONTAINS
       CALL update_veg_dynamics    (tile, model%options)
       CALL update_sb_pools        (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
-      CALL update_veg_pools       (tile)
+      CALL update_veg_pools       (tile, model%options)
 
     !! accumulation over time - daytime & moving average
     !! 
@@ -327,7 +327,7 @@ CONTAINS
     !! 
     !! 
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL write_soil_forcing(tile, time_day, time_year, 1) ! 1 == itile 
+        CALL write_soil_forcing(tile, model%options, time_day, time_year, 1) ! 1 == itile 
       END IF
 
     CASE('soil')
@@ -353,7 +353,7 @@ CONTAINS
 
     !! run Tasks
     !!
-      CALL update_veg_pools       (tile)
+      CALL update_veg_pools       (tile, model%options)
       CALL update_radiation       (tile, model%options)
       CALL update_canopy_fluxes   (tile, model%options)
       CALL update_soil_physics    (tile, model%options)
@@ -445,9 +445,10 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     ! Declare pointers to variables in memory
-    ! 
+    dsl4jsb_Real2D_onChunk :: gross_assimilation        ! ASSIMI_
+    dsl4jsb_Real2D_onChunk :: canopy_cond
+    dsl4jsb_Real2D_onChunk :: co2_conc_leaf
 ! 2 be removed: pointers to veg assimi *slmtemp
-    TYPE(t_assimi_memory),    POINTER   :: assimi     ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory),       POINTER   :: veg        ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory),       POINTER   :: rad        ! local pointer to rad__mem for SLM usability
     ! Get local variables from options argument
@@ -467,9 +468,16 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
+    ! Get process variables (Set pointers to variables in memory)
+!    model  => Get_model(tile%owner_model_id)
+!    lctlib => model%lctlib(tile%lcts%lib_id) 
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)
+
 
 ! 2 be removed  *slmtemp
-    assimi  => assimi__mem 
     veg     => veg__mem 
     rad     => rad__mem
 
@@ -480,8 +488,8 @@ CONTAINS
 
 
       WRITE(20,'(7F16.7)')  time_day+time_year*one_year, t_air, swpar_srf_down * rad2ppfd, &
-                            assimi%gross_assimilation%ptr, rad%appfd%ptr, & 
-                            assimi%canopy_cond%ptr, assimi%co2_conc_leaf%ptr 
+                            gross_assimilation(1), rad%appfd%ptr, & 
+                            canopy_cond(1), co2_conc_leaf(1) 
       WRITE(21,'(20F16.7)') rad%ppfd_sunlit_cl%ptr
       WRITE(22,'(20F16.7)') rad%ppfd_shaded_cl%ptr
       WRITE(23,'(20F16.7)') veg%fleaf_sunlit_cl%ptr
@@ -577,10 +585,13 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)                       !   TYPE(t_assimi_memory), POINTER      :: assimi__mem  
     dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
     dsl4jsb_Def_memory(SOIL_)                         !   TYPE(t_soil_memory), POINTER      :: soil__mem  
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: net_assimilation          ! ASSIMI_
+    dsl4jsb_Real2D_onChunk :: canopy_cond
+    dsl4jsb_Real2D_onChunk :: co2_conc_leaf
+    dsl4jsb_Real2D_onChunk :: w_soil_root_theta         ! SOIL_
 ! 2 be removed: pointers to veg assimi *slmtemp
-    TYPE(t_assimi_memory), POINTER      :: assimi     ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory), POINTER         :: veg        ! local pointer to veg__mem for SLM usability
-    TYPE(t_soil_memory), POINTER        :: soil       ! local pointer to soil__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -609,11 +620,16 @@ CONTAINS
       tile%lcts%lib_id = 1
     ENDIF
     lctlib  => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+
 
 ! 2 be removed  *slmtemp
-    assimi => assimi__mem 
     veg    => veg__mem 
-    soil   => soil__mem 
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -671,7 +687,7 @@ CONTAINS
     !> 1.2 Initialisation of soil and vegetation (so far relevant) 
     !!
     !!  
-    soil%w_soil_root_theta%ptr = ref_theta
+    w_soil_root_theta(:) = ref_theta
     veg%lai%ptr   = ref_lai 
     IF(ref_pft==0) THEN
       veg%pool%leaf%nitrogen%ptr     = ref_nleaf / molar_mass_N * veg%lai%ptr
@@ -720,11 +736,11 @@ CONTAINS
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') swpar_srf_down(1) * rad2ppfd, & 
-           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, & 
-           assimi%co2_conc_leaf%ptr/co2_mixing_ratio(1) !,&
-!           assimi%net_assimilation%ptr,
-!           assimi%co2_conc_leaf%ptr/co2_mixing_ratio(1),veg%pool%leaf%nitrogen%ptr*molar_mass_N,&
-!           assimi%net_assimilation%ptr/(veg%pool%leaf%nitrogen%ptr*molar_mass_N)
+           net_assimilation(1), canopy_cond(1) *1000._wp, & 
+           co2_conc_leaf(1)/co2_mixing_ratio(1) !,&
+!           net_assimilation(1),
+!           co2_conc_leaf(1)/co2_mixing_ratio(1),veg%pool%leaf%nitrogen%ptr*molar_mass_N,&
+!           net_assimilation(1)/(veg%pool%leaf%nitrogen%ptr*molar_mass_N)
 
   END DO
   swpar_srf_down(:) = ref_swdown 
@@ -760,8 +776,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(5F16.7)') t_air(1), &  
-           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
-           assimi%co2_conc_leaf%ptr/co2_mixing_ratio(1) 
+           net_assimilation(1), canopy_cond(1) *1000._wp, &
+           co2_conc_leaf(1)/co2_mixing_ratio(1) 
 
   END DO
   t_air(:)    = ref_t_air + Tzero
@@ -791,8 +807,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') co2_mixing_ratio(1), &
-           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
-           assimi%co2_conc_leaf%ptr/co2_mixing_ratio(1) 
+           net_assimilation(1), canopy_cond(1) *1000._wp, &
+           co2_conc_leaf(1)/co2_mixing_ratio(1) 
 
   END DO
   co2_mixing_ratio(:) = ref_co2_mixing_ratio
@@ -819,8 +835,8 @@ CONTAINS
      vpd(:) = ( calc_spec_humidity_sat(t_air(:),press_srf(:)) - q_air(:) ) / eps_vpd * press_srf(1) / 1000.0_wp
 
      WRITE(lun,'(4F16.7)') vpd(1), &
-           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
-           assimi%co2_conc_leaf%ptr/co2_mixing_ratio(1) 
+           net_assimilation(1), canopy_cond(1) *1000._wp, &
+           co2_conc_leaf(1)/co2_mixing_ratio(1) 
 
   END DO
   q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(1) * eps_vpd
@@ -834,22 +850,22 @@ CONTAINS
   !! 
   lun = lun + 1
   WRITE(lun,*) 'THETA A GC CI' 
-  soil%w_soil_root_theta%ptr = 0.0_wp
+  w_soil_root_theta(:) = 0.0_wp
   DO i = 1,100
 
-     soil%w_soil_root_theta%ptr = soil%w_soil_root_theta%ptr + 0.01_wp 
+     w_soil_root_theta(:) = w_soil_root_theta(:) + 0.01_wp 
 
      !! canopy calculation fluxes
      CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') soil%w_soil_root_theta%ptr*100._wp, &
-           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
-           assimi%co2_conc_leaf%ptr/co2_mixing_ratio(1) 
+     WRITE(lun,'(4F16.7)') w_soil_root_theta(1) *100._wp, &
+           net_assimilation(1), canopy_cond(1) *1000._wp, &
+           co2_conc_leaf(1)/co2_mixing_ratio(1) 
 
   END DO
-  soil%w_soil_root_theta%ptr = ref_theta
+  w_soil_root_theta(:) = ref_theta
 
   !> 2.6 LAI (0-11)
   !! 
@@ -881,8 +897,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') veg%lai%ptr, &
-           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
-           assimi%co2_conc_leaf%ptr/co2_mixing_ratio(1) 
+           net_assimilation(1), canopy_cond(1) *1000._wp, &
+           co2_conc_leaf(1)/co2_mixing_ratio(1) 
 
   END DO
   veg%lai%ptr = ref_lai 
@@ -914,8 +930,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(4F16.7)') veg%pool%leaf%nitrogen%ptr/veg%lai%ptr*molar_mass_N, & 
-           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
-           assimi%co2_conc_leaf%ptr/co2_mixing_ratio(1) 
+           net_assimilation(1), canopy_cond(1) *1000._wp, &
+           co2_conc_leaf(1)/co2_mixing_ratio(1) 
 
   END DO
   veg%pool%leaf%nitrogen%ptr=ref_nleaf/molar_mass_N*veg%lai%ptr
@@ -948,8 +964,8 @@ CONTAINS
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
      WRITE(lun,'(I1,3F16.7)') i, &
-           assimi%net_assimilation%ptr,assimi%canopy_cond%ptr*1000._wp, &
-           assimi%co2_conc_leaf%ptr/co2_mixing_ratio(1) 
+           net_assimilation(1), canopy_cond(1) *1000._wp, &
+           co2_conc_leaf(1)/co2_mixing_ratio(1) 
 
   END DO 
   !STOP

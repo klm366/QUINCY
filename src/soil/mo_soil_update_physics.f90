@@ -116,9 +116,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: percolation_sl
     dsl4jsb_Real3D_onChunk                :: drainage_sl
     dsl4jsb_Real3D_onChunk                :: t_soil
+    dsl4jsb_Real2D_onChunk                :: canopy_cond            ! ASSIMI_
     REAL(wp), POINTER                     :: sw_srf_net             ! RAD_
 !! *slmtemp    
-    TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to assimi__mem for SLM usability
     TYPE(t_veg_memory),      POINTER :: veg             ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -177,10 +177,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, drainage_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil)
-
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
 
 !! *slmtemp
-    assimi      => assimi__mem 
     veg         => veg__mem 
     sw_srf_net  => rad__mem%sw_srf_net%ptr
 
@@ -202,11 +202,11 @@ CONTAINS
     !> 1.2. calulate transpiration (kg / m2 / s)
     !! T = rho * (qsat - qair ) * Gtot in mm/s 
     !!
-    IF(assimi%canopy_cond%ptr > eps8)THEN
+    IF(canopy_cond(1) > eps8)THEN
        veg%transpiration%ptr = press_srf(1) / ( r_gas_dryair * t_air(1) ) * & 
-                  (q_sat(1) - q_air(1)) / (1._wp / assimi%canopy_cond%ptr + 1._wp / ga(1) )  
+                  (q_sat(1) - q_air(1)) / (1._wp / canopy_cond(1) + 1._wp / ga(1) )  
 !       veg%transpiration%ptr = press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
-!                  (q_sat(:) - q_air(:)) / (1._wp / assimi%canopy_cond%ptr + 1._wp / ga(:) )  
+!                  (q_sat(:) - q_air(:)) / (1._wp / canopy_cond(1) + 1._wp / ga(:) )  
     ELSE 
        veg%transpiration%ptr = 0.0_wp 
     ENDIF

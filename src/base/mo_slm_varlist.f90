@@ -168,7 +168,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------!
 
   !-----------------------------------------------------------------------------------------------------
-  !> add 1D variable to struct or l2_struct
+  !> add scalar (aka 1D) variable to struct or l2_struct
   !!
   !!  t_jsb_struct:struct <- t_jsb_var_real1d:var
   !! 
@@ -217,9 +217,9 @@ CONTAINS
   !!
   !!  t_jsb_struct:struct <- t_jsb_var_real2d:var
   !!  
-  !! ==> currectly used correctly for SOIL 2D
+  !! ==> currectly used correctly for some process memories such as SOIL 2D
   !!  AND
-  !! ==> fake/transitionally for VEG 3D variables
+  !! ==> fake/transitionally for other such as VEG 3D variables
   !! 
   !!  see local variables levels:levele
   !! 
@@ -251,10 +251,10 @@ CONTAINS
 
     ! differentiation between processes that already have a proper 2/3D variable implementation or not
     SELECT CASE(struct%owner_proc_id)
-      CASE(1, 2, 5, 11, 12) ! atm2land land2atm soil, pheno, sb
+      CASE(1, 2, 5, 10, 11, 12) ! atm2land land2atm assimi soil, pheno, sb
         levels = ics
         levele = ice
-      CASE(7, 9, 10) ! veg, rad, assimi
+      CASE(7, 9) ! veg, rad
         levels = 1
         levele = assimi_config%ncanopy
       CASE DEFAULT
@@ -344,7 +344,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------!
 
   !-----------------------------------------------------------------------------------------------------
-  !> add 1D variable to to process memory
+  !> add scalar (aka 1D) variable to to process memory
   !!
   !!  t_jsb_memory:mem <- t_jsb_var_r1d:var
   !! 
@@ -428,10 +428,10 @@ CONTAINS
 
     ! differentiation between processes that already have a proper 2/3D variable implementation or not
     SELECT CASE(mem%owner_proc_id)
-      CASE(1, 2, 5, 11, 12) ! atm2land land2atm soil, pheno, sb
+      CASE(1, 2, 5, 10, 11, 12) ! atm2land land2atm assimi soil, pheno, sb
         levels = ics
         levele = ice
-      CASE(7, 9, 10) ! veg, rad, assimi
+      CASE(7, 9) ! veg, rad
         levels = 1
         levele = assimi_config%ncanopy
       CASE DEFAULT
@@ -499,7 +499,7 @@ CONTAINS
     END SELECT
 
     var%name = TRIM(name)
-    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
@@ -517,7 +517,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> add 1D LOGICAL variable to process memory
+  !> add scalar (aka 1D) LOGICAL variable to process memory
   !!
   !!  t_jsb_memory:mem <- t_jsb_var_logical1d:var
   !!    
@@ -590,7 +590,7 @@ CONTAINS
 
     ! only the following processes have proper 2D/3D implementation and thus can use 2D LOGICAL variables
     SELECT CASE(mem%owner_proc_id)
-      CASE(5, 11, 12) ! soil, pheno, sb
+      CASE(5, 10, 11, 12) ! soil, assimi, pheno, sb
         ! just go on
       CASE DEFAULT
         ! exit
@@ -598,7 +598,7 @@ CONTAINS
     END SELECT
 
     var%name = TRIM(name)
-    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN

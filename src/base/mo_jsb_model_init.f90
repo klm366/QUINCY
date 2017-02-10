@@ -34,6 +34,7 @@ MODULE mo_jsb_model_init
     ! assimilation (photosynthesis)
     USE mo_assimi_constants,                ONLY: init_assimi_constants
     USE mo_assimi_config_class,             ONLY: assimi_config
+    USE mo_assimi_init,                     ONLY: assimi_init
     ! phenology
     USE mo_pheno_constants,                 ONLY: init_pheno_constants
     USE mo_pheno_config_class,              ONLY: pheno_config

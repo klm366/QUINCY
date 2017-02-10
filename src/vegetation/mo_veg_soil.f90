@@ -35,10 +35,10 @@ CONTAINS
   !! supply N and P to maintain a certain target C:N:P of the labile pool
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_vegsoil_bgc(tile)
+  SUBROUTINE update_vegsoil_bgc(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_base_constants,        ONLY: dtime, one_day
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
@@ -48,34 +48,67 @@ CONTAINS
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),INTENT(inout), TARGET   :: tile      !< one tile
+    TYPE(t_slm_tile),           INTENT(inout)     :: tile         !< one tile
+    TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER        :: model
-    TYPE(t_lctlib_element), POINTER        :: lctlib      !< land-cover-type library - parameter across pft's
+    TYPE(t_model),          POINTER       :: model
+    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp) :: dcost                                     ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
     REAL(wp) :: n_demand                                  ! N demand of plants (mu mol N /m2 / s) 
     REAL(wp) :: f_nacq_bnf,f_nacq_nup                     ! fraction of N uptake as BFN or Nuptake
     REAL(wp) :: scal
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegsoil_bgc'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real3D_onChunk     :: soil_depth_l          ! SOIL_
+! 2 be removed *slmtemp
     TYPE(t_veg_memory), POINTER             :: veg        ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
-    TYPE(t_soil_memory), POINTER            :: soil       ! local pointer to soil__mem for SLM usability
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(xx_)
+    ! Get process memories
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id) 
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_l)
+    ! ---------------------------
+!    dsl4jsb_Get_var2D_onChunk(xx_, xx)
 
+
+! 2 be removed  *slmtemp
     veg  => veg__mem 
     sb   => sb__mem 
-    soil => soil__mem 
 
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
 
     !> 1.0 Calculate an instantaneous scalar of nutrient demand
     !!     taken as difference of the the weekly growth requirement of the nutrient to the stoichiometry of the labile pool
@@ -114,14 +147,14 @@ CONTAINS
          ! OCN's MM Kinetics
          veg%uptake_nh4%ptr = lctlib%vmax_uptake_n * &
                  veg%demand_uptake_n_tuptake_mavg%ptr * & 
-                 sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + & 
-                   1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) )) * & 
+                 sb%nh4_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_n_aff1 + & 
+                   1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil_depth_l(1,1) )) * & 
                    veg%pool%fine_root%carbon%ptr
          
          veg%uptake_no3%ptr = lctlib%vmax_uptake_n * &
                  veg%demand_uptake_n_tuptake_mavg%ptr * & 
-                 sb%no3_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + & 
-                   1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) )) * & 
+                 sb%no3_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_n_aff1 + & 
+                   1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil_depth_l(1,1) )) * & 
                  veg%pool%fine_root%carbon%ptr
 
     ENDSELECT
@@ -143,8 +176,8 @@ CONTAINS
          ! OCN's MM Kinetics
          veg%uptake_p%ptr = lctlib%vmax_uptake_p * & 
                  veg%demand_uptake_p_tuptake_mavg%ptr * & 
-                 sb%po4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_p_aff1 + & 
-                   1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) )) * & 
+                 sb%po4_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_p_aff1 + & 
+                   1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil_depth_l(1,1) )) * & 
                  veg%pool%fine_root%carbon%ptr
 
     ENDSELECT
@@ -158,7 +191,7 @@ CONTAINS
       CASE ("prescribed") 
         veg%n_fixation%ptr = 0.0_wp
       CASE("standard")
-        IF(sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) < soil_n_threshold_bnf) veg%n_fixation%ptr = lctlib%bnf_base 
+        IF(sb%nh4_solute%ptr(1,1,1) * soil_depth_l(1,1) < soil_n_threshold_bnf) veg%n_fixation%ptr = lctlib%bnf_base 
       !> 3.2 Case 2: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
       CASE ("optimal")
@@ -196,13 +229,13 @@ CONTAINS
     !> 3.0 Calculate potential and actual N uptake per unit fine root carbon
     !!
     veg%unit_uptake_n_pot%ptr = lctlib%vmax_uptake_n * &
-                                (sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + &
-                                 1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1))) + &
-                                 sb%no3_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_n_aff1 + &
-                                 1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1))))
+                                (sb%nh4_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_n_aff1 + &
+                                 1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil_depth_l(1,1))) + &
+                                 sb%no3_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_n_aff1 + &
+                                 1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil_depth_l(1,1))))
     veg%unit_uptake_p_pot%ptr = lctlib%vmax_uptake_p * &
-                                sb%po4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) * ( lctlib%soil_p_aff1 + &
-                                1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil%soil_depth_l%ptr(1,1,1) ))
+                                sb%po4_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_p_aff1 + &
+                                1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil_depth_l(1,1) ))
     IF(veg%pool%fine_root%carbon%ptr > eps8) THEN
       veg%unit_uptake_n_act%ptr = (veg%uptake_nh4%ptr+veg%uptake_no3%ptr) / veg%pool%fine_root%carbon%ptr
       veg%unit_uptake_p_act%ptr = veg%uptake_p%ptr / veg%pool%fine_root%carbon%ptr

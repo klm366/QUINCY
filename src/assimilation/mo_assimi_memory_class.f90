@@ -14,7 +14,7 @@ MODULE mo_assimi_memory_class
   USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later  *slmtemp
 
@@ -33,9 +33,8 @@ MODULE mo_assimi_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
 
-  ! *slmtemp  --> 2D
   ! canopy integrated variables
-    TYPE(t_jsb_var_real1d)    :: &
+    TYPE(t_jsb_var_real2d)    :: &
                               gross_assimilation    , &      !< canopy-integrated gross assimilation rate (µmol CO2/m2/s) 
                               gross_assimilation_C13, &      !< canopy-integrated gross assimilation rate (µmol 13CO2/m2/s) 
                               gross_assimilation_C14, &      !< canopy-integrated gross assimilation rate (µmol 14CO2/m2/s) 
@@ -48,21 +47,21 @@ MODULE mo_assimi_memory_class
                               beta_soil_ps          , &      !< scaling factor to account for soil moisture constraints on photosynthesis
                               beta_soil_gs          , &      !< scaling factor to account for soil moisture constraints on conductance
                               t_jmax_opt                     !< optimal temperature for electron transport 
-  ! canopy level variables --> 3D
-    TYPE(t_jsb_var_real1d)    :: &
+
+    TYPE(t_jsb_var_real3d)    :: &
                               gross_assimilation_cl     , &   !< gross assimilation rate per canopy layer (µmol CO2/m2/s) 
                               net_assimilation_cl       , &   !< net assimilation rate per canopy layer (µmol CO2/m2/s)
                               maint_respiration_leaf_cl , &   !< foliar respiration rate per canopy layer (µmol CO2/m2/s)
                               canopy_cond_cl            , &   !< conductance for water per canopy layer (m/s)
                               co2_conc_leaf_cl                !< internal leaf CO2 concentration per canopy layer (ppm)
 
-    TYPE(t_jsb_var_real1d)    :: &
+    TYPE(t_jsb_var_real2d)    :: &
                               beta_air_daytime          , &   !< average of the previous day
                               beta_air_daytime_dacc     , &   !< average of the previous day
                               beta_air_tfrac_mavg       , &   !< scaling factor to account for air humidity effects on conductance
                               beta_air_tcnl_mavg              !< scaling factor to account for air humidity effects on conductance
 
-    TYPE(t_jsb_var_real1d)    :: &
+    TYPE(t_jsb_var_real2d)    :: &
                               beta_soil_ps_daytime      , &   !< average of the previous day
                               beta_soil_ps_daytime_dacc , &   !< average of the previous day
                               beta_soil_ps_tfrac_mavg   , &   !< scaling factor to account for soil moisture constraints on photosynthesis 

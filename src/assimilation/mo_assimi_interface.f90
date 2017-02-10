@@ -9,10 +9,12 @@
 !!
 MODULE mo_assimi_interface
 
-  USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: message, finish
+#include "dsl_jsbach.inc"
 
-  USE mo_assimi_update_canopy_fluxes
+  USE mo_kind,                          ONLY: wp
+  USE mo_exception,                     ONLY: message, finish
+
+  USE mo_assimi_update_canopy_fluxes,   ONLY: update_canopy_fluxes
 
   IMPLICIT NONE
 !  PRIVATE

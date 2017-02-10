@@ -63,10 +63,10 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk                 :: growing_season
+    dsl4jsb_Logical2D_onChunk     :: growing_season           ! PHENO_
+    dsl4jsb_Real2D_onChunk        :: w_soil_root_theta        ! SOIL_
 !! *slmtemp
     TYPE(t_veg_memory),     POINTER           :: veg      ! local pointer to veg__mem for SLM usability
-    TYPE(t_soil_memory),    POINTER           :: soil     ! local pointer to soil__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -89,15 +89,19 @@ CONTAINS
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+
+
+!! *slmtemp
+    veg     => veg__mem 
+
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-!! *slmtemp
-    veg     => veg__mem 
-    soil    => soil__mem  
 
 
     !> 1.0 Calculate mortality rate and veg\%litterfall
@@ -117,8 +121,8 @@ CONTAINS
       !> 2.1 Calculate establishment_rate and veg\%establishment
       !! 
       CALL calc_veg_establishment(lctlib                          , & ! in
-                                 soil%w_soil_root_theta%ptr(1,1)  , &
-                                 growing_season(1)         , &
+                                 w_soil_root_theta(1)       , &
+                                 growing_season(1)          , &
                                  veg%t_air_week_mavg%ptr          , &
                                  veg%leaf_nitrogen_cl%ptr(:,1)    , &
                                  veg%fn_chl_cl%ptr(:,1)           , &

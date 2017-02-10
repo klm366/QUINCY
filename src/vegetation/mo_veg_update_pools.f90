@@ -32,10 +32,10 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_veg_pools(tile)
+  SUBROUTINE update_veg_pools(tile, options)
 
     USE mo_jsb_class,           ONLY: Get_model
-    USE mo_base_memory,         ONLY: t_slm_tile, t_model
+    USE mo_base_memory,         ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_base_constants,      ONLY: dtime, one_day
     USE mo_base_config_class,   ONLY: base_config
     USE mo_jsb_process_class,   ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -52,35 +52,80 @@ CONTAINS
 
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_slm_tile),       INTENT(inout) :: tile         !< one tile
+    TYPE(t_slm_tile),         INTENT(inout) :: tile             !< one tile
+    TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib           !< land-cover-type library - parameter across pft's
+    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp)                              :: hlp1,hlp2        ! helper variable
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
-    ! 0.3 Memory allocation
+    ! ---------------------------
+    ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),      POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),     POINTER :: soil__mem
-    TYPE(t_assimi_memory),   POINTER      :: assimi   ! local pointer to assimi__mem for SLM usability
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk       :: gross_assimilation        ! ASSIMI_
+    dsl4jsb_Real2D_onChunk       :: gross_assimilation_C13
+    dsl4jsb_Real2D_onChunk       :: gross_assimilation_C14
+    dsl4jsb_Real2D_onChunk       :: beta_air_tfrac_mavg
+    dsl4jsb_Real2D_onChunk       :: beta_soil_ps_tfrac_mavg
+    dsl4jsb_Real2D_onChunk       :: beta_soil_gs_tfrac_mavg
+    dsl4jsb_Real2D_onChunk       :: w_soil_root_pot           ! SOIL_
+!! *slmtemp    
     TYPE(t_veg_memory),      POINTER      :: veg      ! local pointer to veg__mem for SLM usability
     TYPE(t_rad_memory),      POINTER      :: rad      ! local pointer to rad__mem for SLM usability
-    TYPE(t_soil_memory),     POINTER      :: soil     ! local pointer to soil__mem for SLM usability
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(xx_)
+    ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SOIL_)
-
-    assimi    => assimi__mem 
-    veg       => veg__mem 
-    rad       => rad__mem
-    soil      => soil__mem 
-
+    ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
+    ! ---------------------------
+!    dsl4jsb_Get_var2D_onChunk(xx_, xx)
+
+
+!! *slmtemp
+    veg       => veg__mem 
+    rad       => rad__mem
+
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
 
     !> 1.0 for plant and land model, update vegetation pools with fluxes
     !! 
@@ -91,11 +136,11 @@ CONTAINS
        !> 1.1 net balance of the labile carbon pool due to photosynthesis and respiration
        !! 
        !! 
-       veg%npp%ptr      = assimi%gross_assimilation%ptr     - & 
+       veg%npp%ptr      = gross_assimilation(1)     - & 
            veg%growth_respiration%ptr - veg%maint_respiration%ptr - veg%n_processing_respiration%ptr
-       veg%npp_c13%ptr  = assimi%gross_assimilation_C13%ptr - &
+       veg%npp_c13%ptr  = gross_assimilation_C13(1) - &
            veg%growth_respiration_c13%ptr - veg%maint_respiration_c13%ptr - veg%n_processing_respiration_c13%ptr
-       veg%npp_c14%ptr  = assimi%gross_assimilation_C14%ptr - & 
+       veg%npp_c14%ptr  = gross_assimilation_C14(1) - & 
            veg%growth_respiration_c14%ptr - veg%maint_respiration_c14%ptr - veg%n_processing_respiration_c14%ptr
        veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr    + veg%npp%ptr     * dtime / 1000000.0_wp
        veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr  + veg%npp_c13%ptr * dtime / 1000000.0_wp
@@ -175,7 +220,7 @@ CONTAINS
            veg%mean_leaf_age%ptr = 0.0_wp
        END IF
 
-       veg%dphi%ptr = soil%w_soil_root_pot%ptr(1,1) - lctlib%phi_leaf_min - grav * rhoh2o * veg%height%ptr * 1.e-6_wp
+       veg%dphi%ptr = w_soil_root_pot(1) - lctlib%phi_leaf_min - grav * rhoh2o * veg%height%ptr * 1.e-6_wp
 
     END SELECT
 
@@ -193,10 +238,10 @@ CONTAINS
                              veg%press_srf_tfrac_mavg%ptr, &
                              veg%co2_mixing_ratio_tfrac_mavg%ptr, &
                              veg%ga_tfrac_mavg%ptr, &
-                             assimi%beta_air_tfrac_mavg%ptr, &
-                             assimi%beta_soil_ps_tfrac_mavg%ptr, &
+                             beta_air_tfrac_mavg(1), &
+                             beta_soil_ps_tfrac_mavg(1), &
                              veg%beta_sinklim_ps_tfrac_mavg%ptr, &
-                             assimi%beta_soil_gs_tfrac_mavg%ptr, & 
+                             beta_soil_gs_tfrac_mavg(1), & 
                              veg%t_jmax_opt_mavg%ptr, &
                              veg%lai_cl%ptr(:,1), &
                              veg%cumm_lai_cl%ptr(:,1), &
