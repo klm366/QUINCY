@@ -14,7 +14,7 @@ MODULE mo_rad_memory_class
   USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later   *slmtemp
 
@@ -32,22 +32,21 @@ MODULE mo_rad_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_rad_memory
 
-! *slmtemp 1D -> 2D
-    TYPE(t_jsb_var_real1d)  :: &
+    TYPE(t_jsb_var_real2d)  :: &
       & sw_srf_net,            & !< net shortwave radiation at surface
       & swvis_srf_net,         & !< net shortwave radiation at surface in visible range
       & swnir_srf_net,         & !< net shortwave radiation at surface in NIR range
       & lw_srf_net,            & !< net longwave radiation at surface
       & rad_srf_net              !< net radiation at surface
 
-    TYPE(t_jsb_var_real1d)  :: &        ! REAL(wp) 1D ; implemented for SLM use only, see mo_jsb_var_class 
+    TYPE(t_jsb_var_real2d)  :: &        ! REAL(wp) 1D ; implemented for SLM use only, see mo_jsb_var_class 
       & alb_vis,               & !< Albedo of the whole tile in the VIS (visible) range
       & alb_nir,               & !< Albedo of the whole tile in the NIR (near-infrared) range
       & alb_vis_snow,          & !< Albedo of snow in the VIS range
       & alb_nir_snow             !< Albedo of snow in the NIR range                               
 
     ! Additional variables for soil
-    TYPE(t_jsb_var_real1d)  :: &
+    TYPE(t_jsb_var_real2d)  :: &
       & alb_vis_soil,          & !< Albedo in VIS range of soil
                                  ! Initialized from default:
       & alb_nir_soil,          & !< Albedo in VIS range of soil
@@ -55,17 +54,17 @@ MODULE mo_rad_memory_class
       & arad_nir_soil            !< radiation in NIR range absorbed by the soil
 
     ! Additional variables for vegetation
-    TYPE(t_jsb_var_real1d)  :: &
+    TYPE(t_jsb_var_real2d)  :: &
       & alb_vis_can,           & !< Albedo of canopy (without snow cover) in VIS range.
       & alb_nir_can,           & !< Albedo of canopy (without snow cover) in NIR range. 
                                  !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
       & arad_vis_can,          & !< radiation in VIS range absorbed by the canopy      
       & arad_nir_can             !< radiation in NIR range absorbed by the canopy
 
-    TYPE(t_jsb_var_real1d)  :: &
+    TYPE(t_jsb_var_real2d)  :: &
                             appfd                           !< absorbed Photosynthetically Active Photon Flux Density
 
-    TYPE(t_jsb_var_real2d)  :: &   ! DIMENSION(ncanopy)
+    TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
                             ppfd_sunlit_cl              , & !< Photosynthetically Active Photon Flux Density on sunlit leaves (µmol m-2 s-1)
                             ppfd_shaded_cl              , & !< Photosynthetically Active Photon Flux Density on shaded leaves (µmol m-2 s-1)
                             ppfd_sunlit_daytime_cl      , & !<  average of the previous day

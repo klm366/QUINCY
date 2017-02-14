@@ -445,12 +445,14 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: gross_assimilation        ! ASSIMI_
-    dsl4jsb_Real2D_onChunk :: canopy_cond
-    dsl4jsb_Real2D_onChunk :: co2_conc_leaf
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation        ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: canopy_cond
+    dsl4jsb_Real2D_onChunk      :: co2_conc_leaf
+    dsl4jsb_Real2D_onChunk      :: appfd                     ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
 ! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_veg_memory),       POINTER   :: veg        ! local pointer to veg__mem for SLM usability
-    TYPE(t_rad_memory),       POINTER   :: rad        ! local pointer to rad__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -475,11 +477,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
 
 
 ! 2 be removed  *slmtemp
     veg     => veg__mem 
-    rad     => rad__mem
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -488,13 +493,13 @@ CONTAINS
 
 
       WRITE(20,'(7F16.7)')  time_day+time_year*one_year, t_air, swpar_srf_down * rad2ppfd, &
-                            gross_assimilation(1), rad%appfd%ptr, & 
+                            gross_assimilation(1), appfd(1), & 
                             canopy_cond(1), co2_conc_leaf(1) 
-      WRITE(21,'(20F16.7)') rad%ppfd_sunlit_cl%ptr
-      WRITE(22,'(20F16.7)') rad%ppfd_shaded_cl%ptr
-      WRITE(23,'(20F16.7)') veg%fleaf_sunlit_cl%ptr
-      WRITE(24,'(20F16.7)') rad%ppfd_sunlit_cl%ptr(:,1) * veg%fleaf_sunlit_cl%ptr(:,1) + &
-                            & rad%ppfd_shaded_cl%ptr(:,1) + (1._wp-veg%fleaf_sunlit_cl%ptr(:,1))
+      WRITE(21,'(20F16.7)') ppfd_sunlit_cl(1,:)       ! write values of all canopy layers
+      WRITE(22,'(20F16.7)') ppfd_shaded_cl(1,:)       ! write values of all canopy layers
+      WRITE(23,'(20F16.7)') veg%fleaf_sunlit_cl%ptr   ! write values of all canopy layers
+      WRITE(24,'(20F16.7)') ppfd_sunlit_cl(1,:) * veg%fleaf_sunlit_cl%ptr(:,1) + &
+                            & ppfd_shaded_cl(1,:) + (1._wp-veg%fleaf_sunlit_cl%ptr(:,1))  ! write values of all canopy layers
 
   END SUBROUTINE canopy_model_write_data
 
@@ -696,6 +701,7 @@ CONTAINS
       veg%pool%leaf%phosphorus%ptr   = veg%pool%leaf%nitrogen%ptr / lctlib%np_leaf
     ENDIF
     CALL calc_canopy_layers(lctlib = lctlib, & 
+                            nc = nc, &
                           leaf_nitrogen = veg%pool%leaf%nitrogen%ptr, &
                           lai = veg%lai%ptr,&
                           lai_cl = veg%lai_cl%ptr(:,1), &
@@ -879,6 +885,7 @@ CONTAINS
      veg%lai%ptr = veg%lai%ptr + 0.5_wp 
      veg%pool%leaf%nitrogen%ptr=ref_nleaf/molar_mass_N*veg%lai%ptr
      CALL calc_canopy_layers(lctlib = lctlib, & 
+                            nc = nc, &
                           leaf_nitrogen = veg%pool%leaf%nitrogen%ptr, &
                           lai = veg%lai%ptr,&
                           lai_cl = veg%lai_cl%ptr(:,1), &
@@ -912,6 +919,7 @@ CONTAINS
 
      veg%pool%leaf%nitrogen%ptr=0.125_wp*(i)/molar_mass_N*veg%lai%ptr
      CALL calc_canopy_layers(lctlib = lctlib, & 
+                            nc = nc, &
                           leaf_nitrogen = veg%pool%leaf%nitrogen%ptr, &
                           lai = veg%lai%ptr,&
                           lai_cl = veg%lai_cl%ptr(:,1), &
@@ -946,6 +954,7 @@ CONTAINS
      veg%pool%leaf%phosphorus%ptr=veg%pool%leaf%nitrogen%ptr /model%lctlib(i)%np_leaf
      tile%lcts%lib_id = i
      CALL calc_canopy_layers(lctlib = model%lctlib(i), & 
+                            nc = nc, &
                           leaf_nitrogen = veg%pool%leaf%nitrogen%ptr, &
                           lai = veg%lai%ptr,&
                           lai_cl = veg%lai_cl%ptr(:,1), &

@@ -14,8 +14,7 @@ MODULE mo_soil_memory_class
   USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, &
-                                       t_jsb_struct, t_jsb_n_struct             ! *slmjsb4
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   USE mo_slm_varlist,            ONLY: slm_add_var   ! replace by mo_jsb_varlist later    *slmtemp
 

@@ -117,7 +117,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: drainage_sl
     dsl4jsb_Real3D_onChunk                :: t_soil
     dsl4jsb_Real2D_onChunk                :: canopy_cond            ! ASSIMI_
-    REAL(wp), POINTER                     :: sw_srf_net             ! RAD_
+    dsl4jsb_Real2D_onChunk                :: sw_srf_net             ! RAD_
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg             ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -179,10 +179,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)
+
 
 !! *slmtemp
     veg         => veg__mem 
-    sw_srf_net  => rad__mem%sw_srf_net%ptr
 
 
 
@@ -219,7 +221,7 @@ CONTAINS
           evaporation(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
                         (q_sat(:) - q_air(:)) / ( 100._wp / ga(:)) * & 
                         w_soil_root_theta(:)
-          IF(sw_srf_net < eps8) evaporation(:) = 0.0_wp
+          WHERE(sw_srf_net(:) < eps8) evaporation(:) = 0.0_wp
        
        CASE("layer") ! Case of layer scheme
           evaporation(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
@@ -258,7 +260,7 @@ CONTAINS
        !> 2.3 update net radiation flux at the surface, and implied soil temperature
        !!
        net_radiation(:) = latent_heat_flx(:) + sensible_heat_flx(:) - ground_heat_flx(:) 
-       t_soil(:,1) = t_soil(:,1) + ( sw_srf_net - net_radiation(:) + & 
+       t_soil(:,1) = t_soil(:,1) + ( sw_srf_net(:) - net_radiation(:) + & 
                                 ! simple estimate of surface net longwave flux
                                 lw_srf_down(:) - stbo * zemiss_def * t_soil(:,1)**4 ) / & 
                                 (heat_capa_l(:,1) * bulk_dens_l(:,1) * soil_depth_l(:,1)) * &

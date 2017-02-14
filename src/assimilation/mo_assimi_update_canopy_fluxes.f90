@@ -103,9 +103,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: maint_respiration_leaf_cl
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl
     dsl4jsb_Real3D_onChunk :: co2_conc_leaf_cl
+    dsl4jsb_Real3D_onChunk :: ppfd_sunlit_cl            ! RAD_
+    dsl4jsb_Real3D_onChunk :: ppfd_shaded_cl
 ! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_veg_memory),       POINTER   :: veg        ! local pointer to veg__mem for SLM usability
-    TYPE(t_rad_memory),       POINTER   :: rad        ! local pointer to rad__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -156,11 +157,13 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, maint_respiration_leaf_cl)
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, canopy_cond_cl)
     dsl4jsb_Get_var3D_onChunk(ASSIMI_, co2_conc_leaf_cl)
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
 
 
 ! 2 be removed  *slmtemp
     veg     => veg__mem 
-    rad     => rad__mem
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -197,8 +200,8 @@ CONTAINS
                                  co2_mixing_ratio(1)                 , &
                                  ga(1)                               , &
                                  veg%t_air_tacclim_mavg%ptr       , &
-                                 rad%ppfd_sunlit_cl%ptr(icanopy,1), &
-                                 rad%ppfd_shaded_cl%ptr(icanopy,1), &
+                                 ppfd_sunlit_cl(1,icanopy), &
+                                 ppfd_shaded_cl(1,icanopy), &
                                  veg%fleaf_sunlit_cl%ptr(icanopy,1), &
                                  beta_air(1)                 , &
                                  beta_soil_ps(1)             , &

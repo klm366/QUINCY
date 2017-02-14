@@ -78,9 +78,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk       :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk       :: beta_soil_gs_tfrac_mavg
     dsl4jsb_Real2D_onChunk       :: w_soil_root_pot           ! SOIL_
+    dsl4jsb_Real3D_onChunk       :: ppfd_sunlit_tfrac_mavg_cl ! RAD_
+    dsl4jsb_Real3D_onChunk       :: ppfd_shaded_tfrac_mavg_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER      :: veg      ! local pointer to veg__mem for SLM usability
-    TYPE(t_rad_memory),      POINTER      :: rad      ! local pointer to rad__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -112,13 +113,14 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
     ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
+    ! ---------------------------
 !    dsl4jsb_Get_var2D_onChunk(xx_, xx)
 
 
 !! *slmtemp
     veg       => veg__mem 
-    rad       => rad__mem
-
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -228,10 +230,11 @@ CONTAINS
     !!
     !!
     CALL calc_canopy_layers( lctlib, &
+                             nc    , &   ! number of chunks
                              veg%pool%leaf%nitrogen%ptr, &
                              veg%lai%ptr, &
-                             rad%ppfd_sunlit_tfrac_mavg_cl%ptr(:,1),&
-                             rad%ppfd_shaded_tfrac_mavg_cl%ptr(:,1), & 
+                             ppfd_sunlit_tfrac_mavg_cl(1,:),&
+                             ppfd_shaded_tfrac_mavg_cl(1,:), & 
                              veg%fleaf_sunlit_tfrac_mavg_cl%ptr(:,1),&
                              veg%t_air_tfrac_mavg%ptr, &
                              veg%t_air_tacclim_mavg%ptr, &

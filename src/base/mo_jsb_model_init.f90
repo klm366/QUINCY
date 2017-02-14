@@ -31,6 +31,7 @@ MODULE mo_jsb_model_init
     USE mo_atmland_constants,               ONLY: init_atmland_constants
     ! radiation
     USE mo_rad_constants,                   ONLY: init_rad_constants
+    USE mo_rad_init,                        ONLY: rad_init
     ! assimilation (photosynthesis)
     USE mo_assimi_constants,                ONLY: init_assimi_constants
     USE mo_assimi_config_class,             ONLY: assimi_config

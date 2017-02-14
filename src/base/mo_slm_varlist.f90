@@ -81,7 +81,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct'
 
     struct%name = TRIM(name)
-    struct%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    struct%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_struct = mem%no_of_structs + 1
     IF (pos_of_struct > mem%max_no_of_structs) THEN
@@ -114,7 +114,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_n_struct'
 
     n_struct%name = TRIM(name)
-    n_struct%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    n_struct%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_n_struct = mem%no_of_n_structs + 1
     IF (pos_of_n_struct > mem%max_no_of_n_structs) THEN
@@ -147,7 +147,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_l2_struct'
 
     l2_struct%name = TRIM(name)
-    l2_struct%owner_proc_id = n_struct%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    l2_struct%owner_proc_id = n_struct%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_l2_struct = n_struct%no_of_l2_structs + 1
     IF (pos_of_l2_struct > n_struct%max_no_of_l2_structs) THEN
@@ -195,7 +195,7 @@ CONTAINS
     iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
-    var%owner_proc_id = struct%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    var%owner_proc_id = struct%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_var = struct%no_of_vars + 1
     IF (pos_of_var > struct%max_no_of_vars) THEN
@@ -251,10 +251,10 @@ CONTAINS
 
     ! differentiation between processes that already have a proper 2/3D variable implementation or not
     SELECT CASE(struct%owner_proc_id)
-      CASE(1, 2, 5, 10, 11, 12) ! atm2land land2atm assimi soil, pheno, sb
+      CASE(1, 2, 5, 9, 10, 11, 12) ! atm2land land2atm assimi rad soil pheno sb
         levels = ics
         levele = ice
-      CASE(7, 9) ! veg, rad
+      CASE(7) ! veg
         levels = 1
         levele = assimi_config%ncanopy
       CASE DEFAULT
@@ -428,10 +428,10 @@ CONTAINS
 
     ! differentiation between processes that already have a proper 2/3D variable implementation or not
     SELECT CASE(mem%owner_proc_id)
-      CASE(1, 2, 5, 10, 11, 12) ! atm2land land2atm assimi soil, pheno, sb
+      CASE(1, 2, 5, 9, 10, 11, 12) ! atm2land land2atm assimi rad soil pheno sb
         levels = ics
         levele = ice
-      CASE(7, 9) ! veg, rad
+      CASE(7) ! veg
         levels = 1
         levele = assimi_config%ncanopy
       CASE DEFAULT
@@ -590,11 +590,11 @@ CONTAINS
 
     ! only the following processes have proper 2D/3D implementation and thus can use 2D LOGICAL variables
     SELECT CASE(mem%owner_proc_id)
-      CASE(5, 10, 11, 12) ! soil, assimi, pheno, sb
+      CASE(1, 2, 5, 9, 10, 11, 12) ! atm2land land2atm assimi rad soil pheno sb
         ! just go on
       CASE DEFAULT
         ! exit
-        CALL finish(TRIM(routine), 'A LOGICAL variable that is not in memory of soil, pheno, sb aims beeing 2D, '//TRIM(name))
+        CALL finish(TRIM(routine), 'A LOGICAL variable that is in VEG_ memory aims beeing 2D, '//TRIM(name))
     END SELECT
 
     var%name = TRIM(name)

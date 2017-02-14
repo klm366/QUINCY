@@ -36,6 +36,7 @@ CONTAINS
   !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_canopy_layers(lctlib            , &
+                                nc                , &     ! number of chunks
                                 leaf_nitrogen     , &
                                 lai               , &
                                 ppfd_sunlit_cl     , &
@@ -69,6 +70,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in)            :: lctlib                !< land-cover-type library
+    INTEGER,INTENT(in)                           :: nc                    !< number of chunks
     REAL(wp),INTENT(in)                          :: leaf_nitrogen         !< total canopy N (mol/m2)
     REAL(wp),INTENT(in)                          :: lai                   !< total leaf area index
     REAL(wp),INTENT(in),OPTIONAL                 :: t_air                 !< air temperature (avg)
@@ -604,6 +606,7 @@ CONTAINS
   !! Needed for calculation of optimal leaf and root allocation fraction. See mo_veg_growth
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_marginal_canopy_flux_increment(lctlib             , &
+                                                  nc                , &
                                                   t_air             , &
                                                   press_srf         , & 
                                                   q_air             , & 
@@ -630,6 +633,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),INTENT(in) :: lctlib              !< land-cover-type library - parameters for one pft
+    INTEGER,               INTENT(in) :: nc                 !< number of chunks
     TYPE(t_veg_memory),    INTENT(in) :: veg                 !< veg process memory
     REAL(wp),              INTENT(in) :: t_air               !< air temperature (K) 
     REAL(wp),              INTENT(in) :: press_srf           !< air pressure (Pa) 
@@ -668,7 +672,7 @@ CONTAINS
     !fn_pepc_cl      = veg%fn_pepc_cl%ptr(:,1)
     ppfd_sunlit_cl   = rad_ppfd_sunlit_cl(:)
     ppfd_shaded_cl   = rad_ppfd_shaded_cl(:)
-    fleaf_sunlit_cl = veg%fleaf_sunlit_cl%ptr(:,1)
+    fleaf_sunlit_cl  = veg%fleaf_sunlit_cl%ptr(:,1)
  
  !> @todo: mo_veg_canopy calc_npp_increment: I think this is wrong currently, as increaseing leaf area require an
  !! increase in roots and sapwood mass and thus respiration... Also, should be based on current mass
@@ -690,6 +694,7 @@ CONTAINS
 
     ! recompute canopy layer LAI and foliar N with new numbers
     CALL calc_canopy_layers(lctlib = lctlib, & 
+                            nc = nc, &
                             leaf_nitrogen = leaf_nitrogen_new, &
                             lai = lai_new,&
                             ppfd_sunlit_cl = ppfd_sunlit_cl, &
@@ -776,6 +781,7 @@ CONTAINS
   !! Parameter leaf_cn_direction
   !----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_dir_optimal_cn_leaf(lctlib                          , &
+                                        nc                            , &
                                         veg                           , &
                                         beta_air_tcnl_mavg            , &
                                         beta_soil_ps_tcnl_mavg        , &
@@ -794,6 +800,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     TYPE(t_lctlib_element),                     INTENT(in)    :: lctlib       !< land-cover-type library - parameters for one pft
+    INTEGER,                                    INTENT(in)    :: nc           !< number of chunks
     TYPE(t_veg_memory),                         INTENT(inout) :: veg          !< veg process memory 
     REAL(wp),                                   INTENT(in)    :: beta_air_tcnl_mavg
     REAL(wp),                                   INTENT(in)    :: beta_soil_ps_tcnl_mavg
@@ -831,6 +838,7 @@ CONTAINS
        
        ! update N distribution in the canopy
        CALL calc_canopy_layers(lctlib = lctlib, & 
+                          nc = nc, &
                           leaf_nitrogen = leaf_nitrogen, &
                           lai = veg%lai%ptr,&
                           ppfd_sunlit_cl = ppfd_sunlit_tcnl_mavg_cl, &

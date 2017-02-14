@@ -11,7 +11,6 @@ MODULE mo_rad_constants
 
   USE mo_kind, ONLY: wp
 
-
   IMPLICIT NONE
   PUBLIC
 
@@ -43,7 +42,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_rad_constants
 
-  IMPLICIT NONE
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_rad_constants'
 

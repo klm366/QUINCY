@@ -9,10 +9,12 @@
 !!
 MODULE mo_rad_interface
 
-  USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: message, finish
+#include "dsl_jsbach.inc"
 
-  USE mo_rad_update_radiation 
+  USE mo_kind,                  ONLY: wp
+  USE mo_exception,             ONLY: message, finish
+
+  USE mo_rad_update_radiation,  ONLY: update_radiation 
 
 
 

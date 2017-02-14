@@ -949,9 +949,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: canopy_cond
     dsl4jsb_Real2D_onChunk :: drainage                  ! SOIL_
     dsl4jsb_Real3D_onChunk :: soil_depth_l
+    dsl4jsb_Real2D_onChunk :: appfd                     ! RAD_
 !! *slmtemp
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
-    TYPE(t_rad_memory), POINTER      :: rad         ! local pointer to rad__mem for SLM usability
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -995,12 +995,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_l)
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
 
 
 
 !! *slmtemp
     veg     => veg__mem 
-    rad     => rad__mem
     sb      => sb__mem
 
 
@@ -1066,7 +1066,7 @@ CONTAINS
              qh_acc(itile)           = qh_acc(itile)            + sensible_heat_flx(1)          * dtime_one               
              qle_acc(itile)          = qle_acc(itile)           + latent_heat_flx(1)            * dtime_one               
              qg_acc(itile)           = qg_acc(itile)            + ground_heat_flx(1)            * dtime_one               
-             appfd_acc(itile)        = appfd_acc(itile)         + rad%appfd%ptr                 * dtime_one               
+             appfd_acc(itile)        = appfd_acc(itile)         + appfd(1)                      * dtime_one               
              ndat_acc(itile)         = ndat_acc(itile)          + 1 
        
              !> 1.2 write fluxes and set to zero

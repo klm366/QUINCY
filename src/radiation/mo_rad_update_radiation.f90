@@ -80,34 +80,32 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
-    REAL(wp), POINTER           :: alb_vis            , & 
-                                   alb_nir            , &
-                                   alb_vis_can        , & 
-                                   alb_nir_can        , & 
-                                   alb_vis_soil       , & 
-                                   alb_nir_soil
-    REAL(wp), POINTER           :: arad_vis_can       , & 
-                                   arad_nir_can       , & 
-                                   arad_vis_soil      , & 
-                                   arad_nir_soil
-    REAL(wp), POINTER           :: sw_srf_net         , & 
-                                   swvis_srf_net      , & 
-                                   swnir_srf_net      , & 
-                                   rad_srf_net
-    dsl4jsb_Real2D_onChunk :: swpar_srf_down
+    dsl4jsb_Real2D_onChunk :: sw_srf_net              ! RAD_
+    dsl4jsb_Real2D_onChunk :: swvis_srf_net
+    dsl4jsb_Real2D_onChunk :: swnir_srf_net
+    dsl4jsb_Real2D_onChunk :: rad_srf_net
+    dsl4jsb_Real2D_onChunk :: alb_vis
+    dsl4jsb_Real2D_onChunk :: alb_nir
+    dsl4jsb_Real2D_onChunk :: alb_vis_soil
+    dsl4jsb_Real2D_onChunk :: alb_nir_soil
+    dsl4jsb_Real2D_onChunk :: alb_vis_can
+    dsl4jsb_Real2D_onChunk :: alb_nir_can
+    dsl4jsb_Real2D_onChunk :: arad_vis_soil
+    dsl4jsb_Real2D_onChunk :: arad_nir_soil
+    dsl4jsb_Real2D_onChunk :: arad_vis_can
+    dsl4jsb_Real2D_onChunk :: arad_nir_can
+    dsl4jsb_Real2D_onChunk :: appfd
+    dsl4jsb_Real3D_onChunk :: ppfd_sunlit_cl
+    dsl4jsb_Real3D_onChunk :: ppfd_shaded_cl
+    dsl4jsb_Real2D_onChunk :: swpar_srf_down          ! ATM2LAND_
     dsl4jsb_Real2D_onChunk :: swpar_fdiffuse
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
-    dsl4jsb_Real2D_onChunk :: albedo
+    dsl4jsb_Real2D_onChunk :: albedo                  ! LAND2ATM_
     dsl4jsb_Real2D_onChunk :: net_radiation
-!    dsl4jsb_Real2D_onChunk :: alb_vis_dir
-!    dsl4jsb_Real2D_onChunk :: alb_vis_dif
-!    dsl4jsb_Real2D_onChunk :: alb_nir_dir
-!    dsl4jsb_Real2D_onChunk :: alb_nir_dif
 !! *slmtemp
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
-    TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -120,7 +118,7 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config
-!    dsl4jsb_Get_config(PHENO_)
+!    dsl4jsb_Get_config(xx_)
     ! Get process memories
     dsl4jsb_Get_memory(ATM2LAND_)
     dsl4jsb_Get_memory(LAND2ATM_)
@@ -138,31 +136,29 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(LAND2ATM_, albedo)
     dsl4jsb_Get_var2D_onChunk(LAND2ATM_, net_radiation)
-!    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, alb_vis_dir)
-!    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, alb_vis_dif)
-!    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, alb_nir_dir)
-!    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, alb_nir_dif)
     ! ---------------------------
-!    dsl4jsb_Get_var2D_onChunk(xx_, xx)
+    dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)
+    dsl4jsb_Get_var2D_onChunk(RAD_, swvis_srf_net)
+    dsl4jsb_Get_var2D_onChunk(RAD_, swnir_srf_net)
+    dsl4jsb_Get_var2D_onChunk(RAD_, rad_srf_net)
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis)
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir)
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_can)
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_can)
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_soil)
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_soil)
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_can)
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_can)
+    dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
+
 
 
 !! *slmtemp
     veg       => veg__mem 
-    rad       => rad__mem
-    sw_srf_net        => rad%sw_srf_net%ptr
-    swvis_srf_net     => rad%swvis_srf_net%ptr
-    swnir_srf_net     => rad%swnir_srf_net%ptr
-    rad_srf_net       => rad%rad_srf_net%ptr
-    alb_vis           => rad%alb_vis%ptr
-    alb_nir           => rad%alb_nir%ptr
-    alb_vis_soil      => rad%alb_vis_soil%ptr
-    alb_nir_soil      => rad%alb_nir_soil%ptr
-    alb_vis_can       => rad%alb_vis_can%ptr
-    alb_nir_can       => rad%alb_nir_can%ptr
-    arad_vis_soil     => rad%arad_vis_soil%ptr
-    arad_nir_soil     => rad%arad_nir_soil%ptr
-    arad_vis_can      => rad%arad_vis_can%ptr
-    arad_nir_can      => rad%arad_nir_can%ptr
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -170,12 +166,13 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
+
     !> 1.0 Snow and soil albedo 
     !! 
     !! for now, prescribed, should be based on JSBACH 4 routines, and include the effect of snow on the
     !! soil's albedo
-    alb_vis_soil = def_alb_vis_soil 
-    alb_nir_soil = def_alb_nir_soil
+    alb_vis_soil(:) = def_alb_vis_soil
+    alb_nir_soil(:) = def_alb_nir_soil
 
     !> 2.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !! 
@@ -183,10 +180,10 @@ CONTAINS
                      swpar_fdiffuse(1), cos_zenith_angle(1), & 
                      veg%lai%ptr, veg%lai_cl%ptr(:,1), veg%cumm_lai_cl%ptr(:,1),& 
                      lctlib%sigma_vis, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
-                     kbl0_vis, kdf0_vis, alb_vis_soil, &
-                     arad_sunlit_vis_cl,arad_shaded_vis_cl,fleaf_sunlit_vis_cl, &
-                     arad_vis_can,arad_vis_soil, &
-                     alb_vis_can,alb_vis,swvis_srf_net) 
+                     kbl0_vis, kdf0_vis, alb_vis_soil(1), &
+                     arad_sunlit_vis_cl(:),arad_shaded_vis_cl(:),fleaf_sunlit_vis_cl(:), &
+                     arad_vis_can(1),arad_vis_soil(1), &
+                     alb_vis_can(1),alb_vis(1),swvis_srf_net(1)) 
 
     !> 3.0 calculate NIR radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !! 
@@ -196,38 +193,38 @@ CONTAINS
                      swpar_fdiffuse(1), cos_zenith_angle(1), & 
                      veg%lai%ptr, veg%lai_cl%ptr(:,1), veg%cumm_lai_cl%ptr(:,1), &
                      lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
-                     kbl0_nir, kdf0_nir, alb_nir_soil, &
-                     arad_sunlit_nir_cl,arad_shaded_nir_cl,fleaf_sunlit_nir_cl, &
-                     arad_nir_can,arad_nir_soil, &
-                     alb_nir_can,alb_nir,swnir_srf_net) 
+                     kbl0_nir, kdf0_nir, alb_nir_soil(1), &
+                     arad_sunlit_nir_cl(:),arad_shaded_nir_cl(:),fleaf_sunlit_nir_cl(:), &
+                     arad_nir_can(1),arad_nir_soil(1), &
+                     alb_nir_can(1),alb_nir(1),swnir_srf_net(1)) 
 
     !> 4.0 calculate albedo and net radiation for total shortwave radiation
     !!
-    IF(swvis_srf_down(1) + swnir_srf_down(1) > eps8)THEN 
-       albedo(:) = ( alb_vis * swvis_srf_down(:)   + & 
-                  alb_nir * swnir_srf_down(:) ) / & 
-                (swvis_srf_down(:) + swnir_srf_down(:)) 
-    ENDIF 
-    sw_srf_net = swvis_srf_net + swnir_srf_net
+    WHERE(swvis_srf_down(:) + swnir_srf_down(:) > eps8)
+       albedo(:) = ( alb_vis(:) * swvis_srf_down(:)   + & 
+                    alb_nir(:) * swnir_srf_down(:) ) / & 
+                    (swvis_srf_down(:) + swnir_srf_down(:)) 
+    END WHERE 
+    sw_srf_net(:) = swvis_srf_net(1) + swnir_srf_net(1)
 
     !> 5.0 diagnose net radiation (temporarily here for diagnostic purposes)
     !! 
     !! Only for now longwave balance is zero
-    rad_srf_net = sw_srf_net
-    net_radiation(:) = rad_srf_net
+    rad_srf_net(:) = sw_srf_net(:)
+    net_radiation(:) = rad_srf_net(:)
 
     !> 6.0 convert radiation to Photosynthetically Active Photon Flux Density (ppfd)
     !!
     veg%fleaf_sunlit_cl%ptr(:,1) = fleaf_sunlit_vis_cl(:) 
-    IF(swvis_srf_down(1) > eps8) THEN 
-       rad%ppfd_sunlit_cl%ptr(:,1) = arad_sunlit_vis_cl(:) * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd
-       rad%ppfd_shaded_cl%ptr(:,1) = arad_shaded_vis_cl(:) * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd
-       rad%appfd%ptr               = arad_vis_can          * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd 
-    ELSE 
-       rad%ppfd_sunlit_cl%ptr = 0.0_wp
-       rad%ppfd_shaded_cl%ptr = 0.0_wp
-       rad%appfd%ptr          = 0.0_wp
-    ENDIF
+    IF(swvis_srf_down(1) > eps8) THEN
+       ppfd_sunlit_cl(1,:) = arad_sunlit_vis_cl(:) * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd
+       ppfd_shaded_cl(1,:) = arad_shaded_vis_cl(:) * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd
+       appfd(:)            = arad_vis_can(:)       * swpar_srf_down(:)/swvis_srf_down(:) * rad2ppfd 
+    ELSE
+       ppfd_sunlit_cl(:,:) = 0.0_wp
+       ppfd_shaded_cl(:,:) = 0.0_wp
+       appfd(:)            = 0.0_wp
+    END IF
 
   END SUBROUTINE update_radiation
 

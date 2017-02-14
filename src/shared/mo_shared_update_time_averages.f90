@@ -137,9 +137,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: beta_soil_ps_daytime_dacc
     dsl4jsb_Real2D_onChunk :: beta_soil_gs_daytime_dacc
     dsl4jsb_Real2D_onChunk :: t_jmax_opt
+    dsl4jsb_Real3D_onChunk :: ppfd_shaded_cl            ! RAD_
+    dsl4jsb_Real3D_onChunk :: ppfd_sunlit_cl
+    dsl4jsb_Real3D_onChunk :: ppfd_shaded_daytime_cl
+    dsl4jsb_Real3D_onChunk :: ppfd_sunlit_daytime_cl
+    dsl4jsb_Real3D_onChunk :: ppfd_shaded_daytime_dacc_cl
+    dsl4jsb_Real3D_onChunk :: ppfd_sunlit_daytime_dacc_cl
 !! *slmtemp
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
-    TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -179,12 +184,18 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)
     ! ---------------------------
-!    dsl4jsb_Get_var2D_onChunk(xx_, xx)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl)
+    ! ---------------------------
+!    dsl4jsb_Get_var2D_onChunk(VEG_, xx)
 
 
 !! *slmtemp
     veg       => veg__mem 
-    rad       => rad__mem
 
 
 
@@ -200,10 +211,10 @@ CONTAINS
       veg%daytime_counter%ptr = veg%daytime_counter%ptr + 1.0_wp
       ! 1.2 add values and count number of values
       DO icanopy=1,assimi_config%ncanopy
-        rad%ppfd_sunlit_daytime_dacc_cl%ptr(icanopy,1)  = rad%ppfd_sunlit_daytime_dacc_cl%ptr(icanopy,1)   + &
-                                                           rad%ppfd_sunlit_cl%ptr(icanopy,1)
-        rad%ppfd_shaded_daytime_dacc_cl%ptr(icanopy,1)  = rad%ppfd_shaded_daytime_dacc_cl%ptr(icanopy,1)   + & 
-                                                           rad%ppfd_shaded_cl%ptr(icanopy,1)
+        ppfd_sunlit_daytime_dacc_cl(1,icanopy)  = ppfd_sunlit_daytime_dacc_cl(1,icanopy)   + &
+                                                           ppfd_sunlit_cl(1,icanopy)
+        ppfd_shaded_daytime_dacc_cl(1,icanopy)  = ppfd_shaded_daytime_dacc_cl(1,icanopy)   + & 
+                                                           ppfd_shaded_cl(1,icanopy)
         veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) + & 
                                                            veg%fleaf_sunlit_cl%ptr(icanopy,1)
       END DO
@@ -228,8 +239,8 @@ CONTAINS
       ! calculate the average of the current day and pass it to the according avg_prev_* variable; 
       IF(veg%daytime_counter%ptr > eps8) THEN
         DO icanopy=1,assimi_config%ncanopy
-          rad%ppfd_sunlit_daytime_cl%ptr(icanopy,1)   = rad%ppfd_sunlit_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
-          rad%ppfd_shaded_daytime_cl%ptr(icanopy,1)   = rad%ppfd_shaded_daytime_dacc_cl%ptr(icanopy,1)   / veg%daytime_counter%ptr
+          ppfd_sunlit_daytime_cl(1,icanopy)   = ppfd_sunlit_daytime_dacc_cl(1,icanopy)   / veg%daytime_counter%ptr
+          ppfd_shaded_daytime_cl(1,icanopy)   = ppfd_shaded_daytime_dacc_cl(1,icanopy)   / veg%daytime_counter%ptr
           veg%fleaf_sunlit_daytime_cl%ptr(icanopy,1)  = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) / veg%daytime_counter%ptr
         END DO
         veg%t_air_daytime%ptr            = veg%t_air_daytime_dacc%ptr              / veg%daytime_counter%ptr
@@ -242,29 +253,29 @@ CONTAINS
         beta_soil_gs_daytime(:)  = beta_soil_gs_daytime_dacc(:)    / veg%daytime_counter%ptr
         veg%t_jmax_opt_daytime%ptr       = veg%t_jmax_opt_daytime_dacc%ptr         / veg%daytime_counter%ptr
       ELSE  ! if veg%daytime_counter is zero
-        rad%ppfd_sunlit_daytime_cl%ptr   = 0.0_wp
-        rad%ppfd_shaded_daytime_cl%ptr   = 0.0_wp
-        veg%fleaf_sunlit_daytime_cl%ptr  = 0.0_wp
+        ppfd_sunlit_daytime_cl(:,:)   = 0.0_wp
+        ppfd_shaded_daytime_cl(:,:)   = 0.0_wp
+        veg%fleaf_sunlit_daytime_cl%ptr   = 0.0_wp
       END IF
 
 !      write(999,*) time_day, veg%daytime_counter%ptr, &   ! might be used for testing
-!                  rad%ppfd_sunlit_daytime_cl%ptr(1,1), &
-!                  rad%ppfd_shaded_daytime_cl%ptr(1,1), &
+!                  ppfd_sunlit_daytime_cl(1,1), &
+!                  ppfd_shaded_daytime_cl(1,1), &
 !                  veg%fleaf_sunlit_daytime_cl%ptr(1,1), &
 !                  veg%t_jmax_opt_daytime%ptr, ' |-| '
 
       ! set all values of the current day to zero
-      rad%ppfd_sunlit_daytime_dacc_cl%ptr        = 0.0_wp
-      rad%ppfd_shaded_daytime_dacc_cl%ptr        = 0.0_wp
+      ppfd_sunlit_daytime_dacc_cl(:,:)          = 0.0_wp
+      ppfd_shaded_daytime_dacc_cl(:,:)          = 0.0_wp
       veg%fleaf_sunlit_daytime_dacc_cl%ptr       = 0.0_wp
       veg%t_air_daytime_dacc%ptr                 = 0.0_wp
       veg%press_srf_daytime_dacc%ptr             = 0.0_wp
       veg%co2_mixing_ratio_daytime_dacc%ptr      = 0.0_wp
       veg%ga_daytime_dacc%ptr                    = 0.0_wp
-      beta_air_daytime_dacc(:)           = 0.0_wp
-      beta_soil_ps_daytime_dacc(:)       = 0.0_wp
+      beta_air_daytime_dacc(:)                  = 0.0_wp
+      beta_soil_ps_daytime_dacc(:)              = 0.0_wp
       veg%beta_sinklim_ps_daytime_dacc%ptr       = 0.0_wp
-      beta_soil_gs_daytime_dacc(:)       = 0.0_wp
+      beta_soil_gs_daytime_dacc(:)              = 0.0_wp
       veg%t_jmax_opt_daytime_dacc%ptr            = 0.0_wp
       veg%daytime_counter%ptr                    = 0.0_wp
     END IF
@@ -382,9 +393,9 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk       :: growing_season       ! PHENO_
-    dsl4jsb_Real2D_onChunk          :: t_air                ! ATM2LAND_
-    dsl4jsb_Real2D_onChunk          :: gross_assimilation   ! ASSIMI_
+    dsl4jsb_Logical2D_onChunk       :: growing_season             ! PHENO_
+    dsl4jsb_Real2D_onChunk          :: t_air                      ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk          :: gross_assimilation         ! ASSIMI_
     dsl4jsb_Real2D_onChunk          :: net_assimilation_boc
     dsl4jsb_Real2D_onChunk          :: beta_soil_gs
     dsl4jsb_Real2D_onChunk          :: beta_soil_ps_daytime
@@ -397,9 +408,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk          :: beta_soil_gs_tcnl_mavg
     dsl4jsb_Real2D_onChunk          :: beta_air_tfrac_mavg
     dsl4jsb_Real2D_onChunk          :: beta_air_tcnl_mavg
+    dsl4jsb_Real3D_onChunk          :: ppfd_shaded_daytime_cl     ! RAD_
+    dsl4jsb_Real3D_onChunk          :: ppfd_sunlit_daytime_cl
+    dsl4jsb_Real3D_onChunk          :: ppfd_shaded_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk          :: ppfd_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk          :: ppfd_shaded_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk          :: ppfd_sunlit_tfrac_mavg_cl
 !! *slmtemp
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
-    TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -440,7 +456,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)
-
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
+    ! ---------------------------
+!    dsl4jsb_Get_var2D_onChunk(VEG_, )
+!    dsl4jsb_Get_var3D_onChunk(VEG_, )
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -449,7 +474,6 @@ CONTAINS
 
 !! *slmtemp
     veg       => veg__mem 
-    rad       => rad__mem
 
 
 
@@ -487,9 +511,9 @@ CONTAINS
 
     !> 1.4 averages at the time-scale of within-leaf N allocation fractions 
     !!
-    rad%ppfd_sunlit_tfrac_mavg_cl%ptr     = calc_mavg(rad%ppfd_sunlit_tfrac_mavg_cl%ptr, rad%ppfd_sunlit_daytime_cl%ptr, &
+    ppfd_sunlit_tfrac_mavg_cl(:,:)     = calc_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
                                                   mavg_period_tfrac)
-    rad%ppfd_shaded_tfrac_mavg_cl%ptr     = calc_mavg(rad%ppfd_shaded_tfrac_mavg_cl%ptr, rad%ppfd_shaded_daytime_cl%ptr, &
+    ppfd_shaded_tfrac_mavg_cl(:,:)     = calc_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
                                                   mavg_period_tfrac)
     veg%fleaf_sunlit_tfrac_mavg_cl%ptr    = calc_mavg(veg%fleaf_sunlit_tfrac_mavg_cl%ptr, veg%fleaf_sunlit_daytime_cl%ptr, &
                                                   mavg_period_tfrac)
@@ -512,9 +536,9 @@ CONTAINS
 
     !> 1.5 averages at the time-scale of leaf N allocation fractions 
     !!
-    rad%ppfd_sunlit_tcnl_mavg_cl%ptr      = calc_mavg(rad%ppfd_sunlit_tcnl_mavg_cl%ptr, rad%ppfd_sunlit_daytime_cl%ptr, &
+    ppfd_sunlit_tcnl_mavg_cl(:,:)      = calc_mavg(ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
                                                   mavg_period_tcnl)
-    rad%ppfd_shaded_tcnl_mavg_cl%ptr      = calc_mavg(rad%ppfd_shaded_tcnl_mavg_cl%ptr, rad%ppfd_shaded_daytime_cl%ptr, &
+    ppfd_shaded_tcnl_mavg_cl(:,:)      = calc_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
                                                   mavg_period_tcnl)
     veg%fleaf_sunlit_tcnl_mavg_cl%ptr     = calc_mavg(veg%fleaf_sunlit_tcnl_mavg_cl%ptr, veg%fleaf_sunlit_daytime_cl%ptr, &
                                                   mavg_period_tcnl)

@@ -74,25 +74,28 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk             :: growing_season         ! PHENO_
-    dsl4jsb_Real2D_onChunk                :: t_air                  ! ATM2LAND_
-    dsl4jsb_Real2D_onChunk                :: q_air
-    dsl4jsb_Real2D_onChunk                :: press_srf
-    dsl4jsb_Real2D_onChunk                :: co2_mixing_ratio
-    dsl4jsb_Real2D_onChunk                :: ga
-    dsl4jsb_Real2D_onChunk                :: beta_air               ! ASSIMI_
-    dsl4jsb_Real2D_onChunk                :: beta_soil_ps
-    dsl4jsb_Real2D_onChunk                :: beta_soil_gs
-    dsl4jsb_Real2D_onChunk                :: maint_respiration_leaf
-    dsl4jsb_Real2D_onChunk                :: net_assimilation
-    dsl4jsb_Real2D_onChunk                :: canopy_cond
-    dsl4jsb_Real2D_onChunk                :: beta_air_tcnl_mavg
-    dsl4jsb_Real2D_onChunk                :: beta_soil_ps_tcnl_mavg
-    dsl4jsb_Real2D_onChunk                :: beta_soil_gs_tcnl_mavg
-    dsl4jsb_Real2D_onChunk                :: w_soil_root_theta      ! SOIL_
+    dsl4jsb_Logical2D_onChunk   :: growing_season         ! PHENO_
+    dsl4jsb_Real2D_onChunk      :: t_air                  ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk      :: q_air
+    dsl4jsb_Real2D_onChunk      :: press_srf
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
+    dsl4jsb_Real2D_onChunk      :: ga
+    dsl4jsb_Real2D_onChunk      :: beta_air               ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_leaf
+    dsl4jsb_Real2D_onChunk      :: net_assimilation
+    dsl4jsb_Real2D_onChunk      :: canopy_cond
+    dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta      ! SOIL_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl            ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
-    TYPE(t_rad_memory),      POINTER :: rad         ! local pointer to rad__mem for SLM usability
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -136,17 +139,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)
 
 
 !! *slmtemp
     veg     => veg__mem 
-    rad     => rad__mem
-
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+
 
 
     !> 1.0 calculate potential growth rate relative to labile pool size
@@ -172,12 +179,13 @@ CONTAINS
     !! 
     IF (veg_config%flag_optimal_Nleaf .AND. growing_season(1)) THEN
       CALL calc_dir_optimal_cn_leaf(lctlib                                  , &
+                                      nc                                    , &   ! number of chunks
                                       veg                                   , &
                                       beta_air_tcnl_mavg(1)         , &
                                       beta_soil_ps_tcnl_mavg(1)     , &
                                       beta_soil_gs_tcnl_mavg(1)     , &
-                                      rad%ppfd_sunlit_tcnl_mavg_cl%ptr(:,1) , &
-                                      rad%ppfd_shaded_tcnl_mavg_cl%ptr(:,1) )
+                                      ppfd_sunlit_tcnl_mavg_cl(1,:) , &
+                                      ppfd_shaded_tcnl_mavg_cl(1,:) )
 
     END IF
 
@@ -201,6 +209,7 @@ CONTAINS
     !> 3.1 calculate marginal NPP increment per unit C growth, needed for optimal allocation scheme
     !!
     CALL calc_marginal_canopy_flux_increment(lctlib                       , &
+                                              nc                          , &   ! number of chunks
                                               t_air(1)                    , &
                                               press_srf(1)                , &
                                               q_air(1)                    , &
@@ -211,8 +220,8 @@ CONTAINS
                                               beta_air(1)         , & 
                                               beta_soil_ps(1)     , & 
                                               beta_soil_gs(1)     , & 
-                                              rad%ppfd_sunlit_cl%ptr(:,1) , &
-                                              rad%ppfd_shaded_cl%ptr(:,1) , &
+                                              ppfd_sunlit_cl(1,:) , &     ! 
+                                              ppfd_shaded_cl(1,:) , &
                                               veg                         , & ! *slmdev  --> CALL calc_photosynthesis()
                                               veg%unit_npp%ptr            , & 
                                               veg%unit_transpiration%ptr)   
