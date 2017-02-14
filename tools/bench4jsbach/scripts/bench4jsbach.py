@@ -18,7 +18,8 @@ import bench
 
 start = timeit.default_timer ()
 
-parser = OptionParser()
+usage  = """Usage: <B4J RUN SCRIPT> [options] [YOUR SCRIPT NAME | YOUR SCRIPT ]"""
+parser = OptionParser ( usage = usage )
 parser.add_option("-f", "--fetchremote",
                   action="store_true", dest="fetchremote", default=False,
                   help="fetch input files to b4j run environment")

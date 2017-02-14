@@ -13,6 +13,7 @@ import matplotlib.gridspec as gridspec
 import cartopy.crs as ccrs
 import numpy as np
 from pandas import DataFrame
+import math
 
 
 colorlist = [ 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w' ]
@@ -28,16 +29,54 @@ colors_hydrology  = [ darkbrown, lightgreen, lightbrown, darkgreen ]
 def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan ):
     #from datetime import datetime
 
-    print "inpath:", inpath
+    print "\n\ninpath:", inpath
     print "varname:", varname
     print "outpath:", outpath
 
+    tstep_no = 0
+
     nc_fid  = Dataset ( inpath, 'r')
-    lats    = nc_fid.variables [ 'lat' ][ : ]
-    lons    = nc_fid.variables [ 'lon' ][ : ]
-    time    = nc_fid.variables [ 'time' ][ : ]   
-    vardata = nc_fid.variables [ varname ][ 0,:,: ] 
+
+    var       = nc_fid.variables [ varname ]
+    units     = var.units
+    grid_type = var.grid_type
+    long_name = var.long_name
+    time      = nc_fid.variables [ 'time' ][ : ]
+
+    if grid_type == "gaussian":
+        lats    = nc_fid.variables [ 'lat' ][ : ]
+        lons    = nc_fid.variables [ 'lon' ][ : ] 
+        vardata = var [ tstep_no,:,: ]
+    elif grid_type == "unstructured":
+
+        #tstep_no = 71
+        rad2deg_ = 180 / math.pi
+        
+        clon, clat =  nc_fid.variables['clon'][:] * rad2deg_,\
+                      nc_fid.variables['clat'][:] * rad2deg_
+        clon_vertices, clat_vertices  =  nc_fid.variables['clon_bnds'][:] * rad2deg_,\
+                                         nc_fid.variables['clat_bnds'][:] * rad2deg_
+        vardata      =  var [ tstep_no, : ]  #- 273.15
+    else:
+        print "grid_type not found."
+        sys.exit ( 1 )
+        
     nc_fid.close ()
+
+
+    if grid_type == "unstructured":
+        ncells, nv = clon_vertices.shape
+        mt_wholeglobe_r = (( np.amax (clon_vertices, axis = 1 ) - np.amin (clon_vertices, axis = 1 )) > 180 ).astype ( int )
+        mt_wholeglobe_mask = np.array ([ mt_wholeglobe_r, mt_wholeglobe_r, mt_wholeglobe_r ]).T               
+        east = ( clon_vertices < 0 ).astype ( int )
+        east_weight = np.sum ( mt_wholeglobe_mask * east, axis=1 )
+        east_weight_mask = np.array ([ east_weight,  east_weight,  east_weight ]).T
+        shift_eastwest = ( east_weight_mask == 1 ).astype ( int ) * ( east == 1 ).astype ( int ) * 360 + ( east_weight_mask == 2 ).astype ( int ) * ( east == 0 ).astype ( int ) * ( -360 )
+        newxvc = ( clon_vertices + shift_eastwest )
+        newxvc = newxvc.ravel()
+        newyvc = clat_vertices.ravel()
+        triangles = np.reshape ( np.arange ( ncells * nv ), ( ncells, nv ))
+
     
     vmax    = vardata.max ()
     vmin    = vardata.min ()
@@ -89,11 +128,27 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
     cmap.set_over ( color = 'r', alpha = 1.0 )
     cmap.set_under ( color = 'g', alpha = 1.0 )
     
-    f = plt.figure ( figsize = ( 16, 8 ))   
+    f = plt.figure ( figsize = ( 16, 8 ))  
     ax = f.add_subplot ( 111, projection = ccrs.PlateCarree ())
-    ax.pcolormesh ( lons, lats, vardata, cmap=cmap, norm=norm,
-                    edgecolors='face', transform=ccrs.PlateCarree(), 
-                    rasterized=True, zorder=0 )
+    
+    if grid_type == 'gaussian':
+        ax.pcolormesh ( lons, lats,
+                        vardata, cmap=cmap, norm=norm,
+                        edgecolors='face', 
+                        transform=ccrs.PlateCarree(), 
+                        rasterized=True, zorder=0 )
+    elif grid_type == 'unstructured':
+        plt.tripcolor( newxvc, newyvc, triangles,
+                       facecolors=vardata, cmap=cmap, norm=norm,
+                       edgecolor="face",
+                       #linewidths=0.001, edgecolors='k',
+                       transform=ccrs.PlateCarree () )
+        #plt.scatter ( clon_vertices.ravel(), clat_vertices.ravel (), marker="o", s=1, color="yellow", edgecolor='yellow' )
+        #plt.tight_layout() # puts the map to the left margin but resizes correctly
+        #ax.set_global ()
+        # ax.set_extent ([ -180, 180, -90, 90], crs=ccrs.PlateCarree ())
+        plt.subplots_adjust(left=0.1,bottom=0.1)
+        
     ax.coastlines ( linewidth=0.5 )
    
     cax = f.add_axes ([ 0.125, 0.04, 0.775, 0.03 ]) # left, bottom, width, height           
@@ -108,7 +163,7 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
                fontsize = 20,
                transform = ax.transAxes )
     
-    plt.savefig ( outpath ) 
+    plt.savefig ( outpath )
     plt.close ()
   
 
