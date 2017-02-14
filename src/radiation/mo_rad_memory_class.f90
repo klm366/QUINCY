@@ -76,6 +76,13 @@ MODULE mo_rad_memory_class
                             ppfd_sunlit_tcnl_mavg_cl    , & !< Photosynthetically Active Photon Flux Density on sunlit leaves
                             ppfd_shaded_tcnl_mavg_cl        !< Photosynthetically Active Photon Flux Density on shaded leaves
 
+    TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
+                            arad_sunlit_vis_cl   , &
+                            arad_shaded_vis_cl   , &
+                            fleaf_sunlit_vis_cl  , & 
+                            arad_sunlit_nir_cl   , &
+                            arad_shaded_nir_cl   , &
+                            fleaf_sunlit_nir_cl
 
   CONTAINS
     PROCEDURE :: Init => Init_rad_memory
@@ -209,6 +216,25 @@ CONTAINS
   
       CALL slm_add_var(mem, 'ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
             initval_r=10.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'arad_sunlit_vis_cl', mem%arad_sunlit_vis_cl, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'arad_shaded_vis_cl', mem%arad_shaded_vis_cl, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'fleaf_sunlit_vis_cl', mem%fleaf_sunlit_vis_cl, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'arad_sunlit_nir_cl', mem%arad_sunlit_nir_cl, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'arad_shaded_nir_cl', mem%arad_shaded_nir_cl, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'fleaf_sunlit_nir_cl', mem%fleaf_sunlit_nir_cl, &
+            initval_r=0.0_wp) ! initvalue
+
 
     END IF
 

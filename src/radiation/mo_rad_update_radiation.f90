@@ -62,14 +62,6 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
-    !> @todo (update_radiation) these local variables need to be added to RADIATION memory once 3D variables are allowed for \n
-    !! created Ticket #138
-    REAL(wp),DIMENSION(assimi_config%ncanopy) :: arad_sunlit_vis_cl   , &
-                                                 arad_shaded_vis_cl   , &
-                                                 fleaf_sunlit_vis_cl  , & 
-                                                 arad_sunlit_nir_cl   , &
-                                                 arad_shaded_nir_cl   , &
-                                                 fleaf_sunlit_nir_cl
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation'
     ! ---------------------------
@@ -97,6 +89,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: appfd
     dsl4jsb_Real3D_onChunk :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk :: ppfd_shaded_cl
+    dsl4jsb_Real3D_onChunk :: arad_sunlit_vis_cl
+    dsl4jsb_Real3D_onChunk :: arad_shaded_vis_cl
+    dsl4jsb_Real3D_onChunk :: fleaf_sunlit_vis_cl
+    dsl4jsb_Real3D_onChunk :: arad_sunlit_nir_cl
+    dsl4jsb_Real3D_onChunk :: arad_shaded_nir_cl
+    dsl4jsb_Real3D_onChunk :: fleaf_sunlit_nir_cl
     dsl4jsb_Real2D_onChunk :: swpar_srf_down          ! ATM2LAND_
     dsl4jsb_Real2D_onChunk :: swpar_fdiffuse
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
@@ -154,7 +152,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
-
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_vis_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_vis_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_vis_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_nir_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)
 
 
 !! *slmtemp
@@ -181,7 +184,7 @@ CONTAINS
                      veg%lai%ptr, veg%lai_cl%ptr(:,1), veg%cumm_lai_cl%ptr(:,1),& 
                      lctlib%sigma_vis, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
                      kbl0_vis, kdf0_vis, alb_vis_soil(1), &
-                     arad_sunlit_vis_cl(:),arad_shaded_vis_cl(:),fleaf_sunlit_vis_cl(:), &
+                     arad_sunlit_vis_cl(1,:),arad_shaded_vis_cl(1,:),fleaf_sunlit_vis_cl(1,:), &
                      arad_vis_can(1),arad_vis_soil(1), &
                      alb_vis_can(1),alb_vis(1),swvis_srf_net(1)) 
 
@@ -194,7 +197,7 @@ CONTAINS
                      veg%lai%ptr, veg%lai_cl%ptr(:,1), veg%cumm_lai_cl%ptr(:,1), &
                      lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
                      kbl0_nir, kdf0_nir, alb_nir_soil(1), &
-                     arad_sunlit_nir_cl(:),arad_shaded_nir_cl(:),fleaf_sunlit_nir_cl(:), &
+                     arad_sunlit_nir_cl(1,:),arad_shaded_nir_cl(1,:),fleaf_sunlit_nir_cl(1,:), &
                      arad_nir_can(1),arad_nir_soil(1), &
                      alb_nir_can(1),alb_nir(1),swnir_srf_net(1)) 
 
@@ -215,11 +218,11 @@ CONTAINS
 
     !> 6.0 convert radiation to Photosynthetically Active Photon Flux Density (ppfd)
     !!
-    veg%fleaf_sunlit_cl%ptr(:,1) = fleaf_sunlit_vis_cl(:) 
+    veg%fleaf_sunlit_cl%ptr(:,1) = fleaf_sunlit_vis_cl(1,:) 
     IF(swvis_srf_down(1) > eps8) THEN
-       ppfd_sunlit_cl(1,:) = arad_sunlit_vis_cl(:) * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd
-       ppfd_shaded_cl(1,:) = arad_shaded_vis_cl(:) * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd
-       appfd(:)            = arad_vis_can(:)       * swpar_srf_down(:)/swvis_srf_down(:) * rad2ppfd 
+       ppfd_sunlit_cl(1,:) = arad_sunlit_vis_cl(1,:) * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd
+       ppfd_shaded_cl(1,:) = arad_shaded_vis_cl(1,:) * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd
+       appfd(:)            = arad_vis_can(:)         * swpar_srf_down(:)/swvis_srf_down(:) * rad2ppfd 
     ELSE
        ppfd_sunlit_cl(:,:) = 0.0_wp
        ppfd_shaded_cl(:,:) = 0.0_wp
