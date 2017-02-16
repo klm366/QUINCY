@@ -1214,6 +1214,11 @@ CONTAINS
              net_min_n_acc(itile)   = net_min_n_acc(itile) + SUM(sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
              net_min_p_acc(itile)   = net_min_p_acc(itile) + SUM(sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
 
+             leachingCorg_acc(itile) = leachingCorg_acc(itile) + sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk)
+             leachingC13org_acc(itile) = leachingC13org_acc(itile) + sb%transport%dom%carbon13%ptr(1,soil_config%nsoil_water,iblk)
+             leachingC14org_acc(itile) = leachingC14org_acc(itile) + sb%transport%dom%carbon14%ptr(1,soil_config%nsoil_water,iblk)
+             leachingNorg_acc(itile) = leachingNorg_acc(itile) + sb%transport%dom%nitrogen%ptr(1,soil_config%nsoil_water,iblk)
+             leachingPorg_acc(itile) = leachingPorg_acc(itile) + sb%transport%dom%phosphorus%ptr(1,soil_config%nsoil_water,iblk)
 
              IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
                 & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
