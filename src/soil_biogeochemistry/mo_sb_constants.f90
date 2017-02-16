@@ -75,6 +75,10 @@ MODULE mo_sb_constants
    REAL(wp), SAVE :: & 
      carbon_per_dryweight_SOM    !< C per unit dryweight SOM [gC / gOM] 
 
+   REAL(wp), SAVE :: &
+      microbial_cn, &            !< molar ratio of C:N in microbes (testing only!)
+      microbial_np               !< molar ratio of N:P in microbes (testing only!)
+
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_constants'
 
 CONTAINS
@@ -142,6 +146,9 @@ CONTAINS
     f_soluable_seed_bed    = 0.5_wp
 
     carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
+
+    microbial_cn = 6._wp
+    microbial_np = 14._wp
 
   END SUBROUTINE init_sb_constants
 

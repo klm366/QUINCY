@@ -160,7 +160,8 @@ CONTAINS
                      fruit_carbon13_r, fruit_carbon14_r, fruit_nitrogen15_r , &
                      seed_bed_carbon_r, seed_bed_nitrogen_r, seed_bed_phosphorus_r  , &
                      seed_bed_carbon13_r, seed_bed_carbon14_r, seed_bed_nitrogen15_r
-    REAL(wp) ::      rtm_depolymerisation_r, rtm_mic_uptake_r, &
+    REAL(wp), DIMENSION(soil_config%nsoil_water) :: & 
+                     rtm_depolymerisation_r, rtm_mic_uptake_r, &
                      rtm_sorption_r, rtm_desorption_r, & 
                      rtm_hsc_r, rmm_depolymerisation_r, & 
                      rmm_mic_uptake_r, rmm_sorption_r, & 
@@ -179,6 +180,7 @@ CONTAINS
     INTEGER                       :: nlevel_soil  = -1      ! number of levels at the Z-Axis (soil layer)
     INTEGER                       :: nlevel_veg   = -1      ! number of levels at the Z-Axis (canopy layer)
     INTEGER                       :: nc                     ! number of chunks ice-ics+1
+    INTEGER                       :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_forcing'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -336,41 +338,41 @@ CONTAINS
 
     !> 5.0 pass values read from file (i.e. scalar values) to ics-ice
     !!
-    t_air(nc)           = 	    t_air_r
-    q_air(nc)           = 	    q_air_r
-    rain(nc)            = 	    rain_r
-    snow(nc)            = 	    snow_r
-    wind_air(nc)        = 	    wind_air_r
-    wind_10m(nc)        = 	    wind_10m(1)       
-    lw_srf_down(nc)     = 	    lw_srf_down_r
-    swvis_srf_down(nc)  = 	    swvis_srf_down_r
-    swnir_srf_down(nc)  = 	    swnir_srf_down(1) 
-    swpar_srf_down(nc)  = 	    swpar_srf_down(1) 
-    swpar_fdiffuse(nc)  = 	    swpar_fdiffuse(1) 
-    press_srf(nc)       = 	    press_srf_r
-    drag_srf(nc)        = 	    drag_srf(1)       
-    t_acoef(nc)         = 	    t_acoef(1)        
-    t_bcoef(nc)         = 	    t_bcoef(1)        
-    q_acoef(nc)         = 	    q_acoef(1)        
-    q_bcoef(nc)         = 	    q_bcoef(1)        
-    pch(nc)             = 	    pch(1)            
-    cos_zenith_angle(nc)      = 	    cos_zenith_angle(1)     
-    co2_mixing_ratio(nc)      = 	    co2_mixing_ratio_r
-    co2_mixing_ratio_C13(nc)  = 	    co2_mixing_ratio_C13(1) 
-    co2_mixing_ratio_C14(nc)  = 	    co2_mixing_ratio_C14(1) 
-    ga(nc)                    = 	    ga(1)                   
-    ! For lakes:	
-    albedo_lwtr(nc)     = 	    albedo_lwtr(1)    
-    drag_wtr(nc)        = 	    drag_wtr(1)       
-    drag_ice(nc)        = 	    drag_ice(1)       
-    t_acoef_wtr(nc)     = 	    t_acoef_wtr(1)    
-    t_bcoef_wtr(nc)     = 	    t_bcoef_wtr(1)    
-    q_acoef_wtr(nc)     = 	    q_acoef_wtr(1)    
-    q_bcoef_wtr(nc)     = 	    q_bcoef_wtr(1)    
-    t_acoef_ice(nc)     = 	    t_acoef_ice(1)    
-    t_bcoef_ice(nc)     = 	    t_bcoef_ice(1)    
-    q_acoef_ice(nc)     = 	    q_acoef_ice(1)    
-    q_bcoef_ice(nc)     = 	    q_bcoef_ice(1)    
+    t_air(nc)           =         t_air_r
+    q_air(nc)           =         q_air_r
+    rain(nc)            =         rain_r
+    snow(nc)            =         snow_r
+    wind_air(nc)        =         wind_air_r
+    wind_10m(nc)        =         wind_10m(1)       
+    lw_srf_down(nc)     =         lw_srf_down_r
+    swvis_srf_down(nc)  =         swvis_srf_down_r
+    swnir_srf_down(nc)  =         swnir_srf_down(1) 
+    swpar_srf_down(nc)  =         swpar_srf_down(1) 
+    swpar_fdiffuse(nc)  =         swpar_fdiffuse(1) 
+    press_srf(nc)       =         press_srf_r
+    drag_srf(nc)        =         drag_srf(1)       
+    t_acoef(nc)         =         t_acoef(1)        
+    t_bcoef(nc)         =         t_bcoef(1)        
+    q_acoef(nc)         =         q_acoef(1)        
+    q_bcoef(nc)         =         q_bcoef(1)        
+    pch(nc)             =         pch(1)            
+    cos_zenith_angle(nc)      =         cos_zenith_angle(1)     
+    co2_mixing_ratio(nc)      =         co2_mixing_ratio_r
+    co2_mixing_ratio_C13(nc)  =         co2_mixing_ratio_C13(1) 
+    co2_mixing_ratio_C14(nc)  =         co2_mixing_ratio_C14(1) 
+    ga(nc)                    =         ga(1)                   
+    ! For lakes:    
+    albedo_lwtr(nc)     =         albedo_lwtr(1)    
+    drag_wtr(nc)        =         drag_wtr(1)       
+    drag_ice(nc)        =         drag_ice(1)       
+    t_acoef_wtr(nc)     =         t_acoef_wtr(1)    
+    t_bcoef_wtr(nc)     =         t_bcoef_wtr(1)    
+    q_acoef_wtr(nc)     =         q_acoef_wtr(1)    
+    q_bcoef_wtr(nc)     =         q_bcoef_wtr(1)    
+    t_acoef_ice(nc)     =         t_acoef_ice(1)    
+    t_bcoef_ice(nc)     =         t_bcoef_ice(1)    
+    q_acoef_ice(nc)     =         q_acoef_ice(1)    
+    q_bcoef_ice(nc)     =         q_bcoef_ice(1)    
 
 
 
@@ -435,94 +437,98 @@ CONTAINS
 
     lun=10
     READ(lun,*, IOSTAT=stat) time_hlp, & 
-                     rtm_depolymerisation_r, rtm_mic_uptake_r, &
-                     rtm_sorption_r, rtm_desorption_r, & 
-                     rtm_hsc_r, rmm_depolymerisation_r, & 
-                     rmm_mic_uptake_r, rmm_sorption_r, & 
-                     rmm_desorption_r, rmm_hsc_r, &
-                     percolation_sl_r
+                     rtm_depolymerisation_r(1:nlevel_soil), rtm_mic_uptake_r(1:nlevel_soil), &
+                     rtm_sorption_r(1:nlevel_soil), rtm_desorption_r(1:nlevel_soil), & 
+                     rtm_hsc_r(1:nlevel_soil), rmm_depolymerisation_r(1:nlevel_soil), & 
+                     rmm_mic_uptake_r(1:nlevel_soil), rmm_sorption_r(1:nlevel_soil), & 
+                     rmm_desorption_r(1:nlevel_soil), rmm_hsc_r(1:nlevel_soil), &
+                     percolation_sl_r(1:nlevel_soil)
 
     IF(IS_IOSTAT_END(stat)) THEN 
       ! start reading from line one & read header into dummy
       REWIND(lun)
       CALL read_forcing_header(lun)
       READ(lun,*) time_hlp, &
-                     rtm_depolymerisation_r, rtm_mic_uptake_r, &
-                     rtm_sorption_r, rtm_desorption_r, & 
-                     rtm_hsc_r, rmm_depolymerisation_r, & 
-                     rmm_mic_uptake_r, rmm_sorption_r, & 
-                     rmm_desorption_r, rmm_hsc_r, &
-                     percolation_sl_r
+                     rtm_depolymerisation_r(1:nlevel_soil), rtm_mic_uptake_r(1:nlevel_soil), &
+                     rtm_sorption_r(1:nlevel_soil), rtm_desorption_r(1:nlevel_soil), & 
+                     rtm_hsc_r(1:nlevel_soil), rmm_depolymerisation_r(1:nlevel_soil), & 
+                     rmm_mic_uptake_r(1:nlevel_soil), rmm_sorption_r(1:nlevel_soil), & 
+                     rmm_desorption_r(1:nlevel_soil), rmm_hsc_r(1:nlevel_soil), &
+                     percolation_sl_r(1:nlevel_soil)
     END IF
 
     !> 2.0 pass values read from file (i.e. scalar values) to ics-ice
     !!
-    veg%litterfall%leaf%carbon%ptr	 =  leaf_carbon_r
-    veg%litterfall%leaf%nitrogen%ptr	 =  leaf_nitrogen_r
-    veg%litterfall%leaf%phosphorus%ptr    	 =  leaf_phosphorus_r    
-    veg%litterfall%leaf%carbon13%ptr	 =  leaf_carbon13_r
-    veg%litterfall%leaf%carbon14%ptr	 =  leaf_carbon14_r
-    veg%litterfall%leaf%nitrogen15%ptr  	 =  leaf_nitrogen15_r  
-    veg%litterfall%fine_root%carbon%ptr	 =  fine_root_carbon_r
-    veg%litterfall%fine_root%nitrogen%ptr	 =  fine_root_nitrogen_r
-    veg%litterfall%fine_root%phosphorus%ptr   	 =  fine_root_phosphorus_r
-    veg%litterfall%fine_root%carbon13%ptr	 =  fine_root_carbon13_r
-    veg%litterfall%fine_root%carbon14%ptr	 =  fine_root_carbon14_r
-    veg%litterfall%fine_root%nitrogen15%ptr 	 =  fine_root_nitrogen15_r 
-    veg%litterfall%coarse_root%carbon%ptr	 =  coarse_root_carbon_r
-    veg%litterfall%coarse_root%nitrogen%ptr	 =  coarse_root_nitrogen_r
-    veg%litterfall%coarse_root%phosphorus%ptr   	 =  coarse_root_phosphorus_r   
-    veg%litterfall%coarse_root%carbon13%ptr	 =  coarse_root_carbon13_r
-    veg%litterfall%coarse_root%carbon14%ptr	 =  coarse_root_carbon14_r
-    veg%litterfall%coarse_root%nitrogen15%ptr 	 =  coarse_root_nitrogen15_r 
-    veg%litterfall%sap_wood%carbon%ptr	 =  sap_wood_carbon_r
-    veg%litterfall%sap_wood%nitrogen%ptr	 =  sap_wood_nitrogen_r
-    veg%litterfall%sap_wood%phosphorus%ptr    	 =  sap_wood_phosphorus_r    
-    veg%litterfall%sap_wood%carbon13%ptr	 =  sap_wood_carbon13_r
-    veg%litterfall%sap_wood%carbon14%ptr	 =  sap_wood_carbon14_r
-    veg%litterfall%sap_wood%nitrogen15%ptr  	 =  sap_wood_nitrogen15_r  
-    veg%litterfall%heart_wood%carbon%ptr	 =  heart_wood_carbon_r
-    veg%litterfall%heart_wood%nitrogen%ptr	 =  heart_wood_nitrogen_r
-    veg%litterfall%heart_wood%phosphorus%ptr    	 =  heart_wood_phosphorus_r    
-    veg%litterfall%heart_wood%carbon13%ptr	 =  heart_wood_carbon13_r
-    veg%litterfall%heart_wood%carbon14%ptr	 =  heart_wood_carbon14_r
-    veg%litterfall%heart_wood%nitrogen15%ptr  	 =  heart_wood_nitrogen15_r  
-    veg%litterfall%labile%carbon%ptr	 =  labile_carbon_r
-    veg%litterfall%labile%nitrogen%ptr	 =  labile_nitrogen_r
-    veg%litterfall%labile%phosphorus%ptr    	 =  labile_phosphorus_r    
-    veg%litterfall%labile%carbon13%ptr	 =  labile_carbon13_r
-    veg%litterfall%labile%carbon14%ptr	 =  labile_carbon14_r
-    veg%litterfall%labile%nitrogen15%ptr  	 =  labile_nitrogen15_r  
-    veg%litterfall%reserve%carbon%ptr	 =  reserve_carbon_r
-    veg%litterfall%reserve%nitrogen%ptr	 =  reserve_nitrogen_r
-    veg%litterfall%reserve%phosphorus%ptr   	 =  reserve_phosphorus_r   
-    veg%litterfall%reserve%carbon13%ptr	 =  reserve_carbon13_r
-    veg%litterfall%reserve%carbon14%ptr	 =  reserve_carbon14_r
-    veg%litterfall%reserve%nitrogen15%ptr 	 =  reserve_nitrogen15_r 
-    veg%litterfall%fruit%carbon%ptr	 =  fruit_carbon_r
-    veg%litterfall%fruit%nitrogen%ptr	 =  fruit_nitrogen_r
-    veg%litterfall%fruit%phosphorus%ptr   	 =  fruit_phosphorus_r   
-    veg%litterfall%fruit%carbon13%ptr	 =  fruit_carbon13_r
-    veg%litterfall%fruit%carbon14%ptr	 =  fruit_carbon14_r
-    veg%litterfall%fruit%nitrogen15%ptr 	 =  fruit_nitrogen15_r 
-    veg%litterfall%seed_bed%carbon%ptr	 =  seed_bed_carbon_r
-    veg%litterfall%seed_bed%nitrogen%ptr	 =  seed_bed_nitrogen_r
-    veg%litterfall%seed_bed%phosphorus%ptr  	 =  seed_bed_phosphorus_r  
-    veg%litterfall%seed_bed%carbon13%ptr	 =  seed_bed_carbon13_r
-    veg%litterfall%seed_bed%carbon14%ptr	 =  seed_bed_carbon14_r
-    veg%litterfall%seed_bed%nitrogen15%ptr	 =  seed_bed_nitrogen15_r
+    veg%litterfall%leaf%carbon%ptr     =  leaf_carbon_r
+    veg%litterfall%leaf%nitrogen%ptr     =  leaf_nitrogen_r
+    veg%litterfall%leaf%phosphorus%ptr         =  leaf_phosphorus_r    
+    veg%litterfall%leaf%carbon13%ptr     =  leaf_carbon13_r
+    veg%litterfall%leaf%carbon14%ptr     =  leaf_carbon14_r
+    veg%litterfall%leaf%nitrogen15%ptr       =  leaf_nitrogen15_r  
+    veg%litterfall%fine_root%carbon%ptr     =  fine_root_carbon_r
+    veg%litterfall%fine_root%nitrogen%ptr     =  fine_root_nitrogen_r
+    veg%litterfall%fine_root%phosphorus%ptr        =  fine_root_phosphorus_r
+    veg%litterfall%fine_root%carbon13%ptr     =  fine_root_carbon13_r
+    veg%litterfall%fine_root%carbon14%ptr     =  fine_root_carbon14_r
+    veg%litterfall%fine_root%nitrogen15%ptr      =  fine_root_nitrogen15_r 
+    veg%litterfall%coarse_root%carbon%ptr     =  coarse_root_carbon_r
+    veg%litterfall%coarse_root%nitrogen%ptr     =  coarse_root_nitrogen_r
+    veg%litterfall%coarse_root%phosphorus%ptr        =  coarse_root_phosphorus_r   
+    veg%litterfall%coarse_root%carbon13%ptr     =  coarse_root_carbon13_r
+    veg%litterfall%coarse_root%carbon14%ptr     =  coarse_root_carbon14_r
+    veg%litterfall%coarse_root%nitrogen15%ptr      =  coarse_root_nitrogen15_r 
+    veg%litterfall%sap_wood%carbon%ptr     =  sap_wood_carbon_r
+    veg%litterfall%sap_wood%nitrogen%ptr     =  sap_wood_nitrogen_r
+    veg%litterfall%sap_wood%phosphorus%ptr         =  sap_wood_phosphorus_r    
+    veg%litterfall%sap_wood%carbon13%ptr     =  sap_wood_carbon13_r
+    veg%litterfall%sap_wood%carbon14%ptr     =  sap_wood_carbon14_r
+    veg%litterfall%sap_wood%nitrogen15%ptr       =  sap_wood_nitrogen15_r  
+    veg%litterfall%heart_wood%carbon%ptr     =  heart_wood_carbon_r
+    veg%litterfall%heart_wood%nitrogen%ptr     =  heart_wood_nitrogen_r
+    veg%litterfall%heart_wood%phosphorus%ptr         =  heart_wood_phosphorus_r    
+    veg%litterfall%heart_wood%carbon13%ptr     =  heart_wood_carbon13_r
+    veg%litterfall%heart_wood%carbon14%ptr     =  heart_wood_carbon14_r
+    veg%litterfall%heart_wood%nitrogen15%ptr       =  heart_wood_nitrogen15_r  
+    veg%litterfall%labile%carbon%ptr     =  labile_carbon_r
+    veg%litterfall%labile%nitrogen%ptr     =  labile_nitrogen_r
+    veg%litterfall%labile%phosphorus%ptr         =  labile_phosphorus_r    
+    veg%litterfall%labile%carbon13%ptr     =  labile_carbon13_r
+    veg%litterfall%labile%carbon14%ptr     =  labile_carbon14_r
+    veg%litterfall%labile%nitrogen15%ptr       =  labile_nitrogen15_r  
+    veg%litterfall%reserve%carbon%ptr     =  reserve_carbon_r
+    veg%litterfall%reserve%nitrogen%ptr     =  reserve_nitrogen_r
+    veg%litterfall%reserve%phosphorus%ptr        =  reserve_phosphorus_r   
+    veg%litterfall%reserve%carbon13%ptr     =  reserve_carbon13_r
+    veg%litterfall%reserve%carbon14%ptr     =  reserve_carbon14_r
+    veg%litterfall%reserve%nitrogen15%ptr      =  reserve_nitrogen15_r 
+    veg%litterfall%fruit%carbon%ptr     =  fruit_carbon_r
+    veg%litterfall%fruit%nitrogen%ptr     =  fruit_nitrogen_r
+    veg%litterfall%fruit%phosphorus%ptr        =  fruit_phosphorus_r   
+    veg%litterfall%fruit%carbon13%ptr     =  fruit_carbon13_r
+    veg%litterfall%fruit%carbon14%ptr     =  fruit_carbon14_r
+    veg%litterfall%fruit%nitrogen15%ptr      =  fruit_nitrogen15_r 
+    veg%litterfall%seed_bed%carbon%ptr     =  seed_bed_carbon_r
+    veg%litterfall%seed_bed%nitrogen%ptr     =  seed_bed_nitrogen_r
+    veg%litterfall%seed_bed%phosphorus%ptr       =  seed_bed_phosphorus_r  
+    veg%litterfall%seed_bed%carbon13%ptr     =  seed_bed_carbon13_r
+    veg%litterfall%seed_bed%carbon14%ptr     =  seed_bed_carbon14_r
+    veg%litterfall%seed_bed%nitrogen15%ptr     =  seed_bed_nitrogen15_r
 
-    sb%rtm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk) = rtm_depolymerisation_r
-    sb%rtm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk)       = rtm_mic_uptake_r
-    sb%rtm_sorption%ptr(ics:ice,1:nlevel_soil,iblk)         = rtm_sorption_r
-    sb%rtm_desorption%ptr(ics:ice,1:nlevel_soil,iblk)       = rtm_desorption_r
-    sb%rtm_hsc%ptr(ics:ice,1:nlevel_soil,iblk)              = rtm_hsc_r
-    sb%rmm_depolymerisation%ptr(ics:ice,1:nlevel_soil,iblk) = rmm_depolymerisation_r
-    sb%rmm_mic_uptake%ptr(ics:ice,1:nlevel_soil,iblk)       = rmm_mic_uptake_r
-    sb%rmm_sorption%ptr(ics:ice,1:nlevel_soil,iblk)         = rmm_sorption_r
-    sb%rmm_desorption%ptr(ics:ice,1:nlevel_soil,iblk)       = rmm_desorption_r
-    sb%rmm_hsc%ptr(ics:ice,1:nlevel_soil,iblk)              = rmm_hsc_r
-    percolation_sl(:,:)           = percolation_sl_r
+    DO isoil = 1,nlevel_soil
+
+       sb%rtm_depolymerisation%ptr(ics:ice,isoil,iblk) = rtm_depolymerisation_r(isoil)
+       sb%rtm_mic_uptake%ptr(ics:ice,isoil,iblk)       = rtm_mic_uptake_r(isoil)
+       sb%rtm_sorption%ptr(ics:ice,isoil,iblk)         = rtm_sorption_r(isoil)
+       sb%rtm_desorption%ptr(ics:ice,isoil,iblk)       = rtm_desorption_r(isoil)
+       sb%rtm_hsc%ptr(ics:ice,isoil,iblk)              = rtm_hsc_r(isoil)
+       sb%rmm_depolymerisation%ptr(ics:ice,isoil,iblk) = rmm_depolymerisation_r(isoil)
+       sb%rmm_mic_uptake%ptr(ics:ice,isoil,iblk)       = rmm_mic_uptake_r(isoil)
+       sb%rmm_sorption%ptr(ics:ice,isoil,iblk)         = rmm_sorption_r(isoil)
+       sb%rmm_desorption%ptr(ics:ice,isoil,iblk)       = rmm_desorption_r(isoil)
+       sb%rmm_hsc%ptr(ics:ice,isoil,iblk)              = rmm_hsc_r(isoil)
+       percolation_sl(:,isoil)           = percolation_sl_r(isoil)
+
+    ENDDO
 
     END SELECT  ! land plant canopy vs soil
 

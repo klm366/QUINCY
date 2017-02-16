@@ -216,7 +216,7 @@ CONTAINS
       CASE('soil')
 
 !BLARPP
-percolation_sl(:,soil_config%nsoil_water) = 0.0_wp
+!percolation_sl(:,soil_config%nsoil_water) = 0.0_wp
 
 rmm_mic_uptake = 1.0_wp
 rmm_depolymerisation = 1.0_wp
@@ -360,12 +360,15 @@ rmm_desorption = 1.0_wp
          !> 7.0 update pools
          !!
          CALL calc_jsm_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
-         nh4_solute(:,:) = nh4_solute(:,:) + net_mineralisation_n(:,:) + transport_nh4_solute(:,:)
+         !nh4_solute(:,:) = nh4_solute(:,:) + net_mineralisation_n(:,:) + transport_nh4_solute(:,:)
+         nh4_solute(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
          nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)
          no3_solute(:,:) = no3_solute(:,:) + transport_no3_solute(:,:)
-         po4_solute(:,:) = po4_solute(:,:) + net_mineralisation_p(:,:) + transport_po4_solute(:,:)
+         !po4_solute(:,:) = po4_solute(:,:) + net_mineralisation_p(:,:) + transport_po4_solute(:,:)
+         po4_solute(:,:) = po4_solute(:,:) + transport_po4_solute(:,:)
          po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
-         nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_n15(:,:) + transport_nh4_n15_solute(:,:)
+         !nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_n15(:,:) + transport_nh4_n15_solute(:,:)
+         nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + transport_nh4_n15_solute(:,:)
          nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
          no3_n15_solute(:,:) = no3_n15_solute(:,:) + transport_no3_n15_solute(:,:)
 

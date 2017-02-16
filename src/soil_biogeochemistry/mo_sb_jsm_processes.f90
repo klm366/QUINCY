@@ -420,7 +420,7 @@ CONTAINS
                                    het_respiration,het_respiration_c13,het_respiration_c14, &
                                    net_mineralisation_n,net_mineralisation_n15,net_mineralisation_p)
 
-    USE mo_sb_constants, ONLY: vmax_mic_uptake,km_mic_uptake,microbial_cue
+    USE mo_sb_constants, ONLY: vmax_mic_uptake,km_mic_uptake,microbial_cue,microbial_cn,microbial_np
 
     IMPLICIT NONE
 
@@ -443,7 +443,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_p !< net mineralisation rate [mol P/m3/timestep]
     ! 0.2 Local 
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1, uptake_rate, f_uptake
+    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1, uptake_rate, f_uptake, uptake_rate_org, uptake_rate_min
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_growth'
 
     iblk  = options%iblk
@@ -469,51 +469,53 @@ CONTAINS
 
     !> X.X update fluxes
     !! carbon
-    hlp1(:,:) = f_uptake(:,:) * pool_dom%carbon%ptr(ics:ice,:,iblk)
+    uptake_rate_org(:,:) = f_uptake(:,:) * pool_dom%carbon%ptr(ics:ice,:,iblk)
     loss_dom%carbon%ptr(ics:ice,:,iblk)            = loss_dom%carbon%ptr(ics:ice,:,iblk) + & 
                                                      f_uptake(:,:) * pool_dom%carbon%ptr(ics:ice,:,iblk)
     formation_microbial%carbon%ptr(ics:ice,:,iblk) = formation_microbial%carbon%ptr(ics:ice,:,iblk) + & 
-                                                     microbial_cue * hlp1 
-    het_respiration(:,:)                           = het_respiration(:,:) + (1._wp - microbial_cue ) * hlp1
+                                                     microbial_cue * uptake_rate_org 
+    het_respiration(:,:)                           = het_respiration(:,:) + (1._wp - microbial_cue ) * uptake_rate_org
 
     !! nitrogen
-    hlp1(:,:) = f_uptake(:,:) * pool_dom%nitrogen%ptr(ics:ice,:,iblk)
+    uptake_rate_min(:,:) = microbial_cue * uptake_rate_org / microbial_cn - f_uptake(:,:) * pool_dom%nitrogen%ptr(ics:ice,:,iblk) 
+    uptake_rate_org(:,:) = f_uptake(:,:) * pool_dom%nitrogen%ptr(ics:ice,:,iblk)
     loss_dom%nitrogen%ptr(ics:ice,:,iblk)            = loss_dom%nitrogen%ptr(ics:ice,:,iblk) + & 
                                                        f_uptake(:,:) * pool_dom%nitrogen%ptr(ics:ice,:,iblk)
     formation_microbial%nitrogen%ptr(ics:ice,:,iblk) = formation_microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
-                                                       hlp1 
-    net_mineralisation_n(:,:)                        = net_mineralisation_n(:,:) 
+                                                       uptake_rate_org(:,:) + uptake_rate_min(:,:)
+    net_mineralisation_n(:,:)                        = net_mineralisation_n(:,:) - uptake_rate_min(:,:) 
    
     !! phosphorus
-    hlp1(:,:) = f_uptake(:,:) * pool_dom%phosphorus%ptr(ics:ice,:,iblk)
+    uptake_rate_min(:,:) = uptake_rate_org / microbial_np - f_uptake(:,:) * pool_dom%nitrogen%ptr(ics:ice,:,iblk) 
+    uptake_rate_org(:,:) = f_uptake(:,:) * pool_dom%phosphorus%ptr(ics:ice,:,iblk)
     loss_dom%phosphorus%ptr(ics:ice,:,iblk)            = loss_dom%phosphorus%ptr(ics:ice,:,iblk) + & 
                                                          f_uptake(:,:) * pool_dom%phosphorus%ptr(ics:ice,:,iblk)
     formation_microbial%phosphorus%ptr(ics:ice,:,iblk) = formation_microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
-                                                         hlp1 
-    net_mineralisation_p(:,:)                          = net_mineralisation_p(:,:) 
+                                                         uptake_rate_org(:,:) + uptake_rate_min(:,:)
+    net_mineralisation_p(:,:)                          = net_mineralisation_p(:,:) - uptake_rate_min(:,:) 
    
     !! carbon13
-    hlp1(:,:) = f_uptake(:,:) * pool_dom%carbon13%ptr(ics:ice,:,iblk)
+    uptake_rate_org(:,:) = f_uptake(:,:) * pool_dom%carbon13%ptr(ics:ice,:,iblk)
     loss_dom%carbon13%ptr(ics:ice,:,iblk)            = loss_dom%carbon13%ptr(ics:ice,:,iblk) + & 
                                                       f_uptake(:,:) * pool_dom%carbon13%ptr(ics:ice,:,iblk)
     formation_microbial%carbon13%ptr(ics:ice,:,iblk) = formation_microbial%carbon13%ptr(ics:ice,:,iblk) + & 
-                                                       microbial_cue * hlp1 
-    het_respiration_c13(:,:)                         = het_respiration_c13(:,:) + (1._wp - microbial_cue ) * hlp1
+                                                       microbial_cue * uptake_rate_org 
+    het_respiration_c13(:,:)                         = het_respiration_c13(:,:) + (1._wp - microbial_cue ) * uptake_rate_org
 
     !! carbon14
-    hlp1(:,:) = f_uptake(:,:) * pool_dom%carbon14%ptr(ics:ice,:,iblk)
+    uptake_rate_org(:,:) = f_uptake(:,:) * pool_dom%carbon14%ptr(ics:ice,:,iblk)
     loss_dom%carbon14%ptr(ics:ice,:,iblk)            = loss_dom%carbon14%ptr(ics:ice,:,iblk) + & 
                                                        f_uptake(:,:) * pool_dom%carbon14%ptr(ics:ice,:,iblk)
     formation_microbial%carbon14%ptr(ics:ice,:,iblk) = formation_microbial%carbon14%ptr(ics:ice,:,iblk) + & 
-                                                       microbial_cue * hlp1 
-    het_respiration_c14(:,:)                         = het_respiration_c14(:,:) + (1._wp - microbial_cue ) * hlp1
+                                                       microbial_cue * uptake_rate_org 
+    het_respiration_c14(:,:)                         = het_respiration_c14(:,:) + (1._wp - microbial_cue ) * uptake_rate_org
 
     !! nitrogen15
-    hlp1(:,:) = f_uptake(:,:) * pool_dom%nitrogen15%ptr(ics:ice,:,iblk)
+    uptake_rate_org(:,:) = f_uptake(:,:) * pool_dom%nitrogen15%ptr(ics:ice,:,iblk)
     loss_dom%nitrogen15%ptr(ics:ice,:,iblk)            = loss_dom%nitrogen15%ptr(ics:ice,:,iblk) + & 
                                                          f_uptake(:,:) * pool_dom%nitrogen15%ptr(ics:ice,:,iblk)
     formation_microbial%nitrogen15%ptr(ics:ice,:,iblk) = formation_microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                         hlp1 
+                                                         uptake_rate_org 
     net_mineralisation_n15(:,:)                        = net_mineralisation_n15(:,:) 
    
     !! phosphorus
@@ -711,10 +713,10 @@ CONTAINS
             sb_pool%dom_assoc%carbon%ptr(ics:ice,isoil,iblk) + &
             sb_pool%soluable_litter%carbon%ptr(ics:ice,isoil,iblk) + &
             sb_pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk)
-       IF(isoil > 1 ) THEN       
+    !   IF(isoil > 1 ) THEN       
           bulk_soil_carbon_sl(:,isoil) = bulk_soil_carbon_sl(:,isoil) + &
                sb_pool%woody_litter%carbon%ptr(ics:ice,isoil,iblk) 
-       ENDIF
+    !   ENDIF
     ENDDO
 
   END FUNCTION calc_bulk_soil_carbon
