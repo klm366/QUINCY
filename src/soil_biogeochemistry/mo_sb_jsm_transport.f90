@@ -20,7 +20,7 @@ MODULE mo_sb_jsm_transport
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calc_particle_fluxrate, &
+  PUBLIC :: calc_particle_fluxrate, calc_bioturbation_rate, &
             calc_bioturbation_transport_wrapper, calc_liquid_phase_transport_wrapper , & 
             calc_particle_transport_wrapper
 
@@ -682,6 +682,39 @@ CONTAINS
 
   END SUBROUTINE calc_liquid_phase_transport
 
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task called from update_pools 
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> calculates rate of bioturbation 
+  !!
+  !! Input: bulk density 
+  !!
+  !! Output: vertical transport rate (1/s) 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION calc_bioturbation_rate(options,nsoil,bulk_dens_corr_sl) RESULT(k_bioturb)
+
+    USE mo_sb_constants, ONLY: k_diff_org
+
+    IMPLICIT NONE
+
+    ! 0.1 InOut
+    TYPE(t_jsb_task_options),              INTENT(in)    :: options
+    INTEGER,                               INTENT(in)    :: nsoil
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: bulk_dens_corr_sl      !< OM corrected bulk density [kg m-3] 
+    REAL(wp), DIMENSION(options%nc,nsoil)                :: k_bioturb              !< diffusion factor for bioturbation 
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_rate'
+
+    !> 1.0 
+    WHERE(bulk_dens_corr_sl(:,:) > eps8) 
+       k_bioturb(:,:) = k_diff_org / bulk_dens_corr_sl(:,:)
+    ELSEWHERE
+       k_bioturb(:,:) = 0.0_wp
+    ENDWHERE
+
+  END FUNCTION calc_bioturbation_rate
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from calc_bioturbation_transport 

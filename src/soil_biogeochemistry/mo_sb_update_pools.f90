@@ -317,6 +317,7 @@ rmm_desorption = 1.0_wp
 
          !> 5.2 transport due to bioturbation
          !!
+         k_bioturb(:,:) = calc_bioturbation_rate(options, soil_config%nsoil_water, bulk_dens_corr_sl(:,:))
          CALL calc_bioturbation_transport_wrapper(options, soil_config%nsoil_water, k_bioturb(:,:), soil_depth_l(:,:), &
                                           sb%pool%polymeric_litter, sb%pool%dom_assoc, & 
                                           sb%pool%microbial, sb%pool%residue, sb%pool%residue_assoc, & 

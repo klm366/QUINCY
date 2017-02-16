@@ -37,6 +37,7 @@ CONTAINS
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_sb_config_class,       ONLY: sb_config
     USE mo_sb_jsm_processes
+    USE mo_sb_jsm_transport
     USE mo_sb_constants
 
     ! USE PROC_memory
@@ -87,8 +88,6 @@ CONTAINS
  
        CASE('soil')
  
-         ! initialise diffusion by bioturbation
-         sb%k_bioturb%ptr(ics:ice,:,iblk) = k_diff_org
          ! set microbial biomass to minimum possible sensity (does this require adjustment with layer thickness, probably so...?
          sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) = min_mic_biomass
      
@@ -103,6 +102,9 @@ CONTAINS
                                                                          soil%bulk_dens_l%ptr(ics:ice,:,iblk))
          sb%qmax_org%ptr(ics:ice,:,iblk) = calc_qmax_org(sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk))
  
+         ! initialise diffusion by bioturbation
+         sb%k_bioturb%ptr(ics:ice,:,iblk) = calc_bioturbation_rate(options,soil_config%nsoil_water,sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk)) 
+
        CASE DEFAULT
          CALL finish(routine,'Invalid SLM model name. SB_ must only be used with plant, land or soil')
  

@@ -115,7 +115,7 @@ CONTAINS
     kmr_desorption      = 0.50853_wp
     kmr_hsc             = 0.0_wp
 
-    k_diff_org          = 0.286933_wp / one_year / one_day
+    k_diff_org          = 0.286933_wp / 8.0_wp / one_year / one_day
     rho_bulk_org        = 150.3935_wp 
     sorp_cap_org        = 0.0_wp
     qmax_org_mineral_default = 0.055_wp / molar_mass_C * 1000._wp 
