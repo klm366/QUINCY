@@ -262,6 +262,20 @@ CONTAINS
          lun=lun+1                 
          WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
          lun=lun+1                 
+
+         p1str=''
+         p2str=''
+         DO isoil = 1,soil_config%nsoil_water
+            IF(isoil<10) THEN 
+              WRITE(layerstr,'(I1)') isoil
+            ELSE
+              WRITE(layerstr,'(I2)') isoil
+            ENDIF
+            WRITE(p1str,'(a)') TRIM(p1str)//' Qmax_L'//TRIM(layerstr)
+            WRITE(p2str,'(a)') TRIM(p2str)//' Rho_L'//TRIM(layerstr)
+         ENDDO
+         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str)
+         lun=lun+1                 
     END SELECT
      
   END SUBROUTINE init_output_writing_pool
@@ -441,6 +455,9 @@ CONTAINS
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          fname = 'soilpoolPorg_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'soil_diagnostics_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
     END SELECT
@@ -879,6 +896,8 @@ CONTAINS
                                   sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk),&
                                   sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk),sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk),&
                                   sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk)
+             lun=lun+1
+             write(lun,'(100F12.6)') time_d,sb%qmax_org%ptr(ics:ice,:,iblk),sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk)
              
           ENDIF
        ENDIF 
