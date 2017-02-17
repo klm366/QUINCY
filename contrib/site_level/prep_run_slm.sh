@@ -43,6 +43,10 @@ spinupLengthGFDB=300         # years of spin-up before output is saved
 paramSensitivitySim="F"         # T (True) or F (False) [large caps]
 paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
 
+# (4) generate forcing for stand alone soil model
+flag_generate_soil_forcing="T"  # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
+spinupLengthSoilForcing=200       # total length of run to produce soil forcing
+yearsSoilForcing=1              # number of years of forcing to be generated    
 
 ##>> namelist.slm options <<############################################################################
 # flags: T (True) or F (False) [large caps]
@@ -72,7 +76,6 @@ output_interval_pool="weekly"   # timestep daily weekly monthly yearly
 output_interval_flux="weekly"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
 output_end_last_day_year=30     # equal with or larger than output_start_first_day_year
-flag_generate_soil_forcing="F"      # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
@@ -121,11 +124,12 @@ if [ $flag_generate_soil_forcing == "T" ]
   flag_tile_veg_dynamics="T" 
   soil_depth=5.7  
 
-  simulation_length_number=200
+  simulation_length_number=${spinupLengthSoilForcing}
   output_interval_pool="weekly"  # write_soil_forcing() is called per timestep independent of the output_interval_.. settings
   output_interval_flux="weekly"
-  output_start_first_day_year=200
-  output_end_last_day_year=200 
+  let fd=spinupLengthSoilForcing-yearsSoilForcing+1
+  output_start_first_day_year=${fd}
+  output_end_last_day_year=${spinupLengthSoilForcing}
 
   flag_oneYearForcing="F"
   soil_awc_prescribe=300.0

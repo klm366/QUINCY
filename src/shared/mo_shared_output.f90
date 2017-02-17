@@ -916,7 +916,7 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options 
     USE mo_base_constants,        ONLY: dtime
     USE mo_rad_constants,         ONLY: rad2ppfd
-    USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
+    USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14
 
     ! Use of process memories
     dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
@@ -1227,6 +1227,7 @@ CONTAINS
                write(lun,'(8F12.6)') time_d, litterfallC_acc(itile), het_respC_acc(itile), leachingCorg_acc(itile)
                lun = lun + 1
                dC13litterfall = calc_delta_C13(litterfallC_acc(itile),litterfallC13_acc(itile))
+write(*,*) dC13litterfall
                dC13het_resp = calc_delta_C13(het_respC_acc(itile),het_respC13_acc(itile))
                dC13leaching = calc_delta_C13(leachingCorg_acc(itile),leachingC13org_acc(itile))
                write(lun,'(8F12.6)') time_d, dC13litterfall, dC13het_resp, dC13leaching 
@@ -1274,6 +1275,7 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_config_class,      ONLY: veg_config
+    USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -1292,6 +1294,10 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    REAL(wp)                              :: dC13_leaf,dC13_fine_root,dC13_coarse_root,dC13_sap_wood,dC13_heart_wood,dC13_labile, & 
+                                             dC13_reserve,dC13_fruit,dC13_seed_bed
+    REAL(wp)                              :: DC14_leaf,DC14_fine_root,DC14_coarse_root,DC14_sap_wood,DC14_heart_wood,DC14_labile, & 
+                                             DC14_reserve,DC14_fruit,DC14_seed_bed
     INTEGER                               :: lun          ! logical unit number
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_soil_forcing'
@@ -1360,35 +1366,57 @@ CONTAINS
         sb%rmm_hsc%ptr(1,:,1)               , & ! 10
         percolation_sl(1,:)
 
+      !
+      ! convert 13C and 14C in delta notation
+      dC13_leaf        = calc_delta_C13(veg%litterfall%leaf%carbon%ptr,veg%litterfall%leaf%carbon13%ptr)
+      dC13_fine_root   = calc_delta_C13(veg%litterfall%fine_root%carbon%ptr,veg%litterfall%fine_root%carbon13%ptr)
+      dC13_coarse_root = calc_delta_C13(veg%litterfall%coarse_root%carbon%ptr,veg%litterfall%coarse_root%carbon13%ptr)
+      dC13_sap_wood    = calc_delta_C13(veg%litterfall%sap_wood%carbon%ptr,veg%litterfall%sap_wood%carbon13%ptr)
+      dC13_heart_wood  = calc_delta_C13(veg%litterfall%heart_wood%carbon%ptr,veg%litterfall%heart_wood%carbon13%ptr)
+      dC13_labile      = calc_delta_C13(veg%litterfall%labile%carbon%ptr,veg%litterfall%labile%carbon13%ptr)
+      dC13_reserve     = calc_delta_C13(veg%litterfall%reserve%carbon%ptr,veg%litterfall%reserve%carbon13%ptr)
+      dC13_fruit       = calc_delta_C13(veg%litterfall%fruit%carbon%ptr,veg%litterfall%fruit%carbon13%ptr)
+      dC13_seed_bed    = calc_delta_C13(veg%litterfall%seed_bed%carbon%ptr,veg%litterfall%seed_bed%carbon13%ptr)
+
+      DC14_leaf        = calc_delta_C14(veg%litterfall%leaf%carbon%ptr,veg%litterfall%leaf%carbon14%ptr,dC13_leaf)
+      DC14_fine_root   = calc_delta_C14(veg%litterfall%fine_root%carbon%ptr,veg%litterfall%fine_root%carbon14%ptr,dC13_fine_root)
+      DC14_coarse_root = calc_delta_C14(veg%litterfall%coarse_root%carbon%ptr,veg%litterfall%coarse_root%carbon14%ptr,dC13_coarse_root)
+      DC14_sap_wood    = calc_delta_C14(veg%litterfall%sap_wood%carbon%ptr,veg%litterfall%sap_wood%carbon14%ptr,dC13_sap_wood)
+      DC14_heart_wood  = calc_delta_C14(veg%litterfall%heart_wood%carbon%ptr,veg%litterfall%heart_wood%carbon14%ptr,dC13_heart_wood)
+      DC14_labile      = calc_delta_C14(veg%litterfall%labile%carbon%ptr,veg%litterfall%labile%carbon14%ptr,dC13_labile)
+      DC14_reserve     = calc_delta_C14(veg%litterfall%reserve%carbon%ptr,veg%litterfall%reserve%carbon14%ptr,dC13_reserve)
+      DC14_fruit       = calc_delta_C14(veg%litterfall%fruit%carbon%ptr,veg%litterfall%fruit%carbon14%ptr,dC13_fruit)
+      DC14_seed_bed    = calc_delta_C14(veg%litterfall%seed_bed%carbon%ptr,veg%litterfall%seed_bed%carbon14%ptr,dC13_seed_bed)
+
       lun=lun+1
       write(lun,'(55F12.6)') time_d, &
         ! leaf
-        veg%litterfall%leaf%carbon%ptr, veg%litterfall%leaf%nitrogen%ptr, veg%litterfall%leaf%phosphorus%ptr    , &
-        veg%litterfall%leaf%carbon13%ptr, veg%litterfall%leaf%carbon14%ptr, veg%litterfall%leaf%nitrogen15%ptr  , &
+        veg%litterfall%leaf%carbon%ptr*1000._wp, veg%litterfall%leaf%nitrogen%ptr*1000000._wp, veg%litterfall%leaf%phosphorus%ptr*1000000._wp    , &
+        dC13_leaf, DC14_leaf, veg%litterfall%leaf%nitrogen15%ptr*1000000._wp  , &
         ! fine_root
-        veg%litterfall%fine_root%carbon%ptr, veg%litterfall%fine_root%nitrogen%ptr, veg%litterfall%fine_root%phosphorus%ptr   , &
-        veg%litterfall%fine_root%carbon13%ptr, veg%litterfall%fine_root%carbon14%ptr, veg%litterfall%fine_root%nitrogen15%ptr , &
+        veg%litterfall%fine_root%carbon%ptr*1000._wp, veg%litterfall%fine_root%nitrogen%ptr*1000000._wp, veg%litterfall%fine_root%phosphorus%ptr*1000000._wp   , &
+        dC13_fine_root, DC14_fine_root, veg%litterfall%fine_root%nitrogen15%ptr*1000000._wp , &
         ! coarse_root
-        veg%litterfall%coarse_root%carbon%ptr, veg%litterfall%coarse_root%nitrogen%ptr, veg%litterfall%coarse_root%phosphorus%ptr   , &
-        veg%litterfall%coarse_root%carbon13%ptr, veg%litterfall%coarse_root%carbon14%ptr, veg%litterfall%coarse_root%nitrogen15%ptr , &
+        veg%litterfall%coarse_root%carbon%ptr*1000._wp, veg%litterfall%coarse_root%nitrogen%ptr*1000000._wp, veg%litterfall%coarse_root%phosphorus%ptr*1000000._wp   , &
+        dC13_coarse_root, DC14_coarse_root, veg%litterfall%coarse_root%nitrogen15%ptr*1000000._wp , &
         ! sap_wood
-        veg%litterfall%sap_wood%carbon%ptr, veg%litterfall%sap_wood%nitrogen%ptr, veg%litterfall%sap_wood%phosphorus%ptr    , &
-        veg%litterfall%sap_wood%carbon13%ptr, veg%litterfall%sap_wood%carbon14%ptr, veg%litterfall%sap_wood%nitrogen15%ptr  , &
+        veg%litterfall%sap_wood%carbon%ptr*1000._wp, veg%litterfall%sap_wood%nitrogen%ptr*1000000._wp, veg%litterfall%sap_wood%phosphorus%ptr*1000000._wp    , &
+        dC13_sap_wood, DC14_sap_wood, veg%litterfall%sap_wood%nitrogen15%ptr*1000000._wp  , &
         ! heart_wood
-        veg%litterfall%heart_wood%carbon%ptr, veg%litterfall%heart_wood%nitrogen%ptr, veg%litterfall%heart_wood%phosphorus%ptr    , &
-        veg%litterfall%heart_wood%carbon13%ptr, veg%litterfall%heart_wood%carbon14%ptr, veg%litterfall%heart_wood%nitrogen15%ptr  , &
+        veg%litterfall%heart_wood%carbon%ptr*1000._wp, veg%litterfall%heart_wood%nitrogen%ptr*1000000._wp, veg%litterfall%heart_wood%phosphorus%ptr*1000000._wp    , &
+        dC13_heart_wood, DC14_heart_wood, veg%litterfall%heart_wood%nitrogen15%ptr*1000000._wp  , &
         ! labile
-        veg%litterfall%labile%carbon%ptr, veg%litterfall%labile%nitrogen%ptr, veg%litterfall%labile%phosphorus%ptr    , &
-        veg%litterfall%labile%carbon13%ptr, veg%litterfall%labile%carbon14%ptr, veg%litterfall%labile%nitrogen15%ptr  , &
+        veg%litterfall%labile%carbon%ptr*1000._wp, veg%litterfall%labile%nitrogen%ptr*1000000._wp, veg%litterfall%labile%phosphorus%ptr*1000000._wp    , &
+        dC13_labile, DC14_labile, veg%litterfall%labile%nitrogen15%ptr*1000000._wp  , &
         ! reserve
-        veg%litterfall%reserve%carbon%ptr, veg%litterfall%reserve%nitrogen%ptr, veg%litterfall%reserve%phosphorus%ptr   , &
-        veg%litterfall%reserve%carbon13%ptr, veg%litterfall%reserve%carbon14%ptr, veg%litterfall%reserve%nitrogen15%ptr , &
+        veg%litterfall%reserve%carbon%ptr*1000._wp, veg%litterfall%reserve%nitrogen%ptr*1000000._wp, veg%litterfall%reserve%phosphorus%ptr*1000000._wp   , &
+        dC13_reserve, DC14_reserve, veg%litterfall%reserve%nitrogen15%ptr*1000000._wp , &
         ! fruit
-        veg%litterfall%fruit%carbon%ptr, veg%litterfall%fruit%nitrogen%ptr, veg%litterfall%fruit%phosphorus%ptr   , &
-        veg%litterfall%fruit%carbon13%ptr, veg%litterfall%fruit%carbon14%ptr, veg%litterfall%fruit%nitrogen15%ptr , &
+        veg%litterfall%fruit%carbon%ptr*1000._wp, veg%litterfall%fruit%nitrogen%ptr*1000000._wp, veg%litterfall%fruit%phosphorus%ptr*1000000._wp   , &
+        dC13_fruit, DC14_fruit, veg%litterfall%fruit%nitrogen15%ptr*1000._wp , &
         ! seed_bed
-        veg%litterfall%seed_bed%carbon%ptr, veg%litterfall%seed_bed%nitrogen%ptr, veg%litterfall%seed_bed%phosphorus%ptr  , &
-        veg%litterfall%seed_bed%carbon13%ptr, veg%litterfall%seed_bed%carbon14%ptr, veg%litterfall%seed_bed%nitrogen15%ptr
+        veg%litterfall%seed_bed%carbon%ptr*1000._wp, veg%litterfall%seed_bed%nitrogen%ptr*1000000._wp, veg%litterfall%seed_bed%phosphorus%ptr*1000000._wp  , &
+        dC13_seed_bed, DC14_seed_bed, veg%litterfall%seed_bed%nitrogen15%ptr*1000000._wp
 
     END IF 
   END SUBROUTINE write_soil_forcing 

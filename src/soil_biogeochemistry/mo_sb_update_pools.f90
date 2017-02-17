@@ -201,8 +201,8 @@ CONTAINS
      
          rmm_depolymerisation = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_depolymerisation) 
          rmm_mic_uptake       = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_mic_uptake)
-         rmm_sorption         = calc_convert_bulk_to_liquid(w_soil_sl,kmr_sorption) 
-         rmm_desorption       = calc_convert_bulk_to_liquid(w_soil_sl,kmr_desorption) 
+         rmm_sorption         = calc_convert_bulk_to_liquid(w_soil_sl)
+         rmm_desorption       = calc_convert_bulk_to_liquid(w_soil_sl) 
          rmm_hsc              = calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_hsc) 
 
     ENDSELECT
@@ -217,10 +217,10 @@ CONTAINS
 
 !BLARPP
 !percolation_sl(:,soil_config%nsoil_water) = 0.0_wp
+!rmm_mic_uptake = 1.0_wp
+!rmm_depolymerisation = 1.0_wp
+!rmm_hsc = 1.0_wp
 
-rmm_mic_uptake = 1.0_wp
-rmm_depolymerisation = 1.0_wp
-rmm_hsc = 1.0_wp
 rmm_sorption = 1.0_wp
 rmm_desorption = 1.0_wp
          !> 1.0 initialise fluxes

@@ -33,8 +33,6 @@ MODULE mo_sb_constants
       k1_afps, &              !< scaling factor in the air-filled pore space to modifier response
       kmr_depolymerisation, & !< scaling factor for the sensitivity of depolymerisation to oxygen limitation 
       kmr_mic_uptake, &       !< scaling factor for the sensitivity of microbial uptake to oxygen limitation 
-      kmr_sorption, &         !< scaling factor for the sensitivity of sorption to moisture limitation 
-      kmr_desorption, &       !< scaling factor for the sensitivity of desorption to moisture limitation 
       kmr_hsc                 !< scaling factor for the sensitivity of half-saturation constant to moisture limitation 
 
   ! transport and sorption parameters
@@ -111,8 +109,6 @@ CONTAINS
     k1_afps             = 4._wp / 3._wp ! B. Ahrens, pers. comm. 2016
     kmr_depolymerisation= 0.001_wp
     kmr_mic_uptake      = 0.001_wp
-    kmr_sorption        = 0.50853_wp
-    kmr_desorption      = 0.50853_wp
     kmr_hsc             = 0.0_wp
 
     k_diff_org          = 0.286933_wp / 8.0_wp / one_year / one_day

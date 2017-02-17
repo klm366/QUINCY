@@ -1198,25 +1198,20 @@ CONTAINS
   !!
   !! Output: conversion modifier (unitless) 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_convert_bulk_to_liquid(w_soil_sl,param) RESULT(factor)
+  ELEMENTAL FUNCTION calc_convert_bulk_to_liquid(w_soil_sl) RESULT(factor)
 
     IMPLICIT NONE
 
     !0.1 InOut
     REAL(wp), INTENT(in)  :: w_soil_sl           !< soil moisture [m]
-    REAL(wp), INTENT(in)  :: param               !< 
     REAL(wp)              :: factor              !< conversion factor [unitless] 
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_convert_bulk_to_liquid'
 
-    IF(param>eps8) THEN
-       IF(w_soil_sl > eps4) THEN
-         factor = 1._wp / w_soil_sl 
-       ELSE
-          factor = 1._wp / eps4 
-       ENDIF
-    ELSE 
-       factor = 1._wp
+    IF(w_soil_sl > eps4) THEN
+      factor = 1._wp / w_soil_sl 
+    ELSE
+       factor = 1._wp / eps4 
     ENDIF
 
   END FUNCTION calc_convert_bulk_to_liquid
