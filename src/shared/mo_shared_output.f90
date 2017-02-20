@@ -1227,7 +1227,6 @@ CONTAINS
                write(lun,'(8F12.6)') time_d, litterfallC_acc(itile), het_respC_acc(itile), leachingCorg_acc(itile)
                lun = lun + 1
                dC13litterfall = calc_delta_C13(litterfallC_acc(itile),litterfallC13_acc(itile))
-write(*,*) dC13litterfall
                dC13het_resp = calc_delta_C13(het_respC_acc(itile),het_respC13_acc(itile))
                dC13leaching = calc_delta_C13(leachingCorg_acc(itile),leachingC13org_acc(itile))
                write(lun,'(8F12.6)') time_d, dC13litterfall, dC13het_resp, dC13leaching 

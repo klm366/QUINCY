@@ -91,17 +91,11 @@ CONTAINS
  
          ! set microbial biomass to minimum possible density
          sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) = min_mic_biomass
-     
-         ! some initial values for testing
-         sb%pool%dom%carbon%ptr(ics:ice,1,iblk) = 1.0_wp
-         sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = .1_wp
-         sb%nh4_assoc%ptr(ics:ice,1,iblk) = 1.0_wp 
-
-         ! C isotopes
-         sb%pool%dom%carbon13%ptr(ics:ice,:,iblk) = sb%pool%dom%carbon%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-         sb%pool%dom%carbon14%ptr(ics:ice,:,iblk) = sb%pool%dom%carbon%ptr(ics:ice,:,iblk) * calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
          sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk) = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
          sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk) = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) * calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+     
+         ! some initial values for testing
+         sb%nh4_assoc%ptr(ics:ice,1,iblk) = 1.0_wp 
 
          ! inital Qmax based on current soil carbon content
          sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk) = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)

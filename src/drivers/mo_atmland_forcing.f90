@@ -459,6 +459,17 @@ CONTAINS
 
     !> 2.0 pass values read from file (i.e. scalar values) to ics-ice
     !!
+    leaf_dC13_r = -30.0_wp
+    fine_root_dC13_r = -30.0_wp
+    coarse_root_dC13_r = -30.0_wp
+    sap_wood_dC13_r = -30.0_wp
+    heart_wood_dC13_r = -30.0_wp
+    labile_dC13_r = -30.0_wp
+    reserve_dC13_r = -30.0_wp
+    fruit_dC13_r = -30.0_wp
+    seed_bed_dC13_r = -30.0_wp
+
+
     veg%litterfall%leaf%carbon%ptr     = leaf_carbon_r / 1000._wp
     veg%litterfall%leaf%nitrogen%ptr   = leaf_nitrogen_r / 1000000._wp
     veg%litterfall%leaf%phosphorus%ptr = leaf_phosphorus_r / 1000000._wp   
