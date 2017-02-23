@@ -62,6 +62,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib     !< land-cover-type library - parameter across pft's
+    INTEGER                               :: ichunk      !< loop 1,nc
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation'
     ! ---------------------------
@@ -102,8 +103,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
     dsl4jsb_Real2D_onChunk :: albedo                  ! LAND2ATM_
     dsl4jsb_Real2D_onChunk :: net_radiation
-!! *slmtemp
-    TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Real2D_onChunk :: lai                     ! VEG_
+    dsl4jsb_Real3D_onChunk :: lai_cl
+    dsl4jsb_Real3D_onChunk :: cumm_lai_cl
+    dsl4jsb_Real3D_onChunk :: fleaf_sunlit_cl
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -158,10 +161,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_nir_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
 
-
-!! *slmtemp
-    veg       => veg__mem 
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -181,7 +186,7 @@ CONTAINS
     !! 
     CALL calc_sw_srf_net(swvis_srf_down(1), & 
                      swpar_fdiffuse(1), cos_zenith_angle(1), & 
-                     veg%lai%ptr, veg%lai_cl%ptr(:,1), veg%cumm_lai_cl%ptr(:,1),& 
+                     lai(1), lai_cl(1,:), cumm_lai_cl(1,:),& 
                      lctlib%sigma_vis, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
                      kbl0_vis, kdf0_vis, alb_vis_soil(1), &
                      arad_sunlit_vis_cl(1,:),arad_shaded_vis_cl(1,:),fleaf_sunlit_vis_cl(1,:), &
@@ -194,7 +199,7 @@ CONTAINS
     !! diffuse radiation are very similar 
     CALL calc_sw_srf_net(swnir_srf_down(1), & 
                      swpar_fdiffuse(1), cos_zenith_angle(1), & 
-                     veg%lai%ptr, veg%lai_cl%ptr(:,1), veg%cumm_lai_cl%ptr(:,1), &
+                     lai(1), lai_cl(1,:), cumm_lai_cl(1,:), &
                      lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, & 
                      kbl0_nir, kdf0_nir, alb_nir_soil(1), &
                      arad_sunlit_nir_cl(1,:),arad_shaded_nir_cl(1,:),fleaf_sunlit_nir_cl(1,:), &
@@ -218,16 +223,18 @@ CONTAINS
 
     !> 6.0 convert radiation to Photosynthetically Active Photon Flux Density (ppfd)
     !!
-    veg%fleaf_sunlit_cl%ptr(:,1) = fleaf_sunlit_vis_cl(1,:) 
-    IF(swvis_srf_down(1) > eps8) THEN
-       ppfd_sunlit_cl(1,:) = arad_sunlit_vis_cl(1,:) * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd
-       ppfd_shaded_cl(1,:) = arad_shaded_vis_cl(1,:) * swpar_srf_down(1)/swvis_srf_down(1) * rad2ppfd
-       appfd(:)            = arad_vis_can(:)         * swpar_srf_down(:)/swvis_srf_down(:) * rad2ppfd 
-    ELSE
-       ppfd_sunlit_cl(:,:) = 0.0_wp
-       ppfd_shaded_cl(:,:) = 0.0_wp
-       appfd(:)            = 0.0_wp
-    END IF
+    fleaf_sunlit_cl(:,:) = fleaf_sunlit_vis_cl(:,:) 
+    DO ichunk=1,nc
+      IF(swvis_srf_down(ichunk) > eps8) THEN
+         ppfd_sunlit_cl(ichunk,:) = arad_sunlit_vis_cl(ichunk,:) * swpar_srf_down(ichunk)/swvis_srf_down(ichunk) * rad2ppfd
+         ppfd_shaded_cl(ichunk,:) = arad_shaded_vis_cl(ichunk,:) * swpar_srf_down(ichunk)/swvis_srf_down(ichunk) * rad2ppfd
+         appfd(ichunk)            = arad_vis_can(ichunk)         * swpar_srf_down(ichunk)/swvis_srf_down(ichunk) * rad2ppfd 
+      ELSE
+         ppfd_sunlit_cl(ichunk,:) = 0.0_wp
+         ppfd_shaded_cl(ichunk,:) = 0.0_wp
+         appfd(ichunk)            = 0.0_wp
+      END IF
+    END DO
 
   END SUBROUTINE update_radiation
 

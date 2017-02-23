@@ -44,7 +44,7 @@ paramSensitivitySim="F"         # T (True) or F (False) [large caps]
 paramSensitivitySiteNumber=5    # line 2 to ...  (there is a header at line 1)
 
 # (4) generate forcing for stand alone soil model
-flag_generate_soil_forcing="T"  # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
+flag_generate_soil_forcing="F"  # create additional output (veg%litterfall + some soilphysics) used as input of the (standalone) soil model
 spinupLengthSoilForcing=200       # total length of run to produce soil forcing
 yearsSoilForcing=1              # number of years of forcing to be generated    
 

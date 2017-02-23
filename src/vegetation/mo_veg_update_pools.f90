@@ -71,15 +71,66 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk       :: gross_assimilation        ! ASSIMI_
-    dsl4jsb_Real2D_onChunk       :: gross_assimilation_C13
-    dsl4jsb_Real2D_onChunk       :: gross_assimilation_C14
-    dsl4jsb_Real2D_onChunk       :: beta_air_tfrac_mavg
-    dsl4jsb_Real2D_onChunk       :: beta_soil_ps_tfrac_mavg
-    dsl4jsb_Real2D_onChunk       :: beta_soil_gs_tfrac_mavg
-    dsl4jsb_Real2D_onChunk       :: w_soil_root_pot           ! SOIL_
-    dsl4jsb_Real3D_onChunk       :: ppfd_sunlit_tfrac_mavg_cl ! RAD_
-    dsl4jsb_Real3D_onChunk       :: ppfd_shaded_tfrac_mavg_cl
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation         ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
+    dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_pot            ! SOIL_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl  ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
+    dsl4jsb_Real2D_onChunk      :: lai                        ! VEG_
+    dsl4jsb_Real2D_onChunk      :: dens_ind
+    dsl4jsb_Real2D_onChunk      :: delta_dens_ind
+    dsl4jsb_Real2D_onChunk      :: diameter
+    dsl4jsb_Real2D_onChunk      :: height
+    dsl4jsb_Real2D_onChunk      :: mean_leaf_age
+    dsl4jsb_Real2D_onChunk      :: dphi
+    dsl4jsb_Real2D_onChunk      :: npp
+    dsl4jsb_Real2D_onChunk      :: growth_respiration
+    dsl4jsb_Real2D_onChunk      :: maint_respiration
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration
+    dsl4jsb_Real2D_onChunk      :: npp_c13
+    dsl4jsb_Real2D_onChunk      :: growth_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: npp_c14
+    dsl4jsb_Real2D_onChunk      :: growth_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: uptake_nh4
+    dsl4jsb_Real2D_onChunk      :: uptake_no3
+    dsl4jsb_Real2D_onChunk      :: n_fixation
+    dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
+    dsl4jsb_Real2D_onChunk      :: uptake_no3_n15
+    dsl4jsb_Real2D_onChunk      :: n_fixation_n15
+    dsl4jsb_Real2D_onChunk      :: uptake_p
+    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n
+    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
+    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n15
+    dsl4jsb_Real2D_onChunk      :: recycling_leaf_n
+    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
+    dsl4jsb_Real2D_onChunk      :: recycling_leaf_p
+    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
+    dsl4jsb_Real2D_onChunk      :: recycling_leaf_n15
+    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
+    dsl4jsb_Real2D_onChunk      :: t_air_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
+    dsl4jsb_Real2D_onChunk      :: press_srf_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: ga_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: lai_cl
+    dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
+    dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
+    dsl4jsb_Real3D_onChunk      :: fn_rub_cl
+    dsl4jsb_Real3D_onChunk      :: fn_et_cl
+    dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
+    dsl4jsb_Real3D_onChunk      :: fn_chl_cl
+    dsl4jsb_Real3D_onChunk      :: fn_oth_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER      :: veg      ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -116,7 +167,58 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
     ! ---------------------------
-!    dsl4jsb_Get_var2D_onChunk(xx_, xx)
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
+    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)
+    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dphi)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
+
 
 
 !! *slmtemp
@@ -138,25 +240,25 @@ CONTAINS
        !> 1.1 net balance of the labile carbon pool due to photosynthesis and respiration
        !! 
        !! 
-       veg%npp%ptr      = gross_assimilation(1)     - & 
-           veg%growth_respiration%ptr - veg%maint_respiration%ptr - veg%n_processing_respiration%ptr
-       veg%npp_c13%ptr  = gross_assimilation_C13(1) - &
-           veg%growth_respiration_c13%ptr - veg%maint_respiration_c13%ptr - veg%n_processing_respiration_c13%ptr
-       veg%npp_c14%ptr  = gross_assimilation_C14(1) - & 
-           veg%growth_respiration_c14%ptr - veg%maint_respiration_c14%ptr - veg%n_processing_respiration_c14%ptr
-       veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr    + veg%npp%ptr     * dtime / 1000000.0_wp
-       veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr  + veg%npp_c13%ptr * dtime / 1000000.0_wp
-       veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr  + veg%npp_c14%ptr * dtime / 1000000.0_wp
+       npp(1)      = gross_assimilation(1)     - & 
+           growth_respiration(1) - maint_respiration(1) - n_processing_respiration(1)
+       npp_c13(1)  = gross_assimilation_C13(1) - &
+           growth_respiration_c13(1) - maint_respiration_c13(1) - n_processing_respiration_c13(1)
+       npp_c14(1)  = gross_assimilation_C14(1) - & 
+           growth_respiration_c14(1) - maint_respiration_c14(1) - n_processing_respiration_c14(1)
+       veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr    + npp(1)     * dtime / 1000000.0_wp
+       veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr  + npp_c13(1) * dtime / 1000000.0_wp
+       veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr  + npp_c14(1) * dtime / 1000000.0_wp
    
        !> 1.2 Add nutrients from uptake calculations
        !! 
        !! 
        veg%growth%labile%nitrogen%ptr   = veg%growth%labile%nitrogen%ptr + & 
-          ( veg%uptake_nh4%ptr + veg%uptake_no3%ptr + veg%n_fixation%ptr) * dtime / 1000000.0_wp
+                                            ( uptake_nh4(1) + uptake_no3(1) + n_fixation(1)) * dtime / 1000000.0_wp
        veg%growth%labile%nitrogen15%ptr = veg%growth%labile%nitrogen15%ptr + & 
-          ( veg%uptake_nh4_n15%ptr + veg%uptake_no3_n15%ptr + veg%n_fixation_n15%ptr) * dtime / 1000000.0_wp
+                                            ( uptake_nh4_n15(1) + uptake_no3_n15(1) + n_fixation_n15(1)) * dtime / 1000000.0_wp
        veg%growth%labile%phosphorus%ptr = veg%growth%labile%phosphorus%ptr + & 
-          veg%uptake_p%ptr * dtime / 1000000.0_wp
+                                            uptake_p(1) * dtime / 1000000.0_wp
    
        !> 1.3 update labile pool and reserve 
        !! 
@@ -165,28 +267,28 @@ CONTAINS
    
        !> 1.4 update fluxes from continuous nutrient turnover and resorption 
        !!
-       veg%pool%labile%nitrogen%ptr       = veg%pool%labile%nitrogen%ptr      + veg%recycling_leaf_n%ptr + & 
-                                                    veg%recycling_fine_root_n%ptr + veg%recycling_heart_wood_n%ptr
-       veg%pool%leaf%nitrogen%ptr         = veg%pool%leaf%nitrogen%ptr        - veg%recycling_leaf_n%ptr
-       veg%pool%fine_root%nitrogen%ptr    = veg%pool%fine_root%nitrogen%ptr   - veg%recycling_fine_root_n%ptr
-       veg%pool%heart_wood%nitrogen%ptr   = veg%pool%heart_wood%nitrogen%ptr  - veg%recycling_heart_wood_n%ptr
+       veg%pool%labile%nitrogen%ptr       = veg%pool%labile%nitrogen%ptr       + recycling_leaf_n(1) + & 
+                                                      recycling_fine_root_n(1) + recycling_heart_wood_n(1)
+       veg%pool%leaf%nitrogen%ptr         = veg%pool%leaf%nitrogen%ptr         - recycling_leaf_n(1)
+       veg%pool%fine_root%nitrogen%ptr    = veg%pool%fine_root%nitrogen%ptr    - recycling_fine_root_n(1)
+       veg%pool%heart_wood%nitrogen%ptr   = veg%pool%heart_wood%nitrogen%ptr   - recycling_heart_wood_n(1)
    
-       veg%pool%labile%phosphorus%ptr     = veg%pool%labile%phosphorus%ptr    + veg%recycling_leaf_p%ptr + & 
-                                                    veg%recycling_fine_root_p%ptr + veg%recycling_heart_wood_p%ptr
-       veg%pool%leaf%phosphorus%ptr       = veg%pool%leaf%phosphorus%ptr      - veg%recycling_leaf_p%ptr
-       veg%pool%fine_root%phosphorus%ptr  = veg%pool%fine_root%phosphorus%ptr - veg%recycling_fine_root_p%ptr
-       veg%pool%heart_wood%phosphorus%ptr = veg%pool%heart_wood%phosphorus%ptr - veg%recycling_heart_wood_p%ptr
+       veg%pool%labile%phosphorus%ptr     = veg%pool%labile%phosphorus%ptr     + recycling_leaf_p(1) + & 
+                                                      recycling_fine_root_p(1) + recycling_heart_wood_p(1)
+       veg%pool%leaf%phosphorus%ptr       = veg%pool%leaf%phosphorus%ptr       - recycling_leaf_p(1)
+       veg%pool%fine_root%phosphorus%ptr  = veg%pool%fine_root%phosphorus%ptr  - recycling_fine_root_p(1)
+       veg%pool%heart_wood%phosphorus%ptr = veg%pool%heart_wood%phosphorus%ptr - recycling_heart_wood_p(1)
    
-       veg%pool%labile%nitrogen15%ptr     = veg%pool%labile%nitrogen15%ptr    + veg%recycling_leaf_n15%ptr + & 
-                                                    veg%recycling_fine_root_n15%ptr + veg%recycling_heart_wood_n15%ptr
-       veg%pool%leaf%nitrogen15%ptr       = veg%pool%leaf%nitrogen15%ptr      - veg%recycling_leaf_n15%ptr
-       veg%pool%fine_root%nitrogen15%ptr  = veg%pool%fine_root%nitrogen15%ptr - veg%recycling_fine_root_n15%ptr
-       veg%pool%heart_wood%nitrogen15%ptr = veg%pool%heart_wood%nitrogen15%ptr - veg%recycling_heart_wood_n15%ptr
+       veg%pool%labile%nitrogen15%ptr     = veg%pool%labile%nitrogen15%ptr     + recycling_leaf_n15(1) + & 
+                                                    recycling_fine_root_n15(1) + recycling_heart_wood_n15(1)
+       veg%pool%leaf%nitrogen15%ptr       = veg%pool%leaf%nitrogen15%ptr       - recycling_leaf_n15(1)
+       veg%pool%fine_root%nitrogen15%ptr  = veg%pool%fine_root%nitrogen15%ptr  - recycling_fine_root_n15(1)
+       veg%pool%heart_wood%nitrogen15%ptr = veg%pool%heart_wood%nitrogen15%ptr - recycling_heart_wood_n15(1)
    
        !> 1.5 Update plant biogeochemical pools with growth, litterfall and establishment
        !! 
-       veg%pool = veg%pool - veg%litterfall
-       veg%pool = veg%pool + veg%growth
+       veg%pool           = veg%pool - veg%litterfall
+       veg%pool           = veg%pool + veg%growth
        veg%pool%labile    = veg%pool%labile   + veg%establishment
        veg%pool%seed_bed  = veg%pool%seed_bed - veg%establishment
    
@@ -205,55 +307,55 @@ CONTAINS
        !> 2.0 Update plant diagnostics given the above fluxes
        !!
        !! 
-       veg%lai%ptr      = veg%pool%leaf%carbon%ptr * lctlib%sla
-       veg%dens_ind%ptr = veg%dens_ind%ptr + veg%delta_dens_ind%ptr
-       IF(lctlib%growthform == itree.AND.veg%dens_ind%ptr>0.0_wp)THEN
-          veg%diameter%ptr  = calc_diameter_from_woody_biomass(lctlib                         , &
-                                                               veg%pool%sap_wood%carbon%ptr   , &
-                                                               veg%pool%heart_wood%carbon%ptr , &
-                                                               veg%dens_ind%ptr)
-          veg%height%ptr    = calc_height_from_diameter(lctlib, veg%diameter%ptr) 
+       lai(1)      = veg%pool%leaf%carbon%ptr * lctlib%sla
+       dens_ind(1) = dens_ind(1) + delta_dens_ind(1)
+       IF(lctlib%growthform == itree.AND.dens_ind(1)>0.0_wp)THEN
+          diameter(1)  = calc_diameter_from_woody_biomass(lctlib                         , &
+                                                          veg%pool%sap_wood%carbon%ptr   , &
+                                                          veg%pool%heart_wood%carbon%ptr , &
+                                                          dens_ind(1))
+          height(1)    = calc_height_from_diameter(lctlib, diameter(1)) 
        ENDIF 
 
        IF(veg%pool%leaf%carbon%ptr > eps8) THEN 
-           veg%mean_leaf_age%ptr = & 
-             (veg%mean_leaf_age%ptr + dtime/one_day) * (1._wp - veg%growth%leaf%carbon%ptr / veg%pool%leaf%carbon%ptr)
+           mean_leaf_age(1) = & 
+             (mean_leaf_age(1) + dtime/one_day) * (1._wp - veg%growth%leaf%carbon%ptr / veg%pool%leaf%carbon%ptr)
          ELSE 
-           veg%mean_leaf_age%ptr = 0.0_wp
+           mean_leaf_age(1) = 0.0_wp
        END IF
 
-       veg%dphi%ptr = w_soil_root_pot(1) - lctlib%phi_leaf_min - grav * rhoh2o * veg%height%ptr * 1.e-6_wp
+       dphi(1) = w_soil_root_pot(1) - lctlib%phi_leaf_min - grav * rhoh2o * height(1) * 1.e-6_wp
 
     END SELECT
 
     !> 3.0 Given current vegetation pools, update canopy layers 
     !!
     !!
-    CALL calc_canopy_layers( lctlib, &
-                             nc    , &   ! number of chunks
-                             veg%pool%leaf%nitrogen%ptr, &
-                             veg%lai%ptr, &
-                             ppfd_sunlit_tfrac_mavg_cl(1,:),&
-                             ppfd_shaded_tfrac_mavg_cl(1,:), & 
-                             veg%fleaf_sunlit_tfrac_mavg_cl%ptr(:,1),&
-                             veg%t_air_tfrac_mavg%ptr, &
-                             veg%t_air_tacclim_mavg%ptr, &
-                             veg%press_srf_tfrac_mavg%ptr, &
-                             veg%co2_mixing_ratio_tfrac_mavg%ptr, &
-                             veg%ga_tfrac_mavg%ptr, &
-                             beta_air_tfrac_mavg(1), &
-                             beta_soil_ps_tfrac_mavg(1), &
-                             veg%beta_sinklim_ps_tfrac_mavg%ptr, &
-                             beta_soil_gs_tfrac_mavg(1), & 
-                             veg%t_jmax_opt_mavg%ptr, &
-                             veg%lai_cl%ptr(:,1), &
-                             veg%cumm_lai_cl%ptr(:,1), &
-                             veg%leaf_nitrogen_cl%ptr(:,1), &
-                             veg%fn_rub_cl%ptr(:,1), &
-                             veg%fn_et_cl%ptr(:,1), &
-                             veg%fn_pepc_cl%ptr(:,1), &
-                             veg%fn_chl_cl%ptr(:,1), &
-                             veg%fn_oth_cl%ptr(:,1))
+    CALL calc_canopy_layers( lctlib                             , &
+                             nc                                 , &   ! number of chunks
+                             veg%pool%leaf%nitrogen%ptr         , &
+                             lai(1)                             , &
+                             ppfd_sunlit_tfrac_mavg_cl(1,:)     , &
+                             ppfd_shaded_tfrac_mavg_cl(1,:)     , & 
+                             fleaf_sunlit_tfrac_mavg_cl(1,:)    , &
+                             t_air_tfrac_mavg(1)                , &
+                             t_air_tacclim_mavg(1)              , &
+                             press_srf_tfrac_mavg(1)            , &
+                             co2_mixing_ratio_tfrac_mavg(1)     , &
+                             ga_tfrac_mavg(1)                   , &
+                             beta_air_tfrac_mavg(1)             , &
+                             beta_soil_ps_tfrac_mavg(1)         , &
+                             beta_sinklim_ps_tfrac_mavg(1)      , &
+                             beta_soil_gs_tfrac_mavg(1)         , & 
+                             t_jmax_opt_mavg(1)                 , &
+                             lai_cl(1,:)                        , &
+                             cumm_lai_cl(1,:)                   , &
+                             leaf_nitrogen_cl(1,:)              , &
+                             fn_rub_cl(1,:)                     , &
+                             fn_et_cl(1,:)                      , &
+                             fn_pepc_cl(1,:)                    , &
+                             fn_chl_cl(1,:)                     , &
+                             fn_oth_cl(1,:)                     )
 
     !> 4.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass
     !!

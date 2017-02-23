@@ -118,8 +118,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: t_soil
     dsl4jsb_Real2D_onChunk                :: canopy_cond            ! ASSIMI_
     dsl4jsb_Real2D_onChunk                :: sw_srf_net             ! RAD_
-!! *slmtemp    
-    TYPE(t_veg_memory),      POINTER :: veg             ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Real2D_onChunk                :: transpiration          ! VEG_
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -181,10 +180,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)
-
-
-!! *slmtemp
-    veg         => veg__mem 
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration)
 
 
 
@@ -204,14 +201,12 @@ CONTAINS
     !> 1.2. calulate transpiration (kg / m2 / s)
     !! T = rho * (qsat - qair ) * Gtot in mm/s 
     !!
-    IF(canopy_cond(1) > eps8)THEN
-       veg%transpiration%ptr = press_srf(1) / ( r_gas_dryair * t_air(1) ) * & 
-                  (q_sat(1) - q_air(1)) / (1._wp / canopy_cond(1) + 1._wp / ga(1) )  
-!       veg%transpiration%ptr = press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
-!                  (q_sat(:) - q_air(:)) / (1._wp / canopy_cond(1) + 1._wp / ga(:) )  
-    ELSE 
-       veg%transpiration%ptr = 0.0_wp 
-    ENDIF
+    WHERE (canopy_cond(:) > eps8)
+       transpiration(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
+                  (q_sat(:) - q_air(:)) / (1._wp / canopy_cond(1) + 1._wp / ga(:) )  
+    ELSE WHERE
+       transpiration(:) = 0.0_wp 
+    END WHERE
 
     !> 1.3 soil evaporation (kg / m2 / s)
     !! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil(:) = ga(:) / 10)
@@ -232,7 +227,7 @@ CONTAINS
 
     !> 1.4 calculate latent heat flux (W m-2) 
     !!
-    latent_heat_flx(:) = LatentHeatVaporization * (evaporation(:) + veg%transpiration%ptr)
+    latent_heat_flx(:) = LatentHeatVaporization * (evaporation(:) + transpiration(:))
 
     !> 2.0 Estimate surface temperature and sensible heat flux 
     !!
@@ -281,7 +276,7 @@ CONTAINS
           !> 3.1.1 update soil moisture
           !! dS/dt = rain - transpiration - evaporation
           w_soil_root(:) = w_soil_root(:) + (rain(:) + snow(:) &
-               - veg%transpiration%ptr - evaporation(:)) / 1000._wp * dtime
+               - transpiration(:) - evaporation(:)) / 1000._wp * dtime
    
           !> 3.1.2 calculate drainage if any [mm/s]
           !!
@@ -360,7 +355,7 @@ CONTAINS
           infiltration(:) = ( 1.0_wp - drain_frac / soil_depth_l(:,1) ) * infiltration(:)
 
           w_soil_sl(:,1) = w_soil_sl(:,1) + (infiltration(:) - &
-               evaporation(:) * fevaporation(:,1) + veg%transpiration%ptr * ftranspiration(:,1)) / 1000._wp * dtime
+               evaporation(:) * fevaporation(:,1) + transpiration(:) * ftranspiration(:,1)) / 1000._wp * dtime
 
           WHERE(w_soil_sl(:,1) > w_soil_fc_sl(:,1))
                runoff(:) = runoff(:) + (w_soil_sl(:,1) - w_soil_fc_sl(:,1))*1000._wp / dtime
@@ -379,7 +374,7 @@ CONTAINS
                ! water balance of soil layer
                w_soil_sl(:,isoil) = w_soil_sl(:,isoil) + & 
                     (( 1.0_wp - drain_frac / soil_depth_l(:,isoil) ) * drainage_sl(:,isoil-1) - & 
-                     evaporation(:) * fevaporation(:,isoil) + veg%transpiration%ptr * ftranspiration(:,isoil)) / 1000._wp * dtime
+                     evaporation(:) * fevaporation(:,isoil) + transpiration(:) * ftranspiration(:,isoil)) / 1000._wp * dtime
 
                ! drain surplus water to lower layer to keep water storage below field capacity
                WHERE(w_soil_sl(:,isoil) > w_soil_fc_sl(:,isoil))

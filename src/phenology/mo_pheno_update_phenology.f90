@@ -68,14 +68,17 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk          :: t_air                      ! ATM2LAND_
-    dsl4jsb_Logical2D_onChunk       :: growing_season             ! PHENO_
-    dsl4jsb_Real2D_onChunk          :: gdd
-    dsl4jsb_Real2D_onChunk          :: nd_dormance
-    dsl4jsb_Real2D_onChunk          :: beta_soil_gs_tphen_mavg    ! ASSIMI_
-! 2 be removed: pointers to veg assimi *slmtemp
-    TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
-    TYPE(t_assimi_memory),   POINTER :: assimi          ! local pointer to veg__mem for SLM usability
+    dsl4jsb_Real2D_onChunk      :: t_air                      ! ATM2LAND_
+    dsl4jsb_Logical2D_onChunk   :: growing_season             ! PHENO_
+    dsl4jsb_Real2D_onChunk      :: gdd
+    dsl4jsb_Real2D_onChunk      :: nd_dormance
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tphen_mavg    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: t_air_tphen_mavg           ! VEG_
+    dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
+    dsl4jsb_Real2D_onChunk      :: mean_leaf_age
+    dsl4jsb_Real2D_onChunk      :: gpp_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_tlabile_mavg
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -105,9 +108,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)
+    dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)
 
-! 2 be removed  *slmtemp
-    veg     => veg__mem
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -117,18 +125,18 @@ CONTAINS
 
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
     !! 
-    CALL calc_phenology(lctlib                                  , &
-                        t_air                                   , &
-                        beta_soil_gs_tphen_mavg(1)      , &
-                        veg%t_air_tphen_mavg%ptr                , &
-                        veg%t_air_week_mavg%ptr                 , &
-                        veg%t_air_month_mavg%ptr                , &
-                        veg%mean_leaf_age%ptr                   , &
-                        veg%gpp_tlabile_mavg%ptr                , &
-                        veg%maint_respiration_tlabile_mavg%ptr  , &
-                        growing_season(:)                       , &
-                        nd_dormance(:)                          , &
-                        gdd(:)                                  )
+    CALL calc_phenology(lctlib                             , &
+                        t_air(:)                           , &
+                        beta_soil_gs_tphen_mavg(:)         , &
+                        t_air_tphen_mavg(:)                , &
+                        t_air_week_mavg(:)                 , &
+                        t_air_month_mavg(:)                , &
+                        mean_leaf_age(:)                   , &
+                        gpp_tlabile_mavg(:)                , &
+                        maint_respiration_tlabile_mavg(:)  , &
+                        growing_season(:)                  , &
+                        nd_dormance(:)                     , &
+                        gdd(:)                             )
 
   END SUBROUTINE update_phenology 
 

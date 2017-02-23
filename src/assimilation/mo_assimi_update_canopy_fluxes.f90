@@ -78,33 +78,44 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),      POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_air                     ! ATM2LAND_
-    dsl4jsb_Real2D_onChunk :: q_air
-    dsl4jsb_Real2D_onChunk :: press_srf
-    dsl4jsb_Real2D_onChunk :: ga
-    dsl4jsb_Real2D_onChunk :: co2_mixing_ratio
-    dsl4jsb_Real2D_onChunk :: co2_mixing_ratio_C13
-    dsl4jsb_Real2D_onChunk :: co2_mixing_ratio_C14
-    dsl4jsb_Real2D_onChunk :: w_soil_root_theta         ! SOIL_
-    dsl4jsb_Real2D_onChunk :: gross_assimilation        ! ASSIMI_
-    dsl4jsb_Real2D_onChunk :: gross_assimilation_C13
-    dsl4jsb_Real2D_onChunk :: gross_assimilation_C14
-    dsl4jsb_Real2D_onChunk :: net_assimilation
-    dsl4jsb_Real2D_onChunk :: net_assimilation_boc
-    dsl4jsb_Real2D_onChunk :: maint_respiration_leaf
-    dsl4jsb_Real2D_onChunk :: canopy_cond
-    dsl4jsb_Real2D_onChunk :: co2_conc_leaf
-    dsl4jsb_Real2D_onChunk :: beta_air
-    dsl4jsb_Real2D_onChunk :: beta_soil_gs
-    dsl4jsb_Real2D_onChunk :: beta_soil_ps
-    dsl4jsb_Real2D_onChunk :: t_jmax_opt
-    dsl4jsb_Real3D_onChunk :: net_assimilation_cl
-    dsl4jsb_Real3D_onChunk :: gross_assimilation_cl
-    dsl4jsb_Real3D_onChunk :: maint_respiration_leaf_cl
-    dsl4jsb_Real3D_onChunk :: canopy_cond_cl
-    dsl4jsb_Real3D_onChunk :: co2_conc_leaf_cl
-    dsl4jsb_Real3D_onChunk :: ppfd_sunlit_cl            ! RAD_
-    dsl4jsb_Real3D_onChunk :: ppfd_shaded_cl
+    dsl4jsb_Real2D_onChunk      :: t_air                     ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk      :: q_air
+    dsl4jsb_Real2D_onChunk      :: press_srf
+    dsl4jsb_Real2D_onChunk      :: ga
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C13
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta         ! SOIL_
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation        ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
+    dsl4jsb_Real2D_onChunk      :: net_assimilation
+    dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_leaf
+    dsl4jsb_Real2D_onChunk      :: canopy_cond
+    dsl4jsb_Real2D_onChunk      :: co2_conc_leaf
+    dsl4jsb_Real2D_onChunk      :: beta_air
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt
+    dsl4jsb_Real3D_onChunk      :: net_assimilation_cl
+    dsl4jsb_Real3D_onChunk      :: gross_assimilation_cl
+    dsl4jsb_Real3D_onChunk      :: maint_respiration_leaf_cl
+    dsl4jsb_Real3D_onChunk      :: canopy_cond_cl
+    dsl4jsb_Real3D_onChunk      :: co2_conc_leaf_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl            ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
+    dsl4jsb_Real2D_onChunk      :: lai                       ! VEG_
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
+    dsl4jsb_Real3D_onChunk      :: lai_cl
+    dsl4jsb_Real3D_onChunk      :: fn_chl_cl
+    dsl4jsb_Real3D_onChunk      :: fn_et_cl
+    dsl4jsb_Real3D_onChunk      :: fn_rub_cl
+    dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
+    dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
 ! 2 be removed: pointers to veg assimi *slmtemp
     TYPE(t_veg_memory),       POINTER   :: veg        ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -160,6 +171,18 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
 
 
 ! 2 be removed  *slmtemp
@@ -193,27 +216,27 @@ CONTAINS
    !> 2.0 calculate photosynthesis per layer
    !! 
    DO icanopy = 1,assimi_config%ncanopy
-      IF(veg%lai_cl%ptr(icanopy,1) > eps8)THEN
+      IF(lai_cl(1,icanopy) > eps8)THEN
 
         CALL calc_photosynthesis(t_air(1)                            , & ! in
                                  press_srf(1)                        , &
                                  co2_mixing_ratio(1)                 , &
                                  ga(1)                               , &
-                                 veg%t_air_tacclim_mavg%ptr       , &
+                                 t_air_tacclim_mavg(1)       , &
                                  ppfd_sunlit_cl(1,icanopy), &
                                  ppfd_shaded_cl(1,icanopy), &
-                                 veg%fleaf_sunlit_cl%ptr(icanopy,1), &
+                                 fleaf_sunlit_cl(1,icanopy), &
                                  beta_air(1)                 , &
                                  beta_soil_ps(1)             , &
-                                 veg%beta_sinklim_ps%ptr          , &
+                                 beta_sinklim_ps(1)          , &
                                  beta_soil_gs(1)             , &
-                                 veg%fn_chl_cl%ptr(icanopy,1)     , &
-                                 veg%fn_et_cl%ptr(icanopy,1)      , &
-                                 veg%fn_rub_cl%ptr(icanopy,1)     , &
-                                 veg%fn_pepc_cl%ptr(icanopy,1)    , &
-                                 veg%leaf_nitrogen_cl%ptr(icanopy,1)   , &
+                                 fn_chl_cl(1,icanopy)     , &
+                                 fn_et_cl(1,icanopy)      , &
+                                 fn_rub_cl(1,icanopy)     , &
+                                 fn_pepc_cl(1,icanopy)    , &
+                                 leaf_nitrogen_cl(1,icanopy)   , &
                                  lctlib%ps_pathway                     , &
-                                 veg%t_jmax_opt_mavg%ptr               , &
+                                 t_jmax_opt_mavg(1)               , &
                                  lctlib%t_jmax_omega                   , &
                                  lctlib%g0                             , &
                                  lctlib%g1                             , &
@@ -224,7 +247,7 @@ CONTAINS
                                  co2_conc_leaf_cl(1,icanopy)           , &
                                  hlp1, hlp1, hlp1)                   
 
-        gross_assimilation(1) = gross_assimilation(1) + gross_assimilation_cl(1,icanopy) * veg%lai_cl%ptr(icanopy,1)
+        gross_assimilation(1) = gross_assimilation(1) + gross_assimilation_cl(1,icanopy) * lai_cl(1,icanopy)
 
         IF(gross_assimilation_cl(1,icanopy) > eps8) THEN
            hlp1                      = discrimination_ps(co2_conc_leaf_cl(1,icanopy)     , &
@@ -232,33 +255,33 @@ CONTAINS
                                              'C13'              , &
                                              lctlib%ps_pathway)
            gross_assimilation_C13(1) = gross_assimilation_C13(1) + gross_assimilation_cl(1,icanopy) * &
-                                             veg%lai_cl%ptr(icanopy,1) * &
+                                             lai_cl(1,icanopy) * &
                                              calc_fractionation(co2_mixing_ratio(1), co2_mixing_ratio_C13(1), hlp1)
            hlp1                      = discrimination_ps(co2_conc_leaf_cl(1,icanopy)     , &
                                              co2_mixing_ratio(1)   , &
                                              'C14'              , &
                                              lctlib%ps_pathway)
            gross_assimilation_C14(1) = gross_assimilation_C14(1) + gross_assimilation_cl(1,icanopy) * &
-                                             veg%lai_cl%ptr(icanopy,1) * &
+                                             lai_cl(1,icanopy) * &
                                              calc_fractionation(co2_mixing_ratio(1), co2_mixing_ratio_C14(1), &
                                                                 hlp1, scale_correction_C14)
         ENDIF
 
         net_assimilation(1)       = net_assimilation(1)       + net_assimilation_cl(1,icanopy)       * &
-                                      veg%lai_cl%ptr(icanopy,1) 
+                                      lai_cl(1,icanopy) 
         maint_respiration_leaf(1) = maint_respiration_leaf(1) + maint_respiration_leaf_cl(1,icanopy) * &
-                                      veg%lai_cl%ptr(icanopy,1) 
-        canopy_cond(1)      = canopy_cond(1)   + canopy_cond_cl(1,icanopy)   * veg%lai_cl%ptr(icanopy,1)
-        co2_conc_leaf(1)    = co2_conc_leaf(1) + co2_conc_leaf_cl(1,icanopy) * veg%lai_cl%ptr(icanopy,1)
+                                      lai_cl(1,icanopy) 
+        canopy_cond(1)      = canopy_cond(1)   + canopy_cond_cl(1,icanopy)   * lai_cl(1,icanopy)
+        co2_conc_leaf(1)    = co2_conc_leaf(1) + co2_conc_leaf_cl(1,icanopy) * lai_cl(1,icanopy)
 
         ! get the net photosynthesis of the lowest canopy layer at this timestep
-        IF(veg%lai_cl%ptr(icanopy,1) > 0.0_wp) net_assimilation_boc(1) = net_assimilation_cl(1,icanopy) 
+        IF(lai_cl(1,icanopy) > 0.0_wp) net_assimilation_boc(1) = net_assimilation_cl(1,icanopy) 
 
      ENDIF
   ENDDO
 
   ! get mean canopy CO2 concentration in the leaf
-  IF(veg%lai%ptr > eps8) co2_conc_leaf(:) = co2_conc_leaf(:) / veg%lai%ptr
+  WHERE(lai(:) > eps8) co2_conc_leaf(:) = co2_conc_leaf(:) / lai(:)
 
   ! uptake optimum temperature for electron transport 
   IF(assimi_config%flag_t_jmax_acclimation) THEN 

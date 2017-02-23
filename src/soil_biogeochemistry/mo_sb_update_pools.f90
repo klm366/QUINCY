@@ -424,26 +424,43 @@ rmm_desorption = 1.0_wp
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
+    dsl4jsb_Real2D_onChunk      :: uptake_nh4
+    dsl4jsb_Real2D_onChunk      :: uptake_no3
+    dsl4jsb_Real2D_onChunk      :: uptake_p
+
     TYPE(t_veg_memory), POINTER             :: veg        ! local pointer to veg__mem for SLM usability
     TYPE(t_soil_memory), POINTER            :: soil       ! local pointer to soil__mem for SLM usability
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
-    dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SOIL_)
-    dsl4jsb_Get_memory(SB_)
-
-    veg  => veg__mem
-    soil => soil__mem
-    sb   => sb__mem
-
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
 
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
 
-    !> 1 Calculate soil litter pool decomposition.
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(SOIL_)
+    dsl4jsb_Get_memory(SB_)
+
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
+
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)
+
+
+    veg  => veg__mem
+    soil => soil__mem
+    sb   => sb__mem
+
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
+    !> 1.0 Calculate soil litter pool decomposition.
     !!
     sb%het_respiration%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
                                              sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) 
@@ -545,14 +562,14 @@ rmm_desorption = 1.0_wp
        sb%no3_solute%ptr(ics:ice,:,iblk) = sb%no3_solute%ptr(ics:ice,:,iblk) + & 
                                            sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * fnit_nmin * dtime
        sb%nh4_solute%ptr(ics:ice,1,iblk) = sb%nh4_solute%ptr(ics:ice,1,iblk) - & 
-                                           veg%uptake_nh4%ptr / soil%soil_depth_l%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
+                                           uptake_nh4(1:nc) / soil%soil_depth_l%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
        sb%no3_solute%ptr(ics:ice,1,iblk) = sb%no3_solute%ptr(ics:ice,1,iblk) - & 
-                                           veg%uptake_no3%ptr / soil%soil_depth_l%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
+                                           uptake_no3(1:nc) / soil%soil_depth_l%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
     ENDIF
 
     IF(veg_config%p_uptake_scheme /= 'prescribed') THEN
        sb%po4_solute%ptr(ics:ice,:,iblk) = sb%po4_solute%ptr(ics:ice,:,iblk) + sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * dtime
-       sb%po4_solute%ptr(ics:ice,1,iblk) = sb%po4_solute%ptr(ics:ice,1,iblk) - veg%uptake_p%ptr / soil%soil_depth_l%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
+       sb%po4_solute%ptr(ics:ice,1,iblk) = sb%po4_solute%ptr(ics:ice,1,iblk) - uptake_p(1:nc) / soil%soil_depth_l%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
     ENDIF
 
     END SUBROUTINE update_sb_pools_simple

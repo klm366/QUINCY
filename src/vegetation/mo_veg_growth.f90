@@ -34,7 +34,7 @@ CONTAINS
   !> update plant growth (flux\%growth)
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_growth (tile, options)
+  SUBROUTINE update_growth(tile, options)
 
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_base_memory,             ONLY: t_slm_tile, t_model, t_jsb_task_options
@@ -61,7 +61,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp)                              :: dheight    !< delta height
+    REAL(wp), DIMENSION(options%nc)       :: dheight    !< delta height
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_growth'
     ! ---------------------------
@@ -74,13 +74,13 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk   :: growing_season         ! PHENO_
-    dsl4jsb_Real2D_onChunk      :: t_air                  ! ATM2LAND_
+    dsl4jsb_Logical2D_onChunk   :: growing_season             ! PHENO_
+    dsl4jsb_Real2D_onChunk      :: t_air                      ! ATM2LAND_
     dsl4jsb_Real2D_onChunk      :: q_air
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: ga
-    dsl4jsb_Real2D_onChunk      :: beta_air               ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: beta_air                   ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: maint_respiration_leaf
@@ -89,11 +89,91 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta      ! SOIL_
-    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl            ! RAD_
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta          ! SOIL_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl             ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
+    dsl4jsb_Real2D_onChunk      :: target_cn_leaf             ! VEG_
+    dsl4jsb_Real2D_onChunk      :: lai
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: press_srf_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: ga_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: leaf_cn_direction
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
+    dsl4jsb_Real2D_onChunk      :: unit_npp
+    dsl4jsb_Real2D_onChunk      :: unit_transpiration
+    dsl4jsb_Real2D_onChunk      :: kstar_labile
+    dsl4jsb_Real2D_onChunk      :: fmaint_rate
+    dsl4jsb_Real2D_onChunk      :: fmaint_rate_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_npp_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_pot_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: cost_n_uptake_root
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation
+    dsl4jsb_Real2D_onChunk      :: target_np_leaf
+    dsl4jsb_Real2D_onChunk      :: target_cn_fine_root
+    dsl4jsb_Real2D_onChunk      :: target_cn_coarse_root
+    dsl4jsb_Real2D_onChunk      :: target_cn_sap_wood
+    dsl4jsb_Real2D_onChunk      :: target_cn_fruit
+    dsl4jsb_Real2D_onChunk      :: target_np_fine_root
+    dsl4jsb_Real2D_onChunk      :: target_np_coarse_root
+    dsl4jsb_Real2D_onChunk      :: target_np_sap_wood
+    dsl4jsb_Real2D_onChunk      :: target_np_fruit
+    dsl4jsb_Real2D_onChunk      :: height
+    dsl4jsb_Real2D_onChunk      :: dens_ind
+    dsl4jsb_Real2D_onChunk      :: labile_carbon_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_nitrogen_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_phosphorus_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg 
+    dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: transpiration_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: n_fixation_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_act_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_act_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: dphi_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: leaf2sapwood_mass_ratio 
+    dsl4jsb_Real2D_onChunk      :: leaf2root_mass_ratio
+    dsl4jsb_Real2D_onChunk      :: gpp_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_n_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_p_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: leaf2root_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: target_lai
+    dsl4jsb_Real2D_onChunk      :: k1_opt
+    dsl4jsb_Real2D_onChunk      :: k2_opt
+    dsl4jsb_Real2D_onChunk      :: growth_req_p
+    dsl4jsb_Real2D_onChunk      :: growth_req_n
+    dsl4jsb_Real2D_onChunk      :: uptake_nh4
+    dsl4jsb_Real2D_onChunk      :: uptake_no3
+    dsl4jsb_Real2D_onChunk      :: n_fixation
+    dsl4jsb_Real2D_onChunk      :: n_transform_respiration
+    dsl4jsb_Real2D_onChunk      :: n_fixation_respiration
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: growth_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: growth_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
+    dsl4jsb_Real2D_onChunk      :: maint_respiration
+    dsl4jsb_Real2D_onChunk      :: growth_respiration
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
+    dsl4jsb_Real3D_onChunk      :: fn_chl_cl
+    dsl4jsb_Real3D_onChunk      :: fn_et_cl
+    dsl4jsb_Real3D_onChunk      :: fn_rub_cl
+    dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -144,6 +224,88 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf_cn_direction)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, kstar_labile)
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate)
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_coarse_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_sap_wood)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fruit)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_coarse_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_sap_wood)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fruit)
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_act_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2sapwood_mass_ratio)
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_mass_ratio)
+    dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
+    dsl4jsb_Get_var2D_onChunk(VEG_, k1_opt)
+    dsl4jsb_Get_var2D_onChunk(VEG_, k2_opt)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
+
 
 
 !! *slmtemp
@@ -159,49 +321,64 @@ CONTAINS
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
     !! 
-    veg%kstar_labile%ptr = calc_meristem_activity(t_air(1), w_soil_root_theta(1), growing_season(1))
+    kstar_labile(:) = calc_meristem_activity(t_air(:), w_soil_root_theta(:), growing_season(:))
 
     !> 1.1 calculate costs of N uptake and fixation
     !!
-    veg%fmaint_rate%ptr = fmaint_rate_base * temperature_response_respiration(t_air(1), veg%t_air_tacclim_mavg%ptr)
-    CALL calc_nitrogen_uptake_costs(lctlib                               , &
-                                    t_air(1)                             , &
-                                    veg%pool%fine_root%carbon%ptr        , &
-                                    veg%pool%fine_root%nitrogen%ptr      , &
-                                    veg%fmaint_rate_troot_mavg%ptr       , &
-                                    veg%unit_npp_troot_mavg%ptr          , &
-                                    veg%unit_uptake_n_pot_troot_mavg%ptr , &
-                                    veg%cost_n_uptake_root%ptr           , &
-                                    veg%cost_n_fixation%ptr   )           
+    fmaint_rate(:) = fmaint_rate_base * temperature_response_respiration(t_air(:), t_air_tacclim_mavg(:))
+    CALL calc_nitrogen_uptake_costs(lctlib                            , &
+                                    t_air(:)                          , &
+                                    veg%pool%fine_root%carbon%ptr     , &
+                                    veg%pool%fine_root%nitrogen%ptr   , &
+                                    fmaint_rate_troot_mavg(:)         , &
+                                    unit_npp_troot_mavg(:)            , &
+                                    unit_uptake_n_pot_troot_mavg(:)   , &
+                                    cost_n_uptake_root(:)             , &
+                                    cost_n_fixation(:)                  )           
   
     !> 2.0 Calculate target C:N:P for each tissue type
     !! 
     !! 
     IF (veg_config%flag_optimal_Nleaf .AND. growing_season(1)) THEN
-      CALL calc_dir_optimal_cn_leaf(lctlib                                  , &
-                                      nc                                    , &   ! number of chunks
-                                      veg                                   , &
-                                      beta_air_tcnl_mavg(1)         , &
-                                      beta_soil_ps_tcnl_mavg(1)     , &
-                                      beta_soil_gs_tcnl_mavg(1)     , &
-                                      ppfd_sunlit_tcnl_mavg_cl(1,:) , &
-                                      ppfd_shaded_tcnl_mavg_cl(1,:) )
-
+      CALL calc_dir_optimal_cn_leaf(lctlib                               , &
+                                        nc                               , &   ! number of chunks
+                                        veg%pool%leaf%carbon%ptr         , &  
+                                        veg%pool%leaf%nitrogen%ptr       , & 
+                                        lai(1)                           , &
+                                        t_jmax_opt_mavg(1)               , &
+                                        target_cn_leaf(1)                , &
+                                        t_air_tacclim_mavg(1)            , &
+                                        t_air_tcnl_mavg(1)               , &
+                                        ga_tcnl_mavg(1)                  , &
+                                        press_srf_tcnl_mavg(1)           , &
+                                        co2_mixing_ratio_tcnl_mavg(1)    , &
+                                        beta_sinklim_ps_tcnl_mavg(1)     , &
+                                        beta_air_tcnl_mavg(1)            , &
+                                        beta_soil_ps_tcnl_mavg(1)        , &
+                                        beta_soil_gs_tcnl_mavg(1)        , &
+                                        fn_chl_cl(1,:)                   , &
+                                        fn_et_cl(1,:)                    , &
+                                        fn_rub_cl(1,:)                   , &
+                                        fn_pepc_cl(1,:)                  , &
+                                        fleaf_sunlit_tcnl_mavg_cl(1,:)   , &
+                                        ppfd_sunlit_tcnl_mavg_cl(1,:)    , &
+                                        ppfd_shaded_tcnl_mavg_cl(1,:)    , &
+                                        leaf_cn_direction(1)             )
     END IF
 
-    CALL calc_stoichiometry_changes(lctlib                          , & ! in
-                                      growing_season(1)      , &
-                                      veg%leaf_cn_direction%ptr     , &
-                                      veg%target_np_leaf%ptr        , &
-                                      veg%target_cn_leaf%ptr        , & ! inout
-                                      veg%target_cn_fine_root%ptr   , & ! out
-                                      veg%target_cn_coarse_root%ptr , &
-                                      veg%target_cn_sap_wood%ptr    , & 
-                                      veg%target_cn_fruit%ptr       , &
-                                      veg%target_np_fine_root%ptr   , &
-                                      veg%target_np_coarse_root%ptr , & 
-                                      veg%target_np_sap_wood%ptr    , &
-                                      veg%target_np_fruit%ptr )
+    CALL calc_stoichiometry_changes(lctlib                        , & ! in
+                                      growing_season(:)           , &
+                                      leaf_cn_direction(:)        , &
+                                      target_np_leaf(:)           , &
+                                      target_cn_leaf(:)           , & ! inout
+                                      target_cn_fine_root(:)      , & ! out
+                                      target_cn_coarse_root(:)    , &
+                                      target_cn_sap_wood(:)       , &
+                                      target_cn_fruit(:)          , &
+                                      target_np_fine_root(:)      , &
+                                      target_np_coarse_root(:)    , &
+                                      target_np_sap_wood(:)       , &
+                                      target_np_fruit(:)          )
 
     !> 3.0 calculate current allometry 
     !! 
@@ -215,129 +392,139 @@ CONTAINS
                                               q_air(1)                    , &
                                               co2_mixing_ratio(1)         , &
                                               ga(1)                       , & 
-                                              net_assimilation(1) , & 
-                                              canopy_cond(1)      , & 
-                                              beta_air(1)         , & 
-                                              beta_soil_ps(1)     , & 
-                                              beta_soil_gs(1)     , & 
-                                              ppfd_sunlit_cl(1,:) , &     ! 
-                                              ppfd_shaded_cl(1,:) , &
-                                              veg                         , & ! *slmdev  --> CALL calc_photosynthesis()
-                                              veg%unit_npp%ptr            , & 
-                                              veg%unit_transpiration%ptr)   
+                                              net_assimilation(1)         , & 
+                                              canopy_cond(1)              , & 
+                                              beta_air(1)                 , & 
+                                              beta_soil_ps(1)             , & 
+                                              beta_soil_gs(1)             , & 
+                                              veg%pool%leaf%carbon%ptr    , &  
+                                              veg%pool%leaf%nitrogen%ptr  , & 
+                                              lai(1)                      , &
+                                              beta_sinklim_ps(1)          , &
+                                              t_air_tacclim_mavg(1)       , &
+                                              t_jmax_opt_mavg(1)          , &
+                                              fn_chl_cl(1,:)              , &
+                                              fn_et_cl(1,:)               , &
+                                              fn_rub_cl(1,:)              , &
+                                              fn_pepc_cl(1,:)             , &
+                                              fleaf_sunlit_cl(1,:)        , &
+                                              ppfd_sunlit_cl(1,:)         , &
+                                              ppfd_shaded_cl(1,:)         , &
+                                              unit_npp(1)                 , & 
+                                              unit_transpiration(1)       )   
     
     !> 3.2 calculate allometry    
     !!
-    CALL calc_allometry(lctlib                                , &
-                        veg%height%ptr                        , &
-                        veg%pool%sap_wood%carbon%ptr          , &
-                        veg%pool%heart_wood%carbon%ptr        , &
-                        veg%dens_ind%ptr                      , & 
-                        veg%labile_carbon_talloc_mavg%ptr     , &
-                        veg%labile_nitrogen_talloc_mavg%ptr   , & 
-                        veg%labile_phosphorus_talloc_mavg%ptr , &
-                        veg%reserve_carbon_talloc_mavg%ptr    , &
-                        veg%reserve_nitrogen_talloc_mavg%ptr  , &
-                        veg%reserve_phosphorus_talloc_mavg%ptr, &
-                        veg%growth_cn_talloc_mavg%ptr         , &
-                        veg%growth_cp_talloc_mavg%ptr         , & 
-                        veg%npp_talloc_mavg%ptr               , &
-                        veg%unit_npp_talloc_mavg%ptr          , &
-                        veg%transpiration_talloc_mavg%ptr     , &
-                        veg%unit_transpiration_talloc_mavg%ptr, &
-                        veg%n_fixation_talloc_mavg%ptr        , &
-                        veg%unit_uptake_n_act_talloc_mavg%ptr , &
-                        veg%unit_uptake_p_act_talloc_mavg%ptr , &
-                        veg%dphi_talloc_mavg%ptr              , &
-                        veg%kstar_labile%ptr                  , &
-                        dheight                               , &
-                        veg%leaf2sapwood_mass_ratio%ptr       , & 
-                        veg%leaf2root_mass_ratio%ptr          , &
-                        veg%target_lai%ptr                    , &
-                        veg%k1_opt%ptr                        , &
-                        veg%k2_opt%ptr)  
+    CALL calc_allometry(lctlib                           , &
+                        height(:)                        , &
+                        veg%pool%sap_wood%carbon%ptr     , &
+                        veg%pool%heart_wood%carbon%ptr   , &
+                        dens_ind(:)                      , & 
+                        labile_carbon_talloc_mavg(:)     , &
+                        labile_nitrogen_talloc_mavg(:)   , & 
+                        labile_phosphorus_talloc_mavg(:) , &
+                        reserve_carbon_talloc_mavg(:)    , &
+                        reserve_nitrogen_talloc_mavg(:)  , &
+                        reserve_phosphorus_talloc_mavg(:), &
+                        growth_cn_talloc_mavg(:)         , &
+                        growth_cp_talloc_mavg(:)         , & 
+                        npp_talloc_mavg(:)               , &
+                        unit_npp_talloc_mavg(:)          , &
+                        transpiration_talloc_mavg(:)     , &
+                        unit_transpiration_talloc_mavg(:), &
+                        n_fixation_talloc_mavg(:)        , &
+                        unit_uptake_n_act_talloc_mavg(:) , &
+                        unit_uptake_p_act_talloc_mavg(:) , &
+                        dphi_talloc_mavg(:)              , &
+                        kstar_labile(:)                  , &
+                        dheight(:)                       , &
+                        leaf2sapwood_mass_ratio(:)       , & 
+                        leaf2root_mass_ratio(:)          , &
+                        target_lai(:)                    , &
+                        k1_opt(:)                        , &
+                        k2_opt(:)) 
 
     !> 4.0 calculate net flux between reserve and labile pool 
     !! 
     !! Info: veg%reserve_use is of TYPE(t_slm_struct_veg_element)
-    call calc_reserve_useage(lctlib                                     , &
-                              growing_season(1)                  , &
-                              veg%kstar_labile%ptr                      , &
-                              veg%gpp_tlabile_mavg%ptr                  , &
-                              veg%maint_respiration_tlabile_mavg%ptr    , &
-                              veg%growth_req_n_tlabile_mavg%ptr         , &
-                              veg%growth_req_p_tlabile_mavg%ptr         , &
-                              veg%target_cn_leaf%ptr                    , &
-                              veg%target_cn_fine_root%ptr               , & 
-                              veg%target_np_leaf%ptr                    , &
-                              veg%target_np_fine_root%ptr               , &
-                              veg%leaf2root_troot_mavg%ptr              , &
-                              veg%lai%ptr                               , &
-                              veg%target_lai%ptr                        , &
-                              veg%pool%labile                           , &
-                              veg%pool%reserve                          , &
-                              veg%reserve_use                           , &
-                              veg%beta_sinklim_ps%ptr)
+    call calc_reserve_useage(lctlib                               , &
+                             growing_season(1)                    , &
+                             kstar_labile(1)                      , &
+                             gpp_tlabile_mavg(1)                  , &
+                             maint_respiration_tlabile_mavg(1)    , &
+                             growth_req_n_tlabile_mavg(1)         , &
+                             growth_req_p_tlabile_mavg(1)         , &
+                             target_cn_leaf(1)                    , &
+                             target_cn_fine_root(1)               , & 
+                             target_np_leaf(1)                    , &
+                             target_np_fine_root(1)               , &
+                             leaf2root_troot_mavg(1)              , &
+                             lai(1)                               , &
+                             target_lai(1)                        , &
+                             veg%pool%labile                      , &
+                             veg%pool%reserve                     , &
+                             veg%reserve_use                      , &
+                             beta_sinklim_ps(1))
 
     !> 5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)
     !! 
     !! 
     CALL calc_allocation_fraction(lctlib                          , & ! in
-                                  dheight                         , &
-                                  veg%kstar_labile%ptr            , &
+                                  dheight(1)                      , &
+                                  kstar_labile(1)                 , &
                                   veg%pool%leaf%carbon%ptr        , &
                                   veg%pool%sap_wood%carbon%ptr    , &
                                   veg%pool%coarse_root%carbon%ptr , &
                                   veg%pool%fine_root%carbon%ptr   , &
                                   veg%pool%labile%carbon%ptr      , &
-                                  veg%height%ptr                  , &
-                                  veg%leaf2sapwood_mass_ratio%ptr , &
-                                  veg%leaf2root_mass_ratio%ptr    , & 
-                                  veg%k1_opt%ptr                  , &
-                                  veg%k2_opt%ptr                  , &
-                                  veg%target_cn_leaf%ptr          , &
-                                  veg%target_cn_fine_root%ptr     , &
-                                  veg%target_cn_coarse_root%ptr   , &
-                                  veg%target_cn_sap_wood%ptr      , &
-                                  veg%target_cn_fruit%ptr         , &
-                                  veg%target_np_leaf%ptr          , &
-                                  veg%target_np_fine_root%ptr     , &
-                                  veg%target_np_coarse_root%ptr   , &
-                                  veg%target_np_sap_wood%ptr      , &
-                                  veg%target_np_fruit%ptr         , &
+                                  height(1)                       , &
+                                  leaf2sapwood_mass_ratio(1)      , &
+                                  leaf2root_mass_ratio(1)         , & 
+                                  k1_opt(1)                       , &
+                                  k2_opt(1)                       , &
+                                  target_cn_leaf(1)               , &
+                                  target_cn_fine_root(1)          , &
+                                  target_cn_coarse_root(1)        , &
+                                  target_cn_sap_wood(1)           , &
+                                  target_cn_fruit(1)              , &
+                                  target_np_leaf(1)               , &
+                                  target_np_fine_root(1)          , &
+                                  target_np_coarse_root(1)        , &
+                                  target_np_sap_wood(1)           , &
+                                  target_np_fruit(1)              , &
                                   veg%reserve_use%carbon%ptr      , & 
                                   veg%falloc                      , & ! inout  TYPE(t_slm_struct_veg_pool)
-                                  veg%growth_req_n%ptr            , & ! out
-                                  veg%growth_req_p%ptr)
+                                  growth_req_n(1)                 , & ! out
+                                  growth_req_p(1)                 )
 
     !> 6.0 partition labile carbon into growth, growth_respiration, and maintenance 
     !! 
     !! 
     CALL calc_partitioning(t_air(1)                               , & ! in
-                            veg%t_air_tacclim_mavg%ptr            , &
-                            veg%kstar_labile%ptr                  , &
-                            maint_respiration_leaf(1)     , &
-                            veg%cost_n_fixation%ptr               , &
-                            veg%growth_req_p%ptr                  , &
-                            veg%growth_req_n%ptr                  , &
-                            veg%falloc                            , &
-                            veg%pool                              , &
-                            veg%uptake_nh4%ptr                    , & ! inout
-                            veg%uptake_no3%ptr                    , & ! inout
-                            veg%n_fixation%ptr                    , &
-                            veg%n_transform_respiration%ptr       , &
-                            veg%n_fixation_respiration%ptr        , &
-                            veg%n_processing_respiration%ptr      , &
-                            veg%maint_respiration_c13%ptr         , &
-                            veg%maint_respiration_c14%ptr         , &
-                            veg%growth_respiration_c13%ptr        , &
-                            veg%growth_respiration_c14%ptr        , &
-                            veg%n_processing_respiration_c13%ptr  , &
-                            veg%n_processing_respiration_c14%ptr  , &
-                            veg%growth                            , &
-                            veg%maint_respiration_pot%ptr         , & ! out
-                            veg%maint_respiration%ptr             , &
-                            veg%growth_respiration%ptr  )  
+                           t_air_tacclim_mavg(1)            , &
+                           kstar_labile(1)                  , &
+                           maint_respiration_leaf(1)        , &
+                           cost_n_fixation(1)               , &
+                           growth_req_p(1)                  , &
+                           growth_req_n(1)                  , &
+                           veg%falloc                       , &
+                           veg%pool                         , &
+                           uptake_nh4(1)                    , & ! inout
+                           uptake_no3(1)                    , & ! inout
+                           n_fixation(1)                    , &
+                           n_transform_respiration(1)       , &
+                           n_fixation_respiration(1)        , &
+                           n_processing_respiration(1)      , &
+                           maint_respiration_c13(1)         , &
+                           maint_respiration_c14(1)         , &
+                           growth_respiration_c13(1)        , &
+                           growth_respiration_c14(1)        , &
+                           n_processing_respiration_c13(1)  , &
+                           n_processing_respiration_c14(1)  , &
+                           veg%growth                       , &
+                           maint_respiration_pot(1)         , & ! out
+                           maint_respiration(1)             , &
+                           growth_respiration(1)  )  
 
   END SUBROUTINE update_growth 
 

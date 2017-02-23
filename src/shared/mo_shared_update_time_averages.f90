@@ -112,6 +112,7 @@ CONTAINS
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: icanopy    !< loop over ncanopy
+    INTEGER                               :: ichunk     !< loop over chunks ics-ice
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_daytime_averages'
     ! ---------------------------
@@ -122,27 +123,44 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_air                     ! ATM2LAND_
-    dsl4jsb_Real2D_onChunk :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk :: press_srf
-    dsl4jsb_Real2D_onChunk :: co2_mixing_ratio
-    dsl4jsb_Real2D_onChunk :: ga
-    dsl4jsb_Real2D_onChunk :: beta_air                  ! ASSIMI_
-    dsl4jsb_Real2D_onChunk :: beta_soil_ps
-    dsl4jsb_Real2D_onChunk :: beta_soil_gs
-    dsl4jsb_Real2D_onChunk :: beta_air_daytime
-    dsl4jsb_Real2D_onChunk :: beta_soil_ps_daytime
-    dsl4jsb_Real2D_onChunk :: beta_soil_gs_daytime
-    dsl4jsb_Real2D_onChunk :: beta_air_daytime_dacc
-    dsl4jsb_Real2D_onChunk :: beta_soil_ps_daytime_dacc
-    dsl4jsb_Real2D_onChunk :: beta_soil_gs_daytime_dacc
-    dsl4jsb_Real2D_onChunk :: t_jmax_opt
-    dsl4jsb_Real3D_onChunk :: ppfd_shaded_cl            ! RAD_
-    dsl4jsb_Real3D_onChunk :: ppfd_sunlit_cl
-    dsl4jsb_Real3D_onChunk :: ppfd_shaded_daytime_cl
-    dsl4jsb_Real3D_onChunk :: ppfd_sunlit_daytime_cl
-    dsl4jsb_Real3D_onChunk :: ppfd_shaded_daytime_dacc_cl
-    dsl4jsb_Real3D_onChunk :: ppfd_sunlit_daytime_dacc_cl
+    dsl4jsb_Real2D_onChunk      :: t_air                        ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk      :: swpar_srf_down
+    dsl4jsb_Real2D_onChunk      :: press_srf
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
+    dsl4jsb_Real2D_onChunk      :: ga
+    dsl4jsb_Real2D_onChunk      :: beta_air                     ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs
+    dsl4jsb_Real2D_onChunk      :: beta_air_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_air_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl               ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_dacc_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_dacc_cl
+    dsl4jsb_Real2D_onChunk      :: daytime_counter              ! VEG_
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
+    dsl4jsb_Real2D_onChunk      :: t_air_daytime
+    dsl4jsb_Real2D_onChunk      :: press_srf_daytime
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime
+    dsl4jsb_Real2D_onChunk      :: ga_daytime
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_daytime
+    dsl4jsb_Real2D_onChunk      :: press_srf_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: ga_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: t_air_daytime_dacc
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_dacc_cl
 !! *slmtemp
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -191,7 +209,23 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl)
     ! ---------------------------
-!    dsl4jsb_Get_var2D_onChunk(VEG_, xx)
+    dsl4jsb_Get_var2D_onChunk(VEG_, daytime_counter)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime_dacc)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_dacc_cl)
 
 
 !! *slmtemp
@@ -206,29 +240,30 @@ CONTAINS
 
     !> 1.0 if light is available (i.e. daytime)
     !! 
-    IF(swpar_srf_down(1) > eps8) THEN
-      ! 1.1 count number of values added to var_daytime
-      veg%daytime_counter%ptr = veg%daytime_counter%ptr + 1.0_wp
-      ! 1.2 add values and count number of values
-      DO icanopy=1,assimi_config%ncanopy
-        ppfd_sunlit_daytime_dacc_cl(1,icanopy)  = ppfd_sunlit_daytime_dacc_cl(1,icanopy)   + &
-                                                           ppfd_sunlit_cl(1,icanopy)
-        ppfd_shaded_daytime_dacc_cl(1,icanopy)  = ppfd_shaded_daytime_dacc_cl(1,icanopy)   + & 
-                                                           ppfd_shaded_cl(1,icanopy)
-        veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) + & 
-                                                           veg%fleaf_sunlit_cl%ptr(icanopy,1)
-      END DO
-      veg%t_air_daytime_dacc%ptr            = veg%t_air_daytime_dacc%ptr            + t_air(1)
-      veg%press_srf_daytime_dacc%ptr        = veg%press_srf_daytime_dacc%ptr        + press_srf(1)
-      veg%co2_mixing_ratio_daytime_dacc%ptr = veg%co2_mixing_ratio_daytime_dacc%ptr + co2_mixing_ratio(1)
-      veg%ga_daytime_dacc%ptr               = veg%ga_daytime_dacc%ptr               + ga(1)
-      beta_air_daytime_dacc(:)      = beta_air_daytime_dacc(:)      + beta_air(:)
-      beta_soil_ps_daytime_dacc(:)  = beta_soil_ps_daytime_dacc(:)  + beta_soil_ps(:)
-      veg%beta_sinklim_ps_daytime_dacc%ptr  = veg%beta_sinklim_ps_daytime_dacc%ptr  + veg%beta_sinklim_ps%ptr
-      beta_soil_gs_daytime_dacc(:)  = beta_soil_gs_daytime_dacc(:)  + beta_soil_gs(:)
-      veg%t_jmax_opt_daytime_dacc%ptr       = veg%t_jmax_opt_daytime_dacc%ptr       + t_jmax_opt(1)
-      
-    END IF
+    DO ichunk=1,nc
+      IF(swpar_srf_down(ichunk) > eps8) THEN
+        ! 1.1 count number of values added to var_daytime
+        daytime_counter(ichunk) = daytime_counter(ichunk) + 1.0_wp
+        ! 1.2 add values and count number of values
+        DO icanopy=1,assimi_config%ncanopy
+          ppfd_sunlit_daytime_dacc_cl(ichunk,icanopy)  = ppfd_sunlit_daytime_dacc_cl(ichunk,icanopy)   + &
+                                                             ppfd_sunlit_cl(ichunk,icanopy)
+          ppfd_shaded_daytime_dacc_cl(ichunk,icanopy)  = ppfd_shaded_daytime_dacc_cl(ichunk,icanopy)   + & 
+                                                             ppfd_shaded_cl(ichunk,icanopy)
+          fleaf_sunlit_daytime_dacc_cl(ichunk,icanopy) = fleaf_sunlit_daytime_dacc_cl(ichunk,icanopy) + & 
+                                                             fleaf_sunlit_cl(ichunk,icanopy)
+        END DO
+        t_air_daytime_dacc(ichunk)            = t_air_daytime_dacc(ichunk)            + t_air(ichunk)
+        press_srf_daytime_dacc(ichunk)        = press_srf_daytime_dacc(ichunk)        + press_srf(ichunk)
+        co2_mixing_ratio_daytime_dacc(ichunk) = co2_mixing_ratio_daytime_dacc(ichunk) + co2_mixing_ratio(ichunk)
+        ga_daytime_dacc(ichunk)               = ga_daytime_dacc(ichunk)               + ga(ichunk)
+        beta_air_daytime_dacc(ichunk)         = beta_air_daytime_dacc(ichunk)         + beta_air(ichunk)
+        beta_soil_ps_daytime_dacc(ichunk)     = beta_soil_ps_daytime_dacc(ichunk)     + beta_soil_ps(ichunk)
+        beta_sinklim_ps_daytime_dacc(ichunk)  = beta_sinklim_ps_daytime_dacc(ichunk)  + beta_sinklim_ps(ichunk)
+        beta_soil_gs_daytime_dacc(ichunk)     = beta_soil_gs_daytime_dacc(ichunk)     + beta_soil_gs(ichunk)
+        t_jmax_opt_daytime_dacc(ichunk)       = t_jmax_opt_daytime_dacc(ichunk)       + t_jmax_opt(ichunk)
+      END IF
+    END DO
 
 
     !> 2.0 at the end of the day (midnight), calc daytime averages (of the ending day)
@@ -237,47 +272,49 @@ CONTAINS
     IF( ABS(((time_day + timestep_prop_day) - REAL(NINT(time_day)))) < eps8 ) THEN
       ! check if at least one value had been assigned at the current day, avoiding division by zero 
       ! calculate the average of the current day and pass it to the according avg_prev_* variable; 
-      IF(veg%daytime_counter%ptr > eps8) THEN
-        DO icanopy=1,assimi_config%ncanopy
-          ppfd_sunlit_daytime_cl(1,icanopy)   = ppfd_sunlit_daytime_dacc_cl(1,icanopy)   / veg%daytime_counter%ptr
-          ppfd_shaded_daytime_cl(1,icanopy)   = ppfd_shaded_daytime_dacc_cl(1,icanopy)   / veg%daytime_counter%ptr
-          veg%fleaf_sunlit_daytime_cl%ptr(icanopy,1)  = veg%fleaf_sunlit_daytime_dacc_cl%ptr(icanopy,1) / veg%daytime_counter%ptr
-        END DO
-        veg%t_air_daytime%ptr            = veg%t_air_daytime_dacc%ptr              / veg%daytime_counter%ptr
-        veg%press_srf_daytime%ptr        = veg%press_srf_daytime_dacc%ptr          / veg%daytime_counter%ptr
-        veg%co2_mixing_ratio_daytime%ptr = veg%co2_mixing_ratio_daytime_dacc%ptr   / veg%daytime_counter%ptr
-        veg%ga_daytime%ptr               = veg%ga_daytime_dacc%ptr                 / veg%daytime_counter%ptr
-        beta_air_daytime(:)      = beta_air_daytime_dacc(:)        / veg%daytime_counter%ptr
-        beta_soil_ps_daytime(:)  = beta_soil_ps_daytime_dacc(:)    / veg%daytime_counter%ptr
-        veg%beta_sinklim_ps_daytime%ptr  = veg%beta_sinklim_ps_daytime_dacc%ptr    / veg%daytime_counter%ptr
-        beta_soil_gs_daytime(:)  = beta_soil_gs_daytime_dacc(:)    / veg%daytime_counter%ptr
-        veg%t_jmax_opt_daytime%ptr       = veg%t_jmax_opt_daytime_dacc%ptr         / veg%daytime_counter%ptr
-      ELSE  ! if veg%daytime_counter is zero
-        ppfd_sunlit_daytime_cl(:,:)   = 0.0_wp
-        ppfd_shaded_daytime_cl(:,:)   = 0.0_wp
-        veg%fleaf_sunlit_daytime_cl%ptr   = 0.0_wp
-      END IF
+      DO ichunk=1,nc
+        IF(daytime_counter(ichunk) > eps8) THEN
+          DO icanopy=1,assimi_config%ncanopy
+            ppfd_sunlit_daytime_cl(ichunk,icanopy)   = ppfd_sunlit_daytime_dacc_cl(ichunk,icanopy)   / daytime_counter(ichunk)
+            ppfd_shaded_daytime_cl(ichunk,icanopy)   = ppfd_shaded_daytime_dacc_cl(ichunk,icanopy)   / daytime_counter(ichunk)
+            fleaf_sunlit_daytime_cl(ichunk,icanopy)  = fleaf_sunlit_daytime_dacc_cl(ichunk,icanopy)  / daytime_counter(ichunk)
+          END DO
+          t_air_daytime(ichunk)            = t_air_daytime_dacc(ichunk)              / daytime_counter(ichunk)
+          press_srf_daytime(ichunk)        = press_srf_daytime_dacc(ichunk)          / daytime_counter(ichunk)
+          co2_mixing_ratio_daytime(ichunk) = co2_mixing_ratio_daytime_dacc(ichunk)   / daytime_counter(ichunk)
+          ga_daytime(ichunk)               = ga_daytime_dacc(ichunk)                 / daytime_counter(ichunk)
+          beta_air_daytime(ichunk)         = beta_air_daytime_dacc(ichunk)           / daytime_counter(ichunk)
+          beta_soil_ps_daytime(ichunk)     = beta_soil_ps_daytime_dacc(ichunk)       / daytime_counter(ichunk)
+          beta_sinklim_ps_daytime(ichunk)  = beta_sinklim_ps_daytime_dacc(ichunk)    / daytime_counter(ichunk)
+          beta_soil_gs_daytime(ichunk)     = beta_soil_gs_daytime_dacc(ichunk)       / daytime_counter(ichunk)
+          t_jmax_opt_daytime(ichunk)       = t_jmax_opt_daytime_dacc(ichunk)         / daytime_counter(ichunk)
+        ELSE  ! if daytime_counter is zero
+          ppfd_sunlit_daytime_cl(ichunk,:)  = 0.0_wp
+          ppfd_shaded_daytime_cl(ichunk,:)  = 0.0_wp
+          fleaf_sunlit_daytime_cl(ichunk,:) = 0.0_wp
+        END IF
+      END DO  ! loop ics:ice
 
-!      write(999,*) time_day, veg%daytime_counter%ptr, &   ! might be used for testing
+!      write(999,*) time_day, daytime_counter(1), &   ! might be used for testing
 !                  ppfd_sunlit_daytime_cl(1,1), &
 !                  ppfd_shaded_daytime_cl(1,1), &
-!                  veg%fleaf_sunlit_daytime_cl%ptr(1,1), &
-!                  veg%t_jmax_opt_daytime%ptr, ' |-| '
+!                  fleaf_sunlit_daytime_cl(1,1), &
+!                  t_jmax_opt_daytime(1), ' |-| '
 
       ! set all values of the current day to zero
-      ppfd_sunlit_daytime_dacc_cl(:,:)          = 0.0_wp
-      ppfd_shaded_daytime_dacc_cl(:,:)          = 0.0_wp
-      veg%fleaf_sunlit_daytime_dacc_cl%ptr       = 0.0_wp
-      veg%t_air_daytime_dacc%ptr                 = 0.0_wp
-      veg%press_srf_daytime_dacc%ptr             = 0.0_wp
-      veg%co2_mixing_ratio_daytime_dacc%ptr      = 0.0_wp
-      veg%ga_daytime_dacc%ptr                    = 0.0_wp
-      beta_air_daytime_dacc(:)                  = 0.0_wp
-      beta_soil_ps_daytime_dacc(:)              = 0.0_wp
-      veg%beta_sinklim_ps_daytime_dacc%ptr       = 0.0_wp
-      beta_soil_gs_daytime_dacc(:)              = 0.0_wp
-      veg%t_jmax_opt_daytime_dacc%ptr            = 0.0_wp
-      veg%daytime_counter%ptr                    = 0.0_wp
+      ppfd_sunlit_daytime_dacc_cl(:,:)      = 0.0_wp
+      ppfd_shaded_daytime_dacc_cl(:,:)      = 0.0_wp
+      fleaf_sunlit_daytime_dacc_cl(:,:)     = 0.0_wp
+      t_air_daytime_dacc(:)                 = 0.0_wp
+      press_srf_daytime_dacc(:)             = 0.0_wp
+      co2_mixing_ratio_daytime_dacc(:)      = 0.0_wp
+      ga_daytime_dacc(:)                    = 0.0_wp
+      beta_air_daytime_dacc(:)              = 0.0_wp
+      beta_soil_ps_daytime_dacc(:)          = 0.0_wp
+      beta_sinklim_ps_daytime_dacc(:)       = 0.0_wp
+      beta_soil_gs_daytime_dacc(:)          = 0.0_wp
+      t_jmax_opt_daytime_dacc(:)            = 0.0_wp
+      daytime_counter(:)                    = 0.0_wp
     END IF
 
   END SUBROUTINE calc_daytime_averages
@@ -381,7 +418,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAl(wp)                              :: hlp
+    REAl(wp),DIMENSION(options%nc)        :: hlp
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_moving_averages'
     ! ---------------------------
@@ -393,27 +430,100 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk       :: growing_season             ! PHENO_
-    dsl4jsb_Real2D_onChunk          :: t_air                      ! ATM2LAND_
-    dsl4jsb_Real2D_onChunk          :: gross_assimilation         ! ASSIMI_
-    dsl4jsb_Real2D_onChunk          :: net_assimilation_boc
-    dsl4jsb_Real2D_onChunk          :: beta_soil_gs
-    dsl4jsb_Real2D_onChunk          :: beta_soil_ps_daytime
-    dsl4jsb_Real2D_onChunk          :: beta_soil_gs_daytime
-    dsl4jsb_Real2D_onChunk          :: beta_air_daytime
-    dsl4jsb_Real2D_onChunk          :: beta_soil_gs_tphen_mavg
-    dsl4jsb_Real2D_onChunk          :: beta_soil_ps_tfrac_mavg
-    dsl4jsb_Real2D_onChunk          :: beta_soil_gs_tfrac_mavg
-    dsl4jsb_Real2D_onChunk          :: beta_soil_ps_tcnl_mavg
-    dsl4jsb_Real2D_onChunk          :: beta_soil_gs_tcnl_mavg
-    dsl4jsb_Real2D_onChunk          :: beta_air_tfrac_mavg
-    dsl4jsb_Real2D_onChunk          :: beta_air_tcnl_mavg
-    dsl4jsb_Real3D_onChunk          :: ppfd_shaded_daytime_cl     ! RAD_
-    dsl4jsb_Real3D_onChunk          :: ppfd_sunlit_daytime_cl
-    dsl4jsb_Real3D_onChunk          :: ppfd_shaded_tcnl_mavg_cl
-    dsl4jsb_Real3D_onChunk          :: ppfd_sunlit_tcnl_mavg_cl
-    dsl4jsb_Real3D_onChunk          :: ppfd_shaded_tfrac_mavg_cl
-    dsl4jsb_Real3D_onChunk          :: ppfd_sunlit_tfrac_mavg_cl
+    dsl4jsb_Logical2D_onChunk   :: growing_season             ! PHENO_
+    dsl4jsb_Real2D_onChunk      :: t_air                      ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation         ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_air_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tphen_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl     ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real2D_onChunk      :: n_fixation                 ! VEG_
+    dsl4jsb_Real2D_onChunk      :: press_srf_daytime
+    dsl4jsb_Real2D_onChunk      :: t_air_daytime
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation
+    dsl4jsb_Real2D_onChunk      :: f_p_demand
+    dsl4jsb_Real2D_onChunk      :: f_n_demand
+    dsl4jsb_Real2D_onChunk      :: npp
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
+    dsl4jsb_Real2D_onChunk      :: growth_req_n
+    dsl4jsb_Real2D_onChunk      :: growth_req_p
+    dsl4jsb_Real2D_onChunk      :: unit_npp
+    dsl4jsb_Real2D_onChunk      :: transpiration
+    dsl4jsb_Real2D_onChunk      :: unit_transpiration
+    dsl4jsb_Real2D_onChunk      :: dphi
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_act
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_act
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_pot
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_pot
+    dsl4jsb_Real2D_onChunk      :: fmaint_rate
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_daytime
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime
+    dsl4jsb_Real2D_onChunk      :: ga_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
+    dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
+    dsl4jsb_Real2D_onChunk      :: fmaint_rate_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_pot_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_pot_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_npp_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: leaf2root_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: n_fixation_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: ga_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: press_srf_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: gpp_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_n_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_p_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tphen_mavg
+    dsl4jsb_Real2D_onChunk      :: npp_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: press_srf_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: ga_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: transpiration_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: dphi_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_act_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_act_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_carbon_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_nitrogen_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: labile_phosphorus_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
 !! *slmtemp
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -464,8 +574,79 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
     ! ---------------------------
-!    dsl4jsb_Get_var2D_onChunk(VEG_, )
-!    dsl4jsb_Get_var3D_onChunk(VEG_, )
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dphi)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_act)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_pot)
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_pot_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_act_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -482,32 +663,32 @@ CONTAINS
     !!           returns: new current average
 
     !> 1.1 averages at the timescale of the labile pool
-    veg%gpp_tlabile_mavg%ptr                = calc_mavg(veg%gpp_tlabile_mavg%ptr, gross_assimilation(1), &
+    gpp_tlabile_mavg(:)                = calc_mavg(gpp_tlabile_mavg(:), gross_assimilation(:), &
                                                     mavg_period_tlabile)
-    veg%maint_respiration_tlabile_mavg%ptr  = calc_mavg(veg%maint_respiration_tlabile_mavg%ptr, veg%maint_respiration_pot%ptr, &
+    maint_respiration_tlabile_mavg(:)  = calc_mavg(maint_respiration_tlabile_mavg(:), maint_respiration_pot(:), &
                                                     mavg_period_tlabile)
-    veg%growth_req_n_tlabile_mavg%ptr       = calc_mavg(veg%growth_req_n_tlabile_mavg%ptr, veg%growth_req_n%ptr, &
-                                                    mavg_period_tlabile, do_calc=(veg%growth_req_n%ptr > eps8))
-    veg%growth_req_p_tlabile_mavg%ptr       = calc_mavg(veg%growth_req_p_tlabile_mavg%ptr, veg%growth_req_p%ptr, &
-                                                    mavg_period_tlabile, do_calc=(veg%growth_req_p%ptr > eps8))
+    growth_req_n_tlabile_mavg(:)       = calc_mavg(growth_req_n_tlabile_mavg(:), growth_req_n(:), &
+                                                    mavg_period_tlabile, do_calc=(growth_req_n(:) > eps8))
+    growth_req_p_tlabile_mavg(:)       = calc_mavg(growth_req_p_tlabile_mavg(:), growth_req_p(:), &
+                                                    mavg_period_tlabile, do_calc=(growth_req_p(:) > eps8))
     
     !> 1.2 averages at the time-scale of phenology
-    veg%t_air_tphen_mavg%ptr           = calc_mavg(veg%t_air_tphen_mavg%ptr, t_air(1), mavg_period_tphen)
+    t_air_tphen_mavg(:)           = calc_mavg(t_air_tphen_mavg(:), t_air(:), mavg_period_tphen)
     beta_soil_gs_tphen_mavg(:) = calc_mavg(beta_soil_gs_tphen_mavg(:), beta_soil_gs(:), mavg_period_tphen)
 
     !> 1.3 averages at the nutrient-uptake demand time-scale
-    veg%npp_tuptake_mavg%ptr                 = calc_mavg(veg%npp_tuptake_mavg%ptr, veg%npp%ptr, mavg_period_tuptake, &
+    npp_tuptake_mavg(:)                 = calc_mavg(npp_tuptake_mavg(:), npp(:), mavg_period_tuptake, &
                                                      do_calc=(veg%pool%fine_root%carbon%ptr > eps8))
-    veg%demand_uptake_n_tuptake_mavg%ptr     = calc_mavg(veg%demand_uptake_n_tuptake_mavg%ptr, veg%f_n_demand%ptr, &
+    demand_uptake_n_tuptake_mavg(:)     = calc_mavg(demand_uptake_n_tuptake_mavg(:), f_n_demand(:), &
                                                      mavg_period_tuptake, do_calc=(veg%pool%fine_root%carbon%ptr > eps8))
-    veg%demand_uptake_p_tuptake_mavg%ptr     = calc_mavg(veg%demand_uptake_p_tuptake_mavg%ptr, veg%f_p_demand%ptr, &
+    demand_uptake_p_tuptake_mavg(:)     = calc_mavg(demand_uptake_p_tuptake_mavg(:), f_p_demand(:), &
                                                      mavg_period_tuptake, do_calc=(veg%pool%fine_root%carbon%ptr > eps8))
-    veg%cost_n_fixation_tuptake_mavg%ptr     = calc_mavg(veg%cost_n_fixation_tuptake_mavg%ptr, veg%cost_n_fixation%ptr, &
-                                                     mavg_period_tuptake, do_calc=growing_season(1)) 
-    veg%growth_req_n_tuptake_mavg%ptr        = calc_mavg(veg%growth_req_n_tuptake_mavg%ptr, veg%growth_req_n%ptr, &
-                                                     mavg_period_tuptake, do_calc=(veg%growth_req_n%ptr > eps8))
-    veg%growth_req_p_tuptake_mavg%ptr        = calc_mavg(veg%growth_req_p_tuptake_mavg%ptr, veg%growth_req_p%ptr, &
-                                                     mavg_period_tuptake, do_calc=(veg%growth_req_p%ptr > eps8))
+    cost_n_fixation_tuptake_mavg(:)     = calc_mavg(cost_n_fixation_tuptake_mavg(:), cost_n_fixation(:), &
+                                                     mavg_period_tuptake, do_calc=growing_season(:)) 
+    growth_req_n_tuptake_mavg(:)        = calc_mavg(growth_req_n_tuptake_mavg(:), growth_req_n(:), &
+                                                     mavg_period_tuptake, do_calc=(growth_req_n(:) > eps8))
+    growth_req_p_tuptake_mavg(:)        = calc_mavg(growth_req_p_tuptake_mavg(:), growth_req_p(:), &
+                                                     mavg_period_tuptake, do_calc=(growth_req_p(:) > eps8))
 
     !> 1.4 averages at the time-scale of within-leaf N allocation fractions 
     !!
@@ -515,19 +696,19 @@ CONTAINS
                                                   mavg_period_tfrac)
     ppfd_shaded_tfrac_mavg_cl(:,:)     = calc_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
                                                   mavg_period_tfrac)
-    veg%fleaf_sunlit_tfrac_mavg_cl%ptr    = calc_mavg(veg%fleaf_sunlit_tfrac_mavg_cl%ptr, veg%fleaf_sunlit_daytime_cl%ptr, &
+    fleaf_sunlit_tfrac_mavg_cl(:,:)    = calc_mavg(fleaf_sunlit_tfrac_mavg_cl(:,:), fleaf_sunlit_daytime_cl(:,:), &
                                                   mavg_period_tfrac)
-    veg%t_air_tfrac_mavg%ptr              = calc_mavg(veg%t_air_tfrac_mavg%ptr, veg%t_air_daytime%ptr, &
+    t_air_tfrac_mavg(:)              = calc_mavg(t_air_tfrac_mavg(:), t_air_daytime(:), &
                                                   mavg_period_tfrac)
-    veg%press_srf_tfrac_mavg%ptr          = calc_mavg(veg%press_srf_tfrac_mavg%ptr, veg%press_srf_daytime%ptr, &
+    press_srf_tfrac_mavg(:)          = calc_mavg(press_srf_tfrac_mavg(:), press_srf_daytime(:), &
                                                   mavg_period_tfrac)
-    veg%co2_mixing_ratio_tfrac_mavg%ptr   = calc_mavg(veg%co2_mixing_ratio_tfrac_mavg%ptr, veg%co2_mixing_ratio_daytime%ptr, &
+    co2_mixing_ratio_tfrac_mavg(:)   = calc_mavg(co2_mixing_ratio_tfrac_mavg(:), co2_mixing_ratio_daytime(:), &
                                                   mavg_period_tfrac)
-    veg%ga_tfrac_mavg%ptr                 = calc_mavg(veg%ga_tfrac_mavg%ptr, veg%ga_daytime%ptr, &
+    ga_tfrac_mavg(:)                 = calc_mavg(ga_tfrac_mavg(:), ga_daytime(:), &
                                                   mavg_period_tfrac)
     beta_soil_ps_tfrac_mavg(:)    = calc_mavg(beta_soil_ps_tfrac_mavg(:), beta_soil_ps_daytime(:), &
                                                   mavg_period_tfrac)
-    veg%beta_sinklim_ps_tfrac_mavg%ptr    = calc_mavg(veg%beta_sinklim_ps_tfrac_mavg%ptr, veg%beta_sinklim_ps_daytime%ptr, &
+    beta_sinklim_ps_tfrac_mavg(:)    = calc_mavg(beta_sinklim_ps_tfrac_mavg(:), beta_sinklim_ps_daytime(:), &
                                                   mavg_period_tfrac)
     beta_soil_gs_tfrac_mavg(:)    = calc_mavg(beta_soil_gs_tfrac_mavg(:), beta_soil_gs_daytime(:), &
                                                   mavg_period_tfrac)
@@ -540,19 +721,19 @@ CONTAINS
                                                   mavg_period_tcnl)
     ppfd_shaded_tcnl_mavg_cl(:,:)      = calc_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
                                                   mavg_period_tcnl)
-    veg%fleaf_sunlit_tcnl_mavg_cl%ptr     = calc_mavg(veg%fleaf_sunlit_tcnl_mavg_cl%ptr, veg%fleaf_sunlit_daytime_cl%ptr, &
+    fleaf_sunlit_tcnl_mavg_cl(:,:)     = calc_mavg(fleaf_sunlit_tcnl_mavg_cl(:,:), fleaf_sunlit_daytime_cl(:,:), &
                                                   mavg_period_tcnl)
-    veg%t_air_tcnl_mavg%ptr               = calc_mavg(veg%t_air_tcnl_mavg%ptr, veg%t_air_daytime%ptr, &
+    t_air_tcnl_mavg(:)               = calc_mavg(t_air_tcnl_mavg(:), t_air_daytime(:), &
                                                   mavg_period_tcnl)
-    veg%press_srf_tcnl_mavg%ptr           = calc_mavg(veg%press_srf_tcnl_mavg%ptr, veg%press_srf_daytime%ptr, &
+    press_srf_tcnl_mavg(:)           = calc_mavg(press_srf_tcnl_mavg(:), press_srf_daytime(:), &
                                                   mavg_period_tcnl)
-    veg%co2_mixing_ratio_tcnl_mavg%ptr    = calc_mavg(veg%co2_mixing_ratio_tcnl_mavg%ptr, veg%co2_mixing_ratio_daytime%ptr, &
+    co2_mixing_ratio_tcnl_mavg(:)    = calc_mavg(co2_mixing_ratio_tcnl_mavg(:), co2_mixing_ratio_daytime(:), &
                                                   mavg_period_tcnl)
-    veg%ga_tcnl_mavg%ptr                  = calc_mavg(veg%ga_tcnl_mavg%ptr, veg%ga_daytime%ptr, &
-         mavg_period_tcnl)
+    ga_tcnl_mavg(:)                  = calc_mavg(ga_tcnl_mavg(:), ga_daytime(:), &
+                                                  mavg_period_tcnl)
     beta_soil_ps_tcnl_mavg(:)     = calc_mavg(beta_soil_ps_tcnl_mavg(:), beta_soil_ps_daytime(:), &
                                                   mavg_period_tcnl)
-    veg%beta_sinklim_ps_tcnl_mavg%ptr     = calc_mavg(veg%beta_sinklim_ps_tcnl_mavg%ptr, veg%beta_sinklim_ps_daytime%ptr, &
+    beta_sinklim_ps_tcnl_mavg(:)     = calc_mavg(beta_sinklim_ps_tcnl_mavg(:), beta_sinklim_ps_daytime(:), &
                                                   mavg_period_tcnl)
     beta_soil_gs_tcnl_mavg(:)     = calc_mavg(beta_soil_gs_tcnl_mavg(:), beta_soil_gs_daytime(:), &
                                                   mavg_period_tcnl)
@@ -561,81 +742,81 @@ CONTAINS
 
     !> 1.6 time-scale of plant allocation calculation (veg process)
     !!
-    veg%npp_talloc_mavg%ptr                  = calc_mavg(veg%npp_talloc_mavg%ptr, veg%npp%ptr, &
-                                                     mavg_period_talloc, do_calc=growing_season(1))
-    veg%n_fixation_talloc_mavg%ptr           = calc_mavg(veg%n_fixation_talloc_mavg%ptr, veg%n_fixation%ptr, &
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%unit_npp_talloc_mavg%ptr             = calc_mavg(veg%unit_npp_talloc_mavg%ptr, veg%unit_npp%ptr, &
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%transpiration_talloc_mavg%ptr        = calc_mavg(veg%transpiration_talloc_mavg%ptr, veg%transpiration%ptr, &
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%unit_transpiration_talloc_mavg%ptr   = calc_mavg(veg%unit_transpiration_talloc_mavg%ptr, veg%unit_transpiration%ptr, &
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%dphi_talloc_mavg%ptr                 = calc_mavg(veg%dphi_talloc_mavg%ptr, veg%dphi%ptr, &
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%unit_uptake_n_act_talloc_mavg%ptr    = calc_mavg(veg%unit_uptake_n_act_talloc_mavg%ptr, veg%unit_uptake_n_act%ptr, &
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%unit_uptake_p_act_talloc_mavg%ptr    = calc_mavg(veg%unit_uptake_p_act_talloc_mavg%ptr, veg%unit_uptake_p_act%ptr, &
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%labile_carbon_talloc_mavg%ptr        = calc_mavg(veg%labile_carbon_talloc_mavg%ptr, veg%pool%labile%carbon%ptr, & 
-         mavg_period_talloc, do_calc=growing_season(1))
-    veg%labile_nitrogen_talloc_mavg%ptr      = calc_mavg(veg%labile_nitrogen_talloc_mavg%ptr, veg%pool%labile%nitrogen%ptr, & 
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%labile_phosphorus_talloc_mavg%ptr    = calc_mavg(veg%labile_phosphorus_talloc_mavg%ptr, veg%pool%labile%phosphorus%ptr, & 
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%reserve_carbon_talloc_mavg%ptr   = calc_mavg(veg%reserve_carbon_talloc_mavg%ptr, veg%pool%reserve%carbon%ptr, & 
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%reserve_nitrogen_talloc_mavg%ptr      = calc_mavg(veg%reserve_nitrogen_talloc_mavg%ptr, veg%pool%reserve%nitrogen%ptr, & 
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    veg%reserve_phosphorus_talloc_mavg%ptr    = calc_mavg(veg%reserve_phosphorus_talloc_mavg%ptr, veg%pool%reserve%phosphorus%ptr, & 
-                                                      mavg_period_talloc, do_calc=growing_season(1))
-    IF (veg%growth_req_n%ptr > 0._wp)THEN
-       hlp = 1._wp/veg%growth_req_n%ptr
-    ELSE
-       hlp=0._wp
-    ENDIF
-    veg%growth_cn_talloc_mavg%ptr  = calc_mavg(veg%growth_cn_talloc_mavg%ptr, hlp, &
-                                            mavg_period_tgrowth, do_calc=growing_season(1))
+    npp_talloc_mavg(:)                  = calc_mavg(npp_talloc_mavg(:), npp(:), &
+                                                     mavg_period_talloc, do_calc=growing_season(:))
+    n_fixation_talloc_mavg(:)           = calc_mavg(n_fixation_talloc_mavg(:), n_fixation(:), &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    unit_npp_talloc_mavg(:)             = calc_mavg(unit_npp_talloc_mavg(:), unit_npp(:), &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    transpiration_talloc_mavg(:)        = calc_mavg(transpiration_talloc_mavg(:), transpiration(:), &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    unit_transpiration_talloc_mavg(:)   = calc_mavg(unit_transpiration_talloc_mavg(:), unit_transpiration(:), &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    dphi_talloc_mavg(:)                 = calc_mavg(dphi_talloc_mavg(:), dphi(:), &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    unit_uptake_n_act_talloc_mavg(:)    = calc_mavg(unit_uptake_n_act_talloc_mavg(:), unit_uptake_n_act(:), &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    unit_uptake_p_act_talloc_mavg(:)    = calc_mavg(unit_uptake_p_act_talloc_mavg(:), unit_uptake_p_act(:), &
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    labile_carbon_talloc_mavg(:)        = calc_mavg(labile_carbon_talloc_mavg(:), veg%pool%labile%carbon%ptr, & 
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    labile_nitrogen_talloc_mavg(:)      = calc_mavg(labile_nitrogen_talloc_mavg(:), veg%pool%labile%nitrogen%ptr, & 
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    labile_phosphorus_talloc_mavg(:)    = calc_mavg(labile_phosphorus_talloc_mavg(:), veg%pool%labile%phosphorus%ptr, & 
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    reserve_carbon_talloc_mavg(:)       = calc_mavg(reserve_carbon_talloc_mavg(:), veg%pool%reserve%carbon%ptr, & 
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    reserve_nitrogen_talloc_mavg(:)     = calc_mavg(reserve_nitrogen_talloc_mavg(:), veg%pool%reserve%nitrogen%ptr, & 
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    reserve_phosphorus_talloc_mavg(:)   = calc_mavg(reserve_phosphorus_talloc_mavg(:), veg%pool%reserve%phosphorus%ptr, & 
+                                                      mavg_period_talloc, do_calc=growing_season(:))
+    WHERE(growth_req_n(:) > 0._wp)
+       hlp(:) = 1._wp/growth_req_n(:)
+    ELSE WHERE
+       hlp(:) = 0._wp
+    END WHERE
+    growth_cn_talloc_mavg(:)  = calc_mavg(growth_cn_talloc_mavg(:), hlp(:), &
+                                            mavg_period_tgrowth, do_calc=growing_season(:))
     
-    IF (veg%growth_req_n%ptr > 0._wp .AND. veg%growth_req_p%ptr > 0._wp)THEN
-       hlp = 1._wp/(veg%growth_req_n%ptr * veg%growth_req_p%ptr)
-    ELSE
-       hlp=0._wp
-    ENDIF
+    WHERE(growth_req_n(:) > 0._wp .AND. growth_req_p(:) > 0._wp)
+       hlp(:) = 1._wp/(growth_req_n(:) * growth_req_p(:))
+    ELSE WHERE
+       hlp(:) = 0._wp
+    END WHERE
     
-    veg%growth_cp_talloc_mavg%ptr  = calc_mavg(veg%growth_cp_talloc_mavg%ptr, hlp, &
-                                            mavg_period_tgrowth, do_calc=growing_season(1))
+    growth_cp_talloc_mavg(:)  = calc_mavg(growth_cp_talloc_mavg(:), hlp(:), &
+                                            mavg_period_tgrowth, do_calc=growing_season(:))
 
     !> 1.7 averages at the time-scale of root life-time
     !!
-    IF (veg%pool%fine_root%carbon%ptr > eps8)THEN
-       hlp = veg%pool%leaf%carbon%ptr / veg%pool%fine_root%carbon%ptr
+    IF (veg%pool%fine_root%carbon%ptr > eps8) THEN
+       hlp(:) = veg%pool%leaf%carbon%ptr / veg%pool%fine_root%carbon%ptr
     ELSE
-       hlp=0._wp
-    ENDIF
-    veg%leaf2root_troot_mavg%ptr      = calc_mavg(veg%leaf2root_troot_mavg%ptr, hlp, lctlib%tau_fine_root, &
+       hlp(:) = 0._wp
+    END IF
+    leaf2root_troot_mavg(:)      = calc_mavg(leaf2root_troot_mavg(:), hlp(:), lctlib%tau_fine_root, &
                                                do_calc=(veg%pool%leaf%carbon%ptr > eps8) .AND. &
                                                        (veg%pool%fine_root%carbon%ptr > eps8), & 
                                                avg_period_unit='year')
-    veg%unit_npp_troot_mavg%ptr       = calc_mavg(veg%unit_npp_troot_mavg%ptr, veg%unit_npp%ptr, lctlib%tau_fine_root, &
-                                               do_calc=growing_season(1), avg_period_unit='year') 
-    veg%unit_uptake_n_pot_troot_mavg%ptr  = calc_mavg(veg%unit_uptake_n_pot_troot_mavg%ptr, veg%unit_uptake_n_pot%ptr, lctlib%tau_fine_root, &
-                                               do_calc=growing_season(1), avg_period_unit='year')
-    veg%unit_uptake_p_pot_troot_mavg%ptr  = calc_mavg(veg%unit_uptake_p_pot_troot_mavg%ptr, veg%unit_uptake_p_pot%ptr, lctlib%tau_fine_root, &
-                                               do_calc=growing_season(1), avg_period_unit='year')
-    veg%fmaint_rate_troot_mavg%ptr    = calc_mavg(veg%fmaint_rate_troot_mavg%ptr, veg%fmaint_rate%ptr, lctlib%tau_fine_root, &
-                                               do_calc=growing_season(1), avg_period_unit='year') 
+    unit_npp_troot_mavg(:)       = calc_mavg(unit_npp_troot_mavg(:), unit_npp(:), lctlib%tau_fine_root, &
+                                               do_calc=growing_season(:), avg_period_unit='year') 
+    unit_uptake_n_pot_troot_mavg(:)  = calc_mavg(unit_uptake_n_pot_troot_mavg(:), unit_uptake_n_pot(:), lctlib%tau_fine_root, &
+                                               do_calc=growing_season(:), avg_period_unit='year')
+    unit_uptake_p_pot_troot_mavg(:)  = calc_mavg(unit_uptake_p_pot_troot_mavg(:), unit_uptake_p_pot(:), lctlib%tau_fine_root, &
+                                               do_calc=growing_season(:), avg_period_unit='year')
+    fmaint_rate_troot_mavg(:)    = calc_mavg(fmaint_rate_troot_mavg(:), fmaint_rate(:), lctlib%tau_fine_root, &
+                                               do_calc=growing_season(:), avg_period_unit='year') 
 
     !> 1.8 averages at the vegetation dynamics time-scale 
-    veg%an_boc_tvegdyn_mavg%ptr   = calc_mavg(veg%an_boc_tvegdyn_mavg%ptr, net_assimilation_boc(1), mavg_period_tvegdyn, &
+    an_boc_tvegdyn_mavg(:)   = calc_mavg(an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_tvegdyn, &
                                           do_calc=(veg%pool%leaf%carbon%ptr > eps8))
     !> 1.9 averages at the respiration acclimation time-scale
-    veg%t_air_tacclim_mavg%ptr    = calc_mavg(veg%t_air_tacclim_mavg%ptr, t_air(1), mavg_period_tacclim)
+    t_air_tacclim_mavg(:)    = calc_mavg(t_air_tacclim_mavg(:), t_air(:), mavg_period_tacclim)
     !> 1.10 averages with a weekly, monthly timescale 
     !!
-    veg%t_air_week_mavg%ptr       = calc_mavg(veg%t_air_week_mavg%ptr, t_air(1), mavg_period_weekly)
-    veg%t_air_month_mavg%ptr      = calc_mavg(veg%t_air_month_mavg%ptr, t_air(1), mavg_period_monthly)
-    veg%t_jmax_opt_mavg%ptr       = calc_mavg(veg%t_jmax_opt_mavg%ptr, veg%t_jmax_opt_daytime%ptr, mavg_period_weekly)
+    t_air_week_mavg(:)       = calc_mavg(t_air_week_mavg(:), t_air(:), mavg_period_weekly)
+    t_air_month_mavg(:)      = calc_mavg(t_air_month_mavg(:), t_air(:), mavg_period_monthly)
+    t_jmax_opt_mavg(:)       = calc_mavg(t_jmax_opt_mavg(:), t_jmax_opt_daytime(:), mavg_period_weekly)
 
 
 

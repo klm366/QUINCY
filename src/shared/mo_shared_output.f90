@@ -680,11 +680,30 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk         :: growing_season     ! PHENO_
-    dsl4jsb_Real2D_onChunk            :: beta_soil_gs       ! ASSIMI_
-    dsl4jsb_Real2D_onChunk            :: beta_soil_ps
-    dsl4jsb_Real2D_onChunk            :: w_soil_root        ! SOIL_
-    dsl4jsb_Real2D_onChunk            :: w_soil_root_pot
+    dsl4jsb_Logical2D_onChunk   :: growing_season     ! PHENO_
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs       ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps
+    dsl4jsb_Real2D_onChunk      :: w_soil_root        ! SOIL_
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
+    dsl4jsb_Real2D_onChunk      :: lai                ! VEG_
+    dsl4jsb_Real2D_onChunk      :: height
+    dsl4jsb_Real2D_onChunk      :: diameter
+    dsl4jsb_Real2D_onChunk      :: dens_ind
+    dsl4jsb_Real2D_onChunk      :: target_cn_leaf
+    dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_act_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: cost_n_uptake_root
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
+    dsl4jsb_Real3D_onChunk      :: fn_et_cl
+    dsl4jsb_Real3D_onChunk      :: fn_rub_cl
+    dsl4jsb_Real3D_onChunk      :: fn_chl_cl
+    dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
+    dsl4jsb_Real3D_onChunk      :: fn_oth_cl
+    dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
 !! *slmtemp
     TYPE(t_veg_memory),           POINTER     :: veg      ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory),            POINTER     :: sb       ! local pointer to sb__mem for SLM usability
@@ -718,6 +737,26 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)
+    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
 
 
 !! *slmtemp
@@ -795,14 +834,14 @@ CONTAINS
               
               lun=lun+1
               DO icanopy=1, assimi_config%ncanopy
-                write(lun,'(8F12.6)') time_d, REAL(icanopy), veg%fn_et_cl%ptr(icanopy,1), &
-                                      veg%fn_rub_cl%ptr(icanopy,1), veg%fn_chl_cl%ptr(icanopy,1),&
-                                      veg%fn_pepc_cl%ptr(icanopy,1), veg%fn_oth_cl%ptr(icanopy,1),veg%leaf_nitrogen_cl%ptr(icanopy,1)
+                write(lun,'(8F12.6)') time_d, REAL(icanopy), fn_et_cl(1,icanopy), &
+                                      fn_rub_cl(1,icanopy), fn_chl_cl(1,icanopy),&
+                                      fn_pepc_cl(1,icanopy), fn_oth_cl(1,icanopy),leaf_nitrogen_cl(1,icanopy)
               END DO
        
               IF(lctlib%growthform == itree) THEN 
                  IF (veg%pool%sap_wood%carbon%ptr > eps8) THEN
-                    hlp1 = veg%lai%ptr/(veg%pool%sap_wood%carbon%ptr / veg%height%ptr / lctlib%wood_density)
+                    hlp1 = lai(1)/(veg%pool%sap_wood%carbon%ptr / height(1) / lctlib%wood_density)
                  ELSE
                     hlp1 = 0._wp
                  ENDIF
@@ -838,13 +877,13 @@ CONTAINS
                 growing_season_float = 0.0_wp
               END IF 
               lun=lun+1
-              write(lun,'(22F20.6)') time_d, veg%height%ptr, veg%diameter%ptr, veg%lai%ptr, veg%dens_ind%ptr, &
+              write(lun,'(22F20.6)') time_d, height(1), diameter(1), lai(1), dens_ind(1), &
                 hlp1,l2r,s2c, bcf, &
-                veg%target_cn_leaf%ptr, veg%unit_npp_talloc_mavg%ptr, veg%unit_uptake_n_act_talloc_mavg%ptr,&
-                veg%growth_cn_talloc_mavg%ptr, veg%npp_talloc_mavg%ptr, &
+                target_cn_leaf(1), unit_npp_talloc_mavg(1), unit_uptake_n_act_talloc_mavg(1),&
+                growth_cn_talloc_mavg(1), npp_talloc_mavg(1), &
                 growing_season_float, & 
-                veg%cost_n_uptake_root%ptr, veg%cost_n_fixation_tuptake_mavg%ptr, &
-                veg%unit_transpiration_talloc_mavg%ptr * 1.e10_wp, veg%growth_req_n_tuptake_mavg%ptr
+                cost_n_uptake_root(1), cost_n_fixation_tuptake_mavg(1), &
+                unit_transpiration_talloc_mavg(1) * 1.e10_wp, growth_req_n_tuptake_mavg(1)
              END IF
            END IF
         END IF  ! on/off switch specific to 'special case: fluxnet output'
@@ -955,20 +994,40 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: ga                        ! ATM2LAND_
-    dsl4jsb_Real2D_onChunk :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk :: albedo                    ! LAND2ATM_
-    dsl4jsb_Real2D_onChunk :: net_radiation
-    dsl4jsb_Real2D_onChunk :: sensible_heat_flx
-    dsl4jsb_Real2D_onChunk :: latent_heat_flx
-    dsl4jsb_Real2D_onChunk :: ground_heat_flx
-    dsl4jsb_Real2D_onChunk :: gross_assimilation        ! ASSIMI_
-    dsl4jsb_Real2D_onChunk :: gross_assimilation_C13
-    dsl4jsb_Real2D_onChunk :: gross_assimilation_C14
-    dsl4jsb_Real2D_onChunk :: canopy_cond
-    dsl4jsb_Real2D_onChunk :: drainage                  ! SOIL_
-    dsl4jsb_Real3D_onChunk :: soil_depth_l
-    dsl4jsb_Real2D_onChunk :: appfd                     ! RAD_
+    dsl4jsb_Real2D_onChunk      :: ga                        ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk      :: swpar_srf_down
+    dsl4jsb_Real2D_onChunk      :: albedo                    ! LAND2ATM_
+    dsl4jsb_Real2D_onChunk      :: net_radiation
+    dsl4jsb_Real2D_onChunk      :: sensible_heat_flx
+    dsl4jsb_Real2D_onChunk      :: latent_heat_flx
+    dsl4jsb_Real2D_onChunk      :: ground_heat_flx
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation        ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
+    dsl4jsb_Real2D_onChunk      :: canopy_cond
+    dsl4jsb_Real2D_onChunk      :: drainage                  ! SOIL_
+    dsl4jsb_Real3D_onChunk      :: soil_depth_l
+    dsl4jsb_Real2D_onChunk      :: appfd                     ! RAD_
+    dsl4jsb_Real2D_onChunk      :: growth_respiration        ! VEG_
+    dsl4jsb_Real2D_onChunk      :: maint_respiration
+    dsl4jsb_Real2D_onChunk      :: n_transform_respiration
+    dsl4jsb_Real2D_onChunk      :: n_fixation_respiration
+    dsl4jsb_Real2D_onChunk      :: npp
+    dsl4jsb_Real2D_onChunk      :: growth_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_c13
+    dsl4jsb_Real2D_onChunk      :: growth_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: maint_respiration_c14
+    dsl4jsb_Real2D_onChunk      :: uptake_nh4
+    dsl4jsb_Real2D_onChunk      :: uptake_no3
+    dsl4jsb_Real2D_onChunk      :: recycling_leaf_n
+    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n
+    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
+    dsl4jsb_Real2D_onChunk      :: n_fixation
+    dsl4jsb_Real2D_onChunk      :: uptake_p
+    dsl4jsb_Real2D_onChunk      :: recycling_leaf_p
+    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
+    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
+    dsl4jsb_Real2D_onChunk      :: transpiration
 !! *slmtemp
     TYPE(t_veg_memory), POINTER      :: veg         ! local pointer to veg__mem for SLM usability
     TYPE(t_sb_memory), POINTER       :: sb          ! local pointer to sb__mem for SLM usability
@@ -1015,7 +1074,27 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_l)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
-
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration)
 
 
 !! *slmtemp
@@ -1051,32 +1130,32 @@ CONTAINS
                ELSE
                  dtime_one = dtime / 1000000.0_wp      ! interval > timestep
              END IF
-             gpp_acc(itile)          = gpp_acc(itile)           + gross_assimilation(1)   * dtime_one
-             growth_resp_acc(itile)  = growth_resp_acc(itile)   + veg%growth_respiration%ptr      * dtime_one
-             maint_resp_acc(itile)   = maint_resp_acc(itile)    + veg%maint_respiration%ptr       * dtime_one
-             n_transform_resp_acc(itile) = n_transform_resp_acc(itile) + veg%n_transform_respiration%ptr * dtime_one
-             n_fixation_resp_acc(itile) = n_fixation_resp_acc(itile) + veg%n_fixation_respiration%ptr    * dtime_one
-             npp_acc(itile)          = npp_acc(itile)           + veg%npp%ptr                 * dtime_one
-             res_use_c_acc(itile)    = res_use_c_acc(itile)     + veg%reserve_use%carbon%ptr  * dtime_one *1000000._wp/dtime
+             gpp_acc(itile)          = gpp_acc(itile)           + gross_assimilation(1)               * dtime_one
+             growth_resp_acc(itile)  = growth_resp_acc(itile)   + growth_respiration(1)               * dtime_one
+             maint_resp_acc(itile)   = maint_resp_acc(itile)    + maint_respiration(1)                * dtime_one
+             n_transform_resp_acc(itile) = n_transform_resp_acc(itile)  + n_transform_respiration(1)  * dtime_one
+             n_fixation_resp_acc(itile)  = n_fixation_resp_acc(itile)   + n_fixation_respiration(1)   * dtime_one
+             npp_acc(itile)              = npp_acc(itile)               + npp(1)                      * dtime_one
+             res_use_c_acc(itile)        = res_use_c_acc(itile)         + veg%reserve_use%carbon%ptr  * dtime_one *1000000._wp/dtime
              gpp_C13_acc(itile)          = gpp_C13_acc(itile)           + gross_assimilation_C13(1) * dtime_one
-             growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + veg%growth_respiration_c13%ptr * dtime_one
-             maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + veg%maint_respiration_c13%ptr  * dtime_one
+             growth_resp_C13_acc(itile)  = growth_resp_C13_acc(itile)   + growth_respiration_c13(1) * dtime_one
+             maint_resp_C13_acc(itile)   = maint_resp_C13_acc(itile)    + maint_respiration_c13(1)  * dtime_one
              gpp_C14_acc(itile)          = gpp_C14_acc(itile)           + gross_assimilation_C14(1) * dtime_one
-             growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + veg%growth_respiration_c14%ptr * dtime_one
-             maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + veg%maint_respiration_c14%ptr  * dtime_one
-             uptake_nh4_acc(itile)     = uptake_nh4_acc(itile)      + veg%uptake_nh4%ptr                * dtime_one
-             uptake_no3_acc(itile)     = uptake_no3_acc(itile)      + veg%uptake_no3%ptr                * dtime_one
-             recycling_n_acc(itile) = recycling_n_acc(itile)  + ( veg%recycling_leaf_n%ptr + &
-                                       veg%recycling_fine_root_n%ptr + veg%recycling_heart_wood_n%ptr ) * dtime_one *1000000._wp/dtime
+             growth_resp_C14_acc(itile)  = growth_resp_C14_acc(itile)   + growth_respiration_c14(1) * dtime_one
+             maint_resp_C14_acc(itile)   = maint_resp_C14_acc(itile)    + maint_respiration_c14(1)  * dtime_one
+             uptake_nh4_acc(itile)       = uptake_nh4_acc(itile)        + uptake_nh4(1)             * dtime_one
+             uptake_no3_acc(itile)       = uptake_no3_acc(itile)        + uptake_no3(1)             * dtime_one
+             recycling_n_acc(itile)  = recycling_n_acc(itile)   + ( recycling_leaf_n(1) + &
+                                       recycling_fine_root_n(1) + recycling_heart_wood_n(1) )     * dtime_one *1000000._wp/dtime
              res_use_n_acc(itile)    = res_use_n_acc(itile)     + veg%reserve_use%nitrogen%ptr    * dtime_one *1000000._wp/dtime
-             n_fixation_acc(itile)   = n_fixation_acc(itile)    + veg%n_fixation%ptr              * dtime_one 
+             n_fixation_acc(itile)   = n_fixation_acc(itile)    + n_fixation(1)                   * dtime_one 
              n_loss_acc(itile)       = n_loss_acc(itile)        + sb%volatilisation_n%ptr(1,1,1)  * dtime_one 
-             uptake_p_acc(itile)     = uptake_p_acc(itile)      + veg%uptake_p%ptr                * dtime_one
-             recycling_p_acc(itile)  = recycling_p_acc(itile)  + ( veg%recycling_leaf_p%ptr + & 
-                                       veg%recycling_fine_root_p%ptr + veg%recycling_heart_wood_p%ptr ) * dtime_one *1000000._wp/dtime
+             uptake_p_acc(itile)     = uptake_p_acc(itile)      + uptake_p(1)                     * dtime_one
+             recycling_p_acc(itile)  = recycling_p_acc(itile)   + ( recycling_leaf_p(1) + & 
+                                       recycling_fine_root_p(1) + recycling_heart_wood_p(1) )     * dtime_one *1000000._wp/dtime
              res_use_p_acc(itile)    = res_use_p_acc(itile)     + veg%reserve_use%phosphorus%ptr  * dtime_one *1000000._wp/dtime
-             transpiration_acc(itile)= transpiration_acc(itile) + veg%transpiration%ptr           * dtime_one 
-             drainage_acc(itile)     = drainage_acc(itile)      + drainage(1)          * dtime_one 
+             transpiration_acc(itile)= transpiration_acc(itile) + transpiration(1)                * dtime_one 
+             drainage_acc(itile)     = drainage_acc(itile)      + drainage(1)                     * dtime_one 
              gc_acc(itile)           = gc_acc(itile)            + canopy_cond(1)                                                      
              ga_acc(itile)           = ga_acc(itile)            + ga(1)                                                   
              albedo_acc(itile)       = albedo_acc(itile)        + albedo(1)

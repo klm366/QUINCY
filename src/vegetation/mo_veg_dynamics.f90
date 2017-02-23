@@ -63,8 +63,16 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk     :: growing_season           ! PHENO_
-    dsl4jsb_Real2D_onChunk        :: w_soil_root_theta        ! SOIL_
+    dsl4jsb_Logical2D_onChunk   :: growing_season           ! PHENO_
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta        ! SOIL_
+    dsl4jsb_Real2D_onChunk      :: dens_ind                 ! VEG_
+    dsl4jsb_Real2D_onChunk      :: mortality_rate
+    dsl4jsb_Real2D_onChunk      :: delta_dens_ind
+    dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
+    dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
+    dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
+    dsl4jsb_Real3D_onChunk      :: fn_chl_cl
+    dsl4jsb_Real3D_onChunk      :: lai_cl
 !! *slmtemp
     TYPE(t_veg_memory),     POINTER           :: veg      ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -91,6 +99,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
+    dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)
+
 
 
 !! *slmtemp
@@ -108,11 +126,11 @@ CONTAINS
     !! 
     !! retruns constant mortality_rate if flag_tile_veg_dynamics == false \n
     !! but calcs mortality_rate dynamically if flag_tile_veg_dynamics == true
-    CALL calc_veg_mortality(lctlib                      , &
-                            veg%an_boc_tvegdyn_mavg%ptr , &
-                            veg%pool                    , &
-                            veg%litterfall              , &
-                            veg%mortality_rate%ptr )
+    CALL calc_veg_mortality(lctlib                  , & ! in
+                            an_boc_tvegdyn_mavg(1)  , &
+                            veg%pool                , &
+                            veg%litterfall          , & ! inout
+                            mortality_rate(1)       )   ! out
 
     !> 2.0 with vegetation dynamics turned on (flag_tile_veg_dynamics == true)
     !! 
@@ -120,23 +138,23 @@ CONTAINS
 
       !> 2.1 Calculate establishment_rate and veg\%establishment
       !! 
-      CALL calc_veg_establishment(lctlib                          , & ! in
-                                 w_soil_root_theta(1)       , &
-                                 growing_season(1)          , &
-                                 veg%t_air_week_mavg%ptr          , &
-                                 veg%leaf_nitrogen_cl%ptr(:,1)    , &
-                                 veg%fn_chl_cl%ptr(:,1)           , &
-                                 veg%lai_cl%ptr(:,1)              , &
-                                 veg%pool%seed_bed                , &
-                                 veg%establishment )                  ! out
+      CALL calc_veg_establishment(lctlib                  , & ! in
+                                 w_soil_root_theta(1)     , &
+                                 growing_season(1)        , &
+                                 t_air_week_mavg(1)       , &
+                                 leaf_nitrogen_cl(1,:)    , &
+                                 fn_chl_cl(1,:)           , &
+                                 lai_cl(1,:)              , &
+                                 veg%pool%seed_bed        , &
+                                 veg%establishment        )   ! out
 
       !> 2.2 Calculate change in individual density from mortality and establishment
       !! 
       CALL calc_delta_density_individuals(lctlib                        , &
-                                        veg%dens_ind%ptr              , &
-                                        veg%mortality_rate%ptr        , &
-                                        veg%establishment%carbon%ptr  , &
-                                        veg%delta_dens_ind%ptr )
+                                          dens_ind(:)                   , &
+                                          mortality_rate(:)             , &
+                                          veg%establishment%carbon%ptr  , &
+                                          delta_dens_ind(:)             )
 
     END IF  ! veg_config%flag_tile_veg_dynamics
 
