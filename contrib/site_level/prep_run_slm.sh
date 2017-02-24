@@ -88,7 +88,7 @@ soil_theta_prescribe=1.0      # float !
 queue="BTM"                  # available queues: all io BTM mpi_large
 fastNodes="F"                # if T only the nodes iof iog ioh ioi ioj are used (works only with queue BTM and io) | T (True) or F (False) [large caps]
 emailNotification="no"       # set either to yes or no (small caps)
-memory=1000000               # memory per job you may need; provided in Kb (1 Gb == 1000000 Kb)
+memory=1000                  # memory per job you may need [mega byte]; here provided in MB but recalculated to KB which is what OpenLava needs
 numberCpuMax=80              # maximum number of simulations started in parallel
 
 
@@ -520,8 +520,8 @@ if [ $specialFluxnetOutput == "T" ]
 fi
 
 ## validate allocated memory ##
-lowestMem=10000       # 10 Mb
-largestMem=50000000   # 50 Gb
+lowestMem=10       # 10 Mb
+largestMem=50000   # 50 Gb
 # test memory empty or containing characters other then digits
 if [ -z $memory ]  # returns TRUE if unset or empty
  then
@@ -547,10 +547,19 @@ if [ "$memory" -lt "$lowestMem" ]
   fi
 fi
 
+
+## compile the -R argument (Reserved); specifically the "reserved memory"
+reservedArg="rusage[mem="$memory"]"
+
+
+## calculate memory (-M argument) from MB -> KB as needed by OpenLava
+memory=$((memory * 1000))
+
+
 ## validate allocated number of CPUs ##
 lowestCpu=5      # 5   parallel jobs
 largestCpu=100   # 100 parallel jobs
-# test memory empty or containing characters other then digits
+# test numberCpuMax empty or containing characters other then digits
 if [ -z $numberCpuMax ]  # returns TRUE if unset or empty
  then
   echo "EXIT! No numberCpuMax values defined. Please define the number of CPUs that should run in parallel at the Cluster."
@@ -822,17 +831,17 @@ if [ -z $singleSiteName ]  # returns TRUE if unset or empty -> $siteList is used
   # submit job array starting at 2 because first line is the header
   if [ $fastNodes == "T" ]
     then
-      bsub -q "$queue" -m "$fN" -M "$memory" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
+      bsub -q "$queue" -m "$fN" -M "$memory" -R "$reservedArg" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
     else
-      bsub -q "$queue" -M "$memory" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
+      bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobArray" -o "$simFoldOut"out.%I.txt -e "$simFoldErr"err.%I.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles"
   fi
  else # job with individual site #
   array="F"   # needed by cleanup_slm_hpc_run.sh
   if [ $fastNodes == "T" ]
     then
-      bsub -q "$queue" -m "$fN" -M "$memory" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
+      bsub -q "$queue" -m "$fN" -M "$memory" -R "$reservedArg" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
     else
-      bsub -q "$queue" -M "$memory" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
+      bsub -q "$queue" -M "$memory" -R "$reservedArg" -J "$jobName" -o "$simFoldOut"out.txt -e "$simFoldErr"err.txt "$emailSwitch" ./run_slm.sh "$jobName" "$simDefaultFiles" "$singleSiteName"
   fi
 fi
 
