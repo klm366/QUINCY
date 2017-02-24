@@ -56,10 +56,11 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp) :: dcost                                     ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
-    REAL(wp) :: n_demand                                  ! N demand of plants (mu mol N /m2 / s) 
-    REAL(wp) :: f_nacq_bnf,f_nacq_nup                     ! fraction of N uptake as BFN or Nuptake
-    REAL(wp) :: scal
+    REAL(wp),DIMENSION(options%nc)        :: dcost        , &  ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
+                                             n_demand     , &  ! N demand of plants (mu mol N /m2 / s) 
+                                             f_nacq_bnf   , &  ! fraction of N uptake as BFN
+                                             f_nacq_nup   , &  ! fraction of N uptake as Nuptake
+                                             scal
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegsoil_bgc'
     ! ---------------------------
@@ -229,8 +230,8 @@ CONTAINS
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
       CASE ("optimal")
         IF (cost_n_fixation_tuptake_mavg(1) <= cost_n_uptake_root(1)) THEN 
-           dcost         = cost_n_uptake_root(1) - cost_n_fixation_tuptake_mavg(1)
-           n_fixation(1) = veg%pool%fine_root%carbon%ptr * vmax_bnf * dcost / (k_bnf + dcost)
+           dcost(1)         = cost_n_uptake_root(1) - cost_n_fixation_tuptake_mavg(1)
+           n_fixation(1) = veg%pool%fine_root%carbon%ptr * vmax_bnf * dcost(1) / (k_bnf + dcost(1))
         ELSE
            n_fixation(1) = 0.0_wp
         ENDIF
@@ -240,21 +241,20 @@ CONTAINS
       CASE ("resistance")
          ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
 !SZ: why is n-demand defined on a static leaf C:N and not the actual growth requirement for N?
-         n_demand = demand_uptake_n_tuptake_mavg(1) / lctlib%cn_leaf * &
+         n_demand(:) = demand_uptake_n_tuptake_mavg(:) / lctlib%cn_leaf * &
                     veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
 
-         f_nacq_bnf = MAX((cost_n_uptake_root(1) - offset_bnf) / &
+         f_nacq_bnf(:) = MAX((cost_n_uptake_root(1) - offset_bnf) / &
                       (cost_n_uptake_root(1) + cost_n_fixation_tuptake_mavg(1)), 0.0_wp)
-         f_nacq_nup = 1.0_wp - f_nacq_bnf
+         f_nacq_nup(:) = 1.0_wp - f_nacq_bnf(:)
   
-         n_fixation(1) = f_nacq_bnf * n_demand 
-         IF(uptake_nh4(1) + uptake_no3(1) > eps8 .AND. & 
-            f_nacq_nup * n_demand < uptake_nh4(1) + uptake_no3(1) ) THEN
-               scal          = (f_nacq_nup * n_demand) / (uptake_nh4(1) + uptake_no3(1))
+         n_fixation(:) = f_nacq_bnf(:) * n_demand(:) 
+         WHERE(uptake_nh4(:) + uptake_no3(:) > eps8 .AND. f_nacq_nup(:) * n_demand(:) < uptake_nh4(:) + uptake_no3(:) )
+               scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
 ! this needs some thoughts...
-               uptake_nh4(1) = uptake_nh4(1) * scal
-               uptake_no3(1) = uptake_no3(1) * scal
-         ENDIF
+               uptake_nh4(:) = uptake_nh4(:) * scal(:)
+               uptake_no3(:) = uptake_no3(:) * scal(:)
+         END WHERE
   
     ENDSELECT 
 

@@ -66,7 +66,7 @@ CONTAINS
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: icanopy     ! for looping across ncanopy layers
-    REAL(wp)                              :: hlp1       ! dummy variable 
+    REAL(wp),DIMENSION(options%nc)        :: hlp1       ! dummy variable 
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ---------------------------
@@ -245,26 +245,26 @@ CONTAINS
                                  maint_respiration_leaf_cl(1,icanopy)  , &
                                  canopy_cond_cl(1,icanopy)             , &
                                  co2_conc_leaf_cl(1,icanopy)           , &
-                                 hlp1, hlp1, hlp1)                   
+                                 hlp1(1), hlp1(1), hlp1(1))                   
 
         gross_assimilation(1) = gross_assimilation(1) + gross_assimilation_cl(1,icanopy) * lai_cl(1,icanopy)
 
         IF(gross_assimilation_cl(1,icanopy) > eps8) THEN
-           hlp1                      = discrimination_ps(co2_conc_leaf_cl(1,icanopy)     , &
+           hlp1(1)                      = discrimination_ps(co2_conc_leaf_cl(1,icanopy)     , &
                                              co2_mixing_ratio(1)   , &
                                              'C13'              , &
                                              lctlib%ps_pathway)
            gross_assimilation_C13(1) = gross_assimilation_C13(1) + gross_assimilation_cl(1,icanopy) * &
                                              lai_cl(1,icanopy) * &
-                                             calc_fractionation(co2_mixing_ratio(1), co2_mixing_ratio_C13(1), hlp1)
-           hlp1                      = discrimination_ps(co2_conc_leaf_cl(1,icanopy)     , &
+                                             calc_fractionation(co2_mixing_ratio(1), co2_mixing_ratio_C13(1), hlp1(1))
+           hlp1(1)                      = discrimination_ps(co2_conc_leaf_cl(1,icanopy)     , &
                                              co2_mixing_ratio(1)   , &
                                              'C14'              , &
                                              lctlib%ps_pathway)
            gross_assimilation_C14(1) = gross_assimilation_C14(1) + gross_assimilation_cl(1,icanopy) * &
                                              lai_cl(1,icanopy) * &
                                              calc_fractionation(co2_mixing_ratio(1), co2_mixing_ratio_C14(1), &
-                                                                hlp1, scale_correction_C14)
+                                                                hlp1(1), scale_correction_C14)
         ENDIF
 
         net_assimilation(1)       = net_assimilation(1)       + net_assimilation_cl(1,icanopy)       * &

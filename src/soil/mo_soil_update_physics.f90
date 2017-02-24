@@ -62,13 +62,13 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc)       :: &                    ! 1D (ics-ice)
+    REAL(wp), DIMENSION(options%nc)       :: &                    ! 1D (nc)
                                              q_sat        , &
                                              q_sat_soil   , &
                                              evaporation  , &
                                              infiltration , &
                                              hlp1
-    REAL(wp),DIMENSION(options%nc,soil_config%nsoil_water) :: &   ! 2D (ics-ice,z-axis)
+    REAL(wp),DIMENSION(options%nc,soil_config%nsoil_water) :: &   ! 2D (nc,z-axis)
                                              ftranspiration , &
                                              fevaporation   , &
                                              theta_sl

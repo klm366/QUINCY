@@ -52,7 +52,7 @@ CONTAINS
     USE mo_veg_memory_class,      ONLY: t_slm_struct_veg_pool
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options           !< model options
     INTEGER,                               INTENT(in)    :: nsoil             !< number of soil layers 
@@ -62,17 +62,26 @@ CONTAINS
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_soluable_litter
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_polymeric_litter
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_woody_litter
+    ! ---------------------------
     ! 0.2 Local 
-    INTEGER                                                 :: iblk, ics, ice, nc
     INTEGER                                                 :: isoil
     REAL(wp), DIMENSION(options%nc)                         :: hlp1
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp2
+    REAL(wp), DIMENSION(options%nc,nsoil)                   :: hlp2
+    INTEGER                                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_transfer_litterfall_pools'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 pure soluable litter -> labile + reserve?
     !!
@@ -257,7 +266,7 @@ CONTAINS
                                   pool_litter,loss_litter,formation_sink)
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options               !< model options
     INTEGER,                               INTENT(in)    :: nsoil                 !< number of soil layers 
@@ -267,15 +276,25 @@ CONTAINS
     TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_litter           !< litter pool to decompose [mol/m3]
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_litter           !< reduction in litter pool [mol/m3/timestep]
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_sink        !< formation of SOM pool [mol/m3/timestep]
+    ! ---------------------------
     ! 0.2 Local 
-    INTEGER                                                 :: iblk, ics, ice, nc
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1,decay_rate
+    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1 , &
+                                             decay_rate
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_turnover'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 calulate decay per timestep
     !!
@@ -310,6 +329,7 @@ CONTAINS
 
   END SUBROUTINE calc_litter_turnover
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools
   !
@@ -326,7 +346,7 @@ CONTAINS
     USE mo_sb_constants,          ONLY: k_mort_microbial, min_mic_biomass, f_soluable_residue
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),       INTENT(in)    :: options            !< model options
     INTEGER,                        INTENT(in)    :: nsoil              !< number of soil layers 
@@ -334,15 +354,25 @@ CONTAINS
     TYPE(t_slm_struct_sb_element),  INTENT(inout) :: loss_microbial     !< microbial death [mol/m3/timestep]
     TYPE(t_slm_struct_sb_element),  INTENT(inout) :: formation_dom      !< DOM formation from microbial death [mol/m3/timestep]
     TYPE(t_slm_struct_sb_element),  INTENT(inout) :: formation_residue  !< residue formation from microbial death [mol/m3/timestep]
+    ! ---------------------------
     ! 0.2 Local 
+    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1 , &
+                                             mortality_rate
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1, mortality_rate
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_turnover'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 calculate microbial mortality rate, limited to minimum microbial biomass density (-> dormant microbes)
     !!
@@ -401,6 +431,7 @@ CONTAINS
 
   END SUBROUTINE calc_microbial_turnover
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools
   !
@@ -423,7 +454,7 @@ CONTAINS
     USE mo_sb_constants, ONLY: vmax_mic_uptake,km_mic_uptake,microbial_cue,microbial_cn,microbial_np
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options             !< model options
     INTEGER,                               INTENT(in)    :: nsoil               !< number of soil layers 
@@ -441,15 +472,28 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_n !< net mineralisation rate [mol N/m3/timestep]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_n15 !< net mineralisation rate [mol 15N/m3/timestep]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_p !< net mineralisation rate [mol P/m3/timestep]
+    ! ---------------------------
     ! 0.2 Local 
+    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1             , &
+                                             uptake_rate      , &
+                                             f_uptake         , &
+                                             uptake_rate_org  , &
+                                             uptake_rate_min     
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1, uptake_rate, f_uptake, uptake_rate_org, uptake_rate_min
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_growth'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> X.X microbial growth
     !! growth on DOM
@@ -522,6 +566,7 @@ CONTAINS
 
   END SUBROUTINE calc_microbial_growth
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools
   !
@@ -541,7 +586,7 @@ CONTAINS
     USE mo_sb_constants,          ONLY: km_depolymerisation
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options               !< model options
     INTEGER,                               INTENT(in)    :: nsoil                 !< number of soil layers 
@@ -554,15 +599,26 @@ CONTAINS
     TYPE(t_slm_struct_sb_element),         INTENT(in)    :: pool_polymeric        !< polymeric/residue pool [mol/m3]
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_polymeric        !< loss of polymeric/residue pool [mol/m3/timestep]
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: formation_dom         !< formation of DOM [mol/m3/timestep]
+    ! ---------------------------
     ! 0.2 Local 
+    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1                   , &
+                                             hlp2                   , &
+                                             depolymerisation_rate
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1,hlp2,depolymerisation_rate
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_depolymerisation'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 determine potential depolymerisation rate [mol / m3 / timestep]
     !!
@@ -607,6 +663,7 @@ CONTAINS
 
   END SUBROUTINE calc_depolymerisation
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools 
   !
@@ -624,14 +681,21 @@ CONTAINS
     USE mo_shared_constants,      ONLY: molar_mass_C 
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: bulk_soil_carbon_sl     !< soil carbon contributing to density [mol C / m3] 
     REAL(wp), INTENT(in) :: bulk_dens_sl             !< bulk density of the mineral soil [kg / m3]
     REAL(wp)             :: bulk_dens_corr_sl       !< combined bulk density of the mineral and organic soil [kg / m3]
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: fract_org
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bulk_density_correction'
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
  
     !> 1.0 calculate organic mass fraction per soil layer 
     !!
@@ -649,6 +713,7 @@ CONTAINS
 
   END FUNCTION calc_bulk_density_correction 
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools 
   !
@@ -665,16 +730,24 @@ CONTAINS
     USE mo_sb_constants,          ONLY: qmax_org_mineral_default 
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: bulk_dens_corr_sl     !< combined bulk density of the mineral and organic soil [kg / m3] 
     REAL(wp)             :: qmax_org      !< maximum sorption capacity of the soil [kg C / m3]
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_qmax_org'
-   
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
     qmax_org = qmax_org_mineral_default * bulk_dens_corr_sl
 
   END FUNCTION calc_qmax_org
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools 
@@ -689,20 +762,30 @@ CONTAINS
   FUNCTION calc_bulk_soil_carbon(options,nsoil,sb_pool) RESULT (bulk_soil_carbon_sl)
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
     TYPE(t_slm_struct_sb_pool),            INTENT(in)    :: sb_pool                 !< pools [mol/m3]
     REAL(wp), DIMENSION(options%nc,nsoil)                :: bulk_soil_carbon_sl
+    ! ---------------------------
     ! 0.2 Local
-    INTEGER                     :: iblk, ics, ice, nc
     INTEGER                     :: isoil
+    INTEGER                     :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bulk_soil_carbon'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     DO isoil = 1,nsoil
        bulk_soil_carbon_sl(:,isoil) = &
@@ -720,6 +803,7 @@ CONTAINS
     ENDDO
 
   END FUNCTION calc_bulk_soil_carbon
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools 
@@ -740,7 +824,7 @@ CONTAINS
     USE mo_sb_constants,          ONLY: k_adsorpt_dom,k_desorpt_dom,k_adsorpt_det,k_desorpt_det 
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
@@ -761,15 +845,27 @@ CONTAINS
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_dom_assoc          !< rate of DOM transport [mol/m3/timestep]
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_residue            !< rate of DOM transport [mol/m3/timestep]
     TYPE(t_slm_struct_sb_element),         INTENT(inout) :: loss_residue_assoc      !< rate of DOM transport [mol/m3/timestep]
+    ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1,avail_sorption_sites,sorption_rate,desorption_rate
+    REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1                   , &
+                                             avail_sorption_sites   , &
+                                             sorption_rate          , &
+                                             desorption_rate        
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_om_sorption'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 Determine available sorption sites [mol C m-3]
     !!
@@ -870,6 +966,7 @@ CONTAINS
 
   END SUBROUTINE calc_om_sorption 
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools
   !
@@ -884,21 +981,30 @@ CONTAINS
   SUBROUTINE calc_jsm_pool_change(options,pool,formation,loss,transport)
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options), INTENT(in)          :: options      !< model options
     TYPE(t_slm_struct_sb_pool),  INTENT(in)       :: formation    !< rate of formation of a pool [mol/m3/timestep]
     TYPE(t_slm_struct_sb_pool),  INTENT(in)       :: loss         !< rate of loss of a pool [mol/m3/timestep]
     TYPE(t_slm_struct_sb_pool),  INTENT(in)       :: transport    !< rate of transport of a pool [mol/m3/timestep]
     TYPE(t_slm_struct_sb_pool),  INTENT(inout)    :: pool         !< the pool [mol/m3]
+    ! ---------------------------
     ! 0.2 Local 
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_jsm_pool_change'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     ! carbon
     pool%dom%carbon%ptr(ics:ice,:,iblk) = pool%dom%carbon%ptr(ics:ice,:,iblk) + & 
@@ -1105,6 +1211,7 @@ CONTAINS
 
   END SUBROUTINE calc_jsm_pool_change
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Functionality used by the SB module, derived from JSM 
   !
@@ -1126,13 +1233,20 @@ CONTAINS
     USE mo_sb_constants,        ONLY: t_ref_tresponse 
 
     IMPLICIT NONE
-
+    ! ---------------------------
     !0.1 InOut
     REAL(wp), INTENT(in)  :: t_soil_sl        !< soil temperature [K]
     REAL(wp), INTENT(in)  :: Ea            !< activation energy [J mol-1]
     REAL(wp)              :: rate_modifier !< temperature rate modifier [unitless] 
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_temperature_rate_modifier'
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     IF(Ea>eps8)THEN
        rate_modifier = exp(-Ea/r_gas*(1._wp/t_soil_sl - 1._wp/t_ref_tresponse))
@@ -1141,6 +1255,7 @@ CONTAINS
     ENDIF   
 
   END FUNCTION calc_temperature_rate_modifier
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Functionality used by the SB module, derived from JSM 
@@ -1159,16 +1274,23 @@ CONTAINS
     USE mo_sb_constants,        ONLY: k1_afps 
 
     IMPLICIT NONE
-
+    ! ---------------------------
     !0.1 InOut
     REAL(wp), INTENT(in)  :: w_soil_sl     !< soil moisture [m]
     REAL(wp), INTENT(in)  :: w_soil_fc_sl  !< soil moisture at field capacity [m]
     REAL(wp), INTENT(in)  :: param         !< 
     REAL(wp)              :: rate_modifier !< oxygen availability rate modifier [unitless] 
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)              :: air_filled_pore_space
     REAL(wp)              :: hlp
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_oxygen_rate_modifier'
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     IF(param>eps8) THEN
        IF(w_soil_fc_sl > eps8) THEN
@@ -1187,6 +1309,7 @@ CONTAINS
 
   END FUNCTION calc_oxygen_rate_modifier
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Functionality used by the SB module, derived from JSM 
   !
@@ -1201,12 +1324,19 @@ CONTAINS
   ELEMENTAL FUNCTION calc_convert_bulk_to_liquid(w_soil_sl) RESULT(factor)
 
     IMPLICIT NONE
-
+    ! ---------------------------
     !0.1 InOut
     REAL(wp), INTENT(in)  :: w_soil_sl           !< soil moisture [m]
     REAL(wp)              :: factor              !< conversion factor [unitless] 
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_convert_bulk_to_liquid'
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     IF(w_soil_sl > eps4) THEN
       factor = 1._wp / w_soil_sl 
@@ -1215,6 +1345,7 @@ CONTAINS
     ENDIF
 
   END FUNCTION calc_convert_bulk_to_liquid
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Functionality used by the SB module, derived from JSM 
@@ -1231,16 +1362,23 @@ CONTAINS
   ELEMENTAL FUNCTION calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
 
     IMPLICIT NONE
-
-    !0.1 InOut
+    ! ---------------------------
+    ! 0.1 InOut
     REAL(wp), INTENT(in)  :: w_soil_sl           !< soil moisture [m]
     REAL(wp), INTENT(in)  :: w_soil_fc_sl        !< soil moisture at field capacity [m]
     REAL(wp), INTENT(in)  :: param               !< 
     REAL(wp)              :: rate_modifier !< oxygen availability rate modifier [unitless] 
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp)              :: air_filled_pore_space
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_substrate_rate_modifier'
-    
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
     IF(param>eps8.AND.w_soil_fc_sl > eps8) THEN
        air_filled_pore_space = (w_soil_sl - w_soil_fc_sl ) / w_soil_fc_sl
        IF(air_filled_pore_space > eps4) THEN

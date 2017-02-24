@@ -45,36 +45,57 @@ CONTAINS
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(SOIL_)
 
-
-  IMPLICIT NONE
-
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile),         INTENT(inout)      :: tile       !< data structure for dynamic vegetation and soil variables
     TYPE(t_jsb_task_options), INTENT(in)         :: options      !< model options
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_model),          POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                                      :: isoil
     INTEGER                                      :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init'
+    ! ---------------------------
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(SOIL_)
+!! *slmtemp    
     TYPE(t_sb_memory),    POINTER                :: sb         ! local pointer to sb__mem for SLM usability
     TYPE(t_soil_memory),    POINTER              :: soil       ! local pointer to soil__mem for SLM usability
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(xx_)
+    ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SOIL_)
+    ! Get process variables (Set pointers to variables in memory)
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts%lib_id)
+    ! ---------------------------
 
+
+!! *slmtemp
     sb      => sb__mem 
     soil    => soil__mem 
-    model   => Get_model(tile%owner_model_id)
-    lctlib  => model%lctlib(tile%lcts%lib_id)
 
-    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
-    nc    = options%nc
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
  
     SELECT CASE(TRIM(base_config%slm_model_name))
 !! BLARPP: still treating plant and land the same here. Dummy version only. Later land and soil need to go together

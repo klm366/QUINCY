@@ -54,9 +54,11 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_soil_memory
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile),         INTENT(inout), TARGET  :: tile         !< one tile
     TYPE(t_jsb_task_options), INTENT(in)             :: options      !< model options
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
@@ -116,13 +118,16 @@ CONTAINS
 ! 2 be removed?: pointers to veg assimi *slmtemp
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
     TYPE(t_veg_memory), POINTER             :: veg       ! local pointer to soil__mem for SLM usability
-
     ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
-
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config
 !    dsl4jsb_Get_config(SB_)
@@ -178,9 +183,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl) 
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl) 
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate) 
+
+
 ! 2 be removed  *slmtemp
     sb   => sb__mem
     veg   => veg__mem
+
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -387,6 +395,7 @@ rmm_desorption = 1.0_wp
 
   END SUBROUTINE update_sb_pools
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task
   !
@@ -410,45 +419,58 @@ rmm_desorption = 1.0_wp
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile),         INTENT(inout), TARGET    :: tile          !< one tile
     TYPE(t_jsb_task_options), INTENT(in)               :: options       !< model options
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools_simple'
-    INTEGER                               :: iblk, ics, ice, nc
     INTEGER                               :: isoil
+    INTEGER                               :: iblk, ics, ice, nc
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools_simple'
+    ! ---------------------------
     ! 0.3 Memory allocation
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
+    ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
     dsl4jsb_Real2D_onChunk      :: uptake_no3
     dsl4jsb_Real2D_onChunk      :: uptake_p
-
+!! *slmtemp    
     TYPE(t_veg_memory), POINTER             :: veg        ! local pointer to veg__mem for SLM usability
     TYPE(t_soil_memory), POINTER            :: soil       ! local pointer to soil__mem for SLM usability
     TYPE(t_sb_memory), POINTER              :: sb         ! local pointer to sb__mem for SLM usability
-
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
-
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+!    IF (.NOT. tile%Is_process_active(xx_)) RETURN
+!    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process config
+!    dsl4jsb_Get_config(xx_)
+    ! Get process memories
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SOIL_)
     dsl4jsb_Get_memory(SB_)
-
+    ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
-
+    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)
 
 
+!! *slmtemp
     veg  => veg__mem
     soil => soil__mem
     sb   => sb__mem

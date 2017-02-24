@@ -566,7 +566,7 @@ CONTAINS
                   !latitude      , &
                   !longitude     , &
                   vpd
-    REAL(wp)      :: hlp1
+    REAL(wp),DIMENSION(options%nc)      :: hlp1
     INTEGER       :: i,lun
     INTEGER       :: ref_pft                          ! PFT identifier
     ! parameters (specific to the test_canopy model)
@@ -785,7 +785,7 @@ CONTAINS
   lun = lun + 1
   WRITE(lun,*) 'T A GC CI' 
   t_air(:) = - 5.0_wp + Tzero
-  hlp1 = t_jmax_opt_mavg(1)
+  hlp1(:)  = t_jmax_opt_mavg(:)
 
   DO i = 1,70
 
@@ -813,7 +813,7 @@ CONTAINS
         options            , &
         t_air = t_air, &
         q_air = q_air)
-  t_jmax_opt_mavg(1) = hlp1 
+  t_jmax_opt_mavg(:) = hlp1(:) 
 
   !> 2.3 atmospheric CO2 (175 - 1000 ppm) 
   !! 

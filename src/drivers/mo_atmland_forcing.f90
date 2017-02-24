@@ -43,6 +43,7 @@ CONTAINS
                                   iblk               , &  ! in
                                   ics                , &  ! in
                                   ice                , &  ! in
+                                  nc                 , &  ! in
                                   time               , &  ! in
                                   t_air              , &  ! out
                                   q_air              , &  ! out
@@ -95,7 +96,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile)  , INTENT(inout) :: tile     !< one tile
-    INTEGER           , INTENT(in)    :: iblk, ics, ice
+    INTEGER           , INTENT(in)    :: iblk, ics, ice, nc
     REAL(wp)          , INTENT(in)    :: time     !< current time (not timestep !)
     REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from atm2land memory
                                       t_air(:)              , &    !< ..
@@ -167,20 +168,19 @@ CONTAINS
                      rmm_mic_uptake_r, rmm_sorption_r, & 
                      rmm_desorption_r, rmm_hsc_r, &
                      percolation_sl_r
-    INTEGER  :: stat          ! status of I/O (https://software.intel.com/en-us/node/691976)
-    INTEGER  :: lun           ! logical unit number for file input stream, see '2.0 read data'
-    REAL(wp) :: sw_toa_down   ! potential radiation at the top of the atmosphere
-    REAL(wp) :: year          ! dummy variable
-    REAL(wp) :: hour          ! dummy variable
-    REAL(wp) :: hlp1          ! dummy variable 
-    REAL(wp) :: time_hlp      ! dummy variable for soil forcing
-    REAL(wp),         SAVE        :: day                    ! read input dummy variable - save value
-    REAL(wp)                      :: doy_old, &             ! check for new year (column 2 in input file would change from 365 -> 1)
-                                     doy_new
-    INTEGER                       :: nlevel_soil  = -1      ! number of levels at the Z-Axis (soil layer)
-    INTEGER                       :: nlevel_veg   = -1      ! number of levels at the Z-Axis (canopy layer)
-    INTEGER                       :: nc                     ! number of chunks ice-ics+1
-    INTEGER                       :: isoil
+    INTEGER                   :: stat          ! status of I/O (https://software.intel.com/en-us/node/691976)
+    INTEGER                   :: lun           ! logical unit number for file input stream, see '2.0 read data'
+    REAL(wp), DIMENSION(nc)   :: sw_toa_down   ! potential radiation at the top of the atmosphere
+    REAL(wp), DIMENSION(nc)   :: hlp1          ! dummy variable 
+    REAL(wp)                  :: year          ! dummy variable
+    REAL(wp)                  :: hour          ! dummy variable
+    REAL(wp)                  :: time_hlp      ! dummy variable for soil forcing
+    REAL(wp), SAVE            :: day                    ! read input dummy variable - save value
+    REAL(wp)                  :: doy_old, &             ! check for new year (column 2 in input file would change from 365 -> 1)
+                                 doy_new
+    INTEGER                   :: nlevel_soil  = -1      ! number of levels at the Z-Axis (soil layer)
+    INTEGER                   :: nlevel_veg   = -1      ! number of levels at the Z-Axis (canopy layer)
+    INTEGER                   :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_forcing'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -211,6 +211,8 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
 
+
+
 ! 2 be removed  *slmtemp
     sb      => sb__mem 
     veg     => veg__mem 
@@ -221,7 +223,6 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    nc      = ice - ics + 1
     doy_old = 0.0_wp  ! doy in the previous timestep, used for detecting a new year
 
     ! give atm2land variables a value to avoid compiler warning #6843: A dummy argument with an explicit INTENT(OUT) declaration is not given an explicit value
@@ -271,7 +272,7 @@ CONTAINS
     !> 1.0 orbital parameters
     !!
     !! 'declination' is calculated as output paramater, but not needed here
-    CALL update_orbital_parameters(time,declination,sw_toa_down)  ! mo_atmland_util
+    CALL update_orbital_parameters(time,declination,sw_toa_down(1))  ! mo_atmland_util
 
 
     !> 2.0 read data
@@ -325,16 +326,16 @@ CONTAINS
     !!
     wind_10m(1)             = wind_air_r
     ga(1)                   = 40.0_wp / drag_srf(1) * wind_10m(1)
-    hlp1                    = calc_mixing_ratio_C13C12(def_co2_deltaC13)                 ! function: calc_mixing_ratio_C13C12
-    co2_mixing_ratio_C13(1) = co2_mixing_ratio_r / (1._wp + 1._wp/hlp1)
-    hlp1                    = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) ! function: calc_mixing_ratio_C14C
-    co2_mixing_ratio_C14(1) = hlp1 * co2_mixing_ratio_r
+    hlp1(1)                 = calc_mixing_ratio_C13C12(def_co2_deltaC13)                 ! function: calc_mixing_ratio_C13C12
+    co2_mixing_ratio_C13(1) = co2_mixing_ratio_r / (1._wp + 1._wp/hlp1(1))
+    hlp1(1)                 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) ! function: calc_mixing_ratio_C14C
+    co2_mixing_ratio_C14(1) = hlp1(1) * co2_mixing_ratio_r
 
     cos_zenith_angle(1) = calc_solar_angle(grid%lat,grid%lon,time)                       ! function: calc_solar_angle
     swnir_srf_down(1)   = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
     swvis_srf_down_r    = frac_vis_swtot_srf * swvis_srf_down_r 
     swpar_srf_down(1)   = frac_par_swvis_srf * swvis_srf_down_r
-    swpar_fdiffuse(1)   = calc_sw_fdiffuse(swvis_srf_down_r + swnir_srf_down(1), sw_toa_down, cos_zenith_angle(1)) ! function: calc_sw_fdiffuse
+    swpar_fdiffuse(1)   = calc_sw_fdiffuse(swvis_srf_down_r + swnir_srf_down(1), sw_toa_down(1), cos_zenith_angle(1)) ! function: calc_sw_fdiffuse
 
     !> 5.0 pass values read from file (i.e. scalar values) to ics-ice
     !!

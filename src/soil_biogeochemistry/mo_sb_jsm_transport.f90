@@ -43,7 +43,7 @@ CONTAINS
                                          transport_dom, transport_nh4_solute, transport_no3_solute, & 
                                          transport_po4_solute, transport_nh4_n15_solute, transport_no3_n15_solute)
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
@@ -61,14 +61,23 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_po4_solute   !< rate of PO4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_nh4_n15_solute !< rate of N15H4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_no3_n15_solute !< rate of N15O3 transport [mol/m3/timestep]
+    ! ---------------------------
     ! 0.2 Local
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_phase_transport_wrapper'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 transport of DOM
     !!
@@ -99,6 +108,7 @@ CONTAINS
 
   END SUBROUTINE calc_liquid_phase_transport_wrapper
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools 
   !
@@ -120,7 +130,7 @@ CONTAINS
                                           transport_po4_assoc, transport_nh4_n15_assoc)
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
@@ -142,14 +152,23 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_nh4_assoc        !< rate of NH4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_po4_assoc        !< rate of PO4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_nh4_n15_assoc    !< rate of N15H4 transport [mol/m3/timestep]
+    ! ---------------------------
     ! 0.2 Local
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport_wrapper'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 transport of organic pools
     !! 
@@ -264,6 +283,7 @@ CONTAINS
 
   END SUBROUTINE calc_bioturbation_transport_wrapper
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools 
   !
@@ -283,7 +303,7 @@ CONTAINS
     USE mo_shared_constants,      ONLY: molar_mass_C
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in) :: options
     INTEGER,                               INTENT(in) :: nsoil
@@ -292,16 +312,24 @@ CONTAINS
     TYPE(t_slm_struct_sb_pool),            INTENT(in) :: sb_formation           !< formation of pools [mol/m3/timestep]
     TYPE(t_slm_struct_sb_pool),            INTENT(in) :: sb_loss                !< loss from pools [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,nsoil)             :: particle_fluxrate 
+    ! ---------------------------
     ! 0.2 Local
-    ! 0.2 Local
-    INTEGER                     :: iblk, ics, ice, nc
     INTEGER                     :: isoil
+    INTEGER                     :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_fluxrate'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 calculate net change of organic matter cummulative down the profile 
     !! note the omission of woody litter in the first layer, which is assumed not to be part of the profile 
@@ -336,6 +364,7 @@ CONTAINS
 
   END FUNCTION calc_particle_fluxrate
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools 
   !
@@ -355,7 +384,7 @@ CONTAINS
                                           transport_nh4_n15_assoc, transport_no3_n15_solute)
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
@@ -379,16 +408,25 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_nh4_n15_solute   !< rate of solute N15H4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_no3_n15_solute   !< rate of solute N15O3 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport_nh4_n15_assoc    !< rate of associated N15H4 transport [mol/m3/timestep]
+    ! ---------------------------
     ! 0.2 Local
-    INTEGER                               :: iblk, ics, ice, nc
     INTEGER                               :: isoil
     REAL(wp), DIMENSION(options%nc,nsoil) :: particle_fluxrate_woody
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_transport_wrapper'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Get local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 transport of organic pools
     !! 
@@ -577,6 +615,7 @@ CONTAINS
 
   END SUBROUTINE calc_particle_transport_wrapper
 
+
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from calc_particle_transport 
   !
@@ -591,7 +630,7 @@ CONTAINS
   SUBROUTINE calc_particle_transport(options,nsoil,particle_fluxrate,soil_depth_sl,pool,transport)
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
@@ -599,21 +638,28 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_sl           !< depth of each soil layer [m] 
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: pool                   !< current state of pool to be transported
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport              !< transport between layers per timestep 
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc) :: hlp1 
     INTEGER                         :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_transport'
 
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
     !> 1.0 advective transport in the vertical axis of the soil (i.e. down)
     !! I can do 1,n-1 here, because by definition, there cannot be any upward transport from the uppermost layer
     DO isoil = 1,nsoil-1
        WHERE(particle_fluxrate(:,isoil)>0.0_wp)
-          hlp1 = particle_fluxrate(:,isoil) * pool(:,isoil) * soil_depth_sl(:,isoil)
+          hlp1(:) = particle_fluxrate(:,isoil) * pool(:,isoil) * soil_depth_sl(:,isoil)
        ELSEWHERE
-          hlp1 = particle_fluxrate(:,isoil) * pool(:,isoil+1) * soil_depth_sl(:,isoil+1)
+          hlp1(:) = particle_fluxrate(:,isoil) * pool(:,isoil+1) * soil_depth_sl(:,isoil+1)
        ENDWHERE
-       transport(:,isoil)   = transport(:,isoil)   - hlp1 / soil_depth_sl(:,isoil)
-       transport(:,isoil+1) = transport(:,isoil+1) + hlp1 / soil_depth_sl(:,isoil+1)
+       transport(:,isoil)   = transport(:,isoil)   - hlp1(:) / soil_depth_sl(:,isoil)
+       transport(:,isoil+1) = transport(:,isoil+1) + hlp1(:) / soil_depth_sl(:,isoil+1)
        
    ENDDO
 
@@ -621,13 +667,14 @@ CONTAINS
    !!  based on the assumption that there is no upward flux, and that all other 
    !!  material is lost
 !   WHERE(particle_fluxrate(:,nsoil)>0.0_wp)
-!      hlp1 = particle_fluxrate(:,nsoil) * pool(:,nsoil) * soil_depth_sl(:,nsoil)
+!      hlp1(:) = particle_fluxrate(:,nsoil) * pool(:,nsoil) * soil_depth_sl(:,nsoil)
 !   ELSEWHERE
-      hlp1 = 0.0_wp 
+      hlp1(:) = 0.0_wp 
 !   ENDWHERE
-   transport(:,nsoil) = transport(:,nsoil) - hlp1 / soil_depth_sl(:,nsoil)
+   transport(:,nsoil) = transport(:,nsoil) - hlp1(:) / soil_depth_sl(:,nsoil)
 
   END SUBROUTINE calc_particle_transport
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from calc_liquid_phase_transport_wrapper
@@ -643,7 +690,7 @@ CONTAINS
   SUBROUTINE calc_liquid_phase_transport(options,nsoil,percolation_sl,soil_depth_sl,pool,transport)
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
@@ -651,34 +698,40 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_sl           !< depth of each soil layer [m] 
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: pool                   !< current state of pool to be transported
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport              !< transport between layers per timestep 
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc) :: hlp1 
     INTEGER                         :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_transport'
 
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
     !> 1.0 advective transport in the vertical axis of the soil (i.e. down)
     !! I can do 1,n-1 here, because by definition, there cannot be any upward transport from the uppermost layer
     DO isoil = 1,nsoil-1
        WHERE(percolation_sl(:,isoil)>0.0_wp)
-          hlp1 = percolation_sl(:,isoil) * dtime/1000._wp * pool(:,isoil) * soil_depth_sl(:,isoil)
+          hlp1(:) = percolation_sl(:,isoil) * dtime/1000._wp * pool(:,isoil) * soil_depth_sl(:,isoil)
 !! BLARPP for now no upward transport - need to properly think about this in update_soil_physics
        ELSEWHERE
-          hlp1 = 0.0_wp ! percolation_sl(:,isoil) * dtime/1000._wp * pool(:,isoil+1) * soil_depth_sl(:,isoil+1)
+          hlp1(:) = 0.0_wp ! percolation_sl(:,isoil) * dtime/1000._wp * pool(:,isoil+1) * soil_depth_sl(:,isoil+1)
        ENDWHERE
-       transport(:,isoil)   = transport(:,isoil)   - hlp1 / soil_depth_sl(:,isoil)
-       transport(:,isoil+1) = transport(:,isoil+1) + hlp1 / soil_depth_sl(:,isoil+1)
-       
-   ENDDO
+       transport(:,isoil)   = transport(:,isoil)   - hlp1(:) / soil_depth_sl(:,isoil)
+       transport(:,isoil+1) = transport(:,isoil+1) + hlp1(:) / soil_depth_sl(:,isoil+1)
+    ENDDO
 
-   !> 2.0 lower boundary condition,
-   !!  based on the assumption that there is no upward flux, and that all other 
-   !!  material is lost
-   WHERE(percolation_sl(:,nsoil)>0.0_wp)
-      hlp1 = percolation_sl(:,nsoil) * dtime/1000._wp * pool(:,nsoil) * soil_depth_sl(:,nsoil)
-   ELSEWHERE
-      hlp1 = 0.0_wp 
-   ENDWHERE
-   transport(:,nsoil) = transport(:,nsoil) - hlp1 / soil_depth_sl(:,nsoil)
+    !> 2.0 lower boundary condition,
+    !!  based on the assumption that there is no upward flux, and that all other 
+    !!  material is lost
+    WHERE(percolation_sl(:,nsoil)>0.0_wp)
+      hlp1(:) = percolation_sl(:,nsoil) * dtime/1000._wp * pool(:,nsoil) * soil_depth_sl(:,nsoil)
+    ELSEWHERE
+      hlp1(:) = 0.0_wp 
+    ENDWHERE
+    transport(:,nsoil) = transport(:,nsoil) - hlp1(:) / soil_depth_sl(:,nsoil)
 
   END SUBROUTINE calc_liquid_phase_transport
 
@@ -698,14 +751,21 @@ CONTAINS
     USE mo_sb_constants, ONLY: k_diff_org
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: bulk_dens_corr_sl      !< OM corrected bulk density [kg m-3] 
     REAL(wp), DIMENSION(options%nc,nsoil)                :: k_bioturb              !< diffusion factor for bioturbation 
+    ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_rate'
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 
     WHERE(bulk_dens_corr_sl(:,:) > eps8) 
@@ -715,6 +775,7 @@ CONTAINS
     ENDWHERE
 
   END FUNCTION calc_bioturbation_rate
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from calc_bioturbation_transport 
@@ -730,7 +791,7 @@ CONTAINS
   SUBROUTINE calc_bioturbation_transport(options,nsoil,k_bioturb,soil_depth_sl,pool,transport)
 
     IMPLICIT NONE
-
+    ! ---------------------------
     ! 0.1 InOut
     TYPE(t_jsb_task_options),              INTENT(in)    :: options
     INTEGER,                               INTENT(in)    :: nsoil
@@ -738,10 +799,17 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m] 
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(in)    :: pool                   !< current state of pool to be transported
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: transport              !< transport between layers per timestep 
+    ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(options%nc) :: hlp1,hlp2 
     INTEGER                         :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport'
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> 1.0 diffusion transport in the vertical axis of the soil (i.e. down)
     !! I can do 1,n-1 here, because by definition, there cannot be any upward transport from the uppermost layer
@@ -750,15 +818,15 @@ CONTAINS
     DO isoil = 1,nsoil-1
 
        ! distance between the centres of the soil layers
-       hlp1 = (soil_depth_sl(:,isoil)/2.0_wp + soil_depth_sl(:,isoil+1)/2.0_wp)
+       hlp1(:) = (soil_depth_sl(:,isoil)/2.0_wp + soil_depth_sl(:,isoil+1)/2.0_wp)
 
-       WHERE(hlp1 > eps8)  
-          hlp2 = k_bioturb(:,isoil) * dtime * (pool(:,isoil) - pool(:,isoil+1)) / hlp1 
+       WHERE(hlp1(:) > eps8)  
+          hlp2(:) = k_bioturb(:,isoil) * dtime * (pool(:,isoil) - pool(:,isoil+1)) / hlp1(:) 
        ELSEWHERE
-          hlp2 = 0.0_wp
+          hlp2(:) = 0.0_wp
        ENDWHERE
-       transport(:,isoil)   = transport(:,isoil)   - hlp2 / soil_depth_sl(:,isoil)
-       transport(:,isoil+1) = transport(:,isoil+1) + hlp2 / soil_depth_sl(:,isoil+1)
+       transport(:,isoil)   = transport(:,isoil)   - hlp2(:) / soil_depth_sl(:,isoil)
+       transport(:,isoil+1) = transport(:,isoil+1) + hlp2(:) / soil_depth_sl(:,isoil+1)
 
    ENDDO
 

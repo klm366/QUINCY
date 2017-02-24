@@ -232,6 +232,7 @@ PROGRAM land_model_driver
                             iblk    , &
                             ics     , &
                             ice     , &
+                            nc      , &
                             time_day, & 
                                   !! forcing (read from file and passed to atm2land memory via the land_model_interface)
                                   !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: 
