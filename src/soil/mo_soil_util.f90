@@ -22,13 +22,13 @@ MODULE mo_soil_util
 
 CONTAINS
 
-  FUNCTION soil_depth_to_layers_2d(soil_depth, dz) RESULT(soil_depth_l)
+  FUNCTION soil_depth_to_layers_2d(soil_depth, dz) RESULT(soil_depth_sl)
 
     IMPLICIT NONE
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: soil_depth(:,:)
     REAL(wp), INTENT(in) :: dz(:)
-    REAL(wp)             :: soil_depth_l(SIZE(soil_depth,1), SIZE(dz), SIZE(soil_depth,2))
+    REAL(wp)             :: soil_depth_sl(SIZE(soil_depth,1), SIZE(dz), SIZE(soil_depth,2))
     ! 0.2 Local
     REAL(wp) :: dz_cumsum(SIZE(dz)), dz_cumsum_m1(SIZE(dz))
     INTEGER  :: nsoil, i
@@ -43,13 +43,13 @@ CONTAINS
     dz_cumsum(1)    = dz(1)
     dz_cumsum_m1(1) = 0._wp
 
-    soil_depth_l(:,:,:) = 0._wp
+    soil_depth_sl(:,:,:) = 0._wp
 
     DO i=1,nsoil
       WHERE (soil_depth(:,:) > dz_cumsum(i))
-        soil_depth_l(:,i,:) = dz(i)
+        soil_depth_sl(:,i,:) = dz(i)
       ELSEWHERE (soil_depth(:,:) > dz_cumsum_m1(i))
-        soil_depth_l(:,i,:) = soil_depth(:,:) - dz_cumsum_m1(i)
+        soil_depth_sl(:,i,:) = soil_depth(:,:) - dz_cumsum_m1(i)
       END WHERE
     END DO
 

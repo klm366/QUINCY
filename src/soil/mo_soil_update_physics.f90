@@ -105,17 +105,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: w_soil_root_pot
     dsl4jsb_Real2D_onChunk                :: runoff
     dsl4jsb_Real2D_onChunk                :: drainage
-    dsl4jsb_Real3D_onChunk                :: soil_depth_l
-    dsl4jsb_Real3D_onChunk                :: bulk_dens_l
-    dsl4jsb_Real3D_onChunk                :: heat_capa_l
-    dsl4jsb_Real3D_onChunk                :: therm_cond_l
-    dsl4jsb_Real3D_onChunk                :: root_fraction_l
+    dsl4jsb_Real3D_onChunk                :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk                :: bulk_dens_sl
+    dsl4jsb_Real3D_onChunk                :: heat_capa_sl
+    dsl4jsb_Real3D_onChunk                :: therm_cond_sl
+    dsl4jsb_Real3D_onChunk                :: root_fraction_sl
     dsl4jsb_Real3D_onChunk                :: w_soil_pwp_sl
     dsl4jsb_Real3D_onChunk                :: w_soil_fc_sl 
     dsl4jsb_Real3D_onChunk                :: w_soil_sl
     dsl4jsb_Real3D_onChunk                :: percolation_sl
     dsl4jsb_Real3D_onChunk                :: drainage_sl
-    dsl4jsb_Real3D_onChunk                :: t_soil
+    dsl4jsb_Real3D_onChunk                :: t_soil_sl
     dsl4jsb_Real2D_onChunk                :: canopy_cond            ! ASSIMI_
     dsl4jsb_Real2D_onChunk                :: sw_srf_net             ! RAD_
     dsl4jsb_Real2D_onChunk                :: transpiration          ! VEG_
@@ -165,17 +165,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
     dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)
     dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_l)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_l)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_l)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_l)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pwp_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_fc_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, drainage_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
     ! ---------------------------
@@ -196,7 +196,7 @@ CONTAINS
     !> 1.1 calculate saturating specific humidity 
     !!
     q_sat(:) = calc_spec_humidity_sat(t_air(:),press_srf(:))
-    q_sat_soil(:) = calc_spec_humidity_sat(t_soil(:,1),press_srf(:))
+    q_sat_soil(:) = calc_spec_humidity_sat(t_soil_sl(:,1),press_srf(:))
 
     !> 1.2. calulate transpiration (kg / m2 / s)
     !! T = rho * (qsat - qair ) * Gtot in mm/s 
@@ -236,7 +236,7 @@ CONTAINS
        !! (ignoring instabilities and actual surface moisture...)
        !!
        sensible_heat_flx(:) = heat_transfer_coef(drag_srf(:), model%options%steplen) * & 
-                             (surface_dry_static_energy(t_soil(:,1),q_sat_soil(:)) - & 
+                             (surface_dry_static_energy(t_soil_sl(:,1),q_sat_soil(:)) - & 
                               surface_dry_static_energy(t_air(:),q_air(:)))
 
        !> 2.2 Estimate ground flux and update deep soil temperature
@@ -244,27 +244,27 @@ CONTAINS
        !! (ignores interaction of diffusion with water or ice)
        !!
        DO isoil = soil_config%nsoil_water,2,-1
-          WHERE(soil_depth_l(:,isoil) > eps8)
-             ground_heat_flx(:) = (t_soil(:,isoil-1)-t_soil(:,isoil)) * therm_cond_l(:,isoil) / & 
-                        (soil_depth_l(:,isoil)/2.0_wp+soil_depth_l(:,isoil-1)/2.0_wp)
-             t_soil(:,isoil) = t_soil(:,isoil) + ground_heat_flx(:) * dtime / & 
-                        (heat_capa_l(:,isoil) * bulk_dens_l(:,isoil) * soil_depth_l(:,isoil)) 
+          WHERE(soil_depth_sl(:,isoil) > eps8)
+             ground_heat_flx(:) = (t_soil_sl(:,isoil-1)-t_soil_sl(:,isoil)) * therm_cond_sl(:,isoil) / & 
+                        (soil_depth_sl(:,isoil)/2.0_wp+soil_depth_sl(:,isoil-1)/2.0_wp)
+             t_soil_sl(:,isoil) = t_soil_sl(:,isoil) + ground_heat_flx(:) * dtime / & 
+                        (heat_capa_sl(:,isoil) * bulk_dens_sl(:,isoil) * soil_depth_sl(:,isoil)) 
           END WHERE 
        ENDDO 
   
        !> 2.3 update net radiation flux at the surface, and implied soil temperature
        !!
        net_radiation(:) = latent_heat_flx(:) + sensible_heat_flx(:) - ground_heat_flx(:) 
-       t_soil(:,1) = t_soil(:,1) + ( sw_srf_net(:) - net_radiation(:) + & 
+       t_soil_sl(:,1) = t_soil_sl(:,1) + ( sw_srf_net(:) - net_radiation(:) + & 
                                 ! simple estimate of surface net longwave flux
-                                lw_srf_down(:) - stbo * zemiss_def * t_soil(:,1)**4 ) / & 
-                                (heat_capa_l(:,1) * bulk_dens_l(:,1) * soil_depth_l(:,1)) * &
+                                lw_srf_down(:) - stbo * zemiss_def * t_soil_sl(:,1)**4 ) / & 
+                                (heat_capa_sl(:,1) * bulk_dens_sl(:,1) * soil_depth_sl(:,1)) * &
                                 dtime 
 
     ELSE ! diagnose sensible heat flux from net radiation and set soil temperature to air temperature 
        ground_heat_flx(:) = 0.0_wp 
        sensible_heat_flx(:) = net_radiation(:) - latent_heat_flx(:) 
-       t_soil(:,1) = t_air(:)
+       t_soil_sl(:,1) = t_air(:)
     ENDIF
 
     !> 3.0 update soil moisture
@@ -303,7 +303,7 @@ CONTAINS
           !! note that for ease of computation this is not 100% mass conserving and not meant to be!
           !!
           DO isoil = 1,soil_config%nsoil_water
-             WHERE(root_fraction_l(:,isoil) > eps8)
+             WHERE(root_fraction_sl(:,isoil) > eps8)
                 w_soil_sl(:,isoil) = w_soil_pwp_sl(:,isoil) + & 
                    w_soil_root_theta(:) * (w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil))
              END WHERE
@@ -331,7 +331,7 @@ CONTAINS
                 hlp1(:) = (w_soil_sl(:,isoil) - w_soil_pwp_sl(:,isoil)) / & 
                        (w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil))
                 hlp1(:) = calc_soil_moisture_stress(hlp1(:),lctlib%lambda_soil_gs,lctlib%weibull_k_soil_gs)
-                ftranspiration(:,isoil) = root_fraction_l(:,isoil) * hlp1(:) 
+                ftranspiration(:,isoil) = root_fraction_sl(:,isoil) * hlp1(:) 
              END WHERE
           ENDDO
           IF(sum(ftranspiration(:,:)) > eps8 ) THEN 
@@ -350,9 +350,9 @@ CONTAINS
           runoff(:) = rain(:) + snow(:) - infiltration(:) * 1000._wp / dtime
 
           ! modify surface runoff and infiltration such that a constant fraction is actually leaked below the first layer
-          drainage_sl(:,1) = drain_frac / soil_depth_l(:,1) * infiltration(:) + fdrain_runoff * runoff(:)
+          drainage_sl(:,1) = drain_frac / soil_depth_sl(:,1) * infiltration(:) + fdrain_runoff * runoff(:)
           runoff(:) = ( 1.0_wp - fdrain_runoff ) * runoff(:)  
-          infiltration(:) = ( 1.0_wp - drain_frac / soil_depth_l(:,1) ) * infiltration(:)
+          infiltration(:) = ( 1.0_wp - drain_frac / soil_depth_sl(:,1) ) * infiltration(:)
 
           w_soil_sl(:,1) = w_soil_sl(:,1) + (infiltration(:) - &
                evaporation(:) * fevaporation(:,1) + transpiration(:) * ftranspiration(:,1)) / 1000._wp * dtime
@@ -368,12 +368,12 @@ CONTAINS
           DO isoil = 2,soil_config%nsoil_water
 
                ! drainage from this layer due to preferential flow of infiltering water flux
-               drainage_sl(:,isoil) = drain_frac / soil_depth_l(:,isoil) * & 
+               drainage_sl(:,isoil) = drain_frac / soil_depth_sl(:,isoil) * & 
                                                  drainage_sl(:,isoil-1)
 
                ! water balance of soil layer
                w_soil_sl(:,isoil) = w_soil_sl(:,isoil) + & 
-                    (( 1.0_wp - drain_frac / soil_depth_l(:,isoil) ) * drainage_sl(:,isoil-1) - & 
+                    (( 1.0_wp - drain_frac / soil_depth_sl(:,isoil) ) * drainage_sl(:,isoil-1) - & 
                      evaporation(:) * fevaporation(:,isoil) + transpiration(:) * ftranspiration(:,isoil)) / 1000._wp * dtime
 
                ! drain surplus water to lower layer to keep water storage below field capacity
@@ -395,7 +395,7 @@ CONTAINS
              ! diffusion is taken to be proportional to the fractional water content difference 
              hlp1 = kdiff_theta * theta_sl(:,isoil) * dtime * & 
                    (theta_sl(:,isoil-1) - theta_sl(:,isoil)) / &  
-                   ((soil_depth_l(:,isoil-1)+(soil_depth_l(:,isoil)))/2.0_wp)
+                   ((soil_depth_sl(:,isoil-1)+(soil_depth_sl(:,isoil)))/2.0_wp)
 
              w_soil_sl(:,isoil-1) = w_soil_sl(:,isoil-1) - hlp1(:)
              w_soil_sl(:,isoil) = w_soil_sl(:,isoil) + hlp1(:) 
@@ -426,7 +426,7 @@ CONTAINS
           w_soil_root_pot(:) = 0.0_wp
           DO isoil=1,soil_config%nsoil_water
              WHERE(w_soil_fc_sl(:,1) > eps8)
-                 w_soil_root_pot(:) = w_soil_root_pot(:) + root_fraction_l(:,isoil) * &
+                 w_soil_root_pot(:) = w_soil_root_pot(:) + root_fraction_sl(:,isoil) * &
                           k_soil_phi1 * ( MAX(min_theta_wpot,w_soil_sl(:,isoil) / w_soil_fc_sl(:,isoil)) )**k_soil_phi2
              ENDWHERE
           ENDDO

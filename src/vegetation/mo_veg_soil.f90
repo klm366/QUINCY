@@ -69,7 +69,7 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real3D_onChunk      :: soil_depth_l                 ! SOIL_
+    dsl4jsb_Real3D_onChunk      :: soil_depth_sl                 ! SOIL_
     dsl4jsb_Real2D_onChunk      :: f_n_demand                   ! VEG_
     dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: f_p_demand
@@ -110,7 +110,7 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
@@ -178,14 +178,14 @@ CONTAINS
          ! OCN's MM Kinetics
          uptake_nh4(1) = lctlib%vmax_uptake_n * &
                  demand_uptake_n_tuptake_mavg(1) * & 
-                 sb%nh4_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_n_aff1 + & 
-                   1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil_depth_l(1,1) )) * & 
+                 sb%nh4_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_n_aff1 + & 
+                   1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil_depth_sl(1,1) )) * & 
                    veg%pool%fine_root%carbon%ptr
          
          uptake_no3(1) = lctlib%vmax_uptake_n * &
                  demand_uptake_n_tuptake_mavg(1) * & 
-                 sb%no3_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_n_aff1 + & 
-                   1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil_depth_l(1,1) )) * & 
+                 sb%no3_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_n_aff1 + & 
+                   1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil_depth_sl(1,1) )) * & 
                  veg%pool%fine_root%carbon%ptr
 
     ENDSELECT
@@ -207,8 +207,8 @@ CONTAINS
          ! OCN's MM Kinetics
          uptake_p(1) = lctlib%vmax_uptake_p * & 
                  demand_uptake_p_tuptake_mavg(1) * & 
-                 sb%po4_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_p_aff1 + & 
-                   1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil_depth_l(1,1) )) * & 
+                 sb%po4_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_p_aff1 + & 
+                   1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil_depth_sl(1,1) )) * & 
                  veg%pool%fine_root%carbon%ptr
 
     ENDSELECT
@@ -223,7 +223,7 @@ CONTAINS
         n_fixation(1) = 0.0_wp
 
       CASE("standard")
-        IF(sb%nh4_solute%ptr(1,1,1) * soil_depth_l(1,1) < soil_n_threshold_bnf) n_fixation(1) = lctlib%bnf_base 
+        IF(sb%nh4_solute%ptr(1,1,1) * soil_depth_sl(1,1) < soil_n_threshold_bnf) n_fixation(1) = lctlib%bnf_base 
 
       !> 3.2 Case 2: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
@@ -261,13 +261,13 @@ CONTAINS
     !> 4.0 Calculate potential and actual N uptake per unit fine root carbon
     !!
     unit_uptake_n_pot(1) = lctlib%vmax_uptake_n * &
-                                (sb%nh4_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_n_aff1 + &
-                                 1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil_depth_l(1,1))) + &
-                                 sb%no3_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_n_aff1 + &
-                                 1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil_depth_l(1,1))))
+                                (sb%nh4_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_n_aff1 + &
+                                 1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil_depth_sl(1,1))) + &
+                                 sb%no3_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_n_aff1 + &
+                                 1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil_depth_sl(1,1))))
     unit_uptake_p_pot(1) = lctlib%vmax_uptake_p * &
-                                sb%po4_solute%ptr(1,1,1) * soil_depth_l(1,1) * ( lctlib%soil_p_aff1 + &
-                                1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil_depth_l(1,1) ))
+                                sb%po4_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_p_aff1 + &
+                                1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil_depth_sl(1,1) ))
 
     IF(veg%pool%fine_root%carbon%ptr > eps8) THEN
       unit_uptake_n_act(1) = (uptake_nh4(1) + uptake_no3(1)) / veg%pool%fine_root%carbon%ptr

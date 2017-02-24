@@ -64,11 +64,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk    :: w_soil_root_pwp
     dsl4jsb_Real2D_onChunk    :: w_soil_root_fc
     dsl4jsb_Real2D_onChunk    :: w_soil_root_theta
-    dsl4jsb_Real3D_onChunk    :: soil_depth_l
-    dsl4jsb_Real3D_onChunk    :: bulk_dens_l
-    dsl4jsb_Real3D_onChunk    :: heat_capa_l
-    dsl4jsb_Real3D_onChunk    :: therm_cond_l
-    dsl4jsb_Real3D_onChunk    :: root_fraction_l
+    dsl4jsb_Real3D_onChunk    :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk    :: bulk_dens_sl
+    dsl4jsb_Real3D_onChunk    :: heat_capa_sl
+    dsl4jsb_Real3D_onChunk    :: therm_cond_sl
+    dsl4jsb_Real3D_onChunk    :: root_fraction_sl
     dsl4jsb_Real3D_onChunk    :: w_soil_pwp_sl
     dsl4jsb_Real3D_onChunk    :: w_soil_fc_sl 
     dsl4jsb_Real3D_onChunk    :: w_soil_sl
@@ -97,11 +97,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pwp)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_fc)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_l)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_l)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_l)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_l)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pwp_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_fc_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
@@ -124,13 +124,13 @@ CONTAINS
 
     ! Compute actual soil layer depths based on the fixed layer thicknesses from namelist and
     ! the bedrock depth just read in.
-    dsl4jsb_var3D_onDomain(SOIL_, soil_depth_l) = soil_depth_to_layers_2d( &
+    dsl4jsb_var3D_onDomain(SOIL_, soil_depth_sl) = soil_depth_to_layers_2d( &
       & dsl4jsb_var2D_onDomain(SOIL_, soil_depth),                         & ! Total soil depth until bedrock (from textures)
       & soil_config%dz_water(1:soil_config%nsoil_water))    ! Soil layer thicknesses from namelist
 
-    bulk_dens_l(:,:)  = rho_bulk_soil 
-    heat_capa_l(:,:)  = soil_heat_cap
-    therm_cond_l(:,:) = soil_therm_cond
+    bulk_dens_sl(:,:)  = rho_bulk_soil 
+    heat_capa_sl(:,:)  = soil_heat_cap
+    therm_cond_sl(:,:) = soil_therm_cond
 
     ! rooting depth given by prescribed AWC
     root_depth(:) = MAX(soil_config%soil_depth_water(1), & 
@@ -149,34 +149,34 @@ CONTAINS
     ! integral to bottom of root zone: 1/lctlib%k_root_dist * (1 - exp(-lctlib%k_root_dist*depth) 
     ! thus for each layer
     ! layer 1
-    root_fraction_l(:,1) = &  
+    root_fraction_sl(:,1) = &  
           (1._wp - exp(-lctlib%k_root_dist * soil_config%soil_depth_water(1))) / &
           (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
     ! layer 2 -> soil_config%nsoil_water
     DO isoil=2,soil_config%nsoil_water
        WHERE(root_depth(:) > soil_config%soil_depth_water(isoil-1))
           WHERE(root_depth(:) > soil_config%soil_depth_water(isoil))
-             root_fraction_l(:,isoil) = & 
+             root_fraction_sl(:,isoil) = & 
                 (exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1)) - &
                  exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil))) / & 
                 (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
           ELSEWHERE
-             root_fraction_l(:,isoil) = & 
+             root_fraction_sl(:,isoil) = & 
                 (exp(-lctlib%k_root_dist * soil_config%soil_depth_water(isoil-1)) - &
                  exp(-lctlib%k_root_dist * root_depth(:))) / & 
                 (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
           ENDWHERE
        ELSEWHERE
-          root_fraction_l(:,isoil) = 0.0_wp 
+          root_fraction_sl(:,isoil) = 0.0_wp 
        ENDWHERE
     ENDDO
 
 
     ! soil water per layer depth
     DO isoil=1,soil_config%nsoil_water
-       WHERE(soil_depth_l(:,isoil) > 0.0_wp) 
-          w_soil_pwp_sl(:,isoil) = theta_wilt * soil_depth_l(:,isoil) 
-          w_soil_fc_sl(:,isoil)  = theta_sat * soil_depth_l(:,isoil) 
+       WHERE(soil_depth_sl(:,isoil) > 0.0_wp) 
+          w_soil_pwp_sl(:,isoil) = theta_wilt * soil_depth_sl(:,isoil) 
+          w_soil_fc_sl(:,isoil)  = theta_sat * soil_depth_sl(:,isoil) 
        ENDWHERE
     ENDDO
     ! adjust initial water amount to prescribed theta

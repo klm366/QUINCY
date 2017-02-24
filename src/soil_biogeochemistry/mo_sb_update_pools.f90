@@ -69,13 +69,13 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real3D_onChunk :: t_soil
+    dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
-    dsl4jsb_Real3D_onChunk :: soil_depth_l
-    dsl4jsb_Real3D_onChunk :: root_fraction_l
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk :: root_fraction_sl
     dsl4jsb_Real3D_onChunk :: percolation_sl 
-    dsl4jsb_Real3D_onChunk :: bulk_dens_l 
+    dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
     dsl4jsb_Real3D_onChunk :: rtm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rtm_mic_uptake
     dsl4jsb_Real3D_onChunk :: rtm_sorption
@@ -134,13 +134,13 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     t_soil)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_fc_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_l)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)
     dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)
@@ -193,11 +193,11 @@ CONTAINS
     SELECT CASE(TRIM(base_config%slm_model_name))
       CASE('land','plant')
 
-         rtm_depolymerisation = calc_temperature_rate_modifier(t_soil,ea_depolymerisation) 
-         rtm_mic_uptake       = calc_temperature_rate_modifier(t_soil,ea_mic_uptake)
-         rtm_sorption         = calc_temperature_rate_modifier(t_soil,ea_sorption) 
-         rtm_desorption       = calc_temperature_rate_modifier(t_soil,ea_desorption) 
-         rtm_hsc              = calc_temperature_rate_modifier(t_soil,ea_hsc) 
+         rtm_depolymerisation = calc_temperature_rate_modifier(t_soil_sl,ea_depolymerisation) 
+         rtm_mic_uptake       = calc_temperature_rate_modifier(t_soil_sl,ea_mic_uptake)
+         rtm_sorption         = calc_temperature_rate_modifier(t_soil_sl,ea_sorption) 
+         rtm_desorption       = calc_temperature_rate_modifier(t_soil_sl,ea_desorption) 
+         rtm_hsc              = calc_temperature_rate_modifier(t_soil_sl,ea_hsc) 
      
          rmm_depolymerisation = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_depolymerisation) 
          rmm_mic_uptake       = calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,kmr_mic_uptake)
@@ -266,8 +266,8 @@ rmm_desorption = 1.0_wp
                                     sb%pool%polymeric_litter,sb%loss%polymeric_litter,sb%formation%dom)
 
          !> 2.4 update litter pools with recent litter fall
-         CALL calc_transfer_litterfall_pools(options,soil_config%nsoil_water,soil_depth_l, & 
-                                             root_fraction_l,veg%litterfall,sb%formation%soluable_litter, & 
+         CALL calc_transfer_litterfall_pools(options,soil_config%nsoil_water,soil_depth_sl, & 
+                                             root_fraction_sl,veg%litterfall,sb%formation%soluable_litter, & 
                                              sb%formation%polymeric_litter,sb%formation%woody_litter)
                                              
 
@@ -308,7 +308,7 @@ rmm_desorption = 1.0_wp
          !> 5.1 liquid phase transport
          !!
          CALL calc_liquid_phase_transport_wrapper(options,soil_config%nsoil_water, & 
-                                          percolation_sl(:,:), soil_depth_l(:,:), &
+                                          percolation_sl(:,:), soil_depth_sl(:,:), &
                                           sb%pool%dom, nh4_solute(:,:), no3_solute(:,:), po4_solute(:,:), & 
                                           nh4_n15_solute(:,:), no3_n15_solute(:,:), & 
                                           sb%transport%dom, transport_nh4_solute(:,:), & 
@@ -318,7 +318,7 @@ rmm_desorption = 1.0_wp
          !> 5.2 transport due to bioturbation
          !!
          k_bioturb(:,:) = calc_bioturbation_rate(options, soil_config%nsoil_water, bulk_dens_corr_sl(:,:))
-         CALL calc_bioturbation_transport_wrapper(options, soil_config%nsoil_water, k_bioturb(:,:), soil_depth_l(:,:), &
+         CALL calc_bioturbation_transport_wrapper(options, soil_config%nsoil_water, k_bioturb(:,:), soil_depth_sl(:,:), &
                                           sb%pool%polymeric_litter, sb%pool%dom_assoc, & 
                                           sb%pool%microbial, sb%pool%residue, sb%pool%residue_assoc, & 
                                           nh4_assoc(:,:), po4_assoc(:,:), nh4_n15_assoc(:,:), & 
@@ -330,9 +330,9 @@ rmm_desorption = 1.0_wp
          !> 5.3 particle transport
          !!
          particle_fluxrate(:,:) = calc_particle_fluxrate(options,soil_config%nsoil_water, & 
-                                          soil_depth_l(:,:), bulk_dens_corr_sl(:,:), & 
+                                          soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), & 
                                           sb%formation,sb%loss) 
-         CALL calc_particle_transport_wrapper(options, soil_config%nsoil_water, particle_fluxrate(:,:), soil_depth_l(:,:), &
+         CALL calc_particle_transport_wrapper(options, soil_config%nsoil_water, particle_fluxrate(:,:), soil_depth_sl(:,:), &
                                           sb%pool, nh4_solute(:,:), nh4_assoc(:,:), no3_solute(:,:), po4_solute(:,:), & 
                                           po4_assoc(:,:), nh4_n15_solute(:,:), nh4_n15_assoc(:,:), no3_n15_solute(:,:), & 
                                           sb%transport, transport_nh4_solute(:,:), transport_nh4_assoc(:,:), & 
@@ -376,7 +376,7 @@ rmm_desorption = 1.0_wp
          !> 7.1 update diagnostics and other state variables 
          !!
          bulk_soil_carbon_sl = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
-         bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_l)
+         bulk_dens_corr_sl = calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl)
          qmax_org = calc_qmax_org(bulk_dens_corr_sl)
 
       CASE('canopy','test_canopy')
@@ -496,59 +496,59 @@ rmm_desorption = 1.0_wp
        (veg%litterfall%leaf%carbon%ptr + veg%litterfall%sap_wood%carbon%ptr + & 
         veg%litterfall%heart_wood%carbon%ptr + veg%litterfall%fruit%carbon%ptr + & 
         veg%litterfall%labile%carbon%ptr + veg%litterfall%reserve%carbon%ptr + & 
-        veg%litterfall%seed_bed%carbon%ptr ) / soil%soil_depth_l%ptr(ics:ice,1,iblk)
+        veg%litterfall%seed_bed%carbon%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
     sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) +  & 
        (veg%litterfall%leaf%nitrogen%ptr + veg%litterfall%sap_wood%nitrogen%ptr + & 
         veg%litterfall%heart_wood%nitrogen%ptr + veg%litterfall%fruit%nitrogen%ptr + & 
         veg%litterfall%labile%nitrogen%ptr + veg%litterfall%reserve%nitrogen%ptr + & 
-        veg%litterfall%seed_bed%nitrogen%ptr ) / soil%soil_depth_l%ptr(ics:ice,1,iblk)
+        veg%litterfall%seed_bed%nitrogen%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
     sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) + & 
        (veg%litterfall%leaf%phosphorus%ptr + veg%litterfall%sap_wood%phosphorus%ptr + & 
         veg%litterfall%heart_wood%phosphorus%ptr + veg%litterfall%fruit%phosphorus%ptr + & 
         veg%litterfall%labile%phosphorus%ptr + veg%litterfall%reserve%phosphorus%ptr + & 
-        veg%litterfall%seed_bed%phosphorus%ptr ) / soil%soil_depth_l%ptr(ics:ice,1,iblk)
+        veg%litterfall%seed_bed%phosphorus%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
     sb%pool%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%carbon13%ptr(ics:ice,1,iblk) + & 
        (veg%litterfall%leaf%carbon13%ptr + veg%litterfall%sap_wood%carbon13%ptr + & 
         veg%litterfall%heart_wood%carbon13%ptr + veg%litterfall%fruit%carbon13%ptr + & 
         veg%litterfall%labile%carbon13%ptr + veg%litterfall%reserve%carbon13%ptr + & 
-        veg%litterfall%seed_bed%carbon13%ptr ) / soil%soil_depth_l%ptr(ics:ice,1,iblk)
+        veg%litterfall%seed_bed%carbon13%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
     sb%pool%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%carbon14%ptr(ics:ice,1,iblk) + & 
        (veg%litterfall%leaf%carbon14%ptr + veg%litterfall%sap_wood%carbon14%ptr + & 
         veg%litterfall%heart_wood%carbon14%ptr + veg%litterfall%fruit%carbon14%ptr + & 
         veg%litterfall%labile%carbon14%ptr + veg%litterfall%reserve%carbon14%ptr + & 
-        veg%litterfall%seed_bed%carbon14%ptr ) / soil%soil_depth_l%ptr(ics:ice,1,iblk)
+        veg%litterfall%seed_bed%carbon14%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
     sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,1,iblk) + &
        (veg%litterfall%leaf%nitrogen15%ptr + veg%litterfall%sap_wood%nitrogen15%ptr + & 
         veg%litterfall%heart_wood%nitrogen15%ptr + veg%litterfall%fruit%nitrogen15%ptr + & 
         veg%litterfall%labile%nitrogen15%ptr + veg%litterfall%reserve%nitrogen15%ptr + & 
-        veg%litterfall%seed_bed%nitrogen15%ptr ) / soil%soil_depth_l%ptr(ics:ice,1,iblk)
+        veg%litterfall%seed_bed%nitrogen15%ptr ) / soil%soil_depth_sl%ptr(ics:ice,1,iblk)
 
     DO isoil = 1,1
 
        sb%pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%carbon%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr ) / & ! * & 
-          !soil%root_fraction_l%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_l%ptr(ics:ice,isoil,iblk) 
+          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
+            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
        sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr ) / & ! * & 
-          !soil%root_fraction_l%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_l%ptr(ics:ice,isoil,iblk) 
+          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
+            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
        sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr ) / & ! * & 
-          !soil%root_fraction_l%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_l%ptr(ics:ice,isoil,iblk) 
+          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
+            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
        sb%pool%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%carbon13%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr ) / & ! * & 
-          !soil%root_fraction_l%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_l%ptr(ics:ice,isoil,iblk) 
+          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
+            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
        sb%pool%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%carbon14%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr ) / & ! * & 
-          !soil%root_fraction_l%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_l%ptr(ics:ice,isoil,iblk) 
+          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
+            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
        sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) = sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,isoil,iblk) + & 
           ( veg%litterfall%fine_root%nitrogen15%ptr + veg%litterfall%coarse_root%nitrogen15%ptr ) / & ! * & 
-          !soil%root_fraction_l%ptr(ics:ice,isoil,iblk) / & 
-            soil%soil_depth_l%ptr(ics:ice,isoil,iblk) 
+          !soil%root_fraction_sl%ptr(ics:ice,isoil,iblk) / & 
+            soil%soil_depth_sl%ptr(ics:ice,isoil,iblk) 
 
     ENDDO
 
@@ -562,14 +562,14 @@ rmm_desorption = 1.0_wp
        sb%no3_solute%ptr(ics:ice,:,iblk) = sb%no3_solute%ptr(ics:ice,:,iblk) + & 
                                            sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * fnit_nmin * dtime
        sb%nh4_solute%ptr(ics:ice,1,iblk) = sb%nh4_solute%ptr(ics:ice,1,iblk) - & 
-                                           uptake_nh4(1:nc) / soil%soil_depth_l%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
+                                           uptake_nh4(1:nc) / soil%soil_depth_sl%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
        sb%no3_solute%ptr(ics:ice,1,iblk) = sb%no3_solute%ptr(ics:ice,1,iblk) - & 
-                                           uptake_no3(1:nc) / soil%soil_depth_l%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
+                                           uptake_no3(1:nc) / soil%soil_depth_sl%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
     ENDIF
 
     IF(veg_config%p_uptake_scheme /= 'prescribed') THEN
        sb%po4_solute%ptr(ics:ice,:,iblk) = sb%po4_solute%ptr(ics:ice,:,iblk) + sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * dtime
-       sb%po4_solute%ptr(ics:ice,1,iblk) = sb%po4_solute%ptr(ics:ice,1,iblk) - uptake_p(1:nc) / soil%soil_depth_l%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
+       sb%po4_solute%ptr(ics:ice,1,iblk) = sb%po4_solute%ptr(ics:ice,1,iblk) - uptake_p(1:nc) / soil%soil_depth_sl%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
     ENDIF
 
     END SUBROUTINE update_sb_pools_simple

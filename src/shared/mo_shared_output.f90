@@ -1006,7 +1006,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
     dsl4jsb_Real2D_onChunk      :: canopy_cond
     dsl4jsb_Real2D_onChunk      :: drainage                  ! SOIL_
-    dsl4jsb_Real3D_onChunk      :: soil_depth_l
+    dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     dsl4jsb_Real2D_onChunk      :: appfd                     ! RAD_
     dsl4jsb_Real2D_onChunk      :: growth_respiration        ! VEG_
     dsl4jsb_Real2D_onChunk      :: maint_respiration
@@ -1071,7 +1071,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_l)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
     ! ---------------------------
@@ -1287,11 +1287,11 @@ CONTAINS
                                       veg%litterfall%labile%phosphorus%ptr + veg%litterfall%reserve%phosphorus%ptr + &
                                       veg%litterfall%fruit%phosphorus%ptr + veg%litterfall%seed_bed%phosphorus%ptr) 
              
-             het_respC_acc(itile)   = het_respC_acc(itile)   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
-             het_respC13_acc(itile) = het_respC13_acc(itile) + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
-             het_respC14_acc(itile) = het_respC14_acc(itile) + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
-             net_min_n_acc(itile)   = net_min_n_acc(itile) + SUM(sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
-             net_min_p_acc(itile)   = net_min_p_acc(itile) + SUM(sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * soil_depth_l(:,:))
+             het_respC_acc(itile)   = het_respC_acc(itile)   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             het_respC13_acc(itile) = het_respC13_acc(itile) + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             het_respC14_acc(itile) = het_respC14_acc(itile) + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             net_min_n_acc(itile)   = net_min_n_acc(itile) + SUM(sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             net_min_p_acc(itile)   = net_min_p_acc(itile) + SUM(sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
 
              leachingCorg_acc(itile) = leachingCorg_acc(itile) + sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk)
              leachingC13org_acc(itile) = leachingC13org_acc(itile) + sb%transport%dom%carbon13%ptr(1,soil_config%nsoil_water,iblk)

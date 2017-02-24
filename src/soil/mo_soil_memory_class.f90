@@ -44,7 +44,7 @@ MODULE mo_soil_memory_class
 
     ! JSBACH SOIL
     TYPE(t_jsb_var_real3d)          :: &
-                                    soil_depth_l        !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
+                                    soil_depth_sl       !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
 
     ! JSBACH HYDRO MEMORY (temporary here to get rid of vegsoil construct)
     TYPE(t_jsb_var_real2d)          :: &
@@ -76,17 +76,17 @@ MODULE mo_soil_memory_class
 
     ! should go to SLM VEG after change to 2D/3D  *slmdev
     TYPE(t_jsb_var_real3d)          :: &
-                                    root_fraction_l      !< fractions of root per layer
+                                    root_fraction_sl     !< fractions of root per layer
 
     ! soil energy 
     TYPE(t_jsb_var_real3d)          :: &
-                                    t_soil                  !< soil temperature [K] 
+                                    t_soil_sl            !< soil temperature [K] 
 
     ! soil physical properties (not sure where they should belong to, but they are needed in the long-term
     TYPE(t_jsb_var_real3d)          :: & 
-                                    heat_capa_l,         &  !< soil heat capacity (J / kg )
-                                    bulk_dens_l,         &  !< soil bulk density (kg / m3)
-                                    therm_cond_l            !< soil thermal conductivity (W / m2 / K)
+                                    heat_capa_sl,         &  !< soil heat capacity (J / kg )
+                                    bulk_dens_sl,         &  !< soil bulk density (kg / m3)
+                                    therm_cond_sl            !< soil thermal conductivity (W / m2 / K)
 
 
 
@@ -146,13 +146,13 @@ CONTAINS
       CALL slm_add_var(mem, 'soil_depth', mem%soil_depth, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'soil_depth_l', mem%soil_depth_l, &
+      CALL slm_add_var(mem, 'soil_depth_sl', mem%soil_depth_sl, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'root_depth', mem%root_depth, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'root_fraction_l', mem%root_fraction_l, &
+      CALL slm_add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'runoff', mem%runoff, &
@@ -194,16 +194,16 @@ CONTAINS
       CALL slm_add_var(mem, 'w_soil_pot_sl', mem%w_soil_pot_sl, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 't_soil', mem%t_soil, &
+      CALL slm_add_var(mem, 't_soil_sl', mem%t_soil_sl, &
             initval_r=273.15_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'heat_capa_l', mem%heat_capa_l, &
+      CALL slm_add_var(mem, 'heat_capa_sl', mem%heat_capa_sl, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'bulk_dens_l', mem%bulk_dens_l, &
+      CALL slm_add_var(mem, 'bulk_dens_sl', mem%bulk_dens_sl, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL slm_add_var(mem, 'therm_cond_l', mem%therm_cond_l, &
+      CALL slm_add_var(mem, 'therm_cond_sl', mem%therm_cond_sl, &
             initval_r=0.0_wp) ! initvalue
 
     END IF
