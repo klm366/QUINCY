@@ -1242,12 +1242,6 @@ CONTAINS
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_temperature_rate_modifier'
 
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
     IF(Ea>eps8)THEN
        rate_modifier = exp(-Ea/r_gas*(1._wp/t_soil_sl - 1._wp/t_ref_tresponse))
     ELSE
@@ -1285,12 +1279,6 @@ CONTAINS
     REAL(wp)              :: air_filled_pore_space
     REAL(wp)              :: hlp
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_oxygen_rate_modifier'
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
 
     IF(param>eps8) THEN
        IF(w_soil_fc_sl > eps8) THEN
@@ -1332,12 +1320,6 @@ CONTAINS
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_convert_bulk_to_liquid'
 
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
     IF(w_soil_sl > eps4) THEN
       factor = 1._wp / w_soil_sl 
     ELSE
@@ -1372,12 +1354,6 @@ CONTAINS
     ! 0.2 Local
     REAL(wp)              :: air_filled_pore_space
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_substrate_rate_modifier'
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
 
     IF(param>eps8.AND.w_soil_fc_sl > eps8) THEN
        air_filled_pore_space = (w_soil_sl - w_soil_fc_sl ) / w_soil_fc_sl
