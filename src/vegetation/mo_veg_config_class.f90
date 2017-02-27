@@ -30,7 +30,7 @@ MODULE mo_veg_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     INTEGER          :: pft_id
     CHARACTER(15)    :: n_uptake_scheme            !< select scheme to simulate N uptake
-                                                   ! "prescribed|standard|resistance|optimal"           
+                                                   ! "prescribed|standard|std_plus_costs|resistance|optimal"           
     CHARACTER(15)    :: p_uptake_scheme            !< select scheme to simulate P uptake
                                                    ! "prescribed|standard"           
     LOGICAL          :: flag_tile_veg_dynamics     !< calculate within-tile vegetation dynamics + start from bareground
@@ -82,7 +82,7 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
-    n_uptake_scheme                = "standard"  ! prescribed standard resistance optimal
+    n_uptake_scheme                = "standard"  ! prescribed standard std_plus_costs resistance optimal
     p_uptake_scheme                = "standard"  ! prescribed standard
     plant_functional_type_id       = 1
     flag_tile_veg_dynamics         = .FALSE.  ! .TRUE. .FALSE.
@@ -99,7 +99,7 @@ CONTAINS
 
     ! check input for n_uptake scheme
     SELECT CASE (TRIM(n_uptake_scheme))
-     CASE ("prescribed","standard","resistance","optimal")
+     CASE ("prescribed","standard","std_plus_costs","resistance","optimal")
      CASE DEFAULT
        WRITE(message_text,'(2a)') 'invalid n_uptake_scheme',n_uptake_scheme
        CALL finish("mo_veg_config_class:init_veg_config",message_text) 

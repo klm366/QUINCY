@@ -51,7 +51,7 @@ yearsSoilForcing=1              # number of years of forcing to be generated
 ##>> namelist.slm options <<############################################################################
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-n_uptake_scheme="standard"      # prescribed standard optimal resistance
+n_uptake_scheme="standard"      # prescribed standard std_plus_costs optimal resistance
 p_uptake_scheme="prescribed"    # prescribed standard 
 soil_moisture_scheme="bucket"   # prescribed bucket layer
 flag_calc_soil_energy="F"
@@ -207,6 +207,10 @@ while getopts ":e:c:m:y:o:n:h" opt; do
       echo "   n_uptake_scheme=standard"
       n_uptake_scheme="standard"
       ;;
+    "stdp")
+      echo "   n_uptake_scheme=std_plus_costs"
+      n_uptake_scheme="std_plus_costs"
+      ;;
     "opt")
       echo "   n_uptake_scheme=optimal"
       n_uptake_scheme="optimal"
@@ -248,10 +252,11 @@ while getopts ":e:c:m:y:o:n:h" opt; do
     echo "       al: using only optimal allocation"
     echo " -n set the N uptake scheme"
     echo "    Arguments to -n:"
-    echo "       pre: prescribed"
-    echo "       std: standard"
-    echo "       opt: optimal"
-    echo "       res: resistance"
+    echo "       pre : prescribed"
+    echo "       std : standard"
+    echo "       stdp: standard plus transformation costs"
+    echo "       opt : optimal"
+    echo "       res : resistance"
     exit 1
     ;;
   esac
@@ -280,7 +285,7 @@ return 0
 # lists to validate against
 validatesiteDataSet="f c"
 validateSlmModel="land plant soil"  # canopy
-validateNUptakeScheme="prescribed standard optimal resistance"
+validateNUptakeScheme="prescribed standard std_plus_costs optimal resistance"
 validatePUptakeScheme="prescribed standard"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
