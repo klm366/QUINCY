@@ -15,14 +15,14 @@ MODULE mo_assimi_update_canopy_fluxes
   USE mo_kind,                  ONLY: wp, eps4, eps8
   USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-  USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+  USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   USE mo_assimi_constants,      ONLY: ic3phot, ic4phot, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
   USE mo_assimi_config_class,   ONLY: assimi_config
   USE mo_veg_constants,         ONLY: itree, igrass, fmaint_rate_base
 
 
   ! Use of process memories
-  dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+  dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
   dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
   dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
@@ -72,13 +72,13 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(ATM2LAND_)     !   TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(A2L_)     !   TYPE(t_a2l_memory), POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)       !   TYPE(t_assimi_memory), POINTER   :: assimi__mem
     dsl4jsb_Def_memory(VEG_)          !   TYPE(t_veg_memory), POINTER      :: veg__mem  
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),      POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: t_air                     ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk      :: t_air                     ! A2L_
     dsl4jsb_Real2D_onChunk      :: q_air
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: ga
@@ -132,7 +132,7 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
-    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
@@ -141,13 +141,13 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_air)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, ga)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, co2_mixing_ratio)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, co2_mixing_ratio_C13)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, co2_mixing_ratio_C14)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
+    dsl4jsb_Get_var2D_onChunk(A2L_, ga)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
     ! ---------------------------

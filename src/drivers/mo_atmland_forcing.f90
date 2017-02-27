@@ -83,7 +83,7 @@ CONTAINS
                                   &  )
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, grid  ! grid is used for calc_solar_angle()
     USE mo_base_config_class,     ONLY: base_config
     USE mo_soil_config_class,     ONLY: soil_config
@@ -98,7 +98,7 @@ CONTAINS
     TYPE(t_slm_tile)  , INTENT(inout) :: tile     !< one tile
     INTEGER           , INTENT(in)    :: iblk, ics, ice, nc
     REAL(wp)          , INTENT(in)    :: time     !< current time (not timestep !)
-    REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from atm2land memory
+    REAL(wp), OPTIONAL, INTENT(out)   :: &        !! these are all variables from a2l memory
                                       t_air(:)              , &    !< ..
                                       q_air(:)              , &    !< ..
                                       rain(:)               , &    !< ..
@@ -225,7 +225,7 @@ CONTAINS
 
     doy_old = 0.0_wp  ! doy in the previous timestep, used for detecting a new year
 
-    ! give atm2land variables a value to avoid compiler warning #6843: A dummy argument with an explicit INTENT(OUT) declaration is not given an explicit value
+    ! give a2l variables a value to avoid compiler warning #6843: A dummy argument with an explicit INTENT(OUT) declaration is not given an explicit value
     t_air(nc)           = 0.0_wp
     q_air(nc)           = 0.0_wp
     rain(nc)            = 0.0_wp

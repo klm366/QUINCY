@@ -15,7 +15,7 @@ MODULE mo_shared_update_time_averages
 
   USE mo_kind,                    ONLY: wp, eps8
   USE mo_exception,               ONLY: message, finish
-  USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+  USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
   USE mo_base_memory,             ONLY: t_slm_tile, t_model, t_jsb_task_options
 
@@ -96,7 +96,7 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
-    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+    dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
 
@@ -118,12 +118,12 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: t_air                        ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk      :: t_air                        ! A2L_
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
@@ -177,7 +177,7 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(PHENO_)
     ! Get process memories
-    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
@@ -185,11 +185,11 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swpar_srf_down)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, co2_mixing_ratio)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, ga)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
+    dsl4jsb_Get_var2D_onChunk(A2L_, ga)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
@@ -403,7 +403,7 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
-    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+    dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
@@ -424,14 +424,14 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     ! Declare pointers to variables in memory
     dsl4jsb_Logical2D_onChunk   :: growing_season             ! PHENO_
-    dsl4jsb_Real2D_onChunk      :: t_air                      ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk      :: t_air                      ! A2L_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation         ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
@@ -540,7 +540,7 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(PHENO_)
     ! Get process memories
-    dsl4jsb_Get_memory(ATM2LAND_)
+    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)
@@ -551,7 +551,7 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)

@@ -21,7 +21,7 @@ MODULE mo_jsb_model_init
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, init_lctlib
     USE mo_jsb_memory_class,                ONLY: t_jsb_memory
-    USE mo_jsb_process_class,               ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, &
+    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, &
                                                   PHENO_, SB_, Get_process_name
     USE mo_jsb_process_factory,             ONLY: Create_process_memory, max_no_of_processes
     ! shared
@@ -100,7 +100,7 @@ CONTAINS
 
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)              :: tile           !< data structure for dynamic vegetation and soil variables
-    LOGICAL,INTENT(out)                         :: l_forcing      !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
+    LOGICAL,INTENT(out)                         :: l_forcing      !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
     INTEGER,INTENT(in)                          :: iblk, ics, ice !< iBlock, iChunkStart, iChunkEnd
     ! 0.2 Local
     CLASS(t_jsb_memory), POINTER                :: tmp_ptr        !! for Memory init and alloc
@@ -209,7 +209,7 @@ CONTAINS
       tile%mem(iproc)%p => NULL()
       SELECT CASE(iproc)
         ! SLM: extend this CASE to all SLM processes that work with JSBACH4 memory structure; see mo_jsb_process_class for enumeration
-        CASE (RAD_, ASSIMI_, VEG_, PHENO_, SOIL_, SB_, ATM2LAND_, LAND2ATM_)    
+        CASE (RAD_, ASSIMI_, VEG_, PHENO_, SOIL_, SB_, A2L_, L2A_)    
           prefix = 'no-need'
           suffix = 'no-need'
           process_name = Get_process_name(iproc)
@@ -221,7 +221,7 @@ CONTAINS
             !tile%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)
             !tile%mem(iproc)%p%grid_id = tile%grid_id
             tile%mem(iproc)%p%owner_model_id = tile%owner_model_id
-            tile%mem(iproc)%p%owner_proc_id = iproc  ! process ID: ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10 , PHENO_=11
+            tile%mem(iproc)%p%owner_proc_id = iproc  ! process ID: A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10 , PHENO_=11
             !ALLOCATE(tile%mem(iproc)%p%owner_tile_path(SIZE(tile%path)))
             !tile%mem(iproc)%p%owner_tile_path(:) = tile%path(:)
             !tile%mem(iproc)%p%owner_tile_name = TRIM(tile%name)
@@ -232,7 +232,7 @@ CONTAINS
 !!            END IF
             ! call init routine of memory
             CALL tile%mem(iproc)%p%Init( TRIM(process_name), TRIM(suffix), tile%lcts%id, tile%owner_model_id)
-        END SELECT  ! processes with memory (ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_)
+        END SELECT  ! processes with memory (A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_)
         NULLIFY(tmp_ptr)    
       END SELECT    ! iproc
     END DO          ! iproc

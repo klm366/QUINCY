@@ -34,7 +34,7 @@ CONTAINS
   SUBROUTINE update_soil_physics(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_base_constants,        ONLY: dtime
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
@@ -46,8 +46,8 @@ CONTAINS
     USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
 
     ! Use of process memories
-    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-    dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+    dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+    dsl4jsb_Use_memory(L2A_)   !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SOIL_)       !  USE mo_soil_memory_class,     ONLY: t_soil_memory
@@ -78,14 +78,14 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
-    dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
+    dsl4jsb_Def_memory(L2A_)                   !     TYPE(t_l2a_memory), POINTER :: l2a__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk                :: t_air                  ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk                :: t_air                  ! A2L_
     dsl4jsb_Real2D_onChunk                :: q_air
     dsl4jsb_Real2D_onChunk                :: press_srf
     dsl4jsb_Real2D_onChunk                :: ga
@@ -93,7 +93,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: rain
     dsl4jsb_Real2D_onChunk                :: snow
     dsl4jsb_Real2D_onChunk                :: drag_srf
-    dsl4jsb_Real2D_onChunk                :: net_radiation          ! LAND2ATM_
+    dsl4jsb_Real2D_onChunk                :: net_radiation          ! L2A_
     dsl4jsb_Real2D_onChunk                :: ground_heat_flx
     dsl4jsb_Real2D_onChunk                :: latent_heat_flx
     dsl4jsb_Real2D_onChunk                :: sensible_heat_flx
@@ -133,8 +133,8 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
-    dsl4jsb_Get_memory(ATM2LAND_)
-    dsl4jsb_Get_memory(LAND2ATM_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SOIL_)
@@ -143,19 +143,19 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, t_air)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, q_air)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, press_srf)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, ga)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, lw_srf_down)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, rain)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, snow)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, drag_srf)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
+    dsl4jsb_Get_var2D_onChunk(A2L_, ga)
+    dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, rain)
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow)
+    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, net_radiation)
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, ground_heat_flx)
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, latent_heat_flx)
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, sensible_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)
+    dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(L2A_, latent_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, root_depth)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)

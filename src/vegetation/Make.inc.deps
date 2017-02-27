@@ -25,7 +25,7 @@ mo_veg_growth.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
-  mo_atm2land_memory_class.o \
+  mo_a2l_memory_class.o \
   mo_shared_constants.o \
   mo_assimi_constants.o \
   mo_veg_config_class.o \

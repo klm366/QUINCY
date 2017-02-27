@@ -8,7 +8,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !! Integrated into SLM by Jan Engel (20160823) using JSBACH4:git
 !!
-MODULE mo_atm2land_memory_class
+MODULE mo_a2l_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
@@ -31,11 +31,11 @@ MODULE mo_atm2land_memory_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_atm2land_memory, max_no_of_vars
+  PUBLIC :: t_a2l_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
-  TYPE, EXTENDS(t_jsb_memory) :: t_atm2land_memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
 
     TYPE(t_jsb_var_real2d) :: &
                               t_air              , &
@@ -62,7 +62,7 @@ MODULE mo_atm2land_memory_class
                               co2_mixing_ratio     , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                               co2_mixing_ratio_C13 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                               co2_mixing_ratio_C14 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-                              ga                   , &  !> @todo ga in t_atm2land_memory: is a variable from SLM, which may be moved elsewhere
+                              ga                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
                               ! For lakes:
                               albedo_lwtr        , &
                               drag_wtr           , &
@@ -77,20 +77,20 @@ MODULE mo_atm2land_memory_class
                               q_bcoef_ice
 
   CONTAINS
-    PROCEDURE :: Init => Init_atm2land_memory
-  END TYPE t_atm2land_memory
+    PROCEDURE :: Init => Init_a2l_memory
+  END TYPE t_a2l_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_atm2land_memory_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_a2l_memory_class'
 
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize memory (variables) for: atm2land
+  !> initialize memory (variables) for: a2l
   !!
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_atm2land_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
+  SUBROUTINE Init_a2l_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
 
 ! jsbach4
 !    USE mo_jsb_varlist,       ONLY: jsb_add_var
@@ -107,7 +107,7 @@ CONTAINS
     USE mo_atmland_util,      ONLY: calc_spec_humidity_sat
 
     ! 0.1 InOut
-    CLASS(t_atm2land_memory),   INTENT(inout), TARGET :: mem
+    CLASS(t_a2l_memory),   INTENT(inout), TARGET :: mem
     CHARACTER(len=*),           INTENT(in)    :: prefix
     CHARACTER(len=*),           INTENT(in)    :: suffix
     INTEGER,                    INTENT(in)    :: lct_ids
@@ -141,7 +141,7 @@ CONTAINS
 !    TYPE(t_jsb_vgrid),       POINTER :: surface  
 !    INTEGER :: table 
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_atm2land_memory'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_a2l_memory'
 
 ! jsbach4
     model => Get_model(model_id) 
@@ -425,7 +425,7 @@ CONTAINS
 
 !    END IF
 
-  END SUBROUTINE Init_atm2land_memory
+  END SUBROUTINE Init_a2l_memory
 
 #endif
-END MODULE mo_atm2land_memory_class
+END MODULE mo_a2l_memory_class

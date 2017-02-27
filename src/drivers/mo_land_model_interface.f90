@@ -34,7 +34,7 @@ CONTAINS
   SUBROUTINE land_model_interface(tile, &                ! one specific tile
                                   l_forcing, &           ! forcing on/off
                                   time_day, time_year, timestep_prop_day, &
-                                  !! atm2land memory - INTENT(in) - start
+                                  !! a2l memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
                                   rain               , &
@@ -70,8 +70,8 @@ CONTAINS
                                   t_bcoef_ice        , &
                                   q_acoef_ice        , &
                                   q_bcoef_ice        , &
-                                 !! atm2land memory - end
-                                 !! land2atm memory - INTENT(out) - start
+                                 !! a2l memory - end
+                                 !! l2a memory - INTENT(out) - start
                                   t_srf             ,   &
                                   t_eff_srf         ,   &
                                   qsat_srf          ,   &
@@ -93,7 +93,7 @@ CONTAINS
                                   sensible_hflx_wtr ,   &
                                   latent_hflx_ice   ,   &
                                   sensible_hflx_ice     &
-                                  !! land2atm memory - end
+                                  !! l2a memory - end
                                   )
 
 
@@ -101,7 +101,7 @@ CONTAINS
     USE mo_base_memory,                   ONLY: t_slm_tile, t_model
     USE mo_base_config_class,             ONLY: base_config
     USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
-    USE mo_atmland_interface,             ONLY: update_atm2land, update_land2atm
+    USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
     USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
     USE mo_veg_util,                      ONLY: set_zero_vegetation_fluxes
 
@@ -118,11 +118,11 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     TYPE(t_slm_tile),INTENT(inout)      :: tile              !< data structure for dynamic vegetation and soil variables
-    LOGICAL,INTENT(in)                  :: l_forcing         !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
+    LOGICAL,INTENT(in)                  :: l_forcing         !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
     REAL(wp),INTENT(in)                 :: time_day          !< displays the 'real time' in days; time_day == 1.0 after one day has passed
     INTEGER,INTENT(in)                  :: time_year         !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
     REAL(wp),INTENT(in)                 :: timestep_prop_day !< proportion of one day that is simulated with one timestep (dtime/one_day)
-    REAL(wp),INTENT(in)           :: &               !! atm2land memory - INTENT(in) - start
+    REAL(wp),INTENT(in)           :: &               !! a2l memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
                                   rain(:)               , &
@@ -158,8 +158,8 @@ CONTAINS
                                   t_bcoef_ice(:)        , &
                                   q_acoef_ice(:)        , &
                                   q_bcoef_ice(:)        
-                                                     !! atm2land memory - end
-    REAL(wp),INTENT(out)          :: &              !! land2atm memory - INTENT(out) - start
+                                                     !! a2l memory - end
+    REAL(wp),INTENT(out)          :: &              !! l2a memory - INTENT(out) - start
                                   t_srf(:)             ,   &
                                   t_eff_srf(:)         ,   &
                                   qsat_srf(:)          ,   &
@@ -180,7 +180,7 @@ CONTAINS
                                   latent_hflx_wtr(:)   ,   &
                                   sensible_hflx_wtr(:) ,   &
                                   latent_hflx_ice(:)   ,   &
-                                  sensible_hflx_ice(:) !! land2atm memory - end
+                                  sensible_hflx_ice(:) !! l2a memory - end
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_model),          POINTER     :: model
@@ -198,11 +198,11 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    !> pass atmland variables from forcing input (driver) to atm2land
+    !> pass atmland variables from forcing input (driver) to a2l
     !! 
     IF (l_forcing) THEN       ! l_forcing is true
-      CALL update_atm2land( &
-      ! the sequence of input variables is consistent with the sequence of var in t_atm2land_memory & atmland_interface
+      CALL update_a2l( &
+      ! the sequence of input variables is consistent with the sequence of var in t_a2l_memory & atmland_interface
       tile                                         , &
       model%options                                , &
       t_air                   = t_air(:)              , &
@@ -363,7 +363,7 @@ CONTAINS
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
     !! output fluxes -> filename: fort.20
-    !! output also some atm2land variables
+    !! output also some a2l variables
     !! 
       CALL canopy_model_write_data(tile, model%options, time_day, time_year, t_air(1), swpar_srf_down(1))                           
 
@@ -375,11 +375,11 @@ CONTAINS
       CALL finish('land_model_interface','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
     END SELECT  ! select SLM model !
 
-    !> pass atmland variables from land2atm memory back to the driver
+    !> pass atmland variables from l2a memory back to the driver
     !! 
-    IF (l_forcing) THEN       ! l_forcing is true if update_atm2land() is called (depends on the SLM model selected)
-      CALL update_land2atm( &
-      ! the sequence of input variables is consistent with the sequence of var in t_land2atm_memory !
+    IF (l_forcing) THEN       ! l_forcing is true if update_a2l() is called (depends on the SLM model selected)
+      CALL update_l2a( &
+      ! the sequence of input variables is consistent with the sequence of var in t_l2a_memory !
       tile                                              ,   &
       model%options                                     ,   &
       t_srf                   = t_srf(:)             ,   &
@@ -418,7 +418,7 @@ CONTAINS
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_base_constants,        ONLY: one_year
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
@@ -513,7 +513,7 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_base_constants,        ONLY: npft
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_atmland_constants,     ONLY: frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
@@ -693,7 +693,7 @@ CONTAINS
     !latitude                  = 50.0_wp
     !longitude                 = 0.0_wp
 
-    CALL update_atm2land( &
+    CALL update_a2l( &
            tile                                            , &
            options                                         , &
            t_air                   = t_air(:)              , &
@@ -751,7 +751,7 @@ CONTAINS
      swpar_srf_down(:) = swpar_srf_down(:) + 100.0_wp / rad2ppfd 
      swvis_srf_down(:) = swpar_srf_down(:) / frac_par_swvis_srf 
      swnir_srf_down(:) = swvis_srf_down(:) * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
-     CALL update_atm2land(tile, &
+     CALL update_a2l(tile, &
            options            , &
            swvis_srf_down = swvis_srf_down(:), &
            swnir_srf_down = swnir_srf_down(:), &
@@ -773,7 +773,7 @@ CONTAINS
   swpar_srf_down(:) = ref_swdown 
   swvis_srf_down(:) = swpar_srf_down(:) / frac_par_swvis_srf 
   swnir_srf_down(:) = swvis_srf_down(:) * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
-  CALL update_atm2land(tile, &
+  CALL update_a2l(tile, &
            options            , &
            swvis_srf_down = swvis_srf_down, &
            swnir_srf_down = swnir_srf_down, &
@@ -792,7 +792,7 @@ CONTAINS
      t_air(:) = t_air(:) + 1.0_wp 
      q_air(:) = 0.8_wp * calc_spec_humidity_sat(t_air(:),press_srf(:))
      t_jmax_opt_mavg(1) = 20._wp+0.35_wp*(t_air(1) - Tzero)
-     CALL update_atm2land(tile, &
+     CALL update_a2l(tile, &
            options            , &
            t_air = t_air, &
            q_air = q_air)
@@ -809,7 +809,7 @@ CONTAINS
   END DO
   t_air(:)    = ref_t_air + Tzero
   q_air(:)    = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(1) * eps_vpd
-  CALL update_atm2land(tile, &
+  CALL update_a2l(tile, &
         options            , &
         t_air = t_air, &
         q_air = q_air)
@@ -824,7 +824,7 @@ CONTAINS
   DO i = 1,34
 
      co2_mixing_ratio(:) = co2_mixing_ratio(:) + 25._wp
-     CALL update_atm2land(tile, &
+     CALL update_a2l(tile, &
            options            , &
            co2_mixing_ratio = co2_mixing_ratio)
 
@@ -839,7 +839,7 @@ CONTAINS
 
   END DO
   co2_mixing_ratio(:) = ref_co2_mixing_ratio
-  CALL update_atm2land(tile    , &
+  CALL update_a2l(tile    , &
                        options , &
                        co2_mixing_ratio = co2_mixing_ratio)
 
@@ -850,7 +850,7 @@ CONTAINS
   WRITE(lun,*) 'VPD A GC CI' 
   DO i = 1,30
      q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - i * 100.0_wp / press_srf(1) * eps_vpd
-     CALL update_atm2land(tile    , &
+     CALL update_a2l(tile    , &
                           options , &
                           q_air = q_air) 
 
@@ -868,7 +868,7 @@ CONTAINS
   END DO
   q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(1) * eps_vpd
   vpd(:) = ( calc_spec_humidity_sat(t_air(:),press_srf(:)) - q_air(:) ) / eps_vpd * press_srf(1) / 1000.0_wp
-     CALL update_atm2land(tile    , &
+     CALL update_a2l(tile    , &
                           options , &
                           q_air = q_air) 
 

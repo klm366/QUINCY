@@ -17,11 +17,11 @@ MODULE mo_atmland_interface
   USE mo_exception,               ONLY: finish
   USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options
   USE mo_jsb_var_class,           ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-  USE mo_jsb_process_class,       ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+  USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
   ! Use of process memories
-  dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-  dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+  dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+  dsl4jsb_Use_memory(L2A_)   !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
 
 !!! jsbach4
 !!  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -31,8 +31,8 @@ MODULE mo_atmland_interface
 !!  USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 !!  USE mo_jsb_lct_class,      ONLY: LAKE_TYPE, Contains_lct
 
-!!  dsl4jsb_Use_processes ATM2LAND_, SEB_, TURB_, SOIL_, HYDRO_, RAD_
-!!  dsl4jsb_Use_memory(ATM2LAND_)
+!!  dsl4jsb_Use_processes A2L_, SEB_, TURB_, SOIL_, HYDRO_, RAD_
+!!  dsl4jsb_Use_memory(A2L_)
 !!  dsl4jsb_Use_memory(SEB_)
 !!  dsl4jsb_Use_memory(TURB_)
 !!  dsl4jsb_Use_memory(SOIL_)
@@ -41,7 +41,7 @@ MODULE mo_atmland_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: update_atm2land, update_land2atm
+  PUBLIC :: update_a2l, update_l2a
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_interface'
@@ -49,12 +49,12 @@ MODULE mo_atmland_interface
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> pass atmland variables from driver into atm2land memory per timestep
+  !> pass atmland variables from driver into a2l memory per timestep
   !!
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_atm2land( &
-    ! the sequence of input variables is consistent with the sequence of var in t_atm2land_memory !
+  SUBROUTINE update_a2l( &
+    ! the sequence of input variables is consistent with the sequence of var in t_a2l_memory !
     ! some variables differ compared to the JSBACH4 routine, see comments 
     ! all variables are defined as: real(wp), optional, intent(in)
       tile               , &
@@ -83,7 +83,7 @@ CONTAINS
       co2_mixing_ratio     , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
       co2_mixing_ratio_C13 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
       co2_mixing_ratio_C14 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-      ga                   , &  !> @todo ga in t_atm2land_memory: is a variable from SLM, which may be moved elsewhere
+      ga                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
       ! For lakes:
       albedo_lwtr        , &
       drag_wtr           , &
@@ -126,11 +126,11 @@ CONTAINS
                                       pch(:)                , &
                                       cos_zenith_angle(:)   , &
                                 !      CO2_air(:)            , &   ! jsbach4 variables, replaced by co2_mixing_ratio  _c13  _c14
-    ! Info: in JSBACH4 CO2_air_mol(:) is calculated as: dsl4jsb_var2D_onChunk(ATM2LAND_, CO2_air_mol) = CO2_air(:) * molarMassDryAir / molarMassCO2
+    ! Info: in JSBACH4 CO2_air_mol(:) is calculated as: dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol) = CO2_air(:) * molarMassDryAir / molarMassCO2
                                       co2_mixing_ratio(:)     , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                                       co2_mixing_ratio_C13(:) , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                                       co2_mixing_ratio_C14(:) , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-                                      ga(:)                   , &  !> @todo ga in t_atm2land_memory: is a variable from SLM, which may be moved elsewhere
+                                      ga(:)                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
                                       ! For lakes:
                                       drag_wtr(:)           , &
                                       drag_ice(:)           , &
@@ -146,12 +146,12 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_atm2land'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_a2l'
 !    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(ATM2LAND_)   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
+    dsl4jsb_Def_memory(A2L_)   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -162,14 +162,14 @@ CONTAINS
     END IF
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(ATM2LAND_)) RETURN
+!    IF (.NOT. tile%Is_process_active(A2L_)) RETURN
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config
-!    dsl4jsb_Get_config(ATM2LAND_)
+!    dsl4jsb_Get_config(A2L_)
     ! Get process memories
-    dsl4jsb_Get_memory(ATM2LAND_)       ! atm2land__mem => atm2land_memory
+    dsl4jsb_Get_memory(A2L_)       ! a2l__mem => a2l_memory
 
 
 
@@ -180,56 +180,56 @@ CONTAINS
 
 
     ! 1.0 pass variables values to memory
-    IF (PRESENT(t_air))             dsl4jsb_var2D_onChunk(ATM2LAND_,t_air)             = t_air             (:)
-    IF (PRESENT(q_air))             dsl4jsb_var2D_onChunk(ATM2LAND_,q_air)             = q_air             (:)
-    IF (PRESENT(rain))              dsl4jsb_var2D_onChunk(ATM2LAND_,rain)              = rain              (:)
-    IF (PRESENT(snow))              dsl4jsb_var2D_onChunk(ATM2LAND_,snow)              = snow              (:)
-    IF (PRESENT(wind_air))          dsl4jsb_var2D_onChunk(ATM2LAND_,wind_air)          = wind_air          (:)
-    IF (PRESENT(wind_10m))          dsl4jsb_var2D_onChunk(ATM2LAND_,wind_10m)          = wind_10m          (:)
-    IF (PRESENT(lw_srf_down))       dsl4jsb_var2D_onChunk(ATM2LAND_,lw_srf_down)       = lw_srf_down       (:)
-    IF (PRESENT(swvis_srf_down))    dsl4jsb_var2D_onChunk(ATM2LAND_,swvis_srf_down)    = swvis_srf_down    (:)
-    IF (PRESENT(swnir_srf_down))    dsl4jsb_var2D_onChunk(ATM2LAND_,swnir_srf_down)    = swnir_srf_down    (:)
-    IF (PRESENT(swpar_srf_down))    dsl4jsb_var2D_onChunk(ATM2LAND_,swpar_srf_down)    = swpar_srf_down    (:)
-! jsbach4    IF (PRESENT(frac_par_diffuse))  dsl4jsb_var2D_onChunk(ATM2LAND_,frac_par_diffuse)  = frac_par_diffuse  (:)
-    IF (PRESENT(swpar_fdiffuse))    dsl4jsb_var2D_onChunk(ATM2LAND_,swpar_fdiffuse)    = swpar_fdiffuse    (:)
-    IF (PRESENT(press_srf))         dsl4jsb_var2D_onChunk(ATM2LAND_,press_srf)         = press_srf         (:)
-    IF (PRESENT(drag_srf))          dsl4jsb_var2D_onChunk(ATM2LAND_,drag_srf)          = drag_srf          (:)
-    IF (PRESENT(t_acoef))           dsl4jsb_var2D_onChunk(ATM2LAND_,t_acoef)           = t_acoef           (:)
-    IF (PRESENT(t_bcoef))           dsl4jsb_var2D_onChunk(ATM2LAND_,t_bcoef)           = t_bcoef           (:)
-    IF (PRESENT(q_acoef))           dsl4jsb_var2D_onChunk(ATM2LAND_,q_acoef)           = q_acoef           (:)
-    IF (PRESENT(q_bcoef))           dsl4jsb_var2D_onChunk(ATM2LAND_,q_bcoef)           = q_bcoef           (:)
-    IF (PRESENT(pch))               dsl4jsb_var2D_onChunk(ATM2LAND_,pch)               = pch               (:)
-    IF (PRESENT(cos_zenith_angle))  dsl4jsb_var2D_onChunk(ATM2LAND_,cos_zenith_angle)  = cos_zenith_angle  (:)
-    IF (PRESENT(co2_mixing_ratio))     dsl4jsb_var2D_onChunk(ATM2LAND_,co2_mixing_ratio)     = co2_mixing_ratio     (:)
-    IF (PRESENT(co2_mixing_ratio_C13)) dsl4jsb_var2D_onChunk(ATM2LAND_,co2_mixing_ratio_C13) = co2_mixing_ratio_C13 (:)
-    IF (PRESENT(co2_mixing_ratio_C14)) dsl4jsb_var2D_onChunk(ATM2LAND_,co2_mixing_ratio_C14) = co2_mixing_ratio_C14 (:)
-    IF (PRESENT(ga))                dsl4jsb_var2D_onChunk(ATM2LAND_,ga)                 = ga               (:)
+    IF (PRESENT(t_air))             dsl4jsb_var2D_onChunk(A2L_,t_air)             = t_air             (:)
+    IF (PRESENT(q_air))             dsl4jsb_var2D_onChunk(A2L_,q_air)             = q_air             (:)
+    IF (PRESENT(rain))              dsl4jsb_var2D_onChunk(A2L_,rain)              = rain              (:)
+    IF (PRESENT(snow))              dsl4jsb_var2D_onChunk(A2L_,snow)              = snow              (:)
+    IF (PRESENT(wind_air))          dsl4jsb_var2D_onChunk(A2L_,wind_air)          = wind_air          (:)
+    IF (PRESENT(wind_10m))          dsl4jsb_var2D_onChunk(A2L_,wind_10m)          = wind_10m          (:)
+    IF (PRESENT(lw_srf_down))       dsl4jsb_var2D_onChunk(A2L_,lw_srf_down)       = lw_srf_down       (:)
+    IF (PRESENT(swvis_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down)    = swvis_srf_down    (:)
+    IF (PRESENT(swnir_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down)    = swnir_srf_down    (:)
+    IF (PRESENT(swpar_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down)    = swpar_srf_down    (:)
+! jsbach4    IF (PRESENT(frac_par_diffuse))  dsl4jsb_var2D_onChunk(A2L_,frac_par_diffuse)  = frac_par_diffuse  (:)
+    IF (PRESENT(swpar_fdiffuse))    dsl4jsb_var2D_onChunk(A2L_,swpar_fdiffuse)    = swpar_fdiffuse    (:)
+    IF (PRESENT(press_srf))         dsl4jsb_var2D_onChunk(A2L_,press_srf)         = press_srf         (:)
+    IF (PRESENT(drag_srf))          dsl4jsb_var2D_onChunk(A2L_,drag_srf)          = drag_srf          (:)
+    IF (PRESENT(t_acoef))           dsl4jsb_var2D_onChunk(A2L_,t_acoef)           = t_acoef           (:)
+    IF (PRESENT(t_bcoef))           dsl4jsb_var2D_onChunk(A2L_,t_bcoef)           = t_bcoef           (:)
+    IF (PRESENT(q_acoef))           dsl4jsb_var2D_onChunk(A2L_,q_acoef)           = q_acoef           (:)
+    IF (PRESENT(q_bcoef))           dsl4jsb_var2D_onChunk(A2L_,q_bcoef)           = q_bcoef           (:)
+    IF (PRESENT(pch))               dsl4jsb_var2D_onChunk(A2L_,pch)               = pch               (:)
+    IF (PRESENT(cos_zenith_angle))  dsl4jsb_var2D_onChunk(A2L_,cos_zenith_angle)  = cos_zenith_angle  (:)
+    IF (PRESENT(co2_mixing_ratio))     dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio)     = co2_mixing_ratio     (:)
+    IF (PRESENT(co2_mixing_ratio_C13)) dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio_C13) = co2_mixing_ratio_C13 (:)
+    IF (PRESENT(co2_mixing_ratio_C14)) dsl4jsb_var2D_onChunk(A2L_,co2_mixing_ratio_C14) = co2_mixing_ratio_C14 (:)
+    IF (PRESENT(ga))                dsl4jsb_var2D_onChunk(A2L_,ga)                 = ga               (:)
     ! For lakes:
 
 !    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
-      IF (PRESENT(drag_wtr))        dsl4jsb_var2D_onChunk(ATM2LAND_,drag_wtr)          = drag_wtr          (:)
-      IF (PRESENT(drag_ice))        dsl4jsb_var2D_onChunk(ATM2LAND_,drag_ice)          = drag_ice          (:)
-      IF (PRESENT(t_acoef_wtr))     dsl4jsb_var2D_onChunk(ATM2LAND_,t_acoef_wtr)       = t_acoef_wtr       (:)
-      IF (PRESENT(t_bcoef_wtr))     dsl4jsb_var2D_onChunk(ATM2LAND_,t_bcoef_wtr)       = t_bcoef_wtr       (:)
-      IF (PRESENT(q_acoef_wtr))     dsl4jsb_var2D_onChunk(ATM2LAND_,q_acoef_wtr)       = q_acoef_wtr       (:)
-      IF (PRESENT(q_bcoef_wtr))     dsl4jsb_var2D_onChunk(ATM2LAND_,q_bcoef_wtr)       = q_bcoef_wtr       (:)
-      IF (PRESENT(t_acoef_ice))     dsl4jsb_var2D_onChunk(ATM2LAND_,t_acoef_ice)       = t_acoef_ice       (:)
-      IF (PRESENT(t_bcoef_ice))     dsl4jsb_var2D_onChunk(ATM2LAND_,t_bcoef_ice)       = t_bcoef_ice       (:)
-      IF (PRESENT(q_acoef_ice))     dsl4jsb_var2D_onChunk(ATM2LAND_,q_acoef_ice)       = q_acoef_ice       (:)
-      IF (PRESENT(q_bcoef_ice))     dsl4jsb_var2D_onChunk(ATM2LAND_,q_bcoef_ice)       = q_bcoef_ice       (:)
-      IF (PRESENT(albedo_lwtr))     dsl4jsb_var2D_onChunk(ATM2LAND_,albedo_lwtr)       = albedo_lwtr       (:)
+      IF (PRESENT(drag_wtr))        dsl4jsb_var2D_onChunk(A2L_,drag_wtr)          = drag_wtr          (:)
+      IF (PRESENT(drag_ice))        dsl4jsb_var2D_onChunk(A2L_,drag_ice)          = drag_ice          (:)
+      IF (PRESENT(t_acoef_wtr))     dsl4jsb_var2D_onChunk(A2L_,t_acoef_wtr)       = t_acoef_wtr       (:)
+      IF (PRESENT(t_bcoef_wtr))     dsl4jsb_var2D_onChunk(A2L_,t_bcoef_wtr)       = t_bcoef_wtr       (:)
+      IF (PRESENT(q_acoef_wtr))     dsl4jsb_var2D_onChunk(A2L_,q_acoef_wtr)       = q_acoef_wtr       (:)
+      IF (PRESENT(q_bcoef_wtr))     dsl4jsb_var2D_onChunk(A2L_,q_bcoef_wtr)       = q_bcoef_wtr       (:)
+      IF (PRESENT(t_acoef_ice))     dsl4jsb_var2D_onChunk(A2L_,t_acoef_ice)       = t_acoef_ice       (:)
+      IF (PRESENT(t_bcoef_ice))     dsl4jsb_var2D_onChunk(A2L_,t_bcoef_ice)       = t_bcoef_ice       (:)
+      IF (PRESENT(q_acoef_ice))     dsl4jsb_var2D_onChunk(A2L_,q_acoef_ice)       = q_acoef_ice       (:)
+      IF (PRESENT(q_bcoef_ice))     dsl4jsb_var2D_onChunk(A2L_,q_bcoef_ice)       = q_bcoef_ice       (:)
+      IF (PRESENT(albedo_lwtr))     dsl4jsb_var2D_onChunk(A2L_,albedo_lwtr)       = albedo_lwtr       (:)
 !    END IF
 
-  END SUBROUTINE update_atm2land
+  END SUBROUTINE update_a2l
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> pass atmland variables from land2atm memory back into the driver, per timestep
+  !> pass atmland variables from l2a memory back into the driver, per timestep
   !!
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_land2atm( &
-    ! the sequence of input variables is consistent with the sequence of var in t_land2atm_memory !
+  SUBROUTINE update_l2a( &
+    ! the sequence of input variables is consistent with the sequence of var in t_l2a_memory !
     ! some variables differ compared to the JSBACH4 routine, see comments 
     ! all variables are defined as: real(wp), optional, intent(out)
       tile              ,   &
@@ -287,11 +287,11 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_land2atm'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_l2a'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(LAND2ATM_)   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    dsl4jsb_Def_memory(L2A_)   !     TYPE(t_l2a_memory), POINTER :: l2a__mem
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -299,14 +299,14 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-!    IF (.NOT. tile%Is_process_active(LAND2ATM_)) RETURN   ! ask for all processes considered here ?
+!    IF (.NOT. tile%Is_process_active(L2A_)) RETURN   ! ask for all processes considered here ?
 !    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
     ! Get process config
 !    dsl4jsb_Get_config(PHENO_)
     ! Get process memories
-    dsl4jsb_Get_memory(LAND2ATM_)
+    dsl4jsb_Get_memory(L2A_)
 
 
 
@@ -316,28 +316,28 @@ CONTAINS
 
 
     ! 1.0 pass variables values from memory to output variables
-    IF (PRESENT(t_srf))                 t_srf(:)             = dsl4jsb_var2D_onChunk(LAND2ATM_,   t_srf)
-    IF (PRESENT(t_eff_srf))             t_eff_srf(:)         = dsl4jsb_var2D_onChunk(LAND2ATM_,   t_eff_srf)
-    IF (PRESENT(qsat_srf))              qsat_srf(:)          = dsl4jsb_var2D_onChunk(LAND2ATM_,   qsat_srf)
-    IF (PRESENT(fact_q_air))            fact_q_air(:)        = dsl4jsb_var2D_onChunk(LAND2ATM_,   fact_q_air)
-    IF (PRESENT(fact_qsat_srf))         fact_qsat_srf(:)     = dsl4jsb_var2D_onChunk(LAND2ATM_,   fact_qsat_srf)
-    IF (PRESENT(zh_srf))                zh_srf(:)            = dsl4jsb_var2D_onChunk(LAND2ATM_,   zh_srf)
-    IF (PRESENT(zm_srf))                zm_srf(:)            = dsl4jsb_var2D_onChunk(LAND2ATM_,   zm_srf)
-    IF (PRESENT(alb_vis_dif))           alb_vis_dif(:)       = dsl4jsb_var2D_onChunk(LAND2ATM_,   alb_vis_dif)
-    IF (PRESENT(alb_nir_dif))           alb_nir_dif(:)       = dsl4jsb_var2D_onChunk(LAND2ATM_,   alb_nir_dif)
-    IF (PRESENT(alb_vis_dir))           alb_vis_dir(:)       = dsl4jsb_var2D_onChunk(LAND2ATM_,   alb_vis_dir)
-    IF (PRESENT(alb_nir_dir))           alb_nir_dir(:)       = dsl4jsb_var2D_onChunk(LAND2ATM_,   alb_nir_dir)
-    IF (PRESENT(albedo))                albedo(:)            = dsl4jsb_var2D_onChunk(LAND2ATM_,   albedo)
-    IF (PRESENT(sensible_heat_flx))     sensible_heat_flx(:) = dsl4jsb_var2D_onChunk(LAND2ATM_,   sensible_heat_flx)
-    IF (PRESENT(latent_heat_flx))       latent_heat_flx(:)   = dsl4jsb_var2D_onChunk(LAND2ATM_,   latent_heat_flx)
-    IF (PRESENT(net_radiation))         net_radiation(:)     = dsl4jsb_var2D_onChunk(LAND2ATM_,   net_radiation)
-    IF (PRESENT(vpd))                   vpd(:)               = dsl4jsb_var2D_onChunk(LAND2ATM_,   vpd)
+    IF (PRESENT(t_srf))                 t_srf(:)             = dsl4jsb_var2D_onChunk(L2A_,   t_srf)
+    IF (PRESENT(t_eff_srf))             t_eff_srf(:)         = dsl4jsb_var2D_onChunk(L2A_,   t_eff_srf)
+    IF (PRESENT(qsat_srf))              qsat_srf(:)          = dsl4jsb_var2D_onChunk(L2A_,   qsat_srf)
+    IF (PRESENT(fact_q_air))            fact_q_air(:)        = dsl4jsb_var2D_onChunk(L2A_,   fact_q_air)
+    IF (PRESENT(fact_qsat_srf))         fact_qsat_srf(:)     = dsl4jsb_var2D_onChunk(L2A_,   fact_qsat_srf)
+    IF (PRESENT(zh_srf))                zh_srf(:)            = dsl4jsb_var2D_onChunk(L2A_,   zh_srf)
+    IF (PRESENT(zm_srf))                zm_srf(:)            = dsl4jsb_var2D_onChunk(L2A_,   zm_srf)
+    IF (PRESENT(alb_vis_dif))           alb_vis_dif(:)       = dsl4jsb_var2D_onChunk(L2A_,   alb_vis_dif)
+    IF (PRESENT(alb_nir_dif))           alb_nir_dif(:)       = dsl4jsb_var2D_onChunk(L2A_,   alb_nir_dif)
+    IF (PRESENT(alb_vis_dir))           alb_vis_dir(:)       = dsl4jsb_var2D_onChunk(L2A_,   alb_vis_dir)
+    IF (PRESENT(alb_nir_dir))           alb_nir_dir(:)       = dsl4jsb_var2D_onChunk(L2A_,   alb_nir_dir)
+    IF (PRESENT(albedo))                albedo(:)            = dsl4jsb_var2D_onChunk(L2A_,   albedo)
+    IF (PRESENT(sensible_heat_flx))     sensible_heat_flx(:) = dsl4jsb_var2D_onChunk(L2A_,   sensible_heat_flx)
+    IF (PRESENT(latent_heat_flx))       latent_heat_flx(:)   = dsl4jsb_var2D_onChunk(L2A_,   latent_heat_flx)
+    IF (PRESENT(net_radiation))         net_radiation(:)     = dsl4jsb_var2D_onChunk(L2A_,   net_radiation)
+    IF (PRESENT(vpd))                   vpd(:)               = dsl4jsb_var2D_onChunk(L2A_,   vpd)
     ! For lakes:
 !    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
-      IF (PRESENT(latent_hflx_wtr))       latent_hflx_wtr(:)   = dsl4jsb_var2D_onChunk(LAND2ATM_,   latent_hflx_wtr)
-      IF (PRESENT(sensible_hflx_wtr))     sensible_hflx_wtr(:) = dsl4jsb_var2D_onChunk(LAND2ATM_,   sensible_hflx_wtr)
-      IF (PRESENT(latent_hflx_ice))       latent_hflx_ice(:)   = dsl4jsb_var2D_onChunk(LAND2ATM_,   latent_hflx_ice)
-      IF (PRESENT(sensible_hflx_ice))     sensible_hflx_ice(:) = dsl4jsb_var2D_onChunk(LAND2ATM_,   sensible_hflx_ice)
+      IF (PRESENT(latent_hflx_wtr))       latent_hflx_wtr(:)   = dsl4jsb_var2D_onChunk(L2A_,   latent_hflx_wtr)
+      IF (PRESENT(sensible_hflx_wtr))     sensible_hflx_wtr(:) = dsl4jsb_var2D_onChunk(L2A_,   sensible_hflx_wtr)
+      IF (PRESENT(latent_hflx_ice))       latent_hflx_ice(:)   = dsl4jsb_var2D_onChunk(L2A_,   latent_hflx_ice)
+      IF (PRESENT(sensible_hflx_ice))     sensible_hflx_ice(:) = dsl4jsb_var2D_onChunk(L2A_,   sensible_hflx_ice)
 !    ELSE
 !      IF (PRESENT(latent_hflx_wtr))       latent_hflx_wtr(:)   = 0.0_wp
 !      IF (PRESENT(sensible_hflx_wtr))     sensible_hflx_wtr(:) = 0.0_wp
@@ -345,7 +345,7 @@ CONTAINS
 !      IF (PRESENT(sensible_hflx_ice))     sensible_hflx_ice(:) = 0.0_wp
 !    END IF
 
-  END SUBROUTINE update_land2atm
+  END SUBROUTINE update_l2a
 
 
 #endif

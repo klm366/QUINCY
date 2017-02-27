@@ -38,7 +38,7 @@ CONTAINS
     USE mo_base_memory,         ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_base_constants,      ONLY: dtime, one_day
     USE mo_base_config_class,   ONLY: base_config
-    USE mo_jsb_process_class,   ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_shared_constants,    ONLY: lambda_C14, rhoh2o, grav
     USE mo_veg_canopy,          ONLY: calc_canopy_layers
     USE mo_veg_growth,          ONLY: calc_diameter_from_woody_biomass,calc_height_from_diameter

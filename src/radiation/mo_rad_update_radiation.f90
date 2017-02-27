@@ -41,14 +41,14 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_assimi_config_class,   ONLY: assimi_config   ! e.g. ncanopy
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_rad_constants,         ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, kbl0_vis, kdf0_vis, kbl0_nir, kdf0_nir, &
                                         rho2sbeta, k_csf, min_cos_zenith_angle_rad
 
     ! Use of process memories
-    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-    dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+    dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+    dsl4jsb_Use_memory(L2A_)   !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     
@@ -68,8 +68,8 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
-    dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
+    dsl4jsb_Def_memory(L2A_)                   !     TYPE(t_l2a_memory), POINTER :: l2a__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
@@ -96,12 +96,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: arad_sunlit_nir_cl
     dsl4jsb_Real3D_onChunk :: arad_shaded_nir_cl
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_nir_cl
-    dsl4jsb_Real2D_onChunk :: swpar_srf_down          ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk :: swpar_srf_down          ! A2L_
     dsl4jsb_Real2D_onChunk :: swpar_fdiffuse
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
-    dsl4jsb_Real2D_onChunk :: albedo                  ! LAND2ATM_
+    dsl4jsb_Real2D_onChunk :: albedo                  ! L2A_
     dsl4jsb_Real2D_onChunk :: net_radiation
     dsl4jsb_Real2D_onChunk :: lai                     ! VEG_
     dsl4jsb_Real3D_onChunk :: lai_cl
@@ -121,22 +121,22 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
-    dsl4jsb_Get_memory(ATM2LAND_)
-    dsl4jsb_Get_memory(LAND2ATM_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swpar_srf_down)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swpar_fdiffuse)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, cos_zenith_angle)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swnir_srf_down)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swvis_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)
+    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, albedo)
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, net_radiation)
+    dsl4jsb_Get_var2D_onChunk(L2A_, albedo)
+    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)
     dsl4jsb_Get_var2D_onChunk(RAD_, swvis_srf_net)

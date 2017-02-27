@@ -80,7 +80,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct'
 
     struct%name = TRIM(name)
-    struct%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+    struct%owner_proc_id = mem%owner_proc_id  ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_struct = mem%no_of_structs + 1
     IF (pos_of_struct > mem%max_no_of_structs) THEN
@@ -113,7 +113,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_n_struct'
 
     n_struct%name = TRIM(name)
-    n_struct%owner_proc_id = mem%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+    n_struct%owner_proc_id = mem%owner_proc_id  ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_n_struct = mem%no_of_n_structs + 1
     IF (pos_of_n_struct > mem%max_no_of_n_structs) THEN
@@ -146,7 +146,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_l2_struct'
 
     l2_struct%name = TRIM(name)
-    l2_struct%owner_proc_id = n_struct%owner_proc_id  ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+    l2_struct%owner_proc_id = n_struct%owner_proc_id  ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_l2_struct = n_struct%no_of_l2_structs + 1
     IF (pos_of_l2_struct > n_struct%max_no_of_l2_structs) THEN
@@ -241,7 +241,7 @@ CONTAINS
     iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
-    var%owner_proc_id = struct%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+    var%owner_proc_id = struct%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_var = struct%no_of_vars + 1
     IF (pos_of_var > struct%max_no_of_vars) THEN
@@ -300,7 +300,7 @@ CONTAINS
     END SELECT
 
     var%name = TRIM(name)
-    var%owner_proc_id = struct%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
+    var%owner_proc_id = struct%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10
 
     pos_of_var = struct%no_of_vars + 1
     IF (pos_of_var > struct%max_no_of_vars) THEN
@@ -354,7 +354,7 @@ CONTAINS
     iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
-    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+    var%owner_proc_id = mem%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
@@ -414,7 +414,7 @@ CONTAINS
     END SELECT
 
     var%name = TRIM(name)
-    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+    var%owner_proc_id = mem%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
@@ -459,7 +459,7 @@ CONTAINS
     iblk = model%options%iblk   ! *slmtemp
 
     var%name = TRIM(name)
-    var%owner_proc_id = mem%owner_proc_id    ! ATM2LAND_=1, LAND2ATM_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+    var%owner_proc_id = mem%owner_proc_id    ! A2L_=1, L2A_=2, SOIL_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN

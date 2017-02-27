@@ -9,8 +9,8 @@ mo_rad_update_radiation.o: \
   mo_jsb_class.o \
   mo_jsb_process_class.o \
   mo_assimi_config_class.o \
-  mo_atm2land_memory_class.o \
-  mo_land2atm_memory_class.o \
+  mo_a2l_memory_class.o \
+  mo_l2a_memory_class.o \
   mo_rad_constants.o \
   mo_veg_memory_class.o \
   mo_rad_memory_class.o \

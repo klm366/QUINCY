@@ -42,9 +42,9 @@ PROGRAM land_model_driver
   !! 
   !! Local variables
   !! 
-  LOGICAL                       :: l_forcing  ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_atm2land(), update_land2atm())
+  LOGICAL                       :: l_forcing  ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_a2l(), update_l2a())
   INTEGER                       :: iblk, ics, ice, nc   !< *slmtmp may be an input from JSBACH4 later in SLM dev
-  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! atm2land memory - INTENT(in) - start
+  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! a2l memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
                                   rain               , &
@@ -80,8 +80,8 @@ PROGRAM land_model_driver
                                   t_bcoef_ice        , &
                                   q_acoef_ice        , &
                                   q_bcoef_ice
-                                         !! atm2land memory - end
-  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &   !! land2atm memory - start
+                                         !! a2l memory - end
+  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &   !! l2a memory - start
                                   t_srf             ,   &
                                   t_eff_srf         ,   &
                                   qsat_srf          ,   &
@@ -103,7 +103,7 @@ PROGRAM land_model_driver
                                   sensible_hflx_wtr ,   &
                                   latent_hflx_ice   ,   &
                                   sensible_hflx_ice
-                                         !! land2atm memory - end
+                                         !! l2a memory - end
   CHARACTER(len=*), PARAMETER :: modname = 'land_model_driver'
 
 
@@ -126,7 +126,7 @@ PROGRAM land_model_driver
   !! Forcing and Output files init
   !! 
   ! allocate forcing variables (atmland)
-  !! atm2land memory
+  !! a2l memory
   ALLOCATE(t_air(nc))                                           
   ALLOCATE(q_air(nc))                                           
   ALLOCATE(rain(nc))                                            
@@ -162,7 +162,7 @@ PROGRAM land_model_driver
   ALLOCATE(t_bcoef_ice(nc))                                     
   ALLOCATE(q_acoef_ice(nc))                                     
   ALLOCATE(q_bcoef_ice(nc))
-  !! land2atm memory
+  !! l2a memory
   ALLOCATE(t_srf(nc))                                          
   ALLOCATE(t_eff_srf(nc))                                      
   ALLOCATE(qsat_srf(nc))                                       
@@ -234,7 +234,7 @@ PROGRAM land_model_driver
                             ice     , &
                             nc      , &
                             time_day, & 
-                                  !! forcing (read from file and passed to atm2land memory via the land_model_interface)
+                                  !! forcing (read from file and passed to a2l memory via the land_model_interface)
                                   !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: 
                                   t_air                   = t_air(:)              , &
                                   q_air                   = q_air(:)              , &
@@ -280,7 +280,7 @@ PROGRAM land_model_driver
     CALL land_model_interface(tile(1), &
                               l_forcing, &
                               time_day, time_year, timestep_prop_day, &
-                                  !! atm2land memory - INTENT(in) - start
+                                  !! a2l memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
                                   rain(:)               , &
@@ -316,8 +316,8 @@ PROGRAM land_model_driver
                                   t_bcoef_ice(:)        , &
                                   q_acoef_ice(:)        , &
                                   q_bcoef_ice(:)        , &
-                                 !! atm2land memory - end
-                                 !! land2atm memory - INTENT(out) - start
+                                 !! a2l memory - end
+                                 !! l2a memory - INTENT(out) - start
                                   t_srf(:)             ,   &
                                   t_eff_srf(:)         ,   &
                                   qsat_srf(:)          ,   &
@@ -339,7 +339,7 @@ PROGRAM land_model_driver
                                   sensible_hflx_wtr(:) ,   &
                                   latent_hflx_ice(:)   ,   &
                                   sensible_hflx_ice(:)     &
-                                  !! land2atm memory - end
+                                  !! l2a memory - end
                                 &  ) ! land_model_interface()
 
     !! 3.4 check timer & adjust year counter

@@ -640,7 +640,7 @@ CONTAINS
     USE mo_veg_constants,         ONLY: itree
     USE mo_assimi_config_class,   ONLY: assimi_config
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
@@ -951,15 +951,15 @@ CONTAINS
   SUBROUTINE write_output_flux(tile, options, time_d, time_y, itile)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options 
     USE mo_base_constants,        ONLY: dtime
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14
 
     ! Use of process memories
-    dsl4jsb_Use_memory(ATM2LAND_)   !  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-    dsl4jsb_Use_memory(LAND2ATM_)   !  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
+    dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+    dsl4jsb_Use_memory(L2A_)   !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
@@ -986,17 +986,17 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(ATM2LAND_)                   !     TYPE(t_atm2land_memory), POINTER :: atm2land__mem
-    dsl4jsb_Def_memory(LAND2ATM_)                   !     TYPE(t_land2atm_memory), POINTER :: land2atm__mem
+    dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
+    dsl4jsb_Def_memory(L2A_)                   !     TYPE(t_l2a_memory), POINTER :: l2a__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: ga                        ! ATM2LAND_
+    dsl4jsb_Real2D_onChunk      :: ga                        ! A2L_
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: albedo                    ! LAND2ATM_
+    dsl4jsb_Real2D_onChunk      :: albedo                    ! L2A_
     dsl4jsb_Real2D_onChunk      :: net_radiation
     dsl4jsb_Real2D_onChunk      :: sensible_heat_flx
     dsl4jsb_Real2D_onChunk      :: latent_heat_flx
@@ -1045,8 +1045,8 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
-    dsl4jsb_Get_memory(ATM2LAND_)
-    dsl4jsb_Get_memory(LAND2ATM_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
@@ -1056,14 +1056,14 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, swpar_srf_down)
-    dsl4jsb_Get_var2D_onChunk(ATM2LAND_, ga)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, ga)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, albedo)
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, net_radiation)
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, sensible_heat_flx)
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, latent_heat_flx)
-    dsl4jsb_Get_var2D_onChunk(LAND2ATM_, ground_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(L2A_, albedo)
+    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)
+    dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(L2A_, latent_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)
@@ -1351,7 +1351,7 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
-    USE mo_jsb_process_class,     ONLY: ATM2LAND_, LAND2ATM_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_config_class,      ONLY: veg_config
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
 
