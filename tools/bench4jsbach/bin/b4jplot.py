@@ -11,9 +11,15 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
 import cartopy.crs as ccrs
+import cartopy as cart
 import numpy as np
 from pandas import DataFrame
 import math
+from pprint import pprint
+from util import print_item_or_list_rec
+
+# from matplotlib import rcParams
+# rcParams.update({'figure.autolayout': True})
 
 
 colorlist = [ 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w' ]
@@ -26,12 +32,13 @@ darkgreen  = '#6fc1b6'
 colors_hydrology  = [ darkbrown, lightgreen, lightbrown, darkgreen ]
 
     
-def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan ):
+def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan, vmin = np.nan, vmax = np.nan ):
     #from datetime import datetime
 
     print "\n\ninpath:", inpath
     print "varname:", varname
     print "outpath:", outpath
+    print "CAUTION: tstep_no := 0 hardcoded"
 
     tstep_no = 0
 
@@ -40,25 +47,23 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
     var       = nc_fid.variables [ varname ]
     units     = var.units
     grid_type = var.grid_type
-    long_name = var.long_name
+#    long_name = var.long_name
     time      = nc_fid.variables [ 'time' ][ : ]
 
     if grid_type == "gaussian":
         lats    = nc_fid.variables [ 'lat' ][ : ]
         lons    = nc_fid.variables [ 'lon' ][ : ] 
-        vardata = var [ tstep_no,:,: ]
+        vardata = var [ tstep_no, :, : ]
     elif grid_type == "unstructured":
-
-        #tstep_no = 71
-        rad2deg_ = 180 / math.pi
         
+        rad2deg_ = 180 / math.pi
         clon, clat =  nc_fid.variables['clon'][:] * rad2deg_,\
                       nc_fid.variables['clat'][:] * rad2deg_
         clon_vertices, clat_vertices  =  nc_fid.variables['clon_bnds'][:] * rad2deg_,\
                                          nc_fid.variables['clat_bnds'][:] * rad2deg_
-        vardata      =  var [ tstep_no, : ]  #- 273.15
+        vardata      =  var [ tstep_no, : ] 
     else:
-        print "grid_type not found."
+        print "ERROR: grid_type not found."
         sys.exit ( 1 )
         
     nc_fid.close ()
@@ -71,20 +76,20 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
         east = ( clon_vertices < 0 ).astype ( int )
         east_weight = np.sum ( mt_wholeglobe_mask * east, axis=1 )
         east_weight_mask = np.array ([ east_weight,  east_weight,  east_weight ]).T
-        shift_eastwest = ( east_weight_mask == 1 ).astype ( int ) * ( east == 1 ).astype ( int ) * 360 + ( east_weight_mask == 2 ).astype ( int ) * ( east == 0 ).astype ( int ) * ( -360 )
-        newxvc = ( clon_vertices + shift_eastwest )
-        newxvc = newxvc.ravel()
+        shift_eastwest = ( east_weight_mask == 1 ).astype ( int ) * ( east == 1 ).astype ( int ) * 360 + \
+                         ( east_weight_mask == 2 ).astype ( int ) * ( east == 0 ).astype ( int ) * ( -360 )
+        newxvc = ( clon_vertices + shift_eastwest ).ravel()
         newyvc = clat_vertices.ravel()
         triangles = np.reshape ( np.arange ( ncells * nv ), ( ncells, nv ))
 
     
-    vmax    = vardata.max ()
-    vmin    = vardata.min ()
+    vmax    = vardata.max () if np.isnan ( vmax ) else vmax
+    vmin    = vardata.min () if np.isnan ( vmin ) else vmin
     vmean   = vardata.mean () if np.isnan ( midpoint ) else midpoint   
     print "vmin = %0.4g, vmean = %0.4g, vmax = %0.4g" % ( vmin, vmean, vmax )
     
 # # arguments
-    nlevs                = 50
+    nlevs                = 20
     tick_interleave_no   = int ( nlevs // 10 )
     midval               =  vmean
 
@@ -96,7 +101,6 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
     baselevel_right_val  = midval + unit/2   
    # print "vrange = %0.4g, unit = %0.4g, baselevel_left_val = %0.4g, baselevel_right_val = %0.4g" % \
     #    ( vrange, unit, baselevel_left_val, baselevel_right_val )
-
 
  #   assert vmin < baselevel_left_val and \
    #     baselevel_left_val < midval and \
@@ -118,7 +122,8 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
     
  #   print "leftlevel_left_val, midval, rightlevel_right_val ", \
   #      leftlevel_left_val, midval, rightlevel_right_val
-    
+
+    #print "####### COLORS: VALS, LEVELS: #########"
     colors      = plt.cm.BrBG ( vals )
     cmap, norm  = mcolors.from_levels_and_colors ( levels, colors )
     norm.clip   = True
@@ -130,9 +135,15 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
     
     f = plt.figure ( figsize = ( 16, 8 ))  
     ax = f.add_subplot ( 111, projection = ccrs.PlateCarree ())
+    ax.set_xlim ([ -180, 180 ])
+    ax.set_ylim ([ -90, 90 ])
     
     if grid_type == 'gaussian':
-        ax.pcolormesh ( lons, lats,
+        # correct grid with half distance to north and west
+        lons_shifted = lons - np.concatenate (( np.zeros ( 1 ), np.abs ( lons[0:-1] - lons [1:] ) / 2 ), axis = 0 )
+        lats_shifted = lats + np.concatenate (( np.abs ( lats [0:-1] - lats [1:] ) / 2, np.zeros ( 1 )), axis = 0 )
+        #ax.pcolormesh ( lons, lats,
+        ax.pcolormesh ( lons_shifted, lats_shifted,
                         vardata, cmap=cmap, norm=norm,
                         edgecolors='face', 
                         transform=ccrs.PlateCarree(), 
@@ -141,15 +152,12 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
         plt.tripcolor( newxvc, newyvc, triangles,
                        facecolors=vardata, cmap=cmap, norm=norm,
                        edgecolor="face",
-                       #linewidths=0.001, edgecolors='k',
-                       transform=ccrs.PlateCarree () )
-        #plt.scatter ( clon_vertices.ravel(), clat_vertices.ravel (), marker="o", s=1, color="yellow", edgecolor='yellow' )
-        #plt.tight_layout() # puts the map to the left margin but resizes correctly
-        #ax.set_global ()
-        # ax.set_extent ([ -180, 180, -90, 90], crs=ccrs.PlateCarree ())
-        plt.subplots_adjust(left=0.1,bottom=0.1)
+                       transform=ccrs.PlateCarree ())
         
     ax.coastlines ( linewidth=0.5 )
+    ax.add_feature(cart.feature.OCEAN, zorder=100, edgecolor='k', linewidth=0.5, facecolor="silver" )
+
+    print f
    
     cax = f.add_axes ([ 0.125, 0.04, 0.775, 0.03 ]) # left, bottom, width, height           
     cb = mpl.colorbar.ColorbarBase ( cax, cmap = cmap, norm = norm,
@@ -162,8 +170,19 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan )
                horizontalalignment = 'center',
                fontsize = 20,
                transform = ax.transAxes )
+
+    # fp = open ( "runtimefigureinfo.txt", 'a' )
+    # fp.write ( "\n\n\n########################" )
+    # fp.write ( "\ninpath: %s " % inpath )
+    # fp.write ( "\noutpath: %s " % outpath )
+    # fp.write ( "\nFigure: %s " % type ( f ))
+    # fp.write ( "\nsize: %s" % f.get_size_inches ())
+    # d = f.__dict__
+    # fp.write ("""\n%s""" % print_item_or_list_rec ( d, 3 ))
+    # fp.close ()
     
-    plt.savefig ( outpath )
+    #f.tight_layout()
+    plt.savefig ( outpath, dpi = 300 )
     plt.close ()
   
 

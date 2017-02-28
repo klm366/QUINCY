@@ -70,11 +70,15 @@ else:
 
     
     b4j_obj.fetchremote = options.fetchremote
-
-
+    
     # fetch outdata
     for exp in b4j_obj.experiments:
         exp.fetch_outdata ()
+
+        
+    print "\n\nHere we are."
+    sys.exit ( 0 )
+
 
     # diagnosis
     for f_n,f_bench in b4j_obj.config [ 'fields' ].iteritems():

@@ -27,7 +27,9 @@ HOST_AVAIL = { "thunder" : { "login_name" : "thunder4",
                              "domain"     : "hpc.dkrz.de",
                              "cdo_path"   : "/sw/rhel6-x64/cdo/cdo-1.7.0-magicsxx-gcc48/bin" },
                "archive" : { "login_name" : None,
-                             "names"      : []}}
+                             "names"      : []},
+               "scalar"  : { "login_name" : "scalar",
+                             "names"      : [ "scalar", "localhost" ]}}
 
               
 
@@ -118,6 +120,10 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         self.B4J_finalyear   = kwargs.get ( "B4J_finalyear", None )
         self.B4J_index       = {}
 
+        self.B4J_obj.logger.debug ( 'kwargs = { %s }' % ''.join("{!s} = {!r}, ".format(key,val) 
+                                                        for (key,val) in kwargs.items()))
+
+        
         if not self.B4J_path:
             exp_metadata = self.B4J_obj.wikipage.fetch_simulation_row_split_period (
                 "can" if self.B4J_iscan else "ref", self.B4J_name_orig ) 
@@ -134,6 +140,9 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
             self.B4J_oceres      = exp_metadata [ "oce_res" ]
 
         host         = gethostname ()
+        print "host", host
+        print "HOST_AVAIL"
+        print HOST_AVAIL
         self.from_archive = self.B4J_host == 'archive'
         self.from_remote  = host not in HOST_AVAIL [ self.B4J_host ][ 'names' ]
         self.accumulated  = True if self.from_archive else False              # ATT: if logic changes, program flow has to be adapted
