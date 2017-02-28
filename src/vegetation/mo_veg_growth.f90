@@ -1553,6 +1553,17 @@ CONTAINS
        n_transform_respiration  = uptake_nh4 * transform_cost_nh4 + uptake_no3 * transform_cost_no3
        n_fixation_respiration   = n_fixation * cost_n_fixation
        n_processing_respiration = n_fixation_respiration + n_transform_respiration
+    ELSEIF(veg_config%n_uptake_scheme == 'std_plus_costs') THEN
+      n_processing_respiration_pot = uptake_nh4 * transform_cost_nh4 + uptake_no3 * transform_cost_no3 
+      n_processing_respiration_act = MIN(1.0_wp/tau_labile/one_day * veg_pool%labile%carbon%ptr * 1.e6_wp, & 
+                                         n_processing_respiration_pot)
+       ! adjust N uptake to C expenditure
+       IF(n_processing_respiration_pot > eps8 .AND. n_processing_respiration_pot > n_processing_respiration_act) THEN 
+          uptake_nh4    = uptake_nh4  * n_processing_respiration_act / n_processing_respiration_pot
+          uptake_no3    = uptake_no3  * n_processing_respiration_act / n_processing_respiration_pot
+       ENDIF
+       n_transform_respiration  = uptake_nh4 * transform_cost_nh4 + uptake_no3 * transform_cost_no3
+       n_processing_respiration = n_fixation_respiration + n_transform_respiration
     ENDIF
 
     !> 2.0 Determine C, N, P use for growth
