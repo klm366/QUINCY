@@ -1290,8 +1290,8 @@ CONTAINS
              het_respC_acc(itile)   = het_respC_acc(itile)   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
              het_respC13_acc(itile) = het_respC13_acc(itile) + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
              het_respC14_acc(itile) = het_respC14_acc(itile) + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             net_min_n_acc(itile)   = net_min_n_acc(itile) + SUM(sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             net_min_p_acc(itile)   = net_min_p_acc(itile) + SUM(sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             net_min_n_acc(itile)   = net_min_n_acc(itile) + SUM(sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             net_min_p_acc(itile)   = net_min_p_acc(itile) + SUM(sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
 
              leachingCorg_acc(itile) = leachingCorg_acc(itile) + sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk)
              leachingC13org_acc(itile) = leachingC13org_acc(itile) + sb%transport%dom%carbon13%ptr(1,soil_config%nsoil_water,iblk)

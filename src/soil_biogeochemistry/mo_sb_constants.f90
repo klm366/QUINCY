@@ -77,6 +77,36 @@ MODULE mo_sb_constants
       microbial_cn, &            !< molar ratio of C:N in microbes (testing only!)
       microbial_np               !< molar ratio of N:P in microbes (testing only!)
 
+   ! nutrient uptake kinetics
+   REAL(wp), SAVE :: &
+      vmax_mic_uptake_nh4, &     !< maximum NH4 uptake capacity of microbes (mol N / mol biomass C / s)  
+      km_mic_uptake_nh4, &       !< half-saturation concentration (mol N / m3)
+      vmax_mic_uptake_no3, &     !< maximum NO3 uptake capacity of microbes (mol N / mol biomass C / s)
+      km_mic_uptake_no3, &       !< half-saturation concentration (mol N / m3)
+      vmax_plant_uptake_nh4, &   !< maximum NH4 uptake capacity of fine roots (mol N / mol biomass C / s)
+      km_plant_uptake_nh4, &     ! < half-saturation concentration (mol N / m3)
+      vmax_plant_uptake_no3, &   !< maximum NO3 uptake capacity of fine roots (mol N / mol biomass C / s)
+      km_plant_uptake_no3, &     !< half-saturation concentration (mol N / m3)
+      vmax_mic_uptake_po4, &     !< maximum PO4 uptake capacity of microbes (mol N / mol biomass C / s)  
+      km_mic_uptake_po4, &       !< half-saturation concentration (mol N / m3)
+      vmax_plant_uptake_po4, &   !< maximum PO4 uptake capacity of fine roots (mol N / mol biomass C / s)
+      km_plant_uptake_po4, &     ! < half-saturation concentration (mol N / m3)
+      vmax_nitrification, &      !< maximum rate of nitrification per N uptake
+      vmax_denitirfication       !< maximum rate of denitrification per N uptake
+
+   ! isoptop stuff
+   REAL(wp), SAVE :: & 
+      eta_mic_uptake_nh4, &      !< fractionation of N15 due to microbial NH4 assimilation (per mill)
+      eta_mic_uptake_no3, &      !< fractionation of N15 due to microbial NO3 assimilation (per mill)
+      eta_plant_uptake_nh4, &    !< fractionation of N15 due to plant NH4 assimilation (per mill)
+      eta_plant_uptake_no3, &    !< fractionation of N15 due to plant NO3 assimilation (per mill)
+      eta_nitrification, &       !< fractionation of N15 due to microbial nitrification to NO and N2O (per mill)
+      eta_nitrate_production, &  !< fractionation of N15 due to microbial NO3 production during nitrification (per mill)
+      eta_denitrification, &     !< fractionation of N15 due to microbial denitrification (per mill)
+      eta_ammonification, &      !< fractionation of N15 due to microbial ammonification (per mill)
+      eta_volatilisation_nh3, &  !< fractionation of N15 due to NH3 volatilisation (per mill)
+      eta_nfixation              !< fractionation of N15 due to N fixation (per mill)
+
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_constants'
 
 CONTAINS
@@ -88,7 +118,7 @@ CONTAINS
   SUBROUTINE init_sb_constants
 
     USE mo_base_constants, ONLY: one_day, one_year
-    USE mo_shared_constants, ONLY: molar_mass_C 
+    USE mo_shared_constants, ONLY: molar_mass_C, molar_mass_N
  
     IMPLICIT NONE
     ! 0.2 Local
@@ -136,16 +166,43 @@ CONTAINS
     km_depolymerisation = 0.08876_wp / molar_mass_C * 1000_wp ! conversion to mol C / m3
     microbial_cue       = 0.392_wp !! COMISSION paper
    
-    f_soluable_leaf    = 0.5_wp
-    f_soluable_fine_root    = 0.5_wp
-    f_soluable_fruit    = 0.5_wp
-    f_soluable_seed_bed    = 0.5_wp
+    f_soluable_leaf      = 0.5_wp
+    f_soluable_fine_root = 0.5_wp
+    f_soluable_fruit     = 0.5_wp
+    f_soluable_seed_bed  = 0.5_wp
 
     carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
 
     microbial_cn = 6._wp
     microbial_np = 14._wp
+ 
+    vmax_mic_uptake_nh4   = 48.0_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s from Zhu et al. 2017, and references therein 
+    km_mic_uptake_nh4     = 1.2_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein    
+    vmax_mic_uptake_no3   = 39.0_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s from Zhu et al. 2017, and references therein 
+    km_mic_uptake_no3     = 1.8_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein   
+    vmax_plant_uptake_nh4 = 9.7_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s from Zhu et al. 2017, and references therein
+    km_plant_uptake_nh4   = 0.18_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein 
+    vmax_plant_uptake_no3 = 8.0_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s from Zhu et al. 2017, and references therein
+    km_plant_uptake_no3   = 0.41_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein   
+    vmax_mic_uptake_po4   = 48.0_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s 
+    km_mic_uptake_po4     = 1.2_wp / molar_mass_N ! mol / m3 
+    vmax_plant_uptake_po4 = 9.7_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s 
+    km_plant_uptake_po4   = 0.18_wp / molar_mass_N ! mol / m3 
+    vmax_nitrification    = 0.01_wp    
+    vmax_denitirfication  = 0.01_wp  
 
+    ! All values from Robinson 2001, TREE
+    eta_mic_uptake_nh4     = 17._wp
+    eta_mic_uptake_no3     = 13._wp
+    eta_plant_uptake_nh4   = 13.5_wp
+    eta_plant_uptake_no3   = 9.5_wp
+    eta_nitrification      = 47.5_wp
+    eta_nitrate_production = 25._wp
+    eta_denitrification    = 31._wp
+    eta_ammonification     = 2.5_wp
+    eta_volatilisation_nh3 = 50._wp
+    eta_nfixation          = 3.0_wp        
+ 
   END SUBROUTINE init_sb_constants
 
 END MODULE mo_sb_constants

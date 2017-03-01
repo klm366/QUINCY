@@ -26,7 +26,8 @@ MODULE mo_sb_jsm_processes
             calc_om_sorption, & 
             calc_jsm_pool_change, & 
             calc_temperature_rate_modifier,calc_oxygen_rate_modifier, & 
-            calc_convert_bulk_to_liquid,calc_substrate_rate_modifier
+            calc_convert_bulk_to_liquid,calc_substrate_rate_modifier, &
+            calc_inorganic_uptake
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_jsm_processes'
 
@@ -329,6 +330,77 @@ CONTAINS
 
   END SUBROUTINE calc_litter_turnover
 
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task called from update_sb_pools
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> calculate sinks of the bio-available inorganic nutrient pools
+  !!  according to Zhu et al. (2017)
+  !!
+  !! Input: solute concentration, microbial biomass, fine root biomass, rate modifiers 
+  !!
+  !! Output: microbial and plant inorganic uptake rates, and the isotopic signature
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL SUBROUTINE calc_inorganic_uptake(solute, microbial_carbon, fine_root_carbon, &
+                                             rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, & 
+                                             vmax_mic_uptake, km_mic_uptake, vmax_plant_uptake, km_plant_uptake, & 
+                                             mic_uptake, plant_uptake, solute_n15, & 
+                                             eta_mic_uptake, eta_plant_uptake, mic_uptake_n15, plant_uptake_n15)
+
+    USE mo_shared_isotope, ONLY: calc_fractionation
+
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp), INTENT(in)            :: solute                  !< concentration of the solvent to be taken up (mol / m3)
+    REAL(wp), INTENT(in)            :: microbial_carbon        !< microbial carbon density (mol / m3)
+    REAL(wp), INTENT(in)            :: fine_root_carbon        !< fine_root density (mol / m3)
+    REAL(wp), INTENT(in)            :: rtm_mic_uptake          !< temperature rate modifier for microbial (and plant) uptake
+    REAL(wp), INTENT(in)            :: rmm_mic_uptake          !< moisture rate modifier for microbial (and plant) uptake
+    REAL(wp), INTENT(in)            :: rtm_hsc                 !< temperature rate modifier for half_saturation constants
+    REAL(wp), INTENT(in)            :: rmm_hsc                 !< moisture rate modifier for half_saturation constants
+    REAL(wp), INTENT(in)            :: vmax_mic_uptake         !< maximium uptake rate of microbial biomass (mol S / mol C / s)
+    REAL(wp), INTENT(in)            :: km_mic_uptake           !< half-saturation constant of microbial nutrient uptake (mol S / m3)
+    REAL(wp), INTENT(in)            :: vmax_plant_uptake       !< maximium uptake rate of microbial biomass (mol S / mol C / s)
+    REAL(wp), INTENT(in)            :: km_plant_uptake         !< half-saturation constant of microbial nutrient uptake (mol S / m3)
+    REAL(wp), INTENT(out)           :: mic_uptake              !< microbial uptake flux (mol / m3 / timestep), sign convention (-ve = uptake!!)
+    REAL(wp), INTENT(out)           :: plant_uptake            !< plant uptake flux (mol / m3 / timestep)
+    REAL(wp), INTENT(in),  OPTIONAL :: solute_n15              !< concentration of the solvent to be taken up (mol / m3)
+    REAL(wp), INTENT(in),  OPTIONAL :: eta_mic_uptake          !< discrimination of microbial uptake
+    REAL(wp), INTENT(in),  OPTIONAL :: eta_plant_uptake        !< discrimination of plant uptake
+    REAL(wp), INTENT(out), OPTIONAL :: mic_uptake_n15          !< immobilisation flux (mol / m3 / timestep)
+    REAL(wp), INTENT(out), OPTIONAL :: plant_uptake_n15        !< plant uptake flux (mol / m3 / timestep)
+    ! 0.2 Local
+    REAL(wp)              :: hlp1,hlp2
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_inorganic_uptake'
+
+    !> 1.0 uptake
+    !! co-limited rates of N uptake for microbes, plants and processing (nitrification, denitrification)
+    hlp1 = rtm_hsc * rmm_hsc * km_mic_uptake
+    hlp2 = rtm_hsc * rmm_hsc * km_plant_uptake
+    mic_uptake     = rtm_mic_uptake * rmm_mic_uptake * vmax_mic_uptake * microbial_carbon * solute * dtime / &
+                         (hlp1 + solute + hlp1/hlp2 * fine_root_carbon + microbial_carbon)
+    plant_uptake   = rtm_mic_uptake * rmm_mic_uptake * vmax_plant_uptake * fine_root_carbon * solute * dtime / &
+                         (hlp2 + solute + hlp2/hlp1 * microbial_carbon + fine_root_carbon)
+
+    !> 1.1 limit to possible solution, and invert sign on microbial uptake flux (-> net mineralisation)
+    !!
+    hlp1 = mic_uptake + plant_uptake
+    IF(hlp1 > solute .AND. hlp1 > eps8)THEN
+       mic_uptake = - 1.0_wp * mic_uptake / hlp1 * MAX(solute-eps8,0.0_wp)
+       plant_uptake = plant_uptake / hlp1 * MAX(solute-eps8,0.0_wp)
+    ELSE 
+       mic_uptake = - 1.0_wp * mic_uptake
+    ENDIF
+
+    IF(PRESENT(solute_n15))THEN
+       !> 2.0 isotopic signature of flux
+       !!
+       mic_uptake_n15 = mic_uptake * calc_fractionation(solute,solute_n15,eta_mic_uptake)
+       plant_uptake_n15 = plant_uptake * calc_fractionation(solute,solute_n15,eta_plant_uptake)
+    ENDIF
+
+  END SUBROUTINE calc_inorganic_uptake
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools
@@ -449,7 +521,8 @@ CONTAINS
                                    rtm_mic_uptake,rmm_mic_uptake,rtm_hsc,rmm_hsc, &
                                    loss_dom,formation_microbial, &
                                    het_respiration,het_respiration_c13,het_respiration_c14, &
-                                   net_mineralisation_n,net_mineralisation_n15,net_mineralisation_p)
+                                   net_mineralisation_nh4,net_mineralisation_nh4_n15, &
+                                   net_mineralisation_no3,net_mineralisation_no3_n15,net_mineralisation_po4)
 
     USE mo_sb_constants, ONLY: vmax_mic_uptake,km_mic_uptake,microbial_cue,microbial_cn,microbial_np
 
@@ -469,9 +542,11 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration     !< respiration rate [mol C/m3/timestep]
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration_c13 !< respiration rate [mol 13C/m3/timestep] 
     REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: het_respiration_c14 !< respiration rate [mol 14C/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_n !< net mineralisation rate [mol N/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_n15 !< net mineralisation rate [mol 15N/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_p !< net mineralisation rate [mol P/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_nh4 !< net mineralisation rate [mol N/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_nh4_n15 !< net mineralisation rate [mol 15N/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_no3 !< net mineralisation rate [mol N/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_no3_n15 !< net mineralisation rate [mol 15N/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,nsoil), INTENT(inout) :: net_mineralisation_po4 !< net mineralisation rate [mol P/m3/timestep]
     ! ---------------------------
     ! 0.2 Local 
     REAL(wp), DIMENSION(options%nc,nsoil) :: hlp1             , &
@@ -503,6 +578,7 @@ CONTAINS
                        pool_microbial%carbon%ptr(ics:ice,:,iblk) 
 
     !> X.X nutrient limitation stuff ...
+    
 
     !> X.X final rate 
     WHERE(pool_dom%carbon%ptr(ics:ice,:,iblk) > eps8)
@@ -527,7 +603,7 @@ CONTAINS
                                                        uptake_rate_org(:,:) 
     formation_microbial%nitrogen%ptr(ics:ice,:,iblk) = formation_microbial%nitrogen%ptr(ics:ice,:,iblk) + & 
                                                        uptake_rate_org(:,:) + uptake_rate_min(:,:)
-    net_mineralisation_n(:,:)                        = net_mineralisation_n(:,:) - uptake_rate_min(:,:) 
+    net_mineralisation_nh4(:,:)                      = net_mineralisation_nh4(:,:) - uptake_rate_min(:,:) 
    
     !! phosphorus
     uptake_rate_min(:,:) = uptake_rate_org / microbial_np - f_uptake(:,:) * pool_dom%phosphorus%ptr(ics:ice,:,iblk) 
@@ -536,7 +612,7 @@ CONTAINS
                                                          uptake_rate_org(:,:) 
     formation_microbial%phosphorus%ptr(ics:ice,:,iblk) = formation_microbial%phosphorus%ptr(ics:ice,:,iblk) + & 
                                                          uptake_rate_org(:,:) + uptake_rate_min(:,:)
-    net_mineralisation_p(:,:)                          = net_mineralisation_p(:,:) - uptake_rate_min(:,:) 
+    net_mineralisation_po4(:,:)                        = net_mineralisation_po4(:,:) - uptake_rate_min(:,:) 
    
     !! carbon13
     uptake_rate_org(:,:) = f_uptake(:,:) * pool_dom%carbon13%ptr(ics:ice,:,iblk)
@@ -560,7 +636,7 @@ CONTAINS
                                                          uptake_rate_org(:,:) 
     formation_microbial%nitrogen15%ptr(ics:ice,:,iblk) = formation_microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
                                                          uptake_rate_org 
-    net_mineralisation_n15(:,:)                        = net_mineralisation_n15(:,:) 
+    net_mineralisation_nh4_n15(:,:)                    = net_mineralisation_nh4_n15(:,:) 
    
     !! phosphorus
 

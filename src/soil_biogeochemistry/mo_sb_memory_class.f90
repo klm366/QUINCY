@@ -185,11 +185,19 @@ MODULE mo_sb_memory_class
                                     het_respiration    ,    &  !< heterotrophic respiration  [mol m-3 s-1]
                                     het_respiration_c13,    &  !< c13 heterotrophic respiration   [mol m-3 s-1]
                                     het_respiration_c14,    &  !< c14 heterotrophic respiration   [mol m-3 s-1]
-                                    net_mineralisation_n,   &  !< net mineralisation of N    [mol m-3 s-1]
-                                    net_mineralisation_n15, &  !< net mineralisation of N15  [mol m-3 s-1] 
-                                    net_mineralisation_p,   &  !< net mineralisation of P  [mol m-3 s-1]
+                                    net_mineralisation_nh4,     &  !< net mineralisation of N    [mol m-3 s-1]
+                                    net_mineralisation_nh4_n15, &  !< net mineralisation of N15  [mol m-3 s-1] 
+                                    net_mineralisation_no3,     &  !< net mineralisation of N    [mol m-3 s-1]
+                                    net_mineralisation_no3_n15, &  !< net mineralisation of N15  [mol m-3 s-1] 
+                                    net_mineralisation_po4,   &  !< net mineralisation of P  [mol m-3 s-1]
+                                    plant_uptake_nh4_sl,     &  !< plant uptake of N    [mol m-3 s-1]
+                                    plant_uptake_nh4_n15_sl, &  !< plant uptake of N15  [mol m-3 s-1] 
+                                    plant_uptake_no3_sl,     &  !< plant uptake of N    [mol m-3 s-1]
+                                    plant_uptake_no3_n15_sl, &  !< plant uptake of N15  [mol m-3 s-1] 
+                                    plant_uptake_po4_sl,   &  !< plant uptake of P  [mol m-3 s-1]
                                     volatilisation_n,       &  !< volatilisation of N  [µmol m-3 s-1]
-                                    nitrification              !< nitrification  [µmol m-3 s-1]
+                                    nitrification, &             !< nitrification  [µmol m-3 s-1]
+                                    denitrification              !< nitrification  [µmol m-3 s-1]
     
     TYPE(t_jsb_var_real3d)          :: &
       qmax_org, &        !< sorption capacity of mineral soil [kg C kg-1 mineral soil]
@@ -956,19 +964,43 @@ CONTAINS
       CALL slm_add_var(mem, 'het_respiration_c14', mem%het_respiration_c14, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'net_mineralisation_n', mem%net_mineralisation_n, &
+      CALL slm_add_var(mem, 'net_mineralisation_nh4', mem%net_mineralisation_nh4, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'net_mineralisation_n15', mem%net_mineralisation_n15, &
+      CALL slm_add_var(mem, 'net_mineralisation_nh4_n15', mem%net_mineralisation_nh4_n15, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'net_mineralisation_p', mem%net_mineralisation_p, &
+      CALL slm_add_var(mem, 'net_mineralisation_no3', mem%net_mineralisation_no3, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'net_mineralisation_no3_n15', mem%net_mineralisation_no3_n15, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'net_mineralisation_po4', mem%net_mineralisation_po4, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'plant_uptake_nh4_sl', mem%plant_uptake_nh4_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'plant_uptake_nh4_n15_sl', mem%plant_uptake_nh4_n15_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'plant_uptake_no3_sl', mem%plant_uptake_no3_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'plant_uptake_no3_n15_sl', mem%plant_uptake_no3_n15_sl, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL slm_add_var(mem, 'plant_uptake_po4_sl_sl', mem%plant_uptake_po4_sl, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'volatilisation_n', mem%volatilisation_n, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'nitrification', mem%nitrification, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'denitrification', mem%denitrification, &
             initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'qmax_org', mem%qmax_org, &

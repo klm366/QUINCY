@@ -47,6 +47,7 @@ CONTAINS
     USE mo_sb_constants
     USE mo_sb_jsm_processes
     USE mo_sb_jsm_transport
+    USE mo_shared_isotope
  
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -63,6 +64,10 @@ CONTAINS
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc
+    INTEGER                               :: isoil
+!!
+    REAL(wp), DIMENSION(options%nc,soil_config%nsoil_water) :: fine_root_carbon,hlp1
+!!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -91,9 +96,18 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
     dsl4jsb_Real3D_onChunk :: het_respiration_c14
-    dsl4jsb_Real3D_onChunk :: net_mineralisation_n
-    dsl4jsb_Real3D_onChunk :: net_mineralisation_n15
-    dsl4jsb_Real3D_onChunk :: net_mineralisation_p
+    dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4
+    dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4_n15
+    dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
+    dsl4jsb_Real3D_onChunk :: net_mineralisation_no3_n15
+    dsl4jsb_Real3D_onChunk :: net_mineralisation_po4
+    dsl4jsb_Real3D_onChunk :: nitrification 
+    dsl4jsb_Real3D_onChunk :: denitrification 
+    dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_no3_n15_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: nh4_solute 
     dsl4jsb_Real3D_onChunk :: nh4_assoc 
     dsl4jsb_Real3D_onChunk :: no3_solute
@@ -159,9 +173,18 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_n)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_n15)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_p)
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification)
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification)
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute) 
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc) 
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute) 
@@ -239,9 +262,16 @@ rmm_desorption = 1.0_wp
          het_respiration(:,:) = 0.0_wp
          het_respiration_c13(:,:) = 0.0_wp
          het_respiration_c14(:,:) = 0.0_wp
-         net_mineralisation_n(:,:) = 0.0_wp
-         net_mineralisation_n15(:,:) = 0.0_wp
-         net_mineralisation_p(:,:) = 0.0_wp
+         net_mineralisation_nh4(:,:) = 0.0_wp
+         net_mineralisation_nh4_n15(:,:) = 0.0_wp
+         net_mineralisation_no3(:,:) = 0.0_wp
+         net_mineralisation_no3_n15(:,:) = 0.0_wp
+         net_mineralisation_po4(:,:) = 0.0_wp
+         plant_uptake_nh4_sl(:,:) = 0.0_wp
+         plant_uptake_nh4_n15_sl(:,:) = 0.0_wp
+         plant_uptake_no3_sl(:,:) = 0.0_wp
+         plant_uptake_no3_n15_sl(:,:) = 0.0_wp
+         plant_uptake_po4_sl(:,:) = 0.0_wp
          transport_nh4_solute(:,:) = 0.0_wp 
          transport_nh4_assoc(:,:) = 0.0_wp 
          transport_no3_solute(:,:) = 0.0_wp 
@@ -250,6 +280,31 @@ rmm_desorption = 1.0_wp
          transport_nh4_n15_solute(:,:) = 0.0_wp 
          transport_nh4_n15_assoc(:,:) = 0.0_wp 
          transport_no3_n15_solute(:,:) = 0.0_wp 
+
+         !fine_root_carbon = root_fraction_sl * 6._wp !veg%pool%fine_root%carbon%ptr
+         fine_root_carbon = root_fraction_sl * veg%pool%fine_root%carbon%ptr
+
+         !> X.0 Inorganic N assimilation
+         !!
+         !> X.1 NH4
+!!         CALL calc_inorganic_uptake(nh4_solute(:,:), sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), fine_root_carbon(:,:), &
+!!                                    rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), & 
+!!                                    vmax_mic_uptake_nh4, km_mic_uptake_nh4, vmax_plant_uptake_nh4, km_plant_uptake_nh4, & 
+!!                                    net_mineralisation_nh4(:,:), plant_uptake_nh4_sl(:,:), & 
+!!                                    nh4_n15_solute(:,:), eta_mic_uptake_nh4, eta_plant_uptake_nh4, & 
+!!                                    net_mineralisation_nh4_n15(:,:), plant_uptake_nh4_n15_sl(:,:))
+!!         !> X.2 NO3
+!!         CALL calc_inorganic_uptake(no3_solute(:,:), sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), fine_root_carbon(:,:), &
+!!                                    rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), & 
+!!                                    vmax_mic_uptake_no3, km_mic_uptake_no3, vmax_plant_uptake_no3, km_plant_uptake_no3, & 
+!!                                    net_mineralisation_no3(:,:), plant_uptake_no3_sl(:,:), & 
+!!                                    no3_n15_solute(:,:), eta_mic_uptake_no3, eta_plant_uptake_no3, & 
+!!                                    net_mineralisation_no3_n15(:,:), plant_uptake_no3_n15_sl(:,:))
+!!         !> X.3 PO4
+!!         CALL calc_inorganic_uptake(po4_solute(:,:), sb%pool%microbial%carbon%ptr(ics:ice,:,iblk), fine_root_carbon(:,:), &
+!!                                    rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), & 
+!!                                    vmax_mic_uptake_po4, km_mic_uptake_po4, vmax_plant_uptake_po4, km_plant_uptake_po4, & 
+!!                                    net_mineralisation_po4(:,:), plant_uptake_po4_sl(:,:))
 
          !> 2.0 Litter-related fluxes  
          !!
@@ -287,7 +342,9 @@ rmm_desorption = 1.0_wp
                                     rtm_mic_uptake(:,:),rmm_mic_uptake(:,:),rtm_hsc(:,:),rmm_hsc(:,:), &
                                     sb%loss%dom,sb%formation%microbial, &
                                     het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:), &
-                                    net_mineralisation_n(:,:),net_mineralisation_n15(:,:),net_mineralisation_p(:,:))
+                                    net_mineralisation_nh4(:,:),net_mineralisation_nh4_n15(:,:), & 
+                                    net_mineralisation_no3(:,:),net_mineralisation_no3_n15(:,:), & 
+                                    net_mineralisation_po4(:,:))
 
          !> 3.2 microbial death
          !! determine mortality rate, constrained by to avoiding a complete death of the community
@@ -370,14 +427,14 @@ rmm_desorption = 1.0_wp
          !!
          CALL calc_jsm_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
          !nh4_solute(:,:) = nh4_solute(:,:) + net_mineralisation_n(:,:) + transport_nh4_solute(:,:)
-         nh4_solute(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
+         !nh4_solute(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
          nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)
-         no3_solute(:,:) = no3_solute(:,:) + transport_no3_solute(:,:)
-         !po4_solute(:,:) = po4_solute(:,:) + net_mineralisation_p(:,:) + transport_po4_solute(:,:)
+         !no3_solute(:,:) = no3_solute(:,:) + transport_no3_solute(:,:)
+         !po4_solute(:,:) = po4_solute(:,:) + net_mineralisation_po4(:,:) + transport_po4_solute(:,:)
          po4_solute(:,:) = po4_solute(:,:) + transport_po4_solute(:,:)
          po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
          !nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_n15(:,:) + transport_nh4_n15_solute(:,:)
-         nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + transport_nh4_n15_solute(:,:)
+         !nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + transport_nh4_n15_solute(:,:)
          nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
          no3_n15_solute(:,:) = no3_n15_solute(:,:) + transport_no3_n15_solute(:,:)
 
@@ -486,15 +543,15 @@ rmm_desorption = 1.0_wp
     !!
     sb%het_respiration%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
                                              sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) 
-    sb%net_mineralisation_n%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
+    sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
                                                   sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) 
-    sb%net_mineralisation_p%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
+    sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
                                                   sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) 
     sb%het_respiration_c13%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
                                                  sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) 
     sb%het_respiration_c14%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
                                                  sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) 
-    sb%net_mineralisation_n15%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
+    sb%net_mineralisation_nh4_n15%ptr(ics:ice,:,iblk) = sb%rtm_depolymerisation%ptr(ics:ice,:,iblk)/tau_litter/one_day/one_year * & 
                                                     sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) 
 
     ! > 1.1 subtract losses
@@ -502,15 +559,15 @@ rmm_desorption = 1.0_wp
     sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) - & 
                                                           sb%het_respiration%ptr(ics:ice,:,iblk) * dtime
     sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) - & 
-                                                            sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * dtime
+                                                            sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * dtime
     sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) - & 
-                                                              sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * dtime
+                                                              sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * dtime
     sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk) - & 
                                                             sb%het_respiration_c13%ptr(ics:ice,:,iblk) * dtime
     sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk) - & 
                                                             sb%het_respiration_c14%ptr(ics:ice,:,iblk) * dtime
     sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) - & 
-                                                              sb%net_mineralisation_n15%ptr(ics:ice,:,iblk) * dtime
+                                                              sb%net_mineralisation_nh4_n15%ptr(ics:ice,:,iblk) * dtime
 
     !> 2 Update soil litter pool with litter fall
     !!
@@ -577,12 +634,12 @@ rmm_desorption = 1.0_wp
     !> 3 Update mineral pool
     !!
     IF(veg_config%n_uptake_scheme /= 'prescribed') THEN
-       sb%volatilisation_n%ptr(ics:ice,:,iblk) = sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * floss_nmin * 1.e6_wp 
-       sb%nitrification%ptr(ics:ice,:,iblk) = sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * fnit_nmin * 1.e6_wp 
+       sb%volatilisation_n%ptr(ics:ice,:,iblk) = sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * floss_nmin * 1.e6_wp 
+       sb%nitrification%ptr(ics:ice,:,iblk) = sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * fnit_nmin * 1.e6_wp 
        sb%nh4_solute%ptr(ics:ice,:,iblk) = sb%nh4_solute%ptr(ics:ice,:,iblk) + & 
-                                           sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * (1._wp - fnit_nmin) * dtime
+                                           sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * (1._wp - fnit_nmin) * dtime
        sb%no3_solute%ptr(ics:ice,:,iblk) = sb%no3_solute%ptr(ics:ice,:,iblk) + & 
-                                           sb%net_mineralisation_n%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * fnit_nmin * dtime
+                                           sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * (1._wp - floss_nmin) * fnit_nmin * dtime
        sb%nh4_solute%ptr(ics:ice,1,iblk) = sb%nh4_solute%ptr(ics:ice,1,iblk) - & 
                                            uptake_nh4(1:nc) / soil%soil_depth_sl%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
        sb%no3_solute%ptr(ics:ice,1,iblk) = sb%no3_solute%ptr(ics:ice,1,iblk) - & 
@@ -590,7 +647,7 @@ rmm_desorption = 1.0_wp
     ENDIF
 
     IF(veg_config%p_uptake_scheme /= 'prescribed') THEN
-       sb%po4_solute%ptr(ics:ice,:,iblk) = sb%po4_solute%ptr(ics:ice,:,iblk) + sb%net_mineralisation_p%ptr(ics:ice,:,iblk) * dtime
+       sb%po4_solute%ptr(ics:ice,:,iblk) = sb%po4_solute%ptr(ics:ice,:,iblk) + sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * dtime
        sb%po4_solute%ptr(ics:ice,1,iblk) = sb%po4_solute%ptr(ics:ice,1,iblk) - uptake_p(1:nc) / soil%soil_depth_sl%ptr(ics:ice,1,iblk) * dtime/1.e6_wp
     ENDIF
 
