@@ -38,6 +38,7 @@ CONTAINS
     USE mo_base_memory,         ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_base_constants,      ONLY: dtime, one_day
     USE mo_base_config_class,   ONLY: base_config
+    USE mo_assimi_config_class, ONLY: assimi_config
     USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_shared_constants,    ONLY: lambda_C14, rhoh2o, grav
     USE mo_veg_canopy,          ONLY: calc_canopy_layers
@@ -239,12 +240,12 @@ CONTAINS
        !> 1.1 net balance of the labile carbon pool due to photosynthesis and respiration
        !! 
        !! 
-       npp(1)      = gross_assimilation(1)     - & 
-           growth_respiration(1) - maint_respiration(1) - n_processing_respiration(1)
-       npp_c13(1)  = gross_assimilation_C13(1) - &
-           growth_respiration_c13(1) - maint_respiration_c13(1) - n_processing_respiration_c13(1)
-       npp_c14(1)  = gross_assimilation_C14(1) - & 
-           growth_respiration_c14(1) - maint_respiration_c14(1) - n_processing_respiration_c14(1)
+       npp(:)      = gross_assimilation(:)     - & 
+           growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:)
+       npp_c13(:)  = gross_assimilation_C13(:) - &
+           growth_respiration_c13(:) - maint_respiration_c13(:) - n_processing_respiration_c13(:)
+       npp_c14(:)  = gross_assimilation_C14(:) - & 
+           growth_respiration_c14(:) - maint_respiration_c14(:) - n_processing_respiration_c14(:)
        veg%growth%labile%carbon%ptr   = veg%growth%labile%carbon%ptr    + npp(1)     * dtime / 1000000.0_wp
        veg%growth%labile%carbon13%ptr = veg%growth%labile%carbon13%ptr  + npp_c13(1) * dtime / 1000000.0_wp
        veg%growth%labile%carbon14%ptr = veg%growth%labile%carbon14%ptr  + npp_c14(1) * dtime / 1000000.0_wp
@@ -306,55 +307,57 @@ CONTAINS
        !> 2.0 Update plant diagnostics given the above fluxes
        !!
        !! 
-       lai(1)      = veg%pool%leaf%carbon%ptr * lctlib%sla
-       dens_ind(1) = dens_ind(1) + delta_dens_ind(1)
-       IF(lctlib%growthform == itree.AND.dens_ind(1)>0.0_wp)THEN
-          diameter(1)  = calc_diameter_from_woody_biomass(lctlib                         , &
+       lai(:)      = veg%pool%leaf%carbon%ptr * lctlib%sla
+       dens_ind(:) = dens_ind(:) + delta_dens_ind(:)
+       WHERE(dens_ind(:)>0.0_wp .AND. lctlib%growthform == itree)
+          diameter(:)  = calc_diameter_from_woody_biomass(lctlib                         , &
                                                           veg%pool%sap_wood%carbon%ptr   , &
                                                           veg%pool%heart_wood%carbon%ptr , &
-                                                          dens_ind(1))
-          height(1)    = calc_height_from_diameter(lctlib, diameter(1)) 
-       ENDIF 
+                                                          dens_ind(:))
+          height(:)    = calc_height_from_diameter(lctlib, diameter(:)) 
+       END WHERE
 
        IF(veg%pool%leaf%carbon%ptr > eps8) THEN 
-           mean_leaf_age(1) = & 
-             (mean_leaf_age(1) + dtime/one_day) * (1._wp - veg%growth%leaf%carbon%ptr / veg%pool%leaf%carbon%ptr)
+           mean_leaf_age(:) = & 
+             (mean_leaf_age(:) + dtime/one_day) * (1._wp - veg%growth%leaf%carbon%ptr / veg%pool%leaf%carbon%ptr)
          ELSE 
-           mean_leaf_age(1) = 0.0_wp
+           mean_leaf_age(:) = 0.0_wp
        END IF
 
-       dphi(1) = w_soil_root_pot(1) - lctlib%phi_leaf_min - grav * rhoh2o * height(1) * 1.e-6_wp
+       dphi(:) = w_soil_root_pot(:) - lctlib%phi_leaf_min - grav * rhoh2o * height(:) * 1.e-6_wp
 
     END SELECT
 
     !> 3.0 Given current vegetation pools, update canopy layers 
     !!
     !!
-    CALL calc_canopy_layers( lctlib                             , &
-                             nc                                 , &   ! number of chunks
+    CALL calc_canopy_layers( &
+                             nc                                 , & ! in
+                             assimi_config%ncanopy              , &
+                             lctlib                             , &
                              veg%pool%leaf%nitrogen%ptr         , &
-                             lai(1)                             , &
-                             ppfd_sunlit_tfrac_mavg_cl(1,:)     , &
-                             ppfd_shaded_tfrac_mavg_cl(1,:)     , & 
-                             fleaf_sunlit_tfrac_mavg_cl(1,:)    , &
-                             t_air_tfrac_mavg(1)                , &
-                             t_air_tacclim_mavg(1)              , &
-                             press_srf_tfrac_mavg(1)            , &
-                             co2_mixing_ratio_tfrac_mavg(1)     , &
-                             ga_tfrac_mavg(1)                   , &
-                             beta_air_tfrac_mavg(1)             , &
-                             beta_soil_ps_tfrac_mavg(1)         , &
-                             beta_sinklim_ps_tfrac_mavg(1)      , &
-                             beta_soil_gs_tfrac_mavg(1)         , & 
-                             t_jmax_opt_mavg(1)                 , &
-                             lai_cl(1,:)                        , &
-                             cumm_lai_cl(1,:)                   , &
-                             leaf_nitrogen_cl(1,:)              , &
-                             fn_rub_cl(1,:)                     , &
-                             fn_et_cl(1,:)                      , &
-                             fn_pepc_cl(1,:)                    , &
-                             fn_chl_cl(1,:)                     , &
-                             fn_oth_cl(1,:)                     )
+                             lai(:)                             , &
+                             ppfd_sunlit_tfrac_mavg_cl(:,:)     , &
+                             ppfd_shaded_tfrac_mavg_cl(:,:)     , & 
+                             fleaf_sunlit_tfrac_mavg_cl(:,:)    , &
+                             t_air_tfrac_mavg(:)                , &
+                             t_air_tacclim_mavg(:)              , &
+                             press_srf_tfrac_mavg(:)            , &
+                             co2_mixing_ratio_tfrac_mavg(:)     , &
+                             ga_tfrac_mavg(:)                   , &
+                             beta_air_tfrac_mavg(:)             , &
+                             beta_soil_ps_tfrac_mavg(:)         , &
+                             beta_sinklim_ps_tfrac_mavg(:)      , &
+                             beta_soil_gs_tfrac_mavg(:)         , & 
+                             t_jmax_opt_mavg(:)                 , &
+                             lai_cl(:,:)                        , & ! out
+                             cumm_lai_cl(:,:)                   , & ! out
+                             leaf_nitrogen_cl(:,:)              , & ! inout
+                             fn_rub_cl(:,:)                     , &
+                             fn_et_cl(:,:)                      , &
+                             fn_pepc_cl(:,:)                    , &
+                             fn_chl_cl(:,:)                     , &
+                             fn_oth_cl(:,:)                     )
 
     !> 4.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass
     !!

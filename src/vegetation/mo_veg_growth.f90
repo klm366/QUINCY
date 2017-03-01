@@ -43,6 +43,7 @@ CONTAINS
     USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_respiration,         ONLY: temperature_response_respiration
     USE mo_veg_canopy,              ONLY: calc_dir_optimal_cn_leaf, calc_marginal_canopy_flux_increment
+    USE mo_assimi_config_class,     ONLY: assimi_config
 
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
@@ -62,6 +63,7 @@ CONTAINS
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)       :: dheight    !< delta height
+    INTEGER                               :: ichunk     !< loop over chunks ics:ice / 1:nc
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_growth'
     ! ---------------------------
@@ -330,6 +332,8 @@ CONTAINS
                                     t_air(:)                          , &
                                     veg%pool%fine_root%carbon%ptr     , &
                                     veg%pool%fine_root%nitrogen%ptr   , &
+!                                    veg%pool%fine_root%carbon(:)      , &
+!                                    veg%pool%fine_root%nitrogen(:)    , &
                                     fmaint_rate_troot_mavg(:)         , &
                                     unit_npp_troot_mavg(:)            , &
                                     unit_uptake_n_pot_troot_mavg(:)   , &
@@ -338,33 +342,40 @@ CONTAINS
   
     !> 2.0 Calculate target C:N:P for each tissue type
     !! 
+    !! runs only IF (growing_season(ichunk) .AND. veg_pool_leaf_nitrogen > eps4 ) \n
+    !! loops internally over: ichunk=1,nc
     !! 
-    IF (veg_config%flag_optimal_Nleaf .AND. growing_season(1)) THEN
-      CALL calc_dir_optimal_cn_leaf(lctlib                               , &
-                                        nc                               , &   ! number of chunks
+    IF (veg_config%flag_optimal_Nleaf) THEN
+      CALL calc_dir_optimal_cn_leaf( &
+                                        nc                               , & ! in
+                                        assimi_config%ncanopy            , &
+                                        lctlib                           , &
+                                        growing_season(:)                , &
                                         veg%pool%leaf%carbon%ptr         , &  
                                         veg%pool%leaf%nitrogen%ptr       , & 
-                                        lai(1)                           , &
-                                        t_jmax_opt_mavg(1)               , &
-                                        target_cn_leaf(1)                , &
-                                        t_air_tacclim_mavg(1)            , &
-                                        t_air_tcnl_mavg(1)               , &
-                                        ga_tcnl_mavg(1)                  , &
-                                        press_srf_tcnl_mavg(1)           , &
-                                        co2_mixing_ratio_tcnl_mavg(1)    , &
-                                        beta_sinklim_ps_tcnl_mavg(1)     , &
-                                        beta_air_tcnl_mavg(1)            , &
-                                        beta_soil_ps_tcnl_mavg(1)        , &
-                                        beta_soil_gs_tcnl_mavg(1)        , &
-                                        fn_chl_cl(1,:)                   , &
-                                        fn_et_cl(1,:)                    , &
-                                        fn_rub_cl(1,:)                   , &
-                                        fn_pepc_cl(1,:)                  , &
-                                        fleaf_sunlit_tcnl_mavg_cl(1,:)   , &
-                                        ppfd_sunlit_tcnl_mavg_cl(1,:)    , &
-                                        ppfd_shaded_tcnl_mavg_cl(1,:)    , &
-                                        leaf_cn_direction(1)             )
-    END IF
+!                                        veg%pool%leaf%carbon(ics:ice)    , & 
+!                                        veg%pool%leaf%nitrogen(ics:ice)  , & 
+                                        lai(:)                           , &
+                                        t_jmax_opt_mavg(:)               , &
+                                        target_cn_leaf(:)                , &
+                                        t_air_tacclim_mavg(:)            , &
+                                        t_air_tcnl_mavg(:)               , &
+                                        ga_tcnl_mavg(:)                  , &
+                                        press_srf_tcnl_mavg(:)           , &
+                                        co2_mixing_ratio_tcnl_mavg(:)    , &
+                                        beta_sinklim_ps_tcnl_mavg(:)     , &
+                                        beta_air_tcnl_mavg(:)            , &
+                                        beta_soil_ps_tcnl_mavg(:)        , &
+                                        beta_soil_gs_tcnl_mavg(:)        , &
+                                        fn_chl_cl(:,:)                   , &
+                                        fn_et_cl(:,:)                    , &
+                                        fn_rub_cl(:,:)                   , &
+                                        fn_pepc_cl(:,:)                  , &
+                                        fleaf_sunlit_tcnl_mavg_cl(:,:)   , &
+                                        ppfd_sunlit_tcnl_mavg_cl(:,:)    , &
+                                        ppfd_shaded_tcnl_mavg_cl(:,:)    , &
+                                        leaf_cn_direction(:)             )    ! out
+    END IF ! veg_config%flag_optimal_Nleaf
 
     CALL calc_stoichiometry_changes(lctlib                        , & ! in
                                       growing_season(:)           , &
@@ -385,33 +396,37 @@ CONTAINS
     !! 
     !> 3.1 calculate marginal NPP increment per unit C growth, needed for optimal allocation scheme
     !!
-    CALL calc_marginal_canopy_flux_increment(lctlib                       , &
-                                              nc                          , &   ! number of chunks
-                                              t_air(1)                    , &
-                                              press_srf(1)                , &
-                                              q_air(1)                    , &
-                                              co2_mixing_ratio(1)         , &
-                                              ga(1)                       , & 
-                                              net_assimilation(1)         , & 
-                                              canopy_cond(1)              , & 
-                                              beta_air(1)                 , & 
-                                              beta_soil_ps(1)             , & 
-                                              beta_soil_gs(1)             , & 
+    CALL calc_marginal_canopy_flux_increment( &
+                                              options%nc                  , & ! in
+                                              assimi_config%ncanopy       , &
+                                              lctlib                      , &
+                                              t_air(:)                    , &
+                                              press_srf(:)                , &
+                                              q_air(:)                    , &
+                                              co2_mixing_ratio(:)         , &
+                                              ga(:)                       , & 
+                                              net_assimilation(:)         , & 
+                                              canopy_cond(:)              , & 
+                                              beta_air(:)                 , & 
+                                              beta_soil_ps(:)             , & 
+                                              beta_soil_gs(:)             , & 
                                               veg%pool%leaf%carbon%ptr    , &  
-                                              veg%pool%leaf%nitrogen%ptr  , & 
-                                              lai(1)                      , &
-                                              beta_sinklim_ps(1)          , &
-                                              t_air_tacclim_mavg(1)       , &
-                                              t_jmax_opt_mavg(1)          , &
-                                              fn_chl_cl(1,:)              , &
-                                              fn_et_cl(1,:)               , &
-                                              fn_rub_cl(1,:)              , &
-                                              fn_pepc_cl(1,:)             , &
-                                              fleaf_sunlit_cl(1,:)        , &
-                                              ppfd_sunlit_cl(1,:)         , &
-                                              ppfd_shaded_cl(1,:)         , &
-                                              unit_npp(1)                 , & 
-                                              unit_transpiration(1)       )   
+                                              veg%pool%leaf%nitrogen%ptr  , &
+!                                              veg%pool%leaf%carbon(:)     , &  
+!                                              veg%pool%leaf%nitrogen(:)   , &  
+                                              lai(:)                      , &
+                                              beta_sinklim_ps(:)          , &
+                                              t_air_tacclim_mavg(:)       , &
+                                              t_jmax_opt_mavg(:)          , &
+                                              fn_chl_cl(:,:)              , &
+                                              fn_et_cl(:,:)               , &
+                                              fn_rub_cl(:,:)              , &
+                                              fn_pepc_cl(:,:)             , &
+                                              fleaf_sunlit_cl(:,:)        , &
+                                              ppfd_sunlit_cl(:,:)         , &
+                                              ppfd_shaded_cl(:,:)         , &
+                                              unit_npp(:)                 , & ! out
+                                              unit_transpiration(:)       )   
     
     !> 3.2 calculate allometry    
     !!
@@ -419,6 +434,8 @@ CONTAINS
                         height(:)                        , &
                         veg%pool%sap_wood%carbon%ptr     , &
                         veg%pool%heart_wood%carbon%ptr   , &
+!                        veg%pool%sap_wood%carbon(:)     , &
+!                        veg%pool%heart_wood%carbon(:)   , &
                         dens_ind(:)                      , & 
                         labile_carbon_talloc_mavg(:)     , &
                         labile_nitrogen_talloc_mavg(:)   , & 
@@ -465,6 +482,7 @@ CONTAINS
                              veg%pool%reserve                     , &
                              veg%reserve_use                      , &
                              beta_sinklim_ps(1))
+
 
     !> 5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)
     !! 
@@ -1149,6 +1167,7 @@ CONTAINS
 
 
   END SUBROUTINE calc_reserve_useage
+
 
 
   !-----------------------------------------------------------------------------------------------------

@@ -85,7 +85,7 @@ soil_theta_prescribe=1.0      # float !
 
 
 ##>> details about the HPC, if unsure stick with these defaults <<################################
-queue="all"                  # available queues: all io BTM mpi_large
+queue="BTM"                  # available queues: all io BTM mpi_large
 fastNodes="F"                # if T only the nodes iof iog ioh ioi ioj are used (works only with queue BTM and io) | T (True) or F (False) [large caps]
 emailNotification="no"       # set either to yes or no (small caps)
 memory=1000                  # memory per job you may need [mega byte]; here provided in MB but recalculated to KB which is what OpenLava needs

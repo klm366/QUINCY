@@ -514,6 +514,7 @@ CONTAINS
     USE mo_base_constants,        ONLY: npft
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_assimi_config_class,   ONLY: assimi_config
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_atmland_constants,     ONLY: frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
@@ -714,26 +715,28 @@ CONTAINS
     !!
     !!  
     w_soil_root_theta(:) = ref_theta
-    lai(1)   = ref_lai 
+    lai(:)   = ref_lai 
     IF(ref_pft==0) THEN
       veg%pool%leaf%nitrogen%ptr     = ref_nleaf / molar_mass_N * lai(1)
     ELSE
       veg%pool%leaf%nitrogen%ptr     = lai(1) / lctlib%sla / lctlib%cn_leaf
       veg%pool%leaf%phosphorus%ptr   = veg%pool%leaf%nitrogen%ptr / lctlib%np_leaf
     ENDIF
-    CALL calc_canopy_layers(lctlib = lctlib, & 
-                            nc = nc, &
-                          leaf_nitrogen = veg%pool%leaf%nitrogen%ptr, &
-                          lai = lai(1),&
-                          lai_cl = lai_cl(1,:), &
-                          cumm_lai_cl = cumm_lai_cl(1,:), &
-                          leaf_nitrogen_cl = leaf_nitrogen_cl(1,:), &
-                          fn_rub_cl = fn_rub_cl(1,:), &
-                          fn_et_cl = fn_et_cl(1,:), &
-                          fn_pepc_cl = fn_pepc_cl(1,:), &
-                          fn_chl_cl = fn_chl_cl(1,:), &
-                          fn_oth_cl = fn_oth_cl(1,:), &
-                          inquire_n_fractions=.TRUE.)
+    CALL calc_canopy_layers(&
+                          nc                  = nc                                      , &
+                          ncanopy             = assimi_config%ncanopy                   , &
+                          lctlib              = lctlib                                  , & 
+                          leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
+                          lai                 = lai(:),&
+                          lai_cl              = lai_cl(1,:), &
+                          cumm_lai_cl         = cumm_lai_cl(1,:), &
+                          leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
+                          fn_rub_cl           = fn_rub_cl(1,:), &
+                          fn_et_cl            = fn_et_cl(1,:), &
+                          fn_pepc_cl          = fn_pepc_cl(1,:), &
+                          fn_chl_cl           = fn_chl_cl(1,:), &
+                          fn_oth_cl           = fn_oth_cl(1,:), &
+                          inquire_n_fractions = .TRUE.)
     t_jmax_opt_mavg(1) = 20._wp+0.35_wp*(t_air(1) - Tzero)
   !> 2.0 Sensitivity plots
   !!
@@ -899,25 +902,27 @@ CONTAINS
   !! 
   lun = lun + 1
   WRITE(lun,*) 'LAI A GC CI'
-  lai(1) = 0.0_wp
+  lai(:) = 0.0_wp
 ! @todo test_canopy_model -> over what are you looping here ? "i" does not change any as far as I can see (Jan 20160927)
   DO i = 1,22 
 
-     lai(1) = lai(1) + 0.5_wp 
+     lai(:) = lai(:) + 0.5_wp 
      veg%pool%leaf%nitrogen%ptr=ref_nleaf/molar_mass_N*lai(1)
-     CALL calc_canopy_layers(lctlib = lctlib, & 
-                            nc = nc, &
-                          leaf_nitrogen = veg%pool%leaf%nitrogen%ptr, &
-                          lai = lai(1),&
-                          lai_cl = lai_cl(1,:), &
-                          cumm_lai_cl = cumm_lai_cl(1,:), &
-                          leaf_nitrogen_cl = leaf_nitrogen_cl(1,:), &
-                          fn_rub_cl = fn_rub_cl(1,:), &
-                          fn_et_cl = fn_et_cl(1,:), &
-                          fn_pepc_cl = fn_pepc_cl(1,:), &
-                          fn_chl_cl = fn_chl_cl(1,:), &
-                          fn_oth_cl = fn_oth_cl(1,:), &
-                          inquire_n_fractions=.TRUE.)
+     CALL calc_canopy_layers(&
+                          nc                  = nc                                      , &
+                          ncanopy             = assimi_config%ncanopy                   , &
+                          lctlib              = lctlib                                  , & 
+                          leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
+                          lai                 = lai(:),&
+                          lai_cl              = lai_cl(1,:), &
+                          cumm_lai_cl         = cumm_lai_cl(1,:), &
+                          leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
+                          fn_rub_cl           = fn_rub_cl(1,:), &
+                          fn_et_cl            = fn_et_cl(1,:), &
+                          fn_pepc_cl          = fn_pepc_cl(1,:), &
+                          fn_chl_cl           = fn_chl_cl(1,:), &
+                          fn_oth_cl           = fn_oth_cl(1,:), &
+                          inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
      CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
@@ -929,7 +934,7 @@ CONTAINS
            co2_conc_leaf(1)/co2_mixing_ratio(1) 
 
   END DO
-  lai(1) = ref_lai 
+  lai(:) = ref_lai 
 
   !> 2.7 leaf N (0.5-3 g N / m2(LAI))
   !! 
@@ -939,19 +944,21 @@ CONTAINS
   DO i = 1,24
 
      veg%pool%leaf%nitrogen%ptr=0.125_wp*(i)/molar_mass_N*lai(1)
-     CALL calc_canopy_layers(lctlib = lctlib, & 
-                            nc = nc, &
-                          leaf_nitrogen = veg%pool%leaf%nitrogen%ptr, &
-                          lai = lai(1),&
-                          lai_cl = lai_cl(1,:), &
-                          cumm_lai_cl = cumm_lai_cl(1,:), &
-                          leaf_nitrogen_cl = leaf_nitrogen_cl(1,:), &
-                          fn_rub_cl = fn_rub_cl(1,:), &
-                          fn_et_cl = fn_et_cl(1,:), &
-                          fn_pepc_cl = fn_pepc_cl(1,:), &
-                          fn_chl_cl = fn_chl_cl(1,:), &
-                          fn_oth_cl = fn_oth_cl(1,:), &
-                          inquire_n_fractions=.TRUE.)
+     CALL calc_canopy_layers(&
+                          nc                  = nc                                      , &
+                          ncanopy             = assimi_config%ncanopy                   , &
+                          lctlib              = lctlib                                  , & 
+                          leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
+                          lai                 = lai(:),&
+                          lai_cl              = lai_cl(1,:), &
+                          cumm_lai_cl         = cumm_lai_cl(1,:), &
+                          leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
+                          fn_rub_cl           = fn_rub_cl(1,:), &
+                          fn_et_cl            = fn_et_cl(1,:), &
+                          fn_pepc_cl          = fn_pepc_cl(1,:), &
+                          fn_chl_cl           = fn_chl_cl(1,:), &
+                          fn_oth_cl           = fn_oth_cl(1,:), &
+                          inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
      CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util
@@ -974,19 +981,21 @@ CONTAINS
      veg%pool%leaf%nitrogen%ptr  =lai(1) /model%lctlib(i)%sla /model%lctlib(i)%cn_leaf
      veg%pool%leaf%phosphorus%ptr=veg%pool%leaf%nitrogen%ptr /model%lctlib(i)%np_leaf
      tile%lcts%lib_id = i
-     CALL calc_canopy_layers(lctlib = model%lctlib(i), & 
-                            nc = nc, &
-                          leaf_nitrogen = veg%pool%leaf%nitrogen%ptr, &
-                          lai = lai(1),&
-                          lai_cl = lai_cl(1,:), &
-                          cumm_lai_cl = cumm_lai_cl(1,:), &
-                          leaf_nitrogen_cl = leaf_nitrogen_cl(1,:), &
-                          fn_rub_cl = fn_rub_cl(1,:), &
-                          fn_et_cl = fn_et_cl(1,:), &
-                          fn_pepc_cl = fn_pepc_cl(1,:), &
-                          fn_chl_cl = fn_chl_cl(1,:), &
-                          fn_oth_cl = fn_oth_cl(1,:), &
-                          inquire_n_fractions=.TRUE.)
+     CALL calc_canopy_layers(&
+                          nc                  = nc                                      , &
+                          ncanopy             = assimi_config%ncanopy                   , &
+                          lctlib              = model%lctlib(i)                         , & 
+                          leaf_nitrogen       = veg%pool%leaf%nitrogen%ptr, &
+                          lai                 = lai(:),&
+                          lai_cl              = lai_cl(1,:), &
+                          cumm_lai_cl         = cumm_lai_cl(1,:), &
+                          leaf_nitrogen_cl    = leaf_nitrogen_cl(1,:), &
+                          fn_rub_cl           = fn_rub_cl(1,:), &
+                          fn_et_cl            = fn_et_cl(1,:), &
+                          fn_pepc_cl          = fn_pepc_cl(1,:), &
+                          fn_chl_cl           = fn_chl_cl(1,:), &
+                          fn_oth_cl           = fn_oth_cl(1,:), &
+                          inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
      CALL set_zero_vegetation_fluxes(tile)    !< mo_veg_util

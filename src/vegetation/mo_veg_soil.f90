@@ -147,17 +147,17 @@ CONTAINS
     !!
     !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P 
     IF(veg%pool%labile%carbon%ptr > eps8) THEN
-       f_n_demand(1) = lctlib%cn_leaf * & 
-           MAX(growth_req_n_tuptake_mavg(1) - veg%pool%labile%nitrogen%ptr / veg%pool%labile%carbon%ptr, 0.0_wp) 
+       f_n_demand(:) = lctlib%cn_leaf * & 
+           MAX(growth_req_n_tuptake_mavg(:) - veg%pool%labile%nitrogen%ptr / veg%pool%labile%carbon%ptr, 0.0_wp) 
     ELSE
-       f_n_demand(1) = 1.0_wp
+       f_n_demand(:) = 1.0_wp
     ENDIF
 
     IF(veg%pool%labile%nitrogen%ptr > eps8) THEN
-       f_p_demand(1) = lctlib%np_leaf * & 
-           MAX(growth_req_p_tuptake_mavg(1) - veg%pool%labile%phosphorus%ptr / veg%pool%labile%nitrogen%ptr, 0.0_wp)
+       f_p_demand(:) = lctlib%np_leaf * & 
+           MAX(growth_req_p_tuptake_mavg(:) - veg%pool%labile%phosphorus%ptr / veg%pool%labile%nitrogen%ptr, 0.0_wp)
     ELSE
-       f_p_demand(1) = 1.0_wp
+       f_p_demand(:) = 1.0_wp
     ENDIF
 
     !> 2.0 inorganic uptake (first guess)
@@ -171,22 +171,22 @@ CONTAINS
       !!
       CASE ("prescribed")
          ! uptake required to maintain a presribed C:N ratio of the labile pool in µmol N / m2 / s
-         uptake_nh4(1) = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf - veg%pool%labile%nitrogen%ptr, 0.0_wp) * 1.e6_wp / dtime
+         uptake_nh4(:) = MAX(veg%pool%labile%carbon%ptr / lctlib%cn_leaf - veg%pool%labile%nitrogen%ptr, 0.0_wp) * 1.e6_wp / dtime
 
       !> 2.1.2 Case 2. Calculate inorganic N uptake according to Michaelis-Mnten Kinetics  
       !!
       CASE ("standard","optimal","resistance")
          ! OCN's MM Kinetics
-         uptake_nh4(1) = lctlib%vmax_uptake_n * &
-                 demand_uptake_n_tuptake_mavg(1) * & 
-                 sb%nh4_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_n_aff1 + & 
-                   1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil_depth_sl(1,1) )) * & 
+         uptake_nh4(:) = lctlib%vmax_uptake_n * &
+                 demand_uptake_n_tuptake_mavg(:) * & 
+                 sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + & 
+                   1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) )) * & 
                    veg%pool%fine_root%carbon%ptr
          
-         uptake_no3(1) = lctlib%vmax_uptake_n * &
-                 demand_uptake_n_tuptake_mavg(1) * & 
-                 sb%no3_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_n_aff1 + & 
-                   1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil_depth_sl(1,1) )) * & 
+         uptake_no3(:) = lctlib%vmax_uptake_n * &
+                 demand_uptake_n_tuptake_mavg(:) * & 
+                 sb%no3_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + & 
+                   1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(:,1,1) * soil_depth_sl(:,1) )) * & 
                  veg%pool%fine_root%carbon%ptr
 
     ENDSELECT
@@ -198,7 +198,7 @@ CONTAINS
       !!
       CASE ("prescribed")
          ! uptake required to maintain a presribed N:P ratio of the labile pool in µmol P / m2 / s
-         uptake_p(1) = MAX(veg%pool%labile%nitrogen%ptr / lctlib%np_leaf + uptake_nh4(1) * dtime / 1.e6 - &
+         uptake_p(:) = MAX(veg%pool%labile%nitrogen%ptr / lctlib%np_leaf + uptake_nh4(:) * dtime / 1.e6 - &
                            veg%pool%labile%phosphorus%ptr, 0.0_wp) * &
                           1.e6_wp / dtime
 
@@ -206,10 +206,10 @@ CONTAINS
       !!
       CASE ("standard")
          ! OCN's MM Kinetics
-         uptake_p(1) = lctlib%vmax_uptake_p * & 
-                 demand_uptake_p_tuptake_mavg(1) * & 
-                 sb%po4_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_p_aff1 + & 
-                   1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil_depth_sl(1,1) )) * & 
+         uptake_p(:) = lctlib%vmax_uptake_p * & 
+                 demand_uptake_p_tuptake_mavg(:) * & 
+                 sb%po4_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_p_aff1 + & 
+                   1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(:,1,1) * soil_depth_sl(:,1) )) * & 
                  veg%pool%fine_root%carbon%ptr
 
     ENDSELECT
@@ -221,20 +221,20 @@ CONTAINS
       !> 3.1 Case 1: no N fixation
       !!
       CASE ("prescribed") 
-        n_fixation(1) = 0.0_wp
+        n_fixation(:) = 0.0_wp
 
       CASE("standard")
-        IF(sb%nh4_solute%ptr(1,1,1) * soil_depth_sl(1,1) < soil_n_threshold_bnf) n_fixation(1) = lctlib%bnf_base 
+        WHERE(sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) < soil_n_threshold_bnf) n_fixation(:) = lctlib%bnf_base 
 
       !> 3.2 Case 2: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
       CASE ("optimal")
-        IF (cost_n_fixation_tuptake_mavg(1) <= cost_n_uptake_root(1)) THEN 
-           dcost(1)         = cost_n_uptake_root(1) - cost_n_fixation_tuptake_mavg(1)
-           n_fixation(1) = veg%pool%fine_root%carbon%ptr * vmax_bnf * dcost(1) / (k_bnf + dcost(1))
-        ELSE
-           n_fixation(1) = 0.0_wp
-        ENDIF
+        WHERE(cost_n_fixation_tuptake_mavg(:) <= cost_n_uptake_root(:))
+           dcost(:)         = cost_n_uptake_root(:) - cost_n_fixation_tuptake_mavg(:)
+           n_fixation(:) = veg%pool%fine_root%carbon%ptr * vmax_bnf * dcost(:) / (k_bnf + dcost(:))
+        ELSEWHERE
+           n_fixation(:) = 0.0_wp
+        END WHERE
 
       !> 3.3 Case 3: Ohm's law analogy 
       !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
@@ -244,8 +244,8 @@ CONTAINS
          n_demand(:) = demand_uptake_n_tuptake_mavg(:) / lctlib%cn_leaf * &
                     veg%pool%labile%carbon%ptr / tau_labile / one_day * 1.e6
 
-         f_nacq_bnf(:) = MAX((cost_n_uptake_root(1) - offset_bnf) / &
-                      (cost_n_uptake_root(1) + cost_n_fixation_tuptake_mavg(1)), 0.0_wp)
+         f_nacq_bnf(:) = MAX((cost_n_uptake_root(:) - offset_bnf) / &
+                      (cost_n_uptake_root(:) + cost_n_fixation_tuptake_mavg(:)), 0.0_wp)
          f_nacq_nup(:) = 1.0_wp - f_nacq_bnf(:)
   
          n_fixation(:) = f_nacq_bnf(:) * n_demand(:) 
@@ -260,21 +260,21 @@ CONTAINS
 
     !> 4.0 Calculate potential and actual N uptake per unit fine root carbon
     !!
-    unit_uptake_n_pot(1) = lctlib%vmax_uptake_n * &
-                                (sb%nh4_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_n_aff1 + &
-                                 1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(1,1,1) * soil_depth_sl(1,1))) + &
-                                 sb%no3_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_n_aff1 + &
-                                 1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(1,1,1) * soil_depth_sl(1,1))))
-    unit_uptake_p_pot(1) = lctlib%vmax_uptake_p * &
-                                sb%po4_solute%ptr(1,1,1) * soil_depth_sl(1,1) * ( lctlib%soil_p_aff1 + &
-                                1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(1,1,1) * soil_depth_sl(1,1) ))
+    unit_uptake_n_pot(:) = lctlib%vmax_uptake_n * &
+                                (sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + &
+                                 1._wp / ( lctlib%soil_n_aff2 + sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1))) + &
+                                 sb%no3_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_n_aff1 + &
+                                 1._wp / ( lctlib%soil_n_aff2 + sb%no3_solute%ptr(:,1,1) * soil_depth_sl(:,1))))
+    unit_uptake_p_pot(:) = lctlib%vmax_uptake_p * &
+                                sb%po4_solute%ptr(:,1,1) * soil_depth_sl(:,1) * ( lctlib%soil_p_aff1 + &
+                                1._wp / ( lctlib%soil_p_aff2 + sb%po4_solute%ptr(:,1,1) * soil_depth_sl(:,1) ))
 
     IF(veg%pool%fine_root%carbon%ptr > eps8) THEN
-      unit_uptake_n_act(1) = (uptake_nh4(1) + uptake_no3(1)) / veg%pool%fine_root%carbon%ptr
-      unit_uptake_p_act(1) = uptake_p(1) / veg%pool%fine_root%carbon%ptr
+      unit_uptake_n_act(:) = (uptake_nh4(:) + uptake_no3(:)) / veg%pool%fine_root%carbon%ptr
+      unit_uptake_p_act(:) = uptake_p(:) / veg%pool%fine_root%carbon%ptr
     ELSE
-      unit_uptake_n_act(1) = unit_uptake_n_pot(1) * demand_uptake_n_tuptake_mavg(1)
-      unit_uptake_p_act(1) = unit_uptake_p_pot(1) * demand_uptake_p_tuptake_mavg(1)
+      unit_uptake_n_act(:) = unit_uptake_n_pot(:) * demand_uptake_n_tuptake_mavg(:)
+      unit_uptake_p_act(:) = unit_uptake_p_pot(:) * demand_uptake_p_tuptake_mavg(:)
     ENDIF
 
   END SUBROUTINE update_vegsoil_bgc
