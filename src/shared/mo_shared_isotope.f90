@@ -13,7 +13,8 @@ MODULE mo_shared_isotope
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: calc_delta_C13, calc_mixing_ratio_C13C12, calc_delta_C14, calc_mixing_ratio_C14C, calc_fractionation
+  PUBLIC :: calc_delta_C13, calc_mixing_ratio_C13C12, calc_delta_C14, calc_mixing_ratio_C14C, & 
+            calc_delta_N15, calc_mixing_ratio_N15N14, calc_fractionation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_isotope'
 
@@ -38,7 +39,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C13'
 
 
-    IF(element-isotope > eps8) THEN
+    IF(ABS(element-isotope) > eps8) THEN
        delta = ( isotope / (element-isotope) / PDB_STANDARD_C13 - 1.0_wp ) * 1000._wp
     ELSE
        delta = 0.0_wp
@@ -121,6 +122,53 @@ CONTAINS
                    (1._wp - (2._wp* (25._wp + delta_C13) /1000._wp) -1._wp) * scale_correction_C14 
 
   END FUNCTION calc_mixing_ratio_C14C
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Calculates the isotopic enrichment of N15 in delta notation
+  !!
+  !! Input: molar masses of element and its isotope
+  !!
+  !! Output: delta (per mill)
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION calc_delta_N15(element, isotope) RESULT(delta)
+
+    USE mo_shared_constants, ONLY: ATM_STANDARD_N15
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp), INTENT(in) :: element             !< base element (including the isotope)
+    REAL(wp), INTENT(in) :: isotope             !< isotope of element
+    REAL(wp) :: delta                           !< isotope ratio against standard (per mill)
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_N15'
+
+    IF(ABS(element-isotope) > eps8) THEN
+       delta = ( isotope / (element-isotope) / ATM_STANDARD_N15 - 1.0_wp ) * 1000._wp
+    ELSE
+       delta = 0.0_wp
+    ENDIF
+
+  END FUNCTION calc_delta_N15
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Calculates the isotopic mixing ratio of N15 for a given delta 
+  !!
+  !! Input: delta N15 relative to ATM standard
+  !!
+  !! Output: molar mixing ratio of 15N to 14N
+  !-----------------------------------------------------------------------------------------------------
+  PURE ELEMENTAL FUNCTION calc_mixing_ratio_N15N14(delta) RESULT(mixing_ratio)
+
+    USE mo_shared_constants, ONLY: ATM_STANDARD_N15
+    IMPLICIT NONE
+    ! 0.1 InOut
+    REAL(wp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
+    REAL(wp) :: mixing_ratio                    !< isotopic mixing ratio 13C / 12C 
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_N15N14'
+
+    mixing_ratio = ( delta / 1000._wp + 1.0_wp ) * ATM_STANDARD_N15
+
+  END FUNCTION calc_mixing_ratio_N15N14
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculates fractionation of a processes given the process' discrimination value

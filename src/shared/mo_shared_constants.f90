@@ -46,6 +46,7 @@ MODULE mo_shared_constants
     PDB_STANDARD_C13           , &  !< 13C/12C PDB standard
     AAB_STANDARD_C14           , &  !< 0.95·0.238 Bq/gC is the absolute specific activity of 
                                     !! the radiocarbon standard (i.e. 95% of the activity of the OxA-I standard)
+    ATM_STANDARD_N15           , &  !< 15N/14N atmospheric standard
     AvogadroC                  , &  !< Avogadro Number
     lambda_C14                 , &  !< decay constant of C14 (1/s)
     AvogadroC_times_lambda_C14 , &  !< Avogadro Number * decay constant of C14 to reduce the use of the very large/small AvogadroC/lambda_C14 
@@ -115,6 +116,7 @@ CONTAINS
     ! isotope standards
     PDB_STANDARD_C13            = 0.0112372_wp   
     AAB_STANDARD_C14            = 0.2261_wp      
+    ATM_STANDARD_N15            = 0.0036765_wp !Robinson 2001, TREE
     AvogadroC                   = 6.022_wp*1.e23_wp     
     lambda_C14                  = 3.8332_wp*1.e-12_wp    
     AvogadroC_times_lambda_C14  = 6.022_wp * 3.8332_wp * 1.e11_wp  ! used in e.g. calc_delta_C14() & calc_mixing_ratio_C14C()
