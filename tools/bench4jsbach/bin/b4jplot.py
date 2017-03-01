@@ -47,7 +47,6 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan, 
     var       = nc_fid.variables [ varname ]
     units     = var.units
     grid_type = var.grid_type
-#    long_name = var.long_name
     time      = nc_fid.variables [ 'time' ][ : ]
 
     if grid_type == "gaussian":
@@ -71,6 +70,8 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan, 
 
     if grid_type == "unstructured":
         ncells, nv = clon_vertices.shape
+
+        # shift vertices of cells covering half the globe
         mt_wholeglobe_r = (( np.amax (clon_vertices, axis = 1 ) - np.amin (clon_vertices, axis = 1 )) > 180 ).astype ( int )
         mt_wholeglobe_mask = np.array ([ mt_wholeglobe_r, mt_wholeglobe_r, mt_wholeglobe_r ]).T               
         east = ( clon_vertices < 0 ).astype ( int )
@@ -78,15 +79,44 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan, 
         east_weight_mask = np.array ([ east_weight,  east_weight,  east_weight ]).T
         shift_eastwest = ( east_weight_mask == 1 ).astype ( int ) * ( east == 1 ).astype ( int ) * 360 + \
                          ( east_weight_mask == 2 ).astype ( int ) * ( east == 0 ).astype ( int ) * ( -360 )
-        newxvc = ( clon_vertices + shift_eastwest ).ravel()
-        newyvc = clat_vertices.ravel()
-        triangles = np.reshape ( np.arange ( ncells * nv ), ( ncells, nv ))
+        newxvc = clon_vertices + shift_eastwest
+        
+        # copy east/west margin cells
+        eastmargincells = ( newxvc > 180  ).astype ( int )
+        eastmargincells_rowid, margincells_colid =  eastmargincells.nonzero ()
+        eastmargincells_rowid = np.unique ( eastmargincells_rowid )
+        eastnnewcells = eastmargincells_rowid.shape [ 0 ]
+        
+        westmargincells = ( newxvc < -180 ).astype ( int )
+        westmargincells_rowid, margincells_colid =  westmargincells.nonzero ()
+        westmargincells_rowid = np.unique ( westmargincells_rowid )
+        westnnewcells = westmargincells_rowid.shape [ 0 ]
+
+        nallcells = ncells + eastnnewcells + westnnewcells
+        
+        # calculate and concatenate new triangles
+        eastnewrows = np.take ( newxvc, eastmargincells_rowid, axis = 0 )
+        westnewrows = np.take ( newxvc, westmargincells_rowid, axis = 0 )
+        latestxvc = np.concatenate (( newxvc,
+                                      eastnewrows - 360,
+                                      westnewrows + 360 ), axis = 0 )
+        latestyvc = np.concatenate (( clat_vertices, 
+                                      np.take ( clat_vertices, eastmargincells_rowid, axis = 0 ), 
+                                      np.take ( clat_vertices, westmargincells_rowid, axis = 0)),
+                                    axis = 0 )
+        latestvardata = np.ma.concatenate (( vardata, 
+                                             np.take ( vardata, eastmargincells_rowid, axis = 0),
+                                             np.take ( vardata, westmargincells_rowid, axis = 0 )), 
+                                           axis = 0 )
+        
+        newxvc = latestxvc.ravel ()
+        newyvc = latestyvc.ravel ()
+        triangles = np.reshape ( np.arange ( nallcells * nv ), ( nallcells, nv ))
 
     
     vmax    = vardata.max () if np.isnan ( vmax ) else vmax
     vmin    = vardata.min () if np.isnan ( vmin ) else vmin
     vmean   = vardata.mean () if np.isnan ( midpoint ) else midpoint   
-    print "vmin = %0.4g, vmean = %0.4g, vmax = %0.4g" % ( vmin, vmean, vmax )
     
 # # arguments
     nlevs                = 20
@@ -98,14 +128,8 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan, 
     vrange               = vmax - vmin if vmax > 0 else abs ( vmin - vmax )
     unit                 = vrange  / ( nlevs - 1 )
     baselevel_left_val   = midval - unit/2
-    baselevel_right_val  = midval + unit/2   
-   # print "vrange = %0.4g, unit = %0.4g, baselevel_left_val = %0.4g, baselevel_right_val = %0.4g" % \
-    #    ( vrange, unit, baselevel_left_val, baselevel_right_val )
-
- #   assert vmin < baselevel_left_val and \
-   #     baselevel_left_val < midval and \
-    #    midval < baselevel_right_val and  \
-     #   baselevel_right_val < vmax
+    baselevel_right_val  = midval + unit/2
+    
     nlevs_left           = int (( baselevel_left_val - vmin ) // unit ) + 1
     nlevs_right          = int (( vmax - baselevel_right_val ) // unit ) + 1
     nlevs_revised        = nlevs_left + nlevs_right + 1
@@ -119,9 +143,6 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan, 
                                                     len ( ticks ) - 1, tick_interleave_no ))
     vals                 = np.interp ( ticks, [ leftlevel_left_val, midval, rightlevel_right_val ],
                                    [ 0, 0.5, 1 ])
-    
- #   print "leftlevel_left_val, midval, rightlevel_right_val ", \
-  #      leftlevel_left_val, midval, rightlevel_right_val
 
     #print "####### COLORS: VALS, LEVELS: #########"
     colors      = plt.cm.BrBG ( vals )
@@ -137,27 +158,21 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan, 
     ax = f.add_subplot ( 111, projection = ccrs.PlateCarree ())
     ax.set_xlim ([ -180, 180 ])
     ax.set_ylim ([ -90, 90 ])
+    ax.coastlines ( linewidth=0.5 )
+    ax.add_feature(cart.feature.OCEAN, zorder=100, edgecolor='k', linewidth=0.5, facecolor="silver" )
     
     if grid_type == 'gaussian':
         # correct grid with half distance to north and west
         lons_shifted = lons - np.concatenate (( np.zeros ( 1 ), np.abs ( lons[0:-1] - lons [1:] ) / 2 ), axis = 0 )
         lats_shifted = lats + np.concatenate (( np.abs ( lats [0:-1] - lats [1:] ) / 2, np.zeros ( 1 )), axis = 0 )
-        #ax.pcolormesh ( lons, lats,
         ax.pcolormesh ( lons_shifted, lats_shifted,
                         vardata, cmap=cmap, norm=norm,
-                        edgecolors='face', 
-                        transform=ccrs.PlateCarree(), 
+                        edgecolors='face',  
                         rasterized=True, zorder=0 )
     elif grid_type == 'unstructured':
         plt.tripcolor( newxvc, newyvc, triangles,
-                       facecolors=vardata, cmap=cmap, norm=norm,
-                       edgecolor="face",
-                       transform=ccrs.PlateCarree ())
-        
-    ax.coastlines ( linewidth=0.5 )
-    ax.add_feature(cart.feature.OCEAN, zorder=100, edgecolor='k', linewidth=0.5, facecolor="silver" )
-
-    print f
+                       facecolors=latestvardata, cmap=cmap, norm=norm,
+                       edgecolor="face")       
    
     cax = f.add_axes ([ 0.125, 0.04, 0.775, 0.03 ]) # left, bottom, width, height           
     cb = mpl.colorbar.ColorbarBase ( cax, cmap = cmap, norm = norm,
@@ -170,18 +185,7 @@ def mapplot ( inpath, varname, outpath, unit_TeX, title_TeX, midpoint = np.nan, 
                horizontalalignment = 'center',
                fontsize = 20,
                transform = ax.transAxes )
-
-    # fp = open ( "runtimefigureinfo.txt", 'a' )
-    # fp.write ( "\n\n\n########################" )
-    # fp.write ( "\ninpath: %s " % inpath )
-    # fp.write ( "\noutpath: %s " % outpath )
-    # fp.write ( "\nFigure: %s " % type ( f ))
-    # fp.write ( "\nsize: %s" % f.get_size_inches ())
-    # d = f.__dict__
-    # fp.write ("""\n%s""" % print_item_or_list_rec ( d, 3 ))
-    # fp.close ()
     
-    #f.tight_layout()
     plt.savefig ( outpath, dpi = 300 )
     plt.close ()
   
