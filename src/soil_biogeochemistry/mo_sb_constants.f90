@@ -75,7 +75,9 @@ MODULE mo_sb_constants
 
    REAL(wp), SAVE :: &
       microbial_cn, &            !< molar ratio of C:N in microbes (testing only!)
-      microbial_np               !< molar ratio of N:P in microbes (testing only!)
+      microbial_np, &            !< molar ratio of N:P in microbes (testing only!)
+      microbial_nue, & 
+      microbial_pue
 
    ! nutrient uptake kinetics
    REAL(wp), SAVE :: &
@@ -106,6 +108,10 @@ MODULE mo_sb_constants
       eta_ammonification, &      !< fractionation of N15 due to microbial ammonification (per mill)
       eta_volatilisation_nh3, &  !< fractionation of N15 due to NH3 volatilisation (per mill)
       eta_nfixation              !< fractionation of N15 due to N fixation (per mill)
+
+   ! only temporarily
+   REAL(wp), SAVE :: & 
+      nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_constants'
 
@@ -157,7 +163,7 @@ CONTAINS
     k_mort_microbial    = 7.48_wp * 1E-8
     f_soluable_residue  = 0.172_wp
     min_mic_biomass     = 0.01_wp
-    vmax_mic_uptake     = 3495.18053_wp / one_year / one_day
+    vmax_mic_uptake     = 3495.18053_wp / one_year / one_day * 1000000._wp
     km_mic_uptake       = 1.02404788_wp / molar_mass_C * 1000_wp ! conversion to mol C / m3
     tau_soluable_litter = 10._wp * one_day ! 10 days 
     tau_woody_litter    = 20._wp * one_year * one_day ! 20 years 
@@ -173,20 +179,22 @@ CONTAINS
 
     carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
 
-    microbial_cn = 6._wp
+    microbial_cn = 9._wp
     microbial_np = 14._wp
+    microbial_nue = 0.8_wp
+    microbial_pue = 0.8_wp
  
-    vmax_mic_uptake_nh4   = 48.0_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s from Zhu et al. 2017, and references therein 
+    vmax_mic_uptake_nh4   = 48.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein 
     km_mic_uptake_nh4     = 1.2_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein    
-    vmax_mic_uptake_no3   = 39.0_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s from Zhu et al. 2017, and references therein 
+    vmax_mic_uptake_no3   = 39.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein 
     km_mic_uptake_no3     = 1.8_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein   
-    vmax_plant_uptake_nh4 = 9.7_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s from Zhu et al. 2017, and references therein
+    vmax_plant_uptake_nh4 = 9.7_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein
     km_plant_uptake_nh4   = 0.18_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein 
-    vmax_plant_uptake_no3 = 8.0_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s from Zhu et al. 2017, and references therein
+    vmax_plant_uptake_no3 = 8.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s from Zhu et al. 2017, and references therein
     km_plant_uptake_no3   = 0.41_wp / molar_mass_N ! mol / m3 from Zhu et al. 2017, and references therein   
-    vmax_mic_uptake_po4   = 48.0_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s 
+    vmax_mic_uptake_po4   = 48.0_wp / 3600._wp * molar_mass_C ! µmol / mol / s 
     km_mic_uptake_po4     = 1.2_wp / molar_mass_N ! mol / m3 
-    vmax_plant_uptake_po4 = 9.7_wp / 1000000._wp / 3600._wp * molar_mass_C ! mol / mol / s 
+    vmax_plant_uptake_po4 = 9.7_wp / 3600._wp * molar_mass_C ! µmol / mol / s 
     km_plant_uptake_po4   = 0.18_wp / molar_mass_N ! mol / m3 
     vmax_nitrification    = 0.01_wp    
     vmax_denitirfication  = 0.01_wp  
@@ -202,6 +210,11 @@ CONTAINS
     eta_ammonification     = 2.5_wp
     eta_volatilisation_nh3 = 50._wp
     eta_nfixation          = 3.0_wp        
+
+    ! BLARPP temporarily
+    nh4_solute_prescribe = 1.0_wp
+    no3_solute_prescribe = 1.0_wp
+    po4_solute_prescribe = 1.0_wp
  
   END SUBROUTINE init_sb_constants
 

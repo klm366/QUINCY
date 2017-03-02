@@ -111,13 +111,19 @@ CONTAINS
        CASE('soil')
  
          ! set microbial biomass to minimum possible density
-         sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) = min_mic_biomass
-         sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk) = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
-         sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk) = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) * calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+         sb%pool%microbial%carbon%ptr(ics:ice,:,iblk)     = min_mic_biomass
+         sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) / microbial_cn 
+         sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) / microbial_np
+         sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
+         sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) * calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+         sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk)  / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
      
          ! some initial values for testing
          sb%nh4_solute%ptr(ics:ice,:,iblk) = 1.0_wp 
          sb%nh4_n15_solute%ptr(ics:ice,:,iblk) = sb%nh4_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+         sb%no3_solute%ptr(ics:ice,:,iblk) = 1.0_wp 
+         sb%no3_n15_solute%ptr(ics:ice,:,iblk) = sb%no3_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+         sb%po4_solute%ptr(ics:ice,:,iblk) = 1.0_wp 
 
          ! inital Qmax based on current soil carbon content
          sb%bulk_soil_carbon_sl%ptr(ics:ice,:,iblk) = calc_bulk_soil_carbon(options,soil_config%nsoil_water, sb%pool)
