@@ -151,8 +151,8 @@ CONTAINS
     IF(veg%pool%labile%carbon%ptr > eps8) THEN
        f_n_demand(:) = lctlib%cn_leaf * & 
            MAX(growth_req_n_tuptake_mavg(:) - &
-		      (veg%pool%labile%nitrogen%ptr + veg%pool%reserve%nitrogen%ptr) / &
- 			  (veg%pool%labile%carbon%ptr + veg%pool%reserve%carbon%ptr), 0.0_wp)
+              (veg%pool%labile%nitrogen%ptr + veg%pool%reserve%nitrogen%ptr) / &
+              (veg%pool%labile%carbon%ptr + veg%pool%reserve%carbon%ptr), 0.0_wp)
     ELSE
        f_n_demand(:) = 1.0_wp
     ENDIF
@@ -254,13 +254,13 @@ CONTAINS
   
 
          n_fixation(:) = f_nacq_bnf(:) * n_demand(:)
-		 
+         
          WHERE(uptake_nh4(:) + uptake_no3(:) > eps8 .AND. f_nacq_nup(:) * n_demand(:) < uptake_nh4(:) + uptake_no3(:) )
                scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
                uptake_nh4(:) = uptake_nh4(:) * scal(:)
                uptake_no3(:) = uptake_no3(:) * scal(:)
          END WHERE
-		   
+           
     ENDSELECT 
 
     !> 4.0 Calculate potential and actual N uptake per unit fine root carbon

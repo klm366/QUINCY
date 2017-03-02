@@ -87,12 +87,15 @@ MODULE mo_veg_constants
       transform_cost_no3   , &
       ! N transformation costs of converting organic N to organic N (mol C / mol N)
       transform_cost_org   , &
+      ! fractions of NO3 and NH4 uptake based on transformation costs
+      f_nacq_no3           , &
+      f_nacq_nh4           , &
       ! maximum rate of N fixation (µmol N / mol C fine root / s )
       vmax_bnf             , & 
       ! half_saturating cost of the response of N fixation (mol C / mol N) 
       k_bnf                , &
-	  ! factor for BNF response in resistance approach (mol C / mol N)
-	  offset_bnf           , &
+      ! factor for BNF response in resistance approach (mol C / mol N)
+      offset_bnf           , &
       ! maximum soil N at which BNF occurs in standard scheme (mol N / m2)
       soil_n_threshold_bnf
 
@@ -116,7 +119,7 @@ MODULE mo_veg_constants
       toc_rfr_ratio        ,     &               !< top of the canopy red:farred ratio  (Kull & Kruij 1998)
       k_r2fr_chl                   !< extinction of red:farred ratio on leaf chlorophyll (1/mmol N); 
                                                          !! (Kull & Krujit 1998 for the far red value, tuned to get a R:FR ratio
- 	                                                     !! of 0.15 at full canopy closure (a common value) 
+                                                          !! of 0.15 at full canopy closure (a common value) 
 
   ! other
   REAL(wp), SAVE :: & 
@@ -210,9 +213,11 @@ CONTAINS
       transform_cost_nh4  = 1.7_wp    / (molar_mass_C/molar_mass_N)
       transform_cost_no3  = 2.3_wp    / (molar_mass_C/molar_mass_N)
       transform_cost_org  = 1.0_wp    / (molar_mass_C/molar_mass_N)
+      f_nacq_nh4          = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)
+      f_nacq_no3          = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)
       vmax_bnf            = 5.0_wp * 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) *1.e6_wp
       k_bnf               = 50.0_wp   / (molar_mass_C/molar_Mass_N)
-	  offset_bnf          = 6.0_wp * 2.0_wp * (transform_cost_nh4*transform_cost_no3)/(transform_cost_nh4+transform_cost_no3)
+      offset_bnf          = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)
       soil_n_threshold_bnf = 0.04 ! mol N == 0.56 g N /m2
 
   ! parameters used for phenology calculations
