@@ -56,11 +56,13 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_model),          POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+
     REAL(wp),DIMENSION(options%nc)        :: dcost        , &  ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
                                              n_demand     , &  ! N demand of plants (mu mol N /m2 / s) 
                                              f_nacq_bnf   , &  ! fraction of N uptake as BFN
                                              f_nacq_nup   , &  ! fraction of N uptake as Nuptake
                                              scal
+
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_vegsoil_bgc'
     ! ---------------------------
@@ -148,7 +150,9 @@ CONTAINS
     !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P 
     IF(veg%pool%labile%carbon%ptr > eps8) THEN
        f_n_demand(:) = lctlib%cn_leaf * & 
-           MAX(growth_req_n_tuptake_mavg(:) - veg%pool%labile%nitrogen%ptr / veg%pool%labile%carbon%ptr, 0.0_wp) 
+           MAX(growth_req_n_tuptake_mavg(:) - &
+		      (veg%pool%labile%nitrogen%ptr + veg%pool%reserve%nitrogen%ptr) / &
+ 			  (veg%pool%labile%carbon%ptr + veg%pool%reserve%carbon%ptr), 0.0_wp)
     ELSE
        f_n_demand(:) = 1.0_wp
     ENDIF
@@ -248,14 +252,15 @@ CONTAINS
                       (cost_n_uptake_root(:) + cost_n_fixation_tuptake_mavg(:)), 0.0_wp)
          f_nacq_nup(:) = 1.0_wp - f_nacq_bnf(:)
   
-         n_fixation(:) = f_nacq_bnf(:) * n_demand(:) 
+
+         n_fixation(:) = f_nacq_bnf(:) * n_demand(:)
+		 
          WHERE(uptake_nh4(:) + uptake_no3(:) > eps8 .AND. f_nacq_nup(:) * n_demand(:) < uptake_nh4(:) + uptake_no3(:) )
                scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
-! this needs some thoughts...
                uptake_nh4(:) = uptake_nh4(:) * scal(:)
                uptake_no3(:) = uptake_no3(:) * scal(:)
          END WHERE
-  
+		   
     ENDSELECT 
 
     !> 4.0 Calculate potential and actual N uptake per unit fine root carbon
