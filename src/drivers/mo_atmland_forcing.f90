@@ -13,7 +13,7 @@ MODULE mo_atmland_forcing
 #include "dsl_jsbach.inc"
 
   USE mo_kind,                  ONLY: wp, eps8
-  USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14
+  USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14, calc_mixing_ratio_N15N14
   USE mo_atmland_util,          ONLY: update_orbital_parameters, calc_solar_angle, calc_sw_fdiffuse, calc_spec_humidity_sat
   USE mo_atmland_constants
 
@@ -463,83 +463,65 @@ CONTAINS
     veg%litterfall%leaf%carbon%ptr     = leaf_carbon_r / 1000._wp
     veg%litterfall%leaf%nitrogen%ptr   = leaf_nitrogen_r / 1000000._wp
     veg%litterfall%leaf%phosphorus%ptr = leaf_phosphorus_r / 1000000._wp   
-    veg%litterfall%leaf%carbon13%ptr   = veg%litterfall%leaf%carbon%ptr * & 
-                                         (calc_mixing_ratio_C13C12(leaf_dC13_r)/calc_mixing_ratio_C13C12(leaf_dC13_r)+1.0_wp)
+    veg%litterfall%leaf%carbon13%ptr   = veg%litterfall%leaf%carbon%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(leaf_dC13_r))  
     veg%litterfall%leaf%carbon14%ptr   = veg%litterfall%leaf%carbon%ptr * calc_mixing_ratio_C14C(leaf_dC13_r,leaf_DC14_r) 
-    veg%litterfall%leaf%nitrogen15%ptr = veg%litterfall%leaf%nitrogen%ptr * &
-                                         (calc_mixing_ratio_C13C12(leaf_dN15_r)/calc_mixing_ratio_C13C12(leaf_dN15_r)+1.0_wp)
+    veg%litterfall%leaf%nitrogen15%ptr = veg%litterfall%leaf%nitrogen%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(leaf_dN15_r))
 
     veg%litterfall%fine_root%carbon%ptr     = fine_root_carbon_r / 1000._wp
     veg%litterfall%fine_root%nitrogen%ptr   = fine_root_nitrogen_r / 1000000._wp
     veg%litterfall%fine_root%phosphorus%ptr = fine_root_phosphorus_r / 1000000._wp
-    veg%litterfall%fine_root%carbon13%ptr   = veg%litterfall%fine_root%carbon%ptr * & 
-                                              (calc_mixing_ratio_C13C12(fine_root_dC13_r)/calc_mixing_ratio_C13C12(fine_root_dC13_r)+1.0_wp)
+    veg%litterfall%fine_root%carbon13%ptr   = veg%litterfall%fine_root%carbon%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(fine_root_dC13_r)) 
     veg%litterfall%fine_root%carbon14%ptr   = veg%litterfall%fine_root%carbon%ptr * calc_mixing_ratio_C14C(fine_root_dC13_r,fine_root_DC14_r) 
-    veg%litterfall%fine_root%nitrogen15%ptr = veg%litterfall%fine_root%nitrogen%ptr * & 
-                                              (calc_mixing_ratio_C13C12(fine_root_dN15_r)/calc_mixing_ratio_C13C12(fine_root_dN15_r)+1.0_wp)
+    veg%litterfall%fine_root%nitrogen15%ptr = veg%litterfall%fine_root%nitrogen%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(fine_root_dN15_r)) 
 
     veg%litterfall%coarse_root%carbon%ptr     = coarse_root_carbon_r / 1000._wp
     veg%litterfall%coarse_root%nitrogen%ptr   = coarse_root_nitrogen_r / 1000000._wp
     veg%litterfall%coarse_root%phosphorus%ptr = coarse_root_phosphorus_r / 1000000._wp
-    veg%litterfall%coarse_root%carbon13%ptr   = veg%litterfall%coarse_root%carbon%ptr * & 
-                                                (calc_mixing_ratio_C13C12(coarse_root_dC13_r)/calc_mixing_ratio_C13C12(coarse_root_dC13_r)+1.0_wp)
+    veg%litterfall%coarse_root%carbon13%ptr   = veg%litterfall%coarse_root%carbon%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(coarse_root_dC13_r)) 
     veg%litterfall%coarse_root%carbon14%ptr   = veg%litterfall%coarse_root%carbon%ptr * calc_mixing_ratio_C14C(coarse_root_dC13_r,coarse_root_DC14_r) 
-    veg%litterfall%coarse_root%nitrogen15%ptr = veg%litterfall%coarse_root%nitrogen%ptr * & 
-                                                (calc_mixing_ratio_C13C12(coarse_root_dN15_r)/calc_mixing_ratio_C13C12(coarse_root_dN15_r)+1.0_wp)
+    veg%litterfall%coarse_root%nitrogen15%ptr = veg%litterfall%coarse_root%nitrogen%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(coarse_root_dN15_r))
 
     veg%litterfall%sap_wood%carbon%ptr     = sap_wood_carbon_r / 1000._wp
     veg%litterfall%sap_wood%nitrogen%ptr   = sap_wood_nitrogen_r / 1000000._wp
     veg%litterfall%sap_wood%phosphorus%ptr = sap_wood_phosphorus_r / 1000000._wp
-    veg%litterfall%sap_wood%carbon13%ptr   = veg%litterfall%sap_wood%carbon%ptr * & 
-                                             (calc_mixing_ratio_C13C12(sap_wood_dC13_r)/calc_mixing_ratio_C13C12(sap_wood_dC13_r)+1.0_wp)
+    veg%litterfall%sap_wood%carbon13%ptr   = veg%litterfall%sap_wood%carbon%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(sap_wood_dC13_r))
     veg%litterfall%sap_wood%carbon14%ptr   = veg%litterfall%sap_wood%carbon%ptr * calc_mixing_ratio_C14C(sap_wood_dC13_r,sap_wood_DC14_r) 
-    veg%litterfall%sap_wood%nitrogen15%ptr = veg%litterfall%sap_wood%nitrogen%ptr * & 
-                                             (calc_mixing_ratio_C13C12(sap_wood_dN15_r)/calc_mixing_ratio_C13C12(sap_wood_dN15_r)+1.0_wp)
+    veg%litterfall%sap_wood%nitrogen15%ptr = veg%litterfall%sap_wood%nitrogen%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(sap_wood_dN15_r))
 
     veg%litterfall%heart_wood%carbon%ptr     = heart_wood_carbon_r / 1000._wp
     veg%litterfall%heart_wood%nitrogen%ptr   = heart_wood_nitrogen_r / 1000000._wp
     veg%litterfall%heart_wood%phosphorus%ptr = heart_wood_phosphorus_r / 1000000._wp 
-    veg%litterfall%heart_wood%carbon13%ptr   = veg%litterfall%heart_wood%carbon%ptr * & 
-                                               (calc_mixing_ratio_C13C12(heart_wood_dC13_r)/calc_mixing_ratio_C13C12(heart_wood_dC13_r)+1.0_wp)
+    veg%litterfall%heart_wood%carbon13%ptr   = veg%litterfall%heart_wood%carbon%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(heart_wood_dC13_r)) 
     veg%litterfall%heart_wood%carbon14%ptr   = veg%litterfall%heart_wood%carbon%ptr * calc_mixing_ratio_C14C(heart_wood_dC13_r,heart_wood_DC14_r) 
-    veg%litterfall%heart_wood%nitrogen15%ptr = veg%litterfall%heart_wood%nitrogen%ptr * & 
-                                               (calc_mixing_ratio_C13C12(heart_wood_dN15_r)/calc_mixing_ratio_C13C12(heart_wood_dN15_r)+1.0_wp)
+    veg%litterfall%heart_wood%nitrogen15%ptr = veg%litterfall%heart_wood%nitrogen%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(heart_wood_dN15_r))
 
     veg%litterfall%labile%carbon%ptr     = labile_carbon_r / 1000._wp
     veg%litterfall%labile%nitrogen%ptr   = labile_nitrogen_r / 1000000._wp
     veg%litterfall%labile%phosphorus%ptr = labile_phosphorus_r / 1000000._wp 
-    veg%litterfall%labile%carbon13%ptr   = veg%litterfall%labile%carbon%ptr * & 
-                                           (calc_mixing_ratio_C13C12(labile_dC13_r)/calc_mixing_ratio_C13C12(labile_dC13_r)+1.0_wp)
+    veg%litterfall%labile%carbon13%ptr   = veg%litterfall%labile%carbon%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(labile_dC13_r))
     veg%litterfall%labile%carbon14%ptr   = veg%litterfall%labile%carbon%ptr * calc_mixing_ratio_C14C(labile_dC13_r,labile_DC14_r) 
-    veg%litterfall%labile%nitrogen15%ptr = veg%litterfall%labile%nitrogen%ptr * & 
-                                           (calc_mixing_ratio_C13C12(labile_dN15_r)/calc_mixing_ratio_C13C12(labile_dN15_r)+1.0_wp)
+    veg%litterfall%labile%nitrogen15%ptr = veg%litterfall%labile%nitrogen%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(labile_dN15_r))
 
     veg%litterfall%reserve%carbon%ptr     = reserve_carbon_r / 1000._wp
     veg%litterfall%reserve%nitrogen%ptr   = reserve_nitrogen_r / 1000000._wp
     veg%litterfall%reserve%phosphorus%ptr = reserve_phosphorus_r / 1000000._wp
-    veg%litterfall%reserve%carbon13%ptr   = veg%litterfall%reserve%carbon%ptr * & 
-                                            (calc_mixing_ratio_C13C12(reserve_dC13_r)/calc_mixing_ratio_C13C12(reserve_dC13_r)+1.0_wp)
+    veg%litterfall%reserve%carbon13%ptr   = veg%litterfall%reserve%carbon%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(reserve_dC13_r)) 
     veg%litterfall%reserve%carbon14%ptr   = veg%litterfall%reserve%carbon%ptr * calc_mixing_ratio_C14C(reserve_dC13_r,reserve_DC14_r) 
-    veg%litterfall%reserve%nitrogen15%ptr = veg%litterfall%reserve%nitrogen%ptr * &  
-                                            (calc_mixing_ratio_C13C12(reserve_dN15_r)/calc_mixing_ratio_C13C12(reserve_dN15_r)+1.0_wp)
+    veg%litterfall%reserve%nitrogen15%ptr = veg%litterfall%reserve%nitrogen%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(reserve_dN15_r))
 
     veg%litterfall%fruit%carbon%ptr     = fruit_carbon_r / 1000._wp
     veg%litterfall%fruit%nitrogen%ptr   = fruit_nitrogen_r / 1000000._wp
     veg%litterfall%fruit%phosphorus%ptr = fruit_phosphorus_r / 1000000._wp
-    veg%litterfall%fruit%carbon13%ptr   = veg%litterfall%fruit%carbon%ptr * & 
-                                          (calc_mixing_ratio_C13C12(fruit_dC13_r)/calc_mixing_ratio_C13C12(fruit_dC13_r)+1.0_wp)
+    veg%litterfall%fruit%carbon13%ptr   = veg%litterfall%fruit%carbon%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(fruit_dC13_r))
     veg%litterfall%fruit%carbon14%ptr   = veg%litterfall%fruit%carbon%ptr * calc_mixing_ratio_C14C(fruit_dC13_r,fruit_DC14_r) 
-    veg%litterfall%fruit%nitrogen15%ptr = veg%litterfall%fruit%nitrogen%ptr * & 
-                                          (calc_mixing_ratio_C13C12(fruit_dN15_r)/calc_mixing_ratio_C13C12(fruit_dN15_r)+1.0_wp)
+    veg%litterfall%fruit%nitrogen15%ptr = veg%litterfall%fruit%nitrogen%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(fruit_dN15_r))
 
     veg%litterfall%seed_bed%carbon%ptr     = seed_bed_carbon_r / 1000._wp
     veg%litterfall%seed_bed%nitrogen%ptr   = seed_bed_nitrogen_r / 1000000._wp
     veg%litterfall%seed_bed%phosphorus%ptr = seed_bed_phosphorus_r / 1000000._wp
-    veg%litterfall%seed_bed%carbon13%ptr   = veg%litterfall%seed_bed%carbon%ptr * & 
-                                             (calc_mixing_ratio_C13C12(seed_bed_dC13_r)/calc_mixing_ratio_C13C12(seed_bed_dC13_r)+1.0_wp)
+    veg%litterfall%seed_bed%carbon13%ptr   = veg%litterfall%seed_bed%carbon%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_C13C12(seed_bed_dC13_r)) 
     veg%litterfall%seed_bed%carbon14%ptr   = veg%litterfall%seed_bed%carbon%ptr * calc_mixing_ratio_C14C(seed_bed_dC13_r,seed_bed_DC14_r) 
-    veg%litterfall%seed_bed%nitrogen15%ptr = veg%litterfall%seed_bed%nitrogen%ptr * & 
-                                             (calc_mixing_ratio_C13C12(seed_bed_dN15_r)/calc_mixing_ratio_C13C12(seed_bed_dN15_r)+1.0_wp)
+    veg%litterfall%seed_bed%nitrogen15%ptr = veg%litterfall%seed_bed%nitrogen%ptr / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(seed_bed_dN15_r))
 
     DO isoil = 1,nlevel_soil
 
