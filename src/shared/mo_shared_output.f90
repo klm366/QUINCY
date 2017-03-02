@@ -74,10 +74,13 @@ MODULE mo_shared_output
   REAL(wp), DIMENSION(ntile), SAVE :: het_respC14_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: leachingC14org_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: litterfallN_acc 
-  REAL(wp), DIMENSION(ntile), SAVE :: net_min_n_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: net_min_nh4_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: net_min_no3_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: net_min_nh4_n15_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: net_min_no3_n15_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: leachingNorg_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: litterfallP_acc 
-  REAL(wp), DIMENSION(ntile), SAVE :: net_min_p_acc 
+  REAL(wp), DIMENSION(ntile), SAVE :: net_min_po4_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: leachingPorg_acc 
 
 
@@ -143,10 +146,10 @@ CONTAINS
     het_respC14_acc = 0.0_wp
     leachingC14org_acc = 0.0_wp
     litterfallN_acc = 0.0_wp
-    net_min_n_acc = 0.0_wp
+    net_min_nh4_acc = 0.0_wp
     leachingNorg_acc = 0.0_wp
     litterfallP_acc = 0.0_wp
-    net_min_p_acc = 0.0_wp
+    net_min_po4_acc = 0.0_wp
     leachingPorg_acc = 0.0_wp
 
   END SUBROUTINE init_veg_output_variables
@@ -262,6 +265,44 @@ CONTAINS
          lun=lun+1                 
          WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
          lun=lun+1                 
+         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),TRIM(p8str)
+         lun=lun+1                 
+
+         p1str=''
+         p2str=''
+         p3str=''
+         p4str=''
+         p5str=''
+         p6str=''
+         DO isoil = 1,soil_config%nsoil_water
+            IF(isoil<10) THEN 
+              WRITE(layerstr,'(I1)') isoil
+            ELSE
+              WRITE(layerstr,'(I2)') isoil
+            ENDIF
+            WRITE(p1str,'(a)') TRIM(p1str)//' NH4solute_L'//TRIM(layerstr)
+            WRITE(p2str,'(a)') TRIM(p2str)//' NO3solute_L'//TRIM(layerstr)
+            WRITE(p3str,'(a)') TRIM(p3str)//' d15N_NH4solute_L'//TRIM(layerstr)
+            WRITE(p4str,'(a)') TRIM(p4str)//' d15N_NO3solute_L'//TRIM(layerstr)
+            WRITE(p5str,'(a)') TRIM(p5str)//' NH4assoc_L'//TRIM(layerstr)
+            WRITE(p6str,'(a)') TRIM(p7str)//' d15N_NH4assoc_L'//TRIM(layerstr)
+         ENDDO
+         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str)
+         lun=lun+1                 
+
+         p1str=''
+         p2str=''
+         DO isoil = 1,soil_config%nsoil_water
+            IF(isoil<10) THEN 
+              WRITE(layerstr,'(I1)') isoil
+            ELSE
+              WRITE(layerstr,'(I2)') isoil
+            ENDIF
+            WRITE(p1str,'(a)') TRIM(p1str)//' PO4solute_L'//TRIM(layerstr)
+            WRITE(p2str,'(a)') TRIM(p2str)//' PO4assoc_L'//TRIM(layerstr)
+         ENDDO
+         WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str)
+         lun=lun+1                 
 
          p1str=''
          p2str=''
@@ -319,7 +360,7 @@ CONTAINS
         lun=lun+1   
         WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
         lun=lun+1   
-        WRITE(lun,'(a)') 'Time Litterfall NetMin LeachingOrg' 
+        WRITE(lun,'(a)') 'Time Litterfall NetMinNH4 MetMinNO3 NetMind15NH4 MetMind15NO3 LeachingOrg' 
         lun=lun+1   
         WRITE(lun,'(a)') 'Time Litterfall NetMin LeachingOrg' 
         
@@ -454,7 +495,16 @@ CONTAINS
          fname = 'soilpoolNorg_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
+         fname = 'soilpooldN15org_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
          fname = 'soilpoolPorg_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'soilpoolNinorg_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'soilpoolPinorg_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          fname = 'soil_diagnostics_tile'//TRIM(char_itile)//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
@@ -639,7 +689,7 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
     USE mo_veg_constants,         ONLY: itree
     USE mo_assimi_config_class,   ONLY: assimi_config
-    USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
+    USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process memories
@@ -921,21 +971,43 @@ CONTAINS
                 calc_delta_C14(sb%pool%microbial%carbon%ptr(ics:ice,:,iblk),sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk),dC13microbial),&
                 calc_delta_C14(sb%pool%residue%carbon%ptr(ics:ice,:,iblk),sb%pool%residue%carbon14%ptr(ics:ice,:,iblk),dC13residue),&
                 calc_delta_C14(sb%pool%residue_assoc%carbon%ptr(ics:ice,:,iblk),sb%pool%residue_assoc%carbon14%ptr(ics:ice,:,iblk),dC13residue_assoc)
-                
-
              lun=lun+1
+ 
              write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk),&
                                   sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk),&
                                   sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk),&
                                   sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk),&
                                   sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk)
              lun=lun+1
+
+             write(lun,'(100F12.6)') time_d, &
+                calc_delta_N15(sb%pool%soluable_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%soluable_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk),sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%dom%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%dom_assoc%nitrogen%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk),sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk)), &
+                calc_delta_N15(sb%pool%residue_assoc%nitrogen%ptr(ics:ice,:,iblk),sb%pool%residue_assoc%nitrogen15%ptr(ics:ice,:,iblk))
+             lun=lun+1
+
              write(lun,'(100F12.6)') time_d,sb%pool%soluable_litter%phosphorus%ptr(ics:ice,:,iblk),&
                                   sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk),sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk),&
                                   sb%pool%dom%phosphorus%ptr(ics:ice,:,iblk),sb%pool%dom_assoc%phosphorus%ptr(ics:ice,:,iblk),&
                                   sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk),sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk),&
                                   sb%pool%residue_assoc%phosphorus%ptr(ics:ice,:,iblk)
              lun=lun+1
+
+             write(lun,'(100F12.6)') time_d,sb%nh4_solute%ptr(ics:ice,:,iblk),sb%no3_solute%ptr(ics:ice,:,iblk), &
+                                  calc_delta_N15(sb%nh4_solute%ptr(ics:ice,:,iblk),sb%nh4_n15_solute%ptr(ics:ice,:,iblk)), &            
+                                  calc_delta_N15(sb%no3_solute%ptr(ics:ice,:,iblk),sb%no3_n15_solute%ptr(ics:ice,:,iblk)), &            
+                                  sb%nh4_assoc%ptr(ics:ice,:,iblk), &
+                                  calc_delta_N15(sb%nh4_assoc%ptr(ics:ice,:,iblk),sb%nh4_n15_assoc%ptr(ics:ice,:,iblk))
+             lun=lun+1
+
+             write(lun,'(100F12.6)') time_d,sb%po4_solute%ptr(ics:ice,:,iblk),sb%po4_assoc%ptr(ics:ice,:,iblk)
+             lun=lun+1
+
              write(lun,'(100F12.6)') time_d,sb%qmax_org%ptr(ics:ice,:,iblk),sb%bulk_dens_corr_sl%ptr(ics:ice,:,iblk)
              
           ENDIF
@@ -955,7 +1027,7 @@ CONTAINS
     USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options 
     USE mo_base_constants,        ONLY: dtime
     USE mo_rad_constants,         ONLY: rad2ppfd
-    USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14
+    USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
 
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
@@ -1265,33 +1337,36 @@ CONTAINS
                                       veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr + &
                                       veg%litterfall%sap_wood%carbon%ptr + veg%litterfall%heart_wood%carbon%ptr + &
                                       veg%litterfall%labile%carbon%ptr + veg%litterfall%reserve%carbon%ptr + &
-                                      veg%litterfall%fruit%carbon%ptr + veg%litterfall%seed_bed%carbon%ptr) 
+                                      veg%litterfall%fruit%carbon%ptr + veg%litterfall%seed_bed%carbon%ptr) * 1000000.0_wp
              litterfallC13_acc(itile) = litterfallC13_acc(itile) + (veg%litterfall%leaf%carbon13%ptr + & 
                                       veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr + &
                                       veg%litterfall%sap_wood%carbon13%ptr + veg%litterfall%heart_wood%carbon13%ptr + &
                                       veg%litterfall%labile%carbon13%ptr + veg%litterfall%reserve%carbon13%ptr + &
-                                      veg%litterfall%fruit%carbon13%ptr + veg%litterfall%seed_bed%carbon13%ptr) 
+                                      veg%litterfall%fruit%carbon13%ptr + veg%litterfall%seed_bed%carbon13%ptr) * 1000000.0_wp
              litterfallC14_acc(itile) = litterfallC14_acc(itile) + (veg%litterfall%leaf%carbon14%ptr + & 
                                       veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr + &
                                       veg%litterfall%sap_wood%carbon14%ptr + veg%litterfall%heart_wood%carbon14%ptr + &
                                       veg%litterfall%labile%carbon14%ptr + veg%litterfall%reserve%carbon14%ptr + &
-                                      veg%litterfall%fruit%carbon14%ptr + veg%litterfall%seed_bed%carbon14%ptr) 
+                                      veg%litterfall%fruit%carbon14%ptr + veg%litterfall%seed_bed%carbon14%ptr) * 1000000.0_wp 
              litterfallN_acc(itile) = litterfallN_acc(itile) + (veg%litterfall%leaf%nitrogen%ptr + & 
                                       veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr + &
                                       veg%litterfall%sap_wood%nitrogen%ptr + veg%litterfall%heart_wood%nitrogen%ptr + &
                                       veg%litterfall%labile%nitrogen%ptr + veg%litterfall%reserve%nitrogen%ptr + &
-                                      veg%litterfall%fruit%nitrogen%ptr + veg%litterfall%seed_bed%nitrogen%ptr) 
+                                      veg%litterfall%fruit%nitrogen%ptr + veg%litterfall%seed_bed%nitrogen%ptr) * 1000000.0_wp 
              litterfallP_acc(itile) = litterfallP_acc(itile) + (veg%litterfall%leaf%phosphorus%ptr + & 
                                       veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr + &
                                       veg%litterfall%sap_wood%phosphorus%ptr + veg%litterfall%heart_wood%phosphorus%ptr + &
                                       veg%litterfall%labile%phosphorus%ptr + veg%litterfall%reserve%phosphorus%ptr + &
-                                      veg%litterfall%fruit%phosphorus%ptr + veg%litterfall%seed_bed%phosphorus%ptr) 
+                                      veg%litterfall%fruit%phosphorus%ptr + veg%litterfall%seed_bed%phosphorus%ptr) * 1000000.0_wp
              
              het_respC_acc(itile)   = het_respC_acc(itile)   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
              het_respC13_acc(itile) = het_respC13_acc(itile) + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
              het_respC14_acc(itile) = het_respC14_acc(itile) + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             net_min_n_acc(itile)   = net_min_n_acc(itile) + SUM(sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             net_min_p_acc(itile)   = net_min_p_acc(itile) + SUM(sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             net_min_nh4_acc(itile) = net_min_nh4_acc(itile) + SUM(sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             net_min_no3_acc(itile) = net_min_no3_acc(itile) + SUM(sb%net_mineralisation_no3%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             net_min_nh4_n15_acc(itile) = net_min_nh4_n15_acc(itile) + SUM(sb%net_mineralisation_nh4_n15%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             net_min_no3_n15_acc(itile) = net_min_no3_n15_acc(itile) + SUM(sb%net_mineralisation_no3_n15%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             net_min_po4_acc(itile) = net_min_po4_acc(itile) + SUM(sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
 
              leachingCorg_acc(itile) = leachingCorg_acc(itile) + sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk)
              leachingC13org_acc(itile) = leachingC13org_acc(itile) + sb%transport%dom%carbon13%ptr(1,soil_config%nsoil_water,iblk)
@@ -1315,9 +1390,12 @@ CONTAINS
                    calc_delta_C14(het_respC_acc(itile),het_respC14_acc(itile),dC13het_resp), &
                    calc_delta_C14(leachingCorg_acc(itile),leachingC14org_acc(itile),dC13leaching)
                lun = lun + 1
-               write(lun,'(8F12.6)') time_d, litterfallN_acc(itile), net_min_n_acc(itile), leachingNorg_acc(itile)
+               write(lun,'(8F12.6)') time_d, litterfallN_acc(itile), net_min_nh4_acc(itile), net_min_no3_acc(itile), & 
+                                     calc_delta_N15(net_min_nh4_acc(itile),net_min_nh4_n15_acc(itile)), & 
+                                     calc_delta_N15(net_min_no3_acc(itile),net_min_no3_n15_acc(itile)), & 
+                                     leachingNorg_acc(itile)
                lun = lun + 1
-               write(lun,'(8F12.6)') time_d, litterfallP_acc(itile), net_min_p_acc(itile), leachingPorg_acc(itile)
+               write(lun,'(8F12.6)') time_d, litterfallP_acc(itile), net_min_po4_acc(itile), leachingPorg_acc(itile)
 
                litterfallC_acc(itile) = 0.0_wp
                het_respC_acc(itile) = 0.0_wp
@@ -1329,10 +1407,13 @@ CONTAINS
                het_respC14_acc(itile) = 0.0_wp
                leachingC14org_acc(itile) = 0.0_wp
                litterfallN_acc(itile) = 0.0_wp
-               net_min_n_acc(itile) = 0.0_wp
+               net_min_nh4_acc(itile) = 0.0_wp
+               net_min_no3_acc(itile) = 0.0_wp
+               net_min_nh4_n15_acc(itile) = 0.0_wp
+               net_min_no3_n15_acc(itile) = 0.0_wp
                leachingNorg_acc(itile) = 0.0_wp
                litterfallP_acc(itile) = 0.0_wp
-               net_min_p_acc(itile) = 0.0_wp
+               net_min_po4_acc(itile) = 0.0_wp
                leachingPorg_acc(itile) = 0.0_wp
 
              ENDIF
