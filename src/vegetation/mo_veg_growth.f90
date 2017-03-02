@@ -327,18 +327,20 @@ CONTAINS
 
     !> 1.1 calculate costs of N uptake and fixation
     !!
-    fmaint_rate(:) = fmaint_rate_base * temperature_response_respiration(t_air(:), t_air_tacclim_mavg(:))
-    CALL calc_nitrogen_uptake_costs(lctlib                            , &
-                                    t_air(:)                          , &
-                                    veg%pool%fine_root%carbon%ptr     , &
-                                    veg%pool%fine_root%nitrogen%ptr   , &
+    veg%fmaint_rate%ptr = fmaint_rate_base * temperature_response_respiration(t_air(1), veg%t_air_tacclim_mavg%ptr)
+    CALL calc_nitrogen_uptake_costs(lctlib                               , &
+                                    t_air(1)                             , &
+                                    veg%pool%fine_root%carbon%ptr        , &
+                                    veg%pool%fine_root%nitrogen%ptr      , &
 !                                    veg%pool%fine_root%carbon(:)      , &
 !                                    veg%pool%fine_root%nitrogen(:)    , &
-                                    fmaint_rate_troot_mavg(:)         , &
-                                    unit_npp_troot_mavg(:)            , &
-                                    unit_uptake_n_pot_troot_mavg(:)   , &
-                                    cost_n_uptake_root(:)             , &
-                                    cost_n_fixation(:)                  )           
+                                    fmaint_rate_troot_mavg(:)        , &
+                                    unit_npp_troot_mavg(:)           , &
+                                    unit_uptake_n_pot_troot_mavg(:)  , &
+                                    cost_n_uptake_root(:)            , &
+                                    cost_n_fixation(:)               , &
+									uptake_no3(:)                    , &
+									uptake_nh4(:))           
   
     !> 2.0 Calculate target C:N:P for each tissue type
     !! 
@@ -611,7 +613,9 @@ CONTAINS
                                                   unit_npp_troot_mavg       , &
                                                   unit_uptake_n_troot_mavg  , &
                                                   cost_n_uptake_root        , &
-                                                  cost_n_fixation)         
+                                                  cost_n_fixation           , &
+												  no3                       , &
+												  nh4)         
 
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_shared_constants,        ONLY: Tzero
@@ -629,6 +633,8 @@ CONTAINS
     REAL(wp),                 INTENT(in)  :: fmaint_rate_troot_mavg   !< N-speficic root maintentance respiration rate (µmol C/mol N / s)
     REAL(wp),                 INTENT(in)  :: unit_npp_troot_mavg      !< increase of NPP with increased leaf C investment (??)
     REAL(wp),                 INTENT(in)  :: unit_uptake_n_troot_mavg !< increase of root N uptake with increased root C inventment (??)
+	REAL(wp),                 INTENT(in)  :: no3                      !< previous uptake of NO3
+	REAL(wp),                 INTENT(in)  :: nh4                      !< previous uptake of NH4
     REAL(wp),                 INTENT(out) :: cost_n_uptake_root       !< cost of root N uptake (mol C / mol N)
     REAL(wp),                 INTENT(out) :: cost_n_fixation          !< cost of N fixation (mol C / mol N)
     ! 0.2 Local 
@@ -636,6 +642,8 @@ CONTAINS
     REAL(wp) :: gc
     REAL(wp) :: gn
     REAL(wp) :: tf                                    !! BNF-temperature-function after Houlton (2008)
+	REAL(wp) :: f_nacq_nh4
+	REAL(wp) :: f_nacq_no3
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nitrogen_uptake_costs'
 
 
@@ -654,15 +662,17 @@ CONTAINS
     !! based on Rastetter (2001) and Meyerholt (2016, OPT)
 
     ! photosynthesis gain relative to carbon investment into leafs
-    gc = MAX(unit_npp_troot_mavg,0.0_wp)
+    gc = MAX(unit_npp_troot_mavg,0.0_wp) !*0.3_wp
         
     ! n-uptake gain relative to carbon investment into roots
     ! multiplier is Croot / Croot * (1 + fresp_growth + fresp_maint
     gn = unit_uptake_n_troot_mavg /(1._wp+fresp_growth+fresp_maint)
-
+    
+	f_nacq_nh4 = nh4 / (nh4 + no3)
+	f_nacq_no3 = no3 / (nh4 + no3)
     IF(gn > eps8)THEN
         cost_n_uptake_root = gc / gn + &
-                             2.0_wp * (transform_cost_nh4*transform_cost_no3)/(transform_cost_nh4+transform_cost_no3)
+                             (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)
     ELSE
         cost_n_uptake_root = 1000._wp ! an arbitrarily large value !
     ENDIF
