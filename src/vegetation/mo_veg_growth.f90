@@ -82,6 +82,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: ga
+    dsl4jsb_Real2D_onChunk      :: swpar_srf_down
+    dsl4jsb_Real2D_onChunk      :: swpar_fdiffuse
     dsl4jsb_Real2D_onChunk      :: beta_air                   ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
@@ -127,6 +129,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: target_np_fruit
     dsl4jsb_Real2D_onChunk      :: height
     dsl4jsb_Real2D_onChunk      :: dens_ind
+    dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: labile_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: labile_phosphorus_talloc_mavg
@@ -140,8 +145,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: transpiration_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: n_fixation_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_act_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_act_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: dphi_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: leaf2sapwood_mass_ratio 
     dsl4jsb_Real2D_onChunk      :: leaf2root_mass_ratio
@@ -175,6 +180,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_et_cl
     dsl4jsb_Real3D_onChunk      :: fn_rub_cl
     dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
+    dsl4jsb_Real3D_onChunk      :: fn_oth_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
@@ -209,6 +215,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
+     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
@@ -258,6 +266,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fruit)
     dsl4jsb_Get_var2D_onChunk(VEG_, height)
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_talloc_mavg)
@@ -271,8 +282,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_act_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, leaf2sapwood_mass_ratio)
     dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_mass_ratio)
@@ -305,6 +316,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
 
@@ -373,9 +385,13 @@ CONTAINS
                                         fn_et_cl(:,:)                    , &
                                         fn_rub_cl(:,:)                   , &
                                         fn_pepc_cl(:,:)                  , &
+                                        fn_oth_cl(:,:)                   , &
                                         fleaf_sunlit_tcnl_mavg_cl(:,:)   , &
                                         ppfd_sunlit_tcnl_mavg_cl(:,:)    , &
                                         ppfd_shaded_tcnl_mavg_cl(:,:)    , &
+                                        uptake_n_tcnl_mavg               , &
+                                        growth_cn_tcnl_mavg                 , &
+                                        npp_tcnl_mavg                    , &
                                         leaf_cn_direction(:)             )    ! out
     END IF ! veg_config%flag_optimal_Nleaf
 
@@ -424,9 +440,12 @@ CONTAINS
                                               fn_et_cl(:,:)               , &
                                               fn_rub_cl(:,:)              , &
                                               fn_pepc_cl(:,:)             , &
+                                              fn_oth_cl(:,:)              , &
                                               fleaf_sunlit_cl(:,:)        , &
                                               ppfd_sunlit_cl(:,:)         , &
                                               ppfd_shaded_cl(:,:)         , &
+                                              swpar_srf_down              , &
+                                              swpar_fdiffuse              , &
                                               unit_npp(:)                 , & ! out
                                               unit_transpiration(:)       )   
     
@@ -452,8 +471,8 @@ CONTAINS
                         transpiration_talloc_mavg(:)     , &
                         unit_transpiration_talloc_mavg(:), &
                         n_fixation_talloc_mavg(:)        , &
-                        unit_uptake_n_act_talloc_mavg(:) , &
-                        unit_uptake_p_act_talloc_mavg(:) , &
+                        unit_uptake_n_talloc_mavg(:) , &
+                        unit_uptake_p_talloc_mavg(:) , &
                         dphi_talloc_mavg(:)              , &
                         kstar_labile(:)                  , &
                         dheight(:)                       , &
@@ -857,8 +876,8 @@ CONTAINS
     REAL(wp)             :: diameter2                     ! diameter (m) resulting from a infitisemal small increase in woody biomas 
     REAL(wp)             :: k1_opt_w  , &
                             k2_opt_w
-    REAL(wp)             :: hlp1      , &
-                            hlp2
+    REAL(wp)             :: k1_opt_n      , &
+                            k1_opt_p
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allometry'
 
 
@@ -897,24 +916,45 @@ CONTAINS
            !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
            !! NPP = gN * R * growth_cn
            !! Or similar relationships for P
-!BLARPP: would be good to give these variables real names
-           hlp1 = (npp*mavg_period_tgrowth*one_day +&
-                (labile_carbon + reserve_carbon - &
-                (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp - &
-                     n_fixation * growth_cn*mavg_period_tgrowth*one_day) / & 
-                (unit_uptake_n * growth_cn*mavg_period_tgrowth*one_day)
-           hlp2 = (npp*mavg_period_tgrowth*one_day +&
-                (labile_carbon + reserve_carbon - &
-                (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                (unit_uptake_p * growth_cp * mavg_period_tgrowth*one_day)
-           IF ( hlp1 >= hlp2) THEN 
-              ! if N is more limiting than P
-              k1_opt = hlp1 
-              k2_opt = unit_npp/(unit_uptake_n * growth_cn)
-           ELSE
-              k1_opt = hlp2 
-              k2_opt = unit_npp/(unit_uptake_p * growth_cp)
-           ENDIF
+           !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
+           SELECT CASE (veg_config%n_uptake_scheme)
+           CASE ("prescribed", "standard","resistance")
+              k1_opt_n = (npp*mavg_period_tgrowth*one_day +&
+                   (labile_carbon + reserve_carbon - &
+                   (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp - &
+                   n_fixation * growth_cn*mavg_period_tgrowth*one_day) / & 
+                   MAX(unit_uptake_n * growth_cn*mavg_period_tgrowth*one_day, eps8)
+               
+              k1_opt_p = (npp*mavg_period_tgrowth*one_day +&
+                   (labile_carbon + reserve_carbon - &
+                   (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                   MAX(unit_uptake_p * growth_cp * mavg_period_tgrowth*one_day,eps8)
+              IF ( k1_opt_n >= k1_opt_p) THEN 
+                 ! if N is more limiting than P
+                 k1_opt = k1_opt_n 
+                 k2_opt = unit_npp/MAX(unit_uptake_n * growth_cn, eps8)
+              ELSE
+                 k1_opt = k1_opt_p 
+                 k2_opt = unit_npp/MAX(unit_uptake_p * growth_cp, eps8)
+              ENDIF
+           CASE("optimal")
+              k1_opt_n = (npp*mavg_period_tgrowth*one_day +&
+                   (labile_carbon + reserve_carbon - &
+                   (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                   MAX((unit_uptake_n + n_fixation) * growth_cn*mavg_period_tgrowth*one_day, eps8)
+              k1_opt_p = (npp*mavg_period_tgrowth*one_day +&
+                   (labile_carbon + reserve_carbon - &
+                   (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                   MAX(unit_uptake_p * growth_cp * mavg_period_tgrowth*one_day,eps8)
+              IF ( k1_opt_n >= k1_opt_p) THEN 
+                 ! if N is more limiting than P
+                 k1_opt = k1_opt_n 
+                 k2_opt = unit_npp/MAX((unit_uptake_n+n_fixation) * growth_cn, eps8)
+              ELSE
+                 k1_opt = k1_opt_p 
+                 k2_opt = unit_npp/MAX(unit_uptake_p * growth_cp, eps8)
+              ENDIF
+           END SELECT
 
            !> water based optimality, following Magnani 2000 
            !! R = k1 + k2*dL +k3*dS 
@@ -949,24 +989,33 @@ CONTAINS
             !! potential carbon growth rate = potential nitrogen growth rate * plant cn ratio
             !! NPP = gN * R * growth_cn
             !! Or similar relationships for P
-            !BLARPP: would be good to give these variables real names
-            hlp1 = (npp*mavg_period_tgrowth*one_day +&
-                 (labile_carbon + reserve_carbon - &
-                 (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp - n_fixation * growth_cn*mavg_period_tgrowth*one_day) / & 
-                 (unit_uptake_n * growth_cn *mavg_period_tgrowth*one_day)
-            hlp2 = (npp*mavg_period_tgrowth*one_day +&
-                 (labile_carbon + reserve_carbon - &
-                 (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                 (unit_uptake_p * growth_cp * mavg_period_tgrowth*one_day)
-            
-            !IF ( hlp1 >= hlp2) THEN 
-               ! if N is more limiting than P
-               k1_opt = hlp1 
-              k2_opt = unit_npp/(unit_uptake_n * growth_cn)
-           !ELSE
-           !   k1_opt = hlp2 
-           !   k2_opt = unit_npp/(unit_uptake_p * growth_cp)
-           !ENDIF
+               !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
+           SELECT CASE (veg_config%n_uptake_scheme)
+           CASE ("prescribed", "standard","resistance")
+              k1_opt_n = (npp*mavg_period_tgrowth*one_day +&
+                   (labile_carbon + reserve_carbon - &
+                   (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp - &
+                   n_fixation * growth_cn*mavg_period_tgrowth*one_day) / & 
+                   MAX(unit_uptake_n * growth_cn*mavg_period_tgrowth*one_day, eps8)
+           CASE("optimal")
+              k1_opt_n = (npp*mavg_period_tgrowth*one_day +&
+                   (labile_carbon + reserve_carbon - &
+                   (labile_nitrogen + reserve_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                   MAX((unit_uptake_n + n_fixation) * growth_cn*mavg_period_tgrowth*one_day, eps8)
+           END SELECT
+               
+           k1_opt_p = (npp*mavg_period_tgrowth*one_day +&
+                (labile_carbon + reserve_carbon - &
+                (labile_phosphorus + reserve_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                MAX(unit_uptake_p * growth_cp * mavg_period_tgrowth*one_day,eps8)
+           IF ( k1_opt_n >= k1_opt_p) THEN 
+              ! if N is more limiting than P
+              k1_opt = k1_opt_n 
+              k2_opt = unit_npp/MAX(unit_uptake_n * growth_cn, eps8)
+           ELSE
+              k1_opt = k1_opt_p 
+              k2_opt = unit_npp/MAX(unit_uptake_p * growth_cp, eps8)
+           ENDIF
 
             !> water based optimality, following Magnani 2000 
           
@@ -974,11 +1023,11 @@ CONTAINS
            k2_opt_w = unit_transpiration / (lctlib%k_root * dphi) 
 
            ! Compare root increments for a hypothetical unit of leaf growth 
-           !IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
-           !   ! water is limiting 
-           !   k1_opt = k1_opt_w 
-           !   k2_opt = k2_opt_w 
-           !ENDIF 
+           IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
+              ! water is limiting 
+              k1_opt = k1_opt_w 
+              k2_opt = k2_opt_w 
+           ENDIF 
 
          ELSE      
             leaf2root_mass_ratio = sm2lm_grass * lctlib%k_rtos 

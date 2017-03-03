@@ -74,7 +74,9 @@ MODULE mo_jsb_lctlib_class
      REAL(wp) :: c0_allom
      REAL(wp) :: vmax_uptake_n
      REAL(wp) :: soil_n_aff1 
-     REAL(wp) :: soil_n_aff2 
+     REAL(wp) :: soil_n_aff2
+     REAL(wp) :: labile_cn_max
+     REAL(wp) :: labile_cn_min
      REAL(wp) :: vmax_uptake_p
      REAL(wp) :: soil_p_aff1 
      REAL(wp) :: soil_p_aff2 
@@ -233,6 +235,10 @@ CONTAINS
       lctlib(1:npft)%soil_n_aff1 = 0.105_wp      ! tuned from OCN's 0.05 m2/gN assuming 150 L per m2
       ! half saturation of high-affinity uptake (mmol/L) 
       lctlib(1:npft)%soil_n_aff2 = 0.4_wp        ! tuned from OCN's 0.84 gN/m2 assuming 150 L per m2
+      ! Maximum CN of labile pool, needed for N demand
+      lctlib(1:npft)%labile_cn_max = 75._wp
+      ! Minimum CN of labile pool, needed for N demand
+      lctlib(1:npft)%labile_cn_min = 16._wp
       ! vmax of P uptake (~µmol P / mol C / s)
       lctlib(1:npft)%vmax_uptake_p = 0.1428_wp   ! tuned from OCN's 1.5 gN/gC/1800s
       ! low-affinity uptake (L/mmol) 

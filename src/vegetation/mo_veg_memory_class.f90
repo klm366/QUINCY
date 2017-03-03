@@ -302,7 +302,11 @@ MODULE mo_veg_memory_class
                                     press_srf_tcnl_mavg            , &  !< air pressure at surface
                                     co2_mixing_ratio_tcnl_mavg     , &  !< co2 mixing ratio of the air
                                     ga_tcnl_mavg                   , &  !< aerodynamic resistance
-                                    beta_sinklim_ps_tcnl_mavg           !< scaling factor to account for soil moisture constraints on conductance
+                                    beta_sinklim_ps_tcnl_mavg      , &     !< scaling factor to account for soil moisture constraints on conductance
+                                    uptake_n_tcnl_mavg             , &  !< root N uptake
+                                    growth_cn_tcnl_mavg            , &  !< new growth CN ratio
+                                    npp_tcnl_mavg                       !< NPP
+
     ! 1.6 memory of conditions for photosynthesis for the optimisation of biomass allocation fractions
     TYPE(t_jsb_var_real2d)          :: &   
                                     npp_talloc_mavg                , &  !< NPP (µmol m-2 s-1) (averaging time-scale: tau_allocation)
@@ -310,8 +314,8 @@ MODULE mo_veg_memory_class
                                     transpiration_talloc_mavg      , &  !< average transpiration at allocation time-scale
                                     unit_npp_talloc_mavg           , &  !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
                                     unit_transpiration_talloc_mavg , &  !< rate of tranpiration change per unit LAI change?
-                                    unit_uptake_n_act_talloc_mavg  , &  !< actual rate of N uptkae per unit root, mumol N mol-1 (averaging time-scale: tau_allocation)
-                                    unit_uptake_p_act_talloc_mavg  , &  !< actual rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_allocation)
+                                    unit_uptake_n_talloc_mavg  , &  !< actual rate of N uptkae per unit root, mumol N mol-1 (averaging time-scale: tau_allocation)
+                                    unit_uptake_p_talloc_mavg  , &  !< actual rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_allocation)
                                     dphi_talloc_mavg               , &  !< leaf-soil water potential gradient (MPa)  (averaging time-scale: tau_allocation)
                                     growth_cn_talloc_mavg          , &  !< plant growth cn ratio, equivalent to 1/growth_req_n
                                     growth_cp_talloc_mavg          , &  !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)
@@ -1719,7 +1723,17 @@ CONTAINS
             initval_r=0.2_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_sinklim_ps_tcnl_mavg', mem%beta_sinklim_ps_tcnl_mavg, &
-            initval_r=1.0_wp) ! initvalue
+           initval_r=1.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'uptake_n_tcnl_mavg', mem%uptake_n_tcnl_mavg, &
+           initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'growth_cn_tcnl_mavg', mem%growth_cn_tcnl_mavg, &
+           initval_r=0.0_wp) ! initvalue
+
+      CALL slm_add_var(mem, 'npp_tcnl_mavg', mem%npp_tcnl_mavg, &
+           initval_r=0.0_wp) ! initvalue
+
   
       CALL slm_add_var(mem, 'npp_talloc_mavg', mem%npp_talloc_mavg, &
            initval_r=0.0_wp) ! initvalue
@@ -1736,10 +1750,10 @@ CONTAINS
       CALL slm_add_var(mem, 'unit_transpiration_talloc_mavg', mem%unit_transpiration_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'unit_uptake_n_act_talloc_mavg', mem%unit_uptake_n_act_talloc_mavg, &
+      CALL slm_add_var(mem, 'unit_uptake_n_talloc_mavg', mem%unit_uptake_n_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL slm_add_var(mem, 'unit_uptake_p_act_talloc_mavg', mem%unit_uptake_p_act_talloc_mavg, &
+      CALL slm_add_var(mem, 'unit_uptake_p_talloc_mavg', mem%unit_uptake_p_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'dphi_talloc_mavg', mem%dphi_talloc_mavg, &

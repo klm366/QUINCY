@@ -149,10 +149,8 @@ CONTAINS
     !!
     !! this probably needs some thought - f_n_demand should not grow too large, but go to zero, if the plant has too much N/P 
     IF(veg%pool%labile%carbon%ptr > eps8) THEN
-       f_n_demand(:) = lctlib%cn_leaf * & 
-           MAX(growth_req_n_tuptake_mavg(:) - &
-              (veg%pool%labile%nitrogen%ptr + veg%pool%reserve%nitrogen%ptr) / &
-              (veg%pool%labile%carbon%ptr + veg%pool%reserve%carbon%ptr), 0.0_wp)
+       f_n_demand(:) = 1._wp-exp(-(lctlib%labile_cn_max  *MAX(1._wp/lctlib%labile_cn_min - &
+            veg%pool%labile%nitrogen%ptr/veg%pool%labile%carbon%ptr, 0._wp))**2._wp)
     ELSE
        f_n_demand(:) = 1.0_wp
     ENDIF
@@ -228,7 +226,8 @@ CONTAINS
         n_fixation(:) = 0.0_wp
 
       CASE("standard")
-        WHERE(sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) < soil_n_threshold_bnf) n_fixation(:) = lctlib%bnf_base 
+        WHERE(sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) < soil_n_threshold_bnf .AND.&
+             veg%pool%fine_root%carbon%ptr>eps8) n_fixation(:) = lctlib%bnf_base 
 
       !> 3.2 Case 2: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
@@ -256,7 +255,7 @@ CONTAINS
          n_fixation(:) = f_nacq_bnf(:) * n_demand(:)
          
          WHERE(uptake_nh4(:) + uptake_no3(:) > eps8 .AND. f_nacq_nup(:) * n_demand(:) < uptake_nh4(:) + uptake_no3(:) )
-               scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
+               scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:)).
                uptake_nh4(:) = uptake_nh4(:) * scal(:)
                uptake_no3(:) = uptake_no3(:) * scal(:)
          END WHERE

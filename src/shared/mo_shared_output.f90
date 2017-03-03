@@ -741,7 +741,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: target_cn_leaf
     dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_act_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: cost_n_uptake_root
@@ -794,7 +794,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)
@@ -929,7 +929,7 @@ CONTAINS
               lun=lun+1
               write(lun,'(22F20.6)') time_d, height(1), diameter(1), lai(1), dens_ind(1), &
                 hlp1,l2r,s2c, bcf, &
-                target_cn_leaf(1), unit_npp_talloc_mavg(1), unit_uptake_n_act_talloc_mavg(1),&
+                target_cn_leaf(1), unit_npp_talloc_mavg(1), unit_uptake_n_talloc_mavg(1),&
                 growth_cn_talloc_mavg(1), npp_talloc_mavg(1), &
                 growing_season_float, & 
                 cost_n_uptake_root(1), cost_n_fixation_tuptake_mavg(1), &

@@ -129,7 +129,8 @@ CONTAINS
     USE mo_atmland_constants
     USE mo_veg_constants,                   ONLY: fresp_growth
     USE mo_shared_isotope,                  ONLY: calc_fractionation 
-    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps 
+    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
+    USE mo_kind
 
     IMPLICIT NONE
     ! ---------------------------
@@ -157,8 +158,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: transpiration_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_act_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_act_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: dphi_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg
@@ -179,6 +180,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
+    
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -209,8 +214,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_act_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)
@@ -231,7 +236,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
-
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)
 
 !! *slmtemp
     veg     => veg__mem 
@@ -288,12 +295,12 @@ CONTAINS
       npp_talloc_mavg(:) = 0.0_wp
       n_fixation_talloc_mavg(:) = 0.0_wp
       transpiration_talloc_mavg(:) = 0.0_wp
-      unit_npp_talloc_mavg(:) = 0.0_wp
       unit_transpiration_talloc_mavg(:) = 0.0_wp
-      unit_uptake_n_act_talloc_mavg(:) = 0.0_wp
-      unit_uptake_p_act_talloc_mavg(:) = 0.0_wp
+      unit_uptake_n_talloc_mavg(:) = eps8
+      unit_uptake_p_talloc_mavg(:) = eps8
       dphi_talloc_mavg(:) =  - lctlib%phi_leaf_min
       growth_cn_talloc_mavg(:) = 60.0_wp
+      unit_npp_talloc_mavg(:) = unit_uptake_n_talloc_mavg(:) * growth_cn_talloc_mavg(:)
       growth_cp_talloc_mavg(:) = 2000.0_wp
       labile_carbon_talloc_mavg(:) = 0.0_wp
       labile_nitrogen_talloc_mavg(:) = 0.0_wp
@@ -317,7 +324,11 @@ CONTAINS
       co2_mixing_ratio_tcnl_mavg(:) = def_co2_mixing_ratio
       ga_tfrac_mavg(:) = 0.2_wp
       beta_sinklim_ps_tcnl_mavg(:) = 1.0_wp
-
+      growth_cn_tcnl_mavg(:) = 60.0_wp
+      uptake_n_tcnl_mavg(:) = eps8
+      npp_tcnl_mavg(:) = uptake_n_tcnl_mavg * growth_cn_tcnl_mavg
+      
+      
 
   END SUBROUTINE init_slm_plant
 
