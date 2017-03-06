@@ -18,7 +18,7 @@ Growth in SLM is driven by source processes (GPP, nutrient uptake), and the pote
 \end{align} 
 \end{subequations}
   
-where $GPP$ is gross assimilation (Chapt. \ref{ch:assimi}), $R_m$ is maintenance respiration  (Sect. \ref{sec:MaintResp}), $R_r$ is resource uptake respiration (Sect. \ref{sec:ResUptake}), $\Delta S_X$ is the net exchange between the labile and reserve pool (Sect. \ref{sec:Reserve}), $f_{resp,growth}$ is the constant fraction of respiration associated with growth, $G_X$ are the growth rates to build new tissues (Sect. \ref{sec:GrowthRate}), and $U_{root,X}$ and $U_{fix}$ are root uptake and fixation, respectively (Sect. \ref{sec:ResUptake}). Isotopes of C and N follow their main isotope, assuming that tissue construction, storage formation and respiration do not fractionate \cite{Bruggemann:2011co}.  
+where $GPP$ is gross assimilation (Chapt. \ref{ch:assimi}), $R_m$ is maintenance respiration  (Sect. \ref{sec:veg:MaintResp}), $R_r$ is resource uptake respiration (Sect. \ref{sec:ResUptake}), $\Delta S_X$ is the net exchange between the labile and reserve pool (Sect. \ref{sec:Reserve}), $f_{resp,growth}$ is the constant fraction of respiration associated with growth, $G_X$ are the growth rates to build new tissues (Sect. \ref{sec:GrowthRate}), and $U_{root,X}$ and $U_{fix}$ are root uptake and fixation, respectively (Sect. \ref{sec:ResUptake}). Isotopes of C and N follow their main isotope, assuming that tissue construction, storage formation and respiration do not fractionate \cite{Bruggemann:2011co}.  
 
 \subsection{Growth Rate}\label{sec:GrowthRate}
 
@@ -36,9 +36,9 @@ Meristem control is represented by a reduction of the maximum turnover rate at l
 k^{*}_{labile} = \frac{1}{\tau_{labile}} \times e^{-(\lambda^{labile}_{temp}*T)^{k^{labile}_{temp}}} \times e^{-(\lambda^{labile}_{\Theta}*\Theta)^{k^{labile}_{\Theta}}}\label{eq:veg:k0_lab}
 \end{equation}
 
-where $T$ is air temperature in degrees Celsius, $\Theta$ is the fractional soil moisture content, and the $\lambda$ and $k$ are parameters (see Table \ref{TabVegParam}). $k^{*}_{labile}$ is set to zero outside the growing season (see Sect. \ref{sec:phen}).
+where $T$ is air temperature in degrees Celsius, $\Theta$ is the fractional soil moisture content, and the $\lambda$ and $k$ are parameters (see Table \ref{TabVegParam}). $k^{*}_{labile}$ is set to zero outside the growing season (see Sect. \ref{veg:sec:phen}).
 
-Respiration is assumed to have priority over growth (subroutine \texttt{mo\_veg\_growth:calc\_partitioning}). However, under severe C deficit, the meristem activity also down-regulates maintenance and resource uptake respiration (see Sect. \ref{sec:MaintResp}). To ensure that carbon growth ($G_C$) does not exceed the size of the labile carbon pool, the turnover rate of the labile pool to growth is corrected by the current respiration rate, and constrained to positive solutions:
+Respiration is assumed to have priority over growth (subroutine \texttt{mo\_veg\_growth:calc\_partitioning}). However, under severe C deficit, the meristem activity also down-regulates maintenance and resource uptake respiration (see Sect. \ref{sec:veg:MaintResp}). To ensure that carbon growth ($G_C$) does not exceed the size of the labile carbon pool, the turnover rate of the labile pool to growth is corrected by the current respiration rate, and constrained to positive solutions:
 
 \begin{equation}\label{eq:growth_c}
 G^{*}_C = k^{*}_{labile} \times C_{labile} \times dt - R_m - R_r; G_C \ge 0

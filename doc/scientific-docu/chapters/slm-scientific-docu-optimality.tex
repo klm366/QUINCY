@@ -14,12 +14,12 @@ Given the structure of the photosynthesis model there is no analytical solution 
 In addition to the optimality criterion there is a nitrogen availability constraint to avoid increasing NPP in the detriment of overall plant growth. This adds a condition to the change in leaf N, in that incrases in N only take place if there is sufficient N available in the labile pool for growth so if:
 
 \begin{equation}
- \frac{C_{labile}}{N_{labile} < \frac{C_{growth}}{N_{growth}}
+ \frac{C_{labile}}{N_{labile}} < \frac{C_{growth}}{N_{growth}}
 \end{equation}
 
 
 \section{Optimal nitrogen allocation to photosynthetic components}\label{sec:optimal_N_frac}
-As described in section \ref{sec:sec:veg:foliar_N_fractions}, leaf nitrogen is separated into five fractions: non-photosynthetic, chlorophyll, electron trasnport, rubisco and PEP carboxylase (only for C4 plants). In the reference model these fractions vary with depth in the canopy but are fixed in time. In the optimal scheme ddescribed here teh fraction can also avry in time to maximise carbon assimilation.
+As described in section \ref{sec:veg:foliar_N_fractions}, leaf nitrogen is separated into five fractions: non-photosynthetic, chlorophyll, electron trasnport, rubisco and PEP carboxylase (only for C4 plants). In the reference model these fractions vary with depth in the canopy but are fixed in time. In the optimal scheme ddescribed here teh fraction can also avry in time to maximise carbon assimilation.
 
 At each timestep, the three fractions, $f_i$ where $i$ can be either of chlorophyll $chl$, electron transport $et$ or Rubisco $rub$, PEP carboxylase $pep$, can change in order to increase carbon assimilation (or GPP per leaf area), by a given amount, $df_{max}$:
 \begin{equation}
@@ -29,7 +29,7 @@ That is, if the GPP, given the current environmental conditions and new fraction
 
 The optimal criteria is applied for each canopy layer, resultin in a distribution through teh canopy as well as a change in time. The carbon assimilation is caluculated using environmental drivers averaged over a given period of time $T_{frac_N}$ to avoid very short term variations.
 
-\section{OPtimal biomass allocation}\label{sec:optimal_allocation}
+\section{Optimal biomass allocation}\label{sec:optimal_allocation}
 The absic allocation scheme decsribe din section \ref{sec:Allocation} partitions new growth between the model pools given soem fixed allometry relationships. Here we introduce a plastic allocation scheme which responds to availability of C and N for growth as well as the plant wtaer balance.
 
 We propose an optimal allocation scheme in which the leaf:root ratio is driven by the C:N requirements of plant growth. To this purpose we define the potential carbon growth rate, $G_C$ and the potential nitrogen growth rate, $G_N$. The carbon growth rate is simply equal to the NPP:
@@ -74,10 +74,10 @@ In addition to nutrient constraints, we introduce a water limitation based alloc
 
 where $H$ is the plant height, $g$ is the gravitational acceleration, $\rho_w$ is the density of water, $R_{root}$ and $R_{sapwood}$ are the resistance of fine roots and shoots respectively and $dE$ is the transpiration per unit leaf area, calculated in a similar amnner to the NPP increment above.. An additional, optimal, constraint is that the ratio of marginal hydraulic returns for a unit growth in root or shott be equal to the carbon costs of a unit of growth integrated over teh lifetime of the pool. Given these two codniions we can derive an equation for optimal root mass similar to that given by the nutrient optimality:
 
-\begin{subequation}
- C_{fine\_root}=\frac{E_0}{\rho_w(1+c_0H)(R_{fine\_root}\Delta\Phi} + \frac{dE}{\rho_w(1+c_0H)(R_{fine\_root}\Delta\Phi}dC_{leaf} where
+\begin{equation}
+ C_{fine\_root}=\frac{E_0}{\rho_w(1+c_0H)(R_{fine\_root}\Delta\Phi} + \frac{dE}{\rho_w(1+c_0H))(R_{fine\_root}\Delta\Phi}dC_{leaf}) where
  c_0=
-\end{subequation}
+\end{equation}
 
 
 

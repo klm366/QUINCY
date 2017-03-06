@@ -119,7 +119,7 @@ CONTAINS
 
 
 
-    !! 1 Read config paramters from namelist.plant section
+    !! 1 Read config paramters from namelist and run PROC_config%Init routines
     !!
     !!  
     base_config%namelist_filename       = 'namelist.slm'
@@ -136,7 +136,7 @@ CONTAINS
     CALL pheno_config%Init
 
 
-    !! 2 Model init including lctlib init
+    !! 2 Model init 
     !!
     !! see jsbach4 mo_jsb_base
     !! 
