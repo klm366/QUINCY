@@ -76,8 +76,6 @@ MODULE mo_shared_output
   REAL(wp), DIMENSION(ntile), SAVE :: litterfallN_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: net_min_nh4_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: net_min_no3_acc 
-  REAL(wp), DIMENSION(ntile), SAVE :: net_min_nh4_n15_acc 
-  REAL(wp), DIMENSION(ntile), SAVE :: net_min_no3_n15_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: leachingNorg_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: litterfallP_acc 
   REAL(wp), DIMENSION(ntile), SAVE :: net_min_po4_acc 
@@ -285,7 +283,7 @@ CONTAINS
             WRITE(p3str,'(a)') TRIM(p3str)//' d15N_NH4solute_L'//TRIM(layerstr)
             WRITE(p4str,'(a)') TRIM(p4str)//' d15N_NO3solute_L'//TRIM(layerstr)
             WRITE(p5str,'(a)') TRIM(p5str)//' NH4assoc_L'//TRIM(layerstr)
-            WRITE(p6str,'(a)') TRIM(p7str)//' d15N_NH4assoc_L'//TRIM(layerstr)
+            WRITE(p6str,'(a)') TRIM(p6str)//' d15N_NH4assoc_L'//TRIM(layerstr)
          ENDDO
          WRITE(lun,'(9a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str)
          lun=lun+1                 
@@ -360,7 +358,7 @@ CONTAINS
         lun=lun+1   
         WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
         lun=lun+1   
-        WRITE(lun,'(a)') 'Time Litterfall NetMinNH4 MetMinNO3 NetMind15NH4 MetMind15NO3 LeachingOrg' 
+        WRITE(lun,'(a)') 'Time Litterfall NetMinNH4 NetMinNO3 LeachingOrg' 
         lun=lun+1   
         WRITE(lun,'(a)') 'Time Litterfall NetMin LeachingOrg' 
         
@@ -1328,57 +1326,55 @@ CONTAINS
              !! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
              !! for any interval larger timestep multiply by dtime
              IF(output_interval_flux < 1.0_wp) THEN
-                 dtime_one = 1.0_wp                 ! interval = timestep
+                 dtime_one = 1.0_wp / dtime            ! interval = timestep
                ELSE
-                 dtime_one = dtime / 1000000.0_wp      ! interval > timestep
+                 dtime_one = 1.0_wp / 1000000.0_wp      ! interval > timestep
              END IF
 
              litterfallC_acc(itile) = litterfallC_acc(itile) + (veg%litterfall%leaf%carbon%ptr + & 
                                       veg%litterfall%fine_root%carbon%ptr + veg%litterfall%coarse_root%carbon%ptr + &
                                       veg%litterfall%sap_wood%carbon%ptr + veg%litterfall%heart_wood%carbon%ptr + &
                                       veg%litterfall%labile%carbon%ptr + veg%litterfall%reserve%carbon%ptr + &
-                                      veg%litterfall%fruit%carbon%ptr + veg%litterfall%seed_bed%carbon%ptr) * 1000000.0_wp
+                                      veg%litterfall%fruit%carbon%ptr + veg%litterfall%seed_bed%carbon%ptr) * 1000000.0_wp * dtime_one
              litterfallC13_acc(itile) = litterfallC13_acc(itile) + (veg%litterfall%leaf%carbon13%ptr + & 
                                       veg%litterfall%fine_root%carbon13%ptr + veg%litterfall%coarse_root%carbon13%ptr + &
                                       veg%litterfall%sap_wood%carbon13%ptr + veg%litterfall%heart_wood%carbon13%ptr + &
                                       veg%litterfall%labile%carbon13%ptr + veg%litterfall%reserve%carbon13%ptr + &
-                                      veg%litterfall%fruit%carbon13%ptr + veg%litterfall%seed_bed%carbon13%ptr) * 1000000.0_wp
+                                      veg%litterfall%fruit%carbon13%ptr + veg%litterfall%seed_bed%carbon13%ptr) * 1000000.0_wp * dtime_one
              litterfallC14_acc(itile) = litterfallC14_acc(itile) + (veg%litterfall%leaf%carbon14%ptr + & 
                                       veg%litterfall%fine_root%carbon14%ptr + veg%litterfall%coarse_root%carbon14%ptr + &
                                       veg%litterfall%sap_wood%carbon14%ptr + veg%litterfall%heart_wood%carbon14%ptr + &
                                       veg%litterfall%labile%carbon14%ptr + veg%litterfall%reserve%carbon14%ptr + &
-                                      veg%litterfall%fruit%carbon14%ptr + veg%litterfall%seed_bed%carbon14%ptr) * 1000000.0_wp 
+                                      veg%litterfall%fruit%carbon14%ptr + veg%litterfall%seed_bed%carbon14%ptr) * 1000000.0_wp * dtime_one
              litterfallN_acc(itile) = litterfallN_acc(itile) + (veg%litterfall%leaf%nitrogen%ptr + & 
                                       veg%litterfall%fine_root%nitrogen%ptr + veg%litterfall%coarse_root%nitrogen%ptr + &
                                       veg%litterfall%sap_wood%nitrogen%ptr + veg%litterfall%heart_wood%nitrogen%ptr + &
                                       veg%litterfall%labile%nitrogen%ptr + veg%litterfall%reserve%nitrogen%ptr + &
-                                      veg%litterfall%fruit%nitrogen%ptr + veg%litterfall%seed_bed%nitrogen%ptr) * 1000000.0_wp 
+                                      veg%litterfall%fruit%nitrogen%ptr + veg%litterfall%seed_bed%nitrogen%ptr) * 1000000.0_wp * dtime_one
              litterfallP_acc(itile) = litterfallP_acc(itile) + (veg%litterfall%leaf%phosphorus%ptr + & 
                                       veg%litterfall%fine_root%phosphorus%ptr + veg%litterfall%coarse_root%phosphorus%ptr + &
                                       veg%litterfall%sap_wood%phosphorus%ptr + veg%litterfall%heart_wood%phosphorus%ptr + &
                                       veg%litterfall%labile%phosphorus%ptr + veg%litterfall%reserve%phosphorus%ptr + &
-                                      veg%litterfall%fruit%phosphorus%ptr + veg%litterfall%seed_bed%phosphorus%ptr) * 1000000.0_wp
+                                      veg%litterfall%fruit%phosphorus%ptr + veg%litterfall%seed_bed%phosphorus%ptr) * 1000000.0_wp * dtime_one
              
-             het_respC_acc(itile)   = het_respC_acc(itile)   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             het_respC13_acc(itile) = het_respC13_acc(itile) + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             het_respC14_acc(itile) = het_respC14_acc(itile) + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             net_min_nh4_acc(itile) = net_min_nh4_acc(itile) + SUM(sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             net_min_no3_acc(itile) = net_min_no3_acc(itile) + SUM(sb%net_mineralisation_no3%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             net_min_nh4_n15_acc(itile) = net_min_nh4_n15_acc(itile) + SUM(sb%net_mineralisation_nh4_n15%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             net_min_no3_n15_acc(itile) = net_min_no3_n15_acc(itile) + SUM(sb%net_mineralisation_no3_n15%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
-             net_min_po4_acc(itile) = net_min_po4_acc(itile) + SUM(sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:))
+             het_respC_acc(itile)   = het_respC_acc(itile)   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
+             het_respC13_acc(itile) = het_respC13_acc(itile) + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
+             het_respC14_acc(itile) = het_respC14_acc(itile) + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
+             net_min_nh4_acc(itile) = net_min_nh4_acc(itile) + SUM(sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
+             net_min_no3_acc(itile) = net_min_no3_acc(itile) + SUM(sb%net_mineralisation_no3%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
+             net_min_po4_acc(itile) = net_min_po4_acc(itile) + SUM(sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
 
-             leachingCorg_acc(itile) = leachingCorg_acc(itile) + sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk)
-             leachingC13org_acc(itile) = leachingC13org_acc(itile) + sb%transport%dom%carbon13%ptr(1,soil_config%nsoil_water,iblk)
-             leachingC14org_acc(itile) = leachingC14org_acc(itile) + sb%transport%dom%carbon14%ptr(1,soil_config%nsoil_water,iblk)
-             leachingNorg_acc(itile) = leachingNorg_acc(itile) + sb%transport%dom%nitrogen%ptr(1,soil_config%nsoil_water,iblk)
-             leachingPorg_acc(itile) = leachingPorg_acc(itile) + sb%transport%dom%phosphorus%ptr(1,soil_config%nsoil_water,iblk)
+             leachingCorg_acc(itile) = leachingCorg_acc(itile) + sb%transport%dom%carbon%ptr(1,soil_config%nsoil_water,iblk) * dtime_one
+             leachingC13org_acc(itile) = leachingC13org_acc(itile) + sb%transport%dom%carbon13%ptr(1,soil_config%nsoil_water,iblk) * dtime_one
+             leachingC14org_acc(itile) = leachingC14org_acc(itile) + sb%transport%dom%carbon14%ptr(1,soil_config%nsoil_water,iblk) * dtime_one
+             leachingNorg_acc(itile) = leachingNorg_acc(itile) + sb%transport%dom%nitrogen%ptr(1,soil_config%nsoil_water,iblk) * dtime_one
+             leachingPorg_acc(itile) = leachingPorg_acc(itile) + sb%transport%dom%phosphorus%ptr(1,soil_config%nsoil_water,iblk) * dtime_one
 
              IF( MODULO(time_d, output_interval_flux) < eps4 .OR. &
                 & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
 
                lun = (100 * itile) + 30
-               write(lun,'(8F12.6)') time_d, litterfallC_acc(itile), het_respC_acc(itile), leachingCorg_acc(itile)
+               write(lun,'(8F16.6)') time_d, litterfallC_acc(itile), het_respC_acc(itile), leachingCorg_acc(itile)
                lun = lun + 1
                dC13litterfall = calc_delta_C13(litterfallC_acc(itile),litterfallC13_acc(itile))
                dC13het_resp = calc_delta_C13(het_respC_acc(itile),het_respC13_acc(itile))
@@ -1390,12 +1386,10 @@ CONTAINS
                    calc_delta_C14(het_respC_acc(itile),het_respC14_acc(itile),dC13het_resp), &
                    calc_delta_C14(leachingCorg_acc(itile),leachingC14org_acc(itile),dC13leaching)
                lun = lun + 1
-               write(lun,'(8F12.6)') time_d, litterfallN_acc(itile), net_min_nh4_acc(itile), net_min_no3_acc(itile), & 
-                                     calc_delta_N15(net_min_nh4_acc(itile),net_min_nh4_n15_acc(itile)), & 
-                                     calc_delta_N15(net_min_no3_acc(itile),net_min_no3_n15_acc(itile)), & 
+               write(lun,'(8F16.6)') time_d, litterfallN_acc(itile), net_min_nh4_acc(itile), net_min_no3_acc(itile), & 
                                      leachingNorg_acc(itile)
                lun = lun + 1
-               write(lun,'(8F12.6)') time_d, litterfallP_acc(itile), net_min_po4_acc(itile), leachingPorg_acc(itile)
+               write(lun,'(8F16.6)') time_d, litterfallP_acc(itile), net_min_po4_acc(itile), leachingPorg_acc(itile)
 
                litterfallC_acc(itile) = 0.0_wp
                het_respC_acc(itile) = 0.0_wp
@@ -1409,8 +1403,6 @@ CONTAINS
                litterfallN_acc(itile) = 0.0_wp
                net_min_nh4_acc(itile) = 0.0_wp
                net_min_no3_acc(itile) = 0.0_wp
-               net_min_nh4_n15_acc(itile) = 0.0_wp
-               net_min_no3_n15_acc(itile) = 0.0_wp
                leachingNorg_acc(itile) = 0.0_wp
                litterfallP_acc(itile) = 0.0_wp
                net_min_po4_acc(itile) = 0.0_wp

@@ -663,7 +663,7 @@ CONTAINS
                                                      (1._wp - microbial_cue_eff(:,:)) * uptake_dom(:,:) 
 
     !! nitrogen
-    net_mineralisation_nh4(:,:) = gross_mineralisation_nh4 - immobilisation_nh4(:,:)
+    net_mineralisation_nh4(:,:) = gross_mineralisation_nh4(:,:) - immobilisation_nh4(:,:)
     net_mineralisation_no3(:,:) = - immobilisation_no3(:,:)
     uptake_dom(:,:)        = f_uptake(:,:) * pool_dom%nitrogen%ptr(ics:ice,:,iblk)
     loss_dom%nitrogen%ptr(ics:ice,:,iblk)            = loss_dom%nitrogen%ptr(ics:ice,:,iblk) + & 
@@ -698,15 +698,14 @@ CONTAINS
     het_respiration_c14(:,:)                         = het_respiration_c14(:,:) + (1._wp - microbial_cue_eff(:,:) ) * uptake_dom(:,:)
 
     !! nitrogen15
-    net_mineralisation_nh4_n15 = gross_mineralisation_nh4_n15 - immobilisation_nh4_n15(:,:)
-    net_mineralisation_no3_n15 = - immobilisation_no3_n15(:,:)
+    net_mineralisation_nh4_n15(:,:) = gross_mineralisation_nh4_n15(:,:) - immobilisation_nh4_n15(:,:)
+    net_mineralisation_no3_n15(:,:) = - immobilisation_no3_n15(:,:)
     uptake_dom(:,:) = f_uptake(:,:) * pool_dom%nitrogen15%ptr(ics:ice,:,iblk)
     loss_dom%nitrogen15%ptr(ics:ice,:,iblk)            = loss_dom%nitrogen15%ptr(ics:ice,:,iblk) + & 
                                                          uptake_dom(:,:) / 1000000.0_wp 
     formation_microbial%nitrogen15%ptr(ics:ice,:,iblk) = formation_microbial%nitrogen15%ptr(ics:ice,:,iblk) + & 
-                                                         (microbial_nue * uptake_dom(:,:) - & 
-                                                         immobilisation_nh4_n15(:,:) - immobilisation_no3_n15(:,:)) / 1000000.0_wp
-   
+                                                         (microbial_nue * uptake_dom(:,:) + & 
+                                                         immobilisation_nh4_n15(:,:) + immobilisation_no3_n15(:,:)) / 1000000.0_wp
 
   END SUBROUTINE calc_microbial_growth
 
