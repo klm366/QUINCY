@@ -178,7 +178,7 @@ CONTAINS
 
       !> 2.1.2 Case 2. Calculate inorganic N uptake according to Michaelis-Mnten Kinetics  
       !!
-      CASE ("standard","optimal","resistance")
+      CASE ("standard","std_plus_costs","optimal","resistance")
          ! OCN's MM Kinetics
          uptake_nh4(:) = lctlib%vmax_uptake_n * &
                  demand_uptake_n_tuptake_mavg(:) * & 
@@ -226,7 +226,7 @@ CONTAINS
       CASE ("prescribed") 
         n_fixation(:) = 0.0_wp
 
-      CASE("standard")
+      CASE("standard","std_plus_costs")
         WHERE(sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) < soil_n_threshold_bnf .AND.&
              veg%pool%fine_root%carbon%ptr>eps8) n_fixation(:) = lctlib%bnf_base 
 
