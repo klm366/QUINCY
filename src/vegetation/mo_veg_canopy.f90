@@ -108,7 +108,7 @@ CONTAINS
     REAL(wp)  :: jmax2vcmax                                           ! jmax to vcmax ratio
     REAL(wp)  :: f_pepc                                               ! fraction of N in PEP Carboxylase
     LOGICAL   :: optimise_n_fractions
-    INTEGER   :: icanopy
+    INTEGER   :: icanopy, ichunk                               ! looping over ncanopy and nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_canopy_layers'
     ! 0.3 Memory allocation
     ! ...
@@ -169,41 +169,44 @@ CONTAINS
     !> 2. calculate LAI and N content of canopy layers 
     !!
     lc(:) = 0._wp
+    DO ichunk  = 1,nc
     DO icanopy = 1,ncanopy
-       WHERE(lai(:) > eps8) ! avoid any calculation if there are no leaves
-          !> 2.1 LAI of canopy layer 
-          !!
-          WHERE(lc(:)+assimi_config%canopy_layer_depth(icanopy) < lai(:)) 
-             ! if canopy layer is fully developed 
-             lai_cl(:,icanopy) = assimi_config%canopy_layer_depth(icanopy)
-          ELSEWHERE(lc(:) < lai(:).AND.lc(:)+assimi_config%canopy_layer_depth(icanopy) >= lai(:)) 
-             ! if canopy layer is only partially filled assign difference between full LAI and lc to canopy layer
-             lai_cl(:,icanopy) = lai(:) - lc(:) 
-          ENDWHERE
-          lc(:) = lc(:) + lai_cl(:,icanopy)
-          ! make sure all LAI is represented by letting last layer go to the end of the canopy
-          WHERE(icanopy==assimi_config%ncanopy .AND. lc(:) < lai(:) ) 
-            lai_cl(:,assimi_config%ncanopy) = lai_cl(:,assimi_config%ncanopy) + lai(:) - lc(:)
-          ENDWHERE
+      IF(lai(ichunk) > eps8) THEN ! avoid any calculation if there are no leaves
+        !> 2.1 LAI of canopy layer 
+        !!
+        IF(lc(ichunk)+assimi_config%canopy_layer_depth(icanopy) < lai(ichunk)) THEN
+          ! if canopy layer is fully developed 
+          lai_cl(ichunk,icanopy) = assimi_config%canopy_layer_depth(icanopy)
+        ELSEIF(lc(ichunk) < lai(ichunk) .AND. lc(ichunk)+assimi_config%canopy_layer_depth(icanopy) >= lai(ichunk)) THEN 
+          ! if canopy layer is only partially filled assign difference between full LAI and lc to canopy layer
+          lai_cl(ichunk,icanopy) = lai(ichunk) - lc(ichunk) 
+        END IF
+        lc(ichunk) = lc(ichunk) + lai_cl(ichunk,icanopy)
+        ! make sure all LAI is represented by letting last layer go to the end of the canopy
+        IF(icanopy==assimi_config%ncanopy .AND. lc(ichunk) < lai(ichunk) ) THEN
+          lai_cl(ichunk,assimi_config%ncanopy) = lai_cl(ichunk,assimi_config%ncanopy) + lai(ichunk) - lc(ichunk)
+        END IF
 
-          !> 2.2 cummulative LAI above mid-point of canopy layer
-          !!
-          WHERE(lai_cl(:,icanopy) > eps8.AND.icanopy==1)
-                cumm_lai_cl(:,icanopy) = lai_cl(:,icanopy) / 2.0_wp
-          ENDWHERE 
-          WHERE(lai_cl(:,icanopy) > eps8.AND.icanopy>1)
-             cumm_lai_cl(:,icanopy) = cumm_lai_cl(:,icanopy-1) + lai_cl(:,icanopy-1) / 2.0_wp + lai_cl(:,icanopy) / 2.0_wp
-          ENDWHERE
-          !> 2.3 N content of the canopy layer
-          !!
-          WHERE(lai(:) > assimi_config%canopy_layer_depth(1))
-             leaf_nitrogen_cl(:,icanopy) = leaf_nitrogen_tc(:) * exp(-kn * cumm_lai_cl(:,icanopy))
+        !> 2.2 cummulative LAI above mid-point of canopy layer
+        !!
+        IF(lai_cl(ichunk,icanopy) > eps8 .AND. icanopy==1) THEN
+          cumm_lai_cl(ichunk,icanopy) = lai_cl(ichunk,icanopy) / 2.0_wp
+        END IF
+        IF(lai_cl(ichunk,icanopy) > eps8 .AND. icanopy>1) THEN
+          cumm_lai_cl(ichunk,icanopy) = cumm_lai_cl(ichunk,icanopy-1) + lai_cl(ichunk,icanopy-1) / &
+                                        2.0_wp + lai_cl(ichunk,icanopy) / 2.0_wp
+        END IF
+        !> 2.3 N content of the canopy layer
+        !!
+        IF(lai(ichunk) > assimi_config%canopy_layer_depth(1)) THEN
+          leaf_nitrogen_cl(ichunk,icanopy) = leaf_nitrogen_tc(ichunk) * exp(-kn * cumm_lai_cl(ichunk,icanopy))
 !@todo: check whether this causes leaf N in not existing layers
-          ELSEWHERE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
-             leaf_nitrogen_cl(:,icanopy) = leaf_nitrogen_tc(:)
-          ENDWHERE
-       ENDWHERE
-    ENDDO
+        ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
+          leaf_nitrogen_cl(ichunk,icanopy) = leaf_nitrogen_tc(ichunk)
+        END IF
+      END IF ! lai(ichunk) > eps8
+    END DO   ! loop ncanopy
+    END DO   ! loop nc
 
 
     !> 3.0 fractionation of N within canopy laer
