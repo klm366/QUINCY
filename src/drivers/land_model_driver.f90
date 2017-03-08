@@ -215,13 +215,18 @@ PROGRAM land_model_driver
   !! 
   DO itimestep = 1, ntimestep
 
-    !! 3.1 advance timer
+    !! 3.1 advance timer and check timer for new year (year counter)
     !! 
     !! Note \n 
     !!  for each timestep the model simulates what happens during the period:
     !!  time_day (end of prevous timestep)  -->  time_day  + timestep_prop_day
     !! 
     time_day  = time_day  + timestep_prop_day         ! time in days
+
+    IF(time_day > one_year) THEN
+      time_day  = time_day - one_year   ! largest value of time ~ 365; see mo_base_constants
+      time_year = time_year + 1
+    END IF
 
     !! 3.2 set orbital parameters and update time-variant forcing
     !! 
@@ -342,14 +347,7 @@ PROGRAM land_model_driver
                                   !! l2a memory - end
                                 &  ) ! land_model_interface()
 
-    !! 3.4 check timer & adjust year counter
-    !! 
-    IF(time_day > one_year) THEN
-      time_day  = time_day - one_year   ! largest value of time ~ 365; see mo_base_constants
-      time_year = time_year + 1
-    END IF
-
-    !! 3.5 special case: fluxnet output
+    !! 3.4 special case: fluxnet output
     !! 
     IF(base_config%fluxnet_output) THEN
       IF (itimestep == fluxnet_output_start) THEN         ! start of fluxnet output (at each timestep)
