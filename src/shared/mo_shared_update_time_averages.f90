@@ -772,10 +772,10 @@ CONTAINS
     uptake_n_tcnl_mavg         = calc_mavg(uptake_n_tcnl_mavg, &
          uptake_nh4(:)+uptake_no3(:)+n_fixation(:), mavg_period_tcnl, do_calc=growing_season(:))
 
-    WHERE (growth_req_n > 0._wp)
-       hlp = 1._wp/growth_req_n(:)
+    WHERE (growth_req_n(:) > 0._wp)
+       hlp(:) = 1._wp/growth_req_n(:)
     ELSE WHERE
-       hlp=0._wp
+       hlp(:) = 0._wp
     ENDWHERE
     growth_cn_tcnl_mavg  = calc_mavg(growth_cn_tcnl_mavg, hlp, &
          mavg_period_tgrowth, do_calc=growing_season(:))

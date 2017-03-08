@@ -227,8 +227,10 @@ CONTAINS
         n_fixation(:) = 0.0_wp
 
       CASE("standard","std_plus_costs")
-        WHERE(sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) < soil_n_threshold_bnf .AND.&
-             veg%pool%fine_root%carbon%ptr>eps8) n_fixation(:) = lctlib%bnf_base 
+        WHERE(sb%nh4_solute%ptr(:,1,1) * soil_depth_sl(:,1) < soil_n_threshold_bnf .AND. &
+              spread(veg%pool%fine_root%carbon%ptr,1,nc) > eps8) 
+          n_fixation(:) = lctlib%bnf_base 
+        END WHERE
 
       !> 3.2 Case 2: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)

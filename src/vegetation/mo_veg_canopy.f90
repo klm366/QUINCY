@@ -247,7 +247,7 @@ CONTAINS
         !> 3.2.1 optimal case 
         DO icanopy = 1,ncanopy
            WHERE(lai_cl(:,icanopy) > eps8)
-              WHERE(fn_chl_cl(:,icanopy) < eps8.AND.icanopy == 1) ! new layer with new leaves
+              WHERE(fn_chl_cl(:,icanopy) < eps8 .AND. spread(icanopy,1,nc) == 1) ! new layer with new leaves
                  ! first layers: use static allocation as first guess
 !@todo: sloppy programming, implictly assumes that lc = lai -> should be cumm_lai(:,icanopy)
                  fn_chl_cl(:,icanopy) = (k0_fn_chl - k1_fn_chl * exp(-kfn_chl * lc(:))) / chl2n
@@ -259,7 +259,7 @@ CONTAINS
                  ! fraction of Rubisco is determined as the remainder
                  fn_rub_cl(:,icanopy) = 1._wp - fn_oth_cl(:,icanopy) - fn_chl_cl(:,icanopy) - fn_et_cl(:,icanopy) - fn_pepc_cl(:,icanopy)
               ENDWHERE
-              WHERE(fn_chl_cl(:,icanopy) < eps8.AND.icanopy > 1) ! other layers: copy from above layer 
+              WHERE(fn_chl_cl(:,icanopy) < eps8 .AND. spread(icanopy,1,nc) > 1) ! other layers: copy from above layer 
                  fn_chl_cl(:,icanopy)        = fn_chl_cl(:,icanopy-1)
                  fn_et_cl(:,icanopy)         = fn_et_cl(:,icanopy-1)
                  fn_rub_cl(:,icanopy)        = fn_rub_cl(:,icanopy-1)
