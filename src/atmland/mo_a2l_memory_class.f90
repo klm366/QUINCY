@@ -76,6 +76,11 @@ MODULE mo_a2l_memory_class
                               q_acoef_ice        , &
                               q_bcoef_ice
 
+    TYPE(t_jsb_var_real2d) :: &
+                              prev_one_cos_zenith_angle   , &   ! cos_zenith_angle of the previous timestep
+                              prev_two_cos_zenith_angle         ! cos_zenith_angle of the before previous timestep
+
+
   CONTAINS
     PROCEDURE :: Init => Init_a2l_memory
   END TYPE t_a2l_memory
@@ -424,6 +429,23 @@ CONTAINS
         & initval_r=0.07_wp )
 
 !    END IF
+
+      CALL slm_add_var( mem, 'prev_one_cos_zenith_angle', mem%prev_one_cos_zenith_angle,                   &
+!        & hgrid, surface,                                                      &
+!        & t_cf('prev_one_cos_zenith_angle', '', 'Albedo of open lake water'),                &
+!        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+!        & prefix, suffix,                                                      &
+!        & loutput=.TRUE., lrestart=.TRUE., &
+        & initval_r=0.0_wp )
+
+      CALL slm_add_var( mem, 'prev_two_cos_zenith_angle', mem%prev_two_cos_zenith_angle,                   &
+!        & hgrid, surface,                                                      &
+!        & t_cf('prev_two_cos_zenith_angle', '', 'Albedo of open lake water'),                &
+!        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+!        & prefix, suffix,                                                      &
+!        & loutput=.TRUE., lrestart=.TRUE., &
+        & initval_r=0.0_wp )
+
 
   END SUBROUTINE Init_a2l_memory
 

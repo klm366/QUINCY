@@ -88,6 +88,8 @@ CONTAINS
   !> calculate daytime averages
   !!
   !! daytime: the time of the day over which light is available
+  !!
+  !! calculates the daytime avrg at the end of the timestep after local midnight (1st timestep of the new day) !
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_daytime_averages(tile, options, time_day, timestep_prop_day)
 
@@ -128,6 +130,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: ga
+    dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: beta_air                     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
@@ -190,6 +195,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)
+    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
@@ -240,71 +248,60 @@ CONTAINS
 
     !> 1.0 if light is available (i.e. daytime)
     !! 
-    DO ichunk=1,nc
-      IF(swpar_srf_down(ichunk) > eps8) THEN
-        ! 1.1 count number of values added to var_daytime
-        daytime_counter(ichunk) = daytime_counter(ichunk) + 1.0_wp
-        ! 1.2 add values and count number of values
-        DO icanopy=1,assimi_config%ncanopy
-          ppfd_sunlit_daytime_dacc_cl(ichunk,icanopy)  = ppfd_sunlit_daytime_dacc_cl(ichunk,icanopy)   + &
-                                                             ppfd_sunlit_cl(ichunk,icanopy)
-          ppfd_shaded_daytime_dacc_cl(ichunk,icanopy)  = ppfd_shaded_daytime_dacc_cl(ichunk,icanopy)   + & 
-                                                             ppfd_shaded_cl(ichunk,icanopy)
-          fleaf_sunlit_daytime_dacc_cl(ichunk,icanopy) = fleaf_sunlit_daytime_dacc_cl(ichunk,icanopy) + & 
-                                                             fleaf_sunlit_cl(ichunk,icanopy)
-        END DO
-        t_air_daytime_dacc(ichunk)            = t_air_daytime_dacc(ichunk)            + t_air(ichunk)
-        press_srf_daytime_dacc(ichunk)        = press_srf_daytime_dacc(ichunk)        + press_srf(ichunk)
-        co2_mixing_ratio_daytime_dacc(ichunk) = co2_mixing_ratio_daytime_dacc(ichunk) + co2_mixing_ratio(ichunk)
-        ga_daytime_dacc(ichunk)               = ga_daytime_dacc(ichunk)               + ga(ichunk)
-        beta_air_daytime_dacc(ichunk)         = beta_air_daytime_dacc(ichunk)         + beta_air(ichunk)
-        beta_soil_ps_daytime_dacc(ichunk)     = beta_soil_ps_daytime_dacc(ichunk)     + beta_soil_ps(ichunk)
-        beta_sinklim_ps_daytime_dacc(ichunk)  = beta_sinklim_ps_daytime_dacc(ichunk)  + beta_sinklim_ps(ichunk)
-        beta_soil_gs_daytime_dacc(ichunk)     = beta_soil_gs_daytime_dacc(ichunk)     + beta_soil_gs(ichunk)
-        t_jmax_opt_daytime_dacc(ichunk)       = t_jmax_opt_daytime_dacc(ichunk)       + t_jmax_opt(ichunk)
-      END IF
+
+    !> 1.1 1D variables
+    !! 
+    WHERE(swpar_srf_down(:) > eps8)
+        ! 1.1.1 count number of values added to var_daytime
+        daytime_counter(:) = daytime_counter(:) + 1.0_wp
+
+        ! 1.1.2 add values and count number of values
+        t_air_daytime_dacc(:)            = t_air_daytime_dacc(:)            + t_air(:)
+        press_srf_daytime_dacc(:)        = press_srf_daytime_dacc(:)        + press_srf(:)
+        co2_mixing_ratio_daytime_dacc(:) = co2_mixing_ratio_daytime_dacc(:) + co2_mixing_ratio(:)
+        ga_daytime_dacc(:)               = ga_daytime_dacc(:)               + ga(:)
+        beta_air_daytime_dacc(:)         = beta_air_daytime_dacc(:)         + beta_air(:)
+        beta_soil_ps_daytime_dacc(:)     = beta_soil_ps_daytime_dacc(:)     + beta_soil_ps(:)
+        beta_sinklim_ps_daytime_dacc(:)  = beta_sinklim_ps_daytime_dacc(:)  + beta_sinklim_ps(:)
+        beta_soil_gs_daytime_dacc(:)     = beta_soil_gs_daytime_dacc(:)     + beta_soil_gs(:)
+        t_jmax_opt_daytime_dacc(:)       = t_jmax_opt_daytime_dacc(:)       + t_jmax_opt(:)
+    END WHERE
+
+    !> 1.2 2D variables
+    !! 
+    DO icanopy=1,assimi_config%ncanopy
+      WHERE(swpar_srf_down(:) > eps8)
+        ! 1.2.2 add values and count number of values
+        ppfd_sunlit_daytime_dacc_cl(:,icanopy)  = ppfd_sunlit_daytime_dacc_cl(:,icanopy)  + ppfd_sunlit_cl(:,icanopy)
+        ppfd_shaded_daytime_dacc_cl(:,icanopy)  = ppfd_shaded_daytime_dacc_cl(:,icanopy)  + ppfd_shaded_cl(:,icanopy)
+        fleaf_sunlit_daytime_dacc_cl(:,icanopy) = fleaf_sunlit_daytime_dacc_cl(:,icanopy) + fleaf_sunlit_cl(:,icanopy)
+      END WHERE
     END DO
 
 
-    !> 2.0 at the end of the day (midnight), calc daytime averages (of the ending day)
+    !> 2.0 at the timestep after local midnight (1st timestep of the new day) calc daytime averages
     !! 
-    !! calculate the average of the current day and pass this value to the according variable for the "previous day" value
-    IF( ABS(((time_day + timestep_prop_day) - REAL(NINT(time_day)))) < eps8 ) THEN
+    !! calculate the average of the previous day and pass this value to the according variable \n
+    !! the timestep right after midnight is identofied based on changes in cos_zenith_angle (turning from negative to positive)
+
+    !> 2.1 1D variables
+    !! 
+    WHERE((cos_zenith_angle(:) - prev_one_cos_zenith_angle(:)) > eps8 .AND. &
+          (prev_one_cos_zenith_angle(:) - prev_two_cos_zenith_angle(:)) <= eps8)
       ! check if at least one value had been assigned at the current day, avoiding division by zero 
-      ! calculate the average of the current day and pass it to the according avg_prev_* variable; 
-      DO ichunk=1,nc
-        IF(daytime_counter(ichunk) > eps8) THEN
-          DO icanopy=1,assimi_config%ncanopy
-            ppfd_sunlit_daytime_cl(ichunk,icanopy)   = ppfd_sunlit_daytime_dacc_cl(ichunk,icanopy)   / daytime_counter(ichunk)
-            ppfd_shaded_daytime_cl(ichunk,icanopy)   = ppfd_shaded_daytime_dacc_cl(ichunk,icanopy)   / daytime_counter(ichunk)
-            fleaf_sunlit_daytime_cl(ichunk,icanopy)  = fleaf_sunlit_daytime_dacc_cl(ichunk,icanopy)  / daytime_counter(ichunk)
-          END DO
-          t_air_daytime(ichunk)            = t_air_daytime_dacc(ichunk)              / daytime_counter(ichunk)
-          press_srf_daytime(ichunk)        = press_srf_daytime_dacc(ichunk)          / daytime_counter(ichunk)
-          co2_mixing_ratio_daytime(ichunk) = co2_mixing_ratio_daytime_dacc(ichunk)   / daytime_counter(ichunk)
-          ga_daytime(ichunk)               = ga_daytime_dacc(ichunk)                 / daytime_counter(ichunk)
-          beta_air_daytime(ichunk)         = beta_air_daytime_dacc(ichunk)           / daytime_counter(ichunk)
-          beta_soil_ps_daytime(ichunk)     = beta_soil_ps_daytime_dacc(ichunk)       / daytime_counter(ichunk)
-          beta_sinklim_ps_daytime(ichunk)  = beta_sinklim_ps_daytime_dacc(ichunk)    / daytime_counter(ichunk)
-          beta_soil_gs_daytime(ichunk)     = beta_soil_gs_daytime_dacc(ichunk)       / daytime_counter(ichunk)
-          t_jmax_opt_daytime(ichunk)       = t_jmax_opt_daytime_dacc(ichunk)         / daytime_counter(ichunk)
-        ELSE  ! if daytime_counter is zero
-          ppfd_sunlit_daytime_cl(ichunk,:)  = 0.0_wp
-          ppfd_shaded_daytime_cl(ichunk,:)  = 0.0_wp
-          fleaf_sunlit_daytime_cl(ichunk,:) = 0.0_wp
-        END IF
-      END DO  ! loop ics:ice
-
-!      write(999,*) time_day, daytime_counter(1), &   ! might be used for testing
-!                  ppfd_sunlit_daytime_cl(1,1), &
-!                  ppfd_shaded_daytime_cl(1,1), &
-!                  fleaf_sunlit_daytime_cl(1,1), &
-!                  t_jmax_opt_daytime(1), ' |-| '
-
-      ! set all values of the current day to zero
-      ppfd_sunlit_daytime_dacc_cl(:,:)      = 0.0_wp
-      ppfd_shaded_daytime_dacc_cl(:,:)      = 0.0_wp
-      fleaf_sunlit_daytime_dacc_cl(:,:)     = 0.0_wp
+      ! calculate the average over the previous day and pass it to the according *_daytime variable; 
+      WHERE(daytime_counter(:) > eps8)
+          t_air_daytime(:)            = t_air_daytime_dacc(:)              / daytime_counter(:)
+          press_srf_daytime(:)        = press_srf_daytime_dacc(:)          / daytime_counter(:)
+          co2_mixing_ratio_daytime(:) = co2_mixing_ratio_daytime_dacc(:)   / daytime_counter(:)
+          ga_daytime(:)               = ga_daytime_dacc(:)                 / daytime_counter(:)
+          beta_air_daytime(:)         = beta_air_daytime_dacc(:)           / daytime_counter(:)
+          beta_soil_ps_daytime(:)     = beta_soil_ps_daytime_dacc(:)       / daytime_counter(:)
+          beta_sinklim_ps_daytime(:)  = beta_sinklim_ps_daytime_dacc(:)    / daytime_counter(:)
+          beta_soil_gs_daytime(:)     = beta_soil_gs_daytime_dacc(:)       / daytime_counter(:)
+          t_jmax_opt_daytime(:)       = t_jmax_opt_daytime_dacc(:)         / daytime_counter(:)
+      END WHERE
+      ! zero the accumulation variables after daily average has been calculated
       t_air_daytime_dacc(:)                 = 0.0_wp
       press_srf_daytime_dacc(:)             = 0.0_wp
       co2_mixing_ratio_daytime_dacc(:)      = 0.0_wp
@@ -314,8 +311,42 @@ CONTAINS
       beta_sinklim_ps_daytime_dacc(:)       = 0.0_wp
       beta_soil_gs_daytime_dacc(:)          = 0.0_wp
       t_jmax_opt_daytime_dacc(:)            = 0.0_wp
+    END WHERE
+
+    !> 2.2 2D variables
+    !! 
+    DO icanopy=1,assimi_config%ncanopy
+      WHERE((cos_zenith_angle(:) - prev_one_cos_zenith_angle(:)) > eps8 .AND. &
+            (prev_one_cos_zenith_angle(:) - prev_two_cos_zenith_angle(:)) <= eps8)
+        WHERE(daytime_counter(:) > eps8)        
+          ppfd_sunlit_daytime_cl(:,icanopy)   = ppfd_sunlit_daytime_dacc_cl(:,icanopy)   / daytime_counter(:)
+          ppfd_shaded_daytime_cl(:,icanopy)   = ppfd_shaded_daytime_dacc_cl(:,icanopy)   / daytime_counter(:)
+          fleaf_sunlit_daytime_cl(:,icanopy)  = fleaf_sunlit_daytime_dacc_cl(:,icanopy)  / daytime_counter(:)
+        ELSEWHERE
+          ppfd_sunlit_daytime_cl(:,icanopy)   = 0.0_wp
+          ppfd_shaded_daytime_cl(:,icanopy)   = 0.0_wp
+          fleaf_sunlit_daytime_cl(:,icanopy)  = 0.0_wp
+        END WHERE
+        ! zero the accumulation variables after daily average has been calculated
+        ppfd_sunlit_daytime_dacc_cl(:,icanopy)  = 0.0_wp
+        ppfd_shaded_daytime_dacc_cl(:,icanopy)  = 0.0_wp
+        fleaf_sunlit_daytime_dacc_cl(:,icanopy) = 0.0_wp
+      END WHERE
+    END DO
+
+
+    !> 3.0 zero the counter for number of accumulated values (*_dacc) per day
+    !! 
+    WHERE((cos_zenith_angle(:) - prev_one_cos_zenith_angle(:)) > eps8 .AND. &
+          (prev_one_cos_zenith_angle(:) - prev_two_cos_zenith_angle(:)) <= eps8)
       daytime_counter(:)                    = 0.0_wp
-    END IF
+    END WHERE
+
+
+    !> 4.0 update cos_zenith_angle of previous time steps
+    !!
+    prev_two_cos_zenith_angle(:) = prev_one_cos_zenith_angle(:)
+    prev_one_cos_zenith_angle(:) = cos_zenith_angle(:)
 
   END SUBROUTINE calc_daytime_averages
 
