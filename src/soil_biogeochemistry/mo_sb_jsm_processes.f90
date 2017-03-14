@@ -673,7 +673,7 @@ CONTAINS
                                                         immobilisation_nh4(:,:) + immobilisation_no3(:,:)) / 1000000.0_wp 
    
     !! phosphorus
-    net_mineralisation_po4(:,:) = gross_mineralisation_po4(:,:) - immobilisation_nh4(:,:)
+    net_mineralisation_po4(:,:) = gross_mineralisation_po4(:,:) - immobilisation_po4(:,:)
     uptake_dom(:,:)        = f_uptake(:,:) * pool_dom%phosphorus%ptr(ics:ice,:,iblk)
     loss_dom%phosphorus%ptr(ics:ice,:,iblk)            = loss_dom%phosphorus%ptr(ics:ice,:,iblk) + & 
                                                          uptake_dom(:,:) / 1000000.0_wp 
