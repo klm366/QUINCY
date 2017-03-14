@@ -113,10 +113,10 @@ CONTAINS
     TYPE(t_model), POINTER                      :: model
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_slm'
 
-    ! check number of tiles, exit if more than output routines can handle
-    IF(ntile > 1) CALL finish('land_model_driver-init_routine','Number of tiles is too large, i.e. larger than 1')
-    ! 
 
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science / model init
+    ! ------------------------------------------------------------------------------------------------------------
 
 
     !! 1 Read config paramters from namelist and run PROC_config%Init routines

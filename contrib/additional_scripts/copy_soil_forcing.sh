@@ -55,8 +55,8 @@ echo " Copying Fluxnet soil_forcing from :""$pathSourceBase""$expNameF"
       #echo $filenameBase
 
       echo "  site: "$filenameBase
-      cp "$pathSourceBase""$expNameF""/""$siteBase"/output/veglitterfall_tile1_timestep.txt "$pathServerF""$soilForce""$filenameBase""_lit.dat"
-      cp "$pathSourceBase""$expNameF""/""$siteBase"/output/soilphysics_tile1_timestep.txt   "$pathServerF""$soilForce""$filenameBase""_sph.dat"
+      cp "$pathSourceBase""$expNameF""/""$siteBase"/output/veglitterfall_timestep.txt "$pathServerF""$soilForce""$filenameBase""_lit.dat"
+      cp "$pathSourceBase""$expNameF""/""$siteBase"/output/soilphysics_timestep.txt   "$pathServerF""$soilForce""$filenameBase""_sph.dat"
     fi
     sync
   done
@@ -76,8 +76,8 @@ echo " Copying Cruncep soil_forcing from :""$pathSourceBase""$expNameC"
       #echo $filenameBase
 
       echo "  site: "$filenameBase
-      cp "$pathSourceBase""$expNameC""/""$siteBase"/output/veglitterfall_tile1_timestep.txt "$pathServerC""$soilForce""$filenameBase""_lit.dat"
-      cp "$pathSourceBase""$expNameC""/""$siteBase"/output/soilphysics_tile1_timestep.txt   "$pathServerC""$soilForce""$filenameBase""_sph.dat"
+      cp "$pathSourceBase""$expNameC""/""$siteBase"/output/veglitterfall_timestep.txt "$pathServerC""$soilForce""$filenameBase""_lit.dat"
+      cp "$pathSourceBase""$expNameC""/""$siteBase"/output/soilphysics_timestep.txt   "$pathServerC""$soilForce""$filenameBase""_sph.dat"
     fi
     sync
   done

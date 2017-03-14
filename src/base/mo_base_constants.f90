@@ -12,7 +12,6 @@ MODULE mo_base_constants
   USE mo_kind, ONLY : wp,eps4
 
   INTEGER, PARAMETER    :: npft       = 8         !< number of PFTs simulated by the model
-  INTEGER, PARAMETER    :: ntile      = 1         !< number of tiles simulated by the model; see also itile in the driver
   INTEGER, PARAMETER    :: nsoil      = 15        !< number of soil layer simulated by the model
   ! convenience 
   REAL(wp), PARAMETER   :: zero       = 0.0_wp    !< just zero

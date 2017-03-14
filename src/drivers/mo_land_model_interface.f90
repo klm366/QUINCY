@@ -31,7 +31,7 @@ CONTAINS
   !! 
   !! selection of the model via the namlist.slm - BASE_CTL:slm_model_name
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE land_model_interface(tile, &                ! one specific tile
+  SUBROUTINE land_model_interface(tile, &                ! one tile
                                   l_forcing, &           ! forcing on/off
                                   time_day, time_year, timestep_prop_day, &
                                   !! a2l memory - INTENT(in) - start
@@ -274,18 +274,18 @@ CONTAINS
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
     !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
     !! 
-      CALL write_output_pool(tile, model%options, time_day, time_year, 1) ! 1 == itile
+      CALL write_output_pool(tile, model%options, time_day, time_year)
 
     !! output flux: write output in certain intervals, see mo_shared_output
     !! 
     !! 
-      CALL write_output_flux(tile, model%options, time_day, time_year, 1) ! 1 == itile 
+      CALL write_output_flux(tile, model%options, time_day, time_year)
 
     !! output litterfall and soilphysics: usually this would be output at each timstep
     !! 
     !! 
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL write_soil_forcing(tile, model%options, time_day, time_year, 1) ! 1 == itile 
+        CALL write_soil_forcing(tile, model%options, time_day, time_year)
       END IF
 
     CASE('plant')
@@ -316,18 +316,18 @@ CONTAINS
     !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
     !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
     !! 
-      CALL write_output_pool(tile, model%options, time_day, time_year, 1) ! 1 == itile
+      CALL write_output_pool(tile, model%options, time_day, time_year)
 
     !! output flux: write output in certain intervals, see mo_shared_output
     !! 
     !! 
-      CALL write_output_flux(tile, model%options, time_day, time_year, 1) ! 1 == itile 
+      CALL write_output_flux(tile, model%options, time_day, time_year)
 
     !! output litterfall and soilphysics: usually this would be output at each timstep
     !! 
     !! 
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL write_soil_forcing(tile, model%options, time_day, time_year, 1) ! 1 == itile 
+        CALL write_soil_forcing(tile, model%options, time_day, time_year) 
       END IF
 
     CASE('soil')
@@ -338,12 +338,12 @@ CONTAINS
       !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
       !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
       !! 
-      CALL write_output_pool(tile, model%options, time_day, time_year, 1) ! 1 == itile
+      CALL write_output_pool(tile, model%options, time_day, time_year)
   
       !! output flux: write output in certain intervals, see mo_shared_output
       !! 
       !! 
-      CALL write_output_flux(tile, model%options, time_day, time_year, 1) ! 1 == itile 
+      CALL write_output_flux(tile, model%options, time_day, time_year)
 
     CASE('canopy')
     !! canopy -------------------------------------------------------------------------------------

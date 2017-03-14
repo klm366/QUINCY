@@ -17,8 +17,8 @@ PROGRAM land_model_driver
   ! land model
   USE mo_land_model_interface,    ONLY: land_model_interface 
   ! base
-  USE mo_base_constants,          ONLY: ntile, one_year
-  USE mo_base_memory,             ONLY: t_slm_tile !, t_model
+  USE mo_base_constants,          ONLY: one_year
+  USE mo_base_memory,             ONLY: t_slm_tile
   USE mo_base_config_class,       ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
   USE mo_jsb_model_init,          ONLY: init_model, &          ! 'init_model' is an interface
                                         time_day, time_year, ntimestep, itimestep, timestep_prop_day, &
@@ -27,7 +27,8 @@ PROGRAM land_model_driver
   USE mo_atmland_forcing,         ONLY: update_forcing, open_forcing_input_file, close_forcing_input_file ! valid for land plant canopy and soil
                                         
   ! vegetation
-  USE mo_shared_output,           ONLY: init_veg_output_variables, &
+  USE mo_shared_output,           ONLY: allocate_slm_output_variables, &
+                                        init_slm_output_variables, &
                                         open_pool_output_files, &
                                         open_flux_output_files, &
                                         open_output_files_soil_forcing, &
@@ -112,13 +113,13 @@ PROGRAM land_model_driver
   !! 
   !! Create Tile & Model init & Define iblk, ics, ice
   !! 
-  TYPE(t_slm_tile),DIMENSION(ntile), SAVE  :: tile          !< data structure for dynamic vegetation and soil variables
+  TYPE(t_slm_tile), SAVE  :: tile          !< data structure for dynamic vegetation and soil variables
                                                             !! in jsbach4 tile is created in mo_jsb_model_usecases
   iblk    = 1
   ics     = 1
   ice     = 1
   nc      = ice - ics + 1                                   ! (end-number - start-number + 1)
-  CALL init_model(tile(1), l_forcing, iblk, ics, ice)       !< model init : mo_jsb_model_init 
+  CALL init_model(tile, l_forcing, iblk, ics, ice)       !< model init : mo_jsb_model_init 
 
 
   !! 2.0 -----------------------------------------------------------------------------------------------
@@ -192,18 +193,16 @@ PROGRAM land_model_driver
   END IF
   ! Initialise output and flux accumulation, and open output files; see mo_shared_output
   SELECT CASE(TRIM(base_config%slm_model_name))
-    CASE('land','plant')
-      CALL init_veg_output_variables     ! mo_shared_output : interval variables & flux accumulation per tile
-      CALL open_pool_output_files(1)     ! 1 == itile 
-      CALL open_flux_output_files(1)     ! 1 == itile 
+    CASE('land','plant','soil')
+      CALL allocate_slm_output_variables ! mo_shared_output
+      CALL init_slm_output_variables     ! mo_shared_output
+      CALL open_pool_output_files
+      CALL open_flux_output_files
       IF (base_config%flag_generate_soil_forcing) THEN
-        CALL open_output_files_soil_forcing(1)
+        CALL open_output_files_soil_forcing
       END IF
-    CASE('soil')
-      CALL open_pool_output_files(1)     ! 1 == itile 
-      CALL open_flux_output_files(1)     ! 1 == itile 
 !    CASE('canopy')
-! 
+!      see  mo_land_model_interface:canopy_model_write_data
     CASE('test_canopy')
       ntimestep = 1
    END SELECT
@@ -233,7 +232,7 @@ PROGRAM land_model_driver
     !! l_forcing is set in init_slm() depending on the specific SLM model
     !! 
     IF (l_forcing) THEN
-      CALL update_forcing(  tile(1) , & ! necessary for soil: veg%litterfall vegsoil%moisture
+      CALL update_forcing(  tile , & ! necessary for soil: veg%litterfall vegsoil%moisture
                             iblk    , &
                             ics     , &
                             ice     , &
@@ -282,7 +281,7 @@ PROGRAM land_model_driver
     
     !! 3.3 land model interface
     !! 
-    CALL land_model_interface(tile(1), &
+    CALL land_model_interface(tile, &
                               l_forcing, &
                               time_day, time_year, timestep_prop_day, &
                                   !! a2l memory - INTENT(in) - start
@@ -352,15 +351,15 @@ PROGRAM land_model_driver
     IF(base_config%fluxnet_output) THEN
       IF (itimestep == fluxnet_output_start) THEN         ! start of fluxnet output (at each timestep)
           fluxnet_output_status = 2                       ! status update: currently writing output data
-          CALL close_output_files(1)                      ! 1 == itile
+          CALL close_output_files 
           base_config%output_interval_pool   = 'timestep' 
           base_config%output_interval_flux   = 'timestep' 
-          CALL open_pool_output_files(1)                  ! 1 == itile 
-          CALL open_flux_output_files(1)                  ! 1 == itile 
+          CALL open_pool_output_files
+          CALL open_flux_output_files
 
       ELSE IF (itimestep == fluxnet_output_stop) THEN     ! stop of fluxnet output; NO output after this timestep anyway
           fluxnet_output_status = 3                       ! status update: writing output data finished
-          CALL close_output_files(1)                      ! 1 == itile
+          CALL close_output_files
 
       END IF
     END IF
@@ -372,10 +371,10 @@ PROGRAM land_model_driver
   !! 
   !! Close output and forcing files
   !! 
-  IF (fluxnet_output_status == 0) CALL close_output_files(1)     ! 1 == itile 
+  IF (fluxnet_output_status == 0) CALL close_output_files
   IF (l_forcing) CALL close_forcing_input_file ! only if forcing is enabled at all (land plant canopy soil)
   IF (base_config%flag_generate_soil_forcing) THEN
-    CALL close_output_files_soil_forcing(1)
+    CALL close_output_files_soil_forcing
   END IF
 
 

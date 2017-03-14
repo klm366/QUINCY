@@ -34,7 +34,7 @@ specialFluxnetOutput="F"    # T (True) or F (False) [large caps]
 
 # (2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # started by the cleanup_slm_hpc_run.sh using two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R
-compareSimCRUNCEPvsGFDB="F"  # T (True) or F (False) [large caps] -> when "T" default go: siteDataSet="c", output_interval_..="daily", paramSensitivitySim="F"
+compareSimCRUNCEPvsGFDB="F"  # T (True) or F (False) [large caps] -> when "T" defaults are: siteDataSet="c", output_interval_pool/flux="daily", paramSensitivitySim="F"
 spinupLengthGFDB=300         # years of spin-up before output is saved
 
 # (3) parameter sensitivity simulations
@@ -148,11 +148,20 @@ cd "$( dirname "$0" )"
 
 
 ## deal with options and arguments passed to the script ##
-while getopts ":e:c:m:y:o:n:h" opt; do
+while getopts ":e:s:c:m:y:o:n:h" opt; do
   case "$opt" in
   "e")
     echo "   experimentalID=""$OPTARG"
     experimentalID="$OPTARG"
+    ;;
+  "s")
+    if [ "$OPTARG" == "f" ]
+     then
+      echo "   siteDataSet=f (FLUXNET)"
+     else
+      echo "   siteDataSet=c (CRUNCEPv5)"
+    fi
+    siteDataSet="$OPTARG"
     ;;
   "c")
     echo "   customSiteList=""$OPTARG"
@@ -233,6 +242,10 @@ while getopts ":e:c:m:y:o:n:h" opt; do
   "h")  # help #
     echo "Valid options are:"
     echo " -e set the experimentalID"
+    echo " -s set the siteDataSet"
+    echo "    Arguments to -s:"
+    echo "       f: FLUXNET"
+    echo "       c: CRUNCEPv5"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
