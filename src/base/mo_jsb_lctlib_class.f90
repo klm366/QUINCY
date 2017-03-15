@@ -307,8 +307,8 @@ CONTAINS
       lctlib(1:npft)%allom_k2 = & 
       (/0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.65_wp,0.5_wp,0.5_wp/) 
       ! minimum leaf water potential, MPa 
-      lctlib(1:npft)%phi_leaf_min =  & 
-      (/-2.0_wp,-2.0_wp,-2.0_wp,-2.0_wp,-2.0_wp,-2.0_wp,-1.5_wp,-1.5_wp/) 
+      lctlib(1:npft)%phi_leaf_min = &  
+      (/-1.0_wp,-1.0_wp,-1.0_wp,-1.0_wp,-1.0_wp,-1.0_wp,-0.75_wp,-0.75_wp/) 
       ! fine root hydraulic conductance, m3 mol-1 s-1 MPa-1 
       lctlib(1:npft)%k_root = 2.3_wp * molar_mass_C * 1.e-10 
       ! sapwood hydraulic conductance, m2 s-1 MPa-1 
@@ -326,7 +326,6 @@ CONTAINS
           lctlib(ipft)%c0_allom = 0.0_wp
         END IF
       END DO
-  
       ! tuned according to Jackson et al. 1996, Oecologia, to reproduce their cummulative root distribution profiles
       ! only making use of the contrast sclerophyllic, tree, grass
       lctlib(1:npft)%k_root_dist = &

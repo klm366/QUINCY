@@ -791,17 +791,17 @@ CONTAINS
     co2_mixing_ratio_tcnl_mavg(:)    = calc_mavg(co2_mixing_ratio_tcnl_mavg(:), co2_mixing_ratio(:), &
                                                   mavg_period_tcnl,  do_calc=growing_season(:))
     ga_tcnl_mavg(:)                  = calc_mavg(ga_tcnl_mavg(:), ga(:), &
-                                                  mavg_period_tcnl, do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_season(:))
     beta_soil_ps_tcnl_mavg(:)     = calc_mavg(beta_soil_ps_tcnl_mavg(:), beta_soil_ps(:), &
-                                                  mavg_period_tcnl, do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_season(:))
     beta_sinklim_ps_tcnl_mavg(:)     = calc_mavg(beta_sinklim_ps_tcnl_mavg(:), beta_sinklim_ps(:), &
-                                                  mavg_period_tcnl, do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_season(:))
     beta_soil_gs_tcnl_mavg(:)     = calc_mavg(beta_soil_gs_tcnl_mavg(:), beta_soil_gs(:), &
-                                                  mavg_period_tcnl, do_calc=growing_season(:))
+                                                  mavg_period_tcnl,  do_calc=growing_season(:))
     beta_air_tcnl_mavg(:)         = calc_mavg(beta_air_tcnl_mavg(:), beta_air(:), &
-         mavg_period_tcnl, do_calc=growing_season(:))
+         mavg_period_tcnl,  do_calc=growing_season(:))
     uptake_n_tcnl_mavg         = calc_mavg(uptake_n_tcnl_mavg, &
-         uptake_nh4(:)+uptake_no3(:)+n_fixation(:), mavg_period_tcnl, do_calc=growing_season(:))
+         uptake_nh4(:)+uptake_no3(:)+n_fixation(:), mavg_period_tcnl,  do_calc=growing_season(:))
 
     WHERE (growth_req_n(:) > 0._wp)
        hlp(:) = 1._wp/growth_req_n(:)
@@ -809,9 +809,9 @@ CONTAINS
        hlp(:) = 0._wp
     ENDWHERE
     growth_cn_tcnl_mavg  = calc_mavg(growth_cn_tcnl_mavg, hlp, &
-         mavg_period_tgrowth, do_calc=growing_season(:))
+         mavg_period_tgrowth,  do_calc=growing_season(:))
     npp_tcnl_mavg  = calc_mavg(npp_tcnl_mavg, npp(:), &
-                                            mavg_period_tgrowth, do_calc=growing_season(:))
+                                            mavg_period_tgrowth,  do_calc=growing_season(:))
 
 
 
@@ -842,7 +842,7 @@ CONTAINS
                                                       mavg_period_talloc, do_calc=growing_season(:))
     unit_uptake_n_talloc_mavg(:)    = calc_mavg(unit_uptake_n_talloc_mavg(:), unit_uptake_n_pot(:), &
                                                       mavg_period_talloc, do_calc=growing_season(:))
-    unit_uptake_p_talloc_mavg(:)    = calc_mavg(unit_uptake_p_talloc_mavg(:), unit_uptake_p_act(:), &
+    unit_uptake_p_talloc_mavg(:)    = calc_mavg(unit_uptake_p_talloc_mavg(:), unit_uptake_p_pot(:), &
                                                       mavg_period_talloc, do_calc=growing_season(:))
     labile_carbon_talloc_mavg(:)        = calc_mavg(labile_carbon_talloc_mavg(:), veg%pool%labile%carbon%ptr, & 
                                                       mavg_period_talloc, do_calc=growing_season(:))

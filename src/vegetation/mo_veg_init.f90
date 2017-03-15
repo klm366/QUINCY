@@ -294,10 +294,10 @@ CONTAINS
       ! allocation
       npp_talloc_mavg(:) = 0.0_wp
       n_fixation_talloc_mavg(:) = 0.0_wp
-      transpiration_talloc_mavg(:) = 0.0_wp
-      unit_transpiration_talloc_mavg(:) = 0.0_wp
+      transpiration_talloc_mavg(:) = eps8
+      unit_transpiration_talloc_mavg(:) = 1.e-6
       unit_uptake_n_talloc_mavg(:) = eps8
-      unit_uptake_p_talloc_mavg(:) = eps8
+      unit_uptake_p_talloc_mavg(:) = 4._wp*1.e-10
       dphi_talloc_mavg(:) =  - lctlib%phi_leaf_min
       growth_cn_talloc_mavg(:) = 60.0_wp
       unit_npp_talloc_mavg(:) = unit_uptake_n_talloc_mavg(:) * growth_cn_talloc_mavg(:)

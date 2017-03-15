@@ -252,7 +252,7 @@ CONTAINS
   ! parameters for changes in canopy N fractions
 !@todo:should this be 1/20days?
       delta_n_fraction  = 0.048_wp ! 0.001_wp (changed to account for multiplication with dtime/one_day in the code)
-      delta_n_leaf      = 0.0048_wp  ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)   
+      delta_n_leaf      = 0.048_wp  ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)   
 
   END SUBROUTINE init_veg_constants
 
