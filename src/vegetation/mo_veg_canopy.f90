@@ -249,7 +249,7 @@ CONTAINS
            WHERE(lai_cl(:,icanopy) > eps8)
               WHERE(fn_chl_cl(:,icanopy) < eps8 .AND. spread(icanopy,1,nc) == 1) ! new layer with new leaves
                  ! first layers: use static allocation as first guess
-                 fn_chl_cl(:,icanopy) = (k0_fn_chl - k1_fn_chl * exp(-kfn_chl * cumm_lai_lc(:,icanopy))) / chl2n
+                 fn_chl_cl(:,icanopy) = (k0_fn_chl - k1_fn_chl * exp(-kfn_chl * cumm_lai_cl(:,icanopy))) / chl2n
                  ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
                  fn_et_cl(:,icanopy) = (1._wp - (fn_oth_cl(:,icanopy) + fn_chl_cl(:,icanopy) + fn_pepc_cl(:,icanopy) )) / &
                                      (1._wp + jmax2n/(jmax2vcmax * vcmax2n))

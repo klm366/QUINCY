@@ -203,7 +203,7 @@ CONTAINS
     !!
     WHERE (canopy_cond(:) > eps8)
        transpiration(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * & 
-                  (q_sat(:) - q_air(:)) / (1._wp / canopy_cond(1) + 1._wp / ga(:) )  
+                  (q_sat(:) - q_air(:)) / (1._wp / canopy_cond(:) + 1._wp / ga(:) )  
     ELSE WHERE
        transpiration(:) = 0.0_wp 
     END WHERE
