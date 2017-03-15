@@ -655,6 +655,7 @@ CONTAINS
 
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_shared_constants,      ONLY: r_gas_dryair
+    USE mo_rad_constants,         ONLY: rad2ppfd, kbl0_vis
 
 
     IMPLICIT NONE
@@ -767,9 +768,9 @@ CONTAINS
 
     ! In case of no leaves set top layer PAR to SW value
     WHERE (lai(:)<eps8) 
-       loc_ppfd_sunlit_cl(:,1)  = (1._wp - swpar_fdiffuse(:)) * swpar_srf_down(:)
-       loc_ppfd_shaded_cl(:,1)  = swpar_fdiffuse * swpar_srf_down 
-       loc_fleaf_sunlit_cl(:,1) = 1._wp
+       loc_ppfd_sunlit_cl(:,1)  = (1._wp - lctlib%sigma_vis) * swpar_srf_down(:) * rad2ppfd
+       loc_ppfd_shaded_cl(:,1)  = (1._wp - lctlib%sigma_vis) * swpar_fdiffuse * swpar_srf_down * rad2ppfd 
+       loc_fleaf_sunlit_cl(:,1) = exp(-kbl0_vis * cumm_lai_new_cl(:,1))
     END WHERE
 
     ! calculate photosynthesis by integration over canopy layers containing leaves 
@@ -778,7 +779,7 @@ CONTAINS
     DO icanopy = 1,ncanopy
        ! adjust N fractions for any changes in canopy N distribtuion
        ! for optimal fractions this is only an aproximation
-       WHERE (lai(:)>eps8)
+       WHERE (lai(:)>eps8.AND.fn_oth_cl(:,icanopy)<1._wp)
           fn_rub_new_cl(:,icanopy) = fn_rub_cl(:,icanopy) * (1._wp - fn_oth_new_cl(:,icanopy)) / (1._wp - fn_oth_cl(:,icanopy))
           fn_et_new_cl(:,icanopy) = fn_et_cl(:,icanopy) * (1._wp - fn_oth_new_cl(:,icanopy)) / (1._wp - fn_oth_cl(:,icanopy))
           fn_pepc_new_cl(:,icanopy) = fn_pepc_cl(:,icanopy) * (1._wp - fn_oth_new_cl(:,icanopy)) / (1._wp - fn_oth_cl(:,icanopy))
@@ -819,9 +820,8 @@ CONTAINS
     
       net_assimilation_new(:) = net_assimilation_new(:) + an_cl(:) * lai_new_cl(:,icanopy) 
       canopy_cond_new(:) = canopy_cond_new(:) + gs_cl(:) * lai_new_cl(:,icanopy) 
-
     ENDDO
-    
+  
     !> 3.0 Calculate change in canopy fluxes from altered LAI 
 
     !> 3.1 net carbon gain from increased LAI
@@ -1040,8 +1040,7 @@ CONTAINS
       leaf_cn_direction(ichunk) = REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp
       
       IF (uptake_n(ichunk) * growth_cn(ichunk) < npp(ichunk)) &
-           leaf_cn_direction(ichunk) = 0._wp
-    
+          leaf_cn_direction(ichunk) = 0._wp
 
   ELSE    ! IF(veg_pool_leaf_nitrogen > eps4)
      leaf_cn_direction(ichunk) = 0.0_wp
