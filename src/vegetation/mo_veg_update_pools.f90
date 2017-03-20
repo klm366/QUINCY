@@ -35,7 +35,8 @@ CONTAINS
   SUBROUTINE update_veg_pools(tile, options)
 
     USE mo_jsb_class,           ONLY: Get_model
-    USE mo_base_memory,         ONLY: t_slm_tile, t_model, t_jsb_task_options
+    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_constants,      ONLY: dtime, one_day
     USE mo_base_config_class,   ONLY: base_config
     USE mo_assimi_config_class, ONLY: assimi_config
@@ -59,7 +60,7 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in)    :: options          !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER       :: model
+    TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'

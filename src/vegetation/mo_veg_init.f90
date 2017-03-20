@@ -15,7 +15,8 @@ MODULE mo_veg_init
   USE mo_exception,               ONLY: message, finish, message_text
 
   USE mo_jsb_class,               ONLY: Get_model
-  USE mo_base_memory,             ONLY: t_slm_tile, t_model, t_jsb_task_options     ! *slmtemp
+  USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options
+  USE mo_jsb_model_class,         ONLY: t_jsb_model
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
   USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   USE mo_veg_config_class,        ONLY: veg_config
@@ -47,7 +48,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER              :: model
+    TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                                      :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
@@ -100,7 +101,7 @@ CONTAINS
         CALL init_slm_canopy(tile, options)
 
       CASE('test_canopy')
-        ! init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
+        CALL init_slm_canopy(tile, options)
 
       CASE DEFAULT
         CALL finish('veg_init','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
@@ -145,7 +146,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER              :: model
+    TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp)                                     :: hlp1       ! needs to be Scalar as long as pools are Scalar !
     INTEGER                                      :: iblk, ics, ice, nc
@@ -452,7 +453,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER              :: model
+    TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp)                                     :: ref_lai    !< LAI
     REAL(wp)                                     :: ref_nleaf  !< N leaf per unit leaf area in gN/m2

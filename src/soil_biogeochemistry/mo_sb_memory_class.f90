@@ -809,7 +809,7 @@ CONTAINS
 !    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
 !    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_base_memory,         ONLY: t_model
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
 
     ! 0.1.InOut
     CLASS(t_sb_memory), INTENT(inout), TARGET :: mem             !> soil memory
@@ -818,8 +818,7 @@ CONTAINS
     INTEGER,              INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
     INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
     ! 0.2 Local
-    TYPE(t_model), POINTER :: model
-!    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
 !    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
 !    TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
 !    INTEGER :: table

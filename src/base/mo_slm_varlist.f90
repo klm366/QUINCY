@@ -14,7 +14,7 @@ MODULE mo_slm_varlist
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_class,         ONLY: Get_model   ! *slmtemp 
-  USE mo_base_memory,       ONLY: t_model     ! *slmtemp  -> making available ice ics iblk, which is not needed in jsbach4
+  USE mo_jsb_model_class,   ONLY: t_jsb_model
 
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, &
                                   t_jsb_var_logical2d                        , &                 ! *slmjsb4
@@ -231,7 +231,7 @@ CONTAINS
     REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
     INTEGER                       :: pos_of_var
-    TYPE(t_model), POINTER        :: model            ! *slmtemp
+    TYPE(t_jsb_model), POINTER    :: model
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real2d'
 
@@ -279,7 +279,7 @@ CONTAINS
     REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
     INTEGER                       :: pos_of_var
-    TYPE(t_model), POINTER        :: model            ! *slmtemp
+    TYPE(t_jsb_model), POINTER    :: model
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
     INTEGER                       :: nlevel           ! number of levels at Z-Axis (canopy & soil)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real2d'
@@ -344,7 +344,7 @@ CONTAINS
     REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
     INTEGER                       :: pos_of_var
-    TYPE(t_model), POINTER        :: model            ! *slmtemp
+    TYPE(t_jsb_model), POINTER    :: model
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r2d'
 
@@ -393,7 +393,7 @@ CONTAINS
     REAL(wp),                         INTENT(in)      :: initval_r           ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
     INTEGER                       :: pos_of_var
-    TYPE(t_model), POINTER        :: model            ! *slmtemp
+    TYPE(t_jsb_model), POINTER    :: model
     INTEGER                       :: ice, ics, iblk   ! *slmtemp
     INTEGER                       :: nlevel           ! number of levels at Z-Axis (canopy & soil)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r3d'
@@ -448,9 +448,9 @@ CONTAINS
     TYPE(t_jsb_var_logical2d), TARGET,  INTENT(inout)   :: var              ! reference to jsbach var -> newly created plain scalar REAL
     LOGICAL,                            INTENT(in)      :: initval_r        ! value for initialization of the variable (usually 0.0_wp)
     ! 0.2 Local
-    INTEGER                   :: pos_of_var
-    TYPE(t_model), POINTER    :: model            ! *slmtemp
-    INTEGER                   :: ice, ics, iblk   ! *slmtemp
+    INTEGER                     :: pos_of_var
+    TYPE(t_jsb_model), POINTER  :: model
+    INTEGER                     :: ice, ics, iblk   ! *slmtemp
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_l2d'
 
     model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!

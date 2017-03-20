@@ -9,7 +9,7 @@ mo_soil_constants.o: \
 mo_soil_memory_class.o: \
   mo_kind.o \
   mo_exception.o \
-  mo_base_memory.o \
+  mo_jsb_model_class.o \
   mo_jsb_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_var_class.o \
@@ -26,6 +26,7 @@ mo_soil_init.o: \
   mo_kind.o \
   mo_exception.o \
   mo_base_memory.o \
+  mo_jsb_model_class.o \
   mo_base_config_class.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
@@ -42,6 +43,7 @@ mo_soil_util.o: \
 mo_soil_update_physics.o: \
   mo_kind.o \
   mo_base_memory.o \
+  mo_jsb_model_class.o \
   mo_base_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \

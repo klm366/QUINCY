@@ -17,7 +17,8 @@ MODULE mo_jsb_model_init
     ! base
     USE mo_base_constants                     ! e.g. dtime, init_base_constants
     USE mo_jsb_class,                       ONLY: Get_model, jsbach
-    USE mo_base_memory,                     ONLY: t_slm_tile, t_model, grid, new_model
+    USE mo_base_memory,                     ONLY: t_slm_tile, grid
+    USE mo_jsb_model_class,                 ONLY: t_jsb_model, new_model
     USE mo_base_config_class,               ONLY: base_config  !< TYPE, EXTENDS(t_jsb_config) :: t_base_config
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element, init_lctlib
     USE mo_jsb_memory_class,                ONLY: t_jsb_memory
@@ -109,8 +110,8 @@ CONTAINS
     CHARACTER(LEN=15)                           :: prefix         !! for Memory init and alloc
     CHARACTER(LEN=15)                           :: suffix         !! for Memory init and alloc
     INTEGER                                     :: no_of_models
-    TYPE(t_model), POINTER                      :: current => NULL() ! model allocation to jsbach struct - in jsbach4 this is looped over x models
-    TYPE(t_model), POINTER                      :: model
+    TYPE(t_jsb_model), POINTER                  :: current => NULL() ! model allocation to jsbach struct - in jsbach4 this is looped over x models
+    TYPE(t_jsb_model), POINTER                  :: model
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_slm'
 
 
@@ -143,7 +144,7 @@ CONTAINS
     no_of_models = 1
     ALLOCATE(jsbach%models(no_of_models))
     jsbach%no_of_models = no_of_models
-    current => new_model(1, "slm", "slm", "slm_veg_model", "not_available.txt") ! id, name, shortname, description, namelist_filename
+    current => new_model(1, "slm", "slm", base_config%slm_model_name, "namelist.slm") ! id, name, shortname, description, namelist_filename
     current%options%dtime   = base_config%dtime  ! length of one time step
     current%options%steplen = base_config%dtime  ! .. 
     current%options%iblk    = iblk               ! Number of current block (chunk)
@@ -309,6 +310,7 @@ CONTAINS
         CALL veg_init(tile, model%options)       ! veg 
         CALL soil_init(tile, model%options)      ! soil
       CASE('test_canopy')
+        CALL veg_init(tile, model%options)       ! veg 
         ! init is done within the run_test_canopy_model(), which is reasonable because this model runs for only one timestep
       CASE DEFAULT
         CALL finish('land_model_driver-init_routine','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')

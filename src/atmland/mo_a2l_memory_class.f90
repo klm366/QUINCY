@@ -13,7 +13,6 @@ MODULE mo_a2l_memory_class
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message
-  USE mo_jsb_class,              ONLY: Get_model
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
@@ -23,8 +22,8 @@ MODULE mo_a2l_memory_class
 ! jsbach4
 !  USE mo_util,              ONLY: One_of
 
-!  USE mo_jsb_model_class,   ONLY: t_jsb_model
-!  USE mo_jsb_class,         ONLY: Get_model
+  USE mo_jsb_model_class,   ONLY: t_jsb_model
+  USE mo_jsb_class,         ONLY: Get_model
 !  USE mo_jsb_memory_class,  ONLY: t_jsb_memory
 !  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
 !  USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
@@ -102,7 +101,6 @@ CONTAINS
 !    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
 !    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_base_memory,         ONLY: t_model
 
     ! needed to calc SLM init values:
     USE mo_atmland_constants, ONLY: def_wind, def_co2_deltaC13, def_co2_deltaC14, def_t_air, standard_press_srf, def_vpd, &
@@ -119,8 +117,6 @@ CONTAINS
 !    INTEGER,                    INTENT(in)    :: lct_ids(:)  ! jsbach4
     INTEGER,                   INTENT(in)    :: model_id
     ! 0.2 Local
-    TYPE(t_model), POINTER :: model
-    ! needed to calc SLM init values:
     REAL(wp) :: C13C12_mixing_ratio, &
                 C14C_mixing_ratio
     REAL(wp) :: wind_air_init, &
@@ -141,7 +137,7 @@ CONTAINS
 
 
 ! jsbach4
-!    TYPE(t_jsb_model),       POINTER :: model 
+    TYPE(t_jsb_model),       POINTER :: model 
 !    TYPE(t_jsb_grid),        POINTER :: hgrid 
 !    TYPE(t_jsb_vgrid),       POINTER :: surface  
 !    INTEGER :: table 

@@ -13,11 +13,8 @@ MODULE mo_assimi_update_canopy_fluxes
 #include "dsl_jsbach.inc"
 
   USE mo_kind,                  ONLY: wp, eps4, eps8
-  USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
-  USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-  USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-  USE mo_assimi_constants,      ONLY: ic3phot, ic4phot, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
   USE mo_assimi_config_class,   ONLY: assimi_config
+  USE mo_assimi_constants,      ONLY: ic3phot, ic4phot, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
   USE mo_veg_constants,         ONLY: itree, igrass, fmaint_rate_base
 
 
@@ -49,6 +46,10 @@ CONTAINS
   SUBROUTINE update_canopy_fluxes(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
+    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_shared_constants
     USE mo_shared_isotope,        ONLY: calc_fractionation
 
@@ -63,7 +64,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER       :: model
+    TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: icanopy     ! for looping across ncanopy layers
     REAL(wp),DIMENSION(options%nc)        :: hlp1       ! dummy variable 

@@ -84,7 +84,8 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model, grid  ! grid is used for calc_solar_angle()
+    USE mo_base_memory,           ONLY: t_slm_tile, grid  ! grid is used for calc_solar_angle()
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_config_class,     ONLY: base_config
     USE mo_soil_config_class,     ONLY: soil_config
 
@@ -136,7 +137,7 @@ CONTAINS
                                       q_bcoef_ice(:)               !< ..
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),    POINTER     :: model                  ! the model structure
+    TYPE(t_jsb_model), POINTER     :: model                  ! the model structure
     ! READ() input variables for: land plant canopy
     REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &

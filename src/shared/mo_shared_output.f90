@@ -140,6 +140,7 @@ CONTAINS
     ALLOCATE(leachingC14org_acc)
     ALLOCATE(litterfallN_acc)
     ALLOCATE(net_min_nh4_acc)
+    ALLOCATE(net_min_no3_acc)
     ALLOCATE(leachingNorg_acc)
     ALLOCATE(litterfallP_acc)
     ALLOCATE(net_min_po4_acc)
@@ -502,7 +503,8 @@ CONTAINS
   SUBROUTINE write_output_pool(tile, options, time_d, time_y)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
+    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_veg_constants,         ONLY: itree
     USE mo_assimi_config_class,   ONLY: assimi_config
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
@@ -524,7 +526,7 @@ CONTAINS
     INTEGER,  INTENT(in)                 :: time_y      !< time in years; the 1st year of a simulation == year 1 (not zero)
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER      :: model
+    TYPE(t_jsb_model),      POINTER      :: model
     TYPE(t_lctlib_element), POINTER      :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                          :: lun            ! locical unit number
     INTEGER                          :: icanopy         ! loop over ncanopy
@@ -979,7 +981,8 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options 
+    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_constants,        ONLY: dtime
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
@@ -1002,7 +1005,7 @@ CONTAINS
     INTEGER,  INTENT(in)                 :: time_y  !< time in years; the 1st year of a simulation == year 1 (not zero)
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER       :: model
+    TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                      :: lun             ! locical unit number
     REAL(wp), SAVE               :: dtime_one = 1.0_wp ! just 1.0
@@ -1476,7 +1479,8 @@ CONTAINS
   SUBROUTINE write_soil_forcing(tile, options, time_d, time_y)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_base_memory,           ONLY: t_slm_tile, t_model, t_jsb_task_options
+    USE mo_base_memory,           ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_veg_config_class,      ONLY: veg_config
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14
@@ -1495,7 +1499,7 @@ CONTAINS
     INTEGER,          INTENT(in)                  :: time_y       !< time in years; the 1st year of a simulation == year 1 (not zero)
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER       :: model
+    TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp)                              :: dC13_leaf,dC13_fine_root,dC13_coarse_root,dC13_sap_wood,dC13_heart_wood,dC13_labile, & 
                                              dC13_reserve,dC13_fruit,dC13_seed_bed

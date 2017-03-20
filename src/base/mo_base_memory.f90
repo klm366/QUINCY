@@ -11,9 +11,7 @@ MODULE mo_base_memory
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_lct_class
-  USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-  USE mo_jsb_memory_class,        ONLY: t_jsb_memory_p, t_jsb_memory
-  USE mo_jsb_process_class,       ONLY: t_jsb_process_p
+  USE mo_jsb_memory_class,        ONLY: t_jsb_memory_p
 
   IMPLICIT NONE
 
@@ -30,7 +28,7 @@ MODULE mo_base_memory
   END TYPE t_slm_tile  
 
   !-----------------------------------------------------------------------------------------------------
-  !> type definition of model\%options needed in t_model
+  !> type definition of model\%options needed in t_jsb_model
   !!
   !! this is borrowed from JSBACH4 git mo_jsb_task_class [20160818 Jan Engel] \n
   !! enabling the use of ics ice iblk in the 2D and 3D variables
@@ -50,46 +48,6 @@ MODULE mo_base_memory
   END TYPE t_jsb_task_options
 
   !-----------------------------------------------------------------------------------------------------
-  !> very basic version of the JSBACH4: TYPE, EXTENDS(t_Hsm) :: t_jsb_model in mo_jsb_model_class
-  !!
-  !! 
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  TYPE t_model
-    INTEGER                            :: id                !< Model id
-    CHARACTER(len=10)                  :: shortname         !< Model short name
-    !CHARACTER(len=132)                 :: description       !< Model description
-    !CHARACTER(len=filename_max)        :: namelist_filename !< Model namelist file
-    !TYPE(t_jsb_model_config),  POINTER :: config            !< Configuration
-    TYPE(t_jsb_task_options)           :: options           !< Options needed by tasks
-    !INTEGER                            :: grid_id
-    TYPE(t_jsb_process_p),POINTER      :: processes(:)
-    !TYPE(t_Task_queue),        POINTER :: queue        => NULL()
-    !CLASS(t_jsb_process_task), POINTER :: current_task => NULL()
-    TYPE(t_lctlib_element),POINTER     :: lctlib(:)         !< each lctlib(pft_id) contains all parameter values of pft_id \n
-                                                            !! this structure makes parameters accessible throughout the model \n
-                                                            !! consistently with jsbach4
-
-  END TYPE t_model
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Container CLASS for JSBACH model
-  !! 
-  !! Contains pointer to an instance of type t_jsb_model in order to allow arrays
-  !! of pointers to models.
-  !!
-  !! This code is borrowed from jsbach4 mo_jsb_model_class
-  !-----------------------------------------------------------------------------------------------------
-!  TYPE t_jsb_model_m       ! jsbach4 code
-!    TYPE(t_jsb_model), POINTER :: m
-!  END TYPE t_jsb_model_m
-  TYPE t_model_m            ! *slmtemp
-    TYPE(t_model), POINTER :: m
-  END TYPE t_model_m
-
-
-  !-----------------------------------------------------------------------------------------------------
   !> longitude and latitude of a tile
   !!
   !! note: this TYPE is just a temporary solution \n
@@ -103,56 +61,11 @@ MODULE mo_base_memory
   TYPE(t_slm_grid)  :: grid           !< currently initialized with namelist parameter values
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_base_memory'
+
+  PRIVATE
+  PUBLIC  :: t_slm_tile, t_jsb_task_options
+  PUBLIC  :: grid
  
-CONTAINS
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Constructor method for model instance
-  !! 
-  !!
-  !! borrowed from jsbach4 mo_jsb_model_class and modified to fit SLM needs
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION new_model(id, name, shortname, description, namelist_filename) RESULT(return_ptr)
-
-    IMPLICIT NONE
-
-    ! 0.1 InOut
-    INTEGER,                    INTENT(in) :: id
-    CHARACTER(len=*),           INTENT(in) :: name
-    CHARACTER(len=*),           INTENT(in) :: shortname
-    CHARACTER(len=*),           INTENT(in) :: description
-    CHARACTER(len=*),           INTENT(in) :: namelist_filename !< Model namelist file
-    TYPE(t_model), POINTER                 :: return_ptr
-    ! 0.2 Local
-    !INTEGER :: iproc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_model'
-
-    ALLOCATE(return_ptr)
-
-!    CALL return_ptr%Init_hsm(name)
-!    CALL return_ptr%Register_action(t_Action("INTEGRATE"))
-!    CALL return_ptr%Register_action(t_Action("AGGREGATE"))
-
-    return_ptr%id                = id
-    return_ptr%shortname         = TRIM(shortname)
-!    return_ptr%description       = TRIM(description)
-!    return_ptr%namelist_filename = TRIM(namelist_filename)
-!    return_ptr%config => NULL()
-
-!!$    return_ptr%Hsm => return_ptr%t_Hsm
-
-!!$    ALLOCATE(return_ptr%processes(max_no_of_processes))
-!!$    DO iproc=1,max_no_of_processes
-!!$      return_ptr%processes(iproc)%p => Create_process(iproc, return_ptr%id, TRIM(namelist_filename))
-!!$    END DO
-
-!    ALLOCATE(return_ptr%queue)
-
-!    CALL message(TRIM(routine), 'construction of JSBACH model completed.')
-
-  END FUNCTION new_model
-
-
+!CONTAINS
 
 END MODULE mo_base_memory

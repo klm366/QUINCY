@@ -11,8 +11,7 @@
 MODULE mo_jsb_class
 !#ifndef __NO_JSBACH__
 
-  !USE mo_jsb_model_class, ONLY: t_jsb_model, t_jsb_model_m   ! original jsbach4 code
-  USE mo_base_memory,     ONLY: t_model, t_model_m       ! *slmtemp
+  USE mo_jsb_model_class, ONLY: t_jsb_model, t_jsb_model_m 
 
   IMPLICIT NONE
   PRIVATE
@@ -21,8 +20,7 @@ MODULE mo_jsb_class
 
   TYPE t_jsb
      INTEGER :: no_of_models
-     !TYPE(t_jsb_model_m), POINTER :: models(:)
-     TYPE(t_model_m), POINTER :: models(:)
+     TYPE(t_jsb_model_m), POINTER :: models(:)
   END TYPE t_jsb
 
   TYPE(t_jsb) :: jsbach
@@ -52,8 +50,7 @@ CONTAINS
     IMPLICIT NONE
     ! 0.1 InOut
     INTEGER, INTENT(in)        :: id
-    !TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_model_by_id'
 

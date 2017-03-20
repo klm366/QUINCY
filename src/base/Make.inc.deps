@@ -1,5 +1,5 @@
 mo_jsb_class.o: \
-  mo_base_memory.o  
+  mo_jsb_model_class.o  
 
 mo_base_constants.o: \
   mo_kind.o
@@ -7,9 +7,7 @@ mo_base_constants.o: \
 mo_base_memory.o: \
   mo_kind.o \
   mo_jsb_lct_class.o \
-  mo_jsb_lctlib_class.o \
-  mo_jsb_memory_class.o \
-  mo_jsb_process_class.o
+  mo_jsb_memory_class.o
 
 mo_base_util.o: \
   mo_kind.o
@@ -72,6 +70,7 @@ mo_jsb_model_init.o: \
   mo_exception.o \
   mo_base_constants.o \
   mo_jsb_class.o \
+  mo_jsb_model_class.o \
   mo_base_memory.o \
   mo_base_config_class.o \
   mo_jsb_lctlib_class.o \
@@ -112,4 +111,16 @@ mo_slm_varlist.o: \
   mo_assimi_config_class.o \
   mo_soil_config_class.o \
   mo_jsb_memory_class.o
+
+mo_hsm_class.o: \
+  mo_exception.o
+
+mo_jsb_model_class.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_hsm_class.o \
+  mo_base_memory.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o 
+
 

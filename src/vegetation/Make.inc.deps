@@ -10,7 +10,7 @@ mo_veg_interface.o: \
 mo_veg_memory_class.o: \
   mo_kind.o \
   mo_exception.o \
-  mo_base_memory.o \
+  mo_jsb_model_class.o \
   mo_jsb_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_var_class.o \
@@ -21,6 +21,7 @@ mo_veg_growth.o: \
   mo_exception.o \
   mo_base_constants.o \
   mo_base_memory.o \
+  mo_jsb_model_class.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
@@ -43,6 +44,7 @@ mo_veg_respiration.o: \
 mo_veg_soil.o: \
   mo_kind.o \
   mo_base_memory.o \
+  mo_jsb_model_class.o \
   mo_base_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
@@ -55,6 +57,7 @@ mo_veg_soil.o: \
 mo_veg_turnover.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_jsb_model_class.o \
   mo_base_memory.o \
   mo_base_constants.o \
   mo_jsb_class.o \
@@ -76,6 +79,7 @@ mo_veg_config_class.o: \
 mo_veg_dynamics.o: \
   mo_kind.o \
   mo_base_memory.o \
+  mo_jsb_model_class.o \
   mo_base_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
@@ -96,6 +100,7 @@ mo_veg_util.o: \
 mo_veg_update_pools.o: \
   mo_kind.o \
   mo_base_memory.o \
+  mo_jsb_model_class.o \
   mo_base_constants.o \
   mo_base_config_class.o \
   mo_assimi_config_class.o \
@@ -135,6 +140,7 @@ mo_veg_init.o: \
   mo_kind.o \
   mo_exception.o \
   mo_base_memory.o \
+  mo_jsb_model_class.o \
   mo_base_config_class.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \

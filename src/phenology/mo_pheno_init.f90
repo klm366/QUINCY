@@ -32,7 +32,8 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, PHENO_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_memory,             ONLY: t_slm_tile, t_model, t_jsb_task_options    ! *slmtemp
+    USE mo_base_memory,             ONLY: t_slm_tile, t_jsb_task_options
+    USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_pheno_constants
 
     ! Use of process memories
@@ -45,7 +46,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_model),          POINTER              :: model
+    TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                                      :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init'
