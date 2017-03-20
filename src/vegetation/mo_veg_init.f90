@@ -11,7 +11,7 @@ MODULE mo_veg_init
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: wp, eps8
   USE mo_exception,               ONLY: message, finish, message_text
 
   USE mo_jsb_class,               ONLY: Get_model
@@ -87,7 +87,13 @@ CONTAINS
     !! 
     !! SLM models: land, plant,soil (case 1) and canopy (case 2)
     SELECT CASE(TRIM(base_config%slm_model_name))
-      CASE('land', 'plant', 'soil')
+      CASE('land')
+        CALL init_slm_plant(tile, options)
+
+      CASE('plant')
+        CALL init_slm_plant(tile, options)
+
+      CASE('soil')
         CALL init_slm_plant(tile, options)
 
       CASE('canopy')
@@ -105,13 +111,13 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! vegetation init routine specific to the land model
+  ! land model specific vegetation init routine
   ! 
   ! tbc ...
   !-----------------------------------------------------------------------------------------------------
 
   !-----------------------------------------------------------------------------------------------------
-  ! vegetation init routine specific to the soil model
+  ! soil model specific vegetation init routine
   ! 
   ! tbc ...
   !-----------------------------------------------------------------------------------------------------
@@ -119,18 +125,18 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> vegetation init routine specific to the plant model
+  !> plant model specific vegetation init routine
   !!
   !! currently used for: SLM land plant and soil
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_slm_plant(tile, options)
 
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot
-    USE mo_atmland_constants
+    USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
+                                                  standard_press_srf
     USE mo_veg_constants,                   ONLY: fresp_growth
     USE mo_shared_isotope,                  ONLY: calc_fractionation 
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
-    USE mo_kind
 
     IMPLICIT NONE
     ! ---------------------------
@@ -149,7 +155,8 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: target_cn_leaf                   ! VEG_
+    ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: target_cn_leaf
     dsl4jsb_Real2D_onChunk      :: target_np_leaf
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: dphi
@@ -178,12 +185,42 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: press_srf_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg
-    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
-    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
-    
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
+    dsl4jsb_Real2D_onChunk      :: leaf_cn_direction
+    dsl4jsb_Real2D_onChunk      :: t_air_daytime
+    dsl4jsb_Real2D_onChunk      :: press_srf_daytime
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime
+    dsl4jsb_Real2D_onChunk      :: ga_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_daytime
+    dsl4jsb_Real2D_onChunk      :: t_air_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: press_srf_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: ga_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: growth_req_n_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_p_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tphen_mavg
+    dsl4jsb_Real2D_onChunk      :: npp_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: ga_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: leaf2root_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: fn_oth_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -205,6 +242,7 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
+    ! 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
@@ -234,11 +272,43 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf_cn_direction)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
+    ! 3D
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
+
 
 !! *slmtemp
     veg     => veg__mem 
@@ -287,8 +357,11 @@ CONTAINS
          veg%pool%reserve  = veg%init_pool 
       END IF
 
-      ! plant variables
-      dphi(:) = - lctlib%phi_leaf_min
+    ! plant variables
+    dphi(:)               = - lctlib%phi_leaf_min
+    beta_sinklim_ps(:)    = 1.0_wp
+    leaf_cn_direction(:)  = 1.0_wp
+    fn_oth_cl(:,:)        = 1.0_wp
 
       ! initialising moving averages
       ! allocation
@@ -322,13 +395,42 @@ CONTAINS
       t_air_tcnl_mavg(:) = 283.15_wp
       press_srf_tcnl_mavg(:) = standard_press_srf
       co2_mixing_ratio_tcnl_mavg(:) = def_co2_mixing_ratio
-      ga_tfrac_mavg(:) = 0.2_wp
       beta_sinklim_ps_tcnl_mavg(:) = 1.0_wp
       growth_cn_tcnl_mavg(:) = 60.0_wp
       uptake_n_tcnl_mavg(:) = eps8
       npp_tcnl_mavg(:) = uptake_n_tcnl_mavg * growth_cn_tcnl_mavg
-      
-      
+
+
+    ! daytime averages plus accumulation var
+    t_air_daytime(:)                  = 283.15_wp
+    press_srf_daytime(:)              = standard_press_srf
+    co2_mixing_ratio_daytime(:)       = def_co2_mixing_ratio
+    ga_daytime(:)                     = 0.2_wp
+    beta_sinklim_ps_daytime(:)        = 1.0_wp
+    t_jmax_opt_daytime(:)             = 17.0_wp
+    t_air_daytime_dacc(:)             = 283.15_wp
+    press_srf_daytime_dacc(:)         = standard_press_srf
+    co2_mixing_ratio_daytime_dacc(:)  = def_co2_mixing_ratio
+    ga_daytime_dacc(:)                = 0.2_wp
+    beta_sinklim_ps_daytime_dacc(:)   = 1.0_wp
+
+    ! moving averages
+    growth_req_n_tlabile_mavg(:)      = 1._wp/25._wp
+    growth_req_p_tlabile_mavg(:)      = 1._wp/14._wp
+    t_air_tphen_mavg(:)               = 283.15_wp
+    npp_tuptake_mavg(:)               = 1.0_wp
+    demand_uptake_n_tuptake_mavg(:)   = 0.1_wp
+    demand_uptake_p_tuptake_mavg(:)   = 0.1_wp
+    growth_req_n_tuptake_mavg(:)      = 1._wp/25._wp
+    growth_req_p_tuptake_mavg(:)      = 1._wp/14._wp
+    cost_n_fixation_tuptake_mavg(:)   = 10.0_wp
+    ga_tcnl_mavg(:)                   = 0.2_wp
+    leaf2root_troot_mavg(:)           = 1.0_wp
+    an_boc_tvegdyn_mavg(:)            = 5.0_wp
+    t_air_tacclim_mavg(:)             = 283.15_wp
+    t_air_week_mavg(:)                = 283.15_wp
+    t_air_month_mavg(:)               = 283.15_wp
+    t_jmax_opt_mavg(:)                = 17.0_wp
 
   END SUBROUTINE init_slm_plant
 
@@ -341,6 +443,7 @@ CONTAINS
   SUBROUTINE init_slm_canopy(tile, options)
 
     USE mo_shared_constants,                ONLY: molar_mass_N
+    USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, standard_press_srf
 
     IMPLICIT NONE
     ! ---------------------------
@@ -360,7 +463,39 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(VEG_)
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: lai              ! VEG_
+    ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: lai
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
+    dsl4jsb_Real2D_onChunk      :: leaf_cn_direction
+    dsl4jsb_Real2D_onChunk      :: t_air_daytime
+    dsl4jsb_Real2D_onChunk      :: press_srf_daytime
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime
+    dsl4jsb_Real2D_onChunk      :: ga_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_daytime
+    dsl4jsb_Real2D_onChunk      :: t_air_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: press_srf_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: ga_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: growth_req_n_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_p_tlabile_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tphen_mavg
+    dsl4jsb_Real2D_onChunk      :: npp_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: ga_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: leaf2root_troot_mavg
+    dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
+    dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk      :: fn_oth_cl
 !! *slmtemp    
     TYPE(t_veg_memory),      POINTER :: veg         ! local pointer to veg__mem for SLM usability
     ! Get local variables from options argument
@@ -382,8 +517,39 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
+    ! 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
-
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf_cn_direction)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_daytime)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_troot_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
+    ! 3D
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
 
 !! *slmtemp
     veg     => veg__mem 
@@ -410,6 +576,44 @@ CONTAINS
       veg%pool%leaf%nitrogen%ptr   = lai(1) / lctlib%sla / lctlib%cn_leaf 
       veg%pool%leaf%phosphorus = veg%pool%leaf%nitrogen / lctlib%np_leaf
     ENDIF
+
+
+    ! plant variables
+    beta_sinklim_ps(:)    = 1.0_wp
+    leaf_cn_direction(:)  = 1.0_wp
+    fn_oth_cl(:,:)        = 1.0_wp
+
+    ! daytime averages plus accumulation var
+    t_air_daytime(:)                  = 283.15_wp
+    press_srf_daytime(:)              = standard_press_srf
+    co2_mixing_ratio_daytime(:)       = def_co2_mixing_ratio
+    ga_daytime(:)                     = 0.2_wp
+    beta_sinklim_ps_daytime(:)        = 1.0_wp
+    t_jmax_opt_daytime(:)             = 17.0_wp
+    t_air_daytime_dacc(:)             = 283.15_wp
+    press_srf_daytime_dacc(:)         = standard_press_srf
+    co2_mixing_ratio_daytime_dacc(:)  = def_co2_mixing_ratio
+    ga_daytime_dacc(:)                = 0.2_wp
+    beta_sinklim_ps_daytime_dacc(:)   = 1.0_wp
+
+    ! moving averages
+    growth_req_n_tlabile_mavg(:)      = 1._wp/25._wp
+    growth_req_p_tlabile_mavg(:)      = 1._wp/14._wp
+    t_air_tphen_mavg(:)               = 283.15_wp
+    npp_tuptake_mavg(:)               = 1.0_wp
+    demand_uptake_n_tuptake_mavg(:)   = 0.1_wp
+    demand_uptake_p_tuptake_mavg(:)   = 0.1_wp
+    growth_req_n_tuptake_mavg(:)      = 1._wp/25._wp
+    growth_req_p_tuptake_mavg(:)      = 1._wp/14._wp
+    cost_n_fixation_tuptake_mavg(:)   = 10.0_wp
+    ga_tcnl_mavg(:)                   = 0.2_wp
+    leaf2root_troot_mavg(:)           = 1.0_wp
+    an_boc_tvegdyn_mavg(:)            = 5.0_wp
+    t_air_tacclim_mavg(:)             = 283.15_wp
+    t_air_week_mavg(:)                = 283.15_wp
+    t_air_month_mavg(:)               = 283.15_wp
+    t_jmax_opt_mavg(:)                = 17.0_wp
+
 
   END SUBROUTINE init_slm_canopy
 

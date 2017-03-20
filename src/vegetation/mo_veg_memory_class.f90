@@ -1337,7 +1337,6 @@ CONTAINS
 !    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
 !    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_atmland_constants,   ONLY: standard_press_srf, def_co2_mixing_ratio
     USE mo_base_memory,         ONLY: t_model
 
     ! 0.1.InOut
@@ -1399,7 +1398,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_sinklim_ps', mem%beta_sinklim_ps, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'dphi', mem%dphi, &
             initval_r=0.0_wp) ! initvalue
@@ -1411,7 +1410,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'leaf_cn_direction', mem%leaf_cn_direction, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'target_lai', mem%target_lai, &
             initval_r=0.0_wp) ! initvalue
@@ -1459,7 +1458,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'fn_oth_cl', mem%fn_oth_cl, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
             initval_r=0.0_wp) ! initvalue
@@ -1615,40 +1614,40 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_air_daytime', mem%t_air_daytime, &
-            initval_r=283.15_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'press_srf_daytime', mem%press_srf_daytime, &
-            initval_r=standard_press_srf) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'co2_mixing_ratio_daytime', mem%co2_mixing_ratio_daytime, &
-            initval_r=def_co2_mixing_ratio) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'ga_daytime', mem%ga_daytime, &
-            initval_r=0.2_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_sinklim_ps_daytime', mem%beta_sinklim_ps_daytime, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_jmax_opt_daytime', mem%t_jmax_opt_daytime, &
-            initval_r=17.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'fleaf_sunlit_daytime_dacc_cl', mem%fleaf_sunlit_daytime_dacc_cl, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_air_daytime_dacc', mem%t_air_daytime_dacc, &
-            initval_r=283.15_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'press_srf_daytime_dacc', mem%press_srf_daytime_dacc, &
-            initval_r=standard_press_srf) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'co2_mixing_ratio_daytime_dacc', mem%co2_mixing_ratio_daytime_dacc, &
-            initval_r=def_co2_mixing_ratio) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'ga_daytime_dacc', mem%ga_daytime_dacc, &
-            initval_r=0.2_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_sinklim_ps_daytime_dacc', mem%beta_sinklim_ps_daytime_dacc, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_jmax_opt_daytime_dacc', mem%t_jmax_opt_daytime_dacc, &
             initval_r=0.0_wp) ! initvalue
@@ -1663,83 +1662,82 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'growth_req_n_tlabile_mavg', mem%growth_req_n_tlabile_mavg, &
-            initval_r=1._wp/25._wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'growth_req_p_tlabile_mavg', mem%growth_req_p_tlabile_mavg, &
-            initval_r=1._wp/14._wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_air_tphen_mavg', mem%t_air_tphen_mavg, &
-            initval_r=283.15_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'npp_tuptake_mavg', mem%npp_tuptake_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'demand_uptake_n_tuptake_mavg', mem%demand_uptake_n_tuptake_mavg, &
-            initval_r=0.1_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'demand_uptake_p_tuptake_mavg', mem%demand_uptake_p_tuptake_mavg, &
-            initval_r=0.1_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'growth_req_n_tuptake_mavg', mem%growth_req_n_tuptake_mavg, &
-            initval_r=1._wp/25._wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'growth_req_p_tuptake_mavg', mem%growth_req_p_tuptake_mavg, &
-            initval_r=1._wp/14._wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'cost_n_fixation_tuptake_mavg', mem%cost_n_fixation_tuptake_mavg, &
-            initval_r=10.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'fleaf_sunlit_tfrac_mavg_cl', mem%fleaf_sunlit_tfrac_mavg_cl, &
-            initval_r=0.5_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_air_tfrac_mavg', mem%t_air_tfrac_mavg, &
-            initval_r=283.15_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'press_srf_tfrac_mavg', mem%press_srf_tfrac_mavg, &
-            initval_r=standard_press_srf) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'co2_mixing_ratio_tfrac_mavg', mem%co2_mixing_ratio_tfrac_mavg, &
-            initval_r=def_co2_mixing_ratio) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'ga_tfrac_mavg', mem%ga_tfrac_mavg, &
-            initval_r=0.2_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_sinklim_ps_tfrac_mavg', mem%beta_sinklim_ps_tfrac_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'fleaf_sunlit_tcnl_mavg_cl', mem%fleaf_sunlit_tcnl_mavg_cl, &
-            initval_r=0.5_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_air_tcnl_mavg', mem%t_air_tcnl_mavg, &
-            initval_r=283.15_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'press_srf_tcnl_mavg', mem%press_srf_tcnl_mavg, &
-            initval_r=standard_press_srf) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'co2_mixing_ratio_tcnl_mavg', mem%co2_mixing_ratio_tcnl_mavg, &
-            initval_r=def_co2_mixing_ratio) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'ga_tcnl_mavg', mem%ga_tcnl_mavg, &
-            initval_r=0.2_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'beta_sinklim_ps_tcnl_mavg', mem%beta_sinklim_ps_tcnl_mavg, &
-           initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'uptake_n_tcnl_mavg', mem%uptake_n_tcnl_mavg, &
-           initval_r=0.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'growth_cn_tcnl_mavg', mem%growth_cn_tcnl_mavg, &
-           initval_r=0.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'npp_tcnl_mavg', mem%npp_tcnl_mavg, &
-           initval_r=0.0_wp) ! initvalue
-
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'npp_talloc_mavg', mem%npp_talloc_mavg, &
-           initval_r=0.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'n_fixation_talloc_mavg', mem%n_fixation_talloc_mavg, &
-           initval_r=0.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'transpiration_talloc_mavg', mem%transpiration_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
@@ -1757,22 +1755,22 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'dphi_talloc_mavg', mem%dphi_talloc_mavg, &
-            initval_r=-2.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'growth_cn_talloc_mavg', mem%growth_cn_talloc_mavg, &
-            initval_r=60.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'growth_cp_talloc_mavg', mem%growth_cp_talloc_mavg, &
-            initval_r=1000.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'labile_carbon_talloc_mavg', mem%labile_carbon_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'labile_nitrogen_talloc_mavg', mem%labile_nitrogen_talloc_mavg, &
-           initval_r=0.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'labile_phosphorus_talloc_mavg', mem%labile_phosphorus_talloc_mavg, &
-           initval_r=0.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
 
       CALL slm_add_var(mem, 'reserve_carbon_talloc_mavg', mem%reserve_carbon_talloc_mavg, &
             initval_r=0.0_wp) ! initvalue
@@ -1784,7 +1782,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'leaf2root_troot_mavg', mem%leaf2root_troot_mavg, &
-            initval_r=1.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'unit_npp_troot_mavg', mem%unit_npp_troot_mavg, &
             initval_r=0.0_wp) ! initvalue
@@ -1799,19 +1797,19 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 'an_boc_tvegdyn_mavg', mem%an_boc_tvegdyn_mavg, &
-            initval_r=5.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_air_tacclim_mavg', mem%t_air_tacclim_mavg, &
-            initval_r=283.15_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_air_week_mavg', mem%t_air_week_mavg, &
-            initval_r=283.15_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_air_month_mavg', mem%t_air_month_mavg, &
-            initval_r=283.15_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
   
       CALL slm_add_var(mem, 't_jmax_opt_mavg', mem%t_jmax_opt_mavg, &
-            initval_r=17.0_wp) ! initvalue
+            initval_r=0.0_wp) ! initvalue
 
       !> simple TYPE (t_jsb_struct)
       !! 
