@@ -120,15 +120,28 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    !! 1 Read config paramters from namelist and run PROC_config%Init routines
+    !! 1 Model init 
+    !!
+    !! 
+    no_of_models = 1            ! *slmtemp 
+    ALLOCATE(jsbach%models(no_of_models))
+    jsbach%no_of_models = no_of_models
+    current => new_model(1, "slm", "slm", base_config%slm_model_name, "namelist.slm") ! id, name, shortname, description, namelist_filename
+    ! "current" is used for looping if no_of_models > 1 ; but looping would need to include process configs per model (see section 2)
+    jsbach%models(1)%m => current
+    ! point model to jsbach%models(1)%m
+    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+
+
+    !! 2 Config init, run PROC_config%Init routines
     !!
     !!  
-    base_config%namelist_filename       = 'namelist.slm'
-    assimi_config%namelist_filename     = 'namelist.slm'
-    veg_config%namelist_filename        = 'namelist.slm'
-    soil_config%namelist_filename       = 'namelist.slm'
-    sb_config%namelist_filename         = 'namelist.slm'
-    pheno_config%namelist_filename      = 'namelist.slm'
+    base_config%namelist_filename       = model%namelist_filename
+    assimi_config%namelist_filename     = model%namelist_filename
+    veg_config%namelist_filename        = model%namelist_filename
+    soil_config%namelist_filename       = model%namelist_filename
+    sb_config%namelist_filename         = model%namelist_filename
+    pheno_config%namelist_filename      = model%namelist_filename
     CALL base_config%Init              ! includes base_config%slm_model_name => land plant soil canopy test_canopy
     CALL assimi_config%Init
     CALL veg_config%Init
@@ -137,27 +150,19 @@ CONTAINS
     CALL pheno_config%Init
 
 
-    !! 2 Model init 
+    !! 3 Set model options
     !!
-    !! see jsbach4 mo_jsb_base
     !! 
-    no_of_models = 1
-    ALLOCATE(jsbach%models(no_of_models))
-    jsbach%no_of_models = no_of_models
-    current => new_model(1, "slm", "slm", base_config%slm_model_name, "namelist.slm") ! id, name, shortname, description, namelist_filename
-    current%options%dtime   = base_config%dtime  ! length of one time step
-    current%options%steplen = base_config%dtime  ! .. 
-    current%options%iblk    = iblk               ! Number of current block (chunk)
-    current%options%ics     = ics                ! Index of chunk start
-    current%options%ice     = ice                ! Index of chunk end
-    current%options%nc      = ice - ics + 1      ! Length of chunk  (end-number - start-number + 1)
-    !current%lctlib => init_lctlib()           ! not possible here - need init constants init !!
-    jsbach%models(1)%m => current
-    ! point model to jsbach%models(1)%m
-    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    model%options%dtime   = base_config%dtime  ! length of one time step
+    model%options%steplen = base_config%dtime  ! .. 
+    model%options%iblk    = iblk               ! Number of current chunk that consists of multiple grid boxes
+    model%options%ics     = ics                ! Index of chunk start
+    model%options%ice     = ice                ! Index of chunk end
+    model%options%nc      = ice - ics + 1      ! Length of chunk  (end-number - start-number + 1)
+    !model%lctlib => init_lctlib()           ! not possible here - need init constants init !!
 
 
-    !! 3 Tile init
+    !! 4 Tile init
     !! 
     !! 
     !! @todo model_init -> init lcts of the tile via PROCEDURE Construct_jsb_lct  *slmtemp
@@ -169,17 +174,17 @@ CONTAINS
     tile%lcts%lib_id    = veg_config%pft_id  ! pftID == column number in model%lctlib == ID of lct in lctlib (JSBACH4)
 
 
-    !! 4 Grid init
+    !! 5 Grid init
     !! 
     !! 
     grid%lat            = base_config%lat
     grid%lon            = base_config%lon
 
 
-    !! 5 Constants
+    !! 6 Constants
     !! 
 
-    !! 5.1 Constants init
+    !! 6.1 Constants init
     !! 
     !! 
     CALL init_base_constants          ! may be 1st of the 'init constants'
@@ -192,13 +197,13 @@ CONTAINS
     CALL init_sb_constants
     CALL init_pheno_constants
 
-    !! 5.2 Constants set (using param.list file)
+    !! 6.2 Constants set (using param.list file)
     !! 
     !! 
     IF (base_config%set_parameter_values_from_file)  CALL parameters_from_file%set_param
 
 
-    !! 6 Memory init and alloc
+    !! 7 Memory init and alloc
     !! 
     !! >> this is work in progress ! and, thus, not very nice code, but it works for now (Jan 20160819) <<
     !! 
@@ -239,14 +244,14 @@ CONTAINS
     END DO          ! iproc
 
 
-    !! 7 lctlib init
+    !! 8 lctlib init
     !!
     !! Important! init_lctlib() needs config and constants init to be finished !
     !! 
     model%lctlib => init_lctlib()         ! initialize the lctlib with parameters values across PFT's
 
 
-    !! 8 Time init
+    !! 9 Time init
     !! 
     !! 
     time_day          = 0.0_wp                      ! equals 1.0 after one day has passed (i.e. start with zero)
@@ -256,7 +261,7 @@ CONTAINS
     timestep_prop_day = dtime/one_day                  ! proportion of one day that is simulated with one timestep
 
 
-    !! 9 Initialise: Fluxnet specific simulation output
+    !! 10 Initialise: Fluxnet specific simulation output
     !! 
     !! the last full "forcing period" is written into extra output files with half-hourly write-out of values
     fluxnet_output_status = 0
@@ -283,7 +288,7 @@ CONTAINS
     END IF
 
 
-    !! 10 run model-specific init routine  (land plant soil canopy test_canopy)
+    !! 11 run model-specific init routine  (land plant soil canopy test_canopy)
     !! 
     !! 
     ! enable/ disable forcing
