@@ -172,10 +172,11 @@ class Bench_Object ( Diagnostics, Report ):
 
         val  = Validator()
         test = config.validate ( val )
-        if test == True:          
+        if test == True:
             dkl_logger.debug ( "\nValidation of configuration from %s with specification from %s successfully run." % \
                 ( bench_configs_path, b4j_configspec_fn ))
         else:
+            #raise Exception (  "\nERROR validating configuration" )
             raise Exception (  "\nERROR validating configuration %s with specialization %s:\n%s" %\
                                ( bench_configs_path, b4j_configspec_fn,
                                  ', '.join ( "item '%s'" %  k for k,v in test.items () if v == False)))
@@ -325,7 +326,6 @@ class Bench_Object ( Diagnostics, Report ):
                     self.logger.debug (  """\nValidation of configuration for diagnostics for field '%s' with files 
 '%s' and '%s' successfully run.\n""" %  ( f_n, field_configs_path, b4j_field_configspec_fn ))
                 else:
-                    print test
                     raise Exception (  "\nERROR validating configuration %s with specialization %s.\n%s" %\
                                        ( field_configs_path, b4j_field_configspec_fn,
                                          ', '.join ( "item '%s'" %  k for k,v in test.items () if v == False)))

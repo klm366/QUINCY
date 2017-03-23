@@ -4,19 +4,20 @@ frequency=option('yearly','monthly','6-hourly',default='monthly')	  # USER: outp
 documentation=string()			    # USER: description
 
 [fetch]					    # USER: section fetch for diagnostic field
-[[__many__]]				    # USER: subsection <V>, <V>:= id/infix for one variable file to fetch
+[[__many__]]				    # USER: <V>: experiment type conform to type of experiment in main configuration
+[[[__many__]]]				    # USER: subsection <V>, <V>:= id/infix for one variable file to fetch
 longname=string(default=None)		    # USER: <V>: descriptive name
-unit=string()				    # USER: <V>: physical unit
-[[[__many__]]]				    # USER: <V>: experiment type conform to type of experiment in main configuration
-name=string()				    # USER: <V>: name
-code=string()				    # USER: <V>: code 
+unit=string(default=None)		    # USER: <V>: physical unit
+name=string()		                    # USER: <V>: name
+code=string(default=None)		    # USER: <V>: code
+path=string(default=None)
 submodel=string(default=None)		    # USER: <V>: submodel
 stream=string(default=None)		    # USER: <V>: stream		  
 
 [preprocessing]				    # USER: section preprocessing for diagnostic field
+[[__many__]]				    # USER: id/infix for output file written by the script  
 exec=string()				    # USER: executable script to call in b4j run
 input=string_list
-[[__many__]]				    # USER: id/infix for output file written by the script  
 
 [diagnose]				    # USER: section diagnose for diagnostic field 
 exec=string()				    # USER: executable script to call in b4j run       

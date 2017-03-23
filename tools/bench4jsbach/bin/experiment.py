@@ -23,7 +23,9 @@ HOST_AVAIL = { "thunder" : { "login_name" : "thunder4",
                              "domain"     : "zmaw.de",
                              "cdo_path"   : "/sw/squeeze-x64/cdo-1.7.1-gcc48/bin" },
                "mistral" : { "login_name" : "mistral.dkrz.de",
-                             "names"      : [ "mlogin100", "mlogin101", "mlogin102", "mlogin103", "mlogin104", "mlogin105" ],
+                             "names"      : [ "mlogin100", "mlogin101",
+                                              "mlogin102", "mlogin103",
+                                              "mlogin104", "mlogin105" ],
                              "domain"     : "hpc.dkrz.de",
                              "cdo_path"   : "/sw/rhel6-x64/cdo/cdo-1.7.0-magicsxx-gcc48/bin" },
                "archive" : { "login_name" : None,
@@ -97,6 +99,7 @@ are derived from it.
     B4J_index       = None
     B4J_canno       = None
     B4J_refno       = None
+    modeltype       = None
                     
     def __init__ (   self, b4j_obj, **kwargs ):
         """Objects are initialized giving their attributes.
@@ -119,6 +122,7 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         self.B4J_initialyear = kwargs.get ( "B4J_initialyear", None )
         self.B4J_finalyear   = kwargs.get ( "B4J_finalyear", None )
         self.B4J_index       = {}
+        self.modeltype       = "generic"
 
         self.B4J_obj.logger.debug ( 'kwargs = { %s }' % ''.join("{!s} = {!r}, ".format(key,val) 
                                                         for (key,val) in kwargs.items()))
@@ -145,7 +149,8 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         print HOST_AVAIL
         self.from_archive = self.B4J_host == 'archive'
         self.from_remote  = host not in HOST_AVAIL [ self.B4J_host ][ 'names' ]
-        self.accumulated  = True if self.from_archive else False              # ATT: if logic changes, program flow has to be adapted
+        self.accumulated  = True if self.from_archive else False
+        # ATT: if logic changes, program flow has to be adapted
 
     def remotehost_processing ( self, cmd ):
         cmd = "ssh %s@%s '%s'" % ( self.B4J_obj.config [ 'author' ],
@@ -198,7 +203,10 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
                 os.remove ( target_path )
             except OSError:
                 pass
-            cdo.mergetime ( input = [ os.path.join ( orig_dirpath, orig_fn_tmpl % { 'year' : y }) for y in range ( sy, fy + 1 )],
+            cdo.mergetime ( input = [ os.path.join ( orig_dirpath,
+                                                     orig_fn_tmpl % \
+                                                     { 'year' : y }) \
+                                      for y in range ( sy, fy + 1 )],
                             output = target_path )
         elif not os.path.isfile ( target_path ):
             assert 'cdo_path' in HOST_AVAIL [ self.B4J_host ] and \
@@ -247,13 +255,17 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         workingdir = os.getcwd ()
         os.chdir ( self.B4J_obj.downloads_path )
         exe = os.path.join ( bench4jsbach_scripts, "b4j_fetch_archived_file.ksh" )
-        assert os.path.isfile ( exe ) and os.access ( exe, os.X_OK ), "File %s is not executable." % exe
-        self.B4J_obj.logger.debug ( "Fetching outdata and codes files from archive for %s into %s. This might take a while ..." % (
+        assert os.path.isfile ( exe ) and os.access ( exe, os.X_OK ),\
+            "File %s is not executable." % exe
+        self.B4J_obj.logger.debug ( """Fetching outdata and codes files from archive 
+for %s into %s. This might take a while ...""" % (
             self.B4J_name_orig, self.B4J_obj.downloads_path ))
         
         for origin_dirpath, origin_filename in fetchfile_list:
-            sp = subprocess.Popen( [ exe + " " + origin_dirpath + " " + origin_filename ], shell=True,
-                                   stdout=subprocess.PIPE,  stderr=subprocess.PIPE )
+            sp = subprocess.Popen( [ exe + " " + origin_dirpath + " " + origin_filename ],
+                                   shell=True,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE )
             stdout, stderr = sp.communicate()
             if sp.returncode:
                 print "stdout: ", stdout
@@ -307,17 +319,21 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
         for fieldname, fielddict in self.B4J_obj.diagnostic_fields.iteritems ():
             self.B4J_obj.logger.debug ( "Fetch data for field '%s'." % fieldname )
 
-            assert 'fetch' in fielddict, "No 'fetch'-section defined for %s." % fieldname
+            assert 'fetch' in fielddict and \
+                self.modeltype in fielddict [ 'fetch' ], \
+                "No 'fetch'-section defined for %s and %s." % ( fieldname, self.modeltype )
             
             frequence_infix = self.outfiles_dict [ 'frequence_infixes' ][ fielddict [ "frequence" ]]\
                               if fielddict [ "frequence" ] == "monthly" else "" 
             endyearstring = self.outfiles_dict [ 'endyear_tmpl' ] % { 'endyear': self.B4J_endyear }\
                               if self.accumulated else ""
                 
-            for fileid, filedict in fielddict [ 'fetch' ].iteritems ():
-                assert self.modeltype in filedict, "No '%s'-section defined for %s." % ( self.modeltype, fileid )
-                assert "submodel" in filedict [ self.modeltype ] and\
-                       "stream" in filedict [ self.modeltype ], "No '%s'- or '%s'-section defined for %s." % \
+            for fileid, filedict in fielddict [ 'fetch' ][ self.modeltype ].iteritems ():
+                
+
+                assert "submodel" in filedict and \
+                       "stream" in filedict,\
+                       "No '%s'- or '%s'-section defined for %s." % \
                        ( "submodel", "stream", fileid )
                 self.B4J_obj.logger.debug ( "Fetch data for file '%s'." % fileid )
 
@@ -331,15 +347,16 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
 
                 if not self.B4J_obj.fetchremote: continue
                 
-                orig_dirpath = os.path.join ( self.outdata_dirpath, filedict [ self.modeltype ][ "submodel" ])
+                orig_dirpath = os.path.join ( self.outdata_dirpath,
+                                              filedict [ "submodel" ])
 
                 # fetching outdata, not self.accumulated
                 if not self.accumulated:
                     
                     orig_fn_tmpl = self.outfiles_dict [ 'fn_tmpl' ]  % {
                         "expname"             : self.B4J_name_orig,
-                        "submodel"            : filedict [ self.modeltype ][ "submodel" ],
-                        "stream"              : filedict [ self.modeltype ][ "stream" ],
+                        "submodel"            : filedict [ "submodel" ],
+                        "stream"              : filedict [ "stream" ],
                         "cond_frequenceinfix" : frequence_infix,
                         "startyear"           : "%(year)s",
                         "cond_endyearstr"   : "",
@@ -348,15 +365,15 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
                     codesfile_path = os.path.join ( self.codesfiles_dirpath,
                                                     self.codesfiles_dict [ "fn_tmpl" ] % {
                                                         "expname" : self.B4J_name_orig,
-                                                        "submodel": filedict [ self.modeltype ][ "submodel" ],
-                                                        "stream"  : filedict [ self.modeltype ][ "stream" ],
+                                                        "submodel": filedict [ "submodel" ],
+                                                        "stream"  : filedict [ "stream" ],
                                                         "suffix"  : self.codesfiles_dict [ 'suffix' ]})
                     
                     self.accumulate_streams ( orig_dirpath,
                                               orig_fn_tmpl,
                                               self.B4J_startyear,
                                               self.B4J_endyear,
-                                              filedict [ self.modeltype ][ 'code' ],
+                                              filedict [ 'code' ],
                                               fielddict [ 'suffix' ],
                                               codesfile_path,
                                               self.B4J_index [ fileid ],
@@ -365,8 +382,8 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
                 else:
                     orig_filename = self.outfiles_dict [ "fn_tmpl" ]  % {
                         "expname"             : self.B4J_name_orig,
-                        "submodel"            : filedict [ self.modeltype ][ "submodel" ],
-                        "stream"              : filedict [ self.modeltype ][ "stream" ],
+                        "submodel"            : filedict [ "submodel" ],
+                        "stream"              : filedict [ "stream" ],
                         "cond_frequenceinfix" : frequence_infix,
                         "startyear"           : self.B4J_initialyear,
                         "cond_endyearstr"     : endyearstring,
@@ -374,20 +391,25 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
 
                     codes_filename = self.codesfiles_dict [  "fn_tmpl" ] % {
                         "expname"  : self.B4J_name_orig,
-                        "submodel" : filedict [ self.modeltype ][ "submodel" ],
-                        "stream"   : filedict [ self.modeltype ][ "stream" ],
+                        "submodel" : filedict [ "submodel" ],
+                        "stream"   : filedict [ "stream" ],
                         "suffix"   : self.codesfiles_dict [ "suffix" ]}
 
                     if self.from_archive:
-                        self.B4J_index [ fileid + STREAM_SUFFIX ] = os.path.join ( self.B4J_obj.downloads_path, orig_filename )
+                        self.B4J_index [ fileid + STREAM_SUFFIX ] = os.path.join ( self.B4J_obj.downloads_path,
+                                                                                   orig_filename )
                         if not os.path.isfile ( self.B4J_index [ fileid + STREAM_SUFFIX ]):
                             fetchfile_list.append (( orig_dirpath, orig_filename ))
                             
-                        self.B4J_index [ fileid + CODES_SUFFIX ] = os.path.join ( self.B4J_obj.downloads_path, codes_filename )
+                        self.B4J_index [ fileid + CODES_SUFFIX ] = os.path.join ( self.B4J_obj.downloads_path,
+                                                                                  codes_filename )
                         if not os.path.isfile ( self.B4J_index [ fileid + CODES_SUFFIX ]):
-                            fetchfile_list.append (( self.dirpath, self.codesfiles_dict [ 'tar_fn_tmpl' ] % { "expname" : self.B4J_name_orig }))
+                            fetchfile_list.append (( self.dirpath,
+                                                     self.codesfiles_dict [ 'tar_fn_tmpl' ] % \
+                                                     { "expname" : self.B4J_name_orig }))
                     else:
-                        self.B4J_index [ fileid + STREAM_SUFFIX ] = os.path.join ( orig_dirpath, orig_filename )
+                        self.B4J_index [ fileid + STREAM_SUFFIX ] = os.path.join ( orig_dirpath,
+                                                                                   orig_filename )
 
 
         self.land_sea_mask  = self.B4J_obj.path_template % { 
@@ -424,7 +446,7 @@ In a bench4jsbach run this is done by the runskript reading a configuration file
                         os.remove ( self.B4J_index [ fileid ])
                     except OSError:
                         pass
-                    cdo.selcode (  filedict [ self.modeltype ][ 'code' ],
+                    cdo.selcode (  filedict [ 'code' ],
                                    input = " -selyear," + ','.join ( repr ( y ) for y in yearlist ) +\
                                    " " + self.B4J_index [ fileid + STREAM_SUFFIX ],
                                    output = self.B4J_index [ fileid ],
@@ -531,6 +553,7 @@ class CMIP5_Experiment ( Experiment ):
         assert var_filename and os.path.isfile ( var_filename )
 
         Experiment.__init__ ( self, b4j_obj, **kwargs )
+        self.modeltype = "CMIP5"
         
         nc_fid  = Dataset ( var_filename, 'r' )
         nc_attrs = nc_fid.ncattrs ()
@@ -564,7 +587,7 @@ class MPIESM1_Experiment ( Experiment ):
         self.dirpath            = os.path.join ( self.B4J_path, self.B4J_name_orig )
         self.outdata_dirpath    = os.path.join ( self.dirpath, self.outfiles_dict [ "dirname" ])
         self.codesfiles_dirpath = os.path.join ( self.dirpath, self.codesfiles_dict [ 'dirname' ])
-        self.modeltype          = self.__class__.__name__.split ( "_" )[ 0 ]
+        self.modeltype = "MPIESM1"
 
         self.codesfiles_dict [ "is_tared" ] = self.from_archive
         

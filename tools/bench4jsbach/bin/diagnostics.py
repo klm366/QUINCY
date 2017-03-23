@@ -155,17 +155,23 @@ class Diagnostics ( object ):
         cdo = Cdo ()
         
         ################ PREPROCESSING ####################
-        executable = self.get_b4j_path (  fielddict [ 'preprocessing' ][ 'exec' ], "scripts" )
-        input_list = fielddict [ 'preprocessing' ][ 'input' ]
 
         for exp in self.experiments:
+            # TODO: validation of field configuration in preliminary step, EXTEND VALIDATION PROCESS
+            assert 'preprocessing' in fielddict and \
+                exp.modeltype in fielddict [ 'preprocessing' ], \
+                "No 'preprocessing'-section defined for %s and %s." % ( fieldname, exp.modeltype )
+
+            prepdict = fielddict [ 'preprocessing' ][ exp.modeltype ]            
+            executable = self.get_b4j_path (  prepdict [ 'exec' ], "scripts" )
+            input_list = prepdict [ 'input' ]
+            
             arglist = [ "startyear:" + exp.B4J_startyear,  "finalyear:" + exp.B4J_endyear ]
                             
             for key in input_list:
                 arglist.append ( key + ':' + exp.B4J_index [ key ])
-                            
-            for output_item, output_dict in fielddict [ 'preprocessing' ].iteritems ():
-                if not isinstance ( output_dict, configobj.Section ): continue
+                
+            for output_item in  fielddict [ 'preprocessing' ][ 'output' ]:
                 exp.B4J_index [ output_item ] = self.path_template % { 
                     'path'           : fielddict [ "processed_path" ],
                     'classification' : output_item,
@@ -176,6 +182,7 @@ class Diagnostics ( object ):
                 arglist.append ( output_item + ":" + exp.B4J_index [ output_item ])
 
             cmd = ["python", executable ] +  arglist
+            self.logger.debug ( "Calling childprocess preprocessing: \n%s" % ( cmd ))
             subprocessing ( cmd, shell_arg = False, stderr_arg = None )
         self.logger.debug ( "Finished preprocessing with %s for field %s and all experiments successfully." %  \
                             ( executable, fieldname ))
