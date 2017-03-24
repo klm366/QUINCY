@@ -73,9 +73,11 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SOIL_)                         ! TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real3D_onChunk      :: soil_depth_sl                 ! SOIL_
-    dsl4jsb_Real2D_onChunk      :: f_n_demand                   ! VEG_
-    dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
+    ! SOIL_
+    dsl4jsb_Real3D_onChunk      :: soil_depth_sl
+    ! VEG_
+    dsl4jsb_Real2D_onChunk      :: f_n_demand
+!    dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: f_p_demand
     dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
@@ -114,24 +116,24 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)                 ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
-    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
-    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_pot)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_act)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)                     ! out
+!    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)                     ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)      ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                     ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                     ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)                       ! CASE "standard" "prescribed": out / other Cases: in 
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                     ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot)              ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_pot)              ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act)              ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_act)              ! out
 
 
 ! 2 be removed  *slmtemp

@@ -64,9 +64,12 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(SOIL_)                             ! TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk   :: growing_season           ! PHENO_
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta        ! SOIL_
-    dsl4jsb_Real2D_onChunk      :: dens_ind                 ! VEG_
+    ! PHENO_
+    dsl4jsb_Logical2D_onChunk   :: growing_season
+    ! SOIL_
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    ! VEG_
+    dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: mortality_rate
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
@@ -97,18 +100,18 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)       ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)     ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
-    dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)
-    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)
-    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)         ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)         ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)    ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)       ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)              ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                 ! in
 
 
 
@@ -151,11 +154,11 @@ CONTAINS
 
       !> 2.2 Calculate change in individual density from mortality and establishment
       !! 
-      CALL calc_delta_density_individuals(lctlib                        , &
+      CALL calc_delta_density_individuals(lctlib                        , & ! in
                                           dens_ind(:)                   , &
                                           mortality_rate(:)             , &
                                           veg%establishment%carbon%ptr  , &
-                                          delta_dens_ind(:)             )
+                                          delta_dens_ind(:)             )   ! out
 
     END IF  ! veg_config%flag_tile_veg_dynamics
 

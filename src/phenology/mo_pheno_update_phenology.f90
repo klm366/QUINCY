@@ -69,12 +69,16 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: t_air                      ! A2L_
-    dsl4jsb_Logical2D_onChunk   :: growing_season             ! PHENO_
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: t_air
+    ! PHENO_
+    dsl4jsb_Logical2D_onChunk   :: growing_season
     dsl4jsb_Real2D_onChunk      :: gdd
     dsl4jsb_Real2D_onChunk      :: nd_dormance
-    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tphen_mavg    ! ASSIMI_
-    dsl4jsb_Real2D_onChunk      :: t_air_tphen_mavg           ! VEG_
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tphen_mavg
+    ! VEG_
+    dsl4jsb_Real2D_onChunk      :: t_air_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
     dsl4jsb_Real2D_onChunk      :: mean_leaf_age
@@ -102,20 +106,20 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
-    dsl4jsb_Get_var2D_onChunk(PHENO_, gdd)
-    dsl4jsb_Get_var2D_onChunk(PHENO_, nd_dormance)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                 ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_, gdd)                            ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_, nd_dormance)                    ! inout
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                            ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)       ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)
-    dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)                  ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                    ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)   ! in
 
 
 
@@ -126,7 +130,7 @@ CONTAINS
 
     !> 1.0 Check for start and end of growing season, and update both gdd and nd_dormance counter
     !! 
-    CALL calc_phenology(lctlib                             , &
+    CALL calc_phenology(lctlib                             , &  ! in
                         t_air(:)                           , &
                         beta_soil_gs_tphen_mavg(:)         , &
                         t_air_tphen_mavg(:)                , &
@@ -135,7 +139,7 @@ CONTAINS
                         mean_leaf_age(:)                   , &
                         gpp_tlabile_mavg(:)                , &
                         maint_respiration_tlabile_mavg(:)  , &
-                        growing_season(:)                  , &
+                        growing_season(:)                  , &  ! inout
                         nd_dormance(:)                     , &
                         gdd(:)                             )
 

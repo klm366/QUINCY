@@ -79,15 +79,18 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),      POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: t_air                     ! A2L_
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: t_air  
     dsl4jsb_Real2D_onChunk      :: q_air
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C13
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta         ! SOIL_
-    dsl4jsb_Real2D_onChunk      :: gross_assimilation        ! ASSIMI_
+    ! SOIL_
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
     dsl4jsb_Real2D_onChunk      :: net_assimilation
@@ -104,9 +107,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: maint_respiration_leaf_cl
     dsl4jsb_Real3D_onChunk      :: canopy_cond_cl
     dsl4jsb_Real3D_onChunk      :: co2_conc_leaf_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl            ! RAD_
+    ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
-    dsl4jsb_Real2D_onChunk      :: lai                       ! VEG_
+    ! VEG_
+    dsl4jsb_Real2D_onChunk      :: lai 
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
@@ -142,48 +147,48 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
-    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)
-    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
-    dsl4jsb_Get_var2D_onChunk(A2L_, ga)
-    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
-    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)
-    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                          ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                          ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)                      ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                             ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)               ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)             ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, maint_respiration_leaf)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_, net_assimilation_cl)
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_, gross_assimilation_cl)
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_, maint_respiration_leaf_cl)
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_, canopy_cond_cl)
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_, co2_conc_leaf_cl)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)      ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation)            ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)        ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, maint_respiration_leaf)      ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)                 ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)               ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                    ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)                ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)                ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)                  ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, net_assimilation_cl)         ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, gross_assimilation_cl)       ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, maint_respiration_leaf_cl)   ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, canopy_cond_cl)              ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, co2_conc_leaf_cl)            ! out
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
-    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)             ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)                ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                      ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! in
 
 
 ! 2 be removed  *slmtemp
@@ -217,26 +222,26 @@ CONTAINS
   !> 2.0 calculate photosynthesis per layer
   !! 
   DO icanopy = 1,assimi_config%ncanopy
-    CALL calc_photosynthesis(t_air(:)                            , & ! in
-                                 press_srf(:)                        , &
-                                 co2_mixing_ratio(:)                 , &
-                                 ga(:)                               , &
-                                 t_air_tacclim_mavg(:)       , &
-                                 ppfd_sunlit_cl(:,icanopy), &
-                                 ppfd_shaded_cl(:,icanopy), &
-                                 fleaf_sunlit_cl(:,icanopy), &
-                                 beta_air(:)                 , &
-                                 beta_soil_ps(:)             , &
-                                 beta_sinklim_ps(:)          , &
-                                 beta_soil_gs(:)             , &
-                                 fn_chl_cl(:,icanopy)     , &
-                                 fn_et_cl(:,icanopy)      , &
-                                 fn_rub_cl(:,icanopy)     , &
-                                 fn_pepc_cl(:,icanopy)    , &
-                                 lai_cl(:,icanopy)        , &   ! used for: IF statement whether this routine may run or not
-                                 leaf_nitrogen_cl(:,icanopy)   , &
+    CALL calc_photosynthesis(t_air(:)                                  , & ! in
+                                 press_srf(:)                          , &
+                                 co2_mixing_ratio(:)                   , &
+                                 ga(:)                                 , &
+                                 t_air_tacclim_mavg(:)                 , &
+                                 ppfd_sunlit_cl(:,icanopy)             , &
+                                 ppfd_shaded_cl(:,icanopy)             , &
+                                 fleaf_sunlit_cl(:,icanopy)            , &
+                                 beta_air(:)                           , &
+                                 beta_soil_ps(:)                       , &
+                                 beta_sinklim_ps(:)                    , &
+                                 beta_soil_gs(:)                       , &
+                                 fn_chl_cl(:,icanopy)                  , &
+                                 fn_et_cl(:,icanopy)                   , &
+                                 fn_rub_cl(:,icanopy)                  , &
+                                 fn_pepc_cl(:,icanopy)                 , &
+                                 lai_cl(:,icanopy)                     , &   ! used for: IF statement whether this routine may run or not
+                                 leaf_nitrogen_cl(:,icanopy)           , &
                                  lctlib%ps_pathway                     , &
-                                 t_jmax_opt_mavg(:)               , &
+                                 t_jmax_opt_mavg(:)                    , &
                                  lctlib%t_jmax_omega                   , &
                                  lctlib%g0                             , &
                                  lctlib%g1                             , &

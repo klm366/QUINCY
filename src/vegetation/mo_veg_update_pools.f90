@@ -72,16 +72,20 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                          !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                         !     TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk      :: gross_assimilation         ! ASSIMI_
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
     dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_pot            ! SOIL_
-    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl  ! RAD_
+    ! SOIL_
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
+    ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
-    dsl4jsb_Real2D_onChunk      :: lai                        ! VEG_
+    ! VEG_
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: diameter
@@ -156,69 +160,69 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)      ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)         ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)     ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)     ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)               ! in
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
-    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
-    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
-    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)
-    dsl4jsb_Get_var2D_onChunk(VEG_, height)
-    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)
-    dsl4jsb_Get_var2D_onChunk(VEG_, dphi)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! CASE "plant" & "land": out / other Cases: in
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                       ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                       ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)                         ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                  ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, dphi)                           ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp)                            ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)                        ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c14)                        ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_p)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tfrac_mavg)           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg)    ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)                  ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)                    ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! inout
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                      ! inout
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! inout
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! inout
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! inout
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! inout
 
 
 

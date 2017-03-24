@@ -86,7 +86,8 @@ CONTAINS
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk                :: t_air                  ! A2L_
+    ! A2L_
+    dsl4jsb_Real2D_onChunk                :: t_air
     dsl4jsb_Real2D_onChunk                :: q_air
     dsl4jsb_Real2D_onChunk                :: press_srf
     dsl4jsb_Real2D_onChunk                :: ga
@@ -94,11 +95,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: rain
     dsl4jsb_Real2D_onChunk                :: snow
     dsl4jsb_Real2D_onChunk                :: drag_srf
-    dsl4jsb_Real2D_onChunk                :: net_radiation          ! L2A_
+    ! L2A_
+    dsl4jsb_Real2D_onChunk                :: net_radiation
     dsl4jsb_Real2D_onChunk                :: ground_heat_flx
     dsl4jsb_Real2D_onChunk                :: latent_heat_flx
     dsl4jsb_Real2D_onChunk                :: sensible_heat_flx
-    dsl4jsb_Real2D_onChunk                :: root_depth             ! SOIL_
+    ! SOIL_
+    dsl4jsb_Real2D_onChunk                :: root_depth
     dsl4jsb_Real2D_onChunk                :: w_soil_root
     dsl4jsb_Real2D_onChunk                :: w_soil_root_pwp
     dsl4jsb_Real2D_onChunk                :: w_soil_root_fc
@@ -117,9 +120,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: percolation_sl
     dsl4jsb_Real3D_onChunk                :: drainage_sl
     dsl4jsb_Real3D_onChunk                :: t_soil_sl
-    dsl4jsb_Real2D_onChunk                :: canopy_cond            ! ASSIMI_
-    dsl4jsb_Real2D_onChunk                :: sw_srf_net             ! RAD_
-    dsl4jsb_Real2D_onChunk                :: transpiration          ! VEG_
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk                :: canopy_cond
+    ! RAD_
+    dsl4jsb_Real2D_onChunk                :: sw_srf_net
+    ! VEG_
+    dsl4jsb_Real2D_onChunk                :: transpiration
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -144,45 +150,45 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
-    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)
-    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
-    dsl4jsb_Get_var2D_onChunk(A2L_, ga)
-    dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)
-    dsl4jsb_Get_var2D_onChunk(A2L_, rain)
-    dsl4jsb_Get_var2D_onChunk(A2L_, snow)
-    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)            ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                   ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)          ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, rain)                 ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow)                 ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)             ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)
-    dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)
-    dsl4jsb_Get_var2D_onChunk(L2A_, latent_heat_flx)
-    dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)        ! out
+    dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)      ! out
+    dsl4jsb_Get_var2D_onChunk(L2A_, latent_heat_flx)      ! out
+    dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)    ! out
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, root_depth)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pwp)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_fc)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)
-    dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pwp_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_fc_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, drainage_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, root_depth)          ! in
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)         ! inout
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pwp)     ! in
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_fc)      ! in
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)   ! inout
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)     ! out
+    dsl4jsb_Get_var2D_onChunk(SOIL_, runoff)              ! out
+    dsl4jsb_Get_var2D_onChunk(SOIL_, drainage)            ! out
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_, bulk_dens_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_, heat_capa_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_, therm_cond_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_, root_fraction_sl)    ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_pwp_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_fc_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_, w_soil_sl)           ! inout
+    dsl4jsb_Get_var3D_onChunk(SOIL_, percolation_sl)      ! out
+    dsl4jsb_Get_var3D_onChunk(SOIL_, drainage_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SOIL_, t_soil_sl)           ! out
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)       ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)
+    dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration)        ! out
 
 
 

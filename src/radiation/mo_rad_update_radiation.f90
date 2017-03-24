@@ -74,7 +74,8 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: sw_srf_net              ! RAD_
+    ! RAD_
+    dsl4jsb_Real2D_onChunk :: sw_srf_net
     dsl4jsb_Real2D_onChunk :: swvis_srf_net
     dsl4jsb_Real2D_onChunk :: swnir_srf_net
     dsl4jsb_Real2D_onChunk :: rad_srf_net
@@ -97,14 +98,17 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: arad_sunlit_nir_cl
     dsl4jsb_Real3D_onChunk :: arad_shaded_nir_cl
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_nir_cl
-    dsl4jsb_Real2D_onChunk :: swpar_srf_down          ! A2L_
+    ! A2L_
+    dsl4jsb_Real2D_onChunk :: swpar_srf_down
     dsl4jsb_Real2D_onChunk :: swpar_fdiffuse
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
-    dsl4jsb_Real2D_onChunk :: albedo                  ! L2A_
+    ! L2A_
+    dsl4jsb_Real2D_onChunk :: albedo
     dsl4jsb_Real2D_onChunk :: net_radiation
-    dsl4jsb_Real2D_onChunk :: lai                     ! VEG_
+    ! VEG_
+    dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real3D_onChunk :: lai_cl
     dsl4jsb_Real3D_onChunk :: cumm_lai_cl
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_cl
@@ -130,43 +134,43 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)
-    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
-    dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)
-    dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)         ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(L2A_, albedo)
-    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)
+    dsl4jsb_Get_var2D_onChunk(L2A_, albedo)                   ! out
+    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)            ! out
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)
-    dsl4jsb_Get_var2D_onChunk(RAD_, swvis_srf_net)
-    dsl4jsb_Get_var2D_onChunk(RAD_, swnir_srf_net)
-    dsl4jsb_Get_var2D_onChunk(RAD_, rad_srf_net)
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis)
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir)
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_can)
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_can)
-    dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_soil)
-    dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_soil)
-    dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_can)
-    dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_can)
-    dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_vis_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_vis_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_vis_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_nir_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)
+    dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)               ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, swvis_srf_net)            ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, swnir_srf_net)            ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, rad_srf_net)              ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis)                  ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir)                  ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)             ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)             ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_can)              ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_can)              ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_soil)            ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_soil)            ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_can)             ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_can)             ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, appfd)                    ! out
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)           ! out
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)           ! out
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_vis_cl)       ! out
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_vis_cl)       ! out
+    dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_vis_cl)      ! out
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_nir_cl)       ! out
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)       ! out
+    dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)      ! out
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
-    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                      ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)              ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)          ! out
 
 
 

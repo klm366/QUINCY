@@ -102,8 +102,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3_n15
     dsl4jsb_Real3D_onChunk :: net_mineralisation_po4
-    dsl4jsb_Real3D_onChunk :: nitrification 
-    dsl4jsb_Real3D_onChunk :: denitrification 
+!    dsl4jsb_Real3D_onChunk :: nitrification 
+!    dsl4jsb_Real3D_onChunk :: denitrification 
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
@@ -154,59 +154,60 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     t_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_fc_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)
-    dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_desorption)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_hsc)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_depolymerisation)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_mic_uptake)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)
-    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_hsc)
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)
-    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)
-    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)
-    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification)
-    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl) 
-    dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate) 
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     t_soil_sl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_sl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     w_soil_fc_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     soil_depth_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     root_fraction_sl)            ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     percolation_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SOIL_,     bulk_dens_sl)                ! in
+    ! ---------------------------
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)      ! soil: in / land+plant: out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)            ! soil: in / land+plant: out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)              ! soil: in / land+plant: out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_desorption)            ! soil: in / land+plant: out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_hsc)                   ! soil: in / land+plant: out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_depolymerisation)        ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_mic_uptake)              ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_sorption)                ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)              ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_hsc)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)      ! out
+!    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification)
+!    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification)
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)                  ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_assoc)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       no3_solute)                  ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_solute)                  ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc)               ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute)        ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute)        ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb)                   ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
 
 
 ! 2 be removed  *slmtemp

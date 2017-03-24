@@ -59,8 +59,10 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                        ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk   :: growing_season           ! PHENO_
-    dsl4jsb_Real2D_onChunk      :: lai                      ! VEG_ 
+    ! PHENO_
+    dsl4jsb_Logical2D_onChunk   :: growing_season
+    ! VEG_
+    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: target_cn_fine_root
     dsl4jsb_Real2D_onChunk      :: target_np_fine_root
     dsl4jsb_Real2D_onChunk      :: target_cn_leaf
@@ -96,22 +98,22 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root) 
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root)        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)           ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)      ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)           ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)      ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)         ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)    ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)     ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)   ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)     ! inout
 
 
 !! *slmtemp

@@ -47,7 +47,7 @@ CONTAINS
     USE mo_assimi_config_class,     ONLY: assimi_config
 
     ! Use of process memories
-    dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+    dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
@@ -77,15 +77,18 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SOIL_)                       !     TYPE(t_soil_memory),     POINTER :: soil__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Logical2D_onChunk   :: growing_season             ! PHENO_
-    dsl4jsb_Real2D_onChunk      :: t_air                      ! A2L_
+    ! PHENO_
+    dsl4jsb_Logical2D_onChunk   :: growing_season
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: q_air
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
     dsl4jsb_Real2D_onChunk      :: swpar_fdiffuse
-    dsl4jsb_Real2D_onChunk      :: beta_air                   ! ASSIMI_
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk      :: beta_air
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs
     dsl4jsb_Real2D_onChunk      :: maint_respiration_leaf
@@ -94,12 +97,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta          ! SOIL_
-    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl             ! RAD_
+    ! SOIL_
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    ! RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
-    dsl4jsb_Real2D_onChunk      :: target_cn_leaf             ! VEG_
+    ! VEG_ 2D
+    dsl4jsb_Real2D_onChunk      :: target_cn_leaf
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tcnl_mavg
@@ -176,6 +182,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
     dsl4jsb_Real2D_onChunk      :: maint_respiration
     dsl4jsb_Real2D_onChunk      :: growth_respiration
+    ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
     dsl4jsb_Real3D_onChunk      :: fn_et_cl
@@ -209,117 +216,117 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                   ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
-    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)
-    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
-    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
-    dsl4jsb_Get_var2D_onChunk(A2L_, ga)
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
-     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                              ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                              ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)                          ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)                   ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                                 ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                     ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)                     ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, maint_respiration_leaf)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                        ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)                    ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)                    ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, maint_respiration_leaf)          ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation)                ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)                     ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)              ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg)          ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)          ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)
+    dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_theta)                 ! in
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)           ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, leaf_cn_direction)
-    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, kstar_labile)
-    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate)
-    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_troot_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_troot_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot_troot_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)
-    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_coarse_root)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_sap_wood)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fruit)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_coarse_root)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_sap_wood)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fruit)
-    dsl4jsb_Get_var2D_onChunk(VEG_, height)
-    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2sapwood_mass_ratio)
-    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_mass_ratio)
-    dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_troot_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
-    dsl4jsb_Get_var2D_onChunk(VEG_, k1_opt)
-    dsl4jsb_Get_var2D_onChunk(VEG_, k2_opt)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)                     !   inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                    ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tcnl_mavg)                    ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tcnl_mavg)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg)         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tcnl_mavg)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf_cn_direction)                  !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)                    !   inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp)                           !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)                 !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, kstar_labile)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate)                        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_troot_mavg)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_troot_mavg)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot_troot_mavg)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)                 !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation)                    !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)                     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root)                !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_coarse_root)              !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_sap_wood)                 !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fruit)                    !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)                !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_coarse_root)              !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_sap_wood)                 !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fruit)                    !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)                             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)                ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)                      ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_talloc_mavg)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_talloc_mavg)        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_talloc_mavg)      ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)                    ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_talloc_mavg)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_talloc_mavg)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_talloc_mavg)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)                   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2sapwood_mass_ratio)            !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_mass_ratio)               !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)                   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)     ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_troot_mavg)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)                         !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, k1_opt)                             !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, k2_opt)                             !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p)                       !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n)                       !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                         !   inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                         !   inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                         ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)            ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_respiration)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)           ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)              !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)                  !   out
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)                 !   out
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                          ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                           ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                          ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                         ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                          ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)                    ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)          ! in
 
 
 
@@ -341,7 +348,7 @@ CONTAINS
     !> 1.1 calculate costs of N uptake and fixation
     !!
     veg%fmaint_rate%ptr = fmaint_rate_base * temperature_response_respiration(t_air(1), veg%t_air_tacclim_mavg%ptr)
-    CALL calc_nitrogen_uptake_costs(lctlib                           , &
+    CALL calc_nitrogen_uptake_costs(lctlib                           , &    ! in
                                     t_air(:)                         , &
                                     veg%pool%fine_root%carbon%ptr    , &
                                     veg%pool%fine_root%nitrogen%ptr  , &
@@ -352,7 +359,7 @@ CONTAINS
                                     unit_uptake_n_pot_troot_mavg(:)  , &
                                     uptake_no3(:)                    , &
                                     uptake_nh4(:)                    , &           
-                                    cost_n_uptake_root(:)            , &
+                                    cost_n_uptake_root(:)            , &    ! out
                                     cost_n_fixation(:)               )
 
   
@@ -392,7 +399,7 @@ CONTAINS
                                         ppfd_sunlit_tcnl_mavg_cl(:,:)    , &
                                         ppfd_shaded_tcnl_mavg_cl(:,:)    , &
                                         uptake_n_tcnl_mavg               , &
-                                        growth_cn_tcnl_mavg                 , &
+                                        growth_cn_tcnl_mavg              , &
                                         npp_tcnl_mavg                    , &
                                         leaf_cn_direction(:)             )    ! out
     END IF ! veg_config%flag_optimal_Nleaf
@@ -453,7 +460,7 @@ CONTAINS
     
     !> 3.2 calculate allometry    
     !!
-    CALL calc_allometry(lctlib                           , &
+    CALL calc_allometry(lctlib                           , &  ! in
                         height(:)                        , &
                         veg%pool%sap_wood%carbon%ptr     , &
                         veg%pool%heart_wood%carbon%ptr   , &
@@ -473,21 +480,21 @@ CONTAINS
                         transpiration_talloc_mavg(:)     , &
                         unit_transpiration_talloc_mavg(:), &
                         n_fixation_talloc_mavg(:)        , &
-                        unit_uptake_n_talloc_mavg(:) , &
-                        unit_uptake_p_talloc_mavg(:) , &
+                        unit_uptake_n_talloc_mavg(:)     , &
+                        unit_uptake_p_talloc_mavg(:)     , &
                         dphi_talloc_mavg(:)              , &
                         kstar_labile(:)                  , &
-                        dheight(:)                       , &
+                        dheight(:)                       , &  ! out
                         leaf2sapwood_mass_ratio(:)       , & 
                         leaf2root_mass_ratio(:)          , &
                         target_lai(:)                    , &
                         k1_opt(:)                        , &
-                        k2_opt(:))
+                        k2_opt(:)                        )
     
     !> 4.0 calculate net flux between reserve and labile pool 
     !! 
     !! Info: veg%reserve_use is of TYPE(t_slm_struct_veg_element)
-    call calc_reserve_useage(lctlib                               , &
+    CALL calc_reserve_useage(lctlib                               , &   ! in
                              growing_season(1)                    , &
                              kstar_labile(1)                      , &
                              gpp_tlabile_mavg(1)                  , &
@@ -503,8 +510,8 @@ CONTAINS
                              target_lai(1)                        , &
                              veg%pool%labile                      , &
                              veg%pool%reserve                     , &
-                             veg%reserve_use                      , &
-                             beta_sinklim_ps(1))
+                             veg%reserve_use                      , &   ! out
+                             beta_sinklim_ps(1)                   )
 
 
     !> 5.0 calculate allocation coefficients for structural plant pools (leaves, wood, fine and coarse root, fruits)
@@ -541,7 +548,7 @@ CONTAINS
     !> 6.0 partition labile carbon into growth, growth_respiration, and maintenance 
     !! 
     !! 
-    CALL calc_partitioning(t_air(1)                               , & ! in
+    CALL calc_partitioning(t_air(1)                         , & ! in
                            t_air_tacclim_mavg(1)            , &
                            kstar_labile(1)                  , &
                            maint_respiration_leaf(1)        , &
@@ -621,7 +628,7 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------------
   !> Routine to calculate the C costs for (inorganic) N uptake and BNF in order to optimalize N acquisition
   !!   
-  !! Output: C costs of root uptake and N fixation
+  !! output: C costs of root uptake and N fixation
   !! 
   !! @todo: reconsider the time scale of these arguments. Since cost_n_fixation is used for respiration
   !! calculation, it should be based on actual temperature, not its average
@@ -724,7 +731,7 @@ CONTAINS
   !> Routine to calculate the target stoichiometry of the newly growth tissue
   !! 
   !! Includes optimal CN ratio calculation \n
-  !! Output: target stoichiometries
+  !! output: target stoichiometries
   ! --------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_stoichiometry_changes(lctlib                  , &   ! in
                                                   growing_season          , &
@@ -826,9 +833,9 @@ CONTAINS
                                             labile_carbon                 , &
                                             labile_nitrogen               , &
                                             labile_phosphorus             , &
-                                            reserve_carbon            , &
-                                            reserve_nitrogen          , &
-                                            reserve_phosphorus        , &
+                                            reserve_carbon                , &
+                                            reserve_nitrogen              , &
+                                            reserve_phosphorus            , &
                                             growth_cn                     , &
                                             growth_cp                     , &
                                             npp                           , &
@@ -1077,7 +1084,7 @@ CONTAINS
   !!    (3) current LAI, labile and reserve pools, growing season status and potential turnover rate
   !!          of the labile pool;\n    
   !!  
-  !! Output: net flux between reserve and labile pools 
+  !! output: net flux between reserve and labile pools 
   !----------------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE calc_reserve_useage(lctlib                  , &
                                                   growing_season        , &
@@ -1119,7 +1126,7 @@ CONTAINS
     REAL(wp),                      INTENT(in)     :: target_lai                !< target LAI 
     TYPE(t_slm_struct_veg_element),INTENT(in)     :: veg_pool_labile           !< the plant's labile pool size
     TYPE(t_slm_struct_veg_element),INTENT(in)     :: veg_pool_reserve          !< the plant's reserve pool size
-    TYPE(t_slm_struct_veg_element),INTENT(inout)  :: veg_reserve_use           !< current resource use rate (mol/time step)
+    TYPE(t_slm_struct_veg_element),INTENT(out)    :: veg_reserve_use           !< current resource use rate (mol/time step)
                                                                                !!  (+ve: net flux to labile / -ve: net flux to reserve)
     REAL(wp),                      INTENT(out)    :: beta_sinklim_ps           !< sink limitation factor for photosynthesis 
     ! 0.2 Local
@@ -1261,7 +1268,7 @@ CONTAINS
   !! 
   !! Input: target stoichiometry of the tissue types, plant allometry, and current pool sizes
   !! 
-  !! Output:\n 
+  !! output:\n 
   !!         (1) Allocation coefficients for the distribution of biomass for growth;\n
   !!         (2) total N and P required to sustain a unit of growth (in mol); \n
   !!
@@ -1551,7 +1558,7 @@ CONTAINS
   !!
   !! Input: veg
   !! 
-  !! Output: growth of tissue types, maintenance respiration and growth respiration 
+  !! output: growth of tissue types, maintenance respiration and growth respiration 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_partitioning(t_air                          , &  
                                 t_air_tacclim_mavg            , &
