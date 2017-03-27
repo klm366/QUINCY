@@ -36,6 +36,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SOIL_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_mixing_ratio_N15N14
+    USE mo_shared_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_sb_config_class,       ONLY: sb_config
     USE mo_sb_jsm_processes
@@ -98,18 +99,79 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
  
-    SELECT CASE(TRIM(base_config%slm_model_name))
-!! BLARPP: still treating plant and land the same here. Dummy version only. Later land and soil need to go together
-       CASE('land','plant')  
+    SELECT CASE(TRIM(sb_config%sb_model_scheme))
+
+       CASE('one_pool')  
  
-         ! Initial values for Siliva's simple one-bucket soil biogeochemical scheme
-         ! Initialise surface litter pool to 0.5 mol / m2 N and P, and provide some initial NH4 and PO4
-         sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = 8.45_wp / soil_config%dz_water(1)
-         sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(:,1,iblk) 
-         sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
-         sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / soil_config%dz_water(1) 
+          ! Initial values for Siliva's simple one-bucket soil biogeochemical scheme
+          ! Initialise surface litter pool to 0.5 mol / m2 N and P, and provide some initial NH4 and PO4
+          sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = 8.45_wp * 50._wp / soil_config%dz_water(1)
+          sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk) = 8.45_wp / soil_config%dz_water(1)
+          sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,1,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,1,iblk)
+          sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) / & 
+                                                                    (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
+          sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) * & 
+                                                                    calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+          sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+                                                                    (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
+          sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / soil_config%dz_water(1) 
+         
+       CASE('four_pool')
+
+          ! Initial values for Soenke's four pool soil biogeochemical model
+          sb%pool%polymeric_litter%carbon%ptr(ics:ice,1,iblk) = 500._wp / molar_mass_C / soil_config%dz_water(1)
+          sb%pool%woody_litter%carbon%ptr(ics:ice,1,iblk) = 1000._wp / molar_mass_C / soil_config%dz_water(1)
+          sb%pool%microbial%carbon%ptr(ics:ice,1,iblk) = 1000._wp / molar_mass_C / soil_config%dz_water(1)
+          sb%pool%residue%carbon%ptr(ics:ice,1,iblk) = 5000._wp / molar_mass_C / soil_config%dz_water(1)
  
-       CASE('soil')
+          ! non-woody litter all other elements
+          sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) / & 
+                                                                    (50._wp * molar_mass_N / molar_mass_C)
+          sb%pool%polymeric_litter%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+                                                                    (14._wp * molar_mass_P / molar_mass_N) 
+          sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) / & 
+                                                                    (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
+          sb%pool%polymeric_litter%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,iblk) * & 
+                                                                    calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+          sb%pool%polymeric_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%polymeric_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+                                                                    (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          ! woody litter all other elements
+          sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) / & 
+                                                                (220._wp * molar_mass_N / molar_mass_C)
+          sb%pool%woody_litter%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+                                                                (14._wp * molar_mass_P / molar_mass_N) 
+          sb%pool%woody_litter%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) / & 
+                                                                (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
+          sb%pool%woody_litter%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%woody_litter%carbon%ptr(ics:ice,:,iblk) * & 
+                                                                calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+          sb%pool%woody_litter%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%woody_litter%nitrogen%ptr(ics:ice,:,iblk) / & 
+                                                                (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+
+          ! fast pool (=microbial) all other elements
+          sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) / microbial_cn
+          sb%pool%microbial%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) / microbial_np 
+          sb%pool%microbial%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) / & 
+                                                             (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
+          sb%pool%microbial%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%microbial%carbon%ptr(ics:ice,:,iblk) * & 
+                                                             calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+          sb%pool%microbial%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%microbial%nitrogen%ptr(ics:ice,:,iblk) / & 
+                                                             (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+
+          sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk)   = sb%pool%residue%carbon%ptr(ics:ice,:,iblk) / microbial_cn
+          sb%pool%residue%phosphorus%ptr(ics:ice,:,iblk) = sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk) / microbial_np 
+          sb%pool%residue%carbon13%ptr(ics:ice,:,iblk)   = sb%pool%residue%carbon%ptr(ics:ice,:,iblk) / & 
+                                                             (1._wp + 1._wp / calc_mixing_ratio_C13C12(-26.0_wp))
+          sb%pool%residue%carbon14%ptr(ics:ice,:,iblk)   = sb%pool%residue%carbon%ptr(ics:ice,:,iblk) * & 
+                                                             calc_mixing_ratio_C14C(-26.0_wp,2.0_wp) 
+          sb%pool%residue%nitrogen15%ptr(ics:ice,:,iblk) = sb%pool%residue%nitrogen%ptr(ics:ice,:,iblk) / & 
+                                                             (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+
+          sb%nh4_solute%ptr(ics:ice,1,iblk) = 0.1_wp / soil_config%dz_water(1)
+          sb%nh4_n15_solute%ptr(ics:ice,:,iblk) = sb%nh4_solute%ptr(ics:ice,:,iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+          sb%po4_solute%ptr(ics:ice,1,iblk) = 0.01_wp / soil_config%dz_water(1) 
+
+       CASE('jsm')
  
          ! set microbial biomass to minimum possible density
          sb%pool%microbial%carbon%ptr(ics:ice,:,iblk)     = min_mic_biomass

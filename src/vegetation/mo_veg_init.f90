@@ -136,7 +136,7 @@ CONTAINS
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   standard_press_srf
     USE mo_veg_constants,                   ONLY: fresp_growth
-    USE mo_shared_isotope,                  ONLY: calc_fractionation 
+    USE mo_shared_isotope,                  ONLY: calc_fractionation,calc_mixing_ratio_N15N14 
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
 
     IMPLICIT NONE
@@ -350,6 +350,8 @@ CONTAINS
          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
       ENDIF
       veg%init_pool%carbon14 = veg%init_pool%carbon * calc_fractionation(def_co2_mixing_ratio, def_co2_mixing_ratio_C14,hlp1)
+
+      veg%init_pool%nitrogen15 = veg%init_pool%nitrogen / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
 
       ! IF start bareground with vegetation dynamics switched on
       IF(veg_config%flag_tile_veg_dynamics)THEN

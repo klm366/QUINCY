@@ -20,13 +20,14 @@ flist_pool = c(flist_pool,Sys.glob(paste0("soilpool*","_",tstep_pool,"*.txt")))
 flist_pool = c(flist_pool,Sys.glob(paste0("veg_diagnostics*","_",tstep_pool,"*.txt"))) 
 # get flux output files  
 flist_flux = Sys.glob(paste0("vegflux*","_",tstep_pool,"*.txt")) 
+flist_flux = c(flist_flux,Sys.glob(paste0("soilflux*","_",tstep_pool,"*.txt"))) 
 
   #create overall file list
 flist=c(flist_pool,flist_flux)
 nplot=length(flist)
 
 # plot data
-pdf("plant_model_plots.pdf", paper="a4", height=10, width=8, pointsize=12, bg="white", family="Helvetica", version="1.6")
+pdf("land_model_plots.pdf", paper="a4", height=10, width=8, pointsize=12, bg="white", family="Helvetica", version="1.6")
 
 for (i in 1:nplot) {
   print(paste('   reading',flist[i]))

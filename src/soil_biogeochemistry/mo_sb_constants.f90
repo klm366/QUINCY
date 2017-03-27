@@ -20,6 +20,13 @@ MODULE mo_sb_constants
       floss_nmin, &        !< fractional loss of N per unit N mineralisation 
       fnit_nmin            !< fractional nitrification per unit N mineralisation 
 
+   ! four pool model
+   REAL(wp), SAVE :: & 
+      tau_slow, & 
+      tau_fast, &
+      tau_non_woody_litter, &
+      residue_cue
+
   ! parameter for JSM implementation
 
   ! rate modifiers
@@ -124,7 +131,7 @@ CONTAINS
   SUBROUTINE init_sb_constants
 
     USE mo_base_constants, ONLY: one_day, one_year
-    USE mo_shared_constants, ONLY: molar_mass_C, molar_mass_N
+    USE mo_shared_constants, ONLY: molar_mass_C, molar_mass_N, molar_mass_P
  
     IMPLICIT NONE
     ! 0.2 Local
@@ -134,6 +141,12 @@ CONTAINS
     tau_litter = 5.0_wp  ! years
     floss_nmin = 0.05_wp
     fnit_nmin  = 0.1_wp
+
+    ! parameters for less simple soil bgc model
+    tau_slow = 50._wp * one_year * one_day
+    tau_fast = 5._wp * one_year * one_day
+    tau_non_woody_litter = 0.7_wp * one_year * one_day
+    residue_cue = 0.1_wp
 
     ! parameter for JSM implementation
     t_ref_tresponse = 293.15_wp   ! Wang, G., et al. 2012., Soil Biology and Biochemistry 48, 28-38.
@@ -165,7 +178,7 @@ CONTAINS
     min_mic_biomass     = 0.01_wp
     vmax_mic_uptake     = 3495.18053_wp / one_year / one_day * 1000000._wp
     km_mic_uptake       = 1.02404788_wp / molar_mass_C * 1000_wp ! conversion to mol C / m3
-    tau_soluable_litter = 10._wp * one_day ! 10 days 
+    tau_soluable_litter = 30._wp * one_day ! 30 days 
     tau_woody_litter    = 20._wp * one_year * one_day ! 20 years 
     vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day
     vmax_depolymerisation_litter = 0.369800811690762_wp / one_year / one_day 
@@ -179,8 +192,8 @@ CONTAINS
 
     carbon_per_dryweight_SOM = 0.4271_wp   !! COMISSION for Heinich
 
-    microbial_cn = 9._wp
-    microbial_np = 14._wp
+    microbial_cn = 9._wp * molar_mass_N / molar_mass_C
+    microbial_np = 14._wp * molar_mass_P / molar_mass_N
     microbial_nue = 0.8_wp
     microbial_pue = 0.8_wp
  

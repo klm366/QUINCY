@@ -26,6 +26,7 @@ MODULE mo_sb_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_sb_config
+    CHARACTER(15)         :: sb_model_scheme
     REAL(wp)              :: sb_test         !< 2 delete/ replace
 
     CONTAINS
@@ -47,16 +48,17 @@ CONTAINS
   SUBROUTINE Init_sb_config(config)
 
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
+    USE mo_base_config_class,  ONLY: base_config
     ! 0.1 InOut
     CLASS(t_sb_config), INTENT(inout) :: config    !< config type for sb
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL       :: active
-    REAL(wp)      :: sb_test
+    CHARACTER(15) :: sb_model_scheme
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
     NAMELIST /soil_biogeochemistry_ctl/       & 
-                          sb_test
+                      sb_model_scheme
      
 
     ! variables for reading model-options from namelist
@@ -65,8 +67,7 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting soil_biogeochemistry configuration')
 
     ! Set defaults
-    sb_test                     = 5.1_wp
-
+    sb_model_scheme                   = "one_pool"  ! one_pool four_pool jsm 
 
     ! read the namelist
     ! 
@@ -76,9 +77,31 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, soil_biogeochemistry_ctl)
     CALL close_nml(nml_handler)
 
+    SELECT CASE (TRIM(sb_model_scheme))
+      CASE ("one_pool","four_pool")
+      CASE ("jsm")
+         IF(TRIM(base_config%slm_model_name) /= "soil") THEN
+            WRITE(message_text,'(3a)') 'setting sb_model_scheme to ',TRIM(sb_model_scheme), & 
+                                       'is currently only possible configuration for the standalone soil model'
+            CALL finish("mo_sb_config_class:init_sb_config",message_text) 
+         ENDIF 
+      CASE DEFAULT
+        WRITE(message_text,'(2a)') 'invalid sb_model_scheme',sb_model_scheme
+        CALL finish("mo_sb_config_class:init_sb_config",message_text) 
+    ENDSELECT
+
+    SELECT CASE(TRIM(base_config%slm_model_name))
+      CASE('soil')
+         IF(TRIM(sb_model_scheme) /= "jsm") THEN
+            sb_model_scheme = "jsm"  
+            WRITE(message_text,'(3a)') 'setting sb_model_scheme to ',TRIM(sb_model_scheme), & 
+                                       ' this is the only possible configuration for the standalone soil model'
+            WRITE(*,*) "mo_sb_config_class:init_sb_config",message_text 
+         ENDIF
+    END SELECT
 
     ! pass values as read from file
-    config%sb_test                  = sb_test
+    config%sb_model_scheme                 = sb_model_scheme
 
 
   END SUBROUTINE Init_sb_config

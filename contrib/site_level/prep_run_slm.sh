@@ -54,6 +54,7 @@ yearsSoilForcing=1              # number of years of forcing to be generated
 n_uptake_scheme="standard"      # prescribed standard std_plus_costs optimal resistance
 p_uptake_scheme="prescribed"    # prescribed standard 
 soil_moisture_scheme="bucket"   # prescribed bucket layer
+sb_model_scheme="one_pool"      # one_pool four_pool jsm 
 flag_calc_soil_energy="F"
 # canopy model options
 flag_t_resp_acclimation="T"
@@ -111,6 +112,7 @@ if [ $flag_generate_soil_forcing == "T" ]
   n_uptake_scheme="standard"
   p_uptake_scheme="standard"
   soil_moisture_scheme="layer"
+  sb_model_scheme="one_pool"
   flag_calc_soil_energy="T"
 
   flag_t_resp_acclimation="T"
@@ -302,6 +304,7 @@ validateNUptakeScheme="prescribed standard std_plus_costs optimal resistance"
 validatePUptakeScheme="prescribed standard"
 validateCanopyLayerScheme="standard fapar"
 validateSoilMoistureScheme="prescribed bucket layer"
+validateSBModelScheme="one_pool four_pool jsm"
 validateQueue="all io BTM mpi_large"
 validateEmailNotification="yes no"
 validateFlags="F T"
@@ -386,6 +389,7 @@ validateUserConfigValues "$n_uptake_scheme" "$validateNUptakeScheme" "n_uptake_s
 validateUserConfigValues "$p_uptake_scheme" "$validatePUptakeScheme" "p_uptake_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
+validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sd_model_scheme"
 validateUserConfigValues "$flag_calc_soil_energy" "$validateFlags" "flag_calc_soil_energy"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
@@ -751,6 +755,7 @@ changeNamelistValue p_uptake_scheme "$p_uptake_scheme"
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme" 
+changeNamelistValue sb_model_scheme "$sb_model_scheme" 
 if [ "$specialFluxnetOutput" == "T" ]
   then
     changeNamelistValue fluxnet_output .TRUE.

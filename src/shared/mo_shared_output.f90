@@ -311,7 +311,10 @@ CONTAINS
          fname = 'vegpoolH2O'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         fname = 'soilpoolNP'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         fname = 'soilpoolCNP'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
+         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+         lun=lun+1
+         fname = 'soilpooldCdN'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          fname = 'veg_canopy'//'_'//TRIM(base_config%output_interval_pool)//TRIM(opt)//'.txt'
@@ -396,9 +399,13 @@ CONTAINS
          lun=lun+1
          WRITE(lun,'(a)') 'Time RootZoneSoilMoisture RootZoneSoilWaterPotential BetaSoilGS BetaSoilPS'
          lun=lun+1
-         WRITE(lun,'(a)') 'Time LitterN LitterP MineralNH4 MineralNO3 MineralP'
+         WRITE(lun,'(2a)') 'Time StrLitterC StrLitterN StrLitterP WodLitterC WodLitterN WodLitterP', &
+                           ' FastC FastN FastP SlowC SlowN SlowP MineralNH4 MineralNO3 MineralP'
          lun=lun+1
-         WRITE(lun,'(2a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen'
+         WRITE(lun,'(2a)') 'Time StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 StrLitterDC14 WodLitterDC14 FastDC14 SlowDC14'!, &
+         !                 ' StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
+         lun=lun+1
+         WRITE(lun,'(a)') 'Time CanopyLayer f_et f_rub f_chl f_pepc f_oth leaf_nitrogen'
          lun=lun+1
          WRITE(lun,'(2a)') &
          & 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp ', & 
@@ -552,6 +559,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
     dsl4jsb_Real2D_onChunk      :: w_soil_root        ! SOIL_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
+    dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     dsl4jsb_Real2D_onChunk      :: lai                ! VEG_
     dsl4jsb_Real2D_onChunk      :: height
     dsl4jsb_Real2D_onChunk      :: diameter
@@ -604,6 +612,7 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root)
     dsl4jsb_Get_var2D_onChunk(SOIL_, w_soil_root_pot)
+    dsl4jsb_Get_var3D_onChunk(SOIL_, soil_depth_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, height)
@@ -696,8 +705,39 @@ CONTAINS
               lun=lun+1
               write(lun,'(9F12.6)') time_d, w_soil_root(1), w_soil_root_pot(1),beta_soil_gs(1),beta_soil_ps(1)
               lun=lun+1
-              write(lun,'(20F12.6)') time_d, sb%pool%polymeric_litter%nitrogen%ptr(1,1,1), sb%pool%polymeric_litter%phosphorus%ptr(1,1,1), & 
-                   sb%nh4_solute%ptr(1,1,1), sb%no3_solute%ptr(1,1,1), sb%po4_solute%ptr(1,1,1)
+              write(lun,'(20F12.6)') time_d, sb%pool%polymeric_litter%carbon%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%polymeric_litter%nitrogen%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%polymeric_litter%phosphorus%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%woody_litter%carbon%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%woody_litter%nitrogen%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%woody_litter%phosphorus%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%microbial%carbon%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%microbial%nitrogen%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%microbial%phosphorus%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%residue%carbon%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%residue%nitrogen%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%pool%residue%phosphorus%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%nh4_solute%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%no3_solute%ptr(1,1,1)*soil_depth_sl(1,1), & 
+                                     sb%po4_solute%ptr(1,1,1)*soil_depth_sl(1,1)
+
+              dC13polymeric_litter(:,:) = calc_delta_C13(sb%pool%polymeric_litter%carbon%ptr(ics:ice,:,1),sb%pool%polymeric_litter%carbon13%ptr(ics:ice,:,1))
+              dC13woody_litter(:,:)     = calc_delta_C13(sb%pool%woody_litter%carbon%ptr(ics:ice,:,1),sb%pool%woody_litter%carbon13%ptr(ics:ice,:,1))
+              dC13microbial(:,:)        = calc_delta_C13(sb%pool%microbial%carbon%ptr(ics:ice,:,1),sb%pool%microbial%carbon13%ptr(ics:ice,:,1))
+              dC13residue(:,:)          = calc_delta_C13(sb%pool%residue%carbon%ptr(ics:ice,:,1),sb%pool%residue%carbon13%ptr(ics:ice,:,1))
+
+              lun=lun+1
+              write(lun,'(20F14.6)') time_d,dC13polymeric_litter(1,1),dC13woody_litter(1,1),dC13microbial(1,1),dC13residue(1,1), & 
+                calc_delta_C14(sb%pool%polymeric_litter%carbon%ptr(1,1,1),sb%pool%polymeric_litter%carbon14%ptr(1,1,1),dC13polymeric_litter(1,1)), &
+                calc_delta_C14(sb%pool%woody_litter%carbon%ptr(1,1,1),sb%pool%woody_litter%carbon14%ptr(1,1,1),dC13woody_litter(1,1)), &
+                calc_delta_C14(sb%pool%microbial%carbon%ptr(1,1,1),sb%pool%microbial%carbon14%ptr(1,1,1),dC13microbial(1,1)), &
+                calc_delta_C14(sb%pool%residue%carbon%ptr(1,1,1),sb%pool%residue%carbon14%ptr(1,1,1),dC13residue(1,1))!, &
+                !calc_delta_N15(sb%pool%polymeric_litter%nitrogen%ptr(1,1,1),sb%pool%polymeric_litter%nitrogen15%ptr(1,1,1)), &
+                !calc_delta_N15(sb%pool%woody_litter%nitrogen%ptr(1,1,1),sb%pool%woody_litter%nitrogen15%ptr(1,1,1)), &
+                !calc_delta_N15(sb%pool%microbial%nitrogen%ptr(1,1,1),sb%pool%microbial%nitrogen15%ptr(1,1,1)), &
+                !calc_delta_N15(sb%pool%residue%nitrogen%ptr(1,1,1),sb%pool%residue%nitrogen15%ptr(1,1,1)), &
+                !calc_delta_N15(sb%nh4_solute%ptr(1,1,1),sb%nh4_n15_solute%ptr(1,1,1)), &
+                !calc_delta_N15(sb%no3_solute%ptr(1,1,1),sb%no3_n15_solute%ptr(1,1,1))
               
               lun=lun+1
               DO icanopy=1, assimi_config%ncanopy
@@ -898,6 +938,9 @@ CONTAINS
         lun=lun+1
         fname = 'vegfluxEnergy'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        fname = 'soilfluxes'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
 
       CASE('soil')
         fname = 'soilfluxC'//'_'//TRIM(base_config%output_interval_flux)//TRIM(opt)//'.txt'
@@ -956,6 +999,8 @@ CONTAINS
         WRITE(lun,'(a)') 'Time Transpiration Drainage GC GA'
         lun=lun+1
         WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
+        lun=lun+1
+        WRITE(lun,'(a)') 'Time HetResp HetResp_dC13 HetResp_DC14 Net_Mineralisation_NH4 Net_Mineralisation_PO4' 
 
       CASE('soil')
         WRITE(lun,'(a)') 'Time Litterfall HetResp LeachingOrg' 
@@ -1195,6 +1240,11 @@ CONTAINS
              qg_acc           = qg_acc            + ground_heat_flx(1)            * dtime_one               
              appfd_acc        = appfd_acc         + appfd(1)                      * dtime_one               
              ndat_acc         = ndat_acc          + 1 
+             het_respC_acc   = het_respC_acc   + SUM(sb%het_respiration%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
+             het_respC13_acc = het_respC13_acc + SUM(sb%het_respiration_c13%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
+             het_respC14_acc = het_respC14_acc + SUM(sb%het_respiration_c14%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
+             net_min_nh4_acc = net_min_nh4_acc + SUM(sb%net_mineralisation_nh4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
+             net_min_po4_acc = net_min_po4_acc + SUM(sb%net_mineralisation_po4%ptr(ics:ice,:,iblk) * soil_depth_sl(:,:)) * dtime_one
        
              !> 1.2 write fluxes and set to zero
              !!
@@ -1236,6 +1286,10 @@ CONTAINS
                ENDIF
                write(lun,'(12F16.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
                                       albedo_acc, ppfd_acc, appfd_acc, hlp1
+               lun=lun+1
+               dC13het_resp = calc_delta_C13(het_respC_acc,het_respC13_acc)
+               write(lun,'(12F16.8)') time_d, het_respC_acc, dC13het_resp, calc_delta_C14(het_respC_acc,het_respC14_acc,dC13het_resp), &
+                                      net_min_nh4_acc, net_min_po4_acc
                ! set zero
                gpp_acc           = 0.0_wp
                growth_resp_acc   = 0.0_wp
@@ -1269,8 +1323,13 @@ CONTAINS
                qle_acc           = 0.0_wp
                qg_acc            = 0.0_wp
                albedo_acc        = 0.0_wp
-               appfd_acc          = 0.0_wp
+               appfd_acc         = 0.0_wp
                ndat_acc          = 0
+               het_respC_acc     = 0.0_wp
+               het_respC13_acc   = 0.0_wp
+               het_respC14_acc   = 0.0_wp
+               net_min_nh4_acc   = 0.0_wp
+               net_min_po4_acc   = 0.0_wp
              END IF
            END IF
         END IF  ! on/off switch specific to 'special case: fluxnet output'

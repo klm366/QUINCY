@@ -40,7 +40,8 @@
   soil_theta_prescribe=1.0
 /
 &SOIL_BIOGEOCHEMISTRY_CTL
-  ! tba
+  ! flags for the soil biogeochemistry process
+  sb_model_scheme="one_pool"
 /
 &BASE_CTL
   ! basic model config
