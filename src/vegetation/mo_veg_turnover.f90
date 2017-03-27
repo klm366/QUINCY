@@ -63,6 +63,7 @@ CONTAINS
     dsl4jsb_Logical2D_onChunk   :: growing_season
     ! VEG_
     dsl4jsb_Real2D_onChunk      :: lai
+    dsl4jsb_Real2D_onChunk      :: target_lai                      ! VEG_ 
     dsl4jsb_Real2D_onChunk      :: target_cn_fine_root
     dsl4jsb_Real2D_onChunk      :: target_np_fine_root
     dsl4jsb_Real2D_onChunk      :: target_cn_leaf
@@ -100,20 +101,21 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                        ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root)        ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)        ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)             ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)             ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)           ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)      ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)           ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)      ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)         ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)    ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)     ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)   ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)     ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root) 
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
 
 
 !! *slmtemp
@@ -160,6 +162,7 @@ CONTAINS
                               veg%litterfall                        , & ! inout
                               growing_season(1)                     , & ! in
                               lai(1)                                , & ! in
+                              target_lai(1)                         , & ! in
                               recycling_leaf_n(1)                   , & ! inout
                               recycling_leaf_n15(1)                 , &
                               recycling_leaf_p(1)                   , &
@@ -323,6 +326,7 @@ CONTAINS
                                       veg_litterfall            , &
                                       growing_season            , &
                                       lai                       , &
+                                      target_lai                , &
                                       recycling_leaf_n          , &
                                       recycling_leaf_n15        , &
                                       recycling_leaf_p          , &
@@ -346,6 +350,7 @@ CONTAINS
                                                    veg_litterfall       !< current litter fall from vegetation pools
     LOGICAL,                      INTENT(in)    :: growing_season       !< whether the plant is in the growing season
     REAL(wp),                     INTENT(in)    :: lai                  !< the plant's LAI
+    REAL(wp),                     INTENT(in)    :: target_lai           !< the plant's annual maximum LAI
     REAL(wp),                     INTENT(inout) :: recycling_leaf_n , & !< foliar N returning to labile pool 
                                                    recycling_leaf_n15, & !< foliar N15 returning to labile pool 
                                                    recycling_leaf_p , & !< foliar P returning to labile pool 
@@ -371,17 +376,22 @@ CONTAINS
          IF(growing_season)THEN
             fturn_leaf = 0.0_wp              ! herbivory
          ELSE
-            fturn_leaf = max_leaf_shedding_rate * dtime/one_day ! senescence
-            ! if LAI drops below minimum threshold, dump all leaves
-            IF(lai < min_lai) fturn_leaf = 1.0_wp
+             IF(lai>eps4)THEN
+                fturn_leaf = MAX(eps4,max_leaf_shedding_rate*dtime/one_day*target_lai/lai)
+             ELSE
+                fturn_leaf = 1.0_wp
+             ENDIF
          ENDIF
       CASE (iperennial)
          IF(growing_season)THEN
             fturn_leaf = 1.0_wp/lctlib%tau_leaf/one_day/one_year * dtime
          ELSE
-            ! if LAI drops below minimum threshold, dump all leaves
-            fturn_leaf = max_leaf_shedding_rate * dtime/one_day
-            IF(lai < min_lai) fturn_leaf = 1.0_wp
+             IF(lai>eps4)THEN
+                fturn_leaf = MAX(1.0_wp/lctlib%tau_leaf/one_day/one_year * dtime, & 
+                                 max_leaf_shedding_rate*dtime/one_day*target_lai/lai)
+             ELSE
+                fturn_leaf = 1.0_wp
+             ENDIF
        ENDIF
     END SELECT
     veg_litterfall%leaf = veg_litterfall%leaf + veg_pool%leaf * fturn_leaf

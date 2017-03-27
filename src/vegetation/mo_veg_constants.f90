@@ -223,7 +223,7 @@ CONTAINS
   ! parameters used for phenology calculations
       min_lai                     = 0.1_wp
       target_lai_max              = 5.0_wp 
-      max_leaf_shedding_rate      = 0.2_wp
+      max_leaf_shedding_rate      = 0.05_wp
 
   ! vegetation dynamics
       background_mort_rate_tree   = 0.01_wp 
