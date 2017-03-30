@@ -46,7 +46,6 @@ CONTAINS
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_shared_constants,      ONLY: lambda_C14
-    USE mo_veg_config_class,      ONLY: veg_config
     USE mo_sb_config_class,       ONLY: sb_config
     USE mo_sb_constants
     USE mo_shared_isotope
@@ -220,14 +219,16 @@ CONTAINS
        veg%uptake_nh4%ptr(ice:ice,iblk) = plant_uptake_nh4_sl(:,1) * soil_depth_sl(:,1)
        veg%uptake_no3%ptr(ice:ice,iblk) = plant_uptake_no3_sl(:,1) * soil_depth_sl(:,1)
        veg%uptake_p%ptr(ice:ice,iblk) = plant_uptake_po4_sl(:,1) * soil_depth_sl(:,1)
-       IF(veg_config%n_uptake_scheme /= 'prescribed') THEN
+       IF(.NOT.sb_config%flag_sb_prescribe_nh4) THEN
           nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - sb%nitrification%ptr(ice:ice,:,iblk) & 
                                                        - sb%volatilisation_n%ptr(ice:ice,:,iblk)- plant_uptake_nh4_sl(:,:)) * dtime/1.e6_wp
           nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_nh4_n15(:,:) / 1000000.0_wp * dtime
+       ENDIF
+       IF(.NOT.sb_config%flag_sb_prescribe_no3) THEN
           no3_solute(:,:)     = no3_solute(:,:)     + (sb%nitrification%ptr(ice:ice,:,iblk) - plant_uptake_no3_sl(:,:)) / dtime/1.e6_wp 
           no3_n15_solute(:,:) = no3_n15_solute(:,:) + net_mineralisation_no3_n15(:,:) / 1000000.0_wp * dtime
        ENDIF
-       IF(veg_config%p_uptake_scheme /= 'prescribed') THEN
+       IF(.NOT.sb_config%flag_sb_prescribe_po4) THEN
           po4_solute(:,:)     = po4_solute(:,:) + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:)) * dtime/1.e6_wp 
        ENDIF
 

@@ -27,7 +27,9 @@ MODULE mo_sb_config_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_sb_config
     CHARACTER(15)         :: sb_model_scheme
-    REAL(wp)              :: sb_test         !< 2 delete/ replace
+    LOGICAL               :: flag_sb_prescribe_nh4
+    LOGICAL               :: flag_sb_prescribe_no3
+    LOGICAL               :: flag_sb_prescribe_po4
 
     CONTAINS
       PROCEDURE :: Init => Init_sb_config
@@ -55,10 +57,16 @@ CONTAINS
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL       :: active
     CHARACTER(15) :: sb_model_scheme
+    LOGICAL               :: flag_sb_prescribe_nh4
+    LOGICAL               :: flag_sb_prescribe_no3
+    LOGICAL               :: flag_sb_prescribe_po4
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
     NAMELIST /soil_biogeochemistry_ctl/       & 
-                      sb_model_scheme
+                      sb_model_scheme,        &
+                      flag_sb_prescribe_nh4,       &
+                      flag_sb_prescribe_no3,       &
+                      flag_sb_prescribe_po4
      
 
     ! variables for reading model-options from namelist
@@ -67,7 +75,10 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting soil_biogeochemistry configuration')
 
     ! Set defaults
-    sb_model_scheme                   = "one_pool"  ! one_pool four_pool jsm 
+    sb_model_scheme             = "one_pool"  ! one_pool four_pool jsm 
+    flag_sb_prescribe_nh4       = .FALSE.
+    flag_sb_prescribe_no3       = .FALSE.
+    flag_sb_prescribe_po4       = .FALSE.
 
     ! read the namelist
     ! 
@@ -102,6 +113,9 @@ CONTAINS
 
     ! pass values as read from file
     config%sb_model_scheme                 = sb_model_scheme
+    config%flag_sb_prescribe_nh4           = flag_sb_prescribe_nh4
+    config%flag_sb_prescribe_no3           = flag_sb_prescribe_no3
+    config%flag_sb_prescribe_po4           = flag_sb_prescribe_po4
 
 
   END SUBROUTINE Init_sb_config

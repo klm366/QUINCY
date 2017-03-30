@@ -45,7 +45,6 @@ CONTAINS
     USE mo_soil_config_class,     ONLY: soil_config
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_shared_constants,      ONLY: lambda_C14
-    USE mo_veg_config_class,      ONLY: veg_config
     USE mo_sb_config_class,       ONLY: sb_config
     USE mo_sb_constants
     USE mo_sb_jsm_processes
@@ -449,30 +448,33 @@ rmm_desorption = 1.0_wp
          !> 7.0 update pools
          !!
          CALL calc_jsm_pool_change(options,sb%pool,sb%formation,sb%loss,sb%transport)
-         nh4_solute(:,:)     = nh4_solute(:,:)     + net_mineralisation_nh4(:,:) / 1000000.0_wp
-         nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_nh4_n15(:,:) / 1000000.0_wp
-         no3_solute(:,:)     = no3_solute(:,:)     + net_mineralisation_no3(:,:) / 1000000.0_wp
-         no3_n15_solute(:,:) = no3_n15_solute(:,:) + net_mineralisation_no3_n15(:,:) / 1000000.0_wp
-         po4_solute(:,:)     = po4_solute(:,:)     + net_mineralisation_po4(:,:) / 1000000.0_wp
+         nh4_solute(:,:)     = nh4_solute(:,:)     + (net_mineralisation_nh4(:,:) - plant_uptake_nh4_sl(:,:))/ 1000000.0_wp &
+                                                   + transport_nh4_solute(:,:)
+         nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + (net_mineralisation_nh4_n15(:,:) - plant_uptake_nh4_n15_sl(:,:)) / 1000000.0_wp &
+                                                   + transport_nh4_n15_solute(:,:)
+         no3_solute(:,:)     = no3_solute(:,:)     + (net_mineralisation_no3(:,:) - plant_uptake_no3_sl(:,:)) / 1000000.0_wp &
+                                                   + transport_no3_solute(:,:)
+         no3_n15_solute(:,:) = no3_n15_solute(:,:) + (net_mineralisation_no3_n15(:,:) - plant_uptake_no3_n15_sl(:,:)) / 1000000.0_wp &
+                                                   + transport_no3_n15_solute(:,:)
+         po4_solute(:,:)     = po4_solute(:,:)     + (net_mineralisation_po4(:,:) - plant_uptake_po4_sl(:,:)) / 1000000.0_wp &
+                                                   + transport_po4_solute(:,:)
 
-         hlp1(:,:) = MAX(nh4_solute_prescribe - nh4_solute(:,:),0.0_wp)
-         nh4_solute(:,:) = nh4_solute(:,:) + hlp1(:,:) 
-         nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + hlp1(:,:) * calc_mixing_ratio_N15N14(0.0_wp) 
-         hlp1(:,:) = MAX(no3_solute_prescribe - no3_solute(:,:),0.0_wp)
-         no3_solute(:,:) = no3_solute(:,:) + hlp1(:,:) 
-         no3_n15_solute(:,:) = no3_n15_solute(:,:) + hlp1(:,:) * calc_mixing_ratio_N15N14(0.0_wp) 
-         po4_solute(:,:) = po4_solute_prescribe 
-         !nh4_solute(:,:) = nh4_solute(:,:) + net_mineralisation_n(:,:) + transport_nh4_solute(:,:)
-         !nh4_solute(:,:) = nh4_solute(:,:) + transport_nh4_solute(:,:)
+         IF(sb_config%flag_sb_prescribe_nh4)THEN
+            hlp1(:,:) = nh4_solute_prescribe - nh4_solute(:,:)
+            nh4_solute(:,:) = nh4_solute(:,:) + hlp1(:,:) 
+            nh4_n15_solute(:,:) = nh4_solute(:,:) * calc_mixing_ratio_N15N14(0.0_wp) 
+         ENDIF
+         IF(sb_config%flag_sb_prescribe_no3)THEN
+            hlp1(:,:) = no3_solute_prescribe - no3_solute(:,:)
+            no3_solute(:,:) = no3_solute(:,:) + hlp1(:,:) 
+            no3_n15_solute(:,:) = no3_solute(:,:) * calc_mixing_ratio_N15N14(0.0_wp) 
+         ENDIF
+         IF(sb_config%flag_sb_prescribe_po4)THEN
+            po4_solute(:,:) = po4_solute_prescribe 
+         ENDIF
          !nh4_assoc(:,:) = nh4_assoc(:,:) + transport_nh4_assoc(:,:)
-         !no3_solute(:,:) = no3_solute(:,:) + transport_no3_solute(:,:)
-         !po4_solute(:,:) = po4_solute(:,:) + net_mineralisation_po4(:,:) + transport_po4_solute(:,:)
-         !po4_solute(:,:) = po4_solute(:,:) + transport_po4_solute(:,:)
          !po4_assoc(:,:) = po4_assoc(:,:) + transport_po4_assoc(:,:)
-         !nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + net_mineralisation_n15(:,:) + transport_nh4_n15_solute(:,:)
-         !nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + transport_nh4_n15_solute(:,:)
          !nh4_n15_assoc(:,:) = nh4_n15_assoc(:,:) + transport_nh4_n15_assoc(:,:)
-         !no3_n15_solute(:,:) = no3_n15_solute(:,:) + transport_no3_n15_solute(:,:)
 
          !> 7.1 update diagnostics and other state variables 
          !!

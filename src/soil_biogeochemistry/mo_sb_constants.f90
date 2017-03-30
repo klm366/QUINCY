@@ -225,9 +225,9 @@ CONTAINS
     eta_nfixation          = 3.0_wp        
 
     ! BLARPP temporarily
-    nh4_solute_prescribe = 1.0_wp
-    no3_solute_prescribe = 1.0_wp
-    po4_solute_prescribe = 1.0_wp
+    nh4_solute_prescribe = 0.1_wp
+    no3_solute_prescribe = 0.1_wp
+    po4_solute_prescribe = 0.1_wp
  
   END SUBROUTINE init_sb_constants
 

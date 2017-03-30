@@ -42,6 +42,9 @@
 &SOIL_BIOGEOCHEMISTRY_CTL
   ! flags for the soil biogeochemistry process
   sb_model_scheme="one_pool"
+  flag_sb_prescribe_nh4=.FALSE.
+  flag_sb_prescribe_no3=.FALSE.
+  flag_sb_prescribe_po4=.FALSE.
 /
 &BASE_CTL
   ! basic model config

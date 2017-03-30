@@ -21,6 +21,9 @@ n_uptake_scheme="standard"      # prescribed standard std_plus_costs optimal res
 p_uptake_scheme="prescribed"    # prescribed standard 
 soil_moisture_scheme="bucket"   # prescribed bucket layer
 sb_model_scheme="one_pool"      # one pool | four pool | jsm 
+flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
+flag_sb_prescribe_no3="F"       # set no3solute to a constant value
+flag_sb_prescribe_po4="F"       # set po4solute to a constant value
 flag_calc_soil_energy="T"
 # canopy model options
 flag_t_resp_acclimation="T"
@@ -222,6 +225,9 @@ validateUserConfigValues "$p_uptake_scheme" "$validatePUptakeScheme" "p_uptake_s
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$soil_moisture_scheme" "$validateSoilMoistureScheme" "soil_moisture_scheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sb_model_scheme"
+validateUserConfigValues "$flag_sb_prescribe_nh4" "$validateFlags" "flag_sb_prescribe_nh4"
+validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_prescribe_no3"
+validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
 validateUserConfigValues "$flag_calc_soil_energy" "$validateFlags" "flag_calc_soil_energy"
 validateUserConfigValues "$flag_tile_veg_dynamics" "$validateFlags" "flag_tile_veg_dynamics"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
@@ -357,6 +363,24 @@ changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
 changeNamelistValue soil_moisture_scheme "$soil_moisture_scheme"
 changeNamelistValue sb_model_scheme "$sb_model_scheme"
+if [ $flag_sb_prescribe_nh4 == T ]
+  then
+    changeNamelistValue flag_sb_prescribe_nh4 ".TRUE."
+  else
+    changeNamelistValue flag_sb_prescribe_nh4 ".FALSE."
+fi
+if [ $flag_sb_prescribe_no3 == T ]
+  then
+    changeNamelistValue flag_sb_prescribe_no3 ".TRUE."
+  else
+    changeNamelistValue flag_sb_prescribe_no3 ".FALSE."
+fi
+if [ $flag_sb_prescribe_po4 == T ]
+  then
+    changeNamelistValue flag_sb_prescribe_po4 ".TRUE."
+  else
+    changeNamelistValue flag_sb_prescribe_po4 ".FALSE."
+fi
 if [ $flag_calc_soil_energy == T ]
   then
     changeNamelistValue flag_calc_soil_energy ".TRUE."
