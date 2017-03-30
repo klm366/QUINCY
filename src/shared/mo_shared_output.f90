@@ -208,6 +208,7 @@ CONTAINS
     leachingC14org_acc  = 0.0_wp
     litterfallN_acc     = 0.0_wp
     net_min_nh4_acc     = 0.0_wp
+    net_min_no3_acc     = 0.0_wp
     leachingNorg_acc    = 0.0_wp
     litterfallP_acc     = 0.0_wp
     net_min_po4_acc     = 0.0_wp
