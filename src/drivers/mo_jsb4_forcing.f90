@@ -25,10 +25,13 @@
 !!
 MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
+
+  USE mo_jsb_time, ONLY: is_time_experiment_start
+
 #ifndef __ICON__
 
   !>>> TODO: echam!
-  USE mo_time_control,    ONLY: next_date, current_date, lstart, lresume, delta_time, time_step_len, get_year_day
+  USE mo_time_control,    ONLY: next_date, current_date, lresume, delta_time, time_step_len, get_year_day
   USE mo_netcdf,          ONLY: nf_check, nf_get_vara_double, nf_inq_dimid, nf_inq_dimlen, &
                                 nf_inq_varid, NF_MAX_NAME, nf_get_att_text, NF_NOERR
   USE mo_time_conversion, ONLY: IMerge_HMS2Sec, day_in_year, time_days
@@ -46,14 +49,16 @@ MODULE mo_jsb4_forcing
   ! jsb4
   USE mo_jsb_base,           ONLY: jsbach
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, p_bcast
-  USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input, jsb_netcdf_close_file, jsb_netcdf_read_2d_time
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, p_bcast
+  USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_time,           ONLY: get_date_components
   USE mo_jsb_class,          ONLY: get_model
 
-  dsl4jsb_Use_processes SRF
-  dsl4jsb_Use_memory(SRF)
+  USE mo_jsb_physical_constants, ONLY: cvdifts
+
+  dsl4jsb_Use_processes HYDRO_
+  dsl4jsb_Use_memory(HYDRO_)
 
   IMPLICIT NONE
   PRIVATE
@@ -84,7 +89,6 @@ MODULE mo_jsb4_forcing
   !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
   REAL(wp), PARAMETER :: cb = 5._wp
   REAL(wp), PARAMETER :: cc = 5._wp
-  REAL(wp), PARAMETER :: cvdifts = 1.5_wp
   REAL(wp), PARAMETER :: ckap = 0.4_wp
 
   CHARACTER(len=*), PARAMETER :: name_of_unit_attribute = 'units'
@@ -264,9 +268,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_interface_variables_from_external_forcing'
 
     TYPE(t_jsb_model),  POINTER  :: model
-    TYPE(t_jsb_tile), POINTER :: tile
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
 
-    dsl4jsb_Def_memory(SRF)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Real2D_onChunk :: elevation
 
     REAL(wp) :: hlp_r
@@ -324,10 +328,10 @@ CONTAINS
     ! --- compute bottom pressure
     model => get_model(model_id)
     tile => model%Get_top_tile()
+    dsl4jsb_Get_memory(HYDRO_)
     DO iblk = 1, nblks
       ! get elevation
-      dsl4jsb_Get_memory(SRF)
-      dsl4jsb_Get_var2D_onChunk(SRF, elevation, IN)
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, elevation)  ! in
 
       press_srf(:,iblk) = bottom_pressure(elevation(:), t_air(:,iblk))
     ENDDO
@@ -702,7 +706,10 @@ CONTAINS
     REAL(wp), POINTER :: return_pointer(:,:,:) !temporary pointer
     REAL(wp) :: hlp_r(1)
 
+    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_input_file) :: input_file
+
+    model => Get_model(model_id)
 
     !---------------------------
     frequency = forcing_input_variable%frequency
@@ -727,22 +734,22 @@ CONTAINS
 
     ! ----- CO2 ghg_scenario exception: in case of ghg_scenario a single file is used, which contains one CO2 value per year
     IF ((TRIM(forcing_input_variable%variable_name) .EQ. CO2_varname) .AND. (frequency .EQ. GHG_SCENARIO_)) THEN
-      IF(lstart .OR. lresume) THEN
+      IF(is_time_experiment_start() .OR. lresume) THEN
         IF(my_process_is_stdio()) THEN
           ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
-          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model_id)
+          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
           CALL get_time_dimension(input_file%file_id, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
           CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
             & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
-          CALL jsb_netcdf_close_file(input_file)
+          CALL input_file%Close()
         ENDIF
 
         IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
         ALLOCATE(forcing_input_variable%data_read(ice, nblks, time_steps_per_day))
       ENDIF
 
-      IF(new_year_forcing .OR. lstart .OR. lresume) THEN
+      IF(new_year_forcing .OR. is_time_experiment_start() .OR. lresume) THEN
         IF(my_process_is_stdio()) THEN
           ! find current year in the timevalues
           currentTimeStep = 1
@@ -759,10 +766,10 @@ CONTAINS
           ENDIF
 
           ! get the data -- TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
-          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model_id)
+          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
           CALL nf_check(nf_inq_varid(input_file%file_id, CO2_varname, nc_var_id))
           CALL nf_check(nf_get_vara_double(input_file%file_id, nc_var_id, (/ currentTimeStep /), (/ 1 /), hlp_r ))
-          CALL jsb_netcdf_close_file(input_file)
+          CALL input_file%Close()
         ENDIF
 
         IF(my_process_is_mpi_parallel()) THEN
@@ -786,10 +793,10 @@ CONTAINS
     ! TODO: test in case of lresume
 
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
-    IF (new_year_forcing .OR. lstart .OR. lresume) THEN
+    IF (new_year_forcing .OR. is_time_experiment_start() .OR. lresume) THEN
       IF(my_process_is_stdio()) THEN
         input_file = jsb_netcdf_open_input( &
-          & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model_id)
+          & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model%grid_id)
 
         CALL get_time_dimension(input_file%file_id, forcing_input_variable)
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
@@ -820,7 +827,7 @@ CONTAINS
           CALL finish(TRIM(routine), message_text)
         ENDIF
 
-        CALL jsb_netcdf_close_file(input_file)
+        CALL input_file%Close()
         forcing_input_variable%currentDayStart = thisDayStart
         forcing_input_variable%currentDayEnd = thisDayEnd
 
@@ -840,7 +847,7 @@ CONTAINS
     thisDayEnd = forcing_input_variable%currentDayEnd
 
     ! --- if its a new day or new run - read the data
-    IF (new_day_forcing .OR. lstart .OR. lresume) THEN
+    IF (new_day_forcing .OR. is_time_experiment_start() .OR. lresume) THEN
       ! check timeseries
       IF(my_process_is_stdio()) THEN
         !Assertion: currentTimeStep needs to be contained in the file
@@ -860,10 +867,10 @@ CONTAINS
       ENDIF
       ! get data
       input_file = jsb_netcdf_open_input( &
-        & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model_id)
-      return_pointer => jsb_netcdf_read_2d_time(input_file, forcing_input_variable%variable_name, &
+        & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model%grid_id)
+      return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name, &
         & start_time_step=thisDayStart, end_time_step=thisDayEnd, fill_array=forcing_input_variable%data_read)
-      CALL jsb_netcdf_close_file(input_file)
+      CALL input_file%Close()
 
       ! Set the ocean cells of the read data to the constant ocean value and increase the start and end for the next day to be read
       IF(forcing_input_variable%frequency .EQ. TIMESTEP_) THEN
@@ -912,6 +919,7 @@ CONTAINS
     forcing_input_variable%ocean_value = forcing_ocean_value
     forcing_input_variable%expectedUnit = expected_unit
     forcing_input_variable%constantValue = constantValue
+    IF (ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
     NULLIFY(forcing_input_variable%timevalues)
 
   END SUBROUTINE init_forcing_input_variable
@@ -1486,10 +1494,10 @@ CONTAINS
   !   If false: forcing is expected for all variables for all cells (e.g. forcing from echam)
   SUBROUTINE set_ocean_cells(nblks, ics, ice, model_id, constant, array)
 
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile
-    USE mo_jsb_model_class,    ONLY: t_jsb_model
+    USE mo_jsb_model_class, ONLY: t_jsb_model
+    USE mo_jsb_class,       ONLY: Get_model
 
-    dsl4jsb_Def_memory(SRF)
+    !dsl4jsb_Def_memory(SRF)
 
     INTEGER, INTENT(IN) :: nblks, ics, ice, model_id
     REAL(wp), INTENT(IN) :: constant
@@ -1497,16 +1505,18 @@ CONTAINS
     INTEGER :: iblk
 
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_tile),  POINTER :: tile
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile
+
+    REAL(wp) :: fract(ice-ics+1)
 
     IF (.NOT. forcing_options%forcing_set_ocean_to_constants) RETURN
 
-    model => jsbach%models(model_id)%m
+    model => Get_model(model_id)
     tile => model%Get_top_tile()
 
     DO iblk = 1, nblks
-      dsl4jsb_Get_memory(SRF)
-      WHERE (dsl4jsb_var2D_onChunk(SRF, land) .EQ. 0._wp)
+      CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))
+      WHERE (fract(:) == 0._wp)
         array(:,iblk) = constant
       END WHERE
     ENDDO

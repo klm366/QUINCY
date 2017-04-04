@@ -27,15 +27,17 @@ module unload cdo
 module load cdo/1.6.0
 
 # get the script jsbach_init_file.ksh and the program jsbach_init_file.f90
-svn checkout https://svn.zmaw.de/svn/cosmos/branches/cosmos-landveg/contrib/initial_tarfiles
-mv ./initial_tarfiles/jsbach_init_file.ksh .
-mv ./initial_tarfiles/jsbach_init_file.f90 .
+if [ ! -d initial_tarfiles ]; then
+	svn checkout https://svn.zmaw.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
+	mv ./initial_tarfiles/jsbach_init_file.ksh .
+	mv ./initial_tarfiles/jsbach_init_file.f90 .
+fi
 
 # switch off interactive mode in the script jsbach_init_file.ksh
 export interactive_ctrl=1
 
 # Switch for terraplanet
-export terraplanet=true
+export terraplanet=false
 
 # component model resolutions
 export res_atm=T63         # atmosphere horizontal resolution

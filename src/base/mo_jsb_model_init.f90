@@ -12,9 +12,15 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_base,         ONLY: jsbach
+  USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
   USE mo_jsb_model_class,  ONLY: t_jsb_model
+
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: message, finish
+  USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
+
+  dsl4jsb_Use_processes PHENO_
+  dsl4jsb_Use_config(PHENO_)
 
   IMPLICIT NONE
   PRIVATE
@@ -57,12 +63,13 @@ CONTAINS
     INTEGER :: nlon, nlat
 
     model => jsbach%models(model_id)%m
+
     IF (PRESENT(model_name)) THEN
       IF (ADJUSTL(TRIM(model_name)) /= ADJUSTL(TRIM(model%name))) &
         CALL finish(TRIM(routine), 'Model ID and name are inconsistent with namelist config.')
     END IF
 
-    CALL get_nlon_nlat_from_file(jsbach%models(model_id)%m%config%grid_filename, nlon, nlat)
+    CALL get_nlon_nlat_from_file(model%config%grid_filename, nlon, nlat)
     CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
 
 #ifndef __ICON__
@@ -76,7 +83,7 @@ CONTAINS
 
     !needs to be done after the decomposition is initialised; required for get_lon and get_lat, especially for site-level sims
 #ifndef __ICON__
-    CALL get_lons_and_lats_from_file(jsbach%models(model_id)%m%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
+    CALL get_lons_and_lats_from_file(model%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
 #else
     CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
 #endif
@@ -92,9 +99,6 @@ CONTAINS
 
   END SUBROUTINE init_model_standalone
 
-
-!!$  SUBROUTINE init_model_patch( model_id, patch, &
-!!$                             & nsoil_w, dzsoil_w, nsoil_e, dzsoil_e)
   SUBROUTINE init_model_patch( model_id, patch)
 
     USE mo_jsb_domain_iface, ONLY: t_patch
@@ -104,14 +108,6 @@ CONTAINS
     INTEGER,                    INTENT(in) :: model_id
     TYPE(t_patch),              INTENT(in) :: patch
 
-!!$    ! The soil layer structure has be sent back to ICON because this information is needed to setup the CDI output
-!!$    INTEGER,           OPTIONAL, INTENT(out) :: &
-!!$      & nsoil_w,                                & !< Number of soil layers (water)
-!!$      & nsoil_e                                   !< Number of soil layers (energy)
-!!$    REAL(wp), POINTER, OPTIONAL              :: &
-!!$      & dzsoil_w(:),                            & !< Soil layer depths (water)
-!!$      & dzsoil_e(:)                               !< Soil layer depths (energy)
-
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
@@ -120,6 +116,9 @@ CONTAINS
     IF (patch%id < 0) &
       CALL finish(TRIM(routine), 'Improper call with invalid patch')
 
+    IF (model_id > get_no_of_models()) &
+      CALL finish(TRIM(routine), 'Host request to more jsbach models than are defined')
+
     model => jsbach%models(model_id)%m
 
     grid => new_grid(patch=patch)
@@ -127,17 +126,6 @@ CONTAINS
     model%grid_id = grid%id
 
     CALL init_model_common(model)
-
-!!$    IF (PRESENT(nsoil_w)) nsoil_w = model%config%soil%nsoil_water
-!!$    IF (PRESENT(nsoil_e)) nsoil_e = model%config%soil%nsoil_energy
-!!$    IF (PRESENT(dzsoil_w)) THEN
-!!$      ALLOCATE(dzsoil_w(nsoil_w))
-!!$      dzsoil_w(1:nsoil_w) = model%config%soil%dz_water(1:nsoil_w)
-!!$    END IF
-!!$    IF (PRESENT(dzsoil_e)) THEN
-!!$      ALLOCATE(dzsoil_e(nsoil_e))
-!!$      dzsoil_w(1:nsoil_e) = model%config%soil%dz_energy(1:nsoil_e)
-!!$    END IF
 
     NULLIFY(model)
 
@@ -160,6 +148,9 @@ CONTAINS
     IF (decomposition%nlon < 0) &
       CALL finish(TRIM(routine), 'Improper call with invalid decomposition')
 
+    IF (model_id > get_no_of_models()) &
+      CALL finish(TRIM(routine), 'Host request to more jsbach models than are defined')
+
     model => jsbach%models(model_id)%m
 
     grid => new_grid(decomp=decomposition)
@@ -174,31 +165,63 @@ CONTAINS
 
   SUBROUTINE init_model_common(model)
 
-    USE mo_jsb_process_factory, ONLY: HD
-    USE mo_jsb_model_class,    ONLY: print_model
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile
-    USE mo_jsb_model_usecases, ONLY: init_usecase
-    USE mo_srf_init,           ONLY: srf_init_ic, srf_init_bc
-    USE mo_soil_init,          ONLY: soil_init
-    USE mo_veg_init,           ONLY: veg_init_ic, veg_init_bc
+    USE mo_jsb_process_class,   ONLY: SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_
+    USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
+    USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
+    USE mo_jsb_model_class,     ONLY: print_model
+    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+    USE mo_jsb_lct_class,       ONLY: Contains_lct
+    USE mo_jsb_lctlib_class,    ONLY: Read_lctlib
+    USE mo_jsb_model_usecases,  ONLY: init_usecase
+    USE mo_seb_init,            ONLY: seb_init
+    USE mo_turb_init,           ONLY: turb_init
+    USE mo_sse_init,            ONLY: sse_init
+    USE mo_hydro_init,          ONLY: hydro_init
+    USE mo_rad_init,            ONLY: rad_init
+    ! USE mo_assimi_init,         ONLY: assimi_init
+    USE mo_pheno_init,          ONLY: pheno_init
 #ifndef __NO_JSBACH_HD__
-    USE mo_hd_init,            ONLY: hd_init_ic, hd_init_bc
+    USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
-    USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,          ONLY: Register_vgrid
-    USE mo_jsb_io,            ONLY: ZAXIS_SURFACE
+    USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,            ONLY: Register_vgrid
+    USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, cdiDefMissval, missval
+    USE mo_util,                ONLY: one_of
+
+    dsl4jsb_Def_config(PHENO_)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    TYPE(t_jsb_tile),  POINTER :: tile
-    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    CLASS(t_jsb_tile_abstract), POINTER :: tile, child
+    TYPE(t_jsb_vgrid),          POINTER :: surface                      ! Vertical grid
+    INTEGER                             :: iproc, ilct, jlct, i, no_children
+    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
+    INTEGER                             :: no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_common'
+
+    no_omp_thread = Get_omp_thread()
+
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
+
+    CALL model%Set_mode(model%config%hsm_mode)
+
+    CALL cdiDefMissval(missval)
+
+    ALLOCATE(model%processes(max_no_of_processes))
+    DO iproc=1,max_no_of_processes
+      model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
+    END DO
 
     CALL model%Configure_processes()
 
     surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
     CALL register_vgrid(surface)
+
+    model%lctlib => Read_lctlib('lctlib_nlct21.def')
+    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
 
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
@@ -208,33 +231,213 @@ CONTAINS
       ! TBD
     END IF
 
-    CALL print_model(model)
+    ! Temporary for testing ... should be in separate subroutine
+    CALL model%Queue_task(RAD_,    "surface_radiation")
+    CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+    CALL model%Queue_task(HYDRO_,  "soil_properties")
+    CALL model%Queue_task(SEB_,    "surface_energy")
+    CALL model%Queue_task(HYDRO_,  "evaporation")
+    CALL model%Queue_task(SEB_,    "surface_fluxes")
+    IF (model%processes(ASSIMI_)%p%config%active) THEN
+      CALL model%Queue_task(RAD_,    "radiation_par")
+    END IF
+    CALL model%Queue_task(HYDRO_,  "surface_hydrology")
+    CALL model%Queue_task(SSE_,    "soil_properties")
+    CALL model%Queue_task(SSE_,    "soil_temperature")
+    CALL model%Queue_task(HYDRO_,  "soil_hydrology")
+#ifndef __NO_JSBACH_HD__
+    CALL model%Queue_task(HD_,     "hd_local_outflow")
+#endif
+    CALL model%Queue_task(SEB_,    "snowmelt_correction")
+    !IF (model%processes(ASSIMI_)%p%config%active) THEN
+      CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
+                                                                    ! and assimilation_waterunlimited
+    !END IF
+    IF (model%processes(ASSIMI_)%p%config%active) THEN
+      CALL model%Queue_task(ASSIMI_, "canopy_cond_unstressed")  ! first call without water limitation (waterLimitationFlag =.FALSE.)
+    ELSE
+      CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
+    END IF
+    CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
+    CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+    !IF (model%processes(ASSIMI_)%p%config%active) THEN
+      CALL model%Queue_task(ASSIMI_, "assimilation")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
+                                                     ! should be called after the soil hydrology is calculated
+                                                     ! (former update_soil_1) and after the vegetation conductance is calculated
+                                                     ! (former update_vegetation_conductanc)
+    !END IF
+    CALL model%Queue_task(TURB_,   "humidity_scaling")
+    CALL model%Queue_task(PHENO_,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
+                                                           ! but in JSBACH3 it was here at the end...
+    CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
+    CALL model%Queue_task(TURB_,   "surface_roughness")
+    ! Note: albedo is updated at the end of the time step, one time step before the radiation is updated in the atmosphere
+    CALL model%Queue_task(RAD_,    "albedo")
+    CALL model%Queue_task(HYDRO_,  "water_balance")
+    CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
+    IF (debug_on()) THEN
+      CALL print_model(model)
+      CALL model%Print_actions()
+    END IF
 
-    ! At this point, the model configuration, tile and memory structure is set up.
+    ! At this point, the model configuration and tile structure is set up.
 
-    ! We continue with initializing the different model processes.
+    ! We continue with initializing the memory structure and different model processes.
 
+    ! Iterate over tiles and call initialization if necessary
+    CALL model%Reset_tiles()
     tile => model%Get_top_tile()
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
 
-    CALL srf_init_bc(tile)
-    CALL srf_init_ic(tile)
+    DO WHILE (ASSOCIATED(tile))
 
-    CALL soil_init(tile)
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        tile => model%Goto_next_tile()
+        CYCLE
+      END IF
 
-    ! Vegetation must be initialized after soil!
-    CALL veg_init_bc(tile)
-    CALL veg_init_ic(tile)
+      ! Initialize tile memory and read tile fractions
+      ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
+      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE.)
+
+      ! TBD: Loop over processes instead of explicit
+      IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL rad_init(tile)
+      END IF
+
+      IF (one_of(tile%process_action(SEB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL seb_init(tile)
+      END IF
+
+      IF (one_of(tile%process_action(TURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL turb_init(tile)
+      END IF
+
+      IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+        dsl4jsb_Get_config(PHENO_)
+        IF (      tile%is_vegetation &
+          & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
+          & .AND. tile%lcts(1)%lib_id == 0) &
+            & CALL message(TRIM(routine), 'Must use phenology climatology on general, non-PFT VEG tile')
+      END IF
+      ! Initialize PHENO_ before HYDRO_
+      IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL pheno_init(tile)
+      END IF
+
+      ! HYDRO_ needs to be initialized before SSE_
+      IF (one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL hydro_init(tile)
+      END IF
+
+      IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL sse_init(tile)
+      END IF
+
+      ! IF (one_of(tile%process_action(ASSIMI_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      !   CALL assimi_init_bc(tile)
+      !   CALL assimi_init_ic(tile)
+      ! END IF
 
 #ifndef __NO_JSBACH_HD__
-    IF (tile%Is_process_active(HD)) THEN
-      CALL hd_init_bc(tile)
-      CALL hd_init_ic(tile)
-    END IF
+      IF (one_of(tile%process_action(HD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL hd_init_bc(tile)
+        CALL hd_init_ic(tile)
+      END IF
 #endif
-    ! Initialize tile fractions for all tiles
-    ! This is done after the initialization of the initial and boundary conditions of the model components
-    ! because e.g. the fraction of the vegetated tile depends on LAI.
-    ! TBD: later read veg_ratio_max into 'veg' tile, and set 'bare' tile to 1-veg_ratio_max
+
+      tile => model%Goto_next_tile()
+
+    END DO
+
+    ! Iterate over tiles again and set lct fractions (after ALL tile fractions have been set above)
+    CALL model%Reset_tiles()
+    tile => model%Get_top_tile()
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    ALLOCATE(fract_tmp(SIZE(tile%lcts(1)%fract,1), SIZE(tile%lcts(1)%fract,2)))
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
+        tile => model%Goto_next_tile()
+        CYCLE
+      END IF
+
+      ! tile is a leaf or it has children and we're on the way up
+      DO ilct=1,SIZE(tile%lcts)
+        IF (tile%Has_children()) THEN
+          tile%lcts(ilct)%fract(:,:) = 0._wp
+          no_children = tile%Get_no_of_children()
+          child => tile%Get_first_child_tile()
+          DO i=1,no_children
+            IF (Contains_lct(child%lcts, tile%lcts(ilct)%id)) THEN
+              DO jlct=1,SIZE(child%lcts)
+                IF (child%lcts(jlct)%id == tile%lcts(ilct)%id) THEN
+                  CALL child%Get_fraction(fract=fract_tmp(:,:))
+                  IF (jlct > 1) THEN
+                    fract_tmp(:,:) = fract_tmp(:,:) * child%lcts(jlct)%fract(:,:)
+                  END IF
+                  tile%lcts(ilct)%fract(:,:) = tile%lcts(ilct)%fract(:,:) + fract_tmp(:,:)
+                  EXIT
+                END IF
+              END DO
+            END IF
+            child => child%Get_next_sibling_tile()
+          END DO
+        ELSE
+          IF (ilct > 1) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
+          tile%lcts(1)%fract(:,:) = 1._wp        ! Leaves have only one LCT
+        END IF
+      END DO
+
+      tile => model%Goto_next_tile()
+
+    END DO
+
+    DEALLOCATE(fract_tmp)
+
+    ! Iterate over tiles again and initialize hierarchical structure for memories and variables
+    CALL model%Reset_tiles()
+    tile => model%Get_top_tile()
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
+        tile => model%Goto_next_tile()
+        CYCLE
+      END IF
+
+      CALL tile%Init_vars()
+
+      tile => model%Goto_next_tile()
+
+    END DO
+
+    IF (debug_on()) THEN
+      ! Iterate over tiles again and print tile information (after ALL tiles have been initialized above)
+      CALL model%Reset_tiles()
+      tile => model%Get_top_tile()
+      IF (.NOT. ASSOCIATED(tile)) &
+        & CALL finish(TRIM(routine), 'Top tile not set')
+
+      DO WHILE (ASSOCIATED(tile))
+
+        IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+          tile => model%Goto_next_tile()
+          CYCLE
+        END IF
+
+        CALL tile%Print()
+
+        tile => model%Goto_next_tile()
+
+      END DO
+    END IF
 
   END SUBROUTINE init_model_common
 

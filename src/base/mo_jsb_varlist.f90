@@ -10,16 +10,18 @@
 MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish
+  USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_varlist_iface, ONLY: t_jsb_varlist => t_var_list,      &
                                   jsb_get_var_list => get_var_list, &
                                   jsb_new_var_list => new_var_list, &
                                   t_var_metadata, t_list_element,   &
-                                  add_var_list_element_r2d, add_var_list_element_r3d
+                                  add_var_list_element_r2d, add_var_list_element_r3d, &
+                                  VARNAME_LEN
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED_CELL, GRID_REFERENCE, GRID_CELL, missval, &
                                   FILETYPE_NC2, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
@@ -29,6 +31,7 @@ MODULE mo_jsb_varlist
 
   PUBLIC :: t_jsb_varlist
   PUBLIC :: jsb_add_var, Get_varlist
+  PUBLIC :: VARNAME_LEN
 
   INTERFACE jsb_add_var
     MODULE PROCEDURE jsb_add_var_list_element_r2d
@@ -57,11 +60,12 @@ CONTAINS
 
   END FUNCTION Get_varlist
 
-  SUBROUTINE jsb_add_var_list_element_r2d(mem, name, var, &
-    hgrid, vgrid, cf, grib1, grib2, loutput, lcontainer, &
+  SUBROUTINE jsb_add_var_list_element_r2d(mem, name, var,       &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
+    loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
-    resetval_r, lmiss, missval_r, tlev_source, info,            &
-    verbose, new_element, cdiTimeID                             &
+    resetval_r, lmiss, missval_r, l_aggregate_all, tlev_source, &
+    info, verbose, new_element, cdiTimeID                       &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -73,6 +77,8 @@ CONTAINS
     TYPE(t_cf),           INTENT(in)           :: cf                  ! CF related metadata
     TYPE(t_grib1),        INTENT(in)           :: grib1               ! GRIB1 related metadata
     TYPE(t_grib2),        INTENT(in)           :: grib2               ! GRIB2 related metadata
+    CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
+    CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
@@ -81,23 +87,29 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
     INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
 
-!!$    REAL(wp), POINTER :: ptr(:,:,:,:,:)
+    REAL(wp), POINTER :: p5(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
+    CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(wp)          :: missval_r_loc
+    REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: pos_of_var
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r2d'
+
+    name_loc = TRIM(name)
+    IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
+    IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
@@ -113,17 +125,33 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%patch%id)
 
+    ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
+    var%ptr => var%field(:,:,1,1,1)
+    p5 => var%field
+
     CALL add_var_list_element_r2d( &
-      this_list, TRIM(name), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
-      lmiss=lmiss_loc, missval_r=missval_r_loc)
+      ! lmiss=lmiss_loc, missval_r=missval_r_loc)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5)
+
+    var%name = TRIM(name)
+    var%full_name = TRIM(name_loc)
+    var%type = REAL2D
+    var%missval = missval_r_loc
+    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+
+    var%owner_proc_id = mem%owner_proc_id
+
+    ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
+    var%owner_tile_path(:) = mem%owner_tile_path(:)
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
-      CALL finish(TRIM(routine), 'Maximum number of vars exceeded.')
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
@@ -131,21 +159,24 @@ CONTAINS
 
   END SUBROUTINE jsb_add_var_list_element_r2d
 
-  SUBROUTINE jsb_add_var_list_element_r3d(mem, name, var, &
-    hgrid, vgrid, cf, grib1, grib2, extra_dim_n, loutput, lcontainer, &
-    lrestart, lrestart_cont, initval_r, isteptype,              &
-    resetval_r, lmiss, missval_r, tlev_source, info, p5,        &
-    verbose, new_element, cdiTimeID                             &
+  SUBROUTINE jsb_add_var_list_element_r3d(mem, name, var,        &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix,              &
+    extra_dim_n, loutput, lcontainer,                            &
+    lrestart, lrestart_cont, initval_r, isteptype,               &
+    resetval_r, lmiss, missval_r, l_aggregate_all, tlev_source,  &
+    info, verbose, new_element, cdiTimeID                        &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
     CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
     TYPE(t_jsb_var_real3d), INTENT(inout), TARGET :: var                 ! reference to jsbach var
-    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid type
-    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid type
+    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid
+    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid
     TYPE(t_cf),           INTENT(in)           :: cf                  ! CF related metadata
     TYPE(t_grib1),        INTENT(in)           :: grib1               ! GRIB1 related metadata
     TYPE(t_grib2),        INTENT(in)           :: grib2               ! GRIB2 related metadata
+    CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
+    CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
     INTEGER,              INTENT(in), OPTIONAL :: extra_dim_n         ! Extra (third) dimension (not levels)
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
@@ -155,23 +186,29 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
-    REAL(wp),             POINTER,    OPTIONAL :: p5(:,:,:,:,:)       ! provided pointer
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
-    TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
+    TYPE(t_list_element), POINTER,   OPTIONAL  :: new_element           ! pointer to new var list element
     INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
 
+    REAL(wp), POINTER :: p5(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
+    CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(wp)          :: missval_r_loc
+    REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(3), gdims(3)
     INTEGER           :: pos_of_var
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r3d'
+
+    name_loc = TRIM(name)
+    IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
+    IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
@@ -203,17 +240,33 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%patch%id)
 
-    CALL add_var_list_element_r3d( &
-      this_list, TRIM(name), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+    ALLOCATE(var%field(ldims(1),ldims(2),ldims(3),1,1))
+    var%ptr => var%field(:,:,:,1,1)
+    p5 => var%field
+
+   CALL add_var_list_element_r3d( &
+      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
+      ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5)
+
+    var%name = TRIM(name)
+    var%full_name = TRIM(name_loc)
+    var%type = REAL3D
+    var%missval = missval_r_loc
+    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+
+    var%owner_proc_id = mem%owner_proc_id
+
+    ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
+    var%owner_tile_path(:) = mem%owner_tile_path(:)
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
-      CALL finish(TRIM(routine), 'Maximum number of vars exceeded.')
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
@@ -222,7 +275,8 @@ CONTAINS
   END SUBROUTINE jsb_add_var_list_element_r3d
 
   SUBROUTINE jsb_add_var_list_element_r2d_tile(varlist_name, name, ptr, &
-    hgrid, vgrid, cf, grib1, grib2, loutput, lcontainer, &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
+    loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, tlev_source, info,            &
     verbose, new_element, cdiTimeID                             &
@@ -231,11 +285,13 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)           :: varlist_name
     CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
     REAL(wp),             POINTER              :: ptr(:,:)            ! reference to field
-    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid type
-    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid type
+    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid
+    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid
     TYPE(t_cf),           INTENT(in)           :: cf                  ! CF related metadata
     TYPE(t_grib1),        INTENT(in)           :: grib1               ! GRIB1 related metadata
     TYPE(t_grib2),        INTENT(in)           :: grib2               ! GRIB2 related metadata
+    CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
+    CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
@@ -244,7 +300,7 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
@@ -253,13 +309,18 @@ CONTAINS
 
 !!$    REAL(wp), POINTER :: ptr(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
+    CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(wp)          :: missval_r_loc
+    REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_add_var_list_element_r2d'
+
+    name_loc = TRIM(name)
+    IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
+    IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
@@ -276,7 +337,7 @@ CONTAINS
     this_list => Get_varlist(TRIM(varlist_name), hgrid%patch%id)
 
     CALL add_var_list_element_r2d( &
-      this_list, TRIM(name), ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
+      this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%cdiZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisID, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &

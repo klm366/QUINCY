@@ -27,6 +27,7 @@ cdo selvar,glac ${jsbachfile} glac_${res_atm}.nc
 
 # land sea mask on icon grid
 cdo gtc,0 -selvar,slm ${jsbachfile} slm_${grid}.nc
+cdo selvar,slf ${jsbachfile} slf_${grid}.nc
 
 rm -f ${filename}_*.tmp
 varlist="init_moist snow slf slm roughness_length albedo elevation glac fao \
@@ -67,7 +68,7 @@ for var in ${varlist}; do
             rm gauss_${var}.tmp1 ;;
         forest_fract | glac | snow )
             cdo setvar,${var} -fillmiss -ifthen slm_${res_atm}.nc -selvar,${var} ${jsbachfile} \
-		gauss_${var}.tmp ;;
+		          gauss_${var}.tmp ;;
         lai_clim | veg_fract | veg_ratio_max | roughness_length_oro )
             cdo setvar,${var} -fillmiss -sub -setmissval,-9e33 -setmisstoc,-9e33 -setmissval,0 \
                          -add slm_${res_atm}.nc -selvar,${var} ${jsbachfile} \
@@ -79,16 +80,16 @@ for var in ${varlist}; do
     # do the remapping
     case ${var} in
 
- 	elevation )
+ 	    elevation )
             cdo setvar,elevation -ifthen slm_${grid}.nc -selvar,elevation ${jsbachfile} \
                        ${filename}_elevation.tmp ;;
-	slf ) 
+	    slf ) 
             rm -f ${filename}_${var}.tmp1 ${filename}_${var}.tmp ;;
-	slm ) 
+	    slm ) 
             cdo setvar,slm slm_${grid}.nc ${filename}_slm.tmp ;;
-        * )
- 	    cdo setvar,${var} -setmissval,-9e+33 -ifthen slm_${grid}.nc gauss_${var}.tmp \
-		${filename}_${var}.tmp ;;
+      * )
+ 	          cdo setvar,${var} -setmissval,-9e+33 -ifthen slm_${grid}.nc gauss_${var}.tmp \
+		          ${filename}_${var}.tmp ;;
     esac
 done
 
@@ -101,14 +102,14 @@ for var in ${varlist}; do
 
        cover_fract | natural_veg )
            cdo splitlevel ${filename}_${var}.tmp ${filename}_${var}_
-	   typeset -Z2 nt=01
-	   while [[ ${nt} -le ${ntiles} ]]; do
-	       cdo mul ${filename}_${var}_0000${nt}.nc2 glac_inv_${grid}.nc \
-		   ${filename}_${var}_${nt}.tmp
-	       rm ${filename}_${var}_0000${nt}.nc2
-	       (( nt = nt + 1 ))
-	   done
-	   cdo add ${filename}_${var}_01.tmp glac_${grid}.nc ${filename}_${var}_01.tmp1
+	         typeset -Z2 nt=01
+	         while [[ ${nt} -le ${ntiles} ]]; do
+	           cdo mul ${filename}_${var}_0000${nt}.nc2 glac_inv_${grid}.nc \
+		           ${filename}_${var}_${nt}.tmp
+	           rm ${filename}_${var}_0000${nt}.nc2
+	           (( nt = nt + 1 ))
+	         done
+	         cdo add ${filename}_${var}_01.tmp glac_${grid}.nc ${filename}_${var}_01.tmp1
            mv ${filename}_${var}_01.tmp1 ${filename}_${var}_01.tmp
            rm -f ${filename}_${var}.tmp
            cdo merge ${filename}_${var}_??.tmp ${filename}_${var}.tmp
@@ -116,7 +117,7 @@ for var in ${varlist}; do
            rm ${filename}_${var}_??.tmp ;; 
        cover_type )
            cdo splitlevel ${filename}_${var}.tmp ${filename}_${var}_
-	   typeset -Z2 nt=01
+	         typeset -Z2 nt=01
            cdo sub ${filename}_${var}_000001.nc2 glac_${grid}.nc ${filename}_${var}_01.tmp1
            mv ${filename}_${var}_01.tmp1 ${filename}_${var}_000001.nc2
            cdo nint ${filename}_${var}_000011.nc2 ${filename}_${var}_11.tmp1
@@ -125,17 +126,28 @@ for var in ${varlist}; do
            cdo merge ${filename}_${var}_0000??.nc2 ${filename}_${var}.tmp2
            rm ${filename}_${var}_0000??.nc2 ;; 
        glac )
-	    cp glac_${grid}.nc ${filename}_${var}.tmp2 ;;
+	         cdo setname,fract_glac -setmisstoc,0 glac_${grid}.nc ${filename}_${var}.tmp2 ;;
        lai_clim | bclapp | soil_field_cap | forest_fract | heat_capacity | heat_conductivity | root_depth | \
-	   hyd_cond_sat | init_moist | layer_moist | maxmoist | moisture_pot | \
-           pore_size_index | soil_porosity | snow | soil_depth | veg_fract | veg_ratio_max | wilting_point )
+	       hyd_cond_sat | init_moist | layer_moist | maxmoist | moisture_pot | \
+         pore_size_index | soil_porosity | snow | soil_depth | veg_fract | veg_ratio_max | wilting_point )
             cdo mul ${filename}_${var}.tmp glac_inv_${grid}.nc ${filename}_${var}.tmp2 ;;
        albedo )
             cdo setvar,${var} -ifthenelse glac_inv_${grid}.nc ${filename}_${var}.tmp \
-		-mulc,0.7 glac_${grid}.nc ${filename}_${var}.tmp2 ;;
+		          -mulc,0.7 glac_${grid}.nc ${filename}_${var}.tmp2 ;;
     esac
     [[ -f ${filename}_${var}.tmp2 ]] && mv ${filename}_${var}.tmp2  ${filename}_${var}.tmp
 done
+
+cdo mul slf_${grid}.nc -ltc,1 glac_${grid}.nc ${filename}_landnoglacier.tmp
+
+cdo ifthenelse ${filename}_landnoglacier.tmp -setrtoc,0,0.1,0.1 ${filename}_soil_depth.tmp ${filename}_soil_depth.tmp ${filename}_soil_depth.tmp2
+mv ${filename}_soil_depth.tmp2 ${filename}_soil_depth.tmp
+
+cdo mul ${filename}_soil_field_cap.tmp ${filename}_soil_depth.tmp ${filename}_max_soilwater.tmp
+
+cdo min ${filename}_maxmoist.tmp ${filename}_max_soilwater.tmp ${filename}_maxmoist.tmp2
+mv ${filename}_maxmoist.tmp2 ${filename}_maxmoist.tmp
+rm ${filename}_max_soilwater.tmp
 
 #------------------------------------------------------------------------------
 # generate boundary conditions depending on topography for icon grid
@@ -185,15 +197,21 @@ cdo mul jan_surf_tmp.nc ${filename}_notsea.tmp jan_surf.nc
 #
 # lake surface fractions
 #
-cdo chname,ALAKE,lake -selname,ALAKE jan_surf.nc ${filename}_lake.tmp
+#cdo -f nc2 -b F64 chname,ALAKE,fract_lake -setmisstoc,0 -selname,ALAKE jan_surf.nc ${filename}_lake.tmp
+cdo -f nc2 -b F64 chname,ALAKE,fract_lake -setmisstoc,0 -gtc,2 -selname,ALAKE jan_surf.nc ${filename}_lake.tmp
 #
 # land fraction (not sea and not lake)
 #
-cdo chname,notsea,land -sub ${filename}_notsea.tmp ${filename}_lake.tmp ${filename}_land.tmp
+#cdo chname,notsea,land -sub ${filename}_notsea.tmp ${filename}_lake.tmp ${filename}_land.tmp
+cdo -f nc2 -b F64 setname,fract_land -mulc,-1 -subc,1 ${filename}_lake.tmp ${filename}_land.tmp
+#
+# land fraction (not sea, not glacier)
+#
+cdo -f nc2 -b F64 setname,landnoglacier -mulc,-1 -subc,1 ${filename}_glac.tmp ${filename}_landnoglacier.tmp
 #
 # surface physical properties
 #
-cdo chname,AZ0,z0  -selname,AZ0 jan_surf.nc ${filename}_z0.tmp
+cdo chname,AZ0,z0 -setmisstoc,0.005 -selname,AZ0 jan_surf.nc ${filename}_z0.tmp
 #
 # orography
 #
@@ -209,20 +227,42 @@ cdo chname,OROMEA,oromea -selname,OROMEA jan_surf.nc ${filename}_oromea.tmp
 
 rm -f ${grid}_jsbach_clim.nc ${grid}_jsbach_${ntiles}tiles_${year}.nc ${grid}_jsbach.nc
 
+rm -f bc_land_frac_${grid}_${year}.nc bc_land_phys_${grid}_${year}.nc bc_land_soil_${grid}_${year}.nc \
+    bc_land_sso_${grid}_${year}.nc ic_land_soil_${grid}_${year}.nc
+
 # define surfaces
-cdo merge ${filename}_slm.tmp ${filename}_glac.tmp ${filename}_sea.tmp ${filename}_notsea.tmp ${filename}_lake.tmp ${filename}_land.tmp ${filename}_cover_fract.tmp ${filename}_cover_type.tmp ${filename}_natural_veg.tmp ${filename}_veg_ratio_max.tmp bc_land_frac_${grid}_${year}.nc
-rm ${filename}_slm.tmp ${filename}_glac.tmp ${filename}_sea.tmp ${filename}_notsea.tmp ${filename}_lake.tmp ${filename}_land.tmp ${filename}_cover_fract.tmp ${filename}_cover_type.tmp ${filename}_natural_veg.tmp ${filename}_veg_ratio_max.tmp 
+cdo -f nc2 -b F64 merge ${filename}_slm.tmp ${filename}_glac.tmp ${filename}_sea.tmp ${filename}_notsea.tmp \
+  ${filename}_lake.tmp ${filename}_land.tmp ${filename}_cover_fract.tmp ${filename}_cover_type.tmp \
+  ${filename}_natural_veg.tmp ${filename}_veg_ratio_max.tmp ${filename}_landnoglacier.tmp bc_land_frac_${grid}_${year}.nc
+rm ${filename}_slm.tmp ${filename}_glac.tmp ${filename}_sea.tmp ${filename}_notsea.tmp ${filename}_lake.tmp \
+  ${filename}_land.tmp ${filename}_cover_fract.tmp ${filename}_cover_type.tmp ${filename}_natural_veg.tmp \
+  ${filename}_veg_ratio_max.tmp ${filename}_landnoglacier.tmp 
 # physical properties
-cdo merge ${filename}_lai_clim.tmp ${filename}_veg_fract.tmp ${filename}_roughness_length.tmp ${filename}_roughness_length_oro.tmp ${filename}_z0.tmp ${filename}_albedo.tmp ${filename}_albedo_veg_vis.tmp ${filename}_albedo_veg_nir.tmp ${filename}_albedo_soil_vis.tmp ${filename}_albedo_soil_nir.tmp ${filename}_forest_fract.tmp bc_land_phys_${grid}_${year}.nc
-rm ${filename}_lai_clim.tmp ${filename}_veg_fract.tmp ${filename}_roughness_length.tmp ${filename}_roughness_length_oro.tmp ${filename}_z0.tmp ${filename}_albedo.tmp ${filename}_albedo_veg_vis.tmp ${filename}_albedo_veg_nir.tmp ${filename}_albedo_soil_vis.tmp ${filename}_albedo_soil_nir.tmp ${filename}_forest_fract.tmp
+cdo merge ${filename}_lai_clim.tmp ${filename}_veg_fract.tmp ${filename}_roughness_length.tmp \
+  ${filename}_roughness_length_oro.tmp ${filename}_z0.tmp ${filename}_albedo.tmp ${filename}_albedo_veg_vis.tmp \
+  ${filename}_albedo_veg_nir.tmp ${filename}_albedo_soil_vis.tmp ${filename}_albedo_soil_nir.tmp \
+  ${filename}_forest_fract.tmp bc_land_phys_${grid}_${year}.nc
+rm ${filename}_lai_clim.tmp ${filename}_veg_fract.tmp ${filename}_roughness_length.tmp ${filename}_roughness_length_oro.tmp \
+  ${filename}_z0.tmp ${filename}_albedo.tmp ${filename}_albedo_veg_vis.tmp ${filename}_albedo_veg_nir.tmp \
+  ${filename}_albedo_soil_vis.tmp ${filename}_albedo_soil_nir.tmp ${filename}_forest_fract.tmp
 # soil properties
-cdo merge ${filename}_fao.tmp ${filename}_maxmoist.tmp ${filename}_bclapp.tmp ${filename}_soil_field_cap.tmp ${filename}_heat_capacity.tmp ${filename}_heat_conductivity.tmp ${filename}_hyd_cond_sat.tmp ${filename}_moisture_pot.tmp ${filename}_pore_size_index.tmp ${filename}_soil_porosity.tmp ${filename}_soil_depth.tmp ${filename}_wilting_point.tmp ${filename}_root_depth.tmp bc_land_soil_${grid}_${year}.nc
-rm ${filename}_fao.tmp ${filename}_maxmoist.tmp ${filename}_bclapp.tmp ${filename}_soil_field_cap.tmp ${filename}_heat_capacity.tmp ${filename}_heat_conductivity.tmp ${filename}_hyd_cond_sat.tmp ${filename}_moisture_pot.tmp ${filename}_pore_size_index.tmp ${filename}_soil_porosity.tmp ${filename}_soil_depth.tmp ${filename}_wilting_point.tmp ${filename}_root_depth.tmp
+cdo merge ${filename}_fao.tmp ${filename}_maxmoist.tmp ${filename}_bclapp.tmp ${filename}_soil_field_cap.tmp \
+  ${filename}_heat_capacity.tmp ${filename}_heat_conductivity.tmp ${filename}_hyd_cond_sat.tmp ${filename}_moisture_pot.tmp \
+  ${filename}_pore_size_index.tmp ${filename}_soil_porosity.tmp ${filename}_soil_depth.tmp ${filename}_wilting_point.tmp \
+  ${filename}_root_depth.tmp bc_land_soil_${grid}_${year}.nc
+rm ${filename}_fao.tmp ${filename}_maxmoist.tmp ${filename}_bclapp.tmp ${filename}_soil_field_cap.tmp \
+  ${filename}_heat_capacity.tmp ${filename}_heat_conductivity.tmp ${filename}_hyd_cond_sat.tmp ${filename}_moisture_pot.tmp \
+  ${filename}_pore_size_index.tmp ${filename}_soil_porosity.tmp ${filename}_soil_depth.tmp ${filename}_wilting_point.tmp \
+  ${filename}_root_depth.tmp
 # topography
-cdo merge ${filename}_elevation.tmp ${filename}_orostd.tmp ${filename}_orosig.tmp ${filename}_orogam.tmp ${filename}_orothe.tmp ${filename}_oropic.tmp ${filename}_oroval.tmp ${filename}_oromea.tmp bc_land_sso_${grid}_${year}.nc
-rm ${filename}_elevation.tmp ${filename}_orostd.tmp ${filename}_orosig.tmp ${filename}_orogam.tmp ${filename}_orothe.tmp ${filename}_oropic.tmp ${filename}_oroval.tmp ${filename}_oromea.tmp
+cdo merge ${filename}_elevation.tmp ${filename}_orostd.tmp ${filename}_orosig.tmp ${filename}_orogam.tmp \
+  ${filename}_orothe.tmp ${filename}_oropic.tmp ${filename}_oroval.tmp ${filename}_oromea.tmp bc_land_sso_${grid}_${year}.nc
+rm ${filename}_elevation.tmp ${filename}_orostd.tmp ${filename}_orosig.tmp ${filename}_orogam.tmp ${filename}_orothe.tmp \
+  ${filename}_oropic.tmp ${filename}_oroval.tmp ${filename}_oromea.tmp
 # initial soil conditions
-cdo merge ${filename}_surf_temp.tmp ${filename}_init_moist.tmp ${filename}_layer_moist.tmp ${filename}_snow.tmp ic_land_soil_${grid}_${year}.nc
+cdo setmisstoc,280 ${filename}_surf_temp.tmp z.nc ; mv z.nc ${filename}_surf_temp.tmp
+cdo merge ${filename}_surf_temp.tmp ${filename}_init_moist.tmp ${filename}_layer_moist.tmp ${filename}_snow.tmp \
+  ic_land_soil_${grid}_${year}.nc
 rm ${filename}_surf_temp.tmp ${filename}_init_moist.tmp ${filename}_layer_moist.tmp ${filename}_snow.tmp
 
 # clean up

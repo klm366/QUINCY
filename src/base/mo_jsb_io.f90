@@ -1,15 +1,17 @@
 MODULE mo_jsb_io
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: wp, dp
   USE mo_jsb_io_iface, ONLY:                                           &
     Get_netcdf_precision,                                              &
     DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
-    ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND,                             &
+    ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC,              &
     FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,           &
     GRID_CELL, GRID_REFERENCE, GRID_UNSTRUCTURED_CELL,                 &
-    TSTEP_CONSTANT,                                                    &
-    zaxisCreate, zaxisInqName, zaxisInqSize, zaxisDestroy, read_io_namelist
+    TSTEP_CONSTANT, TSTEP_INSTANT,                                     &
+    zaxisCreate, zaxisInqName, zaxisInqSize, zaxisDestroy,             &
+    cdiDefMissval, read_io_namelist
+
   USE mo_exception, ONLY: finish
 
   IMPLICIT NONE
@@ -53,7 +55,20 @@ MODULE mo_jsb_io
 
   INTEGER, SAVE :: cdi_zaxis_ids(max_cdi_zaxis_ids) = 0  ! Collects CDI zaxis IDs of all JSBACH vgrids
 
-  REAL(wp), SAVE :: missval = -9.E33
+  ! Remark on usage of "cdiDefMissval" (taken from icon:mo_initicon.f90)
+
+  ! Inside the GRIB_API (v.1.9.18) the missing value is converted into
+  ! LONG INT for a test, but the default CDI missing value is outside
+  ! of the valid range for LONG INT (U. Schulzweida, bug report
+  ! SUP-277). This causes a crash with INVALID OPERATION.
+
+  ! As a workaround we can choose a different missing value in the
+  ! calling subroutine (here). For the SX-9 this must lie within 53
+  ! bits, because "the SX compiler generates codes using HW
+  ! instructions for floating-point data instead of instructions for
+  ! integers. Therefore, the operation result is not guaranteed if the
+  ! value cannot be represented as integer within 53 bits."
+  REAL(dp), PARAMETER :: missval = -9.E+15_dp
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io'
 

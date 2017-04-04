@@ -13,8 +13,9 @@ MODULE mo_jsb_time
   USE mo_kind,           ONLY: wp
   USE mo_exception,      ONLY: message, message_text, finish
   USE mo_jsb_time_iface, ONLY: t_datetime, get_date_components, get_time_current, get_time_start, &
+                               is_time_experiment_start, is_time_restart, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
-                               get_time_interpolation_weights, get_asselin_coef
+                               is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef
 
   IMPLICIT NONE
   PRIVATE
@@ -23,13 +24,14 @@ MODULE mo_jsb_time
   PUBLIC :: init_time
   PUBLIC :: update_time_at_beginloop, update_time_at_endloop
   PUBLIC :: t_datetime
-  PUBLIC :: get_date_components, get_time_current, get_time_start, &
+  PUBLIC :: get_date_components, get_time_current, get_time_start, is_time_experiment_start, &
             get_year_length, get_month_length, get_day_length, get_year_day
-  PUBLIC :: is_newday, is_newyear, get_year_at_model_start, &
+  PUBLIC :: is_newday, is_newyear, get_year_at_model_start, is_time_ltrig_rad_m1, &
             get_year, get_month, &
             get_day, get_secs_of_day
   PUBLIC :: get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
+  PUBLIC :: timeStep_in_days, time_steps_per_day
 
   INTEGER                :: number_timesteps
   REAL(wp)               :: timestep_length
@@ -173,8 +175,10 @@ CONTAINS
     current  = get_time_current()
     previous = get_time_previous()
 
-    CALL get_date_components(current, day=current_day)
-    CALL get_date_components(previous, day=previous_day)
+    ! CALL get_date_components(current, day=current_day)
+    ! CALL get_date_components(previous, day=previous_day)
+    current_day = INT(get_year_day(current))
+    previous_day = INT(get_year_day(previous))
 
     is_newday = current_day /= previous_day
 
@@ -186,15 +190,17 @@ CONTAINS
 
     TYPE(t_datetime) :: current, previous
 
-    INTEGER :: current_year, previous_year
+    INTEGER :: current_day, previous_day
 
     current  = get_time_current()
     previous = get_time_previous()
 
-    CALL get_date_components(current, year=current_year)
-    CALL get_date_components(previous, year=previous_year)
+    ! CALL get_date_components(current, year=current_year)
+    ! CALL get_date_components(previous, year=previous_year)
+    current_day = INT(get_year_day(current))
+    previous_day = INT(get_year_day(previous))
 
-    is_newyear = current_year /= previous_year
+    is_newyear = current_day == 1 .AND. previous_day > 300
 
   END FUNCTION is_newyear
 
@@ -285,5 +291,36 @@ CONTAINS
 
   END FUNCTION get_year_at_model_start
 
+  
+  REAL(wp) FUNCTION timeStep_in_days() ! EXPRESS the time step in days (as fraction of day)
+    USE mo_jsb_time_iface,   ONLY: get_time_dt
+
+    REAL(wp)                 :: dtime
+
+    dtime = get_time_dt()
+    timeStep_in_days = dtime / 86400._wp
+
+  END FUNCTION timeStep_in_days
+
+
+  INTEGER FUNCTION time_steps_per_day() ! NUMBER of time steps per day
+    USE mo_jsb_time_iface,   ONLY: get_time_dt
+
+    REAL(wp)                 :: dtime
+
+    dtime = get_time_dt()
+
+    ! Set time_steps_per_day
+    IF( mod(86400,INT(dtime)) /= 0) THEN ! For computing the mean day temperature it is assumed that each day
+                                         ! is computed with a fixed number of time steps. Therefore the program is
+                                         ! stopped wheen day length is not an integer multiple of the time step.
+       CALL finish("function time_steps_per_day","ERROR: Day length is not an integer multiple of the time step!")
+    ELSE
+       time_steps_per_day = 86400/int(dtime)
+    END IF
+
+  END FUNCTION time_steps_per_day
+
+   
 #endif
 END MODULE mo_jsb_time

@@ -10,7 +10,7 @@
 MODULE mo_jsb_varlist_iface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: wp, dp
   USE mo_exception,          ONLY: finish
 #ifdef __ICON__
   USE mo_var_list,           ONLY: new_var_list_icon => new_var_list, &
@@ -18,7 +18,7 @@ MODULE mo_jsb_varlist_iface
                                    get_var_list,                      &
                                    add_var_icon => add_var,           &
                                    find_list_element
-  USE mo_var_metadata_types, ONLY: t_var_metadata
+  USE mo_var_metadata_types, ONLY: t_var_metadata, VARNAME_LEN
   USE mo_linked_list,        ONLY: t_var_list, t_list_element
 #else
   USE mo_memory_base,        ONLY: new_stream,                       &
@@ -37,9 +37,14 @@ MODULE mo_jsb_varlist_iface
   IMPLICIT NONE
   PRIVATE
 
+  PUBLIC :: VARNAME_LEN
   PUBLIC :: t_var_list, t_var_metadata, t_list_element, get_var_list
   PUBLIC :: new_var_list
   PUBLIC :: add_var_list_element_r2d, add_var_list_element_r3d
+
+#ifndef __ICON__
+  INTEGER, PARAMETER :: VARNAME_LEN = 64
+#endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_varlist_iface'
 
@@ -115,14 +120,16 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     REAL(wp),             POINTER,    OPTIONAL :: p5(:,:,:,:,:)       ! provided pointer
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
 
+#ifndef __ICON__
     REAL(wp), POINTER :: p4(:,:,:,:)
+#endif
 
     TYPE (t_list_element), POINTER :: element
 
@@ -131,7 +138,9 @@ CONTAINS
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &
         CALL finish(TRIM(routine), 'p5: only four dimensions allowed currently because of ECHAM compatibility')
+#ifndef __ICON__
       p4 => p5(:,:,:,:,1)
+#endif
     END IF
 
 #ifdef __ICON__
@@ -142,16 +151,30 @@ CONTAINS
 
       element => find_list_element(this_list, TRIM(name))
       element%field%info%cdiZaxisID = vgrid
+      element%field%info%ndims = 2
+      element%field%info%used_dimensions(1:2) = ldims(1:2)
 #else
+    IF (PRESENT(p5)) THEN
       CALL add_stream_element(this_list, TRIM(name), ptr, &
         ldims=ldims, gdims=gdims, leveltype=levelindx, &
         longname=cf%long_name, units=cf%units, &
         code=code, table=table, &
-        lmiss=lmiss, missval=missval_r, verbose=.TRUE. &
+        lmiss=lmiss, missval=missval_r, p4=p4, verbose=verbose &
         )
+    ELSE
+      CALL add_stream_element(this_list, TRIM(name), ptr, &
+        ldims=ldims, gdims=gdims, leveltype=levelindx, &
+        longname=cf%long_name, units=cf%units, &
+        code=code, table=table, &
+        lmiss=lmiss, missval=missval_r, verbose=verbose &
+        )
+    END IF
+    element => find_list_element(this_list, TRIM(name))
+    element%field%info%zaxisID = vgrid
 
-      element => find_list_element(this_list, TRIM(name))
-      element%field%info%zaxisID = vgrid
+    IF (PRESENT(initval_r)) THEN
+      ptr(:,:) = initval_r
+    END IF
 #endif
 
   END SUBROUTINE add_var_list_element_r2d
@@ -183,14 +206,16 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
     TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     REAL(wp),             POINTER,    OPTIONAL :: p5(:,:,:,:,:)       ! provided pointer
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
     TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
 
+#ifndef __ICON__
     REAL(wp), POINTER :: p4(:,:,:,:)
+#endif
 
     TYPE (t_list_element), POINTER :: element
 
@@ -199,7 +224,9 @@ CONTAINS
     IF (PRESENT(p5)) THEN
       IF (SIZE(p5, DIM=5) > 1) &
         CALL finish(TRIM(routine), 'p5: only four dimensions allowed currently because of ECHAM compatibility')
+#ifndef __ICON__
       p4 => p5(:,:,:,:,1)
+#endif
     END IF
 
 #ifdef __ICON__
@@ -210,6 +237,8 @@ CONTAINS
 
       element => find_list_element(this_list, TRIM(name))
       element%field%info%cdiZaxisID = vgrid
+      element%field%info%ndims = 3
+      element%field%info%used_dimensions(1:3) = ldims(1:3)
 #else
     IF (PRESENT(p5)) THEN
       CALL add_stream_element(this_list, TRIM(name), ptr, &
@@ -231,6 +260,10 @@ CONTAINS
 
     element => find_list_element(this_list, TRIM(name))
     element%field%info%zaxisID = vgrid
+
+    IF (PRESENT(initval_r)) THEN
+      ptr(:,:,:) = initval_r
+    END IF
 #endif
 
   END SUBROUTINE add_var_list_element_r3d

@@ -49,7 +49,7 @@ CONTAINS
   SUBROUTINE jsbach_init_version(standalone)
 
 !!$    USE mo_netcdf, ONLY: global_att, put_att
-    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio, p_io, p_bcast
 
     LOGICAL, INTENT(in), OPTIONAL :: standalone !< true: offline JSBACH, false: ECHAM/JSBACH
 

@@ -24,7 +24,9 @@ MODULE mo_hd_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_hd_config
      LOGICAL                     :: debug_hd              !< additional printing for debugging
      LOGICAL                     :: diag_water_budget     !< prints to diagnose global water budget
+     LOGICAL                     :: enforce_water_budget  !< finish if water conservation problem
      CHARACTER(len=32)           :: routing_scheme        !< river_routing_scheme: full / weighted_to_coast
+     CHARACTER(len=filename_max) :: fract_filename        !< file name with fractions (land, ocean, etc)
    CONTAINS
      PROCEDURE :: Init => Init_hd_config
   END type t_hd_config
@@ -45,15 +47,19 @@ CONTAINS
     LOGICAL                       :: active                !< hd module is active
     CHARACTER(len=filename_max)   :: ic_filename           !< file with initial conditions
     CHARACTER(len=filename_max)   :: bc_filename           !< file with boundary conditions
+    CHARACTER(len=filename_max)   :: fract_filename        !< file with fractions
     LOGICAL                       :: debug_hd              !< additional printing for debugging
     LOGICAL                       :: diag_water_budget     !< prints to diagnose global water budget
+    LOGICAL                       :: enforce_water_budget  !< finish if water conservation problem
     CHARACTER(len=32)             :: routing_scheme        !< river_routing_scheme: full / weighted_to_coast
 
     NAMELIST /jsb_hd_nml/          &
       active,                      &
       ic_filename, bc_filename,    &
+      fract_filename,              &
       debug_hd,                    &
       diag_water_budget,           &
+      enforce_water_budget,        &
       routing_scheme
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -65,12 +71,14 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting hd configuration')
 
     ! Set defaults
-    active          = .FALSE.
-    ic_filename     = 'hdstart.nc'
-    bc_filename     = 'bc_land_hd.nc'
-    debug_hd        = .FALSE.
-    diag_water_budget = .TRUE.
-    routing_scheme  = 'full'
+    active               = .FALSE.
+    ic_filename          = 'hdstart.nc'
+    bc_filename          = 'bc_land_hd.nc'
+    fract_filename       = 'bc_land_frac.nc'
+    debug_hd             = .FALSE.
+    diag_water_budget    = .TRUE.
+    enforce_water_budget = .TRUE.
+    routing_scheme       = 'full'
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -82,8 +90,10 @@ CONTAINS
     config%active                    = active
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
+    config%fract_filename            = fract_filename
     config%debug_hd                  = debug_hd
     config%diag_water_budget         = diag_water_budget
+    config%enforce_water_budget      = enforce_water_budget
     config%routing_scheme            = routing_scheme
 
     IF (.NOT. active) RETURN

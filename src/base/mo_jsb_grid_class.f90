@@ -18,6 +18,7 @@ MODULE mo_jsb_grid_class
                                    get_ntotal_domain        => get_ntotal,        &
                                    get_ntotal_g_domain      => get_ntotal_g,      &
                                    get_dims_g_domain        => get_dims_g,        &
+                                   get_nlat_g_domain        => get_nlat_g,        &
                                    get_nproma_domain        => get_nproma,        &
                                    get_nblks_domain         => get_nblks,         &
                                    get_lon_domain           => get_lon,           &
@@ -46,8 +47,9 @@ MODULE mo_jsb_grid_class
     INTEGER                      :: nblks = 1
     INTEGER                      :: nproma = 0
     INTEGER                      :: npromz = 0
-    INTEGER                      :: ntotal_g            !< Total number of cells in grid
-    INTEGER                      :: dims_g(2)            !< Dimensions of global grid
+    INTEGER                      :: ntotal_g              !< Total number of cells in grid
+    INTEGER                      :: dims_g(2)             !< Dimensions of global grid
+    INTEGER                      :: nlat_g = 0            !< Number of latitudes in global grid (effective for ICON)
     LOGICAL                      :: configured = .FALSE.
     TYPE(t_patch), POINTER       :: patch
     TYPE(pe_decomposed), POINTER :: decomposition
@@ -71,9 +73,10 @@ MODULE mo_jsb_grid_class
     CHARACTER(len=50) :: longname     = ''
     CHARACTER(len=10) :: units        = ''
     INTEGER :: n_levels               = 0
-    REAL(wp), POINTER :: levels(:)    => NULL()
-    REAL(wp), POINTER :: lbounds(:)   => NULL()
-    REAL(wp), POINTER :: ubounds(:)   => NULL()
+    REAL(wp), ALLOCATABLE :: levels(:)
+    REAL(wp), ALLOCATABLE :: lbounds(:)
+    REAL(wp), ALLOCATABLE :: ubounds(:)
+    REAL(wp), ALLOCATABLE :: dz(:)
     INTEGER :: cdiZaxisID             = 0
     INTEGER :: echamZaxisID           = 0
   END TYPE t_jsb_vgrid
@@ -136,6 +139,7 @@ CONTAINS
     new%ntotal   = get_ntotal_domain       (patch, decomp)
     new%ntotal_g = get_ntotal_g_domain     (patch, decomp)
     new%dims_g(1:2) = get_dims_g_domain    (patch, decomp)
+    new%nlat_g   = get_nlat_g_domain       (patch, decomp)
     new%nblks    = get_nblks_domain        (patch, decomp)
     new%nproma   = get_nproma_domain       (patch, decomp)
     new%npromz   = new%ntotal - new%nproma * (new%nblks - 1)
@@ -168,7 +172,7 @@ CONTAINS
   FUNCTION new_grid_from_file(filename, name) RESULT(grid)
 
 !!$    USE mo_jsb_io_netcdf,      ONLY: ncfile_has_dim
-    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, mpi_comm
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio, p_io, p_bcast, mpi_comm
 
     CHARACTER(LEN=*), INTENT(in)    :: filename
     CHARACTER(LEN=*), INTENT(in)    :: name
@@ -382,7 +386,7 @@ CONTAINS
 
   END FUNCTION get_col_end
 
-  FUNCTION new_vgrid(name, cdi_axis_type, length, longname, units, levels, lbounds, ubounds) RESULT(new)
+  FUNCTION new_vgrid(name, cdi_axis_type, length, longname, units, levels, lbounds, ubounds, dz) RESULT(new)
 
     USE mo_jsb_io,       ONLY: cdi_zaxis_ids, zaxisInqName, zaxisInqSize
     USE mo_jsb_io_iface, ONLY: Create_zaxis
@@ -392,7 +396,7 @@ CONTAINS
     INTEGER,                    INTENT(in) :: length
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: longname
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: units
-    REAL(wp),         OPTIONAL, INTENT(in) :: levels(:), lbounds(:), ubounds(:)
+    REAL(wp),         OPTIONAL, INTENT(in) :: levels(:), lbounds(:), ubounds(:), dz(:)
 
     TYPE(t_jsb_vgrid), POINTER :: new
 
@@ -408,7 +412,7 @@ CONTAINS
 
     new%name = TRIM(name)
     new%n_levels = length
-    ALLOCATE(new%levels(length), new%lbounds(length), new%ubounds(length))
+    ALLOCATE(new%levels(length), new%lbounds(length), new%ubounds(length), new%dz(length))
     IF (PRESENT(levels)) THEN
       new%levels(:) = levels(1:length)
     ELSE
@@ -430,6 +434,11 @@ CONTAINS
       DO i=1,length
         new%ubounds(i) = new%levels(i) + (new%levels(i) - new%lbounds(i))
       END DO
+    END IF
+    IF (PRESENT(dz)) THEN
+      new%dz(:) = dz(1:length)
+    ELSE
+      new%dz(:) = new%ubounds(:) - new%lbounds(:)
     END IF
     IF (PRESENT(longname)) new%longname = TRIM(longname)
     IF (PRESENT(units)) new%units  = TRIM(units)
@@ -494,9 +503,10 @@ CONTAINS
 
     CALL message(TRIM(routine), 'starting destruction of JSBACH vgrid instance.')
 
-    IF (ASSOCIATED(self%levels)) DEALLOCATE(self%levels)
-    IF (ASSOCIATED(self%lbounds)) DEALLOCATE(self%lbounds)
-    IF (ASSOCIATED(self%ubounds)) DEALLOCATE(self%ubounds)
+    IF (ALLOCATED(self%levels))  DEALLOCATE(self%levels)
+    IF (ALLOCATED(self%lbounds)) DEALLOCATE(self%lbounds)
+    IF (ALLOCATED(self%ubounds)) DEALLOCATE(self%ubounds)
+    IF (ALLOCATED(self%dz))      DEALLOCATE(self%dz)
 
     cdi_zaxis_ids(self%id) = 0
     ! If this was the last instance of a JSBACH vgrid that uses a particular cdiZaxisID, also destroy CDI zaxis

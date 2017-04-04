@@ -18,6 +18,8 @@ MODULE mo_jsb_domain_iface
   USE mo_impl_constants_grf, ONLY: grf_bdywidth_c
   USE mo_impl_constants,     ONLY: min_rlcell_int
   USE mo_loopindices,        ONLY: get_indices_c
+  USE mo_physical_constants, ONLY: earth_radius
+  USE mo_math_constants,     ONLY: pi
 #else
   USE mo_decomposition,      ONLY: pe_decomposed, global_decomposition
 #endif
@@ -26,7 +28,7 @@ MODULE mo_jsb_domain_iface
   PRIVATE
 
   PUBLIC :: t_patch, p_patch, pe_decomposed
-  PUBLIC :: get_grid_filename, get_ntotal, get_ntotal_g, get_dims_g, get_nproma, get_nblks, get_lon, get_lat, get_area
+  PUBLIC :: get_grid_filename, get_ntotal, get_ntotal_g, get_dims_g, get_nlat_g, get_nproma, get_nblks, get_lon, get_lat, get_area
   PUBLIC :: get_blk_start, get_blk_end, get_col_start, get_col_end
   PUBLIC :: get_nlon_nlat_from_file, get_lons_and_lats_from_file, jsbalone_init_decomp
 
@@ -163,6 +165,35 @@ CONTAINS
     END IF
 
   END FUNCTION get_dims_g
+
+  FUNCTION get_nlat_g(patch, decomp)
+
+    TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch
+    TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp
+    INTEGER                                   :: get_nlat_g
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nlat_g'
+
+    IF (PRESENT(patch) .AND. PRESENT(decomp)) THEN
+      CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
+    ELSE IF(PRESENT(patch)) THEN
+#ifdef __ICON__
+      ! Derive an effective number of latitudes from characteristic mesh size
+      get_nlat_g = pi * earth_radius / patch%geometry_info%mean_characteristic_length
+#else
+      CALL finish(TRIM(routine), 'patch not allowed')
+#endif
+    ELSE IF(PRESENT(decomp)) THEN
+#ifdef __ICON__
+      CALL finish(TRIM(routine), 'decomposition not allowed')
+#else
+      get_nlat_g = decomp%nlat
+#endif
+    ELSE
+      CALL finish(TRIM(routine), 'Need to specify either patch or decomposition')
+    END IF
+
+  END FUNCTION get_nlat_g
 
   INTEGER FUNCTION get_nblks(patch, decomp)
 
@@ -369,10 +400,8 @@ CONTAINS
     USE mo_transpose,     ONLY: reorder
     USE mo_decomposition, ONLY: ldc => local_decomposition
 #endif
-!#else
-    USE mo_geoloc,     ONLY: philon_2d
-!#endif
 
+    USE mo_geoloc,     ONLY: philon_2d
 #endif
 
     TYPE(t_patch),       OPTIONAL, INTENT(in)  :: patch
@@ -441,7 +470,6 @@ CONTAINS
 #else
       CALL finish(TRIM(routine), 'patch not allowed')
 #endif
-
     ELSE IF(PRESENT(decomp)) THEN
 #ifdef __ICON__
       CALL finish(TRIM(routine), 'decomposition not allowed')
@@ -519,7 +547,7 @@ CONTAINS
   !! @par History
   !! JN: Initial parts copied from jsbach3 mo_jsbach_grid.f90:init_grid
   !!
-  SUBROUTINE get_nlon_nlat_from_file(grid_filename, read_nlon, read_nlat) !filename
+  SUBROUTINE get_nlon_nlat_from_file(grid_filename, return_nlon, return_nlat) !filename
   
     USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel
 
@@ -530,7 +558,7 @@ CONTAINS
 #endif
 
     CHARACTER(len=*), INTENT(in) :: grid_filename
-    INTEGER, INTENT(out) :: read_nlon, read_nlat
+    INTEGER, INTENT(out) :: return_nlon, return_nlat
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nlon_nlat_from_file'
 
@@ -539,6 +567,7 @@ CONTAINS
     INTEGER :: IO_dim_id
 #endif
 
+    INTEGER :: read_nlon, read_nlat
 
 #ifdef __ICON__  
     CALL finish(TRIM(routine), 'not implemented for use with ICON')
@@ -563,6 +592,9 @@ CONTAINS
 
     !Assertion: number of lats needs to be even
     IF (.NOT. MOD(read_nlat,2) .EQ. 0) CALL finish(TRIM(routine), 'number of lats needs to be even.')
+
+    return_nlon = read_nlon
+    return_nlat = read_nlat
 
     !Required for standalone model for mo_gaussgrid::inigau()
     nlon = read_nlon
