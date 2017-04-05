@@ -22,10 +22,10 @@ MODULE mo_hd_interface
   USE mo_jsb_domain_iface,   ONLY: get_blk_start, get_blk_end, get_col_start, get_col_end
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_control,        ONLY: debug_on
-
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_jsb_time,           ONLY: is_time_experiment_start
 
   dsl4jsb_Use_processes HD_, SEB_, HYDRO_
   dsl4jsb_Use_config(HD_)
@@ -508,7 +508,11 @@ CONTAINS
       & drainage        , &
       & outflow_resid   , &
       & discharge       , &
-      & discharge_ocean
+      & discharge_ocean , &
+      & water_budget    , &
+      & water_budget_old, &
+      & water_error     , &
+      & water_flux
 
     dsl4jsb_Real3D_onDomain :: &
       & overlflow_res ,        &
@@ -522,12 +526,12 @@ CONTAINS
       & tile_fract (:,:), &
       & in_domain  (:,:) ! 1: cell in domain, 0: halo cell
 
-    REAL(wp) ::              &
-      & steplen,             &
-      & water_budget,        &  ! water budget of current step
-      & water_budget_old,    &  ! water budget of previous step
-      & water_budget_change, &  ! water budget change within the time step
-      & water_fluxes            ! water fluxes changeing the budget
+    REAL(wp) ::                   &
+      & steplen,                  &
+      & global_water_budget,      &  ! water budget of current step
+      & global_water_budget_old,  &  ! water budget of previous step
+      & global_water_error,       &  ! water budget change within the time step
+      & global_water_flux            ! water fluxes changing the budget
 
     LOGICAL :: debug_hd, diag_water_budget
 
@@ -576,11 +580,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! IN
 
+    dsl4jsb_Get_var2D_onDomain(HD_, water_budget)       ! out
+    dsl4jsb_Get_var2D_onDomain(HD_, water_budget_old)   ! out
+    dsl4jsb_Get_var2D_onDomain(HD_, water_flux)         ! out
+    dsl4jsb_Get_var2D_onDomain(HD_, water_error)        ! out
+
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma, nblks))
     WHERE (is_in_domain(:,:))
       in_domain = 1._wp
-    ELSEWHERE
+    ELSE WHERE
       in_domain = 0._wp
     END WHERE
 
@@ -592,16 +601,17 @@ CONTAINS
       RETURN
     END IF
 
-    water_budget   =  dsl4jsb_var_ptr(HD_,water_budget)  (1,1)
-    water_budget_old = water_budget
+    water_budget_old(:,:) = water_budget(:,:)
+    global_water_budget_old = global_sum_array(water_budget_old(:,:))
 
     ! re-calculate global land water budget
     !
-    water_budget = &
-           global_sum_array(overlflow_res*SPREAD(in_domain,DIM=2,NCOPIES=nres_o_max)) & !< water in overland flow reservoirs [m3]
-         + global_sum_array(baseflow_res *SPREAD(in_domain,DIM=2,NCOPIES=nres_b_max)) & !< water in baseflow reservoir       [m3]
-         + global_sum_array(riverflow_res*SPREAD(in_domain,DIM=2,NCOPIES=nres_r_max)) & !< water in riverflow reservoirs     [m3]
-         + global_sum_array(discharge*in_domain) * steplen                              !< river discharge [m3/s -> m3]
+    water_budget(:,:) = &  ! [m3]
+      &   SUM(overlflow_res(:,:,:), DIM=2) * in_domain(:,:) & !< water in overland flow reservoirs
+      & + SUM(baseflow_res (:,:,:), DIM=2) * in_domain(:,:) & !< water in baseflow reservoir
+      & + SUM(riverflow_res(:,:,:), DIM=2) * in_domain(:,:) & !< water in riverflow reservoirs
+      & + discharge(:,:) * in_domain(:,:) * steplen                              !< river discharge [m3/s -> m3]
+    global_water_budget = global_sum_array(water_budget(:,:))
 
     IF (debug_hd) THEN
       CALL message(routine, 'global water budget:')
@@ -617,19 +627,20 @@ CONTAINS
       WRITE(message_text,*) '-   discharge             : ', &
            global_sum_array(discharge*in_domain)*steplen, ' m3'
       CALL message(routine, message_text)
-      WRITE(message_text,*) '-->          total budget : ', water_budget, ' m3'
+      WRITE(message_text,*) '-->          total budget : ', global_water_budget, ' m3'
       CALL message(routine, message_text)
     END IF
 
     ALLOCATE(tile_fract(nproma, nblks))
     CALL tile%Get_fraction(fract=tile_fract(:,:))
-    water_fluxes = &
-           global_sum_array(runoff          * area/rhoh2o*tile_fract*in_domain)  & !< runoff (incl P-E glac) [kg m-2 s-1] -> [m3/s]
-         + global_sum_array(drainage        * area/rhoh2o*tile_fract*in_domain)  & !< drainage               [kg m-2 s-1] -> [m3/s]
-         - global_sum_array(discharge_ocean * in_domain)                     !< discharge to the ocean
+    water_flux(:,:) = &
+      &   runoff         (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< runoff   [kg m-2 s-1] -> [m3/s]
+      & + drainage       (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< drainage [kg m-2 s-1] -> [m3/s]
+      & - discharge_ocean(:,:) * in_domain(:,:)                                     !< discharge to the ocean
+    global_water_flux = global_sum_array(water_flux(:,:))
 
     IF (debug_hd) THEN
-      CALL message(routine, 'global water fluxes in time interval:')
+      CALL message(routine, 'global water fluxes during time interval:')
       WRITE(message_text,*) '-   runoff (incl. P-E on glacier/lakes) : ', &
            global_sum_array(runoff/rhoh2o*area*tile_fract*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
@@ -639,23 +650,31 @@ CONTAINS
       WRITE(message_text,*) '-   discharge_ocean (neg.): ', &
            global_sum_array(discharge_ocean*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
-      WRITE(message_text,*) '-->      sum of the fluxes: ', water_fluxes*steplen, ' m3'
+      WRITE(message_text,*) '-->      sum of the fluxes: ', global_water_flux*steplen, ' m3'
       CALL message(routine, message_text)
     END IF
 
+    IF (diag_water_budget) THEN
+      WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(discharge_ocean*in_domain), ' m3/s'
+      CALL message (TRIM(routine),message_text)
+    END IF
+
+    IF (is_time_experiment_start()) RETURN
+
     ! water conservation test
     !
-    water_budget_change =  water_budget_old - water_budget + water_fluxes*steplen
+    water_error(:,:) = water_budget_old(:,:) + water_flux(:,:) * steplen - water_budget(:,:)
+    global_water_error = global_sum_array(water_error(:,:))
 
     IF (debug_hd) THEN
-      WRITE (message_text,*) 'Water budget change in time step: ', water_budget_change,' m3'
+      WRITE (message_text,*) 'Water budget imbalance during time step: ', global_water_error,' m3'
       CALL message (routine,message_text)
     END IF
 
-    IF (water_budget_old /= 0._wp .AND. water_budget /= 0._wp) THEN        !vg: zero at the very first time step
-      IF (ABS(water_budget_change/water_budget) > 10._wp*EPSILON(1._wp)) THEN
-        WRITE (message_text,*) 'Water conservation problem: budget change: ', &
-             water_budget_change,' m3'
+    IF (global_water_budget_old /= 0._wp .AND. global_water_budget /= 0._wp) THEN        !vg: zero at the very first time step
+      IF (ABS(global_water_error/global_water_budget) > 10._wp*EPSILON(1._wp)) THEN
+        WRITE (message_text,*) 'Water conservation problem: budget imbalance: ', &
+             global_water_error,' m3'
         IF (dsl4jsb_Config(HD_)%enforce_water_budget) THEN
           CALL finish (TRIM(routine), message_text)
         ELSE
@@ -663,12 +682,6 @@ CONTAINS
         END IF
       END IF
     END IF
-    IF (diag_water_budget) THEN
-      WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(discharge_ocean*in_domain), ' m3/s'
-      CALL message (TRIM(routine),message_text)
-    END IF
-
-    dsl4jsb_var_ptr(HD_,water_budget) = water_budget
 
     DEALLOCATE (in_domain)
 

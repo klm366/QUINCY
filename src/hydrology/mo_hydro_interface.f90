@@ -1924,7 +1924,7 @@ CONTAINS
     END IF
 
     IF (.NOT. is_time_experiment_start()) &
-      & water_budget(:) = (water_content_new(:) - water_content(:)) - water_flux(:) * dtime
+      & water_budget(:) = water_content(:) + water_flux(:) * dtime - water_content_new(:)
 
     water_content(:) = water_content_new(:)
 

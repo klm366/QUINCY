@@ -12,8 +12,17 @@ MODULE mo_hd_memory_class
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind, ONLY: wp
+
+  USE mo_jsb_model_class,  ONLY: t_jsb_model
+  USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+
+  ! Use of prcesses in this module
+  dsl4jsb_Use_processes HD_
+
+  ! Use process configurations
+  dsl4jsb_Use_config(HD_)
 
   IMPLICIT NONE
   PRIVATE
@@ -37,6 +46,9 @@ MODULE mo_hd_memory_class
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
       water_budget    , &
+      water_budget_old, &
+      water_flux      , &
+      water_error     , &
       outflow_resid        !< residual outflow that's not routed to discharge - only used for debugging (see mo_hd_interface.f90)
 
     TYPE(t_jsb_var_real3d) :: &
@@ -73,6 +85,9 @@ CONTAINS
     INTEGER,            INTENT(in)    :: lct_ids(:)
     INTEGER,            INTENT(in)    :: model_id
 
+    dsl4jsb_Def_config(HD_)
+
+    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                      ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, hd_o, hd_b, hd_r  ! Vertical grids
     INTEGER :: table
@@ -81,6 +96,8 @@ CONTAINS
 
     table = tables(1)
 
+    model => Get_model(model_id)
+
     hgrid   => Get_grid(mem%grid_id)
     surface => get_vgrid('surface')
 
@@ -88,6 +105,8 @@ CONTAINS
     hd_o => Get_vgrid('hd_nres_overlflow')
     hd_b => get_vgrid('hd_nres_baseflow')
     hd_r => get_vgrid('hd_nres_riverflow')
+
+    dsl4jsb_Get_config(HD_)
 
     IF (ASSOCIATED(mem%hd_mask%ptr)) RETURN
 
@@ -204,12 +223,36 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    ! It would be sufficient to store just one grid point
-    CALL jsb_add_var( mem, 'water_budget_hd', mem%water_budget,          &
+    CALL jsb_add_var( mem, 'water_budget', mem%water_budget,                             &
       & hgrid, surface,                                                                  &
-      & t_cf('water_budget_hd', 'm3', 'global water budget'),                            &
+      & t_cf('hd_water_budget', 'm3', 'HD water budget'),                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
-      & prefix, suffix,                                                      &
+      & prefix, suffix,                                                                  &
+      & lrestart=.TRUE.,                                                                 &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'water_budget_old', mem%water_budget_old,                     &
+      & hgrid, surface,                                                                  &
+      & t_cf('hd_water_budget_old', 'm3', 'HD water budget (prev. time step)'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
+      & lrestart=.FALSE.,                                                                &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'water_flux', mem%water_flux,                                 &
+      & hgrid, surface,                                                                  &
+      & t_cf('hd_water_flux', 'm3/s', 'HD water flux'),                                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
+      & lrestart=.FALSE.,                                                                &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'water_error', mem%water_error,                               &
+      & hgrid, surface,                                                                  &
+      & t_cf('hd_water_error', 'm3', 'HD water imbalance during time step'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
+      & lrestart=.FALSE.,                                                                &
       & initval_r=0.0_wp )
 
   END SUBROUTINE Init_hd_memory
