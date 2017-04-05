@@ -30,7 +30,6 @@ MODULE mo_physical_constants_iface
 #ifdef __ICON__
     clw,             & !< Specific heat capacity of liquid water [J/(K kg)]
     ci,              & !< Specific heat capacity of ice          [J/(K kg)]
-    cs,              & !< Specific heat capacity of snow         [J/(K kg)]
     rhoi,            & !< Density of (sea) ice                   [kg/m3]
     rhos,            & !< Density of snow                        [kg/m3]
     ki,              & !< Heat conductivity of ice               [J/(m s K)]
@@ -60,6 +59,11 @@ MODULE mo_physical_constants_iface
 
   IMPLICIT NONE
   PUBLIC
+
+#ifdef __ICON__
+  REAL(wp), PARAMETER :: &
+    cs=2090._wp        !< Specific heat capacity of snow         [J/(K kg)]
+#endif
 
 !#ifdef STANDALONE
 !  REAL(wp), PARAMETER :: cvdifts = 1._wp
