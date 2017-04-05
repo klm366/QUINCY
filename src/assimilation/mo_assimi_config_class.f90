@@ -15,6 +15,7 @@ MODULE mo_assimi_config_class
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
@@ -63,7 +64,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_config'
 
-    CALL message(TRIM(routine), 'Starting assimi configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting assimi configuration')
 
     ! Set defaults
     active              = .TRUE.

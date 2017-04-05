@@ -17,7 +17,7 @@ MODULE mo_jsb_model_class
 
   USE mo_hsm_class,         ONLY: t_Hsm, t_State, t_Message, t_Action
   USE mo_jsb_config_class,  ONLY: t_jsb_model_config, t_jsb_config_p
-  USE mo_jsb_process_class, ONLY: t_jsb_process, t_jsb_process_p
+  USE mo_jsb_process_class, ONLY: t_jsb_process, t_jsb_process_p, Get_process_name
   USE mo_jsb_task_class,    ONLY: t_jsb_process_task, t_jsb_process_task_p, t_Task_queue, t_jsb_task_options
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
@@ -162,7 +162,7 @@ CONTAINS
     INTEGER,                   INTENT(in)    :: iproc
     CHARACTER(LEN=*),          INTENT(in)    :: name
 
-    CALL this%queue%Append(this%processes(iproc)%p%Get_task(TRIM(name)))
+    CALL this%queue%Append(this%processes(iproc)%p%Get_task(TRIM(name)), Get_process_name(iproc))
 
   END SUBROUTINE Queue_task
 

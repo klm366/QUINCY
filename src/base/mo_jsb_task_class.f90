@@ -125,10 +125,11 @@ CONTAINS
 
   END SUBROUTINE Do_it
 
-  SUBROUTINE Append_task(this, task)
+  SUBROUTINE Append_task(this, task, process_name)
 
     CLASS(t_Task_queue), TARGET, INTENT(inout)  :: this
-    CLASS(t_jsb_process_task), TARGET :: task
+    CLASS(t_jsb_process_task), TARGET           :: task
+    CHARACTER(len=*),            INTENT(in)     :: process_name
 
     CLASS(t_Task_queue), POINTER :: current, next
 
@@ -150,7 +151,8 @@ CONTAINS
       current%next => next
     END IF
 
-    CALL message(TRIM(routine), 'Appended task "'//TRIM(task%name)//'" to model queue')
+    IF (debug_on()) CALL message(TRIM(routine), &
+      & 'Appended task "'//TRIM(process_name)//':'//TRIM(task%name)//'" to model queue')
 
   END SUBROUTINE Append_task
 

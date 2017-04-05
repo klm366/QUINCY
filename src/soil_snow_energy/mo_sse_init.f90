@@ -12,6 +12,7 @@ MODULE mo_sse_init
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
@@ -81,7 +82,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
-    CALL message(TRIM(routine), 'Setting  soil energy boundary conditions for tile '//TRIM(tile%name))
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting  soil energy boundary conditions for tile '//TRIM(tile%name))
 
     ! Get soil memory of the tile
     dsl4jsb_Get_memory(SSE_)
@@ -155,7 +156,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
-    CALL message(TRIM(routine), 'Initializing soil energy memory for tile '//TRIM(tile%name))
+    IF (debug_on()) CALL message(TRIM(routine), 'Initializing soil energy memory for tile '//TRIM(tile%name))
 
     input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%ic_filename, model%grid_id)
 

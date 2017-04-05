@@ -12,6 +12,7 @@ MODULE mo_hydro_init
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
@@ -71,7 +72,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
-    CALL message(TRIM(routine), 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
 
     model => Get_model(tile%owner_model_id)
 
@@ -255,7 +256,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
-    CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))
+    IF (debug_on()) CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))
 
     model => Get_model(tile%owner_model_id)
 

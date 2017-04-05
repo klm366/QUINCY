@@ -12,6 +12,7 @@ MODULE mo_rad_init
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: Get_model
@@ -68,7 +69,7 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(rad__mem)) RETURN
 
-    CALL message(TRIM(routine), 'Setting  radiation boundary conditions for tile '//TRIM(tile%name))
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting  radiation boundary conditions for tile '//TRIM(tile%name))
 
     ! R: nothing to do in the moment ...
 
@@ -108,7 +109,7 @@ CONTAINS
 
     IF (.NOT. dsl4jsb_Config(RAD_)%active) RETURN
 
-    CALL message(TRIM(routine), 'Initializing radiation memory for tile '//TRIM(tile%name))
+    IF (debug_on()) CALL message(TRIM(routine), 'Initializing radiation memory for tile '//TRIM(tile%name))
 
     ! Initialize physical state
     !

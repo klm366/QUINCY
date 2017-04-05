@@ -12,6 +12,7 @@ MODULE mo_seb_init
 
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
@@ -109,7 +110,7 @@ CONTAINS
 
     ! Initialize parameters
     !
-    CALL message(TRIM(routine), 'Setting initial state of seb memory for tile '// &
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting initial state of seb memory for tile '// &
       &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(SEB_)%ic_filename))
 
     ! Initial surface temperature

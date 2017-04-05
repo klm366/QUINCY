@@ -249,10 +249,10 @@ CONTAINS
     CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
     CALL model%Queue_task(SEB_,    "snowmelt_correction")
-    !IF (model%processes(ASSIMI_)%p%config%active) THEN
+    IF (model%processes(ASSIMI_)%p%config%active) THEN
       CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors") ! normally called before assimilation_waterlimited
                                                                     ! and assimilation_waterunlimited
-    !END IF
+    END IF
     IF (model%processes(ASSIMI_)%p%config%active) THEN
       CALL model%Queue_task(ASSIMI_, "canopy_cond_unstressed")  ! first call without water limitation (waterLimitationFlag =.FALSE.)
     ELSE
@@ -260,12 +260,12 @@ CONTAINS
     END IF
     CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
     CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
-    !IF (model%processes(ASSIMI_)%p%config%active) THEN
+    IF (model%processes(ASSIMI_)%p%config%active) THEN
       CALL model%Queue_task(ASSIMI_, "assimilation")  ! second call with water limitation (waterLimitationFlag =.TRUE.)
                                                      ! should be called after the soil hydrology is calculated
                                                      ! (former update_soil_1) and after the vegetation conductance is calculated
                                                      ! (former update_vegetation_conductanc)
-    !END IF
+    END IF
     CALL model%Queue_task(TURB_,   "humidity_scaling")
     CALL model%Queue_task(PHENO_,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
                                                            ! but in JSBACH3 it was here at the end...

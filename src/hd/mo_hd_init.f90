@@ -13,6 +13,7 @@ MODULE mo_hd_init
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish, message_text
+  USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_config_class,    ONLY: t_jsb_config_p
@@ -73,7 +74,7 @@ CONTAINS
     SELECT CASE (TRIM(dsl4jsb_Config(HD_)%routing_scheme))
     CASE ('full')
 
-      CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//&
+      IF (debug_on()) CALL message(TRIM(routine), 'Initializing hd memory for tile '//TRIM(tile%name)//&
                                   ' from '//TRIM(dsl4jsb_Config(HD_)%bc_filename))
 
       ! Initialize boundary conditions
@@ -216,7 +217,7 @@ CONTAINS
 
     ! read initial conditions
 
-    CALL message(TRIM(routine), 'Initializing hd memory from '//TRIM(dsl4jsb_Config(HD_)%ic_filename))
+    IF (debug_on()) CALL message(TRIM(routine), 'Initializing hd memory from '//TRIM(dsl4jsb_Config(HD_)%ic_filename))
 
 !vg     input_file = jsb_netcdf_open_input(TRIM(model%config%hd%ic_filename), model%grid_id)
 

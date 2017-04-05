@@ -16,6 +16,7 @@ MODULE mo_turb_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
 
   dsl4jsb_Use_processes TURB_
   dsl4jsb_Use_config(TURB_)
@@ -83,7 +84,7 @@ CONTAINS
 
     ! Initialize parameters
     !
-    CALL message(TRIM(routine), &
+    IF (debug_on()) CALL message(TRIM(routine), &
          'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)

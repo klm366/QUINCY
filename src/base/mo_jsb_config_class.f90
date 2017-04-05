@@ -85,7 +85,7 @@ CONTAINS
     grid_filename  = ''
     grid_name      = ''
     usecase        = ''
-    hsm_mode       = 'full'
+    hsm_mode       = 'simple'
     fract_filename = 'bc_land_frac.nc'
 
     ! Read namelist

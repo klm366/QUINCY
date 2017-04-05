@@ -15,6 +15,7 @@ MODULE mo_pheno_init
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message
+  USE mo_jsb_control,         ONLY: debug_on
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model  
   USE mo_jsb_class,           ONLY: get_model
@@ -81,7 +82,7 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
 
-    CALL message(TRIM(routine), 'Setting boundary conditions of pheno memory for tile '// &
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting boundary conditions of pheno memory for tile '// &
       &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(PHENO_)%bc_filename), model%grid_id)
@@ -152,7 +153,7 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
 
-    CALL message(TRIM(routine), 'Setting initial conditions of pheno memory (lai) for tile '// &
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of pheno memory (lai) for tile '// &
       &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
 
     ! Set initial leaf area index from climatology (read in pheno_init_bc)

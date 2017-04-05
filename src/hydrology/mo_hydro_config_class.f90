@@ -14,6 +14,7 @@ MODULE mo_hydro_config_class
   USE mo_util,              ONLY: real2string, logical2string, int2string
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
@@ -83,7 +84,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_hydro_config'
 
-    CALL message(TRIM(routine), 'Starting hydro configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting hydro configuration')
 
     ! Set defaults
     active            = .TRUE.

@@ -11,6 +11,7 @@ MODULE mo_jsb_process_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,           ONLY: message, finish
+  USE mo_jsb_control,         ONLY: debug_on
 
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_process_task_p
   USE mo_jsb_config_class,    ONLY: t_jsb_config
@@ -104,8 +105,8 @@ CONTAINS
       this%task_list = (/ this%task_list, t_jsb_process_task_p(task) /)
     END IF
 
-    CALL message(TRIM(routine), 'Registered task "'//TRIM(task%name)// &
-      &                         '" for process "'//TRIM(this%name)//'".')
+    IF (debug_on()) CALL message(TRIM(routine), 'Registered task "'//TRIM(task%name)// &
+      &                                         '" for process "'//TRIM(this%name)//'".')
 
   END SUBROUTINE Register_task
 

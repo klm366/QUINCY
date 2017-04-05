@@ -14,6 +14,7 @@ MODULE mo_sse_config_class
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_util,              ONLY: real2string, int2string
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
@@ -73,10 +74,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_config'
 
-    CALL message(TRIM(routine), 'Starting soil and snow energy configuration')
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting soil and snow energy configuration')
 
     ! Set defaults
-    active          = .FALSE.
+    active          = .TRUE.
     nsnow            = 5
     dz_snow(:)       = 0._wp
     dz_snow(1:nsnow) = 0.05_wp

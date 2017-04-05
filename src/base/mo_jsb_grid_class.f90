@@ -13,6 +13,7 @@ MODULE mo_jsb_grid_class
   USE mo_kind,               ONLY: wp
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message_text, message, finish
+  USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_domain_iface,   ONLY: t_patch, p_patch, pe_decomposed,               &
                                    get_grid_filename_domain => get_grid_filename, &
                                    get_ntotal_domain        => get_ntotal,        &
@@ -110,7 +111,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_grid_from_host'
 
-    CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from host model')
+    IF (debug_on()) CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from host model')
 
     IF (PRESENT(patch) .AND. PRESENT(decomp)) &
       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
@@ -165,7 +166,7 @@ CONTAINS
 
     grid => new
 
-    CALL message(TRIM(routine), 'construction of JSBACH grid completed.')
+    IF (debug_on()) CALL message(TRIM(routine), 'construction of JSBACH grid completed.')
 
   END FUNCTION new_grid_from_host
 

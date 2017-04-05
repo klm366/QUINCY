@@ -13,6 +13,7 @@ MODULE mo_jsb_base
 !!$  USE mo_jsb_model_class, ONLY: t_jsb_model_m
 !!$  USE mo_jsb_class, ONLY: t_jsb, jsbach
   USE mo_jsb_class,   ONLY: jsbach
+  USE mo_jsb_control, ONLY: debug_on
   USE mo_exception,   ONLY: message_text, message, finish
   USE mo_util,        ONLY: int2string
 
@@ -87,7 +88,7 @@ CONTAINS
 
     !IF (jsbach_runs_standalone) CALL init_domains(jsbach%models(:)%grid%filename) !TODO-check-with-RMS: delete!?
 
-    CALL message(TRIM(routine), 'done basic initialization')
+    IF (debug_on()) CALL message(TRIM(routine), 'done basic initialization')
 
   END SUBROUTINE init_base
 
