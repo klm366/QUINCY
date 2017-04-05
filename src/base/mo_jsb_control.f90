@@ -132,13 +132,15 @@ CONTAINS
     is_standalone  = .TRUE.
     restart_jsbach = .FALSE.
     model_base_dir = '.'
-    l_timer = .TRUE.
+    l_timer = .FALSE.
     debug          = 0
 
     nml_handler = open_nml(TRIM(namelist_filename))
 
     nml_unit = position_nml('jsb_control_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_control_nml)
+
+    l_timer = l_timer .OR. (debug > 0)
 
     ! Get number of models first
     rwnd = .TRUE.
