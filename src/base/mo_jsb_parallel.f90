@@ -33,7 +33,11 @@ CONTAINS
   LOGICAL FUNCTION Is_omp_inside_serial()
 
     IF (Is_enabled_openmp()) THEN
+#ifdef _OPENMP
       Is_omp_inside_serial = omp_get_num_threads() == 1
+#else
+      Is_omp_inside_serial = .FALSE.
+#endif
     ELSE
       Is_omp_inside_serial = .FALSE.
     END IF
@@ -43,7 +47,11 @@ CONTAINS
   INTEGER FUNCTION Get_omp_no_of_threads
 
     IF (Is_enabled_openmp()) THEN
+#ifdef _OPENMP
       Get_omp_no_of_threads = omp_get_max_threads()
+#else
+      Get_omp_no_of_threads = 1
+#endif
     ELSE
       Get_omp_no_of_threads = 1
     END IF
@@ -53,7 +61,11 @@ CONTAINS
   INTEGER FUNCTION Get_omp_thread
 
     IF (Is_enabled_openmp()) THEN
+#ifdef _OPENMP
       Get_omp_thread = omp_get_thread_num() + 1
+#else
+      Get_omp_thread = 1
+#endif
     ELSE
       Get_omp_thread = 1
     END IF
