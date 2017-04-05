@@ -1960,6 +1960,7 @@ CONTAINS
 
     ! weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    ! Don't aggregate, but explicitely compute water balance on each tile
     CALL update_water_balance(tile, options)
     ! dsl4jsb_Aggregate_onChunk(HYDRO_, water_flux,       weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(HYDRO_, water_content,    weighted_by_fract)
