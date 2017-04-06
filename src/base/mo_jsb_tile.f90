@@ -305,7 +305,7 @@ CONTAINS
         ! this%param(iproc)%p => t_jsb_param(iproc)
         tmp_ptr => Create_process_memory(iproc)
         IF (ASSOCIATED(this%parent_tile)) THEN
-          IF (.NOT. ALLOCATED(this%parent_tile%mem(iproc)%p%children) .AND. this%parent_tile%Get_no_of_children() > 0) &
+          IF (.NOT. ASSOCIATED(this%parent_tile%mem(iproc)%p%children) .AND. this%parent_tile%Get_no_of_children() > 0) &
             & ALLOCATE(this%parent_tile%mem(iproc)%p%children(this%parent_tile%Get_no_of_children()))
           this%parent_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
         END IF
@@ -335,7 +335,7 @@ CONTAINS
           no_of_children = tmp_tile%Get_no_of_children()
           IF (.NOT. ASSOCIATED(tmp_tile%mem(iproc)%p)) THEN
             tmp_tile%mem(iproc)%p => Create_process_memory(iproc)
-            IF (.NOT. ALLOCATED(tmp_tile%mem(iproc)%p%children) .AND. no_of_children > 0) &
+            IF (.NOT. ASSOCIATED(tmp_tile%mem(iproc)%p%children) .AND. no_of_children > 0) &
               & ALLOCATE(tmp_tile%mem(iproc)%p%children(no_of_children))
             tmp_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
             tmp_ptr => tmp_tile%mem(iproc)%p

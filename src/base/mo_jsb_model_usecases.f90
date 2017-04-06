@@ -227,17 +227,17 @@ CONTAINS
       & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' /)
 
     CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = (/ &
-      & 'Tropical broadleaf evergreen', &
-      & 'Tropical broadleaf deciduous', &
-      & 'Extra-tropical evergreen'    , &
-      & 'Extra-tropical deciduous'    , &
-      & 'Raingreen shrubs'            , &
-      & 'Deciduous shrubs'            , &
-      & 'C3 grass'                    , &
-      & 'C4 grass'                    , &
-      & 'C3 pasture'                  , &
-      & 'C4 pasture'                  , &
-      & 'C3 crops'                          /)
+      & 'Tropical broadleaf evergreen  ', &
+      & 'Tropical broadleaf deciduous  ', &
+      & 'Extra-tropical evergreen      ', &
+      & 'Extra-tropical deciduous      ', &
+      & 'Raingreen shrubs              ', &
+      & 'Deciduous shrubs              ', &
+      & 'C3 grass                      ', &
+      & 'C4 grass                      ', &
+      & 'C3 pasture                    ', &
+      & 'C4 pasture                    ', &
+      & 'C3 crops                      '    /)
 
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
@@ -309,17 +309,17 @@ CONTAINS
       & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' /)
 
     CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = (/ &
-      & 'Tropical broadleaf evergreen', &
-      & 'Tropical broadleaf deciduous', &
-      & 'Extra-tropical evergreen'    , &
-      & 'Extra-tropical deciduous'    , &
-      & 'Raingreen shrubs'            , &
-      & 'Deciduous shrubs'            , &
-      & 'C3 grass'                    , &
-      & 'C4 grass'                    , &
-      & 'C3 pasture'                  , &
-      & 'C4 pasture'                  , &
-      & 'C3 crops'                          /)
+      & 'Tropical broadleaf evergreen  ', &
+      & 'Tropical broadleaf deciduous  ', &
+      & 'Extra-tropical evergreen      ', &
+      & 'Extra-tropical deciduous      ', &
+      & 'Raingreen shrubs              ', &
+      & 'Deciduous shrubs              ', &
+      & 'C3 grass                      ', &
+      & 'C4 grass                      ', &
+      & 'C3 pasture                    ', &
+      & 'C4 pasture                    ', &
+      & 'C3 crops                      '    /)
 
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away

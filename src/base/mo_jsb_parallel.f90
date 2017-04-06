@@ -36,15 +36,15 @@ CONTAINS
 #ifdef _OPENMP
       Is_omp_inside_serial = omp_get_num_threads() == 1
 #else
-      Is_omp_inside_serial = .FALSE.
+      Is_omp_inside_serial = .TRUE.
 #endif
     ELSE
-      Is_omp_inside_serial = .FALSE.
+      Is_omp_inside_serial = .TRUE.
     END IF
 
   END FUNCTION Is_omp_inside_serial
 
-  INTEGER FUNCTION Get_omp_no_of_threads
+  INTEGER FUNCTION Get_omp_no_of_threads()
 
     IF (Is_enabled_openmp()) THEN
 #ifdef _OPENMP
@@ -58,7 +58,7 @@ CONTAINS
 
   END FUNCTION Get_omp_no_of_threads
 
-  INTEGER FUNCTION Get_omp_thread
+  INTEGER FUNCTION Get_omp_thread()
 
     IF (Is_enabled_openmp()) THEN
 #ifdef _OPENMP

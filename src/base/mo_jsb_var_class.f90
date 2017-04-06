@@ -28,6 +28,9 @@ MODULE mo_jsb_var_class
                                                   ! of those where variable doesn't exist
   END TYPE t_jsb_var
 
+!#pragma GCC diagnostic push
+!#pragma GCC diagnostic ignored "-Wsurprising"
+
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
     REAL(wp), POINTER :: ptr(:,:) => NULL()
   CONTAINS
@@ -51,6 +54,8 @@ MODULE mo_jsb_var_class
     ! GENERIC   :: OPERATOR(*) => Multiply_real3d_with_field
     FINAL     :: finalize_jsb_var_real3d
   END TYPE t_jsb_var_real3d
+
+!#pragma GCC diagnostic pop
 
   TYPE t_jsb_var_p
     CLASS(t_jsb_var), POINTER :: p
