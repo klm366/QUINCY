@@ -110,13 +110,13 @@ CONTAINS
 !!$
       SELECT CASE(TRIM(msg%action%name))
       CASE ('INTEGRATE')
-        IF (l_timer) CALL timer_start(timer_integrate(this%owner_model_id))
+        IF (l_timer .AND. debug_on()) CALL timer_start(timer_integrate(this%owner_model_id))
         CALL this%Integrate(tile, options)
-        IF (l_timer) CALL timer_stop(timer_integrate(this%owner_model_id))
+        IF (l_timer .AND. debug_on()) CALL timer_stop(timer_integrate(this%owner_model_id))
       CASE ('AGGREGATE')
-        IF (l_timer) CALL timer_start(timer_aggregate(this%owner_model_id))
+        IF (l_timer .AND. debug_on()) CALL timer_start(timer_aggregate(this%owner_model_id))
         CALL this%Aggregate(tile, options)
-        IF (l_timer) CALL timer_stop(timer_aggregate(this%owner_model_id))
+        IF (l_timer .AND. debug_on()) CALL timer_stop(timer_aggregate(this%owner_model_id))
       CASE DEFAULT
         CALL finish(TRIM(routine), 'Unknown action for task'//TRIM(this%name))
       END SELECT

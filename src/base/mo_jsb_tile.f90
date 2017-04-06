@@ -583,7 +583,7 @@ CONTAINS
 
     no_omp_thread = Get_omp_thread()
 
-    IF (l_timer) CALL timer_start(timer_process_task(this%owner_model_id))
+    IF (l_timer .AND. debug_on()) CALL timer_start(timer_process_task(this%owner_model_id))
 
     ALLOCATE(msg, source=msg_in)
 
@@ -715,7 +715,7 @@ CONTAINS
 
     IF (ASSOCIATED(msg)) DEALLOCATE(msg)
 
-    IF (l_timer) CALL timer_stop(timer_process_task(this%owner_model_id))
+    IF (l_timer .AND. debug_on()) CALL timer_stop(timer_process_task(this%owner_model_id))
 
   END FUNCTION Process_task_on_tile
 

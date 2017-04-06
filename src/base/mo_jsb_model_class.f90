@@ -241,9 +241,9 @@ CONTAINS
           CALL this%Start() ! Start state machine
           !IF (ASSOCIATED(msg%action)) DEALLOCATE(msg%action)
           !msg%action = this%Get_action('INTEGRATE')
-          IF (l_timer) CALL timer_start(timer_process_msg(this%id))
+          IF (l_timer .AND. debug) CALL timer_start(timer_process_msg(this%id))
           CALL this%Process_message(msg, l_debug)
-          IF (l_timer) CALL timer_stop(timer_process_msg(this%id))
+          IF (l_timer .AND. debug) CALL timer_stop(timer_process_msg(this%id))
         END IF
       END ASSOCIATE
 
